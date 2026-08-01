@@ -59,11 +59,11 @@ def _get_cloud_fallback_hint() -> str:
             last = options[-1]
             rest = ", ".join(options[:-1])
             return f"Or use a cloud API: {rest} (or {last})"
-        # No keys configured — suggest Claude as the default recommendation
-        return "Or get a Claude API key: console.anthropic.com"
+        # No keys configured — point at provider setup without naming a favourite
+        return "Or set up a cloud provider: bristlenose configure <claude|chatgpt|gemini|azure>"
     except Exception:
         # If settings fail to load, fall back to generic suggestion
-        return "Or use a cloud API: --llm claude"
+        return "Or use a cloud API: bristlenose configure <provider>"
 
 
 def get_fix(fix_key: str, install_method: str | None = None) -> str:

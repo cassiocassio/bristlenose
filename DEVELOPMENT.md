@@ -77,7 +77,7 @@ Copy `.env.example` to `.env`. You only need one LLM provider key:
 | `BRISTLENOSE_LLM_PROVIDER` | `anthropic`, `openai`, `azure`, `google`, or `local` |
 | `BRISTLENOSE_ANTHROPIC_API_KEY` | Claude key (from console.anthropic.com) |
 | `BRISTLENOSE_OPENAI_API_KEY` | ChatGPT key (from platform.openai.com) |
-| `BRISTLENOSE_GOOGLE_API_KEY` | Gemini key (budget option, ~$0.20/study) |
+| `BRISTLENOSE_GOOGLE_API_KEY` | Gemini key (from aistudio.google.com) |
 | `BRISTLENOSE_WHISPER_BACKEND` | `auto`, `mlx` (Apple Silicon), `faster-whisper` (CUDA/CPU) |
 
 For Ollama (free, no key): set `BRISTLENOSE_LLM_PROVIDER=local` and install [Ollama](https://ollama.ai). See `.env.example` for all options.

@@ -1,308 +1,214 @@
-# CLI Provider & Model Selection — design + implementation plan
+# CLI Provider Selection — the current-provider model
 
-**Status: PROPOSAL — under review (not implemented).** Drafted 10 Jun 2026.
+**Status: IMPLEMENTED — 31 Jul 2026.** Originally drafted 10 Jun 2026 as a
+derive-only proposal; revised at implementation to the **current-provider**
+model after review (the .app already works this way: the provider stays
+whatever you last set, and nothing asks mid-run). This doc describes what
+shipped and why.
 
-This doc specifies how the **CLI** chooses which LLM provider and model to use,
-replacing the current hardcoded `anthropic` / `claude-sonnet-4` defaults with a
-derive-or-diagnose model. Desktop selection is unchanged (the Swift host injects
-provider+model explicitly); see §Desktop interplay for the toes this must not
-tread on.
+Desktop selection is unchanged (the Swift host injects provider+model
+explicitly); see §6 for the toes this deliberately does not tread on.
 
 ---
 
 ## 1. Principles
 
-1. **A key is a secret; "which provider/model" is a preference.** Different
-   stores, different verbs. Adding a key must never silently change the active
-   provider.
-2. **No hardcoded vendor default in the CLI happy path.** A fresh install with
-   no keys should *diagnose* (help you set one up), not silently try Claude.
-3. **First/only key just works — by derivation, not stored state.** When exactly
-   one cloud provider has a key and nothing explicit is chosen, use it. No
-   persisted "first-ever" marker to drift.
-4. **Beyond one key, you're explicit.** Two-plus keys with no selection →
-   actionable error/diagnostic, never an arbitrary pick.
-5. **Interactive may offer; scripted never surprises.** Prompts only on a TTY;
-   non-interactive contexts fail with an actionable message + the exact env
-   var/flag to set. `configure` is always idempotent.
-6. **The flat "default model per provider" is transitional.** It survives only
-   until per-stage model selection (`bristlenose pipeline`) drives execution. v1
-   reframes it (provider-derived, not a Claude string); it is not deleted.
+1. **A key is a secret; "which provider" is a preference.** Different stores,
+   different verbs. Keys live in the Keychain / Secret Service / protected
+   file; the provider preference is a plaintext line in the user-level config.
+2. **No vendor default in the CLI happy path.** The `llm_provider` field
+   default (`"anthropic"`, `config.py`) survives *only* as the desktop-contract
+   backstop — a CLI run never reaches it. A fresh install with no keys
+   diagnoses; it does not silently try Claude. (The old behaviour dated from
+   February, when Claude was the only provider built.)
+3. **Configuring a provider is choosing it.** `bristlenose configure gemini`
+   validates + stores the key **and makes Gemini current, loudly** — the
+   printed line names the switch and the way back. Nobody pastes a Gemini key
+   expecting to keep running Claude; when they do want that, `use` is one
+   command. (The June draft's "adding a key must never change the provider"
+   survives on the word *silently*: the switch happens in the same breath as
+   the user's own action, announced, reversible.)
+4. **`run`/`analyze` never prompt. Full stop.** The only interactive step in
+   the entire CLI is the key paste inside `configure`. Scripted, CI, agent-
+   driven, and walked-away-for-tea runs all behave identically: resolve or
+   exit 2 with the exact command to run.
+5. **Sole key just works — by derivation, not stored state.** One configured
+   cloud key with no recorded choice → that provider, whoever's it is. Claude
+   wins by the same rule as everyone else, never by favouritism.
+6. **Ambiguity is never resolved by a vendor default.** Two-plus keys and no
+   choice → name the providers and the two ways to choose; exit 2.
 
----
+## 2. The ladder
 
-## 2. Provider resolution (the ladder)
+Resolved on every `load_settings()` (first match wins):
 
-On every CLI run, provider is resolved in this order (first match wins):
-
-| # | Source | Scope |
-|---|--------|-------|
-| 1 | `--llm <provider>` | per run |
-| 2 | `BRISTLENOSE_LLM_PROVIDER` env var (incl. `.env`, `bristlenose.toml`) | per shell / project |
-| 3 | **the sole cloud provider that has a key** (derived) | per machine |
-| 4a | **0 keys** → diagnostic (TTY) / error (non-TTY) | — |
-| 4b | **2+ keys, none selected** → ambiguity error listing configured providers | — |
+| # | Source | Mechanism |
+|---|--------|-----------|
+| 1 | `--llm <provider>` | cli-override into `load_settings(**overrides)` |
+| 2 | `BRISTLENOSE_LLM_PROVIDER` env var | pydantic-settings env |
+| 3 | project-local `.env` | pydantic-settings env_file (later file wins) |
+| 4 | **current provider** — `BRISTLENOSE_LLM_PROVIDER=` in the user-level config `.env` (`~/.config/bristlenose/.env`), written by `configure` / `use` | same env_file list, lowest priority |
+| 5 | sole configured cloud key (derived, no stored state) | `_derive_provider` |
+| 6 | 0 keys → status `none`; 2+ keys → status `ambiguous` | CLI exits before running |
 
 `local` (Ollama) is **never derived** — it is used only when explicitly chosen
-(`--llm local` / env), because "I have no cloud key" must surface the choice
-between *get a key* and *go local*, not silently pick local.
+(`--llm local`, env, `use local`, `configure local`), because "no cloud key"
+must surface the choice between *get a key* and *go local*.
 
-### What changes vs today
+**Storage.** The current provider is a plain `BRISTLENOSE_LLM_PROVIDER=` line
+upserted into the same user-level `.env` that `configure` already uses as its
+no-keyring key fallback (`bristlenose/credentials.py`:
+`read_user_config_var` / `write_user_config_var`, mode `0o600`).
+pydantic-settings already loads that file lowest-priority via
+`config._find_env_files()`, so rungs 2–4 are one mechanism, not three code
+paths — and the desktop carve-out (hosted processes read no `.env` files at
+all) means the CLI preference can never leak into a desktop-hosted run.
 
-- Today: `BristlenoseSettings.llm_provider` field defaults to `"anthropic"`
-  (`config.py:106`), so step 3/4 don't exist — a keyless run silently resolves
-  to Claude, then `_needs_provider_prompt` (`cli.py:381`) only rescues the
-  narrow "provider==anthropic AND no anthropic key" case.
-- After: steps 3/4 are added **for the CLI only** (gated on
-  `not hosted_by_desktop()`). The field default is retained as an internal
-  backstop the desktop relies on (see §Desktop interplay) — but the CLI no
-  longer *reaches* it on the happy path.
+## 3. Implementation map
 
----
+- **`config.py`** — `configured_cloud_providers(settings)` (string-typed,
+  non-empty keys only; Azure counts on key presence, endpoint validated by
+  preflight); `ProviderResolution` (status `hosted | explicit | derived |
+  none | ambiguous`); `_derive_provider(...)` runs inside `load_settings`
+  *after* `_populate_keys_from_keychain` (derivation needs the full key
+  picture) and *before* `_fill_provider_default_model` (so a derived provider
+  gets its coherent default model); result recorded in the `llm_resolve`
+  ledger (`step=2b-derive`) and exposed via `get_provider_resolution()`.
+  `provider_resolution_for(settings)` is the stateless recompute for
+  long-lived processes.
+- **`cli.py`** — `_maybe_guide_provider_setup` (called by `run`/`analyze`
+  after `load_settings`): `none` → setup guidance (TTY, exit 0) or terse
+  error (non-TTY, exit 2); `ambiguous` → exit 2 naming the providers +
+  `bristlenose use …` / `--llm`; `explicit` with a missing key → exit 2
+  naming the exact gap ("Gemini is selected but no Gemini key is
+  configured"), replacing the old misleading "No LLM provider configured";
+  `derived`/`hosted` → pass. `bristlenose use <provider>` — validates a key
+  exists (cloud), writes the preference, confirms; warns when a real env var
+  masks the choice. `configure` calls `_set_current_provider` on success
+  (cloud and local; never for `miro`).
+- **`server/routes/autocode.py`** — a server can't prompt: the start-job
+  route recomputes `provider_resolution_for(settings)` and returns 409 on
+  `ambiguous` instead of letting the field default silently pick a vendor.
+  (Chat lens / codebook builder inherit whatever the serve process resolved;
+  tightening them is deferred to the per-stage backend work.)
+- **`doctor_fixes.py`** — the no-keys suggestion offers all four providers
+  (`bristlenose configure <claude|chatgpt|gemini|azure>`), naming no
+  favourite.
 
-## 3. `configure` behaviour (secrets only)
+## 4. The sequences (as shipped)
 
-`bristlenose configure <provider>` continues to **only validate + store a key**
-(`cli.py:1892`). It never writes a provider preference. Two refinements:
+Fresh machine, zero keys — guidance, no menu, no prices, exit:
 
-- **First key (0→1 transition):** print "you can now run: `bristlenose run …`"
-  (unchanged). No selection is written — derivation (step 3) makes it active.
-- **Subsequent key (now 2+):** print a one-line, TTY-and-script-safe hint:
-  > `ChatGPT key stored. You now have 2 providers (Claude, ChatGPT). Pick one`
-  > `per run with --llm chatgpt, or set BRISTLENOSE_LLM_PROVIDER=chatgpt.`
-
-No interactive "make this active?" prompt in v1 (keeps `configure`
-deterministic; the offer is deferred — see §Open decisions).
-
----
-
-## 4. Diagnostics
-
-- **0 keys, TTY:** existing `_prompt_for_provider` menu (`cli.py:405`) — Claude /
-  ChatGPT / Azure / Gemini / Local, with where-to-get-a-key links.
-- **0 keys, non-TTY:** exit 2 with "No AI provider configured. Run
-  `bristlenose configure <claude|chatgpt|gemini|azure>` or set
-  `BRISTLENOSE_LLM_PROVIDER` + the matching key." **Never prompt** (a prompt in
-  CI hangs the job).
-- **2+ keys, none selected, any context:** exit 2 (non-TTY) / short diagnostic +
-  re-prompt (TTY) listing the configured providers and the two ways to choose.
-- **Selected provider has no key** (e.g. `BRISTLENOSE_LLM_PROVIDER=gemini`, no
-  Gemini key): preflight error "provider Gemini selected but no Gemini key found
-  — run `bristlenose configure gemini`." (This is the cross-store reconciliation;
-  it already half-exists in the api-key preflight, `preflight/api_key.py`.)
-
-TTY detection: `sys.stdin.isatty() and sys.stdout.isatty()`; honour the existing
-`BRISTLENOSE_SKIP_PREFLIGHT` / non-interactive conventions.
-
----
-
-## 5. Model selection (reframe, don't delete)
-
-- The flat `llm_model` field default (`config.py:109`,
-  `"claude-sonnet-4-20250514"`) is **provider-coupled today** only because
-  `_fill_provider_default_model` (`config.py:369`) snaps a never-chosen model to
-  the *resolved provider's* `default_model` (from `PROVIDERS`, `providers.py`).
-  With the new derive logic this already produces gpt-4o for a sole-ChatGPT
-  setup, etc.
-- **v1 change:** stop documenting a single model default. Man page + README +
-  `.env.example` say "defaults to the selected provider's recommended model,"
-  not a fixed Claude string. Optionally set the field default to `""` and let
-  `_fill_provider_default_model` always fill from the provider spec (removes the
-  Claude hardcode from the field) — *flagged as a sub-decision* because empty
-  default has a blast radius on any code reading `llm_model` directly.
-- **Future home:** the per-(stage, provider) matrix that `bristlenose pipeline`
-  already renders. When per-stage selection drives execution, the flat
-  `llm_model` retires. Not in scope here.
-
----
-
-## 6. Example sessions (the playback)
-
-### S1 — Fresh install, no keys, interactive
 ```
-$ bristlenose interviews/
-Bristlenose v0.16.0 · Apple M2 · 32 GB
+$ bristlenose interviews
 
-No AI provider configured. Choose one:
-  [1] Claude API   (recommended, ~$1.50/study)   console.anthropic.com
-  [2] ChatGPT API  (~$1.00/study)                platform.openai.com
-  [3] Azure OpenAI (enterprise)
-  [4] Gemini API   (budget, ~$0.20/study)        aistudio.google.com
-  [5] Local AI     (free, private, slower)       ollama.ai
-Choice [1]: 2
+No LLM provider configured.
 
-Get your key from: platform.openai.com/api-keys
-Then run:  bristlenose configure chatgpt
+Set one up once — bristlenose configure <provider> validates your
+key and stores it securely (Keychain):
+
+  Claude    https://console.anthropic.com/settings/keys
+  ChatGPT   https://platform.openai.com/api-keys
+  Gemini    https://aistudio.google.com/apikey
+  Azure     https://portal.azure.com
+
+For local models via Ollama:  bristlenose configure local
 ```
 
-### S2 — Configure the first key, then run (just works, no flag)
+First key — configure = choose; bare runs work forever after:
+
 ```
 $ bristlenose configure chatgpt
-Enter your ChatGPT API key: ****************
-Validating... ✓ Valid
+Enter your ChatGPT API key: ················
+✓ Valid
 ✓ Stored in Keychain as "Bristlenose ChatGPT API Key"
+ChatGPT is now your provider for analysis.
 You can now run: bristlenose run interviews
-
-$ bristlenose interviews/
-Bristlenose v0.16.0 · ChatGPT · Apple M2 · 32 GB
-✓ Ingest …                 (ChatGPT is the only configured provider — used automatically)
 ```
 
-### S3 — Add a second key (no auto-switch)  ·  **derive-only (recommended v1)**
+Second key — switches loudly, names the way back:
+
 ```
 $ bristlenose configure claude
-Enter your Claude API key: ****************
-Validating... ✓ Valid
+✓ Valid
 ✓ Stored in Keychain as "Bristlenose Claude API Key"
-Note: you now have 2 providers (ChatGPT, Claude). Bristlenose won't guess —
-pick one per run with --llm claude, or set BRISTLENOSE_LLM_PROVIDER=claude.
+Claude is now your provider for analysis (was ChatGPT).
+Switch back any time:  bristlenose use chatgpt
+You can now run: bristlenose run interviews
+```
 
-$ bristlenose interviews/
-Error: 2 AI providers are configured (ChatGPT, Claude) but none is selected.
-  Choose one:   bristlenose run interviews --llm chatgpt
-  Or persist:   export BRISTLENOSE_LLM_PROVIDER=chatgpt    (add to ~/.zshrc or .env)
+Switching without re-pasting a key:
+
+```
+$ bristlenose use chatgpt
+ChatGPT is now your provider for analysis (was Claude).
+Switch back any time:  bristlenose use claude
+```
+
+Explicit choice missing its key — the precise error:
+
+```
+$ bristlenose run interviews --llm gemini
+✗ Gemini is selected but no Gemini key is configured.
+  Run:  bristlenose configure gemini
 (exit 2)
 ```
 
-### S3′ — Same step under **persist-first (Variant B)** — for comparison
-```
-$ bristlenose configure claude
-… ✓ Stored.
-(The first provider you configured — ChatGPT — remains active. Switch with
- `bristlenose use claude`.)
+Migration edge — 2+ keys already present but no recorded choice (configured
+under a pre-`use` version, or keys arriving via `.env`/env only). One-time,
+TTY or not:
 
-$ bristlenose interviews/
-Bristlenose v0.16.0 · ChatGPT · …       ← keeps using the first-configured provider
 ```
-
-### S4 — Scripted / CI (non-TTY) with ambiguity → clean failure
-```
-$ bristlenose run interviews/ < /dev/null
-Error: multiple AI providers configured (ChatGPT, Claude) and no selection.
-  Set BRISTLENOSE_LLM_PROVIDER or pass --llm. (exit 2)
+$ bristlenose run interviews
+✗ 2 AI providers are configured (Claude, ChatGPT) and none is selected.
+  Pick one to stay current:  bristlenose use claude|chatgpt
+  Or just for this run:      --llm claude
+(exit 2)
 ```
 
-### S5 — Editor: persist a default without touching secrets
-```toml
-# bristlenose.toml  (or .env: BRISTLENOSE_LLM_PROVIDER=chatgpt)
-[llm]
-provider = "chatgpt"        # preference — plaintext, committable
-# key stays in the Keychain; never written here
-```
-```
-$ bristlenose interviews/
-Bristlenose v0.16.0 · ChatGPT · …       ← bare run now uses the persisted preference
-```
+This is the only hard stop the model retains, and the population it hits is
+precisely the old silent-Claude beneficiaries — who now make one explicit
+choice.
 
-### S6 — Selected provider missing its key
-```
-$ BRISTLENOSE_LLM_PROVIDER=gemini bristlenose interviews/
-Error: provider "Gemini" selected but no Gemini key found.
-  Run: bristlenose configure gemini   (exit 2)
-```
+## 5. Model selection
 
----
+Unchanged mechanism: `_fill_provider_default_model` snaps a never-chosen
+model to the *resolved* provider's `default_model`, which now composes with
+derivation (sole Gemini key → `gemini-2.5-flash` with no flags anywhere).
+Docs no longer state a fixed Claude model string as "the default" — the
+documented behaviour is "the selected provider's recommended model". The flat
+`llm_model` field default remains until the per-stage matrix drives
+execution (see `docs/design-stage-backends.md`).
 
-## 7. Implementation plan
+## 6. Desktop interplay — toes NOT trodden on
 
-**Python — `bristlenose/credentials.py`**
-- Add `configured_cloud_providers() -> list[str]`: iterate the cloud entries in
-  `PROVIDERS` (anthropic/openai/azure/google), return those with a non-empty key
-  via `get_credential`. (Azure counts as configured on key presence; endpoint/
-  deployment validated later in preflight.)
+1. `tests/test_swift_python_contract.py` pins the Swift constant
+   `BristlenoseShared.pythonDefaultProvider == "anthropic"` against the
+   `config.py` field default. **Kept.** Derivation is gated
+   `not hosted_by_desktop()`; under hosting the resolution status is
+   `hosted` and the field default remains the no-active-provider backstop
+   (`ServeManagerEnvTests.swift`).
+2. `_find_env_files()` returns `[]` under hosting (the consent-integrity
+   carve-out), so the CLI's stored current provider is invisible to
+   desktop-hosted processes by construction.
+3. `_fill_provider_default_model` / `_guard_orphan_desktop_model` untouched.
+4. The desktop's own "first validated key becomes active"
+   (`ConsentActivation.resolve`) and Settings picker are unchanged. CLI and
+   desktop now share the same *semantics* (provider stays as last set;
+   switching is explicit) through different mechanisms — deliberate.
+   Remaining desktop-side language ("Claude is the recommended default" in
+   `WelcomeHomeView.swift`; the Settings picker preselecting Claude before
+   first activation) is queued for the desktop UX pass.
 
-**Python — `bristlenose/config.py` (`load_settings`)**
-- After pydantic build + alias normalisation, insert a CLI-only resolution step
-  (gated `not hosted_by_desktop()`): if `llm_provider` was *not* explicitly set
-  (not in `overrides`, no `BRISTLENOSE_LLM_PROVIDER`), replace the field-default
-  value using `configured_cloud_providers()`:
-  - exactly 1 → that provider (record ledger `step=derive-sole-provider`)
-  - 0 or 2+ → leave a sentinel/flag so the CLI layer raises the right
-    diagnostic (don't raise inside `load_settings` — keep it pure/UI-free).
-- Keep the `llm_provider` field default `"anthropic"` (desktop backstop). Keep
-  `_fill_provider_default_model` and `_guard_orphan_desktop_model` exactly as-is.
+## 7. Testing
 
-**Python — `bristlenose/cli.py`**
-- Replace `_needs_provider_prompt` (`:381`) with a richer
-  `_resolve_or_prompt_provider(settings)` that consumes the derive result:
-  0 keys → menu (TTY) / exit 2 (non-TTY); 2+ unselected → diagnostic (TTY) /
-  exit 2 (non-TTY); 1 or explicit → pass through.
-- Wire it where `_maybe_prompt_for_provider` is called (`:1116` run, `:1395`
-  analyze). Add TTY guards.
-- `configure` (`:1892`): after a successful store, compute
-  `configured_cloud_providers()`; if count ≥ 2 print the one-line "pick one" hint.
-
-**Docs**
-- Man page `bristlenose/data/bristlenose.1`: rewrite the `BRISTLENOSE_LLM_MODEL`
-  line ("selected provider's recommended model"); add a "Choosing a provider"
-  paragraph describing the ladder.
-- README "Getting an API key": replace "Option A (Claude) is the default" with
-  the derive/diagnose explanation + how to persist via `BRISTLENOSE_LLM_PROVIDER`.
-- `.env.example`: annotate the precedence.
-
----
-
-## 8. Desktop interplay — toes NOT to tread on
-
-The desktop selects provider+model in Swift and injects them as env vars; the
-Python resolution must stay backward-compatible with that contract.
-
-1. **`tests/test_swift_python_contract.py`** asserts the Swift constant
-   `BristlenoseShared.pythonDefaultProvider` equals Python's `config.py` default
-   provider. **→ Keep the `llm_provider` field default `"anthropic"`.** Removing
-   it breaks the contract and the desktop's no-active-provider backstop.
-2. **`BristlenoseShared.overlayPreferences` / `resolvedProviderModel`**
-   (`BristlenoseShared.swift:170-201`): when `activeProvider` is **unset**, the
-   desktop injects **no `BRISTLENOSE_LLM_PROVIDER`** and scopes the API-key
-   overlay to `pythonDefaultProvider`. So a defaulted desktop run reaches Python
-   with *exactly one* injected key and no provider env var. Under the new derive
-   logic this resolves to that one provider — same outcome — **but only because
-   the new step is gated `not hosted_by_desktop()`; under hosting we must NOT run
-   derive/diagnose and must fall through to the field default.** Verified by
-   `ServeManagerEnvTests.swift:65` (no_active_provider_falls_back_to_python_default_key).
-3. **`_fill_provider_default_model` / `_guard_orphan_desktop_model`** are already
-   `hosted_by_desktop()`-partitioned. Leave both untouched; mirror the same gate
-   for the new provider-derive step.
-4. **`tests/test_desktop_config_resolution.py::TestRunCommandDefaultDoesNotOverrideEnv`**
-   pins `--llm` default `None`. Unchanged here.
-5. **No Swift changes required.** The desktop's "first validated key becomes
-   active" already lives in `ConsentActivation.resolve`; this plan does not touch
-   it. CLI and desktop deliberately use *different* mechanisms for the same
-   intent (derive-on-CLI vs persisted-activeProvider-on-desktop) — documented,
-   not unified.
-
-**Net:** every new behaviour is behind `not hosted_by_desktop()`. The field
-default + Swift contract is the seam; we keep both green.
-
----
-
-## 9. Testing plan
-
-- `configured_cloud_providers`: unit tests over a fake credential store (0/1/2/3
-  keys, azure-key-only).
-- `load_settings` derive step: 1 key → that provider; 0/2+ → sentinel; explicit
-  `--llm`/env always wins; **`hosted_by_desktop()` → derive is a no-op** (pins
-  toe #2).
-- CLI: TTY vs non-TTY matrix for 0-key and 2-key cases (exit codes + no-hang).
-  Reuse the subprocess pattern from `tests/test_run_lifecycle.py` (poll, don't
-  block) for the non-TTY exit-2 cases.
-- `configure` 2nd-key hint present/absent at the 1→2 boundary.
-- Keep `test_swift_python_contract.py` green (proves toe #1).
-- Man-page lint (`mandoc -Tlint`).
-
----
-
-## 10. Open decisions (for review)
-
-1. **Derive-only (v1) vs persist-first (Variant B).** Derive-only = no stored
-   state, but a 2nd key forces an explicit pick on the next run (S3). Persist-
-   first = first-configured provider stays active (S3′), needs a plaintext
-   `active_provider` in `~/.config/bristlenose/config.toml` + a `bristlenose use`
-   verb + drift validation. **Lean: derive-only.**
-2. **`llm_model` field default `""` vs keep `"claude-sonnet-4"`.** Empty is
-   cleaner (no vendor hardcode) but wider blast radius. **Lean: keep for v1,
-   fix docs only.**
-3. **Interactive "make this active?" offer in `configure`** when adding a 2nd
-   key on a TTY. Convenience, but only meaningful under persist-first. **Defer.**
-4. **Should the 0-key non-TTY case exit 2 or fall through** to a clearer
-   first-stage preflight failure? **Lean: exit 2 early with the configure hint.**
+`tests/test_provider_resolution.py` — the ladder matrix (sole-key derive per
+provider incl. anthropic-by-same-rule, zero/two-key statuses, cli-override /
+env / dotenv explicitness, local-never-derived, hosted no-op, stateless
+recompute incl. MagicMock tolerance), the user-config store (round-trip,
+upsert, 0600), `use` (persist canonical name, missing-key teach, unknown
+provider, env-var masking warning), `configure`-sets-current (first key,
+second key names the previous). `tests/test_provider_horror_scenarios.py` —
+the user-visible gate flows (guidance TTY/non-TTY, ambiguous teach-`use`,
+precise missing-key error, hosted/derived pass-through, never-prompts).
+Ledger coverage in `tests/test_desktop_config_resolution.py` unchanged.

@@ -54,6 +54,8 @@ The report includes:
 - **Word-level transcript highlighting** -- karaoke-style sync with video playback
 - **Video clip extraction** -- export starred quotes as video clips (FFmpeg stream-copy)
 - **Self-contained HTML export** -- one-click bundle for stakeholders, optional anonymisation
+- **Send to Miro** -- push analysed quotes straight onto a Miro board (a native sheet on macOS; a panel in the browser report)
+- **Incremental analysis** -- add more interviews to a finished project and re-run; your starred, tagged, and edited quotes carry across, and new material is flagged
 - **21 UI languages** -- en, es, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK, nl, fi, pl, ru, uk, da, sv, nb, tr (`--lang` flag; the nine most recent are machine-seeded community previews awaiting native review on [Weblate](https://hosted.weblate.org/projects/bristlenose/))
 
 
@@ -65,7 +67,7 @@ For LLM analysis, you can use **Claude**, **ChatGPT**, **Azure OpenAI**, **Gemin
 
 Download **[Bristlenose.dmg](https://github.com/cassiocassio/bristlenose/releases/latest)**, drag to Applications, open it. The app prompts for your Claude API key on first launch and bundles everything else (Python, FFmpeg, Whisper). No terminal needed.
 
-First launch: macOS will block it — go to **System Settings → Privacy & Security**, scroll down, click **"Open Anyway"**. One time only.
+First launch: because it's downloaded from the internet, macOS shows a "are you sure you want to open it?" confirmation — click **Open**. One time only. (The app is signed and notarised, so there's no "unidentified developer" block to work around.)
 
 Requires macOS 15 Sequoia, Apple Silicon (M1+).
 
@@ -118,7 +120,7 @@ bristlenose configure claude    # validates the key and stores it in your system
 bristlenose configure chatgpt    # validates the key and stores it in your system credential store
 ```
 
-To use ChatGPT instead of the default, add `--llm chatgpt` to your commands:
+Configuring makes ChatGPT your current provider. To pick it for a single run without switching, add `--llm chatgpt`:
 
 ```bash
 bristlenose run interviews -o results/ --llm chatgpt
@@ -147,13 +149,11 @@ You'll need your endpoint URL, API key, and deployment name from the [Azure port
 bristlenose configure gemini    # validates the key and stores it in your system credential store
 ```
 
-To use Gemini instead of the default, add `--llm gemini` to your commands:
+Configuring makes Gemini your current provider. To pick it for a single run without switching, add `--llm gemini`:
 
 ```bash
 bristlenose run interviews -o results/ --llm gemini
 ```
-
-**Budget option:** Gemini is 5–7× cheaper than Claude or ChatGPT — roughly $0.06 per hour of interview audio instead of $0.40.
 
 ### Option E: Local AI (via Ollama) — free, no signup
 
@@ -173,7 +173,7 @@ If Ollama isn't installed, bristlenose will offer to install it for you (via Hom
 
 **Trade-offs:** Local models are slower (~10 min vs ~2 min per study) and less accurate (~85% vs ~99% JSON reliability). Good for trying the tool; use cloud APIs for production quality.
 
-Use whichever provider you already have an API key for. If you don't have one yet, Option A (Claude) is the default. A typical 8-participant study costs roughly $1--3 with any cloud provider ($0.20 with Gemini).
+Use whichever provider you already have an API key for. The provider you configure becomes your current one and stays current until you switch (`bristlenose use <provider>`) — with a single configured provider, a bare `bristlenose run` just uses it. A typical 8-participant study costs roughly $1--3 with a cloud provider -- costs vary, check your provider's pricing page.
 
 > **Note:** A ChatGPT Plus/Pro or Claude Pro/Max subscription does **not** include API access. The API is billed separately — you need an API key from [console.anthropic.com](https://console.anthropic.com) or [platform.openai.com](https://platform.openai.com).
 
@@ -263,9 +263,13 @@ bristlenose analyze interviews/bristlenose-output/transcripts-raw/   # skip tran
 bristlenose serve interviews                             # open a previous report (no analysis)
 bristlenose status interviews                            # check project status (read-only)
 bristlenose doctor                                       # check dependencies
+bristlenose configure claude                             # store an API key in your credential store
 bristlenose codebooks                                    # list AutoCode framework templates
 bristlenose pipeline                                     # show which AI models each stage uses
+bristlenose help                                         # detailed help on commands and configuration
 ```
+
+Full reference for every command, option, and exit code: `man bristlenose`, or [the CLI reference](https://bristlenose.app/docs/cli.html) on the website. The man page is installed automatically — by the package manager for Homebrew and Snap, and on first run for pip/pipx installs.
 
 ### Configuration
 
@@ -285,14 +289,12 @@ Transcription hardware is auto-detected. Apple Silicon uses MLX on Metal GPU. NV
 
 ### Sharing
 
-- **.docx export** -- download the report as a Word document
 - **Edit writeback** -- save your in-browser corrections back to the transcript files on disk
 
 ### Platform
 
 - **Windows installer** -- native setup wizard so you don't need Python or the command line
 - **Cross-session moderator linking** -- recognise the same moderator across sessions (currently each session tracks moderators independently)
-- **Snap Store** -- deferred. CI build is currently broken; will revisit after the macOS desktop alpha
 
 Priorities may shift. If something is missing that matters to you, [open an issue](https://github.com/cassiocassio/bristlenose/issues).
 
@@ -305,10 +307,10 @@ Priorities may shift. If something is missing that matters to you, [open an issu
 **Developers** -- Python 3.10+, fully typed, Pydantic models. See [CONTRIBUTING.md](CONTRIBUTING.md) for the CLA, project layout, and design system docs.
 
 **Help us test** -- we'd love feedback from people using bristlenose with:
-- **Gemini** -- budget option at ~$0.06 per hour of interview audio
+- **Gemini** -- the least-exercised of the cloud providers
 - **Azure OpenAI** -- enterprise deployments
 - **Windows** -- the pipeline works but hasn't been widely tested
-- **Linux** -- pipx works today; snap is deferred (CI build is currently broken)
+- **Linux** -- pipx works today; the Snap ships on the edge channel (`snap install bristlenose --edge`)
 
 ---
 
@@ -334,7 +336,7 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 ### Verify everything works
 
 ```bash
-.venv/bin/python -m pytest tests/    # ~3500 Python tests; frontend has ~1300 Vitest tests (`npm test` in frontend/)
+.venv/bin/python -m pytest tests/    # ~3100 Python tests; frontend has ~1400 Vitest tests (`npm test` in frontend/)
 .venv/bin/ruff check .               # lint
 .venv/bin/mypy bristlenose/          # type check (some third-party SDK errors are expected)
 ```

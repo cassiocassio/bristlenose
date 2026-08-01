@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+from typing import NamedTuple
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -243,6 +244,147 @@ def get_resolution_trace() -> list[str]:
     return list(_LAST_RESOLUTION_TRACE)
 
 
+# Which settings field carries each cloud provider's key. `local` is absent by
+# design: going local is always an explicit choice (--llm local / env /
+# `bristlenose use local`), never derived from what happens to be installed.
+_CLOUD_KEY_FIELDS = {
+    "anthropic": "anthropic_api_key",
+    "openai": "openai_api_key",
+    "azure": "azure_api_key",
+    "google": "google_api_key",
+}
+
+
+def configured_cloud_providers(settings: BristlenoseSettings) -> list[str]:
+    """Cloud providers with a non-empty API key on these settings.
+
+    Must be called on settings that have already been through
+    ``_populate_keys_from_keychain`` so env vars, ``.env`` files, and the
+    system keychain are all visible. Azure counts on key presence alone —
+    endpoint/deployment are validated later by preflight.
+
+    The ``isinstance`` guard keeps this meaningful for duck-typed settings
+    (test doubles): only a real non-empty string counts as a key.
+    """
+    return [
+        p
+        for p, field in _CLOUD_KEY_FIELDS.items()
+        if isinstance(value := getattr(settings, field, ""), str) and value
+    ]
+
+
+class ProviderResolution(NamedTuple):
+    """How the LLM provider was (or wasn't) resolved for this process.
+
+    ``status``:
+    - ``"hosted"``    — desktop-hosted; the Swift host owns provider choice.
+    - ``"explicit"``  — chosen via ``--llm``, env var, or a ``.env`` file
+      (including the user-level config .env that ``configure``/``use`` write).
+    - ``"derived"``   — no explicit choice; exactly one cloud provider has a
+      key, so it is used. No stored state involved.
+    - ``"none"``      — no choice and no keys; the CLI prints setup guidance.
+    - ``"ambiguous"`` — no choice but 2+ providers have keys; the CLI asks for
+      one explicit pick (``bristlenose use <provider>``) and exits. Never
+      resolved by falling back to a vendor default.
+    """
+
+    status: str
+    provider: str
+    configured: tuple[str, ...]
+    source: str  # explicit: cli-override | env-var | dotenv; derived: sole-configured-key
+
+
+_LAST_PROVIDER_RESOLUTION: ProviderResolution | None = None
+
+
+def get_provider_resolution() -> ProviderResolution | None:
+    """Return the provider resolution recorded by the last ``load_settings()``."""
+    return _LAST_PROVIDER_RESOLUTION
+
+
+def provider_resolution_for(settings: BristlenoseSettings) -> ProviderResolution:
+    """Compute the provider resolution for already-built settings, statelessly.
+
+    For long-lived processes (serve) where the module-global recorded by the
+    last ``load_settings()`` may be stale or belong to a different context:
+    evaluates the same ladder against the current environment. Never mutates
+    the given settings.
+    """
+    raw_env_provider = os.environ.get("BRISTLENOSE_LLM_PROVIDER")
+    dotenv = [str(p) for p in _find_env_files()]
+    _, resolution = _derive_provider(settings, {}, raw_env_provider, dotenv)
+    return resolution
+
+
+def _dotenv_provider_value(dotenv_files: list[str]) -> str | None:
+    """The ``BRISTLENOSE_LLM_PROVIDER`` value a ``.env`` file supplies, if any.
+
+    Mirrors pydantic-settings semantics (last file wins). Needed because the
+    built settings object can't distinguish "field default" from "explicitly
+    set to the default's value in a file" — and the stored current-provider
+    preference lives in the user-level config ``.env``, which must be honoured
+    as an explicit choice, not overridden by derivation.
+    """
+    from dotenv import dotenv_values
+
+    value: str | None = None
+    for path in dotenv_files:
+        raw = dotenv_values(path).get("BRISTLENOSE_LLM_PROVIDER")
+        if raw:
+            value = raw
+    return value
+
+
+def _derive_provider(
+    settings: BristlenoseSettings,
+    overrides: dict[str, object],
+    raw_env_provider: str | None,
+    dotenv_files: list[str],
+) -> tuple[BristlenoseSettings, ProviderResolution]:
+    """Resolve the provider without ever reaching a vendor default (CLI only).
+
+    The ladder: explicit choice (``--llm`` → env var → ``.env``, which includes
+    the current-provider preference written by ``configure``/``use``) → sole
+    configured key → diagnose. The ``llm_provider`` field default stays
+    ``"anthropic"`` as the desktop-contract backstop (see
+    ``tests/test_swift_python_contract.py``) but a CLI run never *reaches* it:
+    the ``none``/``ambiguous`` statuses make the CLI stop before running.
+    """
+    if hosted_by_desktop():
+        return settings, ProviderResolution(
+            "hosted", settings.llm_provider, (), ""
+        )
+
+    configured = tuple(configured_cloud_providers(settings))
+    if "llm_provider" in overrides:
+        return settings, ProviderResolution(
+            "explicit", settings.llm_provider, configured, "cli-override"
+        )
+    if raw_env_provider is not None:
+        return settings, ProviderResolution(
+            "explicit", settings.llm_provider, configured, "env-var"
+        )
+    if _dotenv_provider_value(dotenv_files):
+        return settings, ProviderResolution(
+            "explicit", settings.llm_provider, configured, "dotenv"
+        )
+
+    if len(configured) == 1:
+        sole = configured[0]
+        if sole != settings.llm_provider:
+            settings = settings.model_copy(update={"llm_provider": sole})
+        return settings, ProviderResolution(
+            "derived", sole, configured, "sole-configured-key"
+        )
+    if not configured:
+        return settings, ProviderResolution(
+            "none", settings.llm_provider, configured, ""
+        )
+    return settings, ProviderResolution(
+        "ambiguous", settings.llm_provider, configured, ""
+    )
+
+
 # CLI-layer notes queued for the NEXT load_settings() trace. load_settings builds
 # the ledger from step-0-inputs onward, but the value of provider/model is decided
 # one layer up — in the `run`/`analyze` command, which chooses whether to forward
@@ -373,6 +515,29 @@ def load_settings(**overrides: object) -> BristlenoseSettings:
         f"model={settings.llm_model} (source={_src('llm_model', raw_env_model)})"
     )
 
+    # Populate API keys from keychain if not set from env/.env. Runs BEFORE
+    # provider derivation and model-fill: derivation needs the complete key
+    # picture, and model-fill needs the derived provider.
+    settings = _populate_keys_from_keychain(settings)
+
+    global _LAST_PROVIDER_RESOLUTION
+    before_provider = settings.llm_provider
+    settings, resolution = _derive_provider(settings, overrides, raw_env_provider, dotenv)
+    _LAST_PROVIDER_RESOLUTION = resolution
+    if resolution.status == "derived" and settings.llm_provider != before_provider:
+        trace.append(
+            "llm_resolve | step=2b-derive | event=_derive_provider [config.py] | "
+            f"provider {before_provider!r} -> {settings.llm_provider!r} | "
+            "cause=sole-configured-key | "
+            f"configured={list(resolution.configured)}"
+        )
+    elif resolution.status in ("none", "ambiguous"):
+        trace.append(
+            "llm_resolve | step=2b-derive | event=_derive_provider [config.py] | "
+            f"no explicit choice | configured={list(resolution.configured)} | "
+            f"status={resolution.status} (CLI diagnoses before running)"
+        )
+
     before_model = settings.llm_model
     settings = _fill_provider_default_model(settings, overrides, raw_env_model)
     if settings.llm_model != before_model:
@@ -394,9 +559,6 @@ def load_settings(**overrides: object) -> BristlenoseSettings:
             "cause=model-injected-without-provider-under-desktop | "
             f"source={settings.llm_provider}-provider-default"
         )
-
-    # Populate API keys from keychain if not set from env/.env
-    settings = _populate_keys_from_keychain(settings)
 
     key_value = {
         "anthropic": settings.anthropic_api_key,

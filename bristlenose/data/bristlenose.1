@@ -150,6 +150,15 @@ deployment). Where no keyring is available \(em a headless server, for
 instance \(em the key is persisted to a permission-protected config file
 instead, so the command always leaves you configured. Use \fB\-k\fR to provide
 the key non-interactively.
+Storing a key also makes that provider current for analysis \(em announced in
+the output, and reversible any time with \fBbristlenose use\fR.
+.TP
+.B use \fIprovider\fR
+Choose which AI provider runs the analysis: \fBclaude\fR, \fBchatgpt\fR,
+\fBgemini\fR, \fBazure\fR, or \fBlocal\fR. The choice persists in your
+user-level config until you change it \(em keys stay stored, so switching
+never means re-entering one. \fB\-\-llm\fR and \fBBRISTLENOSE_LLM_PROVIDER\fR
+still override it per run.
 .TP
 .B codebooks
 List the codebook frameworks available to AutoCode, with the slug to pass to
@@ -204,7 +213,10 @@ Whisper model size: \fBtiny\fR, \fBbase\fR, \fBsmall\fR, \fBmedium\fR,
 .BR \-l ", " \-\-llm " " \fIPROVIDER\fR
 LLM provider: \fBclaude\fR (or \fBanthropic\fR), \fBchatgpt\fR (or \fBopenai\fR),
 \fBazure\fR (or \fBazure-openai\fR), \fBgemini\fR (or \fBgoogle\fR),
-\fBlocal\fR (or \fBollama\fR). Default: \fBclaude\fR.
+\fBlocal\fR (or \fBollama\fR). If not given, the provider you last set with
+\fBconfigure\fR or \fBuse\fR is used; with a single configured provider, that
+one. With several keys and no choice recorded, bristlenose asks you to pick
+once (\fBbristlenose use\fR) rather than guessing.
 \fBazure\fR uses Azure OpenAI Service for
 enterprise environments. \fBlocal\fR runs the analysis through Ollama on your
 own hardware \(em no API key and no outbound call, but slower and it wants a
@@ -384,10 +396,12 @@ Azure OpenAI API version. Default: \fB2024-10-21\fR.
 .SS LLM settings
 .TP
 .B BRISTLENOSE_LLM_PROVIDER
-\fBanthropic\fR, \fBopenai\fR, \fBazure\fR, \fBgoogle\fR, or \fBlocal\fR. Default: \fBanthropic\fR.
+\fBanthropic\fR, \fBopenai\fR, \fBazure\fR, \fBgoogle\fR, or \fBlocal\fR.
+Overrides the current provider set with \fBbristlenose use\fR /
+\fBconfigure\fR; overridden in turn by \fB\-\-llm\fR.
 .TP
 .B BRISTLENOSE_LLM_MODEL
-Model name. Default: \fBclaude-sonnet-4-20250514\fR.
+Model name. Defaults to the selected provider's recommended model.
 .TP
 .B BRISTLENOSE_LLM_MAX_TOKENS
 Maximum response tokens. Default: \fB8192\fR.
@@ -398,11 +412,12 @@ Sampling temperature. Default: \fB0.1\fR.
 .B BRISTLENOSE_LLM_CONCURRENCY
 Parallel LLM calls. Default: \fB3\fR.
 .SS Local LLM settings (Ollama)
-When no API key is configured and you run bristlenose, it offers an interactive
-choice: Local AI (free via Ollama), Claude, or ChatGPT. If you choose Local and
-Ollama isn't installed, bristlenose offers to install it automatically (Homebrew
-on macOS, snap on Linux, curl script fallback). If Ollama is installed but not
-running, bristlenose will start it for you.
+When no API key is configured and you run bristlenose, it prints setup
+guidance \(em where to get a key for each cloud provider, and
+\fBbristlenose configure local\fR for local models \(em and exits. If you
+choose Local and Ollama isn't installed, bristlenose offers to install it
+automatically (Homebrew on macOS, snap on Linux, curl script fallback). If
+Ollama is installed but not running, bristlenose will start it for you.
 .TP
 .B BRISTLENOSE_LOCAL_URL
 Ollama API endpoint. Default: \fBhttp://localhost:11434/v1\fR.
@@ -559,6 +574,14 @@ Use Gemini:
 .nf
 bristlenose configure gemini
 bristlenose run interviews --llm gemini
+.fi
+.RE
+.PP
+Switch the current provider (keys stay stored):
+.PP
+.RS
+.nf
+bristlenose use chatgpt
 .fi
 .RE
 .PP

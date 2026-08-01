@@ -214,7 +214,7 @@ Bristlenose uses AI to analyse your transcripts. Use whichever provider you alre
 
    ```bash
    bristlenose configure claude      # or: bristlenose configure chatgpt
-   bristlenose configure gemini      # budget option (~$0.20/study)
+   bristlenose configure gemini
    ```
 
    This validates your key and saves it to your system's secure credential store:

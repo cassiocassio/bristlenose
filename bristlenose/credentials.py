@@ -208,6 +208,28 @@ class FileCredentialStore(EnvCredentialStore):
         self._write(out)
 
 
+# -- User-level preferences (non-secret) -------------------------------------
+#
+# The same user-level ``.env`` that persists keys on no-keyring platforms also
+# carries non-secret preferences — currently ``BRISTLENOSE_LLM_PROVIDER``, the
+# "current provider" written by `bristlenose configure` and `bristlenose use`.
+# pydantic-settings loads this file via ``config._find_env_files()`` (lowest
+# priority), so a preference stored here is picked up on the next run with no
+# further plumbing, and a real env var or project-local ``.env`` deliberately
+# overrides it. Desktop-hosted processes never read it (`_find_env_files`
+# returns nothing under hosting) — the GUI owns provider choice there.
+
+
+def read_user_config_var(var: str) -> str | None:
+    """Read a ``BRISTLENOSE_*`` variable from the user-level config .env only."""
+    return FileCredentialStore()._read_file().get(var) or None
+
+
+def write_user_config_var(var: str, value: str) -> None:
+    """Upsert a ``BRISTLENOSE_*`` variable in the user-level config .env."""
+    FileCredentialStore()._upsert(var, value)
+
+
 def get_credential_store() -> CredentialStore:
     """Get the appropriate credential store for this platform.
 

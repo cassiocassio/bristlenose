@@ -25,8 +25,8 @@ from bristlenose.utils.text import count_noun
 
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
 _COMMANDS = {
-    "run", "transcribe", "analyze", "analyse", "render", "doctor", "help", "configure", "serve",
-    "status", "codebooks", "pipeline",
+    "run", "transcribe", "analyze", "analyse", "render", "doctor", "help", "configure", "use",
+    "serve", "status", "codebooks", "pipeline",
 }
 
 
@@ -379,28 +379,21 @@ def _run_preflight(settings: object, command: str, *, skip_transcription: bool =
 # ---------------------------------------------------------------------------
 
 
-def _needs_provider_prompt(settings: object) -> bool:
-    """Check if we need to prompt the user to choose an LLM provider.
+# User-typed CLI spelling for each canonical provider id (the reverse of the
+# alias map): what to show in "bristlenose use <x>" / "bristlenose configure <x>"
+# suggestions.
+_CANONICAL_TO_CLI = {
+    "anthropic": "claude",
+    "openai": "chatgpt",
+    "google": "gemini",
+    "azure": "azure",
+    "local": "local",
+}
 
-    Returns True ONLY if:
-    - Provider is 'anthropic' (the default) AND no Anthropic key is set
 
-    This catches the "no config at all" case where a first-time user runs
-    bristlenose without any API key or provider choice.
-
-    Note: We don't prompt for 'openai' or 'local' — if the user explicitly
-    chose those (via --llm or env var), they know what they want. If it's
-    not ready, preflight will catch it with a specific error.
-    """
-    from bristlenose.config import BristlenoseSettings
-
-    assert isinstance(settings, BristlenoseSettings)
-
-    # Only prompt for the default case: anthropic with no key
-    # If user chose openai or local explicitly, don't second-guess them
-    if settings.llm_provider == "anthropic" and not settings.anthropic_api_key:
-        return True
-    return False
+def _is_tty() -> bool:
+    """True when both stdin and stdout are terminals (safe to print guidance)."""
+    return sys.stdin.isatty() and sys.stdout.isatty()
 
 
 def _print_provider_guidance() -> None:
@@ -572,22 +565,80 @@ def _setup_local_provider() -> str | None:
 
 
 def _maybe_guide_provider_setup(settings: object) -> None:
-    """If the default provider has no key, print setup guidance and exit.
+    """Stop before the run when the provider can't be resolved. Never prompts.
 
-    First-run, no-config case: instead of a numbered menu, show how to run
-    ``bristlenose configure <provider>`` and where to get a key, then exit so the
-    user can set one up. Explicit ``--llm`` / env choices are trusted — preflight
-    catches a missing key for those with its own specific error.
+    ``run``/``analyze`` are non-interactive by contract — the only interactive
+    step anywhere is the key paste inside ``configure``. Reads the resolution
+    recorded by ``load_settings()`` (see ``ProviderResolution``):
+
+    - ``none``      — no choice, no keys: setup guidance (TTY, exit 0) or a
+      terse actionable error (non-TTY, exit 2).
+    - ``ambiguous`` — 2+ providers have keys and none is chosen: name them and
+      the two ways to choose; exit 2. Never resolved by a vendor default.
+    - ``explicit``  — the chosen provider must have its key; if missing, name
+      the exact gap (not "no provider configured") and exit 2.
+    - ``derived`` / ``hosted`` — nothing to do.
     """
-    from bristlenose.config import BristlenoseSettings
+    from bristlenose.config import (
+        _CLOUD_KEY_FIELDS,
+        BristlenoseSettings,
+        get_provider_resolution,
+    )
+    from bristlenose.providers import PROVIDERS, get_provider_aliases
 
     assert isinstance(settings, BristlenoseSettings)
 
-    if not _needs_provider_prompt(settings):
+    res = get_provider_resolution()
+    if res is None or res.status in ("hosted", "derived"):
         return
 
-    _print_provider_guidance()
-    raise typer.Exit(0)
+    if res.status == "none":
+        if _is_tty():
+            _print_provider_guidance()
+            raise typer.Exit(0)
+        _say(MessageKind.ERROR, "No AI provider configured.")
+        console.print(
+            "Run bristlenose configure <claude|chatgpt|gemini|azure|local>, "
+            "or set BRISTLENOSE_LLM_PROVIDER and its key.",
+        )
+        raise typer.Exit(2)
+
+    if res.status == "ambiguous":
+        names = ", ".join(
+            PROVIDERS[p].display_name for p in res.configured if p in PROVIDERS
+        )
+        cli_names = "|".join(
+            _CANONICAL_TO_CLI.get(p, p) for p in res.configured
+        )
+        first = _CANONICAL_TO_CLI.get(res.configured[0], res.configured[0])
+        _say(
+            MessageKind.ERROR,
+            f"{count_noun(len(res.configured), 'AI provider')} are configured "
+            f"({names}) and none is selected.",
+        )
+        console.print(f"  Pick one to stay current:  [bold]bristlenose use {cli_names}[/bold]")
+        console.print(f"  Or just for this run:      [bold]--llm {first}[/bold]")
+        raise typer.Exit(2)
+
+    # status == "explicit": the chosen provider must actually have a key.
+    aliases = get_provider_aliases()
+    canonical = aliases.get(res.provider, res.provider)
+    if canonical == "local":
+        return  # Ollama has no key; its own preflight covers readiness
+    if canonical not in PROVIDERS:
+        _say(MessageKind.ERROR, f"Unknown AI provider: {res.provider}")
+        console.print("Valid choices: claude, chatgpt, gemini, azure, local")
+        raise typer.Exit(2)
+    key_field = _CLOUD_KEY_FIELDS.get(canonical)
+    if key_field and not getattr(settings, key_field):
+        display = PROVIDERS[canonical].display_name
+        cli_name = _CANONICAL_TO_CLI.get(canonical, canonical)
+        _say(
+            MessageKind.ERROR,
+            f"{display} is selected but no {display} key is configured.",
+        )
+        console.print(f"  Run:  [bold]bristlenose configure {cli_name}[/bold]")
+        raise typer.Exit(2)
 
 
 # ---------------------------------------------------------------------------
@@ -891,6 +942,31 @@ def _build_estimator(settings: object) -> tuple[object, object]:
     return estimator, _on_event
 
 
+def _is_leftover_log_only_output(output_dir: Path) -> bool:
+    """True when *output_dir* holds nothing but logs from a run that never started.
+
+    A run that exits before the pipeline begins (failed preflight, api-key
+    abort) leaves only ``<output>/.bristlenose/bristlenose.log`` behind. That
+    detritus must not wall off the user's next attempt with
+    "Output directory already exists".
+    """
+    from bristlenose.logging import _LOG_FILENAME
+    from bristlenose.utils.fs import is_os_metadata
+
+    for entry in output_dir.iterdir():
+        if is_os_metadata(entry):
+            continue
+        if entry.name != ".bristlenose" or not entry.is_dir():
+            return False
+        for state_file in entry.iterdir():
+            if is_os_metadata(state_file):
+                continue
+            # bristlenose.log plus RotatingFileHandler backups (.log.1, …)
+            if not state_file.name.startswith(_LOG_FILENAME):
+                return False
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Pipeline commands (run, transcribe, analyze, render)
 # ---------------------------------------------------------------------------
@@ -1006,21 +1082,27 @@ def run(
     if output_exists and not clean:
         from bristlenose.manifest import load_manifest
 
-        if load_manifest(output_dir) is None:
+        if load_manifest(output_dir) is not None:
+            # Print a one-line resume summary from the manifest (Phase 1e)
+            from bristlenose.status import format_resume_summary, get_project_status
+
+            _status = get_project_status(output_dir)
+            if _status is not None:
+                console.print(f"[dim]{format_resume_summary(_status)}[/dim]")
+            else:
+                console.print("[dim]Resuming from previous run...[/dim]")
+        elif _is_leftover_log_only_output(output_dir):
+            # Only a .bristlenose/ log survives from a run that exited before
+            # the pipeline started (failed preflight, api-key abort). Reuse
+            # the directory silently — demanding --clean here walls off the
+            # user's second attempt.
+            output_exists = False
+        else:
             console.print(
                 f"[red]Output directory already exists: {output_dir}[/red]\n"
                 f"Use [bold]--clean[/bold] to delete it and re-run."
             )
             raise typer.Exit(1)
-
-        # Print a one-line resume summary from the manifest (Phase 1e)
-        from bristlenose.status import format_resume_summary, get_project_status
-
-        _status = get_project_status(output_dir)
-        if _status is not None:
-            console.print(f"[dim]{format_resume_summary(_status)}[/dim]")
-        else:
-            console.print("[dim]Resuming from previous run...[/dim]")
 
     if redact_pii and retain_pii:
         _say(MessageKind.ERROR, "Cannot use both --redact-pii and --retain-pii.")
@@ -1072,6 +1154,12 @@ def run(
     )
     settings = load_settings(**settings_kwargs)
 
+    # First-run: no provider configured → print setup guidance and exit.
+    # Runs BEFORE setup_logging so the gated exit creates nothing on disk —
+    # setup_logging mkdirs <output>/.bristlenose, and that leftover made the
+    # post-configure second run fail with "Output directory already exists".
+    _maybe_guide_provider_setup(settings)
+
     # Configure logging BEFORE preflight so the provider/model resolution ledger
     # and the api-key preflight call (where a provider/model-mismatch 404 fires)
     # land in <output>/.bristlenose/bristlenose.log. Without this, both run
@@ -1081,9 +1169,6 @@ def run(
 
     setup_logging(output_dir=output_dir, verbose=verbose)
     log_resolution_trace()
-
-    # First-run: no provider configured → print setup guidance and exit
-    _maybe_guide_provider_setup(settings)
 
     # Header is the first visible output
     _print_header(settings)
@@ -1938,6 +2023,91 @@ def _print_project_status(
 # ---------------------------------------------------------------------------
 
 
+def _set_current_provider(canonical: str) -> None:
+    """Record ``canonical`` as the current analysis provider (user-level config).
+
+    The CLI mirror of the macOS app's behaviour: the provider stays whatever
+    you last set, until you set another. Written to the user-level config .env
+    (lowest priority — a project ``.env``, ``BRISTLENOSE_LLM_PROVIDER``, or
+    ``--llm`` still overrides per run). Loud by design: switching happens in
+    the same breath as the user's own configure/use action, never silently.
+    """
+    from bristlenose.config import hosted_by_desktop
+    from bristlenose.credentials import read_user_config_var, write_user_config_var
+    from bristlenose.providers import PROVIDERS
+
+    if hosted_by_desktop():  # GUI owns provider choice on the desktop
+        return
+
+    previous = read_user_config_var("BRISTLENOSE_LLM_PROVIDER")
+    write_user_config_var("BRISTLENOSE_LLM_PROVIDER", canonical)
+
+    display = PROVIDERS[canonical].display_name if canonical in PROVIDERS else canonical
+    if previous and previous != canonical and previous in PROVIDERS:
+        was = PROVIDERS[previous].display_name
+        console.print(f"{display} is now your provider for analysis (was {was}).")
+        console.print(
+            f"Switch back any time:  [bold]bristlenose use "
+            f"{_CANONICAL_TO_CLI.get(previous, previous)}[/bold]"
+        )
+    else:
+        console.print(f"{display} is now your provider for analysis.")
+
+    env_override = os.environ.get("BRISTLENOSE_LLM_PROVIDER")
+    if env_override and env_override != canonical:
+        _say(
+            MessageKind.WARNING,
+            f"BRISTLENOSE_LLM_PROVIDER={env_override} is set in your environment "
+            "and overrides this choice — unset it to make this stick.",
+        )
+
+
+@app.command()
+def use(
+    provider: Annotated[
+        str,
+        typer.Argument(
+            help="Provider to use for analysis: claude, chatgpt, gemini, azure, or local."
+        ),
+    ],
+) -> None:
+    """Choose which AI provider runs the analysis.
+
+    Persists the choice in your user-level config — the CLI equivalent of the
+    macOS app keeping the provider you last set. Keys stay stored; switch any
+    time. --llm and BRISTLENOSE_LLM_PROVIDER still override per run.
+    """
+    from bristlenose.config import _CLOUD_KEY_FIELDS
+    from bristlenose.providers import PROVIDERS, get_provider_aliases
+
+    aliases = get_provider_aliases()
+    name = provider.lower()
+    canonical = aliases.get(name, name)
+    if canonical not in PROVIDERS:
+        _say(MessageKind.ERROR, f"Unknown provider: {provider}")
+        console.print("Available: claude, chatgpt, gemini, azure, local")
+        raise typer.Exit(1)
+
+    if canonical == "local":
+        _set_current_provider("local")
+        console.print(
+            "If Ollama isn't set up yet:  [bold]bristlenose configure local[/bold]"
+        )
+        return
+
+    settings = load_settings()
+    display = PROVIDERS[canonical].display_name
+    if not getattr(settings, _CLOUD_KEY_FIELDS[canonical]):
+        _say(MessageKind.ERROR, f"No {display} key is configured.")
+        console.print(
+            f"  Run:  [bold]bristlenose configure "
+            f"{_CANONICAL_TO_CLI.get(canonical, canonical)}[/bold]"
+        )
+        raise typer.Exit(1)
+
+    _set_current_provider(canonical)
+
+
 @app.command()
 def configure(
     provider: Annotated[
@@ -1995,7 +2165,8 @@ def configure(
     if canonical == "local":
         if _setup_local_provider() is None:
             raise typer.Exit(1)
-        console.print("Run it with:  [bold]bristlenose run <folder> --llm local[/bold]")
+        _set_current_provider("local")
+        console.print("Run it with:  [bold]bristlenose run <folder>[/bold]")
         return
 
     display_names = {
@@ -2111,6 +2282,7 @@ def configure(
             "(future idea) — not yet available.[/dim]"
         )
     else:
+        _set_current_provider(canonical)
         console.print("You can now run: [bold]bristlenose run interviews[/bold]")
 
 
@@ -2299,6 +2471,14 @@ def _help_commands() -> None:
     console.print("  -p, --project NAME       Project name")
     console.print("  -v, --verbose           Verbose logging")
     console.print()
+    console.print("[bold]bristlenose configure[/bold] <provider>")
+    console.print("  Store an API key securely and make that provider current.")
+    console.print("  claude | chatgpt | gemini | azure | local | miro")
+    console.print()
+    console.print("[bold]bristlenose use[/bold] <provider>")
+    console.print("  Switch the current analysis provider. Keys stay stored.")
+    console.print("  claude | chatgpt | gemini | azure | local")
+    console.print()
     console.print("[bold]bristlenose doctor[/bold]")
     console.print("  Check dependencies, API keys, and system configuration.")
     console.print("  Runs automatically on first use; re-run anytime to diagnose issues.")
@@ -2324,7 +2504,7 @@ def _help_config() -> None:
     console.print()
     console.print("  [bold]LLM[/bold]")
     console.print("  BRISTLENOSE_LLM_PROVIDER         claude | chatgpt | azure | gemini | local")
-    console.print("  BRISTLENOSE_LLM_MODEL            Model name (default: claude-sonnet-4-20250514)")
+    console.print("  BRISTLENOSE_LLM_MODEL            Model name (default: the provider's recommended model)")
     console.print("  BRISTLENOSE_LLM_MAX_TOKENS       Max response tokens (default: 8192)")
     console.print("  BRISTLENOSE_LLM_TEMPERATURE      Temperature (default: 0.1)")
     console.print("  BRISTLENOSE_LLM_CONCURRENCY      Parallel LLM calls (default: 3)")

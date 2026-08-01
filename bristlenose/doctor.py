@@ -1391,7 +1391,17 @@ def _validate_google_key(key: str) -> tuple[bool | None, str]:
             return (False, "401 Unauthorized")
         if exc.code == 403:
             return (False, "403 Forbidden")
-        if exc.code in (400, 429, 500, 503):
+        if exc.code == 400:
+            # Google rejects a bad key with 400 INVALID_ARGUMENT (reason
+            # API_KEY_INVALID), NOT 401 — a garbage key must not validate.
+            try:
+                body = exc.read().decode("utf-8", "replace")
+            except Exception:
+                body = ""
+            if "API_KEY_INVALID" in body or "API key not valid" in body:
+                return (False, "invalid API key")
+            return (None, "HTTP 400")
+        if exc.code in (429, 500, 503):
             return (True, "")
         return (None, f"HTTP {exc.code}")
     except urllib.error.URLError as exc:

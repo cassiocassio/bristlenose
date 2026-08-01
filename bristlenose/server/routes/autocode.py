@@ -210,6 +210,23 @@ async def start_autocode_job(
         # Load settings and check provider
         settings = load_settings()
 
+        # A server can't prompt: if 2+ providers have keys and none was ever
+        # chosen (no --llm/env/current-provider), refuse rather than letting
+        # the field default silently pick a vendor. Recomputed statelessly —
+        # the module-global from load_settings() may belong to another context.
+        from bristlenose.config import provider_resolution_for
+
+        resolution = provider_resolution_for(settings)
+        if resolution.status == "ambiguous":
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Multiple AI providers are configured and none is "
+                    "selected. Pick one: bristlenose use <provider> (or set "
+                    "BRISTLENOSE_LLM_PROVIDER), then retry."
+                ),
+            )
+
         if settings.llm_provider == "local":
             raise HTTPException(
                 status_code=503,

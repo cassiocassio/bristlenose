@@ -236,6 +236,25 @@ temporary opt-out slated for removal.
 Note this is a per-item, non-persisted allowance — nothing is written to
 `trust.json` by a qualified install. Only an explicit `brew trust` persists.
 
+Two knock-on rules fell out of auditing the rest of our brew surface:
+
+- **Never print a short-name brew command for our own formula.** A short name
+  that resolves to an untrusted tap is refused outright, so
+  `brew upgrade bristlenose` fails for precisely the users we'd be telling to
+  run it. Use the qualified form everywhere (`doctor_fixes.py`, pinned by
+  `test_serve_deps_missing_brew`).
+- **Programmatic `brew install` needs `HOMEBREW_NO_ASK=1`.** 6.0's ask mode
+  prompts whenever the plan pulls in dependencies. Both our shellouts —
+  `preflight/ffmpeg.py` (ffmpeg's plan is large) and `ollama.py` (pulls
+  `mlx-c`) — already got the user's consent via our own `Confirm` prompt and
+  run with a TTY attached, so without the env var the user confirms one
+  decision twice.
+
+CI is unaffected and needs no change: `brew install ffmpeg` is a core-tap
+formula (always trusted), the tap install in `install-test.yml` is
+fully-qualified, ask mode is skipped without a TTY, and we don't run
+`brew test-bot` — the workflow that broke most tap maintainers on 6.0.
+
 ### No `brew linkage` verification
 
 Homebrew's `brew linkage` command can't verify dynamic linkage of files installed

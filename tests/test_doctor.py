@@ -1495,7 +1495,11 @@ class TestGetFixGrid:
 
     def test_serve_deps_missing_brew(self) -> None:
         fix = get_fix("serve_deps_missing", "brew")
-        assert "brew upgrade bristlenose" in fix
+        # Must be the fully-qualified name: since Homebrew 6.0 a short name
+        # resolving to an untrusted tap is refused outright, which would fail
+        # for exactly the users reading this message.
+        assert "brew upgrade cassiocassio/bristlenose/bristlenose" in fix
+        assert "brew upgrade bristlenose" not in fix
         assert "'bristlenose[serve]'" not in fix  # brew users don't pip
 
     def test_serve_deps_missing_pip(self) -> None:

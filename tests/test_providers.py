@@ -260,6 +260,9 @@ class TestOllamaHelpers:
             assert install_ollama("brew") is True
             mock_run.assert_called_once()
             assert mock_run.call_args[0][0] == ["brew", "install", "ollama"]
+            # cli.py already asked "Install Ollama now?" — Homebrew 6.0's ask
+            # mode must not prompt for the same decision a second time.
+            assert mock_run.call_args[1]["env"]["HOMEBREW_NO_ASK"] == "1"
 
     def test_install_ollama_snap(self) -> None:
         from bristlenose.ollama import install_ollama

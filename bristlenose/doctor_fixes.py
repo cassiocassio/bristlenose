@@ -404,9 +404,14 @@ def _fix_serve_deps_missing(method: str) -> str:
             "If it persists: github.com/cassiocassio/bristlenose/issues"
         )
     if method == "brew":
+        # Fully-qualified, not the `bristlenose` short name: since Homebrew 6.0
+        # a short name that resolves to an untrusted tap is refused outright
+        # ("Refusing to load formula ... from untrusted tap"), which would fail
+        # for precisely the users who need this message. The qualified form is
+        # allowed by the ARGV rule whether or not the tap is trusted.
         return (
             "`bristlenose serve` needs extras that weren't installed.\n\n"
-            "  brew upgrade bristlenose"
+            "  brew upgrade cassiocassio/bristlenose/bristlenose"
         )
     # pip / pipx / uv. Pipx venvs have "pipx" in sys.prefix; suggest the
     # right command for re-installing in place.

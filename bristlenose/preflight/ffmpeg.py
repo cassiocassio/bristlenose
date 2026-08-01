@@ -162,7 +162,16 @@ def _run_brew_install(
         status.stop()
     t0 = time.perf_counter()
     try:
-        subprocess.run(["brew", "install", "ffmpeg"], check=True)
+        # _confirm_brew_install already got the user's yes. Homebrew 6.0's ask
+        # mode would prompt a second time (it prompts whenever the plan pulls
+        # in dependencies, and ffmpeg's pulls in many), so the user would
+        # confirm twice for one decision. HOMEBREW_NO_ASK restores the pre-6.0
+        # single-confirmation flow. No-op on Homebrew < 6.0.
+        subprocess.run(
+            ["brew", "install", "ffmpeg"],
+            check=True,
+            env={**os.environ, "HOMEBREW_NO_ASK": "1"},
+        )
     finally:
         if status is not None:
             status.start()

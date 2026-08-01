@@ -7,6 +7,7 @@ and pull models on demand.
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -277,10 +278,15 @@ def install_ollama(method: str | None = None) -> bool:
 
     try:
         if method == "brew":
+            # cli.py already asked "Install Ollama now?" — suppress Homebrew
+            # 6.0's ask mode so the user isn't asked to confirm the same
+            # decision twice (ollama's plan pulls in mlx-c, which is enough to
+            # trigger the prompt). No-op on Homebrew < 6.0.
             result = subprocess.run(
                 ["brew", "install", "ollama"],
                 stdout=sys.stdout,
                 stderr=sys.stderr,
+                env={**os.environ, "HOMEBREW_NO_ASK": "1"},
             )
             return result.returncode == 0
 

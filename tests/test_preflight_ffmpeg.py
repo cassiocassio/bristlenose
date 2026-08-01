@@ -138,7 +138,13 @@ class TestPreflightFfmpeg:
                                 status=None,
                                 allow_install=True,
                             )
-        run.assert_called_once_with(["brew", "install", "ffmpeg"], check=True)
+        # Assert on the parts we care about rather than the whole env dict,
+        # which carries the caller's entire environment.
+        run.assert_called_once()
+        assert run.call_args[0][0] == ["brew", "install", "ffmpeg"]
+        assert run.call_args[1]["check"] is True
+        # We already asked; Homebrew 6.0 must not ask a second time.
+        assert run.call_args[1]["env"]["HOMEBREW_NO_ASK"] == "1"
         out = capsys.readouterr().out
         assert "ffmpeg installed" in out
 

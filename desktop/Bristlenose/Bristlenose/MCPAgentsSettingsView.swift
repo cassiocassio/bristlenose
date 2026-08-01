@@ -147,9 +147,6 @@ struct MCPAgentsSettingsView: View {
                 NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
             }
 
-            installRow
-                .padding(.top, 14)
-
             Picker("", selection: $client) {
                 ForEach(AgentClient.allCases) { Text($0.label(i18n)).tag($0) }
             }
@@ -257,10 +254,16 @@ struct MCPAgentsSettingsView: View {
     private var payloadPane: some View {
         VStack(alignment: .leading, spacing: 6) {
             if client == .claudeDesktop {
+                // The install row IS this tab's payload — the .mcpb is
+                // Claude Desktop-only, so it belongs under that tab, in
+                // the slot where every other tab shows its dialect. Hint
+                // then row, mirroring the other tabs' hint-then-payload
+                // (and the mockup's Claude Desktop pane).
                 Text(i18n.t("desktop.mcpAgents.claudeDesktopHint"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                installRow
             } else if endpoint == nil {
                 Text(i18n.t("desktop.connectAgent.notRunning"))
                     .font(.callout)

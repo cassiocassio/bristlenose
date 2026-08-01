@@ -233,22 +233,19 @@ async function callUpstream(hs, msg) {
 }
 
 // --- Self-heal notification -------------------------------------------------
-// Launching Bristlenose mid-session must recover without restarting the
-// client: a light watcher (handshake stat; health probe only when a file
-// exists) fires notifications/tools/list_changed on the offline→ready edge,
-// prompting the client to re-enable the tools. Emitted only after the
-// client has initialized; clients that don't care ignore it.
+// notifications/tools/list_changed fires on the offline→ready edge so a
+// client that cached a dead state refreshes. CRUCIALLY there is NO
+// background watcher any more: the handshake lives in a TCC-protected
+// container, macOS prompts PER ACCESS when the grant fails to persist
+// (measured 1 Aug 2026 — Claude's built-in Node has no stable identity
+// for TCC to key a durable grant to, so Allow lands for one read and the
+// next one re-prompts), and any timer therefore becomes a dialog storm
+// no matter how it backs off on errors. Reads happen ONLY inside tool
+// calls — researcher-initiated, one prompt per question at worst — and
+// the edge detection rides those same reads for free.
 let clientInitialized = false;
 let lastReady = null;
-async function watchServer() {
-  // While TCC is denied or unanswered, every read spawns ANOTHER macOS
-  // dialog — a 5s watcher becomes a dialog storm (the 1 Aug 2026 QA
-  // walk saw ~a hundred in two minutes). Park the watcher; explicit tool
-  // calls remain the retry path (researcher-initiated, one prompt at
-  // most), and their first success un-parks us via readHandshake.
-  if (tccBlocked) { lastReady = false; return; }
-  const s = await state();
-  const ready = s.kind === "ready";
+function noteReady(ready) {
   if (clientInitialized && lastReady === false && ready) {
     process.stdout.write(JSON.stringify(
       { jsonrpc: "2.0", method: "notifications/tools/list_changed" }
@@ -257,8 +254,6 @@ async function watchServer() {
   }
   lastReady = ready;
 }
-const watcher = setInterval(watchServer, 5000);
-watcher.unref?.();
 
 async function handle(msg) {
   // Answer initialize IMMEDIATELY — 60s client deadline, servers start in
@@ -281,6 +276,7 @@ async function handle(msg) {
   if (msg.method === "tools/list") return { tools: TOOLS };
   if (msg.method === "tools/call") {
     const s = await state();
+    noteReady(s.kind === "ready");
     if (s.kind === "no-permission") return text(MSG.permission);
     if (s.kind === "starting") return text(MSG.starting);
     if (s.kind === "no-mcp") return text(MSG.noAgentSupport);

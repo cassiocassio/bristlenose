@@ -1526,17 +1526,30 @@ reader is Claude Desktop's Node process, macOS DOES attribute the container
 read to "Claude" and fires the SystemPolicyAppData prompt (*"Claude" would
 like to access data from other apps*). The shell evidence did not transfer:
 responsible-process attribution is exactly what changes the answer. One
-prompt is the §6.1 "concern inverts into a selling point" case — sticky
-after Allow, silent forever after. The real hazard was emergent: the
-proxy's 5-second self-heal watcher turned the unanswered prompt into a
-**dialog storm** (~a hundred in two minutes), because every fresh read
-attempt spawns another dialog. Fixed in the proxy the same hour: a
-permission failure (EPERM/EACCES) parks the watcher entirely, tool calls
-remain the only retry path (researcher-initiated, one prompt at most, with
-a dedicated "click Allow" tool-result sentence), and the first successful
-read un-parks. Follow-up owed: the pane's Claude Desktop hint should
-pre-announce the prompt (§6.1's advice) — copy + 20 locales, batched with
-the next string pass.
+prompt would have been the §6.1 "concern inverts into a selling point"
+case. It is worse than that: **the grant does not persist.** Allow lands
+for the single read that prompted it and the next read re-prompts —
+Claude Desktop's built-in Node gives TCC no stable code identity to key a
+durable grant to (confirmed by isolation: disabling the extension stops
+the dialogs instantly; the fixed park-on-denial proxy was installed and
+not crash-looping, so per-access granting is the only mechanism left).
+Consequence, learned across two fixes the same night: **no background
+reader can exist at all.** Park-on-denial was insufficient — each read
+*succeeds*, so error-based backoff never engages. The proxy's 5-second
+self-heal watcher (a dialog every tick, ~a hundred in two minutes on the
+QA machine) is deleted outright; handshake reads happen ONLY inside tool
+calls — researcher-initiated, one prompt per question at worst, with a
+dedicated "click Allow" sentence for the denied state — and the
+`tools/list_changed` offline→ready edge rides those same reads for free.
+
+**This promotes §6.1's fallback from contingency to open question:** if
+one macOS prompt per question proves unacceptable in use, the handshake
+must leave the container (the recorded options: a temporary-exception
+path in the user's own Application Support — App Store review risk; or
+the project-folder variants §3.6 weighed, with their Dropbox-sync
+hazard). Decide on real usage, not in the abstract. Follow-up owed
+either way: the pane's Claude Desktop hint should pre-announce the
+prompt — copy + 20 locales, batched with the next string pass.
 
 **Risk §6.1 dissolves**, and with it the §3.6 dilemma: the handshake stays in
 the container, so **no token is ever written into a project folder** and the

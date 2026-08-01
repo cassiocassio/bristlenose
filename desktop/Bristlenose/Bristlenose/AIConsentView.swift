@@ -52,8 +52,14 @@ struct AIConsentView: View {
             header
             introText
             sentToCloudBox
-            agentAccessText
             staysLocalBox
+            // AFTER the stays-local box, deliberately: it is the exception to
+            // BOTH boxes, and an exception has to follow the claim it
+            // qualifies. Above the box it read as a footnote to the cloud
+            // list, leaving "Always stays on your device → participant
+            // names" standing unqualified six lines below its own
+            // contradiction.
+            agentAccessText
             providersRow
             responsibilityText
 

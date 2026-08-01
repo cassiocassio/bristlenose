@@ -708,7 +708,7 @@ function renderLLM(){
 
   host.innerHTML=`<div class="stats">${stats}</div>
     <div class="grid g-2"><div class="card"><h2>Latency × tokens <span class="sub">y=latency · ◯=retried · colour=stage</span></h2>${lp}</div>
-      <div class="card"><h2>Cache hit ratio</h2>${cacheDonut}<p style="color:var(--muted);font-size:11px;margin:12px 0 0">Cached input is billed ~10× cheaper — the biggest re-run cost lever.</p></div></div>
+      <div class="card"><h2>Cache hit ratio</h2>${cacheDonut}<p style="color:var(--muted);font-size:11px;margin:12px 0 0">Cached input is billed at a discount — the biggest re-run cost lever.</p></div></div>
     <div class="card" style="margin-top:14px"><h2>Cost by stage</h2>${bars}</div>
     <div class="card" style="margin-top:14px"><h2>Calls <span class="sub">llm-calls.jsonl · ${calls.length} rows</span></h2><div style="overflow:auto"><table><thead><tr><th>time</th><th>stage</th><th>model</th><th class="num">in</th><th class="num">out</th><th class="num">cache</th><th class="num">latency</th><th>retry</th><th>finish</th><th class="num">cost</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }

@@ -1,6 +1,6 @@
 {
-  "_doc": "Cross-language schema contract between Python (bristlenose/events.py) and Swift (desktop/Bristlenose/Bristlenose/PipelineSummary.swift). Both sides round-trip these scenarios in tests. If you change this file, both sides' tests must continue to pass. Established 7 May 2026 for branches pipeline-summary-events (Python) and pipeline-diagnostic-pill (Swift). Schema version 2: added duration_ms on StageOutcome. Schema version 3: added run_completed_partial_truncated scenario locking STAGE_FAILED_MAX=10 overflow marker shape. Schema version 4: realigned session_id values to ordinal format (s1, s2, ...) matching what bristlenose actually emits at runtime — earlier versions used illustrative descriptive ids that didn't reflect production shape. Schema version 5: added topics bucket to PipelineSummary (between transcripts and quotes) to carry s08 topic-segmentation StageOutcome. Schema-additive — Swift readers that don't yet decode the field still parse fine. Added run_failed_abandoned_at_topics scenario locking the topics-populated shape for the A4-stage-cache-honesty cohort.",
-  "version": 5,
+  "_doc": "Cross-language schema contract between Python (bristlenose/events.py) and Swift (desktop/Bristlenose/Bristlenose/PipelineSummary.swift). Both sides round-trip these scenarios in tests. If you change this file, both sides' tests must continue to pass. Established 7 May 2026 for branches pipeline-summary-events (Python) and pipeline-diagnostic-pill (Swift). Schema version 2: added duration_ms on StageOutcome. Schema version 3: added run_completed_partial_truncated scenario locking STAGE_FAILED_MAX=10 overflow marker shape. Schema version 4: realigned session_id values to ordinal format (s1, s2, ...) matching what bristlenose actually emits at runtime — earlier versions used illustrative descriptive ids that didn't reflect production shape. Schema version 5: added topics bucket to PipelineSummary (between transcripts and quotes) to carry s08 topic-segmentation StageOutcome. Schema-additive — Swift readers that don't yet decode the field still parse fine. Added run_failed_abandoned_at_topics scenario locking the topics-populated shape for the A4-stage-cache-honesty cohort. Schema version 6: added optional source_file on StageFailure (basename of the input file a failure is about — session_id cannot identify a file that failed before a session existed) and the cloud_fetch cause category (a placeholder that never materialised, which must never be reported as a damaged file). Scenario run_completed_partial_cloud_fetch locks both. Schema version 6 also adds run_completed_cached_stage, which locks duration_ms: null for a stage that was present but didn't run. Every prior scenario carried a real duration, so the Swift side's non-optional Int decoded fine in tests while failing on real cached runs — the fixture flattered the code.",
+  "version": 6,
   "scenarios": {
     "run_completed_partial": {
       "_doc": "Partial run: 3 of 5 transcripts succeeded; pipeline continued and produced a (low-value, dev-feedback) report. Diagnostic pill state .completedPartial on Swift side.",
@@ -250,21 +250,174 @@
           "succeeded": 4,
           "duration_ms": 1842000,
           "failed": [
-            {"session_id": "s1", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s1", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s2", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s2", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s3", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s3", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s4", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s4", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s5", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s5", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s6", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s6", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s7", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s7", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s8", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s8", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s9", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s9", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": "s10", "cause": {"category": "whisper", "code": null, "message": "Whisper transcription timed out", "provider": null, "stage": "s05_transcribe", "session_id": "s10", "exit_code": null, "signal": null, "signal_name": null}},
-            {"session_id": null,  "cause": {"category": "unknown", "code": null, "message": "... and 4 more failures truncated", "provider": null, "stage": null, "session_id": null, "exit_code": null, "signal": null, "signal_name": null}}
+            {
+              "session_id": "s1",
+              "cause": {
+                "category": "whisper",
+                "code": null,
+                "message": "Whisper transcription timed out",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s1",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s2",
+              "cause": {
+                "category": "whisper",
+                "code": null,
+                "message": "Whisper transcription timed out",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s2",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s3",
+              "cause": {
+                "category": "whisper",
+                "code": null,
+                "message": "Whisper transcription timed out",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s3",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s4",
+              "cause": {
+                "category": "whisper",
+                "code": null,
+                "message": "Whisper transcription timed out",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s4",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s5",
+              "cause": {
+                "category": "whisper",
+                "code": null,
+                "message": "Whisper transcription timed out",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s5",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s6",
+              "cause": {
+                "category": "whisper",
+                "code": null,
+                "message": "Whisper transcription timed out",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s6",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s7",
+              "cause": {
+                "category": "whisper",
+                "code": null,
+                "message": "Whisper transcription timed out",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s7",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s8",
+              "cause": {
+                "category": "whisper",
+                "code": null,
+                "message": "Whisper transcription timed out",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s8",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s9",
+              "cause": {
+                "category": "whisper",
+                "code": null,
+                "message": "Whisper transcription timed out",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s9",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s10",
+              "cause": {
+                "category": "whisper",
+                "code": null,
+                "message": "Whisper transcription timed out",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s10",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": null,
+              "cause": {
+                "category": "unknown",
+                "code": null,
+                "message": "... and 4 more failures truncated",
+                "provider": null,
+                "stage": null,
+                "session_id": null,
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            }
           ]
         },
-        "topics": {"attempted": 4, "succeeded": 4, "duration_ms": 54000, "failed": []},
-        "quotes": {"attempted": 4, "succeeded": 4, "duration_ms": 96000, "failed": []},
+        "topics": {
+          "attempted": 4,
+          "succeeded": 4,
+          "duration_ms": 54000,
+          "failed": []
+        },
+        "quotes": {
+          "attempted": 4,
+          "succeeded": 4,
+          "duration_ms": 96000,
+          "failed": []
+        },
         "themes": null
       }
     },
@@ -284,10 +437,115 @@
       "cost_usd_estimate": 0.14,
       "price_table_version": "2026-04-01",
       "summary": {
-        "transcripts": {"attempted": 3, "succeeded": 3, "duration_ms": 412000, "failed": []},
-        "topics":      {"attempted": 3, "succeeded": 3, "duration_ms": 41000,  "failed": []},
-        "quotes":      {"attempted": 3, "succeeded": 3, "duration_ms": 82000,  "failed": []},
-        "themes":      {"attempted": 1, "succeeded": 1, "duration_ms": 14000,  "failed": []}
+        "transcripts": {
+          "attempted": 3,
+          "succeeded": 3,
+          "duration_ms": 412000,
+          "failed": []
+        },
+        "topics": {
+          "attempted": 3,
+          "succeeded": 3,
+          "duration_ms": 41000,
+          "failed": []
+        },
+        "quotes": {
+          "attempted": 3,
+          "succeeded": 3,
+          "duration_ms": 82000,
+          "failed": []
+        },
+        "themes": {
+          "attempted": 1,
+          "succeeded": 1,
+          "duration_ms": 14000,
+          "failed": []
+        }
+      }
+    },
+    "run_completed_partial_cloud_fetch": {
+      "_doc": "Partial run on a cloud project: 3 of 4 interviews analysed; one never materialised (cloud_fetch) and one was resident but unreadable. Locks (a) the cloud_fetch category, (b) source_file on a failure with NO session_id — the pre-session case that motivated the field, and (c) source_file alongside a session_id. Swift renders .completedPartial and subtracts these basenames from the +N unanalysed drift.",
+      "schema_version": 1,
+      "ts": "2026-07-29T11:30:00Z",
+      "event": "run_completed",
+      "run_id": "01HXYZ0000000000000CLOUDF",
+      "kind": "run",
+      "started_at": "2026-07-29T11:00:00Z",
+      "ended_at": "2026-07-29T11:30:00Z",
+      "outcome": "completed",
+      "cause": null,
+      "input_tokens": 9800,
+      "output_tokens": 3100,
+      "cost_usd_estimate": 0.14,
+      "price_table_version": "2026-04-01",
+      "summary": {
+        "transcripts": {
+          "attempted": 4,
+          "succeeded": 3,
+          "duration_ms": 540000,
+          "failed": [
+            {
+              "session_id": null,
+              "source_file": "Screen Recording 2026-01-27 at 23.37.37.mov",
+              "cause": {
+                "category": "cloud_fetch",
+                "code": null,
+                "message": "File is stored online only and did not download within 1800s (Dropbox)",
+                "provider": null,
+                "stage": "s01_ingest",
+                "session_id": null,
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s4",
+              "source_file": "interview-04.m4a",
+              "cause": {
+                "category": "missing_input",
+                "code": null,
+                "message": "No audio stream found; the file may be damaged",
+                "provider": null,
+                "stage": "s01_ingest",
+                "session_id": "s4",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            }
+          ]
+        }
+      }
+    },
+    "run_completed_cached_stage": {
+      "_doc": "Clean re-run where transcripts were entirely cache hits: the stage is present in the summary but never executed, so duration_ms is null (distinct from 0, which would mean 'ran instantly'). Locks the null against a non-optional decode on either side.",
+      "schema_version": 1,
+      "ts": "2026-07-29T12:10:00Z",
+      "event": "run_completed",
+      "run_id": "01HXYZ00000000000000CACHE",
+      "kind": "run",
+      "started_at": "2026-07-29T12:09:00Z",
+      "ended_at": "2026-07-29T12:10:00Z",
+      "outcome": "completed",
+      "cause": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd_estimate": 0.0,
+      "price_table_version": "2026-04-01",
+      "summary": {
+        "transcripts": {
+          "attempted": 3,
+          "succeeded": 3,
+          "duration_ms": null,
+          "failed": []
+        },
+        "topics": {
+          "attempted": 3,
+          "succeeded": 3,
+          "duration_ms": 38000,
+          "failed": []
+        }
       }
     }
   }

@@ -341,6 +341,26 @@
     list-style: none;
 }
 
+/* Scope-picker group: a muted category label above three indented scope rows
+   (All / Selected / Starred). Mirrors the native Quotes menu taxonomy. */
+.export-dropdown-group-label {
+    padding: 0.35rem 0.85rem 0.1rem;
+    font-size: var(--bn-text-caption);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    list-style: none;
+}
+
+.export-dropdown-scope {
+    padding-left: 1.5rem;
+}
+
+.export-dropdown-item.is-disabled {
+    color: var(--bn-colour-muted);
+    cursor: default;
+    pointer-events: none;
+}
+
 .export-dropdown-separator {
     height: 0;
     margin: 0.25rem 0;

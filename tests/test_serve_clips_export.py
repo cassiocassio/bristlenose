@@ -72,6 +72,65 @@ class TestStartClipExtraction:
         resp = raw_client.post("/api/projects/1/export/clips")
         assert resp.status_code == 401
 
+    def test_ids_scope_skips_featured_union(self, client: TestClient) -> None:
+        """When the scope picker hands over ids, the hero/union path is skipped."""
+        with patch(
+            "bristlenose.server.routes.clips_export.FFmpegBackend.check_available",
+            return_value=(True, ""),
+        ), patch(
+            "bristlenose.server.routes.clips_export.pick_featured_quotes",
+        ) as mock_featured:
+            resp = client.post(
+                "/api/projects/1/export/clips", json={"ids": ["q-p1-10"]}
+            )
+            assert resp.status_code == 200
+            # Exactly-these-quotes selection must not fall back to featured heroes.
+            mock_featured.assert_not_called()
+
+    def test_no_ids_uses_featured_union(self, client: TestClient) -> None:
+        """With no ids (legacy no-scope caller), the featured union still runs."""
+        with patch(
+            "bristlenose.server.routes.clips_export.FFmpegBackend.check_available",
+            return_value=(True, ""),
+        ), patch(
+            "bristlenose.server.routes.clips_export.pick_featured_quotes",
+            return_value=[],
+        ) as mock_featured:
+            resp = client.post("/api/projects/1/export/clips")
+            assert resp.status_code == 200
+            mock_featured.assert_called_once()
+
+
+class TestCancelClipExtraction:
+    def test_no_job_returns_404(self, client: TestClient) -> None:
+        resp = client.post("/api/projects/1/export/clips/cancel")
+        assert resp.status_code == 404
+
+    def test_completed_job_returns_404(self, client: TestClient) -> None:
+        """A finished job can't be cancelled."""
+        clips_export._jobs[1] = {"status": "completed", "output_dir": "/tmp/clips"}
+        resp = client.post("/api/projects/1/export/clips/cancel")
+        assert resp.status_code == 404
+
+    def test_running_job_is_cancelled(self, client: TestClient) -> None:
+        """Cancelling a running job flips its status; the loop reads that flag."""
+        clips_export._jobs[1] = {"status": "running", "progress": 2, "total": 10}
+        resp = client.post("/api/projects/1/export/clips/cancel")
+        assert resp.status_code == 200
+        assert resp.json() == {"cancelled": True}
+        assert clips_export._jobs[1]["status"] == "cancelled"
+
+        # Status endpoint surfaces the cancelled terminal state.
+        status = client.get("/api/projects/1/export/clips/status")
+        assert status.json()["status"] == "cancelled"
+
+    def test_requires_auth(self) -> None:
+        clips_export._jobs.clear()
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        raw_client = TestClient(app)
+        resp = raw_client.post("/api/projects/1/export/clips/cancel")
+        assert resp.status_code == 401
+
 
 class TestClipStatus:
     def test_no_job_returns_idle(self, client: TestClient) -> None:

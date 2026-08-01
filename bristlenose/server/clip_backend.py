@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from bristlenose.utils.bundled_binary import bundled_binary_path
+from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,18 @@ class FFmpegBackend:
         Stream-copy (``-c copy``) preserves codec without re-encoding.
         """
         output.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            # Fetch first if the source is a cloud placeholder. This is the most
+            # likely site of the three to hit it in real use: cutting clips is
+            # the "go back to an old study" operation, which is exactly when a
+            # provider has evicted the sources. Without this the download runs
+            # inside the 120s budget below and the researcher is told the clip
+            # failed, with no hint that waiting would have fixed it.
+            ensure_materialised(source)
+        except CloudFetchTimeoutError as exc:
+            logger.warning("Clip extraction skipped for %s: %s", source.name, exc)
+            return None
 
         ffmpeg = bundled_binary_path("ffmpeg") or "ffmpeg"
         try:

@@ -106,6 +106,7 @@ class CauseCategoryEnum(str, Enum):
     MISSING_BINARY = "missing_binary"
     DISK = "disk"
     OUTPUT_TRUNCATED = "output_truncated"
+    CLOUD_FETCH = "cloud_fetch"  # cloud placeholder never materialised; NOT a damaged file
     UNKNOWN = "unknown"
 
 
@@ -183,9 +184,27 @@ class StageFailure(BaseModel):
     ``session_id`` is None for stage-wide failures that aren't session-scoped
     (e.g. a single LLM call across all quotes in s11). The Cause carries the
     same shape used at run-level so the desktop can reuse its rendering.
+
+    ``source_file`` is the **basename** of the input file this failure is about,
+    when there is one. Added Jul 2026 because ``session_id`` alone cannot
+    identify the file for failures that happen *before* a session exists — an
+    unreadable or never-materialised recording fails at probe/ingest, so it never
+    gets a session id at all, and every downstream surface was left unable to
+    name it. Three consumers depend on it:
+
+    1. the desktop sidebar row, which must keep a failed file out of the
+       "+N unanalysed" drift count (that count is keyed on basename, so without
+       this the same file is reported twice — once as waiting, once as failed);
+    2. the report dashboard, which lists per-file failure reasons;
+    3. the desktop failure pane, which names the file.
+
+    Basename only, never a full path: it is matched against basenames on the
+    Swift side, and a full path would leak directory structure into a diagnostic
+    the user can copy out.
     """
 
     session_id: str | None = None
+    source_file: str | None = None
     cause: Cause
 
 

@@ -139,7 +139,7 @@ def test_cause_category_matches_swift_enum():
     expected = {
         "user_signal", "auth", "out_of_credit", "quota", "api_request",
         "api_server", "network", "whisper", "missing_dep", "missing_input",
-        "missing_binary", "disk", "output_truncated", "unknown",
+        "missing_binary", "disk", "output_truncated", "cloud_fetch", "unknown",
     }
     actual = {c.value for c in CauseCategoryEnum}
     assert actual == expected
@@ -788,8 +788,8 @@ def _load_contract() -> dict:
 def test_contract_fixture_present_and_versioned():
     """The fixture exists and declares its schema version. Lock-step bump."""
     contract = _load_contract()
-    assert contract["version"] == 5, (
-        "Contract schema version drifted. If the fixture moved to v6, audit "
+    assert contract["version"] == 6, (
+        "Contract schema version drifted. If the fixture moved to v7, audit "
         "every consumer (Python events.py, Swift PipelineSummary.swift) and "
         "update tests on both sides."
     )
@@ -797,6 +797,8 @@ def test_contract_fixture_present_and_versioned():
 
 @pytest.mark.parametrize("scenario_name", [
     "run_completed_partial",
+    "run_completed_partial_cloud_fetch",
+    "run_completed_cached_stage",
     "run_failed_abandoned",
     "run_failed_abandoned_at_topics",
     "run_completed_partial_truncated",

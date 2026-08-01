@@ -247,8 +247,13 @@ async def _run_clip_extraction(
     manifest_path = clips_dir / "clips_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=True))
 
-    job["status"] = "completed"
-    job["progress"] = len(clips)
+    # A cancelled job broke out of the loop early — record that, don't overwrite
+    # it with "completed". Clips written before the break stay on disk (a partial
+    # folder is honest and usable), so output_dir is set either way.
+    cancelled = _jobs.get(project_id, {}).get("status") == "cancelled"
+    job["status"] = "cancelled" if cancelled else "completed"
+    if not cancelled:
+        job["progress"] = len(clips)
     job["output_dir"] = str(clips_dir)
     job["current_clip"] = ""
 
@@ -260,6 +265,12 @@ async def _run_clip_extraction(
 
 class ClipStartRequest(BaseModel):
     anonymise: bool = False
+    # DOM-style quote ids (q-{participant}-{int(start)}) to clip. When present,
+    # exactly these quotes are cut — this is the scope picker (Selected/Starred/
+    # All) handing over its chosen set. When None (legacy no-scope caller, e.g.
+    # the native menu until its submenu lands), fall back to the historical
+    # starred ∪ featured union below.
+    ids: list[str] | None = None
 
 
 class ClipStartResponse(BaseModel):
@@ -289,7 +300,11 @@ async def start_clip_extraction(
     project_id: int,
     body: ClipStartRequest | None = None,
 ) -> ClipStartResponse:
-    """Start async clip extraction for starred + featured quotes."""
+    """Start async clip extraction.
+
+    Clips the quotes named in ``body.ids`` (the Selected/Starred/All scope
+    picker). With no ids, falls back to the legacy starred ∪ featured union.
+    """
     anonymise = body.anonymise if body else False
 
     # Check FFmpeg availability
@@ -312,18 +327,27 @@ async def start_clip_extraction(
         if output_dir is None:
             raise HTTPException(status_code=400, detail="No project directory configured")
 
-        # Load starred quotes
+        # is_starred flag still drives filename/dedup priority in the manifest
+        # builder, so load it regardless of how the clip set is chosen.
         starred_quotes = _load_starred_quotes(db, project_id)
         starred_ids = {q.id for q in starred_quotes}
 
-        # Load all quotes for hero selection
         all_quotes = db.query(Quote).filter(Quote.project_id == project_id).all()
-        hero_quotes = pick_featured_quotes(all_quotes, n=9)
-        hero_ids = {q.id for q in hero_quotes}
 
-        # Union: starred + heroes (deduplicated in manifest builder)
-        combined_ids = starred_ids | hero_ids
-        combined_quotes = [q for q in all_quotes if q.id in combined_ids]
+        if body is not None and body.ids is not None:
+            # Scoped export — clip exactly the quotes the picker handed over.
+            requested = set(body.ids)
+            combined_quotes = [
+                q for q in all_quotes
+                if f"q-{q.participant_id}-{int(q.start_timecode)}" in requested
+            ]
+            hero_ids: set[int] = set()
+        else:
+            # Legacy no-scope caller — historical starred ∪ featured union.
+            hero_quotes = pick_featured_quotes(all_quotes, n=9)
+            hero_ids = {q.id for q in hero_quotes}
+            combined_ids = starred_ids | hero_ids
+            combined_quotes = [q for q in all_quotes if q.id in combined_ids]
 
         # Build manifest
         speaker_map = _load_speaker_names(db, project_id)
@@ -413,6 +437,26 @@ async def get_clip_status(
         current_clip=job.get("current_clip", ""),
         output_dir=job.get("output_dir"),
     )
+
+
+# ---------------------------------------------------------------------------
+# POST /projects/{id}/export/clips/cancel — stop a running job
+# ---------------------------------------------------------------------------
+
+
+@router.post("/projects/{project_id}/export/clips/cancel")
+async def cancel_clip_extraction(project_id: int) -> dict:
+    """Signal a running clip-extraction job to stop after the current clip.
+
+    The background loop polls the job's status each iteration and breaks when it
+    sees ``cancelled``. Clips already written stay on disk. No-op-safe: 404 when
+    nothing is in flight.
+    """
+    job = _jobs.get(project_id)
+    if job is None or job.get("status") not in ("pending", "running"):
+        raise HTTPException(status_code=404, detail="No clip extraction in progress")
+    job["status"] = "cancelled"
+    return {"cancelled": True}
 
 
 # ---------------------------------------------------------------------------

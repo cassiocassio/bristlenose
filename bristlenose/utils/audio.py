@@ -87,6 +87,15 @@ def extract_audio_from_video(
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    try:
+        # Fetch first if this is a cloud placeholder. The 600s budget below is
+        # generous, but a large recording on a domestic uplink can outlast it —
+        # and when it does, ffmpeg's timeout reads as "your video is broken".
+        # Same reasoning as has_audio_stream; see docs/design-project-storage.md.
+        ensure_materialised(video_path)
+    except CloudFetchTimeoutError as exc:
+        raise AudioToolError(str(exc)) from exc
+
     # Use hardware video decode on macOS (VideoToolbox / Media Engine).
     # Harmless no-op for audio-only inputs; ignored if unsupported.
     hwaccel = ["-hwaccel", "videotoolbox"] if platform.system() == "Darwin" else []

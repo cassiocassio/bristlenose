@@ -1409,7 +1409,8 @@ def _auto_tag_from_sentiment_field(db: Session, project: Project) -> None:
 def _pinned_quote_ids(db: Session, project_id: int) -> set[int]:
     """Quote ids carrying durable human work — the derived Freeze pin set.
 
-    ``is_pinned = starred ∨ edited ∨ human-tagged`` and is NEVER stored: it is
+    ``is_pinned = starred ∨ edited ∨ human-tagged ∨ researcher-placed`` (four arms —
+    the placement arm is documented below) and is NEVER stored: it is
     recomputed from the researcher-state tables on every call, so it falls back
     to false automatically the moment the last star / edit / tag is removed
     (object permanence lasts exactly as long as the human's investment does).

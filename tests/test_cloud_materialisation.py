@@ -152,3 +152,82 @@ class TestEnsureMaterialised:
             ensure_materialised(f, timeout=0.2)
         assert "fetched" in str(exc.value)
         assert "ffprobe" not in str(exc.value)
+
+
+class TestReadSitesAreGuarded:
+    """Every ffmpeg/ffprobe site that reads a user file must fetch it FIRST.
+
+    The bug this whole feature exists to kill: the download happens *inside* a
+    subprocess timeout, so a slow fetch is reported as a broken file. Two sites
+    were already guarded (`probe_duration`, `has_audio_stream`); these are the
+    other three. What's pinned per site is the **degradation contract** — fatal,
+    cosmetic, or skippable — plus, crucially, that the subprocess is never
+    reached, since reaching it is the defect.
+    """
+
+    @staticmethod
+    def _explode(monkeypatch, module, subprocess_guard: bool = True) -> list[str]:
+        """Make the fetch time out in *module*, and trip a flag if ffmpeg runs."""
+        ran: list[str] = []
+
+        def boom(path, *a, **kw):  # type: ignore[no-untyped-def]
+            raise CloudFetchTimeoutError(
+                f"{Path(path).name} was still being fetched from Dropbox after 30 minutes"
+            )
+
+        monkeypatch.setattr(module, "ensure_materialised", boom)
+        if subprocess_guard:
+            def never(*a, **kw):  # type: ignore[no-untyped-def]
+                ran.append("subprocess")
+                raise AssertionError("ffmpeg ran despite an unmaterialised source")
+
+            monkeypatch.setattr(module.subprocess, "run", never)
+        return ran
+
+    def test_extract_audio_is_fatal_but_says_downloading(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """Transcription can't proceed without audio, so this one fails the run —
+        but with the fetch message, never an ffmpeg one."""
+        import bristlenose.utils.audio as audio_mod
+        from bristlenose.utils.audio import AudioToolError, extract_audio_from_video
+
+        self._explode(monkeypatch, audio_mod)
+        src = tmp_path / "interview.mov"
+        src.write_bytes(b"x")
+        with pytest.raises(AudioToolError) as exc:
+            extract_audio_from_video(src, tmp_path / "out.wav")
+        assert "fetched" in str(exc.value)
+        assert "Dropbox" in str(exc.value)
+        # The old failure mode, in one assertion.
+        assert "ffmpeg" not in str(exc.value).lower()
+
+    def test_thumbnail_degrades_to_none(self, tmp_path: Path, monkeypatch, caplog) -> None:
+        """A thumbnail is cosmetic — losing it must not fail a run. But it has to
+        say WHY: this site historically swallowed the reason and thumbnails just
+        silently vanished."""
+        import bristlenose.utils.video as video_mod
+        from bristlenose.utils.video import extract_thumbnail
+
+        self._explode(monkeypatch, video_mod)
+        src = tmp_path / "interview.mov"
+        src.write_bytes(b"x")
+        with caplog.at_level("WARNING"):
+            assert extract_thumbnail(src, tmp_path / "thumb.jpg", timestamp=1.0) is None
+        assert "fetched" in caplog.text
+
+    def test_clip_export_degrades_to_none(self, tmp_path: Path, monkeypatch, caplog) -> None:
+        """The likeliest site to hit this in real use — cutting clips is the
+        "go back to an old study" operation, which is exactly when sources have
+        been evicted."""
+        import bristlenose.server.clip_backend as clip_mod
+        from bristlenose.server.clip_backend import FFmpegBackend
+
+        self._explode(monkeypatch, clip_mod)
+        src = tmp_path / "interview.mov"
+        src.write_bytes(b"x")
+        with caplog.at_level("WARNING"):
+            assert FFmpegBackend().extract_clip(
+                src, tmp_path / "clip.mp4", start=1.0, end=2.0
+            ) is None
+        assert "fetched" in caplog.text

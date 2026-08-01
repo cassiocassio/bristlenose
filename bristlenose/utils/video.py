@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from bristlenose.utils.bundled_binary import bundled_binary_path
+from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 
 if TYPE_CHECKING:
     from bristlenose.models import FullTranscript, InputSession
@@ -87,6 +88,17 @@ def extract_thumbnail(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     hwaccel = ["-hwaccel", "videotoolbox"] if platform.system() == "Darwin" else []
+
+    try:
+        # Fetch first if this is a cloud placeholder, so the download doesn't
+        # burn the 30s budget below. A thumbnail is cosmetic, so a fetch that
+        # never lands degrades to "no thumbnail" rather than failing the run —
+        # but it degrades *loudly* in the log, because this site historically
+        # swallowed the reason and thumbnails just silently vanished.
+        ensure_materialised(video_path)
+    except CloudFetchTimeoutError as exc:
+        logger.warning("No thumbnail for %s: %s", video_path.name, exc)
+        return None
 
     ffmpeg = bundled_binary_path("ffmpeg") or "ffmpeg"
     try:

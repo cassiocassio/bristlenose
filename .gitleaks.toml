@@ -22,6 +22,15 @@ regexes = [
   '''env-injected-key''',
   '''test-integration-key-12345''',                       # docs/design-keychain.md dummy
   '''Norman/Garrett/Plato/UXR''',                         # CLAUDE.md prose (design-thinker names, not a key)
+  '''EXAMPLEtokenNOTREALa{20,}''',                        # MCP mockup bearer (all-a padding, same shape as the sk-ant dummy above)
+  # RETIRED, and only reachable in history: two MCP bearer strings that sat in
+  # the connect mockups (893ab183, 30 Jul 2026 — the walkthrough — and the
+  # extension mockup). Both were scrubbed from the working tree on 1 Aug 2026
+  # and the durable one ROTATED, so neither opens anything. Listed by literal
+  # value rather than by path so a NEW token in a mockup still trips the scan —
+  # which is the whole point of keeping this list tight.
+  '''kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ''',
+  '''0riCOVDy8ncTbq59t0QIA69m4PWKbbZjbRZc2WnyHDc''',
 ]
 
 [[allowlists]]

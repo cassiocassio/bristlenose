@@ -177,9 +177,9 @@
   report, speaker codes in place of names; quote text is verbatim. How-to:</span>
   <span class="cyan">https://bristlenose.app/docs/connect-an-agent.html</span>
 
-    Authorization: Bearer kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ
+    Authorization: Bearer EXAMPLEtokenNOTREALaaaaaaaaaaaaaaaaaaaaaaaa
 
-<span class="dim">[bristlenose] auth-token: kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ
+<span class="dim">[bristlenose] auth-token: EXAMPLEtokenNOTREALaaaaaaaaaaaaaaaaaaaaaaaa
 INFO:     Uvicorn running on http://127.0.0.1:8150 (Press CTRL+C to quit)</span></div></div>
   <div class="commentary"><ul>
     <li><b>Option B revised 30 Jul — vendor-neutral:</b> the CLI prints the two primitives (MCP URL + assembled Authorization header, both paste-ready) and a <b>permanent manual link</b>, never a vendor's command. Dialects rot — FastMCP died in one SDK major, Codex reshaped in a month — so dialects live where they can update: the manual, the Mac sheet, and later <code>bristlenose mcp --client</code>. The <code>claude mcp add</code> command moves to the acceptance script. Consequence: the manual's connect-an-agent section is a build deliverable — the URL must resolve before anything ships.</li>
@@ -377,7 +377,7 @@ INFO:     Uvicorn running on http://127.0.0.1:8150 (Press CTRL+C to quit)</span>
       <div class="payload">"bristlenose": {
   "url": "http://127.0.0.1:8150/mcp/",
   "headers": {
-    "Authorization": "Bearer kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ"
+    "Authorization": "Bearer EXAMPLEtokenNOTREALaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 }</div>
     </div>
@@ -407,7 +407,7 @@ INFO:     Uvicorn running on http://127.0.0.1:8150 (Press CTRL+C to quit)</span>
     <div class="tabpanel">
       <div class="plabel">Paste in any terminal:</div>
       <div class="payload">claude mcp add --transport http bristlenose http://127.0.0.1:8150/mcp/ \
-  --header "Authorization: Bearer kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ"</div>
+  --header "Authorization: Bearer EXAMPLEtokenNOTREALaaaaaaaaaaaaaaaaaaaaaaaa"</div>
     </div>
     <div class="sheetfoot"><button class="macbtn">Cancel</button><button class="macbtn primary">Copy Command</button></div>
   </div></div></div>
@@ -424,7 +424,7 @@ INFO:     Uvicorn running on http://127.0.0.1:8150 (Press CTRL+C to quit)</span>
       (one stanza covers ChatGPT desktop, Codex CLI, and the IDE extension):</div>
       <div class="payload">[mcp_servers.bristlenose]
 url = "http://127.0.0.1:8150/mcp/"
-http_headers = { "Authorization" = "Bearer kJ8fwR2vXqLmN0aYt5uBcE7dHs9gPzW1oT4iM6xA3nQ" }</div>
+http_headers = { "Authorization" = "Bearer EXAMPLEtokenNOTREALaaaaaaaaaaaaaaaaaaaaaaaa" }</div>
     </div>
     <div class="sheetfoot"><button class="macbtn">Cancel</button><button class="macbtn primary">Copy Config</button></div>
   </div></div></div>

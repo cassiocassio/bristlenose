@@ -438,3 +438,39 @@ function getCountsSnapshot(): { total: number; starred: number } {
 export function useQuoteCounts(): { total: number; starred: number } {
   return useSyncExternalStore(subscribe, getCountsSnapshot);
 }
+
+/**
+ * Reactive per-quote starred map. The map reference is replaced only when a
+ * star toggles (see toggleStar), so `useSyncExternalStore` bails on unrelated
+ * mutations (tags/edits/search) — used by the shell to derive the native
+ * Star⇄Unstar menu label without re-rendering on every store change.
+ */
+export function useStarredMap(): Record<string, boolean> {
+  return useSyncExternalStore(subscribe, () => state.starred);
+}
+
+/**
+ * Reactive name of the last-applied tag (for the native "Apply <name>" menu
+ * label + its disabled state). Returns a primitive, so the subscription is
+ * stable by value across unrelated mutations.
+ */
+export function useLastTagName(): string | null {
+  return useSyncExternalStore(subscribe, () => lastUsedTag?.name ?? null);
+}
+
+/**
+ * Whether the Star command would *unstar* rather than star — true when its
+ * target set is non-empty and every target is already starred. The target is
+ * the selection, or the focused quote when nothing is selected (selection wins,
+ * matching the click/`s`-key intent). Pure so the native menu's Star⇄Unstar
+ * label derivation is unit-testable independent of the shell.
+ */
+export function starActionIsUnstar(
+  selectedIds: Set<string>,
+  focusedId: string | null,
+  starred: Record<string, boolean>,
+): boolean {
+  const ids =
+    selectedIds.size > 0 ? Array.from(selectedIds) : focusedId ? [focusedId] : [];
+  return ids.length > 0 && ids.every((id) => starred[id]);
+}

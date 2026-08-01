@@ -455,12 +455,27 @@ export function getCodebookAnalysis(
 // Clip export
 // ---------------------------------------------------------------------------
 
-export function startClipExtraction(anonymise = false): Promise<ClipJobStartResponse> {
-  return apiPost<ClipJobStartResponse>("/export/clips", { anonymise });
+/**
+ * Start clip extraction. `ids` (DOM-style quote ids) is the scope picker's
+ * chosen set — Selected/Starred/All. Pass `null` for the legacy no-scope path
+ * (starred ∪ featured union), used by callers that don't offer a scope yet.
+ */
+export function startClipExtraction(
+  anonymise = false,
+  ids: string[] | null = null,
+): Promise<ClipJobStartResponse> {
+  return apiPost<ClipJobStartResponse>("/export/clips", {
+    anonymise,
+    ...(ids != null ? { ids } : {}),
+  });
 }
 
 export function getClipExtractionStatus(): Promise<ClipJobStatus> {
   return apiGet<ClipJobStatus>("/export/clips/status");
+}
+
+export function cancelClipExtraction(): Promise<{ cancelled: boolean }> {
+  return apiPost<{ cancelled: boolean }>("/export/clips/cancel", {});
 }
 
 export function revealClips(): Promise<{ revealed: boolean; path: string }> {

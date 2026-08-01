@@ -152,12 +152,18 @@ export function saveQuotesSpreadsheet(
 }
 
 /**
- * Kick off the ffmpeg clip-extraction background job. Registers an activity
- * chip and surfaces ffmpeg-missing / in-progress / failed states via toast.
+ * Kick off the ffmpeg clip-extraction background job. `ids` is the scope
+ * picker's chosen set (Selected/Starred/All); pass `null` for the legacy
+ * no-scope union. Registers an activity chip and surfaces ffmpeg-missing /
+ * in-progress / failed states via toast.
  */
-export async function extractVideoClips(t: TFunction, anonymise = false): Promise<void> {
+export async function extractVideoClips(
+  ids: string[] | null,
+  t: TFunction,
+  anonymise = false,
+): Promise<void> {
   try {
-    const result = await startClipExtraction(anonymise);
+    const result = await startClipExtraction(anonymise, ids);
     if (result.total === 0) {
       toast(t("export.clips.noClips"));
       return;

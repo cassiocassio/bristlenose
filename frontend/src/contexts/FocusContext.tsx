@@ -36,6 +36,8 @@ interface FocusContextValue {
   toggleSelection: (id: string) => void;
   /** Select a range of quotes between two IDs (inclusive). */
   selectRange: (fromId: string, toId: string) => void;
+  /** Select every currently-visible quote (⌘A). */
+  selectAll: () => void;
   /** Clear all selections. */
   clearSelection: () => void;
   /** Move focus to next (1) or previous (-1) visible quote. */
@@ -91,6 +93,7 @@ const NO_FOCUS: FocusContextValue = {
   setFocus: noopStrOrNull as FocusContextValue["setFocus"],
   toggleSelection: noopStr,
   selectRange: noopStrStr,
+  selectAll: noop,
   clearSelection: noop,
   moveFocus: noop as unknown as FocusContextValue["moveFocus"],
   setAnchor: noopStrOrNull,
@@ -225,6 +228,12 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const selectAll = useCallback(() => {
+    const ids = visibleIdsRef.current;
+    if (!ids.length) return;
+    setSelectedIds(new Set(ids));
+  }, []);
+
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
   }, []);
@@ -333,6 +342,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
       setFocus,
       toggleSelection,
       selectRange,
+      selectAll,
       clearSelection,
       moveFocus,
       setAnchor,
@@ -355,6 +365,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
       setFocus,
       toggleSelection,
       selectRange,
+      selectAll,
       clearSelection,
       moveFocus,
       setAnchor,

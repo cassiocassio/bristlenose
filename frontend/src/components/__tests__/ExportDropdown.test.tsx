@@ -17,6 +17,8 @@ vi.mock("../../utils/api", () => ({
   acceptProposal: vi.fn().mockResolvedValue(undefined),
   denyProposal: vi.fn().mockResolvedValue(undefined),
   getCodebook: vi.fn().mockResolvedValue({ groups: [], ungrouped: [], all_tag_names: [] }),
+  startClipExtraction: vi.fn().mockResolvedValue({ status: "started", total: 1, pii_warning: false }),
+  cancelClipExtraction: vi.fn().mockResolvedValue({ cancelled: true }),
 }));
 
 // Mock toast
@@ -98,13 +100,22 @@ describe("ExportDropdown", () => {
     expect(screen.getByTestId("export-dropdown-menu")).toBeInTheDocument();
   });
 
-  it("shows 5 items on Quotes tab (incl. Send to Miro)", () => {
+  it("shows 3 scoped export groups + 2 project actions on Quotes tab", () => {
     initFromQuotes([makeQuote()]);
     renderDropdown("/report/quotes/");
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
 
+    // Copy / Spreadsheet / Clips each expose All / Selected / Starred = 9 scope
+    // rows, plus Export Report + Send to Miro = 11 menuitems.
     const items = screen.getAllByRole("menuitem");
-    expect(items).toHaveLength(5);
+    expect(items).toHaveLength(11);
+
+    // Every action × scope combination is present.
+    for (const action of ["copy", "spreadsheet", "clips"]) {
+      for (const scope of ["all", "selected", "starred"]) {
+        expect(screen.getByTestId(`export-${action}-${scope}`)).toBeInTheDocument();
+      }
+    }
   });
 
   it("shows Export Report and Send to Miro on non-Quotes tabs", () => {
@@ -118,7 +129,7 @@ describe("ExportDropdown", () => {
     expect(items[0].textContent).toContain("Export Report");
   });
 
-  it("shows quote count in Copy label", () => {
+  it("shows the visible-quote count on each All scope row", () => {
     initFromQuotes([
       makeQuote({ dom_id: "q-p1-1" }),
       makeQuote({ dom_id: "q-p1-2" }),
@@ -126,8 +137,30 @@ describe("ExportDropdown", () => {
     renderDropdown("/report/quotes/");
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
 
-    const items = screen.getAllByRole("menuitem");
-    expect(items[0].textContent).toContain("2");
+    expect(screen.getByTestId("export-copy-all").textContent).toContain("2");
+    expect(screen.getByTestId("export-clips-all").textContent).toContain("2");
+  });
+
+  it("disables the Selected scope when nothing is selected", () => {
+    initFromQuotes([makeQuote()]);
+    renderDropdown("/report/quotes/");
+    fireEvent.click(screen.getByRole("button", { name: "Export" }));
+
+    const selected = screen.getByTestId("export-copy-selected");
+    expect(selected).toHaveAttribute("aria-disabled", "true");
+    expect(selected.className).toContain("is-disabled");
+    expect(selected.textContent).toContain("0");
+  });
+
+  it("reflects the starred count on the Starred scope row", () => {
+    initFromQuotes([
+      makeQuote({ dom_id: "q-p1-1", is_starred: true }),
+      makeQuote({ dom_id: "q-p1-2", is_starred: false }),
+    ]);
+    renderDropdown("/report/quotes/");
+    fireEvent.click(screen.getByRole("button", { name: "Export" }));
+
+    expect(screen.getByTestId("export-clips-starred").textContent).toContain("1");
   });
 
   it("shows paste hint on Quotes tab", () => {
@@ -202,14 +235,34 @@ describe("ExportDropdown", () => {
     renderDropdown("/report/quotes/");
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
 
-    const items = screen.getAllByRole("menuitem");
-    fireEvent.click(items[0]); // Copy Quotes
+    fireEvent.click(screen.getByTestId("export-copy-all"));
 
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledOnce();
       const written = writeText.mock.calls[0][0] as string;
       // Tab-separated: quote, participant code, display name, timecode
       expect(written).toBe("Test quote\tp1\tAlice\t0:10");
+    });
+  });
+
+  it("Extract Clips (All) starts extraction with the visible quote ids", async () => {
+    const { startClipExtraction } = await import("../../utils/api");
+    initFromQuotes([
+      makeQuote({ dom_id: "q-p1-1", participant_id: "p1", start_timecode: 1 }),
+      makeQuote({ dom_id: "q-p1-2", participant_id: "p1", start_timecode: 2 }),
+    ]);
+    renderDropdown("/report/quotes/");
+    fireEvent.click(screen.getByRole("button", { name: "Export" }));
+
+    fireEvent.click(screen.getByTestId("export-clips-all"));
+
+    await waitFor(() => {
+      expect(startClipExtraction).toHaveBeenCalledOnce();
+      // anonymise=false, then the explicit All id set (not the legacy union).
+      const [anon, ids] = (startClipExtraction as unknown as { mock: { calls: unknown[][] } })
+        .mock.calls[0];
+      expect(anon).toBe(false);
+      expect(ids).toEqual(["q-p1-1", "q-p1-2"]);
     });
   });
 });

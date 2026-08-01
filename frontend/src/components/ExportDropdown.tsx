@@ -99,28 +99,42 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
     [onQuotes, store.quotes, filterState],
   );
 
-  const exportIds = useMemo(() => {
-    if (!onQuotes) return [];
-    if (selectedIds.size > 0) return Array.from(selectedIds);
-    return visibleQuotes.map((q) => q.dom_id);
-  }, [onQuotes, selectedIds, visibleQuotes]);
-
-  const quoteCount = exportIds.length;
+  // Three export scopes, mirroring the native Quotes menu. "All" = every quote
+  // currently on screen (respects the toolbar filter, excludes hidden);
+  // "Selected" = the live multi-selection; "Starred" = visible & starred. Each
+  // export action (Copy · Spreadsheet · Clips) offers all three; a scope is
+  // disabled when its set is empty.
+  const allIds = useMemo(
+    () => (onQuotes ? visibleQuotes.map((q) => q.dom_id) : []),
+    [onQuotes, visibleQuotes],
+  );
+  const selectedScopeIds = useMemo(
+    () => (onQuotes ? Array.from(selectedIds) : []),
+    [onQuotes, selectedIds],
+  );
+  const starredScopeIds = useMemo(
+    () =>
+      onQuotes
+        ? visibleQuotes.filter((q) => store.starred[q.dom_id]).map((q) => q.dom_id)
+        : [],
+    [onQuotes, visibleQuotes, store.starred],
+  );
 
   // ── Handlers ──────────────────────────────────────────────────────────
   // Behaviour lives in utils/exportActions so the macOS native menu (via
   // AppLayout's bridge handlers) invokes the identical logic. Anonymise is
   // false here — on the web it rides the Export Report modal checkbox.
 
-  const handleCopyQuotes = useCallback(() => {
-    setOpen(false);
-    void copyQuotesToClipboard(store, exportIds, t);
-  }, [setOpen, store, exportIds, t]);
-
-  const handleSaveSpreadsheet = useCallback(() => {
-    setOpen(false);
-    saveQuotesSpreadsheet(projectId, exportIds, t);
-  }, [setOpen, projectId, exportIds, t]);
+  const runScoped = useCallback(
+    (action: "copy" | "spreadsheet" | "clips", ids: string[]) => {
+      if (ids.length === 0) return;
+      setOpen(false);
+      if (action === "copy") void copyQuotesToClipboard(store, ids, t);
+      else if (action === "spreadsheet") saveQuotesSpreadsheet(projectId, ids, t);
+      else void extractVideoClips(ids, t);
+    },
+    [setOpen, store, projectId, t],
+  );
 
   const handleExportReport = useCallback(() => {
     setOpen(false);
@@ -135,10 +149,66 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
     onSendToMiro();
   }, [setOpen, onSendToMiro]);
 
-  const handleExtractClips = useCallback(() => {
-    setOpen(false);
-    void extractVideoClips(t);
-  }, [setOpen, t]);
+  // Render one export action as a labelled group of three scope rows
+  // (All / Selected / Starred), each disabled when its id set is empty.
+  const renderScopeGroup = (
+    action: "copy" | "spreadsheet" | "clips",
+    heading: string,
+    hint?: string,
+  ) => {
+    // `{{n}}`, not `{{count}}`, is deliberate: i18next reads a `count` option as a
+    // plural selector, so these non-plural labels would resolve through `_one`/
+    // `_other` stems that don't exist and fall back to the raw key. The native
+    // twin (`desktop.menu.quotes.copyScope*`) does use `{{count}}` — Swift's I18n
+    // only pluralises via an explicit `plural()` call, so there's no such trap.
+    const scopes = [
+      { key: "all", label: t("export.scope.all", { n: allIds.length }), ids: allIds },
+      {
+        key: "selected",
+        label: t("export.scope.selected", { n: selectedScopeIds.length }),
+        ids: selectedScopeIds,
+      },
+      {
+        key: "starred",
+        label: t("export.scope.starred", { n: starredScopeIds.length }),
+        ids: starredScopeIds,
+      },
+    ];
+    return (
+      <>
+        <li role="presentation" className="export-dropdown-group-label">
+          {heading}
+        </li>
+        {scopes.map((s) => {
+          const disabled = s.ids.length === 0;
+          return (
+            <li
+              key={`${action}-${s.key}`}
+              role="menuitem"
+              tabIndex={-1}
+              aria-disabled={disabled || undefined}
+              className={`export-dropdown-item export-dropdown-scope${disabled ? " is-disabled" : ""}`}
+              data-testid={`export-${action}-${s.key}`}
+              onClick={disabled ? undefined : () => runScoped(action, s.ids)}
+              onKeyDown={(e) => {
+                if (!disabled && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  runScoped(action, s.ids);
+                }
+              }}
+            >
+              {s.label}
+            </li>
+          );
+        })}
+        {hint ? (
+          <li role="none" className="export-dropdown-hint">
+            {hint}
+          </li>
+        ) : null}
+      </>
+    );
+  };
 
   // ── Render ────────────────────────────────────────────────────────────
 
@@ -167,53 +237,11 @@ export function ExportDropdown({ onExportReport, onSendToMiro }: ExportDropdownP
         >
           {onQuotes && (
             <>
-              <li
-                role="menuitem"
-                tabIndex={-1}
-                className="export-dropdown-item"
-                onClick={handleCopyQuotes}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleCopyQuotes();
-                  }
-                }}
-              >
-                {t("export.copyQuotesCount", { count: quoteCount })}
-              </li>
-              <li role="none" className="export-dropdown-hint">
-                {t("export.pasteHint")}
-              </li>
+              {renderScopeGroup("copy", t("export.copyQuotes"), t("export.pasteHint"))}
               <li role="separator" className="export-dropdown-separator" />
-              <li
-                role="menuitem"
-                tabIndex={-1}
-                className="export-dropdown-item"
-                onClick={handleSaveSpreadsheet}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleSaveSpreadsheet();
-                  }
-                }}
-              >
-                {t("export.saveAsSpreadsheet")}
-              </li>
+              {renderScopeGroup("spreadsheet", t("export.saveAsSpreadsheet"))}
               <li role="separator" className="export-dropdown-separator" />
-              <li
-                role="menuitem"
-                tabIndex={-1}
-                className="export-dropdown-item"
-                onClick={handleExtractClips}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleExtractClips();
-                  }
-                }}
-              >
-                {t("export.extractClips")}
-              </li>
+              {renderScopeGroup("clips", t("export.extractClips"))}
               <li role="separator" className="export-dropdown-separator" />
             </>
           )}

@@ -71,6 +71,7 @@ export function useKeyboardShortcuts({
     selectedIds,
     setFocus,
     toggleSelection,
+    selectAll,
     clearSelection,
     moveFocus,
     setAnchor,
@@ -347,6 +348,49 @@ export function useKeyboardShortcuts({
       if (helpModalOpenRef.current) return;
       if (settingsModalOpenRef.current) return;
 
+      // ⌘A / Ctrl+A — select all visible quotes (quotes tab only).
+      // Preempts the browser's native "select all text" so ⌘A acts on
+      // quotes as objects (ready to star/hide/tag), not on page text. On
+      // other tabs (e.g. transcripts) native text select-all is left intact.
+      // In the desktop app this path is unreached — BristlenoseWebView
+      // intercepts ⌘A in performKeyEquivalent and routes it via the menu
+      // bridge instead (the main menu's Select All would otherwise win).
+      if (key === "a" && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+        if (
+          pathMatches(locationRef.current.pathname, "/report/quotes") &&
+          getVisibleQuoteIds().length > 0
+        ) {
+          e.preventDefault();
+          selectAll();
+          return;
+        }
+      }
+
+      // ⌘C / Ctrl+C — copy the selected quotes' text, matching "Copy Quotes ▸
+      // Selected" from the export menu. Object selection isn't a text
+      // selection, so native copy would grab nothing after ⌘A — this makes ⌘C
+      // the natural next step. Only hijacks when quotes are object-selected on
+      // the Quotes tab; with no selection, native copy is left intact so
+      // ordinary text drag-copy still works. Routes through the same
+      // bn:menu-action path AppLayout uses for the native menu, so browser and
+      // desktop copy identically. In the desktop app this keydown is unreached
+      // — BristlenoseWebView claims ⌘C in performKeyEquivalent and dispatches
+      // the same menu action (the main menu's Copy would otherwise win).
+      if (key === "c" && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+        if (
+          pathMatches(locationRef.current.pathname, "/report/quotes") &&
+          selectedIdsRef.current.size > 0
+        ) {
+          e.preventDefault();
+          window.dispatchEvent(
+            new CustomEvent("bn:menu-action", {
+              detail: { action: "copyQuotes", payload: { scope: "selected" } },
+            }),
+          );
+          return;
+        }
+      }
+
       // [ — toggle TOC sidebar (quotes, sessions, codebook, analysis tabs)
       if (key === "[") {
         const loc = locationRef.current.pathname;
@@ -560,6 +604,9 @@ export function useKeyboardShortcuts({
             if (!anchorIdRef.current) setAnchor(focusedIdRef.current);
           }
           break;
+        case "selectAllQuotes":
+          selectAll();
+          break;
         case "clearSelection":
           clearSelection();
           break;
@@ -623,6 +670,8 @@ export function useKeyboardShortcuts({
     handleShiftMove,
     moveFocus,
     toggleSelection,
+    selectAll,
+    getVisibleQuoteIds,
     setAnchor,
     handleHide,
     handleStar,

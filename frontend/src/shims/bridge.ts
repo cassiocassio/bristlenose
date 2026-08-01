@@ -40,6 +40,8 @@ export type BridgeMessage =
   | { type: "find-pasteboard-write"; text: string }
   | { type: "player-state"; hasPlayer: boolean; playing: boolean }
   | { type: "export-counts"; total: number; selected: number; starred: number }
+  | { type: "focus-change"; quoteId: string | null }
+  | { type: "quote-action-state"; starIsUnstar: boolean; lastTagName: string | null }
   | { type: "lens-subtitle"; tab: string; subtitle: string }
   | { type: "quotes-filter"; searchQuery: string; viewMode: string }
   | { type: "store-miro-token"; token: string };
@@ -95,6 +97,33 @@ export function postPlayerState(hasPlayer: boolean, playing: boolean): void {
  */
 export function postExportCounts(total: number, selected: number, starred: number): void {
   postNativeMessage({ type: "export-counts", total, selected, starred });
+}
+
+/**
+ * Push the focused-quote id to the native shell so the Quotes menu can enable
+ * its focus-gated items (Add Tag, Reveal in Transcript) exactly when a quote is
+ * focused in the report — matching the `t` / reveal keyboard bindings. Without
+ * this the native `focusedQuoteId` stays nil and those items are always dimmed.
+ * Selection *count* rides `export-counts`; this carries focus only, so the two
+ * signals can't drift. No-ops outside WKWebView.
+ */
+export function postFocusChange(quoteId: string | null): void {
+  postNativeMessage({ type: "focus-change", quoteId });
+}
+
+/**
+ * Push the derived state the native Quotes menu needs to label its
+ * quote-action items honestly: whether the Star command would *unstar* (the
+ * target set is all-starred, mirroring the click/`s`-key intent) and the name
+ * of the last-applied tag (for "Apply <name>" + its disabled state). The SPA
+ * owns this logic; native chrome only renders the resulting label. No-ops
+ * outside WKWebView.
+ */
+export function postQuoteActionState(
+  starIsUnstar: boolean,
+  lastTagName: string | null,
+): void {
+  postNativeMessage({ type: "quote-action-state", starIsUnstar, lastTagName });
 }
 
 /**

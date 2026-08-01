@@ -68,8 +68,13 @@ describe("NavBar", () => {
 
   it("nav links are <a> elements (not role=tab)", () => {
     renderNavBar();
-    const links = screen.getAllByRole("link");
-    // 5 text nav links (Settings and Help are buttons)
+    // 5 text nav links (Settings and Help are buttons). The Specimen debug
+    // lens is `IS_DEV`-gated — invisible in a shipped report, but present
+    // here because vitest runs with DEV=true, so exclude it by name rather
+    // than counting it and pinning a number users never see.
+    const links = screen
+      .getAllByRole("link")
+      .filter((a) => a.textContent !== "Specimen");
     expect(links).toHaveLength(5);
   });
 

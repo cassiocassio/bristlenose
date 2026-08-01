@@ -520,4 +520,184 @@ describe("useKeyboardShortcuts", () => {
       unmount();
     });
   });
+
+  describe("⌘A — select all quotes", () => {
+    /** Dispatch a keydown and return whether it was handled (defaultPrevented). */
+    function dispatchKey(key: string, options: Partial<KeyboardEventInit> = {}): boolean {
+      const event = new KeyboardEvent("keydown", {
+        key,
+        bubbles: true,
+        cancelable: true,
+        ...options,
+      });
+      return !document.dispatchEvent(event);
+    }
+
+    it("⌘A selects all visible quotes on the quotes page", () => {
+      const { getCtx, unmount } = renderWithProviders();
+      act(() => {
+        getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2", "q-3"]);
+      });
+
+      act(() => pressKey("a", { metaKey: true }));
+      expect(getCtx().selectedIds.size).toBe(3);
+      expect(getCtx().selectedIds.has("q-1")).toBe(true);
+      expect(getCtx().selectedIds.has("q-3")).toBe(true);
+
+      unmount();
+    });
+
+    it("Ctrl+A also selects all (Windows/Linux browsers)", () => {
+      const { getCtx, unmount } = renderWithProviders();
+      act(() => {
+        getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
+      });
+
+      act(() => pressKey("a", { ctrlKey: true }));
+      expect(getCtx().selectedIds.size).toBe(2);
+
+      unmount();
+    });
+
+    it("⌘A is preventDefault'd on the quotes page (blocks native text select)", () => {
+      const { getCtx, unmount } = renderWithProviders();
+      act(() => {
+        getCtx().registerVisibleQuoteIds("test", ["q-1"]);
+      });
+
+      let handled = false;
+      act(() => {
+        handled = dispatchKey("a", { metaKey: true });
+      });
+      expect(handled).toBe(true);
+
+      unmount();
+    });
+
+    it("⌘A is left to the browser when there are no visible quotes", () => {
+      const { getCtx, unmount } = renderWithProviders();
+
+      let handled = false;
+      act(() => {
+        handled = dispatchKey("a", { metaKey: true });
+      });
+      expect(handled).toBe(false);
+      expect(getCtx().selectedIds.size).toBe(0);
+
+      unmount();
+    });
+
+    it("⌘A is left to the browser on non-quotes pages", () => {
+      const { getCtx, unmount } = renderWithProviders(undefined, "/report/analysis/");
+      act(() => {
+        getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
+      });
+
+      let handled = false;
+      act(() => {
+        handled = dispatchKey("a", { metaKey: true });
+      });
+      expect(handled).toBe(false);
+      expect(getCtx().selectedIds.size).toBe(0);
+
+      unmount();
+    });
+
+    it("⌘A is ignored while editing an input", () => {
+      const input = document.createElement("input");
+      document.body.appendChild(input);
+      input.focus();
+
+      const { getCtx, unmount } = renderWithProviders();
+      act(() => {
+        getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
+      });
+
+      act(() => pressKey("a", { metaKey: true }));
+      expect(getCtx().selectedIds.size).toBe(0);
+
+      unmount();
+    });
+  });
+
+  describe("⌘C — copy selected quotes", () => {
+    function dispatchKey(key: string, options: Partial<KeyboardEventInit> = {}): boolean {
+      const event = new KeyboardEvent("keydown", {
+        key,
+        bubbles: true,
+        cancelable: true,
+        ...options,
+      });
+      return !document.dispatchEvent(event);
+    }
+
+    it("⌘C dispatches copyQuotes(selected) when quotes are selected", () => {
+      const menuEvents: CustomEvent[] = [];
+      const listener = (e: Event) => menuEvents.push(e as CustomEvent);
+      window.addEventListener("bn:menu-action", listener);
+
+      const { getCtx, unmount } = renderWithProviders();
+      act(() => {
+        getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
+        getCtx().toggleSelection("q-1");
+      });
+
+      let handled = false;
+      act(() => {
+        handled = dispatchKey("c", { metaKey: true });
+      });
+      expect(handled).toBe(true);
+      expect(menuEvents).toHaveLength(1);
+      expect(menuEvents[0].detail).toEqual({
+        action: "copyQuotes",
+        payload: { scope: "selected" },
+      });
+
+      window.removeEventListener("bn:menu-action", listener);
+      unmount();
+    });
+
+    it("⌘C is left to the browser with no selection", () => {
+      const menuEvents: CustomEvent[] = [];
+      const listener = (e: Event) => menuEvents.push(e as CustomEvent);
+      window.addEventListener("bn:menu-action", listener);
+
+      const { getCtx, unmount } = renderWithProviders();
+      act(() => {
+        getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
+      });
+
+      let handled = false;
+      act(() => {
+        handled = dispatchKey("c", { metaKey: true });
+      });
+      expect(handled).toBe(false);
+      expect(menuEvents).toHaveLength(0);
+
+      window.removeEventListener("bn:menu-action", listener);
+      unmount();
+    });
+
+    it("⌘C is left to the browser on non-quotes pages", () => {
+      const menuEvents: CustomEvent[] = [];
+      const listener = (e: Event) => menuEvents.push(e as CustomEvent);
+      window.addEventListener("bn:menu-action", listener);
+
+      const { getCtx, unmount } = renderWithProviders(undefined, "/report/analysis/");
+      act(() => {
+        getCtx().registerVisibleQuoteIds("test", ["q-1"]);
+        getCtx().toggleSelection("q-1");
+      });
+
+      let handled = false;
+      act(() => {
+        handled = dispatchKey("c", { metaKey: true });
+      });
+      expect(handled).toBe(false);
+      expect(menuEvents).toHaveLength(0);
+
+      window.removeEventListener("bn:menu-action", listener);
+      unmount();
+    });
+  });
 });

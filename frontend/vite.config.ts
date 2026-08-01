@@ -14,6 +14,15 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["src/test-setup.ts"],
+    // jsdom withholds localStorage/sessionStorage on an OPAQUE origin, and
+    // an explicit `url` is the only way to get a real one. Without this,
+    // `localStorage` is `undefined` — not empty, undefined — so every
+    // `localStorage.clear()` in a beforeEach throws "Cannot read properties
+    // of undefined", failing whole files (170 tests across 10 files) for a
+    // reason that looks nothing like its cause. Storage is load-bearing here
+    // (appearance, palette, feedback drafts, the pre-serve-mode stores), so
+    // this stays until every such test moves to an injected store.
+    environmentOptions: { jsdom: { url: "http://localhost:5173" } },
   },
   server: {
     port: 5173,

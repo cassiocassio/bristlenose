@@ -331,7 +331,7 @@ export interface ClipJobStartResponse {
 }
 
 export interface ClipJobStatus {
-  status: "idle" | "running" | "completed" | "failed";
+  status: "idle" | "running" | "completed" | "failed" | "cancelled";
   progress: number;
   total: number;
   completed_count: number;

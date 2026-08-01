@@ -23,6 +23,7 @@ import {
   setViewMode,
   setTagFilter,
   useQuotesStore,
+  starActionIsUnstar,
 } from "./QuotesContext";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
 
@@ -97,6 +98,31 @@ beforeEach(() => {
 });
 
 // ── Tests ────────────────────────────────────────────────────────────────
+
+describe("starActionIsUnstar", () => {
+  it("is false when nothing is selected or focused", () => {
+    expect(starActionIsUnstar(new Set(), null, {})).toBe(false);
+  });
+
+  it("mirrors the focused quote's state when nothing is selected", () => {
+    expect(starActionIsUnstar(new Set(), "q-1", { "q-1": true })).toBe(true);
+    expect(starActionIsUnstar(new Set(), "q-1", {})).toBe(false);
+  });
+
+  it("selection wins over focus", () => {
+    // Focused quote is starred, but selected quote is not → would star.
+    const starred = { "q-focus": true };
+    expect(starActionIsUnstar(new Set(["q-sel"]), "q-focus", starred)).toBe(false);
+  });
+
+  it("is true only when every selected quote is starred (unstar-all)", () => {
+    const all = { "q-1": true, "q-2": true };
+    expect(starActionIsUnstar(new Set(["q-1", "q-2"]), null, all)).toBe(true);
+    // One unstarred in the selection → star-all direction.
+    const mixed = { "q-1": true };
+    expect(starActionIsUnstar(new Set(["q-1", "q-2"]), null, mixed)).toBe(false);
+  });
+});
 
 describe("QuotesStore", () => {
   describe("initFromQuotes", () => {

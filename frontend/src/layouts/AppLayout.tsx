@@ -38,9 +38,11 @@ import {
   postProjectAction,
   postFindPasteboardWrite,
   postExportCounts,
+  postFocusChange,
+  postQuoteActionState,
 } from "../shims/bridge";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
-import { cancelAutoCode, getAutoCodeStatus, getClipExtractionStatus, revealClips } from "../utils/api";
+import { cancelAutoCode, cancelClipExtraction, getAutoCodeStatus, getClipExtractionStatus, revealClips } from "../utils/api";
 import {
   copyQuotesToClipboard,
   saveQuotesSpreadsheet,
@@ -55,6 +57,9 @@ import {
   getQuotesSnapshot,
   getVisibleQuotes,
   useQuoteCounts,
+  useStarredMap,
+  useLastTagName,
+  starActionIsUnstar,
 } from "../contexts/QuotesContext";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
 import { toast } from "../utils/toast";
@@ -132,19 +137,6 @@ function applyZoom(level: number): void {
   const clamped = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(level * 100) / 100));
   document.documentElement.style.fontSize = `${clamped * 100}%`;
   try { localStorage.setItem(ZOOM_KEY, String(clamped)); } catch { /* */ }
-}
-
-// ── Dark mode toggle (mirrors SettingsModal logic) ───────────────────────
-
-const APPEARANCE_KEY = "bristlenose-appearance";
-
-function toggleDarkMode(): void {
-  const root = document.documentElement;
-  const current = root.getAttribute("data-theme");
-  const next = current === "dark" ? "light" : "dark";
-  root.setAttribute("data-theme", next);
-  root.style.colorScheme = next;
-  try { localStorage.setItem(APPEARANCE_KEY, JSON.stringify(next)); } catch { /* */ }
 }
 
 /** Dev-only playground — lazy-loaded so it's tree-shaken in production. */
@@ -260,6 +252,33 @@ function AppShell() {
     if (!embedded) return;
     postExportCounts(totalQuoteCount, selectedQuoteCount, starredQuoteCount);
   }, [embedded, totalQuoteCount, selectedQuoteCount, starredQuoteCount]);
+
+  // Push the focused quote to native so the Quotes menu's focus-gated items
+  // (Add Tag, Reveal in Transcript) enable exactly when a quote is focused —
+  // the native `focusedQuoteId` has no other writer, so without this it stays
+  // nil and those items are permanently dimmed. Fires only when focus changes.
+  useEffect(() => {
+    if (!embedded) return;
+    postFocusChange(focusedId);
+  }, [embedded, focusedId]);
+
+  // Derived state for the native Quotes menu's adaptive labels. The Star
+  // command targets the selection (or the focused quote); it *unstars* when
+  // that target set is already all-starred — the same intent the click/`s`-key
+  // path uses. Swift can't derive this (it has no per-quote starred map), so
+  // the SPA computes it and pushes it. Keyed on the derived value, not counts:
+  // swapping a starred selection for an unstarred one keeps the count but flips
+  // the intent, which the export-counts channel would miss.
+  const starredMap = useStarredMap();
+  const lastTagName = useLastTagName();
+  const starIsUnstar = useMemo(
+    () => starActionIsUnstar(selectedIds, focusedId, starredMap),
+    [selectedIds, focusedId, starredMap],
+  );
+  useEffect(() => {
+    if (!embedded) return;
+    postQuoteActionState(starIsUnstar, lastTagName);
+  }, [embedded, starIsUnstar, lastTagName]);
 
   useEffect(() => {
     const exportData = getExportData();
@@ -408,14 +427,6 @@ function AppShell() {
           // Dispatched by the macOS native menu for parity with the web dropdown.
           setMiroOpen(true);
           break;
-        case "exportAnonymised":
-          if (isEmbeddedDesktop()) {
-            triggerReportDownload(true);
-          } else {
-            setExportAnonymise(true);
-            setExportOpen(true);
-          }
-          break;
         case "copyAsCSV": {
           const snap2 = getQuotesSnapshot();
           const focused = focusedIdBridgeRef.current;
@@ -465,8 +476,11 @@ function AppShell() {
           break;
         }
         case "extractClips": {
+          // Native menu has no clip scope submenu yet — pass null for the
+          // legacy union. When the native submenu lands it will carry a scope
+          // like copyQuotes above and hand over an explicit id set here.
           const anon = (payload as { anonymise?: boolean } | undefined)?.anonymise ?? false;
-          void extractVideoClips(i18n.t, anon);
+          void extractVideoClips(null, i18n.t, anon);
           break;
         }
         case "allQuotes":
@@ -500,9 +514,6 @@ function AppShell() {
           break;
         case "actualSize":
           applyZoom(1);
-          break;
-        case "toggleDarkMode":
-          toggleDarkMode();
           break;
 
         // ── Codebook operations ─────────────────────────────────────────
@@ -568,11 +579,16 @@ function AppShell() {
               );
             },
             actionLabel: i18n.t("export.clips.reveal"),
+            onCancel: () => {
+              cancelClipExtraction().catch((err) =>
+                console.error("Cancel clip extraction failed:", err),
+              );
+            },
             pollFn: async (): Promise<NormalisedJobStatus> => {
               const s = await getClipExtractionStatus();
               const status = s.status === "idle" ? "running" : s.status;
               return {
-                status: status as "running" | "completed" | "failed",
+                status: status as "running" | "completed" | "failed" | "cancelled",
                 progressLabel: status === "running" ? `${s.progress}/${s.total}` : null,
                 durationLabel: null,
                 errorMessage: status === "failed" ? i18n.t("export.clips.failed") : null,

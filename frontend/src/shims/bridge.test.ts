@@ -9,6 +9,7 @@ import {
   postProjectAction,
   postPlayerState,
   postStoreMiroToken,
+  postFocusChange,
 } from "./bridge";
 
 // ---------------------------------------------------------------------------
@@ -261,6 +262,24 @@ describe("postPlayerState", () => {
 
   it("no-ops gracefully when webkit is absent", () => {
     expect(() => postPlayerState(false, false)).not.toThrow();
+  });
+});
+
+describe("postFocusChange", () => {
+  it("posts focus-change with the focused quote id", () => {
+    const post = installMockWebkit();
+    postFocusChange("q-7");
+    expect(post).toHaveBeenCalledWith({ type: "focus-change", quoteId: "q-7" });
+  });
+
+  it("posts null when focus is cleared (so native re-dims focus-gated items)", () => {
+    const post = installMockWebkit();
+    postFocusChange(null);
+    expect(post).toHaveBeenCalledWith({ type: "focus-change", quoteId: null });
+  });
+
+  it("no-ops gracefully when webkit is absent (browser/serve mode)", () => {
+    expect(() => postFocusChange("q-1")).not.toThrow();
   });
 });
 

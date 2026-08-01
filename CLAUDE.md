@@ -361,7 +361,15 @@ for i in $(seq 1 20); do
 done
 ```
 
-20 iterations × 90s = 30 minutes. Recent releases have run 23–25 minutes (v0.15.13: 25m41s, v0.15.14: 23m22s); the original 15-minute budget routinely expired during a normal release. If PyPI still reports the previous version after 30 minutes: `gh run view --workflow=release.yml` to check the workflow fired. Apply the v0.15.0 debouncing workaround (`git push --delete origin v<X.Y.Z> && git push origin v<X.Y.Z>`) if it didn't.
+20 iterations × 90s = 30 minutes. Recent releases have run 23–25 minutes (v0.15.13: 25m41s, v0.15.14: 23m22s); the original 15-minute budget routinely expired during a normal release. **v0.23.0 took ~2 hours across three attempts** — budget generously on a release that touches the test suite. If PyPI still reports the previous version after 30 minutes: `gh run view --workflow=release.yml` to check the workflow fired. Apply the v0.15.0 debouncing workaround (`git push --delete origin v<X.Y.Z> && git push origin v<X.Y.Z>`) if it didn't.
+
+**`/pypi/<pkg>/json` is CDN-cached and CAN read stale — don't trust a single negative.** During the v0.23.0 verification the poll returned `0.23.0`, and a re-check seconds later returned `0.22.0` from a different edge node. A stale read looks exactly like "the release never published" and would send you into unnecessary tag surgery on an already-successful run. **Confirm with the version-specific endpoint**, which is authoritative and unambiguous:
+
+```sh
+curl -s -o /dev/null -w '%{http_code}\n' https://pypi.org/pypi/bristlenose/<X.Y.Z>/json   # 200 = published
+```
+
+A cache-busted index (`?cb=$RANDOM` + `Cache-Control: no-cache`) is the second check; `releases["<X.Y.Z>"]` should hold 2 files (sdist + wheel). Check `gh run view <id> --json conclusion` too — a `success` conclusion plus a 200 on the version URL means published, whatever the cached index says.
 
 ## Before committing
 

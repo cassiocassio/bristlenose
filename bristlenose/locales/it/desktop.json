@@ -381,6 +381,7 @@
     "sentItem2": "Codici degli interlocutori e timecode",
     "sentItem3": "Richieste di analisi (segmentazione degli argomenti, estrazione delle citazioni, raggruppamento dei temi)",
     "sentSummary": "Dati inviati al provider cloud: trascrizioni elaborate, codici degli interlocutori e richieste di analisi",
+    "agentAccess": "Se attivi l'accesso agenti per un progetto, le citazioni lette da un agente vengono inviate al provider di quell'agente \u2014 un'azienda diversa, con termini propri \u2014 ogni volta che gli poni una domanda. Disattivato per impostazione predefinita e impostabile per progetto.",
     "staysLocalLabel": "Resta sempre sul tuo dispositivo",
     "localItem1": "Registrazioni audio e video originali",
     "localItem2": "Nomi dei partecipanti, recapiti e dati personali",

@@ -381,6 +381,7 @@
     "sentItem2": "Códigos de intervenientes e marcações de tempo",
     "sentItem3": "Pedidos de análise (segmentação de tópicos, extração de citações, agrupamento de temas)",
     "sentSummary": "Dados enviados ao fornecedor na nuvem: transcrições processadas, códigos de intervenientes e pedidos de análise",
+    "agentAccess": "Se ativar o acesso de agentes num projeto, as cita\u00e7\u00f5es que um agente ler s\u00e3o enviadas para o fornecedor desse agente \u2014 outra empresa, sob os termos dela \u2014 sempre que fizer uma pergunta. Desativado por predefini\u00e7\u00e3o e definido por projeto.",
     "staysLocalLabel": "Permanece sempre no seu dispositivo",
     "localItem1": "Gravações em bruto de áudio e vídeo",
     "localItem2": "Nomes de participantes, informações de contacto e dados pessoais",

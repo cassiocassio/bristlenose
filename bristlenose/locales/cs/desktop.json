@@ -398,6 +398,7 @@
     "sentItem2": "Kódy mluvčích a časové značky",
     "sentItem3": "Požadavky na analýzu (segmentace témat, extrakce citátů, shlukování témat)",
     "sentSummary": "Data odeslaná cloudovému poskytovateli: zpracované přepisy, kódy mluvčích a požadavky na analýzu",
+    "agentAccess": "Pokud u projektu zapnete p\u0159\u00edstup agent\u016f, citace, kter\u00e9 agent p\u0159e\u010dte, se p\u0159i ka\u017ed\u00e9m va\u0161em dotazu ode\u0161lou poskytovateli dan\u00e9ho agenta \u2014 jin\u00e9 spole\u010dnosti s vlastn\u00edmi podm\u00ednkami. Ve v\u00fdchoz\u00edm stavu vypnuto, nastavuje se pro ka\u017ed\u00fd projekt zvl\u00e1\u0161\u0165.",
     "staysLocalLabel": "Vždy zůstává ve vašem zařízení",
     "localItem1": "Surové audio a video nahrávky",
     "localItem2": "Jména účastníků, kontaktní údaje a osobní data",

@@ -381,6 +381,7 @@
     "sentItem2": "Sprekercodes en tijdcodes",
     "sentItem3": "Analyseaanvragen (onderwerpsegmentatie, citaatextractie, themaclustering)",
     "sentSummary": "Naar de cloudprovider verzonden gegevens: verwerkte transcripten, sprekercodes en analyseaanvragen",
+    "agentAccess": "Als je agenttoegang inschakelt voor een project, worden de citaten die een agent leest naar de provider van die agent gestuurd \u2014 een ander bedrijf, met eigen voorwaarden \u2014 telkens wanneer je een vraag stelt. Standaard uit, en per project in te stellen.",
     "staysLocalLabel": "Blijft altijd op je apparaat",
     "localItem1": "Ruwe audio- en video-opnamen",
     "localItem2": "Namen van deelnemers, contactgegevens en persoonlijke details",

@@ -381,6 +381,7 @@
     "sentItem2": "Talerkoder og tidskoder",
     "sentItem3": "Analyseanmodninger (emneopdeling, citatudtræk, temagruppering)",
     "sentSummary": "Data sendt til cloududbyder: behandlede transskriptioner, talerkoder og analyseanmodninger",
+    "agentAccess": "Hvis du sl\u00e5r agentadgang til for et projekt, sendes de citater, en agent l\u00e6ser, til den p\u00e5g\u00e6ldende agents udbyder \u2014 en anden virksomhed med sine egne vilk\u00e5r \u2014 hver gang du stiller et sp\u00f8rgsm\u00e5l. Sl\u00e5et fra som standard og indstilles pr. projekt.",
     "staysLocalLabel": "Bliver altid på din enhed",
     "localItem1": "Rå lyd- og videooptagelser",
     "localItem2": "Deltagernavne, kontaktoplysninger og personlige oplysninger",

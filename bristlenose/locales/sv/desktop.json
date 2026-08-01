@@ -381,6 +381,7 @@
     "sentItem2": "Talarkoder och tidkoder",
     "sentItem3": "Analysbegäranden (ämnessegmentering, citatextrahering, temagruppering)",
     "sentSummary": "Data som skickas till molnleverantör: bearbetade transkriptioner, talarkoder och analysbegäranden",
+    "agentAccess": "Om du sl\u00e5r p\u00e5 agent\u00e5tkomst f\u00f6r ett projekt skickas de citat som en agent l\u00e4ser till agentens leverant\u00f6r \u2014 ett annat f\u00f6retag, med egna villkor \u2014 varje g\u00e5ng du st\u00e4ller en fr\u00e5ga. Avst\u00e4ngt som standard och st\u00e4lls in per projekt.",
     "staysLocalLabel": "Stannar alltid på din enhet",
     "localItem1": "Rå ljud- och videoinspelningar",
     "localItem2": "Deltagarnamn, kontaktuppgifter och personliga uppgifter",

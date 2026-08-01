@@ -381,6 +381,7 @@
     "sentItem2": "Talerkoder og tidskoder",
     "sentItem3": "Analyseforespørsler (emneinndeling, sitatuttrekk, temagruppering)",
     "sentSummary": "Data som sendes til skyleverandøren: behandlede transkripsjoner, talerkoder og analyseforespørsler",
+    "agentAccess": "Hvis du sl\u00e5r p\u00e5 agenttilgang for et prosjekt, sendes sitatene en agent leser til agentens leverand\u00f8r \u2014 et annet selskap, med egne vilk\u00e5r \u2014 hver gang du stiller et sp\u00f8rsm\u00e5l. Av som standard, og angis per prosjekt.",
     "staysLocalLabel": "Forblir alltid på enheten din",
     "localItem1": "Rå lyd- og videoopptak",
     "localItem2": "Deltakernavn, kontaktinformasjon og personopplysninger",

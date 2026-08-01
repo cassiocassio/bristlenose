@@ -381,6 +381,7 @@
     "sentItem2": "Speaker codes and timecodes",
     "sentItem3": "Analysis requests (topic segmentation, quote extraction, theme clustering)",
     "sentSummary": "Data sent to cloud provider: processed transcripts, speaker codes, and analysis requests",
+    "agentAccess": "If you turn on Agent Access for a project, the quotes an agent reads are sent to that agent's provider \u2014 a separate company, under its own terms \u2014 each time you ask it a question. Off by default, and set per project.",
     "staysLocalLabel": "Always stays on your device",
     "localItem1": "Raw audio and video recordings",
     "localItem2": "Participant names, contact info, and personal details",

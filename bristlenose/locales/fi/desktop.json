@@ -381,6 +381,7 @@
     "sentItem2": "Puhujakoodit ja aikakoodit",
     "sentItem3": "Analyysipyynnöt (aiheiden jäsentely, sitaattien poiminta, teemojen ryhmittely)",
     "sentSummary": "Pilvipalveluntarjoajalle lähetetty data: käsitellyt litteroinnit, puhujakoodit ja analyysipyynnöt",
+    "agentAccess": "Jos otat projektin agenttien k\u00e4ytt\u00f6oikeuden k\u00e4ytt\u00f6\u00f6n, agentin lukemat lainaukset l\u00e4hetet\u00e4\u00e4n kyseisen agentin palveluntarjoajalle \u2014 eri yritykselle, sen omin ehdoin \u2014 aina kun esit\u00e4t kysymyksen. Oletuksena pois p\u00e4\u00e4lt\u00e4 ja asetetaan projektikohtaisesti.",
     "staysLocalLabel": "Pysyy aina laitteellasi",
     "localItem1": "Raa'at ääni- ja videotallenteet",
     "localItem2": "Osallistujien nimet, yhteystiedot ja henkilökohtaiset tiedot",

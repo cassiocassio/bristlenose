@@ -372,6 +372,7 @@
     "sentItem2": "說話者編碼與時間碼",
     "sentItem3": "分析請求（主題分段、引述擷取、主軸歸納）",
     "sentSummary": "傳送到雲端供應商的資料：處理後的逐字稿、說話者編碼與分析請求",
+    "agentAccess": "\u82e5\u70ba\u5c08\u6848\u958b\u555f\u4ee3\u7406\u5b58\u53d6\uff0c\u4ee3\u7406\u8b80\u53d6\u7684\u5f15\u8ff0\u6703\u5728\u4f60\u6bcf\u6b21\u63d0\u554f\u6642\u50b3\u9001\u7d66\u8a72\u4ee3\u7406\u7684\u4f9b\u61c9\u5546\u2014\u2014\u53e6\u4e00\u5bb6\u516c\u53f8\uff0c\u9069\u7528\u5176\u81ea\u8eab\u689d\u6b3e\u3002\u9810\u8a2d\u70ba\u95dc\u9589\uff0c\u4e26\u53ef\u9010\u4e00\u5c08\u6848\u8a2d\u5b9a\u3002",
     "staysLocalLabel": "始終保留在你的裝置上",
     "localItem1": "原始音訊與影片錄音",
     "localItem2": "參與者姓名、聯絡資訊與個人詳細資料",

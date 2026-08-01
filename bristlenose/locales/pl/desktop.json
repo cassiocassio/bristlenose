@@ -399,6 +399,7 @@
     "sentItem2": "Kody rozmówców i kody czasowe",
     "sentItem3": "Żądania analizy (segmentacja tematów, wyodrębnianie cytatów, grupowanie motywów)",
     "sentSummary": "Dane wysyłane do dostawcy w chmurze: przetworzone transkrypcje, kody rozmówców i żądania analizy",
+    "agentAccess": "Je\u015bli w\u0142\u0105czysz dost\u0119p agent\u00f3w dla projektu, cytaty odczytane przez agenta s\u0105 wysy\u0142ane do dostawcy tego agenta \u2014 innej firmy, na jej w\u0142asnych warunkach \u2014 za ka\u017cdym razem, gdy zadasz pytanie. Domy\u015blnie wy\u0142\u0105czone, ustawiane dla ka\u017cdego projektu osobno.",
     "staysLocalLabel": "Zawsze pozostaje na Twoim urządzeniu",
     "localItem1": "Surowe nagrania dźwiękowe i wideo",
     "localItem2": "Imiona i nazwiska uczestników, dane kontaktowe i informacje osobiste",

@@ -381,6 +381,7 @@
     "sentItem2": "Códigos de falantes e marcações de tempo",
     "sentItem3": "Solicitações de análise (segmentação de tópicos, extração de citações, agrupamento de temas)",
     "sentSummary": "Dados enviados ao provedor na nuvem: transcrições processadas, códigos de falantes e solicitações de análise",
+    "agentAccess": "Se voc\u00ea ativar o acesso de agentes em um projeto, as cita\u00e7\u00f5es que um agente ler ser\u00e3o enviadas ao provedor desse agente \u2014 outra empresa, sob os termos dela \u2014 sempre que voc\u00ea fizer uma pergunta. Desativado por padr\u00e3o e definido por projeto.",
     "staysLocalLabel": "Sempre permanece no seu dispositivo",
     "localItem1": "Gravações brutas de áudio e vídeo",
     "localItem2": "Nomes de participantes, informações de contato e dados pessoais",

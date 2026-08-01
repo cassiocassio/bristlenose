@@ -14,6 +14,11 @@ import SwiftUI
 /// - A new cloud LLM provider is added
 /// - The categories of data sent to LLMs change
 /// - A provider's data handling terms materially change
+/// - **A new class of RECIPIENT appears** — not just a new provider of the
+///   same kind. v2 is the worked example: connecting an MCP agent sends
+///   quotes to that agent's own vendor, which is a different company, under
+///   different terms, at a different moment (when the researcher asks a
+///   question, not when the analysis runs).
 ///
 /// Do NOT increment for:
 /// - Copy tweaks or layout changes
@@ -23,7 +28,12 @@ struct AIConsentView: View {
 
     /// Bump this when disclosure content materially changes.
     /// The dialog re-appears for users who acknowledged a lower version.
-    static let currentVersion = 1
+    ///
+    /// **v2 (0.23.0, 1 Aug 2026)** — agent access. The extension collapsed a
+    /// five-step manual config into one button, removing the friction that
+    /// was implicitly doing the disclosure work, so the disclosure has to do
+    /// it explicitly instead.
+    static let currentVersion = 2
 
     @EnvironmentObject var i18n: I18n
     @EnvironmentObject var ollamaDownload: OllamaDownloadModel
@@ -42,6 +52,7 @@ struct AIConsentView: View {
             header
             introText
             sentToCloudBox
+            agentAccessText
             staysLocalBox
             providersRow
             responsibilityText
@@ -95,6 +106,21 @@ struct AIConsentView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(i18n.t("desktop.aiConsent.sentSummary"))
+    }
+
+    // MARK: - Agent access (the second, conditional recipient — v2)
+
+    /// A SEPARATE line rather than a fourth bullet in the box above, because
+    /// it is a different recipient: the box is headed "sent to your chosen
+    /// cloud provider", and an agent's vendor is neither chosen there nor the
+    /// same company. Conditional (off by default, per project) and triggered
+    /// by asking rather than by analysing, so it cannot sit in a list of
+    /// things every run sends.
+    private var agentAccessText: some View {
+        Text(i18n.t("desktop.aiConsent.agentAccess"))
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Stays local

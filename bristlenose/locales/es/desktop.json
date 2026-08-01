@@ -381,6 +381,7 @@
     "sentItem2": "Códigos de hablante y marcas de tiempo",
     "sentItem3": "Solicitudes de análisis (segmentación temática, extracción de citas, agrupación temática)",
     "sentSummary": "Datos enviados al proveedor en la nube: transcripciones procesadas, códigos de hablante y solicitudes de análisis",
+    "agentAccess": "Si activas el acceso de agentes para un proyecto, las citas que lea un agente se env\u00edan al proveedor de ese agente \u2014una empresa distinta, con sus propias condiciones\u2014 cada vez que le haces una pregunta. Desactivado por defecto y configurable por proyecto.",
     "staysLocalLabel": "Siempre permanece en su dispositivo",
     "localItem1": "Grabaciones de audio y vídeo originales",
     "localItem2": "Nombres de participantes, información de contacto y datos personales",

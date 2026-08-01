@@ -372,6 +372,7 @@
     "sentItem2": "화자 코드 및 타임코드",
     "sentItem3": "분석 요청 (주제 분류, 인용문 추출, 테마 클러스터링)",
     "sentSummary": "클라우드 제공업체로 전송되는 데이터: 처리된 전사본, 화자 코드, 분석 요청",
+    "agentAccess": "\ud504\ub85c\uc81d\ud2b8\uc5d0 \uc5d0\uc774\uc804\ud2b8 \uc811\uadfc\uc744 \ucf1c\uba74, \uc9c8\ubb38\ud560 \ub54c\ub9c8\ub2e4 \uc5d0\uc774\uc804\ud2b8\uac00 \uc77d\uc740 \uc778\uc6a9\ubb38\uc774 \ud574\ub2f9 \uc5d0\uc774\uc804\ud2b8\uc758 \uc81c\uacf5\uc5c5\uccb4(\uc790\uccb4 \uc57d\uad00\uc744 \ub530\ub974\ub294 \ubcc4\ub3c4\uc758 \ud68c\uc0ac)\ub85c \uc804\uc1a1\ub429\ub2c8\ub2e4. \uae30\ubcf8\uac12\uc740 \uaebc\uc9d0\uc774\uba70 \ud504\ub85c\uc81d\ud2b8\ubcc4\ub85c \uc124\uc815\ud569\ub2c8\ub2e4.",
     "staysLocalLabel": "항상 기기에 보관",
     "localItem1": "원본 오디오 및 비디오 녹음",
     "localItem2": "참여자 이름, 연락처 및 개인 정보",

@@ -381,6 +381,7 @@
     "sentItem2": "Codes de locuteur et horodatages",
     "sentItem3": "Demandes d'analyse (segmentation thématique, extraction de verbatim, regroupement thématique)",
     "sentSummary": "Données envoyées au fournisseur cloud : transcriptions traitées, codes de locuteur et demandes d'analyse",
+    "agentAccess": "Si vous activez l'acc\u00e8s des agents pour un projet, les citations lues par un agent sont envoy\u00e9es au fournisseur de cet agent \u2014 une autre entreprise, avec ses propres conditions \u2014 \u00e0 chaque question que vous lui posez. D\u00e9sactiv\u00e9 par d\u00e9faut et d\u00e9fini par projet.",
     "staysLocalLabel": "Reste toujours sur votre appareil",
     "localItem1": "Enregistrements audio et vidéo originaux",
     "localItem2": "Noms des participants, coordonnées et données personnelles",

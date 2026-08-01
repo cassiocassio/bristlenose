@@ -246,14 +246,22 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   antenna icon; the `LLM` tab renamed to **LLM Provider** in the same
   pass). Header always ("Agents read whichever project is selected"),
   Now-showing sub-line only while a serve is up (absence is the
-  information), machine-wide install row (`MCPExtensionInstaller` — copies
-  the bundled `.mcpb` into the container and `NSWorkspace.open`s THAT,
-  never a bundle path; no handler → claude.ai download link), four client
-  tabs (Claude Desktop = install hint; Claude Code / ChatGPT & Codex /
-  Generic MCP = copyable dialects, pinned by
-  `MCPAgentsSettingsViewTests`), and the agent-access audit list — every
-  project, live checkboxes (the flag is host-side), Anonymise switch on
-  the open project's row only (its state lives in that project's DB).
+  information), the GLOBAL Anonymise toggle (`@AppStorage "mcpAnonymise"`,
+  off by default — rides `BRISTLENOSE_MCP_ANONYMISE` via
+  `overlayPreferences`; when that env var is present the server's
+  `grounding._mcp_anonymise_active` ignores the per-project DB flag
+  entirely, so desktop behaviour is purely global; applies via the
+  prefs-changed serve restart like every other Settings pref), machine-wide
+  install row (`MCPExtensionInstaller` — copies the bundled `.mcpb` into
+  the container and `NSWorkspace.open`s THAT, never a bundle path; no
+  handler → claude.ai download link; Install is the pane's ONE
+  `.borderedProminent`), and four client tabs (Claude Desktop = install
+  hint; Claude Code / ChatGPT & Codex / Generic MCP = copyable dialects,
+  pinned by `MCPAgentsSettingsViewTests`). Pane width is 660 — identical
+  to the other three panes; the Settings package animates height only.
+  **There is deliberately NO per-project list here** (retired 1 Aug 2026
+  as over-build): the sidebar's menu is the act and the antenna is the
+  audit — one concept, one home.
 - **Turn On/Off Agent Access** — verb swap, not a checkmark (§3.6a).
   Context menu (`buildProjectMenu`): its own group below housekeeping,
   HIDDEN unless `AgentAccessPolicy.canShare` (locatable AND analysed —
@@ -314,14 +322,13 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   retired sheet): not-running speaks before any build-capability claim (a
   cold-launched app must never say "not available in this build"), and a
   running no-mcp build must never show a payload.
-- **The Anonymise toggle is the real per-project switch** (same
-  `menu.quotes.anonymise` strings as Export; now on the open project's row
-  in the pane's access list). It reads/writes
-  `/api/projects/1/agent-settings` — which needs the **server** token
-  (`serveManager.authToken`), NOT the MCP-scoped token (that one cannot
-  open /api by design). Disabled until the read lands (never guess a
-  compliance state); write failure reverts the switch visibly. Off by
-  default = names accompany codes in the agent's overview.
+- **Anonymise is GLOBAL on desktop (v1)** — same `menu.quotes.anonymise`
+  strings as Export, off by default (= names accompany codes in the
+  agent's overview). The desktop no longer reads or writes
+  `/api/projects/1/agent-settings`; that endpoint and the per-project
+  `projects.mcp_anonymise` flag remain server-side (the CLI/API
+  semantics, and the env-absent fallback in
+  `grounding._mcp_anonymise_active`).
 - **Pane i18n keys are `desktop.mcpAgents.*` / `desktop.connectAgent.*`**
   (the surviving dialect strings kept their keys) — the first dotted
   segment is the namespace FILE. Bare `mcpAgents.*` resolves to nothing

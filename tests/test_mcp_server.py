@@ -532,6 +532,37 @@ class TestNamesFollowTheSwitch:
         overview = _tool_get_project_overview(db, 1, None)
         assert any("name" in s for s in overview["participants"]["speakers"])
 
+    def test_desktop_global_env_switch_wins_both_ways(
+        self, db, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """BRISTLENOSE_MCP_ANONYMISE present = the desktop's v1 GLOBAL
+        switch; the per-project DB flag is ignored entirely (decided
+        1 Aug 2026 — one switch, not a per-project matrix)."""
+        from bristlenose.server.models import Project
+
+        self._name_people(db)
+        project = db.query(Project).one()
+
+        # Global ON beats a DB flag that says names.
+        project.mcp_anonymise = False
+        db.commit()
+        monkeypatch.setenv("BRISTLENOSE_MCP_ANONYMISE", "1")
+        overview = _tool_get_project_overview(db, 1, None)
+        assert all("name" not in s for s in overview["participants"]["speakers"])
+
+        # Global OFF beats a DB flag that says anonymise — desktop
+        # behaviour is purely the global preference.
+        project.mcp_anonymise = True
+        db.commit()
+        monkeypatch.setenv("BRISTLENOSE_MCP_ANONYMISE", "0")
+        overview = _tool_get_project_overview(db, 1, None)
+        assert any("name" in s for s in overview["participants"]["speakers"])
+
+        # Env absent (the CLI) → DB semantics, unchanged.
+        monkeypatch.delenv("BRISTLENOSE_MCP_ANONYMISE")
+        overview = _tool_get_project_overview(db, 1, None)
+        assert all("name" not in s for s in overview["participants"]["speakers"])
+
 
 class TestAgentSettingsAPI:
     """The sheet's read/write path for the per-project Anonymise switch."""

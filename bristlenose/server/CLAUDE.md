@@ -128,10 +128,14 @@ Connect Agent sheet + sidebar antenna badge are the desktop surface).
 - **Hard exclusions, pinned by tests:** no tool takes a filesystem path
   (input-schema allowlist), no writes, no LLM calls (elaborations are
   cache-only via `elaboration.load_cached_elaborations`). Names go through
-  ONE gate: `grounding.resolve_speaker_names`, which returns `{}` when the
-  project's `mcp_anonymise` switch is on (per-surface sticky, off by
-  default like the export toggles; `PUT /api/projects/{id}/agent-settings`
-  flips it, grounding reads it at tool-call time — no restart).
+  ONE gate: `grounding.resolve_speaker_names`. Which Anonymise switch
+  governs is `_mcp_anonymise_active`: when `BRISTLENOSE_MCP_ANONYMISE` is
+  present (the desktop's v1 GLOBAL switch, injected by
+  `overlayPreferences`, applied via serve restart) it wins BOTH ways and
+  the per-project DB flag is ignored; absent (CLI/tests), the project's
+  `mcp_anonymise` flag applies as before (off by default like the export
+  toggles; `PUT /api/projects/{id}/agent-settings` still flips it, read
+  at tool-call time).
   `mcp_server.py` itself still never imports `Person` (mechanical pin).
 - **Adding a tool?** Put `project_id` in the signature (folder scope is
   phase 2), return JSON primitives only, cap the result size, and add a

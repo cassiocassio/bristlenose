@@ -564,8 +564,6 @@
     "clients": {
       "generic": "Og\u00f3lne MCP"
     },
-    "accessHeader": "Dost\u0119p agent\u00f3w",
-    "noProjects": "Na pasku bocznym nie ma jeszcze projekt\u00f3w.",
     "badgeTooltip": "Udost\u0119pniono agentom. Ka\u017cdy po\u0142\u0105czony agent mo\u017ce na Twoj\u0105 pro\u015bb\u0119 czyta\u0107 cytaty z tego projektu."
   }
 }

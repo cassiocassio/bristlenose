@@ -542,8 +542,6 @@
     "clients": {
       "generic": "Generisk MCP"
     },
-    "accessHeader": "Agenttilgang",
-    "noProjects": "Ingen prosjekter i sidefeltet enn\u00e5.",
     "badgeTooltip": "Delt med agenter. Enhver tilkoblet agent kan lese sitatene i dette prosjektet n\u00e5r du ber om det."
   }
 }

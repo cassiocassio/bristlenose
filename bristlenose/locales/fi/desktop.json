@@ -542,8 +542,6 @@
     "clients": {
       "generic": "Yleinen MCP"
     },
-    "accessHeader": "Agenttien k\u00e4ytt\u00f6oikeus",
-    "noProjects": "Sivupalkissa ei ole viel\u00e4 projekteja.",
     "badgeTooltip": "Jaettu agenteille. Yhdistetty agentti voi lukea t\u00e4m\u00e4n projektin lainauksia pyynn\u00f6st\u00e4si."
   }
 }

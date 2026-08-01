@@ -264,6 +264,14 @@ enum BristlenoseShared {
         if let typography = defaults.string(forKey: "typography"), typography != "sf" {
             env["BRISTLENOSE_TYPOGRAPHY"] = typography
         }
+        // Anonymise for MCP agents (Settings ▸ MCP Agents) — the v1 GLOBAL
+        // switch, off by default. ALWAYS injected: when this env var is
+        // present, `grounding.resolve_speaker_names` uses it and ignores the
+        // per-project DB flag entirely, so desktop behaviour is purely the
+        // global preference (decided 1 Aug 2026 — the per-project switch was
+        // the over-build). The CLI never sets it and keeps DB semantics.
+        env["BRISTLENOSE_MCP_ANONYMISE"] =
+            defaults.bool(forKey: "mcpAnonymise") ? "1" : "0"
         if let endpoint = defaults.string(forKey: "azureEndpoint"), !endpoint.isEmpty {
             env["BRISTLENOSE_AZURE_ENDPOINT"] = endpoint
         }

@@ -542,8 +542,6 @@
     "clients": {
       "generic": "Genel MCP"
     },
-    "accessHeader": "Ajan Eri\u015fimi",
-    "noProjects": "Kenar \u00e7ubu\u011funda hen\u00fcz proje yok.",
     "badgeTooltip": "Ajanlarla payla\u015f\u0131l\u0131yor. Ba\u011fl\u0131 herhangi bir ajan, istedi\u011finizde bu projenin al\u0131nt\u0131lar\u0131n\u0131 okuyabilir."
   }
 }

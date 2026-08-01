@@ -30,6 +30,7 @@ is not citable even though it exists in the DB.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -398,20 +399,38 @@ def resolve_quote_ids(
 # Curated signal detection (the report view)
 # ---------------------------------------------------------------------------
 
-def resolve_speaker_names(db: SASession, project_id: int) -> dict[str, str]:
-    """Speaker code → display name, honouring the project's Anonymise switch.
+def _mcp_anonymise_active(project: object) -> bool:
+    """Which Anonymise switch governs this process?
 
-    Returns {} when ``projects.mcp_anonymise`` is on — the ONLY gate through
-    which assistant surfaces may reach the persons table. Display-name
-    policy mirrors the quotes/sessions routes (short name, else full name).
-    Read at call time so flipping the switch takes effect on the agent's
-    next call, no restart.
+    ``BRISTLENOSE_MCP_ANONYMISE`` present → the desktop's GLOBAL switch
+    (Settings ▸ MCP Agents, off by default) — it wins BOTH ways and the
+    per-project DB flag is ignored entirely: v1 deliberately has one
+    switch, not a per-project matrix (decided 1 Aug 2026; the per-project
+    UI was retired as over-build). Absent (the CLI, tests) → the
+    per-project ``projects.mcp_anonymise`` flag, unchanged.
+    """
+    override = os.environ.get("BRISTLENOSE_MCP_ANONYMISE")
+    if override is not None:
+        return override.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(getattr(project, "mcp_anonymise", False))
+
+
+def resolve_speaker_names(db: SASession, project_id: int) -> dict[str, str]:
+    """Speaker code → display name, honouring the Anonymise switch.
+
+    Returns {} when anonymise is active (see ``_mcp_anonymise_active`` for
+    which switch governs) — the ONLY gate through which assistant surfaces
+    may reach the persons table. Display-name policy mirrors the
+    quotes/sessions routes (short name, else full name). The desktop's
+    global switch rides the serve env (applied on the prefs-changed
+    restart, like every other Settings preference); the CLI/DB flag is
+    read at call time as before.
     """
     from bristlenose.server.models import Person, Project, SessionSpeaker
     from bristlenose.server.models import Session as SessionModel
 
     project = db.get(Project, project_id)
-    if project is None or project.mcp_anonymise:
+    if project is None or _mcp_anonymise_active(project):
         return {}
     session_ids = [
         s.id for s in db.query(SessionModel).filter_by(project_id=project_id)

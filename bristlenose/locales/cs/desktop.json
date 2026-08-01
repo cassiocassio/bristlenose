@@ -563,8 +563,6 @@
     "clients": {
       "generic": "Obecn\u00e9 MCP"
     },
-    "accessHeader": "P\u0159\u00edstup agent\u016f",
-    "noProjects": "V bo\u010dn\u00edm panelu zat\u00edm nejsou \u017e\u00e1dn\u00e9 projekty.",
     "badgeTooltip": "Sd\u00edleno s agenty. P\u0159ipojen\u00fd agent m\u016f\u017ee na va\u0161i \u017e\u00e1dost \u010d\u00edst citace z tohoto projektu."
   }
 }

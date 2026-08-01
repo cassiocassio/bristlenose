@@ -1526,30 +1526,23 @@ reader is Claude Desktop's Node process, macOS DOES attribute the container
 read to "Claude" and fires the SystemPolicyAppData prompt (*"Claude" would
 like to access data from other apps*). The shell evidence did not transfer:
 responsible-process attribution is exactly what changes the answer. One
-prompt would have been the §6.1 "concern inverts into a selling point"
-case. It is worse than that: **the grant does not persist.** Allow lands
-for the single read that prompted it and the next read re-prompts —
-Claude Desktop's built-in Node gives TCC no stable code identity to key a
-durable grant to (confirmed by isolation: disabling the extension stops
-the dialogs instantly; the fixed park-on-denial proxy was installed and
-not crash-looping, so per-access granting is the only mechanism left).
-Consequence, learned across two fixes the same night: **no background
-reader can exist at all.** Park-on-denial was insufficient — each read
-*succeeds*, so error-based backoff never engages. The proxy's 5-second
-self-heal watcher (a dialog every tick, ~a hundred in two minutes on the
-QA machine) is deleted outright; handshake reads happen ONLY inside tool
-calls — researcher-initiated, one prompt per question at worst, with a
-dedicated "click Allow" sentence for the denied state — and the
-`tools/list_changed` offline→ready edge rides those same reads for free.
-
-**This promotes §6.1's fallback from contingency to open question:** if
-one macOS prompt per question proves unacceptable in use, the handshake
-must leave the container (the recorded options: a temporary-exception
-path in the user's own Application Support — App Store review risk; or
-the project-folder variants §3.6 weighed, with their Dropbox-sync
-hazard). Decide on real usage, not in the abstract. Follow-up owed
-either way: the pane's Claude Desktop hint should pre-announce the
-prompt — copy + 20 locales, batched with the next string pass.
+prompt IS the §6.1 "concern inverts into a selling point" case — and the
+final measurement landed there: **the grant persists.** After the
+watcher's removal, a full multi-question conversation cost **zero
+dialogs** (1 Aug 2026, second install). The storm's true mechanism was
+the unanswered-dialog QUEUE racing a 5-second timer: every tick's read
+enqueued another dialog while the researcher was still clicking through
+the backlog — which *presented* as "Allow doesn't stick" and briefly
+misdiagnosed as per-access granting. Consequence, kept deliberately:
+**no background reader, ever.** A timer that reads a consent-gated path
+races its own pending dialog no matter how it backs off, and the
+`tools/list_changed` self-heal it powered rides tool-call reads for free
+(the tool list is static). Handshake reads happen ONLY inside tool
+calls, with a dedicated "click Allow" sentence for the denied state.
+§6.1's fallback (handshake out of the container) is NOT needed —
+prompt-once-then-silent is the shipped reality. Follow-up owed: the
+pane's Claude Desktop hint should pre-announce the one-time prompt —
+copy + 20 locales, batched with the next string pass.
 
 **Risk §6.1 dissolves**, and with it the §3.6 dilemma: the handshake stays in
 the container, so **no token is ever written into a project folder** and the

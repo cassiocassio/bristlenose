@@ -542,8 +542,6 @@
     "clients": {
       "generic": "Generisk MCP"
     },
-    "accessHeader": "Agent\u00e5tkomst",
-    "noProjects": "Inga projekt i sidof\u00e4ltet \u00e4nnu.",
     "badgeTooltip": "Delas med agenter. Alla anslutna agenter kan l\u00e4sa projektets citat n\u00e4r du ber om det."
   }
 }

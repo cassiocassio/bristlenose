@@ -542,8 +542,6 @@
     "clients": {
       "generic": "Generic MCP"
     },
-    "accessHeader": "Agent Access",
-    "noProjects": "No projects in the sidebar yet.",
     "badgeTooltip": "Shared with agents. Any connected agent can read this project's quotes when you ask it to."
   }
 }

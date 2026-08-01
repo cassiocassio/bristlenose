@@ -542,8 +542,6 @@
     "clients": {
       "generic": "Generieke MCP"
     },
-    "accessHeader": "Agenttoegang",
-    "noProjects": "Nog geen projecten in de navigatiekolom.",
     "badgeTooltip": "Gedeeld met agents. Elke verbonden agent kan de citaten van dit project lezen wanneer je daarom vraagt."
   }
 }

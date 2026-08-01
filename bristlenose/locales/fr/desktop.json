@@ -542,8 +542,6 @@
     "clients": {
       "generic": "MCP g\u00e9n\u00e9rique"
     },
-    "accessHeader": "Acc\u00e8s des agents",
-    "noProjects": "Aucun projet dans la barre lat\u00e9rale pour le moment.",
     "badgeTooltip": "Partag\u00e9 avec les agents. Tout agent connect\u00e9 peut lire les citations de ce projet \u00e0 votre demande."
   }
 }

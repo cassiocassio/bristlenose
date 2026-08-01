@@ -14,15 +14,14 @@ import SwiftUI
 /// - Sub-line only while a project is serving: "Now showing: …". With
 ///   nothing selected it simply disappears — absence is the information,
 ///   no placeholder, no "no project selected".
+/// - The GLOBAL Anonymise switch, off by default — one switch for the whole
+///   MCP surface, not a per-project matrix (decided 1 Aug 2026; the
+///   per-project list was retired as over-build — the sidebar's menu +
+///   antenna carry the whole per-project exposure story, §5a-bis).
 /// - Install row (machine-wide, so ABOVE the client tabs).
 /// - Four client tabs: Claude Desktop (the install hint), Claude Code /
 ///   ChatGPT & Codex (commands in their own dialects), Generic MCP (the raw
 ///   URL + token — the fallback that makes replacing hand-paste safe).
-/// - The agent-access list: every project with its exposure state — the
-///   "what have I shared?" audit surface (macOS Sharing precedent: act in
-///   context via the project menu, audit here). The serving project's row
-///   also carries the per-project Anonymise switch (serve-gated: its state
-///   lives in that project's DB, readable only while its serve runs).
 struct MCPAgentsSettingsView: View {
 
     @ObservedObject var serveManager: ServeManager
@@ -32,11 +31,11 @@ struct MCPAgentsSettingsView: View {
     @State private var client: AgentClient = .claudeDesktop
     @State private var copied = false
     @State private var copiedResetTask: Task<Void, Never>?
-    /// The per-project Anonymise switch, unchanged from the sheet it moved
-    /// out of: loaded from the serve on appear, nil `savedAnonymise` keeps
-    /// the Toggle disabled so a blind flip can't race the read.
-    @State private var anonymise = false
-    @State private var savedAnonymise: Bool?
+    /// Global Anonymise for agents. Rides the serve env
+    /// (`BRISTLENOSE_MCP_ANONYMISE`, injected by `overlayPreferences`) and
+    /// applies via the prefs-changed serve restart — the same lifecycle as
+    /// every other Settings preference.
+    @AppStorage("mcpAnonymise") private var mcpAnonymise = false
 
     enum AgentClient: String, CaseIterable, Identifiable {
         case claudeDesktop, claudeCode, chatgptCodex, generic
@@ -130,6 +129,24 @@ struct MCPAgentsSettingsView: View {
                     .padding(.top, 2)
             }
 
+            // The one governance control on the pane — global, off by
+            // default (= names accompany codes, matching the export
+            // surfaces' default). Same strings as Export: one word for one
+            // concept. Applies via the prefs-changed serve restart.
+            Toggle(isOn: $mcpAnonymise) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(i18n.t("desktop.menu.quotes.anonymise"))
+                    Text(i18n.t("desktop.menu.quotes.anonymiseHint"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .toggleStyle(.switch)
+            .padding(.top, 14)
+            .onChange(of: mcpAnonymise) {
+                NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+            }
+
             installRow
                 .padding(.top, 14)
 
@@ -143,21 +160,18 @@ struct MCPAgentsSettingsView: View {
 
             payloadPane
                 .padding(.top, 10)
-
-            accessList
-                .padding(.top, 16)
         }
         .padding(20)
-        .frame(width: 560)
+        // 660, matching Appearance / LLM Provider / Transcription exactly —
+        // the Settings package animates HEIGHT per pane, but width jumps
+        // read as a bug. Depth is whatever this content needs (fittingSize);
+        // the only fixed vertical is payloadPane's, which exists so
+        // switching CLIENT tabs never reflows within the pane.
+        .frame(width: 660)
         .onChange(of: client) {
             copiedResetTask?.cancel()
             copied = false
         }
-        .task(id: servingProject?.id) {
-            savedAnonymise = nil
-            await loadAnonymise()
-        }
-        .onChange(of: anonymise) { Task { await saveAnonymise() } }
     }
 
     // MARK: - Header pieces
@@ -192,9 +206,12 @@ struct MCPAgentsSettingsView: View {
             }
             Spacer()
             if MCPExtensionInstaller.claudeDesktopCanInstall {
+                // The pane's ONE prominent action (HIG: a single filled
+                // button per surface; the per-tab Copy stays bordered).
                 Button(i18n.t("desktop.mcpAgents.install")) {
                     MCPExtensionInstaller.install()
                 }
+                .buttonStyle(.borderedProminent)
                 .disabled(!MCPExtensionInstaller.bundledExtensionExists)
             } else {
                 // No handler registered for .mcpb — Claude Desktop isn't
@@ -292,116 +309,6 @@ struct MCPAgentsSettingsView: View {
             Spacer(minLength: 0)
         }
         .frame(height: 170, alignment: .topLeading)
-    }
-
-    // MARK: - Agent access list
-
-    /// Every project with its exposure state — "what have I shared?", the
-    /// governance question no per-project menu can answer. Toggles are
-    /// live (the flag is host-side in projects.json, so it works for any
-    /// project, open or not); rows that cannot be shared (never analysed,
-    /// not locatable) render disabled rather than hidden — the audit list
-    /// must account for every project.
-    private var accessList: some View {
-        let ordered = projectIndex.projects.sorted { $0.position < $1.position }
-        return VStack(alignment: .leading, spacing: 6) {
-            Text(i18n.t("desktop.mcpAgents.accessHeader"))
-                .font(.headline)
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(ordered) { project in
-                    accessRow(project)
-                    if project.id != ordered.last?.id {
-                        Divider()
-                    }
-                }
-                if ordered.isEmpty {
-                    Text(i18n.t("desktop.mcpAgents.noProjects"))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 6)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func accessRow(_ project: Project) -> some View {
-        let shareable = canShare(project)
-        let isServing = servingProject?.id == project.id
-        VStack(alignment: .leading, spacing: 4) {
-            Toggle(isOn: Binding(
-                get: { project.agentAccess },
-                set: { projectIndex.setAgentAccess(id: project.id, enabled: $0) }
-            )) {
-                Text(project.name)
-            }
-            .toggleStyle(.checkbox)
-            .disabled(!shareable)
-
-            // The serving project's row carries the per-project Anonymise
-            // switch — the one place its state is readable (its serve is
-            // up). Same strings as Export: one word for one concept.
-            if isServing && project.agentAccess {
-                Toggle(isOn: $anonymise) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(i18n.t("desktop.menu.quotes.anonymise"))
-                        Text(i18n.t("desktop.menu.quotes.anonymiseHint"))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .disabled(savedAnonymise == nil)
-                .padding(.leading, 20)
-            }
-        }
-        .padding(.vertical, 6)
-    }
-
-    /// Same predicate as the menus (one home: `AgentAccessPolicy`). The
-    /// menu hides; the audit list disables — it must account for every
-    /// project.
-    private func canShare(_ project: Project) -> Bool {
-        AgentAccessPolicy.canShare(
-            project,
-            sessionCount: projectIndex.unanalysed[project.id]?.sessionCount
-        )
-    }
-
-    // MARK: - Anonymise plumbing (moved verbatim from the retired sheet)
-
-    private func settingsURL() -> URL? {
-        guard let port = serveManager.runningPort else { return nil }
-        return URL(string: "http://127.0.0.1:\(port)/api/projects/1/agent-settings")
-    }
-
-    private func loadAnonymise() async {
-        guard let url = settingsURL(), let apiToken = serveManager.authToken else { return }
-        var req = URLRequest(url: url)
-        req.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
-        guard let (data, _) = try? await URLSession.shared.data(for: req),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let value = json["anonymise"] as? Bool
-        else { return }  // switch stays disabled — never guess a compliance state
-        anonymise = value
-        savedAnonymise = value
-    }
-
-    private func saveAnonymise() async {
-        guard let saved = savedAnonymise, saved != anonymise,
-              let url = settingsURL(), let apiToken = serveManager.authToken else { return }
-        var req = URLRequest(url: url)
-        req.httpMethod = "PUT"
-        req.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: ["anonymise": anonymise])
-        if (try? await URLSession.shared.data(for: req)) != nil {
-            savedAnonymise = anonymise
-        } else {
-            // A compliance switch reverts visibly when the write fails.
-            anonymise = saved
-        }
     }
 
     private func copy() {

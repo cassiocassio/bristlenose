@@ -542,8 +542,6 @@
     "clients": {
       "generic": "Generisches MCP"
     },
-    "accessHeader": "Agentenzugriff",
-    "noProjects": "Noch keine Projekte in der Seitenleiste.",
     "badgeTooltip": "F\u00fcr Agenten freigegeben. Jeder verbundene Agent kann die Zitate dieses Projekts auf Ihre Anfrage lesen."
   }
 }

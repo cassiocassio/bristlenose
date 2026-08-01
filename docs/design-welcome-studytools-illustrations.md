@@ -9,11 +9,17 @@ trued-against: HEAD on 2026-07-26
 > **Trued 2026-07-26** — Codebooks (tool 2) shipped this session as the manual-tags
 > illustration, and the seven-sentiments fan was halved in speed. Updated from
 > "one shipped, seven remaining" to two shipped, six remaining.
+>
+> **Updated 1 Aug 2026** — Tag (3) and Star & hide (4) have shipped as webviews,
+> and a NINTH cell was added and shipped: **Connect an AI agent** (a faked-up
+> Claude Code session over the real `/mcp/` tool names — see its section below).
+> Five cells now carry real illustrations; four of the original eight remain.
 
 **Handoff for a new session.** Replacing the 8 static screenshots in the Welcome
 screen's large "Study tools" cell with tiny looping illustrations, **one tool at
-a time**. Tools 1–2 (AutoCode, Codebooks) are **built and shipped in-app**; this
-doc is the brief for the six remaining.
+a time**. Tools 1–4 (AutoCode, Codebooks, Tag, Star & hide) plus the added
+Connect-an-AI-agent cell are **built and shipped in-app**; this doc is the brief
+for the four remaining (Video clips, Send to Miro, Ingest, Redact PII).
 
 ## Why we're doing this (Martin, 25 Jul 2026)
 
@@ -119,12 +125,42 @@ React to these as we go; lock nothing until it's mocked.
 
 | # | Tool | Concept seed | Likely target |
 |---|------|--------------|---------------|
-| 3 | **Tag** | select quotes, press `t` (keycap), a code chip attaches — reuses the quote-card unit | webview + keycap |
-| 4 | **Star & hide** | `s` stars a quote (star fills gold), `h` collapses a row away | webview + keycap |
+| 3 | **Tag** | ~~select quotes, press `t` (keycap), a code chip attaches~~ **DONE** — shipped as webview (`.tag`) | webview + keycap |
+| 4 | **Star & hide** | ~~`s` stars, `h` collapses a row away~~ **DONE** — shipped as webview (`.starHide`) | webview + keycap |
 | 5 | **Video clips** | a quote turns into a film frame with a play triangle / scrubber | native (bespoke drawing) likely |
 | 6 | **Send to Miro** | quotes fly onto a board as sticky notes | native (bespoke) likely |
 | 7 | **Ingest** | a folder drops, files fan out (audio/video/doc icons) → transcript → report | native (bespoke) likely |
 | 8 | **Redact PII** | a name in a quote → a redaction bar sweeps over it (kin to the Dignity strike animation) | webview (report chrome) |
+
+## Added tool — Connect an AI agent (DONE, 1 Aug 2026)
+
+A ninth slot, added when the MCP extension shipped (not one of the original 8
+screenshots). A **faked-up Claude Code session** in a drawn terminal panel — no
+window chrome, no screenshot: the question types in at a dim `>` prompt and
+commits (Claude Code transcript style), a coral `✻ Thinking…` shimmer resolves
+into the green-dot tool call, the result line lands, and a cited answer streams
+back word-by-word.
+
+- **Grounded in the real MCP surface**: the tool line reads
+  `⏺ bristlenose · search_quotes (MCP)(query: "checkout")` — `search_quotes` is
+  the actual tool `/mcp/` exposes (`bristlenose/server/mcp_server.py`). The
+  demo study is the same checkout narrative the Dignity and AutoCode cells use;
+  the answer ends on its quote with a BN-accent `[11:30 · p2]` citation (the
+  payoff: answers point back into the report).
+- **Claude Code's own scheme, following the app appearance** (decided with
+  Martin, 1 Aug): light = ink on terminal white; dark = warm near-black
+  `#262624`, warm-white text, `#d97757` spinner, `#4eba65` tool dot. Only the
+  citation uses the BN palette accent. Edo overrides carry through like every
+  other webview cell.
+- **In-app:** `WelcomeIllustrationHTML.agentChat(...)` + `AgentChatIllustrationView`
+  (enum `.agentChat`), natural height 160, baton turn 13 s — one play then hold;
+  reduce-motion renders the finished conversation. Slot sits after Send to Miro:
+  title "Connect an AI agent", CTA "Connect an agent →" → `connect-an-agent.html`.
+- **Build note:** built directly in-app (the mock-first step was deliberately
+  skipped — the panel reproduces Claude Code chrome, not report chrome, so there
+  was no report CSS to sync); backport a section to
+  `docs/mockups/welcome-studytools-animations.html` only if it needs design
+  iteration.
 
 ## Dependencies / open items
 

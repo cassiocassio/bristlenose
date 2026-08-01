@@ -20,7 +20,7 @@ enum ScienceIllustration: Equatable {
     // NB: now welcome-wide, not science-only — `autocode` is the first study-tools
     // illustration. Worth renaming to `WelcomeIllustration` before the other study
     // tools land (see docs/design-welcome-studytools-illustrations.md).
-    case none, sentimentFan, books, shoal, quote, signal, autocode, manualTags, tag, starHide
+    case none, sentimentFan, books, shoal, quote, signal, autocode, manualTags, tag, starHide, agentChat
 }
 
 /// sRGB colour from a 0xRRGGBB literal (file-private helper).
@@ -398,6 +398,26 @@ struct StarHideIllustrationView: View {
         let still = reduceMotion || !active   // baton: animate only while this cell holds it
         return IllustrationWebView(html: WelcomeIllustrationHTML.starHide(dark: scheme == .dark, palette: palette, reduce: still))
             .id("starhide-\(scheme)-\(palette)-\(still)")
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Study-tools #5 — Connect an AI agent: a faked-up Claude Code session in a terminal
+/// panel. The researcher's question types in, the agent calls the real MCP tool
+/// (`search_quotes` — the actual tool name the /mcp/ endpoint exposes), the result
+/// line lands, and a cited answer streams back word-by-word. Drawn, not screenshotted:
+/// no window chrome, theme- and palette-aware like every other webview illustration.
+struct AgentChatIllustrationView: View {
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
+    @AppStorage("palette") private var palette: String = "default"
+
+    var body: some View {
+        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        return IllustrationWebView(html: WelcomeIllustrationHTML.agentChat(dark: scheme == .dark, palette: palette, reduce: still))
+            .id("agentchat-\(scheme)-\(palette)-\(still)")
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -1250,6 +1270,133 @@ enum WelcomeIllustrationHTML {
             fadePtr(p);
           }
           runStarHide();
+        </script>
+        </body></html>
+        """
+    }
+
+    /// Connect an AI agent (study-tools #5) — a faked-up Claude Code session. The
+    /// question types in at the terminal prompt, a thinking shimmer runs, the agent
+    /// calls the REAL MCP tool (`search_quotes` — the name /mcp/ actually exposes),
+    /// the result line lands, and a cited answer streams back. Plays once per turn.
+    /// Terminal panel is drawn (no window chrome, no screenshot), theme + palette
+    /// aware like the other webview illustrations.
+    static func agentChat(dark: Bool, palette: String, reduce: Bool) -> String {
+        """
+        <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
+        <head><meta charset="utf-8"><style>
+          /* Claude Code's own scheme, following the welcome screen's appearance:
+             light = ink on terminal white, dark = warm near-black (#262624) with warm
+             white text; coral spinner + green tool dot in both. Only the citation uses
+             the BN accent — it points back into the report. */
+          :root{
+            --term-bg:#ffffff; --term-border:#e0ddd4; --term-ink:#1a1a1a; --term-muted:#767676;
+            --term-accent:#007aff; --term-tool:#2c7a39; --term-spin:#c96442;
+            --bn-font-mono:"SF Mono",ui-monospace,Menlo,monospace;
+          }
+          html[data-appearance="dark"]{
+            --term-bg:#262624; --term-border:#3e3e38; --term-ink:#e8e6e3; --term-muted:#98978f;
+            --term-accent:#0a84ff; --term-tool:#4eba65; --term-spin:#d97757;
+          }
+          html[data-palette="edo"]{
+            --term-bg:#fdfbf7; --term-border:#d4c9a8; --term-ink:#1b2230; --term-muted:#4a698a;
+            --term-accent:#0f5c9e;
+          }
+          html[data-palette="edo"][data-appearance="dark"]{
+            --term-bg:#1a1816; --term-border:#2d2820; --term-ink:#e8e3d6; --term-muted:#7ba8a0;
+            --term-accent:#4d9fe0;
+          }
+          *{ box-sizing:border-box; }
+          html,body{ margin:0; height:100%; overflow:hidden; background:transparent; }
+          body{ position:relative; }
+          /* Fixed natural size, centred, uniformly scaled to fit (same fit() pattern as
+             the signal card) — internal layout never reflows, the whole panel scales. */
+          .term{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); transform-origin:center;
+                 width:430px; border:1px solid var(--term-border); border-radius:8px; background:var(--term-bg);
+                 padding:12px 14px; font-family:var(--bn-font-mono); font-size:11.5px; line-height:1.55;
+                 color:var(--term-ink); }
+          .row{ white-space:pre-wrap; margin:0 0 4px; min-height:1.55em; }
+          .row:last-child{ margin-bottom:0; }
+          .ln{ opacity:0; transition:opacity .3s ease; }
+          .ln.on{ opacity:1; }
+          .pg{ color:var(--term-muted); }
+          .done{ color:var(--term-muted); }   /* committed input dims, Claude Code transcript style */
+          .spin{ color:var(--term-spin); }
+          .tooldot{ color:var(--term-tool); }
+          .ansdot{ color:var(--term-ink); }
+          .toolname{ color:var(--term-ink); }
+          .toolargs{ color:var(--term-muted); }
+          .res{ color:var(--term-muted); }
+          .ans{ min-height:4.65em; }   /* reserve 3 lines so the streamed answer never grows the panel */
+          .cite{ color:var(--term-accent); opacity:0; transition:opacity .35s ease; }
+          .cite.on{ opacity:1; }
+          .tcaret{ display:inline-block; width:7px; height:1.15em; background:var(--term-ink);
+                   margin-left:1px; vertical-align:text-bottom; }
+          .tcaret.blink{ animation:tcaret-blink 1s step-end infinite; }
+          @keyframes tcaret-blink{ 50%{opacity:0} }
+          @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
+        </style></head>
+        <body>
+          <div class="term" id="term">
+            <div class="row" id="qrow"><span class="pg">&gt; </span><span id="q"></span><span class="tcaret blink" id="qc"></span></div>
+            <div class="row ln" id="tool"></div>
+            <div class="row ln res" id="res">  ⎿  Found 6 quotes</div>
+            <div class="row ln ans" id="ans"><span class="ansdot">⏺ </span><span id="anstext"></span><span class="cite" id="cite"> [11:30 · p2]</span></div>
+          </div>
+        <script>
+          var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
+          var PACE=1.3;
+          function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+          function nap(ms){ return sleep(Math.round(ms*PACE)); }
+          function settle(){ return new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); }); }
+          function q(id){ return document.getElementById(id); }
+          var QUESTION="where did participants struggle in checkout?";
+          var TOOLCALL='<span class="tooldot">⏺ </span><span class="toolname">bristlenose · search_quotes</span><span class="toolargs"> (MCP)(query: "checkout")</span>';
+          var ANSWER="Checkout is the clearest friction point — six quotes, nearly all frustration: “I couldn’t figure out where to pay.”";
+          function fillStill(){
+            q("q").textContent=QUESTION; q("qc").remove(); q("qrow").classList.add("done");
+            q("tool").innerHTML=TOOLCALL; q("tool").classList.add("on");
+            q("res").classList.add("on");
+            q("anstext").textContent=ANSWER;
+            q("ans").classList.add("on"); q("cite").classList.add("on");
+          }
+          async function typeQuestion(){
+            var el=q("q");
+            for(var i=0;i<QUESTION.length;i++){ el.textContent+=QUESTION[i]; await sleep(34); }
+            await nap(280);
+            q("qc").remove(); q("qrow").classList.add("done");   // enter — the input commits and dims
+          }
+          async function think(){
+            var t=q("tool"), glyphs=["✻","✽","✳","✻"];
+            t.innerHTML='<span class="spin" id="sg">✻</span><span class="toolargs"> Thinking…</span>';
+            t.classList.add("on");
+            for(var i=0;i<glyphs.length;i++){ q("sg").textContent=glyphs[i]; await nap(230); }
+          }
+          async function streamAnswer(){
+            q("ans").classList.add("on");
+            var el=q("anstext"), words=ANSWER.split(" ");
+            for(var i=0;i<words.length;i++){ el.textContent+=(i?" ":"")+words[i]; await sleep(78); }
+            await nap(240);
+            q("cite").classList.add("on");
+          }
+          async function runAgentChat(){
+            await settle();
+            await typeQuestion();
+            await think();
+            q("tool").innerHTML=TOOLCALL;      // the shimmer resolves into the real tool call
+            await nap(550);
+            q("res").classList.add("on");
+            await nap(650);
+            await streamAnswer();
+          }
+          function fit(){
+            var c=document.getElementById("term");
+            var s=Math.min(0.9,(window.innerWidth-8)/c.offsetWidth,(window.innerHeight-8)/c.offsetHeight);
+            if(isFinite(s) && s>0) c.style.transform='translate(-50%,-50%) scale('+s+')';
+          }
+          requestAnimationFrame(fit);
+          window.addEventListener('resize', fit);
+          if(REDUCED){ fillStill(); requestAnimationFrame(fit); } else { runAgentChat(); }
         </script>
         </body></html>
         """

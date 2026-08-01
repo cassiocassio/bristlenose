@@ -98,6 +98,7 @@ extension ScienceIllustration {
         case .manualTags:   return 13
         case .tag:          return 12   // one play (arc → click → t → type) then hold
         case .starHide:     return 14   // two beats (star A, hide B) then hold
+        case .agentChat:    return 13   // one play (type → tool call → streamed answer) then hold
         }
     }
 }

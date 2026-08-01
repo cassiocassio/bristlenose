@@ -42,6 +42,7 @@ private enum WelcomeContent {
         .init(title: "Star & hide", text: "Press `s` to keep the quotes that matter, `h` to hide the rest.", linkLabel: "Keyboard shortcuts →", href: docs + "keyboard-shortcuts.html", illustration: .starHide),
         .init(title: "Video clips", text: "Turn selected quotes into video clips.", linkLabel: "Export options →", href: docs + "export-clips.html", image: "welcome-clips"),
         .init(title: "Send to Miro", text: "Send quotes to a Miro board.", linkLabel: "Connect to Miro →", href: docs + "send-to-miro.html", image: "welcome-miro"),
+        .init(title: "Connect an AI agent", text: "Chat to your data from Claude Code, Claude Desktop, or any MCP agent.", linkLabel: "Connect an agent →", href: docs + "connect-an-agent.html", illustration: .agentChat),
         .init(title: "Ingest", text: "Drop a folder of recordings or transcripts — Bristlenose transcribes, analyses and reports back.", linkLabel: "Import options →", href: docs + "first-analysis.html", image: "welcome-ingest"),
         .init(title: "Redact PII", text: "Remove personal details automatically, before analysis.", linkLabel: "Strip names and more →", href: docs + "redact-pii.html"),
     ]
@@ -596,6 +597,7 @@ private struct SlotRotator: View {
         case .manualTags:   return 176
         case .tag:          return 160
         case .starHide:     return 190   // toolbar + two compact cards
+        case .agentChat:    return 160   // one terminal panel (430×~140 at scale ≤0.9)
         case .books:        return 252   // caption + covers + link (see BookShelfView.naturalHeight)
         }
     }
@@ -616,6 +618,7 @@ private struct SlotRotator: View {
         case .manualTags:   ManualTagsIllustrationView()
         case .tag:          TagIllustrationView()
         case .starHide:     StarHideIllustrationView()
+        case .agentChat:    AgentChatIllustrationView()
         }
     }
 

@@ -6,9 +6,11 @@ CheckResult. The CLI layer (cli.py) handles display.
 
 from __future__ import annotations
 
+import json
 import logging
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -799,6 +801,116 @@ def check_auth_token_env() -> CheckResult:
     )
 
 
+# Homebrew tap identifiers. The formula is the tap plus the formula name; both
+# are valid trust grants (`brew trust --formula …` / `brew trust <tap>`).
+_BREW_TAP = "cassiocassio/bristlenose"
+_BREW_FORMULA = f"{_BREW_TAP}/bristlenose"
+
+
+def _is_brew_formula_install() -> bool:
+    """True only when running from the Homebrew formula's keg.
+
+    Deliberately stricter than ``doctor_fixes.detect_install_method()``, which
+    returns "brew" whenever ``sys.executable`` sits under a Homebrew prefix.
+    That's right for phrasing a fix message, but too loose to gate this check:
+    ``pip install bristlenose`` into a Homebrew *Python* also matches, and
+    telling that user to `brew trust` a formula they never installed is a
+    false positive. The formula builds its venv at
+    ``<prefix>/Cellar/bristlenose/<version>/libexec``, so require the keg path.
+    """
+    parts = Path(sys.prefix).parts
+    return "Cellar" in parts and "bristlenose" in parts
+
+
+def check_brew_tap_trust() -> CheckResult:
+    """Warn when the Homebrew formula is installed but the tap isn't trusted.
+
+    Homebrew 6.0 requires non-official taps to be explicitly trusted before
+    their Ruby is evaluated, and the gate is ARGV-based: a tap is allowed only
+    when its name appears in the command the user typed. So
+    `brew install cassiocassio/bristlenose/bristlenose` still works, but a bare
+    `brew upgrade` never names us, skips the formula, and prints a warning
+    rather than an error. The practical result is an install that goes stale
+    indefinitely with no failure the user would notice — which is exactly the
+    kind of thing doctor exists to surface.
+
+    Trust state is read via `brew trust --json=v1` rather than by parsing
+    ``trust.json`` directly: the store path varies (``$XDG_CONFIG_HOME`` vs
+    ``~/.homebrew``) and its on-disk keys ("trustedformulae") differ from the
+    normalised JSON output ("formulae"). Shelling out also keeps us honest
+    about the ARGV rule — our own argv here never names the formula, so an
+    implicitly-allowed invocation can't produce a false OK.
+
+    See docs/design-homebrew-packaging.md for the full failure mode.
+    """
+    if not _is_brew_formula_install():
+        return CheckResult(
+            status=CheckStatus.SKIP,
+            label="Homebrew",
+            detail="not a Homebrew formula install",
+        )
+
+    brew = shutil.which("brew")
+    if brew is None:
+        return CheckResult(
+            status=CheckStatus.SKIP,
+            label="Homebrew",
+            detail="brew not on PATH",
+        )
+
+    try:
+        proc = subprocess.run(
+            [brew, "trust", "--json=v1"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.debug("brew trust probe failed: %s", exc)
+        return CheckResult(
+            status=CheckStatus.SKIP,
+            label="Homebrew",
+            detail="could not read trust state",
+        )
+
+    if proc.returncode != 0:
+        # Homebrew < 6.0 has no `brew trust` subcommand, so tap trust doesn't
+        # apply and there is nothing to warn about.
+        logger.debug("brew trust exited %s: %s", proc.returncode, proc.stderr.strip())
+        return CheckResult(
+            status=CheckStatus.SKIP,
+            label="Homebrew",
+            detail="tap trust not supported (Homebrew < 6.0)",
+        )
+
+    try:
+        store = json.loads(proc.stdout)
+    except ValueError as exc:
+        logger.debug("brew trust returned unparseable JSON: %s", exc)
+        return CheckResult(
+            status=CheckStatus.SKIP,
+            label="Homebrew",
+            detail="could not read trust state",
+        )
+
+    formulae = store.get("formulae") or []
+    taps = store.get("taps") or []
+    if _BREW_FORMULA in formulae or _BREW_TAP in taps:
+        return CheckResult(
+            status=CheckStatus.OK,
+            label="Homebrew",
+            detail="tap trusted — brew upgrade will keep Bristlenose current",
+        )
+
+    return CheckResult(
+        status=CheckStatus.WARN,
+        label="Homebrew",
+        detail="tap not trusted — brew upgrade silently skips Bristlenose",
+        fix_key="brew_tap_untrusted",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Aggregators
 # ---------------------------------------------------------------------------
@@ -1176,7 +1288,12 @@ def run_bundle_integrity() -> DoctorReport:
 
 
 def run_all(settings: BristlenoseSettings) -> DoctorReport:
-    """Run all checks (used by explicit `bristlenose doctor`)."""
+    """Run all checks (used by explicit `bristlenose doctor`).
+
+    ``check_brew_tap_trust`` is deliberately not in ``run_local_checks``: that
+    feeds the desktop app's Health window, which only ever runs from the
+    bundled sidecar, so the check would always report SKIP there.
+    """
     return DoctorReport(results=[
         check_ffmpeg(),
         check_backend(),
@@ -1187,6 +1304,7 @@ def run_all(settings: BristlenoseSettings) -> DoctorReport:
         check_disk_space(settings),
         check_serve_deps(),
         check_auth_token_env(),
+        check_brew_tap_trust(),
     ])
 
 
@@ -1330,7 +1448,6 @@ def _validate_azure_key(
     Returns (True, "") if valid, (False, error) if rejected,
     (None, error) if we couldn't check (network issue).
     """
-    import json
     import urllib.error
     import urllib.request
 

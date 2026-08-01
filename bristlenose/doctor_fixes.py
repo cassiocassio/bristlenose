@@ -421,6 +421,19 @@ def _fix_serve_deps_missing(method: str) -> str:
     )
 
 
+def _fix_brew_tap_untrusted(method: str) -> str:
+    # The check that raises this only fires on a Homebrew keg install, so the
+    # `method` argument is unused — the fix is the same command regardless of
+    # what detect_install_method() would have guessed.
+    del method
+    return (
+        "Homebrew 6.0 skips untrusted third-party taps during `brew upgrade`,\n"
+        "so Bristlenose installs fine but stops receiving updates.\n\n"
+        "  brew trust --formula cassiocassio/bristlenose/bristlenose\n\n"
+        "One-off. Then `brew upgrade` picks up new versions as normal."
+    )
+
+
 def _fix_auth_token_env_set(_method: str) -> str:
     return (
         "_BRISTLENOSE_AUTH_TOKEN is set in your shell. `bristlenose serve` "
@@ -460,4 +473,5 @@ _FIX_TABLE: dict[str, object] = {
     "ollama_model_missing": _fix_ollama_model_missing,
     "auth_token_env_set": _fix_auth_token_env_set,
     "serve_deps_missing": _fix_serve_deps_missing,
+    "brew_tap_untrusted": _fix_brew_tap_untrusted,
 }

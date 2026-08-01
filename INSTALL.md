@@ -16,6 +16,14 @@ Homebrew handles Python, FFmpeg, and all dependencies for you. One command:
 brew install cassiocassio/bristlenose/bristlenose
 ```
 
+Then trust the formula, so `brew upgrade` keeps Bristlenose current:
+
+```bash
+brew trust --formula cassiocassio/bristlenose/bristlenose
+```
+
+Homebrew 6.0 and later skip formulae from third-party taps during `brew upgrade` unless you trust them. Without this step Bristlenose installs and runs fine, but silently stops receiving updates.
+
 **Don't have Homebrew?** Open Terminal (press Cmd + Space, type "Terminal", hit Enter) and paste:
 
 ```bash

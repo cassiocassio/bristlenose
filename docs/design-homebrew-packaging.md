@@ -205,6 +205,37 @@ tarball (so network was available), but there's a window between `install` and
 If the venv breaks (e.g. Python runtime moved), `brew reinstall bristlenose`
 fixes it — `post_install` recreates the pip install in the fresh venv.
 
+### Tap trust silently drops us from `brew upgrade` (Homebrew 6.0+)
+
+Homebrew 6.0 (11 Jun 2026) requires non-official taps to be explicitly trusted
+before their Ruby is evaluated. The gate is **ARGV-based** — see
+`explicitly_allowed?` in Homebrew's `trust.rb`: a tap is allowed only when its
+full name or tap name appears in the command the user typed.
+
+Consequences, in order of how much they cost us:
+
+- **`brew install cassiocassio/bristlenose/bristlenose` still works**, including
+  auto-tapping a clean machine. The fully-qualified name is in ARGV, so it
+  self-trusts for that invocation. This is the pattern Homebrew's own docs
+  recommend to tap maintainers, and it's what we already documented.
+- **Bare `brew upgrade` skips us.** Our name isn't in ARGV, the formula is never
+  loaded, and we vanish from the upgrade plan. It emits an `opoo` warning
+  ("The following taps are not trusted"), not an error — so an existing install
+  goes stale indefinitely with no failure the user would notice.
+- `brew outdated` likewise doesn't list us.
+- `brew doctor` warns about untrusted taps.
+
+Mitigations in place: the formula's `caveats` block prints the `brew trust
+--formula …` command on every fresh install, and README / INSTALL / the website
+install page carry the same line. Neither reaches installs that predate the
+change — `bristlenose doctor`'s `check_brew_tap_trust` covers those.
+
+Do **not** reach for `HOMEBREW_NO_REQUIRE_TAP_TRUST=1`; it's documented as a
+temporary opt-out slated for removal.
+
+Note this is a per-item, non-persisted allowance — nothing is written to
+`trust.json` by a qualified install. Only an explicit `brew trust` persists.
+
 ### No `brew linkage` verification
 
 Homebrew's `brew linkage` command can't verify dynamic linkage of files installed
@@ -224,6 +255,12 @@ third-party tap; would block homebrew-core submission.
 
 This is significant work and only worth it if user demand justifies it. The
 third-party tap with `post_install` pip works fine for now.
+
+Since Homebrew 6.0 there is one new argument on the benefit side: official taps
+are trusted by default, so a homebrew-core formula would moot the tap-trust
+problem above entirely — no `brew trust` step, no silent-staleness failure mode.
+Not remotely enough on its own to justify 100+ resource blocks, but worth
+weighing if the CLI audience grows.
 
 ---
 

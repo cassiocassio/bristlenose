@@ -27,6 +27,7 @@ from bristlenose.doctor import (
     check_api_key,
     check_auth_token_env,
     check_backend,
+    check_brew_tap_trust,
     check_bundle_admin_panel,
     check_disk_space,
     check_ffmpeg,
@@ -980,6 +981,96 @@ class TestCheckServeDeps:
         assert "uvicorn" not in result.detail
 
 
+class TestCheckBrewTapTrust:
+    """Homebrew 6.0 tap trust — see docs/design-homebrew-packaging.md.
+
+    Everything is mocked: CI's macOS runners have a real `brew` on PATH, so an
+    unmocked check would shell out and report on the runner's trust store.
+    """
+
+    KEG = "/opt/homebrew/Cellar/bristlenose/0.23.0/libexec"
+    TRUSTED_FORMULA = '{"taps": [], "formulae": ["cassiocassio/bristlenose/bristlenose"]}'
+    TRUSTED_TAP = '{"taps": ["cassiocassio/bristlenose"], "formulae": []}'
+    TRUSTED_NOTHING = '{"taps": [], "formulae": [], "casks": [], "commands": []}'
+
+    @staticmethod
+    def _check(
+        prefix: str,
+        *,
+        which: str | None = "/opt/homebrew/bin/brew",
+        returncode: int = 0,
+        stdout: str = "",
+    ) -> CheckResult:
+        proc = MagicMock(returncode=returncode, stdout=stdout, stderr="")
+        with (
+            patch("sys.prefix", prefix),
+            patch("bristlenose.doctor.shutil.which", return_value=which),
+            patch("bristlenose.doctor.subprocess.run", return_value=proc) as run,
+        ):
+            result = check_brew_tap_trust()
+        # A non-Homebrew install must not shell out at all.
+        if "Cellar" not in prefix:
+            run.assert_not_called()
+        return result
+
+    def test_pipx_install_skips(self) -> None:
+        """A pipx install is not a Homebrew keg — nothing to say."""
+        result = self._check("/Users/someone/.local/pipx/venvs/bristlenose")
+        assert result.status == CheckStatus.SKIP
+        assert result.fix_key == ""
+
+    def test_pip_into_homebrew_python_skips(self) -> None:
+        """The false-positive guard.
+
+        `pip install bristlenose` using a Homebrew-installed Python puts
+        sys.prefix under /opt/homebrew but creates no keg. detect_install_method()
+        calls that "brew"; this check must not, or we would tell the user to
+        trust a formula they never installed.
+        """
+        result = self._check("/opt/homebrew")
+        assert result.status == CheckStatus.SKIP
+        assert result.fix_key == ""
+
+    def test_untrusted_keg_warns(self) -> None:
+        """The case that actually costs users: installed, but upgrades skip it."""
+        result = self._check(self.KEG, stdout=self.TRUSTED_NOTHING)
+        assert result.status == CheckStatus.WARN
+        assert result.fix_key == "brew_tap_untrusted"
+        assert "upgrade" in result.detail
+
+    def test_formula_trust_is_enough(self) -> None:
+        result = self._check(self.KEG, stdout=self.TRUSTED_FORMULA)
+        assert result.status == CheckStatus.OK
+        assert result.fix_key == ""
+
+    def test_tap_trust_is_enough(self) -> None:
+        """Whole-tap trust also covers the formula — don't nag someone who has it."""
+        result = self._check(self.KEG, stdout=self.TRUSTED_TAP)
+        assert result.status == CheckStatus.OK
+        assert result.fix_key == ""
+
+    def test_homebrew_older_than_6_skips(self) -> None:
+        """No `brew trust` subcommand means tap trust doesn't exist yet."""
+        result = self._check(self.KEG, returncode=1, stdout="")
+        assert result.status == CheckStatus.SKIP
+        assert result.fix_key == ""
+
+    def test_unparseable_json_skips(self) -> None:
+        """Never fail loudly on an unexpected brew output shape."""
+        result = self._check(self.KEG, stdout="not json")
+        assert result.status == CheckStatus.SKIP
+        assert result.fix_key == ""
+
+    def test_brew_missing_from_path_skips(self) -> None:
+        result = self._check(self.KEG, which=None)
+        assert result.status == CheckStatus.SKIP
+        assert result.fix_key == ""
+
+    def test_fix_message_carries_the_command(self) -> None:
+        fix = get_fix("brew_tap_untrusted", "brew")
+        assert "brew trust --formula cassiocassio/bristlenose/bristlenose" in fix
+
+
 class TestCheckAuthTokenEnv:
     def test_env_var_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """No env var → OK, no warning."""
@@ -1010,7 +1101,7 @@ class TestCheckAuthTokenEnv:
 
 
 class TestRunAll:
-    def test_run_all_returns_nine_results(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_run_all_returns_ten_results(self, monkeypatch: pytest.MonkeyPatch) -> None:
         settings = _settings()
         # check_auth_token_env reads os.environ directly; pin it OK for this test.
         monkeypatch.delenv("_BRISTLENOSE_AUTH_TOKEN", raising=False)
@@ -1023,12 +1114,15 @@ class TestRunAll:
             patch("bristlenose.doctor.check_pii") as m6,
             patch("bristlenose.doctor.check_disk_space") as m7,
             patch("bristlenose.doctor.check_serve_deps") as m8,
+            # Mocked rather than left live: unmocked it would shell out to a
+            # real `brew` on CI's macOS runners.
+            patch("bristlenose.doctor.check_brew_tap_trust") as m9,
         ):
-            for m in (m1, m2, m3, m4, m5, m6, m7, m8):
+            for m in (m1, m2, m3, m4, m5, m6, m7, m8, m9):
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
             report = run_all(settings)
 
-        assert len(report.results) == 9
+        assert len(report.results) == 10
         assert not report.has_failures
 
 

@@ -79,11 +79,14 @@ Requires Python 3.10 or newer.
 ```bash
 # macOS (Homebrew) -- handles ffmpeg + Python for you
 brew install cassiocassio/bristlenose/bristlenose
+brew trust --formula cassiocassio/bristlenose/bristlenose
 
 # Linux / macOS / Windows (pipx or uv)
 pipx install bristlenose
 uv tool install bristlenose    # alternative
 ```
+
+The `brew trust` line is a one-off. Homebrew 6.0 and later skip third-party taps during `brew upgrade` unless trusted, so without it Bristlenose installs fine but silently stops receiving updates.
 
 If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu, `winget install FFmpeg` on Windows).
 

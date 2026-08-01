@@ -96,6 +96,7 @@ final class TypeParityController: ObservableObject {
         panel.nameFieldStringValue = "tokens-desktop-tuned.css"
         panel.allowedContentTypes = [.plainText]
         panel.message = "CSS block + JSON record (also copied to clipboard)"
+        panel.adoptHostAppearance()
         if panel.runModal() == .OK, let url = panel.url {
             try? combined.write(to: url, atomically: true, encoding: .utf8)
         }

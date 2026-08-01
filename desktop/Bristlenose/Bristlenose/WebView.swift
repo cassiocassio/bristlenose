@@ -420,6 +420,9 @@ struct WebView: NSViewRepresentable {
             panel.nameFieldStringValue = suggested
             panel.allowedContentTypes = Self.contentTypes(forExt: ext)
             panel.canCreateDirectories = true
+            // The app forces its own appearance; a panel follows the system's
+            // unless told otherwise. See `PanelHost`.
+            panel.adoptHostAppearance()
             if let dir = Self.lastSaveDirectory(forExt: ext) {
                 panel.directoryURL = dir
             }

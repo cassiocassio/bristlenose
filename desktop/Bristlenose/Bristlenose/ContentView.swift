@@ -297,13 +297,13 @@ struct ContentView: View {
         return components.url ?? serveManager.serveURL
     }
 
-    /// Map the stored appearance string to SwiftUI's ColorScheme.
+    /// SwiftUI's spelling of the appearance preference. `AppAppearance` already
+    /// applies it app-wide via `NSApp.appearance`, so this is belt-and-braces —
+    /// it states the window's appearance locally, which is also what the
+    /// WKWebView inherits to drive the report's `prefers-color-scheme` CSS
+    /// (see the note at `BridgeHandler.swift:234`).
     private var colorScheme: ColorScheme? {
-        switch appearance {
-        case "light": .light
-        case "dark": .dark
-        default: nil  // "auto" → follow system
-        }
+        AppAppearance.colorScheme(for: appearance)
     }
 
     /// The NavigationSplitView plus structural modifiers and the first cluster
@@ -633,6 +633,7 @@ struct ContentView: View {
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         panel.message = String(format: i18n.t("desktop.chrome.locateMessage"), project.name)
+        panel.adoptHostAppearance()
         panel.begin { response in
             Task { @MainActor in
                 guard response == .OK, let url = panel.url else { return }
@@ -669,7 +670,7 @@ struct ContentView: View {
         panel.message = String(format: i18n.t("desktop.chrome.addFilesMessage"), projectName)
         // Match the app's appearance (window's forced `.preferredColorScheme`);
         // a free-floating panel otherwise follows the system theme.
-        panel.appearance = NSApp.keyWindow?.effectiveAppearance
+        panel.adoptHostAppearance()
         panel.begin { response in
             Task { @MainActor in
                 guard response == .OK, !panel.urls.isEmpty else { return }
@@ -1183,13 +1184,11 @@ struct ContentView: View {
         )
         // Resolve the host window for the sheet. A drop-initiated present runs
         // just after the drag's modal event loop, when keyWindow is momentarily
-        // nil — fall back to mainWindow, then the first main-capable visible
-        // window (canBecomeMain filters out panels/utility windows). Without this
-        // the panel lands via the free-floating `begin` fallback, which follows
-        // the *system* theme (light on a dark app) and isn't window-modal.
-        let host = NSApp.keyWindow ?? NSApp.mainWindow
-            ?? NSApp.windows.first { $0.isVisible && $0.canBecomeMain }
-        panel.appearance = host?.effectiveAppearance
+        // nil — `PanelHost` owns that fallback chain. Without a host the panel
+        // lands via the free-floating `begin` fallback, which follows the
+        // *system* theme (light on a dark app) and isn't window-modal.
+        let host = PanelHost.window
+        panel.adoptHostAppearance(host)
         // Window-modal sheet: the drop can't complete without a name + location,
         // so block the initiating window until the user decides — the HIG
         // modality for a window-scoped decision (a sheet, not an app-modal dialog

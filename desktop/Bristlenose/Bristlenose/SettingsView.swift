@@ -112,17 +112,15 @@ final class SettingsWindow {
         controller.show(pane: pane)
     }
 
-    /// Match the window chrome to the app appearance preference. Called at
-    /// open time and again by `SettingsPaneChrome` whenever the preference
-    /// changes while the window is open — the panes' `.preferredColorScheme`
-    /// can't reach this AppKit window's chrome, only `window.appearance` can.
+    /// Match the window chrome to the app appearance preference.
+    ///
+    /// Belt-and-braces since `AppAppearance` began setting `NSApp.appearance`,
+    /// which this window inherits like any other. Kept because it costs one
+    /// line and this window is built by an AppKit controller rather than a
+    /// SwiftUI scene — the panes' `.preferredColorScheme` can't reach its
+    /// chrome, only `window.appearance` can.
     fileprivate func applyAppearance() {
-        let pref = UserDefaults.standard.string(forKey: "appearance") ?? "auto"
-        controller.window?.appearance = switch pref {
-        case "light": NSAppearance(named: .aqua)
-        case "dark": NSAppearance(named: .darkAqua)
-        default: nil  // follow system
-        }
+        controller.window?.appearance = AppAppearance.current
     }
 
     private func symbol(_ name: String) -> NSImage {
@@ -154,10 +152,6 @@ private struct SettingsPaneChrome: ViewModifier {
     }
 
     private var colorScheme: ColorScheme? {
-        switch appearance {
-        case "light": .light
-        case "dark": .dark
-        default: nil
-        }
+        AppAppearance.colorScheme(for: appearance)
     }
 }

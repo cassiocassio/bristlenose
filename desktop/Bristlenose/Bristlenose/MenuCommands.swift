@@ -402,7 +402,7 @@ private struct FileMenuContent: View {
         }
 
         Button(i18n.t("desktop.menu.file.print"), systemImage: "printer") {
-            PrintActions.print(webView: bridgeHandler.webView, window: NSApp.keyWindow)
+            PrintActions.print(webView: bridgeHandler.webView, window: PanelHost.window)
         }
         .keyboardShortcut("p", modifiers: .command)
         // `isReady` is the only published signal that a web view has loaded

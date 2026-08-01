@@ -104,6 +104,7 @@ final class LocateFlow {
                 format: self.i18n.t("desktop.chrome.locateMessage"),
                 self.project.name
             )
+            panel.adoptHostAppearance()
             panel.begin { response in
                 Task { @MainActor in
                     if response == .OK, let url = panel.url {

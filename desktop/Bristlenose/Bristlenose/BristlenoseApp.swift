@@ -15,6 +15,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // let the per-launch ServeManager line carry the sidecar slot.
         appLog.info("BuildInfo: \(BuildInfo.current.oneLine(sidecar: "?"), privacy: .public)")
 
+        // One seam for light/dark. Every window, panel, alert, menu and popover
+        // the app creates inherits `NSApp.appearance` — so no individual surface
+        // has to apply the Settings ▸ Appearance preference itself. See
+        // `AppAppearance`. AppKit calls this delegate method on the main thread.
+        MainActor.assumeIsolated { AppAppearance.beginApplying() }
+
         // The expired-alpha `.dmg` block is presented by `AlphaExpiryFlow` as
         // SwiftUI modals over the (serve-less) main window — see ContentView's
         // `.alphaExpiryFlow(...)`. Serve is refused by `ServeManager.start()`'s

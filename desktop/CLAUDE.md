@@ -42,6 +42,72 @@ Gruber is dragging the design back to Mac reality, native-first got skipped. The
 recurring panels/dialogs checklist and the origin post-mortem live in the
 `feedback_native_primitives_first.md` memory.
 
+## Appearance (light / dark) — one seam, nothing per-surface
+
+**Adding a window, panel, sheet, alert, menu, or popover? Do nothing. It already
+themes correctly.** `AppAppearance.beginApplying()` runs once from
+`AppDelegate.applicationDidFinishLaunching` and sets **`NSApp.appearance`** from
+the Settings ▸ Appearance preference (`@AppStorage("appearance")` — `auto` /
+`light` / `dark`), then keeps it applied via a KVO observation on UserDefaults.
+Every AppKit surface the app creates inherits it. There is no per-surface step,
+and adding one is the bug, not the fix.
+
+**Never re-derive the mapping.** `"light"/"dark"/"auto"` → appearance lives in
+exactly one place, `AppAppearance.swift`. Use `AppAppearance.current`
+(`NSAppearance?`) or `AppAppearance.colorScheme(for:)` (SwiftUI `ColorScheme?`)
+— never a fresh `switch` over the string, and never a fresh
+`UserDefaults.standard.string(forKey: "appearance")`. `nil` means "follow the
+system" in all three spellings, which is why `apply()` needs no `auto` case.
+
+**This is not the seam-alignment "hammer".** `NSApp.appearance` (light/dark) is a
+different property from `NSColor.controlAccentColor`, which the palette work
+rules out overriding app-wide (`docs/private/100days.md` §Edo, and the `.tint()`
+traps in Gotchas below). Appearance is the OS's own light/dark axis and every
+Mac app sets it from its own preference; the accent override is a hammer because
+it repaints controls the system owns. Don't let the accent rule talk you out of
+the appearance seam.
+
+**Why app-level and not per-window.** The preference can disagree with the
+system's. Applied per-window — `.preferredColorScheme` on a SwiftUI scene,
+`window.appearance` on an AppKit one — it reaches *only* windows that opted in,
+leaving every non-window surface on the system theme and obliging each new
+surface to remember. That is precisely what happened: the mapping was written
+out three times, the seven auxiliary `Window` scenes (System Health, Type Parity,
+Run Inspector, Shoal, Shoal Tuner, Shimmer Tuner, Keycap Gallery) had never had
+it applied at all, and the export save panel plus both Locate panels shipped
+light-over-dark. Fixed 2 Aug 2026 by moving to the single `NSApp.appearance`
+seam. **The tell for this whole class: a surface that is correct in Automatic
+and wrong the moment the user forces Light or Dark.** QA it with the app
+preference set *opposite* to System Settings — matching them hides every bug
+here.
+
+**The two deliberate exceptions**, both belt-and-braces rather than load-bearing,
+both already written — don't add a third without a reason in a comment:
+- `ContentView`'s `.preferredColorScheme` — makes SwiftUI's `\.colorScheme`
+  environment explicit for descendants that read it (the web-bridge appearance
+  sync among them).
+- `SettingsWindow.applyAppearance()` — that window is built by an AppKit
+  controller, so the panes' `.preferredColorScheme` can't reach its chrome.
+
+**Save/open panels are the one real caveat — call `panel.adoptHostAppearance()`
+before presenting.** Under App Sandbox an `NSSavePanel`/`NSOpenPanel` is hosted
+out-of-process by the powerbox, the single place where appearance inheritance
+crosses a process boundary, so it is stated explicitly rather than trusted.
+`PanelHost.window` is also the canonical host-window resolution
+(`keyWindow ?? mainWindow ?? first visible canBecomeMain`) — use it for
+`beginSheetModal(for:)` and for `PrintActions.print(window:)` too. Bare
+`NSApp.keyWindow` is wrong: a panel presented just as a drag's modal event loop
+unwinds finds it `nil`, which silently downgrades a sheet to a free-floating,
+system-themed panel. **Tell: the panel has its own traffic-light buttons instead
+of sliding from the title bar.**
+
+**The web report rides the same seam — do not add a bridge channel for it.** The
+WKWebView inherits its window's effective appearance and the report CSS follows
+`prefers-color-scheme`; no env var, no message. A `set-appearance` bridge call
+did exist, was consumed by nothing (it routed via `menuAction` and AppLayout had
+no `case` for it), and was removed 30 Jul 2026 — see the note at
+`BridgeHandler.swift:234`. The platform already carries this fact.
+
 ## Shipping architecture (alpha and beyond)
 
 See `docs/design-desktop-python-runtime.md` for the canonical design. Summary:

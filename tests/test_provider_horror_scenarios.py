@@ -18,7 +18,10 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from bristlenose.config import BristlenoseSettings
+import pytest
+import typer
+
+from bristlenose.config import BristlenoseSettings, ProviderResolution
 from bristlenose.doctor import (
     CheckStatus,
     check_api_key,
@@ -79,14 +82,7 @@ class TestNewUserNoConfig:
         assert report.has_failures
         assert any(r.fix_key == "api_key_missing_anthropic" for r in report.failures)
 
-    def test_needs_provider_prompt_returns_true(self) -> None:
-        """The interactive prompt should trigger for unconfigured users."""
-        from bristlenose.cli import _needs_provider_prompt
-
-        settings = _settings(llm_provider="anthropic", anthropic_api_key="")
-        assert _needs_provider_prompt(settings) is True
-
-    def test_cli_output_no_anthropic_key(self) -> None:
+    def test_cli_output_no_keys_at_all(self, capsys, monkeypatch) -> None:
         """
         What the user sees when they run `bristlenose run ./interviews` with no config:
 
@@ -102,14 +98,44 @@ class TestNewUserNoConfig:
 
         For local models via Ollama:  bristlenose configure local
 
-        (No numbered menu — the run exits so they can configure. The store label
-        in parentheses is resolved live: Keychain / Secret Service / config file.)
+        (No numbered menu, no prompt — the run exits so they can configure. The
+        store label in parentheses is resolved live: Keychain / Secret Service /
+        config file. Resolution status "none" = zero keys AND no explicit choice.)
         """
-        # This test documents expected behavior — the guidance triggers
-        from bristlenose.cli import _needs_provider_prompt
+        from bristlenose import config
+        from bristlenose.cli import _maybe_guide_provider_setup
 
-        settings = _settings(llm_provider="anthropic", anthropic_api_key="")
-        assert _needs_provider_prompt(settings) is True
+        monkeypatch.setattr(
+            config,
+            "_LAST_PROVIDER_RESOLUTION",
+            ProviderResolution("none", "anthropic", (), ""),
+        )
+        monkeypatch.setattr("bristlenose.cli._is_tty", lambda: True)
+        settings = _settings(anthropic_api_key="", openai_api_key="")
+        with pytest.raises(typer.Exit) as excinfo:
+            _maybe_guide_provider_setup(settings)
+        assert excinfo.value.exit_code == 0
+        out = capsys.readouterr().out
+        assert "bristlenose configure <provider>" in out
+
+    def test_no_keys_non_tty_exits_2_with_terse_error(self, capsys, monkeypatch) -> None:
+        """Scripted/CI runs never hang and never see the guidance screen."""
+        from bristlenose import config
+        from bristlenose.cli import _maybe_guide_provider_setup
+
+        monkeypatch.setattr(
+            config,
+            "_LAST_PROVIDER_RESOLUTION",
+            ProviderResolution("none", "anthropic", (), ""),
+        )
+        monkeypatch.setattr("bristlenose.cli._is_tty", lambda: False)
+        settings = _settings(anthropic_api_key="", openai_api_key="")
+        with pytest.raises(typer.Exit) as excinfo:
+            _maybe_guide_provider_setup(settings)
+        assert excinfo.value.exit_code == 2
+        out = capsys.readouterr().out
+        assert "No AI provider configured" in out
+        assert "bristlenose configure" in out
 
 
 class TestProviderGuidance:
@@ -155,25 +181,42 @@ class TestProviderGuidance:
         assert "(Secret Service)" in out
         assert "Keychain" not in out
 
-    def test_configure_local_routes_to_ollama_setup(self) -> None:
+    def test_configure_local_routes_to_ollama_setup(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
         from typer.testing import CliRunner
 
         from bristlenose.cli import app
+
+        # Isolate the current-provider write from the real user config.
+        monkeypatch.delenv("SNAP_USER_COMMON", raising=False)
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
 
         with patch("bristlenose.cli._setup_local_provider", return_value="local") as m:
             res = CliRunner().invoke(app, ["configure", "local"])
         assert m.called
         assert res.exit_code == 0
-        assert "--llm local" in res.output
+        # configure = choose: local becomes current, so the run hint needs no flag.
+        assert "provider for analysis" in res.output
+        assert "bristlenose run" in res.output
+        stored = (tmp_path / "bristlenose" / ".env").read_text()
+        assert "BRISTLENOSE_LLM_PROVIDER=local" in stored
 
-    def test_configure_local_setup_failure_exits_nonzero(self) -> None:
+    def test_configure_local_setup_failure_exits_nonzero(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
         from typer.testing import CliRunner
 
         from bristlenose.cli import app
 
+        monkeypatch.delenv("SNAP_USER_COMMON", raising=False)
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+
         with patch("bristlenose.cli._setup_local_provider", return_value=None):
             res = CliRunner().invoke(app, ["configure", "local"])
         assert res.exit_code == 1
+        # Failed setup records nothing.
+        assert not (tmp_path / "bristlenose" / ".env").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -503,75 +546,98 @@ class TestOllamaNotAvailable:
 # ---------------------------------------------------------------------------
 
 
-class TestInteractivePromptFlows:
-    """Test the interactive first-run prompt in various states."""
+class TestProviderResolutionGates:
+    """``run``/``analyze`` never prompt — the gate stops with guidance or passes.
 
-    def test_prompt_triggers_for_no_anthropic_key(self) -> None:
-        """No key + default provider → prompt triggers."""
-        from bristlenose.cli import _needs_provider_prompt
+    ``_maybe_guide_provider_setup`` reads the ProviderResolution recorded by
+    ``load_settings()``: zero keys → setup guidance; 2+ keys with no choice →
+    "pick once" error; an explicit choice missing its key → a precise error
+    naming the gap (NOT "no provider configured"). A sole configured key
+    (derived) or desktop hosting passes straight through. The only interactive
+    step anywhere in the CLI is the key paste inside ``configure``.
+    """
 
-        settings = _settings(llm_provider="anthropic", anthropic_api_key="")
-        assert _needs_provider_prompt(settings) is True
+    def _gate(self, monkeypatch, resolution, settings, *, tty=True):
+        from bristlenose import config
+        from bristlenose.cli import _maybe_guide_provider_setup
 
-    def test_prompt_does_not_trigger_for_explicit_openai(self) -> None:
-        """Explicit OpenAI provider (no key) → no prompt, preflight will catch it.
+        monkeypatch.setattr(config, "_LAST_PROVIDER_RESOLUTION", resolution)
+        monkeypatch.setattr("bristlenose.cli._is_tty", lambda: tty)
+        return _maybe_guide_provider_setup(settings)
 
-        When user explicitly chooses --llm openai, we don't second-guess them
-        with the 3-way prompt. Preflight will show a specific error.
+    def test_ambiguous_two_keys_exits_2_and_teaches_use(
+        self, capsys, monkeypatch
+    ) -> None:
+        """2+ keys, no choice → never a silent vendor pick, never a prompt."""
+        settings = _settings(
+            anthropic_api_key="sk-ant-x", openai_api_key="sk-oai-x"
+        )
+        resolution = ProviderResolution(
+            "ambiguous", "anthropic", ("anthropic", "openai"), ""
+        )
+        with pytest.raises(typer.Exit) as excinfo:
+            self._gate(monkeypatch, resolution, settings)
+        assert excinfo.value.exit_code == 2
+        out = capsys.readouterr().out
+        assert "Claude" in out and "ChatGPT" in out
+        assert "bristlenose use" in out
+        assert "--llm" in out
+        assert "Choice" not in out  # no prompt, ever
+
+    def test_derived_sole_key_passes_through(self, monkeypatch) -> None:
+        """One configured key → used automatically, whoever's it is."""
+        settings = _settings(openai_api_key="sk-oai-x")
+        resolution = ProviderResolution(
+            "derived", "openai", ("openai",), "sole-configured-key"
+        )
+        assert self._gate(monkeypatch, resolution, settings) is None
+
+    def test_hosted_passes_through(self, monkeypatch) -> None:
+        """Desktop-hosted: the Swift host owns provider choice."""
+        settings = _settings(anthropic_api_key="")
+        resolution = ProviderResolution("hosted", "anthropic", (), "")
+        assert self._gate(monkeypatch, resolution, settings) is None
+
+    def test_explicit_with_key_passes_through(self, monkeypatch) -> None:
+        settings = _settings(
+            llm_provider="openai", openai_api_key="sk-valid-openai-key"
+        )
+        resolution = ProviderResolution(
+            "explicit", "openai", ("openai",), "cli-override"
+        )
+        assert self._gate(monkeypatch, resolution, settings) is None
+
+    def test_explicit_missing_key_names_the_exact_gap(
+        self, capsys, monkeypatch
+    ) -> None:
+        """--llm chatgpt with no ChatGPT key → the error names ChatGPT.
+
+        (Previously this fell through to preflight with a generic message;
+        now the gate says exactly which key is missing and how to add it.)
         """
-        from bristlenose.cli import _needs_provider_prompt
-
         settings = _settings(llm_provider="openai", openai_api_key="")
-        assert _needs_provider_prompt(settings) is False
+        resolution = ProviderResolution(
+            "explicit", "openai", (), "cli-override"
+        )
+        with pytest.raises(typer.Exit) as excinfo:
+            self._gate(monkeypatch, resolution, settings)
+        assert excinfo.value.exit_code == 2
+        out = capsys.readouterr().out
+        assert "ChatGPT" in out
+        assert "bristlenose configure chatgpt" in out
 
-    def test_prompt_does_not_trigger_for_explicit_local(self) -> None:
-        """Explicit local provider (Ollama not ready) → no prompt, preflight will catch it.
-
-        When user explicitly chooses --llm local/ollama, we don't second-guess them
-        with the 3-way prompt. Preflight will show a specific Ollama error.
-        """
-        from bristlenose.cli import _needs_provider_prompt
-
+    def test_explicit_local_passes_through_to_ollama_preflight(
+        self, monkeypatch
+    ) -> None:
+        """--llm local: no key concept — Ollama's own preflight owns readiness."""
         settings = _settings(llm_provider="local")
+        resolution = ProviderResolution("explicit", "local", (), "cli-override")
         with patch("bristlenose.ollama.check_ollama") as mock_check:
             mock_check.return_value = MagicMock(
                 is_running=False,
                 has_suitable_model=False,
             )
-            assert _needs_provider_prompt(settings) is False
-
-    def test_prompt_does_not_trigger_when_anthropic_key_set(self) -> None:
-        """Valid Anthropic key → no prompt."""
-        from bristlenose.cli import _needs_provider_prompt
-
-        settings = _settings(
-            llm_provider="anthropic",
-            anthropic_api_key="sk-ant-valid-key-12345678",
-        )
-        assert _needs_provider_prompt(settings) is False
-
-    def test_prompt_does_not_trigger_when_openai_key_set(self) -> None:
-        """Valid OpenAI key → no prompt."""
-        from bristlenose.cli import _needs_provider_prompt
-
-        settings = _settings(
-            llm_provider="openai",
-            openai_api_key="sk-valid-openai-key",
-        )
-        assert _needs_provider_prompt(settings) is False
-
-    def test_prompt_does_not_trigger_when_ollama_ready(self) -> None:
-        """Local provider + Ollama ready → no prompt."""
-        from bristlenose.cli import _needs_provider_prompt
-
-        settings = _settings(llm_provider="local")
-        with patch("bristlenose.ollama.check_ollama") as mock_check:
-            mock_check.return_value = MagicMock(
-                is_running=True,
-                has_suitable_model=True,
-                recommended_model="llama3.2:3b",
-            )
-            assert _needs_provider_prompt(settings) is False
+            assert self._gate(monkeypatch, resolution, settings) is None
 
 
 # ---------------------------------------------------------------------------

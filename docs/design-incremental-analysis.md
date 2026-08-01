@@ -1,4 +1,18 @@
+---
+status: partial
+last-trued: 2026-07-28
+trued-against: HEAD@main on 2026-07-28
+---
+
 # Incremental analysis and codebook lock
+
+## Changelog
+
+- _2026-07-28_ — added front-matter (had none, so this doc was invisible to every
+  front-matter-driven sweep). Banner added below: the carry-forward mechanism this
+  doc specifies is **not** the one that shipped — the build routed around
+  overlap-matching in favour of Freeze. Body preserved; the delta between the
+  planned matcher and the shipped pin set is the pivot a future reader needs.
 
 **Status:** Thinking document. Not a spec — and the first cut **shipped without it** (v0.20.0, 11 Jul 2026): curation survives re-analysis via freeze-verbatim + membership-is-identity (see the companion doc below), which routes around the quote-re-matching problem this doc frames rather than solving it. What remains live here is the *methodology* — codebook lock-vs-fluid, the saturation proxy, when a theme should be allowed to move — none of which the ship decided. Read it as the open design question behind a shipped feature, not as a pre-TF plan.
 **Sibling docs:** `docs/methodology/tag-rejections-are-great.md`, `docs/methodology/consent-gradient.md`, `docs/design-research-methodology.md`, `docs/design-analysis-future.md`.
@@ -519,6 +533,13 @@ A useful intermediate before the full Mode-B-locked-codebook design lands. Hones
 
 - Stages 1–7 (transcribe, identify speakers, merge): **cache-hit on existing sessions.** Run fresh on new sessions only. This is the cheap-and-honest part — Whisper is deterministic, transcripts don't re-cost.
 - Stages 8–12 (PII, segmentation, quote extraction, clustering, theming): **full regen** across the combined corpus. Themes / sections / sub-clusters / hero quotes all re-derive.
+> **Superseded by Freeze as of 2026-07-28** — see [`design-curation-persistence.md`](design-curation-persistence.md).
+> The ship did **not** carry human work forward by overlap-matching. Marked quotes are pinned via
+> `durable_id` + `frozen_form`, minted on first human touch and exempted from stale cleanup
+> (`importer.py:1409` `_pinned_quote_ids`, `:1507` `_cleanup_stale_data`) — so survival is **not
+> probabilistic** for a pinned quote and no ≥70% gate governs it. The ~81%/~95% overlap figures
+> still apply to *hide* re-matching, which is best-effort by design. Pre-contact text preserved:
+
 - User edits (`source='human'` rows per the schema convention): carry forward by quote-identity match (position-overlap >70% within session). Stars, hides, user-tags, person renames survive.
 - AI-generated tags, AI theme labels, AI section names: replaced entirely. This is the "destructive" part the confirm sheet warns about.
 

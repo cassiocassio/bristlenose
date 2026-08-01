@@ -1,8 +1,18 @@
 ---
 status: partial
-last-trued: 2026-07-28
-trued-against: working tree @main on 2026-07-28
+last-trued: 2026-07-25
+trued-against: working tree @main on 2026-07-25
+last-trued-sections: [checkSystemHealth row (2026-07-28), retired-actions section (2026-07-28)]
 ---
+
+> **Do not honour the "recently trued, skip" short-circuit on this doc.** The
+> `2026-07-28` date it previously carried covered **one row**. A 28 Jul audit found
+> five rows naming actions that exist on neither side of the bridge, three section
+> counts wrong, seven shipped actions missing entirely, and **0 of 12
+> `MenuCommands.swift:N` line anchors still resolving**. The date has been rolled
+> back to the last genuinely whole-doc pass. Re-anchor to struct names
+> (`FileMenuContent`, `CodesMenuContent`, …) when next edited — line numbers here
+> rot within days.
 
 > **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`):** the Project menu + row context menu
 > gained **Stop Analysis** (⌘. on the Project menu) and **Show Diagnostics…**; the toolbar pill that
@@ -10,6 +20,41 @@ trued-against: working tree @main on 2026-07-28
 > rest of the catalogue is untouched by this branch.
 
 > **Truing status:** Trued. Project-ops table rewritten with NotificationCenter / bridge split; old contradicting Future-only table removed. Keyboard shortcuts added throughout. `openInNewWindow` corrected (Shipped, not Future). Help, View, and Codes menus given dedicated sub-sections. Alpha gap (no Analyse/Resume/Retry in context menu) called out inline. See changelog.
+
+## Retired actions — do not re-wire
+
+_Added 2026-07-28._ Eight action names appear in this catalogue's history but are
+**dispatched by nothing today**. They are listed together because they share one
+failure mode: a contributor finds the row, writes a `case` for it in
+`AppLayout.tsx`, and ships dead code. That is exactly how `checkSystemHealth` and
+`pageSetup`/`print` became silent no-ops in the first place.
+
+| Action | Status | Why |
+|---|---|---|
+| `pageSetup`, `print` | **Now native, not bridge** | `PrintActions.pageSetup()` / `PrintActions.print(webView:window:)`. `window.print()` in a WKWebView can't raise the macOS print panel, so the bridge was never the right target. |
+| `checkSystemHealth` | **Now native** | Opens the Health window (`openWindow(id: "health")` → `DoctorReportView` → `GET /api/doctor`). |
+| `mergeCode` | **Withdrawn** | Commented out in `CodesMenuContent` — merging needs a source *and* target and the codebook has no multi-select. |
+| `toggleDarkMode` | **Removed from the View menu** | Appearance is owned by Settings ▸ Appearance. **The frontend handler survives orphaned in `AppLayout.tsx` — nothing dispatches it.** |
+| `exportAnonymised` | **Retired** | Anonymise is a **checkbox on the export save panel** (`ExportAccessoryView`, attached as the NSSavePanel `accessoryView` in `WebView.swift`) — it re-points the download at `?anonymise=…`. A second menu item offering the same choice was redundant. Its `AppLayout.tsx` case is now orphaned; `desktop.menu.file.exportAnonymised` is orphaned across 20 locales. |
+| `filterByTag` | **Retired** | Superseded by the tag sidebar (View ▸ Show Tags). |
+| `exportQuotesCSV` | **Never existed** | No Swift dispatch, no frontend case. |
+| `showHelp`, `showKeyboardShortcuts`, `showReleaseNotes` | **Native** | Help menu opens browser docs directly; no bridge hop. |
+
+**One more unconsumed action — but not a broken feature.** `set-appearance` is
+pushed by `BridgeHandler.syncAppearance()` on every `ready` and has **zero**
+consumers (it routes via `menuAction`, so it needs a `case` in AppLayout's switch;
+there is none — unlike its sibling `syncAnalysisAnimation`, which uses the
+`window.__bristlenose.setX()` namespace pattern and does work).
+
+Unlike the rows above, **nothing is broken by this**: appearance reaches the report
+through native inheritance — `ContentView.swift:393` `.preferredColorScheme(…)`
+forces the window's appearance, the WKWebView inherits it, and the report's CSS
+`prefers-color-scheme` follows. `set-appearance` is therefore **vestigial**, a
+redundant round-trip that fires on every load and lands nowhere, not a dead menu
+item. Recommended: **delete the emitter** — a second channel for a fact the platform
+already carries is how two surfaces drift. Wire it only if the SPA ever needs
+`data-theme` set explicitly (e.g. if "auto" must mean something other than "follow
+system").
 
 ## Changelog
 

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editable themes — ordering consequences prototype</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --ink:#1c2024; --muted:#6b7280; --line:#e3e6ea;
+    --accent:#007aff; --accent-weak:#e8f1ff; --new:#1a7f37; --new-weak:#e7f5ec;
+    --husk:#b45309; --husk-weak:#fdf3e3; --human:#7c3aed; --human-weak:#f1eafe;
+    --pos:#1a7f37; --neg:#d1242f; --neu:#9aa1ab;
+    --menu:#ffffffee; --menu-ink:#1c2024; --menu-sel:#0a69d6; --menu-line:#00000018;
+    --radius:10px; --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#16181c;--card:#1f2228;--ink:#e6e8eb;--muted:#9aa1ab;--line:#2c313a;
+      --accent-weak:#16273f;--new-weak:#12291a;--husk-weak:#2c2312;--human-weak:#241a35;
+      --menu:#2b2e34f2;--menu-ink:#e6e8eb;--menu-line:#ffffff18;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 20px 80px;}
+
+  /* faux macOS menu bar */
+  .menubar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:2px;
+    height:26px;margin:0 -20px 0;padding:0 14px;background:#e9e9eccc;backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--menu-line);font-size:13px;}
+  @media (prefers-color-scheme: dark){.menubar{background:#2a2a2ecc;}}
+  .menubar .apple{font-size:14px;padding:0 8px;opacity:.85;}
+  .menubar .mi{padding:1px 9px;border-radius:5px;cursor:default;}
+  .menubar .mi.app{font-weight:600;}
+  .menubar .mi.open,.menubar .mi:hover{background:var(--menu-sel);color:#fff;}
+
+  /* macOS dropdown menu */
+  .menu{position:absolute;min-width:300px;background:var(--menu);backdrop-filter:blur(30px);
+    border:.5px solid var(--menu-line);border-radius:7px;padding:5px;z-index:50;
+    box-shadow:0 12px 34px #00000033,0 1px 2px #00000022;color:var(--menu-ink);font-size:13.5px;}
+  .menu .row{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 6px;border-radius:5px;
+    white-space:nowrap;cursor:default;}
+  .menu .row .chk{width:16px;text-align:center;font-size:12px;color:currentColor;visibility:hidden;}
+  .menu .row.on .chk{visibility:visible;}
+  .menu .row .ico{width:16px;text-align:center;opacity:.7;font-size:13px;}
+  .menu .row .lbl{flex:1;}
+  .menu .row .arrow{opacity:.5;margin-left:14px;}
+  .menu .row .kbd{opacity:.5;margin-left:20px;font-size:12px;letter-spacing:1px;}
+  .menu .row.enabled:hover{background:var(--menu-sel);color:#fff;}
+  .menu .row.enabled:hover .ico{opacity:.9;}
+  .menu .row.dim{color:#9aa1ab;}
+  .menu .sep{height:1px;background:var(--menu-line);margin:5px 8px;}
+  .menu .cap{font-size:11px;color:#9aa1ab;padding:3px 10px 1px;}
+
+  h1{font-size:19px;margin:22px 0 2px;}
+  .sub{color:var(--muted);margin:0 0 16px;font-size:13px;}
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;}
+  .notice{background:var(--accent-weak);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+    border-radius:var(--radius);padding:11px 14px;margin-bottom:16px;font-size:13px;}
+  .notice b{color:var(--ink);}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;}
+  button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:8px;padding:7px 12px;cursor:pointer;}
+  button:hover{border-color:var(--accent);}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  button.ghost{background:transparent;}
+
+  .blockhead{display:flex;align-items:baseline;gap:12px;margin:2px 0 10px;}
+  .blockhead h2{font-size:17px;margin:0;}
+  .caption{font-size:12.5px;color:var(--muted);}
+  .caption .funnel{display:none;}
+  .themes{display:flex;flex-direction:column;gap:10px;}
+  .theme{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:12px 14px;display:flex;gap:12px;align-items:flex-start;position:relative;}
+  .theme.dragging{opacity:.4;}
+  .theme.dropbefore{box-shadow:0 -3px 0 -1px var(--accent);}
+  .grip{cursor:grab;color:var(--muted);font-size:18px;line-height:1;user-select:none;padding-top:1px;}
+  .tbody{flex:1;min-width:0;}
+  .thead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .tname{font-weight:600;font-size:15px;}
+  .quotes{margin-top:6px;color:var(--muted);font-size:12.5px;display:flex;flex-wrap:wrap;gap:4px 10px;}
+  .q{white-space:nowrap;display:inline-flex;align-items:center;gap:4px;}
+  .sdot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .badge{font-size:11px;font-weight:600;border-radius:20px;padding:2px 8px;letter-spacing:.02em;}
+  .b-new{color:var(--new);background:var(--new-weak);}
+  .b-husk{color:var(--husk);background:var(--husk-weak);}
+  .b-human{color:var(--human);background:var(--human-weak);}
+  .b-count{color:var(--muted);background:transparent;border:1px solid var(--line);}
+  .b-div{color:var(--husk);background:var(--husk-weak);}
+  .del{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 4px;}
+  .del:hover{color:#d11;}
+
+  .state h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;}
+  .state table{width:100%;border-collapse:collapse;font:12px/1.4 var(--mono);}
+  .state td,.state th{text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top;}
+  .state th{color:var(--muted);font-weight:600;}
+  .kv{font:12px/1.5 var(--mono);color:var(--muted);margin-bottom:12px;}
+  .kv b{color:var(--ink);}
+  .futurecard{margin-top:16px;}
+  .futurecard h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;}
+  .futurewrap{display:flex;gap:0;align-items:flex-start;position:relative;}
+  .staticmenu{position:relative;}
+  details{margin-top:14px;font-size:12.5px;color:var(--muted);}
+  summary{cursor:pointer;color:var(--ink);font-weight:600;}
+  code{font:12px var(--mono);background:color-mix(in srgb,var(--muted) 14%,transparent);padding:1px 5px;border-radius:5px;}
+  .legend{font-size:12px;color:var(--muted);margin-top:14px;display:flex;flex-wrap:wrap;gap:8px 14px;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .dot{width:9px;height:9px;border-radius:3px;display:inline-block;}
+</style>
+</head>
+<body>
+<!-- faux macOS menu bar -->
+<div class="menubar">
+  <span class="apple"></span>
+  <span class="mi app">Bristlenose</span>
+  <span class="mi">File</span>
+  <span class="mi">Edit</span>
+  <span class="mi" id="viewMenuBtn">View</span>
+  <span class="mi">Window</span>
+  <span class="mi">Help</span>
+</div>
+<!-- the live View menu (today) -->
+<div class="menu" id="viewMenu" style="display:none;">
+  <div class="row enabled" id="miThemes"><span class="chk">✓</span><span class="ico">↕</span><span class="lbl">Keep Themes Sorted by Strength of Evidence</span></div>
+  <div class="row dim"><span class="chk">✓</span><span class="ico">↕</span><span class="lbl">Keep Sections Sorted by Most Common Sequence</span><span class="kbd" style="opacity:.4;font-size:11px;letter-spacing:0">no sections here</span></div>
+  <div class="sep"></div>
+  <div class="row enabled" id="miAll"><span class="chk">✓</span><span class="ico"></span><span class="lbl">All Quotes</span></div>
+  <div class="row enabled" id="miStar"><span class="chk">✓</span><span class="ico"></span><span class="lbl">Starred Quotes Only</span></div>
+  <div class="sep"></div>
+  <div class="row dim"><span class="chk">✓</span><span class="ico">▦</span><span class="lbl">Show Heatmap</span></div>
+</div>
+
+<div class="wrap">
+  <h1>Editable themes — the ordering consequences</h1>
+  <p class="sub">A behavioural toy for <a href="../design-editable-themes.md">design-editable-themes.md</a>. The sort control lives in the faked <b>View menu</b> above (click <b>View</b>) and its label in the block-header <b>caption</b> — exactly the decided chrome. One machine order per axis (“What Bristlenose thinks”), tick or manual. Fast-forward sessions and watch what new interviews do to your arrangement.</p>
+
+  <div id="notice" class="notice"></div>
+
+  <div class="toolbar">
+    <button id="addSession" class="primary">▶ Add next session</button>
+    <button id="reset" class="ghost">Reset</button>
+    <button id="merge" class="ghost" title="Force the machine to merge two themes — reveals the 'husk' sharp corner">Simulate a merge</button>
+    <span style="color:var(--muted);font-size:12px;margin-left:6px;">↑ open <b style="color:var(--ink)">View</b> to toggle the sort · right-click the “Themes” heading for the same</span>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="blockhead">
+        <h2 id="blockTitle">Themes</h2>
+        <span class="caption" id="caption"></span>
+      </div>
+      <div class="themes" id="themes"></div>
+    </div>
+
+    <div class="panel state">
+      <div class="kv" id="modeline"></div>
+      <h3>Data model (live)</h3>
+      <table>
+        <thead><tr><th>theme</th><th>rank</th><th>by</th><th>br</th><th>str</th></tr></thead>
+        <tbody id="stateRows"></tbody>
+      </table>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--new)"></i>New</span>
+        <span><i class="dot" style="background:var(--human)"></i>You made/renamed</span>
+        <span><i class="dot" style="background:var(--husk)"></i>Husk</span>
+        <span><i class="sdot" style="background:var(--pos)"></i>+</span>
+        <span><i class="sdot" style="background:var(--neg)"></i>−</span>
+        <span><i class="sdot" style="background:var(--neu)"></i>~</span>
+      </div>
+
+      <div class="futurecard">
+        <h3>The same menu, once filters multiply — <span style="text-transform:none;font-weight:400">future, illustrative</span></h3>
+        <div class="futurewrap">
+          <div class="menu staticmenu" style="position:relative;min-width:210px;box-shadow:none;">
+            <div class="row"><span class="chk"></span><span class="ico">↕</span><span class="lbl">Sort</span><span class="arrow">▸</span></div>
+            <div class="row enabled" style="background:var(--menu-sel);color:#fff"><span class="chk"></span><span class="ico">▤</span><span class="lbl">Filter By</span><span class="arrow" style="opacity:.9">▸</span></div>
+          </div>
+          <div class="menu staticmenu" style="position:relative;min-width:200px;margin-left:-1px;margin-top:26px;box-shadow:none;">
+            <div class="row"><span class="chk"></span><span class="lbl">All Quotes</span></div>
+            <div class="sep"></div>
+            <div class="row on"><span class="chk">✓</span><span class="ico"></span><span class="lbl">Starred</span><span class="kbd">⌥1</span></div>
+            <div class="row"><span class="chk">✓</span><span class="ico">◎</span><span class="lbl">Hidden</span><span class="kbd">⌥2</span></div>
+            <div class="row"><span class="chk"></span><span class="ico">🏷</span><span class="lbl">By Tag</span><span class="arrow">▸</span></div>
+            <div class="row"><span class="chk"></span><span class="ico">◐</span><span class="lbl">By Sentiment</span><span class="arrow">▸</span></div>
+            <div class="row"><span class="chk"></span><span class="ico">⌸</span><span class="lbl">Not in a Theme</span></div>
+            <div class="row"><span class="chk"></span><span class="ico">◆</span><span class="lbl">Strong reactions</span></div>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin:8px 2px 0">Sort stays a View submenu (set-once); Filter earns a toolbar popover + this flyout (frequent). See <a href="../design-quote-filtering.md">design-quote-filtering.md</a>.</p>
+      </div>
+
+      <details>
+        <summary>What to try</summary>
+        <ol style="padding-left:18px;margin:8px 0 0;">
+          <li>It opens on <b>Keep Themes Sorted by Strength of Evidence</b> (tick on). Click <b>Add next session</b> — new themes sort in; the divided “Pricing” theme lands <i>low despite wide reach</i> (strength of evidence discounts contention).</li>
+          <li><b>Drag</b> a theme — the tick clears (View menu + caption), you're <b>manual</b>. Add sessions: new themes <b>append at the bottom, New badge</b>; your order never moves.</li>
+          <li>Re-tick in <b>View</b> to hand control back — it re-sorts and discards your arrangement (explicit, undoable-in-spirit).</li>
+          <li><b>Delete</b> a theme, add a session — it returns as <b>New at the end</b>. <b>Simulate a merge</b> in manual — a human-owned theme becomes a <b>husk</b>.</li>
+        </ol>
+      </details>
+    </div>
+  </div>
+</div>
+
+<!-- header context menu -->
+<div class="menu" id="ctxMenu" style="display:none;min-width:280px;">
+  <div class="row enabled" id="ctxThemes"><span class="chk">✓</span><span class="ico">↕</span><span class="lbl">Keep Themes Sorted by Strength of Evidence</span></div>
+</div>
+
+<script>
+/* ---------- fractional-index string ranks ---------- */
+function rankBetween(a,b){
+  a=a||"";b=b||"";let i=0,out="";
+  while(true){
+    const ca=i<a.length?a.charCodeAt(i):96, cb=i<b.length?b.charCodeAt(i):123;
+    if(ca===cb){out+=String.fromCharCode(ca);i++;continue;}
+    const mid=Math.floor((ca+cb)/2);
+    if(mid===ca){out+=String.fromCharCode(ca);i++;continue;}
+    return out+String.fromCharCode(mid);
+  }
+}
+
+/* ---------- state ---------- */
+let uid=0, sessionIdx;
+const nid=()=>"t"+(++uid);
+let state;
+
+function q(p,sentiment,intensity){return {p,intensity,sentiment};}
+function mk(label,createdBy,quotes,isNew=false){return {id:nid(),label,createdBy,quotes,isNew,husk:false,deleted:false,rank:null};}
+
+function seed(){
+  uid=0;sessionIdx=0;
+  state={
+    themeSort:"strength",   // "strength" = auto (What Bristlenose thinks) | null = manual
+    filter:"all",
+    resurrectQueue:[],
+    themes:[
+      mk("Trust & data privacy","pipeline",[q("P1","neg",2),q("P1","neg",1),q("P2","neg",3),q("P3","neg",2)]),
+      mk("Delight in speed","pipeline",[q("P2","pos",3),q("P3","pos",2)]),
+      mk("Onboarding friction","pipeline",[q("P1","neg",2),q("P3","neg",1)]),
+    ],
+  };
+  setNotice("Three interviews analysed. Themes are on <b>Keep Themes Sorted by Strength of Evidence</b> (open <b>View</b> — the tick is on, and the caption under “Themes” says so). Broad + strong + <i>aligned</i> leads. Try the steps under <i>What to try</i>.");
+}
+
+const uniqueP=t=>new Set(t.quotes.map(x=>x.p)).size;
+const sumInt=t=>t.quotes.reduce((s,x)=>s+x.intensity,0);
+function alignment(t){
+  const s=t.quotes.map(x=>x.sentiment).filter(x=>x==="pos"||x==="neg");
+  if(!s.length) return .75;
+  const pos=s.filter(x=>x==="pos").length, neg=s.length-pos;
+  return Math.max(pos,neg)/s.length;           // 1 = fully aligned, .5 = evenly split
+}
+const divided=t=>alignment(t)<0.7 && uniqueP(t)>=3;
+// strength of evidence = reach, WEIGHTED BY AGREEMENT, plus intensity
+function strength(t){ return Math.round(uniqueP(t)*alignment(t)*100 + sumInt(t)); }
+
+/* ---------- ordering ---------- */
+function visible(){return state.themes.filter(t=>!t.deleted);}
+function ordered(){
+  const list=visible();
+  if(state.themeSort==="strength"){
+    const s=[...list].sort((a,b)=> strength(b)-strength(a) || a.label.localeCompare(b.label));
+    let prev=null; s.forEach(t=>{t.rank=rankBetween(prev,null);prev=t.rank;});
+    return s;
+  }
+  return [...list].sort((a,b)=> a.rank<b.rank?-1:a.rank>b.rank?1:0);
+}
+function maxRank(){const rs=visible().map(t=>t.rank).filter(Boolean).sort();return rs.length?rs[rs.length-1]:null;}
+
+/* ---------- re-analysis mutations ---------- */
+function addQuoteTo(id,quote){const t=state.themes.find(t=>t.id===id);if(t)t.quotes.push(quote);}
+function emerge(label,quotes,createdBy="pipeline"){
+  const t=mk(label,createdBy,quotes,true);
+  if(!state.themeSort) t.rank=rankBetween(maxRank(),null);   // manual → APPEND
+  state.themes.push(t);
+  return t;
+}
+function byLabel(l){return state.themes.find(t=>!t.deleted&&t.label===l);}
+function drainResurrections(){while(state.resurrectQueue.length){emerge(state.resurrectQueue.shift()+" ↩",[q("P?","neu",2)]);}}
+
+const SESSIONS=[
+  function(){ // S4
+    drainResurrections();
+    addQuoteTo(state.themes[0].id,q("P4","neg",2));
+    emerge("Accessibility barriers",[q("P4","neg",3)]);
+    setNotice("<b>Session 4 (P4)</b> — a quote joins <b>Trust</b>, and <b>Accessibility barriers</b> emerges. Auto → sorts in by strength; manual → appends at the bottom with a <b>New</b> badge, arrangement untouched.");
+  },
+  function(){ // S5
+    drainResurrections();
+    addQuoteTo(byLabel("Onboarding friction")?.id,q("P5","neg",2));
+    addQuoteTo(byLabel("Delight in speed")?.id,q("P5","pos",2));
+    setNotice("<b>Session 5 (P5)</b> — Onboarding and Delight both gain a participant. On auto the strength order shifts; in manual nothing moves.");
+  },
+  function(){ // S6 — a DIVIDED theme + a split
+    drainResurrections();
+    emerge("Pricing fairness",[q("P1","neg",3),q("P2","pos",3),q("P4","neg",2),q("P5","pos",2)]); // broad but split
+    emerge("Signup form pain",[q("P6","neg",3),q("P3","neg",2)]);                                  // a split shard
+    setNotice("<b>Session 6</b> — <b>Pricing fairness</b> reaches <b>4 participants but they disagree</b> (see the mixed dots). On <b>Strength of Evidence</b> it lands <i>low</i> — contention discounts reach. That's the honest bias of this order, and exactly why it's <b>overridable</b>. A split shard <b>Signup form pain</b> also arrives as New.");
+  },
+];
+
+/* ---------- interactions ---------- */
+function setThemesAuto(){ state.themeSort="strength"; render(); flash("<b>Keep Themes Sorted by Strength of Evidence</b> — autopilot on. New themes sort in; any drag hands control back."); }
+function goManual(){ if(state.themeSort){ ordered(); state.themeSort=null; } }  // freeze current order into ranks, release
+
+let dragId=null;
+function onDrop(targetId){
+  goManual();
+  const list=ordered(), dragged=state.themes.find(t=>t.id===dragId), rest=list.filter(t=>t.id!==dragId);
+  const ti=rest.findIndex(t=>t.id===targetId), above=rest[ti-1]||null, below=rest[ti]||null;
+  dragged.rank=rankBetween(above?above.rank:null, below?below.rank:null);
+  dragId=null; render();
+  flash("You dragged — the tick cleared in <b>View</b> and the caption vanished: you're <b>manual</b>. New themes will only <b>append</b> from here.");
+}
+function delTheme(id){
+  const t=state.themes.find(t=>t.id===id);if(!t)return;
+  t.deleted=true; if(t.createdBy==="pipeline") state.resurrectQueue.push(t.label);
+  render(); flash(t.createdBy==="pipeline"
+    ? "Deleted a machine theme. New data may resurface it — add a session and watch it return as <b>New at the end</b>."
+    : "Deleted your own theme. Its quotes fall to the Uncategorised floor.");
+}
+function simulateMerge(){
+  const list=visible().sort((a,b)=>a.quotes.length-b.quotes.length); if(list.length<2)return;
+  const absorbed=list[0], survivor=list[1];
+  survivor.quotes=survivor.quotes.concat(absorbed.quotes);
+  const humanOwned=absorbed.createdBy==="human"||state.themeSort===null;
+  if(humanOwned){absorbed.quotes=[];absorbed.husk=true;absorbed.isNew=false;} else {absorbed.deleted=true;}
+  render(); flash(humanOwned
+    ? `<b>Merge</b> — <b>${absorbed.label}</b> emptied into <b>${survivor.label}</b>. Human-owned, so it stays as a <b>husk</b> at its old position. Delete it, or leave it. <i>The one sharp corner.</i>`
+    : `<b>Merge</b> — a pure-machine theme was absorbed silently. No husk; you'd committed nothing to it.`);
+}
+
+/* ---------- menus ---------- */
+const viewMenu=document.getElementById("viewMenu"), viewBtn=document.getElementById("viewMenuBtn");
+const ctxMenu=document.getElementById("ctxMenu");
+function openView(){ const r=viewBtn.getBoundingClientRect();
+  viewMenu.style.left=r.left+"px"; viewMenu.style.top=(r.bottom+2)+"px"; viewMenu.style.display="block"; viewBtn.classList.add("open"); }
+function closeMenus(){ viewMenu.style.display="none"; ctxMenu.style.display="none"; viewBtn.classList.remove("open"); }
+viewBtn.addEventListener("click",e=>{ e.stopPropagation(); viewMenu.style.display==="block"?closeMenus():openView(); });
+document.addEventListener("click",closeMenus);
+document.getElementById("miThemes").addEventListener("click",e=>{e.stopPropagation();closeMenus();setThemesAuto();});
+document.getElementById("ctxThemes").addEventListener("click",e=>{e.stopPropagation();closeMenus();setThemesAuto();});
+document.getElementById("miAll").addEventListener("click",e=>{e.stopPropagation();state.filter="all";render();closeMenus();});
+document.getElementById("miStar").addEventListener("click",e=>{e.stopPropagation();state.filter="starred";render();closeMenus();});
+
+/* ---------- render ---------- */
+function setNotice(h){document.getElementById("notice").innerHTML=h;}
+function flash(h){setNotice(h);}
+function render(){
+  const host=document.getElementById("themes"); host.innerHTML="";
+  const list=ordered();
+  list.forEach(t=>{
+    const el=document.createElement("div");
+    el.className="theme"+(t.husk?" husk":"");
+    el.setAttribute("draggable","true");
+    el.addEventListener("dragstart",e=>{dragId=t.id;e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",t.id);el.classList.add("dragging");});
+    el.addEventListener("dragend",()=>{el.classList.remove("dragging");document.querySelectorAll('.theme').forEach(x=>x.classList.remove('dropbefore'));});
+    el.addEventListener("dragover",e=>{e.preventDefault();e.dataTransfer.dropEffect="move";el.classList.add("dropbefore");});
+    el.addEventListener("dragleave",()=>el.classList.remove("dropbefore"));
+    el.addEventListener("drop",e=>{e.preventDefault();el.classList.remove("dropbefore");onDrop(t.id);});
+
+    const badges=[];
+    if(t.husk) badges.push(`<span class="badge b-husk">husk · merged away</span>`);
+    else if(t.isNew) badges.push(`<span class="badge b-new">New</span>`);
+    if(t.createdBy==="human"&&!t.husk) badges.push(`<span class="badge b-human">yours</span>`);
+    if(divided(t)&&!t.husk) badges.push(`<span class="badge b-div">divided</span>`);
+    badges.push(`<span class="badge b-count">${uniqueP(t)} ppl · str ${strength(t)}</span>`);
+
+    const scol=s=>s==="pos"?"var(--pos)":s==="neg"?"var(--neg)":"var(--neu)";
+    const quotes=t.husk?`<span class="q" style="font-style:italic">— merged into another theme —</span>`
+      :t.quotes.map(x=>`<span class="q"><span class="sdot" style="background:${scol(x.sentiment)}"></span>${x.p} ·${"◆".repeat(x.intensity)}</span>`).join("");
+
+    el.innerHTML=`
+      <div class="grip" title="Drag to reorder — switches to manual">⠿</div>
+      <div class="tbody">
+        <div class="thead"><span class="tname">${t.label}</span>${badges.join("")}</div>
+        <div class="quotes">${quotes}</div>
+      </div>
+      <button class="del" title="Delete theme">×</button>`;
+    el.querySelector(".del").addEventListener("click",()=>delTheme(t.id));
+    host.appendChild(el);
+  });
+
+  // caption (auto shows it; manual = nothing, per decision)
+  document.getElementById("caption").innerHTML = state.themeSort ? "Arranged by strength of evidence" : "";
+  // View-menu tick + context tick
+  document.getElementById("miThemes").classList.toggle("on", !!state.themeSort);
+  document.getElementById("ctxThemes").classList.toggle("on", !!state.themeSort);
+  document.getElementById("miAll").classList.toggle("on", state.filter==="all");
+  document.getElementById("miStar").classList.toggle("on", state.filter==="starred");
+  // mode line
+  document.getElementById("modeline").innerHTML = state.themeSort
+    ? `themes: <b>auto</b> &nbsp; <code>sort_key = "strength"</code><br>new → <b>sort in</b> · caption shown`
+    : `themes: <b>manual</b> &nbsp; <code>sort_key = null</code> <span style="color:var(--muted)">(committed)</span><br>new → <b>append + New</b> · no caption`;
+  // state table
+  document.getElementById("stateRows").innerHTML = ordered().map(t=>{
+    const by=t.husk?"husk":(t.createdBy==="human"?"human":"pipeline");
+    const c=t.husk?"var(--husk)":(t.createdBy==="human"?"var(--human)":"var(--muted)");
+    return `<tr><td>${t.label}${t.isNew&&!t.husk?' <span style="color:var(--new)">•new</span>':''}</td>
+      <td>${t.rank||"—"}</td><td style="color:${c}">${by}</td><td>${uniqueP(t)}</td><td>${t.husk?"—":strength(t)}</td></tr>`;
+  }).join("");
+  // session button
+  const btn=document.getElementById("addSession");
+  btn.textContent = sessionIdx<SESSIONS.length ? `▶ Add session ${sessionIdx+4}` : "▶ (no more scripted sessions)";
+}
+
+/* header right-click context menu */
+document.getElementById("blockTitle").addEventListener("contextmenu",e=>{
+  e.preventDefault(); ctxMenu.style.left=e.pageX+"px"; ctxMenu.style.top=e.pageY+"px"; ctxMenu.style.display="block";
+});
+
+/* wiring */
+document.getElementById("addSession").addEventListener("click",()=>{
+  if(sessionIdx<SESSIONS.length){SESSIONS[sessionIdx]();sessionIdx++;} else {drainResurrections();flash("No more scripted sessions. Any deleted themes have resurfaced as New. Try <b>Simulate a merge</b>.");}
+  render();
+});
+document.getElementById("reset").addEventListener("click",()=>{seed();render();});
+document.getElementById("merge").addEventListener("click",simulateMerge);
+
+seed(); render();
+</script>
+</body>
+</html>

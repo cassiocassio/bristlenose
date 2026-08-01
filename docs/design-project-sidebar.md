@@ -334,7 +334,7 @@ All items disabled when nothing is selected.
 > | Target state | Shipped behaviour |
 > |---|---|
 > | `.idle` / `.scanning` | `addFiles` + auto-run, toast "Added N interviews to …" (no Undo button) |
-> | `.ready` | ~~Blocker toast~~ **Reversed — files are copied in and folded via `addFiles`.** `.ready` is deliberately *not* an early return (`ContentView.swift:1380`). The `dropOntoAnalysedProject` locale string is now orphaned (21 locale dirs, zero Swift callers). |
+> | `.ready` | ~~Blocker toast~~ **Reversed for folder-shaped projects — files are copied in and folded via `addFiles`.** `.ready` is deliberately *not* an early return (`ContentView.swift:1380`); a folder-shaped project rescans at run time so the copies fold in. The blocker toast survives for one **narrow** case only: a **file-subset** project (`alreadyAnalysed && !wasFolderShaped`, `ContentView.swift:1421`) — the CLI can't scope a `--files` run, so new files wait for a full re-analysis. `dropOntoAnalysedProject` is therefore **still live**, not orphaned (_corrected 30 Jul 2026 — an audit reported it orphaned; it is used at `ContentView.swift:1425`_). |
 > | `.failed` | Toast redirects user to pill-popover Retry |
 > | `.running` / `.queued` | Toast "Finish or stop the current run before adding more" |
 > | `.unreachable` | Blocked with explanation toast |

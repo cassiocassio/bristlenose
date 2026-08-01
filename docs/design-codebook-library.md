@@ -265,8 +265,10 @@ sparkle) · the **blue dot** status · the **blue/grey switch** language. Nothin
 - **"Add & Apply" fast path** — ship the safe default (separate Apply); add the
   shortcut only if the cohort asks (a mis-click on a combined button is the exact
   surprise-spend we're avoiding).
-- **Incremental sessions × active codebooks** — the cross-feature re-apply question
-  (see Open Q6). Parked; needs the incremental path to be additive first.
+- **Incremental sessions × active codebooks** — ~~the cross-feature re-apply question
+  (see Open Q6). Parked; needs the incremental path to be additive first.~~ **Built** —
+  see §"Session update — Q6 (incremental re-apply) is BUILT". Cost-consent and
+  interim-state remain open.
 
 ## Open questions for review
 
@@ -290,16 +292,19 @@ sparkle) · the **blue dot** status · the **blue/grey switch** language. Nothin
    One coordinated pass across every AutoCode surface (so nothing's left half-
    sparkled); tracked in Deferred, not this feature.
 6. **Incremental sessions × active codebooks — does adding sessions re-apply?**
-   (Parked — cross-feature with incremental analysis; needs the incremental path to
-   be additive first.) **Intuition: yes** — an *enabled + applied* codebook should
+   (~~Parked — needs the incremental path to be additive first.~~ **Unparked: built** —
+   see §Q6-BUILT below; the additive path shipped v0.20.0, 11 Jul 2026.) **Intuition: yes** — an *enabled + applied* codebook should
    cover *all* project quotes, or "active" is a silent lie (new quotes uncoded). But
    re-applying spends, so it must respect cost-safe-play. Shape:
    - **Scope:** only *enabled + applied* codebooks re-apply; disabled (off·kept) and
      never-applied ones don't (consistent with the enable axis).
    - **Delta only:** code just the NEW quotes — never re-code existing ones, never
-     clobber human-provenance tags (`QuoteTag.source == "human"`). Prerequisite:
+     clobber human-provenance tags (`QuoteTag.source == "human"`). ~~Prerequisite:
      incremental re-analyse must become *additive*, not destructive (it currently
-     isn't — see `project_incremental_analysis`).
+     isn't).~~ **Both clauses stale (28 Jul 2026):** the additive path shipped
+     v0.20.0 (11 Jul) — `--clean` is the only destructive route and has zero Swift
+     callers — and *Delta only* is no longer a proposal but what shipped
+     (`autocode.py:831` `reapply_active_frameworks`, wired at `app.py:865`).
    - **Cost consent:** lean toward **bundling into the incremental-add consent point**
      ("adding 3 sessions will also apply your 2 active codebooks to the new quotes")
      — the user is already committing to an expensive run — rather than a silent

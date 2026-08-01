@@ -1,6 +1,24 @@
+---
+status: partial
+last-trued: 2026-07-28
+trued-against: HEAD@main on 2026-07-28
+---
+
 # Curation persistence across incremental re-runs
 
-**Status:** _Shipped this branch (Jul 2026):_ Freeze (Phase 1), section identity (Phase 2), theme star-anchor + "New" flag (Phase 3b/3c), and the named-group retire-exemption + read-only Uncategorised floor. _Still design-only:_ the §9 surfaced-suggestion / dissent flow and §13 manual re-assignment (Phase 0 — [`design-manual-reassignment.md`](design-manual-reassignment.md)).
+## Changelog
+
+- _2026-07-28_ — first truing. **Added front-matter** (this doc is the canonical
+  answer to "what survives a re-run" and had none, so it was invisible to every
+  front-matter-driven sweep). Added §"What still destroys curation" — the doc
+  specified preservation exhaustively but **never named `--clean`**, so a reader
+  could internalise "curation survives re-analysis" with no way to learn the one
+  path where it doesn't. That omission, plus an over-claim in
+  `design-project-sidebar.md:579`, are the two halves of a wrong recommendation
+  made this session. Corrected the pin predicate: it has **four** arms, not three.
+  Status line split — §13's write path shipped; only its picker UI is outstanding.
+
+**Status:** _Shipped this branch (Jul 2026):_ Freeze (Phase 1), section identity (Phase 2), theme star-anchor + "New" flag (Phase 3b/3c), and the named-group retire-exemption + read-only Uncategorised floor. _Still design-only:_ the §9 surfaced-suggestion / dissent flow. §13 manual re-assignment (Phase 0) is **half-shipped** — the **write path is live** (`POST /api/projects/{id}/reassign` sets `assigned_by="researcher"` on both join tables, `routes/data.py:715`; freeze-on-move works), only the **picker UI** is outstanding ([`design-manual-reassignment.md`](design-manual-reassignment.md)).
 **Parent:** [`design-incremental-analysis.md`](design-incremental-analysis.md) — the problem of adding interviews to an already-analysed project without destroying researcher work. That doc frames the problem and the two-layer stance; **this doc specifies the persistence layer**: exactly which human signals survive a re-run, the identity machinery that carries them, and the rules and tie-breakers for when structure shifts underneath them.
 **Implementation plan:** [`design-curation-persistence-plan.md`](design-curation-persistence-plan.md) — the code-grounded phasing (Freeze → Section identity → Themes + "New!" flag), migration steps against the live importer/models, and the build/review process.
 **Grounding:** the quote-stability experiment (Jul 2026 — statistical summary in the parent doc). Numbers used throughout: re-extracting the same interview recovers **~81%** of quotes by single-best-overlap-match and **~95%** by union/split-crediting at ≥70% overlap, with a **~9% genuinely-fragile tail** no matcher recovers; **section** membership is stable run-to-run (**ARI ~0.96**); **theme** membership churns (**ARI ~0.43**, theme counts swinging ~2× on *identical* quotes). Examples below (a "Checkout" section, an "Onboarding friction" theme) are generic UX illustrations, not from any project's data.
@@ -50,7 +68,7 @@ From the researcher's chair:
 | **Fluid** | A quote/grouping with no human marks — fully re-derived each run; may re-cluster, demote, or drop. This is where churn belongs. |
 | **Pinned** | A quote the researcher starred or edited — given a durable ID and **frozen**; never re-derived. |
 | **Frozen** | Stored verbatim as of the moment it was pinned; carried forward as an artefact, not regenerated. |
-| **Human state** | Any deliberate mark: starred, edited, tagged (→ pin); hidden (→ suppress). |
+| **Human state** | Any deliberate mark: starred, edited, human-tagged, **or researcher-placed** (→ pin); hidden (→ suppress). |
 | **Presence / prominence** | Whether it exists (human-owned) vs whether it's featured (machine-suggested). |
 | **Membership-identity** | A section/theme identified by the set of quotes in it, not by its label. |
 | **Anchor** | For a human-committed (custom-named) theme, its identity is anchored to its **frozen starred quotes** — the stable part — while fluid membership churns around them. |
@@ -176,7 +194,7 @@ _Rows whose resolution says **surface** / **ask** / **dissent** describe the des
 
 ## 13. Data model — what implementers need
 
-**Per quote:** `durable_id` (minted on first human touch, **run-independent** — so external references like board exports / clip links stay valid), `source` (`human` | `autocode`), `is_starred`, `is_edited` + `frozen_text`, `frozen_form` (verbatim span at pin-time), `is_hidden`, `tags[]`. A quote is **pinned** iff `is_starred ∨ is_edited ∨ tags` present. **`frozen_form` and `durable_id` are re-identification keys — never serialised to the `/quotes` payload or any export** (enforced + regression-pinned: `TestFrozenFormStaysOffTheExportBoundary`).
+**Per quote:** `durable_id` (minted on first human touch, **run-independent** — so external references like board exports / clip links stay valid), `source` (`human` | `autocode`), `is_starred`, `is_edited` + `frozen_text`, `frozen_form` (verbatim span at pin-time), `is_hidden`, `tags[]`. A quote is **pinned** iff `is_starred ∨ is_edited ∨ human-tags present ∨ researcher-placed` — **four** arms. The fourth is the *placement* arm: a quote the researcher deliberately filed into a section or theme (`assigned_by == "researcher"` on either join) freezes, because moving a quote is human investment. _Note `importer.py:1409`'s own docstring **headline** states only the first three while its body documents the fourth — the headline undercounts the implementation, and that error propagated into this doc._ **`frozen_form` and `durable_id` are re-identification keys — never serialised to the `/quotes` payload or any export** (enforced + regression-pinned: `TestFrozenFormStaysOffTheExportBoundary`).
 
 **Per section/theme:** a **durable identity** (`section#ID` / `theme#ID`) keyed to a **membership signature** (sections) or **star-anchor set + custom name** (human-committed themes) — *not* to the label; `auto_label` (machine, regenerated); `custom_name` (human, bound to the durable ID, `source=human`, sticky).
 
@@ -220,3 +238,34 @@ If this fails, the persistence contract is broken — there is no "passes most o
 - **Durable ID after unpin.** _Resolved (Design-Q1):_ un-pin **scrubs** `durable_id` + `frozen_form` (a `frozen_form` is a re-identification key — don't keep a frozen copy on a deliberately un-pinned quote); re-pin mints fresh. Tested (`test_unpin_scrubs_frozen_form_then_repin_remints`).
 - **Embedding tiebreaker stability** under batch-invariance — un-probed.
 - **Saturation-proxy governor** for lock/unlock lives at the quote layer, not the theme layer (per the parent doc) — how it interacts with pins is unspecified.
+
+## What still destroys curation
+
+_Added 28 Jul 2026. This doc specified preservation exhaustively and never named
+the paths that don't preserve — so a reader could leave believing curation always
+survives. It doesn't, in three distinct ways._
+
+1. **`--clean` deletes the persistence layer itself.** `bristlenose run --clean`
+   does `shutil.rmtree(output_dir)` (`cli.py:1106`). The SQLite database holding
+   every `durable_id`, `frozen_form`, star, tag and edit lives at
+   `<output_dir>/.bristlenose/bristlenose.db` — **inside the tree being removed**.
+   So `--clean` doesn't merely lose curation; it destroys the machinery this whole
+   doc describes. It is **CLI-only today**: `PipelineRunner.start(project:clean:)`
+   defaults `false` and has **zero** `clean: true` callers in `desktop/`.
+2. **Whole-session removal drops that session's pins — by governance, not
+   accident.** Pins protect a quote only while its session survives
+   (`importer.py:1528`); the carve-out exists so consent withdrawal genuinely
+   removes data.
+3. **Hide is best-effort by design.** `is_hidden` is *not* a pin arm, so a hidden
+   quote can reappear after a re-run (~5% accepted). Preservation scales with
+   cost-of-being-wrong, and re-hiding is cheap.
+
+**And one non-destruction worth stating, because it surprises people:** a re-run
+with **no new files changes nothing at all**. Stage skipping is content-hash
+verified, and clustering + thematic grouping are a single cache-gated stage
+(`STAGE_CLUSTER_AND_GROUP`) keyed only on the upstream quote hash
+(`pipeline.py:1655`). Unchanged inputs → every stage reports `(cached)` → no-op.
+**The cache key contains no provider, model, or prompt version**, so switching
+LLM provider and re-running silently reuses the previous analysis. That is the
+gap behind "Re-analyse" having no safe implementation today — see
+[`design-project-sidebar.md`](design-project-sidebar.md) §run-trigger verbs.

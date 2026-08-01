@@ -235,7 +235,7 @@ Run failure renders as **both** a native diagnostic popover (sidebar-anchored) *
 | N01 | `cantFind(.unmountedVolume/.networkUnreachable)` | drive glyph + volume name + hint | **none** | 🟢 |
 | N02 | `cantFind(.moved/.missingBookmark)` | folder-? + "moved" + **Locate…** | re-point folder | 🟢 |
 | N03 | `inCloud` | cloud + "downloading from iCloud" | none (waits) | 🟢 |
-| N04 | `path.isEmpty` | tray + "Drag interviews here" | none in-pane (drop on sidebar) | 🟢 |
+| N04 | `path.isEmpty` **or** `PipelineState.idle` | tray + "Drag Interviews Here" | drop on the pane itself (`dragInterviewsPane`) | 🟢 |
 | N05 | `inputFiles != nil` & no viewable data | "analyses folders" + file list | reveal files; **can't analyse** | ⚪ |
 | N06 | serve `.idle/.starting` | spinner + "Starting…" | none | 🟢 |
 | N07 | serve `.running` & `!isReady` | spinner overlay, 2s-timeout clear | none | ⚪ |
@@ -249,7 +249,7 @@ Run failure renders as **both** a native diagnostic popover (sidebar-anchored) *
 
 | ID | State / condition | What's shown now | Δ actions | Verdict |
 |----|------|------|------|------|
-| W01 | desktop, `entry is None` | "No interviews to analyse yet / drop a folder" | none | 🟢 (🟠 in run case) |
+| ~~W01~~ | ~~desktop, `entry is None`~~ | **superseded by N04 2026-07-30** — a never-run folder project no longer reaches the webview. Still rendered in the residual `queued` / Reduce-Motion-`running` / `scanning`-race cases below. | — | — |
 | W02 | CLI, `entry is None` | "Nothing to see here / `$ bristlenose run`" | none | 🟢 |
 | W03 | last run `CANCELLED` | "Last run was cancelled" + cause + log | feedback/help links | 🟢 |
 | W04 | last run `FAILED` | "Last run failed" + cause + log | feedback/help links | 🟢 |
@@ -361,7 +361,10 @@ view isn't internationalised. `{{…}}` / `%d` / `%@` mark runtime-interpolated 
 
 - **Mixed casing.** Native detail headlines are **Title Case** ("Project Unavailable",
   "Drag Interviews Here", "Project Moved or Deleted", "No Project Selected") while server
-  status pages are **sentence case** ("No interviews to analyse yet."). Pick one.
+  status pages are **sentence case** ("No interviews to analyse yet."). Pick one. _(The
+  worst instance — the same empty state rendered both ways depending on whether the
+  project had a folder — closed 30 Jul 2026 when N04 absorbed W01's desktop case. The
+  split still stands for W03/W04.)_
 - **iCloud reuses the drive hint.** `availability.inCloud`'s body is
   `chrome.projectUnavailableHint` = "Connect the drive to access this project." — wrong
   advice for a cloud-evicted file.

@@ -25,6 +25,8 @@
   --color-text-info:#0c447c; --color-text-warning:#b46a00; --color-text-danger:#a32d2d;
   --color-border-tertiary:rgba(0,0,0,0.12); --color-border-secondary:rgba(0,0,0,0.22); --color-border-info:#378add;
   --border-radius-md:8px; --border-radius-lg:12px;
+  /* macOS system semantic colours — what MessageKind.tint resolves to (.orange / .red) */
+  --nat-orange:#FF9500; --nat-red:#FF3B30;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -33,6 +35,7 @@
     --color-text-primary:#ededea; --color-text-secondary:#a8a79f; --color-text-tertiary:#77766f;
     --color-text-info:#85b7eb; --color-text-warning:#f0b057; --color-text-danger:#f09595;
     --color-border-tertiary:rgba(255,255,255,0.12); --color-border-secondary:rgba(255,255,255,0.22); --color-border-info:#378add;
+    --nat-orange:#FF9F0A; --nat-red:#FF453A;
   }
 }
 * { box-sizing:border-box; }
@@ -81,6 +84,47 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 .kind.e { background:rgba(163,45,45,.15); color:var(--color-text-danger); }
 .warnbox { border-left:3px solid var(--color-text-warning); background:var(--color-background-secondary);
   padding:10px 13px; border-radius:0 6px 6px 0; margin:12px 0; line-height:1.55; }
+
+/* ── §B2 only: pixel-true native sidebar rows ─────────────────────────────
+   Every number below is read from source, not eyeballed. 1 CSS px = 1 pt.
+     sidebar width 180 / 220 / 300 ....... ContentView.swift:358
+     row 32pt single · 46pt two-line ..... ProjectCellSpec.singleLineHeight / rowHeight
+     top inset 7.5pt ..................... ProjectCellSpec.verticalInset
+     icon column 20pt, symbol 16pt ....... ProjectCellSpec.iconWidth / iconSymbolConfig
+     icon→text 6 · title↔sub 1 ........... ProjectCellSpec.iconToText / titleToSubtitle
+     title-internal 6 · sub-internal 4 ... ProjectCellSpec.titleInternal / subtitleInternal
+     trailing inset 4 .................... ProjectCellSpec.trailingInset
+     title 13pt (.body) .................. ProjectCellSpec.titleFont
+     count 10pt (.footnote, tertiary) .... ProjectCellSpec.countFont
+     subtitle 10pt (.caption1, secondary)  ProjectCellSpec.subtitleFont
+   Leading inset 10pt is AppKit's own for `style = .sourceList` — the one
+   number here that isn't a Bristlenose constant. Rows drawn unselected: the
+   source-list capsule would add noise to a loudness judgement.            */
+.nat { background:var(--color-background-secondary); border:0.5px solid var(--color-border-tertiary);
+  border-radius:var(--border-radius-md); padding:6px 0; overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif; }
+.nrow { display:flex; gap:6px; height:32px; padding:7.5px 4px 0 10px; }
+.nrow.two { height:46px; }
+.nico { flex:none; width:20px; font-size:16px; line-height:17px; text-align:center;
+  color:var(--color-text-secondary); }
+.nstack { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.ntitle { height:17px; display:flex; align-items:center; gap:6px; font-size:13px; line-height:17px; }
+.nname { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ncount { flex:none; font-size:10px; color:var(--color-text-tertiary); font-variant-numeric:tabular-nums; }
+.nsub { height:13px; display:flex; align-items:center; gap:4px; font-size:10px; line-height:13px;
+  color:var(--color-text-secondary); }
+.nsub .t { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nsub .g { flex:none; font-size:10px; line-height:13px; }
+.nsub .sp { flex:1; min-width:4px; }
+.warnfill { color:var(--nat-orange); } .errfill { color:var(--nat-red); }
+.opts { display:grid; grid-template-columns:236px 196px 1fr; gap:16px; align-items:start; margin:16px 0; }
+.opthd { grid-column:1 / -1; display:flex; align-items:baseline; gap:8px; margin-top:10px;
+  padding-bottom:4px; border-bottom:0.5px solid var(--color-border-tertiary); }
+.opthd .n { font-size:11px; color:var(--color-text-tertiary); font-variant-numeric:tabular-nums; }
+.opthd .t { font-size:13px; font-weight:600; }
+.opthd .lvl { margin-left:auto; font-size:10px; color:var(--color-text-tertiary); letter-spacing:.04em;
+  text-transform:uppercase; }
+.wlab { font-size:10px; color:var(--color-text-tertiary); margin:0 0 4px; }
 </style>
 </head>
 <body>
@@ -98,10 +142,11 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 <div class="step"><div class="num">1</div>
   <div class="sidebar"><div class="row sel">
     <span class="ico"><i class="ti ti-users-group"></i></span>
-    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs">3 interviews · 3 in Dropbox</div></span>
-    <span class="trail"><i class="ti ti-cloud"></i></span>
+    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs">Yesterday</div></span>
+    <span class="trail"><span class="cnt">3</span></span>
   </div></div>
-  <div class="note"><b>At rest, evicted.</b> Outline <code>icloud</code> glyph, status-only, no click — the shipped F49 decision. The subtitle counts files, so partial vs whole is legible: <i>“1 in Dropbox”</i> reads differently from <i>“3 in Dropbox”</i>. <b>Today this state cannot appear at all</b> — availability short-circuits on folder existence.</div>
+  <div class="note"><b>At rest — no cloud state at all, even when every file is evicted.</b> The subtitle is the bare last-run date (<code>formatBareDate</code>), exactly as today.
+  <br><br><b>An earlier draft of this mockup showed “3 interviews · 3 in Dropbox” here. Cut, on the user's reasoning:</b> drag-and-drop starts processing immediately, so files rarely sit unprocessed; and interviews pulled from Teams or Zoom today are local <i>and</i> on Dropbox, because today is the day they get dragged in. Eviction is a later-life event. Until the researcher has to <i>do</i> something differently, the cloud is not information — it's trivia with a glyph attached. (It was also unreachable in shipped code; the right response turned out to be leaving it that way.)</div>
 </div>
 
 <div class="step"><div class="num">2</div>
@@ -125,10 +170,11 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
 <div class="step"><div class="num">4</div>
   <div class="sidebar"><div class="row sel">
     <span class="ico"><i class="ti ti-users-group"></i></span>
-    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs">3 interviews · 47 quotes</div></span>
+    <span class="txt"><div class="rt">Onboarding pilot</div><div class="rs">Just now</div></span>
     <span class="trail"><span class="cnt">3</span></span>
   </div></div>
-  <div class="note"><b>Done.</b> No cloud glyph — the files are local now. It returns if the provider evicts them again, which is normal and needs no announcement.</div>
+  <div class="note"><b>Done — and the row goes quiet.</b> Under Schema E (decided 29 Jul, see §B2) a clean <code>.ready</code> row shows <b>no subtitle at all</b> and collapses to a single 32pt line. No date, no verb, no tick. Nothing about the cloud, then or later.
+  <br><br><i>Earlier drafts of this step showed “3 interviews · 47 quotes”, then a bare date (<code>formatBareDate</code>) with an optional delta. Neither is right: the first was invented, the second was designed but never once rendered — <code>lastPipelineRunAt</code> has no write site in any build. The delta (<code>+2 new</code>) still shows when there is one; that's an exception, and exceptions are the only thing this line carries.</i></div>
 </div>
 
 <h2>B · Failure modes</h2>
@@ -201,6 +247,188 @@ td.k { white-space:nowrap; font-size:11px; color:var(--color-text-tertiary); }
   <div class="act"><button class="btn pri">Try again</button><button class="btn">Show in Finder</button></div>
 </div>
 <p class="note" style="padding-left:340px">Says <b>“downloaded, but couldn’t be read”</b> — ruling out the cloud explicitly, because that's the confusion this whole change exists to prevent. And it says what <i>didn't</i> fail: a researcher who knows the other two are fine won't re-run the whole study.</p>
+
+<h2>B2 · Decided — how loudly should a partial run nag?</h2>
+<p class="lede">A run finished. Three interviews analysed, one couldn't be read. The row has to say both things, and the subtitle only fits one. <b>Five options, quietest first</b>, drawn at the real geometry so the judgement was about pixels rather than prose. <b>Option 5 won</b> — jump to it for the shipping design.</p>
+<p class="lede"><b>Read options 1–4 as history.</b> They're drawn in the pre-29-Jul world where every row carried a date (Schema A). That's since been retired — a clean row now shows no status line at all — so only option 5 is drawn as the app will look. Kept because the comparison is what produced the decision.</p>
+
+<div class="warnbox"><b>Option 3 is what ships today.</b> <code>.completedPartial</code> is a <code>PipelineState</code>, so it outranks the idle tier — <code>ProjectSubtitle.resolve</code> returns before the date/delta chain is ever consulted (<code>ProjectSubtitle.swift:156-186</code>), and <code>ProjectRow</code> renders the warning glyph plus the localised <i>“Partial completion”</i> header (<code>ProjectRow.swift:255-257</code>). So the drift is <b>already</b> dropped on a partial. The question isn't which to build — it's whether to change what's there.</div>
+
+<p class="note" style="padding:0 0 4px"><b>Every number is read from source.</b> Sidebar 220pt (its <code>ideal</code>; <code>min</code> 180, <code>max</code> 300 — <code>ContentView.swift:358</code>). Rows 32pt single / 46pt two-line, 7.5pt top inset, 20pt icon column, 13pt title, 10pt count, 10pt subtitle — all from <code>ProjectCellSpec.swift</code>, which is itself reverse-engineered verbatim from <code>ProjectRow</code>. The glyph is <code>exclamationmark.triangle.fill</code> in system orange (<code>MessageKind.warning</code>); Tabler stands in for SF Symbols, at the right size. <b>Rows are drawn unselected and with two ordinary neighbours</b> — a row is never judged alone, and “nagging” is a property of the stack.</p>
+
+<!-- ─────────────────────────────────────────────────────────── option 1 -->
+<div class="opts">
+  <div class="opthd"><span class="n">1</span><span class="t">Trailing glyph, subtitle untouched</span><span class="lvl">quietest</span></div>
+
+  <div>
+    <p class="wlab">220pt · ideal</p>
+    <div class="nat" style="width:220px">
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Clinic intake</span><span class="ncount">6</span></span>
+        <span class="nsub"><span class="t">Monday</span></span></span></div>
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Onboarding pilot</span><span class="ncount">3</span></span>
+        <span class="nsub"><span class="t">Yesterday · 3 new</span><span class="sp"></span><span class="g warnfill"><i class="ti ti-alert-triangle-filled"></i></span></span></span></div>
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Retail wayfinding</span><span class="ncount">12</span></span>
+        <span class="nsub"><span class="t">3 Jul</span></span></span></div>
+    </div>
+  </div>
+
+  <div>
+    <p class="wlab">180pt · minimum</p>
+    <div class="nat" style="width:180px">
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Onboarding pilot</span><span class="ncount">3</span></span>
+        <span class="nsub"><span class="t">Yesterday · 3 new</span><span class="sp"></span><span class="g warnfill"><i class="ti ti-alert-triangle-filled"></i></span></span></span></div>
+    </div>
+  </div>
+
+  <div class="note"><b>Uses the subtitle's right slot</b> — the one the cloud glyph occupies, free unless the project is <code>.inCloud</code>. Both facts survive at both widths, and the drift stays clickable.
+  <br><br><b>The cost is that it's easy to miss</b>, and it borrows a slot whose current meaning is <i>ambient status</i>, not <i>something went wrong</i>. It also collides the day a partial run happens on a cloud project.</div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── option 2 -->
+<div class="opts">
+  <div class="opthd"><span class="n">2</span><span class="t">Prefix glyph, subtitle keeps the drift</span><span class="lvl">glyph + delta</span></div>
+
+  <div>
+    <p class="wlab">220pt · ideal</p>
+    <div class="nat" style="width:220px">
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Clinic intake</span><span class="ncount">6</span></span>
+        <span class="nsub"><span class="t">Monday</span></span></span></div>
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Onboarding pilot</span><span class="ncount">3</span></span>
+        <span class="nsub"><span class="g warnfill"><i class="ti ti-alert-triangle-filled"></i></span><span class="t">Yesterday · 3 new</span></span></span></div>
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Retail wayfinding</span><span class="ncount">12</span></span>
+        <span class="nsub"><span class="t">3 Jul</span></span></span></div>
+    </div>
+  </div>
+
+  <div>
+    <p class="wlab">180pt · minimum</p>
+    <div class="nat" style="width:180px">
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Onboarding pilot</span><span class="ncount">3</span></span>
+        <span class="nsub"><span class="g warnfill"><i class="ti ti-alert-triangle-filled"></i></span><span class="t">Yesterday · 3 new</span></span></span></div>
+    </div>
+  </div>
+
+  <div class="note"><b>The prefix slot is already the distress slot</b> — <code>subtitleText(prefix:)</code> and <code>diagnosticSubtitle</code> both put the clickable glyph there, so this reuses the existing vocabulary rather than adding one. Colour carries severity; the text carries the actionable half.
+  <br><br><b>What it costs:</b> the glyph eats 14pt of a line that's already tight, and the failure is stated <i>only</i> in colour — the row never says what went wrong. That's fine if the glyph opens the popover, and wrong if it doesn't.</div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── option 3 -->
+<div class="opts">
+  <div class="opthd"><span class="n">3</span><span class="t">Shipped today — failure takes the subtitle, generically</span><span class="lvl">status quo</span></div>
+
+  <div>
+    <p class="wlab">220pt · ideal</p>
+    <div class="nat" style="width:220px">
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Clinic intake</span><span class="ncount">6</span></span>
+        <span class="nsub"><span class="t">Monday</span></span></span></div>
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Onboarding pilot</span><span class="ncount">3</span></span>
+        <span class="nsub"><span class="g warnfill"><i class="ti ti-alert-triangle-filled"></i></span><span class="t">Partial completion</span></span></span></div>
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Retail wayfinding</span><span class="ncount">12</span></span>
+        <span class="nsub"><span class="t">3 Jul</span></span></span></div>
+    </div>
+  </div>
+
+  <div>
+    <p class="wlab">180pt · minimum</p>
+    <div class="nat" style="width:180px">
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Onboarding pilot</span><span class="ncount">3</span></span>
+        <span class="nsub"><span class="g warnfill"><i class="ti ti-alert-triangle-filled"></i></span><span class="t">Partial completion</span></span></span></div>
+    </div>
+  </div>
+
+  <div class="note"><b>Zero work, and it fits at 180pt.</b> Consistent with every other distress state in the sidebar, which is why it reads as calm here.
+  <br><br><b>“Partial completion” is a status, not a fact about the study.</b> It doesn't say what worked, what didn't, or how many — the researcher has to open the popover to learn anything at all, including the good news that three interviews are ready. That's the weakness worth weighing against its zero cost.</div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── option 4 -->
+<div class="opts">
+  <div class="opthd"><span class="n">4</span><span class="t">Failure takes the subtitle, specifically</span><span class="lvl">louder</span></div>
+
+  <div>
+    <p class="wlab">220pt · ideal</p>
+    <div class="nat" style="width:220px">
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Clinic intake</span><span class="ncount">6</span></span>
+        <span class="nsub"><span class="t">Monday</span></span></span></div>
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Onboarding pilot</span><span class="ncount">3</span></span>
+        <span class="nsub"><span class="g warnfill"><i class="ti ti-alert-triangle-filled"></i></span><span class="t">1 interview couldn’t be read</span></span></span></div>
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Retail wayfinding</span><span class="ncount">12</span></span>
+        <span class="nsub"><span class="t">3 Jul</span></span></span></div>
+    </div>
+  </div>
+
+  <div>
+    <p class="wlab">180pt · minimum</p>
+    <div class="nat" style="width:180px">
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Onboarding pilot</span><span class="ncount">3</span></span>
+        <span class="nsub"><span class="g warnfill"><i class="ti ti-alert-triangle-filled"></i></span><span class="t">1 interview couldn’t be read</span></span></span></div>
+    </div>
+  </div>
+
+  <div class="note"><b>The only option that says what actually happened</b> without opening anything. It's also the sentence the failure pane leads with, so the row and the pane agree.
+  <br><br><b>It truncates at 180pt</b> — and the tail it loses is the verb, leaving “1 interview couldn’t be…”. It also keeps nagging: the phrasing has no tense, so a fortnight later the row still reads like something needs doing, when the drift (“3 new”) is the only live thing left.</div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── option 5 -->
+<div class="opts">
+  <div class="opthd"><span class="n">5</span><span class="t">Composed — both halves in one line</span><span class="lvl" style="color:var(--color-text-info)">★ chosen</span></div>
+
+  <div>
+    <p class="wlab">220pt · ideal — drawn under Schema E</p>
+    <div class="nat" style="width:220px">
+      <div class="nrow"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Clinic intake</span><span class="ncount">6</span></span></span></div>
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Onboarding pilot</span><span class="ncount">3</span></span>
+        <span class="nsub"><span class="g warnfill"><i class="ti ti-alert-triangle-filled"></i></span><span class="t">+3 new, 1 failure</span></span></span></div>
+      <div class="nrow"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Retail wayfinding</span><span class="ncount">12</span></span></span></div>
+      <div class="nrow"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Ward handover study</span><span class="ncount">9</span></span></span></div>
+    </div>
+  </div>
+
+  <div>
+    <p class="wlab">180pt · minimum</p>
+    <div class="nat" style="width:180px">
+      <div class="nrow"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Clinic intake</span><span class="ncount">6</span></span></span></div>
+      <div class="nrow two"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Onboarding pilot</span><span class="ncount">3</span></span>
+        <span class="nsub"><span class="g warnfill"><i class="ti ti-alert-triangle-filled"></i></span><span class="t">+3 new, 1 failure</span></span></span></div>
+      <div class="nrow"><span class="nico"><i class="ti ti-users-group"></i></span>
+        <span class="nstack"><span class="ntitle"><span class="nname">Retail wayfinding</span><span class="ncount">12</span></span></span></div>
+    </div>
+  </div>
+
+  <div class="note"><b>This is the one that ships, and it's drawn in its real context</b> — Schema E, where a clean row has no subtitle at all and collapses to a single 32pt line. The exception is the only two-line row in the list, so it's found by <i>shape</i> before any text is read. Options 1–4 above are still drawn in the superseded Schema A context (a date on every row); they're kept as the record of what was compared, not as a picture of the app.
+  <br><br><b>It fits at both widths — measured, not estimated.</b> Available subtitle width is 163pt at 220pt, 123pt at 180pt. <code>+3 new, 1 failure</code> is <b>78.4pt</b>; the realistic worst case <code>+24 new, 11 failures</code> is <b>94.6pt</b>. Even today's longer copy (<code>+3 unanalysed, 1 failure</code>, 114.1pt) fits at both. Dropping the date is what bought the room: with it, the same line was <b>170.5pt</b> and overran the ideal width.</div>
+</div>
+
+<div class="warnbox" style="border-left-color:var(--color-border-info)"><b>Decided — option 5, the composed line, under Schema E.</b> <code>⚠ +3 new, 1 failure</code>: the drift, then the failure clause, in one subtitle behind the orange warning glyph. <b>No date</b> — see below.
+<br><br><b>This overrides the “one winner, never composed” rule for this state</b> — deliberately. That rule came from a character-count estimate that measurement disproved: the line has 163pt to work with and needs 78–95pt. The rule still holds wherever a state genuinely can't fit both halves; a future pass should not “fix” this back to a single clause.</div>
+
+<div class="warnbox"><b>Schema E — a clean row shows no status line at all.</b> Decided 29 Jul, and it's why the composed line fits.
+<br><br><b>The date is gone from every row.</b> Not deferred — retired. A timestamp earns chrome when it records <i>someone else's</i> action (that's why Mail has dates); on one researcher's own machine, the date we happened to run the pipeline is metadata about our tool, not about the research. The evidence that settled it: <code>lastPipelineRunAt</code> has <b>never had a write site in any build</b>, so the bare date has never once rendered — months of use, nobody filed it. An Appearance pref to bring it back is <b>noted for a future experiment, not built</b>; the revisit trigger is multi-user, not multi-project.
+<br><br><b>Two things still have to be built</b>, and the first is a trap. <b>(1) <code>lastPipelineRunAt</code> must still be written</b> even though the date is no longer shown — <code>ProjectIndex.swift:892</code> gates the <code>+N new</code> delta on it being non-nil, so skipping the write leaves the sidebar permanently blank while <i>looking</i> finished. <b>(2) The drift copy stays as it is.</b> Shortening <code>+{{count}} unanalysed</code> to <code>+{{count}} new</code> was considered and <b>rejected</b> — they aren't synonyms. <i>Unanalysed</i> is a state; <i>new</i> is a claim about arrival time that the code only infers, and several things land in that set without being new (the failed file above, an unsupported format, anything excluded from a re-run). No locale change.</div>
+
+<p class="note" style="padding-top:6px"><b>Why this beats the quieter options.</b> A partial run is two facts and both are live: three interviews are ready to read, and one needs attention. Options 1 and 2 tell the researcher only the first and hide the second behind a colour; options 3 and 4 tell them only the second and drop the news that anything worked at all. The composed line is the only one where the row is honest about the state of the study without being opened.
+<br><br>Under Schema E it also gets a second, pre-attentive channel for free: it is the <b>only two-line row in the list</b>. Most runs succeed, so the sidebar is a uniform stack of single-line rows and the exception is found by shape before a word is read. The height difference isn't raggedness to be normalised — it's the row having more to say.</p>
 
 <h2>C · Must never collapse with these</h2>
 <p class="lede">Same glyph family, opposite severity. One says <i>wait</i>; one says <i>cannot proceed</i>.</p>
@@ -319,9 +547,10 @@ can’t-find → failed → <b>fetch-failed</b> → running → stopped/partial 
 
 <h2>F · Open questions</h2>
 <ul class="lede" style="line-height:1.7">
-  <li><b>Show “3 in Dropbox” at rest at all?</b> It's honest, but the appliance is supposed to cope. Argument for: it makes the next run's wait predictable. Argument against: it's a storage report nobody asked for. <i>Could ship the fetching states without it.</i></li>
-  <li><b>Threshold for “still fetching”.</b> 3 min is a guess. Wants a real corpus on a real domestic uplink.</li>
-  <li><b>Per-file or per-project?</b> Mocked at project level. The Sessions list could mark individual evicted interviews — probably later, and only if researchers ask.</li>
+  <li><s><b>How loudly should a partial run nag?</b></s> <b>Decided — the composed line (§B2 option 5).</b> <code>⚠ +3 new, 1 failure</code>, drawn under <b>Schema E</b> — clean rows show no status line, so this is the only two-line row in the list. Overrides “one winner, never composed” for this state; 78.4pt against 163pt available, fits at the 180pt minimum too. A <i>change</i> to shipped behaviour — today’s <code>.completedPartial</code> renders a generic “Partial completion” and drops the drift.</li>
+  <li><s><b>Show “3 in Dropbox” at rest at all?</b></s> <b>Decided — no.</b> There is no at-rest cloud subtitle and no at-rest cloud glyph, even when every file is evicted. Drag-and-drop starts processing immediately, so files rarely sit unprocessed; eviction is a later-life event. The cloud stays unremarked upon until the researcher has to factor it into their behaviour — i.e. when there's a wait. <i>An earlier draft of this mockup had the state; it was cut deliberately. Don't reintroduce it.</i></li>
+  <li><s><b>Threshold for “still fetching”.</b></s> <b>Decided — ship at 3 min and tune.</b> It's still a guess, and it still wants a real corpus on a domestic uplink; that's calibration after the fact, not a blocker.</li>
+  <li><s><b>Per-file or per-project?</b></s> <b>Decided — per-project.</b> The Sessions list marking individual evicted interviews is out of scope, not deferred pending design.</li>
   <li><s><b>“Make available offline” in the copy</b> is Dropbox's wording; iCloud says “Download Now”, OneDrive “Always keep on this device”.</s> <b>Resolved</b> — the generic “make the file available offline in Finder” reads correctly for all three, so the only per-provider fork left is the provider's <i>name</i>, which <code>cloud_provider_for()</code> already returns.</li>
 </ul>
 

@@ -1,11 +1,12 @@
 ---
 status: current
-last-trued: 2026-07-15
-trued-against: HEAD@main (a44823c0) + uncommitted out-of-credit work on 2026-07-15
+last-trued: 2026-07-29
+trued-against: HEAD@main + a code-grounded walk of ProjectSubtitle / ProjectIndex / ProjectFolderWatcher on 2026-07-29
 ---
 
 ## Changelog
 
+- _2026-07-29_ — **Schema E: the clean row is silent** (new subsection below, after Precedence). A `.ready` row with no delta now renders **no subtitle at all** and collapses to a single line; only exceptions get a line. Supersedes the June "every row shows a date" deferral **on its merits** — the deferral's trigger (concurrent multi-project execution) has *not* fired. Three further corrections from the same walk. (1) **The "never composed" hard rule is now overridden for `.completedPartial`** — see the new subsection; the rule survives everywhere else. (2) **Two shipped branches are unreachable and were never noticed**: `lastPipelineRunAt` has no write site in any build, so `.ready(date:)` never rendered *and* `ProjectIndex.swift:892` gates the `+N unanalysed` delta on it, so that never rendered either. (3) **Cloud fetch/eviction is an extension of this model, not a separate feature** — new rulings folded into the kinds table; spec in `docs/mockups/cloud-fetch-states.html` + the cloud-fetch handoff.
 - _2026-07-15_ — **Truing pass (`--topic` failure-taxonomy).** Two corrections. (1) **§4: `.status` is a multi-pill shelf, not a single pill.** The 19 Jun "app-global only (the Ollama download)" wording read as *one* pill; three now mount (Ollama download, provider out-of-credit, alpha-expiry), each its own `ToolbarItem(placement: .status)` sharing the new `StatusPill` envelope. The axis is unchanged and still right — only the singular framing was stale. Ordering/contention between co-occurring pills is now an **open question** (only pairwise non-co-occurrence is encoded in code). (2) **§3: "Swift only renders it" is no longer strictly true** — an `out_of_credit` verdict now mutates app-global Swift state (sticky verdict → the pill), and the stderr fallback re-derives a provider-scoped credit/rate split when a crash leaves no structured cause. Also: `quota` narrowed to rate-limit, `out_of_credit` added (see [design-pipeline-resilience.md](design-pipeline-resilience.md)). **Not addressed** (pre-existing, flagged): §4's "File import / copy" catalogue row still says copy surfaces in a toolbar pill — stale since 19 Jun and contradicted by this doc's own §§ above; §9 Anchors omits the new pill/model files.
 - _2026-06-23_ — added the **native window title + subtitle** as a third per-project status surface (project identity + a lens-contextual count), shipped on `mac-app-layout-reorg`. Updated the Shipped block + the §4 placement axis; the old toolbar-pill title + `WindowTitleManager` are gone (see `desktop/CLAUDE.md` "Native window title + subtitle live on the DETAIL view"). The two-streams framing (row + detail pane) is now three (+ window chrome).
 - _2026-06-21_ — trued up, no material changes. The §"Shipped (19 Jun 2026)" block + §4 placement axis verified against `ProjectSubtitle.resolve` precedence (`ProjectSubtitle.swift`, `ProjectSubtitleTests.swift`) and copy-on-row (`ProjectRow.swift`; standalone `CopyProgressPill` deleted). Added front-matter + an inline marker on the pre-decision proposal table so a cold reader doesn't read its projected strings ("Copying · 3 of 5 files", "toolbar pill") as current.
@@ -107,6 +108,10 @@ Worked rulings (the precedents):
 | retry after rate-limit (mid-run) | info | "just progress" — transient auto-recovery |
 | interview transcribed to silence | warning | human needs to look; not a failure |
 | iCloud-evicted while offline | info | "like the weather" — will resolve |
+| fetching from a cloud provider | info | just happening; indeterminate (progress is *not* observable — providers swap the file in atomically) |
+| still fetching after ~3 min | warning | a human should look, but nothing failed and the run continues |
+| fetch never completed (30 min) | error | the run stops; the file never arrived |
+| file resident but unreadable | error | genuinely damaged — the message the fetch states exist to stop firing wrongly |
 | partial completion | warning | something didn't go right |
 | drive unplugged / volume ejected | warning | project not usable |
 | analysed files missing from disk | warning | "beyond neutral" — files gone |
@@ -126,6 +131,48 @@ run against a vanished folder is already doomed, so "can't reach the folder" is 
 This matches the shipped `subtitleVariant` early-return. And **drive-unplugged outranks files-missing**
 (whole project gone vs source drift). The self-resolving states below activity (`downloading-from-iCloud`
 is "weather", not a dead end) keep a *starting* order, to be tuned once it's seen live.
+
+### Schema E — the clean row is silent (settled 29 Jul 2026)
+
+Precedence picks a winner; **Schema E decides whether the winner is drawn at all.** A `.ready` row
+with no delta renders **no subtitle line** and collapses to a single 32pt row. Everything else in
+`SubtitleVariant` already has something to say, so the collapse rule is exactly one state.
+
+This **supersedes** the June position ("for TF/alpha every row shows a date so the rhythm is
+consistent and the few non-`.ready` rows stand out") — it does **not** fulfil its trigger, which was
+concurrent multi-project execution and has not fired. Recorded so a later reader doesn't
+reverse it back. Three reasons:
+
+- **The counterfactual already ran.** `lastPipelineRunAt` has never had a write site in any build, so
+  `.ready(date:)` was permanently unreachable and the bare date **never once rendered** — months of
+  daily use, every cohort build, and nobody filed it.
+- **The June reasoning was backwards against `absence is information`.** A subtitle on every row
+  distinguishes exceptions by *content*, which must be read; absent subtitles distinguish them by
+  *presence*, which is pre-attentive. User: *"a whole wall of greens and one red is not helpful —
+  you just need the red."*
+- **A run date is low-value on a single-user machine.** A timestamp earns chrome when it records
+  *someone else's* action (that's why Mail has dates). The revisit trigger is therefore
+  **multi-user, not multi-project**: when a run can be started by someone who isn't you.
+
+**Variable row height is the design, not raggedness.** A taller row is taller because it has more to
+say — the height delta is a second pre-attentive channel alongside the glyph colour. Most runs
+succeed, so the list is a uniform stack of single-line rows with the occasional taller one.
+
+**An Appearance pref to restore the always-on date is noted for a future experiment — not built.**
+
+**TRAP — `lastPipelineRunAt` must still be written**, even though the date is no longer displayed.
+`ProjectIndex.swift:892` gates the `+N` drift delta on it being non-nil (the F14 policy: no drift
+before an analysis baseline exists). Because the field is always nil today, **`+N unanalysed` has
+never rendered either**. Skip the write on the grounds that "we don't show the date any more" and the
+sidebar is permanently blank while *looking* finished. The field becomes write-only — a reviewer
+should not delete it as unused.
+
+**Open — the drift and failure clauses can describe the same file.** `newFiles` is
+"on-disk and not in the DB's ingested set" (`ProjectFolderWatcher.performScanLocked`), and a file
+that *failed* to analyse has no session row — so it counts as new. After a partial run, the one
+unreadable interview appears in **both** halves of the composed line. Needs resolving before
+`.completedPartial` composes: either exclude known-failed basenames from `newFiles` (needs the
+failed set readable by the watcher), or scope the drift to files added *since* the run.
 
 ### Decided — keep the health signal; UX by empirical play
 
@@ -289,6 +336,14 @@ compose. Three tiers, in order:
 
 **Hard rule:** never put two conditions on one line. The detail pane is where the *non-winners*
 would get room — that's its reason to exist. (Memory: `feedback_exception_precedence_chain`.)
+
+**One sanctioned exception (29 Jul 2026): `.completedPartial` composes.** The row shows
+`⚠ +3 new, 1 failure` — drift *and* failure. The rule was written against a character-count
+estimate that measurement disproved: the subtitle has **163pt** at the 220pt ideal sidebar width
+(220 − 10 leading − 20 icon − 6 gap − 13 glyph − 4 gap − 4 trailing), and the composed string needs
+**78–95pt**. A partial run is genuinely two live facts — *these are ready to read* and *this one
+needs attention* — and every single-clause option drops one of them. The rule still governs
+everywhere else; don't generalise this, and don't "fix" it back.
 
 ## 6. The gap — what bucket 1 lacks that bucket 2 has
 

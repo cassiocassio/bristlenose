@@ -28,6 +28,8 @@ tombstone; fix it by adding the row.
 | **starlette** 1.x | FastAPI / starlette | _(graduated 2026-06-09 — FastAPI 0.136.3 dropped the `starlette<1.0` cap, pair pre-mortemed in the graduated-holds wave)_ | n/a — graduated | 2026-06-09 | **graduated** |
 | **tokenizers** 0.23.1 | HF transformer stack | `transformers` 5.7.0 **and** 5.10.2 both pin `tokenizers<=0.23.0` (deps.dev verified 2026-06-05) | a transformers release floats its tokenizers cap to admit 0.23.1 (`GetRequirements` for transformers: cap becomes `<0.24`/`<=0.23.1`); then move tokenizers+transformers together | 2026-06-09 | held |
 | **WTForms** 3.2.2 | sqladmin / serve DB | _(graduated 2026-06-09 — sqladmin 0.27.2 floated `wtforms<3.3`, pair pre-mortemed in the graduated-holds wave)_ | n/a — graduated | 2026-06-09 | **graduated** |
+| **snapcore/action-build** `v1.3.0` (node20) | GitHub Actions runtime | Action declares `runs.using: node20`; **v1.3.0 is the newest tag upstream** (`releases/latest` 404s, tags = `v1.3.0`, `v1`). No node24 release exists to take. Emits the runner's forced-to-node24 annotation. Mitigant: `snap.yml` is `on: workflow_dispatch` only (parked May 2026). | snapcore publishes a release whose `action.yml` has `runs.using: node24` — then bump both snapcore SHAs together with their version comments | 2026-07-29 | held |
+| **snapcore/action-publish** `v1.2.0` (node20) | GitHub Actions runtime | Same: `runs.using: node20`; v1.2.0 is the newest upstream tag. | Same predicate as action-build; move the pair | 2026-07-29 | held |
 
 <!-- Watch grounding: deps.dev GetRequirements for the upstream caps
      (spacy→thinc, fastapi→starlette), GetVersion for publishedAt/scorecard,
@@ -338,3 +340,320 @@ security wave applied above.
 - `docs/design-platform-policy.md` "CI Node 20" / "lighthouse 12.x"
   drift remains — out of scope for this branch; queued for a separate
   policy-doc sweep.
+
+---
+
+## Entry 5 — 2026-07-29 — GitHub Actions pins (`.github/workflows/*.yml`)
+
+- **Grounded against:** each action's `action.yml` read at every candidate
+  major tag via `gh api repos/<r>/contents/action.yml?ref=<tag>` (runtime
+  `runs.using:` verified first-hand, not inferred), upstream release notes
+  via `gh api repos/<r>/releases`, the **actions/runner C# source**
+  (`src/Runner.Common/Util/NodeUtil.cs`,
+  `src/Runner.Worker/Handlers/HandlerFactory.cs`,
+  `src/Runner.Worker/JobExtension.cs`,
+  `src/Runner.Common/Constants.cs`), the deprecation changelog
+  (github.blog 2025-09-19), plus call-site greps across
+  `.github/workflows/` and the pinning register.
+- **Prior calibration applied:** 4 prior entries, 4 hits, 0 misses, 0
+  false-alarms — but **all four were pip/npm. There is no GitHub-Actions
+  coupling-cluster precedent in this ledger.** Two lessons do transfer:
+  (1) *read the upstream metadata, never the headline* — here that meant
+  reading `action.yml` at each tag and the runner's own source, which
+  overturned two premises in the briefing I was handed (see "Briefing
+  premises corrected" below); (2) a 0-false-alarm record is earned
+  permission to say **green loudly**. This entry is a field of greens and
+  says so without hedging.
+- **Candidate set:** the 11 action pins across 9 workflows, plus the
+  `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` mechanism itself.
+
+### New cluster — name it: **GitHub Actions runtime (a fan, not a chain)**
+
+This does not behave like any pip/npm cluster in this ledger. There are
+**no inter-action version caps** — no action's metadata constrains another's,
+so there is no resolver surface at all and no "atomic wave" requirement.
+What couples them is a *single shared external axis*: the runner-provided
+Node runtime. N actions each pinned independently to the same axis — a fan,
+not a chain. Consequences:
+
+- **No 🟡 RESOLVER-NON-EVENT verdicts are possible here.** Nothing can be
+  gated by an upstream cap. Actions fail at *runtime* or not at all.
+- **Composite actions hide transitive runtimes.** `runs.using: composite`
+  is not "unaffected by the Node migration" — it delegates to sub-actions
+  that have their own runtimes, invisible to any `outdated`-style table.
+  `actions/attest-sbom@v2` is the live example (below).
+- Recommend adding to the catalog in `docs/design-dependency-premortem.md`.
+
+### The three central questions, answered from the runner source
+
+**Q1 — Is `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` still load-bearing?**
+**No. It is a confirmed no-op, and it never did what its comment claims.**
+
+`NodeUtil.DetermineActionsNodeVersion()` resolves in strict phase order:
+
+```csharp
+if (requireNode24) { return Node24; }              // Phase 3
+...
+if (useNode24ByDefault) {                          // Phase 2 — LIVE since 2026-06-16
+    if (allowUnsecureNode) { return Node20; }
+    return Node24;                                 // forceNode24 never consulted
+}
+if (forceNode24) { return Node24; }                // Phase 1 — dead branch
+return Node20;
+```
+
+Phase 2 (`actions.runner.usenode24bydefault`) went live **16 June 2026** and
+returns `node24` *without ever reading* `forceNode24`. The variable is only
+consulted in the Phase-1 branch, which is now unreachable. Under Phase 3
+it is short-circuited even earlier.
+
+**And it never silenced the annotation.** `HandlerFactory.cs` buckets a
+node20-declared action by its *resolved* version: resolving to node24 adds
+it to `UpgradedToNode24Actions`, and `JobExtension.cs:998-1004` emits
+`context.Warning(...)` — a real annotation — for exactly that bucket:
+
+> `Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: {list}.`
+
+So setting `FORCE_` moved us from the `DeprecatedNode20Actions` warning to
+the `UpgradedToNode24Actions` warning. **Two annotations, one traded for the
+other.** The rationale comment at `ci.yml:10-12` ("Silence the per-step …
+deprecation chatter") was *wrong when written*, not merely stale. The only
+mechanism that removes the annotation is bumping the action to a
+node24-native major — then `nodeData.NodeVersion == node24` takes the
+`else if` branch in `HandlerFactory`, which tracks nothing and warns nothing.
+
+**Q2 — Cosmetic or functional? Chase the punycode suspicion.**
+**Cosmetic. The suspicion does not survive the primary source.**
+
+`upload-artifact` PR #744 and `download-artifact` PR #451 both describe the
+symptom verbatim:
+
+> `(node:1234) [DEP0040] DeprecationWarning: The punycode module is deprecated. Please use a userland alternative instead.`
+
+The fix bumps `@azure/storage-blob` to `^12.29.1` (swapping deprecated
+`@azure/core-http` for `@azure/core-rest-pipeline`). It is a **stderr
+DeprecationWarning, not a functional break** — `punycode` is still present
+in the Node 24 runtime. "Forced onto node24" **is** equivalent to "built for
+node24" for every action in this candidate set; the only observable delta is
+log noise. Verdicts stay green on the merits, not on the annotation.
+
+**Q3 — Is there a hard deadline?**
+**Yes, but it is a non-event for this repo.** `Constants.cs:211-212`:
+
+```csharp
+public static readonly string Node24DefaultDate = "June 16th, 2026";
+public static readonly string Node20RemovalDate = "September 16th, 2026";
+```
+
+16 Sept 2026 removes the **node20 binary** from the runner. That kills the
+`ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION` escape hatch — which this repo
+does not use (grep clean). Our node20-declared actions are *already* being
+force-run on node24 and will continue to be. **Nothing breaks on 16 Sept.**
+The one real forward deadline is CodeQL: **v3 stops receiving updates in
+December 2026** (github.blog 2025-10-28), so v3 silently stops gaining new
+analysis capability rather than failing.
+
+### Prophecy
+
+| Bump (from→to) | Verdict | Surface | Blast radius & receipt |
+|----------------|---------|---------|------------------------|
+| **actions/checkout** v4→**v7** | 🟢 SAFE | — | v5 = first node24 (`action.yml@v5: using: node24`), runner floor v2.327.1 — all runners GitHub-hosted, satisfied free. v6's "persist creds to a separate file" (PR #2286) is inert: **nothing reads `.git/config` creds or re-uses the checkout token** — grep clean; `release.yml:154` passes `GH_TOKEN: ${{ github.token }}` explicitly. v7 blocks fork-PR checkout under `pull_request_target`/`workflow_run` (PR #2454) — **grep clean, only `workflow_call` is used** (`release.yml:20` → `ci.yml`). 10 call sites. |
+| **actions/setup-python** v5→**v7** | 🟢 SAFE | — | v6 = node24. v7 removes the `pip-install` input (PR #1336) — `grep -rn "pip-install" .github/` **clean**. All 7 call sites pass only `python-version-file: '.tool-versions'`. |
+| **actions/setup-node** v4→**v7** | 🟢 SAFE | — | v5 auto-caches **only when `package.json` has a `packageManager` field** (PR #1348) — absent from `frontend/package.json` and `e2e/package.json`, and there is **no root `package.json`**. v6 narrows auto-cache to npm (moot). v7 = ESM + new cache outputs. `ci.yml:131`'s explicit `cache: "npm"` + `cache-dependency-path` is untouched; the other 3 sites pass no `cache:`. |
+| **actions/upload-artifact** v4→**v7** | 🟢 SAFE | — | v5 is *still node20*; **v6 is the first node24** (release note: "v5 had preliminary support … v6 by default will run on Node.js 24"). v7 adds `archive:` (opt-in, default `true`) + ESM. All 6 call sites use defaults with `name:`/`path:`/`retention-days:` only. |
+| **actions/download-artifact** v4→**v7** | 🟢 SAFE | — | v5's breaking path change is **`artifact-ids:`-only** — `grep -rn "artifact-ids"` **clean**; all 4 sites use `name:` (`release.yml:121,147`, `snap.yml:48,80`). v6 *still node20*; **v7 is the first node24**. |
+| **actions/download-artifact** v7→**v8** | 🟢 SAFE ⚠️ **LATENT** | runtime | The `Content-Type`-based decompress skip only affects artifacts uploaded with `archive: false` — we never set it, so every download is a zip and unzips as before. The `.snap` concern is a non-issue for that reason. **Latent:** `digest-mismatch` now defaults to `error` (was warn, PR #461) — correct hardening, but it converts a previously-survivable transfer flake into a red run. Fires only on real corruption; do not pre-emptively set it back to `warn`. |
+| **github/codeql-action** v3→**v4** | 🟢 SAFE | — | `init/action.yml@v4` and `analyze/action.yml@v4` both `using: node24`. v4's removed input is `add-snippets` — `grep -rn "add-snippets" .github/` **clean**. Min CodeQL bundle 2.17.6; GitHub-hosted ships `codeql-bundle-v2.26.1`. The GHES ≤3.18 gate is irrelevant (github.com). `codeql.yml` passes only `languages` / `queries: security-extended` / `category`. **v3 stops receiving updates Dec 2026** — this is the one bump with a real forward clock. |
+| **actions/attest-sbom** v2→**v3** | 🟢 SAFE — **and the correction that matters** | runtime (transitive) | **The briefing's table says "NOT node-related — `using: composite` at v2/v3/v4". That is right about the wrapper and wrong about the payload.** `attest-sbom@v2`'s composite body SHA-pins two **node20** sub-actions: `actions/attest-sbom/predicate@…534423` (`using: node20`) and `actions/attest@ce27ba3` = **v2.4.0** (`using: node20`, verified). So `attest-sbom@v2` **is** a node20 surface — on the release attestation path — invisible to any runtime table that stops at the wrapper. v3 fixes both (`predicate@2.0.0` + `actions/attest@v3.0.0`, both node24). |
+| **actions/attest-sbom** v2→**v4** | 🟢 SAFE ⚠️ **LATENT — do not take** | — | v4 works, but **v4.0.0 deprecates the action** in favour of `actions/attest`, and its composite body's *first step* is literally `echo "::warning::actions/attest-sbom has been deprecated, please use actions/attest instead"`. Jumping v2→v4 **trades a node20 annotation for a deprecation annotation** and starts a migration clock. **v3 is the sweet spot: node24, no self-deprecation warning.** Take v3; schedule the `actions/attest` migration separately. |
+| **peter-evans/repository-dispatch** v3→**v4.0.1** | 🟢 SAFE | — | `action.yml@v4: using: node24`; v4.0.0 is a runtime-only major, v4.0.1 fixes the node version declaration (PR #433). **No input changes** — `token`/`repository`/`event-type`/`client-payload` all unchanged. SHA-pinned at `release.yml:206`; **the bump must move the SHA *and* the trailing comment together** → `28959ce8df70de7be546dd1250a005dd32156697  # v4.0.1`. Blast radius is the Homebrew tap dispatch, which fails **silently** (cf. CLAUDE.md's release-pipeline gotchas) — verify the tap repo receives `update-formula` on the next release. |
+| **snapcore/action-build** v1.3.0 | ⏸ **HELD / WATCHING** | — | `action.yml@v1.3.0: using: 'node20'`. **v1.3.0 is the newest tag upstream** (`gh api repos/snapcore/action-build/tags` → `v1.3.0, v1`); `releases/latest` 404s. No node24 release exists to take. Mitigant: `snap.yml` is `on: workflow_dispatch` **only** (auto-triggers parked May 2026, `snap.yml:3-8`), so the annotation surfaces only on manual runs. |
+| **snapcore/action-publish** v1.2.0 | ⏸ **HELD / WATCHING** | — | `action.yml@v1.2.0: using: 'node20'`. v1.2.0 is the newest tag upstream. Same predicate, same parked-workflow mitigant. |
+| **pypa/gh-action-pypi-publish** `release/v1` | 🟢 SAFE (non-candidate) | — | Docker action — outside the Node migration entirely. **Leave the moving tag alone**; `release.yml:127-133` documents why (Trusted-Publishing OIDC must track upstream). |
+
+### The guaranteed breakages (act here first)
+
+**None.** Zero 🔴s. Every action in the set either has a node24-native major
+whose breaking changes land on surfaces this repo demonstrably does not use
+(all greps clean), or has no newer release at all. Said plainly so the
+contrast is usable: **this is a green sweep, and the reason it looks scary
+is an annotation, not a fault.**
+
+### The non-events (no action; know why)
+
+Structurally impossible in this ecosystem — see "a fan, not a chain" above.
+There are no inter-action caps, so nothing can be resolver-gated. The
+nearest equivalent is the two snapcore holds, which are blocked by
+*absence of an upstream release*, not by a cap.
+
+### The safe wave (take together)
+
+All ten greens in **one sweep commit**. They are mutually independent (no
+cluster ordering to respect), and a single CI run exercises checkout ×10,
+setup-python ×7, setup-node ×4, upload-artifact ×6, download-artifact ×4,
+codeql ×3, attest-sbom ×1, repository-dispatch ×1. Two carve-outs:
+
+- **attest-sbom → v3, not v4** (see the LATENT row).
+- **download-artifact → v8** is fine; keep `digest-mismatch` at its new
+  `error` default.
+
+Note per CLAUDE.md: a workflow-only change **ships no wheel bytes** → re-use
+the existing version tag, do not bump.
+
+### The unknowns (couldn't look)
+
+**None.** Every runtime fact was read first-hand from `action.yml` at the
+specific tag; every behavioural claim traces to an upstream release note, a
+merged PR body, or the runner's own source. No `gh api` call returned empty
+and was laundered into a green. The one place I deliberately did *not*
+guess: whether snapcore intends a node24 release — that is unknowable from
+here, which is precisely why it is a **hold with a predicate** rather than
+a green or a red.
+
+### Briefing premises corrected while grounding
+
+The candidate set I was handed was accurate on 11 of 11 runtime facts
+(independently re-verified — including the counter-intuitive ones:
+`upload-artifact@v5` and `download-artifact@v5`/`v6` really are still
+node20). Three premises did not survive:
+
+1. **"`attest-sbom` … NOT node-related."** It is — transitively, via two
+   SHA-pinned node20 sub-actions. Composite ≠ exempt.
+2. **"the lighthouse ignore comment in dependabot.yml ('CI is on 20')".**
+   Already fixed on 2026-06-09 (`--watch` pass). The live comment reads
+   "CI satisfies (Node 24 per `.tool-versions`)". *The briefing's stale
+   premise was itself the drift.* Only the **policy-doc** half is still rotten.
+3. **"punycode is where forced-onto-node24 ≠ built-for-node24."**
+   Reasonable suspicion, but the PRs describe a DeprecationWarning.
+
+### Cadence call — **single sweep commit, not a tooling sprint**
+
+The register's trigger (§"Quarterly tooling review" item 6) is "three
+deferred majors"; on a headline count of ten this looks like a sprint. It
+is not, and the count is the wrong instrument here:
+
+- A tooling sprint (1–2 days) exists to absorb **cluster risk** — atomic
+  waves, resolver conflicts, ABI coupling, test-surface churn. This
+  ecosystem has **none of that**. There is nothing to sequence.
+- The change is ten `uses:` lines plus seven `env:` deletions. No wheel
+  bytes, no lockfile, no runtime code, no test surface.
+- Verification is **one green CI run**, which the repo already runs.
+
+Equally: it is **above** the per-PR cost. Ten separate Dependabot PRs, each
+needing a CI cycle and a merge, is exactly the tail-chasing the cadence
+policy was written to prevent. **One sweep commit, one CI run, one review.**
+That respects "move as a wave, not a phone call" without inflating a
+half-hour edit into a sprint.
+
+### Recommendations (ordered)
+
+1. **(c) Fix the stale register rows first — it is free, and this is the
+   third pass.** `docs/design-platform-policy.md:90` "CI Node 20" and the
+   "lighthouse 12.x" row. Do this *first* because it costs nothing and
+   because leaving it un-actioned a third time is how the register stops
+   being trusted at all. **Structural fix, not another re-flag** — see below.
+2. **(a) + (d) together, in one sweep commit.** Bump the ten greens
+   (attest-sbom → **v3**, not v4) **and** delete
+   `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` from all seven workflows plus the
+   now-false rationale comment at `ci.yml:10-12`. These belong in the same
+   commit: the env var's only justification was the annotation, and the
+   bumps are what actually remove it. Deleting it alone would be a
+   behaviour-neutral no-op; bumping alone would leave dead config with a
+   misleading comment.
+   - **The `mac-build.yml` / `secret-scan.yml` inconsistency dissolves
+     here.** Do **not** add the var to the two workflows missing it —
+     remove it from the seven that have it, and the fleet is consistent
+     *and* correct. (Those two workflows were never wrong; they were
+     accidentally right.)
+3. **(b) Add the `github-actions` ecosystem to `.github/dependabot.yml` —
+   but *after* the sweep lands.** This is the systemic fix and the actual
+   root cause: with no `github-actions` block, nothing was watching, which
+   is why pins drifted 1–4 majors unnoticed. Ordering matters — added
+   *before* the sweep it opens ~10 PRs on Monday; added *after*, the first
+   run is a near-no-op. Suggested shape: `directory: "/"`, weekly/Monday,
+   `groups: { actions: { patterns: ["*"] } }` so the fan arrives as **one**
+   grouped PR (the fan shape means grouping is safe — no inter-action
+   caps), plus ignore-with-predicate rows for the two snapcore SHAs.
+   Its omission is **accidental, not decided** — it appears nowhere in the
+   policy doc's "Open questions / known gaps".
+
+**What not to do:**
+
+- **Do not take `attest-sbom@v4`.** v3 is strictly better today.
+- **Do not hand-force the snapcore SHAs** to any "v1" moving tag — there is
+  no node24 release to force to, and un-SHA-pinning a Snap-Store-credentialed
+  step for cosmetic reasons trades a warning for a supply-chain regression.
+- **Do not SHA-pin `pypa/gh-action-pypi-publish`** (`release.yml:127-133`).
+- **Do not run a tooling sprint** for this.
+- **Do not set `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION`.** It buys nothing
+  and dies on 16 Sept 2026.
+
+### Stale-register drift found while grounding
+
+`docs/design-platform-policy.md` pinning register:
+
+- **`CI Node 20`** (line 90) — flatly contradicted by the same document's
+  Pillar 1 (line 32: "CI and local-dev are aligned on **Node 24 LTS** …
+  there are no hardcoded `node-version: "20"` pins") and by `.tool-versions`
+  (`node 24`). Its re-check date (June 2026) is now **past**.
+- **`lighthouse 12.x` — "Lighthouse 13 requires Node ≥22.19; CI is on 20"**
+  — the stated *reason* is false. `.github/dependabot.yml` already carries
+  the corrected reason (perf-baseline re-pin cost). The register is now
+  *behind its own ignore file*.
+
+**I flagged both in Entry 1 (log lines 119-124) and again in Entry 2
+(lines 254-262). The dependabot half was fixed in the 2026-06-09 `--watch`
+wave; the policy-doc half was explicitly "queued for a separate policy-doc
+sweep" and never happened. This is the third flag. That is the Cassandra
+condition in its literal form — correct, cited, repeatedly ignored — and
+the honest reading is that the failure is mine, not the reader's: I kept
+filing prose warnings into a ledger nobody re-reads instead of proposing
+the edit that removes the failure mode.**
+
+**Structural fix so it sticks this time — delete, don't re-word:**
+
+> **A pinning-register row may not restate a value that lives in a tracked
+> config file. It may only *name the file*.**
+
+Applied:
+
+- The **`CI Node 20` row should be deleted outright**, not corrected. It
+  describes a pin that no longer exists; `.tool-versions` is the SSOT and
+  Pillar 1 already says so. It should have died the day `.tool-versions`
+  landed. A "corrected" row restating `Node 24` would rot again at the next
+  LTS.
+- The **`lighthouse` row's reason should cite `.tool-versions`**, not
+  restate a Node number ("requires Node ≥22.19; see `.tool-versions` for the
+  current CI Node").
+
+This is mechanically checkable: **any register row containing a literal
+version number that also appears in a tracked config file is drift by
+construction.** That is a grep, and a candidate `/cassandra --watch` check.
+
+Also still open from Entry 2 and worth folding into the same edit: the
+pinning register has **no cross-reference to this ledger's Held register**.
+One line — "see `docs/dependency-premortem-log.md` § Held register for
+gated holds" — stops the two registers drifting apart.
+
+### OUTCOME — open
+
+Not yet applied. Nothing in this entry has landed.
+
+### SCORE — pending
+
+No verdicts scored. Tally line stays at 4 scored until `/cassandra --score`
+runs against an applied sweep.
+
+Scoring notes for the future pass — the falsifiable claims, so this entry
+can be marked honestly rather than generously:
+
+- If the sweep lands and **CI goes green with no node20 annotations**, the
+  ten greens are hits and the FORCE_-is-a-no-op reading is confirmed.
+- If **any** annotation survives the bump, the `HandlerFactory` reading is
+  wrong and this entry took a miss on Q1.
+- If `attest-sbom@v3` breaks the release attestation, that is a **miss** on
+  a green — and the lesson would be that transitive composite runtimes need
+  a build-level test, not just metadata reading.
+- If the Homebrew tap does **not** receive `update-formula` on the first
+  release after the `repository-dispatch` bump, that is a **miss** — and
+  the standing hazard (silent Homebrew breakage) will have bitten again.

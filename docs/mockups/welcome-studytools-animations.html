@@ -78,6 +78,32 @@
     --bn-selection-border:color-mix(in srgb, var(--bn-colour-accent) 30%, transparent);
   }
 
+  /* --- states + keycap tokens (tag / star / hide) — REAL values from colors/palette-*.css --- */
+  :root{
+    --bn-weight-starred:520;
+    --bn-colour-starred:#999; --bn-colour-icon-idle:#c9ccd1; --bn-colour-border-hover:#d1d5db;
+    /* selection: pale-blue wash + a FULL accent-blue left rule (not a faint mix); focus = a lift shadow */
+    --bn-selection-bg:#eef4fc; --bn-selection-border:var(--bn-colour-accent);
+    --bn-focus-shadow:0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+    --bn-cap-face:#fbfbfc; --bn-cap-face-lo:#f0f1f3; --bn-cap-highlight:rgba(255,255,255,.9); --bn-cap-edge:#cfd2d7;
+  }
+  :root[data-appearance="dark"]{
+    --bn-colour-starred:#ccc; --bn-colour-icon-idle:#595959; --bn-colour-border-hover:#3a3a3a;
+    --bn-selection-bg:#1a2838;
+    --bn-cap-face:#2c2c2e; --bn-cap-face-lo:#232325; --bn-cap-highlight:rgba(255,255,255,.06); --bn-cap-edge:#000;
+  }
+  :root[data-palette="edo"]{
+    --bn-colour-starred:#9e8b6e; --bn-colour-icon-idle:#b8ad91; --bn-colour-border-hover:#c4b896;
+    --bn-selection-bg:#e0e8f0;   /* selection stays cool-blue even on the warm palette (real) */
+    --bn-focus-shadow:0 3px 12px rgba(30,20,10,0.12), 0 0 0 1px rgba(30,20,10,0.06);
+    --bn-cap-face:#fdfbf7; --bn-cap-face-lo:#f3ecdb; --bn-cap-highlight:rgba(255,255,255,.85); --bn-cap-edge:#d4c9a8;
+  }
+  :root[data-palette="edo"][data-appearance="dark"]{
+    --bn-colour-starred:#b8a880; --bn-colour-icon-idle:#4a4030; --bn-colour-border-hover:#3a3428;
+    --bn-selection-bg:#1e2830;
+    --bn-cap-face:#211e18; --bn-cap-face-lo:#1a1816; --bn-cap-highlight:rgba(255,255,255,.05); --bn-cap-edge:#000;
+  }
+
   *{ box-sizing:border-box; }
   body{ margin:0; padding:24px; font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif; color:var(--ink); background:var(--bg); }
   .page{ max-width:1120px; margin:0 auto; }
@@ -253,12 +279,87 @@
   :root[data-appearance="dark"] .grp-ux  .s3{ --tag-bg:oklch(52% 0.10 250); } :root[data-appearance="dark"] .grp-ux  .s4{ --tag-bg:oklch(56% 0.11 250); }
   :root[data-appearance="dark"] .grp-opp .s3{ --tag-bg:oklch(52% 0.10 75); }  :root[data-appearance="dark"] .grp-opp .s4{ --tag-bg:oklch(56% 0.11 75); }
 
+  /* ============================================================= *
+   *  TAG · STAR · HIDE — keyboard-driven quote actions             *
+   *  (t tag · s star · h hide). Keycap = skin B "Raised" (fake,     *
+   *  design-keycaps.md §2). Star/hide/hidden CSS copied verbatim    *
+   *  from atoms/toggle.css, molecules/quote-actions.css,           *
+   *  molecules/hidden-quotes.css, atoms/interactive.css.           *
+   * ============================================================= */
+
+  /* interaction states — verbatim intent from atoms/interactive.css */
+  blockquote.quote-card{ position:relative; }
+  blockquote.quote-card.bn-focused{ background:var(--bn-colour-bg); box-shadow:var(--bn-focus-shadow); z-index:2; transition:box-shadow .2s ease; }
+  blockquote.quote-card.bn-selected{ background:var(--bn-selection-bg); border-left-color:var(--bn-selection-border); transition:background .25s ease, border-color .25s ease; }
+
+  /* starred — verbatim from molecules/quote-actions.css. The on-state is a SUBTLE
+     tint differential, NOT gold: shipped --bn-colour-starred is #999 / #ccc. */
+  blockquote.quote-card.starred{ font-weight:var(--bn-weight-starred); border-left-color:var(--bn-colour-starred); }
+  blockquote.quote-card.starred .star-btn{ color:var(--bn-colour-starred); }
+  @keyframes star-pop{ 0%{transform:scale(1)} 40%{transform:scale(1.55)} 100%{transform:scale(1)} }
+  .star-btn.pop{ animation:star-pop .42s cubic-bezier(.34,1.56,.64,1); }
+
+  /* star / hide buttons — verbatim from atoms/toggle.css */
+  .star-btn,.hide-btn{ position:absolute; top:.55rem; background:none; border:none;
+    font-size:var(--bn-text-label); color:var(--bn-colour-icon-idle); cursor:pointer;
+    padding:2px; line-height:1; display:inline-block; }
+  .star-btn{ right:.6rem; }
+  .hide-btn{ right:2rem; opacity:0; transition:opacity .2s ease, color .2s ease; }
+  blockquote.quote-card.bn-focused .hide-btn{ opacity:1; }
+  .hide-btn svg{ display:block; }
+
+  /* hide collapse + hidden state — verbatim from molecules/hidden-quotes.css */
+  blockquote.quote-card.sh-card{ padding:0.55rem 0.85rem; max-height:140px; }
+  blockquote.quote-card.bn-hiding{ max-height:0!important; opacity:0; overflow:hidden;
+    margin-top:0!important; margin-bottom:0!important; padding-top:0!important;
+    padding-bottom:0!important; border-width:0!important; transition:all 300ms ease; }
+  blockquote.quote-card.bn-hidden{ display:none!important; }
+
+  /* hidden-count chip — verbatim from molecules/hidden-quotes.css */
+  .sh-toolbar{ display:flex; justify-content:flex-end; align-items:center; min-height:20px; margin-bottom:3px; }
+  .bn-hidden-toggle{ background:none; border:none; font-size:var(--bn-text-label);
+    color:var(--bn-colour-accent); cursor:pointer; font-family:var(--bn-font-body);
+    padding:2px 4px; display:inline-block; }
+  .bn-hidden-chevron{ font-size:.7em; margin-left:.15em; }
+  @keyframes hidden-bump{ 0%{transform:scale(1)} 38%{transform:scale(1.18); filter:brightness(1.35)} 100%{transform:scale(1)} }
+  .bn-hidden-toggle.bump{ animation:hidden-bump .5s ease; }
+
+  /* the keycap — skin B "Raised" (design-keycaps.md §2), a bare lowercase key */
+  .cap{ position:absolute; z-index:8; display:inline-flex; align-items:center; justify-content:center;
+    min-width:1.7em; height:1.7em; padding:0 .42em; font-family:var(--bn-font-mono);
+    font-size:var(--bn-text-label); font-weight:500; line-height:1; color:var(--bn-colour-text);
+    border-radius:5px; pointer-events:none; }
+  .cap--raised{ background:linear-gradient(var(--bn-cap-face),var(--bn-cap-face-lo));
+    border:1px solid var(--bn-colour-border-hover);
+    box-shadow:0 1.5px 0 0 var(--bn-cap-edge), inset 0 1px 0 0 var(--bn-cap-highlight); }
+  @keyframes cap-enter{ from{opacity:0; transform:translateY(7px) scale(.9)} to{opacity:1; transform:translateY(0) scale(1)} }
+  .cap-enter{ animation:cap-enter .2s ease-out; }
+  @keyframes cap-leave{ to{opacity:0; transform:translateY(-5px) scale(.92)} }
+  .cap-leave{ animation:cap-leave .22s ease forwards; }
+  /* press — the cap depresses: bottom edge collapses, an accent ring flashes */
+  .cap.cap-press{ transform:translateY(1.5px);
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.2), 0 0 0 3px var(--bn-selection-border);
+    filter:brightness(.97); }
+
+  /* the pointer (drawn arrow cursor) */
+  .ptr{ position:absolute; left:0; top:0; z-index:9; pointer-events:none;
+    filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.35)); will-change:transform; }
+  .ptr-ico{ display:block; transform-origin:4px 3px; }
+  @keyframes ptr-click{ 0%{transform:scale(1)} 45%{transform:scale(.8)} 100%{transform:scale(1)} }
+  .ptr.ptr-click .ptr-ico{ animation:ptr-click .24s ease; }
+
+  /* tag / star-hide stage layout */
+  .anim.sh-frame{ padding:12px 14px; }
+  .anim.sh-frame.cellframe{ min-height:172px; }   /* == the real φ-major cell; two compact cards fit with room */
+  .anim.sh-frame.detailframe{ min-height:236px; }
+  .sh-stage{ display:flex; flex-direction:column; gap:7px; }
+
   @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
 </style>
 </head>
 <body>
 <div class="page">
-  <h1>Welcome — animations for the “Study tools” cell <span style="font-weight:400;color:var(--faint);font-size:13px">· tool 1 of 8 · AutoCode</span></h1>
+  <h1>Welcome — animations for the “Study tools” cell <span style="font-weight:400;color:var(--faint);font-size:13px">· AutoCode · Codebooks · Tag · Star &amp; hide</span></h1>
   <p class="lede">Replacing the 8 static screenshots in the large “Study tools” cell with tiny looping illustrations — themeable, responsive, no baked-in macOS chrome. Same playbook as the science cell: prototype <b>idea + motion + copy</b> here, then decide native-SwiftUI vs webview and build for real. Doing the tools <b>one by one</b> — this is AutoCode.</p>
 
   <div class="controls">
@@ -328,6 +429,57 @@
     </div>
   </div>
 
+  <!-- =========================================================== Tag -->
+  <h2 class="sec"><span class="n">3</span> · Tag — <span class="q">click a quote → press ⌜t⌟ → your code types itself in</span></h2>
+  <p class="map">The most basic move in Bristlenose. Sequence: the pointer moves in and <b>clicks to select</b> (the real <code>.bn-selected</code> blue tint + bar) → a <b>raised keycap</b> (<code>t</code>) rises and presses → a code <b>types itself in</b> character-by-character (same <code>typeInto</code> grammar as the Codebooks cell) and commits to a real <code>.badge-user</code> chip. Keycap = skin B “Raised” from <code>design-keycaps.md</code> (faked — the primitive is unbuilt).</p>
+  <div class="demo">
+    <div class="stage-cell">
+      <div class="tool-cell">
+        <span class="tag">Study tools</span>
+        <div class="t">Tag a quote</div>
+        <div class="summary">Press <b>t</b> to tag the quote you’re on — your own code, typed in.</div>
+        <div class="anim cellframe sh-frame" data-tag="cell"></div>
+        <a class="lnk" href="#">Tag &amp; filter&nbsp;→</a>
+        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag recordings or transcripts here to add a project.</div></div>
+      </div>
+      <div class="caption">at cell scale</div>
+    </div>
+    <div class="stage-detail">
+      <div class="anim detailframe sh-frame" data-tag="detail"></div>
+      <div class="notes"><ul>
+        <li><b>Pointer → click → keycap → action.</b> The shared grammar for the three keyboard tools (Tag / Star / Hide). The pointer <em>arcs</em> in (real hands don’t move in straight lines), clicks the card chrome, the cap presses <em>under the cursor over empty gutter space</em>, and the consequence fires.</li>
+        <li><b>Reuses the “typed” tag.</b> The code arrives one character at a time via the same flow as the Codebooks cell — it reads as “a human wrote this,” the counterpoint to AutoCode’s AI proposal.</li>
+        <li><b>Click the chrome, not the words.</b> Clicking the quote <em>text</em> opens trim/edit (crop) mode in the real report (<code>handleQuoteTextClick</code>), so the pointer lands on the card’s left rule, where a plain click <em>focuses + single-selects</em> together (Finder-style, <code>handleCardClick</code>). Colours are the shipped tokens: <code>--bn-selection-bg</code> #eef4fc + a full accent-blue <code>--bn-selection-border</code> (#007aff) + the <code>--bn-focus-shadow</code> lift.</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <!-- =========================================================== Star & hide -->
+  <h2 class="sec"><span class="n">4</span> · Star &amp; hide — <span class="q">⌜s⌟ stars what matters · ⌜h⌟ hides the noise, count ticks up</span></h2>
+  <p class="map">Two keys, one idea: curate. The pointer focuses a quote → <code>s</code> <b>stars</b> it (the star + left rule pick up the starred tint, body weight bumps) → then focuses another → <code>h</code> <b>hides</b> it (the real <code>.bn-hiding</code> collapse) and the <b>hidden count ticks up by one</b>. Star, hide, and hidden-count CSS copied verbatim from <code>atoms/toggle.css</code>, <code>quote-actions.css</code>, <code>hidden-quotes.css</code>.</p>
+  <div class="demo">
+    <div class="stage-cell">
+      <div class="tool-cell">
+        <span class="tag">Study tools</span>
+        <div class="t">Star &amp; hide</div>
+        <div class="summary">Press <b>s</b> to star what matters, <b>h</b> to hide the noise.</div>
+        <div class="anim cellframe sh-frame" data-sh="cell"></div>
+        <a class="lnk" href="#">Focus your quotes&nbsp;→</a>
+        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag recordings or transcripts here to add a project.</div></div>
+      </div>
+      <div class="caption">at cell scale</div>
+    </div>
+    <div class="stage-detail">
+      <div class="anim detailframe sh-frame" data-sh="detail"></div>
+      <div class="notes"><ul>
+        <li><b>The on-state is a whisper, not gold.</b> Shipped <code>--bn-colour-starred</code> is <code>#999</code> / <code>#ccc</code> — a tint <em>differential</em> (star + left rule + weight), not a gold fill. The roadmap once said “fills gold”; the code disagrees. <b>Open:</b> keep the subtle real state, or make the illustration louder than the product?</li>
+        <li><b>Hide is a real collapse.</b> <code>.bn-hiding</code> animates max-height/opacity/margins to 0 (300ms), then <code>.bn-hidden</code> (display:none); the sibling slides up. The <code>N hidden</code> chip bumps +1 — the quote isn’t gone, it’s parked.</li>
+        <li><b>Click lands on the gutter, not the text.</b> A plain click on the card chrome focuses + selects (real <code>handleCardClick</code>); clicking the words would open trim/edit instead. <code>s</code>/<code>h</code> then act on that quote; the hide button only appears on focus (real behaviour).</li>
+        <li><b>Vertical fit.</b> Two <em>compact</em> single-line cards + the hidden-count strip sit inside the real φ-cell height (172px here) with room to spare. If real quotes run long, the fallback is to <em>sequence</em> them (star card A, then card B slides in to be hidden) rather than show both at once — say if the two-up still feels tight.</li>
+      </ul></div>
+    </div>
+  </div>
+
   <!-- =========================================================== roadmap -->
   <h2 class="sec"><span class="n">□</span> · The eight tools <span class="q">— one by one; AutoCode first</span></h2>
   <p class="map">Each replaces one screenshot. Concept seeds (react as we go); we lock a shared visual grammar on AutoCode and hold the rest to it.</p>
@@ -348,10 +500,10 @@ document.getElementById("rmNote").textContent = REDUCED ? "reduced-motion ON —
 
 /* ================= roadmap strip ================= */
 const TOOLS = [
-  ["AutoCode",    "quote streams → AI code flashes in → accept → solid", "◀ in progress"],
+  ["AutoCode",    "quote streams → AI code flashes in → accept → solid", ""],
   ["Codebooks",   "a codebook builds up, or a ready-made framework drops in", ""],
-  ["Tag",         "select quotes, press ⌜t⌟, a code chip attaches", ""],
-  ["Star & hide", "⌜s⌟ stars a quote (fills gold), ⌜h⌟ collapses one away", ""],
+  ["Tag",         "pointer clicks → press ⌜t⌟ → a code types itself in", "◀ in progress"],
+  ["Star & hide", "⌜s⌟ stars (subtle tint) · ⌜h⌟ hides, count ticks up", "◀ in progress"],
   ["Video clips", "a quote turns into a film frame with a play triangle", ""],
   ["Send to Miro","quotes fly onto a board as sticky notes", ""],
   ["Ingest",      "a folder drops, files fan out → transcript → report", ""],
@@ -551,6 +703,183 @@ async function runManual(host){
   }
 }
 document.querySelectorAll("[data-manual]").forEach(runManual);
+
+/* ================= Tag · Star · Hide (keyboard-driven quote actions) ============ *
+ * Shared grammar: pointer moves in → clicks → a raised keycap presses → the
+ * consequence fires. Reuses PACE / nap / sleep / _reset / _alive / typeInto / REDUCED
+ * from the AutoCode + Manual-tags blocks above.                                    */
+const PTR_SVG = '<svg width="21" height="21" viewBox="0 0 12 19" aria-hidden="true"><path d="M1.2 1.2 L1.2 14.6 L4.8 11.3 L7.1 16.8 L9.3 15.8 L7.0 10.4 L11.4 10.4 Z" fill="#ffffff" stroke="#111111" stroke-width="1.1" stroke-linejoin="round"/></svg>';
+const HIDE_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"><path d="M2 8s2.3-4 6-4 6 4 6 4-2.3 4-6 4-6-4-6-4Z"/><circle cx="8" cy="8" r="1.7"/><line x1="3.2" y1="12.8" x2="12.8" y2="3.2"/></svg>';
+const settle = () => new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+
+function mkPointer(host){
+  const p=document.createElement("div"); p.className="ptr";
+  p.innerHTML='<span class="ptr-ico">'+PTR_SVG+'</span>';
+  host.appendChild(p); return p;
+}
+function relXY(host, el, dx, dy){
+  const hr=host.getBoundingClientRect(), r=el.getBoundingClientRect();
+  return [r.left-hr.left+(dx||0), r.top-hr.top+(dy||0)];
+}
+function setPtr(p,x,y){ p.style.transition="none"; p.style.transform=`translate(${x}px,${y}px)`; p._x=x; p._y=y; }
+// Human hands don't move in straight lines — arc the pointer along a quadratic Bézier,
+// control point pushed perpendicular to the chord, ease-in-out for a natural reach.
+function _bez(a,c,b,t){ const u=1-t; return u*u*a + 2*u*t*c + t*t*b; }
+async function glideCurve(p, host, el, dx, dy){
+  const [ex,ey]=relXY(host,el,dx,dy);
+  const sx=(p._x!=null?p._x:ex), sy=(p._y!=null?p._y:ey);
+  const vx=ex-sx, vy=ey-sy, dist=Math.hypot(vx,vy)||1;
+  const bow=Math.min(48, dist*0.22);                       // arc height ∝ travel
+  const cx=(sx+ex)/2 + (-vy/dist)*bow, cy=(sy+ey)/2 + (vx/dist)*bow;
+  const N=18, frames=[];
+  for(let i=0;i<=N;i++){ const t=i/N; frames.push({transform:`translate(${_bez(sx,cx,ex,t)}px,${_bez(sy,cy,ey,t)}px)`}); }
+  p.style.transition="none";
+  p.animate(frames, {duration:Math.round(640*PACE), easing:"ease-in-out", fill:"forwards"});
+  p._x=ex; p._y=ey; await nap(640);
+}
+async function clickPulse(p){ p.classList.remove("ptr-click"); void p.offsetWidth; p.classList.add("ptr-click"); await nap(260); }
+function fadePtr(p){ p.style.transition="opacity .35s ease"; p.style.opacity="0"; }
+function mkCap(host, x, y, letter){
+  const c=document.createElement("span"); c.className="cap cap--raised cap-enter";
+  c.textContent=letter; c.style.left=x+"px"; c.style.top=y+"px"; host.appendChild(c); return c;
+}
+async function pressCap(c){ await nap(150); c.classList.add("cap-press"); await nap(150); c.classList.remove("cap-press"); await nap(150); }
+async function leaveCap(c){ c.classList.remove("cap-enter"); void c.offsetWidth; c.classList.add("cap-leave"); await nap(240); c.remove(); }
+
+function fullCard(d, withButtons){
+  const btns = withButtons ? `<button class="hide-btn" tabindex="-1">${HIDE_SVG}</button><button class="star-btn" tabindex="-1">★</button>` : "";
+  return `<blockquote class="quote-card sh-card">${btns}
+    <div class="quote-row">
+      <span class="timecode"><span class="timecode-bracket">[</span>${d.time}<span class="timecode-bracket">]</span></span>
+      <div class="quote-body">
+        <span class="smart-quote">“</span>${d.q}<span class="smart-quote">”</span>
+        <span class="speaker"><span class="badge">${d.speaker}</span><span class="badge">${d.role}</span></span>
+        <div class="badges"><span class="badge badge-ai badge-satisfaction">${d.sentiment}</span><span class="badge badge-add">+</span></div>
+      </div>
+    </div>
+  </blockquote>`;
+}
+
+/* -------- Tag (t): click to select, press t, the code types itself in -------- */
+const TAGQ = { time:"09:14", speaker:"p3", role:"Participant", sentiment:"Satisfaction",
+  q:"I knew straight away where to click — it matched what I expected.",
+  tag:"mental model", tagClass:"code-blue" };
+
+async function runTag(host, tok){
+  host.innerHTML = `<div class="sh-stage">${fullCard(TAGQ, false)}</div>`;
+  const card=host.querySelector(".quote-card");
+  const badges=host.querySelector(".badges");
+  const add=host.querySelector(".badge-add");
+  await settle(); if(!_alive(host,tok))return;
+
+  if(REDUCED){
+    const chip=document.createElement("span"); chip.className=`badge badge-user ${TAGQ.tagClass}`;
+    chip.textContent=TAGQ.tag; badges.insertBefore(chip, add); return;
+  }
+
+  const p=mkPointer(host);
+  { const [x,y]=relXY(host,card, card.offsetWidth-6, card.offsetHeight+20); setPtr(p,x,y); }
+  await nap(360); if(!_alive(host,tok))return;
+
+  // 1 · arc in & click the card's LEFT RULE (chrome, not the words — clicking the
+  //     text would open trim/edit). Plain click = focus + single-select together.
+  await glideCurve(p, host, card, 12, card.offsetHeight*0.5); if(!_alive(host,tok))return;
+  await clickPulse(p); card.classList.add("bn-focused","bn-selected");
+  await nap(360); if(!_alive(host,tok))return;
+
+  // 2 · the t keycap rises UNDER the pointer, over empty gutter space, and presses
+  const cap=mkCap(host, p._x-2, p._y+14, "t");
+  await pressCap(cap); if(!_alive(host,tok))return;
+
+  // 3 · the code types itself in, then commits to a real .badge-user chip
+  const ed=document.createElement("span"); ed.className="cb-input";
+  const caret=document.createElement("span"); caret.className="caret blink";
+  badges.insertBefore(ed, add); badges.insertBefore(caret, add);
+  await typeInto(ed, TAGQ.tag, 60); if(!_alive(host,tok))return;
+  caret.classList.remove("blink"); await nap(220);
+  ed.remove(); caret.remove();
+  const chip=document.createElement("span");
+  chip.className=`badge badge-user ${TAGQ.tagClass} badge-appearing`;
+  chip.textContent=TAGQ.tag; badges.insertBefore(chip, add);
+  await leaveCap(cap); if(!_alive(host,tok))return;
+
+  // 4 · deselect and rest on the finished, tagged card
+  card.classList.remove("bn-focused","bn-selected"); fadePtr(p);
+  await nap(2400);
+}
+async function buildTag(host){
+  const tok=_reset(host); const BURST=2;
+  while(_alive(host,tok)){
+    const t0=performance.now();
+    for(let n=0;n<BURST && _alive(host,tok);n++){ await runTag(host,tok); if(REDUCED)return; }
+    if(!_alive(host,tok))return;
+    await sleep(performance.now()-t0);
+  }
+}
+document.querySelectorAll("[data-tag]").forEach(buildTag);
+
+/* -------- Star & hide (s / h): star the keeper, hide the filler, count ticks up -------- */
+const SHQ = [
+  { time:"11:30", speaker:"p1", role:"Participant", sentiment:"Satisfaction",
+    q:"Browsing beat searching — it just worked." },
+  { time:"04:52", speaker:"p2", role:"Participant", sentiment:"Satisfaction",
+    q:"Honestly, I skimmed straight past this bit." },
+];
+function shToolbar(n){ return `<div class="sh-toolbar"><span class="bn-hidden-badge"><button class="bn-hidden-toggle" tabindex="-1">${n} hidden <span class="bn-hidden-chevron">⌄</span></button></span></div>`; }
+
+async function runStarHide(host, tok){
+  host.innerHTML = shToolbar(2) + `<div class="sh-stage">${fullCard(SHQ[0], true)}${fullCard(SHQ[1], true)}</div>`;
+  const cards=host.querySelectorAll(".quote-card");
+  const A=cards[0], B=cards[1];
+  const toggle=host.querySelector(".bn-hidden-toggle");
+  await settle(); if(!_alive(host,tok))return;
+
+  if(REDUCED){
+    A.classList.add("starred");
+    B.classList.add("bn-hidden"); toggle.firstChild.textContent="3 hidden ";
+    return;
+  }
+
+  const p=mkPointer(host);
+  setPtr(p, host.clientWidth-24, host.clientHeight-14);
+  await nap(340); if(!_alive(host,tok))return;
+
+  // ---- s : star card A ----  (arc onto the left rule → focus+select, key under pointer)
+  await glideCurve(p, host, A, 12, A.offsetHeight*0.5); if(!_alive(host,tok))return;
+  await clickPulse(p); A.classList.add("bn-focused","bn-selected");
+  await nap(320); if(!_alive(host,tok))return;
+  const capS=mkCap(host, p._x-2, p._y+14, "s");
+  await pressCap(capS); if(!_alive(host,tok))return;
+  A.classList.remove("bn-focused","bn-selected"); A.classList.add("starred"); A.querySelector(".star-btn").classList.add("pop");
+  await leaveCap(capS); if(!_alive(host,tok))return;
+  await nap(1100); if(!_alive(host,tok))return;
+
+  // ---- h : hide card B, the hidden count ticks up ----
+  await glideCurve(p, host, B, 12, B.offsetHeight*0.5); if(!_alive(host,tok))return;
+  await clickPulse(p); B.classList.add("bn-focused","bn-selected");
+  await nap(320); if(!_alive(host,tok))return;
+  const capH=mkCap(host, p._x-2, p._y+14, "h");
+  await pressCap(capH); if(!_alive(host,tok))return;
+  B.classList.add("bn-hiding");
+  toggle.firstChild.textContent="3 hidden "; toggle.classList.add("bump");
+  await nap(300); B.classList.add("bn-hidden"); if(!_alive(host,tok))return;
+  toggle.classList.remove("bump");
+  await leaveCap(capH); if(!_alive(host,tok))return;
+
+  // rest on the curated state (A starred, B parked)
+  fadePtr(p);
+  await nap(2400);
+}
+async function buildStarHide(host){
+  const tok=_reset(host); const BURST=2;
+  while(_alive(host,tok)){
+    const t0=performance.now();
+    for(let n=0;n<BURST && _alive(host,tok);n++){ await runStarHide(host,tok); if(REDUCED)return; }
+    if(!_alive(host,tok))return;
+    await sleep(performance.now()-t0);
+  }
+}
+document.querySelectorAll("[data-sh]").forEach(buildStarHide);
 </script>
 </body>
 </html>

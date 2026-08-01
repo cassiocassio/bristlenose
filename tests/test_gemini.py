@@ -422,3 +422,45 @@ class TestDoctorFixesGoogle:
         ):
             fix = get_fix("ollama_not_running", "pip")
             assert "--llm gemini" in fix
+
+
+class TestValidateGoogleKeyHttpBranches:
+    """Google rejects bad keys with 400 INVALID_ARGUMENT, not 401.
+
+    Regression for the fake-key-validates bug (31 Jul 2026): a garbage key
+    passed `configure gemini` because every 400 was whitelisted as valid.
+    """
+
+    @staticmethod
+    def _http_error(code: int, body: bytes = b"") -> Exception:
+        import io
+        import urllib.error
+
+        return urllib.error.HTTPError(
+            "https://generativelanguage.googleapis.com/v1beta/models",
+            code,
+            "err",
+            hdrs=None,  # type: ignore[arg-type]
+            fp=io.BytesIO(body),
+        )
+
+    def _validate(self, exc: Exception) -> tuple:
+        from bristlenose.doctor import _validate_google_key
+
+        with patch("urllib.request.urlopen", side_effect=exc):
+            return _validate_google_key("sk-demo-not-a-real-key")
+
+    def test_400_api_key_invalid_is_rejected(self) -> None:
+        body = b'{"error": {"status": "INVALID_ARGUMENT", "details": [{"reason": "API_KEY_INVALID"}]}}'
+        is_valid, error = self._validate(self._http_error(400, body))
+        assert is_valid is False
+        assert "invalid" in error.lower()
+
+    def test_400_unrecognised_body_is_could_not_check(self) -> None:
+        is_valid, _ = self._validate(self._http_error(400, b'{"error": "something else"}'))
+        assert is_valid is None  # store-anyway warning, never a false "Valid"
+
+    def test_401_still_rejected(self) -> None:
+        is_valid, error = self._validate(self._http_error(401))
+        assert is_valid is False
+        assert "401" in error

@@ -599,7 +599,7 @@ class TestDoctorFixesOllama:
             assert "--llm chatgpt" in fix
 
     def test_cloud_fallback_with_no_keys(self) -> None:
-        """When user has no keys, suggest getting a Claude key."""
+        """No keys → point at provider setup without naming a favourite."""
         from bristlenose.doctor_fixes import get_fix
 
         with patch(
@@ -610,4 +610,7 @@ class TestDoctorFixesOllama:
             ),
         ):
             fix = get_fix("ollama_not_running", "pip")
-            assert "console.anthropic.com" in fix
+            assert "bristlenose configure" in fix
+            # Every cloud provider offered, none singled out.
+            for name in ("claude", "chatgpt", "gemini", "azure"):
+                assert name in fix

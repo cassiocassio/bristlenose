@@ -7,6 +7,7 @@ last-trued: 2026-06-21
 
 ## Changelog
 
+- _2026-07-28_ — **Stage 1 of window-scoping shipped** (see §"Window-scoping the menu commands" below): View ▸ Hide/Show Projects is now per-window via the app's first `focusedSceneValue` seam (`SidebarVisibilityFocus.swift`), replacing a `NotificationCenter` broadcast that toggled every open window. `BridgeHandler.sidebarVisible` and the `.toggleProjectsSidebar` notification are deleted. The remaining **16** menu broadcasts are unchanged and still fire in every window — the staged plan for them is the new section. Doc otherwise still aspirational.
 - _2026-06-21_ — added front-matter (`status: pending`) + pending banner on the day the doc was created; confirmed the "What shipped" A1/A2 increments verify against shipped Swift (`ServeManager.swift` single `parked` slot, `generation` token reused; A1 cancel-on-switch modal gone). Currency fix: §"What shipped" called `warm-sidecar-pool` "pending merge" — it merged the same day (`78b2d40`). Body otherwise unaltered (aspirational by design).
 
 # Workspace — genuine multi-project + multi-window (post-TF)
@@ -171,6 +172,54 @@ all reports) + per-project **worker** subprocesses for runs (semaphore-capped).
   architecture. This is a battle-tested-engineer decision (process model, shared
   fate, memory, server rework cost), not a UX or cohort call. Pick it at post-TF
   planning with real multi-project-machine data, not before.
+
+## Window-scoping the menu commands (the Notes-experience prerequisite)
+
+Prompted by "double-click a project → new window, sidebar closed" (28 Jul 2026).
+Assessed against shipped code; **Stage 1 is built**, Stages 2–3 are not.
+
+**The finding that reframes it:** the sidebar wasn't shared state. `ContentView`
+owns `columnVisibility` as `@State`, so it was always per-window — but the
+*command* was a `NotificationCenter.default` broadcast every window received. Two
+windows moved in lockstep. This is systemic: there were **17** `post` sites in
+`MenuCommands.swift` and **zero** uses of `FocusedValue` anywhere in the app. With
+two windows open, New Project fires twice and Rename prompts in both.
+
+Three blockers sit under the Notes experience, all from every model being one
+app-level `@StateObject` injected into `WindowGroup(id: "main")`:
+
+1. **One `ServeManager`** — one sidecar, one port, one warm-park slot; and
+   `create_app(project_dir)` is single-project-per-process (constraint 1 above).
+   Two projects ⇒ two sidecars.
+2. **One `BridgeHandler`, one `weak var webView`** — last WebView registered wins,
+   so every `menuAction` drives the wrong window. Its ~28 `@Published` properties
+   are global too, so `activeTab` is shared: **two windows cannot show different
+   lenses.** This kills the "Quotes here, Sessions there" value even for two
+   windows on the *same* project.
+3. **`WindowGroup(id: "main")` carries no value**, so `openWindow(id:)` duplicates
+   the same state rather than opening a project.
+
+### Stages
+
+- **Stage 1 — window-scoped sidebar. ✅ Shipped 28 Jul 2026.** `focusedSceneValue`
+  publishes the key window's binding; the menu drives it directly and dims when no
+  project window is frontmost. Scene-scoped (not view-scoped) so it survives focus
+  moving into the WKWebView. Decision logic extracted to `SidebarToggle`
+  (+ `SidebarToggleTests`) per the testable-helper convention.
+- **Stage 2 — `@FocusedValue` for the remaining 16 commands.** The real keystone:
+  it is what makes *any* multi-window behaviour correct, and Stage 3 would have to
+  invent it anyway. Also fixes double-fire bugs that exist today the moment a user
+  opens a second window.
+- **Stage 3 — per-window `BridgeHandler` + per-window serve + `WindowGroup(for:)`.**
+  This is Phase C; blocked on the family choice (A/B/C) below. "Sidebar closed by
+  default" is ~2 lines at the *end* of this stage (seed `columnVisibility =
+  .detailOnly` when the window opens with a project value) — none of the cost is
+  there.
+
+**Open question for whoever picks this up:** does double-click mean *new window on
+that project* (Notes), or *new window on the same project, different lens*? The
+second is arguably more valuable for comparison work and is strictly cheaper —
+same serve, so it needs Stage 2 but not Stage 3's per-window sidecar.
 
 ## Sequencing
 

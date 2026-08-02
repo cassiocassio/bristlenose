@@ -72,11 +72,14 @@ system's. Applied per-window — `.preferredColorScheme` on a SwiftUI scene,
 `window.appearance` on an AppKit one — it reaches *only* windows that opted in,
 leaving every non-window surface on the system theme and obliging each new
 surface to remember. That is precisely what happened: the mapping was written
-out three times, the seven auxiliary `Window` scenes (System Health, Type Parity,
-Run Inspector, Shoal, Shoal Tuner, Shimmer Tuner, Keycap Gallery) had never had
-it applied at all, and the export save panel plus both Locate panels shipped
-light-over-dark. Fixed 2 Aug 2026 by moving to the single `NSApp.appearance`
-seam. **The tell for this whole class: a surface that is correct in Automatic
+out three times, five auxiliary `Window` scenes (System Health, Type Parity,
+Run Inspector, Shoal Screensaver, Shoal Tuner) had never had it applied at all,
+and the export save panel plus both Locate panels shipped light-over-dark.
+Fixed 2 Aug 2026 by moving to the single `NSApp.appearance` seam. Shimmer Tuner
+and Keycap Gallery are **not** in that list — they set their own
+`.preferredColorScheme` from a local toggle because they're design tools that
+preview both schemes on demand. That's a third legitimate exception, and it's
+why the seam gate deliberately doesn't police `.preferredColorScheme` sites. **The tell for this whole class: a surface that is correct in Automatic
 and wrong the moment the user forces Light or Dark.** QA it with the app
 preference set *opposite* to System Settings — matching them hides every bug
 here.

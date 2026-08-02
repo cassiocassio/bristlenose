@@ -81,6 +81,18 @@ and wrong the moment the user forces Light or Dark.** QA it with the app
 preference set *opposite* to System Settings — matching them hides every bug
 here.
 
+**Enforcement is mechanical, not just this document.**
+`desktop/scripts/check-appearance-seam.sh` (build-all step 1a-bis, <1s) fails the
+build if the mapping is re-derived outside `AppAppearance.swift`, if the raw
+default is read outside it, if a save/open panel skips `adoptHostAppearance()`,
+or if `AppDelegate` stops calling `beginApplying()` — the one deletion that would
+leave every other assertion passing while nothing is themed. Each assertion is
+proven to fail on its own violation. `AppAppearanceTests` pins the mapping, the
+two spellings agreeing, unknown values falling back to *follow-system* rather
+than to a forced light, and — the silent one — that the UserDefaults KVO actually
+fires, since a rename of that property would apply the preference at launch and
+then never again with no error anywhere.
+
 **The two deliberate exceptions**, both belt-and-braces rather than load-bearing,
 both already written — don't add a third without a reason in a comment:
 - `ContentView`'s `.preferredColorScheme` — makes SwiftUI's `\.colorScheme`

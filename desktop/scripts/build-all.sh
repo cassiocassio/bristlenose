@@ -76,6 +76,14 @@ _bn_t1=$SECONDS
 "$SCRIPT_DIR/check-logging-hygiene.sh" "$ROOT" >/dev/null
 bn_check 1 ok "logging hygiene" "no credential-shaped log calls"
 
+# 1a-bis. Appearance seam — asserts light/dark is applied once via
+# NSApp.appearance and the preference mapping isn't re-derived per surface.
+# Prevents the class this gate was written for: three copies of the mapping,
+# applied per-window, leaving every non-window surface on the system theme.
+# Invisible whenever the app preference agrees with System Settings. <1s.
+"$SCRIPT_DIR/check-appearance-seam.sh" "$ROOT" >/dev/null
+bn_check 1 ok "appearance seam" "one mapping, applied app-wide"
+
 # 1b. Bundle manifest coverage — asserts every runtime-data dir under
 # bristlenose/ is covered by a datas entry in the spec. Prevents the
 # C3-smoke-test BUG-3/4/5 class (data file in source, missing from bundle).

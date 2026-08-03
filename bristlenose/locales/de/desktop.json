@@ -49,8 +49,11 @@
       "hideTags": "Tags ausblenden",
       "showHeatmap": "Heatmap einblenden",
       "hideHeatmap": "Heatmap ausblenden",
+      "hideAllSidebars": "Alle Seitenleisten ausblenden",
+      "showAllSidebars": "Alle Seitenleisten einblenden",
       "allQuotes": "Alle Zitate",
       "starredQuotesOnly": "Nur markierte Zitate",
+      "focusMode": "Fokusmodus",
       "zoomIn": "Vergrößern",
       "zoomOut": "Verkleinern",
       "actualSize": "Tatsächliche Größe"

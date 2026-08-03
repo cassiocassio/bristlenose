@@ -115,7 +115,8 @@
     "loading": "正在載入儀表板…"
   },
   "toolbar": {
-    "matching": "{{count}} 則符合"
+    "matching": "{{count}} 則符合",
+    "focusMode": "\u5c08\u6ce8\u6a21\u5f0f"
   },
   "tags": {
     "noTags": "沒有標籤",

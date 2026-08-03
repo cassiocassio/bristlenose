@@ -49,8 +49,11 @@
       "hideTags": "Ukryj etykiety",
       "showHeatmap": "Pokaż mapę cieplną",
       "hideHeatmap": "Ukryj mapę cieplną",
+      "hideAllSidebars": "Ukryj wszystkie paski boczne",
+      "showAllSidebars": "Poka\u017c wszystkie paski boczne",
       "allQuotes": "Wszystkie cytaty",
       "starredQuotesOnly": "Tylko cytaty z gwiazdką",
+      "focusMode": "Tryb skupienia",
       "zoomIn": "Powiększ",
       "zoomOut": "Pomniejsz",
       "actualSize": "Rzeczywisty rozmiar"

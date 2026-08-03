@@ -199,9 +199,19 @@ Drag handles are 6px invisible strips. On hover: subtle blue highlight (accent c
 |----------|--------|
 | `[` | Toggle TOC sidebar |
 | `]` | Toggle tag sidebar |
-| `\` or `⌘.` | Toggle both (any open → close all; all closed → open both) |
+| `\` or `⌘.` or `§` | Toggle both (any open → hide all, stashing the arrangement; all closed → restore it) |
 
 > **Note:** `⌘[` / `⌘]` and `⌘1` / `⌘2` were considered but are browser-native shortcuts (history back/forward and tab switching) that cannot be reliably intercepted. Plain `[`, `]`, `\` have no browser conflicts and are spatially intuitive (left bracket = left sidebar, right bracket = right sidebar). `⌘.` is kept as an alias for toggle-both (Figma convention).
+>
+> **`§` is an ISO-layout alias, not an advertised binding.** It is the unmodified top-left key on Apple British — the closest a Mac gets to Photoshop's `Tab` — but US ANSI has no `§` key at all (`⌥6`) and its position varies elsewhere (`⇧3` on German; absent from the Spanish top-left slot). So it stays a bare web-layer key behind the `isEditing()` guard, and the desktop menu advertises `⌘⌥\` instead. It could not be a menu key equivalent in any case: a bare `NSMenuItem` equivalent fires before the responder chain and would swallow `§` in every rename field and inline editor.
+
+### Hide all sidebars — stash, don't toggle
+
+Hiding stashes the current arrangement and showing puts **that** back, rather than opening everything. Lineage is Photoshop's `Tab` (and `⇧Tab`, which keeps the toolbar) rather than Figma's Show/Hide UI: Figma can use a bare toggle because its panels are always both present, whereas here mixed arrangements are the norm. Without the stash, "TOC open, tags closed → hide → show" hands back **both** — you gain a sidebar you never had. The stash is ephemeral (never persisted); with nothing stashed, "show all" means all, so the command is never a no-op.
+
+Scope is the sidebars. The Analysis heatmap inspector is a bottom panel on the data rather than navigation chrome, and the toolbar stays — in the desktop app it is the only affordance for the web panels (see § Desktop embedded mode), so hiding it would make this a one-way door.
+
+**Desktop adds the projects column.** `⌘⌥\` in View ▸ **Hide All Sidebars** covers all three; the web keys stay scoped to the two content panels, which in the browser *is* all of them. Native decides the direction — it is the only side that can see the column and the panels at once — and sends an explicit `hideAllSidebars` / `showAllSidebars` rather than a toggle, reading the web half over the `panel-state` bridge mirror. The column deliberately has no stash of its own: it is binary, and "Show All Sidebars" showing it is exactly what the label says.
 
 Guarded by `!editing && !helpModalOpen`. Added to the existing `useKeyboardShortcuts` hook.
 

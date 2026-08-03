@@ -120,7 +120,8 @@
     "loading": "Dashboard wird geladen…"
   },
   "toolbar": {
-    "matching": "{{count}} Treffer"
+    "matching": "{{count}} Treffer",
+    "focusMode": "Fokusmodus"
   },
   "tags": {
     "noTags": "Keine Tags",

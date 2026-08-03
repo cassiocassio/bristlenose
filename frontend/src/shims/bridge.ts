@@ -44,6 +44,8 @@ export type BridgeMessage =
   | { type: "quote-action-state"; starIsUnstar: boolean; lastTagName: string | null }
   | { type: "lens-subtitle"; tab: string; subtitle: string }
   | { type: "quotes-filter"; searchQuery: string; viewMode: string }
+  | { type: "focus-mode"; active: boolean }
+  | { type: "panel-state"; leftOpen: boolean; rightOpen: boolean }
   | { type: "store-miro-token"; token: string };
 
 // ---------------------------------------------------------------------------
@@ -147,6 +149,43 @@ export function postLensSubtitle(tab: string, subtitle: string): void {
  */
 export function postQuotesFilter(searchQuery: string, viewMode: string): void {
   postNativeMessage({ type: "quotes-filter", searchQuery, viewMode });
+}
+
+/**
+ * Mirror the report's Focus Mode state to the native View menu's checkmark.
+ *
+ * The SPA is the source of truth — the menu item dispatches `focusMode` and
+ * reads the result back here, rather than tracking its own flag. That matters
+ * because two paths reload the web view without the menu knowing: a project
+ * switch (the WebView re-mounts on `.id("<project>-<port>")`) and the
+ * post-run `reloadWebView()`. Both reset Focus to off, and a native-side
+ * `@State` would keep claiming it was on. The posting effect in AppLayout is
+ * keyed on the state and so also fires on mount, which is what re-syncs the
+ * checkmark after either reload. No-ops outside the desktop WKWebView.
+ */
+export function postFocusMode(active: boolean): void {
+  postNativeMessage({ type: "focus-mode", active });
+}
+
+/**
+ * Mirror whether the two web sidebars (TOC/left, tags/right) are showing, so
+ * the native View menu can pick the Hide↔Show verb for **Hide All Sidebars**.
+ *
+ * Native owns the projects column and can read it directly; it cannot see
+ * inside the WKWebView, so without this it has to guess — which is why its
+ * neighbours `Show Contents` / `Show Tags` are permanently "Show" and read
+ * wrong whenever those panels are already open. This mirror is deliberately
+ * scoped to the new item; truing the other two is a separate change.
+ *
+ * One-way: the SPA owns the state, native renders the label and sends explicit
+ * `hideAllSidebars` / `showAllSidebars` commands rather than a toggle, so there
+ * is no direction for the two sides to disagree about. Posted from an effect
+ * keyed on the state, so it also fires on mount — re-syncing the menu after a
+ * project switch or the post-run reload remounts the web view.
+ * No-ops outside the desktop WKWebView.
+ */
+export function postPanelState(leftOpen: boolean, rightOpen: boolean): void {
+  postNativeMessage({ type: "panel-state", leftOpen, rightOpen });
 }
 
 /**

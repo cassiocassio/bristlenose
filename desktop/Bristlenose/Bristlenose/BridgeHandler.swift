@@ -110,6 +110,22 @@ final class BridgeHandler: ObservableObject {
     /// View-menu All Quotes / Starred Quotes Only checkmarks.
     @Published var quotesViewMode: String = "all"
 
+    /// Whether the report is in Focus Mode. Mirrored from the SPA (`focus-mode`
+    /// message) — the web side owns the state; this drives only the View-menu
+    /// checkmark. Resets to false on `reset()` because a project switch remounts
+    /// the web view, and Focus is deliberately ephemeral (a freshly-opened
+    /// project boots in normal view). See docs/design-focus-mode.md.
+    @Published var focusModeActive: Bool = false
+
+    /// Whether the web left panel (Contents / Sessions / Codes / Signals) is
+    /// showing. Mirrored from the SPA via `panel-state`. Native can't see inside
+    /// the WKWebView, so without this the View menu has to guess — this is what
+    /// lets Hide All Sidebars pick its verb honestly.
+    @Published var leftPanelOpen: Bool = false
+
+    /// Whether the web tag sidebar is showing. Mirrored via `panel-state`.
+    @Published var rightPanelOpen: Bool = false
+
     /// The filesystem path of the currently selected project.
     /// Set by ContentView on project selection. Used by Project menu actions
     /// (Show in Finder) and disable guards.
@@ -443,6 +459,24 @@ final class BridgeHandler: ObservableObject {
             if q != quotesSearchQuery { quotesSearchQuery = q }
             if vm != quotesViewMode { quotesViewMode = vm }
 
+        case "focus-mode":
+            // Sole writer. The SPA owns Focus Mode; the View-menu checkmark is a
+            // mirror, never a second source of truth — a native @State flag would
+            // keep claiming Focus was on after a project switch or the post-run
+            // reload, both of which remount the web view and reset it to off.
+            // The SPA re-posts on mount, which is what re-syncs us.
+            let on = body["active"] as? Bool ?? false
+            if on != focusModeActive { focusModeActive = on }
+
+        case "panel-state":
+            // Sole writer. Equality-guarded like `quotes-filter` — the SPA
+            // re-posts on mount and on every sidebar change, and an unchanged
+            // post shouldn't churn @Published and re-render the whole menu.
+            let left = body["leftOpen"] as? Bool ?? false
+            let right = body["rightOpen"] as? Bool ?? false
+            if left != leftPanelOpen { leftPanelOpen = left }
+            if right != rightPanelOpen { rightPanelOpen = right }
+
         case "project-action":
             if let action = body["action"] as? String {
                 handleProjectAction(action, data: body["data"] as? [String: Any])
@@ -490,6 +524,9 @@ final class BridgeHandler: ObservableObject {
         undoLabel = nil
         quotesSearchQuery = ""
         quotesViewMode = "all"
+        focusModeActive = false
+        leftPanelOpen = false
+        rightPanelOpen = false
         selectedProjectPath = ""
         selectedProjectRevealablePath = ""
         selectedFolderName = ""

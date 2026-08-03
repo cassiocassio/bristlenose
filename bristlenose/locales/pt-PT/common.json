@@ -128,7 +128,8 @@
     "loading": "A carregar painel…"
   },
   "toolbar": {
-    "matching": "{{count}} correspondentes"
+    "matching": "{{count}} correspondentes",
+    "focusMode": "Modo de foco"
   },
   "tags": {
     "noTags": "Sem etiquetas",

@@ -128,7 +128,8 @@
     "loading": "Pano yükleniyor…"
   },
   "toolbar": {
-    "matching": "{{count}} eşleşen"
+    "matching": "{{count}} eşleşen",
+    "focusMode": "Odak modu"
   },
   "tags": {
     "noTags": "Etiket yok",

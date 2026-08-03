@@ -49,8 +49,11 @@
       "hideTags": "Skrýt štítky",
       "showHeatmap": "Zobrazit teplotní mapu",
       "hideHeatmap": "Skrýt teplotní mapu",
+      "hideAllSidebars": "Skr\u00fdt v\u0161echny postrann\u00ed panely",
+      "showAllSidebars": "Zobrazit v\u0161echny postrann\u00ed panely",
       "allQuotes": "Všechny citáty",
       "starredQuotesOnly": "Pouze citáty s hvězdičkou",
+      "focusMode": "Re\u017eim soust\u0159ed\u011bn\u00ed",
       "zoomIn": "Přiblížit",
       "zoomOut": "Oddálit",
       "actualSize": "Skutečná velikost"

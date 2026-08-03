@@ -89,6 +89,9 @@ _THEME_FILES: list[str] = [
     "organisms/modal-nav.css",
     "organisms/settings-modal.css",
     "templates/report.css",
+    # After report.css: focus mode overrides card/chrome values set upstream,
+    # and at equal specificity the later file wins in this concatenation.
+    "templates/focus-mode.css",
     "molecules/transcript-annotations.css",
     "templates/transcript.css",
     "templates/print.css",

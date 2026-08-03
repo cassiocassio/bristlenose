@@ -456,7 +456,7 @@ Sessions,Sessies,nl,QDA term
 Signals,Signalen,nl,QDA term
 Codes,Codes,nl,QDA term
 Save,Tallenna,fi,Apple HIG
-Cancel,Peruuta,fi,Apple HIG (dialog); Kumoa = Undo, avoid clash
+Cancel,Peruuta,fi,"Apple HIG (dialog); Kumoa = Undo, avoid clash"
 Close,Sulje,fi,Apple HIG
 Copy,Kopioi,fi,Apple HIG
 Delete,Poista,fi,Apple HIG; Poista sivupalkista = Remove
@@ -495,3 +495,22 @@ Agent,Agentti,fi,AI agent (MCP client); tr/zh-Hant choice pending native review
 Agent,Agente,pt-BR,AI agent (MCP client); tr/zh-Hant choice pending native review
 Agent,Agente,pt-PT,AI agent (MCP client); tr/zh-Hant choice pending native review
 Agent,代理,zh-Hant,AI agent (MCP client); tr/zh-Hant choice pending native review
+Focus Mode,Režim soustředění,cs,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Fokustilstand,da,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Fokusmodus,de,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Modo enfoque,es,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Keskittymistila,fi,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Mode concentration,fr,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Modalità focus,it,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,フォーカスモード,ja,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,집중 모드,ko,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Fokusmodus,nb,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Focusmodus,nl,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Tryb skupienia,pl,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Modo foco,pt-BR,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Modo de foco,pt-PT,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Режим фокуса,ru,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Fokusläge,sv,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Odak modu,tr,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,Режим фокусування,uk,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Focus Mode,專注模式,zh-Hant,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).

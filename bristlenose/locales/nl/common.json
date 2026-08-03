@@ -128,7 +128,8 @@
     "loading": "Dashboard laden…"
   },
   "toolbar": {
-    "matching": "{{count}} overeenkomend"
+    "matching": "{{count}} overeenkomend",
+    "focusMode": "Focusmodus"
   },
   "tags": {
     "noTags": "Geen tags",

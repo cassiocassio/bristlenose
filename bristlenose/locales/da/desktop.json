@@ -49,8 +49,11 @@
       "hideTags": "Skjul tags",
       "showHeatmap": "Vis heatmap",
       "hideHeatmap": "Skjul heatmap",
+      "hideAllSidebars": "Skjul alle sidepaneler",
+      "showAllSidebars": "Vis alle sidepaneler",
       "allQuotes": "Alle citater",
       "starredQuotesOnly": "Kun stjernemarkerede citater",
+      "focusMode": "Fokustilstand",
       "zoomIn": "Zoom ind",
       "zoomOut": "Zoom ud",
       "actualSize": "Faktisk størrelse"

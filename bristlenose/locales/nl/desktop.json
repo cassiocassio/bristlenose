@@ -49,8 +49,11 @@
       "hideTags": "Verberg tags",
       "showHeatmap": "Toon heatmap",
       "hideHeatmap": "Verberg heatmap",
+      "hideAllSidebars": "Verberg alle navigatiekolommen",
+      "showAllSidebars": "Toon alle navigatiekolommen",
       "allQuotes": "Alle citaten",
       "starredQuotesOnly": "Alleen citaten met ster",
+      "focusMode": "Focusmodus",
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom uit",
       "actualSize": "Werkelijke grootte"

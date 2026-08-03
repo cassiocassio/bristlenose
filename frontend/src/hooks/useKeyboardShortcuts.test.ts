@@ -7,7 +7,7 @@
  */
 
 import { renderHook, act } from "@testing-library/react";
-import { createElement, useState, useCallback, type ReactNode } from "react";
+import { createElement, useState, useCallback, Fragment, type ReactNode } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { FocusProvider, useFocus } from "../contexts/FocusContext";
 import { PlayerProvider } from "../contexts/PlayerContext";
@@ -19,6 +19,7 @@ import {
 } from "../contexts/QuotesContext";
 import { resetSidebarStore } from "../contexts/SidebarStore";
 import { resetInspectorStore } from "../contexts/InspectorStore";
+import { isFocusMode, _resetFocusMode } from "../contexts/FocusModeStore";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 import { putTags } from "../utils/api";
 
@@ -89,23 +90,29 @@ function renderWithProviders(
   const router = createMemoryRouter(routes, {
     initialEntries: [initialRoute],
   });
+
+  // ONE render for the whole harness. `RouterProvider` does not render its
+  // children, so the router tree and the store hook have to be siblings under
+  // a fragment rather than nested. Mounting the router twice (the shape this
+  // replaced) installed `useKeyboardShortcuts`' document keydown listener
+  // twice, so every bare-key handler ran twice per dispatch and post-keypress
+  // state was unobservable — a toggle always flipped back. It also left the
+  // first tree mounted after `unmount()`, since only the second render's
+  // teardown was returned.
   const result = renderHook(() => useQuotesStore(), {
     wrapper: ({ children }: { children: ReactNode }) =>
-      createElement(RouterProvider, { router }, children),
+      createElement(
+        Fragment,
+        null,
+        createElement(RouterProvider, { router }),
+        children,
+      ),
   });
-
-  // We need a separate render for the actual component tree
-  const { unmount } = renderHook(
-    () => null,
-    {
-      wrapper: () => createElement(RouterProvider, { router }),
-    },
-  );
 
   return {
     getCtx: () => ctx!,
     storeResult: result,
-    unmount,
+    unmount: result.unmount,
   };
 }
 
@@ -516,6 +523,67 @@ describe("useKeyboardShortcuts", () => {
 
       const handled = dispatchKey("m");
       expect(handled).toBe(false);
+
+      unmount();
+    });
+  });
+
+  describe("z — focus mode", () => {
+    function dispatchKey(key: string, options: Partial<KeyboardEventInit> = {}): boolean {
+      const event = new KeyboardEvent("keydown", {
+        key,
+        bubbles: true,
+        cancelable: true,
+        ...options,
+      });
+      return !document.dispatchEvent(event);
+    }
+
+    beforeEach(() => {
+      _resetFocusMode();
+    });
+
+    // Asserting state on *both* edges is what pins the harness to a single
+    // mount. `z` reads module-level FocusModeStore and needs no focused or
+    // selected quote, so unlike the quote-scoped keys it has no guard to bail
+    // on — a harness that mounted the tree twice ran this handler twice per
+    // dispatch and the first assertion below would read `false`.
+    it("z toggles focus mode on the quotes page", () => {
+      const { unmount } = renderWithProviders(undefined, "/report/quotes/");
+
+      expect(isFocusMode()).toBe(false);
+
+      expect(dispatchKey("z")).toBe(true);
+      expect(isFocusMode()).toBe(true);
+
+      expect(dispatchKey("z")).toBe(true);
+      expect(isFocusMode()).toBe(false);
+
+      unmount();
+    });
+
+    it("z is not handled off the quotes lens", () => {
+      // The native View-menu twin dims off this lens. If the key still fired,
+      // the menu would claim the feature is unavailable while it was running.
+      const { unmount } = renderWithProviders(undefined, "/report/analysis/");
+
+      expect(dispatchKey("z")).toBe(false);
+      expect(isFocusMode()).toBe(false);
+
+      unmount();
+    });
+
+    it("⌘Z is left alone for Undo", () => {
+      // The regression this guards: the report has inline quote/heading/name
+      // editing, and Undo is most wanted just *after* an edit commits — when
+      // isEditing() is already false and so guards nothing.
+      const { unmount } = renderWithProviders(undefined, "/report/quotes/");
+
+      expect(dispatchKey("z", { metaKey: true })).toBe(false);
+      expect(isFocusMode()).toBe(false);
+
+      expect(dispatchKey("z", { ctrlKey: true })).toBe(false);
+      expect(isFocusMode()).toBe(false);
 
       unmount();
     });

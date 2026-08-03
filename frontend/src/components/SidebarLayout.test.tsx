@@ -89,6 +89,8 @@ vi.mock("../contexts/SidebarStore", () => ({
   openTags: vi.fn(),
   toggleToc: vi.fn(),
   toggleBoth: vi.fn(),
+  hideAllSidebars: vi.fn(),
+  showAllSidebars: vi.fn(),
   openTocOverlay: vi.fn(),
 }));
 

@@ -150,7 +150,8 @@
     "loading": "Načítání přehledu…"
   },
   "toolbar": {
-    "matching": "{{count}} odpovídá"
+    "matching": "{{count}} odpovídá",
+    "focusMode": "Re\u017eim soust\u0159ed\u011bn\u00ed"
   },
   "tags": {
     "noTags": "Žádné štítky",

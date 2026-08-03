@@ -128,7 +128,8 @@
     "loading": "Caricamento della dashboard…"
   },
   "toolbar": {
-    "matching": "{{count}} corrispondenti"
+    "matching": "{{count}} corrispondenti",
+    "focusMode": "Modalit\u00e0 focus"
   },
   "tags": {
     "noTags": "Nessun tag",

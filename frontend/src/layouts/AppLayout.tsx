@@ -40,7 +40,11 @@ import {
   postExportCounts,
   postFocusChange,
   postQuoteActionState,
+  postFocusMode,
+  postPanelState,
 } from "../shims/bridge";
+import { useSidebarStore } from "../contexts/SidebarStore";
+import { toggleFocusMode, useFocusMode } from "../contexts/FocusModeStore";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
 import { cancelAutoCode, cancelClipExtraction, getAutoCodeStatus, getClipExtractionStatus, revealClips } from "../utils/api";
 import {
@@ -262,6 +266,27 @@ function AppShell() {
     postFocusChange(focusedId);
   }, [embedded, focusedId]);
 
+  // Mirror Focus Mode to the native View menu's checkmark. Keyed on the state,
+  // so it also fires on mount — which is the re-sync after a project switch or
+  // the post-run reload, both of which reset Focus to off without telling the
+  // menu. See postFocusMode's doc comment.
+  const focusModeActive = useFocusMode();
+  useEffect(() => {
+    if (!embedded) return;
+    postFocusMode(focusModeActive);
+  }, [embedded, focusModeActive]);
+
+  // Mirror the two web sidebars to the native View menu so Hide All Sidebars
+  // can pick its verb. An overlay peek counts as open — it is showing, and the
+  // command closes it. Keyed on the booleans, not the store object, so a width
+  // drag or a tag-visibility change doesn't re-post. See postPanelState.
+  const { tocMode, tagsOpen } = useSidebarStore();
+  const tocOpen = tocMode !== "closed";
+  useEffect(() => {
+    if (!embedded) return;
+    postPanelState(tocOpen, tagsOpen);
+  }, [embedded, tocOpen, tagsOpen]);
+
   // Derived state for the native Quotes menu's adaptive labels. The Star
   // command targets the selection (or the focused quote); it *unstars* when
   // that target set is already all-starred — the same intent the click/`s`-key
@@ -374,6 +399,15 @@ function AppShell() {
           break;
         case "toggleRightPanel":
           sidebarAnimations.toggleTags();
+          break;
+        // Explicit, not a toggle: native decides the direction because it also
+        // owns the projects column. A toggle here would disagree with it
+        // whenever the column and the web panels were in different states.
+        case "hideAllSidebars":
+          sidebarAnimations.hideAll();
+          break;
+        case "showAllSidebars":
+          sidebarAnimations.showAll();
           break;
         case "toggleInspectorPanel":
           toggleInspector();
@@ -505,6 +539,13 @@ function AppShell() {
           break;
         case "openBlog":
           window.open("https://blog.bristlenose.app", "_blank");
+          break;
+        case "focusMode":
+          // Report-wide view state — no FocusContext/QuotesContext closure
+          // needed, so AppLayout is the right listener per the menu-action
+          // cookbook in desktop/CLAUDE.md. Native mirrors the result back via
+          // the `focus-mode` bridge post below.
+          toggleFocusMode();
           break;
         case "zoomIn":
           applyZoom(getZoom() + ZOOM_STEP);

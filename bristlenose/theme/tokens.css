@@ -207,6 +207,19 @@
     --bn-transition-normal: 0.2s ease;
     --bn-transition-slow: 0.3s ease;
 
+    /* Focus Mode — the distraction-free reading state (templates/focus-mode.css,
+       docs/design-focus-mode.md). Structural, NOT palette-overridable: the whole
+       transform is colour-free by design, which is what lets it compose with
+       every palette × appearance with zero per-palette overrides. Deliberately
+       here and not in colors/_contract.css — a Focus token in the contract would
+       oblige every future palette author to answer a question the feature
+       doesn't ask. "Dusk, not a light-switch": no overshoot, no bounce — the
+       wrong register for reading evidence. */
+    --bn-focus-ghost-opacity: 0.14;
+    --bn-focus-heading-opacity: 0.4;
+    --bn-focus-dur: 320ms;
+    --bn-focus-ease: ease-in-out;
+
     /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
        Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md
        §4.7.1). Consuming surfaces set --bn-shimmer-base (resting text colour)

@@ -43,6 +43,16 @@ def test_header_sticky_per_column() -> None:
     assert any("Dashboard" in s.text for s in headers)
 
 
+def test_header_count_is_singular_or_plural_never_parenthesised() -> None:
+    # A board is a client-facing deliverable, so "1 quote(s)" is not acceptable.
+    # Dashboard has 2 quotes, Search has 1 — pin both branches.
+    board = layout_board(_columns(), "T")
+    text = {s.text.split("\n")[0]: s.text for s in board.stickies if s.kind == "header"}
+    assert text["Dashboard"].endswith("2 quotes")
+    assert text["Search"].endswith("1 quote")
+    assert not any("(s)" in s for s in text.values())
+
+
 def test_quotes_sorted_session_then_time() -> None:
     board = layout_board(_columns(), "T")
     # Dashboard column: s1@10 before s1@26 -> "b" above "a" (smaller y first).

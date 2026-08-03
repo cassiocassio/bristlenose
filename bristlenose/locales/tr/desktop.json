@@ -49,8 +49,11 @@
       "hideTags": "Etiketleri Gizle",
       "showHeatmap": "Isı Haritasını Göster",
       "hideHeatmap": "Isı Haritasını Gizle",
+      "hideAllSidebars": "T\u00fcm Kenar \u00c7ubuklar\u0131n\u0131 Gizle",
+      "showAllSidebars": "T\u00fcm Kenar \u00c7ubuklar\u0131n\u0131 G\u00f6ster",
       "allQuotes": "Tüm Alıntılar",
       "starredQuotesOnly": "Yalnızca Yıldızlı Alıntılar",
+      "focusMode": "Odak modu",
       "zoomIn": "Yakınlaştır",
       "zoomOut": "Uzaklaştır",
       "actualSize": "Gerçek Boyut"

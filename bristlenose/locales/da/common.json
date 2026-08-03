@@ -128,7 +128,8 @@
     "loading": "Indlæser dashboard…"
   },
   "toolbar": {
-    "matching": "{{count}} match"
+    "matching": "{{count}} match",
+    "focusMode": "Fokustilstand"
   },
   "tags": {
     "noTags": "Ingen tags",

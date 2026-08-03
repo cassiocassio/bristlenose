@@ -121,7 +121,8 @@
     "loading": "Chargement du tableau de bord…"
   },
   "toolbar": {
-    "matching": "{{count}} correspondances"
+    "matching": "{{count}} correspondances",
+    "focusMode": "Mode concentration"
   },
   "tags": {
     "noTags": "Aucune étiquette",

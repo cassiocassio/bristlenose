@@ -9,6 +9,12 @@
       "port": 8150
     },
     {
+      "name": "docs-site",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8210", "--directory", "/Users/cassio/Code/bristlenose-website/build/site"],
+      "port": 8210
+    },
+    {
       "name": "mockups",
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "8199", "--directory", "."],

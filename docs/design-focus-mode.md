@@ -1,6 +1,6 @@
 # Focus mode
 
-Status: design settled, unbuilt. Mockup: [`docs/mockups/nightfall-focus.html`](mockups/nightfall-focus.html) (built under the working title "Nightfall").
+Status: **built 3 Aug 2026** (Phases 0, 1 and 3 — see § Phasing for what each covered and what Phase 2 still owes). Trued against shipped code 3 Aug 2026 — see the changed-since-first-draft notes inline. Mockup: [`docs/mockups/nightfall-focus.html`](mockups/nightfall-focus.html) (built under the working title "Nightfall"; the filename predates the naming decision below and is not a live proposal).
 
 ## What it is
 
@@ -12,22 +12,37 @@ The lineage is iA Writer / Typora "Focus Mode" (dim the non-active content in pl
 
 ### The signal / noise line
 
-The rule that decides what survives: **keep the source's marks and the researcher's own; recede the machine's annotations.**
+Two axes, and they answer different questions. Conflating them is what produced the star bug corrected below.
+
+**Axis 1 — what stays lit (content): keep the source's marks and the researcher's own; recede the machine's annotations.**
 
 | Stays lit | Recedes to faint outline |
 |---|---|
 | Quote text | Tag chips / sentiment badges |
 | Speaker code (`pN`) — whose voice | Timecodes |
-| Star — *if starred* (the researcher's mark) | Context line, hover hints |
-| Theme headings (dim less — wayfinding) | Card background + border |
+| Star — **always**, starred or not | Context line, hover hints |
+| Selection + keyboard-focus state | Card background + border |
+| Theme headings (dim less — wayfinding) | |
 
-Unstarred stars go **fully dark** — absence is information, so the starred quotes read as lit points across the page. Only marks you made stay lit.
+**Axis 2 — what stays live (interaction): anything the researcher can act *through* stays fully interactive, and returns to full presence while engaged** — hover, keyboard focus, or active editing. **Receding is a resting state, not a disabled state.**
+
+Axis 2 is what makes Focus safe to build without enumerating exceptions. The star is never receded; the hide button keeps its existing hover/focus reveal; a tag input opened with `t` is active editing, so it lights up with no special case; selection and the focus ring are the researcher's own live working state. Only chips at rest that nobody is touching are inert.
+
+#### Corrected 3 Aug 2026 — stars are untouched by Focus
+
+The first draft sent unstarred stars **fully dark**, reasoning that absence is information and the starred ones would then read as lit points. That was wrong, for two reasons found by reading the code:
+
+1. **It removes the affordance for the mode's own primary activity.** You enter Focus to read quote text undistracted *so that you can star* — triage is the job. `.star-btn` ([`atoms/toggle.css:3`](../bristlenose/theme/atoms/toggle.css)) is the only always-present control on the card (its sibling `.hide-btn` is the hover/focus-revealed one). Darkening it darkens the one thing the mode exists to serve.
+2. **The differential it was trying to create already exists, and is already quiet.** `--bn-colour-icon-idle` vs `--bn-colour-starred`: `#c9ccd1` → `#999` (default light), `#595959` → `#ccc` (default dark), `#b8ad91` → `#9e8b6e` (edo light). The resting unstarred star is already close to the floor against `#ffffff` / `#111111`. Zeroing it buys a marginal contrast gain and pays the affordance for it.
+
+So there is **no Focus-specific star rule at all** — one fewer moving part, and the lit-points reading survives on the existing differential. This is consistent with the standing position that star contrast is a *state differential*, not an absolute target; Focus makes that differential maximal rather than introducing a new one.
 
 ## Non-goals
 
 - **No reflow. Ever.** The quote under your gaze must not move. This is the whole point — see below.
 - Not a theme switch. Toggling Focus never flips light/dark.
 - Not "Reader" — no re-layout into a reading column (that name would promise reflow).
+- **Not the sidebars.** Focus does not touch the TOC or tag sidebar, including their `--bn-colour-inspector-bg` chrome tint. A reader who wants less noise has already closed them, `[` and `]` do it in one key, and fading a whole panel's tint while its contents stay lit reads as a rendering fault rather than a mode. Foveating without jumping matters more than completeness here. Revisit only if the closed-sidebar path proves not to be what people actually do.
 
 ## Behaviour
 
@@ -46,7 +61,16 @@ Consequence for accessibility: the DOM and reading order are unchanged, so for a
 ### Guards
 
 - **Keyboard handler bails if focus is in an `<input>`, `<textarea>`, or `contenteditable`** — the report has search-as-you-type *and* inline quote/heading editing, so the bare `z` shortcut (below) must not fire mid-edit. `useKeyboardShortcuts.ts` already applies this `isEditing()` guard to its other bare keys.
-- Faded chrome must drop out of **tab order and hit-testing** (`pointer-events: none`, and un-tabbable) — you can't tab into an invisible chip.
+- **`pointer-events: none` and un-tabbability apply only to *resting decorative* chrome** — a receded tag chip nobody is touching. They must never reach a control. The first draft stated this as a blanket rule over "faded chrome", which would have made `t` open an invisible, unfocusable tag input: the keystroke appears to do nothing, which is a silent failure and the worst of the three possible behaviours. Axis 2 above is the general form of the fix; scope the rule, don't special-case the controls.
+- **No auto-exit on tagging.** A mode that exits itself on a keystroke you didn't aim at it is a surprise, and it discards the reading state you built. `t` works exactly as it does outside Focus. The chip it creates recedes at rest, but the already-shipped `.badge-bulk-flash` (0.8 s ring pulse) confirms it landed without you having to read it — a free confirmation channel that needs no design.
+
+### Selection and keyboard focus stay live
+
+Both are the researcher's own working state, not machine annotation, so Axis 1 keeps them lit. There is also a shipped precedent that settles it from the other direction: `.bn-window-inactive` dims selection to grey ([`atoms/interactive.css:106`](../bristlenose/theme/atoms/interactive.css)) precisely because the window is **not** accepting input. Focus Mode is the opposite signal — you are working harder, not less — so dimming selection there would invert an established meaning.
+
+**Implementation trap — the dissolve must exclude the interactive states explicitly.** `.bn-focused` and `.bn-selected` both express themselves through `background` ([`atoms/interactive.css:52-77`](../bristlenose/theme/atoms/interactive.css)), which is the same property the card dissolve sets to `transparent`. `blockquote.quote-card.bn-selected` is specificity (0,2,1) — exactly what a naive `.bn-focus-mode blockquote.quote-card` rule also scores. At equal specificity the later file in the concatenation wins, so Focus Mode would silently blind selection, and the failure only shows when someone tries to multi-select. Write the dissolve as `:not(.bn-selected):not(.bn-focused)`. (Same trap `bristlenose/theme/CLAUDE.md` documents under "CSS specificity vs source order in concatenated theme".)
+
+Getting that right pays a dividend: in Focus, the **only** cards with a visible box are the ones you have selected. The group you are assembling for a bulk star reads as lit slabs on a quiet page — the mode's core activity, rendered by state machinery that already exists.
 
 ## Token model — how it survives palette × appearance
 
@@ -56,19 +80,24 @@ The hard part is not the POC; it's that the transform must compose with every pa
 - **Card dissolve:** `background: transparent` + `border-color: color-mix(in srgb, var(--bn-colour-border) 40%, transparent)`. Reads the *resolved* border token, so it's right in Edo-dark for free.
 - **Signal stays lit:** uses the existing `--bn-colour-text` / `--bn-colour-starred` — already per-palette-correct.
 
-The **one** thing that isn't free is the optional dark-mode ground-deepen. It drops into the existing palette pattern as a single new contract token:
+### Recede-only in every appearance — the ground is never touched
 
-```css
---bn-colour-bg-focus: light-dark(var(--bn-colour-bg), /* deepened dark ground */);
-```
+**Settled 3 Aug 2026, replacing the `--bn-colour-bg-focus` contract token.** Focus never changes the ground colour, in any appearance. The first draft kept an optional dark-mode ground-deepen; it is deleted, and with it the new token, the palette edits, and the whole seam-negotiation problem.
 
-- **Light mode: `--bn-colour-bg-focus == --bn-colour-bg`** — no darkening. Darkening light mode reads as dirty, not calm. Light-mode Focus is recede-only.
-- **Dark mode:** may deepen slightly — dark-mode flavour riding along, not the essence of the feature.
+Three reasons, in order of force:
 
-Because `_contract.css` + `test_color_contract.py` already force every palette to define every token in both the plain block and the `@supports light-dark()` block, **adding Focus is O(1) per palette**: one token, in the two places the contract already makes authors touch. A future palette gets Focus by filling one line — or nothing, if the `light-dark()` default looks right.
+1. **In the desktop app there is no webview ground to change.** The translucent detail column shipped: [`WebView.swift:136`](../desktop/Bristlenose/Bristlenose/WebView.swift) sets `drawsBackground = false` and [`report.css:35`](../bristlenose/theme/templates/report.css) makes `html[data-embedded="true"] body` transparent. Native owns the ground; the report samples through it. To deepen it, the body would have to become opaque again — destroying the vibrancy that work deliberately introduced. That is a regression, not a tuning problem.
+2. **Contrast is relative to a fixed ground anyway.** Every recede in this design is expressed against whatever the ground is. Moving the ground *and* the chrome moves both ends of the relationship for no gain — the readability of the lit quote text is unchanged, and the calm the mode is after comes from the recede, not the darkness.
+3. **It was never the essence.** The draft already called it "dark-mode flavour riding along" and had already ruled it out in light mode ("darkening light mode reads as dirty, not calm"). Extending recede-only to dark costs nothing the feature actually needs.
+
+Consequence: the transform is now **entirely palette-agnostic**. No contract token, no palette files touched, nothing for a future palette author to fill in. It also tightens the zero-reflow guarantee into a zero-*ground* guarantee — touch only `opacity`, `color` and `border-color`, never `background` on the page, and Focus becomes structurally incapable of disturbing the vibrancy seam.
+
+> **Correction to a claim in the first draft.** It asserted that `_contract.css` + `test_color_contract.py` "already force every palette to define every token in both the plain block and the `@supports light-dark()` block." They do not. [`tests/test_color_contract.py:60-68`](../tests/test_color_contract.py) takes a set difference over *every* `--bn-*:` declaration in the file, so a token defined in only one of the two blocks passes clean. The "O(1) per palette, mechanically enforced" claim was overstated. Moot for Focus now that the token is gone, but it is a live false belief that would mislead the next author of a contract token — either fix the doc that repeats it or tighten the test.
 
 Global knobs (structural, non-overridable — live in `tokens.css`, not the contract):
 `--bn-focus-ghost-opacity` (0.14), `--bn-focus-heading-opacity` (0.4), `--bn-focus-dur` (320ms), `--bn-focus-ease`.
+
+**Tune `--bn-focus-ghost-opacity` against the prose before shipping.** At 0.14 a chip carrying `--bn-colour-badge-bg` (`#f3f4f6` on `#ffffff`) is *gone*, not "receded to a faint outline" — the number and the sentence disagree. Settle it on a specimen lens and make the losing one follow, rather than shipping both.
 
 ## Affordances across surfaces
 
@@ -77,8 +106,39 @@ One taxonomy, three renderings. The surfaces do **not** have equal claim: Focus 
 | Surface | Primitive | Entry point | State shown by |
 |---|---|---|---|
 | **SPA** (serve + export) | Toolbar toggle + bare `z` | Moon button in the report toolbar | `aria-pressed` / active styling |
-| **Mac app** | View menu item + `⌘⌥F` | View ▸ Focus Mode (checkmarked toggle) | Menu checkmark — webview is source of truth |
+| **Mac app** | View menu item + `⌘⌥F` | View ▸ Focus Mode — see § below | Menu state — webview is source of truth |
 | **CLI** | Settings default | `report.default_view` in shared Settings | — (not an interactive surface) |
+
+**The moon button does not exist in the Mac app.** [`islands/Toolbar.tsx:60`](../frontend/src/islands/Toolbar.tsx) returns `null` when embedded — the whole web toolbar is suppressed there, its jobs having moved to the native toolbar. So the View-menu item is not a convenience duplicate of a web affordance; it is the app's **only** discoverable entry point, with bare `z` as the undiscoverable one. That raises the bar on getting the menu item right and is the reason the label question below got the attention it did.
+
+### Menu placement (settled)
+
+A section of one in `ViewMenuContent` ([`MenuCommands.swift:590-622`](../desktop/Bristlenose/Bristlenose/MenuCommands.swift)), reusing the divider already sitting above Zoom In and adding one below:
+
+```
+All Quotes                    ← Toggle, checkmark, radio pair
+Starred Quotes Only           ← Toggle, checkmark, radio pair
+──────────────────────────
+Focus Mode                    ← this item
+──────────────────────────
+Zoom In                   ⌘=
+Zoom Out                  ⌘-
+Actual Size               ⌘0
+```
+
+The section may later gain other appearance-related items, but it should not be *designed* around hypothetical members — let it stay a section of one until a second earns its place.
+
+A third checkmark directly beneath a checkmarked radio pair is not confusable here, and this was verified rather than assumed: Mail's View menu carries radio groups, standalone checkmarks and the whole `Show …` verb-swap family in one menu, with dividers doing the grouping; Finder does the same (view-mode radio group, divider, `Use Groups` as a standalone checkbox). Three things make our case safer still — the phrasing isn't parallel (`All Quotes` / `Starred Quotes Only` are noun phrases answering *which quotes*; `Focus Mode` is a named mode), it carries a shortcut and they don't, and the divider is the platform's grouping mechanism.
+
+### Label and shortcut (settled)
+
+**`Focus Mode`, bare title with a checkmark, `⌘⌥F`.** A SwiftUI `Toggle` matching the pair above it, with `set:` ignoring the new value and dispatching `bridgeHandler.menuAction("focusMode")` — the SPA owns the state, mirrored back. See § Decisions for the reasoning and the rejected alternatives.
+
+Three details for the wiring:
+
+- **Derive the checkmark from a published `BridgeHandler` property, never local `@State`.** Two reload paths would desync a local flag: a project switch (the WebView re-mounts on `.id("\(project.id)-\(port)")`) and `ContentView.scheduleReportReloadOnCompletion` → `reloadWebView()` after a run finishes. Push `focusMode` on `ready` as well as on toggle, or the menu will lie about the report.
+- **No `systemImage`.** `All Quotes` and `Actual Size` carry none. While there: `All Quotes` has no icon but `Starred Quotes Only` has `systemImage: "star"` — a radio pair should be symmetric, so drop it or give both one. Small, free, and the kind of asymmetry that reads as nobody having looked.
+- **One i18n key**, `desktop.menu.view.focusMode`, across the 20 full locales (not `zh-Hant-HK`). Register "Focus Mode" in `bristlenose/locales/glossary.csv` or one language ships "reading mode" — which promises exactly the reflow this design refuses.
 
 **The shortcut splits by layer — bare key on web, Cmd-combo in the native menu, both dispatching the same toggle.** This is the established house pattern (web `[` ≠ native `⌘⌥S`, deliberately), and two verified constraints ruled out a unified `⌘\`:
 
@@ -89,13 +149,17 @@ So: **web** registers bare `z` in `useKeyboardShortcuts.ts` (behind the existing
 
 Why bare `z` for web (not `f`, not `⌘`-anything): no mainstream browser (Safari/Chrome/Edge/Firefox on Mac/Win/Linux) reserves a **bare letter** — they reserve modifier combos (`Cmd/Ctrl+[` back was the cautionary case), function keys, and Firefox's bare `/` + `'` type-ahead. A bare letter is therefore the only key that's free *and* behaves identically across OSes (no Cmd-vs-Ctrl divergence). `z` is free in the browsers and in our bound set (`? / [ ] \ m x h s t r j k`), is layout-robust (a letter fires regardless of AZERTY/Dvorak position — unlike backtick, a dead key on several EU layouts), sits out on the bottom-left rim clear of the typing flow, and carries a mild zen/quiet mnemonic. `⌘⌥F` is free natively (`⌘⌥S`/`⌘⌥L`/`⌘⌥T` are taken, `F` isn't) and menu-advertised, so it needn't be find-contested. Both easy to swap if they grate.
 
-## Embedded seam negotiation (the genuinely hard axis)
+## Embedded seam — dissolved, not negotiated
 
-Standalone (browser / export): the webview background *is* the window — Focus darkens (dark mode) or not (light) freely.
+**Rewritten 3 Aug 2026.** The first draft called this "the genuinely hard axis" and specified a mechanism: on toggle, the webview posts its resolved `--bn-colour-bg-focus` to native, which sets the `NSWindow` background to match. That is now both unnecessary and impossible to build honestly.
 
-Embedded (`data-platform="desktop"`, native window behind the WKWebView): if Focus changes the ground colour, the native window background must change in lockstep or a light AppKit gutter shows around a darkened webview — the seam breaks.
+- **Unnecessary**, because recede-only never moves the ground, so there is nothing for the seam to fall out of step with.
+- **Inverted**, because native already owns the ground (see above) — the webview has no resolved ground colour to post.
+- **Against a standing decision**, because it would mean adding a colour channel to the bridge. The `set-appearance` message was *deleted* on 30 Jul 2026 for being consumed by nothing, with the note: *"Don't re-add a second channel for a fact the platform already carries"* ([`BridgeHandler.swift:234`](../desktop/Bristlenose/Bristlenose/BridgeHandler.swift)). Appearance rides `NSApp.appearance` → window → WKWebView → `prefers-color-scheme`, with no message at all.
 
-Mechanism: **reuse the existing seam-alignment bridge.** On toggle — and on any theme change *while* in Focus — the webview posts its resolved `--bn-colour-bg-focus` (`getComputedStyle`) to native; native sets the `NSWindow`/container background to match. Native stays palette-blind: it just matches a colour. Light-mode embedded sends `bg == bg-focus`, so nothing at the seam moves — correct by construction.
+So: **no bridge work for Focus.** The surviving geometry channel (`syncToolbarInset`) is untouched. The hardest section of the original design is now the shortest.
+
+One consequence for the palette matrix: the desktop pins `BRISTLENOSE_COLOR_THEME = "default"`, so Edo is not reachable in the app. Any Edo tuning is browser/CLI work, not a desktop acceptance item.
 
 ## State & persistence
 
@@ -109,31 +173,84 @@ Persistence rule: remember the last choice per instance, but a freshly-opened pr
 
 Phases 0–2 ship the SPA + export together (visual, fast). Phase 3 is the native track (Apple-slow). The CLI piece is trivial and rides Phase 1.
 
-- **Phase 0 — token model (unblocks all).** Add `--bn-colour-bg-focus` to `_contract.css` + both palette files (both blocks each); extend `test_color_contract.py`. Add the global knobs to `tokens.css`. Author the `.bn-focus-mode` rules as formulas over existing tokens. Acceptance: default light+dark and Edo all render Focus with **≤1 override** and zero hardcoded colours.
-- **Phase 1 — SPA behaviour, non-embedded.** `.bn-focus-mode` on the report root; React state in the settings store; toolbar moon button + bare `z` (behind `isEditing()`); boot from `report.default_view`; works in both `serve` and export. Browser-testable via `serve --dev`.
-- **Phase 2 — matrix hardening.** Playground rendering palette × appearance × focus; tune per-palette `--bn-colour-bg-focus` where `light-dark()` misfires (Edo's warm dark ground is the likely one); verify palette/appearance switches *while* in Focus don't jank.
-- **Phase 3 — embedded / native.** Extend the seam bridge to re-post the resolved ground on toggle + theme-change-in-focus; View ▸ Focus Mode item + `⌘⌥F` with checkmark mirroring the webview; verify no light-mode seam gap.
-- **Phase 4 — tests + this doc trued.**
+**Phases 0 and 3 both collapsed on 3 Aug 2026** — dropping the ground-deepen removed the contract token from one and the whole bridge extension from the other.
+
+- **Phase 0 — knobs + CSS. ✅ Built.** Four global knobs in `tokens.css`; `bristlenose/theme/templates/focus-mode.css` registered in `_THEME_FILES` after `report.css`. No contract token, no palette file touched, zero colour literals — the transform is a formula over existing tokens throughout.
+- **Phase 1 — SPA behaviour. ✅ Built.** `frontend/src/contexts/FocusModeStore.ts` (module store + `useSyncExternalStore`, matching SidebarStore) owns the state and the DOM class; toolbar moon button; bare `z`. Works in `serve` and export — the export inlines the theme CSS, so Focus rides along with no export-specific work.
+- **Phase 2 — matrix hardening. ⬜ Outstanding.** Render palette × appearance × focus on the specimen lens; **tune `--bn-focus-ghost-opacity` against the prose** (see the note in § Token model — 0.14 may be below what "faint outline" promises); verify palette/appearance switches *while* in Focus don't jank. Browser/CLI only — Edo isn't reachable on desktop. This is a looking-at-it phase, not a coding one.
+- **Phase 3 — native menu item. ✅ Built.** `View ▸ Focus Mode` (`⌘⌥F`) as a checkmarked `Toggle` in `ViewMenuContent`; `focusModeActive` mirrored from the SPA over a new `focus-mode` bridge message. No seam work, no colour channel.
+- **Phase 4 — tests + this doc trued. ✅ Done.** `tests/test_focus_mode_css.py` (9 invariants), `frontend/src/contexts/FocusModeStore.test.ts` (4), and three `z`-key cases in `useKeyboardShortcuts.test.ts`.
+
+### Decisions taken during the build
+
+- **Two DOM hooks, not one.** `.bn-focus-ready` is added once when the SPA mounts and never removed; `.bn-focus-mode` is toggled. The transitions hang off `.bn-focus-ready` because a transition declared alongside the toggled class **disappears with it** — the fade would play going in and snap coming out, breaking the doc's own "symmetric on the way back". It also confines the transition overrides to SPA surfaces, so the static render is untouched by this file. Pinned by `test_transitions_hang_off_the_always_present_hook`.
+- **Recede leaf elements, not containers that already animate.** `.quote-card .badges` carries an existing `opacity: 0.9 → 1` hover on `--bn-transition-fast`. Focus dims the same element but declares its own transition under `.bn-focus-ready`, so the two compose rather than one clobbering the other's timing.
+- **Print always gets the full report.** A printout is a deliverable someone else reads; faded tags on paper are a defect, not a mode. `@media print` restores every receded value — same reasoning as `print.css` forcing the light colour-scheme.
+- **Ephemeral state, no persistence.** Module state survives route changes within the report and resets on reload, which is exactly the spec's "remember the last choice while you're working, but a freshly-opened project boots in normal view". Adding `localStorage` would break the boot rule rather than improve on it, so the CLI's `report.default_view` boot key is **not** wired — it has no store to seed. Revisit if the handoff/kiosk case turns out to be real.
+- **`z` needs two guards the sibling bare keys don't.** Modifiers (⌘Z is Undo — and the report has inline editing, where Undo is most wanted just *after* a commit, when `isEditing()` is already false and guards nothing) and route (see below). Both pinned in `useKeyboardShortcuts.test.ts`.
 
 ## Testing — invariants, not a 16-cell snapshot matrix
 
 Three invariants carry it; don't screenshot every palette × appearance × context × state cell:
 
 1. **Toggling changes no element geometry** across palettes (the zero-reflow guarantee, asserted on bounding boxes).
-2. **Signal elements retain full opacity/colour** and receded chrome drops to the ghost opacity, in every palette (the contract test already guarantees `--bn-colour-bg-focus` exists everywhere).
-3. **Embedded seam colour equals the webview ground** after toggle.
+2. **Signal elements retain full opacity/colour** and receded chrome drops to the ghost opacity, in every palette.
+3. **Selection and keyboard focus survive Focus** — a card with `.bn-selected` keeps a visibly distinct background in Focus, in every palette. This is the specificity trap above, and it is the one failure that would otherwise ship looking fine: the mode renders correctly and only breaks when someone tries to multi-select.
 
-## Open decisions (settled unless reopened)
+Invariant 3 replaces the original "embedded seam colour equals the webview ground", which no longer has a referent — recede-only never moves the ground, and native owns it in the app regardless.
 
-- Name: **Focus Mode** — settled. (Rejected: Nightfall — smuggles luminance; Reader — promises reflow.)
-- Shortcut: **bare `z` (web) + `⌘⌥F` (native View menu)** — settled. (Rejected: `⌘\` — `\` is the sidebar family + native menus eat Cmd-combos before the WKWebView; bare `f` — find-contested; `⌘§` — ISO-keyboard-only, absent on US/most layouts, and may be the system window-cycle key on UK boards; backtick — dead key on several EU layouts.)
-- Light-mode ground: **recede-only** (`bg-focus == bg`) — settled.
-- Embedded ground: **drive native to match via the seam bridge** — settled.
+## Decisions
+
+### Settled
+
+- Name: **Focus Mode**. (Rejected: Nightfall — smuggles luminance; Reader — promises reflow.)
+- Menu label: **bare `Focus Mode` with a checkmark** (SwiftUI `Toggle`, matching the pair above it). The checkmark carries the state, so the label is the thing rather than the act.
+- Native shortcut: **`⌘⌥F`**, with the Find-and-Replace foreclosure below accepted as a known trade rather than overlooked. Cheap to revisit — it's a one-line change and nothing else depends on it.
+- Ground: **recede-only in every appearance.** No `--bn-colour-bg-focus`, no palette edits.
+- Embedded: **no seam work, no new bridge channel.**
+- Stars: **untouched by Focus**, starred or not.
+- Sidebars: **out of scope for v1.**
+- Selection and keyboard focus: **stay live and visible.**
+- Web shortcut: **bare `z`.** Re-verified 3 Aug 2026 against the bound set in `useKeyboardShortcuts.ts` (`? [ ] \ m / j k x h s t r Enter`, arrows, Escape, plus ⌘-combos and ⌃⇧P/⌃⇧U) — still free. (Rejected: `⌘\` — `\` is the sidebar family and native menus eat Cmd-combos before the WKWebView; bare `f` — find-contested; `⌘§` — ISO-only; backtick — a dead key on several EU layouts.)
 - Report-wide only for v1; per-section Focus (a moon on the section header) deferred until it's demonstrably missed.
+
+### How the label was chosen (and one precedent that didn't survive checking)
+
+> **Correction, same day.** An earlier version of this section cited "Apple Mail ships a View-menu item called Focus Mode" as the decisive precedent. The **strings are genuinely in the shipped nib** — `strings -a /System/Applications/Mail.app/Contents/Resources/Base.lproj/MainMenu.nib` returns `Enable Focus Mode`, `Mail.menuBar.viewMenu.enableFocusMode`, `toggleFocusMode:`, and the menu also carries `moon.circle` — but **the item is not exposed in Mail's actual View menu**, as direct observation confirms. Unexposed or conditionally-gated nib items are ordinary; extracting a string is not evidence that a feature ships. Treat what follows as a signal about Apple's internal naming register, not as shipped precedent. The arguments that don't depend on Mail are marked below.
+
+The three candidates:
+
+| | Form | Standing |
+|---|---|---|
+| A | `Turn On Focus Mode` / `Turn Off Focus Mode` | Matches our shipped `Turn On/Off Agent Access`, so the register is already translated across 20 locales. But Apple uses `Turn On X` for capabilities, not view states — across `/System/Applications` the only instance is Photos' "Turn On Live Photo". Argument against reuse: `Turn On/Off` is currently a meaningful signal in this app for *permissions that keep working while you are not looking*; spending it on a display state dilutes it. |
+| B | `Enter Focus Mode` / `Exit Focus Mode` | **Rejected.** Enter/Exit is the environment-replacement idiom — *independent of Mail*, a sweep of ~18 Apple apps returns only Enter/Exit Full Screen and Enter Time Machine as modes; everything else (`Enter Password`, `Enter Link`, `Enter Selection`) isn't a mode at all. It means the OS or app environment is replaced and you must explicitly leave it: Full Screen removes the menu bar, Time Machine replaces the desktop. Focus touches four CSS properties and guarantees zero reflow — it would borrow the vocabulary's strongest connotation for its weakest change. |
+| C | `Focus Mode` + checkmark | **Chosen.** Matches the two items directly above; the checkmark carries the state so the label can be the thing rather than the act. |
+
+One finding worth keeping so nobody re-derives it:
+
+**`Enable/Disable` is not Windows-ish — that earlier rejection was overturned.** It's a real, current, small Apple register: `Enable Message Filter` in Mail, `Enable Messages in iCloud` in Messages, and iA Writer's own docs word ⌘D as "Enable or disable Focus Mode." (None of those depend on the unexposed Mail item.) The reason not to take it is narrower than "it's Windowsy": `✓ Enable Focus Mode` reads as a contradiction, Apple's `Enable` cluster is a *set-up* register — configure once per account — whereas ours is a lean-in flip you might do twenty times a session, and our View menu already has a bare-attribute register to join (`All Quotes`, `Starred Quotes Only`) and no `Enable` register.
+
+**Shortcut — `⌘⌥F` chosen; the risk below is accepted, not overlooked.**
+
+Constraints confirmed: `⌘F` is routed to the report search bar, `⌃⌘F` is the system Enter Full Screen, `⇧⌘F` is find-in-project in most editors. There is **no cross-app convention to honour** — iA Writer uses `⌘D` (root of a deliberate D-for-display family: `⌘D` Focus, `⇧⌘D` Syntax Highlight, `⌥⇧⌘D` Style Checking), Ulysses uses `⌥⌘T` for Typewriter Mode, and Apple's own Mail Focus Mode item had no extractable key equivalent. The space is genuinely free.
+
+The live risk is **foreclosure, not contention**: `⌘⌥F` is the canonical Find and Replace binding (Pages, Numbers, Keynote, Xcode, BBEdit, Nova; Safari uses it to focus the search field), and our Edit menu already ships the complete `NSTextFinder` cluster *minus that one member* — `⌘F`, `⌘G`, `⇧⌘G`, `⌘E`, `⌘J` at [`MenuCommands.swift:471-493`](../desktop/Bristlenose/Bristlenose/MenuCommands.swift). Find and Replace is plausible here rather than hypothetical: the report has inline editing of quote text, headings and participant names, and hand-anonymising a client name across forty quotes is exactly the job. Taking `⌘⌥F` forecloses it.
+
+Accepted on the grounds that Find and Replace is a *possible* future rather than a planned one, and that reassigning the shortcut later is a one-line change with nothing depending on it. If it's ever wanted, the fallbacks already assessed are `⌘⌥Z` (rhymes with the web layer's bare `z` — one letter across both surfaces; keeps the `⌘⌥` family reading as view toggles, S/L/T/Z; unbound) or no key equivalent at all (matching `All Quotes` / `Starred Quotes Only`, which have none — but that loses the ability to toggle while focus is in the native sidebar, which is a real job).
+
+Ergonomics were checked by hand: `⌃⌘F` (Enter Full Screen) followed by `⌘⌥F` is a workable sequence — pinky plus first and second finger for `⌘⌥`, right middle finger for `F` both times.
+
+**Shortcut research — there is no cross-app convention to honour.** iA Writer uses `⌘D`, the root of a deliberate D-for-display family (`⌘D` Focus, `⇧⌘D` Syntax Highlight, `⌥⇧⌘D` Style Checking). Ulysses uses `⌥⌘T` for Typewriter Mode. Three apps, three unrelated answers, so the space is genuinely free and the choice rests on internal consistency and foreclosure rather than on matching anyone.
+
+**Lens scoping — built quotes-only, provisionally.** Focus's entire signal/noise vocabulary is quote-card vocabulary, so all three affordances are scoped to the Quotes lens and agree with each other: the menu item is `.disabled(activeTab != .quotes)` matching its neighbours, `z` is route-guarded to `/report/quotes` the way `m` is to `/report/analysis`, and the toolbar mounts only in `QuotesTab` so the moon button can't appear elsewhere. All three had to move together — a menu that says "unavailable" while the key still works is worse than either behaviour alone.
+
+Provisional because it's the honest v1, not necessarily the right end state: a live-but-inert menu item is a lie, whereas un-dimming later, once the other lenses have a defined transform, is a free upgrade. Worth revisiting after using it — if reaching for `z` on Sessions or Analysis feels like it *should* work, that's the signal to define the transform there rather than to un-dim an empty one.
 
 ## Changelog draft — HELD until ship
 
 Ready to drop into `CHANGELOG.md` under the shipping version **once Phase 0–2 actually land**. Not in the changelog now because the feature is unbuilt — a user-facing entry for something users can't use would be a promise (no-promises rule). Follows the `0da3cb40` precedent (parked launch copy held for ship day). Trim the affordance list to whatever actually shipped before pasting.
 
-> **Focus Mode — quiet everything but the quotes.** A new reading state for the report. Press `z` — or the moon button in the toolbar, or View ▸ Focus Mode (`⌘⌥F`) in the desktop app — and the chrome recedes: tag chips, sentiment badges, timecodes, the card boxes themselves all sink to a faint outline, leaving just the quote, the speaker code, and the stars you set. Nothing moves. The toggle only fades opacity and colour, never layout, so the quote under your eye stays pinned to the pixel while everything around it drops away — you keep your bearings, the target just becomes unmistakable. Unstarred stars fade out entirely, so the quotes you've marked read as lit points across the page. It's a *mode*, not a theme: it composes with Default and Edo, light and dark, and in the desktop app it deepens the ground to match the native window with no seam. Dusk, not a light-switch — a ~320 ms fade that respects Reduce Motion. Ships on PyPI and in the desktop app.
+Trued 3 Aug 2026 — the original draft promised darkened stars and a deepened desktop ground, neither of which the feature now does.
+
+> **Focus Mode — quiet everything but the quotes.** A new reading state for the report. Press `z` — or the moon button in the toolbar, or View ▸ Focus Mode (`⌘⌥F`) in the desktop app — and the chrome recedes: tag chips, sentiment badges, timecodes, the card boxes themselves all sink to a faint outline, leaving just the quote, the speaker code, and your stars. Nothing moves. The toggle only fades opacity and colour, never layout, so the quote under your eye stays pinned to the pixel while everything around it drops away — you keep your bearings, the target just becomes unmistakable. Starring, selecting and tagging all keep working, so it's a reading state you can act from, not just look at: quiet the page, read the words, mark what matters. It's a *mode*, not a theme — it composes with Default and Edo, light and dark, and never touches the page's ground colour. Dusk, not a light-switch: a ~320 ms fade that respects Reduce Motion. Ships on PyPI and in the desktop app.
 

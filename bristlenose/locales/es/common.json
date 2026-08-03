@@ -121,7 +121,8 @@
     "loading": "Cargando panel…"
   },
   "toolbar": {
-    "matching": "{{count}} coincidencias"
+    "matching": "{{count}} coincidencias",
+    "focusMode": "Modo enfoque"
   },
   "tags": {
     "noTags": "Sin etiquetas",

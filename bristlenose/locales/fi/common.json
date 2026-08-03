@@ -128,7 +128,8 @@
     "loading": "Ladataan koontinäkymää…"
   },
   "toolbar": {
-    "matching": "{{count}} osumaa"
+    "matching": "{{count}} osumaa",
+    "focusMode": "Keskittymistila"
   },
   "tags": {
     "noTags": "Ei tunnisteita",

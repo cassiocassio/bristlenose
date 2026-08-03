@@ -521,6 +521,17 @@ private struct ViewMenuContent: View {
         leftPanelKey != nil
     }
 
+    /// Whether Hide/Show All Sidebars should read "Hide". The projects column is
+    /// read straight off the focused binding; the two web panels arrive over the
+    /// `panel-state` mirror, because native can't see inside the WKWebView.
+    private var allSidebarsShowing: Bool {
+        AllSidebars.anyShowing(
+            projects: SidebarToggle.isVisible(sidebarVisibility?.wrappedValue ?? .all),
+            leftPanel: bridgeHandler.leftPanelOpen,
+            rightPanel: bridgeHandler.rightPanelOpen
+        )
+    }
+
     var body: some View {
         // Tab shortcuts Cmd+1 through Cmd+5
         ForEach(Array(Tab.allCases.enumerated()), id: \.element.id) { index, tab in
@@ -580,6 +591,31 @@ private struct ViewMenuContent: View {
         }
         .disabled(bridgeHandler.activeTab != .analysis)
 
+        // Last in the panel group, reading specific → general: the umbrella over
+        // the three items above it. ⌘⌥\ keeps the family shape of its siblings
+        // (⌘⌥S/L/T) and reuses the key that already means "both sidebars" in the
+        // web layer, where bare `\` does the same for the two content panels.
+        // A *modified* equivalent is load-bearing, not taste — a bare menu key
+        // equivalent fires before the responder chain and would eat the
+        // character in every rename field and inline editor (desktop/CLAUDE.md,
+        // "No bare-key menu shortcuts"). That is also why the ISO-only `§` is a
+        // web-layer alias rather than what this row advertises.
+        Button(i18n.t(allSidebarsShowing
+                      ? "desktop.menu.view.hideAllSidebars"
+                      : "desktop.menu.view.showAllSidebars"),
+               systemImage: "rectangle.split.3x1") {
+            guard let sidebarVisibility else { return }
+            let hiding = allSidebarsShowing
+            withAnimation {
+                sidebarVisibility.wrappedValue = AllSidebars.nextVisibility(
+                    sidebarVisibility.wrappedValue, hiding: hiding
+                )
+            }
+            bridgeHandler.menuAction(AllSidebars.webAction(hiding: hiding))
+        }
+        .keyboardShortcut("\\", modifiers: [.command, .option])
+        .disabled(sidebarVisibility == nil)
+
         Divider()
 
         // Radio-style pair: the active view mode carries a checkmark. A Toggle
@@ -599,6 +635,27 @@ private struct ViewMenuContent: View {
         )) {
             Label(i18n.t("desktop.menu.view.starredQuotesOnly"), systemImage: "star")
         }
+        .disabled(bridgeHandler.activeTab != .quotes)
+
+        Divider()
+
+        // Section of one. Bare title + checkmark, not a Turn On/Off verb swap:
+        // the checkmark carries the state, so the label is the thing rather than
+        // the act — matching the two items above, which is the register this menu
+        // already has. `Turn On/Off` stays reserved for permissions that keep
+        // working while you're not looking (Agent Access). No systemImage: the
+        // radio pair above is the only item here carrying one. See
+        // docs/design-focus-mode.md § Label and shortcut.
+        //
+        // Quotes-scoped like the pair above: the recede transform is defined for
+        // quote cards only, and a live-but-inert menu item is worse than a dimmed
+        // one. Un-dimming later, once the other lenses have a defined transform,
+        // is a free upgrade.
+        Toggle(i18n.t("desktop.menu.view.focusMode"), isOn: Binding(
+            get: { bridgeHandler.focusModeActive },
+            set: { _ in bridgeHandler.menuAction("focusMode") }
+        ))
+        .keyboardShortcut("f", modifiers: [.command, .option])
         .disabled(bridgeHandler.activeTab != .quotes)
 
         Divider()

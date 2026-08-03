@@ -36,6 +36,7 @@ import {
   toggleHUD,
 } from "../contexts/PlaygroundStore";
 import { toggleInspector } from "../contexts/InspectorStore";
+import { toggleFocusMode } from "../contexts/FocusModeStore";
 import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
 import { postEditingStarted, postEditingEnded } from "../shims/bridge";
@@ -415,8 +416,12 @@ export function useKeyboardShortcuts({
         }
       }
 
-      // \ or ⌘. / Ctrl+. — toggle both sidebars (quotes tab only)
-      if (key === "\\" || (key === "." && (e.metaKey || e.ctrlKey))) {
+      // \ or ⌘. / Ctrl+. — toggle both sidebars (quotes tab only).
+      // `§` is an ISO-layout alias: it's the unmodified top-left key on Apple
+      // British and the closest thing a Mac has to Photoshop's Tab. It stays a
+      // web-layer alias rather than the advertised binding because US ANSI has
+      // no § key at all (⌥6) — the menu advertises ⌘⌥\, which everyone has.
+      if (key === "\\" || key === "§" || (key === "." && (e.metaKey || e.ctrlKey))) {
         if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
           e.preventDefault();
           sidebarAnimations.toggleBoth();
@@ -490,6 +495,26 @@ export function useKeyboardShortcuts({
         if (selectedIdsRef.current.size > 0 || focusedIdRef.current) {
           e.preventDefault();
           handleStar();
+          return;
+        }
+      }
+
+      // z — focus mode (quotes lens only)
+      //
+      // Needs no focused or selected quote (it's a view state, not a quote
+      // mutation), but does need two guards the sibling bare keys don't:
+      //
+      // 1. Modifiers. ⌘Z is Undo, and the report has inline quote/heading/name
+      //    editing, so an unguarded bare `z` would swallow it — the isEditing()
+      //    guard above doesn't help, because Undo is most wanted just *after*
+      //    an edit commits, when isEditing() is already false.
+      // 2. Route. The recede transform is defined for quote cards; the native
+      //    View-menu twin dims off this lens, and the two must agree or the
+      //    menu says "unavailable" while the key still works.
+      if (key === "z" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
+          e.preventDefault();
+          toggleFocusMode();
           return;
         }
       }

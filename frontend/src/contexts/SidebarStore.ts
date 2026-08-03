@@ -136,6 +136,14 @@ let frameworkStatesHydrated = false;
  */
 let frameworkEditGeneration = 0;
 
+/**
+ * The arrangement stashed by the last `hideAllSidebars()`, put back by the next
+ * `showAllSidebars()`. Ephemeral on purpose — not persisted, so a fresh session
+ * that opens with everything closed has nothing to restore and "show all"
+ * falls through to opening all. Reset by resetSidebarStore for test isolation.
+ */
+let allSidebarsStash: { tocMode: TocMode; tagsOpen: boolean } | null = null;
+
 function getSnapshot(): SidebarState {
   return state;
 }
@@ -171,15 +179,55 @@ export function toggleTags(): void {
   });
 }
 
-export function toggleBoth(): void {
+/** True when either content sidebar is showing. Drives the Hide↔Show verb. */
+export function anySidebarOpen(): boolean {
+  return state.tocMode !== "closed" || state.tagsOpen;
+}
+
+/**
+ * Close both content sidebars, remembering the arrangement so
+ * `showAllSidebars()` can put back exactly what was there.
+ *
+ * The stash is what makes this a Photoshop-style hide-all rather than a plain
+ * toggle. Without it, "TOC open, tags closed → hide → show" hands back BOTH —
+ * you gain a sidebar you never had. Figma gets away with a bare toggle because
+ * its panels are always both present; mixed arrangements are the norm here.
+ *
+ * No-ops when nothing is open, so a stray second Hide can't overwrite a good
+ * stash with an empty one.
+ */
+export function hideAllSidebars(): void {
+  if (!anySidebarOpen()) return;
+  allSidebarsStash = { tocMode: state.tocMode, tagsOpen: state.tagsOpen };
   setState((prev) => {
-    const anyOpen = prev.tocMode !== "closed" || prev.tagsOpen;
-    const tocMode: TocMode = anyOpen ? "closed" : "push";
-    const tagsOpen = !anyOpen;
+    writeBool(LS_TOC_OPEN, false);
+    writeBool(LS_TAGS_OPEN, false);
+    return { ...prev, tocMode: "closed", tagsOpen: false };
+  });
+}
+
+/**
+ * Restore the stashed arrangement. With no stash — nothing was hidden this
+ * session — "show all" means all, which keeps the menu item live rather than
+ * dead on a first press.
+ */
+export function showAllSidebars(): void {
+  // An overlay peek is transient by design and was never a resting state, so a
+  // stashed overlay comes back as a real push panel.
+  const stashedToc = allSidebarsStash?.tocMode ?? "push";
+  const tocMode: TocMode = stashedToc === "overlay" ? "push" : stashedToc;
+  const tagsOpen = allSidebarsStash?.tagsOpen ?? true;
+  allSidebarsStash = null;
+  setState((prev) => {
     writeBool(LS_TOC_OPEN, tocMode === "push");
     writeBool(LS_TAGS_OPEN, tagsOpen);
     return { ...prev, tocMode, tagsOpen };
   });
+}
+
+export function toggleBoth(): void {
+  if (anySidebarOpen()) hideAllSidebars();
+  else showAllSidebars();
 }
 
 /** Open TOC as a temporary overlay (hover/rail click). Not persisted. */
@@ -398,6 +446,7 @@ export function resetSidebarStore(): void {
   };
   frameworkStatesHydrated = false;
   frameworkEditGeneration = 0;
+  allSidebarsStash = null;
   listeners.forEach((l) => l());
 }
 

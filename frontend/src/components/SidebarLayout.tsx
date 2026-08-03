@@ -28,6 +28,8 @@ import {
   toggleToc,
   toggleTags,
   toggleBoth,
+  hideAllSidebars,
+  showAllSidebars,
   openTocPush,
   closeToc,
   closeTags,
@@ -110,6 +112,8 @@ export const sidebarAnimations = {
   toggleToc: toggleToc as () => void,
   toggleTags: toggleTags as () => void,
   toggleBoth: toggleBoth as () => void,
+  hideAll: hideAllSidebars as () => void,
+  showAll: showAllSidebars as () => void,
 };
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -295,11 +299,26 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
         withAnimation(layoutRef.current, toggleBoth);
       }
     };
+    // Explicit hide/show (native View ▸ Hide All Sidebars). Direction is decided
+    // natively — it knows about the projects column too — so these must never
+    // re-derive it from the web panels alone.
+    sidebarAnimations.hideAll = () => {
+      // An overlay peek animates out on its own path; the grid transition then
+      // covers whatever push panels are left. The stash records it as closed,
+      // which is right — an overlay was never a resting arrangement.
+      if (tocMode === "overlay") closeTocOverlayAnimated();
+      withAnimation(layoutRef.current, hideAllSidebars);
+    };
+    sidebarAnimations.showAll = () => {
+      withAnimation(layoutRef.current, showAllSidebars);
+    };
     return () => {
       // Reset to bare store calls when SidebarLayout unmounts.
       sidebarAnimations.toggleToc = toggleToc;
       sidebarAnimations.toggleTags = toggleTags;
       sidebarAnimations.toggleBoth = toggleBoth;
+      sidebarAnimations.hideAll = hideAllSidebars;
+      sidebarAnimations.showAll = showAllSidebars;
     };
   }, [tocMode, closeTocOverlayAnimated]);
 

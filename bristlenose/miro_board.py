@@ -1,7 +1,10 @@
 """Target-agnostic board IR + trivial layout engine for the Miro bridge.
 
-Pure stdlib (no bristlenose/pydantic imports) so it stays fast, testable, and
-renderer-agnostic. The layout engine turns grouped quotes into a `Board` of
+Near-pure stdlib (no pydantic models, no I/O) so it stays fast, testable, and
+renderer-agnostic. The one bristlenose import is `count_noun` — board stickies
+carry count-bearing text a researcher shows a client, and pluralisation has
+exactly one source of truth in this repo (see CLAUDE.md § CLI plurals); a local
+mirror would be a second one. The layout engine turns grouped quotes into a `Board` of
 frames + stickies + text items in absolute board coordinates; renderers
 (`miro_render_svg` for preview, `miro_client`/`server.miro_export` for the real
 Miro push) translate the IR to a concrete surface.
@@ -13,6 +16,8 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+
+from bristlenose.utils.text import count_noun
 
 # --- layout constants (board px) -------------------------------------------
 STICKY_W = 240.0
@@ -146,7 +151,7 @@ def _build_frame(
         cx = left_x + FRAME_PAD + i * (STICKY_W + GAP_X)
         stickies.append(Sticky(
             kind="header", x=cx, y=FRAMES_Y + FRAME_PAD, width=STICKY_W, height=HEADER_H,
-            colour=HEADER_TOKEN, text=f"{col.label}\n{len(col.quotes)} quote(s)",
+            colour=HEADER_TOKEN, text=f"{col.label}\n{count_noun(len(col.quotes), 'quote')}",
         ))
         sy = FRAMES_Y + FRAME_PAD + HEADER_H + GAP_Y
         for q in sorted(col.quotes, key=_quote_sort_key):

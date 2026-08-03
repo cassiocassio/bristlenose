@@ -49,8 +49,11 @@
       "hideTags": "Nascondi i tag",
       "showHeatmap": "Mostra la mappa di calore",
       "hideHeatmap": "Nascondi la mappa di calore",
+      "hideAllSidebars": "Nascondi tutte le barre laterali",
+      "showAllSidebars": "Mostra tutte le barre laterali",
       "allQuotes": "Tutte le citazioni",
       "starredQuotesOnly": "Solo citazioni con stella",
+      "focusMode": "Modalit\u00e0 focus",
       "zoomIn": "Aumenta lo zoom",
       "zoomOut": "Riduci lo zoom",
       "actualSize": "Dimensioni reali"

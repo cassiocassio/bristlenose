@@ -49,8 +49,11 @@
       "hideTags": "タグを非表示",
       "showHeatmap": "ヒートマップを表示",
       "hideHeatmap": "ヒートマップを非表示",
+      "hideAllSidebars": "\u3059\u3079\u3066\u306e\u30b5\u30a4\u30c9\u30d0\u30fc\u3092\u975e\u8868\u793a",
+      "showAllSidebars": "\u3059\u3079\u3066\u306e\u30b5\u30a4\u30c9\u30d0\u30fc\u3092\u8868\u793a",
       "allQuotes": "すべての発言",
       "starredQuotesOnly": "スター付きの発言のみ",
+      "focusMode": "\u30d5\u30a9\u30fc\u30ab\u30b9\u30e2\u30fc\u30c9",
       "zoomIn": "拡大",
       "zoomOut": "縮小",
       "actualSize": "実際のサイズ"

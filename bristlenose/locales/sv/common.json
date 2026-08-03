@@ -128,7 +128,8 @@
     "loading": "Läser in översikt…"
   },
   "toolbar": {
-    "matching": "{{count}} matchar"
+    "matching": "{{count}} matchar",
+    "focusMode": "Fokusl\u00e4ge"
   },
   "tags": {
     "noTags": "Inga taggar",

@@ -49,8 +49,11 @@
       "hideTags": "Dölj taggar",
       "showHeatmap": "Visa värmekarta",
       "hideHeatmap": "Dölj värmekarta",
+      "hideAllSidebars": "D\u00f6lj alla sidof\u00e4lt",
+      "showAllSidebars": "Visa alla sidof\u00e4lt",
       "allQuotes": "Alla citat",
       "starredQuotesOnly": "Endast stjärnmärkta citat",
+      "focusMode": "Fokusl\u00e4ge",
       "zoomIn": "Zooma in",
       "zoomOut": "Zooma ut",
       "actualSize": "Verklig storlek"

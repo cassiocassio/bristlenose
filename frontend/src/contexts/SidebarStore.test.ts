@@ -15,6 +15,9 @@ import {
   toggleToc,
   toggleTags,
   toggleBoth,
+  hideAllSidebars,
+  showAllSidebars,
+  anySidebarOpen,
   openTocOverlay,
   openTocPush,
   closeToc,
@@ -288,6 +291,83 @@ describe("toggleToc (closed ↔ push)", () => {
     act(() => toggleBoth());
     expect(result.current.tocMode).toBe("closed");
     expect(result.current.tagsOpen).toBe(false);
+  });
+});
+
+describe("hideAllSidebars / showAllSidebars", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    resetSidebarStore();
+  });
+
+  // The invariant the whole stash exists for. A bare toggle would hand back
+  // BOTH here — you'd gain a sidebar you never had.
+  it("restores the arrangement it hid, not everything", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => toggleToc()); // TOC only — tags stay closed
+    act(() => hideAllSidebars());
+    expect(result.current.tocMode).toBe("closed");
+    expect(result.current.tagsOpen).toBe(false);
+
+    act(() => showAllSidebars());
+    expect(result.current.tocMode).toBe("push");
+    expect(result.current.tagsOpen).toBe(false);
+  });
+
+  it("restores a tags-only arrangement", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => toggleTags());
+    act(() => hideAllSidebars());
+    act(() => showAllSidebars());
+    expect(result.current.tocMode).toBe("closed");
+    expect(result.current.tagsOpen).toBe(true);
+  });
+
+  it("opens all when there is nothing stashed", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => showAllSidebars());
+    expect(result.current.tocMode).toBe("push");
+    expect(result.current.tagsOpen).toBe(true);
+  });
+
+  // A stashed overlay was a transient peek, never a resting arrangement.
+  it("restores a stashed overlay peek as a push panel", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => openTocOverlay());
+    act(() => hideAllSidebars());
+    act(() => showAllSidebars());
+    expect(result.current.tocMode).toBe("push");
+  });
+
+  // Guards the stash against a second Hide (menu clicked twice, or a native
+  // verb that lagged the mirror) overwriting it with an empty arrangement.
+  it("a repeated hide does not clobber the stash", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => toggleToc());
+    act(() => hideAllSidebars());
+    act(() => hideAllSidebars());
+    act(() => showAllSidebars());
+    expect(result.current.tocMode).toBe("push");
+    expect(result.current.tagsOpen).toBe(false);
+  });
+
+  it("anySidebarOpen reports the verb the native menu renders", () => {
+    renderHook(() => useSidebarStore());
+    expect(anySidebarOpen()).toBe(false);
+    act(() => openTocOverlay());
+    expect(anySidebarOpen()).toBe(true); // an overlay peek is showing
+    act(() => hideAllSidebars());
+    expect(anySidebarOpen()).toBe(false);
+  });
+
+  it("does not survive a store reset", () => {
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => toggleToc());
+    act(() => hideAllSidebars());
+    act(() => resetSidebarStore());
+    act(() => showAllSidebars());
+    expect(result.current.tocMode).toBe("push");
+    expect(result.current.tagsOpen).toBe(true);
   });
 });
 

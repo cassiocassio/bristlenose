@@ -124,7 +124,8 @@
     "loading": "ダッシュボードを読み込み中…"
   },
   "toolbar": {
-    "matching": "{{count}} 件一致"
+    "matching": "{{count}} 件一致",
+    "focusMode": "\u30d5\u30a9\u30fc\u30ab\u30b9\u30e2\u30fc\u30c9"
   },
   "tags": {
     "noTags": "タグなし",

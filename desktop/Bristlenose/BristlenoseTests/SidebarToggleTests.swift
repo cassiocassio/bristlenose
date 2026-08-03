@@ -51,3 +51,71 @@ import Testing
         }
     }
 }
+
+/// Pins View ▸ Hide/Show All Sidebars — the umbrella over the projects column
+/// and the two web panels.
+///
+/// The rule worth pinning is that *any* one showing means the item reads
+/// "Hide". The tempting alternative — all three showing — inverts the item in
+/// exactly the mixed arrangements it exists to collapse: with only the tag
+/// sidebar open it would offer "Show All Sidebars", and pressing it would open
+/// two more rather than clear the one. The command-pairing test guards the
+/// other half: web and native must move the same direction, because native
+/// owns the verb and the web side is deliberately not allowed to re-derive it.
+@Suite struct AllSidebarsTests {
+
+    // MARK: - anyShowing
+
+    @Test func anyShowing_isTrueWhenAnySingleOneIsUp() {
+        #expect(AllSidebars.anyShowing(projects: true, leftPanel: false, rightPanel: false))
+        #expect(AllSidebars.anyShowing(projects: false, leftPanel: true, rightPanel: false))
+        #expect(AllSidebars.anyShowing(projects: false, leftPanel: false, rightPanel: true))
+    }
+
+    @Test func anyShowing_isFalseOnlyWhenEverythingIsDown() {
+        #expect(AllSidebars.anyShowing(projects: false, leftPanel: false, rightPanel: false) == false)
+    }
+
+    // MARK: - webAction / nextVisibility
+
+    /// The two halves of one press must agree. If the web ever received
+    /// `showAllSidebars` while the column collapsed, the item would half-work
+    /// in a way no single-surface test would catch.
+    @Test func hidingSendsHideAndCollapsesTheColumn() {
+        #expect(AllSidebars.webAction(hiding: true) == "hideAllSidebars")
+        #expect(AllSidebars.nextVisibility(.all, hiding: true) == .detailOnly)
+        #expect(AllSidebars.nextVisibility(.doubleColumn, hiding: true) == .detailOnly)
+    }
+
+    @Test func showingSendsShowAndExpandsTheColumn() {
+        #expect(AllSidebars.webAction(hiding: false) == "showAllSidebars")
+        #expect(AllSidebars.nextVisibility(.detailOnly, hiding: false) == .all)
+    }
+
+    /// Unlike `SidebarToggle.next`, this is idempotent per direction, not an
+    /// involution — the direction comes from `anyShowing`, so a repeated Hide
+    /// must not bounce the column back open.
+    @Test func nextVisibility_isIdempotentPerDirection() {
+        let hiddenOnce = AllSidebars.nextVisibility(.all, hiding: true)
+        #expect(AllSidebars.nextVisibility(hiddenOnce, hiding: true) == .detailOnly)
+        let shownOnce = AllSidebars.nextVisibility(.detailOnly, hiding: false)
+        #expect(AllSidebars.nextVisibility(shownOnce, hiding: false) == .all)
+    }
+
+    /// The end-to-end loop the user feels: everything up → press → everything
+    /// down → press → the column is back.
+    @Test func roundTripReturnsTheColumn() {
+        var visibility = NavigationSplitViewVisibility.all
+        var hiding = AllSidebars.anyShowing(projects: SidebarToggle.isVisible(visibility),
+                                            leftPanel: true, rightPanel: true)
+        #expect(hiding)
+        visibility = AllSidebars.nextVisibility(visibility, hiding: hiding)
+
+        // Web panels are closed now too, so the mirror reports them false.
+        hiding = AllSidebars.anyShowing(projects: SidebarToggle.isVisible(visibility),
+                                        leftPanel: false, rightPanel: false)
+        #expect(hiding == false)
+        visibility = AllSidebars.nextVisibility(visibility, hiding: hiding)
+        #expect(SidebarToggle.isVisible(visibility))
+    }
+}

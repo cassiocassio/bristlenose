@@ -154,7 +154,8 @@
     "loading": "Wczytywanie pulpitu…"
   },
   "toolbar": {
-    "matching": "{{count}} pasujących"
+    "matching": "{{count}} pasujących",
+    "focusMode": "Tryb skupienia"
   },
   "tags": {
     "noTags": "Brak tagów",

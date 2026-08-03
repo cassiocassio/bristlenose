@@ -49,8 +49,11 @@
       "hideTags": "Ocultar etiquetas",
       "showHeatmap": "Mostrar mapa de calor",
       "hideHeatmap": "Ocultar mapa de calor",
+      "hideAllSidebars": "Ocultar todas las barras laterales",
+      "showAllSidebars": "Mostrar todas las barras laterales",
       "allQuotes": "Todas las citas",
       "starredQuotesOnly": "Solo citas destacadas",
+      "focusMode": "Modo enfoque",
       "zoomIn": "Ampliar",
       "zoomOut": "Reducir",
       "actualSize": "Tamaño real"

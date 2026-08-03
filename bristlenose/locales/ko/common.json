@@ -109,7 +109,8 @@
     "loading": "대시보드 로드 중…"
   },
   "toolbar": {
-    "matching": "{{count}}개 일치"
+    "matching": "{{count}}개 일치",
+    "focusMode": "\uc9d1\uc911 \ubaa8\ub4dc"
   },
   "tags": {
     "noTags": "태그 없음",

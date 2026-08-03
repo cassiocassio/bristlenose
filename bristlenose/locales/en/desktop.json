@@ -49,8 +49,11 @@
       "hideTags": "Hide Tags",
       "showHeatmap": "Show Heatmap",
       "hideHeatmap": "Hide Heatmap",
+      "hideAllSidebars": "Hide All Sidebars",
+      "showAllSidebars": "Show All Sidebars",
       "allQuotes": "All Quotes",
       "starredQuotesOnly": "Starred Quotes Only",
+      "focusMode": "Focus Mode",
       "zoomIn": "Zoom In",
       "zoomOut": "Zoom Out",
       "actualSize": "Actual Size"

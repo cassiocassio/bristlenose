@@ -49,8 +49,11 @@
       "hideTags": "Masquer les tags",
       "showHeatmap": "Afficher la carte thermique",
       "hideHeatmap": "Masquer la carte thermique",
+      "hideAllSidebars": "Masquer toutes les barres lat\u00e9rales",
+      "showAllSidebars": "Afficher toutes les barres lat\u00e9rales",
       "allQuotes": "Tous les verbatim",
       "starredQuotesOnly": "Verbatim favoris uniquement",
+      "focusMode": "Mode concentration",
       "zoomIn": "Zoom avant",
       "zoomOut": "Zoom arrière",
       "actualSize": "Taille réelle"

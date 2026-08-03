@@ -128,7 +128,8 @@
     "loading": "Laster inn dashbord …"
   },
   "toolbar": {
-    "matching": "{{count}} treff"
+    "matching": "{{count}} treff",
+    "focusMode": "Fokusmodus"
   },
   "tags": {
     "noTags": "Ingen tagger",

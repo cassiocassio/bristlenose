@@ -49,8 +49,11 @@
       "hideTags": "태그 숨기기",
       "showHeatmap": "히트맵 보기",
       "hideHeatmap": "히트맵 숨기기",
+      "hideAllSidebars": "\ubaa8\ub4e0 \uc0ac\uc774\ub4dc\ubc14 \uac00\ub9ac\uae30",
+      "showAllSidebars": "\ubaa8\ub4e0 \uc0ac\uc774\ub4dc\ubc14 \ubcf4\uae30",
       "allQuotes": "모든 인용문",
       "starredQuotesOnly": "별표 인용문만",
+      "focusMode": "\uc9d1\uc911 \ubaa8\ub4dc",
       "zoomIn": "확대",
       "zoomOut": "축소",
       "actualSize": "실제 크기"

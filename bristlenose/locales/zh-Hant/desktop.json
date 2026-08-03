@@ -49,8 +49,11 @@
       "hideTags": "隱藏標籤",
       "showHeatmap": "顯示熱度圖",
       "hideHeatmap": "隱藏熱度圖",
+      "hideAllSidebars": "\u96b1\u85cf\u6240\u6709\u5074\u908a\u6b04",
+      "showAllSidebars": "\u986f\u793a\u6240\u6709\u5074\u908a\u6b04",
       "allQuotes": "所有引述",
       "starredQuotesOnly": "僅限標星引述",
+      "focusMode": "\u5c08\u6ce8\u6a21\u5f0f",
       "zoomIn": "放大",
       "zoomOut": "縮小",
       "actualSize": "實際大小"

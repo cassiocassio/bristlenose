@@ -133,7 +133,8 @@
     "loading": "Loading dashboard…"
   },
   "toolbar": {
-    "matching": "{{count}} matching"
+    "matching": "{{count}} matching",
+    "focusMode": "Focus Mode"
   },
   "tags": {
     "noTags": "No tags",

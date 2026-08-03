@@ -15,7 +15,9 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { SearchBox } from "../components/SearchBox";
 import { ViewSwitcher } from "../components/ViewSwitcher";
+import { ToolbarButton } from "../components/ToolbarButton";
 import { useQuotesStore, setSearchQuery, setViewMode } from "../contexts/QuotesContext";
+import { useFocusMode, toggleFocusMode } from "../contexts/FocusModeStore";
 import { filterQuotes } from "../utils/filter";
 import type { FilterState } from "../utils/filter";
 import { isEmbedded } from "../utils/embedded";
@@ -25,6 +27,7 @@ import { isEmbedded } from "../utils/embedded";
 export function Toolbar() {
   const { t } = useTranslation();
   const store = useQuotesStore();
+  const focusMode = useFocusMode();
 
   // ── Derived state ─────────────────────────────────────────────────
 
@@ -72,6 +75,38 @@ export function Toolbar() {
         labelOverride={viewLabel}
         data-testid="bn-toolbar-view-switcher"
       />
+      <ToolbarButton
+        label={t("toolbar.focusMode")}
+        icon={<MoonIcon />}
+        className={focusMode ? "toolbar-btn-toggle active" : "toolbar-btn-toggle"}
+        aria-pressed={focusMode}
+        onClick={toggleFocusMode}
+        data-testid="bn-toolbar-focus-mode"
+      />
     </div>
+  );
+}
+
+/**
+ * Moon — the same glyph Apple uses for the identically-named feature in Mail's
+ * View menu (`moon.circle`). Read as "quiet", not "dark mode": Focus never
+ * touches the ground colour, and the button sits with view controls rather than
+ * appearance ones.
+ */
+function MoonIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+    </svg>
   );
 }

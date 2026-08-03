@@ -1,0 +1,149 @@
+/* Template: focus-mode — distraction-free reading state for the report.
+   Spec: docs/design-focus-mode.md
+
+   Two hooks on <html>, each with one job:
+
+     .bn-focus-ready   Added once when the SPA mounts, never removed.
+                       Declares the transitions, so the fade is symmetric in
+                       AND out — a transition declared only under
+                       .bn-focus-mode would vanish the instant that class is
+                       removed, snapping the way back. Also confines the
+                       transition overrides to SPA surfaces: the static render
+                       never sets it and is untouched by this file.
+
+     .bn-focus-mode    Toggled. Declares the receded values only.
+
+   Two axes, per the design doc:
+
+     1. What stays lit    Quote text, speaker code, stars (starred or not),
+                          selection + keyboard focus. Chrome recedes.
+     2. What stays live   Anything the researcher acts THROUGH stays
+                          interactive and returns to full presence while
+                          engaged. Receding is a resting state, never a
+                          disabled one — `pointer-events: none` below applies
+                          only to resting decorative chrome, and lifts the
+                          moment the card is hovered or holds focus.
+
+   The ground is never touched. No `background` on html/body, no palette
+   token — recede-only in every appearance, so this composes with default and
+   edo, light and dark, with zero per-palette overrides. */
+
+/* ── Transitions (always live, so the exit is symmetric) ───────────────── */
+
+.bn-focus-ready blockquote.quote-card {
+    transition: background var(--bn-focus-dur) var(--bn-focus-ease),
+                border-left-color var(--bn-focus-dur) var(--bn-focus-ease);
+}
+
+.bn-focus-ready .quote-card .badges,
+.bn-focus-ready blockquote .timecode,
+.bn-focus-ready blockquote .context,
+.bn-focus-ready .bn-group-header {
+    transition: opacity var(--bn-focus-dur) var(--bn-focus-ease);
+}
+
+/* ── Card dissolve ─────────────────────────────────────────────────────── */
+
+/* The :not() guards are load-bearing, not defensive. `.bn-focused` and
+   `.bn-selected` express themselves through `background`
+   (atoms/interactive.css) — the same property this rule sets. Without the
+   guards, focus mode wins on source order and silently blinds selection: the
+   mode renders perfectly and only breaks when someone tries to multi-select.
+   Pinned by tests/test_focus_mode_css.py. */
+.bn-focus-mode blockquote.quote-card:not(.bn-selected):not(.bn-focused) {
+    background: transparent;
+}
+
+/* Starred keeps its border — the researcher's own mark, per axis 1. */
+.bn-focus-mode blockquote.quote-card:not(.bn-selected):not(.bn-focused):not(.starred) {
+    border-left-color: color-mix(in srgb, var(--bn-colour-border) 40%, transparent);
+}
+
+/* ── Chrome recedes ────────────────────────────────────────────────────── */
+
+.bn-focus-mode .quote-card .badges,
+.bn-focus-mode blockquote .timecode,
+.bn-focus-mode blockquote .context {
+    opacity: var(--bn-focus-ghost-opacity);
+}
+
+/* Resting decorative chrome drops out of hit-testing and tab order — you
+   can't click a chip you can't see. The hover/focus rules below lift this,
+   and the card itself stays hoverable throughout (pointer-events on a child
+   never blocks the parent), so the reveal fires normally. */
+.bn-focus-mode .quote-card .badges {
+    pointer-events: none;
+}
+
+/* Headings dim less — they're wayfinding, not noise. */
+.bn-focus-mode .bn-group-header {
+    opacity: var(--bn-focus-heading-opacity);
+}
+
+/* ── Axis 2: engaged chrome returns to full presence ───────────────────── */
+
+.bn-focus-mode .quote-card:hover .badges,
+.bn-focus-mode .quote-card:focus-within .badges,
+.bn-focus-mode .quote-card.bn-focused .badges,
+.bn-focus-mode .quote-card:hover .timecode,
+.bn-focus-mode .quote-card:focus-within .timecode,
+.bn-focus-mode .quote-card.bn-focused .timecode,
+.bn-focus-mode .quote-card:hover .context,
+.bn-focus-mode .quote-card:focus-within .context,
+.bn-focus-mode .quote-card.bn-focused .context {
+    opacity: 1;
+}
+
+.bn-focus-mode .quote-card:hover .badges,
+.bn-focus-mode .quote-card:focus-within .badges,
+.bn-focus-mode .quote-card.bn-focused .badges {
+    pointer-events: auto;
+}
+
+/* The group header carries an editable heading. Dimmed-while-you-type is
+   exactly the axis-2 violation this file exists to avoid — and it's the
+   quieter kind, because the text still commits, it just looks broken while
+   you work. */
+.bn-focus-mode .bn-group-header:hover,
+.bn-focus-mode .bn-group-header:focus-within {
+    opacity: 1;
+}
+
+/* ── Print — Focus is a reading state, not a property of the artefact ──── */
+
+/* A printout is a deliverable someone else reads. Faded tags and ghosted
+   timecodes on paper are a defect, not a mode — so print always gets the full
+   report, whatever the screen is doing. Same reasoning as print.css forcing
+   the light colour-scheme. */
+@media print {
+    .bn-focus-mode .quote-card .badges,
+    .bn-focus-mode blockquote .timecode,
+    .bn-focus-mode blockquote .context,
+    .bn-focus-mode .bn-group-header {
+        opacity: 1;
+    }
+
+    .bn-focus-mode .quote-card .badges {
+        pointer-events: auto;
+    }
+
+    .bn-focus-mode blockquote.quote-card:not(.bn-selected):not(.bn-focused) {
+        background: var(--bn-colour-quote-bg);
+    }
+
+    .bn-focus-mode blockquote.quote-card:not(.bn-selected):not(.bn-focused):not(.starred) {
+        border-left-color: var(--bn-colour-border);
+    }
+}
+
+/* ── Reduce Motion — snap, don't fade ──────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-focus-ready blockquote.quote-card,
+    .bn-focus-ready .quote-card .badges,
+    .bn-focus-ready blockquote .timecode,
+    .bn-focus-ready blockquote .context,
+    .bn-focus-ready .bn-group-header {
+        transition-duration: 0s;
+    }
+}

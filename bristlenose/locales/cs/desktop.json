@@ -562,6 +562,7 @@
     "recentActivity": "Agent se na tento projekt ned\u00e1vno dotazoval",
     "downloadClaudeDesktop": "Claude Desktop nen\u00ed nainstalov\u00e1n \u2014 st\u00e1hn\u011bte jej z claude.ai",
     "claudeDesktopHint": "P\u0159id\u00e1 Bristlenose do Claude Desktop jako roz\u0161\u00ed\u0159en\u00ed. Claude Desktop po\u017e\u00e1d\u00e1 o potvrzen\u00ed.",
+    "claudeDesktopPromptNote": "P\u0159i prvn\u00ed ot\u00e1zce se macOS jednou zept\u00e1, zda m\u016f\u017ee Claude p\u0159istupovat k dat\u016fm z jin\u00fdch aplikac\u00ed. Klepn\u011bte na \u201ePovolit\u201c \u2014 d\u00edky tomuto opr\u00e1vn\u011bn\u00ed roz\u0161\u00ed\u0159en\u00ed najde Bristlenose.",
     "genericHow": "Zadejte tyto dv\u011b hodnoty libovoln\u00e9mu agentovi kompatibiln\u00edmu s MCP:",
     "clients": {
       "generic": "Obecn\u00e9 MCP"

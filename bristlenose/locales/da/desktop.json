@@ -541,6 +541,7 @@
     "recentActivity": "En agent har for nylig spurgt til dette projekt",
     "downloadClaudeDesktop": "Claude Desktop er ikke installeret \u2014 hent det p\u00e5 claude.ai",
     "claudeDesktopHint": "Tilf\u00f8jer Bristlenose til Claude Desktop som en udvidelse. Claude Desktop beder om bekr\u00e6ftelse.",
+    "claudeDesktopPromptNote": "F\u00f8rste gang du stiller et sp\u00f8rgsm\u00e5l, sp\u00f8rger macOS \u00e9n gang, om Claude m\u00e5 f\u00e5 adgang til data fra andre apps. Klik p\u00e5 \u201cTillad\u201d \u2014 s\u00e5dan finder udvidelsen Bristlenose.",
     "genericHow": "Giv disse to v\u00e6rdier til enhver MCP-kompatibel agent:",
     "clients": {
       "generic": "Generisk MCP"

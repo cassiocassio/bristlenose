@@ -416,12 +416,30 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   (the surviving dialect strings kept their keys) — the first dotted
   segment is the namespace FILE. Bare `mcpAgents.*` resolves to nothing
   and renders raw keys (bit once, caught in review).
+- **The Claude Desktop tab pre-announces the one-time macOS prompt**
+  (`mcpAgents.claudeDesktopPromptNote`, under the install row, 3 Aug
+  2026). Two things about it are load-bearing rather than stylistic.
+  **(1) It sits BELOW the row** because the proxy reads the handshake
+  only inside tool calls — so `"Claude" would like to access data from
+  other apps` fires on the first *question*, not on install; a note
+  placed above the button would mis-set the very expectation it exists
+  to set. **(2) Every locale quotes macOS's OWN dialog wording and
+  Allow-button label**, lifted from `TCC.framework`'s
+  `Localizable.loctable` (`REQUEST_ACCESS_SERVICE_kTCCServiceSystem`
+  `PolicyAppData` + `REQUEST_ACCESS_ALLOW`), not translated
+  independently — recognition is the whole mechanism, and a
+  well-translated-but-different sentence would defeat it. **Reuse that
+  loctable trick for any future pre-announcement of a system prompt**;
+  `plutil -convert json -o - <loctable>` reads it, and it carries 42
+  locales.
 - **Known gaps, deliberate:** the handshake follows the *fronted* serve
   only (a parked warm sidecar's live `/mcp` is not advertised — v1 scope);
   `MCPTokenStore.revoke()` unwired (Turn Off Agent Access deletes the
   handshake, which is the operative revocation; the Keychain token's
-  deletion is a later affordance); no consent-version bump yet for the
-  agent recipient class (surface before next TestFlight).
+  deletion is a later affordance). _(The third entry here — "no
+  consent-version bump yet for the agent recipient class" — was stale and
+  is removed: it shipped 1 Aug 2026, `09b348b1` + `6df94d4f`, and
+  `AIConsentView.currentVersion` is 2.)_
 
 ## Settings window (Cmd+,)
 

@@ -541,6 +541,7 @@
     "recentActivity": "Un agente ha consultado este proyecto recientemente",
     "downloadClaudeDesktop": "Claude Desktop no est\u00e1 instalado; desc\u00e1rgalo en claude.ai",
     "claudeDesktopHint": "A\u00f1ade Bristlenose a Claude Desktop como extensi\u00f3n. Claude Desktop pedir\u00e1 confirmaci\u00f3n.",
+    "claudeDesktopPromptNote": "La primera vez que hagas una pregunta, macOS preguntar\u00e1 una sola vez si Claude puede acceder a datos de otras apps. Haz clic en \u00abPermitir\u00bb: as\u00ed es como la extensi\u00f3n encuentra Bristlenose.",
     "genericHow": "Proporciona estos dos valores a cualquier agente compatible con MCP:",
     "clients": {
       "generic": "MCP gen\u00e9rico"

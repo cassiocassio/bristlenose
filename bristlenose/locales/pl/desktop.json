@@ -563,6 +563,7 @@
     "recentActivity": "Agent niedawno pyta\u0142 o ten projekt",
     "downloadClaudeDesktop": "Claude Desktop nie jest zainstalowany \u2014 pobierz go z claude.ai",
     "claudeDesktopHint": "Dodaje Bristlenose do Claude Desktop jako rozszerzenie. Claude Desktop poprosi o potwierdzenie.",
+    "claudeDesktopPromptNote": "Przy pierwszym pytaniu macOS zapyta jeden raz, czy Claude mo\u017ce uzyska\u0107 dost\u0119p do danych z innych aplikacji. Kliknij \u201ePozw\u00f3l\u201d \u2014 dzi\u0119ki temu rozszerzenie znajdzie Bristlenose.",
     "genericHow": "Podaj te dwie warto\u015bci dowolnemu agentowi zgodnemu z MCP:",
     "clients": {
       "generic": "Og\u00f3lne MCP"

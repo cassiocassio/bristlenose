@@ -1841,9 +1841,22 @@ races its own pending dialog no matter how it backs off, and the
 (the tool list is static). Handshake reads happen ONLY inside tool
 calls, with a dedicated "click Allow" sentence for the denied state.
 §6.1's fallback (handshake out of the container) is NOT needed —
-prompt-once-then-silent is the shipped reality. Follow-up owed: the
+prompt-once-then-silent is the shipped reality. ~~Follow-up owed: the
 pane's Claude Desktop hint should pre-announce the one-time prompt —
-copy + 20 locales, batched with the next string pass.
+copy + 20 locales, batched with the next string pass.~~ **Done 3 Aug
+2026**: `mcpAgents.claudeDesktopPromptNote`, rendered under the install
+row in the slot the other three tabs give `addressNote`. It sits *below*
+the row deliberately — the proxy reads the handshake only inside tool
+calls, so the dialog fires on the first **question**, not on install, and
+the note has to say so or it mis-sets the expectation it exists to set.
+**Each locale quotes macOS's own dialog wording and button label**, taken
+from `TCC.framework`'s `Localizable.loctable`
+(`REQUEST_ACCESS_SERVICE_kTCCServiceSystemPolicyAppData` +
+`REQUEST_ACCESS_ALLOW`) rather than translated independently — so the
+sentence read in the pane matches the dialog seen a moment later, in the
+researcher's own language. That is the whole mechanism by which §6.1's
+"the concern inverts into a selling point" actually works: recognition.
+Worth reusing for any future pre-announcement of a system prompt.
 
 **Risk §6.1 dissolves**, and with it the §3.6 dilemma: the handshake stays in
 the container, so **no token is ever written into a project folder** and the

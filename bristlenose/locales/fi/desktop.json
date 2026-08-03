@@ -541,6 +541,7 @@
     "recentActivity": "Agentti kysyi \u00e4skett\u00e4in t\u00e4st\u00e4 projektista",
     "downloadClaudeDesktop": "Claude Desktopia ei ole asennettu \u2014 lataa se osoitteesta claude.ai",
     "claudeDesktopHint": "Lis\u00e4\u00e4 Bristlenosen Claude Desktopiin laajennuksena. Claude Desktop pyyt\u00e4\u00e4 vahvistuksen.",
+    "claudeDesktopPromptNote": "Kun esit\u00e4t ensimm\u00e4isen kysymyksen, macOS kysyy kerran, saako Claude k\u00e4ytt\u00e4\u00e4 muiden appien tietoja. Osoita \u201cSalli\u201d \u2014 n\u00e4in laajennus l\u00f6yt\u00e4\u00e4 Bristlenosen.",
     "genericHow": "Anna n\u00e4m\u00e4 kaksi arvoa mille tahansa MCP-yhteensopivalle agentille:",
     "clients": {
       "generic": "Yleinen MCP"

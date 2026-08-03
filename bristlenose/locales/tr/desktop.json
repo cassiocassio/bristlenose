@@ -541,6 +541,7 @@
     "recentActivity": "Bir ajan yak\u0131n zamanda bu projeyi sordu",
     "downloadClaudeDesktop": "Claude Desktop y\u00fckl\u00fc de\u011fil \u2014 claude.ai adresinden indirin",
     "claudeDesktopHint": "Bristlenose'u Claude Desktop'a uzant\u0131 olarak ekler. Claude Desktop onay ister.",
+    "claudeDesktopPromptNote": "\u0130lk soruyu sordu\u011funuzda macOS, Claude\u2019un di\u011fer uygulamalardaki verilere eri\u015fmesine bir kez izin isteyecek. \u201c\u0130zin Ver\u201de t\u0131klay\u0131n \u2014 uzant\u0131 Bristlenose\u2019u b\u00f6yle bulur.",
     "genericHow": "Bu iki de\u011feri MCP uyumlu herhangi bir ajana verin:",
     "clients": {
       "generic": "Genel MCP"

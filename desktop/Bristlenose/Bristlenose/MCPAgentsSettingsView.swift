@@ -279,6 +279,26 @@ struct MCPAgentsSettingsView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 installRow
+                // Pre-announce the one-time macOS prompt (§5c, §6.1). A
+                // prompt you were told to expect reads as a boundary
+                // working; an unannounced one reads as a fault — and this
+                // one fires at the exact moment we promised "done".
+                //
+                // It sits BELOW the row because that is when it happens:
+                // the proxy reads the handshake only inside tool calls, so
+                // the dialog appears on the first QUESTION, not on install.
+                // Same slot the other three tabs give `addressNote`.
+                //
+                // Info register, never a caution triangle — the HIG
+                // reserves warnings for negative consequences and nothing
+                // here has gone wrong. Each locale's string quotes macOS's
+                // OWN dialog wording and button label (lifted from
+                // TCC.framework's Localizable.loctable), so the sentence
+                // read here matches the dialog seen a moment later.
+                Text(i18n.t("desktop.mcpAgents.claudeDesktopPromptNote"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             } else if endpoint == nil {
                 // Nothing is serving, so there is no address and no token —
                 // but the SHAPE of the config is the useful thing to a

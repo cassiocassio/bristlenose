@@ -541,6 +541,7 @@
     "recentActivity": "En agent har nyligen fr\u00e5gat om det h\u00e4r projektet",
     "downloadClaudeDesktop": "Claude Desktop \u00e4r inte installerat \u2014 h\u00e4mta det p\u00e5 claude.ai",
     "claudeDesktopHint": "L\u00e4gger till Bristlenose i Claude Desktop som ett till\u00e4gg. Claude Desktop ber om bekr\u00e4ftelse.",
+    "claudeDesktopPromptNote": "F\u00f6rsta g\u00e5ngen du st\u00e4ller en fr\u00e5ga fr\u00e5gar macOS en g\u00e5ng om Claude f\u00e5r komma \u00e5t data fr\u00e5n andra appar. Klicka p\u00e5 \u201dTill\u00e5t\u201d \u2014 s\u00e5 hittar till\u00e4gget Bristlenose.",
     "genericHow": "Ge dessa tv\u00e5 v\u00e4rden till valfri MCP-kompatibel agent:",
     "clients": {
       "generic": "Generisk MCP"

@@ -45,7 +45,12 @@ export type BridgeMessage =
   | { type: "lens-subtitle"; tab: string; subtitle: string }
   | { type: "quotes-filter"; searchQuery: string; viewMode: string }
   | { type: "focus-mode"; active: boolean }
-  | { type: "panel-state"; leftOpen: boolean; rightOpen: boolean }
+  | {
+      type: "panel-state";
+      leftOpen: boolean;
+      rightOpen: boolean;
+      inspectorOpen: boolean;
+    }
   | { type: "store-miro-token"; token: string };
 
 // ---------------------------------------------------------------------------
@@ -168,24 +173,33 @@ export function postFocusMode(active: boolean): void {
 }
 
 /**
- * Mirror whether the two web sidebars (TOC/left, tags/right) are showing, so
- * the native View menu can pick the Hide↔Show verb for **Hide All Sidebars**.
+ * Push which of the report's own panels are open, so the native View menu can
+ * pick each row's verb honestly — "Hide Tags" while the tag sidebar is showing,
+ * "Show Tags" while it isn't. Without this mirror the panel rows read
+ * one-directional and are wrong exactly half the time.
  *
- * Native owns the projects column and can read it directly; it cannot see
- * inside the WKWebView, so without this it has to guess — which is why its
- * neighbours `Show Contents` / `Show Tags` are permanently "Show" and read
- * wrong whenever those panels are already open. This mirror is deliberately
- * scoped to the new item; truing the other two is a separate change.
+ * `leftOpen` covers whichever list the active lens puts in the left slot
+ * (Contents / Sessions / Codes / Signals) — they share one `tocMode`.
+ * `inspectorOpen` is the analysis heatmap, which lives in `InspectorStore`
+ * rather than `SidebarStore` but is the same kind of fact to the menu.
+ * Native equality-guards the assigns.
  *
- * One-way: the SPA owns the state, native renders the label and sends explicit
- * `hideAllSidebars` / `showAllSidebars` commands rather than a toggle, so there
- * is no direction for the two sides to disagree about. Posted from an effect
- * keyed on the state, so it also fires on mount — re-syncing the menu after a
- * project switch or the post-run reload remounts the web view.
- * No-ops outside the desktop WKWebView.
+ * The same mirror feeds **Hide All Sidebars**, which needs to know whether
+ * anything is showing before it picks its verb. Native owns the projects
+ * column and reads it directly; it cannot see inside the WKWebView, so
+ * without this it would have to guess. That item stays one-way — the SPA owns
+ * the state, native renders the label and sends explicit `hideAllSidebars` /
+ * `showAllSidebars` rather than a toggle, so there is no direction for the two
+ * sides to disagree about. Posted from an effect keyed on the state, so it
+ * also fires on mount — re-syncing the menu after a project switch or the
+ * post-run reload remounts the web view. No-ops outside the desktop WKWebView.
  */
-export function postPanelState(leftOpen: boolean, rightOpen: boolean): void {
-  postNativeMessage({ type: "panel-state", leftOpen, rightOpen });
+export function postPanelState(
+  leftOpen: boolean,
+  rightOpen: boolean,
+  inspectorOpen: boolean,
+): void {
+  postNativeMessage({ type: "panel-state", leftOpen, rightOpen, inspectorOpen });
 }
 
 /**

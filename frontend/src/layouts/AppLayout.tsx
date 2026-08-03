@@ -43,7 +43,6 @@ import {
   postFocusMode,
   postPanelState,
 } from "../shims/bridge";
-import { useSidebarStore } from "../contexts/SidebarStore";
 import { toggleFocusMode, useFocusMode } from "../contexts/FocusModeStore";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
 import { cancelAutoCode, cancelClipExtraction, getAutoCodeStatus, getClipExtractionStatus, revealClips } from "../utils/api";
@@ -53,7 +52,8 @@ import {
   extractVideoClips,
 } from "../utils/exportActions";
 import type { NormalisedJobStatus } from "../components/ActivityChipStack";
-import { toggleInspector } from "../contexts/InspectorStore";
+import { toggleInspector, useInspectorStore } from "../contexts/InspectorStore";
+import { useSidebarStore } from "../contexts/SidebarStore";
 import {
   setSearchQuery,
   setViewMode,
@@ -276,17 +276,6 @@ function AppShell() {
     postFocusMode(focusModeActive);
   }, [embedded, focusModeActive]);
 
-  // Mirror the two web sidebars to the native View menu so Hide All Sidebars
-  // can pick its verb. An overlay peek counts as open — it is showing, and the
-  // command closes it. Keyed on the booleans, not the store object, so a width
-  // drag or a tag-visibility change doesn't re-post. See postPanelState.
-  const { tocMode, tagsOpen } = useSidebarStore();
-  const tocOpen = tocMode !== "closed";
-  useEffect(() => {
-    if (!embedded) return;
-    postPanelState(tocOpen, tagsOpen);
-  }, [embedded, tocOpen, tagsOpen]);
-
   // Derived state for the native Quotes menu's adaptive labels. The Star
   // command targets the selection (or the focused quote); it *unstars* when
   // that target set is already all-starred — the same intent the click/`s`-key
@@ -304,6 +293,23 @@ function AppShell() {
     if (!embedded) return;
     postQuoteActionState(starIsUnstar, lastTagName);
   }, [embedded, starIsUnstar, lastTagName]);
+
+  // Mirror the report's own panels to native so the View menu's three panel
+  // rows can swap Hide↔Show. Swift owns no part of this state and can't derive
+  // it, so without the mirror those rows read one-directional ("Show Tags"
+  // while the tag sidebar is open). Keyed on the three booleans, not the store
+  // objects: a width drag, a tag-eye toggle, or a solo-tag entry mutates
+  // SidebarStore without changing what the menu says.
+  const { tocMode, tagsOpen } = useSidebarStore();
+  const { open: inspectorOpen } = useInspectorStore();
+  // "overlay" is the transient hover-peek, and it can't occur embedded (the
+  // rails that trigger it are hidden) — but it is open when it does, so treat
+  // any non-closed mode as open rather than testing for "push".
+  const leftPanelOpen = tocMode !== "closed";
+  useEffect(() => {
+    if (!embedded) return;
+    postPanelState(leftPanelOpen, tagsOpen, inspectorOpen);
+  }, [embedded, leftPanelOpen, tagsOpen, inspectorOpen]);
 
   useEffect(() => {
     const exportData = getExportData();

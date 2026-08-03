@@ -103,3 +103,35 @@ enum AllSidebars {
         hiding ? .detailOnly : .all
     }
 }
+
+/// The label decision behind the View menu's four panel rows — Projects, the
+/// lens's left list (Contents / Sessions / Codes / Signals), Tags, Heatmap —
+/// lifted out of `ViewMenuContent` for the reason `SidebarToggle` was: a
+/// SwiftUI view that decides something hands the decision to a plain helper.
+///
+/// All four rows are toggles, so each reads wrong whenever its panel is already
+/// open ("Show Tags" with the tag sidebar showing). Projects can answer that
+/// from its own window's `NavigationSplitViewVisibility`; the other three are
+/// web state and answer from `BridgeHandler`'s `panel-state` mirror. One helper
+/// so the four rows compose their key the same way and can't drift.
+enum PanelToggle {
+
+    /// Locale key for a panel row's label: `hide…` when the panel is both
+    /// reachable and open, `show…` otherwise.
+    ///
+    /// `isAvailable` is why this isn't a bare ternary. A dimmed row must read
+    /// "Show": on the Project lens there is no left panel to hide, and the
+    /// mirrored `isOpen` there is whatever the last lens that *had* one left
+    /// behind. Falling back to the reveal verb keeps a dimmed row from
+    /// advertising a hide that would do nothing — and matches how the row reads
+    /// the instant it becomes available again.
+    ///
+    /// - Parameter panel: The capitalised key suffix naming the panel
+    ///   (`"Projects"`, `"Contents"`, `"Sessions"`, `"Codes"`, `"Signals"`,
+    ///   `"Tags"`, `"Heatmap"`). Both verbs exist for every one of these in
+    ///   `menu.view` — adding a row means adding both.
+    static func labelKey(panel: String, isOpen: Bool, isAvailable: Bool) -> String {
+        let verb = (isAvailable && isOpen) ? "hide" : "show"
+        return "desktop.menu.view.\(verb)\(panel)"
+    }
+}

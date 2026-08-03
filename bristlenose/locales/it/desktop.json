@@ -45,6 +45,7 @@
       "showSignals": "Mostra i segnali",
       "hideSignals": "Nascondi i segnali",
       "showSessions": "Mostra le sessioni",
+      "hideSessions": "Nascondi le sessioni",
       "showTags": "Mostra i tag",
       "hideTags": "Nascondi i tag",
       "showHeatmap": "Mostra la mappa di calore",

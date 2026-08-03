@@ -117,14 +117,22 @@ final class BridgeHandler: ObservableObject {
     /// project boots in normal view). See docs/design-focus-mode.md.
     @Published var focusModeActive: Bool = false
 
-    /// Whether the web left panel (Contents / Sessions / Codes / Signals) is
-    /// showing. Mirrored from the SPA via `panel-state`. Native can't see inside
-    /// the WKWebView, so without this the View menu has to guess — this is what
-    /// lets Hide All Sidebars pick its verb honestly.
-    @Published var leftPanelOpen: Bool = false
+    /// Whether the report's left panel — whichever list the active lens puts
+    /// there (Contents / Sessions / Codes / Signals; they share one `tocMode`)
+    /// — is open. Mirrored from the SPA via `panel-state`, which is the only
+    /// writer: these panels are web state end to end, so Swift can't derive
+    /// them, and the View menu's Hide/Show verb is wrong half the time without
+    /// the mirror. See `PanelToggle` in `SidebarVisibilityFocus.swift`.
+    @Published var leftPanelOpen = false
 
-    /// Whether the web tag sidebar is showing. Mirrored via `panel-state`.
-    @Published var rightPanelOpen: Bool = false
+    /// Whether the Quotes lens's tag sidebar is open. Same channel, same reason.
+    @Published var rightPanelOpen = false
+
+    /// Whether the Analysis lens's heatmap inspector is open. Owned web-side by
+    /// `InspectorStore` rather than `SidebarStore`, but it rides `panel-state`
+    /// with the other two — one message, one arm, three facts, so the three
+    /// menu rows can't drift apart in how honest they are.
+    @Published var inspectorOpen = false
 
     /// The filesystem path of the currently selected project.
     /// Set by ContentView on project selection. Used by Project menu actions
@@ -469,13 +477,17 @@ final class BridgeHandler: ObservableObject {
             if on != focusModeActive { focusModeActive = on }
 
         case "panel-state":
-            // Sole writer. Equality-guarded like `quotes-filter` — the SPA
-            // re-posts on mount and on every sidebar change, and an unchanged
-            // post shouldn't churn @Published and re-render the whole menu.
+            // Sole writer of the three panel mirrors. Equality-guarded like
+            // `quotes-filter`: the SPA re-posts on every sidebar/inspector store
+            // change (widths, hidden tag groups, solo tag), most of which leave
+            // these booleans alone, and an unchanged @Published assign would
+            // rebuild the View menu's rows for nothing.
             let left = body["leftOpen"] as? Bool ?? false
             let right = body["rightOpen"] as? Bool ?? false
+            let inspector = body["inspectorOpen"] as? Bool ?? false
             if left != leftPanelOpen { leftPanelOpen = left }
             if right != rightPanelOpen { rightPanelOpen = right }
+            if inspector != inspectorOpen { inspectorOpen = inspector }
 
         case "project-action":
             if let action = body["action"] as? String {
@@ -525,8 +537,12 @@ final class BridgeHandler: ObservableObject {
         quotesSearchQuery = ""
         quotesViewMode = "all"
         focusModeActive = false
+        // Closed is the honest default for a project whose SPA hasn't mounted:
+        // the rows dim to "Show", and the incoming `panel-state` corrects them
+        // as soon as the new report restores its panels from localStorage.
         leftPanelOpen = false
         rightPanelOpen = false
+        inspectorOpen = false
         selectedProjectPath = ""
         selectedProjectRevealablePath = ""
         selectedFolderName = ""

@@ -45,6 +45,7 @@
       "showSignals": "シグナルを表示",
       "hideSignals": "シグナルを非表示",
       "showSessions": "\u30bb\u30c3\u30b7\u30e7\u30f3\u3092\u8868\u793a",
+      "hideSessions": "\u30bb\u30c3\u30b7\u30e7\u30f3\u3092\u975e\u8868\u793a",
       "showTags": "タグを表示",
       "hideTags": "タグを非表示",
       "showHeatmap": "ヒートマップを表示",

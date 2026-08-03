@@ -45,6 +45,7 @@
       "showSignals": "Afficher les signaux",
       "hideSignals": "Masquer les signaux",
       "showSessions": "Afficher les entretiens",
+      "hideSessions": "Masquer les entretiens",
       "showTags": "Afficher les tags",
       "hideTags": "Masquer les tags",
       "showHeatmap": "Afficher la carte thermique",

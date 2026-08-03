@@ -45,6 +45,7 @@
       "showSignals": "Vis signaler",
       "hideSignals": "Skjul signaler",
       "showSessions": "Vis \u00f8kter",
+      "hideSessions": "Skjul \u00f8kter",
       "showTags": "Vis tagger",
       "hideTags": "Skjul tagger",
       "showHeatmap": "Vis varmekart",

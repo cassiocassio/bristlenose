@@ -316,7 +316,10 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 pwd
 git branch --show-current
 test -f .claude/setup-incomplete && cat .claude/setup-incomplete
+.venv/bin/python -c 'import sys; print("venv", ".".join(map(str, sys.version_info[:2])))'; grep '^python ' .tool-versions
 ```
+
+**The venv's minor must match `.tool-versions`.** If it doesn't, the env has drifted off the pin — rebuild before doing real work (`rm -rf .venv && python3.12 -m venv .venv && .venv/bin/pip install -e '.[dev,serve]'`), don't work around it. Drift is silent: the suite still passes on a neighbouring minor, so nothing fails until a release build disagrees with the dev box. Found 4 Aug 2026 — a crash-recovery `uv venv` had quietly rebuilt `.venv` on 3.11 **and** dropped `presidio-analyzer`/`presidio-anonymizer` (core deps, stage 7 PII removal) from the install, with a green suite throughout because those tests mock or skip. **Don't reach for `uv` or `mise` to fix it** — that migration is Phases 1–4 of `docs/design-dev-environment.md` and is explicitly gated post-TestFlight; the house mechanism is `python3.12 -m venv` + `pip install -e`. A stray untracked `uv.lock` is the tell.
 
 If you're in a worktree (rare) and `.claude/setup-incomplete` exists, its env isn't prepped — don't start real work until `/new-branch` finishes or setup is done manually (frontend build, venv, smoke test). A `PreToolUse` hook in `.claude/settings.json` blocks `git checkout`/`git switch` to feature branches from the main repo — harmless under trunk (you stay on `main`) and it still guards against accidental in-place checkouts.
 

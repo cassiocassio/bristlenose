@@ -4,16 +4,17 @@ Clone the repo.
 
 ## Prerequisites
 
-- **Python 3.10+**
-- **Node.js** (LTS) + npm
+- **Python 3.12** — the version pinned in `.tool-versions`, what CI's primary cells and the macOS sidecar build use. The package itself supports 3.10+ (CI tests 3.10–3.13), but build a contributor venv on 3.12.
+- **Node.js 24** (also pinned in `.tool-versions`) + npm
 - **FFmpeg** (`brew install ffmpeg` / `apt install ffmpeg`)
 - **git**
 
 ## Quick start
 
 ```bash
-# 1. Python environment
-python3 -m venv .venv
+# 1. Python environment — name 3.12 explicitly; a bare `python3` picks up
+#    whatever your shell resolves to and silently forks the env off the pin
+python3.12 -m venv .venv
 .venv/bin/pip install -e ".[dev,serve]"
 
 # 2. Frontend
@@ -124,7 +125,7 @@ cd /Users/cassio/Code/bristlenose
 git branch my-feature main
 git worktree add "../bristlenose_branch my-feature" my-feature
 cd "../bristlenose_branch my-feature"
-python3 -m venv .venv
+python3.12 -m venv .venv
 .venv/bin/pip install -e ".[dev,serve]"
 ```
 
@@ -147,7 +148,7 @@ git worktree add "../bristlenose_branch my-feature" my-feature
 cd "../bristlenose_branch my-feature"
 
 # 3. Set up local env
-python3 -m venv .venv
+python3.12 -m venv .venv
 .venv/bin/pip install -e ".[dev,serve]"
 cd frontend && npm install && cd ..
 git push -u origin my-feature
@@ -177,6 +178,18 @@ find . -name __pycache__ -exec rm -rf {} +
 .venv/bin/python -m pip install -e ".[dev,serve]"
 ```
 Or delete `.venv` and recreate.
+
+**Venv drifted off the pinned Python:**
+```bash
+.venv/bin/python -V          # must match the `python` line in .tool-versions
+```
+A venv built by something other than `python3.12 -m venv` — a bare `python3`, or a `uv venv` picked up during crash recovery — can land on a neighbouring minor and stay there indefinitely. Nothing fails loudly: the suite passes on 3.10–3.13, so the only symptom is a dev box that disagrees with CI's primary cell and the macOS sidecar (both 3.12). Rebuild rather than patch:
+```bash
+rm -rf .venv
+python3.12 -m venv .venv
+.venv/bin/pip install -e ".[dev,serve]"
+```
+The same accident can drop packages: check `presidio-analyzer` is importable afterwards — it's a core dependency (stage 7, PII removal), but its tests mock or skip, so its absence doesn't redden the suite.
 
 **Debug logging:**
 ```bash

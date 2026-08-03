@@ -682,6 +682,73 @@ high-frequency UI vocabulary and the l10n industry treats `zh-TW`/`zh-HK` as sep
 - **CLI terminal chrome is English-only in alpha**, so the localised Chinese experience appears
   via `bristlenose serve` + the SPA (shipped inside both the CLI package and the `.app`).
 
+**Catalan (`ca`) — reviewer-led, deliberately out of chart order (planned 3 Aug 2026).** Catalan does
+not appear on the prioritisation chart above and would not score well on it: small absolute market,
+modest Mac-installed reach, and a UR community that is real (Barcelona design industry — Elisava,
+IED, BAU) but concentrated. It is being built anyway because **the chart measures the wrong scarce
+resource.** Every locale in this project is gated on a native reviewer, not on translation capacity —
+that is precisely why `nl`, `fi`, `pl`, `ru`, `uk` and `tr` all sit machine-seeded and unreviewed
+today. Catalan has committed native reviewers (Mallorca) before a single string is seeded, which
+inverts the usual bottleneck. Reviewer availability is a legitimate override of the two-axis model;
+the chart ranks *candidates we would have to go and find someone for*.
+
+- **One locale, `ca` — the Valencian fork question is closed, and not on preference.**
+  `ca-ES-valencia` is a registered BCP-47 *variant* subtag and exists in CLDR, but variant subtags
+  are not selectable as OS UI languages — Apple platforms top out at Language+Script+Region, the
+  ceiling `zh-Hant-HK` already tested. There is no shippable second artefact to debate, and Apple's
+  own metadata list says "Catalan", singular. **This is the opposite situation to `pt-PT`/`pt-BR`**
+  (two locales, must never cross-borrow) and to `zh-Hant`/`zh-Hant-HK` (base + thin override): here
+  the platform admits exactly one. Should Valencian ever be wanted, it is a *fork*, not an override
+  layer, and it needs a platform that can select it first.
+- **Balearic reviewers are correct for standard `ca`, not a complication.** Mallorquí differs
+  phonologically and in some lexis, but sits *under* the IEC written standard; Valencian is the
+  variety with a separate normative body (AVL), which is why it earned a subtag and Balearic did
+  not. Mallorcan reviewers read and write the standard natively. They are also unusually well placed
+  to catch **castellanismes** — Spanish calques are the dominant failure mode for Catalan MT, because
+  web-scraped Catalan training data carries heavy Spanish interference. Brief them to flag calques
+  explicitly; that is the highest-value thing they can do.
+- **Apple ships Catalan properly — both gates verified 3 Aug 2026.** macOS offers Català as one of
+  its out-of-the-box system UI languages, so the mandatory Apple-HIG cross-check (Step 2) is a real
+  lookup against Apple's own `ca` `.strings` (via applelocalization.com), not guesswork — a better
+  starting position than most locales here. App Store Connect accepts Catalan metadata, so the
+  `.app` can ship a genuine `ca.lproj` **and** a Catalan store listing. *Caveat:* Apple provides no
+  Catalan spellcheck on macOS, which touches inline quote/heading editing — cosmetic, but real.
+- **Plurals: no new work.** CLDR Catalan is `one` / `many` / `other`, but `many` is
+  `i % 1000000 = 0` — the compact-decimal/exact-millions category. It is unreachable at Bristlenose's
+  count magnitudes (quotes, sessions, tags), and `pluralCategory`'s `default` branch already returns
+  the correct one/other with `_other` fallback covering the rest. Same effective shape as `es`/`it`/
+  `nl` — **no Swift `pluralCategory` branch, no four-form seeding.**
+
+**Process inversion — spend the reviewer on the glossary, not the proofread.** The documented
+seven-step process MT-seeds all ~1,522 keys and puts native review last (Step 5). That ordering is
+what leaves locales stranded: the scarce human is spent proofreading 1,500 strings. Because the
+Catalan reviewers are available *first*, run it backwards:
+
+1. **Build the glossary before translating** — ~30 rows in `glossary.csv` (`es` has 23, `it` 30),
+   Apple-HIG terms sourced from Apple's actual Catalan `.strings`, plus the QDA/domain set.
+2. **Reviewer ratifies the term table** — this is the "core vocab" pass, ~30 minutes rather than an
+   afternoon. Live calls: **Quotes** (`Cites` vs a `Verbatim` loan — French's standout finding may
+   or may not carry to Catalan), **Codebook** (`Llibre de codis` vs a Catalan analogue of French
+   *grille de codage*), **Signals** (our own coinage → likely `Senyals`), **Tags** (loanword or
+   `Etiquetes`), and formality register.
+3. **Then MT-seed all 9 namespaces against the locked table** — which is what the existing Step-6
+   guidance already asks for ("build a glossary before translating"), now with a *human-ratified*
+   table instead of an assumed one.
+4. **Grep-verify domain terms + toolbar overflow**, then an optional second reviewer pass on full
+   strings.
+
+Net effect: the scarce human makes ~30 decisions that propagate to ~1,500 strings, instead of
+reviewing ~1,500 strings that were already fixed by an unratified guess. **If this works, it should
+become the default process for reviewer-gated locales** and the seven-step order above should be
+rewritten to match.
+
+**Mechanics.** Registration is **10 sites, not the 9 in CLAUDE.md** — `tests/test_pipeline_diagnostic_locale_keys.py`
+(`_ALL_LOCALES`; `_PLURAL_LOCALES` is only for non-default plural shapes, so `ca` joins the former
+only) is a tenth that commit `25d3217d` enrolled for `nl`. `scripts/check-locales.py` is the local
+gate. **Sequencing:** do not seed `ca` while `en/common.json`, `en/desktop.json` or `en/settings.json`
+carry uncommitted changes — the seed would be stale on arrival. Steps 1–2 are unaffected and can run
+against the current English at any time, which is convenient given they are the human-gated ones.
+
 ### Alternatives considered
 
 | Platform | Why not |

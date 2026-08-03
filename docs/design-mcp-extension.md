@@ -41,10 +41,29 @@ over a real study through the installed extension.
 | Directory submission | Not done — local install only | §7 Q4, as recommended |
 
 **Still owed** (TODO.md, before the next TestFlight): the `.mcpb` has no
-512×512 `icon.png`, so Claude Desktop shows a generic tile; and the pane's
-Claude Desktop hint should pre-announce the one-time macOS "access data from
-other apps" prompt (§5c). Both are copy/asset work batched with the next
-string pass.
+512×512 `icon.png`, so Claude Desktop shows a generic tile.
+~~and the pane's Claude Desktop hint should pre-announce the one-time macOS
+"access data from other apps" prompt (§5c)~~ — **that shipped 3 Aug 2026**
+(`7d815529`), quoting macOS's own dialog wording and Allow-button label per
+locale; see §5c.
+
+**And the icon may not be ours to fix — test before commissioning artwork.**
+The convention is settled (optional PNG, 512×512, transparent, no plate — the
+host draws the tile; Figma ships a full-colour brand mark at exactly that,
+Anthropic's own Filesystem extension an 80×80 monochrome glyph). But
+[mcpb#154](https://github.com/modelcontextprotocol/mcpb/issues/154) reports
+manifest icons **never rendering for locally-installed extensions** — open, no
+maintainer response — and the install-prefix correlation on the dev machine
+supports it: both icon-bearing extensions there are `ant.dir.*`
+(directory-installed) while ours is `local.mcpb.*`. Since §7 Q4 decided against
+directory submission, **local install is our only channel**, so an icon could
+be inert for every user we have. Decisive test is five minutes: drop any
+placeholder PNG in, rebuild, reinstall, see whether the tile changes. If it
+doesn't, this is not an artwork task — it is *blocked upstream*, and belongs on
+that list instead of recurring as a to-do. Recorded here rather than only in
+TODO.md because it bears directly on §7 Q4's reasoning: "ship locally, revisit
+later" was priced as costing only discoverability, and this is a second cost it
+did not account for.
 
 ## Changelog
 

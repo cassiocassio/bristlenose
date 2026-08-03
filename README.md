@@ -375,6 +375,18 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.24.0** — _3 Aug 2026_
+
+A reading mode for the report, and a pass over the Mac app's chrome.
+
+- **Focus Mode — read the quotes, not the furniture.** `z` on the Quotes lens (⌘⌥F, or **View ▸ Focus Mode**, on the Mac) recedes tag chips, badges, timecodes, context lines and the card box to a faint outline while quote text, speaker codes and stars stay lit. Nothing moves — colour and opacity only, never layout — and anything you hover, tab to or edit comes straight back. A mode, not a theme: it works in light, dark and Edo alike, and honours reduced motion.
+- **Hiding the sidebars remembers what you had open.** `\` (⌘⌥\ on the Mac) stashes the arrangement instead of toggling both, so "contents open, tags closed, hide, show" no longer hands back a sidebar you never had.
+- **The View menu reads each panel's real state** — the four toggle rows now swap between "Show …" and "Hide …" instead of always offering to show.
+- **The Mac app's appearance preference reaches every surface** — save and Locate panels, alerts, context menus, the icon popover, the video pop-out and the five auxiliary windows were all following System Settings instead.
+- **Homebrew 6.0 had quietly stopped upgrading Bristlenose.** Untrusted taps are dropped from a bare `brew upgrade` with a warning rather than an error, so installs went stale unnoticed. `bristlenose doctor` now catches it and prints the one-off `brew trust` fix.
+- **Connecting an agent is disclosed as a second recipient** — a different vendor, at the moment you ask — and the disclosure no longer contradicts itself about participant names.
+- **Also:** the Pipeline view knows all four local models and the memory each needs; Settings ▸ MCP Agents shows the configuration's shape before a project is running, and pre-announces the one-time macOS cross-app prompt; hand-typed tags now appear in the tag sidebar immediately; and wrapped journey chains sit flush.
+
 **0.23.0** — _1 Aug 2026_
 
 Ask your study questions from your own AI agent — and pick which provider runs the analysis.

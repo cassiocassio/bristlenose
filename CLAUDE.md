@@ -436,7 +436,9 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-**Internal TestFlight since 14 Jul 2026** (now the v0.23.x line) — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution. React migration complete (Steps 1–10); bundled-sidecar desktop is the primary distribution path; CLI ships on PyPI + Homebrew + Snap. Static render is a sealed byproduct, not a user-facing product.
+**Internal TestFlight since 14 Jul 2026** (now the v0.24.x line) — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution. React migration complete (Steps 1–10); bundled-sidecar desktop is the primary distribution path; CLI ships on PyPI + Homebrew + Snap. Static render is a sealed byproduct, not a user-facing product.
+
+**0.24.0 (3 Aug 2026)** shipped **Focus Mode** (`z` / ⌘⌥F on the Quotes lens — recede everything but the quotes, zero reflow by construction; `docs/design-focus-mode.md`, Phases 0/1/3, Phase 2 still owed), sidebar hide that stashes-and-restores the arrangement, View-menu rows that read each panel's real state, and one appearance seam themeing every panel and auxiliary window (`AppAppearance.swift`, gated by `check-appearance-seam.sh`). Also: consent v2 disclosing the agent's vendor as a second recipient, Homebrew 6.0 tap-trust handling in `doctor`, and the local-model catalogue reaching parity with the desktop picker (step 1 of 4).
 
 **0.23.0 (1 Aug 2026)** shipped the assistant surface end to end: the `/mcp` endpoint on both channels, a `.mcpb` extension for Claude Desktop (`desktop/mcpb/`, handshake-based — no pasted token), Settings ▸ MCP Agents, per-project **Turn On Agent Access** with the sidebar antenna, and a global Anonymise switch. Same release: `bristlenose use` (no vendor-default provider). Verified live — an agent answered questions over a real study through the installed extension.
 

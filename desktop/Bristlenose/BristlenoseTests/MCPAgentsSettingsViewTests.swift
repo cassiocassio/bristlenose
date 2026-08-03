@@ -53,6 +53,45 @@ struct MCPAgentsSettingsViewTests {
             .payload(endpoint: endpoint, token: token)
         #expect(payload == "\(endpoint)\nAuthorization: Bearer \(token)")
     }
+
+    // MARK: - The no-serve placeholder
+
+    @Test func placeholderCarriesBothStubsInEveryDialect() {
+        for client in MCPAgentsSettingsView.AgentClient.allCases {
+            guard let placeholder = client.placeholderPayload else { continue }
+            #expect(placeholder.contains(MCPAgentsSettingsView.AgentClient.placeholderEndpoint))
+            #expect(placeholder.contains(MCPAgentsSettingsView.AgentClient.placeholderToken))
+        }
+    }
+
+    @Test func claudeDesktopHasNoPlaceholderEither() {
+        // Its tab is the Install button in both states — serve or no serve.
+        #expect(MCPAgentsSettingsView.AgentClient.claudeDesktop.placeholderPayload == nil)
+    }
+
+    @Test func placeholderIsTheSameHeightAsTheLiveBlock() {
+        // The no-reflow guarantee, mechanically. Line breaks come from the
+        // dialect templates, not from the values, so a future dialect edit
+        // that changed only one of the two would fail here rather than
+        // silently making the pane jump when a serve comes up.
+        for client in MCPAgentsSettingsView.AgentClient.allCases {
+            guard let live = client.payload(endpoint: endpoint, token: token),
+                  let placeholder = client.placeholderPayload else { continue }
+            #expect(placeholder.split(separator: "\n", omittingEmptySubsequences: false).count
+                    == live.split(separator: "\n", omittingEmptySubsequences: false).count)
+        }
+    }
+
+    @Test func placeholderNeverLeaksARealValue() {
+        // Cheap belt-and-braces: the stubs are built through the same
+        // `payload(endpoint:token:)` as the live block, so a wiring slip
+        // that passed a live endpoint or token through would show up here.
+        for client in MCPAgentsSettingsView.AgentClient.allCases {
+            guard let placeholder = client.placeholderPayload else { continue }
+            #expect(placeholder.contains(endpoint) == false)
+            #expect(placeholder.contains(token) == false)
+        }
+    }
 }
 
 /// §3.6a's gating table, pinned: hide only on the two KNOWABLE conditions.

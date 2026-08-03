@@ -78,6 +78,21 @@ struct MCPAgentsSettingsView: View {
             }
         }
 
+        /// Stand-ins for the two live values, used when nothing is serving.
+        /// Deliberately NOT localised: the block they sit in is a shell
+        /// command / TOML, which isn't localised either.
+        static let placeholderEndpoint = "<address>"
+        static let placeholderToken = "<token>"
+
+        /// The dialect with its two live values stubbed out. Built through
+        /// `payload(endpoint:token:)` rather than written out again, so the
+        /// placeholder can never drift from the real thing — and so it has
+        /// the same line count, which is what keeps the pane from reflowing
+        /// between the two states.
+        var placeholderPayload: String? {
+            payload(endpoint: Self.placeholderEndpoint, token: Self.placeholderToken)
+        }
+
         @MainActor func how(_ i18n: I18n) -> String? {
             switch self {
             case .claudeDesktop: return nil
@@ -265,9 +280,31 @@ struct MCPAgentsSettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 installRow
             } else if endpoint == nil {
-                Text(i18n.t("desktop.connectAgent.notRunning"))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                // Nothing is serving, so there is no address and no token —
+                // but the SHAPE of the config is the useful thing to a
+                // researcher who opened Settings from Welcome to do setup.
+                // Same structure as the live branch (hint, box, footnote +
+                // button), stubbed and inert: nothing here can be copied
+                // wrong, and the pane doesn't change shape with project
+                // state (§3.7's own rule, which this slot used to break).
+                if let how = client.how(i18n) {
+                    Text(how)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                dialectBox(client.placeholderPayload ?? "", live: false)
+                HStack(alignment: .top) {
+                    // The footnote carries `notRunning` rather than the live
+                    // branch's `addressNote`: it says why everything is grey,
+                    // and a caveat about restarts is moot when nothing runs.
+                    Text(i18n.t("desktop.connectAgent.notRunning"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                    copyButton(live: false)
+                }
             } else if !serveManager.mcpMounted {
                 Text(i18n.t("desktop.connectAgent.unavailable"))
                     .font(.callout)
@@ -279,19 +316,8 @@ struct MCPAgentsSettingsView: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(payloadText)
-                    .font(.subheadline.monospaced())
+                dialectBox(payloadText, live: true)
                     .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color(nsColor: .textBackgroundColor))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
-                    )
                 HStack(alignment: .top) {
                     // info-circle / secondary, NOT a caution triangle: the
                     // HIG reserves warnings for negative consequences, and
@@ -301,17 +327,53 @@ struct MCPAgentsSettingsView: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer()
-                    Button(action: copy) {
-                        ZStack {
-                            Text(client.actionTitle(i18n)).opacity(copied ? 0 : 1)
-                            Text(i18n.t("desktop.connectAgent.copied")).opacity(copied ? 1 : 0)
-                        }
-                    }
+                    copyButton(live: true)
                 }
             }
             Spacer(minLength: 0)
         }
         .frame(height: 170, alignment: .topLeading)
+    }
+
+    /// One definition of the dialect box, so the live and placeholder states
+    /// are pixel-identical by construction rather than by eye. `live: false`
+    /// greys the text; the field's background and border are untouched, so the
+    /// footprint doesn't move. `disabledControlTextColor` is the system's own
+    /// answer for text in a disabled control, so it tracks appearance and
+    /// accessibility for free.
+    ///
+    /// Selectability is deliberately NOT set here. `TextSelectability`'s two
+    /// cases are distinct types, so a ternary can't unify them — and it needs
+    /// no ternary: `Text` is unselectable by default, which is what the
+    /// placeholder wants, so only the live call site opts in.
+    private func dialectBox(_ text: String, live: Bool) -> some View {
+        Text(text)
+            .font(.subheadline.monospaced())
+            .foregroundStyle(live ? Color.primary
+                                  : Color(nsColor: .disabledControlTextColor))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(nsColor: .textBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+            )
+    }
+
+    /// Shared so the disabled button is the same width as the live one — the
+    /// ZStack sizes to the wider of the two labels either way, so the footnote
+    /// row doesn't shift when a serve comes up.
+    private func copyButton(live: Bool) -> some View {
+        Button { if live { copy() } } label: {
+            ZStack {
+                Text(client.actionTitle(i18n)).opacity(copied ? 0 : 1)
+                Text(i18n.t("desktop.connectAgent.copied")).opacity(copied ? 1 : 0)
+            }
+        }
+        .disabled(!live)
     }
 
     private func copy() {

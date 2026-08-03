@@ -1,17 +1,70 @@
 ---
-status: draft
+status: shipped
+last-trued: 2026-08-02
+trued-against: HEAD@main on 2026-08-02
 ---
 
 # The Bristlenose extension — connecting Claude Desktop without a config file
 
 _Scoped 31 Jul 2026, the night the hand-paste path failed three times in a row.
-This doc covers the `.mcpb` route recorded as §6a route 3 in
-[`design-mcp-server.md`](design-mcp-server.md), promoted from "polish" to "the
-thing that makes Claude Desktop usable". The MCP server itself is unchanged —
-this is purely how a client gets connected to it._
+Built and shipped in **0.23.0, 1 Aug 2026**. This doc covers the `.mcpb` route
+recorded as §6a route 3 in [`design-mcp-server.md`](design-mcp-server.md),
+promoted from "polish" to "the thing that makes Claude Desktop usable". The MCP
+server itself is unchanged — this is purely how a client gets connected to it._
+
+> **Trued 2026-08-02** against the shipped feature (`5bd91448` mechanism,
+> `be325728` surface, `ca2675b7`/`91ef1315` the TCC correction, `76d9e92a` the
+> pane's final shape, `a1509333` install-row placement, `2ebcc671` the badge
+> rendering fix, `09b348b1`/`6df94d4f` consent v2). **Four decisions below did
+> not survive contact** and are marked SUPERSEDED inline — §3.3's Option B,
+> §3.6 in its entirety, the Settings agent-access list, and §7 Q3's
+> `bristlenose mcp-proxy`. The superseded reasoning is kept, not deleted: it is
+> how the constraints were found, and §3.3 in particular records the failure
+> mode that the shipped model exists to prevent.
+
+## Status
+
+**Shipped — 0.23.0, 1 Aug 2026.** Verified live: an agent answered questions
+over a real study through the installed extension.
+
+| Piece | State | Anchor |
+|---|---|---|
+| Handshake file (`mcp-handshake.json`, 0600, container) | Shipped | `desktop/Bristlenose/Bristlenose/MCPHandshake.swift` |
+| Node proxy inside the `.mcpb` | Shipped — **308 lines**, zero deps | `desktop/mcpb/server/index.js`, `manifest.json` |
+| Settings ▸ MCP Agents (4th pane, antenna) | Shipped | `desktop/Bristlenose/Bristlenose/MCPAgentsSettingsView.swift` |
+| `Turn On / Turn Off Agent Access` verb swap | Shipped | `AgentAccessPolicy.swift`, `ProjectSidebarOutline.swift:1736` |
+| Exposure badge (no badge / pale / solid) | Shipped | `ProjectSidebarOutline.swift:1327` `agentBadgeView` |
+| Scope model | **Not Option B.** Option A + explicit per-project allowlist | §3.3 SUPERSEDED |
+| Anonymise | **Global on desktop**, not per-project | §3.3 SUPERSEDED, `MCPAgentsSettingsView.swift:38` |
+| Settings agent-access project list | **Built, then cut** (1 Aug, user call) | `76d9e92a` |
+| `bristlenose mcp-proxy` CLI subcommand | **Not shipped** | §7 Q3 |
+| Directory submission | Not done — local install only | §7 Q4, as recommended |
+
+**Still owed** (TODO.md, before the next TestFlight): the `.mcpb` has no
+512×512 `icon.png`, so Claude Desktop shows a generic tile; and the pane's
+Claude Desktop hint should pre-announce the one-time macOS "access data from
+other apps" prompt (§5c). Both are copy/asset work batched with the next
+string pass.
 
 ## Changelog
 
+- _2 Aug 2026_ — **trued against shipped reality.** Frontmatter `draft` →
+  `shipped`; Status table added. Marked the four decisions that did not
+  survive: §3.3's Option B (shipped model is Option A restricted by a
+  per-project allowlist — the `user_config` directory pin was never built),
+  §3.6 (which reasoned entirely from Option B), the Settings agent-access list
+  (built in `be325728`, cut in `76d9e92a`), and §7 Q3's `bristlenose
+  mcp-proxy`. Recorded the Anonymise inversion (global on desktop, not
+  per-project), the consent-v2 recipient-class bump, the badge rendering bug,
+  and closed §5c's "did not answer", §5d, §7 and §8.
+- _1 Aug 2026_ — **shipped in 0.23.0.** Mechanism (`5bd91448`), surface
+  (`be325728`), then four corrections from live use: the TCC prompt does fire
+  and the watcher had to go (`ca2675b7`, `91ef1315`), the pane's per-project
+  matrix was over-built and became one global Anonymise switch (`76d9e92a`),
+  the install row moved under the Claude Desktop tab (`a1509333`), and the
+  antenna was invisible on a collapsed clean row (`2ebcc671`). Consent v2
+  followed (`09b348b1`, `6df94d4f`): an agent's vendor is a second recipient
+  class and the AI disclosure now says so.
 - _31 Jul 2026_ — initial scope, after the QA walk (Finding 86) and a read of
   Figma's shipped extension.
 
@@ -414,12 +467,31 @@ The fallback is most of what makes this *non-error-prone*: the tools are always
 listed, and the ordinary failure is a sentence telling the researcher what to
 do. (Not *all* — see §5a for the one state that is genuinely broken.)
 
-### 3.2a The subject-change announcement — SUPERSEDED by the Option B decision
+### 3.2a The subject-change announcement — SUPERSEDED, but not for the reason recorded
 
 _Kept because it is the argument that produced the decision, not because it
 ships. Under Option B the agent is pinned to one project, so there is no
 subject change to announce. If Option A is ever revisited, this section is why
 it needs more than labelling — and why labelling isn't enough._
+
+> **Correction, 2 Aug 2026.** Option B didn't ship (§3.3), so the reason above
+> is wrong even though the conclusion held. The shipped model *is* Option A —
+> the agent's subject does follow the fronted project — and the announcement
+> still didn't ship. What removed it was the **allowlist**: the only projects
+> that can become the subject are ones the researcher explicitly turned Agent
+> Access on for, so a switch between them is a switch between two studies they
+> already chose to expose. The scenario below (an innocuous sidebar click
+> exposing a study that was never meant to be exposed) is prevented at the
+> source rather than announced after the fact.
+>
+> **What that leaves unmitigated, honestly:** switching between two *shared*
+> projects mid-conversation is still silent. The residual harm is a confident
+> answer about the wrong study, in a scrollback that otherwise reads as one
+> study. The mitigation shipped is the weaker, passive one this section already
+> judged insufficient — every tool payload carries the project, and
+> `get_project_overview` leads with it. If a cohort tester hits this, the ~10
+> lines of proxy work described below is the fix, and it needs no design
+> reopening.
 
 Under Option A (§3.3) the agent's subject would follow Bristlenose. The failure that
 matters is not technical:
@@ -470,6 +542,33 @@ retries — decide from the file's presence and liveness, and let the first real
 tool call discover a dead server.
 
 ### 3.3 Scope model — the decision worth taking deliberately
+
+> **SUPERSEDED — the shipped model is neither A nor B as written here.**
+> Option B (pin one project via `user_config` + Claude Desktop's directory
+> picker) was decided on 31 Jul and **never built**. What shipped is **Option A
+> restricted by an explicit per-project allowlist**: `Turn On Agent Access` per
+> project (§3.6a), and Bristlenose writes the handshake only for a project that
+> is *both* turned on *and* currently serving. There is no `user_config` in the
+> manifest at all.
+>
+> **Why the allowlist beat the pin.** It answers the objection that killed A —
+> the Ollama-only study exposed by a sidebar click — *by construction*: never
+> turned on, no handshake, invisible. And it keeps A's zero-friction property
+> for projects the researcher did choose to expose. Exposure is still an
+> explicit act, which is the principle the paragraphs below were reaching for;
+> the pin was one mechanism for it, and not the one that survived.
+>
+> **The Anonymise paragraph below is doubly stale.** It reasons about a
+> per-project switch. On the desktop the switch is now **global** — one
+> `@AppStorage("mcpAnonymise")`, off by default, at the top of the pane, riding
+> `BRISTLENOSE_MCP_ANONYMISE` into the serve (`76d9e92a`). When that env var is
+> present `grounding._mcp_anonymise_active` ignores the per-project DB flag
+> entirely; the CLI (env absent) keeps DB semantics. So the hole this paragraph
+> identified — grant global, control per-project — was closed by moving the
+> *control* rather than the grant.
+>
+> Kept below because the failure mode it names is the reason the shipped model
+> has an allowlist at all.
 
 Today's model is **per-project**: a token per project, a config entry naming one
 project. With an extension there is a second option, and it is simpler.
@@ -578,8 +677,16 @@ Two fixes, both cheap:
   rather than as a grant.
 - **Consider moving the install act out of the per-project sheet** — installing
   is a once-ever, machine-wide setup act, not a per-project one. See §7 Q6.
+  **Done, and then some: the sheet itself moved out** (§3.7).
 
 ### 3.4 What the researcher does
+
+> **As shipped, step 1 is:** **Bristlenose ▸ Connect an Agent…** (or ⌘, →
+> **MCP Agents**) → the Claude Desktop tab. There is no per-project sheet. Step
+> 0 is the one this list predates: **turn Agent Access on** for the project,
+> from its right-click menu. Steps 2 and 3 are accurate as written, with one
+> addition — the `.mcpb` is copied into BN's own container first and opened
+> from *there*, never from the app bundle.
 
 1. In Bristlenose: **Connect Agent…** → Claude Desktop.
 2. Click **Install Extension…** (ellipsis: the action completes in *another*
@@ -656,6 +763,16 @@ its own form — so many researchers never edit the file at all. There is no
 plus the TOML is the ceiling; one-click install is a Claude Desktop-only
 affordance.
 
+> **MOOT — §7 Q3 did not ship.** The `bristlenose mcp-proxy` subcommand does
+> not exist, so the Claude Code and Codex tabs kept their URL + bearer payload
+> and the PATH wrinkle below was never hit. The four tabs shipped as: Claude
+> Desktop = the install row; Claude Code = `claude mcp add --transport http …
+> --header "Authorization: Bearer …"`; ChatGPT & Codex =
+> `[mcp_servers.bristlenose]` with `http_headers`; Generic MCP = the two raw
+> values (`MCPAgentsSettingsView.swift:60-76`). Kept because this is the
+> decision that has to be taken *first* whenever Q3 is picked up, and the
+> Proxyman precedent is the useful half.
+
 **The wrinkle: `bristlenose` is not on PATH for a desktop-only researcher.**
 The CLI binary comes from pip/brew/snap; the desktop app carries its sidecar
 inside the bundle at
@@ -686,7 +803,16 @@ endpoint, and "works with any MCP-compatible agent" stays true of the server.
 
 **But the plan as drafted starves that path.** With Claude Desktop becoming an
 Install button and the other two tabs moving to `bristlenose mcp-proxy`, no tab
-shows the raw URL and token any more. An earlier draft of this doc said the
+shows the raw URL and token any more.
+
+> **The starvation never happened** — Q3 didn't ship, so Claude Code and Codex
+> kept showing the live values. The fourth tab was built anyway, and correctly:
+> the reasoning below stands on its own (a whole class of client has no other
+> home, and the footnote was doing a missing tab's job), and it becomes
+> load-bearing the moment Q3 *is* picked up. Worth noting the tab was decided
+> from a hypothetical that then didn't occur, and still earned its place.
+
+An earlier draft of this doc said the
 manual page was the home for them; that is wrong. The manual can document the
 *shape*, but the researcher needs the *live* values — a port that changes every
 launch and a per-project token — and a static page cannot carry those.
@@ -862,6 +988,14 @@ not exist — the extension and `mcp-proxy` both re-resolve. The caveat is the
 price of the generic path, and the right long-term measure of success is that
 most researchers never open tab four.
 
+> **Not as shipped, and this is the sharpest consequence of Q3 not landing.**
+> The rotating-address caveat is *not* confined to tab four: with no
+> `mcp-proxy`, Claude Code and Codex re-copy after every restart too, and
+> `connectAgent.addressNote` still says so on both tabs. Only the extension
+> re-resolves. So three of the four tabs carry the caveat, not one — which
+> makes Q3 worth more than "a sleeper win": it is what would make this
+> paragraph true.
+
 ### 3.7 Where does this live? — the entry point, reopened by Option B
 
 Option B changed what the sheet can actually *do*, so the per-project
@@ -920,10 +1054,34 @@ Only J1 is machine-wide. That is the whole of the mismatch.
    right answer if we want zero structural change before the TCC spike settles.
 
 **DECIDED (31 Jul, after the options above): a global home — Settings ▸ MCP
-Agents**, with `Bristlenose ▸ Connect MCP agent…` as a route to it and a
+Agents**, with `Bristlenose ▸ Connect an Agent…` as a route to it and a
 Welcome-screen entry for discovery. This supersedes the "split by lifetime"
 recommendation below; the reasoning that produced it is kept because it is how
 the constraint was found.
+
+> **SHIPPED as decided** (`be325728`), with the menu string settled at
+> **`Connect an Agent…`** rather than "Connect MCP agent…" — the plain word
+> where discovery happens, the precise word (MCP Agents) on the pane where the
+> work happens. Discovery landed as a Welcome tip. Two pane details worth
+> pinning because they were found from the pixels, not the plan: the install
+> row sits **inside the Claude Desktop tab's payload slot**, not above the
+> picker (`a1509333` — above the picker it showed a `.mcpb`-only action while
+> three tabs it does nothing for were selected), and the pane is **660pt wide**
+> to match Appearance / LLM Provider / Transcription exactly, because the
+> Settings package animates height only and 560 was a visible horizontal jump.
+> `Install Extension…` is the pane's single `borderedProminent`.
+>
+> **The payload slot honours "does not change shape" too, since 2 Aug 2026.**
+> It originally didn't: with no serve the three dialect tabs collapsed to the
+> bare *"Start the project before connecting an agent."* sentence, so the pane
+> *did* show an empty state to someone who opened Settings from Welcome to do
+> setup — exactly what the paragraph above forbids. They now render the dialect
+> with `<address>` / `<token>` stubs, greyed and unselectable, with Copy present
+> but disabled and `notRunning` as the footnote. Built by calling the same
+> `AgentClient.payload(endpoint:token:)` with stub values, so the placeholder
+> cannot drift from the live dialect and has the same line count — pinned by
+> `placeholderIsTheSameHeightAsTheLiveBlock`. The values are live-only and the
+> shape is not, which is the distinction the slot was missing.
 
 **First, a technical correction that strengthens Option B rather than
 undermining it.** Per-project connection *is* possible: each serve process
@@ -965,7 +1123,25 @@ showing an empty state or telling them to go and select something first. So:
   was a hangover from the per-project sheet. Under a global home it answered a
   question nobody asked.
 
-**Three consequences to settle with it:**
+**Three consequences to settle with it — all settled, two differently:**
+
+> 1. **The sheet retired outright.** No selector, no shortcut-that-opens-
+>    Settings-pre-selected. The pane produces the per-project payloads from
+>    *whichever project is serving*, stated in the header
+>    (*"Agents read whichever project is selected in Bristlenose"*) with the
+>    Now-showing sub-line as the concrete instance — so the sidebar remains the
+>    only place a project is chosen. The right-click item's job became
+>    enablement (`Turn On / Turn Off Agent Access`), not connection.
+> 2. **Anonymise went neither way.** Both readings below assume it stays
+>    per-project; on the desktop it became **one global switch** (`76d9e92a`),
+>    at the top of the pane, off by default, using the same strings as Export.
+>    The third answer nobody wrote down: it is a *posture toward agents*, not a
+>    property of a project — so it belongs with the agent settings and applies
+>    to all of them. The CLI keeps per-project DB semantics, so the two
+>    channels genuinely differ here; that is deliberate, and pinned by
+>    `TestAnonymise` both ways plus an env-absent fallback.
+> 3. **The Welcome-screen entry shipped**, as a tip. This one landed as
+>    written.
 
 1. **What happens to the per-project sheet?** Its Claude Code / Codex / Generic
    MCP payloads are genuinely per-project, so Settings needs a project
@@ -1098,6 +1274,14 @@ dialect mis-copies, it does not break), the `.mcpb` is a client-side artefact
 that reads our client-agnostic handshake, and `bristlenose mcp-proxy` is
 invocable by anything. The Generic MCP tab is the proof — two primitives,
 no assumptions.
+
+> **Re-checked against what actually shipped: the rule held.** Strike
+> `mcp-proxy` (never built). The rest stands, and one shipped detail is worth
+> reading as evidence rather than accident: the Claude-Desktop-absent case is
+> answered with LaunchServices asking *"is anything registered to open a
+> `.mcpb`?"* (`MCPAgentsSettingsView.swift:367-373`) — a question about **the
+> file type**, not about whether Claude Desktop is installed. That is the rule
+> applied at exactly the point where breaking it would have been easiest.
 
 **The general rule this is the third instance of: the boundary is one-way.** We
 could not read their config to validate it (§1), we cannot tell whether the
@@ -1238,6 +1422,31 @@ machinery does not cover it:
 
 ### 3.6 What Option B changes elsewhere
 
+> **SUPERSEDED in full — Option B never shipped (§3.3).** Every "resolved by
+> the decision" below was resolved by the pin, so none of them are resolved
+> that way in the shipped product. What actually happened to each:
+>
+> - **The sheet header** — moot: the per-project sheet retired entirely. The
+>   pane's header states the rule instead (*"Agents read whichever project is
+>   selected in Bristlenose"*).
+> - **The Anonymise hole** — closed the other way round, by making the switch
+>   global (§3.3 banner), not by pinning the project.
+> - **The subject-change announcement (§3.2a)** — still unnecessary, but for
+>   the allowlist's reason: the only projects that can change under an agent
+>   are ones the researcher explicitly turned on.
+> - **The parked-sidecar bug** — *not* softened by a pin. It is handled by the
+>   handshake naming only the fronted, turned-on project.
+> - **`user_config`** — never used. Which is the better outcome: §6.3's
+>   reinstall-loses-nothing property depends on it, and §6.7's `$`-corruption
+>   bug cannot bite a manifest that has no user config at all.
+> - **The badge** — did grow, and shipped that way (§5a-bis).
+> - **"Where does the handshake live now?"** — dissolved. It stays in the
+>   container. The Dropbox-sync risk this section worried about never arose,
+>   and §5c's final TCC measurement (grant persists, prompt once) removed the
+>   reason to move it.
+>
+> Kept as the record of how the constraint was mapped.
+
 Five open items resolve, one grows, one new question appears.
 
 **Resolved by the decision:**
@@ -1288,21 +1497,57 @@ of bug #244 displaying it in plaintext in their settings pane).
 
 ## 5. What this does *not* change
 
-- The MCP server, its four tools, the scoped token, and the Anonymise switch —
-  all unchanged. This is a transport/onboarding change only.
-- Claude Code and Codex paths.
-- The sidebar antenna badge (it reads `/api/health`; the proxy's pre-flight
-  probe uses the same auth-exempt route, which records no activity — a probe
-  that called a real tool would light the antenna with no researcher present).
+- The MCP server, its four tools, and the scoped token — all unchanged. This is
+  a transport/onboarding change only. ~~and the Anonymise switch~~ —
+  **held only for the CLI.** On the desktop the switch became global
+  (`76d9e92a`); see the §3.3 banner.
+- Claude Code and Codex paths. **Held** — and only because §7 Q3
+  (`bristlenose mcp-proxy`) did not ship. Both tabs still carry a URL and a
+  bearer token, and `connectAgent.addressNote` still tells the researcher to
+  re-copy after a restart. The extension retired that caveat for Claude Desktop
+  alone.
+- ~~The sidebar antenna badge (it reads `/api/health`…)~~ — **this one moved,
+  by design.** §5a-bis reopened it deliberately: the badge now reads the
+  host-side `agentAccess` flag plus the serving path, not `mcp.active`
+  (`ProjectSidebarOutline.swift:1327`). The pre-flight-probe reasoning below is
+  therefore obsolete as a *constraint*, though the probe still uses the
+  auth-exempt route.
 - **Egress.** The handshake is a local discovery file; the recipient set is
   unchanged, and SECURITY.md item 7 already names the agent's model vendor.
   Nothing new leaves the machine — worth saying explicitly, because it is the
   cheapest reassurance in the document.
+  **True mechanically, and it turned out to be the wrong frame.** Consent v2
+  (`09b348b1`, 1 Aug) bumped `AIConsentView.currentVersion` 1 → 2 on the
+  argument that an agent's vendor is a **second recipient class** — a different
+  company, under its own terms, at a different moment (when the researcher
+  asks, not when the analysis runs). The five-step hand-paste had been doing
+  that disclosure implicitly, by friction; a one-button install removed the
+  friction and left nothing saying it. A follow-up (`6df94d4f`) then had to
+  correct the sheet, which promised names "always stay on your device" while
+  Anonymise defaults to **off**. Lesson worth keeping: *"nothing new leaves the
+  machine"* is a statement about bytes, and the consent question is about
+  **recipients**. Removing friction can create a disclosure obligation even
+  when it creates no new egress path.
 
 ## 5a. Checked against the objective
 
 The objective is *friction-free, non-error-prone, just works*. Taken one at a
 time, honestly, including where it doesn't hold.
+
+> **Re-checked after shipping, 2 Aug 2026.** All three claims held, and the
+> "just works" bet paid — Claude Desktop's built-in Node ran the proxy on a
+> machine that needed nothing installed. Two amendments:
+>
+> - **The relaunch caveat resolved well** (§8.2) — it is not a relaunch that
+>   costs the researcher anything.
+> - **A third genuinely-rough state joined the two named below: the one-time
+>   macOS prompt.** *"Claude would like to access data from other apps"* fires
+>   on the first container read (§5c). It is a real boundary being enforced
+>   visibly, which §6.1 argued inverts into a selling point — *if* it is
+>   pre-announced. It currently is not, so a researcher meets an unexplained
+>   third-party permission dialog at the exact moment we promised "done".
+>   That makes the pane's Claude Desktop hint the highest-value copy still
+>   owed, not a nicety.
 
 **Friction-free.** Two clicks (Install, confirm) against seven steps today
 (copy · find file · edit · fix commas · save · quit · relaunch). Nothing to
@@ -1361,13 +1606,35 @@ reader knows it was considered and why it was dropped.
 
 ## 5a-bis. The badge means exposure, not activity
 
-**Decided 31 Jul.** The antenna is **permanent while the project is exposed** —
-it says *any connected agent can read this project's quotes if the researcher
-asks it to*. That is a capability, and capabilities are persistent state.
+**Decided 31 Jul. Shipped 31 Jul (`be325728`), fixed 1 Aug (`2ebcc671`).**
+The antenna is **permanent while the project is exposed** — it says *any
+connected agent can read this project's quotes if the researcher asks it to*.
+That is a capability, and capabilities are persistent state.
 
-This supersedes what is built. The shipped badge is driven by `mcp.active` on
-`/api/health` — a 120-second *activity* window meaning "an agent called a tool
-recently". Under the share model the badge's input becomes
+> **As built, plus the bug that made it invisible.** The three states shipped
+> to spec — no badge / pale / solid — driven by the host-side `agentAccess`
+> flag and the serving path (`ProjectSidebarOutline.swift:1327`
+> `agentBadgeView`). But it was invisible in exactly the case it exists for: a
+> clean idle row takes Schema E's single-line collapse (`iconCell`), and
+> `iconCell` had **no right slot at all**. The ring and the iCloud glyph never
+> noticed, because both of those states always carry subtitle text — `.agent`
+> is the first slot user that has to render on an otherwise-silent row. So the
+> ordinary case (shared, analysed, not currently running) showed nothing. Both
+> layouts now build the glyph from one `agentBadgeView` so solid and pale
+> cannot drift apart, and on the collapsed row the antenna takes the trailing
+> edge with the session count moving inboard — status owns the right edge in
+> both layouts, so the two-line → one-line collapse doesn't move it.
+>
+> **The lesson generalises past this badge:** a new sidebar affordance must be
+> checked against the *collapsed* row, not just the populated one. Schema E
+> means the quietest row is the common row.
+>
+> **And the Settings half of the pairing below was cut.** See the note at the
+> end of this section.
+
+This superseded what was built at the time. That badge was driven by
+`mcp.active` on `/api/health` — a 120-second *activity* window meaning "an
+agent called a tool recently". Under the share model the badge's input becomes
 **shared && handshake live**, which is exposure. Activity is the weaker fact:
 the researcher knows they just asked a question; what they cannot otherwise see
 is that a project is reachable at all.
@@ -1412,6 +1679,27 @@ and "exposed with codes only" is a materially different governance fact, but it
 is a second axis, and two axes on one glyph is unreadable. It belongs in the
 tooltip and the Settings list.
 
+> **CUT 1 Aug 2026: the Settings agent-access list.** It was built in
+> `be325728` — every project as a row with a live checkbox, Anonymise on the
+> open project's row — and removed in `76d9e92a` on the user's call as the
+> over-build. **This section's own argument is what removes it:** the sidebar
+> *is* the audit surface. A second list rendering the same fact in Settings is
+> a duplicate, not a pairing, and it made the pane a per-project matrix when
+> the pane's job is setup.
+>
+> So the shipped division is **one concept, one home**: the context menu is the
+> *act* (§3.6a), the antenna is the *audit* (this section), and Settings ▸ MCP
+> Agents is *setup only* — header, Now-showing, one global Anonymise switch,
+> install row, four client tabs.
+>
+> Two consequences to hold on to. **The pale tier now carries the whole
+> "what have I shared?" question**, because nothing else answers it — which
+> raises rather than lowers its value, and makes `2ebcc671`'s invisible-badge
+> bug the more serious for having shipped. And **Anonymise is no longer a
+> second axis anywhere per-project**: it is one global switch, so the tooltip
+> is the only place the distinction can live. Reinstating a per-project
+> Anonymise would reopen this, and should reopen the badge question with it.
+
 **Known hole:** during a pipeline run the activity ring takes this slot
 (`RightSlot` precedence: ring > copy > agent > cloud), so an exposed project
 shows no antenna. Exposure remains true, just invisible. Probably acceptable —
@@ -1454,7 +1742,20 @@ decision, and three others that must not be undone:
 | Next day, new Claude session | Handshake rewritten with the new port; the token is durable (Keychain, per project) so it is unchanged |
 | Same hour, Claude still open, Bristlenose restarted | **The proxy re-reads the handshake per tool call.** A proxy that resolved once at startup is dead here — this is the scenario that makes §3.2's requirement non-negotiable |
 | Claude opened *before* Bristlenose | **No sticky fallback** (§3.2) — one server deciding per call, self-healing; plus `notifications/tools/list_changed` when the server appears |
-| Switched to another shared project | Handshake rewritten; the next call picks it up and §3.2a marks it in the transcript |
+| Switched to another shared project | Handshake rewritten; the next call picks it up ~~and §3.2a marks it in the transcript~~ — **the marking did not ship**; see the §3.2a banner |
+
+> **As built.** All four rows hold. The three states below shipped as three of
+> the proxy's **six** messages (`desktop/mcpb/server/index.js` `MSG`) — §5c
+> added `noAgentSupport` (404) and `authFailed` (401), and the TCC correction
+> added `permission`. "Three states" here means the *cold-start* discrimination
+> specifically, which is still exactly three; it is not the message count.
+>
+> One clause below became load-bearing in a way it wasn't written to be:
+> *"plus `notifications/tools/list_changed` when the server appears"*. That
+> notification was powered by the 5-second watcher, which the TCC finding
+> deleted. It now rides the tool-call reads instead — free, because the tool
+> list is static and a background refresh was never worth a timer on a
+> consent-gated path (§5c).
 
 **The constraint itself is accepted, and that is a scoping decision.**
 "Bristlenose must be open, with the project open, to make queries" is
@@ -1580,13 +1881,31 @@ validation (§6.6), the missing CPU-arch field, the ABI trap, the size ceiling,
 **and most of §4a's supply-chain obligations** — there is no npm tree to
 audit, SBOM or Dependabot.
 
-### What the spike did not answer
+### What the spike did not answer — all three closed 1 Aug 2026
 
-- **Installing into Claude Desktop.** Needs a click, and the relaunch would end
-  the session that built the bundle. `Bristlenose-spike.mcpb` is ready.
-- **Whether install requires a relaunch** (§6.8) — same reason.
-- **`instance_id` matching** — the proxy implements the check, but
-  `/api/health` does not emit one yet. Inert until it does.
+- ~~**Installing into Claude Desktop.**~~ **Done, live.** `NSWorkspace.open` on
+  a copy of the bundle placed in BN's own container reaches the install flow
+  (never a bundle path — see §4). The mcpb #284 silent no-op did not bite; that
+  issue is drag-to-Settings, and this gesture is the double-click path.
+  Absent-handler case handled: no `.mcpb` handler → a claude.ai download link.
+- ~~**Whether install requires a relaunch** (§6.8)~~ — answered by doing it,
+  and the button copy was written from the answer. What *did* need care was the
+  first-read macOS prompt, not a relaunch; see the TCC correction above.
+- ~~**`instance_id` matching**~~ — **live on both ends.** `/api/health` emits
+  it (`routes/health.py:84`, minted per-serve in `app.py:145`) and the proxy
+  fails **closed** on a missing one (`desktop/mcpb/server/index.js:176-181`) —
+  a `j.mcp?.instance_id &&` conjunct there would have silently skipped the
+  comparison, which is exactly the shape of guard that reads as working while
+  checking nothing. The same id is what makes handshake cleanup safe: a serve
+  only ever deletes a handshake it wrote, never a successor's
+  (`lifecycle.py:126-161`).
+
+**One number to correct:** the spike proxy was 90 lines; the shipped one is
+**308** (`desktop/mcpb/server/index.js`). The growth is all hardening, not
+features — fail-closed instance check, the TCC permission path, the six-message
+vocabulary, terminal-write self-heal, and the `BN-TOOLS-JSON` block that
+`tests/test_mcpb_proxy.py` diffs against the live server's `tools/list` so
+drift fails CI. Still zero dependencies.
 
 ### Two things the spike revealed that were not on the list
 
@@ -1625,34 +1944,59 @@ audit, SBOM or Dependabot.
 
 ## 5d. Docs that become false when this ships — the truing list
 
-Recorded now because none of it is built, and every item below currently
-describes the **hand-paste sheet** accurately. The day the extension lands they
-become wrong, and wrong docs are worse than absent ones.
+**EXECUTED.** Every row landed in the same pass as the feature (`be325728`),
+with one amendment in `76d9e92a` and one item still owed. Kept as the record of
+what was touched, and because the sequencing note at the bottom is still live.
 
-| Doc | What must change |
-|---|---|
-| `SECURITY.md` item 7 | Describes connecting via a pasted config and a durable per-project Keychain token. Becomes: install an extension, share per project, credential lives in a runtime handshake. The "how do I revoke" answer changes too. |
-| `desktop/CLAUDE.md` § MCP / Connect Agent | Documents the right-click sheet, the three copy dialects, `MCPTokenStore` injection and the activity badge. All four change: Settings pane, four tabs, handshake, exposure badge. |
-| `bristlenose/server/CLAUDE.md` § MCP endpoint | The scoped-token rule survives; add the handshake contract, `instance_id`, and that the CLI must mint its own scoped token before writing one. |
-| `docs/design-mcp-server.md` §6a "as built" | Currently records the sheet as shipped. Needs a pointer that §6a route 3 superseded it, not a rewrite — the as-built record has value as history. |
-| **Website `docs-src/connect-an-agent.md`** | The whole Mac flow. Currently: right-click → Connect Agent → paste. Becomes: Settings ▸ MCP Agents → Install, then Share per project. Use `::: fork` — this is **Mac-app-only**; the CLI half stays as-is. |
-| `THIRD-PARTY-BINARIES.md` | Only if the proxy ever gains dependencies. The spike's is dependency-free, so **currently nothing to add** — worth re-checking at build time rather than assuming. |
-| Locales | `settingsTabs.llm` rename + `settingsTabs.mcpAgents` + the pane's strings + the proxy's five messages, × 20 full locales. |
+| Doc | What must change | Status |
+|---|---|---|
+| `SECURITY.md` item 7 | Describes connecting via a pasted config and a durable per-project Keychain token. Becomes: install an extension, share per project, credential lives in a runtime handshake. The "how do I revoke" answer changes too. | ✅ `be325728`, amended `76d9e92a` for the global Anonymise |
+| `desktop/CLAUDE.md` § MCP / Connect Agent | Documents the right-click sheet, the three copy dialects, `MCPTokenStore` injection and the activity badge. All four change: Settings pane, four tabs, handshake, exposure badge. | ✅ `be325728` |
+| `bristlenose/server/CLAUDE.md` § MCP endpoint | The scoped-token rule survives; add the handshake contract, `instance_id`, and that the CLI must mint its own scoped token before writing one. | ✅ `be325728` |
+| `docs/design-mcp-server.md` §6a "as built" | Currently records the sheet as shipped. Needs a pointer that §6a route 3 superseded it, not a rewrite — the as-built record has value as history. | ✅ `be325728` — superseded banner, body kept |
+| **Website `docs-src/connect-an-agent.md`** | The whole Mac flow. Currently: right-click → Connect Agent → paste. Becomes: Settings ▸ MCP Agents → Install, then Share per project. Use `::: fork` — this is **Mac-app-only**; the CLI half stays as-is. | ⚠️ **Written and committed in the website repo; NOT deployed.** One manual rsync owed (maintainer-only, needs SSH agent) |
+| `THIRD-PARTY-BINARIES.md` | Only if the proxy ever gains dependencies. The spike's is dependency-free, so **currently nothing to add** — worth re-checking at build time rather than assuming. | ✅ Re-checked at build: still zero dependencies, so nothing added. Correctly nothing to do, not overlooked |
+| Locales | `settingsTabs.llm` rename + `settingsTabs.mcpAgents` + the pane's strings + the proxy's five messages, × 20 full locales. | ✅ 16 new keys + the rename across all 20; 7 dead sheet keys retired, 2 more with the list (`76d9e92a`), 2 more with consent v2 (`6df94d4f`). `zh-Hant-HK` untouched, correctly — thin override fork |
+
+**One correction to the last row, worth keeping:** the proxy's messages are
+**not** localised and deliberately so. They stay English because they are tool
+results that the *model* relays — it paraphrases them into the conversation's
+own language. Translating them would fork a string the model rewrites anyway.
 
 **Not affected, verified (§3.7a):** README, man page, `docs-src/cli.md`, the SPA
 settings nav, and the SPA config reference — the CLI's connect story does not
-change, and nothing outside the desktop renders `settingsTabs`.
+change, and nothing outside the desktop renders `settingsTabs`. **Held**, and
+for the reason predicted: §7 Q3 not shipping is what kept the CLI's connect
+story identical.
 
-**Sequencing note:** the website page is the one with a *deploy* dependency —
-it is a separate repo and an rsync the maintainer runs. Landing app changes
-before the page is trued leaves the published instructions describing a UI that
-no longer exists, which is the worse direction of drift. True the page in the
-same pass, deploy when the build ships.
+**Sequencing note — still live, and it went the wrong way.** The website page is
+the one with a *deploy* dependency: a separate repo and an rsync the maintainer
+runs. Landing app changes before the page is trued leaves the published
+instructions describing a UI that no longer exists, which is the worse
+direction of drift. The page *was* trued in the same pass, as advised — but
+0.23.0 shipped ahead of the rsync, so `bristlenose.app/docs/` currently
+documents a Mac connect flow that no longer exists. Ride the deploy with the
+build that carries the extension to TestFlight (tracked in `TODO.md`).
 
 ## 6. Risks and what could bite
 
 From the research pass (issue numbers are `modelcontextprotocol/mcpb`) and from
 this machine. Ordered by how much they'd hurt.
+
+**Outcome after shipping (1 Aug 2026).** The list scored well — the one that
+fired is the one it ranked first, and it fired in the shape predicted:
+
+| # | Risk | Outcome |
+|---|---|---|
+| 1 | Container read is TCC-gated | **FIRED**, then resolved. Prompt appears once; the grant persists. §6.1's "pre-announce it and the concern inverts" is the right move and is still **owed** — the pane doesn't pre-announce it yet |
+| 2 | Install silently no-ops | Did not fire — the mitigation (`NSWorkspace.open`, never drag) was correct |
+| 2b | Stale-session death | Did not fire — §3.2's re-read-per-tool-call held, and became load-bearing when the watcher was deleted |
+| 3 | `.mcpb` lags the app, no upgrade path | **Live and unmitigated.** §7 Q6 shipped no update prompt |
+| 4 | Enterprise kill switch | Untested — no locked-down client in the cohort yet |
+| 5 | Directory listing a poor fit | Confirmed; not submitted (§7 Q4) |
+| 6 | Native modules foreclosed | Not hit — proxy is still zero-dependency |
+| 7 | `user_config` `$`-corruption | **Cannot bite.** No `user_config` at all |
+| 8 | Relaunch cost understated again | Answered before the copy was written (§8.2) |
 
 1. **The container read may be TCC-gated — this can invalidate the design.**
    macOS gates `~/Library/Containers/<bundleid>/` behind
@@ -1724,52 +2068,69 @@ this machine. Ordered by how much they'd hurt.
    under-state it again in the replacement. Test, then write the button copy
    from the answer.
 
-## 7. Open questions for the morning
+## 7. Open questions for the morning — all answered
 
-1. **Scope model** — Option A (follow the fronted project) or B (pin one)? §3.3.
-2. **Does the extension replace the Claude Desktop tab entirely,** or sit
-   alongside "advanced: paste it yourself"? (Recommendation: replace. A second
-   path we know is destructive is not a fallback, it is a trap.)
-3. **`bristlenose mcp-proxy` as a CLI subcommand** — the same handshake trick
-   would let Claude Code and Codex drop tokens and ports from their configs too
-   (`claude mcp add bristlenose -- bristlenose mcp-proxy`). Worth doing in the
-   same pass, or later?
-4. **Directory submission** — research says near-term poor fit (§6.5), so the
-   recommendation is *ship locally, revisit later*. Confirm that's acceptable,
-   and note the trap if we ever do both: a directory listing plus an in-app
-   button is **two install paths for one extension**, which is the same trap
-   §7 Q2 refuses, arriving by a different door.
-5. **Where does Install live — the per-project sheet, or app-level Settings?**
-   Installing is a once-ever, machine-wide act; the sheet is a per-project
-   consent surface. Review argues for splitting them (a Settings ▸ Connections
-   row with the extension's name, version and an Install button; the sheet's
-   Claude Desktop tab becomes status plus a "Set Up…" link). Cleaner model,
-   bigger change. The minimum that must ship either way: the sheet header
-   states Option A rather than implying a per-project grant, and the proxy
-   announces subject changes (§3.2a).
-6. **Who prompts for updates?** Local installs never auto-update, so a
-   Bristlenose that ships a newer `.mcpb` than the installed one should
-   probably say so. Where — the sheet's status line, or nothing until it
-   actually breaks?
+Answered on 31 Jul / 1 Aug. Kept with their answers, because three of the six
+were answered *differently from the recommendation written here*.
 
-## 8. Verify before writing code
+1. ~~**Scope model**~~ — **Neither.** Decided B on 31 Jul; shipped Option A
+   restricted by an explicit per-project allowlist. See the §3.3 banner.
+2. ~~**Replace the Claude Desktop tab, or sit alongside "paste it yourself"?**~~
+   — **Replace**, as recommended. The hand-paste path is gone from the product;
+   the per-project sheet retired with it. The Generic MCP tab is the fallback
+   *across clients*, which is a different thing from a second Claude Desktop
+   path.
+3. ~~**`bristlenose mcp-proxy` as a CLI subcommand**~~ — **Not shipped.** The
+   §2 "sleeper win" remains unclaimed: `claude mcp add --transport http` and
+   Codex's `[mcp_servers.bristlenose]` still carry an endpoint plus a bearer
+   token, and `connectAgent.addressNote` still tells the researcher to re-copy
+   after a restart. So the address-free, token-free property the extension won
+   for Claude Desktop is **Claude-Desktop-only** — the three tabs do *not* say
+   the same thing in three dialects. Still the cheapest available win here: one
+   CLI subcommand wrapping a proxy that already exists and is already tested.
+4. ~~**Directory submission**~~ — **No**, as recommended. Local install only,
+   via the in-app button (copy into the container, `NSWorkspace.open`). §6.5's
+   reasoning stands and the two-install-paths trap is avoided by there being
+   one path.
+5. ~~**Where does Install live?**~~ — **App-level Settings**, and further than
+   the review proposed: not a split but a *replacement*. The per-project sheet
+   retired entirely rather than keeping status plus a "Set Up…" link (§3.7).
+   The two "minimums" named here both dissolved with it — there is no sheet
+   header to fix, and §3.2a's subject-change announcement was unnecessary once
+   only allowlisted projects can be the subject.
+6. ~~**Who prompts for updates?**~~ — **Nobody yet, deliberately.** No update
+   prompt shipped. The design's own mitigation carries it: the handshake holds
+   everything and no `user_config` is used, so a reinstall loses nothing, and
+   the proxy is version-tolerant. **This is the weakest of the six answers** —
+   it is "not yet a problem" rather than a decision, and the first cohort
+   tester running a stale `.mcpb` against a newer app is how we will find out.
+   `.mcpb` version is `0.1.0`; nothing compares it to the app's.
 
-Cheap, and each one changes a decision rather than a detail:
+## 8. Verify before writing code — all run
 
-1. **Does reading BN's container from the extension trip a TCC prompt?**
-   (§6.1 — may change the design.) Throwaway `.mcpb` whose one tool returns the
-   errno from that read; install locally, quit and relaunch Claude Desktop,
-   read `~/Library/Logs/Claude/mcp-server-*.log`. Do this before anything else.
-2. **Does installing an extension require a Claude Desktop relaunch?** (§6.8 —
-   writes the button copy.)
-2. **Does `NSWorkspace.open` on a `.mcpb` from the sandboxed app actually reach
-   Claude Desktop's install flow?** And what happens with Claude Desktop
-   absent (§3.4)? Test on a Mac without it.
-3. **Does a minimal `type: node` bundle install cleanly by double-click**, with
-   `can_install` in `main.log`? (§6.1 — this is the one that silently no-ops
-   for our shape; find out on a throwaway bundle before building the real one.)
-4. **Does AGPL-3.0 satisfy the directory's non-waivable open-source clause?**
-   Only matters if Q4 goes the other way.
+Each one did change a decision rather than a detail, and the first one changed
+it twice.
+
+1. ~~**Does reading BN's container from the extension trip a TCC prompt?**~~ —
+   **Shell said no; the live install said yes; the final answer is "yes, once".**
+   The shell measurement did not transfer, because responsible-process
+   attribution is the whole variable. Cost a wrong design (a 5-second self-heal
+   watcher) that had to be deleted outright. Full record in §5c.
+   **The transferable lesson:** a permission measured from a shell is not the
+   same measurement as the same read performed by another app's process. Verify
+   from the process that will actually do it.
+2. ~~**Does installing an extension require a Claude Desktop relaunch?**~~ —
+   answered live; the button copy was written from the answer.
+3. ~~**Does `NSWorkspace.open` on a `.mcpb` from the sandboxed app reach the
+   install flow?**~~ — **Yes**, from a copy in BN's own container (never a
+   bundle path). Claude-Desktop-absent handled: no `.mcpb` handler → a
+   claude.ai download link (`MCPAgentsSettingsView.swift:214-219`).
+4. ~~**Does a minimal `type: node` bundle install cleanly by double-click?**~~ —
+   **Yes.** The mcpb #284 silent no-op did not bite; that report is the
+   drag-to-Settings path, and the double-click path works — which is why §6.1's
+   mitigation said never drag.
+5. ~~**Does AGPL-3.0 satisfy the directory's open-source clause?**~~ — moot,
+   Q4 went the other way.
 
 ## Related docs
 

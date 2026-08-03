@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Bristlenose extension — the whole connect UX</title>
+<title>The Bristlenose extension — the whole connect UX (trued against 0.23.0)</title>
 <style>
   :root {
     --page-bg: #fafafa; --ink: #1d1d1f; --muted: #6e6e73; --rule: #e3e3e6;
@@ -13,6 +13,7 @@
     --term-green: #7ec699; --term-yellow: #e5c07b; --term-red: #e06c75;
     --apple-blue: #007AFF; --mac-sheet: #ececf0; --mac-field: #fff;
     --bad: #c0392b; --bad-bg: #fdecea; --good: #1e6b3a; --good-bg: #dcefe2;
+    --delta-bg: #eaf1fb; --delta-rule: #7ea3d8; --delta-ink: #2c5a99;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -21,6 +22,7 @@
       --commentary-bg: #23221c; --commentary-rule: #6b6247; --commentary-ink: #b3a680;
       --mac-sheet: #2c2c30; --mac-field: #1a1a1d;
       --bad: #ff6b5e; --bad-bg: #3a1f1c; --good: #7ec699; --good-bg: #1c3326;
+      --delta-bg: #18222f; --delta-rule: #46689b; --delta-ink: #8fb4e6;
     }
   }
   * { box-sizing: border-box; }
@@ -56,6 +58,22 @@
     font: 600 10px/1 ui-monospace, Menlo, monospace; letter-spacing: .12em;
     color: var(--commentary-ink); margin-bottom: 6px; }
   .commentary ul { margin: 4px 0 0 18px; padding: 0; } .commentary li { margin: 3px 0; }
+
+  /* Added 2 Aug 2026, truing the mockup against 0.23.0. Deliberately a THIRD
+     register: the artefact is what was drawn, commentary is why it was drawn
+     that way, and this is what the shipped product actually does. */
+  .delta { background: var(--delta-bg); border-left: 4px solid var(--delta-rule);
+    border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 10px 0 0; font-size: 13.5px; }
+  .delta::before { content: "AS SHIPPED · 0.23.0"; display: block;
+    font: 600 10px/1 ui-monospace, Menlo, monospace; letter-spacing: .12em;
+    color: var(--delta-ink); margin-bottom: 6px; }
+  .delta.cut::before { content: "CUT BEFORE SHIPPING"; }
+  .delta.wrong::before { content: "THIS TURNED OUT WRONG"; }
+  .delta ul { margin: 4px 0 0 18px; padding: 0; } .delta li { margin: 3px 0; }
+  .delta b { color: var(--ink); }
+  .tag.shipped { background: var(--good-bg); color: var(--good); }
+  .tag.changed { background: #dce8fa; color: #1a4b8c; }
+  .tag.cut { background: var(--bad-bg); color: var(--bad); }
 
   /* Mac sheet */
   .sheet { background: var(--mac-sheet); border-radius: 10px; padding: 20px; max-width: 560px;
@@ -136,11 +154,35 @@
 
 <h1>The Bristlenose extension</h1>
 <p class="sub">The whole connect UX, after the hand-paste path failed three times in one sitting.
-Proposal for discussion — nothing here is built. 31 July 2026.</p>
+Drawn 31 July 2026 as a proposal — <b>shipped in 0.23.0 on 1 August 2026</b>, and trued against
+what got built on 2 August.</p>
 
 <div class="key">
   <span><b>Artefact</b> — framed. What ships; no labels that wouldn't appear in the product.</span>
   <span><b>Commentary</b> — tinted, ruled. Why it works. Deliberately not-the-product.</span>
+  <span><b>As shipped</b> — blue. Where the built thing differs from the drawing.</span>
+</div>
+
+<div class="delta">
+  <b>Most of this shipped as drawn. Five things did not</b> — each marked in place below, so the
+  drawing stays readable as the argument it was and you can still see where the argument lost.
+  <ul>
+    <li><b>The scope model is neither A nor B.</b> §5 decided <b>B</b> (pin one project through
+      Claude Desktop's picker). §5a then reframed it as <i>Option A restricted to an explicit
+      allowlist</i> — and <b>that</b> is what shipped. No <code>user_config</code>, no directory
+      picker, no pin. §5 is superseded by the section directly after it.</li>
+    <li><b>Anonymise became one global switch</b>, not the per-project control §1 promised to leave
+      alone. Off by default, top of the pane, same strings as Export. The CLI keeps per-project
+      semantics; the two channels genuinely differ.</li>
+    <li><b>The Settings project list was built, then cut.</b> §5a's "decided: both" shipped as
+      <i>one</i>: the right-click menu is the act, the sidebar antenna is the audit.</li>
+    <li><b>The sleeper win didn't land.</b> <code>bristlenose mcp-proxy</code> was never written, so
+      §2's two address-free panes are still aspirational and Claude Code / Codex keep their URL and
+      token.</li>
+    <li><b>The TCC answer in §4 and Q7 is wrong.</b> The prompt <i>does</i> fire. It fires once, and
+      the grant persists — but "no prompt" was measured from a shell, and the shell wasn't the
+      thing doing the reading.</li>
+  </ul>
 </div>
 
 <!-- ─────────────────────────────────────────── -->
@@ -191,7 +233,7 @@ and the second one cost unrelated settings.</p>
 </div>
 
 <!-- ─────────────────────────────────────────── -->
-<h2>1 · The new flow <span class="tag proposal">PROPOSED</span></h2>
+<h2>1 · The new flow <span class="tag shipped">SHIPPED</span></h2>
 
 <ol class="steps">
 <li>
@@ -237,6 +279,21 @@ and the second one cost unrelated settings.</p>
         compliance choice and has nothing to do with transport.</li>
       <li><b>Cancel became Done.</b> Nothing here is cancellable any more — you either install
         or you close the sheet.</li>
+    </ul>
+  </div>
+  <div class="delta">
+    <b>Drawn correctly — the install row really does live inside the Claude Desktop tab.</b>
+    It shipped above the picker first and had to be moved back down, because a
+    <code>.mcpb</code>-only action was showing while three tabs it does nothing for were selected.
+    The pane's fixed payload height is sized to the tallest tab (ChatGPT &amp; Codex), so switching
+    client never reflows it.
+    <ul>
+      <li><b>The Anonymise bullet is wrong.</b> It did <i>not</i> stay where it was. On the Mac it
+        became <b>one global switch</b> at the top of the pane, off by default — a posture toward
+        agents rather than a property of a project. The CLI still reads the per-project database
+        flag, so the two channels differ deliberately.</li>
+      <li>The subtitle drawn here (“An agent has asked about this project recently”) shipped
+        verbatim, and still reads our own server's activity — never Claude's install state.</li>
     </ul>
   </div>
 </li>
@@ -379,7 +436,7 @@ and the second one cost unrelated settings.</p>
 </table>
 
 <!-- ─────────────────────────────────────────── -->
-<h2>2 · Every state the sheet can be in <span class="tag proposal">PROPOSED</span></h2>
+<h2>2 · Every state the sheet can be in <span class="tag changed">SHIPPED, TWO PANES CHANGED</span></h2>
 
 <div class="two">
   <div>
@@ -418,6 +475,23 @@ args = ["mcp-proxy"]</div>
     <li>Cost: one CLI subcommand wrapping the same proxy logic. Open question 3 in the plan.</li>
     <li>Without it, these two tabs keep tonight's URL + token payload — which works, but leaves the
       token in two more config files.</li>
+  </ul>
+</div>
+
+<div class="delta wrong">
+  <b>The two panes above are drawn as they would be <i>with</i> the sleeper win. It wasn't
+  taken.</b> <code>bristlenose mcp-proxy</code> does not exist, so both tabs shipped carrying
+  “tonight's URL + token payload” — the second bullet's case, not the first.
+  <ul>
+    <li><b>Claude Code, as shipped:</b> <code>claude mcp add --transport http bristlenose
+      &lt;endpoint&gt; --header "Authorization: Bearer &lt;token&gt;"</code></li>
+    <li><b>ChatGPT &amp; Codex, as shipped:</b> <code>[mcp_servers.bristlenose]</code> with
+      <code>http_headers</code> carrying the same bearer. One entry still covers ChatGPT desktop,
+      Codex CLI and the IDE extension.</li>
+    <li><b>The consequence the drawing hides:</b> the re-copy-after-restart caveat isn't confined
+      to tab four. Three of the four tabs carry it. Only the extension re-resolves — so what the
+      commentary calls a “sleeper win” is really what would make the rest of this page's
+      port-stops-mattering claim true for anyone not on Claude Desktop.</li>
   </ul>
 </div>
 
@@ -504,7 +578,7 @@ Authorization: Bearer EXAMPLEtokenNOTREALaaaaaaaaaaaaaaaaaaaaaaaa</div>
 </div>
 
 <!-- ─────────────────────────────────────────── -->
-<h2>3 · What the agent sees <span class="tag proposal">PROPOSED</span></h2>
+<h2>3 · What the agent sees <span class="tag shipped">SHIPPED — SIX MESSAGES, NOT FIVE</span></h2>
 
 <h3>Bristlenose isn't serving anything yet <span class="tag ships">VERIFIED IN SPIKE</span></h3>
 <div class="frame"><div class="chrome">Claude Desktop</div>
@@ -583,6 +657,24 @@ researcher sees Claude say it.</p>
   </ul>
 </div>
 
+<div class="delta">
+  <b>All five shipped, and a sixth arrived from the first live install.</b> When the reader is
+  Claude Desktop's own Node process, macOS asks <i>“Claude would like to access data from other
+  apps”</i> before the proxy can read the handshake — so a permission-denied state exists that
+  nobody had drawn.
+  <ul>
+    <li><b>The sixth message names the macOS dialog in its own words and gives the remedy</b>
+      (“click Allow”, or System Settings ▸ Privacy &amp; Security) — deliberately <i>not</i>
+      “reinstall”, because the extension is fine. Same discipline as the 404/401 split: same
+      HTTP-shaped nothing, completely different next action.</li>
+    <li>A seventh, <code>upstream</code>, covers any other status — the honest “I don't know what
+      that was” tier, still carrying the anti-fabrication clause.</li>
+    <li><b>Confirmed as a rule rather than a preference:</b> the messages stay English in all
+      twenty locales. The model relays them <i>in the conversation's language</i>, so translating
+      them would fork a string that gets rewritten anyway.</li>
+  </ul>
+</div>
+
 <h3>The researcher switches project mid-conversation</h3>
 <div class="frame"><div class="chrome">Claude Desktop</div>
 <div class="term"><span class="user">you</span>  and how did that compare on cost?
@@ -611,8 +703,24 @@ In Nurses onboarding, cost comes up in 4 quotes…</div></div>
   </ul>
 </div>
 
+<div class="delta cut">
+  <b>The announcement never shipped — and the reason recorded at the time was the wrong one.</b>
+  It was dropped as unnecessary “because Option B pins the project”, but Option B is not what
+  shipped. What actually removes the scenario is the <b>allowlist</b>: the only projects that can
+  become the subject are ones the researcher explicitly turned Agent Access on for, so the
+  catastrophic case above — the contractually-barred study exposed by an innocuous sidebar click —
+  is prevented at the source rather than announced after the fact.
+  <ul>
+    <li><b>What that leaves, stated honestly:</b> switching between two <i>shared</i> projects
+      mid-conversation is still silent. The residual harm is a confident answer about the wrong
+      study in a scrollback that reads as one study — mitigated only by the passive metadata this
+      commentary already judged insufficient.</li>
+    <li>The ~10 lines remain the fix, and need no design reopening if a cohort tester hits it.</li>
+  </ul>
+</div>
+
 <!-- ─────────────────────────────────────────── -->
-<h2>4 · How it works <span class="tag proposal">PROPOSED</span></h2>
+<h2>4 · How it works <span class="tag shipped">SHIPPED</span></h2>
 
 <div class="diagram">
   <div class="box"><b>Bristlenose</b><small>Serves a project on a kernel-assigned port. Writes
@@ -645,8 +753,46 @@ In Nurses onboarding, cost comes up in 4 quotes…</div></div>
   </ul>
 </div>
 
+<div class="delta">
+  <b>The mechanism shipped exactly as drawn</b> — handshake at 0600 in the container, deleted on
+  stop, proxy re-reading it on every tool call, Claude Desktop never seeing a port or a token. The
+  Node answer held: it ran on a machine with nothing installed. Two corrections to the boxes above.
+  <ul>
+    <li><b>“~150 lines of Node” is now 308</b> — all hardening, no features: a fail-closed
+      instance-id check, the permission path, the six-message vocabulary, terminal-write self-heal,
+      and a tools block that CI diffs against the live server so drift fails the build instead of
+      the researcher. Still zero dependencies.</li>
+    <li><b>The proxy reads the handshake <i>only</i> inside tool calls.</b> The drawing implies a
+      background reader; there was one — a 5-second self-heal watcher — and it had to be deleted
+      outright. On a consent-gated path a timer races its own pending dialog no matter how it backs
+      off. The <code>tools/list_changed</code> recovery now rides tool-call reads for free, because
+      the tool list is static.</li>
+  </ul>
+</div>
+
+<div class="delta wrong">
+  <b>“No prompt, no sticky denial” was measured from the wrong process.</b> The shell test in Q7 was
+  real and its conclusion didn't transfer: when the reader is <i>Claude Desktop's Node</i>, macOS
+  attributes the container read to Claude and fires
+  <i>“Claude would like to access data from other apps.”</i> Responsible-process attribution is the
+  entire variable, and a shell doesn't have Claude's.
+  <ul>
+    <li><b>It costs one dialog, not a permanent tax</b> — the grant persists; a full multi-question
+      conversation after the watcher's removal cost zero further prompts.</li>
+    <li><b>The “storm” was self-inflicted.</b> ~100 dialogs in two minutes on the QA machine came
+      from the watcher's queue outrunning the researcher's clicking, which <i>presented</i> as
+      “Allow doesn't stick” and was briefly misdiagnosed as per-access granting.</li>
+    <li><b>The transferable lesson</b> — worth more than the fix: a permission measured from a
+      shell is not the same measurement as that read performed by another app's process. Verify
+      from the process that will actually do it.</li>
+    <li><b>Still owed:</b> pre-announcing the prompt in the pane's Claude Desktop hint. A prompt
+      you were told to expect reads as a boundary working; an unannounced one reads as a fault —
+      and this one arrives at the exact moment we promised “done”.</li>
+  </ul>
+</div>
+
 <!-- ─────────────────────────────────────────── -->
-<h2>5 · The decision to take <span class="tag broken">NEEDS A CALL</span></h2>
+<h2>5 · The decision to take <span class="tag cut">SUPERSEDED BY §5a</span></h2>
 
 <div class="two">
   <div class="frame"><div class="chrome">Option A — follow the fronted project</div><div class="pad">
@@ -691,8 +837,25 @@ In Nurses onboarding, cost comes up in 4 quotes…</div></div>
   </ul>
 </div>
 
+<div class="delta cut">
+  <b>B was decided and never built. §5a, immediately below, is what shipped.</b> No
+  <code>user_config</code>, no Claude Desktop directory picker, no “two studies = two installs”.
+  <ul>
+    <li><b>The argument in this box survives intact</b> — it is still the reason the shipped model
+      needs an allowlist at all. The Ollama-only study, the warning riding the same message as the
+      breach: all of it holds. What changed is the <i>mechanism</i> chosen to satisfy it.</li>
+    <li><b>The allowlist beats the pin on both axes</b>, which is why it won: it keeps A's
+      zero-friction feel for projects you did share, <i>and</i> it makes the secret study safe by
+      construction rather than by pinning away from it. It also sidesteps two live
+      <code>.mcpb</code> bugs for free — <code>user_config</code> mangles values containing
+      <code>$</code>, and a reinstall loses stored configuration. A manifest with no user config
+      cannot be bitten by either.</li>
+    <li><b>Phase 2 (the folder grant) is untouched by this</b> and still the better end state.</li>
+  </ul>
+</div>
+
 <!-- ─────────────────────────────────────────── -->
-<h2>5a · Two surfaces, two jobs <span class="tag proposal">PROPOSED 31 JUL</span></h2>
+<h2>5a · Two surfaces, two jobs <span class="tag shipped">THIS IS WHAT SHIPPED</span></h2>
 
 <p><b>Setup once, then share per project.</b> The unlock: enablement is <i>Bristlenose writing the
 handshake file</i>, not Claude Desktop's config. That means BN owns it completely — no
@@ -750,6 +913,13 @@ handshake file</i>, not Claude Desktop's config. That means BN owns it completel
     <li><b>Known hole:</b> during a run the activity ring takes this slot and wins, so an exposed
       project shows no antenna. Exposure is still true, just invisible — acceptable, but as a
       decision rather than a discovery.</li>
+    <li><b style="color:var(--ink)">A second, unplanned hole shipped and had to be fixed.</b> The
+      badge was invisible in precisely the ordinary case — shared, analysed, not currently running
+      — because a clean idle row takes the sidebar's single-line collapse, and that layout had no
+      right-hand slot at all. The run ring and the iCloud glyph never noticed, because both of
+      those states always carry subtitle text; the antenna is the first thing that has to render on
+      an otherwise-silent row. <b>The rule to carry forward: check a new sidebar affordance against
+      the collapsed row, not the populated one.</b> The quiet row is the common row.</li>
     <li><b>The pale tier is only possible because the flag lives host-side.</b> The obvious move
       was to put it in the project database beside the Anonymise switch — but that database is
       only readable while <i>that</i> project's serve is running, so the app could never render
@@ -880,7 +1050,7 @@ separator; the stable tail is below.</p>
   permission rather than a connection.
 </div>
 
-<h3>Where the control lives — decided: both</h3>
+<h3>Where the control lives — decided: both <span class="tag cut">SHIPPED AS ONE</span></h3>
 
 <div class="two">
   <div class="frame"><div class="chrome">A · Right-click the project</div><div class="pad">
@@ -929,8 +1099,56 @@ separator; the stable tail is below.</p>
   </ul>
 </div>
 
+<div class="delta cut">
+  <b>C was built, then cut back to A within a day.</b> The Settings list shipped — every project a
+  row, live checkbox, Anonymise on the open project's row — and was removed as the over-build. The
+  right-click menu is the act; the sidebar antenna is the audit. Settings ▸ MCP Agents is
+  <i>setup only</i>: header, Now-showing, one global Anonymise, install row, four client tabs.
+  <ul>
+    <li><b>The argument above defeated itself.</b> The bullet directly preceding this says the
+      sidebar becomes an audit surface — so a Settings list rendering the same fact is a duplicate,
+      not a pairing. “What have I exposed?” <i>is</i> answerable from the sidebar, which was the
+      whole point of making the badge mean exposure rather than activity.</li>
+    <li><b>Two consequences worth holding.</b> The pale tier now carries the entire “what have I
+      shared?” question alone, which raises its value and makes the invisible-badge bug above the
+      more serious for having shipped at all. And with Anonymise global, the tooltip is the only
+      place the names-vs-codes distinction can live — so <b>reinstating a per-project Anonymise
+      would reopen the badge's second-axis question with it.</b></li>
+    <li>The rejected framing to keep rejected: this is <i>one concept, one home</i>. The list's
+      real appeal was that it looked like a governance dashboard, and the sidebar already is one.</li>
+  </ul>
+</div>
+
 <!-- ─────────────────────────────────────────── -->
-<h2>6 · For the morning</h2>
+<h2>6 · For the morning <span class="tag shipped">ALL ANSWERED</span></h2>
+
+<div class="delta">
+  <b>Answered the same morning, and the product shipped that night.</b> Three went against the
+  recommendation written here — worth reading in that light, because the questions were good and
+  two of the recommendations weren't.
+  <ul>
+    <li><b>1 · Scope model — neither.</b> Decided B; shipped A-plus-allowlist (§5a).</li>
+    <li><b>2 · Replace or sit beside? — replace</b>, as recommended. Hand-paste is gone from the
+      product entirely.</li>
+    <li><b>3 · <code>bristlenose mcp-proxy</code>? — no.</b> Not in that pass, not since. Still the
+      cheapest available win: one subcommand wrapping a proxy that already exists and is already
+      tested.</li>
+    <li><b>4 · Directory too? — no</b>, as recommended. Local install only.</li>
+    <li><b>5 · The parked project</b> — resolved by the allowlist plus fronted-only naming: the
+      handshake names the fronted, turned-on project, so a parked sidecar is never what the agent
+      reaches. The correctness bug the review flagged does not arise.</li>
+    <li><b>6 · Where does this live? — option 2 and further.</b> Not a split by lifetime but a
+      replacement: the per-project sheet retired outright rather than keeping a status line and a
+      “Set Up…” link.</li>
+    <li><b>7 · The spike</b> — the one answer that was wrong. See the correction in §4.</li>
+  </ul>
+  <b>And one thing nobody asked that turned out to matter most.</b> Collapsing five manual steps
+  into one button removed the friction that had been doing the disclosure work implicitly — so the
+  AI consent sheet needed a new recipient class (an agent's vendor: a different company, under its
+  own terms, at the moment the researcher asks rather than when the analysis runs). It also had to
+  stop promising that names never leave the device, since Anonymise defaults to off. Removing
+  friction can create a disclosure obligation even when it creates no new egress path.
+</div>
 
 <div class="q"><b>1 · Scope model</b>A (follow the fronted project) or B (pin one)? Everything else
 in the plan is the same either way.</div>
@@ -975,17 +1193,39 @@ mismatch is the whole problem.
 </table>
 </div>
 
-<div class="q" style="border-left-color:var(--good)"><b>7 · ANSWERED — the spike ran</b>
+<div class="q" style="border-left-color:var(--bad)"><b>7 · ANSWERED — the spike ran</b>
+<b style="color:var(--bad)">…and this half of the answer was wrong. See the correction in §4.</b>
 The TCC gate that blocked everything is <b>not a gate</b>: <code>SystemPolicyAppData</code>
 protects Apple's own app containers (Notes, Safari, Mail all denied) but not third-party ones
 (Bristlenose, Adobe and others readable, from a shell with no Full Disk Access). Same-UID is the
 actual gate, and the proxy runs as the researcher.
 <ul style="margin:6px 0 0 18px">
-  <li><b>No prompt, no sticky denial</b> — and the handshake stays in the container, so no token
-    is ever written into a project folder. The Dropbox-sync problem never arises.</li>
+  <li><b>No prompt, no sticky denial</b> — <b style="color:var(--bad)">false as measured.</b> The
+    prompt fires the first time Claude Desktop's Node reads the container. It fires once and the
+    grant persists, so the design survives — but the shell measurement above didn't transfer,
+    because responsible-process attribution is the whole variable. The rest of this bullet holds:
+    the handshake stays in the container, so no token is ever written into a project folder and the
+    Dropbox-sync problem never arises.</li>
   <li>The mechanism was proved end to end too: real data through a <b>90-line, zero-dependency</b>
-    proxy, three states, self-heal, and a wrong token correctly rejected.</li>
+    proxy, three states, self-heal, and a wrong token correctly rejected.
+    <b>Shipped at 308 lines</b>, still zero-dependency — the growth is hardening, and three of the
+    additions exist because this spike's caveat came true.</li>
 </ul></div>
+
+<div class="delta wrong" style="margin-top:14px">
+  <b>The honest scorecard for this page.</b> Twenty-odd decisions, drawn in one night, argued
+  against real Apple strings and a real spike. Four didn't survive contact — and the pattern in
+  the four is worth more than any of them individually: <b>each one was decided from evidence
+  gathered somewhere other than where the thing would run.</b> A shell instead of Claude's Node
+  process. A pin instead of the sidebar. A drawn sidebar row instead of a collapsed one. A
+  reasonable-looking governance list instead of the audit surface already on screen.
+  <ul>
+    <li>The one-way-boundary rule at the end of §5a held completely — <i>we can offer, we cannot
+      observe</i> — and shipped in a place nobody planned: the Claude-Desktop-absent check asks
+      LaunchServices whether anything opens a <code>.mcpb</code>, never whether Claude Desktop is
+      installed. The rule applied at exactly the point where breaking it would have been easiest.</li>
+  </ul>
+</div>
 
 </main>
 </body>

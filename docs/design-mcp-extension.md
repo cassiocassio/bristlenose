@@ -2086,8 +2086,45 @@ were answered *differently from the recommendation written here*.
    token, and `connectAgent.addressNote` still tells the researcher to re-copy
    after a restart. So the address-free, token-free property the extension won
    for Claude Desktop is **Claude-Desktop-only** — the three tabs do *not* say
-   the same thing in three dialects. Still the cheapest available win here: one
-   CLI subcommand wrapping a proxy that already exists and is already tested.
+   the same thing in three dialects.
+
+   **Cost, measured 3 Aug 2026 — it is not "one CLI subcommand wrapping the
+   proxy that has to exist anyway", which is how §2 and this doc's earlier
+   drafts priced it.** Six findings, each of which moves the estimate:
+   - **There is no JSON-RPC, stdio, or MCP-client code in the Python tree at
+     all.** `mcp_server.py` is the *server* on the far side of the HTTP hop;
+     a proxy is a stdio server and an HTTP client, so it reuses none of it.
+     This is a from-scratch reimplementation of all 308 lines, not a wrapper.
+   - **`mcp` is an optional extra, not a base dependency** (`pyproject.toml`
+     `[mcp]`). A proxy that must work from a plain `pip install bristlenose`
+     either pulls the SDK into base deps or hand-rolls the protocol.
+   - **The CLI's `Console` writes to stdout** (`cli.py:59`). A stdio protocol
+     server may emit nothing but frames on stdout — including Typer's own
+     error output. That is a hygiene property the rest of the CLI doesn't have.
+   - **Cold start fights §3.2b.** `import bristlenose.cli` is ~1.1s from a
+     venv; the PyInstaller sidecar's first sandboxed exec is documented as
+     capable of exceeding 15s (`desktop/CLAUDE.md`).
+   - **It cannot be host-gated.** The sidecar's `_PASSTHROUGH_COMMANDS`
+     allowlist would need an *ungated* entry, because the whole point is that
+     Claude Code spawns it and sets no `_BRISTLENOSE_HOSTED_BY_DESKTOP`. That
+     is an ungated, network-adjacent, credential-reading stdio channel on a
+     signed bundle binary — exactly what `test_sidecar_entry.py`'s exact-set
+     pin exists to force review on.
+   - **TCC is unmeasured for a non-Node reader.** The JS proxy's park-on-denial
+     logic exists because the grant behaved unexpectedly for Claude's Node; a
+     Python binary spawned by Claude Code has a different TCC identity, so
+     §5c's measurement does not transfer.
+
+   Plus a drift cost: `tests/test_mcpb_proxy.py` pins the JS proxy against the
+   live server by regex-extracting a JSON block from JS source. A second proxy
+   needs its own equivalent **and** proxy-to-proxy pinning — two proxies can now
+   disagree with each other, not just with the server, and a researcher hitting
+   the same failure through two clients must be told the same thing.
+
+   None of this kills it; the win is still real and still the only thing that
+   would make the port-stops-mattering claim true off Claude Desktop. But it is
+   a project, not an afternoon, and pricing it as an afternoon is how it keeps
+   getting deferred at the moment someone looks properly.
 4. ~~**Directory submission**~~ — **No**, as recommended. Local install only,
    via the in-app button (copy into the container, `NSWorkspace.open`). §6.5's
    reasoning stands and the two-install-paths trap is avoided by there being

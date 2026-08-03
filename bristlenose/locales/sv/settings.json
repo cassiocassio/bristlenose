@@ -220,6 +220,7 @@
         "no_azure_deployment": "Azure-distribution inte angiven",
         "no_google_key": "ingen Gemini API-nyckel angiven",
         "ollama_not_running": "Ollama körs inte",
+        "insufficient_ram": "beh\u00f6ver mer minne",
         "apple_fm_check_desktop": "kontrollera i skrivbordsappen",
         "requires_apple_silicon": "kräver Apple Silicon",
         "mlx_whisper_not_installed": "MLX Whisper är inte installerad",

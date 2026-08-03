@@ -220,6 +220,7 @@
       "no_azure_deployment": "nasazení Azure není nastaveno",
       "no_google_key": "není nastaven API klíč Gemini",
       "ollama_not_running": "Ollama neběží",
+      "insufficient_ram": "pot\u0159ebuje v\u00edce pam\u011bti",
       "apple_fm_check_desktop": "zkontrolujte v desktopové aplikaci",
       "requires_apple_silicon": "vyžaduje Apple Silicon",
       "mlx_whisper_not_installed": "MLX Whisper není nainstalován",

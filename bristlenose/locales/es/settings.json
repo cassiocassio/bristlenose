@@ -220,6 +220,7 @@
         "no_azure_deployment": "despliegue de Azure no configurado",
         "no_google_key": "no hay clave API de Gemini",
         "ollama_not_running": "Ollama no est\u00e1 en ejecuci\u00f3n",
+        "insufficient_ram": "necesita m\u00e1s memoria",
         "apple_fm_check_desktop": "consultar en la aplicaci\u00f3n de escritorio",
         "requires_apple_silicon": "requiere Apple Silicon",
         "mlx_whisper_not_installed": "MLX Whisper no instalado",

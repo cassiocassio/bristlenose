@@ -220,6 +220,7 @@
         "no_azure_deployment": "Azure dağıtımı ayarlanmadı",
         "no_google_key": "Gemini API anahtarı ayarlanmadı",
         "ollama_not_running": "Ollama çalışmıyor",
+        "insufficient_ram": "daha fazla bellek gerektirir",
         "apple_fm_check_desktop": "masaüstü uygulamasında kontrol edin",
         "requires_apple_silicon": "Apple Silicon gerektirir",
         "mlx_whisper_not_installed": "MLX Whisper yüklü değil",

@@ -220,6 +220,7 @@
         "no_azure_deployment": "Azure \ubc30\ud3ec\uac00 \uc124\uc815\ub418\uc9c0 \uc54a\uc74c",
         "no_google_key": "Gemini API \ud0a4\uac00 \uc124\uc815\ub418\uc9c0 \uc54a\uc74c",
         "ollama_not_running": "Ollama\uac00 \uc2e4\ud589\ub418\uace0 \uc788\uc9c0 \uc54a\uc74c",
+        "insufficient_ram": "\uba54\ubaa8\ub9ac\uac00 \ub354 \ud544\uc694\ud568",
         "apple_fm_check_desktop": "\ub370\uc2a4\ud06c\ud1b1 \uc571\uc5d0\uc11c \ud655\uc778\ud558\uc138\uc694",
         "requires_apple_silicon": "Apple Silicon\uc774 \ud544\uc694\ud569\ub2c8\ub2e4",
         "mlx_whisper_not_installed": "MLX Whisper\uac00 \uc124\uce58\ub418\uc9c0 \uc54a\uc74c",

@@ -220,6 +220,7 @@
         "no_azure_deployment": "Azure-implementatie niet ingesteld",
         "no_google_key": "geen Gemini-API-sleutel ingesteld",
         "ollama_not_running": "Ollama draait niet",
+        "insufficient_ram": "heeft meer geheugen nodig",
         "apple_fm_check_desktop": "controleer in de desktop-app",
         "requires_apple_silicon": "vereist Apple Silicon",
         "mlx_whisper_not_installed": "MLX Whisper niet geïnstalleerd",

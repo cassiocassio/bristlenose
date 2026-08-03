@@ -220,6 +220,7 @@
         "no_azure_deployment": "Azure-udrulning ikke angivet",
         "no_google_key": "ingen Gemini API-nøgle angivet",
         "ollama_not_running": "Ollama kører ikke",
+        "insufficient_ram": "kr\u00e6ver mere hukommelse",
         "apple_fm_check_desktop": "tjek i skrivebordsappen",
         "requires_apple_silicon": "kræver Apple Silicon",
         "mlx_whisper_not_installed": "MLX Whisper ikke installeret",

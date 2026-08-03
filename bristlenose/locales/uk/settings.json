@@ -220,6 +220,7 @@
         "no_azure_deployment": "розгортання Azure не задано",
         "no_google_key": "ключ API Gemini не задано",
         "ollama_not_running": "Ollama не працює",
+        "insufficient_ram": "\u043f\u043e\u0442\u0440\u0456\u0431\u043d\u043e \u0431\u0456\u043b\u044c\u0448\u0435 \u043f\u0430\u043c\u2019\u044f\u0442\u0456",
         "apple_fm_check_desktop": "перевірте в застосунку для комп’ютера",
         "requires_apple_silicon": "потрібен Apple Silicon",
         "mlx_whisper_not_installed": "MLX Whisper не встановлено",

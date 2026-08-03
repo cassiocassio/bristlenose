@@ -41,6 +41,7 @@ _REASON_TEXT: dict[str, str] = {
     "pipeline.reasons.no_azure_deployment": "Azure deployment not set",
     "pipeline.reasons.no_google_key": "no Gemini API key set",
     "pipeline.reasons.ollama_not_running": "Ollama not running",
+    "pipeline.reasons.insufficient_ram": "needs more memory",
     "pipeline.reasons.apple_fm_check_desktop": "check in the desktop app",
     "pipeline.reasons.requires_apple_silicon": "requires Apple Silicon",
     "pipeline.reasons.mlx_whisper_not_installed": "mlx_whisper not installed",

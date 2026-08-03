@@ -220,6 +220,7 @@
       "no_azure_deployment": "Azure-käyttöönottoa ei ole asetettu",
       "no_google_key": "Gemini-API-avainta ei ole asetettu",
       "ollama_not_running": "Ollama ei ole käynnissä",
+      "insufficient_ram": "tarvitsee enemm\u00e4n muistia",
       "apple_fm_check_desktop": "tarkista työpöytäsovelluksesta",
       "requires_apple_silicon": "vaatii Apple Siliconin",
       "mlx_whisper_not_installed": "MLX Whisper ei ole asennettu",

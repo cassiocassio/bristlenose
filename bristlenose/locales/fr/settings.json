@@ -220,6 +220,7 @@
         "no_azure_deployment": "d\u00e9ploiement Azure non configur\u00e9",
         "no_google_key": "aucune cl\u00e9 API Gemini configur\u00e9e",
         "ollama_not_running": "Ollama n'est pas en cours d'ex\u00e9cution",
+        "insufficient_ram": "n\u00e9cessite plus de m\u00e9moire",
         "apple_fm_check_desktop": "v\u00e9rifier dans l'application de bureau",
         "requires_apple_silicon": "n\u00e9cessite Apple Silicon",
         "mlx_whisper_not_installed": "MLX Whisper n'est pas install\u00e9",

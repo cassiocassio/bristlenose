@@ -213,8 +213,60 @@ _LLM_BACKENDS: list[BackendOption] = [
             ),
         ],
         models=[
+            # Mirrors the curated four in `OllamaCatalog` (desktop
+            # `LLMProvider.swift`) — same tags, same RAM floors. Kept in step
+            # with the picker deliberately: the Pipeline view is a projection of
+            # what the desktop offers, so a model here that isn't there (or vice
+            # versa) is drift, not a feature. See
+            # `docs/design-gemma4-local-models.md`.
+            #
+            # llama3.2:3b carries NO `min_ram_gb` on purpose. `host.memory_gb`
+            # is None when detection fails, and the predicate is
+            # `is not None and >= value` — so a RAM requirement on the floor
+            # model would make the fallback vanish on exactly the hosts we know
+            # least about. Swift's `minRAMGB: 4` is a can-it-run gate against a
+            # value it always has (`ProcessInfo.physicalMemory`); we don't.
             ModelOption(
                 id="llama3.2:3b", display="llama3.2 3B", publisher="Meta", default=True
+            ),
+            ModelOption(
+                id="gemma4:e4b",
+                display="Gemma 4 E4B",
+                publisher="Google",
+                requires=[
+                    Requirement(
+                        kind="min_ram_gb",
+                        value=8,
+                        reason_key="pipeline.reasons.insufficient_ram",
+                        action_key=None,  # structural — you can't add RAM
+                    ),
+                ],
+            ),
+            ModelOption(
+                id="gemma4:26b",
+                display="Gemma 4 26B",
+                publisher="Google",
+                requires=[
+                    Requirement(
+                        kind="min_ram_gb",
+                        value=24,
+                        reason_key="pipeline.reasons.insufficient_ram",
+                        action_key=None,
+                    ),
+                ],
+            ),
+            ModelOption(
+                id="gemma4:31b",
+                display="Gemma 4 31B",
+                publisher="Google",
+                requires=[
+                    Requirement(
+                        kind="min_ram_gb",
+                        value=32,
+                        reason_key="pipeline.reasons.insufficient_ram",
+                        action_key=None,
+                    ),
+                ],
             ),
         ],
     ),

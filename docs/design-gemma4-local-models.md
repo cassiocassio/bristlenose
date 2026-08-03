@@ -12,6 +12,24 @@ trued-against: HEAD@first-run on 2026-04-30
 
 _13 Apr 2026 — research & plan, partially shipped 30 Apr 2026 (desktop only)._
 
+> **⚠ This document is load-bearing code.** `OllamaCatalog`
+> (`desktop/Bristlenose/Bristlenose/LLMProvider.swift`) says in its own doc
+> comment that it mirrors the `LOCAL_MODEL_RAM` table below — and
+> `LOCAL_MODEL_RAM` **does not exist in Python**. So the tiers in §Gemma 4 model
+> family and §Proposed memory tiers are, today, the de-facto single source of
+> truth for local-model knowledge, with Swift as a hand-copy. That is why the
+> CLI/desktop divergence recorded below went unnoticed for three months:
+> nothing could fail.
+>
+> **Don't revise the tables in isolation.** Any change to a tag, a weight, or a
+> RAM floor has to land in `OllamaCatalog.curated` (Swift) **and**
+> `bristlenose/pipeline_view/catalogue.py` (the `local` backend's `models`) in
+> the same commit. As of 2 Aug 2026 the catalogue carries the same curated four,
+> so it — not this doc — is the intended destination for this knowledge; the
+> remaining work is making Swift read it rather than mirror it. Step 1 of that
+> path is done; steps 2–4 are in the session notes, deliberately parked until
+> after TestFlight.
+
 > **Status (`mixed`):** The desktop macOS path has shipped a curated subset (`llama3.2:3b`, `gemma4:e4b`, `gemma4:26b`, `gemma4:31b`) wired into `OllamaCatalog` (`LLMProvider.swift:264-312`) and surfaced through `OllamaSetupSheet.swift`. `gemma4:e2b` was dropped from the curated list — `e4b` covers the entry tier. The CLI hardware-aware flow described in §Implementation plan is **not yet shipped**; CLI users still get `llama3.2:3b` as the default.
 
 ## Problem

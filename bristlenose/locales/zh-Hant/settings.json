@@ -220,6 +220,7 @@
         "no_azure_deployment": "未設定 Azure 部署",
         "no_google_key": "未設定 Gemini API 金鑰",
         "ollama_not_running": "Ollama 未執行",
+        "insufficient_ram": "\u9700\u8981\u66f4\u591a\u8a18\u61b6\u9ad4",
         "apple_fm_check_desktop": "請在桌面應用程式中檢查",
         "requires_apple_silicon": "需要 Apple 晶片",
         "mlx_whisper_not_installed": "未安裝 MLX Whisper",

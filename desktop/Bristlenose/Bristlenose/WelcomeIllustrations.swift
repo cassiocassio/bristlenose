@@ -2,25 +2,32 @@ import SwiftUI
 import WebKit
 import Combine
 
-// MARK: - Welcome science-cell illustrations
+// MARK: - Welcome-screen illustrations
 //
-// One tiny looping illustration per "Scientific background" pool item
-// (design-welcome-screen.md §Cell 2). Decisions (agreed with Martin, TF-play):
+// One tiny looping illustration per rotator-cell pool item — five for the
+// "Scientific background" cell (design-welcome-screen.md §Cell 2) and five for
+// "Study tools" (design-welcome-studytools-illustrations.md).
+//
+// Science cell (decisions agreed with Martin, TF-play):
 //   1 Seven sentiments      → native SwiftUI fan (SentimentFanView)
 //   2 Signals               → webview (the real signal card + trainboard flip)
 //   3 Dignity               → webview (the strike-and-collapse quote)
 //   4 Source books          → native SwiftUI hat-tip shelf, one cell, synced caption (BookShelfView)
-//   5 Emergent themes       → reuse the existing ShoalView murmuration
-// Native pieces use exact-ish fonts (SF Mono for the chips); the two webviews
-// reuse the mockup CSS/JS verbatim — slight font-rendering differences accepted.
-// All are decorative: accessibilityHidden, inert, reduce-motion aware.
+//   5 Emergent themes       → webview (the two-theme swoop, EmergentThemesView).
+//                             NOT the real ShoalView boids — that's the delight /
+//                             analysing screensaver, which wants a big canvas.
+// Study tools: AutoCode · Codebooks (manual tags) · Tag · Star & hide ·
+//   Connect an AI agent — all webviews (see that brief's build-target section).
+//
+// Native pieces use exact-ish fonts (SF Mono for the chips); the webviews reuse
+// the mockup CSS/JS verbatim — slight font-rendering differences accepted.
+// All are decorative — accessibilityHidden, inert, reduce-motion aware — except
+// BookShelfView, which carries real content and stays accessible.
 
-/// Which illustration a science slot carries (nil case = plain text slot).
-enum ScienceIllustration: Equatable {
-    // NB: now welcome-wide, not science-only — `autocode` is the first study-tools
-    // illustration. Worth renaming to `WelcomeIllustration` before the other study
-    // tools land (see docs/design-welcome-studytools-illustrations.md).
-    case none, sentimentFan, books, shoal, quote, signal, autocode, manualTags, tag, starHide, agentChat
+/// Which illustration a Welcome-screen rotator slot carries (`.none` = plain text slot).
+enum WelcomeIllustration: Equatable {
+    case none, sentimentFan, books, emergentThemes, quote, signal,
+         autocode, manualTags, tag, starHide, agentChat
 }
 
 /// sRGB colour from a 0xRRGGBB literal (file-private helper).

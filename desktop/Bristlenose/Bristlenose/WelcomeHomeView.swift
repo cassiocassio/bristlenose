@@ -27,14 +27,29 @@ private struct SlotItem: Identifiable {
     var linkLabel2: String? = nil   // optional second CTA — e.g. Codebooks offers both paths (manual vs framework)
     var href2: String? = nil
     var image: String? = nil   // imageset name; nil = text-only slot (Science/Tips, art-pending tools)
-    var illustration: ScienceIllustration = .none   // science-cell looping illustration (WelcomeIllustrations.swift)
+    var illustration: WelcomeIllustration = .none   // looping illustration for this slot (WelcomeIllustrations.swift)
+    // Where the PRIMARY CTA goes when it should stay in the app — set instead of `href`,
+    // which the slot then leaves empty. For a tool whose first step is *setup*, sending the
+    // reader to the browser to read about it is a detour; the link should land them on the
+    // control. The docs move to the second CTA ("Learn more →") so both routes stay offered.
+    var primaryDestination: SlotDestination? = nil
+}
+
+/// An in-app destination for a slot's primary CTA.
+///
+/// Deliberately a plain tag rather than a stored closure: `SettingsWindow` is `@MainActor`,
+/// and `WelcomeContent`'s pools are non-isolated `static let`s — so the *call* belongs in the
+/// view (same construct as the AI cell's `Setup →`), and the model stays pure data.
+private enum SlotDestination {
+    case mcpAgentsSettings
 }
 
 private enum WelcomeContent {
     static let docs = "https://bristlenose.app/docs/"
 
     // Draft PNG screenshots (light-mode captures) while the set is tuned — see design-welcome-screen.md §Cell 1.
-    // image = nil → text-only slot (Ingest + Redact PII art pending). CTA labels are per-tool (doc §Cell 1 pool).
+    // image = nil → text-only slot; illustration != .none → a drawn looping illustration replaces the screenshot
+    // (WelcomeIllustrations.swift). CTA labels are per-tool (doc §Cell 1 pool).
     static let studyTools: [SlotItem] = [
         .init(title: "AutoCode", text: "Let AutoCode propose tags across every quote — you Accept or Deny.", linkLabel: "AI helps tag →", href: docs + "use-codebooks.html", illustration: .autocode),
         .init(title: "Codebooks", text: "Build a codebook, or start from a ready-made framework.", linkLabel: "Code by hand →", href: docs + "tag-for-meaning.html", linkLabel2: "Research frameworks →", href2: docs + "codebook-frameworks.html", illustration: .manualTags),
@@ -42,13 +57,26 @@ private enum WelcomeContent {
         .init(title: "Star & hide", text: "Press `s` to keep the quotes that matter, `h` to hide the rest.", linkLabel: "Keyboard shortcuts →", href: docs + "keyboard-shortcuts.html", illustration: .starHide),
         .init(title: "Video clips", text: "Turn selected quotes into video clips.", linkLabel: "Export options →", href: docs + "export-clips.html", image: "welcome-clips"),
         .init(title: "Send to Miro", text: "Send quotes to a Miro board.", linkLabel: "Connect to Miro →", href: docs + "send-to-miro.html", image: "welcome-miro"),
-        .init(title: "Connect an AI agent", text: "Chat to your data from Claude Code, Claude Desktop, or any MCP agent.", linkLabel: "Connect an agent →", href: docs + "connect-an-agent.html", illustration: .agentChat),
+        // The only slot whose first step is setup, so the primary CTA opens the control
+        // (Settings ▸ MCP Agents) rather than a docs page — same destination as the
+        // Bristlenose ▸ Connect an Agent… menu item, and the same "…" that says it opens
+        // something here. The docs keep their route as the second link.
+        .init(title: "Connect an AI agent", text: "Chat to your data from Claude Code, Claude Desktop, or any MCP agent.",
+              linkLabel: "Connect an agent…", href: "",
+              linkLabel2: "Learn more →", href2: docs + "connect-an-agent.html",
+              illustration: .agentChat, primaryDestination: .mcpAgentsSettings),
         .init(title: "Ingest", text: "Drop a folder of recordings or transcripts — Bristlenose transcribes, analyses and reports back.", linkLabel: "Import options →", href: docs + "first-analysis.html", image: "welcome-ingest"),
-        .init(title: "Redact PII", text: "Remove personal details automatically, before analysis.", linkLabel: "Strip names and more →", href: docs + "redact-pii.html"),
+        // WITHHELD from the desktop pool (2 Aug 2026) — this slot taught a tool the .app cannot run.
+        // Presidio + spaCy are in the sidecar spec's `excludes=[]` (desktop/bristlenose-sidecar.spec),
+        // `pii_enabled` defaults false and is only settable by the CLI's `--redact-pii`, and no desktop
+        // control exists — so the capability is absent from the bundle AND unreachable from the UI.
+        // (The Tip cell already skips /docs/redact-pii.html for being CLI-only; this contradicted it.)
+        // Kept verbatim as the reference copy: restore this line when PII redaction ships on the Mac.
+        // .init(title: "Redact PII", text: "Remove personal details automatically, before analysis.", linkLabel: "Strip names and more →", href: docs + "redact-pii.html"),
     ]
 
     static let science: [SlotItem] = [
-        .init(title: "Emergent themes", text: "Themes emerge from participants’ own words, not a fixed taxonomy (Braun & Clarke, 2006).", linkLabel: "Learn more →", href: docs + "research-foundations.html", illustration: .shoal),
+        .init(title: "Emergent themes", text: "Themes emerge from participants’ own words, not a fixed taxonomy (Braun & Clarke, 2006).", linkLabel: "Learn more →", href: docs + "research-foundations.html", illustration: .emergentThemes),
         // One "tip the hat" shelf for all the source books — BookShelfView owns its own author + line + link, synced to the front cover (title/text/href left empty here).
         .init(title: nil, text: "", linkLabel: "", href: "", illustration: .books),
         .init(title: "Seven sentiments", text: "Seven sentiments, grounded in appraisal theory (Scherer) and core affect (Russell).", linkLabel: "Learn more →", href: docs + "signals.html", illustration: .sentimentFan),
@@ -560,7 +588,21 @@ private struct SlotRotator: View {
                     // the other illustrations are decorative (the title/text carry the meaning).
                     .accessibilityHidden(item.illustration != .books)
             }
-            if !item.href.isEmpty, let url = URL(string: item.href) {
+            // PRIMARY CTA — an in-app destination when the slot declares one, else a docs URL.
+            // Styled to read as the same accent link a `Link` produces (matching the AI cell's
+            // `Setup →`); the AppKit Settings window opens on the requested pane directly, so
+            // no SettingsLink (tied to the removed SwiftUI Settings scene) and no tab-key hack.
+            if let destination = item.primaryDestination {
+                Button {
+                    switch destination {
+                    case .mcpAgentsSettings: SettingsWindow.shared.show(pane: .mcpAgents)
+                    }
+                } label: {
+                    Text(item.linkLabel).font(.callout).foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.plain)
+                .padding(.vertical, 2)
+            } else if !item.href.isEmpty, let url = URL(string: item.href) {
                 Link(item.linkLabel, destination: url).font(.callout).padding(.vertical, 2)
             }
             if let href2 = item.href2, !href2.isEmpty, let label2 = item.linkLabel2,
@@ -586,19 +628,19 @@ private struct SlotRotator: View {
     // webviews fit() themselves, the fan is a GeometryReader, the book shelf scales via
     // its own GeometryReader), so a smaller frame simply makes them smaller. The height
     // is thus a cap, not a pin — the cell geometry stays fixed and the content bends.
-    private func illustrationNaturalHeight(_ kind: ScienceIllustration) -> CGFloat {
+    private func illustrationNaturalHeight(_ kind: WelcomeIllustration) -> CGFloat {
         switch kind {
-        case .none:         return 0
-        case .quote:        return 112
-        case .sentimentFan: return 128
-        case .shoal:        return 140
-        case .signal:       return 152
-        case .autocode:     return 160
-        case .manualTags:   return 176
-        case .tag:          return 160
-        case .starHide:     return 190   // toolbar + two compact cards
-        case .agentChat:    return 160   // one terminal panel (430×~140 at scale ≤0.9)
-        case .books:        return 252   // caption + covers + link (see BookShelfView.naturalHeight)
+        case .none:           return 0
+        case .quote:          return 112
+        case .sentimentFan:   return 128
+        case .emergentThemes: return 140
+        case .signal:         return 152
+        case .autocode:       return 160
+        case .manualTags:     return 176
+        case .tag:            return 160
+        case .starHide:       return 190   // toolbar + two compact cards
+        case .agentChat:      return 160   // one terminal panel (430×~140 at scale ≤0.9)
+        case .books:          return 252   // caption + covers + link (see BookShelfView.naturalHeight)
         }
     }
 
@@ -606,19 +648,19 @@ private struct SlotRotator: View {
     // — the caller frames it flexibly (maxHeight: illustrationNaturalHeight) so it bends
     // to the fixed slot. Only the current slot is alive (the rotator renders one item),
     // so a webview / shoal exists only while shown.
-    @ViewBuilder private func illustrationView(_ kind: ScienceIllustration) -> some View {
+    @ViewBuilder private func illustrationView(_ kind: WelcomeIllustration) -> some View {
         switch kind {
-        case .none:         EmptyView()
-        case .sentimentFan: SentimentFanView()
-        case .books:        BookShelfView()   // renders its own author + line + link (synced); self-scales to fit
-        case .shoal:        EmergentThemesView()
-        case .quote:        QuoteIllustrationView()
-        case .signal:       SignalIllustrationView()
-        case .autocode:     AutoCodeIllustrationView()
-        case .manualTags:   ManualTagsIllustrationView()
-        case .tag:          TagIllustrationView()
-        case .starHide:     StarHideIllustrationView()
-        case .agentChat:    AgentChatIllustrationView()
+        case .none:           EmptyView()
+        case .sentimentFan:   SentimentFanView()
+        case .books:          BookShelfView()   // renders its own author + line + link (synced); self-scales to fit
+        case .emergentThemes: EmergentThemesView()
+        case .quote:          QuoteIllustrationView()
+        case .signal:         SignalIllustrationView()
+        case .autocode:       AutoCodeIllustrationView()
+        case .manualTags:     ManualTagsIllustrationView()
+        case .tag:            TagIllustrationView()
+        case .starHide:       StarHideIllustrationView()
+        case .agentChat:      AgentChatIllustrationView()
         }
     }
 

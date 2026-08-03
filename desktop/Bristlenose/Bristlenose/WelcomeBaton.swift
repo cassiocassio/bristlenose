@@ -81,24 +81,24 @@ final class WelcomeBaton: ObservableObject {
 
 // MARK: - Per-illustration turn length
 
-extension ScienceIllustration {
+extension WelcomeIllustration {
     /// How long one turn of this illustration runs before the baton passes on.
     /// Continuous loops (shoal/signal/fan/books/quote) are "showcase" lengths — a cut
     /// mid-loop just freezes to the still. AutoCode is a discrete play, so its turn
     /// covers one full run.
     var welcomeTurn: Double {
         switch self {
-        case .none:         return 0
-        case .sentimentFan: return 11   // half-speed deal → a full cycle needs a longer turn
-        case .books:        return 9
-        case .shoal:        return 9
-        case .quote:        return 10
-        case .signal:       return 11
-        case .autocode:     return 12
-        case .manualTags:   return 13
-        case .tag:          return 12   // one play (arc → click → t → type) then hold
-        case .starHide:     return 14   // two beats (star A, hide B) then hold
-        case .agentChat:    return 13   // one play (type → tool call → streamed answer) then hold
+        case .none:           return 0
+        case .sentimentFan:   return 11   // half-speed deal → a full cycle needs a longer turn
+        case .books:          return 9
+        case .emergentThemes: return 9
+        case .quote:          return 10
+        case .signal:         return 11
+        case .autocode:       return 12
+        case .manualTags:     return 13
+        case .tag:            return 12   // one play (arc → click → t → type) then hold
+        case .starHide:       return 14   // two beats (star A, hide B) then hold
+        case .agentChat:      return 13   // one play (type → tool call → streamed answer) then hold
         }
     }
 }

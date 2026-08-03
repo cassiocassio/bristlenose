@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Welcome — study-tools cell animations</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@420;490;520;700&display=swap">
+<!-- No webfont: the type is macOS SYSTEM type. `-apple-system` resolves to the real
+     SF Pro Text on macOS, which is also what the shipped illustrations use, so the
+     mock now renders the same face as the app — and loads with no network. -->
+
 <!--
   MOCKUP — Tier 2 (system-true). The family of tiny looping illustrations that
   replace the STATIC SCREENSHOTS inside the Welcome screen's "Study tools" cell
@@ -16,7 +17,12 @@
   palette for free; (ii) responsive — resizes with the cell; (iii) no baked-in
   macOS chrome — the idea is drawn, not photographed.
 
-  Doing the 8 tools ONE BY ONE. This file = tool 1, AutoCode.
+  Doing the tools ONE BY ONE. Shipped in-app: AutoCode, Manual tags (Codebooks),
+  Tag, Star & hide — all four have sections below — plus a fifth, Connect an AI
+  agent, built straight in-app with no mock section (bespoke Claude Code chrome,
+  no report CSS to sync). Still to design HERE: Video clips, Send to Miro, Ingest.
+  Redact PII is withheld from the desktop pool entirely (the .app can't run it).
+  Status: 2 Aug 2026.
 
   AUTOCODE sequence (Martin's steer, 25 Jul):
     1. the quote streams in, as if output by an LLM / typed by a fast human;
@@ -67,12 +73,44 @@
   }
 
   :root{
-    --bn-font-mono:"SF Mono",ui-monospace,"Fira Code",Consolas,monospace;
-    --bn-font-body:"Inter","Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;
+    --bn-font-mono:"SF Mono",ui-monospace,Menlo,monospace;   /* = the shipped illustrations' stack */
+    /* SF Pro, byte-identical to the stack the shipped illustrations declare
+       (WelcomeIllustrations.swift) — `-apple-system` resolves to the real SF Pro
+       Text on macOS in both Safari and Chrome, so this mock now shows the same
+       face the app does. It previously loaded Inter from Google Fonts, which
+       silently won over the fallback and rendered the WRONG face inside the cell
+       while the page chrome around it was already SF. */
+    --bn-font-body:-apple-system,"SF Pro Text",system-ui,sans-serif;
     --bn-radius-sm:3px; --bn-radius-md:6px;
     --bn-space-xs:0.15rem; --bn-space-sm:0.35rem; --bn-space-md:0.75rem;
-    --bn-text-body:0.9375rem; --bn-text-body-lh:1.5;
-    --bn-text-label:0.8125rem; --bn-text-badge:0.72rem; --bn-text-micro:0.6rem;
+    /* ---- macOS AppKit type ladder ------------------------------------------
+       Copied VERBATIM from bristlenose/theme/tokens-desktop.css, which was
+       calibrated stop-by-stop against the LIVE AppKit ladder using
+       Debug ▸ Type Parity Inspector (macOS 26.4.1 @2x, Color LCD, Δ ≈ 0px).
+       The token name is BN's; the trailing comment is the REAL macOS style.
+       Read that mapping carefully — `--bn-text-body` is title3/15 (participant
+       voice, i.e. quotes), NOT AppKit `.body`, which is `--bn-text-label`/13
+       (app voice, i.e. our chrome). Getting those two the wrong way round is
+       the easy mistake. Line-heights are Apple's absolute leadings expressed as
+       ratios, except body, deliberately loosened to 1.4 for reading comfort.
+       px values are at a 16px root — the condition the calibration was made in.
+       Previously this mock had badge at 0.72rem (11.52px), micro at 0.6rem
+       (9.6px), body-lh 1.5, and no caption stop at all — so the cards and
+       badges inside every illustration rendered slightly off-scale. */
+    --bn-text-micro:0.625rem;    --bn-text-micro-lh:1.300;   --bn-track-micro:0.013em;  /* 10px — caption2    */
+    --bn-text-badge:0.6875rem;   --bn-text-badge-lh:1.273;   --bn-track-badge:0;        /* 11px — subheadline */
+    --bn-text-caption:0.75rem;   --bn-text-caption-lh:1.250; --bn-track-caption:0;      /* 12px — callout     */
+    --bn-text-label:0.8125rem;   --bn-text-label-lh:1.231;   --bn-track-label:0;        /* 13px — body        */
+    --bn-text-body:0.9375rem;    --bn-text-body-lh:1.4;      --bn-track-body:0;         /* 15px — title3      */
+    --bn-text-heading:1.0625rem; --bn-text-heading-lh:1.294; --bn-track-heading:0;      /* 17px — title2      */
+    --bn-text-title:1.375rem;    --bn-text-title-lh:1.182;   --bn-track-title:0;        /* 22px — title1      */
+    --bn-text-display:1.625rem;  --bn-text-display-lh:1.231; --bn-track-display:0;      /* 26px — largeTitle  */
+    /* Apple's per-size tracking is empirically ≈0 across this range — only micro is
+       non-zero. Carried in full (zeros included) so a diff against tokens-desktop.css
+       comes back clean rather than "7 missing". Unconsumed upstream too. */
+    /* Weights are inherited UNCHANGED on purpose: tokens-desktop.css states SF Pro
+       and Inter share the weight axis and overrides nothing, so the shipped desktop
+       app genuinely renders SF Pro at 420 — matching it here beats "correcting" it. */
     --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
     --bn-transition-fast:0.15s ease;
     --bn-selection-border:color-mix(in srgb, var(--bn-colour-accent) 30%, transparent);
@@ -127,15 +165,43 @@
   .demo{ display:grid; grid-template-columns: 320px 1fr; gap:18px; align-items:start; }
   @media (max-width:820px){ .demo{ grid-template-columns:1fr; } }
 
-  .tool-cell{ border:0.5px solid var(--line); border-radius:10px; padding:14px; background:color-mix(in srgb, var(--bn-colour-accent) 3%, var(--card)); display:flex; flex-direction:column; gap:8px; min-height:340px; overflow:hidden; }
-  .tool-cell .tag{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--tag); font-weight:600; }
-  .tool-cell .t{ font-size:15px; color:var(--ink); font-weight:600; line-height:1.25; }
-  .tool-cell .summary{ font-size:12px; color:var(--faint); line-height:1.4; }
-  .tool-cell .lnk{ color:var(--bn-colour-accent); text-decoration:none; font-weight:500; font-size:12px; }
+  /* padding:16 = welcomeCell(large ? 16 : 10) — was 14, which put every cell's
+     content edge 2px inside where the real one sits. */
+  .tool-cell{ border:0.5px solid var(--line); border-radius:10px; padding:16px; background:color-mix(in srgb, var(--bn-colour-accent) 3%, var(--card)); display:flex; flex-direction:column; gap:8px; min-height:340px; overflow:hidden; }
+  /* ---- cell chrome type: one rule per SwiftUI style, so this block can be diffed
+     line-by-line against WelcomeHomeView.swift. AppKit style named in each comment.
+     Was: tag 11/.06em/600, title lh 1.25, summary 12px/1.4 — three sizes and two
+     leadings adrift, and the summary was a whole stop too small. */
+  .tool-cell .tag{        /* .font(.subheadline).fontWeight(.medium).textCase(.uppercase).kerning(0.4) */
+    font-size:var(--bn-text-badge); line-height:var(--bn-text-badge-lh);
+    font-weight:500;                       /* .medium — was 600 */
+    letter-spacing:0.4px;                  /* SwiftUI kerning is POINTS, not em — was .06em ≈ 0.66px */
+    text-transform:uppercase; color:var(--tag); }
+  .tool-cell .t{          /* .font(.title3).fontWeight(.semibold) */
+    font-size:var(--bn-text-body); line-height:1.333;   /* title3's own leading, not the loosened body 1.4 */
+    font-weight:600; color:var(--ink); }
+  .tool-cell .summary{    /* .font(.body).foregroundStyle(.secondary) — APP voice, so label/13 not body/15 */
+    font-size:var(--bn-text-label); line-height:var(--bn-text-label-lh);
+    font-weight:400; color:var(--faint); }
+  /* Bare key reference IN THE BODY LINE: shipped as a SAME-SIZE monospaced run, not a drawn
+     keycap — design-keycaps.md text-only path, rendered in Swift by welcomeKeyMarkdown()
+     from a markdown backtick (a drawn cap can't flow mid-sentence in SwiftUI Text). Keys stay
+     lowercase (the unmodified-key rule). NB the two treatments coexist on purpose: the body
+     line gets the mono run, while INSIDE the Tag / Star & hide illustrations a raised cap is
+     drawn and pressed — that's a picture of a keypress, not flowing text. */
+  .tool-cell .key{ font-family:var(--bn-font-mono); font-size:1em; }   /* same-size mono run; SF Mono via the token */
+  .tool-cell .lnk{        /* Link(…).font(.callout) — REGULAR weight; a Link isn't emphasised */
+    font-size:var(--bn-text-caption); line-height:var(--bn-text-caption-lh);
+    font-weight:400;                       /* was 500 */
+    color:var(--bn-colour-accent); text-decoration:none; }
   .tool-cell .lnk:hover{ text-decoration:underline; }
-  .dropcard{ margin-top:auto; border:1.5px dashed var(--line); border-radius:10px; padding:10px 11px; color:var(--faint); }
-  .dropcard .dt{ color:var(--ink); font-weight:600; font-size:12.5px; }
-  .dropcard .dd{ font-size:11px; line-height:1.4; }
+  /* 14pt is the ONE deliberate departure from the 4/8/16 ladder — 16 crowded the
+     dashed border against the 15pt title (design-welcome-screen.md §2). Was 10/11. */
+  .dropcard{ margin-top:auto; border:1.5px dashed var(--line); border-radius:10px; padding:14px; color:var(--faint); }
+  .dropcard .dt{          /* .font(.title3).fontWeight(.semibold) — was 12.5px, a stop and a half small */
+    font-size:var(--bn-text-body); line-height:1.333; font-weight:600; color:var(--ink); }
+  .dropcard .dd{          /* .font(.body) — was 11px */
+    font-size:var(--bn-text-label); line-height:var(--bn-text-label-lh); }
   .caption{ font-size:10.5px; color:var(--faint); text-align:center; margin-top:6px; text-transform:uppercase; letter-spacing:.05em; }
 
   .stage-detail{ display:flex; flex-direction:column; gap:10px; }
@@ -143,6 +209,65 @@
   .notes b{ color:var(--ink); font-weight:600; }
   .notes ul{ margin:4px 0 0; padding-left:18px; }
   .notes li{ margin:3px 0; }
+  /* "As shipped" table — the mock's record of the in-app wiring. */
+  .shipped{ margin:6px 0 0; border-collapse:collapse; font-size:11.5px; }
+  .shipped th,.shipped td{ text-align:left; padding:3px 12px 3px 0; border-bottom:0.5px solid var(--line); vertical-align:top; }
+  .shipped th{ color:var(--ink); font-weight:600; white-space:nowrap; }
+  .shipped td code{ white-space:nowrap; }
+
+  /* ================================================================= *
+   *  FULL-BLEED SLOT — mechanism fixture (2 Aug 2026)                  *
+   *  Proposed rule: the illustration shares the CELL's content edge    *
+   *  (16pt, = welcomeCell(large:)), runs full width with an equal      *
+   *  right margin, stays LEADING so slack opens on the RIGHT at max    *
+   *  width, and grows DOWN "as deep as makes" so the CTA lands on the  *
+   *  bottom. Prefixed fb- so it cannot collide with the sections above.*
+   * ================================================================= */
+  .fb-row{ display:grid; grid-template-columns:1fr 1fr; gap:22px; align-items:start; }
+  /* THE CELL IS A SQUARE THAT SCALES WITH THE VIEWPORT — not a fixed box.
+     Real arithmetic (WelcomeHomeView.swift): the spiral is framed
+     `width: w, height: w / 1.618`, and GoldenSplit(.horizontal) hands the major
+     cell `width: (w - 8) * 0.618`. Height = the spiral's full height = 0.618w.
+     Both ≈ 0.618w, so the cell is square, and it grows linearly with width.
+     `aspect-ratio:1` reproduces that; global box-sizing:border-box makes the
+     VISIBLE square square (padding included). padding:16 = welcomeCell(large:).
+     Resize the window and watch both dimensions move together — that is the
+     property the mechanism has to survive. */
+  .fb-cell{ border:0.5px solid var(--line); border-radius:10px; padding:16px; aspect-ratio:1;
+            background:color-mix(in srgb, var(--bn-colour-accent) 3%, var(--card));
+            display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+  .fb-slot{ display:flex; flex-direction:column; gap:3px; flex:1; min-height:0; }  /* gap 3 = the SwiftUI VStack spacing */
+  /* TODAY: a fixed cap in a cell that scales → the illustration stops at a constant
+     while the square keeps growing, so the slack below the CTA grows with the window.
+     176 is a real shipped cap (illustrationNaturalHeight for .manualTags; the set runs
+     160–190). Widen the window and watch this panel get relatively emptier. */
+  .fb-anim.now{ height:176px; overflow:hidden; }
+  /* PROPOSED: the illustration is the flexible member → it eats the slack, so the
+     CTA is pushed onto the bottom edge instead of floating mid-cell. */
+  .fb-anim.fill{ flex:1; min-height:0; overflow:hidden; }
+  /* Dashed outline marks the box the illustration is HANDED, so you can see it
+     take the whole width and depth. Not shipped chrome — a fixture affordance. */
+  .fb-guide{ outline:1px dashed color-mix(in srgb, var(--bn-colour-accent) 50%, transparent); }
+  .fb-slack{ background:repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--bn-colour-accent) 12%, transparent) 6px 12px); }
+  /* The rotator's nav row: 26pt tall (SlotRotator.controlRow), dots centred,
+     chevron disks bottom-aligned at the LEADING and TRAILING edges. */
+  .fb-controls{ position:relative; height:26px; display:flex; align-items:center; justify-content:center; gap:5px; }
+  .fb-dot{ width:5px; height:5px; border-radius:99px; background:var(--line); }
+  .fb-dot.on{ width:10px; background:color-mix(in srgb, var(--bn-colour-accent) 60%, transparent); }
+  .fb-disk{ position:absolute; bottom:0; width:26px; height:26px; border-radius:99px; border:0.5px solid var(--line);
+            background:var(--paper); display:grid; place-items:center; font-size:9px; color:var(--faint); }
+  .fb-disk.lead{ left:0; } .fb-disk.trail{ right:0; }
+  /* The collision: a bottom-pinned LEADING cta lands in the leading disk's band. */
+  .fb-clash{ position:absolute; left:-4px; width:34px; height:30px; border-radius:5px;
+             background:rgba(220,38,38,.16); border:1px solid rgba(220,38,38,.55); pointer-events:none; }
+  .fb-clash-note{ color:#dc2626; font-weight:600; }
+  /* The fake tool's content: quote cards stacked as deep as the box allows. */
+  .fb-stack{ display:flex; flex-direction:column; height:100%; }
+  .fb-stack .quote-card{ margin:0 0 6px; }
+  .fb-theme{ font-size:var(--bn-text-badge); line-height:var(--bn-text-badge-lh); letter-spacing:0.4px;
+             text-transform:uppercase; color:var(--tag); font-weight:500; margin-bottom:5px; }   /* = the cell tag */
+  .fb-count{ font-size:var(--bn-text-micro); line-height:var(--bn-text-micro-lh);
+             letter-spacing:var(--bn-track-micro); color:var(--faint); margin-top:2px; }   /* caption2 */
 
   .anim{ border:0.5px solid var(--line); border-radius:8px; background:var(--paper); position:relative; overflow:hidden; }
   .anim.acframe{ display:flex; align-items:center; padding:2px 8px; }
@@ -257,9 +382,13 @@
   .cb-group.slide-out{ opacity:0; transform:translateX(-22px); }
   .anim.cellframe .cb-group{ padding:8px 10px; }
   .group-title{ font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); line-height:1.45; min-height:1.2em; }
-  .anim.cellframe .group-title{ font-size:12px; }
+  /* REMOVED (2 Aug 2026): `.anim.cellframe .group-title{font-size:12px}` and the
+     matching 9.5px subtitle. The app does NOT shrink type to fit a small cell —
+     fonts stay at fixed semantic sizes and the cell clips as the final backstop
+     (WelcomeHomeView.swift header). Shrinking here made the cell previews render
+     12px/9.5px where the app renders 13px/11px, which is the one thing you'd judge
+     by eye. Any clipping now visible at cell scale IS the fixed-cap problem. */
   .group-subtitle{ font-size:11px; color:var(--bn-colour-muted); line-height:1.35; margin-top:1px; min-height:1em; }
-  .anim.cellframe .group-subtitle{ font-size:9.5px; }
   .tag-list{ display:flex; flex-direction:column; gap:3px; margin-top:7px; }
   .tag-row{ display:flex; align-items:center; min-height:1.4em; }
   .cb-tag{ background:var(--tag-bg); }
@@ -350,7 +479,7 @@
 
   /* tag / star-hide stage layout */
   .anim.sh-frame{ padding:12px 14px; }
-  .anim.sh-frame.cellframe{ min-height:172px; }   /* == the real φ-major cell; two compact cards fit with room */
+  .anim.sh-frame.cellframe{ min-height:172px; }   /* the DESIGN estimate of the φ-major cell; shipped cap is 190 (see As shipped) */
   .anim.sh-frame.detailframe{ min-height:236px; }
   .sh-stage{ display:flex; flex-direction:column; gap:7px; }
 
@@ -359,8 +488,8 @@
 </head>
 <body>
 <div class="page">
-  <h1>Welcome — animations for the “Study tools” cell <span style="font-weight:400;color:var(--faint);font-size:13px">· AutoCode · Codebooks · Tag · Star &amp; hide</span></h1>
-  <p class="lede">Replacing the 8 static screenshots in the large “Study tools” cell with tiny looping illustrations — themeable, responsive, no baked-in macOS chrome. Same playbook as the science cell: prototype <b>idea + motion + copy</b> here, then decide native-SwiftUI vs webview and build for real. Doing the tools <b>one by one</b> — this is AutoCode.</p>
+  <h1>Welcome — animations for the “Study tools” cell <span style="font-weight:400;color:var(--faint);font-size:13px">· shipped: AutoCode · Codebooks · Tag · Star &amp; hide</span></h1>
+  <p class="lede">Replacing the static screenshots in the large “Study tools” cell with tiny looping illustrations — themeable, responsive, no baked-in macOS chrome. Same playbook as the science cell: prototype <b>idea + motion + copy</b> here, then decide native-SwiftUI vs webview and build for real. Doing the tools <b>one by one</b>. The four below are <b>shipped in-app</b>; <b>three remain to design</b> (Video clips · Send to Miro · Ingest) and <b>no screenshots long-term</b> — a baked PNG is not an option for any of them.</p>
 
   <div class="controls">
     <label>Palette
@@ -370,6 +499,26 @@
       <select id="app"><option value="light">Light</option><option value="dark">Dark</option></select>
     </label>
     <span class="rm" id="rmNote"></span>
+  </div>
+
+  <!-- =========================================================== as-shipped record -->
+  <h2 class="sec"><span class="n">≡</span> · As shipped <span class="q">— the in-app wiring these mocks became</span></h2>
+  <p class="map">The cell previews below now carry the <b>shipped copy and CTA labels verbatim</b> (they used to show the mock's proposals, which lost). Two motion differences are <b>deliberate</b>: standalone loops here vs the <code>WelcomeBaton</code>'s one-animation-at-a-time rhythm in-app — the baton owns the tempo, so a cell plays <em>once per turn then holds</em> rather than looping. Enum is <code>WelcomeIllustration</code> (renamed from <code>ScienceIllustration</code>, 2 Aug 2026); each case is rendered by <code>illustrationView</code> in <code>WelcomeHomeView.swift</code>.</p>
+  <div class="notes">
+    <table class="shipped">
+      <tr><th>Slot (title in-app)</th><th>Case</th><th>View</th><th>Height cap</th><th>Turn</th><th>In-app play</th></tr>
+      <tr><td>AutoCode</td><td><code>.autocode</code></td><td><code>AutoCodeIllustrationView</code></td><td>160</td><td>12 s</td><td>once per turn (random quote), then hold</td></tr>
+      <tr><td>Codebooks</td><td><code>.manualTags</code></td><td><code>ManualTagsIllustrationView</code></td><td>176</td><td>13 s</td><td><b>one group per turn</b>, alternating across turns</td></tr>
+      <tr><td>Tag</td><td><code>.tag</code></td><td><code>TagIllustrationView</code></td><td>160</td><td>12 s</td><td>once per turn, then hold</td></tr>
+      <tr><td>Star &amp; hide</td><td><code>.starHide</code></td><td><code>StarHideIllustrationView</code></td><td>190</td><td>14 s</td><td>once per turn (two beats), then hold</td></tr>
+      <tr><td>Connect an AI agent</td><td><code>.agentChat</code></td><td><code>AgentChatIllustrationView</code></td><td>160</td><td>13 s</td><td>once per turn, then hold — <b>no mock section</b> (built in-app; bespoke Claude Code chrome, no report CSS to sync)</td></tr>
+    </table>
+    <ul>
+      <li><b>One slot's primary CTA does NOT open the web (2 Aug 2026).</b> <em>Connect an AI agent</em> reads <b>Connect an agent…</b> and opens <b>Settings ▸ MCP Agents</b> in-app — the same destination as the <em>Bristlenose ▸ Connect an Agent…</em> menu item — because the tool's first step is setup, and a page about the control is a detour from the control. The docs keep their route as a second link, <b>Learn more →</b>. The punctuation is the tell: <b>“…” opens something here, “→” leaves for the browser.</b> Declared as <code>SlotItem.primaryDestination</code> (a plain tag, not a closure — <code>SettingsWindow</code> is <code>@MainActor</code>), rendered by <code>SlotRotator.slotView</code>.</li>
+      <li><b>The height is a CAP, not a pin.</b> <code>illustrationNaturalHeight</code> is passed as <code>maxHeight</code> and every illustration self-scales <em>below</em> it when the golden cell is short — geometry stays fixed, content bends. The <code>min-height:172</code> on this page's <code>.cellframe</code> is a mock convenience and is <b>not</b> the shipped cap.</li>
+      <li><b>Reduce-motion is a finished still, everywhere.</b> In-app the gate is <code>reduce = reduceMotion || !active</code> folded into the webview's <code>.id()</code>, so losing the baton reloads to the still (a brief fade — the known v1 tradeoff of duration-declared handoff).</li>
+      <li><b>All five shipped as webviews.</b> Only the science <em>SentimentFan</em> and <em>BookShelf</em> cells are native SwiftUI — see the revised build-target rule in the brief.</li>
+    </ul>
   </div>
 
   <!-- =========================================================== AutoCode -->
@@ -384,7 +533,7 @@
         <div class="summary">Let AutoCode propose tags across every quote — you Accept or Deny.</div>
         <div class="anim cellframe acframe" data-ac="cell"></div>
         <a class="lnk" href="#">AI helps tag&nbsp;→</a>
-        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag recordings or transcripts here to add a project.</div></div>
+        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag a folder of recordings or transcripts here to add it as a project.</div></div>
       </div>
       <div class="caption">at cell scale · real quote-card type</div>
     </div>
@@ -395,6 +544,7 @@
           <li><b>The code arrives; the rest is context.</b> Quote, timecode, <code>p1 · Participant</code> and the <em>Satisfaction</em> sentiment settle first — AutoCode’s contribution is the <b>code</b>, so it flashes in <b>proposed</b> (dashed, pulsing, real <code>.badge-proposed</code>), offers the real <code>[✗ ✓]</code> pill, and on accept solidifies with the real <code>badge-accept-flash</code>.</li>
           <li><b>Real quotes, de-branded.</b> 11:30 → <b>visible options</b>; 13:08 → <b>platform convention</b>.</li>
           <li><b>Copy edit needed:</b> quote 2 was 37 words → trimmed to <b>~19</b> here (≈50%) so it streams + fits. Your final wording goes in <code>QUOTES</code>.</li>
+          <li><b>Mock vs shipped (deliberate):</b> this page runs the <b>3-play burst then rest</b> loop (WCAG 2.2.2 — no perpetual motion when a cell is the only thing moving). In-app the <code>WelcomeBaton</code> owns the tempo, so it plays <b>once per turn then holds</b> and the burst loop is unused. Keep the burst here — it's what makes the standalone page legible.</li>
           <li><b>Open Qs:</b> should the <code>+</code> pulse when the code lands? Show the deny path occasionally, or always accept? Stream <em>both</em> cards stacked in the big cell vs cycle one?</li>
         </ul>
       </div>
@@ -402,17 +552,18 @@
   </div>
 
   <!-- =========================================================== Manual tags -->
-  <h2 class="sec"><span class="n">2</span> · Manual tags — <span class="q">the researcher hand-builds groups AI could never originate</span></h2>
+  <h2 class="sec"><span class="n">2</span> · Manual tags <span class="q">(the <b>Codebooks</b> slot) — the researcher hand-builds groups AI could never originate</span></h2>
   <p class="map">The human counterpart to AutoCode. Two groups build <b>by hand</b> — title + description + codes typed via the real <code>+ → type → commit</code> flow — one at a time, then slide away. <b>A/B homepage trial</b> = a <em>designed experiment</em>; <b>Switching costs</b> = a <em>commercial dive from the brief</em> (the participant uses a rival). Auto-coding can’t originate either: it wasn’t in the room when the research purpose was set. Group colours are the real codebook OKLCH sets (ux 250 / opp 75).</p>
   <div class="demo">
     <div class="stage-cell">
       <div class="tool-cell">
         <span class="tag">Study tools</span>
-        <div class="t">Tag &amp; group by hand</div>
-        <div class="summary">Create your own tags and groups — the intent only you brought to the research.</div>
+        <div class="t">Codebooks</div>
+        <div class="summary">Build a codebook, or start from a ready-made framework.</div>
         <div class="anim cellframe acframe" data-manual="cell"></div>
-        <a class="lnk" href="#">Manual tagging &amp; codebooks&nbsp;→</a>
-        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag recordings or transcripts here to add a project.</div></div>
+        <a class="lnk" href="#">Code by hand&nbsp;→</a>
+        <a class="lnk" href="#">Research frameworks&nbsp;→</a>
+        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag a folder of recordings or transcripts here to add it as a project.</div></div>
       </div>
       <div class="caption">at cell scale</div>
     </div>
@@ -423,6 +574,7 @@
           <li><b>Why two groups.</b> One is a <em>designed A/B experiment</em>, one a <em>commercial investigation</em> from the brief — the two kinds of a-priori intent auto-coding structurally can’t have (it never attended the research-purpose meeting).</li>
           <li><b>Real flow, by hand.</b> Title + subtitle + each code typed via <code>+ → type → commit → chip</code> (real tag-input + <code>.badge-user</code>), in the group’s real codebook colour.</li>
           <li><b>Fit:</b> groups really <em>accumulate</em> into a codebook — shown one at a time here (slides away) for space. Per-group descriptions included as requested.</li>
+          <li><b>Mock vs shipped (deliberate):</b> this section keeps the standalone <b>two-group accumulate-then-slide</b> sequence because it's the design surface. In-app the cell shows <b>one group per turn</b> and the baton alternates the two across turns — the same way AutoCode alternates its two quotes. The slot is titled <b>Codebooks</b> in-app and this illustration sits under its <b>Code by hand →</b> CTA.</li>
           <li><b>Open:</b> final tag wording is placeholder; and whether to also show a code being <em>applied to a quote</em> after creation.</li>
         </ul>
       </div>
@@ -436,11 +588,11 @@
     <div class="stage-cell">
       <div class="tool-cell">
         <span class="tag">Study tools</span>
-        <div class="t">Tag a quote</div>
-        <div class="summary">Press <b>t</b> to tag the quote you’re on — your own code, typed in.</div>
+        <div class="t">Tag</div>
+        <div class="summary">Select one or more quotes, and press <span class="key">t</span> to tag them with a code from your codebook.</div>
         <div class="anim cellframe sh-frame" data-tag="cell"></div>
-        <a class="lnk" href="#">Tag &amp; filter&nbsp;→</a>
-        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag recordings or transcripts here to add a project.</div></div>
+        <a class="lnk" href="#">Manual tagging&nbsp;→</a>
+        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag a folder of recordings or transcripts here to add it as a project.</div></div>
       </div>
       <div class="caption">at cell scale</div>
     </div>
@@ -462,27 +614,80 @@
       <div class="tool-cell">
         <span class="tag">Study tools</span>
         <div class="t">Star &amp; hide</div>
-        <div class="summary">Press <b>s</b> to star what matters, <b>h</b> to hide the noise.</div>
+        <div class="summary">Press <span class="key">s</span> to keep the quotes that matter, <span class="key">h</span> to hide the rest.</div>
         <div class="anim cellframe sh-frame" data-sh="cell"></div>
-        <a class="lnk" href="#">Focus your quotes&nbsp;→</a>
-        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag recordings or transcripts here to add a project.</div></div>
+        <a class="lnk" href="#">Keyboard shortcuts&nbsp;→</a>
+        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag a folder of recordings or transcripts here to add it as a project.</div></div>
       </div>
       <div class="caption">at cell scale</div>
     </div>
     <div class="stage-detail">
       <div class="anim detailframe sh-frame" data-sh="detail"></div>
       <div class="notes"><ul>
-        <li><b>The on-state is a whisper, not gold.</b> Shipped <code>--bn-colour-starred</code> is <code>#999</code> / <code>#ccc</code> — a tint <em>differential</em> (star + left rule + weight), not a gold fill. The roadmap once said “fills gold”; the code disagrees. <b>Open:</b> keep the subtle real state, or make the illustration louder than the product?</li>
+        <li><b>The on-state is a whisper, not gold — SETTLED.</b> Shipped <code>--bn-colour-starred</code> is <code>#999</code> / <code>#ccc</code> — a tint <em>differential</em> (star + left rule + weight), not a gold fill. The old roadmap line “fills gold” was wrong about the code. The open question (match the product, or make the illustration louder than it?) resolved in favour of <b>matching</b>: the in-app cell ships the real differential plus a star-pop, so the illustration never promises a state the product doesn't have.</li>
         <li><b>Hide is a real collapse.</b> <code>.bn-hiding</code> animates max-height/opacity/margins to 0 (300ms), then <code>.bn-hidden</code> (display:none); the sibling slides up. The <code>N hidden</code> chip bumps +1 — the quote isn’t gone, it’s parked.</li>
         <li><b>Click lands on the gutter, not the text.</b> A plain click on the card chrome focuses + selects (real <code>handleCardClick</code>); clicking the words would open trim/edit instead. <code>s</code>/<code>h</code> then act on that quote; the hide button only appears on focus (real behaviour).</li>
-        <li><b>Vertical fit.</b> Two <em>compact</em> single-line cards + the hidden-count strip sit inside the real φ-cell height (172px here) with room to spare. If real quotes run long, the fallback is to <em>sequence</em> them (star card A, then card B slides in to be hidden) rather than show both at once — say if the two-up still feels tight.</li>
+        <li><b>Vertical fit — settled at 190, not 172.</b> Two <em>compact</em> single-line cards + the hidden-count strip were designed against a 172px estimate of the φ-major cell; in-app this is the <b>tallest</b> of the five illustrations and ships with a <code>190</code> height cap (toolbar + two cards). <b>The two-up won</b> — the sequenced fallback (star card A, then card B slides in to be hidden) was not needed and is not built.</li>
       </ul></div>
     </div>
   </div>
 
+  <!-- =========================================================== full-bleed slot -->
+  <h2 class="sec"><span class="n">⌗</span> · Full-bleed slot <span class="q">— flush left, equal right, and “as deep as makes”</span></h2>
+  <p class="map"><b>The cell is a SQUARE that scales with the viewport</b> — that's the constraint everything here has to survive, so <b>resize the window and watch these two panels</b>. Arithmetic from <code>WelcomeHomeView.swift</code>: the spiral is framed <code>width: w, height: w / 1.618</code>, and <code>GoldenSplit(.horizontal)</code> hands the major cell <code>width: (w − 8) × 0.618</code>; its height is the spiral's full height, <code>0.618w</code>. Both ≈ <code>0.618w</code> → square, growing linearly with width. (These side-by-side panels are each ~half the page, so slightly <em>smaller</em> than the real cell, which is ~62% of the whole content width — the proportions are faithful, the absolute size is conservative.)</p>
+  <p class="map"><b>The proposed rule.</b> The illustration shares the <em>cell's</em> content edge — <b>16pt left, 16pt right</b> (the real <code>welcomeCell(large:)</code> padding, the edge <code>STUDY TOOLS</code> already sits on) — runs the <b>full width</b>, stays <b>leading</b> so that when it hits a max width the slack opens on the <b>right</b>, and grows <b>downwards to fill the depth it's given</b>. The CTA then lands on the bottom instead of floating mid-cell. <b>The φ-geometry does not move</b> — the cell is the same fixed square either way; only the content inside it bends, which is the Parthenon rule working rather than being broken. The fake tool below (<em>Trace a theme</em>) is a <b>fixture, not a roadmap item</b> — it exists to prove the mechanism, and it fills its box by measuring it.</p>
+  <div class="fb-row">
+    <div>
+      <div class="fb-cell">
+        <span class="tag">Study tools</span>
+        <div class="fb-slot">
+          <div class="t">Trace a theme</div>
+          <div class="summary">Follow one theme across every session, in the participants’ own words.</div>
+          <div class="fb-anim now fb-guide" data-fill="now"></div>
+          <a class="lnk" href="#">See the theme&nbsp;→</a>
+          <div class="fb-slack" style="flex:1;min-height:0"></div>
+        </div>
+        <div class="fb-controls">
+          <span class="fb-disk lead">‹</span>
+          <span class="fb-dot"></span><span class="fb-dot on"></span><span class="fb-dot"></span>
+          <span class="fb-disk trail">›</span>
+        </div>
+        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag a folder of recordings or transcripts here to add it as a project.</div></div>
+      </div>
+      <div class="caption">now — a fixed cap in a scaling square, so the slack (hatched) falls <b>below</b> the CTA and grows as you widen the window</div>
+    </div>
+    <div>
+      <div class="fb-cell">
+        <span class="tag">Study tools</span>
+        <div class="fb-slot">
+          <div class="t">Trace a theme</div>
+          <div class="summary">Follow one theme across every session, in the participants’ own words.</div>
+          <div class="fb-anim fill fb-guide" data-fill="deep"></div>
+          <a class="lnk" href="#">See the theme&nbsp;→</a>
+        </div>
+        <div class="fb-controls">
+          <span class="fb-clash" title="the leading chevron disk sits on a bottom-pinned leading link"></span>
+          <span class="fb-disk lead">‹</span>
+          <span class="fb-dot"></span><span class="fb-dot on"></span><span class="fb-dot"></span>
+          <span class="fb-disk trail">›</span>
+        </div>
+        <div class="dropcard"><div class="dt">Drop a folder</div><div class="dd">Drag a folder of recordings or transcripts here to add it as a project.</div></div>
+      </div>
+      <div class="caption">proposed — full width, <b>as deep as makes</b>, CTA on the bottom · <span class="fb-clash-note">red = the collision zone</span></div>
+    </div>
+  </div>
+  <div class="notes"><ul>
+    <li><b>“As deep as makes” is a measuring job, not a bigger number.</b> The fixture renders quote cards one at a time and stops when the next one would overflow (<code>scrollHeight &gt; clientHeight</code>), re-running on resize — so the same illustration shows 2 cards in a short cell and 4 in a tall one. Contrast today's illustrations, which are <em>fit-and-centre</em>: the four flow webviews are <code>body{display:flex; align-items:center}</code> and the two scaled ones clamp at <code>Math.min(0.9, …)</code>, so handing either a taller box just adds <b>air</b>, never content. <b>Relaxing the frame alone changes nothing on screen</b> — each illustration has to be rebuilt to stretch. That's the content-design half.</li>
+    <li><b>The CTA bottoms out ABOVE the 26pt nav row — settled, and it's what dodges the red zone.</b> A CTA pinned to the cell's true bottom edge would land in the leading chevron disk's hit band (red). That bug has already been fixed once: 25 Jul 2026 the full-height chevron strip was stealing clicks from the leading <code>Learn →</code> link, and the fix scoped the tap to the disk band alone, bottom-aligned, commented <em>“hit area = disk band only (dots row level, <b>clear of the link above</b>)”</em>. Stopping the CTA above the nav row keeps exactly that clearance, still reads as “on the bottom”, and needs no change to the chevrons. The red marker stays in this fixture as the reason the CTA stops where it does.</li>
+    <li><b>The bottom of the cell belongs to the Drop-a-folder card — it's a fixture, not a tenant to evict.</b> It rules off the square and is the final implicit CTA. So the target for the illustration + CTA is the bottom of the <em>slot's</em> content area, above the 26pt nav row and above the drop card — which is what both panels show. Not an open question.</li>
+    <li><b>Because the cell is square, the illustration's box SWINGS in aspect ratio.</b> Everything else in the cell is fixed semantic type plus two fixed rows (nav 26 + drop card), so the furniture is a near-constant ~210–230pt of depth no matter how big the square gets. The illustration takes the remainder — so at a ~400pt cell it's roughly <b>400×170, a 2.4:1 letterbox</b>, and at an ~850pt cell it's roughly <b>850×620, near 1.4:1</b>. <b>That swing is the actual design brief.</b> It's also why “grow by quantity” beats “scale one composition”: a stack of cards reads correctly as a wide strip <em>and</em> as a deep column, whereas a single fixed composition can only be right at one aspect. Drag the window across the range and watch the card count change.</li>
+    <li><b>Max width, expressed how?</b> “Slack opens on the right” needs a max — but an absolute pt value will read differently at each window size, since the cell width comes from the golden split. Cheapest honest rule: let the illustration declare a max in <em>ems of its own type</em> (a measure, like body copy) so it stops widening when the line gets uncomfortable, not at an arbitrary pixel.</li>
+    <li><b>Two illustrations don't fit this model at all.</b> <em>Signals</em> and <em>Connect an AI agent</em> are absolutely-positioned and centre-scaled — they'd have to become normal-flow, left-origin layouts first. The book shelf is the other exception: it renders its own caption and link, so it owns its bottom edge and shouldn't be stretched.</li>
+  </ul></div>
+
   <!-- =========================================================== roadmap -->
-  <h2 class="sec"><span class="n">□</span> · The eight tools <span class="q">— one by one; AutoCode first</span></h2>
-  <p class="map">Each replaces one screenshot. Concept seeds (react as we go); we lock a shared visual grammar on AutoCode and hold the rest to it.</p>
+  <h2 class="sec"><span class="n">□</span> · The tool set <span class="q">— one by one; three still to design</span></h2>
+  <p class="map">Each replaces one screenshot. Concept seeds (react as we go); we lock a shared visual grammar on AutoCode and hold the rest to it. Build target is <b>per tool</b> — themed SwiftUI or webview, both fine; the agent cell proved webview works for bespoke chrome too. A screenshot is not a target.</p>
   <div class="notes"><ul id="roadmap"></ul></div>
 
   <p class="notes" style="margin-top:24px;border-top:1px solid var(--line);padding-top:12px">
@@ -499,19 +704,29 @@ const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 document.getElementById("rmNote").textContent = REDUCED ? "reduced-motion ON — loops frozen to still frames" : "";
 
 /* ================= roadmap strip ================= */
+// status: "" = shipped in-app · "todo" = still to design here · "withheld" = not in the desktop pool
 const TOOLS = [
-  ["AutoCode",    "quote streams → AI code flashes in → accept → solid", ""],
-  ["Codebooks",   "a codebook builds up, or a ready-made framework drops in", ""],
-  ["Tag",         "pointer clicks → press ⌜t⌟ → a code types itself in", "◀ in progress"],
-  ["Star & hide", "⌜s⌟ stars (subtle tint) · ⌜h⌟ hides, count ticks up", "◀ in progress"],
-  ["Video clips", "a quote turns into a film frame with a play triangle", ""],
-  ["Send to Miro","quotes fly onto a board as sticky notes", ""],
-  ["Ingest",      "a folder drops, files fan out → transcript → report", ""],
-  ["Redact PII",  "a name in a quote → a redaction bar sweeps over it", ""],
+  ["AutoCode",     "quote streams → AI code flashes in → accept → solid", ""],
+  ["Codebooks",    "a codebook builds up, or a ready-made framework drops in", ""],
+  ["Tag",          "pointer clicks → press ⌜t⌟ → a code types itself in", ""],
+  ["Star & hide",  "⌜s⌟ stars (subtle tint) · ⌜h⌟ hides, count ticks up", ""],
+  ["Connect an AI agent", "a faked Claude Code session over the real /mcp/ tools — built in-app, no mock section", ""],
+  ["Video clips",  "a quote turns into a film frame with a play triangle", "todo"],
+  ["Send to Miro", "quotes fly onto a board as sticky notes", "todo"],
+  ["Ingest",       "a folder drops, files fan out → transcript → report", "todo"],
+  ["Redact PII",   "a name in a quote → a redaction bar sweeps over it", "withheld"],
 ];
+const STATUS = {
+  "":         ["✓ shipped",     "var(--faint)"],
+  "todo":     ["◀ to design",   "var(--bn-colour-accent)"],
+  "withheld": ["— withheld: the .app can’t run it (Presidio excluded, CLI-only flag)", "var(--faint)"],
+};
 const rm = document.getElementById("roadmap");
 TOOLS.forEach(([n,d,s],i)=>{ const li=document.createElement("li");
-  li.innerHTML = `<b>${i+1}. ${n}</b> — ${d}` + (s?` <span style="color:var(--bn-colour-accent)">${s}</span>`:``); rm.appendChild(li); });
+  const [label,colour] = STATUS[s];
+  if (s === "withheld") li.style.opacity = "0.55";
+  li.innerHTML = `<b>${i+1}. ${n}</b> — ${d} <span style="color:${colour}">${label}</span>`;
+  rm.appendChild(li); });
 
 /* ================= AutoCode ================= */
 const _tok = new WeakMap();
@@ -880,6 +1095,70 @@ async function buildStarHide(host){
   }
 }
 document.querySelectorAll("[data-sh]").forEach(buildStarHide);
+
+/* ================= full-bleed slot fixture =================
+   "As deep as makes" is a MEASURING job, not a bigger number. This renders
+   quote cards into the box it was handed and stops when the next one would
+   overflow, re-running on resize — so the same illustration shows 2 cards in
+   a short cell and 4 in a tall one. That's the behaviour the shipped
+   illustrations don't have: they fit-and-centre, so a taller box buys air.
+   Fake tool ("Trace a theme") — a fixture to prove the mechanism, NOT a
+   roadmap item. Cards are the real .quote-card chrome already in this file. */
+const FB_THEME = "Findability";
+const FB_QUOTES = [
+  { t:"11:30", q:"Browsing beat searching — it just worked.",                     tag:"visible options",     cls:"code-blue"   },
+  { t:"09:10", q:"The obvious thing to pick here is kitchenware.",                tag:"visible options",     cls:"code-blue"   },
+  { t:"13:08", q:"Is it normal it’s called a shopping bag?",                      tag:"platform convention", cls:"code-violet" },
+  { t:"08:27", q:"I can go to these categorisations, but that’s probably busy.",   tag:"scan cost",           cls:"code-blue"   },
+  { t:"05:44", q:"I’d have expected it under the other menu.",                    tag:"mental model",        cls:"code-violet" },
+];
+
+function fbCard(d){
+  const bq = document.createElement("blockquote");
+  bq.className = "quote-card";
+  bq.innerHTML =
+    `<div class="quote-row"><span class="timecode">[${d.t}]</span>`
+    + `<div class="quote-body">“${d.q}”</div></div>`
+    + `<div class="badges"><span class="badge badge-user ${d.cls}">${d.tag}</span></div>`;
+  return bq;
+}
+
+function fbFill(host){
+  host.innerHTML = "";
+  const stack = document.createElement("div");
+  stack.className = "fb-stack";
+  stack.innerHTML = `<div class="fb-theme">${FB_THEME}</div>`;
+  // The count line is appended FIRST so its height is part of every fit test —
+  // measure against the final layout, not a layout that grows afterwards.
+  const count = document.createElement("div");
+  count.className = "fb-count";
+  count.textContent = "…";
+  stack.appendChild(count);
+  host.appendChild(stack);
+
+  let shown = 0;
+  for (const d of FB_QUOTES){
+    const card = fbCard(d);
+    stack.insertBefore(card, count);
+    if (host.scrollHeight > host.clientHeight){ stack.removeChild(card); break; }
+    shown++;
+  }
+  count.textContent = `${shown} of ${FB_QUOTES.length} quotes fit — the box decides, not a constant`;
+}
+
+document.querySelectorAll("[data-fill]").forEach(host => {
+  fbFill(host);
+  // Re-measure on resize. Safe against re-entrancy: the host's height comes from
+  // flex + overflow:hidden, so mutating its children cannot change its own size.
+  if (window.ResizeObserver){
+    let queued = false;
+    new ResizeObserver(() => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; fbFill(host); });
+    }).observe(host);
+  }
+});
 </script>
 </body>
 </html>

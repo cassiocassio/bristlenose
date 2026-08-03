@@ -201,6 +201,124 @@ Two things shrink it:
 
 ---
 
+## Part D — Illustration (what to depict, and in what medium)
+
+Diátaxis sorts pages by *purpose*; B6 sorts them by *channel of steps*. Neither
+answers **what to depict**, which is the axis a GUI needs. Apple supplies it, and
+their empirical practice is the surprise: across 22 macOS task pages, images break
+down ~73% **inline UI glyphs**, ~13% topic app icon, and only ~14% actual
+screenshots — median one screenshot per page, a third of task pages have none.
+Their stated policy is a single Style Guide entry (`figures`): use one when it
+shows something not evident from the text alone. A **necessity test**, not an
+enrichment test.
+
+### D1. The ladder — cheapest medium that tells the truth
+
+1. **Words.** The default. Name the control, describe the outcome, never the
+   location. `Choose Edit > Find` for traversal. Positional prose ("top-right",
+   "scroll down to") is the failure mode every major style guide rejects.
+2. **Inline glyph** (`:icon[name]:`) — an icon *in* the sentence, 1em, drawn in
+   `currentColor`. Free dark mode (no second asset, no `<picture>`), no text in
+   the image so no locale multiplication, immune to layout churn. **Only valid
+   where both channels draw the same thing** — see D2.
+3. **Cropped screenshot** — for a control we can't legally or practically draw
+   (native Mac chrome), and for hero shots of whole dialogs. Tight crop to the
+   subject, never a shrunk window; light+dark pair; @2x.
+4. **Nothing.** A third of Apple's task pages. If prose carries it, stop.
+
+The prose must stand alone at every rung. **The sentence has to read correctly
+with images off** — the glyph is redundant reinforcement, never load-bearing.
+
+### D2. The channel rule — chrome forks, content doesn't
+
+The Mac app **hides the web toolbar entirely** and draws its own: `AppLayout`
+renders `<NavBar>` only when `!embedded` ([AppLayout.tsx](../frontend/src/layouts/AppLayout.tsx)).
+So the same action can have different art per channel, and that boundary is
+mechanical, not aesthetic:
+
+- **Document body** (quote cards, tag badges, codebook switches) — rendered by
+  the SPA in *both* channels. **Glyph is always correct.**
+- **Window chrome** (Export, Search, Settings, sidebar toggles, New Project) —
+  native in the app, web in the browser. **Glyph is correct in at most one.**
+
+Audited 3 Aug 2026, six of eight controls share a metaphor and are safe to glyph
+(`magnifyingglass`, `star`, `sidebar.left/right`, `plus`, antenna). Two are not:
+
+| Control | Native | Web | Verdict |
+|---|---|---|---|
+| **Export** | `square.and.arrow.up` (share) | download tray | **Opposite metaphors.** Needs channel-switched art. |
+| **Settings** | app menu / ⌘, — *no icon exists* | gear button | **Words only.** No image can point at a control with no icon. |
+
+**A glyph never goes in a `::: shared` block** if it depicts chrome — `shared`
+asserts the steps are identical, and the art isn't. The *words* can still be
+shared; only the pixels fork. This is the one place B6's taxonomy is coarser than
+the illustration layer needs.
+
+The antenna is Mac-only **by design**, not by omission: the CLI SPA serves one
+project with one MCP connection, so there is no sidebar for a per-project badge.
+
+### D3. SF Symbols — screenshot yes, redraw no
+
+The SF Symbols licence scopes use to creating user interfaces running on Apple
+platforms, and adds a trademark restriction (no use in app icons or logos). The
+sibling **SF Fonts** licence is explicit where it matters: it grants the right to
+show the font in screen shots and other depictions of software running on the
+Apple OS, while separately forbidding its use to create documentation or website
+content as a standalone work product.
+
+So the operative split is **in-situ vs extracted**:
+
+- ✅ A **screenshot of our own Mac app** containing `square.and.arrow.up`.
+- ❌ **Extracting the symbol as SVG** and serving it from `bristlenose.app`.
+
+Consequence: the Mac side of a channel-switched depiction must be a *crop of our
+own toolbar*, never redrawn art. (Reading of licence text, not legal advice;
+Apple reserves discretionary review. The screenshot route is the conservative one.)
+
+### D4. Capture — what to automate, and what not to
+
+Web SPA (`bristlenose serve` in a browser) is fully automatable and the rig is
+mostly built: [playwright.config.ts](../e2e/playwright.config.ts) already boots
+`serve` against a committed fixture on a fixed port; a `colorScheme` matrix plus
+`locator.screenshot()` is the whole addition. Because `deploy.sh` is
+assemble-then-ship into `build/site/`, web shots can be **regenerated every build
+and never committed** — the same principle as reading the changelog live from
+`CHANGELOG.md`. That dissolves staleness rather than managing it.
+
+Native Mac chrome cannot do that (needs a GUI session on a signed-in Mac), so its
+shot set stays **small and deliberately chosen** — every native hero is a
+permanent maintenance obligation. Sequence, cheapest first:
+
+1. Hand-crop the one or two inline controls. No infrastructure.
+2. A **`--screenshot-mode` launch argument** (fixture project, onboarding
+   suppressed, window sized, appearance forced). This is the load-bearing
+   investment — it makes even *manual* capture repeatable, and pays off whether
+   or not the clicking is ever automated.
+3. XCUITest for navigation, only if re-shooting proves painful. Note: drive
+   navigation with XCUITest but **take the picture with `screencapture -l<windowID>`**
+   — XCUITest's own screenshot API is documented to clip corners and return
+   transparent backgrounds, needing corner/shadow reconstruction in post.
+
+Third-party consoles (provider setup pages, Claude Desktop) are **not
+automatable** — login walls, and they redesign without notice. Mitigate by
+doctrine, not tooling: describe the move and the outcome, name the control, don't
+depict the page. Then a console redesign doesn't invalidate the doc.
+
+Demo data is solved: the synthetic **Fishkeeping** dataset (20 sessions,
+[test-data-generation.md](testing/test-data-generation.md)) is generated, not
+recorded, so it carries no participant-data constraint the way real study
+material does. The smoke fixture is too small to photograph well.
+
+### D5. Localisation
+
+**English-only images.** No production system found localises doc screenshots;
+`fastlane snapshot` is the only mainstream locale-matrix tool and it doesn't
+support macOS. 21 locales × 2 themes is the arithmetic that kills the whole idea.
+Inline glyphs sidestep it entirely (no text in the image) — another reason to
+prefer rung 2 over rung 3, and to crop tight when rung 3 is unavoidable.
+
+---
+
 ## Assumptions made in the mockup
 
 1. **Nav grouped by kind** (Get started / How-to / Reference / Understand) with friendly labels, not the Diátaxis words.

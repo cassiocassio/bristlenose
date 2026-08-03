@@ -99,6 +99,11 @@ Three orthogonal display axes. Same internal/external split as provider names ab
 | **hide** / **unhide** | archive, delete, remove | Hide is reversible and explicit. "Archive" implies a destination; "delete" implies permanence. |
 | **export** | download, share, save as | Export is the action. "Download" is a browser mechanic. "Share" implies sending to someone. |
 | **add tag** | tag (as a verb without "add"), code (for the action) | "Add tag" is the explicit UI label. "Tag this quote" is acceptable in prose. Never "code this quote" (confuses code/tag distinction). |
+| **show** (in Finder, in Transcript) | reveal, open in, locate | Apple's shipped verb — "Show in Finder" ships in Finder, Music, Photos, Safari, Notes, Xcode; the "Reveal" survivors are fossils (Console, removed Xcode Snapshots). Apple keeps *reveal* for its scripting/Intents vocabulary only. See [`design-finder-verb.md`](design-finder-verb.md). |
+
+**"Show in Finder" — one verb, name the object only when ambiguous.** Leave the primary object bare ("Show in Finder"); name a secondary one ("Show Transcripts in Finder"), following Photos ("Show in Finder" / "Show Referenced File in Finder") and Music ("Show in Finder" / "Show Album in Library"). Lowercase `in`.
+
+**Translators: do not render "reveal" as a distinct verb.** Apple ships English "Reveal in Finder" in five bundles and translates all five *identically* to its "Show in Finder" string in every one of our 20 languages — the distinction carries no semantic weight outside English. Match Apple's shipped form per locale (`Zobrazit ve Finderu`, `Im Finder zeigen`, `Mostrar en el Finder`, `Finderに表示`, `Finder’da Göster` …); note that cs/pl/fi/tr **decline** "Finder" while ru/uk keep it bare. Never interpolate the object — it must decline, and word order varies across five positions.
 
 ---
 

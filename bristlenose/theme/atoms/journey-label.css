@@ -21,6 +21,21 @@
     transition: color 0.15s, text-decoration-color 0.15s, background 0.15s;
 }
 
+/* Wrapping chains (the Sessions lens grid) carry the horizontal breathing room
+   on the trailing edge only. Padding on an inline box paints at the start of
+   its first line fragment and the end of its last — so symmetric padding shows
+   as a ragged left indent on line 1 and on every line that opens after an
+   arrow, while a line continuing a wrapped label sits flush. Trailing-edge
+   padding keeps the mid-line gaps identical (label's padding-right + the
+   separator's leading space before the arrow; the separator's padding-right +
+   its trailing space after) and leaves nothing to paint at a line start.
+   The transcript header's chain is `--overflow` — one line, horizontal scroll,
+   no wrapping — so it keeps the symmetric pill the active state wants. */
+.bn-session-journey:not(.bn-session-journey--overflow)
+  :is(.bn-journey-label, .bn-journey-sep) {
+    padding-inline: 0 0.3rem;
+}
+
 :is(button, a).bn-journey-label--interactive:hover {
     color: var(--bn-colour-accent);
     text-decoration: underline;

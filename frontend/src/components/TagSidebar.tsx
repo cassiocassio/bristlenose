@@ -6,6 +6,11 @@
  * QuotesStore.tagFilter — the sole tag-filtering surface since the
  * toolbar tag-filter dropdown was removed (v0.16).
  *
+ * The tree is the fetched codebook PLUS anything QuotesStore has been tagged
+ * with since (`mergePendingTags`) — the fetch is a mount-time snapshot and tag
+ * writes are fire-and-forget, so the store is the fresher of the two. Counts
+ * likewise come from the store, never from the codebook's `count`.
+ *
  * Eye toggle state (hiddenTagGroups) is persisted to SQLite via
  * SidebarStore. Framework-level hidden is derived: a framework is
  * hidden when ALL its groups are in hiddenTagGroups.
@@ -145,6 +150,76 @@ export function buildVisibleFrameworks(
   );
 }
 
+// ── Pending (not-yet-refetched) tags ──────────────────────────────────────
+
+/** Fold tag names that live on quotes but not yet in the fetched codebook into
+ * the floor's default group.
+ *
+ * The codebook is a mount-time snapshot: ``PUT /tags`` is fire-and-forget
+ * (``firePut`` returns void), so a tag the researcher just typed exists on the
+ * quote — and in ``QuotesStore`` — before any refetch could see its new
+ * ``TagDefinition``. Without this the tag was simply absent from the sidebar
+ * tree, which read as "my tag vanished" (the floor's card still rendered,
+ * because ``GET /codebook`` emits ``Uncategorised`` unconditionally — so it
+ * looked like an empty group rather than a missing one).
+ *
+ * Optimistic rather than event-driven on purpose: no round trip to race, and it
+ * covers *every* write path (quote card, transcript page, sidebar assign) rather
+ * than the one that remembered to fire an event. Self-healing — once a real
+ * fetch carries the tag, nothing synthetic is added.
+ *
+ * Synthetic ids are negative so they can't collide with server ids in React keys.
+ */
+export function mergePendingTags(
+  codebook: CodebookResponse,
+  storeTagNames: string[],
+): CodebookResponse {
+  const known = new Set<string>();
+  for (const g of codebook.groups) {
+    for (const tag of g.tags) known.add(tag.name.toLowerCase());
+  }
+  for (const tag of codebook.ungrouped) known.add(tag.name.toLowerCase());
+
+  const pending = storeTagNames.filter((n) => !known.has(n.toLowerCase()));
+  if (pending.length === 0) return codebook;
+
+  // The floor's default group ("Uncategorised") is where the server files
+  // hand-made tags, so land them there — same card, no layout jump when the
+  // real fetch arrives. Absent one (older DBs), fall back to `ungrouped`,
+  // which `groupByFramework` already folds into the floor.
+  const defaultIdx = codebook.groups.findIndex((g) => g.is_default);
+  if (defaultIdx === -1) {
+    return {
+      ...codebook,
+      ungrouped: [
+        ...codebook.ungrouped,
+        ...pending.map((name, i) => ({
+          id: -1 - i,
+          name,
+          count: 0,
+          colour_index: codebook.ungrouped.length + i,
+        })),
+      ],
+    };
+  }
+
+  const target = codebook.groups[defaultIdx];
+  const groups = [...codebook.groups];
+  groups[defaultIdx] = {
+    ...target,
+    tags: [
+      ...target.tags,
+      ...pending.map((name, i) => ({
+        id: -1 - i,
+        name,
+        count: 0,
+        colour_index: target.tags.length + i,
+      })),
+    ],
+  };
+  return { ...codebook, groups };
+}
+
 // ── Chevron icon ──────────────────────────────────────────────────────────
 
 function ChevronIcon() {
@@ -255,12 +330,33 @@ export function TagSidebar() {
     ? t("codebook.projectTagsHeading", { project: projectName })
     : t("tags.userTags");
 
+  // Tag names present on quotes, in first-seen casing. Hidden quotes count here
+  // (unlike `tagCounts` below) — this answers "does the tag exist?", not "how
+  // many visible quotes carry it?". A tag whose only quote is hidden still
+  // belongs in the tree, at count 0.
+  const storeTagNames = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const q of store.quotes) {
+      for (const tag of store.tags[q.dom_id] ?? q.tags) {
+        const lower = tag.name.toLowerCase();
+        if (!seen.has(lower)) seen.set(lower, tag.name);
+      }
+    }
+    return Array.from(seen.values());
+  }, [store.quotes, store.tags]);
+
+  // Codebook snapshot + anything the researcher has tagged since it was fetched.
+  const mergedCodebook = useMemo(
+    () => (codebook ? mergePendingTags(codebook, storeTagNames) : null),
+    [codebook, storeTagNames],
+  );
+
   const frameworks = useMemo(
     () =>
-      codebook
-        ? buildVisibleFrameworks(codebook, t, floorTitle, disabledFrameworks)
+      mergedCodebook
+        ? buildVisibleFrameworks(mergedCodebook, t, floorTitle, disabledFrameworks)
         : [],
-    [codebook, t, floorTitle, disabledFrameworks],
+    [mergedCodebook, t, floorTitle, disabledFrameworks],
   );
 
   // Derive framework-level hidden from group-level hidden:
@@ -313,14 +409,14 @@ export function TagSidebar() {
 
   // All tag names for bulk actions
   const allTagNames = useMemo(() => {
-    if (!codebook) return [];
+    if (!mergedCodebook) return [];
     const names: string[] = [];
-    for (const g of codebook.groups) {
+    for (const g of mergedCodebook.groups) {
       for (const t of g.tags) names.push(t.name);
     }
-    for (const t of codebook.ungrouped) names.push(t.name);
+    for (const t of mergedCodebook.ungrouped) names.push(t.name);
     return names;
-  }, [codebook]);
+  }, [mergedCodebook]);
 
   // Stats for subtitle (filtered by search + used-only)
   const totalTags = allTagNames.length;
@@ -406,7 +502,7 @@ export function TagSidebar() {
       if (selectedIds.size === 0) return;
       const targets = Array.from(selectedIds);
 
-      const found = findTagInCodebook(codebook, tagName);
+      const found = findTagInCodebook(mergedCodebook, tagName);
       if (!found) return;
 
       const payload: TagResponse = {
@@ -436,7 +532,7 @@ export function TagSidebar() {
         });
       }, 500);
     },
-    [selectedIds, codebook, flashTag],
+    [selectedIds, mergedCodebook, flashTag],
   );
 
   const handleSoloClick = useCallback(

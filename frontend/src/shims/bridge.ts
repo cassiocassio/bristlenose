@@ -44,6 +44,12 @@ export type BridgeMessage =
   | { type: "quote-action-state"; starIsUnstar: boolean; lastTagName: string | null }
   | { type: "lens-subtitle"; tab: string; subtitle: string }
   | { type: "quotes-filter"; searchQuery: string; viewMode: string }
+  | {
+      type: "panel-state";
+      leftOpen: boolean;
+      rightOpen: boolean;
+      inspectorOpen: boolean;
+    }
   | { type: "store-miro-token"; token: string };
 
 // ---------------------------------------------------------------------------
@@ -147,6 +153,26 @@ export function postLensSubtitle(tab: string, subtitle: string): void {
  */
 export function postQuotesFilter(searchQuery: string, viewMode: string): void {
   postNativeMessage({ type: "quotes-filter", searchQuery, viewMode });
+}
+
+/**
+ * Push which of the report's own panels are open, so the native View menu can
+ * pick each row's verb honestly — "Hide Tags" while the tag sidebar is showing,
+ * "Show Tags" while it isn't. Without this mirror the three panel rows read
+ * one-directional and are wrong exactly half the time.
+ *
+ * `leftOpen` covers whichever list the active lens puts in the left slot
+ * (Contents / Sessions / Codes / Signals) — they share one `tocMode`.
+ * `inspectorOpen` is the analysis heatmap, which lives in `InspectorStore`
+ * rather than `SidebarStore` but is the same kind of fact to the menu.
+ * Native equality-guards the assigns. No-ops outside WKWebView.
+ */
+export function postPanelState(
+  leftOpen: boolean,
+  rightOpen: boolean,
+  inspectorOpen: boolean,
+): void {
+  postNativeMessage({ type: "panel-state", leftOpen, rightOpen, inspectorOpen });
 }
 
 /**

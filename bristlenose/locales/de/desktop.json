@@ -45,6 +45,7 @@
       "showSignals": "Signale einblenden",
       "hideSignals": "Signale ausblenden",
       "showSessions": "Interviews einblenden",
+      "hideSessions": "Interviews ausblenden",
       "showTags": "Tags einblenden",
       "hideTags": "Tags ausblenden",
       "showHeatmap": "Heatmap einblenden",

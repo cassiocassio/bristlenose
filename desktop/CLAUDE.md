@@ -202,7 +202,9 @@ ContentView uses `@EnvironmentObject` — it does not own these objects.
 
 ### Bridge communication
 
-**Inbound** (web → native): `WKScriptMessageHandler` receives messages from `window.webkit.messageHandlers.navigation.postMessage(...)`. Types: `ready`, `route-change`, `editing-started`, `editing-ended`, `focus-change`, `undo-state`, `player-state`, `project-action`, `find-pasteboard-write`.
+**Inbound** (web → native): `WKScriptMessageHandler` receives messages from `window.webkit.messageHandlers.navigation.postMessage(...)`. Types: `ready`, `route-change`, `editing-started`, `editing-ended`, `focus-change`, `undo-state`, `export-counts`, `quote-action-state`, `player-state`, `lens-subtitle`, `quotes-filter`, `panel-state`, `project-action`, `find-pasteboard-write`, `store-miro-token`.
+
+**`panel-state` is how native sees the report's own panels** — `{leftOpen, rightOpen, inspectorOpen}`, posted from an effect in `AppLayout.tsx` whenever the SPA's `SidebarStore`/`InspectorStore` open flags change, and the only writer of `BridgeHandler.leftPanelOpen`/`rightPanelOpen`/`inspectorOpen`. Without it the View menu's panel rows can't swap Hide↔Show (the state is web-owned end to end, so there's nothing for Swift to derive). Consumed by `PanelToggle.labelKey` — see `SidebarVisibilityFocus.swift`.
 
 **Outbound** (native → web): `BridgeHandler` holds a `weak var webView: WKWebView?` (set in `WebView.makeNSView`). Five outbound methods:
 - `goBack()` / `goForward()` — delegates to `webView?.goBack()` / `.goForward()`
@@ -246,7 +248,7 @@ Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu
 - **Export** (share icon) — dropdown `Menu` whose contents change per tab. Always has "Export Report..." first. Quotes tab adds "Export Quotes as CSV"
 
 **Per-tab contextual items** (appear/disappear):
-- **Sessions/Quotes/Codebook/Analysis**: `list.bullet` button toggling the web left panel via `bridgeHandler.menuAction("toggleLeftPanel")` — the session list on Sessions, sections/themes on Quotes, codebooks on Codebook, signals on Analysis. (The native project-sidebar toggle is provided by `NavigationSplitView` automatically, Mail-style.) Label per lens: Sessions reuses `common.nav.sessions` (the lens's own name — the panel lists the sessions it's named for); the others use `desktop.toolbar.{contents,codes,signals}`. ⌘⌥L in **View ▸ Show …** is the menu twin (`leftPanelKey` in `MenuCommands.swift`).
+- **Sessions/Quotes/Codebook/Analysis**: `list.bullet` button toggling the web left panel via `bridgeHandler.menuAction("toggleLeftPanel")` — the session list on Sessions, sections/themes on Quotes, codebooks on Codebook, signals on Analysis. (The native project-sidebar toggle is provided by `NavigationSplitView` automatically, Mail-style.) Label per lens: Sessions reuses `common.nav.sessions` (the lens's own name — the panel lists the sessions it's named for); the others use `desktop.toolbar.{contents,codes,signals}`. ⌘⌥L in **View ▸ Show/Hide …** is the menu twin (`leftPanelKey` in `MenuCommands.swift`; the verb follows the panel's real state via `panel-state`).
 - **Quotes**: Tag sidebar toggle (`sidebar.right` icon)
 - **Analysis**: Heatmap inspector toggle (`square.grid.2x2` icon)
 - **Project**: no extra items

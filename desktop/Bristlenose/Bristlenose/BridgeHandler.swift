@@ -110,6 +110,23 @@ final class BridgeHandler: ObservableObject {
     /// View-menu All Quotes / Starred Quotes Only checkmarks.
     @Published var quotesViewMode: String = "all"
 
+    /// Whether the report's left panel — whichever list the active lens puts
+    /// there (Contents / Sessions / Codes / Signals; they share one `tocMode`)
+    /// — is open. Mirrored from the SPA via `panel-state`, which is the only
+    /// writer: these panels are web state end to end, so Swift can't derive
+    /// them, and the View menu's Hide/Show verb is wrong half the time without
+    /// the mirror. See `PanelToggle` in `SidebarVisibilityFocus.swift`.
+    @Published var leftPanelOpen = false
+
+    /// Whether the Quotes lens's tag sidebar is open. Same channel, same reason.
+    @Published var rightPanelOpen = false
+
+    /// Whether the Analysis lens's heatmap inspector is open. Owned web-side by
+    /// `InspectorStore` rather than `SidebarStore`, but it rides `panel-state`
+    /// with the other two — one message, one arm, three facts, so the three
+    /// menu rows can't drift apart in how honest they are.
+    @Published var inspectorOpen = false
+
     /// The filesystem path of the currently selected project.
     /// Set by ContentView on project selection. Used by Project menu actions
     /// (Show in Finder) and disable guards.
@@ -443,6 +460,19 @@ final class BridgeHandler: ObservableObject {
             if q != quotesSearchQuery { quotesSearchQuery = q }
             if vm != quotesViewMode { quotesViewMode = vm }
 
+        case "panel-state":
+            // Sole writer of the three panel mirrors. Equality-guarded like
+            // `quotes-filter`: the SPA re-posts on every sidebar/inspector store
+            // change (widths, hidden tag groups, solo tag), most of which leave
+            // these booleans alone, and an unchanged @Published assign would
+            // rebuild the View menu's rows for nothing.
+            let left = body["leftOpen"] as? Bool ?? false
+            let right = body["rightOpen"] as? Bool ?? false
+            let inspector = body["inspectorOpen"] as? Bool ?? false
+            if left != leftPanelOpen { leftPanelOpen = left }
+            if right != rightPanelOpen { rightPanelOpen = right }
+            if inspector != inspectorOpen { inspectorOpen = inspector }
+
         case "project-action":
             if let action = body["action"] as? String {
                 handleProjectAction(action, data: body["data"] as? [String: Any])
@@ -490,6 +520,12 @@ final class BridgeHandler: ObservableObject {
         undoLabel = nil
         quotesSearchQuery = ""
         quotesViewMode = "all"
+        // Closed is the honest default for a project whose SPA hasn't mounted:
+        // the rows dim to "Show", and the incoming `panel-state` corrects them
+        // as soon as the new report restores its panels from localStorage.
+        leftPanelOpen = false
+        rightPanelOpen = false
+        inspectorOpen = false
         selectedProjectPath = ""
         selectedProjectRevealablePath = ""
         selectedFolderName = ""

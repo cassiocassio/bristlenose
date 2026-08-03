@@ -40,6 +40,7 @@ import {
   postExportCounts,
   postFocusChange,
   postQuoteActionState,
+  postPanelState,
 } from "../shims/bridge";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
 import { cancelAutoCode, cancelClipExtraction, getAutoCodeStatus, getClipExtractionStatus, revealClips } from "../utils/api";
@@ -49,7 +50,8 @@ import {
   extractVideoClips,
 } from "../utils/exportActions";
 import type { NormalisedJobStatus } from "../components/ActivityChipStack";
-import { toggleInspector } from "../contexts/InspectorStore";
+import { toggleInspector, useInspectorStore } from "../contexts/InspectorStore";
+import { useSidebarStore } from "../contexts/SidebarStore";
 import {
   setSearchQuery,
   setViewMode,
@@ -279,6 +281,23 @@ function AppShell() {
     if (!embedded) return;
     postQuoteActionState(starIsUnstar, lastTagName);
   }, [embedded, starIsUnstar, lastTagName]);
+
+  // Mirror the report's own panels to native so the View menu's three panel
+  // rows can swap Hide↔Show. Swift owns no part of this state and can't derive
+  // it, so without the mirror those rows read one-directional ("Show Tags"
+  // while the tag sidebar is open). Keyed on the three booleans, not the store
+  // objects: a width drag, a tag-eye toggle, or a solo-tag entry mutates
+  // SidebarStore without changing what the menu says.
+  const { tocMode, tagsOpen } = useSidebarStore();
+  const { open: inspectorOpen } = useInspectorStore();
+  // "overlay" is the transient hover-peek, and it can't occur embedded (the
+  // rails that trigger it are hidden) — but it is open when it does, so treat
+  // any non-closed mode as open rather than testing for "push".
+  const leftPanelOpen = tocMode !== "closed";
+  useEffect(() => {
+    if (!embedded) return;
+    postPanelState(leftPanelOpen, tagsOpen, inspectorOpen);
+  }, [embedded, leftPanelOpen, tagsOpen, inspectorOpen]);
 
   useEffect(() => {
     const exportData = getExportData();

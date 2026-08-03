@@ -521,6 +521,17 @@ private struct ViewMenuContent: View {
         leftPanelKey != nil
     }
 
+    /// The tag sidebar and the heatmap inspector each exist on one lens only.
+    /// Read once for both the row's label verb and its `.disabled`, so an
+    /// unavailable row can't dim and still say "Hide".
+    private var hasTagPanel: Bool {
+        bridgeHandler.activeTab == .quotes
+    }
+
+    private var hasHeatmapPanel: Bool {
+        bridgeHandler.activeTab == .analysis
+    }
+
     var body: some View {
         // Tab shortcuts Cmd+1 through Cmd+5
         ForEach(Array(Tab.allCases.enumerated()), id: \.element.id) { index, tab in
@@ -546,15 +557,20 @@ private struct ViewMenuContent: View {
 
         Divider()
 
-        // Dynamic Hide/Show label (Finder convention), content-named "Projects"
-        // to match the reveal-family (Show Contents / Sessions / Codes / Signals
-        // / Tags) and disambiguate from the web left panel. Toggles through the
-        // `columnVisibility` binding via ContentView, not the AppKit selector, so
-        // the auto toolbar button and this item share one source of truth.
-        Button(i18n.t(SidebarToggle.isVisible(sidebarVisibility?.wrappedValue ?? .all)
-                      ? "desktop.menu.view.hideProjects"
-                      : "desktop.menu.view.showProjects"),
-               systemImage: "sidebar.left") {
+        // All four rows are toggles, so all four swap Hide↔Show off the panel's
+        // real state (Finder convention) — see `PanelToggle`. Projects reads its
+        // own window's split-view visibility; the three web panels read the
+        // SPA's `panel-state` mirror, which is the only way native can know.
+        // Content-named "Projects" to match the reveal-family (Contents /
+        // Sessions / Codes / Signals / Tags) and disambiguate from the web left
+        // panel. Toggles through the `columnVisibility` binding via ContentView,
+        // not the AppKit selector, so the auto toolbar button and this item
+        // share one source of truth.
+        Button(i18n.t(PanelToggle.labelKey(
+            panel: "Projects",
+            isOpen: SidebarToggle.isVisible(sidebarVisibility?.wrappedValue ?? .all),
+            isAvailable: sidebarVisibility != nil
+        )), systemImage: "sidebar.left") {
             guard let sidebarVisibility else { return }
             withAnimation {
                 sidebarVisibility.wrappedValue = SidebarToggle.next(sidebarVisibility.wrappedValue)
@@ -563,22 +579,34 @@ private struct ViewMenuContent: View {
         .keyboardShortcut("s", modifiers: [.command, .option])
         .disabled(sidebarVisibility == nil)
 
-        Button(i18n.t("desktop.menu.view.show\(leftPanelKey ?? "Contents")"), systemImage: "list.bullet") {
+        Button(i18n.t(PanelToggle.labelKey(
+            panel: leftPanelKey ?? "Contents",
+            isOpen: bridgeHandler.leftPanelOpen,
+            isAvailable: hasLeftPanel
+        )), systemImage: "list.bullet") {
             bridgeHandler.menuAction("toggleLeftPanel")
         }
         .keyboardShortcut("l", modifiers: [.command, .option])
         .disabled(!hasLeftPanel)
 
-        Button(i18n.t("desktop.menu.view.showTags"), systemImage: "sidebar.right") {
+        Button(i18n.t(PanelToggle.labelKey(
+            panel: "Tags",
+            isOpen: bridgeHandler.rightPanelOpen,
+            isAvailable: hasTagPanel
+        )), systemImage: "sidebar.right") {
             bridgeHandler.menuAction("toggleRightPanel")
         }
         .keyboardShortcut("t", modifiers: [.command, .option])
-        .disabled(bridgeHandler.activeTab != .quotes)
+        .disabled(!hasTagPanel)
 
-        Button(i18n.t("desktop.menu.view.showHeatmap"), systemImage: "square.grid.2x2") {
+        Button(i18n.t(PanelToggle.labelKey(
+            panel: "Heatmap",
+            isOpen: bridgeHandler.inspectorOpen,
+            isAvailable: hasHeatmapPanel
+        )), systemImage: "square.grid.2x2") {
             bridgeHandler.menuAction("toggleInspectorPanel")
         }
-        .disabled(bridgeHandler.activeTab != .analysis)
+        .disabled(!hasHeatmapPanel)
 
         Divider()
 

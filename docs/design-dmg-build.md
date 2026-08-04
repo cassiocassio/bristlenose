@@ -1,7 +1,7 @@
 ---
 status: current
 last-trued: 2026-08-04
-trued-against: HEAD@main on 2026-08-04 (0.24.0 cut — notarised + stapled after a mid-upload notarytool crash and a resubmit; publishing model changed to versioned artefact + stable redirect)
+trued-against: HEAD@main on 2026-08-04 (0.24.0 cut AND published — notarytool crashed mid-upload, orphan purged by Apple, clean resubmit accepted; publishing moved to versioned artefact + stable redirect, verified live)
 ---
 
 # Building the Developer-ID `.dmg`
@@ -181,12 +181,30 @@ low-friction sampler handed out on a link, that is the whole funnel gone.
 
 ## Publishing
 
-Upload the **versioned** artefact — `Bristlenose-<version>.dmg` — and point a
-stable URL at it. Do this **before** the site deploy, or the live CTA 404s. Then
-deploy the website so the "Download for Mac" button goes live. The website lives
-in a separate repo; its `deploy.sh` protects the `dmg/` dir through rsync
-`--delete`, so nothing else ever cleans that directory and retention is this
-side's job.
+**One command — `desktop/scripts/upload-dmg.sh`.** First cut published with it:
+0.24.0 on 4 Aug 2026.
+
+```sh
+desktop/scripts/upload-dmg.sh --dry-run   # probes the host read-only, changes nothing
+desktop/scripts/upload-dmg.sh             # publishes
+```
+
+It gates on `check-dmg-shippable.sh` as a **precondition**, stages to a
+dot-prefixed name **in the target directory** (`mv` is only atomic within a
+filesystem — staging elsewhere would degrade to copy+unlink and reopen the
+truncated-download window), verifies the sha256 of the bytes that landed,
+`chmod 644` before the rename (a new file gets a new inode at `0666 & ~umask`,
+not the old mode — otherwise the download 403s), swaps, repoints the permalink,
+and reaps all but the newest N. If identical bytes are already on the host under
+a name it recognises, it copies server-side instead of re-sending.
+
+Do this **before** the site deploy, or the live CTA 404s. The website lives in a
+separate repo; its `deploy.sh` protects the `dmg/` dir from rsync `--delete`, so
+nothing else ever cleans that directory and retention is this side's job.
+
+Run `--dry-run` every time. It costs seconds and it checks ssh under
+`BatchMode`, the target dir, remote `shasum`, and free space — the things that
+otherwise fail forty minutes in, at 3am, with nobody awake.
 
 **Two URLs, and they answer different questions. Don't collapse them.**
 
@@ -199,6 +217,26 @@ A stable URL whose content changes is the right shape *for this channel
 specifically*: builds expire after 30 days, so a three-week-old post handing
 someone a build that died last Tuesday is worse than one handing them the
 current cut. The stable name is a permalink to a **concept**, not to a file.
+
+**Verified live, 4 Aug 2026** — these were assumptions until the first publish:
+
+```
+/dmg/Bristlenose.dmg         → HTTP 302 → /dmg/Bristlenose-0.24.0.dmg
+/dmg/Bristlenose-0.24.0.dmg  → HTTP 200, 674773487 bytes
+```
+
+The redirect **takes precedence over a real file of the same name**. mod_alias
+resolves the URL before the filesystem is consulted, so the pre-redirect
+`Bristlenose.dmg` still sitting in that directory is unreachable — which is the
+good news for the transition and the bad news for the quota. Those bytes are now
+orphaned and nothing reaps them; remove the legacy file by hand once you're
+satisfied the permalink behaves.
+
+**A stapled `.dmg` is bigger than the one `create-dmg` reported.** 0.24.0:
+`create-dmg` printed `674757575`, the served file is `674773487` — **+15,912
+bytes of stapled ticket**. So a size assertion against the build log reads as a
+mismatch on a *correctly* stapled image. Compare hashes, and compare them
+against the manifest, which is written after stapling.
 
 **Superseded 4 Aug 2026 — this doc previously said the public URL was "never
 versioned — re-cutting refreshes it in place".** Two problems with that, and

@@ -23,7 +23,9 @@
 #   6. Notarise .app + staple.
 #   7. create-dmg  — branded backdrop + drag-to-Applications.
 #   8. Sign .dmg + notarise + staple.
-#   9. Manifest    — sha256s of .app / .dmg / sidecar + commit SHA.
+#   9. Manifest    — sha256s of .app / .dmg / sidecar + the commit SHA and tree
+#                    state captured back at step 3 (NOT re-read here — the chain
+#                    can span a resumed notarisation and outlive HEAD).
 #  10. Final gates — spctl accept, stapler validate.
 #
 # Usage:
@@ -158,6 +160,36 @@ ok "sidecar built + signed under $SIGN_IDENTITY"
 #     (export re-signs, doesn't recompile). Sidecar is fresh+signed from step 2;
 #     skip the in-archive ensure phase.
 say "Xcode archive (development signing; Developer ID applied at export)"
+
+# Provenance is captured HERE, not at manifest-writing time. Stage 9 runs at the
+# end of a chain with two notarisation round-trips in it; re-reading HEAD there
+# is only correct if nothing moved in between. On 4 Aug 2026 something did — a
+# notarytool SIGBUS mid-upload, resumed ~14h later against a main that had
+# advanced two commits, and the manifest credited the wrong commit for the
+# binary. A manifest whose sole purpose is provenance is worse than useless when
+# it lies, so bind the fact to the moment the bits are cut.
+BUILD_COMMIT="$(git -C "$ROOT" rev-parse HEAD)"
+# The .dmg is the one channel with no update mechanism behind it, so record
+# whether the tree was clean too — a recipient has nothing else to go on.
+# GeneratedBuildInfo.swift is rewritten by every Xcode compile; it's gitignored
+# today (so `status --porcelain` already omits it), filtered anyway so an
+# un-ignored copy can't report every build as dirty. See CLAUDE.md's
+# "Status-bar `-dirty` ≠ source dirty".
+BUILD_DIRT="$(git -C "$ROOT" status --porcelain \
+    | grep -v 'desktop/Bristlenose/Bristlenose/GeneratedBuildInfo\.swift' || true)"
+if [ -n "$BUILD_DIRT" ]; then
+    # Split modified-vs-untracked rather than reporting a bare "dirty". Untracked
+    # scratch under experiments/ or docs/ can't reach the .app, but an untracked
+    # .swift under the synced root group compiles straight in — so neither count
+    # can be dropped, and a lone "dirty" that's always on would just get ignored.
+    _dirt_mod="$(printf '%s\n' "$BUILD_DIRT" | grep -cv '^??' || true)"
+    _dirt_unt="$(printf '%s\n' "$BUILD_DIRT" | grep -c  '^??' || true)"
+    BUILD_TREE="dirty — $_dirt_mod modified, $_dirt_unt untracked"
+else
+    BUILD_TREE="clean"
+fi
+ok "archiving from $(git -C "$ROOT" rev-parse --short HEAD) · tree $BUILD_TREE"
+
 rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR"
 export BRISTLENOSE_SKIP_SIDECAR_ENSURE=1
 xcodebuild \
@@ -261,7 +293,8 @@ say "Manifest"
 SIDECAR_BIN="$PROJECT_DIR/Resources/bristlenose-sidecar/bristlenose-sidecar"
 {
     echo "Bristlenose $VERSION — Developer ID .dmg build manifest"
-    echo "commit:  $(git -C "$ROOT" rev-parse HEAD)"
+    echo "commit:  $BUILD_COMMIT"
+    echo "tree:    $BUILD_TREE"
     echo "signed:  $SIGN_IDENTITY"
     echo
     echo "sha256:"

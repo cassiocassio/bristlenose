@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spatial arrow navigation — quotes lens</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-default.css + palette-edo.css).
+   Card styling lifted from organisms/blockquote.css; focus/selection states
+   from atoms/interactive.css; the grid from organisms/responsive-grid.css.
+   Reviews the spatial-arrow-navigation proposal for the quotes lens.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-text-micro-lh:1.3; --bn-text-badge-lh:1.35; --bn-text-caption-lh:1.4;
+  --bn-text-label-lh:1.45; --bn-text-body-lh:1.5; --bn-text-heading-lh:1.3;
+  --bn-text-title-lh:1.25; --bn-text-display-lh:1.2;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-starred:520; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  /* quote grid (tokens.css) */
+  --bn-quote-max-width:23rem; --bn-grid-gap:1.25rem; --bn-flow-tolerance:5em;
+  /* group tints */
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+  --bn-colour-starred:     light-dark(#999999, #8a8a8a);
+  --bn-focus-shadow:       0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+  --bn-selection-bg:       light-dark(#eef4fc, #1a2838);
+  --bn-selection-border:   light-dark(#007aff, #0a84ff);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+  --bn-colour-starred:     light-dark(#8a7d5f, #9a8f70);
+  --bn-selection-bg:       light-dark(#e3ecf5, #22303d);
+  --bn-selection-border:   light-dark(#0f5c9e, #4d9fe0);
+}
+
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:1180px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; font-family:var(--bn-font-mono); }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:70ch; margin:.4rem 0; }
+
+/* ── zone key ─────────────────────────────────────────────────────────── */
+.key { display:flex; gap:1.4rem; flex-wrap:wrap; align-items:center; font-size:var(--bn-text-caption);
+  color:var(--bn-colour-muted); margin-bottom:var(--bn-space-lg); }
+.key b { font-weight:490; color:var(--bn-colour-text); }
+.key .swatch { display:inline-block; width:2rem; height:.85rem; vertical-align:-2px; margin-right:.4rem;
+  border:1px solid var(--bn-colour-border); border-radius:2px; }
+.key .swatch.artefact { background:var(--bn-colour-bg); }
+.key .swatch.comment { background:repeating-linear-gradient(45deg,
+  transparent, transparent 4px, var(--bn-colour-border) 4px, var(--bn-colour-border) 5px); }
+
+/* ── controls ─────────────────────────────────────────────────────────── */
+.controls { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; margin-bottom:var(--bn-space-md); }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase;
+  letter-spacing:.05em; margin-right:.3rem; font-family:var(--bn-font-mono); }
+.controls .sep { width:1px; height:1.4rem; background:var(--bn-colour-border); margin:0 .5rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem;
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn:hover { border-color:var(--bn-colour-border-hover); }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* ── artefact frame ───────────────────────────────────────────────────── */
+.frame { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  overflow:hidden; box-shadow:0 4px 16px var(--bn-colour-shadow); background:var(--bn-colour-bg); }
+.frame-chrome { display:flex; align-items:center; gap:.5rem; padding:.5rem .8rem;
+  border-bottom:1px solid var(--bn-colour-border); background:var(--bn-colour-badge-bg); }
+.frame-chrome .dots { display:flex; gap:.3rem; }
+.frame-chrome .dots i { width:9px; height:9px; border-radius:50%; background:var(--bn-off-track); display:block; }
+.frame-chrome .name { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-family:var(--bn-font-mono); }
+.stage { padding:var(--bn-space-lg); position:relative; }
+
+/* ── REAL quotes-lens surface ─────────────────────────────────────────── */
+.stage h2 { font-size:var(--bn-text-heading); line-height:var(--bn-text-heading-lh);
+  font-weight:490; margin:0 0 var(--bn-space-md); }
+.stage h2:not(:first-child) { margin-top:var(--bn-space-xl); }
+
+/* organisms/responsive-grid.css */
+.quote-group {
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(min(var(--bn-quote-max-width), 100%), 1fr));
+  gap:var(--bn-grid-gap);
+  align-items:start;
+}
+@supports (display: grid-lanes) {
+  .quote-group { display:grid-lanes; flow-tolerance:var(--bn-flow-tolerance); }
+}
+/* organisms/blockquote.css */
+blockquote.quote-card {
+  background:var(--bn-colour-quote-bg);
+  border-left:1px solid var(--bn-colour-border);
+  margin:0;
+  padding:var(--bn-space-md) 1rem;
+  border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0;
+  cursor:pointer;
+}
+blockquote.quote-card.starred { border-left-color:var(--bn-colour-starred); font-weight:var(--bn-weight-starred); }
+.quote-body { font-size:var(--bn-text-body); line-height:var(--bn-text-body-lh); }
+.speaker { display:block; margin-top:var(--bn-space-sm); color:var(--bn-colour-muted); font-size:var(--bn-text-label); }
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
+.badges { margin-top:var(--bn-space-sm); display:flex; gap:.3rem; flex-wrap:wrap; }
+/* atoms/interactive.css */
+/* Verbatim from atoms/interactive.css — do NOT "improve" these. An earlier
+   cut of this mockup used light-dark(#ffffff,#202020) here, which makes the
+   focused card *lighter* than its neighbours in dark mode while the product
+   makes it *darker* (--bn-colour-bg is #111 against #1a1a1a cards). That
+   inversion is why this prototype could be used to compare movement rules
+   without the invisible-dark-cursor problem ever showing up: the mockup was
+   displaying a cursor the product does not have. Keep the gauge honest. */
+blockquote.quote-card.bn-focused {
+  background:var(--bn-colour-bg);
+  box-shadow:var(--bn-focus-shadow);
+  position:relative; z-index:1;
+}
+blockquote.quote-card.bn-selected {
+  background:var(--bn-selection-bg);
+  border-left-color:var(--bn-selection-border);
+}
+blockquote.quote-card.bn-focused.bn-selected { background:var(--bn-selection-bg); box-shadow:var(--bn-focus-shadow); }
+
+/* ── diagnostic overlay (NOT product — off by default) ────────────────── */
+.goal-line { position:absolute; left:0; right:0; height:0; pointer-events:none; display:none;
+  border-top:1px dashed var(--bn-colour-accent); opacity:.55; z-index:5; }
+.stage.diag .goal-line { display:block; }
+.stage.diag blockquote.quote-card::after {
+  content:attr(data-lane); position:absolute; top:2px; right:4px;
+  font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-accent); opacity:.7;
+}
+.stage.diag blockquote.quote-card { position:relative; }
+
+/* ── commentary zone ──────────────────────────────────────────────────── */
+.commentary { margin-top:var(--bn-space-xl); border-left:3px solid var(--bn-colour-border);
+  padding:var(--bn-space-lg) 0 var(--bn-space-lg) var(--bn-space-lg);
+  background:repeating-linear-gradient(45deg, transparent, transparent 9px,
+    light-dark(rgba(0,0,0,.014), rgba(255,255,255,.016)) 9px,
+    light-dark(rgba(0,0,0,.014), rgba(255,255,255,.016)) 18px); }
+.commentary .tag { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption);
+  text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-muted); font-weight:490; }
+.commentary h3 { font-size:var(--bn-text-heading); font-weight:490; margin:var(--bn-space-md) 0 .4rem; }
+.commentary p { max-width:74ch; margin:.5rem 0; font-size:var(--bn-text-label); line-height:1.6; }
+.commentary ul { max-width:74ch; margin:.5rem 0; padding-left:1.1rem; font-size:var(--bn-text-label); line-height:1.6; }
+.commentary li { margin:.3rem 0; }
+.commentary code, .hud code { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  background:var(--bn-colour-badge-bg); padding:.1rem .3rem; border-radius:var(--bn-radius-sm); }
+
+.hud { display:flex; gap:1.4rem; flex-wrap:wrap; font-family:var(--bn-font-mono);
+  font-size:var(--bn-text-caption); color:var(--bn-colour-muted);
+  margin:var(--bn-space-md) 0 0; padding:var(--bn-space-md);
+  border:1px dashed var(--bn-colour-border); border-radius:var(--bn-radius-md); }
+.hud b { color:var(--bn-colour-text); font-weight:490; }
+.hud .warn { color:var(--bn-colour-accent); }
+
+kbd { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); border:1px solid var(--bn-colour-border);
+  border-bottom-width:2px; border-radius:var(--bn-radius-sm); padding:.05rem .35rem;
+  background:var(--bn-colour-bg); }
+
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div class="eyebrow">Prototype · quotes lens</div>
+    <h1>Spatial arrow navigation</h1>
+    <p>Today <kbd>↓</kbd> moves to the next quote in <em>DOM order</em> — which in a multi-column
+    grid renders to the <em>right</em>. This prototype makes the arrows geometric and lets you feel
+    the three candidate scoring rules against a real masonry grid.</p>
+    <p><b>Click any quote to start</b>, then use <kbd>←</kbd> <kbd>↑</kbd> <kbd>↓</kbd> <kbd>→</kbd>.
+    <kbd>j</kbd>/<kbd>k</kbd> stay bound to DOM order so you can feel the difference.
+    <kbd>x</kbd> toggles selection. Resize the window to change the column count.</p>
+  </div>
+
+  <div class="key">
+    <span><span class="swatch artefact"></span><b>Artefact</b> — real pixels, shipped tokens</span>
+    <span><span class="swatch comment"></span><b>Commentary</b> — reasoning, not product</span>
+  </div>
+
+  <div class="controls">
+    <span class="lbl">Rule</span>
+    <button class="pbtn on" data-rule="sight">Line of sight</button>
+    <button class="pbtn" data-rule="centre">Nearest centre</button>
+    <button class="pbtn" data-rule="overlap">Max overlap</button>
+    <span class="sep"></span>
+    <span class="lbl">Palette</span>
+    <button class="pbtn on" data-theme="default">Default</button>
+    <button class="pbtn" data-theme="edo">Edo</button>
+    <span class="sep"></span>
+    <button class="pbtn" id="diag-btn">Diagnostic overlay</button>
+    <button class="pbtn" id="reset-btn">Reset</button>
+  </div>
+
+  <div class="frame">
+    <div class="frame-chrome">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="name" id="chrome-name">quotes lens</span>
+    </div>
+    <div class="stage" id="stage">
+      <div class="goal-line" id="goal-line"></div>
+      <h2>Getting set up</h2>
+      <div class="quote-group" id="g1"></div>
+      <h2>Making sense of the results</h2>
+      <div class="quote-group" id="g2"></div>
+    </div>
+  </div>
+
+  <div class="hud" id="hud"></div>
+
+  <div class="commentary">
+    <div class="tag">Commentary</div>
+
+    <h3>Finding — 4 Aug 2026</h3>
+    <p><b>All three rules felt equivalent on this sample.</b> The predicted drift under Nearest
+    centre was not perceptible in use. That makes <b>Nearest centre the default choice on
+    parsimony</b>: it is the least code by some margin — no lane detection, no remembered-y state
+    machine, no reset rules — and it is the only one of the three that needs nothing beyond a
+    half-plane filter and a distance sort.</p>
+    <p><b>Caveat worth keeping.</b> The drift is real mathematically; it just needs more height
+    variance, or a longer run of consecutive horizontal moves, than this sample produces before it
+    accumulates into something a person notices. So this is a finding about <em>the sample</em> as
+    much as about the rules. All three implementations are kept below rather than pruned to the
+    winner, so revisiting is a one-line change to <code>rule</code> rather than a rewrite.</p>
+    <p><b>Amended on review.</b> Plain nearest-centre had a defect this sample also missed: a
+    <em>vertical</em> press could answer with a <em>sideways</em> card, because
+    <code>align-items: start</code> gives same-row cards different centres once their heights
+    differ. Not drift — a single keypress in the wrong direction, and present on the rectangular
+    grid too, not just masonry. The shipped rule adds a 2× cross-axis penalty; <b>Nearest centre</b>
+    above now includes it, so this page still shows what the product does. Two things follow: the
+    felt-equivalence finding stands for <em>horizontal</em> moves and was under-tested vertically,
+    and the recorded tell gains a second symptom — <em>"↓ moved right"</em>, distinct from the
+    <em>"focus wanders / won't come back"</em> non-reversibility symptom.</p>
+    <p><b>The tell to watch for, if it ever comes back:</b> a report that arrow-key focus "wanders"
+    or "won't go back where it was" — particularly from someone working at a wide window with many
+    lanes, or on a study whose quotes vary a lot in length. That symptom is specifically
+    non-reversibility, and Line of sight is the fix. Anything else (focus landing somewhere odd once,
+    then behaving) is not this.</p>
+
+    <h3>What to feel for</h3>
+    <p><b>The drift test.</b> Focus a card in the left lane, then press <kbd>→</kbd> three times and
+    <kbd>←</kbd> three times. <b>Line of sight</b> returns you to the start by construction — it
+    holds the entry y and only releases it on a vertical move. <b>Nearest centre</b> has no such
+    guarantee: each hop re-centres on a card of a different height, so the error can accumulate.
+    <em>On this sample it doesn't accumulate enough to feel</em> (see the finding above) — the test
+    is kept because it is the thing to re-run against a study with wider height variance.</p>
+    <p><b>The tall-card test.</b> Find a tall card with two or three short ones beside it and press
+    <kbd>→</kbd>. <b>Max overlap</b> has no principled answer here — all the short cards sit entirely
+    within the tall one's span, so they score identically and the tiebreak decides. Line of sight
+    picks by the height you were looking at. Both land somewhere defensible; the difference is
+    whether the choice is <em>principled</em> or <em>arbitrary-but-stable</em>, which only matters if
+    the arbitrary one later proves unstable.</p>
+
+    <h3>The rule</h3>
+    <p>Line of sight is the <em>goal column</em> from text editors, rotated 90°. In an editor you sit
+    on a long line, press <kbd>↓</kbd> through short ones, and land back at your original column —
+    the editor remembers the column and only resets it when you move horizontally. Here we remember
+    the <em>row</em> (a y coordinate) and only reset it on a vertical move, a click, or
+    <kbd>j</kbd>/<kbd>k</kbd>. Nobody has ever noticed the editor version, which is the sign it
+    matches perception; the only time it's visible is when it's missing.</p>
+    <p>Turn on the <b>diagnostic overlay</b> to see the remembered y as a dashed line and the
+    detected lane index on each card. Note the lane index is <em>derived</em> — cards in a lane share
+    a left edge because every lane is <code>1fr</code> off the same <code>minmax</code>, so nothing
+    needs to know the column count, whether masonry is active, or where the sections start.</p>
+
+    <h3>Why this is measured, not computed</h3>
+    <p>Every complication dissolves by reading <code>getBoundingClientRect()</code> off the laid-out
+    DOM at keypress time: masonry lanes, the variable column count from <code>auto-fill</code>, the
+    stack of separate <code>.quote-group</code> grids with full-span headings between them, and
+    hidden/filtered/searched quotes. Crossing a section boundary isn't special-cased below — it falls
+    out of "nearest thing in that direction". Cost is one batched rect read per keypress, a single
+    reflow rather than N.</p>
+
+    <h3>Open questions</h3>
+    <ul>
+      <li><b>Section boundaries</b> — <kbd>↓</kbd> from the last card in a lane currently flows into
+      the next section. Alternative is to stop at the section edge, which would feel like a wall the
+      eye can't see.</li>
+      <li><b>Shift+arrow</b> — not wired here. Today <kbd>⇧j</kbd>/<kbd>⇧k</kbd> <em>accumulate</em>
+      rather than range-select, which generalises to 2-D without ambiguity.</li>
+      <li><b>Lane ends</b> — <kbd>→</kbd> from the rightmost lane does nothing rather than wrapping.
+      Under masonry there are no rows to wrap to, so a wrap would have to invent one and its target
+      would be unpredictable from where the user is standing. (An earlier draft cited Finder's icon
+      view as the precedent for not wrapping; that attribution is unverified and probably backwards,
+      so it's dropped — the masonry argument stands on its own.)</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+// ── data ────────────────────────────────────────────────────────────────────
+// Deliberately varied lengths — the whole design question only shows up when
+// card heights differ, which is exactly when a rectangular grid becomes masonry.
+const QUOTES = [
+  [ // Getting set up
+    ["I had it running in about ten minutes, which honestly surprised me.", "p3", ["onboarding"], "--bn-task-1-bg", false],
+    ["The bit I got stuck on was the folder. I didn't know if it wanted the recordings or the folder above them, and there was nothing telling me which. So I tried both. The second one worked but I still don't know why.", "p1", ["friction","onboarding"], "--bn-emo-1-bg", true],
+    ["I just dragged the whole thing in and hoped.", "p7", [], null, false],
+    ["My IT people would need to sign off on anything that sends audio somewhere, so that's the first question I'd get asked, and I wouldn't have a good answer to give them right now.", "p2", ["trust"], "--bn-trust-1-bg", false],
+    ["Setting it up felt like normal software. That's a compliment.", "p5", ["onboarding"], "--bn-task-1-bg", false],
+    ["I expected to have to install a load of things first. I didn't.", "p4", [], null, false],
+    ["Honestly the hardest part was finding where I'd put the interviews on my own laptop, which is not really your problem.", "p6", ["friction"], "--bn-emo-1-bg", false],
+    ["There was a moment where nothing happened for a while and I couldn't tell if it had frozen or was just thinking. I nearly quit it.", "p1", ["friction","feedback"], "--bn-emo-1-bg", true],
+  ],
+  [ // Making sense of the results
+    ["The quotes were the thing. I went straight to those and ignored everything else on the page.", "p3", ["value"], "--bn-opp-1-bg", true],
+    ["I'd want to move one into a different theme. I could see where it should go and I couldn't drag it.", "p2", ["friction"], "--bn-emo-1-bg", false],
+    ["It found a thing about the pricing page that I'd genuinely missed across six interviews, and I'd read all of them twice.", "p5", ["value"], "--bn-opp-1-bg", true],
+    ["Some of the groupings felt like it was pattern-matching on words rather than meaning. Two quotes about 'waiting' ended up together but one was about a queue and one was about a relationship.", "p4", ["accuracy"], "--bn-ux-1-bg", false],
+    ["I'd send this to a client as-is.", "p7", ["value"], "--bn-opp-1-bg", false],
+    ["Being able to click through to where it was said in the transcript is what makes me trust it. Without that I'd be checking every single one by hand anyway, so it'd save me nothing.", "p1", ["trust"], "--bn-trust-1-bg", true],
+    ["I want to star things as I read and then only export the starred ones.", "p6", ["workflow"], "--bn-task-1-bg", false],
+    ["The sentiment labels I'd probably ignore. I don't think in those categories.", "p2", [], null, false],
+    ["It's the first draft of the analysis, not the analysis. Which is fine — that's the bit that takes me three days.", "p3", ["value"], "--bn-opp-1-bg", false],
+  ],
+];
+
+// ── render ──────────────────────────────────────────────────────────────────
+let uid = 0;
+function render() {
+  [document.getElementById("g1"), document.getElementById("g2")].forEach((host, gi) => {
+    host.innerHTML = "";
+    QUOTES[gi].forEach(([text, who, tags, tint, starred]) => {
+      const id = "q-" + (++uid);
+      const bq = document.createElement("blockquote");
+      bq.className = "quote-card" + (starred ? " starred" : "");
+      bq.id = id;
+      bq.innerHTML =
+        '<div class="quote-body"><span>“</span>' + text + '<span>”</span></div>' +
+        '<span class="speaker">' + who + '</span>' +
+        (tags.length
+          ? '<div class="badges">' + tags.map(t =>
+              '<span class="badge"' + (tint ? ' style="background:var(' + tint + ')"' : '') + '>' + t + '</span>'
+            ).join("") + '</div>'
+          : "");
+      bq.addEventListener("click", () => { setFocus(id); goalY = null; draw(); });
+      host.appendChild(bq);
+    });
+  });
+}
+
+// ── state ───────────────────────────────────────────────────────────────────
+let focusId = null;
+let selected = new Set();
+let goalY = null;          // remembered line of sight; null = derive from focus
+let rule = "sight";
+let lastPath = [];         // for the drift readout
+
+const LANE_TOL = 6;        // px — lane membership by shared left edge
+
+function cards() {
+  return [...document.querySelectorAll(".quote-card")].map(el => {
+    const r = el.getBoundingClientRect();
+    return { el, id: el.id, left: r.left, right: r.right, top: r.top, bottom: r.bottom,
+             cx: r.left + r.width / 2, cy: r.top + r.height / 2, h: r.height };
+  });
+}
+
+function laneEdges(rs) {
+  const edges = [];
+  rs.forEach(r => { if (!edges.some(e => Math.abs(e - r.left) <= LANE_TOL)) edges.push(r.left); });
+  return edges.sort((a, b) => a - b);
+}
+const laneIndex = (r, edges) => edges.findIndex(e => Math.abs(e - r.left) <= LANE_TOL);
+
+// ── the three rules ─────────────────────────────────────────────────────────
+// Each returns the id to move to, or null. `dir` is one of up/down/left/right.
+
+function moveSight(rs, cur, dir) {
+  const edges = laneEdges(rs);
+  const li = laneIndex(cur, edges);
+
+  if (dir === "left" || dir === "right") {
+    const ti = dir === "right" ? li + 1 : li - 1;
+    if (ti < 0 || ti >= edges.length) return null;
+    const y = goalY ?? cur.cy;                       // the remembered line of sight
+    const lane = rs.filter(r => laneIndex(r, edges) === ti);
+    if (!lane.length) return null;
+    // Prefer a card the ray actually passes through; else the nearest to it.
+    const hit = lane.filter(r => y >= r.top && y <= r.bottom);
+    const pool = hit.length ? hit : lane;
+    return pool.reduce((best, r) => {
+      const d = Math.max(r.top - y, 0, y - r.bottom);
+      return d < best.d ? { d, id: r.id } : best;
+    }, { d: Infinity, id: null }).id;
+  }
+
+  // Vertical: same lane first — that is what "down" means when cards flow in lanes.
+  const down = dir === "down";
+  const lane = rs.filter(r => laneIndex(r, edges) === li && r.id !== cur.id
+                              && (down ? r.top > cur.top : r.top < cur.top));
+  if (lane.length) {
+    return lane.reduce((best, r) => {
+      const d = Math.abs(r.top - cur.top);
+      return d < best.d ? { d, id: r.id } : best;
+    }, { d: Infinity, id: null }).id;
+  }
+  // Lane exhausted (end of a section, ragged tail) — nearest card in that
+  // direction anywhere, weighted to prefer staying horizontally close.
+  const any = rs.filter(r => r.id !== cur.id && (down ? r.top > cur.top : r.top < cur.top));
+  if (!any.length) return null;
+  return any.reduce((best, r) => {
+    const d = Math.abs(r.top - cur.top) + Math.abs(r.cx - cur.cx) * 2;
+    return d < best.d ? { d, id: r.id } : best;
+  }, { d: Infinity, id: null }).id;
+}
+
+// THIS IS THE SHIPPED RULE (frontend/src/utils/spatialNav.ts). The 2x
+// cross-axis penalty is load-bearing, not a tweak: without it, `align-items:
+// start` means same-row cards have different centres as soon as their heights
+// differ, and a tall neighbour one lane over scores closer than the card
+// genuinely below — so a plain nearest-centre `↓` moves SIDEWAYS. Measured at
+// the real 388px lane pitch: 412 sideways vs 435 below. With the penalty:
+// 788 vs 435. Keep this function in sync with the module.
+const CROSS_AXIS_PENALTY = 2;
+function moveCentre(rs, cur, dir) {
+  const ok = {
+    right: r => r.cx > cur.cx + LANE_TOL, left: r => r.cx < cur.cx - LANE_TOL,
+    down:  r => r.cy > cur.cy + 1,        up:   r => r.cy < cur.cy - 1,
+  }[dir];
+  const pool = rs.filter(r => r.id !== cur.id && ok(r));
+  if (!pool.length) return null;
+  const horizontal = dir === "left" || dir === "right";
+  const kx = horizontal ? 1 : CROSS_AXIS_PENALTY;
+  const ky = horizontal ? CROSS_AXIS_PENALTY : 1;
+  return pool.reduce((best, r) => {
+    const d = Math.hypot((r.cx - cur.cx) * kx, (r.cy - cur.cy) * ky);
+    return d < best.d ? { d, id: r.id } : best;
+  }, { d: Infinity, id: null }).id;
+}
+
+function moveOverlap(rs, cur, dir) {
+  const edges = laneEdges(rs);
+  const li = laneIndex(cur, edges);
+  if (dir === "left" || dir === "right") {
+    const ti = dir === "right" ? li + 1 : li - 1;
+    if (ti < 0 || ti >= edges.length) return null;
+    const lane = rs.filter(r => laneIndex(r, edges) === ti);
+    if (!lane.length) return null;
+    return lane.reduce((best, r) => {
+      const ov = Math.min(r.bottom, cur.bottom) - Math.max(r.top, cur.top);
+      return ov > best.ov ? { ov, id: r.id } : best;   // ties keep the topmost
+    }, { ov: -Infinity, id: null }).id;
+  }
+  return moveSight(rs, cur, dir);   // vertical is uncontroversial — same lane
+}
+
+const RULES = { sight: moveSight, centre: moveCentre, overlap: moveOverlap };
+
+// ── driver ──────────────────────────────────────────────────────────────────
+function setFocus(id) { focusId = id; }
+
+function move(dir) {
+  const rs = cards();
+  if (!rs.length) return;
+  if (!focusId) { setFocus(rs[0].id); goalY = null; return; }
+  const cur = rs.find(r => r.id === focusId);
+  if (!cur) { setFocus(rs[0].id); goalY = null; return; }
+
+  const next = RULES[rule](rs, cur, dir);
+  if (!next) return;
+
+  if (dir === "left" || dir === "right") {
+    // Hold the line of sight across consecutive horizontal moves — this is
+    // what makes →→→←←← reversible. Only the `sight` rule claims to do it.
+    if (goalY === null) goalY = cur.cy;
+  } else {
+    goalY = null;                                   // vertical move resets it
+  }
+  lastPath.push(dir);
+  if (lastPath.length > 12) lastPath.shift();
+  setFocus(next);
+}
+
+function moveDom(delta) {
+  const rs = cards();
+  const i = rs.findIndex(r => r.id === focusId);
+  const ni = i === -1 ? (delta > 0 ? 0 : rs.length - 1)
+                      : Math.max(0, Math.min(rs.length - 1, i + delta));
+  setFocus(rs[ni].id);
+  goalY = null;                                     // j/k are a different model
+}
+
+// ── paint ───────────────────────────────────────────────────────────────────
+function draw() {
+  const rs = cards();
+  const edges = laneEdges(rs);
+  rs.forEach(r => {
+    r.el.classList.toggle("bn-focused", r.id === focusId);
+    r.el.classList.toggle("bn-selected", selected.has(r.id));
+    r.el.dataset.lane = "L" + laneIndex(r, edges);
+  });
+
+  const stage = document.getElementById("stage");
+  const line = document.getElementById("goal-line");
+  const cur = rs.find(r => r.id === focusId);
+  const y = goalY ?? (cur ? cur.cy : null);
+  if (y !== null) line.style.top = (y - stage.getBoundingClientRect().top) + "px";
+
+  const masonry = CSS.supports("display", "grid-lanes");
+  document.getElementById("chrome-name").textContent =
+    "quotes lens · " + edges.length + (edges.length === 1 ? " lane" : " lanes") +
+    " · " + (masonry ? "masonry (grid-lanes)" : "rectangular grid");
+
+  document.getElementById("hud").innerHTML =
+    "<span>rule <b>" + rule + "</b></span>" +
+    "<span>lanes <b>" + edges.length + "</b></span>" +
+    "<span>focus <b>" + (focusId || "—") + "</b></span>" +
+    "<span>line of sight <b>" + (goalY === null ? "— (free)" : Math.round(goalY) + "px (held)") + "</b></span>" +
+    "<span>selected <b>" + selected.size + "</b></span>" +
+    "<span>path <b>" + (lastPath.map(d => ({left:"←",right:"→",up:"↑",down:"↓"}[d])).join("") || "—") + "</b></span>" +
+    (masonry ? "" : "<span class='warn'>this engine has no grid-lanes — showing the rectangular fallback</span>");
+}
+
+// ── input ───────────────────────────────────────────────────────────────────
+const DIRS = { ArrowLeft:"left", ArrowRight:"right", ArrowUp:"up", ArrowDown:"down" };
+document.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (DIRS[e.key]) { e.preventDefault(); move(DIRS[e.key]); draw(); return; }
+  if (e.key === "j") { e.preventDefault(); moveDom(1);  draw(); return; }
+  if (e.key === "k") { e.preventDefault(); moveDom(-1); draw(); return; }
+  if (e.key === "x" && focusId) {
+    e.preventDefault();
+    selected.has(focusId) ? selected.delete(focusId) : selected.add(focusId);
+    draw(); return;
+  }
+  if (e.key === "Escape") { selected.size ? selected.clear() : (focusId = null); draw(); }
+});
+
+document.querySelectorAll("[data-rule]").forEach(b => b.addEventListener("click", () => {
+  rule = b.dataset.rule;
+  document.querySelectorAll("[data-rule]").forEach(x => x.classList.toggle("on", x === b));
+  goalY = null; lastPath = []; draw();
+}));
+document.querySelectorAll("[data-theme]").forEach(b => b.addEventListener("click", () => {
+  document.documentElement.dataset.colorTheme = b.dataset.theme;
+  document.querySelectorAll("[data-theme]").forEach(x => x.classList.toggle("on", x === b));
+}));
+document.getElementById("diag-btn").addEventListener("click", e => {
+  const on = document.getElementById("stage").classList.toggle("diag");
+  e.currentTarget.classList.toggle("on", on);
+  draw();
+});
+document.getElementById("reset-btn").addEventListener("click", () => {
+  focusId = null; selected.clear(); goalY = null; lastPath = []; draw();
+});
+addEventListener("resize", draw);
+
+render();
+draw();
+</script>
+</body>
+</html>

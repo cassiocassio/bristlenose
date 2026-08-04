@@ -22,6 +22,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import {
+  entryPoint,
+  nextSpatial,
+  readCardRects,
+  type Direction,
+} from "../utils/spatialNav";
+
+export type { Direction };
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -40,8 +48,27 @@ interface FocusContextValue {
   selectAll: () => void;
   /** Clear all selections. */
   clearSelection: () => void;
-  /** Move focus to next (1) or previous (-1) visible quote. */
+  /** Move focus to next (1) or previous (-1) visible quote, in DOM order. */
   moveFocus: (direction: 1 | -1) => void;
+  /**
+   * Move focus geometrically — the arrow keys. Distinct from `moveFocus`
+   * because the quote grid is multi-column masonry, where the next quote in
+   * DOM order renders to the *right* rather than below. See `spatialNav`.
+   *
+   * Returns whether focus actually moved, so the caller can decline the key
+   * and let the browser scroll when there's nowhere to go.
+   */
+  moveFocusSpatial: (direction: Direction) => boolean;
+  /**
+   * Resolve the quote lying in `direction` from `fromId` without moving focus.
+   * Lets Shift+arrow extend the selection along the same path a bare arrow
+   * would travel, so the two can't disagree about where "down" is.
+   *
+   * Takes `null` for a cold cursor so callers never hand-roll the entry point:
+   * doing that from the registry rather than the measured set is exactly the
+   * bug that made the arrow key stick permanently.
+   */
+  getSpatialTarget: (fromId: string | null, direction: Direction) => string | null;
   /** Set the anchor for Shift-extend selection. */
   setAnchor: (id: string | null) => void;
   /** Current anchor ID for range selection. */
@@ -96,6 +123,8 @@ const NO_FOCUS: FocusContextValue = {
   selectAll: noop,
   clearSelection: noop,
   moveFocus: noop as unknown as FocusContextValue["moveFocus"],
+  moveFocusSpatial: () => false,
+  getSpatialTarget: () => null,
   setAnchor: noopStrOrNull,
   anchorId: null,
   registerVisibleQuoteIds: noopStrStr as unknown as FocusContextValue["registerVisibleQuoteIds"],
@@ -184,9 +213,27 @@ export function FocusProvider({ children }: { children: ReactNode }) {
         // Defer scroll to next frame so React has rendered the focus class.
         requestAnimationFrame(() => {
           const el = document.getElementById(id);
-          if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
-          }
+          if (!el) return;
+          // `nearest`, not `center`. Centring re-scrolls the viewport on
+          // every move even when the target is already fully visible — which
+          // with horizontal arrows means the page lurches vertically each
+          // time you step one lane sideways. `nearest` scrolls the minimum
+          // and does nothing at all when the card is already on screen, which
+          // is also what Finder and Mail do with a moving selection.
+          //
+          // It also shrinks a measurement hazard: WebKit reports impossible
+          // rects while a smooth scroll animates (frontend/CLAUDE.md), and
+          // key-repeat measures inside that window. Fewer animations started,
+          // smaller window.
+          // `matchMedia` is optional-chained: jsdom doesn't implement it, and
+          // an absent media-query API should degrade to "animate" rather than
+          // throw inside a rAF callback where nothing would catch it.
+          const reduceMotion =
+            window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+          el.scrollIntoView({
+            behavior: reduceMotion ? "auto" : "smooth",
+            block: "nearest",
+          });
         });
       }
     },
@@ -269,6 +316,61 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     [focusedId, setFocus],
   );
 
+  // ── Spatial movement (arrow keys) ───────────────────────────────────
+
+  /**
+   * The single resolver for every geometric move — bare arrow and
+   * Shift+arrow both go through here.
+   *
+   * Recovery lives here rather than in the callers on purpose. When it sat in
+   * `moveFocusSpatial` alone, Shift+arrow inherited none of it: an unmeasured
+   * cursor resolved to null, and the extend path then *selected the invisible
+   * quote and stayed put*, feeding it to bulk star / hide / copy. Sharing the
+   * scorer was never enough — the fallback has to be shared too.
+   */
+  const getSpatialTarget = useCallback(
+    (fromId: string | null, direction: Direction): string | null => {
+      const ids = visibleIdsRef.current;
+      if (!ids.length) return null;
+
+      const rects = readCardRects(ids);
+
+      // No focus, or a focused quote that's no longer laid out (filtered,
+      // searched away, hidden) — enter at the same end `j`/`k` would.
+      //
+      // Enter from the *measured* set, not the registry. Entering from `ids`
+      // hands focus back to the unmeasurable quote whenever it happens to sit
+      // at the end we're entering from, so the next press repeats the same
+      // failure and the arrow key is permanently dead — each press still
+      // firing a scroll back to the card that can't be measured.
+      // `readCardRects` preserves registry order, so reading order is
+      // unaffected.
+      if (!fromId || !rects.some((r) => r.id === fromId)) {
+        return entryPoint(
+          rects.map((r) => r.id),
+          direction,
+        );
+      }
+
+      // Null at the edge of the grid: stay put rather than wrap. Wrapping
+      // would have to invent a row to wrap to, and masonry has none.
+      return nextSpatial(rects, fromId, direction);
+    },
+    [],
+  );
+
+  /** Returns whether focus actually moved, so the caller can decide whether
+   *  to claim the key or let the browser scroll the page. */
+  const moveFocusSpatial = useCallback(
+    (direction: Direction): boolean => {
+      const next = getSpatialTarget(focusedId, direction);
+      if (!next) return false;
+      setFocus(next);
+      return true;
+    },
+    [focusedId, getSpatialTarget, setFocus],
+  );
+
   // ── Anchor ──────────────────────────────────────────────────────────
 
   const setAnchor = useCallback((id: string | null) => {
@@ -345,6 +447,8 @@ export function FocusProvider({ children }: { children: ReactNode }) {
       selectAll,
       clearSelection,
       moveFocus,
+      moveFocusSpatial,
+      getSpatialTarget,
       setAnchor,
       anchorId,
       registerVisibleQuoteIds,
@@ -368,6 +472,8 @@ export function FocusProvider({ children }: { children: ReactNode }) {
       selectAll,
       clearSelection,
       moveFocus,
+      moveFocusSpatial,
+      getSpatialTarget,
       setAnchor,
       anchorId,
       registerVisibleQuoteIds,

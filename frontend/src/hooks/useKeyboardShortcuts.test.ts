@@ -116,6 +116,33 @@ function renderWithProviders(
   };
 }
 
+/**
+ * Give the named quotes real boxes, and return a teardown.
+ *
+ * jsdom reports every `getBoundingClientRect()` as zero, which `readCardRects`
+ * correctly reads as "not laid out" and drops — so a test of the geometric
+ * path has to supply geometry or it silently exercises the fallback instead.
+ * `scrollIntoView` is stubbed because jsdom doesn't implement it and `setFocus`
+ * calls it on the next frame.
+ */
+function layout(boxes: Record<string, { x: number; y: number }>) {
+  const els: HTMLElement[] = [];
+  for (const [id, { x, y }] of Object.entries(boxes)) {
+    const el = document.createElement("blockquote");
+    el.id = id;
+    el.getBoundingClientRect = () =>
+      ({
+        left: x, top: y, width: 200, height: 100,
+        right: x + 200, bottom: y + 100, x, y,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    el.scrollIntoView = () => {};
+    document.body.appendChild(el);
+    els.push(el);
+  }
+  return () => els.forEach((el) => el.remove());
+}
+
 function pressKey(key: string, options: Partial<KeyboardEventInit> = {}) {
   const event = new KeyboardEvent("keydown", {
     key,
@@ -124,6 +151,10 @@ function pressKey(key: string, options: Partial<KeyboardEventInit> = {}) {
     ...options,
   });
   document.dispatchEvent(event);
+  // Returned so callers can assert on `defaultPrevented` — the only way to
+  // tell "the handler declined this key" from "the handler ran and no state
+  // happened to change", which is exactly the off-lens case.
+  return event;
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────
@@ -216,8 +247,29 @@ describe("useKeyboardShortcuts", () => {
       unmount();
     });
 
-    it("ArrowDown works like j", () => {
+    it("arrows decline the key when nothing is measurable", () => {
+      // jsdom's zero rects are the same shape as a grid that hasn't laid out
+      // yet. Entering from the *registry* here is what let the arrow hand
+      // focus back to an unmeasurable card forever — so the right answer is
+      // to move nothing AND leave the page scroll alone.
       const { getCtx, unmount } = renderWithProviders();
+      act(() => {
+        getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
+      });
+
+      let event!: KeyboardEvent;
+      act(() => {
+        event = pressKey("ArrowDown");
+      });
+      expect(getCtx().focusedId).toBeNull();
+      expect(event.defaultPrevented).toBe(false);
+
+      unmount();
+    });
+
+    it("arrows enter at reading-order start/end once the grid is laid out", () => {
+      const { getCtx, unmount } = renderWithProviders();
+      const cleanup = layout({ "q-1": { x: 0, y: 0 }, "q-2": { x: 0, y: 200 } });
       act(() => {
         getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
       });
@@ -225,18 +277,207 @@ describe("useKeyboardShortcuts", () => {
       act(() => pressKey("ArrowDown"));
       expect(getCtx().focusedId).toBe("q-1");
 
+      act(() => pressKey("Escape"));
+      act(() => pressKey("ArrowUp"));
+      expect(getCtx().focusedId).toBe("q-2");
+
+      cleanup();
       unmount();
     });
+  });
 
-    it("ArrowUp works like k", () => {
-      const { getCtx, unmount } = renderWithProviders();
+  // The arrows are geometric and j/k are DOM order. In one column they agree,
+  // which is why the split went unnoticed for so long — so every test here
+  // lays out TWO lanes, where DOM order and geometry genuinely disagree.
+  //
+  //   lane 0      lane 1
+  //   q-1         q-2
+  //   q-3
+  //
+  // DOM order is q-1, q-2, q-3. From q-1: `j` → q-2 (to the right), `↓` → q-3.
+  describe("arrows are geometric, j/k are DOM order", () => {
+    const TWO_LANES = { "q-1": { x: 0, y: 0 }, "q-2": { x: 300, y: 0 }, "q-3": { x: 0, y: 200 } };
+
+    function start() {
+      const h = renderWithProviders();
+      const cleanup = layout(TWO_LANES);
+      act(() => {
+        h.getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2", "q-3"]);
+        h.getCtx().setFocus("q-1", { scroll: false });
+      });
+      return { ...h, done: () => { cleanup(); h.unmount(); } };
+    }
+
+    it("ArrowDown moves down the lane, not to the next quote in DOM order", () => {
+      const { getCtx, done } = start();
+      act(() => pressKey("ArrowDown"));
+      expect(getCtx().focusedId).toBe("q-3");
+      done();
+    });
+
+    it("ArrowRight crosses into the next lane", () => {
+      const { getCtx, done } = start();
+      act(() => pressKey("ArrowRight"));
+      expect(getCtx().focusedId).toBe("q-2");
+      done();
+    });
+
+    it("ArrowLeft comes back", () => {
+      const { getCtx, done } = start();
+      act(() => pressKey("ArrowRight"));
+      act(() => pressKey("ArrowLeft"));
+      expect(getCtx().focusedId).toBe("q-1");
+      done();
+    });
+
+    it("ArrowRight does nothing at the last lane — no wrap", () => {
+      const { getCtx, done } = start();
+      act(() => pressKey("ArrowRight"));
+      act(() => pressKey("ArrowRight"));
+      expect(getCtx().focusedId).toBe("q-2");
+      done();
+    });
+
+    it("j still follows DOM order across lanes", () => {
+      const { getCtx, done } = start();
+      act(() => pressKey("j"));
+      expect(getCtx().focusedId).toBe("q-2");
+      done();
+    });
+
+    it("Shift+ArrowDown extends along the geometry, matching the bare arrow", () => {
+      const { getCtx, done } = start();
+      act(() => pressKey("ArrowDown", { shiftKey: true }));
+      expect(getCtx().focusedId).toBe("q-3");
+      expect([...getCtx().selectedIds].sort()).toEqual(["q-1", "q-3"]);
+      done();
+    });
+
+    it("does not claim the key at the edge of the grid — page scroll survives", () => {
+      const { getCtx, done } = start();
+      // q-1 is top-left; there is nothing above it.
+      let event!: KeyboardEvent;
+      act(() => {
+        event = pressKey("ArrowUp");
+      });
+      expect(getCtx().focusedId).toBe("q-1");
+      expect(event.defaultPrevented).toBe(false);
+      done();
+    });
+
+    it("declines an arrow another control already claimed", () => {
+      // The sidebar resize separator handles ←/→ with preventDefault but no
+      // stopPropagation, so before the guard one keypress resized the sidebar
+      // *and* moved the quote cursor *and* scrolled the page.
+      const { getCtx, done } = start();
+      act(() => {
+        const event = new KeyboardEvent("keydown", {
+          key: "ArrowRight",
+          bubbles: true,
+          cancelable: true,
+        });
+        event.preventDefault(); // what useDragResize already did
+        document.dispatchEvent(event);
+      });
+      expect(getCtx().focusedId).toBe("q-1");
+      done();
+    });
+
+    it("Shift+arrow recovers from an unmeasurable cursor instead of stalling on it", () => {
+      // Both callers share the recovery, not just the scorer. When only
+      // moveFocusSpatial had it, Shift+arrow on an unmeasurable cursor
+      // selected the invisible quote and *stayed put* — every subsequent
+      // press repeating it. Now the cursor recovers to a real quote.
+      //
+      // Known residual, deliberately not asserted away: the stale cursor is
+      // still seeded into the selection, because `extendTo` always selects
+      // the quote it starts from. `Shift+j`/`Shift+k` do exactly the same on
+      // their own stale-index path, so this is shared, pre-existing
+      // behaviour rather than something the geometric path introduced.
+      const h = renderWithProviders();
+      const cleanup = layout({ "q-1": { x: 0, y: 0 }, "q-3": { x: 0, y: 200 } });
+      act(() => {
+        // q-2 is registered but never laid out.
+        h.getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2", "q-3"]);
+        h.getCtx().setFocus("q-2", { scroll: false });
+      });
+
+      act(() => pressKey("ArrowDown", { shiftKey: true }));
+      expect(h.getCtx().focusedId).not.toBe("q-2");
+      expect(h.getCtx().focusedId).toBe("q-1");
+
+      cleanup();
+      h.unmount();
+    });
+  });
+
+  // The quote keys are gated on the Quotes lens. Focus is a logical cursor
+  // that survives route changes by design, so an ungated handler stays live
+  // everywhere else — swallowing the page scroll on Transcripts/Analysis and
+  // mutating a quote the user has navigated away from. The registry is
+  // deliberately still populated in these tests: a stale id list is precisely
+  // the state the guard has to be safe in.
+  describe("route guard — quote keys are inert off the quotes lens", () => {
+    const OFF_LENS = "/report/sessions/s1";
+
+    it("j does not move focus", () => {
+      const { getCtx, unmount } = renderWithProviders(undefined, OFF_LENS);
       act(() => {
         getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
       });
 
-      act(() => pressKey("ArrowUp"));
-      expect(getCtx().focusedId).toBe("q-2");
+      act(() => pressKey("j"));
+      expect(getCtx().focusedId).toBeNull();
 
+      unmount();
+    });
+
+    it("ArrowDown leaves the page scroll intact", () => {
+      const { getCtx, unmount } = renderWithProviders(undefined, OFF_LENS);
+      act(() => {
+        getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
+      });
+
+      let event!: KeyboardEvent;
+      act(() => {
+        event = pressKey("ArrowDown");
+      });
+      expect(event.defaultPrevented).toBe(false);
+
+      unmount();
+    });
+
+    it("s does not star the quote that was focused before navigating away", () => {
+      const { getCtx, storeResult, unmount } = renderWithProviders(
+        undefined,
+        OFF_LENS,
+      );
+      act(() => {
+        getCtx().registerVisibleQuoteIds("test", ["q-1"]);
+        getCtx().setFocus("q-1", { scroll: false });
+      });
+
+      act(() => pressKey("s"));
+      expect(storeResult.result.current.starred["q-1"]).toBeFalsy();
+
+      unmount();
+    });
+
+    it("still claims ArrowDown on the quotes lens when the cursor can move", () => {
+      const { getCtx, unmount } = renderWithProviders();
+      const cleanup = layout({ "q-1": { x: 0, y: 0 }, "q-2": { x: 0, y: 200 } });
+      act(() => {
+        getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
+      });
+
+      let event!: KeyboardEvent;
+      act(() => {
+        event = pressKey("ArrowDown");
+      });
+      expect(event.defaultPrevented).toBe(true);
+      expect(getCtx().focusedId).toBe("q-1");
+
+      cleanup();
       unmount();
     });
   });

@@ -40,6 +40,7 @@ import { toggleFocusMode } from "../contexts/FocusModeStore";
 import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
 import { postEditingStarted, postEditingEnded } from "../shims/bridge";
+import { type Direction } from "../utils/spatialNav";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -47,6 +48,39 @@ import { postEditingStarted, postEditingEnded } from "../shims/bridge";
 function pathMatches(pathname: string, route: string): boolean {
   return pathname === route || pathname === route + "/";
 }
+
+/** Arrow keys, mapped to the geometric direction they draw. */
+const ARROW_DIRECTIONS: Record<string, Direction | undefined> = {
+  ArrowDown: "down",
+  ArrowUp: "up",
+  ArrowLeft: "left",
+  ArrowRight: "right",
+};
+
+/**
+ * Native-menu actions that act on quotes, and so must respect the same lens
+ * gate the keydown path does.
+ *
+ * Player transport and window actions are deliberately absent — those are
+ * valid from any lens. Without this, off-lens safety for the menu path rests
+ * entirely on the Swift side remembering `.disabled(!onQuotesTab)` on every
+ * item it ever adds; one omission and a quote the user can no longer see gets
+ * starred, hidden, or silently dropped from the selection.
+ */
+const QUOTE_SCOPED_MENU_ACTIONS = new Set([
+  "star",
+  "hide",
+  "addTag",
+  "applyLastTag",
+  "nextQuote",
+  "previousQuote",
+  "extendSelectionDown",
+  "extendSelectionUp",
+  "toggleSelection",
+  "selectAllQuotes",
+  "clearSelection",
+  "revealInTranscript",
+]);
 
 // ── Hook ─────────────────────────────────────────────────────────────────
 
@@ -75,6 +109,8 @@ export function useKeyboardShortcuts({
     selectAll,
     clearSelection,
     moveFocus,
+    moveFocusSpatial,
+    getSpatialTarget,
     setAnchor,
     anchorId,
     openTagInput,
@@ -227,10 +263,18 @@ export function useKeyboardShortcuts({
     return false;
   }, []);
 
-  // ── Shift+j/k extend selection ──────────────────────────────────────
+  // ── Extend selection (Shift+move) ───────────────────────────────────
 
-  const handleShiftMove = useCallback(
-    (direction: 1 | -1) => {
+  /**
+   * Select the focused quote, move focus to `targetId`, and select that too.
+   *
+   * This is an *accumulate* model, not a true range: each step adds the quote
+   * it passes over. That's what makes it generalise to the arrow keys — a 2-D
+   * range has no unambiguous meaning over a masonry grid, whereas accumulating
+   * along the path the cursor actually travelled always does.
+   */
+  const extendTo = useCallback(
+    (targetId: string | null) => {
       const focused = focusedIdRef.current;
 
       // Select the current quote if not already selected
@@ -240,6 +284,22 @@ export function useKeyboardShortcuts({
         }
         if (!anchorIdRef.current) setAnchor(focused);
       }
+
+      // Move focus and select the new target in one synchronous batch
+      if (targetId) {
+        setFocus(targetId);
+        if (!selectedIdsRef.current.has(targetId)) {
+          toggleSelection(targetId);
+        }
+      }
+    },
+    [toggleSelection, setAnchor, setFocus],
+  );
+
+  /** Shift+j/k — extend along DOM order. */
+  const handleShiftMove = useCallback(
+    (direction: 1 | -1) => {
+      const focused = focusedIdRef.current;
 
       // Compute the target ID synchronously from the visible list
       // (can't rely on moveFocus because it updates React state async).
@@ -260,15 +320,21 @@ export function useKeyboardShortcuts({
         }
       }
 
-      // Move focus and select the new target in one synchronous batch
-      if (targetId) {
-        setFocus(targetId);
-        if (!selectedIdsRef.current.has(targetId)) {
-          toggleSelection(targetId);
-        }
-      }
+      extendTo(targetId);
     },
-    [toggleSelection, setAnchor, setFocus, getVisibleQuoteIds],
+    [extendTo, getVisibleQuoteIds],
+  );
+
+  /**
+   * Shift+arrow — extend along the geometry, so it tracks exactly where a bare
+   * arrow would have gone. Sharing `getSpatialTarget` with `moveFocusSpatial`
+   * is what stops the two from disagreeing about which quote is "down".
+   */
+  const handleShiftMoveSpatial = useCallback(
+    (direction: Direction) => {
+      extendTo(getSpatialTarget(focusedIdRef.current, direction));
+    },
+    [extendTo, getSpatialTarget],
   );
 
   // ── Keydown handler ─────────────────────────────────────────────────
@@ -445,31 +511,65 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // Shift+j/ArrowDown — extend selection down
-      if ((key === "j" || key === "ArrowDown") && e.shiftKey) {
-        e.preventDefault();
-        handleShiftMove(1);
+      // Everything below acts on quotes — movement, selection, and the
+      // per-quote actions. Gate the lot on the Quotes lens.
+      //
+      // Focus is a *logical* cursor that deliberately survives scrolling and
+      // route changes, so without this guard the quote keys stay live on every
+      // other lens: `j`/arrows preventDefault the page scroll on Transcripts
+      // and Analysis, and `s`/`h` mutate whichever quote was focused before
+      // the user navigated away — one they can no longer see. The keys that
+      // legitimately work off-lens (`/`, `?`, Escape, `[`, `]`, `\`, `m`, and
+      // the ⌘A/⌘C traps) all sit above this line and carry their own routing.
+      if (!pathMatches(locationRef.current.pathname, "/report/quotes")) return;
+
+      // Arrows — geometric movement, measured off the laid-out grid.
+      //
+      // Split from j/k because the quote grid is multi-column `auto-fill` that
+      // upgrades to masonry (`grid-lanes`), so the next quote in DOM order
+      // renders to the *right*. An arrow bound to DOM order therefore pointed
+      // somewhere it didn't draw, and ←/→ did nothing at all.
+      const arrowDirection = ARROW_DIRECTIONS[key];
+      if (arrowDirection) {
+        // A focused control that already claimed this key owns it. The live
+        // case is the sidebar resize separator (role="separator", ←/→ in
+        // useDragResize), which calls preventDefault but not stopPropagation
+        // — so before this guard, one ArrowLeft resized the sidebar *and*
+        // moved the quote cursor *and* scrolled the page. Scoped to the arrow
+        // block rather than the top of the handler: hoisting it would quietly
+        // rewrite the Escape cascade and the ⌘A/⌘C traps too.
+        if (e.defaultPrevented) return;
+
+        if (e.shiftKey) {
+          // Extending at an edge is still a claim — the selection changed
+          // even when focus didn't.
+          e.preventDefault();
+          handleShiftMoveSpatial(arrowDirection);
+          return;
+        }
+        // Only claim the key if the cursor actually moved. At the edge of the
+        // grid, on an empty search result, or before the islands have
+        // registered, an unconditional preventDefault left the arrows dead —
+        // page scroll lost with nothing gained.
+        if (moveFocusSpatial(arrowDirection)) e.preventDefault();
         return;
       }
 
-      // Shift+k/ArrowUp — extend selection up
-      if ((key === "k" || key === "ArrowUp") && e.shiftKey) {
+      // Shift+j/k — extend selection along DOM order
+      if ((key === "j" || key === "k") && e.shiftKey) {
         e.preventDefault();
-        handleShiftMove(-1);
+        handleShiftMove(key === "j" ? 1 : -1);
         return;
       }
 
-      // j/ArrowDown — next quote
-      if (key === "j" || key === "ArrowDown") {
+      // j/k — the DOM-order list cursor (Gmail / GitHub / Linear lineage).
+      // Deliberately *not* geometric: these mean "next item in reading order"
+      // whatever the layout, and they're what the native Quotes menu's
+      // Next/Previous Quote drive. Two coherent models, not one compromised
+      // one — in a single column they coincide.
+      if (key === "j" || key === "k") {
         e.preventDefault();
-        moveFocus(1);
-        return;
-      }
-
-      // k/ArrowUp — prev quote
-      if (key === "k" || key === "ArrowUp") {
-        e.preventDefault();
-        moveFocus(-1);
+        moveFocus(key === "j" ? 1 : -1);
         return;
       }
 
@@ -559,6 +659,13 @@ export function useKeyboardShortcuts({
     // ── Menu action handler (native menu bar → bridge) ────────────────
     const handleMenuAction = (e: Event) => {
       const { action } = (e as CustomEvent).detail;
+      // Mirror the keydown path's lens gate — see QUOTE_SCOPED_MENU_ACTIONS.
+      if (
+        QUOTE_SCOPED_MENU_ACTIONS.has(action) &&
+        !pathMatches(locationRef.current.pathname, "/report/quotes")
+      ) {
+        return;
+      }
       switch (action) {
         case "star":
           handleStar();
@@ -693,7 +800,9 @@ export function useKeyboardShortcuts({
     navigate,
     focusSearchInput,
     handleShiftMove,
+    handleShiftMoveSpatial,
     moveFocus,
+    moveFocusSpatial,
     toggleSelection,
     selectAll,
     getVisibleQuoteIds,

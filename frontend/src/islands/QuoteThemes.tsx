@@ -158,6 +158,9 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
   );
   useEffect(() => {
     registerVisibleQuoteIds("themes", visibleIds);
+    // See QuoteSections — same reasoning: clear on unmount so the registry
+    // can't outlive the lens, registering empty to keep the merge order.
+    return () => registerVisibleQuoteIds("themes", []);
   }, [registerVisibleQuoteIds, visibleIds]);
 
   const hasMedia = true;

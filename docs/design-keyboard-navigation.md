@@ -79,10 +79,18 @@ Left border priority: **Starred grey > Selected blue > Default grey**
 
 ### Navigation
 
+**Two models, deliberately.** `j`/`k` are a *list* cursor — "next item in reading
+order", whatever the layout. The arrows are *geometric* — "the quote that way on
+screen". They coincide in a single column, which is why they were synonyms until
+the quote grid arrived. See "Spatial arrow navigation" under Implementation
+Phases for why they had to split.
+
 | Key | Action | Notes |
 |-----|--------|-------|
-| `j` / `↓` | Focus next quote | From no-focus: focuses first visible |
-| `k` / `↑` | Focus previous quote | From no-focus: focuses last visible |
+| `j` | Focus next quote (reading order) | From no-focus: first visible. The only key that walks *every* quote — arrows follow one lane |
+| `k` | Focus previous quote (reading order) | From no-focus: last visible |
+| `↓` / `↑` | Focus the quote below / above | Measured geometry, not DOM order |
+| `←` / `→` | Focus the quote left / right | No wrap at the edge; masonry has no row to wrap into |
 
 ### Actions on Focused Quote
 
@@ -105,7 +113,8 @@ Left border priority: **Starred grey > Selected blue > Default grey**
 | Key | Action | Notes |
 |-----|--------|-------|
 | `x` | Toggle select | Add/remove focused quote from selection |
-| `Shift+j/k` | Extend selection | Moves focus and adds to selection |
+| `Shift+j/k` | Extend selection (reading order) | Moves focus and adds to selection |
+| `Shift+arrow` | Extend selection (geometry) | Follows the same path the bare arrow would |
 
 ### Rejected/Deferred
 
@@ -221,7 +230,20 @@ Four-column layout with Navigation, Selection, Actions, Global sections.
   - CSV export respects selection (exports only selected quotes)
 - Auto-suggest in bulk mode filters by intersection (only hides tags ALL quotes have)
 
-**Known issue:** Dark mode selection highlight (`--bn-selection-bg: #1a2838`) is hard to see — needs a more visible variant.
+**Known issue:** Dark mode selection *fill* (`--bn-selection-bg: #1a2838`) is hard to see — ~1.16:1 against a neighbouring card. The 1px `--bn-selection-border` bar clears 3:1 in both themes, so the state is legible; it's the wash that's weak.
+
+### Phase 7: Spatial arrow navigation ✅ DONE (4 Aug 2026)
+
+The quote grid became multi-column `auto-fill` and then masonry (`display: grid-lanes`, WebKit — so the WKWebView always gets it), which broke the arrows: `moveFocus` walked `ids[i ± 1]` in DOM order, so `↓` moved to the card rendered to the **right**, and `←`/`→` were unbound entirely.
+
+- `frontend/src/utils/spatialNav.ts` — pure module. Takes measured `CardRect`s so lanes, column count, section boundaries and filtered cards all resolve without being computed.
+- **Rule: nearest-centre in the pressed half-plane, with a 2× cross-axis penalty.** Three rules were prototyped side by side (see Experiments) and felt equivalent on a realistic sample, so the one with no state won. The penalty is not optional: `.quote-group` is `align-items: start`, so same-row cards have different centres once their heights differ, and unweighted nearest-centre answered `↓` with a *sideways* card at ordinary height variance.
+- `j`/`k` unchanged, and still what the native Quotes menu's Next/Previous Quote drive.
+- Arrows are claimed only when the cursor actually moves, so page scroll survives at grid edges, on empty search results, and before the islands register.
+- An arrow another control already claimed (`e.defaultPrevented`) is declined — the sidebar resize separator handles `←`/`→` without `stopPropagation`.
+- `block: "nearest"` replaced `block: "center"` on focus scroll: centring lurched the viewport on every horizontal step even when the target was already visible.
+
+**Known gap:** `UncategorisedFloor` renders real quote cards but never registers them, so the floor is unreachable by keyboard and absent from `⌘A` and the copy payload. That's a deliberate boundary at three layers (no registration, no focus/selection rendering, not resolvable in `buildLeanQuotesText`) — bringing the floor into the interactive model is the Phase 0 re-filing work, not a navigation fix.
 
 ## Outstanding Design Questions
 
@@ -229,6 +251,30 @@ Four-column layout with Navigation, Selection, Actions, Global sections.
 1. **Dark mode selection visibility** — current `#1a2838` is hard to see; needs brighter variant
 2. **Help overlay styling** — simple modal vs more elaborate design
 3. **Dropdown keyboard highlights** — should use same selection colour (`#eef4fc`)
+4. **Advertising the two models** — `↓` walks one *lane*, so on a three-column
+   window it visits roughly a third of the quotes with no visual cue that a lane
+   is a lane. The primary task ("go through every quote once, starring as I go")
+   is therefore `j`-only. Both models need advertising, with one framing
+   sentence — advertising the arrows alone would promote the model that can't do
+   the main job. **The only advertised surface is off-repo**:
+   `bristlenose.app/docs/keyboard-shortcuts.html` (opened by `?` on both
+   channels) still says "`j` / `↓` — Next quote", which is now false, and never
+   mentions `←`/`→`. That page lives in the website deploy repo — it is an
+   explicit hand-off, not something a later pass here will catch.
+5. **Screen readers cannot perceive the cursor at all.** `.bn-focused` is a
+   React state variable plus a CSS class; `document.activeElement` never moves,
+   there is no roving `tabindex`, and `aria-activedescendant` appears nowhere in
+   the frontend. Pre-existing, but the arrows lean on it much harder. Roving
+   tabindex + `role="option"`/`aria-selected` would subsume this, the `Enter`
+   collision with real controls, the WCAG 2.1.4 single-character-shortcut
+   exposure, and the need to `announce()` cursor moves — four findings, one
+   piece of work. Scheduled, not done.
+6. **The keyboard cursor is near-invisible in dark mode** — `--bn-focus-shadow`
+   is `rgba(0,0,0,…)` in both palettes with no dark variant, so `.bn-focused`
+   measures ~1.09:1 against its neighbours. `templates/focus-mode.css` already
+   fixes this locally and names it "a latent bug app-wide"; hoisting that one
+   declaration into `atoms/interactive.css` retires it. Its blast radius is
+   every `.bn-focused` in dark mode, so it wants its own commit.
 
 ### Future considerations:
 1. **Left-hand navigation** — will use page tint; keep page white for now
@@ -240,6 +286,16 @@ Visual experiments in `experiments/` directory:
 - `focus-selection-styles.html` — initial explorations
 - `focus-selection-styles-v2.html` — refined options
 - `focus-selection-styles-v3.html` — **final design** with all 8 state combinations
+
+Behaviour prototype in `docs/mockups/` (React-era; the three above predate the SPA):
+- `quotes-spatial-arrow-nav.html` — spatial arrow navigation over a real `grid-lanes` grid, with
+  **three scoring rules kept side by side** so the choice can be re-felt rather than re-derived:
+  **line of sight** (remembered y held across consecutive horizontal moves — the text-editor goal
+  column rotated 90°, reversible by construction), **nearest centre** (half-plane filter + distance
+  sort, no lane detection, no state), and **max overlap** (adjacent lane, maximise perpendicular
+  span overlap, topmost tiebreak). Tried 4 Aug 2026: **all three felt equivalent on the sample**, so
+  nearest centre wins on parsimony. The drift that separates them is real but needs greater card-height
+  variance to surface — the mockup's own commentary records the caveat and the symptom to watch for.
 
 ## Research Sources
 

@@ -165,6 +165,13 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
   );
   useEffect(() => {
     registerVisibleQuoteIds("sections", visibleIds);
+    // Drop the ids on unmount, or they outlive this lens: the registry is the
+    // single source for `moveFocus`/`selectAll`/`selectRange`, and a native
+    // menu action (Quotes ▸ Next Quote, Select All) reaches them without the
+    // keydown handler's route guard. Registers empty rather than deleting the
+    // key, so the source keeps its slot and the merge order stays stable
+    // across a remount.
+    return () => registerVisibleQuoteIds("sections", []);
   }, [registerVisibleQuoteIds, visibleIds]);
 
   // Detect media availability — if any quote has a video timecode link

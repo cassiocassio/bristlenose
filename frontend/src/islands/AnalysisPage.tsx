@@ -26,6 +26,7 @@ import {
   setAnalysisSignals,
   setFocusedSignalKey,
 } from "../contexts/AnalysisSignalStore";
+import { useIsDarkAppearance } from "../hooks/useIsDarkAppearance";
 import { apiGet, getCodebookAnalysis } from "../utils/api";
 import { reportHref } from "../utils/reportHref";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
@@ -879,21 +880,10 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   const [tagError, setTagError] = useState<string | null>(null);
   const [tagLoaded, setTagLoaded] = useState(false);
 
-  // Theme detection for heatmap colouring
-  const [isDark, setIsDark] = useState(
-    document.documentElement.getAttribute("data-theme") === "dark",
-  );
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.getAttribute("data-theme") === "dark");
-    });
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
-    return () => observer.disconnect();
-  }, []);
+  // Theme detection for heatmap colouring. Reads the forced `data-theme` when
+  // the web picker set one, else `prefers-color-scheme` — the desktop app
+  // never writes the attribute (appearance is native).
+  const isDark = useIsDarkAppearance();
 
   // Fetch sentiment data from API (or fall back to window global for legacy mode)
   const [sentimentData, setSentimentData] = useState<SentimentAnalysisData | null>(

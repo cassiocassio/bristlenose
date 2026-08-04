@@ -658,4 +658,137 @@ describe("AnalysisPage", () => {
     const cells = document.querySelectorAll('.heatmap-cell[data-count="1"]');
     expect(cells.length).toBeGreaterThan(0);
   });
+
+  // -------------------------------------------------------------------------
+  // Heatmap dark mode
+  //
+  // The desktop app never writes `data-theme` — appearance is owned natively
+  // and the webview follows `prefers-color-scheme` — so reading the attribute
+  // alone pinned every embedded report to the light lightness band.
+  // -------------------------------------------------------------------------
+
+  describe("heatmap dark mode", () => {
+    // A 2×2 matrix. The shared fixtures above are single-column, which makes
+    // every adjusted residual zero, so not one of their cells gets a colour.
+    const contrastCbData: CodebookAnalysisListResponse = {
+      codebooks: [
+        {
+          codebook_id: "uxr",
+          codebook_name: "UX Research",
+          colour_set: "ux",
+          signals: [
+            {
+              location: "Checkout",
+              source_type: "section",
+              group_name: "Pain points",
+              colour_set: "ux",
+              count: 8,
+              participants: ["p1", "p2"],
+              n_eff: 1.9,
+              mean_intensity: 2.0,
+              concentration: 2.0,
+              composite_signal: 0.5,
+              confidence: "strong",
+              quotes: [
+                {
+                  text: "The checkout was really slow",
+                  participant_id: "p1",
+                  session_id: "s1",
+                  start_seconds: 120.5,
+                  intensity: 3,
+                  tag_names: ["Latency"],
+                  segment_index: 12,
+                },
+              ],
+            },
+          ],
+          section_matrix: {
+            cells: {
+              "Checkout|Pain points": { count: 8, weighted_count: 8, participants: { p1: 4, p2: 4 }, intensities: [2] },
+              "Checkout|Praise": { count: 1, weighted_count: 1, participants: { p1: 1 }, intensities: [1] },
+              "Search|Pain points": { count: 1, weighted_count: 1, participants: { p2: 1 }, intensities: [1] },
+              "Search|Praise": { count: 8, weighted_count: 8, participants: { p1: 4, p2: 4 }, intensities: [2] },
+            },
+            row_totals: { Checkout: 9, Search: 9 },
+            col_totals: { "Pain points": 9, Praise: 9 },
+            grand_total: 18,
+            row_labels: ["Checkout", "Search"],
+          },
+          theme_matrix: {
+            cells: {},
+            row_totals: {},
+            col_totals: {},
+            grand_total: 0,
+            row_labels: [],
+          },
+          columns: ["Pain points", "Praise"],
+          participant_ids: ["p1", "p2"],
+          source_breakdown: { accepted: 18, pending: 0, total: 18 },
+          tag_colour_indices: { Latency: 0 },
+        },
+      ],
+      total_participants: 2,
+      trade_off_note: "",
+    };
+
+    // jsdom ships no matchMedia at all, so each test installs one.
+    function installMatchMedia(matches: boolean) {
+      Object.defineProperty(window, "matchMedia", {
+        configurable: true,
+        writable: true,
+        value: vi.fn((query: string) => ({
+          matches,
+          media: query,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        })),
+      });
+    }
+
+    afterEach(() => {
+      delete (window as unknown as Record<string, unknown>).matchMedia;
+      document.documentElement.removeAttribute("data-theme");
+    });
+
+    /** Render, then read the OKLCH lightness off the first coloured cell. */
+    async function renderAndReadLightness(): Promise<number> {
+      mockFetchCodebookAnalysis(contrastCbData);
+      render(<AnalysisPage projectId="1" />);
+      await waitFor(() => {
+        expect(screen.getAllByTestId("bn-heatmap").length).toBeGreaterThan(0);
+      });
+      const cell = Array.from(
+        document.querySelectorAll<HTMLElement>(".heatmap-cell"),
+      ).find((el) => el.style.background.startsWith("oklch("));
+      expect(cell).toBeTruthy();
+      return parseFloat(cell!.style.background.slice("oklch(".length));
+    }
+
+    // The bands are dark [0.25, 0.55] and light [0.55, 0.95]; this fixture's
+    // strongest cell lands at ~0.30 dark and ~0.62 light.
+    const BAND_EDGE = 0.55;
+
+    it("uses the dark band when the OS is dark and nothing is forced", async () => {
+      installMatchMedia(true);
+      expect(await renderAndReadLightness()).toBeLessThan(BAND_EDGE);
+    });
+
+    it("uses the light band when the OS is light and nothing is forced", async () => {
+      installMatchMedia(false);
+      expect(await renderAndReadLightness()).toBeGreaterThan(BAND_EDGE);
+    });
+
+    it("honours a forced data-theme=light over a dark OS", async () => {
+      installMatchMedia(true);
+      document.documentElement.setAttribute("data-theme", "light");
+      expect(await renderAndReadLightness()).toBeGreaterThan(BAND_EDGE);
+    });
+
+    it("honours a forced data-theme=dark over a light OS", async () => {
+      installMatchMedia(false);
+      document.documentElement.setAttribute("data-theme", "dark");
+      expect(await renderAndReadLightness()).toBeLessThan(BAND_EDGE);
+    });
+  });
 });

@@ -9,7 +9,7 @@ _Status: v2 — **Phases 1–5 implemented** (Phase 3 Xcode wiring landed 29 Jun
 | 1 | `build-sidecar.sh` per-layer incremental (F/V/P, `--force`/`--dry-run`, output-side checks, unconditional preconditions, empty-hash guard) + `frontend_source_hash` sliced from the single recipe | **Done.** Decision logic verified via `--dry-run`; live bundle stamp unchanged (no spurious rebuild). |
 | 2 | `ensure-sidecar.sh` orchestrator (escape hatches, Distribution guard, identity-transition→force-P, signs ffmpeg **and** sidecar, deep-verify, atomic `.sign-stamp` outside the bundle, run-log) | **Done.** Verified: cascade, Distribution guard aborts, skip-flags short-circuit. |
 | 4 | `build-all.sh` collapse — steps 2–4 → one `ensure-sidecar.sh --force` under `_BRISTLENOSE_RELEASE=1`; preflight/self-test/inventory/archive/notarise kept | **Done** (syntax + sequence verified; full release run needs the Distribution identity → human). |
-| 5 | `test-ensure-sidecar.sh` — committed decision-logic test | **Done** (7 pass / 0 fail; P-skip-isolation needs a real venv → human QA). |
+| 5 | `test-ensure-sidecar.sh` — committed decision-logic test | **Done** (7 pass / 0 fail; P-skip-isolation needs a real venv → human QA). Extended 4 Aug 2026 with case 8 (race gate present; fingerprint ignores the generated `_build_info.py`). |
 | 3 | Xcode: `Ensure Sidecar Fresh` build phase before Copy; gate keeps `exit 1` + output assertion; skip mechanism; SIGN_IDENTITY mapping; `desktop/CLAUDE.md` update | **Done** (29 Jun 2026). `PBXShellScriptBuildPhase` (UUID `499FD919EA7B4611AE10AE6A`, `alwaysOutOfDate=1`) inserted into the `Bristlenose` target's `buildPhases` immediately before `Copy Sidecar Resources`; runs `ensure-sidecar.sh`. Shipped **option (b)** — no per-scheme skip (ensure runs on every scheme, ~instant when fresh; `BRISTLENOSE_SKIP_SIDECAR_ENSURE=1` opt-out honoured). Copy's `check-sidecar-freshness.sh` gate kept as-is (independent backstop). No SIGN_IDENTITY plumbing (ad-hoc default + Distribution guard). `pbxproj` validated via `plutil -lint` + `xcodebuild -list`. **Human-QA remaining:** the three end-to-end Cmd+R passes in §Verify Phase 3 of the handoff (fresh-bundle all-skip; Python edit → P-rebuild; build-all.sh Distribution archive). |
 
 The expensive end-to-end runs (a real `build-sidecar.sh` full build; a Cmd+R with the phase wired; a `build-all.sh --force` Distribution archive) are the human-QA step — none were run autonomously to avoid churning the machine mid-glyph-QA.
@@ -30,6 +30,22 @@ The desktop app runs a **bundled** PyInstaller sidecar (`desktop/Bristlenose/Res
 
 1. The freshness gate stays **loud (`exit 1`), before the rsync**, exactly as today — demotion means "expected to pass," never "allowed to warn."
 2. Each layer's skip predicate includes an **output-side check** the input-stamp cannot fake (artefact present + non-empty in the bundle, binary mtime ≥ newest source mtime). Two independent computations agreeing is the only thing that makes "did nothing" safe.
+
+## The third staleness class — the tree moving under the build (4 Aug 2026)
+
+`sidecar_source_hash` is snapshotted **once at entry** to `build-sidecar.sh` and written into `.source-stamp` **after** the build, but Vite and PyInstaller read the tree somewhere in between. So a hashed file saved *during* the build yields a bundle that genuinely lacks that edit while the stamp attests a tree that no longer exists. The window is the build's own duration — seconds on a skip path, minutes on a full P rebuild.
+
+The freshness gate already catches this, correctly, on the very next build phase. What it can't do is *explain* it: it reports a bundle-vs-source mismatch, which reads as "the rebuild didn't work" when the truth is "the rebuild worked and then you saved a file."
+
+**Observed 4 Aug 2026.** `ensure-sidecar` ran 18:30:17Z→18:31:15Z, logged `Stamped .source-stamp: 8c89d089e4c4…`, and `Copy Sidecar Resources` failed one second later reading `1d2897c4698f`. Both lines were true; a frontend save had landed inside the 58-second window. The screenshot looked like the check chain contradicting itself.
+
+So `build-sidecar.sh` now **recomputes the fingerprint at the end of a real run and fails if it moved**, naming the window width and both hashes. Three properties are deliberate:
+
+- **The bundle keeps the entry-hash stamp.** Moving the stamp to a post-build hash would close the window by making the stamp *lie* — it would claim the bundle contains an edit PyInstaller never read, converting a loud correct failure into a silently stale bundle. The mismatch left behind is also what makes the next run rebuild P instead of skipping.
+- **It fires on skip paths too**, not just rebuilds. If the tree moves during even a fast all-skip run, the bundle is genuinely stale and the freshness gate would fail anyway — better to say why.
+- **It rests on `sidecar-source-hash.sh` excluding `bristlenose/_build_info.py`.** That file is *generated* by the P layer (git SHA + build date) and sits on disk until the script's EXIT trap removes it, so it is present at recompute time. Counted, it would move the hash on **every** build (measured: `476c2224` → `612bddee`) and the gate would cry wolf permanently. The exclusion is a no-op in the steady state — the file is absent — so it moved nobody's fingerprint. Pinned behaviourally by `test-ensure-sidecar.sh` case 8.
+
+This does **not** make staleness impossible; nothing can, short of freezing the working tree. It makes the one unavoidable case legible. The escape for anyone iterating fast enough to keep hitting it is unchanged: the **Dev Sidecar** / **External Server** schemes serve live source and skip the bundle loop entirely.
 
 ## The two cadences
 
@@ -69,6 +85,7 @@ Two scripts. Layering lives **inside** the bundle builder, gated by fingerprints
 - **P**: PyInstaller `--clean` only if source hash moved **or** `venv_rebuilt` **or** bundle/output missing; `robust_rmrf $BUNDLE` first; rewrite privacy manifest + `.source-stamp` (after a good build). Provenance `git rev-parse` keeps its `|| echo unknown` guard **and logs a warning** when it resolves to `unknown` (stripped-env detector).
 - **`--force` / `FORCE=1`** bypasses all gates → today's exact full clean rebuild. Release passes `--force`.
 - Each step prints `REBUILD <layer> — <reason>` / `skip <layer> (<hash12> matches; output present)` + elapsed.
+- **Race gate (tail, real runs only)**: recompute `sidecar_source_hash` and `exit 1` if it differs from the entry snapshot — the tree moved under the build, so the bundle lacks that edit. Reports the window width and both hash prefixes. Not a `--force` bypass: it reports a fact about the tree, not a skip decision. See §The third staleness class.
 
 ### 2. `ensure-sidecar.sh` → idempotent orchestrator (new)
 

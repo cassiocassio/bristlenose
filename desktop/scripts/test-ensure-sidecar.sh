@@ -86,5 +86,28 @@ fi
 BRISTLENOSE_SKIP_SIDECAR_ENSURE=1 ensure_dry | grep -q 'fast scheme' && ok "SKIP_SIDECAR_ENSURE short-circuits" || bad "skip-ensure flag ignored"
 BRISTLENOSE_ALLOW_STALE_SIDECAR=1 ensure_dry | grep -q 'stale bundle accepted' && ok "ALLOW_STALE short-circuits" || bad "allow-stale flag ignored"
 
+# 8. Race gate: the build must notice the tree moving under it (a hashed file
+#    saved mid-build → the bundle silently lacks that edit). Firing it needs a
+#    real multi-minute build, so assert the guard exists — plus, behaviourally,
+#    the precondition it rests on: the fingerprint must IGNORE the generated
+#    bristlenose/_build_info.py, which is on disk from the PyInstaller step until
+#    build-sidecar.sh's EXIT trap removes it. If that ever counted again, the gate
+#    would cry wolf on every single build.
+grep -q 'source changed while the sidecar was building' "$SCRIPT_DIR/build-sidecar.sh" \
+    && ok "race gate present (entry vs end-of-build fingerprint)" || bad "race gate missing"
+
+BUILD_INFO="$ROOT/bristlenose/_build_info.py"
+if [ -e "$BUILD_INFO" ]; then
+    echo "  skip — bristlenose/_build_info.py on disk (killed build?); can't isolate its effect"
+else
+    before="$(sidecar_source_hash "$ROOT")"
+    printf 'GIT_SHA = "test"\nBUILD_DATE = "test"\n' > "$BUILD_INFO"
+    after="$(sidecar_source_hash "$ROOT")"
+    rm -f "$BUILD_INFO"
+    [ "$before" = "$after" ] \
+        && ok "fingerprint ignores generated _build_info.py (race gate can't false-positive)" \
+        || bad "generated _build_info.py drifts the fingerprint — race gate would fire on every build"
+fi
+
 echo "== $pass passed, $fail failed =="
 [ "$fail" -eq 0 ]

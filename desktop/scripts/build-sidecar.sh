@@ -120,6 +120,9 @@ fi
 
 FRONTEND_HASH="$(frontend_source_hash "$ROOT")"
 SOURCE_HASH="$(sidecar_source_hash "$ROOT")"
+# When the snapshot above was taken — the race gate at the tail re-reads the tree
+# and reports this window's width if the source moved underneath the build.
+SOURCE_HASH_EPOCH="$(date +%s)"
 # An empty/malformed hash must NEVER resolve to "skip" — fail loud (finding 6).
 for h in "$FRONTEND_HASH" "$SOURCE_HASH"; do
     case "$h" in
@@ -267,6 +270,42 @@ fi
 if [ "$DRY_RUN" = 0 ] && [ ! -x "$BUNDLE/bristlenose-sidecar" ]; then
     echo "error: post-build output check failed — $BUNDLE/bristlenose-sidecar absent/not executable" >&2
     exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# Race gate (real runs only) — did the tree move UNDER the build?
+#
+# SOURCE_HASH is snapshotted at entry and stamped into the bundle at the end, but
+# Vite and PyInstaller read the tree somewhere in between. A hashed file saved
+# during that window produces a bundle that genuinely lacks the edit while the
+# stamp attests a tree that no longer exists — so the Xcode "Copy Sidecar
+# Resources" gate immediately fails with a STALE that points at the bundle
+# instead of at the save. Correct verdict, unreadable message. Fail here and name
+# the cause. Observed 4 Aug 2026: a frontend save landed inside a 58 s rebuild;
+# ensure-sidecar stamped 8c89d089 and the freshness gate read 1d2897c4 one second
+# later. The bundle is left stamped with the entry hash on purpose — that
+# mismatch is what makes the NEXT run rebuild instead of skipping.
+#
+# Sound only because sidecar-source-hash.sh excludes the generated
+# bristlenose/_build_info.py, which is still on disk here (its EXIT trap has not
+# run yet) — otherwise this would fire on every build. Pinned by
+# test-ensure-sidecar.sh case 8.
+# ---------------------------------------------------------------------------
+if [ "$DRY_RUN" = 0 ]; then
+    FINAL_HASH="$(sidecar_source_hash "$ROOT")"
+    if [ "$FINAL_HASH" != "$SOURCE_HASH" ]; then
+        _elapsed=$(( $(date +%s) - SOURCE_HASH_EPOCH ))
+        {
+            echo "error: source changed while the sidecar was building (${_elapsed}s window)."
+            echo "       entry ${SOURCE_HASH:0:12} → now ${FINAL_HASH:0:12}"
+            echo "       A file under bristlenose/ or frontend/src was saved after the build"
+            echo "       read the tree, so this bundle does NOT contain that edit."
+            echo "       Nothing is broken — re-run once your edits have settled."
+            echo "       (Iterating on frontend/Python? The 'Bristlenose (Dev Sidecar)' scheme"
+            echo "        serves live source and skips this rebuild entirely.)"
+        } >&2
+        exit 1
+    fi
 fi
 
 if [ "$DRY_RUN" = 1 ]; then

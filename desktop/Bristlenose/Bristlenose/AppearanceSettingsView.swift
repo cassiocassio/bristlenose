@@ -127,14 +127,23 @@ struct AppearanceSettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 660)
-        .onChange(of: appearance) { _, _ in
-            NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
-        }
+        // NB: appearance deliberately has NO .onChange here. It reaches the web
+        // report through the platform, not through us: AppAppearance's KVO sets
+        // NSApp.appearance, the WKWebView inherits its window's effective
+        // appearance, and the report CSS follows prefers-color-scheme. Nothing
+        // in BristlenoseShared.childEnvironment reads this pref, so a
+        // .bristlenosePrefsChanged post here bought a serve restart that served
+        // byte-identical HTML — and, because the restart takes a fresh bind(0)
+        // port, it changed the detail WebView's .id and cold-remounted the SPA
+        // (route, scroll, panels, focus all lost) on every light↔dark switch.
+        // The control experiment: on "auto", flipping the SYSTEM theme posts
+        // nothing, restarts nothing, and re-themes the report anyway.
         .onChange(of: typography) { _, _ in
             // The server renders data-typography onto <html> from
             // BRISTLENOSE_TYPOGRAPHY at sidecar start, so the change lands on
             // restart — same mechanism (and same prefs notification) as the
-            // appearance and language settings in this tab.
+            // language setting below. Appearance does NOT belong in this
+            // company: it produces no env var, so it needs no restart.
             NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
         }
         .onChange(of: palette) { _, _ in

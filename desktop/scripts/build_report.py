@@ -35,6 +35,13 @@ from rich.progress_bar import ProgressBar
 from rich.table import Table
 from rich.text import Text
 
+# Target layout width. The EFFECTIVE width is min(this, the real terminal) —
+# see main(). Forcing a console wider than the terminal makes every line wrap to
+# two physical rows while Rich's Live believes it wrote one, so each refresh
+# moves the cursor up one line and smears the previous frame down the screen
+# instead of overwriting it. Only shows on steps slow enough to refresh
+# (refresh_per_second=12, so anything over ~83ms), which is why it survived: the
+# fast gates finish before the first repaint.
 WIDTH = 92
 IND = "        "
 
@@ -432,6 +439,11 @@ DEMO_FAIL = """\
 
 
 def main() -> int:
+    # The throwaway Console() inside min() auto-detects the real terminal; the
+    # house idiom (CLAUDE.md § Gotchas). Don't cache it — it reads the tty at
+    # construction, and this process may outlive a resize.
+    global WIDTH
+    WIDTH = min(WIDTH, Console().width)
     console = Console(width=WIDTH)
     if "--demo" in sys.argv:
         return run(DEMO.splitlines(), console)

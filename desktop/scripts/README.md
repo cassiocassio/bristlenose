@@ -20,6 +20,7 @@ If your shell is *inside* this folder, prefix with `./` — the folder isn't on 
 | `fetch-ffmpeg.sh` | Downloads pinned-SHA256 static `ffmpeg` + `ffprobe` (macOS arm64) into `Resources/`. Gitignored output — doesn't follow worktrees. | build-all step 2, or once per worktree |
 | `sign-ffmpeg.sh` | Code-signs the bundled `ffmpeg` + `ffprobe` (kept separate from the sidecar: single Mach-O, no entitlements). | build-all step 3, or manual |
 | `generate-build-info.sh` | Writes `GeneratedBuildInfo.swift` (gitignored) from git state + Xcode build settings, for the in-app Build Info diagnostic. | Xcode Run Script phase, pre-Compile |
+| `upload-dmg.sh [--dry-run] [--keep N]` | Publishes a cut `.dmg`: gates on `check-dmg-shippable.sh`, uploads to a dot-prefixed staging name **in the target dir** (so `mv` stays atomic), verifies the sha256 of what landed, `chmod 644`, swaps, then repoints `/dmg/Bristlenose.dmg` at the versioned file by redirect. Reaps all but the newest N. Remote comes from `BRISTLENOSE_DMG_REMOTE` or a gitignored `.ship-local.conf` — never hardcoded, this repo is public. | after `build-dmg.sh` |
 
 > **`build-sidecar.sh` needs the frontend pre-built.** It bundles `bristlenose/server/static/`
 > but does **not** run `npm run build`. If that directory is missing, PyInstaller fails with
@@ -43,6 +44,8 @@ If your shell is *inside* this folder, prefix with `./` — the folder isn't on 
 | `check-release-binary.sh <archive\|app\|binary>` | No dev escape-hatch literals (`BRISTLENOSE_DEV_EXTERNAL_PORT`, `BRISTLENOSE_DEV_SIDECAR_PATH`) survive in the **Release** Mach-O — they live under `#if DEBUG`, so a Release compile must exclude them. | 0 clean · 1 leak |
 | `check-logging-hygiene.sh [root]` | No Swift `Logger` call interpolates a credential-shaped identifier without a `privacy:` marker, and no `print()` dumps env. Scans `desktop/Bristlenose/Bristlenose/*.swift`, excludes `*Tests.swift`. | 0 clean · non-0 violation |
 | `check-dmg-shippable.sh <dmg>` | A Developer-ID `.dmg` is safe to publish: versioned filename, image signed + stapled + Gatekeeper-accepted, and — the load-bearing one — the app **inside the mounted image** is stapled and assessed `source=Notarized Developer ID`. Also asserts the filename's version matches the inner `Info.plist`, and that the sibling manifest's app-binary sha256 describes *these* bytes. Call it as a precondition inside any upload path, not as a step an operator can skip. | 0 shippable · 1 not shippable · 2 usage |
+| `test-upload-dmg.sh` | Invariant tests for the publish path — `swap_decision` (incl. the empty-vs-empty case, where a bare equality test reads two failed measurements as a match), `retention_plan`, the unconfigured-remote refusal, and `check-dmg-shippable.sh` proven against the real notarised `Bristlenose-0.21.0.dmg` plus real violations. No network, no host, no fresh cut. | 0 all pass · 1 failure |
+| `test-ensure-sidecar.sh` | Invariant tests for the per-layer build gating + orchestrator decisions, via `--dry-run` and controlled stamp state. Catches the stamp-writer/checker drift class. | 0 all pass · 1 failure |
 | `bundle-manifest-allowlist.md` | Allowlist consumed by `check-bundle-manifest.sh`. | — |
 | `logging-hygiene-allowlist.md` | Allowlist for `check-logging-hygiene.sh` — add `<!-- ci-allowlist: HYG-<N> -->` + justification. | — |
 

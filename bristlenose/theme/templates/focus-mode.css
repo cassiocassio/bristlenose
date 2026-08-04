@@ -38,7 +38,8 @@
 .bn-focus-ready .quote-card .badges,
 .bn-focus-ready blockquote .timecode,
 .bn-focus-ready blockquote .context,
-.bn-focus-ready .bn-group-header {
+.bn-focus-ready .bn-group-header,
+.bn-focus-ready .description {
     transition: opacity var(--bn-focus-dur) var(--bn-focus-ease);
 }
 
@@ -52,11 +53,41 @@
    Pinned by tests/test_focus_mode_css.py. */
 .bn-focus-mode blockquote.quote-card:not(.bn-selected):not(.bn-focused) {
     background: transparent;
+    border-left-color: color-mix(in srgb, var(--bn-colour-border) 40%, transparent);
 }
 
-/* Starred keeps its border — the researcher's own mark, per axis 1. */
-.bn-focus-mode blockquote.quote-card:not(.bn-selected):not(.bn-focused):not(.starred) {
-    border-left-color: color-mix(in srgb, var(--bn-colour-border) 40%, transparent);
+/* The starred border dissolves with everything else — reversed 3 Aug 2026.
+   It was briefly exempt on the reasoning that a star is the researcher's own
+   mark and axis 1 keeps those lit. Wrong, and the mockup made it obvious: at
+   --bn-colour-starred on a dissolved field it was the loudest thing in the
+   column, and it was shouting on *every* starred card at once. A mark that
+   reads well on one object reads as noise on twenty. What still marks a
+   starred quote: the star glyph at full strength, and the heavier
+   --bn-weight-starred body text, which Focus never touches. Two cues, both
+   in-content, neither shouting. See § The one-ring rule. */
+
+/* ── The keyboard cursor ───────────────────────────────────────────────── */
+
+/* Light needs nothing added: `.bn-focused` drops the card to the PAGE colour,
+   which in both palettes is the *brightest* surface (default #ffffff vs cards
+   #f9fafb; edo #fdfbf7 vs cards #f0e9d8, by a wider margin) — and
+   --bn-focus-shadow is black, so it reads against it. The rule delivers a lift
+   without adding a mark.
+
+   Dark inverts the same rule into nothing: the focused card becomes the
+   DARKEST surface in a field where every dissolved neighbour is already that
+   exact colour, and the black shadow has never been visible on it (both
+   palettes define --bn-focus-shadow as rgba(0,0,0,…) with no dark variant —
+   a latent bug app-wide, which Focus Mode merely stopped covering for).
+
+   So the cue is appearance-conditional, and additive: a transparent ring is a
+   no-op in light, and dark gets an accent ring that resolves per palette for
+   free (#0a84ff default, #4d9fe0 edo). Deliberately NOT transitioned — a
+   cursor must land the instant j/k moves it, not ease in over --bn-focus-dur. */
+.bn-focus-mode blockquote.quote-card.bn-focused {
+    box-shadow:
+        var(--bn-focus-shadow),
+        0 0 0 1px light-dark(transparent, var(--bn-colour-accent));
 }
 
 /* ── Chrome recedes ────────────────────────────────────────────────────── */
@@ -75,8 +106,17 @@
     pointer-events: none;
 }
 
-/* Headings dim less — they're wayfinding, not noise. */
-.bn-focus-mode .bn-group-header {
+/* Headings dim less — they're wayfinding, not noise.
+
+   `.description` (the section/theme blurb) sits at the same depth. It is a
+   SIBLING of .bn-group-header, not a child (QuoteGroup.tsx renders the header
+   div and then the <p>), which is why an earlier rule targeting only the
+   header left every description at full strength — and since they're
+   full-sentence prose in --bn-colour-muted, they read as body text and were
+   the loudest non-quote thing on the page. Same component renders both
+   sections and themes, so one selector covers all four cases. */
+.bn-focus-mode .bn-group-header,
+.bn-focus-mode .description {
     opacity: var(--bn-focus-heading-opacity);
 }
 
@@ -100,12 +140,14 @@
     pointer-events: auto;
 }
 
-/* The group header carries an editable heading. Dimmed-while-you-type is
-   exactly the axis-2 violation this file exists to avoid — and it's the
-   quieter kind, because the text still commits, it just looks broken while
-   you work. */
+/* Both the group header and the description carry editable text with an inline
+   pencil. Dimmed-while-you-type is exactly the axis-2 violation this file
+   exists to avoid — and it's the quieter kind, because the text still commits,
+   it just looks broken while you work. */
 .bn-focus-mode .bn-group-header:hover,
-.bn-focus-mode .bn-group-header:focus-within {
+.bn-focus-mode .bn-group-header:focus-within,
+.bn-focus-mode .description:hover,
+.bn-focus-mode .description:focus-within {
     opacity: 1;
 }
 
@@ -119,8 +161,15 @@
     .bn-focus-mode .quote-card .badges,
     .bn-focus-mode blockquote .timecode,
     .bn-focus-mode blockquote .context,
-    .bn-focus-mode .bn-group-header {
+    .bn-focus-mode .bn-group-header,
+    .bn-focus-mode .description {
         opacity: 1;
+    }
+
+    /* The cursor is a screen affordance — a blue ring around one card on paper
+       is meaningless to whoever reads the printout. */
+    .bn-focus-mode blockquote.quote-card.bn-focused {
+        box-shadow: none;
     }
 
     .bn-focus-mode .quote-card .badges {
@@ -131,6 +180,16 @@
         background: var(--bn-colour-quote-bg);
     }
 
+    /* On paper a starred quote keeps its marked edge, so the border restore
+       must exclude `.starred` explicitly.
+
+       An earlier comment here claimed `.quote-card.starred`
+       (molecules/quote-actions.css) was "more specific and wins". It isn't:
+       that selector is (0,2,0) and this one is (0,4,1) — four classes plus an
+       element. The restore was silently overriding --bn-colour-starred with
+       --bn-colour-border, so printing from Focus Mode stripped the starred
+       edge: the exact opposite of the stated intent, in the one output nobody
+       re-reads before sending. Count specificity, don't assert it. */
     .bn-focus-mode blockquote.quote-card:not(.bn-selected):not(.bn-focused):not(.starred) {
         border-left-color: var(--bn-colour-border);
     }
@@ -143,7 +202,8 @@
     .bn-focus-ready .quote-card .badges,
     .bn-focus-ready blockquote .timecode,
     .bn-focus-ready blockquote .context,
-    .bn-focus-ready .bn-group-header {
+    .bn-focus-ready .bn-group-header,
+    .bn-focus-ready .description {
         transition-duration: 0s;
     }
 }

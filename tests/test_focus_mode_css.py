@@ -87,20 +87,60 @@ class TestSelectionSurvivesFocusMode:
             + "\n  ".join(offenders)
         )
 
-    def test_starred_border_is_preserved(self, css: str) -> None:
-        """A star is the researcher's own mark — it stays lit (axis 1)."""
+    def test_focused_card_carries_a_cue_of_its_own(self, css: str) -> None:
+        """The lesson from the first cut of this file.
+
+        An earlier version of this suite asserted only that the dissolve
+        *excluded* `.bn-focused` — which it did, and which bought nothing,
+        because `.bn-focused`'s own background IS the page colour. The rule
+        passed while the cursor was invisible in dark mode. Test the outcome:
+        the focused card must declare something of its own, not merely be
+        skipped by someone else's rule.
+        """
+        body = _strip_comments(css)
+        cue = [
+            block
+            for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", body)
+            if ".bn-focus-mode" in selector
+            and ".bn-focused" in selector
+            and "print" not in selector
+            and re.search(r"\bbox-shadow\s*:", block)
+            and "none" not in block
+        ]
+        assert cue, (
+            "Focus Mode gives the keyboard cursor no cue of its own. Excluding "
+            "`.bn-focused` from the dissolve is not enough — its background is "
+            "`--bn-colour-bg`, the same colour every dissolved neighbour "
+            "resolves to, so the card is invisible in dark mode."
+        )
+
+
+class TestOneRing:
+    """The ring is the cursor, and the cursor is singular.
+
+    `.bn-focused` is singular by definition, which is the whole licence for a
+    mark this loud. Selection and starred are plural — the starred left border
+    was reversed for exactly this reason (it was legible, and wrong on twenty
+    cards at once). If someone later reaches for the ring to mark "selected" or
+    "search match", the mode dies of rings. This is the guard.
+    """
+
+    def test_ring_is_not_applied_to_plural_states(self, css: str) -> None:
         body = _strip_comments(css)
         offenders = [
             selector.strip()
             for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", body)
             if ".bn-focus-mode" in selector
-            and re.search(r"\bborder-left-color\s*:", block)
-            and ":not(.starred)" not in selector
+            and re.search(r"\bbox-shadow\s*:", block)
+            and "none" not in block
+            and ".bn-focused" not in selector
+            and re.search(r"\.(bn-selected|starred)\b", selector)
         ]
         assert not offenders, (
-            "Focus Mode overrides `border-left-color` without excluding "
-            "`.starred`, which uses it to mark starred quotes. Offending "
-            "selector(s):\n  " + "\n  ".join(offenders)
+            "A ring is applied to a state that can be true of many cards at "
+            "once. Only `.bn-focused` may carry it — see § The one-ring rule "
+            "in docs/design-focus-mode.md. Offending selector(s):\n  "
+            + "\n  ".join(offenders)
         )
 
 
@@ -152,5 +192,71 @@ class TestMotion:
                     "in and snaps coming out."
                 )
 
-    def test_respects_reduced_motion(self, css: str) -> None:
-        assert "prefers-reduced-motion" in css
+    def test_every_transitioned_element_is_zeroed_under_reduced_motion(self, css: str) -> None:
+        """Set equality, not a substring check.
+
+        This replaced `assert "prefers-reduced-motion" in css`, which passed
+        happily while `.description` — added to the transition list the same
+        day — was missing from the reduce-motion block, so descriptions kept
+        fading over 320ms for exactly the users who asked them not to. An
+        existence check cannot fail on the thing it is nominally guarding.
+        """
+        body = _strip_comments(css)
+
+        reduced = re.search(
+            r"@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)\s*\{(.*)\n\}",
+            body,
+            re.DOTALL,
+        )
+        assert reduced, "No prefers-reduced-motion block in focus-mode.css"
+
+        def selectors_of(scope: str) -> set[str]:
+            found: set[str] = set()
+            for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", scope):
+                if not re.search(r"\btransition(-duration)?\s*:", block):
+                    continue
+                for one in selector.split(","):
+                    one = one.strip()
+                    if one.startswith(".bn-focus-ready"):
+                        found.add(one)
+            return found
+
+        transitioned = selectors_of(body[: reduced.start()])
+        zeroed = selectors_of(reduced.group(1))
+
+        missing = transitioned - zeroed
+        assert not missing, (
+            "Element(s) given a Focus Mode transition but not zeroed under "
+            "`prefers-reduced-motion: reduce`, so they still animate for users "
+            "who asked them not to:\n  " + "\n  ".join(sorted(missing))
+        )
+
+
+class TestPrintRestoresTheArtefact:
+    """Print is a deliverable someone else reads — Focus is a screen state."""
+
+    def test_starred_edge_survives_printing(self, css: str) -> None:
+        """The print restore must not out-specify `.quote-card.starred`.
+
+        `.quote-card.starred` is (0,2,0); the print restore is (0,4,1), so an
+        unguarded `border-left-color` there silently replaces
+        --bn-colour-starred with --bn-colour-border and the starred edge
+        vanishes on paper. Specificity was *asserted* in a comment rather than
+        counted, and the failure only shows in printed output.
+        """
+        body = _strip_comments(css)
+        reduced = re.search(r"@media\s*print\s*\{(.*?)\n\}", body, re.DOTALL)
+        assert reduced, "No @media print block in focus-mode.css"
+
+        offenders = [
+            selector.strip()
+            for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", reduced.group(1))
+            if re.search(r"\bborder-left-color\s*:", block)
+            and ":not(.starred)" not in selector
+        ]
+        assert not offenders, (
+            "A print rule sets `border-left-color` without excluding "
+            "`.starred`, which out-specifies `.quote-card.starred` and strips "
+            "the starred edge from the printout. Offending selector(s):\n  "
+            + "\n  ".join(offenders)
+        )

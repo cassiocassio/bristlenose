@@ -1,6 +1,16 @@
+---
+status: current
+last-trued: 2026-08-03
+trued-against: HEAD@main on 2026-08-03
+---
+
 # Focus mode
 
-Status: **built 3 Aug 2026** (Phases 0, 1 and 3 — see § Phasing for what each covered and what Phase 2 still owes). Trued against shipped code 3 Aug 2026 — see the changed-since-first-draft notes inline. Mockup: [`docs/mockups/nightfall-focus.html`](mockups/nightfall-focus.html) (built under the working title "Nightfall"; the filename predates the naming decision below and is not a live proposal).
+**Shipped in 0.24.0** (3 Aug 2026) — Phases 0, 1 and 3. Phase 2 (the palette × appearance tuning pass) is still owed; see § Phasing. Trued against shipped code 3 Aug 2026 by a `design-doc-review` pass, which is what caught the drift the in-session edits had left behind — the author had updated this doc six times across six design reversals and it read as settled while carrying claims from three superseded intermediate states.
+
+**Sandpit: [`docs/mockups/focus-mode-lab.html`](mockups/focus-mode-lab.html)** — the live one. Real quote-card markup over a baked copy of the shipped theme, all four palette × appearance cells side by side, with the rejected cursor cues still switchable. This is what produced the starred-border and keyboard-cursor reversals below; re-open either decision here.
+
+Superseded mockup: [`docs/mockups/nightfall-focus.html`](mockups/nightfall-focus.html) — hand-rolled with its own hex values under the working title "Nightfall", so it shows *pre-decision* treatments and can't be used to judge contrast. Kept as history; don't read it as the design.
 
 ## What it is
 
@@ -20,9 +30,9 @@ Two axes, and they answer different questions. Conflating them is what produced 
 |---|---|
 | Quote text | Tag chips / sentiment badges |
 | Speaker code (`pN`) — whose voice | Timecodes |
-| Star — **always**, starred or not | Context line, hover hints |
-| Selection + keyboard-focus state | Card background + border |
-| Theme headings (dim less — wayfinding) | |
+| Star glyph — **always**, starred or not | Context line, hover hints |
+| Selection + keyboard-focus state | Card background + border, **including the starred border** |
+| Theme headings and descriptions (dim less — wayfinding) | |
 
 **Axis 2 — what stays live (interaction): anything the researcher can act *through* stays fully interactive, and returns to full presence while engaged** — hover, keyboard focus, or active editing. **Receding is a resting state, not a disabled state.**
 
@@ -36,6 +46,54 @@ The first draft sent unstarred stars **fully dark**, reasoning that absence is i
 2. **The differential it was trying to create already exists, and is already quiet.** `--bn-colour-icon-idle` vs `--bn-colour-starred`: `#c9ccd1` → `#999` (default light), `#595959` → `#ccc` (default dark), `#b8ad91` → `#9e8b6e` (edo light). The resting unstarred star is already close to the floor against `#ffffff` / `#111111`. Zeroing it buys a marginal contrast gain and pays the affordance for it.
 
 So there is **no Focus-specific star rule at all** — one fewer moving part, and the lit-points reading survives on the existing differential. This is consistent with the standing position that star contrast is a *state differential*, not an absolute target; Focus makes that differential maximal rather than introducing a new one.
+
+**Second correction, same day — the starred *border* dissolves too.** The first fix kept `.starred` exempt from the border dissolve, on the same axis-1 reasoning. Seen on real data in the mockup, that was clearly wrong: `--bn-colour-starred` on a dissolved field was the loudest thing in the column, and it was shouting on *every* starred card at once. The star glyph and the heavier `--bn-weight-starred` body text (which Focus never touches) carry the mark perfectly well. Two cues, both in-content, neither shouting.
+
+## The one-ring rule
+
+The two starred-border reversals and the keyboard-cursor decision are the same principle applied three times, so it is worth stating as a rule rather than re-deriving:
+
+> **A mark that reads well on one object reads as noise on twenty.**
+
+The starred left-line was *legible* — that was never in doubt. It was wrong because starred is a **plural** state: twenty cards can be starred at once, and twenty bright rules is a field, not a mark. The keyboard cursor gets the loudest treatment in the mode (a 1px accent ring, 4–6.7 contrast against the ground) for exactly the inverse reason: `.bn-focused` is **singular by definition**, so there is never more than one on screen.
+
+Hence: **the ring is the cursor.** Selection keeps its background tint and its left edge; starred keeps its glyph and its text weight; neither may ever take the ring. Pinned by `TestOneRing` in `tests/test_focus_mode_css.py`, because the obvious future mistake is reaching for the ring to mark "selected" or "search match" — at which point the mode dies of rings.
+
+## The keyboard cursor — why the cue is appearance-conditional
+
+`.bn-focused` signals itself by dropping the card to the **page** colour and lifting it with `--bn-focus-shadow`. That is a *relative* idiom: it only says anything against neighbours that aren't focused. Focus Mode dissolves the neighbours to the page colour, removing the reference — so the same rule produces opposite results by appearance:
+
+| | page | card | focused card becomes | shadow |
+|---|---|---|---|---|
+| default light | `#ffffff` | `#f9fafb` | the **brightest** surface | black on light — reads |
+| edo light | `#fdfbf7` | `#f0e9d8` | the **brightest** surface, by more | black on light — reads |
+| default dark | `#111111` | `#1a1a1a` | the **darkest** — as is everything else | black on `#111111` — nothing |
+| edo dark | `#1a1816` | `#211e18` | same | same |
+
+So light needs nothing added: the rule already makes the focused card the brightest ground on the page and the shadow reads against it. Dark needs an absolute cue, and the design system has exactly one channel with the contrast for it — accent, at 4.02–6.67 — because **every** surface option sits in a 1.04–1.29 band:
+
+| | card surface | hover bg | selection bg | accent |
+|---|---|---|---|---|
+| default light | **1.045** | 1.146 | 1.106 | 4.02 |
+| default dark | 1.085 | 1.291 | 1.263 | 5.18 |
+| edo light | 1.171 | 1.215 | 1.197 | 6.67 |
+| edo dark | 1.065 | 1.104 | 1.181 | 6.20 |
+
+Rejected on those numbers: **card surface** (1.045 in default light — swaps an invisible cursor in dark for an invisible one in the *most common* configuration), **hover background** (best surface option, but a moused-over card and the cursor become indistinguishable), and **accent on the left border** — `--bn-selection-border` *is* the accent, so that renders identically to a selected card, and the left edge already carries selection, starred, and playback-active.
+
+The shipped rule is additive, so light is untouched and dark resolves per palette for free:
+
+```css
+.bn-focus-mode blockquote.quote-card.bn-focused {
+    box-shadow:
+        var(--bn-focus-shadow),
+        0 0 0 1px light-dark(transparent, var(--bn-colour-accent));
+}
+```
+
+Deliberately **not** transitioned — a cursor must land the instant `j`/`k` moves it, not ease in over `--bn-focus-dur`.
+
+**Latent bug this surfaced, not fixed here:** `--bn-focus-shadow` has no dark variant in either palette (`rgba(0,0,0,…)` default, `rgba(30,20,10,…)` edo — warm-tinted, but still a dark shadow), so the focus lift has never been visible in dark mode **anywhere in the app** — Focus Mode merely removed the background differential that was covering for it. Whether `.bn-focused` should carry the ring in dark generally is an app-wide change, deliberately out of scope here.
 
 ## Non-goals
 
@@ -61,7 +119,7 @@ Consequence for accessibility: the DOM and reading order are unchanged, so for a
 ### Guards
 
 - **Keyboard handler bails if focus is in an `<input>`, `<textarea>`, or `contenteditable`** — the report has search-as-you-type *and* inline quote/heading editing, so the bare `z` shortcut (below) must not fire mid-edit. `useKeyboardShortcuts.ts` already applies this `isEditing()` guard to its other bare keys.
-- **`pointer-events: none` and un-tabbability apply only to *resting decorative* chrome** — a receded tag chip nobody is touching. They must never reach a control. The first draft stated this as a blanket rule over "faded chrome", which would have made `t` open an invisible, unfocusable tag input: the keystroke appears to do nothing, which is a silent failure and the worst of the three possible behaviours. Axis 2 above is the general form of the fix; scope the rule, don't special-case the controls.
+- **`pointer-events: none` applies only to *resting decorative* chrome** — a receded tag chip nobody is touching. They must never reach a control. The first draft stated this as a blanket rule over "faded chrome", which would have made `t` open an invisible, unfocusable tag input: the keystroke appears to do nothing, which is a silent failure and the worst of the three possible behaviours. Axis 2 above is the general form of the fix; scope the rule, don't special-case the controls. **Only `pointer-events` shipped** — the receded chips are not removed from tab order, so a keyboard user can still tab to a badge button at 0.14 opacity. Open a11y gap, not a described behaviour.
 - **No auto-exit on tagging.** A mode that exits itself on a keystroke you didn't aim at it is a surprise, and it discards the reading state you built. `t` works exactly as it does outside Focus. The chip it creates recedes at rest, but the already-shipped `.badge-bulk-flash` (0.8 s ring pulse) confirms it landed without you having to read it — a free confirmation channel that needs no design.
 
 ### Selection and keyboard focus stay live
@@ -97,7 +155,7 @@ Consequence: the transform is now **entirely palette-agnostic**. No contract tok
 Global knobs (structural, non-overridable — live in `tokens.css`, not the contract):
 `--bn-focus-ghost-opacity` (0.14), `--bn-focus-heading-opacity` (0.4), `--bn-focus-dur` (320ms), `--bn-focus-ease`.
 
-**Tune `--bn-focus-ghost-opacity` against the prose before shipping.** At 0.14 a chip carrying `--bn-colour-badge-bg` (`#f3f4f6` on `#ffffff`) is *gone*, not "receded to a faint outline" — the number and the sentence disagree. Settle it on a specimen lens and make the losing one follow, rather than shipping both.
+**`--bn-focus-ghost-opacity` still needs settling against the prose (Phase 2).** At 0.14 a chip carrying `--bn-colour-badge-bg` (`#f3f4f6` on `#ffffff`) is *gone*, not "receded to a faint outline" — the number and the sentence disagree. It shipped at 0.14 with the prose unreconciled; settle it in the lab and make the losing one follow.
 
 ## Affordances across surfaces
 
@@ -107,13 +165,13 @@ One taxonomy, three renderings. The surfaces do **not** have equal claim: Focus 
 |---|---|---|---|
 | **SPA** (serve + export) | Toolbar toggle + bare `z` | Moon button in the report toolbar | `aria-pressed` / active styling |
 | **Mac app** | View menu item + `⌘⌥F` | View ▸ Focus Mode — see § below | Menu state — webview is source of truth |
-| **CLI** | Settings default | `report.default_view` in shared Settings | — (not an interactive surface) |
+| **CLI** | — | none shipped | — (see § State & persistence: the boot-default key was designed, then not wired) |
 
-**The moon button does not exist in the Mac app.** [`islands/Toolbar.tsx:60`](../frontend/src/islands/Toolbar.tsx) returns `null` when embedded — the whole web toolbar is suppressed there, its jobs having moved to the native toolbar. So the View-menu item is not a convenience duplicate of a web affordance; it is the app's **only** discoverable entry point, with bare `z` as the undiscoverable one. That raises the bar on getting the menu item right and is the reason the label question below got the attention it did.
+**The moon button does not exist in the Mac app.** [`islands/Toolbar.tsx:63`](../frontend/src/islands/Toolbar.tsx) returns `null` when embedded — the whole web toolbar is suppressed there, its jobs having moved to the native toolbar. So the View-menu item is not a convenience duplicate of a web affordance; it is the app's **only** discoverable entry point, with bare `z` as the undiscoverable one. That raises the bar on getting the menu item right and is the reason the label question below got the attention it did.
 
 ### Menu placement (settled)
 
-A section of one in `ViewMenuContent` ([`MenuCommands.swift:590-622`](../desktop/Bristlenose/Bristlenose/MenuCommands.swift)), reusing the divider already sitting above Zoom In and adding one below:
+A section of one in `ViewMenuContent` ([`MenuCommands.swift:686-691`](../desktop/Bristlenose/Bristlenose/MenuCommands.swift)), reusing the divider already sitting above Zoom In and adding one below:
 
 ```
 All Quotes                    ← Toggle, checkmark, radio pair
@@ -136,9 +194,9 @@ A third checkmark directly beneath a checkmarked radio pair is not confusable he
 
 Three details for the wiring:
 
-- **Derive the checkmark from a published `BridgeHandler` property, never local `@State`.** Two reload paths would desync a local flag: a project switch (the WebView re-mounts on `.id("\(project.id)-\(port)")`) and `ContentView.scheduleReportReloadOnCompletion` → `reloadWebView()` after a run finishes. Push `focusMode` on `ready` as well as on toggle, or the menu will lie about the report.
+- **Derive the checkmark from a published `BridgeHandler` property, never local `@State`.** Two reload paths would desync a local flag: a project switch (the WebView re-mounts on `.id("\(project.id)-\(port)")`) and `ContentView.scheduleReportReloadOnCompletion` → `reloadWebView()` after a run finishes. Shipped as an effect keyed `[embedded, focusModeActive]` ([`AppLayout.tsx:273-277`](../frontend/src/layouts/AppLayout.tsx)), which fires on mount and so re-syncs after either reload, plus a native reset in `BridgeHandler.reset()`. Not the `ready`-hook this originally prescribed.
 - **No `systemImage`.** `All Quotes` and `Actual Size` carry none. While there: `All Quotes` has no icon but `Starred Quotes Only` has `systemImage: "star"` — a radio pair should be symmetric, so drop it or give both one. Small, free, and the kind of asymmetry that reads as nobody having looked.
-- **One i18n key**, `desktop.menu.view.focusMode`, across the 20 full locales (not `zh-Hant-HK`). Register "Focus Mode" in `bristlenose/locales/glossary.csv` or one language ships "reading mode" — which promises exactly the reflow this design refuses.
+- **Two i18n keys**, both across the 20 full locales and correctly absent from `zh-Hant-HK`: `desktop.menu.view.focusMode` (menu) and `toolbar.focusMode` (the web moon button). "Focus Mode" is registered in `bristlenose/locales/glossary.csv` with an explicit note that it is **not** Apple's system Focus — Italian renders that "Full Immersion", which would be actively wrong here.
 
 **The shortcut splits by layer — bare key on web, Cmd-combo in the native menu, both dispatching the same toggle.** This is the established house pattern (web `[` ≠ native `⌘⌥S`, deliberately), and two verified constraints ruled out a unified `⌘\`:
 
@@ -155,7 +213,7 @@ Why bare `z` for web (not `f`, not `⌘`-anything): no mainstream browser (Safar
 
 - **Unnecessary**, because recede-only never moves the ground, so there is nothing for the seam to fall out of step with.
 - **Inverted**, because native already owns the ground (see above) — the webview has no resolved ground colour to post.
-- **Against a standing decision**, because it would mean adding a colour channel to the bridge. The `set-appearance` message was *deleted* on 30 Jul 2026 for being consumed by nothing, with the note: *"Don't re-add a second channel for a fact the platform already carries"* ([`BridgeHandler.swift:234`](../desktop/Bristlenose/Bristlenose/BridgeHandler.swift)). Appearance rides `NSApp.appearance` → window → WKWebView → `prefers-color-scheme`, with no message at all.
+- **Against a standing decision**, because it would mean adding a colour channel to the bridge. The `set-appearance` message was *deleted* on 30 Jul 2026 for being consumed by nothing, with the note: *"Don't re-add a second channel for a fact the platform already carries"* ([`BridgeHandler.swift:259-264`](../desktop/Bristlenose/Bristlenose/BridgeHandler.swift)). Appearance rides `NSApp.appearance` → window → WKWebView → `prefers-color-scheme`, with no message at all.
 
 So: **no bridge work for Focus.** The surviving geometry channel (`syncToolbarInset`) is untouched. The hardest section of the original design is now the shortest.
 
@@ -163,15 +221,18 @@ One consequence for the palette matrix: the desktop pins `BRISTLENOSE_COLOR_THEM
 
 ## State & persistence
 
-- **Serve:** SPA settings store.
-- **Embedded:** same store; native menu checkmark mirrors it via the bridge.
-- **Export:** self-contained — `localStorage`, seeded at export time with the baked `report.default_view` default (no server, no native side).
+**Nothing is persisted, anywhere.** `FocusModeStore` is module state ([`FocusModeStore.ts:40`](../frontend/src/contexts/FocusModeStore.ts)) — it survives route changes within the report and resets on reload. Identical in serve, embedded and export; there is no storage layer and no seed.
 
-Persistence rule: remember the last choice per instance, but a freshly-opened project boots in normal view — Focus is a lean-in action, not a default state. The Settings default overrides this for handoff/kiosk use.
+That satisfies the rule this section was written to express: *remember the last choice while you're working, but a freshly-opened project boots in normal view* — Focus is a lean-in action, not a default state. Module state gives exactly that, and adding `localStorage` would break the boot half rather than improve on it.
+
+- **Serve / export:** the store, and nothing else.
+- **Embedded:** the same store; the native menu checkmark mirrors it via the `focus-mode` bridge message. Native holds no state of its own — `BridgeHandler.reset()` clears `focusModeActive` on project switch.
+
+> **Corrected 3 Aug 2026.** This section previously described three mutually incompatible schemes in the space of three lines: a `localStorage`-seeded export, a `report.default_view` Settings key overriding the boot rule, and (further down, under § Decisions) no persistence at all. Only the last was ever built. The first two were pre-build design that survived the truing passes because each edit fixed the section it was looking at. **`report.default_view` does not exist** — no CLI key, no Settings entry, no reader. If the handoff/kiosk case turns out to be real, it's new work, not wiring-up.
 
 ## Phasing
 
-Phases 0–2 ship the SPA + export together (visual, fast). Phase 3 is the native track (Apple-slow). The CLI piece is trivial and rides Phase 1.
+Phases 0–2 ship the SPA + export together (visual, fast). Phase 3 is the native track (Apple-slow). The CLI piece was expected to ride Phase 1 and did not — nothing CLI-side shipped (see § State & persistence).
 
 **Phases 0 and 3 both collapsed on 3 Aug 2026** — dropping the ground-deepen removed the contract token from one and the whole bridge extension from the other.
 
@@ -179,14 +240,14 @@ Phases 0–2 ship the SPA + export together (visual, fast). Phase 3 is the nativ
 - **Phase 1 — SPA behaviour. ✅ Built.** `frontend/src/contexts/FocusModeStore.ts` (module store + `useSyncExternalStore`, matching SidebarStore) owns the state and the DOM class; toolbar moon button; bare `z`. Works in `serve` and export — the export inlines the theme CSS, so Focus rides along with no export-specific work.
 - **Phase 2 — matrix hardening. ⬜ Outstanding.** Render palette × appearance × focus on the specimen lens; **tune `--bn-focus-ghost-opacity` against the prose** (see the note in § Token model — 0.14 may be below what "faint outline" promises); verify palette/appearance switches *while* in Focus don't jank. Browser/CLI only — Edo isn't reachable on desktop. This is a looking-at-it phase, not a coding one.
 - **Phase 3 — native menu item. ✅ Built.** `View ▸ Focus Mode` (`⌘⌥F`) as a checkmarked `Toggle` in `ViewMenuContent`; `focusModeActive` mirrored from the SPA over a new `focus-mode` bridge message. No seam work, no colour channel.
-- **Phase 4 — tests + this doc trued. ✅ Done.** `tests/test_focus_mode_css.py` (9 invariants), `frontend/src/contexts/FocusModeStore.test.ts` (4), and three `z`-key cases in `useKeyboardShortcuts.test.ts`.
+- **Phase 4 — tests + this doc trued. ✅ Done.** `tests/test_focus_mode_css.py` (11 invariants), `frontend/src/contexts/FocusModeStore.test.ts` (4), and three `z`-key cases in `useKeyboardShortcuts.test.ts`.
 
 ### Decisions taken during the build
 
 - **Two DOM hooks, not one.** `.bn-focus-ready` is added once when the SPA mounts and never removed; `.bn-focus-mode` is toggled. The transitions hang off `.bn-focus-ready` because a transition declared alongside the toggled class **disappears with it** — the fade would play going in and snap coming out, breaking the doc's own "symmetric on the way back". It also confines the transition overrides to SPA surfaces, so the static render is untouched by this file. Pinned by `test_transitions_hang_off_the_always_present_hook`.
 - **Recede leaf elements, not containers that already animate.** `.quote-card .badges` carries an existing `opacity: 0.9 → 1` hover on `--bn-transition-fast`. Focus dims the same element but declares its own transition under `.bn-focus-ready`, so the two compose rather than one clobbering the other's timing.
 - **Print always gets the full report.** A printout is a deliverable someone else reads; faded tags on paper are a defect, not a mode. `@media print` restores every receded value — same reasoning as `print.css` forcing the light colour-scheme.
-- **Ephemeral state, no persistence.** Module state survives route changes within the report and resets on reload, which is exactly the spec's "remember the last choice while you're working, but a freshly-opened project boots in normal view". Adding `localStorage` would break the boot rule rather than improve on it, so the CLI's `report.default_view` boot key is **not** wired — it has no store to seed. Revisit if the handoff/kiosk case turns out to be real.
+- **Ephemeral state, no persistence** — see § State & persistence for the full reconciliation, including which of the three schemes this doc used to describe was the real one.
 - **`z` needs two guards the sibling bare keys don't.** Modifiers (⌘Z is Undo — and the report has inline editing, where Undo is most wanted just *after* a commit, when `isEditing()` is already false and guards nothing) and route (see below). Both pinned in `useKeyboardShortcuts.test.ts`.
 
 ## Testing — invariants, not a 16-cell snapshot matrix
@@ -246,9 +307,18 @@ Ergonomics were checked by hand: `⌃⌘F` (Enter Full Screen) followed by `⌘�
 
 Provisional because it's the honest v1, not necessarily the right end state: a live-but-inert menu item is a lie, whereas un-dimming later, once the other lenses have a defined transform, is a free upgrade. Worth revisiting after using it — if reaching for `z` on Sessions or Analysis feels like it *should* work, that's the signal to define the transform there rather than to un-dim an empty one.
 
-## Changelog draft — HELD until ship
+## Changelog draft — SHIPPED, kept as a delta record
 
-Ready to drop into `CHANGELOG.md` under the shipping version **once Phase 0–2 actually land**. Not in the changelog now because the feature is unbuilt — a user-facing entry for something users can't use would be a promise (no-promises rule). Follows the `0da3cb40` precedent (parked launch copy held for ship day). Trim the affordance list to whatever actually shipped before pasting.
+**The live entry is `CHANGELOG.md` under 0.24.0 (3 Aug 2026).** That is the text users read; this draft is history.
+
+> **Corrected 3 Aug 2026.** This section said "Not in the changelog now because the feature is unbuilt" *below* a truing note added the same day — the note fixed the star and ground promises in the draft body and left the "unbuilt" framing standing above it. Classic patched-but-aspirational: anyone following a pointer here and reading the fresh-looking banner would have passed it. It also gated release on "once Phase 0–2 actually land"; Phase 2 never landed and it shipped regardless, which was the right call (Phase 2 is tuning, not function) but makes the gate counterfactual.
+
+Two differences worth keeping, because they show what the draft got wrong before contact with the shipped feature:
+
+- The draft omitted the **Quotes-lens-only** scope. The shipped entry carries it. A changelog promising a report-wide mode for a quotes-scoped one is exactly the over-promise the no-promises rule exists to prevent — and the draft would have shipped it.
+- The draft still described stars dimming and the ground deepening, both reversed during the build.
+
+Kept below verbatim as the pre-ship state. **Do not paste it anywhere** — `CHANGELOG.md` is the source of truth.
 
 Trued 3 Aug 2026 — the original draft promised darkened stars and a deepened desktop ground, neither of which the feature now does.
 

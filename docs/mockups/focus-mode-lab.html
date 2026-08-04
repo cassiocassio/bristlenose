@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en" data-focus-cue="none" data-starred="keep" data-desc="full">
+<head>
+<meta charset="utf-8" />
+<title>Focus Mode lab — cue experiments across palette × appearance</title>
+
+<!--
+  Focus Mode lab — a sandpit, not a proposal.
+
+  The stylesheet beside this file is the REAL shipped theme, generated verbatim:
+
+      .venv/bin/python -c "from bristlenose.stages.s12_render.theme_assets \
+        import load_default_css; open('docs/mockups/focus-mode-lab.theme.css','w') \
+        .write(load_default_css())"
+
+  Re-run that line to re-bake after any theme change. Nothing about the quote
+  cards below is redrawn here — the markup uses the shipped classes
+  (blockquote.quote-card, .quote-row, .timecode, .quote-body, .speaker,
+  .badges, .badge, .star-btn, .bn-group-header, .description) and the shipped
+  state classes (.starred, .bn-focused, .bn-selected), so what renders is what
+  the app renders.
+
+  All four cells are live at once because both palettes are selected by
+  [data-color-theme] (not :root) *inside* the light-dark() @supports block, and
+  color-scheme resolves per element. So each pane sets its own pair.
+
+  The ONLY new CSS in this file is the experiment layer at the bottom of the
+  <style> block, gated behind data-focus-cue / data-starred / data-desc on
+  <html>. It is deliberately quarantined and clearly labelled — none of it has
+  shipped, and the point of the lab is to decide which parts should.
+-->
+
+<link rel="stylesheet" href="focus-mode-lab.theme.css" />
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════════
+   LAB CHROME — the harness. Not product. Never copy this into the theme.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+body {
+    margin: 0;
+    font-family: var(--bn-font-body);
+    background: #6e6e73;
+    color: #f5f5f7;
+    color-scheme: dark;
+}
+
+.lab-hud {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: flex-start;
+    padding: 0.9rem 1.25rem;
+    background: #1d1d1f;
+    border-bottom: 1px solid #3a3a3c;
+}
+
+.lab-hud h1 {
+    margin: 0 1rem 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    align-self: center;
+}
+
+.lab-group { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.lab-group > span {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8e8e93;
+}
+
+.lab-group div { display: flex; gap: 0.25rem; }
+
+.lab-hud button {
+    font: inherit;
+    font-size: 11px;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #48484a;
+    background: #2c2c2e;
+    color: #f5f5f7;
+    cursor: pointer;
+}
+
+.lab-hud button:hover { border-color: #6e6e73; }
+.lab-hud button[aria-pressed="true"] { background: #0a84ff; border-color: #0a84ff; }
+
+.lab-note {
+    max-width: 60ch;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #c7c7cc;
+    align-self: center;
+}
+
+/* Four cells, one per palette × appearance pair. */
+.lab-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    background: #3a3a3c;
+}
+
+.lab-cell { display: flex; flex-direction: column; min-width: 0; }
+
+.lab-cell-label {
+    padding: 0.4rem 0.9rem;
+    font-family: var(--bn-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #c7c7cc;
+    background: #1d1d1f;
+}
+
+/* The artefact itself — real page ground, real tokens. */
+.lab-stage {
+    flex: 1;
+    padding: 1.75rem 1.5rem 2.5rem;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
+    font-size: var(--bn-text-label);
+}
+
+@media (max-width: 1100px) {
+    .lab-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* The shipped `.quote-group .quote-card` carries `content-visibility: auto` so
+   the browser skips painting off-screen cards — right for a report with
+   hundreds of quotes, wrong here: with four panes stacked, the lower two start
+   off-screen and would render blank until scrolled, which reads as a bug. Five
+   cards per pane cost nothing to paint eagerly. Harness-only. */
+.lab-stage .quote-group .quote-card {
+    content-visibility: visible;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   EXPERIMENT LAYER — none of this has shipped.
+   Each block is one candidate answer to "how does the keyboard cursor stay
+   perceptible once every neighbouring card has dissolved to the page colour?"
+   Contrast figures are against the dissolved neighbour (= the page), measured
+   per cell; 1.00 would be invisible.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Cue A — accent ring. Drawn outside the box: zero reflow, and it doesn't
+   touch the left edge, which selection / starred / playback-active already
+   share. Contrast 4.02 / 5.18 / 6.67 / 6.20 across the four cells. */
+[data-focus-cue="ring"] .bn-focus-mode blockquote.quote-card.bn-focused {
+    box-shadow: 0 0 0 1px var(--bn-colour-accent);
+}
+
+/* ── Cue B — soft ring. Same channel, backed off ~40%. Still clear of the
+   1.04–1.29 band every surface option lives in. */
+[data-focus-cue="ring-soft"] .bn-focus-mode blockquote.quote-card.bn-focused {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--bn-colour-accent) 60%, transparent);
+}
+
+/* ── Cue C — card surface. The "stay a card while the others dissolve" idea.
+   Weakest cell is default light at 1.045 — this is the one the numbers argue
+   against, kept here so that can be seen rather than taken on trust. */
+[data-focus-cue="surface"] .bn-focus-mode blockquote.quote-card.bn-focused {
+    background: var(--bn-colour-quote-bg);
+}
+
+/* ── Cue D — hover background. Best of the surface options (1.10–1.29) but it
+   collides with real hover: a moused-over card and the keyboard cursor become
+   the same thing. */
+[data-focus-cue="hover"] .bn-focus-mode blockquote.quote-card.bn-focused {
+    background: var(--bn-colour-hover);
+}
+
+/* ── Cue E — surface + a shadow that actually works in dark. --bn-focus-shadow
+   is rgba(0,0,0,…) in BOTH palettes, so the lift has never been visible in dark
+   mode anywhere in the app. This pairs the surface step with an
+   appearance-aware shadow to see whether two weak cues add up to one good one. */
+[data-focus-cue="surface-shadow"] .bn-focus-mode blockquote.quote-card.bn-focused {
+    background: var(--bn-colour-quote-bg);
+    box-shadow: light-dark(
+        0 3px 12px rgba(0, 0, 0, 0.14),
+        0 3px 14px rgba(0, 0, 0, 0.5)
+    );
+}
+
+/* ── Item (i) — let the starred left border dissolve with everything else.
+   Shipped today it is exempt, which puts --bn-colour-starred at full strength
+   on every starred card at once. The star glyph and the heavier starred text
+   weight both survive regardless. */
+[data-starred="dissolve"] .bn-focus-mode blockquote.quote-card.starred:not(.bn-selected):not(.bn-focused) {
+    border-left-color: color-mix(in srgb, var(--bn-colour-border) 40%, transparent);
+}
+
+/* ── Item (iii) — fade section + theme descriptions. `.description` is a
+   SIBLING of .bn-group-header, which is why the shipped rule misses it. */
+[data-desc="titles"] .bn-focus-mode .description { opacity: var(--bn-focus-heading-opacity); }
+[data-desc="ghost"]  .bn-focus-mode .description { opacity: var(--bn-focus-ghost-opacity); }
+
+[data-desc="titles"] .bn-focus-mode .description,
+[data-desc="ghost"]  .bn-focus-mode .description {
+    transition: opacity var(--bn-focus-dur) var(--bn-focus-ease);
+}
+
+[data-desc="titles"] .bn-focus-mode .description:hover,
+[data-desc="titles"] .bn-focus-mode .description:focus-within,
+[data-desc="ghost"]  .bn-focus-mode .description:hover,
+[data-desc="ghost"]  .bn-focus-mode .description:focus-within {
+    opacity: 1;
+}
+</style>
+</head>
+<body>
+
+<div class="lab-hud">
+    <h1>Focus Mode lab</h1>
+
+    <div class="lab-group">
+        <span>Focus Mode</span>
+        <div>
+            <button data-act="focus" data-val="off" aria-pressed="false">off</button>
+            <button data-act="focus" data-val="on" aria-pressed="true">on</button>
+        </div>
+    </div>
+
+    <div class="lab-group">
+        <span>Keyboard-cursor cue — overrides shipped</span>
+        <div>
+            <button data-act="cue" data-val="none" aria-pressed="true">shipped</button>
+            <button data-act="cue" data-val="ring">A ring everywhere</button>
+            <button data-act="cue" data-val="ring-soft">B soft ring</button>
+            <button data-act="cue" data-val="surface">C surface</button>
+            <button data-act="cue" data-val="hover">D hover bg</button>
+            <button data-act="cue" data-val="surface-shadow">E surface+shadow</button>
+        </div>
+    </div>
+
+    <p class="lab-note">
+        <strong>Settled 3 Aug 2026 and now shipped</strong>, so the default
+        state of this lab <em>is</em> the product: the cursor cue is
+        appearance-conditional — light keeps the existing shadow lift (the
+        focused card drops to the page colour, which is the brightest surface in
+        both light palettes), dark gets a 1px accent ring (there the same rule
+        makes it the <em>darkest</em> card in a field of identically dark ones,
+        and <code>--bn-focus-shadow</code> is black in both palettes). The
+        starred left border dissolves with everything else; descriptions fade
+        with their titles at 0.4.
+    </p>
+
+    <p class="lab-note">
+        Row 2 of each cell is the <strong>keyboard cursor</strong>
+        (<code>.bn-focused</code>) — the card <code>s</code> would star. Row 3 is
+        <strong>selected</strong>, rows 4–5 are <strong>starred</strong>. The
+        cues above are still live so the decision can be re-opened against the
+        four cells; A applies the ring in light too, which is what the shipped
+        rule deliberately does not do. <strong>One ring only</strong> — it marks
+        the cursor, which is singular; selection and starred are plural and must
+        never take it.
+    </p>
+</div>
+
+<div class="lab-grid">
+    <!-- Each cell owns its own palette + appearance. -->
+    <div class="lab-cell">
+        <div class="lab-cell-label">default · light</div>
+        <div class="lab-stage bn-focus-ready bn-focus-mode" data-color-theme="default" style="color-scheme: light">
+            <div class="stage-content"></div>
+        </div>
+    </div>
+    <div class="lab-cell">
+        <div class="lab-cell-label">default · dark</div>
+        <div class="lab-stage bn-focus-ready bn-focus-mode" data-color-theme="default" style="color-scheme: dark">
+            <div class="stage-content"></div>
+        </div>
+    </div>
+    <div class="lab-cell">
+        <div class="lab-cell-label">edo · light</div>
+        <div class="lab-stage bn-focus-ready bn-focus-mode" data-color-theme="edo" style="color-scheme: light">
+            <div class="stage-content"></div>
+        </div>
+    </div>
+    <div class="lab-cell">
+        <div class="lab-cell-label">edo · dark</div>
+        <div class="lab-stage bn-focus-ready bn-focus-mode" data-color-theme="edo" style="color-scheme: dark">
+            <div class="stage-content"></div>
+        </div>
+    </div>
+</div>
+
+<template id="stage-tpl">
+    <div class="bn-group-header">
+        <h3>Beds Category</h3>
+    </div>
+    <p class="description">
+        Users browse the beds and mattresses category page, applying filters and
+        navigating subcategories. Includes page loading issues and general
+        browsing behaviour.
+    </p>
+
+    <div class="quote-group">
+        <blockquote class="quote-card">
+            <span class="context">Top Navigation</span>
+            <div class="quote-row">
+                <span class="timecode">[00:12]</span>
+                <div class="quote-body">
+                    &ldquo;&hellip; oops, I don&rsquo;t need that. Beds and mattresses.
+                    That&rsquo;s easy. That&rsquo;s in the top navigation.&rdquo;
+                    <span class="speaker">p1</span>
+                </div>
+            </div>
+            <div class="badges">
+                <span class="badge">confidence</span>
+                <span class="badge">mental model</span>
+            </div>
+            <button class="star-btn" title="Star">&#9734;</button>
+        </blockquote>
+
+        <blockquote class="quote-card bn-focused">
+            <span class="context">Beds Category</span>
+            <div class="quote-row">
+                <span class="timecode">[00:19]</span>
+                <div class="quote-body">
+                    &ldquo;And I&rsquo;m clicking. Why is that not working?&rdquo;
+                    <span class="speaker">p1</span>
+                </div>
+            </div>
+            <div class="badges">
+                <span class="badge">frustration</span>
+                <span class="badge">dead end</span>
+            </div>
+            <button class="star-btn" title="Star">&#9734;</button>
+        </blockquote>
+
+        <blockquote class="quote-card bn-selected">
+            <span class="context">Beds Category</span>
+            <div class="quote-row">
+                <span class="timecode">[00:26]</span>
+                <div class="quote-body">
+                    &ldquo;Something&rsquo;s up with this&hellip; and then to reload.&rdquo;
+                    <span class="speaker">p1</span>
+                </div>
+            </div>
+            <div class="badges">
+                <span class="badge">frustration</span>
+                <span class="badge">error recovery</span>
+            </div>
+            <button class="star-btn" title="Star">&#9734;</button>
+        </blockquote>
+
+        <blockquote class="quote-card starred">
+            <span class="context">Beds Category</span>
+            <div class="quote-row">
+                <span class="timecode">[00:44]</span>
+                <div class="quote-body">
+                    &ldquo;Has this gone slow because it&rsquo;s doing screen recording?
+                    We&rsquo;ve got lots of battery.&rdquo;
+                    <span class="speaker">p1</span>
+                </div>
+            </div>
+            <div class="badges">
+                <span class="badge">confusion</span>
+                <span class="badge">assumption</span>
+            </div>
+            <button class="star-btn" title="Starred">&#9733;</button>
+        </blockquote>
+
+        <blockquote class="quote-card starred">
+            <span class="context">Beds Category</span>
+            <div class="quote-row">
+                <span class="timecode">[01:42]</span>
+                <div class="quote-body">
+                    &ldquo;That&rsquo;s completely random, I don&rsquo;t need that. Okay,
+                    continue shopping&hellip; I&rsquo;m going to go back to beds.&rdquo;
+                    <span class="speaker">p2</span>
+                    <span class="speaker">Fred</span>
+                </div>
+            </div>
+            <div class="badges">
+                <span class="badge">confusion</span>
+                <span class="badge">friction</span>
+            </div>
+            <button class="star-btn" title="Starred">&#9733;</button>
+        </blockquote>
+    </div>
+</template>
+
+<script>
+// Clone the same markup into all four stages so the cells differ ONLY by
+// palette and appearance — any visible difference is the design system, not
+// the fixture.
+const tpl = document.getElementById("stage-tpl");
+for (const slot of document.querySelectorAll(".stage-content")) {
+    slot.replaceWith(tpl.content.cloneNode(true));
+}
+
+const root = document.documentElement;
+const stages = [...document.querySelectorAll(".lab-stage")];
+
+function press(act, val) {
+    for (const b of document.querySelectorAll(`[data-act="${act}"]`)) {
+        b.setAttribute("aria-pressed", String(b.dataset.val === val));
+    }
+}
+
+const apply = {
+    focus: (v) => stages.forEach((s) => s.classList.toggle("bn-focus-mode", v === "on")),
+    cue: (v) => root.setAttribute("data-focus-cue", v),
+    starred: (v) => root.setAttribute("data-starred", v),
+    desc: (v) => root.setAttribute("data-desc", v),
+};
+
+document.querySelector(".lab-hud").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-act]");
+    if (!btn) return;
+    const { act, val } = btn.dataset;
+    apply[act](val);
+    press(act, val);
+});
+
+// Number keys 1–6 step the cue, so you can flick between candidates and watch
+// one cell rather than hunting the HUD each time.
+const CUES = ["none", "ring", "ring-soft", "surface", "hover", "surface-shadow"];
+addEventListener("keydown", (e) => {
+    const i = parseInt(e.key, 10) - 1;
+    if (i >= 0 && i < CUES.length) { apply.cue(CUES[i]); press("cue", CUES[i]); }
+    if (e.key.toLowerCase() === "z") {
+        const on = !stages[0].classList.contains("bn-focus-mode");
+        apply.focus(on ? "on" : "off"); press("focus", on ? "on" : "off");
+    }
+});
+</script>
+
+</body>
+</html>

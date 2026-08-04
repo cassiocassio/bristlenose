@@ -40,8 +40,13 @@ import time
 from pathlib import Path
 
 APP = "Bristlenose"
-DOMAIN = "app.bristlenose"
-BUNDLE = "research.bristlenose.app"
+# One constant, deliberately: a Mac app's UserDefaults domain IS its bundle
+# identifier, so `defaults read/write` and `open -b` take the same string.
+# Holding it twice is how this drifted — the second copy sat on the retired
+# `research.bristlenose.app` (a non-existent `.research` TLD, replaced by
+# `app.bristlenose` on 25 Mar 2026; see desktop/CLAUDE.md § Key conventions),
+# which silently broke --relaunch while the `defaults` half kept working.
+BUNDLE_ID = "app.bristlenose"
 
 # One entry per docs section that wants a hero. `setup` is AppleScript run
 # against the app before the shot; None means "capture as-is".
@@ -64,15 +69,20 @@ def osa(script: str) -> tuple[int, str]:
 
 
 def read_appearance() -> str:
-    return sh("defaults", "read", DOMAIN, "appearance") or "auto"
+    return sh("defaults", "read", BUNDLE_ID, "appearance") or "auto"
 
 
 def set_appearance(value: str, relaunch: bool) -> None:
-    subprocess.run(["defaults", "write", DOMAIN, "appearance", "-string", value], check=True)
+    subprocess.run(["defaults", "write", BUNDLE_ID, "appearance", "-string", value], check=True)
     if relaunch:
-        osa(f'tell application id "{BUNDLE}" to quit')
+        # quit is tolerant — the app legitimately may not be running yet.
+        osa(f'tell application id "{BUNDLE_ID}" to quit')
         time.sleep(1.2)
-        subprocess.run(["open", "-b", BUNDLE], check=False)
+        # open is NOT tolerant. --relaunch exists to beat cfprefsd caching, so a
+        # relaunch that silently didn't happen returns two identical captures —
+        # the exact symptom it was added to cure. check=True keeps a wrong or
+        # uninstalled bundle id loud.
+        subprocess.run(["open", "-b", BUNDLE_ID], check=True)
         time.sleep(4.0)  # sidecar boot + WKWebView first paint
 
 

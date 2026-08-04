@@ -81,6 +81,14 @@ const IN_DIRECTION: Record<Direction, (c: CardRect, from: CardRect) => boolean> 
  *
  * This is not masonry-specific: the rectangular grid Chromium and Firefox
  * render has exactly the same shape.
+ *
+ * **Where 2 stops being enough.** A level sideways neighbour wins again once
+ * the same-lane card below is more than `hypot(lanePitch * 2, 0)` away
+ * centre-to-centre — ~776px at today's 388px pitch, i.e. two stacked cards of
+ * roughly 750px each. Real quote cards run 100–300px, so there is ~2.5×
+ * headroom. The constant is chosen, not derived: if cards ever get much taller
+ * (very long verbatims, or a density mode that stacks more metadata) that
+ * margin shrinks and this wants re-deriving rather than nudging.
  */
 const CROSS_AXIS_PENALTY = 2;
 

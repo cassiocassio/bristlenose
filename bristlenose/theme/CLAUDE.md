@@ -208,6 +208,8 @@ See `docs/design-dashboard-navigation.md` for the full stat-to-target mapping, P
 
 **Scoped to `.quote-group` only** — featured quotes on the dashboard and other small-count contexts don't get containment.
 
+**Gotcha — measuring a card with `getBoundingClientRect()` FORCES the layout this is meant to skip.** The whole point of `content-visibility: auto` here is that there's no virtualisation, so hundreds of off-screen cards cost nothing until scrolled to. Querying geometry is the documented escape hatch: the browser must produce an accurate answer, so it lays the subtree out anyway. Any JS that reads rects for *every* registered quote (spatial arrow navigation does — `frontend/src/utils/spatialNav.ts`) therefore has a cost that scales with the total number of quotes passing the filter, **not** with what's on screen — and both quote islands mount at once, so the stress fixtures reach several thousand elements per keypress. It's still one reflow rather than N (no interleaved read-after-write), which is why it's acceptable at real study sizes and recorded rather than optimised. If you add another full-grid measurement, know that you're paying this, and prefer document-relative caching invalidated on layout change over per-keypress measuring.
+
 **Gotcha:** `content-visibility: auto` applies `contain: layout style paint` implicitly. This creates a new containing block, but `.quote-group .quote-card` already has `position: relative`, so absolute-positioned action buttons (star, hide) are unaffected. If you add a new child that relies on a containing block *outside* the quote card (e.g. a portal or fixed-position overlay), it will be clipped — use a React portal mounted higher in the tree instead.
 
 ## Gotchas

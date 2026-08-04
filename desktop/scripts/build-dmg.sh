@@ -81,15 +81,47 @@ notarize_and_staple() {
     fi
 
     echo "    submitting $(basename "$submit_target") to Apple (1–15 min)…"
-    local submit_log="$BUILD_DIR/notarytool-$(basename "$target").plist"
-    xcrun notarytool submit "$submit_target" \
-        --keychain-profile "$NOTARY_PROFILE" --wait --output-format plist \
-        > "$submit_log" 2>&1 \
-        || { echo "notarytool submit failed:" >&2; tail -50 "$submit_log" >&2; return 1; }
+    local submit_log="$BUILD_DIR/notarytool-$(basename "$target").log"
+    local submit_rc sid
 
-    local sid
-    sid="$(/usr/libexec/PlistBuddy -c "Print :id" "$submit_log" 2>/dev/null || true)"
-    [ -n "$sid" ] || { echo "no submission UUID:" >&2; cat "$submit_log" >&2; return 1; }
+    # Normal output format, deliberately NOT `--output-format plist`.
+    # plist/json buffer to completion — notarytool's own help says "a single
+    # update will be output at the end of the operation" — so a crash during
+    # the upload leaves a ZERO-BYTE file and the submission ID exists nowhere
+    # on this machine. That is precisely what happened on 4 Aug 2026: the
+    # client took a Bus error partway through a 644 MB upload and
+    # notarytool-Bristlenose-0.24.0.dmg.plist was 0 bytes. Apple later purged
+    # the half-arrived submission, and `notarytool history` never carried it,
+    # so there was nothing to reconcile against — the only recovery was to
+    # resubmit.
+    #
+    # Normal format prints `id: <uuid>` BEFORE the upload begins, so tee-ing it
+    # captures the ID while the upload is still in flight. A crash then leaves
+    # a resumable ID rather than a mystery.
+    set +e
+    xcrun notarytool submit "$submit_target" \
+        --keychain-profile "$NOTARY_PROFILE" --wait 2>&1 | tee "$submit_log"
+    submit_rc=${PIPESTATUS[0]}
+    set -e
+    sid="$(sed -n 's/^ *id: *//p' "$submit_log" | head -1)"
+
+    if [ "$submit_rc" -ne 0 ]; then
+        echo "notarytool submit failed (exit $submit_rc)." >&2
+        if [ -n "$sid" ]; then
+            # The upload may have completed even though the client died.
+            echo "  submission ID was issued: $sid" >&2
+            echo "  check it before resubmitting — a live submission cannot be" >&2
+            echo "  withdrawn, and a second one just queues behind the first:" >&2
+            echo "    xcrun notarytool info $sid --keychain-profile $NOTARY_PROFILE" >&2
+            echo "  'Submission does not exist' means Apple never took it — resubmit." >&2
+        else
+            echo "  no submission ID was issued — nothing reached Apple. Resubmit." >&2
+            echo "  if it dies mid-upload again, retry with --no-s3-acceleration." >&2
+        fi
+        return 1
+    fi
+
+    [ -n "$sid" ] || { echo "no submission UUID in the submit log:" >&2; tail -20 "$submit_log" >&2; return 1; }
 
     # Don't trust `notarytool history` (can show a cached prior run) — fetch
     # this submission's log and assert Accepted.
@@ -102,7 +134,26 @@ notarize_and_staple() {
         /usr/bin/python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); [print(i) for i in d.get("issues",[])[:10]]' "$log_json" >&2
         return 1
     fi
-    xcrun stapler staple "$target"
+    # Stapling DOWNLOADS the ticket from Apple, and it can 404 for a short
+    # while after `Accepted` as the ticket propagates (Error 65, "could not
+    # retrieve ticket"). Unretried, that kills a run which has already paid for
+    # a 15-minute round trip. Assert with `stapler validate` rather than
+    # trusting staple's own exit code.
+    local staple_ok=0 attempt
+    for attempt in 1 2 3 4 5 6; do
+        if xcrun stapler staple "$target" >/dev/null 2>&1 \
+           && xcrun stapler validate "$target" >/dev/null 2>&1; then
+            staple_ok=1
+            break
+        fi
+        [ "$attempt" -lt 6 ] && { echo "    ticket not ready (attempt $attempt/6) — retrying in 30s…"; sleep 30; }
+    done
+    [ "$staple_ok" -eq 1 ] || {
+        echo "stapling failed after 6 attempts — the notarisation was Accepted ($sid)," >&2
+        echo "so retry the staple alone rather than rebuilding:" >&2
+        echo "    xcrun stapler staple '$target'" >&2
+        return 1
+    }
     ok "notarised + stapled: $(basename "$target") (UUID $sid)"
 }
 
@@ -308,14 +359,28 @@ ok "manifest: $(basename "$MANIFEST_PATH")"
 # 10. Final gates
 # ------------------------------------------------------------
 say "Final verification"
-stapler validate "$DMG_PATH"                 && ok "stapler validate (.dmg): passed"
-stapler validate "$APP"                      && ok "stapler validate (.app): passed"
-spctl -a -t open --context context:primary-signature -vv "$DMG_PATH" 2>&1 | grep -q "accepted" \
-    && ok "spctl (.dmg): accepted" \
-    || echo "    note: spctl on the .dmg is advisory; the .app is the Gatekeeper subject"
-spctl -a -t exec -vv "$APP" 2>&1 | grep -q "accepted" \
-    && ok "spctl (.app): accepted" \
-    || die "spctl did not accept the .app — stapling or notarisation incomplete"
+
+# Delegated to check-dmg-shippable.sh — one implementation of "is this safe to
+# publish", shared with the upload path, so the build and the publish can never
+# disagree about what shippable means.
+#
+# What used to be here was four lines, two of which could not fail:
+#
+#     stapler validate "$DMG_PATH" && ok "…"
+#     stapler validate "$APP"      && ok "…"
+#
+# `set -e` deliberately exempts the left operand of `&&`, so an unstapled
+# artefact printed nothing and fell straight through to the success banner
+# below. A third line demoted a `spctl` REJECTION on the .dmg to a reassuring
+# "advisory" note — but `--context context:primary-signature` is exactly what
+# Gatekeeper does at mount time, which is the first thing a user experiences.
+#
+# And all four asserted against $EXPORT_DIR's .app rather than the copy inside
+# the image. create-dmg takes a COPY, so a staple applied after the image was
+# built never reaches it, and nothing downstream would have said so. The gate
+# mounts and interrogates the app a user actually double-clicks.
+"$SCRIPT_DIR/check-dmg-shippable.sh" "$DMG_PATH" \
+    || die "the artefact is not shippable — see the failed assertions above"
 
 cat <<EOF
 

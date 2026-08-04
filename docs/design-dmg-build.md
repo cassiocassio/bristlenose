@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-07-16
-trued-against: HEAD@main on 2026-07-16 (first successful cut: Bristlenose-0.21.0.dmg, notarised + stapled)
+last-trued: 2026-08-04
+trued-against: HEAD@main on 2026-08-04 (0.24.0 cut — notarised + stapled after a mid-upload notarytool crash and a resubmit; publishing model changed to versioned artefact + stable redirect)
 ---
 
 # Building the Developer-ID `.dmg`
@@ -95,6 +95,53 @@ dies `"…requires a provisioning profile."`
 Wired into `build-dmg.sh` steps 3–4 and `ExportOptions-DeveloperID.plist`; the
 full rationale is duplicated in those files' comments.
 
+## When notarisation goes wrong
+
+Learned expensively on 4 Aug 2026 — a crash mid-upload cost about fourteen
+hours, almost all of it spent waiting for something that was never going to
+arrive. The script now encodes all of this; the reasoning is here so nobody
+un-encodes it.
+
+**Never submit with `--output-format plist` (or `json`).** Both buffer to
+completion — notarytool's own help says "a single update will be output at the
+end of the operation" — so a client crash during the upload leaves a
+**zero-byte file** and the submission ID exists nowhere on the machine. Normal
+format prints `id: <uuid>` *before* the upload begins, so `tee` captures it
+while the transfer is still in flight. A crash then leaves something resumable
+rather than a mystery. Keep the machine-readable formats for `info` and `log`,
+which are short calls that complete atomically.
+
+**A submission that dies mid-upload may not exist at Apple at all.** The 0.24.0
+orphan never appeared in `notarytool history`, and by the next morning
+`notarytool info` on its ID returned *"Submission does not exist or does not
+belong to your team"* — Apple had purged it. So there is no "adopt the orphan"
+recovery path to build. The policy is: **no captured ID → resubmit; captured ID
+→ ask `notarytool info` and believe it.**
+
+**`info` distinguishes three states, and they need different responses.** This
+is the distinction that cost the fourteen hours, because a poll loop that
+collapses them will wait for a corpse:
+
+| Reading | Means | Do |
+|---|---|---|
+| `In Progress` | queued at Apple | wait — resubmitting just queues behind it |
+| `Accepted` / `Invalid` | terminal | staple, or read `notarytool log` for the issues |
+| *"Submission does not exist"* | Apple never took it, or purged it | resubmit immediately |
+
+The third is **terminal, not pending.** Treating an empty or missing status as
+"keep waiting" is a fail-open, and it is exactly what turned a two-minute
+recovery into an overnight one.
+
+**Cap the wait.** A clean resubmit of the same 644 MB came back `Accepted`
+within minutes while the orphan had been "pending" for eleven hours. If a
+submission dies without a verdict, retrying once with `--no-s3-acceleration`
+uses Apple's documented alternate upload path.
+
+**Retry the staple.** `stapler staple` *downloads* the ticket, and it can 404
+briefly after `Accepted` while the ticket propagates (Error 65). Unretried,
+that throws away a round trip you have already paid for. Assert success with
+`stapler validate`, not with staple's own exit code.
+
 ## Verifying the artifact
 
 The acceptance signal that it'll open cleanly on a fresh Mac (one *"downloaded
@@ -110,14 +157,77 @@ stapler validate "…/Bristlenose.app"                # → "The validate action
 build-date-anchored (`AlphaBuild.swift`, ~30 days from `GeneratedBuildInfo.buildDate`),
 so a fresh cut is good for ~30 days — re-cut to refresh the public download.
 
+**This is now mechanical — `desktop/scripts/check-dmg-shippable.sh <dmg>`** runs
+exactly the above (mount, assert on the app *inside*, detach) plus the filename
+↔ `Info.plist` version agreement and a manifest ↔ image sha256 check. Step 10
+delegates to it, and any upload path must call it as a **precondition**, not as
+a step an operator can skip.
+
+It was prescribed here and unimplemented for a long time, and the gap was not
+theoretical. Until 4 Aug 2026 step 10 asserted against `$EXPORT_DIR`'s `.app` —
+the export source, not the copy inside the image — and its two `stapler validate`
+lines were written `stapler validate X && ok "…"`, which `set -e` exempts, so a
+failure printed nothing and fell through to the success banner. The one check
+that *would* have caught an unnotarised artefact was the check nobody had
+written.
+
+**Why the app inside the image is the one that matters:** `create-dmg` takes a
+**copy**. Staple the `.app` after the image exists and the copy inside stays
+ticketless, silently — and a user who drags the app out, bins the `.dmg` and
+opens it offline gets *"Bristlenose can't be opened because Apple cannot check
+it for malicious software"*. On Sequoia and later, right-click → Open no longer
+bypasses that; they'd have to go to System Settings ▸ Privacy & Security. For a
+low-friction sampler handed out on a link, that is the whole funnel gone.
+
 ## Publishing
 
-`scp` the `.dmg` to the server as the **stable** name `Bristlenose.dmg` (do this
-**before** the site deploy, or the live CTA 404s), then deploy the website so the
-"Download for Mac" button goes live. The website lives in a separate repo; its
-`deploy.sh` protects the `dmg/` dir through rsync `--delete`, and the permanent
-public URL is `/dmg/Bristlenose.dmg` (never versioned — re-cutting refreshes it
-in place).
+Upload the **versioned** artefact — `Bristlenose-<version>.dmg` — and point a
+stable URL at it. Do this **before** the site deploy, or the live CTA 404s. Then
+deploy the website so the "Download for Mac" button goes live. The website lives
+in a separate repo; its `deploy.sh` protects the `dmg/` dir through rsync
+`--delete`, so nothing else ever cleans that directory and retention is this
+side's job.
+
+**Two URLs, and they answer different questions. Don't collapse them.**
+
+| URL | Means | Serves |
+|---|---|---|
+| `/dmg/Bristlenose.dmg` | "the current alpha" — redirects to the versioned file | The LinkedIn/Substack link, the site CTA, the docs. Never 404s, always live. |
+| `/dmg/Bristlenose-0.24.0.dmg` | "this exact build" — immutable | Pinning, bug reports, "which one were you on?" |
+
+A stable URL whose content changes is the right shape *for this channel
+specifically*: builds expire after 30 days, so a three-week-old post handing
+someone a build that died last Tuesday is worse than one handing them the
+current cut. The stable name is a permalink to a **concept**, not to a file.
+
+**Superseded 4 Aug 2026 — this doc previously said the public URL was "never
+versioned — re-cutting refreshes it in place".** Two problems with that, and
+they pull in opposite directions, which is why the answer is both URLs rather
+than either one:
+
+- **On disk, the downloader can't tell what they have.** A file called
+  `Bristlenose.dmg` in Downloads explains nothing when it stops working six
+  weeks later. That is support load you never see, from people who won't write
+  in.
+- **A bare versioned URL breaks every link already published.** This channel's
+  whole distribution mechanism is a link in a post.
+
+**Redirect, not a symlink.** Apache follows a symlink to read the bytes, but the
+request path is still `/dmg/Bristlenose.dmg`, and the browser names the download
+from the URL — so a symlink fixes the link-rot half and leaves the
+what-have-I-got half exactly as broken. Browsers derive the filename from the
+*final* URL after a redirect, so a redirect fixes both. (`Content-Disposition`
+would also work and keeps one clean URL, but hides the version until the file is
+already saved, and `curl -O` ignores the header without `-J`.)
+
+Rollback is repointing the redirect at the previous versioned file — no
+re-upload, and the reason no separate `.prev` mechanism is needed.
+
+Two consequences worth building for: verification must assert the **effective**
+URL's host and filename rather than accepting a 200, since a redirect that lands
+somewhere unexpected otherwise surfaces as a baffling hash mismatch; and the
+stable URL is never cached *as content*, which sidesteps the 48-hour `max-age`
+on the versioned files.
 
 ## See also
 

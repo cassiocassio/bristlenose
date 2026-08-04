@@ -95,8 +95,12 @@ plan="$(retention_plan 3 v5 v4 v3 v2 v1 | tr '\n' ' ')"
 # ---------------------------------------------------------------------------
 # upload-dmg refuses to run unconfigured (the remote is never hardcoded)
 # ---------------------------------------------------------------------------
+# Neutralise BOTH sources — the env var AND the local conf file. Without the
+# second, this assertion passes on a machine that has no conf and silently
+# stops testing anything on a machine that does.
 set +e
-out="$(cd "$ROOT" && env -u BRISTLENOSE_DMG_REMOTE bash "$SCRIPT_DIR/upload-dmg.sh" --dry-run 2>&1)"
+out="$(cd "$ROOT" && env -u BRISTLENOSE_DMG_REMOTE BRISTLENOSE_SHIP_CONF=/dev/null \
+        bash "$SCRIPT_DIR/upload-dmg.sh" --dry-run 2>&1)"
 rc=$?
 set -e
 if [ "$rc" -eq 2 ] && echo "$out" | grep -q 'BRISTLENOSE_DMG_REMOTE'; then

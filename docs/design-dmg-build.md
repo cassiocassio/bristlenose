@@ -95,6 +95,16 @@ dies `"…requires a provisioning profile."`
 Wired into `build-dmg.sh` steps 3–4 and `ExportOptions-DeveloperID.plist`; the
 full rationale is duplicated in those files' comments.
 
+**The manifest records a dirty tree; it does not refuse one.** Deliberate,
+decided 4 Aug 2026. The `.dmg` is the one channel with no update mechanism
+behind it, so a hard gate on `git status` looks obviously right — but it would
+have refused that very day's cut (`build-dmg.sh` was itself uncommitted), and a
+gate that refuses routine work gets `--allow-dirty`'d by reflex within a week.
+The honest `tree: dirty — N modified, M untracked` line is the real control:
+split modified-from-untracked, because an always-on flag is an ignored flag and
+this tree carries untracked scratch as a matter of course. If a refusal is ever
+wanted, the **publish** boundary is its natural home, not the build.
+
 ## When notarisation goes wrong
 
 Learned expensively on 4 Aug 2026 — a crash mid-upload cost about fourteen

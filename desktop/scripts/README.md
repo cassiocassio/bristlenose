@@ -8,6 +8,16 @@ organised by **what you're trying to do**; the reference tables are at the
 bottom. The *why* lives in [`desktop/CLAUDE.md`](../CLAUDE.md) and the design
 docs.
 
+> **The flat layout is deliberate — don't reorganise into subdirectories.**
+> Considered and rejected 4 Aug 2026. About 150 references to these paths live
+> *outside* this folder, concentrated in the two `CLAUDE.md` files, the xcodeproj
+> build phases, and CI — so subdirectories mean a rename sweep across exactly the
+> documents that steer future sessions, and every reference the sweep misses
+> becomes a broken path pointing somewhere plausible. The `build-` / `check-` /
+> `sign-` / `test-` / `ensure-` prefixes already group these in `ls`. What was
+> actually missing was *which channel* and *which direction the calls run* — both
+> documentation problems, fixed here rather than by moving files.
+
 Every script resolves its own paths (via `$0`), so invoke it from anywhere.
 Inside this folder, prefix with `./` — it isn't on `PATH`.
 

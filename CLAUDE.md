@@ -129,6 +129,28 @@ The trap is that the output still looks like source code. Searching for `mlx|cud
 
 Same family as the two zsh gotchas above — shell tooling whose defaults differ from the obvious analogue and fail *quietly*. When a search result looks strange, re-run the search before believing it.
 
+### `set -e` does NOT fire on a failing left operand of `&&` — so `cmd && ok "passed"` is a gate that cannot fail
+
+POSIX shells deliberately exempt any command whose status is *being tested* from `errexit`, and the left operand of `&&` is one. So this, which reads exactly like an assertion:
+
+```bash
+stapler validate "$DMG" && ok "stapler validate: passed"
+```
+
+…prints nothing on failure, raises nothing, and **falls straight through to the next line**. Verify it yourself: `bash -c 'set -euo pipefail; false && echo B; echo REACHED'` prints `REACHED` and exits `0`.
+
+Two of `build-dmg.sh` stage 10's four final gates were written this way and were decorative through two releases (fixed 4 Aug 2026, `fc1d6ca7`). The near-miss it enabled: a complete, correctly-sized, correctly-hashed `.dmg` that `spctl` called `rejected — Unnotarized Developer ID` sat looking finished for 14 hours because the gate meant to catch that printed nothing.
+
+**Rule: an assertion uses `|| die`, never `&& ok`.** If you want the success line too, `cmd || die "…"; ok "…"`. Applies equally to `cmd && a || b` chains — the `||` arm swallows a genuine failure of `a` as well. Audit any `check-*.sh` or build script for `&& ok`, `&& echo`, `&& printf` where the left side is a real check.
+
+### Verifying only through a pipe hides the entire TTY code path
+
+`foo | tail`, `foo | grep`, `foo > file` all make stdout a non-tty, and any well-behaved CLI *changes behaviour* accordingly: Rich/`clig.dev`-style renderers skip animation, spinners and live regions don't start, colour drops. So a bug that only exists in the animated path is **invisible to every piped run** and instantly visible to the human who runs it bare.
+
+Bit on 4 Aug 2026: `build_report.py` forced `Console(width=92)` regardless of the real terminal, so on a narrower window every line wrapped to two rows while Rich's `Live` moved the cursor up one — each refresh smeared a new copy down the screen. Every verification run during the work was piped, `_start_live()` returns early on a non-tty, and the bug was never once exercised. The user saw it on the first real run.
+
+**When you've verified something only through a pipe, say so** — and prefer running it bare at least once (or with a pty) before claiming it works. The related house idiom is already documented above: `Console(width=min(80, Console().width))` — never force a console wider than the terminal.
+
 ### AppleDouble files on external drives
 
 When macOS copies files to a filesystem that can't store xattrs/resource forks natively (ExFAT, FAT32, SMB shares, some NFS exports), Finder creates a `._<name>` sidecar alongside every user file to carry the metadata. These are **binary blobs that share the user file's extension** — `._foo.mp4` looks like a video to anything that classifies by suffix; `._s1.txt` looks like a transcript and crashes utf-8 decode (`UnicodeDecodeError: byte 0xb0`).

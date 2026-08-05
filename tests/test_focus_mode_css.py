@@ -97,21 +97,60 @@ class TestSelectionSurvivesFocusMode:
         the focused card must declare something of its own, not merely be
         skipped by someone else's rule.
         """
-        body = _strip_comments(css)
+        # Read the SERVED stylesheet, not this one file: the cue deliberately
+        # lives in atoms/interactive.css so it applies in ordinary reading too,
+        # and scoping the assertion to focus-mode.css would make a correct
+        # refactor look like a regression.
+        body = _strip_comments(load_default_css())
         cue = [
             block
             for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", body)
-            if ".bn-focus-mode" in selector
-            and ".bn-focused" in selector
-            and "print" not in selector
+            if ".bn-focused" in selector
+            and "quote-card" in selector
+            and "window-inactive" not in selector
             and re.search(r"\bbox-shadow\s*:", block)
             and "none" not in block
         ]
         assert cue, (
-            "Focus Mode gives the keyboard cursor no cue of its own. Excluding "
-            "`.bn-focused` from the dissolve is not enough — its background is "
+            "The keyboard cursor has no cue of its own. Excluding `.bn-focused` "
+            "from the Focus dissolve is not enough — its background is "
             "`--bn-colour-bg`, the same colour every dissolved neighbour "
             "resolves to, so the card is invisible in dark mode."
+        )
+
+    def test_cursor_ring_recedes_when_the_window_is_inactive(self) -> None:
+        """macOS convention: affordances recede when the app isn't taking input.
+
+        This is the bug that moving the ring out of focus-mode.css fixed. At
+        `.bn-focus-mode blockquote.quote-card.bn-focused` it scored (0,3,1) —
+        identical to `.bn-window-inactive blockquote.quote-card.bn-focused` but
+        later in the concatenation, so the ring won and kept glowing on an
+        inactive window. The rule must stay less specific than the
+        inactive-window suppressor.
+        """
+        body = _strip_comments(load_default_css())
+
+        def spec(sel: str) -> tuple[int, int]:
+            return (len(re.findall(r"[.\[:]", sel.replace("::", ":"))), len(re.findall(r"\b[a-z]+(?=[.\[:]|$)", sel)))
+
+        offenders = [
+            selector.strip()
+            for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", body)
+            if ".bn-focused" in selector
+            and "quote-card" in selector
+            and "window-inactive" not in selector
+            and "print" not in selector
+            and re.search(r"\bbox-shadow\s*:", block)
+            and "none" not in block
+            # The suppressor is `.bn-window-inactive blockquote.quote-card.bn-focused`
+            # = 3 classes. Anything with 3+ classes ties or beats it.
+            and len(re.findall(r"\.[a-zA-Z_-]", selector)) >= 3
+        ]
+        assert not offenders, (
+            "A cursor-ring rule is specific enough to survive "
+            "`.bn-window-inactive`, so the ring will keep glowing while the app "
+            "is in the background. Keep it at two classes or fewer. Offending "
+            "selector(s):\n  " + "\n  ".join(offenders)
         )
 
 
@@ -125,13 +164,20 @@ class TestOneRing:
     "search match", the mode dies of rings. This is the guard.
     """
 
-    def test_ring_is_not_applied_to_plural_states(self, css: str) -> None:
-        body = _strip_comments(css)
+    def test_ring_is_not_applied_to_plural_states(self) -> None:
+        # Reads the SERVED stylesheet and does not filter on `.bn-focus-mode`.
+        # Both were wrong: this guard was written when the ring lived in
+        # focus-mode.css, and when the ring moved to atoms/interactive.css the
+        # guard silently stopped covering the file the ring is actually in — a
+        # `.bn-selected { box-shadow: … }` added there would have sailed
+        # through. Exactly the "asserts the mechanism, not the outcome" shape
+        # this suite calls out above, committed by the same hand in the same
+        # week. A guard scoped to a location is only as good as the location.
+        body = _strip_comments(load_default_css())
         offenders = [
             selector.strip()
             for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", body)
-            if ".bn-focus-mode" in selector
-            and re.search(r"\bbox-shadow\s*:", block)
+            if re.search(r"\bbox-shadow\s*:", block)
             and "none" not in block
             and ".bn-focused" not in selector
             and re.search(r"\.(bn-selected|starred)\b", selector)

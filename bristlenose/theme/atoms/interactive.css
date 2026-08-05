@@ -56,9 +56,40 @@
     position: relative;
 }
 
-/* Quote-card specific: beat blockquote.quote-card (0,1,1) with (0,2,1) */
+/* Quote-card specific: beat blockquote.quote-card (0,1,1) with (0,2,1).
+   (0,2,1) also beats `.quote-card.starred` and `.quote-card.quote-active`
+   (both (0,2,0)), which is deliberate — see the keyline note below. */
 blockquote.quote-card.bn-focused {
     background: var(--bn-colour-bg);
+
+    /* The cursor's cue is appearance-conditional, because the rule above is a
+       RELATIVE idiom: dropping the card to the page colour only says anything
+       against neighbours that aren't focused. In light that makes the focused
+       card the brightest surface in both palettes and --bn-focus-shadow reads
+       against it. In dark it makes it the darkest — with a shadow that has
+       never been visible there (neither palette gives --bn-focus-shadow a dark
+       variant). So dark gets an accent ring, resolved per palette for free.
+
+       This lives here rather than in templates/focus-mode.css because the ring
+       earns its place in ordinary reading too, not only in Focus Mode — and
+       putting it here fixes a bug the Focus-only version had: at (0,3,1) it
+       out-specified `.bn-window-inactive blockquote.quote-card.bn-focused`
+       (also (0,3,1), but earlier in the concatenation), so the ring kept
+       glowing while the app wasn't accepting input. At (0,2,1) the
+       inactive-window rule wins again, which is the macOS convention. */
+    box-shadow:
+        var(--bn-focus-shadow),
+        0 0 0 1px light-dark(transparent, var(--bn-colour-accent));
+
+    /* Keylines must not double up. The card carries a 1px `border-left` and the
+       ring is a 1px box-shadow drawn OUTSIDE the border box, so a focused card
+       would show 2px on the left (ring + border, in two different colours) and
+       1px on its other three sides. In dark the ring owns the whole outline, so
+       the left border steps aside — uniform 1px all round, nothing overlapping.
+       In light there is no ring, so the border stays and simply reverts to the
+       neutral colour: focus OVERRIDES the starred bracket rather than clashing
+       with it or sitting on top of it. Colour only — no reflow either way. */
+    border-left-color: light-dark(var(--bn-colour-border), transparent);
 }
 
 /* ---------------------------------------------------------------------

@@ -68,27 +68,16 @@
 
 /* ── The keyboard cursor ───────────────────────────────────────────────── */
 
-/* Light needs nothing added: `.bn-focused` drops the card to the PAGE colour,
-   which in both palettes is the *brightest* surface (default #ffffff vs cards
-   #f9fafb; edo #fdfbf7 vs cards #f0e9d8, by a wider margin) — and
-   --bn-focus-shadow is black, so it reads against it. The rule delivers a lift
-   without adding a mark.
+/* Nothing here. The cursor's dark-mode accent ring lives in
+   `atoms/interactive.css` on `blockquote.quote-card.bn-focused`, because it
+   earns its place in ordinary reading too — not only in Focus Mode.
 
-   Dark inverts the same rule into nothing: the focused card becomes the
-   DARKEST surface in a field where every dissolved neighbour is already that
-   exact colour, and the black shadow has never been visible on it (both
-   palettes define --bn-focus-shadow as rgba(0,0,0,…) with no dark variant —
-   a latent bug app-wide, which Focus Mode merely stopped covering for).
-
-   So the cue is appearance-conditional, and additive: a transparent ring is a
-   no-op in light, and dark gets an accent ring that resolves per palette for
-   free (#0a84ff default, #4d9fe0 edo). Deliberately NOT transitioned — a
-   cursor must land the instant j/k moves it, not ease in over --bn-focus-dur. */
-.bn-focus-mode blockquote.quote-card.bn-focused {
-    box-shadow:
-        var(--bn-focus-shadow),
-        0 0 0 1px light-dark(transparent, var(--bn-colour-accent));
-}
+   It was briefly defined here at (0,3,1), which silently out-specified
+   `.bn-window-inactive blockquote.quote-card.bn-focused` (the same (0,3,1) but
+   earlier in the concatenation), so the ring kept glowing while the app wasn't
+   accepting input. Moving it to (0,2,1) in interactive.css restores the
+   inactive-window recede. Don't re-add a Focus-scoped copy — Focus Mode needs
+   no cursor rule of its own, and a second one would reintroduce that bug. */
 
 /* ── Chrome recedes ────────────────────────────────────────────────────── */
 
@@ -164,12 +153,6 @@
     .bn-focus-mode .bn-group-header,
     .bn-focus-mode .description {
         opacity: 1;
-    }
-
-    /* The cursor is a screen affordance — a blue ring around one card on paper
-       is meaningless to whoever reads the printout. */
-    .bn-focus-mode blockquote.quote-card.bn-focused {
-        box-shadow: none;
     }
 
     .bn-focus-mode .quote-card .badges {

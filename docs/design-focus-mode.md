@@ -1,14 +1,16 @@
 ---
 status: current
-last-trued: 2026-08-03
-trued-against: HEAD@main on 2026-08-03
+last-trued: 2026-08-05
+trued-against: working tree on 2026-08-05 (the cursor-ring promotion, keyline de-duplication and starred-bar taming are uncommitted at time of truing)
 ---
 
 # Focus mode
 
 **Shipped in 0.24.0** (3 Aug 2026) — Phases 0, 1 and 3. Phase 2 (the palette × appearance tuning pass) is still owed; see § Phasing. Trued against shipped code 3 Aug 2026 by a `design-doc-review` pass, which is what caught the drift the in-session edits had left behind — the author had updated this doc six times across six design reversals and it read as settled while carrying claims from three superseded intermediate states.
 
-**Sandpit: [`docs/mockups/focus-mode-lab.html`](mockups/focus-mode-lab.html)** — the live one. Real quote-card markup over a baked copy of the shipped theme, all four palette × appearance cells side by side, with the rejected cursor cues still switchable. This is what produced the starred-border and keyboard-cursor reversals below; re-open either decision here.
+**Sandpit: [`docs/mockups/focus-mode-lab.html`](mockups/focus-mode-lab.html)** — real quote-card markup over a baked copy of the shipped theme, all four palette × appearance cells side by side, with the rejected cursor cues still switchable. This produced the starred-border and keyboard-cursor reversals below. Re-bake its `.theme.css` from `load_default_css()` after any theme change or it silently shows the previous design.
+
+> **Two known gaps in the lab, as of 5 Aug.** Its prose still frames the cursor cue as Focus-scoped, which stopped being true when the ring moved app-wide; and it has no starred-bar comparison cell, so the taming below can't be judged there. Turning Focus *off* in the HUD does exercise the ordinary-reading ring correctly — that part works.
 
 Superseded mockup: [`docs/mockups/nightfall-focus.html`](mockups/nightfall-focus.html) — hand-rolled with its own hex values under the working title "Nightfall", so it shows *pre-decision* treatments and can't be used to judge contrast. Kept as history; don't read it as the design.
 
@@ -49,13 +51,22 @@ So there is **no Focus-specific star rule at all** — one fewer moving part, an
 
 **Second correction, same day — the starred *border* dissolves too.** The first fix kept `.starred` exempt from the border dissolve, on the same axis-1 reasoning. Seen on real data in the mockup, that was clearly wrong: `--bn-colour-starred` on a dissolved field was the loudest thing in the column, and it was shouting on *every* starred card at once. The star glyph and the heavier `--bn-weight-starred` body text (which Focus never touches) carry the mark perfectly well. Two cues, both in-content, neither shouting.
 
+**Third correction, 5 Aug — the starred bar is tamed in dark *outside* Focus too.** Looking at the mode against a real study surfaced the same bar being wrong in ordinary reading. The failure is **ownership, not loudness**, and that distinction is the reusable part: at 10.84 contrast a 1px rule sitting in the gutter of a 2- or 3-column grid reads as a **divider between** two quotes rather than the **left bracket of** the one it belongs to, so on a wide screen you cannot tell which card it marks. Mixing it toward its own card's background pulls it back onto that card ([`molecules/quote-actions.css`](../bristlenose/theme/molecules/quote-actions.css)):
+
+| | light (the reference) | dark, shipped | dark, tamed |
+|---|---|---|---|
+| default | 2.73 | 10.84 | **2.73** |
+| edo | 2.72 | 7.08 | 2.22 |
+
+Two things to know before touching the number. **39% is tuned to `default`**, which it matches exactly; edo lands gentler than parity and is **deliberately not chased** — one shared percentage cannot satisfy both (edo would want 49%), and edo is owed a colour pass of its own. A future author "splitting the difference" gets neither right. And **the star glyph is untouched**: `--bn-colour-starred` drives both the bar and the glyph, so taming the *token* rather than its border use would have collapsed the starred-vs-unstarred glyph differential from **4.36× to 1.10×** — destroying the very cue this section just established as the one Focus relies on.
+
 ## The one-ring rule
 
 The two starred-border reversals and the keyboard-cursor decision are the same principle applied three times, so it is worth stating as a rule rather than re-deriving:
 
 > **A mark that reads well on one object reads as noise on twenty.**
 
-The starred left-line was *legible* — that was never in doubt. It was wrong because starred is a **plural** state: twenty cards can be starred at once, and twenty bright rules is a field, not a mark. The keyboard cursor gets the loudest treatment in the mode (a 1px accent ring, 4–6.7 contrast against the ground) for exactly the inverse reason: `.bn-focused` is **singular by definition**, so there is never more than one on screen.
+The starred left-line was *legible* — that was never in doubt. It was wrong because starred is a **plural** state: twenty cards can be starred at once, and twenty bright rules is a field, not a mark. The keyboard cursor gets the loudest treatment anywhere in the report — a 1px accent ring at 4–6.7 contrast, in ordinary reading as well as in Focus — for exactly the inverse reason: `.bn-focused` is **singular by definition**, so there is never more than one on screen.
 
 Hence: **the ring is the cursor.** Selection keeps its background tint and its left edge; starred keeps its glyph and its text weight; neither may ever take the ring. Pinned by `TestOneRing` in `tests/test_focus_mode_css.py`, because the obvious future mistake is reaching for the ring to mark "selected" or "search match" — at which point the mode dies of rings.
 
@@ -93,7 +104,19 @@ The shipped rule is additive, so light is untouched and dark resolves per palett
 
 Deliberately **not** transitioned — a cursor must land the instant `j`/`k` moves it, not ease in over `--bn-focus-dur`.
 
-**Latent bug this surfaced, not fixed here:** `--bn-focus-shadow` has no dark variant in either palette (`rgba(0,0,0,…)` default, `rgba(30,20,10,…)` edo — warm-tinted, but still a dark shadow), so the focus lift has never been visible in dark mode **anywhere in the app** — Focus Mode merely removed the background differential that was covering for it. Whether `.bn-focused` should carry the ring in dark generally is an app-wide change, deliberately out of scope here.
+### The cursor cue is app-wide, and lives outside this feature
+
+The rule above is **not** in `templates/focus-mode.css` and is **not** scoped to `.bn-focus-mode`. It sits on `blockquote.quote-card.bn-focused` in [`atoms/interactive.css`](../bristlenose/theme/atoms/interactive.css), because the argument for it never depended on Focus Mode: in dark, dropping the card to the page colour is a weak cue against `#1a1a1a` neighbours and an invisible one against dissolved ones. Focus Mode only removed the last thing covering for it. `focus-mode.css` carries no cursor rule at all — a placeholder comment marks the spot and says why not to re-add one.
+
+**The move fixed a bug, which is the argument for keeping it there.** At `.bn-focus-mode blockquote.quote-card.bn-focused` the ring scored (0,3,1) — identical to `.bn-window-inactive blockquote.quote-card.bn-focused`, but later in the concatenation, so the ring won and **kept glowing while the app was in the background**, against the macOS convention that affordances recede when the app isn't taking input. At (0,2,1) the inactive-window suppressor wins again. Pinned by `test_cursor_ring_recedes_when_the_window_is_inactive`, which fails any cursor rule carrying three or more classes.
+
+**Keylines don't double up.** The card has a 1px `border-left` and the ring is a 1px `box-shadow` drawn *outside* the border box, so a focused card would show 2px on the left in two colours and 1px on its other three sides. The focused card therefore sets `border-left-color: light-dark(var(--bn-colour-border), transparent)` — in dark the ring owns the whole outline at a uniform 1px; in light there is no ring, so the border stays and reverts to neutral. Either way **focus pre-empts** the starred bracket *and* `.quote-card.quote-active`'s playback edge (both (0,2,0)) rather than stacking with them. Colour only — no reflow.
+
+> **Ownership.** `docs/design-keyboard-navigation.md` owns `.bn-focused` and already states "ring for focus, background for selection" as a design principle. That doc is the canonical home for the rule; this section keeps the *derivation* (the four-cell contrast table above is Focus-specific evidence) and should not be mirrored there.
+
+> **Untested fragility:** `.bn-selected` keeps its left edge on a focused card only because it sits later in `interactive.css` at equal specificity. Nothing pins that ordering.
+
+**Latent bug this surfaced, not fixed here:** `--bn-focus-shadow` has no dark variant in either palette (`rgba(0,0,0,…)` default, `rgba(30,20,10,…)` edo — warm-tinted, but still a dark shadow), so the focus lift has never been visible in dark mode **anywhere in the app** — Focus Mode merely removed the background differential that was covering for it. **That is now exactly what shipped** — see § The cursor cue is app-wide below. This paragraph previously ended "whether `.bn-focused` should carry the ring in dark generally is an app-wide change, deliberately out of scope here", which was true for about a day.
 
 ## Non-goals
 
@@ -124,9 +147,9 @@ Consequence for accessibility: the DOM and reading order are unchanged, so for a
 
 ### Selection and keyboard focus stay live
 
-Both are the researcher's own working state, not machine annotation, so Axis 1 keeps them lit. There is also a shipped precedent that settles it from the other direction: `.bn-window-inactive` dims selection to grey ([`atoms/interactive.css:106`](../bristlenose/theme/atoms/interactive.css)) precisely because the window is **not** accepting input. Focus Mode is the opposite signal — you are working harder, not less — so dimming selection there would invert an established meaning.
+Both are the researcher's own working state, not machine annotation, so Axis 1 keeps them lit. There is also a shipped precedent that settles it from the other direction: `.bn-window-inactive` dims selection to grey ([`atoms/interactive.css:137-145`](../bristlenose/theme/atoms/interactive.css)) precisely because the window is **not** accepting input. Focus Mode is the opposite signal — you are working harder, not less — so dimming selection there would invert an established meaning.
 
-**Implementation trap — the dissolve must exclude the interactive states explicitly.** `.bn-focused` and `.bn-selected` both express themselves through `background` ([`atoms/interactive.css:52-77`](../bristlenose/theme/atoms/interactive.css)), which is the same property the card dissolve sets to `transparent`. `blockquote.quote-card.bn-selected` is specificity (0,2,1) — exactly what a naive `.bn-focus-mode blockquote.quote-card` rule also scores. At equal specificity the later file in the concatenation wins, so Focus Mode would silently blind selection, and the failure only shows when someone tries to multi-select. Write the dissolve as `:not(.bn-selected):not(.bn-focused)`. (Same trap `bristlenose/theme/CLAUDE.md` documents under "CSS specificity vs source order in concatenated theme".)
+**Implementation trap — the dissolve must exclude the interactive states explicitly.** `.bn-focused` and `.bn-selected` both express themselves through `background` ([`atoms/interactive.css:52-57, 62-93, 99-108`](../bristlenose/theme/atoms/interactive.css)), which is the same property the card dissolve sets to `transparent`. `blockquote.quote-card.bn-selected` is specificity (0,2,1) — exactly what a naive `.bn-focus-mode blockquote.quote-card` rule also scores. At equal specificity the later file in the concatenation wins, so Focus Mode would silently blind selection, and the failure only shows when someone tries to multi-select. Write the dissolve as `:not(.bn-selected):not(.bn-focused)`. (Same trap `bristlenose/theme/CLAUDE.md` documents under "CSS specificity vs source order in concatenated theme".)
 
 Getting that right pays a dividend: in Focus, the **only** cards with a visible box are the ones you have selected. The group you are assembling for a bulk star reads as lit slabs on a quiet page — the mode's core activity, rendered by state machinery that already exists.
 
@@ -135,7 +158,7 @@ Getting that right pays a dividend: in Focus, the **only** cards with a visible 
 The hard part is not the POC; it's that the transform must compose with every palette (`default`, `edo`, future) and appearance (light/dark) without naming a colour. It does, because almost the entire transform is palette-agnostic:
 
 - **Chrome → faint:** `opacity: var(--bn-focus-ghost-opacity)` (default `0.14`). No colour — correct in every palette.
-- **Card dissolve:** `background: transparent` + `border-color: color-mix(in srgb, var(--bn-colour-border) 40%, transparent)`. Reads the *resolved* border token, so it's right in Edo-dark for free.
+- **Card dissolve:** `background: transparent` + `border-left-color: color-mix(in srgb, var(--bn-colour-border) 40%, transparent)`. Reads the *resolved* border token, so it's right in Edo-dark for free.
 - **Signal stays lit:** uses the existing `--bn-colour-text` / `--bn-colour-starred` — already per-palette-correct.
 
 ### Recede-only in every appearance — the ground is never touched
@@ -240,7 +263,7 @@ Phases 0–2 ship the SPA + export together (visual, fast). Phase 3 is the nativ
 - **Phase 1 — SPA behaviour. ✅ Built.** `frontend/src/contexts/FocusModeStore.ts` (module store + `useSyncExternalStore`, matching SidebarStore) owns the state and the DOM class; toolbar moon button; bare `z`. Works in `serve` and export — the export inlines the theme CSS, so Focus rides along with no export-specific work.
 - **Phase 2 — matrix hardening. ⬜ Outstanding.** Render palette × appearance × focus on the specimen lens; **tune `--bn-focus-ghost-opacity` against the prose** (see the note in § Token model — 0.14 may be below what "faint outline" promises); verify palette/appearance switches *while* in Focus don't jank. Browser/CLI only — Edo isn't reachable on desktop. This is a looking-at-it phase, not a coding one.
 - **Phase 3 — native menu item. ✅ Built.** `View ▸ Focus Mode` (`⌘⌥F`) as a checkmarked `Toggle` in `ViewMenuContent`; `focusModeActive` mirrored from the SPA over a new `focus-mode` bridge message. No seam work, no colour channel.
-- **Phase 4 — tests + this doc trued. ✅ Done.** `tests/test_focus_mode_css.py` (11 invariants), `frontend/src/contexts/FocusModeStore.test.ts` (4), and three `z`-key cases in `useKeyboardShortcuts.test.ts`.
+- **Phase 4 — tests + this doc trued. ✅ Done.** `tests/test_focus_mode_css.py` (12 invariants), `frontend/src/contexts/FocusModeStore.test.ts` (4), and three `z`-key cases in `useKeyboardShortcuts.test.ts`.
 
 ### Decisions taken during the build
 
@@ -254,7 +277,7 @@ Phases 0–2 ship the SPA + export together (visual, fast). Phase 3 is the nativ
 
 Three invariants carry it; don't screenshot every palette × appearance × context × state cell:
 
-1. **Toggling changes no element geometry** across palettes (the zero-reflow guarantee, asserted on bounding boxes).
+1. **Toggling changes no element geometry** across palettes — the zero-reflow guarantee. **NOT BUILT.** This was described as "asserted on bounding boxes" and Phase 4 was marked done over it; no such assertion exists in `tests/`, `e2e/` or `frontend/src`. The guarantee currently rests on construction (the CSS touches no layout property) and on review, not on a test. It is the doc's own headline invariant, so this is the most worthwhile gap in the suite — an e2e bounding-box comparison across a `z` toggle would close it.
 2. **Signal elements retain full opacity/colour** and receded chrome drops to the ghost opacity, in every palette.
 3. **Selection and keyboard focus survive Focus** — a card with `.bn-selected` keeps a visibly distinct background in Focus, in every palette. This is the specificity trap above, and it is the one failure that would otherwise ship looking fine: the mode renders correctly and only breaks when someone tries to multi-select.
 

@@ -6,7 +6,28 @@
 
 .quote-card.starred {
     font-weight: var(--bn-weight-starred);
-    border-left-color: var(--bn-colour-starred);
+    /* The bar is a SECOND cue, not the mark — the glyph above is the mark and
+       keeps its full contrast in both schemes. Light reads as a gentle bracket
+       for the eye at 2.73 against the card. Dark shipped at 10.84 — four times
+       that — and the failure isn't loudness, it's ownership: at that contrast a
+       1px rule sitting in the gutter of a 2- or 3-column grid reads as a
+       DIVIDER between two quotes rather than as the left bracket of the one it
+       belongs to, so on a wide screen you can't tell which card it marks.
+       Mixing toward the card's own background pulls it back onto its card.
+
+       39% is tuned to DEFAULT, which it matches exactly: 10.84 -> 2.73, the
+       light bar's ratio. Edo lands at 2.22 against its own light reference of
+       2.72 — gentler than parity, deliberately not chased. One shared
+       percentage can't satisfy both (edo would want 49%), and edo is owed a
+       whole colour pass of its own; that it can't carry a formula tuned for
+       default is part of why it isn't the default palette. Revisit the edo
+       number in that pass, not by splitting the difference here and getting
+       neither right. The glyph plus --bn-weight-starred do the actual work in
+       both. */
+    border-left-color: light-dark(
+        var(--bn-colour-starred),
+        color-mix(in srgb, var(--bn-colour-starred) 39%, var(--bn-colour-quote-bg))
+    );
 }
 
 .quote-card.starred .context,

@@ -1883,9 +1883,40 @@ body.feedback-enabled .feedback-links {
     position: relative;
 }
 
-/* Quote-card specific: beat blockquote.quote-card (0,1,1) with (0,2,1) */
+/* Quote-card specific: beat blockquote.quote-card (0,1,1) with (0,2,1).
+   (0,2,1) also beats `.quote-card.starred` and `.quote-card.quote-active`
+   (both (0,2,0)), which is deliberate — see the keyline note below. */
 blockquote.quote-card.bn-focused {
     background: var(--bn-colour-bg);
+
+    /* The cursor's cue is appearance-conditional, because the rule above is a
+       RELATIVE idiom: dropping the card to the page colour only says anything
+       against neighbours that aren't focused. In light that makes the focused
+       card the brightest surface in both palettes and --bn-focus-shadow reads
+       against it. In dark it makes it the darkest — with a shadow that has
+       never been visible there (neither palette gives --bn-focus-shadow a dark
+       variant). So dark gets an accent ring, resolved per palette for free.
+
+       This lives here rather than in templates/focus-mode.css because the ring
+       earns its place in ordinary reading too, not only in Focus Mode — and
+       putting it here fixes a bug the Focus-only version had: at (0,3,1) it
+       out-specified `.bn-window-inactive blockquote.quote-card.bn-focused`
+       (also (0,3,1), but earlier in the concatenation), so the ring kept
+       glowing while the app wasn't accepting input. At (0,2,1) the
+       inactive-window rule wins again, which is the macOS convention. */
+    box-shadow:
+        var(--bn-focus-shadow),
+        0 0 0 1px light-dark(transparent, var(--bn-colour-accent));
+
+    /* Keylines must not double up. The card carries a 1px `border-left` and the
+       ring is a 1px box-shadow drawn OUTSIDE the border box, so a focused card
+       would show 2px on the left (ring + border, in two different colours) and
+       1px on its other three sides. In dark the ring owns the whole outline, so
+       the left border steps aside — uniform 1px all round, nothing overlapping.
+       In light there is no ring, so the border stays and simply reverts to the
+       neutral colour: focus OVERRIDES the starred bracket rather than clashing
+       with it or sitting on top of it. Colour only — no reflow either way. */
+    border-left-color: light-dark(var(--bn-colour-border), transparent);
 }
 
 /* ---------------------------------------------------------------------
@@ -3185,7 +3216,28 @@ blockquote:hover .undo-btn.visible {
 
 .quote-card.starred {
     font-weight: var(--bn-weight-starred);
-    border-left-color: var(--bn-colour-starred);
+    /* The bar is a SECOND cue, not the mark — the glyph above is the mark and
+       keeps its full contrast in both schemes. Light reads as a gentle bracket
+       for the eye at 2.73 against the card. Dark shipped at 10.84 — four times
+       that — and the failure isn't loudness, it's ownership: at that contrast a
+       1px rule sitting in the gutter of a 2- or 3-column grid reads as a
+       DIVIDER between two quotes rather than as the left bracket of the one it
+       belongs to, so on a wide screen you can't tell which card it marks.
+       Mixing toward the card's own background pulls it back onto its card.
+
+       39% is tuned to DEFAULT, which it matches exactly: 10.84 -> 2.73, the
+       light bar's ratio. Edo lands at 2.22 against its own light reference of
+       2.72 — gentler than parity, deliberately not chased. One shared
+       percentage can't satisfy both (edo would want 49%), and edo is owed a
+       whole colour pass of its own; that it can't carry a formula tuned for
+       default is part of why it isn't the default palette. Revisit the edo
+       number in that pass, not by splitting the difference here and getting
+       neither right. The glyph plus --bn-weight-starred do the actual work in
+       both. */
+    border-left-color: light-dark(
+        var(--bn-colour-starred),
+        color-mix(in srgb, var(--bn-colour-starred) 39%, var(--bn-colour-quote-bg))
+    );
 }
 
 .quote-card.starred .context,
@@ -10014,27 +10066,16 @@ td a:hover {
 
 /* ── The keyboard cursor ───────────────────────────────────────────────── */
 
-/* Light needs nothing added: `.bn-focused` drops the card to the PAGE colour,
-   which in both palettes is the *brightest* surface (default #ffffff vs cards
-   #f9fafb; edo #fdfbf7 vs cards #f0e9d8, by a wider margin) — and
-   --bn-focus-shadow is black, so it reads against it. The rule delivers a lift
-   without adding a mark.
+/* Nothing here. The cursor's dark-mode accent ring lives in
+   `atoms/interactive.css` on `blockquote.quote-card.bn-focused`, because it
+   earns its place in ordinary reading too — not only in Focus Mode.
 
-   Dark inverts the same rule into nothing: the focused card becomes the
-   DARKEST surface in a field where every dissolved neighbour is already that
-   exact colour, and the black shadow has never been visible on it (both
-   palettes define --bn-focus-shadow as rgba(0,0,0,…) with no dark variant —
-   a latent bug app-wide, which Focus Mode merely stopped covering for).
-
-   So the cue is appearance-conditional, and additive: a transparent ring is a
-   no-op in light, and dark gets an accent ring that resolves per palette for
-   free (#0a84ff default, #4d9fe0 edo). Deliberately NOT transitioned — a
-   cursor must land the instant j/k moves it, not ease in over --bn-focus-dur. */
-.bn-focus-mode blockquote.quote-card.bn-focused {
-    box-shadow:
-        var(--bn-focus-shadow),
-        0 0 0 1px light-dark(transparent, var(--bn-colour-accent));
-}
+   It was briefly defined here at (0,3,1), which silently out-specified
+   `.bn-window-inactive blockquote.quote-card.bn-focused` (the same (0,3,1) but
+   earlier in the concatenation), so the ring kept glowing while the app wasn't
+   accepting input. Moving it to (0,2,1) in interactive.css restores the
+   inactive-window recede. Don't re-add a Focus-scoped copy — Focus Mode needs
+   no cursor rule of its own, and a second one would reintroduce that bug. */
 
 /* ── Chrome recedes ────────────────────────────────────────────────────── */
 
@@ -10110,12 +10151,6 @@ td a:hover {
     .bn-focus-mode .bn-group-header,
     .bn-focus-mode .description {
         opacity: 1;
-    }
-
-    /* The cursor is a screen affordance — a blue ring around one card on paper
-       is meaningless to whoever reads the printout. */
-    .bn-focus-mode blockquote.quote-card.bn-focused {
-        box-shadow: none;
     }
 
     .bn-focus-mode .quote-card .badges {
@@ -10521,6 +10556,14 @@ td a:hover {
     .feedback-overlay { display: none; }
     .footer-logo-picture { display: none; }
     .bn-timecode-glow { box-shadow: none; border-left-color: inherit; animation: none; }
+
+    /* The keyboard cursor is a screen affordance. Its dark-mode accent ring
+       (atoms/interactive.css) means nothing to whoever reads the printout, and
+       it now applies in ordinary reading too — not just Focus Mode — so the
+       suppression has to be general rather than scoped to `.bn-focus-mode`.
+       Print forces the light colour-scheme anyway, which resolves the ring to
+       transparent; this is belt-and-braces for any future non-light print. */
+    blockquote.quote-card.bn-focused { box-shadow: none; }
 }
 
 /* --- templates/export.css --- */

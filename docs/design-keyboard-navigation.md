@@ -269,12 +269,31 @@ The quote grid became multi-column `auto-fill` and then masonry (`display: grid-
    collision with real controls, the WCAG 2.1.4 single-character-shortcut
    exposure, and the need to `announce()` cursor moves — four findings, one
    piece of work. Scheduled, not done.
-6. **The keyboard cursor is near-invisible in dark mode** — `--bn-focus-shadow`
-   is `rgba(0,0,0,…)` in both palettes with no dark variant, so `.bn-focused`
-   measures ~1.09:1 against its neighbours. `templates/focus-mode.css` already
-   fixes this locally and names it "a latent bug app-wide"; hoisting that one
-   declaration into `atoms/interactive.css` retires it. Its blast radius is
-   every `.bn-focused` in dark mode, so it wants its own commit.
+6. ~~**The keyboard cursor is near-invisible in dark mode**~~ ✅ **fixed 5 Aug 2026.**
+   The hoist this bullet prescribed is what shipped: the accent ring moved out
+   of `templates/focus-mode.css` onto `blockquote.quote-card.bn-focused` in
+   [`atoms/interactive.css`](../bristlenose/theme/atoms/interactive.css), so it
+   applies to every `.bn-focused` in dark, not only inside Focus Mode —
+   `box-shadow: var(--bn-focus-shadow), 0 0 0 1px light-dark(transparent,
+   var(--bn-colour-accent))`. Light is unchanged (a transparent ring is a
+   no-op) because there the background lift already reads.
+
+   Two things the bullet didn't anticipate, both worth knowing here since this
+   doc owns `.bn-focused`. The hoist **fixed a second bug**: at the Focus-scoped
+   selector the ring scored (0,3,1) and out-specified
+   `.bn-window-inactive blockquote.quote-card.bn-focused`, so it kept glowing on
+   a background window; at (0,2,1) the inactive-window recede works again, and
+   `test_cursor_ring_recedes_when_the_window_is_inactive` now fails any cursor
+   rule carrying three or more classes. And the focused card **blanks its own
+   left border** in dark (`border-left-color: light-dark(var(--bn-colour-border),
+   transparent)`) so the 1px ring and the 1px `border-left` don't double up —
+   which means focus now *pre-empts* the starred bracket and the playback edge
+   rather than stacking with them.
+
+   `--bn-focus-shadow` itself is still dark-variantless in both palettes; the
+   ring makes that harmless for quote cards but not for any other surface that
+   relies on the lift. Derivation and the four-cell contrast table:
+   [`design-focus-mode.md`](design-focus-mode.md) § The keyboard cursor.
 
 ### Future considerations:
 1. **Left-hand navigation** — will use page tint; keep page white for now

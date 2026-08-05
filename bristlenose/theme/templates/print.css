@@ -26,4 +26,12 @@
     .feedback-overlay { display: none; }
     .footer-logo-picture { display: none; }
     .bn-timecode-glow { box-shadow: none; border-left-color: inherit; animation: none; }
+
+    /* The keyboard cursor is a screen affordance. Its dark-mode accent ring
+       (atoms/interactive.css) means nothing to whoever reads the printout, and
+       it now applies in ordinary reading too — not just Focus Mode — so the
+       suppression has to be general rather than scoped to `.bn-focus-mode`.
+       Print forces the light colour-scheme anyway, which resolves the ring to
+       transparent; this is belt-and-braces for any future non-light print. */
+    blockquote.quote-card.bn-focused { box-shadow: none; }
 }

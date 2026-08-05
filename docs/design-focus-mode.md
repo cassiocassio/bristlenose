@@ -1,7 +1,7 @@
 ---
 status: current
 last-trued: 2026-08-05
-trued-against: working tree on 2026-08-05 (the cursor-ring promotion, keyline de-duplication and starred-bar taming are uncommitted at time of truing)
+trued-against: HEAD@main on 2026-08-05 — the cursor-ring promotion, keyline de-duplication and starred-bar taming were uncommitted when trued and have since landed unchanged as "the cursor ring goes app-wide, and the starred bar stops shouting in dark" (333f494f) and "one thin line round the focused card, and three guards that couldn't fail" (69af7c6c)
 ---
 
 # Focus mode

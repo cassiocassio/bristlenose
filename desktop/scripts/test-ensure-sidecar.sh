@@ -145,8 +145,20 @@ else
         # slice already fingerprints their inputs, and hashing the output would
         # move the hash on every build. Everything else must be covered.
         case "$rel" in bristlenose/server/static*) continue ;; esac
+        # Probe a NON-.py file by preference. `bristlenose/**/*.py` is swept
+        # wholesale, so a .py probe proves nothing about the directory's data
+        # files — and a bare `head -1` picks whichever the filesystem hands
+        # over first. `bristlenose/server/alembic` is exactly that shape (pure
+        # .py + __pycache__), so it would pass on a .py probe whether or not
+        # its data files were covered. Fall back to any file for a dir that
+        # holds only .py, and skip __pycache__ (generated, not input).
         probe="$target"
-        [ -d "$target" ] && probe="$(find "$target" -type f -not -name '.DS_Store' -not -name '._*' | head -1)"
+        if [ -d "$target" ]; then
+            probe="$(find "$target" -type f -not -name '*.py' -not -path '*__pycache__*' \
+                        -not -name '.DS_Store' -not -name '._*' | head -1)"
+            [ -n "$probe" ] || probe="$(find "$target" -type f \
+                        -not -path '*__pycache__*' -not -name '.DS_Store' -not -name '._*' | head -1)"
+        fi
         [ -n "$probe" ] && [ -f "$probe" ] || continue
         before="$(sidecar_source_hash "$ROOT")"
         cp "$probe" "$probe.bnprobe"

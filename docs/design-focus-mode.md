@@ -1,7 +1,7 @@
 ---
 status: current
 last-trued: 2026-08-05
-trued-against: HEAD@main on 2026-08-05 — the cursor-ring promotion, keyline de-duplication and starred-bar taming were uncommitted when trued and have since landed unchanged as "the cursor ring goes app-wide, and the starred bar stops shouting in dark" (333f494f) and "one thin line round the focused card, and three guards that couldn't fail" (69af7c6c)
+trued-against: 43ed8fd4@main on 2026-08-05 — the cursor-ring promotion, keyline de-duplication and starred-bar taming were uncommitted when trued and have since landed as "the cursor ring goes app-wide, and the starred bar stops shouting in dark" (333f494f) and "one thin line round the focused card, and three guards that couldn't fail" (69af7c6c). NOT unchanged, as an earlier revision of this line claimed: 69af7c6c altered the design as it landed — the focused+selected card resolved to a doubled left edge under a specificity tie, which moved the invariant count from 12 to 13 and added the `_positive()` selector helper after a guard was found passing with its target declaration deleted.
 ---
 
 # Focus mode

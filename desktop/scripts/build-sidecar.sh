@@ -228,7 +228,7 @@ if [ "$FORCE" = 1 ]; then need_p=1; p_reason="forced"
 elif [ ! -x "$BUNDLE/bristlenose-sidecar" ]; then need_p=1; p_reason="bundle missing"
 elif [ "$venv_rebuilt" = 1 ]; then need_p=1; p_reason="venv rebuilt"
 elif [ "$frontend_rebuilt" = 1 ]; then need_p=1; p_reason="frontend rebuilt (rebundle static/)"
-elif [ "$SOURCE_HASH" != "$(head -1 "$SOURCE_STAMP" 2>/dev/null || true)" ]; then need_p=1; p_reason="python/locale/frontend source moved"
+elif [ "$SOURCE_HASH" != "$(head -1 "$SOURCE_STAMP" 2>/dev/null || true)" ]; then need_p=1; p_reason="bundled source moved"
 fi
 
 if [ "$need_p" = 1 ]; then
@@ -270,7 +270,7 @@ EOF
         {
             echo "$SOURCE_HASH"
             echo "version=$("$PYTHON" -c 'import bristlenose; print(bristlenose.__version__)' 2>/dev/null || echo unknown)"
-            echo "note=fingerprint of bristlenose/**/*.py + locales + frontend src; see check-sidecar-freshness.sh"
+            echo "note=fingerprint per sidecar-source-hash.sh (the shared recipe; do not re-enumerate its inputs here)"
         } > "$SOURCE_STAMP"
         _say "Stamped .source-stamp: ${SOURCE_HASH:0:12}…"
     fi

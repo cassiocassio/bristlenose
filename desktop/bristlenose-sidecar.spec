@@ -121,9 +121,17 @@ a = Analysis(
             os.path.join(PROJECT_ROOT, "bristlenose", "llm", "prompts"),
             os.path.join("bristlenose", "llm", "prompts"),
         ),
-        # Cohort baselines for LLM cost forecasting (bristlenose/llm/pricing.py
-        # ::_load_baselines reads at runtime). Falls back to empty list on
-        # missing file, but cost-forecast quality degrades — ship the file.
+        # LLM cost-baselines (alpha-telemetry Slice A, 27 Apr 2026).
+        # bristlenose/llm/pricing.py::_load_baselines reads this at runtime via
+        # `Path(__file__).parent / "cohort-baselines.json"`. Missing, it falls
+        # back to an empty list and cost-forecast quality degrades — silently,
+        # because unit tests run against `pip install -e .` where __file__
+        # resolves to the real path either way.
+        #
+        # This entry was listed TWICE (identical source and dest) until 5 Aug
+        # 2026 — harmless to PyInstaller, but it makes the datas list read as
+        # longer than it is and gives two places to edit when one changes.
+        # The two comments are merged here.
         (
             os.path.join(PROJECT_ROOT, "bristlenose", "llm", "cohort-baselines.json"),
             os.path.join("bristlenose", "llm"),
@@ -158,17 +166,6 @@ a = Analysis(
         (
             os.path.join(PROJECT_ROOT, "bristlenose", "server", "codebook"),
             os.path.join("bristlenose", "server", "codebook"),
-        ),
-        # LLM cost-baselines (alpha-telemetry Slice A, 27 Apr 2026).
-        # bristlenose/llm/pricing.py:68 loads this at runtime via
-        # `Path(__file__).parent / "cohort-baselines.json"` for the
-        # baseline-fallback path of cost forecasting. Without this entry
-        # the sidecar can't resolve baselines and falls back to whatever
-        # the no-baseline path does — silent in unit tests because they
-        # run against `pip install -e .` where __file__ resolves correctly.
-        (
-            os.path.join(PROJECT_ROOT, "bristlenose", "llm", "cohort-baselines.json"),
-            os.path.join("bristlenose", "llm"),
         ),
     ],
     hiddenimports=[

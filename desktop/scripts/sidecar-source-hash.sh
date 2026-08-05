@@ -57,6 +57,18 @@ sidecar_source_hash() {
             -not -name '_build_info.py' -print0
         find bristlenose/locales -type f \
             -not -name '.DS_Store' -not -name '._*' -print0
+        # The theme. NOT covered by the *.py sweep above — these are CSS/HTML
+        # data files, and their absence made this a FALSE-GREEN gate: a
+        # theme-only edit never moved the hash, so `check-sidecar-freshness.sh`
+        # reported "✓ matches source", Xcode's Ensure Sidecar Fresh phase
+        # skipped the rebuild, and the .app went on serving the previous
+        # stylesheet. Worse than an absent gate, because it answers the
+        # question confidently and wrongly — cost a rebuild-and-recheck cycle
+        # on 5 Aug 2026 chasing a Focus Mode keyline that was already fixed in
+        # source. The theme is bundled via the spec's datas and IS runtime
+        # input, so it belongs in the fingerprint exactly like locales do.
+        find bristlenose/theme -type f \
+            -not -name '.DS_Store' -not -name '._*' -print0
         _frontend_inputs_print0
         find desktop/bristlenose-sidecar.spec -type f -print0
         find desktop/mcpb -type f \

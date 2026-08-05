@@ -55,7 +55,7 @@ fi
 stamped="$(head -1 "$STAMP")"
 
 if [ "$current" != "$stamped" ]; then
-    echo "error: bundled sidecar is STALE — Python or frontend source under bristlenose/ / frontend/ changed since the last build-sidecar.sh (bundle ${stamped:0:12} vs source ${current:0:12}). The desktop app runs the bundled sidecar + baked SPA, so this build would serve OLD code. Rebuild: desktop/scripts/build-sidecar.sh && desktop/scripts/sign-sidecar.sh (build-sidecar.sh runs npm build for you). Bypass (Swift-only work): BRISTLENOSE_ALLOW_STALE_SIDECAR=1."
+    echo "error: bundled sidecar is STALE — Python, theme CSS, locales or frontend source under bristlenose/ / frontend/ changed since the last build-sidecar.sh (bundle ${stamped:0:12} vs source ${current:0:12}). The desktop app runs the bundled sidecar + baked SPA, so this build would serve OLD code. Rebuild: desktop/scripts/build-sidecar.sh && desktop/scripts/sign-sidecar.sh (build-sidecar.sh runs npm build for you). Bypass (Swift-only work): BRISTLENOSE_ALLOW_STALE_SIDECAR=1."
     exit 1
 fi
 

@@ -100,7 +100,9 @@ Session-ID link · inline speaker-name edit (pencil → Enter/Esc → PUT `/api/
 Timecode links (popout player) · quote span bars · speaker selector · moderator questions · journey breadcrumb.
 
 ### Quotes — `Toolbar.tsx` + `QuoteSections.tsx` + `QuoteThemes.tsx`
-Search (`/`, debounced, count label) · view switcher (All / ★Starred) · Sections + Themes views · editable group heading · star (`s`) · hide (`h`) · quote-text edit (click→Enter/Esc) · quote crop (bracket drag) · timecode link · tag add (`t`, TagInput autocomplete, auto-unhides group) · tag remove · AutoCode Accept/Deny · moderator context pill · context expansion · multi-select (`Cmd+A`, Shift/Cmd-click, `j`/`k`) · TagSidebar (right, `]`) · TOC (left, `[`).
+Search (`/`, debounced, count label) · view switcher (All / ★Starred) · Sections + Themes views · editable group heading · star (`s`) · hide (`h`) · quote-text edit (click→Enter/Esc) · quote crop (bracket drag) · timecode link · tag add (`t`, TagInput autocomplete, auto-unhides group) · tag remove · AutoCode Accept/Deny · multi-select (`Cmd+A`, Shift/Cmd-click, `j`/`k`) · TagSidebar (right, `]`) · TOC (left, `[`).
+
+**Not surfaces — parked 5 Aug 2026, nothing to cover.** The **moderator context pill** and **quote context expansion** are feature-flagged off in `frontend/src/utils/featureFlags.ts` (both default `false`), so neither affordance renders and neither belongs in the acceptance matrix or the by-hand walk. Their code, tests and CSS are deliberately retained — see [design-moderator-question-pill.md](../design-moderator-question-pill.md) and [design-quote-context-expansion.md](../design-quote-context-expansion.md). If a flag flips back on, restore the surface to the list above in the same commit.
 
 ### Codebook — `CodebookPanel.tsx`
 Sidebar (Your tags / Built-in / Frameworks) · Browse-codebooks modal · tag inline-rename · add tag/group · delete tag/group (confirm) · drag-to-merge (confirm) · remove framework (impact confirm) · Run AutoCode (status modal + cancel) · threshold review (Accept All / Review / Cancel) · frequency bars + tentative counts · `[`/`]`.

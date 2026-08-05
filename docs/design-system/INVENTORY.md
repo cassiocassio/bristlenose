@@ -167,7 +167,7 @@ All atom files live in `bristlenose/theme/atoms/`. Twenty files.
 
 ### Timecode — `atoms/timecode.css` and `atoms/context-expansion.css`
 - `.bn-timecode-glow`, `.timecode-bracket` — timecode rendering
-- `.timecode-expandable`, `.expand-arrow`, `.context-segment` — context-expansion chevrons
+- `.timecode-expandable`, `.expand-arrow`, `.context-segment` — context-expansion chevrons. ⚠️ **Retained, not dead.** The consuming components (`ExpandableTimecode`, `ContextSegment`) are feature-flagged off since 5 Aug 2026, so a grep-for-usage finds only flag-gated JSX and tests. Don't sweep as orphan CSS — see `docs/design-quote-context-expansion.md`
 
 ### Thumbnail / video — `atoms/thumbnail.css`
 - `.bn-video-thumb`, `.bn-play-icon` — 96×54 video thumbnail + play glyph
@@ -176,7 +176,7 @@ All atom files live in `bristlenose/theme/atoms/`. Twenty files.
 - `.bn-tooltip`, `.bn-tooltip-wrap` — base tooltip (system pattern documented in `theme/CLAUDE.md`)
 
 ### Moderator-question pill — `atoms/moderator-question.css`
-- `.moderator-question`, `.moderator-question-text`, `.moderator-question-badge`, `.moderator-question-row`, `.moderator-question-dismiss`, `.moderator-question-more`, `.moderator-pill` — see `docs/design-moderator-question-pill.md`
+- `.moderator-question`, `.moderator-question-text`, `.moderator-question-badge`, `.moderator-question-row`, `.moderator-question-dismiss`, `.moderator-question-more`, `.moderator-pill` — see `docs/design-moderator-question-pill.md`. ⚠️ **Retained, not dead.** Feature-flagged off since 5 Aug 2026 — no element carries these classes today, so the whole atom renders nothing. Don't sweep as orphan CSS
 
 ### Journey label — `atoms/journey-label.css`
 - (file scoped to journey markers; classes consumed by transcript renderer — see `bn-journey--fade-*` in templates)
@@ -197,7 +197,8 @@ All atom files live in `bristlenose/theme/atoms/`. Twenty files.
 - `.report-header`, `.header-left`, `.header-right`, `.header-title`, `.header-doc-title`, `.header-logotype`, `.header-meta`, `.header-project`
 
 ### Quote card primitives — `atoms/modal.css`
-- `.quote-card`, `.quote-body`, `.quote-hover-zone` — base quote-card chrome (extended in molecules/organisms)
+- `.quote-card`, `.quote-body` — base quote-card chrome (extended in molecules/organisms)
+- `.quote-hover-zone` — **not base chrome.** Emitted only when the moderator-question pill flag is on, so it hasn't rendered since 5 Aug 2026. Retained deliberately — see `docs/design-moderator-question-pill.md`
 
 ### Transcript primitives — `atoms/modal.css`
 - `.transcript-segment`, `.transcript-word`

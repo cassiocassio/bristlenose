@@ -1,8 +1,21 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { QuoteCard } from "./QuoteCard";
+import { featureFlags, resetFeatureFlags } from "../utils/featureFlags";
 import type { QuoteResponse, ModeratorQuestionResponse, TranscriptSegmentResponse } from "../utils/types";
 
 const NOOP = () => {};
+
+// The moderator-question pill and quote context expansion are parked behind
+// flags (see utils/featureFlags.ts). Their behaviour is still specified here —
+// a revisit inherits a passing suite, not a rewrite — so the file runs with
+// both flags on and the "parked features" describe at the bottom resets them
+// to assert what actually ships today.
+beforeEach(() => {
+  featureFlags.moderatorQuestionPill = true;
+  featureFlags.quoteContextExpansion = true;
+});
+
+afterEach(resetFeatureFlags);
 
 function makeQuote(overrides: Partial<QuoteResponse> = {}): QuoteResponse {
   return {
@@ -375,6 +388,79 @@ describe("QuoteCard — context segments inside blockquote", () => {
 
   it("renders no context segments when arrays are empty", () => {
     renderCard({}, { contextAbove: [], contextBelow: [] });
+    expect(screen.queryByTestId("bn-quote-q-p1-26-ctx-above-0")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bn-quote-q-p1-26-ctx-below-0")).not.toBeInTheDocument();
+  });
+});
+
+// ── Parked features (what ships today) ──────────────────────────────────
+
+/**
+ * Every test above runs with both flags forced on. These run with the shipped
+ * defaults, and each one is the same scenario as a test above — same props,
+ * opposite expectation. They exist so flipping a flag on can't be a silent
+ * change: turn one on and the matching test here fails immediately.
+ */
+describe("QuoteCard — parked features render nothing with shipped flags", () => {
+  beforeEach(resetFeatureFlags);
+
+  const EXPANSION_PROPS = {
+    canExpandAbove: true,
+    canExpandBelow: true,
+    onExpandAbove: () => {},
+    onExpandBelow: () => {},
+  };
+
+  it("renders no moderator pill", () => {
+    renderCard({ segment_index: 3 }, { isPillVisible: true });
+    expect(screen.queryByTestId("bn-quote-q-p1-26-mod-q")).not.toBeInTheDocument();
+    expect(screen.queryByText("Question?")).not.toBeInTheDocument();
+  });
+
+  it("renders no hover zone over the start of the quote", () => {
+    renderCard({ segment_index: 3 });
+    expect(document.querySelector(".quote-hover-zone")).not.toBeInTheDocument();
+  });
+
+  it("renders no question row even for a quote remembered as open", () => {
+    // A researcher who pinned questions open before the flag landed still has
+    // those dom_ids in localStorage — they must not restore unclosable.
+    renderCard(
+      { segment_index: 3 },
+      { isQuestionOpen: true, moderatorQuestion: MOD_QUESTION },
+    );
+    expect(screen.queryByTestId("bn-quote-q-p1-26-mod-q-block")).not.toBeInTheDocument();
+    expect(screen.queryByText(/What specifically was confusing/)).not.toBeInTheDocument();
+  });
+
+  it("shows researcher_context again on a quote that has a moderator question", () => {
+    // The paraphrase was suppressed *because* the pill offered the verbatim
+    // question; with the pill parked it is the context affordance again.
+    renderCard({ segment_index: 3, researcher_context: "When asked about the dashboard" });
+    expect(screen.getByText(/When asked about the dashboard/)).toBeInTheDocument();
+  });
+
+  it("renders a plain timecode, with no expansion chevrons", () => {
+    renderCard({ start_timecode: 26 }, EXPANSION_PROPS);
+    expect(screen.queryByTestId("bn-quote-q-p1-26-expand")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bn-quote-q-p1-26-expand-arrow-up")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bn-quote-q-p1-26-expand-arrow-down")).not.toBeInTheDocument();
+  });
+
+  it("renders no context segments even when they are supplied", () => {
+    const seg: TranscriptSegmentResponse = {
+      speaker_code: "m1",
+      start_time: 20,
+      end_time: 25,
+      text: "Before the quote",
+      html_text: null,
+      is_moderator: true,
+      is_quoted: false,
+      quote_ids: [],
+      segment_index: 2,
+      words: null,
+    };
+    renderCard({}, { contextAbove: [seg], contextBelow: [{ ...seg, text: "After the quote" }] });
     expect(screen.queryByTestId("bn-quote-q-p1-26-ctx-above-0")).not.toBeInTheDocument();
     expect(screen.queryByTestId("bn-quote-q-p1-26-ctx-below-0")).not.toBeInTheDocument();
   });

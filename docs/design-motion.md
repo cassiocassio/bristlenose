@@ -167,7 +167,7 @@ Every state transition in the UI falls into one of these **semantic categories**
 | R8 | **Feedback modal** | hidden / visible | Z (scale + opacity) | 200ms | **Partial** |
 | R9 | **Codebook group body** | collapsed / expanded | Y (content height) | 200ms | **No — native `<details>`** |
 | R10 | **Hidden-quotes dropdown** | closed / open | Y (drops down) | 150ms | **No — instant** |
-| R11 | **Moderator question pill** | hidden / revealed | Y (slides up) | 200ms | ✓ Done (mod-q-reveal) |
+| R11 | **Moderator question pill** | hidden / revealed | Y (slides up) | 200ms | **Built, unreachable** — `mod-q-reveal` ships, but the pill is feature-flagged off (5 Aug 2026), so the transition can't be triggered. See [design-moderator-question-pill.md](design-moderator-question-pill.md) |
 
 ### 4.2 ACKNOWLEDGE / CONFIRM — "Pressing a key on a piano"
 
@@ -340,7 +340,7 @@ A restrained single-hue sheen travelling across **text** to signal *indeterminat
 | `chip-slide-in` | `atoms/activity-chip.css` | Appear | 0.2s |
 | `bn-thinking-shimmer` | `atoms/shimmer.css` | Continuous | 2.7s infinite (18 Jul — replaced `chip-spin`) |
 | `bracket-fade-in` | `molecules/editable-text.css` | Reveal | 0.15s |
-| `mod-q-reveal` | `atoms/moderator-question.css` | Reveal | 0.2s |
+| `mod-q-reveal` | `atoms/moderator-question.css` | Reveal | 0.2s — keyframe ships; its trigger is feature-flagged off (5 Aug 2026). Retained deliberately, not dead |
 | `cell-tooltip-in` | `organisms/analysis.css` | Appear | 0.12s |
 | `anchor-fade` | `templates/transcript.css` | Acknowledge | 5s |
 | `content-settle` | `organisms/sidebar.css` | Inertia | 65ms (iOS variant only) |
@@ -362,7 +362,8 @@ A restrained single-hue sheen travelling across **text** to signal *indeterminat
 - ✓ Timecode: glow pulse, progress bar, word highlight (3 blocks in `timecode.css`)
 - ✗ Badges: 5 keyframes unguarded
 - ✗ Activity chip: slide-in + spin unguarded
-- ✗ Bracket fade-in, moderator reveal, analysis tooltip, anchor fade: unguarded
+- ✗ Bracket fade-in, analysis tooltip, anchor fade: unguarded
+- — Moderator reveal: unguarded, but **not a live defect** — its trigger has been feature-flagged off since 5 Aug 2026, so the animation can't play. Rank it with the flag, not with the queue above; the recommended global rule covers it either way
 - ✗ ~100 transition declarations across theme: no guards
 - **Recommendation:** add a single global rule in `tokens.css`
 

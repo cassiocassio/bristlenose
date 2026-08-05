@@ -18,6 +18,7 @@ import type {
   TranscriptSegmentResponse,
 } from "../utils/types";
 import { getModeratorQuestion } from "../utils/api";
+import { featureFlags } from "../utils/featureFlags";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
 import { deriveTagVisibility } from "../utils/tagVisibility";
 import { NewBadge } from "../components/NewBadge";
@@ -252,7 +253,13 @@ export function QuoteGroup({
   openQuestionsRef.current = openQuestions;
 
   // On mount, batch-fetch moderator questions for previously-open quotes.
+  //
+  // Every other path into this feature is a user gesture on an affordance the
+  // flag withholds, so this is the one that still fires when the pill is
+  // parked — a stale `bristlenose-mod-questions` entry would otherwise send a
+  // request per remembered quote to render nothing.
   useEffect(() => {
+    if (!featureFlags.moderatorQuestionPill) return;
     const domIds = quotes
       .filter((q) => openQuestions.has(q.dom_id) && q.segment_index > 0)
       .map((q) => q.dom_id);

@@ -30,6 +30,7 @@ import type { ModeratorQuestionResponse, ProposedTagBrief, QuoteResponse, Transc
 import { formatTimecode } from "../utils/format";
 import { getTagBg } from "../utils/colours";
 import { isExportMode } from "../utils/exportData";
+import { featureFlags } from "../utils/featureFlags";
 import { highlightText } from "../utils/highlight";
 import { useCropEdit } from "../hooks/useCropEdit";
 import { useFocus, useQuoteFocusState } from "../contexts/FocusContext";
@@ -204,7 +205,13 @@ export function QuoteCard({
     registerTagOpener(domId, () => setIsTagInputOpen(true));
     return () => unregisterTagOpener(domId);
   }, [domId, registerTagOpener, unregisterTagOpener]);
-  const hasModeratorContext = hasModerator && quote.segment_index > 0;
+  // Gated on `moderatorQuestionPill` (parked — see utils/featureFlags.ts).
+  // Falsing this also restores `quote.researcher_context` on quotes that have
+  // a verbatim moderator question: the paraphrased context was suppressed
+  // *because* the pill offered the verbatim one, so with the pill withheld the
+  // researcher context is the affordance again.
+  const hasModeratorContext =
+    featureFlags.moderatorQuestionPill && hasModerator && quote.segment_index > 0;
   const textSpanRef = useRef<HTMLSpanElement>(null);
 
   // ── Crop edit hook ──────────────────────────────────────────────────
@@ -599,7 +606,7 @@ export function QuoteCard({
       onKeyDown={handleCardKeyDown}
       onClick={handleCardClick}
     >
-      {contextAbove && contextAbove.length > 0 && contextAbove.map((seg, i) => (
+      {featureFlags.quoteContextExpansion && contextAbove && contextAbove.length > 0 && contextAbove.map((seg, i) => (
         <ContextSegment
           key={`above-${seg.segment_index}-${i}`}
           speakerCode={seg.speaker_code}
@@ -613,7 +620,10 @@ export function QuoteCard({
       {quote.researcher_context && !hasModeratorContext && (
         <span className="context">[{quote.researcher_context}]</span>
       )}
-      {isQuestionOpen && moderatorQuestion && (() => {
+      {/* Gated as well as the pill: a researcher who pinned questions open
+          before the flag landed still has their dom_ids in localStorage, and
+          without this they'd restore on load with no way to dismiss them. */}
+      {featureFlags.moderatorQuestionPill && isQuestionOpen && moderatorQuestion && (() => {
         const { first, rest } = splitFirstSentence(moderatorQuestion.text);
         return (
           <div className="quote-row moderator-question-row" data-testid={`bn-quote-${domId}-mod-q-block`}>
@@ -652,7 +662,8 @@ export function QuoteCard({
       })()}
       <div className="quote-row">
         {(() => {
-          const hasExpansion = onExpandAbove && onExpandBelow;
+          const hasExpansion =
+            featureFlags.quoteContextExpansion && onExpandAbove && onExpandBelow;
           const timecodeEl = hasMedia ? (
             <TimecodeLink
               seconds={quote.start_timecode}
@@ -797,7 +808,7 @@ export function QuoteCard({
           </div>
         </div>
       </div>
-      {contextBelow && contextBelow.length > 0 && contextBelow.map((seg, i) => (
+      {featureFlags.quoteContextExpansion && contextBelow && contextBelow.length > 0 && contextBelow.map((seg, i) => (
         <ContextSegment
           key={`below-${seg.segment_index}-${i}`}
           speakerCode={seg.speaker_code}

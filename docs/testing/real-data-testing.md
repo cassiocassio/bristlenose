@@ -97,7 +97,7 @@ No public source exists for raw, unedited usability test recordings. Published U
   - Moderator probes after each task ("what were you expecting?", "what was confusing?")
 - **Output**: ~4 hours of .mp4 video
 - **What it tests**:
-  - Moderator question detection (the pill feature)
+  - Moderator question detection (the pipeline/API capability — note the quote-card *pill* that surfaced it was feature-flagged off on 5 Aug 2026; the detection endpoint stays live and is what this fixture would exercise)
   - Task-centric friction tagging
   - The full UXR codebook sentiment taxonomy
   - Quote extraction boundaries around task sequences

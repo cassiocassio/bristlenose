@@ -1,4 +1,17 @@
+---
+status: parked
+last-trued: 2026-08-05
+trued-against: HEAD@main on 2026-08-05
+---
+
 # Design: Moderator Question Pill
+
+> **Parked behind a feature flag, 5 Aug 2026.** Built, tested and documented;
+> the affordance is withheld. `featureFlags.moderatorQuestionPill` in
+> [`frontend/src/utils/featureFlags.ts`](../frontend/src/utils/featureFlags.ts)
+> is `false`, so no pill, no hover zone and no question row render. Everything
+> below still describes real code — read it as the spec for a revisit, not as
+> a description of what a researcher sees today. See § Why it's parked.
 
 ## What it does
 
@@ -116,3 +129,64 @@ These decisions were reached through iterative design review on the rendered moc
 10. **Hover zone extends above quote text.** First attempt had `top: 0; height: 1.6em` — mouse left the zone before reaching the pill (1rem gap). Fix: extend zone upward to `top: calc(-1.1rem - 1px - 4px)` covering the pill position. Pill at `z-index: 2` stays clickable on top of zone at `z-index: 1`
 11. **Pill hover keeps it alive.** Belt-and-suspenders: `onMouseEnter`/`onMouseLeave` on the pill itself set `pillVisibleFor` immediately (no 300ms delay) so hovering the pill keeps it visible
 12. **Pill hidden when question expanded.** First attempt kept the pill visible with an `.active` class — clashed visually with the moderator question row above. Fix: remove pill from DOM entirely when `isQuestionOpen` is true; dismiss × on the badge handles closing
+
+## Why it's parked (5 Aug 2026)
+
+The interaction isn't intuitive enough to ship, and the call was to get the
+basics right rather than carry a half-finished affordance into the cohort.
+
+**The discoverability problem.** The trigger is `.quote-hover-zone` — a 14em ×
+1.6em absolutely-positioned overlay covering roughly the first three words of
+the quote text. It has no visual presence at all; the only cue is
+`cursor: help` once the pointer is already inside it. So the feature is found
+by accident or not at all, and a researcher reading a report has no reason to
+rest the pointer on the start of a quote. Iterations 1–12 above all tuned the
+*reveal* (position, timing, wrapping, dismissal) and none of them addressed
+whether a researcher would ever trigger it.
+
+That is a design question, not a polish question, and the honest answers all
+change the shape of the feature: a persistent marker on quotes that have a
+verbatim question (but see the one-ring rule — a mark that reads well on one
+quote is noise on twenty), a toolbar-level "show moderator questions" toggle
+that treats it as a view mode rather than a per-quote reveal, or folding the
+question into the transcript lens where surrounding turns are the point.
+
+**What the flag restores.** With `hasModeratorContext` false,
+`quote.researcher_context` renders again on quotes with `segment_index > 0`.
+That suppression only ever existed because the pill offered the verbatim
+question in its place, so falling back to the paraphrase is the correct
+pre-feature state, not a regression.
+
+### What stays live
+
+Only the client affordance is withheld. Still shipping, still tested:
+
+- `GET /api/projects/{id}/quotes/{dom_id}/moderator-question` and
+  `ModeratorQuestionResponse` (`bristlenose/server/routes/quotes.py`)
+- `getModeratorQuestion()` (`frontend/src/utils/api.ts`) and the
+  `moderator-question` embed key in the offline export (`routes/export.py`)
+- `bristlenose/theme/atoms/moderator-question.css` — no element carries the
+  classes today, so it renders nothing
+- `quotes.showModeratorQuestion` / `quotes.dismissModeratorQuestion` in all 20
+  locales
+- `tests/test_moderator_question_api.py` (9 tests) and the QuoteCard tests,
+  which flip the flag on so the parked behaviour stays specified
+
+`QuoteGroup`'s mount-time batch fetch is gated too — it's the only path into
+the feature that fires without a user gesture, so a stale
+`bristlenose-mod-questions` localStorage entry would otherwise cost a request
+per remembered quote to render nothing.
+
+### Before flipping the flag back on
+
+1. Answer the discoverability question above — it's the reason for the park,
+   and none of the twelve iterations touch it.
+2. Decide what happens to a researcher's stale `bristlenose-mod-questions`
+   entries; today they're inert, and on flip-back they silently restore.
+3. Delete the "parked features" describe in `QuoteCard.test.tsx` that pins the
+   flag-off behaviour — those tests are written to fail the moment the flag
+   flips, which is the point.
+
+If the revisit concludes the answer is "fold this into the transcript lens" or
+"don't", delete the feature and its flag together rather than leaving the flag
+as a monument.

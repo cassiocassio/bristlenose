@@ -135,8 +135,24 @@ done
 # package set. Catches a half-installed venv and a manual change; a transitive
 # republish within the same >= floor is the documented residual that release
 # --force covers. Only called when the venv exists.
+#
+# `--exclude-editable` is load-bearing, not tidying. In a git checkout pip renders
+# the editable self-install as
+#     -e git+https://github.com/…/bristlenose.git@<HEAD-sha>#egg=bristlenose
+# — i.e. the fingerprint embedded the CURRENT COMMIT. Every commit, including a
+# docs-only one, therefore invalidated V and recreated the venv (~2 min, and V
+# cascades a P rebuild): 130 rebuilds vs 131 skips across the run log, for a gate
+# meant to fire only when deps move. Since commit-then-build is the normal rhythm,
+# the incremental design only paid off when you built twice without committing.
+# Excluding it costs nothing the gate doesn't already hold: bristlenose's own code
+# is covered by sidecar_source_hash, its declared deps + extras by the pyproject
+# hash on the line below, a hand-installed package still shows among the other
+# ~129 entries, and an editable→wheel switch still appears (a non-editable install
+# isn't excluded). The whole gate retires at docs/design-dev-environment.md
+# Phase 3, where `uv sync --check` subsumes both this fingerprint and .deps-ok.
+# Fixed 5 Aug 2026.
 _deps_fingerprint() {
-    { shasum -a 256 "$ROOT/pyproject.toml"; "$PYTHON" -m pip freeze; } \
+    { shasum -a 256 "$ROOT/pyproject.toml"; "$PYTHON" -m pip freeze --exclude-editable; } \
         | shasum -a 256 | cut -d ' ' -f1
 }
 

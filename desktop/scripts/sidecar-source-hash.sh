@@ -69,6 +69,26 @@ sidecar_source_hash() {
         # input, so it belongs in the fingerprint exactly like locales do.
         find bristlenose/theme -type f \
             -not -name '.DS_Store' -not -name '._*' -print0
+        # The remaining bundled data dirs. Same class of miss as the theme: all
+        # are non-.py, so the `*.py` sweep above never sees them, yet all are
+        # `datas` entries in bristlenose-sidecar.spec and all are read at
+        # RUNTIME. Verified false-green before this was added — appending a
+        # comment to bristlenose/llm/prompts/autocode.md left the hash at
+        # 460aad18 unchanged, so editing any LLM prompt and hitting Cmd+R
+        # shipped the OLD prompt while the gate said "✓ matches source".
+        # Prompts are the worst of the four: every LLM-using stage loads them
+        # (spec's own comment calls a missing entry BUG-5).
+        #
+        # The rule this encodes: the fingerprint must include EVERY repo-rooted
+        # `datas` entry in the spec. Add both in the same commit, or the gate
+        # answers confidently and wrongly about the thing you just added.
+        # `bristlenose/server/codebook/.DS_Store` exists on disk right now, so
+        # the OS-metadata filter is load-bearing here and not boilerplate —
+        # without it Finder touching that dir pins the gate to STALE forever
+        # (the 29 Jun 2026 locale-.DS_Store failure, re-run).
+        find bristlenose/llm/prompts bristlenose/server/codebook bristlenose/data -type f \
+            -not -name '.DS_Store' -not -name '._*' -print0
+        find bristlenose/llm/cohort-baselines.json -type f -print0
         _frontend_inputs_print0
         find desktop/bristlenose-sidecar.spec -type f -print0
         find desktop/mcpb -type f \

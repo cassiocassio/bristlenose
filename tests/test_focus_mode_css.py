@@ -48,6 +48,19 @@ def _strip_comments(text: str) -> str:
     return re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
 
 
+def _positive(selector: str) -> str:
+    """A selector with its `:not(...)` negations removed.
+
+    Every matcher in this file asks "does this rule apply to a card in state
+    X?" by looking for `.X` in the selector text — and a negated class reads
+    identically to an asserted one under substring matching, so
+    `…:not(.bn-selected)` counts as *selecting* `.bn-selected`. That is exactly
+    backwards, and it silently defeated a guard here until it was tested for
+    failure rather than assumed to work. Use this for any positive-state check.
+    """
+    return re.sub(r":not\([^)]*\)", "", selector)
+
+
 class TestShipsInTheStylesheet:
     """A rule nobody serves is a rule that doesn't exist."""
 
@@ -105,8 +118,8 @@ class TestSelectionSurvivesFocusMode:
         cue = [
             block
             for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", body)
-            if ".bn-focused" in selector
-            and "quote-card" in selector
+            if ".bn-focused" in _positive(selector)
+            and "quote-card" in _positive(selector)
             and "window-inactive" not in selector
             and re.search(r"\bbox-shadow\s*:", block)
             and "none" not in block
@@ -130,21 +143,18 @@ class TestSelectionSurvivesFocusMode:
         """
         body = _strip_comments(load_default_css())
 
-        def spec(sel: str) -> tuple[int, int]:
-            return (len(re.findall(r"[.\[:]", sel.replace("::", ":"))), len(re.findall(r"\b[a-z]+(?=[.\[:]|$)", sel)))
-
         offenders = [
             selector.strip()
             for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", body)
-            if ".bn-focused" in selector
-            and "quote-card" in selector
+            if ".bn-focused" in _positive(selector)
+            and "quote-card" in _positive(selector)
             and "window-inactive" not in selector
             and "print" not in selector
             and re.search(r"\bbox-shadow\s*:", block)
             and "none" not in block
             # The suppressor is `.bn-window-inactive blockquote.quote-card.bn-focused`
             # = 3 classes. Anything with 3+ classes ties or beats it.
-            and len(re.findall(r"\.[a-zA-Z_-]", selector)) >= 3
+            and len(re.findall(r"\.[a-zA-Z_-]", _positive(selector))) >= 3
         ]
         assert not offenders, (
             "A cursor-ring rule is specific enough to survive "
@@ -179,14 +189,60 @@ class TestOneRing:
             for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", body)
             if re.search(r"\bbox-shadow\s*:", block)
             and "none" not in block
-            and ".bn-focused" not in selector
-            and re.search(r"\.(bn-selected|starred)\b", selector)
+            and ".bn-focused" not in _positive(selector)
+            and re.search(r"\.(bn-selected|starred)\b", _positive(selector))
         ]
         assert not offenders, (
             "A ring is applied to a state that can be true of many cards at "
             "once. Only `.bn-focused` may carry it — see § The one-ring rule "
             "in docs/design-focus-mode.md. Offending selector(s):\n  "
             + "\n  ".join(offenders)
+        )
+
+
+class TestKeylinesDoNotDoubleUp:
+    """One thin line all the way round the focused card, never two on one side.
+
+    The card carries a 1px `border-left` and the cursor ring is a 1px
+    box-shadow drawn *outside* the border box, so any rule that leaves the left
+    border painted while the ring is up produces 2px on the left against 1px
+    elsewhere — on the one card the researcher is working on.
+    """
+
+    def test_focused_and_selected_states_the_left_edge(self) -> None:
+        """The combination must decide, not inherit by source order.
+
+        `blockquote.quote-card.bn-focused` and
+        `blockquote.quote-card.bn-selected` are both (0,2,1) and set the same
+        property, so which one wins on a focused+selected card is decided
+        purely by their order in one file. That is not a decision, it's an
+        accident — and it shipped as one: selection won, and the left edge went
+        to 2px. The combined selector has to say what it wants.
+        """
+        body = _strip_comments(load_default_css())
+        combined = [
+            block
+            for selector, block in re.findall(r"([^{}]+)\{([^{}]*)\}", body)
+            # Strip `:not(...)` first. Without this the Focus dissolve rule
+            # — `…quote-card:not(.bn-selected):not(.bn-focused)`, which sets
+            # border-left-color — matches on substring and the test can never
+            # fail. It didn't, on the first cut: deleting the declaration this
+            # guard exists to protect left it green. A negated class is the
+            # opposite of the class.
+            if _positive(selector) is not None
+            and ".bn-focused" in _positive(selector)
+            and ".bn-selected" in _positive(selector)
+            and "quote-card" in _positive(selector)
+            and "window-inactive" not in selector
+            and re.search(r"\bborder-left-color\s*:", block)
+        ]
+        assert combined, (
+            "No rule states the left edge for a card that is BOTH focused and "
+            "selected, so it falls out of source order between two equally "
+            "specific (0,2,1) rules. Whichever wins, the result is unintended: "
+            "selection winning leaves the border painted under the ring (2px "
+            "left, 1px elsewhere). Set `border-left-color` explicitly on "
+            "`blockquote.quote-card.bn-focused.bn-selected`."
         )
 
 

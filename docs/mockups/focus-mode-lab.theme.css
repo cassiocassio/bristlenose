@@ -1946,6 +1946,21 @@ blockquote.quote-card.bn-selected {
 
 blockquote.quote-card.bn-focused.bn-selected {
     background: var(--bn-selection-bg);
+
+    /* The combination has to state its own left edge, because neither single
+       rule can win it: `blockquote.quote-card.bn-focused` (which blanks the
+       border so the ring owns a uniform outline) and
+       `blockquote.quote-card.bn-selected` (which colours it
+       --bn-selection-border) are BOTH (0,2,1), and selection sits later in this
+       file — so on a card that is focused *and* selected, selection took the
+       edge and you got 2px of blue on the left against 1px of ring everywhere
+       else. Visible, and distracting, precisely on the card you're working on.
+
+       Light keeps the selection edge: there is no ring in light, so nothing
+       doubles up and the edge is a real cue. Dark goes transparent and lets the
+       ring carry a single thin line the whole way round. Pinned by
+       `test_focused_and_selected_states_the_left_edge`. */
+    border-left-color: light-dark(var(--bn-selection-border), transparent);
 }
 
 /* ---------------------------------------------------------------------

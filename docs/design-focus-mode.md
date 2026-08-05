@@ -114,7 +114,7 @@ The rule above is **not** in `templates/focus-mode.css` and is **not** scoped to
 
 > **Ownership.** `docs/design-keyboard-navigation.md` owns `.bn-focused` and already states "ring for focus, background for selection" as a design principle. That doc is the canonical home for the rule; this section keeps the *derivation* (the four-cell contrast table above is Focus-specific evidence) and should not be mirrored there.
 
-> **Untested fragility:** `.bn-selected` keeps its left edge on a focused card only because it sits later in `interactive.css` at equal specificity. Nothing pins that ordering.
+**The focused+selected combination has to state its own left edge.** `blockquote.quote-card.bn-focused` (which blanks the border) and `blockquote.quote-card.bn-selected` (which colours it) are **both (0,2,1)**, so which one won was decided purely by their order in one file — and selection won, putting 2px of blue on the left against 1px of ring everywhere else, on the very card being worked on. So focus pre-empts *starred* and *playback-active* (both (0,2,0)) but **not** selection; the combined selector settles it explicitly: `light-dark(var(--bn-selection-border), transparent)`. Light keeps the selection edge (no ring there to double up with); dark goes transparent so the ring carries one thin line the whole way round. Pinned by `test_focused_and_selected_states_the_left_edge`.
 
 **Latent bug this surfaced, not fixed here:** `--bn-focus-shadow` has no dark variant in either palette (`rgba(0,0,0,…)` default, `rgba(30,20,10,…)` edo — warm-tinted, but still a dark shadow), so the focus lift has never been visible in dark mode **anywhere in the app** — Focus Mode merely removed the background differential that was covering for it. **That is now exactly what shipped** — see § The cursor cue is app-wide below. This paragraph previously ended "whether `.bn-focused` should carry the ring in dark generally is an app-wide change, deliberately out of scope here", which was true for about a day.
 
@@ -263,7 +263,7 @@ Phases 0–2 ship the SPA + export together (visual, fast). Phase 3 is the nativ
 - **Phase 1 — SPA behaviour. ✅ Built.** `frontend/src/contexts/FocusModeStore.ts` (module store + `useSyncExternalStore`, matching SidebarStore) owns the state and the DOM class; toolbar moon button; bare `z`. Works in `serve` and export — the export inlines the theme CSS, so Focus rides along with no export-specific work.
 - **Phase 2 — matrix hardening. ⬜ Outstanding.** Render palette × appearance × focus on the specimen lens; **tune `--bn-focus-ghost-opacity` against the prose** (see the note in § Token model — 0.14 may be below what "faint outline" promises); verify palette/appearance switches *while* in Focus don't jank. Browser/CLI only — Edo isn't reachable on desktop. This is a looking-at-it phase, not a coding one.
 - **Phase 3 — native menu item. ✅ Built.** `View ▸ Focus Mode` (`⌘⌥F`) as a checkmarked `Toggle` in `ViewMenuContent`; `focusModeActive` mirrored from the SPA over a new `focus-mode` bridge message. No seam work, no colour channel.
-- **Phase 4 — tests + this doc trued. ✅ Done.** `tests/test_focus_mode_css.py` (12 invariants), `frontend/src/contexts/FocusModeStore.test.ts` (4), and three `z`-key cases in `useKeyboardShortcuts.test.ts`.
+- **Phase 4 — tests + this doc trued. ✅ Done.** `tests/test_focus_mode_css.py` (13 invariants), `frontend/src/contexts/FocusModeStore.test.ts` (4), and three `z`-key cases in `useKeyboardShortcuts.test.ts`.
 
 ### Decisions taken during the build
 

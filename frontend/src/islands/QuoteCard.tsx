@@ -30,6 +30,7 @@ import type { ModeratorQuestionResponse, ProposedTagBrief, QuoteResponse, Transc
 import { formatTimecode } from "../utils/format";
 import { getTagBg } from "../utils/colours";
 import { isExportMode } from "../utils/exportData";
+import { reportHref } from "../utils/reportHref";
 import { featureFlags } from "../utils/featureFlags";
 import { highlightText } from "../utils/highlight";
 import { useCropEdit } from "../hooks/useCropEdit";
@@ -445,7 +446,13 @@ export function QuoteCard({
 
   // ── Derived state ───────────────────────────────────────────────────
 
-  const transcriptHref = `/report/sessions/${sessionId}#t-${Math.floor(quote.start_timecode)}`;
+  // Must go through reportHref: under hash routing (export mode, file://) a
+  // plain "/report/..." href navigates the browser off the file:// document to
+  // a non-existent path, silently — no console error. The timecode rides as a
+  // nested #t-<seconds> that TranscriptPage's tail-parse resolves.
+  const transcriptHref = reportHref(
+    `/report/sessions/${sessionId}#t-${Math.floor(quote.start_timecode)}`,
+  );
   // Suppress the AI sentiment badge when the same sentiment exists as a
   // codebook tag (from the Sentiment framework auto-import).  This prevents
   // showing the same sentiment twice — once as AI badge, once as user tag.

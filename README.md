@@ -385,6 +385,7 @@ The Sessions lens learns to shrink, the arrow keys learn the layout, and two bui
 - **The Analysis heatmap was drawing light-mode colours on a dark background** — permanently, in the Mac app. It now follows the system appearance and repaints live.
 - **Focus Mode, tuned against real studies** — the starred edge dissolves with everything else (a mark that reads well on one card is noise on twenty), the keyboard cursor gains a thin ring in dark, and descriptions fade with their titles. The starred edge is also tamed in dark outside Focus Mode, where at triple the light-mode contrast it read as a divider between two quotes rather than the bracket of one.
 - **Switching Light/Dark on the Mac no longer reloads your report**, losing your route, scroll position and open panels — all to serve byte-identical HTML.
+- **Speaker names in a shared offline report are links again** — in an exported report, clicking a speaker badge navigated the browser off the file to a path that doesn't exist, silently. It lands on the transcript at the right timecode again.
 - **Also:** the moderator pill and quote-context expansion are switched off behind flags rather than shipped half-discoverable; the disk-image build gained a shippability gate that mounts the image and checks the app inside it, after an unnotarised build sat looking finished for 14 hours; and the Mac app's freshness check stopped ignoring the theme and every LLM prompt.
 
 **0.24.0** — _3 Aug 2026_

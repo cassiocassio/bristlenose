@@ -54,6 +54,23 @@ async function waitForMount(page: Page): Promise<void> {
     undefined,
     { timeout: 10_000 },
   );
+
+  // Root-has-children fires as soon as the SHELL mounts — the routed lens can
+  // still be rendering, so anything asserted here measures the previous route
+  // (usually the dashboard) and passes vacuously. That is not hypothetical:
+  // this spec's link guard sat green locally while the quotes lens contributed
+  // zero anchors, and only failed in CI when the timing happened to land late.
+  // Settle on a stable DOM before asserting (same pattern as perf-gate.spec.ts).
+  await page.waitForFunction(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const count = () => document.querySelectorAll("*").length;
+        const first = count();
+        setTimeout(() => resolve(first > 0 && count() === first), 200);
+      }),
+    undefined,
+    { timeout: 10_000 },
+  );
 }
 
 /** Offline resource-load noise (blocked fonts) we don't count as an app error. */

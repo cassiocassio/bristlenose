@@ -155,14 +155,30 @@ Uses a `repeat(auto-fill, minmax(240px, 1fr))` grid, progressively enhanced to n
 
 ## Session table (report.css + molecules/person-badge.css)
 
-The sessions table in both the Sessions tab and Project tab. Shows per-session metadata: speaker badges, user journey paths, video thumbnails, and sentiment sparklines. Styled primarily in `templates/report.css` with the `bn-person-badge` molecule from `molecules/person-badge.css`.
+The sessions grid in the Sessions tab, and the (still tabular) session list on the Project tab. Shows per-session metadata: speaker badges, user journey paths, video thumbnails, and sentiment sparklines.
+
+**Trued 6 Aug 2026 — this is no longer a `<table>`.** The Sessions lens is a CSS grid with container queries, in `organisms/sessions-grid.css`; `templates/report.css` keeps only the legacy `.bn-session-table tr/td` rules that the sealed static render and the Project-tab list still use. Speaker/badge classes below are unchanged and shared by both.
 
 ### Structure
 
-- **`.bn-session-table`** — `<section>` wrapper. Contains optional moderator header paragraph + `<table>`
-- **`.bn-session-moderators`** — paragraph above table: "Sessions moderated by [m1] Rachel and [m2] Kerry". Uses `.bn-person-badge` molecule for badge+name pairs. Names are regular weight (not semibold) in the header
-- **`.bn-session-table tr`** — `border-bottom: 1px solid var(--bn-colour-border)`. Applied to `<tr>` rather than `<td>` to ensure full-width horizontal rules (avoids gaps from varying cell heights)
-- **`.bn-session-table td`** — `border-bottom: none` (overrides default, since the border is on `<tr>`)
+- **`.bn-session-table`** — `<section>` wrapper. Also the **container-query container**
+  (`container-type: inline-size; container-name: bn-sessions`) — every threshold below is measured
+  against this box, i.e. usable content width, not viewport width
+- **`.bn-session-moderators`** — paragraph above the grid: "Sessions moderated by [m1] Rachel and [m2] Kerry". Uses `.bn-person-badge` molecule for badge+name pairs. Names are regular weight (not semibold) in the header
+- **`.bn-sessions-grid`** — `role="table"`. The parent grid; owns the tracks
+- **`.bn-sessions-row`** — `role="row"`, `grid-column: 1 / -1`, `grid-template-columns: subgrid`.
+  **Subgrid is load-bearing:** per-row grids resolve content-sized tracks *per row*, so columns stop
+  lining up. One parent grid + subgrid keeps rows real boxes (so `:hover` works) while tracks stay
+  shared and content-sized, as a table's are
+- **`.bn-sessions-cell`** — `role="cell"`/`columnheader`. `min-width: 0` is load-bearing: without it
+  an `fr` track cannot shrink below its content and the row overflows instead of wrapping
+- **`.bn-sessions-head`**, **`.bn-sessions-h1`/`.bn-sessions-h2`** — header row and the stacked
+  double-header (Start / User journey; Duration / Interviews when merged). The second line takes the
+  colour of the thing it labels, so the header reads as a legend for its cell
+- **`.bn-cell-{id,thumb,speakers,start,sentiment,duration,file}`** — per-column hooks. Column order is
+  held at every width; breakpoints only *subtract*
+- **Legacy (static render + Project tab only):** `.bn-session-table tr` carries `border-bottom` on
+  `<tr>` not `<td>`; `.bn-session-table td` resets it
 
 ### Columns
 
@@ -172,9 +188,15 @@ The sessions table in both the Sessions tab and Project tab. Shows per-session m
 - **`.bn-speaker-editable-name`** — editable name text beside the code badge. Matches badge name typography (`0.72rem`, emphasis weight, body font). Hover: subtle `quote-bg` background. Active (`[contenteditable]`): accent outline + `quote-bg`. Committed (`.edited`): italic. Uses `EditableText` component with `trigger="external"`. Full name shown as `title` tooltip when it differs from short_name
 - **`.bn-name-pencil`** — pencil edit affordance (✎). `opacity: 0` default → `0.4` on `.bn-session-speaker-entry:hover` → `0.8` on pencil hover. **Hidden during editing** (conditionally rendered: `{!isEditing && <button>}`). Follows the pencil-hide convention (see theme `CLAUDE.md` Gotchas)
 - **`.bn-person-badge`** (molecule) — two-tone split speaker badge. `inline-flex, align-items: center, gap: 0, white-space: nowrap`. Contains `.bn-speaker-badge--split` wrapper with `.bn-speaker-badge-code` (left half: mono font, badge-bg, bordered) + optional `.bn-speaker-badge-name` (right half: body font, quote-bg, bordered). When code-only, CSS `:last-child` gives full border-radius. Hover on linked badges lightens name bg → `--bn-colour-bg`, darkens code text → `--bn-colour-text`. Display toggle: `[data-person-display="code"]` hides names via CSS. In the sessions grid, PersonBadge is rendered code-only (no `name` prop); the name is a separate `EditableText` beside it. Settings stored via `createStore("bristlenose-person-display")` in `person-display.js`
-- **`.bn-session-meta`** — Start date cell, contains date div + optional `.bn-session-journey`
+- **`.bn-session-meta`** — legacy Start-date cell (static render / Project tab). Carries the old
+  `min-width: 12rem` stopgap. **The Sessions lens deliberately does NOT use it** — it lives in the
+  templates layer, which concatenates after organisms, so it would beat `.bn-sessions-cell`'s
+  `min-width: 0` and reinstate the rigidity the shrink pair removes. The lens uses `.bn-cell-start`
 - **`.bn-session-journey`** — user journey path below start date. `font-size: 0.82rem`, `color: var(--bn-colour-muted)`, `white-space: normal` (wraps). Content: "Homepage → Tropical Fish → Equipment → …"
-- **`.bn-session-duration`** — `text-align: right` on both `<th>` and `<td>`. Format: `MM:SS` or `HH:MM:SS`
+- **`.bn-session-duration`** — `text-align: right`. Format: `MM:SS` or `HH:MM:SS`. In the Sessions
+  lens the duration flips to left-aligned once it stacks above the filename, via
+  `.bn-sessions-row .bn-cell-duration` — **0-2-0 on purpose**, because this rule sits in the later
+  templates layer and a bare `.bn-cell-duration` ties on specificity and loses on source order
 - **Interviews column** — source filename. Header uses `.bn-interviews-link` with `.bn-folder-icon` SVG (legacy: `file://` link to input folder; React island: copies `file://` URI to clipboard). Cell shows truncated filename (via `format_finder_filename()`) with `title` for full name on hover. Media sessions (video/audio) render the filename as `<a class="timecode">` — `player.js` event delegation opens the popout player at 0:00. Non-media sessions show plain `<span>` text
 - **`.bn-session-thumb`** — thumbnail cell. `.bn-video-thumb`: `width: 96px; height: 54px` (16:9 HD), `background: var(--bn-colour-border)`, `border-radius: var(--bn-radius-sm)`, flex-centred `.bn-play-icon` (▶ triangle, 1.2rem, muted)
 - **`.bn-session-sentiment`** — sentiment sparkline cell. `.bn-sparkline` container: `display: inline-flex; align-items: flex-end; height: 54px` (matches thumbnail height so baselines align). `.bn-sparkline-bar` spans: height set inline (normalised), colour via `--bn-sentiment-{name}` tokens, `border-radius` on top corners

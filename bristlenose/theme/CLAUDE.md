@@ -122,12 +122,16 @@ Two side-by-side horizontal bar charts: AI sentiment (Python-rendered) and User 
 - **`.bn-person-badge-name`** — `font-weight: var(--bn-weight-emphasis)` (490). In the moderator header, names use normal weight (no `.bn-person-badge-name` class)
 - **Usage**: session table speaker cells (semibold names) and moderator header (regular weight names). The molecule is included in `_THEME_FILES` in `render/theme_assets.py`. React equivalent: `PersonBadge` component in `frontend/src/components/PersonBadge.tsx`
 
-## Session table CSS
+## Session grid CSS
 
-Session table styles in `templates/report.css`. The session table renders in both the Sessions tab and the Project tab.
+**The Sessions lens is a CSS grid, not a `<table>` (since 6 Aug 2026)** — `organisms/sessions-grid.css`. It uses container queries on `.bn-session-table` (which is the container: `container-type: inline-size`), `grid-template-columns: subgrid` on rows, a proportional shrink pair, and a narrow-width degradation ladder that sheds surnames → user journey → names entirely. It is pure CSS: every cell renders at every width and the queries decide what shows, so there is no width measurement in JS and it survives `file://` in an exported report. Full rationale in the file header; class inventory in `CSS-REFERENCE.md`.
 
-- **`.bn-session-table`** — wrapper section, resets margin
-- **`.bn-session-table tr`** — `border-bottom` on `<tr>` not `<td>` (ensures full-width horizontal rules even with varying cell heights)
+`templates/report.css` keeps the legacy `.bn-session-table tr/td` rules, still used by the sealed static render and the Project-tab session list.
+
+**Two specificity traps live here, both measured shipping wrong before being raised:** `.bn-session-duration { text-align: right }` and `.bn-session-meta { min-width: 12rem }` sit in the *templates* layer, which concatenates AFTER organisms — so a bare `.bn-cell-*` rule ties on specificity and loses on source order. The grid answers with `.bn-sessions-row .bn-cell-duration` (0-2-0) and by simply not applying `.bn-session-meta` to the start cell.
+
+- **`.bn-session-table`** — wrapper section, resets margin; container-query container for the lens
+- **`.bn-session-table tr`** (legacy) — `border-bottom` on `<tr>` not `<td>` (ensures full-width horizontal rules even with varying cell heights)
 - **`.bn-session-moderators`** — header sentence above table ("Sessions moderated by [m1] Rachel")
 - **`.bn-session-speakers`** — flex column for vertically stacked speaker entries
 - **`.bn-session-journey`** — muted colour, smaller text, wraps below start date

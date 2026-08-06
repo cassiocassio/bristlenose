@@ -1,0 +1,36 @@
+/* Atom: section-heading — the zone title on a lens page.
+ *
+ * One h1 per top-level content zone, named for the zone, never the lens
+ * (docs/design-lens-template.md § "The h1 scheme"). Four lenses use it:
+ * Quotes ("Sections" / "Themes"), Analysis ("Sentiment signals" / "Tag
+ * signals"), Codebook ("Codebook"), Sessions ("Sessions").
+ *
+ * WHY THIS IS AN ATOM, not a rule in templates/report.css where it lived
+ * until 6 Aug 2026: a class you have to remember to type will eventually be
+ * forgotten. Codebook's h1 carried no `.section-heading` at all — in all
+ * three of its render states — so it rendered with correct type (inherited)
+ * and NO horizontal rule, and nothing caught it. Quotes and Analysis were
+ * right only because they copied each other. Use the `<SectionHeading>`
+ * component (frontend/src/components/SectionHeading.tsx) rather than typing
+ * the class, so a zone title cannot be rendered without its rule.
+ *
+ * Provides the full-pane 1px keyline + padding itself rather than leaning on
+ * the base h2 rule, so an h1 (which has no border of its own) still gets the
+ * divider.
+ *
+ * Font size/weight are deliberately NOT set here — they inherit from the
+ * element (h1 → display/strong), keeping the *semantic* level and the
+ * *graphic* size as separate knobs. Tune size via the h1 rule / specimen lens.
+ *
+ * The 2.5rem top gives between-zone separation. Flushing the FIRST zone title
+ * to the page datum is page-layout geometry, not the atom's business, so that
+ * rule stays in templates/report.css — an atom should not know where on a
+ * page it sits.
+ */
+
+.section-heading {
+    max-width: none;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--bn-colour-keyline);
+}

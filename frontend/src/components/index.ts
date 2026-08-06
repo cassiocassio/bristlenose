@@ -21,6 +21,7 @@ export { Selector } from "./Selector";
 export { Sparkline } from "./Sparkline";
 export { TagInput } from "./TagInput";
 export type { TagVocabularyGroup } from "./TagInput";
+export { SectionHeading } from "./SectionHeading";
 export { ThresholdReviewModal } from "./ThresholdReviewModal";
 export { Thumbnail } from "./Thumbnail";
 export { TimecodeLink } from "./TimecodeLink";

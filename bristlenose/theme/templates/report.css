@@ -74,23 +74,10 @@ h2 {
     border-bottom: 1px solid var(--bn-colour-keyline);
 }
 
-/* Zone-title treatment — self-contained so it works on ANY element (the lens
-   zone titles are now <h1>: "Sections"/"Themes", "Sentiment signals"/"Tag
-   signals"; a lens may carry two, one per top-level content zone — see
-   docs/design-lens-template.md § Headings). Provides the full-pane 1px keyline
-   + padding itself rather than leaning on the base h2 rule, so an h1.section-
-   heading (which has no border of its own) still gets the divider. Font
-   size/weight are deliberately NOT set here — they inherit from the element
-   (h1 → display/strong), keeping the *semantic* level (h1) and the *graphic*
-   size as separate knobs (tune size via the h1 rule / specimen lens). The
-   2.5rem top gives between-zone separation; the first zone-title on a lens is
-   flushed to the datum below. */
-.section-heading {
-    max-width: none;
-    margin: 2.5rem 0 1rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 1px solid var(--bn-colour-keyline);
-}
+/* The .section-heading ATOM moved to atoms/section-heading.css (6 Aug 2026).
+   Only its page-layout rule stays here: an atom should not know where on a
+   page it sits. */
+
 
 /* First zone-title on a lens sits flush at the content datum (no top gap).
    Quotes: the first <section> in <main> ("Sections", before "Themes").

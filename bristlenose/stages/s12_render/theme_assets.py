@@ -54,6 +54,7 @@ _THEME_FILES: list[str] = [
     "atoms/shimmer.css",
     "atoms/activity-chip.css",
     "atoms/journey-label.css",
+    "atoms/section-heading.css",
     "atoms/moderator-question.css",
     "atoms/context-expansion.css",
     "molecules/person-badge.css",

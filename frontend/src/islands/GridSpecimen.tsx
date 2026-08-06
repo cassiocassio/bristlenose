@@ -23,6 +23,7 @@
  */
 
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { SectionHeading } from "../components";
 
 /** One measured snapshot of the layout frame. */
 interface FrameMeasurements {
@@ -319,7 +320,7 @@ export function GridSpecimen() {
         HUD (bottom right) shows the live frame numbers — the same values the layout audit reports.
       </p>
 
-      <h1 className="section-heading">Type</h1>
+      <SectionHeading>Type</SectionHeading>
       <h1>Heading one — lens title size</h1>
       <h2>Heading two — section title with its keyline</h2>
       <h3>Heading three — card / group title</h3>
@@ -329,13 +330,13 @@ export function GridSpecimen() {
         lens is that you can see which.
       </p>
 
-      <h1 className="section-heading">Quote cards</h1>
+      <SectionHeading>Quote cards</SectionHeading>
       <QuoteSpecimens />
 
-      <h1 className="section-heading">Signal cards</h1>
+      <SectionHeading>Signal cards</SectionHeading>
       <SignalSpecimens />
 
-      <h1 className="section-heading">Radius tiers</h1>
+      <SectionHeading>Radius tiers</SectionHeading>
       <RadiusTiers />
     </div>
   );

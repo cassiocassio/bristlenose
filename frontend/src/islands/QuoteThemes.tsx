@@ -19,6 +19,7 @@ import { useFocus } from "../contexts/FocusContext";
 import { filterQuotes } from "../utils/filter";
 import { QuoteGroup } from "./QuoteGroup";
 import { useRefetching, refetchOverlayProps } from "../hooks/useRefetching";
+import { SectionHeading } from "../components";
 
 interface QuoteThemesProps {
   projectId: string;
@@ -168,7 +169,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
   if (error) {
     return (
       <section>
-        <h1 id="themes" className="section-heading">{t("quotes.themes")}</h1>
+        <SectionHeading id="themes">{t("quotes.themes")}</SectionHeading>
         <p style={{ color: "var(--bn-colour-danger, #c00)", padding: "1rem" }}>
           {t("quotes.failedToLoad", { error })}
         </p>
@@ -179,7 +180,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
   if (!data) {
     return (
       <section>
-        <h1 id="themes" className="section-heading">{t("quotes.themes")}</h1>
+        <SectionHeading id="themes">{t("quotes.themes")}</SectionHeading>
         <p style={{ opacity: 0.5, padding: "1rem" }}>{t("quotes.loading")}</p>
       </section>
     );
@@ -189,7 +190,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
 
   return (
     <section {...refetchOverlayProps(isRefetching)}>
-      <h1 id="themes" className="section-heading">{t("quotes.themes")}</h1>
+      <SectionHeading id="themes">{t("quotes.themes")}</SectionHeading>
       {filteredThemes.map((theme) => {
         const displayLabel = theme.edited_label ?? theme.theme_label;
         const anchor = `theme-${displayLabel.toLowerCase().replace(/ /g, "-")}`;

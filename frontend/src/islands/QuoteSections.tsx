@@ -21,6 +21,7 @@ import { filterQuotes } from "../utils/filter";
 import { QuoteGroup } from "./QuoteGroup";
 import { useLastRun } from "../contexts/LastRunStore";
 import { useRefetching, refetchOverlayProps } from "../hooks/useRefetching";
+import { SectionHeading } from "../components";
 
 interface QuoteSectionsProps {
   projectId: string;
@@ -182,7 +183,7 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
   if (error) {
     return (
       <section>
-        <h1 id="sections" className="section-heading">{t("quotes.sections")}</h1>
+        <SectionHeading id="sections">{t("quotes.sections")}</SectionHeading>
         <p style={{ color: "var(--bn-colour-danger, #c00)", padding: "1rem" }}>
           {t("quotes.failedToLoad", { error })}
         </p>
@@ -193,7 +194,7 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
   if (!data) {
     return (
       <section>
-        <h1 id="sections" className="section-heading">{t("quotes.sections")}</h1>
+        <SectionHeading id="sections">{t("quotes.sections")}</SectionHeading>
         <p style={{ opacity: 0.5, padding: "1rem" }}>{t("quotes.loading")}</p>
       </section>
     );
@@ -208,7 +209,7 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
     if (lastRun === null) return null;
     return (
       <section>
-        <h1 id="sections" className="section-heading">{t("quotes.sections")}</h1>
+        <SectionHeading id="sections">{t("quotes.sections")}</SectionHeading>
         <p className="bn-empty-state">{t("emptyState.postZeroQuotes")}</p>
       </section>
     );
@@ -216,7 +217,7 @@ export function QuoteSections({ projectId, refreshKey = 0 }: QuoteSectionsProps)
 
   return (
     <section {...refetchOverlayProps(isRefetching)}>
-      <h1 id="sections" className="section-heading">{t("quotes.sections")}</h1>
+      <SectionHeading id="sections">{t("quotes.sections")}</SectionHeading>
       {filteredSections.map((section) => {
         // Scroll anchor tracks the *displayed* label (rename if present).
         const displayLabel = section.edited_label ?? section.screen_label;

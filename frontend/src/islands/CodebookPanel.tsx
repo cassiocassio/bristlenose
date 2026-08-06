@@ -4,14 +4,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { toast } from "../utils/toast";
 import { isExportMode } from "../utils/exportData";
-import {
-  Badge,
-  ConfirmDialog,
-  EditableText,
-  MicroBar,
-  TagInput,
-  ThresholdReviewModal,
-} from "../components";
+import { Badge, ConfirmDialog, EditableText, MicroBar, SectionHeading, TagInput, ThresholdReviewModal } from "../components";
 import { addJob } from "../contexts/ActivityStore";
 import {
   dropFrameworkDisabled,
@@ -1026,7 +1019,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
   if (error) {
     return (
       <>
-        <h1 className="section-heading">{t("codebook.heading")}</h1>
+        <SectionHeading>{t("codebook.heading")}</SectionHeading>
         <p className="codebook-description">{t("codebook.errorLoading", { error })}</p>
       </>
     );
@@ -1035,7 +1028,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
   if (!data) {
     return (
       <>
-        <h1 className="section-heading">{t("codebook.heading")}</h1>
+        <SectionHeading>{t("codebook.heading")}</SectionHeading>
         <p className="codebook-description">{t("labels.loading")}</p>
       </>
     );
@@ -1061,7 +1054,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
     <>
       <div className="codebook-header">
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 className="section-heading">{t("codebook.heading")}</h1>
+          <SectionHeading>{t("codebook.heading")}</SectionHeading>
           <p className="codebook-description">
             {t("codebook.description")}
           </p>

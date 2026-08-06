@@ -14,7 +14,7 @@
 import { useCallback, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { EditableText, JourneyChain, PersonBadge, Sparkline, Thumbnail } from "../components";
+import { EditableText, JourneyChain, PersonBadge, SectionHeading, Sparkline, Thumbnail } from "../components";
 import type { SparklineItem } from "../components/Sparkline";
 import { PlayerContext } from "../contexts/PlayerContext";
 import { apiGet, getPeople, putPeople } from "../utils/api";
@@ -253,7 +253,7 @@ export function SessionsTable({
           (`.center > main > section:first-of-type > .section-heading`).
           Reuses `nav.sessions` rather than minting `sessions.heading` — the
           word is identical and already reviewed in all 20 locales. */}
-      <h1 className="section-heading">{t("nav.sessions")}</h1>
+      <SectionHeading>{t("nav.sessions")}</SectionHeading>
       <ModeratorHeader moderatorNames={moderator_names} />
       <ObserverHeader observerNames={observer_names} />
       {/* CSS grid, not a <table>. The responsive behaviour needs column

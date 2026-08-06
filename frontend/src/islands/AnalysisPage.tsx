@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Badge, Metric, PersonBadge } from "../components";
+import { Badge, Metric, PersonBadge, SectionHeading } from "../components";
 import { InspectorPanel, DimensionToggle, type InspectorSource } from "../components/InspectorPanel";
 import {
   useInspectorStore,
@@ -1168,7 +1168,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   if (!hasSentiment && !hasTags && !tagLoaded) {
     return (
       <div>
-        <h1 className="section-heading">{t("analysis.heading")}</h1>
+        <SectionHeading>{t("analysis.heading")}</SectionHeading>
         <p className="description" style={{ opacity: 0.5 }}>
           {t("analysis.loadingData")}
         </p>
@@ -1179,7 +1179,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
   if (!hasSentiment && !hasTags) {
     return (
       <div>
-        <h1 className="section-heading">{t("analysis.heading")}</h1>
+        <SectionHeading>{t("analysis.heading")}</SectionHeading>
         <p className="description">
           {t("analysis.noData")}
         </p>
@@ -1199,7 +1199,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
         {/* ── Sentiment signal cards ─────────────────────────── */}
         {hasSentiment && sentimentSignals.length > 0 && (
           <>
-            <h1 className="section-heading">{t("analysis.sentimentSignals")}</h1>
+            <SectionHeading>{t("analysis.sentimentSignals")}</SectionHeading>
             <p className="section-desc">
               {t("analysis.sentimentDesc")}
             </p>
@@ -1226,7 +1226,7 @@ export function AnalysisPage({ projectId }: AnalysisPageProps) {
         {hasTags && tagSignals.length > 0 && (
           <>
             {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
-            <h1 className="section-heading">{t("analysis.tagSignals")}</h1>
+            <SectionHeading>{t("analysis.tagSignals")}</SectionHeading>
             <p className="section-desc">
               {t("analysis.tagDesc")}
             </p>

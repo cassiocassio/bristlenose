@@ -44,6 +44,24 @@
  * Note the journey — a whole column of content — is spent BEFORE identity
  * legibility. Decided 6 Aug 2026.
  *
+ * ── These thresholds are DELIBERATELY off the shared scale ─────────────
+ * The seven values below (1285 / 968 / 900 / 750 / 700 / 560 / 480) are not
+ * drawn from `--bn-breakpoint-*` and should not be moved onto it. Decided
+ * 6 Aug 2026 (Martin): that scale exists to serve card-flow surfaces — the
+ * quote grid, signal cards, code groups — which reflow by column count. This
+ * is a seven-column data grid with a shrink pair and a degradation ladder;
+ * every value here was measured against where its own content actually
+ * breaks. Snapping them to a scale built for card reflow would trade a
+ * working design for a tidier-looking one.
+ *
+ * The same applies to the track geometry (`minmax(11rem, 1fr)`,
+ * `minmax(9rem, 15rem)`) and the 1 : 1.5 shrink ratio — bespoke to this grid,
+ * not candidates for global tokens.
+ *
+ * So: if you are here on a tokenisation sweep, this file is the exception,
+ * and that is on purpose. Tune the numbers by eye in
+ * docs/mockups/sessions-grid-playground.html; don't generalise them.
+ *
  * Thresholds are CONTAINER inline size, i.e. usable content width, not
  * viewport width. In the browser with the sidebar closed, content =
  * window − 184 (48 body padding + 72 rails + 64 centre padding).

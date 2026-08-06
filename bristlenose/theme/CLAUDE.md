@@ -52,6 +52,8 @@ Reference values in `tokens.css` — CSS `@media` can't use `var()`, so these do
 | `--bn-breakpoint-toolbar` | 600px | Toolbar collapse (planned) |
 | `--bn-breakpoint-content` | 1100px | Transcript annotation margin layout |
 
+**The Sessions grid is a deliberate exception — do NOT fold its thresholds into this scale.** `organisms/sessions-grid.css` carries seven bespoke container-query values (1285 / 968 / 900 / 750 / 700 / 560 / 480), plus bespoke track geometry and a 1 : 1.5 shrink ratio. Decided 6 Aug 2026: this scale serves *card-flow* surfaces (quote grid, signal cards, code groups) that reflow by column count; the Sessions lens is a seven-column data grid with a shrink pair and a degradation ladder, and each value was measured against where its own content breaks. Snapping them to a card-reflow scale would trade a working design for a tidier-looking one. Tune them by eye in `docs/mockups/sessions-grid-playground.html`.
+
 ## Inactive window dimming (macOS)
 
 When the macOS app window loses focus, `.bn-window-inactive` is added to `<html>`. CSS rules in `atoms/interactive.css` dim the *chrome* (selections → grey, focus shadow → none) while keeping *content* at full contrast. This matches the macOS convention: "recede the affordances, preserve the data."

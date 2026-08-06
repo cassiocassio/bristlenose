@@ -52,6 +52,16 @@ Reference values in `tokens.css` — CSS `@media` can't use `var()`, so these do
 | `--bn-breakpoint-toolbar` | 600px | Toolbar collapse (planned) |
 | `--bn-breakpoint-content` | 1100px | Transcript annotation margin layout |
 
+**Complex data tables are custom by nature — do not build a generic responsive-table system.** (Decided 6 Aug 2026.) The temptation after the Sessions grid is to extract a reusable "responsive table" abstraction for the next complex table. Don't: every decision in a table's responsive behaviour is a judgement about *its own content*, and five of them resist generalisation.
+
+1. **Which columns matter** — the value of a column to the reader is per-table. There is no generic priority order.
+2. **Reading order** — column order is semantic. What sits next to what is an argument about how the data is read, not a layout default.
+3. **Columns have semantic dependencies** — dropping one datum can force dropping another that no longer makes sense alone. Degradation is a graph, not a list, and the edges are content-specific. (In Sessions: duration and the filename *merge* rather than one dropping, because a file without its duration is weaker; the badge survives everything because the name means nothing without a stable code to hang it on.)
+4. **Fields have different natural min/max lengths** — a person's name, a filename and a user-journey chain size differently and break differently. One shrink rule cannot serve all three.
+5. **Whether a field can be abbreviated is a judgement about recognition** — "will the reader still know what this is?" A surname can go because the first name still identifies the speaker; a filename middle-ellipsises because the head and tail carry the meaning; a journey chain cannot be truncated at all without lying about the path.
+
+So: expect the next complex table to carry its own organism, its own measured thresholds and its own ladder, and expect that to be correct rather than duplicative. Share the *atoms* (badges, timecodes, sparklines, section headings) and the *reasoning pattern* — measure where your own content breaks, hold column order fixed so the eye never re-finds a column, shed detail before structure — never the numbers.
+
 **The Sessions grid is a deliberate exception — do NOT fold its thresholds into this scale.** `organisms/sessions-grid.css` carries seven bespoke container-query values (1285 / 968 / 900 / 750 / 700 / 560 / 480), plus bespoke track geometry and a 1 : 1.5 shrink ratio. Decided 6 Aug 2026: this scale serves *card-flow* surfaces (quote grid, signal cards, code groups) that reflow by column count; the Sessions lens is a seven-column data grid with a shrink pair and a degradation ladder, and each value was measured against where its own content breaks. Snapping them to a card-reflow scale would trade a working design for a tidier-looking one. Tune them by eye in `docs/mockups/sessions-grid-playground.html`.
 
 ## Inactive window dimming (macOS)

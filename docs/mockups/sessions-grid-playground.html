@@ -522,6 +522,26 @@ body.pg-dragging iframe { pointer-events: none; }
     </div>
     <span class="pg-readout" id="pg-cstate"></span>
   </div>
+
+  <!-- Row 6 — variant C degradation ladder (content widths) -->
+  <div class="pg-row" id="pg-crow2">
+    <div class="pg-group">
+      <span class="pg-label">C: short names below</span>
+      <input type="range" id="pg-cnameshort" min="300" max="2000" step="5">
+      <span class="pg-num" id="pg-cnameshort-num"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">C: drop journey below</span>
+      <input type="range" id="pg-cjourney" min="300" max="2000" step="5">
+      <span class="pg-num" id="pg-cjourney-num"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">C: badges only below</span>
+      <input type="range" id="pg-cnameoff" min="300" max="2000" step="5">
+      <span class="pg-num" id="pg-cnameoff-num"></span>
+    </div>
+    <span class="pg-readout" id="pg-cstate2"></span>
+  </div>
 </header>
 
 <main class="pg-stage" id="pg-stage"></main>
@@ -889,11 +909,28 @@ function rolePlaceholder(code) {
   return "Participant";
 }
 
-function speakersHTML(speakers) {
+/**
+ * @param nameMode  "full"  — the name as stored (variant A/B behaviour)
+ *                  "short" — first name only; the surname is the first thing
+ *                            to go when the column runs out of width
+ *                  "none"  — badge alone, no name and no pencil
+ *
+ * The badge is never dropped, never wrapped to its own line, and the name is
+ * never broken mid-word: the badge is the stable identity anchor, so what
+ * degrades under pressure is the name's DETAIL. Ladder decided 6 Aug 2026.
+ */
+function speakersHTML(speakers, nameMode = "full") {
   return speakers.map((sp) => {
+    if (nameMode === "none") {
+      return `<span class="bn-session-speaker-entry">${badgeHTML(sp.code)}</span>`;
+    }
     const named = sp.name !== "";
     const nameClass = "bn-speaker-editable-name" + (named ? "" : " unnamed");
-    const text = named ? esc(sp.name) : esc(rolePlaceholder(sp.code));
+    const full = named ? sp.name : rolePlaceholder(sp.code);
+    /* Split on whitespace only. Names with no space (many CJK and Korean
+       names, and mononyms) are already as short as they get — this returns
+       them unchanged rather than slicing codepoints. */
+    const text = esc(nameMode === "short" ? (full.split(/\s+/)[0] || full) : full);
     return `<span class="bn-session-speaker-entry">` +
              badgeHTML(sp.code) +
              `<span><span class="${nameClass}">${text}</span></span>` +
@@ -1403,6 +1440,12 @@ function renderVariantC(sessions, ctx) {
   const showThumb = w > s.cThumb;
   const durFlex = w <= s.cDurFlex;
 
+  /* The narrow-width degradation ladder, in the order things are given up:
+     surname → user journey → names entirely. The badge never moves. Note the
+     journey (a whole column of content) is spent BEFORE identity legibility. */
+  const nameMode = w <= s.cNameOff ? "none" : (w <= s.cNameShort ? "short" : "full");
+  const showJourney = w > s.cJourney;
+
   /* Wide enough → A's table, holding C's column order and stacked Start
      header. Nothing rearranges at the breakpoint; only the duration/file
      merge (and any dropped column) differs between C's two states. */
@@ -1430,8 +1473,12 @@ function renderVariantC(sessions, ctx) {
     id: () => cell("bnc-id", "ID"),
     thumb: () => cell("bnc-thumb", ""),
     speakers: () => cell("bnc-speakers", "Speakers"),
-    start: () => cell("bnc-start",
-      `<span class="bnc-h1">Start</span><span class="bnc-h2">User journey</span>`),
+    /* Once the journey is dropped the cell is no longer a double-cell, so the
+       header stops being a stack — a "User journey" label over a column that
+       has none is a promise the row doesn't keep. */
+    start: () => cell("bnc-start", showJourney
+      ? `<span class="bnc-h1">Start</span><span class="bnc-h2">User journey</span>`
+      : `<span class="bnc-h1">Start</span>`),
     sent: () => cell("bnc-sent", "Sentiment"),
     durfile: () => cell("bnc-durfile",
       `<span class="bnc-h1">Duration</span>` +
@@ -1443,9 +1490,11 @@ function renderVariantC(sessions, ctx) {
     id: () => cell("bnc-id bn-session-id", `<a href="#">#${x.number}</a>`),
     thumb: () => cell("bnc-thumb",
       `<div class="bn-video-thumb"><img src="${x.thumb}" alt="" loading="lazy"></div>`),
-    speakers: () => cell("bnc-speakers bn-session-speakers", speakersHTML(x.speakers)),
+    speakers: () => cell("bnc-speakers bn-session-speakers",
+      speakersHTML(x.speakers, nameMode)),
     start: () => cell("bnc-start",
-      `<div>${esc(formatFinderDate(x.date))}</div>` + journeyHTML(x.journey)),
+      `<div>${esc(formatFinderDate(x.date))}</div>` +
+      (showJourney ? journeyHTML(x.journey) : "")),
     sent: () => cell("bnc-sent", sparklineHTML(x.sentiment)),
     durfile: () => cell("bnc-durfile",
       `<div class="bn-session-duration">${formatDuration(x.duration)}</div>` +
@@ -1580,6 +1629,11 @@ const DEFAULTS = {
      cDurFlex: below this, duration+interviews stops being a clamped block and
      becomes the third proportional member of the shrink pair. */
   cSwitch: 1285, cThumb: 700, cSent: 968, cDurFlex: 900,
+  /* The degradation ladder. Ordered by width: surnames go first, then the
+     user journey, then names entirely (badges only). Starting points —
+     the speakers overflow begins around 720 content, so short names are
+     set to bite just before it. Tune by eye. */
+  cNameShort: 750, cJourney: 560, cNameOff: 480,
 };
 
 let state = { ...DEFAULTS };
@@ -1609,6 +1663,9 @@ function readHash() {
   s.cThumb = Math.min(1400, Math.max(300, num("cThumb") || s.cThumb));
   s.cSent = Math.min(2000, Math.max(300, num("cSent") || s.cSent));
   s.cDurFlex = Math.min(2000, Math.max(300, num("cDurFlex") || s.cDurFlex));
+  s.cNameShort = Math.min(2000, Math.max(300, num("cNameShort") || s.cNameShort));
+  s.cJourney = Math.min(2000, Math.max(300, num("cJourney") || s.cJourney));
+  s.cNameOff = Math.min(2000, Math.max(300, num("cNameOff") || s.cNameOff));
   state = s;
 }
 
@@ -1632,6 +1689,9 @@ function writeHash() {
   if (state.cThumb !== DEFAULTS.cThumb) q.set("cThumb", state.cThumb);
   if (state.cSent !== DEFAULTS.cSent) q.set("cSent", state.cSent);
   if (state.cDurFlex !== DEFAULTS.cDurFlex) q.set("cDurFlex", state.cDurFlex);
+  if (state.cNameShort !== DEFAULTS.cNameShort) q.set("cNameShort", state.cNameShort);
+  if (state.cJourney !== DEFAULTS.cJourney) q.set("cJourney", state.cJourney);
+  if (state.cNameOff !== DEFAULTS.cNameOff) q.set("cNameOff", state.cNameOff);
   history.replaceState(null, "", "#" + q.toString());
 }
 
@@ -1906,6 +1966,23 @@ function measure() {
   thresholdState("B");
   thresholdState("C");
 
+  /* The ladder's current rung, spelled out — the whole point is that you can
+     see WHICH thing was given up at this width, not just that something was. */
+  const l = document.getElementById("pg-cstate2");
+  if (panes.some((x) => x.key === "C")) {
+    const dim = (t) => `<span style="opacity:.6">${t}</span>`;
+    const mode = content <= state.cNameOff ? "badges only"
+               : content <= state.cNameShort ? "short names" : "full names";
+    const journey = content > state.cJourney;
+    l.innerHTML =
+      `names <b>${mode}</b> ` +
+      dim(`(short &le; ${state.cNameShort}, badges &le; ${state.cNameOff})`) +
+      ` &middot; journey <b>${journey ? "shown" : "dropped"}</b> ` +
+      dim(`(${journey ? "&gt;" : "&le;"} ${state.cJourney})`);
+  } else {
+    l.textContent = "";
+  }
+
   drawRulers();
 }
 
@@ -2032,6 +2109,15 @@ function bindControls() {
   $("pg-cdurflex").addEventListener("input", (e) => {
     state.cDurFlex = parseInt(e.target.value, 10); render();
   });
+  $("pg-cnameshort").addEventListener("input", (e) => {
+    state.cNameShort = parseInt(e.target.value, 10); render();
+  });
+  $("pg-cjourney").addEventListener("input", (e) => {
+    state.cJourney = parseInt(e.target.value, 10); render();
+  });
+  $("pg-cnameoff").addEventListener("input", (e) => {
+    state.cNameOff = parseInt(e.target.value, 10); render();
+  });
   $("pg-compare").addEventListener("change", (e) => {
     state.compare = e.target.checked; rebuild();
   });
@@ -2066,11 +2152,18 @@ function syncControls() {
   $("pg-cthumb-num").textContent = state.cThumb + "px";
   $("pg-cdurflex").value = state.cDurFlex;
   $("pg-cdurflex-num").textContent = state.cDurFlex + "px";
+  $("pg-cnameshort").value = state.cNameShort;
+  $("pg-cnameshort-num").textContent = state.cNameShort + "px";
+  $("pg-cjourney").value = state.cJourney;
+  $("pg-cjourney-num").textContent = state.cJourney + "px";
+  $("pg-cnameoff").value = state.cNameOff;
+  $("pg-cnameoff-num").textContent = state.cNameOff + "px";
 
   /* Dim each threshold row when no pane on stage reads its dials. */
   const onStage = (v) => state.v === v || (state.compare && state.v2 === v);
   $("pg-brow").style.opacity = onStage("B") ? "1" : "0.45";
   $("pg-crow").style.opacity = onStage("C") ? "1" : "0.45";
+  $("pg-crow2").style.opacity = onStage("C") ? "1" : "0.45";
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

@@ -1,6 +1,6 @@
 ---
 status: partial
-last-trued: 2026-07-26
+last-trued: 2026-08-06
 trued-against: HEAD@main on 2026-07-26 (uncommitted Phase B change in-tree)
 ---
 
@@ -14,6 +14,10 @@ trued-against: HEAD@main on 2026-07-26 (uncommitted Phase B change in-tree)
 
 ## Changelog
 
+- _2026-08-06_ — added §"Sessions lens conformance pass": the Sessions lens
+  was rebuilt as a container-query grid (`9f1f8058`), measured against the two
+  invariants (no page-geometry drift found), and the remaining adoption specced
+  as S1–S4 behind the still-missing `__bnLayoutAudit` gate.
 - _2026-07-26_ — trued up: recorded Phase B shipping — sequencing step 1
   (residual `syncToolbarInset` + datum re-scope, `--bn-first-baseline`
   retired) and step 3 (TOC toolbar bleed) landed as code; marked §"Fix: stop
@@ -309,6 +313,93 @@ Trunk throughout; each step an independently-green commit. (The former
 "frost quest" step is gone — scroll-underlap turned out to already work
 natively; see Native geometry. The only frost residue is the scroll-0
 solid band, an accepted platform limitation shared with Xcode.)
+
+## Sessions lens conformance pass (spec, 6 Aug 2026)
+
+The Sessions lens was rebuilt on 6 Aug (`9f1f8058`) from a raw `<table>` at
+`table-layout:auto` into a container-query CSS grid — see
+`bristlenose/theme/organisms/sessions-grid.css`. That rewrite was about
+*responsive* behaviour and deliberately did not touch page-level geometry, so
+this section specs the conformance work against the template above. It is
+written after a measured pass, not a read-through; measurements below are from
+`bristlenose serve` on the smoke fixture at a 1728px viewport, light, browser
+(non-embedded).
+
+### Measured conformance — what already passes
+
+| Invariant | Measured | Verdict |
+|---|---|---|
+| Pages own zero page-level geometry | `.bn-session-table { margin: 0 }`; no page-level padding, gutters or width caps in `SessionsTable.tsx` | **pass** |
+| Content left edge on the canonical line | 92 = 24 body + 36 rail + 32 `.center` | **pass** (browser form; 56 in embedded, no rails) |
+| Content right edge symmetric | 1636, symmetric with left | **pass** (via the `layout-no-right` right-gutter balance, `4f4aae08`) |
+| h1 scheme — Sessions has **none** | zero `h1`, zero `h2` in `.center` | **pass** |
+| First content flushes to the datum | section `margin-top: 0`, section top == first-ink top | **pass** |
+| Keyline scope | header rule + row separators use `--bn-colour-border`, not `--bn-colour-keyline` | **pass** — table chrome is data-grid anatomy and explicitly out of keyline scope |
+| Radius tiers | grid furniture carries no rogue radii; `.bn-video-thumb` keeps `sm` | **pass** |
+
+So the rewrite did not introduce page-geometry drift. The work below is the
+*remaining* template adoption, plus one thing the rewrite newly makes possible.
+
+### The work
+
+**S1 — Move the Sessions intro line into the template's header slot.**
+`.bn-session-moderators` ("Moderated by …" / "Observers: …") is rendered by
+`SessionsTable.tsx` and styled in `templates/report.css`. Per the h1 scheme,
+this line *is* Sessions' zone intro — the table names it as the reason Sessions
+needs no h1. But it currently lives inside the island, so its spacing to the
+datum is owned by the page, not the template — invariant 1 says the template
+owns that. Move it to the shared `PageHeader` slot (the same slot that carries
+zone titles + descriptions on other lenses), keeping the markup and the
+`.bn-person-badge` usage. Acceptance: the intro line's top sits on the datum
+with no page-level margin; deleting every rule in `report.css` matching
+`.bn-session-moderators` changes vertical position by 0.
+
+**S2 — Retire `.bn-session-meta`'s `min-width: 12rem` from the lens path.**
+The Sessions grid already declines to use the class (see the comment at its
+cell site), so the stopgap is inert *for this lens* — but it still sits in
+`templates/report.css`, still applies to the sealed static render and the
+Project-tab session list, and is a live trap for anyone adding a `.bn-cell-*`
+rule (templates concatenate after organisms, so it wins on source order).
+Scope it so it cannot reach the lens: `.bn-session-table table .bn-session-meta`
+or move it into the static-render stylesheet. Acceptance: grep shows no
+unscoped `.bn-session-meta`; the Project-tab list and static render are
+unchanged by screenshot.
+
+**S3 — Verify row rhythm on a multi-row fixture.** The smoke fixture has ONE
+session, so `:last-child { border-bottom: none }` suppresses every separator
+and the row rhythm is literally unobservable there — the measured
+`0px none` above is correct behaviour, not a defect, and it means this pass
+did **not** verify separators, row padding rhythm, or the head/body 2px→1px
+step. Re-measure against a multi-session project (`trial-runs/project-ikea`).
+Acceptance: separators resolve to `--bn-colour-border`; row block padding is
+the `0.5rem` / head `0.6rem` pair the old `td`/`th` used.
+
+**S4 — Declare Sessions' variant honestly in the variants table.** The table
+above lists Sessions as `Left panel: SessionsSidebar`. Confirm that against
+`AppLayout.tsx` after the rewrite and correct the row if it drifted. Invariant
+2 means this table is the spec, not a description.
+
+### Out of scope for this pass
+
+- The **datum value itself** — still the open question below; a global tune,
+  not a Sessions decision. Sessions should ride whatever `--bn-space-xl`
+  settles at, not pin its own.
+- **Embedded-mode measurement.** Everything above is browser-form. The datum
+  and the rail-less edges differ in the `.app`, and the bundled sidecar is
+  stale as of this writing, so an embedded pass needs a sidecar rebuild first.
+- The responsive ladder and its thresholds — settled, shipped, and orthogonal
+  to page geometry.
+
+### Gate (blocks calling this done)
+
+`window.__bnLayoutAudit()` **does not exist** — verified at runtime, not
+inferred (`typeof window.__bnLayoutAudit === "function"` → `false`). Sequencing
+step 5 is still deferred, so today the only enforcement is the Specimen lens
+and the human eye, and the Sessions rewrite is exactly the kind of change it
+was designed to catch. Build the probe and the per-route assertion **before**
+S1–S4, so the conformance work lands against a ruler rather than a screenshot:
+per route assert content-left == token, first-ink == datum, and radius tier per
+component class, on both Chromium and WebKit.
 
 ## Open questions
 

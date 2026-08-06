@@ -75,6 +75,7 @@ _THEME_FILES: list[str] = [
     "organisms/responsive-grid.css",
     "organisms/uncategorised-floor.css",
     "organisms/coverage.css",
+    "organisms/sessions-grid.css",
     "organisms/sentiment-chart.css",
     "organisms/toolbar.css",
     "organisms/toc.css",

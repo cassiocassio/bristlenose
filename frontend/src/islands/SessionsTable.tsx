@@ -250,34 +250,59 @@ export function SessionsTable({
     <section {...refetchOverlayProps(isRefetching, "bn-session-table")}>
       <ModeratorHeader moderatorNames={moderator_names} />
       <ObserverHeader observerNames={observer_names} />
-      <table>
-        <thead>
-          <tr>
-            <th>{t("sessions.colId")}</th>
-            <th>{t("sessions.colSpeakers")}</th>
-            <th>{t("sessions.colStart")}</th>
-            <th className="bn-session-duration">{t("sessions.colDuration")}</th>
-            <th>{interviewsHeader}</th>
-            <th></th>
-            <th>{t("sessions.colSentiment")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sessions.map((sess) => (
-            <SessionRow
-              key={sess.session_id}
-              session={sess}
-              peopleMap={peopleMap}
-              editingCode={editingCode}
-              onEditStart={setEditingCode}
-              onCancelEdit={() => setEditingCode(null)}
-              onNameCommit={handleNameCommit}
-            />
-          ))}
-        </tbody>
-      </table>
+      {/* CSS grid, not a <table>. The responsive behaviour needs column
+          reordering and a two-cells-into-one-column merge, neither of which
+          CSS can do to a table. Roles keep the table semantics for assistive
+          tech. Sizing, breakpoints and the degradation ladder all live in
+          theme/organisms/sessions-grid.css — this component renders every
+          cell at every width and lets container queries decide what shows,
+          so there is no width measurement in JS. */}
+      <div className="bn-sessions-grid" role="table">
+        <div className="bn-sessions-row bn-sessions-head" role="row">
+          <div className="bn-sessions-cell bn-cell-id" role="columnheader">
+            {t("sessions.colId")}
+          </div>
+          <div className="bn-sessions-cell bn-cell-thumb" role="columnheader" />
+          <div className="bn-sessions-cell bn-cell-speakers" role="columnheader">
+            {t("sessions.colSpeakers")}
+          </div>
+          {/* Double-cell: the header stacks to match what the cell holds. */}
+          <div className="bn-sessions-cell bn-cell-start" role="columnheader">
+            <span className="bn-sessions-h1">{t("sessions.colStart")}</span>
+            <span className="bn-sessions-h2">{t("sessions.colJourney")}</span>
+          </div>
+          <div className="bn-sessions-cell bn-cell-sentiment" role="columnheader">
+            {t("sessions.colSentiment")}
+          </div>
+          <div className="bn-sessions-cell bn-cell-duration" role="columnheader">
+            {t("sessions.colDuration")}
+          </div>
+          <div className="bn-sessions-cell bn-cell-file" role="columnheader">
+            {interviewsHeader}
+          </div>
+        </div>
+        {sessions.map((sess) => (
+          <SessionRow
+            key={sess.session_id}
+            session={sess}
+            peopleMap={peopleMap}
+            editingCode={editingCode}
+            onEditStart={setEditingCode}
+            onCancelEdit={() => setEditingCode(null)}
+            onNameCommit={handleNameCommit}
+          />
+        ))}
+      </div>
     </section>
   );
+}
+
+/** First word of a name, for the narrow-width short-name rung. Splits on
+ *  whitespace only — names with no space (many CJK and Korean names, and
+ *  mononyms) are already as short as they get and pass through unchanged
+ *  rather than being sliced by codepoint. */
+function shortName(name: string): string {
+  return name.split(/\s+/)[0] || name;
 }
 
 function SessionRow({
@@ -371,13 +396,21 @@ function SessionRow({
   }
 
   return (
-    <tr data-session={session_id}>
-      <td className="bn-session-id">
+    <div className="bn-sessions-row" data-session={session_id} role="row">
+      <div className="bn-sessions-cell bn-cell-id bn-session-id" role="cell">
         <a href={isExportMode() ? `#${sessionPath}` : sessionPath}>
           #{session_number}
         </a>
-      </td>
-      <td className="bn-session-speakers">
+      </div>
+      <div className="bn-sessions-cell bn-cell-thumb" role="cell">
+        <Thumbnail
+          hasMedia={has_media}
+          thumbnailUrl={thumbnail_url ?? undefined}
+          onActivate={openPlayer}
+          title={videoTitle}
+        />
+      </div>
+      <div className="bn-sessions-cell bn-cell-speakers bn-session-speakers" role="cell">
         {speakers.map((sp) => {
           const person = peopleMap?.[sp.speaker_code];
           const displayName = person?.short_name || sp.name || "";
@@ -404,11 +437,25 @@ function SessionRow({
                   isEditing={isEditing}
                   onCommit={(newName) => onNameCommit(sp.speaker_code, newName)}
                   onCancel={() => onCancelEdit()}
-                  className="bn-speaker-editable-name"
+                  className="bn-speaker-editable-name bn-speaker-name-full"
                   placeholder={speakerRolePlaceholder(sp.speaker_code, t)}
                   placeholderClassName="unnamed"
                   data-testid={`bn-name-${sp.speaker_code}`}
                 />
+                {/* Short form for the narrow-width rung. Rendered always and
+                    swapped by container query, so the ladder stays CSS-only —
+                    no width measurement, and it works from file:// in an
+                    exported report. Not editable: editing at that width shows
+                    the full name via the pencil path. Hidden from assistive
+                    tech so the name is not announced twice. */}
+                <span
+                  className={`bn-speaker-name-short${displayName ? "" : " unnamed"}`}
+                  aria-hidden="true"
+                >
+                  {displayName
+                    ? shortName(displayName)
+                    : speakerRolePlaceholder(sp.speaker_code, t)}
+                </span>
               </span>
               {!isEditing && (
                 <button
@@ -423,8 +470,14 @@ function SessionRow({
             </span>
           );
         })}
-      </td>
-      <td className="bn-session-meta">
+      </div>
+      {/* Deliberately NOT .bn-session-meta — that class is only the old
+          `min-width: 12rem` stopgap, and it lives in the templates layer,
+          which loads after organisms and would therefore win over this
+          cell's `min-width: 0`, reinstating the very rigidity the shrink
+          pair exists to remove. The journey styling comes from
+          .bn-session-journey, which JourneyChain applies itself. */}
+      <div className="bn-sessions-cell bn-cell-start" role="cell">
         <div>{formatFinderDate(session_date, i18n.language)}</div>
         {hasJourney && (
           <JourneyChain
@@ -433,22 +486,17 @@ function SessionRow({
             onIndexClick={(i) => navigate({ pathname: sessionPath, hash: journeyAnchor(i) })}
           />
         )}
-      </td>
-      <td className="bn-session-duration">
-        {formatDuration(duration_seconds)}
-      </td>
-      <td>{sourceEl}</td>
-      <td className="bn-session-thumb">
-        <Thumbnail
-          hasMedia={has_media}
-          thumbnailUrl={thumbnail_url ?? undefined}
-          onActivate={openPlayer}
-          title={videoTitle}
-        />
-      </td>
-      <td className="bn-session-sentiment">
+      </div>
+      <div className="bn-sessions-cell bn-cell-sentiment bn-session-sentiment" role="cell">
         <Sparkline items={sentimentToSparklineItems(sentiment_counts)} />
-      </td>
-    </tr>
+      </div>
+      {/* Duration and the interview file are separate cells at every width.
+          Below the switch a container query drops them into one column,
+          stacked — so the merge is CSS, not a second markup path. */}
+      <div className="bn-sessions-cell bn-cell-duration bn-session-duration" role="cell">
+        {formatDuration(duration_seconds)}
+      </div>
+      <div className="bn-sessions-cell bn-cell-file" role="cell">{sourceEl}</div>
+    </div>
   );
 }

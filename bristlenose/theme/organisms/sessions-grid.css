@@ -1,0 +1,257 @@
+/* Organism: sessions-grid — the Sessions lens row grid.
+ *
+ * Replaces the raw <table> at table-layout:auto that the Sessions lens used
+ * until Aug 2026. That table had no responsive strategy: every column was
+ * nowrap or fixed except Start, so all shrink pressure landed there and the
+ * journey path collapsed to one word per line (the `min-width: 12rem` on
+ * .bn-session-meta was a stopgap, never a column system). Measured, it
+ * overflowed the page by 195px at 616px of content width.
+ *
+ * Design explored in docs/mockups/sessions-grid-playground.html (variants
+ * A/B/C, commits 004cd6a9 + 83d4c25a). This is variant C.
+ *
+ * ── Column order, held at EVERY width ──────────────────────────────────
+ *   ID · thumbnail · speakers · start+journey · sentiment · duration · file
+ * Nothing rearranges as a breakpoint is crossed. What changes is only what
+ * is *given up*, so the eye never has to re-find a column.
+ *
+ * ── SUBGRID is load-bearing ────────────────────────────────────────────
+ * One parent grid owns the tracks; each row is `grid-template-columns:
+ * subgrid`. The obvious build — each row its own grid — does not work: a
+ * content-sized track then resolves per row, so row 3's speakers column is a
+ * different width from row 1's and the table stops lining up. Only fixed
+ * lengths would align, and fixed lengths mean truncated names or dead space.
+ * Subgrid gives both: rows stay real boxes (so :hover works) while tracks are
+ * shared and content-sized across every row, exactly as a table's are.
+ *
+ * max-content tracks size around each cell's own padding, which is why no
+ * track here carries a hand-added allowance for it.
+ *
+ * ── The shrink pair ────────────────────────────────────────────────────
+ * Below the switch, speakers and start+journey become proportional fr tracks
+ * (1 : 1.5) so they give up width TOGETHER rather than Start absorbing every
+ * squeeze. `minmax(0, …)` on both is load-bearing — an fr track's default
+ * minimum is auto, which refuses to shrink below content and would reinstate
+ * exactly the rigidity being removed. Duration+file joins the pair below
+ * 900, which also drops its 9rem floor (a fixed minimum on a column is what
+ * forces a row to overflow once everything else has given up all it can).
+ *
+ * ── The degradation ladder ─────────────────────────────────────────────
+ * The code badge is the stable identity anchor: it never drops to its own
+ * line, and names are never broken mid-word. What degrades is the name's
+ * DETAIL, in this order as width falls:
+ *     surname (→ short name)  →  user journey  →  names entirely (badges)
+ * Note the journey — a whole column of content — is spent BEFORE identity
+ * legibility. Decided 6 Aug 2026.
+ *
+ * Thresholds are CONTAINER inline size, i.e. usable content width, not
+ * viewport width. In the browser with the sidebar closed, content =
+ * window − 184 (48 body padding + 72 rails + 64 centre padding).
+ */
+
+/* The container. Thresholds below are measured against this box. */
+.bn-session-table {
+    container-type: inline-size;
+    container-name: bn-sessions;
+}
+
+.bn-sessions-grid {
+    display: grid;
+    font-size: var(--bn-text-label);
+    /* Widest: duration and interviews are separate columns. */
+    grid-template-columns:
+        max-content          /* id                                     */
+        max-content          /* thumbnail (.bn-video-thumb is 96x54)   */
+        max-content          /* speakers — sized to the longest name   */
+        minmax(11rem, 1fr)   /* start + user journey                   */
+        max-content          /* sentiment — sized by header, not bars  */
+        max-content          /* duration                               */
+        minmax(9rem, 15rem); /* interviews (filename)                  */
+}
+
+.bn-sessions-row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: start;
+    border-bottom: 1px solid var(--bn-colour-border);
+}
+
+.bn-sessions-row:last-child { border-bottom: none; }
+
+.bn-sessions-row[data-session] {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.bn-sessions-row[data-session]:hover { background: var(--bn-colour-hover); }
+
+/* Mirrors the old td: 0.5rem var(--bn-space-md), top-aligned.
+   min-width: 0 is load-bearing — without it an fr track cannot shrink below
+   its content and the row overflows instead of wrapping. */
+.bn-sessions-cell {
+    padding: 0.5rem var(--bn-space-md);
+    min-width: 0;
+}
+
+/* Mirrors the old th: heavier, 0.6rem block padding, 2px rule. */
+.bn-sessions-head { border-bottom-width: 2px; }
+
+.bn-sessions-head .bn-sessions-cell {
+    padding-block: 0.6rem;
+    font-weight: var(--bn-weight-emphasis);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+}
+
+/* Stacked double-header. Structure-agnostic: display:block rather than
+   relying on the flex column, so the same spans stack anywhere. The second
+   line takes the colour of the thing it labels — muted for "User journey"
+   (matching the muted chain), accent for "Interviews" (matching the file
+   link) — so the header reads as a legend for its cell. */
+.bn-sessions-h1,
+.bn-sessions-h2 { display: block; }
+
+.bn-sessions-h2 {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+/* Scoped to direct children so journey labels (nested inside
+   .bn-session-journey) keep their own `all: unset` colour rules. */
+.bn-cell-id > a { color: var(--bn-colour-accent); text-decoration: none; }
+.bn-cell-id > a:hover { text-decoration: underline; }
+
+/* Duration keeps its shipped right alignment while it is its own column. */
+.bn-cell-duration { text-align: right; }
+
+/* Name variants. Both are rendered; CSS picks one, so the ladder needs no
+   JS width measurement. Redundant DOM is the price of a pure-CSS ladder,
+   and it is a few dozen bytes per row. */
+.bn-speaker-name-short { display: none; }
+
+/* ── Below the switch: the C grid ──────────────────────────────────────
+   Duration and interviews merge into one column, stacked, and the shrink
+   pair takes over. This is the ONLY structural change across the whole
+   range — everything below is subtraction. */
+@container bn-sessions (max-width: 1285px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content            /* id                    */
+            max-content            /* thumbnail             */
+            minmax(0, 1fr)         /* speakers  — pair      */
+            minmax(0, 1.5fr)       /* start     — pair      */
+            max-content            /* sentiment             */
+            minmax(9rem, 15rem);   /* duration + interviews */
+    }
+
+    /* Two rows so duration can sit above the filename in one column. */
+    .bn-sessions-row { grid-template-rows: auto auto; }
+
+    .bn-cell-id,
+    .bn-cell-thumb,
+    .bn-cell-speakers,
+    .bn-cell-start,
+    .bn-cell-sentiment { grid-row: 1 / span 2; }
+
+    .bn-cell-duration {
+        grid-column: 6;
+        grid-row: 1;
+        padding-bottom: 0;
+    }
+
+    /* Left-aligned now it sits above the filename rather than being its own
+       column — right alignment only earned its keep as a column.
+       Specificity 0-2-0 is deliberate: .bn-session-duration carries
+       `text-align: right` from templates/report.css, which concatenates AFTER
+       organisms, so a bare .bn-cell-duration ties on specificity and LOSES on
+       source order. Measured shipping right-aligned before this was raised. */
+    .bn-sessions-row .bn-cell-duration { text-align: left; }
+
+    .bn-cell-file {
+        grid-column: 6;
+        grid-row: 2;
+        padding-top: 0.15rem;
+    }
+
+    .bn-cell-file > a { overflow-wrap: anywhere; }
+
+    /* The speakers column is now a shrink-pair member, so it must be able to
+       give up width — which means names wrap rather than holding the track
+       open. flex-start keeps the code badge on the name's first line instead
+       of centred against a two-line name. */
+    .bn-cell-speakers,
+    .bn-cell-speakers .bn-session-speaker-entry { white-space: normal; }
+    .bn-cell-speakers .bn-session-speaker-entry { align-items: flex-start; }
+
+    /* A wrapped name must be flush left on EVERY line, first included.
+       .bn-speaker-editable-name carries `padding: … 0.2rem` and is an inline
+       box, so its left padding paints only at the start of its first line
+       fragment — leaving line 1 indented ~3.2px and wrapped lines flush.
+       (Same inline-box behaviour journey-label.css documents for wrapping
+       journey chains.) inline-block applies the padding to the box, so all
+       lines share one left edge while the hover chip still shrink-wraps. */
+    .bn-cell-speakers .bn-speaker-editable-name { display: inline-block; }
+}
+
+/* Sentiment: the cheapest column on the row (~87px) and the one that makes
+   the grid scannable for triage, so it outlives the layout switch. */
+@container bn-sessions (max-width: 968px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content max-content minmax(0, 1fr) minmax(0, 1.5fr)
+            minmax(9rem, 15rem);
+    }
+    .bn-cell-sentiment { display: none; }
+    .bn-cell-duration,
+    .bn-cell-file { grid-column: 5; }
+}
+
+/* Duration+interviews joins the shrink pair, and loses its 9rem floor. */
+@container bn-sessions (max-width: 900px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content max-content minmax(0, 1fr) minmax(0, 1.5fr)
+            minmax(0, 1fr);
+    }
+}
+
+/* Ladder rung 1 — surnames go; fall back to the short name. */
+@container bn-sessions (max-width: 750px) {
+    /* Specificity 0-2-0 to beat the .bn-cell-speakers .bn-speaker-editable-name
+       inline-block rule above (also 0-2-0, but earlier in source). A bare
+       .bn-speaker-name-full is 0-1-0 and loses, which shows BOTH names at
+       once rather than swapping them — measured before this was raised. */
+    .bn-cell-speakers .bn-speaker-name-full { display: none; }
+    .bn-cell-speakers .bn-speaker-name-short { display: inline-block; }
+}
+
+/* Thumbnail goes. */
+@container bn-sessions (max-width: 700px) {
+    .bn-sessions-grid {
+        grid-template-columns:
+            max-content minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
+    }
+    .bn-cell-thumb { display: none; }
+    .bn-cell-duration,
+    .bn-cell-file { grid-column: 4; }
+}
+
+/* Ladder rung 2 — the user journey goes, leaving the start time alone. The
+   header stops being a stack too: a "User journey" label over a column that
+   no longer has one is a promise the row does not keep. */
+@container bn-sessions (max-width: 560px) {
+    .bn-cell-start .bn-session-journey { display: none; }
+    .bn-sessions-head .bn-cell-start .bn-sessions-h2 { display: none; }
+}
+
+/* Ladder rung 3 — names go entirely. Badges only; the pencil goes with them
+   since there is no longer a name to edit. */
+@container bn-sessions (max-width: 480px) {
+    .bn-cell-speakers .bn-speaker-editable-name,
+    .bn-cell-speakers .bn-speaker-name-full,
+    .bn-cell-speakers .bn-speaker-name-short,
+    .bn-cell-speakers .bn-name-pencil { display: none; }
+}

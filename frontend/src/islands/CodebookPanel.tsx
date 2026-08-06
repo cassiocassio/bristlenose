@@ -1026,7 +1026,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
   if (error) {
     return (
       <>
-        <h1>{t("codebook.heading")}</h1>
+        <h1 className="section-heading">{t("codebook.heading")}</h1>
         <p className="codebook-description">{t("codebook.errorLoading", { error })}</p>
       </>
     );
@@ -1035,7 +1035,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
   if (!data) {
     return (
       <>
-        <h1>{t("codebook.heading")}</h1>
+        <h1 className="section-heading">{t("codebook.heading")}</h1>
         <p className="codebook-description">{t("labels.loading")}</p>
       </>
     );
@@ -1061,7 +1061,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
     <>
       <div className="codebook-header">
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1>{t("codebook.heading")}</h1>
+          <h1 className="section-heading">{t("codebook.heading")}</h1>
           <p className="codebook-description">
             {t("codebook.description")}
           </p>

@@ -248,6 +248,12 @@ export function SessionsTable({
 
   return (
     <section {...refetchOverlayProps(isRefetching, "bn-session-table")}>
+      {/* Zone title. Must be a direct child of this <section> for the
+          flush-to-datum rule to reach it
+          (`.center > main > section:first-of-type > .section-heading`).
+          Reuses `nav.sessions` rather than minting `sessions.heading` — the
+          word is identical and already reviewed in all 20 locales. */}
+      <h1 className="section-heading">{t("nav.sessions")}</h1>
       <ModeratorHeader moderatorNames={moderator_names} />
       <ObserverHeader observerNames={observer_names} />
       {/* CSS grid, not a <table>. The responsive behaviour needs column

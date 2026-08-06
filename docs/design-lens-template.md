@@ -211,8 +211,22 @@ nothing — the h1 has to earn its place by naming the *zone*. They clicked
 | Quotes | "Sections" · "Themes" | two peer organising schemes → two h1s |
 | Analysis | "Sentiment signals" · "Tag signals" | two peer analyses → two h1s |
 | Codebook | "Codes" *(rename pending)* | one zone; h1 + description, the description carries the new info |
-| Sessions | **none** | single zone; "Sessions" would just echo the nav — the "Moderated by …" line is its intro |
+| Sessions | "Sessions" | one zone, titled like every other titled lens — **superseded 6 Aug 2026**, see note below |
 | Project | **none** | dashboard/overview, name's in the titlebar; no titled content zone |
+
+> **Superseded 6 Aug 2026 (Martin).** Sessions now carries a "Sessions" h1 with the
+> full `.section-heading` treatment, matching Quotes and Analysis. The original
+> reasoning — *"'Sessions' would just echo the nav"* — is preserved above because it is
+> still the right test for a *new* lens; it was outweighed here by cross-lens
+> consistency: four of five lenses carry a titled, ruled zone, and Sessions reading
+> differently was the more visible cost. The "Moderated by …" line stays, now as the
+> zone's intro *under* the title rather than in place of one. Reuses the `nav.sessions`
+> locale key (identical word, already reviewed in 20 locales) rather than minting
+> `sessions.heading`.
+>
+> Same pass fixed **Codebook**: its `<h1>` carried no `.section-heading` class at all, so
+> it had the right type (inherited) and no rule. Three render states, all three missing
+> it. See §"Systematising the heading" for why that defect is structural, not a typo.
 
 Multiple h1s per page is legal HTML and screen-reader-survivable (the two are
 far apart). **Semantics and graphic size are separate knobs:** `.section-

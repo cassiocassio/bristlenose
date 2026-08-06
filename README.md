@@ -375,6 +375,18 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.25.0** — _6 Aug 2026_
+
+The Sessions lens learns to shrink, the arrow keys learn the layout, and two build gates that couldn't fail learn to.
+
+- **The Sessions lens no longer runs off the side of the window.** A plain table with no responsive strategy became a grid that degrades on purpose: column order never changes, and detail is shed in a deliberate order — surnames, then the user journey, then names, leaving the speaker badges. The badge is the anchor and never moves; names are never broken mid-word. Pure CSS, so it behaves identically in the app, in a browser, and in an exported report opened offline.
+- **Every lens now has a proper title** — Sessions had no heading, and Codebook's had lost its rule in all three render states. Headings are a component now, so a zone title can't be produced without one.
+- **The arrow keys move by what you can see; `j`/`k` move by reading order.** On a multi-column grid, **down** used to move the cursor to the card on the **right**, and left/right did nothing. The arrows are now geometric and `j`/`k` are a list cursor. Quote shortcuts also stop firing once you leave the lens, where they'd been eating page scroll and starring quotes you'd navigated away from.
+- **The Analysis heatmap was drawing light-mode colours on a dark background** — permanently, in the Mac app. It now follows the system appearance and repaints live.
+- **Focus Mode, tuned against real studies** — the starred edge dissolves with everything else (a mark that reads well on one card is noise on twenty), the keyboard cursor gains a thin ring in dark, and descriptions fade with their titles. The starred edge is also tamed in dark outside Focus Mode, where at triple the light-mode contrast it read as a divider between two quotes rather than the bracket of one.
+- **Switching Light/Dark on the Mac no longer reloads your report**, losing your route, scroll position and open panels — all to serve byte-identical HTML.
+- **Also:** the moderator pill and quote-context expansion are switched off behind flags rather than shipped half-discoverable; the disk-image build gained a shippability gate that mounts the image and checks the app inside it, after an unnotarised build sat looking finished for 14 hours; and the Mac app's freshness check stopped ignoring the theme and every LLM prompt.
+
 **0.24.0** — _3 Aug 2026_
 
 A reading mode for the report, and a pass over the Mac app's chrome.

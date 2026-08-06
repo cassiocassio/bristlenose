@@ -1,0 +1,2167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sessions grid — responsive playground</title>
+
+<!--
+  ═══════════════════════════════════════════════════════════════════════════
+  SESSIONS GRID — RESPONSIVE PLAYGROUND
+  ═══════════════════════════════════════════════════════════════════════════
+
+  WHAT THIS IS
+  ------------
+  A harness for exploring responsive behaviour of the Sessions lens grid
+  (the `<table class="bn-session-table">` rendered by
+  frontend/src/islands/SessionsTable.tsx).
+
+  Variant A is a faithful transcription of the SHIPPED markup — same element
+  tree, same class names, same helper semantics (formatDuration,
+  formatFinderDate, formatFinderFilename, Sparkline, JourneyChain,
+  PersonBadge, Thumbnail). It is not a lookalike.
+
+  Variants B / C / D are EMPTY SLOTS awaiting a brief. See "VARIANT REGISTRY"
+  below for the single place to add one.
+
+  WHY IFRAMES
+  -----------
+  The report stylesheet assumes it owns the document: `body` carries the page
+  padding, `.layout` is `min-height: 100vh`, `.toc-sidebar` is
+  `position: sticky; height: 100vh`. Rendering that inside a page that also
+  has playground chrome would corrupt every one of those. So each pane is an
+  iframe holding a faithful mini-report document, and the chrome lives out
+  here. Bonus: viewport units, media queries and container queries all
+  resolve per-pane, which is exactly what a responsive study needs.
+
+  THE WIDTH AXIS (the point of the whole thing)
+  ---------------------------------------------
+  The constraint on this grid is NOT browser width. It is the width of the
+  `.center` column of the sidebar grid, after rails / sidebar / gutters are
+  subtracted. From bristlenose/theme/tokens.css + organisms/sidebar.css:
+
+      --bn-rail-width      36px    (0 when `.layout.embedded` — macOS app)
+      --bn-sidebar-width  280px    (TOC panel, push mode)
+      --bn-gutter-left      2rem   (32px; `.center` padding-left)
+                                   (and padding-right too on `layout-no-right`)
+
+  …and, easy to forget, `body` itself carries
+  `padding: var(--bn-space-xl) var(--bn-space-lg)` = 2rem/1.5rem, so 48px goes
+  before the sidebar grid even sees the window.
+
+  Sessions is a `layout-no-right` tab, so the only panel that eats width here
+  is the TOC sidebar. The full chain is:
+
+      window ─ body 48 ─▶ .layout ─ rails/panel ─▶ .center ─ pad 64 ─▶ content
+
+      browser,  TOC closed :  W − 48 − 72       − 64  =  W − 184
+      browser,  TOC open   :  W − 48 − (280+36) − 64  =  W − 428
+      embedded, TOC closed :  W − 48 − 0        − 64  =  W − 112
+      embedded, TOC open   :  W − 48 − 280      − 64  =  W − 392
+
+  Those figures are here for orientation only — measure() reads every box off
+  the live iframe, so the readout is measured, never asserted. (The arithmetic
+  above was wrong by exactly the 48px of body padding on first run, which is
+  why nothing in the code trusts a hardcoded copy of it.)
+
+  THE KNOWN SCAR
+  --------------
+  bristlenose/theme/templates/report.css already admits the core problem:
+
+      .bn-session-meta { min-width: 12rem; }
+      /* Start column is the only shrinkable column in the row (all others are
+         nowrap or fixed-width), so auto table-layout dumps all shrink pressure
+         here and the journey path collapses to one word per line at narrow
+         widths. */
+
+  That is the bug any variant is trying to beat. Turn the journey dial up and
+  the width down and you can watch it happen.
+
+  THEME CSS
+  ---------
+  sessions-grid-playground.theme.css is GENERATED — the verbatim output of
+  bristlenose.stages.s12_render.theme_assets.load_default_css(), i.e. the same
+  bytes the report serves at /report/assets/bristlenose-theme.css. Regenerate
+  it after any change under bristlenose/theme/:
+
+      .venv/bin/python -c "from bristlenose.stages.s12_render.theme_assets \
+        import load_default_css as c; from pathlib import Path; \
+        Path('docs/mockups/sessions-grid-playground.theme.css').write_text(c())"
+
+  SCOPE NOTES
+  -----------
+  * Presentational only. Nothing edits, plays or navigates — hover states and
+    the pencil's opacity transition render, but no interaction commits.
+  * LTR only, by instruction. No Arabic/Hebrew, no bidi, no mirrored layout.
+    Script variety (Cyrillic, Greek, CJK, Devanagari, Thai, Vietnamese, Latin
+    with heavy diacritics) is there to stress line boxes and metrics, not to
+    decorate.
+  * Journey labels stay English — a single study's labels come from one LLM
+    pass in one language, so mixing scripts inside a chain would be fiction.
+  * Not simulated: the macOS toolbar inset and translucency
+    (html[data-embedded]). The "Embedded" switch models only the width-
+    relevant part — `.layout.embedded` collapsing the 36px rails to 0.
+  * Fonts have no @font-face; the stack falls back to system-ui if Inter
+    isn't installed locally. "Desktop" switches to the SF Pro stack via
+    [data-platform="desktop"], as shipped.
+
+  Open via:  .venv/bin/bristlenose serve --dev <project>  → About ▸ Design
+  or just open this file directly.
+-->
+
+<style>
+/* ───────────────────────────────────────────────────────────────────────────
+   PLAYGROUND CHROME
+   Namespaced .pg-*, deliberately OFF-SYSTEM (own colours, own type stack).
+   Same convention as GridSpecimen's debug overlays: the harness must never be
+   mistakable for design work. Nothing in here should ever be copied into the
+   product.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --pg-bg:      #16181d;
+  --pg-panel:   #1e2129;
+  --pg-line:    #2f3440;
+  --pg-text:    #e6e8ec;
+  --pg-dim:     #99a0ad;
+  --pg-accent:  #6ea8fe;
+  --pg-warn:    #ffb454;
+  --pg-bad:     #ff6b6b;
+  --pg-good:    #5fd39a;
+  --pg-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --pg-sans: -apple-system, system-ui, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--pg-bg);
+  color: var(--pg-text);
+  font: 13px/1.4 var(--pg-sans);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header bar ─────────────────────────────────────────────────────────── */
+
+.pg-bar {
+  flex: 0 0 auto;
+  background: var(--pg-panel);
+  border-bottom: 1px solid var(--pg-line);
+  padding: 8px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pg-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pg-title {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.pg-title small {
+  color: var(--pg-dim);
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+.pg-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pg-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 6px;
+  background: #23262f;
+  border: 1px solid var(--pg-line);
+  border-radius: 6px;
+}
+
+.pg-label {
+  color: var(--pg-dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+}
+
+/* Segmented control */
+.pg-seg { display: inline-flex; }
+
+.pg-seg button {
+  font: inherit;
+  font-size: 12px;
+  color: var(--pg-text);
+  background: transparent;
+  border: 1px solid var(--pg-line);
+  border-right-width: 0;
+  padding: 3px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pg-seg button:first-child { border-radius: 5px 0 0 5px; }
+.pg-seg button:last-child  { border-radius: 0 5px 5px 0; border-right-width: 1px; }
+.pg-seg button:hover       { background: #2c313c; }
+.pg-seg button[aria-pressed="true"] {
+  background: var(--pg-accent);
+  border-color: var(--pg-accent);
+  color: #10131a;
+  font-weight: 600;
+}
+.pg-seg button[disabled] { opacity: 0.35; cursor: not-allowed; }
+
+.pg-seg button.pg-empty::after {
+  content: "·";
+  margin-left: 5px;
+  color: var(--pg-warn);
+  font-weight: 700;
+}
+
+/* Range + number */
+.pg-group input[type="range"] { width: 118px; accent-color: var(--pg-accent); }
+.pg-num {
+  font-family: var(--pg-mono);
+  font-size: 12px;
+  min-width: 42px;
+  text-align: right;
+  color: var(--pg-text);
+}
+
+.pg-btn {
+  font: inherit;
+  font-size: 12px;
+  color: var(--pg-text);
+  background: #2c313c;
+  border: 1px solid var(--pg-line);
+  border-radius: 5px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+.pg-btn:hover { background: #363c49; }
+
+.pg-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.pg-check input { accent-color: var(--pg-accent); margin: 0; }
+
+/* ── Readout ────────────────────────────────────────────────────────────── */
+
+.pg-readout {
+  font-family: var(--pg-mono);
+  font-size: 11px;
+  color: var(--pg-dim);
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.pg-readout b { color: var(--pg-text); font-weight: 600; }
+.pg-flag {
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.pg-flag.ok  { background: rgba(95,211,154,0.14); color: var(--pg-good); }
+.pg-flag.bad { background: rgba(255,107,107,0.16); color: var(--pg-bad); }
+
+/* ── Stage ──────────────────────────────────────────────────────────────── */
+
+.pg-stage {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 14px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.pg-pane {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--pg-panel);
+  border: 1px solid var(--pg-line);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+}
+
+.pg-pane-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--pg-line);
+  font-size: 11px;
+  color: var(--pg-dim);
+  font-family: var(--pg-mono);
+}
+.pg-pane-head b { color: var(--pg-text); }
+
+.pg-pane-head select {
+  font: inherit;
+  font-family: var(--pg-sans);
+  font-size: 11px;
+  background: #2c313c;
+  color: var(--pg-text);
+  border: 1px solid var(--pg-line);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.pg-frame-wrap {
+  position: relative;
+  flex: 1 1 auto;
+}
+
+.pg-pane iframe {
+  display: block;
+  border: 0;
+  background: #fff;
+}
+
+/* Drag handle on the right edge of a pane — resizes the simulated window. */
+.pg-grip {
+  position: absolute;
+  top: 0;
+  right: -1px;
+  width: 10px;
+  height: 100%;
+  cursor: ew-resize;
+  background: linear-gradient(to right, transparent, rgba(110,168,254,0.0));
+}
+.pg-grip:hover, .pg-grip.dragging {
+  background: linear-gradient(to right, transparent, rgba(110,168,254,0.45));
+}
+body.pg-dragging { cursor: ew-resize; user-select: none; }
+body.pg-dragging iframe { pointer-events: none; }
+
+/* Column ruler overlay — measured, drawn over the pane. */
+.pg-ruler {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: none;
+}
+.pg-ruler.on { display: block; }
+.pg-ruler i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed rgba(110,168,254,0.5);
+}
+.pg-ruler u {
+  position: absolute;
+  font: 10px/1 var(--pg-mono);
+  color: #10131a;
+  background: var(--pg-accent);
+  padding: 2px 4px;
+  border-radius: 0 0 3px 0;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.pg-note {
+  padding: 10px 14px;
+  color: var(--pg-dim);
+  font-size: 11px;
+  font-family: var(--pg-mono);
+  border-top: 1px solid var(--pg-line);
+  background: var(--pg-panel);
+  flex: 0 0 auto;
+}
+.pg-note kbd {
+  font-family: var(--pg-mono);
+  background: #2c313c;
+  border: 1px solid var(--pg-line);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+</style>
+</head>
+
+<body>
+
+<header class="pg-bar">
+  <div class="pg-title-row">
+    <span class="pg-title">Sessions grid <small>responsive playground · 12 sessions · variant A = shipped markup</small></span>
+    <span class="pg-readout" id="pg-readout"></span>
+  </div>
+
+  <!-- Row 1 — variant + compare -->
+  <div class="pg-row">
+    <div class="pg-group">
+      <span class="pg-label">Variant</span>
+      <span class="pg-seg" id="pg-variant"></span>
+    </div>
+    <div class="pg-group">
+      <label class="pg-check"><input type="checkbox" id="pg-compare"> Compare 2-up</label>
+      <select id="pg-variant-b" hidden></select>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">Overlay</span>
+      <label class="pg-check"><input type="checkbox" id="pg-ruler-on"> Column widths</label>
+    </div>
+  </div>
+
+  <!-- Row 2 — the width axis -->
+  <div class="pg-row">
+    <div class="pg-group">
+      <span class="pg-label">Window</span>
+      <input type="range" id="pg-width" min="640" max="2200" step="8">
+      <span class="pg-num" id="pg-width-num"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">Preset</span>
+      <span class="pg-seg" id="pg-width-presets"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">Sidebar</span>
+      <span class="pg-seg" id="pg-toc"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">Chrome</span>
+      <span class="pg-seg" id="pg-chrome"></span>
+    </div>
+  </div>
+
+  <!-- Row 3 — render axes + data dials -->
+  <div class="pg-row">
+    <div class="pg-group">
+      <span class="pg-label">Theme</span>
+      <span class="pg-seg" id="pg-theme"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">Type</span>
+      <span class="pg-seg" id="pg-platform"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">Journey</span>
+      <input type="range" id="pg-journey" min="0" max="16" step="1">
+      <span class="pg-num" id="pg-journey-num"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">Speakers</span>
+      <input type="range" id="pg-speakers" min="2" max="4" step="1">
+      <span class="pg-num" id="pg-speakers-num"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">Names</span>
+      <span class="pg-seg" id="pg-names"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">Files</span>
+      <span class="pg-seg" id="pg-files"></span>
+    </div>
+    <button class="pg-btn" id="pg-reset">Reset</button>
+  </div>
+
+  <!-- Row 4 — B and C breakpoints. All thresholds are CONTENT width, not
+       window width; B and C keep separate sets so they can be compared. -->
+  <div class="pg-row" id="pg-brow">
+    <div class="pg-group">
+      <span class="pg-label">B: use A above</span>
+      <input type="range" id="pg-bswitch" min="400" max="2000" step="5">
+      <span class="pg-num" id="pg-bswitch-num"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">B: hide thumb below</span>
+      <input type="range" id="pg-bthumb" min="300" max="1400" step="5">
+      <span class="pg-num" id="pg-bthumb-num"></span>
+    </div>
+    <span class="pg-readout" id="pg-bstate"></span>
+  </div>
+
+  <!-- Row 5 — variant C's own thresholds -->
+  <div class="pg-row" id="pg-crow">
+    <div class="pg-group">
+      <span class="pg-label">C: use A above</span>
+      <input type="range" id="pg-cswitch" min="400" max="2000" step="5">
+      <span class="pg-num" id="pg-cswitch-num"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">C: drop sentiment below</span>
+      <input type="range" id="pg-csent" min="300" max="2000" step="5">
+      <span class="pg-num" id="pg-csent-num"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">C: hide thumb below</span>
+      <input type="range" id="pg-cthumb" min="300" max="1400" step="5">
+      <span class="pg-num" id="pg-cthumb-num"></span>
+    </div>
+    <div class="pg-group">
+      <span class="pg-label">C: flex duration+file below</span>
+      <input type="range" id="pg-cdurflex" min="300" max="2000" step="5">
+      <span class="pg-num" id="pg-cdurflex-num"></span>
+    </div>
+    <span class="pg-readout" id="pg-cstate"></span>
+  </div>
+</header>
+
+<main class="pg-stage" id="pg-stage"></main>
+
+<footer class="pg-note">
+  Drag a pane's right edge to resize the simulated window &middot;
+  <kbd>&larr;</kbd>/<kbd>&rarr;</kbd> nudge width 8px, with <kbd>&#8679;</kbd> 64px &middot;
+  <kbd>1</kbd>&ndash;<kbd>4</kbd> switch variant &middot;
+  <kbd>d</kbd> dark &middot; <kbd>s</kbd> sidebar &middot; <kbd>e</kbd> embedded &middot;
+  state is in the URL hash, so a link reproduces the exact frame
+</footer>
+
+<script>
+"use strict";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   1. FRAME PRESETS
+
+      Deliberately NO hardcoded copies of --bn-rail-width / --bn-sidebar-width
+      / --bn-gutter-left here. An earlier draft had them and the readout was
+      wrong by 48px within a minute of first run (it forgot body padding).
+      measure() reads every box off the live iframe instead, so the numbers
+      cannot drift from bristlenose/theme/.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const WIDTH_PRESETS = [
+  { label: "800",  w: 800  },
+  { label: "1024", w: 1024 },
+  { label: "1280", w: 1280 },
+  { label: "1440", w: 1440 },
+  { label: "1680", w: 1680 },
+  { label: "1920", w: 1920 },
+];
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   2. FORMAT HELPERS — ports of frontend/src/utils/format.ts.
+      Kept byte-faithful so column widths match the real thing.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** formatDuration — MM:SS or H:MM:SS, em-dash for <= 0. */
+function formatDuration(seconds) {
+  if (seconds <= 0) return "—";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+/** formatFinderDate — en-GB day-month order, with today/yesterday relative. */
+function formatFinderDate(date) {
+  const lng = "en-GB";
+  const now = new Date();
+  const key = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const timePart = new Intl.DateTimeFormat(lng, {
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).format(date);
+
+  if (key(date) === key(now)) {
+    const rtf = new Intl.RelativeTimeFormat(lng, { numeric: "auto" });
+    const today = rtf.format(0, "day");
+    return `${today[0].toUpperCase()}${today.slice(1)}, ${timePart}`;
+  }
+  const yest = new Date(now);
+  yest.setDate(yest.getDate() - 1);
+  if (key(date) === key(yest)) {
+    const rtf = new Intl.RelativeTimeFormat(lng, { numeric: "auto" });
+    const y = rtf.format(-1, "day");
+    return `${y[0].toUpperCase()}${y.slice(1)}, ${timePart}`;
+  }
+  return new Intl.DateTimeFormat(lng, {
+    day: "numeric", month: "short", year: "numeric",
+  }).format(date) + `, ${timePart}`;
+}
+
+/** formatFinderFilename — middle-ellipsis at 24 chars, extension preserved. */
+function formatFinderFilename(name, maxLen = 24) {
+  if (name.length <= maxLen) return name;
+  const dot = name.lastIndexOf(".");
+  if (dot === -1) return name.slice(0, maxLen - 1) + "…";
+  const ext = name.slice(dot);
+  const stem = name.slice(0, dot);
+  const budget = maxLen - ext.length - 1;
+  if (budget <= 0) return name.slice(0, maxLen - 1) + "…";
+  const front = Math.ceil((budget * 2) / 3);
+  const back = budget - front;
+  return back > 0
+    ? stem.slice(0, front) + "…" + stem.slice(-back) + ext
+    : stem.slice(0, front) + "…" + ext;
+}
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   3. DEMO DATA — 12 sessions x ~50 min.
+
+      A typical largish qual study of a retail website. Deliberately loaded
+      with the cases that break layout:
+
+        · journeys of 3–16 sections (the "how much of the site did they
+          visit" axis — the real stress vector, not duration)
+        · 1–4 speakers per session, incl. observers and one unnamed
+          participant (exercises the muted-italic placeholder)
+        · names across LTR scripts: Latin w/ heavy diacritics, German
+          compounds, Cyrillic, Greek, CJK, Devanagari, Thai, Vietnamese
+        · filenames from 7 to 90 chars (exercises middle-ellipsis at 24)
+        · sentiment histograms from single-spike to fully saturated
+        · two sessions dated today/yesterday to exercise relative dates
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Website sections a participant might visit. English by design — a study's
+   journey labels come from one LLM pass in one language. Mixed lengths so
+   wrapping behaviour is exercised, not just label count. */
+const SECTIONS = [
+  "Home", "Search results", "Product detail", "Size guide", "Reviews",
+  "Basket", "Delivery options", "Payment", "Order confirmation", "Account",
+  "Order history", "Returns & refunds", "Help centre", "Live chat",
+  "Store finder", "Wishlist", "Filters & sorting", "Click & collect",
+  "Gift cards", "Delivery & returns policy",
+];
+
+/* [code, role, shortName, longName] — longName is the "Names: long" dial. */
+const PEOPLE = {
+  m1: ["m1", "researcher", "Priya Raghunathan",       "Priya Lakshmi Raghunathan"],
+  m2: ["m2", "researcher", "Tom Whitfield",           "Thomas Edward Whitfield"],
+  o1: ["o1", "observer",   "Hanne Vestergaard",       "Hanne Marie Vestergaard-Lindqvist"],
+  o2: ["o2", "observer",   "",                        ""],
+  p1: ["p1", "participant", "Ruth Kelleher",          "Ruth Anne Kelleher-Mbeki"],
+  p2: ["p2", "participant", "Jörg Nürnberger",
+                            "Jörg-Wilhelm Nürnberger-Schmidt"],
+  p3: ["p3", "participant", "María del Carmen Fernández",
+                            "María del Carmen Fernández de la Vega"],
+  p4: ["p4", "participant", "João Vasconcelos",
+                            "João Pedro de Almeida Vasconcelos"],
+  p5: ["p5", "participant", "Małgorzata Wiśniewska",
+                            "Małgorzata Katarzyna Wiśniewska-Zielińska"],
+  p6: ["p6", "participant", "Ayşe Yılmazoğlu",
+                            "Ayşe Gülşah Yılmazoğlu Karaosmanoğlu"],
+  p7: ["p7", "participant", "Nguyễn Thị Mỹ Hạnh",
+                            "Nguyễn Thị Mỹ Hạnh Trần Quốc"],
+  p8: ["p8", "participant", "Δημήτρης Παπαδόπουλος",
+                            "Δημήτριος Κωνσταντίνος Παπαδόπουλος"],
+  p9: ["p9", "participant", "Екатерина Воробьёва",
+                            "Екатерина Александровна Воробьёва"],
+  p10: ["p10", "participant", "山田由美子",
+                              "山田由美子（やまだ ゆみこ）"],
+  p11: ["p11", "participant", "陈玉玲",
+                              "陈玉玲（研究參與者）"],
+  p12: ["p12", "participant", "प्रियंका शर्मा",
+                              "प्रियंका रामेश्वर शर्मा"],
+  p13: ["p13", "participant", "ศิริพร ทองสุข",
+                              "ศิริพร ทองสุขเจริญรัตน์"],
+  p14: ["p14", "participant", "Guðrún Þórsdóttir",
+                              "Guðrún Sigríður Þórsdóttir"],
+  p15: ["p15", "participant", "박지훈",
+                              "박지훈 (Park Ji-hoon)"],
+  p16: ["p16", "participant", "Anne-Sophie Lefèvre",
+                              "Anne-Sophie Lefèvre-Deschamps"],
+  p17: ["p17", "participant", "Søren Kjærgaard",
+                              "Søren Emil Kjærgaard-Østergaard"],
+  p18: ["p18", "participant", "Väinö Järvinen",
+                              "Väinö Ilmari Järvinen-Mäkeläinen"],
+  p19: ["p19", "participant", "Giuseppe Dell'Aquila",
+                              "Giuseppe Antonio Dell'Aquila-Ferraro"],
+  p20: ["p20", "participant", "",  ""],   /* unnamed → muted-italic placeholder */
+};
+
+const SENTIMENTS = [
+  "frustration", "confusion", "doubt", "surprise",
+  "confidence", "delight", "satisfaction",
+];
+
+/**
+ * Twelve sessions. `j` is an index list into SECTIONS (the journey), ordered
+ * as visited and allowed to revisit. `sent` is the 7 sentiment counts in
+ * SENTIMENTS order. `days` is days-ago (0 = today, 1 = yesterday).
+ */
+const SESSIONS = [
+  { n: 1,  days: 0,  dur: 3012, speakers: ["m1", "p1"],
+    j: [0, 1, 2, 5, 6, 7, 8],
+    sent: [3, 5, 2, 1, 4, 2, 6],
+    files: ["s01.mp4", "P01 session 1.mp4",
+            "P01 — Ruth Kelleher — usability session 1 — 2026-08-06 — FINAL v2.mp4"] },
+
+  { n: 2,  days: 1,  dur: 2948, speakers: ["m1", "p2", "o1"],
+    j: [0, 16, 1, 2, 3, 2, 5, 6, 7, 8, 11],
+    sent: [9, 7, 4, 0, 2, 1, 2],
+    files: ["s02.mov", "P02 Jörg session.mov",
+            "P02 — Jörg Nürnberger — Verbraucherschutz-Sitzung — 2026-08-05.mov"] },
+
+  { n: 3,  days: 3,  dur: 3260, speakers: ["m2", "p3"],
+    j: [0, 1, 2],
+    sent: [1, 0, 0, 2, 6, 8, 7],
+    files: ["s03.m4a", "Zoom_2026-08-03_14-32.m4a",
+            "Zoom_recording_2026-08-03_14-32-07_María_del_Carmen_Fernández.m4a"] },
+
+  { n: 4,  days: 4,  dur: 2760, speakers: ["m1", "p4", "p5"],
+    j: [0, 1, 16, 1, 2, 4, 2, 5, 17, 6, 7, 8, 10, 11, 12, 13],
+    sent: [12, 9, 8, 3, 2, 1, 1],
+    files: ["s04.mp4", "P04+P05 paired session.mp4",
+            "P04-P05 — paired usability session — basket & checkout — 2026-08-02 — raw.mp4"] },
+
+  { n: 5,  days: 7,  dur: 3105, speakers: ["m2", "p6"],
+    j: [0, 1, 2, 3, 5, 6, 7],
+    sent: [4, 6, 3, 2, 3, 2, 3],
+    files: ["s05.mp4", "P06 Ayşe oturum.mp4",
+            "P06 — Ayşe Yılmazoğlu — kullanılabilirlik oturumu 1 — 2026-07-30.mp4"] },
+
+  { n: 6,  days: 8,  dur: 2892, speakers: ["m1", "p7", "o1", "o2"],
+    j: [0, 1, 2, 5, 6, 7, 8, 9, 10, 11],
+    sent: [6, 4, 5, 1, 3, 2, 4],
+    files: ["s06.mp4", "P07 phiên 1.mp4",
+            "P07 — Nguyễn Thị Mỹ Hạnh — phiên nghiên cứu khả dụng 1 — 2026-07-29.mp4"] },
+
+  { n: 7,  days: 10, dur: 3340, speakers: ["m2", "p8"],
+    j: [0, 12, 13, 11, 9, 10],
+    sent: [8, 6, 7, 0, 1, 0, 1],
+    files: ["s07.mov", "P08 συνεδρία.mov",
+            "P08 — Δημήτρης Παπαδόπουλος — συνεδρία ευχρηστίας — 2026-07-27.mov"] },
+
+  { n: 8,  days: 11, dur: 2705, speakers: ["m1", "p9"],
+    j: [0, 1, 2, 15, 5, 6, 7, 8],
+    sent: [2, 3, 1, 4, 5, 6, 5],
+    files: ["s08.mp4", "P09 сессия.mp4",
+            "P09 — Екатерина Воробьёва — сессия юзабилити 1 — 2026-07-26.mp4"] },
+
+  { n: 9,  days: 14, dur: 3180, speakers: ["m2", "p10", "o1"],
+    j: [0, 1, 2, 4, 2, 5, 6, 7, 8, 10, 11, 12],
+    sent: [5, 8, 6, 2, 2, 1, 2],
+    files: ["s09.mp4", "P10 セッション.mp4",
+            "P10 — 山田由美子 — ユーザビリティテスト 第1回 — 2026-07-23.mp4"] },
+
+  { n: 10, days: 16, dur: 2830, speakers: ["m1", "p11", "p12"],
+    j: [0, 1, 2, 5],
+    sent: [1, 1, 0, 3, 7, 9, 8],
+    files: ["s10.mov", "P11+P12 session.mov",
+            "P11-P12 — 陈玉玲 & प्रियंका शर्मा — paired session — 2026-07-21.mov"] },
+
+  { n: 11, days: 18, dur: 3055, speakers: ["m2", "p13", "p14"],
+    j: [0, 16, 1, 2, 3, 4, 15, 2, 5, 17, 6, 7, 8, 9],
+    sent: [7, 5, 4, 3, 3, 2, 3],
+    files: ["s11.mp4", "P13 สัมภาษณ์.mp4",
+            "P13 — ศิริพร ทองสุข — การทดสอบการใช้งาน ครั้งที่ 1 — 2026-07-19.mp4"] },
+
+  { n: 12, days: 21, dur: 2985, speakers: ["m1", "p20", "o1"],
+    j: [0, 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 18, 19],
+    sent: [10, 8, 9, 1, 1, 0, 1],
+    files: ["s12.mp4", "P20 unnamed participant.mp4",
+            "P20 — unnamed participant — unmoderated remote session — checkout & returns — 2026-07-16.mp4"] },
+];
+
+/* Deterministic fake thumbnail: a two-tone "video still" with a figure
+   silhouette. Inline SVG data URI so the file stays self-contained and no
+   binary blobs land in the repo. */
+function thumbDataUri(seed) {
+  const hue = (seed * 47) % 360;
+  const hue2 = (hue + 38) % 360;
+  const cx = 34 + ((seed * 13) % 34);
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="192" height="108" viewBox="0 0 192 108">` +
+    `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0" stop-color="hsl(${hue},32%,74%)"/>` +
+    `<stop offset="1" stop-color="hsl(${hue2},28%,44%)"/>` +
+    `</linearGradient></defs>` +
+    `<rect width="192" height="108" fill="url(#g)"/>` +
+    `<rect x="0" y="82" width="192" height="26" fill="hsl(${hue2},24%,32%)" opacity="0.55"/>` +
+    `<circle cx="${cx + 62}" cy="46" r="17" fill="hsl(${hue},18%,26%)" opacity="0.55"/>` +
+    `<path d="M${cx + 26} 108 a36 34 0 0 1 72 0 z" fill="hsl(${hue},18%,26%)" opacity="0.55"/>` +
+    `</svg>`;
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   4. DIALS → the dataset actually rendered
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Apply the header dials to the seed. Dials are clamps, not replacements —
+ * per-session variation in the seed is preserved, just capped, so turning a
+ * dial down never flattens the study into 12 identical rows.
+ */
+function buildDataset(s) {
+  const now = Date.now();
+  return SESSIONS.map((sess) => {
+    /* The dial caps TOTAL speakers per row. Index 0 is always the moderator,
+       so the floor of 2 keeps every session a real session (moderator + at
+       least one participant) rather than a lone moderator. */
+    const speakers = sess.speakers
+      .slice(0, Math.max(2, s.speakers))
+      .map((code) => {
+        const [c, role, short, long] = PEOPLE[code];
+        const name = s.names === "long" ? long
+                   : s.names === "short" ? short.split(/\s+/)[0] || ""
+                   : short;
+        return { code: c, role, name };
+      });
+
+    const d = new Date(now - sess.days * 86400000);
+    d.setHours(9 + (sess.n % 7), (sess.n * 7) % 60, 0, 0);
+
+    const fileIdx = s.files === "short" ? 0 : s.files === "long" ? 2 : 1;
+
+    return {
+      id: "s" + sess.n,
+      number: sess.n,
+      date: d,
+      duration: sess.dur,
+      speakers,
+      journey: sess.j.slice(0, s.journey).map((i) => SECTIONS[i]),
+      sentiment: Object.fromEntries(SENTIMENTS.map((k, i) => [k, sess.sent[i]])),
+      filename: sess.files[fileIdx],
+      thumb: thumbDataUri(sess.n),
+    };
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   5. VARIANT A — faithful transcription of the shipped markup
+
+      Element-for-element with SessionsTable.tsx + the four primitives it
+      composes (PersonBadge, JourneyChain, Thumbnail, Sparkline). If you
+      change SessionsTable.tsx, change this too — that is the whole contract
+      of variant A.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Sparkline.tsx — maxHeight 20, minHeight 2, gap 2, opacity 0.8. */
+function sparklineHTML(counts) {
+  const items = SENTIMENTS.map((k) => ({
+    key: k, count: counts[k] || 0, colour: `var(--bn-sentiment-${k})`,
+  }));
+  const maxVal = Math.max(...items.map((i) => i.count), 0);
+  if (maxVal === 0) return "—";
+  const bars = items.map((it) => {
+    const h = it.count > 0 ? Math.max(Math.round((it.count / maxVal) * 20), 2) : 0;
+    return `<span class="bn-sparkline-bar" style="height:${h}px;background:${it.colour};opacity:0.8"></span>`;
+  }).join("");
+  return `<div class="bn-sparkline" style="gap:2px">${bars}</div>`;
+}
+
+/** JourneyChain.tsx — separator " → ", labels as <a> when interactive. */
+function journeyHTML(labels) {
+  if (labels.length === 0) return "";
+  const parts = labels.map((label, i) => {
+    const sep = i > 0
+      ? `<span class="bn-journey-sep" aria-hidden="true"> → </span>` : "";
+    return `<span>${sep}<a href="#" class="bn-journey-label bn-journey-label--interactive">${esc(label)}</a></span>`;
+  }).join("");
+  return `<div class="bn-session-journey">${parts}</div>`;
+}
+
+/** PersonBadge.tsx — code-only in this surface (no `name` prop is passed). */
+function badgeHTML(code) {
+  return `<span class="bn-person-badge"><span class="bn-speaker-badge--split">` +
+         `<span class="bn-speaker-badge-code">${esc(code)}</span>` +
+         `</span></span>`;
+}
+
+/** speakerRolePlaceholder() — keyed off the code prefix, not the stored role. */
+function rolePlaceholder(code) {
+  if (code.startsWith("m")) return "Moderator";
+  if (code.startsWith("o")) return "Observer";
+  return "Participant";
+}
+
+function speakersHTML(speakers) {
+  return speakers.map((sp) => {
+    const named = sp.name !== "";
+    const nameClass = "bn-speaker-editable-name" + (named ? "" : " unnamed");
+    const text = named ? esc(sp.name) : esc(rolePlaceholder(sp.code));
+    return `<span class="bn-session-speaker-entry">` +
+             badgeHTML(sp.code) +
+             `<span><span class="${nameClass}">${text}</span></span>` +
+             `<button class="bn-name-pencil" tabindex="-1">&#x270E;</button>` +
+           `</span>`;
+  }).join("");
+}
+
+const FOLDER_ICON =
+  `<svg class="bn-folder-icon" width="14" height="12" viewBox="0 0 14 12" fill="none" ` +
+  `stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">` +
+  `<path d="M1.5 2.5a1 1 0 0 1 1-1h2.6l1.4 1.5h5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z"/></svg>`;
+
+/** The shipped column order. */
+const COLUMN_ORDER_A =
+  ["id", "speakers", "start", "duration", "file", "thumb", "sentiment"];
+
+/**
+ * Variant B's wide order: thumbnail anchored at column 2 and sentiment
+ * directly right of start+journey, exactly as in B's narrow grid. Only the
+ * duration/file pair differs between B's two states.
+ */
+const COLUMN_ORDER_B_WIDE =
+  ["id", "thumb", "speakers", "start", "sentiment", "duration", "file"];
+
+/** Variant C's wide order — forked from B's; edit freely. */
+const COLUMN_ORDER_C_WIDE =
+  ["id", "thumb", "speakers", "start", "sentiment", "duration", "file"];
+
+/**
+ * @param opts.order         Column order (default: the shipped one).
+ * @param opts.stackedStart  Render the Start header as the two-line
+ *   "Start / User journey" stack.
+ * @param opts.prefix        Class prefix for the stacked header spans, so the
+ *   calling variant's own CSS matches them. MUST track the caller: B styles
+ *   .bnb-h1/.bnb-h2, its fork C styles .bnc-h1/.bnc-h2, and a hardcoded
+ *   prefix here silently leaves the other one's header unstacked (the spans
+ *   just sit inline — no error, and only visible in the wide/table state).
+ *
+ * All default to A's behaviour, so variant A itself is untouched. They exist
+ * so a variant can hold one column order and one header treatment across both
+ * of its states, instead of rearranging the row at its own breakpoint.
+ */
+function renderVariantA(sessions, opts = {}) {
+  const order = opts.order || COLUMN_ORDER_A;
+  const stackedStart = !!opts.stackedStart;
+  const px = opts.prefix || "bnb";
+
+  /* ModeratorHeader / ObserverHeader — the two <p class="bn-session-moderators">
+     lines the real table renders above the <table>. */
+  const mods = [...new Set(sessions.flatMap((s) =>
+    s.speakers.filter((x) => x.code.startsWith("m") && x.name).map((x) => x.name)))];
+  const obs = [...new Set(sessions.flatMap((s) =>
+    s.speakers.filter((x) => x.code.startsWith("o") && x.name).map((x) => x.name)))];
+  const oxford = (a) =>
+    a.length <= 1 ? a.join("") :
+    a.length === 2 ? `${a[0]} and ${a[1]}` :
+    a.slice(0, -1).join(", ") + ", and " + a[a.length - 1];
+
+  const head =
+    (mods.length ? `<p class="bn-session-moderators">Moderated by ${esc(oxford(mods))}</p>` : "") +
+    (obs.length ? `<p class="bn-session-moderators">${obs.length === 1 ? "Observer" : "Observers"}: ${esc(oxford(obs))}</p>` : "");
+
+  const th = {
+    id: `<th>ID</th>`,
+    speakers: `<th>Speakers</th>`,
+    start: stackedStart
+      ? `<th><span class="${px}-h1">Start</span>` +
+        `<span class="${px}-h2">User journey</span></th>`
+      : `<th>Start</th>`,
+    duration: `<th class="bn-session-duration">Duration</th>`,
+    file: `<th><a class="bn-interviews-link" href="#" role="button">${FOLDER_ICON} Interviews</a></th>`,
+    thumb: `<th></th>`,
+    sentiment: `<th>Sentiment</th>`,
+  };
+
+  const td = (s) => ({
+    id: `<td class="bn-session-id"><a href="#">#${s.number}</a></td>`,
+    speakers: `<td class="bn-session-speakers">${speakersHTML(s.speakers)}</td>`,
+    start: `<td class="bn-session-meta">` +
+           `<div>${esc(formatFinderDate(s.date))}</div>` +
+           `${journeyHTML(s.journey)}</td>`,
+    duration: `<td class="bn-session-duration">${formatDuration(s.duration)}</td>`,
+    file: `<td><a href="#t=0" class="timecode" title="${esc(s.filename)}">` +
+          `${esc(formatFinderFilename(s.filename))}</a></td>`,
+    thumb: `<td class="bn-session-thumb">` +
+           `<div class="bn-video-thumb"><img src="${s.thumb}" alt="" loading="lazy"></div></td>`,
+    sentiment: `<td class="bn-session-sentiment">${sparklineHTML(s.sentiment)}</td>`,
+  });
+
+  const rows = sessions.map((s) => {
+    const cells = td(s);
+    return `<tr data-session="${s.id}">${order.map((k) => cells[k]).join("")}</tr>`;
+  }).join("");
+
+  return `<section class="bn-session-table">
+    ${head}
+    <table>
+      <thead><tr>${order.map((k) => th[k]).join("")}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </section>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   5b. VARIANT B — reorder, merge duration+filename, stacked double-headers
+
+   Above the switch width this returns renderVariantA() VERBATIM — "if the
+   viewport is wide enough use the current layout", taken literally, so the
+   wide case is the shipped table itself rather than a reproduction of it.
+
+   Below it, the row becomes a CSS grid:
+
+       ID · thumb · speakers · start+journey · sentiment · duration+interviews
+
+   changes from A, all of which hold at EVERY width:
+     · thumbnail moves from second-from-last to straight after ID. Below the
+       thumb width it disappears entirely — presence varies, place does not.
+     · sentiment moves left, to sit directly right of start + user journey
+     · the Start header becomes the two-line "Start / User journey" stack
+
+   and one that is width-conditional — the only thing the breakpoint changes:
+     · duration and the interview filename merge into one cell — duration on
+       top, filename link beneath, both keeping their shipped styles except
+       that duration aligns LEFT (right-alignment only earned its keep when
+       it was its own column). Above the switch they stay two columns, and
+       duration keeps its shipped right alignment.
+
+   Stacked headers take the colour of the thing they label — muted for
+   "User journey" (matching the muted journey chain), accent for "Interviews"
+   (matching the file link), so the header reads as a legend for its cell.
+
+   Note this switches structure in JS, on a measured width. A shipping
+   implementation would want a container query on `.center` plus a single
+   CSS-only structure; that is a bigger change to SessionsTable.tsx than a
+   playground needs, and it would not let the wide case be literally A.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const VARIANT_B_CSS = `
+/* ── Track sizing — the line to tune ──────────────────────────────────────
+   SUBGRID, deliberately. The obvious build (each row its own grid) does not
+   work: a content-sized track then resolves per row, so row 3's speakers
+   column is a different width from row 1's and the "table" stops lining up.
+   Only fixed lengths would align, and fixed lengths mean either truncated
+   names or wasted space. One parent grid + \`grid-template-columns: subgrid\`
+   on each row gives BOTH — rows stay real boxes (so :hover works) while the
+   tracks are shared and content-sized across every row, as a table's are.
+
+   max-content tracks also size around each cell's own padding, which is why
+   nothing here needs a hand-added allowance for it. An earlier draft set
+   fixed rem widths and every one of them was exactly 24px (2 x space-md) too
+   narrow. */
+.bnb-grid {
+  display: grid;
+  font-size: var(--bn-text-label);
+  grid-template-columns:
+    max-content              /* ID                                        */
+    max-content              /* thumbnail (.bn-video-thumb is 96x54)      */
+    max-content              /* speakers — as A: sized to the longest name */
+    minmax(11rem, 1fr)       /* start + user journey — the flexible column */
+    max-content              /* sentiment — sized by its header, not bars  */
+    minmax(9rem, 15rem);     /* duration + interviews                      */
+}
+.bnb[data-thumb="off"] .bnb-grid {
+  grid-template-columns:
+    max-content max-content minmax(11rem, 1fr) max-content minmax(9rem, 15rem);
+}
+
+/* Speakers: the brief said nothing about this column, so it keeps A's
+   behaviour — nowrap, sized to its longest name, never truncated. It can
+   therefore squeeze the journey column towards its 11rem floor at narrow
+   widths; that trade is left visible on purpose (try Names: Long). */
+
+.bnb-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: start;
+  border-bottom: 1px solid var(--bn-colour-border);
+}
+.bnb-row:last-child { border-bottom: none; }
+
+.bnb-row[data-session] {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.bnb-row[data-session]:hover { background: var(--bn-colour-hover); }
+
+/* Mirrors td: padding 0.5rem var(--bn-space-md), top-aligned.
+   min-width:0 is load-bearing — without it the 1fr journey track cannot
+   shrink below its content and the row overflows instead of wrapping. */
+.bnb-c {
+  padding: 0.5rem var(--bn-space-md);
+  min-width: 0;
+}
+
+/* Mirrors th: heavier, 0.6rem block padding, 2px rule. */
+.bnb-head { border-bottom-width: 2px; }
+.bnb-head .bnb-c {
+  padding-block: 0.6rem;
+  font-weight: var(--bn-weight-emphasis);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
+
+/* Stacked double-header. Structure-agnostic on purpose: the same two spans
+   have to stack inside a grid cell (B narrow) AND inside a <th> (B wide),
+   so they carry display:block rather than relying on the flex column above.
+   Second line is muted by default; an accent link (Interviews) keeps its own
+   colour, so each line takes the colour of the thing it labels. */
+.bnb-h1, .bnb-h2 { display: block; }
+.bnb-h2 {
+  font-weight: var(--bn-weight-normal);
+  color: var(--bn-colour-muted);
+}
+
+/* Scoped to direct children so journey labels (nested inside
+   .bn-session-journey) keep their own \`all: unset\` colour rules. */
+.bnb-id > a { color: var(--bn-colour-accent); text-decoration: none; }
+.bnb-id > a:hover { text-decoration: underline; }
+
+.bnb[data-thumb="off"] .bnb-thumb { display: none; }
+
+/* The merged cell. Duration keeps .bn-session-duration's type and nowrap but
+   aligns left, so it sits flush with the filename beneath it. */
+.bnb-durfile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+}
+.bnb-durfile .bn-session-duration { text-align: left; }
+.bnb-durfile > a.timecode { overflow-wrap: anywhere; }
+`;
+
+function renderVariantB(sessions, ctx) {
+  const w = ctx.contentWidth;
+  const s = ctx.state;
+
+  /* Wide enough → A's table, but holding B's column order and B's stacked
+     Start header. Nothing about the row rearranges at the breakpoint: the
+     thumbnail is column 2 either side of it, sentiment sits right of
+     start+journey either side of it, and the "Start / User journey" stack
+     reads the same either side of it.
+
+     That leaves exactly ONE difference between B's two states — whether
+     duration and the interview file are two columns or one merged cell. */
+  if (w > s.bSwitch) {
+    return renderVariantA(sessions, {
+      order: COLUMN_ORDER_B_WIDE,
+      stackedStart: true,
+    });
+  }
+
+  const showThumb = w > s.bThumb;
+
+  const cell = (cls, inner) => `<div class="bnb-c ${cls}">${inner}</div>`;
+
+  const headRow =
+    `<div class="bnb-row bnb-head">` +
+      cell("bnb-id", "ID") +
+      (showThumb ? cell("bnb-thumb", "") : "") +
+      cell("bnb-speakers", "Speakers") +
+      cell("bnb-start",
+        `<span class="bnb-h1">Start</span><span class="bnb-h2">User journey</span>`) +
+      cell("bnb-sent", "Sentiment") +
+      cell("bnb-durfile",
+        `<span class="bnb-h1">Duration</span>` +
+        `<span class="bnb-h2"><a class="bn-interviews-link" href="#" role="button">` +
+        `${FOLDER_ICON} Interviews</a></span>`) +
+    `</div>`;
+
+  const rows = sessions.map((x) =>
+    `<div class="bnb-row" data-session="${x.id}">` +
+      cell("bnb-id bn-session-id", `<a href="#">#${x.number}</a>`) +
+      (showThumb
+        ? cell("bnb-thumb",
+            `<div class="bn-video-thumb"><img src="${x.thumb}" alt="" loading="lazy"></div>`)
+        : "") +
+      cell("bnb-speakers bn-session-speakers", speakersHTML(x.speakers)) +
+      cell("bnb-start",
+        `<div>${esc(formatFinderDate(x.date))}</div>` + journeyHTML(x.journey)) +
+      cell("bnb-sent", sparklineHTML(x.sentiment)) +
+      cell("bnb-durfile",
+        `<div class="bn-session-duration">${formatDuration(x.duration)}</div>` +
+        `<a href="#t=0" class="timecode" title="${esc(x.filename)}">` +
+        `${esc(formatFinderFilename(x.filename))}</a>`) +
+    `</div>`).join("");
+
+  /* Header lines reused from variant A — same strings, same components. */
+  const mods = [...new Set(sessions.flatMap((x) =>
+    x.speakers.filter((y) => y.code.startsWith("m") && y.name).map((y) => y.name)))];
+  const obs = [...new Set(sessions.flatMap((x) =>
+    x.speakers.filter((y) => y.code.startsWith("o") && y.name).map((y) => y.name)))];
+  const oxford = (a) =>
+    a.length <= 1 ? a.join("") :
+    a.length === 2 ? `${a[0]} and ${a[1]}` :
+    a.slice(0, -1).join(", ") + ", and " + a[a.length - 1];
+
+  return `<section class="bn-session-table bnb" data-thumb="${showThumb ? "on" : "off"}">` +
+    (mods.length ? `<p class="bn-session-moderators">Moderated by ${esc(oxford(mods))}</p>` : "") +
+    (obs.length ? `<p class="bn-session-moderators">${obs.length === 1 ? "Observer" : "Observers"}: ${esc(oxford(obs))}</p>` : "") +
+    `<div class="bnb-grid">${headRow}${rows}</div>` +
+  `</section>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   5c. VARIANT C — a standalone copy of B, forked for further changes
+
+   Identical to B at the moment it was forked, with every class prefix
+   renamed (b -> c) and its own CSS block and render function, so the two
+   can diverge freely. Shares B's two breakpoint dials for now; give C its
+   own if the widths need to differ.
+
+   (B's description, still accurate at fork time, follows)
+   reorder, merge duration+filename, stacked double-headers
+
+   Above the switch width this returns renderVariantA() VERBATIM — "if the
+   viewport is wide enough use the current layout", taken literally, so the
+   wide case is the shipped table itself rather than a reproduction of it.
+
+   Below it, the row becomes a CSS grid:
+
+       ID · thumb · speakers · start+journey · sentiment · duration+interviews
+
+   changes from A, all of which hold at EVERY width:
+     · thumbnail moves from second-from-last to straight after ID. Below the
+       thumb width it disappears entirely — presence varies, place does not.
+     · sentiment moves left, to sit directly right of start + user journey
+     · the Start header becomes the two-line "Start / User journey" stack
+
+   and one that is width-conditional — the only thing the breakpoint changes:
+     · duration and the interview filename merge into one cell — duration on
+       top, filename link beneath, both keeping their shipped styles except
+       that duration aligns LEFT (right-alignment only earned its keep when
+       it was its own column). Above the switch they stay two columns, and
+       duration keeps its shipped right alignment.
+
+   Stacked headers take the colour of the thing they label — muted for
+   "User journey" (matching the muted journey chain), accent for "Interviews"
+   (matching the file link), so the header reads as a legend for its cell.
+
+   Note this switches structure in JS, on a measured width. A shipping
+   implementation would want a container query on `.center` plus a single
+   CSS-only structure; that is a bigger change to SessionsTable.tsx than a
+   playground needs, and it would not let the wide case be literally A.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const VARIANT_C_CSS = `
+/* ── Track sizing — the line to tune ──────────────────────────────────────
+   SUBGRID, deliberately. The obvious build (each row its own grid) does not
+   work: a content-sized track then resolves per row, so row 3's speakers
+   column is a different width from row 1's and the "table" stops lining up.
+   Only fixed lengths would align, and fixed lengths mean either truncated
+   names or wasted space. One parent grid + \`grid-template-columns: subgrid\`
+   on each row gives BOTH — rows stay real boxes (so :hover works) while the
+   tracks are shared and content-sized across every row, as a table's are.
+
+   max-content tracks also size around each cell's own padding, which is why
+   nothing here needs a hand-added allowance for it. An earlier draft set
+   fixed rem widths and every one of them was exactly 24px (2 x space-md) too
+   narrow.
+
+   Unlike B, C's track LIST is built in JS (see COL_TRACKS in renderVariantC)
+   and handed in as --bnc-cols. C drops whole columns at two different widths
+   — thumbnail, then sentiment — and a static rule per combination does not
+   scale: two optional columns is already four rules, and the next one is
+   eight. */
+.bnc-grid {
+  display: grid;
+  font-size: var(--bn-text-label);
+  grid-template-columns: var(--bnc-cols);
+}
+
+/* THE SHRINK PAIR — C's divergence from B.
+   In B, speakers is a rigid max-content track: it takes the width its longest
+   name needs and start+journey absorbs every squeeze on its own. In C the two
+   are proportional fr tracks, so below the switch they give up width TOGETHER.
+   The ratio lives in COL_TRACKS.
+
+   The cost is that speakers can no longer hold the track open, so names must
+   wrap. flex-start keeps the code badge on the name's first line rather than
+   centred against a two-line name. B deliberately keeps the rigid column, so
+   the pair can be compared side by side in 2-up. */
+.bnc-speakers,
+.bnc-speakers .bn-session-speaker-entry { white-space: normal; }
+.bnc-speakers .bn-session-speaker-entry { align-items: flex-start; }
+
+/* A wrapped name must be flush left on EVERY line, first one included.
+   .bn-speaker-editable-name carries \`padding: var(--bn-space-xs) 0.2rem\` and
+   is an inline box, so its left padding paints only at the start of its first
+   line fragment — leaving line 1 indented ~3.2px and every wrapped line flush.
+   (Same inline-box padding behaviour journey-label.css documents for wrapping
+   journey chains, which solves it by going trailing-edge-only.)
+
+   inline-block applies the padding to the box instead, so all lines share one
+   left edge while the hover chip still shrink-wraps the text rather than
+   stretching across the flex item. Only C needs this — B's names never wrap. */
+.bnc-speakers .bn-speaker-editable-name { display: inline-block; }
+
+.bnc-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: start;
+  border-bottom: 1px solid var(--bn-colour-border);
+}
+.bnc-row:last-child { border-bottom: none; }
+
+.bnc-row[data-session] {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.bnc-row[data-session]:hover { background: var(--bn-colour-hover); }
+
+/* Mirrors td: padding 0.5rem var(--bn-space-md), top-aligned.
+   min-width:0 is load-bearing — without it the 1fr journey track cannot
+   shrink below its content and the row overflows instead of wrapping. */
+.bnc-c {
+  padding: 0.5rem var(--bn-space-md);
+  min-width: 0;
+}
+
+/* Mirrors th: heavier, 0.6rem block padding, 2px rule. */
+.bnc-head { border-bottom-width: 2px; }
+.bnc-head .bnc-c {
+  padding-block: 0.6rem;
+  font-weight: var(--bn-weight-emphasis);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
+
+/* Stacked double-header. Structure-agnostic on purpose: the same two spans
+   have to stack inside a grid cell (C narrow) AND inside a <th> (C wide),
+   so they carry display:block rather than relying on the flex column above.
+   Second line is muted by default; an accent link (Interviews) keeps its own
+   colour, so each line takes the colour of the thing it labels. */
+.bnc-h1, .bnc-h2 { display: block; }
+.bnc-h2 {
+  font-weight: var(--bn-weight-normal);
+  color: var(--bn-colour-muted);
+}
+
+/* Scoped to direct children so journey labels (nested inside
+   .bn-session-journey) keep their own \`all: unset\` colour rules. */
+.bnc-id > a { color: var(--bn-colour-accent); text-decoration: none; }
+.bnc-id > a:hover { text-decoration: underline; }
+
+/* The merged cell. Duration keeps .bn-session-duration's type and nowrap but
+   aligns left, so it sits flush with the filename beneath it. */
+.bnc-durfile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+}
+.bnc-durfile .bn-session-duration { text-align: left; }
+.bnc-durfile > a.timecode { overflow-wrap: anywhere; }
+`;
+
+/**
+ * C's grid tracks, one per column key.
+ *
+ * speakers + start are THE SHRINK PAIR: proportional fr tracks that give up
+ * width together below the switch, rather than speakers taking what its
+ * longest name wants and start absorbing the whole squeeze (which is what B
+ * does, and what the shipped auto-table does). `minmax(0, …)` on both is
+ * load-bearing — an fr track's default min is auto, which would refuse to
+ * shrink below content and reinstate exactly the rigidity we're removing.
+ *
+ * The 1 : 1.5 ratio is the tuning knob. Raise it to favour the journey chain,
+ * lower it to favour names.
+ */
+const C_COL_TRACKS = {
+  id: "max-content",
+  thumb: "max-content",
+  speakers: "minmax(0, 1fr)",      /* shrink pair */
+  start: "minmax(0, 1.5fr)",       /* shrink pair */
+  sent: "max-content",
+  durfile: "minmax(9rem, 15rem)",  /* until cDurFlex — see below */
+};
+
+/**
+ * Below cDurFlex the duration+interviews column stops being a clamped block
+ * and joins the shrink pair as a third proportional member, making the trio
+ * 1 : 1.5 : 1 (speakers : start : durfile).
+ *
+ * This also removes its 9rem floor, which is the harder-edged benefit: a
+ * fixed minimum on a column is exactly what forces a row to overflow once
+ * everything else has already given up all it can.
+ */
+const C_DURFILE_FLEX = "minmax(0, 1fr)";
+
+function renderVariantC(sessions, ctx) {
+  const w = ctx.contentWidth;
+  const s = ctx.state;
+
+  /* Sentiment is dropped on WIDTH, not on structure, so the rule holds in
+     both of C's states. With the defaults the drop sits below the switch, so
+     in practice it only bites in the grid — but if the dials are dragged the
+     other way the table honours it too, rather than silently disagreeing. */
+  const showSent = w > s.cSent;
+  const showThumb = w > s.cThumb;
+  const durFlex = w <= s.cDurFlex;
+
+  /* Wide enough → A's table, holding C's column order and stacked Start
+     header. Nothing rearranges at the breakpoint; only the duration/file
+     merge (and any dropped column) differs between C's two states. */
+  if (w > s.cSwitch) {
+    return renderVariantA(sessions, {
+      order: COLUMN_ORDER_C_WIDE.filter((k) => k !== "sentiment" || showSent),
+      stackedStart: true,
+      prefix: "bnc",
+    });
+  }
+
+  /* Compose the column set once, then drive tracks, header and body off it —
+     so a dropped column cannot leave a stale track behind (or vice versa). */
+  const cols = ["id"];
+  if (showThumb) cols.push("thumb");
+  cols.push("speakers", "start");
+  if (showSent) cols.push("sent");
+  cols.push("durfile");
+  const tracks = cols.map((k) =>
+    (k === "durfile" && durFlex) ? C_DURFILE_FLEX : C_COL_TRACKS[k]).join(" ");
+
+  const cell = (cls, inner) => `<div class="bnc-c ${cls}">${inner}</div>`;
+
+  const headCell = {
+    id: () => cell("bnc-id", "ID"),
+    thumb: () => cell("bnc-thumb", ""),
+    speakers: () => cell("bnc-speakers", "Speakers"),
+    start: () => cell("bnc-start",
+      `<span class="bnc-h1">Start</span><span class="bnc-h2">User journey</span>`),
+    sent: () => cell("bnc-sent", "Sentiment"),
+    durfile: () => cell("bnc-durfile",
+      `<span class="bnc-h1">Duration</span>` +
+      `<span class="bnc-h2"><a class="bn-interviews-link" href="#" role="button">` +
+      `${FOLDER_ICON} Interviews</a></span>`),
+  };
+
+  const bodyCell = (x) => ({
+    id: () => cell("bnc-id bn-session-id", `<a href="#">#${x.number}</a>`),
+    thumb: () => cell("bnc-thumb",
+      `<div class="bn-video-thumb"><img src="${x.thumb}" alt="" loading="lazy"></div>`),
+    speakers: () => cell("bnc-speakers bn-session-speakers", speakersHTML(x.speakers)),
+    start: () => cell("bnc-start",
+      `<div>${esc(formatFinderDate(x.date))}</div>` + journeyHTML(x.journey)),
+    sent: () => cell("bnc-sent", sparklineHTML(x.sentiment)),
+    durfile: () => cell("bnc-durfile",
+      `<div class="bn-session-duration">${formatDuration(x.duration)}</div>` +
+      `<a href="#t=0" class="timecode" title="${esc(x.filename)}">` +
+      `${esc(formatFinderFilename(x.filename))}</a>`),
+  });
+
+  const headRow =
+    `<div class="bnc-row bnc-head">${cols.map((k) => headCell[k]()).join("")}</div>`;
+
+  const rows = sessions.map((x) => {
+    const c = bodyCell(x);
+    return `<div class="bnc-row" data-session="${x.id}">` +
+           cols.map((k) => c[k]()).join("") + `</div>`;
+  }).join("");
+
+  /* Header lines reused from variant A — same strings, same components. */
+  const mods = [...new Set(sessions.flatMap((x) =>
+    x.speakers.filter((y) => y.code.startsWith("m") && y.name).map((y) => y.name)))];
+  const obs = [...new Set(sessions.flatMap((x) =>
+    x.speakers.filter((y) => y.code.startsWith("o") && y.name).map((y) => y.name)))];
+  const oxford = (a) =>
+    a.length <= 1 ? a.join("") :
+    a.length === 2 ? `${a[0]} and ${a[1]}` :
+    a.slice(0, -1).join(", ") + ", and " + a[a.length - 1];
+
+  return `<section class="bn-session-table bnc">` +
+    (mods.length ? `<p class="bn-session-moderators">Moderated by ${esc(oxford(mods))}</p>` : "") +
+    (obs.length ? `<p class="bn-session-moderators">${obs.length === 1 ? "Observer" : "Observers"}: ${esc(oxford(obs))}</p>` : "") +
+    `<div class="bnc-grid" style="--bnc-cols:${tracks}">${headRow}${rows}</div>` +
+  `</section>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   6. VARIANT REGISTRY  ←──── ADD D HERE
+
+      Each entry:
+        label   short name shown in the switcher and the pane header
+        note    one line describing the idea (shown in the pane header)
+        css     extra CSS injected into that pane's iframe AFTER the theme
+                sheet, so a variant can override the design system without
+                touching it
+        render  (sessions) => html string, mounted inside `.center`
+
+      A variant that only changes CSS can reuse renderVariantA and put
+      everything in `css`. A variant that restructures the row supplies its
+      own render. Both panes in compare mode share one dataset and one frame
+      width, so a side-by-side is an honest comparison.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const EMPTY_SLOT = (letter) => ({
+  label: `${letter} — undefined`,
+  note: "empty slot — awaiting brief",
+  empty: true,
+  css: "",
+  render: () => `
+    <div style="max-width:44ch;margin:12vh 0;font-family:var(--bn-font-body);color:var(--bn-colour-muted)">
+      <p style="font-size:var(--bn-text-body);margin:0 0 .6rem">
+        <strong style="color:var(--bn-colour-text)">Variant ${letter}</strong> is an empty slot.
+      </p>
+      <p style="margin:0">
+        Define it in the <code>VARIANTS</code> registry in this file
+        (section&nbsp;6). Supply <code>css</code> to restyle the shipped
+        markup, or <code>render</code> to restructure it. Everything else —
+        data, dials, frame, measurement — is already wired.
+      </p>
+    </div>`,
+});
+
+const VARIANTS = {
+  A: {
+    label: "A — shipped",
+    note: "faithful transcription of SessionsTable.tsx",
+    css: "",
+    render: renderVariantA,
+  },
+  B: {
+    label: "B — reorder + merge",
+    note: "thumb after ID · duration+file merged · sentiment left · stacked headers",
+    css: VARIANT_B_CSS,
+    render: renderVariantB,
+  },
+  C: {
+    label: "C — fork of B",
+    note: "copy of B at fork time — diverge here",
+    css: VARIANT_C_CSS,
+    render: renderVariantC,
+  },
+  D: EMPTY_SLOT("D"),
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   7. STATE + URL HASH
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const DEFAULTS = {
+  v: "A", v2: "B", compare: false, ruler: false,
+  w: 1440, toc: false, chrome: "browser",
+  theme: "light", platform: "web",
+  journey: 16, speakers: 4, names: "real", files: "real",
+  /* Variant B breakpoints, in CONTENT px (not window px). Defaults chosen so
+     the switch is easy to see from the presets: at a 1440 window the browser
+     with its sidebar closed gives 1256 content (→ A), and opening the TOC
+     gives 1012 (→ B). Tune by eye — that is what the dials are for. */
+  bSwitch: 1100, bThumb: 700,
+  /* C's own set. ALL THREE ARE CONTENT WIDTHS, not window widths — the
+     distinction matters and is easy to slip on: in the browser with the
+     sidebar closed, content = window - 184 (48 body padding + 72 rails + 64
+     centre padding), so a 968 content threshold fires at a ~1152 window.
+     The header readout always reports content, and shows the arithmetic.
+
+     cSent (968) sits well below cSwitch (1285), so C has three real stages:
+     the wide table, then the grid still carrying sentiment, then the grid
+     without it. That middle band is ~317px of content width — a state you
+     can actually land on and judge.
+
+     968 is where the measurement says the column stops being free. Keeping it
+     costs a flat ~52px off the shrink pair at every width; what that buys in
+     journey wrapping:
+
+         content  journey lines with / without   row height
+           1256        2 / 2                      78 /  78   (free)
+            968        3 / 3                      96 /  96   (free)
+            816        5 / 4                     134 / 115
+            720        8 / 5                     191 / 134   <- cliff
+            568       10 / 6                     228 / 153
+
+     Nothing overflows at any setting; the shrink pair absorbs it. So this is
+     a legibility trade, not a breakage one — at 968 the column is still free,
+     and the rows only balloon below ~800.
+
+     cDurFlex: below this, duration+interviews stops being a clamped block and
+     becomes the third proportional member of the shrink pair. */
+  cSwitch: 1285, cThumb: 700, cSent: 968, cDurFlex: 900,
+};
+
+let state = { ...DEFAULTS };
+
+function readHash() {
+  const q = new URLSearchParams(location.hash.slice(1));
+  if (![...q.keys()].length) return;
+  const s = { ...DEFAULTS };
+  const num = (k) => (q.has(k) ? parseInt(q.get(k), 10) : s[k]);
+  const bool = (k) => (q.has(k) ? q.get(k) === "1" : s[k]);
+  s.v = VARIANTS[q.get("v")] ? q.get("v") : s.v;
+  s.v2 = VARIANTS[q.get("v2")] ? q.get("v2") : s.v2;
+  s.compare = bool("compare");
+  s.ruler = bool("ruler");
+  s.w = Math.min(2200, Math.max(640, num("w") || s.w));
+  s.toc = bool("toc");
+  s.chrome = q.get("chrome") === "embedded" ? "embedded" : "browser";
+  s.theme = q.get("theme") === "dark" ? "dark" : "light";
+  s.platform = q.get("platform") === "desktop" ? "desktop" : "web";
+  s.journey = Math.min(16, Math.max(0, isNaN(num("journey")) ? s.journey : num("journey")));
+  s.speakers = Math.min(4, Math.max(2, num("speakers") || s.speakers));
+  s.names = ["short", "real", "long"].includes(q.get("names")) ? q.get("names") : s.names;
+  s.files = ["short", "real", "long"].includes(q.get("files")) ? q.get("files") : s.files;
+  s.bSwitch = Math.min(2000, Math.max(400, num("bSwitch") || s.bSwitch));
+  s.bThumb = Math.min(1400, Math.max(300, num("bThumb") || s.bThumb));
+  s.cSwitch = Math.min(2000, Math.max(400, num("cSwitch") || s.cSwitch));
+  s.cThumb = Math.min(1400, Math.max(300, num("cThumb") || s.cThumb));
+  s.cSent = Math.min(2000, Math.max(300, num("cSent") || s.cSent));
+  s.cDurFlex = Math.min(2000, Math.max(300, num("cDurFlex") || s.cDurFlex));
+  state = s;
+}
+
+function writeHash() {
+  const q = new URLSearchParams();
+  q.set("v", state.v);
+  if (state.compare) { q.set("compare", "1"); q.set("v2", state.v2); }
+  if (state.ruler) q.set("ruler", "1");
+  q.set("w", state.w);
+  if (state.toc) q.set("toc", "1");
+  if (state.chrome !== "browser") q.set("chrome", state.chrome);
+  if (state.theme !== "light") q.set("theme", state.theme);
+  if (state.platform !== "web") q.set("platform", state.platform);
+  if (state.journey !== DEFAULTS.journey) q.set("journey", state.journey);
+  if (state.speakers !== DEFAULTS.speakers) q.set("speakers", state.speakers);
+  if (state.names !== DEFAULTS.names) q.set("names", state.names);
+  if (state.files !== DEFAULTS.files) q.set("files", state.files);
+  if (state.bSwitch !== DEFAULTS.bSwitch) q.set("bSwitch", state.bSwitch);
+  if (state.bThumb !== DEFAULTS.bThumb) q.set("bThumb", state.bThumb);
+  if (state.cSwitch !== DEFAULTS.cSwitch) q.set("cSwitch", state.cSwitch);
+  if (state.cThumb !== DEFAULTS.cThumb) q.set("cThumb", state.cThumb);
+  if (state.cSent !== DEFAULTS.cSent) q.set("cSent", state.cSent);
+  if (state.cDurFlex !== DEFAULTS.cDurFlex) q.set("cDurFlex", state.cDurFlex);
+  history.replaceState(null, "", "#" + q.toString());
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   8. PANES — one iframe per variant on stage
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const THEME_HREF = new URL("sessions-grid-playground.theme.css", location.href).href;
+const stage = document.getElementById("pg-stage");
+const panes = [];   /* { root, iframe, ruler, headEl, key } */
+
+function paneChromeClasses() {
+  const c = ["layout", "layout-no-right"];
+  if (state.toc) c.push("toc-open");
+  if (state.chrome === "embedded") c.push("embedded");
+  return c.join(" ");
+}
+
+function makePane(key, isSecond) {
+  const root = document.createElement("div");
+  root.className = "pg-pane";
+
+  const head = document.createElement("div");
+  head.className = "pg-pane-head";
+  root.appendChild(head);
+
+  const wrap = document.createElement("div");
+  wrap.className = "pg-frame-wrap";
+  const iframe = document.createElement("iframe");
+  wrap.appendChild(iframe);
+
+  const ruler = document.createElement("div");
+  ruler.className = "pg-ruler";
+  wrap.appendChild(ruler);
+
+  const grip = document.createElement("div");
+  grip.className = "pg-grip";
+  wrap.appendChild(grip);
+  installGrip(grip);
+
+  root.appendChild(wrap);
+  stage.appendChild(root);
+
+  const pane = { root, iframe, ruler, head, key, isSecond };
+  panes.push(pane);
+  return pane;
+}
+
+/**
+ * Build the iframe document from scratch — a faithful mini-report.
+ *
+ * The theme sheet is 316 kB and loads asynchronously, so the FIRST paint can
+ * land on an unstyled document: no grid on `.layout`, no padding on
+ * `.center`. Any variant that measures its own width to choose a structure
+ * (B does) would then decide against a bogus number — and self-consistently,
+ * so nothing looks broken: it just silently renders the wrong layout, while
+ * measure() a frame later reports the right width and the two disagree.
+ *
+ * So: repaint once the stylesheet actually lands.
+ */
+function mountPane(pane, sessions) {
+  const doc = pane.iframe.contentDocument;
+  doc.open();
+  doc.write(
+    `<!doctype html><html><head><meta charset="utf-8">` +
+    `<link rel="stylesheet" href="${THEME_HREF}">` +
+    `<style id="variant-css"></style></head><body>` +
+    `<div class="layout layout-no-right"><div class="toc-rail"></div>` +
+    `<div class="toc-sidebar"></div><div class="center" id="mount"></div></div>` +
+    `</body></html>`
+  );
+  doc.close();
+  pane.doc = doc;
+
+  const link = doc.querySelector("link[rel=stylesheet]");
+  if (link && !link.sheet) {
+    link.addEventListener("load", () => {
+      paintPane(pane, buildDataset(state));
+      requestAnimationFrame(measure);
+    }, { once: true });
+  }
+
+  paintPane(pane, sessions);
+}
+
+/** True once the theme sheet is applied — `.layout` is a grid only then. */
+function themeReady(doc) {
+  const el = doc && doc.querySelector(".layout");
+  return !!el && getComputedStyle(el).display === "grid";
+}
+
+/** Usable width inside `.center` — the number a variant picks its layout on. */
+function contentWidthOf(doc) {
+  const centre = doc && doc.querySelector(".center");
+  if (!centre) return null;
+  const cs = getComputedStyle(centre);
+  return Math.round(centre.getBoundingClientRect().width
+    - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0));
+}
+
+function paintPane(pane, sessions) {
+  const variant = VARIANTS[pane.key];
+  const doc = pane.doc;
+  if (!doc || !doc.getElementById("mount")) return;
+
+  doc.documentElement.setAttribute("data-theme", state.theme);
+  doc.documentElement.setAttribute("data-platform",
+    state.platform === "desktop" ? "desktop" : "web");
+  doc.querySelector(".layout").className = paneChromeClasses();
+  doc.getElementById("variant-css").textContent = variant.css || "";
+
+  /* A variant may need to know how much room it has (variant B switches
+     structure on it). Measure `.center` EMPTY first: the table must not be
+     able to feed its own size back into the number that chooses its layout,
+     or a wide table could hold open the very breakpoint meant to escape it. */
+  const mount = doc.getElementById("mount");
+  mount.innerHTML = "";
+  const contentWidth = contentWidthOf(doc);
+
+  /* Remember what this paint was based on. measure() re-checks it a frame
+     later and repaints on mismatch — see the settle pass there. */
+  pane.paintedWidth = contentWidth;
+
+  /* `ready` tells a width-sensitive variant whether contentWidth can be
+     trusted yet. When false, mountPane's stylesheet-load handler will repaint
+     with a real measurement, so a variant may render whatever it likes. */
+  mount.innerHTML = variant.render(sessions, {
+    contentWidth, state, ready: themeReady(doc),
+  });
+
+  pane.head.innerHTML =
+    `<b>${esc(variant.label)}</b><span>${esc(variant.note)}</span>` +
+    (pane.isSecond ? ` <select data-second></select>` : "");
+
+  if (pane.isSecond) {
+    const sel = pane.head.querySelector("select");
+    Object.keys(VARIANTS).forEach((k) => {
+      const o = document.createElement("option");
+      o.value = k; o.textContent = VARIANTS[k].label;
+      if (k === state.v2) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener("change", () => {
+      state.v2 = sel.value;
+      pane.key = sel.value;
+      render();
+    });
+  }
+}
+
+function sizePanes() {
+  panes.forEach((p) => {
+    /* stage padding (14 top + 14 bottom) + this pane's header + 2px borders */
+    const h = Math.max(320,
+      stage.clientHeight - 28 - p.head.offsetHeight - 2);
+    p.iframe.style.width = state.w + "px";
+    p.iframe.style.height = h + "px";
+    p.root.style.width = state.w + "px";
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   9. MEASUREMENT — measured, never asserted
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Measure the width chain from the LIVE iframe rather than from the constants
+ * at the top of this file.
+ *
+ * This started life as an arithmetic prediction and was wrong by 48px on the
+ * first run, because `body { padding: var(--bn-space-xl) var(--bn-space-lg) }`
+ * (2rem/1.5rem) eats 48px horizontally BEFORE the sidebar grid ever sees the
+ * window — an easy step to forget, and exactly the kind of thing a playground
+ * must not get wrong. Reading the real boxes means the readout cannot drift
+ * from the theme: change a token in bristlenose/theme/ and this still tells
+ * the truth.
+ *
+ *   window ─ body padding ─▶ .layout ─ rails/sidebar ─▶ .center ─ padding ─▶ content
+ */
+let settleGuard = 0;
+
+function measure() {
+  const p = panes[0];
+  const out = document.getElementById("pg-readout");
+  if (!p || !p.doc) { out.textContent = ""; return; }
+
+  /* SETTLE PASS. An iframe's viewport does not always resize in the same tick
+     the parent writes iframe.style.width, so the measurement paintPane took to
+     CHOOSE a layout is occasionally the previous width. Nothing would
+     re-trigger, so a width-sensitive variant (C) could sit in the wrong
+     structure until the next input — and look entirely self-consistent doing
+     it. Caught by a fast width sweep reporting content 1039 sandwiched between
+     1344 and 1328, which is impossible for a monotonic drag.
+
+     So: if a pane's painted width no longer matches reality, repaint it and
+     re-measure. Variant-agnostic (it compares widths, not structures), and
+     bounded so a pathological oscillation can't spin. */
+  if (settleGuard < 3) {
+    let repainted = false;
+    panes.forEach((pane) => {
+      if (!pane.doc || pane.paintedWidth == null) return;
+      if (contentWidthOf(pane.doc) !== pane.paintedWidth) {
+        paintPane(pane, buildDataset(state));
+        repainted = true;
+      }
+    });
+    if (repainted) {
+      settleGuard++;
+      requestAnimationFrame(measure);
+      return;
+    }
+  }
+  settleGuard = 0;
+
+  const centre = p.doc.querySelector(".center");
+  const layout = p.doc.querySelector(".layout");
+  const table = p.doc.querySelector(".bn-session-table table");
+  if (!centre || !layout) { out.textContent = ""; return; }
+
+  const px = (v) => parseFloat(v) || 0;
+  const bodyCS = getComputedStyle(p.doc.body);
+  const centreCS = getComputedStyle(centre);
+
+  const bodyPad = Math.round(px(bodyCS.paddingLeft) + px(bodyCS.paddingRight));
+  const layoutW = Math.round(layout.getBoundingClientRect().width);
+  const centreW = Math.round(centre.getBoundingClientRect().width);
+  const centrePad = Math.round(px(centreCS.paddingLeft) + px(centreCS.paddingRight));
+  const railsAndPanel = layoutW - centreW;   /* rails + TOC panel, whichever apply */
+  const content = centreW - centrePad;
+
+  const de = p.doc.documentElement;
+  const overflow = de.scrollWidth - de.clientWidth;
+  const overflows = overflow > 1;
+  const tableW = table ? Math.round(table.getBoundingClientRect().width) : 0;
+
+  out.innerHTML =
+    `window <b>${state.w}</b>` +
+    ` &minus; body <b>${bodyPad}</b>` +
+    ` &minus; rails/panel <b>${railsAndPanel}</b>` +
+    ` &minus; pad <b>${centrePad}</b>` +
+    ` = content <b>${content}px</b>` +
+    (tableW ? ` &middot; table <b>${tableW}px</b>` : "") +
+    ` &middot; <span class="pg-flag ${overflows ? "bad" : "ok"}">` +
+    (overflows ? `H-SCROLL +${overflow}px` : "no h-scroll") +
+    `</span>`;
+
+  /* Which structure each width-sensitive variant is in right now, and why. */
+  const thresholdState = (key) => {
+    const el = document.getElementById(key === "B" ? "pg-bstate" : "pg-cstate");
+    if (!panes.some((x) => x.key === key)) { el.textContent = ""; return; }
+    const sw = key === "B" ? state.bSwitch : state.cSwitch;
+    const th = key === "B" ? state.bThumb : state.cThumb;
+    const usingA = content > sw;
+    const thumb = content > th;
+    const dim = (s) => `<span style="opacity:.6">${s}</span>`;
+    let html =
+      `content <b>${content}</b> &rarr; ` +
+      (usingA ? `<b>A layout</b> ${dim(`(&gt; ${sw})`)}`
+              : `<b>${key} layout</b> ${dim(`(&le; ${sw})`)}`) +
+      ` &middot; thumb <b>${thumb ? "shown" : "hidden"}</b> ` +
+      dim(`(${thumb ? "&gt;" : "&le;"} ${th})`);
+    if (key === "C") {
+      const sent = content > state.cSent;
+      const flex = content <= state.cDurFlex;
+      html += ` &middot; sentiment <b>${sent ? "shown" : "dropped"}</b> ` +
+              dim(`(${sent ? "&gt;" : "&le;"} ${state.cSent})`) +
+              ` &middot; dur+file <b>${flex ? "flexing" : "clamped"}</b> ` +
+              dim(`(${flex ? "&le;" : "&gt;"} ${state.cDurFlex})`);
+    }
+    el.innerHTML = html;
+  };
+  thresholdState("B");
+  thresholdState("C");
+
+  drawRulers();
+}
+
+/**
+ * Column ruler — measured header widths, drawn over the pane.
+ *
+ * Structure-agnostic: variant A's headers are <th> in a <table>, B's are
+ * grid cells, and a future C/D may be neither. So it looks for whatever
+ * header row the variant rendered and reads the labels off the DOM rather
+ * than carrying a hardcoded column-name list that silently mislabels every
+ * variant whose column order isn't A's.
+ */
+function headerCells(doc) {
+  const grid = doc.querySelectorAll(".bnb-head > .bnb-c");
+  if (grid.length) {
+    return [...grid].map((el) => ({
+      el, label: (el.querySelector(".bnb-h1") || el).textContent.trim() || "·",
+    }));
+  }
+  return [...doc.querySelectorAll(".bn-session-table thead th")].map((el) => ({
+    /* Prefer the first line of a stacked header, or the label reads
+       "StartUser journey". */
+    el, label: (el.querySelector(".bnb-h1") || el).textContent.trim() || "·",
+  }));
+}
+
+function drawRulers() {
+  panes.forEach((pane) => {
+    pane.ruler.classList.toggle("on", state.ruler);
+    if (!state.ruler || !pane.doc) { pane.ruler.innerHTML = ""; return; }
+    const cells = headerCells(pane.doc);
+    if (!cells.length) { pane.ruler.innerHTML = ""; return; }
+    let html = "";
+    cells.forEach(({ el, label }, i) => {
+      const r = el.getBoundingClientRect();
+      html += `<i style="left:${Math.round(r.left)}px"></i>` +
+              `<u style="left:${Math.round(r.left)}px;top:0">${esc(label)} ${Math.round(r.width)}</u>`;
+      if (i === cells.length - 1) html += `<i style="left:${Math.round(r.right)}px"></i>`;
+    });
+    pane.ruler.innerHTML = html;
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   10. CONTROLS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function seg(host, options, get, set) {
+  host.innerHTML = "";
+  options.forEach(([value, label, extraClass]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    if (extraClass) b.className = extraClass;
+    b.setAttribute("aria-pressed", String(get() === value));
+    b.addEventListener("click", () => { set(value); render(); });
+    host.appendChild(b);
+  });
+}
+
+const $ = (id) => document.getElementById(id);
+
+/**
+ * Rebuild the segmented controls. Safe to call every render: seg() replaces
+ * innerHTML, so the old buttons (and their listeners) are discarded with it.
+ * Kept separate from bindControls() — the range/checkbox listeners below must
+ * be attached exactly ONCE, or every render adds another and a single drag
+ * fans out into N render() calls.
+ */
+function buildSegments() {
+  seg($("pg-variant"),
+    Object.keys(VARIANTS).map((k) => [k, k, VARIANTS[k].empty ? "pg-empty" : ""]),
+    () => state.v, (v) => (state.v = v));
+
+  seg($("pg-width-presets"),
+    WIDTH_PRESETS.map((p) => [String(p.w), p.label]),
+    () => String(state.w), (v) => (state.w = parseInt(v, 10)));
+
+  seg($("pg-toc"), [["0", "Closed"], ["1", "TOC open"]],
+    () => (state.toc ? "1" : "0"), (v) => (state.toc = v === "1"));
+
+  seg($("pg-chrome"), [["browser", "Browser"], ["embedded", "Mac app"]],
+    () => state.chrome, (v) => (state.chrome = v));
+
+  seg($("pg-theme"), [["light", "Light"], ["dark", "Dark"]],
+    () => state.theme, (v) => (state.theme = v));
+
+  seg($("pg-platform"), [["web", "Web / Inter"], ["desktop", "Desktop / SF"]],
+    () => state.platform, (v) => (state.platform = v));
+
+  seg($("pg-names"), [["short", "Short"], ["real", "Real"], ["long", "Long"]],
+    () => state.names, (v) => (state.names = v));
+
+  seg($("pg-files"), [["short", "Short"], ["real", "Real"], ["long", "Long"]],
+    () => state.files, (v) => (state.files = v));
+}
+
+/** Attach the non-segmented listeners. Called ONCE, at init. */
+function bindControls() {
+  $("pg-width").addEventListener("input", (e) => {
+    state.w = parseInt(e.target.value, 10); render();
+  });
+  $("pg-journey").addEventListener("input", (e) => {
+    state.journey = parseInt(e.target.value, 10); render();
+  });
+  $("pg-speakers").addEventListener("input", (e) => {
+    state.speakers = parseInt(e.target.value, 10); render();
+  });
+  $("pg-bswitch").addEventListener("input", (e) => {
+    state.bSwitch = parseInt(e.target.value, 10); render();
+  });
+  $("pg-bthumb").addEventListener("input", (e) => {
+    state.bThumb = parseInt(e.target.value, 10); render();
+  });
+  $("pg-cswitch").addEventListener("input", (e) => {
+    state.cSwitch = parseInt(e.target.value, 10); render();
+  });
+  $("pg-csent").addEventListener("input", (e) => {
+    state.cSent = parseInt(e.target.value, 10); render();
+  });
+  $("pg-cthumb").addEventListener("input", (e) => {
+    state.cThumb = parseInt(e.target.value, 10); render();
+  });
+  $("pg-cdurflex").addEventListener("input", (e) => {
+    state.cDurFlex = parseInt(e.target.value, 10); render();
+  });
+  $("pg-compare").addEventListener("change", (e) => {
+    state.compare = e.target.checked; rebuild();
+  });
+  $("pg-ruler-on").addEventListener("change", (e) => {
+    state.ruler = e.target.checked; render();
+  });
+  $("pg-reset").addEventListener("click", () => {
+    state = { ...DEFAULTS }; rebuild();
+  });
+}
+
+function syncControls() {
+  buildSegments();
+
+  $("pg-width").value = state.w;
+  $("pg-width-num").textContent = state.w + "px";
+  $("pg-journey").value = state.journey;
+  $("pg-journey-num").textContent = state.journey === 16 ? "all" : "≤" + state.journey;
+  $("pg-speakers").value = state.speakers;
+  $("pg-speakers-num").textContent = "≤" + state.speakers;
+  $("pg-compare").checked = state.compare;
+  $("pg-ruler-on").checked = state.ruler;
+  $("pg-bswitch").value = state.bSwitch;
+  $("pg-bswitch-num").textContent = state.bSwitch + "px";
+  $("pg-bthumb").value = state.bThumb;
+  $("pg-bthumb-num").textContent = state.bThumb + "px";
+  $("pg-cswitch").value = state.cSwitch;
+  $("pg-cswitch-num").textContent = state.cSwitch + "px";
+  $("pg-csent").value = state.cSent;
+  $("pg-csent-num").textContent = state.cSent + "px";
+  $("pg-cthumb").value = state.cThumb;
+  $("pg-cthumb-num").textContent = state.cThumb + "px";
+  $("pg-cdurflex").value = state.cDurFlex;
+  $("pg-cdurflex-num").textContent = state.cDurFlex + "px";
+
+  /* Dim each threshold row when no pane on stage reads its dials. */
+  const onStage = (v) => state.v === v || (state.compare && state.v2 === v);
+  $("pg-brow").style.opacity = onStage("B") ? "1" : "0.45";
+  $("pg-crow").style.opacity = onStage("C") ? "1" : "0.45";
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   11. DRAG-TO-RESIZE + KEYBOARD
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Every event that can end a pointer drag — see the note in installGrip. */
+const END_EVENTS = ["pointerup", "pointercancel", "lostpointercapture"];
+
+function installGrip(grip) {
+  grip.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    grip.setPointerCapture(e.pointerId);
+    grip.classList.add("dragging");
+    document.body.classList.add("pg-dragging");
+    const startX = e.clientX;
+    const startW = state.w;
+
+    const move = (ev) => {
+      /* Round: clientX is fractional on a HiDPI display, so an un-rounded
+         drag yields widths like 1140.55078125 — in the readout, and worse,
+         in the shareable hash. */
+      state.w = Math.round(
+        Math.min(2200, Math.max(640, startW + (ev.clientX - startX))));
+      render();
+    };
+    /* End on ANY terminating pointer event, not just pointerup. A drag whose
+       capture is lost — pointer leaves the window, the OS cancels the gesture,
+       a touch is interrupted — fires pointercancel/lostpointercapture and
+       never a pointerup. Binding only pointerup leaves `move` attached, so the
+       pane keeps resizing on every subsequent mouse movement with no button
+       held: a stuck drag with no way out but a reload. Diagnosed from widths
+       landing on non-step values (1402, 1088) that only this path produces. */
+    const up = () => {
+      grip.classList.remove("dragging");
+      document.body.classList.remove("pg-dragging");
+      grip.removeEventListener("pointermove", move);
+      END_EVENTS.forEach((t) => grip.removeEventListener(t, up));
+    };
+    grip.addEventListener("pointermove", move);
+    END_EVENTS.forEach((t) => grip.addEventListener(t, up));
+  });
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.matches("input, select, textarea")) return;
+  const step = e.shiftKey ? 64 : 8;
+  if (e.key === "ArrowLeft")  { state.w = Math.max(640, state.w - step); render(); e.preventDefault(); }
+  else if (e.key === "ArrowRight") { state.w = Math.min(2200, state.w + step); render(); e.preventDefault(); }
+  else if ("1234".includes(e.key)) { state.v = "ABCD"[parseInt(e.key, 10) - 1]; rebuild(); }
+  else if (e.key === "d") { state.theme = state.theme === "dark" ? "light" : "dark"; render(); }
+  else if (e.key === "s") { state.toc = !state.toc; render(); }
+  else if (e.key === "e") { state.chrome = state.chrome === "embedded" ? "browser" : "embedded"; render(); }
+  else if (e.key === "c") { state.compare = !state.compare; rebuild(); }
+  else if (e.key === "r") { state.ruler = !state.ruler; render(); }
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   12. RENDER LOOP
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function rebuild() {
+  stage.innerHTML = "";
+  panes.length = 0;
+  makePane(state.v, false);
+  if (state.compare) makePane(state.v2, true);
+  /* Size BEFORE the first paint — otherwise the first measurement is taken
+     against an iframe still at its default 300px viewport. */
+  sizePanes();
+  const sessions = buildDataset(state);
+  panes.forEach((p) => mountPane(p, sessions));
+  render();
+}
+
+function render() {
+  panes[0].key = state.v;
+  if (panes[1]) panes[1].key = state.v2;
+  syncControls();
+  sizePanes();
+  const sessions = buildDataset(state);
+  panes.forEach((p) => paintPane(p, sessions));
+  writeHash();
+  requestAnimationFrame(measure);
+}
+
+window.addEventListener("resize", () => { sizePanes(); requestAnimationFrame(measure); });
+
+readHash();
+bindControls();
+rebuild();
+</script>
+
+</body>
+</html>

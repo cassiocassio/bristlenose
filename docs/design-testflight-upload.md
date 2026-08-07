@@ -392,14 +392,9 @@ works.
    misrouted it. Bristlenose is partly insulated (one app record, no prefix siblings), but
    the mitigations are cheap: pass `--apple-id` explicitly so nothing is inferred, document
    `--use-old-altool` in the script header, and keep Transporter on the failure path.
-2. **~~Nobody has run altool once.~~ Largely retired 7 Aug 2026.** Verified live: the API
-   key + issuer authenticate; `--list-apps` returns the app record (and is the credential
-   smoke test that needs no `.pkg` — note `--list-providers` does **not** accept API-key
-   auth, Apple ID only); `--validate-app` performs real server-side validation and exits
-   non-zero with a structured, legible reason. **Still unverified:** whether
-   `--validate-app` can exit 0 with warnings present, and what a real
-   `--upload-package --wait` terminal payload looks like — both need an upload, so they
-   land in Phase 2. Note altool **silently ignores unknown flags** — a typo'd option
+2. **~~Nobody has run altool once.~~ RETIRED 7 Aug 2026 — the full chain ran.** Build
+   0.25.1 (2450) went from `build-all.sh` through the gate to TestFlight. See §Observed
+   contract below. Residual: altool **silently ignores unknown flags** — a typo'd option
    produces no complaint, so the script must validate its own argv.
 3. **Phase 1's pkg expansion may not round-trip signatures.** Spike before committing to it.
 4. **The extraction can make a gate decorative.** `bn_gate`/`bn_check` only *report* — each
@@ -413,6 +408,47 @@ works.
 6. **`~/.private_keys/AuthKey_*.p8` is submission-capable.** Mitigations: `0600`, home-rooted
    (can't intersect the repo), Time-Machine-excluded, Developer role, revocable in one
    click. No rotation cadence is defined — annually, or on any suspected exposure.
+
+## Observed contract — the real transcript (7 Aug 2026, build 2450)
+
+Phase 2 gets written from this, not from the man page. Measured, not inferred.
+
+**Upload.** `altool --upload-package <pkg> --type macos --apiKey … --apiIssuer … --wait`
+transferred 674,984,926 bytes in 8.11 min (1.4 MB/s), then printed:
+
+```
+UPLOAD SUCCEEDED with no errors
+Delivery UUID: b819212d-f037-472a-a25d-ebacf9fac824
+```
+
+**`--wait` polls at 30 s.** `Upload is in state 'PROCESSING'. Checking again in 30 seconds…`
+× 5, then a terminal block. **Processing took ~2.5 min, not the 10–60 the plan budgeted** —
+one data point, don't over-fit, but the wait is far shorter than feared.
+
+**Terminal payload — the fields worth parsing:**
+
+```
+PROCESSINGSTATE: VALID          IMPORT-STATUS: VALID
+IS-ON-APP-STORE-CONNECT: true   BUILD-AUDIENCE-TYPE: APP_STORE_ELIGIBLE
+VERSION: 2450                   EXPIRATION-DATE: 05/11/2026
+EXPIRED: 0                      USES-NON-EXEMPT-ENCRYPTION: false
+```
+
+**Parse `PROCESSINGSTATE` as an allowlist** (`VALID` passes; anything unrecognised fails).
+`IS-ON-APP-STORE-CONNECT: true` is the field that answers the documented
+exit-0-but-the-build-vanished failure, and `EXPIRATION-DATE` is the 90-day clock the whole
+plan exists to service — print it in the footer rather than computing it.
+
+**Confirm independently; don't take altool's word for it.** A separate
+`altool --build-status --delivery-id <uuid>` returned `BUILD-STATUS: VALID` +
+`IS-ON-APP-STORE-CONNECT: true`. That call is cheap, needs no artefact, and is the
+mitigation for Risks 1 and the vanished-build case — Phase 2 should make it a step, not
+an optional nicety. It also proves `--build-status` works fine with an API key (unlike
+`--list-providers`, which is Apple-ID-only).
+
+**Do NOT pass `--show-progress` when stdout isn't a TTY.** It emits `\r`-overwritten bars
+that turned an 11-line log into 131 KB of noise, which is exactly the pipe-vs-TTY trap
+already in the house gotchas. Gate it on `[ -t 1 ]`.
 
 ## Open question
 

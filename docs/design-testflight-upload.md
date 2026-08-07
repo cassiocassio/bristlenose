@@ -1,0 +1,407 @@
+---
+status: proposed
+last-trued: 2026-08-06
+trued-against: 94b13fb0@main (build-all.sh 10 steps, altool 26.40.1 probed live)
+---
+
+# Scripted TestFlight upload — the gate, then one command
+
+_Status: **proposed**, not implemented. Replaces the manual "drag the `.pkg` into
+Transporter.app" step at the end of `build-all.sh`. Revised after a six-agent review pass
+(log kept with the maintainer's local review notes, outside the public tree). The first
+draft was roughly twice this size and built the wrong thing; §Problem records why._
+
+## Changelog
+
+- _2026-08-07_ — Phase 0 split: the ASC API turns out to be opt-in per team behind an
+  Account-Holder **Request Access** gate with no committed approval SLA. Recorded the two
+  escapes (Phase 1's gates are entirely offline; `altool`'s app-specific-password path
+  needs no API access) so the request's latency never sits on the critical path.
+- _2026-08-06 (post-review)_ — halved. The founding premise ("the `.dmg` channel is better
+  engineered, copy its shape") was wrong and is corrected below. Cut: the Keychain
+  credential mechanism, `--validate-only`, `--dry-run`, the `--upload` flag, the
+  delivery-ID two-step, the CI phase, and D5's build-number pre-flight. Added: the two
+  gates matching rejections this project actually took, and negative fixtures.
+- _2026-08-06_ — initial draft.
+
+## Problem
+
+`build-all.sh` runs ten steps and seven verification gates, then prints:
+
+```
+next   drag into Transporter.app, or: xcrun altool --upload-app -f Bristlenose.pkg …
+```
+
+Everything up to that line is scripted, gated, and logged. The one step that is
+irreversible and outward-facing — putting a build on Apple's servers under our name — is a
+GUI drag with no precondition and no record. And it recurs: TestFlight builds expire 90
+days after upload (build 2068 from 14 Jul expires ~12 Oct), so keeping a cohort testing
+means re-uploading forever. Manual steps that recur are the ones that rot.
+
+**The premise the first draft got wrong.** It argued that the Developer-ID `.dmg` channel
+is "better engineered than the primary one" and that the fix was to copy its shape.
+That reasoning doesn't survive contact with why `upload-dmg.sh` is elaborate: it pushes
+644 MB over a domestic uplink to a shared host we administer, where a truncated write
+serves a broken image to strangers at 2am, where retention is nobody else's job, and
+where a stable URL has to be repointed atomically. **Apple's channel has none of that.**
+Apple owns the destination, checksums the transfer, imposes no quota, and no stranger
+can download a half-written file.
+
+So the two channels are not the same problem wearing different hats, and importing
+`upload-dmg.sh`'s machinery here is the wrong abstraction. The operational tell was
+already visible in the first draft: making its credential story fit a second caller
+needed a flag, a temp file, and a `trap`. That was the diagnostic, not a wrinkle.
+
+**What actually transfers is one lesson, not a shape.** From
+`check-dmg-shippable.sh`'s header, written after a complete, correctly-sized 0.24.0 `.dmg`
+sat on disk for 14 hours looking finished while `spctl` called it `rejected — Unnotarized
+Developer ID`:
+
+> This gate exists to make that unpublishable rather than merely detectable, so it is
+> called as a PRECONDITION INSIDE `upload-dmg.sh` — not as a sibling step an operator
+> can forget on the one night it matters.
+
+The near-miss had a second cause worth carrying: two of that script's four gates were
+written `cmd && ok "passed"`, and `set -e` deliberately exempts the left operand of `&&`,
+so a failure printed nothing and fell through to the success banner. **Every assertion
+here uses `|| die`, never `&& ok`.**
+
+**Correct shape for this channel: a gate, and one command.** Not a channel.
+
+## What `altool` actually does (probed, 26.40.1)
+
+| Need | Command |
+|---|---|
+| Dry run against Apple's own validator | `altool --validate-app <pkg>` |
+| Upload **and wait for processing** | `altool --upload-package <pkg> --wait` |
+| Auth | `--api-key <KEYID> --api-issuer <ISSUER>` |
+
+Three corrections to the first draft, all from reading the tool rather than assuming:
+
+- **`--upload-package`, not `--upload-app -f`.** The man page treats the former as primary,
+  `--delivery-id` is documented as its return value, and `--wait` is documented **only**
+  on it. `build-all.sh:609` currently advertises the wrong spelling — fix in the same
+  commit.
+- **`--upload-package --wait` collapses the proposed two-step.** No separate
+  `--build-status --delivery-id` call, no status-parser, no delivery-ID plumbing.
+- **`--build-status` cannot enumerate builds.** It takes a build number as *input*
+  (`--delivery-id`, or `--apple-id` + `--bundle-version` + `--bundle-short-version-string`
+  + `--platform`). There is no "latest build for this version" query and no listing verb.
+  The first draft's D5 was written against a command that doesn't exist.
+
+`--validate-app` is the highest-value single item in this plan. It runs App Store
+Connect's server-side validation **without delivering a build** — the same checks that
+produced three nested-signing rejections on 14 Jul, discoverable in a minute instead of
+after a 223 MB upload.
+
+**No new dependency.** The third-party ASC CLI stays unadopted.
+
+## Decisions
+
+**D1 — Local script. Not CI.** The repo's grain already is this: CLI channels (PyPI, Snap,
+Homebrew) run in CI; desktop channels run as local scripts. CI would mean the Apple
+Distribution private key in Actions secrets — a cert that can sign malware distributable
+to every Mac — plus porting a build that depends on a machine-local `.venv-sidecar`,
+Homebrew toolchain, gitignored ffmpeg binaries, and a 447 MB bundle with 219 inner
+Mach-Os to sign. That's cost, not posture. Revisit if the Mac ever stops being the only
+place a build can happen; bus factor is the real trigger, not a second developer.
+
+**D2 — Do NOT flip `destination` to `upload` in `ExportOptions.plist`.** The tempting
+one-liner: `xcodebuild -exportArchive` would upload directly. It uploads *before* gates
+7–10 run, inverting the precondition lesson. Second reason: `uploadSymbols` only takes
+effect on the `destination=upload` path, so flipping it silently changes symbol behaviour
+too. Recorded because someone will propose it.
+
+**D3 — The `.p8` is a `0600` file at `~/.private_keys/`, excluded from Time Machine.**
+
+The first draft routed the key through Keychain and materialised it to a trap-cleaned
+temp file, because "secrets go in Keychain" is the right Mac instinct. It was wrong here,
+and its own text conceded why: once `/usr/bin/security` is granted "Always Allow", the
+delta against a `0600` file is approximately zero against the threat model that matters
+(code execution as the user), and zero against the one FileVault covers (stolen laptop,
+powered off). What it bought instead was a materialisation path, a `trap`, a temp file a
+`kill -9` leaves behind, and a ⚠ warning about whether the store round-trips its own
+secret. A mechanism that needs a warning label about its own correctness is the design
+review, not a task.
+
+The one measured objection survives and is met by an assertion rather than a mechanism:
+`~/.appstoreconnect` would be **Time-Machine-Included**, so a plaintext key would land in
+every hourly snapshot, retained for months, possibly onto an unencrypted external.
+`tmutil addexclusion` closes that in one Phase 0 line, and Phase 1 asserts
+`tmutil isexcluded` with a `|| die`.
+
+`~/.private_keys/` specifically — it is one of altool's own four search paths, so no
+`--p8-file-path` plumbing is needed, and being home-rooted it can't intersect the repo.
+Deleting the mechanism also deletes a finding it created: the first draft's Phase 0
+stored the key with `security add-generic-password -w "$(cat …)"`, putting the PEM body
+in argv **and permanently in shell history** — the exact exposure D3 had rejected
+`--auth-string` for.
+
+Still add `private_keys/`, `*.p8`, `AuthKey_*` to `.gitignore`: altool's *first* search
+path is `./private_keys`, resolved against CWD, which for a script run from the repo root
+is the repo root. That is a public repo and a submission-capable key.
+
+**Credential scope: mint with the `Developer` role, not `App Manager`.** Developer can
+upload builds and query build status; App Manager additionally grants store-metadata
+editing and submit-for-review, which nothing here uses. Use a **Team Key** (issuer
+required), not an Individual Key — an Individual Key inherits the creating user's role,
+which for the Account Holder is maximal. A two-minute re-mint makes trying the narrow
+role free.
+
+**D4 — The gate is a re-runnable script the uploader cannot run without.**
+`check-pkg-shippable.sh <pkg-path>`, called by both `build-all.sh` and
+`upload-testflight.sh`. One implementation, not two that drift.
+
+**D5 — No build-number pre-flight.** The first draft proposed querying ASC to refuse a
+duplicate `(marketing version, build number)` pair. Cut: the query doesn't exist (see
+above), and the check has zero recorded occurrences, one operator, and a blast radius of
+one rejected upload with a clear message from Apple — who already refuses duplicates
+correctly and cheaply. Replaced by a `bn_art` line printing the local pair before upload,
+so the operator sees what they're about to send. Reinstate the real check the first time a
+duplicate actually costs an evening.
+
+Worth knowing when that happens: ASC keys on `(CFBundleShortVersionString, CFBundleVersion)`
+— build numbers need only be unique *within* a marketing version. And
+`bump-version.py` cannot currently produce a same-version build bump: re-running it at an
+existing version rewrites `__init__.py`, the man page and the pbxproj, then dies on
+`git tag` (`check=True`), leaving a dirty staged tree and no new build number. That's the
+90-day-refresh problem, and it belongs to `bump-version.py`, not here.
+
+## Plan
+
+### Phase 0 — credentials _(human; blocking for the Apple round trip only)_
+
+**0a. The API is opt-in per team, and the request is gated.** App Store Connect → Users and
+Access → Integrations → App Store Connect API shows *"Permission is required to access the
+App Store Connect API"* with a **Request Access** button until the **Account Holder**
+enables it (checkbox to accept the API terms, then Submit). Apple documents these requests
+as *"reviewed and approved on a case-by-case basis"* and commits to no SLA — **fire it
+before you need it.** In our case (7 Aug 2026) approval was **instant**: the Team Keys /
+Individual Keys tabs and the Generate API Key dialog appeared immediately on submit. Treat
+that as one data point, not a guarantee; the escapes below exist for the other case.
+
+**This does not gate the work.** Two escapes, both real:
+
+- **Phase 1's local gates need no Apple credentials at all.** codesign, nested
+  `app-sandbox`, framework `--identifier`, host sandbox, `ITSAppUsesNonExemptEncryption`,
+  privacy manifests, the §2.5.2 PYZ scan, `pkgutil`, profile expiry — every one is offline.
+  Only the closing `altool --validate-app` needs auth. Build the gate and its negative
+  fixtures while the request sits.
+- **`altool`'s other auth path skips this gate entirely.** `-u <apple-id> -p @keychain:<item>`
+  — Apple ID plus an app-specific password, read natively from Keychain, no API access
+  request needed. `--store-password-in-keychain-item` writes it. The existing
+  `bristlenose-notary` profile is already this shape, so the pattern is on the machine.
+  It is account-wide and unscopeable, so it is the **bridge, not the destination** — but
+  it unblocks Phases 1–2 today and is a one-line swap when the key arrives.
+
+**0b. Once access is granted:** generate a **Team Key** (the *Individual Keys* tab inherits
+the creating user's role — for the Account Holder that is maximal) with the **Developer**
+role. The `.p8` downloads exactly once and cannot be re-downloaded.
+
+Prepare the destination **before** clicking Generate — there is no second chance:
+
+```bash
+mkdir -p ~/.private_keys && chmod 700 ~/.private_keys && tmutil addexclusion ~/.private_keys
+```
+
+Immediately **after** the download — and then *verify*, because a Finder move applies
+`umask 022` and this silently produced a world-readable `644` key on the first real run:
+
+```bash
+mv ~/Downloads/AuthKey_*.p8 ~/.private_keys/ && chmod 600 ~/.private_keys/AuthKey_*.p8
+ls -l ~/.private_keys/          # must read -rw-------, not -rw-r--r--
+```
+
+Capture into `desktop/scripts/.ship-local.conf` (gitignored, the `.dmg` uploader's existing
+config channel) — none of these are secrets:
+
+- `BRISTLENOSE_ASC_KEY_ID`, `BRISTLENOSE_ASC_ISSUER_ID`
+- `BRISTLENOSE_ASC_APPLE_ID` — the app record's **numeric** ID. Needed by `--build-status`
+  and `--beta-app-store-text`, and it is what stops altool *inferring* the app record from
+  the bundle ID (see Risks 1). Find it via `altool --list-providers` → `--list-apps`.
+
+**Backup: use the existing dotfiles mechanism, don't invent an obligation.** The house rule
+is already written down — git is a sharing medium so `~/.gitignore_global` excludes all
+cert material, while the nightly iCloud rsync **deliberately includes secrets** because
+recovery from a dead Mac is its entire purpose (`.ssh/`, `.gnupg/`, `.aws/` are already in
+its `PATHS`). A `.p8` is the same class as an SSH private key, so it belongs there too:
+
+- add `".private_keys/"` to that script's `PATHS`
+- add `*.p8` to `~/.gitignore_global` — it lists `*.pem` / `*.key` / `*.p12` /
+  `*.provisionprofile` but **not** `*.p8`, so every repo on the machine is exposed until
+  it does
+
+`tmutil addexclusion` above is belt-and-braces for a future Time Machine disk (none is
+configured on this Mac today) — it is **not** the backup story and must not be mistaken
+for one. Excluding the key from TM while forgetting to add it to the dotfiles rsync leaves
+it backed up by nothing, which is exactly what happened on 7 Aug 2026.
+
+**Then, before writing any script: run `altool --validate-app` by hand, once, against the
+current `.pkg`, and once against a deliberately broken one.** Phase 2 gets written from
+that transcript, not from this document. Everything below the gate is currently designed
+against an unrun tool.
+
+### Phase 1 — `check-pkg-shippable.sh <pkg>` _(the actual deliverable)_
+
+Takes a path, exits 0/1/2, every assertion `|| die`. This is ~80% of the value and is
+shippable independently of any uploader.
+
+**It is not a lift.** Today's gates c–f read `$EXPORTED_APP`, which under `method=app-store`
+is the `.app` from the **xcarchive** — `build-all.sh:335-348` falls back to it and prints a
+`note:` saying so. So the gates have never once touched the `.pkg` payload, and
+`check-dmg-shippable.sh`'s load-bearing lesson (*interrogate the copy the recipient
+receives*) describes a gap that exists in this channel **right now**. Phase 1 changes the
+subject deliberately; "behaviour-preserving" is the wrong success criterion.
+
+Mechanism: `pkgutil --expand-full` into a trap-cleaned temp dir, assert exactly one `.app`
+in the payload, gate that. **Spike first** — if extraction doesn't round-trip a signature
+well enough for `codesign --verify --deep --strict` to mean anything, say so in a comment,
+keep the local gates on the xcarchive `.app`, and let `--validate-app` be the authority on
+the shipped bytes. Don't pretend either way.
+
+Assertions, in cost order (local first, Apple's validator last):
+
+- The seven existing gates — a–f **plus d2**; the first draft said "six" and the
+  per-script README says "four". Three sources, three numbers. Make one authoritative here.
+- **Nested-executable `app-sandbox`** — every Mach-O in the bundle. This was rejection #2
+  on 14 Jul. Local `codesign --verify` passes without it.
+- **Framework main binaries carry a real `--identifier`**, not an auto-derived
+  `Python-<hash>`. This was rejection #3. `sign-sidecar.sh:183-209` implements the fix;
+  nothing verifies the result.
+- **Host `app-sandbox`** — the `ITMS-90296` auto-reject. Set correctly today
+  (`project.pbxproj:515`); a gate is how you stop caring which doc is right about it.
+- **`ITSAppUsesNonExemptEncryption` present** — set today (`:486`, `:531`). Delete that key
+  and every other gate still passes while builds silently stop reaching testers, stuck in
+  Missing Compliance. Textbook silent failure.
+- **The §2.5.2 `itms-services` PYZ scan** (`check-sidecar-appstore-strings.sh`) re-run
+  against the sidecar *inside the pkg*. It currently runs at step 2c against the source
+  tree — fine inside one linear build, wrong under D4's premise.
+- **`pkgutil --check-signature` asserting the leaf is `3rd Party Mac Developer Installer`**,
+  not merely "trusted". A Developer ID Installer pkg satisfies today's looser test, and
+  there is a live Developer ID channel producing artefacts in the same `desktop/build/`.
+- **Provisioning profile expiry** — warn at T-30, fail at T+0. Mac App Store profiles
+  expire annually; the current one's first anniversary lands inside the window this plan
+  covers. An expired profile is the canonical evening-waster: the local archive succeeds
+  and only ASC objects.
+- **Credential hygiene** (D3), both assertions, because both have already failed once:
+  `tmutil isexcluded ~/.private_keys` reports `[Excluded]`, **and** the `.p8` is mode
+  `600`. On 7 Aug 2026 the key landed `644` — default `umask 022` — and was
+  world-readable until caught. A `chmod` in a runbook is a hope; this is the check.
+- **`altool --validate-app`** last, and **skipped with `bn_gate … skip` when
+  `SIGN_IDENTITY="-"`** — step 10 runs on every build including ad-hoc ones, and an
+  unconditional Apple round trip would fail every local build.
+
+**Negative fixtures — `test-check-pkg-shippable.sh`, same commit.** The house bar is
+already written at `test-upload-dmg.sh:16-17`: *every assertion is shown to FAIL on its own
+violation, because a gate that can't fail is worse than no gate.* These gates have never
+been shown to fail **and** they're changing subject, so a lifted gate that silently no-ops
+on a `.pkg` would pass green forever. That is the `sidecar-source-hash.sh` class this
+project has already eaten twice. Fixtures by file surgery on the artefact the build
+already made: delete a `PrivacyInfo.xcprivacy`; `codesign --remove-signature` and ad-hoc
+re-sign; strip an entitlement from one nested binary.
+
+**Report nesting — resolve before writing.** `build-all.sh` sources `report.sh` and calls
+`bn_autowrap`, which exports `_BN_ACTIVE=1`; a nested child's `bn_check`/`bn_gate` emit
+**nothing** (`report.sh:47-51`). So naively extracting the battery turns seven labelled
+gate lines into one opaque step with no reasons on failure. `check-dmg-shippable.sh` never
+hits this because `build-dmg.sh` doesn't render. Pick: child logs to a file and the parent
+shows one line plus a path (the existing house pattern, `build-all.sh:76-92`), or teach
+`report.sh` a child-replay protocol. The first is conventional; the second preserves the
+report you'd miss.
+
+### Phase 2 — `upload-testflight.sh <pkg>` _(write it from Phase 0's transcript)_
+
+- Resolve config; exit 2 with a usage message if unconfigured (`upload-dmg.sh`'s contract).
+- **Call `check-pkg-shippable.sh` as a precondition.** Not optional, not skippable.
+- Print the local `(marketing version, build number)` pair and the delivery target.
+- `altool --upload-package <pkg> --wait --api-key … --api-issuer … --apple-id …`.
+- **Echo the delivery ID before entering the wait**, so a Ctrl-C or a closed lid leaves a
+  token to resume by hand. Print it on the failure path too.
+- **Treat a zero exit as unverified; the terminal state is the verdict.** There is a
+  documented Apple failure mode where altool exits 0, prints no error, and the build never
+  appears in ASC — while ASC has registered the delivery, so a retry is then rejected as a
+  duplicate. Parse the terminal state as an **allowlist**: an unrecognised state fails.
+- On failure, print Apple's issue list **verbatim** — `build-all.sh:499-503` already does
+  this for notarytool. A script that renders `ITMS-90238` as "upload failed" is strictly
+  worse than the drag.
+- No `--dry-run` (Apple's `--validate-app` *is* the dry run, server-side, against the real
+  artefact; a local one prints your own script back at you) and no `--validate-only`
+  (`check-pkg-shippable.sh <pkg>` already is that verb).
+
+Also: `build-all.sh` step 6 gains one `cp` to a versioned filename
+(`Bristlenose-<MARKETING>-<BUILD>.pkg`). The export dir is `rm -rf`'d at the top of every
+run (`:278`) and the artefact is named `Bristlenose.pkg`, so "upload a `.pkg` from an
+earlier build" currently has no earlier build, and resolving by the unversioned name is
+exactly what `check-dmg-shippable.sh` rule #1 exists to forbid. One line; don't import
+`--keep N` retention with it.
+
+### Phase 3 — the footer _(one line)_
+
+Replace `build-all.sh:609` with `bn_art "next" "desktop/scripts/upload-testflight.sh <pkg>"`.
+
+No `--upload` flag on `build-all.sh`. Upload isn't a step of the build — it's a separate
+act with a separate credential and separate irreversibility, and a flag that's off in
+every run is configuration for the configurable.
+
+Demote Transporter to the **failure** path rather than deleting it (see Risks 1). When the
+uploader dies, the last line the operator reads should be the manual route that still
+works.
+
+## What stays manual
+
+- **Minting the key** (Phase 0) — Apple portal, once.
+- **"What to Test" notes.** `--beta-app-store-text` exists but needs the numeric app ID,
+  a prescriptive `up-<appleID>/<platform>/…` folder layout you're expected to `--download`
+  and rebuild, `--bundle-version` (undocumented in `--help`, documented in Apple's bundled
+  `AppStoreText-README.md`), and pre-existing Beta App Information. For a five-person
+  internal cohort this is a Slack message.
+- **Beta App Review** — external TestFlight only.
+- **Apple's processing time** — 10–60 min, waited on, not eliminated.
+- **Tester group assignment.** Internal TF auto-distribution is an ASC per-group
+  checkbox ("Enable automatic distribution"), not a platform guarantee, and the script
+  cannot observe it.
+
+## Risks
+
+1. **altool on Xcode 26 has live app-record-resolution bugs.** The rewrite *infers* the app
+   record from the bundle ID and has been reported picking the wrong one (fastlane #29698),
+   and failing outright with `-19237` (#29820) — in one Apple Forums case (812132)
+   Transporter uploaded the same artefact correctly where altool and the REST API both
+   misrouted it. Bristlenose is partly insulated (one app record, no prefix siblings), but
+   the mitigations are cheap: pass `--apple-id` explicitly so nothing is inferred, document
+   `--use-old-altool` in the script header, and keep Transporter on the failure path.
+2. **Nobody has run altool once.** Phase 2 is currently designed from a man page. Phase 0's
+   hand-run is the mitigation and it is not optional. Verified so far: `EXIT CODES: 0/1`,
+   and local failures (missing file, zero-byte pkg, bad auth) all exit 1. **Not** verified:
+   whether `--validate-app` exits 0 with warnings present, and what a real `--wait`
+   terminal payload looks like. Note altool **silently ignores unknown flags** — a typo'd
+   option produces no complaint, so the script must validate its own argv.
+3. **Phase 1's pkg expansion may not round-trip signatures.** Spike before committing to it.
+4. **The extraction can make a gate decorative.** `bn_gate`/`bn_check` only *report* — each
+   is preceded by its real `if`. When the block moves, the tempting tidy-up is
+   `cmd && bn_gate x ok "…"`, which is `fc1d6ca7` in a new costume and invisible because the
+   report still renders. Make the rule mechanical, not remembered:
+   `grep -nE '&& *(ok|die|bn_gate|bn_check) ' desktop/scripts/*.sh` as a build gate.
+5. **Verified only through a pipe.** `bn_autowrap` re-execs with stdout piped, and a 10–60
+   min `--wait` with progress output is exactly where the TTY and piped paths diverge. Give
+   the long-wait path one bare, un-piped run before believing it.
+6. **`~/.private_keys/AuthKey_*.p8` is submission-capable.** Mitigations: `0600`, home-rooted
+   (can't intersect the repo), Time-Machine-excluded, Developer role, revocable in one
+   click. No rotation cadence is defined — annually, or on any suspected exposure.
+
+## Open question
+
+Should `--validate-app` run on every release build, not just before an upload? It costs a
+network round trip and catches the ITMS-class rejections early. Leaning yes — but it needs
+the ad-hoc skip above, so settle it once Phase 1 exists.
+
+## See also
+
+- `desktop/scripts/check-dmg-shippable.sh` — the gate-as-precondition pattern and the
+  near-miss that produced it
+- `desktop/scripts/upload-dmg.sh` — a good uploader for a *different* problem; read
+  §Problem here before copying it
+- `desktop/scripts/README.md` — the per-script register; two new rows and a changed
+  "Ship a TestFlight build" job, same commit
+- [design-desktop-build-orchestration.md](design-desktop-build-orchestration.md) — how the
+  `.pkg` gets built

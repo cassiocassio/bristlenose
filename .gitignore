@@ -12,6 +12,15 @@ build/
 venv/
 env/
 .env
+
+# App Store Connect API private keys. The real key lives at ~/.private_keys/ —
+# but altool's FIRST search path is ./private_keys, resolved against CWD, which
+# for a script run from the repo root is this public repo. A submission-capable
+# key committed here would be permanent. Belt and braces.
+private_keys/
+*.p8
+AuthKey_*
+
 *.wav
 *.mp3
 *.mp4

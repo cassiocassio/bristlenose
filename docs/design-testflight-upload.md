@@ -152,13 +152,35 @@ role free.
 `check-pkg-shippable.sh <pkg-path>`, called by both `build-all.sh` and
 `upload-testflight.sh`. One implementation, not two that drift.
 
-**D5 — No build-number pre-flight.** The first draft proposed querying ASC to refuse a
-duplicate `(marketing version, build number)` pair. Cut: the query doesn't exist (see
-above), and the check has zero recorded occurrences, one operator, and a blast radius of
-one rejected upload with a clear message from Apple — who already refuses duplicates
-correctly and cheaply. Replaced by a `bn_art` line printing the local pair before upload,
-so the operator sees what they're about to send. Reinstate the real check the first time a
-duplicate actually costs an evening.
+**D5 — No build-number pre-flight. `--validate-app` already is one — confirmed live.**
+
+The first draft proposed querying ASC to refuse a duplicate `(marketing version, build
+number)` pair locally. Cut on review, on the argument that it would be a second
+implementation of a check Apple already performs. **Verified 7 Aug 2026** — the very first
+run of `check-pkg-shippable.sh` with a working credential, against the `.pkg` on disk:
+
+```
+ERROR (-19232): The bundle version must be higher than the previously uploaded
+version: '2445'.  status: 409  code: ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE
+meta: previousBundleVersion : 2445
+```
+
+Server-side, in ~24 s, on a 644 MB artefact that was never transferred. A local pre-flight
+would have duplicated this exactly, using a query that doesn't exist, to save nothing.
+**Do not reinstate it.**
+
+Two things this run also proves, which Risk 2 previously listed as unverified: the
+credential chain works end to end (JWT accepted, structured response returned), and
+`--validate-app` exits non-zero with a legible, actionable reason — so the `|| die`
+discipline has something real to bite on.
+
+Worth knowing when the 90-day refresh comes round: ASC keys on
+`(CFBundleShortVersionString, CFBundleVersion)`, so build numbers need only be unique
+*within* a marketing version. And `bump-version.py` cannot currently produce a same-version
+build bump — re-running it at an existing version rewrites `__init__.py`, the man page and
+the pbxproj, then dies on `git tag` (`check=True`), leaving a dirty staged tree and no new
+build number. That's the refresh problem, it is now demonstrably live (2445 is spent), and
+it belongs to `bump-version.py`, not here.
 
 Worth knowing when that happens: ASC keys on `(CFBundleShortVersionString, CFBundleVersion)`
 — build numbers need only be unique *within* a marketing version. And
@@ -370,12 +392,15 @@ works.
    misrouted it. Bristlenose is partly insulated (one app record, no prefix siblings), but
    the mitigations are cheap: pass `--apple-id` explicitly so nothing is inferred, document
    `--use-old-altool` in the script header, and keep Transporter on the failure path.
-2. **Nobody has run altool once.** Phase 2 is currently designed from a man page. Phase 0's
-   hand-run is the mitigation and it is not optional. Verified so far: `EXIT CODES: 0/1`,
-   and local failures (missing file, zero-byte pkg, bad auth) all exit 1. **Not** verified:
-   whether `--validate-app` exits 0 with warnings present, and what a real `--wait`
-   terminal payload looks like. Note altool **silently ignores unknown flags** — a typo'd
-   option produces no complaint, so the script must validate its own argv.
+2. **~~Nobody has run altool once.~~ Largely retired 7 Aug 2026.** Verified live: the API
+   key + issuer authenticate; `--list-apps` returns the app record (and is the credential
+   smoke test that needs no `.pkg` — note `--list-providers` does **not** accept API-key
+   auth, Apple ID only); `--validate-app` performs real server-side validation and exits
+   non-zero with a structured, legible reason. **Still unverified:** whether
+   `--validate-app` can exit 0 with warnings present, and what a real
+   `--upload-package --wait` terminal payload looks like — both need an upload, so they
+   land in Phase 2. Note altool **silently ignores unknown flags** — a typo'd option
+   produces no complaint, so the script must validate its own argv.
 3. **Phase 1's pkg expansion may not round-trip signatures.** Spike before committing to it.
 4. **The extraction can make a gate decorative.** `bn_gate`/`bn_check` only *report* — each
    is preceded by its real `if`. When the block moves, the tempting tidy-up is

@@ -4,11 +4,11 @@ All notable changes to Bristlenose are documented here. See also the [README](RE
 
 **0.25.1** — _7 Aug 2026_
 
-- **Speaker names in a shared offline report are links again.** In an exported report — the self-contained file you hand to a stakeholder — clicking a speaker badge on a quote did nothing useful: it navigated the browser off the file to a path that doesn't exist. Every other link in the export had been converted to work without a server; the quote cards' jump-to-this-moment-in-the-transcript link was the one that hadn't, so it broke silently, with no error message to explain it. It now lands on the transcript at the right timecode, the same as everywhere else. Affected 0.25.0, which reached the direct-download `.dmg` only.
+- **Speaker names in a shared offline report are links again.** In an exported report — the self-contained file you hand to a stakeholder — clicking a speaker badge on a quote did nothing useful: it navigated the browser off the file to a path that doesn't exist. Every other link in the export had been converted to work without a server; the quote cards' jump-to-this-moment-in-the-transcript link was the one that hadn't, so it broke silently, with no error message to explain it. It now lands on the transcript at the right timecode, the same as everywhere else. **If you are on 0.25.0, upgrade** — it carries the bug.
 
 **0.25.0** — _6 Aug 2026_
 
-_Published as a direct-download `.dmg` only — superseded by 0.25.1 the same night, which is the first build of this line on PyPI, Homebrew and Snap._
+_Superseded within the hour by 0.25.1, which fixes broken speaker links in exported reports. Use 0.25.1; `pip install bristlenose` gives you it by default._
 
 The Sessions lens learns to shrink, the arrow keys learn the layout, and two build gates that couldn't fail learn to.
 

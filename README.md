@@ -377,11 +377,11 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 **0.25.1** — _7 Aug 2026_
 
-- **Speaker names in a shared offline report are links again** — in an exported report, clicking a speaker badge navigated the browser off the file to a path that doesn't exist, silently. It lands on the transcript at the right timecode again. Affected 0.25.0, which reached the direct-download `.dmg` only.
+- **Speaker names in a shared offline report are links again** — in an exported report, clicking a speaker badge navigated the browser off the file to a path that doesn't exist, silently. It lands on the transcript at the right timecode again. **If you are on 0.25.0, upgrade.**
 
 **0.25.0** — _6 Aug 2026_
 
-The Sessions lens learns to shrink, the arrow keys learn the layout, and two build gates that couldn't fail learn to. _(Published as a direct-download `.dmg` only; 0.25.1 is the first build of this line on PyPI, Homebrew and Snap.)_
+The Sessions lens learns to shrink, the arrow keys learn the layout, and two build gates that couldn't fail learn to. _(Superseded within the hour by 0.25.1 — use that one.)_
 
 - **The Sessions lens no longer runs off the side of the window.** A plain table with no responsive strategy became a grid that degrades on purpose: column order never changes, and detail is shed in a deliberate order — surnames, then the user journey, then names, leaving the speaker badges. The badge is the anchor and never moves; names are never broken mid-word. Pure CSS, so it behaves identically in the app, in a browser, and in an exported report opened offline.
 - **Every lens now has a proper title** — Sessions had no heading, and Codebook's had lost its rule in all three render states. Headings are a component now, so a zone title can't be produced without one.

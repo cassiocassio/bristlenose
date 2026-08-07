@@ -242,6 +242,8 @@ safe to hand a stranger”, so there's no second implementation to drift.
 | `check-logging-hygiene.sh [root]` | No Swift `Logger` interpolates a credential-shaped identifier without a `privacy:` marker; no `print()` dumps env. |
 | `check-appearance-seam.sh` | The light/dark mapping isn't re-derived outside `AppAppearance.swift`; panels call `adoptHostAppearance()`; `AppDelegate` still calls `beginApplying()`. |
 | `build-mcpb.sh` / `check-mcpb.sh` | Builds and gates the `.mcpb` agent extension bundled into the app. |
+| `check-pkg-shippable.sh <pkg>` | **Interrogates the `.app` inside the `.pkg`**, not the xcarchive copy the other gates read. Installer cert is specifically `3rd Party Mac Developer Installer`; payload holds exactly one app; version agrees with the working tree; signature `--deep --strict`; `get-task-allow` absent; host + nested **executables** carry `app-sandbox` (ASC rejection #2); no auto-derived framework identifiers (rejection #3); Hardened Runtime; privacy manifests; `ITSAppUsesNonExemptEncryption` present; §2.5.2 PYZ scan re-run against the bundled sidecar; provisioning profile not expired (warns at T-30); then `altool --validate-app` last, skipped for ad-hoc or unconfigured. |
+| `test-check-pkg-shippable.sh` | Drives each of the above red via a synthetic signed `.pkg` — a gate that can't fail is worse than no gate. 7 cases, ~10s. |
 
 ### Developer-ID `.dmg` only
 

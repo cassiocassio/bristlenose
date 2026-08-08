@@ -6,6 +6,11 @@ user-invocable: true
 allowed-tools: Bash, Read, Edit, Glob, Grep, AskUserQuestion
 ---
 
+> **Shipping more than the CLI?** `/bn-release` orchestrates all channels —
+> TestFlight, `.dmg`, Snap, the website — and hands back here for the CLI publish
+> below. This skill remains the specialist for PyPI/tag/Homebrew and owns the
+> tag-surgery decision tree; `/bn-release` deliberately does not duplicate it.
+
 Cut a release of bristlenose. This is the **only** workflow verb that reaches the outside world. Treat it deliberately — it is the irreversible-outward one.
 
 `$ARGUMENTS` may contain `--dry-run` (do everything except push / tag / publish — for testing).

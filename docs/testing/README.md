@@ -16,6 +16,7 @@ The **defining split** (the whole reason this set exists): the top two tiers are
 ## The documents (one set)
 
 **Here in `docs/testing/`:**
+- **[bn-release-acceptance.md](bn-release-acceptance.md)** — acceptance criteria for the `/bn-release` skill. Scores *behaviour under instruction* rather than code, so a pass is one observation and not a proof. Three tiers: dry run (free, repeatable), fault injection, live release. Written before the skill's first run, on purpose.
 - **[acceptance-matrix.md](acceptance-matrix.md)** — the mechanical tier. Three-tier model, shape-not-content invariants, drive mechanisms ranked by ROI, phased plan, overnight-run gates. Plan of record.
 - **[coverage-inventory.md](coverage-inventory.md)** — the single source of *what surfaces exist to cover* (16 ingest formats · 5 exports · 5 lenses + every clicking surface · 5 providers · non-English). Both tiers consume it. Add new surfaces here first.
 - **[test-data-generation.md](test-data-generation.md)** — repeatable recipe for synthetic fixtures (any topic/language/scale).

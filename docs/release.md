@@ -268,6 +268,7 @@ release doesn't imply a desktop build, or vice versa):
   **[design-desktop-build-orchestration.md](design-desktop-build-orchestration.md)**
   and `desktop/CLAUDE.md`.
 
-A single doc mapping all five channels (PyPI · Homebrew · Snap · `.dmg` ·
-TestFlight) doesn't exist yet — this doc plus the two linked above are the
-current pieces.
+**All five channels on one page: [release-channels.md](release-channels.md)** —
+which script or trigger reaches which destination, what a tag push actually
+fires, and the expiry clocks. Written 8 Aug 2026; this doc remains the detailed
+CLI process.

@@ -33,7 +33,7 @@ each a superset of the audience below it:
 | Tier | | Cadence | Channels | Version moves | Prose |
 |---|---|---|---|---|---|
 | **0** | **Due diligence** | every push | CI builds, publishes nothing | none | none |
-| **1** | **Cohort** | daily → fortnightly | TestFlight · `.dmg` · PyPI · GH Release · Homebrew · Snap **edge** | see below | CHANGELOG + website |
+| **1** | **Cohort** | daily → fortnightly | TestFlight · `.dmg` · PyPI · GH Release · Homebrew · Snap **edge** | patch or minor — **you decide** | CHANGELOG + website |
 | **2** | **Public** | monthly-ish | Snap **stable** · **App Store** | *nothing new* — promotes | + App Store listing |
 
 ### Why Mac and CLI are one tier, not two
@@ -43,39 +43,62 @@ Homebrew". That boundary was in the wrong place, and the giveaway was that
 the two would almost always be done together. Two reasons they are one tier:
 
 **The technical one — the Mac app bundles the Python.** The `.app` ships a
-PyInstaller sidecar built from the same source as the wheel. So a Python or
-frontend change *cannot* go to PyPI alone: publish without rebuilding the
-sidecar and the Mac app is silently running old code. Conversely a Swift-only
-change has nothing to publish to PyPI. They are not two acts that often
-coincide; they are one act whose reach depends on what moved.
+PyInstaller sidecar built from the same source as the wheel, so publishing to
+PyPI without rebuilding the sidecar leaves the Mac app silently running old
+code. The two artefacts are downstream of one source tree; treating them as
+separate release events invites them to disagree.
 
 **The human one — it is one judgement and one paragraph.** "Is this good enough
 to put in front of the cohort?" is asked once, and a single CHANGELOG entry
 covers it however many channels carry it. Splitting the tier means writing that
 decision down twice.
 
-### The shape of a Tier 1 release is *derived*, not chosen
+### The version bump is a communication decision, not a property of the diff
 
-Which channels a Tier 1 release reaches follows from the diff, so the tool
-computes it and offers it for confirmation rather than asking for a flag:
+**A point release means "the user needs telling something is different." That is
+the whole definition.** It is a product judgement, and it belongs to the person
+making it.
 
-```
-git diff --name-only <last-tag>..HEAD
-   only desktop/**/*.swift  →  Mac artefacts only · BUILD NUMBER only · no version bump
-   anything else            →  version bump · every cohort channel
-```
+An earlier draft of this document got that badly wrong. It proposed deriving the
+version consequence from *which files changed* — Swift-only meant a build-number
+bump, anything else meant a version bump. That is reasoning about the release
+from a compiler's point of view. **Users do not know or care which language
+moved.** A CSS change to the quote grid, a TypeScript change to the lens
+switcher, a Swift change to the sidebar and a Python change to the pipeline can
+each transform the experience or none of them can. The file extension carries no
+information about that.
 
-**Swift-only releases deliberately do not move the marketing version.** That
-keeps PyPI at `0.26.0` and TestFlight at `0.26.0 (2451)` *consistent* rather than
-punching a hole in the version line — the build number carries Mac-side
-iteration, which is exactly what it is for. It is also why the 90-day TestFlight
-expiry refresh costs no release at all: it is a build-number bump and nothing
-else.
+So:
 
-This rests on the split `bump-version.py --build-only` created:
-`CURRENT_PROJECT_VERSION` moves per upload, is invisible, and is free;
-`MARKETING_VERSION` moves per release, is public, and costs a changelog, three
-doc surfaces and a tag. Thirty builds of `0.25.1` is normal, not a smell.
+- **The tool never infers the version from file paths.** It can *show* the diff
+  and the commit subjects as evidence, and it can suggest minor-vs-patch against
+  the house rule (feature → minor, fix → patch). The call is the human's, always.
+- **A release ships to every cohort channel.** No exceptions carved out by
+  language or layer. One version line means one version line — a PyPI release
+  carrying no functional Python change is a harmless no-op upgrade, and it is
+  worth far more than a gap in the numbering that someone has to explain later.
+
+**And the tool does not model who is affected.** A change may only matter to Mac
+users, or only to people using local models, or only to whoever has the codebook
+open. That is real, and it is a **communications** problem — whose release notes
+say what, to whom — owned by the person writing them. The moment the release
+machinery starts reasoning about audience segments it is inventing a model of the
+userbase that will be wrong, unmaintained, and used to make decisions nobody
+sanity-checks. Ship the release; write the note.
+
+### What `--build-only` is actually for
+
+The build-number mechanism is real and useful, but its trigger is **re-shipping
+the same release**, not shipping a smaller one:
+
+- the 90-day TestFlight expiry refresh — nothing changed, the artefact just needs
+  to exist again
+- a retry after a rejected or failed upload — same release, spent build number
+
+In both cases there is nothing to tell anyone, which is precisely why no version
+moves. If a user would notice a difference, it is a point release. The split
+`bump-version.py --build-only` created is between *"say the same thing again"*
+and *"say something new"* — not between programming languages.
 
 **Internal TestFlight has no review.** Measured 7 Aug 2026: upload →
 `PROCESSINGSTATE: VALID` in ~11 minutes, no human in the loop. The days-long
@@ -195,9 +218,10 @@ output, per-channel probing — this repo already does better in shell
 (`report.sh`, the `check-*` family, `upload-dmg.sh`'s decision helpers).
 
 **So: a thin skill over a fat shell — but thin in *mechanism*, not in value.** If
-the upshot is that you type `./scripts/release.sh` for a Swift-only rebuild and
-reach for `/bn-release` whenever prose is owed, that is precisely the intended
-shape: the skill earns its keep exactly where prose does.
+the upshot is that you type `./scripts/release.sh` when re-shipping an unchanged
+release and reach for `/bn-release` whenever there is something to tell people,
+that is precisely the intended shape: the skill earns its keep exactly where
+prose does.
 
 ### The concrete split
 

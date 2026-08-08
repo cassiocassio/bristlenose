@@ -25,6 +25,84 @@ build from a commit that also carries an unrelated untracked file. Each is
 individually small and each is invisible to the scripts, because no script reads
 prose.
 
+## Cadence — four tiers, not one release
+
+A release is not one thing at one speed. Four tiers, each a **superset of the
+audience** of the one below, each with a different cost and a different version
+consequence:
+
+| Tier | Cadence | Channels | Version moves | Prose needed |
+|---|---|---|---|---|
+| **0** | every push | CI only — builds, publishes nothing | none | none |
+| **1** | daily-ish | internal TestFlight · `.dmg` | build number only | none |
+| **2** | weekly / fortnightly | PyPI · GitHub Release · Homebrew · Snap **edge** | patch or minor | CHANGELOG + website |
+| **3** | monthly-ish | Snap **stable** · **App Store** | *nothing new* — promotes | + App Store listing |
+
+**Tier 1 exists because build number and marketing version serve different
+masters.** `CURRENT_PROJECT_VERSION` moves on every upload, is invisible to
+users, and costs nothing; `MARKETING_VERSION` moves on every release, is visible
+to everyone, and costs a changelog, three doc surfaces and a tag.
+`bump-version.py --build-only` decoupled them, which is exactly what makes a fast
+TestFlight cadence possible — thirty builds of 0.25.1 is normal, not a smell.
+
+**Internal TestFlight has no review.** Measured 7 Aug 2026: upload →
+`PROCESSINGSTATE: VALID` in ~11 minutes, no human in the loop. The days-long
+latency belongs to **App Store review** and **external TF's Beta App Review** —
+Apple's *public* gates, not Apple. While the cohort is internal, TF is one of the
+*fastest* channels available, quicker than the `.dmg` with its two notary waits.
+
+### Tier 3 promotes; it does not build
+
+The App Store submission should take a build that has been **soaking on
+TestFlight for weeks**, not one cut that morning. That is the real argument for a
+monthly store cadence — not review latency, which is a scheduling cost paid once,
+but **soak time**. A rejection or a bad review costs far more than a week of
+waiting.
+
+Snap and Apple both support promotion (same revision edge→stable; an existing TF
+build submitted for review). **PyPI and Homebrew do not** — no channel concept,
+so publishing *is* releasing. That asymmetry sets Tier 2's cadence: it moves at
+the speed of the one channel that can't stage.
+
+The store's own safety valve is **phased release** (7-day rollout to a growing
+percentage, haltable mid-flight). It is what makes a monthly cadence tolerable
+despite "you can't unship", and it should be the default once there are users.
+
+### One version line, selective submission
+
+`MARKETING_VERSION` **is** `__version__` today — one line for both the Mac app
+and the CLI. When PyPI goes weekly and the store goes monthly they appear to
+diverge. Three ways out, and only one is right:
+
+- ❌ Slow PyPI to the store's cadence — punishes CLI users for Apple's process.
+- ❌ Fork into two version lines — the website then has to explain two numbers.
+- ✅ **One line, selective submission.** Everything ships to PyPI; the store gets
+  a *subset* (0.26, 0.29, 0.32…). "Latest in the App Store" is simply an older
+  point on the same line.
+
+Keeps one truth, and makes a store release a **decision**, not a build.
+
+## The three prose surfaces — the actual reason this is a skill
+
+Tier 2 and Tier 3 each require a human-readable description of the release, and
+by Tier 3 there are **three of them, hand-written, saying the same thing**:
+
+| Surface | Drifts? |
+|---|---|
+| `CHANGELOG.md` | **No, by construction** — the website's changelog page is rendered live from it (`build.py`), so there is no second copy |
+| **Website** — `docs-src/cli.md`, install instructions, homepage feature rows | **Yes, and nothing checks it.** The homepage rows are a known un-owned drift |
+| **App Store listing** — What's New, description, screenshots | New at Tier 3, and Apple shows it to strangers |
+
+Three descriptions of one release, written at 9pm, by the person who most wants
+to be finished. That is a drift machine, and keeping them consistent is not a
+checking problem — it is a **writing** problem.
+
+This is where the earlier framing was too thin. The skill is not merely a
+verifier that critiques prose; **it drafts it**, against the diff, and the human
+edits. Mechanically the plumbing is already scriptable — `altool
+--app-store-text` uploads What's New copy, `build.py` renders the docs — so what
+is missing is never the transport. It is the sentence.
+
 ## Shell or skill? — the question worth settling first
 
 Three shapes are possible, and the choice is not a matter of taste:
@@ -48,33 +126,46 @@ precondition inside a script is *structurally* unskippable, whereas a
 precondition in a skill is an instruction a model can misread, and it is the
 model that would then be pushing a tag or uploading a build.
 
-That gives the acceptance test for this whole design:
+That gives the acceptance test — stated carefully, because the obvious phrasing
+is wrong:
 
-> **You must be able to do a complete release with no Claude session at all**,
-> by running the scripts in order. If that stops being true, too much logic has
+> **Shell must be able to ship the *bits* unaided.** Scripts in order, no Claude
+> session, artefacts delivered. If that stops being true, too much logic has
 > leaked into the skill.
+>
+> The skill is what makes the release **describable** — and by Tier 3,
+> describable is half the product.
 
-The skill is then a **better front door, never a required one** — and it must add
-no *capability* the shell lacks, only convenience and judgement.
+An earlier draft said "you must be able to do a *complete* release with no Claude
+session". That was too neat. You can ship the bits; you cannot write three
+consistent prose surfaces. The mechanical release degrades not at all without the
+skill, and the *complete* release degrades a lot — those are different claims and
+conflating them undersells why the skill exists.
 
 ### What that leaves the skill
 
-Narrower than it first appears. Genuinely LLM-only work is two things:
+Three things, and the first is bigger than the first draft allowed:
 
-1. **Reading prose against a diff** — is the CHANGELOG entry an honest
-   description of `git log <last-tag>..HEAD`? Does new CLI surface reach all
-   three doc surfaces? No script can do this; it is the actual recurring failure.
-2. **Triage under partial failure** — PyPI published, Homebrew's poll timed out,
-   TestFlight came back INVALID: what to retry, what to accept, what needs a
-   human. Shell can *report* this well; deciding is judgement.
+1. **Drafting the prose, not just checking it.** The CHANGELOG entry, the
+   `docs-src/cli.md` update, the homepage row, the App Store What's New — each
+   written *against the diff* for the human to edit. This is the work that gets
+   skipped at 9pm, and the homepage feature rows are already documented as
+   drifting with nothing to true them.
+2. **Reading prose against a diff** — is the existing CHANGELOG entry honest
+   about `git log <last-tag>..HEAD`? Does new CLI surface reach all three
+   surfaces? No script can answer this.
+3. **Triage under partial failure** — PyPI published, Homebrew's poll timed out,
+   TestFlight came back INVALID. Shell can *report* this well; deciding what to
+   retry is judgement.
 
 Everything else people reach to a skill for — sequencing, progress, pretty
 output, per-channel probing — this repo already does better in shell
 (`report.sh`, the `check-*` family, `upload-dmg.sh`'s decision helpers).
 
-**So: a thin skill over a fat shell.** If that means you mostly end up typing
-`./scripts/release.sh` and rarely invoking `/bn-release`, that is the design
-succeeding, not failing.
+**So: a thin skill over a fat shell — but thin in *mechanism*, not in value.** If
+the upshot is that you type `./scripts/release.sh` for a Tier 1 build and reach
+for `/bn-release` at Tier 2 and 3, that is precisely the intended shape: the
+skill earns its keep exactly where prose does.
 
 ### The concrete split
 
@@ -136,6 +227,20 @@ version to learn the same thing.
 
 This also fits the evening rule for free: build during the day, push after 9pm.
 
+**And the website deploys LAST, after PyPI confirms.** The website's changelog
+page is rendered live from `CHANGELOG.md`, so deploying before PyPI has accepted
+the upload publishes a page announcing a version nobody can install — for the
+~25 minutes CI takes, and indefinitely if the release fails. The full order is
+therefore:
+
+```
+bump + commit → Mac artefacts (dmg, TestFlight) → tag push (PyPI, GH, Homebrew)
+              → verify PyPI → deploy website → Snap
+```
+
+This constraint is invisible until the sequence is written down, which is an
+argument for writing it down.
+
 ### D3 — One authorisation, not per-step
 
 Per the house rule, automate the mechanical end to end including the
@@ -155,11 +260,22 @@ because it is the same code path the real release takes.
 Same reasoning as `upload-testflight.sh`, where Apple's own `--validate-app` is
 the dry run and a local one would just print the script back at you.
 
-### D5 — Channel selection is explicit, defaults are computed
+### D5 — Select by TIER, not by channel
 
-`/bn-release` with no arguments proposes the channels that are **ready and not
-already done**, and says why each is in or out. `/bn-release --only testflight`
-or `--skip snap` narrows it.
+`/bn-release --tier 1` is a better interface than `--only testflight,dmg`,
+because the tier encodes the *cadence decision* — which channels, which version
+consequence, which prose is owed — rather than leaving it to be reassembled from
+memory each time. `--tier 2` means "the full tagged release, and yes I will write
+the changelog".
+
+Channel-level overrides (`--skip snap`) stay available for the exceptional case,
+but they are the escape hatch, not the interface.
+
+With no arguments, it proposes the tier that fits what has changed since the last
+tag, shows the reasoning, and lets the human overrule. **A channel that isn't
+ready is reported, never silently dropped** — "Snap skipped: nothing has reached
+edge since its triggers were parked" is information, and silence is how you
+discover six months later that a channel is stale.
 
 Crucially: **a channel that isn't ready is reported, not silently dropped.**
 "Snap skipped — its triggers are parked, publishing is a manual workflow_dispatch"
@@ -289,18 +405,45 @@ one.
    while Homebrew's poll times out. The verify step must report per-channel truth
    rather than one overall verdict.
 
+## What to build first
+
+The tiers are not equally urgent, and Tier 0 is both the cheapest and the most
+overdue.
+
+1. **Tier 0 — make CI build what it doesn't publish.** `ci.yml` runs tests but
+   never builds the wheel, sdist or snap, so packaging breakage is discovered at
+   *release* time. Snap especially: nothing has built it since its triggers were
+   parked, so its build health is currently **unknown**. This is a small change
+   to an existing workflow and needs none of the rest of this design.
+2. **`check-release-ready.sh`** — the mechanical preflight. Useful standalone,
+   immediately, whether or not the skill ever exists.
+3. **The skill, scoped to Tier 2 prose.** Drafting the CHANGELOG entry and the
+   website updates against the diff is where the value concentrates today.
+4. **Tier 3 support** — App Store listing copy, promotion, phased release — when
+   there is actually a store listing to keep true.
+
+Deliberately deferred until there are users to protect: Snap **stable**, and
+`rcN` pre-release versions on PyPI (the only staging mechanism a channel-less
+registry offers, and it costs a numbering discipline).
+
 ## Open questions
 
 1. **Should `check-release-ready.sh` run in CI on every push to `main`?** It would
    catch changelog/doc drift continuously rather than at release time, when
    fixing it is most annoying. Cost: another gate that can cry wolf. _Leaning
    yes, advisory-only._
-2. **Does `/bn-release` bump and commit, or expect that done?** Bumping is four
+2. **Does a normal Tier 2 release publish Snap to edge, stable, or both?** Snap's
+   own convention is edge-tracks-development, stable-is-curated. _Leaning: edge
+   every Tier 2, stable only at Tier 3._ Product call, not mechanical.
+3. **Which Tier 2 releases get promoted to the store?** Every third? Whenever a
+   feature warrants it? Time-based is predictable; feature-based is honest. This
+   is the decision the whole Tier 3 design hangs off and it is the user's.
+4. **Does `/bn-release` bump and commit, or expect that done?** Bumping is four
    files plus a tag dance with a documented footgun, so folding it in is
    tempting — but it makes the skill's first act a mutation, which sits badly with
    "preflight is read-only". _Leaning: the skill runs `bump-version.py` **after**
    authorisation, as step one of execute._
-3. **How does it reach the website repo?** It's a separate private repo on this
+5. **How does it reach the website repo?** It's a separate private repo on this
    machine. Path via config like `.ship-local.conf`, or assume a sibling
    directory? _Leaning config, with a clear skip when absent._
 

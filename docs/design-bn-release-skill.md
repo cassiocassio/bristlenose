@@ -1,14 +1,27 @@
 ---
-status: proposed
+status: current
 last-trued: 2026-08-08
-trued-against: 1e2e4bed@main — channel facts from release-channels.md
+trued-against: 7d93f63f@main — three parts now built; see Status
 ---
 
 # `/bn-release` — orchestrating the five channels
 
-_Status: **design only**, nothing built. Plans a skill that runs a release across
-some or all of PyPI · GitHub Release · Homebrew · TestFlight · `.dmg`, having
-first proven the tree, the changelog and the docs are actually ready._
+_Plans a skill that runs a release across some or all of PyPI · GitHub Release ·
+Homebrew · Snap · TestFlight · `.dmg`, having first proven the tree, the
+changelog and the docs are actually ready._
+
+**Status (8 Aug 2026) — no longer design-only:**
+
+| Piece | State |
+|---|---|
+| Tier 0 CI — wheel, sdist, snap built and not published | ✅ shipped, green first run |
+| `scripts/check-release-ready.sh` — the mechanical preflight | ✅ shipped |
+| `.claude/skills/bn-release/SKILL.md` | ✅ written, **never run** |
+| Acceptance criteria | ✅ `docs/testing/bn-release-acceptance.md`, written before first run |
+| Tier 2 (App Store promotion, listing copy, phased release) | ⬜ not started |
+
+The skill has not been exercised even once. Score its first run against the
+acceptance criteria rather than against this document's intentions.
 
 ## The problem it solves
 
@@ -344,9 +357,9 @@ but they are the escape hatch, not the interface.
 
 With no arguments, it proposes the tier that fits what has changed since the last
 tag, shows the reasoning, and lets the human overrule. **A channel that isn't
-ready is reported, never silently dropped** — "Snap skipped: nothing has reached
-edge since its triggers were parked" is information, and silence is how you
-discover six months later that a channel is stale.
+ready is reported, never silently dropped** — "Snap skipped: edge is at 0.22.0,
+three versions behind" is information, and silence is how you discover six months
+later that a channel has drifted.
 
 Crucially: **a channel that isn't ready is reported, not silently dropped.**
 "Snap skipped — its triggers are parked, publishing is a manual workflow_dispatch"
@@ -443,8 +456,19 @@ the ref *is* the channel selector, so there's no separate flag to get wrong.
 
 The reason `push`/`pull_request` were parked (a snap on every commit is noise)
 argues *for* driving it from a release orchestrator, which is precisely the
-per-release moment the parking left unserved. The consequence of not doing so is
-already visible: nothing has reached edge since the triggers were parked.
+per-release moment the parking left unserved.
+
+**Correction, 8 Aug 2026.** An earlier draft asserted here that "nothing has
+reached edge since the triggers were parked". That was false, and it conflated
+two different things: the *build* had not run in CI since 17 Apr, but the
+*channel* was still being fed by hand — edge held 0.22.0 (rev 6) from 26 Jul,
+three minor versions behind rather than abandoned. The argument survives the
+correction and is in fact better for it: hand-dispatching works, it just happens
+when someone remembers, which is exactly the job an orchestrator should take
+over. Restoring the triggers on 8 Aug also disproved the other half of the
+parking rationale — the build passed first time, so whatever broke it in April
+had been incidentally fixed, and the trigger had been off for ~4 months guarding
+against a failure that no longer existed.
 
 **Open: does a normal release publish edge, stable, or both?** Snap's own
 convention is that edge tracks development and stable is curated. Given
@@ -483,9 +507,12 @@ overdue.
 
 1. **Tier 0 — make CI build what it doesn't publish.** `ci.yml` runs tests but
    never builds the wheel, sdist or snap, so packaging breakage is discovered at
-   *release* time. Snap especially: nothing has built it since its triggers were
-   parked, so its build health is currently **unknown**. This is a small change
-   to an existing workflow and needs none of the rest of this design.
+   *release* time. Snap especially: nothing had built it in CI since 17 Apr.
+   **Done 8 Aug 2026** — `ci.yml` gained a `package` job (wheel + sdist + `twine
+   check` + an assertion that the SPA is actually inside the wheel), and
+   `snap.yml` regained its push/PR triggers with `publish-edge` narrowed to
+   dispatch-only so build coverage carries no publish risk. Both passed on the
+   first run.
 2. **`check-release-ready.sh`** — the mechanical preflight. Useful standalone,
    immediately, whether or not the skill ever exists.
 3. **The skill, scoped to Tier 1 prose.** Drafting the CHANGELOG entry and the

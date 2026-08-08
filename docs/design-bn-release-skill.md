@@ -62,21 +62,37 @@ making it.
 An earlier draft of this document got that badly wrong. It proposed deriving the
 version consequence from *which files changed* — Swift-only meant a build-number
 bump, anything else meant a version bump. That is reasoning about the release
-from a compiler's point of view. **Users do not know or care which language
-moved.** A CSS change to the quote grid, a TypeScript change to the lens
-switcher, a Swift change to the sidebar and a Python change to the pipeline can
-each transform the experience or none of them can. The file extension carries no
-information about that.
+from a compiler's point of view.
 
-So:
+**Effort and user impact are orthogonal, in both directions**, and the examples
+are not hypothetical:
 
-- **The tool never infers the version from file paths.** It can *show* the diff
-  and the commit subjects as evidence, and it can suggest minor-vs-patch against
-  the house rule (feature → minor, fix → patch). The call is the human's, always.
+| Change | Effort | What the user experiences |
+|---|---|---|
+| Refactor the pipeline internals | weeks | *nothing* — but it still ships as "improved reliability" |
+| Every background to pink | minutes | a different product |
+| One sentence in an LLM prompt | one line | every analysis they ever run, differently judged |
+| A margin width | one line | possibly nothing, possibly the thing that stops it feeling broken |
+
+So the **size** of the diff carries as little information as the file extension.
+Neither is evidence about the only question that matters, which is whether
+someone needs telling.
+
+- **The tool never infers the version from the diff — not from paths, not from
+  line counts.** What it may surface as evidence is the **commit subjects**,
+  because those are prose a human already wrote about intent. A diff describes
+  effort; a commit message describes purpose. Even then it is a reminder of what
+  happened, never a recommendation. The call is the human's, always.
 - **A release ships to every cohort channel.** No exceptions carved out by
   language or layer. One version line means one version line — a PyPI release
   carrying no functional Python change is a harmless no-op upgrade, and it is
   worth far more than a gap in the numbering that someone has to explain later.
+
+**Release notes describe the change in experience, not the change in code.**
+"Improved reliability" is the honest and complete note for a month of internal
+refactoring — it is what happened *to the user*. The skill drafts against that
+standard, and a draft that reads like a commit log has failed even if every line
+in it is true.
 
 **And the tool does not model who is affected.** A change may only matter to Mac
 users, or only to people using local models, or only to whoever has the codebook

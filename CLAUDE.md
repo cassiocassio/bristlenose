@@ -95,6 +95,50 @@ CLI output: Cargo/uv-style checkmark lines with per-stage timing. Time estimatio
 
 F401 is marked `unfixable` in `pyproject.toml` so `ruff check --fix` (and the PostToolUse hook) won't delete imports during incremental edits. Ruff still *reports* unused imports — remove them manually when they're genuinely unused.
 
+### A blocked PreToolUse hook kills the WHOLE Bash call, not the offending fragment
+
+The `leak-scan.sh` / `block-checkout.sh` PreToolUse hooks match against the
+**entire command string**, and a match blocks the whole invocation — so every
+other command batched into that call silently never runs. Bit twice on 8 Aug
+2026. First: a call doing `sed -i '' … && grep -cE '<blocked-pattern>' … && git
+add …` was refused because the *grep pattern* named a blocked path. The grep was
+a leak-**check**, not a leak. The `sed` never ran, and the next command reported
+the file unchanged — which reads as "my edit didn't apply" rather than "the whole
+call was refused". Second, and more instructive: the attempt to write *this very
+gotcha* was refused, because the explanatory text quoted the blocked string as an
+example.
+
+Three rules. **(1)** Never put a blocked pattern in a command string, even as a
+search term — grep via a shell variable, or use `git check-ignore` instead.
+**(2)** The hook fires on Edit/Write to public docs too, so *documentation about*
+a blocked pattern must paraphrase it (this file's own convention: say "the
+maintainer's private planning notes, kept outside the public tree"). **(3)** After
+a refusal, assume **nothing** in that call ran; re-verify state before
+re-issuing, rather than assuming the parts before the offending fragment
+succeeded.
+
+### Only Mach-O EXECUTABLES carry entitlements — bundles and dylibs never do
+
+The `.app` holds ~227 Mach-Os but only **4 are executables** (the host, ffmpeg,
+ffprobe, the sidecar). The rest are Python `.so` extension **bundles** and
+**dylibs**, which carry no entitlements at all — they inherit from the loading
+process. So `find -perm -111` plus "assert app-sandbox" reports **223 of 227
+missing it** against a correctly-signed, ASC-accepted package. Filter on
+`file -b "$b" | grep -qE 'Mach-O.*executable'`, never bare `Mach-O`.
+
+Those 4 are exactly the set the 14 Jul 2026 nested-signing rejections were about,
+so the gate is worth having — but a gate that cries wolf gets switched off, which
+is worse than no gate. `desktop/scripts/check-pkg-shippable.sh` has the working
+form with the reasoning inline.
+
+**Release-channel mechanics** (five channels, their triggers, and the two
+different expiry clocks — `.dmg` 30 days from the *build*, TestFlight 90 from the
+*upload*) are mapped in `docs/release-channels.md`. The measured `altool`
+contract — including that `--list-providers` refuses API-key auth while
+`--list-apps` accepts it, and that `--show-progress` must be TTY-gated or it
+bloats a log 12,000× — is in `docs/design-testflight-upload.md` § Observed
+contract. Don't re-derive either.
+
 ### macOS BSD userland — use GNU coreutils
 
 macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat`, `readlink`, `tar`, and others. These differ from the GNU versions in subtle, bug-inducing ways:

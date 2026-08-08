@@ -267,5 +267,82 @@ jobs:
           path: e2e/playwright-report/
           retention-days: 7
 
+  # Tier 0 of the release cadence: build what we ship, publish nothing.
+  #
+  # Added 8 Aug 2026. Until now CI ran the tests but never built the PACKAGE, so
+  # a broken sdist or wheel — a bad `pyproject.toml`, a file missing from the
+  # wheel's package list, invalid metadata — was only discovered by release.yml
+  # AFTER a tag had been pushed. That is the worst possible moment: the tag is
+  # public, and PyPI versions are immutable, so a version can be burned learning
+  # something a 60-second job could have said on the commit that caused it.
+  #
+  # ⚠️ COUPLED TO release.yml's `build` JOB — keep the steps in step.
+  # This deliberately mirrors that job's build path (frontend → `python -m build`)
+  # rather than extracting a shared reusable workflow, because release.yml also
+  # carries SBOM generation, Sigstore attestation and Trusted Publishing, and
+  # refactoring the thing that ships in order to add a check to the thing that
+  # doesn't is the wrong risk trade. The cost is a second copy of four steps.
+  # If you change how release.yml builds, change this too — the failure mode is
+  # CI passing while the release breaks, which is exactly the drift this job
+  # exists to prevent, one level up.
+  #
+  # What is NOT duplicated, on purpose: SBOMs and attestation (release-only, and
+  # meaningless for an artifact that is thrown away).
+  #
+  # Note release.yml reuses this whole workflow (`uses: ./.github/workflows/ci.yml`),
+  # so a release now builds the package twice — once here as a gate, once for real.
+  # That is ~2 minutes well spent: a packaging failure stops the release in the
+  # `ci` job, before the tag's build job has done anything.
+  package:
+    name: Build wheel + sdist (no publish)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: '.tool-versions'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.tool-versions'
+
+      # The wheel ships bristlenose/server/static/. Building the frontend first
+      # is what makes this a real package check rather than a pyproject syntax
+      # check — without it the wheel builds happily and is missing the SPA.
+      - name: Build React frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install build tools
+        run: pip install --upgrade pip build twine
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      # `python -m build` succeeding does not mean PyPI would accept it. twine
+      # check validates the metadata PyPI actually parses — a malformed README
+      # or classifier fails here, not at upload.
+      - name: Validate package metadata
+        run: twine check dist/*
+
+      # The wheel is the artifact users get. Assert the SPA actually made it in:
+      # a wheel that builds, passes twine, and ships no frontend is precisely the
+      # confidently-wrong green this job exists to prevent.
+      - name: Assert the wheel carries the built frontend
+        run: |
+          wheel=$(ls dist/*.whl)
+          echo "inspecting $wheel"
+          if ! python -m zipfile -l "$wheel" | grep -q 'bristlenose/server/static/index.html'; then
+            echo "::error::wheel is missing bristlenose/server/static/index.html — the SPA did not make it into the package" >&2
+            python -m zipfile -l "$wheel" | head -30 >&2
+            exit 1
+          fi
+          echo "✓ SPA present in the wheel"
+
 # perf-gate moved to .github/workflows/perf.yml (post-merge only on main).
 # See that file + docs/private/handoffs/ci-reshape.md for rationale.

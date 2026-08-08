@@ -1,12 +1,35 @@
 name: Snap Build & Publish
 
-# Auto-triggers disabled May 2026 — Snap build has been failing on every push
-# since 2026-04-17 and adds noise to PR check status during the alpha-critical
-# path. Linux users on the alpha cohort can install from PyPI; the Snap-only
-# slice of users is small enough to defer until autumn 2026 (post-TestFlight,
-# during beta). Workflow remains runnable via the GitHub Actions UI when ready
-# to revisit. Re-enable by restoring the `push` + `pull_request` triggers.
+# BUILD on every push; PUBLISH only when asked. Restored 8 Aug 2026.
+#
+# History: auto-triggers were disabled May 2026 because the Snap build had been
+# failing on every push since 2026-04-17 and was adding noise to PR check status
+# during the alpha-critical path. That was the right call then. The cost since is
+# that NOTHING has built the snap for three months, so its build health is
+# unknown and any breakage will be discovered at release time — the worst moment.
+#
+# The distinction that makes restoring safe: **what was parked is the trigger,
+# not the publish.** The `build` job produces an artifact and publishes nothing.
+# So push/pull_request give back build coverage at zero publish risk.
+#
+# ⚠️ Restoring `push` alone would NOT have been safe. `publish-edge` used to read
+# `(main && push) || workflow_dispatch`, so the moment the push trigger came back
+# it would have started auto-publishing to edge on every commit to main. That
+# clause had been dead code since May and is removed below — see publish-edge.
+#
+# Publishing remains deliberate, and the ref is the channel selector:
+#   gh workflow run snap.yml --ref main       → edge
+#   gh workflow run snap.yml --ref vX.Y.Z     → stable
+#
+# This job is NOT a required status check. A red X here is information — the
+# build has been unverified since April and may well fail — and it must not block
+# a merge. Fix it or read it; don't add continue-on-error, which would convert
+# "broken" into "green".
 on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -34,12 +57,12 @@ jobs:
           path: ${{ steps.snapcraft.outputs.snap }}
 
   publish-edge:
-    # Publishes on push-to-main (when the auto-triggers are restored) OR on a
-    # manual workflow_dispatch run — the latter is how we publish to edge while
-    # the push/pull_request triggers stay parked (see the on: block above).
-    if: >-
-      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
-      github.event_name == 'workflow_dispatch'
+    # Dispatch ONLY. The `(main && push)` arm was removed 8 Aug 2026 when the
+    # push trigger was restored for build coverage: it had been dead code since
+    # May, and leaving it would have silently converted "build on every commit"
+    # into "publish to edge on every commit" — the exact autoupdate behaviour we
+    # want to avoid. Publishing is a decision, not a side effect of committing.
+    if: github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     env:
@@ -82,7 +105,8 @@ jobs:
         with:
           name: snap-amd64
 
-      # See publish-edge: resolve the concrete filename; action-publish does not
+      # Reached by dispatching against a tag ref: `gh workflow run snap.yml --ref vX.Y.Z`.
+    # See publish-edge: resolve the concrete filename; action-publish does not
       # shell-glob the `snap:` input.
       - name: Resolve snap path
         id: snap

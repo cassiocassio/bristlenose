@@ -428,8 +428,9 @@ bn_step_ok 8 elapsed=$((SECONDS-_bn_t8)) detail="$PROFILE_APP_ID / $PROFILE_TEAM
 # Developer ID certificate". App Store / TestFlight builds are validated
 # server-side after upload to App Store Connect, NOT via notarytool. So
 # when `method=app-store(-connect)` we skip steps 9 and 10[a] entirely;
-# the .pkg in $EXPORT_DIR is the alpha deliverable, ready for Transporter
-# / `xcrun altool --upload-app`.
+# the .pkg in $EXPORT_DIR is the alpha deliverable. Send it with
+# `upload-testflight.sh`, which gates it first; Transporter.app remains the
+# documented manual fallback, on that script's failure path.
 #
 # `ditto` is mandatory for zipping a .app for notarisation — plain
 # `zip` mangles extended attributes and symlinks, producing a zip
@@ -606,6 +607,6 @@ else
     bn_art "artifact" "$EXPORTED_PKG"
     bn_art "size" "${_bn_size:-?} · ready for App Store Connect"
     bn_art "signed" "$SIGN_IDENTITY"
-    bn_art "next" "drag into Transporter.app, or: xcrun altool --upload-app -f Bristlenose.pkg --type macos --apiKey <KEY_ID> --apiIssuer <ISSUER_ID>"
+    bn_art "next" "desktop/scripts/upload-testflight.sh"
 fi
 bn_done ok

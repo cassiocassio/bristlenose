@@ -47,11 +47,35 @@ Store Connect will accept.** Running the wrong one is the easiest mistake here.
 
 ```bash
 ./desktop/scripts/build-all.sh
+./desktop/scripts/upload-testflight.sh
 ```
 
-One command, bails on any non-zero exit. Needs an Apple Distribution identity
-and notarytool credentials. It runs the sidecar build, the signing, the archive,
-and all four App Store gates itself — you don't invoke those separately.
+**Two commands, deliberately.** Building and sending are separate acts: different
+credentials, and only one of them is irreversible. There is no `--upload` flag on
+`build-all.sh` — a flag that's off in every run is configuration for the
+configurable.
+
+`build-all.sh` bails on any non-zero exit and runs the sidecar build, the
+signing, the archive and its own gates — you don't invoke those separately. It
+needs an Apple Distribution identity. It does **not** need notarytool
+credentials: `notarytool` only accepts Developer ID, and App Store Connect
+validates server-side instead (that's the `.dmg` channel's requirement, not this
+one).
+
+`upload-testflight.sh` runs `check-pkg-shippable.sh` as a precondition — there is
+no flag to skip it — then uploads, waits for a terminal state, and asks App Store
+Connect independently whether the build actually arrived, because a zero exit
+from `altool` is not proof that it did. One-off setup, same gitignored
+`.ship-local.conf`:
+
+```bash
+BRISTLENOSE_ASC_KEY_ID="<key id>"
+BRISTLENOSE_ASC_ISSUER_ID="<issuer uuid>"
+BRISTLENOSE_ASC_APPLE_ID="<numeric app id>"
+```
+
+Each upload spends its build number forever. A replacement needs a higher one:
+`./scripts/bump-version.py --build-only`.
 
 ### “Cut a `.dmg` and publish it”
 
@@ -144,8 +168,8 @@ instead of the rendered report.
 
 **You type these** — seven, realistically:
 
-`build-all.sh` · `build-dmg.sh` · `upload-dmg.sh` · `build-sidecar.sh` ·
-`sign-sidecar.sh` · `reset-sandbox-state.sh` · `test-*.sh`
+`build-all.sh` · `upload-testflight.sh` · `build-dmg.sh` · `upload-dmg.sh` ·
+`build-sidecar.sh` · `sign-sidecar.sh` · `reset-sandbox-state.sh` · `test-*.sh`
 <br>(plus `fetch-ffmpeg.sh` once per worktree, and any `check-*.sh` when you're
 debugging a specific failure)
 

@@ -25,25 +25,57 @@ build from a commit that also carries an unrelated untracked file. Each is
 individually small and each is invisible to the scripts, because no script reads
 prose.
 
-## Cadence — four tiers, not one release
+## Cadence — three tiers, by audience
 
-A release is not one thing at one speed. Four tiers, each a **superset of the
-audience** of the one below, each with a different cost and a different version
-consequence:
+A release is not one thing at one speed. **Three tiers, keyed to who finds out**,
+each a superset of the audience below it:
 
-| Tier | Cadence | Channels | Version moves | Prose needed |
-|---|---|---|---|---|
-| **0** | every push | CI only — builds, publishes nothing | none | none |
-| **1** | daily-ish | internal TestFlight · `.dmg` | build number only | none |
-| **2** | weekly / fortnightly | PyPI · GitHub Release · Homebrew · Snap **edge** | patch or minor | CHANGELOG + website |
-| **3** | monthly-ish | Snap **stable** · **App Store** | *nothing new* — promotes | + App Store listing |
+| Tier | | Cadence | Channels | Version moves | Prose |
+|---|---|---|---|---|---|
+| **0** | **Due diligence** | every push | CI builds, publishes nothing | none | none |
+| **1** | **Cohort** | daily → fortnightly | TestFlight · `.dmg` · PyPI · GH Release · Homebrew · Snap **edge** | see below | CHANGELOG + website |
+| **2** | **Public** | monthly-ish | Snap **stable** · **App Store** | *nothing new* — promotes | + App Store listing |
 
-**Tier 1 exists because build number and marketing version serve different
-masters.** `CURRENT_PROJECT_VERSION` moves on every upload, is invisible to
-users, and costs nothing; `MARKETING_VERSION` moves on every release, is visible
-to everyone, and costs a changelog, three doc surfaces and a tag.
-`bump-version.py --build-only` decoupled them, which is exactly what makes a fast
-TestFlight cadence possible — thirty builds of 0.25.1 is normal, not a smell.
+### Why Mac and CLI are one tier, not two
+
+An earlier draft split these: Tier 1 as "TestFlight + `.dmg`", Tier 2 as "PyPI +
+Homebrew". That boundary was in the wrong place, and the giveaway was that
+the two would almost always be done together. Two reasons they are one tier:
+
+**The technical one — the Mac app bundles the Python.** The `.app` ships a
+PyInstaller sidecar built from the same source as the wheel. So a Python or
+frontend change *cannot* go to PyPI alone: publish without rebuilding the
+sidecar and the Mac app is silently running old code. Conversely a Swift-only
+change has nothing to publish to PyPI. They are not two acts that often
+coincide; they are one act whose reach depends on what moved.
+
+**The human one — it is one judgement and one paragraph.** "Is this good enough
+to put in front of the cohort?" is asked once, and a single CHANGELOG entry
+covers it however many channels carry it. Splitting the tier means writing that
+decision down twice.
+
+### The shape of a Tier 1 release is *derived*, not chosen
+
+Which channels a Tier 1 release reaches follows from the diff, so the tool
+computes it and offers it for confirmation rather than asking for a flag:
+
+```
+git diff --name-only <last-tag>..HEAD
+   only desktop/**/*.swift  →  Mac artefacts only · BUILD NUMBER only · no version bump
+   anything else            →  version bump · every cohort channel
+```
+
+**Swift-only releases deliberately do not move the marketing version.** That
+keeps PyPI at `0.26.0` and TestFlight at `0.26.0 (2451)` *consistent* rather than
+punching a hole in the version line — the build number carries Mac-side
+iteration, which is exactly what it is for. It is also why the 90-day TestFlight
+expiry refresh costs no release at all: it is a build-number bump and nothing
+else.
+
+This rests on the split `bump-version.py --build-only` created:
+`CURRENT_PROJECT_VERSION` moves per upload, is invisible, and is free;
+`MARKETING_VERSION` moves per release, is public, and costs a changelog, three
+doc surfaces and a tag. Thirty builds of `0.25.1` is normal, not a smell.
 
 **Internal TestFlight has no review.** Measured 7 Aug 2026: upload →
 `PROCESSINGSTATE: VALID` in ~11 minutes, no human in the loop. The days-long
@@ -51,7 +83,7 @@ latency belongs to **App Store review** and **external TF's Beta App Review** �
 Apple's *public* gates, not Apple. While the cohort is internal, TF is one of the
 *fastest* channels available, quicker than the `.dmg` with its two notary waits.
 
-### Tier 3 promotes; it does not build
+### Tier 2 promotes; it does not build
 
 The App Store submission should take a build that has been **soaking on
 TestFlight for weeks**, not one cut that morning. That is the real argument for a
@@ -61,7 +93,7 @@ waiting.
 
 Snap and Apple both support promotion (same revision edge→stable; an existing TF
 build submitted for review). **PyPI and Homebrew do not** — no channel concept,
-so publishing *is* releasing. That asymmetry sets Tier 2's cadence: it moves at
+so publishing *is* releasing. That asymmetry sets Tier 1's cadence: it moves at
 the speed of the one channel that can't stage.
 
 The store's own safety valve is **phased release** (7-day rollout to a growing
@@ -84,14 +116,14 @@ Keeps one truth, and makes a store release a **decision**, not a build.
 
 ## The three prose surfaces — the actual reason this is a skill
 
-Tier 2 and Tier 3 each require a human-readable description of the release, and
-by Tier 3 there are **three of them, hand-written, saying the same thing**:
+Tier 1 and Tier 2 each require a human-readable description of the release, and
+by Tier 2 there are **three of them, hand-written, saying the same thing**:
 
 | Surface | Drifts? |
 |---|---|
 | `CHANGELOG.md` | **No, by construction** — the website's changelog page is rendered live from it (`build.py`), so there is no second copy |
 | **Website** — `docs-src/cli.md`, install instructions, homepage feature rows | **Yes, and nothing checks it.** The homepage rows are a known un-owned drift |
-| **App Store listing** — What's New, description, screenshots | New at Tier 3, and Apple shows it to strangers |
+| **App Store listing** — What's New, description, screenshots | New at Tier 2, and Apple shows it to strangers |
 
 Three descriptions of one release, written at 9pm, by the person who most wants
 to be finished. That is a drift machine, and keeping them consistent is not a
@@ -133,7 +165,7 @@ is wrong:
 > session, artefacts delivered. If that stops being true, too much logic has
 > leaked into the skill.
 >
-> The skill is what makes the release **describable** — and by Tier 3,
+> The skill is what makes the release **describable** — and by Tier 2,
 > describable is half the product.
 
 An earlier draft said "you must be able to do a *complete* release with no Claude
@@ -163,9 +195,9 @@ output, per-channel probing — this repo already does better in shell
 (`report.sh`, the `check-*` family, `upload-dmg.sh`'s decision helpers).
 
 **So: a thin skill over a fat shell — but thin in *mechanism*, not in value.** If
-the upshot is that you type `./scripts/release.sh` for a Tier 1 build and reach
-for `/bn-release` at Tier 2 and 3, that is precisely the intended shape: the
-skill earns its keep exactly where prose does.
+the upshot is that you type `./scripts/release.sh` for a Swift-only rebuild and
+reach for `/bn-release` whenever prose is owed, that is precisely the intended
+shape: the skill earns its keep exactly where prose does.
 
 ### The concrete split
 
@@ -262,11 +294,10 @@ the dry run and a local one would just print the script back at you.
 
 ### D5 — Select by TIER, not by channel
 
-`/bn-release --tier 1` is a better interface than `--only testflight,dmg`,
+`/bn-release --tier 1` is a better interface than `--only testflight,dmg,pypi`,
 because the tier encodes the *cadence decision* — which channels, which version
 consequence, which prose is owed — rather than leaving it to be reassembled from
-memory each time. `--tier 2` means "the full tagged release, and yes I will write
-the changelog".
+memory each time. `--tier 1` means "ship it to the cohort, and yes I will write the changelog".
 
 Channel-level overrides (`--skip snap`) stay available for the exceptional case,
 but they are the escape hatch, not the interface.
@@ -417,9 +448,9 @@ overdue.
    to an existing workflow and needs none of the rest of this design.
 2. **`check-release-ready.sh`** — the mechanical preflight. Useful standalone,
    immediately, whether or not the skill ever exists.
-3. **The skill, scoped to Tier 2 prose.** Drafting the CHANGELOG entry and the
+3. **The skill, scoped to Tier 1 prose.** Drafting the CHANGELOG entry and the
    website updates against the diff is where the value concentrates today.
-4. **Tier 3 support** — App Store listing copy, promotion, phased release — when
+4. **Tier 2 support** — App Store listing copy, promotion, phased release — when
    there is actually a store listing to keep true.
 
 Deliberately deferred until there are users to protect: Snap **stable**, and
@@ -432,12 +463,12 @@ registry offers, and it costs a numbering discipline).
    catch changelog/doc drift continuously rather than at release time, when
    fixing it is most annoying. Cost: another gate that can cry wolf. _Leaning
    yes, advisory-only._
-2. **Does a normal Tier 2 release publish Snap to edge, stable, or both?** Snap's
+2. **Does a normal Tier 1 release publish Snap to edge, stable, or both?** Snap's
    own convention is edge-tracks-development, stable-is-curated. _Leaning: edge
-   every Tier 2, stable only at Tier 3._ Product call, not mechanical.
-3. **Which Tier 2 releases get promoted to the store?** Every third? Whenever a
+   every Tier 1, stable only at Tier 2._ Product call, not mechanical.
+3. **Which Tier 1 releases get promoted to the store?** Every third? Whenever a
    feature warrants it? Time-based is predictable; feature-based is honest. This
-   is the decision the whole Tier 3 design hangs off and it is the user's.
+   is the decision the whole Tier 2 design hangs off and it is the user's.
 4. **Does `/bn-release` bump and commit, or expect that done?** Bumping is four
    files plus a tag dance with a documented footgun, so folding it in is
    tempting — but it makes the skill's first act a mutation, which sits badly with

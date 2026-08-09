@@ -375,6 +375,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.25.2** — _9 Aug 2026_
+
+- **Cancelling a run no longer records it as a failure** — pressing Ctrl-C while a run was still starting up wrote nothing about the cancellation, so the run looked abandoned and the next one reported it as having stopped unexpectedly. A cancellation is now always recorded as one.
+
 **0.25.1** — _7 Aug 2026_
 
 - **Speaker names in a shared offline report are links again** — in an exported report, clicking a speaker badge navigated the browser off the file to a path that doesn't exist, silently. It lands on the transcript at the right timecode again. **If you are on 0.25.0, upgrade.**

@@ -2,6 +2,10 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.25.2** — _9 Aug 2026_
+
+- **Cancelling a run no longer records it as a failure.** Press Ctrl-C in the first moments of a run — while it was still starting up — and Bristlenose wrote nothing at all about the cancellation. The run was left looking abandoned, and the next run you started reported the previous one as having stopped unexpectedly. You stopped it on purpose; you were told it had failed. The window was a narrow one, so this was rare on an idle machine and more likely on a busy one, but nothing afterwards could tell a deliberate cancel from a crash. A cancellation is now always recorded as a cancellation. The same change means a run that cannot write its own bookkeeping — a full disk, say — is recorded as a failure with a reason attached, rather than leaving no trace.
+
 **0.25.1** — _7 Aug 2026_
 
 - **Speaker names in a shared offline report are links again.** In an exported report — the self-contained file you hand to a stakeholder — clicking a speaker badge on a quote did nothing useful: it navigated the browser off the file to a path that doesn't exist. Every other link in the export had been converted to work without a server; the quote cards' jump-to-this-moment-in-the-transcript link was the one that hadn't, so it broke silently, with no error message to explain it. It now lands on the transcript at the right timecode, the same as everywhere else. **If you are on 0.25.0, upgrade** — it carries the bug.

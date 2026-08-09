@@ -819,6 +819,64 @@ def test_subprocess_sigint_during_startup_is_cancelled(tmp_path: Path):
     )
 
 
+def test_subprocess_sigint_inside_append_event_is_cancelled(tmp_path: Path):
+    """A signal arriving while `run_started` is still being written is cancelled.
+
+    The sibling test above patches `_write_pid_file`, which sits *after*
+    `append_event` returns. This one covers the earlier and subtler window:
+    the event becomes visible to a reader mid-call, before the fsync and close.
+
+        write → [a reader can see run_started here] → fsync → close → return
+
+    A first pass at the fix opened the guard on the statement after
+    `append_event`, reasoning the residual gap was one bytecode instruction. It
+    is that whole tail instead — milliseconds on a contended filesystem. That
+    version survived an 8x local stress run and then failed on ubuntu 3.11 in
+    CI, inside the very test written to prove the fix, which is why this window
+    gets its own deterministic test rather than sharing one.
+
+    Made deterministic by lingering *after* the real write, so `run_started` is
+    genuinely observable while the process is still inside the call.
+    """
+    preamble = """
+        import time
+        _real_append = _rl_mod.append_event
+        def _slow_append(f, ev):
+            _real_append(f, ev)
+            if type(ev).__name__ == "RunStartedEvent":
+                time.sleep(3.0)
+        _rl_mod.append_event = _slow_append
+    """
+    proc = _spawn_lifecycle_subprocess(
+        tmp_path,
+        body="import signal\nsignal.pause()",
+        preamble=preamble,
+    )
+    f = events_path(tmp_path)
+    try:
+        # Returns while the subprocess is still inside append_event.
+        _wait_for_run_started(f)
+        proc.send_signal(signal.SIGINT)
+        landed = _wait_for_event(
+            f,
+            lambda e: (
+                isinstance(e, RunCancelledEvent)
+                and e.cause.category == CauseCategoryEnum.USER_SIGNAL
+                and e.cause.signal_name == "SIGINT"
+            ),
+            timeout=60.0,
+        )
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait(timeout=10)
+    assert landed, (
+        "A run interrupted while run_started was still being flushed wrote no "
+        "terminus event — the guard must cover append_event itself, not start "
+        "after it returns."
+    )
+
+
 def test_subprocess_clean_exit_writes_run_completed(tmp_path: Path):
     proc = _spawn_lifecycle_subprocess(tmp_path, body="pass")
     proc.wait(timeout=30)

@@ -726,20 +726,31 @@ def run_lifecycle(
             out["summary"] = handle.summary
         return out
 
-    # Appending `run_started` is what creates the debt of a terminus event, so
-    # the guard opens on the very next statement. The pid-file write, the log
-    # line and the telemetry context used to sit BETWEEN the two — unguarded —
-    # which meant a signal arriving during startup raised KeyboardInterrupt
-    # straight out of __enter__ and no terminus was ever written. The run then
-    # looked *stranded* (reconciled to run_failed on the next start) rather
-    # than cancelled, so a researcher who pressed Ctrl-C was told their run
-    # failed. Microseconds wide on an idle Mac; wide enough to hit routinely on
-    # a loaded CI runner, where it read as a flaky test rather than the bug it
-    # was. Pinned by test_subprocess_sigint_during_startup_is_cancelled.
+    # `append_event` itself is INSIDE the guard, and that placement is the whole
+    # point. A signal arriving during startup used to raise KeyboardInterrupt
+    # straight out of __enter__ with no terminus ever written: the run read as
+    # *stranded*, the next start reconciled it to run_failed, and a researcher
+    # who pressed Ctrl-C was told their run had failed.
+    #
+    # The subtle part is where the window actually begins. The debt is created
+    # not when append_event RETURNS but when the line becomes OBSERVABLE — which
+    # happens mid-call, before the fsync and close:
+    #
+    #     write → [a reader can see run_started here] → fsync → close → return
+    #
+    # A first pass at this fix opened the guard on the statement after
+    # append_event, on the reasoning that the remaining gap was one bytecode
+    # instruction. It isn't: the gap is that whole tail, milliseconds wide on a
+    # contended filesystem. It survived a local 8x stress run and failed on
+    # ubuntu 3.11 in CI, inside the very test written to prove the fix.
+    #
+    # So: everything from the append onwards is guarded. A partially-written
+    # run_started plus a cancel is fine — read_events already tolerates a
+    # partial tail line.
     telemetry_tokens: tuple[object, object] | None = None
-    append_event(events_file, started_event)
     try:
         try:
+            append_event(events_file, started_event)
             _write_pid_file(output_dir, run_id, proc_start_time)
             log.info("run_started run_id=%s kind=%s", run_id, kind.value)
             telemetry_tokens = telemetry.set_run_context(

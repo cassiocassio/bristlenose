@@ -707,11 +707,6 @@ def run_lifecycle(
         started_at=started_at,
         process=proc,
     )
-    append_event(events_file, started_event)
-    _write_pid_file(output_dir, run_id, proc_start_time)
-
-    log.info("run_started run_id=%s kind=%s", run_id, kind.value)
-
     handle = RunHandle(
         run_id,
         events_file=events_file,
@@ -731,10 +726,25 @@ def run_lifecycle(
             out["summary"] = handle.summary
         return out
 
-    telemetry_tokens = telemetry.set_run_context(run_id, output_dir / ".bristlenose")
-
+    # Appending `run_started` is what creates the debt of a terminus event, so
+    # the guard opens on the very next statement. The pid-file write, the log
+    # line and the telemetry context used to sit BETWEEN the two — unguarded —
+    # which meant a signal arriving during startup raised KeyboardInterrupt
+    # straight out of __enter__ and no terminus was ever written. The run then
+    # looked *stranded* (reconciled to run_failed on the next start) rather
+    # than cancelled, so a researcher who pressed Ctrl-C was told their run
+    # failed. Microseconds wide on an idle Mac; wide enough to hit routinely on
+    # a loaded CI runner, where it read as a flaky test rather than the bug it
+    # was. Pinned by test_subprocess_sigint_during_startup_is_cancelled.
+    telemetry_tokens: tuple[object, object] | None = None
+    append_event(events_file, started_event)
     try:
         try:
+            _write_pid_file(output_dir, run_id, proc_start_time)
+            log.info("run_started run_id=%s kind=%s", run_id, kind.value)
+            telemetry_tokens = telemetry.set_run_context(
+                run_id, output_dir / ".bristlenose",
+            )
             yield handle
         except KeyboardInterrupt as exc:
             sig = _caught_signal or signal.SIGINT
@@ -816,4 +826,7 @@ def run_lifecycle(
             telemetry.trim_run_terminus()
             _remove_pid_file(output_dir)
     finally:
-        telemetry.reset_run_context(telemetry_tokens)
+        # None when the signal landed before set_run_context ran — there is
+        # then no contextvar state to restore.
+        if telemetry_tokens is not None:
+            telemetry.reset_run_context(telemetry_tokens)

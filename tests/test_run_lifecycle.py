@@ -608,19 +608,37 @@ def test_concurrent_run_refused_when_pid_file_alive(tmp_path: Path):
 # ---------------------------------------------------------------------------
 
 
-def _spawn_lifecycle_subprocess(tmp_path: Path, body: str) -> subprocess.Popen:
-    """Spawn a Python subprocess that enters run_lifecycle, then runs `body`."""
-    repo_root = Path(__file__).parent.parent
-    script = textwrap.dedent(f"""
-        import sys
-        sys.path.insert(0, {str(repo_root)!r})
-        from pathlib import Path
-        from bristlenose.events import KindEnum
-        from bristlenose.run_lifecycle import run_lifecycle
+def _spawn_lifecycle_subprocess(
+    tmp_path: Path, body: str, *, preamble: str = "",
+) -> subprocess.Popen:
+    """Spawn a Python subprocess that enters run_lifecycle, then runs `body`.
 
-        with run_lifecycle(Path({str(tmp_path)!r}), KindEnum.RUN):
-            {body}
-    """)
+    `body` and `preamble` are written as ordinary dedented blocks and are
+    re-indented here — the previous version interpolated them raw, so a
+    multi-line body had to carry the template's exact leading whitespace.
+
+    `preamble` runs after the imports and before the `with`, and is the hook
+    for reaching into `_rl_mod` to widen a window inside lifecycle startup.
+    """
+    repo_root = Path(__file__).parent.parent
+    script = (
+        textwrap.dedent(f"""
+            import sys
+            sys.path.insert(0, {str(repo_root)!r})
+            from pathlib import Path
+            from bristlenose.events import KindEnum
+            from bristlenose.run_lifecycle import run_lifecycle
+            import bristlenose.run_lifecycle as _rl_mod
+            __PREAMBLE__
+            with run_lifecycle(Path({str(tmp_path)!r}), KindEnum.RUN):
+            __BODY__
+        """)
+        .replace("__PREAMBLE__", textwrap.dedent(preamble).strip("\n"))
+        .replace(
+            "__BODY__",
+            textwrap.indent(textwrap.dedent(body).strip("\n"), "    "),
+        )
+    )
     return subprocess.Popen(
         [sys.executable, "-c", script],
         # BRISTLENOSE_LOG_LEVEL=ERROR cuts cold-import logging chatter on
@@ -641,13 +659,14 @@ def _wait_for_event(
 ) -> bool:
     """Poll the events file until `predicate(event)` matches, or timeout.
 
-    Generous deadline because:
-    - The subprocess pays cold-import cost (Pydantic, pricing, etc.) before
-      installing handlers — slow CI runners take a few seconds even idle.
-    - After SIGINT/SIGTERM, the lifecycle wrapper has to catch
-      KeyboardInterrupt, build the Cause, and fsync the line. On Python
-      3.10 + Linux ubuntu-latest under full-matrix load this can exceed
-      the 15s `proc.wait` timeout we used to use.
+    Polling the events file — rather than `proc.wait` — is the durable part:
+    process teardown can outlast the event flush, so waiting on exit measures
+    the wrong thing. The deadline itself should stay modest. Callers pass 60s,
+    which covers a cold import plus a Cause build plus one fsync with room to
+    spare; if that is ever exceeded, something is stuck and the right response
+    is to find out what, not to raise the number. Three successive raises were
+    spent on a deadline that was never the problem — see the
+    `run_started`-window bug in CLAUDE.md.
     """
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -669,18 +688,59 @@ def _wait_for_run_started(events_file: Path, *, timeout: float = 30.0) -> None:
         )
 
 
-def test_subprocess_sigint_writes_run_cancelled(tmp_path: Path):
-    proc = _spawn_lifecycle_subprocess(
-        tmp_path,
-        body="import signal\n            signal.pause()",
+def _paused_body(sentinel: Path) -> str:
+    """Subprocess body: announce readiness, then park in ``signal.pause()``.
+
+    The sentinel is the point of this helper. `run_started` is written during
+    lifecycle *startup*, several statements before the body runs, so waiting on
+    it and then signalling aims at a process that is very probably not paused
+    yet — which is a different code path from the one these tests mean to
+    exercise. Waiting for the sentinel instead means the signal lands on a
+    genuinely paused process, deterministically, on any runner.
+
+    A signal arriving between the write and `pause()` is still handled
+    correctly (the handler raises KeyboardInterrupt, which the lifecycle
+    catches); the sentinel is about aiming the test, not about safety.
+    """
+    return f"""
+        import signal
+        Path({str(sentinel)!r}).write_text("ready")
+        signal.pause()
+    """
+
+
+def _wait_for_ready(sentinel: Path, *, timeout: float = 30.0) -> None:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if sentinel.exists():
+            return
+        time.sleep(0.02)
+    raise AssertionError(
+        f"Subprocess never reached signal.pause() within {timeout}s.",
     )
+
+
+def test_subprocess_sigint_writes_run_cancelled(tmp_path: Path):
+    """SIGINT to a paused run writes run_cancelled with the right signal.
+
+    The deadline is 60s, down from 240s. The doubling ladder was treating a
+    real defect as slowness: the test signalled as soon as `run_started`
+    appeared, which on a loaded runner meant the signal usually landed during
+    lifecycle *startup*, where nothing caught it — see
+    test_subprocess_sigint_during_startup_is_cancelled. With the sentinel
+    aiming the signal at a genuinely paused process, what remains is a Cause
+    build plus one fsync, so anything approaching 60s is a hang worth failing
+    on rather than a deadline worth raising again.
+    """
+    sentinel = tmp_path / "ready"
+    proc = _spawn_lifecycle_subprocess(tmp_path, _paused_body(sentinel))
     f = events_path(tmp_path)
     try:
         _wait_for_run_started(f)
+        _wait_for_ready(sentinel)
         proc.send_signal(signal.SIGINT)
         # Poll the events file rather than wait for proc exit — proc cleanup
-        # can take longer than the cancel-event flush on slow CI runners
-        # (ubuntu-latest + Python 3.10 has been observed > 15s under load).
+        # can take longer than the cancel-event flush on slow CI runners.
         landed = _wait_for_event(
             f,
             lambda e: (
@@ -689,14 +749,73 @@ def test_subprocess_sigint_writes_run_cancelled(tmp_path: Path):
                 and e.cause.signal == int(signal.SIGINT)
                 and e.cause.signal_name == "SIGINT"
             ),
-            timeout=240.0,
+            timeout=60.0,
         )
     finally:
         if proc.poll() is None:
             proc.kill()
         proc.wait(timeout=10)
     assert landed, (
-        "RunCancelledEvent (SIGINT) never landed within 240s of sending the signal"
+        "RunCancelledEvent (SIGINT) never landed within 60s of sending the signal"
+    )
+
+
+def test_subprocess_sigint_during_startup_is_cancelled(tmp_path: Path):
+    """A signal arriving during lifecycle STARTUP still writes run_cancelled.
+
+    Appending `run_started` is what creates the debt of a terminus event, but
+    the pid-file write, the log line and the telemetry context used to sit
+    outside every handler. A signal landing in that window raised
+    KeyboardInterrupt straight out of ``__enter__``, no terminus was written at
+    all, and the run read as *stranded* — reconciled to run_failed on the next
+    start. So a researcher who pressed Ctrl-C during startup was told their run
+    had failed.
+
+    This is the defect that presented as a flaky
+    test_subprocess_sigint_writes_run_cancelled on ubuntu-latest: that test
+    signalled on `run_started` and so aimed straight at the window, and the
+    response each time was to double its timeout.
+
+    Made deterministic by holding the process still inside the window rather
+    than racing it. `_write_pid_file` is the first statement after
+    `run_started`, so slowing it parks the process exactly where the bug lived.
+    """
+    preamble = """
+        import time
+        _real_write = _rl_mod._write_pid_file
+        def _slow_write(*a, **kw):
+            time.sleep(3.0)
+            return _real_write(*a, **kw)
+        _rl_mod._write_pid_file = _slow_write
+    """
+    proc = _spawn_lifecycle_subprocess(
+        tmp_path,
+        body="import signal\nsignal.pause()",
+        preamble=preamble,
+    )
+    f = events_path(tmp_path)
+    try:
+        # run_started has landed; the process is now inside the slowed window
+        # and has NOT reached the body.
+        _wait_for_run_started(f)
+        proc.send_signal(signal.SIGINT)
+        landed = _wait_for_event(
+            f,
+            lambda e: (
+                isinstance(e, RunCancelledEvent)
+                and e.cause.category == CauseCategoryEnum.USER_SIGNAL
+                and e.cause.signal_name == "SIGINT"
+            ),
+            timeout=60.0,
+        )
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait(timeout=10)
+    assert landed, (
+        "A run interrupted during startup wrote no terminus event — it will "
+        "read as stranded and be reconciled to run_failed, telling the user "
+        "their run failed when they cancelled it."
     )
 
 
@@ -709,13 +828,12 @@ def test_subprocess_clean_exit_writes_run_completed(tmp_path: Path):
 
 
 def test_subprocess_sigterm_writes_run_cancelled(tmp_path: Path):
-    proc = _spawn_lifecycle_subprocess(
-        tmp_path,
-        body="import signal\n            signal.pause()",
-    )
+    sentinel = tmp_path / "ready"
+    proc = _spawn_lifecycle_subprocess(tmp_path, _paused_body(sentinel))
     f = events_path(tmp_path)
     try:
         _wait_for_run_started(f)
+        _wait_for_ready(sentinel)
         proc.send_signal(signal.SIGTERM)
         landed = _wait_for_event(
             f,
@@ -723,12 +841,12 @@ def test_subprocess_sigterm_writes_run_cancelled(tmp_path: Path):
                 isinstance(e, RunCancelledEvent)
                 and e.cause.signal_name == "SIGTERM"
             ),
-            timeout=240.0,
+            timeout=60.0,
         )
     finally:
         if proc.poll() is None:
             proc.kill()
         proc.wait(timeout=10)
     assert landed, (
-        "RunCancelledEvent (SIGTERM) never landed within 240s of sending the signal"
+        "RunCancelledEvent (SIGTERM) never landed within 60s of sending the signal"
     )

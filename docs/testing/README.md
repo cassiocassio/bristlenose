@@ -23,6 +23,7 @@ The **defining split** (the whole reason this set exists): the top two tiers are
 - **[real-data-testing.md](real-data-testing.md)** — using real interview data under governance.
 
 **Elsewhere (indexed here, left in place — widely referenced):**
+- [`docs/design-release-system-audit.md`](../design-release-system-audit.md) — eight-lens adversarial audit of the release system (scripts, both skills, the three workflows), run the morning after the 0.25.2 incident. Pairs with `bn-release-acceptance.md` above: that doc asks whether the skill behaves, this one asks whether the machinery underneath it can be trusted. Findings carry their verification status inline — nine confirmed by skeptics who re-derived them, six high-severity still unverified. Untriaged; §5 proposes rescoping the acceptance doc's own protocol and its `S9` criterion.
 - [`docs/design-test-philosophy.md`](../design-test-philosophy.md) — the testing pyramid + house position (James Bach / context-driven).
 - [`docs/archive/design-test-strategy.md`](../design-test-strategy.md) — per-layer audit, tool choices.
 - [`docs/design-playwright-testing.md`](../design-playwright-testing.md) — tier-2 Playwright specifics.

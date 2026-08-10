@@ -2,9 +2,15 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.25.3** — _10 Aug 2026_
+
+- **Cancelling a run no longer records it as a failure.** Press Ctrl-C in the first moments of a run — while it was still starting up — and Bristlenose wrote nothing at all about the cancellation. The run was left looking abandoned, and the next run you started reported the previous one as having stopped unexpectedly. You stopped it on purpose; you were told it had failed. The window was a narrow one, so this was rare on an idle machine and more likely on a busy one, but nothing afterwards could tell a deliberate cancel from a crash. A cancellation is now always recorded as a cancellation — including when the signal lands in the very first milliseconds, while the run's own opening log entry is still being flushed to disk, which is the case 0.25.2 left open. The same change means a run that cannot write its own bookkeeping — a full disk, say — is recorded as a failure with a reason attached, rather than leaving no trace.
+
 **0.25.2** — _9 Aug 2026_
 
-- **Cancelling a run no longer records it as a failure.** Press Ctrl-C in the first moments of a run — while it was still starting up — and Bristlenose wrote nothing at all about the cancellation. The run was left looking abandoned, and the next run you started reported the previous one as having stopped unexpectedly. You stopped it on purpose; you were told it had failed. The window was a narrow one, so this was rare on an idle machine and more likely on a busy one, but nothing afterwards could tell a deliberate cancel from a crash. A cancellation is now always recorded as a cancellation. The same change means a run that cannot write its own bookkeeping — a full disk, say — is recorded as a failure with a reason attached, rather than leaving no trace.
+_Reached TestFlight and the direct-download `.dmg` only — never published to PyPI, Homebrew or Snap. Its fix was incomplete, leaving the narrowest case still misreported. Superseded by 0.25.3; use that one._
+
+- **Cancelling a run no longer records it as a failure.** Press Ctrl-C in the first moments of a run — while it was still starting up — and Bristlenose wrote nothing at all about the cancellation. The run was left looking abandoned, and the next run you started reported the previous one as having stopped unexpectedly.
 
 **0.25.1** — _7 Aug 2026_
 

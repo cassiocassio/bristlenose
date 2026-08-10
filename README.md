@@ -375,9 +375,13 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.25.3** — _10 Aug 2026_
+
+- **Cancelling a run no longer records it as a failure** — pressing Ctrl-C while a run was still starting up wrote nothing about the cancellation, so the run looked abandoned and the next one reported it as having stopped unexpectedly. A cancellation is now always recorded as one, including when the signal lands while the run's opening log entry is still being written — the case 0.25.2 left open.
+
 **0.25.2** — _9 Aug 2026_
 
-- **Cancelling a run no longer records it as a failure** — pressing Ctrl-C while a run was still starting up wrote nothing about the cancellation, so the run looked abandoned and the next one reported it as having stopped unexpectedly. A cancellation is now always recorded as one.
+Reached TestFlight and the direct-download `.dmg` only; its fix was incomplete. _(Superseded by 0.25.3 — use that one.)_
 
 **0.25.1** — _7 Aug 2026_
 

@@ -41,9 +41,18 @@ Show what landed since the last tag: `git log <lasttag>..HEAD --oneline`. Decide
 **First decide which case you're in — they take different paths:**
 - **Fresh bump (common):** `__version__` is the last *released* version and you're cutting a new `X.Y.Z`. Proceed through Step 3 → Step 4 (bump).
 - **Publish-pending (already bumped, awaiting publish):** `__version__` already equals an existing local tag `vX.Y.Z` AND PyPI is *behind* it — a prior session bumped + tagged but the release never landed (deferred push, or a release run that fired and failed). **Skip Step 4 entirely — do NOT re-bump or re-tag.** Go straight to Step 5 and push `main` + the existing tag. If `git push origin vX.Y.Z` says "Everything up-to-date", the tag is already on origin → the release run already fired; check `gh run list --workflow=release.yml` for its conclusion:
-  - **fired and *failed* on a flaky/transient step** (e.g. the lifecycle SIGTERM timing test) → `gh run rerun <id> --failed` (replays the *tagged* commit — correct when the code is fine and the test just flaked).
-  - **failed on something a *later* commit fixed** → move the tag: `git tag -f vX.Y.Z <fixed-sha> && git push --delete origin vX.Y.Z && git push origin vX.Y.Z` (fresh run on the fix).
-  - Then resume Step 5's PyPI verify loop. (Worked example: 0.15.18 on 21 Jun 2026 — tag pushed at 14:35, release run failed on the flaky lifecycle test; `gh run rerun --failed` was the fix, no tag surgery.)
+  **Run this discriminator BEFORE choosing a branch — it forbids the first one:**
+  ```bash
+  git log vX.Y.Z..origin/main --oneline -- bristlenose/ frontend/
+  ```
+  Non-empty means shipped code has moved since the tag: the tagged commit is **not**
+  what you now believe ships, so a rerun would publish stale code immutably. Rerun
+  is then **off the table** regardless of how flaky the failure looks.
+
+  - **fired and *failed* on a flaky/transient step, and the discriminator is empty** → `gh run rerun <id> --failed` (replays the *tagged* commit — correct only when the code is genuinely unchanged and the test just flaked).
+  - **failed on something a *later* commit fixed, and nothing shipped from the tag yet** → move the tag: `git tag -f vX.Y.Z <fixed-sha> && git push --delete origin vX.Y.Z && git push origin vX.Y.Z` (fresh run on the fix).
+  - **failed, a later commit fixed it, and Mac channels already shipped from the tag** → **supersede.** Leave the tag where it is (it is the accurate provenance for the TestFlight build and the published `.dmg`, and the `.dmg` manifest pins that commit — deleting it orphans the trail). Bump to `X.Y.Z+1`, rebuild every Mac artefact, and amend the superseded version's CHANGELOG entry to name the channels it reached and point at its replacement. Precedent: 0.25.0 → 0.25.1, and 0.25.2 → 0.25.3 on 10 Aug 2026.
+  - Then resume Step 5's PyPI verify loop. (Worked example: 0.15.18 on 21 Jun 2026 — tag pushed at 14:35, release run failed on the flaky lifecycle test; `gh run rerun --failed` was the fix, no tag surgery. Counter-example: 0.25.2 on 9 Aug 2026 — same test, same look, but it was a genuinely incomplete fix and the discriminator was non-empty; a rerun would have published the broken half.)
 
 **Weekday evening rule:** releases land after 9pm London. If it's daytime on a weekday, confirm with the user before proceeding (override is fine — it's a guideline). Weekends: any time. Log `bash .claude/skills/_shared/wflog.sh new-release version "<X.Y.Z>"`.
 

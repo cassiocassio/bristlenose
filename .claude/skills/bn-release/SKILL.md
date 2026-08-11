@@ -34,12 +34,27 @@ git describe --tags --abbrev=0
 git log $(git describe --tags --abbrev=0)..HEAD --oneline
 ```
 
-**Two different acts. Establish which one this is, first:**
+**Three possible acts. Establish which one this is, first:**
 
 | | What it is | Version | Prose |
 |---|---|---|---|
 | **Release** | You are telling users something is different | bumps | required |
 | **Rebuild** | Refreshing TestFlight/`.dmg` with nothing new to say — e.g. the 90-day expiry | `--build-only` | none |
+| **Nothing to ship** | The range touches no shipped code | none | none |
+
+**Check the third one first, because it is cheap and it is common.** A week of
+docs, tooling and CI work produces a long `git log` and an empty diff where it
+counts:
+
+```bash
+git diff $(git describe --tags --abbrev=0)..HEAD --stat -- bristlenose/ frontend/
+```
+
+Empty means the wheel would be **byte-identical** to the version already on PyPI,
+and the house rule applies: repo-only changes re-use the existing tag rather than
+bumping. Say so and stop — do not manufacture a release to have something to do.
+(Mac artefacts are a separate question: `desktop/` changes can warrant a rebuild
+even when the wheel is unchanged.)
 
 **The version is a communication decision and it belongs to the human.** Do not
 infer it from the diff. A month of refactoring can be invisible to users; one
@@ -70,6 +85,14 @@ That is the mechanical half and it is authoritative: **if it exits non-zero, sto
 and fix, whatever your own reading says.** It checks tree, version agreement
 across four files, changelog format and non-emptiness, tag, PyPI immutability,
 certs, profile expiry, ASC config, CI status.
+
+**Expect it to fail on this first run, and do not treat that as a stop.** On a
+genuine release the CHANGELOG and README entries for the target version cannot
+exist yet — Phase 3 is where you write them. So the shape is **preflight → prose
+→ preflight**, and only the second run's verdict is the gate. Any *other* failure
+is a real stop. Two things the script cannot see, so check them yourself: whether
+an existing tag points at HEAD (it only checks the tag exists), and whether the
+CI line means "green" or merely "no evidence" — those read the same in its output.
 
 Then do the part it cannot — read `git log <last-tag>..HEAD` **and the diff**, and
 report:
@@ -105,8 +128,20 @@ This is the work most likely to be skipped at 9pm, and it is why this is a skill
 Present a single page: ordered steps, wall-clock estimates, what is being skipped
 and why, and any advisory finding the human is choosing to accept.
 
-**Mark the line where reversible becomes irreversible.** Everything before the
-tag push can be abandoned; PyPI never can.
+**Mark both lines where reversible becomes irreversible — there are two, and they
+cost differently:**
+
+| | Line | Crossed by | Cost of being wrong |
+|---|---|---|---|
+| **soft** | a build number is spent forever | `upload-testflight.sh` | recoverable: `--build-only` and rebuild. But the build **reaches cohort testers** and cannot be recalled, only expired in ASC |
+| **hard** | a PyPI version is burned forever | pushing the tag | unrecoverable: that version can never be re-used |
+
+Publishing the `.dmg` sits between them — technically re-publishable, but the
+public permalink swaps the moment it lands, so treat it as audience-reaching too.
+"Reversible" and "nobody saw it" are different properties; say which you mean.
+
+Ask **once**, before the *soft* line — not before the hard one. Everything up to
+and including `push main` is genuinely abandonable and needs no ceremony.
 
 Then ask **once**. Not per channel — a prompt per step trains people to say yes.
 Declining here is the dry run; there is no `--dry-run` flag because the preflight
@@ -117,22 +152,60 @@ always ran.
 Order matters and is derived from reversibility, not convenience.
 
 ```
-1  bump + commit          ./scripts/bump-version.py minor|patch     (or --build-only)
-2  Mac artefacts          desktop/scripts/build-all.sh              ~35 min
-                          desktop/scripts/upload-testflight.sh      gates internally
+1  bump + tag + commit    ./scripts/bump-version.py minor|patch     (or --build-only)
+                          git tag -d vX.Y.Z        ← it tagged PRE-bump HEAD
+                          git add + git commit
+                          git tag vX.Y.Z           ← now on the bump commit
+                          verify: git rev-parse HEAD == git rev-parse vX.Y.Z^{}
+
+2  push main (NOT tags)   git push origin main                      ~25 min for CI
+                          release.yml fires on TAGS only — this publishes nothing.
+                          Wait for green before spending the Mac lane.
+
+3  Mac artefacts          SIGN_IDENTITY="Apple Distribution: Martin Storey (Z56GZVA2QB)" \
+                            desktop/scripts/build-all.sh            ~35 min warm / ~50 cold
+                          desktop/scripts/upload-testflight.sh      ← SOFT irreversible
                           desktop/scripts/build-dmg.sh              ~40 min, two notary waits
-                          desktop/scripts/upload-dmg.sh
-3  CLI publish            → follow .claude/skills/new-release/SKILL.md Steps 4–6
-                            (tag, push, PyPI verify, and its tag-surgery tree)
-4  website deploy         only AFTER PyPI confirms — see below
-5  Snap                   gh workflow run snap.yml --ref main       (edge)
+                          desktop/scripts/upload-dmg.sh             ← public permalink swaps
+
+4  CLI publish            re-assert HEAD == tag == origin/main, then
+                          → .claude/skills/new-release/SKILL.md Steps 5–6 ONLY
+                            (push tag, PyPI verify, and its tag-surgery tree)
+                                                                    ← HARD irreversible
+
+5  website deploy         only AFTER PyPI confirms — see below
+6  Snap                   gh workflow run snap.yml --ref main       (edge)
                           gh workflow run snap.yml --ref vX.Y.Z     (stable, Tier 2)
-6  Tier 2 only            App Store submission, phased release on
+7  Tier 2 only            App Store submission, phased release on
 ```
 
-**Mac artefacts before the tag push.** A signing regression or expired profile
-must surface while the version can still be abandoned. Push first and you have
-burned an immutable PyPI version to learn it.
+**Step 1 owns the whole tag dance.** `bump-version.py` creates the tag on
+*pre-bump* HEAD, before the commit exists, so it points at the wrong commit until
+you delete and re-tag. Do that here, in one unit, and verify tag == HEAD before
+moving on. Do **not** delegate this to `/new-release` Step 4: that step is the
+same bump, and after step 1 the tree already satisfies its publish-pending case,
+whose instruction is *"push the existing tag"* — which would push a tag pointing
+at the pre-bump commit. Hand off Steps **5–6 only**.
+
+**`SIGN_IDENTITY` is not optional.** Unset, it defaults to `-` (ad-hoc), and
+`build-all.sh` then silently skips the identity check, the provisioning-profile
+check and the notarytool check — six gates off, no warning, and you find out 35
+minutes later at the upload. `build-dmg.sh` needs no such care: it defaults to
+the Developer ID identity and refuses ad-hoc outright.
+
+**Push `main` before the Mac lane, not after.** `release.yml` fires only on
+`push: tags`, so pushing `main` publishes nothing anywhere — it just buys a CI
+verdict before you spend 75 minutes and a permanently-consumed build number. The
+old ordering conflated the two pushes and left the Mac lane running against code
+CI had never seen. **Caveat worth stating out loud: one green is not proof on a
+suite with a live flake, and the tag push re-runs CI, so a green now can still be
+followed by a red then.** If that happens after the uploads, the release is
+already partially published — the supersede path in `/new-release` Step 2 is the
+answer, not a rerun.
+
+**Budget cold, not warm.** A version bump invalidates the PyInstaller and
+frontend caches, so the sidecar rebuild inside `build-all.sh` runs ~19 min rather
+than ~6. A full Publish-tier release is **~2h15 wall-clock**, most of it waiting.
 
 **The website deploys last.** Its changelog page renders live from `CHANGELOG.md`,
 so deploying before PyPI accepts the upload publishes a page announcing a version
@@ -153,10 +226,24 @@ emergencies.
 |---|---|
 | PyPI | `curl -s -o /dev/null -w '%{http_code}' https://pypi.org/pypi/bristlenose/X.Y.Z/json` → 200 |
 | GitHub Release | `gh release view vX.Y.Z` |
-| Homebrew | the tap formula's `version` |
-| TestFlight | `xcrun altool --build-status --delivery-id <uuid> …` |
-| Snap | `snap info bristlenose` |
-| `.dmg` | `curl -I` the versioned URL |
+| Homebrew | the tap formula's sdist URL names `bristlenose-X.Y.Z.tar.gz` |
+| TestFlight | `xcrun altool --build-status --delivery-id <uuid> …` — **capture the UUID into the plan when `upload-testflight.sh` prints it**; it is the one probe you cannot reconstruct later |
+| Snap | `snap info bristlenose` (no `snap` on macOS — fall back to the workflow run's conclusion, and say that is what you did) |
+| **Website** | `curl -s https://bristlenose.app/docs/changelog.html \| grep -c 'X\.Y\.Z'` → non-zero |
+| `.dmg` | `curl -sI https://bristlenose.app/dmg/Bristlenose.dmg` → 302 to the versioned name |
+
+**Probe the website even though its deploy is manual.** *Manual* and
+*unverifiable* are different properties, and conflating them is how the only
+channel nobody checks stays unchecked. It is in fact the **strongest** probe
+available: that page renders from `CHANGELOG.md` at build time, so a hit proves
+the deploy ran *after* the entry existed. Only that one page carries a version —
+homepage, docs index, `cli.md` and the install page carry none, and the homepage
+links the stable `/dmg/Bristlenose.dmg` redirect rather than a versioned
+filename, so there is nothing else to drift.
+
+Every row must trace to a command you actually ran. If you could not run one, say
+so and name what would run it — never let a channel's status rest on someone
+having told you.
 
 Close with a table of what is now true per channel, plus the expiry clocks —
 **`.dmg` 30 days from the *build*, TestFlight 90 from the *upload*.**

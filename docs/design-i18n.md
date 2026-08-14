@@ -682,7 +682,8 @@ high-frequency UI vocabulary and the l10n industry treats `zh-TW`/`zh-HK` as sep
 - **CLI terminal chrome is English-only in alpha**, so the localised Chinese experience appears
   via `bristlenose serve` + the SPA (shipped inside both the CLI package and the `.app`).
 
-**Catalan (`ca`) — reviewer-led, deliberately out of chart order (planned 3 Aug 2026).** Catalan does
+**Catalan (`ca`) — reviewer-led, deliberately out of chart order (planned 3 Aug 2026; glossary landed
+14 Aug 2026).** Catalan does
 not appear on the prioritisation chart above and would not score well on it: small absolute market,
 modest Mac-installed reach, and a UR community that is real (Barcelona design industry — Elisava,
 IED, BAU) but concentrated. It is being built anyway because **the chart measures the wrong scarce
@@ -707,21 +708,76 @@ the chart ranks *candidates we would have to go and find someone for*.
   to catch **castellanismes** — Spanish calques are the dominant failure mode for Catalan MT, because
   web-scraped Catalan training data carries heavy Spanish interference. Brief them to flag calques
   explicitly; that is the highest-value thing they can do.
-- **Apple ships Catalan properly — both gates verified 3 Aug 2026.** macOS offers Català as one of
-  its out-of-the-box system UI languages, so the mandatory Apple-HIG cross-check (Step 2) is a real
-  lookup against Apple's own `ca` `.strings` (via applelocalization.com), not guesswork — a better
-  starting position than most locales here. App Store Connect accepts Catalan metadata, so the
-  `.app` can ship a genuine `ca.lproj` **and** a Catalan store listing. *Caveat:* Apple provides no
-  Catalan spellcheck on macOS, which touches inline quote/heading editing — cosmetic, but real.
+- **Apple ships Catalan properly — verified on-device 14 Aug 2026, not just from docs.** macOS
+  ships a **full** Catalan UI: menu bar, AppKit save panel, System Settings. Confirmed by screenshots
+  of a Catalan-set Mac, which is the only evidence that settles it — the web record is actively
+  misleading here. `support.apple.com/ca-es/` serves **Spanish**, and at least one secondary source
+  claims macOS has no Catalan menu localisation; both are wrong about the OS-strings corpus and cost
+  a full flip-flop mid-session before the screenshots resolved it. **Don't re-derive this from search
+  results — it's settled, and the answer is yes.** So the mandatory Apple-HIG cross-check (Step 2) is
+  a real lookup against Apple's own `ca` strings, a better starting position than most locales here.
+  App Store Connect accepts Catalan metadata, so the `.app` can ship a genuine `ca.lproj` **and** a
+  Catalan store listing. *Caveat:* Apple provides no Catalan spellcheck on macOS, which touches
+  inline quote/heading editing — cosmetic, but real.
 - **Plurals: no new work.** CLDR Catalan is `one` / `many` / `other`, but `many` is
   `i % 1000000 = 0` — the compact-decimal/exact-millions category. It is unreachable at Bristlenose's
   count magnitudes (quotes, sessions, tags), and `pluralCategory`'s `default` branch already returns
   the correct one/other with `_other` fallback covering the rest. Same effective shape as `es`/`it`/
   `nl` — **no Swift `pluralCategory` branch, no four-form seeding.**
 
+**Register and form — settled 14 Aug 2026 by two independent authorities.** Apple's shipped `ca`
+strings and Microsoft's `cat-esp` style guide were checked against each other; they agree, so these
+are not open questions and should not be re-litigated with the reviewer:
+
+- **Commands take the imperative — never the infinitive.** Microsoft §4.1.19 is explicit: *"For
+  commands instructions suggestions and similar text always use the imperative form not impersonal
+  forms or infinitives. (Use the second-person singular of the imperative tu to address the system.
+  **Unlike English and Spanish the infinitive form should never be used in Catalan.**)"* Apple's menus
+  bear it out throughout — Desa, Obre, Tanca, Copia, Retalla, Enganxa, Desfés, Refés, Imprimeix,
+  Exporta, Mostra, Oculta, Surt. **This is the single highest-value fact in the Catalan glossary:** it
+  splits `ca` from `es`/`fr`/`pt` (all infinitive) and aligns it with `it`. An MT seed trained on
+  Spanish-adjacent data will get this wrong across every command string.
+- **Titles take nouns**, even where English uses a verb — menus, tabs, window titles, and dialog-box
+  titles (questions excepted). Affects the `desktop.json` menu namespace specifically. Apple concurs:
+  "Usuaris i grups", "Tipus de lletra".
+- **Progress and status use the pronominal passive with `es`, in complete sentences** — "S'està desant
+  el fitxer", never "Desant el fitxer". **This lands directly on our pipeline status strings**, which
+  are exactly that shape.
+- **`tu` vs `vós` is genuinely open and belongs to the reviewer.** Microsoft: immersive apps use `tu`,
+  formal contexts `vós`; Office 365 and Skype chose `vós`. Note the imperative-addresses-the-*system*
+  rule is separate and already settled — this decision governs user-directed prose only.
+- **Orthography that tooling can break:** `Cancel·la` carries the interpunct (U+00B7), and Catalan
+  elides constantly with a typographic apostrophe (`l'app`, `d'escriptura`, `Temps d'ús`) — same
+  family as the German typographic-quote gotcha. Apple also uses *pronoms febles* correctly
+  (`Selecciona-ho tot`); Microsoft warns these get dropped under Spanish influence, so their absence
+  is a cheap castellanisme tell for the reviewer to grep for.
+
+**Two term collisions worth naming.** (1) **Focus Mode has no safe direct translation** — Apple `ca`
+calls system Focus **"Modes de concentració"**, so `Mode concentració` is unavailable to us for the
+same reason `it` had to reach for *Full Immersion*. Seeded provisionally as `Mode immersió`, flagged
+for review. (2) **Tags → `Etiquetes`** — Apple's own term (Finder tags, the save panel's "Etiquetes:"
+field). Catalan should use it rather than keep the English loanword the way `es`/`fr`/`it` did;
+Microsoft's *barbarismes* rule points the same way. `Tags` isn't a `glossary.csv` row yet — add it as
+a full term-block when it is.
+
+**Second source: Microsoft, and who adjudicates.** Windows Catalan is a **Language Interface Pack**,
+not a full language pack — a partial layer requiring en-US/en-GB/es-ES/fr-FR beneath, so it falls back
+to the base language where untranslated (structurally like our `zh-Hant-HK`). The useful artefact is
+the **Catalan Localization Style Guide** (`cat-esp-StyleGuide.pdf`, 63pp, current — it covers Copilot),
+sibling to the `por-bra`/`por-prt` guides already cited for Portuguese. Both Microsoft and Softcatalà
+defer to **TERMCAT** as the official terminology body, so when Apple and the Recull disagree, TERMCAT
+adjudicates.
+
+**Corrections to the first draft** (recorded so they aren't reintroduced): Delete is **`Elimina`**, not
+`Suprimeix`; Hide is **`Oculta`**, not `Amaga`; Settings is **`Configuració`** — Catalan did *not*
+follow the Spanish post-Ventura rename to *Ajustes*, so don't inherit it. Apple uses `Elimina` for
+**both** Delete and Remove, so the Remove disambiguation is ours to make and is seeded as `Suprimeix`
+pending review.
+
 **Process inversion — spend the reviewer on the glossary, not the proofread.** The documented
-seven-step process MT-seeds all ~1,522 keys and puts native review last (Step 5). That ordering is
-what leaves locales stranded: the scarce human is spent proofreading 1,500 strings. Because the
+seven-step process MT-seeds all **1,246 keys** (flattened across the 9 `en` namespaces — measured, not
+the line count) and puts native review last (Step 5). That ordering is
+what leaves locales stranded: the scarce human is spent proofreading 1,246 strings. Because the
 Catalan reviewers are available *first*, run it backwards:
 
 1. **Build the glossary before translating** — ~30 rows in `glossary.csv` (`es` has 23, `it` 30),
@@ -737,8 +793,8 @@ Catalan reviewers are available *first*, run it backwards:
 4. **Grep-verify domain terms + toolbar overflow**, then an optional second reviewer pass on full
    strings.
 
-Net effect: the scarce human makes ~30 decisions that propagate to ~1,500 strings, instead of
-reviewing ~1,500 strings that were already fixed by an unratified guess. **If this works, it should
+Net effect: the scarce human makes ~30 decisions that propagate to 1,246 strings, instead of
+reviewing 1,246 strings that were already fixed by an unratified guess. **If this works, it should
 become the default process for reviewer-gated locales** and the seven-step order above should be
 rewritten to match.
 

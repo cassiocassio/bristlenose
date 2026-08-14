@@ -514,3 +514,33 @@ Focus Mode,Fokusläge,sv,Bristlenose feature: distraction-free reading state for
 Focus Mode,Odak modu,tr,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
 Focus Mode,Режим фокусування,uk,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
 Focus Mode,專注模式,zh-Hant,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
+Save,Desa,ca,Apple macOS ca (verified on-device 14 Aug 2026). Imperative. NOT Guardar - that is the Spanish form and the castellanisme trap
+Cancel,Cancel·la,ca,Apple macOS ca (verified on-device 14 Aug 2026). Contains the interpunct U+00B7 (l·l) - watch JSON escaping and font fallback
+Close,Tanca,ca,Apple macOS ca (verified on-device 14 Aug 2026)
+Copy,Copia,ca,Apple macOS ca (verified on-device 14 Aug 2026)
+Delete,Elimina,ca,Apple macOS ca (verified on-device 14 Aug 2026) Edit menu. Apple uses Elimina for BOTH Delete and Remove - see Remove row. PENDING native review for the disambiguation
+Undo,Desfés,ca,Apple macOS ca (verified on-device 14 Aug 2026)
+Redo,Refés,ca,Apple macOS ca (verified on-device 14 Aug 2026)
+Search,Cerca,ca,Apple macOS ca (verified on-device 14 Aug 2026)
+Print,Imprimeix,ca,Apple macOS ca (verified on-device 14 Aug 2026)
+Export,Exporta,ca,Apple macOS ca (verified on-device 14 Aug 2026)
+Settings,Configuració,ca,Apple macOS ca (verified on-device 14 Aug 2026). Catalan did NOT follow the Spanish post-Ventura rename to Ajustes - do not inherit it
+Open,Obre,ca,Apple macOS ca (verified on-device 14 Aug 2026)
+Hide,Oculta,ca,Apple macOS ca (verified on-device 14 Aug 2026). NOT Amaga
+Import,Importa,ca,Apple macOS ca (verified on-device 14 Aug 2026)
+Show,Mostra,ca,Apple macOS ca (verified on-device 14 Aug 2026)
+Edit,Edita,ca,Apple macOS ca (verified on-device 14 Aug 2026) System Settings
+Add,Afegeix,ca,Apple macOS ca (verified on-device 14 Aug 2026) System Settings
+Quit,Surt,ca,Apple macOS ca (verified on-device 14 Aug 2026)
+Accept,Accepta,ca,Softcatala Recull lemma acceptar. Imperative per Microsoft ca-ES style guide 4.1.19: the infinitive must never be used in Catalan. PENDING native review
+Apply,Aplica,ca,Softcatala Recull lemma aplicar. Imperative per Microsoft ca-ES style guide 4.1.19: the infinitive must never be used in Catalan. PENDING native review
+Reset,Reinicialitza,ca,Softcatala Recull gives reiniciar/reinicialitzar. Restableix is the alternative. PENDING native review
+Done,Fet,ca,Softcatala Recull. PENDING native review
+Remove,Suprimeix,ca,Ours to disambiguate - Apple uses Elimina for both Delete and Remove. PENDING native review
+Codebook,Llibre de codis,ca,QDA term. PENDING native review - ask whether Catalan QDA practice has its own form
+Quotes,Cites,ca,QDA term. PENDING native review - ask whether Catalan UR borrowed verbatim the way French did
+Sessions,Sessions,ca,QDA term. PENDING native review
+Signals,Senyals,ca,Bristlenose coinage - we name it. PENDING native review
+Codes,Codis,ca,QDA term. PENDING native review
+Agent,Agent,ca,AI agent (MCP client). PENDING native review
+Focus Mode,Mode immersió,ca,PROVISIONAL - COLLISION: Apple ca calls system Focus 'Modes de concentració' so Mode concentració is unavailable. Immersion register proposed after it: Full Immersion. PENDING native review

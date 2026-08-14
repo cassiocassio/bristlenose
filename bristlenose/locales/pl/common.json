@@ -109,6 +109,11 @@
     "copyFolderPath": "Kopiuj ścieżkę folderu",
     "showInFinder": "Poka\u017c w Finderze",
     "editName": "Edytuj nazwę dla {{code}}",
+    "speakerPlaceholder": {
+      "moderator": "Moderator",
+      "participant": "Uczestnik",
+      "observer": "Obserwator"
+    },
     "failedToLoad": "Nie udało się wczytać sesji: {{error}}",
     "loading": "Wczytywanie sesji…"
   },

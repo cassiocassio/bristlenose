@@ -525,6 +525,13 @@
     "unavailable": "Agenttilkobling er ikke tilgjengelig i denne versjonen.",
     "notRunning": "Start prosjektet f\u00f8r du kobler til en agent."
   },
+  "sessionsPopover": {
+    "allSessions": "Alle \u00f8kter",
+    "allCount_one": "Alle {{count}} \u00f8kt",
+    "allCount_other": "Alle {{count}} \u00f8kter",
+    "noSessions": "Ingen \u00f8kter enn\u00e5",
+    "loadFailed": "Kunne ikke laste inn \u00f8kter"
+  },
   "toast": {
     "removedBatchAnnouncement": "Fjernet %d prosjekter. Trykk Kommando-Z for å angre.",
     "removedAnnouncement": "Fjernet «%@». Trykk Kommando-Z for å angre.",

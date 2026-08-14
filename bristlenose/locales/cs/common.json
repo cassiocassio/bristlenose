@@ -105,6 +105,11 @@
     "copyFolderPath": "Kopírovat cestu ke složce",
     "showInFinder": "Zobrazit ve Finderu",
     "editName": "Upravit jméno pro {{code}}",
+    "speakerPlaceholder": {
+      "moderator": "Moder\u00e1tor",
+      "participant": "\u00da\u010dastn\u00edk",
+      "observer": "Pozorovatel"
+    },
     "failedToLoad": "Nepodařilo se načíst sezení: {{error}}",
     "loading": "Načítání sezení…"
   },

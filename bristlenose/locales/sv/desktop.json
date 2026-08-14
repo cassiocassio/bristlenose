@@ -525,6 +525,13 @@
     "unavailable": "Agentanslutning \u00e4r inte tillg\u00e4nglig i det h\u00e4r bygget.",
     "notRunning": "Starta projektet innan du ansluter en agent."
   },
+  "sessionsPopover": {
+    "allSessions": "Alla sessioner",
+    "allCount_one": "Alla {{count}} session",
+    "allCount_other": "Alla {{count}} sessioner",
+    "noSessions": "Inga sessioner \u00e4nnu",
+    "loadFailed": "Kunde inte l\u00e4sa in sessioner"
+  },
   "toast": {
     "removedBatchAnnouncement": "Tog bort %d projekt. Tryck på Kommando-Z för att ångra.",
     "removedAnnouncement": "Tog bort ”%@”. Tryck på Kommando-Z för att ångra.",

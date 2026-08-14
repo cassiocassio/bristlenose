@@ -95,6 +95,11 @@
     "copyFolderPath": "Kopioi kansion polku",
     "showInFinder": "N\u00e4yt\u00e4 Finderissa",
     "editName": "Muokkaa nimeä: {{code}}",
+    "speakerPlaceholder": {
+      "moderator": "Moderaattori",
+      "participant": "Osallistuja",
+      "observer": "Tarkkailija"
+    },
     "failedToLoad": "Istuntojen lataus epäonnistui: {{error}}",
     "loading": "Ladataan istuntoja…"
   },

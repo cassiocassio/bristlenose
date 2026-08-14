@@ -525,6 +525,13 @@
     "unavailable": "Agentverbinding is niet beschikbaar in deze build.",
     "notRunning": "Start het project voordat je een agent verbindt."
   },
+  "sessionsPopover": {
+    "allSessions": "Alle sessies",
+    "allCount_one": "Alle {{count}} sessie",
+    "allCount_other": "Alle {{count}} sessies",
+    "noSessions": "Nog geen sessies",
+    "loadFailed": "Kon sessies niet laden"
+  },
   "toast": {
     "removedBatchAnnouncement": "%d projecten verwijderd. Druk op Command-Z om te herstellen.",
     "removedAnnouncement": "“%@” verwijderd. Druk op Command-Z om te herstellen.",

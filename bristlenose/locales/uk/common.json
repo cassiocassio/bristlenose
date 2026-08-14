@@ -109,6 +109,11 @@
     "copyFolderPath": "Копіювати шлях до теки",
     "showInFinder": "\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u0438 \u0443 Finder",
     "editName": "Змінити назву для {{code}}",
+    "speakerPlaceholder": {
+      "moderator": "\u041c\u043e\u0434\u0435\u0440\u0430\u0442\u043e\u0440",
+      "participant": "\u0423\u0447\u0430\u0441\u043d\u0438\u043a",
+      "observer": "\u0421\u043f\u043e\u0441\u0442\u0435\u0440\u0456\u0433\u0430\u0447"
+    },
     "failedToLoad": "Не вдалося завантажити сесії: {{error}}",
     "loading": "Завантаження сесій…"
   },

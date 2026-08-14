@@ -88,6 +88,11 @@
     "copyFolderPath": "Copiar ruta de carpeta",
     "showInFinder": "Mostrar en Finder",
     "editName": "Editar nombre de {{code}}",
+    "speakerPlaceholder": {
+      "moderator": "Moderador",
+      "participant": "Participante",
+      "observer": "Observador"
+    },
     "failedToLoad": "Error al cargar las sesiones: {{error}}",
     "loading": "Cargando sesiones…"
   },

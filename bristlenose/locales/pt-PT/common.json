@@ -95,6 +95,11 @@
     "copyFolderPath": "Copiar caminho da pasta",
     "showInFinder": "Mostrar no Finder",
     "editName": "Editar nome de {{code}}",
+    "speakerPlaceholder": {
+      "moderator": "Moderador",
+      "participant": "Participante",
+      "observer": "Observador"
+    },
     "failedToLoad": "Falha ao carregar sessões: {{error}}",
     "loading": "A carregar sessões…"
   },

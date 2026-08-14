@@ -525,6 +525,13 @@
     "unavailable": "Agentforbindelse er ikke tilg\u00e6ngelig i dette build.",
     "notRunning": "Start projektet, f\u00f8r du forbinder en agent."
   },
+  "sessionsPopover": {
+    "allSessions": "Alle sessioner",
+    "allCount_one": "Alle {{count}} session",
+    "allCount_other": "Alle {{count}} sessioner",
+    "noSessions": "Ingen sessioner endnu",
+    "loadFailed": "Kunne ikke indl\u00e6se sessioner"
+  },
   "toast": {
     "removedBatchAnnouncement": "Fjernede %d projekter. Tryk på Kommando-Z for at fortryde.",
     "removedAnnouncement": "Fjernede “%@”. Tryk på Kommando-Z for at fortryde.",

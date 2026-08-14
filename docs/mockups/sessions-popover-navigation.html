@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default" data-appearance="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sessions lens — native popover navigation</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════════
+   TOKENS — lifted verbatim from the shipped design system.
+   Colour: bristlenose/theme/colors/palette-default.css + palette-edo.css
+   Type:   bristlenose/theme/tokens-desktop.css  (SF Pro / AppKit ladder —
+           this surface is the macOS app, so the desktop scale applies,
+           NOT the web Inter scale.)
+   Space:  bristlenose/theme/tokens.css
+   ══════════════════════════════════════════════════════════════════════ */
+:root {
+    color-scheme: light dark;
+
+    /* — type: macOS AppKit ladder (tokens-desktop.css) — */
+    --bn-font-body: -apple-system, "SF Pro Text", "SF Pro", system-ui, sans-serif;
+    --bn-font-mono: "SF Mono", ui-monospace, monospace;
+    --bn-text-micro:      0.625rem;   /* 10px — caption2   */
+    --bn-text-micro-lh:   1.300;
+    --bn-text-badge:      0.6875rem;  /* 11px — subheadline */
+    --bn-text-badge-lh:   1.273;
+    --bn-text-caption:    0.75rem;    /* 12px — callout    */
+    --bn-text-caption-lh: 1.250;
+    --bn-text-label:      0.8125rem;  /* 13px — body       */
+    --bn-text-label-lh:   1.231;
+    --bn-text-body:       0.9375rem;  /* 15px — title3     */
+    --bn-text-heading:    1.0625rem;  /* 17px — title2     */
+    --bn-text-title:      1.375rem;   /* 22px — title1     */
+
+    --bn-weight-normal:   420;
+    --bn-weight-emphasis: 490;
+    --bn-weight-strong:   700;
+
+    /* — space + radii (tokens.css) — */
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    /* — colour: palette-default.css — */
+    --bn-colour-bg:           light-dark(#ffffff, #111111);
+    --bn-colour-text:         light-dark(#1a1a1a, #e5e7eb);
+    --bn-colour-muted:        light-dark(#6b7280, #9ca3af);
+    --bn-colour-border:       light-dark(#e5e7eb, #2d2d2d);
+    --bn-colour-accent:       light-dark(#007aff, #0a84ff);
+    --bn-colour-hover:        light-dark(#e8f0fe, #1e293b);
+    --bn-colour-badge-bg:     light-dark(#f3f4f6, #252525);
+    --bn-colour-badge-text:   light-dark(#374151, #d1d5db);
+    --bn-nav-selection-bg:    light-dark(#efefef, #2b2b2b);
+
+    /* — Assets.xcassets/Palette*Lozenge.colorset (authored for exactly
+         this surface: "any future SwiftUI selection surface") — */
+    --bn-lozenge:             light-dark(#eef4fc, #1a2838);
+
+    /* — AppKit source-list capsule: INTERNAL to NSTableView, matches no
+         public UI-element colour (verified by sampling). Approximated here
+         for eyeballing only — it cannot be read, only imitated. — */
+    --appkit-capsule:         light-dark(#dfe3e8, #3a3f45);
+
+    /* — macOS popover chrome — */
+    --pop-bg:      light-dark(#ffffff, #2c2c2e);
+    --pop-stroke:  light-dark(rgba(0,0,0,.12), rgba(255,255,255,.14));
+    --pop-shadow:  light-dark(0 12px 44px rgba(0,0,0,.20), 0 12px 44px rgba(0,0,0,.55));
+    --pop-hover:   light-dark(rgba(0,0,0,.06), rgba(255,255,255,.09));
+    --pop-sep:     light-dark(rgba(0,0,0,.10), rgba(255,255,255,.13));
+    --win-chrome:  light-dark(#ececec, #333335);
+    --win-body:    light-dark(#ffffff, #1e1e20);
+
+    /* — page chrome (NOT product — commentary/scaffolding only) — */
+    --page-bg:     light-dark(#f5f5f7, #161618);
+    --page-ink:    light-dark(#1a1a1a, #e5e7eb);
+    --page-dim:    light-dark(#6b7280, #9ca3af);
+    --page-rule:   light-dark(#dcdce0, #303034);
+    --page-note:   light-dark(#fbfaf5, #1c1b18);
+}
+
+/* Edo palette swap — palette-edo.css */
+:root[data-color-theme="edo"] {
+    --bn-colour-bg:         light-dark(#fdfbf7, #1a1816);
+    --bn-colour-text:       light-dark(#1b2230, #e8e3d6);
+    --bn-colour-muted:      light-dark(#4a698a, #7ba8a0);
+    --bn-colour-border:     light-dark(#d4c9a8, #2d2820);
+    --bn-colour-accent:     light-dark(#0f5c9e, #4d9fe0);
+    --bn-colour-hover:      light-dark(#ede5d1, #252118);
+    --bn-colour-badge-bg:   light-dark(#e8dfc9, #2d2820);
+    --bn-colour-badge-text: light-dark(#2d3654, #c4b898);
+    --bn-nav-selection-bg:  light-dark(#e6ddc9, #2d2922);
+    --bn-lozenge:           light-dark(#e6ddc9, #2d2922);
+    --pop-bg:               light-dark(#fdfbf7, #232019);
+    --win-body:             light-dark(#fdfbf7, #1a1816);
+    --win-chrome:           light-dark(#efe8d8, #2b2721);
+}
+
+:root[data-appearance="light"] { color-scheme: light; }
+:root[data-appearance="dark"]  { color-scheme: dark;  }
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: var(--bn-space-xl);
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-label);
+    font-weight: var(--bn-weight-normal);
+    background: var(--page-bg);
+    color: var(--page-ink);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── page scaffolding ────────────────────────────────────────────── */
+.wrap { max-width: 1180px; margin: 0 auto; }
+h1 { font-size: var(--bn-text-title); font-weight: var(--bn-weight-emphasis); margin: 0 0 var(--bn-space-sm); }
+.sub { color: var(--page-dim); margin: 0 0 var(--bn-space-lg); max-width: 68ch; line-height: 1.5; }
+h2 {
+    font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis);
+    margin: var(--bn-space-xl) 0 var(--bn-space-sm);
+    padding-bottom: var(--bn-space-sm); border-bottom: 1px solid var(--page-rule);
+}
+
+/* key — names the two zones */
+.key { display: flex; gap: var(--bn-space-lg); flex-wrap: wrap; margin-bottom: var(--bn-space-lg); font-size: var(--bn-text-caption); }
+.key div { display: flex; align-items: center; gap: var(--bn-space-sm); }
+.key .sw-a { width: 26px; height: 15px; border-radius: var(--bn-radius-sm); background: var(--win-body); border: 1px solid var(--page-rule); }
+.key .sw-c { width: 26px; height: 15px; border-radius: var(--bn-radius-sm); background: var(--page-note); border-left: 3px solid var(--bn-colour-accent);
+    background-image: repeating-linear-gradient(45deg, transparent 0 4px, rgba(128,128,128,.13) 4px 8px); }
+
+/* controls — scaffolding, deliberately not-the-product */
+.controls {
+    position: sticky; top: 0; z-index: 40;
+    display: flex; gap: var(--bn-space-lg); flex-wrap: wrap; align-items: center;
+    padding: var(--bn-space-md); margin-bottom: var(--bn-space-lg);
+    background: var(--page-bg); border: 1px solid var(--page-rule); border-radius: var(--bn-radius-lg);
+}
+.ctl { display: flex; align-items: center; gap: var(--bn-space-sm); }
+.ctl > span { font-size: var(--bn-text-caption); color: var(--page-dim); }
+.seg { display: inline-flex; border: 1px solid var(--page-rule); border-radius: var(--bn-radius-md); overflow: hidden; }
+.seg button {
+    font: inherit; font-size: var(--bn-text-caption); padding: 4px 11px; border: 0;
+    background: transparent; color: var(--page-ink); cursor: pointer;
+}
+.seg button + button { border-left: 1px solid var(--page-rule); }
+.seg button[aria-pressed="true"] { background: var(--bn-colour-accent); color: #fff; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   ARTEFACT ZONE — real pixels. No prose inside these frames.
+   ══════════════════════════════════════════════════════════════════════ */
+.stage { display: flex; gap: var(--bn-space-xl); flex-wrap: wrap; align-items: flex-start; }
+.frame { flex: 1 1 460px; min-width: 400px; }
+.frame-chrome {
+    font-family: var(--bn-font-mono); font-size: var(--bn-text-micro);
+    text-transform: uppercase; letter-spacing: .07em; color: var(--page-dim);
+    padding-bottom: 6px;
+}
+
+/* — macOS window fragment — */
+.win {
+    background: var(--win-body);
+    border: 1px solid light-dark(rgba(0,0,0,.16), rgba(255,255,255,.10));
+    border-radius: 10px; overflow: visible;
+    box-shadow: 0 4px 18px rgba(0,0,0,.10);
+}
+.titlebar {
+    display: flex; align-items: center; gap: var(--bn-space-md);
+    height: 46px; padding: 0 12px;
+    background: var(--win-chrome);
+    border-bottom: 1px solid light-dark(rgba(0,0,0,.10), rgba(255,255,255,.08));
+    border-radius: 10px 10px 0 0;
+}
+.lights { display: flex; gap: 8px; }
+.lights i { width: 11px; height: 11px; border-radius: 50%; display: block; }
+.lights i:nth-child(1) { background: #ff5f57; }
+.lights i:nth-child(2) { background: #febc2e; }
+.lights i:nth-child(3) { background: #28c840; }
+.tb-title { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-text); }
+.tb-sub   { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
+.tb-spacer { flex: 1; }
+.tb-btn {
+    width: 26px; height: 22px; border-radius: 5px; display: grid; place-items: center;
+    color: light-dark(#3c3c3e, #d8d8da); cursor: pointer; border: 0; background: transparent;
+}
+.tb-btn.armed { background: light-dark(rgba(0,0,0,.10), rgba(255,255,255,.14)); }
+.tb-btn svg { width: 15px; height: 15px; }
+
+/* Tall enough that the popover floats over a plausible report area rather
+   than spilling out of the window — a popover overlays, it doesn't push. */
+.win-body { height: 600px; display: grid; place-items: start center; padding-top: 240px; color: var(--bn-colour-muted); font-size: var(--bn-text-caption); border-radius: 0 0 10px 10px; }
+
+/* — the popover — */
+.pop-anchor { position: relative; height: 0; }
+.pop {
+    position: relative; margin: 9px 0 0 8px;
+    width: 308px;                        /* == ExportPopoverContent .frame(width: 308) */
+    padding: 6px 0;                      /*    .padding(.vertical, 6)                   */
+    background: var(--pop-bg);
+    border-radius: 10px;
+    box-shadow: var(--pop-shadow), 0 0 0 .5px var(--pop-stroke);
+}
+.pop.no-arrow::before { display: none; }
+.pop::before {
+    content: ""; position: absolute; top: -6px; left: 22px;
+    width: 13px; height: 13px; background: var(--pop-bg);
+    transform: rotate(45deg); border-radius: 2px;
+    box-shadow: -.5px -.5px 0 var(--pop-stroke);
+}
+/* Sized so the common case (5–12 sessions) fits without scrolling; a 30+
+   study scrolls. 12 single-line rows + index + separator ≈ 560. */
+.pop-scroll { max-height: 560px; overflow-y: auto; overscroll-behavior: contain; }
+.pop-scroll::-webkit-scrollbar { width: 9px; }
+.pop-scroll::-webkit-scrollbar-thumb { background: light-dark(rgba(0,0,0,.22), rgba(255,255,255,.24)); border-radius: 9px; border: 2px solid transparent; background-clip: content-box; }
+
+.sep { height: 1px; background: var(--pop-sep); margin: 4px 10px; }  /* Divider().padding(.horizontal, 10) */
+
+/* — a popover row: geometry copied from ExportPopoverRow — */
+.row {
+    display: flex; align-items: flex-start; gap: 10px;      /* HStack(spacing: 10)        */
+    padding: 6px 12px;                                       /* .padding(6 / 12)          */
+    margin: 0 6px;                                           /* .padding(.horizontal, 6)  */
+    border-radius: var(--bn-radius-md);                      /* cornerRadius: 6           */
+    cursor: pointer; text-decoration: none; color: var(--bn-colour-text);
+}
+.row:hover { background: var(--pop-hover); }
+.row-slot { flex: 0 0 auto; min-width: 30px; display: flex; justify-content: flex-start; padding-top: 1px; }
+.row-text { min-width: 0; flex: 1; }
+.row-title {
+    font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.row-sub {
+    font-size: var(--bn-text-micro); line-height: var(--bn-text-micro-lh);   /* SwiftUI .caption == 10pt on macOS */
+    color: var(--bn-colour-muted); margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* The check is a real third column: in NSMenu it leads, and every row pays for
+   it whether ticked or not. Absent entirely in the other treatments. */
+.row-check { display: none; flex: 0 0 12px; padding-top: 3px; color: var(--bn-colour-accent); }
+.row-check svg { width: 11px; height: 11px; display: block; }
+
+/* — .badge atom, ported verbatim from theme/atoms/badge.css — */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    line-height: var(--bn-text-badge-lh);
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    white-space: nowrap;
+    /* Sized for the common case: pN and pNN. Three digits widens the badge and
+       shifts that one title — it must not break, it needn't be pretty. */
+    min-width: 22px;
+    text-align: center;
+}
+.badge-stack { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+.idx-glyph {
+    width: 22px; height: 17px; border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text);
+    display: grid; place-items: center;
+}
+.idx-glyph svg { width: 11px; height: 11px; }
+
+/* — active-row treatments — */
+.row.is-active .row-title { color: var(--bn-colour-accent); font-weight: var(--bn-weight-emphasis); }
+[data-active-style="lozenge"]  .row.is-active { background: var(--bn-lozenge); }
+[data-active-style="accent"]   .row.is-active { background: transparent; }
+[data-active-style="check"]    .row.is-active { background: var(--bn-lozenge); }
+[data-active-style="check"]    .row-check { display: block; order: -1; visibility: hidden; }
+[data-active-style="check"]    .row.is-active .row-check { visibility: visible; }
+[data-active-style="navsel"]   .row.is-active { background: var(--bn-nav-selection-bg); }
+[data-active-style="capsule"]  .row.is-active { background: var(--appkit-capsule); }
+
+/* ── Stacked multi-participant rows ──────────────────────────────────
+   Two shapes, same content. "top" is badges stacked from the top of the
+   margin, names starting on line 2 of the text — the columns drift.
+   "aligned" is one 2-column grid so badge N sits on name N's line; the
+   title and subtitle span column 2. No nesting either way. */
+.badge-stack { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+.spk-name {
+    font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.spk-name.unnamed { color: var(--bn-colour-muted); }
+
+.mgrid {
+    display: grid; grid-template-columns: 30px 1fr;   /* == .row-slot min-width */
+    column-gap: 10px; row-gap: 2px;                   /* == .row gap           */
+    align-items: center; min-width: 0; flex: 1;
+}
+.mgrid > .row-title, .mgrid > .row-sub { grid-column: 2; }
+.mgrid > .badge { justify-self: start; }
+
+/* — swatch strip — */
+.swatches { display: flex; gap: var(--bn-space-md); flex-wrap: wrap; }
+.sw-card { flex: 1 1 190px; border: 1px solid var(--page-rule); border-radius: var(--bn-radius-md); overflow: hidden; background: var(--win-body); }
+.sw-chip { height: 56px; }
+.sw-meta { padding: 8px 10px; }
+.sw-name { font-size: var(--bn-text-caption); font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-text); }
+.sw-val  { font-family: var(--bn-font-mono); font-size: var(--bn-text-micro); color: var(--bn-colour-muted); margin-top: 2px; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   COMMENTARY ZONE — deliberately not-the-product.
+   ══════════════════════════════════════════════════════════════════════ */
+.commentary {
+    margin-top: var(--bn-space-lg);
+    padding: var(--bn-space-md) var(--bn-space-lg);
+    border-left: 3px solid var(--bn-colour-accent);
+    border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+    background: var(--page-note);
+    background-image: repeating-linear-gradient(45deg, transparent 0 7px, rgba(128,128,128,.05) 7px 14px);
+}
+.commentary::before {
+    content: "Commentary"; display: block;
+    font-family: var(--bn-font-mono); font-size: var(--bn-text-micro);
+    text-transform: uppercase; letter-spacing: .09em; color: var(--page-dim);
+    margin-bottom: var(--bn-space-sm);
+}
+.commentary p, .commentary li { line-height: 1.55; margin: 0 0 var(--bn-space-sm); max-width: 78ch; }
+.commentary ul { padding-left: 1.15rem; margin: 0; }
+.commentary code {
+    font-family: var(--bn-font-mono); font-size: .92em;
+    background: light-dark(rgba(0,0,0,.06), rgba(255,255,255,.09));
+    padding: 1px 4px; border-radius: var(--bn-radius-sm);
+}
+.commentary b { font-weight: var(--bn-weight-emphasis); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Sessions lens — native popover navigation</h1>
+<p class="sub">
+    A <b>quick session switcher</b> in the embedded (macOS) build. It replaces the session dropdown in the
+    transcript's sticky header — not the left sidebar, which was never the right fit for switching and is
+    removed. The full-fat view, with sentiment maps and user journeys, stays one click away as
+    <b>Sessions index</b>. Real pixels below: the shipped <code>.badge</code> atom, the macOS AppKit type
+    ladder from <code>tokens-desktop.css</code>, and <code>ExportPopoverRow</code>'s exact geometry
+    (308pt wide, 6/12 row padding, 10pt gap, 6pt corner radius).
+</p>
+
+<div class="key">
+    <div><span class="sw-a"></span> Artefact — what ships</div>
+    <div><span class="sw-c"></span> Commentary — why, and what's still open</div>
+</div>
+
+<div class="controls">
+    <div class="ctl"><span>Palette</span>
+        <div class="seg" id="seg-palette">
+            <button data-v="default" aria-pressed="true">Default</button>
+            <button data-v="edo" aria-pressed="false">Edo</button>
+        </div>
+    </div>
+    <div class="ctl"><span>Appearance</span>
+        <div class="seg" id="seg-appearance">
+            <button data-v="light" aria-pressed="true">Light</button>
+            <button data-v="dark" aria-pressed="false">Dark</button>
+        </div>
+    </div>
+    <div class="ctl"><span>Study size</span>
+        <div class="seg" id="seg-size">
+            <button data-v="6" aria-pressed="false">6</button>
+            <button data-v="12" aria-pressed="true">12</button>
+            <button data-v="34" aria-pressed="false">34</button>
+        </div>
+    </div>
+    <div class="ctl"><span>Stacked badges</span>
+        <div class="seg" id="seg-align">
+            <button data-v="aligned" aria-pressed="true">Aligned to names ✓</button>
+            <button data-v="top" aria-pressed="false">Top of margin</button>
+        </div>
+    </div>
+    <div class="ctl"><span>Active row</span>
+        <div class="seg" id="seg-active">
+            <button data-v="capsule" aria-pressed="true">AppKit capsule ✓</button>
+            <button data-v="lozenge" aria-pressed="false">Lozenge</button>
+            <button data-v="accent" aria-pressed="false">Accent only</button>
+            <button data-v="check" aria-pressed="false">Wash + check</button>
+            <button data-v="navsel" aria-pressed="false">Web nav-sel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════ ARTEFACT: the two multi-party treatments, side by side ════════════ -->
+<h2>Multi-participant row shape — the two candidates</h2>
+
+<div class="stage">
+    <div class="frame">
+        <div class="frame-chrome">A · single-line, compressed badge — not chosen</div>
+        <div class="win">
+            <div class="titlebar">
+                <span class="lights"><i></i><i></i><i></i></span>
+                <button class="tb-btn armed" aria-label="Sessions">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                        <path d="M2 4h1M2 8h1M2 12h1M5.5 4h9M5.5 8h9M5.5 12h9"/>
+                    </svg>
+                </button>
+                <div><div class="tb-title">Fishkeeping</div><div class="tb-sub">20 Sessions · 7h 39m</div></div>
+                <span class="tb-spacer"></span>
+            </div>
+            <div class="pop-anchor"><div class="pop" data-variant="inline"><div class="pop-scroll" id="pop-inline"></div></div></div>
+            <div class="win-body">report</div>
+        </div>
+    </div>
+
+    <div class="frame">
+        <div class="frame-chrome">B · stacked speaker rows — chosen ✓</div>
+        <div class="win">
+            <div class="titlebar">
+                <span class="lights"><i></i><i></i><i></i></span>
+                <button class="tb-btn armed" aria-label="Sessions">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                        <path d="M2 4h1M2 8h1M2 12h1M5.5 4h9M5.5 8h9M5.5 12h9"/>
+                    </svg>
+                </button>
+                <div><div class="tb-title">Fishkeeping</div><div class="tb-sub">20 Sessions · 7h 39m</div></div>
+                <span class="tb-spacer"></span>
+            </div>
+            <div class="pop-anchor"><div class="pop" data-variant="stacked"><div class="pop-scroll" id="pop-stacked"></div></div></div>
+            <div class="win-body">report</div>
+        </div>
+    </div>
+</div>
+
+<div class="commentary">
+    <p>
+        Rows are real <b>Fishkeeping</b> data — genuine names and durations, genuine multi-participant
+        sessions (<b>#6, #8, #10</b>) where two or three people share one session and <b>the second and third
+        have no name</b>, because the pipeline only named the first speaker in each. Codes stay globally
+        sequential the way the pipeline assigns them, so a three-person session pushes every later code
+        along — <code>#11</code> is <code>p16</code>, not <code>p11</code>. Timestamps are substituted
+        (Fishkeeping is a transcript-only import; see the note under the swatches).
+        Twelve sessions is the default because that's the top of the common range — switch to 6 or 34
+        above to see the short case and the scrolling case.
+    </p>
+    <ul>
+        <li><b>A compresses the shared prefix</b> — <code>p15, 16, 17</code> in one badge, names comma-joined
+            in the title. Uniform 42pt row height, which is what a 20-row scrolling list wants.
+            Watch it truncate at 308pt: <em>“Session 16 · Nina Petrović, Participan…”</em>. That truncation is
+            real, not a mockup artefact — it is what 308pt buys you.</li>
+        <li><b>B stacks</b> — participant badges in the margin, one name per line, and <b>no <code>#N</code>
+            session badge</b>. The p-codes are the nomenclature researchers already put on slide decks;
+            <code>#N</code> is a CLI habit that reads as an escapee in a Mac list. Nothing truncates and every
+            code is legible; rows go 42 → 90pt.</li>
+        <li><b>Badges align to the names</b> (chosen), not to the top of the margin. This is not tidiness: at
+            <em>top</em>, the first badge sits level with the title, so <code>p6</code> appears to label
+            <em>Session 6</em> — reintroducing exactly the session-number/participant-number conflation that
+            dropping <code>#N</code> was meant to remove — and the last name is left with no badge. Aligning
+            costs 16pt of row height. It needs no table-in-a-table: two columns sharing a row pitch is one CSS
+            grid, or one <code>NSGridView</code> in AppKit. Flip the control to see the rejected shape.</li>
+        <li><b>A's cost, visible once it's on screen:</b> the wider compressed badge pushes that row's title
+            right, so titles no longer align down the list — <em>Session 6</em> and <em>Session 10</em> start
+            further in than their neighbours. It reads as ragged rather than broken, and it only happens on the
+            rare row. Worth deciding deliberately: accept the ragged edge, or pin the badge column to a fixed
+            width and let a multi-party badge overflow it.</li>
+        <li>Badge is sized for <code>pN</code> and <code>pNN</code> — the 99.9% case. Three digits widens that
+            one badge and shifts its title; it doesn't break, and it isn't a design target before beta.</li>
+    </ul>
+    <p>
+        <b>Why a popover and not an <code>NSMenu</code>.</b> The thing being replaced is already a dropdown, so
+        this isn't a sidebar being demoted into a menu — it's a dropdown moving to the titlebar and gaining the
+        density it always wanted. <code>NSMenu</code> can't do a two-line row with a muted subtitle, and the
+        duration/date line is the whole reason this beats the old selector. The list is sized for what actually
+        happens: <b>5–12 sessions very commonly</b>, occasionally 30+. At 12 nothing scrolls; past that it does,
+        and the “full fat” answer was always Sessions index rather than a longer menu.
+    </p>
+</div>
+
+<!-- ════════════ ARTEFACT: active-row treatments ════════════ -->
+<h2>Active row — four treatments, same three rows</h2>
+
+<div class="stage" id="active-gallery"></div>
+
+<div class="commentary">
+    <p>
+        <b>Decided: the real AppKit source-list capsule</b> — which decides the implementation, not just the
+        styling. The capsule colour is internal to <code>NSTableView</code>, so having it means using the
+        control: the popover stays a popover (SwiftUI <code>.popover</code>, same as the share menu) and its
+        <em>content</em> becomes an <code>NSTableView</code> with <code>style = .sourceList</code>. The other
+        three below are kept switchable as the record of what was weighed. Note the specimens are SwiftUI-style
+        approximations — only the shipped control draws the true capsule.
+    </p>
+    <p>
+        The popover family has <b>no precedent for a selected row</b> — <code>ExportPopoverRow</code> has hover only
+        (<code>Color.primary.opacity(0.06)</code>), because actions have no “current one”. This adds a state the
+        family doesn't have, so it has to borrow from somewhere.
+    </p>
+    <ul>
+        <li><b>Lozenge</b> — the colour authored in <code>Assets.xcassets</code> for, in its own words,
+            “any future SwiftUI selection surface”. That is this. Same 6pt rounded rect as the hover, so
+            hover and selection are one shape at two weights.</li>
+        <li><b>Accent only</b> — matches the web <code>.session-entry.active</code> text treatment but drops its
+            wash. Quietest; also the easiest to lose when the row is also hovered.</li>
+        <li><b>Wash + check</b> — the strict <code>NSMenu</code> idiom. It costs a third column, and the check
+            pushes the badges out of alignment with every other row.</li>
+        <li><b>AppKit capsule</b> — reference only. The real source-list capsule colour is
+            <em>internal to <code>NSTableView</code> and matches no public UI-element colour</em> (verified by
+            sampling all of them). The chip here is an imitation; a SwiftUI row cannot read the real value.</li>
+    </ul>
+</div>
+
+<!-- ════════════ ARTEFACT: the three "selected" values ════════════ -->
+<h2>Three different “selected” values are already in play</h2>
+
+<div class="swatches" id="swatches"></div>
+
+<div class="commentary">
+    <p>
+        Flip the palette above and watch these three converge and diverge. Under <b>Edo</b> the web
+        nav-selection and the Lozenge are <b>byte-identical</b> (<code>#e6ddc9</code>) — they were authored as one
+        decision. Under <b>Default</b> they are not even the same hue: the web sidebar washes rows neutral grey
+        <code>#efefef</code> while the Lozenge is pale blue <code>#eef4fc</code>. AppKit's real capsule is a third
+        value under both, and unreadable under both.
+    </p>
+    <p>
+        So “match the project sidebar” cannot be satisfied literally on any palette. The question the side-by-side
+        actually answers is <b>which mismatch reads as deliberate</b> — a popover that agrees with the web list it
+        replaces, or one that agrees with the native list above it.
+    </p>
+    <p>
+        <b>On the date:</b> rows show <code>duration · formatFinderDate(...)</code> — exact parity with the Sessions
+        grid's Start column. Sessions ingested from media carry a real clock time
+        (<code>st_birthtime</code>, <code>s01_ingest.py:23</code>). Sessions imported from transcript text with a bare
+        <code>YYYY-MM-DD</code> header do not, and render <code>11 Feb 2026, 00:00</code> — the last row of each popover
+        is pinned to that state so the failure mode is visible rather than described.
+    </p>
+</div>
+
+<script>
+// ── Real Fishkeeping rows — genuine names, durations and multi-participant
+//    shapes (including the unnamed second/third speakers the pipeline never
+//    named). Codes stay globally sequential the way the pipeline assigns them,
+//    so a multi-party session pushes every later code along. Timestamps are
+//    substituted (Fishkeeping is a transcript-only import — see commentary).
+//    Twelve sessions: the common case, and it puts the multi-party rows in view.
+const STUDY = [
+  { n:1,  id:"s1",  secs:1591, at:"2026-02-10T09:12:00", people:[["p1","Yuki Tanaka"]] },
+  { n:2,  id:"s2",  secs:1316, at:"2026-02-10T10:05:00", people:[["p2","Priya Chakraborty"]] },
+  { n:3,  id:"s3",  secs:1331, at:"2026-02-10T11:20:00", people:[["p3","Amara Osei"]] },
+  { n:4,  id:"s4",  secs:1520, at:"2026-02-10T13:40:00", people:[["p4","Callum Reid"]] },
+  { n:5,  id:"s5",  secs:1081, at:"2026-02-10T15:02:00", people:[["p5","Marcus Webb"]] },
+  { n:6,  id:"s6",  secs:1169, at:"2026-02-11T09:00:00", people:[["p6","Beth Armitage"],["p7",null],["p8",null]] },
+  { n:7,  id:"s7",  secs:1713, at:"2026-02-11T10:25:00", people:[["p9","Lisa Brennan"]] },
+  { n:8,  id:"s8",  secs:1223, at:"2026-02-11T11:40:00", people:[["p10","Rob Dawson"],["p11",null]] },
+  { n:9,  id:"s9",  secs:1074, at:"2026-02-11T13:15:00", people:[["p12","Tom Kowalski"]] },
+  { n:10, id:"s10", secs:1522, at:"2026-02-11T14:30:00", people:[["p13","Nina Petrović"],["p14",null],["p15",null]] },
+  { n:11, id:"s11", secs:1162, at:"2026-02-12T09:45:00", people:[["p16","Sian Morgan"]] },
+  // Pinned to the transcript-import state: a bare YYYY-MM-DD header → midnight.
+  { n:12, id:"s12", secs:1522, at:"2026-02-12T00:00:00", people:[["p17","Jake Butterfield"]] },
+];
+
+// The 30+ tail, for eyeballing the scroll case. Same shapes, later codes.
+const TAIL_NAMES = ["Fatima Al-Rashid","Hannah Yip","Erin Gallagher","Ollie Stewart","Deon Richards",
+  "Mel Thornton","Greg Thornton","Nadia Hussain","Callum Reid","Amara Osei",
+  "Marcus Webb","Priya Chakraborty","Yuki Tanaka","Sian Morgan","Rob Dawson",
+  "Lisa Brennan","Tom Kowalski","Beth Armitage"];
+function buildStudy(size) {
+  if (size <= STUDY.length) return STUDY.slice(0, size);
+  const out = STUDY.slice();
+  let code = 18;
+  for (let i = 0; out.length < size; i++) {
+    const n = out.length + 1;
+    const day = 12 + Math.floor(i / 5);
+    const hh = String(9 + (i % 5) * 2).padStart(2, "0");
+    out.push({ n, id: "s" + n, secs: 900 + ((i * 137) % 1200),
+      at: `2026-02-${String(day).padStart(2,"0")}T${hh}:15:00`,
+      people: [["p" + code++, TAIL_NAMES[i % TAIL_NAMES.length]]] });
+  }
+  return out;
+}
+
+let SESSIONS = STUDY;
+let BADGE_ALIGN = "aligned";     // "aligned" (chosen) | "top"
+const ACTIVE_ID = "s3";
+const PLACEHOLDER = "Participant";           // t("sessions.speakerPlaceholder.participant")
+
+// formatCompactDuration — frontend/src/utils/format.ts:71
+function compactDuration(s) {
+  if (s <= 0) return "—";
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h === 0 ? `${m}m` : `${h}h ${String(m).padStart(2, "0")}`;
+}
+
+// formatFinderDate — frontend/src/utils/format.ts:20 (en-GB, 24h, "d MMM yyyy, HH:mm")
+function finderDate(iso) {
+  const dt = new Date(iso);
+  const d = new Intl.DateTimeFormat("en-GB", { day:"numeric", month:"short", year:"numeric" }).format(dt);
+  const t = new Intl.DateTimeFormat("en-GB", { hour:"2-digit", minute:"2-digit", hour12:false }).format(dt);
+  return `${d}, ${t}`;
+}
+
+// The compressed multi-speaker badge: shared prefix once, then bare numbers.
+// p15,p16,p17 → "p15, 16, 17".  Falls back to a plain join if prefixes differ.
+function compressCodes(codes) {
+  const m = codes.map(c => c.match(/^([a-z]+)(\d+)$/i));
+  if (m.every(Boolean) && new Set(m.map(x => x[1])).size === 1) {
+    return m[0][1] + m.map((x, i) => (i === 0 ? x[2] : " " + x[2])).join(",");
+  }
+  return codes.join(", ");
+}
+
+const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
+const CHECK = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.3 4.8 8.6 9.5 3.5"/></svg>';
+const GRID  = '<svg viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5" height="5" rx="1"/><rect x="7" y="0" width="5" height="5" rx="1"/><rect x="0" y="7" width="5" height="5" rx="1"/><rect x="7" y="7" width="5" height="5" rx="1"/></svg>';
+
+function indexRow(active) {
+  const row = el("a", "row" + (active ? " is-active" : ""));
+  const slot = el("div", "row-slot");
+  const g = el("div", "idx-glyph"); g.innerHTML = GRID; slot.appendChild(g);
+  const text = el("div", "row-text");
+  text.appendChild(el("div", "row-title", "Sessions index"));
+  text.appendChild(el("div", "row-sub", `All ${SESSIONS.length} sessions`));
+  const chk = el("div", "row-check"); chk.innerHTML = CHECK;
+  row.append(slot, text, chk);
+  return row;
+}
+
+function sessionRow(s, variant) {
+  const row = el("a", "row" + (s.id === ACTIVE_ID ? " is-active" : ""));
+  const slot = el("div", "row-slot");
+  const text = el("div", "row-text");
+  const codes = s.people.map(p => p[0]);
+  const names = s.people.map(p => p[1]).filter(Boolean);
+
+  if (variant === "stacked" && s.people.length > 1) {
+    // B — participant badges stacked in the margin, names one per line.
+    // No #N session badge: the p-codes are the nomenclature people already
+    // read on slide decks; #N is a CLI habit and doesn't belong here.
+    if (BADGE_ALIGN === "aligned") {
+      // One grid: badge N shares a row with name N.
+      const g = el("div", "mgrid");
+      g.appendChild(el("div", "row-title", "Session " + s.n));
+      for (const [code, name] of s.people) {
+        g.appendChild(el("span", "badge", code));
+        g.appendChild(el("span", "spk-name" + (name ? "" : " unnamed"), name || PLACEHOLDER));
+      }
+      g.appendChild(el("div", "row-sub", `${compactDuration(s.secs)} · ${finderDate(s.at)}`));
+      row.appendChild(g);
+      const chkA = el("div", "row-check"); chkA.innerHTML = CHECK;
+      row.appendChild(chkA);
+      return row;
+    }
+    const stack = el("div", "badge-stack");
+    for (const [code] of s.people) stack.appendChild(el("span", "badge", code));
+    slot.appendChild(stack);
+    text.appendChild(el("div", "row-title", "Session " + s.n));
+    for (const [, name] of s.people) {
+      text.appendChild(el("div", "spk-name" + (name ? "" : " unnamed"), name || PLACEHOLDER));
+    }
+  } else {
+    // A — one compressed badge, names comma-joined.
+    slot.appendChild(el("span", "badge", compressCodes(codes)));
+    const label = names.length
+      ? names.join(", ") + (s.people.length > names.length
+          ? ", " + Array(s.people.length - names.length).fill(PLACEHOLDER).join(", ") : "")
+      : PLACEHOLDER;
+    text.appendChild(el("div", "row-title", `Session ${s.n} · ${label}`));
+  }
+
+  text.appendChild(el("div", "row-sub", `${compactDuration(s.secs)} · ${finderDate(s.at)}`));
+  const chk = el("div", "row-check"); chk.innerHTML = CHECK;
+  row.append(slot, text, chk);
+  return row;
+}
+
+function buildPopover(host, variant) {
+  host.replaceChildren();
+  host.appendChild(indexRow(false));
+  host.appendChild(el("div", "sep"));
+  for (const s of SESSIONS) host.appendChild(sessionRow(s, variant));
+}
+
+function rebuild() {
+  buildPopover(document.getElementById("pop-inline"), "inline");
+  buildPopover(document.getElementById("pop-stacked"), "stacked");
+  const total = SESSIONS.reduce((a, s) => a + s.secs, 0);
+  const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60);
+  document.querySelectorAll(".tb-sub").forEach(n => {
+    n.textContent = `${SESSIONS.length} Sessions · ${h}h ${String(m).padStart(2, "0")}m`;
+  });
+}
+rebuild();
+
+// ── Active-row gallery: same three rows under each treatment ─────────
+const TREATMENTS = [
+  ["lozenge", "Lozenge wash + accent text"],
+  ["accent",  "Accent text only"],
+  ["check",   "Wash + leading checkmark"],
+  ["capsule", "AppKit capsule (reference)"],
+];
+const gallery = document.getElementById("active-gallery");
+for (const [value, label] of TREATMENTS) {
+  const frame = el("div", "frame"); frame.style.flex = "1 1 240px"; frame.style.minWidth = "260px";
+  frame.appendChild(el("div", "frame-chrome", label));
+  // no-arrow: these specimens aren't anchored to a button, so the caret would lie.
+  const pop = el("div", "pop no-arrow");
+  pop.style.margin = "0"; pop.style.width = "290px";
+  pop.setAttribute("data-active-style", value);
+  for (const s of SESSIONS.slice(1, 4)) pop.appendChild(sessionRow(s, "inline"));
+  frame.appendChild(pop);
+  gallery.appendChild(frame);
+}
+
+// ── Swatches ─────────────────────────────────────────────────────────
+const SWATCHES = [
+  ["Lozenge (authored)",   "--bn-lozenge",          "Assets.xcassets · Palette*Lozenge"],
+  ["Web nav-selection",    "--bn-nav-selection-bg", "palette-*.css · .session-entry.active"],
+  ["AppKit capsule",       "--appkit-capsule",      "NSTableView internal — unreadable"],
+];
+const swHost = document.getElementById("swatches");
+function paintSwatches() {
+  swHost.replaceChildren();
+  const cs = getComputedStyle(document.documentElement);
+  for (const [name, varName, note] of SWATCHES) {
+    const card = el("div", "sw-card");
+    const chip = el("div", "sw-chip");
+    chip.style.background = `var(${varName})`;
+    const meta = el("div", "sw-meta");
+    meta.appendChild(el("div", "sw-name", name));
+    const resolved = cs.getPropertyValue(varName).trim();
+    meta.appendChild(el("div", "sw-val", resolved || note));
+    meta.appendChild(el("div", "sw-val", note));
+    card.append(chip, meta);
+    swHost.appendChild(card);
+  }
+}
+paintSwatches();
+
+// ── Controls ─────────────────────────────────────────────────────────
+// State survives a reload so a side-by-side comparison isn't lost every time
+// the page is refreshed. Guarded — file:// in some browsers has no storage.
+const STORE = "bn-sessions-popover-mockup";
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch { return {}; }
+}
+function saveState(id, v) {
+  try { const s = loadState(); s[id] = v; localStorage.setItem(STORE, JSON.stringify(s)); } catch { /* no-op */ }
+}
+function wire(id, apply) {
+  const seg = document.getElementById(id);
+  const select = (v, persist) => {
+    const btn = seg.querySelector(`button[data-v="${CSS.escape(v)}"]`);
+    if (!btn) return;
+    seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+    apply(v);
+    if (persist) saveState(id, v);
+  };
+  seg.addEventListener("click", (e) => {
+    const btn = e.target.closest("button"); if (!btn) return;
+    select(btn.dataset.v, true);
+  });
+  const saved = loadState()[id];
+  if (saved != null) select(saved, false);
+}
+wire("seg-palette",    v => { document.documentElement.setAttribute("data-color-theme", v); paintSwatches(); });
+wire("seg-appearance", v => { document.documentElement.setAttribute("data-appearance", v); paintSwatches(); });
+wire("seg-active",     v => document.querySelectorAll('.pop[data-variant]').forEach(p => p.setAttribute("data-active-style", v)));
+wire("seg-align",      v => { BADGE_ALIGN = v; rebuild(); });
+wire("seg-size",       v => { SESSIONS = buildStudy(Number(v)); rebuild();
+    document.querySelectorAll('.pop[data-variant]').forEach(p =>
+        p.setAttribute("data-active-style",
+            document.querySelector('#seg-active button[aria-pressed="true"]').dataset.v)); });
+
+// Apply whichever active-row treatment ended up selected (restored or default).
+document.querySelectorAll('.pop[data-variant]').forEach(p => p.setAttribute(
+  "data-active-style",
+  document.querySelector('#seg-active button[aria-pressed="true"]').dataset.v));
+</script>
+</div>
+</body>
+</html>

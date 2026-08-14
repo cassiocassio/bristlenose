@@ -2027,27 +2027,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     }
 }
 
-/// Forces the **unemphasized** source-list selection (grey ground + accent-tinted
-/// content) in ALL focus states. The default `.sourceList` selection flips to a
-/// vivid-blue fill / white text when the outline is first responder + key; real
-/// source lists (Finder/Photos) are focus-stable, so we pin `isEmphasized`.
-/// The row view for ALL source-list rows — project, folder, and the genuinely-
-/// selected active lens. The active lens is kept in `selectedRowIndexes`
-/// (`applySelection` + `selectionIndexesForProposedSelection`) precisely so the
-/// TABLE draws its capsule with the same internal source-list rendering as a
-/// selected project — exact colour / margin / radius, all of which a hand-placed
-/// view cannot match (the source-list selection colour is internal to the table and
-/// matches no public UI-element-colour token — verified by sampling all of them).
-/// The `isEmphasized` pin is the focus-stability attempt; it's largely inert on the
-/// current macOS draw path (project + lens both show the native two-state the user
-/// accepted as matching Mail), kept as the single shared emphasis behaviour so the
-/// two can never diverge.
-private class SourceListSelectionRowView: NSTableRowView {
-    override var isEmphasized: Bool {
-        get { false }
-        set { }
-    }
-}
+// SourceListSelectionRowView moved to its own file (SourceListSelectionRowView.swift)
+// when the sessions popover became its second consumer — one shared row view is
+// what stops the sidebar's and the popover's selection treatment drifting.
 
 /// The paper tint overlay view — a plain layer-backed NSView that also
 /// forwards the AppKit `viewDidChangeEffectiveAppearance` callback so the

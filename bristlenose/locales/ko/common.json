@@ -82,6 +82,11 @@
     "copyFolderPath": "폴더 경로 복사",
     "showInFinder": "Finder\uc5d0\uc11c \ubcf4\uae30",
     "editName": "{{code}} 이름 편집",
+    "speakerPlaceholder": {
+      "moderator": "\uc9c4\ud589\uc790",
+      "participant": "\ucc38\uac00\uc790",
+      "observer": "\uad00\ucc30\uc790"
+    },
     "failedToLoad": "세션 로드 실패: {{error}}",
     "loading": "세션 로드 중…"
   },

@@ -95,6 +95,11 @@
     "copyFolderPath": "Klasör yolunu kopyala",
     "showInFinder": "Finder\u2019da G\u00f6ster",
     "editName": "{{code}} için adı düzenle",
+    "speakerPlaceholder": {
+      "moderator": "Moderat\u00f6r",
+      "participant": "Kat\u0131l\u0131mc\u0131",
+      "observer": "G\u00f6zlemci"
+    },
     "failedToLoad": "Oturumlar yüklenemedi: {{error}}",
     "loading": "Oturumlar yükleniyor…"
   },

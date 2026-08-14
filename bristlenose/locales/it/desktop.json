@@ -525,6 +525,13 @@
     "unavailable": "La connessione degli agenti non \u00e8 disponibile in questa build.",
     "notRunning": "Avvia il progetto prima di collegare un agente."
   },
+  "sessionsPopover": {
+    "allSessions": "Tutte le sessioni",
+    "allCount_one": "{{count}} sessione",
+    "allCount_other": "Tutte e {{count}} le sessioni",
+    "noSessions": "Ancora nessuna sessione",
+    "loadFailed": "Impossibile caricare le sessioni"
+  },
   "toast": {
     "removedBatchAnnouncement": "Rimossi %d progetti. Premi Comando-Z per annullare.",
     "removedAnnouncement": "Rimosso “%@”. Premi Comando-Z per annullare.",

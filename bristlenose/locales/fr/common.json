@@ -88,6 +88,11 @@
     "copyFolderPath": "Copier le chemin du dossier",
     "showInFinder": "Afficher dans le Finder",
     "editName": "Modifier le nom de {{code}}",
+    "speakerPlaceholder": {
+      "moderator": "Animateur",
+      "participant": "Participant",
+      "observer": "Observateur"
+    },
     "failedToLoad": "Échec du chargement des entretiens : {{error}}",
     "loading": "Chargement des entretiens…"
   },

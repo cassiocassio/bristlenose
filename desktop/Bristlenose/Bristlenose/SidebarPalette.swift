@@ -24,6 +24,19 @@ import AppKit
 enum SidebarPalette {
     enum Concept: String {
         case paper, ink, accent, lozenge
+        /// Speaker-badge chip (sessions popover). Under Default these resolve
+        /// to SYSTEM semantics, never sampled CSS hexes —
+        /// `design-native-colour-alignment.md` §Principles: the CSS palette
+        /// *samples* the OS colours (re-sampled at OS bumps) precisely because
+        /// no canonical hex exists; in Swift we hold the live `NSColor`, so
+        /// porting a sampled hex would run that pipeline backwards. System
+        /// semantics also track appearance, Increase Contrast AND
+        /// `backgroundStyle` for free, which is what lets the badge respond to
+        /// the selection capsule instead of floating on it. Under Edo the
+        /// colorsets (`PaletteEdoBadgebackground` / `PaletteEdoBadgetext`) are
+        /// generated from `palette-edo.css`, not hand-authored; until they land
+        /// the asset miss falls back to the same system semantics below.
+        case badgeBackground, badgeText
     }
 
     /// The active palette, read from `UserDefaults` (same key as
@@ -44,10 +57,12 @@ enum SidebarPalette {
             return asset
         }
         switch concept {
-        case .paper:   return .windowBackgroundColor
-        case .ink:     return .labelColor
-        case .accent:  return .controlAccentColor
-        case .lozenge: return .selectedContentBackgroundColor
+        case .paper:           return .windowBackgroundColor
+        case .ink:             return .labelColor
+        case .accent:          return .controlAccentColor
+        case .lozenge:         return .selectedContentBackgroundColor
+        case .badgeBackground: return .quaternaryLabelColor
+        case .badgeText:       return .secondaryLabelColor
         }
     }
 

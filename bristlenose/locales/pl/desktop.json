@@ -547,6 +547,15 @@
     "unavailable": "Po\u0142\u0105czenie agenta nie jest dost\u0119pne w tej kompilacji.",
     "notRunning": "Uruchom projekt przed po\u0142\u0105czeniem agenta."
   },
+  "sessionsPopover": {
+    "allSessions": "Wszystkie sesje",
+    "allCount_one": "Wszystkie sesje ({{count}})",
+    "allCount_few": "Wszystkie {{count}} sesje",
+    "allCount_many": "Wszystkie {{count}} sesji",
+    "allCount_other": "Wszystkie {{count}} sesji",
+    "noSessions": "Nie ma jeszcze sesji",
+    "loadFailed": "Nie uda\u0142o si\u0119 wczyta\u0107 sesji"
+  },
   "toast": {
     "removedBatchAnnouncement": "Usunięto %d projektów. Naciśnij Command-Z, aby cofnąć.",
     "removedAnnouncement": "Usunięto „%@”. Naciśnij Command-Z, aby cofnąć.",

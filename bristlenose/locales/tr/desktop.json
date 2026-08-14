@@ -525,6 +525,13 @@
     "unavailable": "Bu yap\u0131da ajan ba\u011flant\u0131s\u0131 kullan\u0131lam\u0131yor.",
     "notRunning": "Ajan ba\u011flamadan \u00f6nce projeyi ba\u015flat\u0131n."
   },
+  "sessionsPopover": {
+    "allSessions": "T\u00fcm Oturumlar",
+    "allCount_one": "T\u00fcm {{count}} oturum",
+    "allCount_other": "T\u00fcm {{count}} oturum",
+    "noSessions": "Hen\u00fcz oturum yok",
+    "loadFailed": "Oturumlar y\u00fcklenemedi"
+  },
   "toast": {
     "removedBatchAnnouncement": "%d proje kaldırıldı. Geri almak için Command-Z tuşlarına basın.",
     "removedAnnouncement": "“%@” kaldırıldı. Geri almak için Command-Z tuşlarına basın.",

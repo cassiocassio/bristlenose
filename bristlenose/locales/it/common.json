@@ -95,6 +95,11 @@
     "copyFolderPath": "Copia percorso della cartella",
     "showInFinder": "Mostra nel Finder",
     "editName": "Modifica nome per {{code}}",
+    "speakerPlaceholder": {
+      "moderator": "Moderatore",
+      "participant": "Partecipante",
+      "observer": "Osservatore"
+    },
     "failedToLoad": "Impossibile caricare le sessioni: {{error}}",
     "loading": "Caricamento delle sessioni…"
   },

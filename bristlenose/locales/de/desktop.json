@@ -525,6 +525,13 @@
     "unavailable": "Die Agent-Verbindung ist in diesem Build nicht verf\u00fcgbar.",
     "notRunning": "Starten Sie das Projekt, bevor Sie einen Agenten verbinden."
   },
+  "sessionsPopover": {
+    "allSessions": "Alle Interviews",
+    "allCount_one": "Alle {{count}} Interview",
+    "allCount_other": "Alle {{count}} Interviews",
+    "noSessions": "Noch keine Interviews",
+    "loadFailed": "Interviews konnten nicht geladen werden"
+  },
   "toast": {
     "removedBatchAnnouncement": "%d Projekte entfernt. Dr\u00fccken Sie Befehl-Z, um den Vorgang r\u00fcckg\u00e4ngig zu machen.",
     "removedAnnouncement": "\u201e%@\u201c entfernt. Dr\u00fccken Sie Befehl-Z, um den Vorgang r\u00fcckg\u00e4ngig zu machen.",

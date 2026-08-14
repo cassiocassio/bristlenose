@@ -47,6 +47,7 @@ Keys in `desktop.json` that only render inside the macOS app shell. CLI serve mo
 | `toolbar.*` | ~21 | Native toolbar labels with keyboard shortcut hints |
 | `chrome.*` | ~11 | Server status ("Starting server..."), project panels, drag-and-drop prompts |
 | `settingsTabs.*` | ~3 | Native Settings window tab labels (Appearance, LLM, Transcription) |
+| `sessionsPopover.*` | 5–7 | Native session-switcher popover: "All Sessions" row, count subtitle (plural forms; cs/pl/ru/uk carry `_few`/`_many`), empty and failure states. Row title reuses `common.autocode.sessionLabel`; the unnamed-speaker placeholder reuses `common.sessions.speakerPlaceholder.*`; Retry reuses `common.buttons.retry` |
 | `aiConsent.*` | ~15 | First-run cloud provider consent dialog |
 | `help.*` (overrides) | 3 | Desktop variants for forked keys (see Forked section below) |
 | `configReference.*` | 1 | Desktop variant for config reference intro |

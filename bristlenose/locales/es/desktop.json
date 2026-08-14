@@ -525,6 +525,13 @@
     "unavailable": "La conexi\u00f3n de agentes no est\u00e1 disponible en esta compilaci\u00f3n.",
     "notRunning": "Inicia el proyecto antes de conectar un agente."
   },
+  "sessionsPopover": {
+    "allSessions": "Todas las sesiones",
+    "allCount_one": "{{count}} sesi\u00f3n",
+    "allCount_other": "Las {{count}} sesiones",
+    "noSessions": "A\u00fan no hay sesiones",
+    "loadFailed": "Error al cargar las sesiones"
+  },
   "toast": {
     "removedBatchAnnouncement": "Se eliminaron %d proyectos. Pulse Comando-Z para deshacer.",
     "removedAnnouncement": "Se elimin\u00f3 \u00ab%@\u00bb. Pulse Comando-Z para deshacer.",

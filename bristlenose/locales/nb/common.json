@@ -82,6 +82,11 @@
     "uncategorisedIntro_other": "{{count}} quotes you kept aren\u2019t in any section or theme right now \u2014 but they\u2019re safe here, nothing was lost."
   },
   "sessions": {
+    "speakerPlaceholder": {
+      "moderator": "Moderator",
+      "participant": "Deltaker",
+      "observer": "Observat\u00f8r"
+    },
     "moderatedBy": "Moderert av {{names}}",
     "observer_one": "Observatør: {{names}}",
     "observer_other": "Observatører: {{names}}",

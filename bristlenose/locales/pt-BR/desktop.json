@@ -525,6 +525,13 @@
     "unavailable": "A conex\u00e3o de agentes n\u00e3o est\u00e1 dispon\u00edvel nesta compila\u00e7\u00e3o.",
     "notRunning": "Inicie o projeto antes de conectar um agente."
   },
+  "sessionsPopover": {
+    "allSessions": "Todas as sess\u00f5es",
+    "allCount_one": "{{count}} sess\u00e3o",
+    "allCount_other": "Todas as {{count}} sess\u00f5es",
+    "noSessions": "Ainda n\u00e3o h\u00e1 sess\u00f5es",
+    "loadFailed": "Falha ao carregar sess\u00f5es"
+  },
   "toast": {
     "removedBatchAnnouncement": "%d projetos removidos. Pressione Command-Z para desfazer.",
     "removedAnnouncement": "“%@” removido. Pressione Command-Z para desfazer.",

@@ -525,6 +525,13 @@
     "unavailable": "The agent connection isn\u2019t available in this build.",
     "notRunning": "Start the project before connecting an agent."
   },
+  "sessionsPopover": {
+    "allSessions": "All Sessions",
+    "allCount_one": "All {{count}} session",
+    "allCount_other": "All {{count}} sessions",
+    "noSessions": "No sessions yet",
+    "loadFailed": "Couldn't load sessions"
+  },
   "toast": {
     "removedBatchAnnouncement": "Removed %d projects. Press Command-Z to undo.",
     "removedAnnouncement": "Removed \u201c%@\u201d. Press Command-Z to undo.",

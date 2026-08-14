@@ -546,6 +546,15 @@
     "unavailable": "P\u0159ipojen\u00ed agenta nen\u00ed v tomto sestaven\u00ed k dispozici.",
     "notRunning": "P\u0159ed p\u0159ipojen\u00edm agenta projekt nejprve spus\u0165te."
   },
+  "sessionsPopover": {
+    "allSessions": "V\u0161echna sezen\u00ed",
+    "allCount_one": "V\u0161echna sezen\u00ed ({{count}})",
+    "allCount_few": "V\u0161echna {{count}} sezen\u00ed",
+    "allCount_many": "V\u0161ech {{count}} sezen\u00ed",
+    "allCount_other": "V\u0161ech {{count}} sezen\u00ed",
+    "noSessions": "Zat\u00edm \u017e\u00e1dn\u00e1 sezen\u00ed",
+    "loadFailed": "Nepoda\u0159ilo se na\u010d\u00edst sezen\u00ed"
+  },
   "toast": {
     "removedBatchAnnouncement": "Odebráno %d projektů. Stisknutím Command-Z vrátíte zpět.",
     "removedAnnouncement": "Odebráno „%@“. Stisknutím Command-Z vrátíte zpět.",

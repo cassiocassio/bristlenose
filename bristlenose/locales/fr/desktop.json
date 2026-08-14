@@ -525,6 +525,13 @@
     "unavailable": "La connexion d\u2019agents n\u2019est pas disponible dans cette version.",
     "notRunning": "D\u00e9marrez le projet avant de connecter un agent."
   },
+  "sessionsPopover": {
+    "allSessions": "Tous les entretiens",
+    "allCount_one": "{{count}} entretien",
+    "allCount_other": "Les {{count}} entretiens",
+    "noSessions": "Pas encore d\u2019entretiens",
+    "loadFailed": "\u00c9chec du chargement des entretiens"
+  },
   "toast": {
     "removedBatchAnnouncement": "%d projets retir\u00e9s. Appuyez sur Commande-Z pour annuler.",
     "removedAnnouncement": "\u00ab\u00a0%@\u00a0\u00bb a \u00e9t\u00e9 retir\u00e9. Appuyez sur Commande-Z pour annuler.",

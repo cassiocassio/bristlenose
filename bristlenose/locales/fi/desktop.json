@@ -525,6 +525,13 @@
     "unavailable": "Agenttiyhteys ei ole k\u00e4ytett\u00e4viss\u00e4 t\u00e4ss\u00e4 koontiversiossa.",
     "notRunning": "K\u00e4ynnist\u00e4 projekti ennen agentin yhdist\u00e4mist\u00e4."
   },
+  "sessionsPopover": {
+    "allSessions": "Kaikki istunnot",
+    "allCount_one": "Kaikki {{count}} istunto",
+    "allCount_other": "Kaikki {{count}} istuntoa",
+    "noSessions": "Ei viel\u00e4 istuntoja",
+    "loadFailed": "Istuntojen lataus ep\u00e4onnistui"
+  },
   "toast": {
     "removedBatchAnnouncement": "Poistettiin %d projektia. Kumoa painamalla Komento-Z.",
     "removedAnnouncement": "Poistettu ”%@”. Kumoa painamalla Komento-Z.",

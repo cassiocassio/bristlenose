@@ -454,14 +454,32 @@ private final class PortFlipper {
         #expect(abs(stacked - SessionsPopoverSpec.rowHeight(participantCount: 3)) < 0.5)
     }
 
-    @Test("The row view is the shared source-list row view, so the two surfaces cannot drift")
+    @Test("The row view inherits the shared source-list row view, so the two surfaces cannot drift")
     func sharedRowView() {
         let (table, coordinator) = makeTable(rows: [row(1, participants: [("p1", "Yuki")])])
         let rowView = coordinator.tableView(table, rowViewForRow: 0)
+        // The hover subclass (menu-role pointer tracking) IS-A the shared row
+        // view — the capsule pin is inherited, not duplicated. The sidebar
+        // keeps the hover-free base class.
+        #expect(rowView is SessionsPopoverHoverRowView)
         #expect(rowView is SourceListSelectionRowView)
         #expect(rowView?.isEmphasized == false)
         rowView?.isEmphasized = true                    // the pin: writes are ignored
         #expect(rowView?.isEmphasized == false)
+    }
+
+    @Test("The badge reports a text baseline so the grid can align it to the name")
+    func badgeReportsBaseline() {
+        // A plain NSView reports no baseline, and NSGridView's .firstBaseline
+        // alignment then falls back to edge placement — the chip sat visibly
+        // below the text beside it (QA screenshot, 14 Aug 2026). The offset
+        // must be the label's own baseline plus the chip's vertical inset —
+        // i.e. strictly greater than the bare label's, and within the chip.
+        let badge = SpeakerBadgeView(code: "p1")
+        let bare = NSTextField(labelWithString: "p1")
+        bare.font = SpeakerBadgeView.font
+        #expect(badge.firstBaselineOffsetFromTop > bare.firstBaselineOffsetFromTop)
+        #expect(badge.firstBaselineOffsetFromTop < badge.intrinsicContentSize.height)
     }
 
     @Test("Token type-select finds codes on non-leading rows, wrapping the search")

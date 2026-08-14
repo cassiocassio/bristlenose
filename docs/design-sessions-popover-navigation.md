@@ -457,14 +457,31 @@ Sessions after this), `docs/glossary.md` (new user-facing name),
 - **`list.bullet` means two things** — a momentary chooser on Sessions, a
   stateful toggle on the other three lenses. The sin is the divergence in *kind*,
   not the glyph, and fixing the menu twin (commit 2) is most of the cure.
-- **No hover highlight.** Source-list tables show selection, never hover; the
-  sibling export popover *will* highlight under the pointer and this one won't.
-  Drawing it on `NSTableRowView` would be rebuilding a webview approximation
-  inside Swift — the thing the governing principle forbids.
+- **Hover highlight: YES — reversed 14 Aug 2026 on first live QA.** The plan
+  originally accepted no-hover because source-list *tables* never hover
+  (Finder, Mail). The reversal is the role argument, and it is the correct
+  reading of the governing principle: **the container's idiom wins over the
+  control's.** This surface behaves as a menu — transient, light-dismiss,
+  click-commits — and Apple's own menus and popover choosers track the
+  pointer; the table is an implementation detail chosen for the capsule. Nor
+  is hover here a webview approximation: it is Apple menu vocabulary. The
+  treatment is the popover *family's* wash (`labelColor` at 6%, matching
+  `ExportPopoverRow` and the All Sessions row), deliberately not the menu's
+  accent capsule — which would collide with the grey capsule marking the
+  *current* session and fork the hover vocabulary inside one surface.
+  Implemented as `SessionsPopoverHoverRowView`, a **subclass** of the shared
+  row view, so the project sidebar (a genuine source list) stays hover-free
+  and the capsule anti-drift guarantee is inherited.
 - **The `?embedded` query param** makes `isEmbedded()` true in a browser, so the
   documented dev-QA URL yields a report with no switcher at all. Gate the
   removal on the injected global, or note it in the QA doc.
 - **`#N` in the Sessions index** is on its way out but not in this change.
+- **Only Sessions loses its left panel.** The Quotes TOC, tag sidebar, codebook
+  and signals panels — their toolbar toggles, ⌘⌥L behaviour and `[`/`]` keys —
+  are untouched on those lenses, in the app and in the browser. The same
+  popover treatment *may* one day suit them, but that is a separate decision
+  per lens (Sessions' panel was a switcher; the others navigate within a
+  view), recorded 14 Aug 2026 as explicitly not-yet.
 
 ## Not doing
 

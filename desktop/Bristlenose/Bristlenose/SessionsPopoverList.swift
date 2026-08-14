@@ -159,7 +159,7 @@ struct SessionsPopoverList: NSViewRepresentable {
         func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
 
         func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
-            SourceListSelectionRowView()
+            SessionsPopoverHoverRowView()
         }
 
         func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
@@ -218,6 +218,60 @@ struct SessionsPopoverList: NSViewRepresentable {
             guard let table, table.selectedRow >= 0, table.selectedRow < rows.count else { return }
             onCommit(rows[table.selectedRow].session)
         }
+    }
+}
+
+// MARK: - Hover row view
+
+/// Menu-style pointer tracking for the popover's rows.
+///
+/// A source-list TABLE doesn't hover (Finder and Mail never do), and the plan
+/// originally accepted no-hover on that ground — reversed 14 Aug 2026 on the
+/// role argument: **the container's idiom wins over the control's.** This
+/// surface behaves as a menu (transient, light-dismiss, click-commits), and
+/// Apple's menus and popover choosers track the pointer; the table is an
+/// implementation detail chosen for the selection capsule.
+///
+/// The wash is the popover FAMILY's hover — `labelColor` at 6%, the same value
+/// `ExportPopoverRow` and the All Sessions row above hand-roll — deliberately
+/// NOT the menu's accent capsule, which would collide with the grey capsule
+/// the control draws for the *current* session and fork the hover vocabulary
+/// inside one surface. Hovering the current row composites slightly darker.
+///
+/// A SUBCLASS of the shared row view so the project sidebar — a genuine source
+/// list that must not hover — is untouched, and the capsule anti-drift
+/// guarantee is inherited rather than duplicated.
+final class SessionsPopoverHoverRowView: SourceListSelectionRowView {
+
+    private var hovered = false {
+        didSet { if hovered != oldValue { needsDisplay = true } }
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        for area in trackingAreas where area.owner === self {
+            removeTrackingArea(area)
+        }
+        // .activeAlways: a popover's window is key, but tracking must survive
+        // the brief non-key moments during presentation.
+        addTrackingArea(NSTrackingArea(
+            rect: .zero,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self
+        ))
+    }
+
+    override func mouseEntered(with event: NSEvent) { hovered = true }
+    override func mouseExited(with event: NSEvent) { hovered = false }
+
+    override func drawBackground(in dirtyRect: NSRect) {
+        super.drawBackground(in: dirtyRect)
+        guard hovered else { return }
+        // Same side inset the source-list capsule uses, so hover and selection
+        // read as one shape at two weights (the mockup's decided treatment).
+        let wash = bounds.insetBy(dx: 10, dy: 0)
+        NSColor.labelColor.withAlphaComponent(0.06).setFill()
+        NSBezierPath(roundedRect: wash, xRadius: 6, yRadius: 6).fill()
     }
 }
 
@@ -418,6 +472,15 @@ final class SpeakerBadgeView: NSView {
     override var intrinsicContentSize: NSSize {
         NSSize(width: Self.width(for: label.stringValue),
                height: ceil(label.intrinsicContentSize.height) + Self.verticalInset * 2)
+    }
+
+    /// `NSGridView`'s `.firstBaseline` row alignment consults this, and a plain
+    /// `NSView` reports no baseline — so the grid fell back to edge placement
+    /// and the chip sat visibly below the text beside it (QA screenshot,
+    /// 14 Aug 2026). The label is centred inside `verticalInset`, so its
+    /// baseline offset from our top is exact.
+    override var firstBaselineOffsetFromTop: CGFloat {
+        Self.verticalInset + label.firstBaselineOffsetFromTop
     }
 
     override var wantsUpdateLayer: Bool { true }

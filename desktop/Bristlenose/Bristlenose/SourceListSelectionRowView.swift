@@ -19,7 +19,11 @@ import AppKit
 /// the current macOS draw path (both surfaces show the native two-state the
 /// user accepted as matching Mail), kept as the single shared emphasis
 /// behaviour.
-final class SourceListSelectionRowView: NSTableRowView {
+/// Not `final`: the sessions popover subclasses this
+/// (`SessionsPopoverHoverRowView`) to add menu-role hover on top of the
+/// inherited pin — hover belongs to that surface's container idiom, never to
+/// the sidebar's.
+class SourceListSelectionRowView: NSTableRowView {
     override var isEmphasized: Bool {
         get { false }
         set { }

@@ -1,5 +1,39 @@
 # Internationalisation — Codebook & Sentiment Translation
 
+## Why we localise at all — read this before evaluating any locale
+
+**Localisation is recognition, not utility.** It is a positioning strategy, and the strategy in one
+line is: **don't add ten more features — send a signal to researchers all over the world that you
+see them.** Everything below this section is mechanics; this is the reason any of it happens.
+
+The argument, four parts:
+
+1. **The incumbents won't do this, and the reason is structural.** Dovetail and co. don't localise
+   because San Francisco is the centre of the universe. They *could* buy twenty locales tomorrow;
+   they won't, because the return doesn't clear their bar. That asymmetry is durable — it isn't a
+   capability gap that funding closes, it's a priorities gap that funding *creates*. Localisation is
+   one of the few moats a solo maintainer can dig that a well-funded US competitor will walk past.
+2. **The mechanism is affective, not functional — and it works on fluent speakers too.** This is the
+   part that spreadsheets miss. The maintainer's Italian boss has a decade in the UK and full
+   professional English, and still switches to Italian with visible pleasure — *a little spark of
+   joy*. For everyone whose first language isn't English, a localised UI is a small friction removed
+   from the working day. You never know which emotional factor makes someone click **Get** and start
+   a trial. It can just be one feature.
+3. **The unit economics invert at our scale.** A locale that wins five users is noise to Dovetail and
+   material to us. **We don't need a lot of users — every single one matters.** The same investment
+   has completely different value depending on the size of the business making it, which is why
+   copying the incumbent's prioritisation logic is a mistake rather than a shortcut.
+4. **It is an explicit trade against feature surface.** Feature count is where an incumbent with more
+   engineers wins. Recognition is a axis where they aren't competing at all. Spending the next
+   increment on a locale instead of a feature is choosing the contested ground deliberately.
+
+**Consequence for how locales get chosen.** The prioritisation chart further down (Mac reach × UR
+depth) is a *sketch for ranking candidates we'd have to go and find a reviewer for* — it is not a
+gate, and it is not an ROI model. **Do not build a business case for a locale, and do not let a weak
+one argue against it.** This has already gone wrong once (Catalan, 14 Aug 2026 — a throwaway "five
+users, maybe $1000?" became a de-risking framework that recommended exactly the wrong thing). The
+governing line is the maintainer's: **"Some kinds of analysis are best done outside a spreadsheet."**
+
 ## Problem
 
 Bristlenose processes interviews in any language — modern LLMs handle cross-lingual reasoning natively (English prompt + German transcript = fine). But the **display layer** should speak the researcher's language. A German ethnographer expects "Zitate" not "Quotes", and a Japanese UXR practitioner expects コード not "Codes".

@@ -1,7 +1,7 @@
 ---
-status: findings, untriaged by the maintainer
-last-trued: 2026-08-09
-trued-against: 824655d6@main — eight-lens adversarial review run the morning after the 0.25.2 incident
+status: §3 closed; §1, §2, §5 open and awaiting a decision
+last-trued: 2026-08-14
+trued-against: c6bbf7d9@main — §3 fixed and verified; the rest as first written against 824655d6
 ---
 
 # Release-system audit — findings
@@ -94,6 +94,12 @@ Recommendation: (a) + (c).
 The house's documented nemesis (`&& ok`) in new clothes. The unifying defect:
 **these scripts fail correctly when a check runs and fails, and answer green when a
 check could not run.**
+
+> **Closed 14 Aug 2026.** 3.3 in `e9158717`; 3.1, 3.2, 3.4, 3.6, 3.7, 3.8 in
+> `c6bbf7d9`. Each fixed gate was driven through its full decision table,
+> including the states that previously read green. **3.5 is deliberately still
+> open** — it is a policy decision (should macOS block on tag runs only?), not a
+> defect to fix.
 
 | # | Finding | Status |
 |---|---|---|
@@ -188,9 +194,14 @@ guarantee; stage 2c's `itms-services` scan is the only coverage in the ad-hoc/ID
 
 1. `pypi` environment hold + Phase 5 reorder — dissolves the topology problem (§1)
 2. `bump-version.py` tags post-commit — dissolves the seam and K6 (§2)
-3. Fail-open sweep as one themed commit (§3.1–3.4, 3.6, 3.7)
+3. ~~Fail-open sweep as one themed commit~~ — **done**, `e9158717` + `c6bbf7d9` (§3)
 4. The two ~10-minute relaxations + 9pm re-scoping (§5)
 5. Acceptance-doc rescope, including S9 (§5)
+
+Note on ordering as it actually went: item 3 was done first, because it needed no
+decision from anyone. Items 1, 2, 4 and 5 all turn on a judgement — how much the
+tag push should cost, whether to depend on out-of-repo settings, what to trade
+away — and those are the maintainer's to make.
 
 Everything else is drift-cleanup that can ride along with normal work.
 

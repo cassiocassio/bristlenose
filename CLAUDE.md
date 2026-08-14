@@ -415,23 +415,32 @@ See `docs/BRANCHES.md` for any active worktrees and the parked set.
 
 ### Release timing (evening releases)
 
-Releases should land on GitHub after 9pm London time on weekdays to avoid pushing version bumps during working hours. Weekends are fine any time.
+Weekday releases land after 9pm London; **the act that lands a release is the
+publish approval, not any push.** The `pypi` GitHub environment carries a
+required-reviewer hold (14 Aug 2026 — Settings ▸ Environments, not in any file;
+`check-release-ready.sh`'s `publish hold` line probes it), so pushing `main`,
+pushing the tag, and building all publish nothing. Consequences:
 
-**Workflow (weekdays only):**
-1. Work on `main` as usual — commit everything locally
-2. Don't push to `origin/main` until after 9pm
-3. To see work remotely before release (CI checks, another machine): `git push origin main:wip` — the `wip` branch doesn't trigger releases
-4. After 9pm: `git push origin main --tags`
+1. Push `main` **any time** — it never publishes and it buys CI signal. The old
+   step "hold main until 9pm" and its `main:wip` preview workaround are retired
+   (wip never triggered CI anyway — `ci.yml` fires on `branches: [main]` only).
+2. Push the tag with it, as **two back-to-back commands, never one `--tags`**
+   (the bundled push is how the tag-driven workflow gets debounced into never
+   firing). The tag starts release.yml's CI run — macOS cells blocking there —
+   and its publish job then *waits* on the hold.
+3. **The approval is what waits for 9pm on weekdays.** Weekends: any time. A
+   morning approval after an overnight run is a sanctioned override — the human
+   is choosing the moment with full information, which is what the guideline
+   exists to protect.
 
-**Weekends:** Push any time — no restrictions.
+**Override:** approve when something is urgent. This is a guideline, not a gate.
 
-**Override:** Just push if something is urgent. This is a guideline, not a gate.
-
-**Why:** Avoids notifications during client working hours; batches releases into a predictable window.
+**Why:** avoids release notifications during client working hours; batches
+releases into a predictable window.
 
 ### Post-push PyPI verification (mandatory)
 
-A tag push that reaches GitHub is NOT the same as a release that reaches PyPI. The release pipeline silently stalled from v0.15.5 to v0.15.9 (five versions, ~6 days) because no step checked that PyPI actually accepted the upload. **After every `git push origin main --tags`, verify before declaring the release done:**
+A tag push that reaches GitHub is NOT the same as a release that reaches PyPI. The release pipeline silently stalled from v0.15.5 to v0.15.9 (five versions, ~6 days) because no step checked that PyPI actually accepted the upload. **After approving the publish job, verify before declaring the release done:**
 
 ```sh
 for i in $(seq 1 20); do

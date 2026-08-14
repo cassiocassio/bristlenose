@@ -37,11 +37,10 @@ __version__ = "0.4.0"
 **Use `scripts/bump-version.py` — don't hand-edit versions.** It updates
 `bristlenose/__init__.py` (the single source), the man page `.TH` line + ISO
 date, **and** the desktop Xcode `project.pbxproj` (marketing version + build
-number); stages those; and creates the git tag.
-
-**The footgun:** it creates the tag on the *current* HEAD — *before* your bump
-commit exists — so the tag points at the wrong commit until you delete and
-re-create it after committing. The standard flow:
+number); stages those. It does **not** commit or tag — the commit the tag
+belongs on doesn't exist until you've added the changelog prose, so the tag is
+yours to create afterwards (the script prints the exact sequence). The
+standard flow:
 
 ```bash
 # 1. Write the CHANGELOG.md + README.md changelog entries FIRST
@@ -57,19 +56,44 @@ git commit -m "bump to X.Y.Z"
 git tag vX.Y.Z
 git rev-parse HEAD; git rev-parse vX.Y.Z^{}   # same SHA — confirm
 
-# 4. Push branch, then tag separately (see gates below)
+# 4. Push branch and tag — two commands, back to back (never one `--tags`)
 git push origin main
 git push origin vX.Y.Z
 ```
 
-GitHub Actions handles PyPI / Homebrew / Snap from there.
+**Pushing the tag does not publish.** The `pypi` GitHub environment carries a
+**required-reviewer hold** (added 14 Aug 2026): `release.yml` runs the full CI
+suite — with the macOS cells *blocking*, unlike daily pushes — and then its
+`publish` job waits, up to 30 days, for an approval on the run page. PyPI, the
+GitHub Release and the Homebrew notification all sit behind that approval. This
+is what lets the tag go out *early*, alongside `main`, so both CI runs execute
+while the Mac artefacts build — and every irreversible act (TestFlight upload,
+`.dmg` publish, the approval itself) happens *after* every verdict is in.
+
+**The hold lives in repo Settings ▸ Environments ▸ pypi, not in any file.** A
+fresh fork, a recreated environment, or an accidental deletion silently reverts
+to publish-on-tag-push. `check-release-ready.sh` probes it on every run (the
+`publish hold` line); if that line warns, restore the reviewer before pushing
+any tag:
+
+```sh
+gh api repos/cassiocassio/bristlenose/environments/pypi \
+  --jq '[.protection_rules[]? | select(.type=="required_reviewers")] | length'
+# 0 = no hold — restore via Settings ▸ Environments ▸ pypi ▸ Required reviewers
+```
+
+To approve: the release run's page ▸ **Review deployments** ▸ tick `pypi` ▸
+Approve (works from a phone). To abandon instead: don't approve, delete the tag
+(`git push --delete origin vX.Y.Z && git tag -d vX.Y.Z`) — the held run expires
+harmlessly.
 
 ### Two mandatory gates — do not skip
 
-- **Evening timing (weekdays):** push to `origin/main` only after **21:00
-  London** on weekdays (avoids version churn during client hours). Weekends: any
-  time. Preview remotely without triggering a release via a `wip` branch
-  (`git push origin main:wip`). Override for genuine urgency.
+- **Evening timing (weekdays):** the act that *lands* the release is the
+  **publish approval** — that is what waits for **21:00 London** on weekdays
+  (avoids version churn during client hours). Pushing `main`+tag and building
+  publish nothing, so the run can start any time; a morning approval after an
+  overnight run is a sanctioned override. Weekends: any time.
 - **Post-push PyPI verification (mandatory):** a tag reaching GitHub is **not** a
   release reaching PyPI — the pipeline has silently stalled before (v0.15.5→.9,
   ~6 days, unnoticed). After pushing the tag, poll until PyPI flips:

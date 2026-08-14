@@ -103,11 +103,15 @@ Serve mode is the actively developed experience. The static render is a sealed b
 ./scripts/bump-version.py 0.11.0   # explicit version
 ```
 
-Updates `bristlenose/__init__.py` and the man page, creates a git tag. After bumping:
+Updates `bristlenose/__init__.py`, the man page and the pbxproj; stages them. It does not commit or tag. After bumping:
 
 1. Add changelog entry to `README.md` and `CHANGELOG.md`
 2. Update version in `CLAUDE.md` "Current status" section
-3. Commit and push with tags: `git push origin main --tags`
+3. Commit, then `git tag vX.Y.Z` (after the commit, so it points at it)
+4. Push branch and tag as two commands — `git push origin main` then
+   `git push origin vX.Y.Z` (never one `--tags`; it debounces the release
+   workflow). The publish job then waits for approval on the run page —
+   see docs/release.md for the full flow
 
 ## Git worktrees
 

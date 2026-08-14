@@ -1,7 +1,7 @@
 ---
-status: §3 closed; §1, §2, §5 open and awaiting a decision
+status: §1, §2, §3 closed (§3.5 folded into §1's fix); §5 open and awaiting a decision
 last-trued: 2026-08-14
-trued-against: c6bbf7d9@main — §3 fixed and verified; the rest as first written against 824655d6
+trued-against: the §1+§3.5 change — pypi environment hold live, strict-macos wired, flow rewritten; §5 as first written against 824655d6
 ---
 
 # Release-system audit — findings
@@ -97,9 +97,10 @@ check could not run.**
 
 > **Closed 14 Aug 2026.** 3.3 in `e9158717`; 3.1, 3.2, 3.4, 3.6, 3.7, 3.8 in
 > `c6bbf7d9`. Each fixed gate was driven through its full decision table,
-> including the states that previously read green. **3.5 is deliberately still
-> open** — it is a policy decision (should macOS block on tag runs only?), not a
-> defect to fix.
+> including the states that previously read green. **3.5 closed the same day as
+> part of the §1 change**: the policy question resolved to "blocking on release
+> runs, informational on daily pushes" — `ci.yml` gained a `strict-macos`
+> workflow_call/dispatch input and `release.yml` passes it true.
 
 | # | Finding | Status |
 |---|---|---|
@@ -192,11 +193,20 @@ guarantee; stage 2c's `itms-services` scan is the only coverage in the ad-hoc/ID
 
 ## 7. Shortlist
 
-1. `pypi` environment hold + Phase 5 reorder — dissolves the topology problem (§1)
-2. `bump-version.py` tags post-commit — dissolves the seam and K6 (§2)
+1. ~~`pypi` environment hold + Phase 5 reorder~~ — **done 14 Aug 2026, with §3.5
+   folded in**: required reviewer live on the environment (probed by the
+   preflight's `publish hold` line, since it lives in Settings, not the tree);
+   `release.yml` passes `strict-macos: true` so the release run's macOS cells
+   block; Phase 5 pushes main+tag first, builds while both CI runs execute, and
+   puts uploads + approval after every verdict. The 9pm guideline now binds the
+   approval — which also settles §5's re-scoping item. (§1, §3.5, §5c)
+2. ~~`bump-version.py` tags post-commit~~ — **done**, `d6bf3a49`: it no longer
+   tags at all; the tag is created after the prose commit (§2)
 3. ~~Fail-open sweep as one themed commit~~ — **done**, `e9158717` + `c6bbf7d9` (§3)
-4. The two ~10-minute relaxations + 9pm re-scoping (§5)
-5. Acceptance-doc rescope, including S9 (§5)
+4. The two ~10-minute relaxations — double notarisation, upload-path
+   `validate-app` (§5)
+5. Acceptance-doc rescope: S9's byte-identical decline, criteria for the
+   K9/K10 classes (S5 already rewritten for the new order) (§5)
 
 Note on ordering as it actually went: item 3 was done first, because it needed no
 decision from anyone. Items 1, 2, 4 and 5 all turn on a judgement — how much the

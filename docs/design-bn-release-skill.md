@@ -294,6 +294,15 @@ single run rather than only in emergencies.
 
 ### D2 — Mac artefacts first; the tag push last
 
+> **Superseded 14 Aug 2026** (audit §1, the 0.25.2 post-mortem). D2's premise —
+> "push the tag and you have burned a PyPI version" — stopped being true when
+> the `pypi` environment gained a required-reviewer hold: publish now waits for
+> an approval, so the tag can go out *first*, both CI runs (the release run's
+> macOS cells blocking, via `ci.yml`'s `strict-macos` input) overlap the Mac
+> build, and every irreversible act follows every verdict. The shipped order
+> lives in the skill's Phase 5; the hold is probed by `check-release-ready.sh`.
+> D2's *reasoning* was sound for the world it was written in — kept as history.
+
 Order the irreversible acts by how permanent they are, and do the permanent one
 **last**:
 

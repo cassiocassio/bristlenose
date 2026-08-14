@@ -261,9 +261,10 @@ Day-to-day development just means committing and pushing to `main`. CI runs auto
 git add bristlenose/__init__.py README.md
 git commit -m "vX.Y.Z"
 git tag vX.Y.Z
-git push origin main --tags
+git push origin main
+git push origin vX.Y.Z   # two pushes, never one --tags
 ```
 
-GitHub Actions handles the rest: CI → PyPI publish → GitHub Release → Homebrew tap update. The snap workflow also triggers: edge on push to main, stable on tags.
+GitHub Actions handles the rest: CI → then the publish job waits for the maintainer's approval on the run page → PyPI publish → GitHub Release → Homebrew tap update. The snap workflow also triggers: edge on push to main, stable on tags.
 
 For the full release pipeline details, cross-repo topology, secrets, Homebrew tap automation, and Snap Store setup, see [`docs/release.md`](docs/release.md).

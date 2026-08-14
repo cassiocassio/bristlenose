@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-08-08
-trued-against: efc0053f@main — read from the scripts and workflow files, not from memory
+last-trued: 2026-08-14
+trued-against: the §1+§3.5 release-ordering change — pypi environment hold live, publish lands at approval, bump-version no longer tags
 ---
 
 # Release channels — the one-page map
@@ -12,7 +12,7 @@ but the sidecar.
 
 | Channel | You do | Trigger | Artefact | Lifespan |
 |---|---|---|---|---|
-| **PyPI** | `git push origin main --tags` | tag `v*` | sdist + wheel | permanent |
+| **PyPI** | push the tag, then **approve the run** | tag `v*` + approval | sdist + wheel | permanent |
 | **GitHub Release** | *(nothing)* | same tag push | auto notes + assets | permanent |
 | **Homebrew** | *(nothing)* | same tag push, after PyPI | tap formula bump | permanent |
 | **Snap** | run the workflow by hand | `workflow_dispatch` | `.snap` → edge | permanent |
@@ -23,8 +23,9 @@ but the sidecar.
 
 ## One tag push does six things
 
-`git push origin main --tags` fires `release.yml`, which runs **six jobs in
-order**. There is no separate "make a GitHub release" step — it's job four.
+Pushing tag `v*` fires `release.yml`, which runs **six jobs in order** — and
+parks at `publish` on the pypi environment's required-reviewer hold until you
+approve the run (14 Aug 2026; probed by `check-release-ready.sh`). There is no separate "make a GitHub release" step — it's job four.
 
 ```
 ci → build (sdist, wheel, SBOMs, attestation) → publish (PyPI)
@@ -75,8 +76,12 @@ would be off in every run — configuration for the configurable.
 ./scripts/bump-version.py minor    # or patch — minor = feature, patch = fix
 # ... write CHANGELOG.md + README.md, stage, commit ...
 git tag v<X.Y.Z>                   # after the commit — it must point at it
-git push origin main               # publishes nothing; let CI go green
-git push origin v<X.Y.Z>           # separate push — this is the irreversible one
+git push origin main               # two commands back to back — never `--tags`
+git push origin v<X.Y.Z>           # publishes NOTHING: the pypi environment's
+                                   # required-reviewer hold parks release.yml's
+                                   # publish job until you approve the run
+# ... both CI runs green, Mac artefacts built + uploaded ...
+# run page ▸ Review deployments ▸ Approve   ← the release lands HERE
 ```
 
 Then **verify PyPI actually accepted it** — a tag reaching GitHub is not a
@@ -138,8 +143,11 @@ byte-identical — force-move the existing tag rather than forking the version l
 Counter-rule: if the version ever *published*, PyPI immutability means you must
 bump.
 
-**Releases land after 9pm London on weekdays.** Weekends are unrestricted. To see
-work remotely without triggering a release: `git push origin main:wip`.
+**Releases land after 9pm London on weekdays — and the landing act is the
+publish approval.** Pushing `main` and the tag publishes nothing (the hold), so
+push any time; only the approval waits for the window. Weekends are
+unrestricted. (The old `main:wip` preview workaround is retired — main can
+simply be pushed, and wip never triggered CI anyway.)
 
 ---
 

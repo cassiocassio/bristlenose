@@ -74,12 +74,27 @@ git rev-parse HEAD; git rev-parse v<X.Y.Z>^{}   # same SHA — confirm before pu
 
 **If `--dry-run`: print exactly what would run and STOP here.** Log `bash .claude/skills/_shared/wflog.sh new-release dry-run-stop "<X.Y.Z>"`.
 
-## Step 5: Push + verify PyPI (the part that reaches the world)
+## Step 5: Push, approve, verify PyPI (the part that reaches the world)
 
 ```bash
 git push origin main
 git push origin v<X.Y.Z>
 ```
+
+**The tag push no longer publishes.** The `pypi` environment carries a
+required-reviewer hold (14 Aug 2026), so `release.yml` runs CI — with macOS
+cells *blocking*, unlike daily pushes — and then its `publish` job **waits for
+approval** on the run page (up to 30 days). Nothing reaches PyPI, the GitHub
+Release, or Homebrew until the human approves. So after pushing:
+
+1. Wait for the release run's CI to go green (and, in the full `/bn-release`
+   flow, for the Mac uploads to complete — the approval comes *last*).
+2. Approve: run page ▸ **Review deployments** ▸ tick `pypi` ▸ Approve.
+3. Only then does the verify loop below have anything to see.
+
+If the preflight's `publish hold` line **warned**, the hold is gone and the old
+behaviour applies: the tag push publishes immediately — treat the push itself
+as the irreversible act and do not push until everything else is done.
 
 Then the **mandatory** verify loop (a tag reaching GitHub ≠ a release reaching PyPI):
 

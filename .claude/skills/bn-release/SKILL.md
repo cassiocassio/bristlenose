@@ -90,9 +90,12 @@ certs, profile expiry, ASC config, CI status.
 genuine release the CHANGELOG and README entries for the target version cannot
 exist yet — Phase 3 is where you write them. So the shape is **preflight → prose
 → preflight**, and only the second run's verdict is the gate. Any *other* failure
-is a real stop. Two things the script cannot see, so check them yourself: whether
-an existing tag points at HEAD (it only checks the tag exists), and whether the
-CI line means "green" or merely "no evidence" — those read the same in its output.
+is a real stop. Three of its lines deserve a read rather than a skim: `git tag`
+compares the tag to HEAD (diverged-and-unpublished is the dangerous state and
+fails); `CI status` distinguishes green from in-progress from no-evidence; and
+`publish hold` proves the pypi environment's required-reviewer gate exists —
+**a warning there means a tag push publishes immediately, and Phase 5's
+ordering does not apply until the hold is restored.**
 
 Then do the part it cannot — read `git log <last-tag>..HEAD` **and the diff**, and
 report:
@@ -134,14 +137,23 @@ cost differently:**
 | | Line | Crossed by | Cost of being wrong |
 |---|---|---|---|
 | **soft** | a build number is spent forever | `upload-testflight.sh` | recoverable: `--build-only` and rebuild. But the build **reaches cohort testers** and cannot be recalled, only expired in ASC |
-| **hard** | a PyPI version is burned forever | pushing the tag | unrecoverable: that version can never be re-used |
+| **hard** | a PyPI version is burned forever | **approving the publish job** in GitHub's UI | unrecoverable: that version can never be re-used |
 
-Publishing the `.dmg` sits between them — technically re-publishable, but the
-public permalink swaps the moment it lands, so treat it as audience-reaching too.
-"Reversible" and "nobody saw it" are different properties; say which you mean.
+**Pushing the tag is on neither line.** The `pypi` environment carries a
+required-reviewer hold, so `release.yml` runs its (strict-macOS) CI and then its
+publish job *waits* — up to 30 days — for an approval on the run page. That is
+what lets the tag go out at the start, with `main`, while everything is still
+abandonable: to walk away, don't approve, and delete the tag. The preflight's
+`publish hold` line proves the hold exists — **if it warns, you are in the old
+world where a tag push publishes immediately, and the order below is wrong.**
+
+Publishing the `.dmg` sits between the lines — technically re-publishable, but
+the public permalink swaps the moment it lands, so treat it as audience-reaching
+too. "Reversible" and "nobody saw it" are different properties; say which you
+mean.
 
 Ask **once**, before the *soft* line — not before the hard one. Everything up to
-and including `push main` is genuinely abandonable and needs no ceremony.
+and including the pushes is genuinely abandonable and needs no ceremony.
 
 Then ask **once**. Not per channel — a prompt per step trains people to say yes.
 Declining here is the dry run; there is no `--dry-run` flag because the preflight
@@ -158,25 +170,36 @@ Order matters and is derived from reversibility, not convenience.
                           git tag vX.Y.Z           ← AFTER the commit
                           verify: git rev-parse HEAD == git rev-parse vX.Y.Z^{}
 
-2  push main (NOT tags)   git push origin main                      ~25 min for CI
-                          release.yml fires on TAGS only — this publishes nothing.
-                          Wait for green before spending the Mac lane.
+2  push main AND tag      git push origin main
+                          git push origin vX.Y.Z
+                          Two commands back to back — never one `--tags` (debounce).
+                          Publishes NOTHING: release.yml fires, runs CI with
+                          strict macOS, and its publish job HOLDS on the pypi
+                          environment gate. Two CI runs are now in flight.
 
-3  Mac artefacts          SIGN_IDENTITY="Apple Distribution: Martin Storey (Z56GZVA2QB)" \
+3  Mac artefacts          run WHILE both CI runs execute — builds only, no uploads
+                          SIGN_IDENTITY="Apple Distribution: Martin Storey (Z56GZVA2QB)" \
                             desktop/scripts/build-all.sh            ~35 min warm / ~50 cold
-                          desktop/scripts/upload-testflight.sh      ← SOFT irreversible
                           desktop/scripts/build-dmg.sh              ~40 min, two notary waits
+
+4  THE GATE               both CI runs green — the main push run AND the release
+                          run (whose macOS cells are blocking) — and every Mac
+                          build gate green. Nothing irreversible has happened yet.
+                          Any red: don't approve, delete the tag, fix, start over.
+                          Cost so far: nothing.
+
+5  uploads                desktop/scripts/upload-testflight.sh      ← SOFT irreversible
                           desktop/scripts/upload-dmg.sh             ← public permalink swaps
 
-4  CLI publish            re-assert HEAD == tag == origin/main, then
-                          → .claude/skills/new-release/SKILL.md Steps 5–6 ONLY
-                            (push tag, PyPI verify, and its tag-surgery tree)
+6  approve publish        GitHub run page ▸ Review deployments ▸ Approve
                                                                     ← HARD irreversible
+                          Cascade: PyPI → verify-pypi · GitHub Release · Homebrew.
+                          Then → new-release SKILL.md Step 6 for the PyPI verify.
 
-5  website deploy         only AFTER PyPI confirms — see below
-6  Snap                   gh workflow run snap.yml --ref main       (edge)
+7  website deploy         only AFTER PyPI confirms — see below
+8  Snap                   gh workflow run snap.yml --ref main       (edge)
                           gh workflow run snap.yml --ref vX.Y.Z     (stable, Tier 2)
-7  Tier 2 only            App Store submission, phased release on
+9  Tier 2 only            App Store submission, phased release on
 ```
 
 **Step 1 owns bump, commit and tag as one unit.** `bump-version.py` no longer
@@ -184,7 +207,8 @@ tags at all (it can't be right — the commit the tag belongs on doesn't exist w
 it runs), so the tag is yours to create *after* the commit. Verify tag == HEAD
 before moving on. Do **not** delegate this to `/new-release` Step 4: that step is
 the same bump, and after step 1 the tree already satisfies its publish-pending
-case, whose instruction is *"push the existing tag"*. Hand off Steps **5–6 only**.
+case, whose instruction is *"push the existing tag"*. Its Step 6 (PyPI verify)
+is the only piece you borrow, after the approval.
 
 **`SIGN_IDENTITY` is not optional.** Unset, it defaults to `-` (ad-hoc), and
 `build-all.sh` then silently skips the identity check, the provisioning-profile
@@ -192,19 +216,26 @@ check and the notarytool check — six gates off, no warning, and you find out 3
 minutes later at the upload. `build-dmg.sh` needs no such care: it defaults to
 the Developer ID identity and refuses ad-hoc outright.
 
-**Push `main` before the Mac lane, not after.** `release.yml` fires only on
-`push: tags`, so pushing `main` publishes nothing anywhere — it just buys a CI
-verdict before you spend 75 minutes and a permanently-consumed build number. The
-old ordering conflated the two pushes and left the Mac lane running against code
-CI had never seen. **Caveat worth stating out loud: one green is not proof on a
-suite with a live flake, and the tag push re-runs CI, so a green now can still be
-followed by a red then.** If that happens after the uploads, the release is
-already partially published — the supersede path in `/new-release` Step 2 is the
-answer, not a rerun.
+**Why the tag goes out at the start.** The old order held the tag back because
+pushing it *was* publishing — so the Mac lane ran first, and its uploads landed
+before the tag run's CI verdict existed. That is the window 0.25.2 died in:
+first CI run green, uploads out, second CI run red, three channels shipped on a
+version the suite then rejected. With the publish hold, the tag is just a ref:
+pushing it early starts the second CI run — the one whose macOS cells actually
+block — while the Mac build runs, and **every** irreversible act now sits behind
+both verdicts. Same failure today costs: nothing. The two runs are also two
+*independent* samples of the suite on the same commit, which is precisely the
+evidence a single green cannot give you on a flaky test.
 
 **Budget cold, not warm.** A version bump invalidates the PyInstaller and
 frontend caches, so the sidecar rebuild inside `build-all.sh` runs ~19 min rather
-than ~6. A full Publish-tier release is **~2h15 wall-clock**, most of it waiting.
+than ~6. A full Publish-tier release is **~1h55 wall-clock** under this order —
+the second CI run overlaps the Mac build instead of following it.
+
+**If approval never comes, nothing happens** — the run waits up to 30 days, then
+expires un-published. An abandoned release is: don't approve, delete the tag
+(`git push --delete origin vX.Y.Z && git tag -d vX.Y.Z`), fix, re-tag. The only
+residue is a tag that briefly existed on origin.
 
 **The website deploys last.** Its changelog page renders live from `CHANGELOG.md`,
 so deploying before PyPI accepts the upload publishes a page announcing a version
@@ -255,8 +286,13 @@ Close with a table of what is now true per channel, plus the expiry clocks —
   the answer is to fix the artefact, never to work around the check.
 - **A partial release is a normal outcome**, not an error. PyPI can succeed while
   Homebrew's poll times out. Report per-channel truth, not one verdict.
-- **Weekday releases land after 9pm London.** Weekends unrestricted. It is a
-  guideline — confirm rather than refuse.
+- **Weekday releases land after 9pm London; the landing act is the publish
+  approval.** Pushing `main` and the tag publishes nothing (the hold), building
+  publishes nothing — so the run can *start* any time, and only the approval
+  waits for the window. Weekends unrestricted. It is a guideline — confirm
+  rather than refuse. (A morning approval after an overnight run is a common,
+  sanctioned override: the human is choosing the moment with full information,
+  which is what the guideline exists to protect.)
 - **Every upload spends its build number forever.** A replacement needs
   `./scripts/bump-version.py --build-only`.
 - **Do not author the changelog alone.** Draft it; the human decides what users

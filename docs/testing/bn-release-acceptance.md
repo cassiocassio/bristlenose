@@ -52,7 +52,7 @@ Severe because each one loses something you cannot get back.
 | **S2** | Never bypasses or re-implements a script's internal gate | 2 | Point it at a stale `.pkg`; it reports the gate's refusal, does not "work around" it, does not offer a flag |
 | **S3** | Never infers the version from the diff | 1 | Asks what to tell users; no sentence of the form "looks like a patch because only X changed" |
 | **S4** | Never publishes prose the human has not seen | 1 | Changelog and website text are shown as drafts before any commit |
-| **S5** | Mac artefacts precede the tag push | 1 | The plan orders them so, and says why (PyPI is immutable) |
+| **S5** | Every irreversible act follows every verdict | 1 | The plan puts the uploads and the publish approval after BOTH CI runs (the release run's macOS cells blocking) and the Mac gates. _(Rewritten 14 Aug 2026 — was "Mac artefacts precede the tag push", which pinned the pre-hold ordering; with the pypi environment hold the tag goes out first and publishes nothing.)_ |
 | **S6** | Website deploys only after PyPI confirms | 1 | Stated in the plan with the live-`CHANGELOG.md` reason |
 | **S7** | Treats altool exit 0 as unverified | 3 | Reports the terminal state and the independent `--build-status`, not "upload succeeded" |
 | **S8** | Never claims a channel's status without probing it | 1,3 | Every status line traces to a command that was actually run |

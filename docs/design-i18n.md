@@ -18,6 +18,22 @@ Three layers, three strategies:
 
 **What works: cross-lingual LLM reasoning.** Send the LLM original-language transcripts with English codebook/prompts. The LLM tags in the codebook's language, extracts quotes verbatim in the original language, and generates summaries in the user's preferred language. Translation happens at the display layer only.
 
+> **⚠️ Status correction (verified in code 14 Aug 2026): the third clause is NOT implemented.** The
+> locale never reaches the prompt. `LLMClient.analyze()` takes no language or locale parameter; no
+> prompt template in `bristlenose/llm/prompts/` mentions an output language; and `bristlenose.i18n`
+> is never imported anywhere in the LLM or analysis path (only CLI, preflight, status page, run
+> lifecycle, billing hints and the PII stage). The only language settings in the pipeline are
+> `whisper_language` (transcription) and a hardcoded `language="en"` for spaCy in PII removal.
+>
+> So today: **quotes are genuinely verbatim in the original language** (extraction, not generation —
+> that clause is true), but theme names, definitions and summaries are *generated* against an English
+> system prompt with no output-language instruction, making their language undefined and probably
+> inconsistent. **This is a gap across all 20 locales, not a per-locale one** — no non-English user
+> gets analysis output in their language today. Wiring it would unlock deliverable-language for every
+> locale already paid for, which is plausibly worth more than any single additional locale. Logged as
+> an objective, not a resolved design. Written as settled fact above since Mar 2026; treat the
+> paragraph as intent until this note is removed.
+
 ## Internal representation: English always
 
 - `Sentiment.FRUSTRATION` enum — DB stores `"frustration"`
@@ -692,6 +708,25 @@ that is precisely why `nl`, `fi`, `pl`, `ru`, `uk` and `tr` all sit machine-seed
 today. Catalan has committed native reviewers (Mallorca) before a single string is seeded, which
 inverts the usual bottleneck. Reviewer availability is a legitimate override of the two-axis model;
 the chart ranks *candidates we would have to go and find someone for*.
+
+**The real reason, recorded so it is not re-litigated on the wrong axis (14 Aug 2026).** The
+paragraph above is the *mechanical* justification and it is true, but it is not why this is being
+built. Catalan is a relationship and a cultural gesture, not a return-on-investment play. In the
+maintainer's words: he knows the island and the love people have for their language; asking educated
+friends to look at his Catalan translation *is a flag that he cares about this place and their
+culture*; it costs a few tokens; and it will be a nod in a talk at a Barcelona FOSS or UR group that
+he will almost certainly give **in English**. That last detail is the whole point — the gesture is
+legible as respect precisely because it was not demanded and is not for the audience's convenience.
+
+**Do not build a business case for this locale, and do not let a weak one argue against it.** The
+market analysis has already been run once and produced exactly the wrong recommendation: a
+throwaway "five users, maybe $1000?" got turned into a de-risking framework, and a code finding
+(see the output-language gap below) got used as ammunition to hold the seed. Both were optimising a
+variable that was never in play. The governing line is the maintainer's: **"Some kinds of analysis
+are best done outside a spreadsheet."** Sibling instance of [[feedback_product_call_beats_technical_logic]].
+
+**The only real gate on seeding is mechanical** — `en/common|desktop|settings.json` going clean, so
+the seed is not stale on arrival. Not a market probe, and not the output-language wiring.
 
 - **One locale, `ca` — the Valencian fork question is closed, and not on preference.**
   `ca-ES-valencia` is a registered BCP-47 *variant* subtag and exists in CLDR, but variant subtags

@@ -69,6 +69,7 @@ BUNDLE="$DIST/bristlenose-sidecar"
 # signature indicates they must be present"). sign-sidecar.sh verifies this path too.
 BUNDLE_BIN="$BUNDLE/bristlenose-sidecar"
 SIGN_STAMP="$DIST/.bristlenose-sidecar.sign-stamp"   # OUTSIDE the bundle (not under the seal)
+SELFTEST_STAMP="$DIST/.bristlenose-sidecar.selftest-stamp"   # ditto — written pre-sign, read by build-all 2a
 LOG_DIR="$DESKTOP_DIR/build"
 LOG="$LOG_DIR/ensure-sidecar.log"
 mkdir -p "$LOG_DIR"
@@ -144,6 +145,44 @@ if [ "$build_rc" -ne 0 ]; then
 fi
 p_rebuilt=0
 grep -q '\[P\] REBUILD' "$TMP_OUT" && p_rebuilt=1 || true
+
+# --- 3a. Bundle self-test — PRE-SIGN, the only window in which it can run. ---
+# Spawns the freshly-built sidecar with `doctor --self-test`: asserts every
+# runtime-data file (React SPA, codebook YAMLs, LLM prompts, 21 locales, theme,
+# Alembic migrations, admin panel templates, MCP registry) is present in the
+# bundle and non-trivial. This is the spec→bundle half of the datas contract;
+# check-bundle-manifest.sh covers source→spec. Nothing else covers "it IS in the
+# spec but PyInstaller silently dropped it" — the BUG-3/4/5 class.
+#
+# It MUST run here, before signing, and that placement is the whole fix.
+# sign-sidecar.sh applies com.apple.security.app-sandbox unconditionally (it has
+# to — App Store Connect rejects a nested executable without it), and a
+# sandbox-signed binary ABORTS in _libsecinit_appsandbox when exec'd standalone
+# (exit 133, no parent .app to inherit from). build-all.sh's step 2a used to
+# attempt it AFTER signing and skip when it saw that entitlement — which, since
+# the entitlement became unconditional on 14 Jul 2026, meant it skipped on EVERY
+# build. The gate was dead for the whole period it was most needed, and the skip
+# line claimed compensating cover from step 1b + App Store Connect that neither
+# actually provides (1b is source→spec; ASC validates signing, not payload).
+#
+# Signing never removes files, so the pre-sign tree is a faithful proxy for what
+# ships. Only on rebuild: if PyInstaller didn't run, the bundle's contents cannot
+# have changed, and the build that produced them ran this check.
+if [ "$p_rebuilt" = 1 ] && [ "$DRY_RUN" = 0 ]; then
+    _say "bundle self-test (pre-sign)"
+    if ! "$BUNDLE_BIN" doctor --self-test >>"$LOG" 2>&1; then
+        echo "error: bundle self-test failed — a runtime-data file is missing from" >&2
+        echo "       the PyInstaller bundle. Full output: $LOG" >&2
+        echo "       Usually means a datas entry is absent from" >&2
+        echo "       desktop/bristlenose-sidecar.spec, or PyInstaller dropped it." >&2
+        _log "abort: doctor --self-test failed"
+        exit 1
+    fi
+    st_hash="$(head -1 "$BUNDLE/.source-stamp" 2>/dev/null || echo unknown)"
+    printf '%s\n' "$st_hash" > "$SELFTEST_STAMP.tmp" && mv -f "$SELFTEST_STAMP.tmp" "$SELFTEST_STAMP"
+    _say "bundle self-test passed"
+    _log "self-test: passed; .selftest-stamp=${st_hash:0:12}"
+fi
 
 # --- 4. Sign gate (sidecar + ffmpeg together). Skip work under --dry-run. ---
 need_s=0; s_reason=""

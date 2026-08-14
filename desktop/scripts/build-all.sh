@@ -164,27 +164,45 @@ bn_step_ok 2 elapsed=$((SECONDS-_bn_t2)) detail="built + signed under $SIGN_IDEN
 # Runs the binary directly (single in-process exec, ~2-3s). No HTTP,
 # no port handling, no subprocess orchestration.
 
-bn_step_start 2a Build "Bundle self-test" \
-    narrative="Spawns the just-built sidecar with doctor --self-test — asserts every runtime-data file is present in the bundle."
+bn_step_start 2a Verify "Bundle self-test" \
+    narrative="Asserts doctor --self-test ran against THIS bundle — every runtime-data file present, checked pre-sign in step 2."
 _bn_t2a=$SECONDS
 SIDECAR_BIN="$DESKTOP_DIR/Bristlenose/Resources/bristlenose-sidecar/bristlenose-sidecar"
 if [ ! -x "$SIDECAR_BIN" ]; then
     echo "error: sidecar binary not found or not executable: $SIDECAR_BIN" >&2
     exit 1
 fi
-# A MAS build signs the sidecar with com.apple.security.app-sandbox + inherit, which
-# makes it ABORT when exec'd standalone (no parent .app to inherit the sandbox from —
-# dies in _libsecinit_appsandbox). So the bare `doctor --self-test` below only works on
-# non-sandbox (Debug / ad-hoc) builds. For a sandbox-signed sidecar, skip it: the
-# spec→bundle datas are already gated by check-bundle-manifest.sh (step 1b, no exec)
-# and by App Store Connect's own validation, and the runtime path is exercised via the
-# launched .app. (14 Jul 2026 — added with the nested-sandbox signing fix.)
-if codesign -d --entitlements - "$SIDECAR_BIN" 2>/dev/null | grep -q "app-sandbox"; then
-    bn_step_skip 2a detail="app-sandbox-signed sidecar can't run standalone (MAS build); datas covered by 1b + ASC"
-else
-    "$SIDECAR_BIN" doctor --self-test >/dev/null
-    bn_step_ok 2a elapsed=$((SECONDS-_bn_t2a)) detail="doctor --self-test: all runtime data present"
+# The self-test itself RUNS IN ensure-sidecar.sh (step 2), pre-sign. It cannot run
+# here: sign-sidecar.sh applies com.apple.security.app-sandbox unconditionally, and a
+# sandbox-signed binary aborts in _libsecinit_appsandbox when exec'd standalone
+# (exit 133). This step used to attempt the exec and skip on that entitlement — which
+# meant it skipped on EVERY build once the entitlement became unconditional
+# (14 Jul 2026), so the only gate on "PyInstaller dropped a datas entry" was dead for
+# the whole period it was most needed. Both release lanes call ensure-sidecar --force,
+# so a release always rebuilds and always runs it.
+#
+# What remains here is the assertion that it happened, for THIS bundle: compare the
+# stamp ensure-sidecar wrote against the bundle's own source fingerprint. A missing or
+# stale stamp means the shipped tree was never checked — fail, don't warn.
+SELFTEST_STAMP="$DESKTOP_DIR/Bristlenose/Resources/.bristlenose-sidecar.selftest-stamp"
+SOURCE_STAMP="$DESKTOP_DIR/Bristlenose/Resources/bristlenose-sidecar/.source-stamp"
+if [ ! -f "$SELFTEST_STAMP" ]; then
+    echo "error: no bundle self-test stamp at $SELFTEST_STAMP" >&2
+    echo "       This bundle has never been self-tested. Rebuild it:" >&2
+    echo "         desktop/scripts/ensure-sidecar.sh --force" >&2
+    exit 1
 fi
+_st_recorded="$(head -1 "$SELFTEST_STAMP" 2>/dev/null || echo "")"
+_st_current="$(head -1 "$SOURCE_STAMP" 2>/dev/null || echo "")"
+if [ -z "$_st_current" ] || [ "$_st_recorded" != "$_st_current" ]; then
+    echo "error: bundle self-test stamp is stale" >&2
+    echo "       self-tested: ${_st_recorded:-<none>}" >&2
+    echo "       bundle is:   ${_st_current:-<unreadable>}" >&2
+    echo "       Rebuild: desktop/scripts/ensure-sidecar.sh --force" >&2
+    exit 1
+fi
+bn_step_ok 2a elapsed=$((SECONDS-_bn_t2a)) \
+    detail="all runtime data present · self-tested pre-sign at ${_st_recorded:0:12}"
 
 # ------------------------------------------------------------
 # 2b. THIRD-PARTY-BINARIES.md staleness check (C5)

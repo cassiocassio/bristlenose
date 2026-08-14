@@ -94,6 +94,11 @@ desktop/Bristlenose/Resources/bristlenose-sidecar.delete-*
 # Atomic sign-stamp written outside the bundle by ensure-sidecar.sh on every
 # Cmd+R (Ensure Sidecar Fresh build phase) — per-machine build state, not source.
 desktop/Bristlenose/Resources/.bristlenose-sidecar.sign-stamp
+# Self-test stamp, same shape and same reason: ensure-sidecar.sh records the
+# source fingerprint it ran `doctor --self-test` against, and build-all step 2a
+# asserts it still matches. Outside the bundle so it stays out from under the
+# code-signature seal.
+desktop/Bristlenose/Resources/.bristlenose-sidecar.selftest-stamp
 desktop/Bristlenose/Resources/ffmpeg
 desktop/Bristlenose/Resources/ffprobe
 desktop/Bristlenose/Resources/Bristlenose.mcpb

@@ -414,3 +414,65 @@ describe("embedded mode (macOS desktop)", () => {
     expect(screen.getByLabelText("Close tag sidebar")).toBeTruthy();
   });
 });
+
+// The header holds two things: the title (Sessions/Analysis pass one, Quotes
+// and Codebooks no longer do) and the close ×, which embedded mode gates out.
+// Embedded + no title leaves it holding neither — so it must not render at all,
+// or it sits at the top of the panel as an empty padded box pushing the first
+// heading off the datum the toolbar establishes. jsdom can't measure that box
+// (every rect is zero), so these assert the element's existence, which is the
+// thing the padding hangs off.
+describe("left sidebar header — renders only when it holds something", () => {
+  beforeEach(() => {
+    mockState = { ...mockState, tocMode: "push" };
+  });
+
+  it("is absent in embedded mode when no title is passed", () => {
+    mockEmbedded = true;
+    const { container } = render(
+      <SidebarLayout active={true}>
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    expect(container.querySelector(".toc-sidebar-header")).toBeNull();
+  });
+
+  it("is present in embedded mode when a title is passed", () => {
+    mockEmbedded = true;
+    const { container } = render(
+      <SidebarLayout active={true} leftPanelTitle="Sessions">
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    expect(container.querySelector(".toc-sidebar-header")).toBeTruthy();
+    expect(screen.getByText("Sessions")).toBeTruthy();
+  });
+
+  it("survives in the browser without a title — the close × keeps it alive", () => {
+    mockEmbedded = false;
+    const { container } = render(
+      <SidebarLayout active={true}>
+        <div>Content</div>
+      </SidebarLayout>,
+    );
+    expect(container.querySelector(".toc-sidebar-header")).toBeTruthy();
+    expect(screen.getByLabelText("Close table of contents")).toBeTruthy();
+  });
+
+  it("renders no title element when none is passed, on either surface", () => {
+    for (const embedded of [true, false]) {
+      mockEmbedded = embedded;
+      const { container, unmount } = render(
+        <SidebarLayout active={true}>
+          <div>Content</div>
+        </SidebarLayout>,
+      );
+      // Scoped to .toc-sidebar — the tag sidebar has its own always-titled
+      // header ("Tags") and an unscoped query would match that instead.
+      // Guards the old `leftPanelTitle ?? t("quotes.contents")` fallback from
+      // creeping back in — it would render "Contents" here.
+      expect(container.querySelector(".toc-sidebar .sidebar-title")).toBeNull();
+      unmount();
+    }
+  });
+});

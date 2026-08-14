@@ -507,9 +507,12 @@ private struct ViewMenuContent: View {
     @FocusedValue(\.sidebarVisibility) private var sidebarVisibility
 
     /// Locale key suffix for the left-panel label, per tab.
+    ///
+    /// `.sessions` deliberately absent since the popover switcher replaced that
+    /// lens's left panel — its ⌘⌥L row is the dedicated switcher branch below,
+    /// so this key never labels a toggle for a panel that no longer exists.
     private var leftPanelKey: String? {
         switch bridgeHandler.activeTab {
-        case .sessions: return "Sessions"
         case .quotes:   return "Contents"
         case .codebook: return "Codes"
         case .analysis: return "Signals"
@@ -595,15 +598,26 @@ private struct ViewMenuContent: View {
         .keyboardShortcut("s", modifiers: [.command, .option])
         .disabled(sidebarVisibility == nil)
 
-        Button(i18n.t(PanelToggle.labelKey(
-            panel: leftPanelKey ?? "Contents",
-            isOpen: bridgeHandler.leftPanelOpen,
-            isAvailable: hasLeftPanel
-        )), systemImage: "list.bullet") {
-            bridgeHandler.menuAction("toggleLeftPanel")
+        // ⌘⌥L is lens-appropriate: a panel TOGGLE on Quotes/Codebook/Analysis,
+        // the session SWITCHER on Sessions — where the left panel is gone and a
+        // toggle row would confidently offer "Hide Sessions" for a panel not on
+        // screen. Replaced, not hidden: the row stays real on every lens.
+        if bridgeHandler.activeTab == .sessions {
+            Button(i18n.t("desktop.toolbar.switchSession"), systemImage: "list.bullet") {
+                NotificationCenter.default.post(name: .showSessionsSwitcher, object: nil)
+            }
+            .keyboardShortcut("l", modifiers: [.command, .option])
+        } else {
+            Button(i18n.t(PanelToggle.labelKey(
+                panel: leftPanelKey ?? "Contents",
+                isOpen: bridgeHandler.leftPanelOpen,
+                isAvailable: hasLeftPanel
+            )), systemImage: "list.bullet") {
+                bridgeHandler.menuAction("toggleLeftPanel")
+            }
+            .keyboardShortcut("l", modifiers: [.command, .option])
+            .disabled(!hasLeftPanel)
         }
-        .keyboardShortcut("l", modifiers: [.command, .option])
-        .disabled(!hasLeftPanel)
 
         Button(i18n.t(PanelToggle.labelKey(
             panel: "Tags",

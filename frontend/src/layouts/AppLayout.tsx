@@ -227,8 +227,18 @@ function AppShell() {
   const isSessions = _isSessions || _isSessionsSlash;
   const isCodebook = _isCodebook || _isCodebookSlash;
   const isAnalysis = _isAnalysis || _isAnalysisSlash;
-  const showSidebar = !!(isQuotes || isSessions || isTranscript || isCodebook || isAnalysis);
   const isSessionsRoute = !!(isSessions || isTranscript);
+  // Embedded (macOS) removes the Sessions lens's left panel — the native
+  // session-switcher popover replaces it (design-sessions-popover-navigation.md).
+  // ONLY Sessions: the Quotes TOC, codebook and signals panels keep their
+  // panels on both platforms. Gate `showSidebar` (→ SidebarLayout `active`),
+  // NOT just the leftPanel prop — `{leftPanel ?? <TocSidebar/>}` means a bare
+  // undefined would render the *Quotes* contents panel on the Sessions lens.
+  const embeddedSessionsPanelRemoved = isEmbedded() && isSessionsRoute;
+  const showSidebar = !!(
+    (isQuotes || isSessionsRoute || isCodebook || isAnalysis) &&
+    !embeddedSessionsPanelRemoved
+  );
   const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
   const toggleMiro = useCallback(() => setMiroOpen((prev) => !prev), []);
   const navigate = useNavigate();
@@ -305,7 +315,10 @@ function AppShell() {
   // "overlay" is the transient hover-peek, and it can't occur embedded (the
   // rails that trigger it are hidden) — but it is open when it does, so treat
   // any non-closed mode as open rather than testing for "push".
-  const leftPanelOpen = tocMode !== "closed";
+  // On the embedded Sessions lens there IS no left panel (native popover
+  // instead), so the store flag must not reach `panel-state` — otherwise the
+  // View menu confidently offers "Hide Sessions" for a panel not on screen.
+  const leftPanelOpen = tocMode !== "closed" && !embeddedSessionsPanelRemoved;
   useEffect(() => {
     if (!embedded) return;
     postPanelState(leftPanelOpen, tagsOpen, inspectorOpen);
@@ -709,12 +722,17 @@ function AppShell() {
   return (
     <SidebarLayout
       active={showSidebar}
-      leftPanel={isSessionsRoute ? <SessionsSidebar /> : isCodebook ? <CodebookSidebar /> : isAnalysis ? <AnalysisSidebar /> : undefined}
+      leftPanel={
+        // The embedded gate repeats here (belt to showSidebar's braces) so
+        // SessionsSidebar never MOUNTS on the embedded Sessions lens — its
+        // useEffect fetch would otherwise still fire behind an inactive layout.
+        isSessionsRoute && !embeddedSessionsPanelRemoved ? <SessionsSidebar /> : isCodebook ? <CodebookSidebar /> : isAnalysis ? <AnalysisSidebar /> : undefined
+      }
       leftPanelTitle={
         // Codebooks dropped its title 14 Aug 2026, alongside Quotes' "Contents"
         // (SidebarLayout renders the header only when a title is passed). To
         // restore, put the branch back: isCodebook ? i18n.t("codebook.heading") :
-        isSessionsRoute ? i18n.t("nav.sessions") : isAnalysis ? i18n.t("analysis.signals") : undefined
+        isSessionsRoute && !embeddedSessionsPanelRemoved ? i18n.t("nav.sessions") : isAnalysis ? i18n.t("analysis.signals") : undefined
       }
       showRightSidebar={!!isQuotes}
     >

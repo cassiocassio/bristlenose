@@ -132,12 +132,23 @@ vi.mock("../utils/api", () => ({
   putTags: vi.fn(),
 }));
 
-import { getTranscript } from "../utils/api";
+// Mock embedded detection — default false (browser); flip per-test. The house
+// pattern (SidebarLayout.test.tsx): mock the module, never toggle the global —
+// isEmbedded() memoises on first call.
+let mockEmbedded = false;
+vi.mock("../utils/embedded", () => ({
+  isEmbedded: () => mockEmbedded,
+}));
+
+import { getTranscript, getSessionList } from "../utils/api";
 
 const mockedGetTranscript = vi.mocked(getTranscript);
+const mockedGetSessionList = vi.mocked(getSessionList);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockEmbedded = false;
+  mockedGetSessionList.mockResolvedValue([]);
 });
 
 // ---------------------------------------------------------------------------
@@ -623,5 +634,41 @@ describe("TranscriptPage", () => {
     expect(wordSpans).toHaveLength(4);
     const marks = body.querySelectorAll("mark.bn-cited");
     expect(marks).toHaveLength(0);
+  });
+
+  // ── Sticky-header session selector: embedded gating ──────────────────
+  // The native macOS build replaces session switching with the titlebar
+  // popover; the browser keeps the dropdown. BOTH directions asserted — a
+  // negative-only test on either side passes on an inverted gate
+  // (design-sessions-popover-navigation.md, review finding on the SPA tests).
+
+  const twoSessions = [
+    { session_id: "s1", session_number: 1, session_date: null, speakers: [] },
+    { session_id: "s2", session_number: 2, session_date: null, speakers: [] },
+  ];
+
+  it("browser keeps the session dropdown when several sessions exist", async () => {
+    mockEmbedded = false;
+    mockedGetSessionList.mockResolvedValue(twoSessions);
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("session-selector")).toBeTruthy();
+    });
+    expect(screen.queryByTestId("session-label")).toBeNull();
+  });
+
+  it("embedded drops the dropdown but KEEPS the label naming the session", async () => {
+    mockEmbedded = true;
+    mockedGetSessionList.mockResolvedValue(twoSessions);
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("transcript-body")).toBeTruthy();
+    });
+    // The disclosure is gone — the native popover owns switching…
+    expect(screen.queryByTestId("session-selector")).toBeNull();
+    // …but the label stays: it is the only thing naming the session here.
+    expect(screen.getByTestId("session-label").textContent).toContain("Session 1");
   });
 });

@@ -472,9 +472,14 @@ Sessions after this), `docs/glossary.md` (new user-facing name),
   Implemented as `SessionsPopoverHoverRowView`, a **subclass** of the shared
   row view, so the project sidebar (a genuine source list) stays hover-free
   and the capsule anti-drift guarantee is inherited.
-- **The `?embedded` query param** makes `isEmbedded()` true in a browser, so the
-  documented dev-QA URL yields a report with no switcher at all. Gate the
-  removal on the injected global, or note it in the QA doc.
+- **The `?embedded` query param** makes `isEmbedded()` true in a browser, so
+  the dev-QA URL shows the Sessions lens with no sidebar, no dropdown, and no
+  native popover. **Decided: gate on `isEmbedded()` anyway** — one embedded
+  predicate everywhere, consistent with the rails and every other embedded
+  behaviour; forking a second predicate for one gate would make the QA URL
+  *lie* about the web-side removal. What `?embedded` now shows is the true
+  embedded web state; the switching affordance is native chrome a browser
+  cannot render. Noted in `design-sidebar.md` § Desktop embedded mode.
 - **`#N` in the Sessions index** is on its way out but not in this change.
 - **Only Sessions loses its left panel.** The Quotes TOC, tag sidebar, codebook
   and signals panels — their toolbar toggles, ⌘⌥L behaviour and `[`/`]` keys —

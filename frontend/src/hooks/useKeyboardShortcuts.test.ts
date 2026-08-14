@@ -35,6 +35,14 @@ vi.mock("../utils/api", () => ({
   denyProposal: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Mock embedded detection — default false (browser); flip per-test. The house
+// pattern (SidebarLayout.test.tsx): mock the module, never toggle the global —
+// isEmbedded() memoises on first call.
+let mockEmbedded = false;
+vi.mock("../utils/embedded", () => ({
+  isEmbedded: () => mockEmbedded,
+}));
+
 /**
  * Consumer component that exposes focus context + installs keyboard shortcuts.
  */
@@ -578,6 +586,34 @@ describe("useKeyboardShortcuts", () => {
       const { unmount } = renderWithProviders();
       const handled = dispatchKey("[");
       expect(handled).toBe(true);
+      unmount();
+    });
+
+    // ── Embedded Sessions gate — asserted BOTH ways ────────────────────
+    // Only the Sessions lens lost its left panel to the native switcher
+    // popover; every other lens keeps `[` on both platforms, and the browser
+    // keeps it everywhere. An inverted gate passes a negative-only test.
+
+    it("[ on the sessions route still toggles in the BROWSER", () => {
+      mockEmbedded = false;
+      const { unmount } = renderWithProviders(undefined, "/report/sessions/s1");
+      expect(dispatchKey("[")).toBe(true);
+      unmount();
+    });
+
+    it("[ on the EMBEDDED sessions route is inert — the native popover owns switching", () => {
+      mockEmbedded = true;
+      const { unmount } = renderWithProviders(undefined, "/report/sessions/s1");
+      expect(dispatchKey("[")).toBe(false);
+      mockEmbedded = false;
+      unmount();
+    });
+
+    it("[ on the EMBEDDED quotes route still toggles — only Sessions lost its panel", () => {
+      mockEmbedded = true;
+      const { unmount } = renderWithProviders();
+      expect(dispatchKey("[")).toBe(true);
+      mockEmbedded = false;
       unmount();
     });
 

@@ -226,14 +226,14 @@ ContentView uses `@EnvironmentObject` — it does not own these objects.
 Four zones in the unified title bar:
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│ ● ● ●  ⊞  ◀ ▶  │  Project · Sessions · Quotes · Codebook · Analysis  │  🔍 ↑ [ctx]  │
-│ leading         │  centre (segmented control)                          │  trailing     │
-└──────────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ● ● ●  ⊞  [ctx] ◀ ▶  │  Project title · subtitle  │  🔍 ↑ [ctx]           │
+│ leading               │  (window title, native)    │  trailing            │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Leading** (`.navigation`): back/forward buttons with KVO-driven enable/disable
-- **Centre** (`.principal`): segmented `Picker` bound to `bridgeHandler.activeTab` via a two-way `Binding<Tab>` (nil mapped to `.project` — segmented Picker requires non-optional)
+- **Leading** (`.navigation`): lens-contextual left button (see "Toolbar morphing"), then back/forward with KVO-driven enable/disable
+- **Lens switching lives in the SIDEBAR, not the toolbar** — the former centre segmented `Picker` was relocated into the project sidebar (`LensRail.swift` + the AppKit outline's lens rows); `ContentView` has no `.principal` toolbar item. `switchToTab` callers are the lens rows, the `LensRail` fallback, and **View ▸ ⌘1–5** — all routed through `bridgeHandler.activateLens` (Sessions restores the last-viewed route via `SessionsRouteMemory`; `switchToTab` itself stays "go to the tab root")
 - **Trailing** (`.primaryAction`): contextual items that morph per tab — see "Toolbar morphing" below
 - **Title + subtitle**: `.navigationTitle(selectedProject?.name ?? "Bristlenose")` + `.navigationSubtitle(navigationSubtitle)` on the **detail** view (native Mail/Notes pattern — title = scope/project, subtitle = "16 Sessions · 18h 23m" from the DB session count + summed `duration_seconds`). NOT a custom `.navigation` `ToolbarItem` — see the gotcha below.
 
@@ -248,12 +248,13 @@ Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu
 - **Export** (share icon) — dropdown `Menu` whose contents change per tab. Always has "Export Report..." first. Quotes tab adds "Export Quotes as CSV"
 
 **Per-tab contextual items** (appear/disappear):
-- **Sessions/Quotes/Codebook/Analysis**: `list.bullet` button toggling the web left panel via `bridgeHandler.menuAction("toggleLeftPanel")` — the session list on Sessions, sections/themes on Quotes, codebooks on Codebook, signals on Analysis. (The native project-sidebar toggle is provided by `NavigationSplitView` automatically, Mail-style.) Label per lens: Sessions reuses `common.nav.sessions` (the lens's own name — the panel lists the sessions it's named for); the others use `desktop.toolbar.{contents,codes,signals}`. ⌘⌥L in **View ▸ Show/Hide …** is the menu twin (`leftPanelKey` in `MenuCommands.swift`; the verb follows the panel's real state via `panel-state`).
+- **Sessions**: `list.bullet` button presenting the **native session-switcher popover** (`SessionsSwitcherButton` → `SessionsPopoverContent`; label `desktop.toolbar.switchSession`) — NOT a panel toggle. The Sessions lens has no web left panel in embedded mode; the popover replaced it (`docs/design-sessions-popover-navigation.md`). ⌘⌥L on this lens posts `.showSessionsSwitcher` to present the same popover. Same glyph as the toggles below, different *kind* (momentary chooser vs stateful toggle) — accepted, and the menu twin is what keeps it honest.
+- **Quotes/Codebook/Analysis**: `list.bullet` button toggling the web left panel via `bridgeHandler.menuAction("toggleLeftPanel")` — sections/themes on Quotes, codebooks on Codebook, signals on Analysis. (The native project-sidebar toggle is provided by `NavigationSplitView` automatically, Mail-style.) Labels use `desktop.toolbar.{contents,codes,signals}`. ⌘⌥L in **View ▸ Show/Hide …** is the menu twin (`leftPanelKey` in `MenuCommands.swift`; the verb follows the panel's real state via `panel-state`).
 - **Quotes**: Tag sidebar toggle (`sidebar.right` icon)
 - **Analysis**: Heatmap inspector toggle (`square.grid.2x2` icon)
 - **Project**: no extra items
 
-**The toolbar is the *only* surface for the web nav/tag sidebars in embedded mode.** The SPA hides its own icon rails + close-× when `isEmbedded()` (`.layout.embedded` in `bristlenose/theme/organisms/sidebar.css`) — that web chrome is a non-Mac idiom and the two 36px rails wasted width the WKWebView (zero-inset, fills the detail pane) gives back to content. So the `toggleLeftPanel` / `toggleRightPanel` ControlGroup buttons + `[`/`]` keys are the user's only way to open/close them; there's no in-pane affordance to fall back on. Overlay/hover-peek mode is also gone in embedded (it was rail-triggered) — the web TOC is closed↔push only. If you ever remove these toolbar toggles, the web sidebars become unreachable in the app. See `docs/design-sidebar.md` § Desktop embedded mode.
+**The toolbar is the *only* surface for the web nav/tag sidebars in embedded mode** (Quotes/Codebook/Analysis — the Sessions lens no longer *has* a web left panel; its switcher popover replaced it, and `AppLayout` gates `showSidebar`, the `[` key, and `panel-state` off the embedded sessions route). The SPA hides its own icon rails + close-× when `isEmbedded()` (`.layout.embedded` in `bristlenose/theme/organisms/sidebar.css`) — that web chrome is a non-Mac idiom and the two 36px rails wasted width the WKWebView (zero-inset, fills the detail pane) gives back to content. So the `toggleLeftPanel` / `toggleRightPanel` ControlGroup buttons + `[`/`]` keys are the user's only way to open/close them; there's no in-pane affordance to fall back on. Overlay/hover-peek mode is also gone in embedded (it was rail-triggered) — the web TOC is closed↔push only. If you ever remove these toolbar toggles, those web sidebars become unreachable in the app. See `docs/design-sidebar.md` § Desktop embedded mode.
 
 `ExportMenuButton` is a `View` struct in `ContentView.swift` that observes `bridgeHandler.activeTab` to render the correct menu items.
 

@@ -458,14 +458,18 @@ export function useKeyboardShortcuts({
         }
       }
 
-      // [ — toggle TOC sidebar (quotes, sessions, codebook, analysis tabs)
+      // [ — toggle TOC sidebar (quotes, codebook, analysis; sessions in the
+      // browser only — embedded removed the Sessions left panel in favour of
+      // the native switcher popover, and toggling a panel that isn't there
+      // would flip the store flag with no pixels to show for it)
       if (key === "[") {
         const loc = locationRef.current.pathname;
+        const onSessions = loc.startsWith("/report/sessions");
         if (
           pathMatches(loc, "/report/quotes") ||
           pathMatches(loc, "/report/codebook") ||
           pathMatches(loc, "/report/analysis") ||
-          loc.startsWith("/report/sessions")
+          (onSessions && !isEmbedded())
         ) {
           e.preventDefault();
           sidebarAnimations.toggleToc();

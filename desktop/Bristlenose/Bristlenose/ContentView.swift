@@ -1512,12 +1512,11 @@ struct ContentView: View {
 
     /// Per-tab label for the left-panel toolbar button.
     ///
-    /// Sessions reuses the lens's own name rather than a dedicated
-    /// `desktop.toolbar.*` key — the panel lists exactly the sessions the lens
-    /// is named for, so `common.nav.sessions` is the single source for the word.
+    /// Per-tab label for the left-panel toggle. `.sessions` is absent: that
+    /// lens's toolbar slot is the session-switcher popover
+    /// (`SessionsSwitcherButton`), not a panel toggle.
     private var leftPanelToolbarLabel: String {
         switch bridgeHandler.activeTab {
-        case .sessions: return Tab.sessions.fullLocalizedLabel(i18n)
         case .quotes:   return i18n.t("desktop.toolbar.contents")
         case .codebook: return i18n.t("desktop.toolbar.codes")
         case .analysis: return i18n.t("desktop.toolbar.signals")
@@ -1528,7 +1527,6 @@ struct ContentView: View {
     /// Per-tab tooltip for the left-panel toolbar button.
     private var leftPanelToolbarHelp: String {
         switch bridgeHandler.activeTab {
-        case .sessions: return i18n.t("desktop.toolbar.showSessions")
         case .quotes:   return i18n.t("desktop.toolbar.showContents")
         case .codebook: return i18n.t("desktop.toolbar.showCodes")
         case .analysis: return i18n.t("desktop.toolbar.showSignals")

@@ -20,6 +20,7 @@ import { JourneyChain, PersonBadge, TimecodeLink } from "../components";
 import { Annotation } from "../components/Annotation";
 import type { AnnotationTag } from "../components/Annotation";
 import { Selector } from "../components/Selector";
+import { isEmbedded } from "../utils/embedded";
 import {
   getTranscript,
   getSessionList,
@@ -444,7 +445,11 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         ref={headerRef}
         data-testid="transcript-journey-header"
       >
-        {sessionList.length > 1 ? (
+        {sessionList.length > 1 && !isEmbedded() ? (
+          // Embedded keeps the LABEL but drops the disclosure — the native
+          // session-switcher popover in the titlebar owns switching there
+          // (design-sessions-popover-navigation.md §What ships). The label
+          // stays because it is the only thing naming the session on the page.
           <Selector<SessionListItem>
             label={`Session ${sessionNum}`}
             items={sessionList}

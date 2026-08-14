@@ -140,9 +140,22 @@ This is what makes the badge respond to selection. AppKit sets
 `backgroundStyle = .emphasized` on a selected source-list cell and stock cells
 re-tint; a CALayer chip ported from CSS is the one element that doesn't know
 it's selected, which is why the mockup shows a grey chip floating inside the
-capsule in light and a punched hole in dark. It also retires the measured
-contrast failures (accent title on capsule was 2.91–3.12:1 against a 4.5:1 bar)
-— system label colours are correct by construction and free.
+capsule in light and a punched hole in dark.
+
+**Selected-row text takes the accent** (added 14 Aug 2026, first live QA):
+the title and the *real* names go accent on the selected row — matching the
+project sidebar, whose cells get this free because they wire the
+`NSTableCellView` outlets and *"the system tints icon + label via
+`backgroundStyle` (selected → accent, else label)"*. Our fields are grid
+children, so `SessionRowCellView` responds to the same `backgroundStyle`
+signal by hand rather than inventing a parallel selection channel. This is
+decision #2 of `design-native-colour-alignment.md` (grey capsule + accent
+content; the sampled pairs clear the 3:1 UI-component bar — the review's
+4.5:1 body-text framing was the wrong bar for a selection treatment the OS
+itself ships). Accent tracks the user's system accent on Default
+(`.controlAccentColor`), Edo's Prussian via `SidebarPalette`. The unnamed
+placeholder stays secondary italic — accent italic would claim it's a name —
+and the subtitle stays secondary.
 
 **Note for QA — ways the mockup is knowingly stale** (it is a throwaway review
 artefact; the decisions moved past it and it was deliberately not re-rendered):

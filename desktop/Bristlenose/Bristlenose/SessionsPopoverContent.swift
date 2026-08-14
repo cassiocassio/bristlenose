@@ -31,6 +31,11 @@ struct SessionsPopoverContent: View {
     /// mockup's own default study); past the cap the source list scrolls
     /// natively.
     private static let maxListHeight: CGFloat = 660
+    /// One 4pt grid square of slack below the last row (user call, first live
+    /// QA): matches the air between the separator and the first row's capsule,
+    /// and stops an exactly-fitting list arming the scrollbar on subpixel
+    /// rounding — the frame used to be the bare sum of row heights.
+    private static let listBreathingRoom: CGFloat = 4
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -98,7 +103,8 @@ struct SessionsPopoverContent: View {
                 onCancel: onDismiss
             )
             .frame(width: Self.width,
-                   height: min(listHeight(rows), Self.maxListHeight))
+                   height: min(listHeight(rows) + Self.listBreathingRoom,
+                               Self.maxListHeight))
         }
     }
 

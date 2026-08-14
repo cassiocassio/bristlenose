@@ -337,16 +337,48 @@ final class SessionRowCellView: NSTableCellView {
     }
 
     private var grid: NSGridView?
+    /// Fields that take the accent on the selected row — the localised title
+    /// and the REAL names. The unnamed placeholder stays secondary italic
+    /// (accent italic would claim it's a name), and the subtitle stays
+    /// secondary.
+    private var selectionTintedTitles: [NSTextField] = []
+    private var selectionTintedNames: [NSTextField] = []
 
     convenience init(identifier: NSUserInterfaceItemIdentifier) {
         self.init(frame: .zero)
         self.identifier = identifier
     }
 
+    /// Selected row → accent title + names, matching the project sidebar's
+    /// grey-capsule-plus-accent-content treatment (decision #2 of
+    /// `design-native-colour-alignment.md`, and the web `.session-entry.active`).
+    /// The sidebar gets this FREE because it wires the `NSTableCellView`
+    /// outlets and "the system tints icon + label via `backgroundStyle`
+    /// (selected → accent, else label)" — our fields are grid children, so we
+    /// respond to the same signal by hand rather than inventing a parallel
+    /// selection channel. Accent tracks the user's system accent on Default
+    /// (`.controlAccentColor`), Edo's Prussian via `SidebarPalette`.
+    override var backgroundStyle: NSView.BackgroundStyle {
+        didSet { applySelectionTint() }
+    }
+
+    private func applySelectionTint() {
+        let selected = backgroundStyle == .emphasized
+        let accent = SidebarPalette.accent(fallback: .controlAccentColor) ?? .controlAccentColor
+        for field in selectionTintedTitles {
+            field.textColor = selected ? accent : .secondaryLabelColor
+        }
+        for field in selectionTintedNames {
+            field.textColor = selected ? accent : .labelColor
+        }
+    }
+
     func configure(with row: SessionsPopoverRow,
                    badgeColumnWidth: CGFloat,
                    titleColumnWidth: CGFloat) {
         grid?.removeFromSuperview()
+        selectionTintedTitles = []
+        selectionTintedNames = []
 
         let participants = row.session.participants
         var gridRows: [[NSView]] = []
@@ -357,6 +389,7 @@ final class SessionRowCellView: NSTableCellView {
             f.font = Self.titleFont
             f.textColor = .secondaryLabelColor
             f.lineBreakMode = .byTruncatingTail
+            selectionTintedTitles.append(f)
             return f
         }
         func nameField(_ p: SessionsPopoverSpec.Participant) -> NSTextField {
@@ -364,6 +397,7 @@ final class SessionRowCellView: NSTableCellView {
             f.font = p.name == nil ? Self.placeholderFont : Self.nameFont
             f.textColor = p.name == nil ? .secondaryLabelColor : .labelColor
             f.lineBreakMode = .byTruncatingTail
+            if p.name != nil { selectionTintedNames.append(f) }
             return f
         }
         func subtitleField() -> NSTextField {
@@ -415,6 +449,10 @@ final class SessionRowCellView: NSTableCellView {
         setAccessibilityRole(.staticText)
         setAccessibilityLabel(row.accessibility)
         hideDescendantsFromAccessibility(g)
+
+        // Reused cells arrive with whatever backgroundStyle their previous row
+        // had — re-apply against the fresh field arrays.
+        applySelectionTint()
     }
 
     private func hideDescendantsFromAccessibility(_ view: NSView) {

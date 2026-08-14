@@ -390,19 +390,32 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, showRightSide
         onMouseEnter={overlay.onPanelMouseEnter}
         onMouseLeave={overlay.onPanelMouseLeave}
       >
-        <div className="sidebar-header toc-sidebar-header">
-          <span className="sidebar-title">{leftPanelTitle ?? t("quotes.contents")}</span>
-          {!embedded && (
-            <button
-              className="sidebar-close"
-              onClick={handleCloseToc}
-              title={t("buttons.close")}
-              aria-label={t("nav.closeTableOfContents")}
-            >
-              ×
-            </button>
-          )}
-        </div>
+        {/* Header renders only when it holds something. Quotes and Codebooks
+            now pass no title (see AppLayout), and embedded mode has no close ×,
+            so on the Mac those two lenses would otherwise open with an empty
+            padded box above the first heading. */}
+        {(leftPanelTitle || !embedded) && (
+          <div className="sidebar-header toc-sidebar-header">
+            {/* Titles trialled out 14 Aug 2026. "Contents" above a list of
+                contents — and "Codebook" above a list of codebooks — restated
+                the rows beneath them. Sessions and Analysis still pass one.
+                To restore the old behaviour, put back:
+                  <span className="sidebar-title">{leftPanelTitle ?? t("quotes.contents")}</span>
+                If we haven't missed it, drop this note and the quotes.contents
+                key with it. Tracked in the maintainer's planning notes. */}
+            {leftPanelTitle && <span className="sidebar-title">{leftPanelTitle}</span>}
+            {!embedded && (
+              <button
+                className="sidebar-close"
+                onClick={handleCloseToc}
+                title={t("buttons.close")}
+                aria-label={t("nav.closeTableOfContents")}
+              >
+                ×
+              </button>
+            )}
+          </div>
+        )}
         <div className="toc-sidebar-body">
           {leftPanel ?? <TocSidebar onOverlayClose={closeTocOverlayAnimated} />}
         </div>

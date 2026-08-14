@@ -81,9 +81,9 @@ describe("Router", () => {
     expect(tab.className).toContain("active");
   });
 
-  it("/report/codebook/ activates Codebook tab", () => {
+  it("/report/codebook/ activates Codebooks tab", () => {
     renderRoute("/report/codebook/");
-    const tab = screen.getByRole("link", { name: "Codebook" });
+    const tab = screen.getByRole("link", { name: "Codebooks" });
     expect(tab.className).toContain("active");
   });
 

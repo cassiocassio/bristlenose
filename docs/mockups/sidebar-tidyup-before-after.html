@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sidebar tidy-up — before / after</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css, tokens-typography.css, colors/palette-*.css).
+   Sidebar component CSS lifted from bristlenose/theme/organisms/sidebar.css
+   (.toc-sidebar, .sidebar-header, .sidebar-close, .toc-heading, .toc-link,
+   .codebook-dot, .sidebar-mini-btn) — values not approximated.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-light:370; --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-nav-selection-bg:   light-dark(#efefef, #2b2b2b);
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-nav-selection-bg:   light-dark(#e6ddc9, #2d2922);
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:1080px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+
+/* ── page chrome (NOT product) ─────────────────────────────────────────── */
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; font-family:var(--bn-font-mono); }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:70ch; margin:.4rem 0; }
+
+.key { display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start; padding:.9rem 1.1rem; margin-bottom:var(--bn-space-xl);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); background:var(--bn-colour-quote-bg); }
+.key-item { display:flex; gap:.6rem; align-items:flex-start; font-size:var(--bn-text-label); color:var(--bn-colour-muted); max-width:38ch; }
+.key-sw { width:36px; height:26px; flex-shrink:0; border-radius:var(--bn-radius-sm); }
+.key-sw.art { border:1px solid var(--bn-colour-border-hover); background:var(--bn-colour-bg); }
+.key-sw.com { border-left:3px solid var(--bn-colour-border-hover); background:
+  repeating-linear-gradient(45deg, transparent, transparent 4px,
+    light-dark(rgba(0,0,0,.05), rgba(255,255,255,.06)) 4px,
+    light-dark(rgba(0,0,0,.05), rgba(255,255,255,.06)) 8px); }
+.key-item b { color:var(--bn-colour-text); font-weight:490; display:block; }
+
+.controls { display:flex; gap:.4rem; align-items:center; margin-bottom:var(--bn-space-xl); flex-wrap:wrap; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; font-family:var(--bn-font-mono); }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+.bench { margin:3rem 0; scroll-margin-top:1rem; }
+.bench-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.bench-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1.2rem; max-width:74ch; }
+.bench-head .askfor { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  color:var(--bn-colour-accent); border:1px solid var(--bn-colour-accent); border-radius:var(--bn-radius-pill);
+  padding:.1rem .55rem; margin-bottom:.7rem; }
+.bench-head .askfor.open { color:var(--bn-colour-muted); border-color:var(--bn-colour-border-hover); }
+
+/* ── ARTEFACT ZONE: framed real pixels ─────────────────────────────────── */
+.rack { display:flex; gap:1.5rem; flex-wrap:wrap; align-items:flex-start; }
+.frame { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg); overflow:hidden;
+  background:var(--bn-colour-bg); box-shadow:0 2px 10px var(--bn-colour-shadow); }
+.frame-bar { display:flex; align-items:center; gap:.4rem; padding:.4rem .7rem;
+  border-bottom:1px solid var(--bn-colour-border); background:var(--bn-colour-quote-bg); }
+.frame-bar .dots { display:flex; gap:4px; }
+.frame-bar .dots i { width:8px; height:8px; border-radius:50%; background:var(--bn-colour-border-hover); display:block; }
+.frame-bar .tag { margin-left:auto; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); }
+.frame-bar .tag.now { color:var(--bn-colour-accent); }
+.frame-stage { display:flex; background:var(--bn-colour-bg); }
+
+/* ── REAL sidebar (organisms/sidebar.css) ──────────────────────────────── */
+.toc-sidebar {
+  height:480px; overflow-y:auto; overflow-x:hidden;
+  background:var(--bn-colour-bg); border-right:1px solid var(--bn-colour-border);
+  padding-top:var(--bn-space-xl); padding-bottom:2rem;
+  display:flex; flex-direction:column; flex-shrink:0;
+}
+.sidebar-header {
+  display:flex; flex-direction:column; align-items:flex-start; gap:.25rem;
+  padding:var(--bn-space-md) .85rem .25rem; flex-shrink:0;
+}
+.sidebar-header.collapsed { padding:0; }
+.toc-sidebar-header .sidebar-title { font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); }
+.sidebar-close {
+  background:none; border:none; font-size:var(--bn-text-heading); color:var(--bn-colour-muted);
+  cursor:pointer; line-height:1; order:-1; margin-left:-.5rem; padding:2px 6px;
+  font-family:inherit;
+}
+.toc-sidebar-body { flex:1; overflow-y:auto; padding:0 .85rem 1rem; }
+.toc-heading {
+  font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis);
+  margin:1rem 0 var(--bn-space-sm); padding-bottom:.25rem;
+  border-bottom:1px solid var(--bn-colour-border);
+}
+.toc-heading:first-child { margin-top:0; }
+.toc-link {
+  display:block; padding:.2rem var(--bn-space-sm); font-size:var(--bn-text-label);
+  font-weight:var(--bn-weight-light); color:var(--bn-colour-text); text-decoration:none;
+  border-radius:var(--bn-radius-md); cursor:pointer;
+}
+.toc-link.active {
+  font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-accent);
+  background:var(--bn-nav-selection-bg);
+}
+.toc-link.codebook-toc-link { display:flex; align-items:flex-start; gap:var(--bn-space-xs); }
+.toc-link.codebook-toc-link.not-imported { opacity:1; color:var(--bn-colour-muted); }
+.toc-link.codebook-toc-link.not-imported .codebook-toc-label { opacity:.6; }
+.toc-link.codebook-disabled .codebook-toc-label { color:var(--bn-colour-muted); }
+.codebook-dot { flex-shrink:0; width:7px; height:7px; margin-top:.45em; border-radius:50%; background:transparent; }
+.codebook-dot-on  { background:var(--bn-colour-accent); }
+.codebook-dot-off { background:var(--bn-colour-border-hover); }
+.sidebar-mini-btn {
+  display:inline-flex; align-items:center; gap:var(--bn-space-xs); font-family:inherit;
+  font-size:var(--bn-text-caption); font-weight:var(--bn-weight-emphasis);
+  padding:var(--bn-space-xs) var(--bn-space-sm); border-radius:var(--bn-radius-sm);
+  border:1px solid var(--bn-colour-border); background:var(--bn-colour-bg);
+  color:var(--bn-colour-muted); cursor:pointer; margin:var(--bn-space-xs) var(--bn-space-sm);
+}
+/* a sliver of the centre column so the panel reads as a panel, not a card */
+.stage-center { flex:1; min-width:120px; padding:var(--bn-space-xl) 1rem; background:var(--bn-colour-bg); }
+.ghost-line { height:9px; border-radius:var(--bn-radius-sm); background:var(--bn-colour-quote-bg); margin-bottom:.5rem; }
+.ghost-line.s { width:55%; } .ghost-line.m { width:80%; } .ghost-line.l { width:96%; }
+.ghost-card { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  padding:.7rem .8rem; margin-bottom:.7rem; background:var(--bn-colour-quote-bg); }
+
+/* embedded (desktop) variant — no close × at all */
+.toc-sidebar.embedded .sidebar-close { display:none; }
+.dead-space { position:relative; }
+.dead-space::after {
+  content:""; position:absolute; inset:0;
+  background:repeating-linear-gradient(45deg, transparent, transparent 3px,
+    light-dark(rgba(255,0,0,.10), rgba(255,90,90,.16)) 3px,
+    light-dark(rgba(255,0,0,.10), rgba(255,90,90,.16)) 6px);
+  pointer-events:none;
+}
+
+/* ── COMMENTARY ZONE: deliberately not-the-product ─────────────────────── */
+.commentary {
+  margin-top:1.4rem; border-left:3px solid var(--bn-colour-border-hover);
+  padding:1rem 1.2rem; border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0;
+  background:
+    repeating-linear-gradient(45deg, transparent, transparent 5px,
+      light-dark(rgba(0,0,0,.035), rgba(255,255,255,.045)) 5px,
+      light-dark(rgba(0,0,0,.035), rgba(255,255,255,.045)) 10px);
+}
+.commentary .clabel {
+  font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.12em;
+  text-transform:uppercase; color:var(--bn-colour-muted); display:block; margin-bottom:.5rem;
+}
+.commentary p { margin:.45rem 0; font-size:var(--bn-text-label); max-width:78ch; }
+.commentary ul { margin:.45rem 0; padding-left:1.1rem; font-size:var(--bn-text-label); max-width:78ch; }
+.commentary li { margin:.3rem 0; }
+.commentary code { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); padding:.05rem .3rem; border-radius:var(--bn-radius-sm); }
+.commentary .verdict { font-weight:490; color:var(--bn-colour-text); }
+.commentary .flag { color:light-dark(#b45309,#fbbf24); font-weight:490; }
+
+.rule { border:none; border-top:1px solid var(--bn-colour-border); margin:3.5rem 0 0; }
+.caption { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-family:var(--bn-font-mono); margin:.55rem 0 0; }
+
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div class="eyebrow">mockup · sidebar tidy-up round 1</div>
+    <h1>Quotes &amp; Codebooks left sidebars — before / after</h1>
+    <p>Every frame below is drawn with the shipped tokens and the real
+       <code style="font-family:var(--bn-font-mono);font-size:var(--bn-text-badge)">sidebar.css</code>
+       rules — panel width, type scale, weights, the 7px status dot, the outdented close ×.
+       Nothing here is approximated, so what you see is what lands.</p>
+  </div>
+
+  <div class="key">
+    <div class="key-item">
+      <span class="key-sw art"></span>
+      <span><b>Artefact</b>Framed. Real pixels only — if it isn't in the frame, it isn't in the product.</span>
+    </div>
+    <div class="key-item">
+      <span class="key-sw com"></span>
+      <span><b>Commentary</b>Hatched, ruled left. Reasoning and open questions. Never ships.</span>
+    </div>
+    <div class="key-item">
+      <span style="width:36px;flex-shrink:0;text-align:center;font-family:var(--bn-font-mono);font-size:var(--bn-text-micro);color:var(--bn-colour-accent);border:1px solid var(--bn-colour-accent);border-radius:var(--bn-radius-pill);padding:.1rem 0;">ASK</span>
+      <span><b>Decision pill</b>Blue = you've already called it. Grey = still open, this bench exists to settle it.</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <span class="lbl">palette</span>
+    <button class="pbtn on" data-theme="default">Default</button>
+    <button class="pbtn" data-theme="edo">Edo</button>
+    <span class="lbl" style="margin-left:1rem">appearance</span>
+    <span style="font-size:var(--bn-text-caption);color:var(--bn-colour-muted)">follows your system — flip macOS to dark to check both</span>
+  </div>
+
+
+  <!-- ══════════════ BENCH 1 — QUOTES ══════════════ -->
+  <section class="bench">
+    <div class="bench-head">
+      <span class="askfor">called · remove "Contents"</span>
+      <h2>1 · Quotes sidebar</h2>
+      <p class="sub">The title goes. Section and theme headings stay — they're doing real work,
+         separating two different groupings of the same quotes.</p>
+    </div>
+
+    <div class="rack">
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag">before</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar" style="width:280px">
+            <div class="sidebar-header toc-sidebar-header">
+              <span class="sidebar-title">Contents</span>
+              <button class="sidebar-close">&times;</button>
+            </div>
+            <div class="toc-sidebar-body">
+              <div class="toc-heading">Sections</div>
+              <a class="toc-link">Getting started</a>
+              <a class="toc-link active">Search &amp; discovery</a>
+              <a class="toc-link">Comparing options</a>
+              <a class="toc-link">Checkout</a>
+              <a class="toc-link">Account settings</a>
+              <div class="toc-heading">Themes</div>
+              <a class="toc-link">Trust and reassurance</a>
+              <a class="toc-link">Speed versus certainty</a>
+              <a class="toc-link">Mental models of stock</a>
+              <a class="toc-link">Recovering from a mistake</a>
+            </div>
+          </div>
+          <div class="stage-center">
+            <div class="ghost-card"><div class="ghost-line l"></div><div class="ghost-line m"></div></div>
+            <div class="ghost-card"><div class="ghost-line l"></div><div class="ghost-line s"></div></div>
+            <div class="ghost-card"><div class="ghost-line m"></div><div class="ghost-line l"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag now">after</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar" style="width:280px">
+            <div class="sidebar-header toc-sidebar-header">
+              <button class="sidebar-close">&times;</button>
+            </div>
+            <div class="toc-sidebar-body">
+              <div class="toc-heading">Sections</div>
+              <a class="toc-link">Getting started</a>
+              <a class="toc-link active">Search &amp; discovery</a>
+              <a class="toc-link">Comparing options</a>
+              <a class="toc-link">Checkout</a>
+              <a class="toc-link">Account settings</a>
+              <div class="toc-heading">Themes</div>
+              <a class="toc-link">Trust and reassurance</a>
+              <a class="toc-link">Speed versus certainty</a>
+              <a class="toc-link">Mental models of stock</a>
+              <a class="toc-link">Recovering from a mistake</a>
+            </div>
+          </div>
+          <div class="stage-center">
+            <div class="ghost-card"><div class="ghost-line l"></div><div class="ghost-line m"></div></div>
+            <div class="ghost-card"><div class="ghost-line l"></div><div class="ghost-line s"></div></div>
+            <div class="ghost-card"><div class="ghost-line m"></div><div class="ghost-line l"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="commentary">
+      <span class="clabel">Commentary</span>
+      <p><span class="verdict">Correction to what I told you in chat.</span> I said the × sat
+         <em>beside</em> the title and would need re-aligning. It doesn't. <code>.sidebar-header</code> is
+         <code>flex-direction: column</code> and the × carries <code>order:-1</code> with a
+         <code>-0.5rem</code> hanging indent, so it sits <em>above</em> the title, aligned to where the rail
+         icon was. Drop the title and the × stays exactly where it is. No CSS change needed in the browser.</p>
+      <p>The two remaining <code>.toc-heading</code> rules keep their bottom rules, so the list still reads
+         as two groups. "Sections" becomes the first thing in the panel — which is what the panel is.</p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+
+  <!-- ══════════════ BENCH 2 — CODEBOOKS ══════════════ -->
+  <section class="bench">
+    <div class="bench-head">
+      <span class="askfor">called · title, 3 renames, button</span>
+      <h2>2 · Codebooks sidebar</h2>
+      <p class="sub">Four changes at once: title out, "Your tags"&nbsp;→&nbsp;Manual tags,
+         "Built-in"&nbsp;→&nbsp;Default, "Frameworks"&nbsp;→&nbsp;Library, and the
+         "Codebook&nbsp;Library&nbsp;→" button removed.</p>
+    </div>
+
+    <div class="rack">
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag">before</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar" style="width:280px">
+            <div class="sidebar-header toc-sidebar-header">
+              <span class="sidebar-title">Codebook</span>
+              <button class="sidebar-close">&times;</button>
+            </div>
+            <div class="toc-sidebar-body">
+              <div class="toc-heading">Your tags</div>
+              <a class="toc-link codebook-toc-link active"><span class="codebook-dot"></span><span class="codebook-toc-label">Grocery delivery 2026</span></a>
+              <div class="toc-heading">Built-in</div>
+              <a class="toc-link codebook-toc-link"><span class="codebook-dot codebook-dot-on"></span><span class="codebook-toc-label">Emotional and cognitive signals</span></a>
+              <a class="toc-link codebook-toc-link codebook-disabled"><span class="codebook-dot codebook-dot-off"></span><span class="codebook-toc-label">Bristlenose UXR Codebook</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">Command-Line UX</span></a>
+              <div class="toc-heading">Frameworks</div>
+              <a class="toc-link codebook-toc-link"><span class="codebook-dot codebook-dot-on"></span><span class="codebook-toc-label">10 Usability Heuristics for User Interface Design</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">The Design of Everyday Things</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">The User Experience Honeycomb</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">Laws of UX</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">The Elements of User Experience</span></a>
+              <button class="sidebar-mini-btn">Codebook Library &rarr;</button>
+            </div>
+          </div>
+          <div class="stage-center">
+            <div class="ghost-card"><div class="ghost-line m"></div><div class="ghost-line l"></div></div>
+            <div class="ghost-card"><div class="ghost-line l"></div><div class="ghost-line s"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag now">after</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar" style="width:280px">
+            <div class="sidebar-header toc-sidebar-header">
+              <button class="sidebar-close">&times;</button>
+            </div>
+            <div class="toc-sidebar-body">
+              <div class="toc-heading">Manual tags</div>
+              <a class="toc-link codebook-toc-link active"><span class="codebook-dot"></span><span class="codebook-toc-label">Grocery delivery 2026</span></a>
+              <div class="toc-heading">Default</div>
+              <a class="toc-link codebook-toc-link"><span class="codebook-dot codebook-dot-on"></span><span class="codebook-toc-label">Emotional and cognitive signals</span></a>
+              <a class="toc-link codebook-toc-link codebook-disabled"><span class="codebook-dot codebook-dot-off"></span><span class="codebook-toc-label">Bristlenose UXR Codebook</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">Command-Line UX</span></a>
+              <div class="toc-heading">Library</div>
+              <a class="toc-link codebook-toc-link"><span class="codebook-dot codebook-dot-on"></span><span class="codebook-toc-label">10 Usability Heuristics for User Interface Design</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">The Design of Everyday Things</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">The User Experience Honeycomb</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">Laws of UX</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">The Elements of User Experience</span></a>
+            </div>
+          </div>
+          <div class="stage-center">
+            <div class="ghost-card"><div class="ghost-line m"></div><div class="ghost-line l"></div></div>
+            <div class="ghost-card"><div class="ghost-line l"></div><div class="ghost-line s"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="commentary">
+      <span class="clabel">Commentary</span>
+      <p><span class="verdict">"Library" is the change that earns the most.</span> It stops the heading and
+         the button underneath it saying two different words for one thing — and once the heading says
+         Library, the button reads as a duplicate, which is the argument for deleting it rather than moving it.</p>
+      <p><span class="verdict">The button loses nothing.</span> The browse modal is still reached three ways:
+         the primary button in the Codebooks panel header (same string, visible on the same screen),
+         clicking any greyed row here, and the native <em>Browse Codebooks…</em> menu item.</p>
+      <p><span class="flag">Open — "Manual tags" may be false.</span> AutoCode-accepted tags land in this
+         same group carrying <code>source:"autocode"</code>. They are not manual. Bench&nbsp;4 puts the three
+         candidates side by side.</p>
+      <p><span class="flag">Knock-on.</span> The browse modal's own section title is
+         <code>codebook.frameworksHeader</code> = "Codebook frameworks". If Frameworks becomes Library here,
+         that should follow, or the modal contradicts the sidebar that opened it.</p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+
+  <!-- ══════════════ BENCH 3 — THE OTHER THREE LENSES ══════════════ -->
+  <section class="bench">
+    <div class="bench-head">
+      <span class="askfor open">open · two lenses or all five?</span>
+      <h2>3 · The title is one shared element</h2>
+      <p class="sub">There is a single <code>&lt;span class="sidebar-title"&gt;</code> in
+         <code>SidebarLayout</code>. Commenting it out removes it from all five lenses, not two.
+         Here's what the other three lose.</p>
+    </div>
+
+    <div class="rack">
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag">before · sessions</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar" style="width:250px">
+            <div class="sidebar-header toc-sidebar-header">
+              <span class="sidebar-title">Sessions</span>
+              <button class="sidebar-close">&times;</button>
+            </div>
+            <div class="toc-sidebar-body">
+              <a class="toc-link active">P1 · Rukmini Iyer</a>
+              <a class="toc-link">P2 · Tomás Ferreira</a>
+              <a class="toc-link">P3 · Aoife Brennan</a>
+              <a class="toc-link">P4 · Kwame Mensah</a>
+              <a class="toc-link">P5 · Hana Kobayashi</a>
+              <a class="toc-link">P6 · Léa Rousseau</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag now">after · sessions</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar" style="width:250px">
+            <div class="sidebar-header toc-sidebar-header">
+              <button class="sidebar-close">&times;</button>
+            </div>
+            <div class="toc-sidebar-body">
+              <a class="toc-link active">P1 · Rukmini Iyer</a>
+              <a class="toc-link">P2 · Tomás Ferreira</a>
+              <a class="toc-link">P3 · Aoife Brennan</a>
+              <a class="toc-link">P4 · Kwame Mensah</a>
+              <a class="toc-link">P5 · Hana Kobayashi</a>
+              <a class="toc-link">P6 · Léa Rousseau</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag">before · analysis</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar" style="width:250px">
+            <div class="sidebar-header toc-sidebar-header">
+              <span class="sidebar-title">Signals</span>
+              <button class="sidebar-close">&times;</button>
+            </div>
+            <div class="toc-sidebar-body">
+              <a class="toc-link active">Delivery slot anxiety</a>
+              <a class="toc-link">Substitution distrust</a>
+              <a class="toc-link">Basket abandonment</a>
+              <a class="toc-link">Price transparency</a>
+              <a class="toc-link">Repeat-order shortcuts</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag now">after · analysis</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar" style="width:250px">
+            <div class="sidebar-header toc-sidebar-header">
+              <button class="sidebar-close">&times;</button>
+            </div>
+            <div class="toc-sidebar-body">
+              <a class="toc-link active">Delivery slot anxiety</a>
+              <a class="toc-link">Substitution distrust</a>
+              <a class="toc-link">Basket abandonment</a>
+              <a class="toc-link">Price transparency</a>
+              <a class="toc-link">Repeat-order shortcuts</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="commentary">
+      <span class="clabel">Commentary</span>
+      <p><span class="verdict">Sessions survives it.</span> "P1 · Rukmini Iyer" is self-evidently a session.
+         The title was restating the rows.</p>
+      <p><span class="flag">Analysis is the one to look hard at.</span> Without "Signals", the rows are five
+         bare noun phrases — "Delivery slot anxiety" doesn't announce what kind of object it is. This is the
+         one lens where the title was classifying rather than repeating.</p>
+      <p><span class="verdict">Recommendation: take all five anyway.</span> Keeping one exception means a
+         conditional in <code>SidebarLayout</code> that exists solely to preserve a word — and if Analysis
+         genuinely needs the classification, the honest fix is a <code>.toc-heading</code> inside the panel
+         (like Quotes' "Sections"/"Themes"), not a title bar the other four don't need.</p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+
+  <!-- ══════════════ BENCH 4 — THE WORD ══════════════ -->
+  <section class="bench">
+    <div class="bench-head">
+      <span class="askfor open">open · which word?</span>
+      <h2>4 · "Your tags" → what, exactly</h2>
+      <p class="sub">Same panel, three headings. The group holds every tag that isn't from an installed
+         codebook — typed by hand <em>and</em> accepted from AutoCode.</p>
+    </div>
+
+    <div class="rack">
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag">today</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar" style="width:230px">
+            <div class="sidebar-header toc-sidebar-header"><button class="sidebar-close">&times;</button></div>
+            <div class="toc-sidebar-body">
+              <div class="toc-heading">Your tags</div>
+              <a class="toc-link codebook-toc-link active"><span class="codebook-dot"></span><span class="codebook-toc-label">Grocery delivery 2026</span></a>
+              <div class="toc-heading">Default</div>
+              <a class="toc-link codebook-toc-link"><span class="codebook-dot codebook-dot-on"></span><span class="codebook-toc-label">Emotional and cognitive signals</span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag now">proposed</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar" style="width:230px">
+            <div class="sidebar-header toc-sidebar-header"><button class="sidebar-close">&times;</button></div>
+            <div class="toc-sidebar-body">
+              <div class="toc-heading">Manual tags</div>
+              <a class="toc-link codebook-toc-link active"><span class="codebook-dot"></span><span class="codebook-toc-label">Grocery delivery 2026</span></a>
+              <div class="toc-heading">Default</div>
+              <a class="toc-link codebook-toc-link"><span class="codebook-dot codebook-dot-on"></span><span class="codebook-toc-label">Emotional and cognitive signals</span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag">alternative</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar" style="width:230px">
+            <div class="sidebar-header toc-sidebar-header"><button class="sidebar-close">&times;</button></div>
+            <div class="toc-sidebar-body">
+              <div class="toc-heading">Project tags</div>
+              <a class="toc-link codebook-toc-link active"><span class="codebook-dot"></span><span class="codebook-toc-label">Grocery delivery 2026</span></a>
+              <div class="toc-heading">Default</div>
+              <a class="toc-link codebook-toc-link"><span class="codebook-dot codebook-dot-on"></span><span class="codebook-toc-label">Emotional and cognitive signals</span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="commentary">
+      <span class="clabel">Commentary</span>
+      <ul>
+        <li><span class="verdict">Manual tags</span> — reads cleanly against "Default" and "Library"
+            (all three become <em>where the tags came from</em>). But it is factually wrong for every
+            AutoCode-accepted tag in the group, and that's a growing share.</li>
+        <li><span class="verdict">Project tags</span> — stays true whatever the provenance, and matches the
+            row beneath it, which already renders as "<em>Grocery delivery 2026</em> tags" in the panel.
+            Slightly duller.</li>
+        <li><span class="verdict">Your tags</span> — today's. Ownership rather than origin, so it sits
+            awkwardly beside two origin words.</li>
+      </ul>
+      <p>One more thing this key does: <code>codebook.yourTags</code> is <em>also</em> the fallback heading
+         in the Codebooks panel when a project has no name. Whichever word wins shows up there too.</p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+
+  <!-- ══════════════ BENCH 5 — WIDTH ══════════════ -->
+  <section class="bench">
+    <div class="bench-head">
+      <span class="askfor open">open · did you mean change the default?</span>
+      <h2>5 · Panel width — 280 today, 200 minimum</h2>
+      <p class="sub">You said the minimum width is a good default. Read one way that's "leave it alone";
+         read the other it's "make 200 the default". Both drawn with the same rows.</p>
+    </div>
+
+    <div class="rack">
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag">280px · today's default</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar" style="width:280px">
+            <div class="sidebar-header toc-sidebar-header"><button class="sidebar-close">&times;</button></div>
+            <div class="toc-sidebar-body">
+              <div class="toc-heading">Library</div>
+              <a class="toc-link codebook-toc-link"><span class="codebook-dot codebook-dot-on"></span><span class="codebook-toc-label">10 Usability Heuristics for User Interface Design</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">The Design of Everyday Things</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">The User Experience Honeycomb</span></a>
+            </div>
+          </div>
+          <div class="stage-center"><div class="ghost-card"><div class="ghost-line l"></div><div class="ghost-line m"></div></div></div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag now">200px · the minimum</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar" style="width:200px">
+            <div class="sidebar-header toc-sidebar-header"><button class="sidebar-close">&times;</button></div>
+            <div class="toc-sidebar-body">
+              <div class="toc-heading">Library</div>
+              <a class="toc-link codebook-toc-link"><span class="codebook-dot codebook-dot-on"></span><span class="codebook-toc-label">10 Usability Heuristics for User Interface Design</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">The Design of Everyday Things</span></a>
+              <a class="toc-link codebook-toc-link not-imported"><span class="codebook-dot"></span><span class="codebook-toc-label">The User Experience Honeycomb</span></a>
+            </div>
+          </div>
+          <div class="stage-center"><div class="ghost-card"><div class="ghost-line l"></div><div class="ghost-line m"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="commentary">
+      <span class="clabel">Commentary</span>
+      <p>Framework titles are the stress test — Nielsen's runs to four lines at 200px against three at 280px.
+         Everything else in both panels is unaffected. If you meant "leave the minimum where it is",
+         say so and I'll change nothing; if you meant "ship 200 as the default", it's one constant
+         (<code>DEFAULT_WIDTH</code>) and the existing per-user saved width still wins.</p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+
+  <!-- ══════════════ BENCH 6 — THE MAC ══════════════ -->
+  <section class="bench">
+    <div class="bench-head">
+      <span class="askfor open">open · collapse the empty header?</span>
+      <h2>6 · The desktop app has no close ×</h2>
+      <p class="sub">In the Mac app the sidebars are driven from the native toolbar, so
+         <code>SidebarLayout</code> gates the × out. Remove the title as well and the header holds
+         nothing — but still occupies <code>space-md&nbsp;+&nbsp;0.25rem</code> of the panel.</p>
+    </div>
+
+    <div class="rack">
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag">after · header kept</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar embedded" style="width:250px">
+            <div class="sidebar-header toc-sidebar-header dead-space" style="min-height:1.75rem"></div>
+            <div class="toc-sidebar-body">
+              <div class="toc-heading">Sections</div>
+              <a class="toc-link active">Getting started</a>
+              <a class="toc-link">Search &amp; discovery</a>
+              <a class="toc-link">Comparing options</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="tag now">after · header collapsed</span></div>
+        <div class="frame-stage">
+          <div class="toc-sidebar embedded" style="width:250px">
+            <div class="sidebar-header toc-sidebar-header collapsed"></div>
+            <div class="toc-sidebar-body">
+              <div class="toc-heading">Sections</div>
+              <a class="toc-link active">Getting started</a>
+              <a class="toc-link">Search &amp; discovery</a>
+              <a class="toc-link">Comparing options</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">hatched red = empty box still taking vertical space</p>
+
+    <div class="commentary">
+      <span class="clabel">Commentary</span>
+      <p>It's ~1rem of nothing at the top of every panel on the Mac, and it pushes the first heading off the
+         datum the toolbar establishes. Cheap to fix: render the header only when it has a child.
+         In the browser nothing changes — the × keeps the header alive there.</p>
+      <p><span class="flag">Vocabulary drift, for later.</span> The native View menu still says
+         <em>Show&nbsp;Contents</em> / <em>Hide&nbsp;Contents</em> and the toolbar button is labelled
+         <em>Contents</em>. Once no panel says the word, that's the only place it survives. Menus naming a
+         panel is ordinary Mac practice, so it can stand — but if it bothers you, <em>Show&nbsp;Sidebar</em>
+         is the stock phrasing.</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+document.querySelectorAll('.pbtn[data-theme]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('.pbtn[data-theme]').forEach(function (o) { o.classList.remove('on'); });
+    b.classList.add('on');
+    document.documentElement.setAttribute('data-color-theme', b.dataset.theme);
+  });
+});
+</script>
+</body>
+</html>

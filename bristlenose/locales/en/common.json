@@ -8,7 +8,7 @@
     "quotes": "Quotes",
     "sessions": "Sessions",
     "analysis": "Analysis",
-    "codebook": "Codebook",
+    "codebook": "Codebooks",
     "settings": "Settings",
     "about": "About",
     "help": "Help"
@@ -488,7 +488,7 @@
     "pendingWeighted": "(pending tags weighted by AI confidence)"
   },
   "codebook": {
-    "heading": "Codebook",
+    "heading": "Codebooks",
     "description": "Drag tags between groups to reorganise. Click a tag or title to rename it. Drop a tag on another to merge.",
     "errorLoading": "Error loading codebook: {{error}}",
     "addTag": "+ tag",
@@ -537,9 +537,9 @@
     "hide": "Uninstall",
     "projectTagsHeading": "{{project}} tags",
     "codebookLab": "Codebook lab",
-    "yourTags": "Your tags",
-    "builtIn": "Built-in",
-    "frameworks": "Frameworks",
+    "yourTags": "Manual tags",
+    "builtIn": "Default",
+    "frameworks": "Library",
     "sentimentTitle": "Emotional and cognitive signals",
     "uncategorised": "Uncategorised",
     "uncategorisedSubtitle": "Tags not yet assigned to any group",

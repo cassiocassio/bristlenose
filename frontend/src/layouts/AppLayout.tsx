@@ -710,7 +710,12 @@ function AppShell() {
     <SidebarLayout
       active={showSidebar}
       leftPanel={isSessionsRoute ? <SessionsSidebar /> : isCodebook ? <CodebookSidebar /> : isAnalysis ? <AnalysisSidebar /> : undefined}
-      leftPanelTitle={isSessionsRoute ? i18n.t("nav.sessions") : isCodebook ? i18n.t("codebook.heading") : isAnalysis ? i18n.t("analysis.signals") : undefined}
+      leftPanelTitle={
+        // Codebooks dropped its title 14 Aug 2026, alongside Quotes' "Contents"
+        // (SidebarLayout renders the header only when a title is passed). To
+        // restore, put the branch back: isCodebook ? i18n.t("codebook.heading") :
+        isSessionsRoute ? i18n.t("nav.sessions") : isAnalysis ? i18n.t("analysis.signals") : undefined
+      }
       showRightSidebar={!!isQuotes}
     >
       {!embedded && <Header />}

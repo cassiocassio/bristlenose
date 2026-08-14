@@ -23,7 +23,13 @@ import type { TagFilterState } from "../utils/filter";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
-const DEFAULT_WIDTH = 280;
+// The left nav opens at its minimum: start skinny but available, and let the
+// user widen if their content wants it — better than a wide default that most
+// people narrow. Framework titles are the case that wants more room; if they
+// prove to need it we'd rather edge this up than have the panel change size
+// per lens. The tag sidebar keeps 280 — different content, different default.
+const DEFAULT_TOC_WIDTH = 200;
+const DEFAULT_TAGS_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
 
@@ -73,15 +79,15 @@ function readBool(key: string, fallback: boolean): boolean {
   }
 }
 
-function readWidth(key: string): number {
+function readWidth(key: string, fallback: number): number {
   try {
     const v = localStorage.getItem(key);
-    if (v === null) return DEFAULT_WIDTH;
+    if (v === null) return fallback;
     const n = parseInt(v, 10);
-    if (isNaN(n)) return DEFAULT_WIDTH;
+    if (isNaN(n)) return fallback;
     return Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, n));
   } catch {
-    return DEFAULT_WIDTH;
+    return fallback;
   }
 }
 
@@ -109,8 +115,8 @@ function loadState(): SidebarState {
   return {
     tocMode: tocPersisted ? "push" : "closed",
     tagsOpen: readBool(LS_TAGS_OPEN, false),
-    tocWidth: readWidth(LS_TOC_WIDTH),
-    tagsWidth: readWidth(LS_TAGS_WIDTH),
+    tocWidth: readWidth(LS_TOC_WIDTH, DEFAULT_TOC_WIDTH),
+    tagsWidth: readWidth(LS_TAGS_WIDTH, DEFAULT_TAGS_WIDTH),
     hiddenTagGroups: new Set(),
     disabledFrameworks: new Set(),
     soloTag: null,
@@ -437,8 +443,8 @@ export function resetSidebarStore(): void {
   state = {
     tocMode: "closed",
     tagsOpen: false,
-    tocWidth: DEFAULT_WIDTH,
-    tagsWidth: DEFAULT_WIDTH,
+    tocWidth: DEFAULT_TOC_WIDTH,
+    tagsWidth: DEFAULT_TAGS_WIDTH,
     hiddenTagGroups: new Set(),
     disabledFrameworks: new Set(),
     soloTag: null,

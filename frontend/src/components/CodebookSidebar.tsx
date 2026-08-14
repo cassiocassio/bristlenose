@@ -156,9 +156,15 @@ export function CodebookSidebar() {
     [],
   );
 
-  const handleBrowseClick = useCallback(() => {
-    window.dispatchEvent(new CustomEvent("bn:codebook-browse"));
-  }, []);
+  // Removed 14 Aug 2026 with the "Codebook Library →" button below — the same
+  // string is already a primary button in the Codebooks panel header, so this
+  // duplicated an affordance visible on the same screen. Browsing stays
+  // reachable three ways: that panel button, clicking a not-imported row here,
+  // and the native Browse Codebooks… menu item. A more natural entry point is
+  // round 2. To restore, uncomment this and the button in the render.
+  // const handleBrowseClick = useCallback(() => {
+  //   window.dispatchEvent(new CustomEvent("bn:codebook-browse"));
+  // }, []);
 
   const handleProjectClick = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -240,13 +246,14 @@ export function CodebookSidebar() {
         <>
           <div className="toc-heading">{t("codebook.frameworks")}</div>
           {frameworks.map(renderEntry)}
-          <button
-            className="sidebar-mini-btn"
-            type="button"
-            onClick={handleBrowseClick}
-          >
-            {t("codebook.browseCodebooks")} &rarr;
-          </button>
+          {/* Removed 14 Aug 2026 — see the handleBrowseClick note above.
+              <button
+                className="sidebar-mini-btn"
+                type="button"
+                onClick={handleBrowseClick}
+              >
+                {t("codebook.browseCodebooks")} &rarr;
+              </button> */}
         </>
       )}
     </nav>

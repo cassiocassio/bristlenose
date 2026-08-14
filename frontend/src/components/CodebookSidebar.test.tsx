@@ -126,13 +126,13 @@ describe("CodebookSidebar", () => {
   it("renders three section headings", async () => {
     render(<CodebookSidebar />);
     await waitFor(() => {
-      expect(screen.getByText("Your tags")).toBeInTheDocument();
+      expect(screen.getByText("Manual tags")).toBeInTheDocument();
     });
-    expect(screen.getByText("Built-in")).toBeInTheDocument();
-    expect(screen.getByText("Frameworks")).toBeInTheDocument();
+    expect(screen.getByText("Default")).toBeInTheDocument();
+    expect(screen.getByText("Library")).toBeInTheDocument();
   });
 
-  it("renders project name under Your tags", async () => {
+  it("renders project name under Manual tags", async () => {
     render(<CodebookSidebar />);
     await waitFor(() => {
       expect(screen.getByText("Project Ikea")).toBeInTheDocument();
@@ -169,11 +169,16 @@ describe("CodebookSidebar", () => {
     expect(link).not.toHaveClass("not-imported");
   });
 
-  it("renders Codebook Library button", async () => {
+  // The sidebar's "Codebook Library →" button was removed 14 Aug 2026 — it
+  // duplicated the primary button already in the Codebooks panel header. The
+  // browse event it fired is still covered below, via the not-imported row
+  // (the surviving in-sidebar path to the same modal).
+  it("has no browse button of its own", async () => {
     render(<CodebookSidebar />);
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /codebook library/i })).toBeInTheDocument();
+      expect(screen.getByText("Library")).toBeInTheDocument();
     });
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("defaults active to project entry", async () => {
@@ -221,22 +226,6 @@ describe("CodebookSidebar", () => {
     expect(handler).toHaveBeenCalledTimes(1);
     const event = handler.mock.calls[0][0] as CustomEvent;
     expect(event.detail).toEqual({ templateId: "garrett" });
-
-    window.removeEventListener("bn:codebook-browse", handler);
-  });
-
-  it("dispatches bn:codebook-browse on Codebook Library click", async () => {
-    render(<CodebookSidebar />);
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /codebook library/i })).toBeInTheDocument();
-    });
-
-    const handler = vi.fn();
-    window.addEventListener("bn:codebook-browse", handler);
-
-    fireEvent.click(screen.getByRole("button", { name: /codebook library/i }));
-
-    expect(handler).toHaveBeenCalledTimes(1);
 
     window.removeEventListener("bn:codebook-browse", handler);
   });

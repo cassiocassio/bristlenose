@@ -39,7 +39,7 @@ describe("NavBar", () => {
     expect(screen.getByText("Project")).toBeInTheDocument();
     expect(screen.getByText("Sessions")).toBeInTheDocument();
     expect(screen.getByText("Quotes")).toBeInTheDocument();
-    expect(screen.getByText("Codebook")).toBeInTheDocument();
+    expect(screen.getByText("Codebooks")).toBeInTheDocument();
     expect(screen.getByText("Analysis")).toBeInTheDocument();
     // Settings and Help are buttons (open modals), not tabs/links
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
@@ -88,7 +88,9 @@ describe("NavBar", () => {
     expect(screen.getByText("Project").closest("a")).toHaveAttribute("href", "/report/");
     expect(screen.getByText("Sessions").closest("a")).toHaveAttribute("href", "/report/sessions/");
     expect(screen.getByText("Quotes").closest("a")).toHaveAttribute("href", "/report/quotes/");
-    expect(screen.getByText("Codebook").closest("a")).toHaveAttribute("href", "/report/codebook/");
+    // Label pluralised 14 Aug 2026; the route deliberately did NOT follow —
+    // it's baked into exported reports, deep links and the native bridge.
+    expect(screen.getByText("Codebooks").closest("a")).toHaveAttribute("href", "/report/codebook/");
     expect(screen.getByText("Analysis").closest("a")).toHaveAttribute("href", "/report/analysis/");
   });
 

@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-08-05
-trued-against: 43ed8fd4@main on 2026-08-05 (scripts + pbxproj + 353 logged ensure runs)
+last-trued: 2026-08-14
+trued-against: ensure-sidecar with the pre-sign self-test (step 3a) + build-all's 2a stamp assertion; previously 43ed8fd4@main on 2026-08-05
 ---
 
 > **Truing status:** Partial — trued 2026-08-05. §Per-layer fingerprinting, §Script changes,
@@ -10,6 +10,18 @@ trued-against: 43ed8fd4@main on 2026-08-05 (scripts + pbxproj + 353 logged ensur
 > history. Everything else was verified against the scripts and left alone.
 
 ## Changelog
+
+- _2026-08-14_ — trued up: ensure-sidecar pseudo-code gains step 3a (pre-sign
+  `doctor --self-test` on rebuild, `.selftest-stamp`); Phase 2 row and the
+  §Local-vs-TestFlight ordering updated (build-all's 2a is now a downstream
+  stamp *assertion*, exit 1 on absent/stale); §Core-principle honest-gap
+  paragraph updated ("unguarded" → "guarded on rebuild, pre-sign; mtime
+  comparison still unbuilt"); shell anchors re-pointed after the 39-line
+  insertion. Promoted the load-bearing invariant: a sandbox-signed nested
+  executable aborts standalone (exit 133), so **pre-sign is the only window**
+  — moving the check downstream is how it sat dead 14 Jul → 14 Aug. Anchors:
+  `desktop/scripts/ensure-sidecar.sh:149-185`, `desktop/scripts/build-all.sh:167-206`,
+  commit "run the bundle self-test where it can actually run".
 
 - _2026-08-05 (third pass)_ — trued up: §Core principle's input enumeration was still incomplete after the second pass and still read as complete — four more repo-rooted `datas` entries (`llm/prompts`, `server/codebook`, `data`, `cohort-baselines.json`) were outside the recipe, verified by a prompt edit leaving the hash unmoved. Replaced the inline list with a table plus the point that the durable fix is the **assertion**, not the list; added §Risks 5 (an incomplete input set *inverts* the gate — distinct from risk 3's writer/checker drift — materialised twice, now mechanically mitigated); corrected the §Script changes shebang anchor, which cited `:138` for `sign-sidecar.sh` when that line invokes `build-sidecar.sh`. Anchors: `desktop/scripts/sidecar-source-hash.sh:89-91`, `desktop/scripts/test-ensure-sidecar.sh` case 9, commit "close the other four holes in the fingerprint, and assert coverage this time".
 - _2026-08-05 (second pass)_ — trued up: stated the completeness precondition on "stamps attest inputs" after `bristlenose/theme/**` was found missing from the fingerprint, which made the freshness gate answer **confidently and wrongly** rather than merely fail to answer; corrected §Problem's input enumeration, which had named only three of the six hashed sets. Anchors: `desktop/scripts/sidecar-source-hash.sh`, `desktop/bristlenose-sidecar.spec:102`, commit "sidecar freshness: hash the theme too — the gate was answering wrongly, not just failing to answer".
@@ -26,7 +38,7 @@ _Status: v2 — **Phases 1–5 implemented** (Phase 3 Xcode wiring landed 29 Jun
 | Phase | What | State |
 |---|---|---|
 | 1 | `build-sidecar.sh` per-layer incremental (F/V/P, `--force`/`--dry-run`, output-side checks, unconditional preconditions, empty-hash guard) + `frontend_source_hash` sliced from the single recipe | **Done.** Decision logic verified via `--dry-run`; live bundle stamp unchanged (no spurious rebuild). |
-| 2 | `ensure-sidecar.sh` orchestrator (escape hatches, Distribution guard, identity-transition→force-P, signs ffmpeg **and** sidecar, deep-verify, atomic `.sign-stamp` outside the bundle, run-log) | **Done.** Verified: cascade, Distribution guard aborts, skip-flags short-circuit. |
+| 2 | `ensure-sidecar.sh` orchestrator (escape hatches, Distribution guard, identity-transition→force-P, **pre-sign `doctor --self-test` on rebuild → `.selftest-stamp`** (14 Aug 2026), signs ffmpeg **and** sidecar, deep-verify, atomic `.sign-stamp` outside the bundle, run-log) | **Done.** Verified: cascade, Distribution guard aborts, skip-flags short-circuit; self-test exercised on a live forced rebuild. |
 | 4 | `build-all.sh` collapse — steps 2–4 → one `ensure-sidecar.sh --force` under `_BRISTLENOSE_RELEASE=1`; preflight/self-test/inventory/archive/notarise kept | **Done** (syntax + sequence verified; full release run needs the Distribution identity → human). |
 | 5 | `test-ensure-sidecar.sh` — committed decision-logic test | **Done.** Cases 1–9; two of them (recipe-vs-live-stamp, P-skip isolation) are **conditional** on a healthy `.venv-sidecar` and a tree matching the bundle stamp, so the pass *count* is environment-dependent — cite cases, not a number. Extended 4–5 Aug 2026 with case 8's two assertions (race gate present; fingerprint ignores the generated `_build_info.py`) and **case 9**, the spec→fingerprint coverage assertion (§Risks 5) — the first case here that tests the machinery's *coverage* rather than its behaviour. |
 | 3 | Xcode: `Ensure Sidecar Fresh` build phase before Copy; gate keeps `exit 1` + output assertion; skip mechanism; SIGN_IDENTITY mapping; `desktop/CLAUDE.md` update | **Done** (29 Jun 2026). `PBXShellScriptBuildPhase` (UUID `499FD919EA7B4611AE10AE6A`, `alwaysOutOfDate=1`) inserted into the `Bristlenose` target's `buildPhases` immediately before `Copy Sidecar Resources`; runs `ensure-sidecar.sh`. Shipped **option (b)** — no per-scheme skip (ensure runs on every scheme, ~instant when fresh; `BRISTLENOSE_SKIP_SIDECAR_ENSURE=1` opt-out honoured). Copy's `check-sidecar-freshness.sh` gate kept as-is (independent backstop). No SIGN_IDENTITY plumbing (ad-hoc default + Distribution guard). `pbxproj` validated via `plutil -lint` + `xcodebuild -list`. **Human QA: done** (was "three passes remaining"; the plan actually listed four). Evidence: fresh-bundle all-skip and stale→rebuild are exercised continuously — `desktop/build/ensure-sidecar.log` holds 353 runs from 2026-06-29T12:38:59Z onward; the Python-edit→P-rebuild pass was recorded live 29 Jun 15:19Z; the Distribution-archive pass is evidenced by the shipped TestFlight builds (commits "desktop: fix 3 App Store Connect upload rejections (nested-binary MAS signing)", "desktop: flip Release to sandbox + hardened runtime for App Store upload"). **Since amended:** the phase now `exit 0`s for `CONFIGURATION = Release` — see §Xcode wiring. |
@@ -70,7 +82,7 @@ The desktop app runs a **bundled** PyInstaller sidecar (`desktop/Bristlenose/Res
 
 **The durable fix is the assertion, not the list.** A hand-maintained enumeration is exactly what failed twice; a list that merely *looks* complete cannot be distinguished from one that is. `test-ensure-sidecar.sh` case 9 now parses the spec's own `datas` paths and proves each one moves the hash when edited — the mirror of `check-bundle-manifest.sh`'s source→spec direction, closing spec→fingerprint. It is proven to fail on its own violation (drop one clause from the recipe and it names the uncovered path), which is the property the preceding two years of this gate lacked.
 
-**As built (5 Aug 2026), point 2 is weaker than this section claims** — stated here rather than quietly corrected, because the gap is the interesting part. What shipped: F asserts `bristlenose/server/static/index.html` exists and is non-empty (**source-side**, `build-sidecar.sh`); V requires the `.deps-ok` sentinel; P asserts the outer bundle binary exists and is executable. What did **not** ship: the *binary mtime ≥ newest source mtime* comparison and the *in-bundle* `index.html` assertion — grep the three scripts for `mtime` or `-nt` and there is nothing. So P's output check confirms the bundle exists, not that it contains a current SPA; the in-bundle side is unguarded. Treat the mtime/in-bundle wording below (§Per-layer fingerprinting, §Xcode wiring) as design intent, not as a safety net you can rely on today.
+**As built (5 Aug 2026), point 2 is weaker than this section claims** — stated here rather than quietly corrected, because the gap is the interesting part. What shipped: F asserts `bristlenose/server/static/index.html` exists and is non-empty (**source-side**, `build-sidecar.sh`); V requires the `.deps-ok` sentinel; P asserts the outer bundle binary exists and is executable. What did **not** ship: the *binary mtime ≥ newest source mtime* comparison and the *in-bundle* `index.html` assertion — grep the three scripts for `mtime` or `-nt` and there is nothing. So P's output check confirms the bundle exists, not that it contains a current SPA. _(Updated 14 Aug 2026: the in-bundle side is no longer fully unguarded — `doctor --self-test` now runs pre-sign on every rebuild and asserts the bundle's payload (SPA, codebooks, prompts, locales, theme, migrations, admin, MCP), complementing case 9's spec→fingerprint direction: case 9 proves the recipe *notices* a file, the self-test proves PyInstaller *shipped* it. The mtime comparison remains unbuilt.)_ Treat the mtime wording below (§Per-layer fingerprinting, §Xcode wiring) as design intent, not as a safety net you can rely on today.
 
 ## The third staleness class — the tree moving under the build (4 Aug 2026)
 
@@ -145,6 +157,12 @@ ensure-sidecar.sh [--force] [--dry-run]
   2. identity transition (.sign-stamp identity != SIGN_IDENTITY) → force a clean P
   3. build-sidecar.sh [--force]        # F + V + P, each gated + output-checked
                                        # (preconditions live HERE, not in ensure)
+  3a. IF P rebuilt: doctor --self-test on the UNSIGNED bundle → .selftest-stamp
+      # PRE-SIGN is the only window: sign-sidecar applies app-sandbox
+      # unconditionally (ASC requires it on nested executables) and a
+      # sandbox-signed binary aborts standalone (exit 133). Attempting this
+      # post-sign is exactly how the check sat dead 14 Jul → 14 Aug 2026 —
+      # do not "tidy" it downstream. build-all step 2a asserts the stamp.
   4. sign IF (P rebuilt OR identity changed OR ffmpeg fetched OR deep-verify fails):
         sign-ffmpeg.sh   ;   sign-sidecar.sh      # BOTH — ffmpeg is a bundled Mach-O too
         -> codesign --verify --deep --strict; write .sign-stamp atomically
@@ -152,7 +170,7 @@ ensure-sidecar.sh [--force] [--dry-run]
      per-layer decision+timing format described in §Instrumentation — unbuilt)
 ```
 
-- **Shell**: `ensure-sidecar.sh` stays **bash-3.2-safe** (it runs as an Xcode build phase under `/bin/bash`); it shells out to `sign-sidecar.sh` as a child. **The child does NOT keep its own shebang** — an earlier revision of this line said it did, and that is exactly the trap. All three child invocations are bare `bash "$SCRIPT_DIR/<child>.sh"` — `ensure-sidecar.sh:138` (build-sidecar), `:159` (sign-ffmpeg), `:160` (sign-sidecar) — which **overrides** each child's `#!/usr/bin/env bash` and resolves to the first `bash` on PATH. Under Xcode's stripped PATH that is `/bin/bash` 3.2, and `sign-sidecar.sh` needs 4.3+. The requirement is met only by the Homebrew-prefix PATH prepend at the top of both scripts — remove the prepend, or "tidy" the invocation, and signing breaks in-phase while working fine from a login shell.
+- **Shell**: `ensure-sidecar.sh` stays **bash-3.2-safe** (it runs as an Xcode build phase under `/bin/bash`); it shells out to `sign-sidecar.sh` as a child. **The child does NOT keep its own shebang** — an earlier revision of this line said it did, and that is exactly the trap. All three child invocations are bare `bash "$SCRIPT_DIR/<child>.sh"` — `ensure-sidecar.sh:139` (build-sidecar), `:198` (sign-ffmpeg), `:199` (sign-sidecar) — shifted by step 3a's insertion — which **overrides** each child's `#!/usr/bin/env bash` and resolves to the first `bash` on PATH. Under Xcode's stripped PATH that is `/bin/bash` 3.2, and `sign-sidecar.sh` needs 4.3+. The requirement is met only by the Homebrew-prefix PATH prepend at the top of both scripts — remove the prepend, or "tidy" the invocation, and signing breaks in-phase while working fine from a login shell.
 - **Distribution guard**: if `SIGN_IDENTITY != "-"` (a real identity) ensure refuses to proceed unless invoked via `build-all.sh` (an env flag `_BRISTLENOSE_RELEASE=1`) — Distribution signing is never auto-invoked from the IDE inner loop. The Release-config Cmd+R/Archive path therefore ad-hoc-signs for *local validation only*; the shipping artifact comes from `build-all.sh`.
 - **ffmpeg sign-state**: a `.sign-stamp` covering ffmpeg/ffprobe, re-signed on identity change / fetch / verify-fail — independent of the sidecar P gate (ffmpeg never changes when Python does).
 
@@ -176,7 +194,7 @@ ensure-sidecar.sh [--force] [--dry-run]
 One orchestration *script*, but **two non-equivalent doors** — and the plan is honest about it:
 
 - **Cmd+R (Debug)** → `ensure-sidecar.sh` ad-hoc-signs (`-`) for **local validation only**. **IDE Archive (Release) no longer runs ensure at all** — the phase `exit 0`s for `CONFIGURATION = Release` (see §Xcode wiring). IDE-Archive remains explicitly a **non-shipping** path.
-- **`build-all.sh --force` (the only shipping path)** → runs every preflight (identity/profile/notary preflight, logging-hygiene, bundle-manifest), self-test, inventory-staleness, then `ensure-sidecar.sh --force` (with `_BRISTLENOSE_RELEASE=1` + Distribution `SIGN_IDENTITY`), then archive/export/notarise/verify. The collapse replaced only build-all's steps 2–4 (parallel fetch+build+sign) with `ensure-sidecar.sh --force`; the surrounding steps stayed verbatim — **though the step list has since grown**: 1a-bis (appearance-seam gate), 2c (App Store §2.5.2 string scan), 2d (`.mcpb` build + check). Don't treat the old "1/1a/1b/2a/2b and 5–10" enumeration as current; read `build-all.sh`.
+- **`build-all.sh --force` (the only shipping path)** → runs every preflight (identity/profile/notary preflight, logging-hygiene, bundle-manifest), then `ensure-sidecar.sh --force` (with `_BRISTLENOSE_RELEASE=1` + Distribution `SIGN_IDENTITY`) — **which contains the self-test, pre-sign** — then step 2a *asserts* the `.selftest-stamp` matches the bundle (exit 1 on absent/stale), then inventory-staleness, archive/export/verify. The collapse replaced only build-all's steps 2–4 (parallel fetch+build+sign) with `ensure-sidecar.sh --force`; the surrounding steps stayed verbatim — **though the step list has since grown**: 1a-bis (appearance-seam gate), 2c (App Store §2.5.2 string scan), 2d (`.mcpb` build + check). Don't treat the old "1/1a/1b/2a/2b and 5–10" enumeration as current; read `build-all.sh`.
   - **Concurrency was never implemented.** This line used to claim ensure "preserves the fetch-ffmpeg ‖ build-sidecar concurrency internally (background the fetch)". It doesn't — the fetch runs synchronously at step 1, the build at step 3, and there is no `&`/`wait` anywhere in `ensure-sidecar.sh`. In practice this costs nothing, because the fetch is a one-time download that no-ops on every subsequent run; but the parallelism the collapse was supposed to preserve is simply gone.
 
 ## Instrumentation (explicit goal)

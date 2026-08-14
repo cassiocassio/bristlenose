@@ -1,4 +1,26 @@
+---
+status: current
+last-trued: 2026-08-14
+trued-against: ci.yml with strict-macos + package job; release.yml with the pypi hold; snap.yml build-on-push/publish-on-dispatch; mac-build.yml shipped
+---
+
 # CI architecture
+
+## Changelog
+
+- _2026-08-14_ — trued up (first pass; doc had no front-matter): macOS
+  continue-on-error is now conditional (`strict-macos` input — blocking on
+  release runs, informational on pushes); job table gains the `package` job
+  (8 Aug) and the shipped `mac-build.yml`; §Desktop-build plan marked
+  superseded; snap row corrected (build on push, publish on dispatch,
+  fail-loud creds); Node 20 → `.tool-versions` (24); ESLint is a blocking
+  gate at zero; size-limit 305→220 kB; §Release workflow gains the pypi
+  approval hold. Known code gap recorded: the "every job declares
+  timeout-minutes" invariant currently holds only for `e2e`. Anchors:
+  `.github/workflows/ci.yml:116,325`, `release.yml:22-24,119`,
+  `snap.yml:29-35,65`, `mac-build.yml`, `frontend/package.json:46`, commits
+  "hold publish for approval, and make the release gate certify macOS",
+  "ci: build the wheel, sdist and snap — publish nothing".
 
 ## Goals
 
@@ -16,7 +38,7 @@ CI is not a quality gate for perfection. Steps that enforce correctness (ruff, p
 
 **Canonical cell.** One combination — ubuntu-latest + Python 3.12 — is the "real" CI. It produces the coverage report, runs the dependency audit, generates the SBOM. Other matrix cells exist to catch compatibility issues, not to duplicate bookkeeping.
 
-**macOS as signal, not gate.** macOS runners cost 10× Linux and surface platform-specific issues that rarely block a pure-Python change. All macOS jobs run with `continue-on-error: true` — a failure shows as a yellow warning, not a red block. Investigate when yellow, but don't hold a merge for it.
+**macOS as signal on pushes, gate on releases.** macOS runners cost 10× Linux and surface platform-specific issues that rarely block a pure-Python change. On daily pushes the macOS test cells run `continue-on-error` — a failure shows yellow, not red; investigate, don't hold a merge. **On release runs they block**: `ci.yml` takes a `strict-macos` input (workflow_call + workflow_dispatch) and `release.yml` passes `true`, because a release gate that certifies only Linux is certifying the wrong platform for a Mac-first product — the macOS cells are the sole automated coverage the Homebrew/pip-on-Mac audience has, and the Mac artefacts themselves never pass through CI at all. (Changed 14 Aug 2026; the unconditional informational rule below this point in older text is the pre-change world.)
 
 **`fail-fast: false` on the test matrix.** A Python 3.10 failure doesn't predict a 3.13 failure. Let all cells finish so you see the full picture in one push, not across three retry cycles.
 
@@ -57,20 +79,22 @@ test (8 cells) ────┘
                    │
 frontend ──────────┘
 
-desktop-build ─────────  (independent, planned S2)
+package ───────────────  (wheel + sdist, publishes nothing — added 8 Aug)
+mac-build.yml ─────────  (separate workflow: Swift compile check, macos-15)
 ```
 
-Four jobs today, one planned:
+Five jobs in `ci.yml`, plus the shipped Mac workflow:
 
 | Job | Runs on | Depends on | Blocking? |
 |-----|---------|------------|-----------|
 | `lint` | ubuntu, Python 3.12 | — | Yes |
-| `test` | 4 Python × 2 OS (8 cells) | `lint` | Ubuntu yes, macOS informational |
-| `frontend-lint-type-test` | ubuntu, Node 20 | — | Yes |
-| `e2e` | ubuntu, Python 3.12 + Node 20 | `test` + `frontend` | Yes |
-| `desktop-build` *(planned)* | macOS | — | Informational initially |
+| `test` | 4 Python × 2 OS (8 cells) | `lint` | Ubuntu yes; macOS informational on pushes, **blocking on release runs** (`strict-macos`) |
+| `frontend-lint-type-test` | ubuntu, Node from `.tool-versions` (24) | — | Yes |
+| `e2e` | ubuntu, Python 3.12 + Node 24 | `test` + `frontend` | Yes |
+| `package` | ubuntu | — | Yes — wheel + sdist + `twine check` + an assertion the React SPA is inside the wheel |
+| `mac-build.yml` *(separate workflow)* | macos-15 | — | path-filtered to `desktop/**`; compile-only, no signing, no Swift tests |
 
-`lint` and `frontend` run in parallel (no dependency between them). `test` waits for `lint`. `e2e` waits for both `test` and `frontend`. `desktop-build` is independent — Swift compilation doesn't depend on Python or Node.
+`lint` and `frontend` run in parallel (no dependency between them). `test` waits for `lint`. `e2e` waits for both `test` and `frontend`.
 
 ## What each job does
 
@@ -96,17 +120,17 @@ pip cache is enabled (`cache: pip` on `setup-python`) to avoid re-downloading wh
 
 ### frontend-lint-type-test
 
-Single ubuntu job with Node 20. Runs the full frontend quality chain:
+Single ubuntu job, Node from `.tool-versions` (24). Runs the full frontend quality chain:
 
 | Step | Blocking? | Why |
 |------|-----------|-----|
-| ESLint | No | 84 pre-existing problems; fix incrementally |
+| ESLint | **Yes** | Blocking gate — the 84 pre-existing problems were cleared to zero 30 Jun 2026 |
 | TypeScript typecheck | Yes | Type errors are bugs |
 | npm audit | No | Production deps will become blocking; full audit stays informational |
 | SBOM generation + upload | No | Compliance artifact |
 | Vitest | Yes | ~1265 unit/integration tests |
 | Vite build | Yes | Build errors are shipping errors |
-| size-limit | Yes | Bundle size gate (305 KB gzip) |
+| size-limit | Yes | Bundle size gate (220 kB gzip — `frontend/package.json`) |
 
 ### e2e
 
@@ -224,11 +248,10 @@ These run with `continue-on-error: true`. They appear as yellow warnings, not re
 | mypy | lint | 9 pre-existing third-party SDK type errors (anthropic, presidio, faster-whisper) that can't be fixed upstream |
 | pip-audit | lint | Transitive deps (torch, protobuf) frequently have unfixed advisories |
 | npm audit | frontend | Dev dep CVEs (Vite ecosystem) rarely actionable |
-| ESLint | frontend | 84 pre-existing problems from missing jsx-a11y plugin and strict react-hooks rules |
 | SBOM generation | lint, frontend | Compliance artifact; generation tool failures shouldn't block |
 | macOS test cells | test | Platform signal, not a gate (see Philosophy) |
 
-**Promotion path:** when pre-existing errors are resolved, promote to blocking by removing `continue-on-error: true`. Target: mypy and ESLint first, pip-audit and npm audit when transitive dep noise is manageable.
+**Promotion path:** when pre-existing errors are resolved, promote to blocking by removing `continue-on-error: true`. ESLint was promoted 30 Jun 2026 (zero problems, blocking since). Remaining targets: mypy first, pip-audit and npm audit when transitive dep noise is manageable.
 
 ## Release workflow
 
@@ -252,7 +275,7 @@ The release workflow never runs independently — it always gates on the full CI
 |----------|---------|---------|
 | `codeql.yml` | Push/PR to main + weekly Monday | CodeQL security scanning (Python + JavaScript). Security-extended queries. LLM prompt injection detection requires manual review |
 | `i18n-check.yml` | Locale file changes | Validates locale JSON files via `scripts/check-locales.py` (key parity, syntax) |
-| `snap.yml` | Push to main + version tags | Builds Snap package. Edge channel on main pushes, stable channel on tags. Skips gracefully if credentials unavailable |
+| `snap.yml` | Builds on every push/PR (publishes nothing); publishes on `workflow_dispatch` only — edge via `--ref main`, stable via `--ref vX.Y.Z` (a tag-ref dispatch fires both). Missing credentials **fail loudly** on the publish jobs (14 Aug 2026) |
 | `install-test.yml` | Weekly + on-demand + install doc changes | Tests documented install paths (pip, pipx, Homebrew) across platforms. Optional full pipeline run with real API key on weekly schedule |
 
 ## Coverage gaps
@@ -277,12 +300,18 @@ Audit of what the project uses vs what CI actually tests (Apr 2026).
 | **Swift desktop app — no CI at all** | High | Fix: add `desktop-build` job (see plan below). The product going to the App Store has zero build verification |
 | **Windows — 3 code paths, never tested** | Low | Accept. Windows is Won't for 100-day scope. Code paths are defensive (`platform.system()` checks in ingest, Ollama, clips). No Windows runner until there's a Windows release plan |
 | **macOS Python tests — informational** | Medium | Accept. macOS failures show as yellow warnings. Promoting to blocking would gate every push on the 10× cost runners for a pure-Python package that ships via Linux-built PyPI/Homebrew/Snap. Revisit when desktop app integration tests exist |
-| **Node version mismatch (CI: 20, docs: 24)** | Medium | Fix when Node 24 LTS lands in GitHub Actions runner images. Current code works on both; the constraint is ESLint 10 which was added after the CI was set up |
 | **Snap arm64 — declared, never built** | Low | Accept. No arm64 Snap users. `snapcraft.yaml` declares it for future use |
 | **Homebrew install — weekly only** | Low | Accept. Formula changes are rare and triggered by releases. Weekly cadence is sufficient |
 | **Firefox — not in Playwright browsers** | Low | Accept. WebKit (Safari engine) + Chromium covers the two browser engines users actually encounter. Firefox shares no engine with either |
 
 ### Desktop build job — implementation plan
+
+> **Superseded by the shipped `mac-build.yml` (before 14 Aug 2026).** What
+> shipped differs on every axis below: a separate workflow rather than a job in
+> `ci.yml`; path-filtered to `desktop/**`; `macos-15`; compile-only with
+> `CODE_SIGNING_ALLOWED=NO` (that reasoning survives); **no** Swift tests; a
+> log artifact on failure; blocking rather than informational. Plan preserved
+> for the rationale.
 
 **Goal:** catch Swift compilation errors, missing imports, and deployment target issues on every push. Does not run the app or test it — just verifies it builds.
 

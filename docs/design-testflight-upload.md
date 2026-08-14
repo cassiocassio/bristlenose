@@ -1,17 +1,33 @@
 ---
-status: proposed
-last-trued: 2026-08-06
-trued-against: 94b13fb0@main (build-all.sh 10 steps, altool 26.40.1 probed live)
+status: current
+last-trued: 2026-08-14
+trued-against: the shipped uploader (upload-testflight.sh + check-pkg-shippable.sh, two live uploads: 0.25.1/2450, 0.25.3/2472)
 ---
 
 # Scripted TestFlight upload — the gate, then one command
 
-_Status: **proposed**, not implemented. Replaces the manual "drag the `.pkg` into
-Transporter.app" step at the end of `build-all.sh`. Revised after a six-agent review pass
-(log kept with the maintainer's local review notes, outside the public tree). The first
-draft was roughly twice this size and built the wrong thing; §Problem records why._
+> **Truing status:** As-built record (trued 2026-08-14). Everything this doc
+> planned as Phase 1/2/3 shipped — `check-pkg-shippable.sh`,
+> `upload-testflight.sh`, `test-check-pkg-shippable.sh` — and has uploaded two
+> real builds. The plan text is preserved; §As-built delta below records the
+> five places reality diverged from it. Originally a proposal replacing the
+> "drag the `.pkg` into Transporter.app" step; revised after a six-agent review
+> pass (the first draft was roughly twice this size and built the wrong thing —
+> §Problem records why).
 
 ## Changelog
+
+- _2026-08-14_ — trued up: status proposed → as-built (all three phases shipped,
+  two live uploads); added §As-built delta (five divergences incl. the D4
+  half-wire); recorded the 14 Aug escalations (unparsed UUID fatal, UNCONFIRMED
+  exit 1, BN_SKIP_ASC_VALIDATE announced skip) and closed §Open question the
+  other way; de-duplicated the 90-day-refresh paragraph and corrected its
+  bump-version claims (--build-only exists; the script no longer tags at all);
+  fixed the --api-key/--apiKey spelling. Anchors:
+  `desktop/scripts/upload-testflight.sh`, `desktop/scripts/check-pkg-shippable.sh:364-376`,
+  commits "make the checks that couldn't fail, fail", "stop paying Apple twice:
+  one notary round trip, one 675MB transfer", "bump-version: --build-only, and
+  check the tag before writing anything".
 
 - _2026-08-07_ — Phase 0 split: the ASC API turns out to be opt-in per team behind an
   Account-Holder **Request Access** gate with no committed approval SLA. Recorded the two
@@ -26,13 +42,14 @@ draft was roughly twice this size and built the wrong thing; §Problem records w
 
 ## Problem
 
-`build-all.sh` runs ten steps and seven verification gates, then prints:
+`build-all.sh` runs ten steps and seven verification gates, then **printed** (until
+"build-all: point the footer at upload-testflight.sh, not Transporter"):
 
 ```
 next   drag into Transporter.app, or: xcrun altool --upload-app -f Bristlenose.pkg …
 ```
 
-Everything up to that line is scripted, gated, and logged. The one step that is
+Everything up to that line was scripted, gated, and logged. The one step that was
 irreversible and outward-facing — putting a build on Apple's servers under our name — is a
 GUI drag with no precondition and no record. And it recurs: TestFlight builds expire 90
 days after upload (build 2068 from 14 Jul expires ~12 Oct), so keeping a cohort testing
@@ -74,14 +91,14 @@ here uses `|| die`, never `&& ok`.**
 |---|---|
 | Dry run against Apple's own validator | `altool --validate-app <pkg>` |
 | Upload **and wait for processing** | `altool --upload-package <pkg> --wait` |
-| Auth | `--api-key <KEYID> --api-issuer <ISSUER>` |
+| Auth | `--apiKey <KEYID>` / `--apiIssuer <ISSUER>` (camelCase — the hyphenated spellings in an earlier draft don't exist; see the transcript below) |
 
 Three corrections to the first draft, all from reading the tool rather than assuming:
 
 - **`--upload-package`, not `--upload-app -f`.** The man page treats the former as primary,
   `--delivery-id` is documented as its return value, and `--wait` is documented **only**
-  on it. `build-all.sh:609` currently advertises the wrong spelling — fix in the same
-  commit.
+  on it. `build-all.sh`'s footer advertised the wrong spelling — fixed; the footer now
+  points at `upload-testflight.sh` and carries no altool invocation at all.
 - **`--upload-package --wait` collapses the proposed two-step.** No separate
   `--build-status --delivery-id` call, no status-parser, no delivery-ID plumbing.
 - **`--build-status` cannot enumerate builds.** It takes a build number as *input*
@@ -176,18 +193,16 @@ discipline has something real to bite on.
 
 Worth knowing when the 90-day refresh comes round: ASC keys on
 `(CFBundleShortVersionString, CFBundleVersion)`, so build numbers need only be unique
-*within* a marketing version. And `bump-version.py` cannot currently produce a same-version
-build bump — re-running it at an existing version rewrites `__init__.py`, the man page and
-the pbxproj, then dies on `git tag` (`check=True`), leaving a dirty staged tree and no new
-build number. That's the refresh problem, it is now demonstrably live (2445 is spent), and
-it belongs to `bump-version.py`, not here.
-
-Worth knowing when that happens: ASC keys on `(CFBundleShortVersionString, CFBundleVersion)`
-— build numbers need only be unique *within* a marketing version. And
-`bump-version.py` cannot currently produce a same-version build bump: re-running it at an
-existing version rewrites `__init__.py`, the man page and the pbxproj, then dies on
-`git tag` (`check=True`), leaving a dirty staged tree and no new build number. That's the
-90-day-refresh problem, and it belongs to `bump-version.py`, not here.
+*within* a marketing version. The refresh problem this paragraph originally
+recorded — `bump-version.py` couldn't produce a same-version build bump, and
+re-running it at an existing version died on `git tag` after rewriting three
+files — was fixed in two stages: `--build-only` shipped ("bump-version:
+--build-only, and check the tag before writing anything"), and the script later
+stopped tagging entirely ("stop bump-version.py tagging a commit that doesn't
+exist yet"). `./scripts/bump-version.py --build-only` is now the documented
+refresh path, and the uploader's own Undo text names it. _(An earlier revision
+of this doc carried this paragraph twice, near-verbatim — an editing artefact,
+collapsed 14 Aug.)_
 
 ## Plan
 
@@ -322,7 +337,7 @@ project has already eaten twice. Fixtures by file surgery on the artefact the bu
 already made: delete a `PrivacyInfo.xcprivacy`; `codesign --remove-signature` and ad-hoc
 re-sign; strip an entitlement from one nested binary.
 
-**Report nesting — resolve before writing.** `build-all.sh` sources `report.sh` and calls
+**~~Report nesting — resolve before writing.~~ Resolved as built — option 1:** the child logs to a file, the parent shows one line + the log path (`upload-testflight.sh:145-151`), and `check-pkg-shippable.sh` never sources `report.sh` at all. Original analysis: `build-all.sh` sources `report.sh` and calls
 `bn_autowrap`, which exports `_BN_ACTIVE=1`; a nested child's `bn_check`/`bn_gate` emit
 **nothing** (`report.sh:47-51`). So naively extracting the battery turns seven labelled
 gate lines into one opaque step with no reasons on failure. `check-dmg-shippable.sh` never
@@ -337,7 +352,10 @@ report you'd miss.
 - **Call `check-pkg-shippable.sh` as a precondition.** Not optional, not skippable.
 - Print the local `(marketing version, build number)` pair and the delivery target.
 - `altool --upload-package <pkg> --wait --api-key … --api-issuer … --apple-id …`.
-- **Echo the delivery ID before entering the wait**, so a Ctrl-C or a closed lid leaves a
+- **Echo the delivery ID before entering the wait** *(shipped differently: the UUID is
+  sed-parsed from the log AFTER altool returns — `upload-testflight.sh:211` — so a Ctrl-C
+  mid-wait echoes nothing; the live log file named at upload start is the resume handle)*,
+  so a Ctrl-C or a closed lid leaves a
   token to resume by hand. Print it on the failure path too.
 - **Treat a zero exit as unverified; the terminal state is the verdict.** There is a
   documented Apple failure mode where altool exits 0, prints no error, and the build never
@@ -378,7 +396,7 @@ works.
   `AppStoreText-README.md`), and pre-existing Beta App Information. For a five-person
   internal cohort this is a Slack message.
 - **Beta App Review** — external TestFlight only.
-- **Apple's processing time** — 10–60 min, waited on, not eliminated.
+- **Apple's processing time** — waited on, not eliminated (planned budget was 10–60 min; measured ~2.5 min on both live uploads — see §Observed contract).
 - **Tester group assignment.** Internal TF auto-distribution is an ASC per-group
   checkbox ("Enable automatic distribution"), not a platform guarantee, and the script
   cannot observe it.
@@ -395,8 +413,12 @@ works.
 2. **~~Nobody has run altool once.~~ RETIRED 7 Aug 2026 — the full chain ran.** Build
    0.25.1 (2450) went from `build-all.sh` through the gate to TestFlight. See §Observed
    contract below. Residual: altool **silently ignores unknown flags** — a typo'd option
-   produces no complaint, so the script must validate its own argv.
-3. **Phase 1's pkg expansion may not round-trip signatures.** Spike before committing to it.
+   produces no complaint, so the script must validate its own argv. *(As built: the three
+   tempting flags are refused explicitly with an explanation; anything else falls to the
+   file-exists check on arg 1 — covered for the one argument it takes.)*
+3. **~~Phase 1's pkg expansion may not round-trip signatures.~~ SETTLED 7 Aug 2026 — it
+   does.** `check-pkg-shippable.sh:17-21` records the verification: `pkgutil
+   --expand-full` round-trips the signature intact.
 4. **The extraction can make a gate decorative.** `bn_gate`/`bn_check` only *report* — each
    is preceded by its real `if`. When the block moves, the tempting tidy-up is
    `cmd && bn_gate x ok "…"`, which is `fc1d6ca7` in a new costume and invisible because the
@@ -452,9 +474,40 @@ already in the house gotchas. Gate it on `[ -t 1 ]`.
 
 ## Open question
 
-Should `--validate-app` run on every release build, not just before an upload? It costs a
-network round trip and catches the ITMS-class rejections early. Leaning yes — but it needs
-the ad-hoc skip above, so settle it once Phase 1 exists.
+> **Settled 14 Aug 2026 — the other way.** The leaning below was toward running
+> `--validate-app` on *more* paths; it now runs on **fewer**. Measured cost
+> decided it: on the upload path the gate's validate shipped the same 675 MB to
+> the same endpoint that `--upload-package` revalidates minutes later — ~8 min
+> and ~10% of a release's wall clock to learn the same answer. The uploader now
+> passes `BN_SKIP_ASC_VALIDATE=1` (announced skip, `check-pkg-shippable.sh:364-376`);
+> a standalone gate run keeps validate-app and remains the documented dry run.
+> `build-all.sh` never gained the every-build validate. Commit: "stop paying
+> Apple twice: one notary round trip, one 675MB transfer".
+
+Original question, preserved: Should `--validate-app` run on every release build, not just
+before an upload? It costs a network round trip and catches the ITMS-class rejections
+early. Leaning yes — but it needs the ad-hoc skip above, so settle it once Phase 1 exists.
+
+## As-built delta — what shipped differently from this plan
+
+Trued 14 Aug 2026. Five divergences, none of which invalidate the plan's
+reasoning; three are open gaps a future pass may still close.
+
+| Planned | As built | Status |
+|---|---|---|
+| D4: `check-pkg-shippable.sh` called by **both** `build-all.sh` and the uploader — "one implementation, not two that drift" | Only the uploader calls it; `build-all.sh` still runs its own inline gates a–f/d2 against the **xcarchive** copy | **Open gap** — the drift D4 exists to prevent is structurally possible |
+| D3 credential hygiene: assert `tmutil isexcluded` AND mode 600 | Only existence + a mode-600 *warning* in the preflight; no tmutil assertion anywhere | **Open gap** |
+| Versioned `cp` in build-all step 6 (`Bristlenose-<ver>-<build>.pkg`) | Not shipped; uploader defaults to the unversioned export path, mitigated by the gate's pkg-vs-tree version check | **Open gap** |
+| Delivery-ID echoed before the wait | Parsed from the log after altool returns; the log file is the resume handle | Shipped differently, acceptable |
+| `&&-ok` grep as a build gate (Risk 4) | Never wired | **Open gap** (the class it guards was fixed by hand in `fc1d6ca7` and audited since) |
+
+Shipped beyond the plan (14 Aug): an unparsed Delivery UUID is **fatal**; an
+unconfirmed `--build-status` prints an **UNCONFIRMED** banner and exits 1 —
+where non-zero does *not* mean the upload failed (the build number is spent
+either way; the recovery is App Store Connect, never a re-upload); and the
+gate's validate-app is an announced skip on the upload path
+(`BN_SKIP_ASC_VALIDATE=1`). Commits: "make the checks that couldn't fail,
+fail", "stop paying Apple twice".
 
 ## See also
 

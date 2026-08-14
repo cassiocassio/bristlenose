@@ -1,7 +1,7 @@
 ---
-status: current
-last-trued: 2026-08-08
-trued-against: 7d93f63f@main — three parts now built; see Status
+status: mixed
+last-trued: 2026-08-14
+trued-against: the shipped skill after two live releases and the publish-hold rebuild; D2/D3/D4/D5 carry superseded banners, core sections verbatim-current
 ---
 
 # `/bn-release` — orchestrating the five channels
@@ -10,18 +10,36 @@ _Plans a skill that runs a release across some or all of PyPI · GitHub Release 
 Homebrew · Snap · TestFlight · `.dmg`, having first proven the tree, the
 changelog and the docs are actually ready._
 
-**Status (8 Aug 2026) — no longer design-only:**
+**Status (14 Aug 2026) — built, and run twice live:**
 
 | Piece | State |
 |---|---|
-| Tier 0 CI — wheel, sdist, snap built and not published | ✅ shipped, green first run |
-| `scripts/check-release-ready.sh` — the mechanical preflight | ✅ shipped |
-| `.claude/skills/bn-release/SKILL.md` | ✅ written, **never run** |
-| Acceptance criteria | ✅ `docs/testing/bn-release-acceptance.md`, written before first run |
+| Tier 0 CI — wheel, sdist, snap built and not published | ✅ shipped, green |
+| `scripts/check-release-ready.sh` — the mechanical preflight | ✅ shipped; grew tag→HEAD, five-state CI, and publish-hold probes post-audit |
+| `.claude/skills/bn-release/SKILL.md` | ✅ **run twice live**: 0.25.2 (9 Aug — tag-run CI failed *after* the Mac channels published; superseded by 0.25.3) and 0.25.3 (10 Aug — clean) |
+| Acceptance criteria | ✅ `docs/testing/bn-release-acceptance.md` |
+| The eight-lens audit those runs triggered | ✅ `docs/design-release-system-audit.md` — every mechanical finding closed 14 Aug |
 | Tier 2 (App Store promotion, listing copy, phased release) | ⬜ not started |
 
-The skill has not been exercised even once. Score its first run against the
-acceptance criteria rather than against this document's intentions.
+The 0.25.2 incident rewrote the ordering this doc originally derived: the
+`pypi` environment now holds `publish` for approval, so the tag goes out
+*first* and every irreversible act follows every verdict. **The shipped
+authority is the skill itself** (Phase 5's nine steps); D2–D5 below carry
+superseded banners and are kept as the reasoning of the world they were
+written in.
+
+## Changelog
+
+- _2026-08-14_ — trued up: status table (two live runs); D2 banner re-scoped
+  (website-last stays current) and D3/D4/D5 given their own; §Preflight list
+  synced to the shipped script; §Snap corrected (build-on-push restored 8 Aug;
+  a tag-ref dispatch fires BOTH publish jobs); estimates updated for the
+  one-round-trip dmg lane; open questions Q2/Q4 closed; audit doc linked.
+  Anchors: `.claude/skills/bn-release/SKILL.md` Phase 5,
+  `scripts/check-release-ready.sh:190-332`, `.github/workflows/snap.yml:29-35,65,106`,
+  commits "hold publish for approval, and make the release gate certify macOS",
+  "stop paying Apple twice: one notary round trip, one 675MB transfer".
+- _2026-08-08_ — status update: three parts built.
 
 ## The problem it solves
 
@@ -321,11 +339,15 @@ version to learn the same thing.
 
 This also fits the evening rule for free: build during the day, push after 9pm.
 
+> **The paragraph below is NOT superseded** — website-last survived the reorder
+> unchanged (skill Phase 5 step 7; acceptance S6). The banner above covers the
+> ordering derivation only.
+
 **And the website deploys LAST, after PyPI confirms.** The website's changelog
 page is rendered live from `CHANGELOG.md`, so deploying before PyPI has accepted
 the upload publishes a page announcing a version nobody can install — for the
-~25 minutes CI takes, and indefinitely if the release fails. The full order is
-therefore:
+~25 minutes CI takes, and indefinitely if the release fails. The full order as originally derived (superseded — see banner above; the
+shipped nine-step order is in the skill's Phase 5):
 
 ```
 bump + commit → Mac artefacts (dmg, TestFlight) → tag push (PyPI, GH, Homebrew)
@@ -337,6 +359,13 @@ argument for writing it down.
 
 ### D3 — One authorisation, not per-step
 
+> **Partially superseded 14 Aug 2026.** The shipped flow has **two** human
+> gates, not one: the chat ask before the *soft* line (TestFlight upload), and
+> the GitHub **Review deployments** approval before the *hard* line (PyPI) —
+> which the publish hold created. D3's anti-pattern reasoning (a prompt per
+> step trains `y`) still governs the chat gate; the platform approval is a
+> second gate because the act it guards is the one that can never be undone.
+
 Per the house rule, automate the mechanical end to end including the
 outward-facing act, and put the human at the single point where judgement
 differs. That point is **after the preflight, before the first irreversible act**
@@ -347,6 +376,14 @@ trains you to type `y`, which is the opposite of a gate.
 
 ### D4 — There is no `--dry-run`, because the preflight always runs
 
+> **Rescoped 14 Aug 2026.** "Declining is the dry run" survives, but the
+> byte-identical version of the claim proved unsatisfiable by construction: the
+> preflight hard-fails until the CHANGELOG and README entries exist on disk, so
+> Phase 3 writes them *before* the ask, and a declined run always leaves the
+> drafts. The honest guarantee — and the acceptance criterion S9 as rescoped —
+> is **no commits, no tags, no uploads; drafts offered for restore**. (Also:
+> `/new-release` does ship a `--dry-run`; the no-flag rule is this skill's.)
+
 The preflight is read-only and unconditional. Running `/bn-release` and declining
 at the authorisation point **is** the dry run, and it is a better one than a flag
 because it is the same code path the real release takes.
@@ -355,6 +392,12 @@ Same reasoning as `upload-testflight.sh`, where Apple's own `--validate-app` is
 the dry run and a local one would just print the script back at you.
 
 ### D5 — Select by TIER, not by channel
+
+> **Aspirational — the flag interface was never built (confirmed 14 Aug 2026).**
+> The shipped skill takes no arguments: Phase 1 asks the tier question in
+> prose and defaults to Tier 1, which delivers D5's *decision* (tier-first,
+> channels derived) without its *interface*. `--tier` / `--skip` remain
+> unbuilt; if arguments ever arrive, this section is the design for them.
 
 `/bn-release --tier 1` is a better interface than `--only testflight,dmg,pypi`,
 because the tier encodes the *cadence decision* — which channels, which version
@@ -401,16 +444,28 @@ exactly the call the 0.15.0→0.15.19 run got wrong nineteen times.
   went out alongside an untracked doc that wasn't mine — harmless, but nobody
   decided that)
 - venv minor matches `.tool-versions`
-- `pytest` green, `ruff check .` clean
+- `ruff check .` clean — **not** pytest: the script deliberately asks whether
+  HEAD has a green **CI run** instead of re-running the suite (CI owns tests;
+  the question that matters for the locally-built Mac channels is whether CI
+  ever saw this commit). The CI probe reports five states distinctly — green /
+  red / in-progress / no-run-yet / could-not-query
 - version agrees across `__init__.py`, the man page `.TH`, and pbxproj
   `MARKETING_VERSION`
-- CHANGELOG has an entry for the new version, in the house format
+- CHANGELOG has an entry for the new version, in the house format — **expected
+  to fail on the first run of a real release** (Phase 3 writes the prose; the
+  shape is preflight → prose → preflight, and the second verdict is the gate)
 - README's changelog section agrees with CHANGELOG.md
-- tag doesn't already exist
+- the tag, if it exists, **points at HEAD** — a four-outcome comparison, not an
+  existence check: diverged-and-published is routine, diverged-and-UNPUBLISHED
+  is the 0.25.2 mid-flight hazard and fails
 - **not already on PyPI** — immutability makes this the single most important
   mechanical check
+- **the publish hold exists** — the pypi environment's required reviewer lives
+  in repo Settings, not the tree; a warning here means a tag push publishes
+  immediately and the shipped ordering does not apply
 - per-channel readiness: certs present and unexpired, profile ≥30 days,
-  `.ship-local.conf` complete, build number not spent
+  `.ship-local.conf` complete (the build number is printed for the human, not
+  asserted)
 
 **Judgement — the skill:**
 
@@ -427,15 +482,19 @@ exactly the call the 0.15.0→0.15.19 run got wrong nineteen times.
 
 One page, in the house report style. Explicitly:
 
-- ordered steps with wall-clock estimates (`.dmg` ≈ 40 min of notary waiting;
-  TestFlight ≈ 35 min build + ~10 min upload; PyPI ≈ 25 min of CI)
-- **a visible line where reversible becomes irreversible**
+- ordered steps with wall-clock estimates (`.dmg` ≈ 30 min, one notary wait
+  since 14 Aug; TestFlight ≈ 35–50 min build + ~10 min upload; the two CI runs
+  overlap the builds; full release ≈ 1h55)
+- **both visible lines where reversible becomes irreversible** — soft (a build
+  number spent, testers reached) and hard (the publish approval; PyPI immutable)
 - what is being skipped and why
 - what the preflight flagged that the human is choosing to accept
 
 ### 4 · Authorise · 5 · Execute · 6 · Verify
 
-Execution is the existing scripts, in D2's order, with the report streaming. Every
+Execution is the existing scripts, in the shipped Phase 5 order (nine steps —
+push main+tag first, builds overlap both CI runs, uploads then approval last;
+D2's original order is superseded), with the report streaming. Every
 channel's post-condition is **probed, not assumed** — the `--build-status`
 confirmation in `upload-testflight.sh` is the pattern, and it exists because
 altool can exit 0 on a build that never arrives.
@@ -448,20 +507,28 @@ Final output is a table of what is now true, per channel, with the expiry clocks
 The first draft parked Snap as "manual, don't touch". That was wrong, and the
 distinction matters: **what's parked is the auto-trigger, not the publish.**
 
-`snap.yml` has `workflow_dispatch` as its *only* trigger, and two publish jobs:
+`snap.yml` **builds on every push and pull request** (build-health coverage,
+restored 8 Aug 2026 — the trigger parking below described the May–Aug state)
+and **publishes only deliberately**, via two publish jobs:
 
 | Job | Fires when |
 |---|---|
 | `publish-edge` | `github.event_name == 'workflow_dispatch'` |
 | `publish-stable` | `startsWith(github.ref, 'refs/tags/v')` |
 
-Since the sole trigger is dispatch, **`publish-stable` is reached by dispatching
+Publishing is dispatch-only, and **`publish-stable` is reached by dispatching
 the workflow against the tag ref** — `gh workflow run snap.yml --ref vX.Y.Z`.
-Dispatch against `main` and you get edge instead.
+Dispatch against `main` and you get edge.
+
+> **Correction (14 Aug 2026, audit §4):** "the ref *is* the channel selector"
+> overstates it. `publish-edge` fires on *any* dispatch — it carries **no ref
+> condition** — so a tag-ref dispatch fires **both** jobs: the ref *adds*
+> stable, it does not *switch* channels. Benign today (same bits to both), but
+> a Tier 2 promotion double-publishes, and any future `channel` input must
+> gate both job conditions or it will too.
 
 So Snap is a first-class orchestrated channel, and the release's Snap step is one
-command with a channel implied by the ref. That's a nicer design than it looks:
-the ref *is* the channel selector, so there's no separate flag to get wrong.
+command with a channel implied — with the caveat above — by the ref.
 
 The reason `push`/`pull_request` were parked (a snap on every commit is noise)
 argues *for* driving it from a release orchestrator, which is precisely the
@@ -487,8 +554,11 @@ one.
 
 ## What stays manual, deliberately
 
-- **Writing the CHANGELOG.** The skill reads and critiques it; it does not author
-  it. A generated changelog is a changelog nobody reads.
+- **Deciding the CHANGELOG.** The skill *drafts* it against the diff (that is
+  Phase 3's whole job — see §three prose surfaces above) and the human edits
+  and owns it. _(This bullet originally said "does not author it" — a residual
+  of the pre-rewrite verifier framing, contradicting the doc's own drafting
+  section. What stays manual is the judgement, not the typing.)_
 - **The website deploy.** Separate private repo, rsync over SSH agent, run by the
   maintainer. The skill checks the docs *match*; it does not deploy them.
 - **Choosing the bump type.**
@@ -522,10 +592,12 @@ overdue.
    `snap.yml` regained its push/PR triggers with `publish-edge` narrowed to
    dispatch-only so build coverage carries no publish risk. Both passed on the
    first run.
-2. **`check-release-ready.sh`** — the mechanical preflight. Useful standalone,
-   immediately, whether or not the skill ever exists.
-3. **The skill, scoped to Tier 1 prose.** Drafting the CHANGELOG entry and the
-   website updates against the diff is where the value concentrates today.
+2. **`check-release-ready.sh`** — the mechanical preflight. **Done 8 Aug 2026**
+   ("check-release-ready: the mechanical half of the release preflight"), and
+   extended 14 Aug with the tag→HEAD, five-state-CI and publish-hold probes.
+3. **The skill, scoped to Tier 1 prose.** **Done 8 Aug 2026** ("/bn-release —
+   orchestrate all channels, and draft the prose"); run live twice (0.25.2,
+   0.25.3), rewritten 14 Aug for the publish-hold ordering.
 4. **Tier 2 support** — App Store listing copy, promotion, phased release — when
    there is actually a store listing to keep true.
 
@@ -539,23 +611,28 @@ registry offers, and it costs a numbering discipline).
    catch changelog/doc drift continuously rather than at release time, when
    fixing it is most annoying. Cost: another gate that can cry wolf. _Leaning
    yes, advisory-only._
-2. **Does a normal Tier 1 release publish Snap to edge, stable, or both?** Snap's
-   own convention is edge-tracks-development, stable-is-curated. _Leaning: edge
-   every Tier 1, stable only at Tier 2._ Product call, not mechanical.
+2. ~~**Does a normal Tier 1 release publish Snap to edge, stable, or both?**~~
+   **Answered as leaned**: the shipped skill dispatches edge (`--ref main`) on
+   every Publish-tier release and stable (`--ref vX.Y.Z`) only at Tier 2 —
+   with the §Snap caveat that a tag-ref dispatch fires both jobs.
 3. **Which Tier 1 releases get promoted to the store?** Every third? Whenever a
    feature warrants it? Time-based is predictable; feature-based is honest. This
    is the decision the whole Tier 2 design hangs off and it is the user's.
-4. **Does `/bn-release` bump and commit, or expect that done?** Bumping is four
-   files plus a tag dance with a documented footgun, so folding it in is
-   tempting — but it makes the skill's first act a mutation, which sits badly with
-   "preflight is read-only". _Leaning: the skill runs `bump-version.py` **after**
-   authorisation, as step one of execute._
+4. ~~**Does `/bn-release` bump and commit, or expect that done?**~~ **Answered
+   as leaned — and the premise dissolved**: Phase 5 step 1 runs the bump after
+   authorisation, and the "tag dance with a documented footgun" no longer
+   exists ("stop bump-version.py tagging a commit that doesn't exist yet" —
+   the script stages files and never tags; the tag is created after the prose
+   commit).
 5. **How does it reach the website repo?** It's a separate private repo on this
    machine. Path via config like `.ship-local.conf`, or assume a sibling
    directory? _Leaning config, with a clear skip when absent._
 
 ## See also
 
+- [design-release-system-audit.md](design-release-system-audit.md) — the
+  eight-lens audit the two live runs triggered; supersedes D2, rescopes D3/D4,
+  and refuted the Snap ref-selector claim. The findings that rewrote this doc.
 - [release-channels.md](release-channels.md) — the five channels, triggers, clocks
 - [release.md](release.md) — the CLI process in detail
 - [design-testflight-upload.md](design-testflight-upload.md) — the gate-as-precondition

@@ -1,10 +1,26 @@
 ---
 status: current
-last-trued: 2026-08-04
-trued-against: HEAD@main on 2026-08-04 (0.24.0 cut AND published — notarytool crashed mid-upload, orphan purged by Apple, clean resubmit accepted; publishing moved to versioned artefact + stable redirect, verified live)
+last-trued: 2026-08-14
+trued-against: the one-round-trip notary model (app-level notarisation retired, "stop paying Apple twice"); previously 2026-08-04 against the 0.24.0 publish
 ---
 
 # Building the Developer-ID `.dmg`
+
+## Changelog
+
+- _2026-08-14_ — trued up: app-level notarisation retired (one notary round
+  trip, on the image; step 6 is now a documented absence), §Verifying rewritten
+  — the inner app is deliberately ticketless so `stapler validate` on it FAILS
+  by design; the gate asserts `codesign --deep --strict` instead and its inner
+  `spctl` verdict resolves via **online** ticket lookup (new network
+  dependency). Step 2 gains the pre-sign `doctor --self-test`. Anchors:
+  `desktop/scripts/build-dmg.sh:23-26,301-322`,
+  `desktop/scripts/check-dmg-shippable.sh:127-151`,
+  `desktop/scripts/ensure-sidecar.sh:149-185`, commits "stop paying Apple
+  twice: one notary round trip, one 675MB transfer", "run the bundle self-test
+  where it can actually run".
+- _2026-08-04_ — trued against the 0.24.0 cut-and-publish (notarytool
+  mid-upload crash, versioned artefact + stable redirect verified live).
 
 How we cut the notarised, stapled, **Developer-ID-signed** `.dmg` served for
 direct download from bristlenose.app. This is a distinct channel from the App
@@ -41,7 +57,9 @@ Strategy (who it's for, why it expires) is out of scope here; this doc is the
 `build-dmg.sh` bails on any non-zero exit. Stages:
 
 1. **Preflight** — cert present, `create-dmg`, notary profile.
-2. **Sidecar** — `ensure-sidecar.sh --force`: rebuild the PyInstaller bundle and
+2. **Sidecar** — `ensure-sidecar.sh --force`: rebuild the PyInstaller bundle,
+   run `doctor --self-test` on it **pre-sign** (the only window it can run —
+   sandbox-signed it aborts standalone; writes `.selftest-stamp`), then
    Developer-ID-sign every inner `.dylib`/`.so`/framework (Apple Distribution
    won't notarise; the whole tree must be Developer-ID-signed).
 3. **Archive** — *development* signing (see next section).
@@ -49,14 +67,20 @@ Strategy (who it's for, why it expires) is out of scope here; this doc is the
 5. **Verify** — `codesign --verify --deep --strict` (the sandbox + Developer-ID +
    keychain-group gate) + `check-release-binary.sh` (no dev/debug literals, no
    `get-task-allow`) **before** spending notary time.
-6. **Notarise + staple** the `.app` (staple so a user who drags the app out and
-   discards the `.dmg` still gets a clean, offline Gatekeeper check).
+6. *(retired 14 Aug 2026)* — app-level notarisation is deliberately absent.
+   The `.dmg` submission in step 8 covers the nested app's cdhashes; what the
+   separate round trip bought was offline first-launch of a dragged-out app,
+   traded away for halving the lane's slowest stretch. See §Verifying below.
 7. **create-dmg** — branded window, drag-to-Applications layout.
-8. **Sign + notarise + staple** the `.dmg`.
+8. **Sign + notarise + staple** the `.dmg` — the ONE notary round trip.
 9. **Manifest** — sha256s + commit SHA.
-10. **Final gates** — `spctl` accept + `stapler validate` on both `.app` and `.dmg`.
+10. **Final gates** — delegated to `check-dmg-shippable.sh`: `spctl` accept +
+    `stapler validate` on the image; `codesign --deep --strict` + `spctl` on
+    the app inside it (no staple check there — see §Verifying).
 
-Wall-clock ~35–45 min; the two ~15-min notary round-trips dominate. `--force`
+Wall-clock ~25–35 min; the single ~15-min notary round-trip dominates (it was
+two until 14 Aug 2026 — the lane was halved by dropping app-level notarisation,
+not by Apple getting faster). `--force`
 recreates the sidecar venv (clean dep closure + typeguard/`pyz+py` audit) — that
 ~10–15 min is deliberate for a release cut.
 
@@ -160,15 +184,27 @@ from the Internet — Open?"* tap, **not** the "unidentified developer" wall):
 ```sh
 # mount the .dmg, then on the app INSIDE it (what a downloader evaluates):
 spctl -a -t exec -vv "/Volumes/…/Bristlenose.app"   # → accepted; source=Notarized Developer ID
-stapler validate "…/Bristlenose.app"                # → "The validate action worked!" (offline ticket)
+codesign --verify --deep --strict "…/Bristlenose.app"   # → signature valid, deep and strict
 ```
+
+**Do NOT assert `stapler validate` on the inner app — it fails by design.**
+Since 14 Aug 2026 the app inside the image carries no ticket: only the `.dmg`
+is notarised and stapled, and its ticket covers the app's cdhashes. The `spctl`
+verdict on the inner app therefore resolves via an **online ticket lookup** —
+which is exactly what it proves (the dmg's notarisation reaches this app), and
+means the acceptance check needs network. The traded-away guarantee: first
+launch of a dragged-out app on a fully offline Mac needs one online check to
+clear quarantine; every later launch is offline-clean. Restore path if that
+ever matters (air-gapped channel): `notarize_and_staple "$APP"` before
+create-dmg, and revert the gate's inner-app check to a staple assertion.
 
 `source=Notarized Developer ID` is the gold standard. Expiry is
 build-date-anchored (`AlphaBuild.swift`, ~30 days from `GeneratedBuildInfo.buildDate`),
 so a fresh cut is good for ~30 days — re-cut to refresh the public download.
 
 **This is now mechanical — `desktop/scripts/check-dmg-shippable.sh <dmg>`** runs
-exactly the above (mount, assert on the app *inside*, detach) plus the filename
+the above (mount, assert on the app *inside* — signature + Gatekeeper, the
+latter needing network for the ticket lookup — detach) plus the filename
 ↔ `Info.plist` version agreement and a manifest ↔ image sha256 check. Step 10
 delegates to it, and any upload path must call it as a **precondition**, not as
 a step an operator can skip.
@@ -182,12 +218,19 @@ that *would* have caught an unnotarised artefact was the check nobody had
 written.
 
 **Why the app inside the image is the one that matters:** `create-dmg` takes a
-**copy**. Staple the `.app` after the image exists and the copy inside stays
-ticketless, silently — and a user who drags the app out, bins the `.dmg` and
-opens it offline gets *"Bristlenose can't be opened because Apple cannot check
-it for malicious software"*. On Sequoia and later, right-click → Open no longer
-bypasses that; they'd have to go to System Settings ▸ Privacy & Security. For a
-low-friction sampler handed out on a link, that is the whole funnel gone.
+**copy** — any check against the export-dir original proves nothing about the
+bytes a user receives. That lesson (4 Aug 2026) still governs the gate's
+mount-and-interrogate design.
+
+> **The offline-launch argument below described the OLD model and is retained
+> as the record of what was traded away (14 Aug 2026).** With the inner app
+> unstapled by design, the offline-drag scenario now costs one online check on
+> first launch — accepted deliberately for a 30-day expiring sampler whose
+> user just pulled 660 MB over the network. Original reasoning: a user who
+> drags the app out, bins the `.dmg` and opens it offline gets *"Bristlenose
+> can't be opened because Apple cannot check it for malicious software"*; on
+> Sequoia+ right-click → Open no longer bypasses that. That failure mode is
+> now reachable only with zero network on first launch.
 
 ## Publishing
 
@@ -234,6 +277,11 @@ current cut. The stable name is a permalink to a **concept**, not to a file.
 /dmg/Bristlenose.dmg         → HTTP 302 → /dmg/Bristlenose-0.24.0.dmg
 /dmg/Bristlenose-0.24.0.dmg  → HTTP 200, 674773487 bytes
 ```
+
+The redirect lives in `/dmg/.htaccess`, and that file is **written by
+`upload-dmg.sh` on every publish** — it is not pre-existing server config, so
+don't hunt for it in the website repo; the uploader owns it (and the documented
+rollback is editing its `Redirect` line to point at a previous versioned file).
 
 The redirect **takes precedence over a real file of the same name**. mod_alias
 resolves the URL before the filesystem is consulted, so the pre-redirect

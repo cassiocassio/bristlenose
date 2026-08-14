@@ -180,7 +180,7 @@ Order matters and is derived from reversibility, not convenience.
 3  Mac artefacts          run WHILE both CI runs execute — builds only, no uploads
                           SIGN_IDENTITY="Apple Distribution: Martin Storey (Z56GZVA2QB)" \
                             desktop/scripts/build-all.sh            ~35 min warm / ~50 cold
-                          desktop/scripts/build-dmg.sh              ~40 min, two notary waits
+                          desktop/scripts/build-dmg.sh              ~30 min, one notary wait
 
 4  THE GATE               both CI runs green — the main push run AND the release
                           run (whose macOS cells are blocking) — and every Mac

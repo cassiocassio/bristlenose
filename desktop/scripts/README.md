@@ -63,9 +63,16 @@ validates server-side instead (that's the `.dmg` channel's requirement, not this
 one).
 
 `upload-testflight.sh` runs `check-pkg-shippable.sh` as a precondition — there is
-no flag to skip it — then uploads, waits for a terminal state, and asks App Store
+no flag to skip it (it does set `BN_SKIP_ASC_VALIDATE=1`, which turns the gate's
+*last* check, `altool --validate-app`, into an announced skip on this path only:
+the upload transfers the same bytes minutes later and Apple revalidates
+server-side, so pre-validating shipped 675 MB twice per release; every local
+check still runs) — then uploads, waits for a terminal state, and asks App Store
 Connect independently whether the build actually arrived, because a zero exit
-from `altool` is not proof that it did. One-off setup, same gitignored
+from `altool` is not proof that it did. **A non-zero exit from the uploader does
+NOT mean the upload failed**: an unconfirmed delivery exits 1 with an
+UNCONFIRMED banner precisely because the build number is spent either way — the
+recovery is to look in App Store Connect, never to re-upload at that number. One-off setup, same gitignored
 `.ship-local.conf`:
 
 ```bash
@@ -80,7 +87,7 @@ Each upload spends its build number forever. A replacement needs a higher one:
 ### “Cut a `.dmg` and publish it”
 
 ```bash
-./desktop/scripts/build-dmg.sh              # ~40 min: build + two notary waits
+./desktop/scripts/build-dmg.sh              # ~30 min: build + ONE notary wait (app-level notarisation retired 14 Aug 2026)
 ./desktop/scripts/upload-dmg.sh --dry-run   # probes the host, changes nothing
 ./desktop/scripts/upload-dmg.sh             # publishes
 ```
@@ -203,8 +210,10 @@ build-all.sh ──────────────── App Store / TestFl
   ├─ ensure-sidecar.sh
   │    ├─ fetch-ffmpeg.sh
   │    ├─ build-sidecar.sh ─── sidecar-source-hash.sh
+  │    ├─ doctor --self-test   (PRE-SIGN, on rebuild → .selftest-stamp)
   │    ├─ sign-ffmpeg.sh
   │    └─ sign-sidecar.sh
+  ├─ (step 2a: asserts .selftest-stamp matches the bundle — exit 1 if absent/stale)
   ├─ check-sidecar-appstore-strings.sh ─ …-strings.py
   ├─ build-mcpb.sh ─── check-mcpb.sh
   ├─ check-release-binary.sh
@@ -248,7 +257,7 @@ safe to hand a stranger”, so there's no second implementation to drift.
 | Script | What it does |
 |---|---|
 | `build-sidecar.sh` | PyInstaller `--onedir` of `bristlenose serve` → `Resources/bristlenose-sidecar/`. Per-layer incremental; `--force` (releases) recreates `.venv-sidecar` so the dep closure is clean. **Needs the frontend pre-built** — it bundles `bristlenose/server/static/` but doesn't run `npm run build`. Prereq: `python3.12` on `PATH`. |
-| `ensure-sidecar.sh` | Orchestrates build + sign + deep-verify. The Xcode phase calls it, which is why a plain Cmd+R self-heals a stale bundle. |
+| `ensure-sidecar.sh` | Orchestrates build + **pre-sign `doctor --self-test`** + sign + deep-verify. The self-test runs between build and sign because that is the *only* window it can: sign-sidecar applies `app-sandbox` unconditionally (ASC requires it on nested executables) and a sandbox-signed binary aborts standalone (exit 133) — attempting it post-sign is how the check sat dead 14 Jul → 14 Aug. Writes `.bristlenose-sidecar.selftest-stamp` beside `.sign-stamp`; build-all's step 2a asserts it. The Xcode phase calls this, which is why a plain Cmd+R self-heals a stale bundle. |
 | `sign-sidecar.sh` | Signs every Mach-O (240+) leaf-first via a `wait -n` pool — not `xargs -P`, which drops child exit codes on BSD. |
 | `fetch-ffmpeg.sh` | Pinned-SHA256 static `ffmpeg` + `ffprobe` (arm64). Gitignored output; doesn't follow worktrees. |
 | `sign-ffmpeg.sh` | Signs those two (separate from the sidecar: single Mach-O, no entitlements). |
@@ -266,16 +275,16 @@ safe to hand a stranger”, so there's no second implementation to drift.
 | `check-logging-hygiene.sh [root]` | No Swift `Logger` interpolates a credential-shaped identifier without a `privacy:` marker; no `print()` dumps env. |
 | `check-appearance-seam.sh` | The light/dark mapping isn't re-derived outside `AppAppearance.swift`; panels call `adoptHostAppearance()`; `AppDelegate` still calls `beginApplying()`. |
 | `build-mcpb.sh` / `check-mcpb.sh` | Builds and gates the `.mcpb` agent extension bundled into the app. |
-| `check-pkg-shippable.sh <pkg>` | **Interrogates the `.app` inside the `.pkg`**, not the xcarchive copy the other gates read. Installer cert is specifically `3rd Party Mac Developer Installer`; payload holds exactly one app; version agrees with the working tree; signature `--deep --strict`; `get-task-allow` absent; host + nested **executables** carry `app-sandbox` (ASC rejection #2); no auto-derived framework identifiers (rejection #3); Hardened Runtime; privacy manifests; `ITSAppUsesNonExemptEncryption` present; §2.5.2 PYZ scan re-run against the bundled sidecar; provisioning profile not expired (warns at T-30); then `altool --validate-app` last, skipped for ad-hoc or unconfigured. |
-| `upload-testflight.sh [<pkg>]` | Runs the gate as a precondition (no skip flag), names the app record explicitly so altool never infers it, uploads with `--wait`, parses `PROCESSINGSTATE` as an allowlist, then **independently** re-asks ASC via `--build-status` because a zero exit from altool is not proof the build landed. Prints the delivery UUID on every path including failure, Apple's errors verbatim, and Transporter as the documented fallback. |
+| `check-pkg-shippable.sh <pkg>` | **Interrogates the `.app` inside the `.pkg`**, not the xcarchive copy the other gates read. Installer cert is specifically `3rd Party Mac Developer Installer`; payload holds exactly one app; version agrees with the working tree; signature `--deep --strict`; `get-task-allow` absent; host + nested **executables** carry `app-sandbox` (ASC rejection #2); no auto-derived framework identifiers (rejection #3); Hardened Runtime; privacy manifests; `ITSAppUsesNonExemptEncryption` present; §2.5.2 PYZ scan re-run against the bundled sidecar; provisioning profile not expired (warns at T-30); then `altool --validate-app` last — skipped for ad-hoc, unconfigured, or `BN_SKIP_ASC_VALIDATE=1` (the uploader's announced skip; standalone runs keep it as the dry run). Check 3 fails closed since 14 Aug: an empty version extraction is fatal, version and build mismatches report separately, and the four pbxproj configs must agree. |
+| `upload-testflight.sh [<pkg>]` | Runs the gate as a precondition (no skip flag), names the app record explicitly so altool never infers it, uploads with `--wait`, parses `PROCESSINGSTATE` as an allowlist, then **independently** re-asks ASC via `--build-status` because a zero exit from altool is not proof the build landed. Prints the delivery UUID on every path including failure, Apple's errors verbatim, and Transporter as the documented fallback. Since 14 Aug: an **unparsed** delivery UUID is fatal (it silently disables the independent check), and an unconfirmed delivery prints an UNCONFIRMED banner and **exits 1 — which does not mean the upload failed**; the build number is spent, check ASC, never re-upload at that number. |
 | `test-check-pkg-shippable.sh` | Drives each of the above red via a synthetic signed `.pkg` — a gate that can't fail is worse than no gate. 7 cases, ~10s. |
 
 ### Developer-ID `.dmg` only
 
 | Script | What it does |
 |---|---|
-| `build-dmg.sh` | The 10-stage cut: sidecar → archive → export as Developer ID → verify → notarise + staple `.app` → `create-dmg` → notarise + staple `.dmg` → manifest → gates. |
-| `check-dmg-shippable.sh <dmg>` | Versioned filename; image signed, stapled, Gatekeeper-accepted; and the load-bearing one — the app **inside the mounted image** is stapled and reads `source=Notarized Developer ID`. Plus filename↔`Info.plist` version agreement and manifest↔image sha256. |
+| `build-dmg.sh` | The 10-stage cut: sidecar → archive → export as Developer ID → verify → `create-dmg` → notarise + staple `.dmg` (**one** round trip — app-level notarisation retired 14 Aug 2026; the dmg's ticket covers the nested app, trading offline-first-launch of a dragged-out app) → manifest → gates. |
+| `check-dmg-shippable.sh <dmg>` | Versioned filename; image signed, stapled, Gatekeeper-accepted; and the load-bearing one — the app **inside the mounted image** passes `codesign --deep --strict` and reads `source=Notarized Developer ID` (the latter via **online** ticket lookup — the inner app is deliberately unstapled since 14 Aug, so this gate needs network). Plus filename↔`Info.plist` version agreement and manifest↔image sha256. |
 | `upload-dmg.sh [--dry-run] [--keep N]` | Gates, stages to a dot-prefixed name **in the target dir** (so `mv` stays atomic), verifies the sha256 of what landed, `chmod 644`, swaps, repoints the permalink, reaps all but the newest N. Skips the transfer if identical bytes are already on the host. |
 
 ### Dev / QA / tests

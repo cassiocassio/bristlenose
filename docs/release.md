@@ -1,18 +1,32 @@
 ---
 status: partial
-last-trued: 2026-07-16
-trued-against: HEAD@main on 2026-07-16
+last-trued: 2026-08-14
+trued-against: the publish-hold release rebuild (pypi environment hold live, strict-macos wired, bump-version no longer tags)
 ---
 
 # Release Process
 
-> **Trued 2026-07-16.** Corrected "Cutting a release" to use
-> `scripts/bump-version.py` (the doc described hand-editing, which drifted once
-> the script landed), folded in the two mandatory gates that lived only in
-> `CLAUDE.md` (evening timing, post-push PyPI verification), and added the
-> **Desktop channels** pointer — the `.dmg` and App Store paths were entirely
-> absent, so a reader here would ship a half-release. `status: partial` because
-> this doc is accurate for the CLI channels but deliberately covers only those.
+> **Truing status:** Partial — CLI channels only, deliberately (see Desktop
+> channels pointer at the end). Head and tail trued 2026-08-14 against the
+> publish-hold rebuild; the 2026-07-16 pass folded in bump-version.py and the
+> two mandatory gates.
+
+## Changelog
+
+- _2026-08-14_ — trued up: rewrote §Post-push verification (the poll now starts
+  at the **approval**, not the tag push — the old timeout remedy was tag surgery
+  on a merely-unapproved release); redrew the §What-happens-after diagram (hold
+  on `publish`, `verify-pypi` job, `strict-macos: true`); corrected every Snap
+  claim (strict confinement not classic, edge publishes on dispatch only since
+  8 Aug, publish jobs fail loudly on missing credentials); §CI gates gains the
+  release-run macOS blocking; §Desktop channels upload path is
+  `upload-testflight.sh`, Transporter is the fallback. Anchors:
+  `.github/workflows/release.yml:111-122`, `.github/workflows/snap.yml:29-35,62-68`,
+  `snap/snapcraft.yaml:3`, commits "hold publish for approval, and make the
+  release gate certify macOS", "stop bump-version.py tagging a commit that
+  doesn't exist yet".
+- _2026-07-16_ — trued up: bump-version.py flow, two mandatory gates, Desktop
+  channels pointer.
 
 **Scope: PyPI · Homebrew · Snap (the CLI channels).** The desktop app ships
 through separate channels — Developer-ID `.dmg` and App Store / TestFlight —
@@ -94,21 +108,27 @@ harmlessly.
   (avoids version churn during client hours). Pushing `main`+tag and building
   publish nothing, so the run can start any time; a morning approval after an
   overnight run is a sanctioned override. Weekends: any time.
-- **Post-push PyPI verification (mandatory):** a tag reaching GitHub is **not** a
-  release reaching PyPI — the pipeline has silently stalled before (v0.15.5→.9,
-  ~6 days, unnoticed). After pushing the tag, poll until PyPI flips:
+- **Post-APPROVAL PyPI verification (mandatory):** an approved publish job is
+  **not** a release reaching PyPI — the pipeline has silently stalled before
+  (v0.15.5→.9, ~6 days, unnoticed). The clock starts at the **approval**, not
+  the tag push: until you approve, the run is *parked at the hold by design*,
+  and a poll started at tag-push time will "time out" on a release that is
+  merely unapproved. **Do not reach for tag surgery on an unapproved run** —
+  check the run page first; if `publish` shows "waiting for review", the fix
+  is the Approve button, not the tag. After approving, verify:
 
   ```sh
-  for i in $(seq 1 20); do sleep 90
-    pypi=$(curl -s https://pypi.org/pypi/bristlenose/json | jq -r .info.version)
-    echo "[$i] PyPI: $pypi"; [ "$pypi" = "X.Y.Z" ] && break
-  done
+  curl -s -o /dev/null -w '%{http_code}\n' https://pypi.org/pypi/bristlenose/X.Y.Z/json
+  # 200 = published; the version-specific endpoint is authoritative
+  # (the /json index is CDN-cached and can read stale — don't trust a single
+  # negative from it)
   ```
 
-  20×90s ≈ 30 min (recent runs take 23–25 min). If PyPI still shows the old
-  version after 30 min, `gh run view --workflow=release.yml` to check the run
-  fired; a debounced tag push may need redelivery
-  (`git push --delete origin vX.Y.Z && git push origin vX.Y.Z`).
+  `release.yml`'s own `verify-pypi` job also polls server-side and turns a
+  stalled publish into a red run. The tag-redelivery workaround
+  (`git push --delete origin vX.Y.Z && git push origin vX.Y.Z`) remains valid
+  for exactly one case: `gh run view --workflow=release.yml` shows the workflow
+  **never fired at all** (the debounced-tag-push class).
 
 **Test/CI/docs-only fixes reuse the tag** — a change touching only `tests/`,
 `e2e/`, `docs/`, `.claude/`, `.github/`, or fixtures ships a byte-identical
@@ -121,10 +141,14 @@ The release pipeline spans **three repos/workflows** and runs multiple jobs:
 
 ```
 bristlenose repo (release.yml) — triggered by v* tag
-├─ ci           → ruff, mypy, pytest (via workflow_call to ci.yml)
-├─ build        → sdist + wheel (python -m build)
-├─ publish      → PyPI via OIDC trusted publishing (no token needed)
+├─ ci           → full suite via workflow_call to ci.yml, WITH strict-macos: true
+│                 (macOS test cells BLOCK here; informational on daily pushes)
+├─ build        → sdist + wheel (python -m build), SBOMs, attestation
+├─ publish      → ⏸ PARKS on the pypi environment's required-reviewer hold
+│                 (up to 30 days) — PyPI publishes only after you Approve.
+│                 OIDC trusted publishing, no token.
 ├─ github-release → creates GitHub Release with auto-generated notes
+├─ verify-pypi  → server-side poll; a stalled publish goes RED, not silent
 └─ notify-homebrew → sends repository_dispatch to tap repo
                         │
                         ▼
@@ -136,15 +160,19 @@ homebrew-bristlenose repo (update-formula.yml)
                    See docs/design-homebrew-packaging.md for why the
                    formula uses post_install pip instead of resource blocks)
 
-bristlenose repo (snap.yml) — triggered by push to main AND v* tags
-├─ build        → snapcore/action-build (amd64, ~10 min)
-├─ publish-edge → push to main → publishes to snap edge channel
-└─ publish-stable → v* tag → publishes to snap stable channel
+bristlenose repo (snap.yml) — BUILDS on every push/PR; publishes only on demand
+├─ build          → snapcore/action-build (amd64, ~10 min) — publishes nothing
+├─ publish-edge   → workflow_dispatch ONLY (gh workflow run snap.yml --ref main)
+└─ publish-stable → dispatch against a v* tag ref (--ref vX.Y.Z)
+                    NB a tag-ref dispatch fires BOTH publish jobs — the ref
+                    adds stable, it does not switch channels
 ```
 
-Note: the snap workflow runs on **every push to main** (not just tags). This
-means edge always has the latest main build. Stable only updates on tagged
-releases, same as PyPI/Homebrew.
+Note: since 8 Aug 2026 the snap workflow **builds** on every push (build-health
+coverage, zero publish risk) but **publishes only when dispatched** — edge does
+NOT track main automatically, and goes stale unless someone dispatches it.
+Both publish jobs fail loudly if `SNAPCRAFT_STORE_CREDENTIALS` is missing
+(they were green no-ops before 14 Aug 2026).
 
 ## Cross-repo topology
 
@@ -174,7 +202,10 @@ releases, same as PyPI/Homebrew.
 ## CI gates
 
 - **Ruff**: hard gate
-- **pytest**: hard gate
+- **pytest**: hard gate — and on **release runs** the macOS matrix cells are
+  **blocking** too (`ci.yml`'s `strict-macos` input, passed `true` by
+  `release.yml`; informational on daily pushes). A release green certifies both
+  platforms; a push green certifies Linux.
 - **mypy**: informational (continue-on-error due to third-party SDK type issues)
 
 ## Homebrew tap automation
@@ -214,10 +245,9 @@ The formula at `Formula/bristlenose.rb` creates a Python 3.12 virtualenv and run
 # 1. Register the snap name
 snapcraft register bristlenose
 
-# 2. Request classic confinement approval
-#    Post at https://forum.snapcraft.io with justification
-#    (CLI tool needing arbitrary filesystem access, .env files, etc.)
-#    Takes 3-5 business days.
+# 2. (historical) Classic confinement approval was planned but never needed —
+#    the shipped snap is STRICT confinement (snap/snapcraft.yaml:3), so there
+#    is no forum request step.
 
 # 3. Export store credentials for CI
 snapcraft export-login --snaps=bristlenose \
@@ -232,29 +262,35 @@ snapcraft export-login --snaps=bristlenose \
 
 The snap pipeline is independent of the PyPI/Homebrew pipeline. It runs via `.github/workflows/snap.yml`:
 
-- **Every push to main** → builds amd64 snap → publishes to `edge` channel
-- **Every v* tag** → builds amd64 snap → publishes to `stable` channel
-- **Pull requests** → builds snap (no publish) → artifact available for download
+- **Every push / pull request** → builds the amd64 snap — **publishes nothing**
+  (build-health coverage restored 8 Aug 2026; publishing is a decision, not a
+  side effect of committing)
+- **`gh workflow run snap.yml --ref main`** → publishes the build to `edge`
+- **`gh workflow run snap.yml --ref vX.Y.Z`** → publishes to `stable` — and NB
+  a tag-ref dispatch fires the edge job too (the ref adds stable, it does not
+  switch)
+- Both publish jobs **fail loudly** if `SNAPCRAFT_STORE_CREDENTIALS` is absent
+  (silent green skips retired 14 Aug 2026)
 
 The snap version is read from `bristlenose/__init__.py` at build time via `adopt-info` + `craftctl` — no manual version bumping in `snapcraft.yaml`.
 
 ### Channel strategy
 
 ```
-edge      ← every push to main (CI auto-publishes)
+edge      ← manual dispatch against main (does NOT auto-track main)
 beta      ← manual promotion: snapcraft release bristlenose <rev> beta
 candidate ← manual promotion: snapcraft release bristlenose <rev> candidate
-stable    ← tagged releases (CI auto-publishes)
+stable    ← manual dispatch against a v* tag ref
 ```
 
 Users install from stable by default:
 ```bash
-sudo snap install bristlenose --classic
+sudo snap install bristlenose
 ```
 
 Testers install from edge:
 ```bash
-sudo snap install bristlenose --edge --classic
+sudo snap install bristlenose --edge
 ```
 
 ### Manual snap operations
@@ -270,7 +306,7 @@ snapcraft release bristlenose <revision> beta
 snapcraft --destructive-mode
 
 # Install a locally-built snap (bypasses Store entirely)
-sudo snap install --dangerous --classic ./bristlenose_*.snap
+sudo snap install --dangerous ./bristlenose_*.snap
 ```
 
 ### Architecture note
@@ -284,11 +320,15 @@ above applies to them, and they're decoupled from the CLI version line (a CLI
 release doesn't imply a desktop build, or vice versa):
 
 - **Developer-ID `.dmg`** — direct download from bristlenose.app (an expiring
-  alpha sampler). Built + notarised by `desktop/scripts/build-dmg.sh`, published
-  by `scp` + the website deploy. Full mechanics:
-  **[design-dmg-build.md](design-dmg-build.md)**.
+  alpha sampler). Built + notarised by `desktop/scripts/build-dmg.sh` (one
+  notary round trip, on the image — app-level notarisation retired 14 Aug
+  2026), published atomically by `desktop/scripts/upload-dmg.sh`. Full
+  mechanics: **[design-dmg-build.md](design-dmg-build.md)**.
 - **App Store / TestFlight `.pkg`** — Apple Distribution signed, built by
-  `desktop/scripts/build-all.sh`; uploaded via Transporter / `xcrun altool`. See
+  `desktop/scripts/build-all.sh`; uploaded by
+  `desktop/scripts/upload-testflight.sh` (gate as precondition, independent
+  ASC confirmation; Transporter is the documented *fallback* on its failure
+  path). See
   **[design-desktop-build-orchestration.md](design-desktop-build-orchestration.md)**
   and `desktop/CLAUDE.md`.
 

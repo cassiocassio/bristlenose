@@ -171,9 +171,16 @@ reports X.Y.Z to every probe.
 **Refuted — leave alone.** This is the part that answers *"is the complexity
 warranted?"*: `check-pkg-shippable`'s 16 checks each trace to a taken post-upload
 rejection, costing seconds against a 644 MB upload and a forever-spent build number;
-`check-dmg-shippable`'s mount-and-interrogate is the 4 Aug create-dmg lesson, and
-`spctl` passes online *without* a staple, so the staple check is the distinct offline
-guarantee; stage 2c's `itms-services` scan is the only coverage in the ad-hoc/IDE loop.
+`check-dmg-shippable`'s mount-and-interrogate is the 4 Aug create-dmg lesson;
+stage 2c's `itms-services` scan is the only coverage in the ad-hoc/IDE loop.
+
+> _Correction, 14 Aug:_ this list originally also defended the inner-app staple
+> check ("the staple check is the distinct offline guarantee") — which the
+> **Endorsed** list above simultaneously authorised removing. The endorsed side
+> won when the relaxation shipped: the staple check was replaced by a
+> `codesign --deep --strict` assertion, and offline-first-launch was the
+> guarantee knowingly traded. One doc should not argue both sides; the losing
+> argument is preserved here as the record of the trade.
 
 > **The artefact gates are earned complexity. The prose sprawl is not.**
 

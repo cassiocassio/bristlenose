@@ -191,12 +191,21 @@ class OutputPaths:
         """Intermediate JSON file: .bristlenose/intermediate/{filename}"""
         return self.intermediate_dir / filename
 
-    # --- PII summary (still at root level) ---
-
-    @property
-    def pii_summary(self) -> Path:
-        """PII redaction summary: pii_summary.txt"""
-        return self.output_dir / "pii_summary.txt"
+    # NOTE: there is deliberately no `pii_summary` helper here.
+    #
+    # `pii_summary.txt` is a re-identification key — every original PII value
+    # with its timecode, deduplicated into one small portable file. It lives in
+    # `.bristlenose/` and is written by exactly one function,
+    # `s07_pii_removal.write_pii_summary`, pinned by
+    # `tests/test_pii_audit.py::TestPiiSummaryLocation`.
+    #
+    # A helper used to sit here returning `output_dir / "pii_summary.txt"` — the
+    # *shareable* root, which is the one location the rule forbids. It had no
+    # callers, so nothing was broken; the hazard was that CLAUDE.md points
+    # everyone at `OutputPaths` for "consistent path construction", so the next
+    # person to reach for the canonical helper would have got the forbidden
+    # path with the house style vouching for it. Removed 14 Aug 2026. If you
+    # need the path, take it from the writer.
 
     # --- Directory creation ---
 

@@ -457,10 +457,14 @@ Compute type for faster-whisper: \fBint8\fR, \fBfloat16\fR, or \fBfloat32\fR. De
 Enable PII redaction. Default: \fBfalse\fR.
 .TP
 .B BRISTLENOSE_PII_LLM_PASS
-Extra LLM-based PII pass. Default: \fBfalse\fR.
+\fBNot implemented.\fR Reserved for a planned LLM-based second pass. Setting it
+to true makes a redaction run stop with an error rather than silently redacting
+with Presidio alone. Default: \fBfalse\fR.
 .TP
 .B BRISTLENOSE_PII_CUSTOM_NAMES
-Comma-separated list of additional names to redact.
+\fBNot implemented.\fR Reserved for a list of additional names to always redact.
+Setting it makes a redaction run stop with an error, because the listed names
+would not in fact be removed. Default: empty.
 .SS Pipeline settings
 .TP
 .B BRISTLENOSE_MIN_QUOTE_WORDS

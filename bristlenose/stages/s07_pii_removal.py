@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import time
-import warnings
 from collections import Counter
 from pathlib import Path
 
@@ -18,6 +17,7 @@ from bristlenose.models import (
     TranscriptSegment,
     format_timecode,
 )
+from bristlenose.utils.text import count_noun
 
 logger = logging.getLogger(__name__)
 
@@ -156,18 +156,35 @@ def remove_pii(
     Returns:
         Tuple of (cleaned transcripts, all redactions across all sessions).
     """
-    # Warn about configured-but-unimplemented fields
+    # Refuse configured-but-unimplemented fields rather than warning past them.
+    #
+    # Both stay deliberately unimplemented (D7, docs/design-redact-pii.md —
+    # `pii_llm_pass` is the reserved stub for the planned regex + LLM-NER
+    # approach, so it graduates rather than gets built against Presidio). The
+    # defect was never that they do nothing; it was that they did nothing
+    # *quietly*. A `warnings.warn` is shown once per location and is trivially
+    # lost in a long run, so a researcher who listed the names they most wanted
+    # gone got a run that reported redaction succeeded while those exact names
+    # sat in `transcripts-cooked/` — fake success in a privacy guarantee, which
+    # is the one place it cannot be tolerated. Fail closed: for a redaction
+    # control, refusing to run is the only safe direction.
+    unimplemented: list[str] = []
     if settings.pii_llm_pass:
-        warnings.warn(
-            "pii_llm_pass is configured but not yet implemented — "
-            "no LLM second pass will run. PII detection uses Presidio only.",
-            stacklevel=2,
+        unimplemented.append(
+            "pii_llm_pass — there is no LLM second pass; detection is Presidio-only"
         )
     if settings.pii_custom_names:
-        warnings.warn(
-            "pii_custom_names is configured but not yet implemented — "
-            "the listed names will NOT be automatically redacted.",
-            stacklevel=2,
+        unimplemented.append(
+            f"pii_custom_names — the {count_noun(len(settings.pii_custom_names), 'name')} "
+            "listed here would NOT be redacted"
+        )
+    if unimplemented:
+        raise ValueError(
+            "PII redaction was asked for settings it cannot honour:\n  - "
+            + "\n  - ".join(unimplemented)
+            + "\n\nUnset them to run with Presidio-only redaction, which is what "
+            "the CLI ships today. They are reserved for the planned regex + LLM "
+            "approach — see docs/design-redact-pii.md."
         )
 
     logger.info("Initialising Presidio (loads spaCy NLP model on first run)...")

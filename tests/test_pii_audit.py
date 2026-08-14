@@ -3,7 +3,8 @@
 Two test layers:
 
 1. **Config tests** (CI-safe): Verify score threshold, default entities, and
-   runtime warnings for unimplemented config fields.
+   that the two unimplemented config fields refuse to run rather than
+   redacting more weakly than asked.
 
 2. **Detection tests** (``@pytest.mark.slow``, skipped in CI): Run the horror-
    show transcript through Presidio and check what gets caught vs missed.
@@ -17,7 +18,6 @@ PII planted across 8 adversarial categories.  Expected results are in
 
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -111,50 +111,68 @@ class TestPiiConfig:
         assert "Sarah Thompson" not in repr_str
         assert "<14 chars>" in repr_str
 
-    def test_warning_pii_llm_pass(self) -> None:
-        """Setting pii_llm_pass=True should emit a warning."""
+    def test_pii_llm_pass_refuses_to_run(self) -> None:
+        """`pii_llm_pass` is unimplemented, so redaction must refuse, not warn.
+
+        The outcome under test is that no redacted output is produced at all.
+        A warning let the run continue and report success while delivering
+        weaker redaction than was asked for.
+        """
         settings = BristlenoseSettings(pii_enabled=True, pii_llm_pass=True)
-        # We need to call remove_pii to trigger the warning, but we can't
-        # without Presidio.  Instead, test the warning logic directly.
         from bristlenose.stages.s07_pii_removal import remove_pii
 
-        with warnings.catch_warnings(record=True) as w, \
-                patch("bristlenose.stages.s07_pii_removal._init_presidio") as mock_init:
+        with patch("bristlenose.stages.s07_pii_removal._init_presidio") as mock_init:
             mock_init.return_value = (MagicMock(), MagicMock())
-            warnings.simplefilter("always")
-            remove_pii([], settings)
-            warning_messages = [str(x.message) for x in w]
-            assert any("pii_llm_pass" in msg for msg in warning_messages)
+            with pytest.raises(ValueError, match="pii_llm_pass"):
+                remove_pii([], settings)
 
-    def test_warning_pii_custom_names(self) -> None:
-        """Setting pii_custom_names should emit a warning."""
+    def test_pii_custom_names_refuses_to_run(self) -> None:
+        """`pii_custom_names` is unimplemented, so redaction must refuse, not warn."""
         settings = BristlenoseSettings(
             pii_enabled=True,
             pii_custom_names=["Sarah Thompson"],
         )
         from bristlenose.stages.s07_pii_removal import remove_pii
 
-        with warnings.catch_warnings(record=True) as w, \
-                patch("bristlenose.stages.s07_pii_removal._init_presidio") as mock_init:
+        with patch("bristlenose.stages.s07_pii_removal._init_presidio") as mock_init:
             mock_init.return_value = (MagicMock(), MagicMock())
-            warnings.simplefilter("always")
-            remove_pii([], settings)
-            warning_messages = [str(x.message) for x in w]
-            assert any("pii_custom_names" in msg for msg in warning_messages)
+            with pytest.raises(ValueError, match="pii_custom_names"):
+                remove_pii([], settings)
 
-    def test_no_warning_default_config(self) -> None:
-        """Default config should not emit warnings."""
+    def test_refusal_does_not_echo_the_names_it_refuses(self) -> None:
+        """The error counts the names; it must never quote them.
+
+        Same rule as `PiiRedaction.__repr__` above — an exception message
+        travels into logs, `pipeline-events.jsonl`, and pasted bug reports,
+        every one of which is a named re-identification surface.
+        """
+        settings = BristlenoseSettings(
+            pii_enabled=True,
+            pii_custom_names=["Sarah Thompson", "Ravi Chandrasekaran"],
+        )
+        from bristlenose.stages.s07_pii_removal import remove_pii
+
+        with patch("bristlenose.stages.s07_pii_removal._init_presidio") as mock_init:
+            mock_init.return_value = (MagicMock(), MagicMock())
+            with pytest.raises(ValueError) as excinfo:
+                remove_pii([], settings)
+
+        message = str(excinfo.value)
+        assert "Sarah Thompson" not in message
+        assert "Ravi Chandrasekaran" not in message
+        assert "2 names" in message  # count_noun pluralises
+
+    def test_default_config_runs(self) -> None:
+        """Neither field set — redaction proceeds normally."""
         settings = BristlenoseSettings(pii_enabled=True)
         from bristlenose.stages.s07_pii_removal import remove_pii
 
-        with warnings.catch_warnings(record=True) as w, \
-                patch("bristlenose.stages.s07_pii_removal._init_presidio") as mock_init:
+        with patch("bristlenose.stages.s07_pii_removal._init_presidio") as mock_init:
             mock_init.return_value = (MagicMock(), MagicMock())
-            warnings.simplefilter("always")
-            remove_pii([], settings)
-            warning_messages = [str(x.message) for x in w]
-            assert not any("pii_llm_pass" in msg for msg in warning_messages)
-            assert not any("pii_custom_names" in msg for msg in warning_messages)
+            clean, redactions = remove_pii([], settings)
+
+        assert clean == []
+        assert redactions == []
 
 
 class TestPiiSummaryLocation:

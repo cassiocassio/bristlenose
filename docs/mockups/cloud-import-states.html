@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud import — window states</title>
+<style>
+:root{
+  --bg:#f2f2f7; --page:#fff; --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+  --line:#d8d8dc; --hairline:#e6e6ea; --chrome:#ececed; --chrome2:#e4e4e6;
+  --accent:#007aff; --sel:#007aff; --selink:#fff;
+  --warn:#c9500f; --warnbg:#fdf0e6; --bad:#c92a2a; --good:#1a7f37;
+  --shadow:0 12px 40px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.10);
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+    --line:#3a3a3d; --hairline:#2c2c2f; --chrome:#2a2a2c; --chrome2:#242426;
+    --accent:#0a84ff; --sel:#0a5fce; --selink:#fff;
+    --warn:#ff9f45; --warnbg:#3a2a18; --bad:#ff6b6b; --good:#4ac26b;
+    --shadow:0 12px 40px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+body{
+  margin:0; padding:40px 24px 80px;
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  background:var(--bg); color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px;margin:0 auto}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+.sub{color:var(--dim);margin:0 0 8px;max-width:70ch}
+.meta{color:var(--faint);font-size:12px;margin:0 0 40px}
+h2{font-size:15px;font-weight:700;margin:44px 0 4px;letter-spacing:-.01em}
+h2 .n{color:var(--faint);font-weight:500;margin-right:8px;font-variant-numeric:tabular-nums}
+.note{color:var(--dim);margin:0 0 14px;max-width:78ch;font-size:12.5px}
+.note b{color:var(--ink);font-weight:600}
+.why{
+  border-left:2px solid var(--accent); padding:2px 0 2px 12px; margin:0 0 14px;
+  color:var(--dim); font-size:12.5px; max-width:78ch;
+}
+
+/* ---- window chrome ---- */
+.win{
+  background:var(--page); border-radius:10px; box-shadow:var(--shadow);
+  overflow:hidden; margin:0 0 8px; border:.5px solid var(--line);
+}
+.win.sm{max-width:620px}
+.tbar{
+  background:linear-gradient(var(--chrome),var(--chrome2));
+  border-bottom:.5px solid var(--line);
+  padding:0 14px; height:52px; display:flex; align-items:center; gap:12px;
+}
+.lights{display:flex;gap:8px;flex:0 0 auto;margin-right:4px}
+.lights i{width:12px;height:12px;border-radius:50%;display:block}
+.lights i:nth-child(1){background:#ff5f57}
+.lights i:nth-child(2){background:#febc2e}
+.lights i:nth-child(3){background:#28c840}
+.titles{flex:1 1 auto;min-width:0}
+.wtitle{font-size:13px;font-weight:600;line-height:1.2}
+.wsub{font-size:11px;color:var(--dim);line-height:1.3}
+.search{
+  flex:0 0 200px; height:24px; border-radius:6px; border:.5px solid var(--line);
+  background:var(--page); display:flex;align-items:center;gap:6px;padding:0 8px;
+  font-size:12px;color:var(--faint);
+}
+.search.on{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+.search.on .q{color:var(--ink)}
+
+/* ---- table ---- */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{
+  text-align:left;font-weight:500;color:var(--dim);font-size:11px;
+  padding:6px 12px;border-bottom:.5px solid var(--line);background:var(--page);
+  position:sticky;top:0;
+}
+thead th.sorted{color:var(--ink);font-weight:600}
+tbody td{padding:7px 12px;border-bottom:.5px solid var(--hairline);vertical-align:middle}
+tbody tr.done td{color:var(--faint)}
+tbody tr.focus{box-shadow:inset 0 0 0 2px var(--accent)}
+tbody td.c{width:30px;padding-left:12px;padding-right:0}
+/* macOS checkbox — rounded-cap checkmark, gradient well, hairline border */
+.cb{
+  width:14px;height:14px;border-radius:3.5px;
+  border:.5px solid rgba(0,0,0,.24);
+  background:linear-gradient(#fff,#f6f6f7);
+  box-shadow:0 .5px 1px rgba(0,0,0,.05);
+  display:inline-block;position:relative;vertical-align:-2.5px;
+  background-repeat:no-repeat;background-position:center;
+}
+.cb.on{
+  border-color:transparent;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3.4 7.3 5.85 9.75 10.7 4.3' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-color:var(--accent);
+  box-shadow:0 .5px 1.5px rgba(0,0,0,.16);
+}
+.cb.on:not(.dis){background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3.4 7.3 5.85 9.75 10.7 4.3' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),linear-gradient(rgba(255,255,255,.14),transparent)}
+.cb.dis{
+  border-color:transparent;box-shadow:none;
+  background-color:color-mix(in srgb,var(--faint) 42%,transparent);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3.4 7.3 5.85 9.75 10.7 4.3' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme:dark){
+  .cb{border-color:rgba(255,255,255,.16);background:linear-gradient(#5b5b60,#525257);box-shadow:none}
+}
+.mt{font-weight:500}
+.who{font-size:11px;color:var(--dim);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:44ch}
+.who .me{color:var(--faint)}
+.who .pn{color:var(--ink)}
+.who .more{color:var(--faint)}
+.tm{font-size:11px;color:var(--dim);margin-top:1px;font-variant-numeric:tabular-nums}
+.disc{color:var(--accent);text-decoration:none;border-bottom:.5px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+.grip{
+  height:14px;background:
+    linear-gradient(135deg,transparent 45%,var(--line) 45%,var(--line) 55%,transparent 55%) right bottom/5px 5px no-repeat,
+    linear-gradient(135deg,transparent 45%,var(--line) 45%,var(--line) 55%,transparent 55%) right 4px bottom 4px/5px 5px no-repeat;
+}
+.dim{color:var(--dim)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.exp{color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.exp.hot{color:var(--warn);font-weight:600}
+.pill{
+  display:inline-block;padding:1px 7px;border-radius:9px;font-size:10.5px;
+  background:var(--chrome);color:var(--dim);white-space:nowrap;font-weight:500;
+}
+.pill.warn{background:var(--warnbg);color:var(--warn)}
+.pill.bad{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
+.pill.good{background:color-mix(in srgb,var(--good) 15%,transparent);color:var(--good)}
+tr.sel .pill{background:rgba(255,255,255,.22);color:#fff}
+.tick{color:var(--good);font-weight:700}
+.bar{height:3px;border-radius:2px;background:var(--line);overflow:hidden;width:90px;display:inline-block;vertical-align:middle}
+.bar i{display:block;height:100%;background:var(--accent)}
+tr.sel .bar{background:rgba(255,255,255,.3)}
+tr.sel .bar i{background:#fff}
+
+/* ---- footer ---- */
+.foot{
+  border-top:.5px solid var(--line);background:var(--chrome2);
+  padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.arith{
+  flex:1 1 auto;min-width:220px;font-size:11.5px;color:var(--dim);
+  font-variant-numeric:tabular-nums;
+}
+.arith b{color:var(--ink);font-weight:600}
+.arith .u{color:var(--warn);font-weight:600}
+.pop{
+  height:24px;border-radius:6px;border:.5px solid var(--line);background:var(--page);
+  padding:0 22px 0 9px;font-size:12px;display:inline-flex;align-items:center;
+  position:relative;color:var(--ink);
+}
+.pop:after{content:"⌄";position:absolute;right:7px;top:0px;color:var(--dim);font-size:12px}
+.btn{
+  height:24px;border-radius:6px;padding:0 13px;font-size:12px;font-weight:500;
+  display:inline-flex;align-items:center;border:.5px solid var(--line);
+  background:var(--page);color:var(--ink);
+}
+.btn.pri{background:var(--accent);border-color:transparent;color:#fff}
+.btn.off{opacity:.4}
+
+/* ---- empty states ---- */
+.cuv{
+  padding:52px 24px;text-align:center;display:flex;flex-direction:column;
+  align-items:center;gap:7px;
+}
+.cuv .g{font-size:34px;line-height:1;opacity:.42;margin-bottom:2px}
+.cuv .t{font-size:14px;font-weight:600}
+.cuv .d{font-size:12.5px;color:var(--dim);max-width:44ch}
+.cuv .a{margin-top:10px}
+.spin{
+  width:17px;height:17px;border-radius:50%;
+  border:2px solid var(--line);border-top-color:var(--dim);
+  animation:sp .8s linear infinite;
+}
+/* Microsoft-branded sign-in button — their asset, their redlines, their string */
+.msbtn{
+  display:inline-flex;align-items:center;gap:12px;height:41px;padding:0 12px;
+  background:#fff;border:1px solid #8c8c8c;color:#5e5e5e;
+  font:15px "Segoe UI",-apple-system,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  .msbtn{background:#2f2f2f;border-color:#2f2f2f;color:#fff}
+}
+.msbtn svg{display:block}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+/* ---- sidebar row ---- */
+.side{
+  max-width:300px;background:var(--chrome);border-radius:8px;padding:6px;
+  border:.5px solid var(--line);box-shadow:var(--shadow);
+}
+.srow{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px}
+.srow.on{background:var(--sel)}
+.srow.on .sn,.srow.on .ss{color:#fff}
+.srow.on .ss{opacity:.85}
+.sicon{width:17px;text-align:center;opacity:.75}
+.stext{min-width:0;flex:1}
+.sn{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ring{width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;flex:0 0 auto}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+.legend{
+  margin:34px 0 0;padding:14px 16px;border-radius:9px;background:var(--page);
+  border:.5px solid var(--line);font-size:12.5px;color:var(--dim);
+}
+.legend b{color:var(--ink)}
+.legend ul{margin:8px 0 0;padding-left:18px}
+.legend li{margin:4px 0}
+kbd{
+  font:11px var(--mono);background:var(--chrome);border:.5px solid var(--line);
+  border-radius:4px;padding:1px 5px;color:var(--ink);
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Cloud import — window states</h1>
+<p class="sub">Mockup for <code>docs/design-cloud-import.md</code> §6/§9. Teams, v1, macOS-only. Image-Capture-shaped <b>window</b>, not a sheet — a sheet is window-modal, so it would hide the sidebar-row progress behind itself and destroy the per-row outcomes that recovery depends on.</p>
+<p class="meta">14 Aug 2026 · nine states · light/dark aware · not pixel-final, shape-final</p>
+
+<!-- 1 -->
+<h2><span class="n">1</span>Not signed in — the resting state</h2>
+<p class="why">This is what most launches see. Absence is information: one line of what it does, one button, no billboard.</p>
+<div class="win sm">
+  <div class="tbar">
+    <div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="wtitle">Import from Teams</div></div>
+  </div>
+  <div class="cuv">
+    <div class="g">􀈄</div>
+    <div class="t">Not signed in</div>
+    <div class="d">Use your work or school account to see meetings you recorded in Teams, and bring them into a project.</div>
+    <div class="a"><span class="msbtn">
+      <svg width="21" height="21" viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+      Sign in with Microsoft
+    </span></div>
+  </div>
+</div>
+<p class="note"><b>This button is Microsoft's, not ours.</b> Their branding guidelines permit exactly two strings — <i>“Sign in with Microsoft”</i>, or <i>“Sign in”</i> if space is tight — so the earlier <i>“Sign in to Microsoft”</i> was not a permitted variant. The logo is required, unaltered, and ships as an official SVG to download rather than redraw (the one above is a stand-in for the mockup). Light and dark schemes are both provided.</p>
+<p class="note"><b>“Work or school account” is also Microsoft's term, and it is mandatory.</b> They ask for it alongside the button so users recognise whether it applies to them, and explicitly forbid “enterprise account”, “business account” and “corporate account”. Also forbidden in end-user UI: <i>Azure</i> and <i>Active Directory</i> — fine in this doc and with IT admins, never on screen.</p>
+<p class="note"><b>Before</b> that button: the <code>TCC.loctable</code> pre-announcement of macOS's own <i>“Bristlenose” Wants to Use “microsoftonline.com” to Sign In</i> alert — quoting Apple's exact wording per the shipped MCP pattern, because recognition is the whole mechanism. Microsoft publishes the equivalent for their own strings — a Terminology Search and a UI String Search — so the 20 localisations of this button should be <i>looked up</i>, not machine-translated. Same trick, second vendor.</p>
+
+<!-- 2 -->
+<h2><span class="n">2</span>Loading the list</h2>
+<p class="why">A 30-day calendar window joined against <code>/Recordings</code> is not instant. In-place progress, not a spinner over blank.</p>
+<div class="win sm">
+  <div class="tbar">
+    <div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="wtitle">Import from Teams</div><div class="wsub">martin@144a.org</div></div>
+  </div>
+  <div class="cuv"><div class="spin"></div><div class="d" style="margin-top:6px">Looking at the last 30 days…</div></div>
+</div>
+
+<!-- 3 HERO -->
+<h2><span class="n">3</span>The list — the hero state</h2>
+<p class="why">Most-recent-first by default, because the researcher opened this to find last week. Expiry is a <b>column</b>, not the sort — the triage queue is a second intent. Ticks are intent; the blue row highlight is gone.</p>
+<div class="win">
+  <div class="tbar">
+    <div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="wtitle">Import from Teams</div><div class="wsub">St Mary's Trust · martin@144a.org · last 30 days</div></div>
+    <div class="search"><span>􀊫</span><span class="q">Filter</span></div>
+  </div>
+  <table>
+    <thead><tr>
+      <th class="c"></th>
+      <th style="width:36%">Meeting</th><th class="sorted" style="width:15%">Date ▾ <span style="font-weight:400;opacity:.7">· BST</span></th>
+      <th style="width:10%">Length</th><th style="width:13%">Expires</th><th style="width:20%">Status</th>
+    </tr></thead>
+    <tbody>
+      <tr class="focus"><td class="c"><span class="cb on"></span></td>
+        <td><div class="mt">P07 Interview — ward handover</div><div class="who"><span class="pn">Sarah Chen</span> · J. Whitfield <span class="more">+4</span></div></td>
+        <td class="num"><div>Wed 12 Aug</div><div class="tm">16:00</div></td><td class="num">58 min</td><td class="exp">in 58 days</td><td></td></tr>
+      <tr><td class="c"><span class="cb on"></span></td>
+        <td><div class="mt">P06 Interview — ward handover</div><div class="who"><span class="pn">Margarethe Okafor-Whitcombe</span> · A. Bianchi <span class="more">+3</span></div></td>
+        <td class="num"><div>Wed 12 Aug</div><div class="tm">14:30</div></td><td class="num">1 h 04</td><td class="exp">in 57 days</td><td></td></tr>
+      <tr><td class="c"><span class="cb"></span></td>
+        <td><div class="mt">Weekly sync — design</div><div class="who">6 attendees</div></td>
+        <td class="num dim"><div>Wed 12 Aug</div><div class="tm">09:30</div></td><td class="num dim">27 min</td><td class="exp">in 57 days</td><td></td></tr>
+      <tr class="done"><td class="c"></td>
+        <td><div class="mt">P05b Interview — ward handover</div><div class="who"><span class="pn">D. Achebe</span> · S. Chen <span class="more">+2</span></div></td>
+        <td class="num"><div>Tue 11 Aug</div><div class="tm">16:30</div></td><td class="num">1 h 09</td><td class="exp">in 56 days</td><td><span class="pill warn">View only</span></td></tr>
+      <tr><td class="c"><span class="cb on"></span></td>
+        <td><div class="mt">P05 Interview — ward handover</div><div class="who">J. Whitfield</div></td>
+        <td class="num"><div>Tue 11 Aug</div><div class="tm">11:00</div></td><td class="num">51 min</td><td class="exp">in 56 days</td><td></td></tr>
+      <tr class="done"><td class="c"><span class="cb dis"></span></td>
+        <td><div class="mt">P04 Interview — triage</div><div class="who">D. Achebe</div></td>
+        <td class="num"><div>Thu 6 Aug</div><div class="tm">15:15</div></td><td class="num">1 h 11</td><td class="exp">in 52 days</td><td></td></tr>
+      <tr><td class="c"><span class="cb"></span></td>
+        <td><div class="mt">P03 Interview — triage</div><div class="who">L. Fitzgerald</div></td>
+        <td class="num"><div>Tue 4 Aug</div><div class="tm">10:00</div></td><td class="num">55 min</td><td class="exp">in 50 days</td><td><span class="pill warn">Damaged</span></td></tr>
+      <tr class="done"><td class="c"><span class="cb dis"></span></td>
+        <td><div class="mt">P02 Interview — triage</div><div class="who">K. Lindqvist</div></td>
+        <td class="num"><div>Fri 27 Jun</div><div class="tm">13:00</div></td><td class="num">1 h 02</td><td class="exp">in 12 days</td><td><span class="pill">On Dropbox</span></td></tr>
+      <tr class="done"><td class="c"><span class="cb dis"></span></td>
+        <td><div class="mt">P01b Interview — triage</div><div class="who">R. Nakamura</div></td>
+        <td class="num"><div>Mon 23 Jun</div><div class="tm">14:00</div></td><td class="num">44 min</td><td class="exp">in 8 days</td><td><span class="pill">On “T7”</span></td></tr>
+      <tr><td class="c"><span class="cb"></span></td>
+        <td><div class="mt">P01 Interview — triage</div><div class="who">R. Nakamura</div></td>
+        <td class="num dim"><div>Fri 20 Jun</div><div class="tm">09:00</div></td><td class="num dim">49 min</td><td class="exp hot">in 5 days</td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="foot">
+    <div class="arith">11 meetings in window · <b>8 you can fetch</b> · <a class="disc" href="#">3 organised by someone else</a></div>
+    <span style="font-size:11.5px;color:var(--dim)">Project:</span> <span class="pop">Ward Handover Study</span>
+    <span class="btn pri">Import 3 Recordings</span>
+  </div>
+  <div class="grip"></div>
+</div>
+<p class="note"><b>Checkboxes, not row selection.</b> Image Capture and Photos use selection alone — but those are <i>transient</i>: pick and immediately import. This list carries durable per-row state and, more decisively, the workflow is <i>filter, then pick</i>. Under selection semantics, ticking three under “Interview”, clearing the filter and adding two more is fragile and invisible. Ticks make it obviously durable. The discipline that survives from the selection argument is <b>one model only</b>: ticks are intent, highlight is keyboard focus (row 1), <kbd>⌘A</kbd> ticks the filtered set, <kbd>space</kbd> toggles the focused row.</p>
+<p class="note"><b>Who was in it, free.</b> We're already fetching the roster for §1's priority 3, so attendees can show before import — which also patches the naming-discipline hole: a call titled “Weekly sync” or “Chat with Sarah” won't survive a title filter, but you'll recognise it from the people. <b>Displaying is not persisting</b> — only attendees the researcher promotes to participants ever reach disk.</p>
+<p class="note"><b>One line, always — the content bends, the geometry doesn't.</b> A realistic session is a moderator, two observers and three participants, with names that don't fit. Wrapping gives variable row heights and kills scanning; silent truncation loses the count. So it degrades in a fixed order, and the order comes from asking what the line is <i>for</i>: identifying which call this is.
+<ul style="margin:6px 0 0;padding-left:18px">
+<li><b>Drop yourself.</b> You organised it; “you” is in every row and says nothing.</li>
+<li><b>Drop anyone who declined.</b> The response status is right there in the event, and a decline is strong evidence they aren't in the recording — an accuracy win, not just a space one.</li>
+<li><b>Order by externality.</b> An attendee whose email domain differs from yours is probably the participant; colleagues are probably observers. So the participant's name survives truncation and the observers are what gets shed. It's an ordering hint, not a claim — when it's wrong you simply see a different name first.</li>
+<li><b>Then a count, not an ellipsis.</b> “Sarah Chen · J. Whitfield <span class="more">+4</span>” tells you there are six; “Sarah Chen, J. Whit…” tells you nothing.</li>
+</ul></p>
+<p class="note"><b>Names in the list, emails never.</b> Emails are a re-identification key (§9) and are also unscannable — a column of <code>firstname.lastname@clientco.com</code> is uniform noise. They earn their place at the “who is p1?” promotion step, where telling two Sarahs apart actually needs one. Full attendee list on hover as a tooltip; the real disclosure with roles and addresses belongs to the promotion step, which isn't drawn yet.</p>
+<p class="note"><i>Known lever, not built:</i> two-line rows cost vertical space at 40 recordings. Mail's preview-lines setting is the precedent if a compact mode is ever wanted — noted so it isn't rediscovered as a bug.</p>
+<p class="note"><b>“View only” is a seventh state and the only one with no remedy.</b> An admin policy (<code>BlockDownloadFileTypeIds TeamsMeetingRecording</code>, SharePoint Advanced Management) gives browser-only playback with, in Microsoft's own words, <i>“no ability to download or sync files or access them through apps”</i> — that last clause is Graph, so the API is blocked, not just the button. For channel meetings under it, even the <b>organiser</b> is view-only unless they're also a channel owner. So: <b>no checkbox at all</b> — there is nothing to tick, and offering one would be a lie. It must be resolved at <i>list</i> time, not as a 403 after the user ticked twenty rows. Note this row also has no manual fallback: the researcher can't download it by hand either, so drag-drop rescues nothing.</p>
+<p class="note"><b>“Project:” labels the destination.</b> Unlabelled, a project name sitting in the footer reads as a status caption rather than a control. Colon-terminated noun to the left of the control is the standard form — Print's <i>Printer:</i> and <i>Presets:</i>, the save panel's <i>Where:</i>.</p>
+<p class="note"><b>Button placement, checked against HIG rather than assumed.</b> <i>“Always place the default button on the trailing side of a row… Cancel buttons are typically on the leading side.”</i> So Import sits trailing and prominent, and there is <b>no Cancel</b> — this is a window, so you close it. Two consequences already drawn: <b>Stop</b> during a fetch is a plain button, not prominent, because HIG says not to give the primary role to a destructive action; and titles are verbs carrying the count (<i>Import 3 Recordings</i>, <i>Retry 2</i>) rather than OK, since <i>“a specific button title… helps people understand the action they're taking.”</i></p>
+<p class="note"><b>The three-way import state, in three rows.</b> P04 is <i>imported and present</i> — checked, disabled, nothing to do. P03 is <i>imported but missing-or-unverifiable</i> — unchecked and <b>enabled</b>, because a moved or truncated file is exactly the case that should re-fetch. Everything else is <i>not imported</i>. Re-importing a file that is present and fine is a deliberate rarity: right-click ▸ <i>Import Again</i>, not a default affordance. And the tick means “already in <b>this destination</b>”, so changing the project below re-evaluates the column.</p>
+<p class="note"><b>“Meeting” is the calendar event title</b> — remote data, not editable here, and not a description field. With no calendar match it falls back to the title parsed from the recording filename. Renaming happens after import, on the session.</p>
+<p class="note"><b>Time, because dates don't disambiguate.</b> UR batches sessions — P06 and P07 are both Wednesday, which is the normal case, not the edge one. The zone is stated once in the header rather than on every row; times render in the researcher's current local zone, as Calendar.app does. Internally the window must be computed in a pinned zone: <code>calendarView</code> honours <code>Prefer: outlook.timezone</code>, and a UTC-vs-local mismatch shifts the boundary by up to a day, silently dropping a 9am Monday interview out of “last 30 days”.</p>
+<p class="note"><b>Year appears only when it differs from the current one</b> — Finder and Mail's rule. Eleven months of the year it is noise; across the New Year it is essential. A 20 Dec – 19 Jan window renders
+<span style="display:inline-block;vertical-align:-6px;margin:0 4px;padding:2px 7px;border:.5px solid var(--line);border-radius:5px;background:var(--page)"><span class="num" style="font-size:12px">Fri 27 Dec 2025</span><span class="tm">13:00</span></span>
+beside
+<span style="display:inline-block;vertical-align:-6px;margin:0 4px;padding:2px 7px;border:.5px solid var(--line);border-radius:5px;background:var(--page)"><span class="num" style="font-size:12px">Tue 7 Jan</span><span class="tm">09:30</span></span>
+and the boundary needs no explaining. The same rule covers §9's “go back further” search, which can span years — there every row carries its year, which is uniform rather than cluttered. <b>Format through the system formatter, never a hand-rolled pattern</b>: day-name and month ordering differ by locale, and the expiry countdown beside it (“in 5 days” / “in 1 day”) needs CLDR plurals rather than string concatenation.</p>
+<p class="note"><b>Resizeable, with a remembered frame</b> (<code>setFrameAutosaveName</code>) — Image Capture's behaviour. Columns are sortable and their widths persist too.</p>
+<p class="note"><b>Status is its own column, and mostly empty on purpose.</b> It was inline in the title cell a draft ago, which made the title do two jobs and hid the exceptions among long meeting names. It also means the table keeps <i>one shape</i> — states 8 and 9 already had a Status column, so the previous version reshaped the moment you pressed Import. Empty is the common case: the checkbox already says imported or not, so this column carries only what the checkbox cannot — <i>Damaged</i>, <i>On Dropbox</i>, <i>On “T7”</i>. Two rows lit out of nine is scannable; nine rows saying “Imported” would not be. <b>Size</b> came out to make room — it is derivable from length, the footer totals it, and the disk precheck surfaces it when it actually matters; available as an optional column.</p>
+<p class="note"><b>The unmatched count is a disclosure, not a list.</b> An earlier draft said to list unmatched meetings inline so the arithmetic could be verified — but on a busy calendar that buries 8 real recordings under 90 stand-ups. The count stays permanently visible; clicking it reveals them. Legible absence without the flood.</p>
+
+<h2><span class="n">3c</span>Unreachable meetings — name the owner, because that's the fix</h2>
+<p class="why">Clicking the footer's “organised by someone else” reveals these. They're dead weight as a count; as rows with a name on them they're a workflow — ping the owner and ask.</p>
+<div class="win">
+  <div class="tbar">
+    <div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="wtitle">Import from Teams</div><div class="wsub">St Mary's Trust · martin@144a.org · last 30 days</div></div>
+    <div class="search"><span>􀊫</span><span class="q">Filter</span></div>
+  </div>
+  <table>
+    <thead><tr><th class="c"></th><th style="width:36%">Meeting</th><th class="sorted" style="width:15%">Date ▾ <span style="font-weight:400;opacity:.7">· BST</span></th><th style="width:10%">Length</th><th style="width:13%">Expires</th><th style="width:20%">Status</th></tr></thead>
+    <tbody>
+      <tr><td class="c"><span class="cb on"></span></td>
+        <td><div class="mt">P07 Interview — ward handover</div><div class="who"><span class="pn">Sarah Chen</span> · J. Whitfield <span class="more">+4</span></div></td>
+        <td class="num"><div>Wed 12 Aug</div><div class="tm">16:00</div></td><td class="num">58 min</td><td class="exp">in 58 days</td><td></td></tr>
+      <tr class="done focus"><td class="c"></td>
+        <td><div class="mt">Discharge pathway — session 2</div><div class="who"><span class="pn">A. Bianchi</span> · D. Achebe <span class="more">+3</span></div></td>
+        <td class="num"><div>Tue 11 Aug</div><div class="tm">10:00</div></td><td class="num">—</td><td class="exp">—</td><td><span class="pill">􀉭 A. Bianchi</span></td></tr>
+      <tr class="done"><td class="c"></td>
+        <td><div class="mt">P05b Interview — ward handover</div><div class="who"><span class="pn">D. Achebe</span> · S. Chen <span class="more">+2</span></div></td>
+        <td class="num"><div>Tue 11 Aug</div><div class="tm">16:30</div></td><td class="num">1 h 09</td><td class="exp">in 56 days</td><td><span class="pill warn">􀎡 View only</span></td></tr>
+    </tbody>
+  </table>
+  <div class="foot">
+    <div class="arith" style="color:var(--ink)">􀉭 <b>A. Bianchi</b> organised this. Bristlenose can't see whether it was recorded — ask them.</div>
+    <span class="btn">Copy Email</span>
+  </div>
+  <div class="grip"></div>
+</div>
+<p class="note"><b>The footer becomes contextual on focus</b> rather than using a tooltip. Tooltips need a mouse and a dwell; the footer is already there, is keyboard-reachable, and has room for a whole sentence plus the action. Focus a normal row and it returns to the arithmetic.</p>
+<p class="note"><b>Two unreachable cases, opposite remedies — so never one message.</b> A <i>view-only</i> recording is <b>yours</b>, blocked by your own tenant's policy: the fix is asking IT for a security-group exemption, and pinging the organiser does nothing because that's you. A <i>not-yours</i> meeting needs the organiser: ask them to share it, or to download it and drop it somewhere. Same “can't fetch”, entirely different sentence and entirely different person.</p>
+<p class="note"><b>Honesty limit, drawn deliberately.</b> The not-yours row shows “—” for length and expiry, because those come from the recording and we can't see it. We know the <i>meeting</i> and the <i>organiser</i> from the calendar; whether a recording exists would need <code>Files.Read.All</code>, the admin wall §3 refuses. So the copy is “ask them”, never “they have it”.</p>
+<p class="note"><i>Product guidance this implies, beyond the UI:</i> the reliable answer is <b>organise the sessions yourself</b>. Google Meet has the same shape. That belongs in onboarding as a recommendation, not buried as a limitation — a week lost to someone else's permissions model is the failure this feature exists to prevent. A Teams deep link (<code>msteams:/l/chat/…</code>) to open the chat with the owner is a plausible nicety; flagged, not specified.</p>
+
+<h2><span class="n">3b</span>The destination picker</h2>
+<p class="why">Two cadences, one control: a new study imports five at once; a longitudinal one adds two or three over weeks. So it's a picker with the current project pre-selected — never a default.</p>
+<div style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap">
+  <div style="background:var(--page);border:.5px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:5px;min-width:250px">
+    <div style="padding:4px 10px;border-radius:5px;background:var(--sel);color:#fff;font-size:12.5px">✓&nbsp; Ward Handover Study</div>
+    <div style="padding:4px 10px 4px 26px;font-size:12.5px">Triage Pilot</div>
+    <div style="padding:4px 10px 4px 26px;font-size:12.5px">Discharge Study 2025</div>
+    <div style="height:1px;background:var(--hairline);margin:5px 8px"></div>
+    <div style="padding:4px 10px 4px 26px;font-size:12.5px">New Project…</div>
+  </div>
+  <p class="note" style="flex:1 1 300px;margin:0">
+  <b>New Project…</b> creates immediately with a provisional name taken from the meeting series, and you rename it in place in the sidebar — no naming dialog stacked on this window, which would be a modal inside a modal.<br><br>
+  <b>Changing the destination re-evaluates the tick column</b>, because “already imported” means “already in <i>this</i> project”. The same recording legitimately belonging to two studies is a real case, not an error.<br><br>
+  <b>After the fetch, nothing runs automatically.</b> Files land and the project offers to analyse. The rhythm incremental analysis was built for is import 3 → analyse → import 3 more, so auto-running would fight the workflow and spend an LLM budget the researcher didn't authorise.
+  </p>
+</div>
+<p class="note"><b>The footer line is the most important element here.</b> This feature's success output and its failure output are both “a shorter list” — an unfollowed pagination link, a timezone-shifted window and a fuzzy join key all produce one, and the researcher reads it as “it didn't record” while the expiry clock runs. Stating the arithmetic is what makes the organiser-only constraint honest rather than silent, and it's the only place in the design where a data-losing failure becomes visible.</p>
+<p class="note"><b>Earn the red.</b> Only the row inside the danger window is warning-coloured. A countdown on every row is a wall of countdowns, and then none of them mean anything.</p>
+
+<!-- 4 -->
+<h2><span class="n">4</span>Filtered</h2>
+<p class="why">Title comes free from the recording filename — no calendar scope needed. Select-All operates on the <b>filtered</b> set, never the window.</p>
+<div class="win">
+  <div class="tbar">
+    <div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="wtitle">Import from Teams</div><div class="wsub">martin@144a.org · last 30 days</div></div>
+    <div class="search on"><span>􀊫</span><span class="q">Interview</span></div>
+  </div>
+  <table>
+    <thead><tr><th class="c"></th><th style="width:36%">Meeting</th><th class="sorted" style="width:15%">Date ▾ <span style="font-weight:400;opacity:.7">· BST</span></th><th style="width:10%">Length</th><th style="width:13%">Expires</th><th style="width:20%">Status</th></tr></thead>
+    <tbody>
+      <tr class="focus"><td class="c"><span class="cb on"></span></td><td><div class="mt">P07 Interview — ward handover</div><div class="who"><span class="pn">Sarah Chen</span> · J. Whitfield <span class="more">+4</span></div></td><td class="num"><div>Wed 12 Aug</div><div class="tm">16:00</div></td><td class="num">58 min</td><td class="exp">in 58 days</td><td></td></tr>
+      <tr><td class="c"><span class="cb on"></span></td><td><div class="mt">P06 Interview — ward handover</div><div class="who"><span class="pn">Margarethe Okafor-Whitcombe</span> · A. Bianchi <span class="more">+3</span></div></td><td class="num"><div>Wed 12 Aug</div><div class="tm">14:30</div></td><td class="num">1 h 04</td><td class="exp">in 57 days</td><td></td></tr>
+      <tr><td class="c"><span class="cb on"></span></td><td><div class="mt">P05 Interview — ward handover</div><div class="who">J. Whitfield</div></td><td class="num"><div>Tue 11 Aug</div><div class="tm">11:00</div></td><td class="num">51 min</td><td class="exp">in 56 days</td><td></td></tr>
+      <tr class="done"><td class="c"><span class="cb dis"></span></td><td><div class="mt">P04 Interview — triage</div><div class="who">D. Achebe</div></td><td class="num"><div>Thu 6 Aug</div><div class="tm">15:15</div></td><td class="num">1 h 11</td><td class="exp">in 52 days</td><td></td></tr>
+      <tr><td class="c"><span class="cb"></span></td><td><div class="mt">P03 Interview — triage</div><div class="who">L. Fitzgerald</div></td><td class="num"><div>Tue 4 Aug</div><div class="tm">10:00</div></td><td class="num">55 min</td><td class="exp">in 50 days</td><td><span class="pill warn">Damaged</span></td></tr>
+      <tr class="done"><td class="c"><span class="cb dis"></span></td><td><div class="mt">P02 Interview — triage</div><div class="who">K. Lindqvist</div></td><td class="num"><div>Fri 27 Jun</div><div class="tm">13:00</div></td><td class="num">1 h 02</td><td class="exp">in 12 days</td><td><span class="pill">On Dropbox</span></td></tr>
+      <tr><td class="c"><span class="cb"></span></td><td><div class="mt">P01 Interview — triage</div><div class="who">R. Nakamura</div></td><td class="num"><div>Fri 20 Jun</div><div class="tm">09:00</div></td><td class="num">49 min</td><td class="exp hot">in 5 days</td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="foot">
+    <div class="arith">7 of 9 shown · filtered on “Interview”</div>
+    <span style="font-size:11.5px;color:var(--dim)">Project:</span> <span class="pop">Ward Handover Study</span>
+    <span class="btn pri">Import 3 Recordings</span>
+  </div>
+</div>
+<p class="note">Title filtering rides on meeting-naming discipline — “Chat with Sarah” won't match. Say so here rather than hiding it; attendee and <code>@domain</code> search is v1.1 and needs the scope upgrade.</p>
+
+<!-- 5 + 6 -->
+<div class="grid2">
+<div>
+<h2><span class="n">5</span>No recordings in window</h2>
+<div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="titles"><div class="wtitle">Import from Teams</div></div></div>
+<div class="cuv"><div class="g">􀉉</div><div class="t">No recordings in the last 30 days</div><div class="d">11 meetings, none with a recording you organised.</div><div class="a"><span class="btn">Look back 60 days</span></div></div></div>
+</div>
+<div>
+<h2><span class="n">6</span>Filter matches nothing</h2>
+<div class="win"><div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="titles"><div class="wtitle">Import from Teams</div></div><div class="search on"><span>􀊫</span><span class="q">Diary study</span></div></div>
+<div class="cuv"><div class="g">􀊫</div><div class="t">No results for “Diary study”</div><div class="d">6 recordings in this window. Titles come from the meeting name.</div></div></div>
+</div>
+</div>
+<p class="note">Two different states, deliberately worded differently. <code>ContentUnavailableView</code> covers both — and <code>.search</code> quotes the term back automatically.</p>
+
+<!-- 7 -->
+<h2><span class="n">7</span>All already imported</h2>
+<p class="why">Keep the rows, ticked and dimmed. Removing them makes the researcher doubt the meeting existed — the opposite of reassurance.</p>
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="titles"><div class="wtitle">Import from Teams</div><div class="wsub">martin@144a.org · last 30 days</div></div><div class="search"><span>􀊫</span><span class="q">Filter</span></div></div>
+  <table>
+    <thead><tr><th class="c"></th><th style="width:36%">Meeting</th><th class="sorted" style="width:15%">Date ▾ <span style="font-weight:400;opacity:.7">· BST</span></th><th style="width:10%">Length</th><th style="width:13%">Expires</th><th style="width:20%">Status</th></tr></thead>
+    <tbody>
+      <tr class="done"><td class="c"><span class="cb dis"></span></td><td><div class="mt">P07 Interview — ward handover</div><div class="who"><span class="pn">Sarah Chen</span> · J. Whitfield <span class="more">+4</span></div></td><td class="num"><div>Wed 12 Aug</div><div class="tm">16:00</div></td><td class="num">58 min</td><td class="exp">in 58 days</td><td></td></tr>
+      <tr class="done"><td class="c"><span class="cb dis"></span></td><td><div class="mt">P06 Interview — ward handover</div><div class="who"><span class="pn">Margarethe Okafor-Whitcombe</span> · A. Bianchi <span class="more">+3</span></div></td><td class="num"><div>Wed 12 Aug</div><div class="tm">14:30</div></td><td class="num">1 h 04</td><td class="exp">in 57 days</td><td></td></tr>
+      <tr class="done"><td class="c"><span class="cb dis"></span></td><td><div class="mt">P05 Interview — ward handover</div><div class="who">J. Whitfield</div></td><td class="num"><div>Tue 11 Aug</div><div class="tm">11:00</div></td><td class="num">51 min</td><td class="exp">in 56 days</td><td><span class="pill">On “T7”</span></td></tr>
+      <tr><td class="c"><span class="cb"></span></td><td><div class="mt">P03 Interview — triage</div><div class="who">L. Fitzgerald</div></td><td class="num"><div>Tue 4 Aug</div><div class="tm">10:00</div></td><td class="num">55 min</td><td class="exp">in 50 days</td><td><span class="pill warn">Damaged</span></td></tr>
+    </tbody>
+  </table>
+  <div class="foot"><div class="arith">3 already in <b>Ward Handover Study</b> · <span style="color:var(--warn);font-weight:600">1 needs re-fetching</span></div><span style="font-size:11.5px;color:var(--dim)">Project:</span> <span class="pop">Ward Handover Study</span><span class="btn pri">Import 1 Recording</span></div>
+</div>
+<p class="note"><b>Rows 3 and 4 are why imported-state is derived, not stored.</b> A boolean would call both of these “already imported” and offer nothing. Row 3's file is on an unplugged T7 — <b>still checked and disabled</b>, because re-fetching from Teams would be the wrong fix for a drive that just needs plugging in. Row 4's file is the wrong size — <b>unchecked and enabled</b>, because that one genuinely does need re-fetching. Same past fact, opposite present remedy, and only a derived state can tell them apart. You can see a file; you must trust a flag.</p>
+
+<!-- 8 -->
+<h2><span class="n">8</span>Fetching</h2>
+<p class="why">The window stays open and non-modal — which is exactly what a sheet couldn't do. Per-row state lives in the row; the project's aggregate rides its sidebar row.</p>
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="titles"><div class="wtitle">Import from Teams</div><div class="wsub">Fetching 2 of 4 · about 6 min left</div></div><div class="search"><span>􀊫</span><span class="q">Interview</span></div></div>
+  <table>
+    <thead><tr><th class="c"></th><th style="width:36%">Meeting</th><th style="width:15%">Date <span style="font-weight:400;opacity:.7">· BST</span></th><th style="width:10%">Length</th><th style="width:13%">Expires</th><th style="width:20%">Status</th></tr></thead>
+    <tbody>
+      <tr class="done"><td class="c"><span class="cb dis"></span></td><td><div class="mt">P01 Interview — triage</div><div class="who">R. Nakamura</div></td><td class="num"><div>Fri 20 Jun</div><div class="tm">09:00</div></td><td class="num">49 min</td><td class="exp hot">in 5 days</td><td><span class="pill good">Imported</span></td></tr>
+      <tr><td class="c"><span class="cb on"></span></td><td><div class="mt">P05 Interview — ward handover</div><div class="who">J. Whitfield</div></td><td class="num"><div>Tue 11 Aug</div><div class="tm">11:00</div></td><td class="num">51 min</td><td class="exp">in 56 days</td><td><span class="bar"><i style="width:64%"></i></span> <span class="dim num">64%</span></td></tr>
+      <tr><td class="c"><span class="cb on"></span></td><td><div class="mt">P06 Interview — ward handover</div><div class="who"><span class="pn">Margarethe Okafor-Whitcombe</span> · A. Bianchi <span class="more">+3</span></div></td><td class="num"><div>Wed 12 Aug</div><div class="tm">14:30</div></td><td class="num">1 h 04</td><td class="exp">in 57 days</td><td><span class="pill">Queued</span></td></tr>
+      <tr><td class="c"><span class="cb on"></span></td><td><div class="mt">P07 Interview — ward handover</div><div class="who"><span class="pn">Sarah Chen</span> · J. Whitfield <span class="more">+4</span></div></td><td class="num"><div>Wed 12 Aug</div><div class="tm">16:00</div></td><td class="num">58 min</td><td class="exp">in 58 days</td><td><span class="pill">Queued</span></td></tr>
+    </tbody>
+  </table>
+  <div class="foot"><div class="arith">Fetching soonest-expiring first · 2.4 GB of 4.7 GB</div><span class="btn">Stop</span></div>
+</div>
+<p class="note"><b>Display order is the user's; fetch order is expiry's.</b> The list is date-sorted but P01 (5 days left) went first — otherwise an interrupted batch loses exactly the files closest to the recycle bin. Note the engine is <code>URLSession</code> background downloads, not <code>CopyMachinery</code>, whose cancel deletes every already-written file.</p>
+<div class="side" style="margin-top:14px">
+  <div class="srow on"><span class="ring"></span><div class="stext"><div class="sn">Ward Handover Study</div><div class="ss">Fetching 2 of 4 · about 6 min left</div></div></div>
+  <div class="srow"><span class="sicon">􀉚</span><div class="stext"><div class="sn">Triage Pilot</div></div></div>
+</div>
+<p class="note">Same state at two fidelities — per-file in the list, per-project on the row. Not double-reporting: they describe different things, and <b>the row is what survives closing the window</b>, so nothing is lost by getting on with something else. Prose stays minimal: extend the <code>RunProgressSubtitle</code> ladder (<i>stage · N of M · ETA</i>), <b>not</b> <code>ProjectSubtitle.copying(fraction:)</code>, which holds a single 0–1 number with no item identity, count or ETA and so cannot say “Fetching 2 of 4 · about 6 min left”.</p>
+<p class="note"><b>Getting back in.</b> Right-click the project ▸ <i>Import from Teams…</i>, or <code>File ▸ Import from Teams…</code> — Apple puts reopening a closed window in the <b>File</b> menu, and reserves the Window menu for listing <i>currently open</i> windows alphabetically. So the scene takes <code>.commandsRemoved()</code> to suppress SwiftUI's automatic Window-menu reopen entry, and appears there only while actually open. Double-click on the row isn't available — that gesture is already reserved for opening the project itself. HIG's <i>“avoid listing panels or other modal views”</i> in that same section is a third independent argument against the sheet.</p>
+
+<!-- 9 -->
+<h2><span class="n">9</span>Partial failure</h2>
+<p class="why">No “7 of 7 done!” toast, and no alert per failure. The ones that landed say nothing; the ones that didn't carry their reason and stay selected for a retry.</p>
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="titles"><div class="wtitle">Import from Teams</div><div class="wsub">4 requested · 2 imported · 2 failed</div></div><div class="search"><span>􀊫</span><span class="q">Interview</span></div></div>
+  <table>
+    <thead><tr><th class="c"></th><th style="width:36%">Meeting</th><th style="width:15%">Date <span style="font-weight:400;opacity:.7">· BST</span></th><th style="width:10%">Length</th><th style="width:13%">Expires</th><th style="width:20%">Status</th></tr></thead>
+    <tbody>
+      <tr class="done"><td class="c"><span class="cb dis"></span></td><td><div class="mt">P01 Interview — triage</div><div class="who">R. Nakamura</div></td><td class="num"><div>Fri 20 Jun</div><div class="tm">09:00</div></td><td class="num">49 min</td><td class="exp hot">in 5 days</td><td><span class="pill good">Imported</span></td></tr>
+      <tr class="done"><td class="c"><span class="cb dis"></span></td><td><div class="mt">P05 Interview — ward handover</div><div class="who">J. Whitfield</div></td><td class="num"><div>Tue 11 Aug</div><div class="tm">11:00</div></td><td class="num">51 min</td><td class="exp">in 56 days</td><td><span class="pill good">Imported</span></td></tr>
+      <tr><td class="c"><span class="cb on"></span></td><td><div class="mt">P06 Interview — ward handover</div><div class="who"><span class="pn">Margarethe Okafor-Whitcombe</span> · A. Bianchi <span class="more">+3</span></div></td><td class="num"><div>Wed 12 Aug</div><div class="tm">14:30</div></td><td class="num">1 h 04</td><td class="exp">in 57 days</td><td><span class="pill bad">Lost connection at 71%</span></td></tr>
+      <tr><td class="c"><span class="cb on"></span></td><td><div class="mt">P07 Interview — ward handover</div><div class="who"><span class="pn">Sarah Chen</span> · J. Whitfield <span class="more">+4</span></div></td><td class="num"><div>Wed 12 Aug</div><div class="tm">16:00</div></td><td class="num">58 min</td><td class="exp">in 58 days</td><td><span class="pill bad">Not enough disk space</span></td></tr>
+    </tbody>
+  </table>
+  <div class="foot"><div class="arith"><b>2 imported</b> · <span style="color:var(--bad);font-weight:600">2 failed</span> — 8.1 GB free, 2.6 GB needed</div><span style="font-size:11.5px;color:var(--dim)">Project:</span> <span class="pop">Ward Handover Study</span><span class="btn pri">Retry 2</span></div>
+</div>
+<p class="note"><b>Partial failure isn't only a list problem.</b> Stages 10 and 11 cluster across sessions, so analysing 19 of 20 doesn't give “the report minus one” — it gives <i>different themes</i>, in a report that looks complete. The failure count has to survive this window closing, and Analyse should mention it before running.</p>
+<p class="note">The disk-space row shouldn't reach here at all in the normal case — the precheck runs before a byte moves, using sizes the listing already carries. It's drawn as a failure state because a mid-batch <code>ENOSPC</code> is still reachable when something else fills the disk.</p>
+
+<div class="legend">
+<b>Decisions this mockup encodes, and where they come from</b>
+<ul>
+<li><b>Window, not sheet</b> — Image Capture's shape. A sheet is window-modal, so states 8 and 9 are impossible in one: keeping it up hides the sidebar row, dismissing it destroys the per-row outcomes recovery needs. <code>NewFilesSheet</code> is explicitly <i>not</i> the model — it carries a retirement notice.</li>
+<li><b>Checkboxes carry every intent; there is no multi-selection.</b> One focus row for keyboard navigation, no blue. That removes the ambiguity the two-model version had, and the button names the tick count.</li>
+<li><b>Shift-click a checkbox to tick a range — this is the gesture that pays.</b> Sorted by date, a study's sessions are adjacent: tick Monday's, shift-click Wednesday's, three ticked. <kbd>space</kbd> toggles the focused row; arrows move focus; type-select jumps by title (focus decides whether typing filters or type-selects, as Mail and Image Capture do). <kbd>↵</kbd> commits, double-click fetches one row, columns sort, rows have a context menu.</li>
+<li><b>Edit ▸ Select All exists but shouldn't be promoted.</b> The list is <i>recordings you organised</i> — research calls mixed with workshops, readouts and demos — so ticking the whole window is close to always wrong. Post-filter it's coherent, which is narrow enough to be a menu item honouring the Mac convention rather than a feature with a button. It operates on the filtered set, never the window.</li>
+<li><b>The footer arithmetic</b> — the only place a data-losing failure becomes visible, and what makes organiser-only honest.</li>
+<li><b>Derived import state</b> — three-way, not a boolean (state 7, row 3).</li>
+<li><b>Entry points</b>, not drawn: <code>File ▸ Import from Teams…</code> beside <code>Add Files… ⇧⌘A</code>, a project context-menu twin, and <code>Bristlenose ▸ Accounts…</code>. Sign-out lives in Settings ▸ Accounts, not here — the window shows a read-only account line.</li>
+<li><b>Microsoft owns the sign-in string, the logo and the account noun</b> — “Sign in with Microsoft”, their unaltered SVG, “work or school account”. Never <i>Azure</i> or <i>Active Directory</i> on screen. Once signed in, prefer the organisation's name over a generic; the toolbar's bare UPN here is the minimum, not the target.</li>
+<li><b>Their guidelines require sign-out and account switching</b> — “people are often associated with more than one organization”. That independently confirms the review's Keychain finding: today's single-slot-per-provider storage would let a freelancer's second client tenant silently overwrite the first. Two sources, one fix: key on <code>(platform, account)</code>.</li>
+<li><b>Not drawn:</b> the roster/participant-promotion step, which is where “who is p1?” gets answered and where the manual spreadsheet dies. Deserves its own pass.</li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>

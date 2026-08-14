@@ -1,8 +1,15 @@
 # Cloud import — capturing originals from Teams, Zoom and Meet
 
-**Status: designed 28 Jul 2026, nothing built. Post-TF, not cohort-blocking.**
+**Status: designed 28 Jul 2026. Revised 14 Aug 2026 after a permissions/benchmark pass and a six-agent review. Nothing built. Post-TF, not cohort-blocking.**
 
 Downloading recordings by hand, per file, is drudgery — and it is the thing Dovetail and Marvin remove by default. Bristlenose can too, and unlike them it needs no server.
+
+**The feature in one sentence, in the researcher's words:** *look at a list of last week's meetings, filter on "Interview", tick the obvious research calls, and click get-them-all — download and ingest.*
+
+**Two decisions taken 14 Aug 2026, both narrowing scope deliberately:**
+
+- **v1 is macOS-only** (§7). Not a compromise — it deletes the hardest problem in the design rather than solving it.
+- **v1 fetches only meetings the researcher organised** (§4). A statable precondition, not a silent limitation — §6 requires the list to show what it *couldn't* offer.
 
 **Scope note.** This doc is about *getting the bytes down*. What happens to media once Bristlenose has it — reading it when it's cloud-evicted, archiving, retention, why BN manages none of it — is **`docs/design-project-storage.md`**. The two meet at one point: import produces *captured originals*, and that is what the retention clock runs against.
 
@@ -10,17 +17,23 @@ Downloading recordings by hand, per file, is drudgery — and it is the thing Do
 
 ## 1. Why, in priority order
 
-1. **The video file.** Everything else is gravy. It is the irreplaceable asset and the annoying thing to obtain.
+1. **The video file.** The irreplaceable asset and the annoying thing to obtain.
 2. **Beat the expiry.** Teams recordings expire (120 days documented, commonly configured to 60); Zoom is org-set. A link can vanish at any moment, so BN must hold bytes, not pointers.
-3. **Provenance.** Source, capture date, meeting, participants. This is what makes a retention lifecycle implementable at all — you cannot expire on a schedule without a start date.
-4. **Roster.** Attendee names and emails from the invite. Could retire the pre-redaction speaker-ID LLM call (§6).
-5. **Transcript and invite brief.** Gravy — see the caution in §6.
+3. **The attendee roster.** Real names, spelled the way the organisation spells them. **Promoted from #4 on 14 Aug 2026** — it is cheaper to obtain than the video (§3), reachable in cases where the video is not (§4), and removes a live manual step: the researcher currently copies names out of the Teams/Outlook UI into a spreadsheet by hand.
+4. **Provenance.** Source, capture date, meeting. You cannot expire on a schedule without a start date.
+5. **The transcript text.** Genuinely optional, and the quality question is **open, not settled** — see §8. On Teams it is also the single hardest thing to obtain (§3), which settles it there by other means.
+
+**What the roster does *not* do.** An earlier draft claimed it retires the pipeline's pre-redaction speaker-ID LLM call. It does not, on three counts: there are **two** such calls in s05b (`identify_speaker_roles_llm` and `split_single_speaker_llm` — a roster does nothing for the latter); the roster supplies the candidate *set* while the call's job is the *mapping* `speaker_label → person AND role`; and it also extracts `job_title`, which is not in a calendar event. Add §9's *invited ≠ attended* and the roster is not ground truth for who spoke. It **constrains** the guess from open-ended to a short list — real and valuable — but the `SECURITY.md` disclosure stays. Retiring the call while the assignment is still a guess would trade a *disclosed* guess for an *undisclosed* one.
 
 ---
 
-## 2. The mechanism — no server required
+## 2. The mechanism
 
-A *user-initiated* fetch is an OAuth **public client with PKCE**: `ASWebAuthenticationSession` opens a sign-in sheet, the redirect returns on loopback or a custom scheme, no client secret, refresh token into the Keychain. This is the shape already used for Miro.
+A *user-initiated* fetch is an OAuth **public client with PKCE**: `ASWebAuthenticationSession` opens a sign-in sheet, the redirect returns on a custom scheme, no client secret, refresh token into the Keychain.
+
+**Prefer a custom scheme over a loopback listener.** Both work under the sandbox (`ENABLE_INCOMING_NETWORK_CONNECTIONS` is already set), but a loopback listener is reachable by any same-UID process during the auth window, whereas `ASWebAuthenticationSession(url:callbackURLScheme:)` routes the callback to the initiating session only. Needs a `CFBundleURLTypes` entry the target does not yet have. Leave `prefersEphemeralWebBrowserSession` at `false` so an already-signed-in researcher gets one-click consent instead of a full MFA round trip.
+
+**What is and isn't a from-scratch build.** The Swift consent sheet is new — `ASWebAuthenticationSession` appears nowhere in the tree. The **PKCE machinery is not**: `bristlenose/miro_client.py` already has `generate_pkce`, `build_authorize_url`, `exchange_code_for_tokens` and `refresh_access_token`, with a live authorization-code + loopback flow wired in `routes/miro.py`. That is the reference implementation for the token dance even though this feature's ceremony is Swift-side. **Before copying it, fix its fake-success bug** (`routes/miro.py:353-359` reports "Connected ✓" on the path where the credential-store write failed) or three platforms inherit it. A connect flow verifies by read-back: store, read back, *then* report connected.
 
 A server is only needed for **always-on watching** (poll the tenant while the app is closed). That is not this feature and should not become it.
 
@@ -28,80 +41,230 @@ A server is only needed for **always-on watching** (poll the tenant while the ap
 
 ## 3. Gates, per platform
 
-| | Search index | Fetch | Scopes | Gate |
+Three artifacts, not one — and **they do not share a gate**. The 28 Jul version conflated them, which made Teams look worse and Google look better than they are.
+
+| | List / index | Video | Roster | Transcript |
 |---|---|---|---|---|
-| **Teams** | `/me/calendarView` — filter client-side; Graph cannot filter by attendee | `getAllRecordings`, or just list OneDrive `/Recordings` | `Files.Read` + `Calendars.Read` — delegated, own data | **None.** User-consentable; metering ended 25 Aug 2025 |
-| **Zoom** | `/users/me/recordings` returns topic + date natively (1-month max range per call) | same call returns download URLs | `cloud_recording:read:list_user_recordings` | General app, submittable **Unlisted**; Zoom review |
-| **Google Meet** | Calendar API `q=` searches attendee name and email server-side | Picker (`drive.file`) or Drive | `calendar.events.readonly` is **sensitive** | Verification: review + justification + demo video. Not CASA, no annual fee |
+| **Teams** | `Calendars.ReadBasic` — no admin consent. Or free: the title is in the recording filename (§6) | `Files.Read` — no admin consent | `Calendars.ReadBasic` — no admin consent | `OnlineMeetingTranscript.Read.All` — **admin consent required, even delegated** ✓verified |
+| **Zoom** | `cloud_recording:read:list_user_recordings` — topic + date native | same call returns download URLs | ⚠️unverified — may sit behind `report:read:admin` or a paid plan | **same call returns the VTT** |
+| **Meet** | `calendar.events.readonly` — sensitive, verification 4–7 weeks | `drive.meet.readonly` — restricted → CASA ⚠️unverified | `calendar.events.readonly` — sensitive | `drive.meet.readonly` — restricted → CASA ⚠️unverified |
+
+Cells are marked ✓verified or ⚠️unverified deliberately. The two unverified ones carry real weight — the Google classification drives §5's "conditional, not scheduled" call, and the Zoom roster cell is part of why Zoom is the platform that could settle §8. Check both before treating the sequencing as settled.
+
+**"No admin consent" is a property of the permission, not a guarantee about the tenant.** Whether a user *may* self-consent is an Entra policy setting. The modern default is "allow user consent for apps from **verified publishers**, for **selected permissions**", where the documented low-impact starting set is the OIDC scopes plus `User.Read` — and neither `Files.Read` nor `Calendars.ReadBasic` is in it. Enterprises routinely narrow further to no user consent at all. Microsoft **Publisher Verification** (Partner Center account + verified domain) may therefore be a prerequisite rather than a nicety — *probe this against a real client-shaped tenant, don't infer it from the docs*. This is the single most load-bearing claim in the doc and it decides §5's sequencing.
 
 **Never reach for `Files.Read.All` or `Sites.Read.All`** — admin-consent-only since Aug 2025. That is the procurement gate the customer profile is defined by avoiding. It is the only thing standing between this feature and the team's SharePoint site, and the answer is to not want the SharePoint site.
 
-`drive.readonly` is a **restricted** scope — CASA third-party assessment, $500–$4,500/year, re-verified annually. `drive.file` via the Picker is not. Never request the restricted one.
+**Take `Calendars.ReadBasic`, not `Calendars.Read`.** `ReadBasic` returns `attendees[]` — the entire roster payload §1 promotes to priority 3 — *without* `body`, `bodyPreview` or attachments. `Calendars.Read` additionally hands Bristlenose every meeting body in the researcher's diary: agendas, dial-in PINs, NDA text, HR and medical appointments. The only stated need for bodies is v1.1's description search, which should be a **scope upgrade the researcher opts into at the moment they first use it** — incremental consent, which is also the pattern that survives an IT review best. This is data minimisation first and a smaller payload second (it also removes the need for `$select` gymnastics on `calendarView`).
+
+**On Google, the list UX and the affordable scope are mutually exclusive.** `drive.meet.readonly` is classified **restricted**, same tier as `drive.readonly`: CASA assessment, $500–4,500/year, re-verified annually. The affordable alternative, `drive.file`, is non-sensitive but *means the user picks each file in Google's own Picker* — not a filterable list, not one-click. Note the asymmetry's real cause: Microsoft has a picker analogue too (`Files.Read.Selected`), but its blanket scope is merely user-consentable while Google's is restricted. We take `Files.Read` on Microsoft for exactly the reason we reject the Picker on Google — the list *is* the feature.
 
 ---
 
-## 4. Why the Teams case is unusually clean
+## 4. Organiser-only, and why that is fair for v1
 
-Non-channel meeting recordings land in the **organiser's own OneDrive** (`/Recordings`), and the researcher schedules the interview. So the only permission needed is one the user can grant themselves — which happens to align exactly with the customer profile: the individual purchaser with no procurement gate.
+Non-channel meeting recordings land in the **organiser's own OneDrive** (`/Recordings`), and the researcher schedules the interview. So the only permission needed is one the user can grant themselves.
 
-**Where it breaks:**
+**v1 fetches only what the researcher organised.** Where a client PM booked the calls, the recording is in *their* OneDrive and shared-with-me generally needs `Files.Read.All` — the admin wall. A freelancer as a guest in a client tenant may have no access at all. Both are real for the customer profile.
 
-- **Someone else organised the session** — a client PM books the calls. The recording is in their OneDrive, shared with the researcher, and shared-with-me on a work account generally needs `Files.Read.All` (admin wall).
-- **Freelancer as a guest in the client's tenant** — not the organiser, possibly no access at all.
+**But being the organiser is not sufficient, and this is the case that breaks the model.** An admin can turn on an org-wide policy — `Set-SPOTenant -BlockDownloadFileTypePolicy $true -BlockDownloadFileTypeIds TeamsMeetingRecording` — giving *browser-only* access with, verbatim, **"no ability to download or sync files or access them through apps."** That last clause is Graph: the API path is blocked, not merely the download button. It needs a **SharePoint Advanced Management (Syntex)** licence, so it is not universal — but it is precisely what a regulated client buys, which means it is likeliest exactly where the recordings matter most. Named security groups can be exempted (`-ExcludedBlockDownloadGroupIds`); app-only callers such as antivirus are exempt, which does not help a delegated app. It applies to new recordings only, and not to manually uploaded files. And for **channel** meetings under the Block policy, recordings land in a *View only* folder where even the meeting organiser is view-only unless they are also a channel owner.
 
-Both are real for freelancers and indie consultants, who are explicitly in the customer profile. So **manual drag-drop import stays a first-class path forever** — not a fallback, and not something to deprecate once this ships.
+Two consequences. **Availability must be resolved at list time**, per §7's per-item model — a row reading "your organisation blocks downloading recordings" is a usable answer; twenty ticked rows returning 403 at fetch time is not. And **there is no manual fallback here**: the researcher cannot download the file by hand either, so §4's usual "drag-drop still works" escape does not apply. For a tenant with this policy on, Bristlenose cannot obtain those recordings by any route. State that plainly rather than let a cohort call discover it.
 
----
+Three things make the organiser requirement a fair v1 constraint rather than a silent limitation:
 
-## 5. Shape
+- **It is not a per-row failure.** Listing the researcher's own `/Recordings` means everything in the list is fetchable by construction. Other people's meetings don't 403 at fetch time — they simply aren't there.
+- **But absence must be legible, and actionable.** That is exactly the trap §6 addresses: a shorter list is also what every join failure looks like. The list must state *"8 meetings in window · 4 recordings you can fetch · 4 organised by someone else"*, so "not yours" is distinguishable from "didn't record". **And revealing those rows must name the organiser**, because the real-world fix is to ping them and ask — a count is dead weight, a name is a workflow. The two unreachable cases take opposite messages and point at different people: a *view-only* recording is the researcher's own, blocked by their tenant, so the remedy is an IT exemption and naming the organiser would be absurd (it is them); a *not-yours* meeting needs its organiser, to share it or to download and hand over a copy. Honesty limit to hold: for someone else's meeting we know the event and the organiser but **not whether it was recorded** — that would need `Files.Read.All`. So the copy is "ask them", never "they have it", and length and expiry render as unknown. Surface this in the footer on row focus rather than a tooltip: keyboard-reachable, room for a sentence plus a Copy Email action, and the space already exists.
+- **The roster survives the break.** The calendar event is in the *researcher's own* calendar because they were invited to it, so `Calendars.ReadBasic` still returns the attendee list even where `Files.Read` cannot reach the recording. The roster feature works for people the download feature cannot help.
 
-- **v1** — `Files.Read` only. List `/Recordings`, parse title + date from the filename (`<Title>-<YYYYMMDD_HHMMSS>-Meeting Recording.mp4`), **single-select**, download into the selected project. No calendar, no verification, no meetings API. Store the `driveItem` id + account on the imported session: one record serving dedupe, retry, and provenance.
-- **v1.1** — multi-select with per-row outcome. Reuse the existing `partial` vocabulary rather than inventing one. Resumable fetch (Range requests).
-- **v2** — `Calendars.Read` for surname / `@domain` / description search plus the attendee roster.
-- **Then** Zoom (review), then Google (sensitive-scope verification).
-
-**Already-imported state belongs in v1, not v1.1.** It prevents duplicates at one-at-a-time, and it does most of v1.1's reliability work: a partial multi-fetch recovers by re-ticking what didn't land, with no transactional download, no rollback path, and no resume tokens. Without it the researcher reconciles two lists by hand — the exact drudgery the feature exists to remove.
+**Manual drag-drop import stays a first-class path forever** — not a fallback, and not something to deprecate once this ships. It is the whole answer for the non-organiser case.
 
 ---
 
-## 6. Mechanics worth knowing before building
+## 5. Sequence — Teams first, and why
 
-**The calendar is the index; the storage API is the fetch.** Graph cannot filter events by attendee — Microsoft's guidance is to pull `calendarView` over a range and filter client-side. For a desktop app that is better anyway: sub-millisecond type-ahead over surname, `@domain`, title and description, with no round-trip per keystroke.
+**Teams → Zoom → Meet.** Same order the 28 Jul draft proposed, different and stronger reasons.
 
-**Read `expirationDateTime` off each file** rather than choosing a window. Sort soonest-expiring first and the import list becomes a triage queue — *"expires in 11 days"* next to the tick-box. Microsoft's expiry-warning emails are now a per-tenant setting, so researchers can no longer rely on being told. On expiry the file goes to the recycle bin, not a hard delete, so there is a grace period.
+**Teams is the only one of the three with no third-party gate.** Video, roster and list are all delegated, own-data, user-consentable: no app review, no verification fee, no annual audit. It also wins on documentation depth, prior art, implementation simplicity, and on market share for the population that matters — *client organisations*, not researchers (§9). The costs are the transcript (admin-walled) and §4's organiser constraint.
 
-**Default window 30 days**, ceiling wherever the oldest surviving file sits. ~95% of what you want to import is recent — you cannot analyse what you cannot remember. Going further back is a *different intent* (you know what you're looking for): an explicit search with a term and a range, not a longer scroll.
+**The one caveat that could reorder this is §3's tenant-policy question.** "It can ship to the cohort the day it is finished" holds only if the researcher can actually self-consent in a real tenant. If publisher verification turns out to be a prerequisite, Teams has a gate after all — a smaller one than Zoom's review, but not zero. Probe before committing.
 
-**A calendar event is not proof a recording exists.** Resolve recordings for the window once and join locally, so the list only offers meetings that actually have something to fetch. Second effect: if BN retains only entries that matched a recording, it never holds the researcher's general diary — the correctness fix and the privacy fix are the same fix.
+**Zoom second, but start its review clock first.** Zoom's gate is one-time, unpaid, and mostly latency — and you can build and dogfood against your own account without review, since review gates *distribution*. Submit the Unlisted app when Teams work begins and let the queue run in parallel. Zoom is second on merit too: one scope returns list, video *and* VTT, making it the only platform where §8's question can be asked at all.
 
-**Cadence is two-shaped, and one tick-list serves both:**
-
-- **Usability** — 5 sessions in 2 days, all imported at once on day 3. Usually a *new* project.
-- **Generative / longitudinal** — 2–3 at a time over weeks. Always *adding* to an existing project.
-
-So destination is a picker ("New project…" plus the current project pre-selected), not a default. Select-all must operate on the **filtered** set, not the window.
-
-**This rhythm is what incremental analysis was built for** (shipped 0.20.0): import 3 → analyse → import 3 more → re-analyse with curation surviving. Import closes the one manual gap left in the middle of a workflow that already exists.
-
-**A roster from the invite could retire the pre-redaction speaker-ID LLM call.** Stage 5b sends raw transcript to the LLM *before* PII redaction because it must infer names and roles — the only pre-redaction egress in the pipeline, currently disclosed in `SECURITY.md`. Attendee lists make it ground truth instead of a guess.
-
-**Never take the platform transcript in place of Whisper.** Teams and Zoom transcripts are real-time ASR with weak diarisation. Substituting them would be a quality regression precisely where attribution errors matter most. Second opinion or metadata only.
-
-**The fetch reuses existing UI.** `CopyMachinery`'s determinate ring, hover-cancel and "Copying · N%" on the target row is the right surface; this needs a second source alongside drag-drop, not a new progress system.
+**Google last, and conditional rather than scheduled.** The only one with a recurring cost and an annual re-audit, and on the affordable scope the feature does not exist (§3). Gate it on cohort demand. If nobody asks, never pay.
 
 ---
 
-## 7. Costs to be honest about
+## 6. Shape — the staircase
 
-- Three OAuth app registrations to create, maintain, and keep through review.
+- **v1** — `Files.Read` + `Calendars.ReadBasic`. List the researcher's own `/Recordings`, join to the calendar window for the roster. **Multi-select with per-row outcome.** Download into a destination project. Record `(platform, remoteID, account)` provenance per imported session.
+- **v1.1** — within-file resume (Range requests), and attendee/`@domain`/description search (which needs the `Calendars.Read` upgrade).
+- **Then** Zoom (review already in flight per §5), then Google (only if asked).
+
+**Three changes from the 28 Jul staircase**, all from the 14 Aug pass:
+
+**Title filtering needs no calendar.** Teams names recordings `<Title>-<YYYYMMDD_HHMMSS>-Meeting Recording.mp4`, so the title is already in the filename. Filtering on "Interview" is free from `Files.Read` alone. The old v2 gate on search was right only for *attendee / `@domain` / description* search. Caveat to state in the UI rather than hide: title filtering rides on meeting-naming discipline, and "Chat with Sarah" will not match.
+
+**Calendar access moved from v2 to v1.** Not for search — for the roster (§1, §4).
+
+**Multi-select moved from v1.1 to v1**, because the feature as the researcher describes it *is* multi-select; a single-select v1 would ship something nobody asked for.
+
+### The four things that make a batch honest
+
+These are v1 requirements, not polish. Each closes a failure that would otherwise be **invisible** — and this feature's designed output and its failure output are both "a shorter list", which is the worst possible property for a feature whose justification is beating an expiry clock.
+
+**1. Show the join's arithmetic.** The calendar↔recording join is an inner join over two independently-paginated, independently-windowed lists. Its intended output is "shorter than your calendar" — and so is an unfollowed `@odata.nextLink` (which returns HTTP 200 with a partial page), a UTC-vs-local window shift at the edges, a fuzzy `(title, timestamp)` join key where the title is user-mutable and the timestamp is recording-start not meeting-start, or `/events` returning series masters where `/calendarView` would expand occurrences. Every one produces a short list the researcher reads as "it didn't record". So: display `N in window · M you can fetch · N−M unmatched` permanently, make the unmatched count a **disclosure rather than an inline list** (on a busy calendar, listing them buries eight real recordings under ninety stand-ups — the count is what has to be always-visible, not the rows), pin the timezone, and make paginator terminal state explicit (`exhausted` / `page_cap_hit` / `error`) so a truncated listing fails loudly instead of looking complete.
+
+**Timezone is load-bearing twice.** Internally, `calendarView` honours `Prefer: outlook.timezone` and a UTC-vs-local mismatch shifts the window boundary by up to a day at each edge — silently dropping a 9am Monday interview out of "last 30 days". Externally, the list needs a **time** column, not just a date: UR batches sessions, so two or three interviews on one Wednesday is the normal case and the date disambiguates nothing. State the zone once in the column header rather than on every row, and render in the researcher's current local zone as Calendar.app does. §9's privacy argument is satisfied by not *persisting* unmatched entries; it does not require hiding them in-session.
+
+**2. Prove the bytes arrived.** A `fetch` whose only success signal is not-throwing will happily write a 401 body into a `.mp4`, or half a file. The loud version fails hours later at stage 2; the quiet version is a **truncated-but-valid MP4** that ffprobe accepts, Whisper transcribes for 40 of 60 minutes, and the report presents as a confident analysis of a complete session. Write to `.part`, check status *before* opening the destination, compare bytes written against both `content-length` and the listing's own file size (an independent second source that catches a redirect), check magic bytes, then `os.replace`. Nothing half-written is ever visible — **which also hands this section the rollback path it used to say did not exist.**
+
+**3. Derive already-imported state; never store it as a boolean.** This record is load-bearing for partial-failure recovery, and every plausible write point but one biases toward under-reporting what needs re-fetching — the direction that loses data. Deriving dissolves the question. You can **see** a file; you must **trust** a flag.
+
+But "did we import it" and "can we read it now" are different questions, and the obvious check answers the wrong one. **`fileExists()` returns true for a cloud placeholder** — that is exactly why `.inCloud` is currently unreachable (`design-project-storage.md` §3) — so an existence test reports *imported and present* for a file that raises `EDEADLK` on read. **Resolve from `stat` alone, never by reading bytes**: materialising placeholders to verify them would fire N multi-gigabyte downloads just to open the window. `stat` yields existence, logical size and `SF_DATALESS` on a placeholder without faulting it in, and size-against-the-byte-count-recorded-at-import *is* the truncation check — no hashing needed.
+
+Six states, resolved per row at list time:
+
+| State | Tick | Means | Fix path |
+|---|---|---|---|
+| **not imported** | empty, enabled | no local file | fetch from Teams |
+| **imported** | checked, disabled | present, resident, size matches | none — say nothing |
+| **not downloaded** | checked, disabled | present but `SF_DATALESS` | the *destination* provider, named |
+| **drive not connected** | checked, disabled | volume unmounted | reconnect the volume, named |
+| **damaged** | empty, **enabled** | size ≠ recorded | re-fetch from Teams |
+| **view only** | **none** | tenant blocks download (§4) | none — and no manual route either |
+| **no longer in Teams** | none | absent from the listing | none — unrecoverable if not imported |
+
+Four confusions this vocabulary exists to prevent, each of which has a cheaper wrong version:
+
+- **A placeholder is not damaged.** It is a healthy file that needs fetching. Colouring it as an error repeats the exact defect `design-project-storage.md` §3 reproduced — *"ffprobe timed out"* read as "my video is broken" when it meant "still downloading". Neutral, not warning.
+- **Not-downloaded must never look like not-imported.** If a placeholder shows as fetchable, the researcher re-pulls 1.3 GB from Teams for a file they already own — spending an expiry-limited remote fetch on a local problem. This is the expensive confusion and the reason the tick stays checked-and-disabled.
+- **Two clouds, two fixes.** A placeholder needs fetching from the *destination* store (Dropbox, OneDrive, iCloud); a not-imported row needs fetching from *Teams*. Name the provider — the storage doc's rule — or the researcher has nowhere to go.
+- **An unmounted volume is not a missing file.** `ProjectAvailability` already models `.cantFind(.unmountedVolume(name:))`; reuse it. "On *T7*, not connected" is actionable; "missing" is not.
+
+Note the collapse: **the remote axis mostly does not produce states.** An expired recording simply stops appearing in the listing, so "gone from Teams *and* imported" is the feature working (say nothing) and "gone *and* not imported" cannot be shown at all — which is §6's arithmetic problem, not a row state. Teams moves expirations to a recycle bin rather than hard-deleting, so a grace-period surface is conceivable later; not v1.
+
+**4. A terminus carrying arithmetic the user cannot miss** — `20 requested · 18 imported · 2 failed` — and the failure count must survive the surface closing. Partial failure is not only a list-reconciliation problem: stages 10 and 11 cluster and theme *across* sessions, so analysing 19 of 20 does not produce "the report minus one session", it produces **different themes**, in a report that looks internally consistent and complete. If a project holds failed import rows, Analyse should say so before running — state it, don't block. New states go through the five-kind `MessageKind` taxonomy (`docs/design-pipeline-diagnostic-popover.md`), not new glyphs.
+
+**The unit of recovery is the file, not the batch.** `.part` plus derived already-imported state means an interrupted batch loses at most one file's progress, so within-file Range resume can stay at v1.1 without v1 shipping a batch that can't recover.
+
+---
+
+## 7. Architecture — macOS-only, Swift end to end
+
+**v1 is a macOS feature. The CLI does not get cloud import.** This is the decision that makes the rest of the design tractable, and it is worth being explicit about why, because an earlier draft assumed CLI parity and paid heavily for it.
+
+**It deletes the hardest problem rather than solving it.** With a Swift/Python split, the refresh token has to cross a process boundary, and the LLM-key pattern cannot carry it: `childEnvironment` builds the environment once at spawn so it cannot rotate; every forked grandchild inherits it (the sidecar forks ffmpeg, ffprobe and `pip`, so a client's tenant credential would sit in pip's environment while pip talks to the network); and persisting a rotated refresh token needs a Keychain write Python cannot make under App Sandbox — which is the entire reason that pattern exists. Swift-owns-everything makes the question moot: the token never leaves the process that can refresh it.
+
+**It hands us the right engine for free.** `URLSession` background download tasks give 401-retry-with-fresh-token, resume data, and survival across lid-close and network changes — one primitive answering token refresh, resumability and "the researcher got on a train" together. `OllamaDownloadModel.swift` is the in-tree precedent for a large network download with streaming progress and cooperative cancel; **`CopyMachinery` is not.** Its ring, hover-cancel and subtitle slot are reusable; its engine is single-in-flight, local `FileManager.copyItem` transport, and `rollback(written:)` deletes every already-written file on cancel — which would destroy the recovery path §6 is built on.
+
+**The destination picker is inherently multi-project, and multi-project lives natively.** The SPA is scoped to one project by construction (`serve` opens a folder), so an import surface offering "New project… or this one" wants to be where projects are.
+
+**This is not a fork.** `docs/design-modularity.md` protects the *pipeline* from forking. Drag-drop import is already macOS-only and nobody calls that a fork — cloud import is drag-drop with a different source. The CLI's import story exists and is the filesystem: point `bristlenose run` at a synced OneDrive folder. Linux users lose an accelerant, not a capability.
+
+**No `CallSource` protocol yet.** An earlier draft sketched one. At n=1 that is Speculative Generality: Google's Picker path returns a selection from a foreign UI and does not fit a `listCalls(window:)` shape at all, Zoom returns download URLs from the list call while Teams needs a second, and the sketch carried no cancel, no progress and no resume token. Build Teams concretely; extract the interface when Zoom is a real second implementation. The 80/20 estimate still holds and is the useful part — **shared spine** (auth ceremony and token storage, the normalised call record, the filter/select/destination UI, the download-progress-ingest tail, provenance and derived import state) versus **per-platform adapter** (endpoints, scopes, pagination, date-windowing, record mapping, download-URL resolution). Platform #1 costs roughly five times platform #2; that is the sequencing argument, not an instruction to abstract early.
+
+**Model artifact availability per item, not per platform.** "Available" is the conjunction of what the platform can serve, what the granted scopes allow, and whether *this* item is reachable — resolve it at list time from the listing response, so a row can say "roster — needs calendar access" rather than silently having none.
+
+**Do not take the vendor SDKs.** MSAL and GoogleSignIn bring their own token-storage opinions that fight `KeychainHelper`, and add nested Mach-Os to a sandboxed App Store binary where every one must carry a Team ID signature. `URLSession` plus the reference docs is the expected answer.
+
+**Key the credential on `(platform, account)`.** `KeychainHelper` is currently one service name per provider with a fixed account, so a freelancer's second client tenant would **silently overwrite** the first. Follow `MCPTokenStore`'s shape instead: own service name, account key hashed from a stable identifier (never the raw UPN — that is a client email address sitting readable as Keychain item metadata), and non-synchronizable.
+
+**Before writing the Teams adapter, spend an hour in Graph Explorer** — against a real client-shaped tenant, not just your own, because §3's consent-policy question is answered by watching whether the prompt appears or bounces to "Need admin approval". The other unknowns are cheap to see and expensive to design around: how external participants render in `attendees[]`, and how reliable the filename format is.
+
+---
+
+## 8. The transcript question is open — measure it properly, or not at all
+
+The 28 Jul draft said: *never take the platform transcript in place of Whisper — real-time ASR with weak diarisation.* **The conclusion survives as a default; the stated reason does not.**
+
+- **On word accuracy, Whisper's advantage is not established for this audio.** Whisper large-v3 is usually reported near 1.8% WER on LibriSpeech test-clean, but that is clean read speech. On the **AMI meeting corpus** it rises into double figures — and the mic condition matters more than the headline: AMI-IHM (a headset per participant) and AMI-SDM (one distant mic) differ by roughly 2×, and a platform recording, where each participant is on their own device mic before mixing, sits far closer to IHM. Quote the condition or the comparison is unfalsifiable.
+- **On diarisation the old claim is probably backwards.** The platform transcribes the **per-participant stream, pre-mix**, so speaker attribution is stream-derived ground truth with a real name attached. Whisper carries no notion of who is talking; any pipeline returning labelled dialogue is joining it to a separate diarisation model inferring speakers from mixed-down audio. The platform is likely the **stronger** side here.
+- **The platform also transcribes better source audio than BN will ever receive** — pre-mix, pre-compression. Structural; no model choice closes it.
+
+There is no published head-to-head, and there probably cannot easily be one: vendors do not publish, and you cannot batch-feed a corpus through live transcription.
+
+**So the honest position is "unknown, and the priors point the other way than we assumed" — not "the platform wins". Do not act on it yet.**
+
+**And do not run the casual version of the experiment.** An earlier draft called this "a one-afternoon experiment: run a study both ways and look at where they disagree". That cannot produce a trustworthy answer — disagreement shows they differ, not which is right; there is no reference truth; this very section states the expected direction, so an unblinded adjudicator will read every disagreement as Whisper erring; and N=1 with no pre-registered decision rule concludes whatever the reader arrived believing. In a medical-UR context, a false "take the platform transcript" is the most expensive wrong conclusion in this doc. If it is worth doing it needs: a hand-corrected reference on a bounded sample, blind A/B adjudication, a pre-registered metric and decision rule, **diarisation scored separately from words** (since the argument above is that they point in opposite directions), and "no result" kept available as an outcome. `experiments/thematic-spike/` is the in-tree precedent for that shape. There is also a consent question in reusing participant recordings for a methodology comparison (`docs/methodology/consent-gradient.md`).
+
+**The plumbing for the cheap version already exists** — BN parses subtitle files and `analyze` skips transcription — which is a reason to be careful, not a reason to proceed. The shape worth testing eventually is a **merge**: the platform's named speaker turns as the attribution scaffold, Whisper for the words.
+
+---
+
+## 9. Mechanics worth knowing before building
+
+**Where the user starts, and how they get back.** `File ▸ Import from Teams…` as a sibling to the existing `File ▸ Add Files… ⇧⌘A` (whose own comment calls it "the menu twin of drag-drop") — **flat while there is one platform, a submenu at three**: a one-item submenu is a Mac smell, so this becomes `File ▸ Import ▸ Microsoft Teams… / Zoom… / Google Meet…` when the second lands, and takes the fuller product name there for parallelism. Also a project context-menu twin following the Agent Access pattern (context menu *hides* when unavailable, menu-bar twin *dims*), and `Bristlenose ▸ Accounts…` mirroring `Connect an Agent…`. Account lifecycle — sign in, sign out, "Connected as…", the scope disclosure — belongs in a **Settings ▸ Accounts** pane on the Mail Accounts pattern the app already uses twice; the import surface shows a read-only account line only. One place to disconnect, not two.
+
+**One window, globally, with the destination pre-selected by how you opened it.** Opening from a project's context menu pre-selects that project; opening from the File menu pre-selects the current one. Re-opening after a close is the **File** menu's job, not the Window menu's — HIG is explicit that the Window menu lists *currently open* windows (alphabetically) and that reopening belongs in File. Two consequences: the scene takes **`.commandsRemoved()`**, since a titled SwiftUI `Window` otherwise auto-contributes a Window-menu reopen entry that HIG says shouldn't be there — the project's existing rule for auxiliary windows, now with a second reason — while the window still appears in the open-windows list *while open*, because that listing is AppKit enumerating real `NSWindow`s rather than the scene contributing a command (verify on device). And note HIG's *"avoid listing panels or other modal views"* is a third independent argument for this being a window rather than a sheet. **Double-click on a project row is not available** as a door — `project_sidebar_rename_gestures_decided` already reserves it for opening the project itself.
+
+**The fetch's progress belongs on the project's sidebar row, in the existing ring and subtitle.** Per-file state stays in the import window; the project's aggregate rides its row, so closing the window loses nothing. Prose stays minimal — the `RunProgressSubtitle` ladder (`stage · N of M · ETA`) is the vocabulary to extend, **not** `ProjectSubtitle.copying(fraction:)`, which carries a single 0–1 number with no item identity, count or ETA and therefore cannot say "Fetching 3 of 7 · 12 min left". Note `SubtitleVariant.isDiagnostic` is deliberately exhaustive with no `default`, so a new case forces an explicit decision — budget for that rather than being surprised by it.
+
+**Microsoft owns the sign-in vocabulary — look it up, don't write it.** Their branding guidelines permit exactly two strings on the button: **"Sign in with Microsoft"**, or **"Sign in"** if space is tight. "Sign in *to* Microsoft" is not a variant. The Microsoft logo is required beside it, unaltered, and ships as official light/dark SVG and PNG assets to download rather than redraw. The account noun is **"work or school account"** — mandatory alongside the button so users recognise whether it applies to them — and "enterprise account", "business account" and "corporate account" are explicitly forbidden, as are *Azure* and *Active Directory* anywhere an end user can see them (fine in this doc and with IT admins). Once signed in, prefer the organisation's own name over a generic. Two consequences worth carrying: their guidelines **require a way to sign out and switch account** ("people are often associated with more than one organization"), which independently confirms §7's `(platform, account)` keying — today's single-slot storage would let a second client tenant silently overwrite the first. And Microsoft publishes a **Terminology Search and a UI String Search** so localised apps match their own products, which is the same trick as the `TCC.loctable` lift for the macOS prompt: the 20 translations of this button are *looked up*, not machine-translated.
+
+**The surface is a window, not a sheet.** Image Capture is the system analogue and it is a window; Photos import is a view. Mechanically a sheet cannot work here: it is window-modal, so keeping it up hides the sidebar-row progress behind a modal, and dismissing it destroys the per-row outcomes §6's recovery depends on. **Do not model it on `NewFilesSheet`** — that file carries its own retirement notice and is the codebase's worked example of a data view wrongly living in native chrome.
+
+**Checkboxes carry the intent; there is no multi-selection.** Image Capture and Photos use selection alone, but those are *transient* — pick and immediately import. This list has durable per-row state (§6) and a filter step, and under selection semantics a tick made under one filter, then revisited under another, is fragile and invisible. So: checkboxes are intent, one focus row for keyboard navigation, and the button names the tick count (`Import 4 Recordings`). One model, no ambiguity, and no heavy blue over rows that already carry state.
+
+**Shift-click a checkbox to tick a range — the gesture that actually pays.** Sorted by date, a study's sessions are adjacent, so tick Monday's and shift-click Wednesday's. Also owed: `space` toggles the focused row, arrows move focus, type-select jumps by title (`SessionsPopoverSpec.typeSelectString` exists — note type-select and the filter field compete for the keyboard, and the system apps resolve it by focus), Return commits, double-click fetches one row, column-header sorting, and a row context menu carrying the rare *Import Again*. The whole task must complete without a mouse. **Edit ▸ Select All exists but is not promoted**: the list is *recordings you organised*, mixing research calls with workshops and readouts, so ticking the whole window is close to always wrong. It is coherent only post-filter — narrow enough to be a menu item honouring the convention rather than a button.
+
+**Display order is the user's; fetch order is expiry's.** Default the *list* to most-recent-first — the doc's own "last week's meetings" framing is what the researcher opened it for, and an 88-day-old call above yesterday's interview is wrong. Make expiry a sortable column plus an "expiring soon" filter, and earn the red: a countdown on every row is a wall of countdowns, so only rows inside the danger window get warning colour. But **execute** the batch soonest-expiring-first regardless of display sort, or an interrupted batch loses exactly the files closest to the recycle bin. Select-all operates on the **filtered** set, not the window.
+
+**Bound the concurrency at 3–4** (the project's existing `asyncio.Semaphore` figure). The benefit is resilience — one stalled file doesn't block the batch — not throughput; a single 1.3 GB transfer already saturates a modest uplink.
+
+**Check free space before a byte moves.** A 6–20 GB batch is the paradigm case for the "free-space precheck; legible `ENOSPC`" that `design-project-storage.md` already decided YES. Both halves exist and are unwired here: `CopyMachinery.availableBytes()`/`insufficientDiskSpace` gates local drag-drop, and `doctor.check_disk_space()` runs only under `bristlenose doctor`. Both Graph and Zoom carry file size in the listing, so this is free — and worse than the local case if skipped, since a network fetch hitting `ENOSPC` mid-batch has burned real transfer time.
+
+**Read `expirationDateTime` off each file** rather than choosing a window. Microsoft's expiry-warning emails are now a per-tenant setting, so researchers can no longer rely on being told. On expiry the file goes to the recycle bin, not a hard delete, so there is a grace period. Re-resolve the download URL immediately before each fetch, not at list time — they are short-lived by design, and a 404 on a soon-expiring item deserves its own message rather than a generic failure.
+
+**Default window 30 days**, ceiling wherever the oldest surviving file sits. ~95% of what you want is recent. Going further back is a *different intent*: an explicit search with a term and a range, not a longer scroll.
+
+**Persist only the attendees the researcher promotes to participants.** The attendee list also contains the client PM, the note-taker and the stakeholder observer — never recruited, never consented, not research subjects. Present the list, persist the promoted ones, discard the rest without writing them to disk. This is the correctness fix and the privacy fix being the same fix, again — and it costs nothing, because the selection UI is already there.
+
+**Roster names are provisional until something links them to a speaker.** `people.auto_populate_names` only fills empty fields and never overwrites, so the first name written **wins permanently** — a roster-derived name is not corrected by a later LLM pass, a re-run, or re-analysis, and it reads as *more* authoritative than the guess it replaced because it came from the org directory. Land roster names in a candidate field, and make the mapping an explicit researcher act ("who is p1?") against the attendee list — which is also the cheapest v1 and is precisely the manual spreadsheet step §1 wants gone.
+
+**Participant contact details are a re-identification key.** If email is captured at all it belongs in the class BN already has — `.bristlenose/`, `0o600`, `O_NOFOLLOW`, named in `SECURITY.md` beside `pii_summary.txt` and `llm-calls.jsonl`, never in any export or support bundle. The default implementation path does the opposite: a field on `PersonEditable` flows to `Person` → `GET /people` → `EMBED_PATH_TEMPLATES` → embedded in every exported HTML, past an `_anonymise_data` that clears only `full_name`/`short_name`. That is an anonymised report with participant contact details in it. If any part reaches `/people`, extend `_anonymise_data` in the same commit with a regression test asserting no `@` survives.
+
+**Every remote-sourced string is untrusted.** §4 says the researcher is often not the organiser, so a third party controls meeting titles and attendee display names. `safe_filename()` for anything becoming a path component — the intuitive "keep the remote name" implementation skips it — and `wrap_untrusted()` for anything reaching a prompt, noting `tests/test_prompt_boundary.py` enforces only the variables already enumerated.
+
+**Download URLs are credentials.** Graph's `@microsoft.graph.downloadUrl` is pre-authenticated and Zoom's is commonly used with `?access_token=`; `httpx` and friends log full URLs at INFO, and BN's log file defaults to INFO inside the project folder a researcher may hand to a client. No OAuth-bearing URL is ever passed to a logging call. The Swift redactor covers only Anthropic/OpenAI/Google-API key shapes today — Microsoft, Google and Zoom token shapes need adding before this ships.
+
+**The calendar is the index; the storage API is the fetch.** Graph cannot filter events by attendee, so pull `calendarView` over a range and filter client-side. Better anyway: sub-millisecond type-ahead with no round-trip per keystroke. Keep the index in memory and let it die with the window — with `ReadBasic` there are no meeting bodies in it to worry about.
+
+**The roster is `attendees[].emailAddress.{name, address}`, plus `type` and response status.** Two limits to design for rather than paper over: *invited ≠ attended*, and an external participant not in the org directory may come back as a bare address or whatever the organiser typed — which matters, because UR participants are usually external. Actual-attendance data (`attendanceReports`) is a separate artifact permission behind admin consent; not worth chasing. **Response status is worth using**, though: a declined invitee is strong evidence they were not in the recording, so dropping them is an accuracy improvement, not just a space saving.
+
+**The attendee line is one line, always, and degrades in a fixed order.** A realistic session is a moderator, two observers and three participants with names that do not fit; wrapping gives variable row heights and destroys scanning, and silent truncation loses the count. Geometry is fixed, content bends. The ladder follows from what the line is *for* — identifying which call this is, which means the **participant**, never the moderator (always the researcher) and rarely the observers (often the same client faces weekly). So: drop yourself; drop anyone who declined; order by *externality* — an attendee whose email domain differs from the researcher's is probably the participant, colleagues are probably observers, so the useful name survives truncation — then a **count rather than an ellipsis** ("Sarah Chen · J. Whitfield +4" tells you there are six; a trailing "…" tells you nothing). Externality is an ordering hint, not a claim; when it is wrong the only cost is seeing a different name first.
+
+**"You" is known, from `/me`** — the token is scoped to the signed-in account, and since v1 lists only meetings the researcher organised, the event's `organizer` is them by construction. One read supplies both the address to drop and the domain externality compares against. Two caveats: an alias can defeat a naive address match, which degrades harmlessly (you appear in your own attendee line) and does not justify alias resolution in v1; and **"you" is the organiser, not necessarily the moderator** — a colleague can run a call the researcher booked, so the promotion step must not auto-assign the signed-in user as moderator.
+
+**Names in the list, emails never.** Emails are a re-identification key, and are also unscannable — a column of `firstname.lastname@clientco.com` is uniform noise carrying no recognition signal. They earn their place at the "who is p1?" promotion step, where telling two Sarahs apart genuinely needs one. Full attendee list on hover; the real disclosure, with roles and addresses, belongs to that promotion step.
+
+**The researcher does not choose the platform — the client does.** So the relevant market share is client-organisation penetration weighted toward enterprise. No UR-specific tooling survey covers this: the obvious source (*State of User Research 2025*, n=485) does not ask about video conferencing at all, and the widely-quoted "Zoom mentioned 130+ times" is a vendor blog's gloss on free-text. Do not plan against it.
+
+**This rhythm is what incremental analysis was built for** (shipped 0.20.0): import 3 → analyse → import 3 more → re-analyse with curation surviving. Destination is a picker ("New project…" plus the current project pre-selected), not a default — and `New Project…` should create with a provisional name and let the researcher rename in place in the sidebar, rather than stacking a naming dialog on the import window.
+
+**Testing.** Every failure above — 401 mid-fetch, truncated body, unfollowed `nextLink`, zone-shifted window, expired download URL — is reachable only through a fake transport, and there is none in `tests/` today; `httpx.MockTransport` is built in and adds no dependency. PKCE mechanics, the derived-import-state round-trip and the truncation checks are unit-testable; the live `ASWebAuthenticationSession` round-trip against a real tenant categorically is not, and the internal TF cohort covers what CI cannot. Cloud import is a new **ingest** surface — network-sourced, unlike the 16 file-shaped ones — and belongs in `docs/testing/coverage-inventory.md` before it is built.
+
+---
+
+## 10. Costs to be honest about
+
+- One OAuth app registration before any third party has to say yes; three by the end.
+- **Microsoft Publisher Verification may be a prerequisite** (§3) — a Partner Center account and a verified domain, not just a form.
 - Three APIs that will change underneath us.
-- A governance question: a researcher's employer may take a view on a personally-purchased tool authenticating to corporate M365, even at `Files.Read` on their own drive.
+- **i18n.** A window with this many states needs `desktop.*` keys across 20 locale directories, CLDR plurals on every count-bearing string, and `scripts/check-locales.py` only warns — nothing fails if it is skipped.
+- **A corporate tenant credential in the Keychain is a different class from a personal LLM key.** The iCloud-sync decision for API keys is settled and disclosed and is not reopened here; the new question is whether a *client's* IT policy permits their tenant credential to leave the managed device. Non-synchronizable is the answer for this one (§7).
+- **The destination is often itself a cloud folder.** On a Mac, project folders frequently live under `~/Library/CloudStorage/`, so the feature's default behaviour is to pull media out of the client's tenant and write it into whatever cloud that folder syncs to — a second vendor, unasked, and per `design-project-storage.md` plausibly outside the team's governance boundary. Detect with `cloud_provider_for(destination)` and disclose before the fetch. Secondary effects: the reverse sync competes for the same uplink, and the provider may later evict the file, so the retention clock runs against bytes BN cannot read without coordination.
+- No disconnect, revoke or multi-account story exists yet (§7, §9). An Entra admin can revoke tenant-wide from Enterprise Applications — worth stating, because it is a strong answer.
+- A researcher's employer may take a view on a personally-purchased tool authenticating to corporate M365, even at `Files.Read` on their own drive. This is the scenario enterprise consent machinery exists to govern, which is a better answer than most SaaS can give.
+- Consent should bump to v3 when this ships: the v2 dialog's stays-local box becomes false by omission, and a per-connection disclosure listing the scopes in plain English belongs at the OAuth moment.
 
 ---
 
-## 8. Related
+## 11. Related
 
 - **`docs/design-project-storage.md`** — what happens to media once BN has it; the other half of this pair
+- The review log for this doc — 32 findings from the 14 Aug six-agent pass — lives with the maintainer's private review notes, kept outside the public tree
 - `docs/methodology/consent-gradient.md` — the governance model provenance and retention sit inside
-- `docs/design-keychain.md` — token storage; the Miro flow is the precedent
-- `SECURITY.md` — the stage-5b pre-redaction disclosure this feature could remove
+- `docs/design-pipeline-diagnostic-popover.md` — read before adding any new error/status message
+- `docs/design-keychain.md` · `docs/design-modularity.md` · `docs/testing/coverage-inventory.md`
+- `SECURITY.md` — the stage-5b pre-redaction disclosure the roster constrains but does not remove

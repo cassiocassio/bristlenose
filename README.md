@@ -57,7 +57,7 @@ The report includes:
 - **Send to Miro** -- push analysed quotes straight onto a Miro board (a native sheet on macOS; a panel in the browser report)
 - **Incremental analysis** -- add more interviews to a finished project and re-run; your starred, tagged, and edited quotes carry across, and new material is flagged
 - **Ask your study from your own agent** -- a read-only MCP endpoint hands Claude, Claude Code, ChatGPT or Codex four tools over your curated quotes, themes, signals and codebook; on macOS it installs as a one-click extension with no address or token to paste, and each project is exposed only when you turn agent access on
-- **21 UI languages** -- en, es, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK, nl, fi, pl, ru, uk, da, sv, nb, tr (`--lang` flag; the nine most recent are machine-seeded community previews awaiting native review on [Weblate](https://hosted.weblate.org/projects/bristlenose/))
+- **22 UI languages** -- en, es, ca, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK, nl, fi, pl, ru, uk, da, sv, nb, tr (`--lang` flag; ten are machine-seeded community previews awaiting native review on [Weblate](https://hosted.weblate.org/projects/bristlenose/) -- Catalan is the exception among them, seeded on top of a glossary its native reviewers ratified first)
 
 
 ## Install
@@ -361,7 +361,7 @@ for the full project layout. The short version:
 - `bristlenose/server/` -- FastAPI + SQLite + SQLAlchemy data layer behind serve mode
 - `bristlenose/stages/` -- 12-stage pipeline (ingest through render), one module per stage
 - `bristlenose/llm/` -- multi-provider client + prompt templates (Markdown)
-- `bristlenose/locales/` -- 21 UI locales (en, es, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK, nl, fi, pl, ru, uk, da, sv, nb, tr)
+- `bristlenose/locales/` -- 22 UI locales (en, es, ca, fr, de, ko, ja, cs, it, pt-BR, pt-PT, zh-Hant, zh-Hant-HK, nl, fi, pl, ru, uk, da, sv, nb, tr)
 - `desktop/` -- SwiftUI macOS shell that bundles a signed PyInstaller sidecar
 - `bristlenose/pipeline.py` -- orchestrator that wires the stages together
 - `bristlenose/cli.py` -- Typer CLI entry point
@@ -374,6 +374,10 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 ---
 
 ## Changelog
+
+**0.26.0** — _14 Aug 2026_
+
+- **Català — Bristlenose now speaks Catalan, built the other way round.** Catalan (`ca`) joins across the desktop app, web report, and CLI (Settings → Language) — twenty-two locales in all. Every previous language was machine-seeded first and corrected by native speakers afterwards; this one inverts that. The **glossary was ratified by its native reviewers before a single string was seeded**, so the ~30 decisions that recur across all 1,247 keys were settled by people who speak the language, and the seed was built on top of them. Apple's Catalan terms were verified **on a Catalan-set Mac**, not from the web record, which is wrong about Catalan on macOS in both directions. Ships as **one locale, not a Valencian pair** — unlike the deliberate Portuguese and Chinese splits, the standard is shared. Register follows Apple's shipped Catalan: imperative for commands (`Desa`, not the Spanish-borrowed _Guardar_ — the dominant failure mode for machine-translated Catalan), pronominal passive for status, nouns in titles. Seeded-string quality remains the reviewers' to refine on [Weblate](https://hosted.weblate.org/projects/bristlenose/); fill-empty-only, so contributed translations always win.
 
 **0.25.3** — _10 Aug 2026_
 

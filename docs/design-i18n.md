@@ -746,8 +746,9 @@ high-frequency UI vocabulary and the l10n industry treats `zh-TW`/`zh-HK` as sep
 - **CLI terminal chrome is English-only in alpha**, so the localised Chinese experience appears
   via `bristlenose serve` + the SPA (shipped inside both the CLI package and the `.app`).
 
-**Catalan (`ca`) — reviewer-led, deliberately out of chart order (planned 3 Aug 2026; glossary landed
-14 Aug 2026).** Catalan does
+**Catalan (`ca`) — reviewer-led, deliberately out of chart order (planned 3 Aug 2026; glossary
+ratified and locale seeded 14 Aug 2026 — 1,247 keys, `9aa11beb` + `b983a7ae`; awaiting the native
+review the whole approach is built around).** Catalan does
 not appear on the prioritisation chart above and would not score well on it: small absolute market,
 modest Mac-installed reach, and a UR community that is real (Barcelona design industry — Elisava,
 IED, BAU) but concentrated. It is being built anyway because **the chart measures the wrong scarce
@@ -893,11 +894,45 @@ become the default process for reviewer-gated locales** and the seven-step order
 rewritten to match.
 
 **Mechanics.** Registration is **10 sites, not the 9 in CLAUDE.md** — `tests/test_pipeline_diagnostic_locale_keys.py`
-(`_ALL_LOCALES`; `_PLURAL_LOCALES` is only for non-default plural shapes, so `ca` joins the former
-only) is a tenth that commit `25d3217d` enrolled for `nl`. `scripts/check-locales.py` is the local
-gate. **Sequencing:** do not seed `ca` while `en/common.json`, `en/desktop.json` or `en/settings.json`
+is a tenth that commit `25d3217d` enrolled for `nl`. ~~`_PLURAL_LOCALES` is only for non-default
+plural shapes, so `ca` joins `_ALL_LOCALES` only.~~ **Wrong — corrected 14 Aug 2026 against the code.**
+`_PLURAL_LOCALES` means *inflects by count*, not *has an unusual plural shape*: `es`, `fr` and `de` are
+all one/other-shaped and all enrolled in it. It drives two live assertions —
+`test_plural_locales_have_one_and_other` (`overflow_one`/`_other`) and
+`test_chrome_count_plural_locales_have_one_and_other` (every `_CHROME_COUNT_PREFIXES` stem) — so a
+locale left out of it **silently loses its plural coverage**: `test_every_locale_dir_is_classified`
+checks membership of `_ALL_LOCALES | _FALLBACK_ONLY_LOCALES` only, and never notices the omission.
+Every full locale therefore goes in `_ALL_LOCALES` **plus exactly one** of `_PLURAL_LOCALES` /
+`_SINGLE_FORM_LOCALES`, which is what CLAUDE.md says and what `ca` is actually enrolled as (both
+tuples, correctly). `scripts/check-locales.py` is the local gate. **Sequencing:** do not seed `ca` while `en/common.json`, `en/desktop.json` or `en/settings.json`
 carry uncommitted changes — the seed would be stale on arrival. Steps 1–2 are unaffected and can run
 against the current English at any time, which is convenient given they are the human-gated ones.
+
+**Reviewer handoff — what is ratified vs what is machine-seeded (14 Aug 2026).** Step 11 asks for this
+catalogue explicitly, so the scarce human spends their pass on the unratified half.
+
+*Ratified, do not re-open:* the ~30 glossary decisions in `bristlenose/locales/glossary.csv`, each
+carrying its source in the `note` column — Apple macOS `ca` verified **on-device**, not from the web
+record, which is actively wrong about Catalan on macOS. Includes the castellanisme traps (`Desa` not
+*Guardar*), the `Cancel·la` interpunct (U+00B7 — watch JSON escaping and font fallback), and the
+Delete/Remove split Apple collapses (`Elimina` / `Suprimeix`) which is **ours to make and flagged
+pending** in the CSV.
+
+*Machine-seeded, wants the native pass:* the remaining ~1,220 keys. Highest-value targets, in order —
+(1) **the 80 plural stems** (54 `common`, 24 `desktop`, 2 `preflight`), full parity with `en` but
+never read by a Catalan speaker; `ca` is one/other so it rides `pluralCategory`'s `default` branch,
+meaning a wrong stem fails silently rather than loudly. (2) The **register rule** — imperative for
+buttons/commands, pronominal passive (`S'ha completat…`) for system status and ongoing processes,
+**nouns in title slots**; that last scoping is where the 14 Aug adversarial pass found all six defects
+(`b983a7ae`), so it is the proven weak seam. (3) Domain vocabulary that the glossary does not cover —
+the QDA terms a working researcher would actually say.
+
+*Verified mechanically and not worth reviewer time:* 33 elision sites (including `la IA`,
+`la instal·lació`, `l'histograma`, `l'LLM`), ~40 pronominal-passive number agreements, `tu`
+consistency, the article-before-program-name rule that `es`/`it`/`fr` all skip, and absence of
+castellanismes. `pipeline.json`'s `stageComplete` is `"S'ha completat {stage}"` — participle before a
+postposed subject, invariable, which is the one Romance locale that gets this right; see TODO.md for
+the latent agreement bug the other five carry.
 
 ### Alternatives considered
 

@@ -47,15 +47,15 @@ re-create it after committing. The standard flow:
 # 1. Write the CHANGELOG.md + README.md changelog entries FIRST
 #    Format: **X.Y.Z** — _D Mon YYYY_   (e.g. **0.21.0** — _16 Jul 2026_)
 
-# 2. Bump (writes __init__.py + man page + pbxproj, stages them, tags early)
+# 2. Bump (writes __init__.py + man page + pbxproj, stages them; no commit, no tag)
 ./scripts/bump-version.py minor        # or: patch / major / an explicit x.y.z
 
-# 3. Drop the premature tag, stage CHANGELOG+README (bump staged the rest),
-#    commit, then re-tag on the real commit
-git tag -d vX.Y.Z
+# 3. Stage CHANGELOG+README (bump staged the rest), commit, THEN tag —
+#    the tag must point at the bump commit, so it cannot come first
 git add CHANGELOG.md README.md
 git commit -m "bump to X.Y.Z"
 git tag vX.Y.Z
+git rev-parse HEAD; git rev-parse vX.Y.Z^{}   # same SHA — confirm
 
 # 4. Push branch, then tag separately (see gates below)
 git push origin main

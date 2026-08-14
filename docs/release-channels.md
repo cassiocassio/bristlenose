@@ -73,10 +73,10 @@ would be off in every run — configuration for the configurable.
 
 ```bash
 ./scripts/bump-version.py minor    # or patch — minor = feature, patch = fix
-git tag -d v<X.Y.Z>                # the script tags HEAD before the bump lands
 # ... write CHANGELOG.md + README.md, stage, commit ...
-git tag v<X.Y.Z>
-git push origin main && git push origin v<X.Y.Z>
+git tag v<X.Y.Z>                   # after the commit — it must point at it
+git push origin main               # publishes nothing; let CI go green
+git push origin v<X.Y.Z>           # separate push — this is the irreversible one
 ```
 
 Then **verify PyPI actually accepted it** — a tag reaching GitHub is not a

@@ -65,11 +65,11 @@ Write the release entry in `CHANGELOG.md` and the README changelog section in ho
 **Skip this whole step if Step 2 found the publish-pending case** (already bumped + tagged) — re-bumping a version that's already tagged is wrong. This step is only for a *fresh* bump.
 
 ```bash
-./scripts/bump-version.py <X.Y.Z>   # updates __init__.py, man page .TH date, creates tag at CURRENT HEAD
-git tag -d v<X.Y.Z>                  # tag points at the wrong commit until the bump commit lands — delete, re-tag after commit
-git add CHANGELOG.md README.md bristlenose/__init__.py   # + any other files bump-version.py staged
+./scripts/bump-version.py <X.Y.Z>   # updates __init__.py, man page .TH, pbxproj; stages them; NO commit, NO tag
+git add CHANGELOG.md README.md CLAUDE.md   # + anything else you edited; bump staged the version files
 git commit -m "bump to <X.Y.Z>"
-git tag v<X.Y.Z>
+git tag v<X.Y.Z>                     # AFTER the commit, so it points at it
+git rev-parse HEAD; git rev-parse v<X.Y.Z>^{}   # same SHA — confirm before pushing
 ```
 
 **If `--dry-run`: print exactly what would run and STOP here.** Log `bash .claude/skills/_shared/wflog.sh new-release dry-run-stop "<X.Y.Z>"`.

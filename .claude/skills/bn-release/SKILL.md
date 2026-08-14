@@ -152,10 +152,10 @@ always ran.
 Order matters and is derived from reversibility, not convenience.
 
 ```
-1  bump + tag + commit    ./scripts/bump-version.py minor|patch     (or --build-only)
-                          git tag -d vX.Y.Z        ← it tagged PRE-bump HEAD
-                          git add + git commit
-                          git tag vX.Y.Z           ← now on the bump commit
+1  bump + commit + tag    ./scripts/bump-version.py minor|patch     (or --build-only)
+                          git add CHANGELOG.md README.md CLAUDE.md
+                          git commit -m "bump to X.Y.Z"
+                          git tag vX.Y.Z           ← AFTER the commit
                           verify: git rev-parse HEAD == git rev-parse vX.Y.Z^{}
 
 2  push main (NOT tags)   git push origin main                      ~25 min for CI
@@ -179,13 +179,12 @@ Order matters and is derived from reversibility, not convenience.
 7  Tier 2 only            App Store submission, phased release on
 ```
 
-**Step 1 owns the whole tag dance.** `bump-version.py` creates the tag on
-*pre-bump* HEAD, before the commit exists, so it points at the wrong commit until
-you delete and re-tag. Do that here, in one unit, and verify tag == HEAD before
-moving on. Do **not** delegate this to `/new-release` Step 4: that step is the
-same bump, and after step 1 the tree already satisfies its publish-pending case,
-whose instruction is *"push the existing tag"* — which would push a tag pointing
-at the pre-bump commit. Hand off Steps **5–6 only**.
+**Step 1 owns bump, commit and tag as one unit.** `bump-version.py` no longer
+tags at all (it can't be right — the commit the tag belongs on doesn't exist when
+it runs), so the tag is yours to create *after* the commit. Verify tag == HEAD
+before moving on. Do **not** delegate this to `/new-release` Step 4: that step is
+the same bump, and after step 1 the tree already satisfies its publish-pending
+case, whose instruction is *"push the existing tag"*. Hand off Steps **5–6 only**.
 
 **`SIGN_IDENTITY` is not optional.** Unset, it defaults to `-` (ad-hoc), and
 `build-all.sh` then silently skips the identity check, the provisioning-profile

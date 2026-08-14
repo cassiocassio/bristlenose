@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
-"""Bump version in all required files and create git tag.
+"""Bump the version in all required files. Stages them. Does NOT commit or tag.
+
+WHY IT DOESN'T TAG
+This script used to run `git tag vX.Y.Z` before returning — which tagged whatever
+HEAD was at the time, i.e. the commit BEFORE the bump. Every runbook then carried
+the same correction: delete the tag, commit, re-tag. Five documents described that
+dance, and the script's own closing instructions never mentioned it at all — they
+said "commit" then "push --tags", which pushes a tag pointing at the pre-bump
+commit.
+
+It cannot tag correctly, because it does not own the commit: the caller adds the
+CHANGELOG, README and CLAUDE.md prose afterwards, so the commit this tag belongs
+on does not exist yet when the script runs. A tool that cannot be right should not
+guess. It stages the version files and tells you the two commands to run.
 
 Usage:
     ./scripts/bump-version.py patch   # 0.6.8 → 0.6.9
@@ -172,13 +185,6 @@ def tag_exists(tag: str) -> bool:
     return result.returncode == 0
 
 
-def create_git_tag(new_version: str) -> None:
-    """Create git tag (does not push)."""
-    tag = f"v{new_version}"
-    subprocess.run(["git", "tag", tag], check=True, cwd=ROOT)
-    print(f"  Created tag {tag}")
-
-
 def build_only(explicit: str | None) -> None:
     """Bump the build number alone — same marketing version, no tag."""
     current_build = get_current_build_number()
@@ -270,15 +276,27 @@ def main() -> None:
         ["git", "add"] + [str(f) for f in updated_files],
         check=True, cwd=ROOT,
     )
-    print(f"\n  Staged {len(updated_files)} files")
+    print(f"\n  Staged {len(updated_files)} files — not committed, not tagged")
 
-    create_git_tag(new_version)
+    tag = f"v{new_version}"
+    print(f"""
+Done. The tag comes AFTER the commit, so that it points at it:
 
-    print("\nDone. Remember to:")
-    print("  1. Update README.md changelog")
-    print("  2. Update CLAUDE.md 'Current status' version")
-    print(f"  3. Commit: git commit -m 'bump to {new_version}'")
-    print("  4. Push (after 9pm): git push origin main --tags")
+  1. Write the CHANGELOG.md + README.md entries for {new_version}
+  2. Update CLAUDE.md 'Current status'
+  3. git add CHANGELOG.md README.md CLAUDE.md
+     git commit -m 'bump to {new_version}'
+  4. git tag {tag}
+     git rev-parse HEAD; git rev-parse {tag}^{{}}      # same SHA — confirm it
+
+Then push main and the tag SEPARATELY, never `--tags`:
+
+  5. git push origin main         # publishes nothing; release.yml fires on tags
+     ...let CI go green, build the Mac artefacts...
+  6. git push origin {tag}        # THIS is the irreversible one
+
+Bundling both into one `git push --tags` is also how the tag-driven release
+workflow gets debounced into never firing.""")
 
 
 if __name__ == "__main__":

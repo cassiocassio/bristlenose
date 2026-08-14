@@ -704,10 +704,21 @@ the chart ranks *candidates we would have to go and find someone for*.
 - **Balearic reviewers are correct for standard `ca`, not a complication.** Mallorquí differs
   phonologically and in some lexis, but sits *under* the IEC written standard; Valencian is the
   variety with a separate normative body (AVL), which is why it earned a subtag and Balearic did
-  not. Mallorcan reviewers read and write the standard natively. They are also unusually well placed
-  to catch **castellanismes** — Spanish calques are the dominant failure mode for Catalan MT, because
-  web-scraped Catalan training data carries heavy Spanish interference. Brief them to flag calques
-  explicitly; that is the highest-value thing they can do.
+  not. **Native attestation (14 Aug 2026), which settles it better than the structural argument:**
+  Mallorcan speakers with Barcelona scientific degrees describe mallorquí as something they *adjust
+  out of* to be accepted in educated Barcelona circles and flip back to at dinner on the island —
+  textbook diglossia. The standard **is** the professional register; the dialect is the intimate one.
+  Nobody expects professional software UI in the island dialect, so the dialect-leakage risk is
+  essentially nil and needs no special guarding.
+- **Their code-switching is an asset, for a narrower reason than I first claimed.** An earlier draft
+  said Balearic reviewers were "unusually well placed" to catch **castellanismes** — that was an
+  overclaim; spotting Spanish calques is a general native-Catalan competence, not a Balearic one.
+  The real edge is **register sensitivity**: habitual code-switchers have conscious access to the
+  formal/intimate boundary, which is exactly the judgement UI copy needs (Apple-HIG imperative for
+  commands, impersonal for body text). Still brief them to flag calques — Spanish interference is
+  the dominant Catalan MT failure mode because web-scraped training data carries it heavily — just
+  don't justify the reviewer choice on that basis. The reviewer choice is justified by availability
+  and nativeness, which is the scarce resource this whole plan turns on.
 - **Apple ships Catalan properly — verified on-device 14 Aug 2026, not just from docs.** macOS
   ships a **full** Catalan UI: menu bar, AppKit save panel, System Settings. Confirmed by screenshots
   of a Catalan-set Mac, which is the only evidence that settles it — the web record is actively

@@ -20,9 +20,10 @@
 #   3. Archive     — xcodebuild archive, Developer-ID signing overrides.
 #   4. Export      — xcodebuild -exportArchive → standalone .app.
 #   5. Verify app  — codesign --deep --strict (catches the sandbox/keychain-group spike).
-#   6. Notarise .app + staple.
+#   6. (retired 14 Aug 2026) app-level notarisation — the .dmg submission in
+#      step 8 covers the nested app; see the step-6 comment for the trade.
 #   7. create-dmg  — branded backdrop + drag-to-Applications.
-#   8. Sign .dmg + notarise + staple.
+#   8. Sign .dmg + notarise + staple — the ONE notary round trip.
 #   9. Manifest    — sha256s of .app / .dmg / sidecar + the commit SHA and tree
 #                    state captured back at step 3 (NOT re-read here — the chain
 #                    can span a resumed notarisation and outlive HEAD).
@@ -297,12 +298,28 @@ ok "codesign --deep --strict: valid"
 ok "release-binary scan: no dev/debug literals · no get-task-allow"
 
 # ------------------------------------------------------------
-# 6. Notarise + staple the .app
+# 6. (retired 14 Aug 2026) Notarise + staple the .app — deliberately absent
 # ------------------------------------------------------------
-# Staple the inner .app so a user who drags it out of the .dmg and discards the
-# .dmg still gets clean Gatekeeper (the ticket is embedded in the .app).
-say "Notarise .app"
-notarize_and_staple "$APP"
+# Apple requires notarising the OUTERMOST distributable only: the .dmg
+# submission in step 8 scans the nested .app and its ticket covers the app's
+# cdhashes, so Gatekeeper clears both the mount and the dragged-out app. What
+# a separate app-level round trip bought was exactly one scenario — FIRST
+# launch of the dragged-out app on a fully OFFLINE Mac (no stapled ticket on
+# the app itself, so Gatekeeper needs one online lookup). For a 30-day
+# expiring BYOK sampler whose user pulled 660 MB over the network seconds
+# earlier, that guarantee is not worth doubling the slowest, most
+# failure-prone stretch of this lane (~600 MB zip + upload + 1-15 min wait +
+# staple-retry, before the dmg does it all again). One online launch clears
+# quarantine; every later launch is offline-clean.
+#
+# check-dmg-shippable.sh changed in the SAME commit: its "inner app stapled"
+# assertion became "inner app signature" (codesign --deep --strict) — the gate
+# would otherwise fail every image this script now produces. The inner-app
+# spctl assessment stays: it proves the dmg's notarisation actually covers the
+# app (via ticket lookup). If offline-first-launch ever becomes a requirement
+# (e.g. a channel for air-gapped users), restore: `notarize_and_staple "$APP"`
+# here, BEFORE create-dmg copies the app into the image — and revert the gate.
+# Audit: docs/design-release-system-audit.md §5.
 
 # ------------------------------------------------------------
 # 7. Build the .dmg

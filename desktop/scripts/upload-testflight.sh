@@ -35,8 +35,11 @@
 #
 # Deliberately NOT here:
 #   --dry-run       Apple's --validate-app IS the dry run: server-side, on the
-#                   real artefact, and already inside the gate. A local one would
-#                   print this script back at you.
+#                   real artefact — run `check-pkg-shippable.sh <pkg>` standalone
+#                   and it is the last check. (On THIS path the gate skips it,
+#                   announced, via BN_SKIP_ASC_VALIDATE: the upload itself
+#                   revalidates the same bytes server-side minutes later, so
+#                   pre-validating shipped 675 MB to Apple twice per release.)
 #   --validate-only `check-pkg-shippable.sh <pkg>` already is that verb.
 #   --force/--skip  There is no way to bypass the gate. That is the design.
 #
@@ -130,7 +133,13 @@ bold "UPLOAD  ·  $(basename "$PKG")  →  TestFlight"
 printf '\n'
 say "1. Precondition — check-pkg-shippable.sh"
 GATE_LOG="$LOG_DIR/upload-gate.log"
-if "$GATE" "$PKG" > "$GATE_LOG" 2>&1; then
+# BN_SKIP_ASC_VALIDATE turns the gate's LAST check (altool --validate-app) into
+# an announced skip — on this path only. The upload below transfers the same
+# bytes to the same endpoint minutes later and Apple revalidates server-side,
+# so the pre-upload validate was a duplicate 675 MB / ~8 min transfer per
+# release. Every LOCAL check still runs, unskippably; a standalone
+# `check-pkg-shippable.sh <pkg>` keeps validate-app and remains the dry run.
+if BN_SKIP_ASC_VALIDATE=1 "$GATE" "$PKG" > "$GATE_LOG" 2>&1; then
     ok "gate" "$(grep -c '✓' "$GATE_LOG" 2>/dev/null || echo '?') checks passed"
 else
     printf '\n'

@@ -203,8 +203,14 @@ guarantee; stage 2c's `itms-services` scan is the only coverage in the ad-hoc/ID
 2. ~~`bump-version.py` tags post-commit~~ — **done**, `d6bf3a49`: it no longer
    tags at all; the tag is created after the prose commit (§2)
 3. ~~Fail-open sweep as one themed commit~~ — **done**, `e9158717` + `c6bbf7d9` (§3)
-4. The two ~10-minute relaxations — double notarisation, upload-path
-   `validate-app` (§5)
+4. ~~The two ~10-minute relaxations~~ — **done 14 Aug 2026**: app-level
+   notarisation retired from `build-dmg.sh` (the `.dmg` submission covers the
+   nested app; trade accepted — one online Gatekeeper lookup on first launch of
+   a dragged-out app), with `check-dmg-shippable.sh`'s inner-app staple check
+   becoming a `codesign --deep --strict` check in the same commit; and
+   `upload-testflight.sh` now sets `BN_SKIP_ASC_VALIDATE=1` so its gate skips
+   the pre-upload `validate-app` transfer (announced, upload revalidates
+   server-side; standalone gate runs keep it). ~28 min returned per release. (§5)
 5. Acceptance-doc rescope: S9's byte-identical decline, criteria for the
    K9/K10 classes (S5 already rewritten for the new order) (§5)
 

@@ -361,6 +361,19 @@ if [ "${SIGN_IDENTITY:-}" = "-" ]; then
     skip "App Store validation" "ad-hoc identity — nothing to validate"
 elif [ -z "$KEY_ID" ] || [ -z "$ISSUER" ]; then
     skip "App Store validation" "no ASC credential configured (see .ship-local.conf)"
+elif [ "${BN_SKIP_ASC_VALIDATE:-}" = "1" ]; then
+    # Set ONLY by upload-testflight.sh, which runs this gate as its precondition
+    # and then immediately transfers the pkg with --upload-package — whose
+    # server side runs the same validation on the same bytes minutes later.
+    # Running validate-app here too shipped the 675 MB artefact to Apple TWICE
+    # back to back (~8 min, ~10% of the release's wall clock) to learn the same
+    # answer, and a server-rejectable pkg discovered at upload costs the same
+    # transfer it would have cost to discover pre-upload. Expected loss: ~zero.
+    # (This also covers the duplicate-build-number refusal that validate-app
+    # used to catch pre-transfer — the upload rejects it identically.)
+    # A STANDALONE gate run never sets this: there, validate-app is the best
+    # dry run available — server-side, on the real artefact — and stays.
+    skip "App Store validation" "skipped by the uploader — --upload-package revalidates server-side (BN_SKIP_ASC_VALIDATE=1)"
 elif xcrun altool --validate-app "$PKG" --type macos \
         --apiKey "$KEY_ID" --apiIssuer "$ISSUER" >"$WORK/validate.log" 2>&1; then
     ok "App Store validation" "altool --validate-app: no issues"

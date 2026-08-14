@@ -122,15 +122,28 @@ else
 
     # THE load-bearing assertion. `create-dmg` copies the .app, so a staple
     # applied to the export-dir original never reaches this copy.
-    if xcrun stapler validate "$INNER_APP" >/dev/null 2>&1; then
-        pass "inner app stapled" "ticket present"
+    #
+    # DELIBERATELY NOT a staple check (changed 14 Aug 2026, same commit as
+    # build-dmg.sh retiring app-level notarisation): the inner app carries no
+    # ticket by design now — the .dmg's notarisation covers it, and the
+    # accepted trade is one online Gatekeeper lookup on the first launch of a
+    # dragged-out app. What must still hold is that the app INSIDE the image
+    # is validly signed, deep and strict — the create-dmg-copies class this
+    # mount-and-interrogate gate exists for. The spctl assessment below then
+    # proves the dmg's ticket actually reaches this app. If app stapling ever
+    # returns, restore: stapler validate "$INNER_APP".
+    if codesign --verify --deep --strict "$INNER_APP" >/dev/null 2>&1; then
+        pass "inner app signature" "--deep --strict valid"
     else
-        fail "inner app stapled" "the app INSIDE the image has no ticket — it will fail to open offline"
+        fail "inner app signature" "the app INSIDE the image fails codesign --deep --strict"
     fi
 
     # Assert the reason, not the word. `grep -q accepted` passes on any output
     # containing that substring; we want the specific verdict Gatekeeper gives
-    # a notarised Developer-ID app.
+    # a notarised Developer-ID app. With the inner app unstapled (by design),
+    # this verdict comes via an online ticket lookup — which is also exactly
+    # what it proves: the .dmg's notarisation covers THIS app's cdhash. Needs
+    # network; this gate runs minutes after a notary round trip, so it has it.
     APP_ASSESS="$(spctl --assess --type exec -vv "$INNER_APP" 2>&1 || true)"
     case "$APP_ASSESS" in
         *"source=Notarized Developer ID"*) pass "inner app Gatekeeper" "Notarized Developer ID" ;;

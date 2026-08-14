@@ -67,13 +67,39 @@ def bump_version(current: str, bump_type: str) -> str:
         return bump_type
 
 
+def _sub_or_die(pattern: str, repl: str, text: str, *, path: Path, what: str) -> str:
+    """``re.sub`` that refuses to no-op silently.
+
+    Every updater below writes a file and then prints "Updated <path>". When a
+    pattern stops matching — Xcode reformats the pbxproj, the ``__version__``
+    style changes, someone edits the ``.TH`` line — ``re.sub`` returns the text
+    unchanged, the write is a no-op, and that success line becomes a lie. The
+    bump then half-lands: some version files move and others don't, which is
+    exactly the mismatch ``check-release-ready.sh`` exists to catch, discovered
+    much later and blamed on something else.
+
+    Dying here is right even mid-run. A partial bump is a two-second
+    ``git checkout``; a silent one ships.
+    """
+    new_text, n = re.subn(pattern, repl, text)
+    if n == 0:
+        sys.exit(
+            f"error: {path.relative_to(ROOT)} — no match for {what}.\n"
+            f"       The file's format has changed and bump-version.py needs updating.\n"
+            f"       Check `git status`: files updated before this one have been written."
+        )
+    return new_text
+
+
 def update_init(new_version: str) -> None:
     """Update __version__ in __init__.py."""
     text = INIT_FILE.read_text()
-    new_text = re.sub(
+    new_text = _sub_or_die(
         r'(__version__\s*=\s*["\'])([^"\']+)(["\'])',
         rf'\g<1>{new_version}\g<3>',
         text,
+        path=INIT_FILE,
+        what="the __version__ assignment",
     )
     INIT_FILE.write_text(new_text)
     print(f"  Updated {INIT_FILE.relative_to(ROOT)}")
@@ -86,10 +112,12 @@ def update_man_page(new_version: str) -> None:
     today = date.today().isoformat()  # YYYY-MM-DD, mandoc-friendly
     text = MAN_FILE.read_text()
     # Match: .TH BRISTLENOSE 1 "2026-05-11" "bristlenose 0.6.8"
-    new_text = re.sub(
+    new_text = _sub_or_die(
         r'(\.TH BRISTLENOSE 1 ")[^"]+(" "bristlenose )\d+\.\d+\.\d+(")',
         rf"\g<1>{today}\g<2>{new_version}\g<3>",
         text,
+        path=MAN_FILE,
+        what="the .TH header line (date + version)",
     )
     MAN_FILE.write_text(new_text)
     print(f"  Updated {MAN_FILE.relative_to(ROOT)}")
@@ -115,16 +143,20 @@ def get_current_build_number() -> int:
 def update_pbxproj(new_version: str | None, build_number: int) -> None:
     """Update CURRENT_PROJECT_VERSION, and MARKETING_VERSION unless new_version is None."""
     text = PBXPROJ_FILE.read_text()
-    text = re.sub(
+    text = _sub_or_die(
         r"CURRENT_PROJECT_VERSION = \d+;",
         f"CURRENT_PROJECT_VERSION = {build_number};",
         text,
+        path=PBXPROJ_FILE,
+        what="CURRENT_PROJECT_VERSION",
     )
     if new_version is not None:
-        text = re.sub(
+        text = _sub_or_die(
             r"MARKETING_VERSION = [\d.]+;",
             f"MARKETING_VERSION = {new_version};",
             text,
+            path=PBXPROJ_FILE,
+            what="MARKETING_VERSION",
         )
     PBXPROJ_FILE.write_text(text)
     label = f"{new_version}, build {build_number}" if new_version else f"build {build_number}"

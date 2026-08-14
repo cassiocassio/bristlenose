@@ -235,21 +235,61 @@ esac
 
 # Independent second opinion. altool exiting 0 is not evidence the build exists;
 # this asks ASC directly. Cheap, no artefact, works with an API key.
+# An empty DELIVERY after a zero-exit upload is not a soft condition: the UUID
+# sed is a text parse of Apple's output, and losing it silently disables the only
+# independent check this script has. Say so before it becomes a shrug below.
+[ -n "$DELIVERY" ] || die "upload reported success but no Delivery UUID was parsed — the independent ASC check cannot run. The build may or may not have landed; verify by hand in App Store Connect before re-uploading (this build number is spent either way). Log: $UPLOAD_LOG"
+
 STATUS_LOG="$WORK/status.log"
-if [ -n "$DELIVERY" ] && xcrun altool --build-status --delivery-id "$DELIVERY" \
+CONFIRMED=0
+if xcrun altool --build-status --delivery-id "$DELIVERY" \
         --apiKey "$KEY_ID" --apiIssuer "$ISSUER" > "$STATUS_LOG" 2>&1; then
     ON_ASC=$(sed -n 's/.*IS-ON-APP-STORE-CONNECT: *\([a-z]*\).*/\1/p' "$STATUS_LOG" | head -1)
     BSTATUS=$(sed -n 's/.*BUILD-STATUS: *\([A-Z_]*\).*/\1/p' "$STATUS_LOG" | head -1)
     [ "$ON_ASC" = "true" ] \
         || die "ASC does not report the build as present (IS-ON-APP-STORE-CONNECT=$ON_ASC). This is the exit-0-but-vanished case — do NOT re-upload at this build number, it is spent. Delivery $DELIVERY"
     ok "app store connect" "present · BUILD-STATUS $BSTATUS"
+    CONFIRMED=1
     # EXPIRATION-DATE, hyphenated, from the OUTER block. The nested
     # EXPIRATIONDATE under APP-STORE-ATTRIBUTES is the literal placeholder
     # string "expirationDate" — same word, different key, not a date.
     EXPIRES=$(sed -n 's/.*EXPIRATION-DATE: *\(.*\)/\1/p' "$STATUS_LOG" | head -1)
 else
-    say "  ⚠ could not run the independent --build-status check; relying on altool alone"
     EXPIRES=$(sed -n 's/.*EXPIRATION-DATE: *\(.*\)/\1/p' "$CLEAN" | head -1)
+fi
+
+# The independent check is this script's entire reason to exist — its header says
+# a zero exit from altool is not evidence the build landed. Yet the fallback used
+# to print a soft warning and then fall through to a banner reading "confirmed
+# present in App Store Connect", exit 0. So the ONE failure mode it was built to
+# catch was the one it reported as success.
+#
+# Non-zero here does NOT mean the upload failed. It means the upload is
+# unconfirmed, which is a different and more awkward state: the build number is
+# spent either way, so the recovery is to look in App Store Connect, never to
+# re-upload at the same number.
+if [ "$CONFIRMED" -ne 1 ]; then
+    printf '\n'
+    bold "  ⚠ Delivered, but UNCONFIRMED"
+    printf '\n'
+    printf '     build  %s (%s)\n' "$VER" "$BUILD"
+    printf '  delivery  %s\n' "$DELIVERY"
+    printf '     state  %s per altool · ASC NOT independently confirmed\n' "$STATE"
+    cat >&2 <<EOF
+
+  altool reported the upload succeeded, but the independent --build-status check
+  could not be run or did not answer. That is the documented exit-0-but-vanished
+  case, so altool's own word is exactly what must not be trusted here.
+
+  Build $BUILD is spent regardless. Do NOT re-upload at this number.
+  Check App Store Connect ▸ TestFlight ▸ Builds, or re-run the check by hand:
+
+    xcrun altool --build-status --delivery-id $DELIVERY \\
+      --apiKey "\$BRISTLENOSE_ASC_KEY_ID" --apiIssuer "\$BRISTLENOSE_ASC_ISSUER_ID"
+
+  Status log: $STATUS_LOG
+EOF
+    exit 1
 fi
 
 # ---------------------------------------------------------------------------

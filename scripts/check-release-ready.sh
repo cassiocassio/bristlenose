@@ -159,16 +159,9 @@ head_ "Not already released"
 # ---------------------------------------------------------------------------
 # PyPI versions are IMMUTABLE. This is the highest-value mechanical check here:
 # everything else is recoverable, and this one is not.
-if git rev-parse -q --verify "refs/tags/v$TARGET" >/dev/null; then
-    if [ "$PRE_BUMP" -eq 1 ]; then
-        bad "git tag" "v$TARGET already exists — pick another version"
-    else
-        ok "git tag" "v$TARGET exists (already bumped)"
-    fi
-else
-    ok "git tag" "v$TARGET is free"
-fi
-
+# PyPI is probed FIRST because the tag check below needs to know it: a tag that
+# has drifted from HEAD is routine after a published release and alarming before
+# one, and reporting both cases the same way would be crying wolf.
 PYPI_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
     "https://pypi.org/pypi/bristlenose/$TARGET/json" 2>/dev/null || echo "000")
 case "$PYPI_CODE" in
@@ -181,6 +174,38 @@ case "$PYPI_CODE" in
          fi ;;
     *)   warn "PyPI" "could not reach PyPI (HTTP $PYPI_CODE) — unverified" ;;
 esac
+
+# The tag check used to pass on EXISTENCE alone — "v$TARGET exists (already
+# bumped)" — and never asked where it points. Run against the 0.25.2 mid-flight
+# state (tag on the partial fix, main carrying the correction, PyPI never
+# published) it printed a green tick and reached READY, so the one hazard the
+# maintainer had paused on was invisible to the tool whose job is release-state
+# hazards. Re-running the skill is the documented resume mechanism, so a resume
+# flowed straight through the blind spot.
+#
+# Severity depends on whether the version shipped, which is why PyPI goes first:
+#   published + tag≠HEAD  → routine. You have committed since the release.
+#   unpublished + tag≠HEAD → publish-pending with an ambiguous tag. Which commit
+#                            ships is genuinely unclear and only a human can say.
+if git rev-parse -q --verify "refs/tags/v$TARGET" >/dev/null; then
+    if [ "$PRE_BUMP" -eq 1 ]; then
+        bad "git tag" "v$TARGET already exists — pick another version"
+    else
+        TAG_SHA=$(git rev-parse "refs/tags/v$TARGET^{commit}" 2>/dev/null || echo "")
+        HEAD_SHA=$(git rev-parse HEAD 2>/dev/null || echo "")
+        if [ -z "$TAG_SHA" ] || [ -z "$HEAD_SHA" ]; then
+            bad "git tag" "could not resolve v$TARGET or HEAD — cannot compare"
+        elif [ "$TAG_SHA" = "$HEAD_SHA" ]; then
+            ok  "git tag" "v$TARGET points at HEAD ($(git rev-parse --short HEAD))"
+        elif [ "$ALREADY_RELEASED" -eq 1 ]; then
+            ok  "git tag" "v$TARGET at $(git rev-parse --short "$TAG_SHA") · published; HEAD has moved on"
+        else
+            bad "git tag" "v$TARGET points at $(git rev-parse --short "$TAG_SHA"), HEAD is $(git rev-parse --short HEAD) — unpublished, so decide which ships"
+        fi
+    fi
+else
+    ok "git tag" "v$TARGET is free"
+fi
 
 # ---------------------------------------------------------------------------
 if [ "$SCOPE" != "cli" ]; then
@@ -253,18 +278,34 @@ head_ "CI"
 # release.yml gates on CI (`needs: ci`) so PyPI cannot publish untested code —
 # but the Mac artefacts are built locally and bypass CI entirely, which is
 # exactly why an un-run HEAD is worth saying out loud.
+# Five distinct evidence-absent states used to collapse into one warn labelled
+# "no CI run found for this commit" — which was true for exactly one of them.
+# gh missing, gh unauthenticated, a failed query and an IN-PROGRESS run all read
+# the same, and an in-progress run really does return an empty conclusion, so the
+# label was actively false. A line that talks nonsense in four cases out of five
+# gets skimmed, which is the whole failure: the operator stops reading the one
+# check standing between a local Mac build and code CI has never seen.
 SHA=$(git rev-parse HEAD)
+SHORT=$(git rev-parse --short HEAD)
 if ! command -v gh >/dev/null 2>&1; then
-    warn "CI status" "gh not installed — cannot check"
+    warn "CI status" "gh not installed — CI state unknown"
+elif ! gh auth status >/dev/null 2>&1; then
+    warn "CI status" "gh is not authenticated — CI state unknown"
 elif ! git branch -r --contains "$SHA" 2>/dev/null | grep -q origin; then
     warn "CI status" "HEAD is not pushed — CI has never seen this commit"
 else
-    CONCL=$(gh run list --commit "$SHA" --workflow ci.yml --limit 1 \
-            --json conclusion --jq '.[0].conclusion' 2>/dev/null || echo "")
-    case "$CONCL" in
-        success) ok   "CI status" "green for $(git rev-parse --short HEAD)" ;;
-        "")      warn "CI status" "no CI run found for this commit" ;;
-        *)       bad  "CI status" "conclusion '$CONCL' for $(git rev-parse --short HEAD)" ;;
+    # gh's built-in --jq, so no external jq dependency. `.[0] // {}` keeps an
+    # empty run list from crashing the filter; the result is a bare "|".
+    RUN=$(gh run list --commit "$SHA" --workflow ci.yml --limit 1 \
+          --json conclusion,status \
+          --jq '.[0] // {} | "\(.status // "")|\(.conclusion // "")"' 2>/dev/null \
+          || echo "QUERY_FAILED")
+    case "$RUN" in
+        QUERY_FAILED)      warn "CI status" "could not query GitHub — CI state unknown" ;;
+        "|")               warn "CI status" "no CI run for $SHORT — not started yet" ;;
+        completed\|success) ok  "CI status" "green for $SHORT" ;;
+        completed\|*)      bad  "CI status" "conclusion '${RUN#*|}' for $SHORT" ;;
+        *)                 warn "CI status" "run is ${RUN%%|*} for $SHORT — not finished" ;;
     esac
 fi
 

@@ -135,11 +135,39 @@ PBXPROJ="$ROOT/desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj"
 WANT_VER=$(sed -n 's/^__version__ *= *"\(.*\)"/\1/p' "$ROOT/bristlenose/__init__.py" 2>/dev/null | head -1)
 WANT_BUILD=$(sed -n 's/.*CURRENT_PROJECT_VERSION = \([0-9]*\);.*/\1/p' "$PBXPROJ" 2>/dev/null | head -1)
 
+# Both guards used to read `[ -n "$WANT" ] && [ mismatch ]`, so an EMPTY
+# extraction — an Xcode release reformatting the pbxproj, a changed __version__
+# style, a moved script resolving ROOT wrong — made both false, fell through to
+# the else, and printed a confident "agrees with tree" for a comparison that
+# never ran. This is the only defence against the stale-artefact class this
+# script's own header warns about (a live Developer ID build writes into the
+# same desktop/build/ tree, and the .pkg filename carries no version), in a file
+# whose stated doctrine is that every assertion must be able to fail.
+[ -n "$WANT_VER" ]   || die "version" "cannot read __version__ from bristlenose/__init__.py — comparison impossible"
+[ -n "$WANT_BUILD" ] || die "build number" "cannot read CURRENT_PROJECT_VERSION from $PBXPROJ — comparison impossible"
+
+# The pbxproj carries CURRENT_PROJECT_VERSION once per build configuration and
+# `head -1` silently compares against whichever appears first. They are identical
+# today and bump-version.py moves them together, so a divergence means something
+# edited one by hand — worth saying rather than picking one arbitrarily.
+PBX_BUILDS=$(sed -n 's/.*CURRENT_PROJECT_VERSION = \([0-9]*\);.*/\1/p' "$PBXPROJ" 2>/dev/null | sort -u | tr '\n' ' ')
+case "$(printf '%s' "$PBX_BUILDS" | wc -w | tr -d ' ')" in
+    0|1) : ;;
+    *)   die "build number" "pbxproj configurations disagree: $PBX_BUILDS" ;;
+esac
+
+# Separate ifs, not if/elif: a version mismatch used to mask a simultaneous
+# build-number mismatch. die() accumulates rather than exits, so both report.
+VERSION_OK=1
 if [ -n "$WANT_VER" ] && [ "$GOT_VER" != "$WANT_VER" ]; then
     die "marketing version" "pkg is $GOT_VER, working tree is $WANT_VER — stale artefact?"
-elif [ -n "$WANT_BUILD" ] && [ "$GOT_BUILD" != "$WANT_BUILD" ]; then
+    VERSION_OK=0
+fi
+if [ -n "$WANT_BUILD" ] && [ "$GOT_BUILD" != "$WANT_BUILD" ]; then
     die "build number" "pkg is $GOT_BUILD, working tree is $WANT_BUILD — stale artefact?"
-else
+    VERSION_OK=0
+fi
+if [ -n "$WANT_VER" ] && [ -n "$WANT_BUILD" ] && [ "$VERSION_OK" -eq 1 ]; then
     ok "version" "$GOT_VER ($GOT_BUILD) · agrees with tree"
 fi
 

@@ -89,9 +89,18 @@ jobs:
           snap: ${{ steps.snap.outputs.path }}
           release: edge
 
-      - name: Skip publish (no credentials)
+      # Both publish jobs run ONLY on a deliberate trigger — publish-edge on
+      # workflow_dispatch, publish-stable on a tag ref. A missing credential is
+      # therefore never "nothing was asked of me"; it is "you asked me to publish
+      # and I could not". Skipping green reports a publish that did not happen,
+      # on the one path where that reading matters.
+      - name: Fail — no store credentials
         if: env.HAS_CREDS != 'true'
-        run: echo "Skipping publish — SNAPCRAFT_STORE_CREDENTIALS not set"
+        run: |
+          echo "::error::SNAPCRAFT_STORE_CREDENTIALS is not set — cannot publish."
+          echo "This job only runs when publishing was explicitly requested, so a"
+          echo "silent skip would report success having published nothing."
+          exit 1
 
   publish-stable:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -121,6 +130,15 @@ jobs:
           snap: ${{ steps.snap.outputs.path }}
           release: stable
 
-      - name: Skip publish (no credentials)
+      # Both publish jobs run ONLY on a deliberate trigger — publish-edge on
+      # workflow_dispatch, publish-stable on a tag ref. A missing credential is
+      # therefore never "nothing was asked of me"; it is "you asked me to publish
+      # and I could not". Skipping green reports a publish that did not happen,
+      # on the one path where that reading matters.
+      - name: Fail — no store credentials
         if: env.HAS_CREDS != 'true'
-        run: echo "Skipping publish — SNAPCRAFT_STORE_CREDENTIALS not set"
+        run: |
+          echo "::error::SNAPCRAFT_STORE_CREDENTIALS is not set — cannot publish."
+          echo "This job only runs when publishing was explicitly requested, so a"
+          echo "silent skip would report success having published nothing."
+          exit 1

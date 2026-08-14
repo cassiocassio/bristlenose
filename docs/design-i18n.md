@@ -27,12 +27,26 @@ The argument, four parts:
    engineers wins. Recognition is a axis where they aren't competing at all. Spending the next
    increment on a locale instead of a feature is choosing the contested ground deliberately.
 
-**Consequence for how locales get chosen.** The prioritisation chart further down (Mac reach × UR
-depth) is a *sketch for ranking candidates we'd have to go and find a reviewer for* — it is not a
-gate, and it is not an ROI model. **Do not build a business case for a locale, and do not let a weak
-one argue against it.** This has already gone wrong once (Catalan, 14 Aug 2026 — a throwaway "five
-users, maybe $1000?" became a de-risking framework that recommended exactly the wrong thing). The
-governing line is the maintainer's: **"Some kinds of analysis are best done outside a spreadsheet."**
+**Consequence for how locales get chosen — three inputs, none of them a gate.** There *is* a
+commercial case, and the sequencing has followed real logic: the prioritisation chart below (Mac
+reach × UR depth) is why `nl` went first, why the Nordics travelled together, why RTL is a
+checkpoint rather than a locale, and why `zh-Hans` is parked. That reasoning stands. But it is **one
+of three inputs**, not the decision procedure:
+
+1. **Commercial logic** — the chart. Real, and it drives sequencing.
+2. **Emotional and cultural** — the recognition argument above. Why a locale can be worth doing that
+   the chart ranks low.
+3. **Practicality** — *who we can ask a favour of*, and *which communities we want to present to*.
+   Reviewer availability is the genuine bottleneck on every locale here (it is why `nl`/`fi`/`pl`/
+   `ru`/`uk`/`tr` sit seeded-but-unreviewed), and conference audiences are a real input — the **UX
+   Europe unconference crowd** is a community worth showing up for, and that legitimately shapes
+   which languages get attention.
+
+**The failure mode is letting a thin ROI estimate override inputs 2 and 3** — not having a
+commercial view at all. That went wrong once (Catalan, 14 Aug 2026): a throwaway "five users, maybe
+$1000?" became a de-risking framework that recommended holding a seed which was never a financial
+decision. The chart informs; it does not adjudicate. The governing line is the maintainer's: **"Some
+kinds of analysis are best done outside a spreadsheet."**
 
 ## Problem
 

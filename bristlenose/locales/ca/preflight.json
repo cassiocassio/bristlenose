@@ -24,7 +24,7 @@
     "cmd_other": "https://ffmpeg.org/download.html"
   },
   "api_key": {
-    "source_attribution": "S'utilitza la clau API de {provider_display} de {source}. Verificació: ~0,0001 $, sense contingut de la transcripció.",
+    "source_attribution": "S'utilitza la clau API de {provider_display} obtinguda de {source}. Verificació: ~0,0001 $, sense contingut de la transcripció.",
     "rejected_invalid_key": "S'ha rebutjat la teva clau API de {provider_display} (HTTP 401).\nComprova la clau a {keys_url}\ni torna a executar-ho.",
     "no_credit": "El teu compte de {provider_display} no té crèdit d'API disponible.\nRecarrega'l a {billing_url}\n({minimum_note})\ni torna a executar-ho.",
     "model_unavailable": "El model sol·licitat no està disponible per al teu compte de {provider_display}. Consulta els models disponibles a {console_url} i activa el model o canvia `--llm-model` per un que el teu compte pugui fer servir.",

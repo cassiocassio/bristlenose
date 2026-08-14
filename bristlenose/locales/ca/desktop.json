@@ -260,7 +260,7 @@
       "stage": "Etapa {{index}} · {{stage}}",
       "stageShort": "Etapa {{index}}",
       "queued": "En cua · {{position}}",
-      "waitingSubprocess": "S'està esperant que surti el subprocés d'anàlisi.",
+      "waitingSubprocess": "S'està esperant que finalitzi el subprocés d'anàlisi.",
       "resuming": "S'està reprenent l'anàlisi (s'ha tornat a connectar després de reiniciar l'app).",
       "startingUp": "S'està iniciant — s'estan carregant els models i validant les credencials.",
       "elapsed": "Temps transcorregut: {{time}}",
@@ -268,9 +268,9 @@
       "stop": "Atura",
       "headline": {
         "running": "En execució",
-        "stopping": "S'està aturant",
+        "stopping": "En aturada",
         "queued": "En cua",
-        "failed": "Ha fallat"
+        "failed": "Execució fallida"
       },
       "help": {
         "running": "Mostra el progrés del processament de {{project}}",
@@ -311,7 +311,7 @@
     "inCloud": "A l'iCloud"
   },
   "boot": {
-    "tagline": "Donar sentit a la recerca amb usuaris",
+    "tagline": "Anàlisi de sentit per a la recerca amb usuaris",
     "startingSidecar": "S'està iniciant el Bristlenose…",
     "loadingReport": "S'està carregant l'informe…",
     "failedTitle": "No s'ha pogut iniciar el Bristlenose",
@@ -432,7 +432,7 @@
       "notSetUp": "Sense configurar",
       "invalid": "Clau no vàlida",
       "unavailable": "No disponible",
-      "checking": "S'està comprovant…",
+      "checking": "En comprovació",
       "outOfCredit": "Sense crèdit",
       "local": "Local"
     },

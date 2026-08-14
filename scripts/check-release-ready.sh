@@ -309,6 +309,28 @@ else
     esac
 fi
 
+# The publish hold lives in repo SETTINGS (Environments ▸ pypi ▸ required
+# reviewers), not in any file — nothing in the tree proves it exists, and a
+# fresh fork or a deleted environment silently reverts to publish-on-tag. The
+# release ordering (tag pushed EARLY, uploads after both CI verdicts, publish
+# waiting for approval) leans on this setting, so probe it rather than remember
+# it. Deliberately NOT nested in the CI-status branches above: this must report
+# regardless of whether HEAD is pushed or a run exists. Warn, not fail — the
+# flow degrades to pre-hold behaviour, which is worse but not wrong; the
+# operator just needs to know which world they are in before pushing the tag.
+if command -v gh >/dev/null 2>&1; then
+    HOLD=$(gh api repos/cassiocassio/bristlenose/environments/pypi \
+           --jq '[.protection_rules[]? | select(.type == "required_reviewers")] | length' \
+           2>/dev/null || echo "QUERY_FAILED")
+    case "$HOLD" in
+        QUERY_FAILED) warn "publish hold" "could not query the pypi environment — state unknown" ;;
+        0)            warn "publish hold" "NO required reviewer on the pypi environment — a tag push publishes IMMEDIATELY" ;;
+        *)            ok   "publish hold" "pypi environment requires approval before publish" ;;
+    esac
+else
+    warn "publish hold" "gh not installed — cannot verify the pypi environment"
+fi
+
 RUFF=$( .venv/bin/ruff check . 2>&1 | tail -1 )
 grep -q 'All checks passed' <<<"$RUFF" && ok "ruff" "clean" || bad "ruff" "$RUFF"
 fi

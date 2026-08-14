@@ -6,6 +6,25 @@ on:
   pull_request:
     branches: [main]
   workflow_call:  # allow release.yml to invoke this workflow
+    inputs:
+      strict-macos:
+        description: >-
+          Fail the run when a macOS test cell fails. Daily pushes leave this
+          off (macOS stays informational); release.yml passes true, because a
+          release gate that ignores the platform Homebrew/pip Mac users run on
+          is certifying the wrong thing.
+        type: boolean
+        required: false
+        default: false
+  # Same input, hand-triggerable — exists so the strict path can be exercised
+  # without cutting a release (trigger, watch it parse and spawn jobs, cancel).
+  workflow_dispatch:
+    inputs:
+      strict-macos:
+        description: 'Fail the run on macOS test failures (release-gate mode)'
+        type: boolean
+        required: false
+        default: false
 
 # Silence the per-step "actions/checkout@v4 is running on Node 20"
 # deprecation chatter and run JS actions on Node 24 ahead of the June
@@ -83,8 +102,18 @@ jobs:
   test:
     needs: lint
     runs-on: ${{ matrix.os }}
-    # macOS is informational — catches platform bugs without blocking merges
-    continue-on-error: ${{ matrix.os == 'macos-latest' }}
+    # macOS is informational on daily pushes (catches platform bugs without
+    # blocking merges) but BLOCKING when strict-macos is passed — release.yml
+    # passes it, so "CI green" on a release means green on both platforms.
+    # It used to mean "green on Linux" for a Mac-first product: every macOS
+    # cell could fail and needs:ci still let publish run. The macOS cells are
+    # the only automated coverage the Homebrew/pip-on-Mac audience has — the
+    # human walk covers the .app, nobody hand-tests the Mac CLI.
+    #
+    # Expression note: on push/PR events the inputs context is empty, so
+    # `inputs.strict-macos != true` is `null != true` → true → informational.
+    # Via workflow_call/dispatch with strict-macos: true it is false → blocking.
+    continue-on-error: ${{ matrix.os == 'macos-latest' && inputs.strict-macos != true }}
 
     strategy:
       fail-fast: false

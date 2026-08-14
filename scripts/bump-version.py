@@ -289,14 +289,20 @@ Done. The tag comes AFTER the commit, so that it points at it:
   4. git tag {tag}
      git rev-parse HEAD; git rev-parse {tag}^{{}}      # same SHA — confirm it
 
-Then push main and the tag SEPARATELY, never `--tags`:
+Then push main and the tag — as two commands, never one `--tags`:
 
-  5. git push origin main         # publishes nothing; release.yml fires on tags
-     ...let CI go green, build the Mac artefacts...
-  6. git push origin {tag}        # THIS is the irreversible one
+  5. git push origin main
+     git push origin {tag}
 
-Bundling both into one `git push --tags` is also how the tag-driven release
-workflow gets debounced into never firing.""")
+  Both are safe to run back to back: release.yml fires on the tag but its
+  publish job HOLDS on the pypi environment's required-reviewer gate, so
+  nothing reaches PyPI until you approve the run in GitHub. The release
+  lands at that approval — after both CI runs are green and the Mac
+  artefacts are built and uploaded. `check-release-ready.sh` probes that
+  the hold actually exists; heed its 'publish hold' line before pushing.
+
+(`--tags` stays forbidden: bundling branch and tag into one push is how the
+tag-driven release workflow gets debounced into never firing.)""")
 
 
 if __name__ == "__main__":

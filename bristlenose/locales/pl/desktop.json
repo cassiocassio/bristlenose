@@ -354,6 +354,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "Prze\u0142\u0105cz sesj\u0119",
     "back": "Wstecz (⌘[)",
     "forward": "Naprzód (⌘])",
     "tab": "Karta",

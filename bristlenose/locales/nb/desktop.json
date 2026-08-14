@@ -336,6 +336,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "Bytt \u00f8kt",
     "back": "Tilbake (⌘[)",
     "forward": "Frem (⌘])",
     "tab": "Fane",

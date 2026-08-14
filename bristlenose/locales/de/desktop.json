@@ -336,6 +336,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "Interview wechseln",
     "back": "Zurück (⌘[)",
     "forward": "Vorwärts (⌘])",
     "tab": "Tab",

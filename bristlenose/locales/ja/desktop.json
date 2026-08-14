@@ -244,6 +244,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "\u30bb\u30c3\u30b7\u30e7\u30f3\u3092\u5207\u308a\u66ff\u3048\u308b",
     "back": "戻る (⌘[)",
     "forward": "進む (⌘])",
     "tab": "タブ",

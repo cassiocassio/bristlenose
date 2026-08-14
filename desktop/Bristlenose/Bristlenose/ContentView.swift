@@ -1546,16 +1546,27 @@ struct ContentView: View {
         // The old `WindowTitleManager` is gone — its forced
         // `titleVisibility = .hidden` was what had suppressed the subtitle.
 
-        // Contextual — Sessions/Quotes/Codebook/Analysis: left panel toggle
+        // Contextual — Sessions: the native session-switcher popover.
+        // Same glyph, same slot as the panel toggles below, but a different
+        // KIND (momentary chooser, not a stateful toggle) — the accepted
+        // list.bullet double-meaning; the menu twin is what keeps it honest.
+        if bridgeHandler.activeTab == .sessions {
+            ToolbarItem(placement: .navigation) {
+                SessionsSwitcherButton(bridgeHandler: bridgeHandler,
+                                       serveManager: serveManager,
+                                       i18n: i18n)
+            }
+        }
+
+        // Contextual — Quotes/Codebook/Analysis: left panel toggle
         // The native sidebar toggle (for the project list) is provided by
         // NavigationSplitView automatically — Mail-style: lives inside the
         // sidebar column when open, snaps left to traffic lights when closed.
-        // This standalone button controls the web navigation sidebar (the
-        // session list on Sessions, sections/themes on Quotes, codebooks on
-        // Codebook, signals on Analysis).
-        // Gestalt proximity: each toggle is near the thing it controls.
-        if bridgeHandler.activeTab == .sessions ||
-           bridgeHandler.activeTab == .quotes ||
+        // This standalone button controls the web navigation sidebar
+        // (sections/themes on Quotes, codebooks on Codebook, signals on
+        // Analysis). Gestalt proximity: each toggle is near the thing it
+        // controls.
+        if bridgeHandler.activeTab == .quotes ||
            bridgeHandler.activeTab == .codebook ||
            bridgeHandler.activeTab == .analysis {
             ToolbarItem(placement: .navigation) {
@@ -1718,7 +1729,7 @@ struct ContentView: View {
                 lenses: LensItem.all,
                 activeTab: bridgeHandler.activeTab,
                 lensesEnabled: selectedProjectShowsReport,
-                onActivateLens: { bridgeHandler.switchToTab($0) },
+                onActivateLens: { bridgeHandler.activateLens($0) },
                 onExternalDrop: { target, urls in
                     // Route to the same substrate-independent handlers the SwiftUI
                     // sidebar's `.dropDestination` closures use — drop policy lives
@@ -2005,6 +2016,11 @@ struct ContentView: View {
         guard let id = selectedProjectID,
               isAnalysing(old[id]), isReportReady(new[id]) else { return }
         Self.reloadLog.info("completion id=\(id.uuidString, privacy: .public)")
+        // A run may have renumbered the positional session ids — a remembered
+        // `s3` would then restore *successfully* to a different participant's
+        // transcript. Clearing beats validating: renumbering only happens via
+        // a run, and this is the transition that marks one (SessionsRouteMemory).
+        bridgeHandler.clearSessionsRouteMemory()
         reportReloadTask?.cancel()
         reportReloadTask = Task { @MainActor in
             // Ride out the serve's ~1s re-import and any brief serve-restart or

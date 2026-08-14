@@ -48,7 +48,7 @@ private struct LensRow: View {
 
     var body: some View {
         Button {
-            bridgeHandler.switchToTab(item.tab)
+            bridgeHandler.activateLens(item.tab)
         } label: {
             Label {
                 Text(item.label(i18n))

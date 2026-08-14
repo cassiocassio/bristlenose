@@ -336,6 +336,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "Skift session",
     "back": "Tilbage (⌘[)",
     "forward": "Frem (⌘])",
     "tab": "Faneblad",

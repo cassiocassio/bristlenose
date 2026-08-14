@@ -336,6 +336,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "Changer d'entretien",
     "back": "Précédent (⌘[)",
     "forward": "Suivant (⌘])",
     "tab": "Onglet",

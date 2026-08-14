@@ -336,6 +336,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "Vaihda istuntoa",
     "back": "Takaisin (⌘[)",
     "forward": "Eteenpäin (⌘])",
     "tab": "Välilehti",

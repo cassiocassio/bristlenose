@@ -341,6 +341,46 @@ private final class PortFlipper {
     }
 }
 
+// MARK: - Route memory
+
+@Suite struct SessionsRouteMemoryTests {
+
+    @Test("Parses the three route shapes and rejects everything else")
+    func parsing() {
+        typealias R = SessionsRouteMemory
+        #expect(R.sessionsRoute(fromPath: "/report/sessions/") == .index)
+        #expect(R.sessionsRoute(fromPath: "/report/sessions") == .index)
+        #expect(R.sessionsRoute(fromPath: "/report/sessions/s3") == .session("s3"))
+        #expect(R.sessionsRoute(fromPath: "/report/sessions/s12?x=1#t-40") == .session("s12"))
+        #expect(R.sessionsRoute(fromPath: "/report/quotes/") == nil)
+        #expect(R.sessionsRoute(fromPath: "/report/") == nil)
+        // The server serves transcript_*.html under the same prefix — a
+        // non-session filename must never become a restore target.
+        #expect(R.sessionsRoute(fromPath: "/report/sessions/transcript_s1.html") == nil)
+        #expect(R.sessionsRoute(fromPath: "/report/sessions/s3/extra") == nil)
+        #expect(R.sessionsRoute(fromPath: "/report/sessionsfoo") == nil)
+        #expect(R.sessionsRoute(fromPath: "/report/sessions/sX") == nil)
+    }
+
+    @Test("Remembers the last transcript; visiting the grid resets to index")
+    func observeAndReset() {
+        var m = SessionsRouteMemory()
+        #expect(m.restoreSessionID == nil)
+        m.observe(path: "/report/sessions/s3")
+        #expect(m.restoreSessionID == "s3")
+        // Other lenses leave the memory alone — leaving Sessions and coming
+        // back is exactly the restore case.
+        m.observe(path: "/report/quotes/")
+        #expect(m.restoreSessionID == "s3")
+        // The grid resets it: "the view the user left" is now the index.
+        m.observe(path: "/report/sessions/")
+        #expect(m.restoreSessionID == nil)
+        m.observe(path: "/report/sessions/s7")
+        m.clear()   // run completion / project switch
+        #expect(m.restoreSessionID == nil)
+    }
+}
+
 // MARK: - Table outcome
 
 /// The OUTCOME tests the review demanded (Finding 40, accepted): a pure

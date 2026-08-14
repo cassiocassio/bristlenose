@@ -327,6 +327,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "\uc138\uc158 \uc804\ud658",
     "back": "뒤로 (⌘[)",
     "forward": "앞으로 (⌘])",
     "tab": "탭",

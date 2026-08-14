@@ -280,11 +280,16 @@ Web storage is not an option regardless: `.nonPersistent()` is minted fresh per
 so `localStorage` is wiped constantly — and reaching for a persistent store to
 "fix" that would be a genuine cross-project leak.
 
-**The remembered id must be validated, not just restored.** Session ids are
-positional; a re-analysis that drops a session renumbers the rest, so remembered
-`s3` restores *successfully* to a different participant's transcript. Validate
-against the fetched list and clear on the `run_completed` terminus. The 404 case
-is the benign half.
+**The remembered id is cleared, not validated.** Session ids are positional; a
+re-analysis that drops a session renumbers the rest, so remembered `s3` restores
+*successfully* to a different participant's transcript. The review proposed
+validate-and-clear; what shipped is **clear-only**, on the same
+`analysing → ready` transition that drives the report reload — renumbering only
+happens via a run, so clearing at the run boundary covers the wrong-participant
+case, and validation at restore time had no fetched list at hand (the popover
+model belongs to the toolbar button, not the lens rows). The benign 404 half
+lands on `TranscriptPage`'s error state with the toolbar switcher as the way
+out. Memory also clears on project switch (`BridgeHandler.reset()`).
 
 Also: **All Sessions** must navigate to `/report/sessions/` explicitly, or the
 restore will bounce it straight back to the remembered transcript.
@@ -391,21 +396,34 @@ Three commits, so reverting the last alone restores the sidebar.
    goes through `I18n.plural(_:count:)`, reusing the reviewed four-form twin at
    `desktop.connectAgent.sessions_*`. Glossary row for "All Sessions".
 
-**Commit 2 — rewiring.** Still nothing removed.
-8. Toolbar button presents the popover on `.sessions`; give it its own
-   accessible name (today it resolves to "Sessions" *on the Sessions lens*).
-9. Menu twin + ⌘⌥L, `[`, and `allSidebarsShowing` all repointed — otherwise
-   they toggle a panel that no longer exists and the View row lies ("Hide
-   Sessions" for something not on screen).
-10. `navigateToSession` bridge wrapper — must not copy the
-    `in: nil, in: .page` completion-overload pattern that leaves `catch` dead.
-11. Route memory, Swift-side, validated against the fetched list.
+**Commit 2 — rewiring.** Still nothing removed, and — deliberately narrower
+than first planned — **only the affordances that don't guard the sidebar**: the
+⌘⌥L/View-menu repoint, `[`-key gating, `allSidebarsShowing` and `panel-state`
+move to commit 3, because they are consequences *of* the removal. That way
+reverting commit 3 alone restores both the sidebar and every path to it,
+leaving a coherent fallback (popover on the toolbar, sidebar via ⌘⌥L). In the
+commit-2 window ⌘⌥L still toggles a sidebar that still exists, so no menu row
+lies.
+8. Toolbar button presents the popover on `.sessions`
+   (`SessionsSwitcherButton`) with its own accessible name
+   (`desktop.toolbar.switchSession`, seeded ×20 — it used to resolve to
+   "Sessions" *on the Sessions lens*). Listens for `.showSessionsSwitcher`
+   so commit 3's menu twin is one `NotificationCenter.post`.
+9. `navigateToSession` bridge wrapper — the completion-handler overload with an
+   explicit nil, NOT the `try await … in: nil, in: .page` spelling that
+   silently resolves to the same overload and leaves the `catch` dead.
+10. Route memory, Swift-side (`SessionsRouteMemory`, pure + tested):
+    lens-activation callers (`activateLens` — sidebar rows, `LensRail`, ⌘1–5)
+    restore; `switchToTab` stays pure so All Sessions reaches the grid.
 
 **Commit 3 — the removal. This is the revert target.**
-12. `SessionsSidebar` out of the embedded layout — gate `showSidebar`/`active`,
+11. `SessionsSidebar` out of the embedded layout — gate `showSidebar`/`active`,
     **not** the `leftPanel` prop: `{leftPanel ?? <TocSidebar/>}` means
     `undefined` renders the *Quotes* contents panel.
-13. Sticky-header `Selector` disclosure gated on `isEmbedded()`, label kept.
+12. Sticky-header `Selector` disclosure gated on `isEmbedded()`, label kept.
+13. ⌘⌥L / View ▸ row on `.sessions` → post `.showSessionsSwitcher`; `[` key
+    gated off the sessions route; `allSidebarsShowing` and `panel-state` stop
+    counting a panel that no longer exists.
 
 **Accessibility** (throughout, not a phase): one composed `accessibilityLabel`
 per row, from the **model** not the truncated text field, badge immediately

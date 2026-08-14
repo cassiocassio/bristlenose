@@ -336,6 +336,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "Sessie wisselen",
     "back": "Terug (⌘[)",
     "forward": "Vooruit (⌘])",
     "tab": "Tab",

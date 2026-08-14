@@ -353,6 +353,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "P\u0159epnout sezen\u00ed",
     "back": "Zpět (⌘[)",
     "forward": "Vpřed (⌘])",
     "tab": "Panel",

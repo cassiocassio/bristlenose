@@ -336,6 +336,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "Trocar de sess\u00e3o",
     "back": "Voltar (⌘[)",
     "forward": "Avançar (⌘])",
     "tab": "Aba",

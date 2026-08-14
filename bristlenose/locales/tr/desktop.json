@@ -336,6 +336,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "Oturum De\u011fi\u015ftir",
     "back": "Geri (⌘[)",
     "forward": "İleri (⌘])",
     "tab": "Sekme",

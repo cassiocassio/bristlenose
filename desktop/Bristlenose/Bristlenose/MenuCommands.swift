@@ -548,10 +548,11 @@ private struct ViewMenuContent: View {
     }
 
     var body: some View {
-        // Tab shortcuts Cmd+1 through Cmd+5
+        // Tab shortcuts Cmd+1 through Cmd+5. `activateLens`, not `switchToTab`:
+        // the Sessions lens restores the view the user left (route memory).
         ForEach(Array(Tab.allCases.enumerated()), id: \.element.id) { index, tab in
             Button(tab.localizedLabel(i18n), systemImage: LensItem.systemImage(for: tab)) {
-                bridgeHandler.switchToTab(tab)
+                bridgeHandler.activateLens(tab)
             }
             .keyboardShortcut(
                 KeyEquivalent(Character("\(index + 1)")),

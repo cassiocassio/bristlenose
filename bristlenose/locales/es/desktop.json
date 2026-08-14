@@ -336,6 +336,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "Cambiar de sesi\u00f3n",
     "back": "Atrás (⌘[)",
     "forward": "Adelante (⌘])",
     "tab": "Pestaña",

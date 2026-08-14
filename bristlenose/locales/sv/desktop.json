@@ -336,6 +336,7 @@
     }
   },
   "toolbar": {
+    "switchSession": "Byt session",
     "back": "Bakåt (⌘[)",
     "forward": "Framåt (⌘])",
     "tab": "Flik",

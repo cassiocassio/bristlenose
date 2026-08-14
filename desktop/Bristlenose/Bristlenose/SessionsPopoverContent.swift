@@ -136,6 +136,89 @@ struct SessionsPopoverContent: View {
     }
 }
 
+// MARK: - Toolbar button
+
+extension Notification.Name {
+    /// Posted to present the session switcher from outside the toolbar — the
+    /// menu twin (commit 3 repoints ⌘⌥L here on the Sessions lens) and any
+    /// future affordance. Same native-side pattern as `.showMiroSheet`.
+    static let showSessionsSwitcher = Notification.Name("showSessionsSwitcher")
+}
+
+/// The Sessions-lens toolbar button — presents the session-switcher popover.
+///
+/// Replaces the `toggleLeftPanel` dispatch on this one lens (the other three
+/// lenses keep their web-panel toggle). Carries its OWN accessible name:
+/// the shared label resolved to "Sessions" via `common.nav.sessions`, so
+/// VoiceOver said "Sessions, button" while sitting on the Sessions lens —
+/// no information at all (review finding 28).
+struct SessionsSwitcherButton: View {
+    @ObservedObject var bridgeHandler: BridgeHandler
+    @ObservedObject var serveManager: ServeManager
+    @ObservedObject var i18n: I18n
+
+    @StateObject private var model = SessionsPopoverModel()
+    @State private var isPresented = false
+
+    var body: some View {
+        Button {
+            present()
+        } label: {
+            Label(i18n.t("desktop.toolbar.switchSession"), systemImage: "list.bullet")
+        }
+        .help(i18n.t("desktop.toolbar.switchSession"))
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            SessionsPopoverContent(
+                model: model,
+                i18n: i18n,
+                activeSessionID: activeSessionID,
+                onAllSessions: {
+                    // Plain switchToTab, deliberately NOT activateLens — All
+                    // Sessions must reach the grid; the route memory would
+                    // bounce an activateLens straight back to the transcript.
+                    bridgeHandler.switchToTab(.sessions)
+                    isPresented = false
+                },
+                onCommit: { session in
+                    bridgeHandler.navigateToSession(session.sessionID)
+                },
+                onDismiss: { isPresented = false },
+                onRetry: { refresh() }
+            )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showSessionsSwitcher)) { _ in
+            if !isPresented { present() }
+        }
+    }
+
+    private func present() {
+        isPresented = true
+        refresh()   // the decided refresh trigger: every open re-fetches
+    }
+
+    private func refresh() {
+        // Identity is read through the provider at request-build time and
+        // re-read after the await, inside SessionsAPI.load — never snapshot
+        // port/token here (the parked-sidecar wrong-project class).
+        let manager = serveManager
+        Task {
+            await model.refresh { [weak manager] in
+                guard let manager,
+                      let port = manager.runningPort,
+                      let token = manager.authToken else { return nil }
+                return (port: port, token: token)
+            }
+        }
+    }
+
+    private var activeSessionID: String? {
+        if case .session(let id) = SessionsRouteMemory.sessionsRoute(fromPath: bridgeHandler.currentPath) {
+            return id
+        }
+        return nil
+    }
+}
+
 // MARK: - Action row
 
 /// The All Sessions row — `ExportPopoverRow`'s visual language (same metrics:

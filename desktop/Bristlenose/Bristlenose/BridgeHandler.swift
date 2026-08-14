@@ -224,6 +224,55 @@ final class BridgeHandler: ObservableObject {
         }
     }
 
+    /// Sessions-lens route memory — fed by `route-change`, cleared on project
+    /// switch (`reset()`) and on run completion (positional session ids
+    /// renumber across a re-analysis; see `SessionsRouteMemory`'s type doc).
+    var sessionsRouteMemory = SessionsRouteMemory()
+
+    /// Named clear for the run-completion transition (`ContentView.
+    /// scheduleReportReloadOnCompletion`) — see `SessionsRouteMemory` for why
+    /// clearing beats validating.
+    func clearSessionsRouteMemory() {
+        sessionsRouteMemory.clear()
+    }
+
+    /// Activate a lens the way the lens-activation affordances do — the
+    /// sidebar lens rows, `LensRail`, and View ▸ ⌘1–5 all route here.
+    ///
+    /// For every lens but Sessions this IS `switchToTab`. Sessions restores
+    /// the view the user left (design doc §Route memory): the remembered
+    /// transcript when there is one, the grid otherwise. `switchToTab` itself
+    /// stays pure — "go to the tab root" — which is what lets the popover's
+    /// All Sessions row reach the grid without the memory bouncing it back.
+    func activateLens(_ tab: Tab) {
+        if tab == .sessions, let sid = sessionsRouteMemory.restoreSessionID {
+            navigateToSession(sid)
+            return
+        }
+        switchToTab(tab)
+    }
+
+    /// Navigate the SPA to a session's transcript via the
+    /// `window.navigateToSession` shim (`navigation.ts:62`).
+    ///
+    /// Deliberately the **completion-handler overload** with an explicit nil —
+    /// honest fire-and-forget. Do NOT write `try await … in: nil, in: .page`
+    /// here: that spelling silently resolves to this same completion overload,
+    /// whose Void result makes the `await`/`try` no-ops and the `catch` dead
+    /// (the documented BridgeHandler wrinkle — six inert warnings elsewhere in
+    /// this file; don't add a seventh).
+    func navigateToSession(_ sessionID: String) {
+        guard let webView else { return }
+        webView.callAsyncJavaScript(
+            "window.navigateToSession(sid)",
+            arguments: ["sid": sessionID],
+            in: nil,
+            in: .page,
+            completionHandler: nil
+        )
+        webView.window?.makeFirstResponder(webView)
+    }
+
     /// Push the Quotes-lens search text from the native search field into the
     /// SPA store (`setSearchQuery` action → live filtering). Fire-and-forget;
     /// the SPA is the single source of truth for `quotesSearchQuery` — it's
@@ -420,6 +469,7 @@ final class BridgeHandler: ObservableObject {
         case "route-change":
             if let url = body["url"] as? String {
                 currentPath = url
+                sessionsRouteMemory.observe(path: url)
             }
 
         case "editing-started":
@@ -520,6 +570,7 @@ final class BridgeHandler: ObservableObject {
     func reset() {
         isReady = false
         currentPath = ""
+        sessionsRouteMemory.clear()
         isEditing = false
         canGoBack = false
         canGoForward = false

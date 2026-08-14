@@ -317,7 +317,11 @@ shrinks to match in the same pass.)
    riskiest step.) **Deferred** — `.signal-card` radius already landed
    (`be1835b7`); the scroll-pane → SidebarLayout structural move is post-Phase-B.
 3. **TOC sidebar treatment.** **Shipped as code 2026-07-26** — `.toc-sidebar`
-   mirrors the tag sidebar's toolbar bleed (`sidebar.css`).
+   mirrors the tag sidebar's toolbar bleed (`sidebar.css`). Colour tier
+   followed 14 Aug 2026 — `.toc-sidebar` rides `--bn-colour-inspector-bg`
+   like the tag sidebar; it had shipped on the editor `--bn-colour-bg`,
+   invisible in light mode (2% delta) and near-black beside the native
+   sidebar in dark.
 4. **Keyline token + playground toggle.** Keyline token
    (`--bn-colour-keyline`) shipped; playground A/B toggle not yet wired.
 5. **`__bnLayoutAudit` + Playwright alignment gate** — locks it all in.

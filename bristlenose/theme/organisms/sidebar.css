@@ -195,7 +195,7 @@
     height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
-    background: var(--bn-colour-bg);
+    background: var(--bn-colour-inspector-bg);
     border-right: 1px solid var(--bn-colour-border);
     visibility: hidden;
     opacity: 0;

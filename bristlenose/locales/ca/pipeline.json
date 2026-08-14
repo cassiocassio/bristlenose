@@ -1,0 +1,6 @@
+{
+  "start": "S'està iniciant el processament de {path}",
+  "stageStart": "S'està executant {stage}…",
+  "stageComplete": "S'ha completat {stage} ({duration})",
+  "done": "S'ha completat el processament. Sortida: {output}"
+}

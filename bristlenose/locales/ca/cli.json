@@ -1,0 +1,27 @@
+{
+  "version": "bristlenose {version}",
+  "help": "Motor de transcripció i extracció de cites per a la recerca amb usuaris.",
+  "stage": {
+    "ingest": "Ingesta",
+    "extractAudio": "Extracció de l'àudio",
+    "transcribe": "Transcripció",
+    "identifySpeakers": "Identificació dels parlants",
+    "mergeTranscript": "Fusió de la transcripció",
+    "piiRemoval": "Eliminació de dades personals",
+    "topicSegmentation": "Segmentació per temes",
+    "quoteExtraction": "Extracció de cites",
+    "quoteClustering": "Agrupació de cites",
+    "thematicGrouping": "Agrupació temàtica",
+    "render": "Generació"
+  },
+  "error": {
+    "noInput": "No s'ha especificat cap carpeta d'entrada.",
+    "notFound": "No s'ha trobat la carpeta: {path}",
+    "noFiles": "No s'ha trobat cap fitxer d'àudio, de vídeo o de transcripció a {path}"
+  },
+  "progress": {
+    "complete": "Completat",
+    "failed": "Ha fallat",
+    "skipped": "Omès"
+  }
+}

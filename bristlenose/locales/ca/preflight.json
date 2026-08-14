@@ -1,0 +1,45 @@
+{
+  "whisper": {
+    "banner_intro": "El Bristlenose necessita el model de transcripció Whisper ({size}).",
+    "verb_downloading": "S'està baixant",
+    "verb_resuming": "S'està reprenent la baixada de",
+    "fetching": "{verb} {repo_id}...",
+    "ready": "El model Whisper està a punt",
+    "aborted_no_fetch": "El model Whisper {repo_id} no és a la memòria cau i s'ha indicat --no-fetch. Executa `bristlenose doctor --fetch` per obtenir-lo per endavant, o torna a executar-ho sense --no-fetch."
+  },
+  "ffmpeg": {
+    "banner_missing": "Cal l'ffmpeg per llegir fitxers de vídeo. No s'ha trobat al PATH.",
+    "prompt_brew_install": "Vols executar `brew install ffmpeg` ara?",
+    "installed": "S'ha instal·lat l'ffmpeg",
+    "aborted": "Cal l'ffmpeg, però no s'ha trobat. Instal·la'l amb l'ordre anterior i torna a executar-ho.",
+    "label_macos": "macOS",
+    "label_ubuntu": "Ubuntu / Debian",
+    "label_fedora": "Fedora / RHEL",
+    "label_arch": "Arch / Manjaro",
+    "label_other": "Altres",
+    "cmd_macos": "brew install ffmpeg",
+    "cmd_ubuntu": "sudo apt install ffmpeg",
+    "cmd_fedora": "sudo dnf install ffmpeg",
+    "cmd_arch": "sudo pacman -S ffmpeg",
+    "cmd_other": "https://ffmpeg.org/download.html"
+  },
+  "api_key": {
+    "source_attribution": "S'utilitza la clau API de {provider_display} de {source}. Verificació: ~0,0001 $, sense contingut de la transcripció.",
+    "rejected_invalid_key": "S'ha rebutjat la teva clau API de {provider_display} (HTTP 401).\nComprova la clau a {keys_url}\ni torna a executar-ho.",
+    "no_credit": "El teu compte de {provider_display} no té crèdit d'API disponible.\nRecarrega'l a {billing_url}\n({minimum_note})\ni torna a executar-ho.",
+    "model_unavailable": "El model sol·licitat no està disponible per al teu compte de {provider_display}. Consulta els models disponibles a {console_url} i activa el model o canvia `--llm-model` per un que el teu compte pugui fer servir.",
+    "rate_limit": "{provider_display} està limitant la freqüència de peticions d'aquest compte. Espera un minut i torna a executar-ho, o redueix `llm_concurrency` al teu bristlenose.toml.",
+    "generic": "El proveïdor diu: {message}.\nSi sembla un problema de saldo, recarrega el compte a la consola de facturació del proveïdor i torna a executar-ho.",
+    "network": "No s'ha pogut contactar amb el proveïdor: {message}.\nComprova la configuració de DNS, VPN o servidor intermediari i torna a executar-ho.",
+    "azure_deployment_unavailable": "No s'ha trobat el desplegament d'Azure. Aquest és el **nom del desplegament** del portal d'Azure, no un identificador de model — comprova'l al portal d'Azure a Azure OpenAI → Desplegaments. Actualitza BRISTLENOSE_AZURE_DEPLOYMENT (o azure_deployment a bristlenose.toml) i torna a executar-ho. Causa: {message}.",
+    "google_model_unavailable": "El Gemini ha denegat l'accés al model sol·licitat. Normalment és una restricció de nivell, una restricció de regió o la facturació no activada — comprova-ho a la consola de Google Cloud a {console_url}. Si la facturació està configurada, prova un altre model amb --llm-model. Causa: {message}.",
+    "local_server_down": "Sembla que l'Ollama no s'està executant. Inicia'l amb `ollama serve` (o obre l'app Ollama al macOS) i torna a executar-ho. Causa: {message}.",
+    "local_model_not_pulled": "El model local sol·licitat no s'ha baixat. Executa `ollama pull <model>` per baixar-lo (comprova el nom del model a bristlenose.toml o --llm-model) i torna a executar-ho. Causa: {message}."
+  },
+  "pii": {
+    "downloading": "S'està baixant el detector de dades personals (~12 MB, només un cop)..."
+  },
+  "closing": {
+    "no_more_questions": "No hi ha més preguntes.{estimate_suffix} Ctrl+C quan vulguis."
+  }
+}

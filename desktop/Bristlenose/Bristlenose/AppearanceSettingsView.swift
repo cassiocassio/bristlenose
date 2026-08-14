@@ -63,6 +63,7 @@ struct AppearanceSettingsView: View {
                 Picker(i18n.t("settings.language.legend"), selection: $language) {
                     Text("English").tag("en")
                     Text("Español").tag("es")
+                    Text("Català").tag("ca")
                     Text("日本語").tag("ja")
                     Text("Français").tag("fr")
                     Text("Deutsch").tag("de")

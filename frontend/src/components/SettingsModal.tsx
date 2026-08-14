@@ -46,6 +46,7 @@ const PALETTE_KEYS = PALETTES.map((value) => ({ value, labelKey: `palette.${valu
 const LOCALE_LABELS: Record<Locale, string> = {
   en: "English",
   es: "Español",
+  ca: "Català",
   ja: "日本語",
   fr: "Français",
   de: "Deutsch",

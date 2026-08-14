@@ -1,0 +1,233 @@
+{
+  "heading": "Configuració",
+  "appearance": {
+    "diagnosticsLegend": "Mostra el menú Diagnòstic",
+    "diagnosticsHelp": "Afegeix un menú Diagnòstic amb eines per inspeccionar les execucions d'anàlisi. També activa l'Inspector Web a la vista de l'informe.",
+    "animationLegend": "Mostra l'animació mentre s'analitza",
+    "animationHelp": "Reprodueix una animació de paraules en estol a la finestra principal mentre s'analitza un projecte. Desactiva-ho per veure el progrés sense adornaments.",
+    "randomIconsLegend": "Assigna una icona aleatòria als projectes nous",
+    "randomIconsHelp": "Cada projecte nou rep una icona distintiva perquè sigui fàcil de reconèixer a la barra lateral. Desactiva-ho per mantenir l'anella simple i triar les icones tu mateix.",
+    "legend": "Aspecte de l'aplicació",
+    "auto": "Utilitza l'aspecte del sistema",
+    "light": "Clar",
+    "dark": "Fosc"
+  },
+  "palette": {
+    "legend": "Paleta de colors",
+    "default": "Per defecte",
+    "edo": "Edo",
+    "description": "Recolora tota l'aplicació. L'Edo utilitza paper washi càlid i tinta blau de Prússia."
+  },
+  "typography": {
+    "legend": "Tipografia"
+  },
+  "language": {
+    "legend": "Idioma",
+    "description": "Controla l'idioma de la interfície. El contingut de l'informe no es tradueix.",
+    "helpTranslate": "Ajuda a traduir el Bristlenose al teu idioma a"
+  },
+  "settingsNav": {
+    "general": "General",
+    "project": "Projecte",
+    "profile": "Perfil",
+    "apiKeys": "Claus API",
+    "config": "Configuració",
+    "projectStub": "Aquí apareixerà la configuració de cada projecte. Properament.",
+    "profileStub": "Aquí apareixerà la configuració del perfil (nom, correu, motor de Whisper). Properament.",
+    "apiKeysStub": "Aquí apareixerà la gestió de les claus API. Properament.",
+    "pipeline": "Pipeline"
+  },
+  "configReference": {
+    "heading": "Referència de configuració",
+    "intro": "Totes les opcions següents es configuren amb variables d'entorn o amb un fitxer <code>.env</code>. Es mostren aquí com a referència: per canviar un valor, edita el fitxer que s'indica a cada fila.",
+    "clickToCopy": "Fes clic per copiar",
+    "copied": "Copiat",
+    "categories": {
+      "llm": "Proveïdor i model d'LLM",
+      "transcription": "Transcripció",
+      "privacy": "Privadesa",
+      "quotes": "Cites",
+      "analysis": "Anàlisi",
+      "autocode": "AutoCode",
+      "display": "Visualització",
+      "pipeline": "Pipeline",
+      "thumbnails": "Miniatures",
+      "server": "Servidor",
+      "logging": "Registre",
+      "timing": "Temps"
+    },
+    "settings": {
+      "llm": {
+        "provider": "Proveïdor",
+        "model": "Model",
+        "temperature": "Temperatura",
+        "maxTokens": "Màxim de tokens de sortida",
+        "concurrency": "Concurrència",
+        "claudeKey": "Clau API del Claude",
+        "chatgptKey": "Clau API del ChatGPT",
+        "geminiKey": "Clau API del Gemini",
+        "azureKey": "Clau API d'Azure",
+        "azureEndpoint": "Punt final d'Azure",
+        "azureDeployment": "Desplegament d'Azure",
+        "azureApiVersion": "Versió de l'API d'Azure",
+        "ollamaUrl": "URL de l'Ollama",
+        "ollamaModel": "Model de l'Ollama"
+      },
+      "transcription": {
+        "backend": "Motor",
+        "model": "Model",
+        "language": "Idioma",
+        "device": "Dispositiu",
+        "computeType": "Tipus de càlcul",
+        "audioConcurrency": "Concurrència d'extracció d'àudio"
+      },
+      "privacy": {
+        "piiRedaction": "Ocultació de dades personals",
+        "piiLlmPass": "Passada d'LLM per a dades personals",
+        "customNames": "Noms personalitzats per ocultar"
+      },
+      "quotes": {
+        "minQuoteWords": "Mínim de paraules per cita",
+        "speakerMergeGap": "Interval de fusió de parlants",
+        "quoteSequenceGap": "Interval de seqüència de cites",
+        "llmFailureThreshold": "Llindar de fallades de l'LLM",
+        "autocodeBatchSize": "Mida del lot d'AutoCode"
+      },
+      "analysis": {
+        "topNSignals": "Nombre màxim de senyals",
+        "topNSignalsGeneric": "Nombre màxim de senyals (genèric)",
+        "topNElaboration": "Nombre màxim per a l'elaboració",
+        "minQuotesPerCell": "Mínim de cites per cel·la",
+        "strongConcentration": "Fort: concentració >",
+        "strongParticipants": "Fort: participants ≥",
+        "strongQuotes": "Fort: cites ≥",
+        "moderateConcentration": "Moderat: concentració >",
+        "moderateParticipants": "Moderat: participants ≥",
+        "moderateQuotes": "Moderat: cites ≥"
+      },
+      "autocode": {
+        "defaultLower": "Llindar inferior per defecte",
+        "defaultUpper": "Llindar superior per defecte",
+        "sliderStep": "Pas del control lliscant",
+        "sliderMinGap": "Interval mínim del control lliscant",
+        "histogramBins": "Intervals de l'histograma"
+      },
+      "display": {
+        "searchMinChars": "Mínim de caràcters de cerca",
+        "activityPollInterval": "Interval de sondeig d'activitat"
+      },
+      "pipeline": {
+        "projectName": "Nom del projecte",
+        "writeIntermediate": "Escriu els fitxers intermedis",
+        "skipTranscription": "Omet la transcripció",
+        "maxSessionsBeforeConfirm": "Màxim de sessions abans de confirmar"
+      },
+      "thumbnails": {
+        "keyframeSearchWindow": "Finestra de cerca de fotogrames clau",
+        "fallbackFrameTime": "Temps del fotograma alternatiu",
+        "thumbnailWidth": "Amplada de la miniatura",
+        "jpegQuality": "Qualitat JPEG"
+      },
+      "server": {
+        "serverPort": "Port del servidor",
+        "miroAccessToken": "Testimoni d'accés del Miro"
+      },
+      "logging": {
+        "logLevel": "Nivell de registre (fitxer)",
+        "logFileMaxSize": "Mida màxima del fitxer de registre",
+        "logBackupCount": "Nombre de còpies de registre"
+      },
+      "timing": {
+        "minRunsEstimate": "Execucions mínimes abans de l'estimació",
+        "minRunsRange": "Execucions mínimes abans de l'interval ±"
+      }
+    }
+  },
+    "pipeline": {
+      "intro": "Vista de només lectura dels models que el Bristlenose fa servir actualment a cada etapa del processament. Per canviar un motor, edita la configuració (variables d'entorn o fitxer .env).",
+      "loading": "S'està carregant la vista del processament…",
+      "error": "No s'ha pogut carregar la vista del processament",
+      "keys": "claus",
+      "keysNone": "cap",
+      "ollama": "ollama",
+      "running": "en execució",
+      "notDetected": "no detectat",
+      "available": "disponible",
+      "unavailable": "no disponible",
+      "alternatives": {
+        "summaryHeading": "Motors d'LLM en aquest amfitrió",
+        "available": "Disponibles",
+        "unavailable": "No disponibles",
+        "none": "cap"
+      },
+      "backends": {
+        "local_ollama": "Local (Ollama)",
+        "builtin_anonymiser": "Anonimitzador integrat"
+      },
+      "glyph": {
+        "available": "disponible",
+        "unavailable": "no disponible",
+        "skipped": "no aplicable en aquest amfitrió"
+      },
+      "column": {
+        "model": "Model",
+        "availability": "Disponibilitat",
+        "quality": "Qualitat",
+        "notes": "Notes"
+      },
+      "key": {
+        "italic_label": "cursiva",
+        "synthesised": "de la teva configuració, no del nostre catàleg"
+      },
+      "qualifier": {
+        "default": "per defecte",
+        "current": "actual",
+        "your_deployment": "el teu desplegament d'Azure"
+      },
+      "quality": {
+        "glyph": {
+          "excellent": "qualitat excel·lent",
+          "good": "bona qualitat",
+          "marginal": "qualitat justa",
+          "avoid": "evita'l — qualitat massa baixa",
+          "untested": "sense provar"
+        },
+        "untested": "sense provar",
+        "local_speaker_id_acceptable": "Els models locals identifiquen bé els parlants",
+        "local_topic_segmentation_acceptable": "Els models locals segmenten bé els temes",
+        "local_quote_extraction_miss_rate": "els models petits es deixen les cites de diverses oracions",
+        "local_quote_clustering_drift": "els models petits agrupen les cites de manera inconsistent",
+        "local_thematic_grouping_drift": "els models petits perden el fil en la síntesi temàtica",
+        "mlx_whisper_apple_silicon_optimal": "òptim en Apple Silicon",
+        "faster_whisper_cpu_baseline": "base sòlida en CPU; no cal GPU"
+      },
+      "actions": {
+        "obtain_anthropic_key": "obtén una clau API a console.anthropic.com i defineix ANTHROPIC_API_KEY o enganxa-la a Configuració → Claus",
+        "obtain_openai_key": "obtén una clau API a platform.openai.com i defineix OPENAI_API_KEY o enganxa-la a Configuració → Claus",
+        "obtain_google_key": "obtén una clau API a aistudio.google.com i defineix GOOGLE_API_KEY o enganxa-la a Configuració → Claus",
+        "configure_azure": "defineix la clau, el punt final i el desplegament d'Azure a Configuració → Claus",
+        "start_ollama": "inicia el servei Ollama (ollama serve)",
+        "install_mlx_whisper": "pip install mlx-whisper (requereix Apple Silicon)",
+        "install_ctranslate2": "pip install ctranslate2",
+        "install_presidio": "pip install bristlenose[redact-pii] per activar l'anonimitzador integrat",
+        "enable_pii_redaction": "executa-ho amb --redact-pii o defineix pii_enabled=true"
+      },
+      "reasons": {
+        "no_anthropic_key": "no s'ha definit cap clau API del Claude",
+        "no_openai_key": "no s'ha definit cap clau API del ChatGPT",
+        "no_azure_key": "no s'ha definit cap clau d'Azure OpenAI",
+        "no_azure_endpoint": "no s'ha definit el punt final d'Azure",
+        "no_azure_deployment": "no s'ha definit el desplegament d'Azure",
+        "no_google_key": "no s'ha definit cap clau API del Gemini",
+        "ollama_not_running": "l'Ollama no s'està executant",
+        "insufficient_ram": "cal més memòria",
+        "apple_fm_check_desktop": "comprova-ho a l'aplicació d'escriptori",
+        "requires_apple_silicon": "requereix Apple Silicon",
+        "mlx_whisper_not_installed": "MLX Whisper no està instal·lat",
+        "ctranslate2_not_installed": "ctranslate2 no està instal·lat",
+        "presidio_not_installed": "L'anonimitzador integrat no està instal·lat",
+        "spacy_model_missing": "el model lingüístic no està instal·lat",
+        "pii_disabled": "l'ocultació de dades personals està desactivada"
+      }
+    }
+}

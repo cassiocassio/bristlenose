@@ -1,0 +1,24 @@
+{
+  "error": {
+    "notFound": "No s'ha trobat el recurs.",
+    "badRequest": "Sol·licitud incorrecta: {detail}",
+    "internal": "Error intern del servidor."
+  },
+  "status": {
+    "healthy": "Correcte",
+    "degraded": "Degradat"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "Encara no hi ha entrevistes per analitzar.",
+    "noRunDesktopLong": "Arrossega-hi una carpeta d'entrevistes per començar.",
+    "noRunCliShort": "Aquí encara no hi ha res.",
+    "cancelledShort": "S'ha cancel·lat l'última execució.",
+    "cancelledLong": "Torna-ho a executar quan vulguis.",
+    "failedShort": "L'última execució ha fallat.",
+    "recentLog": "Registre recent:",
+    "showDetails": "Mostra els detalls",
+    "sendFeedback": "Envia comentaris",
+    "help": "Ajuda",
+    "cliExitedWithCode": "La CLI ha acabat amb el codi {code}"
+  }
+}

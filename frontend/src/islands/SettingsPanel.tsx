@@ -31,6 +31,7 @@ const OPTIONS: { value: Appearance; labelKey: string }[] = [
 const LOCALE_LABELS: Record<Locale, string> = {
   en: "English",
   es: "Español",
+  ca: "Català",
   ja: "日本語",
   fr: "Français",
   de: "Deutsch",

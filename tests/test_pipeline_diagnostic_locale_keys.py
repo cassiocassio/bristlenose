@@ -25,14 +25,14 @@ _LOCALES_DIR = Path(__file__).resolve().parents[1] / "bristlenose" / "locales"
 # fallback chain — so it is NOT listed here (these tests read each locale's
 # desktop.json directly, with no fallback).
 _ALL_LOCALES = (
-    "en", "es", "fr", "de", "ko", "ja", "cs", "it", "pl", "ru", "uk",
+    "en", "es", "ca", "fr", "de", "ko", "ja", "cs", "it", "pl", "ru", "uk",
     "da", "sv", "nb", "tr", "nl", "fi", "pt-BR", "pt-PT", "zh-Hant",
 )
 # Locales that inflect by count. it = one/other (like es/fr/de); pl/ru/uk are
 # four-form (one/few/many/other) but still carry one+other, so they pass the
 # one_and_other check and additionally get four-form coverage below.
 _PLURAL_LOCALES = (
-    "en", "es", "fr", "de", "cs", "it", "pl", "ru", "uk", "da", "sv", "nb", "tr", "nl", "fi", "pt-BR", "pt-PT"
+    "en", "es", "ca", "fr", "de", "cs", "it", "pl", "ru", "uk", "da", "sv", "nb", "tr", "nl", "fi", "pt-BR", "pt-PT"
 )
 _SINGLE_FORM_LOCALES = ("ko", "ja", "zh-Hant")
 # Thin-override locales resolved via the runtime fallback chain — these tests

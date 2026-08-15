@@ -156,7 +156,10 @@ enum DownloadVerdict: Equatable {
         case .usable:
             return nil
         case .notMedia:
-            return "Zoom sent a web page, not a recording"
+            // Platform-neutral by necessity: this type is shared by all three
+            // adapters, and it previously named Zoom in every verdict — so a
+            // Graph failure sent the reader to look at the wrong vendor.
+            return "The server sent a web page, not a recording"
         case .badStatus:
             return "The download was refused"
         case .shortRead:

@@ -411,7 +411,26 @@ struct CloudImportWindow: View {
         guard let destinationID,
               let project = projectIndex.projects.first(where: { $0.id == destinationID })
         else { return }
-        store.startFetch(destination: URL(fileURLWithPath: project.path))
+
+        // Borrow the project's security-scoped lease rather than rebuilding a
+        // raw path. Under App Sandbox a `URL(fileURLWithPath:)` into a
+        // user-chosen folder has no grant behind it, so the whole multi-gigabyte
+        // transfer would run and then fail at the publish move — surfacing as
+        // "The download failed", which reads as a network fault. Debug builds
+        // are unsandboxed, so a green run there proves nothing about TestFlight.
+        //
+        // `leaseURL` returns a URL with scope already open and owned by
+        // `ProjectIndex`; per its contract we must not call
+        // start/stopAccessingSecurityScopedResource ourselves.
+        //
+        // Still owed, and deliberately not done here because it changes the
+        // surface: the picker offers projects whose lease is unavailable
+        // (`.cantFind`, `.inCloud`, past the watcher cap, or no bookmark data).
+        // Falling back to the raw path keeps today's behaviour for those rather
+        // than introducing a refusal state this pass has no design for.
+        let destination = projectIndex.leaseURL(projectID: destinationID)
+            ?? URL(fileURLWithPath: project.path)
+        store.startFetch(destination: destination)
     }
 
     private var subtitle: String {

@@ -111,7 +111,22 @@ final class CloudDownloader: NSObject {
     /// Set per-request so the redirect delegate knows the policy. A stored
     /// property rather than a parameter because `URLSessionTaskDelegate` gives
     /// no route to pass context into the redirect callback.
-    private var currentPolicy: CloudTransferPolicy = .meet
+    ///
+    /// **Defaults to the strict policy, not `.meet`.** It is overwritten before
+    /// any request goes out, so the value is unreachable — but this decides
+    /// whether a bearer token crosses a host boundary, and the fail-safe default
+    /// for that is "strip". A future path that redirects before assignment
+    /// should leak nothing.
+    private var currentPolicy = CloudTransferPolicy(
+        authorization: .bearer,
+        keepAuthorizationAcrossRedirect: false
+    )
+
+    /// True when this object built the session and must therefore tear it down.
+    /// An un-invalidated `URLSession` leaks for the life of the process, and
+    /// this type is constructed **once per downloaded file** — so a 20-file
+    /// batch leaked 20 sessions before this existed.
+    private let ownsSession: Bool
 
     /// Set for the duration of one transfer so the delegate's progress
     /// callbacks can reach the caller. Same reasoning as `currentPolicy`:
@@ -121,9 +136,18 @@ final class CloudDownloader: NSObject {
     init(session: URLSession? = nil, fileManager: FileManager = .default) {
         self.fileManager = fileManager
         // A configuration of our own so the redirect delegate is guaranteed to
-        // be consulted; `URLSession.shared` cannot take one.
-        self.session = session ?? URLSession(configuration: .default)
+        // be consulted; `URLSession.shared` cannot take one — and `.shared`
+        // would also write meeting metadata and redirect `Location` headers to
+        // the app container's on-disk cache, which is not ours to keep.
+        self.ownsSession = (session == nil)
+        self.session = session ?? CloudNetworking.makeSession()
         super.init()
+    }
+
+    deinit {
+        // Lets the transfer finish, then releases the session. Only when we
+        // built it: an injected one belongs to the caller.
+        if ownsSession { session.finishTasksAndInvalidate() }
     }
 
     /// Downloads, verifies, and only then puts the file under its real name.
@@ -173,10 +197,7 @@ final class CloudDownloader: NSObject {
         // array bookkeeping rather than in the network. The task streams to
         // disk in the kernel's own buffers and reports progress through the
         // delegate.
-        self.progressHandler = { [weak self] written, total in
-            guard self != nil else { return }
-            progress(written, total)
-        }
+        self.progressHandler = progress
         defer { self.progressHandler = nil }
 
         let (tempURL, response) = try await session.download(for: urlRequest, delegate: self)

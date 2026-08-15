@@ -17,7 +17,9 @@ struct CloudImportWindowHost: View {
                 ContentUnavailableView {
                     Label("Nothing to import yet", systemImage: "square.and.arrow.down")
                 } description: {
-                    Text("Choose File ▸ Import ▸ Google Meet to start.")
+                    // Reached on macOS state restoration, when the platform is by
+                    // definition unknown — so it must not name one.
+                    Text("Choose File ▸ Import to start.")
                 }
             }
         }

@@ -99,13 +99,23 @@ private struct GraphCalendarView: Decodable {
         let organizer: Organizer?
     }
     let value: [Event]?
+    /// Graph paginates `calendarView` like everything else. This member was
+    /// absent, so the continuation could not even be *read*, let alone followed
+    /// — and §6 names an unfollowed `@odata.nextLink` as a lead failure mode.
+    let nextLink: String?
+
+    enum CodingKeys: String, CodingKey {
+        case value
+        case nextLink = "@odata.nextLink"
+    }
 }
 
 // MARK: - The adapter
 
 final class TeamsSource: CloudImportSource {
     private let config: MicrosoftOAuthConfig
-    private let session: URLSession
+    private let sessionOwner: CloudSessionOwner
+    private var session: URLSession { sessionOwner.session }
     private var tokens: MicrosoftTokenResponse?
     private var identity: String?
     private var tier: DriveTier = .unknown("")
@@ -120,11 +130,15 @@ final class TeamsSource: CloudImportSource {
     ///   `ZoomSource.init` — this is the Keychain-restore seam §2 owes, and
     ///   until that exists it is what lets the listing path be driven over a
     ///   stubbed transport.
+    /// - Parameter session: injection seam for the transport tests. Omit it and
+    ///   the adapter builds — and owns — an ephemeral, redirect-policed session
+    ///   (`CloudNetworking`); an injected one is adopted and never invalidated
+    ///   here, because this object did not create it.
     init(config: MicrosoftOAuthConfig,
-         session: URLSession = .shared,
+         session: URLSession? = nil,
          restoredTokens: MicrosoftTokenResponse? = nil) {
         self.config = config
-        self.session = session
+        self.sessionOwner = session.map(CloudSessionOwner.init(adopting:)) ?? CloudSessionOwner()
         self.tokens = restoredTokens
     }
 
@@ -201,10 +215,19 @@ final class TeamsSource: CloudImportSource {
                 // empty folder: a personal Teams account attaches recordings to
                 // the meeting chat and never creates the folder at all. Naming
                 // that turns a baffling empty list into one sentence.
-                if error.outcome == .notFound {
+                // …but only on the FIRST page. A 404 partway through a walk is
+                // an expired `@odata.nextLink`, not a personal account — and
+                // returning `empty(.exhausted)` there discarded every row
+                // already collected and told a researcher with hundreds of
+                // recordings that they had none, misdiagnosed as the wrong
+                // account tier, with `isExact` true.
+                if error.outcome == .notFound, pagesFetched == 0 {
                     tier = .personal
                     return empty(window, outcome: .exhausted)
                 }
+                // A 404 on a later page falls through to the ordinary failure
+                // path below, which reports `.failed(after:)` and keeps the rows
+                // already collected.
                 outcome = .failed(after: pagesFetched, outcome: mapOutcome(error.outcome))
                 break
             } catch {
@@ -230,12 +253,28 @@ final class TeamsSource: CloudImportSource {
             arithmetic: JoinArithmetic(
                 eventsInWindow: max(events.count, rows.count),
                 fetchable: rows.filter(\.isSelectable).count,
-                // v1 lists the researcher's OWN /Recordings, so everything here
-                // is theirs by construction — other people's meetings are not
-                // 403s at fetch time, they simply are not present. §4's
-                // "reveal who organised it" case needs the calendar side, which
-                // is the count below when the scope was granted.
-                organisedByOthers: max(0, events.count - rows.count),
+                // **Count it, don't subtract it.**
+                //
+                // This was `max(0, events.count - rows.count)`, which is not the
+                // quantity it names. `events` is the researcher's entire diary
+                // for the window; `rows` is their own recordings. Every meeting
+                // they attended and did not record — most of a working week —
+                // landed in "organised by someone else", and any bug that
+                // emptied `rows` made the number equal the whole diary. It did:
+                // when the filename parser rejected every business recording,
+                // the window reported one meeting "organised by someone else"
+                // about a meeting the user had organised themselves.
+                //
+                // The organiser is on the event, so ask it. Meetings with no
+                // organiser field, and the whole calendar when the scope was
+                // declined, count as zero rather than as somebody else's —
+                // §6's requirement is that this line never overstates.
+                organisedByOthers: events.filter { event in
+                    guard let organiser = event.organizer?.emailAddress?.address?.lowercased(),
+                          let me = identity?.lowercased()
+                    else { return false }
+                    return organiser != me
+                }.count,
                 outcome: outcome
             ),
             window: window
@@ -262,11 +301,26 @@ final class TeamsSource: CloudImportSource {
         // mismatch shifts the window boundary by up to a day at each edge —
         // silently dropping a 9am Monday interview out of "last 30 days". Pin
         // it rather than accept the mailbox default.
-        guard let data = try? await get(url.absoluteString,
-                                        headers: ["Prefer": "outlook.timezone=\"UTC\""]),
-              let page = try? JSONDecoder().decode(GraphCalendarView.self, from: data)
-        else { return [] }
-        return page.value ?? []
+        // Walk the continuation. A researcher with a busy diary exceeds `$top`
+        // easily, and a truncated roster is silent: rows still render, they just
+        // lose their attendees — and the footer went on reporting `.exhausted`
+        // because this read never touched `outcome`. Capped like the recordings
+        // walk, for the same reason.
+        var events: [GraphCalendarView.Event] = []
+        var next: String? = url.absoluteString
+        var pages = 0
+        let pageCap = 20
+
+        while let link = next, pages < pageCap {
+            guard let data = try? await get(link,
+                                            headers: ["Prefer": "outlook.timezone=\"UTC\""]),
+                  let page = try? JSONDecoder().decode(GraphCalendarView.self, from: data)
+            else { break }
+            events.append(contentsOf: page.value ?? [])
+            next = page.nextLink
+            pages += 1
+        }
+        return events
     }
 
     private func makeRow(
@@ -388,8 +442,23 @@ final class TeamsSource: CloudImportSource {
         destination: URL,
         progress: @escaping @Sendable (FetchProgress) -> Void
     ) async -> FetchOutcome {
-        guard let url = downloadURLs[row.id] else {
-            return .failed(reason: "That recording has no download link.", isRetryable: true)
+        // Re-resolve immediately before fetching, exactly as the note on
+        // `downloadURLs` has always claimed and the code did not do.
+        //
+        // `@microsoft.graph.downloadUrl` is short-lived by design — roughly an
+        // hour. Reusing the value captured at list time meant a batch begun
+        // forty minutes after the window opened took a `badStatus` on its tail,
+        // surfaced as "The download was refused" with `isRetryable: true`, so
+        // every retry failed identically. The list-time value is kept only as a
+        // fallback for the case where the re-resolve itself fails.
+        let url: URL
+        do {
+            url = try await resolveDownloadURL(itemID: row.id)
+        } catch {
+            guard let cached = downloadURLs[row.id] else {
+                return .failed(reason: "That recording has no download link.", isRetryable: true)
+            }
+            url = cached
         }
         let name = CloudDownloadNaming.filename(
             title: row.title, startsAt: row.startsAt, fileExtension: "mp4")
@@ -423,12 +492,44 @@ final class TeamsSource: CloudImportSource {
                     return false
                 }()
             )
+        } catch is CancellationError {
+            return .cancelled
+        } catch let error as URLError where error.code == .cancelled {
+            // `URLSession.download` reports Task cancellation as
+            // `URLError(.cancelled)`, NOT as `CloudDownloadError.cancelled` —
+            // so without this arm a deliberate Stop fell through to the generic
+            // catch below and was recorded as a *failure*. The terminus then
+            // counted the user's own decision as a fault and offered "Retry" for
+            // rows they had chosen to abandon.
+            return .cancelled
         } catch {
             return .failed(reason: "The download failed.", isRetryable: true)
         }
     }
 
     // MARK: HTTP
+
+    /// Asks Graph for a fresh pre-authenticated download URL for one driveItem.
+    ///
+    /// `$select=@microsoft.graph.downloadUrl` is the documented way to get the
+    /// hand-off without re-listing the folder. The value that comes back is a
+    /// **credential** — it carries `tempauth=` in its query string — so it is
+    /// returned to the caller and never stored on a row, logged, or held past
+    /// the transfer.
+    private func resolveDownloadURL(itemID: String) async throws -> URL {
+        struct Resolved: Decodable {
+            let downloadURL: String?
+            enum CodingKeys: String, CodingKey { case downloadURL = "@microsoft.graph.downloadUrl" }
+        }
+        let encoded = itemID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? itemID
+        let data = try await get(
+            "https://graph.microsoft.com/v1.0/me/drive/items/\(encoded)"
+            + "?$select=id,@microsoft.graph.downloadUrl")
+        guard let raw = try? JSONDecoder().decode(Resolved.self, from: data).downloadURL,
+              let url = URL(string: raw)
+        else { throw TeamsAPIError(outcome: .unexpected(status: 0, code: "no-download-url")) }
+        return url
+    }
 
     private func get(_ urlString: String, headers: [String: String] = [:]) async throws -> Data {
         guard let url = URL(string: urlString), let token = tokens?.accessToken else {

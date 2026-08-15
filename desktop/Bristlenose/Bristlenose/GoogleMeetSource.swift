@@ -103,7 +103,8 @@ private struct RecordingsPage: Decodable {
 
 final class GoogleMeetSource: CloudImportSource {
     private let config: GoogleOAuthConfig
-    private let session: URLSession
+    private let sessionOwner: CloudSessionOwner
+    private var session: URLSession { sessionOwner.session }
     private var tokens: GoogleTokens?
     private var identity: String?
 
@@ -123,9 +124,31 @@ final class GoogleMeetSource: CloudImportSource {
     /// and *no other scope*, so these two grants can never be the same token.
     private var mediaToken: GoogleTokens?
 
-    init(config: GoogleOAuthConfig, session: URLSession = .shared) {
+    /// - Parameter session: injection seam for the transport tests. Omit it and
+    ///   the adapter builds — and owns — an ephemeral, redirect-policed session
+    ///   (`CloudNetworking`); an injected one is adopted and never invalidated
+    ///   here, because this object did not create it.
+    ///
+    /// - Parameter restoredTokens: a previously-obtained listing grant, matching
+    ///   the seam Teams and Zoom already had. §2 needs an adapter to be
+    ///   constructible already-authenticated so the Keychain restore has
+    ///   somewhere to land; today the only caller is the transport suite, which
+    ///   is also the only way to drive Google's listing path over a stub.
+    ///
+    /// - Parameter restoredMediaGrant: the Picker grant, which on Google is a
+    ///   **pair** and not a token. `fetch` guards on `grantedFileIDs` *before*
+    ///   it reads `mediaToken`, so a token restored without its file ids sits
+    ///   unused behind a failing guard — a seam that looks restored and is not.
+    ///   Restore both or neither.
+    init(config: GoogleOAuthConfig,
+         session: URLSession? = nil,
+         restoredTokens: GoogleTokens? = nil,
+         restoredMediaGrant: (tokens: GoogleTokens, fileIDs: Set<String>)? = nil) {
         self.config = config
-        self.session = session
+        self.sessionOwner = session.map(CloudSessionOwner.init(adopting:)) ?? CloudSessionOwner()
+        self.tokens = restoredTokens
+        self.mediaToken = restoredMediaGrant?.tokens
+        self.grantedFileIDs = restoredMediaGrant?.fileIDs ?? []
     }
 
     var accountEmail: String? { identity }
@@ -141,6 +164,33 @@ final class GoogleMeetSource: CloudImportSource {
         let granted = try await client.signIn(scopes: GoogleScopes.requested, requireAll: false)
         tokens = granted
         identity = try? await fetchIdentity(accessToken: granted.accessToken)
+    }
+
+    /// One `files.get` for `size`, using the media grant.
+    ///
+    /// Deliberately not called at list time: the Picker grant does not exist
+    /// then, so this would 403 on every row. Returns nil on any failure — an
+    /// unknown size is a state the verifier already models honestly, and a
+    /// guessed one would be worse than none.
+    private func driveFileSize(fileID: String, accessToken: String) async -> Int64? {
+        guard var components = URLComponents(
+            string: "https://www.googleapis.com/drive/v3/files/\(fileID)")
+        else { return nil }
+        components.queryItems = [URLQueryItem(name: "fields", value: "size")]
+        guard let url = components.url else { return nil }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        guard let (data, response) = try? await session.data(for: request),
+              GoogleResponseClassifier.classify(
+                  status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: data) == .ok
+        else { return nil }
+
+        // Drive returns `size` as a STRING, not a number — a JSON int64 would
+        // lose precision in some clients, so Google quotes it. Decoding it as
+        // `Int64` silently yields nil.
+        struct Meta: Decodable { let size: String? }
+        return (try? JSONDecoder().decode(Meta.self, from: data)).flatMap { $0.size }.flatMap(Int64.init)
     }
 
     private func fetchIdentity(accessToken: String) async throws -> String? {
@@ -239,6 +289,20 @@ final class GoogleMeetSource: CloudImportSource {
             // CLIFF — Google: "If there are more than the specified number of
             // attendees, only the participant is returned." Capping at 10 on an
             // 11-person event yields a roster of exactly one, silently.
+            //
+            // **`fields` is what makes this file's opening claim true.** The
+            // header says event bodies "are never fetched and never persisted",
+            // and the narrow `Decodable` guaranteed only the second half — with
+            // no projection Google returns the full event resource, so every
+            // agenda, dial-in PIN and medical appointment in the researcher's
+            // diary crossed the wire and could land in a URL cache. Teams has
+            // always done this (`$select`); Google was the asymmetry. The list
+            // below must stay in step with `CalendarEventsPage`.
+            URLQueryItem(
+                name: "fields",
+                value: "items(id,summary,start,end,attendees,organizer,"
+                    + "conferenceData,attendeesOmitted,recurringEventId),nextPageToken"
+            ),
         ]
         if let pageToken { items.append(URLQueryItem(name: "pageToken", value: pageToken)) }
         components.queryItems = items
@@ -426,22 +490,44 @@ final class GoogleMeetSource: CloudImportSource {
             )
         }
 
+        // **Ask Drive how big it is, now that we hold the grant.**
+        //
+        // `row.sizeBytes` is nil on every Google row, because at *list* time the
+        // Picker grant does not exist yet. That left Meet as the one platform
+        // with no size at all — which silently disabled three things at once:
+        // `verifyPayload`'s size comparison, the free-space precheck, and any
+        // hope of catching a truncated transfer. A `ftyp` in the first eight
+        // bytes was the entire defence, and a truncated MP4 has those.
+        //
+        // Here the grant *does* exist, so one metadata read closes it. Failure
+        // is non-fatal: an absent size is the honest input the verifier already
+        // knows how to treat as unknown.
+        let knownSize = await driveFileSize(fileID: fileID, accessToken: token)
+
         // `alt=media` is what turns files.get from metadata into bytes. Without
         // it the response is a perfectly valid JSON description of the file,
         // which — absent the content-type check in the shared verifier — would
         // land on disk named .mp4.
-        var components = URLComponents(
-            string: "https://www.googleapis.com/drive/v3/files/\(fileID)")!
+        // Not force-unwrapped: `fileID` is a remote string, and an
+        // RFC-3986-invalid character in it would crash the app rather than fail
+        // the row. Same reasoning as §9's "every remote-sourced string is
+        // untrusted" — a third party controls what Drive hands back.
+        guard var components = URLComponents(
+            string: "https://www.googleapis.com/drive/v3/files/\(fileID)")
+        else { return .failed(reason: "That file has an unusable identifier.", isRetryable: false) }
         components.queryItems = [URLQueryItem(name: "alt", value: "media")]
 
         let name = CloudDownloadNaming.filename(
             title: row.title, startsAt: row.startsAt, fileExtension: "mp4")
+        guard let mediaURL = components.url else {
+            return .failed(reason: "That file has an unusable identifier.", isRetryable: false)
+        }
         let request = CloudDownloadRequest(
-            url: components.url!,
+            url: mediaURL,
             accessToken: token,
             policy: .meet,
             expected: ExpectedFile(
-                sizeBytes: row.sizeBytes,
+                sizeBytes: knownSize ?? row.sizeBytes,
                 // Drive exposes md5/sha1/sha256 on files.get, but not on the
                 // path this design takes — the Meet API hands over a file id,
                 // not a metadata blob — so verification is size + magic bytes.
@@ -472,6 +558,16 @@ final class GoogleMeetSource: CloudImportSource {
                     return false
                 }()
             )
+        } catch is CancellationError {
+            return .cancelled
+        } catch let error as URLError where error.code == .cancelled {
+            // `URLSession.download` reports Task cancellation as
+            // `URLError(.cancelled)`, NOT as `CloudDownloadError.cancelled` —
+            // so without this arm a deliberate Stop fell through to the generic
+            // catch below and was recorded as a *failure*. The terminus then
+            // counted the user's own decision as a fault and offered "Retry" for
+            // rows they had chosen to abandon.
+            return .cancelled
         } catch {
             return .failed(reason: "The download failed.", isRetryable: true)
         }

@@ -103,7 +103,8 @@ struct ZoomPreflight: Equatable {
 
 final class ZoomSource: CloudImportSource {
     private let config: ZoomOAuthConfig
-    private let session: URLSession
+    private let sessionOwner: CloudSessionOwner
+    private var session: URLSession { sessionOwner.session }
     private var tokens: ZoomTokens?
     private var identity: String?
     private(set) var preflight: ZoomPreflight?
@@ -124,11 +125,15 @@ final class ZoomSource: CloudImportSource {
     ///   constructible already-authenticated. Nothing persists yet, so today
     ///   the only caller that passes this is the transport test suite — which
     ///   is also the only way to drive the listing path over a stub.
+    /// - Parameter session: injection seam for the transport tests. Omit it and
+    ///   the adapter builds — and owns — an ephemeral, redirect-policed session
+    ///   (`CloudNetworking`); an injected one is adopted and never invalidated
+    ///   here, because this object did not create it.
     init(config: ZoomOAuthConfig,
-         session: URLSession = .shared,
+         session: URLSession? = nil,
          restoredTokens: ZoomTokens? = nil) {
         self.config = config
-        self.session = session
+        self.sessionOwner = session.map(CloudSessionOwner.init(adopting:)) ?? CloudSessionOwner()
         self.tokens = restoredTokens
     }
 
@@ -375,6 +380,16 @@ final class ZoomSource: CloudImportSource {
                     return false
                 }()
             )
+        } catch is CancellationError {
+            return .cancelled
+        } catch let error as URLError where error.code == .cancelled {
+            // `URLSession.download` reports Task cancellation as
+            // `URLError(.cancelled)`, NOT as `CloudDownloadError.cancelled` —
+            // so without this arm a deliberate Stop fell through to the generic
+            // catch below and was recorded as a *failure*. The terminus then
+            // counted the user's own decision as a fault and offered "Retry" for
+            // rows they had chosen to abandon.
+            return .cancelled
         } catch {
             return .failed(reason: "The download failed.", isRetryable: true)
         }

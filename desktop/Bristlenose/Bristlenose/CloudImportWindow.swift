@@ -71,6 +71,15 @@ struct CloudImportWindow: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
+        case .signInIncomplete:
+            ContentUnavailableView {
+                Label("Sign-in didn't finish", systemImage: "person.crop.circle.badge.questionmark")
+            } description: {
+                Text(incompleteSignInDetail)
+            } actions: {
+                Button("Try Again", action: store.signIn)
+            }
+
         case .failed(let message):
             ContentUnavailableView {
                 Label("Couldn't load your meetings", systemImage: "exclamationmark.triangle")
@@ -112,6 +121,22 @@ struct CloudImportWindow: View {
             }
             .controlSize(.large)
         }
+    }
+
+    /// Names both possibilities, because from here they are indistinguishable.
+    ///
+    /// The order is deliberate: the researcher's own action first (they know
+    /// whether they closed the window), then the one they cannot see. Leading
+    /// with the admin theory would read as blame-shifting to someone who simply
+    /// changed their mind.
+    private var incompleteSignInDetail: String {
+        let base = "Bristlenose didn't receive an account from \(platform.displayName)."
+        guard platform.signInMayAwaitAdminApproval else {
+            return base + " If you closed the sign-in window, try again."
+        }
+        return base
+            + " If you closed the sign-in window, try again — and if \(platform.displayName) "
+            + "asked for your administrator's approval, sign-in won't complete until they grant it."
     }
 
     /// One sentence naming the capability, not the account type.

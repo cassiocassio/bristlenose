@@ -136,6 +136,32 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// Whether a sign-in commonly stalls on someone else's approval, with no
+    /// error ever reaching this app.
+    ///
+    /// **This is the failure that has no error code, and it is not rare.** On
+    /// Zoom, Marketplace pre-approval is enabled *by default* for every
+    /// multi-seat account, and the block is enforced on Zoom's own consent
+    /// screen — before any redirect. The researcher clicks Sign In, reads a
+    /// page telling them to ask their admin, and comes back to an app that is
+    /// still spinning. Nothing failed; nothing arrived. Teams has the same
+    /// shape via Entra's user-consent policy ("Need admin approval").
+    ///
+    /// Google is the exception: a Workspace admin can restrict apps, but there
+    /// is no equivalent default-on gate, so promising a Google user that their
+    /// admin might be the problem would be a guess.
+    ///
+    /// The UI consequence: when a sign-in ends without credentials on these
+    /// platforms, the copy must offer "your admin may need to approve this"
+    /// alongside "you cancelled" — because the two are indistinguishable from
+    /// here, and only one of them is the researcher's own doing.
+    var signInMayAwaitAdminApproval: Bool {
+        switch self {
+        case .zoom, .teams: return true
+        case .meet:         return false
+        }
+    }
+
     /// Whether the platform serves a speaker-attributed transcript on a scope
     /// we are willing to hold.
     ///

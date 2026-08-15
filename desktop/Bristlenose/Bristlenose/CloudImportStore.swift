@@ -22,6 +22,17 @@ final class CloudImportStore: ObservableObject {
         /// Listing failed outright — distinct from a listing that partly
         /// succeeded, which is `.loaded` with a non-exhausted outcome.
         case failed(String)
+
+        /// The consent flow ended and we hold no credentials.
+        ///
+        /// Deliberately NOT folded into `.failed`, and not called "cancelled":
+        /// on Zoom and Teams the commonest cause is an admin approval the
+        /// researcher cannot grant themselves, enforced on the vendor's own
+        /// consent screen before any redirect — so no error ever reaches this
+        /// app. From here, "you cancelled" and "your organisation has to
+        /// approve this first" are indistinguishable, and telling someone they
+        /// cancelled when they were blocked sends them to try again, forever.
+        case signInIncomplete
     }
 
     @Published private(set) var phase: Phase = .signedOut
@@ -143,8 +154,18 @@ final class CloudImportStore: ObservableObject {
         Task { @MainActor in
             do {
                 try await source.signIn()
+                guard source.accountEmail != nil else {
+                    // Signed in, apparently, but no account came back. On the
+                    // admin-gated platforms this is the pre-approval wall.
+                    phase = .signInIncomplete
+                    return
+                }
                 accountEmail = source.accountEmail
                 await load()
+            } catch let error as ZoomOAuthError where error == .cancelled {
+                phase = .signInIncomplete
+            } catch let error as GoogleOAuthError where error == .cancelled {
+                phase = .signInIncomplete
             } catch {
                 phase = .failed(error.localizedDescription)
             }

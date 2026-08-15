@@ -426,3 +426,39 @@ struct ZoomByteVerificationTests {
         #expect(ZoomDownloadGuard.verify(received: 5_000, expected: 0) == .usable)
     }
 }
+
+// MARK: - The sign-in that never returns
+
+@MainActor
+@Suite("Sign-in that yields no account")
+struct SignInIncompleteTests {
+
+    @Test("A consent flow that returns no account is not treated as signed in")
+    func noAccountMeansIncomplete() async {
+        // The Zoom pre-approval wall's real shape: enabled by DEFAULT on every
+        // multi-seat account, enforced on Zoom's own consent screen before any
+        // redirect, so the flow completes without error and without an account.
+        // Left unhandled the window spins forever; called "cancelled" it sends
+        // the researcher to try again, forever, against a wall only their
+        // admin can remove.
+        let store = CloudImportStore(
+            source: FixtureCloudSource(scenario: .signInIncomplete, platform: .zoom))
+        store.signIn()
+
+        for _ in 0..<40 where store.phase == .signingIn {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        #expect(store.phase == .signInIncomplete)
+        #expect(store.accountEmail == nil)
+    }
+
+    @Test("Only the admin-gated platforms mention an administrator")
+    func copyIsPlatformAware() {
+        // Zoom and Teams both have a default-shaped org gate. Google does not,
+        // so telling a Google user their admin might be the problem would be a
+        // guess dressed as help.
+        #expect(CloudPlatform.zoom.signInMayAwaitAdminApproval)
+        #expect(CloudPlatform.teams.signInMayAwaitAdminApproval)
+        #expect(!CloudPlatform.meet.signInMayAwaitAdminApproval)
+    }
+}

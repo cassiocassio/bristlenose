@@ -92,6 +92,7 @@ protocol CloudImportSource: AnyObject {
 /// without a paid Workspace tenant that does not exist yet.
 enum CloudImportScenario: String, CaseIterable, Identifiable {
     case signedOut
+    case signInIncomplete
     case loading
     case populated
     case personalAccountNoRecordings
@@ -110,6 +111,7 @@ enum CloudImportScenario: String, CaseIterable, Identifiable {
     var menuTitle: String {
         switch self {
         case .signedOut:                   return "Signed Out"
+        case .signInIncomplete:            return "Sign-In Didn't Finish (admin approval)"
         case .loading:                     return "Loading"
         case .populated:                   return "Populated List"
         case .personalAccountNoRecordings: return "Personal Account (no recordings)"
@@ -146,7 +148,7 @@ final class FixtureCloudSource: CloudImportSource {
     /// account on Google and a Basic-plan work address on Zoom, so a fixture
     /// that always showed a consumer address would exercise the wrong sentence.
     var accountEmail: String? {
-        guard signedIn else { return nil }
+        guard signedIn, scenario != .signInIncomplete else { return nil }
         guard scenario == .personalAccountNoRecordings else {
             return "martin@stmarystrust.example"
         }
@@ -163,6 +165,12 @@ final class FixtureCloudSource: CloudImportSource {
         // A beat, so the sign-in state is actually observable in the UI rather
         // than flashing past.
         try? await Task.sleep(for: .milliseconds(400))
+        // The pre-approval wall's actual shape: the consent flow returns
+        // without error and without an account, because the block was enforced
+        // on the vendor's own screen before any redirect. Reproducing it here
+        // is the only way to see that state without a multi-seat tenant whose
+        // admin has not approved us.
+        guard scenario != .signInIncomplete else { return }
         signedIn = true
     }
 
@@ -302,7 +310,7 @@ final class FixtureCloudSource: CloudImportSource {
 
     private func rows() -> [CloudImportRow] {
         switch scenario {
-        case .signedOut, .loading, .emptyWindow:
+        case .signedOut, .signInIncomplete, .loading, .emptyWindow:
             return []
 
         case .personalAccountNoRecordings:

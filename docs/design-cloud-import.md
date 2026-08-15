@@ -396,7 +396,15 @@ There is no published head-to-head, and there probably cannot easily be one: ven
 
 What shipped: seven Swift test files — `CloudDownloadTests`, `GoogleMeetImportTests`, `ZoomImportTests`, `TeamsSourceTests`, `CloudImportModelTests`, `OAuthPKCETests`, `TeamsRecordingNameTests` — covering the pure-value layer, which is where the classification decisions live. Three of them caught real defects in the commits that introduced them, which is the argument for writing them at that layer.
 
-⚠️ **The transport layer is still untested, and it is blocked on nothing.** Every failure in this section — 401 mid-fetch, truncated body, unfollowed `@odata.nextLink`, zone-shifted window, expired download URL, an HTML page written as `.mp4` — is reachable only through a stubbed transport, and there is no `URLProtocol` stub anywhere in `desktop/`. `CloudDownloader.init(session:)` already takes an injectable `URLSession`, so the seam exists and is unused. This is the highest-value unbuilt test layer and needs no account.
+**The transport layer is now tested** (`CloudTransportTests.swift`, 15 Aug 2026). A `URLProtocol` stub answers from a queue and — the part that matters — **records the requests**, because the whole of `CloudTransferPolicy` is a claim about which headers survive a redirect, and that claim is unfalsifiable without seeing the second request. Eleven tests drive the real `CloudDownloader` and the real adapters over a fake network:
+
+- Zoom's `Authorization` is dropped across a cross-host CDN redirect; Teams sends none at all; a same-host redirect still lands.
+- An HTML page with a 200, a truncated body, and a hash mismatch each leave **nothing on disk** — no `.mp4` and no orphan `.part`. The happy path leaves exactly one file under its final name.
+- An unlicensed 401 requests no URL twice — the retry loop the classifier exists to prevent.
+- An endless `@odata.nextLink` reports `pageCapHit`, never `exhausted`.
+- A 90-day Zoom window issues **three** requests, each carrying explicit `from`/`to` — omitting them makes Zoom answer for today only, which reads as an empty account.
+
+Two things this cost, both worth recording. The adapters gained a `restoredTokens:` initialiser parameter — not a test hook but the Keychain-restore seam §2 already owed, since an adapter must be constructible already-authenticated. And an early draft of these tests **passed for the wrong reason**: with no token injected, the adapters' guard short-circuited before the network, so assertions about request counts were satisfied by zero requests. A test that cannot fail on the bug it names is worse than no test, and it took injecting a token to make them honest.
 
 The live `ASWebAuthenticationSession` round trip against a real tenant categorically is not unit-testable; the internal TF cohort covers what CI cannot. Cloud import is a new **ingest** surface — network-sourced, unlike the 16 file-shaped ones — and its section in `docs/testing/coverage-inventory.md` was owed *before* the build and is now owed *after* it.
 

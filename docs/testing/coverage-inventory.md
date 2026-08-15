@@ -62,12 +62,15 @@ source is hostile rather than merely varied):
 `FixtureCloudSource` drives twelve scenarios across all three platforms from the
 Diagnostics menu with no account.
 
-⚠️ **Two gaps, both real:**
-1. **No transport-layer tests.** There is no `URLProtocol` stub anywhere in `desktop/`,
-   so every network failure mode above is asserted at the policy layer and never
-   driven through a fake transport. Blocked on nothing.
-2. **No live round trip on any platform.** No OAuth client is registered, so sign-in
-   cannot complete. Human-tier, and it gates everything.
+**Transport tier (added 15 Aug 2026):** `CloudTransportTests.swift` — a
+`URLProtocol` stub that records requests, driving the real `CloudDownloader` and
+the real adapters. Eleven tests covering redirect header policy per platform,
+what survives on disk after each failure mode, no-retry-loop on an unlicensed
+401, `pageCapHit` on an endless continuation, and month-chunking of a 90-day
+Zoom window.
+
+⚠️ **One gap remains: no live round trip on any platform.** No OAuth client is
+registered, so sign-in cannot complete. Human-tier, and it gates everything.
 
 ---
 

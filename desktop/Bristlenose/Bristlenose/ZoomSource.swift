@@ -117,9 +117,19 @@ final class ZoomSource: CloudImportSource {
     /// screenshot. The adapter keeps them; the row hands out nothing.
     private var chosenFiles: [String: ZoomRecordingFile] = [:]
 
-    init(config: ZoomOAuthConfig, session: URLSession = .shared) {
+    /// - Parameter restoredTokens: a previously-obtained grant.
+    ///
+    ///   Forward-looking rather than a test hook: §2 requires the refresh token
+    ///   to be restored from the Keychain at launch, so an adapter must be
+    ///   constructible already-authenticated. Nothing persists yet, so today
+    ///   the only caller that passes this is the transport test suite — which
+    ///   is also the only way to drive the listing path over a stub.
+    init(config: ZoomOAuthConfig,
+         session: URLSession = .shared,
+         restoredTokens: ZoomTokens? = nil) {
         self.config = config
         self.session = session
+        self.tokens = restoredTokens
     }
 
     var accountEmail: String? { identity }

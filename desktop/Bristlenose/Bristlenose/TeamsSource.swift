@@ -104,9 +104,16 @@ final class TeamsSource: CloudImportSource {
     private var downloadURLs: [String: URL] = [:]
     private var expectations: [String: ExpectedFile] = [:]
 
-    init(config: MicrosoftOAuthConfig, session: URLSession = .shared) {
+    /// - Parameter restoredTokens: a previously-obtained grant. See the note on
+    ///   `ZoomSource.init` — this is the Keychain-restore seam §2 owes, and
+    ///   until that exists it is what lets the listing path be driven over a
+    ///   stubbed transport.
+    init(config: MicrosoftOAuthConfig,
+         session: URLSession = .shared,
+         restoredTokens: MicrosoftTokenResponse? = nil) {
         self.config = config
         self.session = session
+        self.tokens = restoredTokens
     }
 
     var accountEmail: String? { identity }

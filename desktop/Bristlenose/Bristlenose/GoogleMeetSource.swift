@@ -101,7 +101,7 @@ private struct RecordingsPage: Decodable {
 
 // MARK: - The adapter
 
-final class GoogleMeetSource: MeetImportSource {
+final class GoogleMeetSource: CloudImportSource {
     private let config: GoogleOAuthConfig
     private let session: URLSession
     private var tokens: GoogleTokens?
@@ -249,9 +249,9 @@ final class GoogleMeetSource: MeetImportSource {
     private func buildRows(
         from events: [CalendarEventsPage.Event],
         tokens: GoogleTokens
-    ) async -> [GoogleImportRow] {
+    ) async -> [CloudImportRow] {
         let canReachMeet = tokens.has(GoogleScopes.meetReadonly)
-        var rows: [GoogleImportRow] = []
+        var rows: [CloudImportRow] = []
 
         for event in events {
             guard let start = event.start?.dateTime.flatMap(Self.parseRFC3339) else {
@@ -297,7 +297,7 @@ final class GoogleMeetSource: MeetImportSource {
                 duration = end.timeIntervalSince(start)
             }
 
-            rows.append(GoogleImportRow(
+            rows.append(CloudImportRow(
                 id: event.id ?? (fileID ?? UUID().uuidString),
                 title: event.summary ?? "Untitled meeting",
                 startsAt: start,
@@ -385,7 +385,7 @@ final class GoogleMeetSource: MeetImportSource {
     }
 
     func fetch(
-        row: GoogleImportRow,
+        row: CloudImportRow,
         destination: URL,
         progress: @escaping @Sendable (FetchProgress) -> Void
     ) async -> FetchOutcome {
@@ -430,7 +430,7 @@ final class GoogleMeetSource: MeetImportSource {
     private static func attendees(
         of event: CalendarEventsPage.Event,
         domain: String?
-    ) -> [GoogleImportRow.Attendee] {
+    ) -> [CloudImportRow.Attendee] {
         (event.attendees ?? [])
             // Rooms and equipment are attendees to Google and noise to a
             // researcher.
@@ -441,10 +441,10 @@ final class GoogleMeetSource: MeetImportSource {
     private static func person(
         _ p: CalendarEventsPage.Event.Person?,
         domain: String?
-    ) -> GoogleImportRow.Attendee? {
+    ) -> CloudImportRow.Attendee? {
         guard let p, p.email != nil || p.displayName != nil else { return nil }
         let external = domain.map { d in !(p.email?.hasSuffix("@\(d)") ?? false) } ?? true
-        return GoogleImportRow.Attendee(
+        return CloudImportRow.Attendee(
             // `displayName` is documented "if available" and, for external
             // guests, routinely absent — Google discards it for @gmail.com
             // addresses at insert time. So the participant most likely to have

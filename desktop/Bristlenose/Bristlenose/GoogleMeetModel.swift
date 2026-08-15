@@ -357,7 +357,7 @@ enum ArtifactAvailability: Hashable {
 // CloudImportModel.swift and is shared. It is about files on this Mac —
 // present, dataless, wrong size, on an unmounted volume — and none of that is
 // platform-specific. Its one platform-flavoured member is the label for a row
-// that has vanished from the remote listing; see `GoogleImportRow.statusLabel`,
+// that has vanished from the remote listing; see `CloudImportRow.statusLabel`,
 // which overrides it rather than editing the Teams file.
 
 /// One row of the Google Meet import list, after the calendar↔recording join.
@@ -365,7 +365,7 @@ enum ArtifactAvailability: Hashable {
 /// Value type, `Identifiable`, no references to any API client: the whole point
 /// is that the list can be built from a live adapter or from fixtures and the
 /// UI cannot tell the difference.
-struct GoogleImportRow: Identifiable, Equatable {
+struct CloudImportRow: Identifiable, Equatable {
     /// Stable across refreshes. The calendar event id when we have one, else the
     /// Drive file id — never an array index, because the list re-sorts.
     let id: String
@@ -517,7 +517,7 @@ enum AttendeeLine {
     ///   count, never an ellipsis: "Sarah Chen · J. Whitfield +4" says there are
     ///   six; "Sarah Chen, J. Whit…" says nothing.
     static func compose(
-        _ attendees: [GoogleImportRow.Attendee],
+        _ attendees: [CloudImportRow.Attendee],
         limit: Int = 2
     ) -> (names: [String], overflow: Int) {
         let ranked = rank(attendees)
@@ -531,7 +531,7 @@ enum AttendeeLine {
     /// `isExternal` is an ordering hint, not a claim: when it is wrong the only
     /// cost is seeing a different name first. Sorting is stable within each
     /// group so the platform's own ordering survives where we have no opinion.
-    static func rank(_ attendees: [GoogleImportRow.Attendee]) -> [GoogleImportRow.Attendee] {
+    static func rank(_ attendees: [CloudImportRow.Attendee]) -> [CloudImportRow.Attendee] {
         attendees
             .filter { !$0.isSelf && !$0.didDecline }
             .enumerated()

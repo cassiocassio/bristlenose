@@ -1,6 +1,6 @@
 import SwiftUI
 
-// The import window. Renders `MeetImportStore`; decides nothing itself.
+// The import window. Renders `CloudImportStore`; decides nothing itself.
 //
 // Shape comes from docs/mockups/cloud-import-states.html — the Teams window —
 // with the Google deviations marked `DEVIATION` inline and argued in
@@ -22,14 +22,17 @@ import SwiftUI
 // focus model — it draws the row, moves on arrows, supports type-select — so it
 // is taken as-is rather than hand-rolled. Ticks stay a separate `Set`.
 
-struct MeetImportWindow: View {
-    @ObservedObject var store: MeetImportStore
+struct CloudImportWindow: View {
+    @ObservedObject var store: CloudImportStore
     @EnvironmentObject var projectIndex: ProjectIndex
+    /// Supplies every vendor-specific string. A `switch` on platform inside a
+    /// view body is the smell this replaces.
+    let platform: CloudPlatform
 
     /// Destination project. Pre-selected by how the window was opened (§9), not
     /// defaulted — a wrong default here writes gigabytes into the wrong study.
     @State private var destinationID: UUID?
-    @State private var sortOrder: [KeyPathComparator<GoogleImportRow>] = [
+    @State private var sortOrder: [KeyPathComparator<CloudImportRow>] = [
         .init(\.startsAt, order: .reverse)
     ]
 
@@ -40,7 +43,7 @@ struct MeetImportWindow: View {
             footer
         }
         .frame(minWidth: 760, minHeight: 420)
-        .navigationTitle("Import from Google Meet")
+        .navigationTitle(platform.windowTitle)
         .navigationSubtitle(subtitle)
         .searchable(text: $store.filterText, placement: .toolbar, prompt: "Filter")
         .task {
@@ -95,7 +98,7 @@ struct MeetImportWindow: View {
             // recording. So the sentence names the capability, not the account
             // type, and the tier refusal is stated once the list is known
             // rather than guessed at up front.
-            Text("Use the Google Account that hosted your interviews to see the meetings you recorded, and bring them into a project.")
+            Text(signedOutDetail)
         } actions: {
             // The button string is Google's, not ours: their branding
             // guidelines specify "Sign in with Google" together with the
@@ -103,12 +106,26 @@ struct MeetImportWindow: View {
             // rather than redraw. `googleMark` is a stand-in until it is.
             Button(action: store.signIn) {
                 HStack(spacing: 8) {
-                    GoogleMark()
-                    Text("Sign in with Google")
+                    VendorMark(platform: platform)
+                    Text(platform.signInTitle)
                 }
             }
             .controlSize(.large)
         }
+    }
+
+    /// One sentence naming the capability, not the account type.
+    ///
+    /// Microsoft's guidelines *require* the account noun beside the button —
+    /// "work or school account", never "business" or "corporate" — because
+    /// users need to recognise whether it applies to them. Google has no such
+    /// requirement, and naming the account type there would actively mislead: a
+    /// personal Google Account signs in perfectly and can never hold a
+    /// recording, so the tier refusal belongs after the list, not before it.
+    private var signedOutDetail: String {
+        let base = "Sign in to see the meetings you recorded, and bring them into a project."
+        guard let noun = platform.accountNoun else { return base }
+        return "Use your \(noun) to see the meetings you recorded, and bring them into a project."
     }
 
     @ViewBuilder
@@ -212,7 +229,7 @@ struct MeetImportWindow: View {
 
     // MARK: - The table
 
-    private func table(_ rows: [GoogleImportRow]) -> some View {
+    private func table(_ rows: [CloudImportRow]) -> some View {
         Table(rows, selection: $store.focusedRowID, sortOrder: $sortOrder) {
             // Tick column. Header is deliberately blank — a titled checkbox
             // column reads as a filter control.
@@ -246,19 +263,23 @@ struct MeetImportWindow: View {
             }
             .width(min: 60, ideal: 76)
 
+            // Expiry is a COLUMN on platforms that expose a per-file clock,
+            // and absent on those that do not. Teams' own product renders
+            // exactly this affordance on exactly this data; Drive has no
+            // expiration field at all, so drawing the column there would be a
+            // row of em-dashes pretending to be data. Absence is information.
+            if platform.hasPerFileExpiry {
+                TableColumn("Expires") { row in
+                    ExpiryCell(row: row)
+                }
+                .width(min: 78, ideal: 96)
+            }
+
             TableColumn("Status") { row in
                 StatusCell(row: row, store: store)
             }
             .width(min: 110, ideal: 170)
         }
-        // DEVIATION: the Teams table carries an "Expires" column showing a live
-        // countdown, copied from Teams' own product, which renders exactly that
-        // affordance on exactly this data. Google has no per-file equivalent —
-        // retention is an admin policy rather than a file attribute — so a
-        // countdown column would be a row of em-dashes pretending to be data.
-        // It is omitted rather than emptied, and §1's "beat the expiry"
-        // argument is correspondingly weaker here. That is a finding about the
-        // platform, not a gap in this window.
         .tableStyle(.inset)
         .alternatingRowBackgrounds(.disabled)
     }
@@ -379,8 +400,8 @@ struct MeetImportWindow: View {
 // MARK: - Cells
 
 private struct TickBox: View {
-    let row: GoogleImportRow
-    @ObservedObject var store: MeetImportStore
+    let row: CloudImportRow
+    @ObservedObject var store: CloudImportStore
 
     var body: some View {
         if row.showsCheckbox {
@@ -412,7 +433,7 @@ private struct TickBox: View {
 }
 
 private struct AttendeeLineView: View {
-    let row: GoogleImportRow
+    let row: CloudImportRow
 
     var body: some View {
         let (names, overflow) = AttendeeLine.compose(row.attendees)
@@ -438,8 +459,8 @@ private struct AttendeeLineView: View {
 }
 
 private struct StatusCell: View {
-    let row: GoogleImportRow
-    @ObservedObject var store: MeetImportStore
+    let row: CloudImportRow
+    @ObservedObject var store: CloudImportStore
 
     var body: some View {
         if let progress = store.progress[row.id] {
@@ -468,18 +489,50 @@ private struct StatusCell: View {
     }
 }
 
-/// Stand-in for Google's official mark.
+/// Stand-in for each vendor's official mark.
 ///
-/// Their branding guidelines require the unaltered asset and permit no redrawn
-/// approximation, so this is explicitly a placeholder to be replaced with the
-/// downloaded SVG before this ships — the same discipline the Teams mockup
-/// applies to Microsoft's logo. Drawn as a neutral glyph rather than an
-/// almost-right four-colour G, because an approximation that looks correct is
-/// harder to notice and remove than one that obviously isn't.
-private struct GoogleMark: View {
+/// All three require the unaltered asset and permit no redrawn approximation,
+/// so these are explicitly placeholders to be replaced with the downloaded SVGs
+/// before this ships. Drawn as neutral glyphs rather than almost-right
+/// imitations, because an approximation that looks correct is harder to notice
+/// and remove than one that obviously isn't.
+private struct VendorMark: View {
+    let platform: CloudPlatform
+
     var body: some View {
-        Image(systemName: "g.circle")
+        Image(systemName: symbol)
             .imageScale(.medium)
             .accessibilityHidden(true)
+    }
+
+    private var symbol: String {
+        switch platform {
+        case .teams: return "m.square"
+        case .meet:  return "g.circle"
+        case .zoom:  return "z.square"
+        }
+    }
+}
+
+/// The countdown, rendered only where the platform supplies one.
+private struct ExpiryCell: View {
+    let row: CloudImportRow
+
+    var body: some View {
+        if let expires = row.expiresAt {
+            Text(expires, format: .relative(presentation: .named))
+                .font(.callout)
+                // Earn the red: a countdown on every row is a wall of
+                // countdowns, and then none of them mean anything. Only rows
+                // inside the danger window get warning colour.
+                .foregroundStyle(isUrgent(expires) ? AnyShapeStyle(.orange)
+                                                   : AnyShapeStyle(.secondary))
+        } else {
+            Text("—").foregroundStyle(.tertiary)
+        }
+    }
+
+    private func isUrgent(_ date: Date) -> Bool {
+        date.timeIntervalSinceNow < 7 * 24 * 3600
     }
 }

@@ -163,8 +163,8 @@ struct AttendeeLineTests {
         isSelf: Bool = false,
         declined: Bool = false,
         external: Bool = false
-    ) -> GoogleImportRow.Attendee {
-        GoogleImportRow.Attendee(
+    ) -> CloudImportRow.Attendee {
+        CloudImportRow.Attendee(
             displayName: name, email: email,
             isSelf: isSelf, didDecline: declined, isExternal: external
         )
@@ -356,13 +356,13 @@ struct JoinArithmeticTests {
 // MARK: - Row selectability
 
 @Suite("Import row selectability")
-struct GoogleImportRowTests {
+struct CloudImportRowTests {
 
     private func row(
         local: ImportRowState,
         video: ArtifactAvailability = .available
-    ) -> GoogleImportRow {
-        GoogleImportRow(
+    ) -> CloudImportRow {
+        CloudImportRow(
             id: "r", title: "t", startsAt: Date(), duration: nil, sizeBytes: nil,
             expiresAt: nil, attendees: [], localState: local,
             video: video, roster: .available, transcript: .available, organiser: nil
@@ -408,10 +408,10 @@ struct GoogleImportRowTests {
 
 @MainActor
 @Suite("Fetch ordering and batch state")
-struct MeetImportStoreTests {
+struct CloudImportStoreTests {
 
-    private func store(_ scenario: MeetImportScenario) async -> MeetImportStore {
-        let store = MeetImportStore(source: FixtureMeetSource(scenario: scenario))
+    private func store(_ scenario: CloudImportScenario) async -> CloudImportStore {
+        let store = CloudImportStore(source: FixtureCloudSource(scenario: scenario))
         await store.load()
         return store
     }

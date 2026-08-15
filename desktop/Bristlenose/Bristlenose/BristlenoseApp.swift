@@ -52,7 +52,7 @@ struct BristlenoseApp: App {
     /// Owns the single import window's store. App-level rather than
     /// scene-level: one window globally (§9), so one store, or two windows
     /// would race for the same destination with two tick sets.
-    @StateObject private var meetImport = MeetImportCoordinator()
+    @StateObject private var cloudImport = CloudImportCoordinator()
     @StateObject private var pipelineRunner = PipelineRunner()
     @StateObject private var volumeWatcher = VolumeWatcher()
     @StateObject private var toast = ToastStore()
@@ -156,8 +156,8 @@ struct BristlenoseApp: App {
                 .alphaExpiryFlow(i18n: i18n, toast: toast)
                 // Opens the cloud-import scene. Lives here rather than in
                 // ContentView so it is alive even with no project selected.
-                .modifier(MeetImportOpener(
-                    coordinator: meetImport,
+                .modifier(CloudImportOpener(
+                    coordinator: cloudImport,
                     projectIndex: projectIndex,
                     selectedProjectID: nil
                 ))
@@ -196,10 +196,10 @@ struct BristlenoseApp: App {
         // otherwise contributes an automatic Window-menu reopen entry, and HIG
         // reserves that menu for windows that are *currently open*. Reopening
         // belongs in File, which is where the import item lives.
-        Window("Import from Google Meet", id: "meet-import") {
-            MeetImportWindowHost()
+        Window("Import", id: "cloud-import") {
+            CloudImportWindowHost()
                 .environmentObject(projectIndex)
-                .environmentObject(meetImport)
+                .environmentObject(cloudImport)
                 .environmentObject(i18n)
                 .tint(paletteAccent)
         }

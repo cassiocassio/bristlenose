@@ -156,13 +156,18 @@ private struct DiagnosticsMenuContent: View {
             // verified OAuth client, none of which exist yet. Without this
             // menu the states could be written but never *seen*, which is how
             // an empty-state's copy stays wrong for two releases.
-            Menu("Google Meet Import") {
-                ForEach(MeetImportScenario.allCases) { scenario in
-                    Button(scenario.menuTitle) {
-                        NotificationCenter.default.post(
-                            name: .openGoogleMeetImportFixture,
-                            object: scenario
-                        )
+            Menu("Cloud Import") {
+                ForEach(CloudPlatform.allCases) { platform in
+                    Menu(platform.displayName) {
+                        ForEach(CloudImportScenario.allCases) { scenario in
+                            Button(scenario.menuTitle) {
+                                NotificationCenter.default.post(
+                                    name: .openCloudImportFixture,
+                                    object: FixtureRequest(platform: platform,
+                                                           scenario: scenario)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -404,8 +409,13 @@ private struct FileMenuContent: View {
         // menu item users have already learned. Cheaper to be one item wide
         // for a while than to move it afterwards.
         Menu {
-            Button("Google Meet…", systemImage: "video") {
-                NotificationCenter.default.post(name: .openGoogleMeetImport, object: nil)
+            // Only platforms with a live adapter appear. An item that opens a
+            // window which then says "not built yet" is worse than no item —
+            // menus are a promise about what the app can do.
+            ForEach(CloudPlatform.shipping) { platform in
+                Button(platform.displayName + "…", systemImage: platform.symbolName) {
+                    NotificationCenter.default.post(name: .openCloudImport, object: platform)
+                }
             }
         } label: {
             Label("Import", systemImage: "square.and.arrow.down")

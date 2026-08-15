@@ -7,9 +7,9 @@ import SwiftUI
 /// `desktop/CLAUDE.md` § Testing: "if a SwiftUI view is making a decision, the
 /// decision belongs in a testable helper". The view below it is a renderer.
 ///
-/// Holds a `MeetImportSource` and never asks which kind it is.
+/// Holds a `CloudImportSource` and never asks which kind it is.
 @MainActor
-final class MeetImportStore: ObservableObject {
+final class CloudImportStore: ObservableObject {
 
     /// What the window is showing. One enum rather than a handful of booleans,
     /// because the states are mutually exclusive and a boolean soup makes
@@ -48,7 +48,7 @@ final class MeetImportStore: ObservableObject {
     /// going further back is a different intent, not a longer scroll.
     @Published var windowDays: Int = 30
 
-    private let source: MeetImportSource
+    private let source: CloudImportSource
     private var listTask: Task<Void, Never>?
     private var fetchTask: Task<Void, Never>?
 
@@ -57,7 +57,7 @@ final class MeetImportStore: ObservableObject {
     /// already saturates a modest uplink.
     private let maxConcurrentFetches = 3
 
-    init(source: MeetImportSource) {
+    init(source: CloudImportSource) {
         self.source = source
         self.accountEmail = source.accountEmail
         self.phase = source.accountEmail == nil ? .signedOut : .loading
@@ -68,7 +68,7 @@ final class MeetImportStore: ObservableObject {
     /// Rows after the filter, in display order: most-recent-first, because the
     /// researcher opened this to find last week. Fetch order is a different
     /// question — see `fetchOrder`.
-    var visibleRows: [GoogleImportRow] {
+    var visibleRows: [CloudImportRow] {
         let all = listing?.rows ?? []
         let term = filterText.trimmingCharacters(in: .whitespacesAndNewlines)
         let filtered = term.isEmpty
@@ -87,7 +87,7 @@ final class MeetImportStore: ObservableObject {
     /// retention is an admin policy — fall back to oldest-first, on the same
     /// reasoning one level down: the oldest recording is the one nearest
     /// whatever policy eventually removes it.
-    var fetchOrder: [GoogleImportRow] {
+    var fetchOrder: [CloudImportRow] {
         (listing?.rows ?? [])
             .filter { ticked.contains($0.id) && $0.isSelectable }
             .sorted { lhs, rhs in

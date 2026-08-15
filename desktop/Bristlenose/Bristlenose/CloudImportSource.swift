@@ -4,7 +4,7 @@ import Foundation
 //
 // Two implementations from the outset, both real:
 //   • `GoogleMeetSource`   — live Google Calendar + Drive/Meet APIs.
-//   • `FixtureMeetSource`  — recorded/derived shapes, no network, no account.
+//   • `FixtureCloudSource`  — recorded/derived shapes, no network, no account.
 //
 // This is NOT the `CallSource` abstraction docs/design-cloud-import.md §7 warns
 // against ("at n=1 that is Speculative Generality"). That warning is about
@@ -22,7 +22,7 @@ import Foundation
 
 /// One complete answer to "what could I import right now".
 struct MeetingListing: Equatable {
-    var rows: [GoogleImportRow]
+    var rows: [CloudImportRow]
     var arithmetic: JoinArithmetic
     /// The window that was asked for, so the UI can say "last 30 days" without
     /// re-deriving it and drifting from what was actually queried.
@@ -49,7 +49,7 @@ enum FetchOutcome: Equatable {
 
 // MARK: - The protocol
 
-protocol MeetImportSource: AnyObject {
+protocol CloudImportSource: AnyObject {
     /// The signed-in account, or nil when signed out. Rendered read-only in the
     /// window's subtitle; sign-out lives in Settings ▸ Accounts, per §9's "one
     /// place to disconnect, not two".
@@ -74,7 +74,7 @@ protocol MeetImportSource: AnyObject {
     /// 3–4 per §9) and the ordering (soonest-expiring first, regardless of
     /// display sort).
     func fetch(
-        row: GoogleImportRow,
+        row: CloudImportRow,
         destination: URL,
         progress: @escaping @Sendable (FetchProgress) -> Void
     ) async -> FetchOutcome
@@ -90,7 +90,7 @@ protocol MeetImportSource: AnyObject {
 /// account with a full calendar and no recordings, a partial batch — is
 /// unreachable from a happy-path live account, and several are unreachable
 /// without a paid Workspace tenant that does not exist yet.
-enum MeetImportScenario: String, CaseIterable, Identifiable {
+enum CloudImportScenario: String, CaseIterable, Identifiable {
     case signedOut
     case loading
     case populated
@@ -123,17 +123,17 @@ enum MeetImportScenario: String, CaseIterable, Identifiable {
     }
 }
 
-/// A `MeetImportSource` backed by generated shapes rather than a network.
+/// A `CloudImportSource` backed by generated shapes rather than a network.
 ///
 /// Dates are computed relative to a fixed `now` passed in, so the same scenario
 /// renders identically on any day — a fixture whose rows drift with the wall
 /// clock stops being a fixture.
-final class FixtureMeetSource: MeetImportSource {
-    private let scenario: MeetImportScenario
+final class FixtureCloudSource: CloudImportSource {
+    private let scenario: CloudImportScenario
     private let now: Date
     private var signedIn: Bool
 
-    init(scenario: MeetImportScenario, now: Date = Date()) {
+    init(scenario: CloudImportScenario, now: Date = Date()) {
         self.scenario = scenario
         self.now = now
         self.signedIn = (scenario != .signedOut)
@@ -170,7 +170,7 @@ final class FixtureMeetSource: MeetImportSource {
     }
 
     func fetch(
-        row: GoogleImportRow,
+        row: CloudImportRow,
         destination: URL,
         progress: @escaping @Sendable (FetchProgress) -> Void
     ) async -> FetchOutcome {
@@ -214,7 +214,7 @@ final class FixtureMeetSource: MeetImportSource {
     /// the column, an external participant with no display name at all (the
     /// shape Google returns for someone outside the directory), and a decliner
     /// who must be dropped from the line.
-    private func participants(_ n: Int) -> [GoogleImportRow.Attendee] {
+    private func participants(_ n: Int) -> [CloudImportRow.Attendee] {
         let pool: [(String?, String)] = [
             ("Sarah Chen", "s.chen@nhs.example"),
             ("Margarethe Okafor-Whitcombe", "m.okafor-whitcombe@nhs.example"),
@@ -225,8 +225,8 @@ final class FixtureMeetSource: MeetImportSource {
             ("R. Nakamura", "r.nakamura@nhs.example"),
         ]
         let domain = accountTier.organisationDomain
-        var out: [GoogleImportRow.Attendee] = [
-            GoogleImportRow.Attendee(
+        var out: [CloudImportRow.Attendee] = [
+            CloudImportRow.Attendee(
                 displayName: "Martin Storey",
                 email: accountEmail,
                 isSelf: true,
@@ -236,14 +236,14 @@ final class FixtureMeetSource: MeetImportSource {
         ]
         for (name, email) in pool.prefix(n) {
             let external = domain.map { !email.hasSuffix("@\($0)") } ?? true
-            out.append(GoogleImportRow.Attendee(
+            out.append(CloudImportRow.Attendee(
                 displayName: name,
                 email: email,
                 isExternal: external
             ))
         }
         // One decliner, to prove the line drops them.
-        out.append(GoogleImportRow.Attendee(
+        out.append(CloudImportRow.Attendee(
             displayName: "K. Lindqvist",
             email: "k.lindqvist@stmarystrust.example",
             didDecline: true,
@@ -263,9 +263,9 @@ final class FixtureMeetSource: MeetImportSource {
         people: Int = 3,
         local: ImportRowState = .notImported,
         video: ArtifactAvailability = .available,
-        organiser: GoogleImportRow.Attendee? = nil
-    ) -> GoogleImportRow {
-        GoogleImportRow(
+        organiser: CloudImportRow.Attendee? = nil
+    ) -> CloudImportRow {
+        CloudImportRow(
             id: id,
             title: title,
             startsAt: day(daysAgo, hour: hour, minute: minute),
@@ -285,7 +285,7 @@ final class FixtureMeetSource: MeetImportSource {
         )
     }
 
-    private func rows() -> [GoogleImportRow] {
+    private func rows() -> [CloudImportRow] {
         switch scenario {
         case .signedOut, .loading, .emptyWindow:
             return []
@@ -329,7 +329,7 @@ final class FixtureMeetSource: MeetImportSource {
             ]
 
         case .someoneElsesMeetings:
-            let bianchi = GoogleImportRow.Attendee(
+            let bianchi = CloudImportRow.Attendee(
                 displayName: "A. Bianchi", email: "a.bianchi@nhs.example",
                 isOrganiser: true, isExternal: true
             )

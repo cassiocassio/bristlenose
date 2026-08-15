@@ -10,13 +10,18 @@ import SwiftUI
 /// It also owns the live-vs-fixture choice, so that decision is made in exactly
 /// one place and the window itself never learns which it has.
 @MainActor
-final class MeetImportCoordinator: ObservableObject {
-    @Published private(set) var store: MeetImportStore?
+final class CloudImportCoordinator: ObservableObject {
+    @Published private(set) var store: CloudImportStore?
+
+    /// Which platform the window is showing. Drives every vendor-specific
+    /// string in it — sign-in title, account noun, whether an Expires column
+    /// exists at all.
+    @Published private(set) var platform: CloudPlatform = .meet
 
     /// Which fixture scenario is showing, or nil when the window is live.
     /// Rendered in the window as a visible badge — a debug surface that isn't
     /// obviously a debug surface is a way to file fictional bug reports.
-    @Published private(set) var fixtureScenario: MeetImportScenario?
+    @Published private(set) var fixtureScenario: CloudImportScenario?
 
     /// Set at open time by whichever door was used (§9: opening from a
     /// project's context menu pre-selects that project; from the File menu, the
@@ -29,24 +34,30 @@ final class MeetImportCoordinator: ObservableObject {
     var oauthConfig: GoogleOAuthConfig? { GoogleOAuthConfig.resolve() }
 
     /// Open against the real Google APIs.
-    func openLive(preselecting projectID: UUID?) {
+    func openLive(_ platform: CloudPlatform, preselecting projectID: UUID?) {
+        self.platform = platform
         preselectedProjectID = projectID
         fixtureScenario = nil
         guard let config = oauthConfig else {
             // No client ID. Deliberately still opens the window: the honest
             // thing is a window that says what is missing, not a menu item that
             // does nothing when clicked.
-            store = MeetImportStore(source: UnconfiguredMeetSource())
+            store = CloudImportStore(source: UnconfiguredCloudSource())
             return
         }
-        store = MeetImportStore(source: GoogleMeetSource(config: config))
+        store = CloudImportStore(source: GoogleMeetSource(config: config))
     }
 
     /// Open against fixtures. Diagnostics menu only.
-    func openFixture(_ scenario: MeetImportScenario, preselecting projectID: UUID?) {
+    func openFixture(
+        _ platform: CloudPlatform,
+        _ scenario: CloudImportScenario,
+        preselecting projectID: UUID?
+    ) {
+        self.platform = platform
         preselectedProjectID = projectID
         fixtureScenario = scenario
-        store = MeetImportStore(source: FixtureMeetSource(scenario: scenario))
+        store = CloudImportStore(source: FixtureCloudSource(scenario: scenario))
     }
 }
 
@@ -58,7 +69,7 @@ final class MeetImportCoordinator: ObservableObject {
 /// Registering an OAuth client is an act of the maintainer's Google account;
 /// the app cannot do it for itself, and pretending otherwise would be the
 /// fake-success pattern this codebase keeps finding and removing.
-final class UnconfiguredMeetSource: MeetImportSource {
+final class UnconfiguredCloudSource: CloudImportSource {
     var accountEmail: String? { nil }
     var accountTier: GoogleAccountTier { .unknown }
 
@@ -74,7 +85,7 @@ final class UnconfiguredMeetSource: MeetImportSource {
     }
 
     func fetch(
-        row: GoogleImportRow,
+        row: CloudImportRow,
         destination: URL,
         progress: @escaping @Sendable (FetchProgress) -> Void
     ) async -> FetchOutcome {

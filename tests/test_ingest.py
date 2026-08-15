@@ -70,6 +70,49 @@ class TestNormaliseStem:
         transcript = _normalise_stem("user research")
         assert recording == transcript
 
+    # -- Teams: real specimens ------------------------------------------------
+    #
+    # Every Teams case above this line is CONSTRUCTED — invented in Feb 2026
+    # alongside the regex, with a space before the timestamp. Both real formats
+    # use a hyphen, so the regex matched only its own fixtures and neither real
+    # file, for six months, with a green suite throughout.
+    #
+    # The rule that follows from that: a case below this line must be a
+    # filename observed on a real tenant, with the date and tier recorded.
+
+    def test_teams_business_pair_matches(self) -> None:
+        """Business tenant, captured 15 Aug 2026 — no UTC marker, hyphen separator.
+
+        Unpaired, this is not a cosmetic bug: the video and its transcript
+        become two sessions, so the mp4 is transcribed from scratch and the
+        report gains a duplicate participant.
+        """
+        recording = _normalise_stem(
+            "meeting with martin storey-20260815_200732-meeting recording"
+        )
+        transcript = _normalise_stem("meeting with martin storey")
+        assert recording == transcript == "meeting with martin storey"
+
+    def test_teams_personal_pair_matches(self) -> None:
+        """Personal OneDrive, captured 15 Aug 2026 — UTC marker, hyphen separator."""
+        recording = _normalise_stem(
+            "meeting with martin storey-20260719_142007utc-meeting recording"
+        )
+        transcript = _normalise_stem("meeting with martin storey")
+        assert recording == transcript == "meeting with martin storey"
+
+    def test_teams_hyphenated_title_survives(self) -> None:
+        """The hyphen separator makes a hyphenated title the interesting case.
+
+        "Q3 Review - Design" is an ordinary meeting name, and the tail strip
+        must take only the timestamp block, not the first hyphen it meets.
+        """
+        recording = _normalise_stem(
+            "q3 review - design-20260815_200732-meeting recording"
+        )
+        transcript = _normalise_stem("q3 review - design")
+        assert recording == transcript == "q3 review - design"
+
     # -- Zoom cloud ----------------------------------------------------------
 
     def test_zoom_cloud_video(self) -> None:

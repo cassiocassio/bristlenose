@@ -94,9 +94,22 @@ def _try_add_file(path: Path, files: list[InputFile]) -> None:
 
 # -- Platform filename patterns --------------------------------------------------
 
-# Teams: "Title 20260130_093012-Meeting Recording" or "-meeting transcript"
+# Teams. Two real specimens, both captured 15 Aug 2026 — note the separator is
+# a HYPHEN, and the "UTC" marker appears on personal tenants only:
+#
+#   Meeting with Martin Storey-20260719_142007UTC-Meeting Recording.mp4   (personal)
+#   Meeting with Martin Storey-20260815_200732-Meeting Recording.mp4      (business)
+#
+# The transcript sibling carries neither timestamp nor suffix — it is just
+# "Meeting with Martin Storey.vtt" — so stripping this tail is the whole
+# mechanism by which video and transcript become one session.
+#
+# This pattern originally required whitespace before the timestamp and no UTC
+# marker, which matched neither real format and only ever matched the
+# constructed fixture written alongside it. Both real files therefore ingested
+# as two separate sessions, and the mp4 was re-transcribed from scratch.
 _TEAMS_SUFFIX_RE = re.compile(
-    r"\s+\d{8}_\d{6}-(meeting recording|meeting transcript)$",
+    r"[\s-]+\d{8}_\d{6}(utc)?-(meeting recording|meeting transcript)$",
     re.IGNORECASE,
 )
 

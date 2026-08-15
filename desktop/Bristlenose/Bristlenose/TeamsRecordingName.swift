@@ -1,37 +1,65 @@
 import Foundation
 
-/// Parses a Teams recording filename into the title and the moment it started.
+/// Parses a Teams recording filename into the title and, when the filename
+/// says so, the moment it started.
 ///
-/// Real specimen, downloaded 15 Aug 2026:
+/// Two real specimens, both captured 15 Aug 2026:
 ///
-///     Meeting with Martin Storey-20260719_142007UTC-Meeting Recording.mp4
+///     Meeting with Martin Storey-20260719_142007UTC-Meeting Recording.mp4   (personal)
+///     Meeting with Martin Storey-20260815_200732-Meeting Recording.mp4      (business)
 ///
-/// Two things make this worth a type rather than a `split(separator: "-")`.
+/// Three things make this worth a type rather than a `split(separator: "-")`.
 ///
 /// **The title can contain hyphens.** "Q3 Review - Design" is an ordinary
 /// meeting name, and a left-to-right split mangles it. So this parses from the
 /// *right*, where the structure is fixed, and treats everything before the
 /// timestamp as the title.
 ///
-/// **The timestamp is UTC and says so.** That `UTC` suffix is load-bearing: the
-/// same specimen displayed as 16:20 in the Teams UI while the filename read
-/// 14:20:07 — a two-hour offset from the client rendering local time. Parse it
-/// as local and a 30-day window is wrong by the offset, silently dropping
+/// **The `UTC` marker is optional, and its absence is not cosmetic.** A
+/// business tenant omits it, and the timestamp it writes instead is in neither
+/// UTC nor the user's local time. Measured on the business specimen above: the
+/// filename reads 20:07:32, the mp4's own `creation_time` reads
+/// `2026-08-15T18:07:38Z`, and the machine was in London on BST (UTC+1). The
+/// filename is therefore **UTC+2** — a server-side zone, configured on the
+/// tenant or the mailbox, that the researcher never set and cannot see from
+/// the filename. The personal specimen shows the same two-hour offset against
+/// its Teams UI rendering.
+///
+/// So an unmarked timestamp cannot be resolved to a moment by *any* regex.
+/// `startedAtUTC` is nil in that case, deliberately, and the caller must take
+/// the moment from a source that carries a zone — `driveItem.createdDateTime`
+/// over Graph, or `format.tags.creation_time` from the file itself. Returning
+/// a plausible-looking wrong Date here is how a 30-day window silently drops
 /// meetings at each edge.
 ///
 /// Why this matters at all: the title being *in the filename* is what lets the
 /// import list be filtered on "Interview" using `Files.Read` alone, with no
-/// calendar scope. See docs/design-cloud-import.md §6.
+/// calendar scope. See docs/design-cloud-import.md §6. The **title** is what
+/// this type exists to recover; the timestamp is a bonus that only sometimes
+/// arrives.
 struct TeamsRecordingName: Equatable {
     /// The meeting title as Teams recorded it. Not sanitised — it is
     /// third-party-controlled text (§9), so it must go through `safe_filename`
     /// before becoming a path component and be wrapped before reaching a prompt.
     let title: String
 
-    /// Recording start, in UTC. Note this is recording-start, not meeting-start:
-    /// the gap between them is however late everyone joined, and is the
-    /// tolerance the calendar join has to allow for.
-    let startedAt: Date
+    /// Recording start in UTC — **only when the filename carried the `UTC`
+    /// marker.** Nil on a business-tenant filename, where the timestamp is in
+    /// an unknowable server-side zone (see the type note). Callers must fall
+    /// back to a zone-carrying source rather than treating nil as "no date".
+    ///
+    /// Note this is recording-start, not meeting-start: the gap between them is
+    /// however late everyone joined, and is the tolerance the calendar join has
+    /// to allow for.
+    let startedAtUTC: Date?
+
+    /// The timestamp exactly as the filename wrote it, zone unresolved.
+    ///
+    /// Kept because it is still useful for *disambiguation* — two recordings of
+    /// the same weekly meeting differ here even when neither can be placed on a
+    /// clock — and because it is the only date-ish thing a transcript sibling
+    /// can be matched against. Never render it as a time.
+    let timestampDigits: String
 
     /// The fixed tail Teams appends. Held as a constant rather than inlined so
     /// the localisation question has somewhere to live: whether this suffix
@@ -40,7 +68,10 @@ struct TeamsRecordingName: Equatable {
     /// behind the calendar scope instead of being free.
     static let suffix = "-Meeting Recording"
 
-    private static let timestampPattern = /^(.+)-(\d{8})_(\d{6})UTC$/
+    /// `UTC` is optional because a business tenant omits it. Capturing it
+    /// rather than merely tolerating it is the point: its presence is the only
+    /// evidence that the digits mean anything on a clock.
+    private static let timestampPattern = /^(.+)-(\d{8})_(\d{6})(UTC)?$/
 
     /// Returns `nil` rather than throwing: a file that does not match is simply
     /// not a Teams recording, which is an ordinary condition in a folder listing
@@ -59,12 +90,18 @@ struct TeamsRecordingName: Equatable {
         let rawTitle = String(match.1)
         guard !rawTitle.isEmpty else { return nil }
 
-        guard let date = Self.date(yyyymmdd: String(match.2), hhmmss: String(match.3)) else {
-            return nil
-        }
+        let yyyymmdd = String(match.2), hhmmss = String(match.3)
+
+        // A date is only computed when the filename declared its zone. Without
+        // the marker the digits are in a server-side zone we cannot name, so
+        // there is no honest Date to return — see the type note.
+        let isZoneQualified = match.4 != nil
+        let resolved = isZoneQualified ? Self.date(yyyymmdd: yyyymmdd, hhmmss: hhmmss) : nil
+        if isZoneQualified, resolved == nil { return nil }   // marked UTC but not a real date
 
         self.title = rawTitle
-        self.startedAt = date
+        self.timestampDigits = "\(yyyymmdd)_\(hhmmss)"
+        self.startedAtUTC = resolved
     }
 
     private static func date(yyyymmdd: String, hhmmss: String) -> Date? {

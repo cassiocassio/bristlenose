@@ -49,8 +49,20 @@ private struct GraphChildren: Decodable {
         /// column disappears rather than standing empty.
         let expirationDateTime: String?
 
+        /// ISO-8601 with an explicit zone, and therefore **the only
+        /// trustworthy moment on a Teams recording.** The filename's timestamp
+        /// is unmarked on a business tenant and sits in a server-side zone
+        /// nobody can name — measured at UTC+2 against a London machine on
+        /// BST — so the window filter, the row's displayed time and the
+        /// calendar join all take their moment from here. See the note on
+        /// `TeamsRecordingName`.
+        ///
+        /// Always served: the recordings listing sets no `$select`, so the
+        /// default driveItem property set arrives whole.
+        let createdDateTime: String?
+
         enum CodingKeys: String, CodingKey {
-            case id, name, size, parentReference, file, expirationDateTime
+            case id, name, size, parentReference, file, expirationDateTime, createdDateTime
             case downloadURL = "@microsoft.graph.downloadUrl"
         }
     }
@@ -263,12 +275,19 @@ final class TeamsSource: CloudImportSource {
         events: [GraphCalendarView.Event]
     ) -> CloudImportRow? {
         guard let id = item.id, let name = item.name else { return nil }
-        // Title and date come from the filename, free, with no calendar scope —
-        // `<Title>-<YYYYMMDD_HHMMSS>UTC-Meeting Recording.mp4`, and the `UTC`
-        // suffix means it. Parsing it as local shifts the window by the offset
-        // and drops meetings at each edge.
+        // The **title** comes from the filename, free, with no calendar scope.
+        // That is what this parse is for (§6).
         guard let parsed = TeamsRecordingName(filename: name) else { return nil }
-        guard window.contains(parsed.startedAt) else { return nil }
+
+        // The **moment** does not. A business filename writes an unmarked
+        // timestamp in a server-side zone — measured at UTC+2 from a London
+        // machine on BST — so it cannot be placed on a clock by any regex.
+        // `createdDateTime` carries its zone explicitly; the filename's value
+        // is used only when it declared itself UTC, which personal tenants do.
+        guard let startedAt = item.createdDateTime.flatMap(Self.parseISO)
+                ?? parsed.startedAtUTC
+        else { return nil }
+        guard window.contains(startedAt) else { return nil }
 
         if let raw = item.downloadURL, let url = URL(string: raw) {
             downloadURLs[id] = url
@@ -286,13 +305,13 @@ final class TeamsSource: CloudImportSource {
             expectedFormat: .mp4
         )
 
-        let matched = Self.matchEvent(events, to: parsed)
+        let matched = Self.matchEvent(events, near: startedAt)
         let attendees = matched.map { Self.attendees(of: $0, ownAddress: identity) } ?? []
 
         return CloudImportRow(
             id: id,
             title: matched?.subject ?? parsed.title,
-            startsAt: parsed.startedAt,
+            startsAt: startedAt,
             duration: nil,
             sizeBytes: item.size,
             expiresAt: item.expirationDateTime.flatMap(Self.parseISO),
@@ -315,14 +334,17 @@ final class TeamsSource: CloudImportSource {
     /// window absorbs that without letting a back-to-back session steal the
     /// match; widening it would silently attach the wrong roster to a row,
     /// which is worse than no roster at all.
+    /// Takes the moment rather than the parsed filename: the join must run
+    /// against a zone-qualified instant, and on a business tenant the filename
+    /// cannot supply one.
     private static func matchEvent(
         _ events: [GraphCalendarView.Event],
-        to recording: TeamsRecordingName
+        near recordingStart: Date
     ) -> GraphCalendarView.Event? {
         events
             .compactMap { event -> (GraphCalendarView.Event, TimeInterval)? in
                 guard let start = event.start?.dateTime.flatMap(parseISO) else { return nil }
-                let delta = abs(start.timeIntervalSince(recording.startedAt))
+                let delta = abs(start.timeIntervalSince(recordingStart))
                 guard delta <= 1_800 else { return nil }
                 return (event, delta)
             }

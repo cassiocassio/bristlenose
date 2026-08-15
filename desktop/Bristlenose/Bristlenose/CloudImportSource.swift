@@ -130,20 +130,31 @@ enum CloudImportScenario: String, CaseIterable, Identifiable {
 /// clock stops being a fixture.
 final class FixtureCloudSource: CloudImportSource {
     private let scenario: CloudImportScenario
+    private let platform: CloudPlatform
     private let now: Date
     private var signedIn: Bool
 
-    init(scenario: CloudImportScenario, now: Date = Date()) {
+    init(scenario: CloudImportScenario, platform: CloudPlatform = .meet, now: Date = Date()) {
         self.scenario = scenario
+        self.platform = platform
         self.now = now
         self.signedIn = (scenario != .signedOut)
     }
 
+    /// The address shape differs per platform, and it is not cosmetic: the
+    /// tier that yields a full calendar and zero recordings is a consumer
+    /// account on Google and a Basic-plan work address on Zoom, so a fixture
+    /// that always showed a consumer address would exercise the wrong sentence.
     var accountEmail: String? {
         guard signedIn else { return nil }
-        return scenario == .personalAccountNoRecordings
-            ? "m.storey@gmail.com"
-            : "martin@stmarystrust.example"
+        guard scenario == .personalAccountNoRecordings else {
+            return "martin@stmarystrust.example"
+        }
+        switch platform {
+        case .meet:  return "m.storey@gmail.com"
+        case .teams: return "m.storey@outlook.example"
+        case .zoom:  return "martin@stmarystrust.example"
+        }
     }
 
     var accountTier: GoogleAccountTier { GoogleAccountTier(email: accountEmail) }
@@ -271,11 +282,15 @@ final class FixtureCloudSource: CloudImportSource {
             startsAt: day(daysAgo, hour: hour, minute: minute),
             duration: organiser == nil ? TimeInterval(minutes * 60) : nil,
             sizeBytes: organiser == nil ? Int64(gigabytes * 1_073_741_824) : nil,
-            // Nil throughout, and that is the finding rather than an omission:
-            // Google retention is an admin policy, not a per-file attribute, so
-            // there is no countdown to render. See the design doc's Expires
-            // column note.
-            expiresAt: nil,
+            // Nil on Google, and that is a finding rather than an omission:
+            // Drive has no per-file retention attribute, so there is nothing to
+            // count down and the column is absent entirely. Platforms that DO
+            // expose one get a real date, so the "earn the red" rule — only
+            // rows inside the danger window are warning-coloured — is actually
+            // exercised by the fixture rather than asserted in a comment.
+            expiresAt: platform.hasPerFileExpiry
+                ? Calendar.current.date(byAdding: .day, value: max(2, 60 - daysAgo), to: now)
+                : nil,
             attendees: participants(people),
             localState: local,
             video: video,

@@ -28,24 +28,42 @@ final class CloudImportCoordinator: ObservableObject {
     /// current one).
     @Published var preselectedProjectID: UUID?
 
-    /// Nil when no client ID has been configured. Read once here rather than at
-    /// each call site so "not set up" is a state the UI can render rather than
-    /// a failure it has to catch.
-    var oauthConfig: GoogleOAuthConfig? { GoogleOAuthConfig.resolve() }
-
-    /// Open against the real Google APIs.
+    /// Open against a platform's real APIs.
+    ///
+    /// Every branch that cannot find credentials opens the window anyway, on an
+    /// `UnconfiguredCloudSource`. Registering an OAuth client is an act of the
+    /// maintainer's own vendor account — the app cannot do it for itself — so
+    /// "not set up" is a state to render, not a menu item that does nothing when
+    /// clicked.
     func openLive(_ platform: CloudPlatform, preselecting projectID: UUID?) {
         self.platform = platform
         preselectedProjectID = projectID
         fixtureScenario = nil
-        guard let config = oauthConfig else {
-            // No client ID. Deliberately still opens the window: the honest
-            // thing is a window that says what is missing, not a menu item that
-            // does nothing when clicked.
+
+        switch platform {
+        case .meet:
+            guard let config = GoogleOAuthConfig.resolve() else {
+                store = CloudImportStore(source: UnconfiguredCloudSource()); return
+            }
+            store = CloudImportStore(source: GoogleMeetSource(config: config))
+
+        case .zoom:
+            // Zoom needs TWO values, not one: a public client ID *and* an HTTPS
+            // redirect, because Zoom does not derive the redirect from the
+            // client ID the way Google does — it is whatever was registered in
+            // the app's OAuth allow list, matched exactly.
+            guard let config = ZoomOAuthConfig.resolve() else {
+                store = CloudImportStore(source: UnconfiguredCloudSource()); return
+            }
+            store = CloudImportStore(source: ZoomSource(config: config))
+
+        case .teams:
+            // The Teams adapter is the sibling session's work and is not wired
+            // here yet. `CloudPlatform.shipping` deliberately omits it, so this
+            // branch is unreachable from the File menu — it exists so that
+            // adding Teams is one line rather than a refactor.
             store = CloudImportStore(source: UnconfiguredCloudSource())
-            return
         }
-        store = CloudImportStore(source: GoogleMeetSource(config: config))
     }
 
     /// Open against fixtures. Diagnostics menu only.
@@ -57,7 +75,7 @@ final class CloudImportCoordinator: ObservableObject {
         self.platform = platform
         preselectedProjectID = projectID
         fixtureScenario = scenario
-        store = CloudImportStore(source: FixtureCloudSource(scenario: scenario))
+        store = CloudImportStore(source: FixtureCloudSource(scenario: scenario, platform: platform))
     }
 }
 

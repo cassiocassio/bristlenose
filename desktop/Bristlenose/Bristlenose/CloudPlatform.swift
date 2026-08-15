@@ -28,7 +28,7 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     /// menu is a promise about what the app can do. `allCases` still drives the
     /// Diagnostics fixture menu, where seeing an unbuilt platform's states is
     /// the entire point.
-    static var shipping: [CloudPlatform] { [.meet] }
+    static var shipping: [CloudPlatform] { [.meet, .zoom] }
 
     // MARK: Naming
 
@@ -104,15 +104,21 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     /// worse than an absent one. (Note the *conference record* does expire at
     /// 30 days — but that governs the transcript and metadata, not the MP4.)
     ///
-    /// Zoom: **pending** — an auto-delete setting exists at account level; the
-    /// open question is whether it surfaces per recording. Set from research
-    /// before the adapter ships, and do not guess: guessing `true` here draws a
-    /// countdown column that silently reads "—" on every row.
+    /// Zoom: **yes, but derived rather than served.** There is no per-file
+    /// expiry field; there is an account setting, `auto_delete_cmr` with
+    /// `auto_delete_cmr_days`, readable from `GET /users/me/settings`. Add the
+    /// days to a recording's own start time and every row has a real, correct
+    /// countdown — computed once from one preflight call rather than fetched
+    /// per row. When auto-delete is off the column is genuinely empty, which is
+    /// the honest answer and not a gap.
+    ///
+    /// So the rule is not "does the API return an expiry date" but "can this
+    /// platform tell the researcher how long they have". Teams and Zoom can;
+    /// Drive cannot, at all.
     var hasPerFileExpiry: Bool {
         switch self {
-        case .teams: return true
-        case .meet:  return false
-        case .zoom:  return false
+        case .teams, .zoom: return true
+        case .meet:         return false
         }
     }
 
@@ -136,14 +142,21 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     /// Meet: yes — `conferenceRecords.transcripts.entries` gives per-utterance
     /// participant, timings and text on a *sensitive* scope.
     /// Teams: no — `OnlineMeetingTranscript.Read.All` is admin-consent-only.
-    /// Zoom: pending research; the VTT rides the same call as the video, which
-    /// would make Zoom the only platform where §8's comparison can be asked
-    /// cheaply.
+    /// Zoom: **yes, and on the same call as the video** — a `TRANSCRIPT` file
+    /// in VTT, speaker names carried as a `Name: ` prefix in each cue.
+    /// Conditional on the host's "Create audio transcript" setting and, on
+    /// every plan, **English only** — which excludes more real researchers than
+    /// any tier boundary and is invisible until a VTT fails to arrive. So this
+    /// flag says the platform *can*; `ZoomPreflight` says whether this account
+    /// *will*.
+    ///
+    /// Both Meet and Zoom therefore make §8's comparison askable. Meet's is the
+    /// better artefact (per-utterance, participant-resolved); Zoom's is the
+    /// cheaper to obtain (no second call, no extra scope).
     var servesTranscript: Bool {
         switch self {
-        case .meet:  return true
-        case .teams: return false
-        case .zoom:  return false
+        case .meet, .zoom: return true
+        case .teams:       return false
         }
     }
 }

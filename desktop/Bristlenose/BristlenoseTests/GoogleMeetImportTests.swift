@@ -27,11 +27,16 @@ struct GoogleResponseClassifierTests {
         "status":"PERMISSION_DENIED"}}
         """.utf8)
 
-        static let scopeNamedInMessage = Data("""
-        {"error":{"code":403,"message":"Request is missing required authentication scope
-        https://www.googleapis.com/auth/meetings.space.readonly for this request.",
-        "errors":[{"reason":"ACCESS_TOKEN_SCOPE_INSUFFICIENT"}],"status":"PERMISSION_DENIED"}}
-        """.utf8)
+        /// NB the message is on ONE line. A line break inside a JSON *string
+        /// value* is invalid JSON — the other fixtures here break after commas,
+        /// which is fine, but wrapping this one for readability made
+        /// `JSONDecoder` fail silently, the message read as empty, and the
+        /// classifier fall through to its default branch. The test caught it;
+        /// the malformed fixture would otherwise have "passed" any assertion
+        /// loose enough to accept the fallback.
+        static let scopeNamedInMessage = Data(
+            #"{"error":{"code":403,"message":"Request is missing required authentication scope https://www.googleapis.com/auth/meetings.space.readonly for this request.","errors":[{"reason":"ACCESS_TOKEN_SCOPE_INSUFFICIENT"}],"status":"PERMISSION_DENIED"}}"#.utf8
+        )
 
         /// Quota exhaustion arriving as 403 rather than 429 — Google does this
         /// on several APIs.

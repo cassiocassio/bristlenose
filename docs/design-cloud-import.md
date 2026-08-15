@@ -1,17 +1,41 @@
 ---
 status: partial
-last-trued: 2026-08-15
-trued-against: HEAD@main on 2026-08-15 (bb93871a)
+last-trued: 2026-08-15 (evening — second pass, post-tenant)
+trued-against: HEAD@main on 2026-08-15 (8b8eafc9)
 ---
 
-> **Truing status:** Partial — trued 15 Aug 2026. §§2, 6, 9 and 10 carried
-> statements written before the build and were corrected; §7's `CallSource`
-> section was **actively wrong** and is rewritten. §3's platform findings and
-> §6's download-verification ladder are freshly accurate. Sections describing
-> *unbuilt* work are now marked as owed rather than planned. See changelog.
+> **Truing status:** Partial — trued **twice** on 15 Aug 2026, and the second
+> pass is the one that matters. The morning pass corrected pre-build claims by
+> *reasoning*; this one corrects pre-tenant claims by *measurement*, after a
+> live Microsoft 365 tenant was bought and Teams signed in.
+>
+> **Changed this pass:** §0's "nothing works" gate (Teams is registered and
+> signs in; `CFBundleURLTypes` was never required and this doc said it was);
+> §3's Q7 — **answered NO**, with the original inference preserved because it
+> was a well-reasoned wrong guess; §6's "the timestamp is UTC" instruction,
+> which is **wrong for the tier that ships** and is superseded in place.
+>
+> **Unchanged and still correct:** §1's priorities, §2, §4, §5's sequencing,
+> §7's spine, §8, and §6's verification ladder.
+>
+> **Still pre-contact:** nothing has completed a **download** on any platform.
+> Treat every claim about the transfer path as untested — the two claims about
+> the *listing* path that met reality this week were both wrong.
 
 ## Changelog
 
+- _2026-08-15 (evening)_ — trued against the **first live tenant** (`8b8eafc9`).
+  §0: Teams is registered and signs in; `CFBundleURLTypes` was never required
+  and this doc claimed it was; the probe list re-cut (one answered, one now
+  known unanswerable by us, two new one-listing probes). §3: **Q7 answered NO**
+  — transcript is not a sibling file — with the original inference preserved
+  under a superseded banner, plus the manual-`.vtt` fallback and the Stream-web
+  "Speaker 1" trap. §6: the "timestamp is UTC" instruction superseded in place —
+  business tenants omit the marker and write a server-side zone (measured UTC+2
+  against the mp4's own `creation_time`), so the moment must come from
+  `driveItem.createdDateTime`; both real specimens recorded; two invariants
+  promoted out of the commit body (a parse refusal must produce a stated row;
+  a filename grammar must be pinned by an observed specimen).
 - _2026-08-15_ — trued up after three adapters shipped: corrected the status
   block (four open probes, not three; added the registration/persistence
   reality that makes every sign-in inert today); rewrote §7's "No `CallSource`
@@ -35,11 +59,18 @@ trued-against: HEAD@main on 2026-08-15 (bb93871a)
 
 **What is not built — and the first item means nothing works yet.**
 
-- **No OAuth client is registered on any platform, and two entitlements are missing.** All three configs read a client ID from `UserDefaults`/`Info.plist` and return `nil` when it is absent, so **no sign-in can complete today**. Teams additionally needs a `CFBundleURLTypes` entry for `msauth.app.bristlenose://auth`, and Zoom needs an `associated-domains` entitlement plus a deployed `apple-app-site-association` file — neither is in the target. This is the gate before anything else here can be exercised.
+- **Teams is registered and signs in. Google and Zoom are not.** A Microsoft 365 Business Basic tenant (`bristlenose.onmicrosoft.com`, £6.48/mo, **monthly**) and an Entra app registration were created 15 Aug 2026 — multitenant + personal accounts, redirect `msauth.app.bristlenose://auth` as a public client, public client flows on, delegated `Files.Read` / `Calendars.Read` / `offline_access` / `User.Read`. The client ID lives in the app's sandboxed `UserDefaults`, **not in this repo**. Google's and Zoom's configs still read a client ID and return `nil`, so neither can sign in.
+  - **`CFBundleURLTypes` turned out not to be required, and this doc said it was.** Teams signed in with no URL type registered in the target: `ASWebAuthenticationSession(url:callbackURLScheme:)` has the OS route the callback to the initiating session directly, never through LaunchServices — which is the security property §2 chose it for in the first place. **Zoom's `associated-domains` entitlement and a deployed `apple-app-site-association` file are still genuinely required**, because Zoom refuses custom schemes and its callback is HTTPS.
 - **No token is persisted, and no refresh is wired.** §2 and §7 describe a Keychain refresh token keyed on `(platform, account)`; nothing writes to the Keychain, and `refresh` is never called. Access tokens last about an hour on all three, so even once registration lands, a long batch can 401 mid-flight and every launch will re-prompt.
 - **No adapter derives local row state.** §6's `stat`-based six/seven-state model is implemented in `ImportRowState` and exercised only by `FixtureCloudSource`; all three live adapters hardcode `.notImported`.
 - **Where the full list lives.** Done/undone in dependency order is kept in the `cloud-import-state-of-play` handoff, with the maintainer's private planning notes outside the public tree — so it is gitignored and a grep of a clean checkout will not find it. This status block is the public summary; that handoff is the working document.
-- **Live acceptance.** The shipped code has never met a real recording. **Four** open probes, not three: §3's Picker question on Google, §3's tenant-consent question on Microsoft, whether Graph serves `expirationDateTime` per file, and §3's transcript-in-OneDrive question — the last of which would revise §1, §3 and §5 if it comes back yes.
+- **Live acceptance — Teams has now met a real recording; nothing has been fetched.** On 15 Aug 2026 the shipped code signed in to a live tenant, listed `/Recordings` over Graph and rendered the window. It has still never completed a **download**, on any platform. Two parsers broke on first contact and are fixed (`8b8eafc9`) — see §6.
+  Of the four open probes, one is answered and one is now known to be unanswerable by us:
+  - ✅ **Is the transcript a sibling file in OneDrive?** **No** — see §3. §1, §3 and §5 stand unrevised.
+  - 🔒 **Can a researcher self-consent in a real client tenant?** Still open, and **our own tenant can never answer it**: the owner is Global Administrator, so consent always succeeds and the org-wide consent checkbox only renders for admins. This needs a cohort member in a tenant we do not administer — see §5.
+  - ⬜ Does the Google Picker surface a Meet recording? Untouched.
+  - ⬜ Does Graph serve `expirationDateTime` per driveItem? Untouched — but now cheaply answerable, and a captured response from the app's own listing may already contain it, since that listing sets no `$select`.
+  - ⬜ *New, same cost:* does business OneDrive return `sha256Hash`, or only `quickXorHash`? One listing settles it, and §6's verification ladder degrades differently depending on the answer.
 
 Downloading recordings by hand, per file, is drudgery — and it is the thing Dovetail and Marvin remove by default. Bristlenose can too, and unlike them it needs no server.
 
@@ -98,7 +129,11 @@ Cells are marked ✓verified or ⚠️unverified deliberately. **The two Google 
 
 **Two doors to the same artifact, priced differently.** `OnlineMeetingTranscript.Read.All` and `OnlineMeetingRecording.Read.All` are *both* admin-consent-required (verified in the permissions list, 15 Aug 2026) — but reading the same recording **as a file in OneDrive** via `Files.Read` is user-consentable. That asymmetry is the whole reason this design takes the file door: Microsoft prices "read the meeting's artifacts" above "read the user's own files, some of which happen to be recordings."
 
+> **Answered NO, 15 Aug 2026 — the original position stands, and §1, §3 and §5 need no revision.** On a live business tenant, `/Recordings` contained the `.mp4` **alone**. The transcript exists and is downloadable as `.vtt` or `.docx`, but from the **meeting object** (Stream), behind its own Download control — not as a file in the folder, and not reachable by `Files.Read`. The paragraph below is preserved because it was a correctly-reasoned wrong guess, and the shape of the error is the useful part: Microsoft's phrasing generalises from *channel* meetings, where recordings and transcripts do share a folder, to meetings in general, where they do not.
+
 **⚠️ Open question that could overturn §1's priority 5: is the transcript also a file in OneDrive?** Microsoft's block-download documentation repeatedly says *"recording **and transcript** files from SharePoint or OneDrive"*, and for channel meetings that *"recordings **and transcripts** are saved to a Recordings folder."* If Teams drops the transcript beside the `.mp4` as a sibling file, `Files.Read` reaches it and **the transcript is not admin-walled at all** — making it free alongside the video rather than "the single hardest thing to obtain", and giving Teams the three-artifact coverage §5 currently credits only to Zoom. This is inference from phrasing, not observation. Settle it the moment a work tenant exists: list `/Recordings` and look for a transcript file beside the recording. If it is there, §1, §3 and §5 all need revising.
+
+**What the researcher can still do by hand, and what it costs us.** The transcript is two clicks away in the Teams UI, and the downloaded `.vtt` is *good*: it carries real `<v Martin Storey>` voice tags, and Bristlenose's stage-3 parser reads it correctly (19 cues → 2 segments with real `speaker_label`). So "import the video from Teams, drop the transcript in yourself" is a real fallback that sidesteps an admin-walled scope entirely — at the cost of the appliance not coping, which §1 holds out against for good reasons. **One trap if anyone evaluates this in a browser:** Stream's *web* player renders every speaker as "Speaker 1". The file and the Teams desktop app both carry the real name; only the web view degrades. Judging transcript quality by clicking Play reaches the wrong conclusion.
 
 **Zoom's mechanics, added 15 Aug 2026 — four traps, all of which return a plausible wrong answer rather than an error.**
 
@@ -205,9 +240,27 @@ So the order stands as **Teams → Zoom → Meet**, on unchanged reasoning — T
 
 **Three changes from the 28 Jul staircase**, all from the 14 Aug pass:
 
-**Title filtering needs no calendar.** Teams names recordings `<Title>-<YYYYMMDD_HHMMSS>UTC-Meeting Recording.mp4` — observed 15 Aug 2026 on a real download: `Meeting with Martin Storey-20260719_142007UTC-Meeting Recording.mp4`. The title is already in the filename, so filtering on "Interview" is free from `Files.Read` alone. The old v2 gate on search was right only for *attendee / `@domain` / description* search. Caveat to state in the UI rather than hide: title filtering rides on meeting-naming discipline, and "Chat with Sarah" will not match.
+**Title filtering needs no calendar — and the title is the *only* thing the filename can be trusted for.** Teams puts the meeting title in the recording's filename, so filtering on "Interview" is free from `Files.Read` alone. The old v2 gate on search was right only for *attendee / `@domain` / description* search. Caveat to state in the UI rather than hide: title filtering rides on meeting-naming discipline, and "Chat with Sarah" will not match.
+
+Two real specimens, both captured 15 Aug 2026 — **the format is tier-dependent**:
+
+```
+Meeting with Martin Storey-20260719_142007UTC-Meeting Recording.mp4   (personal)
+Meeting with Martin Storey-20260815_200732-Meeting Recording.mp4      (business)
+```
+
+> **Superseded 15 Aug 2026 by a business-tier specimen.** The paragraph below was written from the personal specimen alone and its instruction — "parse it as UTC" — is **wrong for the tier that ships**. Preserved because the reasoning was sound on one specimen and the delta is the lesson: a filename grammar observed once is a guess.
 
 **The timestamp is UTC, and the `UTC` suffix says so — parse it as such.** This removes one of the two timezone hazards in the join (§6.1), and the same observation demonstrates the other: that recording displayed as **16:20** in Teams while the filename read **14:20:07 UTC**, a two-hour gap consistent with the client rendering local time in a UTC+2 zone. Parse the filename as local and the 30-day window is wrong by the offset, silently dropping meetings at each edge. The remaining drift to measure in Q3 is therefore only *recording-start minus meeting-start* — how late everyone joined — not a timezone term.
+
+**What replaces it: never take the moment from the filename.** A business tenant omits the `UTC` marker, and the timestamp it writes instead is in neither UTC nor the user's local time. Measured on the business specimen: the filename reads **20:07:32**, the mp4's own `format.tags.creation_time` reads **`2026-08-15T18:07:38Z`**, and the machine was in London on BST (UTC+1). The filename is therefore **UTC+2** — a server-side zone, set on the tenant or the mailbox, which the researcher never chose and cannot see from the filename. **No regex can resolve it**, so there is no correct pattern to write.
+
+Take the moment from a source that carries its zone: `driveItem.createdDateTime` over Graph, or `format.tags.creation_time` from the file once it is local. `TeamsRecordingName.startedAtUTC` is deliberately **optional and nil** when the marker is absent, because returning a plausible-looking wrong `Date` is exactly how the 30-day window silently drops meetings at each edge. Commit *"teams filenames: the UTC marker is personal-tier only, and the business timestamp is unknowable"*.
+
+**Two invariants this cost us, both worth stating once.**
+
+- **A parse refusal must produce a stated row, never a silent drop.** The Swift parser required the `UTC` literal, so every business recording was dropped from the listing — and because a dropped row leaves `outcome` untouched, the window reported a folder *containing* a recording as "No recordings in the last 30 days", and the footer then read "1 organised by someone else" about a meeting the user had organised themselves. That is requirement 1 below failing in precisely the way it exists to prevent.
+- **A filename grammar must be pinned by an observed specimen, never a constructed one.** Bristlenose's *pipeline* had the same bug independently: `_TEAMS_SUFFIX_RE` in `s01_ingest.py` required whitespace where both real formats use a hyphen, so it matched only the fixture invented alongside it in Feb 2026. A downloaded recording and its transcript therefore ingested as **two sessions** — the mp4 re-transcribed from scratch, the report gaining a duplicate participant — live in shipping code for six months with a green suite throughout. Both test suites now carry the real specimens, tagged with tier and capture date, behind a comment marking the line between constructed and observed.
 
 **Do not assume `/Recordings` exists.** That convention is work/school-tier. On a **personal Teams account the recording is attached to the meeting chat** with a Download button — nothing lands in OneDrive, which is why a Graph probe of `/me/drive/root:/Recordings:` returns `itemNotFound` on such an account. The adapter needs a tier check beside the `driveType` check, and a legible refusal rather than an empty list.
 
@@ -421,7 +474,7 @@ The live `ASWebAuthenticationSession` round trip against a real tenant categoric
 - **The destination is often itself a cloud folder.** On a Mac, project folders frequently live under `~/Library/CloudStorage/`, so the feature's default behaviour is to pull media out of the client's tenant and write it into whatever cloud that folder syncs to — a second vendor, unasked, and per `design-project-storage.md` plausibly outside the team's governance boundary. Detect with `cloud_provider_for(destination)` and disclose before the fetch. Secondary effects: the reverse sync competes for the same uplink, and the provider may later evict the file, so the retention clock runs against bytes BN cannot read without coordination.
 - No disconnect, revoke or multi-account story exists yet (§7, §9). An Entra admin can revoke tenant-wide from Enterprise Applications — worth stating, because it is a strong answer.
 - A researcher's employer may take a view on a personally-purchased tool authenticating to corporate M365, even at `Files.Read` on their own drive. This is the scenario enterprise consent machinery exists to govern, which is a better answer than most SaaS can give.
-- ⚠️ **Consent is owed now, not "when this ships".** The feature has shipped behind `File ▸ Import` with three live adapters while `AIConsentView.currentVersion` is still 2. The v2 dialog's stays-local box becomes false by omission, and a per-connection disclosure listing the scopes in plain English belongs at the OAuth moment. That said, the practical urgency is gated by the registration gap in the status block — no sign-in can complete until a client ID exists, so nothing has leaked. Fix both before the first cohort tester touches it.
+- ⚠️ **Consent is owed now, not "when this ships".** The feature has shipped behind `File ▸ Import` with three live adapters while `AIConsentView.currentVersion` is still 2. The v2 dialog's stays-local box becomes false by omission, and a per-connection disclosure listing the scopes in plain English belongs at the OAuth moment. **The escape clause this paragraph used to carry is gone.** It read "the practical urgency is gated by the registration gap — no sign-in can complete until a client ID exists, so nothing has leaked". A client ID exists as of 15 Aug 2026, and a live Graph session has read a real corporate calendar and a real OneDrive. Fix both before the first cohort tester touches it — and note the consent screen the researcher actually sees says "unverified" and "the publisher has not provided links to their terms", which is our own disclosure gap showing through Microsoft's UI.
 
 ---
 

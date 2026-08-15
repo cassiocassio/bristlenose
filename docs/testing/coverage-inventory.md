@@ -36,9 +36,17 @@ ordinary `.mp4`/`.m4a`.
 
 | Platform | Adapter | Artifacts reachable | Live-tested? |
 |---|---|---|---|
-| Microsoft Teams | `TeamsSource.swift` | video + roster; transcript admin-walled | ❌ never met a real tenant |
-| Google Meet | `GoogleMeetSource.swift` | video (Picker) + roster + transcript | ❌ |
-| Zoom | `ZoomSource.swift` | video + VTT; no roster (API has none) | ❌ |
+| Microsoft Teams | `TeamsSource.swift` | video + roster; transcript admin-walled — **confirmed 15 Aug**, `/Recordings` holds the `.mp4` alone | 🟡 signs in and lists against a live tenant (15 Aug 2026); **has never downloaded** |
+| Google Meet | `GoogleMeetSource.swift` | video (Picker) + roster + transcript | ❌ no OAuth client registered |
+| Zoom | `ZoomSource.swift` | video + VTT; no roster (API has none) | ❌ no OAuth client registered |
+
+**What the first live tenant cost, and why this column is worth keeping honest.**
+Teams' listing path met real bytes on 15 Aug and **two filename parsers broke** —
+the Swift one rejected every business recording, and Bristlenose's own pipeline
+regex had been mis-pairing recordings with their transcripts since Feb 2026
+(fixed `8b8eafc9`). Both had been green throughout against fixtures they were
+written beside. A ❌ in this column is not "probably fine, untested"; on the one
+row that changed it, it was two bugs.
 
 **Mechanical coverage that exists:** seven Swift test files — `CloudDownloadTests`,
 `GoogleMeetImportTests`, `ZoomImportTests`, `TeamsSourceTests`, `CloudImportModelTests`,

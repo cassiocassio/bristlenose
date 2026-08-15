@@ -221,6 +221,18 @@ Note the collapse: **the remote axis mostly does not produce states.** An expire
 
 **The unit of recovery is the file, not the batch.** `.part` plus derived already-imported state means an interrupted batch loses at most one file's progress, so within-file Range resume can stay at v1.1 without v1 shipping a batch that can't recover.
 
+**Built 15 Aug 2026 — one download path, three platforms** (`CloudDownloadVerification`, `CloudDownloader`). The sequence is the design, and every step exists because of a failure the previous step cannot catch:
+
+1. **Free space, before a byte moves.** Both Graph and Zoom carry size in the listing, so this is free.
+2. **The response head, before the destination exists.** An HTML login page or a 59-byte JSON error arriving with a 200 is refused here, so no file is ever created for it.
+3. **Transfer to the system temp dir**, via a `URLSession` *download task* — not `URLSession.bytes`, which reads pleasantly and spends an 800 MB transfer in Swift array bookkeeping.
+4. **Size, then magic bytes, then hash** — increasing cost, so a file failing the free check never pays for the expensive one. Size catches truncation; magic bytes catch the case size cannot, where a redirect served something else of coincidentally similar length; the hash makes Microsoft exact rather than heuristic, since Graph is the only one of the three that publishes one before the download.
+5. **Two moves to publish.** The temp dir is often on a different volume, and a cross-volume move is a copy — not atomic. So the copy lands under `.part`, where a crash leaves something obviously unfinished, and only the final same-volume rename makes the real name appear. **The destination path never names a partial file, for any instant.**
+
+Three per-platform differences are all that vary, and they live in one `CloudTransferPolicy`: Graph sends **no header** (its URL carries `tempauth=`, which is why §9 forbids logging it), Zoom **strips** the header across its CDN redirect, Google keeps it. The row deliberately carries no download URL at all — those are credentials, and a value type that reaches the view layer is how one ends up in a log line or a screenshot; the adapters hold them.
+
+**Google needs one extra step, and it belongs to the batch rather than the row.** `drive.file` grants access per file through a Picker round trip, and the desktop Picker permits that scope and no other — so it cannot ride the sign-in. `prepareBatch` runs the Picker once over the ticked set; a declined grant fails the batch before any transfer starts, because none of the rows would be reachable. Teams and Zoom implement it as a no-op.
+
 ---
 
 ## 7. Architecture — macOS-only, Swift end to end

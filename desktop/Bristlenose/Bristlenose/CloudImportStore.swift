@@ -270,6 +270,20 @@ final class CloudImportStore: ObservableObject {
 
         let queue = fetchOrder
         fetchTask = Task { @MainActor in
+            // One grant for the whole batch, before any transfer starts. A
+            // failure here is the batch's failure — every row would 403 — so it
+            // is reported once rather than N times.
+            do {
+                try await source.prepareBatch(rowIDs: queue.map(\.id))
+            } catch {
+                for row in queue {
+                    outcomes[row.id] = .failed(
+                        reason: "Access wasn't granted.", isRetryable: true)
+                }
+                isFetching = false
+                return
+            }
+
             await withTaskGroup(of: Void.self) { group in
                 var iterator = queue.makeIterator()
                 var running = 0

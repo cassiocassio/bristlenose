@@ -68,6 +68,19 @@ protocol CloudImportSource: AnyObject {
     /// design exists to make visible.
     func list(window: DateInterval) async -> MeetingListing
 
+    /// Called once before a batch, with every row about to be fetched.
+    ///
+    /// Exists for one platform's sake and is a no-op for the others, which is
+    /// the honest shape: Google's `drive.file` grant is **per file**, obtained
+    /// through a Picker round trip, and the desktop Picker permits that scope
+    /// and no other — so it cannot ride the sign-in. Doing it per row would put
+    /// a system browser in front of the researcher once per recording; doing it
+    /// once for the ticked set is a single confirmation over the whole batch.
+    ///
+    /// Throwing here fails the batch before any transfer starts, which is
+    /// right: a declined grant means none of the rows are reachable.
+    func prepareBatch(rowIDs: [String]) async throws
+
     /// Fetch one row's media into `destination`.
     ///
     /// One row at a time, by design: the caller owns concurrency (bounded at
@@ -123,6 +136,11 @@ enum CloudImportScenario: String, CaseIterable, Identifiable {
         case .partialFailure:              return "Partial Failure After Fetch"
         }
     }
+}
+
+extension CloudImportSource {
+    /// Most platforms need nothing before a batch.
+    func prepareBatch(rowIDs: [String]) async throws {}
 }
 
 /// A `CloudImportSource` backed by generated shapes rather than a network.

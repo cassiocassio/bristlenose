@@ -108,6 +108,15 @@ final class ZoomSource: CloudImportSource {
     private var identity: String?
     private(set) var preflight: ZoomPreflight?
 
+    /// The media file chosen for each row, kept from list time.
+    ///
+    /// The row itself deliberately does not carry a download URL: those are
+    /// credentials (§9 — Zoom's redirects to a pre-signed CDN URL, Graph's
+    /// carries `tempauth=` in the query string), and putting one on a value
+    /// type that flows into the view layer is how it reaches a log line or a
+    /// screenshot. The adapter keeps them; the row hands out nothing.
+    private var chosenFiles: [String: ZoomRecordingFile] = [:]
+
     init(config: ZoomOAuthConfig, session: URLSession = .shared) {
         self.config = config
         self.session = session
@@ -269,6 +278,7 @@ final class ZoomSource: CloudImportSource {
         }
         let choice = ZoomFileSelection.choose(from: files)
         guard let media = choice.media else { return nil }
+        chosenFiles[uuid] = media
 
         let expiry = ZoomExpiry(
             autoDelete: meeting.auto_delete,
@@ -307,16 +317,57 @@ final class ZoomSource: CloudImportSource {
         destination: URL,
         progress: @escaping @Sendable (FetchProgress) -> Void
     ) async -> FetchOutcome {
-        // Not wired to disk yet — the write path (.part file, byte-count check
-        // against the listing's own size, magic-byte check, atomic replace) is
-        // shared work that belongs with the Teams adapter's download, and
-        // half-writing it here would produce exactly the truncated-but-valid
-        // MP4 §6 exists to prevent.
-        //
-        // What IS settled and encoded above the fold: `ZoomRedirectStripper`
-        // below, which is the Zoom-specific half and the one another adapter
-        // cannot supply.
-        .failed(reason: "Download not wired yet.", isRetryable: false)
+        guard let file = chosenFiles[row.id], let url = file.downloadURL else {
+            return .failed(reason: "That recording has no downloadable file.", isRetryable: false)
+        }
+        guard let token = tokens?.accessToken else {
+            return .failed(reason: "Signed out.", isRetryable: true)
+        }
+
+        let name = CloudDownloadNaming.filename(
+            title: row.title,
+            startsAt: row.startsAt,
+            fileExtension: file.fileType == .m4a ? "m4a" : "mp4"
+        )
+        let request = CloudDownloadRequest(
+            url: url,
+            accessToken: token,
+            policy: .zoom,
+            expected: ExpectedFile(
+                // The listing's own figure — an independent second source, so
+                // it catches a redirect that served something else entirely
+                // rather than merely a truncated stream.
+                sizeBytes: file.sizeBytes,
+                // Zoom publishes no content hash, so verification here is
+                // size + magic bytes rather than exact.
+                hash: nil,
+                expectedFormat: .mp4
+            ),
+            destination: destination.appendingPathComponent(name)
+        )
+
+        do {
+            let bytes = try await CloudDownloader().download(request) { written, total in
+                progress(FetchProgress(
+                    rowID: row.id,
+                    fraction: total.map { Double(written) / Double($0) },
+                    bytesWritten: written,
+                    bytesExpected: total
+                ))
+            }
+            return .imported(bytes: bytes)
+        } catch let error as CloudDownloadError {
+            if case .cancelled = error { return .cancelled }
+            return .failed(
+                reason: error.errorDescription ?? "The download failed.",
+                isRetryable: {
+                    if case .rejected(let verdict) = error { return verdict.isRetryable }
+                    return false
+                }()
+            )
+        } catch {
+            return .failed(reason: "The download failed.", isRetryable: true)
+        }
     }
 
     // MARK: HTTP

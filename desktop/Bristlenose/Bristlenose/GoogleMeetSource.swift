@@ -107,10 +107,21 @@ final class GoogleMeetSource: CloudImportSource {
     private var tokens: GoogleTokens?
     private var identity: String?
 
-    /// Drive file ids the user has granted through the Picker, keyed by row.
-    /// Held because the grant is per-file: a row whose id is absent needs a
-    /// Picker round trip before its bytes are reachable.
+    /// Drive file ids the user has granted through the Picker.
+    ///
+    /// Held because the grant is genuinely per-file on `drive.file`: a row
+    /// whose id is absent is not reachable, however valid the token is.
     private var grantedFileIDs: Set<String> = []
+
+    /// The Drive file id backing each row, kept from list time. Not on the row
+    /// itself — see the Zoom adapter's note; download handles are credentials
+    /// and do not belong on a value type the view layer holds.
+    private var driveFileIDs: [String: String] = [:]
+
+    /// The `drive.file` token from the Picker exchange. Separate from the
+    /// listing token by construction: Zoom's desktop Picker permits `drive.file`
+    /// and *no other scope*, so these two grants can never be the same token.
+    private var mediaToken: GoogleTokens?
 
     init(config: GoogleOAuthConfig, session: URLSession = .shared) {
         self.config = config
@@ -297,8 +308,11 @@ final class GoogleMeetSource: CloudImportSource {
                 duration = end.timeIntervalSince(start)
             }
 
+            let rowID = event.id ?? (fileID ?? UUID().uuidString)
+            if let fileID { driveFileIDs[rowID] = fileID }
+
             rows.append(CloudImportRow(
-                id: event.id ?? (fileID ?? UUID().uuidString),
+                id: rowID,
                 title: event.summary ?? "Untitled meeting",
                 startsAt: start,
                 duration: duration,
@@ -374,13 +388,23 @@ final class GoogleMeetSource: CloudImportSource {
 
     /// Ask for the file grant over the whole ticked batch, in one Picker round
     /// trip. Called by the store before the first `fetch`.
+    /// Google's batch preparation IS the Picker round trip.
     @MainActor
-    func requestMediaGrant(for fileIDs: [String]) async throws {
+    func prepareBatch(rowIDs: [String]) async throws {
+        try await requestMediaGrant(for: rowIDs)
+    }
+
+    @MainActor
+    func requestMediaGrant(for rowIDs: [String]) async throws {
+        let wanted = rowIDs.compactMap { driveFileIDs[$0] }
+        guard !wanted.isEmpty else { return }
         let client = GoogleOAuthClient(config: config, session: session)
-        let (_, picked) = try await client.pickMedia(fileIDs: fileIDs)
+        let (tokens, picked) = try await client.pickMedia(fileIDs: wanted)
+        mediaToken = tokens
         // Honour what was granted, never what was asked for: the researcher
         // may deselect inside the Picker, and treating the request as the
-        // answer would produce a batch that 403s on the rows they removed.
+        // answer would produce a batch that 403s on exactly the rows they
+        // chose to remove.
         grantedFileIDs.formUnion(picked)
     }
 
@@ -389,13 +413,68 @@ final class GoogleMeetSource: CloudImportSource {
         destination: URL,
         progress: @escaping @Sendable (FetchProgress) -> Void
     ) async -> FetchOutcome {
-        // Deliberately not implemented against the network yet: the download
-        // half needs the Picker grant proven against a real Meet recording
-        // first (the one open question the research could not close), and a
-        // half-written download that silently produces a truncated MP4 is the
-        // exact failure §6 exists to prevent. Failing loudly beats guessing.
-        .failed(reason: "Download not wired yet — the Picker grant is unproven.",
-                isRetryable: false)
+        guard let fileID = driveFileIDs[row.id] else {
+            return .failed(reason: "That meeting has no recording file.", isRetryable: false)
+        }
+        // The grant is per-file, so a row the researcher did not include in the
+        // Picker selection is unreachable — and saying so beats a 403 that
+        // reads like a bug.
+        guard grantedFileIDs.contains(fileID), let token = mediaToken?.accessToken else {
+            return .failed(
+                reason: "Bristlenose doesn't have access to this file yet.",
+                isRetryable: true
+            )
+        }
+
+        // `alt=media` is what turns files.get from metadata into bytes. Without
+        // it the response is a perfectly valid JSON description of the file,
+        // which — absent the content-type check in the shared verifier — would
+        // land on disk named .mp4.
+        var components = URLComponents(
+            string: "https://www.googleapis.com/drive/v3/files/\(fileID)")!
+        components.queryItems = [URLQueryItem(name: "alt", value: "media")]
+
+        let name = CloudDownloadNaming.filename(
+            title: row.title, startsAt: row.startsAt, fileExtension: "mp4")
+        let request = CloudDownloadRequest(
+            url: components.url!,
+            accessToken: token,
+            policy: .meet,
+            expected: ExpectedFile(
+                sizeBytes: row.sizeBytes,
+                // Drive exposes md5/sha1/sha256 on files.get, but not on the
+                // path this design takes — the Meet API hands over a file id,
+                // not a metadata blob — so verification is size + magic bytes.
+                // Fetching metadata purely to hash would cost a round trip per
+                // row for a check the format probe already largely covers.
+                hash: nil,
+                expectedFormat: .mp4
+            ),
+            destination: destination.appendingPathComponent(name)
+        )
+
+        do {
+            let bytes = try await CloudDownloader().download(request) { written, total in
+                progress(FetchProgress(
+                    rowID: row.id,
+                    fraction: total.map { Double(written) / Double($0) },
+                    bytesWritten: written,
+                    bytesExpected: total
+                ))
+            }
+            return .imported(bytes: bytes)
+        } catch let error as CloudDownloadError {
+            if case .cancelled = error { return .cancelled }
+            return .failed(
+                reason: error.errorDescription ?? "The download failed.",
+                isRetryable: {
+                    if case .rejected(let verdict) = error { return verdict.isRetryable }
+                    return false
+                }()
+            )
+        } catch {
+            return .failed(reason: "The download failed.", isRetryable: true)
+        }
     }
 
     // MARK: Helpers

@@ -284,16 +284,6 @@ struct BristlenoseApp: App {
         .defaultSize(width: 680, height: 720)
         .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
 
-        // DEBUG-only cloud-import harness — the planned Teams import UX with
-        // sample data and no integration, so the interaction can be exercised
-        // while the real data path is blocked behind a work tenant.
-        // Mirrors docs/mockups/cloud-import-states.html. Debug ▸ Cloud Import Harness.
-        Window("Cloud Import Harness", id: "cloud-import-harness") {
-            CloudImportHarnessView()
-                .tint(paletteAccent)
-        }
-        .defaultSize(width: 940, height: 560)
-        .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
         #endif
     }
 }

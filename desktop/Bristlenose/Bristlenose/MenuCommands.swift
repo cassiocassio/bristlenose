@@ -217,8 +217,6 @@ private struct DebugMenuContent: View {
 
         Button("Keycap Gallery") { openWindow(id: "keycap-gallery") }
 
-        Button("Cloud Import Harness") { openWindow(id: "cloud-import-harness") }
-
         // Debug lens — test content on a visible grid, inside the report
         // webview itself (measures the production CSS in situ). Routes the
         // SPA to /report/specimen; needs a served project.

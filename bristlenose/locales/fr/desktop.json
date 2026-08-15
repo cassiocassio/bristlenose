@@ -320,6 +320,7 @@
     "hideDetails": "Masquer les détails"
   },
   "welcome": {
+    "windowTitle": "Bienvenue",
     "subtitle": "Transformez un dossier d’entretiens en un rapport partageable — sur votre Mac, sans rien envoyer.",
     "newProject": "Nouveau projet",
     "newProjectHint": "Choisissez un dossier d’enregistrements ou de transcriptions pour démarrer.",

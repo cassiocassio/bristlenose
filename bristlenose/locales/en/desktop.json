@@ -320,6 +320,7 @@
     "hideDetails": "Hide details"
   },
   "welcome": {
+    "windowTitle": "Welcome",
     "subtitle": "Turn a folder of interviews into a report you can share — on your laptop, nothing uploaded.",
     "newProject": "New Project",
     "newProjectHint": "Pick a folder of recordings or transcripts and start fresh.",

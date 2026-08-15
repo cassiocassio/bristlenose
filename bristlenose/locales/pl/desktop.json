@@ -338,6 +338,7 @@
     "hideDetails": "Ukryj szczegóły"
   },
   "welcome": {
+    "windowTitle": "Witamy",
     "subtitle": "Zamień folder wywiadów w raport, którym możesz się podzielić — na swoim laptopie, nic nie jest przesyłane.",
     "newProject": "Nowy projekt",
     "newProjectHint": "Wybierz folder z nagraniami lub transkrypcjami i zacznij od nowa.",

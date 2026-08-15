@@ -320,6 +320,7 @@
     "hideDetails": "Kätke tiedot"
   },
   "welcome": {
+    "windowTitle": "Tervetuloa",
     "subtitle": "Muuta haastattelukansio raportiksi, jonka voit jakaa — omalla koneellasi, mitään ei ladata verkkoon.",
     "newProject": "Uusi projekti",
     "newProjectHint": "Valitse tallenteiden tai litterointien kansio ja aloita alusta.",

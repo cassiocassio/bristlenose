@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { codebookCounts } from "./lensSubtitle";
+import {
+  codebookCounts,
+  codebookSubtitle,
+  quotesSubtitle,
+  signalsSubtitle,
+} from "./lensSubtitle";
 import type { CodebookResponse } from "./types";
 
 /** Minimal codebook carrying only the fields `codebookCounts` reads. */
@@ -74,5 +79,39 @@ describe("codebookCounts", () => {
 
   it("is zero for an empty codebook", () => {
     expect(codebookCounts(makeCodebook([]))).toEqual({ codebooks: 0, tags: 0 });
+  });
+});
+
+/**
+ * The outcome under test is what the window says, not which branch ran: at zero
+ * the titlebar and the Window menu entry must carry no count at all. Assertions
+ * on the non-zero side check only that *something* is produced, so they don't
+ * pin translated copy that the locale files own.
+ */
+describe("zero counts produce no subtitle", () => {
+  it("quotes: empty at zero, present above it", () => {
+    expect(quotesSubtitle(0)).toBe("");
+    expect(quotesSubtitle(1)).not.toBe("");
+  });
+
+  it("quotes: empty at zero under the starred filter too", () => {
+    // The starred branch builds its string differently ("Starred quotes · 12"),
+    // so it needs its own guard — an empty starred view is the commonest way to
+    // hit zero.
+    expect(quotesSubtitle(0, true)).toBe("");
+    expect(quotesSubtitle(3, true)).not.toBe("");
+  });
+
+  it("signals: empty at zero, present above it", () => {
+    expect(signalsSubtitle(0)).toBe("");
+    expect(signalsSubtitle(1)).not.toBe("");
+  });
+
+  it("codebook: empty only when there is nothing at all", () => {
+    expect(codebookSubtitle(0, 0)).toBe("");
+    // A codebook with no tags yet is still something to name — a fresh project
+    // reads "1 Codebook · 0 Tags" rather than falling silent.
+    expect(codebookSubtitle(1, 0)).not.toBe("");
+    expect(codebookSubtitle(1, 4)).not.toBe("");
   });
 });

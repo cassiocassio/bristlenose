@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Window menu naming — options &amp; edge cases</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --page-bg:    light-dark(#e8e8ec, #1c1c1e);
+    --page-fg:    light-dark(#1d1d1f, #f2f2f7);
+    --page-mute:  light-dark(#6e6e73, #98989d);
+    --rule:       light-dark(#d2d2d7, #3a3a3c);
+    --card:       light-dark(#fdfdfd, #242426);
+
+    /* macOS menu */
+    --menu-bg:    light-dark(#f6f6f8, #2e2e30);
+    --menu-edge:  light-dark(#00000022, #ffffff1f);
+    --menu-fg:    light-dark(#1d1d1f, #f2f2f7);
+    --menu-dim:   light-dark(#9a9a9f, #78787d);
+    --menu-sep:   light-dark(#0000001a, #ffffff1a);
+    --menu-shadow:light-dark(0 12px 34px #00000026, 0 12px 34px #00000066);
+
+    --accent:     light-dark(#007aff, #0a84ff);
+    --warn-bg:    light-dark(#fff4e0, #3a2f18);
+    --warn-fg:    light-dark(#8a5a00, #f5c563);
+    --bad-bg:     light-dark(#ffe9e9, #3a1f1f);
+    --bad-fg:     light-dark(#9a2020, #ff8a8a);
+    --ok-bg:      light-dark(#e6f6ec, #16301f);
+    --ok-fg:      light-dark(#1c6b38, #7fdaa1);
+
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --ui: -apple-system, "SF Pro Text", BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 32px 96px;
+    background: var(--page-bg); color: var(--page-fg);
+    font: 15px/1.55 var(--ui);
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  h1 { font-size: 26px; letter-spacing: -0.02em; margin: 0 0 6px; }
+  h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--page-mute); font-family: var(--mono); font-weight: 600;
+    margin: 52px 0 4px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+  }
+  h3 { font-size: 15px; margin: 30px 0 12px; font-weight: 590; }
+  .lede { color: var(--page-mute); margin: 0 0 4px; max-width: 74ch; }
+
+  /* ── key ───────────────────────────────────────────────── */
+  .key-bar {
+    display: flex; gap: 26px; flex-wrap: wrap; align-items: center;
+    margin: 22px 0 0; padding: 12px 16px;
+    border: 1px solid var(--rule); border-radius: 10px; background: var(--card);
+    font-size: 13px;
+  }
+  .key-bar b { font-weight: 590; }
+  .swatch { display: inline-block; width: 26px; height: 14px; border-radius: 3px;
+            vertical-align: -2px; margin-right: 8px; border: 1px solid var(--rule); }
+  .swatch.art { background: var(--menu-bg); }
+  .swatch.com { background: repeating-linear-gradient(45deg,
+                  light-dark(#e3e3e8,#38383c) 0 5px, transparent 5px 10px); }
+
+  /* ── artefact ──────────────────────────────────────────── */
+  .row { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+  figure { margin: 0 0 8px; }
+  figcaption {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--page-mute);
+    padding: 0 2px 7px;
+  }
+  figcaption .tag {
+    display: inline-block; padding: 1px 6px; border-radius: 4px; margin-left: 6px;
+    text-transform: none; letter-spacing: 0;
+  }
+  .tag.ships { background: var(--ok-bg);  color: var(--ok-fg); }
+  .tag.prop  { background: light-dark(#e5efff,#152744); color: var(--accent); }
+  .tag.gone  { background: var(--bad-bg); color: var(--bad-fg); }
+  .tag.dec   { background: var(--warn-bg);color: var(--warn-fg); }
+
+  .menu {
+    background: var(--menu-bg);
+    border: 0.5px solid var(--menu-edge);
+    border-radius: 10px;
+    box-shadow: var(--menu-shadow);
+    padding: 5px 0;
+    min-width: 268px; width: max-content; max-width: 560px;
+    font-size: 13.5px; color: var(--menu-fg);
+    -webkit-font-smoothing: antialiased;
+  }
+  .menu.narrow { min-width: 236px; }
+  .mi { display: flex; align-items: center; gap: 0; padding: 3.5px 12px 3.5px 8px; white-space: nowrap; }
+  .mi.dim { color: var(--menu-dim); }
+  .mi .chk { width: 16px; flex: 0 0 16px; font-size: 12px; text-align: center; opacity: 0; }
+  .mi.on .chk { opacity: 1; }
+  .mi .ico { width: 22px; flex: 0 0 22px; display: flex; align-items: center; opacity: 0.85; }
+  .mi .ico svg { width: 15px; height: 15px; }
+  .mi .lbl { flex: 1 1 auto; padding-right: 30px; }
+  .mi .kbd { color: var(--menu-dim); font-size: 13px; letter-spacing: 0.5px; }
+  .mi .sub { color: var(--menu-dim); }
+  .sep { height: 1px; background: var(--menu-sep); margin: 5px 12px; }
+  .menu .noico .lbl { padding-left: 22px; }
+
+  /* highlight of the bit under discussion */
+  .mark { background: light-dark(#fff2a8, #5a4a00); border-radius: 3px;
+          box-shadow: 0 0 0 2px light-dark(#fff2a8,#5a4a00); }
+
+  /* ── commentary ────────────────────────────────────────── */
+  .note {
+    margin: 14px 0 0; padding: 14px 16px 14px 18px;
+    border-left: 3px solid var(--page-mute);
+    background: repeating-linear-gradient(45deg,
+      light-dark(#e3e3e8,#2a2a2d) 0 6px, transparent 6px 12px);
+    border-radius: 0 8px 8px 0;
+    font-size: 13.5px; max-width: 78ch;
+  }
+  .note::before {
+    content: "commentary";
+    display: block; font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--page-mute); margin-bottom: 6px;
+  }
+  .note p { margin: 0 0 8px; }
+  .note p:last-child { margin-bottom: 0; }
+  .note code, .lede code, li code { font-family: var(--mono); font-size: 0.9em;
+    background: light-dark(#00000010,#ffffff14); padding: 1px 5px; border-radius: 4px; }
+  .note ul { margin: 6px 0 0; padding-left: 20px; }
+  .note li { margin-bottom: 5px; }
+  .verdict { font-weight: 590; }
+
+  .case { margin-bottom: 38px; }
+  .case > h3 { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .case > h3 .n { font-family: var(--mono); font-size: 12px; color: var(--page-mute); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="win" viewBox="0 0 16 16">
+    <rect x="1.2" y="2.6" width="13.6" height="10.8" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.3"/>
+    <path d="M1.2 5.6h13.6" stroke="currentColor" stroke-width="1.3"/>
+  </symbol>
+  <symbol id="winplus" viewBox="0 0 16 16">
+    <rect x="1.2" y="2.6" width="10" height="8.6" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/>
+    <path d="M1.2 5.4h10" stroke="currentColor" stroke-width="1.3"/>
+    <path d="M12.4 10v4.4M10.2 12.2h4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="stack" viewBox="0 0 16 16">
+    <path d="M8 1.8 15 5l-7 3.2L1 5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+    <path d="M2.4 8 8 10.6 13.6 8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+  </symbol>
+</svg>
+
+<div class="wrap">
+
+  <h1>Window menu — naming options &amp; edge cases</h1>
+  <p class="lede">
+    What the window list at the foot of the <b>Window</b> menu should read, for a Bristlenose
+    that can open more than one window. Rows are drawn at macOS metrics; the entry text is
+    AppKit's own composition of <code>NSWindow.title</code> and <code>NSWindow.subtitle</code>.
+  </p>
+
+  <div class="key-bar">
+    <span><span class="swatch art"></span><b>Artefact</b> — pixels as they would ship</span>
+    <span><span class="swatch com"></span><b>Commentary</b> — not part of the product</span>
+  </div>
+
+  <div class="note" style="margin-top:22px">
+    <p><b>Decided 15 Aug 2026.</b> Scheme <b>B</b> — title + count, no lens name. Where an
+    edge case below is drawn in C's grammar (<code>Quotes · 312 shown</code>), B's single-phrase
+    form is what shipped.</p>
+    <ul>
+      <li><b>E1 · Welcome</b> — shipped. <code>welcome.windowTitle</code> in 21 locales.</li>
+      <li><b>E2 · unanalysed</b> — bare title. Already the behaviour, no change.</li>
+      <li><b>E3 · localised subtitle</b> — already the behaviour, no change.</li>
+      <li><b>E4 · ordinal suffix</b> — accepted, <b>blocked</b>: there is never more than one
+      window per project until selection and the bridge stop being singletons.</li>
+      <li><b>E5 · folder as disambiguator only</b> — shipped. Triggered by a name clash in the
+      <i>index</i>, not by which windows are open, so a project's subtitle can't change shape
+      because a window opened elsewhere.</li>
+      <li><b>E6 · drop the count at zero</b> — shipped. Under B the subtitle <i>is</i> the count,
+      so zero drops the whole subtitle: <code>IKEA&nbsp;Study</code>, not
+      <code>IKEA&nbsp;Study (Quotes)</code>.</li>
+      <li><b>E7 · state in the subtitle</b> — shipped for the two <i>live</i> states, running and
+      stopping. Terminal conditions (stopped, failed, partial) stay on the sidebar row: they don't
+      clear themselves, and a titlebar reading <code>(Stopped)</code> would sit there for ever.</li>
+      <li><b>E8 · untruncated</b> — already the behaviour, no change.</li>
+    </ul>
+    <p>Not decided, still open: the video pop-out's title (today <code>s3 — Bristlenose</code>),
+    and moving ⇧⌘O to <b>File ▸ New Viewer Window</b> — both wait on E4's multi-window work.</p>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2>1 · What ships today</h2>
+  <p class="lede">Unchanged code, three real states. The composition is already Mail-shaped.</p>
+
+  <div class="row">
+    <figure>
+      <figcaption>no project selected <span class="tag gone">the bug</span></figcaption>
+      <div class="menu narrow">
+        <div class="mi noico"><span class="chk">✓</span><span class="lbl">Bring All to Front</span></div>
+        <div class="sep"></div>
+        <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl"><span class="mark">Bristlenose</span></span></div>
+        <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl"><span class="mark">Bristlenose</span></span></div>
+      </div>
+    </figure>
+
+    <figure>
+      <figcaption>project · sessions lens <span class="tag ships">ships</span></figcaption>
+      <div class="menu">
+        <div class="mi noico"><span class="chk">✓</span><span class="lbl">Bring All to Front</span></div>
+        <div class="sep"></div>
+        <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(16 Sessions · 18h 23m)</span></span></div>
+      </div>
+    </figure>
+
+    <figure>
+      <figcaption>project · quotes lens · player open <span class="tag ships">ships</span></figcaption>
+      <div class="menu">
+        <div class="mi noico"><span class="chk">✓</span><span class="lbl">Bring All to Front</span></div>
+        <div class="sep"></div>
+        <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(312 quotes)</span></span></div>
+        <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl"><span class="mark">s3 — Bristlenose</span></span></div>
+      </div>
+    </figure>
+
+    <figure>
+      <figcaption>reference · mail.app</figcaption>
+      <div class="menu">
+        <div class="mi noico"><span class="chk">✓</span><span class="lbl">Bring All to Front</span></div>
+        <div class="sep"></div>
+        <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">All Inboxes <span class="sub">(All Mail · Filter by: Unread (2,762 messages))</span></span></div>
+      </div>
+    </figure>
+  </div>
+
+  <div class="note">
+    <p>The mechanism is not missing — it is already correct. <code>ContentView</code> sets the
+    title to the project name and the subtitle to a lens-contextual count, and AppKit renders the
+    pair as <code>Title (Subtitle)</code>. That is precisely Mail's shape.</p>
+    <p>Two things are wrong, and neither is the naming scheme:</p>
+    <ul>
+      <li><b>The empty-state fallback is the brand name.</b> Two welcome windows are literally
+      indistinguishable. <code>Welcome</code> fixes it — the word needs a locale key, so it is a
+      separate edit from anything else here.</li>
+      <li><b>The video pop-out titles itself <code>s3 — Bristlenose</code></b> — raw session id,
+      then the brand. It already sits in this list today, and it is the only existing second
+      window. Whatever scheme wins below has to cover it.</li>
+    </ul>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2>2 · The options</h2>
+  <p class="lede">Two windows on one project, on different lenses — the case the scheme exists to serve.</p>
+
+  <div class="row">
+    <figure>
+      <figcaption>A · title only</figcaption>
+      <div class="menu narrow">
+        <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study</span></div>
+        <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study</span></div>
+      </div>
+    </figure>
+
+    <figure>
+      <figcaption>B · title + count <span class="tag ships">ships today</span></figcaption>
+      <div class="menu">
+        <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(312 quotes)</span></span></div>
+        <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(8 signals)</span></span></div>
+      </div>
+    </figure>
+
+    <figure>
+      <figcaption>C · title + lens + count <span class="tag prop">proposed</span></figcaption>
+      <div class="menu">
+        <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(Quotes · 312 shown)</span></span></div>
+        <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(Analysis · 8 signals)</span></span></div>
+      </div>
+    </figure>
+
+    <figure>
+      <figcaption>D · path-style <span class="tag gone">withdrawn</span></figcaption>
+      <div class="menu">
+        <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">Project view: Acme: IKEA Study: Quotes</span></div>
+        <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">Project view: Acme: IKEA Study: Analysis</span></div>
+      </div>
+    </figure>
+  </div>
+
+  <div class="note">
+    <p><b>A</b> fails the one job — two windows, one name.</p>
+    <p><b>B</b> distinguishes them, but only by inference: you read <i>312 quotes</i> and deduce
+    <i>Quotes</i>. It breaks outright on the two lenses that share a subtitle — Project and
+    Sessions both render <code>16 Sessions · 18h 23m</code>.</p>
+    <p><b>C</b> names the lens and keeps the count. Same grammar as Mail's
+    <code>scope (context · state)</code>, and it is a one-line change to the existing subtitle
+    builder rather than a new mechanism. <span class="verdict">Recommended.</span></p>
+    <p><b>D</b> is withdrawn — the type prefix names the window's kind in a menu already called
+    Window, and the colons read as an old-Mac path.</p>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2>3 · Edge cases — handled by the scheme</h2>
+
+  <div class="case">
+    <h3><span class="n">E1</span> No project selected</h3>
+    <div class="row">
+      <figure>
+        <figcaption>proposed <span class="tag prop">needs a locale key</span></figcaption>
+        <div class="menu narrow">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">Welcome</span></div>
+          <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(Quotes · 312 shown)</span></span></div>
+        </div>
+      </figure>
+    </div>
+    <div class="note">
+      <p>No subtitle — the welcome screen has no count to report, and
+      <code>navigationSubtitle</code> already returns empty here. Two welcome windows stay
+      identical, which is correct: they <i>are</i> identical.</p>
+    </div>
+  </div>
+
+  <div class="case">
+    <h3><span class="n">E2</span> Project with no analysis yet</h3>
+    <div class="row">
+      <figure>
+        <figcaption>imported, not yet run</figcaption>
+        <div class="menu narrow">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">Q3 Onboarding</span></div>
+        </div>
+      </figure>
+    </div>
+    <div class="note">
+      <p>Falls back to bare title, no parentheses — the existing behaviour when the session count
+      is nil. Nothing to decide.</p>
+    </div>
+  </div>
+
+  <div class="case">
+    <h3><span class="n">E3</span> Non-English locale</h3>
+    <div class="row">
+      <figure>
+        <figcaption>de</figcaption>
+        <div class="menu">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(Zitate · 312 angezeigt)</span></span></div>
+        </div>
+      </figure>
+      <figure>
+        <figcaption>ja</figcaption>
+        <div class="menu">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(引用 · 312件表示)</span></span></div>
+        </div>
+      </figure>
+    </div>
+    <div class="note">
+      <p>Subtitle localises, project name does not — it is the researcher's own data. Already true
+      today; adding the lens name adds one more translated token per locale, which the existing
+      <code>lensSubtitle</code> helpers already own.</p>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2>4 · Edge cases — these force a decision</h2>
+
+  <div class="case">
+    <h3><span class="n">E4</span> Two windows, same project, same lens <span class="tag dec">decide</span></h3>
+    <div class="row">
+      <figure>
+        <figcaption>unresolvable by naming</figcaption>
+        <div class="menu">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(Quotes · 312 shown)</span></span></div>
+          <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(Quotes · 312 shown)</span></span></div>
+        </div>
+      </figure>
+      <figure>
+        <figcaption>alternative · ordinal suffix</figcaption>
+        <div class="menu">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(Quotes · 312 shown)</span></span></div>
+          <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study 2 <span class="sub">(Quotes · 312 shown)</span></span></div>
+        </div>
+      </figure>
+    </div>
+    <div class="note">
+      <p>Mail, Finder and Safari all permit duplicate rows and do nothing about it. The ordinal
+      suffix is the <i>document</i> convention (<code>Untitled 2</code>) and it is wrong here —
+      these are two views of one project, not two projects, and numbering implies the second is a
+      copy.</p>
+      <p><span class="verdict">Recommendation: accept the duplicate.</span> If the two windows
+      genuinely diverge — different filter, different scroll — the subtitle already diverges with
+      them, because it is computed from live filter state.</p>
+    </div>
+  </div>
+
+  <div class="case">
+    <h3><span class="n">E5</span> Two projects, same name, different folders <span class="tag dec">decide</span></h3>
+    <div class="row">
+      <figure>
+        <figcaption>without folder</figcaption>
+        <div class="menu">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">Pilot <span class="sub">(Quotes · 312 shown)</span></span></div>
+          <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">Pilot <span class="sub">(Quotes · 47 shown)</span></span></div>
+        </div>
+      </figure>
+      <figure>
+        <figcaption>folder as disambiguator only</figcaption>
+        <div class="menu">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">Pilot <span class="sub">(Acme · Quotes · 312 shown)</span></span></div>
+          <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">Pilot <span class="sub">(Globex · Quotes · 47 shown)</span></span></div>
+        </div>
+      </figure>
+      <figure>
+        <figcaption>folder always</figcaption>
+        <div class="menu">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">Pilot <span class="sub">(Acme · Quotes · 312 shown)</span></span></div>
+          <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(Acme · Analysis · 8 signals)</span></span></div>
+        </div>
+      </figure>
+    </div>
+    <div class="note">
+      <p>This is the only case where the client folder earns its place — and note it earns it in
+      the <b>subtitle</b>, not as a title prefix.</p>
+      <p>Conditional inclusion is tempting and I would not do it: a subtitle that changes shape
+      depending on what <i>other</i> windows are open is unpredictable, and the researcher cannot
+      learn the rule. <span class="verdict">Either always or never.</span> Given the counts already
+      differ in the failing case, <i>never</i> is defensible and cheaper — revisit only if a real
+      cohort project hits it.</p>
+    </div>
+  </div>
+
+  <div class="case">
+    <h3><span class="n">E6</span> Zero-count lens <span class="tag dec">decide</span></h3>
+    <div class="row">
+      <figure>
+        <figcaption>literal</figcaption>
+        <div class="menu">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(Quotes · 0 shown)</span></span></div>
+        </div>
+      </figure>
+      <figure>
+        <figcaption>drop the count at zero</figcaption>
+        <div class="menu narrow">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(Quotes)</span></span></div>
+        </div>
+      </figure>
+    </div>
+    <div class="note">
+      <p>Zero happens routinely — an over-narrow filter, a tag with nothing under it. Reporting
+      <code>0 shown</code> in a window title is noise about a state the researcher can already see
+      on screen. Dropping to the bare lens name keeps the window identifiable and stops the title
+      commenting on the filter. <span class="verdict">Prefer the second.</span></p>
+    </div>
+  </div>
+
+  <div class="case">
+    <h3><span class="n">E7</span> Analysis running <span class="tag dec">decide</span></h3>
+    <div class="row">
+      <figure>
+        <figcaption>state in the subtitle</figcaption>
+        <div class="menu">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(Transcribing · 3 of 8)</span></span></div>
+        </div>
+      </figure>
+      <figure>
+        <figcaption>state stays on the row</figcaption>
+        <div class="menu">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(16 Sessions · 18h 23m)</span></span></div>
+        </div>
+      </figure>
+    </div>
+    <div class="note">
+      <p>Mail does put live state in the title (the unread count moves). But Bristlenose already
+      decided where run status lives: on the project's sidebar row, because status lives where its
+      subject lives. A title that narrates the run duplicates that in a place the researcher is not
+      looking, and it churns the Window menu once a second.</p>
+      <p><span class="verdict">Recommendation: leave it out.</span> The exception worth considering
+      is a window whose project is running <i>while the sidebar is hidden</i> — but that argues for
+      the toolbar, not the title.</p>
+    </div>
+  </div>
+
+  <div class="case">
+    <h3><span class="n">E8</span> Long project name <span class="tag dec">decide</span></h3>
+    <div class="row">
+      <figure>
+        <figcaption>60-char name, untruncated</figcaption>
+        <div class="menu">
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">Q3 Onboarding Friction — Enterprise Cohort (round two) <span class="sub">(Quotes · 312 shown)</span></span></div>
+        </div>
+      </figure>
+    </div>
+    <div class="note">
+      <p>The menu grows to fit; there is no wrapping. Mail's own entry in the reference above is 67
+      characters, so a wide Window menu is within precedent rather than a defect — and the folder
+      name from E5 would push it further.</p>
+      <p>The researcher named the project, so truncating their words to preserve our count is the
+      wrong trade. <span class="verdict">If anything is dropped at width, drop the subtitle.</span></p>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <h2>5 · Already in this menu, independent of the scheme</h2>
+
+  <div class="case">
+    <h3><span class="n">E9</span> The full menu, as it would read</h3>
+    <div class="row">
+      <figure>
+        <figcaption>proposed · everything open</figcaption>
+        <div class="menu">
+          <div class="mi noico"><span class="chk">✓</span><span class="lbl">Minimize</span><span class="kbd">⌘M</span></div>
+          <div class="mi noico"><span class="chk">✓</span><span class="lbl">Zoom</span></div>
+          <div class="sep"></div>
+          <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#winplus"/></svg></span><span class="lbl"><span class="mark">New Viewer Window</span></span><span class="kbd">⇧⌘O</span></div>
+          <div class="sep"></div>
+          <div class="mi noico dim"><span class="chk">✓</span><span class="lbl">Show Previous Tab</span></div>
+          <div class="mi noico dim"><span class="chk">✓</span><span class="lbl">Show Next Tab</span></div>
+          <div class="mi noico"><span class="chk">✓</span><span class="lbl">Merge All Windows</span></div>
+          <div class="sep"></div>
+          <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#stack"/></svg></span><span class="lbl">Bring All to Front</span></div>
+          <div class="sep"></div>
+          <div class="mi on"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(Quotes · 312 shown)</span></span></div>
+          <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">IKEA Study <span class="sub">(Analysis · 8 signals)</span></span></div>
+          <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">Welcome</span></div>
+          <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">Ben — IKEA Study <span class="sub">(Video)</span></span></div>
+          <div class="mi"><span class="chk">✓</span><span class="ico"><svg><use href="#win"/></svg></span><span class="lbl">System Health</span></div>
+        </div>
+      </figure>
+    </div>
+    <div class="note">
+      <p>Three things resolved by drawing it whole:</p>
+      <ul>
+        <li>The stray <code>Bristlenose</code> command above the tab items goes away. Today it is
+        <code>openWindow(id:&nbsp;"main")</code> against a <code>WindowGroup</code>, which spawns a
+        window rather than reopening one — it is a New Window command wearing a reopen label, and it
+        belongs in <b>File</b> as <b>New Viewer Window</b> with the ⇧⌘O that is currently dead.</li>
+        <li>The player pop-out becomes <code>Ben — IKEA Study (Video)</code>: participant, study,
+        kind. Its current <code>s3 — Bristlenose</code> shows a speaker code no one outside the
+        pipeline reads, and appends the app name in a list where every row is this app.</li>
+        <li>Auxiliary windows (System Health, and the Diagnostics tools) sit here already and need
+        nothing — they are single-instance and their names are unambiguous.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:44px">
+    <p><b>Sequencing.</b> Everything above describes labels for windows that cannot yet differ:
+    selection, the bridge and the serve target are all app-level singletons, so a second window
+    today shows the same project through the same web view. The naming is the last part of that
+    feature, not the first.</p>
+    <p>Two pieces are independent of it and can land now: the <code>Welcome</code> fallback, and the
+    player pop-out's title.</p>
+  </div>
+
+</div>
+</body>
+</html>

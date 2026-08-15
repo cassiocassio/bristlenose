@@ -320,6 +320,7 @@
     "hideDetails": "Skjul detaljer"
   },
   "welcome": {
+    "windowTitle": "Velkommen",
     "subtitle": "Forvandl en mappe med interviews til en rapport, du kan dele — på din bærbare, intet uploades.",
     "newProject": "Nyt projekt",
     "newProjectHint": "Vælg en mappe med optagelser eller transskriptioner, og start forfra.",

@@ -320,6 +320,7 @@
     "hideDetails": "Ocultar detalhes"
   },
   "welcome": {
+    "windowTitle": "Boas-vindas",
     "subtitle": "Transforme uma pasta de entrevistas num relatório que pode partilhar — no seu portátil, nada é enviado.",
     "newProject": "Novo projeto",
     "newProjectHint": "Escolha uma pasta de gravações ou transcrições e comece do zero.",

@@ -320,6 +320,7 @@
     "hideDetails": "Details ausblenden"
   },
   "welcome": {
+    "windowTitle": "Willkommen",
     "subtitle": "Aus einem Ordner mit Interviews wird ein teilbarer Bericht — lokal, nichts wird hochgeladen.",
     "newProject": "Neues Projekt",
     "newProjectHint": "Wählen Sie einen Ordner mit Aufnahmen oder Transkripten und legen Sie los.",

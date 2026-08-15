@@ -320,6 +320,7 @@
     "hideDetails": "Verberg details"
   },
   "welcome": {
+    "windowTitle": "Welkom",
     "subtitle": "Verander een map met interviews in een rapport dat je kunt delen — op je laptop, niets geüpload.",
     "newProject": "Nieuw project",
     "newProjectHint": "Kies een map met opnamen of transcripten en begin opnieuw.",

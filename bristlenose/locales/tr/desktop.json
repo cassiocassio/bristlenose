@@ -320,6 +320,7 @@
     "hideDetails": "Ayrıntıları gizle"
   },
   "welcome": {
+    "windowTitle": "Ho\u015f geldiniz",
     "subtitle": "Görüşmelerden oluşan bir klasörü paylaşabileceğiniz bir rapora dönüştürün — dizüstü bilgisayarınızda, hiçbir şey yüklenmeden.",
     "newProject": "Yeni Proje",
     "newProjectHint": "Kayıtlardan ya da dökümlerden oluşan bir klasör seçin ve baştan başlayın.",

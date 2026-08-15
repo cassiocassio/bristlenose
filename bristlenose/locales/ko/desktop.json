@@ -311,6 +311,7 @@
     "hideDetails": "세부 정보 숨기기"
   },
   "welcome": {
+    "windowTitle": "\ud658\uc601\ud569\ub2c8\ub2e4",
     "subtitle": "인터뷰 폴더를 공유 가능한 보고서로 — 노트북에서, 아무것도 업로드하지 않고.",
     "newProject": "새 프로젝트",
     "newProjectHint": "녹음 또는 전사본 폴더를 골라 새로 시작하세요.",

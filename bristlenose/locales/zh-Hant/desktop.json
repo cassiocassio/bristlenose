@@ -311,6 +311,7 @@
     "hideDetails": "隱藏詳細資訊"
   },
   "welcome": {
+    "windowTitle": "\u6b61\u8fce",
     "subtitle": "將一個裝有訪談的檔案夾變成可分享的報告 — 全在你的筆記型電腦上，不上傳任何內容。",
     "newProject": "新增專案",
     "newProjectHint": "選擇一個裝有錄音或逐字稿的檔案夾，從頭開始。",

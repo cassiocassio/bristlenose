@@ -7,6 +7,14 @@
  * only here — never stored. One string drives both surfaces: the desktop
  * window subtitle (via the bridge) and the browser tab (`document.title`).
  * Sessions/Project are handled natively (Swift DB read), not here.
+ *
+ * **A zero count returns the empty string, not "0 Quotes".** Zero happens
+ * routinely — an over-narrow filter, a tag with nothing under it — and it is a
+ * state the researcher is already looking at. Reporting it in the titlebar and
+ * the Window menu is the chrome commenting on the filter rather than naming the
+ * window. Empty degrades correctly at both ends: the desktop title centres on
+ * its own, and the browser tab falls back to "Bristlenose"
+ * (`LensSubtitleSync`). Mockup E6 in `docs/mockups/window-menu-naming.html`.
  */
 import i18n from "../i18n";
 import type { CodebookResponse } from "./types";
@@ -22,6 +30,7 @@ const SEP = " · ";
  * label, so this subtitle is the scope cue.
  */
 export function quotesSubtitle(visibleCount: number, starred = false): string {
+  if (visibleCount === 0) return "";
   if (starred) {
     return `${i18n.t("quotes.starredQuotes")}${SEP}${visibleCount}`;
   }
@@ -30,6 +39,7 @@ export function quotesSubtitle(visibleCount: number, starred = false): string {
 
 /** "13 Signals" — the count of currently-shown signals (dismissed excluded). */
 export function signalsSubtitle(count: number): string {
+  if (count === 0) return "";
   return i18n.t("titlebar.signals", { count });
 }
 
@@ -63,6 +73,7 @@ export function codebookCounts(codebook: CodebookResponse): {
 
 /** "3 Codebooks · 47 Tags" — two interpunct-joined counts. */
 export function codebookSubtitle(codebooks: number, tags: number): string {
+  if (codebooks === 0 && tags === 0) return "";
   const left = i18n.t("titlebar.codebooks", { count: codebooks });
   const right = i18n.t("titlebar.tags", { count: tags });
   return `${left}${SEP}${right}`;

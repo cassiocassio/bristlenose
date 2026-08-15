@@ -375,6 +375,7 @@
     "hideDetails": "詳細を非表示"
   },
   "welcome": {
+    "windowTitle": "\u3088\u3046\u3053\u305d",
     "subtitle": "インタビューのフォルダから共有できるレポートを — このMacの中で、アップロードはありません。",
     "newProject": "新規プロジェクト",
     "newProjectHint": "録音や書き起こしのフォルダを選んで始めましょう。",

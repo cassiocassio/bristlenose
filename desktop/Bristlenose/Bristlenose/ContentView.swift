@@ -220,16 +220,21 @@ struct ContentView: View {
         return projectIndex.projects.first { $0.id == id }
     }
 
-    /// Native window subtitle (drives `NSWindow.subtitle`), per active lens.
+    /// The resting body of the window subtitle — the per-lens count. An
+    /// in-flight run outranks it (`WindowSubtitleModifier`), and a name clash
+    /// prefixes it with the folder (`WindowSubtitle.folderDisambiguator`).
+    ///
     /// Sessions/Project show the session count + total time from the local
     /// analysis DB — stable, and painted instantly before the report loads. The
     /// report-derived lenses (Quotes/Codebook/Analysis) carry *live* counts only
     /// the SPA can compute (Signals don't exist in the DB; visible-quote/tag
     /// counts shift as the researcher edits), so they arrive over the bridge as
-    /// `lensSubtitle`. Empty renders as no subtitle, the title centring on its
-    /// own. Recomputes reactively: `activeTab`/`lensSubtitle` are `@Published`,
-    /// as is `unanalysed`.
-    private var navigationSubtitle: String {
+    /// `lensSubtitle` — including the empty string the SPA now sends when a lens
+    /// counts zero, so the title stops commenting on a filter that found
+    /// nothing. Empty renders as no subtitle, the title centring on its own.
+    /// Recomputes reactively: `activeTab`/`lensSubtitle` are `@Published`, as is
+    /// `unanalysed`.
+    private var countSubtitle: String {
         switch bridgeHandler.activeTab {
         case .quotes?, .codebook?, .analysis?:
             // Honour the bridged subtitle only when it's for the lens we're on,
@@ -262,6 +267,28 @@ struct ContentView: View {
     /// for single-form locales like ja/ko).
     private func sessionCountPhrase(_ count: Int) -> String {
         i18n.plural("desktop.chrome.titleSessions", count: count)
+    }
+
+    /// The selected project's folder, present only when another project shares
+    /// its name — see `WindowSubtitle.folderDisambiguator` for why the trigger
+    /// is the index rather than the open windows.
+    private var subtitleFolder: String? {
+        guard let project = selectedProject else { return nil }
+        return WindowSubtitle.folderDisambiguator(
+            for: project,
+            projects: projectIndex.projects,
+            folders: projectIndex.folders
+        )
+    }
+
+    /// Whether the selected project's run is in flight. Read off
+    /// `pipelineRunner.state`, which is low-frequency and which ContentView
+    /// already observes; the per-second progress churn lives in `liveData` and
+    /// is observed by `WindowSubtitleModifier` instead.
+    private var isSelectedProjectRunning: Bool {
+        guard let id = selectedProject?.id else { return false }
+        if case .running = pipelineRunner.state[id] { return true }
+        return false
     }
 
     /// The currently selected folder (when exactly one folder is selected).
@@ -328,8 +355,18 @@ struct ContentView: View {
                 // gone — the duplicate title item it dodged no longer exists,
                 // and forcing `titleVisibility = .hidden` was what suppressed
                 // the native subtitle.
-                .navigationTitle(selectedProject?.name ?? "Bristlenose")
-                .navigationSubtitle(navigationSubtitle)
+                .navigationTitle(selectedProject?.name ?? i18n.t("desktop.welcome.windowTitle"))
+                // Subtitle composition lives in `WindowSubtitle.swift` — it has
+                // to observe `liveData` itself to tick during a run, and its
+                // precedence rules are testable decisions, not view code.
+                .modifier(WindowSubtitleModifier(
+                    liveData: pipelineRunner.liveData,
+                    projectID: selectedProject?.id,
+                    isRunning: isSelectedProjectRunning,
+                    folder: subtitleFolder,
+                    countSubtitle: countSubtitle,
+                    i18n: i18n
+                ))
         }
         .background(SidebarDeselectMonitor { selection = [] })
         .overlay(alignment: .bottomTrailing) {

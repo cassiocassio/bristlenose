@@ -320,6 +320,7 @@
     "hideDetails": "Skjul detaljer"
   },
   "welcome": {
+    "windowTitle": "Velkommen",
     "subtitle": "Gjør en mappe med intervjuer om til en rapport du kan dele – på din egen maskin, ingenting lastes opp.",
     "newProject": "Nytt prosjekt",
     "newProjectHint": "Velg en mappe med opptak eller transkripsjoner og start på nytt.",

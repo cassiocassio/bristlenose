@@ -337,6 +337,7 @@
     "hideDetails": "Skrýt podrobnosti"
   },
   "welcome": {
+    "windowTitle": "V\u00edtejte",
     "subtitle": "Proměňte složku rozhovorů ve zprávu, kterou můžete sdílet — na svém notebooku, nic se nenahrává.",
     "newProject": "Nový projekt",
     "newProjectHint": "Vyberte složku nahrávek nebo přepisů a začněte od začátku.",

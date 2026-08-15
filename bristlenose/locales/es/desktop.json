@@ -320,6 +320,7 @@
     "hideDetails": "Ocultar detalles"
   },
   "welcome": {
+    "windowTitle": "Bienvenida",
     "subtitle": "Convierte una carpeta de entrevistas en un informe compartible, en tu portátil, sin subir nada.",
     "newProject": "Nuevo proyecto",
     "newProjectHint": "Elige una carpeta de grabaciones o transcripciones y empieza de cero.",

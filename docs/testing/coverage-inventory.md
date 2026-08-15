@@ -2,11 +2,11 @@
 
 _The single source of "what exists to be covered." Consumed by **both** testing tiers: the mechanical [acceptance-matrix.md](acceptance-matrix.md) (assert each surface works, shape-only) and the human walk (judge each surface, feel + correctness). Grounded against code 7 Jul 2026 — re-true when surfaces are added._
 
-When you add an ingest format, an export, a lens, or a provider, add it here first — then both tiers inherit it. Fixture status is tracked here as ✅ *have* / ⚠️ *need*; the concrete fixture-folder mapping lives in the private walks-fix-walks QA doc (real interview data stays out of git).
+When you add an ingest format, **a cloud ingest source**, an export, a lens, or a provider, add it here first — then both tiers inherit it. Fixture status is tracked here as ✅ *have* / ⚠️ *need*; the concrete fixture-folder mapping lives in the private walks-fix-walks QA doc (real interview data stays out of git).
 
 ---
 
-## 1. Ingest formats (16 claimed — README:229 / manual:117)
+## 1. Ingest formats (16 claimed — README:233)
 
 Four decode paths converge on one transcript. Source: `bristlenose/models.py:97-101`.
 
@@ -24,6 +24,50 @@ Four decode paths converge on one transcript. Source: `bristlenose/models.py:97-
 **Ingest invariants:** same-stem merge (`p1.mp4`+`p1.srt` = one session, subtitle skips transcription — README:231); mixed-format folder; `._*`/`.DS_Store` ignored (`is_os_metadata`, `utils/fs.py`).
 
 **Test-data gap:** the 10 container/subtitle formats are covered by the cheap pytest above (fixtures generated at test-time via ffmpeg — no committed binaries). `.docx` is the one that needs **real** exports (a synthetic docx parses by construction against the Teams-shaped parser `s04_parse_docx.py:16`, proving nothing — the Meet leg specifically tests whether Google Meet's real shape parses). Prefer a **public-domain** source (a FOSSDA transcript → Google Doc → export) over a real client call; regression-pin `git check-ignore` on the gitignored format-acceptance fixture slot. Recipe: [test-data-generation.md](test-data-generation.md).
+
+---
+
+## 1a. Cloud import — ingest that isn't a file (3 sources)
+
+Added 15 Aug 2026, when three adapters shipped. `design-cloud-import.md` §9 asked
+for this section *before* the build; it is here after. Cloud import is a **source**,
+not a format — the 16 above are unchanged, because what lands on disk is still an
+ordinary `.mp4`/`.m4a`.
+
+| Platform | Adapter | Artifacts reachable | Live-tested? |
+|---|---|---|---|
+| Microsoft Teams | `TeamsSource.swift` | video + roster; transcript admin-walled | ❌ never met a real tenant |
+| Google Meet | `GoogleMeetSource.swift` | video (Picker) + roster + transcript | ❌ |
+| Zoom | `ZoomSource.swift` | video + VTT; no roster (API has none) | ❌ |
+
+**Mechanical coverage that exists:** seven Swift test files — `CloudDownloadTests`,
+`GoogleMeetImportTests`, `ZoomImportTests`, `TeamsSourceTests`, `CloudImportModelTests`,
+`OAuthPKCETests`, `TeamsRecordingNameTests`. They cover the pure-value layer:
+response classification, file selection, date-window chunking, filename synthesis,
+byte verification.
+
+**Cloud-ingest invariants** (distinct from the file-shaped ones above, because the
+source is hostile rather than merely varied):
+- an error delivered as HTTP 200 is refused **before** the destination file exists
+- bytes are checked against the listing's own size — an independent second source
+- magic bytes catch what size cannot: a redirect that served something else of
+  similar length
+- `.part` + same-volume rename, so the destination path never names a partial file
+- per-platform redirect header policy (Graph sends none, Zoom strips, Google keeps)
+- remote-controlled meeting titles go through filename sanitisation before becoming
+  a path component
+- no download URL reaches the view layer — they are credentials
+
+**Seams:** `CloudDownloader.init(session:)` takes an injectable `URLSession`;
+`FixtureCloudSource` drives twelve scenarios across all three platforms from the
+Diagnostics menu with no account.
+
+⚠️ **Two gaps, both real:**
+1. **No transport-layer tests.** There is no `URLProtocol` stub anywhere in `desktop/`,
+   so every network failure mode above is asserted at the policy layer and never
+   driven through a fake transport. Blocked on nothing.
+2. **No live round trip on any platform.** No OAuth client is registered, so sign-in
+   cannot complete. Human-tier, and it gates everything.
 
 ---
 

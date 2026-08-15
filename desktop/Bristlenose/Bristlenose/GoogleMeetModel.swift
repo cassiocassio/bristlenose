@@ -496,7 +496,11 @@ struct CloudImportRow: Identifiable, Equatable {
         case .available:
             break
         }
-        if case .noLongerAvailable = localState { return "No longer in Meet" }
+        // Deliberately platform-neutral. This type is shared by all three
+        // adapters, so naming one vendor here renders "No longer in Meet" on a
+        // Zoom row. The platform name belongs to `CloudPlatform`, which the
+        // window holds; the row does not know which platform it came from.
+        if case .noLongerAvailable = localState { return "No longer available" }
         return localState.statusLabel
     }
 }

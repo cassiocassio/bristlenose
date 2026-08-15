@@ -1,10 +1,44 @@
+---
+status: partial
+last-trued: 2026-08-15
+trued-against: HEAD@main on 2026-08-15 (bb93871a)
+---
+
+> **Truing status:** Partial — trued 15 Aug 2026. §§2, 6, 9 and 10 carried
+> statements written before the build and were corrected; §7's `CallSource`
+> section was **actively wrong** and is rewritten. §3's platform findings and
+> §6's download-verification ladder are freshly accurate. Sections describing
+> *unbuilt* work are now marked as owed rather than planned. See changelog.
+
+## Changelog
+
+- _2026-08-15_ — trued up after three adapters shipped: corrected the status
+  block (four open probes, not three; added the registration/persistence
+  reality that makes every sign-in inert today); rewrote §7's "No `CallSource`
+  protocol yet" — the rule was followed and the conclusion inverted; rewrote
+  §6's Teams-only staircase for the three-platform spine; resolved four
+  self-contradictions (§3 Zoom roster cell vs prose, §5 vs §6 on Google's
+  conditionality, §6 vs §9 on the free-space precheck, "six states" over a
+  seven-row table); replaced §9's testing paragraph, which named the wrong
+  language stack. Anchors: `CloudImportSource.swift`, `CloudPlatform.swift`,
+  `CloudDownloader.swift`, commit subjects "extract the spine before Zoom",
+  "one download path, and it proves the bytes arrived", "Teams goes live".
+- _2026-08-15_ — revised as Google, Zoom and Teams were researched and built.
+- _2026-08-14_ — revised after a permissions/benchmark pass and a six-agent review.
+- _2026-07-28_ — initial design.
+
 # Cloud import — capturing originals from Teams, Zoom and Meet
 
-**Status: designed 28 Jul 2026. Revised 14 Aug 2026 after a permissions/benchmark pass and a six-agent review. Revised again 15 Aug 2026, when Google and Zoom were researched and all three adapters were built. Post-TF, not cohort-blocking.**
+**Status: designed 28 Jul 2026. Revised 14 Aug 2026 after a permissions/benchmark pass and a six-agent review. Revised again 15 Aug 2026, when Google, Zoom and Teams were researched and all three adapters were built. Post-TF, not cohort-blocking.**
 
-**What exists as of 15 Aug 2026.** All three platforms are live behind `File ▸ Import`, on one shared spine: `CloudImportSource` (the protocol), `CloudImportStore` (the state machine), `CloudImportWindow` (the surface), `CloudPlatform` (everything vendor-shaped the UI says), and `CloudDownloader` + `CloudDownloadVerification` (§6's "prove the bytes arrived", once, for all three). Per-platform adapters carry only what genuinely differs: the endpoints, the scope vocabulary, the error dialects, and each vendor's own way of failing quietly. A `FixtureCloudSource` drives every state from the Diagnostics menu without an account.
+**What exists as of 15 Aug 2026.** All three platforms are live behind `File ▸ Import`, on one shared spine: `CloudImportSource` (the protocol), `CloudImportStore` (the state machine), `CloudImportWindow` (the surface), `CloudPlatform` (everything vendor-shaped the UI says), `CloudImportCoordinator` (which source the window holds), and `CloudDownloader` + `CloudDownloadVerification` (§6's "prove the bytes arrived", once, for all three). Per-platform adapters carry only what genuinely differs: the endpoints, the scope vocabulary, the error dialects, the OAuth ceremony, and each vendor's own way of failing quietly. A `FixtureCloudSource` drives every state from the Diagnostics menu without an account.
 
-**What is not built.** Live acceptance against a real tenant on any platform — the shipped code has never met a real recording. The three open probes are §3's Picker question on Google, §3's tenant-consent question on Microsoft, and whether Graph serves `expirationDateTime` per file. Each is an hour's work against an account we do not yet have, and each could move a design decision rather than merely confirm one.
+**What is not built — and the first item means nothing works yet.**
+
+- **No OAuth client is registered on any platform, and two entitlements are missing.** All three configs read a client ID from `UserDefaults`/`Info.plist` and return `nil` when it is absent, so **no sign-in can complete today**. Teams additionally needs a `CFBundleURLTypes` entry for `msauth.app.bristlenose://auth`, and Zoom needs an `associated-domains` entitlement plus a deployed `apple-app-site-association` file — neither is in the target. This is the gate before anything else here can be exercised.
+- **No token is persisted, and no refresh is wired.** §2 and §7 describe a Keychain refresh token keyed on `(platform, account)`; nothing writes to the Keychain, and `refresh` is never called. Access tokens last about an hour on all three, so even once registration lands, a long batch can 401 mid-flight and every launch will re-prompt.
+- **No adapter derives local row state.** §6's `stat`-based six/seven-state model is implemented in `ImportRowState` and exercised only by `FixtureCloudSource`; all three live adapters hardcode `.notImported`.
+- **Live acceptance.** The shipped code has never met a real recording. **Four** open probes, not three: §3's Picker question on Google, §3's tenant-consent question on Microsoft, whether Graph serves `expirationDateTime` per file, and §3's transcript-in-OneDrive question — the last of which would revise §1, §3 and §5 if it comes back yes.
 
 Downloading recordings by hand, per file, is drudgery — and it is the thing Dovetail and Marvin remove by default. Bristlenose can too, and unlike them it needs no server.
 
@@ -41,7 +75,7 @@ Two Zoom token properties that are not Google's and must not be inherited by ass
 
 **Prefer a custom scheme over a loopback listener.** Both work under the sandbox (`ENABLE_INCOMING_NETWORK_CONNECTIONS` is already set), but a loopback listener is reachable by any same-UID process during the auth window, whereas `ASWebAuthenticationSession(url:callbackURLScheme:)` routes the callback to the initiating session only. Needs a `CFBundleURLTypes` entry the target does not yet have. Leave `prefersEphemeralWebBrowserSession` at `false` so an already-signed-in researcher gets one-click consent instead of a full MFA round trip.
 
-**What is and isn't a from-scratch build.** The Swift consent sheet is new — `ASWebAuthenticationSession` appears nowhere in the tree. The **PKCE machinery is not**: `bristlenose/miro_client.py` already has `generate_pkce`, `build_authorize_url`, `exchange_code_for_tokens` and `refresh_access_token`, with a live authorization-code + loopback flow wired in `routes/miro.py`. That is the reference implementation for the token dance even though this feature's ceremony is Swift-side. **Before copying it, fix its fake-success bug** (`routes/miro.py:353-359` reports "Connected ✓" on the path where the credential-store write failed) or three platforms inherit it. A connect flow verifies by read-back: store, read back, *then* report connected.
+**What is and isn't a from-scratch build.** The Swift consent sheet is new — `ASWebAuthenticationSession` appears nowhere in the tree. The **PKCE machinery is not**: `bristlenose/miro_client.py` already has `generate_pkce`, `build_authorize_url`, `exchange_code_for_tokens` and `refresh_access_token`, with a live authorization-code + loopback flow wired in `routes/miro.py`. That is the reference implementation for the token dance even though this feature's ceremony is Swift-side. **The read-back rule survives; the "before copying" framing does not.** _Trued 15 Aug 2026._ Nothing copies `miro_client.py` — all three ceremonies are hand-rolled in Swift — so the three platforms did not inherit the bug. But the bug itself is **still live and still shipping**: `bristlenose/server/routes/miro.py` reports "Connected to Miro ✓" on the path where the credential-store write failed, and unlike the sibling paste route it has no in-session fallback, so the token is genuinely lost. It is now simply a defect we own, unrelated to this feature. The rule it teaches is the load-bearing part and applies to all three adapters the moment they gain Keychain persistence: **a connect flow verifies by read-back — store, read back, *then* report connected.**
 
 A server is only needed for **always-on watching** (poll the tenant while the app is closed). That is not this feature and should not become it.
 
@@ -57,7 +91,7 @@ Three artifacts, not one — and **they do not share a gate**. The 28 Jul versio
 | **Zoom** | `cloud_recording:read:list_user_recordings` — user-managed, no admin ✓verified. **Pro plan or higher** | same call returns `download_url`; **no download scope exists** — the same bearer authorises it ✓verified | **none ✓verified** — the list call carries no attendees at all; a roster needs a report endpoint behind an admin scope | **same call returns the VTT** ✓verified — speaker names as a `Name:` cue prefix, **English only, every plan** |
 | **Meet** | `calendar.events.readonly` — sensitive ✓verified | `drive.file` + Picker — **non-sensitive** ✓verified. (`drive.meet.readonly` — restricted → CASA ✓verified, and refused) | `meetings.space.readonly` — sensitive ✓verified | `meetings.space.readonly` — **sensitive** ✓verified |
 
-Cells are marked ✓verified or ⚠️unverified deliberately. **The two Google cells were resolved 15 Aug 2026 and the answer reorders §5** — see below. The Zoom roster cell is still open, and is part of why Zoom is the platform that could settle §8.
+Cells are marked ✓verified or ⚠️unverified deliberately. **The two Google cells were resolved 15 Aug 2026, and the answer reprices §5's third slot rather than reordering it** — the sequence still runs Teams → Zoom → Meet; see below. The Zoom roster cell was resolved the same day and is now marked ✓verified in the table: the list call carries no attendees at all. _Zoom was previously described here as "the platform that could settle §8"; Meet's per-utterance transcript now makes it the better candidate — see §8._
 
 **"No admin consent" is a property of the permission, not a guarantee about the tenant.** Whether a user *may* self-consent is an Entra policy setting. The modern default is "allow user consent for apps from **verified publishers**, for **selected permissions**", where the documented low-impact starting set is the OIDC scopes plus `User.Read` — and neither `Files.Read` nor `Calendars.Read` is in it. Enterprises routinely narrow further to no user consent at all. Microsoft **Publisher Verification** (Partner Center account + verified domain) may therefore be a prerequisite rather than a nicety — *probe this against a real client-shaped tenant, don't infer it from the docs*. This is the single most load-bearing claim in the doc and it decides §5's sequencing.
 
@@ -164,7 +198,7 @@ So the order stands as **Teams → Zoom → Meet**, on unchanged reasoning — T
 
 ## 6. Shape — the staircase
 
-- **v1** — `Files.Read` + `Calendars.Read`. List the researcher's own `/Recordings`, join to the calendar window for the roster. **Multi-select with per-row outcome.** Download into a destination project. Record `(platform, remoteID, account)` provenance per imported session.
+- **v1** — _as designed: Teams only, `Files.Read` + `Calendars.Read`. **What shipped 15 Aug 2026 is v1 across all three platforms**, because the research that repriced Google and Zoom arrived before the Teams build did._ List the researcher's own recordings, join to a calendar window for the roster where the platform has one. **Multi-select with per-row outcome.** Download into a destination project. ⚠️ Still owed at v1: `(platform, remoteID, account)` provenance per imported session, and the derived `stat`-based import state below — all three adapters currently hardcode `.notImported`.
 - **v1.1** — within-file resume (Range requests), and attendee/`@domain`/description search (which needs the `Calendars.Read` upgrade).
 - **Then** Zoom (review already in flight per §5), then Google (only if asked).
 
@@ -184,7 +218,9 @@ So the order stands as **Teams → Zoom → Meet**, on unchanged reasoning — T
 
 **Multi-select moved from v1.1 to v1**, because the feature as the researcher describes it *is* multi-select; a single-select v1 would ship something nobody asked for.
 
-### The four things that make a batch honest
+### The five things that make a batch honest
+
+_Four when written; a fifth was promised in §3 on 15 Aug and is added below._
 
 These are v1 requirements, not polish. Each closes a failure that would otherwise be **invisible** — and this feature's designed output and its failure output are both "a shorter list", which is the worst possible property for a feature whose justification is beating an expiry clock.
 
@@ -200,17 +236,17 @@ These are v1 requirements, not polish. Each closes a failure that would otherwis
 
 But "did we import it" and "can we read it now" are different questions, and the obvious check answers the wrong one. **`fileExists()` returns true for a cloud placeholder** — that is exactly why `.inCloud` is currently unreachable (`design-project-storage.md` §3) — so an existence test reports *imported and present* for a file that raises `EDEADLK` on read. **Resolve from `stat` alone, never by reading bytes**: materialising placeholders to verify them would fire N multi-gigabyte downloads just to open the window. `stat` yields existence, logical size and `SF_DATALESS` on a placeholder without faulting it in, and size-against-the-byte-count-recorded-at-import *is* the truncation check — no hashing needed.
 
-Six states, resolved per row at list time:
+Seven states, resolved per row at list time (`ImportRowState`):
 
 | State | Tick | Means | Fix path |
 |---|---|---|---|
-| **not imported** | empty, enabled | no local file | fetch from Teams |
+| **not imported** | empty, enabled | no local file | fetch from the platform |
 | **imported** | checked, disabled | present, resident, size matches | none — say nothing |
 | **not downloaded** | checked, disabled | present but `SF_DATALESS` | the *destination* provider, named |
 | **drive not connected** | checked, disabled | volume unmounted | reconnect the volume, named |
-| **damaged** | empty, **enabled** | size ≠ recorded | re-fetch from Teams |
+| **damaged** | empty, **enabled** | size ≠ recorded | re-fetch from the platform |
 | **view only** | **none** | tenant blocks download (§4) | none — and no manual route either |
-| **no longer in Teams** | none | absent from the listing | none — unrecoverable if not imported |
+| **no longer on the platform** | none | absent from the listing | none — unrecoverable if not imported |
 
 Four confusions this vocabulary exists to prevent, each of which has a cheaper wrong version:
 
@@ -222,6 +258,12 @@ Four confusions this vocabulary exists to prevent, each of which has a cheaper w
 Note the collapse: **the remote axis mostly does not produce states.** An expired recording simply stops appearing in the listing, so "gone from Teams *and* imported" is the feature working (say nothing) and "gone *and* not imported" cannot be shown at all — which is §6's arithmetic problem, not a row state. Teams moves expirations to a recycle bin rather than hard-deleting, so a grace-period surface is conceivable later; not v1.
 
 **4. A terminus carrying arithmetic the user cannot miss** — `20 requested · 18 imported · 2 failed` — and the failure count must survive the surface closing. Partial failure is not only a list-reconciliation problem: stages 10 and 11 cluster and theme *across* sessions, so analysing 19 of 20 does not produce "the report minus one session", it produces **different themes**, in a report that looks internally consistent and complete. If a project holds failed import rows, Analyse should say so before running — state it, don't block. New states go through the five-kind `MessageKind` taxonomy (`docs/design-pipeline-diagnostic-popover.md`), not new glyphs.
+
+⚠️ Neither half of requirement 4 shipped: `CloudImportStore.terminus` is in-memory and dies with the window, and no Analyse-time check reads failed import rows. The arithmetic renders correctly *while the window is open*, which is the easy half.
+
+**5. A sign-in that never returns must be its own state.** On Zoom, Marketplace pre-approval is enabled **by default** on every multi-seat account, and the block is enforced on the vendor's own consent screen *before any redirect* — so no code, no error and no callback reaches Bristlenose. Teams has the same shape through Entra's user-consent policy. The researcher clicks Sign In, reads a page telling them to ask their admin, and returns to an app that is still spinning.
+
+From inside the app, "you closed the window" and "your organisation has to approve this first" are **indistinguishable** — `ASWebAuthenticationSession` reports plain cancellation for both. So the state must not be called *cancelled*: that word sends someone to retry, forever, against a wall only somebody else can remove. It names both possibilities, the researcher's own action first, and it is the one requirement here that shipped complete (`CloudImportStore.Phase.signInIncomplete`, `CloudPlatform.signInMayAwaitAdminApproval`, and a Diagnostics fixture, since a tenant whose admin has not approved us cannot be conjured).
 
 **The unit of recovery is the file, not the batch.** `.part` plus derived already-imported state means an interrupted batch loses at most one file's progress, so within-file Range resume can stay at v1.1 without v1 shipping a batch that can't recover.
 
@@ -251,7 +293,19 @@ Three per-platform differences are all that vary, and they live in one `CloudTra
 
 **This is not a fork.** `docs/design-modularity.md` protects the *pipeline* from forking. Drag-drop import is already macOS-only and nobody calls that a fork — cloud import is drag-drop with a different source. The CLI's import story exists and is the filesystem: point `bristlenose run` at a synced OneDrive folder. Linux users lose an accelerant, not a capability.
 
-**No `CallSource` protocol yet.** An earlier draft sketched one. At n=1 that is Speculative Generality: Google's Picker path returns a selection from a foreign UI and does not fit a `listCalls(window:)` shape at all, Zoom returns download URLs from the list call while Teams needs a second, and the sketch carried no cancel, no progress and no resume token. Build Teams concretely; extract the interface when Zoom is a real second implementation. The 80/20 estimate still holds and is the useful part — **shared spine** (auth ceremony and token storage, the normalised call record, the filter/select/destination UI, the download-progress-ingest tail, provenance and derived import state) versus **per-platform adapter** (endpoints, scopes, pagination, date-windowing, record mapping, download-URL resolution). Platform #1 costs roughly five times platform #2; that is the sequencing argument, not an instruction to abstract early.
+**The spine was extracted on the second implementation, exactly as this section instructed** — `CloudImportSource`, 15 Aug 2026. _This paragraph previously read "No `CallSource` protocol yet… extract the interface when Zoom is a real second implementation." The rule was followed; the conclusion is now history, and the timing is the part worth keeping._
+
+The extraction commit sits **between** Google and Zoom, not after both — Google 02:31, extraction 02:39, Zoom 02:57 — which is the "at n=2, not n=1" discipline working rather than being remembered afterwards. The Speculative-Generality argument is why the timing was right, and it stands.
+
+What is interesting is that the three specific blockers this section named to justify waiting did not persist — they **dissolved**, and each dissolved into a design improvement rather than a compromise:
+
+- *"Google's Picker path returns a selection from a foreign UI and does not fit a `listCalls(window:)` shape at all"* → absorbed as `prepareBatch(rowIDs:)`, a protocol method with a default no-op extension. Google runs its Picker once per batch; the other two implement nothing.
+- *"Zoom returns download URLs from the list call while Teams needs a second"* → dissolved by deciding the row carries **no** download URL at all. Those are credentials (§9), so the adapters hold them and the shared type never sees one. A privacy rule removed an abstraction problem.
+- *"the sketch carried no cancel, no progress"* → `fetch(row:destination:progress:)` plus `FetchOutcome.cancelled`.
+
+Only *no resume token* survives, and it is still v1.1 per the staircase above.
+
+The 80/20 split held, and is now observable rather than estimated — **shared spine** (the protocol, the state machine, the window, the vendor vocabulary in `CloudPlatform`, the whole download-and-verify path) versus **per-platform adapter** (endpoints, scopes, pagination, date-windowing, record mapping, error dialect, OAuth ceremony). The pre-contact estimate said platform #1 costs roughly five times platform #2. ⚠️ That ratio is now measurable and has **not** been measured; three platforms landed the same day, but the second and third were each preceded by a research pass whose cost dwarfed the coding, so the naive wall-clock comparison would flatter the spine. Treat the 5× figure as the sequencing argument it always was, not as a retrospective finding.
 
 **Model artifact availability per item, not per platform.** "Available" is the conjunction of what the platform can serve, what the granted scopes allow, and whether *this* item is reachable — resolve it at list time from the listing response, so a row can say "roster — needs calendar access" rather than silently having none.
 
@@ -306,13 +360,15 @@ There is no published head-to-head, and there probably cannot easily be one: ven
 
 **Bound the concurrency at 3–4** (the project's existing `asyncio.Semaphore` figure). The benefit is resilience — one stalled file doesn't block the batch — not throughput; a single 1.3 GB transfer already saturates a modest uplink.
 
-**Check free space before a byte moves.** A 6–20 GB batch is the paradigm case for the "free-space precheck; legible `ENOSPC`" that `design-project-storage.md` already decided YES. Both halves exist and are unwired here: `CopyMachinery.availableBytes()`/`insufficientDiskSpace` gates local drag-drop, and `doctor.check_disk_space()` runs only under `bristlenose doctor`. Both Graph and Zoom carry file size in the listing, so this is free — and worse than the local case if skipped, since a network fetch hitting `ENOSPC` mid-batch has burned real transfer time.
+**Check free space before a byte moves.** A 6–20 GB batch is the paradigm case for the "free-space precheck; legible `ENOSPC`" that `design-project-storage.md` already decided YES. **Wired 15 Aug 2026** — `CloudDownloader` runs the check before a byte moves, reusing `CopyMachinery.availableBytes()`, and refuses with a named `insufficientSpace` rather than a generic failure. The two pre-existing halves it draws on: `CopyMachinery.availableBytes()`/`insufficientDiskSpace` gates local drag-drop, and `doctor.check_disk_space()` runs only under `bristlenose doctor` — the pipeline run still has no precheck of its own. Both Graph and Zoom carry file size in the listing, so this is free — and worse than the local case if skipped, since a network fetch hitting `ENOSPC` mid-batch has burned real transfer time.
 
 **Read `expirationDateTime` off each file** rather than choosing a window. Microsoft's expiry-warning emails are now a per-tenant setting, so researchers can no longer rely on being told. On expiry the file goes to the recycle bin, not a hard delete, so there is a grace period. Re-resolve the download URL immediately before each fetch, not at list time — they are short-lived by design, and a 404 on a soon-expiring item deserves its own message rather than a generic failure.
 
 **Default window 30 days**, ceiling wherever the oldest surviving file sits. ~95% of what you want is recent. Going further back is a *different intent*: an explicit search with a term and a range, not a longer scroll.
 
 **Persist only the attendees the researcher promotes to participants.** The attendee list also contains the client PM, the note-taker and the stakeholder observer — never recruited, never consented, not research subjects. Present the list, persist the promoted ones, discard the rest without writing them to disk. This is the correctness fix and the privacy fix being the same fix, again — and it costs nothing, because the selection UI is already there.
+
+**Check whether the promotion step already has a home before drawing one.** _Added 15 Aug 2026._ The "who is p1?" step is the piece carrying the actual payoff — where emails finally earn their place and the manual spreadsheet dies — and it is still undrawn. But there is a decent chance this is *feeding candidates into UI that already exists* rather than a new surface: read [docs/design-speaker-editing.md](design-speaker-editing.md) and [docs/design-transcript-speaker-editing-roadmap.md](design-transcript-speaker-editing-roadmap.md) first. Related and easy to get wrong: **"you" is the organiser, not necessarily the moderator** — a colleague can run a call the researcher booked — so the promotion step must not auto-assign the signed-in user as moderator.
 
 **Roster names are provisional until something links them to a speaker.** `people.auto_populate_names` only fills empty fields and never overwrites, so the first name written **wins permanently** — a roster-derived name is not corrected by a later LLM pass, a re-run, or re-analysis, and it reads as *more* authoritative than the guess it replaced because it came from the org directory. Land roster names in a candidate field, and make the mapping an explicit researcher act ("who is p1?") against the attendee list — which is also the cheapest v1 and is precisely the manual spreadsheet step §1 wants gone.
 
@@ -336,21 +392,27 @@ There is no published head-to-head, and there probably cannot easily be one: ven
 
 **This rhythm is what incremental analysis was built for** (shipped 0.20.0): import 3 → analyse → import 3 more → re-analyse with curation surviving. Destination is a picker ("New project…" plus the current project pre-selected), not a default — and `New Project…` should create with a provisional name and let the researcher rename in place in the sidebar, rather than stacking a naming dialog on the import window.
 
-**Testing.** Every failure above — 401 mid-fetch, truncated body, unfollowed `nextLink`, zone-shifted window, expired download URL — is reachable only through a fake transport, and there is none in `tests/` today; `httpx.MockTransport` is built in and adds no dependency. PKCE mechanics, the derived-import-state round-trip and the truncation checks are unit-testable; the live `ASWebAuthenticationSession` round-trip against a real tenant categorically is not, and the internal TF cohort covers what CI cannot. Cloud import is a new **ingest** surface — network-sourced, unlike the 16 file-shaped ones — and belongs in `docs/testing/coverage-inventory.md` before it is built.
+**Testing.** _Rewritten 15 Aug 2026: this paragraph named the wrong language. It proposed `httpx.MockTransport` in `tests/`, but §7 put the whole feature in Swift, so the Python fake-transport plan never applied._
+
+What shipped: seven Swift test files — `CloudDownloadTests`, `GoogleMeetImportTests`, `ZoomImportTests`, `TeamsSourceTests`, `CloudImportModelTests`, `OAuthPKCETests`, `TeamsRecordingNameTests` — covering the pure-value layer, which is where the classification decisions live. Three of them caught real defects in the commits that introduced them, which is the argument for writing them at that layer.
+
+⚠️ **The transport layer is still untested, and it is blocked on nothing.** Every failure in this section — 401 mid-fetch, truncated body, unfollowed `@odata.nextLink`, zone-shifted window, expired download URL, an HTML page written as `.mp4` — is reachable only through a stubbed transport, and there is no `URLProtocol` stub anywhere in `desktop/`. `CloudDownloader.init(session:)` already takes an injectable `URLSession`, so the seam exists and is unused. This is the highest-value unbuilt test layer and needs no account.
+
+The live `ASWebAuthenticationSession` round trip against a real tenant categorically is not unit-testable; the internal TF cohort covers what CI cannot. Cloud import is a new **ingest** surface — network-sourced, unlike the 16 file-shaped ones — and its section in `docs/testing/coverage-inventory.md` was owed *before* the build and is now owed *after* it.
 
 ---
 
 ## 10. Costs to be honest about
 
-- One OAuth app registration before any third party has to say yes; three by the end.
+- One OAuth app registration before any third party has to say yes; three by the end. **None of the three exists yet** — see the status block; this is now the gate on everything else in this doc.
 - **Microsoft Publisher Verification may be a prerequisite** (§3) — a Partner Center account and a verified domain, not just a form.
 - Three APIs that will change underneath us.
-- **i18n.** A window with this many states needs `desktop.*` keys across 20 locale directories, CLDR plurals on every count-bearing string, and `scripts/check-locales.py` only warns — nothing fails if it is skipped.
+- **i18n — now realised debt, not a future cost.** The shipped window is hardcoded English throughout ("Import 1 Recording", "Filter", the plan-refusal sentences). A window with this many states needs `desktop.*` keys across the **21** full locale directories (plus the `zh-Hant-HK` override fork), CLDR plurals on every count-bearing string, and `scripts/check-locales.py` only warns — nothing fails if it is skipped.
 - **A corporate tenant credential in the Keychain is a different class from a personal LLM key.** The iCloud-sync decision for API keys is settled and disclosed and is not reopened here; the new question is whether a *client's* IT policy permits their tenant credential to leave the managed device. Non-synchronizable is the answer for this one (§7).
 - **The destination is often itself a cloud folder.** On a Mac, project folders frequently live under `~/Library/CloudStorage/`, so the feature's default behaviour is to pull media out of the client's tenant and write it into whatever cloud that folder syncs to — a second vendor, unasked, and per `design-project-storage.md` plausibly outside the team's governance boundary. Detect with `cloud_provider_for(destination)` and disclose before the fetch. Secondary effects: the reverse sync competes for the same uplink, and the provider may later evict the file, so the retention clock runs against bytes BN cannot read without coordination.
 - No disconnect, revoke or multi-account story exists yet (§7, §9). An Entra admin can revoke tenant-wide from Enterprise Applications — worth stating, because it is a strong answer.
 - A researcher's employer may take a view on a personally-purchased tool authenticating to corporate M365, even at `Files.Read` on their own drive. This is the scenario enterprise consent machinery exists to govern, which is a better answer than most SaaS can give.
-- Consent should bump to v3 when this ships: the v2 dialog's stays-local box becomes false by omission, and a per-connection disclosure listing the scopes in plain English belongs at the OAuth moment.
+- ⚠️ **Consent is owed now, not "when this ships".** The feature has shipped behind `File ▸ Import` with three live adapters while `AIConsentView.currentVersion` is still 2. The v2 dialog's stays-local box becomes false by omission, and a per-connection disclosure listing the scopes in plain English belongs at the OAuth moment. That said, the practical urgency is gated by the registration gap in the status block — no sign-in can complete until a client ID exists, so nothing has leaked. Fix both before the first cohort tester touches it.
 
 ---
 

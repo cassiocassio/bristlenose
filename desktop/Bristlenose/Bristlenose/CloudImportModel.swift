@@ -265,7 +265,10 @@ enum ImportRowState: Equatable {
         case .viewOnly:
             return "View only"
         case .noLongerAvailable:
-            return "No longer in Teams"
+            // Platform-neutral since 15 Aug 2026: this enum was Teams-only when
+            // written and is now shared by all three adapters, so naming one
+            // vendor rendered "No longer in Teams" on Zoom and Meet rows.
+            return "No longer available"
         }
     }
 

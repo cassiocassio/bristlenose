@@ -1,6 +1,10 @@
 # Cloud import — capturing originals from Teams, Zoom and Meet
 
-**Status: designed 28 Jul 2026. Revised 14 Aug 2026 after a permissions/benchmark pass and a six-agent review. Nothing built. Post-TF, not cohort-blocking.**
+**Status: designed 28 Jul 2026. Revised 14 Aug 2026 after a permissions/benchmark pass and a six-agent review. Revised again 15 Aug 2026, when Google and Zoom were researched and all three adapters were built. Post-TF, not cohort-blocking.**
+
+**What exists as of 15 Aug 2026.** All three platforms are live behind `File ▸ Import`, on one shared spine: `CloudImportSource` (the protocol), `CloudImportStore` (the state machine), `CloudImportWindow` (the surface), `CloudPlatform` (everything vendor-shaped the UI says), and `CloudDownloader` + `CloudDownloadVerification` (§6's "prove the bytes arrived", once, for all three). Per-platform adapters carry only what genuinely differs: the endpoints, the scope vocabulary, the error dialects, and each vendor's own way of failing quietly. A `FixtureCloudSource` drives every state from the Diagnostics menu without an account.
+
+**What is not built.** Live acceptance against a real tenant on any platform — the shipped code has never met a real recording. The three open probes are §3's Picker question on Google, §3's tenant-consent question on Microsoft, and whether Graph serves `expirationDateTime` per file. Each is an hour's work against an account we do not yet have, and each could move a design decision rather than merely confirm one.
 
 Downloading recordings by hand, per file, is drudgery — and it is the thing Dovetail and Marvin remove by default. Bristlenose can too, and unlike them it needs no server.
 

@@ -28,7 +28,7 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     /// menu is a promise about what the app can do. `allCases` still drives the
     /// Diagnostics fixture menu, where seeing an unbuilt platform's states is
     /// the entire point.
-    static var shipping: [CloudPlatform] { [.meet, .zoom] }
+    static var shipping: [CloudPlatform] { [.teams, .meet, .zoom] }
 
     // MARK: Naming
 

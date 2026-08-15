@@ -58,11 +58,13 @@ final class CloudImportCoordinator: ObservableObject {
             store = CloudImportStore(source: ZoomSource(config: config))
 
         case .teams:
-            // The Teams adapter is the sibling session's work and is not wired
-            // here yet. `CloudPlatform.shipping` deliberately omits it, so this
-            // branch is unreachable from the File menu — it exists so that
-            // adding Teams is one line rather than a refactor.
-            store = CloudImportStore(source: UnconfiguredCloudSource())
+            // One value, not two: unlike Zoom, Microsoft derives nothing from
+            // the client ID but accepts a conventional custom-scheme redirect,
+            // so the redirect and tenant both have sane defaults.
+            guard let config = MicrosoftOAuthConfig.resolve() else {
+                store = CloudImportStore(source: UnconfiguredCloudSource()); return
+            }
+            store = CloudImportStore(source: TeamsSource(config: config))
         }
     }
 

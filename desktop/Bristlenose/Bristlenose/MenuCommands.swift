@@ -145,6 +145,27 @@ private struct DiagnosticsMenuContent: View {
                 AdminPanelAction.open(serveManager: serveManager)
             }
             .disabled(serveManager.runningPort == nil)
+
+            // The cloud-import window, driven by fixtures instead of Google.
+            //
+            // This is not a convenience. Every failure state the design turns
+            // on — a capped paginator, a declined scope, a personal account
+            // with a full calendar and no recordings, a half-failed batch — is
+            // unreachable from a healthy live account, and most are unreachable
+            // without a paid Workspace tenant, a recorded meeting and a
+            // verified OAuth client, none of which exist yet. Without this
+            // menu the states could be written but never *seen*, which is how
+            // an empty-state's copy stays wrong for two releases.
+            Menu("Google Meet Import") {
+                ForEach(MeetImportScenario.allCases) { scenario in
+                    Button(scenario.menuTitle) {
+                        NotificationCenter.default.post(
+                            name: .openGoogleMeetImportFixture,
+                            object: scenario
+                        )
+                    }
+                }
+            }
         }
 
         #if DEBUG
@@ -371,6 +392,24 @@ private struct FileMenuContent: View {
             NotificationCenter.default.post(name: .addFilesToSelectedProject, object: nil)
         }
         .keyboardShortcut("a", modifiers: [.command, .shift])
+
+        // Import ▸ — cloud sources, beside Add Files… because that is the same
+        // act from a different place (`docs/design-cloud-import.md` §9).
+        //
+        // A submenu holding one item is normally a Mac smell, and the design
+        // doc says to stay flat until the second platform lands. It is a
+        // submenu here because Teams and Zoom are both designed and queued
+        // behind this, and the alternative — ship `Import from Google Meet…`
+        // flat, then move it into a submenu two releases later — relocates a
+        // menu item users have already learned. Cheaper to be one item wide
+        // for a while than to move it afterwards.
+        Menu {
+            Button("Google Meet…", systemImage: "video") {
+                NotificationCenter.default.post(name: .openGoogleMeetImport, object: nil)
+            }
+        } label: {
+            Label("Import", systemImage: "square.and.arrow.down")
+        }
 
         Button(i18n.t("desktop.menu.file.openInNewWindow"), systemImage: "macwindow.badge.plus") {
             bridgeHandler.menuAction("openInNewWindow")

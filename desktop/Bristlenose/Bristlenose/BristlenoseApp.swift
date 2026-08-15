@@ -48,6 +48,11 @@ struct BristlenoseApp: App {
     @StateObject private var serveManager = ServeManager()
     @StateObject private var bridgeHandler = BridgeHandler()
     @StateObject private var projectIndex = ProjectIndex()
+
+    /// Owns the single import window's store. App-level rather than
+    /// scene-level: one window globally (§9), so one store, or two windows
+    /// would race for the same destination with two tick sets.
+    @StateObject private var meetImport = MeetImportCoordinator()
     @StateObject private var pipelineRunner = PipelineRunner()
     @StateObject private var volumeWatcher = VolumeWatcher()
     @StateObject private var toast = ToastStore()
@@ -149,6 +154,13 @@ struct BristlenoseApp: App {
                 // i18n + toast passed explicitly (the modifier isn't inside their
                 // .environmentObject scope).
                 .alphaExpiryFlow(i18n: i18n, toast: toast)
+                // Opens the cloud-import scene. Lives here rather than in
+                // ContentView so it is alive even with no project selected.
+                .modifier(MeetImportOpener(
+                    coordinator: meetImport,
+                    projectIndex: projectIndex,
+                    selectedProjectID: nil
+                ))
         }
         .defaultSize(width: 1000, height: 700)
         .windowResizability(.contentMinSize)
@@ -174,6 +186,26 @@ struct BristlenoseApp: App {
         // is a hard acceptance criterion, not polish: this scene ships, and
         // without it SwiftUI adds a stray Window-menu row to every App Store /
         // TestFlight user even with the Diagnostics toggle off.
+        // Cloud import. A WINDOW, not a sheet — Image Capture is the system
+        // analogue and it is a window. Mechanically a sheet cannot work here:
+        // it is window-modal, so keeping it up would hide the sidebar-row
+        // progress behind it, and dismissing it would destroy the per-row
+        // outcomes recovery depends on (`docs/design-cloud-import.md` §9).
+        //
+        // `.commandsRemoved()` for the usual reason — a titled Window scene
+        // otherwise contributes an automatic Window-menu reopen entry, and HIG
+        // reserves that menu for windows that are *currently open*. Reopening
+        // belongs in File, which is where the import item lives.
+        Window("Import from Google Meet", id: "meet-import") {
+            MeetImportWindowHost()
+                .environmentObject(projectIndex)
+                .environmentObject(meetImport)
+                .environmentObject(i18n)
+                .tint(paletteAccent)
+        }
+        .defaultSize(width: 900, height: 560)
+        .commandsRemoved()
+
         Window("Shoal Screensaver", id: "shoal-view") {
             ShoalWindowView()
                 .tint(paletteAccent)

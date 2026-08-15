@@ -265,6 +265,19 @@ extension Notification.Name {
     /// project (copy → incremental run for folder-shaped analysed projects).
     static let addFilesToSelectedProject = Notification.Name("bristlenoseAddFilesToSelectedProject")
 
+    /// Posted by File ▸ Import ▸ Google Meet… — opens the cloud-import window
+    /// against the live Google APIs, pre-selecting the current project as the
+    /// destination.
+    static let openGoogleMeetImport = Notification.Name("bristlenoseOpenGoogleMeetImport")
+
+    /// Posted by Diagnostics ▸ Google Meet Import — opens the same window
+    /// against fixtures. `object` carries the `MeetImportScenario`.
+    ///
+    /// A separate notification rather than a parameter on the one above, so
+    /// that no code path can reach the fixture source by passing a wrong or
+    /// defaulted argument: the only way in is a menu item that says so.
+    static let openGoogleMeetImportFixture = Notification.Name("bristlenoseOpenGoogleMeetImportFixture")
+
     /// Posted by View > Move Focus to Projects (⌘0) — returns keyboard focus
     /// from the web report to the project list (the §10.1 no-trap command).
 

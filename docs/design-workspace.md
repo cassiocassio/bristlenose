@@ -7,6 +7,7 @@ last-trued: 2026-08-15
 
 ## Changelog
 
+- _2026-08-16b_ — **Presumed Family A; the memory objection is measured.** A sidecar is **~140 MB and flat from 1 to 8 windows** (two sidecars — fronted + A2 parked slot — served eight windows), so A's penalty over B/C is ~140 MB *per additional project*, i.e. 140–280 MB at the expected 2–3. That was the argument holding the family call open, and it no longer carries. §"Effectively decided vs genuinely open" moves the call from *open* to **presumed A, decide late**, and constraint 7 is recorded as A's one genuinely new design problem, to be answered on paper before Stage 3b. New §"Implementation plan" sequences the work; its first two items are family-independent, so nothing waits on the formal call. Two caveats attached to the number: it came off a 3-session project (a floor, not a typical figure) and one Debug-build machine. Separately, `SharedConfigStore` landed (`b0dbabc9`) — constraint 6 is closed for messaging; its memory half is unverified because attributing WebKit helper processes to an app from outside it defeated five approaches.
 - _2026-08-16_ — **The window axis is sized, and it isn't the project axis.** Observed usage is ~12 windows over ~2–3 projects (five transcripts side by side plus quotes/analysis on *one* study), so §"Problem definition" now splits the two and carries an "N is about" column. Three consequences recorded: the A/B/C call governs the *small* axis; N retained WebViews cost the same under every family, which largely defuses memory as a discriminator between them; and the load case is a whole 16 GB desk, not an app. §"Memory governance" replaces "a cap sized later" with a **stated budget** plus **live-if-visible / discarded-if-occluded**, whose ceiling is display area rather than user intent. The "what settles the family call" note is **revised**: the earlier "how many projects" survey asked the wrong question — the deciding number is the marginal cost of the Nth window on the *same* project, which is a one-day spike. Two new constraints: 6, cross-window BroadcastChannel is validated but unwired (`WebView.swift:87` mints a fresh partition per view, so two windows are mute today); 7, the MCP handshake assumes exactly one fronted serve, which B and C fit natively and A does not. Family A/B/C still open.
 - _2026-08-15_ — **Window-level decisions taken; the big architectural call still open.** (1) New §"What a window opens onto": double-click opens *that project* — the Notes model, answering the open question this doc used to end on — and a window restores the **lens** plus an **anchor**, never a pixel offset and never search/filter, from `projects.json`. (2) New §"The command that opens a window": `Window ▸ Bristlenose` becomes `File ▸ New Window` (⌥⌘N), per the HIG's own menu-bar standards; records the missing `applicationShouldHandleReopen` this exposes. (3) Stage 3 split into **3a** (per-window `BridgeHandler`, same-project windows — needs no family call) and **3b** (per-window serve — blocked on A/B/C), because 3a is what actually buys "Quotes here, Analysis there" and is reachable today. (4) New constraint 5: with two windows open the title bar can name a project that isn't on screen — observed, not predicted by the blocker list. Family A/B/C unchanged and still open.
 
@@ -265,10 +266,35 @@ all reports) + per-project **worker** subprocesses for runs (semaphore-capped).
   the lens + an anchor and nothing else; `File ▸ New Window` (⌥⌘N) replaces
   `Window ▸ Bristlenose`; window title = project name, subtitle = count or live run
   state. All four sit in the two new sections below and none of them waits on A/B/C.
-- **Genuinely open (the big call):** Family **A vs B vs C** — the serve/view
-  architecture. This is a battle-tested-engineer decision (process model, shared
-  fate, memory, server rework cost), not a UX or cohort call. Pick it at post-TF
-  planning, not before.
+- **Presumed Family A, decide late (16 Aug 2026).** Not yet formally chosen, but
+  no longer wide open: stop spending anything on keeping B or C alive, and don't
+  wait on the call to proceed (the plan's first two items are family-independent).
+
+  **What changed:** the family question was held open by an *unquantified* memory
+  cost, and it is now quantified. A sidecar is **~140 MB and flat from 1 to 8
+  windows** — measured 16 Aug 2026, two sidecars serving eight windows. Since
+  every family needs one live WebView per window, sidecar count is the *only*
+  thing A/B/C differ on, so A's whole penalty is ~140 MB per additional project:
+  140–280 MB at the expected 2–3. On 16 GB that is not an argument, and it was the
+  argument. Weigh it against A's zero server rework (B needs single-project →
+  multi-tenant, the ~12 hardcoded `/api/projects/1/` frontend sites, and per-project
+  media/event routing), A's reversibility (retained-WebView work survives a later
+  move to B; B's surgery does not survive a move back), free isolation (each
+  sidecar is already its own origin/token/store), and no shared fate.
+
+  **Two caveats on the number.** It came off a **3-session** project, so it is a
+  floor rather than a typical figure — re-measure against a real 40-session study
+  before it enters a budget. And it is one reading, one machine, Debug build.
+
+  **A's one genuinely new problem is constraint 7** (the MCP handshake). It is
+  smaller than it looks — agent access is already per-project and opt-in, and the
+  handshake already ships a deliberate v1 limitation — but it touches a contract
+  with software installed inside another vendor's app, so it gets designed on
+  paper before Stage 3b, not discovered mid-build.
+
+  **What would reopen the call:** the sidecar figure landing far higher against a
+  real study, or the expected project count turning out to be ~8–10 rather than
+  2–3.
 
   **What settles it is a spike, not a survey** (revised 16 Aug 2026). The earlier
   framing — "pick it with real multi-project-machine data", i.e. how many projects a
@@ -445,6 +471,73 @@ order for easy scanning"* — a second, independent reason the
 prefix sorts every window under one letter and destroys the scan. The shipped scheme
 is title = project name, subtitle = count or live run state; the options weighed and
 the edge cases are drawn in `docs/mockups/window-menu-naming.html`.
+
+## Implementation plan
+
+Derived from the stages and decisions above, ordered by dependency. **The first
+two items are family-independent** — they are what the observed usage (a dozen
+windows over two or three studies) actually needs, and nothing in them changes if
+the presumed-A call is later reversed.
+
+### Now — unblocked, and fixing live defects
+
+**P1 · Stage 2 — `@FocusedValue` for the broadcast commands.**
+`MenuCommands.swift` holds 19 `NotificationCenter.default.post` sites; each fires
+in *every* open window, and a second window is reachable today, so these are live
+defects rather than future ones. Copy the Stage 1 seam (`SidebarVisibilityFocus`,
+scene-scoped so it survives focus moving into the WKWebView); decision logic goes
+in testable helpers per the house convention, as `SidebarToggle` did.
+*Done when:* with two windows open, New Project fires once, Rename prompts only
+in the key window, and every menu command targets the frontmost project window
+and dims when none is frontmost.
+
+**P2 · Stage 3a — per-window `BridgeHandler`.** Depends on P1: routing commands to
+the right window is meaningless while the state they act on is shared. One
+`BridgeHandler` per window, each owning its `weak var webView` and its ~28
+published properties. Both windows keep pointing at the same sidecar — no second
+Python process, no serve rework.
+*Done when:* two windows on one project sit on different lenses with independent
+toolbars, and constraint 5 is gone — no title can name a project that isn't on
+screen. Ships with the E4 ordinal suffix for same-lens duplicates (nine identical
+Window-menu rows is the case that earned it) and the `File ▸ New Window` ⌥⌘N
+rename, which is deliberately held until here so we don't advertise a second
+window before it works.
+
+**P3 · Per-window restore — lens + anchor.** Depends on P2 (the lens has nowhere
+to live until each window owns one). Per §"What a window opens onto"; copy
+`SessionsRouteMemory`'s shape. *Done when:* closing a window on Quotes at a given
+section and reopening the project lands there, while search and filter do not
+come back.
+
+### Alongside — measurements that gate the memory design
+
+**M1 · Quiet-machine window cost.** Quit browsers, confirm `pgrep -f
+WebKit.WebContent` reads near zero, launch, open N windows, count and measure.
+No attribution needed once nothing else on the machine spawns WebKit. *Answers:*
+whether occlusion-discarding is load-bearing or a refinement. Independent of
+P1–P3; do it whenever convenient.
+
+**M2 · Sidecar footprint against a real study.** Re-measure the ~140 MB against a
+40-session project rather than the 3-session one it came from. *Answers:* whether
+the presumed-A cost estimate survives, and gives the budget a real number.
+
+### Design-before-build
+
+**D1 · Agent access across N sidecars** (constraint 7). A's only new problem, and
+the one that touches an external contract. Must be settled on paper before P4.
+
+### Later — needs D1, M1, and the formal call
+
+**P4 · Stage 3b** — per-window serve, cross-project windows. **P5 · Tier-2
+retained views** — pairs with P4; shares the view-pool infrastructure.
+**Phase B** — parallel runs, cap-2 + queue; orthogonal to all of the above and
+can move earlier if run-throughput feedback demands it.
+
+### Small, already decided, not blocked by any of the above
+
+`applicationShouldHandleReopen` — clicking the Dock icon with no windows open
+currently does nothing, and `Window ▸ Bristlenose` is the only way back. Lands
+*with* the rename in P2, not after it.
 
 ## Sequencing
 

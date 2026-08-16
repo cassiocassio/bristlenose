@@ -175,9 +175,29 @@ final class CloudImportStore: ObservableObject {
     func load() async {
         listTask?.cancel()
         phase = .loading
+        // **The trailing edge is now + 3h, not now, and it is the same fact as
+        // the Meet lookup's 3h lookback seen from the other side.**
+        //
+        // A recording exists on the clock the *call* ran on; the listing is
+        // filtered on the clock the *event* was scheduled for. Google's
+        // `timeMax` bounds an event's START (an overlap query, not a
+        // containment one), so ending the window at this instant excludes any
+        // meeting whose scheduled start is still in the future — including one
+        // that has already been recorded, which is the routine case for anyone
+        // who opens the room early. Observed 16 Aug 2026: a call joined at
+        // 2:12pm against a 3:00pm event would have listed as nothing at all
+        // until 3pm, with no error to say why.
+        //
+        // Three hours because that is the tolerance the recording lookup
+        // already allows in the other direction; a narrower one here would make
+        // that tolerance unreachable for the most recent meetings, which are
+        // exactly the ones a researcher opens this window to find. Harmless for
+        // Teams and Zoom, which filter on the recording's own timestamp and
+        // simply have nothing in the future to return.
+        let now = Date()
         let interval = DateInterval(
-            start: Calendar.current.date(byAdding: .day, value: -windowDays, to: Date()) ?? Date(),
-            end: Date()
+            start: Calendar.current.date(byAdding: .day, value: -windowDays, to: now) ?? now,
+            end: now.addingTimeInterval(3 * 3600)
         )
         let task = Task { @MainActor in
             let result = await source.list(window: interval)

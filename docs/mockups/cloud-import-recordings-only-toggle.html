@@ -1,0 +1,249 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud import — hiding meetings that produced nothing</title>
+<style>
+:root{
+  --bg:#f2f2f7; --page:#fff; --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+  --line:#d8d8dc; --hairline:#e6e6ea; --chrome:#ececed; --chrome2:#e4e4e6;
+  --accent:#007aff; --warn:#c9500f; --good:#1a7f37; --grouphdr:#f0f0f3;
+  --shadow:0 12px 40px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.10);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+    --line:#3a3a3d; --hairline:#2c2c2f; --chrome:#2a2a2c; --chrome2:#242426;
+    --accent:#0a84ff; --warn:#ff9f45; --good:#4ac26b; --grouphdr:#28282b;
+    --shadow:0 12px 40px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;padding:40px 24px 90px;
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:15px;font-weight:700;margin:34px 0 10px}
+.sub{color:var(--dim);margin:0 0 8px;max-width:80ch}
+.meta{color:var(--faint);font-size:12px;margin:0 0 30px}
+.why{border-left:2px solid var(--accent);padding:2px 0 2px 12px;margin:14px 0 0;
+     color:var(--dim);font-size:12.5px;max-width:88ch}
+.why b{color:var(--ink);font-weight:600}
+.why.bad{border-color:var(--warn)}
+.ask{background:var(--grouphdr);border:.5px solid var(--line);border-radius:8px;
+     padding:12px 14px;margin:0 0 26px;font-size:12.5px;color:var(--dim);max-width:96ch}
+.ask b{color:var(--ink)}
+
+.win{background:var(--page);border-radius:10px;box-shadow:var(--shadow);
+     overflow:hidden;border:.5px solid var(--line);margin-bottom:6px}
+.tbar{background:linear-gradient(var(--chrome),var(--chrome2));
+      border-bottom:.5px solid var(--line);padding:0 14px;height:52px;
+      display:flex;align-items:center;gap:10px}
+.lights{display:flex;gap:8px;margin-right:4px}
+.lights i{width:12px;height:12px;border-radius:50%;display:block}
+.lights i:nth-child(1){background:#ff5f57}
+.lights i:nth-child(2){background:#febc2e}
+.lights i:nth-child(3){background:#28c840}
+.titles .t{font-weight:700;font-size:13px;line-height:1.2}
+.titles .s{color:var(--dim);font-size:11.5px;line-height:1.2}
+.filter{border:.5px solid var(--line);border-radius:7px;
+        padding:4px 10px;color:var(--faint);font-size:12px;min-width:120px}
+.tbar .grow{margin-left:auto}
+.pick{border:.5px solid var(--line);border-radius:6px;padding:3px 8px;
+      font-size:12px;background:var(--page);white-space:nowrap}
+.chev{color:var(--faint);margin-left:3px;font-size:10px}
+
+/* the control under discussion, in three shapes */
+.sw{display:inline-flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap}
+.sw i{width:26px;height:15px;border-radius:8px;background:var(--accent);position:relative;display:block}
+.sw i:after{content:"";position:absolute;top:1.5px;right:1.5px;width:12px;height:12px;
+  border-radius:50%;background:#fff}
+.sw.off i{background:#c7c7cc}
+.sw.off i:after{right:auto;left:1.5px}
+@media (prefers-color-scheme:dark){ .sw.off i{background:#48484a} }
+.seg{display:inline-flex;border:.5px solid var(--line);border-radius:7px;overflow:hidden;font-size:12px}
+.seg span{padding:3px 10px;background:var(--page)}
+.seg span.on{background:var(--accent);color:#fff}
+.btnicon{border:.5px solid var(--line);border-radius:6px;padding:3px 9px;font-size:12px;
+  background:var(--page);white-space:nowrap}
+.btnicon.on{background:var(--accent);color:#fff;border-color:transparent}
+
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
+thead th{text-align:left;font-weight:600;color:var(--dim);font-size:11.5px;
+  padding:7px 10px;background:var(--page);border-bottom:.5px solid var(--line);white-space:nowrap}
+thead th.r{text-align:right}
+td{padding:7px 10px;vertical-align:top;border-bottom:.5px solid var(--hairline)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.size{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;color:var(--dim);width:74px}
+.tick{width:26px}
+.ttl{font-weight:600}
+.sub2{color:var(--faint);font-size:11.5px;margin-top:1px}
+.dash{color:var(--faint)} .size.dash{text-align:right}
+.status{color:var(--dim);white-space:nowrap}
+tr.day th{background:var(--grouphdr);font-weight:700;color:var(--ink);font-size:11.5px;
+  padding:5px 10px;border-top:.5px solid var(--line);border-bottom:.5px solid var(--line);text-align:left}
+.tri{display:inline-block;width:11px;color:var(--faint);font-size:9px}
+.kid .ttl{padding-left:22px;font-weight:500}
+.adhoc .ttl:after{content:"ad hoc";font-size:10px;font-weight:600;color:var(--warn);
+  border:.5px solid var(--warn);border-radius:4px;padding:0 4px;margin-left:7px;vertical-align:1px}
+.muted td{opacity:.55}
+.bar{display:flex;align-items:center;gap:8px;padding:9px 14px;
+     border-top:.5px solid var(--line);background:var(--chrome2);font-size:12px}
+.bar .grow{margin-left:auto}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:5px 12px;
+     font-size:12px;font-weight:600}
+.lnk{color:var(--accent);text-decoration:none;font-size:11.5px}
+.cap{font-size:12px;color:var(--faint);margin:0 0 18px}
+.opts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:12px 0 0}
+.opt{border:.5px solid var(--line);border-radius:8px;padding:12px 13px;background:var(--page)}
+.opt h3{margin:0 0 8px;font-size:12.5px}
+.opt p{margin:8px 0 0;font-size:12px;color:var(--dim)}
+code{font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace}
+</style>
+
+<div class="wrap">
+<h1>Hiding meetings that produced nothing</h1>
+<p class="sub">A working month is mostly un-recorded meetings. Showing them all buries
+the handful of rows that are the point — but hiding them for ever makes a forgotten
+record button indistinguishable from a session that never happened.</p>
+<p class="meta">17 Aug 2026 · real data: five Meet recordings in Drive, two of them from
+instant meetings with no calendar event</p>
+
+<div class="ask">
+<b>Two things are tangled here and the mockup should separate them.</b>
+The <b>toggle</b> is about noise: forty meetings, five recordings. The <b>ad-hoc gap</b>
+is about correctness: two of those five recordings have no calendar event, so today they
+produce no row at all — not a dimmed one, not a "Not recorded" one, and not a line in the
+footer's arithmetic. A toggle cannot fix that, and turning it on would <i>hide the evidence
+that anything was missing</i>. Panel 3 shows the list once both are addressed.
+</div>
+
+<h2>1 — Today: everything, including what you can't use</h2>
+<p class="cap">Two recorded meetings, one that nobody recorded. At this size it reads fine.</p>
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Google Meet</div>
+      <div class="s">martin@finca342.org</div></div>
+    <div class="grow"></div>
+    <div class="pick">Last 30 days <span class="chev">⌄</span></div>
+    <div class="filter">Filter</div></div>
+  <table>
+    <thead><tr><th class="tick"></th><th>Meeting</th><th>Scheduled</th><th>Recorded</th><th class="r">Size</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr class="day"><th colspan="6">Today</th></tr>
+      <tr><td class="tick"></td>
+        <td><div class="ttl"><span class="tri">▾</span>test</div><div class="sub2">2 recordings</div></td>
+        <td class="num">15:00<div class="sub2">1h 30m</div></td><td class="dash">—</td>
+        <td class="size dash">—</td><td></td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Recording 1</div></td><td class="dash">—</td>
+        <td class="num">13:12<div class="sub2">1m 2s</div></td>
+        <td class="size">3.1 MB</td><td></td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Recording 2</div></td><td class="dash">—</td>
+        <td class="num">14:12<div class="sub2">21s</div></td>
+        <td class="size">5.4 MB</td><td></td></tr>
+      <tr class="muted"><td class="tick"></td>
+        <td><div class="ttl">Weekly sync</div><div class="sub2">Dana Okonkwo · Priya Raman</div></td>
+        <td class="num">10:00<div class="sub2">30m</div></td>
+        <td class="dash">—</td><td class="size dash">—</td>
+        <td class="status">Not recorded</td></tr>
+    </tbody>
+  </table>
+  <div class="bar"><span>3 meetings · 2 recordings · <b>2 you can fetch</b></span>
+    <span class="grow"></span><button class="btn">Import 2 Recordings</button></div>
+</div>
+<p class="why"><b>Scale is the whole argument.</b> Three rows is comfortable. Thirty days of
+a real calendar is forty meetings and five recordings, and then this list is 35 rows of grey
+around 5 rows of signal — the researcher scrolls past their own work.</p>
+
+<h2>2 — Where the control goes, and what it says</h2>
+<p class="cap">Same state, three shapes. The question is which reads as <i>scope</i> rather than as a setting.</p>
+<div class="opts">
+  <div class="opt"><h3>A · Switch in the toolbar</h3>
+    <div class="sw"><i></i> Only with recordings</div>
+    <p>Reads as a preference that persists. Widest label, and the toolbar is already carrying
+    a window picker and a filter field.</p></div>
+  <div class="opt"><h3>B · Segmented, beside the window picker</h3>
+    <div class="seg"><span class="on">Recorded</span><span>All meetings</span></div>
+    <p>Reads as <i>scope</i>, the same grammar as “Last 30 days”. Two named states, no
+    hidden default. Costs more width than a switch.</p></div>
+  <div class="opt"><h3>C · A filter chip that appears when it bites</h3>
+    <div class="btnicon on">Recorded only ×</div>
+    <p>Nothing in the chrome until something is hidden, then a dismissible chip —
+    Mail’s idiom. Least clutter at rest; least discoverable when you want it back.</p></div>
+</div>
+<p class="why"><b>B is the argument I’d make.</b> The toolbar already answers “what am I looking
+at?” with <i>Last 30 days</i>, and this is the second half of the same sentence. A switch says
+“setting”; a segmented control says “scope”, and scope is what this is.</p>
+
+<h2>3 — On by default, with the ad-hoc recordings restored</h2>
+<p class="cap">What the list should be: five recordings, two of them from meetings that were
+never in the calendar. The hidden row is <i>named in the footer</i>, not silently dropped.</p>
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Google Meet</div>
+      <div class="s">martin@finca342.org</div></div>
+    <div class="grow"></div>
+    <div class="seg"><span class="on">Recorded</span><span>All meetings</span></div>
+    <div class="pick">Last 30 days <span class="chev">⌄</span></div>
+    <div class="filter">Filter</div></div>
+  <table>
+    <thead><tr><th class="tick"></th><th>Meeting</th><th>Scheduled</th><th>Recorded</th><th class="r">Size</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr class="day"><th colspan="6">Today</th></tr>
+      <tr><td class="tick"></td>
+        <td><div class="ttl"><span class="tri">▾</span>test</div><div class="sub2">2 recordings</div></td>
+        <td class="num">15:00<div class="sub2">1h 30m</div></td><td class="dash">—</td>
+        <td class="size dash">—</td><td></td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Recording 1</div></td><td class="dash">—</td>
+        <td class="num">13:12<div class="sub2">1m 2s</div></td>
+        <td class="size">3.1 MB</td><td></td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Recording 2</div></td><td class="dash">—</td>
+        <td class="num">14:12<div class="sub2">21s</div></td>
+        <td class="size">5.4 MB</td><td></td></tr>
+      <tr class="adhoc"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">osp-jwrt-wff</div><div class="sub2">Martin Storey</div></td>
+        <td class="dash">—</td><td class="num">14:21<div class="sub2">14s</div></td>
+        <td class="size">3.7 MB</td><td></td></tr>
+      <tr class="adhoc"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">twk-fnyg-myw</div><div class="sub2">Martin Storey</div></td>
+        <td class="dash">—</td><td class="num">15:02<div class="sub2">2m 40s</div></td>
+        <td class="size">28 MB</td><td></td></tr>
+
+      <tr class="day"><th colspan="6">Fri 15 Aug</th></tr>
+      <tr><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Banyalbufar discussion</div><div class="sub2">Aoife Brennan</div></td>
+        <td class="num">23:00<div class="sub2">1h</div></td>
+        <td class="num">22:45<div class="sub2">4m 38s</div></td>
+        <td class="size">58 MB</td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="bar"><span>4 meetings · 5 recordings · <b>5 you can fetch</b>
+    · <span style="color:var(--faint)">1 with no recording hidden</span></span>
+    <span class="grow"></span><button class="btn">Import 5 Recordings</button></div>
+</div>
+
+<p class="why"><b>The footer keeps the arithmetic honest.</b> “1 with no recording hidden” is
+what stops the toggle from becoming the thing it was meant to prevent. Without it, a bug that
+failed to find a recording would look exactly like a meeting the toggle chose not to show —
+and that is the failure mode this whole window is written against. The clause disappears when
+nothing is hidden, so it costs nothing in the ordinary case.</p>
+
+<p class="why bad"><b>The ad-hoc rows are not a mockup flourish — they are the reason to do
+this in the right order.</b> Two of five real recordings have no calendar event. Today they
+produce no row, no dimmed row, and no contribution to the footer’s counts, because the Meet
+listing walks the <i>calendar</i> and hangs recordings off events. Ship the toggle first and
+default it on, and the window will look tidier while still being 40% short — with the tidiness
+supplying the alibi. <b>Invert the listing first</b> (list conference records by time, join the
+calendar on afterwards, the shape Teams already uses), then the toggle is a comfort rather than
+a cover.</p>
+
+<p class="why"><b>Open question the inversion raises.</b> A conference record carries a
+<code>space</code>, not a meeting code, so joining a record back to its calendar event needs
+either an extra <code>spaces.get</code> per record or a time-overlap join like the Teams
+adapter’s. The first is exact and costs a call; the second is free and fuzzy. Worth deciding
+before writing it, because it is the same class of choice that produced the
+<code>.first</code> bug.</p>
+</div>

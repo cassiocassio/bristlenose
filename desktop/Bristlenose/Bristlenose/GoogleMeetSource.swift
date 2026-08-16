@@ -295,6 +295,18 @@ final class GoogleMeetSource: CloudImportSource {
         let fetchable = rows.filter(\.isSelectable).count
         let others = rows.filter { $0.organiser != nil }.count
 
+        // The terminus of the listing path, and it exists because its absence
+        // was unreadable: a window stuck on the spinner logged a complete set of
+        // per-meeting lookups and then simply stopped, with no way to tell
+        // "list never returned" from "list returned and the UI didn't move".
+        // One line, at the only place that can distinguish them.
+        Self.log.notice("""
+            meet_list complete events=\(events.count, privacy: .public) \
+            rows=\(rows.count, privacy: .public) \
+            fetchable=\(fetchable, privacy: .public) \
+            outcome=\(String(describing: outcome), privacy: .public)
+            """)
+
         return MeetingListing(
             rows: rows,
             arithmetic: JoinArithmetic(

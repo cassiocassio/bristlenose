@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import SwiftUI
 
 /// The import window's state machine.
@@ -35,7 +36,19 @@ final class CloudImportStore: ObservableObject {
         case signInIncomplete
     }
 
-    @Published private(set) var phase: Phase = .signedOut
+    /// Phase transitions, because the window's whole visible state is this
+    /// enum and a stuck spinner is indistinguishable from a slow one.
+    private static let log = Logger(subsystem: "app.bristlenose", category: "cloud-import")
+
+    @Published private(set) var phase: Phase = .signedOut {
+        didSet {
+            guard phase != oldValue else { return }
+            Self.log.notice("""
+                import_phase \(String(describing: oldValue), privacy: .public) \
+                -> \(String(describing: self.phase), privacy: .public)
+                """)
+        }
+    }
     @Published private(set) var listing: MeetingListing? { didSet { rebuildOutline() } }
     @Published private(set) var accountEmail: String?
 
@@ -243,6 +256,7 @@ final class CloudImportStore: ObservableObject {
         let task = Task { @MainActor in
             let result = await source.list(window: interval)
             guard !Task.isCancelled else { return }
+            Self.log.notice("import_list returned, applying")
             listing = result
             accountEmail = source.accountEmail
             phase = .loaded

@@ -83,7 +83,7 @@ tr.day th{background:var(--grouphdr);font-weight:700;color:var(--ink);font-size:
   padding:5px 10px;border-top:.5px solid var(--line);border-bottom:.5px solid var(--line);text-align:left}
 .tri{display:inline-block;width:11px;color:var(--faint);font-size:9px}
 .kid .ttl{padding-left:22px;font-weight:500}
-.adhoc .ttl:after{content:"ad hoc";font-size:10px;font-weight:600;color:var(--warn);
+.instant .ttl:after{content:"instant";font-size:10px;font-weight:600;color:var(--warn);
   border:.5px solid var(--warn);border-radius:4px;padding:0 4px;margin-left:7px;vertical-align:1px}
 .muted td{opacity:.55}
 .bar{display:flex;align-items:center;gap:8px;padding:9px 14px;
@@ -110,7 +110,7 @@ instant meetings with no calendar event</p>
 
 <div class="ask">
 <b>Two things are tangled here and the mockup should separate them.</b>
-The <b>toggle</b> is about noise: forty meetings, five recordings. The <b>ad-hoc gap</b>
+The <b>toggle</b> is about noise: forty meetings, five recordings. The <b>instant-meeting gap</b>
 is about correctness: two of those five recordings have no calendar event, so today they
 produce no row at all — not a dimmed one, not a "Not recorded" one, and not a line in the
 footer's arithmetic. A toggle cannot fix that, and turning it on would <i>hide the evidence
@@ -176,7 +176,7 @@ around 5 rows of signal — the researcher scrolls past their own work.</p>
 at?” with <i>Last 30 days</i>, and this is the second half of the same sentence. A switch says
 “setting”; a segmented control says “scope”, and scope is what this is.</p>
 
-<h2>3 — On by default, with the ad-hoc recordings restored</h2>
+<h2>3 — On by default, with the instant meetings restored</h2>
 <p class="cap">What the list should be: five recordings, two of them from meetings that were
 never in the calendar. The hidden row is <i>named in the footer</i>, not silently dropped.</p>
 <div class="win">
@@ -203,11 +203,11 @@ never in the calendar. The hidden row is <i>named in the footer</i>, not silentl
         <td><div class="ttl">Recording 2</div></td><td class="dash">—</td>
         <td class="num">14:12<div class="sub2">21s</div></td>
         <td class="size">5.4 MB</td><td></td></tr>
-      <tr class="adhoc"><td class="tick"><input type="checkbox"></td>
+      <tr class="instant"><td class="tick"><input type="checkbox"></td>
         <td><div class="ttl">osp-jwrt-wff</div><div class="sub2">Martin Storey</div></td>
         <td class="dash">—</td><td class="num">14:21<div class="sub2">14s</div></td>
         <td class="size">3.7 MB</td><td></td></tr>
-      <tr class="adhoc"><td class="tick"><input type="checkbox"></td>
+      <tr class="instant"><td class="tick"><input type="checkbox"></td>
         <td><div class="ttl">twk-fnyg-myw</div><div class="sub2">Martin Storey</div></td>
         <td class="dash">—</td><td class="num">15:02<div class="sub2">2m 40s</div></td>
         <td class="size">28 MB</td><td></td></tr>
@@ -231,7 +231,7 @@ failed to find a recording would look exactly like a meeting the toggle chose no
 and that is the failure mode this whole window is written against. The clause disappears when
 nothing is hidden, so it costs nothing in the ordinary case.</p>
 
-<p class="why bad"><b>The ad-hoc rows are not a mockup flourish — they are the reason to do
+<p class="why bad"><b>The instant-meeting rows are not a mockup flourish — they are the reason to do
 this in the right order.</b> Two of five real recordings have no calendar event. Today they
 produce no row, no dimmed row, and no contribution to the footer’s counts, because the Meet
 listing walks the <i>calendar</i> and hangs recordings off events. Ship the toggle first and

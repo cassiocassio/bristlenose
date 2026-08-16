@@ -65,10 +65,15 @@ enum CloudImportOutline {
 
         var isChild: Bool { ordinal != nil }
 
-        // NOT here, deliberately: an "ad hoc" badge for a recording with no
+        // NOT here, deliberately: an "Instant" badge for a recording with no
         // calendar event behind it.
         //
-        // The mockup draws one, and it is the right design — an instant
+        // **Meet's own word, not ours.** Google's UI says "Start an instant
+        // meeting"; "ad hoc" is an invention, and this codebase's rule is that
+        // the vocabulary is the vendor's (see `CloudPlatform`, which exists
+        // almost entirely for that reason).
+        //
+        // The mockup draws the badge, and it is the right design — an instant
         // meeting's dash in the Scheduled column should read as "there was
         // never anything scheduled" rather than as data we failed to find. But
         // no adapter can currently tell those two apart. A missing
@@ -77,7 +82,7 @@ enum CloudImportOutline {
         // false claim on every row of a scope-declined Teams list — and the
         // researcher's remedy (re-consent) is the opposite of what it implies.
         //
-        // It lands with ad-hoc *listing*, which is the same piece of work:
+        // It lands with instant-meeting *listing*, which is the same work:
         // Meet's list is event-first, so a call started from the Meet home
         // screen produces a Drive recording this window never shows at all
         // (verified live, 16 Aug 2026). When the adapter can emit such a row it
@@ -194,7 +199,7 @@ enum CloudImportOutline {
     /// somewhere else is exactly how it stops being.
     struct Result: Equatable {
         let days: [Node]
-        /// Calls shown. An ad-hoc recording counts as one: it *was* a meeting,
+        /// Calls shown. An instant meeting counts as one: it *was* a meeting,
         /// it just wasn't in anybody's calendar.
         let meetings: Int
         /// Rows with a file behind them. A meeting nobody recorded contributes
@@ -240,7 +245,7 @@ enum CloudImportOutline {
         guard !rows.isEmpty else { return .empty }
 
         // 1 — gather rows into calls. A row with no `meetingID` is its own
-        //     call: an ad-hoc recording is a meeting that nobody scheduled, not
+        //     call: an instant meeting is a meeting nobody scheduled, not
         //     an orphan to be swept into a bucket with other people's orphans.
         var order: [String] = []
         var groups: [String: [CloudImportRow]] = [:]

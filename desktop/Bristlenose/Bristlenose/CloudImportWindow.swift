@@ -371,9 +371,13 @@ struct CloudImportWindow: View {
             .font(.callout)
         } else if let a = store.listing?.arithmetic {
             HStack(spacing: 5) {
+                // Not "in window" — the window is already named in the
+                // subtitle ("last 30 days"), and saying it twice on one screen
+                // is the same redundancy §7 rules out for the timezone: state
+                // it once in the header, never on every row.
                 Text(a.isExact
-                     ? "\(CloudCount.noun(a.eventsInWindow, "meeting")) in window"
-                     : "at least \(CloudCount.noun(a.eventsInWindow, "meeting")) in window")
+                     ? CloudCount.noun(a.eventsInWindow, "meeting")
+                     : "at least \(CloudCount.noun(a.eventsInWindow, "meeting"))")
                 Text("·").foregroundStyle(.secondary)
                 Text("\(a.fetchable) you can fetch").fontWeight(.semibold)
                 if a.organisedByOthers > 0 {

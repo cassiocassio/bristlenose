@@ -55,8 +55,14 @@ private enum Column {
 struct CloudImportOutlineView: NSViewRepresentable {
     @ObservedObject var store: CloudImportStore
     let platform: CloudPlatform
+    /// Passed rather than read from the environment: the cells are AppKit and
+    /// live below SwiftUI's reach, so the one object they all need has to be
+    /// handed down explicitly.
+    @ObservedObject var i18n: I18n
 
-    func makeCoordinator() -> Coordinator { Coordinator(store: store, platform: platform) }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(store: store, platform: platform, i18n: i18n)
+    }
 
     func makeNSView(context: Context) -> NSScrollView {
         let outline = OutlineView()
@@ -96,7 +102,7 @@ struct CloudImportOutlineView: NSViewRepresentable {
         outline.autosaveName = "CloudImportOutline"
         outline.autosaveTableColumns = true
 
-        addColumns(to: outline)
+        addColumns(to: outline, i18n)
         outline.outlineTableColumn = outline.tableColumns.first { $0.identifier == Column.meeting }
 
         let scrollView = NSScrollView()
@@ -126,6 +132,7 @@ struct CloudImportOutlineView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         context.coordinator.store = store
         context.coordinator.platform = platform
+        context.coordinator.i18n = i18n
         context.coordinator.syncExpiresColumn()
         context.coordinator.reload(force: false)
     }
@@ -137,7 +144,7 @@ struct CloudImportOutlineView: NSViewRepresentable {
     /// seven. Status is the one that mattered: it carries the per-row failure
     /// sentence that §6's terminus argument rests on being legible, and it was
     /// pinned at 150pt on a window that can be 1400 wide.
-    private func addColumns(to outline: NSOutlineView) {
+    private func addColumns(to outline: NSOutlineView, _ i18n: I18n) {
         func column(
             _ id: NSUserInterfaceItemIdentifier,
             _ title: String,
@@ -159,15 +166,20 @@ struct CloudImportOutlineView: NSViewRepresentable {
         // control rather than as a per-row choice. Fixed, because a checkbox
         // does not get wider.
         outline.addTableColumn(column(Column.tick, "", width: 26, max: 26))
-        outline.addTableColumn(column(Column.meeting, "Meeting", width: 320, min: 200))
-        outline.addTableColumn(column(Column.scheduled, "Scheduled", width: 92, min: 72, max: 160))
-        outline.addTableColumn(column(Column.recorded, "Recorded", width: 92, min: 72, max: 160))
-        outline.addTableColumn(column(Column.size, "Size", width: 74, min: 60, max: 120,
-                                      alignment: .right))
+        outline.addTableColumn(column(Column.meeting, i18n.t("desktop.cloudImport.columnMeeting"),
+                                      width: 320, min: 200))
+        outline.addTableColumn(column(Column.scheduled, i18n.t("desktop.cloudImport.columnScheduled"),
+                                      width: 92, min: 72, max: 160))
+        outline.addTableColumn(column(Column.recorded, i18n.t("desktop.cloudImport.columnRecorded"),
+                                      width: 92, min: 72, max: 160))
+        outline.addTableColumn(column(Column.size, i18n.t("desktop.cloudImport.columnSize"),
+                                      width: 74, min: 60, max: 120, alignment: .right))
         // Added and removed live by `syncExpiresColumn`, because the platform can
         // change under the same window.
-        outline.addTableColumn(column(Column.expires, "Expires", width: 92, min: 72, max: 160))
-        outline.addTableColumn(column(Column.status, "Status", width: 150, min: 110))
+        outline.addTableColumn(column(Column.expires, i18n.t("desktop.cloudImport.columnExpires"),
+                                      width: 92, min: 72, max: 160))
+        outline.addTableColumn(column(Column.status, i18n.t("desktop.cloudImport.columnStatus"),
+                                      width: 150, min: 110))
     }
 }
 
@@ -179,6 +191,7 @@ extension CloudImportOutlineView {
     final class Coordinator: NSObject, NSOutlineViewDataSource, NSOutlineViewDelegate {
         var store: CloudImportStore
         var platform: CloudPlatform
+        var i18n: I18n
         weak var outline: NSOutlineView?
 
         private var result: CloudImportOutline.Result = .empty
@@ -241,9 +254,10 @@ extension CloudImportOutlineView {
             )
         }
 
-        init(store: CloudImportStore, platform: CloudPlatform) {
+        init(store: CloudImportStore, platform: CloudPlatform, i18n: I18n) {
             self.store = store
             self.platform = platform
+            self.i18n = i18n
         }
 
         // MARK: Reload
@@ -256,7 +270,7 @@ extension CloudImportOutlineView {
             if force || store.outlineGeneration != generation {
                 generation = store.outlineGeneration
                 result = store.outline
-                let fingerprint = CloudImportOutline.fingerprint(of: result)
+                let fingerprint = CloudImportOutline.fingerprint(of: result, locale: i18n.locale)
                 if force || fingerprint != structure {
                     structure = fingerprint
                     // The only path that re-asks the data source, and therefore
@@ -393,7 +407,7 @@ extension CloudImportOutlineView {
                 outline.removeTableColumn(column)
             case (true, .none):
                 let column = NSTableColumn(identifier: Column.expires)
-                column.title = "Expires"
+                column.title = i18n.t("desktop.cloudImport.columnExpires")
                 column.width = 92
                 column.minWidth = 92
                 column.maxWidth = 92
@@ -572,8 +586,8 @@ extension CloudImportOutlineView {
                     payload: .meeting(children.map(\.id)),
                     state: draw == .on ? .on : (draw == .mixed ? .mixed : .off),
                     enabled: tick.isEnabled,
-                    label: Self.meetingAccessibilityName(for: node, children: children),
-                    reason: tick.isEnabled ? nil : "Every recording of this meeting is already here.",
+                    label: meetingAccessibilityName(for: node, children: children),
+                    reason: tick.isEnabled ? nil : i18n.t("desktop.cloudImport.allAlreadyHere"),
                     target: self,
                     action: #selector(tickChanged(_:))
                 )
@@ -593,14 +607,14 @@ extension CloudImportOutlineView {
                 // on a purely local problem.
                 state: row.drawsTicked(in: store.ticked) ? .on : .off,
                 enabled: row.isSelectable,
-                label: Self.accessibilityName(for: node),
+                label: accessibilityName(for: node),
                 // Restored. The SwiftUI cell explained a held row on hover
                 // ("Already imported — the file is on Dropbox and needs
                 // downloading there") and the port dropped it — leaving a
                 // ticked, greyed checkbox beside an empty Status cell with the
                 // reason stated nowhere at all, since `.imported` has no status
                 // label by design.
-                reason: row.isSelectable ? nil : Self.heldReason(row),
+                reason: row.isSelectable ? nil : heldReason(row),
                 target: self,
                 action: #selector(tickChanged(_:))
             )
@@ -612,12 +626,13 @@ extension CloudImportOutlineView {
         /// Names the count, because that is the whole difference between this
         /// box and the ones under it — and a keyboard-free "Import P05
         /// Interview" would be indistinguishable from its first child.
-        private static func meetingAccessibilityName(
+        private func meetingAccessibilityName(
             for node: CloudImportOutline.Node,
             children: [CloudImportRow]
         ) -> String {
             guard case .meeting(let meeting) = node.kind else { return "" }
-            return "Import all \(CloudCount.noun(children.count, "recording")) of \(meeting.title)"
+            return i18n.plural("desktop.cloudImport.importAllAccessibility", count: children.count,
+                               ["title": meeting.title])
         }
 
         /// What VoiceOver calls this row.
@@ -628,23 +643,26 @@ extension CloudImportOutlineView {
         /// different files, one 32 minutes and one 38. The ordinal is the only
         /// thing that distinguishes them on screen, and it has to be the thing
         /// that distinguishes them in speech.
-        private static func accessibilityName(for node: CloudImportOutline.Node) -> String {
+        private func accessibilityName(for node: CloudImportOutline.Node) -> String {
             guard case .recording(let recording) = node.kind else { return "" }
-            guard let ordinal = recording.ordinal else { return "Import \(recording.row.title)" }
-            return "Import recording \(ordinal), \(recording.row.title)"
+            guard let ordinal = recording.ordinal else {
+                return i18n.t("desktop.cloudImport.importRowAccessibility", ["title": recording.row.title])
+            }
+            return i18n.t("desktop.cloudImport.importRecordingAccessibility",
+                          ["n": String(ordinal), "title": recording.row.title])
         }
 
         /// Why a held row's checkbox is disabled. The distinction that matters:
         /// a placeholder or an unplugged volume is a *local* problem, and
         /// re-fetching would spend an expiry-limited remote read on it.
-        private static func heldReason(_ row: CloudImportRow) -> String? {
+        private func heldReason(_ row: CloudImportRow) -> String? {
             switch row.localState {
             case .imported:
-                return "Already in this project."
+                return i18n.t("desktop.cloudImport.heldImported")
             case .notDownloaded(let provider):
-                return "Already imported — the file is on \(provider) and needs downloading there."
+                return i18n.t("desktop.cloudImport.heldNotDownloaded", ["provider": provider])
             case .driveNotConnected(let volume):
-                return "Already imported — \u{201C}\(volume)\u{201D} isn\u{2019}t connected."
+                return i18n.t("desktop.cloudImport.heldDriveNotConnected", ["volume": volume])
             default:
                 return nil
             }
@@ -679,13 +697,13 @@ extension CloudImportOutlineView {
             // No `.day` case: group rows are only ever drawn through the
             // nil-column path above, so a branch here would be unreachable.
             case .day:
-                view.configureDash()
+                view.configureDash(i18n.t("desktop.cloudImport.notApplicable"))
 
             case .meeting(let meeting):
                 view.configure(
                     title: meeting.title,
                     subtitle: AttendeeLine.summary(meeting.attendees, organiser: meeting.organiser)
-                        ?? CloudCount.noun(meeting.recordingCount, "recording")
+                        ?? i18n.plural("desktop.cloudImport.meetingRecordingCount", count: meeting.recordingCount)
                 )
 
             case .recording(let recording):
@@ -695,13 +713,14 @@ extension CloudImportOutlineView {
                     // each one would be three copies of the same sentence —
                     // and the parent row is directly above it.
                     view.configure(
-                        title: "Recording \(ordinal)",
+                        title: i18n.t("desktop.cloudImport.recordingOrdinal", ["n": String(ordinal)]),
                         titleFont: .systemFont(ofSize: Metrics.titleSize, weight: .regular),
                         subtitle: nil,
                         // Spatial adjacency carries the meeting's name for
                         // someone looking at the screen. VoiceOver has no
                         // adjacency, so it is said.
-                        accessibility: "Recording \(ordinal), \(recording.row.title)"
+                        accessibility: i18n.t("desktop.cloudImport.recordingOrdinalAccessibility",
+                                              ["n": String(ordinal), "title": recording.row.title])
                     )
                 } else {
                     let row = recording.row
@@ -719,14 +738,16 @@ extension CloudImportOutlineView {
             view.leadingInset = 0
             switch node.kind {
             case .meeting(let meeting):
-                view.configureClock(at: meeting.scheduledAt, length: meeting.scheduledDuration)
+                view.configureClock(at: meeting.scheduledAt, length: meeting.scheduledDuration,
+                                    notApplicable: i18n.t("desktop.cloudImport.notApplicable"))
             case .recording(let recording) where !recording.isChild:
                 view.configureClock(at: recording.row.scheduledAt,
-                                    length: recording.row.scheduledDuration)
+                                    length: recording.row.scheduledDuration,
+                                    notApplicable: i18n.t("desktop.cloudImport.notApplicable"))
             default:
                 // A child's meeting time is on the row above it. Repeating it
                 // would say the same thing three times.
-                view.configureDash()
+                view.configureDash(i18n.t("desktop.cloudImport.notApplicable"))
             }
             return view
         }
@@ -736,10 +757,11 @@ extension CloudImportOutlineView {
             view.leadingInset = 0
             // A meeting header has no file, so it has no record button moment.
             guard case .recording(let recording) = node.kind else {
-                view.configureDash()
+                view.configureDash(i18n.t("desktop.cloudImport.notApplicable"))
                 return view
             }
-            view.configureClock(at: recording.row.recordedAt, length: recording.row.duration)
+            view.configureClock(at: recording.row.recordedAt, length: recording.row.duration,
+                                notApplicable: i18n.t("desktop.cloudImport.notApplicable"))
             return view
         }
 
@@ -754,7 +776,7 @@ extension CloudImportOutlineView {
             // they are — so the sum would restate what the rows below already
             // say and add a figure that informs no decision.
             guard let bytes = node.row?.sizeBytes else {
-                view.configureDash()
+                view.configureDash(i18n.t("desktop.cloudImport.notApplicable"))
                 return view
             }
             view.configure(
@@ -771,7 +793,7 @@ extension CloudImportOutlineView {
             view.leadingInset = 0
             view.alignment = .natural
             guard let expires = node.row?.expiresAt else {
-                view.configureDash()
+                view.configureDash(i18n.t("desktop.cloudImport.notApplicable"))
                 return view
             }
             // Earn the red: a countdown on every row is a wall of countdowns,
@@ -793,20 +815,20 @@ extension CloudImportOutlineView {
                 return view
             }
             if let progress = store.progress[row.id] {
-                view.configureProgress(progress.fraction, name: row.title)
+                view.configureProgress(progress.fraction, name: row.title, i18n: i18n)
             } else if let outcome = store.outcomes[row.id] {
                 switch outcome {
                 case .imported:
-                    view.configureText("Imported", colour: .systemGreen, bold: true,
+                    view.configureText(i18n.t("desktop.cloudImport.statusImported"), colour: .systemGreen, bold: true,
                                        symbol: "checkmark")
                 case .failed(let reason, _):
                     view.configureText(reason, colour: .systemRed, bold: false)
                 case .cancelled:
-                    view.configureText("Stopped", colour: .secondaryLabelColor, bold: false)
+                    view.configureText(i18n.t("desktop.cloudImport.statusStopped"), colour: .secondaryLabelColor, bold: false)
                 }
             } else if store.isFetching && store.ticked.contains(row.id) {
-                view.configureText("Queued", colour: .secondaryLabelColor, bold: false)
-            } else if let label = row.statusLabel {
+                view.configureText(i18n.t("desktop.cloudImport.statusQueued"), colour: .secondaryLabelColor, bold: false)
+            } else if let label = row.statusLabel(i18n) {
                 view.configureText(
                     label,
                     colour: row.localState.isWarning ? .systemOrange : .secondaryLabelColor,
@@ -1051,9 +1073,9 @@ private final class TwoLineCellView: OutlineCellView {
 
     /// A moment over how long it ran. Monospaced digits so the eye can compare
     /// down the column, which is the only thing anyone does with a time.
-    func configureClock(at moment: Date?, length: TimeInterval?) {
+    func configureClock(at moment: Date?, length: TimeInterval?, notApplicable: String) {
         guard let moment else {
-            configureDash()
+            configureDash(notApplicable)
             return
         }
         configure(
@@ -1068,13 +1090,13 @@ private final class TwoLineCellView: OutlineCellView {
     /// does not apply to this row" both read better as a mark than as a hole —
     /// on screen. In the accessibility tree it is the opposite: a meeting header
     /// announcing four em-dashes is noise, so the mark is named instead.
-    func configureDash() {
+    func configureDash(_ notApplicable: String) {
         configure(
             title: "\u{2014}",
             titleFont: .systemFont(ofSize: Metrics.subtitleSize),
             subtitle: nil,
             titleColour: .tertiaryLabelColor,
-            accessibility: "None"
+            accessibility: notApplicable
         )
     }
 }
@@ -1159,20 +1181,21 @@ private final class StatusCellView: OutlineCellView {
     /// An indeterminate bar for the window between "the transfer started" and
     /// "the server told us how big it is" — a bar sitting at 0% for ten seconds
     /// reads as stalled.
-    func configureProgress(_ fraction: Double?, name: String) {
+    func configureProgress(_ fraction: Double?, name: String, i18n: I18n) {
         row.isHidden = true
         bar.isHidden = false
         bar.toolTip = nil
         // Without these the one state VoiceOver has least to say about — an
         // unknown-size transfer — is also unnamed.
-        bar.setAccessibilityLabel("Downloading \(name)")
+        bar.setAccessibilityLabel(i18n.t("desktop.cloudImport.downloading", ["title": name]))
         if let fraction {
             if bar.isIndeterminate { bar.stopAnimation(nil); bar.isIndeterminate = false }
             bar.doubleValue = fraction
-            bar.setAccessibilityValueDescription("\(Int(fraction * 100)) percent")
+            bar.setAccessibilityValueDescription(
+                i18n.t("desktop.cloudImport.downloadPercent", ["percent": String(Int(fraction * 100))]))
         } else if !bar.isIndeterminate {
             bar.isIndeterminate = true
-            bar.setAccessibilityValueDescription("Starting")
+            bar.setAccessibilityValueDescription(i18n.t("desktop.cloudImport.downloadStarting"))
             bar.startAnimation(nil)
         }
     }

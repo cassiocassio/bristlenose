@@ -369,8 +369,13 @@ enum CloudImportOutline {
     /// reload — the only path that re-asks — whenever a rendered value changes.
     /// Store-derived state (progress, outcomes, ticks) is deliberately absent:
     /// those cells read the store directly and are refreshed by the cheap path.
-    static func fingerprint(of result: Result) -> [String] {
-        result.days.flatMap { day -> [String] in
+    /// - Parameter locale: included so switching language forces the full
+    ///   reload. Every string below is now looked up, and the cheap refresh path
+    ///   touches only the two store-driven columns — so without this the column
+    ///   headers, the day names and every meeting title would stay in the old
+    ///   language until something else happened to move.
+    static func fingerprint(of result: Result, locale: String) -> [String] {
+        [locale] + result.days.flatMap { day -> [String] in
             var out = [day.id + "|" + label(of: day)]
             for node in day.children {
                 out.append(node.id + "|" + signature(of: node))
@@ -409,7 +414,11 @@ enum CloudImportOutline {
             parts.append(row.duration.map(String.init(describing:)) ?? "")
             parts.append(row.sizeBytes.map(String.init) ?? "")
             parts.append(row.expiresAt.map(String.init(describing:)) ?? "")
-            parts.append(row.statusLabel ?? "")
+            // The *cause*, not the rendered label: a locale-free token that
+            // moves whenever the label would, and needs no `I18n` down here in
+            // a pure value type.
+            parts.append(String(describing: row.video))
+            parts.append(String(describing: row.localState))
             parts.append(String(row.showsCheckbox))
             parts.append(String(row.isSelectable))
             parts.append(row.attendees.map(\.listLabel).joined(separator: ","))

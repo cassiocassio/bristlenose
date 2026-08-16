@@ -158,14 +158,45 @@ struct TeamsTransferTests {
     }
 }
 
-// MARK: - Every platform is live
+// MARK: - Three platforms built; which are offered is a flag
 
-@Suite("All three platforms shipping")
+@Suite("Platform vocabulary and the Zoom parking rule")
 struct ShippingPlatformTests {
 
-    @Test("All three appear in the File menu")
-    func allShipping() {
-        #expect(Set(CloudPlatform.shipping) == Set(CloudPlatform.allCases))
+    @Test("All three adapters are built")
+    func allBuilt() {
+        #expect(Set(CloudPlatform.built) == Set(CloudPlatform.allCases))
+    }
+
+    /// Zoom was parked 16 Aug 2026 so Teams and Meet could reach releasable
+    /// quality first. These pin the *outcome a user would see* — which items
+    /// the File menu offers — not the mechanism, so they still mean something
+    /// if the filter is reimplemented.
+    @Test("Parked: the File menu offers Teams and Meet, and withholds Zoom")
+    func zoomParkedByDefault() {
+        let offered = CloudPlatform.offered(zoomEnabled: false)
+        #expect(offered == [.teams, .meet])
+        #expect(!offered.contains(.zoom))
+    }
+
+    @Test("Unparked: the flag restores Zoom, in sequence order")
+    func zoomReturnsWhenEnabled() {
+        #expect(CloudPlatform.offered(zoomEnabled: true) == [.teams, .meet, .zoom])
+    }
+
+    /// Parking must withhold the menu item and nothing else. If a future
+    /// cleanup amputates the adapter, `built` shrinks and `allBuilt` fails —
+    /// but this says the parked platform is still fully *spoken*, which is
+    /// what keeps the Diagnostics fixture menu honest while Zoom is away.
+    @Test("A parked platform keeps its full vocabulary and transfer policy")
+    func parkedPlatformStaysComplete() {
+        _ = CloudTransferPolicy.for(.zoom)
+        #expect(!CloudPlatform.zoom.displayName.isEmpty)
+        #expect(!CloudPlatform.zoom.signInTitle.isEmpty)
+        // `windowTitle` is a lookup now, so its presence is `check-locales.py`'s
+        // job rather than this suite's. What stays here is the vocabulary the
+        // vendor mandates, which is platform data.
+        #expect(CloudPlatform.zoom.mandatesAccountNoun == false)
     }
 
     @Test("Each platform has a transfer policy and a distinct vocabulary")
@@ -186,8 +217,8 @@ struct ShippingPlatformTests {
         // Their guidelines require "work or school account" beside the button
         // and forbid three synonyms. The other two mandate nothing, and
         // inventing one for Google would actively mislead.
-        #expect(CloudPlatform.teams.accountNoun == "work or school account")
-        #expect(CloudPlatform.meet.accountNoun == nil)
-        #expect(CloudPlatform.zoom.accountNoun == nil)
+        #expect(CloudPlatform.teams.mandatesAccountNoun)
+        #expect(!CloudPlatform.meet.mandatesAccountNoun)
+        #expect(!CloudPlatform.zoom.mandatesAccountNoun)
     }
 }

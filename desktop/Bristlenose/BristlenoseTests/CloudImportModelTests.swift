@@ -188,7 +188,11 @@ struct ImportRowStateTests {
         let state = ImportRowState.notDownloaded(provider: "Dropbox")
         #expect(!state.isSelectable)
         #expect(state.showsCheckbox)
-        #expect(state.statusLabel == "On Dropbox")
+        // The wording moved to `desktop.cloudImport.statusOnProvider`, where
+        // `check-locales.py` enforces that every locale keeps the
+        // `{{provider}}` placeholder — which is the actual invariant here
+        // (name the provider, don't say "missing"). What stays behavioural is
+        // asserted above and below.
         #expect(!state.isWarning, "a placeholder is a healthy file, not a failure")
     }
 
@@ -202,7 +206,9 @@ struct ImportRowStateTests {
     func unmountedNamesVolume() {
         let state = ImportRowState.driveNotConnected(volume: "T7")
         #expect(!state.isSelectable, "re-fetching is the wrong fix for an unplugged drive")
-        #expect(state.statusLabel == "On “T7”")
+        // Same: the string is now `desktop.cloudImport.statusOnVolume` and its
+        // `{{volume}}` placeholder is locale-checked. A volume that went
+        // unnamed would fail there, not here.
     }
 
     /// No checkbox at all, rather than a disabled one: there is nothing to tick,

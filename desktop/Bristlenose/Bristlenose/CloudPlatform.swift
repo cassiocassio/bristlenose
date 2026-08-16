@@ -67,7 +67,13 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
 
     /// The window title. "Import from X" reads as the act, which is what a
     /// window title should name.
-    var windowTitle: String { "Import from \(displayName)" }
+    /// Takes `I18n` rather than reading a global: the product name is NOT
+    /// translated (Microsoft and Google both require their own), so only the
+    /// frame around it moves.
+    @MainActor
+    func windowTitle(_ i18n: I18n) -> String {
+        i18n.t("desktop.cloudImport.windowTitle", ["platform": displayName])
+    }
 
     /// The vendor's own sign-in string. **Look these up; never compose them.**
     ///
@@ -93,12 +99,26 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     /// them. Google has no equivalent requirement, and naming the account type
     /// there would actively mislead: a personal Google Account signs in
     /// perfectly and can never hold a recording.
-    var accountNoun: String? {
+    /// Whether this vendor mandates an account noun beside the sign-in button.
+    ///
+    /// Separate from the wording, and it has to be: the *policy* is platform
+    /// data that a test can assert without a locale bundle, while the words are
+    /// Microsoft's and are looked up. Collapsing them made the invariant
+    /// ("only Microsoft mandates one") untestable without standing up I18n.
+    var mandatesAccountNoun: Bool {
         switch self {
-        case .teams: return "work or school account"
-        case .meet:  return nil
-        case .zoom:  return nil
+        case .teams: return true
+        case .meet, .zoom: return false
         }
+    }
+
+    @MainActor
+    func accountNoun(_ i18n: I18n) -> String? {
+        guard mandatesAccountNoun else { return nil }
+        // Microsoft mandates this noun and publishes it localised, so the
+        // translation is a LOOKUP rather than a rendering choice — see the note
+        // on `signInTitle`, which is the same obligation one step further.
+        return i18n.t("desktop.cloudImport.accountNounTeams")
     }
 
     /// Where "About recordings permissions" goes.

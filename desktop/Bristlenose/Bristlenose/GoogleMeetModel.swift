@@ -677,23 +677,24 @@ struct CloudImportRow: Identifiable, Equatable {
     /// Status-column text. Empty is the common and correct case — the checkbox
     /// already says imported or not, so this carries only what the checkbox
     /// cannot.
-    var statusLabel: String? {
+    @MainActor
+    func statusLabel(_ i18n: I18n) -> String? {
         switch video {
         case .notOrganiser(let organiser):
-            return organiser ?? "Someone else"
+            return organiser ?? i18n.t("desktop.cloudImport.statusSomeoneElse")
         case .notRecorded:
-            return "Not recorded"
+            return i18n.t("desktop.cloudImport.statusNotRecorded")
         case .notResolved:
-            return "Couldn't match"
+            return i18n.t("desktop.cloudImport.statusNotResolved")
         case .notOnThisPlan:
             // Not "Not recorded" — on this branch the meeting's recording
             // status is unknown and unknowable, because the account could
             // never have produced one.
-            return "Needs a paid plan"
+            return i18n.t("desktop.cloudImport.statusNeedsPaidPlan")
         case .needsScope:
-            return "Needs access"
+            return i18n.t("desktop.cloudImport.statusNeedsAccess")
         case .unsupported:
-            return "Unavailable"
+            return i18n.t("desktop.cloudImport.statusUnavailable")
         case .available:
             break
         }
@@ -701,8 +702,10 @@ struct CloudImportRow: Identifiable, Equatable {
         // adapters, so naming one vendor here renders "No longer in Meet" on a
         // Zoom row. The platform name belongs to `CloudPlatform`, which the
         // window holds; the row does not know which platform it came from.
-        if case .noLongerAvailable = localState { return "No longer available" }
-        return localState.statusLabel
+        if case .noLongerAvailable = localState {
+            return i18n.t("desktop.cloudImport.statusNoLongerAvailable")
+        }
+        return localState.statusLabel(i18n)
     }
 
     /// Whether this row survives the filter field.

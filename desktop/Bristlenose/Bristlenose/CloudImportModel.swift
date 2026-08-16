@@ -252,23 +252,24 @@ enum ImportRowState: Equatable {
     /// Text for the Status column. `nil` means the column stays empty — the common
     /// case, and deliberate: the checkbox already says imported or not, so this
     /// carries only what the checkbox cannot.
-    var statusLabel: String? {
+    @MainActor
+    func statusLabel(_ i18n: I18n) -> String? {
         switch self {
         case .notImported, .imported:
             return nil
         case .notDownloaded(let provider):
-            return "On \(provider)"
+            return i18n.t("desktop.cloudImport.statusOnProvider", ["provider": provider])
         case .driveNotConnected(let volume):
-            return "On “\(volume)”"
+            return i18n.t("desktop.cloudImport.statusOnVolume", ["volume": volume])
         case .damaged:
-            return "Damaged"
+            return i18n.t("desktop.cloudImport.statusDamaged")
         case .viewOnly:
-            return "View only"
+            return i18n.t("desktop.cloudImport.statusViewOnly")
         case .noLongerAvailable:
             // Platform-neutral since 15 Aug 2026: this enum was Teams-only when
             // written and is now shared by all three adapters, so naming one
             // vendor rendered "No longer in Teams" on Zoom and Meet rows.
-            return "No longer available"
+            return i18n.t("desktop.cloudImport.statusNoLongerAvailable")
         }
     }
 

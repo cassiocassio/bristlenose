@@ -418,7 +418,15 @@ struct CloudImportRowTests {
         let notMine = row(local: .notImported, video: .notOrganiser(organiser: "A. Bianchi"))
         #expect(!notMine.showsCheckbox)
         #expect(!notMine.isSelectable)
-        #expect(notMine.statusLabel == "A. Bianchi")
+        // The organiser's NAME is carried, not a count — the fix is to ping
+        // them, and a name is a workflow where a number is dead weight. Asserted
+        // on the value rather than the rendered label, because the label is a
+        // lookup now and the name is data that never gets translated.
+        guard case .notOrganiser(let who) = notMine.video else {
+            Issue.record("someone else's meeting must say whose")
+            return
+        }
+        #expect(who == "A. Bianchi")
     }
 
     /// The two refusals that look identical at row level and are not the same
@@ -507,12 +515,17 @@ struct CloudImportRowTests {
 
     @Test("Not-recorded and can't-record are different sentences")
     func refusalsAreDistinguished() {
-        // Nobody pressed record. An ordinary month, not a fault.
-        #expect(row(local: .notImported, video: .notRecorded).statusLabel == "Not recorded")
-        // A personal account, which cannot record a Meet call at all — so the
-        // recording status of any given meeting is not merely absent, it is
-        // unknowable. Saying "not recorded" here would imply it could have been.
-        #expect(row(local: .notImported, video: .notOnThisPlan).statusLabel == "Needs a paid plan")
+        // Nobody pressed record (an ordinary month, not a fault) versus a
+        // personal account that cannot record at all — where the status is not
+        // merely absent but unknowable, and "not recorded" would imply it could
+        // have been. Finding 117 was these two collapsing into one sentence.
+        //
+        // The sentences are `statusNotRecorded` and `statusNeedsPaidPlan` now.
+        // What this pins is that the two states stay DISTINCT all the way to
+        // the row, which is the half that was actually wrong.
+        #expect(ArtifactAvailability.notRecorded != ArtifactAvailability.notOnThisPlan)
+        #expect(row(local: .notImported, video: .notRecorded).video == .notRecorded)
+        #expect(row(local: .notImported, video: .notOnThisPlan).video == .notOnThisPlan)
         // Both are equally unfetchable, which is why the labels are the only
         // thing carrying the difference.
         #expect(!row(local: .notImported, video: .notRecorded).showsCheckbox)

@@ -170,6 +170,52 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     /// whatever it said, and "whatever your admin chose, which we cannot read"
     /// on Teams. A control that lies on one platform and shrugs on another is
     /// worse than its absence.
+    ///
+    /// ### What actually bounds each platform, and whether we can read it
+    ///
+    /// The three differ in *mechanism*, not just in number, which is why this
+    /// is a property here rather than a constant in the window.
+    ///
+    /// **Teams — no API ceiling, and long windows are cheap.** `/Recordings` is
+    /// one paginated folder listing and the window is applied client-side
+    /// against `createdDateTime`, so cost is flat in the window's width and the
+    /// only real limit is the tenant's retention policy. That policy is *not*
+    /// readable with delegated user scopes, and the per-file
+    /// `expirationDateTime` was measured **absent** on a live business tenant
+    /// (Finding 114). So Teams is the one platform where "All available" would
+    /// be honest — and we still can't say what it contains.
+    ///
+    /// **Zoom — linear cost, and the ceiling IS readable.** The API caps a
+    /// query at one month, so `ZoomSource` already chunks (90 days = 3 calls,
+    /// pinned by `zoomChunksTheWindow`). Cost grows one call per month, with no
+    /// hard stop. The account's own retention is on the wire and already
+    /// decoded: `auto_delete_cmr` + `auto_delete_cmr_days` in `ZoomUserSettings`
+    /// from `GET /users/me/settings`. When auto-delete is on, the real horizon
+    /// is computable — and a sentence stating it ("Zoom deletes cloud
+    /// recordings after 90 days") beats any menu item, in the same voice as the
+    /// existing `transcriptCaveat`.
+    ///
+    /// **Meet — the ceiling is low, and it is the one that misleads.** The
+    /// recording lives in Drive indefinitely; the *conference record*, which is
+    /// the only route from a calendar event to that file, is documented to
+    /// expire at 30 days. A 90-day window therefore returns sixty days of
+    /// meetings whose recordings exist, are downloadable, and read
+    /// **"Not recorded"** — false negatives at scale, indistinguishable from
+    /// the honest kind. Cost is also worst here: the list is event-first, so a
+    /// long window is *N* events × 2 Meet calls rather than one paginated call.
+    ///
+    /// ### Why all three still say [30, 60, 90] today
+    ///
+    /// Meet's ceiling is **documented, not measured**, and withdrawing an
+    /// affordance on an unverified number would hide two thirds of a
+    /// researcher's recordings if the documentation is stale.
+    /// `conferenceRecords` carries `expireTime`; one live listing settles it.
+    /// When it does, `.meet` becomes `[30]` **here and nowhere else** — the
+    /// picker hides itself at a single choice and the subtitle takes the
+    /// statement back, so that change costs no UI work.
+    ///
+    /// The same probe would let Zoom's list shrink or grow to its account's
+    /// real retention rather than a guess.
     var windowChoices: [Int] {
         switch self {
         case .teams, .meet, .zoom: return [30, 60, 90]

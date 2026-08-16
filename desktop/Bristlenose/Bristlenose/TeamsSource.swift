@@ -62,8 +62,32 @@ private struct GraphChildren: Decodable {
         /// default driveItem property set arrives whole.
         let createdDateTime: String?
 
+        /// **How long the recording runs — and it was here all along.**
+        ///
+        /// Every Teams row shipped `duration: nil`, and that was written up as
+        /// "Graph doesn't serve a duration". It does: the `video` facet is part
+        /// of the default driveItem representation, this listing sets no
+        /// `$select`, so it has been arriving on the wire and falling on the
+        /// floor of a `Decodable` with nowhere to put it. The absence was ours.
+        ///
+        /// `duration` is **milliseconds**, unlike every other time on this type.
+        struct MediaFacet: Decodable { let duration: Int64? }
+        /// Present on `.mp4`.
+        let video: MediaFacet?
+        /// Present on the `.m4a` audio-only variant, same shape.
+        let audio: MediaFacet?
+
+        /// Seconds, from whichever facet the file has. Nil only when Graph
+        /// genuinely served neither — which is worth telling apart from "we
+        /// never asked", the mistake this replaces.
+        var mediaDurationSeconds: TimeInterval? {
+            guard let ms = video?.duration ?? audio?.duration else { return nil }
+            return TimeInterval(ms) / 1000
+        }
+
         enum CodingKeys: String, CodingKey {
             case id, name, size, parentReference, file, expirationDateTime, createdDateTime
+            case video, audio
             case downloadURL = "@microsoft.graph.downloadUrl"
         }
     }
@@ -367,7 +391,10 @@ final class TeamsSource: CloudImportSource {
             id: id,
             title: matched?.subject ?? parsed.title,
             startsAt: startedAt,
-            duration: nil,
+            // The recording's own length, from the driveItem's media facet —
+            // never the meeting's booked length, which is the number that told
+            // a 20-second Google file it was 1h 30m.
+            duration: item.mediaDurationSeconds,
             sizeBytes: item.size,
             expiresAt: item.expirationDateTime.flatMap(Self.parseISO),
             attendees: attendees,

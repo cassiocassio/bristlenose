@@ -70,6 +70,10 @@ struct WebView: NSViewRepresentable {
 
     let url: URL?
     let bridgeHandler: BridgeHandler
+    /// Which running sidecar this view is showing. Selects the storage
+    /// partition, so sibling windows on the same serve share one — see
+    /// `SharedConfigStore`.
+    let session: ServeSession
     /// Bearer token for localhost API access control.
     /// Injected via WKUserScript at document start.
     var authToken: String?
@@ -84,7 +88,11 @@ struct WebView: NSViewRepresentable {
         let config = WKWebViewConfiguration()
 
         // Ephemeral storage — no cross-project cookie/sessionStorage leakage.
-        config.websiteDataStore = .nonPersistent()
+        // Shared per serve session rather than minted per view, so sibling
+        // windows on the same project can reach each other over BroadcastChannel
+        // and WebKit is free to consolidate their content processes. Different
+        // projects still never share a partition. See `SharedConfigStore`.
+        config.websiteDataStore = SharedConfigStore.shared.dataStore(for: session)
 
         let userContentController = WKUserContentController()
 

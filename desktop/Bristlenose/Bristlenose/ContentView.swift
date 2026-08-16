@@ -2353,8 +2353,13 @@ struct ContentView: View {
                         // while reusing the previous sidecar's injected auth token
                         // → silent 401s / blank report. The port in the key forces
                         // a fresh makeNSView that re-injects the right token.
-                        WebView(url: serveURLWithLocale, bridgeHandler: bridgeHandler, authToken: serveManager.authToken)
-                            .id("\(project.id.uuidString)-\(port)")
+                        // `viewID` is also the storage-partition key, so the
+                        // re-mount and the re-key can't drift apart.
+                        WebView(url: serveURLWithLocale,
+                                bridgeHandler: bridgeHandler,
+                                session: ServeSession(projectID: project.id, port: port),
+                                authToken: serveManager.authToken)
+                            .id(ServeSession(projectID: project.id, port: port).viewID)
                             .accessibilityLabel(i18n.t("desktop.chrome.reportContent"))
                             .accessibilityHidden(!bridgeHandler.isReady)
                             .focusSection()

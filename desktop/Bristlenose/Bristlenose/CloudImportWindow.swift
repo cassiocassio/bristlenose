@@ -46,8 +46,49 @@ struct CloudImportWindow: View {
         .navigationTitle(platform.windowTitle)
         .navigationSubtitle(subtitle)
         .searchable(text: $store.filterText, placement: .toolbar, prompt: "Filter")
+        .toolbar { windowScopePicker }
         .task {
             if store.accountEmail != nil, store.listing == nil { await store.load() }
+        }
+        .onChange(of: store.windowDays) { _, _ in
+            // A menu selection is a deliberate act, so one re-list per change
+            // needs no debounce. Guarded on being signed in because the picker
+            // is reachable before the first sign-in completes.
+            guard store.accountEmail != nil else { return }
+            Task { await store.load() }
+        }
+    }
+
+    /// How far back to look.
+    ///
+    /// **In the toolbar, because it is scope** — the Mail-filter and
+    /// Finder-arrangement slot — and not in the subtitle, which is where it
+    /// used to be stated and could not be changed. The control replaces a
+    /// "Look back 60 days" button that lived *inside the empty state*, so the
+    /// only way to widen the window was to find nothing first: a researcher who
+    /// got two results and wanted a third from six weeks ago had no affordance
+    /// at all. That button also doubled unboundedly — 30, 60, 120, 240 — which
+    /// on Meet is a calendar walk of two calls per event.
+    ///
+    /// **Hidden at one choice**, which is not a nicety: Meet's conference
+    /// records expire around thirty days while the Drive file lives on, so a
+    /// longer window there would list weeks of meetings whose recordings are
+    /// real, downloadable, and reported "Not recorded". If `expireTime` on a
+    /// live tenant confirms that ceiling, `.meet` shrinks to `[30]` in
+    /// `CloudPlatform` and this control disappears by itself.
+    @ToolbarContentBuilder
+    private var windowScopePicker: some ToolbarContent {
+        if platform.windowChoices.count > 1 {
+            ToolbarItem(placement: .primaryAction) {
+                Picker("Window", selection: $store.windowDays) {
+                    ForEach(platform.windowChoices, id: \.self) { days in
+                        Text("Last \(CloudCount.noun(days, "day"))").tag(days)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .help("How far back to look for recordings")
+            }
         }
     }
 
@@ -177,9 +218,14 @@ struct CloudImportWindow: View {
             } description: {
                 Text(emptyWindowDetail)
             } actions: {
-                Button("Look back \(store.windowDays * 2) days") {
-                    store.windowDays *= 2
-                    Task { await store.load() }
+                // The next choice up, not a doubling — and absent when there
+                // isn't one, so the empty state stops offering a window the
+                // platform cannot serve. The re-list rides `onChange`, so this
+                // only sets the value.
+                if let wider = platform.windowChoices.first(where: { $0 > store.windowDays }) {
+                    Button("Look back \(CloudCount.noun(wider, "day"))") {
+                        store.windowDays = wider
+                    }
                 }
             }
         } else {
@@ -481,7 +527,13 @@ struct CloudImportWindow: View {
     private var subtitle: String {
         var parts: [String] = []
         if let email = store.accountEmail { parts.append(email) }
-        if store.phase == .loaded { parts.append("last \(store.windowDays) days") }
+        // The window is named by the toolbar picker now. Repeating it here is
+        // the redundancy already removed from the footer's "in window".
+        // Restored only when the picker is hidden, so a single-choice platform
+        // still states its scope somewhere.
+        if store.phase == .loaded, platform.windowChoices.count == 1 {
+            parts.append("last \(CloudCount.noun(store.windowDays, "day"))")
+        }
         return parts.joined(separator: " · ")
     }
 }

@@ -252,6 +252,22 @@ enum ImportRowState: Equatable {
     /// Text for the Status column. `nil` means the column stays empty — the common
     /// case, and deliberate: the checkbox already says imported or not, so this
     /// carries only what the checkbox cannot.
+    /// Whether this state has anything to say in the Status column.
+    ///
+    /// Policy, not wording — the same split as `CloudPlatform.mandatesAccountNoun`.
+    /// "The common states are silent" is an invariant a test should be able to
+    /// assert without standing up a locale bundle, and once `statusLabel` took
+    /// an `I18n` the old assertion (`statusLabel == nil`) quietly promoted a
+    /// non-optional function to `Optional` and became **always false**. It
+    /// failed loudly, which is the only reason it isn't still sitting there
+    /// looking like a passing test.
+    var isSilent: Bool {
+        switch self {
+        case .notImported, .imported: return true
+        default: return false
+        }
+    }
+
     @MainActor
     func statusLabel(_ i18n: I18n) -> String? {
         switch self {

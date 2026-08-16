@@ -223,8 +223,12 @@ struct ImportRowStateTests {
     /// Status column carries only what the checkbox cannot.
     @Test("The common states leave the Status column empty")
     func commonStatesAreSilent() {
-        #expect(ImportRowState.notImported.statusLabel == nil)
-        #expect(ImportRowState.imported.statusLabel == nil)
+        #expect(ImportRowState.notImported.isSilent)
+        #expect(ImportRowState.imported.isSilent)
+        // And the states that do speak are not silent, or the property would
+        // be trivially true and this test would pass on a broken switch.
+        #expect(!ImportRowState.damaged.isSilent)
+        #expect(!ImportRowState.viewOnly.isSilent)
     }
 
     @Test("Only actionable conditions are warning-coloured")

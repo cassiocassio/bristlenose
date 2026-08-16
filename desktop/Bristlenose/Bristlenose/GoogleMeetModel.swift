@@ -525,6 +525,48 @@ struct CloudImportRow: Identifiable, Equatable {
         if case .noLongerAvailable = localState { return "No longer available" }
         return localState.statusLabel
     }
+
+    /// Whether this row survives the filter field.
+    ///
+    /// **Titles and people, not titles alone.** The filter used to test the
+    /// title only, which is backwards for a surface whose most identifying
+    /// content is the attendee line: a researcher looking for the session with
+    /// Simon in it types "Simon", and "P05 Interview" tells them nothing about
+    /// whether they found it.
+    ///
+    /// Three decisions inside this:
+    ///
+    /// **Diacritic-insensitive, so "Bjorn" finds "Björn".** The old predicate
+    /// was `localizedCaseInsensitiveContains`, which is not — while
+    /// `TeamsRecordingName.matches(filter:)` next door *is*, and has a test
+    /// saying so, and was never called from the window. Two implementations,
+    /// different semantics, and the weaker one was the live one.
+    ///
+    /// **Searches the whole ranked set, not the visible three.** The line shows
+    /// the first few names; the filter covers everyone behind the `+N` too.
+    /// Same rules, different depth — otherwise a name is findable only when it
+    /// happens to fit.
+    ///
+    /// **Self and decliners are excluded, because `rank` excludes them.** Your
+    /// own name would match every row and identify nothing. A decliner is
+    /// stronger: "was Simon in that one?" should answer *no* for a meeting
+    /// Simon declined, and matching it would be a false positive in exactly the
+    /// question the filter exists to answer.
+    func matches(filter: String) -> Bool {
+        let term = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !term.isEmpty else { return true }
+        let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
+
+        if title.range(of: term, options: options) != nil { return true }
+        // The organiser of someone else's meeting is a legitimate search term
+        // ("who ran that one?") and is not always present in `attendees`.
+        if let organiser, organiser.listLabel.range(of: term, options: options) != nil {
+            return true
+        }
+        return AttendeeLine.rank(attendees).contains {
+            $0.listLabel.range(of: term, options: options) != nil
+        }
+    }
 }
 
 // MARK: - The attendee line

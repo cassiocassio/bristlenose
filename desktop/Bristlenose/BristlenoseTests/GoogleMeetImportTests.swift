@@ -431,6 +431,80 @@ struct CloudImportRowTests {
     /// state: a Workspace researcher whose month happened to contain no
     /// recordings was told their *account* could not record, and sent to argue
     /// with an admin about an edition they already had.
+    private func person(
+        _ name: String, declined: Bool = false, isSelf: Bool = false
+    ) -> CloudImportRow.Attendee {
+        CloudImportRow.Attendee(
+            displayName: name, email: nil,
+            isSelf: isSelf, didDecline: declined, isExternal: true
+        )
+    }
+
+    private func peopled(
+        title: String, _ attendees: [CloudImportRow.Attendee],
+        organiser: CloudImportRow.Attendee? = nil
+    ) -> CloudImportRow {
+        CloudImportRow(
+            id: "r", title: title, startsAt: Date(), duration: nil, sizeBytes: nil,
+            expiresAt: nil, attendees: attendees, localState: .notImported,
+            video: .available, roster: .available, transcript: .available,
+            organiser: organiser
+        )
+    }
+
+    /// The filter tested the title alone, which is backwards for a surface whose
+    /// most identifying content is the attendee line. Someone hunting the
+    /// session Simon was in types "Simon".
+    @Test("The filter matches people, not just titles")
+    func filterMatchesPeople() {
+        let r = peopled(title: "P05 Interview", [person("Priya Raman"), person("Simon Ellery")])
+        #expect(r.matches(filter: "Interview"))   // title, as before
+        #expect(r.matches(filter: "05"))          // title substring
+        #expect(r.matches(filter: "Simon"))       // given name
+        #expect(r.matches(filter: "Raman"))       // surname
+        #expect(r.matches(filter: ""), "an empty filter matches everything")
+        #expect(!r.matches(filter: "Okonkwo"))
+    }
+
+    /// The old predicate was `localizedCaseInsensitiveContains`, which is not
+    /// diacritic-insensitive — while `TeamsRecordingName.matches` next door is,
+    /// has a test saying so, and was never called from the window.
+    @Test("Diacritics don't hide a participant")
+    func filterIgnoresDiacritics() {
+        let r = peopled(title: "P07 Interview", [person("Björn Åkesson")])
+        #expect(r.matches(filter: "bjorn"))
+        #expect(r.matches(filter: "Akesson"))
+    }
+
+    /// Search covers the whole ranked set, not the three the line has room for
+    /// — otherwise a name is findable only when it happens to fit.
+    @Test("A name behind the +N overflow is still findable")
+    func filterSeesPastOverflow() {
+        let many = (1...8).map { person("Person \($0)") } + [person("Aoife Brennan")]
+        #expect(peopled(title: "Workshop", many).matches(filter: "Aoife"))
+    }
+
+    /// Same exclusions as the display, and for the same reason. Your own name
+    /// would match every row; a decliner matching would answer "was Simon in
+    /// that one?" with a false yes, which is the question the filter exists for.
+    @Test("Self and decliners are excluded, exactly as the line excludes them")
+    func filterHonoursTheLadder() {
+        let r = peopled(title: "P08 Interview", [
+            person("Martin Storey", isSelf: true),
+            person("Simon Ellery", declined: true),
+            person("Dana Okonkwo"),
+        ])
+        #expect(r.matches(filter: "Dana"))
+        #expect(!r.matches(filter: "Martin"), "you are in every row and identify none")
+        #expect(!r.matches(filter: "Simon"), "declined is strong evidence of absence")
+    }
+
+    @Test("Someone else's meeting is findable by its organiser")
+    func filterMatchesOrganiser() {
+        let r = peopled(title: "Weekly sync", [], organiser: person("Tomas Lind"))
+        #expect(r.matches(filter: "Tomas"))
+    }
+
     @Test("Not-recorded and can't-record are different sentences")
     func refusalsAreDistinguished() {
         // Nobody pressed record. An ordinary month, not a fault.

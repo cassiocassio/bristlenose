@@ -81,10 +81,10 @@ final class CloudImportStore: ObservableObject {
     /// question — see `fetchOrder`.
     var visibleRows: [CloudImportRow] {
         let all = listing?.rows ?? []
-        let term = filterText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let filtered = term.isEmpty
-            ? all
-            : all.filter { $0.title.localizedCaseInsensitiveContains(term) }
+        // The predicate lives on the row — titles *and* people, diacritic-
+        // insensitive, covering names behind the `+N` overflow. See
+        // `CloudImportRow.matches(filter:)` for why each of those is deliberate.
+        let filtered = all.filter { $0.matches(filter: filterText) }
         return filtered.sorted { $0.startsAt > $1.startsAt }
     }
 

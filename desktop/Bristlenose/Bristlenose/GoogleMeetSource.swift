@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 // The live adapter: Google Calendar + Meet + Drive.
 //
@@ -56,6 +57,22 @@ private struct CalendarEventsPage: Decodable {
             let conferenceId: String?
             let conferenceSolution: Solution?
         }
+        /// A Drive file hung off the event. **Probe, not yet a feature.**
+        ///
+        /// Observed 16 Aug 2026: a recorded Meet event carries its Recording,
+        /// its Transcript and its Gemini notes here as attachments, each with a
+        /// `fileId`. If that is reliable it is a far shorter road to the video
+        /// than `conferenceRecords` — no meeting-code match, no start-time
+        /// window, no organiser wall — and it would retire the three findings
+        /// that exist only to make that join work.
+        ///
+        /// Decoded narrowly for the same reason as everything else here: a
+        /// struct with nowhere to put an agenda cannot keep one.
+        struct Attachment: Decodable {
+            let fileId: String?
+            let title: String?
+            let mimeType: String?
+        }
         let id: String?
         let summary: String?
         let start: When?
@@ -63,6 +80,7 @@ private struct CalendarEventsPage: Decodable {
         let attendees: [Person]?
         let organizer: Person?
         let conferenceData: Conference?
+        let attachments: [Attachment]?
         /// TRAP: the honesty flag. True means the attendee array is a lie of
         /// omission, and any roster built from it is incomplete.
         let attendeesOmitted: Bool?
@@ -316,7 +334,11 @@ final class GoogleMeetSource: CloudImportSource {
             URLQueryItem(
                 name: "fields",
                 value: "items(id,summary,start,end,attendees,organizer,"
-                    + "conferenceData,attendeesOmitted,recurringEventId),nextPageToken"
+                    + "conferenceData,attendeesOmitted,recurringEventId,"
+                    // Probe. Adds file titles and ids, which are meeting-derived
+                    // rather than agenda text, so the header's claim about
+                    // never fetching event bodies still holds.
+                    + "attachments),nextPageToken"
             ),
         ]
         if let pageToken { items.append(URLQueryItem(name: "pageToken", value: pageToken)) }
@@ -361,6 +383,19 @@ final class GoogleMeetSource: CloudImportSource {
                 continue
             }
             candidates.append((event, start, event.organizer?.isSelf == true))
+
+            // Probe, logged rather than used. If every recorded meeting carries
+            // a `video/*` attachment with a fileId, the whole conferenceRecords
+            // join is a longer road to the same place.
+            let attachments = event.attachments ?? []
+            Self.log.notice("""
+                meet_event attachments=\(attachments.count, privacy: .public) \
+                kinds=[\(attachments.compactMap(\.mimeType).joined(separator: ","), privacy: .public)] \
+                hasFileIDs=\(attachments.allSatisfy { $0.fileId != nil }, privacy: .public)
+                """)
+            for attachment in attachments {
+                Self.log.debug("meet_event attachment title=\(attachment.title ?? "—", privacy: .public)")
+            }
         }
 
         // Pass 2 — the Meet lookups, concurrently.
@@ -460,6 +495,11 @@ final class GoogleMeetSource: CloudImportSource {
         let fileID: String?
         let recordExpires: Date?
     }
+
+    /// Diagnostics for the join, which is the one step whose failure the row
+    /// model cannot express (Finding 123). Category is dotted so
+    /// `--predicate 'subsystem == "app.bristlenose"'` still catches it.
+    private static let log = Logger(subsystem: "app.bristlenose", category: "cloud-import.meet")
 
     /// How many meeting lookups are in flight at once.
     ///
@@ -562,11 +602,49 @@ final class GoogleMeetSource: CloudImportSource {
 
         var request = URLRequest(url: url)
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        guard let (data, response) = try? await session.data(for: request),
-              GoogleResponseClassifier.classify(
-                status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: data) == .ok,
-              let page = try? JSONDecoder().decode(ConferenceRecordsPage.self, from: data),
-              let record = page.conferenceRecords?.first,
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            log.notice("meet_lookup phase=records transport_error=\(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let outcome = GoogleResponseClassifier.classify(status: status, body: data)
+        let page = try? JSONDecoder().decode(ConferenceRecordsPage.self, from: data)
+
+        // **This function returns nil for four different facts** — no record,
+        // no generated recording, a refusal, a dropped connection — and the row
+        // renders all four as "not recorded" (Finding 123). That was written up
+        // as bounded and deferred; it then became the only thing standing
+        // between a recording visibly sitting in Drive and any way to find out
+        // why it wasn't joined. So the four facts are at least *said*, even
+        // though the row still cannot distinguish them.
+        //
+        // Shape, not value, at `.notice`. The meeting code is a join key Google
+        // asks apps not to surface, and a system log can leave the machine
+        // inside a sysdiagnose; length and dash count are enough to catch a
+        // format mismatch, which is the leading hypothesis. The code and the
+        // whole filter sit one level down at `.debug`, behind `--level debug`,
+        // so reading them is a deliberate act.
+        log.notice("""
+            meet_lookup phase=records status=\(status, privacy: .public) \
+            outcome=\(String(describing: outcome), privacy: .public) \
+            records=\(page?.conferenceRecords?.count ?? -1, privacy: .public) \
+            codeLen=\(code.count, privacy: .public) \
+            codeDashes=\(code.filter { $0 == "-" }.count, privacy: .public)
+            """)
+        log.debug("meet_lookup filter=\(filter, privacy: .public)")
+        if status != 200, let body = String(data: data, encoding: .utf8), !body.isEmpty {
+            // Google's error envelope names the cause. Truncated because a
+            // stack of HTML from a proxy would otherwise flood the log.
+            log.notice("meet_lookup phase=records body=\(body.prefix(400), privacy: .public)")
+        }
+
+        guard outcome == .ok,
+              let record = page?.conferenceRecords?.first,
               let name = record.name
         else { return nil }
 
@@ -582,10 +660,32 @@ final class GoogleMeetSource: CloudImportSource {
         }
         var recRequest = URLRequest(url: recURL)
         recRequest.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        guard let (recData, recResponse) = try? await session.data(for: recRequest),
-              GoogleResponseClassifier.classify(
-                status: (recResponse as? HTTPURLResponse)?.statusCode ?? 0, body: recData) == .ok,
-              let recPage = try? JSONDecoder().decode(RecordingsPage.self, from: recData)
+
+        let recData: Data
+        let recResponse: URLResponse
+        do {
+            (recData, recResponse) = try await session.data(for: recRequest)
+        } catch {
+            log.notice("meet_lookup phase=recordings transport_error=\(error.localizedDescription, privacy: .public)")
+            return RecordingLookup(fileID: nil, recordExpires: expires)
+        }
+        let recStatus = (recResponse as? HTTPURLResponse)?.statusCode ?? 0
+        let recOutcome = GoogleResponseClassifier.classify(status: recStatus, body: recData)
+        let recPage = try? JSONDecoder().decode(RecordingsPage.self, from: recData)
+
+        // The states are the point. `STARTED` and `ENDED` mean the recording
+        // exists but has no bytes yet, and Google's propagation runs roughly
+        // the length of the call — so "found a record, found a recording, still
+        // returned nothing" is a *wait*, not a fault, and only this line can
+        // tell the two apart.
+        log.notice("""
+            meet_lookup phase=recordings status=\(recStatus, privacy: .public) \
+            outcome=\(String(describing: recOutcome), privacy: .public) \
+            count=\(recPage?.recordings?.count ?? -1, privacy: .public) \
+            states=[\((recPage?.recordings ?? []).compactMap(\.state).joined(separator: ","), privacy: .public)]
+            """)
+
+        guard recOutcome == .ok, let recPage
         else { return RecordingLookup(fileID: nil, recordExpires: expires) }
 
         // Only a FILE_GENERATED recording has bytes behind it. STARTED and

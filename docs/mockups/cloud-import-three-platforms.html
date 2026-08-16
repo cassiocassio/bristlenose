@@ -1,0 +1,267 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud import — one grid, three platforms</title>
+<style>
+:root{
+  --bg:#f2f2f7; --page:#fff; --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+  --line:#d8d8dc; --hairline:#e6e6ea; --chrome:#ececed; --chrome2:#e4e4e6;
+  --accent:#007aff; --warn:#c9500f; --bad:#c92a2a; --good:#1a7f37; --grouphdr:#f0f0f3;
+  --shadow:0 10px 34px rgba(0,0,0,.15), 0 2px 6px rgba(0,0,0,.09);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+    --line:#3a3a3d; --hairline:#2c2c2f; --chrome:#2a2a2c; --chrome2:#242426;
+    --accent:#0a84ff; --warn:#ff9f45; --bad:#ff6b6b; --good:#4ac26b; --grouphdr:#28282b;
+    --shadow:0 10px 34px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;padding:36px 20px 90px;
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1840px;margin:0 auto}
+h1{font-size:25px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+.sub{color:var(--dim);margin:0 0 8px;max-width:80ch}
+.meta{color:var(--faint);font-size:12px;margin:0 0 26px}
+h2{font-size:14.5px;font-weight:700;margin:0 0 4px}
+.note{color:var(--dim);margin:0 0 12px;font-size:12.5px;min-height:5.2em}
+.note b{color:var(--ink);font-weight:600}
+.ask{border:1px solid var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent);
+     border-radius:8px;padding:12px 16px;margin:0 0 28px;max-width:96ch;font-size:13px}
+.ask b{color:var(--ink)}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start}
+@media (max-width:1480px){.cols{grid-template-columns:1fr}}
+
+.win{background:var(--page);border-radius:10px;box-shadow:var(--shadow);
+     overflow:hidden;border:.5px solid var(--line)}
+.tbar{background:linear-gradient(var(--chrome),var(--chrome2));
+      border-bottom:.5px solid var(--line);padding:0 12px;height:46px;
+      display:flex;align-items:center;gap:9px}
+.lights{display:flex;gap:6px}
+.lights i{width:10px;height:10px;border-radius:50%;display:block}
+.lights i:nth-child(1){background:#ff5f57}
+.lights i:nth-child(2){background:#febc2e}
+.lights i:nth-child(3){background:#28c840}
+.titles .t{font-weight:700;font-size:12px;line-height:1.2}
+.titles .s{color:var(--dim);font-size:10.5px;line-height:1.2}
+.grow{margin-left:auto}
+.pick{border:.5px solid var(--line);border-radius:6px;padding:2px 6px;
+      font-size:11px;background:var(--page);white-space:nowrap}
+.chev{color:var(--faint);margin-left:2px;font-size:9px}
+
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:11.5px}
+thead th{text-align:left;font-weight:600;color:var(--dim);font-size:10.5px;
+  padding:6px 8px;background:var(--page);border-bottom:.5px solid var(--line);white-space:nowrap}
+thead th.r{text-align:right}
+td{padding:6px 8px;vertical-align:top;border-bottom:.5px solid var(--hairline)}
+tbody tr:last-child td{border-bottom:none}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.size{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;color:var(--dim)}
+.tick{width:22px}
+.ttl{font-weight:600}
+.sub2{color:var(--faint);font-size:10.5px;margin-top:1px}
+.dash{color:var(--faint)}
+.size.dash{text-align:right}
+.status{color:var(--dim);white-space:nowrap}
+tr.day th{background:var(--grouphdr);font-weight:700;color:var(--ink);font-size:10.5px;
+  padding:4px 8px;border-top:.5px solid var(--line);border-bottom:.5px solid var(--line);
+  text-align:left}
+.tri{display:inline-block;width:10px;color:var(--faint);font-size:9px}
+.kid .ttl{padding-left:19px;font-weight:500}
+.bar{display:flex;align-items:center;gap:7px;padding:7px 12px;
+     border-top:.5px solid var(--line);background:var(--chrome2);font-size:11px}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:5px;
+     padding:4px 9px;font-size:11px;font-weight:600}
+/* Annotation for the reader, NOT a UI state. Deliberately not
+   var(--bad): red is MessageKind.error and means "did not
+   complete", which none of these are. */
+.flag{color:var(--warn);font-weight:600}
+.filter{border:.5px solid var(--line);border-radius:6px;padding:2px 8px;
+        color:var(--faint);font-size:11px;min-width:88px}
+.why{border-left:2px solid var(--accent);padding:2px 0 2px 11px;margin:12px 0 0;
+     color:var(--dim);font-size:12px}
+.why b{color:var(--ink);font-weight:600}
+.why.bad{border-color:var(--bad)}
+table.mx{margin:26px 0 0;font-size:12.5px;border-collapse:collapse;max-width:96ch}
+table.mx td,table.mx th{border:.5px solid var(--line);padding:6px 10px;text-align:left}
+table.mx th{background:var(--grouphdr);font-weight:600}
+code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace}
+</style>
+
+<div class="wrap">
+<h1>One grid, three platforms</h1>
+<p class="sub">Same component, same row type, same columns. Everything
+platform-shaped is <b>data</b> in <code>CloudPlatform</code> and values on the
+row — not branches in the view. Below is what each actually renders from what
+its API actually returns.</p>
+<p class="meta">16 Aug 2026 · drawn from the three adapters' real row construction,
+not from wishes</p>
+
+<div class="ask">
+<b>The question this drawing raised, and it is not the one I set out to answer.</b>
+On Meet a child row is <b>another session</b> — you joined twice, two interviews,
+two files worth analysing. On Zoom a child row is <b>the same session rendered
+four ways</b> — speaker view, gallery view, shared screen, audio-only. Ticking two
+Meet children gets you two interviews. Ticking two Zoom children gets you the
+same 45 minutes twice, and Bristlenose will analyse it as two participants.
+<b>Same visual structure, opposite meaning.</b> See panel 3.
+</div>
+
+<div class="cols">
+
+<!-- ═══════ MEET ═══════ -->
+<div>
+<h2>Google Meet</h2>
+<p class="note">Both clocks. Attendees from the calendar. 1:N is <b>rare</b> —
+it means you joined the same meeting twice. No Expires column:
+<code>hasPerFileExpiry</code> is false because Drive has no per-file expiry and
+retention is an admin policy.</p>
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Google Meet</div>
+      <div class="s">martin@finca342.org</div></div>
+    <div class="grow"></div><div class="pick">Last 30 days <span class="chev">⌄</span></div><div class="filter">Filter</div></div>
+  <table>
+    <thead><tr><th class="tick"></th><th>Meeting</th><th>Scheduled</th><th>Recorded</th><th class="r">Size</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr class="day"><th colspan="6">Wed 13 Aug</th></tr>
+      <tr><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">P04 Interview</div><div class="sub2">Priya Raman · Simon Ellery</div></td>
+        <td class="num">09:30<div class="sub2">1h</div></td>
+        <td class="num">09:34<div class="sub2">52m 11s</div></td>
+        <td class="size">1.1 GB</td><td></td></tr>
+      <tr><td class="tick"></td>
+        <td><div class="ttl"><span class="tri">▾</span>P05 Interview</div>
+          <div class="sub2">Dana Okonkwo · Simon Ellery</div></td>
+        <td class="num">11:00<div class="sub2">1h</div></td><td class="dash">—</td>
+        <td class="size dash">—</td><td></td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Recording 1</div></td><td class="dash">—</td>
+        <td class="num">11:02<div class="sub2">32m 04s</div></td>
+        <td class="size">618 MB</td><td></td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Recording 2</div></td><td class="dash">—</td>
+        <td class="num">11:41<div class="sub2">38m 19s</div></td>
+        <td class="size">701 MB</td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="bar"><span>2 meetings · 3 recordings · <b>3 you can fetch</b></span>
+    <span class="grow"></span><button class="btn">Import 3 Recordings</button></div>
+</div>
+<p class="why"><b>Two children = two interviews.</b> The count in the footer is
+honest and the button does what it says.</p>
+</div>
+
+<!-- ═══════ TEAMS ═══════ -->
+<div>
+<h2>Microsoft Teams</h2>
+<p class="note">Always <b>flat</b> — one recording per meeting, so the outline
+never grows a triangle. Attendees from <code>calendarView</code>. <b>Duration is
+never known</b> (<code>duration: nil</code> in every row), and the Expires column
+is declared but Graph does not serve it.</p>
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Microsoft Teams</div>
+      <div class="s">martin@bristlenose.onmicrosoft.com</div></div>
+    <div class="grow"></div><div class="pick">Last 30 days <span class="chev">⌄</span></div><div class="filter">Filter</div></div>
+  <table>
+    <thead><tr><th class="tick"></th><th>Meeting</th><th>Scheduled</th><th>Recorded</th><th class="r">Size</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr class="day"><th colspan="6">Wed 13 Aug</th></tr>
+      <tr><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">P04 Interview</div><div class="sub2">Priya Raman · Simon Ellery</div></td>
+        <td class="num">09:30<div class="sub2">1h</div></td>
+        <td class="num">09:34<div class="sub2 flag">—</div></td>
+        <td class="size">1.1 GB</td><td></td></tr>
+      <tr><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">P05 Interview</div><div class="sub2">Dana Okonkwo · Simon Ellery</div></td>
+        <td class="num">11:00<div class="sub2">1h</div></td>
+        <td class="num">11:02<div class="sub2 flag">—</div></td>
+        <td class="size">1.3 GB</td><td></td></tr>
+      <tr><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Team standup</div><div class="sub2">Tomas Lind · Aoife Brennan</div></td>
+        <td class="num">14:00<div class="sub2">30m</div></td>
+        <td class="num">14:01<div class="sub2 flag">—</div></td>
+        <td class="size">210 MB</td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="bar"><span>3 meetings · <b>3 you can fetch</b></span>
+    <span class="grow"></span><button class="btn">Import 3 Recordings</button></div>
+</div>
+<p class="why"><b>Footer says "3 meetings" only</b> — meetings and recordings are
+the same number, so the second noun is withheld. The red dashes are the real
+gap: Teams knows when a recording started and never how long it ran.</p>
+</div>
+
+<!-- ═══════ ZOOM ═══════ -->
+<div>
+<h2>Zoom</h2>
+<p class="note">1:N is <b>routine</b>, not rare — <code>yieldsMultipleMediaFiles</code>
+is true for Zoom alone. Attendees never arrive and the line simply isn't there —
+saying "no roster" on every row would read as a fault the researcher is expected
+to fix. Expires is real, from the account's auto-delete.</p>
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Zoom</div>
+      <div class="s">martin@finca342.org</div></div>
+    <div class="grow"></div><div class="pick">Last 30 days <span class="chev">⌄</span></div><div class="filter">Filter</div></div>
+  <table>
+    <thead><tr><th class="tick"></th><th>Meeting</th><th>Scheduled</th><th>Recorded</th><th class="r">Size</th><th>Expires</th></tr></thead>
+    <tbody>
+      <tr class="day"><th colspan="6">Wed 13 Aug</th></tr>
+      <tr><td class="tick"></td>
+        <td><div class="ttl"><span class="tri">▾</span>P04 Interview</div></td>
+        <td class="num">09:30<div class="sub2">1h</div></td><td class="dash">—</td>
+        <td class="size dash">—</td><td class="status">in 12 days</td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Speaker view</div></td><td class="dash">—</td>
+        <td class="num">09:34<div class="sub2">52m 11s</div></td>
+        <td class="size">1.1 GB</td><td></td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Gallery view</div></td><td class="dash">—</td>
+        <td class="num">09:34<div class="sub2">52m 11s</div></td>
+        <td class="size">1.2 GB</td><td></td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Shared screen</div></td><td class="dash">—</td>
+        <td class="num">09:34<div class="sub2">52m 11s</div></td>
+        <td class="size">640 MB</td><td></td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Audio only</div></td><td class="dash">—</td>
+        <td class="num">09:34<div class="sub2">52m 11s</div></td>
+        <td class="size">48 MB</td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="bar"><span>1 meeting · 4 recordings · 4 you can fetch</span>
+    <span class="grow"></span><button class="btn">Import 4 Recordings</button></div>
+</div>
+<p class="why bad"><b>Every child has the same start and the same duration</b>,
+because they are one session. "Import 4 Recordings" produces four files of the
+same 52 minutes, and s01 will group them by stem or not at all — either one
+session with four videos, or <b>four participants who said identical things</b>.</p>
+</div>
+
+</div>
+
+<table class="mx">
+<tr><th></th><th>Meet</th><th>Teams</th><th>Zoom</th></tr>
+<tr><th>Meeting clock</th><td>event</td><td><code>calendarView</code></td><td><code>meeting.start_time</code></td></tr>
+<tr><th>Recording clock</th><td>new, unproven</td><td><code>createdDateTime</code></td><td>per file, unused</td></tr>
+<tr><th>Duration</th><td>new, unproven</td><td><b>never</b></td><td>meeting's, <b>not the video's</b></td></tr>
+<tr><th>Attendees</th><td>yes</td><td>yes</td><td><b>never</b></td></tr>
+<tr><th>Organiser</th><td>yes</td><td><b>never set</b></td><td><b>never set</b></td></tr>
+<tr><th>Expires column</th><td>hidden</td><td>declared, unserved</td><td>real</td></tr>
+<tr><th>Children mean</th><td>another session</td><td>—</td><td><b>same session, another rendering</b></td></tr>
+</table>
+
+<p class="why" style="margin-top:22px"><b>So: one codebase, and the conditions
+are already data rather than branches.</b> <code>CloudPlatform</code> holds
+<code>windowChoices</code>, <code>hasPerFileExpiry</code>,
+<code>yieldsMultipleMediaFiles</code> and the vendor strings; the row carries
+<code>attendees</code>, <code>duration</code>, <code>organiser</code>. Every
+difference above renders as an <b>absence</b> — a dash, a missing column, a blank
+subtitle — not as a different layout. That is the design working.
+<b>Except the last row of the table</b>, which is not an absence but a different
+meaning wearing the same shape, and no amount of platform data fixes that.</p>
+
+</div>

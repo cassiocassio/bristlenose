@@ -1,0 +1,228 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud import — meetings and their recordings</title>
+<style>
+:root{
+  --bg:#f2f2f7; --page:#fff; --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+  --line:#d8d8dc; --hairline:#e6e6ea; --chrome:#ececed; --chrome2:#e4e4e6;
+  --accent:#007aff; --warn:#c9500f; --good:#1a7f37; --grouphdr:#f0f0f3;
+  --shadow:0 12px 40px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.10);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+    --line:#3a3a3d; --hairline:#2c2c2f; --chrome:#2a2a2c; --chrome2:#242426;
+    --accent:#0a84ff; --warn:#ff9f45; --good:#4ac26b; --grouphdr:#28282b;
+    --shadow:0 12px 40px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;padding:40px 24px 90px;
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1160px;margin:0 auto}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+.sub{color:var(--dim);margin:0 0 8px;max-width:78ch}
+.meta{color:var(--faint);font-size:12px;margin:0 0 34px}
+.why{border-left:2px solid var(--accent);padding:2px 0 2px 12px;margin:18px 0 0;
+     color:var(--dim);font-size:12.5px;max-width:86ch}
+.why b{color:var(--ink);font-weight:600}
+
+.win{background:var(--page);border-radius:10px;box-shadow:var(--shadow);
+     overflow:hidden;border:.5px solid var(--line)}
+.tbar{background:linear-gradient(var(--chrome),var(--chrome2));
+      border-bottom:.5px solid var(--line);padding:0 14px;height:52px;
+      display:flex;align-items:center;gap:12px}
+.lights{display:flex;gap:8px;margin-right:4px}
+.lights i{width:12px;height:12px;border-radius:50%;display:block}
+.lights i:nth-child(1){background:#ff5f57}
+.lights i:nth-child(2){background:#febc2e}
+.lights i:nth-child(3){background:#28c840}
+.titles .t{font-weight:700;font-size:13px;line-height:1.2}
+.titles .s{color:var(--dim);font-size:11.5px;line-height:1.2}
+.filter{border:.5px solid var(--line);border-radius:7px;
+        padding:4px 10px;color:var(--faint);font-size:12px;min-width:150px}
+.tbar .grow{margin-left:auto}
+.pick{border:.5px solid var(--line);border-radius:6px;padding:3px 8px;
+      font-size:12px;background:var(--page);white-space:nowrap}
+.chev{color:var(--faint);margin-left:3px;font-size:10px}
+
+.scroll{max-height:470px;overflow-y:auto}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
+thead th{position:sticky;top:0;z-index:3;text-align:left;font-weight:600;
+  color:var(--dim);font-size:11.5px;padding:7px 10px;background:var(--page);
+  border-bottom:.5px solid var(--line);white-space:nowrap}
+thead th.r{text-align:right}
+td{padding:7px 10px;vertical-align:top;border-bottom:.5px solid var(--hairline)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.size{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;
+      color:var(--dim);width:74px}
+.tick{width:26px}
+.ttl{font-weight:600}
+.sub2{color:var(--faint);font-size:11.5px;margin-top:1px}
+.dash{color:var(--faint)}
+.size.dash{text-align:right}
+.status{color:var(--dim);white-space:nowrap}
+.status.ok{color:var(--good);font-weight:600}
+.over{background:rgba(128,128,128,.18);border-radius:4px;padding:0 4px;
+      font-size:10.5px;margin-left:4px;vertical-align:1px;cursor:pointer}
+
+tr.day th{position:sticky;top:27px;z-index:2;background:var(--grouphdr);
+  font-weight:700;color:var(--ink);font-size:11.5px;letter-spacing:.01em;
+  padding:5px 10px;border-top:.5px solid var(--line);
+  border-bottom:.5px solid var(--line);text-align:left}
+
+.tri{display:inline-block;width:11px;color:var(--faint);font-size:9px}
+.kid .ttl{padding-left:22px;font-weight:500}
+.adhoc .ttl:after{content:"ad hoc";font-size:10px;font-weight:600;color:var(--warn);
+  border:.5px solid var(--warn);border-radius:4px;padding:0 4px;margin-left:7px;
+  vertical-align:1px}
+
+.bar{display:flex;align-items:center;gap:8px;padding:9px 14px;
+     border-top:.5px solid var(--line);background:var(--chrome2);font-size:12px}
+.bar .grow{margin-left:auto}
+.lnk{color:var(--accent);text-decoration:none;font-size:11.5px}
+.lnk:hover{text-decoration:underline}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:6px;
+     padding:5px 12px;font-size:12px;font-weight:600}
+.legend{margin:32px 0 0;font-size:12.5px;color:var(--dim);max-width:88ch}
+.legend li{margin:0 0 10px}
+.legend b{color:var(--ink)}
+q{font-style:italic}
+code{font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace}
+</style>
+
+<div class="wrap">
+<h1>Meetings and their recordings</h1>
+<p class="sub">Settled: separators kept, floating day header, indent for the rare
+1:N meeting. One row per recording, because that is what you fetch.</p>
+<p class="meta">16 Aug 2026 · Today and Yesterday are real data from a live tenant;
+Wed 13 Aug is the dense case · scroll to see the day header pin</p>
+
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Google Meet</div>
+      <div class="s">martin@finca342.org</div></div>
+    <div class="grow"></div>
+    <div class="pick">Last 30 days <span class="chev">⌄</span></div>
+    <div class="filter">Filter</div></div>
+  <div class="scroll">
+  <table>
+    <thead><tr><th class="tick"></th><th>Meeting</th><th>Scheduled</th><th>Recorded</th><th class="r">Size</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr class="day"><th colspan="6">Today</th></tr>
+      <tr><td class="tick"></td>
+        <td><div class="ttl"><span class="tri">▾</span>test</div><div class="sub2">2 recordings</div></td>
+        <td class="num">14:00<div class="sub2">1h 30m</div></td><td class="dash">—</td>
+        <td class="size dash">—</td><td></td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox" checked></td>
+        <td><div class="ttl">Recording 1</div></td>
+        <td class="dash">—</td><td class="num">13:12<div class="sub2">21s</div></td>
+        <td class="size">5.4 MB</td><td class="status ok">✓ Imported</td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Recording 2</div></td>
+        <td class="dash">—</td><td class="num">14:12<div class="sub2">1m 2s</div></td>
+        <td class="size">3.1 MB</td><td></td></tr>
+      <tr class="adhoc"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">osp-jwrt-wff</div><div class="sub2">Martin Storey</div></td>
+        <td class="dash">—</td><td class="num">14:21<div class="sub2">14s</div></td>
+        <td class="size">3.7 MB</td><td></td></tr>
+
+      <tr class="day"><th colspan="6">Yesterday</th></tr>
+      <tr><td class="tick"></td>
+        <td><div class="ttl">Banyalbufar discussion</div><div class="sub2">Aoife Brennan</div></td>
+        <td class="num">23:00<div class="sub2">1h</div></td>
+        <td class="num">22:45<div class="sub2">4m 38s</div></td>
+        <td class="size">58 MB</td><td class="status">Needs access</td></tr>
+
+      <tr class="day"><th colspan="6">Wed 13 Aug</th></tr>
+      <tr><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">P04 Interview</div><div class="sub2">Priya Raman · Simon Ellery</div></td>
+        <td class="num">09:30<div class="sub2">1h</div></td>
+        <td class="num">09:34<div class="sub2">52m 11s</div></td>
+        <td class="size">1.1 GB</td><td></td></tr>
+      <tr><td class="tick"></td>
+        <td><div class="ttl"><span class="tri">▾</span>P05 Interview</div>
+          <div class="sub2">Dana Okonkwo · Simon Ellery · Priya Raman<span class="over">+3</span></div></td>
+        <td class="num">11:00<div class="sub2">1h</div></td><td class="dash">—</td>
+        <td class="size dash">—</td><td></td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Recording 1</div></td>
+        <td class="dash">—</td><td class="num">11:02<div class="sub2">32m 04s</div></td>
+        <td class="size">618 MB</td><td></td></tr>
+      <tr class="kid"><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">Recording 2</div></td>
+        <td class="dash">—</td><td class="num">11:41<div class="sub2">38m 19s</div></td>
+        <td class="size">701 MB</td><td></td></tr>
+      <tr><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">P06 Interview</div><div class="sub2">Tomas Lind</div></td>
+        <td class="num">14:00<div class="sub2">45m</div></td>
+        <td class="num">14:03<div class="sub2">41m 27s</div></td>
+        <td class="size">874 MB</td><td></td></tr>
+
+      <tr class="day"><th colspan="6">Mon 11 Aug</th></tr>
+      <tr><td class="tick"></td>
+        <td><div class="ttl">Weekly sync</div>
+          <div class="sub2">Dana Okonkwo · Priya Raman · Simon Ellery<span class="over">+4</span></div></td>
+        <td class="num">10:00<div class="sub2">30m</div></td>
+        <td class="dash">—</td><td class="size dash">—</td>
+        <td class="status">Not recorded</td></tr>
+
+      <tr class="day"><th colspan="6">Fri 8 Aug</th></tr>
+      <tr><td class="tick"><input type="checkbox"></td>
+        <td><div class="ttl">P03 Interview</div><div class="sub2">Aoife Brennan</div></td>
+        <td class="num">15:00<div class="sub2">1h</div></td>
+        <td class="num">15:06<div class="sub2">47m 52s</div></td>
+        <td class="size">1.0 GB</td><td></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="bar"><span>8 meetings · 9 recordings · <b>7 you can fetch</b></span>
+    <a class="lnk" href="#">About recordings permissions</a>
+    <span class="grow"></span><button class="btn">Import 6 Recordings</button></div>
+</div>
+
+<p class="why"><b>Size is its own column now</b>, narrow and right-aligned after
+<i>Recorded</i>. It was buried under the recording title where it competed with
+names for the one slot that matters. Right-aligned and tabular so the eye can
+compare down the column, which is the only thing anyone does with a file size —
+and it makes the free-space question answerable by scanning rather than adding up.
+A meeting row with no file of its own shows a dash, same as its other empty
+columns.</p>
+
+<ul class="legend">
+<li><b>Day header:</b> <code>Today</code> / <code>Yesterday</code> then
+<code>Wed 13 Aug</code>. No counts — the rows below are the count. The weekday is
+there because a study is scheduled across a week or two and <i>Wednesday</i> is
+how a researcher holds that. Year only when it differs from the current one.</li>
+
+<li><b>The permissions link appears only when a recording is withheld</b> —
+<code>fetchable &lt; recordings</code>. A meeting nobody recorded contributes zero
+recordings, so it can never trigger it. Per-provider micro-summaries, each with
+an onward link to the vendor's own rules: Teams (recordings live in the
+<i>organiser's</i> OneDrive; channel meetings go to SharePoint), Meet (own-data
+scope; <b>conference records expire ~30 days even though the Drive file lives
+on</b>; personal accounts cannot record), Zoom (only <i>cloud</i> recordings
+reach the API; account auto-delete).</li>
+
+<li><b>HIG, verbatim:</b> <q>Use an outline view instead of a table view to
+present hierarchical data</q>, and <q>expose data hierarchy in the first column
+only.</q> Triangle and indent in <i>Meeting</i>; every other column stays flat.
+<code>NSOutlineView</code> + <code>floatsGroupRows</code>, and with separators
+kept there is no <code>NSTableRowView</code> subclass to write.</li>
+
+<li><b>The checkbox is the selection</b>, not a persistent row highlight — HIG
+distinguishes tables that navigate a hierarchy from those that <q>list
+options</q>. Ours is the second.</li>
+
+<li><b>Attendee default is now 3</b> (was 2, which put a "+1" on a routine
+three-person interview). Still a floor: the parameter is documented as
+<q>how many names fit — the caller measures</q>, and no call site measures yet.
+Fill the width, cap around 4–5, externals first.</li>
+
+<li><b>Still owed:</b> <q>retain people's expansion choices</q> across sessions,
+Option-click-expands-everything, and per-level sorting with day grouping
+following the date arrangement rather than being permanent.</li>
+</ul>
+
+</div>

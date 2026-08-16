@@ -51,11 +51,14 @@ struct TeamsRecordingNameTests {
         #expect(parsed.timestampDigits == "20260815_200732")
     }
 
-    /// Measured, not assumed. The business specimen's filename reads 20:07:32;
-    /// the mp4's own `format.tags.creation_time` reads `2026-08-15T18:07:38Z`;
-    /// the machine was in London on BST (UTC+1). The filename is therefore
-    /// UTC+2 — a server-side zone, set on the tenant or the mailbox, invisible
-    /// from the filename and not the user's own.
+    /// Measured, not assumed — and the first measurement was wrong. The
+    /// business filename reads 20:07:32 and the mp4's own
+    /// `format.tags.creation_time` reads `2026-08-15T18:07:38Z`; the recording
+    /// machine was on `Europe/Madrid` (UTC+2), so the two agree exactly and the
+    /// filename is the recorder's own wall clock. (It was first written up as a
+    /// mysterious server-side zone, from an assumed London machine that was
+    /// never checked.) Unresolvable either way: the importing machine need not
+    /// be the recording one.
     ///
     /// So there is no correct way to turn those digits into an instant, and
     /// returning a plausible-looking wrong `Date` is worse than returning none:

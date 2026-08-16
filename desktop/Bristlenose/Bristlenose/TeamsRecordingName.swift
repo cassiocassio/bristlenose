@@ -16,14 +16,17 @@ import Foundation
 /// timestamp as the title.
 ///
 /// **The `UTC` marker is optional, and its absence is not cosmetic.** A
-/// business tenant omits it, and the timestamp it writes instead is in neither
-/// UTC nor the user's local time. Measured on the business specimen above: the
-/// filename reads 20:07:32, the mp4's own `creation_time` reads
-/// `2026-08-15T18:07:38Z`, and the machine was in London on BST (UTC+1). The
-/// filename is therefore **UTC+2** — a server-side zone, configured on the
-/// tenant or the mailbox, that the researcher never set and cannot see from
-/// the filename. The personal specimen shows the same two-hour offset against
-/// its Teams UI rendering.
+/// business tenant omits it, and what it writes instead is **local time, with
+/// nothing saying whose**. Measured on the business specimen above: the filename
+/// reads 20:07:32, the mp4's own `creation_time` reads `2026-08-15T18:07:38Z`,
+/// and the recording machine was on `Europe/Madrid` (UTC+2) — so the two agree
+/// exactly, and the filename is simply the wall clock in front of whoever hit
+/// record.
+///
+/// That is unresolvable rather than merely undeclared. The importing machine is
+/// not necessarily the recording one: a researcher in London opening a
+/// colleague's Madrid recording has no way to know the digits were written two
+/// hours ahead of their own clock, and neither has this parser.
 ///
 /// So an unmarked timestamp cannot be resolved to a moment by *any* regex.
 /// `startedAtUTC` is nil in that case, deliberately, and the caller must take
@@ -44,9 +47,10 @@ struct TeamsRecordingName: Equatable {
     let title: String
 
     /// Recording start in UTC — **only when the filename carried the `UTC`
-    /// marker.** Nil on a business-tenant filename, where the timestamp is in
-    /// an unknowable server-side zone (see the type note). Callers must fall
-    /// back to a zone-carrying source rather than treating nil as "no date".
+    /// marker.** Nil on a business-tenant filename, where the digits are the
+    /// recorder's local wall clock and carry no zone (see the type note).
+    /// Callers must fall back to a zone-carrying source rather than treating nil
+    /// as "no date".
     ///
     /// Note this is recording-start, not meeting-start: the gap between them is
     /// however late everyone joined, and is the tolerance the calendar join has
@@ -93,8 +97,8 @@ struct TeamsRecordingName: Equatable {
         let yyyymmdd = String(match.2), hhmmss = String(match.3)
 
         // A date is only computed when the filename declared its zone. Without
-        // the marker the digits are in a server-side zone we cannot name, so
-        // there is no honest Date to return — see the type note.
+        // the marker the digits are somebody's local wall clock and we do not
+        // know whose, so there is no honest Date to return — see the type note.
         let isZoneQualified = match.4 != nil
         let resolved = isZoneQualified ? Self.date(yyyymmdd: yyyymmdd, hhmmss: hhmmss) : nil
         if isZoneQualified, resolved == nil { return nil }   // marked UTC but not a real date

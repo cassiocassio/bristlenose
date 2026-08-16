@@ -51,11 +51,12 @@ private struct GraphChildren: Decodable {
 
         /// ISO-8601 with an explicit zone, and therefore **the only
         /// trustworthy moment on a Teams recording.** The filename's timestamp
-        /// is unmarked on a business tenant and sits in a server-side zone
-        /// nobody can name — measured at UTC+2 against a London machine on
-        /// BST — so the window filter, the row's displayed time and the
-        /// calendar join all take their moment from here. See the note on
-        /// `TeamsRecordingName`.
+        /// is unmarked on a business tenant and is simply the recorder's local
+        /// wall clock — verified against a `Europe/Madrid` machine, where the
+        /// filename and `creation_time` agree exactly — so it cannot be placed
+        /// on a clock by anyone importing from a different zone. The window
+        /// filter, the row's displayed time and the calendar join all take their
+        /// moment from here. See the note on `TeamsRecordingName`.
         ///
         /// Always served: the recordings listing sets no `$select`, so the
         /// default driveItem property set arrives whole.
@@ -333,9 +334,9 @@ final class TeamsSource: CloudImportSource {
         // That is what this parse is for (§6).
         guard let parsed = TeamsRecordingName(filename: name) else { return nil }
 
-        // The **moment** does not. A business filename writes an unmarked
-        // timestamp in a server-side zone — measured at UTC+2 from a London
-        // machine on BST — so it cannot be placed on a clock by any regex.
+        // The **moment** does not. A business filename writes the recorder's
+        // local wall clock with no zone marker, so it cannot be placed on a
+        // clock by any regex run on a machine in a different zone.
         // `createdDateTime` carries its zone explicitly; the filename's value
         // is used only when it declared itself UTC, which personal tenants do.
         guard let startedAt = item.createdDateTime.flatMap(Self.parseISO)

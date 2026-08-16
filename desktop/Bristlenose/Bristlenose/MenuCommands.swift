@@ -74,14 +74,9 @@ struct MenuCommands: Commands {
             i18n: i18n
         )
 
-        // Window > Bristlenose — reopen the main window if the user has closed it
-        // but the app process is still alive (Notes / Music / Pages convention).
-        // No keyboard shortcut: ⌘0 collides with WKWebView's "reset zoom" and
-        // there's no recognisable alternative. Cohort feedback can revisit.
-        CommandGroup(before: .windowList) {
-            ShowMainWindowMenuContent()
-            Divider()
-        }
+        // (`Window ▸ Bristlenose` lived here until 16 Aug 2026. It is
+        // `File ▸ New Window` now — see FileMenuContent for why the Window menu
+        // was the wrong home.)
 
         CommandGroup(replacing: .help) {
             HelpMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
@@ -301,20 +296,6 @@ private struct CustomMenus: Commands {
     }
 }
 
-// MARK: - Window > Bristlenose
-
-private struct ShowMainWindowMenuContent: View {
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some View {
-        // Brand name, not a translatable phrase — Notes / Music / Pages all
-        // use the app's own name here regardless of system language.
-        Button("Bristlenose") {
-            openWindow(id: "main")
-        }
-    }
-}
-
 // MARK: - App menu (Bristlenose)
 
 private struct AppMenuContent: View {
@@ -401,6 +382,23 @@ private struct FileMenuContent: View {
         }
         .keyboardShortcut("n", modifiers: [.command, .shift])
 
+        // File ▸ New Window (⌥⌘N) — was `Window ▸ Bristlenose`, which was wrong
+        // twice over. Wrong menu: Apple's standard Window-menu command list
+        // contains no new-window command at all, while `File ▸ New <Item>` is
+        // defined as "Creates a new document, file, or window." And wrong
+        // label: it called `openWindow(id:)` against a `WindowGroup`, which
+        // *spawns* a window rather than reopening one — a New Window command
+        // wearing a reopen label, and the way a second window got opened by
+        // accident. Sits with New Project / New Folder because it is the third
+        // New item, and ⌥⌘N keeps that family's shape.
+        //
+        // A new window inherits the persisted project selection, so this is
+        // "same study, another lens" — the case that wants two windows open.
+        Button(i18n.t("desktop.menu.file.newWindow"), systemImage: "macwindow") {
+            openWindow(id: "main")
+        }
+        .keyboardShortcut("n", modifiers: [.command, .option])
+
         // Add Files… — the menu twin of drag-drop. ⇧⌘A mirrors Apple Mail's
         // File ▸ Attach Files. Fires unconditionally (like New Project/Folder);
         // the window resolves its own selection and toasts if none.
@@ -433,10 +431,23 @@ private struct FileMenuContent: View {
             Label("Import", systemImage: "square.and.arrow.down")
         }
 
+        // Open the SELECTED project in a new window — the menu twin of
+        // double-clicking a sidebar row. Distinct from New Window above, which
+        // opens another view of the project already showing.
+        //
+        // Dimmed, because it cannot work yet: `menuAction("openInNewWindow")`
+        // has no handler in the SPA and never did, so this was a silent no-op
+        // from the day it shipped. It needs a window that can carry a project
+        // value (`WindowGroup(for:)`), which is Stage 3b and blocked on the
+        // serve/view family call. Dimmed rather than deleted because the
+        // command is designed and wanted — and a menu is a promise about what
+        // the app can do, so an item that does nothing is worse than one that
+        // says it can't yet.
         Button(i18n.t("desktop.menu.file.openInNewWindow"), systemImage: "macwindow.badge.plus") {
             bridgeHandler.menuAction("openInNewWindow")
         }
         .keyboardShortcut("o", modifiers: [.command, .shift])
+        .disabled(true)  // Stage 3b — docs/design-workspace.md
 
         Divider()
 

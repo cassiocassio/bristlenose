@@ -19,6 +19,7 @@
     "file": {
       "newProject": "Novo Projeto…",
       "newFolder": "Nova Pasta…",
+      "newWindow": "Nova Janela",
       "addFiles": "Adicionar Arquivos\u2026",
       "openInNewWindow": "Abrir em Nova Janela",
       "exportReport": "Exportar Relatório…",

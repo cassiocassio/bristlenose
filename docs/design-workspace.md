@@ -7,6 +7,7 @@ last-trued: 2026-08-15
 
 ## Changelog
 
+- _2026-08-16f_ — **`File ▸ New Window` (⌥⌘N) ships, and the dead item beside it is finally dimmed.** `Window ▸ Bristlenose` is gone: wrong menu (Apple's Window-menu command list has no new-window command) and wrong label (it called `openWindow(id:)` against a `WindowGroup`, which *spawns*). Seeding the key across the 21 locales turned up **`File ▸ Open in New Window` (⇧⌘O) already there and dead** — the item this session opened by asking whether it did anything. They are different commands, not duplicates: New Window opens another view of the project already showing; Open in New Window opens the *selected* project, the menu twin of a sidebar double-click. So it stays, `.disabled(true)`, until `WindowGroup(for:)` can carry a project value in Stage 3b — dimmed rather than deleted, because the command is wanted and because a menu is a promise about what the app can do. `applicationShouldHandleReopen` did **not** ride along: the coupling wasn't load-bearing (the menu bar outlives windows, so New Window is already the way back from empty), and it regroups with the **window roster** — now the named next unit, wanted by reopen, by the E4 ordinals, and by the ⌘N-from-Settings papercut. Its shape is a genuine choice, not plumbing: count vs titles vs approximating AppKit's `mainWindow`, which is the semantic `focusedSceneValue` doesn't give (it follows *key*).
 - _2026-08-16e_ — **P2 core shipped: each window owns its own state.** `ContentView` holds its `BridgeHandler` as a `@StateObject` and publishes it as `focusedSceneValue(\.bridge, …)`; the menu bar reads the key window's, falling back to `BridgeHandler.unattached` — a never-attached instance whose all-default state dims exactly the items that need a window, so the no-window case needed no branch in ten menu structs. **Two windows on one project can now sit on different lenses**, which is the felt feature (tags beside quotes) and it needed no family call, no second sidecar and no serve rework. The reload fan-out came free: `scheduleReportReloadOnCompletion` already ran per `ContentView`, gated on that window's project. Three decisions taken: renderer crashes on a shared partition are **debounced** (`RendererRecovery`, 250 ms collect + 150 ms stagger, no crash-loop guard by design); a run is narrated by the **key window only** (`WindowSubtitle.body`, extracted as a pure decision so it is testable — five title bars counting one run to 100% is noise, and a background window's per-lens count is genuinely different information); and the **serve stays up** when the last window closes. That last one changed nothing directly but exposed the quit hook sitting on `ContentView`, where it never ran with no window open — moved into `ServeManager`'s own termination observer. Also closed a `TODO` that had been waiting for exactly this work: report chrome now follows `@Environment(\.controlActiveState)` rather than app-wide `NSWindow` key notifications. Still owed on 3a: the E4 ordinal suffix, `File ▸ New Window` ⌥⌘N, `applicationShouldHandleReopen`, and the window roster all three want.
 - _2026-08-16d_ — **P1 shipped: the menu bar routes instead of broadcasting.** The taxonomy the stress test asked for is settled first (new §"P1's taxonomy") — four groups, two mechanisms, because window-targeted and selection-targeted share one routing rule and differ only in what the window does next. So the conversion is **one** focused value carrying a per-window command sink, not seventeen focused values. The predicted no-window failure doesn't arise: New Project is already two halves, and the app-global half (`projectIndex.addProject`) needs no window, so ⌘N stages the follow-through on the batons `pendingIconReveal`/`pendingRename` established and opens a window to drain them — the item is never dimmed. Three broadcasts that reached *inside* a window became per-window batons (the outline's rename, the toolbar's session switcher, the export popover's Miro row). 15 `Notification.Name` declarations deleted; 15 `ContentView` receivers collapsed into one `perform(_:)`. **The drift is now mechanically held**: `check-menu-routing.sh` (build-all step 1a-ter) fails on any post from `MenuCommands.swift` bar the two that open a dedicated `Window` scene, and on any retired name reappearing — the count went 16 → 19 in eighteen days precisely because nothing failed. Two things deliberately left: one papercut (⌘N with Settings frontmost opens a second window rather than raising the first — wants a window roster, which `applicationShouldHandleReopen` needs anyway, so both land in P2), and two app-level broadcasts outside the 19 that will need the same treatment (`showFeedbackSheet`, `undoableRemovalRestoredSelection`).
 - _2026-08-16c_ — **The child-window shape, and the plan stress-tested.** New §"What a child window is": a spun-off window is same-project, own lens, **no project list** — masters get projects, children get lenses, which removes the failure mode (a secondary window switching the shared serve) while keeping the whole point (Quotes here, Codebook there). Ships restrictive (list hidden *and* switching inert) because loosening is trivial and tightening later isn't; pin-vs-hide is deliberately deferred since both answers ship the same first version. Claude Desktop recorded as the reference implementation, contributing two things the design had missed — a **scope chip** as an alternative to our subtitle, and a **pin (keep-on-top)**, which the five-transcripts case needs. One question left open: whether there are one or two child types (atomic transcript leaf vs lens window), since the naming inverts between them. Accepted for alpha: a child's title is its only cue, which promotes constraint 5 to a Stage 3a **acceptance criterion**. §"Implementation plan" gains the shortest-path note (tags-beside-quotes is P1+P2 and needs no family call) and a stress-test findings subsection. New constraint 8 (shared partition shares renderer failure); constraint 6 updated — wired in `b0dbabc9`, and it closes half of the second cache opt-out in `design-desktop-switch-performance.md`. Relaunch boot storm deferred as alpha-acceptable.
@@ -460,7 +461,7 @@ window finally has somewhere to put its own lens. `SessionsRouteMemory` is the s
 to copy: a small value type carrying the decision, unit-testable, fed by the
 `route-change` bridge messages that already flow.
 
-## The command that opens a window (decided 15 Aug 2026)
+## The command that opens a window (decided 15 Aug 2026, shipped 16 Aug)
 
 `Window ▸ Bristlenose` becomes **`File ▸ New Window`, ⌥⌘N**.
 
@@ -474,6 +475,24 @@ gets opened by accident today.
 
 ⌥⌘N rather than ⌘N because ⌘N is New Project. That is Mail's exact split — ⌘N makes
 a new *thing* (a message), ⌥⌘N makes a new *window onto existing things*.
+
+**Shipped 16 Aug 2026**, and it turned up a sibling the design hadn't accounted
+for. `File ▸ Open in New Window` (⇧⌘O) already existed — the item whose deadness
+opened this whole line of work — dispatching `menuAction("openInNewWindow")` to
+an SPA handler that has never existed. The two are **different commands**, not
+duplicates: New Window opens another view of the project already showing; Open
+in New Window opens the *selected* project, which is the menu twin of
+double-clicking a sidebar row. So the dead one stays, **dimmed**, until
+`WindowGroup(for:)` can carry a project value — Stage 3b. Dimmed rather than
+deleted because the command is designed and wanted, and because this codebase
+already treats a menu as a promise about what the app can do: an item that
+silently does nothing is worse than one that says it can't yet.
+
+`applicationShouldHandleReopen` did **not** ship with it. The coupling turned out
+not to be load-bearing — the menu bar survives having no windows, so
+`File ▸ New Window` is still reachable from the empty state, which is what
+`Window ▸ Bristlenose` was there to provide. It is grouped with the window roster
+instead, below.
 
 Rejected: *New Bristlenose Window* (Finder names itself only because its menu bar is
 also the desktop's; for an ordinary app the app name is noise) and *New Project
@@ -749,9 +768,25 @@ by mounting only the visible windows.
 
 ### Small, already decided, not blocked by any of the above
 
-`applicationShouldHandleReopen` — clicking the Dock icon with no windows open
-currently does nothing, and `Window ▸ Bristlenose` is the only way back. Lands
-*with* the rename in P2, not after it.
+**The window roster, and its three consumers.** Nothing tracks live project
+windows, and three owed items all want that and nothing else:
+
+- `applicationShouldHandleReopen` — clicking the Dock icon with no windows open
+  does nothing. (No longer coupled to the rename, which shipped without it: the
+  menu bar outlives windows, so `File ▸ New Window` is already the way back.)
+- **The E4 ordinal suffix** — numbering same-lens duplicates needs to know how
+  many siblings share a title.
+- **The ⌘N papercut** — with a project window open but Settings frontmost, ⌘N
+  opens a *second* window rather than raising the first.
+
+The roster is the next unit of work, and its shape is a real choice rather than a
+mechanism: a **count** is enough for reopen; **titles** are needed for ordinals;
+and the papercut wants something closer to AppKit's `mainWindow` — "the window
+that is the focus of the user's attention", which stays pointing at the document
+window while a panel is key. SwiftUI's `focusedSceneValue` follows **key**, not
+main, which is the gap. Approximating `mainWindow` with a most-recently-key list
+is the biggest of the three and should be argued for on its own merits, not
+smuggled in as plumbing.
 
 ## Sequencing
 

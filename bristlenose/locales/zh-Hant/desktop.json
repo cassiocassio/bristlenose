@@ -19,6 +19,7 @@
     "file": {
       "newProject": "新增專案…",
       "newFolder": "新增檔案夾…",
+      "newWindow": "\u65b0\u589e\u8996\u7a97",
       "addFiles": "\u52a0\u5165\u6a94\u6848\u2026",
       "openInNewWindow": "在新視窗中打開",
       "exportReport": "輸出報告…",

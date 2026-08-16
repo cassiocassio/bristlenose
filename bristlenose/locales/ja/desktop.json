@@ -19,6 +19,7 @@
     "file": {
       "newProject": "新規プロジェクト…",
       "newFolder": "新規フォルダ…",
+      "newWindow": "\u65b0\u898f\u30a6\u30a4\u30f3\u30c9\u30a6",
       "addFiles": "\u30d5\u30a1\u30a4\u30eb\u3092\u8ffd\u52a0\u2026",
       "openInNewWindow": "新しいウインドウで開く",
       "exportReport": "レポートを書き出す…",

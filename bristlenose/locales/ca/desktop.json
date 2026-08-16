@@ -19,6 +19,7 @@
     "file": {
       "newProject": "Projecte nou…",
       "newFolder": "Carpeta nova…",
+      "newWindow": "Finestra nova",
       "addFiles": "Afegeix fitxers…",
       "openInNewWindow": "Obre en una finestra nova",
       "exportReport": "Exporta l'informe…",

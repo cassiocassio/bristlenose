@@ -195,6 +195,27 @@ Bit on 4 Aug 2026: `build_report.py` forced `Console(width=92)` regardless of th
 
 **When you've verified something only through a pipe, say so** — and prefer running it bare at least once (or with a pty) before claiming it works. The related house idiom is already documented above: `Console(width=min(80, Console().width))` — never force a console wider than the terminal.
 
+### A backgrounded `pytest … | tail`'s reported exit code is `tail`'s, not pytest's
+
+Sibling to the two above, and the one most likely to produce a **confident false
+"tests passed"**. A background Bash task reports the exit status of the
+*pipeline*, which in a shell without `pipefail` is the status of the **last**
+stage. So `pytest tests/ -q 2>&1 | tail -15` reports **exit code 0 even when
+pytest failed**, because `tail` succeeded at tailing. The completion
+notification then says "completed (exit code 0)" and reads exactly like a green
+run.
+
+Hit twice on 16 Aug 2026 while verifying the docx-parser work. Both runs were
+genuinely green, so nothing broke — which is precisely why it is worth writing
+down: the tell only appears when the suite is red, and by then the habit of
+trusting the notification is already formed.
+
+**Rule: never report a suite result from the exit code of a piped background
+task — `Read` the output file and quote the real summary line** (`N passed, M
+skipped…`). If you want the exit code to mean something, either drop the pipe
+(`pytest … > out.txt 2>&1`) or set `set -o pipefail` first. The same applies to
+`ruff … | tail`, `npm run build | tail`, and any `cmd | head` gate.
+
 ### AppleDouble files on external drives
 
 When macOS copies files to a filesystem that can't store xattrs/resource forks natively (ExFAT, FAT32, SMB shares, some NFS exports), Finder creates a `._<name>` sidecar alongside every user file to carry the metadata. These are **binary blobs that share the user file's extension** — `._foo.mp4` looks like a video to anything that classifies by suffix; `._s1.txt` looks like a transcript and crashes utf-8 decode (`UnicodeDecodeError: byte 0xb0`).

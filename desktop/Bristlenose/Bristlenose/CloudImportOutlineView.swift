@@ -478,7 +478,17 @@ extension CloudImportOutlineView {
             // VoiceOver reaches the header's checkbox directly because it
             // navigates by element rather than by table selection. The only
             // thing lost is a shortcut, not a capability.
-            (item as? CloudImportOutline.Node)?.row != nil
+            //
+            // **And the highlight follows tickability, not rowness.** A
+            // full-width accent bar is the strongest "you have chosen this"
+            // signal the platform has, and painting it on a row nothing can be
+            // done to says the opposite of the truth — the first thing a person
+            // reported on seeing the real window was that the blue read as "you
+            // can select these things", on rows that were not selectable at all.
+            // The checkbox is the selection; the highlight is only ever focus,
+            // and focus belongs where an action can land.
+            guard let row = (item as? CloudImportOutline.Node)?.row else { return false }
+            return row.isSelectable
         }
 
         func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {

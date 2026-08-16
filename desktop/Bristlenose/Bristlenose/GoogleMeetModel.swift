@@ -667,10 +667,24 @@ struct CloudImportRow: Identifiable, Equatable {
         ticked.contains(id) || !localState.isSelectable
     }
 
-    /// Whether the row draws a checkbox at all. A row with nothing to fetch
-    /// draws none: offering one would be a lie.
+    /// Whether the row draws a checkbox at all — live, or dead-and-disabled.
+    ///
+    /// **A dead checkbox and no checkbox say different things**, and collapsing
+    /// them was a real loss of information. Nothing at all means *there is no
+    /// recording here*. A disabled box means *there is a recording here and you
+    /// cannot have it* — which is the state a researcher can act on, by asking
+    /// the organiser, re-consenting, or upgrading a plan.
+    ///
+    /// The settled mockup drew an empty cell for both, including on a row
+    /// showing 58 MB of video under "Needs access", and this faithfully
+    /// reproduced that. A mockup is where the collapse is easy to miss: the
+    /// Status column carried the difference, so the missing checkbox read as
+    /// tidy rather than as silence about a file that exists.
+    ///
+    /// `isWithheld` already drew this line for the permissions link. It draws
+    /// the same line here, which is what it should have done from the start.
     var showsCheckbox: Bool {
-        guard video.isAvailable else { return false }
+        guard video.isAvailable || isWithheld else { return false }
         return localState.showsCheckbox
     }
 

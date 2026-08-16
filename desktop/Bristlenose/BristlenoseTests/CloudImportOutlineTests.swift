@@ -400,18 +400,39 @@ struct CloudImportOutlineTests {
         #expect(CloudImportOutline.parentTick(for: mixed, ticked: ["file-b"]).draw == .on)
     }
 
-    /// Nothing to tick, no tick offered — the same rule the leaf rows follow.
-    /// A control that cannot act is worse than no control.
-    @Test("A meeting whose recordings are all unfetchable offers no header tick")
-    func parentTickAbsentWhenNothingIsTickable() {
+    /// The header summarises what its children draw, including when what they
+    /// draw is a row of dead boxes.
+    ///
+    /// Someone else's meeting has recordings in it that this account cannot
+    /// reach, so each child shows a disabled checkbox — *there is a thing here
+    /// and you cannot have it* — and the header says the same, disabled.
+    /// Offering nothing at all would say there was nothing there.
+    @Test("A meeting whose recordings are all withheld shows a dead header tick")
+    func parentTickIsDeadWhenNothingIsTickable() {
         let scheduled = moment(daysAgo: 3, hour: 11)
-        let none = [
+        let withheld = [
             row(id: "file-a", scheduled: scheduled, recorded: nil,
                 meeting: "mtg", video: .notOrganiser(organiser: "A. Bianchi")),
             row(id: "file-b", scheduled: scheduled, recorded: nil,
                 meeting: "mtg", video: .notOrganiser(organiser: "A. Bianchi")),
         ]
-        #expect(CloudImportOutline.parentTick(for: none, ticked: []) == .none)
+        let tick = CloudImportOutline.parentTick(for: withheld, ticked: [])
+        #expect(tick.draw == .off)
+        #expect(!tick.isEnabled)
+    }
+
+    /// …and a meeting nobody recorded still offers nothing, because there is
+    /// genuinely nothing there. This is the line the mockup collapsed.
+    @Test("A meeting nobody recorded offers no header tick at all")
+    func parentTickAbsentWhenNothingWasRecorded() {
+        let scheduled = moment(daysAgo: 3, hour: 11)
+        let unrecorded = [
+            row(id: "a", scheduled: scheduled, recorded: nil, meeting: "mtg",
+                video: .notRecorded),
+            row(id: "b", scheduled: scheduled, recorded: nil, meeting: "mtg",
+                video: .notRecorded),
+        ]
+        #expect(CloudImportOutline.parentTick(for: unrecorded, ticked: []) == .none)
     }
 
     // MARK: - Identity

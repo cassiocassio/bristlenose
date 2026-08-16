@@ -416,7 +416,11 @@ struct CloudImportRowTests {
         // failure to fetch time — twenty ticked rows returning 403 after the
         // researcher walked away.
         let notMine = row(local: .notImported, video: .notOrganiser(organiser: "A. Bianchi"))
-        #expect(!notMine.showsCheckbox)
+        // A DEAD checkbox, not an absent one. Someone else's meeting has a
+        // recording in it — the researcher just can't reach it — and the
+        // remedy (ask them) only makes sense if the window admits the file
+        // exists. Absence would say there is nothing there.
+        #expect(notMine.showsCheckbox)
         #expect(!notMine.isSelectable)
         // The organiser's NAME is carried, not a count — the fix is to ping
         // them, and a name is a workflow where a number is dead weight. Asserted
@@ -513,6 +517,22 @@ struct CloudImportRowTests {
         #expect(r.matches(filter: "Tomas"))
     }
 
+    /// The line the mockup collapsed: nothing here, versus something here you
+    /// cannot have. Only the first draws no checkbox.
+    @Test("A meeting nobody recorded offers no checkbox; a withheld one offers a dead one")
+    func checkboxDistinguishesAbsenceFromRefusal() {
+        #expect(!row(local: .notImported, video: .notRecorded).showsCheckbox,
+                "nothing was recorded, so there is nothing to offer")
+        for withheld in [ArtifactAvailability.needsScope("drive.file"),
+                         .notOnThisPlan,
+                         .notOrganiser(organiser: "A. Bianchi"),
+                         .unsupported] {
+            let r = row(local: .notImported, video: withheld)
+            #expect(r.showsCheckbox, "a recording exists and is withheld: say so")
+            #expect(!r.isSelectable, "…and it still cannot be ticked")
+        }
+    }
+
     @Test("Not-recorded and can't-record are different sentences")
     func refusalsAreDistinguished() {
         // Nobody pressed record (an ordinary month, not a fault) versus a
@@ -526,10 +546,13 @@ struct CloudImportRowTests {
         #expect(ArtifactAvailability.notRecorded != ArtifactAvailability.notOnThisPlan)
         #expect(row(local: .notImported, video: .notRecorded).video == .notRecorded)
         #expect(row(local: .notImported, video: .notOnThisPlan).video == .notOnThisPlan)
-        // Both are equally unfetchable, which is why the labels are the only
-        // thing carrying the difference.
+        // Both are equally unfetchable — but not equally EMPTY, and the
+        // checkbox now carries that too: nothing recorded offers no box, while
+        // a plan refusal offers a dead one, because on a paid plan there would
+        // have been a file.
         #expect(!row(local: .notImported, video: .notRecorded).showsCheckbox)
-        #expect(!row(local: .notImported, video: .notOnThisPlan).showsCheckbox)
+        #expect(row(local: .notImported, video: .notOnThisPlan).showsCheckbox)
+        #expect(!row(local: .notImported, video: .notOnThisPlan).isSelectable)
     }
 }
 

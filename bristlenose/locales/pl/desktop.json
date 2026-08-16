@@ -583,6 +583,7 @@
     "badgeTooltip": "Udost\u0119pniono agentom. Ka\u017cdy po\u0142\u0105czony agent mo\u017ce na Twoj\u0105 pro\u015bb\u0119 czyta\u0107 cytaty z tego projektu."
   },
   "cloudImport": {
+    "instantMeeting": "Spotkanie b\u0142yskawiczne",
     "windowTitle": "Importuj z {{platform}}",
     "filter": "Filtruj",
     "scopeLabel": "Okres",

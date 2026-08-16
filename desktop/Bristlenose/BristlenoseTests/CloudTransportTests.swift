@@ -565,7 +565,13 @@ struct AdapterRowDerivationTests {
 
     /// The stub queue is FIFO across every URL, so the order below is the order
     /// `list` actually makes its calls: identity, the calendar page, the
-    /// conference record, then that record's recordings.
+    /// window's conference records, each record's recordings, then the room of
+    /// each record that produced a file.
+    ///
+    /// That last call is what makes the join exact — `spaces.get` returns the
+    /// meeting code the calendar event already carries — and omitting it from
+    /// this fixture is a good way to watch a booked meeting arrive as an
+    /// instant one.
     @Test("Two FILE_GENERATED recordings become two rows of one meeting")
     func twoRecordingsBecomeTwoRows() async throws {
         let start = Date().addingTimeInterval(-3 * 3600)
@@ -583,7 +589,7 @@ struct AdapterRowDerivationTests {
             "conferenceSolution":{"key":{"type":"hangoutsMeet"}}}}]}
         """))
         StubURLProtocol.enqueue(.json("""
-        {"conferenceRecords":[{"name":"conferenceRecords/rec-1",
+        {"conferenceRecords":[{"name":"conferenceRecords/rec-1","space":"spaces/sp-1",
           "startTime":"\(iso.string(from: start))"}]}
         """))
         StubURLProtocol.enqueue(.json("""
@@ -596,6 +602,7 @@ struct AdapterRowDerivationTests {
            "endTime":"\(iso.string(from: start.addingTimeInterval(4700)))"},
           {"name":"r3","state":"STARTED","driveDestination":{"file":"file-C"}}]}
         """))
+        StubURLProtocol.enqueue(.json(#"{"meetingCode":"abc-defg-hij"}"#))
 
         let source = GoogleMeetSource(
             config: GoogleOAuthConfig(clientID: "cid.apps.googleusercontent.com"),
@@ -621,6 +628,109 @@ struct AdapterRowDerivationTests {
         #expect(first?.recordedAt != nil)
         #expect(first?.scheduledAt != first?.recordedAt)
         #expect(first?.duration == 1_920, "the recording's length, never the booked hour")
+    }
+
+    /// The reason the listing was inverted, end to end.
+    ///
+    /// A call started from the Meet home screen has no calendar event, so the
+    /// old event-first walk produced no row for it at all — not a dimmed one,
+    /// not a footer count. Two of five real recordings were invisible this way
+    /// on a live tenant (16 Aug 2026).
+    ///
+    /// The booked meeting in the same window is here to prove the other half:
+    /// an unmatched recording must not be quietly glued onto the nearest
+    /// booking, which is exactly what a time-overlap join would have done.
+    @Test("A recording with no calendar event becomes its own row")
+    func instantMeetingBecomesItsOwnRow() async throws {
+        let booked = Date().addingTimeInterval(-5 * 3600)
+        let called = Date().addingTimeInterval(-2 * 3600)
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@stmarystrust.example"}"#))
+        StubURLProtocol.enqueue(.json("""
+        {"items":[{"id":"evt-1","summary":"P05 Interview",
+          "start":{"dateTime":"\(iso.string(from: booked))"},
+          "end":{"dateTime":"\(iso.string(from: booked.addingTimeInterval(3600)))"},
+          "organizer":{"email":"martin@stmarystrust.example","self":true},
+          "conferenceData":{"conferenceId":"abc-defg-hij",
+            "conferenceSolution":{"key":{"type":"hangoutsMeet"}}}}]}
+        """))
+        // One call in the window, and it is not that meeting's room.
+        StubURLProtocol.enqueue(.json("""
+        {"conferenceRecords":[{"name":"conferenceRecords/rec-9","space":"spaces/sp-9",
+          "startTime":"\(iso.string(from: called))"}]}
+        """))
+        StubURLProtocol.enqueue(.json("""
+        {"recordings":[{"name":"r1","state":"FILE_GENERATED",
+          "driveDestination":{"file":"file-Z"},
+          "startTime":"\(iso.string(from: called.addingTimeInterval(60)))",
+          "endTime":"\(iso.string(from: called.addingTimeInterval(74)))"}]}
+        """))
+        StubURLProtocol.enqueue(.json(#"{"meetingCode":"osp-jwrt-wff"}"#))
+
+        let source = GoogleMeetSource(
+            config: GoogleOAuthConfig(clientID: "cid.apps.googleusercontent.com"),
+            session: StubURLProtocol.session(),
+            restoredTokens: googleTokens())
+        let listing = await source.list(window: window)
+
+        #expect(listing.rows.count == 2, "the booking and the unbooked call")
+
+        let instant = try #require(listing.rows.first { $0.isUnscheduled })
+        // The code is the only name this call has ever had, and it is what
+        // keeps two of them in one day apart — in the list and on disk.
+        #expect(instant.title == "osp-jwrt-wff")
+        #expect(instant.scheduledAt == nil)
+        #expect(instant.scheduledDuration == nil)
+        #expect(instant.recordedAt != nil)
+        #expect(instant.duration == 14)
+        #expect(instant.video == .available, "there is a file and we can reach it")
+
+        let meeting = try #require(listing.rows.first { !$0.isUnscheduled })
+        #expect(meeting.title == "P05 Interview")
+        // The whole point: a recording in a different room is never annexed to
+        // a booking just because it happened nearby.
+        #expect(meeting.video == .notRecorded)
+        #expect(meeting.isUnscheduled == false)
+    }
+
+    /// The blanket-claim guard, one layer below the blanket.
+    ///
+    /// "We could not read your calls" and "nobody recorded anything" arrive at
+    /// the row as the same empty set, and rendering the first as the second
+    /// puts *None of these were recorded* over a month of interviews that are
+    /// all sitting in Drive.
+    @Test("A refused conference-record list never reads as 'not recorded'")
+    func refusedHarvestDoesNotClaimNotRecorded() async throws {
+        let booked = Date().addingTimeInterval(-5 * 3600)
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@stmarystrust.example"}"#))
+        StubURLProtocol.enqueue(.json("""
+        {"items":[{"id":"evt-1","summary":"P05 Interview",
+          "start":{"dateTime":"\(iso.string(from: booked))"},
+          "end":{"dateTime":"\(iso.string(from: booked.addingTimeInterval(3600)))"},
+          "organizer":{"email":"martin@stmarystrust.example","self":true},
+          "conferenceData":{"conferenceId":"abc-defg-hij",
+            "conferenceSolution":{"key":{"type":"hangoutsMeet"}}}}]}
+        """))
+        StubURLProtocol.enqueue(.json(
+            #"{"error":{"code":403,"status":"PERMISSION_DENIED","message":"denied"}}"#,
+            status: 403))
+
+        let source = GoogleMeetSource(
+            config: GoogleOAuthConfig(clientID: "cid.apps.googleusercontent.com"),
+            session: StubURLProtocol.session(),
+            restoredTokens: googleTokens())
+        let listing = await source.list(window: window)
+
+        let row = try #require(listing.rows.first)
+        #expect(row.video == .unsupported, "'Unavailable' is what we actually know")
+        #expect(row.video != .notRecorded)
     }
 
     /// Teams has always had the meeting's own clock in hand — Graph serves

@@ -45,6 +45,10 @@ enum CloudImportOutline {
         let organiser: CloudImportRow.Attendee?
         let scheduledAt: Date?
         let scheduledDuration: TimeInterval?
+        /// True when this call was never booked — see `CloudImportRow`'s note.
+        /// Carried up from the lead row so a header renders the same sub-line
+        /// its children would have.
+        let isUnscheduled: Bool
         /// How many recordings hang under it. Always ≥ 2 by construction.
         let recordingCount: Int
     }
@@ -65,29 +69,23 @@ enum CloudImportOutline {
 
         var isChild: Bool { ordinal != nil }
 
-        // NOT here, deliberately: an "Instant" badge for a recording with no
-        // calendar event behind it.
+        // The "instant meeting" label is NOT a property here — it is
+        // `CloudImportRow.isUnscheduled`, rendered by the cell through
+        // `AttendeeLine.subtitle`.
         //
         // **Meet's own word, not ours.** Google's UI says "Start an instant
         // meeting"; "ad hoc" is an invention, and this codebase's rule is that
         // the vocabulary is the vendor's (see `CloudPlatform`, which exists
         // almost entirely for that reason).
         //
-        // The mockup draws the badge, and it is the right design — an instant
-        // meeting's dash in the Scheduled column should read as "there was
-        // never anything scheduled" rather than as data we failed to find. But
-        // no adapter can currently tell those two apart. A missing
-        // `scheduledAt` means "no event" on Meet *and* "the researcher declined
-        // the calendar scope" on Teams, so a badge inferred from it would be a
-        // false claim on every row of a scope-declined Teams list — and the
-        // researcher's remedy (re-consent) is the opposite of what it implies.
-        //
-        // It lands with instant-meeting *listing*, which is the same work:
-        // Meet's list is event-first, so a call started from the Meet home
-        // screen produces a Drive recording this window never shows at all
-        // (verified live, 16 Aug 2026). When the adapter can emit such a row it
-        // knows for a fact there was no event, and the badge follows from that
-        // fact rather than from an absence.
+        // It waited on the listing inversion, and the reason is worth keeping:
+        // a missing `scheduledAt` means "no event" on Meet *and* "the
+        // researcher declined the calendar scope" on Teams, so a label inferred
+        // from that absence would be a false claim on every row of a
+        // scope-declined Teams list — and the remedy it implies, live with it,
+        // is the opposite of the real one. Only an adapter that lists *calls*
+        // and then fails to find a booking knows the difference, which is what
+        // the record-first listing made possible.
     }
 
     /// What a row in the outline is.
@@ -324,6 +322,7 @@ enum CloudImportOutline {
                     organiser: lead.organiser,
                     scheduledAt: lead.scheduledAt,
                     scheduledDuration: lead.scheduledDuration,
+                    isUnscheduled: lead.isUnscheduled,
                     recordingCount: children.count
                 )
                 entries.append(Entry(
@@ -403,6 +402,7 @@ enum CloudImportOutline {
             return [meeting.title,
                     meeting.scheduledAt.map(String.init(describing:)) ?? "",
                     meeting.scheduledDuration.map(String.init(describing:)) ?? "",
+                    String(meeting.isUnscheduled),
                     String(meeting.recordingCount),
                     meeting.attendees.map(\.listLabel).joined(separator: ",")]
                 .joined(separator: "|")

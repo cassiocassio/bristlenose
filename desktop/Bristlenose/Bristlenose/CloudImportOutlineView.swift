@@ -731,7 +731,11 @@ extension CloudImportOutlineView {
             case .meeting(let meeting):
                 view.configure(
                     title: meeting.title,
-                    subtitle: AttendeeLine.summary(meeting.attendees, organiser: meeting.organiser)
+                    subtitle: AttendeeLine.subtitle(
+                        meeting.attendees,
+                        organiser: meeting.organiser,
+                        isUnscheduled: meeting.isUnscheduled,
+                        unscheduledLabel: i18n.t("desktop.cloudImport.instantMeeting"))
                         ?? i18n.plural("desktop.cloudImport.meetingRecordingCount", count: meeting.recordingCount)
                 )
 
@@ -755,7 +759,15 @@ extension CloudImportOutlineView {
                     let row = recording.row
                     view.configure(
                         title: row.title,
-                        subtitle: AttendeeLine.summary(row.attendees, organiser: row.organiser)
+                        // A call nobody booked has no invitation list to name,
+                        // so the sub-line says what it is instead — which is
+                        // also what explains the dash in the Scheduled column
+                        // beside it.
+                        subtitle: AttendeeLine.subtitle(
+                            row.attendees,
+                            organiser: row.organiser,
+                            isUnscheduled: row.isUnscheduled,
+                            unscheduledLabel: i18n.t("desktop.cloudImport.instantMeeting"))
                     )
                 }
             }

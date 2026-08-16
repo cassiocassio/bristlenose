@@ -559,6 +559,7 @@
     "badgeTooltip": "Delt med agenter. Enhver forbundet agent kan l\u00e6se projektets citater, n\u00e5r du beder om det."
   },
   "cloudImport": {
+    "instantMeeting": "\u00d8jeblikkeligt m\u00f8de",
     "windowTitle": "Importer fra {{platform}}",
     "filter": "Filtr\u00e9r",
     "scopeLabel": "Periode",

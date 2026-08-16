@@ -559,6 +559,7 @@
     "badgeTooltip": "Partag\u00e9 avec les agents. Tout agent connect\u00e9 peut lire les citations de ce projet \u00e0 votre demande."
   },
   "cloudImport": {
+    "instantMeeting": "R\u00e9union instantan\u00e9e",
     "windowTitle": "Importer depuis {{platform}}",
     "filter": "Filtrer",
     "scopeLabel": "P\u00e9riode",

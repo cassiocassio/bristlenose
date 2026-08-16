@@ -42,6 +42,28 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
 
 ## Changelog
 
+- _2026-08-17_ — **Meet's listing is inverted: conference records lead, the
+  calendar joins onto them.** The adapter used to walk the calendar and ask
+  Meet, per event, for records on that event's meeting code inside a ±15-hour
+  window. Two costs came out of that shape. The visible one: a call started from
+  the Meet home screen has no event to walk from, so it produced no row, no
+  dimmed row and no footer count — on the live tenant, **two of five real
+  recordings were invisible**. The subtle one: the window was doing work the key
+  should have done. `spaces.get` returns each record's real `meetingCode`, which
+  is the same string `conferenceData.conferenceId` carries, so the join is now an
+  equality on a key both sides genuinely share (`ConferenceRecordJoin`). Time is
+  used only to pick which instance of a recurring series a record belongs to —
+  inside one room, where bookings cannot overlap — so the case that made a
+  time-overlap join unsafe (accepting two clashing invitations, or hopping
+  between calls) cannot arise. Three consequences worth stating: an unmatched
+  record now becomes **its own row**, titled with the meeting code and marked
+  *Instant meeting* (Meet's word), which is what makes the tighter one-hour
+  early-join tolerance safe — the failure it produces is a recording filed under
+  a code instead of a title, not one filed under the **wrong** title; a refused
+  `conferenceRecords.list` is recorded as `ListOutcome.failed` and forces every
+  unmatched row to *Unavailable*, because "we could not look" must never render
+  as "nobody recorded"; and §4's organiser rule is now a **fallback explanation
+  rather than a gate** on Meet — see the amendment there.
 - _2026-08-16 (branding pass)_ — new **§9a Vendor branding**, read out of the
   three vendors' current guidelines. The reframe: brand here is **three**
   surfaces under three instruments, and the one the design was drifting toward —
@@ -243,6 +265,18 @@ So the list UX and the affordable scope are **not** mutually exclusive. Bristlen
 ---
 
 ## 4. Organiser-only, and why that is fair for v1
+
+> **Amended for Meet, 17 Aug 2026 — the organiser check is now a fallback
+> explanation, not a gate.** This section is written from Teams, where listing
+> the researcher's own `/Recordings` makes the constraint structural. Meet's
+> adapter used to import that shape by *choice*: it looked up recordings only
+> for events the researcher organised, so a colleague's meeting whose recording
+> this account could plainly reach still read "Someone else" and drew no
+> checkbox. With the listing inverted, the records are read first and the
+> question is answered by data — a recording in hand outranks any reason we
+> expected not to find one. `.notOrganiser` now fires only where we looked,
+> found nothing, and cannot prove the absence: it names the person to ask, which
+> is the paragraph below's point and its actual value.
 
 Non-channel meeting recordings land in the **organiser's own OneDrive** (`/Recordings`), and the researcher schedules the interview. So the only permission needed is one the user can grant themselves.
 

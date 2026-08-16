@@ -582,6 +582,7 @@
     "badgeTooltip": "Sd\u00edleno s agenty. P\u0159ipojen\u00fd agent m\u016f\u017ee na va\u0161i \u017e\u00e1dost \u010d\u00edst citace z tohoto projektu."
   },
   "cloudImport": {
+    "instantMeeting": "Okam\u017eit\u00e1 sch\u016fzka",
     "windowTitle": "Importovat z {{platform}}",
     "filter": "Filtrovat",
     "scopeLabel": "Obdob\u00ed",

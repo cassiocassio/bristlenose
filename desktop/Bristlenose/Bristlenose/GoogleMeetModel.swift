@@ -417,10 +417,26 @@ struct CloudImportRow: Identifiable, Equatable {
     /// When the meeting was **booked** to start, from the calendar.
     ///
     /// Nil for a recording with no calendar event behind it — an instant
-    /// meeting, a call started from the Meet home screen. That is not a gap to
-    /// be filled: the Scheduled column shows a dash and the row is marked ad
-    /// hoc, which is the true state of affairs.
+    /// meeting, a call started from the Meet home screen — **and also** for a
+    /// list built without calendar access at all. The Scheduled column shows a
+    /// dash either way; `isUnscheduled` is what tells the two apart.
     let scheduledAt: Date?
+
+    /// True when we know **for a fact** that no booking exists behind this
+    /// recording, rather than merely not having found one.
+    ///
+    /// The distinction is the whole reason this is a stored flag and not
+    /// `scheduledAt == nil`. That absence means "nobody scheduled this" on Meet
+    /// and "the researcher declined the calendar scope" on Teams, so a label
+    /// inferred from it would call every row of a scope-declined Teams list an
+    /// instant meeting — and the remedy it implies, live with it, is the
+    /// opposite of the real one, which is to re-consent.
+    ///
+    /// Only an adapter that listed the *call* and then failed to find a booking
+    /// for it can set this. Meet does, since the listing was inverted; Teams and
+    /// Zoom cannot yet and leave it false, which reads as "we don't know" and is
+    /// the truth for them.
+    let isUnscheduled: Bool
 
     /// How long the meeting was booked for — `end − start` on the event.
     /// Rendered under `scheduledAt`, and never confused with `duration`, which
@@ -577,9 +593,11 @@ struct CloudImportRow: Identifiable, Equatable {
         scheduledDuration: TimeInterval? = nil,
         recordedAt: Date? = nil,
         meetingID: String? = nil,
-        siblingOrdinal: Int? = nil
+        siblingOrdinal: Int? = nil,
+        isUnscheduled: Bool = false
     ) {
         self.siblingOrdinal = siblingOrdinal
+        self.isUnscheduled = isUnscheduled
         self.id = id
         self.title = title
         self.startsAt = startsAt
@@ -831,6 +849,30 @@ enum AttendeeLine {
         let joined = names.joined(separator: " · ")
         // A count, not an ellipsis: "+4" says there are six.
         return overflow > 0 ? "\(joined)  +\(overflow)" : joined
+    }
+
+    /// The sub-line as the grid actually draws it — including the case where
+    /// there is nobody to name.
+    ///
+    /// **People first, always.** A call with attendees says who was on it, even
+    /// when nobody booked it; the label below only ever fills a genuine absence.
+    ///
+    /// - Parameter unscheduledLabel: Meet's own word for a call started without
+    ///   a booking, already localised. Passed in rather than looked up so this
+    ///   stays a pure function — and so the vocabulary belongs to the caller,
+    ///   which is the one that knows the platform. Google's UI says "Start an
+    ///   instant meeting"; Teams says "Meet now" for the same act and will want
+    ///   its own string when it can tell an unbooked call from an unread
+    ///   calendar.
+    static func subtitle(
+        _ attendees: [CloudImportRow.Attendee],
+        organiser: CloudImportRow.Attendee?,
+        isUnscheduled: Bool,
+        unscheduledLabel: String,
+        limit: Int = 3
+    ) -> String? {
+        if let line = summary(attendees, organiser: organiser, limit: limit) { return line }
+        return isUnscheduled ? unscheduledLabel : nil
     }
 
     /// Drop yourself, drop decliners, order by externality.

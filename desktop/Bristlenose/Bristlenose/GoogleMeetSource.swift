@@ -96,9 +96,26 @@ private struct ConferenceRecordsPage: Decodable {
         let startTime: String?
         let endTime: String?
         let expireTime: String?
+        /// `spaces/<id>` — the room the call was held in.
+        ///
+        /// **The join key, one dereference away.** The code a calendar event
+        /// carries (`conferenceData.conferenceId`) is the same string
+        /// `spaces.get` returns as `meetingCode`, so resolving this turns the
+        /// calendar↔recording join from a time heuristic into an equality.
+        let space: String?
     }
     let conferenceRecords: [Record]?
     let nextPageToken: String?
+}
+
+/// One Meet space, reduced to the only field this adapter reads.
+///
+/// Narrow on purpose, like every other decode here: a struct with nowhere to put
+/// `activeConference` cannot accidentally hold a pointer to a call in progress.
+private struct MeetSpace: Decodable {
+    /// `abc-mnop-xyz`. The string a person types to join, and the string a
+    /// calendar event stores — which is what makes the join exact.
+    let meetingCode: String?
 }
 
 private struct RecordingsPage: Decodable {
@@ -134,6 +151,85 @@ private struct RecordingsPage: Decodable {
     /// a call segmented past that loses its tail — and, before this member
     /// existed, could not even report that it had.
     let nextPageToken: String?
+}
+
+// MARK: - The harvest
+
+/// Every Meet call in the window, with what it produced and which room it was
+/// in — the whole remote half of the join, gathered before a single row exists.
+///
+/// This is the shape the inversion needed. The adapter used to hold one lookup
+/// per calendar event, which meant a call could only be *found* by starting from
+/// a booking. Here the calls are the primary list and the calendar is joined
+/// onto them, so a call nobody booked is an ordinary member rather than an
+/// impossibility.
+private struct MeetHarvest: Sendable {
+
+    /// One recording with bytes behind it.
+    struct Recording: Sendable {
+        let fileID: String
+        /// When the record button was actually pressed, and for how long — the
+        /// session's real boundary. Nil when Google didn't serve it.
+        let startedAt: Date?
+        let duration: TimeInterval?
+    }
+
+    /// One call.
+    struct Record: Sendable {
+        /// `conferenceRecords/<id>`.
+        let name: String
+        /// The room's join code, resolved through `spaces.get`. Nil when the
+        /// space could not be read — and then this call can never be joined to a
+        /// booking, because the code is the only key they share.
+        let meetingCode: String?
+        /// When the *call* began. Not when anyone pressed record: a conference
+        /// record spans everything said before the button.
+        let start: Date?
+        let end: Date?
+        let expires: Date?
+
+        /// **Every** generated recording, in the order Google returned them.
+        ///
+        /// This used to be a single optional taken with `.first`, and the second
+        /// half of any meeting where somebody stopped and restarted recording
+        /// was dropped in silence — a half-session analyses perfectly cleanly
+        /// and reads as complete, so nothing ever told the researcher that forty
+        /// minutes never arrived.
+        let recordings: [Recording]
+
+        /// Whether Google reported any `FILE_GENERATED` recording at all,
+        /// regardless of whether we could resolve a file for it.
+        ///
+        /// The two are not the same fact and the difference is a false claim:
+        /// with this false, "nobody recorded this meeting" is true; with it true
+        /// and `recordings` empty, a completed recording exists and we simply
+        /// could not reach it.
+        let sawGeneratedRecordings: Bool
+    }
+
+    var records: [MeetHarvest.Record] = []
+
+    /// Why the set is incomplete, when it is.
+    ///
+    /// **Load-bearing, not diagnostic.** Every row reads this: a failure here
+    /// means "we could not look", and the one thing the window must never do is
+    /// render that as "nobody recorded". Nil means the window's calls were read
+    /// end to end and an absence is genuinely an absence.
+    var failure: GoogleAPIOutcome?
+}
+
+/// One call and what asking about it returned. Named rather than a tuple so it
+/// can cross a task-group boundary.
+private struct HarvestedCall: Sendable {
+    let record: ConferenceRecordsPage.Record
+    let recordings: [MeetHarvest.Recording]
+    let sawGenerated: Bool
+}
+
+/// One room and its join code, or nil where the room could not be read.
+private struct ResolvedSpace: Sendable {
+    let space: String
+    let code: String?
 }
 
 // MARK: - The adapter
@@ -291,7 +387,27 @@ final class GoogleMeetSource: CloudImportSource {
             }
         } while pageToken != nil
 
-        let rows = await buildRows(from: events, tokens: tokens)
+        // **The calls, listed on their own terms.** One window-wide query rather
+        // than one per calendar event — which is what makes a call nobody booked
+        // visible at all, and what lets the join key on the meeting code instead
+        // of on a ±window around a booking.
+        let harvest = await Self.harvestConferenceRecords(
+            window: window,
+            canReachMeet: tokens.has(GoogleScopes.meetReadonly),
+            accessToken: tokens.accessToken,
+            session: session)
+
+        // **The join is over two lists, so either one being short makes the
+        // output a floor.** The calendar paginator has always reported its own
+        // terminus here; the records list is now the other half of the same
+        // join and has to report through the same channel, or a refused
+        // conference-record read renders as a confident, complete, shorter
+        // list — the exact shape `ListOutcome` exists to prevent.
+        if outcome == .exhausted, let failure = harvest.failure {
+            outcome = .failed(after: pagesFetched, outcome: failure)
+        }
+
+        let rows = buildRows(from: events, harvest: harvest, tokens: tokens)
         let fetchable = rows.filter(\.isSelectable).count
         let others = rows.filter { $0.organiser != nil }.count
 
@@ -302,6 +418,8 @@ final class GoogleMeetSource: CloudImportSource {
         // One line, at the only place that can distinguish them.
         Self.log.notice("""
             meet_list complete events=\(events.count, privacy: .public) \
+            records=\(harvest.records.count, privacy: .public) \
+            unscheduled=\(rows.filter(\.isUnscheduled).count, privacy: .public) \
             rows=\(rows.count, privacy: .public) \
             fetchable=\(fetchable, privacy: .public) \
             outcome=\(String(describing: outcome), privacy: .public)
@@ -384,21 +502,27 @@ final class GoogleMeetSource: CloudImportSource {
         return try JSONDecoder().decode(CalendarEventsPage.self, from: data)
     }
 
-    /// Joins each Meet-bearing event to its conference record and recording.
+    /// Joins the calls that happened to the meetings that were booked.
     ///
-    /// The join key is `conferenceData.conferenceId`, which for `hangoutsMeet`
-    /// is the 10-letter meeting code, and matches the Meet API's
-    /// `space.meetingCode`.
+    /// **Records lead, events follow — the reverse of what this used to do**,
+    /// and the reversal is what makes an unbooked call visible. Walking the
+    /// calendar can only ever produce rows for things somebody scheduled, so a
+    /// call started from the Meet home screen had no row, no dimmed row and no
+    /// footer count. On the tenant this was built against that was two of five
+    /// real recordings (16 Aug 2026).
+    ///
+    /// The join key is the meeting code: `conferenceData.conferenceId` on the
+    /// calendar side, `space.meetingCode` on Meet's. Same string, exactly.
     private func buildRows(
         from events: [CalendarEventsPage.Event],
+        harvest: MeetHarvest,
         tokens: GoogleTokens
-    ) async -> [CloudImportRow] {
+    ) -> [CloudImportRow] {
         let canReachMeet = tokens.has(GoogleScopes.meetReadonly)
         let tier = GoogleAccountTier(email: identity)
         let domain = tier.organisationDomain
 
-        // Pass 1 — narrow to the events that can become rows, in calendar
-        // order, before any network call is made.
+        // Pass 1 — narrow to the events that can become rows, in calendar order.
         var candidates: [(event: CalendarEventsPage.Event, start: Date, isOrganiser: Bool)] = []
         for event in events {
             guard let start = event.start?.dateTime.flatMap(Self.parseRFC3339) else {
@@ -416,8 +540,8 @@ final class GoogleMeetSource: CloudImportSource {
             candidates.append((event, start, event.organizer?.isSelf == true))
 
             // Probe, logged rather than used. If every recorded meeting carries
-            // a `video/*` attachment with a fileId, the whole conferenceRecords
-            // join is a longer road to the same place.
+            // a `video/*` attachment with a fileId, that is a shorter road to
+            // the file than the space resolution below.
             let attachments = event.attachments ?? []
             Self.log.notice("""
                 meet_event attachments=\(attachments.count, privacy: .public) \
@@ -429,38 +553,39 @@ final class GoogleMeetSource: CloudImportSource {
             }
         }
 
-        // Pass 2 — the Meet lookups, concurrently.
+        // Pass 2 — the join, on the key rather than on the clock.
         //
-        // **This is the pass that decides whether the window feels broken.**
-        // Each lookup is two sequential round trips (conference record, then
-        // its recordings), and the obvious shape — resolve each row inside the
-        // loop that builds it — makes them all sequential too. A researcher
-        // with thirty Meet calls in a month therefore waits on sixty serial
-        // requests behind a spinner with no progress, for a list Teams renders
-        // from a single call. Nothing errors; it is just slow enough to read as
-        // a hang, which is the failure mode that gets a feature abandoned
-        // rather than reported.
-        //
-        // Only organiser-owned events with a meeting code are queued: the
-        // others are already decided and a request for them would 403.
-        // The event's END rides along now. A conference record spans real time
-        // and so does a booking, so how much of the booking a call actually
-        // occupied is far stronger evidence than comparing start times — and it
-        // is the only measure that separates two sessions held in the same Meet
-        // room, which cannot overlap each other.
-        let jobs: [(index: Int, code: String, start: Date, end: Date?)] = canReachMeet
-            ? candidates.indices.compactMap { i in
-                guard candidates[i].isOrganiser,
-                      let code = candidates[i].event.conferenceData?.conferenceId
-                else { return nil }
-                return (index: i, code: code, start: candidates[i].start,
-                        end: candidates[i].event.end?.dateTime.flatMap(Self.parseRFC3339))
-            }
-            : []
-        let lookups = await Self.lookUpRecordings(
-            jobs: jobs, accessToken: tokens.accessToken, session: session)
+        // The event's key is its index in `candidates`: unique by construction
+        // and stable for this listing, where `event.id` is optional and the
+        // meeting code is shared by every instance of a recurring series.
+        let joinEvents = candidates.indices.compactMap { index -> ConferenceRecordJoin.Event? in
+            guard let code = candidates[index].event.conferenceData?.conferenceId,
+                  !code.isEmpty
+            else { return nil }
+            return ConferenceRecordJoin.Event(
+                id: String(index),
+                meetingCode: code,
+                start: candidates[index].start,
+                end: candidates[index].event.end?.dateTime.flatMap(Self.parseRFC3339))
+        }
+        let join = ConferenceRecordJoin.join(
+            records: harvest.records.map {
+                ConferenceRecordJoin.Record(name: $0.name, meetingCode: $0.meetingCode,
+                                            start: $0.start, end: $0.end)
+            },
+            events: joinEvents)
+        let byName = Dictionary(harvest.records.map { ($0.name, $0) },
+                                uniquingKeysWith: { first, _ in first })
 
-        // Pass 3 — assemble, in the original order.
+        Self.log.notice("""
+            meet_join events=\(joinEvents.count, privacy: .public) \
+            records=\(harvest.records.count, privacy: .public) \
+            matched=\(join.byEvent.values.reduce(0) { $0 + $1.count }, privacy: .public) \
+            unmatched=\(join.unmatched.count, privacy: .public) \
+            failure=\(harvest.failure.map { String(describing: $0) } ?? "none", privacy: .public)
+            """)
+
+        // Pass 3 — a row per booked meeting, and one per recording it produced.
         var rows: [CloudImportRow] = []
         for (index, candidate) in candidates.enumerated() {
             let event = candidate.event
@@ -468,10 +593,18 @@ final class GoogleMeetSource: CloudImportSource {
             let isOrganiser = candidate.isOrganiser
             let attendees = Self.attendees(of: event, domain: domain)
 
+            let mine = (join.byEvent[String(index)] ?? []).compactMap { byName[$0] }
+            let found = Self.unionedRecordings(of: mine)
+            let sawGenerated = mine.contains(where: \.sawGeneratedRecordings)
+            // Expiry belongs to whichever record holds the file. They share a
+            // room and a window, so the first is representative — and the field
+            // is nil on every tenant measured so far.
+            let expiresAt = mine.compactMap(\.expires).first
+
             // The calendar's own two facts, kept apart from the recording's.
-            // The Scheduled and Recorded columns exist because these
-            // *routinely* disagree — a booked hour against a 52-minute file,
-            // and a start four minutes late.
+            // The Scheduled and Recorded columns exist because these *routinely*
+            // disagree — a booked hour against a 52-minute file, and a start
+            // four minutes late.
             let scheduledEnd = event.end?.dateTime.flatMap(Self.parseRFC3339)
             let scheduledDuration = scheduledEnd.map { $0.timeIntervalSince(start) }
             // A meeting id, so several recordings of one call nest under it.
@@ -486,52 +619,47 @@ final class GoogleMeetSource: CloudImportSource {
             // ungrouped row is honest; a wrongly-grouped one is not.
             let meetingID = event.id
 
-            var video: ArtifactAvailability = .available
-            var expiresAt: Date?
-            var found: [RecordingLookup.Found] = []
-
-            if !isOrganiser {
-                // Through `listLabel`, never the raw address. The `?? email`
-                // fallback this replaces put a full participant email into the
-                // Status column — bypassing the one helper written to stop
-                // exactly that ("not a copy-pasteable identifier sitting in a
-                // screenshot"), and firing precisely on the population that
-                // most needs it: Google returns bare addresses for people
-                // outside the organiser's domain, which is where UR
-                // participants live.
+            // **The ladder, in the order the facts arrive.** Each rung is a
+            // different thing we know, and the ones that claim the most sit
+            // last: a recording in hand outranks every reason we might have
+            // expected not to find one.
+            let video: ArtifactAvailability
+            if !canReachMeet {
+                video = .needsScope(GoogleScopes.meetReadonly)
+            } else if !found.isEmpty {
+                // **Whoever booked it.** The organiser wall used to be checked
+                // first and so answered for rows we could plainly fetch: a
+                // colleague's meeting whose recording this account can reach
+                // read "Someone else" and drew no checkbox. Ask the data, then
+                // explain what it didn't answer.
+                video = .available
+            } else if harvest.failure != nil {
+                // We could not read the whole set of calls, so "nobody recorded
+                // this" is a claim we have not earned. On a mono-reason list it
+                // becomes the blanket "None of these were recorded" over a
+                // month of interviews that are all sitting in Drive.
+                video = .unsupported
+            } else if sawGenerated {
+                // Google told us a completed recording exists and we could not
+                // resolve a file for it. `.unsupported` renders "Unavailable",
+                // which is what we actually know.
+                video = .unsupported
+            } else if !isOrganiser {
+                // We looked and found nothing — but a call we were only invited
+                // to may not be ours to see, so the absence proves nothing.
+                // Naming the organiser is the remedy: the fix is to ask them.
+                //
+                // Through `listLabel`, never the raw address: Google returns
+                // bare addresses for people outside the organiser's domain,
+                // which is exactly where UR participants live.
                 video = .notOrganiser(
                     organiser: Self.person(event.organizer, domain: nil)?.listLabel)
-            } else if !canReachMeet {
-                video = .needsScope(GoogleScopes.meetReadonly)
             } else {
-                // An empty list covers three shapes: no meeting code to search
-                // on, no conference record, and no FILE_GENERATED recording.
-                // All three mean the same thing to the researcher — there is
-                // nothing to fetch — and none of them is a fault.
-                expiresAt = lookups[index]?.recordExpires
-                found = lookups[index]?.recordings ?? []
-                if found.isEmpty {
-                    if lookups[index]?.sawGeneratedRecordings == true {
-                        // Google told us a completed recording exists and we
-                        // could not resolve a file for any of them. Saying
-                        // "Not recorded" here is a false claim of knowledge —
-                        // and on a mono-reason list it becomes the blanket
-                        // "None of these were recorded", which is Finding 117's
-                        // shape with a different untruth in it. `.unsupported`
-                        // renders "Unavailable", which is what we actually
-                        // know. The case this really wants is Finding 123's
-                        // missing "the lookup failed" availability; until that
-                        // exists, do not claim the stronger fact.
-                        video = .unsupported
-                    } else {
-                        // Only a personal account earns the plan verdict, where
-                        // it is literally true. A Workspace account with an
-                        // unrecorded meeting is not a capability problem, and
-                        // saying so sends a paying customer to argue with their
-                        // admin.
-                        video = tier == .personal ? .notOnThisPlan : .notRecorded
-                    }
-                }
+                // Only a personal account earns the plan verdict, where it is
+                // literally true. A Workspace account with an unrecorded meeting
+                // is not a capability problem, and saying so sends a paying
+                // customer to argue with their admin.
+                video = tier == .personal ? .notOnThisPlan : .notRecorded
             }
 
             // Common to every row this event produces. Only the recording's own
@@ -596,24 +724,14 @@ final class GoogleMeetSource: CloudImportSource {
                                 recordedAt: nil, duration: nil))
             } else {
                 let eventKey = event.id ?? event.conferenceData?.conferenceId ?? UUID().uuidString
-                for (index, recording) in found.enumerated() {
-                    // **Composite, not the bare file id**, and the difference is
-                    // a real collision rather than a theoretical one. The
-                    // conference-record lookup keys on the meeting *code*,
-                    // which is shared by every event using one Meet link — a
-                    // researcher's persistent personal room, say — over a
-                    // 15-hour window, and then takes `.first` of an unordered
-                    // list. Two events at 10:00 and 15:00 on that link both
-                    // resolve to the same record, so a bare file id gave two
-                    // rows the same identity.
-                    //
-                    // Everything downstream is keyed on that identity:
+                for (ordinal, recording) in found.enumerated() {
+                    // **Composite, not the bare file id.** One Drive file can be
+                    // reached from more than one row's worth of context, and
+                    // everything downstream is keyed on row identity:
                     // `NSOutlineView` requires unique items and `Node` equality
-                    // is id-only, so one of the two rows would never draw;
+                    // is id-only, so a duplicate id means one row never draws;
                     // `ticked`, `progress` and `outcomes` are dictionaries, so
-                    // one tick queued both and one outcome spoke for both.
-                    // Prefixing with the event restores one-id-per-row while
-                    // keeping it stable across re-lists.
+                    // one tick would queue both and one outcome speak for both.
                     let rowID = "\(eventKey)#\(recording.fileID)"
                     // The map is what answers "does this row have a file", which
                     // the row id alone cannot: an un-recorded meeting's row id
@@ -625,68 +743,125 @@ final class GoogleMeetSource: CloudImportSource {
                                     duration: recording.duration,
                                     // Nil for the ordinary one-recording call,
                                     // so its filename and label are unchanged.
-                                    siblingOrdinal: found.count > 1 ? index + 1 : nil))
+                                    siblingOrdinal: found.count > 1 ? ordinal + 1 : nil))
                 }
             }
         }
+
+        // Pass 4 — the calls nobody booked.
+        //
+        // This pass is the reason for the whole inversion, and it is nine lines
+        // long. Everything that made it possible happened upstream: listing the
+        // records on time alone, and resolving each one's room to a code that
+        // the calendar either has or hasn't.
+        for name in join.unmatched {
+            guard let record = byName[name], !record.recordings.isEmpty else {
+                // Nothing to fetch, and nothing to say about it either: an
+                // unbooked call that nobody recorded left no trace worth a row.
+                continue
+            }
+            rows.append(contentsOf: unscheduledRows(for: record))
+        }
+
         return rows
     }
 
-    /// What one meeting's lookup found.
+    /// Rows for a call that has no booking behind it.
     ///
-    /// A named `Sendable` struct rather than the tuple this used to return, so
-    /// it can cross a task-group boundary.
-    private struct RecordingLookup: Sendable {
-        let recordExpires: Date?
+    /// **Titled with the meeting code**, which is the string the researcher
+    /// typed or clicked to join and the only name this call has ever had. Two
+    /// such calls in one day are then told apart at a glance — where a shared
+    /// "Instant meeting" title would leave them distinguishable only by clock,
+    /// and would collide in `CloudDownloadNaming` the moment both were fetched.
+    /// That the code is a live join key is a considered trade: the researcher's
+    /// own room code, in their own window, against two files overwriting each
+    /// other on disk.
+    private func unscheduledRows(for record: MeetHarvest.Record) -> [CloudImportRow] {
+        let title = record.meetingCode ?? Self.shortID(of: record.name)
+        // Siblings only when there really are siblings, so the ordinary
+        // one-recording call renders flat rather than behind a triangle.
+        let meetingID = record.recordings.count > 1 ? record.name : nil
 
-        /// **Every** generated recording the call produced, in the order Google
-        /// returned them — not the first one.
-        ///
-        /// This used to be a single optional `fileID` taken with `.first`, and
-        /// the second half of any meeting where somebody stopped and restarted
-        /// recording was dropped in silence. That is the §6 failure this whole
-        /// feature is written against: a half-session analyses perfectly
-        /// cleanly and reads as complete, so nothing ever tells the researcher
-        /// that forty minutes of their interview never arrived. Observed on a
-        /// live tenant 16 Aug 2026 — one call, two `FILE_GENERATED` entries.
-        let recordings: [Found]
-
-        struct Found: Sendable {
-            let fileID: String
-            /// When the record button was actually pressed, and for how long —
-            /// the session's real boundary. Nil when Google didn't serve it.
-            let startedAt: Date?
-            let duration: TimeInterval?
-        }
-
-        /// Whether Google reported any `FILE_GENERATED` recording at all,
-        /// regardless of whether we could resolve a file for it.
-        ///
-        /// The two are not the same fact and the difference is a false claim:
-        /// with this false, "nobody recorded this meeting" is true; with it
-        /// true and `recordings` empty, Google told us a completed recording
-        /// exists and we simply could not reach it. Reporting the second as the
-        /// first is Finding 117's shape one layer down.
-        let sawGeneratedRecordings: Bool
-
-        /// The list defaults to empty, because every caller that omits it is a
-        /// path where the lookup gave up — no record, no recordings, a refusal.
-        /// Defaulting rather than threading `[]` through three failure sites
-        /// keeps "we found nothing" as the thing you get by saying nothing.
-        init(recordExpires: Date?, recordings: [Found] = [],
-             sawGeneratedRecordings: Bool = false) {
-            self.recordExpires = recordExpires
-            self.recordings = recordings
-            self.sawGeneratedRecordings = sawGeneratedRecordings
+        return record.recordings.enumerated().map { ordinal, recording in
+            let rowID = "\(record.name)#\(recording.fileID)"
+            driveFileIDs[rowID] = recording.fileID
+            let anchor = recording.startedAt ?? record.start
+            if anchor == nil {
+                // Neither the recording nor its call carried a clock, which
+                // Google's own contract says cannot happen (`ConferenceRecord`
+                // documents `startTime` as always set). Said out loud and given
+                // an obviously-invented date rather than a plausible one: the
+                // row must exist — dropping a recording is the failure this
+                // adapter is written against — and a 2001 day header reads as a
+                // bug, where "today" would read as a fact.
+                Self.log.notice("meet_row unscheduled_without_clock")
+            }
+            return CloudImportRow(
+                id: rowID,
+                title: title,
+                startsAt: anchor ?? .distantPast,
+                duration: recording.duration,
+                sizeBytes: nil,
+                expiresAt: record.expires,
+                // No event, so no invitation list. Not a gap to be filled: the
+                // roster genuinely does not exist for a call started from the
+                // Meet home screen, and `.unsupported` says so.
+                attendees: [],
+                localState: .notImported,
+                video: .available,
+                roster: .unsupported,
+                transcript: .available,
+                organiser: nil,
+                scheduledAt: nil,
+                scheduledDuration: nil,
+                recordedAt: recording.startedAt,
+                meetingID: meetingID,
+                siblingOrdinal: record.recordings.count > 1 ? ordinal + 1 : nil,
+                // The fact, not an inference from the two nils above. See the
+                // property's own note: on Teams those nils mean something else
+                // entirely.
+                isUnscheduled: true
+            )
         }
     }
+
+    /// Every recording across a call's conference records, deduplicated and in
+    /// the order they happened.
+    ///
+    /// One booking can hold several calls into the same room — join, leave,
+    /// rejoin — and their recordings are spread across separate records. Asking
+    /// only the "best" one reported "Not recorded" over two files sitting in
+    /// Drive.
+    private static func unionedRecordings(
+        of records: [MeetHarvest.Record]
+    ) -> [MeetHarvest.Recording] {
+        var found: [MeetHarvest.Recording] = []
+        var seen = Set<String>()
+        for record in records {
+            for recording in record.recordings where seen.insert(recording.fileID).inserted {
+                found.append(recording)
+            }
+        }
+        // Chronological, so "Recording 1" is the one that happened first across
+        // the whole meeting rather than within whichever record it came from.
+        found.sort { ($0.startedAt ?? .distantPast) < ($1.startedAt ?? .distantPast) }
+        return found
+    }
+
+    /// `conferenceRecords/abc123` → `abc123`. A last-resort title, used only
+    /// when a call's room could not be resolved to its code.
+    private static func shortID(of name: String) -> String {
+        String(name.split(separator: "/").last ?? Substring(name))
+    }
+
+    // MARK: - The harvest
 
     /// Diagnostics for the join, which is the one step whose failure the row
     /// model cannot express (Finding 123). Category is dotted so
     /// `--predicate 'subsystem == "app.bristlenose"'` still catches it.
     private static let log = Logger(subsystem: "app.bristlenose", category: "cloud-import.meet")
 
-    /// How many meeting lookups are in flight at once.
+    /// How many Meet lookups are in flight at once.
     ///
     /// Four, the same bound §9 puts on concurrent downloads — not because the
     /// two are the same problem, but because one number this codebase can
@@ -696,122 +871,59 @@ final class GoogleMeetSource: CloudImportSource {
     /// for a rate-limited one.
     private static let lookupConcurrency = 4
 
-    /// Runs the per-meeting lookups concurrently and returns them keyed by the
-    /// caller's own index, so calendar order survives the reordering that
-    /// concurrency guarantees.
+    /// Every call in the window, with what it produced and which room it was in.
     ///
-    /// Static, and taking the session and token as parameters, so no child task
-    /// captures `self`: this adapter holds mutable state (`driveFileIDs`,
-    /// `identity`) that must not be touched off the calling context.
-    private static func lookUpRecordings(
-        jobs: [(index: Int, code: String, start: Date, end: Date?)],
+    /// Three phases, each one a fan-out over the phase before it:
+    ///
+    /// 1. **The calls**, filtered on time alone. One paginated query for the
+    ///    whole window, where the old shape made one per calendar event — so
+    ///    this is both fewer round trips and the only version that can see a
+    ///    call nobody booked.
+    /// 2. **What each produced.** A `FILE_GENERATED` recording is the only kind
+    ///    with bytes behind it.
+    /// 3. **The room**, for the calls that produced something. Deliberately not
+    ///    for the rest: a call with no file contributes nothing a code could
+    ///    change, so resolving every space would be a round trip per meeting for
+    ///    an answer nobody reads.
+    private static func harvestConferenceRecords(
+        window: DateInterval,
+        canReachMeet: Bool,
         accessToken: String,
         session: URLSession
-    ) async -> [Int: RecordingLookup] {
-        guard !jobs.isEmpty else { return [:] }
-        return await withTaskGroup(of: (Int, RecordingLookup?).self) { group in
-            var results: [Int: RecordingLookup] = [:]
-            var next = 0
+    ) async -> MeetHarvest {
+        // Without the scope there is nothing to ask and no failure to report —
+        // every row will say `.needsScope`, which is the accurate and actionable
+        // thing, and a recorded "failure" here would compete with it.
+        guard canReachMeet else { return MeetHarvest() }
 
-            while next < min(lookupConcurrency, jobs.count) {
-                let job = jobs[next]
-                next += 1
-                group.addTask {
-                    (job.index, await Self.recording(forMeetingCode: job.code, near: job.start,
-                                                     until: job.end,
-                                                     accessToken: accessToken, session: session))
-                }
-            }
-            // Refill as each finishes rather than in waves: a wave stalls on
-            // its slowest member while three connections sit idle.
-            while let (index, found) = await group.next() {
-                if let found { results[index] = found }
-                if next < jobs.count {
-                    let job = jobs[next]
-                    next += 1
-                    group.addTask {
-                        (job.index, await Self.recording(forMeetingCode: job.code, near: job.start,
-                                                         until: job.end,
-                                                         accessToken: accessToken, session: session))
-                    }
-                }
-            }
-            return results
-        }
-    }
+        // TRAP: the filter's field names are snake_case while the JSON response
+        // is camelCase. `startTime>=…` returns an empty list with HTTP 200 — a
+        // silent no-match that looks exactly like a quiet month.
+        //
+        // Only our own dates are interpolated now. The old filter spliced a
+        // remote-controlled meeting code into this string, which made a
+        // malformed-filter 400 reachable by data rather than only by bug.
+        let filter = "start_time>=\"\(rfc3339(window.start))\""
+            + " AND start_time<=\"\(rfc3339(window.end))\""
 
-    /// Finds the recording for one meeting, or establishes that there isn't one.
-    ///
-    /// **Returns nil for two different facts, and that conflation is a known
-    /// gap.** "There is no recording" and "the lookup failed" both arrive here
-    /// as nil, and the caller renders both as *not recorded* — a claim of
-    /// knowledge in the second case. It is bounded (a failed lookup makes a row
-    /// unfetchable, which is the safe direction) but it is exactly the
-    /// plausible-wrong-answer shape this file's header warns about, and closing
-    /// it needs an availability case the shared row model does not have yet.
-    private static func recording(
-        forMeetingCode code: String,
-        near start: Date,
-        until eventEnd: Date?,
-        accessToken: String,
-        session: URLSession
-    ) async -> RecordingLookup? {
-        // TRAP: the filter string uses snake_case field names while the JSON
-        // response is camelCase. `space.meetingCode = …` returns an empty list
-        // with HTTP 200 — a silent no-match that looks exactly like "there was
-        // no recording".
-        //
-        // The start_time clause is not an optimisation. A recurring meeting
-        // reuses ONE meeting code across every instance, so the code alone
-        // cannot say which Tuesday's recording this is.
-        //
-        // **The lookback is three hours, not one, and the reason is that people
-        // join early.** The conference record is stamped when the call actually
-        // starts, the calendar event says when it was meant to; a researcher
-        // who opens the room to check their mic before a 3pm session produces a
-        // record dated before the event. Observed live on 16 Aug 2026 — a call
-        // joined at 2:12pm against a 3:00pm event cleared the old one-hour
-        // lookback by twelve minutes. Twenty minutes earlier and the row would
-        // have read "Not recorded" about a recording sitting in Drive, which is
-        // the false negative this whole file is written against.
-        //
-        // Three hours is bounded by the recurrence it has to disambiguate: the
-        // tightest realistic recurrence is daily, 24 hours apart, so the window
-        // must stay under 24 hours wide. At −3/+12 it is 15, with room to
-        // spare. Do not widen the trailing edge past +12 without shrinking this
-        // one — the sum is the constraint, not either end.
-        //
-        // The window is a NET, not a decision. It gathers candidates; which one
-        // is this meeting's is `ConferenceRecordMatch`'s job, and that is a
-        // recent change — this used to take `.first` of the result and call it
-        // done.
-        let dayStart = start.addingTimeInterval(-3 * 3600)
-        let dayEnd = start.addingTimeInterval(12 * 3600)
-        let filter = "space.meeting_code = \"\(code)\" AND start_time>=\"\(Self.rfc3339(dayStart))\" AND start_time<=\"\(Self.rfc3339(dayEnd))\""
-
-        // **Every page, not the first.** Selection is only as good as the set it
-        // chooses from: with the continuation unfollowed, a busy personal room
-        // could push the right record onto page two and the match would pick
-        // confidently from the wrong half of the candidates. Capped so a
-        // pathological room cannot spin, and the cap is logged when it bites.
-        var candidates: [ConferenceRecordMatch.Candidate] = []
-        var expires: Date?
+        var raw: [ConferenceRecordsPage.Record] = []
+        var failure: GoogleAPIOutcome?
         var pageToken: String?
         var pages = 0
-        let pageCap = 5
+        // Every page, not the first: a busy month segments, and an unfollowed
+        // continuation is a set of recordings that silently do not exist.
+        let pageCap = 10
 
         repeat {
-            var components = URLComponents(string: "https://meet.googleapis.com/v2/conferenceRecords")!
+            var components = URLComponents(
+                string: "https://meet.googleapis.com/v2/conferenceRecords")!
             var items = [URLQueryItem(name: "filter", value: filter)]
             if let pageToken { items.append(URLQueryItem(name: "pageToken", value: pageToken)) }
             components.queryItems = items
             guard let url = components.url else {
-                // A fact that used to return nil in silence. The filter
-                // interpolates a remote-controlled meeting code, so this is
-                // reachable by data rather than only by bug — and it renders as
-                // "Not recorded" with nothing anywhere to say otherwise.
-                log.notice("meet_lookup phase=records unbuildable_url codeLen=\(code.count, privacy: .public)")
-                return nil
+                log.notice("meet_harvest phase=records unbuildable_url")
+                failure = .unexpected(status: 0, reason: "unbuildable url")
+                break
             }
 
             var request = URLRequest(url: url)
@@ -822,123 +934,180 @@ final class GoogleMeetSource: CloudImportSource {
             do {
                 (data, response) = try await session.data(for: request)
             } catch {
-                log.notice("meet_lookup phase=records transport_error=\(error.localizedDescription, privacy: .public)")
-                return nil
+                log.notice("""
+                    meet_harvest phase=records \
+                    transport_error=\(error.localizedDescription, privacy: .public)
+                    """)
+                failure = .unexpected(status: 0, reason: "transport")
+                break
             }
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             let outcome = GoogleResponseClassifier.classify(status: status, body: data)
             let page = try? JSONDecoder().decode(ConferenceRecordsPage.self, from: data)
 
-            // **This function returns nil for several different facts** — no
-            // record, no generated recording, a refusal, a dropped connection —
-            // and the row renders them alike (Finding 123). Each is at least
-            // *said* here, even though the row model still cannot tell them
-            // apart.
-            //
-            // Shape, not value, at `.notice`. The meeting code is a join key
-            // Google asks apps not to surface, and a system log can leave the
-            // machine inside a sysdiagnose; length and dash count are enough to
-            // catch a format mismatch. The code and the whole filter sit one
-            // level down at `.debug`, marked private.
             log.notice("""
-                meet_lookup phase=records status=\(status, privacy: .public) \
+                meet_harvest phase=records status=\(status, privacy: .public) \
                 outcome=\(String(describing: outcome), privacy: .public) \
                 page=\(pages, privacy: .public) \
-                records=\(page?.conferenceRecords?.count ?? -1, privacy: .public) \
-                codeLen=\(code.count, privacy: .public) \
-                codeDashes=\(code.filter { $0 == "-" }.count, privacy: .public)
+                records=\(page?.conferenceRecords?.count ?? -1, privacy: .public)
                 """)
-            log.debug("meet_lookup filter=\(filter, privacy: .private)")
             if status != 200, let body = String(data: data, encoding: .utf8), !body.isEmpty {
-                log.notice("meet_lookup phase=records body=\(body.prefix(400), privacy: .private)")
+                log.notice("meet_harvest phase=records body=\(body.prefix(400), privacy: .private)")
             }
-            guard outcome == .ok, let page else { return nil }
-
-            for record in page.conferenceRecords ?? [] {
-                guard let name = record.name else {
-                    // The count above already said a record was found, so
-                    // without this the only tell is the absence of a later
-                    // `phase=recordings` line.
-                    log.notice("meet_lookup phase=records record_without_name")
-                    continue
-                }
-                candidates.append(ConferenceRecordMatch.Candidate(
-                    name: name,
-                    start: record.startTime.flatMap(Self.parseRFC3339),
-                    end: record.endTime.flatMap(Self.parseRFC3339)
-                ))
-                // Expiry belongs to whichever record wins, but they share a
-                // code and a window, so the first one seen is representative
-                // and the field is nil on every tenant measured so far.
-                if expires == nil { expires = record.expireTime.flatMap(Self.parseRFC3339) }
+            guard outcome == .ok, let page else {
+                // **Recorded, not swallowed.** Every row downstream reads this:
+                // a failure here means "we could not look", and the one thing
+                // the window must never do is render that as "nobody recorded".
+                failure = outcome == .ok ? .unexpected(status: status, reason: "undecodable")
+                                         : outcome
+                break
             }
 
+            raw.append(contentsOf: page.conferenceRecords ?? [])
             pageToken = page.nextPageToken
             pages += 1
             if pageToken != nil && pages >= pageCap {
-                log.notice("meet_lookup phase=records page_cap_hit pages=\(pages, privacy: .public)")
+                log.notice("meet_harvest phase=records page_cap_hit pages=\(pages, privacy: .public)")
+                // A prefix passing for a total is exactly the shape `ListOutcome`
+                // exists to prevent, one layer down.
+                failure = .unexpected(status: 200, reason: "page cap")
                 break
             }
         } while pageToken != nil
 
-        // **The choice, and the refusal.** `.first` was a coin toss: the API
-        // documents no ordering and takes no `order_by`, so on a personal room
-        // used twice in a day an event at 10:00 and one at 15:00 could each get
-        // the other's recording. That is not a missing row — it is the wrong
-        // video under the right participant's name, and it analyses cleanly.
-        let outcome = ConferenceRecordMatch.select(
-            from: candidates, eventStart: start, eventEnd: eventEnd)
-        // Offsets from the event, in minutes, so a wrong sweep can be read
-        // rather than guessed at. Relative values only — the record NAME is a
-        // join key and stays out of the log.
-        for candidate in candidates {
-            let from = candidate.start.map { Int($0.timeIntervalSince(start) / 60) }
-            let to = candidate.end.map { Int($0.timeIntervalSince(start) / 60) }
-            log.debug("""
-                meet_lookup phase=candidate startMin=\(from ?? -9999, privacy: .public) \
-                endMin=\(to ?? -9999, privacy: .public)
-                """)
-        }
-
-        let names: [String]
-        switch outcome {
-        case .none:
-            return nil
-        case .matched(let selected):
-            names = selected
-        }
-
-        // **Every record's recordings, unioned.** One event can hold several
-        // calls into the same room — join, leave, rejoin — and the recordings
-        // are spread across their conference records. Asking only the "best"
-        // one reported "Not recorded" over two files sitting in Drive.
-        var found: [RecordingLookup.Found] = []
-        var seenFileIDs = Set<String>()
-        var sawGenerated = false
-
-        for name in names {
-            let (recordings, generated) = await Self.recordings(
-                ofRecord: name, accessToken: accessToken, session: session)
-            if generated { sawGenerated = true }
-            for recording in recordings where seenFileIDs.insert(recording.fileID).inserted {
-                found.append(recording)
+        // Phase 2 — what each call produced.
+        let calls = await mapConcurrently(raw) { record -> HarvestedCall in
+            guard let name = record.name, !name.isEmpty else {
+                // The count above already said a record was found, so without
+                // this the only tell is a missing `phase=recordings` line.
+                log.notice("meet_harvest phase=records record_without_name")
+                return HarvestedCall(record: record, recordings: [], sawGenerated: false)
             }
+            let (found, generated) = await recordings(
+                ofRecord: name, accessToken: accessToken, session: session)
+            return HarvestedCall(record: record, recordings: found, sawGenerated: generated)
         }
 
-        // Chronological, so the outline's "Recording 1" is the one that
-        // happened first across the whole event rather than within whichever
-        // record it came from.
-        found.sort { ($0.startedAt ?? .distantPast) < ($1.startedAt ?? .distantPast) }
+        // Phase 3 — the room, deduplicated. A researcher's personal room holds
+        // many of the month's calls and `spaces.get` returns the same code every
+        // time.
+        var wanted: [String] = []
+        var seenSpaces = Set<String>()
+        for call in calls where !call.recordings.isEmpty || call.sawGenerated {
+            guard let space = call.record.space, !space.isEmpty else { continue }
+            if seenSpaces.insert(space).inserted { wanted.append(space) }
+        }
+        let resolved = await mapConcurrently(wanted) { space in
+            ResolvedSpace(
+                space: space,
+                code: await meetingCode(ofSpace: space, accessToken: accessToken, session: session))
+        }
+        var codeBySpace: [String: String] = [:]
+        for entry in resolved {
+            if let code = entry.code, !code.isEmpty { codeBySpace[entry.space] = code }
+        }
+
+        let records: [MeetHarvest.Record] = calls.compactMap { call in
+            guard let name = call.record.name, !name.isEmpty else { return nil }
+            return MeetHarvest.Record(
+                name: name,
+                meetingCode: call.record.space.flatMap { codeBySpace[$0] },
+                start: call.record.startTime.flatMap(parseRFC3339),
+                end: call.record.endTime.flatMap(parseRFC3339),
+                expires: call.record.expireTime.flatMap(parseRFC3339),
+                recordings: call.recordings,
+                sawGeneratedRecordings: call.sawGenerated)
+        }
 
         log.notice("""
-            meet_lookup phase=union records=\(names.count, privacy: .public) \
-            recordings=\(found.count, privacy: .public) \
-            sawGenerated=\(sawGenerated, privacy: .public)
+            meet_harvest complete records=\(records.count, privacy: .public) \
+            withFiles=\(records.filter { !$0.recordings.isEmpty }.count, privacy: .public) \
+            spacesResolved=\(codeBySpace.count, privacy: .public) \
+            ofSpacesAsked=\(wanted.count, privacy: .public) \
+            failure=\(failure.map { String(describing: $0) } ?? "none", privacy: .public)
             """)
 
-        return RecordingLookup(recordExpires: expires,
-                               recordings: found,
-                               sawGeneratedRecordings: sawGenerated)
+        return MeetHarvest(records: records, failure: failure)
+    }
+
+    /// The room's join code, which is the join key both sides share.
+    ///
+    /// Returns nil on any failure. A record with no code can never be matched to
+    /// a booking — and that is the safe direction now, because an unmatched
+    /// record still becomes a row.
+    private static func meetingCode(
+        ofSpace space: String,
+        accessToken: String,
+        session: URLSession
+    ) async -> String? {
+        // `space` is remote-controlled (`spaces/<id>`), so it goes through the
+        // failable initialiser rather than a force-unwrap: a third party decides
+        // what is in the string, and a crash is worse than a row that carries a
+        // code instead of a title.
+        guard let url = URL(string: "https://meet.googleapis.com/v2/\(space)") else {
+            log.notice("meet_harvest phase=space unbuildable_url")
+            return nil
+        }
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            log.notice("""
+                meet_harvest phase=space \
+                transport_error=\(error.localizedDescription, privacy: .public)
+                """)
+            return nil
+        }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let outcome = GoogleResponseClassifier.classify(status: status, body: data)
+        // Shape, not value. The code is a join key that opens a room, so its
+        // length and dash count are enough to catch a format mismatch; the code
+        // itself never reaches the system log.
+        let code = (try? JSONDecoder().decode(MeetSpace.self, from: data))?.meetingCode
+        log.notice("""
+            meet_harvest phase=space status=\(status, privacy: .public) \
+            outcome=\(String(describing: outcome), privacy: .public) \
+            codeLen=\(code?.count ?? -1, privacy: .public) \
+            codeDashes=\(code?.filter { $0 == "-" }.count ?? -1, privacy: .public)
+            """)
+        guard outcome == .ok else { return nil }
+        return code
+    }
+
+    /// Runs `transform` over `items` with at most `limit` in flight, preserving
+    /// input order.
+    ///
+    /// Refills as each finishes rather than in waves: a wave stalls on its
+    /// slowest member while three connections sit idle. Static, and taking the
+    /// session and token as parameters at every call site, so no child task
+    /// captures `self` — this adapter holds mutable state (`driveFileIDs`,
+    /// `identity`) that must not be touched off the calling context.
+    private static func mapConcurrently<In: Sendable, Out: Sendable>(
+        _ items: [In],
+        limit: Int = lookupConcurrency,
+        _ transform: @escaping @Sendable (In) async -> Out
+    ) async -> [Out] {
+        guard !items.isEmpty else { return [] }
+        var results: [Int: Out] = [:]
+        await withTaskGroup(of: (Int, Out).self) { group in
+            var next = 0
+            func enqueue() {
+                let index = next
+                let item = items[index]
+                next += 1
+                group.addTask { (index, await transform(item)) }
+            }
+            while next < min(limit, items.count) { enqueue() }
+            while let (index, out) = await group.next() {
+                results[index] = out
+                if next < items.count { enqueue() }
+            }
+        }
+        return (0..<items.count).compactMap { results[$0] }
     }
 
     /// One conference record's recordings.
@@ -950,7 +1119,7 @@ final class GoogleMeetSource: CloudImportSource {
         ofRecord name: String,
         accessToken: String,
         session: URLSession
-    ) async -> ([RecordingLookup.Found], Bool) {
+    ) async -> ([MeetHarvest.Recording], Bool) {
         // `name` is remote-controlled (`conferenceRecords/<id>`), so it goes
         // through the failable initialiser rather than a force-unwrap: a third
         // party decides what is in the string, and a crash is a worse outcome
@@ -991,11 +1160,11 @@ final class GoogleMeetSource: CloudImportSource {
         // ENDED both mean "not yet", so offering a row for those would produce
         // a fetch that 404s minutes after the researcher ticks it.
         let generated = (page.recordings ?? []).filter { $0.state == "FILE_GENERATED" }
-        let found: [RecordingLookup.Found] = generated.compactMap { recording in
+        let found: [MeetHarvest.Recording] = generated.compactMap { recording in
             guard let fileID = recording.driveDestination?.file else { return nil }
             let began = recording.startTime.flatMap(Self.parseRFC3339)
             let ended = recording.endTime.flatMap(Self.parseRFC3339)
-            return RecordingLookup.Found(
+            return MeetHarvest.Recording(
                 fileID: fileID,
                 startedAt: began,
                 duration: (began != nil && ended != nil)

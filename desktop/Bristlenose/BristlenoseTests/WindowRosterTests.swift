@@ -105,8 +105,8 @@ struct WindowRosterTests {
                 "lowest free, not next-highest — otherwise ordinals climb forever")
     }
 
-    @Test("closing the FIRST window leaves the survivor on its number")
-    func survivorKeepsItsNumber() {
+    @Test("a window left alone gives its number up")
+    func lastOneStandingIsUnnumbered() {
         let roster = freshRoster()
         let a = UUID(), b = UUID()
         _ = roster.claim(windowID: a, showing: quotes(study))
@@ -114,10 +114,71 @@ struct WindowRosterTests {
 
         roster.release(windowID: a)
 
-        // A single window reading "Study 2" looks odd, and is the accepted cost
-        // of never renumbering. Pinned so it reads as a decision rather than as
-        // the bug it resembles.
-        #expect(roster.ordinal(for: b) == 2)
+        // An ordinal exists to disambiguate. Alone, it disambiguates nothing,
+        // and "Study 2" with no "Study" anywhere is just wrong.
+        #expect(roster.ordinal(for: b) == 1)
+    }
+
+    @Test("a number grabbed in transit doesn't outlive the reason for it")
+    func transitOrdinalIsGivenUp() {
+        // The case the first real multi-window run drew: every window passes
+        // through the Project lens as it opens, so ⌥⌘N four times claims 1–4
+        // there. Move three of them to other lenses and the survivor was left
+        // titled "IKEA with uxfriends 4" — alone on Project, with no 1, 2 or 3
+        // anywhere.
+        let roster = freshRoster()
+        let windows = (0..<4).map { _ in UUID() }
+        let project = WindowRoster.Group(projectID: study, lens: "project")
+        for w in windows { _ = roster.claim(windowID: w, showing: project) }
+        #expect(roster.ordinal(for: windows[3]) == 4)
+
+        for (i, lens) in ["sessions", "quotes", "codebook"].enumerated() {
+            _ = roster.claim(windowID: windows[i],
+                             showing: WindowRoster.Group(projectID: study, lens: lens))
+        }
+
+        #expect(roster.ordinal(for: windows[3]) == 1, "alone on Project — no suffix")
+    }
+
+    @Test("the gap survives while the group still has members")
+    func compactionDoesNotEatTheGap() {
+        // The rule the gap decision was actually about, unchanged: 1 is still
+        // held, so nothing moves and the third window keeps its 3.
+        let roster = freshRoster()
+        let a = UUID(), b = UUID(), c = UUID()
+        _ = roster.claim(windowID: a, showing: quotes(study))
+        _ = roster.claim(windowID: b, showing: quotes(study))
+        _ = roster.claim(windowID: c, showing: quotes(study))
+
+        roster.release(windowID: b)
+
+        #expect(roster.ordinal(for: a) == 1)
+        #expect(roster.ordinal(for: c) == 3)
+    }
+
+    // MARK: - Whose serve is it?
+
+    @Test("a window opening with no project doesn't look like the last one")
+    func anotherWindowStillShowsAProject() {
+        // The question that decides whether the shared sidecar is torn down. A
+        // new window starts with no selection, and used to stop the serve on
+        // everyone's behalf — which reset every other window to the dashboard.
+        let roster = freshRoster()
+        let showing = UUID(), opening = UUID()
+        _ = roster.claim(windowID: showing, showing: quotes(study))
+        _ = roster.claim(windowID: opening, showing: nil)
+
+        #expect(roster.anyProjectShown(excluding: opening))
+        #expect(!roster.anyProjectShown(excluding: showing),
+                "the only project window may stop the serve")
+    }
+
+    @Test("nobody showing a project means the serve is nobody's")
+    func noProjectAnywhere() {
+        let roster = freshRoster()
+        let a = UUID()
+        _ = roster.claim(windowID: a, showing: nil)
+        #expect(!roster.anyProjectShown(excluding: UUID()))
     }
 
     @Test("switching lens releases the old group's ordinal")

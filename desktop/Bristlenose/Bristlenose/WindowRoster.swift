@@ -21,9 +21,13 @@ import Foundation
 /// this app **dims** its window commands rather than acting on the window
 /// behind, so there is no second window to resolve and nothing to hold.
 @MainActor
-final class WindowRoster {
+final class WindowRoster: ObservableObject {
 
     static let shared = WindowRoster()
+
+    /// Each live window's ordinal. Published because a window's number can
+    /// change after it was handed out — see `compact`.
+    @Published private(set) var assignments: [UUID: Int] = [:]
 
     /// What makes two windows duplicates for titling: the same study on the
     /// same lens. Different lenses already read differently in the Window menu,
@@ -34,7 +38,8 @@ final class WindowRoster {
         let lens: String?
     }
 
-    /// Ordinals in use per group. Never compacted — see `claim`.
+    /// Ordinals in use per group. Gaps are kept while the group has members —
+ /// see `claim` — and collapse only when one window is left, see `compact`.
     private var taken: [Group: Set<Int>] = [:]
     /// Every live project window, and the ordinal it holds. The group is
     /// optional because a window showing the welcome screen still **counts** as
@@ -51,13 +56,27 @@ final class WindowRoster {
     /// Number of live project windows — for tests and diagnostics.
     var count: Int { held.count }
 
+    /// Is any window **other than this one** showing a project?
+    ///
+    /// The question the serve lifecycle has to ask before it tears anything
+    /// down. Selection is per window; the sidecar is not. A window that
+    /// deselects — or that has just opened and hasn't restored its project yet
+    /// — used to stop the serve on everyone's behalf, which killed the port
+    /// every other window's web view was mounted against.
+    ///
+    /// Excludes the asking window deliberately, so the answer doesn't depend on
+    /// whether that window's own roster entry has been updated yet. Two
+    /// observers drive this (`selection` and `windowGroup`) and their order
+    /// isn't guaranteed.
+    func anyProjectShown(excluding windowID: UUID) -> Bool {
+        held.contains { $0.key != windowID && $0.value.group != nil }
+    }
+
     /// What number `windowID` is currently holding, or 1 if it holds none.
     ///
     /// A read, deliberately separate from `claim`: claiming *releases first*
     /// (the window is telling the roster it now shows something else), so
-    /// re-claiming is not a way to ask "what am I?". Each window keeps its own
-    /// ordinal in `@State`; this exists so the never-renumber property can be
-    /// observed from outside rather than inferred.
+    /// re-claiming is not a way to ask "what am I?".
     func ordinal(for windowID: UUID) -> Int {
         held[windowID]?.ordinal ?? 1
     }
@@ -66,17 +85,15 @@ final class WindowRoster {
     /// held before. `1` means "no suffix" — the first window on a study's lens
     /// is titled plainly, and only the second onwards is numbered.
     ///
-    /// **Lowest free number, and nobody is ever renumbered** (decided 16 Aug
-    /// 2026). Close the second of three and you are left with "Study" and
-    /// "Study 3" — a gap, kept on purpose: renumbering would change a window's
-    /// name while the researcher is looking at it, which is the same
-    /// unlearnable-rule objection this design uses against a time-based
-    /// restore. A window opened later fills the gap, so the numbers stay small.
+    /// **Lowest free number, and a window with company is never renumbered**
+    /// (decided 16 Aug 2026). Close the second of three and you are left with
+    /// "Study" and "Study 3" — a gap, kept on purpose: renumbering would change
+    /// a window's name while the researcher is looking at it, which is the same
+    /// unlearnable-rule objection this design uses against a time-based restore.
+    /// A window opened later fills the gap, so the numbers stay small.
     ///
-    /// The honest consequence: close the *first* of two and the survivor stays
-    /// "Study 2" on its own. Odd-looking, and still better than the alternative,
-    /// which is a title that changes because something happened in a different
-    /// window.
+    /// The one exception is a window left **alone** in its group, which gives
+    /// its number up — see `compact` for the case that earned it.
     @discardableResult
     func claim(windowID: UUID, showing group: Group?) -> Int {
         release(windowID: windowID)
@@ -84,6 +101,7 @@ final class WindowRoster {
             // Still a window, still counts for `hasProjectWindow` — just not a
             // member of any duplicate group.
             held[windowID] = (nil, 1)
+            assignments[windowID] = 1
             return 1
         }
 
@@ -93,16 +111,47 @@ final class WindowRoster {
         used.insert(ordinal)
         taken[group] = used
         held[windowID] = (group, ordinal)
+        assignments[windowID] = ordinal
         return ordinal
     }
 
     /// Give back whatever `windowID` holds. Safe to call for a window that
     /// holds nothing.
     func release(windowID: UUID) {
+        assignments.removeValue(forKey: windowID)
         guard let (group, ordinal) = held.removeValue(forKey: windowID),
               let group else { return }
         taken[group]?.remove(ordinal)
         if taken[group]?.isEmpty == true { taken[group] = nil }
+        compact(group)
+    }
+
+    /// A window left alone in its group gives up its number.
+    ///
+    /// **Why this is not the renumbering that was rejected.** The gap rule
+    /// exists so a window's name doesn't change because of something that
+    /// happened in a *different* window, and it is kept exactly where it was
+    /// decided: close the middle of three and you still have "Study" and
+    /// "Study 3", because 1 is still held and nothing moves.
+    ///
+    /// This covers a case the decision was never shown, and which turned out to
+    /// be the common one. Every window passes *through* the Project lens as it
+    /// opens, so pressing ⌥⌘N four times claims 1–4 there; move three of them
+    /// to other lenses and the survivor keeps whatever it grabbed in transit.
+    /// The first real run of multi-window drew a window titled
+    /// **"IKEA with uxfriends 4"** sitting alone on Project, with no 1, 2 or 3
+    /// anywhere — a number disambiguating nothing, which is the one thing an
+    /// ordinal must never be.
+    ///
+    /// So: an ordinal is shown only while it is telling the reader something.
+    /// Alone in the group, it isn't.
+    private func compact(_ group: Group) {
+        let members = held.filter { $0.value.group == group }
+        guard members.count == 1, let (id, entry) = members.first, entry.ordinal != 1
+        else { return }
+        taken[group] = [1]
+        held[id] = (group, 1)
+        assignments[id] = 1
     }
 
     /// The suffix for an ordinal: nothing for the first, " 2" onwards.
@@ -118,5 +167,6 @@ final class WindowRoster {
     func resetForTesting() {
         taken.removeAll()
         held.removeAll()
+        assignments.removeAll()
     }
 }

@@ -590,6 +590,19 @@ final class ServeManager: ObservableObject {
     /// lifetime, so every (fronted or parked) sidecar inherits an already-open
     /// security scope. No explicit lease handoff is needed here.
     func switchProject(to path: String) async {
+        // Already serving exactly this? Then there is nothing to switch, and
+        // doing it anyway is actively harmful: a re-point mints a new port, and
+        // every window's web view is keyed on the port (`ServeSession.viewID`),
+        // so all of them remount and land back on the Project dashboard.
+        //
+        // Reachable the moment a second window exists — a new window restores
+        // the same project and asks for it again — which is exactly how
+        // multi-window first behaved: opening a window reset every other window
+        // to the dashboard (16 Aug 2026). Preference changes take
+        // `restartIfRunning()`, not this path, so a same-path no-op loses
+        // nothing.
+        if case .running = state, currentProjectPath == path { return }
+
         let decision = RepointDecision.evaluate(
             target: path,
             parkedPath: parked?.projectPath,

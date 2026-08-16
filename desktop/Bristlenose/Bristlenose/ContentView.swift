@@ -222,9 +222,11 @@ struct ContentView: View {
     /// this window's `SessionsSwitcherButton`.
     @State private var sessionsSwitcherRequest = 0
 
-    /// This window's place among the windows showing the same study on the same
-    /// lens — 1 for the first, which takes no suffix. See `WindowRoster`.
-    @State private var windowOrdinal = 1
+    /// The roster, observed rather than merely called: a window's number can
+    /// change after it was handed out — the last window left in a group gives
+    /// its number up — so the title has to follow, not cache. See
+    /// `WindowRoster.compact`.
+    @ObservedObject private var windowRoster = WindowRoster.shared
 
     /// The project this window has already restored the remembered lens for.
     ///
@@ -292,7 +294,7 @@ struct ContentView: View {
     /// earned it).
     private var windowTitle: String {
         let base = selectedProject?.name ?? i18n.t("desktop.welcome.windowTitle")
-        return base + WindowRoster.suffix(for: windowOrdinal)
+        return base + WindowRoster.suffix(for: windowRoster.assignments[windowID] ?? 1)
     }
 
     /// The single selected item, if exactly one is selected.
@@ -631,7 +633,7 @@ struct ContentView: View {
         // a different study, or a different lens of the same one. `initial`
         // covers the window opening already showing something.
         .onChange(of: windowGroup, initial: true) { _, group in
-            windowOrdinal = WindowRoster.shared.claim(windowID: windowID, showing: group)
+            windowRoster.claim(windowID: windowID, showing: group)
         }
         // Restore the lens this project was left on, once the report is up.
         // `isReady` is cleared by `BridgeHandler.reset()` on every project
@@ -867,8 +869,7 @@ struct ContentView: View {
                     // consent-gated (never running pre-consent), and granting
                     // consent (re)starts via the .onChange(of: consentVersion) →
                     // start() path, not this one.
-                    switchTask?.cancel()
-                    serveManager.stop()
+                    stopServeIfLastProjectWindow()
                 }
             }
         case .folder(let id):
@@ -878,8 +879,7 @@ struct ContentView: View {
             bridgeHandler.selectedProjectIsRunning = false
             bridgeHandler.selectedFolderName =
                 projectIndex.folders.first { $0.id == id }?.name ?? ""
-            switchTask?.cancel()
-            serveManager.stop()
+            stopServeIfLastProjectWindow()
         default:
             // Multi-select or empty — stop serve, clear state.
             persistedProjectID = ""
@@ -887,9 +887,30 @@ struct ContentView: View {
             bridgeHandler.selectedProjectRevealablePath = ""
             bridgeHandler.selectedProjectIsRunning = false
             bridgeHandler.selectedFolderName = ""
-            switchTask?.cancel()
-            serveManager.stop()
+            stopServeIfLastProjectWindow()
         }
+    }
+
+    /// Stop the sidecar — but only if this window is the last one that needed it.
+    ///
+    /// Selection is per window; the sidecar is not. Every arm of
+    /// `applySelectionChange` that isn't "serve this project" used to call
+    /// `serveManager.stop()` on everyone's behalf, and the blast radius was
+    /// total: killing the serve mints a new port on the next start, every
+    /// window's web view is keyed on the port (`ServeSession.viewID`), so they
+    /// all remount and land back on the Project dashboard.
+    ///
+    /// That made two ordinary acts destructive as soon as a second window
+    /// existed — **opening a new window** (it starts with no selection and hits
+    /// the default arm before restoring its project) and **going to the welcome
+    /// screen** (deselecting). Both reset every other window. Reported from the
+    /// first real multi-window run, 16 Aug 2026.
+    ///
+    /// The cancel stays unconditional: `switchTask` is this window's own.
+    private func stopServeIfLastProjectWindow() {
+        switchTask?.cancel()
+        guard !windowRoster.anyProjectShown(excluding: windowID) else { return }
+        serveManager.stop()
     }
 
     // MARK: - Notification receivers (extracted to reduce body complexity)

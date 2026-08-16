@@ -441,6 +441,15 @@ extension CloudImportOutlineView {
         func outlineView(_ outlineView: NSOutlineView, shouldSelectItem item: Any) -> Bool {
             // A day is a label and a meeting header has no file behind it.
             // Neither is a destination for the keyboard.
+            //
+            // **Decided 16 Aug 2026, and reviewed twice — leave it.** Making
+            // headers selectable would give the parent tick a keyboard route
+            // and cost a selectable row that the primary action cannot act on.
+            // The trade was declined: a keyboard-without-VoiceOver user ticks
+            // the children instead, which reaches exactly the same place, and
+            // VoiceOver reaches the header's checkbox directly because it
+            // navigates by element rather than by table selection. The only
+            // thing lost is a shortcut, not a capability.
             (item as? CloudImportOutline.Node)?.row != nil
         }
 
@@ -738,6 +747,12 @@ extension CloudImportOutlineView {
             let view = reuse(TwoLineCellView.self, Column.size, in: outline)
             view.leadingInset = 0
             view.alignment = .right
+            // A meeting header shows a dash, **not the sum of its recordings**.
+            // Decided 16 Aug 2026 against the reviewer's suggestion: a total is
+            // a number nobody acts on. You do not choose between the two halves
+            // of one interview on size — you want both, and the files are what
+            // they are — so the sum would restate what the rows below already
+            // say and add a figure that informs no decision.
             guard let bytes = node.row?.sizeBytes else {
                 view.configureDash()
                 return view

@@ -42,6 +42,16 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
 
 ## Changelog
 
+- _2026-08-16 (branding pass)_ — new **§9a Vendor branding**, read out of the
+  three vendors' current guidelines. The reframe: brand here is **three**
+  surfaces under three instruments, and the one the design was drifting toward —
+  a Teams/Meet/Zoom product icon in the `File ▸ Import` submenu — is the one all
+  three vendors forbid without an express licence. So `symbolName`'s "placeholder
+  in every case" comment is inverted into a decision. Also corrected: this
+  codebase's claim that **Zoom publishes a sign-in spec** (it does not, and its
+  Marks licence reaches SDK Apps only, which we are not), and Google's ban on
+  **monochrome** marks — which `provider-google.imageset` breaks today, one
+  surface over. §9's Microsoft paragraph is verified and stands.
 - _2026-08-16_ — **the first live Google tenant**, and the same shape of lesson
   one platform over. A Business Standard Workspace was bought and a Meet
   recorded, which settled the folder and naming grammar by measurement, and
@@ -480,6 +490,10 @@ There is no published head-to-head, and there probably cannot easily be one: ven
 
 **Microsoft owns the sign-in vocabulary — look it up, don't write it.** Their branding guidelines permit exactly two strings on the button: **"Sign in with Microsoft"**, or **"Sign in"** if space is tight. "Sign in *to* Microsoft" is not a variant. The Microsoft logo is required beside it, unaltered, and ships as official light/dark SVG and PNG assets to download rather than redraw. The account noun is **"work or school account"** — mandatory alongside the button so users recognise whether it applies to them — and "enterprise account", "business account" and "corporate account" are explicitly forbidden, as are *Azure* and *Active Directory* anywhere an end user can see them (fine in this doc and with IT admins). Once signed in, prefer the organisation's own name over a generic. Two consequences worth carrying: their guidelines **require a way to sign out and switch account** ("people are often associated with more than one organization"), which independently confirms §7's `(platform, account)` keying — today's single-slot storage would let a second client tenant silently overwrite the first. And Microsoft publishes a **Terminology Search and a UI String Search** so localised apps match their own products, which is the same trick as the `TCC.loctable` lift for the macOS prompt: the 20 translations of this button are *looked up*, not machine-translated.
 
+_Extended by §9a (16 Aug 2026), which adds Google and Zoom, separates the
+sign-in button from product-icon use, and records that neither product icon may
+be used at all. This paragraph is verified and unchanged._
+
 **The surface is a window, not a sheet.** Image Capture is the system analogue and it is a window; Photos import is a view. Mechanically a sheet cannot work here: it is window-modal, so keeping it up hides the sidebar-row progress behind a modal, and dismissing it destroys the per-row outcomes §6's recovery depends on. **Do not model it on `NewFilesSheet`** — that file carries its own retirement notice and is the codebase's worked example of a data view wrongly living in native chrome.
 
 **Checkboxes carry the intent; there is no multi-selection.** Image Capture and Photos use selection alone, but those are *transient* — pick and immediately import. This list has durable per-row state (§6) and a filter step, and under selection semantics a tick made under one filter, then revisited under another, is fragile and invisible. So: checkboxes are intent, one focus row for keyboard navigation, and the button names the tick count (`Import 4 Recordings`). One model, no ambiguity, and no heavy blue over rows that already carry state.
@@ -537,6 +551,189 @@ What shipped: seven Swift test files — `CloudDownloadTests`, `GoogleMeetImport
 Two things this cost, both worth recording. The adapters gained a `restoredTokens:` initialiser parameter — not a test hook but the Keychain-restore seam §2 already owed, since an adapter must be constructible already-authenticated. And an early draft of these tests **passed for the wrong reason**: with no token injected, the adapters' guard short-circuited before the network, so assertions about request counts were satisfied by zero requests. A test that cannot fail on the bug it names is worse than no test, and it took injecting a token to make them honest.
 
 The live `ASWebAuthenticationSession` round trip against a real tenant categorically is not unit-testable; the internal TF cohort covers what CI cannot. Cloud import is a new **ingest** surface — network-sourced, unlike the 16 file-shaped ones — and its section in `docs/testing/coverage-inventory.md` was owed *before* the build and is now owed *after* it.
+
+---
+
+## 9a. Vendor branding — three surfaces, three rule sets
+
+_Written 16 Aug 2026, from the vendors' own current guidelines. Extends §9's
+"Microsoft owns the sign-in vocabulary" paragraph, which is verified and stands;
+this section adds the two platforms it never covered and the two surfaces it
+never separated. Nothing here is implemented — it is a brief._
+
+**The mistake this section exists to prevent is treating brand as one problem.**
+It is three, and they are governed by three different instruments:
+
+| Surface | Instrument | Answer |
+| --- | --- | --- |
+| The **sign-in button** | The vendor's identity-branding programme | Required, specified, granted |
+| The product **name** in menus, titles, prose | Nominative (referential) trademark use | Permitted, with naming rules |
+| The product **icon** in menus and rows | A trademark licence | **Forbidden without an express grant — all three** |
+
+That third row is the finding. The instinct is to put a Teams glyph beside
+`Microsoft Teams…` in `File ▸ Import`, and all three vendors independently
+prohibit exactly that. Microsoft: *"our logos, app and product icons… can never
+be used without an express license."* Google: product icons require a Partner
+Marketing Hub account and per-use approval. Zoom: the Zoom Marks licence in the
+Marketplace ToS reaches **SDK Apps only**, and this is a REST/OAuth app, so it
+confers nothing at all.
+
+So `CloudPlatform.symbolName` currently documents itself as *"a placeholder in
+every case… each vendor requires its own unaltered mark"*
+([CloudPlatform.swift:104](../desktop/Bristlenose/Bristlenose/CloudPlatform.swift#L104)).
+**That is backwards.** The generic SF Symbols there are not a placeholder
+awaiting a real asset — they are the only lawful answer, and the comment should
+be inverted from an apology into a decision.
+
+### The rule
+
+**The vendor's mark appears exactly once per flow — at the authorisation moment
+— and nowhere else.**
+
+That is where the mark is required, where it does real work (recognition: *"that
+is the account I have"*), and where an explicit permission grant covers it.
+Everywhere else the *name* already carries the meaning and the mark adds only
+licence exposure. It is also the native answer: Apple's own Internet Accounts
+shows vendor marks in the account-add picker and plain text everywhere after.
+
+One rule settles all three surfaces — **button: the official asset, unaltered;
+menus and titles: the name and a generic glyph; product icons: never.**
+
+### What shipped, and why it isn't a bug
+
+The mockup's Microsoft four-square was never dropped by accident. It is a
+hand-drawn stand-in that says so in its own note
+([cloud-import-states.html:240](mockups/cloud-import-states.html)), and
+`VendorMark` carries the same honesty forward, rendering `m.square` / `g.circle`
+/ `z.square` with a comment arguing that an obvious placeholder is easier to
+notice and remove than an almost-right imitation
+([CloudImportWindow.swift:571](../desktop/Bristlenose/Bristlenose/CloudImportWindow.swift#L571)).
+That reasoning was right and should be preserved in the commit that replaces it.
+The debt is unpaid, not unrecorded.
+
+(For the avoidance of a recurring mix-up: the mark on the sign-in button is the
+**Microsoft** logo — four coloured squares. The Windows flag is a different mark
+denoting the OS, and would be wrong here.)
+
+### Surface 1 — the button, per vendor
+
+**Microsoft.** The strings are already correct: `signInTitle` returns one of the
+two permitted forms and `accountNoun` returns "work or school account" with the
+three forbidden synonyms avoided. Owed: the real asset. Microsoft ships the
+standalone logo (`ms-symbollockup_mssymbol_19.svg`) *and* four full-button
+lockups (light/dark × long/short). Take the standalone — see "the lockup trap"
+below. Also owed, and this one is a missing **feature** rather than a wrong
+pixel: *"DO provide a way for users to sign out and switch to another user
+account."* There is no Settings ▸ Accounts pane.
+[CloudImportSource.swift:55](../desktop/Bristlenose/Bristlenose/CloudImportSource.swift#L55)
+already cites §9's "one place to disconnect, not two" — the place does not exist.
+This is the same requirement §7's `(platform, account)` keying arrives at from
+the other direction, so it is one piece of work, not two.
+
+**Google.** Stricter than the code assumes, and one rule we break elsewhere
+today: **monochrome versions of the G are explicitly forbidden**, as is changing
+its size or colour. It must be the standard colour-gradient mark. Permitted
+strings are "Sign in with Google" / "Sign up with Google" / "Continue with
+Google" — ours is fine. Custom buttons **are** permitted, and the enforced spec
+is: fills `#FFFFFF` (light) / `#131314` (dark) / `#F2F2F2` (neutral); strokes
+`#747775` / `#8E918F` / none; text `#1F1F1F` / `#E3E3E3` / `#1F1F1F`; Google Sans
+Medium 14/20; iOS padding 16 before the logo, 12 after it, 16 after the text.
+
+**Zoom.** This doc's own `CloudPlatform` comment asserts *"Zoom has its own"*
+branding spec ([CloudPlatform.swift:12](../desktop/Bristlenose/Bristlenose/CloudPlatform.swift#L12)).
+**It does not.** No published "Sign in with Zoom" button specification could be
+found, and the trademark position is worse than absent: the Marks licence covers
+SDK Apps, all other uses require Zoom's prior written agreement, and everything
+must comply with a Brand Guidelines and Partner Guide obtained from
+`brand@zoom.us`. Today's exposure is nil — the menu item is withheld behind
+`BristlenoseFlags.cloudImportZoom` — but the claim should be corrected before
+anyone builds on it. **Do not build a Zoom sign-in button on the assumption that
+a spec exists to comply with.** Either ask Zoom in writing or ship a
+vendor-neutral button with the name in text.
+
+### The lockup trap
+
+Both Microsoft and Google ship whole-button *images*. Do not use them. They are
+web and Android artefacts: they cannot be localised into 21 languages, they do
+not respond to Increase Contrast or Reduce Transparency, they carry no VoiceOver
+text, and a bitmap button is not a Mac control. Build the button natively and
+place the **standalone mark** inside it — structurally what
+`CloudImportWindow.signedOutView` already does, with a real asset instead of an
+SF Symbol.
+
+Microsoft's binding rules are *don't alter the logo*, *use one of two strings*,
+*name the account type*; a native button with the unaltered SVG satisfies all
+three, and their redlines are framed as *recommended*. Google explicitly permits
+custom buttons, so honour the three things they enforce — full-colour G at the
+sanctioned size, a permitted string, a permitted fill — and **deviate on typeface
+only**, SF instead of Google Sans. That is one written deviation in the house
+form ("the system primitive is X; we depart because Z"), and typography is the
+one axis where platform convention should win.
+
+### Two mechanical safeguards
+
+**Rendering intent is a live trap, not a hypothetical.** An asset-catalog
+imageset set to `template` renders as a monochrome tint. That would silently
+convert the full-colour Google G into precisely the forbidden monochrome mark —
+a compliance failure delivered by an Xcode default rather than any design
+decision, and invisible in code review. Every vendor imageset pins
+`"template-rendering-intent": "original"` explicitly.
+
+**A `desktop/scripts/check-vendor-marks.sh` gate**, alongside
+`check-appearance-seam.sh` and `check-mcpb.sh`, asserting the SHA-256 of each
+mark still matches the downloaded original and that rendering intent has not
+drifted — plus a `PROVENANCE.md` recording source URL, download date, hash and
+licence basis per asset. The failure this prevents is specific and likely: a
+future tidying pass recolours the marks to match the palette, or makes them
+monochrome "for dark mode", and creates a violation while believing it is
+housekeeping.
+
+### Localisation
+
+Both vendors mandate localised button text, and both publish official
+translations — Microsoft's Terminology Search and UI String Search, and Google's
+encouragement to localise. The window is hardcoded English throughout (§10 already
+books this as realised debt): there are no `desktop.cloudImport.*` keys at all.
+For the two vendor-mandated strings specifically, **look the translations up
+rather than machine-translating them** — the same move as the `TCC.loctable` lift
+for the macOS permission prompt, where recognition is the whole mechanism.
+Settle the English first, per the house order.
+
+### What is not verified
+
+Microsoft's redlines live in a PNG diagram that could not be machine-read. The
+`41px` height, `Segoe UI 15`, and `#8c8c8c` border in the mockup's `.msbtn` CSS
+came from whoever wrote the mockup, not from the guidelines directly — measure
+from the downloaded asset before building. Google's published spec gave fills,
+strokes, typography and padding but no explicit button height.
+
+### Adjacent, and already shipping
+
+The same decision, one surface over, and live today rather than pending:
+`Assets.xcassets/provider-google.imageset` is a flat-black Gemini spark — a
+monochrome Google mark, the explicitly forbidden case — and
+`provider-azure.imageset` is the Azure logo redrawn, against Microsoft's
+"never without an express license". Both render in Settings ▸ LLM Provider and
+on the welcome screen. Out of this feature's scope, same fix, and it ships now
+whereas this one does not.
+
+### Order of work
+
+1. Correct the two false claims in code — `symbolName`'s comment and
+   `CloudPlatform`'s "Zoom has its own". Costs nothing, prevents building on sand.
+2. Download Microsoft's and Google's official marks; add provenance, pin
+   rendering intent, add the gate.
+3. Replace `VendorMark` for Teams and Meet. Leave Zoom on the neutral glyph.
+4. Settle the English strings, then look up the vendor-mandated translations.
+5. Settings ▸ Accounts (sign out / switch account) — the only Microsoft
+   requirement that is a missing feature, and shared with §7's account keying.
+
+**Sources.** Microsoft: *Sign in with Microsoft branding guidelines*
+(`learn.microsoft.com/entra/identity-platform/howto-add-branding-in-apps`) and
+the Microsoft Trademark and Brand Guidelines. Google: *Sign in with Google
+Branding Guidelines* (`developers.google.com/identity/branding-guidelines`) and
+the Partner Marketing Hub brand guidance. Zoom: the App Marketplace Terms of
+Service (Zoom Marks clause) and `brand.zoom.com`.
 
 ---
 

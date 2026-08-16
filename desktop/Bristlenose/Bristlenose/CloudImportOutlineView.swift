@@ -374,7 +374,21 @@ extension CloudImportOutlineView {
                 // screen, and space then ticked an invisible row straight into
                 // the fetch queue.
                 outline.deselectAll(nil)
-                store.focusedRowID = nil
+                // **Only when it actually changes.** `@Published` fires on every
+                // assignment, not on every *difference*, so writing nil over nil
+                // still publishes — and this runs inside `updateNSView`, so the
+                // publish re-renders the view, which calls `updateNSView`, which
+                // lands here again. An unconditional write is an infinite render
+                // loop on the main thread.
+                //
+                // It needed two of my own changes to become reachable: removing
+                // the pre-selection (so `focusedRowID` is nil at load, which
+                // takes this branch) and adding the clear (so the branch writes).
+                // Each was right on its own. Together they froze the window on
+                // whatever frame it had last drawn — the loading spinner — which
+                // reads as "stuck loading" and sent me looking at the network
+                // path, where nothing was wrong.
+                if store.focusedRowID != nil { store.focusedRowID = nil }
                 return
             }
             let row = outline.row(forItem: node)
@@ -490,9 +504,12 @@ extension CloudImportOutlineView {
             guard let node = item as? CloudImportOutline.Node,
                   case .meeting(let meeting) = node.kind
             else { return }
-            if collapsed {
+            // Conditional for the same reason as the selection writes: a Set
+            // insert that changes nothing still publishes, and this is reached
+            // from AppKit callbacks that fire during our own apply pass.
+            if collapsed, !store.collapsedMeetings.contains(meeting.id) {
                 store.collapsedMeetings.insert(meeting.id)
-            } else {
+            } else if !collapsed, store.collapsedMeetings.contains(meeting.id) {
                 store.collapsedMeetings.remove(meeting.id)
             }
         }
@@ -506,11 +523,13 @@ extension CloudImportOutlineView {
             else {
                 // Deselected — clicking empty space, or the selected row being
                 // collapsed away. Leaving the old id in the store meant space
-                // kept ticking a row nothing on screen pointed at.
-                store.focusedRowID = nil
+                // kept ticking a row nothing on screen pointed at. Guarded for
+                // the same reason as `applySelection`: a no-op write still
+                // publishes.
+                if store.focusedRowID != nil { store.focusedRowID = nil }
                 return
             }
-            store.focusedRowID = row.id
+            if store.focusedRowID != row.id { store.focusedRowID = row.id }
         }
 
         // `typeSelectStringFor` is deliberately NOT implemented, and it was.

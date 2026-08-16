@@ -151,6 +151,81 @@ class TestNormaliseStem:
         )
         assert recording == transcript
 
+    # -- Google Meet: real specimens ------------------------------------------
+    #
+    # Every Google Meet case above this line is CONSTRUCTED, from the paren
+    # naming Google used when the regex was written. Google has since moved to
+    # a dated-tail form, so those patterns match nothing Google emits today —
+    # the same shape of failure as the Teams block above.
+    #
+    # Cases below this line are names observed on a real tenant, with the date
+    # and tier recorded.
+
+    def test_gmeet_business_pair_matches(self) -> None:
+        """Business Standard tenant, captured 15 Aug 2026.
+
+        The two files carry DIFFERENT timestamps — the recording is stamped
+        with the meeting start, the notes Doc with the moment Gemini finished
+        writing. Anything that normalises the timestamp rather than removing it
+        still yields two keys, so the pair still would not group.
+        """
+        recording = _normalise_stem(
+            "banyalbufar discussion - 2026/08/15 22:45 bst - recording"
+        )
+        transcript = _normalise_stem(
+            "banyalbufar discussion - 2026/08/15 23:02 - notes by gemini"
+        )
+        assert recording == transcript == "banyalbufar discussion"
+
+    def test_gmeet_disk_sanitised_name_matches(self) -> None:
+        """Drive's API `name` and the downloaded filename differ.
+
+        The API returns "2026/08/15 23:02"; macOS sanitises the file on disk to
+        "2026_08_15 23_02". Ingest only ever sees the disk form, but the API
+        form reaches the importer, so both must normalise identically.
+        """
+        on_disk = _normalise_stem(
+            "banyalbufar discussion - 2026_08_15 23_02 - notes by gemini"
+        )
+        from_api = _normalise_stem(
+            "banyalbufar discussion - 2026/08/15 23:02 - notes by gemini"
+        )
+        assert on_disk == from_api == "banyalbufar discussion"
+
+    def test_gmeet_tail_strip_is_anchored_on_digits_not_the_trailing_word(
+        self,
+    ) -> None:
+        """"Recording" / "Notes by Gemini" are localised; the date block is not.
+
+        A tenant running in another language must still group its pair, so the
+        pattern may not enumerate the trailing words.
+        """
+        recording = _normalise_stem(
+            "reunió de banyalbufar - 2026/08/15 22:45 cest - gravació"
+        )
+        transcript = _normalise_stem(
+            "reunió de banyalbufar - 2026/08/15 23:02 - notes de gemini"
+        )
+        assert recording == transcript == "reunió de banyalbufar"
+
+    def test_gmeet_hyphenated_title_survives(self) -> None:
+        """The " - " separator makes a hyphenated meeting title the risk case."""
+        assert (
+            _normalise_stem("q3 review - design - 2026/08/15 22:45 bst - recording")
+            == "q3 review - design"
+        )
+
+    def test_gmeet_title_ending_in_a_date_is_not_truncated(self) -> None:
+        """The trailing kind is mandatory, and this is why.
+
+        Without it, any title whose own text ends in a date and time would be
+        silently cut back to its first few words.
+        """
+        assert (
+            _normalise_stem("q3 planning - 2026/08/15 14:00")
+            == "q3 planning - 2026/08/15 14:00"
+        )
+
     # -- No false positives --------------------------------------------------
 
     def test_normal_stem_not_mangled(self) -> None:

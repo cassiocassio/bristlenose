@@ -1,0 +1,58 @@
+{
+  "_comment": [
+    "OBSERVED SPECIMEN — not constructed. Do not 'tidy' this file.",
+    "",
+    "Microsoft Teams transcript, exported from the meeting chat as .docx and",
+    "captured 15 Aug 2026 from a business-tier tenant (the same call whose",
+    "filename grammar is pinned in tests/test_ingest.py).",
+    "",
+    "THE POINT OF THIS FILE IS THE EMBEDDED NEWLINES. Teams packs an entire",
+    "turn — the 'Name  0:04' header AND every line of speech under it — into",
+    "ONE paragraph, separated by <w:br/>, which python-docx returns as '\\n'",
+    "inside paragraph.text. Paragraph 3 below carries 8 of them.",
+    "",
+    "A parser that treats a paragraph as a line therefore sees one unmatched",
+    "blob per turn, matches no speaker header, and falls through to the",
+    "untimed path: 5 segments, every one at start_time=0.0 with no speaker.",
+    "That is what this real file did while the constructed one-line-per-",
+    "paragraph tests alongside it passed — the same failure shape as",
+    "_TEAMS_SUFFIX_RE and Swift's TeamsRecordingName, recorded in",
+    "docs/design-cloud-import.md §6.",
+    "",
+    "No redaction was applied. The speaker name is the capturing user's own",
+    "and is already public as the repo's git author; the long Microsoft",
+    "privacy-policy passage is boilerplate the participant read aloud.",
+    "",
+    "KNOWN RESIDUE, deliberately left visible: Teams brackets a transcript",
+    "with '<Name> started transcription' / '<Name> stopped transcription'.",
+    "The opening marker precedes the first header and is dropped; the closing",
+    "one trails the final turn and is currently appended to it as speech.",
+    "Stripping it needs either the English literal (localisation-fragile, the",
+    "trap this module avoids) or a rule that risks eating a genuine last line",
+    "beginning with the speaker's name. Deferred pending a multi-turn",
+    "specimen to design against."
+  ],
+  "platform": "teams",
+  "tier": "business",
+  "captured": "2026-08-15",
+  "source_filename": "Meeting with Martin Storey.docx",
+  "paragraph_count": 5,
+  "paragraphs": [
+    "Meeting with Martin Storey-20260815_200732-Meeting Recording",
+    "15 August 2026, 06:07pm",
+    "Martin Storey started transcription",
+    "Martin Storey   0:04\nAnd it says recording and transcription started by you, let everyone know they're being included. That is a privacy policy because people have privacy policies.\nYour privacy is important to Microsoft. This privacy statement explains the personal data we process, how we process it, and for what purposes. Microsoft offers a wide range of products, including server products used to help operate enterprises worldwide.\ndevices customers use in their homes, software that students use at school, and services developers use to create and host new products. References to Microsoft products in this statement include Microsoft services, websites, apps, software,\nservers and devices.\nPlease read the product specific details in this privacy statement, which provide additional or relevant information. This statement applies to the interactions Microsoft has with you and the Microsoft products listed below, as well as other Microsoft products that display this statement.\nSearch.\nOkay.",
+    "Martin Storey stopped transcription"
+  ],
+  "expected": {
+    "segment_count": 1,
+    "speaker_label": "Martin Storey",
+    "start_time": 4.0,
+    "text_starts_with": "And it says recording and transcription started by you"
+  },
+  "pre_fix_behaviour": {
+    "segment_count": 5,
+    "all_start_times_zero": true,
+    "all_speaker_labels_none": true
+  }
+}

@@ -21,6 +21,7 @@ from bristlenose.events import (
     PipelineAbandonedError,
     PipelineSummary,
     ReflowScopeEnum,
+    StageFailure,
     StageOutcome,
 )
 from bristlenose.hashing import hash_bytes, hash_file_metadata, verify_file_hash
@@ -49,6 +50,7 @@ from bristlenose.manifest import STAGE_TRANSCRIBE as _M_STAGE_TRANSCRIBE
 from bristlenose.models import (
     ExtractedQuote,
     FileType,
+    InputFile,
     InputSession,
     PiiCleanTranscript,
     PipelineResult,
@@ -2362,10 +2364,47 @@ class Pipeline:
             ``transcribe_sessions`` directly.
         """
         from bristlenose.stages.s03_parse_subtitles import parse_subtitle_file
-        from bristlenose.stages.s04_parse_docx import parse_docx_file
+        from bristlenose.stages.s04_parse_docx import DocxParseRefusedError, parse_docx_file
         from bristlenose.stages.s05_transcribe import transcribe_sessions
 
         session_segments: dict[str, list[TranscriptSegment]] = {}
+        parse_failures: list[StageFailure] = []
+
+        def _record_parse_failure(
+            session_id: str, f: InputFile, stage: str, exc: Exception
+        ) -> None:
+            """State a transcript-parse failure instead of dropping it silently.
+
+            A session whose only transcript fails to parse produces no segments
+            AND is excluded from ``needs_transcription`` below (audio extraction
+            was skipped for it in s02, so ``audio_path`` is None) — so without
+            this it vanishes from the run with nothing recorded anywhere. That is
+            the failure mode ``docs/design-cloud-import.md`` names: "a parse
+            refusal must produce a stated row, never a silent drop."
+
+            ``Cause.message`` is built from structured fields only. The one
+            exception is ``DocxParseRefusedError``, whose message bristlenose authors
+            itself and which quotes no document content — everything else could
+            carry file content into ``pipeline-events.jsonl``, a named
+            re-identification surface.
+            """
+            if isinstance(exc, DocxParseRefusedError):
+                message = str(exc)
+            else:
+                message = f"{f.path.name} could not be parsed: {type(exc).__name__}"
+            logger.error("%s: Failed to parse %s: %s", session_id, f.path.name, exc)
+            parse_failures.append(
+                StageFailure(
+                    session_id=session_id,
+                    source_file=f.path.name,
+                    cause=Cause(
+                        category=CauseCategoryEnum.MISSING_INPUT,
+                        message=message,
+                        stage=stage,
+                        session_id=session_id,
+                    ),
+                )
+            )
 
         for session in sessions:
             segments: list[TranscriptSegment] = []
@@ -2383,11 +2422,8 @@ class Pipeline:
                             f.path.name,
                         )
                     except Exception as exc:
-                        logger.error(
-                            "%s: Failed to parse %s: %s",
-                            session.session_id,
-                            f.path.name,
-                            exc,
+                        _record_parse_failure(
+                            session.session_id, f, "s03_parse_subtitles", exc
                         )
 
             # Try docx files
@@ -2403,22 +2439,29 @@ class Pipeline:
                             f.path.name,
                         )
                     except Exception as exc:
-                        logger.error(
-                            "%s: Failed to parse %s: %s",
-                            session.session_id,
-                            f.path.name,
-                            exc,
+                        _record_parse_failure(
+                            session.session_id, f, "s04_parse_docx", exc
                         )
 
             if segments:
                 session_segments[session.session_id] = segments
             # If no existing transcript, audio will be transcribed below
 
+        # Sessions whose transcript failed to parse and that produced nothing
+        # else are attempts that failed — count them, or `attempted` reports
+        # only the successes and the abandon check can never fire.
+        lost_sessions = {
+            fail.session_id
+            for fail in parse_failures
+            if fail.session_id is not None and fail.session_id not in session_segments
+        }
+
         # Pre-existing-transcript sessions count as transcript successes —
         # they don't go through Whisper, but they did produce segments.
         transcript_outcome = StageOutcome(
-            attempted=len(session_segments),
+            attempted=len(session_segments) + len(lost_sessions),
             succeeded=len(session_segments),
+            failed=parse_failures,
         )
 
         # Transcribe sessions that still need it

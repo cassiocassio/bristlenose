@@ -139,6 +139,43 @@ _GMEET_TRANSCRIPT_SUFFIX_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Google Meet, current naming — the two patterns above match nothing Google
+# emits today. Two specimens, both captured 15 Aug 2026 on a Workspace Business
+# Standard tenant:
+#
+#   Banyalbufar discussion - 2026_08_15 23_02 - Notes by Gemini.docx   (on disk)
+#   Banyalbufar discussion - 2026/08/15 22:45 BST - Recording          (Drive name)
+#
+# Only the first was observed on disk; the second is the Drive resource name as
+# Google itself writes it in the notes document's own Attachments line. Drive's
+# API `name` uses "/" and ":"; the download is sanitised to "_", so accept both.
+# The timezone marker appears on the recording and not the notes Doc, so it is
+# optional. `transcript` as a trailing kind is INFERRED, not observed.
+#
+# Three things fix the shape of this pattern:
+#
+# 1. **Strip the whole tail, not just the suffix.** The recording is stamped
+#    with the meeting start and the Doc with the moment Gemini finished writing
+#    — 22:45 vs 23:02 in the pair above. A suffix-only strip leaves two stems
+#    that still differ, so the pair still becomes two sessions and the mp4 is
+#    still re-transcribed from scratch. That is the whole bug.
+# 2. **The trailing kind is mandatory.** It is what stops an ordinary title that
+#    merely ends in a date ("Q3 planning - 2026/08/15 14:00") being truncated.
+# 3. **But its content is not matched.** "Recording" and "Notes by Gemini" are
+#    localised in a non-English tenant; the digits are not. Enumerating the
+#    English words is the trap that made `_TEAMS_SUFFIX_RE` — and Swift's
+#    `TeamsRecordingName` — match only the fixtures invented alongside them.
+#    So: require " - <short run>" structurally, match any language's word for it.
+_GMEET_TAIL_RE = re.compile(
+    r"\s*[-–]\s*"                          # " - " before the timestamp
+    r"\d{4}[_/.-]\d{2}[_/.-]\d{2}"         # 2026_08_15  /  2026/08/15
+    r"\s+\d{1,2}[_:.]\d{2}"                # 23_02       /  23:02
+    r"(?:\s+[a-z]{2,5}(?:[+-]\d{1,2})?)?"  # BST / UTC / GMT-5   (optional)
+    r"\s*[-–]\s*"                          # " - " before the kind
+    r".{1,30}$",                           # Recording / Gravació / 錄影 …
+    re.IGNORECASE,
+)
+
 
 def _normalise_stem(stem: str) -> str:
     """Normalise a filename stem for session matching.
@@ -162,7 +199,9 @@ def _normalise_stem(stem: str) -> str:
     stem = _ZOOM_CLOUD_PREFIX_RE.sub("", stem)
     stem = _ZOOM_CLOUD_TAIL_RE.sub("", stem)
 
-    # 4. Google Meet: strip "(YYYY-MM-DD at ...)" and "- Transcript"
+    # 4. Google Meet: the dated tail first — it needs the trailing kind in order
+    #    to match, and `_GMEET_TRANSCRIPT_SUFFIX_RE` would otherwise eat it.
+    stem = _GMEET_TAIL_RE.sub("", stem)
     stem = _GMEET_TRANSCRIPT_SUFFIX_RE.sub("", stem)
     stem = _GMEET_PAREN_RE.sub("", stem)
 

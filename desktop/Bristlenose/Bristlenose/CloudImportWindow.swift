@@ -198,7 +198,10 @@ struct CloudImportWindow: View {
 
     @ViewBuilder
     private var loadedView: some View {
-        let rows = store.visibleRows
+        // `store.outline.isEmpty` rather than `store.visibleRows.isEmpty`: the
+        // latter flattens the whole tree into a fresh array, and this body is
+        // re-evaluated several times a second while a batch downloads.
+        let isEmpty = store.outline.isEmpty
 
         if let refusal = store.blanketRefusal {
             // DEVIATION, and the most important one on this platform. Every row
@@ -209,10 +212,10 @@ struct CloudImportWindow: View {
             // legibly empty. Google returns a full, convincing calendar and no
             // media — a list that looks like it works.
             blanketRefusalView(refusal)
-        } else if rows.isEmpty && !store.filterText.isEmpty {
+        } else if isEmpty && !store.filterText.isEmpty {
             // State 6. `.search` quotes the term back automatically.
             ContentUnavailableView.search(text: store.filterText)
-        } else if rows.isEmpty {
+        } else if isEmpty {
             // State 5.
             ContentUnavailableView {
                 Label("No recordings in the last \(store.windowDays) days",
@@ -374,7 +377,14 @@ struct CloudImportWindow: View {
                 }
                 Text("·").foregroundStyle(.secondary)
                 Text("\(counts.fetchable) you can fetch").fontWeight(.semibold)
-                if a.organisedByOthers > 0 {
+                // Suppressed while a filter is on. Every other number in this
+                // sentence is measured over the filtered list; this one is
+                // measured over the whole window, so filtering to "P05" read
+                // "1 meeting · 1 you can fetch · 4 organised by someone else"
+                // — one sentence quietly counting two different sets, on the
+                // surface whose entire claim is that its arithmetic is
+                // checkable by looking.
+                if a.organisedByOthers > 0, store.filterText.isEmpty {
                     Text("·").foregroundStyle(.secondary)
                     Text("\(a.organisedByOthers) organised by someone else")
                         .foregroundStyle(.secondary)

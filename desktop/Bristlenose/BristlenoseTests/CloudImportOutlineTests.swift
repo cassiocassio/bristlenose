@@ -36,6 +36,7 @@ struct CloudImportOutlineTests {
         recorded: Date?,
         ran: TimeInterval? = nil,
         meeting: String? = nil,
+        ordinal: Int? = nil,
         local: ImportRowState = .notImported,
         video: ArtifactAvailability = .available
     ) -> CloudImportRow {
@@ -55,7 +56,8 @@ struct CloudImportOutlineTests {
             scheduledAt: scheduled,
             scheduledDuration: booked,
             recordedAt: recorded,
-            meetingID: meeting
+            meetingID: meeting,
+            siblingOrdinal: ordinal
         )
     }
 
@@ -175,20 +177,54 @@ struct CloudImportOutlineTests {
 
     /// A recording that ran past midnight must not be torn off its meeting into
     /// the next day's group. The call belongs to the day it was booked for.
-    @Test("A meeting anchors its day on when it was booked, not when it recorded")
+    /// A call booked at 23:30 whose second half records after midnight must not
+    /// be torn in two by the day grouping — the meeting row under one header
+    /// and one of its children under the next.
+    ///
+    /// Two rows, deliberately: with one row this took the single-recording
+    /// branch and never built a meeting node at all, so it pinned something
+    /// milder than its own name claimed.
+    @Test("A meeting that records past midnight stays whole, under its booked day")
     func lateNightMeetingStaysWithItsDay() {
         let scheduled = moment(daysAgo: 2, hour: 23, minute: 30)
         let result = build([
             row(id: "file-a", scheduled: scheduled,
+                recorded: scheduled.addingTimeInterval(600), meeting: "mtg-late"),
+            row(id: "file-b", scheduled: scheduled,
                 recorded: scheduled.addingTimeInterval(3_600), meeting: "mtg-late"),
         ])
 
-        #expect(result.days.count == 1)
+        #expect(result.days.count == 1, "one day, not one either side of midnight")
         guard case .day(let day) = result.days[0].kind else {
             Issue.record("expected a day header")
             return
         }
         #expect(day.start == calendar.startOfDay(for: scheduled))
+        #expect(result.days[0].children.count == 1)
+        #expect(result.days[0].children[0].children.count == 2, "both halves under one meeting")
+    }
+
+    /// Ordinals come from the adapter, not from position — because siblings can
+    /// share an exact `startsAt` (the platform omitted the recording's own
+    /// start), which makes their sorted order arbitrary rather than merely
+    /// unspecified. The same ordinal also disambiguates the destination
+    /// filename, so a swap is not cosmetic.
+    @Test("The adapter's ordinal wins over array position")
+    func adapterOrdinalWins() {
+        let scheduled = moment(daysAgo: 3, hour: 11)
+        let result = build([
+            row(id: "file-a", scheduled: scheduled, recorded: scheduled,
+                meeting: "mtg", ordinal: 2),
+            row(id: "file-b", scheduled: scheduled, recorded: scheduled,
+                meeting: "mtg", ordinal: 1),
+        ])
+        let children = result.days[0].children[0].children
+        let ordinals = children.map { node -> Int? in
+            guard case .recording(let r) = node.kind else { return nil }
+            return r.ordinal
+        }
+        #expect(Set(ordinals.compactMap { $0 }) == [1, 2],
+                "each sibling keeps the number the adapter gave it")
     }
 
     // MARK: - Day labels
@@ -241,6 +277,45 @@ struct CloudImportOutlineTests {
         ])
         #expect(result.fetchable == 2)
         #expect(!result.withholding)
+    }
+
+    /// The case that made `fetchable < recordings` the wrong arithmetic, and
+    /// the one a returning researcher hits every single time.
+    ///
+    /// All three of these are *local* facts — the file is already here, it is
+    /// an iCloud placeholder, the drive is unplugged — and each makes a row
+    /// unfetchable while plainly having a recording. Counting them as withheld
+    /// showed a remote-permissions link to someone whose only crime was
+    /// succeeding last week, which is exactly how a link that means something
+    /// becomes a link nobody reads.
+    @Test("A file you already have is not a permissions problem")
+    func localStatesAreNotWithholding() {
+        let result = build([
+            row(id: "a", scheduled: moment(daysAgo: 1, hour: 9),
+                recorded: moment(daysAgo: 1, hour: 9), local: .imported),
+            row(id: "b", scheduled: moment(daysAgo: 2, hour: 9),
+                recorded: moment(daysAgo: 2, hour: 9),
+                local: .notDownloaded(provider: "Dropbox")),
+            row(id: "c", scheduled: moment(daysAgo: 3, hour: 9),
+                recorded: moment(daysAgo: 3, hour: 9),
+                local: .driveNotConnected(volume: "T7")),
+        ])
+        #expect(result.recordings == 3)
+        #expect(result.fetchable == 0, "none of them can be ticked…")
+        #expect(!result.withholding, "…and none of them is a permissions question")
+    }
+
+    /// The most permission-shaped state in the feature, and the one the old
+    /// arithmetic could never fire for: we were not allowed to look, so we see
+    /// no recording, so `fetchable < recordings` was 0 < 0.
+    @Test("A declined scope is withholding even though we cannot see the file")
+    func declinedScopeIsWithholding() {
+        let result = build([
+            row(id: "a", scheduled: moment(daysAgo: 1, hour: 9), recorded: moment(daysAgo: 1, hour: 9)),
+            row(id: "b", scheduled: moment(daysAgo: 2, hour: 10), recorded: nil,
+                video: .needsScope("drive.readonly")),
+        ])
+        #expect(result.withholding)
     }
 
     /// The case the mockup calls out by name: an ordinary month of un-recorded

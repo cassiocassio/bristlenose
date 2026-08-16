@@ -528,4 +528,145 @@ struct ListingTransportTests {
         #expect(!listing.arithmetic.outcome.isComplete)
     }
 }
+
+// MARK: - Deriving rows from a real response shape
+
+/// The layer the outline tests cannot reach.
+///
+/// `CloudImportOutlineTests` proves the tree groups two rows correctly *given*
+/// two rows. Nothing proved the adapter builds two rows from a Google response
+/// carrying two recordings — which is precisely where the bug lived: a `.first`
+/// that dropped the second half of any stopped-and-restarted interview, in
+/// silence, in a feature whose failure output and success output are both a
+/// shorter list. A revert to `.first`-shaped logic must fail something.
+///
+/// Nested inside `CloudTransportTests` for the reason its header explains:
+/// `.serialized` orders tests *within* a suite, and `StubURLProtocol`'s queue
+/// is process-global, so a sibling top-level suite reads someone else's
+/// responses. Written outside first, and it failed exactly that way — passing
+/// alone, failing in the full run.
+@Suite("Deriving rows", .serialized)
+struct AdapterRowDerivationTests {
+
+    private var window: DateInterval {
+        let end = Date()
+        return DateInterval(start: Calendar.current.date(byAdding: .day, value: -30, to: end)!,
+                            end: end)
+    }
+
+    private func googleTokens() -> GoogleTokens {
+        // `meetReadonly` must be granted or `buildRows` skips the lookup
+        // entirely and every row reads "Needs access" — a green test proving
+        // nothing.
+        GoogleTokens(accessToken: "T", refreshToken: "R",
+                     expiresAt: Date().addingTimeInterval(3600),
+                     granted: GoogleScopes.requested)
+    }
+
+    /// The stub queue is FIFO across every URL, so the order below is the order
+    /// `list` actually makes its calls: identity, the calendar page, the
+    /// conference record, then that record's recordings.
+    @Test("Two FILE_GENERATED recordings become two rows of one meeting")
+    func twoRecordingsBecomeTwoRows() async throws {
+        let start = Date().addingTimeInterval(-3 * 3600)
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@stmarystrust.example"}"#))
+        StubURLProtocol.enqueue(.json("""
+        {"items":[{"id":"evt-1","summary":"P05 Interview",
+          "start":{"dateTime":"\(iso.string(from: start))"},
+          "end":{"dateTime":"\(iso.string(from: start.addingTimeInterval(3600)))"},
+          "organizer":{"email":"martin@stmarystrust.example","self":true},
+          "conferenceData":{"conferenceId":"abc-defg-hij",
+            "conferenceSolution":{"key":{"type":"hangoutsMeet"}}}}]}
+        """))
+        StubURLProtocol.enqueue(.json("""
+        {"conferenceRecords":[{"name":"conferenceRecords/rec-1",
+          "startTime":"\(iso.string(from: start))"}]}
+        """))
+        StubURLProtocol.enqueue(.json("""
+        {"recordings":[
+          {"name":"r1","state":"FILE_GENERATED","driveDestination":{"file":"file-A"},
+           "startTime":"\(iso.string(from: start.addingTimeInterval(120)))",
+           "endTime":"\(iso.string(from: start.addingTimeInterval(2040)))"},
+          {"name":"r2","state":"FILE_GENERATED","driveDestination":{"file":"file-B"},
+           "startTime":"\(iso.string(from: start.addingTimeInterval(2400)))",
+           "endTime":"\(iso.string(from: start.addingTimeInterval(4700)))"},
+          {"name":"r3","state":"STARTED","driveDestination":{"file":"file-C"}}]}
+        """))
+
+        let source = GoogleMeetSource(
+            config: GoogleOAuthConfig(clientID: "cid.apps.googleusercontent.com"),
+            session: StubURLProtocol.session(),
+            restoredTokens: googleTokens())
+        let listing = await source.list(window: window)
+
+        #expect(listing.rows.count == 2, "both halves, not just the first")
+        // Same call, so they nest — and the ids differ, or the outline cannot
+        // draw both and one tick would queue them both.
+        #expect(Set(listing.rows.map(\.meetingID)) == ["evt-1"])
+        #expect(Set(listing.rows.map(\.id)).count == 2)
+        // The ordinal is what keeps their filenames apart on the path where
+        // Google omits the recording's own start.
+        #expect(Set(listing.rows.compactMap(\.siblingOrdinal)) == [1, 2])
+        // `STARTED` has no bytes behind it yet; offering it would produce a
+        // fetch that 404s minutes after the researcher ticks it.
+        #expect(listing.rows.allSatisfy { $0.video == .available })
+        // Both clocks, and they disagree — which is the whole reason the grid
+        // has two columns.
+        let first = listing.rows.min { $0.startsAt < $1.startsAt }
+        #expect(first?.scheduledAt != nil)
+        #expect(first?.recordedAt != nil)
+        #expect(first?.scheduledAt != first?.recordedAt)
+        #expect(first?.duration == 1_920, "the recording's length, never the booked hour")
+    }
+
+    /// Teams has always had the meeting's own clock in hand — Graph serves
+    /// `start` and `end` on the matched event — and simply never passed it on,
+    /// so the Scheduled column stood empty for a reason that looked like a
+    /// platform limit and was ours.
+    @Test("Teams populates the meeting clock from the matched calendar event")
+    func teamsCarriesTheScheduledClock() async throws {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        let booked = Date().addingTimeInterval(-2 * 3600)
+        let landed = booked.addingTimeInterval(240)
+
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json("""
+        {"value":[{"id":"item-1","name":"P04 Interview-20260816_090000-Meeting Recording.mp4",
+          "size":1048576,"createdDateTime":"\(iso.string(from: landed))",
+          "parentReference":{"driveType":"business"},
+          "file":{"mimeType":"video/mp4"},
+          "video":{"duration":3131000},
+          "@microsoft.graph.downloadUrl":"https://example.invalid/d"}]}
+        """))
+        StubURLProtocol.enqueue(.json("""
+        {"value":[{"id":"cal-1","subject":"P04 Interview",
+          "start":{"dateTime":"\(iso.string(from: booked))"},
+          "end":{"dateTime":"\(iso.string(from: booked.addingTimeInterval(3600)))"},
+          "organizer":{"emailAddress":{"address":"martin@example.invalid"}}}]}
+        """))
+
+        let source = TeamsSource(
+            config: MicrosoftOAuthConfig(clientID: "cid", tenant: "common",
+                                         redirectURI: "msauth.test://auth"),
+            session: StubURLProtocol.session(),
+            restoredTokens: MicrosoftTokenResponse(
+                data: Data(#"{"access_token":"T","expires_in":3600}"#.utf8))!)
+        let listing = await source.list(window: window)
+
+        let row = try #require(listing.rows.first)
+        #expect(row.scheduledAt != nil, "the booked start, from the matched event")
+        #expect(row.scheduledDuration == 3600)
+        #expect(row.recordedAt != nil, "and when the file landed, separately")
+        #expect(row.duration == 3131, "the media facet's own length, in seconds")
+        // Flat, always. `matchEvent` is a ±30-minute proximity guess, and
+        // grouping on it would nest two unrelated interviews as one call's two
+        // halves — hiding the titles that are the only thing telling them apart.
+        #expect(row.meetingID == nil)
+    }
+}
 }

@@ -421,13 +421,28 @@ final class TeamsSource: CloudImportSource {
             // `createdDateTime` is when the recording landed, which is the
             // closest thing Graph has to a record-button moment.
             recordedAt: startedAt,
-            // Two files that matched the same event are two recordings of one
-            // call — somebody stopped and restarted — and nest under it. With
-            // no matched event there is nothing to group by, and the row stands
-            // alone, which is also the correct answer when the researcher
-            // declined the calendar scope: we have no grounds to claim two
-            // files belong together.
-            meetingID: matched?.id
+            // **Always nil. Teams is flat, and the settled design says so.**
+            //
+            // The tempting line here is `matched?.id`, so two files that hit
+            // the same event nest as two recordings of one call. It was written
+            // that way and is wrong, because `matchEvent` is a ±30-minute
+            // proximity guess with no identity check — and it is matched
+            // against `createdDateTime`, which is when the recording *landed*,
+            // near the meeting's end. A 50-minute session booked at 10:00
+            // produces a file stamped ~10:52, which is outside its own event's
+            // window and inside the next slot's.
+            //
+            // Grouping on that guess is worse than a wrong title, because of
+            // what the outline does with it: a child row draws only "Recording
+            // 2" and its clock, dropping the filename-derived title that is the
+            // one thing distinguishing two Teams files. So two unrelated
+            // interviews would render as one call's two halves, with the
+            // evidence of the mistake removed by the nesting that made it.
+            //
+            // The event is still trusted for the roster and the Scheduled
+            // column — both visible and checkable — just not for a claim about
+            // session identity.
+            meetingID: nil
         )
     }
 
@@ -512,7 +527,8 @@ final class TeamsSource: CloudImportSource {
             url = cached
         }
         let name = CloudDownloadNaming.filename(
-            title: row.title, startsAt: row.startsAt, fileExtension: "mp4")
+            title: row.title, startsAt: row.startsAt, fileExtension: "mp4",
+            part: row.siblingOrdinal)
         let request = CloudDownloadRequest(
             url: url,
             // No token: Graph's downloadUrl is pre-authenticated. Sending a

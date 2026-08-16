@@ -94,12 +94,22 @@ final class CloudImportStore: ObservableObject {
 
     // MARK: - Derived
 
+    /// Bumped whenever `outline` is replaced, and never otherwise.
+    ///
+    /// The view compares it to decide whether a *structural* pass is needed at
+    /// all. Without it, every progress tick — several a second per in-flight
+    /// file — walked the whole tree twice, once to build a fingerprint it then
+    /// threw away and once to resolve the focused row, in order to conclude
+    /// that nothing had changed.
+    @Published private(set) var outlineGeneration: Int = 0
+
     private func rebuildOutline() {
         // The predicate lives on the row — titles *and* people, diacritic-
         // insensitive, covering names behind the `+N` overflow. See
         // `CloudImportRow.matches(filter:)` for why each of those is deliberate.
         let filtered = (listing?.rows ?? []).filter { $0.matches(filter: filterText) }
         outline = CloudImportOutline.build(rows: filtered)
+        outlineGeneration &+= 1
     }
 
     /// Rows after the filter, **in the order they appear on screen**.
@@ -240,7 +250,23 @@ final class CloudImportStore: ObservableObject {
             // reason: the list is *recordings you organised*, mixing research
             // calls with workshops and readouts, so a default of "all" is close
             // to always wrong.
-            if focusedRowID == nil { focusedRowID = visibleRows.first?.id }
+            //
+            // And **pre-select nothing either.** Setting focus to row 1 here
+            // drew a highlighted row above a button reading "Import 0
+            // Recordings" — at rest, the only thing on screen that looked
+            // chosen, and it wasn't. Worse, the outline is not the first
+            // responder when the window opens (the toolbar's filter field is
+            // in the running), so it rendered in the inactive grey that reads
+            // as disabled. An empty selection is the honest opening state; the
+            // first arrow key selects row 1, which is what a Mac list does.
+            //
+            // A row that has gone (a filter keystroke, a collapsed parent) must
+            // not keep the focus either: `toggleFocused` would tick something
+            // invisible straight into the fetch queue.
+            if let focused = focusedRowID,
+               !visibleRows.contains(where: { $0.id == focused }) {
+                focusedRowID = nil
+            }
         }
         listTask = task
         await task.value
@@ -255,9 +281,19 @@ final class CloudImportStore: ObservableObject {
     /// Toggle one row. Rows that cannot be fetched cannot be ticked — the guard
     /// lives here rather than in the view so that keyboard, mouse and Select
     /// All all obey it.
-    func toggle(_ rowID: String) {
-        guard let row = listing?.rows.first(where: { $0.id == rowID }), row.isSelectable else { return }
+    /// - Returns: whether the tick actually moved. False means the row refused
+    ///   — already held, someone else's meeting, nothing to fetch — which the
+    ///   keyboard path turns into a beep rather than a silent no-op.
+    @discardableResult
+    func toggle(_ rowID: String) -> Bool {
+        // Looked up in the **visible** rows, not the whole listing. A row the
+        // filter has hidden is not a row the researcher is acting on, and
+        // ticking one puts a file they cannot see into the fetch queue.
+        guard let row = visibleRows.first(where: { $0.id == rowID }), row.isSelectable else {
+            return false
+        }
         if ticked.contains(rowID) { ticked.remove(rowID) } else { ticked.insert(rowID) }
+        return true
     }
 
     /// Shift-click a checkbox to tick a range — §9's "the gesture that actually
@@ -291,20 +327,19 @@ final class CloudImportStore: ObservableObject {
         for row in visibleRows where row.isSelectable { ticked.insert(row.id) }
     }
 
-    func clearSelection() { ticked.removeAll() }
+    /// Clears the **ticks**, not the keyboard focus.
+    ///
+    /// Named `clearSelection` until 16 Aug 2026, beside a `focusedRowID` that
+    /// the outline also calls "selection" — two different things under one
+    /// word, in a file where the whole design rests on keeping intent and
+    /// navigation apart. The next person to wire Escape would have reached for
+    /// the wrong one.
+    func clearTicks() { ticked.removeAll() }
 
-    func moveFocus(by delta: Int) {
-        let visible = visibleRows
-        guard !visible.isEmpty else { return }
-        guard let current = focusedRowID,
-              let idx = visible.firstIndex(where: { $0.id == current })
-        else {
-            focusedRowID = visible.first?.id
-            return
-        }
-        let next = min(max(0, idx + delta), visible.count - 1)
-        focusedRowID = visible[next].id
-    }
+    // `moveFocus(by:)` lived here and is gone. `NSOutlineView` does arrow
+    // navigation natively, so it was a second, divergent focus model with no
+    // caller — superseded by replacement rather than merely unfinished, which
+    // is the distinction between deleting it and parking it.
 
     func toggleFocused() {
         guard let focusedRowID else { return }

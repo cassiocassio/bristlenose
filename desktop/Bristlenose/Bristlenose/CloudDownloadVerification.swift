@@ -297,15 +297,28 @@ enum CloudDownloadNaming {
     /// researcher can see which session it is. The separator is an em dash with
     /// spaces, which sorts after digits and reads as a break rather than as
     /// part of either field.
+    /// - Parameter part: which recording of its call this is, when the call
+    ///   produced more than one. Rendered as ` (2)`, Finder's own idiom.
+    ///
+    ///   **Not cosmetic.** Two halves of one interview carry the same title,
+    ///   and — on the path where the platform omits the recording's own start
+    ///   time — the same `startsAt`, so without this they produce byte-identical
+    ///   names. `publish` deliberately overwrites its destination (a re-fetched
+    ///   damaged file must replace the bad one), so one half silently
+    ///   annihilated the other while both rows reported "Imported" and the
+    ///   terminus said two. Nil for the ordinary single-recording call, which
+    ///   keeps every existing name unchanged.
     static func filename(
         title: String,
         startsAt: Date,
         fileExtension: String,
+        part: Int? = nil,
         calendar: Calendar = .current
     ) -> String {
         let stamp = Self.stampFormatter.string(from: startsAt)
         let safe = safeComponent(title)
-        let stem = safe.isEmpty ? stamp : "\(stamp) — \(safe)"
+        var stem = safe.isEmpty ? stamp : "\(stamp) — \(safe)"
+        if let part { stem += " (\(part))" }
         return "\(stem).\(fileExtension)"
     }
 

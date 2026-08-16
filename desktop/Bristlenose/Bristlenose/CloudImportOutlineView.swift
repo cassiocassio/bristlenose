@@ -16,8 +16,9 @@ import SwiftUI
 // The triangle and the indent live in Meeting; every other column stays flat.
 //
 // What the outline gives us for free, and is the reason not to hand-roll it:
-// arrow-key navigation, left/right expand-collapse, type-select, column
-// resizing, VoiceOver row and column semantics, and the floating header.
+// arrow-key navigation, left/right expand-collapse, column resizing, VoiceOver
+// row and column semantics, and the floating header. (Type-select is
+// deliberately declined — see the note where its delegate method would be.)
 //
 // Shape: docs/mockups/cloud-import-recordings-grid.html.
 
@@ -33,8 +34,10 @@ private enum Metrics {
     /// AppKit gives them no indent of their own.
     static let dayLabelInset: CGFloat = 10
     static let cellInset: CGFloat = 6
-    static let titleSize: CGFloat = 13
-    static let subtitleSize: CGFloat = 11
+    /// The platform's own two sizes, named rather than spelled 13 and 11, so
+    /// they track a system that has moved them before.
+    static let titleSize = NSFont.systemFontSize
+    static let subtitleSize = NSFont.smallSystemFontSize
 }
 
 private enum Column {
@@ -77,8 +80,21 @@ struct CloudImportOutlineView: NSViewRepresentable {
         outline.gridColor = .separatorColor
         outline.allowsMultipleSelection = false
         outline.allowsEmptySelection = true
-        // Slack goes to Meeting: it is the only column left resizable below.
+        // Every column carries an autoresizing mask by default, so `.uniform`
+        // spreads slack across all of them — Meeting simply absorbs it because
+        // the others are clamped `min == max`. (An earlier comment here said
+        // Meeting was "the only column left resizable", which is the right
+        // outcome from the wrong mechanism and would have survived the fix
+        // below.)
         outline.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
+        // The disclosure triangle and the indent travel with `outlineTableColumn`,
+        // so dragging Status in front of Meeting would put the hierarchy in the
+        // middle of the grid — the exact thing this design's second HIG quote
+        // rules out. Widths stay draggable; order does not.
+        outline.allowsColumnReordering = false
+        // Column widths are a personalisation and should outlive the window.
+        outline.autosaveName = "CloudImportOutline"
+        outline.autosaveTableColumns = true
 
         addColumns(to: outline)
         outline.outlineTableColumn = outline.tableColumns.first { $0.identifier == Column.meeting }
@@ -87,9 +103,23 @@ struct CloudImportOutlineView: NSViewRepresentable {
         scrollView.documentView = outline
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
-        scrollView.drawsBackground = false
+        // NB: no `drawsBackground = false`. That spelling is the *sidebar*
+        // idiom, for letting an `NSVisualEffectView`'s vibrancy through — and
+        // this is a plain window with nothing behind it, so it would paint the
+        // area below a short list in `windowBackgroundColor` while the rows sat
+        // on `controlBackgroundColor`: two greys and a seam, at its worst in
+        // the one-or-two-row state that is this window's commonest.
         context.coordinator.outline = outline
         context.coordinator.reload(force: true)
+        // The list is what this window is for, so it takes the keyboard rather
+        // than leaving it to the toolbar's filter field. Without this the
+        // window opened with arrows and space doing nothing until the user
+        // clicked a row — and, when a row *was* pre-selected, drew it in the
+        // inactive grey that reads as disabled.
+        //
+        // Deferred a runloop turn because the view is not in a window yet at
+        // `makeNSView` time, so `makeFirstResponder` would have nothing to ask.
+        DispatchQueue.main.async { outline.window?.makeFirstResponder(outline) }
         return scrollView
     }
 
@@ -100,34 +130,44 @@ struct CloudImportOutlineView: NSViewRepresentable {
         context.coordinator.reload(force: false)
     }
 
+    /// Every column but the tick is draggable, and each has a real range.
+    ///
+    /// They were all clamped `min == max` except Meeting, which meant a user's
+    /// reflex on a clipped column — drag its edge — did nothing on six of
+    /// seven. Status is the one that mattered: it carries the per-row failure
+    /// sentence that §6's terminus argument rests on being legible, and it was
+    /// pinned at 150pt on a window that can be 1400 wide.
     private func addColumns(to outline: NSOutlineView) {
         func column(
             _ id: NSUserInterfaceItemIdentifier,
             _ title: String,
             width: CGFloat,
-            resizable: Bool = false,
+            min minWidth: CGFloat? = nil,
+            max maxWidth: CGFloat = 10_000,
             alignment: NSTextAlignment = .natural
         ) -> NSTableColumn {
             let c = NSTableColumn(identifier: id)
             c.title = title
             c.width = width
-            c.minWidth = resizable ? 200 : width
-            c.maxWidth = resizable ? 10_000 : width
+            c.minWidth = minWidth ?? width
+            c.maxWidth = maxWidth
             c.headerCell.alignment = alignment
             return c
         }
 
         // Header deliberately blank: a titled checkbox column reads as a filter
-        // control rather than as a per-row choice.
-        outline.addTableColumn(column(Column.tick, "", width: 26))
-        outline.addTableColumn(column(Column.meeting, "Meeting", width: 320, resizable: true))
-        outline.addTableColumn(column(Column.scheduled, "Scheduled", width: 92))
-        outline.addTableColumn(column(Column.recorded, "Recorded", width: 92))
-        outline.addTableColumn(column(Column.size, "Size", width: 74, alignment: .right))
+        // control rather than as a per-row choice. Fixed, because a checkbox
+        // does not get wider.
+        outline.addTableColumn(column(Column.tick, "", width: 26, max: 26))
+        outline.addTableColumn(column(Column.meeting, "Meeting", width: 320, min: 200))
+        outline.addTableColumn(column(Column.scheduled, "Scheduled", width: 92, min: 72, max: 160))
+        outline.addTableColumn(column(Column.recorded, "Recorded", width: 92, min: 72, max: 160))
+        outline.addTableColumn(column(Column.size, "Size", width: 74, min: 60, max: 120,
+                                      alignment: .right))
         // Added and removed live by `syncExpiresColumn`, because the platform can
         // change under the same window.
-        outline.addTableColumn(column(Column.expires, "Expires", width: 92))
-        outline.addTableColumn(column(Column.status, "Status", width: 150))
+        outline.addTableColumn(column(Column.expires, "Expires", width: 92, min: 72, max: 160))
+        outline.addTableColumn(column(Column.status, "Status", width: 150, min: 110))
     }
 }
 
@@ -142,15 +182,54 @@ extension CloudImportOutlineView {
         weak var outline: NSOutlineView?
 
         private var result: CloudImportOutline.Result = .empty
-        /// The structural fingerprint of what is currently on screen. A full
-        /// `reloadData()` is only worth paying when this moves; anything else
-        /// (a progress tick, an outcome landing) refreshes cell contents while
-        /// leaving the item tree, its expansion and the selection alone.
+        /// The fingerprint of everything the cells draw from the tree. A full
+        /// `reloadData()` is only worth paying when this moves — and is
+        /// *required* when it does, because the partial reload cannot swap in a
+        /// rebuilt node. See `CloudImportOutline.fingerprint(of:)`.
         private var structure: [String] = []
+        /// The store's outline generation last seen. Lets the whole structural
+        /// pass — fingerprint, expansion, selection — be skipped on the ~99% of
+        /// updates that are a download reporting another percent.
+        private var generation = -1
+        /// Per-row store-derived state, so a refresh can touch only the rows
+        /// that moved instead of every row in every column.
+        private var rowStates: [String: RowState] = [:]
         /// Guards the selection round trip. Writing the store from
-        /// `selectionDidChange` while applying the store's own selection is how
-        /// a focus model starts fighting the user.
+        /// `selectionDidChange` while applying the store's own selection — or
+        /// while a programmatic expand/collapse moves it — is how a focus model
+        /// starts fighting the user.
         private var applyingStoreState = false
+
+        /// What the two store-driven columns render from. Diffed rather than
+        /// re-rendered, because the alternative is ~2,000 `viewFor` calls per
+        /// progress tick for the sake of one moving bar.
+        private struct RowState: Equatable {
+            let ticked: Bool
+            let selectable: Bool
+            let fraction: Double?
+            let inFlight: Bool
+            let outcome: String?
+            let queued: Bool
+        }
+
+        private func state(of row: CloudImportRow) -> RowState {
+            let progress = store.progress[row.id]
+            let outcome: String? = store.outcomes[row.id].map { outcome in
+                switch outcome {
+                case .imported:                 return "imported"
+                case .failed(let reason, _):    return "failed:\(reason)"
+                case .cancelled:                return "cancelled"
+                }
+            }
+            return RowState(
+                ticked: store.ticked.contains(row.id),
+                selectable: row.isSelectable,
+                fraction: progress?.fraction,
+                inFlight: progress != nil,
+                outcome: outcome,
+                queued: store.isFetching && store.ticked.contains(row.id)
+            )
+        }
 
         init(store: CloudImportStore, platform: CloudPlatform) {
             self.store = store
@@ -161,30 +240,72 @@ extension CloudImportOutlineView {
 
         func reload(force: Bool) {
             guard let outline else { return }
-            result = store.outline
-            let fingerprint = Self.fingerprint(of: result)
 
-            if force || fingerprint != structure {
-                structure = fingerprint
-                outline.reloadData()
-                expandDays()
-                applyCollapsedMeetings()
-            } else if outline.numberOfRows > 0 {
-                // Same rows, different contents. Reusing the item tree keeps
-                // expansion and selection; `reloadData()` here would throw both
-                // away on every percent of every download.
-                outline.reloadData(
-                    forRowIndexes: IndexSet(integersIn: 0..<outline.numberOfRows),
-                    columnIndexes: IndexSet(integersIn: 0..<outline.numberOfColumns)
-                )
+            // The structural pass, skipped entirely when the store says the
+            // tree has not been rebuilt since we last looked.
+            if force || store.outlineGeneration != generation {
+                generation = store.outlineGeneration
+                result = store.outline
+                let fingerprint = CloudImportOutline.fingerprint(of: result)
+                if force || fingerprint != structure {
+                    structure = fingerprint
+                    // The only path that re-asks the data source, and therefore
+                    // the only one that can replace a retained node with its
+                    // rebuilt twin. `reloadData(forRowIndexes:)` re-requests
+                    // *views* for items AppKit already holds — and since `Node`
+                    // equality is id-only, a changed row would otherwise render
+                    // its previous values forever.
+                    outline.reloadData()
+                    applyingStoreState = true
+                    expandDays()
+                    applyCollapsedMeetings()
+                    applyingStoreState = false
+                }
+                applySelection()
+                // Every cell was just rebuilt, so there is nothing to refresh —
+                // only a baseline to record, or the next tick would diff
+                // against an empty map and reload the whole table once more.
+                refreshChangedRows(seedOnly: true)
+                return
             }
+
+            // Nothing structural moved: a download reported another percent, or
+            // a tick landed. Touch only the rows whose store-derived state
+            // actually changed, in the two columns that read the store.
+            refreshChangedRows(seedOnly: false)
             applySelection()
         }
 
-        private static func fingerprint(of result: CloudImportOutline.Result) -> [String] {
-            result.days.flatMap { day in
-                [day.id] + day.children.flatMap { [$0.id] + $0.children.map(\.id) }
+        /// Reloads the tick and status cells of rows whose state moved.
+        ///
+        /// The whole point is what it *doesn't* do. Reloading every row in
+        /// every column ran `viewFor` ~2,000 times at 200 rows — each rebuilding
+        /// a stack view and re-running a formatter — several times a second,
+        /// for the length of a batch that the design budgets at 45 to 90
+        /// minutes. Three files are in flight at most, so at most three rows
+        /// have anything new to say.
+        private func refreshChangedRows(seedOnly: Bool) {
+            guard let outline, outline.numberOfRows > 0 else {
+                rowStates.removeAll()
+                return
             }
+            var changed = IndexSet()
+            var seen: [String: RowState] = [:]
+            for index in 0..<outline.numberOfRows {
+                guard let node = outline.item(atRow: index) as? CloudImportOutline.Node,
+                      let row = node.row
+                else { continue }
+                let current = state(of: row)
+                seen[row.id] = current
+                if !seedOnly, rowStates[row.id] != current { changed.insert(index) }
+            }
+            rowStates = seen
+            guard !changed.isEmpty else { return }
+            let columns = [Column.tick, Column.status].compactMap {
+                outline.column(withIdentifier: $0)
+            }.filter { $0 >= 0 }
+            guard !columns.isEmpty else { return }
+            outline.reloadData(forRowIndexes: changed, columnIndexes: IndexSet(columns))
         }
 
         private func expandDays() {
@@ -216,7 +337,13 @@ extension CloudImportOutlineView {
             guard let focused = store.focusedRowID,
                   let node = node(forRowID: focused)
             else {
-                if store.focusedRowID == nil { outline.deselectAll(nil) }
+                // Covers both "nothing is focused" and "the focused row is
+                // gone" — a filter keystroke, a collapsed parent. The second
+                // used to leave a stale id in the store with no selection on
+                // screen, and space then ticked an invisible row straight into
+                // the fetch queue.
+                outline.deselectAll(nil)
+                store.focusedRowID = nil
                 return
             }
             let row = outline.row(forItem: node)
@@ -316,6 +443,10 @@ extension CloudImportOutlineView {
         }
 
         private func recordCollapse(_ item: Any, collapsed: Bool) {
+            // A programmatic apply is us telling the outline what the store
+            // already says. Writing it back would publish from inside
+            // `updateNSView` and cost a full refresh per structural rebuild.
+            guard !applyingStoreState else { return }
             guard let node = item as? CloudImportOutline.Node,
                   case .meeting(let meeting) = node.kind
             else { return }
@@ -332,24 +463,31 @@ extension CloudImportOutlineView {
             guard selected >= 0,
                   let node = outline.item(atRow: selected) as? CloudImportOutline.Node,
                   let row = node.row
-            else { return }
+            else {
+                // Deselected — clicking empty space, or the selected row being
+                // collapsed away. Leaving the old id in the store meant space
+                // kept ticking a row nothing on screen pointed at.
+                store.focusedRowID = nil
+                return
+            }
             store.focusedRowID = row.id
         }
 
-        /// Type-select on the meeting title — the only string a person would
-        /// type to find a row.
-        func outlineView(
-            _ outlineView: NSOutlineView,
-            typeSelectStringFor tableColumn: NSTableColumn?,
-            item: Any
-        ) -> String? {
-            guard let node = item as? CloudImportOutline.Node else { return nil }
-            switch node.kind {
-            case .day(let day):             return day.label
-            case .meeting(let meeting):     return meeting.title
-            case .recording(let recording): return recording.row.title
-            }
-        }
+        // `typeSelectStringFor` is deliberately NOT implemented, and it was.
+        //
+        // Removed because it was wrong three ways at once and the window
+        // already has the better affordance. (1) Space is a legitimate
+        // type-select character and every title here is multi-word — "Weekly
+        // sync", "P04 Interview" — but space is also the tick key, so the
+        // buffer could never get past the first word. (2) It answered with
+        // `row.title` for a child row whose *displayed* title is "Recording 2",
+        // so it matched a string nobody could see. (3) It answered for days and
+        // meeting headers, which `shouldSelectItem` then refuses — typing
+        // "Weekly" matched, the selection was declined, and nothing happened,
+        // silently, on some rows and not others.
+        //
+        // The toolbar's Filter field is the search affordance, it searches
+        // people as well as titles, and it does not compete with the keyboard.
 
         // MARK: Delegate — views
 
@@ -404,11 +542,48 @@ extension CloudImportOutlineView {
                 // on a purely local problem.
                 on: store.ticked.contains(row.id) || !row.localState.isSelectable,
                 enabled: row.isSelectable,
-                label: row.title,
+                label: Self.accessibilityName(for: node),
+                // Restored. The SwiftUI cell explained a held row on hover
+                // ("Already imported — the file is on Dropbox and needs
+                // downloading there") and the port dropped it — leaving a
+                // ticked, greyed checkbox beside an empty Status cell with the
+                // reason stated nowhere at all, since `.imported` has no status
+                // label by design.
+                reason: row.isSelectable ? nil : Self.heldReason(row),
                 target: self,
                 action: #selector(tickChanged(_:))
             )
             return view
+        }
+
+        /// What VoiceOver calls this row.
+        ///
+        /// Built from the **node**, not the row, because two siblings of one
+        /// call carry the same `title` — the event's summary — so a row-derived
+        /// label announced "Import P05 Interview, checkbox" twice for two
+        /// different files, one 32 minutes and one 38. The ordinal is the only
+        /// thing that distinguishes them on screen, and it has to be the thing
+        /// that distinguishes them in speech.
+        private static func accessibilityName(for node: CloudImportOutline.Node) -> String {
+            guard case .recording(let recording) = node.kind else { return "" }
+            guard let ordinal = recording.ordinal else { return "Import \(recording.row.title)" }
+            return "Import recording \(ordinal), \(recording.row.title)"
+        }
+
+        /// Why a held row's checkbox is disabled. The distinction that matters:
+        /// a placeholder or an unplugged volume is a *local* problem, and
+        /// re-fetching would spend an expiry-limited remote read on it.
+        private static func heldReason(_ row: CloudImportRow) -> String? {
+            switch row.localState {
+            case .imported:
+                return "Already in this project."
+            case .notDownloaded(let provider):
+                return "Already imported — the file is on \(provider) and needs downloading there."
+            case .driveNotConnected(let volume):
+                return "Already imported — \u{201C}\(volume)\u{201D} isn\u{2019}t connected."
+            default:
+                return nil
+            }
         }
 
         @objc private func tickChanged(_ sender: RowCheckbox) {
@@ -423,58 +598,42 @@ extension CloudImportOutlineView {
             let view = reuse(TwoLineCellView.self, Column.meeting, in: outline)
             view.leadingInset = 0
             switch node.kind {
-            case .day(let day):
-                view.configure(title: day.label, subtitle: nil)
+            // No `.day` case: group rows are only ever drawn through the
+            // nil-column path above, so a branch here would be unreachable.
+            case .day:
+                view.configureDash()
 
             case .meeting(let meeting):
                 view.configure(
                     title: meeting.title,
-                    subtitle: Self.attendeeLine(meeting.attendees, organiser: meeting.organiser)
-                        ?? CloudCount.noun(meeting.recordingCount, "recording"),
-                    badge: nil
+                    subtitle: AttendeeLine.summary(meeting.attendees, organiser: meeting.organiser)
+                        ?? CloudCount.noun(meeting.recordingCount, "recording")
                 )
 
             case .recording(let recording):
-                if recording.isChild {
+                if let ordinal = recording.ordinal {
                     // A child says only what distinguishes it from its
                     // siblings. Repeating the title and the attendee line on
-                    // each one would be three copies of the same sentence.
+                    // each one would be three copies of the same sentence —
+                    // and the parent row is directly above it.
                     view.configure(
-                        title: "Recording \(recording.ordinal ?? 1)",
+                        title: "Recording \(ordinal)",
                         titleFont: .systemFont(ofSize: Metrics.titleSize, weight: .regular),
-                        subtitle: nil
+                        subtitle: nil,
+                        // Spatial adjacency carries the meeting's name for
+                        // someone looking at the screen. VoiceOver has no
+                        // adjacency, so it is said.
+                        accessibility: "Recording \(ordinal), \(recording.row.title)"
                     )
                 } else {
                     let row = recording.row
                     view.configure(
                         title: row.title,
-                        subtitle: Self.attendeeLine(row.attendees, organiser: row.organiser)
+                        subtitle: AttendeeLine.summary(row.attendees, organiser: row.organiser)
                     )
                 }
             }
             return view
-        }
-
-        /// Names in the list, emails never — they are a re-identification key
-        /// and are also unscannable. They earn their place at the "who is p1?"
-        /// promotion step.
-        private static func attendeeLine(
-            _ attendees: [CloudImportRow.Attendee],
-            organiser: CloudImportRow.Attendee?
-        ) -> String? {
-            let (names, overflow) = AttendeeLine.compose(attendees)
-            if names.isEmpty {
-                // Someone else's meeting: their name is the workflow — the fix
-                // is to ping them — where a count would be dead weight.
-                if let organiser { return organiser.listLabel }
-                // Nothing, not "0 attendees". A meeting with no invitees is an
-                // ordinary meeting, and announcing the zero is chrome for a
-                // non-event.
-                return attendees.isEmpty ? nil : CloudCount.noun(attendees.count, "attendee")
-            }
-            let joined = names.joined(separator: " · ")
-            // A count, not an ellipsis: "+4" says there are six.
-            return overflow > 0 ? "\(joined)  +\(overflow)" : joined
         }
 
         private func scheduledView(for node: CloudImportOutline.Node, in outline: NSOutlineView) -> NSView {
@@ -550,11 +709,12 @@ extension CloudImportOutlineView {
                 return view
             }
             if let progress = store.progress[row.id] {
-                view.configureProgress(progress.fraction)
+                view.configureProgress(progress.fraction, name: row.title)
             } else if let outcome = store.outcomes[row.id] {
                 switch outcome {
                 case .imported:
-                    view.configureText("✓ Imported", colour: .systemGreen, bold: true)
+                    view.configureText("Imported", colour: .systemGreen, bold: true,
+                                       symbol: "checkmark")
                 case .failed(let reason, _):
                     view.configureText(reason, colour: .systemRed, bold: false)
                 case .cancelled:
@@ -591,8 +751,15 @@ extension CloudImportOutlineView {
 
         /// Space ticks the focused row — the gesture that makes this a list of
         /// options rather than a list of destinations.
-        func toggleFocusedRow() {
-            store.toggleFocused()
+        ///
+        /// - Returns: false when the row refused, so the caller can beep. A key
+        ///   that is understood and declined gets a beep on this platform;
+        ///   Finder, Mail and Xcode all do it, and silence reads as the app
+        ///   having missed the keystroke.
+        @discardableResult
+        func toggleFocusedRow() -> Bool {
+            guard let focused = store.focusedRowID else { return false }
+            return store.toggle(focused)
         }
     }
 }
@@ -608,7 +775,9 @@ private final class OutlineView: NSOutlineView {
 
     override func keyDown(with event: NSEvent) {
         if event.charactersIgnoringModifiers == " " {
-            MainActor.assumeIsolated { coordinator?.toggleFocusedRow() }
+            MainActor.assumeIsolated {
+                if coordinator?.toggleFocusedRow() != true { NSSound.beep() }
+            }
             return
         }
         super.keyDown(with: event)
@@ -623,7 +792,44 @@ private final class RowCheckbox: NSButton {
     var rowID: String?
 }
 
-private final class TickCellView: NSView {
+/// The base every cell here shares, and the one thing `NSTableCellView` is
+/// genuinely needed for.
+///
+/// These cells hand-roll their layout — two labels and a stack is past what
+/// `textField`/`imageView` model, and Mail and Xcode hand-roll multi-line rows
+/// too. What they cannot hand-roll is the
+/// `NSTableRowView.interiorBackgroundStyle → NSTableCellView.backgroundStyle`
+/// forwarding chain, and it is load-bearing: every cell re-asserts semantic
+/// colours (`.secondaryLabelColor`, `.systemOrange`, `.systemGreen`) on each
+/// reload, which during a download fires at `didWriteData` cadence. On a
+/// selected row that repaints grey-on-accent-blue — nowhere near 4.5:1 — for
+/// the attendee line, both clocks, the size, the expiry and the status at once.
+///
+/// So colours are stored as *intent* and re-derived whenever the row's
+/// emphasis changes, rather than assigned once and forgotten.
+private class OutlineCellView: NSTableCellView {
+    override var backgroundStyle: NSView.BackgroundStyle {
+        didSet { applyBackgroundStyle() }
+    }
+
+    /// True when the row is drawn on an emphasised (key-window, selected)
+    /// background, where semantic label colours are illegible.
+    var isOnEmphasisedBackground: Bool { backgroundStyle == .emphasized }
+
+    /// The colour to actually draw, given what the cell meant.
+    func resolved(_ intent: NSColor) -> NSColor {
+        guard isOnEmphasisedBackground else { return intent }
+        // One colour on the selection pill, at two weights. The system draws
+        // selected text this way; a `.systemGreen` tick on accent blue does not
+        // become more legible for being green.
+        return intent == .labelColor ? .alternateSelectedControlTextColor
+                                     : .alternateSelectedControlTextColor.withAlphaComponent(0.75)
+    }
+
+    func applyBackgroundStyle() {}
+}
+
+private final class TickCellView: OutlineCellView {
     private let checkbox = RowCheckbox(checkboxWithTitle: "", target: nil, action: nil)
 
     override init(frame frameRect: NSRect) {
@@ -644,6 +850,7 @@ private final class TickCellView: NSView {
         on: Bool,
         enabled: Bool,
         label: String,
+        reason: String?,
         target: AnyObject,
         action: Selector
     ) {
@@ -653,9 +860,13 @@ private final class TickCellView: NSView {
         checkbox.isEnabled = enabled
         checkbox.target = target
         checkbox.action = action
-        // VoiceOver reads "Import <meeting>, checkbox" rather than an unnamed
-        // control in an unnamed column.
-        checkbox.setAccessibilityLabel("Import \(label)")
+        // VoiceOver reads "Import recording 2, P05 Interview, checkbox" rather
+        // than an unnamed control in an unnamed column.
+        checkbox.setAccessibilityLabel(label)
+        checkbox.toolTip = reason
+        // The reason is the whole content for a held row, whose Status cell is
+        // empty by design — so it has to reach VoiceOver too, not only hover.
+        checkbox.setAccessibilityHelp(reason)
     }
 
     func configureEmpty() {
@@ -663,19 +874,22 @@ private final class TickCellView: NSView {
         checkbox.rowID = nil
         checkbox.target = nil
         checkbox.action = nil
+        checkbox.toolTip = nil
     }
 }
 
-/// Title over optional subtitle, with an optional trailing badge on the title
-/// line. Every text column in the grid is this shape — a moment over its
-/// length, a meeting over its people, a recording over nothing.
-private final class TwoLineCellView: NSView {
+/// Title over optional subtitle. Every text column in the grid is this shape —
+/// a moment over its length, a meeting over its people, a recording over
+/// nothing.
+private final class TwoLineCellView: OutlineCellView {
     private let title = NSTextField(labelWithString: "")
     private let subtitle = NSTextField(labelWithString: "")
-    private let badge = NSTextField(labelWithString: "")
-    private let titleRow = NSStackView()
     private let stack = NSStackView()
     private var leading: NSLayoutConstraint!
+
+    /// What the cell *meant*, so `backgroundStyle` can re-derive what to draw.
+    private var titleIntent: NSColor = .labelColor
+    private var subtitleIntent: NSColor = .secondaryLabelColor
 
     var leadingInset: CGFloat = 0 {
         didSet { leading.constant = Metrics.cellInset + leadingInset }
@@ -686,7 +900,6 @@ private final class TwoLineCellView: NSView {
             title.alignment = alignment
             subtitle.alignment = alignment
             stack.alignment = alignment == .right ? .trailing : .leading
-            titleRow.alignment = .firstBaseline
         }
     }
 
@@ -701,24 +914,10 @@ private final class TwoLineCellView: NSView {
         subtitle.lineBreakMode = .byTruncatingTail
         subtitle.cell?.usesSingleLineMode = true
 
-        badge.font = .systemFont(ofSize: 9, weight: .semibold)
-        badge.textColor = .secondaryLabelColor
-        badge.wantsLayer = true
-        badge.layer?.borderWidth = 0.5
-        badge.layer?.cornerRadius = 3
-        badge.setContentHuggingPriority(.required, for: .horizontal)
-        badge.setContentCompressionResistancePriority(.required, for: .horizontal)
-
-        titleRow.orientation = .horizontal
-        titleRow.spacing = 6
-        titleRow.alignment = .firstBaseline
-        titleRow.addArrangedSubview(title)
-        titleRow.addArrangedSubview(badge)
-
         stack.orientation = .vertical
         stack.spacing = 1
         stack.alignment = .leading
-        stack.addArrangedSubview(titleRow)
+        stack.addArrangedSubview(title)
         stack.addArrangedSubview(subtitle)
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
@@ -734,22 +933,27 @@ private final class TwoLineCellView: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not from a nib") }
 
+    override func applyBackgroundStyle() {
+        title.textColor = resolved(titleIntent)
+        subtitle.textColor = resolved(subtitleIntent)
+    }
+
     func configure(
         title text: String,
         titleFont: NSFont = .systemFont(ofSize: Metrics.titleSize, weight: .semibold),
         subtitle detail: String?,
-        badge badgeText: String? = nil,
-        titleColour: NSColor = .labelColor
+        titleColour: NSColor = .labelColor,
+        accessibility: String? = nil
     ) {
         title.stringValue = text
         title.font = titleFont
-        title.textColor = titleColour
         title.alignment = alignment
         subtitle.stringValue = detail ?? ""
         subtitle.isHidden = (detail ?? "").isEmpty
-        badge.stringValue = badgeText.map { " \($0) " } ?? ""
-        badge.isHidden = badgeText == nil
-        badge.layer?.borderColor = NSColor.tertiaryLabelColor.cgColor
+        titleIntent = titleColour
+        subtitleIntent = .secondaryLabelColor
+        applyBackgroundStyle()
+        title.setAccessibilityLabel(accessibility)
     }
 
     /// A moment over how long it ran. Monospaced digits so the eye can compare
@@ -768,29 +972,44 @@ private final class TwoLineCellView: NSView {
     }
 
     /// An em-dash, not a blank. "We have no value for this" and "this column
-    /// does not apply to this row" both read better as a mark than as a hole.
+    /// does not apply to this row" both read better as a mark than as a hole —
+    /// on screen. In the accessibility tree it is the opposite: a meeting header
+    /// announcing four em-dashes is noise, so the mark is named instead.
     func configureDash() {
         configure(
-            title: "—",
+            title: "\u{2014}",
             titleFont: .systemFont(ofSize: Metrics.subtitleSize),
             subtitle: nil,
-            titleColour: .tertiaryLabelColor
+            titleColour: .tertiaryLabelColor,
+            accessibility: "None"
         )
     }
 }
 
 /// Status is the one column whose content changes shape rather than value: a
 /// determinate bar while bytes move, a sentence before and after.
-private final class StatusCellView: NSView {
+private final class StatusCellView: OutlineCellView {
     private let label = NSTextField(labelWithString: "")
+    private let glyph = NSImageView()
     private let bar = NSProgressIndicator()
+    private let row = NSStackView()
+    private var labelIntent: NSColor = .secondaryLabelColor
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         label.font = .systemFont(ofSize: Metrics.subtitleSize)
         label.lineBreakMode = .byTruncatingTail
         label.cell?.usesSingleLineMode = true
-        label.translatesAutoresizingMaskIntoConstraints = false
+
+        glyph.imageScaling = .scaleProportionallyDown
+        glyph.setContentHuggingPriority(.required, for: .horizontal)
+
+        row.orientation = .horizontal
+        row.spacing = 4
+        row.alignment = .centerY
+        row.addArrangedSubview(glyph)
+        row.addArrangedSubview(label)
+        row.translatesAutoresizingMaskIntoConstraints = false
 
         bar.isIndeterminate = false
         bar.style = .bar
@@ -799,12 +1018,13 @@ private final class StatusCellView: NSView {
         bar.controlSize = .small
         bar.translatesAutoresizingMaskIntoConstraints = false
 
-        addSubview(label)
+        addSubview(row)
         addSubview(bar)
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Metrics.cellInset),
-            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Metrics.cellInset),
-            label.centerYAnchor.constraint(equalTo: centerYAnchor),
+            row.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Metrics.cellInset),
+            row.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor,
+                                          constant: -Metrics.cellInset),
+            row.centerYAnchor.constraint(equalTo: centerYAnchor),
             bar.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Metrics.cellInset),
             bar.widthAnchor.constraint(equalToConstant: 70),
             bar.centerYAnchor.constraint(equalTo: centerYAnchor),
@@ -814,12 +1034,30 @@ private final class StatusCellView: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not from a nib") }
 
-    func configureText(_ text: String, colour: NSColor, bold: Bool) {
+    override func applyBackgroundStyle() {
+        label.textColor = resolved(labelIntent)
+        glyph.contentTintColor = resolved(labelIntent)
+    }
+
+    /// - Parameter symbol: an SF Symbol name, not a character.
+    ///
+    ///   The success state was the string `"\u{2713} Imported"`, which
+    ///   VoiceOver reads out as the name of the character. A glyph belongs in
+    ///   an image view where it has a role and can be hidden from the
+    ///   accessibility tree — `desktop/CLAUDE.md` § Native primitives first:
+    ///   "SF Symbols / real file icons for glyphs".
+    func configureText(_ text: String, colour: NSColor, bold: Bool, symbol: String? = nil) {
         bar.isHidden = true
-        label.isHidden = false
+        row.isHidden = false
         label.stringValue = text
-        label.textColor = colour
+        labelIntent = colour
         label.font = .systemFont(ofSize: Metrics.subtitleSize, weight: bold ? .semibold : .regular)
+        glyph.image = symbol.flatMap {
+            NSImage(systemSymbolName: $0, accessibilityDescription: nil)
+        }
+        glyph.isHidden = glyph.image == nil
+        glyph.setAccessibilityElement(false)
+        applyBackgroundStyle()
         // The whole sentence on hover, because a failure reason is exactly the
         // string that will not fit.
         label.toolTip = text
@@ -828,23 +1066,30 @@ private final class StatusCellView: NSView {
     /// An indeterminate bar for the window between "the transfer started" and
     /// "the server told us how big it is" — a bar sitting at 0% for ten seconds
     /// reads as stalled.
-    func configureProgress(_ fraction: Double?) {
-        label.isHidden = true
+    func configureProgress(_ fraction: Double?, name: String) {
+        row.isHidden = true
         bar.isHidden = false
         bar.toolTip = nil
+        // Without these the one state VoiceOver has least to say about — an
+        // unknown-size transfer — is also unnamed.
+        bar.setAccessibilityLabel("Downloading \(name)")
         if let fraction {
             if bar.isIndeterminate { bar.stopAnimation(nil); bar.isIndeterminate = false }
             bar.doubleValue = fraction
+            bar.setAccessibilityValueDescription("\(Int(fraction * 100)) percent")
         } else if !bar.isIndeterminate {
             bar.isIndeterminate = true
+            bar.setAccessibilityValueDescription("Starting")
             bar.startAnimation(nil)
         }
     }
 
     func configureEmpty() {
         bar.isHidden = true
-        label.isHidden = false
+        row.isHidden = false
         label.stringValue = ""
         label.toolTip = nil
+        glyph.image = nil
+        glyph.isHidden = true
     }
 }

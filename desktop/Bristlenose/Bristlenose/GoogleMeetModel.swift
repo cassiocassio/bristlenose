@@ -437,6 +437,27 @@ struct CloudImportRow: Identifiable, Equatable {
     /// where a `.rendition` case is what would make the compiler ask.
     let meetingID: String?
 
+    /// Which recording of its call this is, 1-based — and **nil when the call
+    /// produced only one**, which is the overwhelmingly common case.
+    ///
+    /// Set by the adapter, which is the only place that knows, rather than
+    /// derived from position in a sorted array. That matters for three separate
+    /// reasons, and the third is a data-losing bug:
+    ///
+    /// 1. Swift's sort is not documented as stable, and siblings sort on
+    ///    `startsAt` — which is *identical* for both when Google omits the
+    ///    recording's `startTime`. Positional ordinals could then swap between
+    ///    two renders of the same list.
+    /// 2. The outline labels children "Recording 1" / "Recording 2" from it, so
+    ///    the label is a fact about the call rather than about the array.
+    /// 3. **It disambiguates the filename.** Both siblings carry the same title
+    ///    and, on that same nil-`startTime` path, the same `startsAt` — so they
+    ///    produced byte-identical destination names, and `publish` deliberately
+    ///    overwrites. One file survived, both rows reported "Imported", and the
+    ///    terminus said two. That is the segmented-recording loss this feature
+    ///    just fixed, reappearing one layer down at the filesystem.
+    let siblingOrdinal: Int?
+
     /// Duration of the *recording* where known, else of the meeting. Nil when
     /// the row is someone else's meeting — we know the event, not the file.
     let duration: TimeInterval?
@@ -544,8 +565,10 @@ struct CloudImportRow: Identifiable, Equatable {
         scheduledAt: Date? = nil,
         scheduledDuration: TimeInterval? = nil,
         recordedAt: Date? = nil,
-        meetingID: String? = nil
+        meetingID: String? = nil,
+        siblingOrdinal: Int? = nil
     ) {
+        self.siblingOrdinal = siblingOrdinal
         self.id = id
         self.title = title
         self.startsAt = startsAt
@@ -571,6 +594,41 @@ struct CloudImportRow: Identifiable, Equatable {
     /// imported); a row can be untickable and have no recording (nobody pressed
     /// record). The footer counts recordings, so it needs this one.
     var hasRecording: Bool { recordedAt != nil || video.isAvailable }
+
+    /// Whether a recording is being **kept from** the researcher — the one
+    /// condition that earns the "About recordings permissions" link.
+    ///
+    /// This asks the remote question directly, and it must, because the
+    /// arithmetic that looks equivalent is not. `fetchable < recordings` counts
+    /// three purely *local* states as withholding: a file already imported, an
+    /// iCloud placeholder in the destination project, and an unmounted external
+    /// drive all report `isSelectable == false` while plainly having a
+    /// recording. So a returning researcher — the commonest case there is —
+    /// would be shown a link about *remote permissions* because they succeeded
+    /// last week. The link's argued value is its **absence**; one that appears
+    /// after a success is the "trains people to ignore it by the third visit"
+    /// failure the design warns about, arriving by the third visit.
+    ///
+    /// Switched exhaustively rather than defaulted, so a new availability case
+    /// has to state which side of this line it falls on.
+    var isWithheld: Bool {
+        switch video {
+        case .available:
+            return false
+        case .notRecorded:
+            // Nothing was withheld, because nothing existed. An ordinary month
+            // of un-recorded standups must never raise a permissions question.
+            return false
+        case .needsScope, .notOnThisPlan, .notOrganiser, .unsupported:
+            // Each of these is a decision made at the other end: a scope we
+            // don't hold, a plan that doesn't include it, someone else's
+            // meeting, a tenant that blocks download. `.needsScope` belongs
+            // here even though we cannot see whether a recording exists —
+            // being unable to look *is* the permission problem, and it is the
+            // most permission-shaped state in the feature.
+            return true
+        }
+    }
 
     /// Whether this row can be ticked. Local state decides first (an already-held
     /// file is not re-fetchable), then remote availability.
@@ -693,6 +751,37 @@ enum AttendeeLine {
         guard limit > 0 else { return ([], ranked.count) }
         let shown = Array(ranked.prefix(limit))
         return (shown.map(\.listLabel), max(0, ranked.count - shown.count))
+    }
+
+    /// The whole subtitle, ready to render: `Sarah Chen · J. Whitfield  +4`, or
+    /// the organiser's name on someone else's meeting, or nothing.
+    ///
+    /// Here rather than private to the outline's coordinator, where it was, so
+    /// it can be reached by a test — `desktop/CLAUDE.md` § Testing: "if a
+    /// SwiftUI view is making a decision, the decision belongs in a testable
+    /// helper". Three decisions live in these eight lines, and each is one the
+    /// review log has already had to argue once.
+    ///
+    /// - Returns: nil when there is nothing to say. **Nothing, not "0
+    ///   attendees"** — a meeting with no invitees is an ordinary meeting, and
+    ///   announcing the zero is chrome for a non-event.
+    static func summary(
+        _ attendees: [CloudImportRow.Attendee],
+        organiser: CloudImportRow.Attendee?,
+        limit: Int = 3
+    ) -> String? {
+        let (names, overflow) = compose(attendees, limit: limit)
+        guard !names.isEmpty else {
+            // Someone else's meeting: their name is the workflow — the fix is
+            // to ping them — where a count would be dead weight.
+            if let organiser { return organiser.listLabel }
+            // Names existed and were all shed: you, decliners, resources. The
+            // count is the honest residue and worth saying.
+            return attendees.isEmpty ? nil : CloudCount.noun(attendees.count, "attendee")
+        }
+        let joined = names.joined(separator: " · ")
+        // A count, not an ellipsis: "+4" says there are six.
+        return overflow > 0 ? "\(joined)  +\(overflow)" : joined
     }
 
     /// Drop yourself, drop decliners, order by externality.

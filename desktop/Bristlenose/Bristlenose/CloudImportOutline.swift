@@ -151,21 +151,25 @@ enum CloudImportOutline {
         /// it just wasn't in anybody's calendar.
         let meetings: Int
         /// Rows with a file behind them. A meeting nobody recorded contributes
-        /// zero, which is what lets `withholding` mean what it says.
+        /// zero.
         let recordings: Int
         /// Rows that can actually be ticked right now.
         let fetchable: Int
-
-        static let empty = Result(days: [], meetings: 0, recordings: 0, fetchable: 0)
-
         /// Whether some recording the researcher can *see* is one they cannot
-        /// *fetch* — the condition that earns the "About recordings
-        /// permissions" link, and nothing else does.
+        /// *fetch*, for a reason at the other end — the condition that earns
+        /// the "About recordings permissions" link, and nothing else does.
         ///
-        /// A meeting nobody recorded contributes no recordings, so an ordinary
-        /// month of un-recorded standups can never trigger it. Fetch 8 of 8 and
-        /// the link is absent; that absence is the reassurance.
-        var withholding: Bool { fetchable < recordings }
+        /// **Not `fetchable < recordings`**, which is the arithmetic that looks
+        /// equivalent and is not: it counts an already-imported file, an iCloud
+        /// placeholder and an unmounted drive as withholding, so a returning
+        /// researcher gets a remote-permissions link because they succeeded
+        /// last week. See `CloudImportRow.isWithheld`.
+        let withholding: Bool
+
+        static let empty = Result(days: [], meetings: 0, recordings: 0,
+                                  fetchable: 0, withholding: false)
+
+        var isEmpty: Bool { days.isEmpty }
     }
 
     // MARK: - Building it
@@ -194,7 +198,11 @@ enum CloudImportOutline {
         var order: [String] = []
         var groups: [String: [CloudImportRow]] = [:]
         for row in rows {
-            let key = row.meetingID ?? "row:\(row.id)"
+            // Both sides namespaced, so a `meetingID` that happens to read like
+            // a synthesised key cannot collide with one. The namespace is free
+            // and the alternative is an argument about how unlikely a Graph id
+            // is to start with "row:".
+            let key = row.meetingID.map { "mtg:\($0)" } ?? "row:\(row.id)"
             if groups[key] == nil { order.append(key) }
             groups[key, default: []].append(row)
         }
@@ -203,35 +211,67 @@ enum CloudImportOutline {
         struct Entry { let anchor: Date; let node: Node }
         var entries: [Entry] = []
 
+        var meetingCount = 0, recordingCount = 0, fetchableCount = 0, withheld = false
+
         for key in order {
-            guard let members = groups[key], let first = members.first else { continue }
+            guard let members = groups[key], !members.isEmpty else {
+                // Unreachable by construction — `order` gains a key only in the
+                // branch that immediately appends a row to it. Loud rather than
+                // silent because this is the one loop where a dropped key is a
+                // dropped meeting, and the whole hazard of this feature is that
+                // a shorter list looks exactly like a quieter month.
+                assertionFailure("a grouping key with no rows: \(key)")
+                continue
+            }
             // Chronological within the call: "Recording 1" is the one that
             // happened first, which is the only ordering a person would guess.
             let sorted = members.sorted { $0.startsAt < $1.startsAt }
+            let lead = sorted[0]
+            // Everything about the call is read from `lead` — never from input
+            // order. Identical today, because siblings share one event on both
+            // adapters; free to make true, and it removes the question.
+            //
             // The call's own moment is when it was *booked* if it was booked at
             // all, so a meeting and its recordings never straddle a day header
             // just because someone hit record after midnight.
-            let anchor = first.scheduledAt ?? sorted[0].startsAt
+            let anchor = lead.scheduledAt ?? lead.startsAt
+
+            // Counted from what is about to be built, not from the input array.
+            // The footer's claim is that it is checkable against the list, and
+            // a count taken from a different set is exactly how that stops
+            // being true — including when a duplicate id means two rows arrive
+            // and only one can be drawn.
+            meetingCount += 1
+            for row in sorted {
+                if row.hasRecording { recordingCount += 1 }
+                if row.isSelectable { fetchableCount += 1 }
+                if row.isWithheld { withheld = true }
+            }
 
             if sorted.count == 1 {
-                let only = sorted[0]
                 entries.append(Entry(
                     anchor: anchor,
-                    node: Node(id: "rec:\(only.id)",
-                               kind: .recording(Recording(row: only, ordinal: nil)))
+                    node: Node(id: "rec:\(lead.id)",
+                               kind: .recording(Recording(row: lead, ordinal: nil)))
                 ))
             } else {
                 let children = sorted.enumerated().map { index, row in
                     Node(id: "rec:\(row.id)",
-                         kind: .recording(Recording(row: row, ordinal: index + 1)))
+                         // The adapter's own ordinal wins. Position is the
+                         // fallback for a source that doesn't set one — and it
+                         // is only a fallback because siblings can share an
+                         // exact `startsAt`, which makes their sorted order
+                         // arbitrary rather than merely unspecified.
+                         kind: .recording(Recording(row: row,
+                                                    ordinal: row.siblingOrdinal ?? index + 1)))
                 }
                 let meeting = Meeting(
                     id: key,
-                    title: first.title,
-                    attendees: first.attendees,
-                    organiser: first.organiser,
-                    scheduledAt: first.scheduledAt,
-                    scheduledDuration: first.scheduledDuration,
+                    title: lead.title,
+                    attendees: lead.attendees,
+                    organiser: lead.organiser,
+                    scheduledAt: lead.scheduledAt,
+                    scheduledDuration: lead.scheduledDuration,
                     recordingCount: children.count
                 )
                 entries.append(Entry(
@@ -258,10 +298,76 @@ enum CloudImportOutline {
 
         return Result(
             days: days,
-            meetings: entries.count,
-            recordings: rows.filter(\.hasRecording).count,
-            fetchable: rows.filter(\.isSelectable).count
+            meetings: meetingCount,
+            recordings: recordingCount,
+            fetchable: fetchableCount,
+            withholding: withheld
         )
+    }
+
+    /// A fingerprint of everything the cells draw *from the tree*.
+    ///
+    /// Two jobs, and the second is the one that isn't obvious.
+    ///
+    /// The obvious one: skip a full `reloadData()` when nothing structural
+    /// moved, so a download's progress ticks don't collapse every disclosure
+    /// triangle several times a second.
+    ///
+    /// The load-bearing one: `reloadData(forRowIndexes:columnIndexes:)` does
+    /// **not** re-ask the data source for items — it re-requests views for the
+    /// items AppKit already holds. Since `Node` equality is keyed on id alone,
+    /// a rebuilt node with the same id never swaps in, so every cell reading
+    /// `node.kind` would render the *previous* listing's values indefinitely.
+    /// Making this fingerprint content-sensitive is what forces the full
+    /// reload — the only path that re-asks — whenever a rendered value changes.
+    /// Store-derived state (progress, outcomes, ticks) is deliberately absent:
+    /// those cells read the store directly and are refreshed by the cheap path.
+    static func fingerprint(of result: Result) -> [String] {
+        result.days.flatMap { day -> [String] in
+            var out = [day.id + "|" + label(of: day)]
+            for node in day.children {
+                out.append(node.id + "|" + signature(of: node))
+                out.append(contentsOf: node.children.map { $0.id + "|" + signature(of: $0) })
+            }
+            return out
+        }
+    }
+
+    private static func label(of node: Node) -> String {
+        if case .day(let day) = node.kind { return day.label }
+        return ""
+    }
+
+    private static func signature(of node: Node) -> String {
+        switch node.kind {
+        case .day(let day):
+            return day.label
+        case .meeting(let meeting):
+            return [meeting.title,
+                    meeting.scheduledAt.map(String.init(describing:)) ?? "",
+                    meeting.scheduledDuration.map(String.init(describing:)) ?? "",
+                    String(meeting.recordingCount),
+                    meeting.attendees.map(\.listLabel).joined(separator: ",")]
+                .joined(separator: "|")
+        case .recording(let recording):
+            let row = recording.row
+            // Built by appending rather than as one literal: the array-literal
+            // form of this tripped "unable to type-check this expression in
+            // reasonable time", which is SwiftUI's classic complaint arriving
+            // in a plain function.
+            var parts: [String] = [row.title]
+            parts.append(recording.ordinal.map(String.init) ?? "")
+            parts.append(row.scheduledAt.map(String.init(describing:)) ?? "")
+            parts.append(row.recordedAt.map(String.init(describing:)) ?? "")
+            parts.append(row.duration.map(String.init(describing:)) ?? "")
+            parts.append(row.sizeBytes.map(String.init) ?? "")
+            parts.append(row.expiresAt.map(String.init(describing:)) ?? "")
+            parts.append(row.statusLabel ?? "")
+            parts.append(String(row.showsCheckbox))
+            parts.append(String(row.isSelectable))
+            parts.append(row.attendees.map(\.listLabel).joined(separator: ","))
+            return parts.joined(separator: "|")
+        }
     }
 
     /// "Today" / "Yesterday" / "Wed 13 Aug" / "Wed 13 Aug 2025".

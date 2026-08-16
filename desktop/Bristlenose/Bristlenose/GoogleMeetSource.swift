@@ -129,6 +129,11 @@ private struct RecordingsPage: Decodable {
         let endTime: String?
     }
     let recordings: [Recording]?
+    /// Decoded so the truncation can at least be *seen*. Google returns at most
+    /// ten recordings per page by default and this call sends no page size, so
+    /// a call segmented past that loses its tail — and, before this member
+    /// existed, could not even report that it had.
+    let nextPageToken: String?
 }
 
 // MARK: - The adapter
@@ -455,15 +460,29 @@ final class GoogleMeetSource: CloudImportSource {
             // The event id is the right key: the meeting code is reused across
             // every instance of a recurring series, so grouping on it would
             // stack six Tuesdays into one meeting.
-            let meetingID = event.id ?? event.conferenceData?.conferenceId
+            //
+            // And **no fallback to the code**, which is what the sentence above
+            // rules out and an earlier draft then did anyway. With `event.id`
+            // nil, grouping on the code files every instance of a recurring
+            // series under one header, titled from whichever arrived first. An
+            // ungrouped row is honest; a wrongly-grouped one is not.
+            let meetingID = event.id
 
             var video: ArtifactAvailability = .available
             var expiresAt: Date?
             var found: [RecordingLookup.Found] = []
 
             if !isOrganiser {
-                video = .notOrganiser(organiser: event.organizer?.displayName
-                                      ?? event.organizer?.email)
+                // Through `listLabel`, never the raw address. The `?? email`
+                // fallback this replaces put a full participant email into the
+                // Status column — bypassing the one helper written to stop
+                // exactly that ("not a copy-pasteable identifier sitting in a
+                // screenshot"), and firing precisely on the population that
+                // most needs it: Google returns bare addresses for people
+                // outside the organiser's domain, which is where UR
+                // participants live.
+                video = .notOrganiser(
+                    organiser: Self.person(event.organizer, domain: nil)?.listLabel)
             } else if !canReachMeet {
                 video = .needsScope(GoogleScopes.meetReadonly)
             } else {
@@ -474,11 +493,26 @@ final class GoogleMeetSource: CloudImportSource {
                 expiresAt = lookups[index]?.recordExpires
                 found = lookups[index]?.recordings ?? []
                 if found.isEmpty {
-                    // Only a personal account earns the plan verdict, where it
-                    // is literally true. A Workspace account with an unrecorded
-                    // meeting is not a capability problem, and saying so sends
-                    // a paying customer to argue with their admin.
-                    video = tier == .personal ? .notOnThisPlan : .notRecorded
+                    if lookups[index]?.sawGeneratedRecordings == true {
+                        // Google told us a completed recording exists and we
+                        // could not resolve a file for any of them. Saying
+                        // "Not recorded" here is a false claim of knowledge —
+                        // and on a mono-reason list it becomes the blanket
+                        // "None of these were recorded", which is Finding 117's
+                        // shape with a different untruth in it. `.unsupported`
+                        // renders "Unavailable", which is what we actually
+                        // know. The case this really wants is Finding 123's
+                        // missing "the lookup failed" availability; until that
+                        // exists, do not claim the stronger fact.
+                        video = .unsupported
+                    } else {
+                        // Only a personal account earns the plan verdict, where
+                        // it is literally true. A Workspace account with an
+                        // unrecorded meeting is not a capability problem, and
+                        // saying so sends a paying customer to argue with their
+                        // admin.
+                        video = tier == .personal ? .notOnThisPlan : .notRecorded
+                    }
                 }
             }
 
@@ -487,7 +521,8 @@ final class GoogleMeetSource: CloudImportSource {
             func row(
                 id: String,
                 recordedAt: Date?,
-                duration: TimeInterval?
+                duration: TimeInterval?,
+                siblingOrdinal: Int? = nil
             ) -> CloudImportRow {
                 CloudImportRow(
                     id: id,
@@ -529,7 +564,8 @@ final class GoogleMeetSource: CloudImportSource {
                     scheduledAt: start,
                     scheduledDuration: scheduledDuration,
                     recordedAt: recordedAt,
-                    meetingID: meetingID
+                    meetingID: meetingID,
+                    siblingOrdinal: siblingOrdinal
                 )
             }
 
@@ -541,22 +577,37 @@ final class GoogleMeetSource: CloudImportSource {
                 rows.append(row(id: event.id ?? UUID().uuidString,
                                 recordedAt: nil, duration: nil))
             } else {
-                for recording in found {
-                    // The Drive file id is the row id. One row is now one file,
-                    // so the two identities have collapsed into each other —
-                    // which is what makes a tick stable across a re-list, and
-                    // what stops the fetch map from ever drifting from the row
-                    // it belongs to.
+                let eventKey = event.id ?? event.conferenceData?.conferenceId ?? UUID().uuidString
+                for (index, recording) in found.enumerated() {
+                    // **Composite, not the bare file id**, and the difference is
+                    // a real collision rather than a theoretical one. The
+                    // conference-record lookup keys on the meeting *code*,
+                    // which is shared by every event using one Meet link — a
+                    // researcher's persistent personal room, say — over a
+                    // 15-hour window, and then takes `.first` of an unordered
+                    // list. Two events at 10:00 and 15:00 on that link both
+                    // resolve to the same record, so a bare file id gave two
+                    // rows the same identity.
                     //
-                    // The map survives that collapse rather than being retired
-                    // by it, because it answers a second question the row id
-                    // alone cannot: *does this row have a file at all*. An
-                    // un-recorded meeting's row id is its calendar event id,
-                    // and `requestMediaGrant` must not hand that to the Picker.
-                    driveFileIDs[recording.fileID] = recording.fileID
-                    rows.append(row(id: recording.fileID,
+                    // Everything downstream is keyed on that identity:
+                    // `NSOutlineView` requires unique items and `Node` equality
+                    // is id-only, so one of the two rows would never draw;
+                    // `ticked`, `progress` and `outcomes` are dictionaries, so
+                    // one tick queued both and one outcome spoke for both.
+                    // Prefixing with the event restores one-id-per-row while
+                    // keeping it stable across re-lists.
+                    let rowID = "\(eventKey)#\(recording.fileID)"
+                    // The map is what answers "does this row have a file", which
+                    // the row id alone cannot: an un-recorded meeting's row id
+                    // is its calendar event id, and `requestMediaGrant` must
+                    // never hand that to the Picker.
+                    driveFileIDs[rowID] = recording.fileID
+                    rows.append(row(id: rowID,
                                     recordedAt: recording.startedAt,
-                                    duration: recording.duration))
+                                    duration: recording.duration,
+                                    // Nil for the ordinary one-recording call,
+                                    // so its filename and label are unchanged.
+                                    siblingOrdinal: found.count > 1 ? index + 1 : nil))
                 }
             }
         }
@@ -590,13 +641,25 @@ final class GoogleMeetSource: CloudImportSource {
             let duration: TimeInterval?
         }
 
+        /// Whether Google reported any `FILE_GENERATED` recording at all,
+        /// regardless of whether we could resolve a file for it.
+        ///
+        /// The two are not the same fact and the difference is a false claim:
+        /// with this false, "nobody recorded this meeting" is true; with it
+        /// true and `recordings` empty, Google told us a completed recording
+        /// exists and we simply could not reach it. Reporting the second as the
+        /// first is Finding 117's shape one layer down.
+        let sawGeneratedRecordings: Bool
+
         /// The list defaults to empty, because every caller that omits it is a
         /// path where the lookup gave up — no record, no recordings, a refusal.
         /// Defaulting rather than threading `[]` through three failure sites
         /// keeps "we found nothing" as the thing you get by saying nothing.
-        init(recordExpires: Date?, recordings: [Found] = []) {
+        init(recordExpires: Date?, recordings: [Found] = [],
+             sawGeneratedRecordings: Bool = false) {
             self.recordExpires = recordExpires
             self.recordings = recordings
+            self.sawGeneratedRecordings = sawGeneratedRecordings
         }
     }
 
@@ -702,7 +765,14 @@ final class GoogleMeetSource: CloudImportSource {
 
         var components = URLComponents(string: "https://meet.googleapis.com/v2/conferenceRecords")!
         components.queryItems = [URLQueryItem(name: "filter", value: filter)]
-        guard let url = components.url else { return nil }
+        guard let url = components.url else {
+            // A fifth fact that used to return nil in silence. The filter
+            // interpolates a remote-controlled meeting code, so this is
+            // reachable by data rather than only by bug — and it renders as
+            // "Not recorded" with nothing anywhere to say otherwise.
+            log.notice("meet_lookup phase=records unbuildable_url codeLen=\(code.count, privacy: .public)")
+            return nil
+        }
 
         var request = URLRequest(url: url)
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
@@ -740,17 +810,34 @@ final class GoogleMeetSource: CloudImportSource {
             codeLen=\(code.count, privacy: .public) \
             codeDashes=\(code.filter { $0 == "-" }.count, privacy: .public)
             """)
-        log.debug("meet_lookup filter=\(filter, privacy: .public)")
+        // **`.private`, not `.debug`-and-public.** The comment above states the
+        // rule correctly and the next two lines used to break it: level and
+        // redaction are different axes. `.debug` governs whether a line is
+        // persisted to the log *store*; `privacy:` governs whether the value is
+        // redacted — and `.debug` messages sitting in the ring buffer are
+        // captured verbatim into a sysdiagnose's logarchive. The filter carries
+        // the meeting code, which with Workspace's default quick-access is
+        // close to an invitation to a research session.
+        //
+        // `.private` still renders in full in Xcode and in a live `log stream`
+        // from the developer's own machine, which is where these are read.
+        log.debug("meet_lookup filter=\(filter, privacy: .private)")
         if status != 200, let body = String(data: data, encoding: .utf8), !body.isEmpty {
             // Google's error envelope names the cause. Truncated because a
-            // stack of HTML from a proxy would otherwise flood the log.
-            log.notice("meet_lookup phase=records body=\(body.prefix(400), privacy: .public)")
+            // stack of HTML from a proxy would otherwise flood the log — and
+            // private because `INVALID_ARGUMENT` echoes the filter expression,
+            // meeting code and all, straight back into the message.
+            log.notice("meet_lookup phase=records body=\(body.prefix(400), privacy: .private)")
         }
 
-        guard outcome == .ok,
-              let record = page?.conferenceRecords?.first,
-              let name = record.name
-        else { return nil }
+        guard outcome == .ok, let record = page?.conferenceRecords?.first else { return nil }
+        guard let name = record.name else {
+            // The preceding notice already logged `records=1`, so without this
+            // the only tell is the *absence* of a later `phase=recordings`
+            // line — a fact you have to know to look for.
+            log.notice("meet_lookup phase=records record_without_name")
+            return nil
+        }
 
         let expires = record.expireTime.flatMap(Self.parseRFC3339)
 
@@ -760,6 +847,8 @@ final class GoogleMeetSource: CloudImportSource {
         // reason: a third party decides what is in the string, and a crash is
         // a worse outcome than a row that can't be fetched.
         guard let recURL = URL(string: "https://meet.googleapis.com/v2/\(name)/recordings") else {
+            // `name` is remote-controlled, so this too is reachable by data.
+            log.notice("meet_lookup phase=recordings unbuildable_url")
             return RecordingLookup(recordExpires: expires)
         }
         var recRequest = URLRequest(url: recURL)
@@ -820,15 +909,27 @@ final class GoogleMeetSource: CloudImportSource {
         // are in the multi-recording case. Logged rather than assumed: the span
         // fields are documented, this adapter only recently began asking for
         // them, and a nil silently falls the row back to event timing.
+        // `truncated` is the one number here that is a *loss* rather than a
+        // measurement. Google documents this endpoint as returning at most ten
+        // recordings when no page size is given, and `RecordingsPage` follows
+        // no continuation — which was harmless while only the first recording
+        // was ever used, and is a silent tail-drop now that every one becomes a
+        // row. Logged rather than followed because following it honestly needs
+        // a way to say "partial" that `RecordingLookup` has no channel for; the
+        // line is what makes the loss falsifiable in the meantime.
+        let truncated = recPage.nextPageToken?.isEmpty == false
         log.notice("""
             meet_lookup phase=recording_span \
             generated=\(generated.count, privacy: .public) \
             withFile=\(found.count, privacy: .public) \
             withStart=\(found.filter { $0.startedAt != nil }.count, privacy: .public) \
-            withSpan=\(found.filter { $0.duration != nil }.count, privacy: .public)
+            withSpan=\(found.filter { $0.duration != nil }.count, privacy: .public) \
+            truncated=\(truncated, privacy: .public)
             """)
 
-        return RecordingLookup(recordExpires: expires, recordings: found)
+        return RecordingLookup(recordExpires: expires,
+                               recordings: found,
+                               sawGeneratedRecordings: !generated.isEmpty)
     }
 
     // MARK: Fetching
@@ -901,7 +1002,12 @@ final class GoogleMeetSource: CloudImportSource {
         components.queryItems = [URLQueryItem(name: "alt", value: "media")]
 
         let name = CloudDownloadNaming.filename(
-            title: row.title, startsAt: row.startsAt, fileExtension: "mp4")
+            title: row.title, startsAt: row.startsAt, fileExtension: "mp4",
+            // Two halves of one call share a title, and share `startsAt` too
+            // whenever Google omits the recording's own start — so without the
+            // ordinal they produce the same path and one silently overwrites
+            // the other, with both rows reporting success.
+            part: row.siblingOrdinal)
         guard let mediaURL = components.url else {
             return .failed(reason: "That file has an unusable identifier.", isRetryable: false)
         }

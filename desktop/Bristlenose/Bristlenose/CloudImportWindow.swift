@@ -527,8 +527,17 @@ private struct AttendeeLineView: View {
     var body: some View {
         let (names, overflow) = AttendeeLine.compose(row.attendees)
         HStack(spacing: 4) {
-            if names.isEmpty {
-                Text("\(row.attendees.count) attendees")
+            if names.isEmpty && row.attendees.isEmpty {
+                // **Nothing, not "0 attendees".** A meeting with no invitees is
+                // an ordinary meeting, and announcing the zero is chrome for a
+                // non-event — the exact shape "absence is information" rules
+                // out. It also read as a fault on the first live Google list,
+                // where every test meeting legitimately had none.
+                EmptyView()
+            } else if names.isEmpty {
+                // Names existed and were all shed — you, decliners, resources.
+                // The count is the honest residue and worth saying.
+                Text(CloudCount.noun(row.attendees.count, "attendee"))
             } else {
                 Text(names.joined(separator: " · ")).lineLimit(1)
                 if overflow > 0 {

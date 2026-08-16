@@ -21,14 +21,36 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     var id: String { rawValue }
 
     /// The platforms with a live adapter, in the order `docs/design-cloud-import.md`
-    /// §5 sequences them.
+    /// §5 sequences them. **Built, not necessarily offered** — see `shipping`.
+    static let built: [CloudPlatform] = [.teams, .meet, .zoom]
+
+    /// Which of `built` the UI actually offers, given the parking flags.
+    ///
+    /// Pure and injectable so the parking rule is testable without touching
+    /// `UserDefaults` — a test that read the live flag would pass or fail based
+    /// on the developer's own machine, which is the environment-dependence CI
+    /// has burned this project on before.
+    static func offered(zoomEnabled: Bool) -> [CloudPlatform] {
+        built.filter { $0 != .zoom || zoomEnabled }
+    }
+
+    /// The platforms offered in `File ▸ Import`, right now, on this machine.
     ///
     /// The File menu reads this, not `allCases`: a menu item that opens a
     /// window which then says "not built yet" is worse than no item, because a
     /// menu is a promise about what the app can do. `allCases` still drives the
-    /// Diagnostics fixture menu, where seeing an unbuilt platform's states is
+    /// Diagnostics fixture menu, where seeing a parked platform's states is
     /// the entire point.
-    static var shipping: [CloudPlatform] { [.teams, .meet, .zoom] }
+    ///
+    /// **Zoom is parked here as of 16 Aug 2026** (`BristlenoseFlags.cloudImportZoom`,
+    /// default off) so Teams and Meet can reach releasable quality first. The
+    /// adapter is complete and still compiled, tested and fixture-driveable;
+    /// only the menu item is withheld. Any future import surface — the project
+    /// context-menu twin, a Settings ▸ Accounts pane — should read `shipping`
+    /// and inherit the parking rather than re-deriving it.
+    static var shipping: [CloudPlatform] {
+        offered(zoomEnabled: BristlenoseFlags.cloudImportZoom)
+    }
 
     // MARK: Naming
 
@@ -119,6 +141,38 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .teams, .zoom: return true
         case .meet:         return false
+        }
+    }
+
+    /// How far back this platform can honestly be asked to look, shortest
+    /// first. The first entry is the default.
+    ///
+    /// **A window is a query bound, not a claim about what exists** — and the
+    /// two come apart badly on one of these platforms, which is why this is a
+    /// per-platform property rather than a constant.
+    ///
+    /// Google's recording lives in Drive indefinitely, but the *conference
+    /// record* — the only route from a calendar event to that file — expires,
+    /// documented at 30 days. So a 90-day window there returns sixty days of
+    /// meetings whose recordings exist, are perfectly downloadable, and read
+    /// "Not recorded". Systematic false negatives, indistinguishable from the
+    /// honest kind.
+    ///
+    /// **All three still offer 30/60/90 today, deliberately.** The 30-day
+    /// ceiling is documented and not measured, and removing an affordance on a
+    /// number we have not seen would hide two thirds of a researcher's
+    /// recordings if the documentation is stale. `conferenceRecords` carries
+    /// `expireTime`; one live listing settles it, and then `.meet` shrinks to
+    /// `[30]` here and nowhere else — the picker hides itself at one choice,
+    /// so that change costs no UI work.
+    ///
+    /// Deliberately **no "All available"**: it would mean 30 days on Google
+    /// whatever it said, and "whatever your admin chose, which we cannot read"
+    /// on Teams. A control that lies on one platform and shrugs on another is
+    /// worse than its absence.
+    var windowChoices: [Int] {
+        switch self {
+        case .teams, .meet, .zoom: return [30, 60, 90]
         }
     }
 

@@ -1,8 +1,15 @@
 # Platform transcript ingestion — design doc
 
-**Status**: Phase 1 shipped (Zoom + Teams "it just works"). Researchers can drop a folder of Teams `.docx` + `.mp4` or Zoom `.vtt` + `.mp4` and Bristlenose uses the platform transcript directly, skipping both audio extraction and Whisper. Phase 2 (Google Meet, filename metadata) and Phase 3 (supplementary sources, manual overrides) remain open.
+**Status**: Phase 1 shipped (Zoom + Teams "it just works"). Researchers can drop a folder of Teams `.docx` + `.mp4` or Zoom `.vtt` + `.mp4` and Bristlenose uses the platform transcript directly, skipping both audio extraction and Whisper. **Google Meet `.docx` joined them 16 Aug 2026** (`29f5d9be`) — parser 2d and pairing 1d below. The rest of Phase 2 (filename metadata) and Phase 3 (supplementary sources, manual overrides) remain open.
+
+**A caution this doc earned the hard way.** Both platform sections below were written from
+reasoning rather than from files, and both were wrong where it counted — Teams' pairing
+grammar (six months, `_TEAMS_SUFFIX_RE`), Google's transcript naming, and the claim that
+Meet's downloaded `.docx` holds "the same content" as the Doc. Every format claim here
+should be read as a hypothesis until an observed specimen is pinned beside it in
+`tests/fixtures/platform-transcripts/`, tagged with tier, locale and capture date.
 **Created**: 2026-02-01
-**Updated**: 2026-05-11
+**Updated**: 2026-08-16
 
 ## Problem
 
@@ -26,7 +33,9 @@ Bristlenose needs to:
   grouped into one session
 - **VTT parser** handles `<v Speaker Name>text</v>` voice tags (Teams VTT works today)
 - **SRT parser** handles `Speaker Name: text` colon prefix (Zoom VTT/SRT works today)
-- **DOCX parser** handles Teams-style `Speaker Name  HH:MM:SS` headers
+- **DOCX parser** handles Teams-style `Speaker Name  HH:MM:SS` headers and Google Meet's
+  timecode-line-then-`Name: text` pairing; splits paragraphs on their internal line breaks
+  first, because a `.docx` paragraph is **not** a line (Teams packs a whole turn into one)
 - **Name extraction** in `people.py` filters generic labels, keeps real names
 - FFmpeg handles MP4, MOV, MKV, M4A, etc. for audio extraction
 
@@ -88,11 +97,35 @@ Phone dial-in shows as phone number or "Call-in User 1".
 |----------|--------|-------------------|---------------------|
 | Recording | MP4 | `{Title} ({YYYY-MM-DD at HH MM GMT±X}).mp4` | Standard MP4 atoms |
 | Chat log | SBV | `{Title} ({YYYY-MM-DD at HH MM GMT±X}).sbv` | Speaker names, relative timestamps |
-| Transcript | Google Doc | `{Title} ({YYYY-M-DD at HH:MM TZ}) - Transcript` | Speaker names, ~5-min timestamps, attendee list |
-| Transcript (downloaded) | DOCX | Same name + `.docx` | Same content |
+| Transcript | Google Doc | `{Title} - {YYYY/MM/DD HH:MM TZ} - Notes by Gemini` | **Two tabs** — "Notes" (Gemini's AI summary) and "Transcript" |
+| Transcript (downloaded) | DOCX | Same name, `/` and `:` sanitised to `_` | **NOT the same content** — the export flattens both tabs into one paragraph stream |
+
+**The naming and the "same content" row above were both wrong until 16 Aug 2026**, and
+the second was the more expensive error. Corrected against an observed specimen
+(Workspace Business Standard, en-GB/BST, captured 15 Aug 2026 — pinned at
+`tests/fixtures/platform-transcripts/gmeet-notes-by-gemini-2026-08-15.json`):
+
+- **The transcript is a *tab inside* a Doc, not a document.** A Google Doc has no
+  canonical byte form, so every `files.export` rendering is a projection — and the
+  `.docx` one **flattens the Notes tab and the Transcript tab into a single paragraph
+  stream** with no boundary surviving. Measured: 19 paragraphs, of which **one** is
+  speech. The rest is Gemini's summary, Gemini's own UI chrome, and an attendee email
+  address.
+- **The recording and the transcript Doc carry different timestamps** — the recording is
+  stamped with the meeting start, the Doc with the moment Gemini finished writing (22:45
+  vs 23:02 in the specimen). Any pairing rule that normalises the timestamp rather than
+  removing the whole tail still yields two keys.
+- **Drive's API `name` differs from the downloaded filename** — the API returns
+  `2026/08/15 23:02`, the file on disk is sanitised to `2026_08_15 23_02`. A grammar
+  pinned from a download will not match a listing.
+- **v1 of cloud import takes the video and skips the transcript entirely** — see
+  `docs/design-cloud-import.md` §3. This section describes the *drag-drop* path, which
+  stays first-class regardless.
 
 **Speaker names**: Google Account display names — less reliable than Teams. Known
-misattribution issues.
+misattribution issues. Note the parser reads them via `[^:]`, so native-script names
+(`田中:`, `김영희:`) survive — the Latin-only speaker regex tracked against
+`s03_parse_subtitles.py` does not apply to this path.
 
 **Matching strategy**: Recording and transcript share the calendar event title and a
 date/time stamp. Match by title prefix after stripping the parenthetical date and
@@ -131,8 +164,16 @@ and its platform transcript are automatically paired even when stems don't match
   session regardless of individual filenames
 - [x] **1c. Zoom cloud ID matching**: extract the numeric meeting ID from Zoom cloud
   download filenames (`{Topic}_{ID}_{Date}`) and group files sharing the same ID
-- [x] **1d. Google Meet title+date matching**: strip `({date})` parenthetical and
-  `- Transcript` suffix, then match by normalised title (Phase 2 prep — regex ready)
+- [x] **1d. Google Meet title+date matching**: ~~strip `({date})` parenthetical and
+  `- Transcript` suffix, then match by normalised title (Phase 2 prep — regex ready)~~
+  ✅ **reworked 16 Aug 2026** (`29f5d9be`) — the "regex ready" claim was false against
+  real files: both `_GMEET_PAREN_RE` and `_GMEET_TRANSCRIPT_SUFFIX_RE` matched nothing
+  Google emits, so a recording and its transcript ingested as **two** sessions and the
+  mp4 was re-transcribed from scratch. `_GMEET_TAIL_RE` now strips the whole
+  ` - {date} {time} [TZ] - {kind}` tail. It requires the trailing kind (that is what
+  stops a title merely *ending* in a date being truncated) but never reads it —
+  "Recording" and "Notes by Gemini" are localised per tenant, and enumerating the
+  English words is exactly what cost `_TEAMS_SUFFIX_RE` six months.
 - [ ] **1e. General fuzzy matching fallback**: when exact stem match fails, try Levenshtein
   or token-set similarity on normalised stems; require high threshold (e.g. 0.85) to
   avoid false positives
@@ -153,9 +194,23 @@ Add parsers for formats not currently handled.
   blank line between segments — similar structure to Teams DOCX
 - [ ] **2c. Rev/Descript TXT parser**: `Speaker N (HH:MM:SS):` header format; also handle
   notation tags like `[inaudible]`, `[crosstalk]`
-- [ ] **2d. Google Meet DOCX parser**: different structure from Teams DOCX — has header
+- [x] **2d. Google Meet DOCX parser**: ~~different structure from Teams DOCX — has header
   block with meeting title + attendee list, then `Speaker Name  HH:MM` blocks with
-  ~5-minute granularity. Needs separate heuristic from Teams DOCX detection
+  ~5-minute granularity. Needs separate heuristic from Teams DOCX detection~~
+  ✅ **shipped 16 Aug 2026** (`29f5d9be`) — but the shape guessed above was wrong on the
+  detail that mattered. Real Meet puts the **timecode alone on its own line**, then the
+  speaker *inline* as `Name: text` — not `Speaker Name  HH:MM` blocks. The parser
+  therefore recognises speech **structurally** (an `HH:MM:SS`-only line immediately
+  followed by `Name: text`) and drops everything else, rather than finding the tab
+  boundary: the only textual separators are the `📝 Notes` / `📖 Transcript` headings,
+  emoji plus a word a non-English tenant localises. Gemini's prose carries no such
+  pairing, so the Notes tab cannot be ingested — without matching a single localised
+  string. Meet is tried **before** Teams, because a Meet document can incidentally
+  satisfy the looser Teams pattern. **Still open:** a Meet Doc whose Transcript tab is
+  empty is untimed, so it falls past the refusal into the plain-paragraph path and its
+  summary *would* be ingested — closing that needs either the localised headings or
+  refusing every untimed `.docx`, which would also reject agency Word transcripts. See
+  `bristlenose/stages/CLAUDE.md` § "Google Meet transcripts".
 
 ### Cluster 3 — Platform transcript preference ("trust the platform")
 

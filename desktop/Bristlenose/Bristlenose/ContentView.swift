@@ -226,6 +226,17 @@ struct ContentView: View {
     /// lens — 1 for the first, which takes no suffix. See `WindowRoster`.
     @State private var windowOrdinal = 1
 
+    /// The project this window has already restored the remembered lens for.
+    ///
+    /// Load-bearing twice, which is why it isn't a bool. It stops the restore
+    /// re-firing on the *next* `isReady` — a run-completion reload raises that
+    /// flag again, and yanking the researcher back to a lens they had since
+    /// navigated away from would be worse than not restoring at all. And it
+    /// gates the *capture*: the SPA lands on the dashboard and reports it before
+    /// the restore runs, so capturing unconditionally would overwrite the
+    /// memory with `project` and then dutifully restore that.
+    @State private var lensRestoredFor: UUID?
+
     /// Handle to the in-flight project-switch Task. Switching is async (serve
     /// sidecar teardown + respawn); a background pipeline run makes rapid
     /// switching routine, so we cancel the prior switch before starting the
@@ -594,6 +605,24 @@ struct ContentView: View {
         // covers the window opening already showing something.
         .onChange(of: windowGroup, initial: true) { _, group in
             windowOrdinal = WindowRoster.shared.claim(windowID: windowID, showing: group)
+        }
+        // Restore the lens this project was left on, once the report is up.
+        // `isReady` is cleared by `BridgeHandler.reset()` on every project
+        // switch, so this transition marks each fresh open. See `LensMemory`.
+        .onChange(of: bridgeHandler.isReady) { _, ready in
+            guard ready, let id = selectedProjectID, lensRestoredFor != id else { return }
+            lensRestoredFor = id
+            guard let tab = LensMemory.restore(
+                projectIndex.projects.first(where: { $0.id == id })?.lastLens
+            ) else { return }
+            bridgeHandler.activateLens(tab)
+        }
+        // Remember where they leave it. Gated on having restored first — see
+        // `lensRestoredFor`.
+        .onChange(of: bridgeHandler.activeTab) { _, tab in
+            guard let id = selectedProjectID, lensRestoredFor == id,
+                  let lens = LensMemory.remember(tab) else { return }
+            projectIndex.setLastLens(id: id, lens: lens)
         }
         // Whatever `NewItemFallback` staged while there was no window to put it
         // in. `.onAppear` covers the window opened *to receive* it; `.onChange`

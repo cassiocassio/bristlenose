@@ -7,6 +7,7 @@ last-trued: 2026-08-15
 
 ## Changelog
 
+- _2026-08-16h_ — **P3a: a project opens where you left it.** The lens half of the restore, and it turned out to need **no new bridge plumbing** — the lens is derivable from the `route-change` path that already flows, so the stress test's "bigger than copy `SessionsRouteMemory`" warning applies only to the anchor half. `LensMemory` holds the decision (unknown lens degrades to the dashboard rather than crashing or being honoured blindly; a never-opened project has no memory, which lands it on the dashboard without needing a rule); `Project.lastLens` persists it in `projects.json`, machine-local and deliberately not inside the researcher's project folder. Two guards share one piece of state: the restore must not re-fire on a run-completion reload's `isReady`, and the capture must not run before the restore or the SPA's initial dashboard landing overwrites the memory it is about to restore from. **P3b (the anchor) is specified but not started** — Quotes → theme heading, Sessions → session, Analysis → top; Codebook taken as its group heading by inference, one table entry to change. Twice while writing the back-compat test I hand-wrote a `projects.json` fixture and twice the format guess was wrong (the envelope's `version`, then `.prettyPrinted` + `.sortedKeys`) — it now round-trips through the real encoder and strips the key by parsing, which is the version that encodes no guess.
 - _2026-08-16g_ — **Stage 3a is complete: the roster, the ordinals, and the Dock click.** Two decisions closed it. **Dim, not `mainWindow`** — with a panel frontmost the app dims its window commands rather than acting on the window behind, so `WindowRoster` is deliberately *not* a most-recently-key list, and the ⌘N-from-Settings papercut is **retired rather than fixed**: under the dim rule, "no window is in focus, so make one" is the coherent answer. **Keep the gap** — ordinals are lowest-free and nobody already open is ever renumbered, so closing the middle of three leaves "Study" and "Study 3" and the next window fills the 2. The consequence the decision hadn't pictured is now pinned by a test: close the *first* of two and the survivor sits alone as "Study 2" — odd-looking, and still better than a title that changes because something happened in another window. `applicationShouldHandleReopen` asks the roster rather than AppKit's `hasVisibleWindows`, which counts Settings and the Import window and would answer "yes" when there is nothing to come back to. Writing the roster's tests caught a real bug before it shipped — a welcome-screen window wasn't being counted, so a Dock click would have opened a second one. **Nothing in Stage 3a has been seen on screen**; that is the outstanding claim on all of it.
 - _2026-08-16f_ — **`File ▸ New Window` (⌥⌘N) ships, and the dead item beside it is finally dimmed.** `Window ▸ Bristlenose` is gone: wrong menu (Apple's Window-menu command list has no new-window command) and wrong label (it called `openWindow(id:)` against a `WindowGroup`, which *spawns*). Seeding the key across the 21 locales turned up **`File ▸ Open in New Window` (⇧⌘O) already there and dead** — the item this session opened by asking whether it did anything. They are different commands, not duplicates: New Window opens another view of the project already showing; Open in New Window opens the *selected* project, the menu twin of a sidebar double-click. So it stays, `.disabled(true)`, until `WindowGroup(for:)` can carry a project value in Stage 3b — dimmed rather than deleted, because the command is wanted and because a menu is a promise about what the app can do. `applicationShouldHandleReopen` did **not** ride along: the coupling wasn't load-bearing (the menu bar outlives windows, so New Window is already the way back from empty), and it regroups with the **window roster** — now the named next unit, wanted by reopen, by the E4 ordinals, and by the ⌘N-from-Settings papercut. Its shape is a genuine choice, not plumbing: count vs titles vs approximating AppKit's `mainWindow`, which is the semantic `focusedSceneValue` doesn't give (it follows *key*).
 - _2026-08-16e_ — **P2 core shipped: each window owns its own state.** `ContentView` holds its `BridgeHandler` as a `@StateObject` and publishes it as `focusedSceneValue(\.bridge, …)`; the menu bar reads the key window's, falling back to `BridgeHandler.unattached` — a never-attached instance whose all-default state dims exactly the items that need a window, so the no-window case needed no branch in ten menu structs. **Two windows on one project can now sit on different lenses**, which is the felt feature (tags beside quotes) and it needed no family call, no second sidecar and no serve rework. The reload fan-out came free: `scheduleReportReloadOnCompletion` already ran per `ContentView`, gated on that window's project. Three decisions taken: renderer crashes on a shared partition are **debounced** (`RendererRecovery`, 250 ms collect + 150 ms stagger, no crash-loop guard by design); a run is narrated by the **key window only** (`WindowSubtitle.body`, extracted as a pure decision so it is testable — five title bars counting one run to 100% is noise, and a background window's per-lens count is genuinely different information); and the **serve stays up** when the last window closes. That last one changed nothing directly but exposed the quit hook sitting on `ContentView`, where it never ran with no window open — moved into `ServeManager`'s own termination observer. Also closed a `TODO` that had been waiting for exactly this work: report chrome now follows `@Environment(\.controlActiveState)` rather than app-wide `NSWindow` key notifications. Still owed on 3a: the E4 ordinal suffix, `File ▸ New Window` ⌥⌘N, `applicationShouldHandleReopen`, and the window roster all three want.
@@ -701,9 +702,31 @@ screen.** That is the one outstanding claim on all of it.
 
 **P3 · Per-window restore — lens + anchor.** Depends on P2 (the lens has nowhere
 to live until each window owns one). Per §"What a window opens onto"; copy
-`SessionsRouteMemory`'s shape. *Done when:* closing a window on Quotes at a given
-section and reopening the project lands there, while search and filter do not
-come back.
+`SessionsRouteMemory`'s shape.
+
+**P3a — the lens. ✅ Shipped 16 Aug 2026.** `LensMemory` decides, `Project.lastLens`
+stores it in `projects.json`, and `ContentView` restores on the `isReady`
+transition that marks a fresh open. Needed **no new bridge plumbing** — the lens
+is already derivable from the `route-change` path this doc's stress test worried
+about. The table below is explicit that the lens is "most of the felt value", and
+this is that half.
+
+Two guards, both load-bearing, both in one piece of state (`lensRestoredFor`):
+the restore must not re-fire on the *next* `isReady`, because a run-completion
+reload raises that flag again and would yank the researcher back from wherever
+they had since navigated; and the *capture* must not run before the restore, or
+the SPA's initial landing on the dashboard overwrites the memory with `project`
+and the restore then dutifully honours it.
+
+**P3b — the anchor. Not started.** This is the half that needs the bridge work:
+`route-change` carries the pathname only, so there is no anchor or scroll message
+in either direction. Anchors decided 16 Aug 2026 — **Quotes → theme heading,
+Sessions → session, Analysis → top (none)**; Codebook was not specified and is
+taken as its group heading, the direct sibling of Quotes' theme heading, which is
+one entry in a per-lens table to change if that's wrong.
+
+*Done when:* closing a window on Quotes at a given section and reopening the
+project lands there, while search and filter do not come back.
 
 ### Alongside — measurements that gate the memory design
 
@@ -760,11 +783,13 @@ still owed is a **roster of live project windows** — wanted by
 `applicationShouldHandleReopen`, by the E4 ordinal suffix, and by the ⌘N papercut.
 That is the remaining half.
 
-**P3 — bigger than "copy `SessionsRouteMemory`".** `route-change` carries the
-pathname only; there is no anchor or scroll message in `BridgeHandler`. P3 needs
-new bridge plumbing in both directions, capture *before* teardown (by
-`onDisappear` the web view is gone), and restore *after* mount — the existing
-retry-polling `scrollToAnchor` shim covers that half.
+**P3 — bigger than "copy `SessionsRouteMemory`". ◐ Half-answered: it splits.**
+The **lens** half needed none of it — the lens is derivable from the
+`route-change` path that already flows, so P3a shipped 16 Aug 2026 with no bridge
+work at all. The warning stands for the **anchor** half: no anchor or scroll
+message exists in either direction, so P3b needs new plumbing, capture before
+teardown (by `onDisappear` the web view is gone), and restore after mount — the
+existing retry-polling `scrollToAnchor` shim covers that last part.
 
 **M1 — "quit browsers" is insufficient.** Xcode, Mail, Messages, Slack and Notion
 all embed WebKit, and Xcode will be open because you are building. Enumerate and

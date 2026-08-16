@@ -77,6 +77,14 @@ struct Project: Identifiable, Hashable, Codable {
     /// connection — turning it on with no agent installed succeeds.
     /// `ServeManager.syncHandshake()` reads it via `agentAccessResolver`.
     var agentAccess: Bool
+    /// The lens this project was last left on (`Tab.rawValue`), restored when a
+    /// window opens on it. Host-side, in `projects.json`, deliberately **not**
+    /// inside the researcher's project folder: this is window management, not
+    /// study data, and it has no business travelling with the study to a
+    /// client's Drive. See `docs/design-workspace.md` §"What a window opens
+    /// onto" for why a wrong restore costs a click and a wrong reset can cost a
+    /// search.
+    var lastLens: String?
 
     enum CodingKeys: String, CodingKey {
         case id, name, path, icon, position
@@ -91,6 +99,7 @@ struct Project: Identifiable, Hashable, Codable {
         case lastOpened = "last_opened"
         case lastPipelineRunAt = "last_pipeline_run_at"
         case agentAccess = "agent_access"
+        case lastLens = "last_lens"
     }
 
     // Custom coding for bookmarkData (Base64 string in JSON instead of byte array).
@@ -123,6 +132,11 @@ struct Project: Identifiable, Hashable, Codable {
         // files have no agent_access key and must keep parsing. Default OFF:
         // exposure is an explicit act (Option B, design §3.3).
         agentAccess = try container.decodeIfPresent(Bool.self, forKey: .agentAccess) ?? false
+        // Absent for every project that predates lens memory, and for one never
+        // opened. Both mean the same thing and want the same answer: land on
+        // the Project dashboard, which is exactly the never-opened case the
+        // design says the dashboard is right for.
+        lastLens = try container.decodeIfPresent(String.self, forKey: .lastLens)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -143,6 +157,7 @@ struct Project: Identifiable, Hashable, Codable {
         try container.encodeIfPresent(lastOpened, forKey: .lastOpened)
         try container.encodeIfPresent(lastPipelineRunAt, forKey: .lastPipelineRunAt)
         try container.encode(agentAccess, forKey: .agentAccess)
+        try container.encodeIfPresent(lastLens, forKey: .lastLens)
     }
 
     init(id: UUID, name: String, path: String, inputFiles: [String]? = nil,
@@ -151,7 +166,7 @@ struct Project: Identifiable, Hashable, Codable {
          lastOpened: Date? = nil, lastPipelineRunAt: Date? = nil,
          lastSeenPath: String? = nil, resourceIdentifier: String? = nil,
          schemaVersion: Int = Project.currentSchemaVersion,
-         agentAccess: Bool = false) {
+         agentAccess: Bool = false, lastLens: String? = nil) {
         self.id = id
         self.name = name
         self.path = path
@@ -168,6 +183,7 @@ struct Project: Identifiable, Hashable, Codable {
         self.lastOpened = lastOpened
         self.lastPipelineRunAt = lastPipelineRunAt
         self.agentAccess = agentAccess
+        self.lastLens = lastLens
     }
 
     /// Whether the project directory is currently accessible on disk.
@@ -514,6 +530,17 @@ final class ProjectIndex: ObservableObject {
     }
 
     /// Stamp the current date as last-opened.
+    /// Remember the lens a project was left on, for the next window that opens
+    /// it. Writes only on a real change — the lens is reported on every route
+    /// change, and `projects.json` is not worth rewriting to store what it
+    /// already says.
+    func setLastLens(id: UUID, lens: String) {
+        guard let index = projects.firstIndex(where: { $0.id == id }),
+              projects[index].lastLens != lens else { return }
+        projects[index].lastLens = lens
+        save()
+    }
+
     func updateLastOpened(id: UUID) {
         guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
         projects[index].lastOpened = Date()

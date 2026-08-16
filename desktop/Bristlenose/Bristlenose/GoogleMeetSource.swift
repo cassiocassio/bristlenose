@@ -113,6 +113,20 @@ private struct RecordingsPage: Decodable {
         let name: String?
         let state: String?
         let driveDestination: DriveDestination?
+        /// **The canonical session boundary, if Google serves it.**
+        ///
+        /// Decided 16 Aug 2026: the *video* is the session. Not the calendar
+        /// event — which may not exist, and which one call can hold several
+        /// sessions inside — and not the conference record, which spans
+        /// everything said before anyone pressed record.
+        ///
+        /// Optional because it is unproven on the wire: these fields are
+        /// documented on the Recording resource but this adapter has never
+        /// asked for them. Absent, the row falls back to the event's start and
+        /// reports **no** duration at all — never the meeting's, which is the
+        /// number that told a 20-second file it was 1h 30m.
+        let startTime: String?
+        let endTime: String?
     }
     let recordings: [Recording]?
 }
@@ -458,9 +472,26 @@ final class GoogleMeetSource: CloudImportSource {
                 }
             }
 
-            if let end = event.end?.dateTime.flatMap(Self.parseRFC3339) {
-                duration = end.timeIntervalSince(start)
-            }
+            // **The video is the session; the meeting is context.**
+            //
+            // Settled 16 Aug 2026, after a measurement: on one instant meeting
+            // the recording ran 14s and the transcript 38s, so 63% of what was
+            // said sat outside the recording. A calendar event cannot be the
+            // session boundary — it may not exist at all, one call can hold
+            // several sessions inside it, and it spans everything said before
+            // anyone pressed record.
+            //
+            // So the anchor is the record button where Google tells us when
+            // that was, and the event's start only as a fallback for a row
+            // that has no recording to be anchored to.
+            let sessionStart = lookups[index]?.startedAt ?? start
+
+            // Duration comes from the recording or not at all. It used to come
+            // from `event.end − event.start`, which reported **1h 30m** over a
+            // 20-second file — a wrong number at the exact point the
+            // researcher decides what is worth fetching, and an input to the
+            // free-space precheck. A dash is information; that was not.
+            duration = lookups[index]?.duration
 
             let rowID = event.id ?? (fileID ?? UUID().uuidString)
             if let fileID { driveFileIDs[rowID] = fileID }
@@ -468,7 +499,7 @@ final class GoogleMeetSource: CloudImportSource {
             rows.append(CloudImportRow(
                 id: rowID,
                 title: event.summary ?? "Untitled meeting",
-                startsAt: start,
+                startsAt: sessionStart,
                 duration: duration,
                 // Size needs a Drive metadata read, which needs the file grant
                 // this row may not have yet. Left nil rather than guessed —
@@ -494,6 +525,22 @@ final class GoogleMeetSource: CloudImportSource {
     private struct RecordingLookup: Sendable {
         let fileID: String?
         let recordExpires: Date?
+        /// When the record button was actually pressed, and for how long — the
+        /// session's real boundary. Nil when Google didn't serve it.
+        let startedAt: Date?
+        let duration: TimeInterval?
+
+        /// The span defaults to absent, because every caller that omits it is a
+        /// path where the lookup gave up — no record, no recordings, a refusal.
+        /// Defaulting rather than threading `nil` through three failure sites
+        /// keeps "we don't know" as the thing you get by saying nothing.
+        init(fileID: String?, recordExpires: Date?,
+             startedAt: Date? = nil, duration: TimeInterval? = nil) {
+            self.fileID = fileID
+            self.recordExpires = recordExpires
+            self.startedAt = startedAt
+            self.duration = duration
+        }
     }
 
     /// Diagnostics for the join, which is the one step whose failure the row
@@ -700,7 +747,26 @@ final class GoogleMeetSource: CloudImportSource {
         // the row model does not express. Unproven either way until a segmented
         // recording is actually observed.
         let generated = recPage.recordings?.first { $0.state == "FILE_GENERATED" }
-        return RecordingLookup(fileID: generated?.driveDestination?.file, recordExpires: expires)
+        let began = generated?.startTime.flatMap(Self.parseRFC3339)
+        let ended = generated?.endTime.flatMap(Self.parseRFC3339)
+
+        // Whether the canonical boundary is on the wire at all. Logged rather
+        // than assumed: the fields are documented, this adapter has never asked
+        // for them, and a nil here silently falls the row back to event timing.
+        log.notice("""
+            meet_lookup phase=recording_span \
+            hasStart=\(began != nil, privacy: .public) \
+            hasEnd=\(ended != nil, privacy: .public)
+            """)
+
+        return RecordingLookup(
+            fileID: generated?.driveDestination?.file,
+            recordExpires: expires,
+            startedAt: began,
+            duration: (began != nil && ended != nil)
+                ? ended!.timeIntervalSince(began!)
+                : nil
+        )
     }
 
     // MARK: Fetching

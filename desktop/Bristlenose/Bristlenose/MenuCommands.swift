@@ -19,7 +19,6 @@ import SwiftUI
 /// `CommandMenu` titles stay in English — SwiftUI resolves `LocalizedStringKey`
 /// from `.lproj` bundles, not runtime JSON. Matches ATLAS.ti/MAXQDA precedent.
 struct MenuCommands: Commands {
-    @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var serveManager: ServeManager
     @ObservedObject var projectIndex: ProjectIndex
     @ObservedObject var removalStore: UndoableRemovalStore
@@ -33,6 +32,17 @@ struct MenuCommands: Commands {
     /// documented fallback is applies-on-next-launch (Safari-acceptable).
     @AppStorage(DiagnosticsPreference.key)
     private var showDiagnosticsMenu: Bool = DiagnosticsPreference.defaultValue
+
+    /// The key window's bridge. Read once here and handed down as a plain
+    /// `@ObservedObject` to each section, so the sections keep observing
+    /// correctly (the `View`-inside-`Commands` pattern the doc comment above
+    /// describes) while the *choice of object* follows the front window.
+    @FocusedValue(\.bridge) private var focusedBridge
+
+    /// The bridge the menus read. Falls back to the never-attached stand-in
+    /// when no project window is frontmost — see `BridgeHandler.unattached`,
+    /// whose default state dims exactly the items that need a window.
+    private var bridgeHandler: BridgeHandler { focusedBridge ?? .unattached }
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {

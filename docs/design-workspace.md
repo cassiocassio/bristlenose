@@ -7,6 +7,7 @@ last-trued: 2026-08-15
 
 ## Changelog
 
+- _2026-08-16e_ — **P2 core shipped: each window owns its own state.** `ContentView` holds its `BridgeHandler` as a `@StateObject` and publishes it as `focusedSceneValue(\.bridge, …)`; the menu bar reads the key window's, falling back to `BridgeHandler.unattached` — a never-attached instance whose all-default state dims exactly the items that need a window, so the no-window case needed no branch in ten menu structs. **Two windows on one project can now sit on different lenses**, which is the felt feature (tags beside quotes) and it needed no family call, no second sidecar and no serve rework. The reload fan-out came free: `scheduleReportReloadOnCompletion` already ran per `ContentView`, gated on that window's project. Three decisions taken: renderer crashes on a shared partition are **debounced** (`RendererRecovery`, 250 ms collect + 150 ms stagger, no crash-loop guard by design); a run is narrated by the **key window only** (`WindowSubtitle.body`, extracted as a pure decision so it is testable — five title bars counting one run to 100% is noise, and a background window's per-lens count is genuinely different information); and the **serve stays up** when the last window closes. That last one changed nothing directly but exposed the quit hook sitting on `ContentView`, where it never ran with no window open — moved into `ServeManager`'s own termination observer. Also closed a `TODO` that had been waiting for exactly this work: report chrome now follows `@Environment(\.controlActiveState)` rather than app-wide `NSWindow` key notifications. Still owed on 3a: the E4 ordinal suffix, `File ▸ New Window` ⌥⌘N, `applicationShouldHandleReopen`, and the window roster all three want.
 - _2026-08-16d_ — **P1 shipped: the menu bar routes instead of broadcasting.** The taxonomy the stress test asked for is settled first (new §"P1's taxonomy") — four groups, two mechanisms, because window-targeted and selection-targeted share one routing rule and differ only in what the window does next. So the conversion is **one** focused value carrying a per-window command sink, not seventeen focused values. The predicted no-window failure doesn't arise: New Project is already two halves, and the app-global half (`projectIndex.addProject`) needs no window, so ⌘N stages the follow-through on the batons `pendingIconReveal`/`pendingRename` established and opens a window to drain them — the item is never dimmed. Three broadcasts that reached *inside* a window became per-window batons (the outline's rename, the toolbar's session switcher, the export popover's Miro row). 15 `Notification.Name` declarations deleted; 15 `ContentView` receivers collapsed into one `perform(_:)`. **The drift is now mechanically held**: `check-menu-routing.sh` (build-all step 1a-ter) fails on any post from `MenuCommands.swift` bar the two that open a dedicated `Window` scene, and on any retired name reappearing — the count went 16 → 19 in eighteen days precisely because nothing failed. Two things deliberately left: one papercut (⌘N with Settings frontmost opens a second window rather than raising the first — wants a window roster, which `applicationShouldHandleReopen` needs anyway, so both land in P2), and two app-level broadcasts outside the 19 that will need the same treatment (`showFeedbackSheet`, `undoableRemovalRestoredSelection`).
 - _2026-08-16c_ — **The child-window shape, and the plan stress-tested.** New §"What a child window is": a spun-off window is same-project, own lens, **no project list** — masters get projects, children get lenses, which removes the failure mode (a secondary window switching the shared serve) while keeping the whole point (Quotes here, Codebook there). Ships restrictive (list hidden *and* switching inert) because loosening is trivial and tightening later isn't; pin-vs-hide is deliberately deferred since both answers ship the same first version. Claude Desktop recorded as the reference implementation, contributing two things the design had missed — a **scope chip** as an alternative to our subtitle, and a **pin (keep-on-top)**, which the five-transcripts case needs. One question left open: whether there are one or two child types (atomic transcript leaf vs lens window), since the naming inverts between them. Accepted for alpha: a child's title is its only cue, which promotes constraint 5 to a Stage 3a **acceptance criterion**. §"Implementation plan" gains the shortest-path note (tags-beside-quotes is P1+P2 and needs no family call) and a stress-test findings subsection. New constraint 8 (shared partition shares renderer failure); constraint 6 updated — wired in `b0dbabc9`, and it closes half of the second cache opt-out in `design-desktop-switch-performance.md`. Relaunch boot storm deferred as alpha-acceptable.
 - _2026-08-16b_ — **Presumed Family A; the memory objection is measured.** A sidecar is **~140 MB and flat from 1 to 8 windows** (two sidecars — fronted + A2 parked slot — served eight windows), so A's penalty over B/C is ~140 MB *per additional project*, i.e. 140–280 MB at the expected 2–3. That was the argument holding the family call open, and it no longer carries. §"Effectively decided vs genuinely open" moves the call from *open* to **presumed A, decide late**, and constraint 7 is recorded as A's one genuinely new design problem, to be answered on paper before Stage 3b. New §"Implementation plan" sequences the work; its first two items are family-independent, so nothing waits on the formal call. Two caveats attached to the number: it came off a 3-session project (a floor, not a typical figure) and one Debug-build machine. Separately, `SharedConfigStore` landed (`b0dbabc9`) — constraint 6 is closed for messaging; its memory half is unverified because attributing WebKit helper processes to an app from outside it defeated five approaches.
@@ -375,7 +376,8 @@ app-level `@StateObject` injected into `WindowGroup(id: "main")`:
   written with the broadcast pattern, because it is the path of least resistance and
   nothing fails when you take it. The number grows until Stage 2 lands and makes
   `focusedSceneValue` the obvious idiom to copy.
-- **Stage 3a — per-window `BridgeHandler` (same-project windows).** Split out of
+- **Stage 3a — per-window `BridgeHandler` (same-project windows). ✅ Core shipped
+  16 Aug 2026** (see P2 in §"Implementation plan"). Split out of
   Stage 3 on 15 Aug 2026 because it is the half that **actually delivers the felt
   feature** — "Quotes in this window, Analysis in that one" — and it needs **no
   family call**. One `BridgeHandler` per window, each owning its own `weak var
@@ -626,17 +628,39 @@ a project at all" — does not arise. Which window consumes the baton when sever
 are open is a P2 question, not a P1 one: with one window there is no ambiguity, and
 P1 routes to the key window before the fallback is ever reached.
 
-**P2 · Stage 3a — per-window `BridgeHandler`.** Depends on P1: routing commands to
-the right window is meaningless while the state they act on is shared. One
-`BridgeHandler` per window, each owning its `weak var webView` and its ~28
-published properties. Both windows keep pointing at the same sidecar — no second
-Python process, no serve rework.
-*Done when:* two windows on one project sit on different lenses with independent
-toolbars, and constraint 5 is gone — no title can name a project that isn't on
-screen. Ships with the E4 ordinal suffix for same-lens duplicates (nine identical
-Window-menu rows is the case that earned it) and the `File ▸ New Window` ⌥⌘N
-rename, which is deliberately held until here so we don't advertise a second
-window before it works.
+**P2 · Stage 3a — per-window `BridgeHandler`. ✅ Core shipped 16 Aug 2026.**
+Depends on P1: routing commands to the right window is meaningless while the
+state they act on is shared. `ContentView` now owns its `BridgeHandler` as a
+`@StateObject` and publishes it as `focusedSceneValue(\.bridge, …)`; the menu bar
+reads the key window's and falls back to `BridgeHandler.unattached`, whose
+all-default state dims exactly the items that need a window — so the no-window
+case needed no branch in ten menu structs. Both windows still point at the same
+sidecar: no second Python process, no serve rework.
+
+The reload fan-out turned out to need **no work**: `scheduleReportReloadOnCompletion`
+already runs per `ContentView` and is gated on that window's `selectedProjectID`,
+so making the handler per-window made it fan out by construction.
+
+The three stress-test failure points were **decided 16 Aug 2026** and are
+resolved:
+
+| | Decision | How |
+|---|---|---|
+| **Renderer crash on a shared partition** (constraint 8) | Debounce | `RendererRecovery` collects the per-view terminations from one crash for 250 ms, then reloads the batch staggered 150 ms apart. Not coordinated: each view has to re-fetch its own page regardless, so an election buys nothing. |
+| **Run narration at N windows** (E7 at a scale it wasn't argued at) | Key window only | `WindowSubtitle.body(narratesRun:isStopping:isRunning:)` — extracted as a pure decision so it is testable, per this file's own rule. Background windows show their per-lens count, which is genuinely different information per window. |
+| **Last window closed** | Serve stays up | Already the behaviour, so no teardown was added — but it exposed that the quit hook lived on `ContentView`, i.e. never ran when the last window was closed. Moved into `ServeManager`'s own termination observer: the object that owns the process owns its shutdown. |
+
+Also folded in: the `NSWindow.did{Become,Resign}Key` pair driving report chrome
+carried a `TODO: filter by window object when multi-window ships`. They are
+`@Environment(\.controlActiveState)` now — per-window by construction, no AppKit
+plumbing, and it covers app-level deactivation too.
+
+*Still owed here:* the E4 ordinal suffix for same-lens duplicates (nine identical
+Window-menu rows is the case that earned it), the `File ▸ New Window` ⌥⌘N rename,
+`applicationShouldHandleReopen`, and the window roster the last two want — which
+is also what fixes ⌘N-from-Settings opening a second window. Constraint 5 (a title
+naming a project that isn't on screen) is structurally gone now that each window
+owns its own state, but that has not been seen on screen.
 
 **P3 · Per-window restore — lens + anchor.** Depends on P2 (the lens has nowhere
 to live until each window owns one). Per §"What a window opens onto"; copy
@@ -677,18 +701,27 @@ unable to create a project) does not arise: the command splits into an app-globa
 half and a window follow-through. The gate exists as
 `desktop/scripts/check-menu-routing.sh`.
 
-**P2 — the renderer-crash recovery was written for N=1.** Constraint 8. Needs a
-coordinated or debounced reload *before* multi-window.
+**P2 — the renderer-crash recovery was written for N=1. ✅ Debounced.**
+Constraint 8. `RendererRecovery` — 250 ms collection window, 150 ms stagger.
+Deliberately no crash-loop guard: a page that reliably kills the renderer
+reload-loops at N=1 today, and that is a separate bug whose fix this would
+only hide.
 
-**P2 — the run-completion reload must fan out.** `reloadWebView()` becomes
-per-handler, so the completion path has to reach every window on that project, not
-just the key one. And every one of those title bars will narrate the run at once —
-the E7 decision at a scale it was not argued at.
+**P2 — the run-completion reload must fan out. ✅ Free, then decided.** The
+reload half needed nothing: `scheduleReportReloadOnCompletion` already runs per
+`ContentView`, gated on that window's `selectedProjectID`, so a per-window handler
+fans it out by construction. The narration half was the real question, and it is
+**key window only** — see the P2 table.
 
-**P2 — nothing refcounts windows.** `SharedConfigStore.release(projectID:)` has no
-callers (added speculatively in `b0dbabc9`), and `ContentView.onDisappear` only
-clears drop-target highlights. Last-window-closed needs an owner: release the
-partition, and decide whether the serve stops.
+**P2 — nothing refcounts windows. ◐ Half-answered.** The serve question is
+decided — **it stays up**, so closing the last window is not a teardown event and
+needs no refcount for that. The partition follows: with the serve up, reopening
+asks for the same `ServeSession` and should get the same partition back, so
+releasing on window close would throw away sessionStorage for nothing;
+`SharedConfigStore`'s supersede-sweep already handles the port changing. What is
+still owed is a **roster of live project windows** — wanted by
+`applicationShouldHandleReopen`, by the E4 ordinal suffix, and by the ⌘N papercut.
+That is the remaining half.
 
 **P3 — bigger than "copy `SessionsRouteMemory`".** `route-change` carries the
 pathname only; there is no anchor or scroll message in `BridgeHandler`. P3 needs

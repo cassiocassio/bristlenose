@@ -46,7 +46,6 @@ struct BristlenoseApp: App {
 
     // State lifted from ContentView so .commands and .onReceive can access them.
     @StateObject private var serveManager = ServeManager()
-    @StateObject private var bridgeHandler = BridgeHandler()
     @StateObject private var projectIndex = ProjectIndex()
 
     /// Owns the single import window's store. App-level rather than
@@ -93,7 +92,6 @@ struct BristlenoseApp: App {
             ContentView()
                 .frame(minWidth: 700, minHeight: 500)
                 .environmentObject(serveManager)
-                .environmentObject(bridgeHandler)
                 .environmentObject(projectIndex)
                 .environmentObject(pipelineRunner)
                 .environmentObject(toast)
@@ -135,11 +133,10 @@ struct BristlenoseApp: App {
                         )
                     }
                 }
-                .onReceive(
-                    NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
-                ) { _ in
-                    serveManager.stop()
-                }
+                // (Sidecar teardown on quit moved into `ServeManager`'s own
+                // termination observer, 16 Aug 2026. It was here, on a view
+                // inside the WindowGroup, so quitting with no window open never
+                // ran it — and the serve now deliberately outlives its windows.)
                 // Palette-aware SwiftUI accent. Reads `PaletteDefaultAccent` /
                 // `PaletteEdoAccent` (see `SidebarPalette` / Assets.xcassets)
                 // so every SwiftUI `.tint` consumer downstream — tab labels,
@@ -165,7 +162,11 @@ struct BristlenoseApp: App {
         .defaultSize(width: 1000, height: 700)
         .windowResizability(.contentMinSize)
         .commands {
-            MenuCommands(bridgeHandler: bridgeHandler, serveManager: serveManager, projectIndex: projectIndex, removalStore: removalStore, i18n: i18n, ollamaDownload: ollamaDownload)
+            // No `bridgeHandler` parameter: each window owns its own (Stage
+            // 3a), so the menu bar reads the key window's through
+            // `@FocusedValue(\.bridge)`. Passing an app-level one here is what
+            // made every window show the same lens.
+            MenuCommands(serveManager: serveManager, projectIndex: projectIndex, removalStore: removalStore, i18n: i18n, ollamaDownload: ollamaDownload)
         }
         .commands {
             // The Settings window is an AppKit `SettingsWindowController`

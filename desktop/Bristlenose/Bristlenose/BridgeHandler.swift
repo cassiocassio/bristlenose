@@ -166,6 +166,20 @@ final class BridgeHandler: ObservableObject {
     /// Set by WebView.makeNSView, cleared on reset(). Weak to avoid retain cycles.
     weak var webView: WKWebView?
 
+    /// What the menu bar reads when **no project window is frontmost** — the
+    /// Settings window, the Import window, or no window at all.
+    ///
+    /// One instance, never attached to a web view, never written to. Its
+    /// all-default state is exactly the right answer for every menu item that
+    /// asks: `isReady` false dims Print, `canUndo` false dims Undo, `activeTab`
+    /// nil hides the lens-specific rows, `selectedProjectPath` empty dims the
+    /// project items. So the no-window case needs no separate branch in ten
+    /// menu structs — it falls out of the state being genuinely absent.
+    ///
+    /// `menuAction` on it is a no-op (`webView` is nil), which is the honest
+    /// behaviour if anything ever does reach it.
+    static let unattached = BridgeHandler()
+
     private static let log = Logger(subsystem: "app.bristlenose", category: "bridge")
 
     /// Force the detail WebView to re-fetch its current URL from the serve — used

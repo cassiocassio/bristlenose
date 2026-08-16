@@ -6,9 +6,11 @@ import Testing
 /// The window subtitle's composition rules — the parenthesised half of the
 /// Window-menu entry. Options weighed: `docs/mockups/window-menu-naming.html`.
 ///
-/// `WindowSubtitleModifier`'s run-state precedence isn't covered here: it reads
-/// a live `PipelineLiveData` inside a SwiftUI `body`, and the pure part of it
-/// (`RunProgressSubtitle.compose`) already has its own suite.
+/// The run-state precedence *is* covered here now (`WindowSubtitle.body`): it
+/// grew a third input on 16 Aug 2026 — only the key window narrates a run — and
+/// three interacting rules inside a SwiftUI `body` is exactly what this file's
+/// opening note says not to leave untestable. The text for each outcome still
+/// lives in the modifier, and `RunProgressSubtitle.compose` has its own suite.
 @Suite("Window subtitle composition")
 struct WindowSubtitleTests {
 
@@ -126,5 +128,36 @@ struct WindowSubtitleTests {
         // naive join produces at zero, and the reason this case is pinned.
         #expect(WindowSubtitle.compose(folder: nil, body: "") == "")
         #expect(WindowSubtitle.compose(folder: "", body: "") == "")
+    }
+
+    // MARK: - Which body wins (mockup E7, multi-window 16 Aug 2026)
+
+    @Test("only the key window narrates a run")
+    func nonKeyWindowShowsItsCount() {
+        // The case this rule exists for: five windows on one study, one run.
+        // Four of them are more useful showing their own lens's count.
+        #expect(WindowSubtitle.body(narratesRun: false, isStopping: false, isRunning: true)
+                == .count)
+        #expect(WindowSubtitle.body(narratesRun: false, isStopping: true, isRunning: true)
+                == .count,
+                "not even Stopping — a background window narrating is the noise being removed")
+    }
+
+    @Test("the key window narrates, and stopping outranks progress")
+    func keyWindowPrecedence() {
+        #expect(WindowSubtitle.body(narratesRun: true, isStopping: false, isRunning: true)
+                == .runProgress)
+        // Immediate ack: the pill, the sidebar row and the titlebar flip
+        // together on the click, before the run has actually wound down.
+        #expect(WindowSubtitle.body(narratesRun: true, isStopping: true, isRunning: true)
+                == .stopping)
+    }
+
+    @Test("no run means the count, key window or not")
+    func idleShowsCount() {
+        #expect(WindowSubtitle.body(narratesRun: true, isStopping: false, isRunning: false)
+                == .count)
+        #expect(WindowSubtitle.body(narratesRun: false, isStopping: false, isRunning: false)
+                == .count)
     }
 }

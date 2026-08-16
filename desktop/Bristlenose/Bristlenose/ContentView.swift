@@ -122,7 +122,16 @@ struct LocateErrorState: Identifiable {
 struct ContentView: View {
 
     @EnvironmentObject var serveManager: ServeManager
-    @EnvironmentObject var bridgeHandler: BridgeHandler
+    /// **This window's** bridge to its web view — Stage 3a.
+    ///
+    /// Was one app-level `@StateObject` injected into every window, which meant
+    /// `activeTab` and its ~28 siblings were global: two windows physically
+    /// could not sit on different lenses, and the menu bar's labels described
+    /// whichever window moved last. `@StateObject` here gives each window its
+    /// own, and `.focusedSceneValue(\.bridge, …)` is how the menu bar finds the
+    /// front one. Both windows still point at the *same* sidecar — this is the
+    /// half of multi-window that needs no serve rework.
+    @StateObject private var bridgeHandler = BridgeHandler()
     @EnvironmentObject var projectIndex: ProjectIndex
     @EnvironmentObject var pipelineRunner: PipelineRunner
     @EnvironmentObject var toast: ToastStore
@@ -134,6 +143,10 @@ struct ContentView: View {
     @AppStorage("appearance") private var appearance: String = "auto"
     @AppStorage("showAnalysisAnimation") private var showAnalysisAnimation = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Whether this window is the key one. `.key` while it is frontmost,
+    /// `.active` when a sibling window is, `.inactive` when the app itself
+    /// isn't — so this is per-window without any AppKit plumbing.
+    @Environment(\.controlActiveState) private var controlActiveState
     @AppStorage("selectedProjectID") private var persistedProjectID: String = ""
     @AppStorage("aiConsentVersion") private var consentVersion: Int = 0
     /// Selection binding for the List — uses `SidebarSelection` enum so both
@@ -219,6 +232,9 @@ struct ContentView: View {
     /// In-flight retry task that reloads the detail WebView after a run finishes
     /// — see scheduleReportReloadIfNeeded.
     @State private var reportReloadTask: Task<Void, Never>?
+
+    /// Is this the front window?
+    private var isKeyWindow: Bool { controlActiveState == .key }
 
     /// The single selected item, if exactly one is selected.
     private var soleSelection: SidebarSelection? {
@@ -376,6 +392,7 @@ struct ContentView: View {
                     liveData: pipelineRunner.liveData,
                     projectID: selectedProject?.id,
                     isRunning: isSelectedProjectRunning,
+                    narratesRun: isKeyWindow,
                     folder: subtitleFolder,
                     countSubtitle: countSubtitle,
                     i18n: i18n
@@ -407,14 +424,16 @@ struct ContentView: View {
         }
         .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
         .preferredColorScheme(colorScheme)
-        // TODO: filter by window object when multi-window ships —
-        // currently fires for any window (Settings, player, etc.) which is
-        // correct single-window behaviour but will over-toggle with >1 content window.
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
-            bridgeHandler.setWindowActive(true)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
-            bridgeHandler.setWindowActive(false)
+        // Report chrome follows *this* window's key state. Was two
+        // `NSWindow.did{Become,Resign}Key` observers with a TODO on them: they
+        // fire for any window in the app — Settings, the video pop-out — so a
+        // second content window would have been told it went inactive whenever
+        // its sibling came forward. `controlActiveState` is the per-window
+        // answer SwiftUI already computes, and it correctly reports `.inactive`
+        // for the whole app losing focus, which is the other half the
+        // notifications covered.
+        .onChange(of: isKeyWindow, initial: true) { _, isKey in
+            bridgeHandler.setWindowActive(isKey)
         }
         .onReceive(NotificationCenter.default.publisher(for: .bristlenosePaletteChanged)) { _ in
             // Colour-palette picker changed — apply live to the report webview
@@ -543,6 +562,9 @@ struct ContentView: View {
             \.windowCommands,
             WindowCommandSink(windowID: windowID, perform: { perform($0) })
         )
+        // The state half of the same seam: the menu bar reads *this* window's
+        // lens, undo stack and selection mirror when it is frontmost.
+        .focusedSceneValue(\.bridge, bridgeHandler)
         // Whatever `NewItemFallback` staged while there was no window to put it
         // in. `.onAppear` covers the window opened *to receive* it; `.onChange`
         // covers a window that was already up. Both drain the same one-shot.

@@ -1,3 +1,8 @@
+// AppKit is here for exactly one symbol — `NSApplication.willTerminateNotification`,
+// which this object observes so the sidecar's shutdown belongs to the object that
+// owns the process rather than to whichever view happens to be on screen. Nothing
+// else in this file touches UI; keep it that way.
+import AppKit
 import Darwin
 import Foundation
 import OSLog
@@ -158,6 +163,21 @@ final class ServeManager: ObservableObject {
             }
         }
 
+        // Stop the sidecar on quit. This lived on `ContentView` until 16 Aug
+        // 2026, which was survivable while a window was always open — but the
+        // serve now deliberately outlives its windows (closing the last one
+        // keeps it up, so reopening is instant), and with no window there is no
+        // ContentView to run the handler. Quitting from that state left the
+        // teardown to the sidecar's own parent-death watcher: a backstop, not a
+        // shutdown path. The object that owns the process owns its shutdown.
+        terminationObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.stop() }
+        }
+
         // Sweep a SIGKILL leftover (force quit, OOM, the Xcode stop button —
         // none of which run the delete-on-stop path). Unconditional at host
         // launch: no sidecar is running yet, so any file here is stale, and a
@@ -197,6 +217,10 @@ final class ServeManager: ObservableObject {
 
     /// Observer for preference changes that require a serve restart.
     private var prefsObserver: Any?
+
+    /// Observer for app termination — stops the sidecar. Held so it lives as
+    /// long as this object does, which is the app's lifetime.
+    private var terminationObserver: Any?
 
     deinit {
         // ServeManager is app-lifetime today, but the poll loop shouldn't

@@ -47,6 +47,41 @@ enum WindowSubtitle {
         return name
     }
 
+    /// What the subtitle's body says.
+    enum Body: Equatable {
+        /// The resting per-lens count.
+        case count
+        /// "Stopping…" — the immediate acknowledgement.
+        case runProgress
+        /// The live stage / ETA narration.
+        case stopping
+    }
+
+    /// Which body wins (mockup E7, extended for multi-window 16 Aug 2026).
+    ///
+    /// Three rules, in order:
+    ///
+    /// 1. **Only the key window narrates.** Five windows on one study all
+    ///    counting the same run to 100% is noise, and the four that aren't
+    ///    frontmost are more useful showing their own lens's count — which
+    ///    actually differs per window.
+    /// 2. **Stopping outranks progress**, the same immediate-ack contract the
+    ///    pill and the sidebar row honour, so all three flip together on the
+    ///    click.
+    /// 3. Otherwise a run in flight outranks the count.
+    ///
+    /// Scoped to the two *live* states. A run narrates itself while it happens
+    /// and then stops, which is what earns it a place in chrome the researcher
+    /// can't dismiss. Terminal conditions (stopped, failed, partial) stay on the
+    /// sidebar row, where status lives with its subject — a titlebar reading
+    /// "(Stopped)" would sit there indefinitely, and that is a different
+    /// decision from this one.
+    static func body(narratesRun: Bool, isStopping: Bool, isRunning: Bool) -> Body {
+        guard narratesRun else { return .count }
+        if isStopping { return .stopping }
+        return isRunning ? .runProgress : .count
+    }
+
     /// Joins the optional folder onto the body (the count, or the live run
     /// state). Either half may be absent: a project with no analysis and no
     /// name clash yields `""`, which AppKit renders as a bare title rather than
@@ -80,6 +115,16 @@ struct WindowSubtitleModifier: ViewModifier {
     /// `state` is low-frequency and `ContentView` already observes the runner;
     /// only the churn belongs to `liveData`.
     let isRunning: Bool
+    /// Whether this window is the one that narrates the run — true only for the
+    /// key window (decided 16 Aug 2026).
+    ///
+    /// E7 put the run in the subtitle when one window was the only possibility.
+    /// Multi-window changes the picture rather than the principle: with five
+    /// windows open on one study, five title bars all counting the same run up
+    /// to 100% is noise, and none of them is telling the researcher anything
+    /// the front one isn't. The others fall back to their resting count, which
+    /// is per-lens and therefore genuinely different information per window.
+    let narratesRun: Bool
     /// Result of `WindowSubtitle.folderDisambiguator`, nil in the normal case.
     let folder: String?
     /// The resting body — the lens count, when no run is in flight.
@@ -90,31 +135,30 @@ struct WindowSubtitleModifier: ViewModifier {
         content.navigationSubtitle(WindowSubtitle.compose(folder: folder, body: bodyText))
     }
 
-    /// A run in flight outranks the count (mockup E7).
-    ///
-    /// Scoped to the two *live* states — stopping and running. A run narrates
-    /// itself while it is happening and then stops, which is what earns it a
-    /// place in chrome the researcher can't dismiss. Terminal conditions
-    /// (stopped, failed, partial) deliberately stay on the sidebar row, where
-    /// status lives with its subject: a titlebar reading "(Stopped)" would sit
-    /// there indefinitely, and that is a different decision from this one.
+    /// Renders whichever body `WindowSubtitle.body` picked. The precedence
+    /// itself lives there, testably; this is the text for each outcome.
     private var bodyText: String {
         guard let projectID else { return countSubtitle }
         let progress = liveData.progress[projectID]
-        // Stopping outranks progress — the same immediate-ack contract the pill
-        // and the sidebar row honour, so all three flip together on the click.
-        if progress?.isStopping == true {
+        switch WindowSubtitle.body(
+            narratesRun: narratesRun,
+            isStopping: progress?.isStopping == true,
+            isRunning: isRunning
+        ) {
+        case .count:
+            return countSubtitle
+        case .stopping:
             return i18n.t("desktop.chrome.pipeline.stopping")
+        case .runProgress:
+            return RunProgressSubtitle.compose(
+                stage: progress?.stage,
+                sessionsComplete: progress?.sessionsComplete,
+                sessionsTotal: progress?.sessionsTotal,
+                etaRemainingSeconds: progress?.etaRemainingSeconds,
+                resuming: progress?.attachedFromOrphan ?? false,
+                separator: WindowSubtitle.separator,
+                localize: { i18n.t($0, $1) }
+            )
         }
-        guard isRunning else { return countSubtitle }
-        return RunProgressSubtitle.compose(
-            stage: progress?.stage,
-            sessionsComplete: progress?.sessionsComplete,
-            sessionsTotal: progress?.sessionsTotal,
-            etaRemainingSeconds: progress?.etaRemainingSeconds,
-            resuming: progress?.attachedFromOrphan ?? false,
-            separator: WindowSubtitle.separator,
-            localize: { i18n.t($0, $1) }
-        )
     }
 }

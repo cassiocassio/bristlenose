@@ -339,9 +339,17 @@ struct WebView: NSViewRepresentable {
         }
 
         /// Handle web content process crashes — reload the page.
-        /// The serve process is still running; only the renderer crashed.
+        ///
+        /// The serve process is still running; only the renderer crashed. This
+        /// used to be a bare `webView.reload()`, which was right while one
+        /// window meant one web view. Sibling windows now share a storage
+        /// partition, so WebKit may host several in one content process and a
+        /// single crash calls this on all of them — see `RendererRecovery`,
+        /// which collects them and reloads the batch staggered.
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-            webView.reload()
+            MainActor.assumeIsolated {
+                RendererRecovery.shared.webViewDidTerminate(webView)
+            }
         }
 
         // MARK: - WKNavigationDelegate (downloads)

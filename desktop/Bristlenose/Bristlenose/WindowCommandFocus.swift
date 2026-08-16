@@ -122,6 +122,19 @@ struct WindowCommandKey: FocusedValueKey {
     typealias Value = WindowCommandSink
 }
 
+/// The key window's `BridgeHandler` — the *state* half of the same seam.
+///
+/// Routing a command to the front window is only half the job: the menu also
+/// reads that window's state to decide its labels and its dimming (`activeTab`
+/// picks the left-panel row's name, `canUndo` gates Undo, `isReady` gates
+/// Print). While one `BridgeHandler` was shared app-wide, every window
+/// necessarily showed the same lens — routing the *command* correctly wouldn't
+/// have helped, because the *state* it acts on was global. Stage 3a splits the
+/// object per window and this is how the menu bar finds the right one.
+struct BridgeHandlerKey: FocusedValueKey {
+    typealias Value = BridgeHandler
+}
+
 extension FocusedValues {
     /// The key window's menu-command sink. `nil` when no project window is
     /// frontmost — e.g. Settings, the Import window, or a diagnostics window —
@@ -130,6 +143,14 @@ extension FocusedValues {
     var windowCommands: WindowCommandSink? {
         get { self[WindowCommandKey.self] }
         set { self[WindowCommandKey.self] = newValue }
+    }
+
+    /// The key window's `BridgeHandler`. `nil` in the same cases as
+    /// `windowCommands`; `MenuCommands` substitutes `BridgeHandler.unattached`,
+    /// whose all-default state dims every item that depends on a report.
+    var bridge: BridgeHandler? {
+        get { self[BridgeHandlerKey.self] }
+        set { self[BridgeHandlerKey.self] = newValue }
     }
 }
 

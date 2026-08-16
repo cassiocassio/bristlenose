@@ -82,12 +82,51 @@ return list(await asyncio.gather(*(_process(t) for t in transcripts)))
 - **`_normalise_stem(stem)`**: strips platform suffixes before stem matching. Expects lowercased input:
   - Teams: `{YYYYMMDD}_{HHMMSS}-Meeting Recording`, `-meeting transcript`
   - Zoom cloud: `Audio Transcript_` prefix, `_{MeetingID}_{Month_DD_YYYY}` tail (9–11 digit IDs)
-  - Google Meet: `({YYYY-MM-DD at ...})` parenthetical, `- Transcript` suffix
+  - Google Meet: ` - {YYYY/MM/DD HH:MM} [TZ] - {kind}` dated tail (current), plus the older `({YYYY-MM-DD at ...})` parenthetical and `- Transcript` suffix
   - Legacy: `_transcript`, `_subtitles`, `_captions`, `_sub`, `_srt`
 - **`_is_zoom_local_dir(dir_name)`**: matches `YYYY-MM-DD HH.MM.SS Topic MeetingID` pattern
 - **`group_into_sessions()`**: Pass 1 groups Zoom local folder files by directory; Pass 2 groups remaining files by normalised stem
-- **Regex patterns**: 6 compiled module-level patterns (`_TEAMS_SUFFIX_RE`, `_ZOOM_CLOUD_TAIL_RE`, `_ZOOM_CLOUD_PREFIX_RE`, `_ZOOM_LOCAL_DIR_RE`, `_GMEET_PAREN_RE`, `_GMEET_TRANSCRIPT_SUFFIX_RE`)
-- **Tests**: `tests/test_ingest.py` — 35 tests covering normalisation, Zoom dir detection, session grouping for all platforms, false positive prevention
+- **Regex patterns**: 7 compiled module-level patterns (`_TEAMS_SUFFIX_RE`, `_ZOOM_CLOUD_TAIL_RE`, `_ZOOM_CLOUD_PREFIX_RE`, `_ZOOM_LOCAL_DIR_RE`, `_GMEET_TAIL_RE`, `_GMEET_PAREN_RE`, `_GMEET_TRANSCRIPT_SUFFIX_RE`)
+- **`_GMEET_TAIL_RE` strips the whole dated tail, and requires a trailing kind it does not read.** Confirmed 16 Aug 2026: the older two Google Meet patterns matched nothing Google emits, so a recording and its notes Doc ingested as two sessions. The tail must go entire — the recording carries the *meeting start* (`22:45`) and the Doc the *moment Gemini finished writing* (`23:02`), so a suffix-only strip still leaves two keys. The trailing kind is mandatory (it stops a title that merely ends in a date being truncated) but its text is never matched — "Recording" / "Notes by Gemini" are localised per tenant, and enumerating them is the trap that cost `_TEAMS_SUFFIX_RE` six months
+- **Tests**: `tests/test_ingest.py` — normalisation, Zoom dir detection, session grouping for all platforms, false positive prevention. Teams and Google Meet each have an **observed-specimen block**; a case below those markers must be a filename seen on a real tenant, with tier and capture date recorded
+
+## Google Meet transcripts — the .docx export is not a transcript (Stage 4)
+
+**Observed 16 Aug 2026 on a live Workspace Business Standard tenant.** Google Meet saves no transcript *file*. It saves a **Google Doc** named `<meeting title> - <YYYY/MM/DD HH:MM TZ> - Notes by Gemini`, holding two document **tabs** — "Notes" (Gemini's AI summary) and "Transcript". Drive's default download is `.docx`, and **the export flattens both tabs into a single paragraph stream.** What `python-docx` actually sees is 19 paragraphs, of which exactly one is speech:
+
+```
+[00] 📝 Notes
+[03] Invited participant@example.org Martin Storey  ← a real attendee email address, redacted here
+[07] A summary wasn't produced for this meeting…    ← Gemini's summary (a stub here; pages on a real session)
+[11] How is the quality of these specific notes? Take a short survey…
+[12] 📖 Transcript
+[15] 00:00:11
+[16] Martin Storey: Okay. Talking, talking, talking. …
+[17] Transcription ended after 00:00:39
+[18] This editable transcript was computer generated and might contain errors.
+```
+
+**`s04_parse_docx.py` used to mis-parse this and say nothing — fixed 16 Aug 2026.** Both Teams speaker patterns anchor on a timecode at end-of-line (`Speaker Name  00:01:23`). Google puts the timecode alone on its own line and the speaker *inline* as `Name: text`, so neither matched. The bare timecode did match `_TIMESTAMP_ONLY` — but that branch **does not increment `matched_headers`**, so the counter stayed at 0, the `< 2` guard returned `None`, and `_parse_docx` fell through to `_parse_plain_paragraphs`. Every paragraph became a segment at `start_time=0.0` with no `speaker_label`, and Gemini's summary, Gemini's UI chrome and an attendee email address all entered the transcript corpus as quotable speech, at INFO ("Parsing as plain text (no timecodes)"), with the run completing normally.
+
+**And the Teams path was broken the same way, which nothing caught for longer.** A `.docx` paragraph is **not** a line. Teams packs an entire turn — the `Martin Storey  0:04` header *and* every line of speech — into **one** paragraph separated by `<w:br/>`, which `python-docx` renders as `\n` inside `p.text`. A parser whose unit was the paragraph saw one unmatched blob per turn, so the real Teams specimen also produced segments at `start_time=0.0` with no `speaker_label`. The tests missed it because every constructed fixture put one line per paragraph — the shape the bug cannot occur in.
+
+**How it is parsed now.** `_document_lines()` splits every paragraph on its line breaks first, so the parser's unit matches the transcript's. Then: **recognise speech, never find the tab boundary.** `_try_parse_gmeet_format` emits a segment only for an `HH:MM:SS`-only line *immediately followed by* `Name: text`, and drops everything else — Gemini's prose carries no such pairing, so the Notes tab cannot be ingested, without matching a single localised string. Meet is tried **before** Teams, because a Meet document can incidentally satisfy the looser Teams pattern (the `Transcription ended after 00:00:39` trailer does). Timecodes present but unalignable raise `DocxParseRefusedError` rather than degrading to `_parse_plain_paragraphs`.
+
+Six things to know before touching it:
+
+- **The unit of structure is the LINE, never the paragraph.** This is the finding that generalises: it cost the Teams path a silent mis-parse that no constructed fixture could ever have exposed. Any new format branch reads `_document_lines()`, and any new fixture must carry the real intra-paragraph line breaks. `_TIMESTAMP_ONLY` likewise has to be tested against lines — testing it against whole paragraphs is what let the refusal gate miss Teams entirely.
+- **`matched_headers < 2` was refusing valid files.** The observed Teams export is a single 39-second turn, so a two-header threshold rejected it outright. One *strong* header now suffices — arrow notation, or the 2-or-more-space gap between name and timecode (`_TEAMS_SPEAKER_LINE_WIDE`) — while a single weak match still falls through. Don't restore the flat threshold.
+- **The failure mode is quote fabrication, not a crash.** On a real session those summary paragraphs are pages of confident prose *about* what participants said, and quote extraction cannot tell them from testimony. **Refusing the file is better than parsing it optimistically** — the standing invariant is `docs/design-cloud-import.md` §6, "a parse refusal must produce a stated row, never a silent drop."
+- **A refusal must be *recorded*, not merely raised.** A docx-bearing session has `has_existing_transcript=True`, so s02 skips audio extraction and leaves `audio_path=None` — which also excludes it from `needs_transcription`. `_gather_all_segments` therefore records a `StageFailure` (`MISSING_INPUT`, `source_file=<basename>`) and counts the lost session in `attempted`; without that the session leaves no trace anywhere in the run and the abandon check can never fire. The same treatment now covers subtitle parse errors, which had the identical silent drop.
+- **The bold speaker name survives the export and is still unused.** `p.runs` carries the bold on `Martin Storey:`, but the parser reads `p.text`. The colon regex is safe here *because* the mandatory preceding timecode does the discriminating, but run-level bold would be a stronger signal if the pairing rule ever needs relaxing.
+- **The tab boundary does *not* survive.** The only separators in the flattened stream are the emoji headers `📝 Notes` / `📖 Transcript` — emoji plus a word that is localised per tenant. Matching those literals is the same fragility class as path-matching the `Meet Recordings` folder that Google renamed in July 2026. **Known gap:** a Meet Doc whose Transcript tab is empty is untimed, so it lands in `_parse_plain_paragraphs` and its summary *would* be ingested. Closing that needs either those localised headings or refusing every untimed `.docx` — which would also reject agency-produced Word transcripts. Open product decision.
+- **The upstream fix is to never export at all** — `documents.get` with `includeTabsContent=true` returns tabs as addressable subtrees under `document.tabs[]`. That belongs to the macOS cloud-import adapter (`docs/design-cloud-import.md` §3), and it **does not retire this bug**: hand-downloaded `.docx` files keep arriving through drag-drop, which the design commits to keeping first-class forever.
+
+One related trap in the same neighbourhood, also fixed 16 Aug 2026: `_GMEET_TRANSCRIPT_SUFFIX_RE` and `_GMEET_PAREN_RE` did predate Google's renaming and matched nothing real — see `_GMEET_TAIL_RE` under "Platform-aware session grouping" above. Still live: **Drive's API `name` differs from the downloaded filename** — the API returns `2026/08/15 23:02` where the file on disk is sanitised to `2026_08_15 23_02`, so a grammar pinned from a download will not match a listing. `_GMEET_TAIL_RE` accepts both separators; anything new must too.
+
+**Known residue, deliberately not fixed:** Teams' `<Name> stopped transcription` closing marker is absorbed into the final turn. Every removal rule available is either the English literal — the localisation fragility this module exists to avoid — or a heuristic that could eat a genuine last line. Pinned as a *visible* test rather than silently accepted, so it stays a known cost rather than becoming folklore.
+
+Tests live in `tests/test_parse_docx.py`, pinned to two observed specimens in `tests/fixtures/platform-transcripts/` — `gmeet-notes-by-gemini-2026-08-15.json` (19 paragraphs) and `teams-meeting-recording-2026-08-15.json` — each tagged with tier, locale and capture date, and each recording its deliberate departures from the captured bytes (both redact the real attendee email; this repo is public). `docs/design-cloud-import.md` §6 records two separate six-month bugs (`TeamsRecordingName`, and `_TEAMS_SUFFIX_RE` in `s01_ingest.py`) caused by regexes that matched only the fixture invented alongside them — and the paragraph-vs-line bug above is the third in that family.
 
 ## Concurrent audio extraction (Stage 2)
 

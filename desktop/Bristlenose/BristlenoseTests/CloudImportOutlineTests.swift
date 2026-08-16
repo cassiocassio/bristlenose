@@ -348,6 +348,72 @@ struct CloudImportOutlineTests {
         #expect(result.withholding)
     }
 
+    // MARK: - The meeting header's checkbox
+
+    /// The parent exists for the case the outline was built for — one interview
+    /// that arrived as two files — where wanting both is the ordinary intent.
+    @Test("A meeting header summarises its recordings: off, mixed, on")
+    func parentTickSummarises() {
+        let scheduled = moment(daysAgo: 3, hour: 11)
+        let a = row(id: "file-a", scheduled: scheduled, recorded: scheduled, meeting: "mtg")
+        let b = row(id: "file-b", scheduled: scheduled,
+                    recorded: scheduled.addingTimeInterval(2_400), meeting: "mtg")
+
+        #expect(CloudImportOutline.parentTick(for: [a, b], ticked: []).draw == .off)
+        #expect(CloudImportOutline.parentTick(for: [a, b], ticked: ["file-a"]).draw == .mixed)
+        #expect(CloudImportOutline.parentTick(for: [a, b], ticked: ["file-a", "file-b"]).draw == .on)
+    }
+
+    /// The parent must never contradict the boxes directly beneath it. A file
+    /// already on disk draws ticked — because it is here, not because it was
+    /// chosen — so a meeting whose halves are both imported reads *on*, and
+    /// says so while doing nothing when clicked.
+    @Test("A fully-imported meeting reads on, and is disabled")
+    func parentTickFollowsWhatChildrenDraw() {
+        let scheduled = moment(daysAgo: 3, hour: 11)
+        let held = [
+            row(id: "file-a", scheduled: scheduled, recorded: scheduled,
+                meeting: "mtg", local: .imported),
+            row(id: "file-b", scheduled: scheduled, recorded: scheduled,
+                meeting: "mtg", local: .driveNotConnected(volume: "T7")),
+        ]
+        let tick = CloudImportOutline.parentTick(for: held, ticked: [])
+        #expect(tick.draw == .on, "both boxes below are drawn ticked")
+        #expect(!tick.isEnabled, "and neither can be acted on")
+    }
+
+    /// One imported half and one fetchable half is the awkward shape, and the
+    /// answer follows from the same rule: one box drawn, one not, so mixed —
+    /// and clicking is still worth offering, because one child can move.
+    @Test("A half-held meeting is mixed and still actionable")
+    func parentTickWithOneHeldChild() {
+        let scheduled = moment(daysAgo: 3, hour: 11)
+        let mixed = [
+            row(id: "file-a", scheduled: scheduled, recorded: scheduled,
+                meeting: "mtg", local: .imported),
+            row(id: "file-b", scheduled: scheduled, recorded: scheduled, meeting: "mtg"),
+        ]
+        let tick = CloudImportOutline.parentTick(for: mixed, ticked: [])
+        #expect(tick.draw == .mixed)
+        #expect(tick.isEnabled)
+        // Tick the one that can move and the parent completes.
+        #expect(CloudImportOutline.parentTick(for: mixed, ticked: ["file-b"]).draw == .on)
+    }
+
+    /// Nothing to tick, no tick offered — the same rule the leaf rows follow.
+    /// A control that cannot act is worse than no control.
+    @Test("A meeting whose recordings are all unfetchable offers no header tick")
+    func parentTickAbsentWhenNothingIsTickable() {
+        let scheduled = moment(daysAgo: 3, hour: 11)
+        let none = [
+            row(id: "file-a", scheduled: scheduled, recorded: nil,
+                meeting: "mtg", video: .notOrganiser(organiser: "A. Bianchi")),
+            row(id: "file-b", scheduled: scheduled, recorded: nil,
+                meeting: "mtg", video: .notOrganiser(organiser: "A. Bianchi")),
+        ]
+        #expect(CloudImportOutline.parentTick(for: none, ticked: []) == .none)
+    }
+
     // MARK: - Identity
 
     /// The contract that keeps the outline usable, and the one that would fail

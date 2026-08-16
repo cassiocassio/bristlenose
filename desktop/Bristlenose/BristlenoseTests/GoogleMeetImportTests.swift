@@ -552,6 +552,40 @@ struct CloudImportStoreTests {
         #expect(dates == dates.sorted())
     }
 
+    /// **Mixed completes the set; full clears it.**
+    ///
+    /// Reading a half-made selection as an instruction to discard it would
+    /// throw away a choice the researcher had already expressed — they clicked
+    /// the parent to mean "all of this call". Only a fully-ticked meeting
+    /// unticks.
+    @Test("The meeting header ticks the rest, and only clears when already full")
+    func meetingHeaderCompletesThenClears() async {
+        let store = await self.store(.populated)
+        // The 1:N meeting in the fixture: one call, two recordings.
+        let pair = store.visibleRows.filter { $0.meetingID != nil }.map(\.id)
+        #expect(pair.count == 2, "the fixture's stop-and-restart meeting")
+
+        store.toggle(pair[0])                       // half-ticked
+        store.toggleMeeting(rowIDs: pair)
+        #expect(pair.allSatisfy { store.ticked.contains($0) }, "mixed completes")
+
+        store.toggleMeeting(rowIDs: pair)
+        #expect(pair.allSatisfy { !store.ticked.contains($0) }, "full clears")
+    }
+
+    /// A recording already on disk is untouched in either direction: it draws
+    /// ticked because it is here, not because it was chosen, so unticking it
+    /// would mean nothing — and re-fetching it would spend an expiry-limited
+    /// remote read on a purely local problem.
+    @Test("The meeting header never moves a held recording")
+    func meetingHeaderSkipsHeldRows() async {
+        let store = await self.store(.allAlreadyImported)
+        let held = store.visibleRows.filter { !$0.isSelectable }.map(\.id)
+        #expect(!held.isEmpty)
+        #expect(!store.toggleMeeting(rowIDs: held), "nothing to move, so nothing claimed")
+        #expect(store.ticked.isEmpty)
+    }
+
     @Test("Select All takes the filtered set, never the whole window")
     func selectAllRespectsFilter() async {
         let store = await self.store(.populated)

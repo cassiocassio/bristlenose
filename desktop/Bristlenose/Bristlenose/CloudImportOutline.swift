@@ -137,6 +137,53 @@ enum CloudImportOutline {
         }
     }
 
+    // MARK: - The meeting header's checkbox
+
+    /// How a meeting header's checkbox draws, summarising the recordings under
+    /// it.
+    ///
+    /// A parent tick exists because of the case the outline was built for: one
+    /// interview that arrived as two files. Wanting one half and not the other
+    /// is the rare intent; wanting both is the ordinary one, and making the
+    /// ordinary intent cost two clicks — on the exact shape the feature was
+    /// added to handle — is the hierarchy taxing its own reason for existing.
+    /// Mail and Finder both give a group a tri-state box.
+    ///
+    /// It summarises rather than commands, which is why `.mixed` is a state the
+    /// parent can *show* and never a state the researcher can *choose*.
+    /// **How it draws and whether it can act are separate questions**, and
+    /// collapsing them is the obvious mistake: a meeting whose two recordings
+    /// are both already imported draws fully ticked *and* does nothing when
+    /// clicked — the same pairing its children use, for the same reason.
+    struct ParentTick: Equatable {
+        enum Draw: Equatable { case off, mixed, on }
+
+        /// Nil when nothing beneath offers a tick, and then the header offers
+        /// none either — a control that cannot act is worse than no control.
+        let draw: Draw?
+        let isEnabled: Bool
+
+        static let none = ParentTick(draw: nil, isEnabled: false)
+    }
+
+    /// Reads the children the way the screen does.
+    ///
+    /// Deliberately over what each child **draws**, not over what is in the
+    /// tick set: a recording already on disk draws ticked, so a meeting whose
+    /// two files are both imported reads `on` rather than `off`. A parent that
+    /// contradicted the boxes directly beneath it would be worse than none.
+    static func parentTick(
+        for rows: [CloudImportRow],
+        ticked: Set<String>
+    ) -> ParentTick {
+        let shown = rows.filter(\.showsCheckbox)
+        guard !shown.isEmpty else { return .none }
+        let drawn = shown.filter { $0.drawsTicked(in: ticked) }.count
+        let draw: ParentTick.Draw = drawn == 0 ? .off
+            : (drawn == shown.count ? .on : .mixed)
+        return ParentTick(draw: draw, isEnabled: shown.contains(where: \.isSelectable))
+    }
+
     // MARK: - The result
 
     /// The tree plus the three numbers the footer is allowed to state.

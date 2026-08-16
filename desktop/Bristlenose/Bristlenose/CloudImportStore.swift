@@ -296,6 +296,33 @@ final class CloudImportStore: ObservableObject {
         return true
     }
 
+    /// The meeting header's tri-state checkbox.
+    ///
+    /// **Mixed completes the set; full clears it.** Clicking a partly-ticked
+    /// meeting ticks the rest rather than emptying it — the researcher clicked
+    /// the parent to mean "all of this call", and reading a half-made selection
+    /// as an instruction to discard it would throw away the choice they had
+    /// already expressed. Only a fully-ticked meeting unticks. Finder and Mail
+    /// both behave this way.
+    ///
+    /// Operates on the tickable children only. A recording already on disk is
+    /// untouched in either direction: it draws ticked because it is here, not
+    /// because it was chosen, and unticking it would mean nothing.
+    ///
+    /// - Returns: whether anything moved, so the keyboard path can beep.
+    @discardableResult
+    func toggleMeeting(rowIDs: [String]) -> Bool {
+        let wanted = Set(rowIDs)
+        let actionable = visibleRows.filter { wanted.contains($0.id) && $0.isSelectable }
+        guard !actionable.isEmpty else { return false }
+        if actionable.allSatisfy({ ticked.contains($0.id) }) {
+            for row in actionable { ticked.remove(row.id) }
+        } else {
+            for row in actionable { ticked.insert(row.id) }
+        }
+        return true
+    }
+
     /// Shift-click a checkbox to tick a range — §9's "the gesture that actually
     /// pays". Sorted by date, a study's sessions are adjacent: tick Monday's,
     /// shift-click Wednesday's.

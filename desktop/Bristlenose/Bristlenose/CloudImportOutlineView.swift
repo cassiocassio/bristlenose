@@ -191,9 +191,19 @@ extension CloudImportOutlineView {
         /// pass — fingerprint, expansion, selection — be skipped on the ~99% of
         /// updates that are a download reporting another percent.
         private var generation = -1
-        /// Per-row store-derived state, so a refresh can touch only the rows
-        /// that moved instead of every row in every column.
-        private var rowStates: [String: RowState] = [:]
+        /// Per-**node** store-derived state, so a refresh can touch only what
+        /// moved instead of every row in every column.
+        ///
+        /// Keyed on the node rather than the row because a meeting header has
+        /// no row of its own and still has a checkbox that changes: ticking one
+        /// child flips its parent between off, mixed and on. Keyed on rows, the
+        /// parent was skipped by the loop entirely and its box never redrew.
+        private var cellStates: [String: CellState] = [:]
+
+        private enum CellState: Equatable {
+            case row(RowState)
+            case meeting(CloudImportOutline.ParentTick)
+        }
         /// Guards the selection round trip. Writing the store from
         /// `selectionDidChange` while applying the store's own selection — or
         /// while a programmatic expand/collapse moves it — is how a focus model
@@ -286,20 +296,27 @@ extension CloudImportOutlineView {
         /// have anything new to say.
         private func refreshChangedRows(seedOnly: Bool) {
             guard let outline, outline.numberOfRows > 0 else {
-                rowStates.removeAll()
+                cellStates.removeAll()
                 return
             }
             var changed = IndexSet()
-            var seen: [String: RowState] = [:]
+            var seen: [String: CellState] = [:]
             for index in 0..<outline.numberOfRows {
-                guard let node = outline.item(atRow: index) as? CloudImportOutline.Node,
-                      let row = node.row
+                guard let node = outline.item(atRow: index) as? CloudImportOutline.Node
                 else { continue }
-                let current = state(of: row)
-                seen[row.id] = current
-                if !seedOnly, rowStates[row.id] != current { changed.insert(index) }
+                let current: CellState
+                if let row = node.row {
+                    current = .row(state(of: row))
+                } else if case .meeting = node.kind {
+                    current = .meeting(CloudImportOutline.parentTick(
+                        for: node.children.compactMap(\.row), ticked: store.ticked))
+                } else {
+                    continue   // a day header has nothing store-derived on it
+                }
+                seen[node.id] = current
+                if !seedOnly, cellStates[node.id] != current { changed.insert(index) }
             }
-            rowStates = seen
+            cellStates = seen
             guard !changed.isEmpty else { return }
             let columns = [Column.tick, Column.status].compactMap {
                 outline.column(withIdentifier: $0)
@@ -529,6 +546,31 @@ extension CloudImportOutlineView {
 
         private func tickView(for node: CloudImportOutline.Node, in outline: NSOutlineView) -> NSView? {
             let view = reuse(TickCellView.self, Column.tick, in: outline)
+
+            // A meeting header has no file of its own, and for a long while
+            // that meant it had no checkbox either. But the case this whole
+            // outline exists for is one interview that arrived as two files,
+            // and wanting both is the ordinary intent — so the header
+            // summarises its recordings and can set them all at once.
+            if case .meeting = node.kind {
+                let children = node.children.compactMap(\.row)
+                let tick = CloudImportOutline.parentTick(for: children, ticked: store.ticked)
+                guard let draw = tick.draw else {
+                    view.configureEmpty()
+                    return view
+                }
+                view.configure(
+                    payload: .meeting(children.map(\.id)),
+                    state: draw == .on ? .on : (draw == .mixed ? .mixed : .off),
+                    enabled: tick.isEnabled,
+                    label: Self.meetingAccessibilityName(for: node, children: children),
+                    reason: tick.isEnabled ? nil : "Every recording of this meeting is already here.",
+                    target: self,
+                    action: #selector(tickChanged(_:))
+                )
+                return view
+            }
+
             guard let row = node.row, row.showsCheckbox else {
                 // No checkbox at all, not a disabled one. There is nothing to
                 // fetch and offering a control would be a lie.
@@ -536,11 +578,11 @@ extension CloudImportOutlineView {
                 return view
             }
             view.configure(
-                rowID: row.id,
+                payload: .row(row.id),
                 // An already-held file reads as ticked-and-disabled: it is here,
                 // and re-fetching it would spend an expiry-limited remote read
                 // on a purely local problem.
-                on: store.ticked.contains(row.id) || !row.localState.isSelectable,
+                state: row.drawsTicked(in: store.ticked) ? .on : .off,
                 enabled: row.isSelectable,
                 label: Self.accessibilityName(for: node),
                 // Restored. The SwiftUI cell explained a held row on hover
@@ -554,6 +596,19 @@ extension CloudImportOutlineView {
                 action: #selector(tickChanged(_:))
             )
             return view
+        }
+
+        /// What VoiceOver calls a meeting header's checkbox.
+        ///
+        /// Names the count, because that is the whole difference between this
+        /// box and the ones under it — and a keyboard-free "Import P05
+        /// Interview" would be indistinguishable from its first child.
+        private static func meetingAccessibilityName(
+            for node: CloudImportOutline.Node,
+            children: [CloudImportRow]
+        ) -> String {
+            guard case .meeting(let meeting) = node.kind else { return "" }
+            return "Import all \(CloudCount.noun(children.count, "recording")) of \(meeting.title)"
         }
 
         /// What VoiceOver calls this row.
@@ -587,11 +642,25 @@ extension CloudImportOutlineView {
         }
 
         @objc private func tickChanged(_ sender: RowCheckbox) {
-            guard let rowID = sender.rowID else { return }
-            store.toggle(rowID)
-            // The store is the truth: a row it refused to tick must not be left
-            // drawn as ticked.
-            sender.state = store.ticked.contains(rowID) ? .on : .off
+            // The store is the truth in both branches: the button's own state
+            // after a click is AppKit's guess, and a row the store refuses must
+            // not be left drawn as ticked. Nothing here reads `sender.state`.
+            switch sender.payload {
+            case .row(let rowID):
+                store.toggle(rowID)
+                sender.state = store.ticked.contains(rowID) ? .on : .off
+            case .meeting(let rowIDs):
+                store.toggleMeeting(rowIDs: rowIDs)
+                // Redrawing the children is `refreshChangedRows`'s job on the
+                // next update — this only settles the box that was clicked,
+                // which AppKit has already moved somewhere of its own choosing.
+                let children = store.visibleRows.filter { rowIDs.contains($0.id) }
+                let tick = CloudImportOutline.parentTick(for: children, ticked: store.ticked)
+                sender.allowsMixedState = (tick.draw == .mixed)
+                sender.state = tick.draw == .on ? .on : (tick.draw == .mixed ? .mixed : .off)
+            case .none:
+                return
+            }
         }
 
         private func meetingView(for node: CloudImportOutline.Node, in outline: NSOutlineView) -> NSView {
@@ -786,7 +855,14 @@ private final class OutlineView: NSOutlineView {
 /// A checkbox carrying the row it speaks for. `NSButton.tag` is an `Int` and
 /// row ids are strings, so the identity has to ride somewhere.
 private final class RowCheckbox: NSButton {
-    var rowID: String?
+    /// What this box speaks for. An enum rather than two optionals, so the
+    /// action cannot read a leaf as a meeting or find both nil.
+    enum Payload: Equatable {
+        case row(String)
+        /// A meeting header, carrying its recordings' row ids.
+        case meeting([String])
+    }
+    var payload: Payload?
 }
 
 /// The base every cell here shares, and the one thing `NSTableCellView` is
@@ -843,8 +919,8 @@ private final class TickCellView: OutlineCellView {
     required init?(coder: NSCoder) { fatalError("not from a nib") }
 
     func configure(
-        rowID: String,
-        on: Bool,
+        payload: RowCheckbox.Payload,
+        state: NSControl.StateValue,
         enabled: Bool,
         label: String,
         reason: String?,
@@ -852,8 +928,13 @@ private final class TickCellView: OutlineCellView {
         action: Selector
     ) {
         checkbox.isHidden = false
-        checkbox.rowID = rowID
-        checkbox.state = on ? .on : .off
+        checkbox.payload = payload
+        // Only a meeting header can be mixed, and only ever because we set it:
+        // `allowsMixedState` would otherwise let a *click* cycle into mixed,
+        // which is not a thing anyone means. Every state here is computed from
+        // the store and written back, never read off the button.
+        checkbox.allowsMixedState = (state == .mixed)
+        checkbox.state = state
         checkbox.isEnabled = enabled
         checkbox.target = target
         checkbox.action = action
@@ -868,7 +949,7 @@ private final class TickCellView: OutlineCellView {
 
     func configureEmpty() {
         checkbox.isHidden = true
-        checkbox.rowID = nil
+        checkbox.payload = nil
         checkbox.target = nil
         checkbox.action = nil
         checkbox.toolTip = nil

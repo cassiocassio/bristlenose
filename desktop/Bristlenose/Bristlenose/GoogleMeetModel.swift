@@ -637,6 +637,20 @@ struct CloudImportRow: Identifiable, Equatable {
         return video.isAvailable
     }
 
+    /// Whether this row's checkbox draws as ticked.
+    ///
+    /// **Two ways to be ticked, and they mean different things.** Either the
+    /// researcher chose it, or we already hold the file — the second draws
+    /// ticked *and disabled*, because it is here and re-fetching would spend an
+    /// expiry-limited remote read on a purely local problem.
+    ///
+    /// One definition, because a meeting header's tri-state checkbox has to
+    /// summarise exactly what its children draw. Two copies of this predicate
+    /// is a parent reading "mixed" over three boxes that all look ticked.
+    func drawsTicked(in ticked: Set<String>) -> Bool {
+        ticked.contains(id) || !localState.isSelectable
+    }
+
     /// Whether the row draws a checkbox at all. A row with nothing to fetch
     /// draws none: offering one would be a lie.
     var showsCheckbox: Bool {

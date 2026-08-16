@@ -7,6 +7,7 @@ last-trued: 2026-08-15
 
 ## Changelog
 
+- _2026-08-16g_ — **Stage 3a is complete: the roster, the ordinals, and the Dock click.** Two decisions closed it. **Dim, not `mainWindow`** — with a panel frontmost the app dims its window commands rather than acting on the window behind, so `WindowRoster` is deliberately *not* a most-recently-key list, and the ⌘N-from-Settings papercut is **retired rather than fixed**: under the dim rule, "no window is in focus, so make one" is the coherent answer. **Keep the gap** — ordinals are lowest-free and nobody already open is ever renumbered, so closing the middle of three leaves "Study" and "Study 3" and the next window fills the 2. The consequence the decision hadn't pictured is now pinned by a test: close the *first* of two and the survivor sits alone as "Study 2" — odd-looking, and still better than a title that changes because something happened in another window. `applicationShouldHandleReopen` asks the roster rather than AppKit's `hasVisibleWindows`, which counts Settings and the Import window and would answer "yes" when there is nothing to come back to. Writing the roster's tests caught a real bug before it shipped — a welcome-screen window wasn't being counted, so a Dock click would have opened a second one. **Nothing in Stage 3a has been seen on screen**; that is the outstanding claim on all of it.
 - _2026-08-16f_ — **`File ▸ New Window` (⌥⌘N) ships, and the dead item beside it is finally dimmed.** `Window ▸ Bristlenose` is gone: wrong menu (Apple's Window-menu command list has no new-window command) and wrong label (it called `openWindow(id:)` against a `WindowGroup`, which *spawns*). Seeding the key across the 21 locales turned up **`File ▸ Open in New Window` (⇧⌘O) already there and dead** — the item this session opened by asking whether it did anything. They are different commands, not duplicates: New Window opens another view of the project already showing; Open in New Window opens the *selected* project, the menu twin of a sidebar double-click. So it stays, `.disabled(true)`, until `WindowGroup(for:)` can carry a project value in Stage 3b — dimmed rather than deleted, because the command is wanted and because a menu is a promise about what the app can do. `applicationShouldHandleReopen` did **not** ride along: the coupling wasn't load-bearing (the menu bar outlives windows, so New Window is already the way back from empty), and it regroups with the **window roster** — now the named next unit, wanted by reopen, by the E4 ordinals, and by the ⌘N-from-Settings papercut. Its shape is a genuine choice, not plumbing: count vs titles vs approximating AppKit's `mainWindow`, which is the semantic `focusedSceneValue` doesn't give (it follows *key*).
 - _2026-08-16e_ — **P2 core shipped: each window owns its own state.** `ContentView` holds its `BridgeHandler` as a `@StateObject` and publishes it as `focusedSceneValue(\.bridge, …)`; the menu bar reads the key window's, falling back to `BridgeHandler.unattached` — a never-attached instance whose all-default state dims exactly the items that need a window, so the no-window case needed no branch in ten menu structs. **Two windows on one project can now sit on different lenses**, which is the felt feature (tags beside quotes) and it needed no family call, no second sidecar and no serve rework. The reload fan-out came free: `scheduleReportReloadOnCompletion` already ran per `ContentView`, gated on that window's project. Three decisions taken: renderer crashes on a shared partition are **debounced** (`RendererRecovery`, 250 ms collect + 150 ms stagger, no crash-loop guard by design); a run is narrated by the **key window only** (`WindowSubtitle.body`, extracted as a pure decision so it is testable — five title bars counting one run to 100% is noise, and a background window's per-lens count is genuinely different information); and the **serve stays up** when the last window closes. That last one changed nothing directly but exposed the quit hook sitting on `ContentView`, where it never ran with no window open — moved into `ServeManager`'s own termination observer. Also closed a `TODO` that had been waiting for exactly this work: report chrome now follows `@Environment(\.controlActiveState)` rather than app-wide `NSWindow` key notifications. Still owed on 3a: the E4 ordinal suffix, `File ▸ New Window` ⌥⌘N, `applicationShouldHandleReopen`, and the window roster all three want.
 - _2026-08-16d_ — **P1 shipped: the menu bar routes instead of broadcasting.** The taxonomy the stress test asked for is settled first (new §"P1's taxonomy") — four groups, two mechanisms, because window-targeted and selection-targeted share one routing rule and differ only in what the window does next. So the conversion is **one** focused value carrying a per-window command sink, not seventeen focused values. The predicted no-window failure doesn't arise: New Project is already two halves, and the app-global half (`projectIndex.addProject`) needs no window, so ⌘N stages the follow-through on the batons `pendingIconReveal`/`pendingRename` established and opens a window to drain them — the item is never dimmed. Three broadcasts that reached *inside* a window became per-window batons (the outline's rename, the toolbar's session switcher, the export popover's Miro row). 15 `Notification.Name` declarations deleted; 15 `ContentView` receivers collapsed into one `perform(_:)`. **The drift is now mechanically held**: `check-menu-routing.sh` (build-all step 1a-ter) fails on any post from `MenuCommands.swift` bar the two that open a dedicated `Window` scene, and on any retired name reappearing — the count went 16 → 19 in eighteen days precisely because nothing failed. Two things deliberately left: one papercut (⌘N with Settings frontmost opens a second window rather than raising the first — wants a window roster, which `applicationShouldHandleReopen` needs anyway, so both land in P2), and two app-level broadcasts outside the 19 that will need the same treatment (`showFeedbackSheet`, `undoableRemovalRestoredSelection`).
@@ -377,7 +378,7 @@ app-level `@StateObject` injected into `WindowGroup(id: "main")`:
   written with the broadcast pattern, because it is the path of least resistance and
   nothing fails when you take it. The number grows until Stage 2 lands and makes
   `focusedSceneValue` the obvious idiom to copy.
-- **Stage 3a — per-window `BridgeHandler` (same-project windows). ✅ Core shipped
+- **Stage 3a — per-window `BridgeHandler` (same-project windows). ✅ Complete
   16 Aug 2026** (see P2 in §"Implementation plan"). Split out of
   Stage 3 on 15 Aug 2026 because it is the half that **actually delivers the felt
   feature** — "Quotes in this window, Analysis in that one" — and it needs **no
@@ -674,12 +675,29 @@ carried a `TODO: filter by window object when multi-window ships`. They are
 `@Environment(\.controlActiveState)` now — per-window by construction, no AppKit
 plumbing, and it covers app-level deactivation too.
 
-*Still owed here:* the E4 ordinal suffix for same-lens duplicates (nine identical
-Window-menu rows is the case that earned it), the `File ▸ New Window` ⌥⌘N rename,
-`applicationShouldHandleReopen`, and the window roster the last two want — which
-is also what fixes ⌘N-from-Settings opening a second window. Constraint 5 (a title
-naming a project that isn't on screen) is structurally gone now that each window
-owns its own state, but that has not been seen on screen.
+**Stage 3a is complete as of 16 Aug 2026.** The four items that were owed all
+landed: the `File ▸ New Window` ⌥⌘N rename, the **E4 ordinal suffix**,
+`applicationShouldHandleReopen`, and the `WindowRoster` the last two needed.
+
+`WindowRoster` is deliberately small — ordinals per (study, lens) group, and "is
+any project window open?". It is **not** a most-recently-key list, i.e. not an
+approximation of AppKit's `mainWindow`. That was considered and declined
+(16 Aug 2026): with a panel frontmost this app **dims** its window commands
+rather than acting on the window behind, so there is no second window to resolve
+and nothing to hold. That decision also **retires the ⌘N papercut** rather than
+fixing it — under the dim rule, "no window is in focus, so make one" is the
+coherent answer, not a bug.
+
+Ordinals are **lowest-free, and nobody already open is ever renumbered**. Close
+the second of three and you keep "Study" and "Study 3"; the next window opened
+fills the 2, so the numbers stay small. The honest consequence, pinned by a test
+so it doesn't read as a bug: close the *first* of two and the survivor stays
+"Study 2" on its own. Odd-looking, and still better than a title that changes
+because something happened in a different window.
+
+Constraint 5 (a title naming a project that isn't on screen) is structurally gone
+now that each window owns its own state — **but none of Stage 3a has been seen on
+screen.** That is the one outstanding claim on all of it.
 
 **P3 · Per-window restore — lens + anchor.** Depends on P2 (the lens has nowhere
 to live until each window owns one). Per §"What a window opens onto"; copy
@@ -756,9 +774,12 @@ quit, or state the floor.
 with what has been *loaded*, so the protocol must fix the state ("after opening
 Quotes on the largest study") or successive readings are not comparable.
 
-**E4 ordinals leave gaps.** Close window 2 of 3 and you have "Study" and
-"Study 3". Document convention says do not renumber — keep that, but decide it
-rather than ship it.
+**E4 ordinals leave gaps. ✅ Decided and shipped: keep the gap.** Close window 2
+of 3 and you have "Study" and "Study 3"; the next window opened fills the 2, so
+the numbers stay small. Renumbering was rejected for the reason this doc rejects
+a time-based restore — a name that changes for reasons invisible from the window
+itself is unlearnable. One consequence the decision didn't picture, now pinned by
+a test: close the *first* of two and the survivor sits alone as "Study 2".
 
 **Deferred — the relaunch boot storm.** Eight restored windows each cold-mounting
 against one booting sidecar. Alpha-acceptable (16 Aug 2026), and already partly
@@ -768,25 +789,12 @@ by mounting only the visible windows.
 
 ### Small, already decided, not blocked by any of the above
 
-**The window roster, and its three consumers.** Nothing tracks live project
-windows, and three owed items all want that and nothing else:
-
-- `applicationShouldHandleReopen` — clicking the Dock icon with no windows open
-  does nothing. (No longer coupled to the rename, which shipped without it: the
-  menu bar outlives windows, so `File ▸ New Window` is already the way back.)
-- **The E4 ordinal suffix** — numbering same-lens duplicates needs to know how
-  many siblings share a title.
-- **The ⌘N papercut** — with a project window open but Settings frontmost, ⌘N
-  opens a *second* window rather than raising the first.
-
-The roster is the next unit of work, and its shape is a real choice rather than a
-mechanism: a **count** is enough for reopen; **titles** are needed for ordinals;
-and the papercut wants something closer to AppKit's `mainWindow` — "the window
-that is the focus of the user's attention", which stays pointing at the document
-window while a panel is key. SwiftUI's `focusedSceneValue` follows **key**, not
-main, which is the gap. Approximating `mainWindow` with a most-recently-key list
-is the biggest of the three and should be argued for on its own merits, not
-smuggled in as plumbing.
+**The window roster. ✅ Shipped 16 Aug 2026** — `WindowRoster`, serving the two
+consumers that survived: `applicationShouldHandleReopen` (which asks it rather
+than AppKit's `hasVisibleWindows`, since that counts Settings and the Import
+window too) and the E4 ordinals. The third — approximating AppKit's `mainWindow`
+so a command could act on the window *behind* a frontmost panel — was **declined**
+in favour of dimming, which is what the app already did. See the P2 section.
 
 ## Sequencing
 

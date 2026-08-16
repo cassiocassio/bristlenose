@@ -222,6 +222,10 @@ struct ContentView: View {
     /// this window's `SessionsSwitcherButton`.
     @State private var sessionsSwitcherRequest = 0
 
+    /// This window's place among the windows showing the same study on the same
+    /// lens — 1 for the first, which takes no suffix. See `WindowRoster`.
+    @State private var windowOrdinal = 1
+
     /// Handle to the in-flight project-switch Task. Switching is async (serve
     /// sidecar teardown + respawn); a background pipeline run makes rapid
     /// switching routine, so we cancel the prior switch before starting the
@@ -235,6 +239,23 @@ struct ContentView: View {
 
     /// Is this the front window?
     private var isKeyWindow: Bool { controlActiveState == .key }
+
+    /// Which set of windows this one is a duplicate of, for titling. Nil on the
+    /// welcome screen — an unselected window shows "Welcome", and two of those
+    /// are not worth numbering.
+    private var windowGroup: WindowRoster.Group? {
+        guard let id = selectedProject?.id else { return nil }
+        return WindowRoster.Group(projectID: id, lens: bridgeHandler.activeTab?.rawValue)
+    }
+
+    /// The window's title: the project's name, or "Welcome" with none selected,
+    /// plus an ordinal when a sibling window already shows the same lens of the
+    /// same study (mockup E4 — nine identical Window-menu rows is the case that
+    /// earned it).
+    private var windowTitle: String {
+        let base = selectedProject?.name ?? i18n.t("desktop.welcome.windowTitle")
+        return base + WindowRoster.suffix(for: windowOrdinal)
+    }
 
     /// The single selected item, if exactly one is selected.
     private var soleSelection: SidebarSelection? {
@@ -384,7 +405,7 @@ struct ContentView: View {
                 // gone — the duplicate title item it dodged no longer exists,
                 // and forcing `titleVisibility = .hidden` was what suppressed
                 // the native subtitle.
-                .navigationTitle(selectedProject?.name ?? i18n.t("desktop.welcome.windowTitle"))
+                .navigationTitle(windowTitle)
                 // Subtitle composition lives in `WindowSubtitle.swift` — it has
                 // to observe `liveData` itself to tick during a run, and its
                 // precedence rules are testable decisions, not view code.
@@ -548,6 +569,9 @@ struct ContentView: View {
         .onDisappear {
             dropTargetProjectID = nil
             dropTargetFolderID = nil
+            // Give the ordinal back. Deliberately does NOT renumber the
+            // survivors — see `WindowRoster.claim`.
+            WindowRoster.shared.release(windowID: windowID)
         }
     }
 
@@ -565,6 +589,12 @@ struct ContentView: View {
         // The state half of the same seam: the menu bar reads *this* window's
         // lens, undo stack and selection mirror when it is frontmost.
         .focusedSceneValue(\.bridge, bridgeHandler)
+        // Take a place in the roster whenever what this window shows changes —
+        // a different study, or a different lens of the same one. `initial`
+        // covers the window opening already showing something.
+        .onChange(of: windowGroup, initial: true) { _, group in
+            windowOrdinal = WindowRoster.shared.claim(windowID: windowID, showing: group)
+        }
         // Whatever `NewItemFallback` staged while there was no window to put it
         // in. `.onAppear` covers the window opened *to receive* it; `.onChange`
         // covers a window that was already up. Both drain the same one-shot.

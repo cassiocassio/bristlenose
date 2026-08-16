@@ -3,8 +3,9 @@ import SwiftUI
 
 private let appLog = Logger(subsystem: "app.bristlenose", category: "app")
 
-/// Minimal AppDelegate for future delegate needs.
-/// Zombie cleanup uses `.onReceive(willTerminateNotification)` on the root View.
+/// App-lifecycle hooks: launch provenance, the appearance seam, and the
+/// Dock-icon reopen. Sidecar teardown on quit is *not* here — `ServeManager`
+/// observes termination itself, because it owns the process.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Symmetry with the existing `Mode:` line in ServeManager — this one
@@ -28,6 +29,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // channel.
     }
 
+    /// Opens a project window. Set once at launch by the App scene, which is
+    /// where `openWindow` is reachable from.
+    @MainActor var openProjectWindow: (() -> Void)?
+
+    /// Clicking the Dock icon with no project window open.
+    ///
+    /// Until 16 Aug 2026 this did nothing: `Window ▸ Bristlenose` was the only
+    /// way back, and it has since become `File ▸ New Window`. The menu bar
+    /// outlives windows, so that item is still reachable from an empty state —
+    /// but the Dock icon is where a Mac user reaches first, and an app that
+    /// ignores a click on it reads as hung.
+    ///
+    /// Asks the roster rather than trusting AppKit's `hasVisibleWindows`, which
+    /// counts Settings and the Import window too and would answer "yes, there's
+    /// a window" when there is nothing to come back to.
+    func applicationShouldHandleReopen(
+        _ sender: NSApplication, hasVisibleWindows flag: Bool
+    ) -> Bool {
+        MainActor.assumeIsolated {
+            if !WindowRoster.shared.hasProjectWindow {
+                openProjectWindow?()
+            }
+        }
+        return true
+    }
+
     /// Responder-chain entry point for opening Settings. The web bridge
     /// (`BridgeHandler` "open-settings") and the out-of-credit pill call
     /// `NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, ...)`,
@@ -43,6 +70,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct BristlenoseApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
+    /// Handed to the app delegate so a Dock-icon click can open a window when
+    /// none is open. `openWindow` is a scene affordance, so this is the only
+    /// place that can reach it on the delegate's behalf.
+    @Environment(\.openWindow) private var openWindow
 
     // State lifted from ContentView so .commands and .onReceive can access them.
     @StateObject private var serveManager = ServeManager()
@@ -85,9 +117,9 @@ struct BristlenoseApp: App {
     }
 
     var body: some Scene {
-        // `id` lets the Window > Bristlenose menu item reopen this scene via
-        // `openWindow(id:)` after the user has closed the main window but the
-        // app process is still alive (e.g. after a sidecar crash dialog).
+        // `id` is what `File ▸ New Window` (⌥⌘N) and the Dock-icon reopen both
+        // open — `openWindow(id:)` against a `WindowGroup` spawns a window,
+        // which is what both of them want.
         WindowGroup(id: "main") {
             ContentView()
                 .frame(minWidth: 700, minHeight: 500)
@@ -106,6 +138,9 @@ struct BristlenoseApp: App {
                     // The AppKit Settings window is built lazily on first open;
                     // hand it the app's i18n so its SwiftUI panes can translate.
                     SettingsWindow.shared.i18n = i18n
+                    // Dock-icon click with no project window open — see
+                    // `AppDelegate.applicationShouldHandleReopen`.
+                    appDelegate.openProjectWindow = { openWindow(id: "main") }
                     // The MCP Agents pane's live inputs (Now-showing line,
                     // payloads, the agent-access list).
                     SettingsWindow.shared.serveManager = serveManager

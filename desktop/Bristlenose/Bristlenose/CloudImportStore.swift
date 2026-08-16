@@ -255,7 +255,15 @@ final class CloudImportStore: ObservableObject {
         )
         let task = Task { @MainActor in
             let result = await source.list(window: interval)
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled else {
+                // The one path that leaves the window on its spinner forever:
+                // a superseded listing returns, its result is dropped, and
+                // `phase` is never moved off `.loading`. Correct when a newer
+                // `load()` is going to finish — and indistinguishable from a
+                // hang when there isn't one, which is why it now says so.
+                Self.log.notice("import_list superseded, result discarded")
+                return
+            }
             Self.log.notice("import_list returned, applying")
             listing = result
             accountEmail = source.accountEmail

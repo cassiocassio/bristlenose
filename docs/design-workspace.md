@@ -796,7 +796,7 @@ reload half needed nothing: `scheduleReportReloadOnCompletion` already runs per
 fans it out by construction. The narration half was the real question, and it is
 **key window only** — see the P2 table.
 
-**P2 — nothing refcounts windows. ◐ Half-answered.** The serve question is
+**P2 — nothing refcounts windows. ✅ Answered.** The serve question is
 decided — **it stays up**, so closing the last window is not a teardown event and
 needs no refcount for that. The partition follows: with the serve up, reopening
 asks for the same `ServeSession` and should get the same partition back, so
@@ -804,9 +804,9 @@ releasing on window close would throw away sessionStorage for nothing;
 `SharedConfigStore`'s supersede-sweep already handles the port changing. What is
 still owed is a **roster of live project windows** — wanted by
 `applicationShouldHandleReopen`, by the E4 ordinal suffix, and by the ⌘N papercut.
-That is the remaining half.
+`WindowRoster` shipped later the same day and closed it.
 
-**P3 — bigger than "copy `SessionsRouteMemory`". ◐ Half-answered: it splits.**
+**P3 — bigger than "copy `SessionsRouteMemory`". ✅ True, and it split.**
 The **lens** half needed none of it — the lens is derivable from the
 `route-change` path that already flows, so P3a shipped 16 Aug 2026 with no bridge
 work at all. The warning stands for the **anchor** half: no anchor or scroll

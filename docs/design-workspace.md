@@ -7,6 +7,7 @@ last-trued: 2026-08-15
 
 ## Changelog
 
+- _2026-08-16_ — **The window axis is sized, and it isn't the project axis.** Observed usage is ~12 windows over ~2–3 projects (five transcripts side by side plus quotes/analysis on *one* study), so §"Problem definition" now splits the two and carries an "N is about" column. Three consequences recorded: the A/B/C call governs the *small* axis; N retained WebViews cost the same under every family, which largely defuses memory as a discriminator between them; and the load case is a whole 16 GB desk, not an app. §"Memory governance" replaces "a cap sized later" with a **stated budget** plus **live-if-visible / discarded-if-occluded**, whose ceiling is display area rather than user intent. The "what settles the family call" note is **revised**: the earlier "how many projects" survey asked the wrong question — the deciding number is the marginal cost of the Nth window on the *same* project, which is a one-day spike. Two new constraints: 6, cross-window BroadcastChannel is validated but unwired (`WebView.swift:87` mints a fresh partition per view, so two windows are mute today); 7, the MCP handshake assumes exactly one fronted serve, which B and C fit natively and A does not. Family A/B/C still open.
 - _2026-08-15_ — **Window-level decisions taken; the big architectural call still open.** (1) New §"What a window opens onto": double-click opens *that project* — the Notes model, answering the open question this doc used to end on — and a window restores the **lens** plus an **anchor**, never a pixel offset and never search/filter, from `projects.json`. (2) New §"The command that opens a window": `Window ▸ Bristlenose` becomes `File ▸ New Window` (⌥⌘N), per the HIG's own menu-bar standards; records the missing `applicationShouldHandleReopen` this exposes. (3) Stage 3 split into **3a** (per-window `BridgeHandler`, same-project windows — needs no family call) and **3b** (per-window serve — blocked on A/B/C), because 3a is what actually buys "Quotes here, Analysis there" and is reachable today. (4) New constraint 5: with two windows open the title bar can name a project that isn't on screen — observed, not predicted by the blocker list. Family A/B/C unchanged and still open.
 
 - _2026-07-28_ — **Stage 1 of window-scoping shipped** (see §"Window-scoping the menu commands" below): View ▸ Hide/Show Projects is now per-window via the app's first `focusedSceneValue` seam (`SidebarVisibilityFocus.swift`), replacing a `NotificationCenter` broadcast that toggled every open window. `BridgeHandler.sidebarVisible` and the `.toggleProjectsSidebar` notification are deleted. The remaining **16** menu broadcasts are unchanged and still fire in every window — the staged plan for them is the new section. Doc otherwise still aspirational.
@@ -99,6 +100,30 @@ These are established facts (verified during A2), not assumptions:
    more credible, on a window that may be showing something else entirely. The
    consequence for sequencing is that multi-window cannot ship half-done — a window
    that lies about which study it shows is worse than a window you can't open.
+6. **Cross-window messaging is designed and validated, but not wired.**
+   `docs/design-wkwebview-messaging.md` proved (28 Mar 2026) that BroadcastChannel
+   works across `WKWebView`s sharing one `WKWebsiteDataStore` **instance**, and
+   specifies a per-project keyed store: views within a project share the partition
+   and can talk; views across projects stay isolated. That is exactly the shape the
+   observed usage needs — "scroll the quotes window, jump to each quote in context"
+   is same-project by construction. But `WebView.swift:87` still calls
+   `.nonPersistent()` directly, which mints a **fresh partition per view**, so two
+   windows would today be mute to each other. The spike is done; the wiring is one
+   line and has no dependency on the family choice.
+7. **The MCP handshake assumes exactly one fronted serve.** `MCPHandshake` carries
+   `{schema, port, token, instance_id, updated_at}` and — deliberately — **no
+   `project` field**, because "tool payloads carry the project"; `syncHandshake()`
+   guards on the *fronted* `state`. Multi-window across projects dissolves
+   "fronted". This cuts by family: **B and C fit natively** (one port, one token,
+   agent names the project — the shape the handshake was already designed for),
+   while **A does not** (N ports and N tokens against a one-slot file). A's ways out
+   are both costly: grow the handshake to N entries — a breaking change to the one
+   contract Bristlenose has with software installed inside *another vendor's* app,
+   where an already-installed proxy can skew against a newer host — or let agent
+   exposure follow window focus, which is unacceptable on its own terms (the antenna
+   badge means exposure; exposure that moves when you click a window is not
+   something the researcher authorised). Recorded because it would otherwise be
+   rediscovered halfway through implementing A.
 
 ## Problem definition
 
@@ -107,17 +132,46 @@ exactly one is *fronted* (served + viewable), switching is a per-switch sidecar
 lifecycle event, and only one pipeline runs at a time. The gap to the end goal has
 four independent dimensions, each currently at "one":
 
-| Dimension | Today | Genuine multi-project |
-|---|---|---|
-| **Viewable at once** | 1 fronted | N mounted, switch is instant |
-| **Warm (no re-load)** | 1 parked (A2) | all open projects |
-| **Running at once** | 1 (A1 backgrounds it) | N in parallel (capped) |
-| **Windows** | 1 | N, side-by-side |
+| Dimension | Today | Genuine multi-project | N is about |
+|---|---|---|---|
+| **Viewable at once** | 1 fronted | N mounted, switch is instant | ~2–3 |
+| **Warm (no re-load)** | 1 parked (A2) | all open projects | ~2–3 |
+| **Running at once** | 1 (A1 backgrounds it) | N in parallel (capped) | 2 (policy) |
+| **Windows** | 1 | N, side-by-side | **~12** |
 
 The job is to lift each from "one" to "N" **without** regressing isolation
 (per-project token + ephemeral store), the local-first contract, or 8 GB-floor
 viability — and keeping CLI ≡ desktop parity (one codebase, packaging differences
 only; `docs/design-modularity.md`).
+
+### Windows and projects are different axes — sized 16 Aug 2026
+
+The table above originally listed "Windows" alongside the project dimensions as
+though they scaled together. They do not, and the difference is large enough to
+change which decisions matter.
+
+The observed shape (maintainer, 16 Aug 2026) is **many windows over few projects**:
+*"quotes and codebook, or a couple of transcripts and analysis … all the transcripts
+from 5 sessions tall and skinny side by side on a Studio Display, then scrolling the
+main quotes window and jumping to each quote in context."* That is eight-plus windows
+on **one** study. The project count is *"less than the number of mail viewers you
+might open"* — two or three.
+
+Three consequences, and the first is uncomfortable for how this doc is organised:
+
+1. **The family call (A/B/C) governs the axis that is small.** N projects is ~2–3.
+   The axis that is large — windows — is served by Stage 3a, which needs no family
+   decision at all. The expensive, contested, least-reversible choice in this
+   document is not the one gating the shape of use we actually expect.
+2. **It largely defuses the memory argument between families.** N retained WebViews
+   cost the same under A, B and C — every family needs a live view per window. The
+   family changes only the *sidecar* count, and 3 sidecars vs 1 is on the order of
+   180 MB. If the WebViews are the bill, the process model is a rounding error on
+   the constraint this doc named as governing.
+3. **The load case is a whole desk, not an app.** The target is a 16 GB machine with
+   "50 other tabs and Excel and all the rest open" — Bristlenose is one citizen
+   among several heavy ones, not the foreground tenant. See §"Memory governance"
+   under the orthogonal decisions.
 
 ## Implementation options (undecided — the range, with trade-offs)
 
@@ -173,8 +227,28 @@ all reports) + per-project **worker** subprocesses for runs (semaphore-capped).
 - **Parallel runs → Phase B (cap-2 + queue).** `PipelineRunner` single-slot →
   2-slot, 3rd queues (policy already chosen: ruled out unbounded — GPU + provider
   rate-limit contention). Orthogonal to the serve/view model.
-- **Memory governance.** Whatever goes "N live" needs a small cap + shared LRU
-  eviction across the sidecar pool and the WebView pool, sized for the 8 GB floor.
+- **Memory governance — a stated budget, and liveness bounded by occlusion.**
+  Whatever goes "N live" needs eviction, but a cap sized later is a knob; a budget
+  is falsifiable. **State a figure Bristlenose holds itself to on a loaded 16 GB
+  machine** (the load case is a whole desk — 50 browser tabs, Excel, Teams calls,
+  mail — with Bristlenose as one citizen, not the foreground tenant), and treat
+  exceeding it as a defect rather than a tuning opportunity.
+
+  The mechanism that makes a dozen windows compatible with that budget is
+  **live if visible, discarded if occluded** — Safari's background-tab discarding,
+  applied to windows. It reads as though it fights "instant", but there is a natural
+  bound underneath: **you cannot look at more windows than fit on your screen.**
+  Tiled across a Studio Display all twelve are visible and all live — and that is a
+  machine with headroom. On the 16 GB laptop you cannot *see* twelve windows, so the
+  ones behind can be discarded without anyone noticing, and revealing one is a
+  deliberate act that can afford a beat. This turns the ceiling into a function of
+  **display area rather than user intent**, which is self-limiting in the right
+  direction and is the only framing found so far under which "a dozen windows" and
+  "good citizen next to Teams and Excel" are simultaneously true.
+
+  Couples to §"What a window opens onto" — a discarded window restoring is the same
+  problem as a window reopening, so the lens + anchor restore is the mechanism for
+  both, and pixel offsets fail for both for the same reason.
 - **Per-project view-state persistence** (scroll/selection/view) falls out of
   retained views (Family A / Tier 2) for free; Family B would need explicit
   state save/restore.
@@ -194,7 +268,27 @@ all reports) + per-project **worker** subprocesses for runs (semaphore-capped).
 - **Genuinely open (the big call):** Family **A vs B vs C** — the serve/view
   architecture. This is a battle-tested-engineer decision (process model, shared
   fate, memory, server rework cost), not a UX or cohort call. Pick it at post-TF
-  planning with real multi-project-machine data, not before.
+  planning, not before.
+
+  **What settles it is a spike, not a survey** (revised 16 Aug 2026). The earlier
+  framing — "pick it with real multi-project-machine data", i.e. how many projects a
+  researcher keeps live — asked the wrong question: that number is ~2–3 and it is
+  the *small* axis (see §"Windows and projects are different axes"). The number that
+  actually decides is **the marginal cost of the Nth window on the same project,
+  versus the Nth project.** Windows on one project share an origin, a port and a
+  data store; windows on different projects cannot. Whether WebKit collapses
+  same-origin views onto one content process is what makes a dozen windows either
+  ~300 MB or ~2 GB, and it is a day's measurement rather than a cohort question.
+  Run it before the family call, because it moves constraint 3 (memory as the
+  governing cost) more than any argument in this section does.
+
+  Weigh alongside it, in both directions: **for A** — it extends shipped, proven A2,
+  and it is the reversible option (the retained-WebView work survives a later move
+  to B, whereas B's single-project→multi-tenant surgery does not survive a move
+  back); and its governing objection, memory on the 8 GB floor, is the one that
+  erodes with time, since base Apple Silicon is already 16 GB and this ships
+  post-TF. **Against A** — constraint 7, the MCP handshake, which B and C fit
+  natively and A does not.
 
 ## Window-scoping the menu commands (the Notes-experience prerequisite)
 

@@ -205,6 +205,7 @@ struct CloudImportWindow: View {
     private func blanketTitle(_ refusal: ArtifactAvailability) -> String {
         switch refusal {
         case .notOnThisPlan:  return "This account can't record Meet calls"
+        case .notRecorded:    return "None of these were recorded"
         case .needsScope:     return "Bristlenose can't see your recordings"
         case .notOrganiser:   return "None of these are yours to fetch"
         case .unsupported:    return "Recordings aren't available"
@@ -216,6 +217,9 @@ struct CloudImportWindow: View {
         switch refusal {
         case .notOnThisPlan: return "person.crop.circle.badge.exclamationmark"
         case .needsScope:    return "lock"
+        // Not an error glyph: nothing failed. A month with no recordings in it
+        // is an ordinary month, and this state should read as an observation.
+        case .notRecorded:   return "video.slash"
         default:             return "questionmark.circle"
         }
     }
@@ -227,6 +231,14 @@ struct CloudImportWindow: View {
             // explanation rather than as a failure to find anything.
             return "\(store.listing?.rows.count ?? 0) meetings are here, but Meet recording needs a Google Workspace plan. "
                 + "Recordings made on a work account can still be dragged in from Finder."
+        case .notRecorded:
+            // States the fact and stops. No remedy is offered because there
+            // isn't one — the meetings are over, and a recording that was
+            // never started cannot be recovered by anything the researcher
+            // does here. Naming the count keeps it an observation about this
+            // window rather than a verdict about the account.
+            return "\(store.listing?.rows.count ?? 0) meetings are here, and none of them were recorded. "
+                + "Meet only keeps a recording when someone starts one during the call."
         case .needsScope:
             // The wording is careful, and the care is a research finding rather
             // than taste. Google does NOT support incremental authorisation for

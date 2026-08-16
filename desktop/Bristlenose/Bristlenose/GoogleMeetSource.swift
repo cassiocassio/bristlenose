@@ -209,6 +209,21 @@ final class GoogleMeetSource: CloudImportSource {
                                                   outcome: .needsReauthentication(reason: "no token")))
         }
 
+        // Identity is captured during `signIn`, but an adapter built from a
+        // restored grant never runs that — and `identity` is the only input to
+        // `GoogleAccountTier`. Left nil the tier reads `.unknown`, which marks
+        // every attendee external *and* downgrades an un-recorded meeting from
+        // "nobody pressed record" to a claim about the account's plan. One
+        // call, once, closes both.
+        if identity == nil {
+            identity = try? await fetchIdentity(accessToken: tokens.accessToken)
+        }
+
+        // Ids from an earlier window are not merely clutter. `fetch` resolves a
+        // row to a file through this map, so an id that outlives its row is a
+        // download aimed at last month's meeting.
+        driveFileIDs.removeAll()
+
         var events: [CalendarEventsPage.Event] = []
         var pageToken: String?
         var pagesFetched = 0
@@ -326,8 +341,12 @@ final class GoogleMeetSource: CloudImportSource {
         tokens: GoogleTokens
     ) async -> [CloudImportRow] {
         let canReachMeet = tokens.has(GoogleScopes.meetReadonly)
-        var rows: [CloudImportRow] = []
+        let tier = GoogleAccountTier(email: identity)
+        let domain = tier.organisationDomain
 
+        // Pass 1 — narrow to the events that can become rows, in calendar
+        // order, before any network call is made.
+        var candidates: [(event: CalendarEventsPage.Event, start: Date, isOrganiser: Bool)] = []
         for event in events {
             guard let start = event.start?.dateTime.flatMap(Self.parseRFC3339) else {
                 // No `dateTime` means an all-day event (Google returns `date`
@@ -341,9 +360,41 @@ final class GoogleMeetSource: CloudImportSource {
                 // what makes the footer's arithmetic honest — but not a row.
                 continue
             }
+            candidates.append((event, start, event.organizer?.isSelf == true))
+        }
 
-            let isOrganiser = event.organizer?.isSelf == true
-            let attendees = Self.attendees(of: event, domain: GoogleAccountTier(email: identity).organisationDomain)
+        // Pass 2 — the Meet lookups, concurrently.
+        //
+        // **This is the pass that decides whether the window feels broken.**
+        // Each lookup is two sequential round trips (conference record, then
+        // its recordings), and the obvious shape — resolve each row inside the
+        // loop that builds it — makes them all sequential too. A researcher
+        // with thirty Meet calls in a month therefore waits on sixty serial
+        // requests behind a spinner with no progress, for a list Teams renders
+        // from a single call. Nothing errors; it is just slow enough to read as
+        // a hang, which is the failure mode that gets a feature abandoned
+        // rather than reported.
+        //
+        // Only organiser-owned events with a meeting code are queued: the
+        // others are already decided and a request for them would 403.
+        let jobs: [(index: Int, code: String, start: Date)] = canReachMeet
+            ? candidates.indices.compactMap { i in
+                guard candidates[i].isOrganiser,
+                      let code = candidates[i].event.conferenceData?.conferenceId
+                else { return nil }
+                return (index: i, code: code, start: candidates[i].start)
+            }
+            : []
+        let lookups = await Self.lookUpRecordings(
+            jobs: jobs, accessToken: tokens.accessToken, session: session)
+
+        // Pass 3 — assemble, in the original order.
+        var rows: [CloudImportRow] = []
+        for (index, candidate) in candidates.enumerated() {
+            let event = candidate.event
+            let start = candidate.start
+            let isOrganiser = candidate.isOrganiser
+            let attendees = Self.attendees(of: event, domain: domain)
 
             var video: ArtifactAvailability = .available
             var fileID: String?
@@ -355,16 +406,20 @@ final class GoogleMeetSource: CloudImportSource {
                                       ?? event.organizer?.email)
             } else if !canReachMeet {
                 video = .needsScope(GoogleScopes.meetReadonly)
-            } else if let code = event.conferenceData?.conferenceId {
-                let found = await recording(forMeetingCode: code,
-                                            near: start,
-                                            accessToken: tokens.accessToken)
+            } else {
+                // Nil covers three shapes: no meeting code to search on, no
+                // conference record, and no FILE_GENERATED recording. All three
+                // mean the same thing to the researcher — there is nothing to
+                // fetch — and none of them is a fault.
+                let found = lookups[index]
                 fileID = found?.fileID
                 expiresAt = found?.recordExpires
-                if found?.fileID == nil {
-                    // The meeting happened, we could look, and there is no
-                    // recording. Distinct from "we weren't allowed to look".
-                    video = .notOnThisPlan
+                if fileID == nil {
+                    // Only a personal account earns the plan verdict, where it
+                    // is literally true. A Workspace account with an unrecorded
+                    // meeting is not a capability problem, and saying so sends
+                    // a paying customer to argue with their admin.
+                    video = tier == .personal ? .notOnThisPlan : .notRecorded
                 }
             }
 
@@ -397,11 +452,82 @@ final class GoogleMeetSource: CloudImportSource {
         return rows
     }
 
-    private func recording(
+    /// What one meeting's lookup found.
+    ///
+    /// A named `Sendable` struct rather than the tuple this used to return, so
+    /// it can cross a task-group boundary.
+    private struct RecordingLookup: Sendable {
+        let fileID: String?
+        let recordExpires: Date?
+    }
+
+    /// How many meeting lookups are in flight at once.
+    ///
+    /// Four, the same bound §9 puts on concurrent downloads — not because the
+    /// two are the same problem, but because one number this codebase can
+    /// justify beats two it cannot. The constraint here is Google's per-user
+    /// quota, which is per-minute and shared across every call this adapter
+    /// makes, so unbounded fan-out on a busy calendar would trade a slow list
+    /// for a rate-limited one.
+    private static let lookupConcurrency = 4
+
+    /// Runs the per-meeting lookups concurrently and returns them keyed by the
+    /// caller's own index, so calendar order survives the reordering that
+    /// concurrency guarantees.
+    ///
+    /// Static, and taking the session and token as parameters, so no child task
+    /// captures `self`: this adapter holds mutable state (`driveFileIDs`,
+    /// `identity`) that must not be touched off the calling context.
+    private static func lookUpRecordings(
+        jobs: [(index: Int, code: String, start: Date)],
+        accessToken: String,
+        session: URLSession
+    ) async -> [Int: RecordingLookup] {
+        guard !jobs.isEmpty else { return [:] }
+        return await withTaskGroup(of: (Int, RecordingLookup?).self) { group in
+            var results: [Int: RecordingLookup] = [:]
+            var next = 0
+
+            while next < min(lookupConcurrency, jobs.count) {
+                let job = jobs[next]
+                next += 1
+                group.addTask {
+                    (job.index, await Self.recording(forMeetingCode: job.code, near: job.start,
+                                                     accessToken: accessToken, session: session))
+                }
+            }
+            // Refill as each finishes rather than in waves: a wave stalls on
+            // its slowest member while three connections sit idle.
+            while let (index, found) = await group.next() {
+                if let found { results[index] = found }
+                if next < jobs.count {
+                    let job = jobs[next]
+                    next += 1
+                    group.addTask {
+                        (job.index, await Self.recording(forMeetingCode: job.code, near: job.start,
+                                                         accessToken: accessToken, session: session))
+                    }
+                }
+            }
+            return results
+        }
+    }
+
+    /// Finds the recording for one meeting, or establishes that there isn't one.
+    ///
+    /// **Returns nil for two different facts, and that conflation is a known
+    /// gap.** "There is no recording" and "the lookup failed" both arrive here
+    /// as nil, and the caller renders both as *not recorded* — a claim of
+    /// knowledge in the second case. It is bounded (a failed lookup makes a row
+    /// unfetchable, which is the safe direction) but it is exactly the
+    /// plausible-wrong-answer shape this file's header warns about, and closing
+    /// it needs an availability case the shared row model does not have yet.
+    private static func recording(
         forMeetingCode code: String,
         near start: Date,
-        accessToken: String
-    ) async -> (fileID: String?, recordExpires: Date?)? {
+        accessToken: String,
+        session: URLSession
+    ) async -> RecordingLookup? {
         // TRAP: the filter string uses snake_case field names while the JSON
         // response is camelCase. `space.meetingCode = …` returns an empty list
         // with HTTP 200 — a silent no-match that looks exactly like "there was
@@ -430,22 +556,35 @@ final class GoogleMeetSource: CloudImportSource {
 
         let expires = record.expireTime.flatMap(Self.parseRFC3339)
 
-        var recURL = URLComponents(string: "https://meet.googleapis.com/v2/\(name)/recordings")!
-        recURL.queryItems = []
-        var recRequest = URLRequest(url: recURL.url!)
+        // `name` is remote-controlled (`conferenceRecords/<id>`), so it goes
+        // through the failable initialiser rather than a force-unwrap — the
+        // same rule this file applies to `fileID` in `fetch`, and for the same
+        // reason: a third party decides what is in the string, and a crash is
+        // a worse outcome than a row that can't be fetched.
+        guard let recURL = URL(string: "https://meet.googleapis.com/v2/\(name)/recordings") else {
+            return RecordingLookup(fileID: nil, recordExpires: expires)
+        }
+        var recRequest = URLRequest(url: recURL)
         recRequest.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         guard let (recData, recResponse) = try? await session.data(for: recRequest),
               GoogleResponseClassifier.classify(
                 status: (recResponse as? HTTPURLResponse)?.statusCode ?? 0, body: recData) == .ok,
               let recPage = try? JSONDecoder().decode(RecordingsPage.self, from: recData)
-        else { return (nil, expires) }
+        else { return RecordingLookup(fileID: nil, recordExpires: expires) }
 
         // Only a FILE_GENERATED recording has bytes behind it. STARTED and
         // ENDED both mean "not yet", and Google's own propagation delay is
         // roughly the length of the meeting — so offering a row for those
         // would produce a fetch that 404s minutes after the researcher ticks it.
+        //
+        // KNOWN GAP: `.first` where a meeting stopped and restarted recording
+        // yields two FILE_GENERATED entries, and the second half is dropped in
+        // silence — a §6-class loss, since a half-session analyses cleanly and
+        // reads as complete. Fixing it means one row producing two files, which
+        // the row model does not express. Unproven either way until a segmented
+        // recording is actually observed.
         let generated = recPage.recordings?.first { $0.state == "FILE_GENERATED" }
-        return (generated?.driveDestination?.file, expires)
+        return RecordingLookup(fileID: generated?.driveDestination?.file, recordExpires: expires)
     }
 
     // MARK: Fetching

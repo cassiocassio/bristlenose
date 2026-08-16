@@ -403,9 +403,28 @@ struct CloudImportRowTests {
         #expect(notMine.statusLabel == "A. Bianchi")
     }
 
-    @Test("A personal account's rows say the plan can't record")
-    func planRefusalLabel() {
-        #expect(row(local: .notImported, video: .notOnThisPlan).statusLabel == "Not recorded")
+    /// The two refusals that look identical at row level and are not the same
+    /// fact — and this test used to prove they were conflated without anyone
+    /// reading it that way. Its name said *the plan can't record*; its one
+    /// assertion checked for **"Not recorded"**. The name and the assertion
+    /// disagreed, which was the bug (Finding 117) sitting in plain sight.
+    ///
+    /// The consequence is invisible at row level and severe in the blanket
+    /// state: a Workspace researcher whose month happened to contain no
+    /// recordings was told their *account* could not record, and sent to argue
+    /// with an admin about an edition they already had.
+    @Test("Not-recorded and can't-record are different sentences")
+    func refusalsAreDistinguished() {
+        // Nobody pressed record. An ordinary month, not a fault.
+        #expect(row(local: .notImported, video: .notRecorded).statusLabel == "Not recorded")
+        // A personal account, which cannot record a Meet call at all — so the
+        // recording status of any given meeting is not merely absent, it is
+        // unknowable. Saying "not recorded" here would imply it could have been.
+        #expect(row(local: .notImported, video: .notOnThisPlan).statusLabel == "Needs a paid plan")
+        // Both are equally unfetchable, which is why the labels are the only
+        // thing carrying the difference.
+        #expect(!row(local: .notImported, video: .notRecorded).showsCheckbox)
+        #expect(!row(local: .notImported, video: .notOnThisPlan).showsCheckbox)
     }
 }
 

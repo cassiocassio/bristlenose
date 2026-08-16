@@ -343,6 +343,23 @@ enum ArtifactAvailability: Hashable {
     case needsScope(String)
     /// This account's plan doesn't produce it.
     case notOnThisPlan
+    /// We were allowed to look, we looked, and nobody recorded this meeting.
+    ///
+    /// **Distinct from `.notOnThisPlan`, and the distinction is the whole
+    /// reason this case exists.** Both produce an unfetchable row, so the
+    /// temptation is to reuse the plan case — which is what Google's adapter
+    /// did until 16 Aug 2026, before a single real list had ever run. The
+    /// consequence only shows when *every* row is refused, which is an
+    /// ordinary month for a researcher who took notes instead of recording:
+    /// the window's blanket state then told a paying Workspace customer that
+    /// "this account can't record Meet calls", and the fix it implied was to
+    /// go and argue with their admin about an edition upgrade they already
+    /// have.
+    ///
+    /// An un-recorded meeting is not a capability failure and must not be
+    /// reported as one. Only `GoogleAccountTier.personal` earns
+    /// `.notOnThisPlan`, where the claim is literally true.
+    case notRecorded
     /// Someone else organised the meeting.
     case notOrganiser(organiser: String?)
     /// The platform doesn't offer it at all.
@@ -487,8 +504,13 @@ struct CloudImportRow: Identifiable, Equatable {
         switch video {
         case .notOrganiser(let organiser):
             return organiser ?? "Someone else"
-        case .notOnThisPlan:
+        case .notRecorded:
             return "Not recorded"
+        case .notOnThisPlan:
+            // Not "Not recorded" — on this branch the meeting's recording
+            // status is unknown and unknowable, because the account could
+            // never have produced one.
+            return "Needs a paid plan"
         case .needsScope:
             return "Needs access"
         case .unsupported:

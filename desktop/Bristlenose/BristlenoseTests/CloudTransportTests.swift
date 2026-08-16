@@ -443,7 +443,10 @@ struct ListingTransportTests {
         // is indistinguishable from a study that had fewer sessions — so the
         // terminal state has to be carried, not inferred.
         StubURLProtocol.reset()
-        for _ in 0..<40 {
+        // Eighty, deliberately more than both caps together. A queue sized to
+        // the expected count cannot tell "it stopped because the cap held" from
+        // "it stopped because the stub ran dry", and the second proves nothing.
+        for _ in 0..<80 {
             StubURLProtocol.enqueue(.json(
                 #"{"value":[],"@odata.nextLink":"https://graph.microsoft.com/v1.0/next"}"#))
         }
@@ -461,8 +464,19 @@ struct ListingTransportTests {
             return
         }
         #expect(!listing.arithmetic.isExact)
-        // It stopped rather than spinning: the cap is 20, not 40.
-        #expect(StubURLProtocol.requests.count <= 21)
+        // It stopped rather than spinning. **Two** bounded paginators, not one:
+        // the recordings walk caps at 20, and then `list` still reads the
+        // calendar for the roster, which caps at 20 of its own. 40 is the sum
+        // of two honest bounds, not one loose one.
+        //
+        // This bound read `<= 21` until 16 Aug 2026, when the calendar read
+        // gained pagination and the assertion started failing — correctly. The
+        // second paginator was added and the desktop suite was not re-run, so
+        // the regression sat for a day in a test whose entire subject is
+        // *noticing that a walk did not finish*. Worth the irony being written
+        // down rather than quietly corrected.
+        #expect(StubURLProtocol.requests.count <= 40,
+                "neither paginator may exceed its cap: \(StubURLProtocol.requests.count)")
     }
 
     @Test("Zoom splits a 90-day window into month-sized requests")

@@ -26,6 +26,16 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
 > flattens the two together. §5's "strongest artifact position" is corrected;
 > §6 carries the Google specimens.
 >
+> **Zoom is parked, 16 Aug 2026 — a scheduling decision, not a design one.**
+> `File ▸ Import ▸ Zoom` is withheld behind `BristlenoseFlags.cloudImportZoom`
+> (default off) so Teams and Meet can reach releasable quality first. Everything
+> in this document about Zoom still stands and still compiles; only the menu item
+> is withheld. §5's Teams → Zoom → Meet *sequencing* is now overtaken by events
+> in practice — Meet has a live tenant and Zoom has no account at all — but the
+> reasoning behind that order is untouched and should be re-read, not re-derived,
+> when Zoom is picked back up. Pick-up brief:
+> `cloud-import-zoom-parked.md` in the maintainer's private handoffs.
+>
 > **Still pre-contact:** nothing has completed a **download** on any platform.
 > Treat every claim about the transfer path as untested — the three claims about
 > the *listing* path that met reality this week were all wrong.
@@ -259,6 +269,17 @@ So Zoom's gate is the largest of the three in *substance*, while Google's is the
 **Google last, but no longer conditional — and its ceiling is higher than Teams'.** _Revised 15 Aug 2026; the 14 Aug reasoning was priced off the wrong door (§3)._ The recurring cost and the annual re-audit were the whole argument for gating Google on demand, and on the `meetings.space.readonly` + `drive.file` path there is no recurring cost, no assessment and no admin gate. What remains is **sensitive-scope verification** — Google review, demo video, verified domain, roughly a week to ten days — which is latency, one-time, unpaid, and the same *kind* of gate as Zoom's review rather than a different order of thing.
 
 So the order stands as **Teams → Zoom → Meet**, on unchanged reasoning — Teams has no third-party gate at all, and Zoom's clock should start early — but the reason for Google's position changes from *"it costs money forever"* to *"it is third in a queue"*. Start its verification clock alongside Zoom's; the queue is the cost now.
+
+> **Corrected 16 Aug 2026 — the paragraph above prices Google's third door and never names the first two, and for the alpha cohort it is the wrong door.** Sensitive-scope verification gates **general availability**. It does not gate a cohort, and Google publishes two ways past it:
+>
+> - **Internal audience.** A Cloud project owned by a Workspace organisation may set its consent screen to Internal. Sensitive scopes work at once, for everyone in the org, with **no verification of any kind**. Nobody outside the org can sign in — which is the whole cost.
+> - **External, publishing status Testing.** Up to **100 named test users**, sensitive scopes, no verification. The cost is that refresh tokens issued in this state expire after **7 days**, so a tester re-authenticates weekly.
+>
+> The alpha cohort is 5–10 people (§9). It fits the second door with ninety places spare, and the first door covers dogfooding today at zero cost. So "roughly a week to ten days" is a real gate on shipping and **not** a gate on the cohort, and the sentence above reads as though it were both.
+>
+> **This inverts the comparison the previous two days built, and that is the finding.** §3's load-bearing Microsoft question was answered on 16 Aug by the Entra UI itself: *"End users cannot grant consent to newly registered multitenant apps without verified publishers"* — so Teams, the platform chosen precisely because it had **no third-party gate**, cannot reach a cohort researcher until Publisher Verification is done (MPN account, DNS-verified domain). Meanwhile Google's cohort door opens by adding an email address to a list.
+>
+> **Teams → Zoom → Meet is not reordered by this**, because the order was chosen on ceiling and effort rather than on gate latency, and Teams' build is done while Google's has never made a live call. But the standing claim that Teams is the one that "can ship to the cohort the day it is finished" is now false, and Google is the one that could — a reversal worth holding in view if Publisher Verification stalls.
 
 > **Inverted 16 Aug 2026 by a live tenant, and the inversion is the useful part.** The paragraph below is correct about the **API** door and wrong about the platform. It reasoned from `conferenceRecords` alone and never asked what the *file* door serves — which turned out to be a tab inside a Gemini notes Doc (§3). Both doors were real; only one had been priced.
 

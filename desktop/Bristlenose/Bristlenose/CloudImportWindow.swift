@@ -376,9 +376,26 @@ struct CloudImportWindow: View {
         }
     }
 
+    /// Projects that can actually receive a file.
+    ///
+    /// A project whose `path` is empty is an unlocated placeholder — the
+    /// "Drag Interviews Here" state — and has no folder behind it. Offering one
+    /// as a destination is offering a choice that cannot work: on 16 Aug 2026 a
+    /// real recording was fetched, verified byte-for-byte, and published into
+    /// `URL(fileURLWithPath: "")`, which resolves to the **process's current
+    /// working directory** — the sandbox container root. The window reported
+    /// "✓ Imported" and the researcher had no way to find their file.
+    ///
+    /// Filtering here rather than refusing at `start()` keeps this a correctness
+    /// fix rather than a new UI state: the primary button's existing disabled
+    /// condition (`destinationID == nil`) already covers "nothing selectable".
+    private var deliverableProjects: [Project] {
+        projectIndex.projects.filter { !$0.path.isEmpty }
+    }
+
     private var destinationPicker: some View {
         Picker("", selection: $destinationID) {
-            ForEach(projectIndex.projects) { project in
+            ForEach(deliverableProjects) { project in
                 Text(project.name).tag(Optional(project.id))
             }
         }
@@ -428,6 +445,12 @@ struct CloudImportWindow: View {
         // (`.cantFind`, `.inCloud`, past the watcher cap, or no bookmark data).
         // Falling back to the raw path keeps today's behaviour for those rather
         // than introducing a refusal state this pass has no design for.
+        // No empty-path fallback. `URL(fileURLWithPath: "")` is the cwd, not a
+        // refusal, and it published a real recording into the sandbox container
+        // while the window said "Imported" (16 Aug 2026). The picker no longer
+        // offers unlocated projects, so this guard should be unreachable — it
+        // is here because "should be unreachable" is what the last one said.
+        guard !project.path.isEmpty else { return }
         let destination = projectIndex.leaseURL(projectID: destinationID)
             ?? URL(fileURLWithPath: project.path)
         store.startFetch(destination: destination)

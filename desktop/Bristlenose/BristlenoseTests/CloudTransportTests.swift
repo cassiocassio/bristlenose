@@ -223,6 +223,59 @@ struct RedirectHeaderTests {
     }
 }
 
+// MARK: - An undeliverable destination
+
+/// The bug a real first download found, on 16 Aug 2026.
+///
+/// The import window offered "New Project" — an unlocated placeholder whose
+/// `path` is the empty string — and `CloudImportWindow.start()` fell back to
+/// `URL(fileURLWithPath: project.path)` when no security-scoped lease existed.
+/// An empty path resolves to the process's **current working directory**, so
+/// the transfer aimed at somewhere the researcher never chose. The window then
+/// reported "✓ Imported" and "1 imported", and no file existed anywhere.
+///
+/// This suite pins the transport half: `download` must not report success for a
+/// destination it cannot write. The window half — not offering an undeliverable
+/// destination at all — is pinned separately.
+@Suite("An undeliverable destination", .serialized)
+struct UndeliverableDestinationTests {
+
+    private func attempt(destination: URL) async -> Result<Int64, Error> {
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.mp4(bytes: 4096))
+        let downloader = CloudDownloader(session: StubURLProtocol.session())
+        let request = CloudDownloadRequest(
+            url: URL(string: "https://api.example.test/file")!,
+            accessToken: "T",
+            policy: .meet,
+            expected: ExpectedFile(expectedFormat: .mp4),
+            destination: destination
+        )
+        do { return .success(try await downloader.download(request) { _, _ in }) }
+        catch { return .failure(error) }
+    }
+
+    @Test("A directory that does not exist is a failure, not an import")
+    func nonexistentDirectoryFails() async {
+        let dest = URL(fileURLWithPath: "/nonexistent-\(UUID().uuidString)/out.mp4")
+        guard case .failure = await attempt(destination: dest) else {
+            Issue.record("reported success for a destination it cannot write")
+            return
+        }
+    }
+
+    @Test("An unwritable directory is a failure, not an import")
+    func unwritableDirectoryFails() async {
+        // /System is real and readable, so this fails at the write rather than
+        // at a missing parent — a different code path from the case above.
+        let dest = URL(fileURLWithPath: "/System/out-\(UUID().uuidString).mp4")
+        guard case .failure = await attempt(destination: dest) else {
+            Issue.record("reported success writing into /System")
+            return
+        }
+    }
+}
+
 // MARK: - What lands on disk
 
 @Suite("What lands on disk", .serialized)

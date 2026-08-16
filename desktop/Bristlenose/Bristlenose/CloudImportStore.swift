@@ -341,9 +341,16 @@ final class CloudImportStore: ObservableObject {
     // caller — superseded by replacement rather than merely unfinished, which
     // is the distinction between deleting it and parking it.
 
-    func toggleFocused() {
-        guard let focusedRowID else { return }
-        toggle(focusedRowID)
+    /// Space, from the outline.
+    ///
+    /// - Returns: whether the tick moved. False covers both "nothing is
+    ///   focused" and "that row refuses" — the caller beeps either way, because
+    ///   silence after a key that was understood reads as the app having missed
+    ///   the keystroke.
+    @discardableResult
+    func toggleFocused() -> Bool {
+        guard let focusedRowID else { return false }
+        return toggle(focusedRowID)
     }
 
     // MARK: - Fetching

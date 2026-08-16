@@ -757,10 +757,7 @@ extension CloudImportOutlineView {
         ///   Finder, Mail and Xcode all do it, and silence reads as the app
         ///   having missed the keystroke.
         @discardableResult
-        func toggleFocusedRow() -> Bool {
-            guard let focused = store.focusedRowID else { return false }
-            return store.toggle(focused)
-        }
+        func toggleFocusedRow() -> Bool { store.toggleFocused() }
     }
 }
 

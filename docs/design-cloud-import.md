@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-08-15 (evening — second pass, post-tenant)
-trued-against: HEAD@main on 2026-08-15 (8b8eafc9)
+last-trued: 2026-08-16 (third pass, post-Google-tenant)
+trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
 ---
 
 > **Truing status:** Partial — trued **twice** on 15 Aug 2026, and the second
@@ -18,12 +18,32 @@ trued-against: HEAD@main on 2026-08-15 (8b8eafc9)
 > **Unchanged and still correct:** §1's priorities, §2, §4, §5's sequencing,
 > §7's spine, §8, and §6's verification ladder.
 >
+> **Third pass, 16 Aug 2026 — a Google tenant, same lesson again.** A Business
+> Standard Workspace was bought and a Meet recorded. Two claims met reality and
+> one of them changed v1's scope: the Meet row in §3 had **no tier gate** where
+> Zoom's said "Pro plan or higher", and Google's transcript turns out **not to
+> be a file at all** — it is a tab inside a Gemini notes Doc, and every export
+> flattens the two together. §5's "strongest artifact position" is corrected;
+> §6 carries the Google specimens.
+>
 > **Still pre-contact:** nothing has completed a **download** on any platform.
-> Treat every claim about the transfer path as untested — the two claims about
-> the *listing* path that met reality this week were both wrong.
+> Treat every claim about the transfer path as untested — the three claims about
+> the *listing* path that met reality this week were all wrong.
 
 ## Changelog
 
+- _2026-08-16_ — **the first live Google tenant**, and the same shape of lesson
+  one platform over. A Business Standard Workspace was bought and a Meet
+  recorded, which settled the folder and naming grammar by measurement, and
+  **repriced the transcript badly enough to change v1's scope: Google's
+  transcript is now out of scope.** §3's Meet row gains the tier gate it lacked
+  while Zoom's had one, plus a Google-mechanics block; §3's and §5's "strongest
+  artifact position" claims are corrected in place; §6 carries the observed
+  specimens. Two findings outrank the rest: the transcript is **not a file** —
+  it is a tab inside a Gemini notes Doc, and every export flattens the two
+  together — and a live defect in `s04_parse_docx.py` ingests that flattened
+  export as speech, reachable today from drag-drop and owned by no adapter
+  (recorded in `bristlenose/stages/CLAUDE.md`).
 - _2026-08-15 (evening)_ — trued against the **first live tenant** (`8b8eafc9`).
   §0: Teams is registered and signs in; `CFBundleURLTypes` was never required
   and this doc claimed it was; the probe list re-cut (one answered, one now
@@ -60,6 +80,7 @@ trued-against: HEAD@main on 2026-08-15 (8b8eafc9)
 **What is not built — and the first item means nothing works yet.**
 
 - **Teams is registered and signs in. Google and Zoom are not.** A Microsoft 365 Business Basic tenant (`bristlenose.onmicrosoft.com`, £6.48/mo, **monthly**) and an Entra app registration were created 15 Aug 2026 — multitenant + personal accounts, redirect `msauth.app.bristlenose://auth` as a public client, public client flows on, delegated `Files.Read` / `Calendars.Read` / `offline_access` / `User.Read`. The client ID lives in the app's sandboxed `UserDefaults`, **not in this repo**. Google's and Zoom's configs still read a client ID and return `nil`, so neither can sign in.
+  - **A Google tenant now exists, and it is not the same thing as a Google registration.** _16 Aug 2026._ A Workspace **Business Standard** tenant was bought on a throwaway domain (Flexible/monthly, ~£11.80/user; the domain was taken at signup rather than pointed at `bristlenose.app`, whose MX carries live mail). It has recorded a real Meet, which is what §3's and §6's Google findings are measured against. **No OAuth client is registered in any Google Cloud project**, so `GoogleMeetConfig` still returns `nil` and nothing can sign in. When one is created it belongs in a Cloud project owned by an account that outlives the tenant — the throwaway domain is a *data source*, not the app's identity, and an OAuth client registered inside it dies with it.
   - **`CFBundleURLTypes` turned out not to be required, and this doc said it was.** Teams signed in with no URL type registered in the target: `ASWebAuthenticationSession(url:callbackURLScheme:)` has the OS route the callback to the initiating session directly, never through LaunchServices — which is the security property §2 chose it for in the first place. **Zoom's `associated-domains` entitlement and a deployed `apple-app-site-association` file are still genuinely required**, because Zoom refuses custom schemes and its callback is HTTPS.
 - **No token is persisted, and no refresh is wired.** §2 and §7 describe a Keychain refresh token keyed on `(platform, account)`; nothing writes to the Keychain, and `refresh` is never called. Access tokens last about an hour on all three, so even once registration lands, a long batch can 401 mid-flight and every launch will re-prompt.
 - **No adapter derives local row state.** §6's `stat`-based six/seven-state model is implemented in `ImportRowState` and exercised only by `FixtureCloudSource`; all three live adapters hardcode `.notImported`.
@@ -68,7 +89,7 @@ trued-against: HEAD@main on 2026-08-15 (8b8eafc9)
   Of the four open probes, one is answered and one is now known to be unanswerable by us:
   - ✅ **Is the transcript a sibling file in OneDrive?** **No** — see §3. §1, §3 and §5 stand unrevised.
   - 🔒 **Can a researcher self-consent in a real client tenant?** Still open, and **our own tenant can never answer it**: the owner is Global Administrator, so consent always succeeds and the org-wide consent checkbox only renders for admins. This needs a cohort member in a tenant we do not administer — see §5.
-  - ⬜ Does the Google Picker surface a Meet recording? Untouched.
+  - ⬜ Does the Google Picker surface a Meet recording? **Still untouched, but now cheap** — a Google tenant exists with a real recording in it (below). The sub-risk is *also* still open and needs a second body: the 16 Aug call was solo, so nothing has yet been observed about what an **attendee** sees in their own Drive after the July shortcut change. Invite a free `@gmail.com` to a recorded call and both questions close together.
   - ⬜ Does Graph serve `expirationDateTime` per driveItem? Untouched — but now cheaply answerable, and a captured response from the app's own listing may already contain it, since that listing sets no `$select`.
   - ⬜ *New, same cost:* does business OneDrive return `sha256Hash`, or only `quickXorHash`? One listing settles it, and §6's verification ladder degrades differently depending on the answer.
 
@@ -121,7 +142,7 @@ Three artifacts, not one — and **they do not share a gate**. The 28 Jul versio
 |---|---|---|---|---|
 | **Teams** | `Calendars.Read` — no admin consent ✓verified. Or free: the title is in the recording filename (§6) | `Files.Read` — no admin consent ✓verified | `Calendars.Read` — no admin consent ✓verified | `OnlineMeetingTranscript.Read.All` — **admin consent required, even delegated** ✓verified |
 | **Zoom** | `cloud_recording:read:list_user_recordings` — user-managed, no admin ✓verified. **Pro plan or higher** | same call returns `download_url`; **no download scope exists** — the same bearer authorises it ✓verified | **none ✓verified** — the list call carries no attendees at all; a roster needs a report endpoint behind an admin scope | **same call returns the VTT** ✓verified — speaker names as a `Name:` cue prefix, **English only, every plan** |
-| **Meet** | `calendar.events.readonly` — sensitive ✓verified | `drive.file` + Picker — **non-sensitive** ✓verified. (`drive.meet.readonly` — restricted → CASA ✓verified, and refused) | `meetings.space.readonly` — sensitive ✓verified | `meetings.space.readonly` — **sensitive** ✓verified |
+| **Meet** | `calendar.events.readonly` — sensitive ✓verified. **Business Standard or higher** ✓verified | `drive.file` + Picker — **non-sensitive** ✓verified. (`drive.meet.readonly` — restricted → CASA ✓verified, and refused) | `calendar.events.readonly` `attendees[]`, or `meetings.space.readonly` — sensitive ✓verified | **descoped from v1** ✓verified — not a file; a tab inside a Gemini Doc (below) |
 
 Cells are marked ✓verified or ⚠️unverified deliberately. **The two Google cells were resolved 15 Aug 2026, and the answer reprices §5's third slot rather than reordering it** — the sequence still runs Teams → Zoom → Meet; see below. The Zoom roster cell was resolved the same day and is now marked ✓verified in the table: the list call carries no attendees at all. _Zoom was previously described here as "the platform that could settle §8"; Meet's per-utterance transcript now makes it the better candidate — see §8._
 
@@ -162,7 +183,7 @@ So v1 takes `Calendars.Read` and **owes a compensating control instead**: reques
 
 **Google was mispriced, and the error was mine — I costed one door and called it the platform.** The 14 Aug claim was that `drive.meet.readonly` is restricted, and that is **correct** (verified 15 Aug 2026 against Google's own scope table *and* the 11 Jul 2024 Drive release note announcing it as restricted on day one). What was wrong is the inference drawn from it. `drive.meet.readonly` is not the only door to a Meet recording, and it is not even the cheapest — it is the *most expensive* of three, and we should take neither of the other two by accident.
 
-- **The Meet REST API is a separate, cheaper door.** `meetings.space.readonly` is **sensitive**, not restricted — no assessment, no fee, nothing admin-gated — and it serves `conferenceRecords.transcripts.entries`: per utterance, a `participant` reference, `startTime`, `endTime` and `text`, with `participants.get` resolving the reference to a display name. That is a **complete speaker-attributed, timecoded transcript on the cheap tier**, and it is the strongest artifact position of any of the three platforms (§8 revisits this).
+- **The Meet REST API is a separate, cheaper door.** `meetings.space.readonly` is **sensitive**, not restricted — no assessment, no fee, nothing admin-gated — and it serves `conferenceRecords.transcripts.entries`: per utterance, a `participant` reference, `startTime`, `endTime` and `text`, with `participants.get` resolving the reference to a display name. That is a **complete speaker-attributed, timecoded transcript on the cheap tier**, and it is the strongest artifact position of any of the three platforms (§8 revisits this). ⚠️ _Corrected 16 Aug 2026: this remains true of the **API** door and is why §8's experiment is still cheapest to run here — but it is no longer an argument for v1, which descoped Google's transcript entirely. It is also Workspace-only, so it is blind to the paying consumer accounts the file door reaches. See the Google-mechanics block below._
 - **`drive.file` + Picker is non-sensitive and reaches the bytes.** The Meet API hands out a Drive `fileId` and an `exportUri` that is a *browser view link* (`drive.google.com/file/d/{id}/view`), never a byte stream — so downloading means the Drive API either way. `drive.file` covers "files the user shares with an app while using the Google Picker API", and Google actively recommends that pairing over broader scopes.
 - **So Google can be built with zero restricted scopes.** The recurring cost that put it last does not have to be paid at all.
 
@@ -187,6 +208,17 @@ So the list UX and the affordable scope are **not** mutually exclusive. Bristlen
 **Microsoft's asymmetry is the mirror image, and that is the interesting part.** On Microsoft, reading a recording *as a meeting artifact* is admin-gated while the same bytes *as a file* are user-consentable — so we take the file door. On Google it inverts: the *artifact* door is the cheap one and nothing is admin-gated at all. Same feature, opposite doors, for opposite reasons. (Microsoft's nearest picker analogue, `Files.Read.Selected`, is *not* the counterpart it looks like — Preview, admin-consent, and its own docs say it "should not be used for directly calling Microsoft Graph APIs". Verified 15 Aug 2026.)
 
 **Do not path-match `Meet Recordings` — that folder was renamed last month.** Google moved recordings into a **"Google Meet"** folder in the host's My Drive with a subfolder per meeting, rolling out 22–30 Jul 2026, renaming the old folder "Legacy Meet Recordings", and told admins to "audit any API scripts or automated workflows that rely on specific folder names or IDs". Resolve by file id from the API or by Picker selection, never by walking a named folder. The same change gives *attendees* shortcuts in their own Drive — which is a lead on §4's not-the-organiser case, and the reason the Picker sub-risk above matters.
+
+**Google's mechanics, measured 16 Aug 2026 on a live Business Standard tenant — six findings, and one of them changed v1's scope.**
+
+- **Recording is Business Standard or higher, and this table had no tier gate where Zoom's did.** Free personal accounts cannot record at all. Workspace **Business Starter cannot either, despite costing money** — so "the client is on Workspace" is not the question; the edition is. Transcripts sit behind the same gate. Getting this wrong does not produce an error, it produces an empty list, which is this feature's designed output *and* its failure output (§6, requirement 1).
+- **Consumer accounts can record but cannot be listed, and the split runs straight through the two doors.** Google One Premium (2 TB) and AI Pro *do* grant Meet recording on an ordinary `@gmail.com`, saved to the same Drive folder — but the **Meet REST API serves only Workspace-hosted meetings**, so `conferenceRecords` is blind to them. A paying consumer researcher is reachable by `calendar.events.readonly` + `drive.file` + Picker and invisible to the artifact door. Freelancers are exactly this population, so the door choice is a coverage decision, not just a cost one.
+- **Transcripts are on by default and have no admin toggle.** Google's own page says so for every Workspace edition, and the Meet page in Admin console carries no transcript switch at all — recording has one, transcription does not. The host starts it in-call (Activities → Transcripts). Anyone hunting Admin console for the setting will not find it; **its absence there is not evidence the edition lacks the feature**, and the in-call menu is where absence would actually mean something.
+- **The transcript is not a file, and this is the finding that descoped it.** Google saves it as a **tab inside** a Doc named `<title> - <timestamp> - Notes by Gemini`, beside a Notes tab holding Gemini's summary. A Google Doc has no canonical byte form — `files.get?alt=media` fails on it outright, and every `files.export` rendering (`.docx`, `.txt`, `.md`) **flattens both tabs into one stream**. Measured on the specimen: 19 paragraphs, of which **one** is speech; the rest are Gemini's summary, Gemini's own UI chrome (*"Take a short survey to let us know your feedback"*), and — in paragraph 3 — **an attendee's email address**. On a real session, where Gemini has enough speech to summarise, those stub paragraphs are pages of confident AI prose about what participants said. The clean door does exist: `documents.get` with `includeTabsContent=true` returns tabs as addressable subtrees under `document.tabs[]`, so the transcript can be read without the Notes tab ever being touched. But that is a third API, possibly a fourth scope (unverified: whether `drive.file` alone authorises `documents.get`), and a document-tree walk. **Of the three platforms Google is the only one where "download the transcript" is not a well-defined operation** — Teams serves a `.vtt` from Stream, Zoom returns one on the same call as the video, Google returns whichever lossy projection you ask for.
+- **Automatic Gemini note-taking is default-on for meetings with 3+ guests**, so a per-meeting folder can hold a third artifact nobody asked for. A two-person interview does not trigger it; a call with a client PM and a note-taker does — which is the common shape in agency work.
+- **`capabilities.canDownload` is Google's answer to §4's block-download policy, and it is better than Teams'.** Drive surfaces "Security limitations" per item, and on Google download restriction is **owner-settable per recording**, not only an org-wide admin policy as on SharePoint. So §6's **view only** row state resolves directly from the listing rather than by inference — which is precisely what §6's requirement 1 demands and what Teams cannot supply. Note the consequence for copy: on Google that state can be the researcher's own past choice, so "your organisation blocks this" is the wrong sentence.
+
+**The v1 decision that follows: Google's transcript is out of scope.** _Taken 16 Aug 2026._ Import the video; let Whisper do the words. This removes the Docs API, the tab walk, the `documents.readonly` question and the Gemini-contamination risk from the adapter in one move — and §8 has never established that a platform transcript beats our own transcription anyway, so nothing of proven value is being given up. **The consequence to take deliberately** is that dropping the transcript also removes the main argument for `meetings.space.readonly`, and v1 could then run on `calendar.events.readonly` + `drive.file` + Picker alone — which would additionally serve consumer accounts. What that costs is the pre-scoped Picker: without `conferenceRecords` there is no `driveDestination.file` id per meeting, so `file_ids` cannot be populated and the researcher browses the folder rather than confirming a ticked set. That is the §3 objection above, returning. Decide it on the list UX, not on the scope bill.
 
 ---
 
@@ -228,7 +260,11 @@ So Zoom's gate is the largest of the three in *substance*, while Google's is the
 
 So the order stands as **Teams → Zoom → Meet**, on unchanged reasoning — Teams has no third-party gate at all, and Zoom's clock should start early — but the reason for Google's position changes from *"it costs money forever"* to *"it is third in a queue"*. Start its verification clock alongside Zoom's; the queue is the cost now.
 
+> **Inverted 16 Aug 2026 by a live tenant, and the inversion is the useful part.** The paragraph below is correct about the **API** door and wrong about the platform. It reasoned from `conferenceRecords` alone and never asked what the *file* door serves — which turned out to be a tab inside a Gemini notes Doc (§3). Both doors were real; only one had been priced.
+
 **And one artifact where Google is the strongest of the three, not the weakest.** Teams' transcript is admin-walled (§3) and Zoom's rides the same call as the video; Google's is a **first-class, per-utterance, speaker-attributed, timecoded API resource on a sensitive scope**. If §8's open question is ever settled in favour of the platform transcript, Google is where that pays off most — which is an argument for building it *before* the answer arrives rather than after, since it is the platform that would make the experiment worth running.
+
+**What replaces it: for v1, Google is the weakest of the three, and deliberately so.** With the transcript descoped (§3), Google delivers video and roster where Teams delivers video, roster and a hand-downloadable `.vtt`, and Zoom delivers all three from one call. That is a scope decision rather than a platform limitation, and it is reversible: the API door is untouched and still the cheapest place to run §8's experiment, because it is the only one of the three that hands over per-utterance speaker attribution without an admin gate. The claim to retire is "Google is where the artifacts are best" as a reason to **sequence** it earlier. The claim to keep is "Google is where the transcript experiment is cheapest to run" as a reason to **return** to it once §8 has an answer.
 
 ---
 
@@ -261,6 +297,25 @@ Take the moment from a source that carries its zone: `driveItem.createdDateTime`
 
 - **A parse refusal must produce a stated row, never a silent drop.** The Swift parser required the `UTC` literal, so every business recording was dropped from the listing — and because a dropped row leaves `outcome` untouched, the window reported a folder *containing* a recording as "No recordings in the last 30 days", and the footer then read "1 organised by someone else" about a meeting the user had organised themselves. That is requirement 1 below failing in precisely the way it exists to prevent.
 - **A filename grammar must be pinned by an observed specimen, never a constructed one.** Bristlenose's *pipeline* had the same bug independently: `_TEAMS_SUFFIX_RE` in `s01_ingest.py` required whitespace where both real formats use a hyphen, so it matched only the fixture invented alongside it in Feb 2026. A downloaded recording and its transcript therefore ingested as **two sessions** — the mp4 re-transcribed from scratch, the report gaining a duplicate participant — live in shipping code for six months with a green suite throughout. Both test suites now carry the real specimens, tagged with tier and capture date, behind a comment marking the line between constructed and observed.
+
+**Google's specimens, captured 16 Aug 2026 on Business Standard, en-GB, BST — and its grammar is *derived*, which Teams' is not:**
+
+```
+folder      Banyalbufar discussion - 2026/08/15 22:45 BST
+recording   Banyalbufar discussion - 2026/08/15 22:45 BST - Recording
+notes doc   Banyalbufar discussion - 2026/08/15 23:02 BST - Notes by Gemini
+downloaded  Banyalbufar discussion - 2026_08_15 23_02 BST - Notes by Gemini.docx
+```
+
+Four things follow, and only the first is good news.
+
+**The file name is the folder name plus a suffix.** So one observed folder tells you the shape of everything inside it, where Teams required a specimen per tier. Drive's UI hides the extension; confirm separately what the API returns for `name`.
+
+**Google names the zone inline — and you still must not parse it.** `BST` sits in the filename where the Teams business tier wrote a bare server-side timestamp, so the moment looks recoverable here in a way it genuinely was not there. It isn't. Zone abbreviations are globally ambiguous (`BST` is British Summer Time here and Bangladesh Standard Time elsewhere; `CST` is three separate zones), and this is presumably rendered in the organiser's locale rather than a fixed one. The Teams rule is unchanged and now holds for two platforms for two different reasons: **take the moment from a source that carries its offset** — `createdDateTime` over the Drive API. Note also minute resolution, no seconds, where Teams gave six digits.
+
+**The recording and its Doc carry different timestamps for the same meeting** — `22:45` and `23:02`. The folder is stamped at conference start and the recording inherits the folder's name; the Doc is stamped when note-taking began. They are provably the same meeting because the Doc's own *Attachments* line names the recording file. So **any timestamp join between a recording and its transcript is dead on Google**, and that in-body cross-reference is the only name-level link there is — localised prose, not a join key. Resolve by id or by Picker selection, exactly as this section already says for folder names.
+
+**The API `name` and the on-disk name are different strings.** Drive returns `2026/08/15 23:02`; the download sanitises `/` and `:` to `_`. This is the invariant above arriving in a new shape — not "one specimen is a guess" but **"one *observation point* is a guess"**. A parser pinned against a downloaded file will not match a listing, and the drag-drop path and the adapter path see different names for the same artifact.
 
 **Do not assume `/Recordings` exists.** That convention is work/school-tier. On a **personal Teams account the recording is attached to the meeting chat** with a Download button — nothing lands in OneDrive, which is why a Graph probe of `/me/drive/root:/Recordings:` returns `itemNotFound` on such an account. The adapter needs a tier check beside the `driveType` check, and a legible refusal rather than an empty list.
 
@@ -323,7 +378,7 @@ From inside the app, "you closed the window" and "your organisation has to appro
 
 **Built 15 Aug 2026 — one download path, three platforms** (`CloudDownloadVerification`, `CloudDownloader`). The sequence is the design, and every step exists because of a failure the previous step cannot catch:
 
-1. **Free space, before a byte moves.** Both Graph and Zoom carry size in the listing, so this is free.
+1. **Free space, before a byte moves.** All three carry size in the listing, so this is free — Google confirmed 16 Aug 2026 on a live tenant.
 2. **The response head, before the destination exists.** An HTML login page or a 59-byte JSON error arriving with a 200 is refused here, so no file is ever created for it.
 3. **Transfer to the system temp dir**, via a `URLSession` *download task* — not `URLSession.bytes`, which reads pleasantly and spends an 800 MB transfer in Swift array bookkeeping.
 4. **Size, then magic bytes, then hash** — increasing cost, so a file failing the free check never pays for the expensive one. Size catches truncation; magic bytes catch the case size cannot, where a redirect served something else of coincidentally similar length; the hash makes Microsoft exact rather than heuristic, since Graph is the only one of the three that publishes one before the download.
@@ -414,7 +469,7 @@ There is no published head-to-head, and there probably cannot easily be one: ven
 
 **Bound the concurrency at 3–4** (the project's existing `asyncio.Semaphore` figure). The benefit is resilience — one stalled file doesn't block the batch — not throughput; a single 1.3 GB transfer already saturates a modest uplink.
 
-**Check free space before a byte moves.** A 6–20 GB batch is the paradigm case for the "free-space precheck; legible `ENOSPC`" that `design-project-storage.md` already decided YES. **Wired 15 Aug 2026** — `CloudDownloader` runs the check before a byte moves, reusing `CopyMachinery.availableBytes()`, and refuses with a named `insufficientSpace` rather than a generic failure. The two pre-existing halves it draws on: `CopyMachinery.availableBytes()`/`insufficientDiskSpace` gates local drag-drop, and `doctor.check_disk_space()` runs only under `bristlenose doctor` — the pipeline run still has no precheck of its own. Both Graph and Zoom carry file size in the listing, so this is free — and worse than the local case if skipped, since a network fetch hitting `ENOSPC` mid-batch has burned real transfer time.
+**Check free space before a byte moves.** A 6–20 GB batch is the paradigm case for the "free-space precheck; legible `ENOSPC`" that `design-project-storage.md` already decided YES. **Wired 15 Aug 2026** — `CloudDownloader` runs the check before a byte moves, reusing `CopyMachinery.availableBytes()`, and refuses with a named `insufficientSpace` rather than a generic failure. The two pre-existing halves it draws on: `CopyMachinery.availableBytes()`/`insufficientDiskSpace` gates local drag-drop, and `doctor.check_disk_space()` runs only under `bristlenose doctor` — the pipeline run still has no precheck of its own. All three carry file size in the listing, so this is free — and worse than the local case if skipped, since a network fetch hitting `ENOSPC` mid-batch has burned real transfer time.
 
 **Read `expirationDateTime` off each file** rather than choosing a window. Microsoft's expiry-warning emails are now a per-tenant setting, so researchers can no longer rely on being told. On expiry the file goes to the recycle bin, not a hard delete, so there is a grace period. Re-resolve the download URL immediately before each fetch, not at list time — they are short-lived by design, and a 404 on a soon-expiring item deserves its own message rather than a generic failure.
 

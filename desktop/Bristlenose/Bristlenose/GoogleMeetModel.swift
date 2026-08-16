@@ -539,12 +539,24 @@ enum AttendeeLine {
 
     /// - Parameter limit: how many names fit. The caller measures; this type
     ///   does not guess at pixels.
+    ///
+    ///   **The default is three, and it is a claim about research sessions
+    ///   rather than about pixels.** A session is the researcher — dropped as
+    ///   self — one or two participants, and at most one observer, so three
+    ///   surviving names covers the large majority of them without an overflow
+    ///   badge appearing on the ordinary case. Two was the original default and
+    ///   was too tight for a window whose *minimum* width is 760pt: it put "+1"
+    ///   on a routine three-person interview.
+    ///
+    ///   It remains a floor rather than the answer. The caller is still meant
+    ///   to measure and pass a real limit — no call site does yet, which is why
+    ///   this default was doing all the work.
     /// - Returns: the names to render and the count of everyone omitted. A
     ///   count, never an ellipsis: "Sarah Chen · J. Whitfield +4" says there are
     ///   six; "Sarah Chen, J. Whit…" says nothing.
     static func compose(
         _ attendees: [CloudImportRow.Attendee],
-        limit: Int = 2
+        limit: Int = 3
     ) -> (names: [String], overflow: Int) {
         let ranked = rank(attendees)
         guard limit > 0 else { return ([], ranked.count) }

@@ -210,6 +210,24 @@ struct AttendeeLineTests {
         #expect(overflow == 2)
     }
 
+    /// Pins the default as a decision rather than a magic number. Three is a
+    /// claim about the shape of a research session — researcher (dropped as
+    /// self), one or two participants, at most one observer — not about pixels.
+    /// Two was the original and put a "+1" badge on a routine three-person
+    /// interview in a window 760pt wide at its narrowest.
+    @Test("The default limit fits a research session, not a phone")
+    func defaultLimitFitsASession() {
+        let (names, overflow) = AttendeeLine.compose([
+            attendee("Martin Storey", "martin@x.example", isSelf: true),
+            attendee("Sarah Chen", "s.chen@y.example", external: true),
+            attendee("Priya Raman", "p.raman@y.example", external: true),
+            attendee("Dana Okonkwo", "d.okonkwo@x.example"),
+            attendee("Tomas Lind", "t.lind@x.example"),
+        ])
+        #expect(names.count == 3)
+        #expect(overflow == 1)
+    }
+
     @Test("Overflow is a count, not an ellipsis")
     func countNotEllipsis() {
         let people = (1...6).map { attendee("Person \($0)", "p\($0)@y.example", external: true) }

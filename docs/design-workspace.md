@@ -7,6 +7,7 @@ last-trued: 2026-08-15
 
 ## Changelog
 
+- _2026-08-16c_ — **The child-window shape, and the plan stress-tested.** New §"What a child window is": a spun-off window is same-project, own lens, **no project list** — masters get projects, children get lenses, which removes the failure mode (a secondary window switching the shared serve) while keeping the whole point (Quotes here, Codebook there). Ships restrictive (list hidden *and* switching inert) because loosening is trivial and tightening later isn't; pin-vs-hide is deliberately deferred since both answers ship the same first version. Claude Desktop recorded as the reference implementation, contributing two things the design had missed — a **scope chip** as an alternative to our subtitle, and a **pin (keep-on-top)**, which the five-transcripts case needs. One question left open: whether there are one or two child types (atomic transcript leaf vs lens window), since the naming inverts between them. Accepted for alpha: a child's title is its only cue, which promotes constraint 5 to a Stage 3a **acceptance criterion**. §"Implementation plan" gains the shortest-path note (tags-beside-quotes is P1+P2 and needs no family call) and a stress-test findings subsection. New constraint 8 (shared partition shares renderer failure); constraint 6 updated — wired in `b0dbabc9`, and it closes half of the second cache opt-out in `design-desktop-switch-performance.md`. Relaunch boot storm deferred as alpha-acceptable.
 - _2026-08-16b_ — **Presumed Family A; the memory objection is measured.** A sidecar is **~140 MB and flat from 1 to 8 windows** (two sidecars — fronted + A2 parked slot — served eight windows), so A's penalty over B/C is ~140 MB *per additional project*, i.e. 140–280 MB at the expected 2–3. That was the argument holding the family call open, and it no longer carries. §"Effectively decided vs genuinely open" moves the call from *open* to **presumed A, decide late**, and constraint 7 is recorded as A's one genuinely new design problem, to be answered on paper before Stage 3b. New §"Implementation plan" sequences the work; its first two items are family-independent, so nothing waits on the formal call. Two caveats attached to the number: it came off a 3-session project (a floor, not a typical figure) and one Debug-build machine. Separately, `SharedConfigStore` landed (`b0dbabc9`) — constraint 6 is closed for messaging; its memory half is unverified because attributing WebKit helper processes to an app from outside it defeated five approaches.
 - _2026-08-16_ — **The window axis is sized, and it isn't the project axis.** Observed usage is ~12 windows over ~2–3 projects (five transcripts side by side plus quotes/analysis on *one* study), so §"Problem definition" now splits the two and carries an "N is about" column. Three consequences recorded: the A/B/C call governs the *small* axis; N retained WebViews cost the same under every family, which largely defuses memory as a discriminator between them; and the load case is a whole 16 GB desk, not an app. §"Memory governance" replaces "a cap sized later" with a **stated budget** plus **live-if-visible / discarded-if-occluded**, whose ceiling is display area rather than user intent. The "what settles the family call" note is **revised**: the earlier "how many projects" survey asked the wrong question — the deciding number is the marginal cost of the Nth window on the *same* project, which is a one-day spike. Two new constraints: 6, cross-window BroadcastChannel is validated but unwired (`WebView.swift:87` mints a fresh partition per view, so two windows are mute today); 7, the MCP handshake assumes exactly one fronted serve, which B and C fit natively and A does not. Family A/B/C still open.
 - _2026-08-15_ — **Window-level decisions taken; the big architectural call still open.** (1) New §"What a window opens onto": double-click opens *that project* — the Notes model, answering the open question this doc used to end on — and a window restores the **lens** plus an **anchor**, never a pixel offset and never search/filter, from `projects.json`. (2) New §"The command that opens a window": `Window ▸ Bristlenose` becomes `File ▸ New Window` (⌥⌘N), per the HIG's own menu-bar standards; records the missing `applicationShouldHandleReopen` this exposes. (3) Stage 3 split into **3a** (per-window `BridgeHandler`, same-project windows — needs no family call) and **3b** (per-window serve — blocked on A/B/C), because 3a is what actually buys "Quotes here, Analysis there" and is reachable today. (4) New constraint 5: with two windows open the title bar can name a project that isn't on screen — observed, not predicted by the blocker list. Family A/B/C unchanged and still open.
@@ -109,8 +110,23 @@ These are established facts (verified during A2), not assumptions:
    observed usage needs — "scroll the quotes window, jump to each quote in context"
    is same-project by construction. But `WebView.swift:87` still calls
    `.nonPersistent()` directly, which mints a **fresh partition per view**, so two
-   windows would today be mute to each other. The spike is done; the wiring is one
-   line and has no dependency on the family choice.
+   windows would today be mute to each other. **Wired 16 Aug 2026** (`b0dbabc9`,
+   `SharedConfigStore`) — keyed per *serve session*, not per project, because the
+   server sets a cookie and cookies ignore port, so a partition outliving its
+   sidecar would replay the old session's cookie at the next one. Sharing also
+   closes half of the second cache opt-out catalogued in
+   `design-desktop-switch-performance.md` §"WebKit ≠ Safari": the ephemeral store
+   was previously fresh *per view*, so every window started with an empty resource
+   cache; siblings now share one, and the first to load populates the bundle for
+   the rest.
+8. **A shared partition also shares renderer failure, and the recovery predates
+   it.** `webViewWebContentProcessDidTerminate` (`WebView.swift:343`) calls
+   `webView.reload()` — a clean recovery for one window. Now that siblings share a
+   partition, *if* WebKit consolidates their content processes (the benefit we
+   want, still unverified) then one renderer crash takes out every window on that
+   project and each independently fires a full SPA mount against one sidecar. The
+   consolidation is also a blast-radius increase, and the recovery path was written
+   for N=1. Needs a coordinated or debounced reload before multi-window, not after.
 7. **The MCP handshake assumes exactly one fronted serve.** `MCPHandshake` carries
    `{schema, port, token, instance_id, updated_at}` and — deliberately — **no
    `project` field**, because "tool payloads carry the project"; `syncHandshake()`
@@ -472,12 +488,86 @@ prefix sorts every window under one letter and destroys the scan. The shipped sc
 is title = project name, subtitle = count or live run state; the options weighed and
 the edge cases are drawn in `docs/mockups/window-menu-naming.html`.
 
+## What a child window is (decided 16 Aug 2026)
+
+Spinning a window off a study gives a **child**: same project, its own lens, and
+**no project list**. Masters get projects, children get lenses. One `ContentView`,
+one flag on the sidebar outline — `ProjectSidebarOutline` already folds the five
+lens rows into the same `NSOutlineView` as the project list, so this is a section
+omitted, not a new window type.
+
+**Why the cut is exactly there.** The project list switches which study is served,
+and with one `ServeManager` a secondary window switching it yanks every other
+window's content — constraint 5 again, but user-triggered and frequent. The lens
+rail switches the view of the current study: per-window after Stage 3a, harmless,
+and the entire point. Removing the first removes the failure mode; keeping the
+second keeps the feature. Nothing is traded.
+
+**Ship restrictive.** In a child the list is not shown *and* project-switching is
+inert (`View ▸ Show Projects` dims). Not because the pin is certainly right, but
+because loosening later is trivial and tightening after people rely on it is not.
+
+**Deferred deliberately — pin vs hide-by-default-switchable.** Both answers ship
+the same first version; they diverge only on what happens when someone tries to
+get the list back, which is observable in use rather than predictable. The test:
+spin off a Quotes window and go ten minutes without reaching for the project list.
+If the hand goes there it is a hide, and the serve question reopens.
+
+**Accepted for alpha — a child's title is its only cue.** A master has two, the
+sidebar selection and the title; strip the list and the title stands alone. Fine
+at alpha, since the failure needs two windows *and* a stale title. But it promotes
+constraint 5 from a nice-to-have to a **Stage 3a acceptance criterion**: in a
+master a wrong title is contradicted by the sidebar, in a child there is nothing
+to contradict it.
+
+### Reference implementation — Claude Desktop
+
+Its "open in new window" is this pattern shipping (observed 16 Aug 2026): the
+child has **no sidebar at all** — traffic lights, title, pin, overflow menu — and
+is fully live, its composer works, so a child is not a read-only viewer. Two
+things worth taking:
+
+- **A scope chip beside the title** (the project name next to the conversation
+  name) is how it shows containment without a sidebar. An alternative to our
+  title+subtitle and more compact under a long name — prototype it against the
+  subtitle before Stage 3a fixes the shape.
+- **A pin (keep-on-top)**, per-window and opt-in. Nothing here had noticed the
+  need, and the five-transcripts-beside-a-scrolling-quotes-window case requires
+  it, or the transcripts fall behind the master the moment you click it.
+  `NSWindow.level = .floating`; selective, since five floating windows would fight
+  each other and bury the master.
+
+### Open — one child type or two?
+
+Claude Desktop's child is a *pure leaf* with no navigation, which it can be
+because a conversation is **atomic**, like a note. A study is not — it has five
+lenses, so Bristlenose has one level more than the reference (project → lens →
+session versus project → conversation). The analogy is exact for a transcript
+window and silent about a lens window.
+
+The naming inverts between them, which is the tell that they may be different
+things: the reference puts the leaf in the title and the container in a chip.
+"Ben — 12 Mar" with an `IKEA Study` chip reads well; "Quotes" with an `IKEA Study`
+chip does not, because *Quotes* is a mode, not a name — for a lens window the
+study **is** the identity. So possibly two types: an atomic transcript leaf (no
+rail, participant in the title) and a lens window (study in the title, lens rail,
+no project list). That is more surface than one type. Decide before Stage 3a,
+not during.
+
 ## Implementation plan
 
 Derived from the stages and decisions above, ordered by dependency. **The first
 two items are family-independent** — they are what the observed usage (a dozen
 windows over two or three studies) actually needs, and nothing in them changes if
 the presumed-A call is later reversed.
+
+### The shortest path to the felt feature
+
+Tags beside quotes — two windows on **one** study, one on Codebook and one on
+Quotes — is **P1 + P2 and nothing else.** No family call, no cross-project serve,
+no retained views, no occlusion policy, no pin decision, no child-type decision.
+All of those sit on the far side of it. When the rest of this plan looks long,
+this is the part that isn't.
 
 ### Now — unblocked, and fixing live defects
 
@@ -532,6 +622,55 @@ the one that touches an external contract. Must be settled on paper before P4.
 retained views** — pairs with P4; shares the view-pool infrastructure.
 **Phase B** — parallel runs, cap-2 + queue; orthogonal to all of the above and
 can move earlier if run-throughput feedback demands it.
+
+### Failure points found by stress-testing this plan (16 Aug 2026)
+
+**P1 — the 19 sites are three categories, not one.** App-global fire-once (New
+Project, New Folder), window-targeted (Rename, Move To, panel toggles), and
+selection-targeted. "Route to the key window" is right for the last two and wrong
+for the first: New Project routed to the key window *works*, by accident, but with
+**no window open it dims and the user cannot create a project at all**. Settle the
+taxonomy before the refactor and give the no-window path an owner. Worth a
+mechanical gate in the house style — a check script asserting zero
+`NotificationCenter.default.post` in `MenuCommands.swift`, so a twentieth cannot be
+added later.
+
+**P2 — the renderer-crash recovery was written for N=1.** Constraint 8. Needs a
+coordinated or debounced reload *before* multi-window.
+
+**P2 — the run-completion reload must fan out.** `reloadWebView()` becomes
+per-handler, so the completion path has to reach every window on that project, not
+just the key one. And every one of those title bars will narrate the run at once —
+the E7 decision at a scale it was not argued at.
+
+**P2 — nothing refcounts windows.** `SharedConfigStore.release(projectID:)` has no
+callers (added speculatively in `b0dbabc9`), and `ContentView.onDisappear` only
+clears drop-target highlights. Last-window-closed needs an owner: release the
+partition, and decide whether the serve stops.
+
+**P3 — bigger than "copy `SessionsRouteMemory`".** `route-change` carries the
+pathname only; there is no anchor or scroll message in `BridgeHandler`. P3 needs
+new bridge plumbing in both directions, capture *before* teardown (by
+`onDisappear` the web view is gone), and restore *after* mount — the existing
+retry-polling `scrollToAnchor` shim covers that half.
+
+**M1 — "quit browsers" is insufficient.** Xcode, Mail, Messages, Slack and Notion
+all embed WebKit, and Xcode will be open because you are building. Enumerate and
+quit, or state the floor.
+
+**M2 — the number depends on state, not just study size.** Sidecar footprint grows
+with what has been *loaded*, so the protocol must fix the state ("after opening
+Quotes on the largest study") or successive readings are not comparable.
+
+**E4 ordinals leave gaps.** Close window 2 of 3 and you have "Study" and
+"Study 3". Document convention says do not renumber — keep that, but decide it
+rather than ship it.
+
+**Deferred — the relaunch boot storm.** Eight restored windows each cold-mounting
+against one booting sidecar. Alpha-acceptable (16 Aug 2026), and already partly
+mitigated: siblings now share one ephemeral resource cache, so the first to load
+populates the bundle for the rest, and occlusion-discarding covers the remainder
+by mounting only the visible windows.
 
 ### Small, already decided, not blocked by any of the above
 

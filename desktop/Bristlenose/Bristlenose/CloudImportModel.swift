@@ -284,3 +284,32 @@ enum ImportRowState: Equatable {
         }
     }
 }
+
+// MARK: - Counting things in a sentence
+
+/// English count + noun, in one place.
+///
+/// Five sites in the import window interpolate a count into a sentence, and
+/// every one of them said **"1 meetings"** — which is what the first live
+/// Google list drew on its opening screen, twice, in a window whose whole job
+/// is to be believed about quantities. Hardcoding the `s` looks fine at each
+/// site and is wrong across all of them.
+///
+/// Deliberately **not** a general pluraliser. The CLI already has one
+/// (`count_noun`, wrapping inflect) and the React SPA uses i18next's CLDR
+/// plurals; this window is hardcoded English only because cloud import is not
+/// localised yet. When it is, these become `t(key, count:)` — and routing them
+/// through one function now means there is a single shape to convert rather
+/// than five interpolations to hunt down.
+///
+/// Verb agreement is **not** handled here, on purpose: "1 meeting is here" and
+/// "3 meetings are here" are different sentences, not a pluralised token, and a
+/// helper that tried to conjugate would be inventing a grammar engine to avoid
+/// writing two strings. Sites that need a verb write both forms.
+enum CloudCount {
+    /// `1 meeting` / `3 meetings`. Pass `plural` for anything English doesn't
+    /// form with a bare `s`.
+    static func noun(_ n: Int, _ singular: String, plural: String? = nil) -> String {
+        "\(n) \(n == 1 ? singular : (plural ?? singular + "s"))"
+    }
+}

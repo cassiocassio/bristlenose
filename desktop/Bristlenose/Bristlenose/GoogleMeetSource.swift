@@ -536,7 +536,23 @@ final class GoogleMeetSource: CloudImportSource {
         // The start_time clause is not an optimisation. A recurring meeting
         // reuses ONE meeting code across every instance, so the code alone
         // cannot say which Tuesday's recording this is.
-        let dayStart = start.addingTimeInterval(-3600)
+        //
+        // **The lookback is three hours, not one, and the reason is that people
+        // join early.** The conference record is stamped when the call actually
+        // starts, the calendar event says when it was meant to; a researcher
+        // who opens the room to check their mic before a 3pm session produces a
+        // record dated before the event. Observed live on 16 Aug 2026 — a call
+        // joined at 2:12pm against a 3:00pm event cleared the old one-hour
+        // lookback by twelve minutes. Twenty minutes earlier and the row would
+        // have read "Not recorded" about a recording sitting in Drive, which is
+        // the false negative this whole file is written against.
+        //
+        // Three hours is bounded by the recurrence it has to disambiguate: the
+        // tightest realistic recurrence is daily, 24 hours apart, so the window
+        // must stay under 24 hours wide. At −3/+12 it is 15, with room to
+        // spare. Do not widen the trailing edge past +12 without shrinking this
+        // one — the sum is the constraint, not either end.
+        let dayStart = start.addingTimeInterval(-3 * 3600)
         let dayEnd = start.addingTimeInterval(12 * 3600)
         let filter = "space.meeting_code = \"\(code)\" AND start_time>=\"\(Self.rfc3339(dayStart))\" AND start_time<=\"\(Self.rfc3339(dayEnd))\""
 

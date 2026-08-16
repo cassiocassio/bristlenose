@@ -229,3 +229,33 @@ struct ImportRowStateTests {
         #expect(ImportRowState.viewOnly.isWarning)
     }
 }
+
+// MARK: - Counting things in a sentence
+
+@Suite("Counted nouns")
+struct CloudCountTests {
+
+    /// Written after the first live Google list drew **"1 meetings are here"**
+    /// and **"1 meetings in window"** on the same screen — in a window whose
+    /// entire job is to be believed about quantities, and whose own design doc
+    /// says its success output and its failure output are both a shorter list.
+    /// A count the reader can see is wrong is a poor advertisement for the
+    /// counts they can't check.
+    @Test("One is singular, and nothing else is")
+    func singularAtOne() {
+        #expect(CloudCount.noun(1, "meeting") == "1 meeting")
+        #expect(CloudCount.noun(2, "meeting") == "2 meetings")
+        // Zero is plural in English — "0 meetings" — which is easy to get
+        // wrong by reaching for `n > 1` and reading it as "not singular".
+        #expect(CloudCount.noun(0, "meeting") == "0 meetings")
+    }
+
+    @Test("An irregular plural is passed in rather than derived")
+    func explicitPlural() {
+        // No inflection engine here by choice; the CLI has one and the SPA has
+        // CLDR. This must therefore be given anything a bare `s` won't form,
+        // and quietly producing "persons" would be the failure.
+        #expect(CloudCount.noun(2, "person", plural: "people") == "2 people")
+        #expect(CloudCount.noun(1, "person", plural: "people") == "1 person")
+    }
+}

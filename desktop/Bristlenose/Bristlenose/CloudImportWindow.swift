@@ -229,7 +229,10 @@ struct CloudImportWindow: View {
         case .notOnThisPlan:
             // Names the meetings we CAN see, so the sentence reads as an
             // explanation rather than as a failure to find anything.
-            return "\(store.listing?.rows.count ?? 0) meetings are here, but Meet recording needs a Google Workspace plan. "
+            let n = store.listing?.rows.count ?? 0
+            return (n == 1
+                    ? "One meeting is here, but Meet recording needs a Google Workspace plan. "
+                    : "\(n) meetings are here, but Meet recording needs a Google Workspace plan. ")
                 + "Recordings made on a work account can still be dragged in from Finder."
         case .notRecorded:
             // States the fact and stops. No remedy is offered because there
@@ -237,7 +240,10 @@ struct CloudImportWindow: View {
             // never started cannot be recovered by anything the researcher
             // does here. Naming the count keeps it an observation about this
             // window rather than a verdict about the account.
-            return "\(store.listing?.rows.count ?? 0) meetings are here, and none of them were recorded. "
+            let count = store.listing?.rows.count ?? 0
+            return (count == 1
+                    ? "One meeting is here, and it wasn't recorded. "
+                    : "\(count) meetings are here, and none of them were recorded. ")
                 + "Meet only keeps a recording when someone starts one during the call."
         case .needsScope:
             // The wording is careful, and the care is a research finding rather
@@ -261,7 +267,7 @@ struct CloudImportWindow: View {
 
     private var emptyWindowDetail: String {
         guard let a = store.listing?.arithmetic else { return "" }
-        return "\(a.eventsInWindow) meetings, none with a recording you organised."
+        return "\(CloudCount.noun(a.eventsInWindow, "meeting")), none with a recording you organised."
     }
 
     // MARK: - The table
@@ -366,8 +372,8 @@ struct CloudImportWindow: View {
         } else if let a = store.listing?.arithmetic {
             HStack(spacing: 5) {
                 Text(a.isExact
-                     ? "\(a.eventsInWindow) meetings in window"
-                     : "at least \(a.eventsInWindow) meetings in window")
+                     ? "\(CloudCount.noun(a.eventsInWindow, "meeting")) in window"
+                     : "at least \(CloudCount.noun(a.eventsInWindow, "meeting")) in window")
                 Text("·").foregroundStyle(.secondary)
                 Text("\(a.fetchable) you can fetch").fontWeight(.semibold)
                 if a.organisedByOthers > 0 {

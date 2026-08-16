@@ -362,6 +362,17 @@ enum ArtifactAvailability: Hashable {
     case notRecorded
     /// Someone else organised the meeting.
     case notOrganiser(organiser: String?)
+    /// Recordings exist on this meeting's link around this time, and none of
+    /// them can be told apart well enough to say which is this meeting's.
+    ///
+    /// **A refusal that costs the researcher a row, chosen over a guess that
+    /// costs them a wrong one.** A Meet link is a room, not a meeting, and a
+    /// personal room is reused all day — so two sessions can produce two
+    /// records that a start time cannot separate. Guessing yields the *other*
+    /// session's video filed under this participant's name, which analyses
+    /// cleanly and reads as complete. This says so instead, and the recording
+    /// is still one Drive visit away.
+    case notResolved
     /// The platform doesn't offer it at all.
     case unsupported
 
@@ -619,6 +630,11 @@ struct CloudImportRow: Identifiable, Equatable {
             // Nothing was withheld, because nothing existed. An ordinary month
             // of un-recorded standups must never raise a permissions question.
             return false
+        case .notResolved:
+            // Also not a permissions question — the recording is reachable and
+            // the failure is ours. Sending the researcher to a page about
+            // scopes and plans would be a wrong turn.
+            return false
         case .needsScope, .notOnThisPlan, .notOrganiser, .unsupported:
             // Each of these is a decision made at the other end: a scope we
             // don't hold, a plan that doesn't include it, someone else's
@@ -667,6 +683,8 @@ struct CloudImportRow: Identifiable, Equatable {
             return organiser ?? "Someone else"
         case .notRecorded:
             return "Not recorded"
+        case .notResolved:
+            return "Couldn't match"
         case .notOnThisPlan:
             // Not "Not recorded" — on this branch the meeting's recording
             // status is unknown and unknowable, because the account could

@@ -259,6 +259,7 @@ struct CloudImportWindow: View {
         case .notRecorded:    return "None of these were recorded"
         case .needsScope:     return "Bristlenose can't see your recordings"
         case .notOrganiser:   return "None of these are yours to fetch"
+        case .notResolved:    return "Bristlenose couldn't match these up"
         case .unsupported:    return "Recordings aren't available"
         case .available:      return ""
         }
@@ -271,6 +272,9 @@ struct CloudImportWindow: View {
         // Not an error glyph: nothing failed. A month with no recordings in it
         // is an ordinary month, and this state should read as an observation.
         case .notRecorded:   return "video.slash"
+        // Also not an error: the recordings exist and are reachable, we just
+        // can't say which is which. A puzzle, not a fault.
+        case .notResolved:   return "questionmark.square.dashed"
         default:             return "questionmark.circle"
         }
     }
@@ -311,6 +315,13 @@ struct CloudImportWindow: View {
             return organiser.map {
                 "\($0) organised these. Bristlenose can't see whether they were recorded — ask them."
             } ?? "Someone else organised these. Ask them to share the recordings."
+        case .notResolved:
+            // Names the cause, because it is the one thing that makes the
+            // remedy obvious: the room is reused, so the link alone can't say
+            // which call this was. The recordings are still in Drive.
+            return "These meetings share a Meet link, and more than one call was recorded "
+                + "around the same time — so Bristlenose can't tell which recording belongs "
+                + "to which. Open Google Drive and drag the ones you want in from Finder."
         case .unsupported, .available:
             return ""
         }

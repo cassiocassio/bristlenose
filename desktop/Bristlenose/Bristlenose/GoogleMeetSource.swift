@@ -431,12 +431,18 @@ final class GoogleMeetSource: CloudImportSource {
         //
         // Only organiser-owned events with a meeting code are queued: the
         // others are already decided and a request for them would 403.
-        let jobs: [(index: Int, code: String, start: Date)] = canReachMeet
+        // The event's END rides along now. A conference record spans real time
+        // and so does a booking, so how much of the booking a call actually
+        // occupied is far stronger evidence than comparing start times — and it
+        // is the only measure that separates two sessions held in the same Meet
+        // room, which cannot overlap each other.
+        let jobs: [(index: Int, code: String, start: Date, end: Date?)] = canReachMeet
             ? candidates.indices.compactMap { i in
                 guard candidates[i].isOrganiser,
                       let code = candidates[i].event.conferenceData?.conferenceId
                 else { return nil }
-                return (index: i, code: code, start: candidates[i].start)
+                return (index: i, code: code, start: candidates[i].start,
+                        end: candidates[i].event.end?.dateTime.flatMap(Self.parseRFC3339))
             }
             : []
         let lookups = await Self.lookUpRecordings(
@@ -492,7 +498,15 @@ final class GoogleMeetSource: CloudImportSource {
                 // nothing to fetch — and none of them is a fault.
                 expiresAt = lookups[index]?.recordExpires
                 found = lookups[index]?.recordings ?? []
-                if found.isEmpty {
+                if let ambiguous = lookups[index]?.ambiguousCandidates {
+                    // Several conference records on this meeting's link around
+                    // this time, and none of them separable. Said, rather than
+                    // guessed at — a wrong guess here is another session's
+                    // video under this participant's name.
+                    Self.log.notice(
+                        "meet_row ambiguous candidates=\(ambiguous, privacy: .public)")
+                    video = .notResolved
+                } else if found.isEmpty {
                     if lookups[index]?.sawGeneratedRecordings == true {
                         // Google told us a completed recording exists and we
                         // could not resolve a file for any of them. Saying
@@ -651,15 +665,21 @@ final class GoogleMeetSource: CloudImportSource {
         /// first is Finding 117's shape one layer down.
         let sawGeneratedRecordings: Bool
 
+        /// How many conference records were plausible, when the lookup declined
+        /// to choose between them. Nil whenever a choice was made.
+        let ambiguousCandidates: Int?
+
         /// The list defaults to empty, because every caller that omits it is a
         /// path where the lookup gave up — no record, no recordings, a refusal.
         /// Defaulting rather than threading `[]` through three failure sites
         /// keeps "we found nothing" as the thing you get by saying nothing.
         init(recordExpires: Date?, recordings: [Found] = [],
-             sawGeneratedRecordings: Bool = false) {
+             sawGeneratedRecordings: Bool = false,
+             ambiguousCandidates: Int? = nil) {
             self.recordExpires = recordExpires
             self.recordings = recordings
             self.sawGeneratedRecordings = sawGeneratedRecordings
+            self.ambiguousCandidates = ambiguousCandidates
         }
     }
 
@@ -686,7 +706,7 @@ final class GoogleMeetSource: CloudImportSource {
     /// captures `self`: this adapter holds mutable state (`driveFileIDs`,
     /// `identity`) that must not be touched off the calling context.
     private static func lookUpRecordings(
-        jobs: [(index: Int, code: String, start: Date)],
+        jobs: [(index: Int, code: String, start: Date, end: Date?)],
         accessToken: String,
         session: URLSession
     ) async -> [Int: RecordingLookup] {
@@ -700,6 +720,7 @@ final class GoogleMeetSource: CloudImportSource {
                 next += 1
                 group.addTask {
                     (job.index, await Self.recording(forMeetingCode: job.code, near: job.start,
+                                                     until: job.end,
                                                      accessToken: accessToken, session: session))
                 }
             }
@@ -712,6 +733,7 @@ final class GoogleMeetSource: CloudImportSource {
                     next += 1
                     group.addTask {
                         (job.index, await Self.recording(forMeetingCode: job.code, near: job.start,
+                                                         until: job.end,
                                                          accessToken: accessToken, session: session))
                     }
                 }
@@ -732,6 +754,7 @@ final class GoogleMeetSource: CloudImportSource {
     private static func recording(
         forMeetingCode code: String,
         near start: Date,
+        until eventEnd: Date?,
         accessToken: String,
         session: URLSession
     ) async -> RecordingLookup? {
@@ -759,87 +782,130 @@ final class GoogleMeetSource: CloudImportSource {
         // must stay under 24 hours wide. At −3/+12 it is 15, with room to
         // spare. Do not widen the trailing edge past +12 without shrinking this
         // one — the sum is the constraint, not either end.
+        //
+        // The window is a NET, not a decision. It gathers candidates; which one
+        // is this meeting's is `ConferenceRecordMatch`'s job, and that is a
+        // recent change — this used to take `.first` of the result and call it
+        // done.
         let dayStart = start.addingTimeInterval(-3 * 3600)
         let dayEnd = start.addingTimeInterval(12 * 3600)
         let filter = "space.meeting_code = \"\(code)\" AND start_time>=\"\(Self.rfc3339(dayStart))\" AND start_time<=\"\(Self.rfc3339(dayEnd))\""
 
-        var components = URLComponents(string: "https://meet.googleapis.com/v2/conferenceRecords")!
-        components.queryItems = [URLQueryItem(name: "filter", value: filter)]
-        guard let url = components.url else {
-            // A fifth fact that used to return nil in silence. The filter
-            // interpolates a remote-controlled meeting code, so this is
-            // reachable by data rather than only by bug — and it renders as
-            // "Not recorded" with nothing anywhere to say otherwise.
-            log.notice("meet_lookup phase=records unbuildable_url codeLen=\(code.count, privacy: .public)")
-            return nil
-        }
+        // **Every page, not the first.** Selection is only as good as the set it
+        // chooses from: with the continuation unfollowed, a busy personal room
+        // could push the right record onto page two and the match would pick
+        // confidently from the wrong half of the candidates. Capped so a
+        // pathological room cannot spin, and the cap is logged when it bites.
+        var candidates: [ConferenceRecordMatch.Candidate] = []
+        var expires: Date?
+        var pageToken: String?
+        var pages = 0
+        let pageCap = 5
 
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        repeat {
+            var components = URLComponents(string: "https://meet.googleapis.com/v2/conferenceRecords")!
+            var items = [URLQueryItem(name: "filter", value: filter)]
+            if let pageToken { items.append(URLQueryItem(name: "pageToken", value: pageToken)) }
+            components.queryItems = items
+            guard let url = components.url else {
+                // A fact that used to return nil in silence. The filter
+                // interpolates a remote-controlled meeting code, so this is
+                // reachable by data rather than only by bug — and it renders as
+                // "Not recorded" with nothing anywhere to say otherwise.
+                log.notice("meet_lookup phase=records unbuildable_url codeLen=\(code.count, privacy: .public)")
+                return nil
+            }
 
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch {
-            log.notice("meet_lookup phase=records transport_error=\(error.localizedDescription, privacy: .public)")
-            return nil
-        }
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        let outcome = GoogleResponseClassifier.classify(status: status, body: data)
-        let page = try? JSONDecoder().decode(ConferenceRecordsPage.self, from: data)
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
-        // **This function returns nil for four different facts** — no record,
-        // no generated recording, a refusal, a dropped connection — and the row
-        // renders all four as "not recorded" (Finding 123). That was written up
-        // as bounded and deferred; it then became the only thing standing
-        // between a recording visibly sitting in Drive and any way to find out
-        // why it wasn't joined. So the four facts are at least *said*, even
-        // though the row still cannot distinguish them.
-        //
-        // Shape, not value, at `.notice`. The meeting code is a join key Google
-        // asks apps not to surface, and a system log can leave the machine
-        // inside a sysdiagnose; length and dash count are enough to catch a
-        // format mismatch, which is the leading hypothesis. The code and the
-        // whole filter sit one level down at `.debug`, behind `--level debug`,
-        // so reading them is a deliberate act.
+            let data: Data
+            let response: URLResponse
+            do {
+                (data, response) = try await session.data(for: request)
+            } catch {
+                log.notice("meet_lookup phase=records transport_error=\(error.localizedDescription, privacy: .public)")
+                return nil
+            }
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let outcome = GoogleResponseClassifier.classify(status: status, body: data)
+            let page = try? JSONDecoder().decode(ConferenceRecordsPage.self, from: data)
+
+            // **This function returns nil for several different facts** — no
+            // record, no generated recording, a refusal, a dropped connection —
+            // and the row renders them alike (Finding 123). Each is at least
+            // *said* here, even though the row model still cannot tell them
+            // apart.
+            //
+            // Shape, not value, at `.notice`. The meeting code is a join key
+            // Google asks apps not to surface, and a system log can leave the
+            // machine inside a sysdiagnose; length and dash count are enough to
+            // catch a format mismatch. The code and the whole filter sit one
+            // level down at `.debug`, marked private.
+            log.notice("""
+                meet_lookup phase=records status=\(status, privacy: .public) \
+                outcome=\(String(describing: outcome), privacy: .public) \
+                page=\(pages, privacy: .public) \
+                records=\(page?.conferenceRecords?.count ?? -1, privacy: .public) \
+                codeLen=\(code.count, privacy: .public) \
+                codeDashes=\(code.filter { $0 == "-" }.count, privacy: .public)
+                """)
+            log.debug("meet_lookup filter=\(filter, privacy: .private)")
+            if status != 200, let body = String(data: data, encoding: .utf8), !body.isEmpty {
+                log.notice("meet_lookup phase=records body=\(body.prefix(400), privacy: .private)")
+            }
+            guard outcome == .ok, let page else { return nil }
+
+            for record in page.conferenceRecords ?? [] {
+                guard let name = record.name else {
+                    // The count above already said a record was found, so
+                    // without this the only tell is the absence of a later
+                    // `phase=recordings` line.
+                    log.notice("meet_lookup phase=records record_without_name")
+                    continue
+                }
+                candidates.append(ConferenceRecordMatch.Candidate(
+                    name: name,
+                    start: record.startTime.flatMap(Self.parseRFC3339),
+                    end: record.endTime.flatMap(Self.parseRFC3339)
+                ))
+                // Expiry belongs to whichever record wins, but they share a
+                // code and a window, so the first one seen is representative
+                // and the field is nil on every tenant measured so far.
+                if expires == nil { expires = record.expireTime.flatMap(Self.parseRFC3339) }
+            }
+
+            pageToken = page.nextPageToken
+            pages += 1
+            if pageToken != nil && pages >= pageCap {
+                log.notice("meet_lookup phase=records page_cap_hit pages=\(pages, privacy: .public)")
+                break
+            }
+        } while pageToken != nil
+
+        // **The choice, and the refusal.** `.first` was a coin toss: the API
+        // documents no ordering and takes no `order_by`, so on a personal room
+        // used twice in a day an event at 10:00 and one at 15:00 could each get
+        // the other's recording. That is not a missing row — it is the wrong
+        // video under the right participant's name, and it analyses cleanly.
+        let outcome = ConferenceRecordMatch.pick(
+            from: candidates, eventStart: start, eventEnd: eventEnd)
         log.notice("""
-            meet_lookup phase=records status=\(status, privacy: .public) \
-            outcome=\(String(describing: outcome), privacy: .public) \
-            records=\(page?.conferenceRecords?.count ?? -1, privacy: .public) \
-            codeLen=\(code.count, privacy: .public) \
-            codeDashes=\(code.filter { $0 == "-" }.count, privacy: .public)
+            meet_lookup phase=match candidates=\(candidates.count, privacy: .public) \
+            outcome=\(String(describing: outcome), privacy: .public)
             """)
-        // **`.private`, not `.debug`-and-public.** The comment above states the
-        // rule correctly and the next two lines used to break it: level and
-        // redaction are different axes. `.debug` governs whether a line is
-        // persisted to the log *store*; `privacy:` governs whether the value is
-        // redacted — and `.debug` messages sitting in the ring buffer are
-        // captured verbatim into a sysdiagnose's logarchive. The filter carries
-        // the meeting code, which with Workspace's default quick-access is
-        // close to an invitation to a research session.
-        //
-        // `.private` still renders in full in Xcode and in a live `log stream`
-        // from the developer's own machine, which is where these are read.
-        log.debug("meet_lookup filter=\(filter, privacy: .private)")
-        if status != 200, let body = String(data: data, encoding: .utf8), !body.isEmpty {
-            // Google's error envelope names the cause. Truncated because a
-            // stack of HTML from a proxy would otherwise flood the log — and
-            // private because `INVALID_ARGUMENT` echoes the filter expression,
-            // meeting code and all, straight back into the message.
-            log.notice("meet_lookup phase=records body=\(body.prefix(400), privacy: .private)")
-        }
 
-        guard outcome == .ok, let record = page?.conferenceRecords?.first else { return nil }
-        guard let name = record.name else {
-            // The preceding notice already logged `records=1`, so without this
-            // the only tell is the *absence* of a later `phase=recordings`
-            // line — a fact you have to know to look for.
-            log.notice("meet_lookup phase=records record_without_name")
+        let name: String
+        switch outcome {
+        case .none:
             return nil
+        case .ambiguous(let count):
+            // Refusing costs a row the researcher can still fetch from Drive.
+            // Guessing costs them a silently mis-attributed interview.
+            return RecordingLookup(recordExpires: expires, ambiguousCandidates: count)
+        case .matched(let matched):
+            name = matched
         }
-
-        let expires = record.expireTime.flatMap(Self.parseRFC3339)
 
         // `name` is remote-controlled (`conferenceRecords/<id>`), so it goes
         // through the failable initialiser rather than a force-unwrap — the

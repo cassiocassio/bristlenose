@@ -510,15 +510,7 @@ final class GoogleMeetSource: CloudImportSource {
                 // nothing to fetch — and none of them is a fault.
                 expiresAt = lookups[index]?.recordExpires
                 found = lookups[index]?.recordings ?? []
-                if let ambiguous = lookups[index]?.ambiguousCandidates {
-                    // Several conference records on this meeting's link around
-                    // this time, and none of them separable. Said, rather than
-                    // guessed at — a wrong guess here is another session's
-                    // video under this participant's name.
-                    Self.log.notice(
-                        "meet_row ambiguous candidates=\(ambiguous, privacy: .public)")
-                    video = .notResolved
-                } else if found.isEmpty {
+                if found.isEmpty {
                     if lookups[index]?.sawGeneratedRecordings == true {
                         // Google told us a completed recording exists and we
                         // could not resolve a file for any of them. Saying
@@ -677,21 +669,15 @@ final class GoogleMeetSource: CloudImportSource {
         /// first is Finding 117's shape one layer down.
         let sawGeneratedRecordings: Bool
 
-        /// How many conference records were plausible, when the lookup declined
-        /// to choose between them. Nil whenever a choice was made.
-        let ambiguousCandidates: Int?
-
         /// The list defaults to empty, because every caller that omits it is a
         /// path where the lookup gave up — no record, no recordings, a refusal.
         /// Defaulting rather than threading `[]` through three failure sites
         /// keeps "we found nothing" as the thing you get by saying nothing.
         init(recordExpires: Date?, recordings: [Found] = [],
-             sawGeneratedRecordings: Bool = false,
-             ambiguousCandidates: Int? = nil) {
+             sawGeneratedRecordings: Bool = false) {
             self.recordExpires = recordExpires
             self.recordings = recordings
             self.sawGeneratedRecordings = sawGeneratedRecordings
-            self.ambiguousCandidates = ambiguousCandidates
         }
     }
 
@@ -900,76 +886,111 @@ final class GoogleMeetSource: CloudImportSource {
         // used twice in a day an event at 10:00 and one at 15:00 could each get
         // the other's recording. That is not a missing row — it is the wrong
         // video under the right participant's name, and it analyses cleanly.
-        let outcome = ConferenceRecordMatch.pick(
+        let outcome = ConferenceRecordMatch.select(
             from: candidates, eventStart: start, eventEnd: eventEnd)
-        log.notice("""
-            meet_lookup phase=match candidates=\(candidates.count, privacy: .public) \
-            outcome=\(String(describing: outcome), privacy: .public)
-            """)
+        // Offsets from the event, in minutes, so a wrong sweep can be read
+        // rather than guessed at. Relative values only — the record NAME is a
+        // join key and stays out of the log.
+        for candidate in candidates {
+            let from = candidate.start.map { Int($0.timeIntervalSince(start) / 60) }
+            let to = candidate.end.map { Int($0.timeIntervalSince(start) / 60) }
+            log.debug("""
+                meet_lookup phase=candidate startMin=\(from ?? -9999, privacy: .public) \
+                endMin=\(to ?? -9999, privacy: .public)
+                """)
+        }
 
-        let name: String
+        let names: [String]
         switch outcome {
         case .none:
             return nil
-        case .ambiguous(let count):
-            // Refusing costs a row the researcher can still fetch from Drive.
-            // Guessing costs them a silently mis-attributed interview.
-            return RecordingLookup(recordExpires: expires, ambiguousCandidates: count)
-        case .matched(let matched):
-            name = matched
+        case .matched(let selected):
+            names = selected
         }
 
+        // **Every record's recordings, unioned.** One event can hold several
+        // calls into the same room — join, leave, rejoin — and the recordings
+        // are spread across their conference records. Asking only the "best"
+        // one reported "Not recorded" over two files sitting in Drive.
+        var found: [RecordingLookup.Found] = []
+        var seenFileIDs = Set<String>()
+        var sawGenerated = false
+
+        for name in names {
+            let (recordings, generated) = await Self.recordings(
+                ofRecord: name, accessToken: accessToken, session: session)
+            if generated { sawGenerated = true }
+            for recording in recordings where seenFileIDs.insert(recording.fileID).inserted {
+                found.append(recording)
+            }
+        }
+
+        // Chronological, so the outline's "Recording 1" is the one that
+        // happened first across the whole event rather than within whichever
+        // record it came from.
+        found.sort { ($0.startedAt ?? .distantPast) < ($1.startedAt ?? .distantPast) }
+
+        log.notice("""
+            meet_lookup phase=union records=\(names.count, privacy: .public) \
+            recordings=\(found.count, privacy: .public) \
+            sawGenerated=\(sawGenerated, privacy: .public)
+            """)
+
+        return RecordingLookup(recordExpires: expires,
+                               recordings: found,
+                               sawGeneratedRecordings: sawGenerated)
+    }
+
+    /// One conference record's recordings.
+    ///
+    /// - Returns: the fetchable ones, and whether Google reported any
+    ///   `FILE_GENERATED` at all — the second is what tells "nobody recorded
+    ///   this" apart from "a recording exists and we could not resolve it".
+    private static func recordings(
+        ofRecord name: String,
+        accessToken: String,
+        session: URLSession
+    ) async -> ([RecordingLookup.Found], Bool) {
         // `name` is remote-controlled (`conferenceRecords/<id>`), so it goes
-        // through the failable initialiser rather than a force-unwrap — the
-        // same rule this file applies to `fileID` in `fetch`, and for the same
-        // reason: a third party decides what is in the string, and a crash is
-        // a worse outcome than a row that can't be fetched.
+        // through the failable initialiser rather than a force-unwrap: a third
+        // party decides what is in the string, and a crash is a worse outcome
+        // than a row that can't be fetched.
         guard let recURL = URL(string: "https://meet.googleapis.com/v2/\(name)/recordings") else {
-            // `name` is remote-controlled, so this too is reachable by data.
             log.notice("meet_lookup phase=recordings unbuildable_url")
-            return RecordingLookup(recordExpires: expires)
+            return ([], false)
         }
-        var recRequest = URLRequest(url: recURL)
-        recRequest.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        var request = URLRequest(url: recURL)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
-        let recData: Data
-        let recResponse: URLResponse
+        let data: Data
+        let response: URLResponse
         do {
-            (recData, recResponse) = try await session.data(for: recRequest)
+            (data, response) = try await session.data(for: request)
         } catch {
             log.notice("meet_lookup phase=recordings transport_error=\(error.localizedDescription, privacy: .public)")
-            return RecordingLookup(recordExpires: expires)
+            return ([], false)
         }
-        let recStatus = (recResponse as? HTTPURLResponse)?.statusCode ?? 0
-        let recOutcome = GoogleResponseClassifier.classify(status: recStatus, body: recData)
-        let recPage = try? JSONDecoder().decode(RecordingsPage.self, from: recData)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let outcome = GoogleResponseClassifier.classify(status: status, body: data)
+        let page = try? JSONDecoder().decode(RecordingsPage.self, from: data)
 
         // The states are the point. `STARTED` and `ENDED` mean the recording
         // exists but has no bytes yet, and Google's propagation runs roughly
         // the length of the call — so "found a record, found a recording, still
-        // returned nothing" is a *wait*, not a fault, and only this line can
-        // tell the two apart.
+        // returned nothing" is a *wait*, not a fault, and only this line tells
+        // the two apart.
         log.notice("""
-            meet_lookup phase=recordings status=\(recStatus, privacy: .public) \
-            outcome=\(String(describing: recOutcome), privacy: .public) \
-            count=\(recPage?.recordings?.count ?? -1, privacy: .public) \
-            states=[\((recPage?.recordings ?? []).compactMap(\.state).joined(separator: ","), privacy: .public)]
+            meet_lookup phase=recordings status=\(status, privacy: .public) \
+            outcome=\(String(describing: outcome), privacy: .public) \
+            count=\(page?.recordings?.count ?? -1, privacy: .public) \
+            states=[\((page?.recordings ?? []).compactMap(\.state).joined(separator: ","), privacy: .public)]
             """)
-
-        guard recOutcome == .ok, let recPage
-        else { return RecordingLookup(recordExpires: expires) }
+        guard outcome == .ok, let page else { return ([], false) }
 
         // Only a FILE_GENERATED recording has bytes behind it. STARTED and
-        // ENDED both mean "not yet", and Google's own propagation delay is
-        // roughly the length of the meeting — so offering a row for those
-        // would produce a fetch that 404s minutes after the researcher ticks it.
-        //
-        // **All of them, not the first.** A call where somebody stopped and
-        // restarted recording yields several `FILE_GENERATED` entries, and the
-        // previous `.first` dropped every one after the first in silence. Each
-        // now becomes its own row, nested under the meeting — which is what the
-        // outline exists for.
-        let generated = (recPage.recordings ?? []).filter { $0.state == "FILE_GENERATED" }
+        // ENDED both mean "not yet", so offering a row for those would produce
+        // a fetch that 404s minutes after the researcher ticks it.
+        let generated = (page.recordings ?? []).filter { $0.state == "FILE_GENERATED" }
         let found: [RecordingLookup.Found] = generated.compactMap { recording in
             guard let fileID = recording.driveDestination?.file else { return nil }
             let began = recording.startTime.flatMap(Self.parseRFC3339)
@@ -983,31 +1004,14 @@ final class GoogleMeetSource: CloudImportSource {
             )
         }
 
-        // Whether the canonical boundary is on the wire at all, and whether we
-        // are in the multi-recording case. Logged rather than assumed: the span
-        // fields are documented, this adapter only recently began asking for
-        // them, and a nil silently falls the row back to event timing.
-        // `truncated` is the one number here that is a *loss* rather than a
-        // measurement. Google documents this endpoint as returning at most ten
-        // recordings when no page size is given, and `RecordingsPage` follows
-        // no continuation — which was harmless while only the first recording
-        // was ever used, and is a silent tail-drop now that every one becomes a
-        // row. Logged rather than followed because following it honestly needs
-        // a way to say "partial" that `RecordingLookup` has no channel for; the
-        // line is what makes the loss falsifiable in the meantime.
-        let truncated = recPage.nextPageToken?.isEmpty == false
-        log.notice("""
-            meet_lookup phase=recording_span \
-            generated=\(generated.count, privacy: .public) \
-            withFile=\(found.count, privacy: .public) \
-            withStart=\(found.filter { $0.startedAt != nil }.count, privacy: .public) \
-            withSpan=\(found.filter { $0.duration != nil }.count, privacy: .public) \
-            truncated=\(truncated, privacy: .public)
-            """)
-
-        return RecordingLookup(recordExpires: expires,
-                               recordings: found,
-                               sawGeneratedRecordings: !generated.isEmpty)
+        // Google returns at most ten recordings per page and this call sends no
+        // page size, so a call segmented past that loses its tail. Logged rather
+        // than followed, because following it honestly needs a way to say
+        // "partial" that this return type has no channel for.
+        if page.nextPageToken?.isEmpty == false {
+            log.notice("meet_lookup phase=recordings truncated")
+        }
+        return (found, !generated.isEmpty)
     }
 
     // MARK: Fetching

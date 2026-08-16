@@ -39,105 +39,39 @@ enum ConferenceRecordMatch {
     enum Outcome: Equatable {
         /// Nothing on this code in this window.
         case none
-        /// One record is clearly this event's.
-        case matched(String)
-        /// Two or more are equally plausible, and picking would be a guess.
-        ///
-        /// **Deliberately not "take the nearest anyway".** Every other refusal
-        /// in this adapter costs the researcher a row they could have had; this
-        /// one, guessed wrong, costs them a *correct-looking* import of someone
-        /// else's session under this participant's name. A row they can chase
-        /// is recoverable. A quietly mis-attributed interview is not — it
-        /// analyses cleanly and reads as complete, which is the failure this
-        /// whole feature is written against.
-        case ambiguous(candidates: Int)
+        /// The records that belong to this event — **all of them**, not one.
+        case matched([String])
     }
 
-    /// Picks the record for an event, or declines to.
+    /// Selects every conference record that plausibly belongs to this event.
     ///
-    /// **Overlap first, distance second.** A conference record spans real time
-    /// and so does a calendar event, so the strongest available evidence is how
-    /// much of the booked hour the call actually occupied — far stronger than
-    /// comparing start times, because people join early and run late in both
-    /// directions at once. Two calls in one room cannot overlap each other, so
-    /// overlap separates them cleanly where "nearest start" can still tie.
+    /// **It selects rather than chooses, and that distinction is the bug this
+    /// replaced.** A Meet code is a room, and one calendar event can hold
+    /// several calls into that room: join, leave, rejoin, each producing its
+    /// own conference record with its own recording. Observed live on
+    /// 16 Aug 2026 — a "test" event booked for 15:00 with recordings at 13:12
+    /// and 14:12, three conference records on one code, all of them that
+    /// event's.
     ///
-    /// Distance between start times is the fallback for when overlap cannot
-    /// speak: a record still in progress with no `endTime`, an event with no
-    /// end, or a call that finished before its own booking began.
+    /// Picking the single nearest record therefore hid real recordings: the
+    /// window showed "Not recorded" over two files sitting in Drive, which is
+    /// exactly the false negative this adapter exists to prevent. Worse, the
+    /// outline had already been built to render a meeting with two recordings
+    /// — the model was right and the selection threw the data away before it
+    /// got there.
     ///
-    /// - Parameter tolerance: how much better the winner must be before the
-    ///   choice counts as evidence rather than noise. Applied as a ratio on
-    ///   overlap and as an absolute margin on distance — see the constants.
-    static func pick(
+    /// What still bounds over-claiming is the **caller's window**, not this
+    /// function: a recurring series reuses one code across every instance, and
+    /// the −3h/+12h net around this instance is what keeps last Tuesday's
+    /// record out. Widening that window widens what this sweeps up.
+    static func select(
         from candidates: [Candidate],
         eventStart: Date,
         eventEnd: Date?
     ) -> Outcome {
         let usable = candidates.filter { !$0.name.isEmpty }
         guard !usable.isEmpty else { return .none }
-        guard usable.count > 1 else { return .matched(usable[0].name) }
-
-        // --- Overlap, when both intervals are known ---------------------------
-        if let eventEnd, eventEnd > eventStart {
-            let scored = usable
-                .map { (candidate: $0, overlap: overlap($0, eventStart, eventEnd)) }
-                .sorted { $0.overlap > $1.overlap }
-            let best = scored[0], runnerUp = scored[1]
-            if best.overlap > 0 {
-                // A clear winner is one that occupied the booking and the
-                // others essentially did not. The ratio, rather than a fixed
-                // number of seconds, because the same 90-second margin means
-                // something different against a 5-minute call and an hour-long
-                // one.
-                if runnerUp.overlap == 0 || best.overlap >= runnerUp.overlap * overlapRatio {
-                    return .matched(best.candidate.name)
-                }
-                return .ambiguous(candidates: usable.count)
-            }
-            // Nothing overlapped the booking at all — everything ran outside
-            // it. Fall through to distance rather than refusing: a call that
-            // started an hour early and finished before the scheduled start is
-            // unusual but not ambiguous.
-        }
-
-        // --- Distance between start times -------------------------------------
-        let timed = usable.compactMap { candidate -> (Candidate, TimeInterval)? in
-            guard let start = candidate.start else { return nil }
-            return (candidate, abs(start.timeIntervalSince(eventStart)))
-        }
-        // A record with no start time at all cannot be placed. If that is all
-        // there is, there is nothing to choose between.
-        guard !timed.isEmpty else { return .ambiguous(candidates: usable.count) }
-        guard timed.count > 1 else { return .matched(timed[0].0.name) }
-
-        let sorted = timed.sorted { $0.1 < $1.1 }
-        let best = sorted[0], runnerUp = sorted[1]
-        // An absolute margin here, not a ratio: near the event both distances
-        // are small and their ratio is wild (two minutes versus one is a
-        // factor of two and means nothing), while half an hour apart is a real
-        // separation whatever the absolute values.
-        if runnerUp.1 - best.1 >= distanceMargin {
-            return .matched(best.0.name)
-        }
-        return .ambiguous(candidates: usable.count)
+        return .matched(usable.map(\.name))
     }
 
-    /// The winner must have occupied at least three times as much of the
-    /// booking as its nearest rival. Two genuinely different sessions in one
-    /// room are usually 100:0 on this measure; the ratio exists to catch the
-    /// case where a stray record clips the edge of the booking.
-    static let overlapRatio: Double = 3
-
-    /// Half an hour. Two calls on one link closer together than this are
-    /// back-to-back sessions whose recordings a start time cannot separate —
-    /// the same bound `TeamsSource.matchEvent` uses, for the same reason.
-    static let distanceMargin: TimeInterval = 30 * 60
-
-    private static func overlap(_ candidate: Candidate, _ from: Date, _ to: Date) -> TimeInterval {
-        guard let start = candidate.start, let end = candidate.end, end > start else { return 0 }
-        let lower = max(start, from)
-        let upper = min(end, to)
-        return max(0, upper.timeIntervalSince(lower))
-    }
 }

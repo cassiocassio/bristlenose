@@ -33,6 +33,7 @@ export interface BridgeState {
 /** Messages posted to the native side via WKScriptMessageHandler. */
 export type BridgeMessage =
   | { type: "route-change"; url: string }
+  | { type: "anchor-change"; lens: string; anchor: string | null }
   | { type: "ready" }
   | { type: "editing-started"; element: string }
   | { type: "editing-ended" }
@@ -69,6 +70,22 @@ function postNativeMessage(msg: BridgeMessage): void {
 
 export function postRouteChange(url: string): void {
   postNativeMessage({ type: "route-change", url });
+}
+
+/**
+ * Where the reader is within a lens — a heading id, or null for the top of the
+ * page. The shell persists it per project so reopening lands there.
+ *
+ * Carries the lens it belongs to, because this message and `route-change` are
+ * independent: without it, "scrolled to the top of Quotes" and "left Quotes"
+ * both arrive as a bare null, and the shell would clear a perfectly good
+ * remembered position on every lens switch. Same guard as
+ * `lens-subtitle`/`lensSubtitleTab`.
+ *
+ * See `useAnchorReporter`, which decides what counts as a position.
+ */
+export function postAnchorChange(lens: string, anchor: string | null): void {
+  postNativeMessage({ type: "anchor-change", lens, anchor });
 }
 
 export function postReady(): void {

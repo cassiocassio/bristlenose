@@ -85,6 +85,10 @@ struct Project: Identifiable, Hashable, Codable {
     /// onto" for why a wrong restore costs a click and a wrong reset can cost a
     /// search.
     var lastLens: String?
+    /// Where in that lens — a heading id on Quotes/Codebook, a session id on
+    /// Sessions, nil elsewhere. Meaningless without `lastLens`, which is why
+    /// `LensAnchor` interprets the pair rather than this alone.
+    var lastAnchor: String?
 
     enum CodingKeys: String, CodingKey {
         case id, name, path, icon, position
@@ -100,6 +104,7 @@ struct Project: Identifiable, Hashable, Codable {
         case lastPipelineRunAt = "last_pipeline_run_at"
         case agentAccess = "agent_access"
         case lastLens = "last_lens"
+        case lastAnchor = "last_anchor"
     }
 
     // Custom coding for bookmarkData (Base64 string in JSON instead of byte array).
@@ -137,6 +142,7 @@ struct Project: Identifiable, Hashable, Codable {
         // the Project dashboard, which is exactly the never-opened case the
         // design says the dashboard is right for.
         lastLens = try container.decodeIfPresent(String.self, forKey: .lastLens)
+        lastAnchor = try container.decodeIfPresent(String.self, forKey: .lastAnchor)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -158,6 +164,7 @@ struct Project: Identifiable, Hashable, Codable {
         try container.encodeIfPresent(lastPipelineRunAt, forKey: .lastPipelineRunAt)
         try container.encode(agentAccess, forKey: .agentAccess)
         try container.encodeIfPresent(lastLens, forKey: .lastLens)
+        try container.encodeIfPresent(lastAnchor, forKey: .lastAnchor)
     }
 
     init(id: UUID, name: String, path: String, inputFiles: [String]? = nil,
@@ -166,7 +173,8 @@ struct Project: Identifiable, Hashable, Codable {
          lastOpened: Date? = nil, lastPipelineRunAt: Date? = nil,
          lastSeenPath: String? = nil, resourceIdentifier: String? = nil,
          schemaVersion: Int = Project.currentSchemaVersion,
-         agentAccess: Bool = false, lastLens: String? = nil) {
+         agentAccess: Bool = false, lastLens: String? = nil,
+         lastAnchor: String? = nil) {
         self.id = id
         self.name = name
         self.path = path
@@ -184,6 +192,7 @@ struct Project: Identifiable, Hashable, Codable {
         self.lastPipelineRunAt = lastPipelineRunAt
         self.agentAccess = agentAccess
         self.lastLens = lastLens
+        self.lastAnchor = lastAnchor
     }
 
     /// Whether the project directory is currently accessible on disk.
@@ -538,6 +547,16 @@ final class ProjectIndex: ObservableObject {
         guard let index = projects.firstIndex(where: { $0.id == id }),
               projects[index].lastLens != lens else { return }
         projects[index].lastLens = lens
+        save()
+    }
+
+    /// Remember where in the lens. Same write-only-on-change rule as
+    /// `setLastLens`: the anchor is reported on every scroll-settle, and
+    /// `projects.json` is not worth rewriting to store what it already says.
+    func setLastAnchor(id: UUID, anchor: String?) {
+        guard let index = projects.firstIndex(where: { $0.id == id }),
+              projects[index].lastAnchor != anchor else { return }
+        projects[index].lastAnchor = anchor
         save()
     }
 

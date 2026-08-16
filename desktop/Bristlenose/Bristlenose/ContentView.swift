@@ -251,6 +251,33 @@ struct ContentView: View {
     /// Is this the front window?
     private var isKeyWindow: Bool { controlActiveState == .key }
 
+    /// The position to remember for the current lens.
+    ///
+    /// Two sources because the two lenses mean different things by "position":
+    /// Quotes and Codebook report a heading id over the bridge as the reader
+    /// scrolls, while Sessions' position is which transcript is open — a route,
+    /// already tracked per window by `SessionsRouteMemory`. See `LensAnchor`.
+    private var capturedAnchor: String? {
+        guard let tab = bridgeHandler.activeTab else { return nil }
+        if tab == .sessions { return bridgeHandler.restoreSessionID }
+        // Only honour an anchor reported *for this lens*. The two messages are
+        // independent, so a stale one can arrive either side of a lens switch.
+        guard bridgeHandler.currentAnchorLens == tab.rawValue else { return nil }
+        return bridgeHandler.currentAnchor
+    }
+
+    /// Put the window back where it was within the restored lens.
+    private func restoreAnchor(_ anchor: String?, on tab: Tab) {
+        switch LensAnchor.action(lens: tab, anchor: anchor) {
+        case .scroll(let id):
+            bridgeHandler.scrollToAnchor(id)
+        case .session(let id):
+            bridgeHandler.navigateToSession(id)
+        case .top:
+            break
+        }
+    }
+
     /// Which set of windows this one is a duplicate of, for titling. Nil on the
     /// welcome screen — an unselected window shows "Welcome", and two of those
     /// are not worth numbering.
@@ -612,10 +639,10 @@ struct ContentView: View {
         .onChange(of: bridgeHandler.isReady) { _, ready in
             guard ready, let id = selectedProjectID, lensRestoredFor != id else { return }
             lensRestoredFor = id
-            guard let tab = LensMemory.restore(
-                projectIndex.projects.first(where: { $0.id == id })?.lastLens
-            ) else { return }
+            guard let project = projectIndex.projects.first(where: { $0.id == id }),
+                  let tab = LensMemory.restore(project.lastLens) else { return }
             bridgeHandler.activateLens(tab)
+            restoreAnchor(project.lastAnchor, on: tab)
         }
         // Remember where they leave it. Gated on having restored first — see
         // `lensRestoredFor`.
@@ -623,7 +650,24 @@ struct ContentView: View {
             guard let id = selectedProjectID, lensRestoredFor == id,
                   let lens = LensMemory.remember(tab) else { return }
             projectIndex.setLastLens(id: id, lens: lens)
+            // A lens with no remembered position must clear the old one, or a
+            // stale Quotes anchor would be restored against Codebook.
+            if !LensAnchor.remembersPosition(tab) {
+                projectIndex.setLastAnchor(id: id, anchor: nil)
+            }
         }
+        // …and where in it. Sessions reports its position as a route rather
+        // than a scroll offset, so it comes from the window's own route memory
+        // instead of the SPA's scroll reporter.
+        .onChange(of: capturedAnchor) { _, anchor in
+            guard let id = selectedProjectID, lensRestoredFor == id,
+                  LensAnchor.remembersPosition(bridgeHandler.activeTab) else { return }
+            projectIndex.setLastAnchor(id: id, anchor: anchor)
+        }
+        // A lens switch retires the old lens's anchor before the new lens has
+        // reported one, so `capturedAnchor` goes nil without meaning "the top".
+        // Clearing is handled by the activeTab observer above; this only exists
+        // to note that the nil is expected.
         // Whatever `NewItemFallback` staged while there was no window to put it
         // in. `.onAppear` covers the window opened *to receive* it; `.onChange`
         // covers a window that was already up. Both drain the same one-shot.

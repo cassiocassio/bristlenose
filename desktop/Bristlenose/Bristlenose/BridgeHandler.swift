@@ -21,6 +21,19 @@ final class BridgeHandler: ObservableObject {
     /// paint complete. Used to dismiss the loading overlay.
     @Published var isReady = false
 
+    /// Where the reader is within the current lens — a heading id, or nil for
+    /// the top. Posted by `useAnchorReporter` on scroll-settle; persisted per
+    /// project by `ContentView` so reopening lands there. Interpretation is
+    /// per-lens — see `LensAnchor`.
+    @Published var currentAnchor: String?
+
+    /// Which lens `currentAnchor` is for. Matched against `activeTab` before the
+    /// anchor is persisted, exactly as `lensSubtitleTab` guards `lensSubtitle`:
+    /// `anchor-change` and `route-change` are independent messages, so without
+    /// this, "scrolled back to the top of Quotes" and "left Quotes" both arrive
+    /// as a bare nil and a lens switch would wipe a good remembered position.
+    @Published var currentAnchorLens: String?
+
     /// Current React Router pathname, updated on `route-change` messages.
     /// Used to keep the native toolbar tab highlight in sync.
     @Published var currentPath = ""
@@ -287,6 +300,35 @@ final class BridgeHandler: ObservableObject {
         webView.window?.makeFirstResponder(webView)
     }
 
+    /// The session the window's route memory last saw, if any — read by
+    /// `ContentView` when persisting the Sessions lens's remembered position,
+    /// which is a route rather than a scroll offset (see `LensAnchor`).
+    var restoreSessionID: String? { sessionsRouteMemory.restoreSessionID }
+
+    /// Scroll the report to an element id, via the `window.scrollToAnchor` shim
+    /// (`navigation.ts`). Used to put a reopened project back where it was
+    /// within its lens.
+    ///
+    /// The shim retries for ~5s, which is what makes this safe to fire straight
+    /// after a lens switch: the destination page has to mount and fetch before
+    /// its anchors exist. If the id never appears — a theme renamed or dropped
+    /// by a re-analysis — it gives up and the reader is left at the top, which
+    /// is the honest failure and the reason an id is stored rather than an
+    /// offset.
+    ///
+    /// Same completion-handler-with-nil spelling as `navigateToSession`, for
+    /// the reason documented there.
+    func scrollToAnchor(_ anchorID: String) {
+        guard let webView else { return }
+        webView.callAsyncJavaScript(
+            "window.scrollToAnchor(id)",
+            arguments: ["id": anchorID],
+            in: nil,
+            in: .page,
+            completionHandler: nil
+        )
+    }
+
     /// Push the Quotes-lens search text from the native search field into the
     /// SPA store (`setSearchQuery` action → live filtering). Fire-and-forget;
     /// the SPA is the single source of truth for `quotesSearchQuery` — it's
@@ -486,6 +528,12 @@ final class BridgeHandler: ObservableObject {
                 sessionsRouteMemory.observe(path: url)
             }
 
+        case "anchor-change":
+            // JS null arrives as NSNull, not a missing key — `as? String` maps
+            // both to nil, which is what "the top of the page" means here.
+            currentAnchor = body["anchor"] as? String
+            currentAnchorLens = body["lens"] as? String
+
         case "editing-started":
             isEditing = true
 
@@ -584,6 +632,8 @@ final class BridgeHandler: ObservableObject {
     func reset() {
         isReady = false
         currentPath = ""
+        currentAnchor = nil
+        currentAnchorLens = nil
         sessionsRouteMemory.clear()
         isEditing = false
         canGoBack = false

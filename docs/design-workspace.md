@@ -7,6 +7,7 @@ last-trued: 2026-08-15
 
 ## Changelog
 
+- _2026-08-16i_ — **P3b: a project reopens where you were on the page, not just on the right lens.** New `anchor-change` message inbound and the existing retry-aware `window.scrollToAnchor` outbound. Anchors as decided: Quotes → group heading (sections *and* themes — both are `QuoteGroup`, and watching only themes would leave the Sections half always restoring to the top), Sessions → session, Analysis and Project → top; Codebook taken as its framework header. **Sessions is the case that shapes the design** — its position is a route, not an offset, so it restores by navigating and its value comes from `SessionsRouteMemory` rather than the scroll reporter; one stored field plus `LensAnchor`'s per-lens table beats two fields kept mutually exclusive by convention. The message **names its lens**, because `anchor-change` and `route-change` are independent and a bare nil can't distinguish "scrolled back to the top of Quotes" from "left Quotes" — without it, every lens switch would wipe a good remembered position (same guard, same reason, as `lensSubtitle`/`lensSubtitleTab`). Capture is debounced to scroll-settle and written only on change, which also dissolved the stress test's teardown-race worry: there is nothing left to grab at `onDisappear`. No validation that a stored anchor still exists — the content is mutable, so the check would be a lie by the time it mattered; it fails honestly at the top instead. **Stage 3a and P3 are now complete, and none of it has been seen on screen.**
 - _2026-08-16h_ — **P3a: a project opens where you left it.** The lens half of the restore, and it turned out to need **no new bridge plumbing** — the lens is derivable from the `route-change` path that already flows, so the stress test's "bigger than copy `SessionsRouteMemory`" warning applies only to the anchor half. `LensMemory` holds the decision (unknown lens degrades to the dashboard rather than crashing or being honoured blindly; a never-opened project has no memory, which lands it on the dashboard without needing a rule); `Project.lastLens` persists it in `projects.json`, machine-local and deliberately not inside the researcher's project folder. Two guards share one piece of state: the restore must not re-fire on a run-completion reload's `isReady`, and the capture must not run before the restore or the SPA's initial dashboard landing overwrites the memory it is about to restore from. **P3b (the anchor) is specified but not started** — Quotes → theme heading, Sessions → session, Analysis → top; Codebook taken as its group heading by inference, one table entry to change. Twice while writing the back-compat test I hand-wrote a `projects.json` fixture and twice the format guess was wrong (the envelope's `version`, then `.prettyPrinted` + `.sortedKeys`) — it now round-trips through the real encoder and strips the key by parsing, which is the version that encodes no guess.
 - _2026-08-16g_ — **Stage 3a is complete: the roster, the ordinals, and the Dock click.** Two decisions closed it. **Dim, not `mainWindow`** — with a panel frontmost the app dims its window commands rather than acting on the window behind, so `WindowRoster` is deliberately *not* a most-recently-key list, and the ⌘N-from-Settings papercut is **retired rather than fixed**: under the dim rule, "no window is in focus, so make one" is the coherent answer. **Keep the gap** — ordinals are lowest-free and nobody already open is ever renumbered, so closing the middle of three leaves "Study" and "Study 3" and the next window fills the 2. The consequence the decision hadn't pictured is now pinned by a test: close the *first* of two and the survivor sits alone as "Study 2" — odd-looking, and still better than a title that changes because something happened in another window. `applicationShouldHandleReopen` asks the roster rather than AppKit's `hasVisibleWindows`, which counts Settings and the Import window and would answer "yes" when there is nothing to come back to. Writing the roster's tests caught a real bug before it shipped — a welcome-screen window wasn't being counted, so a Dock click would have opened a second one. **Nothing in Stage 3a has been seen on screen**; that is the outstanding claim on all of it.
 - _2026-08-16f_ — **`File ▸ New Window` (⌥⌘N) ships, and the dead item beside it is finally dimmed.** `Window ▸ Bristlenose` is gone: wrong menu (Apple's Window-menu command list has no new-window command) and wrong label (it called `openWindow(id:)` against a `WindowGroup`, which *spawns*). Seeding the key across the 21 locales turned up **`File ▸ Open in New Window` (⇧⌘O) already there and dead** — the item this session opened by asking whether it did anything. They are different commands, not duplicates: New Window opens another view of the project already showing; Open in New Window opens the *selected* project, the menu twin of a sidebar double-click. So it stays, `.disabled(true)`, until `WindowGroup(for:)` can carry a project value in Stage 3b — dimmed rather than deleted, because the command is wanted and because a menu is a promise about what the app can do. `applicationShouldHandleReopen` did **not** ride along: the coupling wasn't load-bearing (the menu bar outlives windows, so New Window is already the way back from empty), and it regroups with the **window roster** — now the named next unit, wanted by reopen, by the E4 ordinals, and by the ⌘N-from-Settings papercut. Its shape is a genuine choice, not plumbing: count vs titles vs approximating AppKit's `mainWindow`, which is the semantic `focusedSceneValue` doesn't give (it follows *key*).
@@ -718,12 +719,34 @@ they had since navigated; and the *capture* must not run before the restore, or
 the SPA's initial landing on the dashboard overwrites the memory with `project`
 and the restore then dutifully honours it.
 
-**P3b — the anchor. Not started.** This is the half that needs the bridge work:
-`route-change` carries the pathname only, so there is no anchor or scroll message
-in either direction. Anchors decided 16 Aug 2026 — **Quotes → theme heading,
-Sessions → session, Analysis → top (none)**; Codebook was not specified and is
-taken as its group heading, the direct sibling of Quotes' theme heading, which is
-one entry in a per-lens table to change if that's wrong.
+**P3b — the anchor. ✅ Shipped 16 Aug 2026.** The half that needed the bridge
+work, and it got a new message in each direction: `anchor-change` inbound
+(`useAnchorReporter` → `BridgeHandler.currentAnchor`) and `window.scrollToAnchor`
+outbound, which already existed as a shim and is retry-aware, so it survives being
+fired straight after a lens switch while the destination page is still mounting.
+
+Anchors as decided: **Quotes → group heading** (sections *and* themes — both are
+`QuoteGroup`, both render `<h3 id>`, and watching only themes would make the
+Sections half of the lens always restore to the top), **Sessions → session**,
+**Analysis and Project → top**. Codebook was not specified and is taken as its
+framework section header, the direct sibling of a theme heading one lens over.
+
+**Sessions is the shape that justifies the design.** Its position is a *route*,
+not a scroll offset, so restoring it means navigating, and its value comes from
+`SessionsRouteMemory` rather than from the SPA's scroll reporter. One stored field
+interpreted by `LensAnchor`'s per-lens table, rather than two fields kept mutually
+exclusive by convention.
+
+Capture is debounced to scroll-settle and written only on change, and the message
+**names its lens** — `anchor-change` and `route-change` are independent, so a bare
+nil cannot distinguish "scrolled back to the top of Quotes" from "left Quotes",
+and without the lens a switch away would wipe a good remembered position. Same
+guard, and the same reason, as `lensSubtitle`/`lensSubtitleTab`.
+
+Deliberately no validation that a stored anchor still exists: the content is
+mutable, so the check would be a lie by the time it mattered. It fails honestly
+instead — `scrollToAnchor` retries then gives up at the top, and a vanished
+session lands on `TranscriptPage`'s error state with the switcher as the way out.
 
 *Done when:* closing a window on Quotes at a given section and reopening the
 project lands there, while search and filter do not come back.
@@ -789,7 +812,10 @@ The **lens** half needed none of it — the lens is derivable from the
 work at all. The warning stands for the **anchor** half: no anchor or scroll
 message exists in either direction, so P3b needs new plumbing, capture before
 teardown (by `onDisappear` the web view is gone), and restore after mount — the
-existing retry-polling `scrollToAnchor` shim covers that last part.
+existing retry-polling `scrollToAnchor` shim covers that last part. **✅ All of
+it shipped 16 Aug 2026** — the teardown-race worry dissolved: capture is
+continuous (debounced scroll-settle, written on change), so there is nothing to
+grab at `onDisappear`.
 
 **M1 — "quit browsers" is insufficient.** Xcode, Mail, Messages, Slack and Notion
 all embed WebKit, and Xcode will be open because you are building. Enumerate and

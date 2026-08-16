@@ -28,6 +28,7 @@ import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider, useFocus } from "../contexts/FocusContext";
 import { useActivityJobs, removeJob } from "../contexts/ActivityStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { useAnchorReporter } from "../hooks/useAnchorReporter";
 import { useScrollToAnchor } from "../hooks/useScrollToAnchor";
 import { installNavigationShims } from "../shims/navigation";
 import { useProjectId } from "../hooks/useProjectId";
@@ -376,6 +377,12 @@ function AppShell() {
     if (!embedded) return;
     postRouteChange(location.pathname);
   }, [embedded, location.pathname]);
+
+  // Report where the reader is within the lens, so reopening the project lands
+  // there rather than at the top. Lives here, not in the TOC sidebar, because
+  // the TOC is only mounted when its panel is open — and a position is worth
+  // remembering whether or not the reader has that panel showing.
+  useAnchorReporter(location.pathname, embedded);
 
   // Announce tab navigation to screen readers.
   const isFirstRender = useRef(true);

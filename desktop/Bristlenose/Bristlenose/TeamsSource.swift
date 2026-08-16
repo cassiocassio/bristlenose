@@ -387,6 +387,15 @@ final class TeamsSource: CloudImportSource {
         let matched = Self.matchEvent(events, near: startedAt)
         let attendees = matched.map { Self.attendees(of: $0, ownAddress: identity) } ?? []
 
+        // The meeting's own clock, which this adapter has always had in hand
+        // and never passed on. Graph gives `start` and `end` on the matched
+        // event, so the Scheduled column costs nothing extra — and it is the
+        // column that makes Teams' real gap legible rather than baffling: the
+        // meeting was booked for an hour, the recording began at 09:34, and
+        // how long it ran is genuinely unknown because Graph does not say.
+        let scheduledAt = matched?.start?.dateTime.flatMap(Self.parseISO)
+        let scheduledEnd = matched?.end?.dateTime.flatMap(Self.parseISO)
+
         return CloudImportRow(
             id: id,
             title: matched?.subject ?? parsed.title,
@@ -404,7 +413,21 @@ final class TeamsSource: CloudImportSource {
             // Admin-consent-only, even delegated. Not requested, so never
             // available — stated rather than silently missing.
             transcript: .needsScope("OnlineMeetingTranscript.Read.All"),
-            organiser: nil
+            organiser: nil,
+            scheduledAt: scheduledAt,
+            scheduledDuration: scheduledEnd.flatMap { end in
+                scheduledAt.map { end.timeIntervalSince($0) }
+            },
+            // `createdDateTime` is when the recording landed, which is the
+            // closest thing Graph has to a record-button moment.
+            recordedAt: startedAt,
+            // Two files that matched the same event are two recordings of one
+            // call — somebody stopped and restarted — and nest under it. With
+            // no matched event there is nothing to group by, and the row stands
+            // alone, which is also the correct answer when the researcher
+            // declined the calendar scope: we have no grounds to claim two
+            // files belong together.
+            meetingID: matched?.id
         )
     }
 

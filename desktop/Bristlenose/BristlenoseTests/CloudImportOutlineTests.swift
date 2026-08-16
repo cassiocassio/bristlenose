@@ -1,0 +1,327 @@
+import Foundation
+import Testing
+
+@testable import Bristlenose
+
+// The import grid's tree, which is where every judgement about what nests under
+// what is made. The view below it renders; it decides nothing.
+//
+// Scope, deliberately: these test the *outcomes* a researcher would notice — a
+// half-session that goes missing, a footer that overstates, a triangle on a
+// meeting that never needed one — rather than the shape of the enum. The
+// mechanical grouping is exercised by all of them at once, which is what makes
+// them worth having.
+
+@Suite("Cloud import outline")
+struct CloudImportOutlineTests {
+
+    private let calendar = Calendar(identifier: .gregorian)
+
+    /// A fixed instant, so day labels don't drift with the wall clock. 16 Aug
+    /// 2026 is a Sunday.
+    private var now: Date {
+        calendar.date(from: DateComponents(year: 2026, month: 8, day: 16, hour: 18))!
+    }
+
+    private func moment(daysAgo: Int, hour: Int, minute: Int = 0) -> Date {
+        let day = calendar.date(byAdding: .day, value: -daysAgo, to: now)!
+        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)!
+    }
+
+    private func row(
+        id: String,
+        title: String = "P05 Interview",
+        scheduled: Date,
+        booked: TimeInterval? = 3600,
+        recorded: Date?,
+        ran: TimeInterval? = nil,
+        meeting: String? = nil,
+        local: ImportRowState = .notImported,
+        video: ArtifactAvailability = .available
+    ) -> CloudImportRow {
+        CloudImportRow(
+            id: id,
+            title: title,
+            startsAt: recorded ?? scheduled,
+            duration: ran,
+            sizeBytes: nil,
+            expiresAt: nil,
+            attendees: [],
+            localState: local,
+            video: video,
+            roster: .available,
+            transcript: .available,
+            organiser: nil,
+            scheduledAt: scheduled,
+            scheduledDuration: booked,
+            recordedAt: recorded,
+            meetingID: meeting
+        )
+    }
+
+    private func build(_ rows: [CloudImportRow]) -> CloudImportOutline.Result {
+        CloudImportOutline.build(rows: rows, now: now, calendar: calendar)
+    }
+
+    // MARK: - The reason this is an outline
+
+    /// The failure the whole grid exists to make visible.
+    ///
+    /// A researcher stops and restarts recording mid-interview and the call
+    /// produces two files. The adapter used to take `.first` and drop the
+    /// second in silence — and a half-session analyses perfectly cleanly, so
+    /// nothing downstream would ever say that forty minutes never arrived.
+    /// Both halves must be present, separately tickable, and counted.
+    @Test("Two recordings of one call nest under it, and both can be fetched")
+    func oneMeetingTwoRecordings() {
+        let scheduled = moment(daysAgo: 3, hour: 11)
+        let result = build([
+            row(id: "file-a", scheduled: scheduled,
+                recorded: scheduled.addingTimeInterval(120), ran: 1_924, meeting: "mtg-p05"),
+            row(id: "file-b", scheduled: scheduled,
+                recorded: scheduled.addingTimeInterval(2_460), ran: 2_299, meeting: "mtg-p05"),
+        ])
+
+        #expect(result.days.count == 1)
+        let entries = result.days[0].children
+        #expect(entries.count == 1, "one call, not two rows at meeting level")
+
+        guard case .meeting(let meeting) = entries[0].kind else {
+            Issue.record("a call with two recordings draws a meeting row")
+            return
+        }
+        #expect(meeting.recordingCount == 2)
+        #expect(entries[0].children.count == 2)
+        #expect(entries[0].children.compactMap(\.row?.id) == ["file-a", "file-b"],
+                "chronological within the call — Recording 1 is the one that happened first")
+
+        // The footer's job: say two, not one.
+        #expect(result.meetings == 1)
+        #expect(result.recordings == 2)
+        #expect(result.fetchable == 2)
+    }
+
+    /// The 90% case, and the one that must NOT grow a triangle. Making someone
+    /// expand a disclosure to read a single recording's time would be the
+    /// hierarchy taxing the common case to serve the rare one.
+    @Test("One recording of one call is a single flat row")
+    func oneMeetingOneRecording() {
+        let scheduled = moment(daysAgo: 3, hour: 9, minute: 30)
+        let result = build([
+            row(id: "file-a", scheduled: scheduled,
+                recorded: scheduled.addingTimeInterval(240), ran: 3_131, meeting: "mtg-p04"),
+        ])
+
+        let entries = result.days[0].children
+        #expect(entries.count == 1)
+        #expect(entries[0].children.isEmpty, "nothing to expand")
+        guard case .recording(let recording) = entries[0].kind else {
+            Issue.record("a lone recording is a recording row, not a meeting row")
+            return
+        }
+        #expect(recording.ordinal == nil, "no ordinal means: this row IS the meeting")
+        #expect(!recording.isChild)
+        // Both clocks live on the one row — the point of not nesting it.
+        #expect(recording.row.scheduledAt == scheduled)
+        #expect(recording.row.recordedAt == scheduled.addingTimeInterval(240))
+    }
+
+    /// A meeting nobody recorded is still a row. "You didn't record that one"
+    /// and "that meeting isn't here" are different answers, and only one of
+    /// them is true — the false negative this feature is written against.
+    @Test("A meeting with no recording is listed, and counts as zero recordings")
+    func unrecordedMeetingStillAppears() {
+        let result = build([
+            row(id: "evt-sync", title: "Weekly sync",
+                scheduled: moment(daysAgo: 5, hour: 10), recorded: nil, video: .notRecorded),
+        ])
+
+        #expect(result.days[0].children.count == 1)
+        #expect(result.meetings == 1)
+        #expect(result.recordings == 0)
+        #expect(result.fetchable == 0)
+    }
+
+    // MARK: - Order
+
+    /// Newest day first, because the researcher opened this to find last week.
+    /// Chronological inside the day, because that is how a schedule reads and
+    /// how two interviews that share a Wednesday relate to each other.
+    @Test("Days descend; rows within a day ascend")
+    func ordering() {
+        let result = build([
+            row(id: "c", title: "Late",   scheduled: moment(daysAgo: 3, hour: 16), recorded: moment(daysAgo: 3, hour: 16)),
+            row(id: "a", title: "Early",  scheduled: moment(daysAgo: 3, hour: 9),  recorded: moment(daysAgo: 3, hour: 9)),
+            row(id: "z", title: "Older",  scheduled: moment(daysAgo: 9, hour: 11), recorded: moment(daysAgo: 9, hour: 11)),
+            row(id: "n", title: "Newer",  scheduled: moment(daysAgo: 1, hour: 14), recorded: moment(daysAgo: 1, hour: 14)),
+        ])
+
+        #expect(result.days.count == 3)
+        // Compared as dates rather than as labels: the label's *wording* is
+        // `dayLabels`' business, and asserting a formatted string here would
+        // pin this test to the machine's locale for no gain.
+        #expect(result.days.compactMap { node -> Date? in
+            guard case .day(let day) = node.kind else { return nil }
+            return day.start
+        } == [
+            calendar.startOfDay(for: moment(daysAgo: 1, hour: 12)),
+            calendar.startOfDay(for: moment(daysAgo: 3, hour: 12)),
+            calendar.startOfDay(for: moment(daysAgo: 9, hour: 12)),
+        ])
+
+        // Within the dense day: 09:00 before 16:00.
+        #expect(result.days[1].children.compactMap(\.row?.title) == ["Early", "Late"])
+    }
+
+    /// A recording that ran past midnight must not be torn off its meeting into
+    /// the next day's group. The call belongs to the day it was booked for.
+    @Test("A meeting anchors its day on when it was booked, not when it recorded")
+    func lateNightMeetingStaysWithItsDay() {
+        let scheduled = moment(daysAgo: 2, hour: 23, minute: 30)
+        let result = build([
+            row(id: "file-a", scheduled: scheduled,
+                recorded: scheduled.addingTimeInterval(3_600), meeting: "mtg-late"),
+        ])
+
+        #expect(result.days.count == 1)
+        guard case .day(let day) = result.days[0].kind else {
+            Issue.record("expected a day header")
+            return
+        }
+        #expect(day.start == calendar.startOfDay(for: scheduled))
+    }
+
+    // MARK: - Day labels
+
+    @Test("Today and Yesterday are named; older days carry their weekday")
+    func dayLabels() {
+        func label(_ date: Date) -> String {
+            CloudImportOutline.dayLabel(for: date, now: now, calendar: calendar)
+        }
+        #expect(label(moment(daysAgo: 0, hour: 9)) == "Today")
+        #expect(label(moment(daysAgo: 1, hour: 9)) == "Yesterday")
+
+        // 13 Aug 2026 is a Thursday. Asserted by content rather than as one
+        // string, because the system formatter orders weekday, day and month
+        // per locale — "Thu 13 Aug" here, "Thu, Aug 13" on a US Mac — and
+        // pinning the order would test the machine rather than the code. What
+        // must be true either way: all three parts are present.
+        //
+        // The weekday is there because a study runs across a week or two and
+        // "the Thursday one" is how a researcher holds that.
+        let older = label(moment(daysAgo: 3, hour: 9))
+        #expect(older.contains("Thu"))
+        #expect(older.contains("13"))
+        #expect(older.contains("Aug"))
+    }
+
+    /// Finder and Mail's rule. Eleven months of the year the year is noise;
+    /// across the New Year it is the only thing that disambiguates.
+    @Test("The year appears only when it differs from this one")
+    func yearOnlyWhenDifferent() {
+        let thisYear = CloudImportOutline.dayLabel(
+            for: moment(daysAgo: 30, hour: 9), now: now, calendar: calendar)
+        let lastYear = CloudImportOutline.dayLabel(
+            for: moment(daysAgo: 300, hour: 9), now: now, calendar: calendar)
+        #expect(!thisYear.contains("2026"))
+        #expect(lastYear.contains("2025"))
+    }
+
+    // MARK: - What the footer may claim
+
+    /// The permissions link's whole contract. It appears when a recording the
+    /// researcher can *see* is one they cannot *fetch* — and its absence when
+    /// they can fetch everything is the reassurance, so a link that is always
+    /// on is worse than none.
+    @Test("Fetch everything you can see and there is no permissions link")
+    func noLinkWhenNothingIsWithheld() {
+        let result = build([
+            row(id: "a", scheduled: moment(daysAgo: 1, hour: 9), recorded: moment(daysAgo: 1, hour: 9)),
+            row(id: "b", scheduled: moment(daysAgo: 2, hour: 9), recorded: moment(daysAgo: 2, hour: 9)),
+        ])
+        #expect(result.fetchable == 2)
+        #expect(!result.withholding)
+    }
+
+    /// The case the mockup calls out by name: an ordinary month of un-recorded
+    /// standups must never raise a permissions question, because nothing was
+    /// withheld — there was simply nothing to withhold.
+    @Test("A meeting nobody recorded never triggers the permissions link")
+    func unrecordedMeetingsAreNotWithholding() {
+        let result = build([
+            row(id: "a", scheduled: moment(daysAgo: 1, hour: 9), recorded: moment(daysAgo: 1, hour: 9)),
+            row(id: "sync1", scheduled: moment(daysAgo: 2, hour: 10), recorded: nil, video: .notRecorded),
+            row(id: "sync2", scheduled: moment(daysAgo: 3, hour: 10), recorded: nil, video: .notRecorded),
+        ])
+        #expect(result.meetings == 3)
+        #expect(result.recordings == 1)
+        #expect(!result.withholding, "two un-recorded standups are not a permissions problem")
+    }
+
+    @Test("A recording we can see and cannot fetch does trigger it")
+    func withheldRecordingIsWithholding() {
+        let visible = moment(daysAgo: 1, hour: 9)
+        let result = build([
+            row(id: "a", scheduled: visible, recorded: visible),
+            // Listed, with a real recording behind it, and unfetchable — the
+            // Teams shape where the tenant blocks download.
+            row(id: "b", scheduled: moment(daysAgo: 2, hour: 9),
+                recorded: moment(daysAgo: 2, hour: 9), video: .unsupported),
+        ])
+        #expect(result.recordings == 2)
+        #expect(result.fetchable == 1)
+        #expect(result.withholding)
+    }
+
+    // MARK: - Identity
+
+    /// The contract that keeps the outline usable, and the one that would fail
+    /// silently: the tree is rebuilt on every keystroke and every progress
+    /// tick, and `NSOutlineView` matches its retained items against the new
+    /// ones with `isEqual:`. Default `NSObject` identity would make every
+    /// rebuild all-new objects — collapsing every expansion and dropping the
+    /// selection on each keypress, which reads as the outline fighting the
+    /// user rather than as an identity bug.
+    @Test("A rebuilt tree produces nodes equal to the ones it replaces")
+    func nodesSurviveARebuild() {
+        let scheduled = moment(daysAgo: 3, hour: 11)
+        let rows = [
+            row(id: "file-a", scheduled: scheduled, recorded: scheduled, meeting: "mtg"),
+            row(id: "file-b", scheduled: scheduled,
+                recorded: scheduled.addingTimeInterval(2_400), meeting: "mtg"),
+        ]
+
+        let first = build(rows)
+        let second = build(rows)
+
+        #expect(first.days[0] == second.days[0])
+        #expect(first.days[0].hash == second.days[0].hash)
+        #expect(first.days[0].children[0] == second.days[0].children[0])
+        #expect(first.days[0].children[0].children[1]
+                == second.days[0].children[0].children[1])
+        // Equal, but genuinely rebuilt — otherwise this proves nothing.
+        #expect(first.days[0] !== second.days[0])
+    }
+
+    /// Rows with no meeting id are each their own call, never swept into one
+    /// bucket together. Two unrelated ad-hoc recordings sharing a "no meeting"
+    /// key would render as one meeting with two children — which on Meet means
+    /// claiming they are two halves of the same session.
+    @Test("Rows with no meeting are separate meetings, not one shared group")
+    func nilMeetingIDsDoNotMerge() {
+        let result = build([
+            row(id: "a", title: "One", scheduled: moment(daysAgo: 1, hour: 9),
+                recorded: moment(daysAgo: 1, hour: 9), meeting: nil),
+            row(id: "b", title: "Two", scheduled: moment(daysAgo: 1, hour: 14),
+                recorded: moment(daysAgo: 1, hour: 14), meeting: nil),
+        ])
+        #expect(result.days[0].children.count == 2)
+        #expect(result.days[0].children.allSatisfy { $0.children.isEmpty })
+        #expect(result.meetings == 2)
+    }
+
+    @Test("An empty list is an empty outline, not a day with nothing in it")
+    func emptyIsEmpty() {
+        #expect(build([]) == .empty)
+    }
+}

@@ -7,8 +7,13 @@ import SwiftUI
 // docs/design-cloud-import.md §3.
 //
 // Native primitives, per desktop/CLAUDE.md § Native primitives first:
-//   • `Table`                  — NSTableView. Sortable columns, type-select,
-//                                arrow-key navigation and VoiceOver for free.
+//   • `NSOutlineView`          — via `CloudImportOutlineView`. HIG: "use an
+//                                outline view instead of a table view to
+//                                present hierarchical data". A meeting can
+//                                hold more than one recording, and only an
+//                                outline says so. It also brings the floating
+//                                day header, which SwiftUI has no equivalent
+//                                for at all.
 //   • `ContentUnavailableView` — the system empty state; `.search` quotes the
 //                                term back on its own.
 //   • `Window` scene           — not a sheet. A sheet is window-modal, so it
@@ -18,7 +23,7 @@ import SwiftUI
 //                                system analogue and it is a window.
 //
 // The one place selection semantics needed a decision: the mockup says "ticks
-// are intent, highlight is keyboard focus". `Table`'s single selection IS a
+// are intent, highlight is keyboard focus". The outline's single selection IS a
 // focus model — it draws the row, moves on arrows, supports type-select — so it
 // is taken as-is rather than hand-rolled. Ticks stay a separate `Set`.
 
@@ -32,9 +37,6 @@ struct CloudImportWindow: View {
     /// Destination project. Pre-selected by how the window was opened (§9), not
     /// defaulted — a wrong default here writes gigabytes into the wrong study.
     @State private var destinationID: UUID?
-    @State private var sortOrder: [KeyPathComparator<CloudImportRow>] = [
-        .init(\.startsAt, order: .reverse)
-    ]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -229,7 +231,7 @@ struct CloudImportWindow: View {
                 }
             }
         } else {
-            table(rows)
+            CloudImportOutlineView(store: store, platform: platform)
         }
     }
 
@@ -316,75 +318,6 @@ struct CloudImportWindow: View {
         return "\(CloudCount.noun(a.eventsInWindow, "meeting")), none with a recording you organised."
     }
 
-    // MARK: - The table
-
-    private func table(_ rows: [CloudImportRow]) -> some View {
-        Table(rows, selection: $store.focusedRowID, sortOrder: $sortOrder) {
-            // Tick column. Header is deliberately blank — a titled checkbox
-            // column reads as a filter control.
-            TableColumn("") { row in
-                TickBox(row: row, store: store)
-            }
-            .width(28)
-
-            TableColumn("Meeting") { row in
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(row.title).lineLimit(1)
-                    AttendeeLineView(row: row)
-                }
-            }
-            .width(min: 220, ideal: 320)
-
-            TableColumn("Date", value: \.startsAt) { row in
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(row.startsAt, format: dateFormat(for: row.startsAt))
-                        .monospacedDigit()
-                    Text(row.startsAt, style: .time)
-                        .font(.caption).foregroundStyle(.secondary).monospacedDigit()
-                }
-            }
-            .width(min: 96, ideal: 120)
-
-            TableColumn("Length") { row in
-                Text(row.duration.map(DurationFormat.human) ?? "—")
-                    .monospacedDigit()
-                    .foregroundStyle(row.duration == nil ? .secondary : .primary)
-            }
-            .width(min: 60, ideal: 76)
-
-            // Expiry is a COLUMN on platforms that expose a per-file clock,
-            // and absent on those that do not. Teams' own product renders
-            // exactly this affordance on exactly this data; Drive has no
-            // expiration field at all, so drawing the column there would be a
-            // row of em-dashes pretending to be data. Absence is information.
-            if platform.hasPerFileExpiry {
-                TableColumn("Expires") { row in
-                    ExpiryCell(row: row)
-                }
-                .width(min: 78, ideal: 96)
-            }
-
-            TableColumn("Status") { row in
-                StatusCell(row: row, store: store)
-            }
-            .width(min: 110, ideal: 170)
-        }
-        .tableStyle(.inset)
-        .alternatingRowBackgrounds(.disabled)
-    }
-
-    /// Year appears only when it differs from the current one — Finder and
-    /// Mail's rule. Eleven months of the year it is noise; across the New Year
-    /// it is essential. Through the system formatter, never a hand-rolled
-    /// pattern: day-name and month ordering differ by locale.
-    private func dateFormat(for date: Date) -> Date.FormatStyle {
-        let cal = Calendar.current
-        let sameYear = cal.component(.year, from: date) == cal.component(.year, from: Date())
-        var style = Date.FormatStyle.dateTime.weekday(.abbreviated).day().month(.abbreviated)
-        if !sameYear { style = style.year() }
-        return style
-    }
-
     // MARK: - Footer
 
     private var footer: some View {
@@ -416,20 +349,44 @@ struct CloudImportWindow: View {
             }
             .font(.callout)
         } else if let a = store.listing?.arithmetic {
+            let counts = store.outline
             HStack(spacing: 5) {
-                // Not "in window" — the window is already named in the
-                // subtitle ("last 30 days"), and saying it twice on one screen
-                // is the same redundancy §7 rules out for the timezone: state
-                // it once in the header, never on every row.
+                // Not "in window" — the window is already named in the toolbar
+                // picker, and saying it twice on one screen is the same
+                // redundancy §7 rules out for the timezone: state it once,
+                // never on every row.
+                //
+                // The meetings count is what is **on screen**, so the sentence
+                // is checkable by looking. It used to be `eventsInWindow` — the
+                // researcher's whole diary, including every meeting with no
+                // video call attached — which read as a join loss that wasn't
+                // one. Real incompleteness has its own signal, below.
                 Text(a.isExact
-                     ? CloudCount.noun(a.eventsInWindow, "meeting")
-                     : "at least \(CloudCount.noun(a.eventsInWindow, "meeting"))")
+                     ? CloudCount.noun(counts.meetings, "meeting")
+                     : "at least \(CloudCount.noun(counts.meetings, "meeting"))")
+                // Only when the two numbers differ. In the 90% case one meeting
+                // made one recording, and a second noun saying the same number
+                // twice is a sentence the reader has to check before
+                // discarding.
+                if counts.recordings != counts.meetings {
+                    Text("·").foregroundStyle(.secondary)
+                    Text(CloudCount.noun(counts.recordings, "recording"))
+                }
                 Text("·").foregroundStyle(.secondary)
-                Text("\(a.fetchable) you can fetch").fontWeight(.semibold)
+                Text("\(counts.fetchable) you can fetch").fontWeight(.semibold)
                 if a.organisedByOthers > 0 {
                     Text("·").foregroundStyle(.secondary)
                     Text("\(a.organisedByOthers) organised by someone else")
                         .foregroundStyle(.secondary)
+                }
+                // Shown only when a recording the researcher can *see* is one
+                // they cannot fetch. Fetch 8 of 8 and there is no link — that
+                // absence is the reassurance, and a permanent "learn about
+                // permissions" would train people to ignore it by the third
+                // visit.
+                if counts.withholding {
+                    Link("About recordings permissions", destination: platform.permissionsDocURL)
+                        .font(.caption)
                 }
                 // A capped paginator returns HTTP 200 with a partial page, and
                 // every error check says fine. Saying so is the whole point.
@@ -540,105 +497,6 @@ struct CloudImportWindow: View {
 
 // MARK: - Cells
 
-private struct TickBox: View {
-    let row: CloudImportRow
-    @ObservedObject var store: CloudImportStore
-
-    var body: some View {
-        if row.showsCheckbox {
-            Toggle("", isOn: Binding(
-                get: { store.ticked.contains(row.id) || !row.localState.isSelectable },
-                set: { _ in store.toggle(row.id) }
-            ))
-            .labelsHidden()
-            .disabled(!row.isSelectable)
-            .help(row.isSelectable ? "" : heldReason)
-        } else {
-            // No checkbox at all. There is nothing to tick, and offering one
-            // would be a lie.
-            Color.clear.frame(width: 1, height: 1)
-        }
-    }
-
-    /// Why a held row is disabled. The distinction that matters: a placeholder
-    /// or an unplugged volume is a *local* problem, and re-fetching from Meet
-    /// would spend an expiry-limited remote read on it.
-    private var heldReason: String {
-        switch row.localState {
-        case .imported:                        return "Already in this project."
-        case .notDownloaded(let provider):     return "Already imported — the file is on \(provider) and needs downloading there."
-        case .driveNotConnected(let volume):   return "Already imported — “\(volume)” isn't connected."
-        default:                               return ""
-        }
-    }
-}
-
-private struct AttendeeLineView: View {
-    let row: CloudImportRow
-
-    var body: some View {
-        let (names, overflow) = AttendeeLine.compose(row.attendees)
-        HStack(spacing: 4) {
-            if names.isEmpty && row.attendees.isEmpty {
-                // **Nothing, not "0 attendees".** A meeting with no invitees is
-                // an ordinary meeting, and announcing the zero is chrome for a
-                // non-event — the exact shape "absence is information" rules
-                // out. It also read as a fault on the first live Google list,
-                // where every test meeting legitimately had none.
-                EmptyView()
-            } else if names.isEmpty {
-                // Names existed and were all shed — you, decliners, resources.
-                // The count is the honest residue and worth saying.
-                Text(CloudCount.noun(row.attendees.count, "attendee"))
-            } else {
-                Text(names.joined(separator: " · ")).lineLimit(1)
-                if overflow > 0 {
-                    // A count, not an ellipsis: "+4" says there are six.
-                    Text("+\(overflow)")
-                        .padding(.horizontal, 4).padding(.vertical, 1)
-                        .background(.quaternary, in: Capsule())
-                }
-            }
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        // Names in the list, emails never — they are a re-identification key
-        // and are also unscannable. They earn their place at the "who is p1?"
-        // promotion step.
-    }
-}
-
-private struct StatusCell: View {
-    let row: CloudImportRow
-    @ObservedObject var store: CloudImportStore
-
-    var body: some View {
-        if let progress = store.progress[row.id] {
-            HStack(spacing: 6) {
-                ProgressView(value: progress.fraction ?? 0).frame(width: 60)
-                Text(progress.fraction.map { "\(Int($0 * 100))%" } ?? "")
-                    .font(.caption).monospacedDigit().foregroundStyle(.secondary)
-            }
-        } else if let outcome = store.outcomes[row.id] {
-            switch outcome {
-            case .imported:
-                Label("Imported", systemImage: "checkmark").font(.caption).foregroundStyle(.green)
-            case .failed(let reason, _):
-                Text(reason).font(.caption).foregroundStyle(.red).lineLimit(1).help(reason)
-            case .cancelled:
-                Text("Stopped").font(.caption).foregroundStyle(.secondary)
-            }
-        } else if store.isFetching && store.ticked.contains(row.id) {
-            Text("Queued").font(.caption).foregroundStyle(.secondary)
-        } else if let label = row.statusLabel {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(row.localState.isWarning ? .orange : .secondary)
-                .lineLimit(1)
-        }
-    }
-}
-
 /// Stand-in for each vendor's official mark.
 ///
 /// All three require the unaltered asset and permit no redrawn approximation,
@@ -661,28 +519,5 @@ private struct VendorMark: View {
         case .meet:  return "g.circle"
         case .zoom:  return "z.square"
         }
-    }
-}
-
-/// The countdown, rendered only where the platform supplies one.
-private struct ExpiryCell: View {
-    let row: CloudImportRow
-
-    var body: some View {
-        if let expires = row.expiresAt {
-            Text(expires, format: .relative(presentation: .named))
-                .font(.callout)
-                // Earn the red: a countdown on every row is a wall of
-                // countdowns, and then none of them mean anything. Only rows
-                // inside the danger window get warning colour.
-                .foregroundStyle(isUrgent(expires) ? AnyShapeStyle(.orange)
-                                                   : AnyShapeStyle(.secondary))
-        } else {
-            Text("—").foregroundStyle(.tertiary)
-        }
-    }
-
-    private func isUrgent(_ date: Date) -> Bool {
-        date.timeIntervalSinceNow < 7 * 24 * 3600
     }
 }

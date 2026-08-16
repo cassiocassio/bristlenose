@@ -36,8 +36,26 @@ final class CloudImportStore: ObservableObject {
     }
 
     @Published private(set) var phase: Phase = .signedOut
-    @Published private(set) var listing: MeetingListing?
+    @Published private(set) var listing: MeetingListing? { didSet { rebuildOutline() } }
     @Published private(set) var accountEmail: String?
+
+    /// The list as the grid draws it: days, meetings, recordings, plus the three
+    /// counts the footer is allowed to state.
+    ///
+    /// Stored rather than computed, because it is read once per render and the
+    /// renders are frequent — a fetch publishes progress several times a second
+    /// and rebuilding the tree on each would be work nobody asked for. It is
+    /// recomputed exactly when its inputs move: a new listing, or a new filter.
+    @Published private(set) var outline: CloudImportOutline.Result = .empty
+
+    /// Meetings the researcher has collapsed, this session.
+    ///
+    /// Expanded is the default and the point: nesting exists to *show* that one
+    /// call produced two files. A collapse is a deliberate act and survives
+    /// filtering, which is the state a rebuild would otherwise throw away on
+    /// every keystroke. Not yet persisted across launches — the mockup lists
+    /// that as owed.
+    @Published var collapsedMeetings: Set<String> = []
 
     /// Ticked rows. Intent, and durable across filter changes — which is the
     /// whole argument for checkboxes over selection: ticking three under
@@ -48,7 +66,7 @@ final class CloudImportStore: ObservableObject {
     /// a tick — one model for intent, one for navigation.
     @Published var focusedRowID: String?
 
-    @Published var filterText: String = ""
+    @Published var filterText: String = "" { didSet { rebuildOutline() } }
 
     /// Per-row fetch state, keyed by row id.
     @Published private(set) var progress: [String: FetchProgress] = [:]
@@ -76,16 +94,29 @@ final class CloudImportStore: ObservableObject {
 
     // MARK: - Derived
 
-    /// Rows after the filter, in display order: most-recent-first, because the
-    /// researcher opened this to find last week. Fetch order is a different
-    /// question — see `fetchOrder`.
-    var visibleRows: [CloudImportRow] {
-        let all = listing?.rows ?? []
+    private func rebuildOutline() {
         // The predicate lives on the row — titles *and* people, diacritic-
         // insensitive, covering names behind the `+N` overflow. See
         // `CloudImportRow.matches(filter:)` for why each of those is deliberate.
-        let filtered = all.filter { $0.matches(filter: filterText) }
-        return filtered.sorted { $0.startsAt > $1.startsAt }
+        let filtered = (listing?.rows ?? []).filter { $0.matches(filter: filterText) }
+        outline = CloudImportOutline.build(rows: filtered)
+    }
+
+    /// Rows after the filter, **in the order they appear on screen**.
+    ///
+    /// Derived from the outline rather than sorted independently, because the
+    /// two would drift and only one of them is what the researcher's eye used.
+    /// Range selection is the case that would break first: shift-clicking from
+    /// Monday to Wednesday has to tick what lies between them *as drawn* —
+    /// days newest-first, rows within a day oldest-first — and a second sort
+    /// order here would silently tick a different set.
+    var visibleRows: [CloudImportRow] {
+        outline.days.flatMap { day in
+            day.children.flatMap { node -> [CloudImportRow] in
+                if node.children.isEmpty { return node.row.map { [$0] } ?? [] }
+                return node.children.compactMap(\.row)
+            }
+        }
     }
 
     /// Ticked rows that are still tickable, in the order they will actually be

@@ -101,6 +101,26 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// Where "About recordings permissions" goes.
+    ///
+    /// One page, three anchors, rather than three pages: the three rules rhyme
+    /// (whose cloud holds the file, what the account plan permits, how long it
+    /// survives) and a researcher who uses two platforms should be able to read
+    /// both without navigating twice.
+    ///
+    /// The link is shown only when a recording the researcher can see is one
+    /// they cannot fetch — so the page's job is narrow and answerable: Teams,
+    /// recordings live in the *organiser's* OneDrive and channel meetings go to
+    /// SharePoint; Meet, own-data scope only, and conference records expire
+    /// around thirty days even though the Drive file lives on, and personal
+    /// accounts cannot record at all; Zoom, only *cloud* recordings reach the
+    /// API and the account's auto-delete decides how long.
+    var permissionsDocURL: URL {
+        // Force-unwrapped against a literal that cannot fail to parse — the
+        // same shape as `AlphaBuild.landingURL` next door.
+        URL(string: "https://bristlenose.app/docs/recording-permissions.html#\(rawValue)")!
+    }
+
     /// SF Symbol for menus. A placeholder in every case: each vendor requires
     /// its own unaltered mark on the sign-in button, shipped as an official
     /// asset rather than redrawn.

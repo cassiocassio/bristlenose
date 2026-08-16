@@ -393,9 +393,49 @@ struct CloudImportRow: Identifiable, Equatable {
     /// component, `wrap_untrusted()` before it reaches a prompt.
     let title: String
 
-    /// Meeting start. Rendered in the researcher's current local zone, as
-    /// Calendar.app does; the zone is stated once in the column header.
+    /// The row's anchor on the clock: when the record button was pressed if we
+    /// know, otherwise when the meeting was booked. Sorting, day grouping and
+    /// fetch ordering all read this, so it is never nil.
+    ///
+    /// It is deliberately *not* rendered on its own — the grid draws
+    /// `scheduledAt` and `recordedAt` in separate columns, because a researcher
+    /// looking at "09:30 / 09:34" learns something a single merged time cannot
+    /// tell them.
     let startsAt: Date
+
+    /// When the meeting was **booked** to start, from the calendar.
+    ///
+    /// Nil for a recording with no calendar event behind it — an instant
+    /// meeting, a call started from the Meet home screen. That is not a gap to
+    /// be filled: the Scheduled column shows a dash and the row is marked ad
+    /// hoc, which is the true state of affairs.
+    let scheduledAt: Date?
+
+    /// How long the meeting was booked for — `end − start` on the event.
+    /// Rendered under `scheduledAt`, and never confused with `duration`, which
+    /// is the recording's own length. The two routinely disagree by an hour.
+    let scheduledDuration: TimeInterval?
+
+    /// When the record button was actually pressed. Nil when there is no
+    /// recording — which is the honest answer for a meeting nobody recorded,
+    /// and the reason this is separate from `startsAt` rather than folded into
+    /// it. A row whose Recorded column is a dash has no file behind it.
+    let recordedAt: Date?
+
+    /// The meeting this row belongs to. Rows sharing one are recordings of the
+    /// **same call**, and the outline nests them under a single meeting row.
+    ///
+    /// Nil means "this recording has no calendar event" — the ad-hoc case,
+    /// which stands alone at meeting level rather than being invented a parent.
+    ///
+    /// **On Zoom this will need a second thought and the compiler will not ask
+    /// for it.** Two Meet children are two interviews; two Zoom children would
+    /// be one interview rendered twice (speaker view, gallery view), and
+    /// ticking both yields the same 45 minutes analysed as two participants.
+    /// The grouping is identical; the meaning is opposite. See
+    /// `CloudPlatform.yieldsMultipleMediaFiles`, and `CloudImportOutline.Kind`,
+    /// where a `.rendition` case is what would make the compiler ask.
+    let meetingID: String?
 
     /// Duration of the *recording* where known, else of the meeting. Nil when
     /// the row is someone else's meeting — we know the event, not the file.
@@ -482,6 +522,55 @@ struct CloudImportRow: Identifiable, Equatable {
             return String(email[..<at])
         }
     }
+
+    /// Explicit rather than memberwise, so the four grid fields can default to
+    /// "we don't know" and every adapter that hasn't learned them yet keeps
+    /// compiling — and, more usefully, keeps *rendering*: a source that sets
+    /// none of them produces exactly the flat one-clock list this type drew
+    /// before the grid existed.
+    init(
+        id: String,
+        title: String,
+        startsAt: Date,
+        duration: TimeInterval?,
+        sizeBytes: Int64?,
+        expiresAt: Date?,
+        attendees: [Attendee],
+        localState: ImportRowState,
+        video: ArtifactAvailability,
+        roster: ArtifactAvailability,
+        transcript: ArtifactAvailability,
+        organiser: Attendee?,
+        scheduledAt: Date? = nil,
+        scheduledDuration: TimeInterval? = nil,
+        recordedAt: Date? = nil,
+        meetingID: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.startsAt = startsAt
+        self.scheduledAt = scheduledAt
+        self.scheduledDuration = scheduledDuration
+        self.recordedAt = recordedAt
+        self.meetingID = meetingID
+        self.duration = duration
+        self.sizeBytes = sizeBytes
+        self.expiresAt = expiresAt
+        self.attendees = attendees
+        self.localState = localState
+        self.video = video
+        self.roster = roster
+        self.transcript = transcript
+        self.organiser = organiser
+    }
+
+    /// Whether this row has a file behind it at all.
+    ///
+    /// Not the same question as `isSelectable`, which also asks whether we
+    /// already hold it. A row can have a recording and be untickable (already
+    /// imported); a row can be untickable and have no recording (nobody pressed
+    /// record). The footer counts recordings, so it needs this one.
+    var hasRecording: Bool { recordedAt != nil || video.isAvailable }
 
     /// Whether this row can be ticked. Local state decides first (an already-held
     /// file is not re-fetchable), then remote availability.

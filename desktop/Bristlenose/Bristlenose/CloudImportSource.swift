@@ -289,6 +289,16 @@ final class FixtureCloudSource: CloudImportSource {
         return out
     }
 
+    /// - Parameters:
+    ///   - minutes: how long the **recording** ran. The booked length is
+    ///     derived — rounded up to the next half hour — because the two
+    ///     disagreeing is the whole reason the grid has two clocks, and a
+    ///     fixture where they agree would never exercise it.
+    ///   - lateBy: minutes between the booked start and the record button.
+    ///     Everybody joins a couple of minutes late; a fixture that starts on
+    ///     the second is a fixture that hides an off-by-one.
+    ///   - meeting: shared between rows that are recordings of the same call.
+    ///     Nil means the row is its own meeting.
     private func row(
         id: String,
         title: String,
@@ -298,14 +308,24 @@ final class FixtureCloudSource: CloudImportSource {
         minutes: Int,
         gigabytes: Double,
         people: Int = 3,
+        lateBy: Int = 4,
+        meeting: String? = nil,
         local: ImportRowState = .notImported,
         video: ArtifactAvailability = .available,
         organiser: CloudImportRow.Attendee? = nil
     ) -> CloudImportRow {
-        CloudImportRow(
+        let scheduled = day(daysAgo, hour: hour, minute: minute)
+        // No recording, no record-button moment. The dash in the Recorded
+        // column is the fixture's job here: it is what a meeting nobody
+        // recorded actually looks like.
+        let recorded: Date? = (organiser == nil && video.isAvailable)
+            ? scheduled.addingTimeInterval(TimeInterval(lateBy * 60))
+            : nil
+        let booked = TimeInterval(((minutes + 29) / 30) * 30 * 60)
+        return CloudImportRow(
             id: id,
             title: title,
-            startsAt: day(daysAgo, hour: hour, minute: minute),
+            startsAt: recorded ?? scheduled,
             duration: organiser == nil ? TimeInterval(minutes * 60) : nil,
             sizeBytes: organiser == nil ? Int64(gigabytes * 1_073_741_824) : nil,
             // Nil on Google, and that is a finding rather than an omission:
@@ -322,7 +342,11 @@ final class FixtureCloudSource: CloudImportSource {
             video: video,
             roster: .available,
             transcript: .available,
-            organiser: organiser
+            organiser: organiser,
+            scheduledAt: scheduled,
+            scheduledDuration: booked,
+            recordedAt: recorded,
+            meetingID: meeting
         )
     }
 
@@ -411,8 +435,18 @@ final class FixtureCloudSource: CloudImportSource {
                 row(id: "evt-sync", title: "Weekly sync — design",
                     daysAgo: 3, hour: 9, minute: 30, minutes: 27, gigabytes: 0.6,
                     people: 5),
-                row(id: "evt-p05", title: "P05 Interview — ward handover",
-                    daysAgo: 4, hour: 11, minutes: 51, gigabytes: 1.1),
+                // The 1:N case, and the reason the list is an outline at all:
+                // one booked hour where somebody stopped and restarted, so the
+                // interview arrives as two files. These nest under a single
+                // meeting row and are ticked separately — on Meet they are two
+                // genuine halves of one session, and losing the second is the
+                // silent §6 failure the `.first` lookup used to produce.
+                row(id: "evt-p05a", title: "P05 Interview — ward handover",
+                    daysAgo: 4, hour: 11, minutes: 32, gigabytes: 0.6,
+                    lateBy: 2, meeting: "mtg-p05"),
+                row(id: "evt-p05b", title: "P05 Interview — ward handover",
+                    daysAgo: 4, hour: 11, minutes: 38, gigabytes: 0.7,
+                    lateBy: 41, meeting: "mtg-p05"),
                 row(id: "evt-p04", title: "P04 Interview — triage",
                     daysAgo: 9, hour: 15, minute: 15, minutes: 71, gigabytes: 1.6,
                     local: .imported),

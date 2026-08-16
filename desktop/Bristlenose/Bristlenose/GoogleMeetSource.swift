@@ -445,10 +445,21 @@ final class GoogleMeetSource: CloudImportSource {
             let isOrganiser = candidate.isOrganiser
             let attendees = Self.attendees(of: event, domain: domain)
 
+            // The calendar's own two facts, kept apart from the recording's.
+            // The Scheduled and Recorded columns exist because these
+            // *routinely* disagree — a booked hour against a 52-minute file,
+            // and a start four minutes late.
+            let scheduledEnd = event.end?.dateTime.flatMap(Self.parseRFC3339)
+            let scheduledDuration = scheduledEnd.map { $0.timeIntervalSince(start) }
+            // A meeting id, so several recordings of one call nest under it.
+            // The event id is the right key: the meeting code is reused across
+            // every instance of a recurring series, so grouping on it would
+            // stack six Tuesdays into one meeting.
+            let meetingID = event.id ?? event.conferenceData?.conferenceId
+
             var video: ArtifactAvailability = .available
-            var fileID: String?
-            var duration: TimeInterval?
             var expiresAt: Date?
+            var found: [RecordingLookup.Found] = []
 
             if !isOrganiser {
                 video = .notOrganiser(organiser: event.organizer?.displayName
@@ -456,14 +467,13 @@ final class GoogleMeetSource: CloudImportSource {
             } else if !canReachMeet {
                 video = .needsScope(GoogleScopes.meetReadonly)
             } else {
-                // Nil covers three shapes: no meeting code to search on, no
-                // conference record, and no FILE_GENERATED recording. All three
-                // mean the same thing to the researcher — there is nothing to
-                // fetch — and none of them is a fault.
-                let found = lookups[index]
-                fileID = found?.fileID
-                expiresAt = found?.recordExpires
-                if fileID == nil {
+                // An empty list covers three shapes: no meeting code to search
+                // on, no conference record, and no FILE_GENERATED recording.
+                // All three mean the same thing to the researcher — there is
+                // nothing to fetch — and none of them is a fault.
+                expiresAt = lookups[index]?.recordExpires
+                found = lookups[index]?.recordings ?? []
+                if found.isEmpty {
                     // Only a personal account earns the plan verdict, where it
                     // is literally true. A Workspace account with an unrecorded
                     // meeting is not a capability problem, and saying so sends
@@ -472,48 +482,83 @@ final class GoogleMeetSource: CloudImportSource {
                 }
             }
 
-            // **The video is the session; the meeting is context.**
-            //
-            // Settled 16 Aug 2026, after a measurement: on one instant meeting
-            // the recording ran 14s and the transcript 38s, so 63% of what was
-            // said sat outside the recording. A calendar event cannot be the
-            // session boundary — it may not exist at all, one call can hold
-            // several sessions inside it, and it spans everything said before
-            // anyone pressed record.
-            //
-            // So the anchor is the record button where Google tells us when
-            // that was, and the event's start only as a fallback for a row
-            // that has no recording to be anchored to.
-            let sessionStart = lookups[index]?.startedAt ?? start
+            // Common to every row this event produces. Only the recording's own
+            // facts differ between siblings.
+            func row(
+                id: String,
+                recordedAt: Date?,
+                duration: TimeInterval?
+            ) -> CloudImportRow {
+                CloudImportRow(
+                    id: id,
+                    title: event.summary ?? "Untitled meeting",
+                    // **The video is the session; the meeting is context.**
+                    //
+                    // Settled 16 Aug 2026, after a measurement: on one instant
+                    // meeting the recording ran 14s and the transcript 38s, so
+                    // 63% of what was said sat outside the recording. A
+                    // calendar event cannot be the session boundary — it may
+                    // not exist at all, one call can hold several sessions
+                    // inside it, and it spans everything said before anyone
+                    // pressed record.
+                    //
+                    // So the anchor is the record button where Google tells us
+                    // when that was, and the event's start only as a fallback
+                    // for a row that has no recording to be anchored to.
+                    startsAt: recordedAt ?? start,
+                    // The recording's own length, or nothing. It used to come
+                    // from `event.end − event.start`, which reported **1h 30m**
+                    // over a 20-second file — a wrong number at the exact point
+                    // the researcher decides what is worth fetching, and an
+                    // input to the free-space precheck. A dash is information;
+                    // that was not. The booked hour is still shown, in its own
+                    // column, where it cannot be mistaken for this.
+                    duration: duration,
+                    // Size needs a Drive metadata read, which needs the file
+                    // grant this row may not have yet. Left nil rather than
+                    // guessed — the free-space precheck reads it and a
+                    // fabricated number there would be worse than an absent one.
+                    sizeBytes: nil,
+                    expiresAt: expiresAt,
+                    attendees: attendees,
+                    localState: .notImported,
+                    video: video,
+                    roster: attendees.isEmpty ? .unsupported : .available,
+                    transcript: canReachMeet ? .available : .needsScope(GoogleScopes.meetReadonly),
+                    organiser: isOrganiser ? nil : Self.person(event.organizer, domain: nil),
+                    scheduledAt: start,
+                    scheduledDuration: scheduledDuration,
+                    recordedAt: recordedAt,
+                    meetingID: meetingID
+                )
+            }
 
-            // Duration comes from the recording or not at all. It used to come
-            // from `event.end − event.start`, which reported **1h 30m** over a
-            // 20-second file — a wrong number at the exact point the
-            // researcher decides what is worth fetching, and an input to the
-            // free-space precheck. A dash is information; that was not.
-            duration = lookups[index]?.duration
-
-            let rowID = event.id ?? (fileID ?? UUID().uuidString)
-            if let fileID { driveFileIDs[rowID] = fileID }
-
-            rows.append(CloudImportRow(
-                id: rowID,
-                title: event.summary ?? "Untitled meeting",
-                startsAt: sessionStart,
-                duration: duration,
-                // Size needs a Drive metadata read, which needs the file grant
-                // this row may not have yet. Left nil rather than guessed —
-                // the free-space precheck reads it and a fabricated number
-                // there would be worse than an absent one.
-                sizeBytes: nil,
-                expiresAt: expiresAt,
-                attendees: attendees,
-                localState: .notImported,
-                video: video,
-                roster: attendees.isEmpty ? .unsupported : .available,
-                transcript: canReachMeet ? .available : .needsScope(GoogleScopes.meetReadonly),
-                organiser: isOrganiser ? nil : Self.person(event.organizer, domain: nil)
-            ))
+            if found.isEmpty {
+                // A meeting with no recording is still a row: it is the
+                // difference between "you didn't record that one" and the
+                // meeting silently not existing, which is the false negative
+                // this whole adapter is written against.
+                rows.append(row(id: event.id ?? UUID().uuidString,
+                                recordedAt: nil, duration: nil))
+            } else {
+                for recording in found {
+                    // The Drive file id is the row id. One row is now one file,
+                    // so the two identities have collapsed into each other —
+                    // which is what makes a tick stable across a re-list, and
+                    // what stops the fetch map from ever drifting from the row
+                    // it belongs to.
+                    //
+                    // The map survives that collapse rather than being retired
+                    // by it, because it answers a second question the row id
+                    // alone cannot: *does this row have a file at all*. An
+                    // un-recorded meeting's row id is its calendar event id,
+                    // and `requestMediaGrant` must not hand that to the Picker.
+                    driveFileIDs[recording.fileID] = recording.fileID
+                    rows.append(row(id: recording.fileID,
+                                    recordedAt: recording.startedAt,
+                                    duration: recording.duration))
+                }
+            }
         }
         return rows
     }
@@ -523,23 +568,35 @@ final class GoogleMeetSource: CloudImportSource {
     /// A named `Sendable` struct rather than the tuple this used to return, so
     /// it can cross a task-group boundary.
     private struct RecordingLookup: Sendable {
-        let fileID: String?
         let recordExpires: Date?
-        /// When the record button was actually pressed, and for how long — the
-        /// session's real boundary. Nil when Google didn't serve it.
-        let startedAt: Date?
-        let duration: TimeInterval?
 
-        /// The span defaults to absent, because every caller that omits it is a
+        /// **Every** generated recording the call produced, in the order Google
+        /// returned them — not the first one.
+        ///
+        /// This used to be a single optional `fileID` taken with `.first`, and
+        /// the second half of any meeting where somebody stopped and restarted
+        /// recording was dropped in silence. That is the §6 failure this whole
+        /// feature is written against: a half-session analyses perfectly
+        /// cleanly and reads as complete, so nothing ever tells the researcher
+        /// that forty minutes of their interview never arrived. Observed on a
+        /// live tenant 16 Aug 2026 — one call, two `FILE_GENERATED` entries.
+        let recordings: [Found]
+
+        struct Found: Sendable {
+            let fileID: String
+            /// When the record button was actually pressed, and for how long —
+            /// the session's real boundary. Nil when Google didn't serve it.
+            let startedAt: Date?
+            let duration: TimeInterval?
+        }
+
+        /// The list defaults to empty, because every caller that omits it is a
         /// path where the lookup gave up — no record, no recordings, a refusal.
-        /// Defaulting rather than threading `nil` through three failure sites
-        /// keeps "we don't know" as the thing you get by saying nothing.
-        init(fileID: String?, recordExpires: Date?,
-             startedAt: Date? = nil, duration: TimeInterval? = nil) {
-            self.fileID = fileID
+        /// Defaulting rather than threading `[]` through three failure sites
+        /// keeps "we found nothing" as the thing you get by saying nothing.
+        init(recordExpires: Date?, recordings: [Found] = []) {
             self.recordExpires = recordExpires
-            self.startedAt = startedAt
-            self.duration = duration
+            self.recordings = recordings
         }
     }
 
@@ -703,7 +760,7 @@ final class GoogleMeetSource: CloudImportSource {
         // reason: a third party decides what is in the string, and a crash is
         // a worse outcome than a row that can't be fetched.
         guard let recURL = URL(string: "https://meet.googleapis.com/v2/\(name)/recordings") else {
-            return RecordingLookup(fileID: nil, recordExpires: expires)
+            return RecordingLookup(recordExpires: expires)
         }
         var recRequest = URLRequest(url: recURL)
         recRequest.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
@@ -714,7 +771,7 @@ final class GoogleMeetSource: CloudImportSource {
             (recData, recResponse) = try await session.data(for: recRequest)
         } catch {
             log.notice("meet_lookup phase=recordings transport_error=\(error.localizedDescription, privacy: .public)")
-            return RecordingLookup(fileID: nil, recordExpires: expires)
+            return RecordingLookup(recordExpires: expires)
         }
         let recStatus = (recResponse as? HTTPURLResponse)?.statusCode ?? 0
         let recOutcome = GoogleResponseClassifier.classify(status: recStatus, body: recData)
@@ -733,40 +790,45 @@ final class GoogleMeetSource: CloudImportSource {
             """)
 
         guard recOutcome == .ok, let recPage
-        else { return RecordingLookup(fileID: nil, recordExpires: expires) }
+        else { return RecordingLookup(recordExpires: expires) }
 
         // Only a FILE_GENERATED recording has bytes behind it. STARTED and
         // ENDED both mean "not yet", and Google's own propagation delay is
         // roughly the length of the meeting — so offering a row for those
         // would produce a fetch that 404s minutes after the researcher ticks it.
         //
-        // KNOWN GAP: `.first` where a meeting stopped and restarted recording
-        // yields two FILE_GENERATED entries, and the second half is dropped in
-        // silence — a §6-class loss, since a half-session analyses cleanly and
-        // reads as complete. Fixing it means one row producing two files, which
-        // the row model does not express. Unproven either way until a segmented
-        // recording is actually observed.
-        let generated = recPage.recordings?.first { $0.state == "FILE_GENERATED" }
-        let began = generated?.startTime.flatMap(Self.parseRFC3339)
-        let ended = generated?.endTime.flatMap(Self.parseRFC3339)
+        // **All of them, not the first.** A call where somebody stopped and
+        // restarted recording yields several `FILE_GENERATED` entries, and the
+        // previous `.first` dropped every one after the first in silence. Each
+        // now becomes its own row, nested under the meeting — which is what the
+        // outline exists for.
+        let generated = (recPage.recordings ?? []).filter { $0.state == "FILE_GENERATED" }
+        let found: [RecordingLookup.Found] = generated.compactMap { recording in
+            guard let fileID = recording.driveDestination?.file else { return nil }
+            let began = recording.startTime.flatMap(Self.parseRFC3339)
+            let ended = recording.endTime.flatMap(Self.parseRFC3339)
+            return RecordingLookup.Found(
+                fileID: fileID,
+                startedAt: began,
+                duration: (began != nil && ended != nil)
+                    ? ended!.timeIntervalSince(began!)
+                    : nil
+            )
+        }
 
-        // Whether the canonical boundary is on the wire at all. Logged rather
-        // than assumed: the fields are documented, this adapter has never asked
-        // for them, and a nil here silently falls the row back to event timing.
+        // Whether the canonical boundary is on the wire at all, and whether we
+        // are in the multi-recording case. Logged rather than assumed: the span
+        // fields are documented, this adapter only recently began asking for
+        // them, and a nil silently falls the row back to event timing.
         log.notice("""
             meet_lookup phase=recording_span \
-            hasStart=\(began != nil, privacy: .public) \
-            hasEnd=\(ended != nil, privacy: .public)
+            generated=\(generated.count, privacy: .public) \
+            withFile=\(found.count, privacy: .public) \
+            withStart=\(found.filter { $0.startedAt != nil }.count, privacy: .public) \
+            withSpan=\(found.filter { $0.duration != nil }.count, privacy: .public)
             """)
 
-        return RecordingLookup(
-            fileID: generated?.driveDestination?.file,
-            recordExpires: expires,
-            startedAt: began,
-            duration: (began != nil && ended != nil)
-                ? ended!.timeIntervalSince(began!)
-                : nil
-        )
+        return RecordingLookup(recordExpires: expires, recordings: found)
     }
 
     // MARK: Fetching

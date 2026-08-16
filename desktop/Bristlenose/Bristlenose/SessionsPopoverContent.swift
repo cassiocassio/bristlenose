@@ -144,13 +144,6 @@ struct SessionsPopoverContent: View {
 
 // MARK: - Toolbar button
 
-extension Notification.Name {
-    /// Posted to present the session switcher from outside the toolbar — the
-    /// menu twin (commit 3 repoints ⌘⌥L here on the Sessions lens) and any
-    /// future affordance. Same native-side pattern as `.showMiroSheet`.
-    static let showSessionsSwitcher = Notification.Name("showSessionsSwitcher")
-}
-
 /// The Sessions-lens toolbar button — presents the session-switcher popover.
 ///
 /// Replaces the `toggleLeftPanel` dispatch on this one lens (the other three
@@ -162,6 +155,12 @@ struct SessionsSwitcherButton: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var serveManager: ServeManager
     @ObservedObject var i18n: I18n
+    /// Per-window "present the switcher", bumped by View ▸ Switch Session
+    /// (⌘⌥L) through this window's `WindowCommandSink`. A counter for the same
+    /// reason the outline's `renameRequest` is one — repeat presses have to be
+    /// distinguishable. Replaces a `.showSessionsSwitcher` broadcast, which
+    /// opened the popover in every window at once.
+    let presentRequest: Int
 
     @StateObject private var model = SessionsPopoverModel()
     @State private var isPresented = false
@@ -192,7 +191,7 @@ struct SessionsSwitcherButton: View {
                 onRetry: { refresh() }
             )
         }
-        .onReceive(NotificationCenter.default.publisher(for: .showSessionsSwitcher)) { _ in
+        .onChange(of: presentRequest) { _, _ in
             if !isPresented { present() }
         }
     }

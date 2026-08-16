@@ -254,17 +254,6 @@ enum SidebarSelection: Hashable {
 // MARK: - Notification names
 
 extension Notification.Name {
-    /// Posted by File > New Project (Cmd+N) and the sidebar [+] button.
-    static let createNewProject = Notification.Name("bristlenoseCreateNewProject")
-
-    /// Posted by File > New Folder (⇧⌘N) and the sidebar folder.badge.plus button.
-    static let createNewFolder = Notification.Name("bristlenoseCreateNewFolder")
-
-    /// Posted by File > Add Files… (⇧⌘A) — presents an open panel and routes the
-    /// chosen files through the same intake path as a drop onto the selected
-    /// project (copy → incremental run for folder-shaped analysed projects).
-    static let addFilesToSelectedProject = Notification.Name("bristlenoseAddFilesToSelectedProject")
-
     /// Posted by File ▸ Import ▸ <platform>… — opens the cloud-import window
     /// against that platform's live APIs, pre-selecting the current project as
     /// the destination. `object` carries the `CloudPlatform`.
@@ -278,46 +267,18 @@ extension Notification.Name {
     /// defaulted argument: the only way in is a menu item that says so.
     static let openCloudImportFixture = Notification.Name("bristlenoseOpenCloudImportFixture")
 
-    /// Posted by View > Move Focus to Projects (⌘0) — returns keyboard focus
-    /// from the web report to the project list (the §10.1 no-trap command).
-
-    /// Posted by Help > Welcome to Bristlenose — clears the project selection so
-    /// the app-level Welcome home pane (WelcomeHomeView) shows. Same effect as
-    /// clicking the sidebar's empty space (SidebarDeselectMonitor); the menu item
-    /// is the discoverable, re-openable way back that a click can't advertise.
-    static let showWelcome = Notification.Name("bristlenoseShowWelcome")
-
-    // NOTE: `toggleProjectsSidebar` was removed (28 Jul 2026). A broadcast
-    // reached every open window, so one ⌘⌥S toggled them all. View ▸ Hide/Show
-    // Projects now drives the FRONT window's `columnVisibility` binding directly
-    // via `focusedSceneValue` — see `SidebarVisibilityFocus.swift`. The same
-    // broadcast-hits-every-window fault applies to the notifications below;
-    // converting them is staged in `docs/design-workspace.md`.
-
-    /// Posted by Project ▸ Show Transcripts in Finder — reveals the project's
-    /// transcripts folder (see `TranscriptsRevealTarget` for the fallback ladder).
-    static let revealTranscripts = Notification.Name("bristlenoseRevealTranscripts")
-
-    /// Posted by Project > Rename to trigger inline rename in the sidebar.
-    static let renameSelectedProject = Notification.Name("bristlenoseRenameSelectedProject")
-
-    /// Posted by Project > Rename Folder to trigger inline rename on the selected folder.
-    static let renameSelectedFolder = Notification.Name("bristlenoseRenameSelectedFolder")
-
-    /// Posted by Project > Delete Folder to remove the selected folder.
-    static let deleteSelectedFolder = Notification.Name("bristlenoseDeleteSelectedFolder")
-
-    /// Posted by Project > Move to to move the selected project into a folder.
-    /// `userInfo["folderId"]` is the target `UUID` or `NSNull` for root.
-    static let moveSelectedProject = Notification.Name("bristlenoseMoveSelectedProject")
-
-    /// Posted by Project > Locate… to re-point a moved/deleted project.
-    static let locateSelectedProject = Notification.Name("bristlenoseLocateSelectedProject")
-
-    /// Posted by Project > Stop Analysis (⌘.) to cancel the selected project's
-    /// run. The keyboard accelerator for the hover-× / context-menu Stop; acts
-    /// on the sole-selected project (the menu item dims when it isn't running).
-    static let stopSelectedProject = Notification.Name("bristlenoseStopSelectedProject")
+    // NOTE: `toggleProjectsSidebar` was removed 28 Jul 2026, and the whole
+    // menu-bar family followed on 16 Aug 2026 — New Project, New Folder, Add
+    // Files, Welcome, Show Transcripts, Rename ×2, Delete Folder, Move To,
+    // Locate, Stop, Remove from Sidebar, AI & Privacy, Send to Miro, Switch
+    // Session. Each was a broadcast every open window answered, so ⌘N created a
+    // project per window and Rename opened an editor in all of them. They are
+    // now `WindowCommand` cases routed to the key window — see
+    // `WindowCommandFocus.swift`, gated by `desktop/scripts/check-menu-routing.sh`.
+    //
+    // The two above survive because they open a dedicated `Window` scene rather
+    // than reaching into a project window, so there is exactly one receiver by
+    // construction.
 }
 
 // MARK: - Project index (persistence)
@@ -354,6 +315,15 @@ final class ProjectIndex: ObservableObject {
     /// row context menu. The AppKit outline consumes it via `consumeRename` and
     /// opens the row's editable name field. Mirrors `pendingIconReveal`.
     @Published var pendingRename: UUID?
+
+    /// Transient (not persisted) one-shot signal: what the next project window
+    /// to appear should select. Written only by `NewItemFallback` — the
+    /// app-level half of New Project / New Folder, which runs when no project
+    /// window is frontmost and so has nowhere to put the selection yet.
+    /// `ContentView` consumes it via `consumePendingSelection`. Sibling of
+    /// `pendingRename`, and set alongside it: the pair is "select this, then
+    /// open its name for editing".
+    @Published var pendingSelection: SidebarSelection?
 
     /// Bookmark leases held while a project is `.ready`. Released on
     /// transition to `.cantFind` / `.inCloud` or when the project is removed.
@@ -459,6 +429,14 @@ final class ProjectIndex: ObservableObject {
     /// Clear the one-shot rename trigger after the row has entered inline edit.
     func consumeRename(_ id: UUID) {
         if pendingRename == id { pendingRename = nil }
+    }
+
+    /// Take the staged selection, if there is one, clearing it. Returning the
+    /// value rather than exposing "read then clear" at the call site keeps this
+    /// one-shot even if a second window appears in the same run loop.
+    func consumePendingSelection() -> SidebarSelection? {
+        defer { pendingSelection = nil }
+        return pendingSelection
     }
 
     /// Remove a project by ID.

@@ -40,7 +40,7 @@ struct MenuCommands: Commands {
         }
 
         CommandGroup(replacing: .newItem) {
-            FileMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
+            FileMenuContent(bridgeHandler: bridgeHandler, projectIndex: projectIndex, i18n: i18n)
         }
 
         CommandGroup(replacing: .undoRedo) {
@@ -196,6 +196,7 @@ private struct DebugMenuContent: View {
     /// "Grid Specimen" navigates the report SPA (no native window scene).
     @ObservedObject var bridgeHandler: BridgeHandler
     @Environment(\.openWindow) private var openWindow
+    @FocusedValue(\.windowCommands) private var windowCommands
 
     var body: some View {
         // Diagnostics windows take NO keyboard shortcut — except Run Inspector,
@@ -259,19 +260,11 @@ private struct DebugMenuContent: View {
         }
     }
 
-    /// Ask ContentView (which owns the sidebar selection) to inject `name` into
-    /// the selected project. Mirrors the `.createNewProject` notification idiom.
+    /// Ask the key window (which owns the sidebar selection) to inject `name`
+    /// into its selected project.
     private func postFixture(_ name: String) {
-        NotificationCenter.default.post(
-            name: .applyDebugFixture, object: nil, userInfo: ["scenario": name]
-        )
+        windowCommands?.perform(.applyDebugFixture(scenario: name))
     }
-}
-
-extension Notification.Name {
-    /// DEBUG only — posted by Debug ▸ Diagnostic fixtures; observed by
-    /// ContentView, which applies the named fixture to the selected project.
-    static let applyDebugFixture = Notification.Name("bristlenoseApplyDebugFixture")
 }
 #endif
 
@@ -317,6 +310,7 @@ private struct ShowMainWindowMenuContent: View {
 private struct AppMenuContent: View {
     @ObservedObject var serveManager: ServeManager
     @ObservedObject var i18n: I18n
+    @FocusedValue(\.windowCommands) private var windowCommands
 
     var body: some View {
         Button(i18n.t("desktop.menu.app.about")) {
@@ -352,9 +346,9 @@ private struct AppMenuContent: View {
         Divider()
 
         Button(i18n.t("desktop.menu.app.aiPrivacy"), systemImage: "hand.raised") {
-            NotificationCenter.default.post(
-                name: .showAIConsentSheet, object: nil)
+            windowCommands?.perform(.showAIConsent)
         }
+        .disabled(!WindowCommand.showAIConsent.isEnabled(hasKeyWindow: windowCommands != nil))
 
         Divider()
 
@@ -375,26 +369,36 @@ private struct AppMenuContent: View {
 
 private struct FileMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
+    @ObservedObject var projectIndex: ProjectIndex
     @ObservedObject var i18n: I18n
+    @FocusedValue(\.windowCommands) private var windowCommands
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Button(i18n.t("desktop.menu.file.newProject"), systemImage: "plus") {
-            NotificationCenter.default.post(name: .createNewProject, object: nil)
+            newItem(.newProject) {
+                NewItemFallback.createProject(
+                    in: projectIndex, named: i18n.t("desktop.chrome.newProject"))
+            }
         }
         .keyboardShortcut("n", modifiers: .command)
 
         Button(i18n.t("desktop.menu.file.newFolder"), systemImage: "folder.badge.plus") {
-            NotificationCenter.default.post(name: .createNewFolder, object: nil)
+            newItem(.newFolder) {
+                NewItemFallback.createFolder(
+                    in: projectIndex, named: i18n.t("desktop.chrome.newFolder"))
+            }
         }
         .keyboardShortcut("n", modifiers: [.command, .shift])
 
         // Add Files… — the menu twin of drag-drop. ⇧⌘A mirrors Apple Mail's
-        // File ▸ Attach Files. Posts unconditionally (like New Project/Folder);
-        // ContentView resolves the current selection and toasts if none.
+        // File ▸ Attach Files. Fires unconditionally (like New Project/Folder);
+        // the window resolves its own selection and toasts if none.
         Button(i18n.t("desktop.menu.file.addFiles"), systemImage: "plus.rectangle.on.folder") {
-            NotificationCenter.default.post(name: .addFilesToSelectedProject, object: nil)
+            windowCommands?.perform(.addFiles)
         }
         .keyboardShortcut("a", modifiers: [.command, .shift])
+        .disabled(!WindowCommand.addFiles.isEnabled(hasKeyWindow: windowCommands != nil))
 
         // Import ▸ — cloud sources, beside Add Files… because that is the same
         // act from a different place (`docs/design-cloud-import.md` §9).
@@ -460,6 +464,23 @@ private struct FileMenuContent: View {
         // showing'" gotcha in desktop/CLAUDE.md — but it correctly separates
         // "nothing to print yet" from "something is on screen".
         .disabled(!bridgeHandler.isReady)
+    }
+
+    /// Group 1 — the two commands that must work with **no project window
+    /// frontmost**, so neither is ever dimmed.
+    ///
+    /// With a key window it creates, selects and begins inline rename there, as
+    /// before. Without one, `fallback` does the app-global half (the model
+    /// mutation) and stages the rest on `ProjectIndex`'s one-shot batons; the
+    /// window opened here drains them on appear. See `NewItemFallback`, which
+    /// documents the one case this gets wrong.
+    private func newItem(_ command: WindowCommand, fallback: () -> Void) {
+        if let windowCommands {
+            windowCommands.perform(command)
+        } else {
+            fallback()
+            openWindow(id: "main")
+        }
     }
 }
 
@@ -548,6 +569,7 @@ private struct FindMenuContent: View {
 private struct ViewMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
+    @FocusedValue(\.windowCommands) private var windowCommands
 
     /// The FRONT window's projects-sidebar binding, published by its
     /// `ContentView` via `focusedSceneValue`. Window-scoped on purpose: Hide/Show
@@ -653,9 +675,11 @@ private struct ViewMenuContent: View {
         // screen. Replaced, not hidden: the row stays real on every lens.
         if bridgeHandler.activeTab == .sessions {
             Button(i18n.t("desktop.toolbar.switchSession"), systemImage: "list.bullet") {
-                NotificationCenter.default.post(name: .showSessionsSwitcher, object: nil)
+                windowCommands?.perform(.showSessionsSwitcher)
             }
             .keyboardShortcut("l", modifiers: [.command, .option])
+            .disabled(!WindowCommand.showSessionsSwitcher
+                .isEnabled(hasKeyWindow: windowCommands != nil))
         } else {
             Button(i18n.t(PanelToggle.labelKey(
                 panel: leftPanelKey ?? "Contents",
@@ -782,6 +806,7 @@ private struct ProjectMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var projectIndex: ProjectIndex
     @ObservedObject var i18n: I18n
+    @FocusedValue(\.windowCommands) private var windowCommands
 
     /// Whether a folder is selected.
     private var hasFolder: Bool {
@@ -806,12 +831,23 @@ private struct ProjectMenuContent: View {
         } ?? false
     }
 
+    /// Is there a window for this command to act in? Every item in this menu
+    /// acts on the front window's sidebar selection, so all of them dim when no
+    /// project window is frontmost — the same rule the View menu's Hide/Show
+    /// Projects has followed since Stage 1. Composed with each item's own
+    /// selection guard, which still reads app-global `BridgeHandler` state
+    /// until Stage 3a makes it per-window.
+    private func enabled(_ command: WindowCommand) -> Bool {
+        command.isEnabled(hasKeyWindow: windowCommands != nil)
+    }
+
     var body: some View {
         if hasFolder {
             // Folder-specific items
             Button(i18n.t("desktop.menu.folder.rename"), systemImage: "pencil") {
-                NotificationCenter.default.post(name: .renameSelectedFolder, object: nil)
+                windowCommands?.perform(.renameFolder)
             }
+            .disabled(!enabled(.renameFolder))
 
             Button(i18n.t("desktop.menu.folder.archive"), systemImage: "archivebox") {
                 // Phase 5
@@ -821,9 +857,10 @@ private struct ProjectMenuContent: View {
             Divider()
 
             Button(i18n.t("desktop.menu.folder.delete"), systemImage: "trash", role: .destructive) {
-                NotificationCenter.default.post(name: .deleteSelectedFolder, object: nil)
+                windowCommands?.perform(.deleteFolder)
             }
             .keyboardShortcut(.delete, modifiers: .command)
+            .disabled(!enabled(.deleteFolder))
         } else {
             // Project-specific items (or nothing selected)
             Button(i18n.t("desktop.menu.project.showInFinder"), systemImage: "folder") {
@@ -842,14 +879,14 @@ private struct ProjectMenuContent: View {
             // `doc.text`, not a second `folder`, so two adjacent reveals don't
             // share a glyph.
             Button(i18n.t("desktop.menu.quotes.revealTranscripts"), systemImage: "doc.text") {
-                NotificationCenter.default.post(name: .revealTranscripts, object: nil)
+                windowCommands?.perform(.revealTranscripts)
             }
-            .disabled(bridgeHandler.selectedProjectPath.isEmpty)
+            .disabled(bridgeHandler.selectedProjectPath.isEmpty || !enabled(.revealTranscripts))
 
             Button(i18n.t("desktop.chrome.locate"), systemImage: "location.magnifyingglass") {
-                NotificationCenter.default.post(name: .locateSelectedProject, object: nil)
+                windowCommands?.perform(.locateProject)
             }
-            .disabled(bridgeHandler.selectedProjectAvailable)
+            .disabled(bridgeHandler.selectedProjectAvailable || !enabled(.locateProject))
 
             // HIG: every context-menu item is also reachable from the menu
             // bar. Turn On/Off Agent Access — the context menu's verb swap
@@ -869,14 +906,14 @@ private struct ProjectMenuContent: View {
             .disabled(!selectedProjectCanShare)
 
             Button(i18n.t("desktop.menu.project.rename"), systemImage: "pencil") {
-                NotificationCenter.default.post(name: .renameSelectedProject, object: nil)
+                windowCommands?.perform(.renameProject)
             }
             // Single-selection-only operation; receiver guards on `sole`.
             // `selectedProjectPath.isEmpty` covers both no-selection AND
             // multi-selection (cleared by applySelectionChange's default
             // branch). Indie-consensus: Finder/Notes/Mail/Things disable
             // Rename on multi-select rather than silently no-op.
-            .disabled(bridgeHandler.selectedProjectPath.isEmpty)
+            .disabled(bridgeHandler.selectedProjectPath.isEmpty || !enabled(.renameProject))
 
             // "Move to" submenu — lists all folders + "No Folder" for root.
             // Disabled on no-selection AND multi-selection for the same
@@ -887,23 +924,19 @@ private struct ProjectMenuContent: View {
             if !projectIndex.folders.isEmpty {
                 Menu(i18n.t("desktop.menu.project.moveTo"), systemImage: "folder") {
                     Button(i18n.t("desktop.menu.project.noFolder")) {
-                        NotificationCenter.default.post(
-                            name: .moveSelectedProject, object: nil
-                        )
+                        windowCommands?.perform(.moveProject(toFolder: nil))
                     }
 
                     Divider()
 
                     ForEach(projectIndex.folders) { folder in
                         Button(folder.name) {
-                            NotificationCenter.default.post(
-                                name: .moveSelectedProject, object: nil,
-                                userInfo: ["folderId": folder.id]
-                            )
+                            windowCommands?.perform(.moveProject(toFolder: folder.id))
                         }
                     }
                 }
-                .disabled(bridgeHandler.selectedProjectPath.isEmpty)
+                .disabled(bridgeHandler.selectedProjectPath.isEmpty
+                          || !enabled(.moveProject(toFolder: nil)))
             }
 
             // ⌘. is the canonical macOS Stop/Cancel; here it's the keyboard
@@ -911,10 +944,10 @@ private struct ProjectMenuContent: View {
             // the sole-selected project; dimmed (not hidden) when it isn't
             // running, per menu-bar HIG (context menus hide instead).
             Button(i18n.t("desktop.menu.project.stopAnalysis"), systemImage: "stop.circle") {
-                NotificationCenter.default.post(name: .stopSelectedProject, object: nil)
+                windowCommands?.perform(.stopProject)
             }
             .keyboardShortcut(".", modifiers: .command)
-            .disabled(!bridgeHandler.selectedProjectIsRunning)
+            .disabled(!bridgeHandler.selectedProjectIsRunning || !enabled(.stopProject))
 
             Button(i18n.t("desktop.menu.project.reAnalyse"), systemImage: "arrow.clockwise") {
                 bridgeHandler.menuAction("reAnalyse")
@@ -929,11 +962,10 @@ private struct ProjectMenuContent: View {
             Divider()
 
             Button(i18n.t("desktop.menu.project.removeFromSidebar"), systemImage: "minus.circle") {
-                NotificationCenter.default.post(
-                    name: .removeSelectedProjectsFromSidebar, object: nil
-                )
+                windowCommands?.perform(.removeFromSidebar)
             }
             .keyboardShortcut(.delete, modifiers: .command)
+            .disabled(!enabled(.removeFromSidebar))
         }
     }
 }
@@ -1026,6 +1058,7 @@ private struct CodesMenuContent: View {
 private struct QuotesMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
+    @FocusedValue(\.windowCommands) private var windowCommands
 
     private var onQuotesTab: Bool {
         bridgeHandler.activeTab == .quotes
@@ -1194,8 +1227,9 @@ private struct QuotesMenuContent: View {
         // whole-report export. (Briefly moved to File on 28 Jul 2026 and moved
         // straight back — recorded so it isn't "tidied" there again.)
         Button(i18n.t("common.miro.menuLabel")) {
-            NotificationCenter.default.post(name: .showMiroSheet, object: nil)
+            windowCommands?.perform(.showMiro)
         }
+        .disabled(!WindowCommand.showMiro.isEnabled(hasKeyWindow: windowCommands != nil))
 
         Divider()
 
@@ -1298,6 +1332,7 @@ private struct VideoMenuContent: View {
 private struct HelpMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
+    @FocusedValue(\.windowCommands) private var windowCommands
 
     var body: some View {
         // Help, Keyboard Shortcuts, and Acknowledgements open external pages in
@@ -1317,8 +1352,9 @@ private struct HelpMenuContent: View {
         // Bristlenose") kept from the retired WelcomeView — see
         // docs/design-welcome-screen.md §Copy & i18n; this is now a live reference.
         Button(i18n.t("desktop.chrome.welcomeTitle")) {
-            NotificationCenter.default.post(name: .showWelcome, object: nil)
+            windowCommands?.perform(.showWelcome)
         }
+        .disabled(!WindowCommand.showWelcome.isEnabled(hasKeyWindow: windowCommands != nil))
 
         Button(i18n.t("desktop.menu.help.keyboardShortcuts")) {
             Self.open("https://bristlenose.app/docs/keyboard-shortcuts.html")

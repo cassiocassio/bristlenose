@@ -294,16 +294,11 @@ extension Notification.Name {
     /// the web layer via `bridgeHandler.setColorPalette()` — a live runtime
     /// data-color-theme swap, so (unlike prefs) it does NOT restart the sidecar.
     static let bristlenosePaletteChanged = Notification.Name("bristlenosePaletteChanged")
-    /// Posted by the app menu to re-show the AI data disclosure sheet.
-    static let showAIConsentSheet = Notification.Name("showAIConsentSheet")
     /// Posted when the active provider's out-of-credit state may have changed
     /// (e.g. a run failed on billing → verdict recorded). `OutOfCreditModel`
     /// listens and re-reads. Distinct from `bristlenosePrefsChanged` so the
     /// pill can refresh WITHOUT triggering a serve restart.
     static let bristlenoseOutOfCreditChanged = Notification.Name("bristlenoseOutOfCreditChanged")
-    /// Posted by the Export popover row + Quotes-menu item to present the native
-    /// Send-to-Miro sheet (ContentView owns the `.sheet`).
-    static let showMiroSheet = Notification.Name("showMiroSheet")
     /// Posted when feedback is requested but the SPA isn't mounted (the status
     /// page): the status-page bridge (`project-action: open-feedback`) and Help ▸
     /// Send Feedback's bridge-probe fallback both post this. ContentView owns the

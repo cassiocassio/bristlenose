@@ -167,11 +167,6 @@ final class UndoableRemovalStore: ObservableObject {
 // MARK: - Notification names
 
 extension Notification.Name {
-    /// Posted by Project > Remove from Sidebar to remove the selected project(s)
-    /// via the UndoableRemovalStore (with toast + undo window).
-    static let removeSelectedProjectsFromSidebar =
-        Notification.Name("bristlenoseRemoveSelectedProjectsFromSidebar")
-
     /// Posted by `UndoableRemovalStore.undoLastRemoval()` so ContentView can
     /// re-apply the captured selection set. `userInfo["selection"]` is a
     /// `Set<SidebarSelection>`.

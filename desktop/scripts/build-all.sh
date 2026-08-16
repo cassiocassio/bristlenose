@@ -84,6 +84,13 @@ bn_check 1 ok "logging hygiene" "no credential-shaped log calls"
 "$SCRIPT_DIR/check-appearance-seam.sh" "$ROOT" >/dev/null
 bn_check 1 ok "appearance seam" "one mapping, applied app-wide"
 
+# 1a-ter. Menu routing — asserts the menu bar sends commands to the front
+# window rather than broadcasting them to all of them. The drift is measured:
+# the broadcast count grew 16 → 19 between 28 Jul and 15 Aug 2026 because
+# nothing failed when a new command took the easy path. <1s.
+"$SCRIPT_DIR/check-menu-routing.sh" "$ROOT" >/dev/null
+bn_check 1 ok "menu routing" "commands target a window, not every window"
+
 # 1b. Bundle manifest coverage — asserts every runtime-data dir under
 # bristlenose/ is covered by a datas entry in the spec. Prevents the
 # C3-smoke-test BUG-3/4/5 class (data file in source, missing from bundle).

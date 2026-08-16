@@ -7,6 +7,7 @@ last-trued: 2026-08-15
 
 ## Changelog
 
+- _2026-08-16d_ — **P1 shipped: the menu bar routes instead of broadcasting.** The taxonomy the stress test asked for is settled first (new §"P1's taxonomy") — four groups, two mechanisms, because window-targeted and selection-targeted share one routing rule and differ only in what the window does next. So the conversion is **one** focused value carrying a per-window command sink, not seventeen focused values. The predicted no-window failure doesn't arise: New Project is already two halves, and the app-global half (`projectIndex.addProject`) needs no window, so ⌘N stages the follow-through on the batons `pendingIconReveal`/`pendingRename` established and opens a window to drain them — the item is never dimmed. Three broadcasts that reached *inside* a window became per-window batons (the outline's rename, the toolbar's session switcher, the export popover's Miro row). 15 `Notification.Name` declarations deleted; 14 `ContentView` receivers collapsed into one `perform(_:)`. **The drift is now mechanically held**: `check-menu-routing.sh` (build-all step 1a-ter) fails on any post from `MenuCommands.swift` bar the two that open a dedicated `Window` scene, and on any retired name reappearing — the count went 16 → 19 in eighteen days precisely because nothing failed. Two things deliberately left: one papercut (⌘N with Settings frontmost opens a second window rather than raising the first — wants a window roster, which `applicationShouldHandleReopen` needs anyway, so both land in P2), and two app-level broadcasts outside the 19 that will need the same treatment (`showFeedbackSheet`, `undoableRemovalRestoredSelection`).
 - _2026-08-16c_ — **The child-window shape, and the plan stress-tested.** New §"What a child window is": a spun-off window is same-project, own lens, **no project list** — masters get projects, children get lenses, which removes the failure mode (a secondary window switching the shared serve) while keeping the whole point (Quotes here, Codebook there). Ships restrictive (list hidden *and* switching inert) because loosening is trivial and tightening later isn't; pin-vs-hide is deliberately deferred since both answers ship the same first version. Claude Desktop recorded as the reference implementation, contributing two things the design had missed — a **scope chip** as an alternative to our subtitle, and a **pin (keep-on-top)**, which the five-transcripts case needs. One question left open: whether there are one or two child types (atomic transcript leaf vs lens window), since the naming inverts between them. Accepted for alpha: a child's title is its only cue, which promotes constraint 5 to a Stage 3a **acceptance criterion**. §"Implementation plan" gains the shortest-path note (tags-beside-quotes is P1+P2 and needs no family call) and a stress-test findings subsection. New constraint 8 (shared partition shares renderer failure); constraint 6 updated — wired in `b0dbabc9`, and it closes half of the second cache opt-out in `design-desktop-switch-performance.md`. Relaunch boot storm deferred as alpha-acceptable.
 - _2026-08-16b_ — **Presumed Family A; the memory objection is measured.** A sidecar is **~140 MB and flat from 1 to 8 windows** (two sidecars — fronted + A2 parked slot — served eight windows), so A's penalty over B/C is ~140 MB *per additional project*, i.e. 140–280 MB at the expected 2–3. That was the argument holding the family call open, and it no longer carries. §"Effectively decided vs genuinely open" moves the call from *open* to **presumed A, decide late**, and constraint 7 is recorded as A's one genuinely new design problem, to be answered on paper before Stage 3b. New §"Implementation plan" sequences the work; its first two items are family-independent, so nothing waits on the formal call. Two caveats attached to the number: it came off a 3-session project (a floor, not a typical figure) and one Debug-build machine. Separately, `SharedConfigStore` landed (`b0dbabc9`) — constraint 6 is closed for messaging; its memory half is unverified because attributing WebKit helper processes to an app from outside it defeated five approaches.
 - _2026-08-16_ — **The window axis is sized, and it isn't the project axis.** Observed usage is ~12 windows over ~2–3 projects (five transcripts side by side plus quotes/analysis on *one* study), so §"Problem definition" now splits the two and carries an "N is about" column. Three consequences recorded: the A/B/C call governs the *small* axis; N retained WebViews cost the same under every family, which largely defuses memory as a discriminator between them; and the load case is a whole 16 GB desk, not an app. §"Memory governance" replaces "a cap sized later" with a **stated budget** plus **live-if-visible / discarded-if-occluded**, whose ceiling is display area rather than user intent. The "what settles the family call" note is **revised**: the earlier "how many projects" survey asked the wrong question — the deciding number is the marginal cost of the Nth window on the *same* project, which is a one-day spike. Two new constraints: 6, cross-window BroadcastChannel is validated but unwired (`WebView.swift:87` mints a fresh partition per view, so two windows are mute today); 7, the MCP handshake assumes exactly one fronted serve, which B and C fit natively and A does not. Family A/B/C still open.
@@ -365,7 +366,8 @@ app-level `@StateObject` injected into `WindowGroup(id: "main")`:
   project window is frontmost. Scene-scoped (not view-scoped) so it survives focus
   moving into the WKWebView. Decision logic extracted to `SidebarToggle`
   (+ `SidebarToggleTests`) per the testable-helper convention.
-- **Stage 2 — `@FocusedValue` for the remaining commands.** The real keystone: it is
+- **Stage 2 — `@FocusedValue` for the remaining commands. ✅ Shipped 16 Aug 2026**
+  (see P1 in §"Implementation plan"). The real keystone: it is
   what makes *any* multi-window behaviour correct, and Stage 3 would have to invent
   it anyway. Also fixes double-fire bugs that exist today the moment a user opens a
   second window. **The count is now 19, not the 16 recorded on 28 Jul 2026** —
@@ -571,15 +573,58 @@ this is the part that isn't.
 
 ### Now — unblocked, and fixing live defects
 
-**P1 · Stage 2 — `@FocusedValue` for the broadcast commands.**
-`MenuCommands.swift` holds 19 `NotificationCenter.default.post` sites; each fires
-in *every* open window, and a second window is reachable today, so these are live
-defects rather than future ones. Copy the Stage 1 seam (`SidebarVisibilityFocus`,
-scene-scoped so it survives focus moving into the WKWebView); decision logic goes
-in testable helpers per the house convention, as `SidebarToggle` did.
-*Done when:* with two windows open, New Project fires once, Rename prompts only
-in the key window, and every menu command targets the frontmost project window
-and dims when none is frontmost.
+**P1 · Stage 2 — `@FocusedValue` for the broadcast commands. ✅ Shipped 16 Aug
+2026.** `MenuCommands.swift` held 19 `NotificationCenter.default.post` sites; each
+fired in *every* open window, and a second window is reachable today, so these
+were live defects rather than future ones. All 17 that reach a project window now
+go through one `WindowCommandSink` published as a scene focused value
+(`WindowCommandFocus.swift`) — 14 `ContentView` receivers collapse into one
+`perform(_:)`. Three per-window batons replaced the broadcasts that reached
+*inside* a window: the outline's `renameRequest`, the toolbar's
+`sessionsSwitcherRequest`, and the export popover's `onMiro` closure. Fifteen
+`Notification.Name` declarations are deleted.
+*Done:* every menu command targets the frontmost project window and dims when
+none is — except New Project and New Folder, which never dim (see the taxonomy
+above). Held open by `desktop/scripts/check-menu-routing.sh`, wired into
+`build-all.sh` step 1a-ter, which fails on a post from `MenuCommands.swift` or on
+a retired name coming back. Seven tests in `WindowCommandTests`.
+
+#### P1's taxonomy, settled 16 Aug 2026
+
+The stress test said to settle this before the refactor. Read against the code,
+the 19 sites are **four** groups, and the useful finding is that two of them share
+one mechanism:
+
+| Group | Sites | Routing | Dims when no window? |
+|---|---|---|---|
+| **1 · App-global with a window follow-through** | New Project, New Folder | Key window if there is one; otherwise perform the model half at app level and open a window to carry the rest | **Never** |
+| **2 · Window-targeted** | AI & Privacy, Send to Miro, Send Feedback, Welcome, Switch Session, (DEBUG) diagnostic fixtures | Key window | Yes |
+| **3 · Selection-targeted** | Rename ×2, Delete Folder, Move To ×2, Reveal Transcripts, Locate, Stop, Remove from Sidebar, Add Files | Key window, which reads its own selection | Yes |
+| **4 · Already single-receiver by scene** | Import ▸ …, (DEBUG) Cloud Import fixtures | A dedicated `Window` scene receives them | n/a |
+
+Groups 2 and 3 are **one seam**, not two: both mean "route to the key window",
+and they differ only in what the window then does with it. So the conversion is
+one focused value carrying a per-window command sink, not seventeen focused
+values. Group 3's *dimming* still reads app-global `BridgeHandler` state until
+P2 — P1 owns routing, not state.
+
+Group 4 is the reason the count of real defects is 17, not 19. `openCloudImport`
+is received by `CloudImportOpener`, which is attached to the main `WindowGroup`
+and so does fire once per window — but it opens a `Window` scene, and
+`openWindow(id:)` on one of those is idempotent, so the visible behaviour is
+already correct. Left alone deliberately: the fix is to move the modifier off the
+`WindowGroup`, which belongs with the cloud-import work, not here.
+
+**The no-window path has an owner, and it is group 1's split.** `createNewProject()`
+is already two halves — `projectIndex.addProject(…)`, which is app-global and needs
+no window, and *select it + begin inline rename*, which is window state. So ⌘N with
+no window open performs the first half at app level, sets the existing one-shot
+batons (`pendingRename` — the idiom `pendingIconReveal` established), and opens a
+window that consumes them on appear. The item is therefore **never dimmed**, and
+the failure the stress test predicted — "no window open and the user cannot create
+a project at all" — does not arise. Which window consumes the baton when several
+are open is a P2 question, not a P1 one: with one window there is no ambiguity, and
+P1 routes to the key window before the fallback is ever reached.
 
 **P2 · Stage 3a — per-window `BridgeHandler`.** Depends on P1: routing commands to
 the right window is meaningless while the state they act on is shared. One
@@ -625,15 +670,12 @@ can move earlier if run-throughput feedback demands it.
 
 ### Failure points found by stress-testing this plan (16 Aug 2026)
 
-**P1 — the 19 sites are three categories, not one.** App-global fire-once (New
-Project, New Folder), window-targeted (Rename, Move To, panel toggles), and
-selection-targeted. "Route to the key window" is right for the last two and wrong
-for the first: New Project routed to the key window *works*, by accident, but with
-**no window open it dims and the user cannot create a project at all**. Settle the
-taxonomy before the refactor and give the no-window path an owner. Worth a
-mechanical gate in the house style — a check script asserting zero
-`NotificationCenter.default.post` in `MenuCommands.swift`, so a twentieth cannot be
-added later.
+**P1 — the 19 sites are three categories, not one. ✅ Settled and shipped.** It
+turned out to be four groups sharing two mechanisms — see "P1's taxonomy" above.
+The predicted failure (New Project dimming with no window open, leaving the user
+unable to create a project) does not arise: the command splits into an app-global
+half and a window follow-through. The gate exists as
+`desktop/scripts/check-menu-routing.sh`.
 
 **P2 — the renderer-crash recovery was written for N=1.** Constraint 8. Needs a
 coordinated or debounced reload *before* multi-window.

@@ -196,6 +196,19 @@ struct ContentView: View {
     /// `bristlenose-output/` inside.
     @State private var locateError: LocateErrorState?
 
+    /// This window's identity, for the `WindowCommandSink` published as a scene
+    /// focused value. Stable for the window's lifetime and the only thing the
+    /// menu bar compares, since the sink's closure is rebuilt every body pass.
+    @State private var windowID = UUID()
+
+    /// Bumped by Project ▸ Rename …; consumed by this window's sidebar outline.
+    /// See `ProjectSidebarOutline.renameRequest`.
+    @State private var renameRequest = 0
+
+    /// Bumped by View ▸ Switch Session (⌘⌥L on the Sessions lens); consumed by
+    /// this window's `SessionsSwitcherButton`.
+    @State private var sessionsSwitcherRequest = 0
+
     /// Handle to the in-flight project-switch Task. Switching is async (serve
     /// sidecar teardown + respawn); a background pipeline run makes rapid
     /// switching routine, so we cancel the prior switch before starting the
@@ -500,14 +513,6 @@ struct ContentView: View {
             try? await Task.sleep(for: .milliseconds(500))
             pipelineRunner._applyDebugFixture(to: id)
         }
-        // Debug ▸ Diagnostic fixtures submenu — apply a named scenario live to
-        // the selected project (no relaunch). The menu owns no selection, so it
-        // posts here, where the sidebar selection lives.
-        .onReceive(NotificationCenter.default.publisher(for: .applyDebugFixture)) { note in
-            guard let name = note.userInfo?["scenario"] as? String,
-                  let id = selectedProjectID else { return }
-            pipelineRunner.applyDebugFixture(named: name, to: id)
-        }
         // Debug-only: if BRISTLENOSE_DEBUG_OLLAMA_PHASE is set, open the
         // local-model pill in that state at launch (no consent dance) so the
         // popover/pill UX can be QA'd without a real daemon. No-op when unset.
@@ -529,17 +534,20 @@ struct ContentView: View {
 
     var body: some View {
         splitViewCore
-        // AI & Privacy... re-access from app menu.
-        .onReceive(NotificationCenter.default.publisher(for: .showAIConsentSheet)) { _ in
-            aiConsentReviewMode = true
-            showingAIConsent = true
-        }
-        // Send to Miro — native sheet over the same Python REST endpoints the web
-        // panel uses. Only present when serve is running (the entry is only
-        // reachable with a project open).
-        .onReceive(NotificationCenter.default.publisher(for: .showMiroSheet)) { _ in
-            if serveManager.runningPort != nil { showingMiroSheet = true }
-        }
+        // Every window-scoped menu command arrives through here, routed to
+        // whichever window is key rather than broadcast to all of them — see
+        // `WindowCommandFocus.swift`. Scene-scoped, not view-scoped, for the
+        // reason `SidebarVisibilityFocus` documents: focus spends most of its
+        // life inside the WKWebView, and a view-scoped value would drop out.
+        .focusedSceneValue(
+            \.windowCommands,
+            WindowCommandSink(windowID: windowID, perform: { perform($0) })
+        )
+        // Whatever `NewItemFallback` staged while there was no window to put it
+        // in. `.onAppear` covers the window opened *to receive* it; `.onChange`
+        // covers a window that was already up. Both drain the same one-shot.
+        .onAppear { consumePendingSelection() }
+        .onChange(of: projectIndex.pendingSelection) { _, _ in consumePendingSelection() }
         .sheet(isPresented: $showingMiroSheet) {
             if let port = serveManager.runningPort {
                 MiroSheet(
@@ -566,15 +574,6 @@ struct ContentView: View {
                 FeedbackSheet(config: .serverless, i18n: i18n, onToast: { toast.show($0) })
             }
         }
-        // File > New Project (Cmd+N) and sidebar [+] button.
-        .onReceive(NotificationCenter.default.publisher(for: .createNewProject)) { _ in
-            createNewProject()
-        }
-        // Help > Welcome to Bristlenose — deselect to show the Welcome home pane
-        // (same effect as clicking the sidebar's empty space).
-        .onReceive(NotificationCenter.default.publisher(for: .showWelcome)) { _ in
-            selection = []
-        }
         // View ▸ Hide/Show Projects (⌘⌥S) acts on THIS window: publish our
         // `columnVisibility` binding as a scene focused value and let the menu
         // drive it directly. Replaces a `.toggleProjectsSidebar` broadcast that
@@ -584,31 +583,12 @@ struct ContentView: View {
         // binding is the single source of truth the auto toolbar button already
         // drives. See `SidebarVisibilityFocus.swift`.
         .focusedSceneValue(\.sidebarVisibility, $columnVisibility)
-        // File > Add Files… (⇧⌘A) — menu twin of drag-drop.
-        .onReceive(NotificationCenter.default.publisher(for: .addFilesToSelectedProject)) { _ in
-            addFilesToSelectedProject()
-        }
         // Undo restored a removal batch — re-apply the prior selection.
         .onReceive(NotificationCenter.default.publisher(for: .undoableRemovalRestoredSelection)) { note in
             if let restored = note.userInfo?["selection"] as? Set<SidebarSelection> {
                 selection = restored
             }
         }
-        // File > New Folder (⇧⌘N) and sidebar folder.badge.plus button.
-        .onReceive(NotificationCenter.default.publisher(for: .createNewFolder)) { _ in
-            createNewFolder()
-        }
-        // View > Move Focus to Projects (⌘0) — the §10.1 keyboard no-trap return.
-        .modifier(ProjectNotificationReceivers(
-            selection: $selection,
-            renamingProjectID: $renamingProjectID,
-            renamingFolderID: $renamingFolderID,
-            projectIndex: projectIndex,
-            bridgeHandler: bridgeHandler,
-            onLocate: { project in locateProject(project) },
-            onRemoveFromSidebar: { removeSelectedProjectsFromSidebar() },
-            onStop: { project in pipelineRunner.cancel(project: project) }
-        ))
         .sheet(isPresented: $showingAIConsent) {
             AIConsentView(
                 isReviewMode: aiConsentReviewMode,
@@ -789,6 +769,98 @@ struct ContentView: View {
 
     // MARK: - Notification receivers (extracted to reduce body complexity)
     // Split into a ViewModifier to keep the main body within type-checker limits.
+
+    // MARK: - Window-scoped menu commands
+
+    /// Run a menu command in **this** window.
+    ///
+    /// The single door the menu bar reaches this window through, published as
+    /// `WindowCommandSink`. Replaces fourteen `NotificationCenter` receivers
+    /// that every open window answered — see `WindowCommandFocus.swift` for the
+    /// taxonomy and `docs/design-workspace.md` §"P1's taxonomy".
+    private func perform(_ command: WindowCommand) {
+        switch command {
+        case .newProject:
+            createNewProject()
+        case .newFolder:
+            createNewFolder()
+
+        case .showAIConsent:
+            aiConsentReviewMode = true
+            showingAIConsent = true
+        case .showMiro:
+            // The native sheet drives the same Python REST endpoints the web
+            // panel uses, so it needs a live serve. The entry is only reachable
+            // with a project open; this is the belt.
+            if serveManager.runningPort != nil { showingMiroSheet = true }
+        case .showWelcome:
+            // Deselect — the same effect as clicking the sidebar's empty space.
+            selection = []
+        case .showSessionsSwitcher:
+            sessionsSwitcherRequest += 1
+        case .applyDebugFixture(let scenario):
+            applyDebugFixture(named: scenario)
+
+        case .addFiles:
+            addFilesToSelectedProject()
+        case .renameProject:
+            // Both paths, deliberately: the AppKit outline is the shipping
+            // sidebar and answers `renameRequest`; `renamingProjectID` drives
+            // the SwiftUI sidebar, which is inert while the outline renders.
+            if case .project(let id) = soleSelection { renamingProjectID = id }
+            renameRequest += 1
+        case .renameFolder:
+            if case .folder(let id) = soleSelection { renamingFolderID = id }
+            renameRequest += 1
+        case .deleteFolder:
+            deleteSelectedFolders()
+        case .moveProject(let folderID):
+            guard case .project(let projectID) = soleSelection else { return }
+            projectIndex.moveProject(projectId: projectID, toFolder: folderID)
+        case .revealTranscripts:
+            guard let target = TranscriptsRevealTarget.resolve(
+                projectPath: bridgeHandler.selectedProjectPath
+            ) else { return }
+            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: target)
+        case .locateProject:
+            if let project = selectedProject { locateProject(project) }
+        case .stopProject:
+            if let project = selectedProject { pipelineRunner.cancel(project: project) }
+        case .removeFromSidebar:
+            removeSelectedProjectsFromSidebar()
+        }
+    }
+
+    /// Delete every selected folder. Projects inside them are unaffected —
+    /// `removeFolder` re-parents rather than cascading.
+    private func deleteSelectedFolders() {
+        let folderIds = selection.compactMap { sel -> UUID? in
+            if case .folder(let id) = sel { return id }
+            return nil
+        }
+        for id in folderIds {
+            selection.remove(.folder(id))
+            projectIndex.removeFolder(id: id)
+        }
+    }
+
+    /// Diagnostics ▸ Diagnostic fixtures — inject a synthesised state into this
+    /// window's selected project. No-op outside DEBUG, where the harness that
+    /// applies it doesn't ship.
+    private func applyDebugFixture(named scenario: String) {
+        #if DEBUG
+        guard let id = selectedProjectID else { return }
+        pipelineRunner.applyDebugFixture(named: scenario, to: id)
+        #endif
+    }
+
+    /// Take whatever `NewItemFallback` staged for the next window to appear.
+    /// One-shot: `consumePendingSelection` clears as it reads, so a second
+    /// window opening in the same run loop doesn't also grab it.
+    private func consumePendingSelection() {
+        guard let pending = projectIndex.consumePendingSelection() else { return }
+        selection = [pending]
+    }
 
     // MARK: - Project and folder creation
 
@@ -1589,7 +1661,8 @@ struct ContentView: View {
             ToolbarItem(placement: .navigation) {
                 SessionsSwitcherButton(bridgeHandler: bridgeHandler,
                                        serveManager: serveManager,
-                                       i18n: i18n)
+                                       i18n: i18n,
+                                       presentRequest: sessionsSwitcherRequest)
             }
         }
 
@@ -1675,7 +1748,8 @@ struct ContentView: View {
         if selectedProjectShowsReport {
             // Universal — Export menu (contents morph per tab)
             ToolbarItem(placement: .primaryAction) {
-                ExportMenuButton(bridgeHandler: bridgeHandler, i18n: i18n)
+                ExportMenuButton(bridgeHandler: bridgeHandler, i18n: i18n,
+                                 onMiro: { perform(.showMiro) })
             }
 
             // Contextual — Quotes tab: starred filter toggle + tag sidebar toggle
@@ -1800,7 +1874,8 @@ struct ContentView: View {
                 // is "this project's serve is up" — the handshake follows
                 // the fronted running serve, so this path IS handshake-live.
                 servingProjectPath: serveManager.runningPort != nil
-                    ? serveManager.currentProjectPath : nil
+                    ? serveManager.currentProjectPath : nil,
+                renameRequest: renameRequest
             )
             .navigationTitle(i18n.t("desktop.chrome.projects"))
         } else {
@@ -2476,81 +2551,10 @@ struct ContentView: View {
 
 // MARK: - Export toolbar menu
 
-// MARK: - Project notification receivers (extracted ViewModifier)
-
-/// Receives project-related notifications (rename, delete, move, locate) from the
-/// native menu bar. Extracted from ContentView's body to keep the SwiftUI expression
-/// within the type-checker's complexity limits.
-private struct ProjectNotificationReceivers: ViewModifier {
-    @Binding var selection: Set<SidebarSelection>
-    @Binding var renamingProjectID: UUID?
-    @Binding var renamingFolderID: UUID?
-    let projectIndex: ProjectIndex
-    let bridgeHandler: BridgeHandler
-    let onLocate: (Project) -> Void
-    let onRemoveFromSidebar: () -> Void
-    let onStop: (Project) -> Void
-
-    /// The single selected item, if exactly one.
-    private var sole: SidebarSelection? {
-        selection.count == 1 ? selection.first : nil
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .onReceive(NotificationCenter.default.publisher(for: .renameSelectedProject)) { _ in
-                if case .project(let id) = sole {
-                    renamingProjectID = id
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .renameSelectedFolder)) { _ in
-                if case .folder(let id) = sole {
-                    renamingFolderID = id
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .deleteSelectedFolder)) { _ in
-                // Delete all selected folders.
-                let folderIds = selection.compactMap { sel -> UUID? in
-                    if case .folder(let id) = sel { return id }
-                    return nil
-                }
-                for id in folderIds {
-                    selection.remove(.folder(id))
-                    projectIndex.removeFolder(id: id)
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .moveSelectedProject)) { notification in
-                guard case .project(let projectId) = sole else { return }
-                let folderId = notification.userInfo?["folderId"] as? UUID
-                projectIndex.moveProject(projectId: projectId, toFolder: folderId)
-            }
-            // Project ▸ Show Transcripts in Finder — the menu twin of the export
-        // popover's row. The popover is a convenience; the menu bar is the
-        // canonical, keyboard- and VoiceOver-reachable surface, so the command
-        // needs to exist here too. Same target ladder via `TranscriptsRevealTarget`.
-        .onReceive(NotificationCenter.default.publisher(for: .revealTranscripts)) { _ in
-            guard let target = TranscriptsRevealTarget.resolve(
-                projectPath: bridgeHandler.selectedProjectPath
-            ) else { return }
-            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: target)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .locateSelectedProject)) { _ in
-                guard case .project(let id) = sole else { return }
-                if let project = projectIndex.projects.first(where: { $0.id == id }) {
-                    onLocate(project)
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .stopSelectedProject)) { _ in
-                guard case .project(let id) = sole else { return }
-                if let project = projectIndex.projects.first(where: { $0.id == id }) {
-                    onStop(project)
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .removeSelectedProjectsFromSidebar)) { _ in
-                onRemoveFromSidebar()
-            }
-    }
-}
+// (`ProjectNotificationReceivers` lived here until 16 Aug 2026 — nine
+// `NotificationCenter` receivers for the Project menu, every one of which every
+// open window answered. They are now `ContentView.perform(_:)` cases, reached
+// through this window's `WindowCommandSink`.)
 
 /// Toolbar export button — the macOS surface of the canonical export list,
 /// at parity with the SPA dropdown (see docs/mockups/export-menu-comparison.html).
@@ -2572,6 +2576,10 @@ private struct ProjectNotificationReceivers: ViewModifier {
 struct ExportMenuButton: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
+    /// Present the Miro sheet, which `ContentView` owns. A closure rather than
+    /// the `.showMiroSheet` broadcast it used to post — this button is in one
+    /// window's toolbar, and the sheet belongs to that window.
+    let onMiro: () -> Void
 
     @State private var isPresented = false
 
@@ -2583,7 +2591,7 @@ struct ExportMenuButton: View {
         }
         .help(i18n.t("desktop.toolbar.exportShortcut"))
         .popover(isPresented: $isPresented, arrowEdge: .bottom) {
-            ExportPopoverContent(bridgeHandler: bridgeHandler, i18n: i18n) {
+            ExportPopoverContent(bridgeHandler: bridgeHandler, i18n: i18n, onMiro: onMiro) {
                 isPresented = false
             }
         }
@@ -2595,6 +2603,7 @@ struct ExportMenuButton: View {
 private struct ExportPopoverContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
+    let onMiro: () -> Void
     let dismiss: () -> Void
 
     /// Global Anonymise — strips participant *names* (display names) from every
@@ -2714,8 +2723,8 @@ private struct ExportPopoverContent: View {
 
             // Send to Miro — always available (uploads the project's quotes as a
             // new board of sticky notes). Presents the native MiroSheet, which
-            // drives the same Python REST endpoints the web panel uses; ContentView
-            // owns the .sheet (via the .showMiroSheet notification).
+            // drives the same Python REST endpoints the web panel uses; this
+            // window's ContentView owns the .sheet (via `onMiro`).
             Divider().padding(.horizontal, 10)
             ExportPopoverRow(
                 icon: "square.grid.2x2",
@@ -2723,7 +2732,7 @@ private struct ExportPopoverContent: View {
                 subtitle: i18n.t("common.miro.popoverSubtitle")
             ) {
                 dismiss()
-                NotificationCenter.default.post(name: .showMiroSheet, object: nil)
+                onMiro()
             }
         }
         .frame(width: 308)

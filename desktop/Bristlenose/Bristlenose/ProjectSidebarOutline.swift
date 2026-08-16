@@ -106,6 +106,16 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// (§5a-bis: exposure, not activity). Value-typed so a change re-runs
     /// `updateNSViewController` → reload.
     let servingProjectPath: String?
+    /// Per-window "begin rename on the sole selected row", bumped by the
+    /// menu-bar Project ▸ Rename items via this window's `WindowCommandSink`.
+    ///
+    /// A counter rather than a flag: two consecutive Rename presses have to be
+    /// distinguishable, and there is no id to carry — the controller resolves
+    /// the target from its own selection, which is the whole point of routing
+    /// per window. Replaces the `.renameSelectedFolder` / `.renameSelectedProject`
+    /// notifications this controller used to observe, which arrived in every
+    /// open window at once.
+    let renameRequest: Int
 
     func makeNSViewController(context: Context) -> SidebarOutlineController {
         let controller = SidebarOutlineController()
@@ -147,6 +157,8 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
             activeTab: activeTab,
             lensesEnabled: lensesEnabled
         )
+        // After `update` — the rows have to exist before a row can enter edit.
+        controller.applyRenameRequest(renameRequest)
     }
 }
 
@@ -388,15 +400,10 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             object: nil
         )
 
-        // Menu-bar "Rename …" (Project menu). The AppKit outline is the live
-        // sidebar, so it consumes these directly — the SwiftUI `renamingFolderID`
-        // path they also drive is inert when this controller is rendered.
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(renameSelectedNotification(_:)),
-            name: .renameSelectedFolder, object: nil)
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(renameSelectedNotification(_:)),
-            name: .renameSelectedProject, object: nil)
+        // Menu-bar "Rename …" (Project menu) arrives per window as
+        // `renameRequest` on the representable — see `applyRenameRequest`. It
+        // used to be two `NotificationCenter` observers, which meant Rename in
+        // one window opened an editor in every window.
 
         // Return / Enter on a selected row begins rename (the Finder idiom — in
         // this sidebar selection already "opens", so Return is free to mean rename).
@@ -641,11 +648,21 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         return true
     }
 
-    /// Menu-bar Project ▸ Rename … — begins rename on the sole selected row. The
-    /// menu items are already selection-gated in `MenuCommands`; this is the safety net.
-    @objc private func renameSelectedNotification(_ note: Notification) {
+    /// Menu-bar Project ▸ Rename … — begins rename on the sole selected row.
+    ///
+    /// Driven by the representable's `renameRequest` counter, which only this
+    /// window's `WindowCommandSink` bumps. The initial value is 0 on both sides,
+    /// so a freshly-created controller never fires; every later change is a
+    /// genuine press. The menu items are already selection-gated in
+    /// `MenuCommands`; `beginRenameSelected` is the safety net.
+    func applyRenameRequest(_ request: Int) {
+        guard request != lastRenameRequest else { return }
+        lastRenameRequest = request
         beginRenameSelected()
     }
+
+    /// Last `renameRequest` acted on — see `applyRenameRequest`.
+    private var lastRenameRequest = 0
 
     // MARK: - Slow-second-click rename (Photos' sidebar idiom)
 

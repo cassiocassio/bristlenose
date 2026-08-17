@@ -159,12 +159,88 @@ final class TeamsSource: CloudImportSource {
     ///   the adapter builds — and owns — an ephemeral, redirect-policed session
     ///   (`CloudNetworking`); an injected one is adopted and never invalidated
     ///   here, because this object did not create it.
+    /// - Parameter restoredIdentity: the signed-in address, restored with the
+    ///   tokens. Without it `CloudImportStore` opens on `.signedOut` — it reads
+    ///   that from `accountEmail` — so a good restored token would sit behind a
+    ///   sign-in button and the restore would look like it had failed.
+    /// - Parameter onGrantChanged: called whenever the grant materially moves —
+    ///   signed in, renewed, or revoked. **Nil means forget it.** One callback
+    ///   rather than a `save` for the revoked case: a store only ever told about
+    ///   successes keeps a dead grant looking live indefinitely.
     init(config: MicrosoftOAuthConfig,
          session: URLSession? = nil,
-         restoredTokens: MicrosoftTokenResponse? = nil) {
+         restoredTokens: MicrosoftTokenResponse? = nil,
+         restoredIdentity: String? = nil,
+         onGrantChanged: (@Sendable (MicrosoftGrant?) -> Void)? = nil) {
         self.config = config
         self.sessionOwner = session.map(CloudSessionOwner.init(adopting:)) ?? CloudSessionOwner()
         self.tokens = restoredTokens
+        self.identity = restoredIdentity
+        self.onGrantChanged = onGrantChanged
+    }
+
+    private let onGrantChanged: (@Sendable (MicrosoftGrant?) -> Void)?
+
+    /// Publish the current grant, or its absence.
+    ///
+    /// After every move rather than at chosen moments, because the move that
+    /// matters is the one nobody remembers to instrument — a silent renewal an
+    /// hour in, whose new refresh token is the only one that still works
+    /// tomorrow.
+    ///
+    /// **Never call the store synchronously.** A Keychain write can block on an
+    /// authorisation prompt, which on an ad-hoc-signed build is routine rather
+    /// than hypothetical — those fall back to the legacy file-based keychain,
+    /// which binds grants to the binary hash and re-prompts on every rebuild.
+    /// `signIn()` is `@MainActor` and publishes the instant the web auth session
+    /// returns, so a blocking write there stalls the main actor behind a dialog
+    /// the auth window is covering, and the window spins forever with no error.
+    ///
+    /// The snapshot is taken here, on the caller's actor, so what gets written
+    /// is what was true at the call rather than whatever the adapter has drifted
+    /// to by the time the write lands.
+    private func publishGrant() {
+        let snapshot = tokens.map { MicrosoftGrant(tokens: $0, identity: identity) }
+        guard let onGrantChanged else { return }
+        Task.detached(priority: .utility) { onGrantChanged(snapshot) }
+    }
+
+    /// Renew the token when it has aged out, or report that we cannot.
+    ///
+    /// The listing path had no expiry check at all before this, which was
+    /// survivable only while the token was minted at sign-in and used minutes
+    /// later. Once a sign-in outlives the window — the entire point of restoring
+    /// one — an hour-old token is the ordinary case.
+    ///
+    /// Returns false when the grant is gone for good, **having already told the
+    /// store to forget it**: a revoked refresh token fails identically forever,
+    /// so keeping it turns one honest sign-in into an unbreakable loop of failed
+    /// listings.
+    ///
+    /// `@MainActor` because `MicrosoftOAuthClient`'s initialiser is — it can
+    /// carry an anchor window. The refresh itself is a plain POST with no UI, so
+    /// the hop costs nothing.
+    @MainActor
+    private func renewedTokenIfNeeded() async -> Bool {
+        guard let current = tokens else { return false }
+        guard current.isExpired() else { return true }
+        guard let refreshToken = current.refreshToken else {
+            tokens = nil
+            publishGrant()
+            return false
+        }
+        let client = MicrosoftOAuthClient(config: config, session: session)
+        guard let renewed = try? await client.refresh(refreshToken: refreshToken) else {
+            tokens = nil
+            publishGrant()
+            return false
+        }
+        // Carry the refresh token forward when the response omitted it — see
+        // `carryingForwardRefreshToken`. Storing the response verbatim is how a
+        // renewed session dies an hour later instead of immediately.
+        tokens = renewed.carryingForwardRefreshToken(from: current)
+        publishGrant()
+        return true
     }
 
     var accountEmail: String? { identity }
@@ -192,6 +268,7 @@ final class TeamsSource: CloudImportSource {
         let client = MicrosoftOAuthClient(config: config, session: session)
         tokens = try await client.signIn()
         identity = try? await fetchIdentity()
+        publishGrant()
     }
 
     private func fetchIdentity() async throws -> String? {
@@ -224,7 +301,10 @@ final class TeamsSource: CloudImportSource {
     // MARK: Listing
 
     func list(window: DateInterval) async -> MeetingListing {
-        guard tokens != nil else {
+        // Renew before reading, not after failing. On the restore path an
+        // hour-old token is the ordinary case, so 401-ing into a sign-in nobody
+        // needed would be the common experience rather than the rare one.
+        guard await renewedTokenIfNeeded(), tokens != nil else {
             return empty(window, outcome: .failed(after: 0,
                                                   outcome: .needsReauthentication(reason: "no token")))
         }
@@ -547,6 +627,14 @@ final class TeamsSource: CloudImportSource {
         destination: URL,
         progress: @escaping @Sendable (FetchProgress) -> Void
     ) async -> FetchOutcome {
+        // Renew here too, and for a sharper reason than the listing: a batch of
+        // multi-gigabyte recordings can easily outlive an hour-long token, so
+        // the tail of a long import is exactly where an unrenewed grant fails —
+        // after the researcher has stopped watching, on the files they waited
+        // longest for. The transfer itself needs no token (the URL carries its
+        // own), but re-resolving that URL does.
+        _ = await renewedTokenIfNeeded()
+
         // Re-resolve immediately before fetching, exactly as the note on
         // `downloadURLs` has always claimed and the code did not do.
         //

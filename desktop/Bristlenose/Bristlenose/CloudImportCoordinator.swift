@@ -76,7 +76,16 @@ final class CloudImportCoordinator: ObservableObject {
             guard let config = MicrosoftOAuthConfig.resolve() else {
                 store = CloudImportStore(source: UnconfiguredCloudSource(), platform: platform); return
             }
-            store = CloudImportStore(source: TeamsSource(config: config), platform: platform)
+            // Restore the previous sign-in if one survived. One grant here, not
+            // Google's two — see `MicrosoftGrant`.
+            let savedTeams = CloudGrantStore.loadTeams()
+            store = CloudImportStore(
+                source: TeamsSource(
+                    config: config,
+                    restoredTokens: savedTeams?.tokens,
+                    restoredIdentity: savedTeams?.identity,
+                    onGrantChanged: { CloudGrantStore.saveTeams($0) }),
+                platform: platform)
         }
     }
 

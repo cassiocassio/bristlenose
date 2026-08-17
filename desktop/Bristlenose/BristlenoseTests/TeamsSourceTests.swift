@@ -221,4 +221,57 @@ struct ShippingPlatformTests {
         #expect(!CloudPlatform.meet.mandatesAccountNoun)
         #expect(!CloudPlatform.zoom.mandatesAccountNoun)
     }
+
+    // MARK: - Keeping the sign-in
+
+    @Test("A renewal that omits the refresh token keeps the one we hold")
+    func renewalCarriesForwardTheRefreshToken() {
+        // **The silent-death case, and the reason this is a named function
+        // rather than an assignment.** Microsoft omits `refresh_token` whenever
+        // it chooses not to rotate, and the omission is routine. Storing the
+        // response verbatim therefore writes a grant with no way to renew —
+        // which works fine for an hour and then strands the account, long after
+        // the change that caused it.
+        let previous = MicrosoftTokenResponse(
+            accessToken: "old", refreshToken: "KEEP-ME",
+            expiresAt: Date().addingTimeInterval(-10))
+        let renewedWithout = MicrosoftTokenResponse(
+            accessToken: "new", refreshToken: nil,
+            expiresAt: Date().addingTimeInterval(3600))
+
+        let merged = renewedWithout.carryingForwardRefreshToken(from: previous)
+        #expect(merged.accessToken == "new")
+        #expect(merged.refreshToken == "KEEP-ME")
+    }
+
+    @Test("A rotated refresh token replaces the old one, never the reverse")
+    func rotationPrefersTheNewToken() {
+        // The other direction, which the `??` gets right only by being written
+        // the correct way round — and getting it backwards would pin the
+        // account to a token the server has already retired.
+        let previous = MicrosoftTokenResponse(
+            accessToken: "old", refreshToken: "STALE",
+            expiresAt: Date().addingTimeInterval(-10))
+        let rotated = MicrosoftTokenResponse(
+            accessToken: "new", refreshToken: "FRESH",
+            expiresAt: Date().addingTimeInterval(3600))
+
+        #expect(rotated.carryingForwardRefreshToken(from: previous).refreshToken == "FRESH")
+    }
+
+    @Test("A grant survives the round trip it is stored by")
+    func grantRoundTrips() {
+        // The stored shape is the type's own properties, not the OAuth wire
+        // payload `init?(data:)` parses. Two formats, one type — so the encoder
+        // and decoder agreeing is worth asserting rather than assuming.
+        let grant = MicrosoftGrant(
+            tokens: MicrosoftTokenResponse(
+                accessToken: "A", refreshToken: "R",
+                expiresAt: Date(timeIntervalSince1970: 1_800_000_000)),
+            identity: "martin@clientco.com")
+
+        let data = try? JSONEncoder().encode(grant)
+        let decoded = data.flatMap { try? JSONDecoder().decode(MicrosoftGrant.self, from: $0) }
+        #expect(decoded == grant)
+    }
 }

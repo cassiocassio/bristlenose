@@ -44,6 +44,21 @@ struct GoogleGrant: Codable, Equatable, Sendable {
     }
 }
 
+/// A Microsoft sign-in worth keeping.
+///
+/// One grant, not two. Teams needs no counterpart to Google's Picker step:
+/// `Files.Read` reaches the recordings directly, so there is no second
+/// authorization to hold and no half-restored state to make unrepresentable.
+struct MicrosoftGrant: Codable, Equatable, Sendable {
+    var tokens: MicrosoftTokenResponse
+
+    /// The signed-in address, for the same blunt reason as Google's:
+    /// `CloudImportStore` picks its opening phase from `source.accountEmail`,
+    /// so a restore without it opens on the sign-in button while holding a
+    /// working token, and the restore reads as a failure.
+    var identity: String?
+}
+
 /// Where a cloud sign-in lives between window opens.
 ///
 /// The Keychain, via the same helper the LLM provider keys use: a refresh
@@ -99,5 +114,39 @@ enum CloudGrantStore {
 
     static func clearGoogle() {
         KeychainHelper.delete(provider: googleAccount)
+    }
+
+    private static let teamsAccount = "cloud-microsoft-teams"
+
+    static func loadTeams() -> MicrosoftGrant? {
+        guard let raw = KeychainHelper.get(provider: teamsAccount),
+              let data = raw.data(using: .utf8)
+        else { return nil }
+        guard let grant = try? JSONDecoder().decode(MicrosoftGrant.self, from: data) else {
+            log.notice("cloud_grant teams decode failed — discarding")
+            clearTeams()
+            return nil
+        }
+        return grant
+    }
+
+    /// Save, or — on nil — forget. Same one-entry-point rule as Google: the
+    /// callers that need to forget are exactly the ones that would otherwise
+    /// leave a revoked grant looking live.
+    static func saveTeams(_ grant: MicrosoftGrant?) {
+        guard let grant else { clearTeams(); return }
+        guard let data = try? JSONEncoder().encode(grant),
+              let raw = String(data: data, encoding: .utf8)
+        else {
+            log.error("cloud_grant teams encode failed")
+            return
+        }
+        if !KeychainHelper.set(provider: teamsAccount, value: raw) {
+            log.error("cloud_grant teams keychain write refused")
+        }
+    }
+
+    static func clearTeams() {
+        KeychainHelper.delete(provider: teamsAccount)
     }
 }

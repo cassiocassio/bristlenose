@@ -27,6 +27,13 @@ struct CloudGrantKeychainRegistrationTests {
         #expect(KeychainHelper.serviceNames["cloud-google-meet"] != nil)
     }
 
+    @Test("The Teams grant key resolves to a service name")
+    func teamsGrantKeyIsRegistered() {
+        // Same guard, second platform. `CloudGrantStore.saveTeams` would return
+        // without error and store nothing.
+        #expect(KeychainHelper.serviceNames["cloud-microsoft-teams"] != nil)
+    }
+
     @Test("An unregistered key really does fail closed — the trap this pins")
     func unregisteredKeysReadNil() {
         // Proves the mechanism rather than trusting the comment: without this,

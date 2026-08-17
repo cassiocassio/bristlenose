@@ -81,7 +81,7 @@ struct KeychainHelperTests {
     /// cloud sign-in is a host-side concern the sidecar never touches, and
     /// adding it to `credentials_macos.py` would imply a reader that does not
     /// exist.
-    private static let swiftOnly: Set<String> = ["cloud-google-meet"]
+    private static let swiftOnly: Set<String> = ["cloud-google-meet", "cloud-microsoft-teams"]
 
     @Test func serviceNames_pinAllCredentialKeys() {
         // Pinned exactly so adding or removing a key fails loudly with a clear

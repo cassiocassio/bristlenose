@@ -126,13 +126,40 @@ enum AuthorizationCallback: Equatable {
 
 /// A Microsoft token endpoint response, with the one derived fact that matters.
 /// Named for its provider because Google's equivalent has a different shape.
-struct MicrosoftTokenResponse: Equatable {
+/// `Codable` so a grant can outlive the window — the stored shape is this
+/// type's own properties, **not** the OAuth wire payload that `init?(data:)`
+/// parses. Two different formats for two different jobs; don't feed one to the
+/// other.
+struct MicrosoftTokenResponse: Equatable, Codable, Sendable {
     let accessToken: String
     /// Absent when the provider chose not to rotate it. Absence means "keep the
     /// one you have", never "you no longer have one" — discarding a refresh
     /// token because a response omitted it is how a session silently dies.
     let refreshToken: String?
     let expiresAt: Date
+
+    /// The renewed token, carrying forward what the response left out.
+    ///
+    /// Microsoft omits `refresh_token` whenever it chooses not to rotate, and
+    /// the omission is routine rather than exceptional. Taking the response at
+    /// face value therefore stores a grant with `refreshToken: nil`, which
+    /// works until the access token ages out an hour later and then strands the
+    /// account with no way back but a fresh sign-in — a failure that arrives
+    /// long after the change that caused it.
+    func carryingForwardRefreshToken(from previous: MicrosoftTokenResponse) -> Self {
+        MicrosoftTokenResponse(
+            accessToken: accessToken,
+            refreshToken: refreshToken ?? previous.refreshToken,
+            expiresAt: expiresAt)
+    }
+
+    /// Memberwise, for the merge above and for tests. The failable
+    /// `init?(data:)` stays the only way to build one from a wire response.
+    init(accessToken: String, refreshToken: String?, expiresAt: Date) {
+        self.accessToken = accessToken
+        self.refreshToken = refreshToken
+        self.expiresAt = expiresAt
+    }
 
     private struct Payload: Decodable {
         let access_token: String

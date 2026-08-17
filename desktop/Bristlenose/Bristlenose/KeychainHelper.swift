@@ -43,6 +43,7 @@ enum KeychainHelper {
         // and writes false, silently. A store built on an unregistered key
         // looks entirely correct and persists nothing.
         "cloud-google-meet": "Bristlenose Google Meet Sign-In",
+        "cloud-microsoft-teams": "Bristlenose Microsoft Teams Sign-In",
     ]
 
     /// A `KeychainStore` backed by the real macOS Keychain.

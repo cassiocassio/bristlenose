@@ -519,12 +519,57 @@ struct ListingTransportTests {
                 "a permission failure was reported as a complete, empty listing")
     }
 
-    private func teamsSource() -> TeamsSource {
+    @Test("A restored token that has aged out renews before it is used")
+    func expiredRestoredTokenRenewsFirst() async throws {
+        // The whole point of keeping a sign-in is that it outlives the window —
+        // so on the restore path an hour-old token is the ORDINARY case, not the
+        // edge one. Without this the common experience of a remembered sign-in
+        // is a 401 and a sign-in prompt nobody needed, which is indistinguishable
+        // from the persistence never having worked.
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"access_token":"NEW","expires_in":3600}"#))
+        StubURLProtocol.enqueue(.json(#"{"value":[]}"#))   // the listing
+        StubURLProtocol.enqueue(.json(#"{"value":[]}"#))   // the roster
+
+        let listing = await teamsSource(tokens: expiredToken()).list(window: window)
+
+        let urls = StubURLProtocol.requests.compactMap(\.url?.absoluteString)
+        let first = try #require(urls.first)
+        #expect(first.contains("/oauth2/v2.0/token"),
+                "the listing ran before the token was renewed: \(urls)")
+        #expect(listing.arithmetic.outcome.isComplete)
+    }
+
+    @Test("A refused renewal gives up once — a revoked grant fails identically forever")
+    func refusedRenewalDoesNotLoop() async throws {
+        // A refresh token the tenant has revoked will fail the same way on every
+        // attempt, so retrying converts one honest sign-in into an unbreakable
+        // loop of failed listings. Four responses are queued; giving up consumes
+        // exactly one.
+        StubURLProtocol.reset()
+        for _ in 0..<4 {
+            StubURLProtocol.enqueue(.json(#"{"error":"invalid_grant"}"#, status: 400))
+        }
+
+        let listing = await teamsSource(tokens: expiredToken()).list(window: window)
+
+        #expect(StubURLProtocol.requests.count == 1,
+                "a revoked grant was retried: \(StubURLProtocol.requests.count) requests")
+        #expect(!listing.arithmetic.outcome.isComplete)
+        #expect(listing.rows.isEmpty)
+    }
+
+    private func expiredToken() -> MicrosoftTokenResponse {
+        MicrosoftTokenResponse(accessToken: "OLD", refreshToken: "R",
+                               expiresAt: Date().addingTimeInterval(-3600))
+    }
+
+    private func teamsSource(tokens: MicrosoftTokenResponse? = nil) -> TeamsSource {
         TeamsSource(
             config: MicrosoftOAuthConfig(clientID: "cid", tenant: "common",
                                          redirectURI: "msauth.test://auth"),
             session: StubURLProtocol.session(),
-            restoredTokens: MicrosoftTokenResponse(
+            restoredTokens: tokens ?? MicrosoftTokenResponse(
                 data: Data(#"{"access_token":"T","expires_in":3600}"#.utf8))!)
     }
 

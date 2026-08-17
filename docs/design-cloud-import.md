@@ -103,6 +103,24 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
        and persisting the grant take the journey from 29 to 17 with no scope
        change and no audit — after which the restricted scope buys exactly one
        further click. Then the choice can be made on its merits.
+     - **And on `drive.file` there is no Google gate at all** — the point that
+       makes the rest of this bullet mostly moot, and which was reached late
+       because the restricted-scope framing was carried past the decision that
+       ruled restricted scopes out. Google's own verification page: *"If your
+       app utilizes only non-sensitive scopes, it is not mandatory for your app
+       to complete the app verification process."* `drive.file` is
+       non-sensitive. So: no verification, no assessment, nothing annual,
+       nothing to budget. Optional **brand** verification only, if we want our
+       name and logo on the consent screen — which we already have.
+       **Google's one real lever is the OAuth client itself**, which it can
+       restrict for policy violation; that is independent of Apple, who review
+       the app but audit nobody's Google-API compliance. Small surface on a
+       non-sensitive scope, and not nil, but not a process we have to pass.
+       Note also that `GoogleOAuthConfig.resolve` reads the client ID from
+       **UserDefaults before the Info.plist**, so a customer whose admin
+       objects to our client can point the app at one they registered
+       themselves — and an internal-only app is exempt from everything. Not
+       exposed in the UI; worth remembering it exists.
      - **DECIDED: we stay on `drive.file`.** Bristlenose will not carry a
        recurring security assessment to save a click. That price is a footnote
        on an enterprise line item and a material share of an indie

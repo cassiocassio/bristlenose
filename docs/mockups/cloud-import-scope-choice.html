@@ -217,6 +217,28 @@ much less urgent, and can be decided on its merits rather than under duress.</p>
 
 <h2>4. Decided: we stay on <code>drive.file</code></h2>
 
+<div class="ask" style="border-color:var(--good)">
+<b>And on <code>drive.file</code> there is no Google gate at all.</b> Google’s verification
+page: <i>“If your app utilizes only <b>non-sensitive</b> scopes, it is not mandatory for
+your app to complete the app verification process.”</i> <code>drive.file</code> is
+non-sensitive. No verification, no assessment, nothing annual, nothing to budget —
+optional <b>brand</b> verification only, if we want our name and logo on the consent
+screen, which we already have.
+<br><br>
+This page reached that late, because the restricted-scope framing got carried past the
+decision that ruled restricted scopes out. Sections 2 and 3 are true and, for the chosen
+path, <b>mostly beside the point</b>. Kept because the next person will ask the same
+question and deserves the working, not the conclusion.
+<br><br>
+<b>Google’s one real lever is the OAuth client</b>, which it can restrict for policy
+violation. That is independent of Apple, who review the app and audit nobody’s
+Google-API compliance. Small surface on a non-sensitive scope; not nil, but not a
+<em>process</em> we have to pass. And <code>GoogleOAuthConfig.resolve</code> reads the
+client ID from UserDefaults before the Info.plist, so a customer whose admin objects to
+ours can point the app at one they registered themselves — an internal-only app being
+exempt from everything.
+</div>
+
 <div class="ask" style="border-color:var(--warn)">
 <b>Settled 17 Aug 2026.</b> Bristlenose will not buy a recurring security assessment to
 save a click. That pricing is a footnote on an enterprise line item and a material share

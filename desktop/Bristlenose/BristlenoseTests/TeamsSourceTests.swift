@@ -259,6 +259,115 @@ struct ShippingPlatformTests {
         #expect(rotated.carryingForwardRefreshToken(from: previous).refreshToken == "FRESH")
     }
 
+    // MARK: - Telling three refusals apart
+
+    @Test("Conditional Access is its own refusal, and nobody in the room can fix it")
+    func conditionalAccessIsDistinct() {
+        // The sign-in SUCCEEDS and the token is refused anyway — usually a
+        // policy demanding a managed device, which a hand-rolled flow can never
+        // satisfy because it transmits no Primary Refresh Token for the device
+        // to be judged by. Left in `unexpected` it fails closed with no
+        // explanation, which reads as a bug in Bristlenose.
+        let refusal = MicrosoftSignInRefusal.classify(
+            code: "access_denied",
+            description: "AADSTS53003: Access has been blocked by Conditional Access policies.")
+        #expect(refusal == .conditionalAccess)
+        #expect(!refusal.isWorthRetrying)
+    }
+
+    @Test("Both admin-consent walls classify the same, because Entra reports them the same")
+    func adminApprovalIsOneWallNotTwo() {
+        // Worth pinning as a *limit*, not a behaviour. With the admin-consent
+        // workflow enabled the user sees "Approval required" and a Request
+        // button; with it disabled they see "Need admin approval" and no way to
+        // ask — and both return AADSTS90094. The difference lives on Microsoft's
+        // page, not in our callback, so any UI that claims to tell them apart is
+        // claiming something it cannot know.
+        for code in ["AADSTS90094", "AADSTS65001"] {
+            #expect(MicrosoftSignInRefusal.classify(code: code, description: "")
+                    == .adminApprovalRequired)
+        }
+        #expect(!MicrosoftSignInRefusal.adminApprovalRequired.isWorthRetrying,
+                "offering Try again at a wall only a third party can remove")
+    }
+
+    @Test("A user who declined is the one refusal worth retrying")
+    func declineIsRetryable() {
+        let refusal = MicrosoftSignInRefusal.classify(code: "AADSTS65004", description: "")
+        #expect(refusal == .userDeclined)
+        #expect(refusal.isWorthRetrying)
+    }
+
+    @Test("The code is found wherever Entra put it")
+    func codeFoundInEitherField() {
+        // Entra puts AADSTSnnnnn in the human-readable description as often as
+        // in `error`, so matching only the code field silently misses half of
+        // them — and a missed classification degrades to `.other`, which renders
+        // Microsoft's raw sentence and looks deliberate.
+        #expect(MicrosoftSignInRefusal.classify(
+            code: "", description: "AADSTS53003: blocked") == .conditionalAccess)
+        #expect(MicrosoftSignInRefusal.classify(
+            code: "AADSTS53003", description: "") == .conditionalAccess)
+    }
+
+    @Test("Conditional Access refused at the token leg still reads as Conditional Access")
+    func conditionalAccessAtTokenLeg() {
+        // It can refuse *after* the authorize leg has already succeeded, which
+        // is exactly why it presents as "sign-in worked, then nothing did".
+        let error = MicrosoftOAuthError.tokenExchangeFailed(
+            status: 400, body: #"{"error":"invalid_grant","error_description":"AADSTS53003: blocked"}"#)
+        #expect(error.refusal == .conditionalAccess)
+        #expect(error.errorDescription?.contains("security policy") == true)
+    }
+
+    @Test("An unclassified refusal keeps Microsoft's own words")
+    func unknownRefusalPassesThrough() {
+        // Better than a house sentence that guesses: Entra's text names the
+        // cause, and inventing a friendlier wrong one is how a diagnosable
+        // failure becomes an undiagnosable one.
+        let refusal = MicrosoftSignInRefusal.classify(
+            code: "AADSTS00000", description: "Something new and specific")
+        #expect(refusal == .other(description: "Something new and specific"))
+        #expect(refusal.message(rawDescription: "Something new and specific")
+                == "Something new and specific")
+    }
+
+    @Test("A bare code number in a correlation ID does not classify the failure")
+    func bareNumbersDoNotMatch() {
+        // Entra descriptions carry correlation IDs and timestamps, so matching
+        // `contains("65001")` rather than `contains("AADSTS65001")` can be
+        // satisfied by a digit run inside a GUID — and the cost of being wrong
+        // is sending someone to their IT department about something else.
+        let refusal = MicrosoftSignInRefusal.classify(
+            code: "invalid_request",
+            description: "Correlation ID: 3b90094f-65001-4a2e-9d65-004fcafe1234")
+        #expect(refusal != .adminApprovalRequired)
+        #expect(refusal != .userDeclined)
+    }
+
+    @Test("A refusal with no description never renders as an empty message")
+    func emptyDescriptionStillSaysSomething() {
+        // Passing the platform's words straight through is right until there
+        // are none, at which point it surfaces as a dialog with a title and no
+        // body.
+        #expect(!MicrosoftSignInRefusal.userDeclined.message(rawDescription: "").isEmpty)
+        #expect(!MicrosoftSignInRefusal.other(description: "").message(rawDescription: "").isEmpty)
+    }
+
+    @Test("Classifying a decline does not cost us Microsoft's wording")
+    func declineKeepsMicrosoftsWords() {
+        // The regression this pins: adding `.userDeclined` so the retry
+        // affordance could be right initially replaced "User declined to
+        // consent" with a blander house sentence — trading a specific,
+        // searchable string for a vague one, which is exactly what the
+        // sibling suite's `otherRefusal` exists to forbid. Classification is
+        // for deciding *who can act*, not for rewriting text we already
+        // understand.
+        #expect(MicrosoftSignInRefusal.userDeclined
+                .message(rawDescription: "User declined to consent.")
+                == "User declined to consent.")
+    }
+
     @Test("A grant survives the round trip it is stored by")
     func grantRoundTrips() {
         // The stored shape is the type's own properties, not the OAuth wire

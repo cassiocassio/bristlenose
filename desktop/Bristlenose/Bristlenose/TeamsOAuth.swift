@@ -99,16 +99,130 @@ struct MicrosoftOAuthConfig {
     }
 }
 
+/// What an Entra refusal actually means — and, more usefully, **who can do
+/// something about it**. Three refusals arrive down the same channel with the
+/// same shape, and they have nothing in common: one the researcher undoes by
+/// clicking again, one only their IT can lift, and one nobody in the
+/// conversation can lift at all.
+///
+/// A pure function over the code so the mapping is testable without an OAuth
+/// round trip, per the house rule that a decision belongs in a helper rather
+/// than in whatever view happens to render it.
+enum MicrosoftSignInRefusal: Equatable {
+    /// `AADSTS65004` — they read the consent screen and said no. Retrying is
+    /// exactly right, and is the only one of these where it is.
+    case userDeclined
+
+    /// `AADSTS90094` / `AADSTS65001` — the tenant requires an administrator.
+    ///
+    /// **We cannot tell which of Entra's two walls they hit**, and it is worth
+    /// stating rather than discovering later: with the admin-consent workflow
+    /// enabled the user sees "Approval required" and a Request-approval button;
+    /// with it disabled they see "Need admin approval" and no way to ask. Both
+    /// return this same code — the difference lives on Microsoft's page, not in
+    /// the callback. So one honest screen serves both, and it must not offer
+    /// "Try again": useless in the first case, actively misleading in the
+    /// second.
+    case adminApprovalRequired
+
+    /// `AADSTS53003` — Conditional Access. The sign-in **succeeded** and the
+    /// token was refused anyway, usually because a policy demands a compliant or
+    /// hybrid-joined device and a hand-rolled flow transmits no Primary Refresh
+    /// Token for the device to be judged by. Not a consent problem, not a
+    /// licence problem, and not fixable by the researcher, their admin, or us —
+    /// so it earns its own case purely to stop it being described as one of the
+    /// others.
+    case conditionalAccess
+
+    case other(description: String)
+
+    /// Entra puts the `AADSTSnnnnn` code inside the human-readable description
+    /// as often as it puts it in `error`, so both are searched.
+    static func classify(code: String, description: String) -> Self {
+        let haystack = code + " " + description
+        // **Match the full `AADSTSnnnnn`, never the bare number.** Entra always
+        // writes the prefix, and its descriptions also carry correlation IDs and
+        // timestamps — so a bare `contains("65001")` can be satisfied by a digit
+        // run in a GUID and classify an unrelated failure as an admin gate. The
+        // cost of being wrong here is telling someone to go to their IT
+        // department about something else entirely.
+        if haystack.contains("AADSTS53003") { return .conditionalAccess }
+        if haystack.contains("AADSTS90094") || haystack.contains("AADSTS65001") {
+            return .adminApprovalRequired
+        }
+        if haystack.contains("AADSTS65004") { return .userDeclined }
+        return .other(description: description)
+    }
+
+    /// The sentence to show, given whatever Microsoft said.
+    ///
+    /// **Two of these four keep Microsoft's own words**, and that is the rule
+    /// rather than an omission: substituting our sentence for a message we do
+    /// not specifically understand replaces a searchable, specific string with a
+    /// vaguer one. We only override where we can say something Microsoft's text
+    /// does not — namely *who can act*, which is the whole reason these are
+    /// classified at all.
+    ///
+    /// Note `adminApprovalRequired` deliberately keeps the word
+    /// **"administrator"**: it is what Entra's own screen says, and echoing the
+    /// platform's vocabulary is what makes the message recognisable rather than
+    /// merely accurate.
+    func message(rawDescription: String) -> String {
+        switch self {
+        case .userDeclined:
+            // Their words. "User declined to consent" is already precise, and
+            // ours would be strictly less informative — but only when there are
+            // any: passing the description straight through means an empty one
+            // becomes an empty error, which surfaces as a dialog with a title
+            // and no body.
+            return rawDescription.isEmpty ? "Sign-in was declined." : rawDescription
+        case .adminApprovalRequired:
+            return "Your organisation needs an administrator to approve "
+                 + "Bristlenose before it can read your recordings. Send your IT "
+                 + "team the approval link — this isn't one you can grant yourself."
+        case .conditionalAccess:
+            return "Your organisation's security policy blocked this sign-in. "
+                 + "This usually means it only allows managed devices, and it "
+                 + "can't be resolved from Bristlenose."
+        case .other(let description):
+            return description.isEmpty
+                ? "Microsoft declined the sign-in and didn't say why."
+                : description
+        }
+    }
+
+    /// Whether trying again could plausibly work. False for both of the walls —
+    /// and getting this wrong is the difference between a researcher waiting for
+    /// their admin and a researcher clicking a button forever.
+    var isWorthRetrying: Bool { self == .userDeclined }
+}
+
 enum MicrosoftOAuthError: LocalizedError, Equatable {
     case notConfigured
     case cancelled
     case stateMismatch
     case noAuthorizationCode
-    /// Microsoft returned an error on the authorize leg. `AADSTS65004` is the
-    /// user declining; `AADSTS90094` is the one that matters — the tenant
-    /// requires an administrator to consent, which no amount of retrying fixes.
+    /// Microsoft returned an error on the authorize leg. See
+    /// `MicrosoftSignInRefusal` for what the codes actually mean.
     case consentRefused(code: String, description: String)
     case tokenExchangeFailed(status: Int, body: String)
+
+    /// The refusal behind this error, when it is one. Callers branch on this
+    /// rather than re-matching strings.
+    var refusal: MicrosoftSignInRefusal? {
+        switch self {
+        case .consentRefused(let code, let description):
+            return .classify(code: code, description: description)
+        case .tokenExchangeFailed(_, let body):
+            // Conditional Access can refuse at the *token* leg too, after the
+            // authorize leg has already succeeded — which is precisely why it
+            // reads as "sign-in worked, then nothing did".
+            let refusal = MicrosoftSignInRefusal.classify(code: "", description: body)
+            return refusal == .conditionalAccess ? refusal : nil
+        default:
+            return nil
+        }
+    }
 
     var errorDescription: String? {
         switch self {
@@ -121,10 +235,13 @@ enum MicrosoftOAuthError: LocalizedError, Equatable {
         case .noAuthorizationCode:
             return "Microsoft didn't return an authorisation code."
         case .consentRefused(let code, let description):
-            return code.contains("90094")
-                ? "Your organisation requires an administrator to approve Bristlenose before you can connect."
-                : description
+            return MicrosoftSignInRefusal
+                .classify(code: code, description: description)
+                .message(rawDescription: description)
         case .tokenExchangeFailed(let status, let body):
+            if let refusal, refusal == .conditionalAccess {
+                return refusal.message(rawDescription: body)
+            }
             return "Microsoft refused the sign-in (HTTP \(status)). \(body)"
         }
     }

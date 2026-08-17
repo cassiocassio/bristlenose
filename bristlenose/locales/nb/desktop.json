@@ -559,6 +559,8 @@
     "badgeTooltip": "Delt med agenter. Enhver tilkoblet agent kan lese sitatene i dette prosjektet n\u00e5r du ber om det."
   },
   "cloudImport": {
+    "destinationNewProject": "Nytt prosjekt\u2026",
+    "newProjectSaveMessage": "Opptakene du importerer, kopieres til denne mappen.",
     "instantMeeting": "Umiddelbart m\u00f8te",
     "windowTitle": "Importer fra {{platform}}",
     "filter": "Filtrer",

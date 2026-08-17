@@ -582,6 +582,8 @@
     "badgeTooltip": "Sd\u00edleno s agenty. P\u0159ipojen\u00fd agent m\u016f\u017ee na va\u0161i \u017e\u00e1dost \u010d\u00edst citace z tohoto projektu."
   },
   "cloudImport": {
+    "destinationNewProject": "Nov\u00fd projekt\u2026",
+    "newProjectSaveMessage": "Nahr\u00e1vky, kter\u00e9 importujete, se zkop\u00edruj\u00ed do t\u00e9to slo\u017eky.",
     "instantMeeting": "Okam\u017eit\u00e1 sch\u016fzka",
     "windowTitle": "Importovat z {{platform}}",
     "filter": "Filtrovat",

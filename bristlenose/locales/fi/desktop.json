@@ -559,6 +559,8 @@
     "badgeTooltip": "Jaettu agenteille. Yhdistetty agentti voi lukea t\u00e4m\u00e4n projektin lainauksia pyynn\u00f6st\u00e4si."
   },
   "cloudImport": {
+    "destinationNewProject": "Uusi projekti\u2026",
+    "newProjectSaveMessage": "Tuomasi tallenteet kopioidaan t\u00e4h\u00e4n kansioon.",
     "instantMeeting": "Pikakokous",
     "windowTitle": "Tuo palvelusta {{platform}}",
     "filter": "Suodata",

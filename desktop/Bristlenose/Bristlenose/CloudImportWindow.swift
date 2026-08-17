@@ -30,14 +30,22 @@ import SwiftUI
 struct CloudImportWindow: View {
     @ObservedObject var store: CloudImportStore
     @EnvironmentObject var projectIndex: ProjectIndex
+    /// Read for one thing only: which project the researcher was looking at
+    /// when they invoked Import.
+    @EnvironmentObject private var coordinator: CloudImportCoordinator
     @EnvironmentObject private var i18n: I18n
     /// Supplies every vendor-specific string. A `switch` on platform inside a
     /// view body is the smell this replaces.
     let platform: CloudPlatform
 
-    /// Destination project. Pre-selected by how the window was opened (§9), not
-    /// defaulted — a wrong default here writes gigabytes into the wrong study.
-    @State private var destinationID: UUID?
+    /// Where the recordings go. Pre-selected by how the window was opened (§9),
+    /// never silently defaulted to a project — a wrong default here writes
+    /// gigabytes into the wrong study.
+    ///
+    /// `.newProject` when the window was opened with nothing selected, which is
+    /// a route rather than a dead end: the researcher on the welcome screen can
+    /// name and place a study from inside this popup.
+    @State private var destination: CloudImportDestinations.Choice = .newProject
 
     var body: some View {
         VStack(spacing: 0) {
@@ -52,6 +60,25 @@ struct CloudImportWindow: View {
         .toolbar { windowScopePicker }
         .task {
             if store.accountEmail != nil, store.listing == nil { await store.load() }
+        }
+        // Follows how the window was opened, including a re-open from a
+        // different project while it is already on screen — one window globally
+        // (§9), so the destination has to keep up with the invocation rather
+        // than be fixed at first mount. Fires on appear and on change; a nil
+        // preselection resolves to `.newProject`, which is the same value the
+        // state starts at, so opening from the welcome screen never triggers
+        // the panel by itself.
+        .task(id: coordinator.preselectedProjectID) {
+            destination = CloudImportDestinations.initialChoice(
+                preselected: coordinator.preselectedProjectID, in: destinationGroups)
+        }
+        // Choosing "New Project…" opens its panel there and then, the way
+        // "Other…" behaves in a native popup — not silently at Import, where a
+        // save sheet would arrive after the researcher thought they were done
+        // deciding.
+        .onChange(of: destination) { previous, next in
+            guard next == .newProject, previous != .newProject else { return }
+            makeNewProject(revertingTo: previous)
         }
         .onChange(of: store.windowDays) { _, _ in
             // A menu selection is a deliberate act, so one re-list per change
@@ -417,27 +444,79 @@ struct CloudImportWindow: View {
     ///
     /// A project whose `path` is empty is an unlocated placeholder — the
     /// "Drag Interviews Here" state — and has no folder behind it. Offering one
-    /// as a destination is offering a choice that cannot work: on 16 Aug 2026 a
-    /// real recording was fetched, verified byte-for-byte, and published into
-    /// `URL(fileURLWithPath: "")`, which resolves to the **process's current
-    /// working directory** — the sandbox container root. The window reported
-    /// "✓ Imported" and the researcher had no way to find their file.
-    ///
-    /// Filtering here rather than refusing at `start()` keeps this a correctness
-    /// fix rather than a new UI state: the primary button's existing disabled
-    /// condition (`destinationID == nil`) already covers "nothing selectable".
-    private var deliverableProjects: [Project] {
-        projectIndex.projects.filter { !$0.path.isEmpty }
+    /// The popup's contents, in sidebar order, with folders as headings.
+    /// Every judgement in here is `CloudImportDestinations`'; this is the read.
+    private var destinationGroups: [CloudImportDestinations.Group] {
+        CloudImportDestinations.groups(
+            sidebar: projectIndex.sidebarItems,
+            projectsInFolder: { projectIndex.projectsInFolder($0) })
+    }
+
+    /// The chosen project, when the choice is one. Nil while the popup still
+    /// reads "New Project…" — which is a pending decision, not a destination.
+    private var chosenProjectID: UUID? {
+        if case .project(let id) = destination { return id }
+        return nil
     }
 
     private var destinationPicker: some View {
-        Picker("", selection: $destinationID) {
-            ForEach(deliverableProjects) { project in
-                Text(project.name).tag(Optional(project.id))
+        Picker("", selection: $destination) {
+            // First, and separated: the one entry that isn't a place that
+            // already exists. Choosing it opens the panel that makes one.
+            Text(i18n.t("desktop.cloudImport.destinationNewProject"))
+                .tag(CloudImportDestinations.Choice.newProject)
+            Divider()
+            ForEach(destinationGroups) { group in
+                destinationGroup(group)
             }
         }
         .labelsHidden()
-        .frame(maxWidth: 200)
+        .frame(maxWidth: 220)
+    }
+
+    /// A folder becomes a real menu **section header** — unselectable by
+    /// construction, which is the point. A folder is not a place a recording
+    /// can land, so it must not be clickable; `Section` is how AppKit says that
+    /// and it needs no disabled-row of our own.
+    @ViewBuilder
+    private func destinationGroup(_ group: CloudImportDestinations.Group) -> some View {
+        if let folderName = group.folderName {
+            Section(folderName) { destinationRows(group.projects) }
+        } else {
+            // Root-level projects sit under no heading, exactly as in the
+            // sidebar.
+            destinationRows(group.projects)
+        }
+    }
+
+    @ViewBuilder
+    private func destinationRows(_ projects: [Project]) -> some View {
+        ForEach(projects) { project in
+            Text(project.name).tag(CloudImportDestinations.Choice.project(project.id))
+        }
+    }
+
+    /// Name and place a new study, then select it.
+    ///
+    /// Cancelling must leave the previous selection alone — `present` returns
+    /// nil for that, and `previous` is what we go back to. Without it the popup
+    /// would sit on "New Project…" after a cancel, which reads as though the
+    /// cancel had been ignored.
+    private func makeNewProject(revertingTo previous: CloudImportDestinations.Choice,
+                                then continuation: ((UUID) -> Void)? = nil) {
+        NewProjectDestination.present(
+            index: projectIndex,
+            i18n: i18n,
+            suggestedName: i18n.t("desktop.chrome.newProject"),
+            message: i18n.t("desktop.cloudImport.newProjectSaveMessage")
+        ) { created in
+            guard let created else {
+                destination = previous
+                return
+            }
+            destination = .project(created)
+            continuation?(created)
+        }
     }
 
     @ViewBuilder
@@ -454,14 +533,32 @@ struct CloudImportWindow: View {
             // button title… helps people understand the action they're taking."
             Button(i18n.plural("desktop.cloudImport.importButton", count: store.tickedCount)) { start() }
                 .buttonStyle(.borderedProminent)
-                .disabled(store.tickedCount == 0 || destinationID == nil)
+                // No longer gated on a destination existing. "New Project…" is
+                // a destination the researcher can commit to — the panel that
+                // resolves it opens on the way through, which is the ordinary
+                // Save-panel shape rather than a disabled button with no way to
+                // find out why.
+                .disabled(store.tickedCount == 0)
                 .keyboardShortcut(.defaultAction)
         }
     }
 
     private func start() {
-        guard let destinationID,
-              let project = projectIndex.projects.first(where: { $0.id == destinationID })
+        guard store.tickedCount > 0 else { return }
+        guard let projectID = chosenProjectID else {
+            // The popup still reads "New Project…" — opened from the welcome
+            // screen, where the researcher has said nothing about where this
+            // belongs. Ask at the commit, then carry straight on.
+            makeNewProject(revertingTo: destination) { created in
+                startFetch(into: created)
+            }
+            return
+        }
+        startFetch(into: projectID)
+    }
+
+    private func startFetch(into projectID: UUID) {
+        guard let project = projectIndex.projects.first(where: { $0.id == projectID })
         else { return }
 
         // Borrow the project's security-scoped lease rather than rebuilding a
@@ -486,9 +583,9 @@ struct CloudImportWindow: View {
         // offers unlocated projects, so this guard should be unreachable — it
         // is here because "should be unreachable" is what the last one said.
         guard !project.path.isEmpty else { return }
-        let destination = projectIndex.leaseURL(projectID: destinationID)
+        let folder = projectIndex.leaseURL(projectID: projectID)
             ?? URL(fileURLWithPath: project.path)
-        store.startFetch(destination: destination)
+        store.startFetch(destination: folder)
     }
 
     private var subtitle: String {

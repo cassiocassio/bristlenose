@@ -559,6 +559,8 @@
     "badgeTooltip": "F\u00fcr Agenten freigegeben. Jeder verbundene Agent kann die Zitate dieses Projekts auf Ihre Anfrage lesen."
   },
   "cloudImport": {
+    "destinationNewProject": "Neues Projekt\u2026",
+    "newProjectSaveMessage": "Die importierten Aufzeichnungen werden in diesen Ordner kopiert.",
     "instantMeeting": "Sofortbesprechung",
     "windowTitle": "Aus {{platform}} importieren",
     "filter": "Filtern",

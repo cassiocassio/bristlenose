@@ -559,6 +559,8 @@
     "badgeTooltip": "Gedeeld met agents. Elke verbonden agent kan de citaten van dit project lezen wanneer je daarom vraagt."
   },
   "cloudImport": {
+    "destinationNewProject": "Nieuw project\u2026",
+    "newProjectSaveMessage": "De opnamen die je importeert worden naar deze map gekopieerd.",
     "instantMeeting": "Directe vergadering",
     "windowTitle": "Importeren uit {{platform}}",
     "filter": "Filteren",

@@ -559,6 +559,8 @@
     "badgeTooltip": "Delas med agenter. Alla anslutna agenter kan l\u00e4sa projektets citat n\u00e4r du ber om det."
   },
   "cloudImport": {
+    "destinationNewProject": "Nytt projekt\u2026",
+    "newProjectSaveMessage": "Inspelningarna du importerar kopieras till den h\u00e4r mappen.",
     "instantMeeting": "Snabbm\u00f6te",
     "windowTitle": "Importera fr\u00e5n {{platform}}",
     "filter": "Filtrera",

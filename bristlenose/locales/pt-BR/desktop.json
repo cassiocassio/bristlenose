@@ -559,6 +559,8 @@
     "badgeTooltip": "Compartilhado com agentes. Qualquer agente conectado pode ler as cita\u00e7\u00f5es deste projeto quando voc\u00ea pedir."
   },
   "cloudImport": {
+    "destinationNewProject": "Novo projeto\u2026",
+    "newProjectSaveMessage": "As grava\u00e7\u00f5es que voc\u00ea importar s\u00e3o copiadas para esta pasta.",
     "instantMeeting": "Reuni\u00e3o instant\u00e2nea",
     "windowTitle": "Importar do {{platform}}",
     "filter": "Filtrar",

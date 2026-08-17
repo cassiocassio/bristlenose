@@ -559,6 +559,8 @@
     "badgeTooltip": "Shared with agents. Any connected agent can read this project's quotes when you ask it to."
   },
   "cloudImport": {
+    "destinationNewProject": "New Project\u2026",
+    "newProjectSaveMessage": "The recordings you import are copied into this folder.",
     "instantMeeting": "Instant meeting",
     "windowTitle": "Import from {{platform}}",
     "filter": "Filter",

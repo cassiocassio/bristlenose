@@ -639,6 +639,32 @@ the researcher actually lives in, <b>the duration scan is the entire answer</b>,
 </table>
 </div>
 
+<h3>What is actually being prevented: p2 and p3 are the same person</h3>
+<p class="sub">Not a wasted download. <b>A false finding.</b> Two copies of one interview become two
+sessions, two participants, and two sets of the same quotes — and the quote clustering then puts
+those identical quotes together, where agreement between two participants is exactly what a
+researcher reads as corroboration.</p>
+
+<p class="why bad"><b>So the duplicate does not look like a mistake. It looks like a stronger
+result.</b> Theme prevalence reads “4 of 6 participants” for something three of five said; the
+analysis page's signal-concentration metrics inherit the same inflation; and nothing anywhere is
+wrong-looking enough to prompt a check. This is the same class as every other hazard in this
+document — a defect whose output is indistinguishable from a good one — and it is the reason the
+guard is worth building before anything else on the media side.</p>
+
+<p class="why good"><b>Which settles how it presents: as <code>.imported</code>, not as a
+warning.</b> When the durations match, the honest claim is simply <i>this project already has this
+interview</i> — the same status, the same ticked-and-dead checkbox, as a recording we fetched
+ourselves. No new state, no new words, no “are you sure?”. <code>ImportRowState.imported</code>
+gains its second producer and the researcher sees green on four of six.</p>
+
+<p class="why"><b>Worth knowing, not solving here: the import window would be the only defence.</b>
+The invariant is <i>one interview, one participant</i>, and it is a property of the study rather than
+of the importer — two same-content files landing by any route (two hand-drops, a restore, a
+colleague's copy) double a participant just as silently. Guarding at import is the cheap, early,
+well-placed catch; it is not the same as the pipeline holding the invariant. Separate conversation,
+but the assumption that this fix covers it would be wrong.</p>
+
 <p class="why good"><b>So the cheap half ships first and alone.</b> A pure matcher — rows with
 durations against local media files with durations — plus one folder scan whenever the destination
 popup changes, feeding <code>ImportRowState.imported</code>, which is written, translated into 21

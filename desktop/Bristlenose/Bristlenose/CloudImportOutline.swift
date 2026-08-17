@@ -222,6 +222,40 @@ enum CloudImportOutline {
         var isEmpty: Bool { days.isEmpty }
     }
 
+    // MARK: - Whether the Scheduled column has anything to say
+
+    /// Whether the Scheduled column earns its place in a listing of `rows`.
+    ///
+    /// **A column earns its place by carrying data, not by having a reason.**
+    /// That is the whole rule, and stating it that way is what keeps it from
+    /// needing a second one: a Teams researcher who declined — or was refused —
+    /// the calendar scope and a Meet researcher whose month happened to be all
+    /// instant meetings produce the same empty column, and neither is helped by
+    /// a rule of thumb that can tell them apart. `syncExpiresColumn` already
+    /// argues this for Drive, which has no per-file expiry at all: a column of
+    /// em-dashes pretending to be data is worse than an absent one.
+    ///
+    /// The consequence is real rather than cosmetic, and it is why this is not
+    /// left to the researcher to squint past. `Calendars.Read` joined
+    /// Microsoft's default app consent policy in Nov 2025, so on a corporate
+    /// tenant the ordinary outcome is a listing with **no** scheduled times at
+    /// all — a Scheduled column ruled down the page with nothing in it, next to
+    /// a Recorded column that is full. That reads as a bug in the listing, or
+    /// as recordings that lost their meetings, rather than as a permission the
+    /// tenant declined to give.
+    ///
+    /// **An empty listing keeps the column.** Knowing there is no scheduled
+    /// data requires having listed something; nothing listed is not evidence,
+    /// and dropping the column on the empty state only to restore it a moment
+    /// later is jitter with no information in it.
+    ///
+    /// Ask this of the **whole** listing, never of the filtered subset the
+    /// outline is built from — otherwise a filter keystroke that happens to
+    /// leave only instant meetings takes the column away mid-type.
+    static func showsScheduledColumn(for rows: [CloudImportRow]) -> Bool {
+        rows.isEmpty || rows.contains { $0.scheduledAt != nil }
+    }
+
     // MARK: - Building it
 
     /// Group rows into days → meetings → recordings.

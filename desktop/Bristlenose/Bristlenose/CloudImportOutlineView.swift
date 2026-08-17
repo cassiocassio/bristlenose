@@ -134,6 +134,7 @@ struct CloudImportOutlineView: NSViewRepresentable {
         context.coordinator.platform = platform
         context.coordinator.i18n = i18n
         context.coordinator.syncExpiresColumn()
+        context.coordinator.syncScheduledColumn()
         context.coordinator.reload(force: false)
     }
 
@@ -168,6 +169,9 @@ struct CloudImportOutlineView: NSViewRepresentable {
         outline.addTableColumn(column(Column.tick, "", width: 26, max: 26))
         outline.addTableColumn(column(Column.meeting, i18n.t("desktop.cloudImport.columnMeeting"),
                                       width: 320, min: 200))
+        // Added and removed live by `syncScheduledColumn`, because whether the
+        // listing carries scheduled times is a fact about the *data* — and on
+        // Teams, about a permission the tenant may have declined.
         outline.addTableColumn(column(Column.scheduled, i18n.t("desktop.cloudImport.columnScheduled"),
                                       width: 92, min: 72, max: 160))
         outline.addTableColumn(column(Column.recorded, i18n.t("desktop.cloudImport.columnRecorded"),
@@ -430,6 +434,40 @@ extension CloudImportOutlineView {
                 if let status = outline.tableColumns.firstIndex(where: { $0.identifier == Column.status }),
                    let expires = outline.tableColumns.firstIndex(where: { $0.identifier == Column.expires }) {
                     outline.moveColumn(expires, toColumn: status)
+                }
+            default:
+                break
+            }
+        }
+
+        /// Adds or removes the Scheduled column to match the listing.
+        ///
+        /// Twin of `syncExpiresColumn`, and deliberately the same shape — but
+        /// driven by the data rather than by the platform, because the same
+        /// adapter produces both answers on different tenants. See
+        /// `CloudImportOutline.showsScheduledColumn(for:)` for the rule and why
+        /// it is asked of `store.rows` rather than of the filtered outline.
+        func syncScheduledColumn() {
+            guard let outline else { return }
+            let wanted = CloudImportOutline.showsScheduledColumn(for: store.rows)
+            let existing = outline.tableColumns.first { $0.identifier == Column.scheduled }
+            switch (wanted, existing) {
+            case (false, .some(let column)):
+                outline.removeTableColumn(column)
+            case (true, .none):
+                let column = NSTableColumn(identifier: Column.scheduled)
+                column.title = i18n.t("desktop.cloudImport.columnScheduled")
+                column.width = 92
+                column.minWidth = 72
+                column.maxWidth = 160
+                // Before Recorded — the two clocks read left to right in the
+                // order the call actually happened in, and a Scheduled column
+                // that came back on the far right would read as a new column
+                // rather than as the one that went away.
+                outline.addTableColumn(column)
+                if let recorded = outline.tableColumns.firstIndex(where: { $0.identifier == Column.recorded }),
+                   let scheduled = outline.tableColumns.firstIndex(where: { $0.identifier == Column.scheduled }) {
+                    outline.moveColumn(scheduled, toColumn: recorded)
                 }
             default:
                 break

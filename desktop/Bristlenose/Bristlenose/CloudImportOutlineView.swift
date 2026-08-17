@@ -1224,12 +1224,43 @@ private final class StatusCellView: OutlineCellView {
             bar.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Metrics.cellInset),
             bar.widthAnchor.constraint(equalToConstant: 70),
             bar.centerYAnchor.constraint(equalTo: centerYAnchor),
-            cancelButton.leadingAnchor.constraint(equalTo: bar.trailingAnchor, constant: 4),
+            // **Trailing, not tucked against the bar.** The cancel sits at the
+            // column's own edge, the way Safari's Downloads list and Finder's
+            // copy sheet put it — so with several rows transferring the stops
+            // form one column the eye can run down, rather than a ragged edge
+            // that moves with each bar. It also keeps a destructive control
+            // away from the thing it destroys.
+            cancelButton.trailingAnchor.constraint(equalTo: trailingAnchor,
+                                                   constant: -Metrics.cellInset),
             cancelButton.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
+
+        // The bar must not run into the button when the column is dragged
+        // narrow. High rather than required so a genuinely cramped column
+        // degrades quietly instead of logging a constraint conflict.
+        let clearance = bar.trailingAnchor.constraint(
+            lessThanOrEqualTo: cancelButton.leadingAnchor, constant: -6)
+        clearance.priority = .defaultHigh
+        clearance.isActive = true
     }
 
     @objc private func cancelClicked() { onCancel?() }
+
+    /// The one place the bar-versus-text swap is decided.
+    ///
+    /// The cancel button rides with the bar, and `StatusCellView` is **reused**
+    /// across rows — so a cell that showed a live transfer and is then handed a
+    /// text status kept a live-looking stop control over a row that had already
+    /// finished. Every `configure…` path routes through here rather than each
+    /// remembering to hide it, because the next one added will not remember.
+    private func showProgress(_ showing: Bool) {
+        bar.isHidden = !showing
+        row.isHidden = showing
+        if !showing {
+            cancelButton.isHidden = true
+            onCancel = nil
+        }
+    }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not from a nib") }
@@ -1258,8 +1289,7 @@ private final class StatusCellView: OutlineCellView {
     }
 
     func configureText(_ text: String, colour: NSColor, bold: Bool, symbol: String? = nil) {
-        bar.isHidden = true
-        row.isHidden = false
+        showProgress(false)
         label.stringValue = text
         labelIntent = colour
         label.font = .systemFont(ofSize: Metrics.subtitleSize, weight: bold ? .semibold : .regular)
@@ -1279,13 +1309,10 @@ private final class StatusCellView: OutlineCellView {
     /// reads as stalled.
     func configureProgress(_ fraction: Double?, name: String, i18n: I18n,
                            onCancel: (() -> Void)? = nil) {
-        row.isHidden = true
-        bar.isHidden = false
+        showProgress(true)
         bar.toolTip = nil
         self.onCancel = onCancel
-        // Only offered when there is something to stop. A cell reused from a
-        // finished row would otherwise keep a live-looking control over a bar
-        // that is no longer moving.
+        // Offered only where there is a live transfer to stop.
         cancelButton.isHidden = onCancel == nil
         cancelButton.toolTip = i18n.t("desktop.cloudImport.cancelRow", ["title": name])
         cancelButton.setAccessibilityLabel(
@@ -1306,8 +1333,7 @@ private final class StatusCellView: OutlineCellView {
     }
 
     func configureEmpty() {
-        bar.isHidden = true
-        row.isHidden = false
+        showProgress(false)
         label.stringValue = ""
         label.toolTip = nil
         glyph.image = nil

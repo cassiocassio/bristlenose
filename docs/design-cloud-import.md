@@ -62,13 +62,24 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
      implementation trap the research flags: `setFileIds()` is the *JavaScript*
      Picker API and does **not** exist in the `trigger_onepick` desktop flow,
      which uses the `file_ids=` URL parameter. We use the URL parameter, which
-     is correct. Google's own wording for it is "pre-**navigated**", not
-     pre-selected — **but our 17 Aug QA measured pre-selection**: the Picker
-     opened reading "2 selected" with both files already highlighted, needing
-     one Insert click rather than N. That is a measurement the documentation
-     understates, and it means the double-selection costs one click, not one
-     per file. The earlier click count in
-     `docs/mockups/cloud-import-scope-choice.html` overstated it.
+     is correct. Google's wording for it is "pre-**navigated**", not
+     pre-selected, and **that wording is exact**: the researcher still clicks
+     each file. _(An earlier version of this entry claimed QA had measured
+     pre-selection, from a screenshot reading "2 selected" with both files
+     highlighted. That screenshot was taken **after** the clicks. The
+     double-selection therefore costs one click per file, as originally
+     counted — `file_ids` narrows what you are choosing among, it does not
+     choose for you.)_
+     - **Which makes the listing-wide grant a trade, not a pure win — open.**
+       If every seeded file must be clicked, then asking over the whole listing
+       front-loads *all* the clicking: a researcher importing 3 of 20 today
+       faces 20 thumbnails instead of 3, in exchange for later batches asking
+       nothing. Shipped that way in `dca4c1be` on the assumption that seeding
+       was free. It isn't. Unmeasured and decisive: whether the Picker offers
+       any multi-select affordance (shift-click, select-all) over a
+       pre-navigated set — if it does, the trade is clearly worth it; if it
+       does not, seeding the listing may be worse than a round trip per batch
+       for anyone who imports selectively. **Measure before defending it.**
   3. **The client-only CASA exemption is NOT supported.** Three separate
      attempts to state the trigger as settled — in either direction — were
      voted down; only the claim that it is *genuinely ambiguous* survived

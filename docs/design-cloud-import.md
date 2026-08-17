@@ -42,6 +42,40 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
 
 ## Changelog
 
+- _2026-08-17 (first live QA of the whole loop, Meet)_ — the walk that found
+  the two defects above, plus a queue of its own. **What worked end to end:**
+  files present → rows held → delete them → rows fetchable again → tick →
+  Picker → Queued → Imported; and switching the destination to another project
+  re-offers every row, because "already imported" is a fact about *a folder*,
+  not about the recording. Owed, in the order it hurts:
+  1. **A batch can maroon in "Queued" forever.** `prepareBatch` awaits the
+     media-grant session; if that session is dismissed oddly it never returns,
+     `isFetching` stays true, and every row sits on "Queued" with no timeout
+     and no way back except **Stop**. "Queued" is also a lie there — nothing is
+     queued, we are waiting on a person. Wants its own state, *Waiting for
+     permission*, and a deadline.
+  2. **Stop → Import does not cleanly re-open the Picker** — observed
+     re-opening the browser but not at the grant page, which suggests the
+     consumed Picker session (`fid=`) is being reused rather than minted.
+  3. **The media grant is re-asked far more often than Google requires.**
+     Three causes, all ours: `pickMedia` hardcodes `prompt=consent`, which
+     *forces* the consent screen even for files already granted;
+     `requestMediaGrant` never consults `grantedFileIDs`, so it re-picks files
+     it already holds; and `openLive` builds a fresh source per window open,
+     discarding `grantedFileIDs` and `mediaToken` with it.
+  4. **It cannot simply be folded into the first sign-in**, and that is not a
+     bug: Google refuses a picker authorization carrying any other scope (the
+     comment at `GoogleOAuth.pickMedia` records this), and the grant is bound
+     to *specific file IDs*, which do not exist until the researcher has a
+     list to pick from. The genuine options are (a) seed the Picker with every
+     recording in the current listing rather than only the ticked rows — one
+     grant per listing instead of one per batch, no scope change; or (b) ask
+     for a broad Drive scope once, which trades "only the specific files you
+     use with this app" for "all your Drive". (a) first.
+  5. **Cancel is batch-only.** Wants a per-row cancel beside each progress bar,
+     and the whole-batch cancel to be reachable from the sidebar ring once
+     that exists (item 2 of the previous entry).
+  6. **Zoom's tolerance is unmeasured** and parked — Meet and Teams ship first.
 - _2026-08-17_ — **item 1 of the design session is built: already-in-this-project,
   by duration.** `ImportRowState.imported` has a producer for the first time —
   it was written, localised into 21 languages ("Already in this project."), and

@@ -37,6 +37,12 @@ enum KeychainHelper {
         "azure": "Bristlenose Azure API Key",
         "google": "Bristlenose Google Gemini API Key",
         "miro": "Bristlenose Miro Access Token",
+        // Cloud import sign-ins. **This map is an allowlist, not a naming
+        // convention** — `get` and `set` both `guard let service =
+        // serviceNames[provider]` and bail, so an unregistered key reads nil
+        // and writes false, silently. A store built on an unregistered key
+        // looks entirely correct and persists nothing.
+        "cloud-google-meet": "Bristlenose Google Meet Sign-In",
     ]
 
     /// A `KeychainStore` backed by the real macOS Keychain.

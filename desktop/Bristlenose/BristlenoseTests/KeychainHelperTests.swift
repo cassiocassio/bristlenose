@@ -71,12 +71,36 @@ struct KeychainHelperTests {
         #expect(KeychainHelper.serviceNames["miro"] == "Bristlenose Miro Access Token")
     }
 
+    /// Keys the **Python** side also reads. Adding one here obliges a matching
+    /// entry in `MacOSCredentialStore.SERVICE_NAMES` (`credentials_macos.py`)
+    /// or the two ends silently disagree about where a credential lives.
+    private static let mirroredToPython: Set<String> =
+        ["anthropic", "openai", "azure", "google", "miro"]
+
+    /// Keys only the Swift host uses. **Deliberately absent from Python** — a
+    /// cloud sign-in is a host-side concern the sidecar never touches, and
+    /// adding it to `credentials_macos.py` would imply a reader that does not
+    /// exist.
+    private static let swiftOnly: Set<String> = ["cloud-google-meet"]
+
     @Test func serviceNames_pinAllCredentialKeys() {
-        // The full credential service-name map: core LLM provider keys, plus
-        // integration/collaboration access tokens (Miro today; the set will grow).
-        // Pin it exactly so adding/removing a key fails loudly with a clear diff and
-        // forces a matching update to MacOSCredentialStore.SERVICE_NAMES (credentials_macos.py).
-        let expected: Set<String> = ["anthropic", "openai", "azure", "google", "miro"]
-        #expect(Set(KeychainHelper.serviceNames.keys) == expected)
+        // Pinned exactly so adding or removing a key fails loudly with a clear
+        // diff. Split into two sets rather than one flat list because the two
+        // carry different obligations, and a flat list invites the next person
+        // to satisfy this test by editing Python for a key Python never reads.
+        #expect(Set(KeychainHelper.serviceNames.keys)
+                == Self.mirroredToPython.union(Self.swiftOnly))
+    }
+
+    /// The registration itself is load-bearing, not bookkeeping: `get` and
+    /// `set` both `guard let service = serviceNames[provider]` and bail, so an
+    /// unregistered key reads nil and writes false **silently**.
+    /// `CloudGrantStore` shipped against an unregistered key and persisted
+    /// nothing at all, with no error anywhere.
+    @Test func serviceNames_cloudSignInIsRegistered() {
+        for key in Self.swiftOnly {
+            #expect(KeychainHelper.serviceNames[key] != nil,
+                    "\(key) is unregistered — its store is a silent no-op")
+        }
     }
 }

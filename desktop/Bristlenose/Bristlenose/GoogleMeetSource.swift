@@ -307,12 +307,29 @@ final class GoogleMeetSource: CloudImportSource {
     /// moment that matters is the one nobody remembers to instrument — a
     /// silent refresh an hour in, whose new refresh token is the only one that
     /// will still work tomorrow.
+    /// **Never call the store synchronously.** Persisting goes to the Keychain,
+    /// and a Keychain write can block on an authorisation prompt — which on an
+    /// ad-hoc-signed build is not hypothetical, since those fall back to the
+    /// legacy file-based keychain that binds grants to the binary hash and
+    /// re-prompts on every rebuild. `signIn()` is `@MainActor` and calls this
+    /// the instant the web auth session returns, so a blocking write there
+    /// stalls the main actor behind a dialog the auth window is covering, and
+    /// the window spins forever with no error anywhere.
+    ///
+    /// The snapshot is taken here, on the caller's actor, so the value that
+    /// gets written is the one that was true at the call — not whatever the
+    /// adapter has drifted to by the time the write lands.
     private func publishGrant() {
-        guard let tokens else { onGrantChanged?(nil); return }
-        let media = mediaToken.map {
-            GoogleGrant.MediaGrant(tokens: $0, fileIDs: grantedFileIDs.sorted())
+        let snapshot: GoogleGrant? = tokens.map { current in
+            GoogleGrant(
+                tokens: current,
+                media: mediaToken.map {
+                    GoogleGrant.MediaGrant(tokens: $0, fileIDs: grantedFileIDs.sorted())
+                },
+                identity: identity)
         }
-        onGrantChanged?(GoogleGrant(tokens: tokens, media: media, identity: identity))
+        guard let onGrantChanged else { return }
+        Task.detached(priority: .utility) { onGrantChanged(snapshot) }
     }
 
     /// Renew the listing token when it has aged out, or report that we cannot.

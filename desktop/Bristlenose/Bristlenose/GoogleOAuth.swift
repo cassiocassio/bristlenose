@@ -224,7 +224,7 @@ enum GoogleOAuthError: LocalizedError, Equatable {
 /// synthesised conformance is deliberate: every member is already a value the
 /// encoder handles, and a hand-rolled one would be a second place to forget a
 /// field the moment one is added.
-struct GoogleTokens: Equatable, Codable {
+struct GoogleTokens: Equatable, Codable, Sendable {
     let accessToken: String
     let refreshToken: String?
     let expiresAt: Date

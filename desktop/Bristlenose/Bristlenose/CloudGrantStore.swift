@@ -17,7 +17,7 @@ import OSLog
 /// (calendar + Meet) and the Picker's `drive.file` grant are separate
 /// authorizations with different scopes, obtained through different flows, and
 /// Google will not let the second carry any scope but its own.
-struct GoogleGrant: Codable, Equatable {
+struct GoogleGrant: Codable, Equatable, Sendable {
     /// The listing grant — calendar events and Meet conference records.
     var tokens: GoogleTokens
 
@@ -36,7 +36,7 @@ struct GoogleGrant: Codable, Equatable {
     /// it reads the token, so a token kept without its ids sits unused behind
     /// a failing guard — restored, and inert. Keeping them in one value makes
     /// half-restoring unrepresentable rather than merely discouraged.
-    struct MediaGrant: Codable, Equatable {
+    struct MediaGrant: Codable, Equatable, Sendable {
         var tokens: GoogleTokens
         /// Sorted, so one grant serialises identically twice — a `Set` would
         /// rewrite the stored blob on every save for no change.

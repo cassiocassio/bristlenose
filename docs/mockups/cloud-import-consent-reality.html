@@ -544,11 +544,16 @@ app asks for a special folder that doesn't exist, so the drive is now the discri
 <code>/me/drive</code> answers we hold <code>Files.Read</code>, the refusal is about the folder, and
 <code>driveType</code> names the tier as a field instead of a guess.</li>
 
-<li><b>Teams token persistence + refresh</b> — <code>MicrosoftGrant</code> in
-<code>CloudGrantStore</code>, plus a <code>cloud-microsoft-teams</code> entry in
-<code>KeychainHelper.serviceNames</code>, which is an allowlist: an unregistered key persists
-nothing, silently. <b>Two grants, one record</b> — the same “make half-restoring unrepresentable”
-shape the Google grant just took. <i>Blocked — both files are held by the Google session.</i></li>
+<li><s>Teams token persistence + refresh.</s> <b>Done 17 Aug</b> —
+<code>MicrosoftGrant</code> in <code>CloudGrantStore</code>, registered as
+<code>cloud-microsoft-teams</code> in <code>KeychainHelper.serviceNames</code>. <b>One grant, not
+Google's two</b>: no Picker step here, so there is no second authorization to hold. The identity
+rides with the tokens because <code>CloudImportStore</code> picks its opening phase from
+<code>accountEmail</code>. Both the listing and the fetch renew before reading — the fetch for the
+sharper reason that a multi-gigabyte batch outlives an hour, so an unrenewed grant fails at the
+tail, after the researcher has stopped watching. And a renewal <b>carries the refresh token
+forward when the response omits it</b>, which Microsoft does routinely: storing the response
+verbatim renews once and then strands the account an hour later.</li>
 </ol>
 
 <p class="why good"><b>One change died on its own merits</b> — marking filename-derived titles as

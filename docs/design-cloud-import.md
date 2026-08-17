@@ -42,6 +42,67 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
 
 ## Changelog
 
+- _2026-08-17 (researched, 21 primary sources, adversarially verified)_ — what
+  the platform actually permits, against Google's own current docs (most "Last
+  updated 2026-07-22"). Four things that change what we do:
+  1. **`prompt=consent` is documented Required, and so is `trigger_onepick`.**
+     Google's parameter table marks both **Required** on the desktop Picker
+     authorization URL — verified across en/it/ja renderings, and the same
+     table marks four *other* params Optional, so the split is real. The
+     Android sibling goes further: set Prompt to CONSENT "even if it was
+     granted before", and `setOptOutIncludingGrantedScopes(true)`. So **the
+     per-batch round trip is the design, not our misconfiguration** — the flow
+     returns `picked_file_ids` *and* a fresh `code` you must exchange. Closes
+     the open item: leaving `prompt=consent` alone was correct, and deleting it
+     is not the free win it looked like. (Still unmeasured: what actually
+     happens if `prompt` is omitted. Documented ≠ enforced.)
+  2. **Which makes "ask over the whole listing" the right mitigation** — the
+     round trip cannot be removed, only made rarer, and asking listing-wide is
+     exactly how you make it rarer. Shipped in `dca4c1be`. Note the
+     implementation trap the research flags: `setFileIds()` is the *JavaScript*
+     Picker API and does **not** exist in the `trigger_onepick` desktop flow,
+     which uses the `file_ids=` URL parameter. We use the URL parameter, which
+     is correct. Google's own wording for it is "pre-**navigated**", not
+     pre-selected — **but our 17 Aug QA measured pre-selection**: the Picker
+     opened reading "2 selected" with both files already highlighted, needing
+     one Insert click rather than N. That is a measurement the documentation
+     understates, and it means the double-selection costs one click, not one
+     per file. The earlier click count in
+     `docs/mockups/cloud-import-scope-choice.html` overstated it.
+  3. **The client-only CASA exemption is NOT supported.** Three separate
+     attempts to state the trigger as settled — in either direction — were
+     voted down; only the claim that it is *genuinely ambiguous* survived
+     unanimously. The page carries two inconsistent formulations, both
+     **capability** tests ("has the ability to access", "or has the capability
+     to access"), one of which drops "third-party" and says merely "a server";
+     and the dedicated CASA support page states the requirement with **no
+     server qualifier at all**. No page carves out native, desktop or
+     backend-less apps. So the "we have no server, therefore we are exempt"
+     reading is a hope, not a finding — still worth asking Google, but do not
+     plan on the answer. Immaterial to us while we stay on `drive.file`, which
+     is why we do.
+  4. **A route to transcripts with no Drive scope at all, and it is shipped
+     somewhere.** Meet REST API *enumeration* scopes — `meetings.space.created`
+     / `meetings.space.readonly` — are only **Sensitive**, and
+     `conferenceRecords.list`, `.recordings.list` and `.transcripts.list` all
+     run on them. Mattermost's Google Meet plugin (read at source, the one
+     genuinely *measured* finding in the report) pulls **full transcript text**
+     via `conferenceRecords.transcripts/*/entries`, renders WebVTT locally, and
+     holds **zero** Drive scopes anywhere in the repo — while deliberately
+     *linking* recording media via `exportUri` rather than downloading it, so
+     Drive's own ACLs gate the bytes. Bears directly on §8's open transcript
+     question, since we already hold the Meet scope. **Two hard limits before
+     anyone gets excited:** transcript entries are deleted **30 days** after
+     the conference, so this cannot be the durable source for older studies;
+     and a fileId obtained from the Meet API is **not** readable under
+     `drive.file`, so this shortens nothing on the recording download.
+  Flagged for honesty: the **$500–$4,500** assessment figure came in with the
+  research brief and **no Google page read carries pricing** — it is unverified
+  here, though one first-hand account of shelving an app over ~$540/year did
+  surface. Do not let the well-verified "annual recurring obligation" launder
+  the number. And the report's own biggest gap: the search budget ran out
+  before first-hand indie-developer accounts could be swept, so what came back
+  is a strong documentary map plus one code precedent, not a survey of practice.
 - _2026-08-17 (first live QA of the whole loop, Meet)_ — the walk that found
   the two defects above, plus a queue of its own. **What worked end to end:**
   files present → rows held → delete them → rows fetchable again → tick →

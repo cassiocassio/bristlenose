@@ -42,6 +42,30 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
 
 ## Changelog
 
+- _2026-08-18 (measured on a live account)_ — **the Picker grant survives a
+  relaunch, and a file already granted is not asked for again.** Walked on a
+  real Google account: quit, rebuild, reopen the window — signed in, no
+  consent screen; then tick a recording granted in an earlier session and
+  press Import — **no Picker at all**.
+  Three things that were separately unproven now hold together:
+  1. **Both halves of the grant round-trip the Keychain.** Google's is a *pair*
+     — the listing token and the Picker's `drive.file` grant with its file ids
+     — and `fetch` guards on the ids *before* it reads the media token, so a
+     half-restore looks identical to a full one until an import is attempted.
+     It is a full restore.
+  2. **`MediaGrantPlan.decide` skips the round trip in practice**, not just in
+     its unit tests.
+  3. **The deep-research report's "cheapest possible win" is answered.** That
+     report could only establish persistence as *documented*, and flagged
+     explicitly that nobody in its corpus had tested whether a stored token
+     also covers ids picked in an earlier batch. It does.
+  Note what this does **not** yet prove: that the bytes then arrive. Skipping
+  the Picker shows we did not *ask*; only a completed download shows the stored
+  token is still good against Drive. Marked here so the distinction is not lost
+  the next time someone reads "persistence works".
+  Also settled the same day: **Google's Picker has a select-all**, so seeding
+  it with the whole listing costs about one click rather than one per file —
+  the measurement the listing-wide grant was committed pending, and it holds.
 - _2026-08-17 (evening — the window stops being a dead end)_ — six fixes to
   the **shared** import window, so Teams inherits every one. Ordered by how
   badly each read to the researcher:

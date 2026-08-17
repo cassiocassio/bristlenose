@@ -645,6 +645,7 @@
     "signingInCancel": "Kumoa",
     "done": "Valmis",
     "statusWaitingPermission": "Odottaa k\u00e4ytt\u00f6oikeutta",
+    "importButtonIdle": "Tuo",
     "heldImported": "Jo t\u00e4ss\u00e4 projektissa.",
     "heldNotDownloaded": "Jo tuotu \u2014 tiedosto on palvelussa {{provider}}, ja se on ladattava sielt\u00e4.",
     "heldDriveNotConnected": "Jo tuotu \u2014 \u201d{{volume}}\u201d ei ole liitettyn\u00e4.",

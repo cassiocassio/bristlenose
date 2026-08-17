@@ -645,6 +645,7 @@
     "signingInCancel": "Cancelar",
     "done": "Conclu\u00eddo",
     "statusWaitingPermission": "A aguardar permiss\u00e3o",
+    "importButtonIdle": "Importar",
     "heldImported": "J\u00e1 est\u00e1 neste projeto.",
     "heldNotDownloaded": "J\u00e1 importada \u2014 o ficheiro est\u00e1 no {{provider}} e tem de ser transferido a\u00ed.",
     "heldDriveNotConnected": "J\u00e1 importada \u2014 \u00ab{{volume}}\u00bb n\u00e3o est\u00e1 ligado.",

@@ -645,6 +645,7 @@
     "signingInCancel": "Abbrechen",
     "done": "Fertig",
     "statusWaitingPermission": "Warten auf Berechtigung",
+    "importButtonIdle": "Importieren",
     "heldImported": "Bereits in diesem Projekt.",
     "heldNotDownloaded": "Bereits importiert \u2014 die Datei liegt auf {{provider}} und muss dort geladen werden.",
     "heldDriveNotConnected": "Bereits importiert \u2014 \u201e{{volume}}\u201c ist nicht verbunden.",

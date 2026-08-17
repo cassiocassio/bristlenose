@@ -573,7 +573,35 @@ struct CloudImportWindow: View {
         } else {
             // A specific verb carrying the count, never "OK" — HIG: "a specific
             // button title… helps people understand the action they're taking."
-            Button(i18n.plural("desktop.cloudImport.importButton", count: store.tickedCount)) { start() }
+            //
+            // **At zero the count is dropped, not rendered.** "Import 0
+            // Recordings" describes an action that does nothing, and a number
+            // inside a verb reads as a defect rather than as a state. The bare
+            // verb says what the button *will* do once something is ticked,
+            // which is the useful thing a disabled control can carry.
+            ZStack {
+                // Sizing ghost. Without it the button grows the instant the
+                // first checkbox is ticked and the pointer is left hovering
+                // over nothing. Anchored to the **one-recording** label rather
+                // than the largest possible: sizing to "Import 47 Recordings"
+                // would leave a button reading "Import" floating in a third of
+                // a window. Later growth (1 → 2, 9 → 10) is gradual and
+                // happens while the researcher is already clicking; the 0 → 1
+                // jump is the one that moves under a stationary pointer.
+                //
+                // A whole Button rather than a Text, so the ghost carries the
+                // same style, padding and font — a bare Text would need the
+                // button metrics hand-copied and would drift the moment
+                // anything about the style changed.
+                Button(i18n.plural("desktop.cloudImport.importButton", count: 1)) {}
+                    .buttonStyle(.borderedProminent)
+                    .hidden()
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+
+                Button(store.tickedCount == 0
+                       ? i18n.t("desktop.cloudImport.importButtonIdle")
+                       : i18n.plural("desktop.cloudImport.importButton", count: store.tickedCount)) { start() }
                 .buttonStyle(.borderedProminent)
                 // No longer gated on a destination existing. "New Project…" is
                 // a destination the researcher can commit to — the panel that
@@ -582,6 +610,10 @@ struct CloudImportWindow: View {
                 // find out why.
                 .disabled(store.tickedCount == 0)
                 .keyboardShortcut(.defaultAction)
+            }
+            // The ZStack takes the width of its widest child, so the ghost sets
+            // a floor and the real button never shrinks below it.
+            .fixedSize()
         }
     }
 

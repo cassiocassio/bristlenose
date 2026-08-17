@@ -701,6 +701,7 @@
     "signingInCancel": "Anuluj",
     "done": "Gotowe",
     "statusWaitingPermission": "Oczekiwanie na uprawnienia",
+    "importButtonIdle": "Importuj",
     "heldImported": "Ju\u017c w tym projekcie.",
     "heldNotDownloaded": "Ju\u017c zaimportowano \u2014 plik jest na {{provider}} i trzeba go tam pobra\u0107.",
     "heldDriveNotConnected": "Ju\u017c zaimportowano \u2014 \u201e{{volume}}\u201d nie jest pod\u0142\u0105czony.",

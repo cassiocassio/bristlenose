@@ -42,6 +42,44 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
 
 ## Changelog
 
+- _2026-08-17 (design session, mostly unbuilt)_ — a long design pass over what
+  happens **after** the researcher presses Import. Two mockups carry it:
+  `docs/mockups/cloud-import-sidebar-progress.html` (the closed-window case) and
+  `docs/mockups/cloud-import-failure-states.html` (a pre-mortem over every
+  state, enumerated from the shipped types). What shipped in code is the
+  **destination popup**: preselects the frontmost window's project, offers
+  *New Project…* first behind an `NSSavePanel`, renders folders as unselectable
+  section headers, and preserves the researcher's own sidebar order. What is
+  settled and unbuilt, in the order it should be done:
+  1. **Already-in-this-project, by duration.** The 99.9% route is a *manual*
+     download, renamed, dropped in the folder — so no record we mint can cover
+     it and a folder scan is the whole answer, not a fallback. Feeds
+     `ImportRowState.imported`, which is written, localised into 21 languages
+     and **has never had a producer** (all three adapters hardcode
+     `.notImported`; six of the fourteen row states are unreachable). The harm
+     is not a wasted download: two copies of one interview become two
+     participants whose identical quotes then *cluster together*, which reads as
+     corroboration. A duplicate does not look like a mistake, it looks like a
+     stronger result.
+  2. **The sidebar ring**, reusing `Kind.copying(fraction:)` — which already
+     means "a determinate, cancellable transfer into this project" — plus
+     `beginAddingInterviews` and `RunProgressMath.clampedFraction`. Nothing new
+     is drawn and no verb is invented; the subtitle is "3 of 4" because that is
+     the question a closed window leaves. Sizes become measurable in the gap
+     after `prepareBatch` returns and before the task group starts, which also
+     un-blinds the free-space precheck.
+  3. **Monitor mode.** Reopening stays in File ▸ Import with the other platforms
+     dimmed and the verb swapped to *Show …*; four controls that are live-but-
+     inert during a fetch become honestly disabled. Closes a reachable defect —
+     `openLive` replaces `store` unconditionally, so starting a batch, closing
+     the window and picking another platform leaves the first batch downloading
+     invisibly with no way to see or stop it.
+  4. **A per-project record** of what landed and what was asked for and never
+     arrived — the only thing that can outlive the window. Largest item here:
+     schema, migration, project-private.
+  Measured rather than assumed: **Google writes no `creation_time` into its
+  MP4s** (`encoder=Google` and nothing else); Teams does. Decided out of scope:
+  trimmed files, and with them audio fingerprinting. Deferred: Zoom.
 - _2026-08-17_ — **Meet's listing is inverted: conference records lead, the
   calendar joins onto them.** The adapter used to walk the calendar and ask
   Meet, per event, for records on that event's meeting code inside a ±15-hour

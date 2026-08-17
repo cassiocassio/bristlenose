@@ -1455,9 +1455,7 @@ struct ContentView: View {
     ) {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = suggestedName
-        panel.directoryURL = FileManager.default.urls(
-            for: .documentDirectory, in: .userDomainMask
-        ).first
+        panel.directoryURL = ProjectFolderDefaults.suggestedDirectory()
         panel.canCreateDirectories = true
         panel.title = i18n.t("desktop.chrome.newProjectSaveTitle")
         panel.prompt = i18n.t("desktop.chrome.newProjectSavePrompt")
@@ -1491,6 +1489,9 @@ struct ContentView: View {
                     try FileManager.default.createDirectory(
                         at: target, withIntermediateDirectories: true
                     )
+                    // Where studies live, learned rather than configured — the
+                    // next New Project panel starts here instead of Documents.
+                    ProjectFolderDefaults.remember(projectFolder: target)
                     // Folder-shaped (inputFiles == nil) → analysable. The project
                     // name follows the panel filename (single source of truth).
                     let project: Project

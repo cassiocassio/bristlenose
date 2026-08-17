@@ -32,8 +32,7 @@ enum NewProjectDestination {
     ) {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = suggestedName
-        panel.directoryURL = FileManager.default
-            .urls(for: .documentDirectory, in: .userDomainMask).first
+        panel.directoryURL = ProjectFolderDefaults.suggestedDirectory()
         panel.canCreateDirectories = true
         panel.title = i18n.t("desktop.chrome.newProjectSaveTitle")
         panel.prompt = i18n.t("desktop.chrome.newProjectSavePrompt")
@@ -56,6 +55,10 @@ enum NewProjectDestination {
                 do {
                     try FileManager.default.createDirectory(
                         at: target, withIntermediateDirectories: true)
+                    // Only after it exists. Remembering a folder we then failed
+                    // to create would send the next panel somewhere that isn't
+                    // there.
+                    ProjectFolderDefaults.remember(projectFolder: target)
                 } catch {
                     // Said out loud rather than swallowed: the popup would
                     // otherwise snap back to its previous value with no

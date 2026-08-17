@@ -45,12 +45,16 @@ struct GeneralSettingsView: View {
                 LabeledContent {
                     folderMenu
                 } label: {
+                    // "Initial default location for new projects" — says
+                    // *initial* and *default* rather than naming the folder,
+                    // because the panel still lets the researcher go anywhere.
+                    // A terser "New project folder" left that implicit and read
+                    // as a constraint. No section header above it: with one row
+                    // the header only repeated the label.
                     Text(i18n.t("settings.general.projectFolderLegend"))
                     Text(explanation)
                         .foregroundStyle(.secondary)
                 }
-            } header: {
-                Text(i18n.t("settings.general.newProjectsLegend"))
             }
         }
         .formStyle(.grouped)

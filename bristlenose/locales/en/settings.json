@@ -1,7 +1,6 @@
 {
   "general": {
-    "newProjectsLegend": "New projects",
-    "projectFolderLegend": "New project folder",
+    "projectFolderLegend": "Initial default location for new projects",
     "projectFolderHelp": "Bristlenose remembers where you last made a project. Set this to always start somewhere.",
     "lastLocationUsed": "Last location used",
     "chooseOther": "Other…",

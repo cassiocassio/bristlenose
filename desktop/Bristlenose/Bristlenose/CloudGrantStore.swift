@@ -149,4 +149,62 @@ enum CloudGrantStore {
     static func clearTeams() {
         KeychainHelper.delete(provider: teamsAccount)
     }
+
+    // MARK: - The platform-agnostic surface the Accounts pane talks to
+
+    /// One connected account.
+    struct Connection: Equatable, Identifiable, Sendable {
+        let platform: CloudPlatform
+        /// The address signed in with. **Optional on purpose**: a grant stored
+        /// before the identity travelled with it, or one whose `/me` lookup
+        /// failed, is still a real connection that a researcher must be able to
+        /// see and remove. A row with no address beats no row.
+        let address: String?
+        var id: String { platform.rawValue }
+    }
+
+    /// Every platform currently holding a sign-in, in the order §5 sequences
+    /// them.
+    static func connections() -> [Connection] {
+        CloudPlatform.built.compactMap { platform in
+            switch platform {
+            case .teams:
+                return loadTeams().map { Connection(platform: platform, address: $0.identity) }
+            case .meet:
+                return loadGoogle().map { Connection(platform: platform, address: $0.identity) }
+            case .zoom:
+                // No store yet — Zoom is parked and cannot sign in, so there is
+                // never a grant to find. An explicit case rather than a
+                // `default` so wiring Zoom's store is a compile-time prompt.
+                return nil
+            }
+        }
+    }
+
+    /// Forget one platform's sign-in.
+    ///
+    /// **Removing the stored copy is not the whole job.** A live adapter in an
+    /// open import window holds its tokens in memory, so clearing the Keychain
+    /// alone would leave a window that keeps listing and fetching against an
+    /// account the researcher has just disconnected — the disconnect would look
+    /// done and not be, which is the worst shape for a control whose entire
+    /// purpose is revocation. The notification is how the live session learns.
+    static func disconnect(_ platform: CloudPlatform) {
+        switch platform {
+        case .teams: clearTeams()
+        case .meet:  clearGoogle()
+        case .zoom:  break
+        }
+        NotificationCenter.default.post(
+            name: .bristlenoseCloudAccountDisconnected,
+            object: nil,
+            userInfo: ["platform": platform.rawValue])
+    }
+}
+
+extension Notification.Name {
+    /// Posted after a cloud sign-in is forgotten. `userInfo["platform"]` carries
+    /// the `CloudPlatform` raw value.
+    static let bristlenoseCloudAccountDisconnected =
+        Notification.Name("bristlenoseCloudAccountDisconnected")
 }

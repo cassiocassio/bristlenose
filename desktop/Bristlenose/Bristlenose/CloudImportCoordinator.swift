@@ -28,6 +28,37 @@ final class CloudImportCoordinator: ObservableObject {
     /// current one).
     @Published var preselectedProjectID: UUID?
 
+    private var disconnectObserver: NSObjectProtocol?
+
+    init() {
+        // Disconnecting an account in Settings must reach a window that is
+        // already open. Without this the Keychain copy goes and the live
+        // adapter — which holds its tokens in memory — carries on listing and
+        // fetching against the account just disconnected, so the control
+        // appears to work and does not. §9's "one place to disconnect" only
+        // holds if that one place actually reaches everywhere.
+        disconnectObserver = NotificationCenter.default.addObserver(
+            forName: .bristlenoseCloudAccountDisconnected,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            let raw = note.userInfo?["platform"] as? String
+            MainActor.assumeIsolated {
+                guard let self, let raw, self.platform.rawValue == raw else { return }
+                // Drop the store rather than re-opening on the sign-in button:
+                // the window's whole state — ticks, outcomes, the batch — belongs
+                // to a session that no longer exists.
+                self.store = nil
+            }
+        }
+    }
+
+    deinit {
+        if let disconnectObserver {
+            NotificationCenter.default.removeObserver(disconnectObserver)
+        }
+    }
+
     /// Open against a platform's real APIs.
     ///
     /// Every branch that cannot find credentials opens the window anyway, on an

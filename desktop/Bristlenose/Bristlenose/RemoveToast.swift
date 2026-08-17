@@ -64,11 +64,11 @@ struct RemoveToast: View {
     }
 
     private func tildified(name: String, path rawPath: String) -> String {
-        let path = rawPath.isEmpty ? "" : rawPath
-        guard !path.isEmpty else { return name }
-        let home = NSHomeDirectory()
-        let display = path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path
-        return "\(name)\n\(display)"
+        guard !rawPath.isEmpty else { return name }
+        // `UserHome`, not `NSHomeDirectory()` — the latter returns the sandbox
+        // container, so the prefix never matched a real project path and this
+        // printed `/Users/cassio/Work/…` where every Mac app prints `~/Work/…`.
+        return "\(name)\n\(UserHome.abbreviate(rawPath))"
     }
 
     /// Post a VoiceOver announcement so non-sighted users learn the remove

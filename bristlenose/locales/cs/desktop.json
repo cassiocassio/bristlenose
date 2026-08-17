@@ -379,6 +379,7 @@
     "exportShortcut": "Exportovat (⌘⇧E)"
   },
   "settingsTabs": {
+    "general": "Obecn\u00e9",
     "appearance": "Vzhled",
     "llm": "Poskytovatel LLM",
     "mcpAgents": "Agenti MCP",

@@ -1,4 +1,18 @@
 {
+  "general": {
+    "newProjectsLegend": "New projects",
+    "projectFolderLegend": "New project folder",
+    "projectFolderHelp": "Bristlenose remembers where you last made a project. Set this to always start somewhere.",
+    "lastLocationUsed": "Last location used",
+    "chooseOther": "Other…",
+    "useLastLocation": "Use Last Location",
+    "choosePrompt": "Choose",
+    "chooseMessage": "Choose where new projects should be created.",
+    "inProvider": "in {{provider}}",
+    "volumeOffline": "On {{volume}}, which isn’t connected.",
+    "folderDeleted": "This folder has been deleted.",
+    "fallbackNote": "New projects will start in your last location."
+  },
   "heading": "Settings",
   "appearance": {
     "diagnosticsLegend": "Show Diagnostics menu",

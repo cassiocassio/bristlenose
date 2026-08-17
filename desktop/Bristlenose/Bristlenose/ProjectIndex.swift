@@ -830,18 +830,11 @@ final class ProjectIndex: ObservableObject {
 
     /// Detect the storage location type from a filesystem path.
     static func detectLocation(for path: String) -> Location {
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
+        let homeDir = UserHome.path
 
         // Cloud detection — check before local, since cloud paths live under /Users/
-        let cloudPrefixes: [(prefix: String, label: String)] = [
-            ("/Library/CloudStorage/OneDrive", "OneDrive"),
-            ("/Library/CloudStorage/Dropbox", "Dropbox"),
-            ("/Library/Mobile Documents", "iCloud Drive"),
-        ]
-        for cloud in cloudPrefixes {
-            if path.contains(cloud.prefix) {
-                return Location(type: .cloud, displayHint: cloud.label)
-            }
+        if let label = cloudProviderLabel(for: path) {
+            return Location(type: .cloud, displayHint: label)
         }
 
         // Volume — under /Volumes/
@@ -873,6 +866,86 @@ final class ProjectIndex: ObservableObject {
         }
 
         return Location(type: .local, displayHint: "On this Mac")
+    }
+
+    /// The sync provider's name for a path, or nil if it is not synced.
+    ///
+    /// **Structural, not an allowlist.** This used to be three hardcoded
+    /// prefixes (`/Library/CloudStorage/OneDrive`, `…/Dropbox`,
+    /// `/Library/Mobile Documents`), which missed Google Drive and Box — and,
+    /// worse, missed **`~/Documents` under Desktop & Documents sync**, so
+    /// Bristlenose's own default project location was reported as "On this Mac"
+    /// on any Mac with iCloud Drive turned on. The most likely sync root of all
+    /// was the one the allowlist could not see.
+    ///
+    /// `isUbiquitousItemKey` is the OS's own File Provider flag, so it answers
+    /// for every provider without naming any of them, and it reads no vendor's
+    /// state — we know the protocol, never the client. The path shape is then
+    /// consulted *only* to label what the flag already established.
+    ///
+    /// Naming the provider is the point: when a run stalls for three minutes
+    /// materialising a dataless file, the researcher needs to already know this
+    /// folder is Dropbox's, or the stall reads as Bristlenose being slow. It is
+    /// attribution, never a warning — a project inside the client's tree is the
+    /// intended configuration (`docs/design-project-storage.md` §3).
+    static func cloudProviderLabel(for path: String) -> String? {
+        guard !path.isEmpty else { return nil }
+
+        // Shape first, and the order is load-bearing: it is free, it names the
+        // vendor, and — critically — it still works for a path that no longer
+        // exists. Projects on an unmounted or deleted cloud folder are exactly
+        // the case the sidebar most needs labelled, and a filesystem probe
+        // cannot answer for a path that isn't there. (Getting this order wrong
+        // made a deleted Dropbox project read "On this Mac"; caught by
+        // `ProjectIndexTests.detectLocation_dropboxPath` and friends, which pass
+        // synthetic paths for precisely this reason.)
+        //
+        // `~/Library/CloudStorage/<Provider>-<account>` — the account suffix is
+        // the user's, not ours to display. Unknown providers keep their own name
+        // rather than being flattened to a generic "Cloud": structural, so Box
+        // and Google Drive work without being enumerated.
+        if let range = path.range(of: "/Library/CloudStorage/") {
+            let container = String(path[range.upperBound...].split(separator: "/").first ?? "")
+            let vendor = String(container.split(separator: "-").first ?? "")
+            if !vendor.isEmpty { return providerNames[vendor] ?? vendor }
+        }
+        if path.contains("/Library/Mobile Documents") { return "iCloud Drive" }
+
+        // Then the File Provider flag — the only way to catch a *home* folder
+        // that Desktop & Documents sync has taken over. `~/Documents` has no
+        // distinguishing shape at all, which is why the old three-prefix
+        // allowlist reported Bristlenose's own default project location as "On
+        // this Mac" on any Mac with iCloud Drive turned on.
+        return isUbiquitous(path: path) ? "iCloud Drive" : nil
+    }
+
+    /// Product names, per the house rule that user-facing text uses the product
+    /// the researcher recognises. Keys are the on-disk container names.
+    private static let providerNames: [String: String] = [
+        "GoogleDrive": "Google Drive",
+        "ProtonDrive": "Proton Drive",
+        "pCloudDrive": "pCloud",
+    ]
+
+    /// Whether the path is inside a File Provider (synced) domain.
+    ///
+    /// Walks up to the nearest folder that actually exists: `detectLocation` is
+    /// called for unavailable projects too, and `resourceValues` on a missing
+    /// path tells you nothing. A deleted project inside Dropbox is still a
+    /// Dropbox project.
+    private static func isUbiquitous(path: String) -> Bool {
+        var url = URL(fileURLWithPath: path)
+        let fileManager = FileManager.default
+        while url.path != "/" && !url.path.isEmpty {
+            if fileManager.fileExists(atPath: url.path) {
+                let values = try? url.resourceValues(forKeys: [.isUbiquitousItemKey])
+                return values?.isUbiquitousItem ?? false
+            }
+            let parent = url.deletingLastPathComponent()
+            guard parent.path != url.path else { return false }
+            url = parent
+        }
+        return false
     }
 
     /// Check if a path is on a network filesystem (SMB, AFP, NFS, WebDAV).

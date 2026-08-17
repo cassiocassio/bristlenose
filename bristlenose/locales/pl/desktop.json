@@ -380,6 +380,7 @@
     "exportShortcut": "Eksportuj (⌘⇧E)"
   },
   "settingsTabs": {
+    "general": "Og\u00f3lne",
     "appearance": "Wygląd",
     "llm": "Dostawca LLM",
     "mcpAgents": "Agenci MCP",

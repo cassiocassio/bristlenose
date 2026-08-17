@@ -362,6 +362,7 @@
     "exportShortcut": "Vie (⌘⇧E)"
   },
   "settingsTabs": {
+    "general": "Yleiset",
     "appearance": "Ulkoasu",
     "llm": "LLM-palveluntarjoaja",
     "mcpAgents": "MCP-agentit",

@@ -353,6 +353,7 @@
     "exportShortcut": "내보내기 (⌘⇧E)"
   },
   "settingsTabs": {
+    "general": "\uc77c\ubc18",
     "appearance": "외관",
     "llm": "LLM \uc81c\uacf5\uc5c5\uccb4",
     "mcpAgents": "MCP \uc5d0\uc774\uc804\ud2b8",

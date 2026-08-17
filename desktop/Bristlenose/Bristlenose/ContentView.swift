@@ -3108,17 +3108,13 @@ struct SpotlightConfirmSheet: View {
     }
 
     /// Path segments suitable for a comma-joined VoiceOver label.
+    ///
+    /// `UserHome`, not `NSHomeDirectory()` — the latter returns the sandbox
+    /// container, so the home prefix never matched and the crumb read
+    /// `Users › cassio › Work › Studies`, making VoiceOver speak two junk
+    /// components before the useful ones.
     private func breadcrumbSegments(for url: URL) -> [String] {
-        let home = NSHomeDirectory()
-        let path = url.path
-        var trimmed = path
-        var leading = ""
-        if path.hasPrefix(home) {
-            trimmed = String(path.dropFirst(home.count))
-            leading = "~"
-        }
-        let parts = trimmed.split(separator: "/").map(String.init)
-        return leading.isEmpty ? parts : ([leading] + parts)
+        UserHome.abbreviatedSegments(url.path)
     }
 }
 

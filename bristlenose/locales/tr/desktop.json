@@ -362,6 +362,7 @@
     "exportShortcut": "Dışa Aktar (⌘⇧E)"
   },
   "settingsTabs": {
+    "general": "Genel",
     "appearance": "Görünüm",
     "llm": "LLM Sa\u011flay\u0131c\u0131s\u0131",
     "mcpAgents": "MCP Ajanlar\u0131",

@@ -362,6 +362,7 @@
     "exportShortcut": "Exportar (⌘⇧E)"
   },
   "settingsTabs": {
+    "general": "Geral",
     "appearance": "Aparência",
     "llm": "Fornecedor de LLM",
     "mcpAgents": "Agentes MCP",

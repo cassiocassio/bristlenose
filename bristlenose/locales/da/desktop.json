@@ -362,6 +362,7 @@
     "exportShortcut": "Eksportér (⌘⇧E)"
   },
   "settingsTabs": {
+    "general": "Generelt",
     "appearance": "Udseende",
     "llm": "LLM-udbyder",
     "mcpAgents": "MCP-agenter",

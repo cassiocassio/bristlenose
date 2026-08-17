@@ -362,6 +362,7 @@
     "exportShortcut": "Exporteer (⌘⇧E)"
   },
   "settingsTabs": {
+    "general": "Algemeen",
     "appearance": "Weergave",
     "llm": "LLM-provider",
     "mcpAgents": "MCP-agents",

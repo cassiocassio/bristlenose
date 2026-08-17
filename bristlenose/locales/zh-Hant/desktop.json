@@ -353,6 +353,7 @@
     "exportShortcut": "輸出（⌘⇧E）"
   },
   "settingsTabs": {
+    "general": "\u4e00\u822c",
     "appearance": "外觀",
     "llm": "LLM \u4f9b\u61c9\u5546",
     "mcpAgents": "MCP \u4ee3\u7406",

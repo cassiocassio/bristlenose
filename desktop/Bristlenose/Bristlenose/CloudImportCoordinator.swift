@@ -81,7 +81,33 @@ final class CloudImportCoordinator: ObservableObject {
     /// maintainer's own vendor account — the app cannot do it for itself — so
     /// "not set up" is a state to render, not a menu item that does nothing when
     /// clicked.
+    /// True while a batch is transferring, whichever platform started it.
+    ///
+    /// Read by the File ▸ Import menu so the other platforms can dim rather
+    /// than silently discard a running batch — see `openLive`'s guard.
+    var isFetching: Bool { store?.isFetching ?? false }
+
     func openLive(_ platform: CloudPlatform, preselecting projectID: UUID?) {
+        // **Never replace a store that is mid-transfer.**
+        //
+        // This method used to swap `store` unconditionally, and there is one
+        // store globally (§9). So starting a batch, closing the window, and
+        // opening Import on another platform released the only reference to the
+        // fetching store — leaving the transfers running, invisible, with
+        // nothing left that could show or stop them. The researcher's files
+        // kept arriving from a window that no longer existed.
+        //
+        // Re-presenting the running one is the honest answer rather than a
+        // refusal: the batch is the thing they most likely want to see. The
+        // menu dims the other platforms so this guard is a safety net rather
+        // than the primary mechanism — but it is the guard that makes the
+        // defect unreachable, because a menu can be raced and a notification
+        // can arrive from anywhere.
+        guard !isFetching else {
+            preselectedProjectID = projectID
+            return
+        }
+
         self.platform = platform
         preselectedProjectID = projectID
         fixtureScenario = nil

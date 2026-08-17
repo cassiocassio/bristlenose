@@ -26,6 +26,11 @@ struct MenuCommands: Commands {
     /// Used only by the Diagnostics menu's DEBUG harness section (Ollama
     /// setup-pill state forcing).
     @ObservedObject var ollamaDownload: OllamaDownloadModel
+    /// Read by File ▸ Import so a running batch can dim the other
+    /// platforms. One store globally (§9), so switching platform
+    /// mid-transfer would otherwise abandon it — see
+    /// `CloudImportCoordinator.openLive`.
+    @ObservedObject var cloudImport: CloudImportCoordinator
     /// Gates the Diagnostics menu's presence. `@AppStorage` is a
     /// DynamicProperty, so flipping the toggle in Appearance settings should
     /// re-evaluate menu presence live; if a macOS release regresses that, the
@@ -50,7 +55,7 @@ struct MenuCommands: Commands {
         }
 
         CommandGroup(replacing: .newItem) {
-            FileMenuContent(bridgeHandler: bridgeHandler, projectIndex: projectIndex, i18n: i18n)
+            FileMenuContent(bridgeHandler: bridgeHandler, projectIndex: projectIndex, i18n: i18n, cloudImport: cloudImport)
         }
 
         CommandGroup(replacing: .undoRedo) {
@@ -362,6 +367,7 @@ private struct FileMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var projectIndex: ProjectIndex
     @ObservedObject var i18n: I18n
+    @ObservedObject var cloudImport: CloudImportCoordinator
     @FocusedValue(\.windowCommands) private var windowCommands
     @Environment(\.openWindow) private var openWindow
 
@@ -422,10 +428,28 @@ private struct FileMenuContent: View {
             // Only platforms with a live adapter appear. An item that opens a
             // window which then says "not built yet" is worse than no item —
             // menus are a promise about what the app can do.
+            // **While a batch is transferring, only the platform running it is
+            // reachable, and its verb changes.** There is one import window
+            // globally (§9), so picking another platform mid-transfer would
+            // abandon the running batch — files still arriving, nothing left
+            // that could show or stop them. Dimming is the HIG answer (menus
+            // dim, never hide) and it prevents the request rather than refusing
+            // it; `CloudImportCoordinator.openLive` keeps a guard behind this
+            // because a menu can be raced and the notification has other
+            // senders.
+            //
+            // The ellipsis goes with it. "Google Meet…" promises a window that
+            // asks something; while a batch runs the window only *shows* what
+            // is already happening, and HIG reserves the ellipsis for the
+            // former.
             ForEach(CloudPlatform.shipping) { platform in
-                Button(platform.displayName + "…", systemImage: platform.symbolName) {
+                let busyElsewhere = cloudImport.isFetching && cloudImport.platform != platform
+                let showing = cloudImport.isFetching && cloudImport.platform == platform
+                Button(platform.displayName + (showing ? "" : "…"),
+                       systemImage: platform.symbolName) {
                     NotificationCenter.default.post(name: .openCloudImport, object: platform)
                 }
+                .disabled(busyElsewhere)
             }
         } label: {
             Label("Import", systemImage: "square.and.arrow.down")

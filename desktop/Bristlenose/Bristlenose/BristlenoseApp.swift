@@ -201,7 +201,7 @@ struct BristlenoseApp: App {
             // 3a), so the menu bar reads the key window's through
             // `@FocusedValue(\.bridge)`. Passing an app-level one here is what
             // made every window show the same lens.
-            MenuCommands(serveManager: serveManager, projectIndex: projectIndex, removalStore: removalStore, i18n: i18n, ollamaDownload: ollamaDownload)
+            MenuCommands(serveManager: serveManager, projectIndex: projectIndex, removalStore: removalStore, i18n: i18n, ollamaDownload: ollamaDownload, cloudImport: cloudImport)
         }
         .commands {
             // The Settings window is an AppKit `SettingsWindowController`

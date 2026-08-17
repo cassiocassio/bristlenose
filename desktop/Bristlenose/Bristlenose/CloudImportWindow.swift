@@ -129,13 +129,47 @@ struct CloudImportWindow: View {
     private var windowScopePicker: some ToolbarContent {
         if platform.windowChoices.count > 1 {
             ToolbarItem(placement: .primaryAction) {
-                Picker(i18n.t("desktop.cloudImport.scopeLabel"), selection: $store.windowDays) {
-                    ForEach(platform.windowChoices, id: \.self) { days in
-                        Text(i18n.plural("desktop.cloudImport.scopeChoice", count: days)).tag(days)
+                // **A borderless pull-down, not a bordered pop-up.**
+                //
+                // As a bare `Picker` this drew a filled, outlined capsule —
+                // and on macOS 26 a lone `.primaryAction` item also gets the
+                // toolbar's own hairline group chrome wrapped around it, so a
+                // *filter* ended up with two borders and read as the most
+                // important control in the window. It is a scope control: the
+                // Mail-filter, Finder-arrangement slot, and both of those are
+                // borderless and icon-led.
+                //
+                // The `Picker` survives **inside** the menu rather than being
+                // replaced by plain buttons, because it is what puts the
+                // checkmark against the current choice. A hand-rolled `Menu`
+                // of `Button`s would have to draw that itself and would drift
+                // from the system's idea of a one-of-N menu — the exact
+                // native-primitives departure this file otherwise avoids.
+                Menu {
+                    Picker(i18n.t("desktop.cloudImport.scopeLabel"),
+                           selection: $store.windowDays) {
+                        ForEach(platform.windowChoices, id: \.self) { days in
+                            Text(i18n.plural("desktop.cloudImport.scopeChoice", count: days))
+                                .tag(days)
+                        }
                     }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                } label: {
+                    // **No glyph, deliberately.** A calendar symbol was tried
+                    // and dropped: the words already say what this is, and an
+                    // icon would give weight to a control that wants less of
+                    // it. Thirty days is the ~99% case — a study you left for
+                    // a month is a study whose conversations you no longer
+                    // remember — so this exists to hint that you are *not*
+                    // seeing all of history, not to be chosen from. The
+                    // chevron carries the affordance; the words carry the
+                    // answer; nothing else needs to be here.
+                    Text(i18n.plural("desktop.cloudImport.scopeChoice",
+                                     count: store.windowDays))
                 }
-                .pickerStyle(.menu)
-                .labelsHidden()
+                .menuStyle(.borderlessButton)
+                .fixedSize()
                 .help(i18n.t("desktop.cloudImport.scopeHelp"))
             }
         }

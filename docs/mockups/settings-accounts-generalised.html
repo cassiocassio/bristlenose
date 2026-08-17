@@ -1,0 +1,440 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings ▸ Accounts — connect things, see them, get out of trouble</title>
+<style>
+:root{
+  --bg:#f2f2f7; --page:#fff; --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+  --line:#d8d8dc; --hairline:#e6e6ea; --grouphdr:#f0f0f3; --chrome:#ececf0;
+  --field:#fff; --accent:#007aff; --warn:#c9500f; --good:#1a7f37; --bad:#c1121f;
+  --shadow:0 12px 40px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.10);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+    --line:#3a3a3d; --hairline:#2c2c2f; --grouphdr:#28282b; --chrome:#242427;
+    --field:#2a2a2d; --accent:#0a84ff; --warn:#ff9f45; --good:#4ac26b; --bad:#ff6b6b;
+    --shadow:0 12px 40px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;padding:40px 24px 90px;
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:15px;font-weight:700;margin:44px 0 10px;padding-top:18px;
+   border-top:.5px solid var(--line)}
+h3{font-size:13px;font-weight:700;margin:26px 0 8px}
+.sub{color:var(--dim);margin:0 0 10px;max-width:94ch}
+.meta{color:var(--faint);font-size:12px;margin:0 0 26px}
+.why{border-left:2px solid var(--accent);padding:2px 0 2px 12px;margin:14px 0 0;
+     color:var(--dim);font-size:12.5px;max-width:96ch}
+.why b{color:var(--ink);font-weight:600}
+.why.bad{border-color:var(--warn)}
+.why.good{border-color:var(--good)}
+.why.dead{border-color:var(--bad)}
+.ask{background:var(--grouphdr);border:.5px solid var(--line);border-radius:8px;
+     padding:14px 16px;margin:0 0 26px;font-size:12.5px;color:var(--dim);max-width:104ch}
+.ask b{color:var(--ink)}
+.ask.hot{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 7%,var(--grouphdr))}
+code{font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+     background:var(--grouphdr);border-radius:4px;padding:1px 5px}
+.tag{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.04em;
+     padding:1px 6px;border-radius:4px;text-transform:uppercase;vertical-align:2px}
+.tag.now{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.tag.new{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.tag.no{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
+
+.win{background:var(--page);border:.5px solid var(--line);border-radius:11px;
+     box-shadow:var(--shadow);overflow:hidden;max-width:660px;margin:10px 0 0}
+.tbar{display:flex;align-items:center;gap:9px;padding:8px 12px;background:var(--chrome);
+      border-bottom:.5px solid var(--line);position:relative}
+.lights{display:flex;gap:6px}
+.lights i{width:11px;height:11px;border-radius:50%;background:#d8d8dc;display:block}
+@media (prefers-color-scheme:dark){.lights i{background:#3a3a3d}}
+.wtitle{position:absolute;left:0;right:0;text-align:center;font-size:12.5px;font-weight:700;
+        pointer-events:none}
+.tabs{display:flex;gap:4px;justify-content:center;padding:7px 10px 8px;background:var(--chrome);
+      border-bottom:.5px solid var(--line);flex-wrap:wrap}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 9px;
+     border-radius:6px;font-size:10px;color:var(--dim);min-width:58px}
+.tab.on{background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink);font-weight:600}
+.tab .g{font-size:14px;line-height:1.1}
+.body{padding:16px 18px 18px}
+.sect{font-size:13px;font-weight:700;margin:0 0 8px}
+.card{border:.5px solid var(--line);border-radius:8px;background:var(--field);overflow:hidden}
+.row{display:flex;align-items:center;gap:11px;padding:9px 12px;
+     border-bottom:.5px solid var(--hairline)}
+.row:last-child{border-bottom:0}
+.row.dimrow .nm,.row.dimrow .sub2{opacity:.62}
+.ic{width:26px;height:26px;border-radius:6px;background:var(--grouphdr);flex:none;
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+    color:var(--dim)}
+.nm{font-weight:600}
+.sub2{color:var(--faint);font-size:11.5px;margin-top:1px}
+.grow{margin-left:auto}
+.btn{border:.5px solid var(--line);border-radius:6px;padding:3px 10px;font-size:12px;
+     background:var(--page);color:var(--accent);font-weight:500;white-space:nowrap}
+.btn.q{color:var(--ink)}
+.btn.pri{background:var(--accent);color:#fff;border-color:transparent;font-weight:600}
+.note{color:var(--dim);font-size:11.5px;margin:9px 2px 0}
+.bar{display:flex;gap:8px;margin-top:10px}
+.pill{font-size:10px;font-weight:700;border-radius:4px;padding:0 5px;margin-left:7px;
+      vertical-align:1px;white-space:nowrap}
+.pill.w{color:var(--warn);border:.5px solid var(--warn)}
+.pill.g{color:var(--faint);border:.5px solid var(--line)}
+
+.sheet{background:var(--page);border:.5px solid var(--line);border-radius:11px;
+       box-shadow:var(--shadow);overflow:hidden;max-width:400px;margin-top:10px}
+.sheet .hd{padding:14px 16px 4px;font-weight:700;font-size:13px}
+.sheet .bd{padding:4px 16px 14px}
+
+.t2{background:var(--page);border:.5px solid var(--line);border-radius:10px;
+    box-shadow:var(--shadow);overflow:hidden;margin-top:10px}
+.t2 table{border-collapse:collapse;width:100%;font-size:12px}
+.t2 th{text-align:left;font-size:10px;letter-spacing:.03em;text-transform:uppercase;
+      color:var(--faint);font-weight:700;padding:9px 12px;background:var(--grouphdr);
+      border-bottom:.5px solid var(--line)}
+.t2 td{padding:9px 12px;border-bottom:.5px solid var(--hairline);vertical-align:top}
+.t2 tr:last-child td{border-bottom:0}
+.t2 td.k{font-weight:600;white-space:nowrap}
+.t2 td.dimc{color:var(--dim)}
+.grid2{display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+       align-items:start}
+ul.q,ol.chg{max-width:100ch;padding-left:20px}
+ul.q li,ol.chg li{margin:0 0 13px;color:var(--dim)}
+ul.q li b,ol.chg li b{color:var(--ink)}
+.iss{border:.5px solid var(--line);border-radius:8px;padding:13px 15px;margin:14px 0 0;
+     background:var(--page);max-width:104ch}
+.iss h4{margin:0 0 6px;font-size:13px}
+.iss p{margin:0 0 8px;color:var(--dim);font-size:12.5px}
+.iss p:last-child{margin-bottom:0}
+.iss b{color:var(--ink)}
+.rec{border-left:2px solid var(--good);padding-left:10px}
+</style>
+
+<div class="wrap">
+
+<h1>Connect things, see them, get out of trouble</h1>
+<p class="sub">Settled 18 Aug: <b>one flat list</b>. Not grouped by direction — that is an
+engineer's axis. A researcher wants to connect a thing, see what they have connected, and undo it
+when it is the wrong one. Miro sits in the same list as the meeting accounts because to the person
+using it, they are the same kind of thing: an account Bristlenose talks to on their behalf.</p>
+<p class="meta">Design artefact · 18 Aug 2026 · supersedes the grouped variant · relates to
+<code>docs/design-cloud-import.md</code> §7 and §9, <code>docs/design-miro-bridge.md</code></p>
+
+<div class="ask hot">
+<b>The hard part is not the list. It is that today you can only have one of each.</b>
+<code>KeychainHelper</code> stores one item per service under a fixed account string
+(<code>"bristlenose"</code>), so signing in to a second Microsoft account <b>silently overwrites the
+first</b> — no error, no warning, and the first account simply stops working. §7 already names this:
+*"a freelancer's second client tenant would silently overwrite the first."*<br><br>
+A UR consultant has a personal Microsoft account and one per client. They have a personal Miro and
+their agency's. <b>Multi-account is the ordinary case for this audience, not an edge case</b> — and
+every "silly situation" worth escaping from is downstream of getting the keying right.
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>1 — The pane</h2>
+
+<div class="grid2">
+<div>
+<h3>Ordinary — several accounts, some of them doubled</h3>
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="wtitle">Accounts</div></div>
+  <div class="tabs">
+    <div class="tab"><span class="g">⚙</span>General</div>
+    <div class="tab"><span class="g">✧</span>Appearance</div>
+    <div class="tab"><span class="g">◍</span>LLM</div>
+    <div class="tab"><span class="g">⁝⁝</span>Transcription</div>
+    <div class="tab on"><span class="g">☺</span>Accounts</div>
+    <div class="tab"><span class="g">((•))</span>MCP</div>
+  </div>
+  <div class="body">
+    <div class="card">
+      <div class="row"><div class="ic">T</div>
+        <div><div class="nm">Microsoft Teams</div>
+          <div class="sub2">martin@clientco.com</div></div>
+        <div class="grow"></div><span class="btn">Disconnect…</span></div>
+      <div class="row"><div class="ic">T</div>
+        <div><div class="nm">Microsoft Teams<span class="pill g">PERSONAL</span></div>
+          <div class="sub2">martin@outlook.com</div></div>
+        <div class="grow"></div><span class="btn">Disconnect…</span></div>
+      <div class="row"><div class="ic">M</div>
+        <div><div class="nm">Google Meet</div>
+          <div class="sub2">martin@finca342.org</div></div>
+        <div class="grow"></div><span class="btn">Disconnect…</span></div>
+      <div class="row"><div class="ic">◳</div>
+        <div><div class="nm">Miro</div>
+          <div class="sub2">Martin Storey · 144a</div></div>
+        <div class="grow"></div><span class="btn">Disconnect…</span></div>
+    </div>
+    <div class="bar"><span class="btn q">Add Account…</span></div>
+    <p class="note">Bristlenose uses these to bring recordings in and to send quotes out.</p>
+  </div>
+</div>
+<p class="why good"><b>One row per account, not per service.</b> Two Teams rows is not a defect to
+design away — it is the answer to "which of my Microsoft accounts is this?", and it is the only
+place that question can be asked. The service name repeats; the identity line is what
+distinguishes them, so it does the work and gets the second line to itself.</p>
+</div>
+
+<div>
+<h3>Add Account — what it is possible to connect</h3>
+<div class="sheet">
+  <div class="hd">Add an account</div>
+  <div class="bd">
+    <div class="card">
+      <div class="row"><div class="ic">T</div>
+        <div><div class="nm">Microsoft Teams</div>
+          <div class="sub2">Import recordings from OneDrive</div></div>
+        <div class="grow"></div><span class="btn q">Connect…</span></div>
+      <div class="row"><div class="ic">M</div>
+        <div><div class="nm">Google Meet</div>
+          <div class="sub2">Import recordings from Drive</div></div>
+        <div class="grow"></div><span class="btn q">Connect…</span></div>
+      <div class="row"><div class="ic">◳</div>
+        <div><div class="nm">Miro</div>
+          <div class="sub2">Send quotes to a board</div></div>
+        <div class="grow"></div><span class="btn q">Connect…</span></div>
+    </div>
+  </div>
+</div>
+<p class="why"><b>This is where "what can I connect?" gets answered</b>, rather than by permanent
+Not-connected rows in the main list. It is the Internet Accounts idiom, it stays honest when the
+catalogue grows, and — the reason that matters here — <b>it is the only shape that lets you add a
+<i>second</i> account of a service you already have</b>. A per-service row with a Connect button
+cannot express that.</p>
+<p class="why bad"><b>Zoom is deliberately absent.</b> It is behind a flag and cannot sign in, so
+listing it would offer a door that opens onto nothing. The catalogue shows what is connectable
+<i>now</i>, not what exists in the codebase.</p>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>2 — The states, and the escapes</h2>
+<p class="sub">The shipped pane has one state: connected. These are the rest, and each one exists
+because there is a situation a researcher currently cannot get out of.</p>
+
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="wtitle">Accounts</div></div>
+  <div class="body">
+    <div class="card">
+      <div class="row"><div class="ic">T</div>
+        <div><div class="nm">Microsoft Teams<span class="pill w">SIGN IN AGAIN</span></div>
+          <div class="sub2">martin@clientco.com — your organisation ended the session</div></div>
+        <div class="grow"></div><span class="btn q">Sign In…</span></div>
+      <div class="row"><div class="ic">T</div>
+        <div><div class="nm">Microsoft Teams<span class="pill g">PERSONAL</span></div>
+          <div class="sub2">martin@outlook.com — personal accounts have no recordings folder</div></div>
+        <div class="grow"></div><span class="btn">Disconnect…</span></div>
+      <div class="row"><div class="ic">◳</div>
+        <div><div class="nm">Miro</div>
+          <div class="sub2">Martin Storey · 144a</div></div>
+        <div class="grow"></div><span class="btn">Disconnect…</span></div>
+      <div class="row dimrow"><div class="ic">◳</div>
+        <div><div class="nm">Miro</div>
+          <div class="sub2">Can't reach Miro just now</div></div>
+        <div class="grow"></div><span class="btn">Disconnect…</span></div>
+    </div>
+    <div class="bar"><span class="btn q">Add Account…</span></div>
+  </div>
+</div>
+
+<div class="t2">
+<table>
+<tr><th>State</th><th>The situation it rescues</th><th>What the row does</th></tr>
+
+<tr><td class="k">Connected <span class="tag now">shipped</span></td>
+  <td class="dimc">—</td>
+  <td>Name, identity, Disconnect. Says nothing else, deliberately.</td></tr>
+
+<tr><td class="k">Sign in again</td>
+  <td class="dimc"><b>"It just stopped working and I don't know why."</b> A refused refresh drops
+  the grant silently today, so a revoked session makes the account <i>vanish from this list</i> —
+  the researcher cannot tell it from having disconnected it themselves.</td>
+  <td>Keeps the row, names the cause, offers <b>Sign In…</b>. The account survives its own
+  credential.</td></tr>
+
+<tr><td class="k">Wrong kind of account</td>
+  <td class="dimc"><b>"I signed in and there's nothing there."</b> A personal Microsoft account has
+  no <code>/Recordings</code> folder at all — the import window shows an empty list, which is
+  indistinguishable from having no recordings.</td>
+  <td>A quiet <b>PERSONAL</b> pill and one sentence. The adapter already detects this
+  (<code>DriveTier</code>); today it is only surfaced inside the import window, and only while it
+  is open.</td></tr>
+
+<tr><td class="k">Can't reach it</td>
+  <td class="dimc"><b>"Is it broken or am I offline?"</b></td>
+  <td>Dims the row and says so. <b>Not an error, and no Reconnect button</b> — nothing is wrong
+  with the account, and offering a remedy for a flat wifi teaches the wrong lesson.</td></tr>
+
+<tr><td class="k">Two of the same</td>
+  <td class="dimc"><b>"Which one is Bristlenose actually using?"</b> The situation this whole
+  redesign exists for.</td>
+  <td>Both rows, both identities, both removable. See §3 issue 4 for the harder half — which one a
+  given import or export uses.</td></tr>
+</table>
+</div>
+
+<p class="why"><b>Every one of these is a state that exists in the system today and is invisible.</b>
+None of them needs new detection — the tier check, the refresh failure and the reachability probe
+all exist. What is missing is a place that outlives the window they happen in.</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>3 — Implementation issues</h2>
+<p class="sub">In dependency order. Issue 1 is the one everything else waits on, and it is a
+credential-storage change, so it wants care rather than speed.</p>
+
+<div class="iss">
+<h4>1 · The Keychain can only hold one account per service</h4>
+<p><code>KeychainHelper</code> keys every item on <code>(serviceNames[provider], "bristlenose")</code>
+— a <b>fixed</b> account string. A second sign-in to the same service hits
+<code>errSecDuplicateItem</code> and takes the <code>SecItemUpdate</code> path, which
+<b>overwrites the first account's token in place</b>. No error is returned; <code>set</code> returns
+<code>true</code>. The first account stops working at its next refresh and there is nothing anywhere
+saying why.</p>
+<p>Three shapes:</p>
+<p><b>(a) One Keychain item per account</b>, <code>kSecAttrAccount</code> = a stable per-account key.
+§7 prescribes this, following <code>MCPTokenStore</code>: hash the identifier, <b>never store the
+raw address</b> — the account attribute is unencrypted metadata, and a client's email sitting
+readable in Keychain Access is precisely the kind of leak this project cares about. Costs a new
+enumeration path (<code>kSecMatchLimitAll</code> + <code>kSecReturnAttributes</code>), which
+<code>KeychainHelper</code> has no equivalent of today.</p>
+<p><b>(b) One item per service holding an array of grants.</b> Enumeration is free, migration is a
+JSON shape change, and the store code barely moves. But every write rewrites every account for that
+service, so one bad write loses them all — and the blob grows without bound if disconnect ever
+fails to prune.</p>
+<p><b>(c) Service name per account.</b> Rejected: service names come from a hardcoded allowlist
+that exists precisely so an unregistered key fails closed. Making them dynamic removes the guard
+that caught a silent no-op twice this week.</p>
+<p class="rec"><b>Take (a).</b> It is what §7 already specifies, it keeps failures per-account, and
+the enumeration cost is one function. (b) is genuinely tempting for a day's work and its failure
+mode — losing every account for a service — is the one failure this pane exists to prevent.</p>
+</div>
+
+<div class="iss">
+<h4>2 · There is no stable account identifier, only an email address</h4>
+<p>Whatever keys the Keychain item has to survive the address changing and has to be the same across
+two sign-ins to the same account. Today we hold <code>mail ?? userPrincipalName</code> — a UPN can
+be renamed, and a researcher who re-signs-in after a rename would silently acquire a
+<b>second row for the same account</b>.</p>
+<p>Microsoft's token carries <code>oid</code> (immutable object id) and <code>tid</code> (tenant),
+which is the correct key. Google's carries <code>sub</code>. <b>Miro has neither</b> — the token is
+pasted, and <code>MiroAPI.Connection</code> returns display strings only; the closest thing to an
+id is the team name, which is not one.</p>
+<p class="rec"><b>Parse the id claim where there is one, and fall back to the address where there
+is not.</b> Do not invent a synthetic id: a random per-connection id makes "the same account
+connected twice" unrepresentable, which is exactly the mess to be escaped from. For Miro, treat a
+second connection carrying the same <code>userName + orgName</code> as a replacement rather than an
+addition, and accept that it is a heuristic.</p>
+</div>
+
+<div class="iss">
+<h4>3 · Miro is not a <code>CloudPlatform</code> and must not become one</h4>
+<p>The pane needs one list, but <code>CloudGrantStore.connections()</code> switches over
+<code>CloudPlatform</code> — an enum meaning "a meeting platform with an import adapter". Adding
+<code>.miro</code> to it puts Miro in the import window's platform picker, the fixture harness, and
+<code>CloudPlatform.built</code>.</p>
+<p class="rec">A small <code>ConnectedService</code> value the pane renders — id, display name,
+identity line, capability, disconnect action — produced by both the meeting adapters and Miro. The
+pane depends on that, not on either enum.</p>
+</div>
+
+<div class="iss">
+<h4>4 · Once there are two, something has to choose — and it is not this pane</h4>
+<p>The genuinely awkward one. <code>openLive(platform:)</code> loads <i>the</i> grant for a
+platform. With two Teams accounts it must pick, and Settings is the wrong place to decide it: the
+choice belongs at the moment of use, where the researcher knows which client they are working on.
+The same applies to the export sheet with two Miro accounts.</p>
+<p>Three ways: a picker in the import window (honest, one more click every time); most-recently-used
+with a way to switch (quiet, and quietly wrong the first time it guesses); or a per-project
+association — <b>this project imports from that account</b> — which matches how a consultant thinks
+and costs a schema field.</p>
+<p class="rec"><b>Ship the picker first, and only when a second account exists.</b> One account is
+the common case and should stay one click. The per-project association is the better long-term
+answer and can be added underneath a picker that already works, without changing the storage.
+<b>Do not ship most-recently-used</b> — the failure is importing a client's recordings under the
+wrong account's credentials, which is the one mistake in this feature that cannot be undone by
+noticing.</p>
+</div>
+
+<div class="iss">
+<h4>5 · Live-session invalidation currently keys on the platform</h4>
+<p>The disconnect notification I shipped carries a platform raw value, and the coordinator drops the
+open window if it matches. With two accounts per platform, disconnecting the personal Teams account
+would <b>close an import window signed in to the work one</b>.</p>
+<p class="rec">Carry the account key alongside the platform and match on both. Small, but it must
+land in the same change as the keying or it becomes a real bug rather than a latent one.</p>
+</div>
+
+<div class="iss">
+<h4>6 · Existing grants have to migrate, once</h4>
+<p>Anything connected today sits under the fixed <code>"bristlenose"</code> account string. After
+the change nothing looks for it there.</p>
+<p class="rec">Read the old key on first launch, write it under the new one, delete the old. It
+either works or the researcher signs in again — an outcome worth stating plainly rather than
+engineering a fallback chain that has to be maintained forever. <b>Do the deletion</b>: leaving the
+legacy item means a future enumeration finds a ghost account nobody can remove.</p>
+</div>
+
+<div class="iss">
+<h4>7 · The iCloud sync question comes with it, unresolved</h4>
+<p>All of this stores third-party credentials, and <code>KeychainHelper.set</code> writes
+<code>kSecAttrSynchronizable: true</code> unconditionally, against §7 and §10's
+<b>non-synchronizable</b>. Multiplying the number of stored accounts multiplies whatever the answer
+is.</p>
+<p class="rec">Settle it <b>in the same change</b>, not after. Note the wrinkle:
+<code>kSecAttrSynchronizable</code> cannot be flipped on an existing item by
+<code>SecItemUpdate</code>, so the migration in issue 6 is the natural and possibly only cheap
+moment to change it.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>4 — What I would build, and in what order</h2>
+<ol class="chg">
+<li><b>The storage change alone, with no UI</b> — per-account keying, the id claim, the migration,
+the sync decision, and the notification carrying an account key. Behind the existing single-account
+behaviour, so nothing changes on screen. This is the risky part and it deserves to land by itself.</li>
+<li><b>The flat list rendering <code>ConnectedService</code></b>, with Miro included and the four
+states. Read-only plus Disconnect — no new connect flows.</li>
+<li><b>Add Account…</b>, which is where a second account of an existing service first becomes
+reachable, and therefore the first point the storage change is actually exercised.</li>
+<li><b>The picker at point of use</b>, appearing only when more than one account exists.</li>
+</ol>
+<p class="why"><b>Order matters more than usual here</b> because steps 1 and 3 are the ones that can
+lose a credential, and putting the whole list between them means the storage change has been
+exercised by hand for a while before anything invites a second account.</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>5 — Closed, and still open</h2>
+
+<div class="ask">
+<b>Closed 18 Aug.</b><br><br>
+<b>Do LLM providers or MCP Agents move in, or get a cross-reference?</b> — <b>No, and no.</b> Both
+need more room than a row, and both are their own thing: the LLM pane is a configuration surface
+where connecting is one field among model choice, status and validation; MCP Agents is an exposure
+control with its own install flow and per-project semantics. Neither is an account you connect and
+forget, which is what this list is for. <b>No cross-reference either</b> — a pointer from one pane
+to another is the shape you reach for when the boundary is wrong, and here it is right.<br><br>
+<b>Sections, or a flat list?</b> — <b>Flat, permanently, not just for now.</b> Three services today
+and Zoom the only one on the horizon: four rows. A list of four does not need navigation, and
+grouping four things by an axis the reader does not think in costs more than it explains.
+</div>
+
+<ul class="q">
+<li><b>Does Miro's pasted token survive this?</b> <span class="tag no">open</span> Every other row
+is an OAuth round trip. Miro's is "go to Miro's developer settings, make a token, paste it" — a
+developer flow in a researcher's settings window, and it looks much stranger in a catalogue beside
+two Sign in with… buttons than it does buried in an export sheet. Miro does have OAuth; whether
+adopting it is worth the work is its own decision, and this mockup only makes the oddness
+visible.</li>
+<li><b>What is the identity line for a service with no identity?</b> <span class="tag no">open</span>
+Miro gives user, team and org; the meeting accounts give an address. A future connection that gives
+none leaves a row with a name and filler under it — and "Connected" as a second line is worse than
+no second line, since it says only what the row's presence already says.</li>
+</ul>
+
+</div>

@@ -1,0 +1,278 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud import — the permission ceremony, and the one choice worth offering</title>
+<style>
+:root{
+  --bg:#f2f2f7; --page:#fff; --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+  --line:#d8d8dc; --hairline:#e6e6ea; --grouphdr:#f0f0f3;
+  --accent:#007aff; --warn:#c9500f; --good:#1a7f37; --dead:#8e8e93;
+  --shadow:0 12px 40px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.10);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+    --line:#3a3a3d; --hairline:#2c2c2f; --grouphdr:#28282b;
+    --accent:#0a84ff; --warn:#ff9f45; --good:#4ac26b; --dead:#78787d;
+    --shadow:0 12px 40px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;padding:40px 24px 90px;
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:15px;font-weight:700;margin:40px 0 10px}
+h3{font-size:12.5px;font-weight:700;margin:24px 0 8px;color:var(--dim)}
+.sub{color:var(--dim);margin:0 0 10px;max-width:88ch}
+.meta{color:var(--faint);font-size:12px;margin:0 0 26px}
+.why{border-left:2px solid var(--accent);padding:2px 0 2px 12px;margin:14px 0 0;
+     color:var(--dim);font-size:12.5px;max-width:94ch}
+.why b{color:var(--ink);font-weight:600}
+.why.bad{border-color:var(--warn)}
+.why.good{border-color:var(--good)}
+.ask{background:var(--grouphdr);border:.5px solid var(--line);border-radius:8px;
+     padding:13px 15px;margin:0 0 26px;font-size:12.5px;color:var(--dim);max-width:100ch}
+.ask b{color:var(--ink)}
+code{font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+     background:var(--grouphdr);border-radius:4px;padding:1px 5px}
+
+.t{background:var(--page);border:.5px solid var(--line);border-radius:10px;
+   box-shadow:var(--shadow);overflow:hidden;margin-top:8px}
+.t table{border-collapse:collapse;width:100%;font-size:12px}
+.t th{text-align:left;font-size:10.5px;letter-spacing:.03em;text-transform:uppercase;
+      color:var(--faint);font-weight:700;padding:9px 12px;background:var(--grouphdr);
+      border-bottom:.5px solid var(--line);white-space:nowrap}
+.t td{padding:8px 12px;border-bottom:.5px solid var(--hairline);vertical-align:top}
+.t tr:last-child td{border-bottom:0}
+.t td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.t td.words{font-weight:600;white-space:nowrap}
+.t tr.tot td{font-weight:700;background:var(--grouphdr)}
+.tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.02em;
+     padding:1px 6px;border-radius:4px;text-transform:uppercase}
+.tag.no{background:rgba(201,80,15,.14);color:var(--warn)}
+.tag.ok{background:rgba(26,127,55,.14);color:var(--good)}
+
+/* ---- the macOS pane ---- */
+.pane{background:var(--page);border:.5px solid var(--line);border-radius:12px;
+      box-shadow:var(--shadow);max-width:600px;overflow:hidden;margin-top:10px}
+.pane .bar{height:38px;background:var(--grouphdr);border-bottom:.5px solid var(--line);
+     display:flex;align-items:center;padding:0 13px;gap:7px}
+.dot{width:11px;height:11px;border-radius:50%}
+.pane .title{font-size:12.5px;font-weight:600;margin-left:6px}
+.pane .body{padding:20px 22px 22px}
+.pane h4{margin:0 0 3px;font-size:13px;font-weight:600}
+.pane .lede{margin:0 0 16px;font-size:12px;color:var(--dim);max-width:60ch}
+
+.radio{display:flex;gap:9px;padding:11px 0;align-items:flex-start}
+.radio + .radio{border-top:.5px solid var(--hairline)}
+.rb{width:14px;height:14px;border-radius:50%;border:1px solid var(--faint);
+    flex:0 0 auto;margin-top:1px;background:var(--page);position:relative}
+.rb.on{background:var(--accent);border-color:var(--accent)}
+.rb.on::after{content:"";position:absolute;inset:4px;border-radius:50%;background:#fff}
+.rl{font-size:12.5px;font-weight:600;margin:0 0 2px}
+.rd{font-size:11.5px;color:var(--dim);margin:0;max-width:58ch}
+.quote{font-size:11.5px;color:var(--dim);margin:5px 0 0;padding-left:9px;
+       border-left:2px solid var(--line);font-style:italic}
+.note{margin-top:15px;font-size:11.5px;color:var(--faint);max-width:60ch}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+.callout{border:.5px solid var(--line);border-radius:10px;padding:14px 16px;
+         background:var(--page);box-shadow:var(--shadow)}
+.callout h5{margin:0 0 6px;font-size:12px;font-weight:700}
+.callout p{margin:0;font-size:12px;color:var(--dim)}
+.strike{text-decoration:line-through;color:var(--faint)}
+</style>
+
+<div class="wrap">
+
+<h1>The permission ceremony</h1>
+<p class="sub">Cloud import, Google Meet. What it costs the researcher today, why it costs
+that, and the one choice actually worth putting on screen.</p>
+<p class="meta">Drawn 17 Aug 2026, from the first live end-to-end run. Companion to
+<code>docs/design-cloud-import.md</code>.</p>
+
+<div class="ask">
+<b>The premise being tested.</b> Import exists to be easier than downloading by hand. If
+it is not, it is worse than nothing — it is a second way to do the same job, with its own
+bugs. So the question is not "is this consent reasonable?" It is
+<b>"how many clicks, against the manual route it replaces?"</b>
+</div>
+
+<h2>1. Count them</h2>
+<p class="sub">One batch, twelve interviews. Every click, end to end.</p>
+
+<div class="t"><table>
+<tr><th>Step</th><th>Who asks</th><th style="text-align:right">Clicks</th></tr>
+<tr><td>Tick the recordings you want</td><td>Bristlenose</td><td class="n">12</td></tr>
+<tr><td><b>Import</b></td><td>Bristlenose</td><td class="n">1</td></tr>
+<tr><td>“Bristlenose” Wants to Use “accounts.google.com” to Sign In → <b>Continue</b></td><td>macOS</td><td class="n">1</td></tr>
+<tr><td>Choose an account → your account</td><td>Google</td><td class="n">1</td></tr>
+<tr><td>Bristlenose wants to access your Google Account → <b>Allow access</b></td><td>Google</td><td class="n">1</td></tr>
+<tr><td><b>Select the same twelve files again</b>, in Google’s Picker</td><td>Google</td><td class="n">12</td></tr>
+<tr><td><b>Insert</b></td><td>Google</td><td class="n">1</td></tr>
+<tr class="tot"><td>Total</td><td></td><td class="n">29</td></tr>
+</table></div>
+
+<p class="why bad"><b>The manual route it replaces is about the same.</b> Open Drive, then
+per file: click, download. Twelve files ≈ 24–30 clicks. <b>We have not made this easier.</b>
+And that is one batch — the fixed five recur on every subsequent import, because none of
+the grant survives the window closing.</p>
+
+<p class="why bad"><b>The worst line is the sixth.</b> The researcher picks the recordings
+in our list, and then <b>picks the identical set again in Google’s Picker</b>. That is not
+a consent step they are reading; it is the same decision, taken twice, in two different
+list UIs. Everything else on this table is defensible. That line is not.</p>
+
+<h2>2. Why it is like that</h2>
+
+<div class="t"><table>
+<tr><th>Scope</th><th>What the researcher is shown</th><th>Google tier</th><th>What it costs us</th></tr>
+<tr>
+  <td class="words"><code>drive.file</code><br><span style="font-weight:400;color:var(--faint)">today</span></td>
+  <td>“See, edit, create, and delete only the specific Google&nbsp;Drive files you use with this app”</td>
+  <td><span class="tag ok">non-sensitive</span></td>
+  <td>Nothing. No verification, no audit.<br><b>But the grant binds to file IDs</b> — so a
+      new file always means a new Picker.</td>
+</tr>
+<tr>
+  <td class="words"><code>drive.meet.readonly</code></td>
+  <td>“View Drive files created or edited by Google&nbsp;Meet”</td>
+  <td><span class="tag no">restricted</span></td>
+  <td>CASA Tier&nbsp;2 assessment, by a Google-approved lab, <b>re-done every 12 months</b>.
+      Hundreds to a few thousand £/year.</td>
+</tr>
+<tr>
+  <td class="words strike"><code>drive.readonly</code></td>
+  <td>“View and download <b>all</b> your Drive files”</td>
+  <td><span class="tag no">restricted</span></td>
+  <td>Identical CASA cost to the row above.</td>
+</tr>
+</table></div>
+
+<p class="why good"><b>That last row is why there is no three-way choice.</b>
+<code>drive.meet.readonly</code> and <code>drive.readonly</code> sit in the <b>same</b>
+restricted tier and carry the <b>same</b> annual audit — but one says “files Google Meet
+made” and the other says “all your Drive”. Paying the identical toll for the worse
+sentence would be indefensible. <b>If we ever go restricted, we go Meet-only.</b>
+“All your Drive” is off the table permanently, not deferred.</p>
+
+<p class="why"><b>And it cannot be folded into the first sign-in.</b> Google refuses a
+Picker authorization that carries any other scope — the calendar scope this same app
+already holds included — so the media grant is structurally a second round trip. It also
+binds to <em>specific file IDs</em>, which do not exist until the researcher has a list to
+pick from. Asking at sign-in is not a thing we are choosing not to do; it is not
+available.</p>
+
+<h2>3. Do the free thing first</h2>
+<p class="sub">Three defects, all ours, none needing a scope change or a penny of audit.</p>
+
+<div class="t"><table>
+<tr><th>Fix</th><th>Where</th><th>Effect</th></tr>
+<tr><td><b>Seed the Picker with the whole listing</b>, not just the ticked rows</td>
+    <td><code>requestMediaGrant</code></td>
+    <td>One grant covers everything in the window. The double-selection collapses to a
+        single “Allow access”.</td></tr>
+<tr><td><b>Skip the Picker when every wanted file is already granted</b></td>
+    <td><code>requestMediaGrant</code> — it never consults <code>grantedFileIDs</code></td>
+    <td>Re-importing, or a second batch inside one listing, asks nothing at all.</td></tr>
+<tr><td><b>Persist the grant across window opens</b></td>
+    <td><code>openLive</code> builds a fresh source each time and drops it</td>
+    <td>Tomorrow’s import of the same study asks nothing.</td></tr>
+<tr><td><b>Stop forcing the consent screen</b></td>
+    <td><code>prompt=consent</code>, hardcoded</td>
+    <td>Google may skip the screen entirely for a grant it already holds. <i>Verify
+        against a live account — this one is a claim, not a measurement.</i></td></tr>
+</table></div>
+
+<div class="t" style="margin-top:14px"><table>
+<tr><th>Journey</th><th style="text-align:right">First import</th><th style="text-align:right">Every one after</th></tr>
+<tr><td>Today</td><td class="n">29</td><td class="n">17</td></tr>
+<tr><td>After the free fixes</td><td class="n">17</td><td class="n">13</td></tr>
+<tr><td>With <code>drive.meet.readonly</code></td><td class="n">16</td><td class="n">13</td></tr>
+</table></div>
+
+<p class="why good"><b>Which is the finding.</b> Once the double-selection is gone, the
+restricted scope buys <b>one click</b>. The ceremony is not really the consent — it is that
+we make the researcher choose the same files twice. Fix that and the scope question gets
+much less urgent, and can be decided on its merits rather than under duress.</p>
+
+<h2>4. The choice, if we still want it</h2>
+<p class="sub">Settings ▸ Cloud Import. Not a first-run question — nobody can answer this
+before they have felt the cost.</p>
+
+<div class="pane">
+  <div class="bar">
+    <span class="dot" style="background:#ff5f57"></span>
+    <span class="dot" style="background:#febc2e"></span>
+    <span class="dot" style="background:#28c840"></span>
+    <span class="title">Cloud Import</span>
+  </div>
+  <div class="body">
+    <h4>Google Drive access</h4>
+    <p class="lede">How much of your Drive Bristlenose may read when it fetches recordings.</p>
+
+    <div class="radio">
+      <div class="rb on"></div>
+      <div>
+        <p class="rl">Only the files I pick</p>
+        <p class="rd">Bristlenose asks Google for permission each time you import
+          recordings it has not seen before.</p>
+        <p class="quote">“See, edit, create, and delete only the specific Google Drive
+          files you use with this app”</p>
+      </div>
+    </div>
+
+    <div class="radio">
+      <div class="rb"></div>
+      <div>
+        <p class="rl">Anything Google Meet made</p>
+        <p class="rd">Ask once. Covers recordings, transcripts and meeting notes — and
+          nothing else in your Drive.</p>
+        <p class="quote">“View Drive files created or edited by Google Meet”</p>
+      </div>
+    </div>
+
+    <p class="note">Changing this signs you out of Google. You can revoke either at any
+      time in your Google&nbsp;Account.</p>
+  </div>
+</div>
+
+<p class="why"><b>Each option quotes Google’s own consent sentence verbatim.</b> The
+researcher is going to read that exact string on the next screen, and recognition is the
+whole mechanism — the same reason the MCP pane quotes macOS’s own dialog wording rather
+than paraphrasing it. Our label says what it means to <em>them</em>; the quote says what
+Google will say.</p>
+
+<div class="grid2" style="margin-top:22px">
+  <div class="callout">
+    <h5>Why the narrow one stays the default</h5>
+    <p>Not timidity — a Workspace admin can block restricted scopes outright, so the
+      per-file path has to keep working on a client tenant whatever we prefer. A default
+      that some researchers simply cannot use is not a default.</p>
+  </div>
+  <div class="callout">
+    <h5>Why it is not a first-run question</h5>
+    <p>“Which OAuth scope would you like?” is unanswerable before you have felt the cost
+      of the narrow one. The honest place is Settings, discovered after the second or
+      third import — and pointed at from the import window once we can see the researcher
+      re-granting repeatedly.</p>
+  </div>
+</div>
+
+<h2>5. What has to be true before this ships</h2>
+<div class="t"><table>
+<tr><th>Gate</th><th>State</th></tr>
+<tr><td>The free fixes land, and the click count is re-counted against a live account</td><td>not started</td></tr>
+<tr><td>CASA Tier&nbsp;2 assessment budgeted and passed, annually</td><td>not started — a real recurring cost, not a one-off</td></tr>
+<tr><td>Google OAuth verification for a restricted scope</td><td>not started</td></tr>
+<tr><td>Behaviour when a Workspace admin blocks the restricted scope</td><td><b>unmeasured</b> — needs a specimen, not reasoning</td></tr>
+<tr><td>Whether <code>prompt=consent</code> is genuinely required by the one-pick flow</td><td><b>unmeasured</b> — the code comment lumps it with <code>trigger_onepick</code></td></tr>
+</table></div>
+
+<p class="why bad"><b>The last two are marked unmeasured on purpose.</b> This feature has
+already had six reasoned-not-measured claims turn out wrong on contact with a real tenant.
+Neither belongs in a plan as an assumption.</p>
+
+</div>

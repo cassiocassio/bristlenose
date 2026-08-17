@@ -67,11 +67,37 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
      bug: Google refuses a picker authorization carrying any other scope (the
      comment at `GoogleOAuth.pickMedia` records this), and the grant is bound
      to *specific file IDs*, which do not exist until the researcher has a
-     list to pick from. The genuine options are (a) seed the Picker with every
-     recording in the current listing rather than only the ticked rows — one
-     grant per listing instead of one per batch, no scope change; or (b) ask
-     for a broad Drive scope once, which trades "only the specific files you
-     use with this app" for "all your Drive". (a) first.
+     list to pick from. Mocked up in
+     `docs/mockups/cloud-import-scope-choice.html`, which counts the journey
+     and settles the scope question. Three things came out of it:
+     - **The ceremony is not the consent, it is the double selection.** The
+       researcher picks the recordings in our list and then picks *the same
+       set again* in Google's Picker. Twelve interviews is 29 clicks end to
+       end, against 24–30 to download them by hand — so on this measure import
+       is not yet easier than the thing it replaces, which was its whole
+       premise.
+     - **`drive.readonly` is off the table permanently.** Checked against
+       Google's scope table 17 Aug 2026: `drive.meet.readonly` ("View Drive
+       files created or edited by Google Meet") is **restricted**, the same
+       tier as `drive.readonly` — so both carry a CASA Tier 2 assessment by an
+       approved lab, repeated every 12 months, at real annual cost. Identical
+       toll, and one of them says "all your Drive". If we ever go restricted we
+       go Meet-only; there is no argument for the broader one.
+     - **Do the free fixes first and the scope question loses its urgency.**
+       Seeding the Picker with the whole listing, honouring `grantedFileIDs`,
+       and persisting the grant take the journey from 29 to 17 with no scope
+       change and no audit — after which the restricted scope buys exactly one
+       further click. Then the choice can be made on its merits.
+     If it is still wanted, it is a **two-way** radio in Settings ▸ Cloud
+     Import — *Only the files I pick* (default) vs *Anything Google Meet made*
+     — each quoting Google's own consent sentence verbatim, on the same
+     recognition argument that governs the MCP pane's macOS-dialog quote. Not
+     a first-run question: nobody can answer it before feeling the cost. The
+     narrow option stays the default because a Workspace admin can block
+     restricted scopes outright, so it has to keep working on a client tenant
+     regardless of what we prefer. Unmeasured and flagged as such: what a
+     blocked tenant actually does, and whether `prompt=consent` is genuinely
+     required by the one-pick flow.
   5. **Cancel is batch-only.** Wants a per-row cancel beside each progress bar,
      and the whole-batch cancel to be reachable from the sidebar ring once
      that exists (item 2 of the previous entry).

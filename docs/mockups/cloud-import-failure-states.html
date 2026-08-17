@@ -594,34 +594,60 @@ hand → rename → trim → drag in. Then open cloud import and the same meetin
 do not mint keys for, the only usable signals are <b>intrinsic to the media</b>. No amount of
 bookkeeping on our side reaches them.</p>
 
-<h3>What is intrinsic, ranked by what survives a trim</h3>
+<h3>Measured, 17 Aug 2026 — and it removes half the answer</h3>
+<p class="sub"><code>ffprobe</code> over the five recordings this feature has actually fetched, plus
+the Teams file already in the same project:</p>
+
 <div class="t">
 <table>
-<tr><th>Signal</th><th>Survives a trim?</th><th>Cost</th><th>Status</th></tr>
-<tr><td class="st"><b>Media creation timestamp</b><br><span class="none">container metadata</span></td>
-  <td class="act"><b>Unknown — and knowable in a minute.</b> <code>-c copy</code> trims preserve
-  metadata; a QuickTime re-export may not.</td>
-  <td class="act">One <code>ffprobe</code> per file, milliseconds. ffprobe is already bundled.</td>
-  <td class="words">measure first</td></tr>
-<tr><td class="st"><b>Audio fingerprint</b><br><span class="none">chromaprint-style</span></td>
-  <td class="act">By design — that is the whole point of the technique. Robust to trims, re-encodes
-  and level changes.</td>
-  <td class="act">Sub-second per minute of audio. “Computers are fast and good at this kind of
-  thing” is exactly right.</td>
-  <td class="words">new dependency</td></tr>
-<tr><td class="st">Duration, with tolerance</td>
-  <td class="act">Partly — a trim makes it <i>shorter</i>, so “is this file a sub-interval of that
-  meeting?” is weak but non-zero.</td>
-  <td class="act">Free; already read.</td><td class="words">weak, free</td></tr>
+<tr><th>File</th><th>Duration</th><th><code>creation_time</code></th><th>Other tags</th></tr>
+<tr class="gap"><td class="st">4 × Meet recordings</td><td class="act">20.75s · 14.0s · 28.25s · 2152.83s</td>
+  <td class="words">absent</td><td class="act"><code>encoder=Google</code></td></tr>
+<tr><td class="st">1 × Teams recording</td><td class="act">1092.10s</td>
+  <td class="words">2026-05-09T13:46:03Z</td><td class="act">—</td></tr>
 </table>
 </div>
 
-<p class="why good"><b>The next step is a specimen, not a decision.</b> Both artefacts exist on the
-maintainer's machine right now — a Meet download and the trimmed, renamed copy of it. Comparing
-<code>ffprobe -show_format -show_streams</code> on the pair settles in one minute what actually
-survives <i>that</i> workflow, and turns this whole section from a design argument into a
-measurement. Six reasoned-not-measured claims about cloud import have already turned out wrong; this
-is the same shape and the specimen is free.</p>
+<p class="why bad"><b>Google writes no creation timestamp into its MP4s.</b> Microsoft does. So the
+duration + creation-time pair works on Teams and collapses to <b>duration alone</b> on Meet — which
+is the platform this was being designed for. One <code>ffprobe</code> run, ten seconds, and it
+retires a plan that read as obviously correct.</p>
+
+<h3>But the stated case needs no metadata at all</h3>
+<p class="sub"><i>“You grab the first few files, then come back to import two more, and the ones you
+did on Wednesday are there already.”</i> Wednesday's files came <b>through the importer</b> — so the
+per-project record answers that exactly, by row id, with no file inspection and no ambiguity. Green
+on four of six is a record lookup.</p>
+
+<p class="why"><b>Media matching is only for files that arrived by hand</b>, and it degrades in a
+knowable order:</p>
+
+<div class="t">
+<table>
+<tr><th>How the file got there</th><th>Meet</th><th>Teams</th></tr>
+<tr><td class="st">Through the importer</td>
+  <td style="color:var(--good);font-weight:650">exact — row id</td>
+  <td style="color:var(--good);font-weight:650">exact — row id</td></tr>
+<tr><td class="st">By hand, any name</td>
+  <td class="act"><b>duration</b> — sub-second precision, and 50-minute interviews do not collide.
+  <code>encoder=Google</code> corroborates the provenance.</td>
+  <td class="act"><b>duration + creation_time</b> — the pair, as hoped.</td></tr>
+<tr class="gap"><td class="st">By hand, then trimmed</td>
+  <td class="words">nothing survives</td>
+  <td class="act">creation_time alone, <i>if</i> the trim preserved it.</td></tr>
+</table>
+</div>
+
+<p class="why"><b>Accept the trimmed-Meet gap rather than reach for fingerprinting.</b> Audio
+fingerprinting solves it and is IP-protection technology — a dependency, a compute budget and a
+capability, for one cell of this table. The honest position is that a hand-trimmed Meet recording is
+unrecognisable, said once, rather than a new subsystem.</p>
+
+<p class="why"><b>One thing to check before wiring it: how close is the container's duration to the
+API's?</b> Google's <code>endTime − startTime</code> is wall-clock between recording events; the
+container's is media length. They should agree closely and may not agree exactly, so the comparison
+wants a small tolerance — and the tolerance is free to widen, because a study's interviews differ by
+minutes, not seconds.</p>
 
 <h3>Whatever the signal, the response is a note — never a block</h3>
 <p class="why"><b>A researcher may legitimately want both</b> — the trimmed working copy and the full

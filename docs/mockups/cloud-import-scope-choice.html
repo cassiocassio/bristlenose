@@ -217,13 +217,28 @@ much less urgent, and can be decided on its merits rather than under duress.</p>
 
 <h2>4. Decided: we stay on <code>drive.file</code></h2>
 
+<div class="ask" style="border-color:var(--warn)">
+<b>Correction, and it matters: there IS a gate — just the free one.</b> An earlier
+draft of this page said that on <code>drive.file</code> there was no Google gate at all,
+reading only the Drive half. <b>Import does not use <code>drive.file</code> alone.</b> The
+listing needs <code>calendar.events.readonly</code> and the Meet conference-records scope,
+and both are <b>sensitive</b>. Google’s rule is verification for <i>sensitive <b>or</b>
+restricted</i> — so verification applies to Bristlenose today, whatever we do about Drive.
+<br><br>
+What that costs is the point: sensitive-tier verification is <b>review, written
+justification, a demo video, and weeks of latency — no security assessment, no assessor,
+no fee</b>. It is time, not money. The <code>drive.file</code> decision still avoids the
+paid tier completely, which was the thing worth protecting; it does not avoid verification,
+because nothing that can list a Meet recording does.
+</div>
+
 <div class="ask" style="border-color:var(--good)">
-<b>And on <code>drive.file</code> there is no Google gate at all.</b> Google’s verification
-page: <i>“If your app utilizes only <b>non-sensitive</b> scopes, it is not mandatory for
-your app to complete the app verification process.”</i> <code>drive.file</code> is
-non-sensitive. No verification, no assessment, nothing annual, nothing to budget —
-optional <b>brand</b> verification only, if we want our name and logo on the consent
-screen, which we already have.
+<b>The Drive half, accurately.</b> Google’s verification page: <i>“If your app utilizes
+only <b>non-sensitive</b> scopes, it is not mandatory for your app to complete the app
+verification process.”</i> <code>drive.file</code> is non-sensitive, so it <b>adds nothing</b>
+to the burden the calendar and Meet scopes already carry. Choosing a restricted Drive scope
+would add the paid assessment on top. That is the whole delta, and it is the delta the
+decision below turns on.
 <br><br>
 This page reached that late, because the restricted-scope framing got carried past the
 decision that ruled restricted scopes out. Sections 2 and 3 are true and, for the chosen

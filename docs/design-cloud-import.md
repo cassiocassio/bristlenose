@@ -103,15 +103,21 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
        and persisting the grant take the journey from 29 to 17 with no scope
        change and no audit — after which the restricted scope buys exactly one
        further click. Then the choice can be made on its merits.
-     - **And on `drive.file` there is no Google gate at all** — the point that
-       makes the rest of this bullet mostly moot, and which was reached late
-       because the restricted-scope framing was carried past the decision that
-       ruled restricted scopes out. Google's own verification page: *"If your
-       app utilizes only non-sensitive scopes, it is not mandatory for your app
-       to complete the app verification process."* `drive.file` is
-       non-sensitive. So: no verification, no assessment, nothing annual,
-       nothing to budget. Optional **brand** verification only, if we want our
-       name and logo on the consent screen — which we already have.
+     - **There IS a gate, and it is the free one — corrected.** An earlier
+       version of this entry said that on `drive.file` there was no Google gate
+       at all, having read only the Drive half. Import does not use
+       `drive.file` alone: the listing needs `calendar.events.readonly` and the
+       Meet conference-records scope, and **both are sensitive**
+       (`GoogleScopes` says so in its own doc comments). Google requires
+       verification for *sensitive **or** restricted* scopes, so verification
+       applies to Bristlenose today regardless of what we do about Drive.
+       What it costs is the point: sensitive-tier verification is review,
+       written justification, a demo video and weeks of latency — **no security
+       assessment, no assessor, no fee**. Time, not money. Accurately, then:
+       `drive.file` is non-sensitive and **adds nothing** to the burden the
+       calendar and Meet scopes already carry, while a restricted Drive scope
+       would add the paid assessment on top. That delta is what the decision
+       below turns on, and it survives the correction intact.
        **Google's one real lever is the OAuth client itself**, which it can
        restrict for policy violation; that is independent of Apple, who review
        the app but audit nobody's Google-API compliance. Small surface on a

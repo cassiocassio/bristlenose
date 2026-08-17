@@ -644,6 +644,7 @@
     "signingInBody": "Slutf\u00f6r inloggningen till {{platform}} i webbl\u00e4saren.",
     "signingInCancel": "Avbryt",
     "done": "Klar",
+    "statusWaitingPermission": "V\u00e4ntar p\u00e5 beh\u00f6righet",
     "heldImported": "Finns redan i det h\u00e4r projektet.",
     "heldNotDownloaded": "Redan importerad \u2014 filen finns p\u00e5 {{provider}} och m\u00e5ste h\u00e4mtas d\u00e4r.",
     "heldDriveNotConnected": "Redan importerad \u2014 \u201d{{volume}}\u201d \u00e4r inte ansluten.",

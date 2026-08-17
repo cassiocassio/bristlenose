@@ -644,6 +644,7 @@
     "signingInBody": "Rond het inloggen bij {{platform}} af in je browser.",
     "signingInCancel": "Annuleer",
     "done": "Klaar",
+    "statusWaitingPermission": "Wacht op toestemming",
     "heldImported": "Zit al in dit project.",
     "heldNotDownloaded": "Al ge\u00efmporteerd \u2014 het bestand staat op {{provider}} en moet daar worden gedownload.",
     "heldDriveNotConnected": "Al ge\u00efmporteerd \u2014 \u2018{{volume}}\u2019 is niet aangesloten.",

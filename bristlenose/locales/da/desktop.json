@@ -644,6 +644,7 @@
     "signingInBody": "Fuldf\u00f8r login til {{platform}} i din browser.",
     "signingInCancel": "Annuller",
     "done": "F\u00e6rdig",
+    "statusWaitingPermission": "Venter p\u00e5 tilladelse",
     "heldImported": "Allerede i dette projekt.",
     "heldNotDownloaded": "Allerede importeret \u2014 filen ligger p\u00e5 {{provider}} og skal hentes der.",
     "heldDriveNotConnected": "Allerede importeret \u2014 \u201c{{volume}}\u201d er ikke tilsluttet.",

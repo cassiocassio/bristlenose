@@ -519,9 +519,26 @@ final class CloudImportStore: ObservableObject {
 
     // MARK: - Fetching
 
+    /// True while the batch is blocked on the researcher granting access in
+    /// their browser — **not** while anything is transferring.
+    ///
+    /// The rows used to say "Queued" here, which is a lie of exactly the wrong
+    /// kind: nothing is queued, nothing is waiting its turn, and no amount of
+    /// patience will move it. We are waiting on a person, in a window that on
+    /// macOS opens in their *real* browser and is therefore routinely hidden
+    /// behind it. Measured 17 Aug 2026: a stack of consent windows sitting
+    /// unseen behind Chrome while the app appeared to be working.
+    @Published private(set) var isAwaitingGrant = false
+
+    /// Bumped on every start and every stop, so a grant the researcher walked
+    /// away from cannot come back later and start transferring files.
+    private var fetchGeneration = 0
+
     func startFetch(destination: URL) {
         guard !isFetching, !fetchOrder.isEmpty else { return }
         isFetching = true
+        fetchGeneration &+= 1
+        let mine = fetchGeneration
         outcomes.removeAll()
         progress.removeAll()
 
@@ -530,9 +547,13 @@ final class CloudImportStore: ObservableObject {
             // One grant for the whole batch, before any transfer starts. A
             // failure here is the batch's failure — every row would 403 — so it
             // is reported once rather than N times.
+            isAwaitingGrant = true
             do {
                 try await source.prepareBatch(rowIDs: queue.map(\.id))
+                isAwaitingGrant = false
             } catch {
+                isAwaitingGrant = false
+                guard self.fetchGeneration == mine else { return }
                 for row in queue {
                     outcomes[row.id] = .failed(
                         reason: "Access wasn't granted.", isRetryable: true)
@@ -540,6 +561,14 @@ final class CloudImportStore: ObservableObject {
                 isFetching = false
                 return
             }
+
+            // **Stop cannot cancel a browser round trip.** `Task.cancel()` does
+            // not reach into an `ASWebAuthenticationSession` continuation, so a
+            // researcher who presses Stop while the consent window is open gets
+            // their UI back — and, without this guard, the grant would land
+            // minutes later and quietly start transferring the batch they had
+            // just abandoned. The generation is what makes a late return inert.
+            guard self.fetchGeneration == mine else { return }
 
             await withTaskGroup(of: Void.self) { group in
                 var iterator = queue.makeIterator()
@@ -579,6 +608,11 @@ final class CloudImportStore: ObservableObject {
     func stopFetch() {
         fetchTask?.cancel()
         fetchTask = nil
+        // Bumped so an in-flight grant that returns after this — which it will,
+        // since cancelling the Task does not close the browser window — cannot
+        // resume the batch behind the researcher's back.
+        fetchGeneration &+= 1
+        isAwaitingGrant = false
         isFetching = false
     }
 }

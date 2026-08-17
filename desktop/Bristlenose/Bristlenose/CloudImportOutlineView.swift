@@ -877,6 +877,15 @@ extension CloudImportOutlineView {
                     view.configure(i18n.t("desktop.cloudImport.statusStopped"),
                                    kind: .skipped, bold: false)
                 }
+            } else if store.isAwaitingGrant && store.ticked.contains(row.id) {
+                // **Not "Queued".** Nothing is queued and nothing is waiting
+                // its turn — the batch is blocked on the researcher granting
+                // access in a browser window that, on macOS, opens in their
+                // real browser and is routinely buried behind it. Saying
+                // "Queued" here sends them to wait for a machine that is
+                // waiting for them.
+                view.configureText(i18n.t("desktop.cloudImport.statusWaitingPermission"),
+                                   colour: .secondaryLabelColor, bold: false)
             } else if store.isFetching && store.ticked.contains(row.id) {
                 // Deliberately glyphless: the taxonomy is explicit that
                 // pending and running are *status*, not kinds.

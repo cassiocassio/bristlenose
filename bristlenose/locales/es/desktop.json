@@ -644,6 +644,7 @@
     "signingInBody": "Termina de iniciar sesi\u00f3n en {{platform}} en el navegador.",
     "signingInCancel": "Cancelar",
     "done": "Listo",
+    "statusWaitingPermission": "Esperando permiso",
     "heldImported": "Ya est\u00e1 en este proyecto.",
     "heldNotDownloaded": "Ya importada: el archivo est\u00e1 en {{provider}} y hay que descargarlo all\u00ed.",
     "heldDriveNotConnected": "Ya importada: \u00ab{{volume}}\u00bb no est\u00e1 conectado.",

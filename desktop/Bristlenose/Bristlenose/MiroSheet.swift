@@ -106,6 +106,10 @@ final class MiroSheetModel: ObservableObject {
         userName = conn.userName
         teamName = conn.teamName
         orgName = conn.orgName
+        // Cache the display line for Settings ▸ Accounts, which cannot fetch it
+        // — the identity is an HTTP call through a running sidecar, and that
+        // pane can be open with no serve at all. Display strings only.
+        MiroConnectionStore.remember(conn)
         step = conn.connected ? .configure : .connect
     }
 
@@ -127,6 +131,7 @@ final class MiroSheetModel: ObservableObject {
             if !KeychainHelper.set(provider: "miro", value: pasted) {
                 self.error = dt("connectPersistWarning")
             }
+            MiroConnectionStore.remember(conn)
             step = .configure
         } catch {
             self.error = (error as? MiroAPI.APIError)?.message ?? t("connectError")
@@ -139,6 +144,7 @@ final class MiroSheetModel: ObservableObject {
         error = nil
         await api.disconnect()
         KeychainHelper.delete(provider: "miro")  // also clear the Swift-stored copy
+        MiroConnectionStore.forgetIdentity()     // …and the line Settings shows
         token = ""
         userName = nil
         teamName = nil

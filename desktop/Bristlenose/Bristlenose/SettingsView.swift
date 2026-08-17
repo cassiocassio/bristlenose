@@ -98,9 +98,19 @@ final class SettingsWindow {
                     title: "Accounts",
                     toolbarIcon: symbol("person.crop.circle")
                 ) {
-                    AccountsSettingsView()
-                        .environmentObject(i18n)
-                        .modifier(SettingsPaneChrome())
+                    // The serve is needed for one thing only: disconnecting
+                    // Miro has to clear the running sidecar's in-memory copy of
+                    // the token as well as the Keychain one. Same shape as the
+                    // cloud disconnect reaching an open import window, and the
+                    // same `if let` as MCP Agents below — the pane is built
+                    // lazily on first open, by which point launch has set it.
+                    Group {
+                        if let serve = self.serveManager {
+                            AccountsSettingsView(serveManager: serve)
+                        }
+                    }
+                    .environmentObject(i18n)
+                    .modifier(SettingsPaneChrome())
                 },
                 // Last, deliberately: Appearance is chrome, LLM Provider and
                 // Transcription are the engines; who can read your work is a

@@ -396,11 +396,15 @@ This is the table to argue with; the windows above are just it, rendered.</p>
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════ -->
-<h2>3 — The two walls, and why they need different words</h2>
+<h2>3 — The two walls — which we cannot tell apart, and that decides the design</h2>
 <p class="sub">Real products treat this as a support problem, not an engineering one. Morgen's and
 GReminders' answer to the same wall is a walkthrough plus a pre-built admin-consent URL carrying
-their client id. Nobody engineers around it. The variable worth modelling is which of Entra's two
-screens the researcher hit, because one has a door and one does not.</p>
+their client id. Nobody engineers around it.</p>
+<p class="sub"><b>An earlier draft of this page proposed detecting which wall the researcher hit and
+showing a different screen for each. That is not buildable</b> — verified 17 Aug:
+<b>both walls return the same <code>AADSTS90094</code></b>. The difference exists on Microsoft's own
+page, not in the callback we receive. The two panels below are therefore <i>what the researcher
+sees on Microsoft's side</i>, not a branch we can implement.</p>
 
 <div class="grid2">
 <div>
@@ -411,9 +415,11 @@ screens the researcher hit, because one has a door and one does not.</p>
   email — most approve within a day.</p>
   <div class="btnrow"><button class="btn">Continue to Microsoft</button></div>
 </div></div>
-<p class="why good">The researcher has a door. We hand them to it and say what happens next, because
-the Entra screen itself says nothing about timescale. <b>Route back into the window on success</b> —
-this is the one branch where retrying is the right instinct.</p>
+<p class="why">The researcher has a door — but note where they are standing when they use it.
+If they click <b>Request approval</b> they stay on Microsoft's page and <b>never return to us at
+all</b>. So the callback we actually receive is overwhelmingly the <i>other</i> case, or someone
+who backed out. That is the second reason not to build a branch on it: the happy half of the
+branch mostly never reaches our code.</p>
 </div>
 
 <div>
@@ -425,12 +431,35 @@ this is the one branch where retrying is the right instinct.</p>
   <div class="btnrow"><button class="btn">Copy link for your admin</button>
     <span class="ghostbtn">Import from Finder instead</span></div>
 </div></div>
-<p class="why bad">No door, so <b>“Try again” must not appear</b> — it sends someone at a wall only
-a third party can remove. The escape hatch is the honest one: the recording is two clicks away in
+<p class="why bad">No door. <b>“Try again” must not appear</b> — it sends someone at a wall only a
+third party can remove. The escape hatch is the honest one: the recording is two clicks away in
 Teams, and drag-drop already works. Naming that is not an admission of defeat; it is the appliance
 coping.</p>
 </div>
 </div>
+
+<h3>So we ship one screen, correct under both</h3>
+<div class="screen"><div class="body">
+  <h4>Your organisation needs to approve Bristlenose</h4>
+  <p>ClientCo requires an administrator to approve apps before they can read your meeting
+  recordings. Send your IT team the link — this isn't one you can grant yourself.</p>
+  <div class="btnrow"><button class="btn">Copy link for your admin</button>
+    <span class="ghostbtn">Import from Finder instead</span></div>
+</div></div>
+<p class="why good"><b>The limit produced a better screen than the branch would have.</b> One
+sentence that is true whichever wall they hit, a link that works in both cases, no “Try again” to
+send them in a circle, and the manual route named rather than hidden. <b>Shipped 17 Aug</b> as
+<code>MicrosoftSignInRefusal</code> — a pure classifier over the Entra code, with
+<code>isWorthRetrying</code> false for both walls and true only for a genuine decline, so the
+distinction that <i>does</i> exist is the one the UI acts on.</p>
+
+<p class="why"><b>Third refusal, and it is neither of these:</b> <code>AADSTS53003</code>,
+Conditional Access. The sign-in <i>succeeds</i> and the token is refused anyway — typically a policy
+demanding a managed device, which a hand-rolled flow can never satisfy because it transmits no
+Primary Refresh Token for the device to be judged by. It presents as “sign-in worked, then nothing
+did”, and until 17 Aug it fell into <code>unexpected</code> and failed closed with no explanation,
+which reads as a bug in Bristlenose. Nobody in the conversation can lift it — not the researcher,
+not their admin, not us — so it now says exactly that.</p>
 
 <p class="why"><b>Both screens need a scope line the researcher can hand over.</b> An admin asked to
 approve an unknown app will ask what it reads. Today our consent screen says “unverified” and “the
@@ -524,16 +553,22 @@ window A and window B in §1, and it is a rendering rule rather than a message.<
 and not an error — a quiet line near the roster's absence that explains what the second grant would
 add and lets them ask. It must survive being declined without nagging.</li>
 
-<li><b>Branch the consent refusal on <code>AADSTS90094</code> into the two walls in §3</b>, and only
-show “Try again” where the request workflow actually exists. Needed for the calendar grant, and
-still needed for sign-in itself: <code>Files.Read</code> is not on Microsoft's blocked list, but
-§3's warning stands — under a verified-publishers consent policy the self-consentable set is the
-OIDC scopes plus <code>User.Read</code>, and <code>Files.Read</code> is not in it.</li>
+<li><s>Branch the consent refusal into the two walls, and only show “Try again” where the request
+workflow exists.</s> <b>Done 17 Aug, and the shape changed on contact.</b> The branch is not
+buildable — both walls return the same <code>AADSTS90094</code> — so it shipped as
+<b>one screen correct under both</b>, plus a <code>MicrosoftSignInRefusal</code> classifier whose
+<code>isWorthRetrying</code> is false for both walls and true only for a genuine decline. Still
+needed for sign-in itself, not just the calendar: <code>Files.Read</code> is not on Microsoft's
+blocked list, but §3's warning stands — under a verified-publishers consent policy the
+self-consentable set is the OIDC scopes plus <code>User.Read</code>, and <code>Files.Read</code> is
+not in it. <i>The remaining half is UI: `isWorthRetrying` needs to reach the button, which lives in
+a file another session holds.</i></li>
 
-<li><b>Classify <code>AADSTS53003</code> distinctly.</b> Conditional Access is neither a consent
-problem nor a licence problem, and today it lands in <code>unexpected</code> and fails closed with
-no explanation. Nobody — not the researcher, not their admin, not us — can fix it from here, so say
-precisely that.</li>
+<li><s>Classify <code>AADSTS53003</code> distinctly.</s> <b>Done 17 Aug.</b> Conditional Access is
+neither a consent nor a licence problem; it fell into <code>unexpected</code> and failed closed with
+no explanation, which reads as a bug in Bristlenose. It now says that nobody in the conversation can
+lift it — and it is classified at the <b>token</b> leg as well as the authorize leg, because it
+refuses <i>after</i> a successful sign-in.</li>
 
 <li><s>Stop diagnosing a 404 on <code>/Recordings</code> as a personal account.</s>
 <b>Done 17 Aug</b> — the listing now addresses <code>/me/drive/special/recordings/children</code>,
@@ -575,12 +610,16 @@ then today's single call already delivers A-when-possible and most of this plan 
 non-admin on a default-policy tenant, one carrying <code>Files.Read</code> alone and one carrying
 both. Read both screens. Needs someone else's tenant — ours always says yes.</li>
 
-<li><b>Do we chase Publisher Verification now?</b> <span class="tag unk">the real unknown</span>
-It does not lift the admin gate on the calendar, but it is the thing standing between a researcher
-and <code>Files.Read</code> on a restrictive tenant. Under a verified-publishers consent policy the
-self-consentable set is the OIDC scopes plus <code>User.Read</code>, and <code>Files.Read</code> is
-not in it. If that policy is common, Publisher Verification stops being paperwork and becomes
-<b>the gate on the entire feature</b>. Partner Center account plus a verified domain.</li>
+<li><s>Do we chase Publisher Verification now?</s> <b>Not open — already answered, and it is
+blocking.</b> <span class="tag meas">measured</span> The design doc's §5 records it from the Entra
+UI itself on 16 Aug: <i>“End users cannot grant consent to newly registered multitenant apps
+without verified publishers.”</i> So a cohort researcher cannot self-consent to
+<code>Files.Read</code> either, and <b>scenario B does not work today</b> — not because of the
+calendar finding, but because of us. <b>Two independent gates that fail at the same screen:</b> this
+one is ours to clear (Partner Center / MPN account, DNS-verified domain); the
+<code>Calendars.Read</code> one belongs to the tenant and we can never clear it. Clearing ours
+restores window B, <b>never window A</b>. It is the single highest-priority item on this page and
+it is not a research question — it is paperwork someone has to do.</li>
 
 <li><s>Does the <code>/Recordings</code> folder name localise?</s> <b>Closed 17 Aug —
 and it never needed the tenant.</b> Graph's own special-folder documentation states that the

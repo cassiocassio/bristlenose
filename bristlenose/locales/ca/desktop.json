@@ -646,6 +646,7 @@
     "done": "Fet",
     "statusWaitingPermission": "Esperant perm\u00eds",
     "importButtonIdle": "Importa",
+    "cancelRow": "Atura la baixada de {{title}}",
     "heldImported": "Ja \u00e9s en aquest projecte.",
     "heldNotDownloaded": "Ja importat: el fitxer \u00e9s a {{provider}} i cal baixar-lo all\u00e0.",
     "heldDriveNotConnected": "Ja importat: \u00ab{{volume}}\u00bb no est\u00e0 connectat.",

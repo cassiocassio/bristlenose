@@ -856,7 +856,8 @@ extension CloudImportOutlineView {
                 return view
             }
             if let progress = store.progress[row.id] {
-                view.configureProgress(progress.fraction, name: row.title, i18n: i18n)
+                view.configureProgress(progress.fraction, name: row.title, i18n: i18n,
+                                       onCancel: { [weak store] in store?.cancelRow(row.id) })
             } else if let outcome = store.outcomes[row.id] {
                 // Every glyph and tint below comes from `MessageKind`, which
                 // `docs/design-pipeline-diagnostic-popover.md` states is the
@@ -1169,6 +1170,15 @@ private final class StatusCellView: OutlineCellView {
     private let row = NSStackView()
     private var labelIntent: NSColor = .secondaryLabelColor
 
+    /// Stop just this transfer. A **control**, not a status marker — the
+    /// `MessageKind` vocabulary governs typographic glyphs ("inline glyphs are
+    /// typographic markers, not buttons"), so this is free to use the platform
+    /// idiom instead: Safari's Downloads popover puts exactly this beside
+    /// exactly this bar. It only ever appears while a bar is showing, which is
+    /// what keeps it from reading as the error glyph it shares a symbol with.
+    private let cancelButton = NSButton()
+    private var onCancel: (() -> Void)?
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         label.font = .systemFont(ofSize: Metrics.subtitleSize)
@@ -1192,8 +1202,20 @@ private final class StatusCellView: OutlineCellView {
         bar.controlSize = .small
         bar.translatesAutoresizingMaskIntoConstraints = false
 
+        cancelButton.isBordered = false
+        cancelButton.bezelStyle = .inline
+        cancelButton.imagePosition = .imageOnly
+        cancelButton.image = NSImage(systemSymbolName: "xmark.circle.fill",
+                                     accessibilityDescription: nil)
+        cancelButton.contentTintColor = .secondaryLabelColor
+        cancelButton.target = self
+        cancelButton.action = #selector(cancelClicked)
+        cancelButton.translatesAutoresizingMaskIntoConstraints = false
+        cancelButton.setContentHuggingPriority(.required, for: .horizontal)
+
         addSubview(row)
         addSubview(bar)
+        addSubview(cancelButton)
         NSLayoutConstraint.activate([
             row.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Metrics.cellInset),
             row.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor,
@@ -1202,8 +1224,12 @@ private final class StatusCellView: OutlineCellView {
             bar.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Metrics.cellInset),
             bar.widthAnchor.constraint(equalToConstant: 70),
             bar.centerYAnchor.constraint(equalTo: centerYAnchor),
+            cancelButton.leadingAnchor.constraint(equalTo: bar.trailingAnchor, constant: 4),
+            cancelButton.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
     }
+
+    @objc private func cancelClicked() { onCancel?() }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not from a nib") }
@@ -1251,10 +1277,19 @@ private final class StatusCellView: OutlineCellView {
     /// An indeterminate bar for the window between "the transfer started" and
     /// "the server told us how big it is" — a bar sitting at 0% for ten seconds
     /// reads as stalled.
-    func configureProgress(_ fraction: Double?, name: String, i18n: I18n) {
+    func configureProgress(_ fraction: Double?, name: String, i18n: I18n,
+                           onCancel: (() -> Void)? = nil) {
         row.isHidden = true
         bar.isHidden = false
         bar.toolTip = nil
+        self.onCancel = onCancel
+        // Only offered when there is something to stop. A cell reused from a
+        // finished row would otherwise keep a live-looking control over a bar
+        // that is no longer moving.
+        cancelButton.isHidden = onCancel == nil
+        cancelButton.toolTip = i18n.t("desktop.cloudImport.cancelRow", ["title": name])
+        cancelButton.setAccessibilityLabel(
+            i18n.t("desktop.cloudImport.cancelRow", ["title": name]))
         // Without these the one state VoiceOver has least to say about — an
         // unknown-size transfer — is also unnamed.
         bar.setAccessibilityLabel(i18n.t("desktop.cloudImport.downloading", ["title": name]))

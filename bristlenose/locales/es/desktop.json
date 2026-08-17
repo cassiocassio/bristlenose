@@ -646,6 +646,7 @@
     "done": "Listo",
     "statusWaitingPermission": "Esperando permiso",
     "importButtonIdle": "Importar",
+    "cancelRow": "Detener la descarga de {{title}}",
     "heldImported": "Ya est\u00e1 en este proyecto.",
     "heldNotDownloaded": "Ya importada: el archivo est\u00e1 en {{provider}} y hay que descargarlo all\u00ed.",
     "heldDriveNotConnected": "Ya importada: \u00ab{{volume}}\u00bb no est\u00e1 conectado.",

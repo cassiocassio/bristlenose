@@ -570,14 +570,29 @@ final class CloudImportStore: ObservableObject {
             // just abandoned. The generation is what makes a late return inert.
             guard self.fetchGeneration == mine else { return }
 
-            await withTaskGroup(of: Void.self) { group in
+            // `@MainActor` on the group body, so the per-row task registry can
+            // be written from `startNext`. Without it the closure is
+            // nonisolated and the bookkeeping cannot touch `rowTasks` — and the
+            // alternative, hopping per registration, would let a cancel arrive
+            // between a task starting and the handle that stops it being
+            // recorded.
+            await withTaskGroup(of: Void.self) { @MainActor group in
                 var iterator = queue.makeIterator()
                 var running = 0
 
-                func startNext() {
+                // `@MainActor` on the nested function too: a local `func` does
+                // **not** inherit its enclosing closure's isolation, so the
+                // annotation on the group body above does not reach in here.
+                @MainActor func startNext() {
                     guard let row = iterator.next() else { return }
                     running += 1
-                    group.addTask { @MainActor [weak self] in
+                    // A per-row `Task` we keep a handle on, rather than an
+                    // anonymous group child. `withTaskGroup` hands back no
+                    // per-child handle, so with `addTask` alone the only
+                    // available cancellation is all-or-nothing — and one
+                    // stalled 465 MB transfer then forces abandoning the four
+                    // beside it that were fine.
+                    let task = Task { @MainActor [weak self] in
                         guard let self else { return }
                         let outcome = await self.source.fetch(
                             row: row,
@@ -588,10 +603,17 @@ final class CloudImportStore: ObservableObject {
                         )
                         self.outcomes[row.id] = outcome
                         self.progress[row.id] = nil
+                        self.rowTasks[row.id] = nil
                         // A row that landed stops being tickable; one that
                         // failed stays ticked so Retry has something to act on.
                         if case .imported = outcome { self.ticked.remove(row.id) }
                     }
+                    rowTasks[row.id] = task
+                    // The group waits on it, but does not own its cancellation
+                    // — which is the whole point, and also the trap: an
+                    // unstructured `Task` does NOT inherit the group's
+                    // cancellation, so `stopFetch` has to cancel these itself.
+                    group.addTask { await task.value }
                 }
 
                 for _ in 0..<min(maxConcurrentFetches, queue.count) { startNext() }
@@ -605,9 +627,40 @@ final class CloudImportStore: ObservableObject {
         }
     }
 
+    /// In-flight transfers, one per row, so a single stuck one can be dropped
+    /// without taking the batch with it.
+    private var rowTasks: [String: Task<Void, Never>] = [:]
+
+    /// Stop one transfer. The rest of the batch carries on.
+    ///
+    /// Genuinely stops it rather than merely un-drawing it: the download is a
+    /// `URLSession.download(for:delegate:)`, which bridges Swift task
+    /// cancellation to the session task, and `CloudDownloader` checks
+    /// `Task.isCancelled` again before anything reaches the project folder.
+    /// The outcome is left to the natural completion path — the adapter
+    /// already maps both `CloudDownloadError.cancelled` and the
+    /// `URLError(.cancelled)` the transport actually throws onto
+    /// `FetchOutcome.cancelled` — because setting it here would race a
+    /// transfer that finished in the same instant and could report a landed
+    /// file as stopped.
+    ///
+    /// The row stays ticked on purpose: you stopped it, so Retry should still
+    /// find it.
+    func cancelRow(_ rowID: String) {
+        rowTasks[rowID]?.cancel()
+        rowTasks[rowID] = nil
+    }
+
     func stopFetch() {
         fetchTask?.cancel()
         fetchTask = nil
+        // **Cancel the row tasks explicitly.** They are unstructured `Task`s,
+        // created so they can be cancelled one at a time, and the price of that
+        // is that they do NOT inherit cancellation from `fetchTask` or from the
+        // group. Without this line Stop would tear down the coordinator and
+        // leave every download running.
+        for task in rowTasks.values { task.cancel() }
+        rowTasks.removeAll()
         // Bumped so an in-flight grant that returns after this — which it will,
         // since cancelling the Task does not close the browser window — cannot
         // resume the batch behind the researcher's back.

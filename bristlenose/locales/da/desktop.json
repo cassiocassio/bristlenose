@@ -646,6 +646,7 @@
     "done": "F\u00e6rdig",
     "statusWaitingPermission": "Venter p\u00e5 tilladelse",
     "importButtonIdle": "Importer",
+    "cancelRow": "Stop overf\u00f8rslen af {{title}}",
     "heldImported": "Allerede i dette projekt.",
     "heldNotDownloaded": "Allerede importeret \u2014 filen ligger p\u00e5 {{provider}} og skal hentes der.",
     "heldDriveNotConnected": "Allerede importeret \u2014 \u201c{{volume}}\u201d er ikke tilsluttet.",

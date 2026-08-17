@@ -685,6 +685,7 @@
     "done": "Hotovo",
     "statusWaitingPermission": "\u010cek\u00e1 na opr\u00e1vn\u011bn\u00ed",
     "importButtonIdle": "Importovat",
+    "cancelRow": "Zastavit stahov\u00e1n\u00ed {{title}}",
     "heldImported": "U\u017e je v tomto projektu.",
     "heldNotDownloaded": "U\u017e importov\u00e1no \u2014 soubor je na {{provider}} a je pot\u0159eba ho st\u00e1hnout tam.",
     "heldDriveNotConnected": "U\u017e importov\u00e1no \u2014 \u201e{{volume}}\u201c nen\u00ed p\u0159ipojeno.",

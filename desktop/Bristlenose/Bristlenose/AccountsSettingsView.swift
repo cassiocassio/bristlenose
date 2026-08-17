@@ -27,10 +27,22 @@ struct AccountsSettingsView: View {
     @ObservedObject var serveManager: ServeManager
     @EnvironmentObject private var i18n: I18n
 
-    @State private var sections: [AccountSection] = []
+    @State private var sections: [AccountSection]
     /// The section awaiting confirmation, if any. Held rather than passed so
     /// the alert survives the list reloading underneath it.
     @State private var pendingDisconnect: AccountSection?
+
+    /// **Seeded here, not in `.onAppear`.** The Settings package sizes each
+    /// pane to its `fittingSize` at the moment the pane is shown, and does not
+    /// re-measure when the content grows underneath it. Filling the Form from
+    /// `.onAppear` therefore measured an *empty* one: the window came up a
+    /// single header tall and clipped the other three services below the frame,
+    /// which reads as a broken pane rather than a short one. Everything the
+    /// first render needs is on disk, so there is nothing to wait for.
+    init(serveManager: ServeManager) {
+        self.serveManager = serveManager
+        _sections = State(initialValue: Self.currentSections())
+    }
 
     var body: some View {
         Form {
@@ -148,7 +160,13 @@ struct AccountsSettingsView: View {
     // MARK: - Doing things
 
     private func reload() {
-        sections = AccountsSectionModel.sections(
+        sections = Self.currentSections()
+    }
+
+    /// Everything the pane shows, read off disk. `static` so `init` can call it
+    /// before `self` exists.
+    private static func currentSections() -> [AccountSection] {
+        AccountsSectionModel.sections(
             available: availablePlatforms(),
             connections: CloudGrantStore.connections(),
             miroConnected: MiroConnectionStore.isConnected(),
@@ -158,7 +176,7 @@ struct AccountsSettingsView: View {
     /// A platform is connectable when this build carries an OAuth client for it
     /// and it is not parked. `CloudPlatform.offered` already owns the parking
     /// half; the config resolvers own the other.
-    private func availablePlatforms() -> Set<CloudPlatform> {
+    private static func availablePlatforms() -> Set<CloudPlatform> {
         Set(CloudPlatform.offered(zoomEnabled: BristlenoseFlags.cloudImportZoom).filter { platform in
             switch platform {
             case .teams: return MicrosoftOAuthConfig.resolve() != nil

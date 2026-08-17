@@ -199,8 +199,23 @@
     /* The speakers column is now a shrink-pair member, so it must be able to
        give up width — which means names wrap rather than holding the track
        open. flex-start keeps the code badge on the name's first line instead
-       of centred against a two-line name. */
-    .bn-cell-speakers,
+       of centred against a two-line name.
+
+       Specificity 0-2-0 on the cell for the SAME reason `.bn-cell-duration`
+       carries it below, and this is the rule that proves the trap is worth
+       documenting twice: the cell also carries `.bn-session-speakers`, which
+       sets `white-space: nowrap` in templates/report.css — concatenated ~5000
+       lines AFTER organisms, so a bare `.bn-cell-speakers` ties at 0-1-0 and
+       loses on source order. Names therefore never wrapped, the track shrank
+       to its `minmax(0, …)` floor anyway, and the un-wrappable content spilled
+       rightwards across Start and Sentiment. That is the header-text overlap
+       reported on 17 Aug 2026 — and it means rung 1 of the ladder had never
+       actually worked since it shipped on 6 Aug.
+
+       Fixing it here rather than in report.css on purpose: that nowrap is
+       still correct for the `<table>` the sealed static render uses, which
+       shares the class. */
+    .bn-sessions-row .bn-cell-speakers,
     .bn-cell-speakers .bn-session-speaker-entry { white-space: normal; }
     .bn-cell-speakers .bn-session-speaker-entry { align-items: flex-start; }
 

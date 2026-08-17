@@ -123,6 +123,39 @@ using it, they are the same kind of thing: an account Bristlenose talks to on th
 <p class="meta">Design artefact · 18 Aug 2026 · supersedes the grouped variant · relates to
 <code>docs/design-cloud-import.md</code> §7 and §9, <code>docs/design-miro-bridge.md</code></p>
 
+<div class="ask" style="border-left:3px solid var(--good)">
+<b>SHIPPED 18 Aug 2026 — and the pane is not the one drawn below.</b> Read §1 as the reasoning
+that got there, not as the built thing.<br><br>
+<b>What changed, and why.</b> The flat list and the <b>Add Account…</b> sheet are both gone. There
+are exactly four possible services and, for now, one account per service — so the pane is a
+<b>section per service</b>, each carrying one row in one of four states. A flat list answers "what
+have I connected?"; a fixed catalogue of four is worth reading as "what can this thing talk to?"
+as well, and a permanent Not-connected row answers that without a sheet to open. Zoom is
+<i>listed</i>, saying it cannot be connected yet, rather than hidden — §1's argument against
+offering "a door onto nothing" survives as the reason its row carries <b>no button</b>, which is a
+better answer than absence.<br><br>
+<b>The four states, and the one line that decides them:</b> everything the pane shows is derived
+from what is already on disk, so <b>it makes no network call</b>. <code>Not available</code> ·
+<code>Not connected</code> · <code>Connected</code> · <code>Needs attention</code> — the last being
+one row-slot with two causes (§2's <i>Sign in again</i> and <i>Wrong kind of account</i>), because
+they are mutually exclusive and the row draws identically for both. §2's fourth state,
+<b>Can't reach it, was cut</b>: it is a state of the network rather than of the account, rendering
+it means a Settings pane doing I/O on appear, and §2 had already argued it deserves no Reconnect
+button. It belongs in the import window, where a call is actually being made.<br><br>
+<b>The consequence of no-network is the interesting one.</b> Anything knowable only from a call has
+to be <i>persisted when that call happens</i>. Google's tier is free — <code>GoogleAccountTier</code>
+is string work on the address domain — so a consumer account is flagged before the researcher goes
+looking at an empty list. Microsoft's is not, so a personal account still reads as merely connected
+until the adapter writes its <code>DriveTier</code> verdict onto the grant. That gap is pinned by a
+test named for it.<br><br>
+<b>Connecting stays at the point of intent.</b> §3's rule holds: <b>Connect…</b> posts the same
+notification the File menu does and opens the import window. One door, one sign-in flow. Miro is the
+exception and says so rather than offering a button that fails — its connect needs a running serve
+and an open project.<br><br>
+Commits <code>8901845f</code> (storage) · <code>d3b66642</code> (the pane) ·
+<code>a27f85b4</code> (the tombstone).
+</div>
+
 <div class="ask hot">
 <b>The hard part is not the list. It is that today you can only have one of each.</b>
 <code>KeychainHelper</code> stores one item per service under a fixed account string
@@ -266,16 +299,19 @@ because there is a situation a researcher currently cannot get out of.</p>
   (<code>DriveTier</code>); today it is only surfaced inside the import window, and only while it
   is open.</td></tr>
 
-<tr><td class="k">Can't reach it</td>
+<tr><td class="k"><s>Can't reach it</s> <span class="tag no">cut</span></td>
   <td class="dimc"><b>"Is it broken or am I offline?"</b></td>
-  <td>Dims the row and says so. <b>Not an error, and no Reconnect button</b> — nothing is wrong
-  with the account, and offering a remedy for a flat wifi teaches the wrong lesson.</td></tr>
+  <td><b>Not built, and deliberately.</b> The argument in this row is what killed it: nothing is
+  wrong with the account, so there is nothing for an <i>account</i> pane to say. It is also the one
+  state that cannot be derived at rest — rendering it means Settings doing network I/O on appear.
+  It belongs in the import window, where a call is actually being made.</td></tr>
 
 <tr><td class="k">Two of the same</td>
   <td class="dimc"><b>"Which one is Bristlenose actually using?"</b> The situation this whole
   redesign exists for.</td>
-  <td>Both rows, both identities, both removable. See §3 issue 4 for the harder half — which one a
-  given import or export uses.</td></tr>
+  <td>Both rows, both identities, both removable — <b>the storage supports it now</b>. The pane
+  does not yet <i>show</i> two, because nothing offers a way to connect a second; see the scope-cut
+  note above §4 for why choosing between them is deferred rather than owed.</td></tr>
 </table>
 </div>
 
@@ -312,7 +348,14 @@ that exists precisely so an unregistered key fails closed. Making them dynamic r
 that caught a silent no-op twice this week.</p>
 <p class="rec"><b>Take (a).</b> It is what §7 already specifies, it keeps failures per-account, and
 the enumeration cost is one function. (b) is genuinely tempting for a day's work and its failure
-mode — losing every account for a service — is the one failure this pane exists to prevent.</p>
+<p class="rec"><span class="tag now">shipped</span> <b>(a), as prescribed.</b> One item per
+account, <code>kSecAttrAccount</code> a SHA-256 of the lowercased address. The shape came out better
+than this issue proposed in one respect worth carrying: the fixed account string <b>stays as the
+default parameter</b>, so the LLM provider keys — which the Python side reads at that exact fixed
+account — are untouched, and only cloud sign-ins pass a per-account key. Enumeration is
+<code>KeychainHelper.accounts(provider:)</code>, attributes only, so listing accounts does not
+decrypt every credential to do it. Verified by reverting <code>derive()</code> to the fixed key:
+12 of the 17 new tests fail, the two-accounts-coexist repro among them.</p>
 </div>
 
 <div class="iss">
@@ -329,7 +372,12 @@ id is the team name, which is not one.</p>
 is not.</b> Do not invent a synthetic id: a random per-connection id makes "the same account
 connected twice" unrepresentable, which is exactly the mess to be escaped from. For Miro, treat a
 second connection carrying the same <code>userName + orgName</code> as a replacement rather than an
-addition, and accept that it is a heuristic.</p>
+<p class="rec"><span class="tag now">shipped, scope cut</span> <b>The address is the
+identifier; the id claims are not parsed.</b> <code>oid</code>+<code>tid</code> and <code>sub</code>
+would survive a rename, but the researcher who renames and re-signs-in, acquiring a second row for
+the same account, was judged <b>edge-case paranoia for v1</b>. That second row is visible, labelled
+with its address, and removable — which is the escape hatch working rather than failing. The
+Miro-replacement heuristic is therefore moot: Miro is not per-account keyed at all.</p>
 </div>
 
 <div class="iss">
@@ -340,7 +388,10 @@ addition, and accept that it is a heuristic.</p>
 <code>CloudPlatform.built</code>.</p>
 <p class="rec">A small <code>ConnectedService</code> value the pane renders — id, display name,
 identity line, capability, disconnect action — produced by both the meeting adapters and Miro. The
-pane depends on that, not on either enum.</p>
+<p class="rec"><span class="tag now">shipped</span> <b>As prescribed</b> —
+<code>AccountService</code>, an enum of <code>.cloud(CloudPlatform)</code> and <code>.miro</code>,
+carrying display name, symbol, purpose, and whether connecting is possible from the pane.
+<code>CloudPlatform</code> is untouched and still has three cases.</p>
 </div>
 
 <div class="iss">
@@ -367,7 +418,12 @@ noticing.</p>
 open window if it matches. With two accounts per platform, disconnecting the personal Teams account
 would <b>close an import window signed in to the work one</b>.</p>
 <p class="rec">Carry the account key alongside the platform and match on both. Small, but it must
-land in the same change as the keying or it becomes a real bug rather than a latent one.</p>
+<p class="rec"><span class="tag now">shipped</span> <b>Landed in the same change as the
+keying, as this issue insisted.</b> The notification carries <code>account</code> alongside
+<code>platform</code>, and the match is extracted as <code>CloudDisconnectMatch.dropsSession</code>
+— a pure function, because a <code>NotificationCenter</code> observer is an awkward place to test a
+decision. <b>Unknown on either side drops the session</b>: the costs are not symmetric, and only one
+of the two mistakes is recoverable by noticing.</p>
 </div>
 
 <div class="iss">
@@ -377,7 +433,12 @@ the change nothing looks for it there.</p>
 <p class="rec">Read the old key on first launch, write it under the new one, delete the old. It
 either works or the researcher signs in again — an outcome worth stating plainly rather than
 engineering a fallback chain that has to be maintained forever. <b>Do the deletion</b>: leaving the
-legacy item means a future enumeration finds a ghost account nobody can remove.</p>
+<p class="rec"><span class="tag now">shipped</span> <b>Read, rewrite, delete — the deletion
+included.</b> It runs on every read rather than behind a once-flag: one Keychain miss in the
+ordinary case, and a flag is a thing to reset in tests and to get wrong across processes. One
+correction to the fear stated here — a leftover would not have been a <i>ghost</i>. Enumeration
+decodes what it finds, so any stray item would still show its address and its Disconnect
+button.</p>
 </div>
 
 <div class="iss">
@@ -389,24 +450,57 @@ is.</p>
 <p class="rec">Settle it <b>in the same change</b>, not after. Note the wrinkle:
 <code>kSecAttrSynchronizable</code> cannot be flipped on an existing item by
 <code>SecItemUpdate</code>, so the migration in issue 6 is the natural and possibly only cheap
-moment to change it.</p>
+<p class="rec" style="border-color:var(--warn)"><span class="tag no">reversed</span>
+<b>Settled 18 Aug: the sync STAYS.</b> Not deferred — decided the other way, against §7 and §10,
+which both now want truing. The realistic loss event is the Mac being stolen, and iCloud Keychain is
+what saves you; the alternatives are paper, a USB stick you will lose, or paying for a password
+manager. iCloud Keychain is end-to-end encrypted regardless of Advanced Data Protection, so this is
+not plaintext-to-Apple, and the grant permits downloading a limited set of recordings from an
+account the researcher is signed into in Office and Teams all day on the same devices. The
+mechanical wrinkle named here was real, and is exactly why it had to be settled now rather than
+later: <code>kSecAttrSynchronizable</code> cannot be flipped by <code>SecItemUpdate</code>, so the
+migration was the one cheap moment it could ever have changed. That moment has passed, with the
+answer "stay synced".</p>
 </div>
 
 <!-- ══════════════════════════════════════════════════════════ -->
+<div class="ask hot">
+<b>Scope cut, 18 Aug — "multi-account madness later".</b> Issue 4 is <b>deferred by decision</b>:
+nothing has to choose between two accounts yet. This pane's job is to let a researcher <b>see which
+account is connected, notice it is the wrong one, disconnect, and sign in to the right one</b>.
+That is the whole escape hatch, and for someone working one client at a time it is a complete
+answer rather than a workaround.<br><br>
+<b>The storage half is not deferred and is already being built</b> —
+<code>KeychainHelper</code> has grown <code>get/set/delete(provider:account:)</code> and an
+<code>accounts(provider:)</code> enumeration. So: <i>hold</i> two accounts safely now,
+<i>decide between</i> them later. Note the shape it took, which is better than issue 1 proposed —
+the fixed account string stays as the default parameter, so the LLM provider keys, which the
+<b>Python side reads at that exact fixed account</b>, are untouched and only cloud sign-ins pass a
+per-account key.
+</div>
+
 <h2>4 — What I would build, and in what order</h2>
 <ol class="chg">
 <li><b>The storage change alone, with no UI</b> — per-account keying, the id claim, the migration,
 the sync decision, and the notification carrying an account key. Behind the existing single-account
 behaviour, so nothing changes on screen. This is the risky part and it deserves to land by itself.</li>
-<li><b>The flat list rendering <code>ConnectedService</code></b>, with Miro included and the four
-states. Read-only plus Disconnect — no new connect flows.</li>
-<li><b>Add Account…</b>, which is where a second account of an existing service first becomes
-reachable, and therefore the first point the storage change is actually exercised.</li>
-<li><b>The picker at point of use</b>, appearing only when more than one account exists.</li>
+<li><s>The flat list rendering <code>ConnectedService</code></s> <span class="tag now">shipped,
+changed shape</span> — a <b>section per service</b>, Miro included, four states, read-only plus
+Disconnect and a Connect that opens the import window. <code>ConnectedService</code> shipped as
+<code>AccountService</code>.</li>
+<li><s><b>Add Account…</b></s> <span class="tag no">dropped</span> — there is no Add Account sheet.
+With four fixed services and one account each, a permanent Not-connected row in each section is the
+same answer without a modal. It comes back only if a second account of one service becomes
+reachable.</li>
+<li><b>The picker at point of use</b> <span class="tag no">deferred</span> — nothing has to choose
+between two accounts yet.</li>
 </ol>
 <p class="why"><b>Order matters more than usual here</b> because steps 1 and 3 are the ones that can
 lose a credential, and putting the whole list between them means the storage change has been
-exercised by hand for a while before anything invites a second account.</p>
+exercised by hand for a while before anything invites a second account.<br><br>
+<b>That held, by a different route.</b> Step 3 was dropped rather than sequenced, so the storage
+change now sits behind a pane that cannot invite a second account at all — the same protection, with
+one fewer thing built.</p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
 <h2>5 — Closed, and still open</h2>
@@ -425,16 +519,14 @@ grouping four things by an axis the reader does not think in costs more than it 
 </div>
 
 <ul class="q">
-<li><b>Does Miro's pasted token survive this?</b> <span class="tag no">open</span> Every other row
-is an OAuth round trip. Miro's is "go to Miro's developer settings, make a token, paste it" — a
-developer flow in a researcher's settings window, and it looks much stranger in a catalogue beside
-two Sign in with… buttons than it does buried in an export sheet. Miro does have OAuth; whether
-adopting it is worth the work is its own decision, and this mockup only makes the oddness
-visible.</li>
+<li><s>Does Miro's pasted token survive this?</s> <b>Yes — closed 18 Aug.</b> That is where we
+are today, it is not a blocker for putting Miro in the list, and there are other Miro auth
+questions for another day. Showing it beside two OAuth rows makes its oddness visible, which is a
+prompt for that day rather than a reason to hold this work.</li>
 <li><b>What is the identity line for a service with no identity?</b> <span class="tag no">open</span>
-Miro gives user, team and org; the meeting accounts give an address. A future connection that gives
-none leaves a row with a name and filler under it — and "Connected" as a second line is worse than
-no second line, since it says only what the row's presence already says.</li>
+Miro gives user, team and org; the meeting accounts give an address, so nothing hits this yet. But
+a row with a name and filler under it is worse than a row with just a name — and "Connected" as a
+second line says only what the row's presence already says.</li>
 </ul>
 
 </div>

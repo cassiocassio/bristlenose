@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-08-16 (third pass, post-Google-tenant)
-trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
+last-trued: 2026-08-18 (fourth pass, post-Accounts-pane — §7 keying, §9 lifecycle, §10 costs)
+trued-against: HEAD@main on 2026-08-18 (a27f85b4)
 ---
 
 > **Truing status:** Partial — trued **twice** on 15 Aug 2026, and the second
@@ -41,6 +41,32 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
 > the *listing* path that met reality this week were all wrong.
 
 ## Changelog
+
+- _2026-08-18 — Settings ▸ Accounts, and the storage under it_ — three
+  commits and a truing pass over the sections they contradicted.
+  1. **One Keychain item per account** (`8901845f`). §7's diagnosis was exact and
+     is now fixed: a second sign-in no longer overwrites the first in place.
+     Keyed on a SHA-256 of the address — **not** on `oid`/`sub`, which was cut
+     for v1. Enumeration, plus a one-shot migration off the old fixed key that
+     **deletes** the legacy item.
+  2. **The pane** (`d3b66642`) — a section per service, four states, and **no
+     network call**: everything is derived from disk. That is what makes
+     Microsoft's account-tier state still owed a writer while Google's is free.
+     §9 said Mail Accounts; a sidebar-and-detail for four rows with one verb
+     would be chrome around nothing, so it is sections. §2 of the mockup's
+     "Can't reach it" state was **cut** on the same logic — it is a state of the
+     network, not of the account.
+  3. **A revoked sign-in stops vanishing** (`a27f85b4`). A refused refresh used
+     to delete the grant, so the account disappeared from Settings —
+     indistinguishable from having disconnected it yourself. It now keeps the
+     row with the credential stripped, which preserves the reason the delete
+     existed (a revoked refresh token fails identically forever) while giving
+     "it just stopped working" somewhere to be answered.
+  4. **iCloud sync reversed.** §7 and §10 both said non-synchronizable; cloud
+     grants **stay synced**. The stolen Mac is the real loss event, iCloud
+     Keychain is E2E regardless of ADP, and the timing was forced —
+     `kSecAttrSynchronizable` cannot be flipped by `SecItemUpdate`, so the
+     migration was the only cheap moment.
 
 - _2026-08-18 (measured on a live account)_ — **the Picker grant survives a
   relaunch, and a file already granted is not asked for again.** Walked on a
@@ -835,7 +861,13 @@ The 80/20 split held, and is now observable rather than estimated — **shared s
 
 **This is an open decision, not a settled one.** Against AppAuth: a nested Mach-O in a sandboxed App Store binary, and an Objective-C dependency. For it: PKCE, `state` validation, token refresh and error handling are exactly the security-sensitive infrastructure where a hand-rolled subtle bug *is* a vulnerability, and the house rule is to defer that class of work to battle-tested implementations rather than re-derive it. Weigh it properly before writing the ceremony — and note that `URLSession` still carries the *fetch* either way; this decision is only about the token dance.
 
-**Key the credential on `(platform, account)`.** `KeychainHelper` is currently one service name per provider with a fixed account, so a freelancer's second client tenant would **silently overwrite** the first. Follow `MCPTokenStore`'s shape instead: own service name, account key hashed from a stable identifier (never the raw UPN — that is a client email address sitting readable as Keychain item metadata), and non-synchronizable.
+**Key the credential on `(platform, account)`. Shipped 18 Aug 2026** (`8901845f`), and this paragraph's diagnosis was exact: `KeychainHelper` keyed every item on a fixed account string, so a second sign-in hit `errSecDuplicateItem`, took the `SecItemUpdate` path and **overwrote the first account's token in place** — no error, `set` returned `true`, and the first account stopped working at its next refresh with nothing anywhere saying why. It is now one Keychain item per account, `kSecAttrAccount` a SHA-256 hash, following `MCPTokenStore` as prescribed, plus a `kSecMatchLimitAll` enumeration this helper had no equivalent of and a one-shot migration off the old fixed key.
+
+Two departures from the prescription above, both deliberate.
+
+**The stable identifier is the signed-in address, not an id claim.** Microsoft's `oid`+`tid` and Google's `sub` would survive a rename; parsing them was cut for v1 because the only failure they prevent is a researcher who renames their account, signs in again, and acquires a second row for the same account — a row that is visible, labelled with its address, and removable. The hashing survives untouched and for exactly the reason stated: `kSecAttrAccount` is unencrypted metadata, and a client's email address readable in Keychain Access is the leak this project cares about.
+
+**Non-synchronizable was reversed — cloud grants stay in iCloud Keychain.** _Settled 18 Aug 2026; this sentence used to say the opposite, and so does §10's cost line, which is corrected there._ The realistic loss event is the Mac being stolen, and iCloud Keychain is what recovers from it; the alternatives are paper, a USB stick, or a paid password manager. It is end-to-end encrypted regardless of Advanced Data Protection, so this is not plaintext-to-Apple, and the grant permits downloading a limited set of recordings from an account the researcher is signed into on the same devices all day. `MCPTokenStore` remains non-synchronizable for a reason that does not transfer: that token names a server on *this* machine and is meaningless on another Mac. **The timing was forced rather than chosen** — `kSecAttrSynchronizable` cannot be flipped on an existing item by `SecItemUpdate`, so the migration was the one cheap moment the answer could ever have changed.
 
 **Before writing the Teams adapter, spend an hour in Graph Explorer** — against a real client-shaped tenant, not just your own, because §3's consent-policy question is answered by watching whether the prompt appears or bounces to "Need admin approval". The other unknowns are cheap to see and expensive to design around: how external participants render in `attendees[]`, and how reliable the filename format is.
 
@@ -862,7 +894,7 @@ There is no published head-to-head, and there probably cannot easily be one: ven
 
 ## 9. Mechanics worth knowing before building
 
-**Where the user starts, and how they get back.** `File ▸ Import from Teams…` as a sibling to the existing `File ▸ Add Files… ⇧⌘A` (whose own comment calls it "the menu twin of drag-drop") — **flat while there is one platform, a submenu at three**: a one-item submenu is a Mac smell, so this becomes `File ▸ Import ▸ Microsoft Teams… / Zoom… / Google Meet…` when the second lands, and takes the fuller product name there for parallelism. Also a project context-menu twin following the Agent Access pattern (context menu *hides* when unavailable, menu-bar twin *dims*), and `Bristlenose ▸ Accounts…` mirroring `Connect an Agent…`. Account lifecycle — sign in, sign out, "Connected as…", the scope disclosure — belongs in a **Settings ▸ Accounts** pane on the Mail Accounts pattern the app already uses twice; the import surface shows a read-only account line only. One place to disconnect, not two.
+**Where the user starts, and how they get back.** `File ▸ Import from Teams…` as a sibling to the existing `File ▸ Add Files… ⇧⌘A` (whose own comment calls it "the menu twin of drag-drop") — **flat while there is one platform, a submenu at three**: a one-item submenu is a Mac smell, so this becomes `File ▸ Import ▸ Microsoft Teams… / Zoom… / Google Meet…` when the second lands, and takes the fuller product name there for parallelism. Also a project context-menu twin following the Agent Access pattern (context menu *hides* when unavailable, menu-bar twin *dims*), and `Bristlenose ▸ Accounts…` mirroring `Connect an Agent…`. Account lifecycle — sign in, sign out, "Connected as…", the scope disclosure — belongs in a **Settings ▸ Accounts** pane; the import surface shows a read-only account line only. One place to disconnect, not two. _Shipped 18 Aug 2026 (`d3b66642`), and **not** on the Mail Accounts pattern this sentence named._ Sidebar-and-detail is right when there is a detail worth showing; with four fixed services, one account each and a single verb, it would be chrome around nothing. What shipped is a **section per service**, each carrying one row in one of four states — unavailable, not connected, connected, needs attention. Two things about it are load-bearing. **The pane makes no network call**: every state is derived from the Keychain, the OAuth config and the address stored beside the tokens, so anything knowable only from a call has to be persisted when that call happens (Google's account tier falls out of the address domain and is free; Microsoft's `DriveTier` does not and is still owed a writer). And **connecting stays at the point of intent** — Connect… posts the same notification the File menu does and opens the import window, so there is one sign-in flow rather than a second one in Settings. Full state engine and the reasoning: `docs/mockups/settings-accounts-generalised.html`.
 
 **One window, globally, with the destination pre-selected by how you opened it.** Opening from a project's context menu pre-selects that project; opening from the File menu pre-selects the current one. Re-opening after a close is the **File** menu's job, not the Window menu's — HIG is explicit that the Window menu lists *currently open* windows (alphabetically) and that reopening belongs in File. Two consequences: the scene takes **`.commandsRemoved()`**, since a titled SwiftUI `Window` otherwise auto-contributes a Window-menu reopen entry that HIG says shouldn't be there — the project's existing rule for auxiliary windows, now with a second reason — while the window still appears in the open-windows list *while open*, because that listing is AppKit enumerating real `NSWindow`s rather than the scene contributing a command (verify on device). And note HIG's *"avoid listing panels or other modal views"* is a third independent argument for this being a window rather than a sheet. **Double-click on a project row is not available** as a door — `project_sidebar_rename_gestures_decided` already reserves it for opening the project itself.
 
@@ -1123,9 +1155,9 @@ Service (Zoom Marks clause) and `brand.zoom.com`.
 - **Microsoft Publisher Verification may be a prerequisite** (§3) — a Partner Center account and a verified domain, not just a form.
 - Three APIs that will change underneath us.
 - **i18n — now realised debt, not a future cost.** The shipped window is hardcoded English throughout ("Import 1 Recording", "Filter", the plan-refusal sentences). A window with this many states needs `desktop.*` keys across the **21** full locale directories (plus the `zh-Hant-HK` override fork), CLDR plurals on every count-bearing string, and `scripts/check-locales.py` only warns — nothing fails if it is skipped.
-- **A corporate tenant credential in the Keychain is a different class from a personal LLM key.** The iCloud-sync decision for API keys is settled and disclosed and is not reopened here; the new question is whether a *client's* IT policy permits their tenant credential to leave the managed device. Non-synchronizable is the answer for this one (§7).
+- **A corporate tenant credential in the Keychain is a different class from a personal LLM key.** The iCloud-sync decision for API keys is settled and disclosed and is not reopened here; the question this raised was whether a *client's* IT policy permits their tenant credential to leave the managed device. ~~Non-synchronizable is the answer for this one (§7).~~ **Answered the other way, 18 Aug 2026: cloud grants sync, like every other secret this app holds.** iCloud Keychain is end-to-end encrypted regardless of ADP, so the exposure is not to Apple; and the credential is a scoped, revocable grant to download recordings from an account the researcher is signed into on those same devices anyway. Weighed against a stolen Mac with no recovery path, the sync is the safer default. The governance question is real but belongs in disclosure, not in storage — see the consent line below. Reasoning in full at §7.
 - **The destination is often itself a cloud folder.** On a Mac, project folders frequently live under `~/Library/CloudStorage/`, so the feature's default behaviour is to pull media out of the client's tenant and write it into whatever cloud that folder syncs to — a second vendor, unasked, and per `design-project-storage.md` plausibly outside the team's governance boundary. Detect with `cloud_provider_for(destination)` and disclose before the fetch. Secondary effects: the reverse sync competes for the same uplink, and the provider may later evict the file, so the retention clock runs against bytes BN cannot read without coordination.
-- No disconnect, revoke or multi-account story exists yet (§7, §9). An Entra admin can revoke tenant-wide from Enterprise Applications — worth stating, because it is a strong answer.
+- ~~No disconnect, revoke or multi-account story exists yet (§7, §9).~~ **Two of the three now exist** (18 Aug 2026). Disconnect shipped in Settings ▸ Accounts, and it reaches an open import window rather than only the Keychain — removing the stored copy while a live adapter holds tokens in memory would leave a control that appears to work and does not. Multi-account *storage* shipped; multi-account *choosing* is deferred by decision, because nothing yet offers a way to connect a second account. **Revocation is still the gap, and the honest sentence is that Bristlenose cannot do it**: the disconnect confirmation says so in as many words and points the researcher at their account settings. An Entra admin can revoke tenant-wide from Enterprise Applications — worth stating, because it is a strong answer.
 - A researcher's employer may take a view on a personally-purchased tool authenticating to corporate M365, even at `Files.Read` on their own drive. This is the scenario enterprise consent machinery exists to govern, which is a better answer than most SaaS can give.
 - ⚠️ **Consent is owed now, not "when this ships".** The feature has shipped behind `File ▸ Import` with three live adapters while `AIConsentView.currentVersion` is still 2. The v2 dialog's stays-local box becomes false by omission, and a per-connection disclosure listing the scopes in plain English belongs at the OAuth moment. **The escape clause this paragraph used to carry is gone.** It read "the practical urgency is gated by the registration gap — no sign-in can complete until a client ID exists, so nothing has leaked". A client ID exists as of 15 Aug 2026, and a live Graph session has read a real corporate calendar and a real OneDrive. Fix both before the first cohort tester touches it — and note the consent screen the researcher actually sees says "unverified" and "the publisher has not provided links to their terms", which is our own disclosure gap showing through Microsoft's UI.
 

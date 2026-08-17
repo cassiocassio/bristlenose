@@ -103,16 +103,26 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
        and persisting the grant take the journey from 29 to 17 with no scope
        change and no audit — after which the restricted scope buys exactly one
        further click. Then the choice can be made on its merits.
-     If it is still wanted, it is a **two-way** radio in Settings ▸ Cloud
-     Import — *Only the files I pick* (default) vs *Anything Google Meet made*
-     — each quoting Google's own consent sentence verbatim, on the same
-     recognition argument that governs the MCP pane's macOS-dialog quote. Not
-     a first-run question: nobody can answer it before feeling the cost. The
-     narrow option stays the default because a Workspace admin can block
-     restricted scopes outright, so it has to keep working on a client tenant
-     regardless of what we prefer. Unmeasured and flagged as such: what a
-     blocked tenant actually does, and whether `prompt=consent` is genuinely
-     required by the one-pick flow.
+     - **DECIDED: we stay on `drive.file`.** Bristlenose will not carry a
+       recurring security assessment to save a click. That price is a footnote
+       on an enterprise line item and a material share of an indie
+       developer's income — the same number is not the same decision at the
+       two scales. So the restricted scopes are **out, not deferred**, unless
+       the exemption question above comes back "no assessment required", which
+       costs nothing to ask and is the only thing that could revive them.
+     Which makes the free fixes the whole answer rather than a first step. The
+     steady state they reach: first import of a study asks once, covering every
+     recording in the listing; later imports of those recordings ask **nothing**;
+     recordings appearing afterwards ask once, for the new ones only. That is a
+     good product on a non-sensitive scope with no verification and no annual
+     anything. **It rests on one unmeasured fact — whether a `drive.file` grant
+     persists server-side so a stored refresh token keeps reading a
+     previously-picked file.** Measure that first; it decides whether the
+     sentence above is a promise or a hope. Second unmeasured item, equally
+     cheap: whether `prompt=consent` is genuinely required by the one-pick flow
+     (the code comment lumps it in with `trigger_onepick`) — if not, deleting
+     it is free. The two-way Settings radio stays drawn in the mockup as parked
+     work, not next work.
   5. **Cancel is batch-only.** Wants a per-row cancel beside each progress bar,
      and the whole-batch cancel to be reachable from the sidebar ring once
      that exists (item 2 of the previous entry).

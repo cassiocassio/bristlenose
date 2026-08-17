@@ -215,9 +215,35 @@ restricted scope buys <b>one click</b>. The ceremony is not really the consent �
 we make the researcher choose the same files twice. Fix that and the scope question gets
 much less urgent, and can be decided on its merits rather than under duress.</p>
 
-<h2>4. The choice, if we still want it</h2>
+<h2>4. Decided: we stay on <code>drive.file</code></h2>
+
+<div class="ask" style="border-color:var(--warn)">
+<b>Settled 17 Aug 2026.</b> Bristlenose will not buy a recurring security assessment to
+save a click. That pricing is a footnote on an enterprise line item and a material share
+of an indie developer’s income; the two are not the same decision wearing different
+numbers. <b>So the restricted scopes are out — not deferred, out</b> — unless the
+exemption question below comes back “no assessment required”, which costs nothing to ask.
+<br><br>
+<b>Which makes section 3 the entire answer rather than a first step.</b> The scope was
+never the problem. Three implementation gaps were, and none of them needs Google’s
+permission to fix.
+</div>
+
+<p class="why good"><b>What the steady state looks like once they are fixed.</b> First
+import of a study: one grant, covering every recording in the listing. Every subsequent
+import of those recordings: <b>nothing asked at all</b>. New recordings appearing later:
+one grant, covering the new ones only. That is a perfectly good product — and it is
+reachable with a non-sensitive scope, no verification, and no annual anything.</p>
+
+<p class="why"><b>The one number that decides whether that is true</b> is whether a
+<code>drive.file</code> grant persists server-side at Google, so a stored refresh token
+keeps reading a previously-picked file indefinitely. If it does, the above holds. If it
+expires, the ceiling is lower and we should know that before promising it. <b>Unmeasured
+— and the first thing to measure.</b></p>
+
+<h3 style="margin-top:34px">Parked: the choice, if the exemption question ever unblocks it</h3>
 <p class="sub">Settings ▸ Cloud Import. Not a first-run question — nobody can answer this
-before they have felt the cost.</p>
+before they have felt the cost. Drawn because it is cheap to keep, not because it is next.</p>
 
 <div class="pane">
   <div class="bar">
@@ -278,19 +304,25 @@ Google will say.</p>
   </div>
 </div>
 
-<h2>5. What has to be true before this ships</h2>
+<h2>5. What is actually next</h2>
 <div class="t"><table>
-<tr><th>Gate</th><th>State</th></tr>
-<tr><td>The free fixes land, and the click count is re-counted against a live account</td><td>not started</td></tr>
-<tr><td><b>Whether the CASA assessment applies to us at all</b> — the third-party-server clause, against a client-only app whose pipeline nonetheless calls a cloud LLM</td><td><b>unresolved</b> — ask Google, don’t infer. Decides whether the row below is £0 or £/year forever</td></tr>
-<tr><td>If it applies: assessment budgeted, passed, and re-passed every 12 months</td><td>not started — developer pays the assessor directly</td></tr>
-<tr><td>Google OAuth verification for a restricted scope</td><td>not started — required either way</td></tr>
-<tr><td>Behaviour when a Workspace admin blocks the restricted scope</td><td><b>unmeasured</b> — needs a specimen, not reasoning</td></tr>
-<tr><td>Whether <code>prompt=consent</code> is genuinely required by the one-pick flow</td><td><b>unmeasured</b> — the code comment lumps it with <code>trigger_onepick</code></td></tr>
+<tr><th>Gate</th><th>Costs</th><th>State</th></tr>
+<tr><td><b>Does a <code>drive.file</code> grant persist server-side?</b> Decides whether “ask once per recording, ever” is real</td><td>nothing — one live test</td><td><b>unmeasured — do this first</b></td></tr>
+<tr><td>Whether <code>prompt=consent</code> is genuinely required by the one-pick flow</td><td>nothing — delete it and watch</td><td><b>unmeasured</b> — the code comment lumps it with <code>trigger_onepick</code></td></tr>
+<tr><td>The three free fixes land, and the journey is re-counted against a live account</td><td>engineering only</td><td>not started</td></tr>
+<tr><td>Ask Google whether the assessment applies to a client-only app at all</td><td>nothing — an email</td><td>unresolved. The only thing that could revive the parked radio</td></tr>
+<tr><td class="strike">CASA assessment, annually</td><td class="strike">$500–$4,500/yr, developer-paid</td><td><b>declined</b> — not a cost this product carries</td></tr>
+<tr><td class="strike">OAuth verification for a restricted scope</td><td class="strike">time + the above</td><td><b>not pursued</b>, consequent on the row above</td></tr>
 </table></div>
 
-<p class="why bad"><b>The last two are marked unmeasured on purpose.</b> This feature has
-already had six reasoned-not-measured claims turn out wrong on contact with a real tenant.
-Neither belongs in a plan as an assumption.</p>
+<p class="why good"><b>Every live row costs nothing but attention.</b> That is the useful
+outcome of this exercise: the expensive option turned out to be both unaffordable and
+nearly pointless — worth one click once the free work is done — and the free work was
+sitting there the whole time being mistaken for a stepping stone.</p>
+
+<p class="why bad"><b>The two “unmeasured” rows are marked so on purpose.</b> This feature
+has already had six reasoned-not-measured claims turn out wrong on contact with a real
+tenant. Neither belongs in a plan as an assumption, and both are answerable in an
+afternoon.</p>
 
 </div>

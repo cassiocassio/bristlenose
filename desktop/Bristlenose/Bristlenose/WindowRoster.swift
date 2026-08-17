@@ -29,13 +29,31 @@ final class WindowRoster: ObservableObject {
     /// change after it was handed out — see `compact`.
     @Published private(set) var assignments: [UUID: Int] = [:]
 
-    /// What makes two windows duplicates for titling: the same study on the
-    /// same lens. Different lenses already read differently in the Window menu,
-    /// because the subtitle carries the per-lens count.
+    /// What makes two windows duplicates: **the same row in the Window menu**.
+    ///
+    /// AppKit renders each row as `Title (Subtitle)`, so two windows collide
+    /// exactly when the project *and* the subtitle match — which is the only
+    /// time a number is telling the reader anything.
+    ///
+    /// This was keyed on the **lens** until 17 Aug 2026, on the stated
+    /// assumption that "different lenses already read differently, because the
+    /// subtitle carries the per-lens count". That assumption is false, and the
+    /// first six-window run showed it: `countSubtitle` returns the session count
+    /// for Project, for Sessions *and* for a window with no lens yet, so three
+    /// windows drew `IKEA with uxfriends (1 Session · 18m)` three times — each
+    /// alone in its own lens group, each therefore unnumbered. Keying on the
+    /// rendered subtitle makes the collision test the same thing the reader is
+    /// looking at, rather than a proxy for it.
+    ///
+    /// The folder disambiguator is not part of the key: it is derived from the
+    /// project, and the key is already project-scoped, so two windows on one
+    /// study always share it.
     struct Group: Hashable {
         let projectID: UUID
-        /// `Tab.rawValue`, or nil before the report has said which lens it is on.
-        let lens: String?
+        /// The resting per-lens subtitle — `countSubtitle`, deliberately not the
+        /// live run narration. A run's stage and ETA change every second, and
+        /// keying on them would reshuffle numbers throughout a run.
+        let subtitle: String
     }
 
     /// Ordinals in use per group. Gaps are kept while the group has members —

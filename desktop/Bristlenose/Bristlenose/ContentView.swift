@@ -8,17 +8,38 @@ import os
 /// all list rows. Uses NSEvent local monitor + NSTableView.row(at:) so it
 /// doesn't conflict with List's selection gesture (no SwiftUI gesture needed).
 /// The monitor is installed once and removed in deinit — no leak risk.
+///
+/// **Scoped to its own window.** `addLocalMonitorForEvents` is *app*-wide: every
+/// window installs one, and every one of them sees every click anywhere in the
+/// app. Each then called its **own** `deselect`, so one click in one window's
+/// empty sidebar area deselected every open window — which showed up as going to
+/// the welcome screen putting all six windows on Welcome at once (reported
+/// 17 Aug 2026, the first multi-window run). Harmless while there was only ever
+/// one window; total the moment there are two.
 private struct SidebarDeselectMonitor: NSViewRepresentable {
     let deselect: () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(deselect: deselect) }
-    func makeNSView(context: Context) -> NSView { NSView() }
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        // How the coordinator learns which window it belongs to. Read at click
+        // time, not now: `view.window` is nil until SwiftUI inserts it.
+        context.coordinator.host = view
+        return view
+    }
+
     func updateNSView(_ view: NSView, context: Context) {
         context.coordinator.deselect = deselect
+        context.coordinator.host = view
     }
 
     final class Coordinator {
         var deselect: () -> Void
+        /// The view this monitor was installed for — its window is the only one
+        /// whose clicks count. Weak: the coordinator outlives nothing, but the
+        /// view is owned by the view hierarchy.
+        weak var host: NSView?
         private var monitor: Any?
 
         init(deselect: @escaping () -> Void) {
@@ -31,6 +52,8 @@ private struct SidebarDeselectMonitor: NSViewRepresentable {
 
         private func handle(_ event: NSEvent) {
             guard let window = event.window,
+                  // Our window, or none of our business — see the type doc.
+                  window === host?.window,
                   let tableView = Self.sidebarTableView(in: window) else { return }
             let point = tableView.convert(event.locationInWindow, from: nil)
             // Only act when click is inside the table view but below all rows.
@@ -280,12 +303,16 @@ struct ContentView: View {
         }
     }
 
-    /// Which set of windows this one is a duplicate of, for titling. Nil on the
-    /// welcome screen — an unselected window shows "Welcome", and two of those
-    /// are not worth numbering.
+    /// Which set of windows this one is a duplicate of, for titling — keyed on
+    /// the **menu row**, not the lens. Nil on the welcome screen: an unselected
+    /// window shows "Welcome", and two of those are not worth numbering.
+    ///
+    /// `countSubtitle` rather than `activeTab`, because Project, Sessions and a
+    /// not-yet-reported lens all render the same session count — see
+    /// `WindowRoster.Group`.
     private var windowGroup: WindowRoster.Group? {
         guard let id = selectedProject?.id else { return nil }
-        return WindowRoster.Group(projectID: id, lens: bridgeHandler.activeTab?.rawValue)
+        return WindowRoster.Group(projectID: id, subtitle: countSubtitle)
     }
 
     /// The window's title: the project's name, or "Welcome" with none selected,

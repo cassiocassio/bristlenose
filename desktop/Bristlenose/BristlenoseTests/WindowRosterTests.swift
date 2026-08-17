@@ -24,8 +24,10 @@ struct WindowRosterTests {
     private let study = UUID()
     private let other = UUID()
 
-    private func quotes(_ id: UUID) -> WindowRoster.Group {
-        WindowRoster.Group(projectID: id, lens: "quotes")
+    /// Windows whose Window-menu rows read the same — the collision the ordinal
+    /// exists to break. Keyed on the rendered subtitle, not the lens.
+    private func row(_ id: UUID, _ subtitle: String = "20 Quotes") -> WindowRoster.Group {
+        WindowRoster.Group(projectID: id, subtitle: subtitle)
     }
 
     // MARK: - Assignment
@@ -33,7 +35,7 @@ struct WindowRosterTests {
     @Test("the first window on a lens takes no suffix")
     func firstIsUnsuffixed() {
         let roster = freshRoster()
-        let ordinal = roster.claim(windowID: UUID(), showing: quotes(study))
+        let ordinal = roster.claim(windowID: UUID(), showing: row(study))
         #expect(ordinal == 1)
         #expect(WindowRoster.suffix(for: ordinal) == "")
     }
@@ -41,21 +43,20 @@ struct WindowRosterTests {
     @Test("a second window on the same lens is numbered")
     func secondIsNumbered() {
         let roster = freshRoster()
-        _ = roster.claim(windowID: UUID(), showing: quotes(study))
-        let second = roster.claim(windowID: UUID(), showing: quotes(study))
+        _ = roster.claim(windowID: UUID(), showing: row(study))
+        let second = roster.claim(windowID: UUID(), showing: row(study))
         #expect(second == 2)
         #expect(WindowRoster.suffix(for: second) == " 2")
     }
 
-    @Test("different lenses of one study don't collide")
-    func lensesAreSeparateGroups() {
+    @Test("windows whose rows differ don't collide")
+    func differentSubtitlesAreSeparateGroups() {
         let roster = freshRoster()
-        let onQuotes = roster.claim(windowID: UUID(), showing: quotes(study))
+        let onQuotes = roster.claim(windowID: UUID(), showing: row(study))
         let onCodebook = roster.claim(
-            windowID: UUID(),
-            showing: WindowRoster.Group(projectID: study, lens: "codebook"))
-        // Their subtitles already differ (each carries its own lens count), so
-        // there is nothing to disambiguate and neither takes a suffix.
+            windowID: UUID(), showing: row(study, "4 Codebooks · 60 Tags"))
+        // Different rows in the menu, so there is nothing to disambiguate and
+        // neither takes a suffix.
         #expect(onQuotes == 1)
         #expect(onCodebook == 1)
     }
@@ -63,8 +64,8 @@ struct WindowRosterTests {
     @Test("different studies don't collide")
     func studiesAreSeparateGroups() {
         let roster = freshRoster()
-        #expect(roster.claim(windowID: UUID(), showing: quotes(study)) == 1)
-        #expect(roster.claim(windowID: UUID(), showing: quotes(other)) == 1)
+        #expect(roster.claim(windowID: UUID(), showing: row(study)) == 1)
+        #expect(roster.claim(windowID: UUID(), showing: row(other)) == 1)
     }
 
     @Test("the welcome screen isn't numbered")
@@ -80,9 +81,9 @@ struct WindowRosterTests {
     func gapIsKept() {
         let roster = freshRoster()
         let a = UUID(), b = UUID(), c = UUID()
-        #expect(roster.claim(windowID: a, showing: quotes(study)) == 1)
-        #expect(roster.claim(windowID: b, showing: quotes(study)) == 2)
-        #expect(roster.claim(windowID: c, showing: quotes(study)) == 3)
+        #expect(roster.claim(windowID: a, showing: row(study)) == 1)
+        #expect(roster.claim(windowID: b, showing: row(study)) == 2)
+        #expect(roster.claim(windowID: c, showing: row(study)) == 3)
 
         roster.release(windowID: b)
 
@@ -96,12 +97,12 @@ struct WindowRosterTests {
     func gapIsRefilled() {
         let roster = freshRoster()
         let a = UUID(), b = UUID(), c = UUID()
-        _ = roster.claim(windowID: a, showing: quotes(study))
-        _ = roster.claim(windowID: b, showing: quotes(study))
-        _ = roster.claim(windowID: c, showing: quotes(study))
+        _ = roster.claim(windowID: a, showing: row(study))
+        _ = roster.claim(windowID: b, showing: row(study))
+        _ = roster.claim(windowID: c, showing: row(study))
         roster.release(windowID: b)
 
-        #expect(roster.claim(windowID: UUID(), showing: quotes(study)) == 2,
+        #expect(roster.claim(windowID: UUID(), showing: row(study)) == 2,
                 "lowest free, not next-highest — otherwise ordinals climb forever")
     }
 
@@ -109,8 +110,8 @@ struct WindowRosterTests {
     func lastOneStandingIsUnnumbered() {
         let roster = freshRoster()
         let a = UUID(), b = UUID()
-        _ = roster.claim(windowID: a, showing: quotes(study))
-        _ = roster.claim(windowID: b, showing: quotes(study))
+        _ = roster.claim(windowID: a, showing: row(study))
+        _ = roster.claim(windowID: b, showing: row(study))
 
         roster.release(windowID: a)
 
@@ -128,13 +129,12 @@ struct WindowRosterTests {
         // anywhere.
         let roster = freshRoster()
         let windows = (0..<4).map { _ in UUID() }
-        let project = WindowRoster.Group(projectID: study, lens: "project")
+        let project = row(study, "1 Session · 18m")
         for w in windows { _ = roster.claim(windowID: w, showing: project) }
         #expect(roster.ordinal(for: windows[3]) == 4)
 
-        for (i, lens) in ["sessions", "quotes", "codebook"].enumerated() {
-            _ = roster.claim(windowID: windows[i],
-                             showing: WindowRoster.Group(projectID: study, lens: lens))
+        for (i, subtitle) in ["20 Quotes", "6 Signals", "4 Codebooks · 60 Tags"].enumerated() {
+            _ = roster.claim(windowID: windows[i], showing: row(study, subtitle))
         }
 
         #expect(roster.ordinal(for: windows[3]) == 1, "alone on Project — no suffix")
@@ -146,9 +146,9 @@ struct WindowRosterTests {
         // held, so nothing moves and the third window keeps its 3.
         let roster = freshRoster()
         let a = UUID(), b = UUID(), c = UUID()
-        _ = roster.claim(windowID: a, showing: quotes(study))
-        _ = roster.claim(windowID: b, showing: quotes(study))
-        _ = roster.claim(windowID: c, showing: quotes(study))
+        _ = roster.claim(windowID: a, showing: row(study))
+        _ = roster.claim(windowID: b, showing: row(study))
+        _ = roster.claim(windowID: c, showing: row(study))
 
         roster.release(windowID: b)
 
@@ -164,12 +164,12 @@ struct WindowRosterTests {
         // new window starts with no selection, and used to stop the serve on
         // everyone's behalf — which reset every other window to the dashboard.
         let roster = freshRoster()
-        let showing = UUID(), opening = UUID()
-        _ = roster.claim(windowID: showing, showing: quotes(study))
+        let visible = UUID(), opening = UUID()
+        _ = roster.claim(windowID: visible, showing: row(study))
         _ = roster.claim(windowID: opening, showing: nil)
 
         #expect(roster.anyProjectShown(excluding: opening))
-        #expect(!roster.anyProjectShown(excluding: showing),
+        #expect(!roster.anyProjectShown(excluding: visible),
                 "the only project window may stop the serve")
     }
 
@@ -185,15 +185,15 @@ struct WindowRosterTests {
     func switchingLensMovesGroups() {
         let roster = freshRoster()
         let a = UUID(), b = UUID()
-        _ = roster.claim(windowID: a, showing: quotes(study))
-        #expect(roster.claim(windowID: b, showing: quotes(study)) == 2)
+        _ = roster.claim(windowID: a, showing: row(study))
+        #expect(roster.claim(windowID: b, showing: row(study)) == 2)
 
         // b moves to Codebook — it is no longer a duplicate of a, so it drops
         // its suffix, and its old number is free for the next Quotes window.
         #expect(roster.claim(
             windowID: b,
-            showing: WindowRoster.Group(projectID: study, lens: "codebook")) == 1)
-        #expect(roster.claim(windowID: UUID(), showing: quotes(study)) == 2)
+            showing: row(study, "4 Codebooks · 60 Tags")) == 1)
+        #expect(roster.claim(windowID: UUID(), showing: row(study)) == 2)
     }
 
     // MARK: - Is anything open?
@@ -204,7 +204,7 @@ struct WindowRosterTests {
         #expect(!roster.hasProjectWindow, "no windows — a Dock click should open one")
 
         let a = UUID()
-        _ = roster.claim(windowID: a, showing: quotes(study))
+        _ = roster.claim(windowID: a, showing: row(study))
         #expect(roster.hasProjectWindow)
 
         // The welcome screen still counts: it IS a project window, just an
@@ -216,5 +216,21 @@ struct WindowRosterTests {
         roster.release(windowID: a)
         roster.release(windowID: b)
         #expect(!roster.hasProjectWindow)
+    }
+
+    @Test("Project and Sessions collide, because they draw the same row")
+    func sameSubtitleDifferentLensStillCollides() {
+        // The bug the first six-window run drew. `countSubtitle` returns the
+        // session count for Project, for Sessions AND for a window with no lens
+        // yet — so three windows read `IKEA with uxfriends (1 Session · 18m)`.
+        // Keyed on the lens they were three separate groups, each unnumbered,
+        // and the menu showed the same row three times.
+        let roster = freshRoster()
+        let onProject = UUID(), onSessions = UUID(), onTranscript = UUID()
+        let sameRow = "1 Session · 18m"
+
+        #expect(roster.claim(windowID: onProject, showing: row(study, sameRow)) == 1)
+        #expect(roster.claim(windowID: onSessions, showing: row(study, sameRow)) == 2)
+        #expect(roster.claim(windowID: onTranscript, showing: row(study, sameRow)) == 3)
     }
 }

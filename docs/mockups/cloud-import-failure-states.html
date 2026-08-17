@@ -528,6 +528,49 @@ which were asked for and did not arrive — supplies:</p>
 </table>
 </div>
 
+<h3>Do we need a hash?</h3>
+<p class="sub"><b>Not for this.</b> A hash identifies a <i>file</i>; the question is about a
+<i>recording</i>. “Did this project already receive cloud row X” is answered exactly by the record,
+with no file inspection at all — and byte-identical is only <i>evidence</i> for same-recording, never
+proof: two exports of one call can differ by a byte and be the same interview.</p>
+
+<div class="t">
+<table>
+<tr><th>Layer</th><th>Cost</th><th>Catches</th><th>Misses</th></tr>
+<tr><td class="st"><b>Row id in the record</b></td><td class="act">nothing — it is the record</td>
+  <td class="act">Exactly what we fetched, under any name. The only layer that can say <i>asked for
+  and never arrived</i>.</td>
+  <td class="act">Files that arrived by another route. A file since deleted.</td></tr>
+<tr><td class="st"><b>Size, scanned across the folder</b></td>
+  <td class="act">one directory listing, no reads</td>
+  <td class="act">A renamed file — the case in question. <b>And the more likely one:</b> a recording
+  the researcher downloaded from Drive by hand last week and dragged in, which no record can know
+  about.</td>
+  <td class="act">Two genuinely different recordings of identical byte length — possible, and a
+  false positive here costs only an un-offered re-download.</td></tr>
+<tr><td class="st"><b>Content hash</b></td>
+  <td class="act"><b>a full read of every file, every time the window opens</b></td>
+  <td class="act">Nothing size does not already catch, at this level of stakes.</td>
+  <td class="act">Same recording re-exported — differs by a byte, reads as unrelated.</td></tr>
+</table>
+</div>
+
+<p class="why good"><b>Record the hash anyway, because it is now free.</b> §3's size sweep already
+calls <code>files.get?fields=size</code>; adding <code>md5Checksum</code> is the same round trip. The
+adapter's own comment says verification settled for size + magic bytes because “fetching metadata
+purely to hash would cost a round trip per row” — that objection expires the moment the sweep exists.
+So <code>DownloadVerdict.hashMismatch</code>, which is written and unreachable, becomes reachable at
+zero cost, and the record carries a hash for the day a question is worth a full read.</p>
+
+<p class="why"><b>The rule: hash to verify what just arrived, size to recognise what is already
+there.</b> One is a check on bytes we are receiving anyway; the other must not cost a gigabyte of
+reading every time someone opens a window.</p>
+
+<p class="why bad"><b>And the harm being prevented is not wasted bandwidth.</b> A duplicate import
+lands a second copy under the canonical name, the pipeline scans the folder, and one interview
+becomes two sessions with two participants — the same corruption as the Zoom rendition case, arriving
+by a different door.</p>
+
 <p class="why"><b>And it belongs in the project, not in the app.</b> The project folder is what the
 researcher owns, moves between machines and hands to a colleague — the same reasoning that puts
 re-identification keys under <code>.bristlenose/</code> rather than in preferences. A record kept in

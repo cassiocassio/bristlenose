@@ -1,0 +1,496 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud import — every way it goes wrong, and what the researcher can do</title>
+<style>
+:root{
+  --bg:#f2f2f7; --page:#fff; --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+  --line:#d8d8dc; --hairline:#e6e6ea; --grouphdr:#f0f0f3;
+  --accent:#007aff; --warn:#c9500f; --good:#1a7f37; --dead:#8e8e93;
+  --shadow:0 12px 40px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.10);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+    --line:#3a3a3d; --hairline:#2c2c2f; --grouphdr:#28282b;
+    --accent:#0a84ff; --warn:#ff9f45; --good:#4ac26b; --dead:#78787d;
+    --shadow:0 12px 40px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;padding:40px 24px 90px;
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1280px;margin:0 auto}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:15px;font-weight:700;margin:38px 0 10px}
+h3{font-size:12.5px;font-weight:700;margin:24px 0 8px;color:var(--dim)}
+.sub{color:var(--dim);margin:0 0 10px;max-width:88ch}
+.meta{color:var(--faint);font-size:12px;margin:0 0 26px}
+.why{border-left:2px solid var(--accent);padding:2px 0 2px 12px;margin:14px 0 0;
+     color:var(--dim);font-size:12.5px;max-width:94ch}
+.why b{color:var(--ink);font-weight:600}
+.why.bad{border-color:var(--warn)}
+.why.good{border-color:var(--good)}
+.ask{background:var(--grouphdr);border:.5px solid var(--line);border-radius:8px;
+     padding:13px 15px;margin:0 0 26px;font-size:12.5px;color:var(--dim);max-width:100ch}
+.ask b{color:var(--ink)}
+code{font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+     background:var(--grouphdr);border-radius:4px;padding:1px 5px}
+
+.t{background:var(--page);border:.5px solid var(--line);border-radius:10px;
+   box-shadow:var(--shadow);overflow:hidden;margin-top:8px}
+.t table{border-collapse:collapse;width:100%;font-size:12px}
+.t th{text-align:left;font-size:10.5px;letter-spacing:.03em;text-transform:uppercase;
+      color:var(--faint);font-weight:700;padding:9px 12px;background:var(--grouphdr);
+      border-bottom:.5px solid var(--line);white-space:nowrap}
+.t td{padding:8px 12px;border-bottom:.5px solid var(--hairline);vertical-align:top}
+.t tr:last-child td{border-bottom:0}
+.t td.st{white-space:nowrap}
+.t td.st code{background:transparent;padding:0;color:var(--dim)}
+.t td.words{font-weight:600;white-space:nowrap}
+.t td.act{color:var(--dim)}
+.t tr.gap td{background:color-mix(in srgb,var(--warn) 9%,transparent)}
+.pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.02em;
+      padding:1px 6px;border-radius:4px;white-space:nowrap;text-transform:uppercase}
+.pill.win{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.pill.row{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.pill.bar{background:color-mix(in srgb,var(--dead) 20%,transparent);color:var(--dim)}
+.pill.non{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.none{color:var(--faint);font-style:italic;font-weight:400}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0 0;font-size:11.5px;color:var(--dim)}
+</style>
+
+<div class="wrap">
+
+<h1>Every way it goes wrong</h1>
+<p class="sub">A pre-mortem over the whole import path, from sign-in to a window the researcher
+closed an hour ago. For each state: where it surfaces, the exact words, and what they can actually
+do about it. Enumerated from the shipped types — <code>GoogleAPIOutcome</code>,
+<code>TeamsAPIOutcome</code>, <code>ArtifactAvailability</code>, <code>ImportRowState</code>,
+<code>ListOutcome</code>, <code>FetchOutcome</code>, <code>DownloadVerdict</code> — not from
+imagination, so the gaps below are real gaps rather than unwritten cases.</p>
+<p class="meta">Design artefact · 17 Aug 2026 · sibling of
+<code>cloud-import-sidebar-progress.html</code> · relates to
+<code>docs/design-cloud-import.md</code> §6</p>
+
+<div class="ask">
+<b>The finding, before the tables: the vocabulary is nearly complete, and its lifetime is the bug.</b>
+Fourteen row states and six blanket titles already exist and are localised into 21 languages. Almost
+every state below already has words. What almost none of them have is <b>a life after the import
+window closes</b> — and the researcher closes it, because it looks like it is working. Nine of the
+rows below are marked ⚠, and eight of those nine are the same defect wearing different clothes.
+</div>
+
+<div class="legend">
+  <span><span class="pill win">window</span> the import window</span>
+  <span><span class="pill row">row</span> the project's sidebar row</span>
+  <span><span class="pill bar">footer</span> the window's arithmetic line</span>
+  <span><span class="pill non">nowhere</span> not currently surfaced</span>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>1 — Before a single row exists</h2>
+<p class="sub">Sign-in and listing. These are <b>blanket</b> states: the window has nothing to show,
+so it says one thing well instead of forty rows of nothing.</p>
+
+<div class="t">
+<table>
+<tr><th>State</th><th>Where</th><th>What it says</th><th>What they can do</th></tr>
+
+<tr><td class="st"><code>signedOut</code></td><td><span class="pill win">window</span></td>
+  <td class="words">Not signed in</td><td class="act">Sign in — the only control on screen.</td></tr>
+
+<tr><td class="st"><code>needsReauthentication</code><br><span class="none">Google + Teams</span></td>
+  <td><span class="pill win">window</span></td>
+  <td class="words">Sign-in didn't finish</td>
+  <td class="act">Sign in again. <code>RetryPolicy.onceAfterReauthentication</code> — once, then stop,
+  because a refreshed token that fails identically is a loop.</td></tr>
+
+<tr><td class="st"><code>scopeNotGranted(scope:)</code></td><td><span class="pill win">window</span></td>
+  <td class="words">Bristlenose can't see your recordings</td>
+  <td class="act">Re-consent, <b>naming the one missing permission</b> — Google's consent screen lets
+  you tick scopes individually, so this is routine, not exceptional. A wrong scope name here is worse
+  than none, so <code>scopeHint</code> returns nil rather than guessing.</td></tr>
+
+<tr><td class="st"><code>notAvailableOnThisPlan</code><br><span class="none">personal Google</span></td>
+  <td><span class="pill win">window</span></td>
+  <td class="words">This account can't record Meet calls</td>
+  <td class="act"><b>Nothing, and say so.</b> No amount of consent fixes it. Drag-drop from Finder is
+  the whole answer and must be named here.</td></tr>
+
+<tr><td class="st"><code>accountNotLicensed</code><br><span class="none">Teams only</span></td>
+  <td><span class="pill win">window</span></td>
+  <td class="words">Bristlenose can't see your recordings</td>
+  <td class="act">Their IT. Distinct from Google's plan case in remedy — a licence can be granted,
+  a consumer tier cannot.</td></tr>
+
+<tr><td class="st"><code>rateLimited(retryAfter:)</code></td><td><span class="pill win">window</span></td>
+  <td class="words">Couldn't load your meetings</td>
+  <td class="act">Wait, then retry. <b>Never routed to a permission message</b> — Google returns quota
+  exhaustion as 403, and reading that as a permission problem sends a researcher to their IT
+  department over something that clears itself.</td></tr>
+
+<tr><td class="st"><code>transient(status:)</code> / <code>unexpected</code></td>
+  <td><span class="pill win">window</span></td>
+  <td class="words">Couldn't load your meetings</td>
+  <td class="act">Retry for transient; <code>unexpected</code> fails <b>closed</b> — an unclassifiable
+  response never earns a free retry.</td></tr>
+
+<tr class="gap"><td class="st">⚠ <code>pageCapHit</code></td>
+  <td><span class="pill bar">footer</span></td>
+  <td class="words">counts become a floor</td>
+  <td class="act">Narrow the window. <b>The list is a prefix and looks exactly like a complete one</b>
+  — this is why <code>ListOutcome</code> exists. Verify the footer actually renders the distinction
+  rather than printing a confident total.</td></tr>
+
+<tr class="gap"><td class="st">⚠ <code>harvest failure</code><br><span class="none">Meet, new</span></td>
+  <td><span class="pill win">window</span> <span class="pill bar">footer</span></td>
+  <td class="words">Unavailable, per row</td>
+  <td class="act">Retry the list. Forces every unmatched row off “Not recorded”, because
+  <b>“we couldn't look” must never render as “nobody recorded”</b> — on a mono-reason list that
+  becomes <i>None of these were recorded</i> over a month of interviews sitting in Drive.</td></tr>
+
+<tr><td class="st">Empty window, no error</td><td><span class="pill win">window</span></td>
+  <td class="words">No recordings in the last 30 days</td>
+  <td class="act">Widen the window. <b>The most dangerous response in the feature</b> — a 200 with an
+  empty list is not an error and must never be dressed as one, nor as certainty.</td></tr>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>2 — Per row, at list time</h2>
+<p class="sub">A row exists. Two independent axes decide what it says: what the platform will serve
+(<code>ArtifactAvailability</code>) and what is already on this Mac (<code>ImportRowState</code>).
+The checkbox column carries a third distinction that is easy to collapse and expensive to lose:
+<b>a dead checkbox means “there is a recording here and you cannot have it”; no checkbox means
+“there is nothing here”.</b></p>
+
+<div class="t">
+<table>
+<tr><th>State</th><th>Status column</th><th>Checkbox</th><th>What they can do</th></tr>
+
+<tr><td class="st"><code>.available</code></td><td class="none">(silent)</td>
+  <td>live</td><td class="act">Tick it. The common case says nothing, deliberately.</td></tr>
+
+<tr><td class="st"><code>.notRecorded</code></td><td class="words">Not recorded</td>
+  <td class="none">none</td>
+  <td class="act">Nothing to do — and <b>no permissions link</b>. An ordinary month of un-recorded
+  standups must never raise a permissions question.</td></tr>
+
+<tr><td class="st"><code>.notOrganiser(organiser:)</code></td><td class="words">Someone else</td>
+  <td>dead</td>
+  <td class="act"><b>Ask them</b> — the row names the person, because the real-world fix is to ping
+  them. A count would be dead weight where a name is a workflow. Never the raw address.</td></tr>
+
+<tr><td class="st"><code>.needsScope(_)</code></td><td class="words">Needs access</td>
+  <td>dead</td><td class="act">Re-consent. Being unable to look <i>is</i> the permission problem.</td></tr>
+
+<tr><td class="st"><code>.notOnThisPlan</code></td><td class="words">Needs a paid plan</td>
+  <td>dead</td><td class="act">Upgrade, or drag-drop. Only a personal account earns this.</td></tr>
+
+<tr><td class="st"><code>.unsupported</code></td><td class="words">Unavailable</td>
+  <td>dead</td><td class="act">Retry the list. Deliberately weaker than “Not recorded” — it claims
+  only what we know.</td></tr>
+
+<tr class="gap"><td class="st">⚠ <code>.notResolved</code></td><td class="words">Couldn't match</td>
+  <td class="none">none</td>
+  <td class="act"><b>No producer since the listing was inverted.</b> Strings live in 21 locales and
+  the state is unreachable. Keep it or cut it — but decide, because a state nothing can enter is a
+  promise the code no longer keeps.</td></tr>
+
+<tr><td class="st"><code>.viewOnly</code><br><span class="none">Teams tenant block</span></td>
+  <td class="words">View only</td><td class="none">none</td>
+  <td class="act"><b>Nothing, by any route.</b> The API path is blocked, and so is downloading by
+  hand — the usual “drag-drop still works” escape does not apply. An IT exemption is the only
+  remedy and the copy must say so plainly.</td></tr>
+
+<tr><td class="st"><code>.noLongerAvailable</code></td><td class="words">No longer available</td>
+  <td class="none">none</td>
+  <td class="act">Nothing. Gone between one list and the next; unrecoverable if never imported.</td></tr>
+
+<tr><td class="st"><code>.imported</code></td><td class="words">Imported</td>
+  <td>ticked + dead</td><td class="act">Nothing — you have it.</td></tr>
+
+<tr class="gap"><td class="st">⚠ <code>.imported</code> <i>this session</i></td>
+  <td class="words">✓ Imported</td><td><b>empty and live</b></td>
+  <td class="act"><b>Observed 17 Aug, real defect.</b> After a successful fetch the row shows
+  “Imported” while its checkbox draws empty and enabled — <code>localState</code> is never refreshed,
+  so <code>drawsTicked</code> reads the tick set, which was cleared. The row invites a re-download of
+  a file it just told you it has.</td></tr>
+
+<tr><td class="st"><code>.damaged</code></td><td class="words">Damaged</td>
+  <td>live</td><td class="act">Re-fetch. Present but the wrong size — the one local state that
+  genuinely wants fetching again.</td></tr>
+
+<tr><td class="st"><code>.notDownloaded(provider:)</code></td><td class="words">On iCloud</td>
+  <td>ticked + dead</td>
+  <td class="act">Materialise it in Finder. <b>Not an error</b> — a healthy file in the destination's
+  cloud, which is a different cloud from the import's.</td></tr>
+
+<tr><td class="st"><code>.driveNotConnected(volume:)</code></td><td class="words">On “Archive”</td>
+  <td>ticked + dead</td><td class="act">Plug the drive in. Naming the volume is what makes it
+  actionable.</td></tr>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>3 — At the moment of commit</h2>
+
+<div class="t">
+<table>
+<tr><th>State</th><th>Where</th><th>What it says</th><th>What they can do</th></tr>
+
+<tr><td class="st">Picker cancelled</td><td><span class="pill win">window</span></td>
+  <td class="words">Access wasn't granted.</td>
+  <td class="act">Press Import again. Reported <b>once for the batch</b>, not N times — a grant
+  failure is the batch's failure.</td></tr>
+
+<tr class="gap"><td class="st">⚠ Picker <i>deselection</i></td>
+  <td><span class="pill non">nowhere</span></td>
+  <td class="none">nothing</td>
+  <td class="act"><b>Silent shrink.</b> The code honours what was granted, not what was asked — so a
+  researcher who unticks two files inside Google's Picker gets a smaller batch and no acknowledgement.
+  The rows stay ticked, the ring's denominator is wrong, and “3 of 4” counts a file nobody
+  asked for.</td></tr>
+
+<tr class="gap"><td class="st">⚠ Not enough disk space</td>
+  <td><span class="pill non">nowhere</span> <span class="none">→ should be</span> <span class="pill win">window</span></td>
+  <td class="words">This needs 4.2 GB free…</td>
+  <td class="act">Free space, or pick a different project. <code>CloudDownloadError.insufficientSpace</code>
+  exists and fires <b>per file, mid-batch</b>; the precheck that should fire before the first byte
+  reads <code>sizeBytes</code>, nil on every Google row. The size sweep makes it possible.</td></tr>
+
+<tr><td class="st">Destination unreachable</td><td><span class="pill win">window</span></td>
+  <td class="words">—</td>
+  <td class="act">The picker no longer offers projects with no path, after a real recording was
+  published into the sandbox container root while the window said “✓ Imported”. A project whose
+  <i>lease</i> is unavailable is still offered — a known gap, not yet a refusal state.</td></tr>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>4 — During the transfer</h2>
+<p class="sub">Every one of these is verified rather than trusted, because a download that lands and
+is wrong is worse than one that fails. <code>DownloadVerdict.isRetryable</code> already decides which
+offer a Retry.</p>
+
+<div class="t">
+<table>
+<tr><th>Verdict</th><th>Retryable</th><th>What went wrong</th><th>What they can do</th></tr>
+
+<tr><td class="st"><code>.shortRead(expected:received:)</code></td>
+  <td style="color:var(--good);font-weight:650">yes</td>
+  <td class="act">Connection dropped mid-file. The commonest real failure.</td>
+  <td class="act">Retry — the window keeps failed rows ticked so Retry has something to act on.</td></tr>
+
+<tr><td class="st"><code>.badStatus(_)</code></td>
+  <td style="color:var(--good);font-weight:650">yes</td>
+  <td class="act">Server said no, transiently.</td><td class="act">Retry.</td></tr>
+
+<tr><td class="st"><code>.notMedia(contentType:)</code></td>
+  <td style="color:var(--warn);font-weight:650">no</td>
+  <td class="act">JSON where a video should be — <code>alt=media</code> missing would land a perfectly
+  valid file description on disk named <code>.mp4</code>.</td>
+  <td class="act">Nothing; a bug on our side. Must be reported as such, not as a network fault.</td></tr>
+
+<tr><td class="st"><code>.sizeMismatch</code> / <code>.hashMismatch</code></td>
+  <td style="color:var(--warn);font-weight:650">no</td>
+  <td class="act">Arrived complete and wrong.</td>
+  <td class="act">Nothing automatic. <b>The file is never published</b> — a truncated MP4 still has
+  <code>ftyp</code> in its first eight bytes, which is why magic-bytes alone was never enough.</td></tr>
+
+<tr><td class="st"><code>.wrongFormat(detected:)</code></td>
+  <td style="color:var(--warn);font-weight:650">no</td>
+  <td class="act">A real media file of the wrong kind.</td><td class="act">Nothing.</td></tr>
+
+<tr><td class="st"><code>.cancelled</code></td><td class="none">n/a</td>
+  <td class="act"><b>A decision, not a fault.</b> <code>URLError(.cancelled)</code> used to fall
+  through to the generic catch and be recorded as a failure — so the terminus counted the user's own
+  choice as a fault and offered Retry for rows they had deliberately abandoned.</td>
+  <td class="act">Nothing is owed. Say nothing.</td></tr>
+
+<tr class="gap"><td class="st">⚠ Destination vanishes mid-batch</td><td class="none">—</td>
+  <td class="act">Volume unmounted, folder moved. Every remaining publish fails.</td>
+  <td class="act">Should stop the batch and report the <b>project</b> as unreachable — one cause, not
+  N download failures. Untested.</td></tr>
+
+<tr class="gap"><td class="st">⚠ Another platform chosen<br>while a batch runs</td><td class="none">—</td>
+  <td class="act"><code>openLive</code> replaces <code>store</code> unconditionally. The running
+  fetch task holds its store strongly, so <b>it keeps downloading — invisibly, into a project the
+  new window knows nothing about, with no way to see it or stop it.</b> Reachable today in three
+  clicks.</td>
+  <td class="act">Nothing, because nothing tells them. §9 is the fix.</td></tr>
+
+<tr class="gap"><td class="st">⚠ App quits mid-batch</td><td class="none">—</td>
+  <td class="act">Ordinary <code>URLSession</code>, not a background one, so the transfers die.
+  <code>.part</code> files remain and <b>nothing anywhere remembers a batch was in flight</b>.</td>
+  <td class="act">Nothing, and nothing is said. Same shape as the stranded-run problem the pipeline's
+  event log was built to fix, and it wants the same answer: write the batch's intent somewhere
+  durable before the first byte.</td></tr>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>5 — After the batch, while the window is still open</h2>
+
+<div class="t">
+<table>
+<tr><th>State</th><th>Where</th><th>What it says</th><th>What they can do</th></tr>
+<tr><td class="st">All imported</td><td><span class="pill bar">footer</span></td>
+  <td class="words">5 imported</td><td class="act">Close it. Analysis starts on its own.</td></tr>
+<tr><td class="st">Some failed</td><td><span class="pill bar">footer</span></td>
+  <td class="words">3 imported · 2 failed</td>
+  <td class="act"><b>Retry failed</b> — the primary button changes verb, and the failed rows stayed
+  ticked precisely so it has something to act on.</td></tr>
+<tr><td class="st">Stopped</td><td><span class="pill win">window</span></td>
+  <td class="words">Stopped</td><td class="act">Re-tick and import again. No apology.</td></tr>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>6 — After the window closes. This is the hole.</h2>
+<p class="sub">Everything above lives in the window. The researcher closes it — <b>because it looks
+like it is working</b> — and the entire vocabulary goes with it. What remains is a project row that
+knows only what is on disk.</p>
+
+<div class="t">
+<table>
+<tr><th>What happened</th><th>Where it lives now</th><th>What the row shows</th><th>What is owed</th></tr>
+
+<tr class="gap"><td class="st">⚠ Two of five failed</td>
+  <td class="act"><code>store.outcomes</code>, in memory</td>
+  <td class="none">nothing</td>
+  <td class="act"><b>A shortfall that survives the window</b>, and a route back. The Drive file ids
+  are still held, so retrying needs no re-list.</td></tr>
+
+<tr class="gap"><td class="st">⚠ The batch is still running</td>
+  <td class="act"><code>store.progress</code>, in memory</td>
+  <td class="none">nothing</td>
+  <td class="act">The ring, and <b>“3 of 4”</b>. Which is the whole of the sibling document.</td></tr>
+
+<tr class="gap"><td class="st">⚠ It finished an hour ago, short</td>
+  <td class="act">nowhere — the store is per-window state</td>
+  <td class="none">nothing</td>
+  <td class="act">The researcher sees a finished report over three interviews and <b>no signal that a
+  fourth exists in the cloud and never came down</b>. This feature's own failure mode — a shorter set
+  that reads as complete — arriving after the window built to prevent it was dismissed.</td></tr>
+
+<tr class="gap"><td class="st">⚠ They quit and relaunched</td>
+  <td class="act">nowhere</td>
+  <td class="none">nothing</td>
+  <td class="act">Even the memory of the shortfall is gone. Only durable state fixes this.</td></tr>
+</table>
+</div>
+
+<p class="why bad"><b>Eight of the nine ⚠ rows in this document are one defect.</b> Not missing
+error handling — the handling is unusually complete — but error handling with the lifetime of a
+window that the design actively encourages people to close.</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>7 — What each platform can send that the others cannot</h2>
+
+<div class="t">
+<table>
+<tr><th>Platform</th><th>Only there</th><th>Consequence</th></tr>
+
+<tr><td class="st"><b>Meet</b></td>
+  <td class="act">Consumer accounts that <i>can</i> record (One Premium / AI Pro) but are invisible to
+  the Meet API, which serves Workspace-hosted meetings only. Conference records expire after 30 days
+  while the Drive file lives on. Sizes unknown before the per-file Picker grant.</td>
+  <td class="act">A paying researcher reachable by calendar + Picker and invisible to the artifact
+  door. And <b>a window wider than 30 days reports “Not recorded” for meetings that were</b> —
+  pre-existing, unchanged by the inversion, and now cheap to detect since the oldest record returned
+  is one readable number.</td></tr>
+
+<tr><td class="st"><b>Teams</b></td>
+  <td class="act">The tenant Block-download policy: browser-only access with, verbatim, “no ability to
+  download or sync files or access them through apps”. Channel meetings can land in a
+  <i>View only</i> folder where even the organiser is view-only.</td>
+  <td class="act"><b>The only state in the feature with no remedy and no manual fallback.</b> It needs
+  a licence a regulated client buys — which means it is likeliest exactly where the recordings matter
+  most. Say it plainly rather than let a cohort call discover it.</td></tr>
+
+<tr><td class="st"><b>Zoom</b><br><span class="none">parked behind a flag</span></td>
+  <td class="act">Cloud recording switched off for the account — a string already exists for it. And
+  <b>renditions</b>: one session served as speaker view, gallery view, shared screen, audio only.</td>
+  <td class="act">The rendition case is the dangerous one and it is <b>the same shape as Meet's
+  siblings with the opposite meaning</b>: two Meet children are two interviews; four Zoom children
+  are one interview four times. Ticking them all yields 45 minutes analysed as four participants.
+  <code>CloudImportOutline.Kind</code> is an enum so a <code>.rendition</code> case would make the
+  compiler ask at every switch.</td></tr>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>9 — Reopening mid-batch: the window is a monitor, not a chooser</h2>
+<p class="sub">Reopening stays in <b>File ▸ Import</b>, which keeps the existing convention and reads
+the way the researcher thinks — “my Teams import”, not “the import window”. While a batch is in
+flight the platform that owns it is the <b>only enabled item</b>; the other two dim, which is how the
+menu explains the one-batch-at-a-time rule instead of letting a click destroy a running transfer.</p>
+
+<p class="why good"><b>Reopening already shows the live batch</b> rather than a fresh sign-in — the
+store lives above the window and <code>CloudImportWindow.task</code> only lists
+<code>if store.listing == nil</code>. So there is no authentication dance to avoid; there is a
+<code>store</code> replacement to <i>stop</i>.</p>
+
+<h3>What the window is, in each mode</h3>
+<div class="t">
+<table>
+<tr><th>Control</th><th>Choosing</th><th>Watching</th><th>Why</th></tr>
+<tr><td class="st">Checkboxes</td><td>live</td><td class="words">inert, still drawn</td>
+  <td class="act">The batch was snapshotted at <code>startFetch</code> (<code>let queue =
+  fetchOrder</code>). Ticking now changes nothing — and <code>toggle</code> is <b>not</b> guarded on
+  <code>isFetching</code> today, so it is a live control that silently does nothing.</td></tr>
+<tr><td class="st">Primary button</td><td class="words">Import 5 Recordings</td><td>Stop</td>
+  <td class="act">Already correct, and already not prominent — HIG does not give the primary role to
+  a destructive action.</td></tr>
+<tr><td class="st">Destination popup</td><td>live</td><td class="words">inert</td>
+  <td class="act">The destination URL was captured at <code>startFetch</code>. Changing it mid-batch
+  is a control that lies.</td></tr>
+<tr><td class="st">Window scope <span class="none">“Last 30 days”</span></td><td>live</td>
+  <td class="words">inert</td>
+  <td class="act"><b>Actively harmful today.</b> Its <code>onChange</code> re-lists with no
+  <code>isFetching</code> guard, replacing <code>listing</code> while <code>fetchOrder</code> still
+  points at the old rows.</td></tr>
+<tr><td class="st">Filter field</td><td>live</td><td class="words">live</td>
+  <td class="act">The one control that gets <i>more</i> useful while watching — it is how you find
+  the one that is stuck, which is the whole reason to come back.</td></tr>
+<tr><td class="st">Per-row progress</td><td class="none">—</td><td class="words">the point</td>
+  <td class="act">Bars, bytes, per-file outcome. The diagnosis the sidebar ring deliberately cannot
+  give.</td></tr>
+</table>
+</div>
+
+<p class="why"><b>The menu item swaps verb, it does not just dim its neighbours.</b> “Teams…” starts
+an import; during a batch the same position should read <b>“Show Teams Import”</b>. Same idiom as
+Turn On/Off Agent Access and the Hide/Show panel rows — this codebase already prefers a changed verb
+to an ambiguous one, and it removes the last doubt about what the click will do.</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>10 — The order I would fix them in</h2>
+<div class="t">
+<table>
+<tr><th>#</th><th>Fix</th><th>Why here</th></tr>
+<tr><td>1</td><td class="words">A shortfall that outlives the window</td>
+  <td class="act">Eight of the nine ⚠ rows collapse into it. Everything else is polish until a closed
+  window can still tell the truth.</td></tr>
+<tr><td>2</td><td class="words">The ring and “3 of 4”</td>
+  <td class="act">Same seam, and it is what makes closing the window safe in the first place.</td></tr>
+<tr><td>3</td><td class="words">Monitor mode + the platform lock</td>
+  <td class="act">Closes a reachable defect — three clicks to an unstoppable invisible batch — and
+  makes four inert-but-live controls honest.</td></tr>
+<tr><td>4</td><td class="words">Refresh <code>localState</code> after a fetch</td>
+  <td class="act">Observed, reproducible, and it invites a re-download of a file we just said we
+  have.</td></tr>
+<tr><td>5</td><td class="words">Free-space precheck before the first byte</td>
+  <td class="act">Rides in free on the size sweep, and turns a mid-batch failure into a decision.</td></tr>
+<tr><td>6</td><td class="words">Acknowledge a Picker deselection</td>
+  <td class="act">Small, silent, and it makes two other numbers wrong.</td></tr>
+<tr><td>7</td><td class="words">Decide <code>.notResolved</code></td>
+  <td class="act">Cheap either way, and a state nothing can enter is a lie in 21 languages.</td></tr>
+<tr><td>8</td><td class="words">Durable batch intent</td>
+  <td class="act">The quit-mid-batch hole. Real, rarer, and needs a design rather than a patch.</td></tr>
+</table>
+</div>
+
+</div>

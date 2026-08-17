@@ -339,13 +339,73 @@ different confirmations, different consequences, different recovery. The hover-�
 thing at each moment, and a blended ring has no moment to switch on.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2>4 — The denominator is the whole design</h2>
-<p class="sub">“% of total downloads” sounds like one number. It is a choice about what
-<i>total</i> means, and on Meet the obvious answer is not available: <b>the file sizes are not known
-at list time</b> — Google's per-file grant arrives through the Picker, after ticking, so the Size
-column is empty by construction.</p>
+<h2>4 — The denominator, measured at commit</h2>
+<p class="sub">Sizes are unknown while the researcher is <i>choosing</i> — that much is structural.
+But the moment they commit, Bristlenose asks Google for the file grant, and <b>a grant is exactly
+what a size read needs</b>. So the totals are knowable a second after mouseup, before a single byte
+of video moves.</p>
 
-<h3>The batch from 16 Aug, as the window showed it</h3>
+<div class="seq">
+<table>
+<tr><th>#</th><th>Moment</th><th>What is known</th><th>What the sidebar shows</th></tr>
+
+<tr><td>1</td><td class="who">Mouseup on <i>Import 5 Recordings</i></td>
+  <td class="note">Count, titles, durations. No bytes.</td>
+  <td class="note">Nothing yet — the Picker is about to take the screen.</td></tr>
+
+<tr class="mark"><td>2</td><td class="who">Google's Picker</td>
+  <td class="note"><b>The batch can shrink here.</b> <code>requestMediaGrant</code> unions what was
+  <i>granted</i>, not what was asked — the researcher may deselect inside the Picker.</td>
+  <td class="note">Still nothing. A ring that started at mouseup would be counting files the
+  researcher is in the middle of removing.</td></tr>
+
+<tr class="mark"><td>3</td><td class="who">Grant held —<br><code>prepareBatch</code> returns</td>
+  <td class="note"><b>Everything.</b> One <code>files.get?fields=size</code> per granted file,
+  four at a time, sub-second for a batch this size. Exact total bytes, exact per-file bytes.</td>
+  <td class="note">Ring appears at 0%, subtitle names the batch. Expectations set:
+  <i>“4 recordings · 1.2 GB”</i>.</td></tr>
+
+<tr><td>4</td><td class="who">Transfers start</td>
+  <td class="note">Bytes written per file, and after a few seconds a settled throughput.</td>
+  <td class="note">Ring fills against a <b>measured</b> total. Time remaining appears only once the
+  rate has calibrated.</td></tr>
+
+<tr><td>5</td><td class="who">Last byte lands</td>
+  <td class="note">—</td>
+  <td class="note">Ring completes to 100%, holds a beat, then restarts at 0 as
+  <i>Transcribing</i>.</td></tr>
+</table>
+</div>
+
+<p class="why good"><b>This is the version to build, and it is smaller than the estimate it
+replaces.</b> <code>driveFileSize(fileID:accessToken:)</code> already exists in the Meet adapter —
+it is called per file inside <code>fetch</code>, one round trip too late to be useful. Hoisting it to
+a sweep between <code>prepareBatch</code> and the task group turns the ring's denominator from a
+guess into a measurement, and needs no new API.</p>
+
+<p class="why good"><b>It also un-blinds the free-space precheck.</b> That check reads
+<code>sizeBytes</code>, which is nil on every Google row, so today it cannot warn before a multi-
+gigabyte batch. Step 3 is the moment it becomes possible <i>and</i> the moment it is useful — before
+the first byte, not at file four with the disk full.</p>
+
+<h3>Two ways this ships silently wrong</h3>
+
+<p class="why bad"><b>Counting the ticked set instead of the granted set.</b> The Picker is a real
+decision point and the code already honours it —
+<code>grantedFileIDs.formUnion(picked)</code>, “honour what was granted, never what was asked for”.
+A denominator built at mouseup from ticks is too big whenever the researcher deselects, so the ring
+stops at 80% over a batch that finished perfectly. It fails <i>toward</i> looking broken, which is
+the better direction, but it is still a lie about a completed job.</p>
+
+<p class="why bad"><b>Completing the arc over a partial batch.</b> If two downloads fail, the ring
+must stop where it stands — not sweep to 100% before handing over. A filled ring is the strongest
+“done” signal on the row, and putting it over an incomplete import is this feature's own failure mode
+wearing the phase indicator's clothes.</p>
+
+<h3>The fallback, and where the estimate still earns its keep</h3>
+<p class="sub">A size read can fail per file, and a platform may serve neither size nor grant. So the
+weights degrade: <b>measured bytes → duration → equal share</b>. Duration is worth having in the
+ladder because it is startlingly better than counting files, which is the obvious alternative.</p>
 
 <div class="proof">
 <table>
@@ -398,21 +458,21 @@ column is empty by construction.</p>
       <div><div class="big">4.9%</div>
         <div class="lbl">same moment, honest</div></div>
     </div>
-    <div class="vb">Duration <b>is</b> known at list time — it comes from the Meet API with the
-    recording — and for a fixed codec it tracks bytes closely. It is an estimate, and it is the best
-    one available before a single byte moves.</div>
+    <div class="vb">Known at list time — it arrives from the Meet API with the recording — and for a
+    fixed codec it tracks bytes closely. Not needed when the size read works; the right thing to fall
+    back to when it doesn't.</div>
   </div>
 </div>
 
-<p class="why good"><b>Then refine, and clamp.</b> Each download's real <code>Content-Length</code>
-arrives as it starts, so the denominator can be corrected from estimate to measurement file by file
-— which can move the fraction <i>down</i>. That is precisely what
-<code>RunProgressMath.clampedFraction(raw:previous:)</code> already exists for, one feature over: a
-ring whose total is a prediction, which must never go backwards. Third reuse, same reason.</p>
+<p class="why"><b>Clamp regardless.</b> Measured or estimated, the denominator can still move — a
+size read that lands late, a file dropped from the grant. <code>RunProgressMath.clampedFraction(raw:previous:)</code>
+already exists for a ring whose total is a moving target, one feature over. Same problem, same
+answer, and it costs one call.</p>
 
-<p class="why"><b>Fallback, stated: equal weight.</b> A row whose duration is unknown counts as the
-batch's mean. Rare on Meet, likelier on a platform that lists without durations, and the ring still
-converges on 100% because the numerator and denominator use the same weights.</p>
+<p class="why"><b>Time remaining waits for calibration.</b> Bytes-remaining over the first sample
+says “4 hours”. The run ring already refuses this — <code>nil → indeterminate spinner
+(uncalibrated first run before any measured signal)</code> — and the download deserves the same
+discipline: the ring fills from the first byte, the words hold until the rate settles.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2>5 — What this reuses, and what it deliberately does not</h2>

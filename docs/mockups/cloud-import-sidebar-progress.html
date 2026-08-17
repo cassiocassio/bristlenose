@@ -211,8 +211,9 @@ the two marked in orange are the new ones.</p>
   <td class="msg">CopyDisplay<br>.copying(fraction:)</td>
   <td class="note"><b>The only new plumbing.</b> Not a new verb and not a new type —
   <code>copyDisplay(for:)</code> is already the row's channel for “a determinate transfer is landing
-  in this project”, fed by <code>CopyMachinery</code>. It gains a second source. One weighted number
-  per batch, recomputed on each <code>FetchProgress</code>, clamped monotonic by
+  in this project”, fed by <code>CopyMachinery</code>. It gains a second source, and an item count
+  the copy path never had — its byte-% subtitle carries the comment “no file-item <i>N of M</i>
+  source exists”, which cloud import can supply. Clamped monotonic by
   <code>RunProgressMath.clampedFraction</code>.</td></tr>
 
 <tr><td>4</td><td class="who">Runner → Row</td>
@@ -236,8 +237,8 @@ exactly this shape and the row already merges it.</p>
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2>3 — The row across the whole arc</h2>
 <p class="sub">One row, five moments. The ring never empties and refills within a phase; the
-subtitle is what names which phase you are in — and the download phase names nothing, because a
-percentage needs no verb.</p>
+subtitle is what names which phase you are in — and the download phase needs no verb at
+all — “3 of 4” is the whole sentence.</p>
 
 <div class="states">
 
@@ -263,14 +264,14 @@ percentage needs no verb.</p>
   </div>
 
   <div class="state">
-    <p class="cap"><b>2.</b> Window closed — a bare percentage, no verb</p>
+    <p class="cap"><b>2.</b> Window closed — a count, because that is the question</p>
     <div class="side">
       <div class="hdr">Projects</div>
       <div class="row"><div class="ico">▤</div><div class="txt">
         <div class="t1">rename</div></div><div class="slot"></div></div>
       <div class="row sel"><div class="ico">§</div><div class="txt">
         <div class="t1">IKEA with uxfriends</div>
-        <div class="t2">38%</div></div>
+        <div class="t2">3 of 4</div></div>
         <div class="slot">
           <svg width="16" height="16" viewBox="0 0 16 16">
             <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--track)" stroke-width="2"/>
@@ -291,7 +292,7 @@ percentage needs no verb.</p>
         <div class="t1">rename</div></div><div class="slot"></div></div>
       <div class="row sel"><div class="ico">§</div><div class="txt">
         <div class="t1">IKEA with uxfriends</div>
-        <div class="t2">38%</div></div>
+        <div class="t2">3 of 4</div></div>
         <div class="slot" style="color:var(--dim);font-size:15px;line-height:16px;text-align:center">⊗</div>
       </div>
     </div>
@@ -342,140 +343,78 @@ different confirmations, different consequences, different recovery. The hover-�
 thing at each moment, and a blended ring has no moment to switch on.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2>4 — The denominator, measured at commit</h2>
-<p class="sub">Sizes are unknown while the researcher is <i>choosing</i> — that much is structural.
-But the moment they commit, Bristlenose asks Google for the file grant, and <b>a grant is exactly
-what a size read needs</b>. So the totals are knowable a second after mouseup, before a single byte
-of video moves.</p>
+<h2>4 — Three questions, and only three</h2>
+<p class="sub">A study is five interviews of about fifty minutes, not the lopsided test batch this
+document was first written against. So <b>share-of-work weighting is not the design problem it
+looked like</b> — equal pixels for equal minutes is a nicety when the files are the same length
+anyway. What the researcher actually wants from a closed window is smaller and more specific:</p>
 
 <div class="seq">
 <table>
-<tr><th>#</th><th>Moment</th><th>What is known</th><th>What the sidebar shows</th></tr>
-
-<tr><td>1</td><td class="who">Mouseup on <i>Import 5 Recordings</i></td>
-  <td class="note">Count, titles, durations. No bytes.</td>
-  <td class="note">Nothing yet — the Picker is about to take the screen.</td></tr>
-
-<tr class="mark"><td>2</td><td class="who">Google's Picker</td>
-  <td class="note"><b>The batch can shrink here.</b> <code>requestMediaGrant</code> unions what was
-  <i>granted</i>, not what was asked — the researcher may deselect inside the Picker.</td>
-  <td class="note">Still nothing. A ring that started at mouseup would be counting files the
-  researcher is in the middle of removing.</td></tr>
-
-<tr class="mark"><td>3</td><td class="who">Grant held —<br><code>prepareBatch</code> returns</td>
-  <td class="note"><b>Everything.</b> One <code>files.get?fields=size</code> per granted file,
-  four at a time, sub-second for a batch this size. Exact total bytes, exact per-file bytes.</td>
-  <td class="note">Ring appears at 0%, subtitle names the batch. Expectations set:
-  <i>“4 recordings · 1.2 GB”</i>.</td></tr>
-
-<tr><td>4</td><td class="who">Transfers start</td>
-  <td class="note">Bytes written per file, and after a few seconds a settled throughput.</td>
-  <td class="note">Ring fills against a <b>measured</b> total. Time remaining appears only once the
-  rate has calibrated.</td></tr>
-
-<tr><td>5</td><td class="who">Last byte lands</td>
-  <td class="note">—</td>
-  <td class="note">Ring completes to 100%, holds a beat, then restarts at 0 as
-  <i>Transcribing</i>.</td></tr>
+<tr><th>The question</th><th>Answered by</th><th>Not answered by</th></tr>
+<tr><td class="who">“Are they all coming?”</td>
+  <td class="note"><b>“3 of 4”</b> in the subtitle. A count of discrete recordings is the direct
+  answer; a percentage is an inference from one.</td>
+  <td class="note">A bare percentage.</td></tr>
+<tr><td class="who">“Should I get a coffee?”</td>
+  <td class="note"><b>A ring that visibly creeps.</b> Motion at a readable rate is the answer;
+  precision is not.</td>
+  <td class="note">“4 min 32 s”, which is wrong the moment the wifi changes and invites the user to
+  hold it against you.</td></tr>
+<tr class="mark"><td class="who">“Which one is stuck?”</td>
+  <td class="note"><b>Reopening the window.</b> Per-recording rows, per-file bars, per-file
+  outcomes — the detail lives there and is already built.</td>
+  <td class="note">One ring, ever. A single indicator summarising N transfers cannot name one of
+  them, and pretending otherwise is how a row grows a second line it cannot fill.</td></tr>
 </table>
 </div>
 
-<p class="why good"><b>This is the version to build, and it is smaller than the estimate it
-replaces.</b> <code>driveFileSize(fileID:accessToken:)</code> already exists in the Meet adapter —
-it is called per file inside <code>fetch</code>, one round trip too late to be useful. Hoisting it to
-a sweep between <code>prepareBatch</code> and the task group turns the ring's denominator from a
-guess into a measurement, and needs no new API.</p>
+<p class="why"><b>So the sidebar's job is reassurance plus a route back</b>, and the import window's
+job is diagnosis. That division is why the window keeps its bars (§5) rather than inheriting rings:
+the two surfaces are answering different questions, not rendering the same answer at two sizes.</p>
+
+<h3>Why bytes anyway — motion, not accuracy</h3>
+<p class="sub">Weighting by file count would be accurate enough for a real study. It would also make
+the ring <b>jump</b>: five identical interviews means five 20% steps with four-minute stalls between
+them. A ring that has not moved for four minutes answers the coffee question with silence, which is
+exactly the reading that sends someone to Activity Monitor.</p>
+
+<p class="why good"><b>And the bytes are nearly free, at a moment that was already going to
+happen.</b> Sizes are unknown while the researcher is <i>choosing</i> — that much is structural, the
+per-file grant does not exist yet. But the moment they commit, <code>prepareBatch</code> obtains that
+grant and returns <i>before</i> the task group starts, and a grant is exactly what a size read needs.
+One <code>files.get?fields=size</code> sweep in that gap, four at a time, sub-second for a batch this
+size. <code>driveFileSize(fileID:accessToken:)</code> already exists in the adapter — it is called
+per file inside <code>fetch</code>, one round trip too late to inform anything.</p>
 
 <p class="why good"><b>It also un-blinds the free-space precheck.</b> That check reads
-<code>sizeBytes</code>, which is nil on every Google row, so today it cannot warn before a multi-
-gigabyte batch. Step 3 is the moment it becomes possible <i>and</i> the moment it is useful — before
-the first byte, not at file four with the disk full.</p>
+<code>sizeBytes</code>, nil on every Google row, so today it cannot warn before a multi-gigabyte
+batch. The sweep is both when that becomes possible and when it is useful — before the first byte,
+not at file four with the disk full.</p>
+
+<p class="why"><b>The fallback is one line, not a ladder.</b> A size read that fails leaves that file
+counted as the batch mean. Nothing more elaborate earns its keep, because the endpoint was never the
+point — the motion was.</p>
 
 <h3>Two ways this ships silently wrong</h3>
 
-<p class="why bad"><b>Counting the ticked set instead of the granted set.</b> The Picker is a real
-decision point and the code already honours it —
-<code>grantedFileIDs.formUnion(picked)</code>, “honour what was granted, never what was asked for”.
-A denominator built at mouseup from ticks is too big whenever the researcher deselects, so the ring
-stops at 80% over a batch that finished perfectly. It fails <i>toward</i> looking broken, which is
-the better direction, but it is still a lie about a completed job.</p>
+<p class="why bad"><b>Counting the ticked set instead of the granted set.</b> Google's Picker sits
+between mouseup and the grant, and it is a real decision point — <code>requestMediaGrant</code>
+unions what was <i>granted</i>, with the comment “honour what was granted, never what was asked
+for”. A denominator built at mouseup from ticks is too big whenever the researcher deselects, so the
+ring stops at 80% over a batch that finished perfectly, and “3 of 4” counts a file nobody asked
+for.</p>
 
-<p class="why bad"><b>Completing the arc over a partial batch.</b> If two downloads fail, the ring
-must stop where it stands — not sweep to 100% before handing over. A filled ring is the strongest
-“done” signal on the row, and putting it over an incomplete import is this feature's own failure mode
-wearing the phase indicator's clothes.</p>
+<p class="why bad"><b>Completing the arc over a partial batch.</b> On a clean batch the ring should
+reach 100% and hold a beat before the processing sweep starts at zero — a ring that vanishes at 87%
+reads as breakage. On a batch where two downloads failed it must stop where it stands. A filled ring
+is the strongest “done” signal the row has, and putting it over an incomplete import is this
+feature's own failure mode wearing the phase indicator's clothes.</p>
 
-<h3>The fallback, and where the estimate still earns its keep</h3>
-<p class="sub">A size read can fail per file, and a platform may serve neither size nor grant. So the
-weights degrade: <b>measured bytes → duration → equal share</b>. Duration is worth having in the
-ladder because it is startlingly better than counting files, which is the obvious alternative.</p>
-
-<div class="proof">
-<table>
-<tr><th>Recording</th><th class="num">Duration</th><th class="num">By file count</th>
-    <th class="num">By duration</th><th>Share of the work</th></tr>
-<tr><td>Recording 2 — <i>test</i></td><td class="num">52s</td>
-    <td class="num">25.0%</td><td class="num">2.3%</td>
-    <td><div class="bar"><i style="width:2.3%"></i></div></td></tr>
-<tr><td>osp-jwrt-wff <span style="color:var(--faint)">· instant</span></td><td class="num">14s</td>
-    <td class="num">25.0%</td><td class="num">0.6%</td>
-    <td><div class="bar"><i style="width:0.6%"></i></div></td></tr>
-<tr><td>Banyalbufar discussion</td><td class="num">46s</td>
-    <td class="num">25.0%</td><td class="num">2.0%</td>
-    <td><div class="bar"><i style="width:2.0%"></i></div></td></tr>
-<tr><td>twk-fnyg-myw <span style="color:var(--faint)">· instant</span></td><td class="num">35m 00s</td>
-    <td class="num">25.0%</td><td class="num">95.1%</td>
-    <td><div class="bar"><i style="width:95.1%"></i></div></td></tr>
-<tr class="tot"><td>Four recordings</td><td class="num">36m 52s</td>
-    <td class="num">100%</td><td class="num">100%</td><td></td></tr>
-</table>
-</div>
-
-<div class="verdict">
-  <div class="v no">
-    <div class="vh">✗ Weighted by file count</div>
-    <div class="ringrow">
-      <svg width="30" height="30" viewBox="0 0 16 16">
-        <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--track)" stroke-width="2"/>
-        <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--warn)" stroke-width="2"
-          stroke-linecap="round" stroke-dasharray="40.8" stroke-dashoffset="10.2"
-          transform="rotate(-90 8 8)"/>
-      </svg>
-      <div><div class="big">75%</div>
-        <div class="lbl">three small files done</div></div>
-    </div>
-    <div class="vb">Reads as nearly finished with <b>95% of the bytes still to come</b>. The ring
-    then sits motionless for minutes — the exact shape of progress UI that teaches people to
-    distrust every progress indicator you ever ship.</div>
-  </div>
-
-  <div class="v yes">
-    <div class="vh">✓ Weighted by duration</div>
-    <div class="ringrow">
-      <svg width="30" height="30" viewBox="0 0 16 16">
-        <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--track)" stroke-width="2"/>
-        <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--good)" stroke-width="2"
-          stroke-linecap="round" stroke-dasharray="40.8" stroke-dashoffset="38.8"
-          transform="rotate(-90 8 8)"/>
-      </svg>
-      <div><div class="big">4.9%</div>
-        <div class="lbl">same moment, honest</div></div>
-    </div>
-    <div class="vb">Known at list time — it arrives from the Meet API with the recording — and for a
-    fixed codec it tracks bytes closely. Not needed when the size read works; the right thing to fall
-    back to when it doesn't.</div>
-  </div>
-</div>
-
-<p class="why"><b>Clamp regardless.</b> Measured or estimated, the denominator can still move — a
-size read that lands late, a file dropped from the grant. <code>RunProgressMath.clampedFraction(raw:previous:)</code>
-already exists for a ring whose total is a moving target, one feature over. Same problem, same
-answer, and it costs one call.</p>
-
-<p class="why"><b>Time remaining waits for calibration.</b> Bytes-remaining over the first sample
-says “4 hours”. The run ring already refuses this — <code>nil → indeterminate spinner
-(uncalibrated first run before any measured signal)</code> — and the download deserves the same
-discipline: the ring fills from the first byte, the words hold until the rate settles.</p>
+<p class="why"><b>Time waits for calibration.</b> Bytes-remaining over the first sample says “4
+hours”. The run ring already refuses exactly this — <code>nil → indeterminate spinner (uncalibrated
+first run before any measured signal)</code> — and coffee-scale wording (“about 5 minutes”) is the
+most precision this deserves even once it has settled.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2>5 — What this reuses, and what it deliberately does not</h2>

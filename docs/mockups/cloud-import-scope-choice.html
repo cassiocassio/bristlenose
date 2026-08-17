@@ -140,23 +140,40 @@ list UIs. Everything else on this table is defensible. That line is not.</p>
   <td class="words"><code>drive.meet.readonly</code></td>
   <td>“View Drive files created or edited by Google&nbsp;Meet”</td>
   <td><span class="tag no">restricted</span></td>
-  <td>CASA Tier&nbsp;2 assessment, by a Google-approved lab, <b>re-done every 12 months</b>.
-      Hundreds to a few thousand £/year.</td>
+  <td>Google OAuth verification, certainly. A <b>CASA security assessment</b> —
+      developer-paid, annual — <b>only if the third-party-server clause bites</b>. See
+      below; unresolved.</td>
 </tr>
 <tr>
   <td class="words strike"><code>drive.readonly</code></td>
   <td>“View and download <b>all</b> your Drive files”</td>
   <td><span class="tag no">restricted</span></td>
-  <td>Identical CASA cost to the row above.</td>
+  <td>Whatever the row above costs, exactly.</td>
 </tr>
 </table></div>
 
 <p class="why good"><b>That last row is why there is no three-way choice.</b>
 <code>drive.meet.readonly</code> and <code>drive.readonly</code> sit in the <b>same</b>
-restricted tier and carry the <b>same</b> annual audit — but one says “files Google Meet
-made” and the other says “all your Drive”. Paying the identical toll for the worse
-sentence would be indefensible. <b>If we ever go restricted, we go Meet-only.</b>
-“All your Drive” is off the table permanently, not deferred.</p>
+restricted tier, so whatever verification and assessment burden one carries, the other
+carries identically — but one says “files Google Meet made” and the other says “all your
+Drive”. Paying the same toll for the worse sentence would be indefensible.
+<b>If we ever go restricted, we go Meet-only.</b> “All your Drive” is off the table
+permanently, not deferred. <b>This conclusion does not depend on the open question
+below</b> — it holds whichever way that lands.</p>
+
+<div class="callout" style="margin-top:16px">
+  <h5>The open question: does the assessment apply to us at all?</h5>
+  <p>Google’s condition is “requests access to restricted data <b>and has the ability to
+    access data from or through a third-party server</b>”. Bristlenose downloads
+    Drive&nbsp;→ the researcher’s own Mac; there is no Bristlenose server in that path,
+    which reads like exemption. What muddies it is the pipeline’s LLM call — whether
+    transcript text <em>derived from</em> a restricted-scope file counts as that data
+    transiting a third-party server is an assessor’s call, not one to settle from a doc.
+    <b>If it does apply:</b> the developer engages a Google-empanelled assessor and pays
+    them directly (Google is not party to the fee), commonly $500–$4,500 for an app of
+    this complexity, <b>repeated every 12 months</b>. Verification itself is required
+    either way.</p>
+</div>
 
 <p class="why"><b>And it cannot be folded into the first sign-in.</b> Google refuses a
 Picker authorization that carries any other scope — the calendar scope this same app
@@ -265,8 +282,9 @@ Google will say.</p>
 <div class="t"><table>
 <tr><th>Gate</th><th>State</th></tr>
 <tr><td>The free fixes land, and the click count is re-counted against a live account</td><td>not started</td></tr>
-<tr><td>CASA Tier&nbsp;2 assessment budgeted and passed, annually</td><td>not started — a real recurring cost, not a one-off</td></tr>
-<tr><td>Google OAuth verification for a restricted scope</td><td>not started</td></tr>
+<tr><td><b>Whether the CASA assessment applies to us at all</b> — the third-party-server clause, against a client-only app whose pipeline nonetheless calls a cloud LLM</td><td><b>unresolved</b> — ask Google, don’t infer. Decides whether the row below is £0 or £/year forever</td></tr>
+<tr><td>If it applies: assessment budgeted, passed, and re-passed every 12 months</td><td>not started — developer pays the assessor directly</td></tr>
+<tr><td>Google OAuth verification for a restricted scope</td><td>not started — required either way</td></tr>
 <tr><td>Behaviour when a Workspace admin blocks the restricted scope</td><td><b>unmeasured</b> — needs a specimen, not reasoning</td></tr>
 <tr><td>Whether <code>prompt=consent</code> is genuinely required by the one-pick flow</td><td><b>unmeasured</b> — the code comment lumps it with <code>trigger_onepick</code></td></tr>
 </table></div>

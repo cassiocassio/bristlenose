@@ -79,10 +79,25 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
      - **`drive.readonly` is off the table permanently.** Checked against
        Google's scope table 17 Aug 2026: `drive.meet.readonly` ("View Drive
        files created or edited by Google Meet") is **restricted**, the same
-       tier as `drive.readonly` — so both carry a CASA Tier 2 assessment by an
-       approved lab, repeated every 12 months, at real annual cost. Identical
-       toll, and one of them says "all your Drive". If we ever go restricted we
-       go Meet-only; there is no argument for the broader one.
+       tier as `drive.readonly` — so whatever verification and assessment
+       burden one carries, the other carries identically, and one of them says
+       "all your Drive". If we ever go restricted we go Meet-only; there is no
+       argument for the broader one, and this holds whichever way the next
+       bullet lands.
+     - **Whether a CASA assessment applies to us at all is unresolved, and
+       must be asked rather than inferred.** Google's condition is "requests
+       access to restricted data *and has the ability to access data from or
+       through a third-party server*". Bristlenose downloads Drive → the
+       researcher's own Mac with no server of ours in the path, which reads
+       like exemption; what muddies it is the pipeline's LLM call, since
+       whether transcript text *derived from* a restricted-scope file counts
+       as that data transiting a third-party server is an assessor's judgement.
+       If it does apply, the developer engages a Google-empanelled assessor and
+       pays directly (Google is not party to the fee) — commonly $500–$4,500
+       for an app of this complexity, **repeated every 12 months**. Restricted-
+       scope *verification* is required either way. _Recorded 17 Aug 2026 after
+       an initial claim that the audit simply applied — it is conditional, and
+       the condition is one this app might genuinely fall outside._
      - **Do the free fixes first and the scope question loses its urgency.**
        Seeding the Picker with the whole listing, honouring `grantedFileIDs`,
        and persisting the grant take the journey from 29 to 17 with no scope

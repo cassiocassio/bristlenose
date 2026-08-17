@@ -74,11 +74,17 @@ imagination, so the gaps below are real gaps rather than unwritten cases.</p>
 <code>docs/design-cloud-import.md</code> §6</p>
 
 <div class="ask">
-<b>The finding, before the tables: the vocabulary is nearly complete, and its lifetime is the bug.</b>
-Fourteen row states and six blanket titles already exist and are localised into 21 languages. Almost
-every state below already has words. What almost none of them have is <b>a life after the import
-window closes</b> — and the researcher closes it, because it looks like it is working. Nine of the
-rows below are marked ⚠, and eight of those nine are the same defect wearing different clothes.
+<b>The finding, before the tables: the window can <i>describe</i> every state and can only
+<i>detect</i> the remote ones.</b> Fourteen row states and six blanket titles exist, localised into
+21 languages — and all three adapters hardcode <code>localState: .notImported</code>, with nothing
+downstream deriving it. So <b>six of the fourteen have no producer at all</b>: <i>Imported</i>,
+<i>Damaged</i>, <i>On iCloud</i>, <i>On “Archive”</i>, <i>No longer available</i>, <i>View only</i>.
+Everything the window might say about <b>the file you already have</b> is written, translated, and
+unreachable.<br><br>
+The second half of the same defect is lifetime: what the window <i>does</i> learn — outcomes,
+progress, a shortfall — lives in <code>store.outcomes</code> and dies with the window the design
+actively encourages people to close. <b>Both halves are answered by one artefact</b>: a durable,
+per-project record of what this project received. See §11.
 </div>
 
 <div class="legend">
@@ -198,18 +204,18 @@ The checkbox column carries a third distinction that is easy to collapse and exp
   the state is unreachable. Keep it or cut it — but decide, because a state nothing can enter is a
   promise the code no longer keeps.</td></tr>
 
-<tr><td class="st"><code>.viewOnly</code><br><span class="none">Teams tenant block</span></td>
+<tr class="gap"><td class="st">⚠ <code>.viewOnly</code><br><span class="none">Teams tenant block · no producer</span></td>
   <td class="words">View only</td><td class="none">none</td>
   <td class="act"><b>Nothing, by any route.</b> The API path is blocked, and so is downloading by
   hand — the usual “drag-drop still works” escape does not apply. An IT exemption is the only
   remedy and the copy must say so plainly.</td></tr>
 
-<tr><td class="st"><code>.noLongerAvailable</code></td><td class="words">No longer available</td>
+<tr class="gap"><td class="st">⚠ <code>.noLongerAvailable</code></td><td class="words">No longer available</td>
   <td class="none">none</td>
-  <td class="act">Nothing. Gone between one list and the next; unrecoverable if never imported.</td></tr>
+  <td class="act"><b>No producer.</b> Needs a previous listing to diff against — which the per-project record in §11 would also supply.</td></tr>
 
-<tr><td class="st"><code>.imported</code></td><td class="words">Imported</td>
-  <td>ticked + dead</td><td class="act">Nothing — you have it.</td></tr>
+<tr class="gap"><td class="st">⚠ <code>.imported</code></td><td class="words">Imported</td>
+  <td>ticked + dead</td><td class="act"><b>No producer.</b> Every adapter hardcodes <code>.notImported</code>, so a window opened after a successful import offers to fetch it all again.</td></tr>
 
 <tr class="gap"><td class="st">⚠ <code>.imported</code> <i>this session</i></td>
   <td class="words">✓ Imported</td><td><b>empty and live</b></td>
@@ -218,18 +224,15 @@ The checkbox column carries a third distinction that is easy to collapse and exp
   so <code>drawsTicked</code> reads the tick set, which was cleared. The row invites a re-download of
   a file it just told you it has.</td></tr>
 
-<tr><td class="st"><code>.damaged</code></td><td class="words">Damaged</td>
-  <td>live</td><td class="act">Re-fetch. Present but the wrong size — the one local state that
-  genuinely wants fetching again.</td></tr>
+<tr class="gap"><td class="st">⚠ <code>.damaged</code></td><td class="words">Damaged</td>
+  <td>live</td><td class="act"><b>No producer.</b> Would want the expected size, which the §3 sweep now supplies.</td></tr>
 
-<tr><td class="st"><code>.notDownloaded(provider:)</code></td><td class="words">On iCloud</td>
+<tr class="gap"><td class="st">⚠ <code>.notDownloaded(provider:)</code></td><td class="words">On iCloud</td>
   <td>ticked + dead</td>
-  <td class="act">Materialise it in Finder. <b>Not an error</b> — a healthy file in the destination's
-  cloud, which is a different cloud from the import's.</td></tr>
+  <td class="act"><b>No producer.</b> Would say: materialise it in Finder — not an error, a healthy file in the <i>destination's</i> cloud, a different cloud from the import's.</td></tr>
 
-<tr><td class="st"><code>.driveNotConnected(volume:)</code></td><td class="words">On “Archive”</td>
-  <td>ticked + dead</td><td class="act">Plug the drive in. Naming the volume is what makes it
-  actionable.</td></tr>
+<tr class="gap"><td class="st">⚠ <code>.driveNotConnected(volume:)</code></td><td class="words">On “Archive”</td>
+  <td>ticked + dead</td><td class="act"><b>No producer.</b> Would say: plug the drive in — naming the volume is what makes it actionable.</td></tr>
 </table>
 </div>
 
@@ -467,13 +470,85 @@ Turn On/Off Agent Access and the Hide/Show panel rows — this codebase already 
 to an ambiguous one, and it removes the last doubt about what the click will do.</p>
 
 <!-- ══════════════════════════════════════════════════════════ -->
-<h2>10 — The order I would fix them in</h2>
+<h2>11 — What the batch leaves behind, and where “already imported” actually lives</h2>
+
+<h3>The end of a batch is not a fresh open — it should be better than one</h3>
+<p class="sub">When the last transfer finishes the window becomes choosable again: checkboxes live,
+Import back, destination live. But it must not become <b>amnesiac</b>. A genuinely fresh open today
+would offer to re-download every file it just fetched, because no adapter derives local state — the
+“✓ Imported” a researcher sees comes from <code>store.outcomes</code>, which is in-memory and dies
+with the window.</p>
+
+<div class="t">
+<table>
+<tr><th>After the batch</th><th>Checkbox</th><th>Status</th><th>Why</th></tr>
+<tr><td class="st">Landed</td><td>ticked + dead</td><td class="words">Imported</td>
+  <td class="act">You have it. Re-fetching spends an expiry-limited remote read on nothing.</td></tr>
+<tr><td class="st">Failed</td><td><b>stays ticked, live</b></td><td class="words">the reason</td>
+  <td class="act">Deliberate — <i>Retry failed</i> needs something to act on, and the store already
+  keeps failed rows ticked for exactly this.</td></tr>
+<tr><td class="st">Cancelled</td><td>unticked, live</td><td class="none">(silent)</td>
+  <td class="act">A decision, not a fault. Nothing owed, nothing said.</td></tr>
+<tr><td class="st">Never ticked</td><td>unticked, live</td><td class="none">(silent)</td>
+  <td class="act">Unchanged. This is the “what is still available” the window is being reopened
+  for.</td></tr>
+</table>
+</div>
+
+<h3>“Can they re-download into a different project?” — yes, and it breaks the model</h3>
+<p class="why bad"><b><code>localState</code> is a stored property of the row, but “already imported”
+is a property of <i>(row, destination)</i>.</b> The same recording is imported into <i>IKEA with
+uxfriends</i> and not into <i>Ward handover</i> — and the destination popup is right there in the
+footer, changeable at any moment. A row that reads <i>Imported</i> must go back to a live checkbox
+the instant the destination changes. A field set once by the adapter cannot express that, and no
+amount of refreshing it after a fetch will fix the shape.</p>
+
+<h3>Filename matching is the tempting answer and the wrong one</h3>
+<p class="sub"><code>CloudDownloadNaming</code> is deterministic, so “does
+<code>destination/&lt;name&gt;</code> exist?” looks like a free answer. It is a guess: the researcher
+renames files, two studies collide on a title, and a file restored from a backup is
+indistinguishable from one we fetched. The house rule is the exact key over the clever heuristic —
+and here the exact key is cheap, because <b>we know the row id we downloaded</b>.</p>
+
+<p class="why good"><b>One artefact answers four of the flagged rows.</b> A small durable record
+inside the destination project — which cloud rows landed, when, from which platform and account, and
+which were asked for and did not arrive — supplies:</p>
+
+<div class="t">
+<table>
+<tr><th>It answers</th><th>Which flagged row</th></tr>
+<tr><td class="act">“Do I already have this, <i>in this project</i>?”</td>
+  <td class="words">⚠ <code>.imported</code> has no producer</td></tr>
+<tr><td class="act">“Four were promised, three came” — an hour later, in a closed window</td>
+  <td class="words">⚠ the shortfall dies with the store (§6)</td></tr>
+<tr><td class="act">“A batch was in flight when you quit”</td>
+  <td class="words">⚠ nothing remembers (§4)</td></tr>
+<tr><td class="act">“This one was in last week's list and is gone now”</td>
+  <td class="words">⚠ <code>.noLongerAvailable</code> has no producer</td></tr>
+</table>
+</div>
+
+<p class="why"><b>And it belongs in the project, not in the app.</b> The project folder is what the
+researcher owns, moves between machines and hands to a colleague — the same reasoning that puts
+re-identification keys under <code>.bristlenose/</code> rather than in preferences. A record kept in
+app state would be right until the first time somebody opened the folder somewhere else.</p>
+
+<p class="why"><b>Sizing it honestly: this is the largest single item in this document.</b> It is a
+new persisted artefact with a schema, a migration story and a privacy question (it names meetings and
+platforms, so it is project-private and never rides along in an export). Everything else here is a
+guard, a disabled control or a word. Worth doing once, and worth not doing by accident as a
+side-effect of fixing the checkbox.</p>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<h2>12 — The order I would fix them in</h2>
 <div class="t">
 <table>
 <tr><th>#</th><th>Fix</th><th>Why here</th></tr>
-<tr><td>1</td><td class="words">A shortfall that outlives the window</td>
-  <td class="act">Eight of the nine ⚠ rows collapse into it. Everything else is polish until a closed
-  window can still tell the truth.</td></tr>
+<tr><td>1</td><td class="words">A per-project record of what landed</td>
+  <td class="act">§11. Answers four flagged rows at once — the shortfall that outlives the window,
+  “do I already have this”, the quit-mid-batch hole, and the vanished recording. Everything else is
+  polish until a closed window can still tell the truth. Also the biggest item here: schema,
+  migration, and project-private by construction.</td></tr>
 <tr><td>2</td><td class="words">The ring and “3 of 4”</td>
   <td class="act">Same seam, and it is what makes closing the window safe in the first place.</td></tr>
 <tr><td>3</td><td class="words">Monitor mode + the platform lock</td>

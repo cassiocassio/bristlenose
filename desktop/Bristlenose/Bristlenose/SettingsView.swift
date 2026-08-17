@@ -7,13 +7,15 @@ import SwiftUI
 // so `Settings` there resolves to the package, not SwiftUI's `Settings` scene).
 // A bare `Settings.Pane` here would resolve to SwiftUI's `Settings` and fail.
 
-// Stable identifiers for the four Settings panes (also used for deep-linking —
+// Stable identifiers for the five Settings panes (also used for deep-linking —
 // e.g. the welcome "Setup →" opens `.llm`; Bristlenose ▸ Connect an Agent…
 // opens `.mcpAgents`).
 extension PkgSettings.PaneIdentifier {
+    static let general = Self("general")
     static let appearance = Self("appearance")
     static let llm = Self("llm")
     static let transcription = Self("transcription")
+    static let accounts = Self("accounts")
     static let mcpAgents = Self("mcpAgents")
 }
 
@@ -47,6 +49,19 @@ final class SettingsWindow {
         let i18n = self.i18n ?? I18n()
         return SettingsWindowController(
             panes: [
+                // First, deliberately: General is the pane a Mac user checks for
+                // app-level behaviour ("where do new things go"), and it holds
+                // the answer the other four never touch. See
+                // GeneralSettingsView for why it isn't a row in Appearance.
+                PkgSettings.Pane(
+                    identifier: .general,
+                    title: i18n.t("desktop.settingsTabs.general"),
+                    toolbarIcon: symbol("gearshape")
+                ) {
+                    GeneralSettingsView()
+                        .environmentObject(i18n)
+                        .modifier(SettingsPaneChrome())
+                },
                 PkgSettings.Pane(
                     identifier: .appearance,
                     title: i18n.t("desktop.settingsTabs.appearance"),
@@ -71,6 +86,19 @@ final class SettingsWindow {
                     toolbarIcon: symbol("waveform")
                 ) {
                     TranscriptionSettingsView()
+                        .environmentObject(i18n)
+                        .modifier(SettingsPaneChrome())
+                },
+                // Accounts sits beside MCP Agents rather than near the engines:
+                // both answer "who can reach your work and your material", where
+                // the panes above answer "how does it run". §9 puts account
+                // lifecycle here — "one place to disconnect, not two".
+                PkgSettings.Pane(
+                    identifier: .accounts,
+                    title: "Accounts",
+                    toolbarIcon: symbol("person.crop.circle")
+                ) {
+                    AccountsSettingsView()
                         .environmentObject(i18n)
                         .modifier(SettingsPaneChrome())
                 },

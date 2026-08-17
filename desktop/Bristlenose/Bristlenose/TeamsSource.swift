@@ -205,6 +205,22 @@ final class TeamsSource: CloudImportSource {
         return me?.mail ?? me?.userPrincipalName
     }
 
+    /// The drive's own `driveType`, which is what decides whether this account
+    /// can hold Teams recordings at all.
+    ///
+    /// Returns nil when the call fails — deliberately not `.unknown`, because
+    /// the caller needs to tell "the drive says something I don't recognise"
+    /// from "I could not read the drive", and only the second casts doubt on
+    /// whether we hold `Files.Read`.
+    private func fetchDriveTier() async -> DriveTier? {
+        struct Drive: Decodable { let driveType: String? }
+        guard let data = try? await get(
+                  "https://graph.microsoft.com/v1.0/me/drive?$select=driveType"),
+              let drive = try? JSONDecoder().decode(Drive.self, from: data)
+        else { return nil }
+        return DriveTier(driveType: drive.driveType)
+    }
+
     // MARK: Listing
 
     func list(window: DateInterval) async -> MeetingListing {
@@ -214,7 +230,14 @@ final class TeamsSource: CloudImportSource {
         }
 
         var items: [GraphChildren.Item] = []
-        var next: String? = "https://graph.microsoft.com/v1.0/me/drive/root:/Recordings:/children"
+        // **`special/recordings`, never the `/Recordings:` path.** Graph
+        // documents this alias as existing precisely to avoid a path lookup
+        // "which would require localization" — so the hardcoded English path
+        // was a bug for every non-English tenant, and one that surfaced as an
+        // empty list misdiagnosed as the wrong account tier. The alias also
+        // survives the user renaming or moving the folder, and it costs no new
+        // scope: `Files.Read` is its least-privileged delegated permission.
+        var next: String? = "https://graph.microsoft.com/v1.0/me/drive/special/recordings/children"
         var pagesFetched = 0
         let pageCap = 20
         var outcome: ListOutcome = .exhausted
@@ -236,18 +259,34 @@ final class TeamsSource: CloudImportSource {
                     break
                 }
             } catch let error as TeamsAPIError {
-                // `itemNotFound` on /Recordings is the tier problem, not an
-                // empty folder: a personal Teams account attaches recordings to
-                // the meeting chat and never creates the folder at all. Naming
-                // that turns a baffling empty list into one sentence.
-                // …but only on the FIRST page. A 404 partway through a walk is
-                // an expired `@odata.nextLink`, not a personal account — and
-                // returning `empty(.exhausted)` there discarded every row
-                // already collected and told a researcher with hundreds of
-                // recordings that they had none, misdiagnosed as the wrong
-                // account tier, with `isExact` true.
-                if error.outcome == .notFound, pagesFetched == 0 {
-                    tier = .personal
+                // **A missing Recordings folder answers 403 OR 404, and neither
+                // means what its status line says.** Graph documents both for a
+                // read-only app requesting a special folder that does not exist
+                // — so the classifier's `403 → scopeNotGranted` would send a
+                // researcher who simply has not recorded yet to re-consent a
+                // permission they already hold.
+                //
+                // Disambiguate by reading the drive, and only here: if
+                // `/me/drive` answers, we demonstrably hold `Files.Read`, so the
+                // refusal is about the folder rather than the grant, and the
+                // tier it returns carries the explanation — a personal account
+                // never creates the folder at all, because the recording is
+                // attached to the meeting chat instead. If the drive is
+                // unreadable too, the grant really is in doubt and the original
+                // outcome stands.
+                //
+                // **Lazily, never eagerly.** Reading the tier up-front would put
+                // a second request on every successful listing, and the happy
+                // path is the one that must stay cheap.
+                //
+                // Only on the FIRST page. A 404 partway through a walk is an
+                // expired `@odata.nextLink`, not a missing folder — returning
+                // `empty(.exhausted)` there discarded every row already
+                // collected and told a researcher with hundreds of recordings
+                // that they had none, with `isExact` true.
+                let folderAbsent = error.outcome == .notFound || error.outcome == .scopeNotGranted
+                if folderAbsent, pagesFetched == 0, let readTier = await fetchDriveTier() {
+                    tier = readTier
                     return empty(window, outcome: .exhausted)
                 }
                 // A 404 on a later page falls through to the ordinary failure

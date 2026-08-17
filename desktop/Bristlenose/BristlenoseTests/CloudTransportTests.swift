@@ -436,6 +436,98 @@ struct ListingTransportTests {
         #expect(!listing.arithmetic.outcome.isComplete)
     }
 
+    @Test("The recordings listing addresses the special folder, never the English path")
+    func recordingsUsesSpecialFolderAlias() async throws {
+        // Graph documents `special/recordings` as existing precisely to avoid a
+        // path lookup "which would require localization". The hardcoded
+        // `/drive/root:/Recordings:` path was therefore a bug on every
+        // non-English tenant — and one that surfaced as an empty list
+        // misdiagnosed as the wrong account tier, which is a confident wrong
+        // answer rather than a visible failure.
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"value":[]}"#))
+        StubURLProtocol.enqueue(.json(#"{"value":[]}"#))   // the roster read
+
+        _ = await teamsSource().list(window: window)
+
+        let urls = StubURLProtocol.requests.compactMap(\.url?.absoluteString)
+        let listing = try #require(urls.first)
+        #expect(listing.contains("/drive/special/recordings/children"))
+        #expect(!listing.contains("root:"), "the localised path is back: \(listing)")
+    }
+
+    @Test("A folder that isn't there is an empty list, not a permissions problem")
+    func absentFolderWithReadableDriveIsNotDenied() async throws {
+        // The trap the alias introduces. Graph answers **403 or 404** when a
+        // read-only app asks for a special folder that does not exist, and the
+        // classifier maps 403 to `scopeNotGranted` — so a researcher who simply
+        // has not recorded yet would be told to re-consent a permission they
+        // already hold, which is an instruction that cannot work.
+        //
+        // Reading the drive is the discriminator: if it answers, we hold
+        // `Files.Read` and the refusal is about the folder.
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"error":{"code":"accessDenied","message":"denied"}}"#,
+                                      status: 403))
+        StubURLProtocol.enqueue(.json(#"{"driveType":"business"}"#))
+
+        let source = teamsSource()
+        let listing = await source.list(window: window)
+
+        #expect(listing.rows.isEmpty)
+        #expect(listing.arithmetic.outcome.isComplete,
+                "an absent folder was reported as a failed listing")
+        #expect(source.accountTier != .personal,
+                "a business drive must not be mistaken for a personal account")
+    }
+
+    @Test("A personal account is named from the drive, not guessed from a status code")
+    func personalTierComesFromTheDrive() async throws {
+        // A personal account attaches the recording to the meeting chat and
+        // never creates the folder, so the refusal is identical to the business
+        // case above. The tier is what tells them apart, and it is a *field* —
+        // the old code inferred it from a 404, which is exactly the guess that
+        // told a business tenant it was a consumer account.
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"error":{"code":"itemNotFound","message":"not found"}}"#,
+                                      status: 404))
+        StubURLProtocol.enqueue(.json(#"{"driveType":"personal"}"#))
+
+        let source = teamsSource()
+        let listing = await source.list(window: window)
+
+        #expect(listing.rows.isEmpty)
+        #expect(source.accountTier == .personal)
+    }
+
+    @Test("A denial we cannot rule out stays a denial")
+    func unreadableDriveKeepsTheError() async throws {
+        // The other half, and the one that would rot silently: if the drive is
+        // unreadable too, we have no evidence the grant is intact, so swallowing
+        // the refusal as "you have no recordings" would hide a real permission
+        // failure behind the feature's own designed output — an empty list.
+        StubURLProtocol.reset()
+        for _ in 0..<4 {
+            StubURLProtocol.enqueue(.json(#"{"error":{"code":"accessDenied","message":"denied"}}"#,
+                                          status: 403))
+        }
+
+        let listing = await teamsSource().list(window: window)
+
+        #expect(listing.rows.isEmpty)
+        #expect(!listing.arithmetic.outcome.isComplete,
+                "a permission failure was reported as a complete, empty listing")
+    }
+
+    private func teamsSource() -> TeamsSource {
+        TeamsSource(
+            config: MicrosoftOAuthConfig(clientID: "cid", tenant: "common",
+                                         redirectURI: "msauth.test://auth"),
+            session: StubURLProtocol.session(),
+            restoredTokens: MicrosoftTokenResponse(
+                data: Data(#"{"access_token":"T","expires_in":3600}"#.utf8))!)
+    }
+
     @Test("An unfollowed continuation reports pageCapHit, never exhausted")
     func paginationCapIsHonest() async throws {
         // The designed output of this feature and its failure mode are both

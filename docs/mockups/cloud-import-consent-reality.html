@@ -1,0 +1,610 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud import — what the researcher actually sees on a corporate tenant</title>
+<style>
+:root{
+  --bg:#f2f2f7; --page:#fff; --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+  --line:#d8d8dc; --hairline:#e6e6ea; --grouphdr:#f0f0f3; --chrome:#ececf0;
+  --accent:#007aff; --warn:#c9500f; --good:#1a7f37; --dead:#8e8e93; --bad:#c1121f;
+  --shadow:0 12px 40px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.10);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+    --line:#3a3a3d; --hairline:#2c2c2f; --grouphdr:#28282b; --chrome:#242427;
+    --accent:#0a84ff; --warn:#ff9f45; --good:#4ac26b; --dead:#78787d; --bad:#ff6b6b;
+    --shadow:0 12px 40px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;padding:40px 24px 90px;
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1280px;margin:0 auto}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:15px;font-weight:700;margin:44px 0 10px;padding-top:18px;
+   border-top:.5px solid var(--line)}
+h3{font-size:13px;font-weight:700;margin:26px 0 8px}
+.sub{color:var(--dim);margin:0 0 10px;max-width:92ch}
+.meta{color:var(--faint);font-size:12px;margin:0 0 26px}
+.why{border-left:2px solid var(--accent);padding:2px 0 2px 12px;margin:14px 0 0;
+     color:var(--dim);font-size:12.5px;max-width:96ch}
+.why b{color:var(--ink);font-weight:600}
+.why.bad{border-color:var(--warn)}
+.why.good{border-color:var(--good)}
+.why.dead{border-color:var(--bad)}
+.ask{background:var(--grouphdr);border:.5px solid var(--line);border-radius:8px;
+     padding:14px 16px;margin:0 0 26px;font-size:12.5px;color:var(--dim);max-width:104ch}
+.ask b{color:var(--ink)}
+.ask.hot{border-color:var(--warn);
+     background:color-mix(in srgb,var(--warn) 7%,var(--grouphdr))}
+code{font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+     background:var(--grouphdr);border-radius:4px;padding:1px 5px}
+.tag{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.04em;
+     padding:1px 6px;border-radius:4px;text-transform:uppercase;vertical-align:2px}
+.tag.doc{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.tag.meas{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.tag.unk{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
+
+/* ── the window ── */
+.win{background:var(--page);border:.5px solid var(--line);border-radius:11px;
+     box-shadow:var(--shadow);overflow:hidden;margin:10px 0 0;max-width:940px}
+.tbar{display:flex;align-items:center;gap:11px;padding:9px 13px;background:var(--chrome);
+      border-bottom:.5px solid var(--line)}
+.lights{display:flex;gap:6px}
+.lights i{width:11px;height:11px;border-radius:50%;background:#d8d8dc;display:block}
+@media (prefers-color-scheme:dark){.lights i{background:#3a3a3d}}
+.titles .t{font-size:12.5px;font-weight:700;line-height:1.2}
+.titles .s{font-size:11px;color:var(--faint);line-height:1.3}
+.grow{margin-left:auto}
+.pick,.filter{font-size:11.5px;color:var(--dim);border:.5px solid var(--line);
+      border-radius:6px;padding:3px 9px;background:var(--page)}
+.win table{border-collapse:collapse;width:100%;font-size:12px}
+.win thead th{text-align:left;font-size:10px;letter-spacing:.03em;text-transform:uppercase;
+      color:var(--faint);font-weight:700;padding:7px 10px;background:var(--grouphdr);
+      border-bottom:.5px solid var(--line);white-space:nowrap}
+.win td{padding:7px 10px;border-bottom:.5px solid var(--hairline);vertical-align:top}
+.win tr:last-child td{border-bottom:0}
+.tick{width:26px}
+.ttl{font-weight:600}
+.sub2{color:var(--faint);font-size:11.5px;margin-top:1px}
+.dash{color:var(--faint)}
+.num{white-space:nowrap}
+.r,.size{text-align:right;white-space:nowrap}
+.status{color:var(--dim);white-space:nowrap}
+.status.ok{color:var(--good);font-weight:600}
+.status.no{color:var(--warn);font-weight:600}
+tr.day th{background:var(--grouphdr);font-weight:700;color:var(--ink);font-size:11px;
+  padding:4px 10px;border-top:.5px solid var(--line);
+  border-bottom:.5px solid var(--line);text-align:left}
+tr.ghost td{opacity:.42}
+.bar{display:flex;align-items:center;gap:8px;padding:9px 13px;
+     border-top:.5px solid var(--line);background:var(--chrome);font-size:11.5px;
+     color:var(--dim)}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:6px;
+     padding:5px 12px;font-size:12px;font-weight:600}
+.btn.off{background:var(--line);color:var(--faint)}
+.lost{color:var(--warn);font-weight:600}
+
+/* ── the blank-slate / consent screens ── */
+.screen{background:var(--page);border:.5px solid var(--line);border-radius:11px;
+        box-shadow:var(--shadow);overflow:hidden;max-width:430px;margin-top:10px}
+.screen .body{padding:30px 24px 24px;text-align:center}
+.screen h4{font-size:14px;font-weight:700;margin:0 0 6px}
+.screen p{font-size:12px;color:var(--dim);margin:0 0 14px;line-height:1.5}
+.screen .btnrow{display:flex;gap:8px;justify-content:center}
+.screen .ghostbtn{border:.5px solid var(--line);border-radius:6px;padding:5px 12px;
+     font-size:12px;font-weight:600;color:var(--ink);background:var(--page)}
+
+/* ── comparison + change tables ── */
+.t2{background:var(--page);border:.5px solid var(--line);border-radius:10px;
+    box-shadow:var(--shadow);overflow:hidden;margin-top:10px}
+.t2 table{border-collapse:collapse;width:100%;font-size:12px}
+.t2 th{text-align:left;font-size:10px;letter-spacing:.03em;text-transform:uppercase;
+      color:var(--faint);font-weight:700;padding:9px 12px;background:var(--grouphdr);
+      border-bottom:.5px solid var(--line)}
+.t2 td{padding:9px 12px;border-bottom:.5px solid var(--hairline);vertical-align:top}
+.t2 tr:last-child td{border-bottom:0}
+.t2 td.k{font-weight:600;white-space:nowrap}
+.t2 td.dimc{color:var(--dim)}
+.grid2{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(390px,1fr));
+       align-items:start}
+ol.chg{max-width:100ch;padding-left:20px}
+ol.chg li{margin:0 0 13px;color:var(--dim)}
+ol.chg li b{color:var(--ink)}
+ul.q{max-width:100ch;padding-left:20px}
+ul.q li{margin:0 0 12px;color:var(--dim)}
+ul.q li b{color:var(--ink)}
+</style>
+
+<div class="wrap">
+
+<h1>What the researcher actually sees</h1>
+<p class="sub">The import window was designed against a tenant that grants everything. Research on
+17 Aug 2026 says the common corporate tenant does not — and the thing it withholds is the calendar,
+which is where <b>the roster, the schedule, the titles and the arithmetic footer</b> come from. This
+remodels the shipped surfaces against that tenant, so the consequence is visible rather than
+argued.</p>
+<p class="sub"><b>Drawing it settled it.</b> The window without a calendar turned out to be a good
+product rather than a degraded one — date, time and duration identify a session, and all three
+survive. So the conclusion is not <i>how do we cope when the calendar is refused</i>. It is
+<b>aim for A, land safely on B, and let the columns follow the data</b>: ask for the video first
+and the calendar second, so a refused calendar costs the calendar and nothing else, and drop any
+column the grant returned no data for rather than ruling a stripe of em-dashes. §5 carries the
+changes; §6 carries the one measurement they are all gated on.</p>
+<p class="meta">Design artefact · 17 Aug 2026 · siblings:
+<code>cloud-import-recordings-grid.html</code>, <code>cloud-import-failure-states.html</code>,
+<code>cloud-import-scope-choice.html</code> · relates to <code>docs/design-cloud-import.md</code>
+§3, §6</p>
+
+<div class="ask hot">
+<b>The finding, in one line: <code>Calendars.Read</code> has required admin consent since late
+November 2025, and we verified otherwise on a tenant where we are the admin.</b><br><br>
+Microsoft's message centre <code>MC1163922</code> added 20 Exchange and Teams permissions to the
+Microsoft-managed default app consent policy, rolling out late Oct → late Nov 2025.
+<code>Calendars.Read</code> is on that list, and so is <code>Calendars.ReadBasic</code>.
+<code>Files.Read</code> is <b>not</b> — the change is scoped to Exchange and Teams, not files.
+Our §3 table marks <code>Calendars.Read</code> “no admin consent ✓verified” as of 15 Aug 2026;
+that check ran against our own tenant, whose owner is Global Administrator, which the probe brief
+already names as the trap that always says yes.<br><br>
+<b>So the video survives and the calendar does not.</b> Everything below follows from that one
+sentence. <span class="tag doc">documented</span> — the enumerated permission list comes from trade
+write-ups of the message centre post, not from a live non-admin tenant. The measurement that
+settles it is Q-B, and it is now the cheapest high-value probe we have.
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>1 — The same four recordings, three tenants</h2>
+<p class="sub">Identical OneDrive contents. Identical researcher. The only variable is what their
+organisation let them consent to.</p>
+
+<h3>A · The tenant we designed for — calendar granted</h3>
+
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Microsoft Teams</div>
+      <div class="s">martin@clientco.com</div></div>
+    <div class="grow"></div>
+    <div class="pick">Last 30 days ⌄</div><div class="filter">Filter</div></div>
+  <table>
+    <thead><tr><th class="tick"></th><th>Meeting</th><th>Scheduled</th><th>Recorded</th>
+      <th class="r">Size</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr class="day"><th colspan="6">Wed 13 Aug</th></tr>
+      <tr><td class="tick"><input type="checkbox" checked></td>
+        <td><div class="ttl">P04 Interview</div>
+            <div class="sub2">Priya Raman · Simon Ellery</div></td>
+        <td class="num">09:30<div class="sub2">1h</div></td>
+        <td class="num">09:34<div class="sub2">52m 11s</div></td>
+        <td class="size">1.1 GB</td><td></td></tr>
+      <tr><td class="tick"><input type="checkbox" checked></td>
+        <td><div class="ttl">P05 Interview</div>
+            <div class="sub2">Dana Okonkwo · Simon Ellery</div></td>
+        <td class="num">11:00<div class="sub2">1h</div></td>
+        <td class="num">11:02<div class="sub2">48m 03s</div></td>
+        <td class="size">1.0 GB</td><td></td></tr>
+      <tr><td class="tick"></td>
+        <td><div class="ttl">Weekly sync</div>
+            <div class="sub2">Dana Okonkwo · Priya Raman · Simon Ellery</div></td>
+        <td class="num">10:00<div class="sub2">30m</div></td>
+        <td class="dash">—</td><td class="size dash">—</td>
+        <td class="status">Not recorded</td></tr>
+      <tr class="day"><th colspan="6">Fri 8 Aug</th></tr>
+      <tr><td class="tick"><input type="checkbox" checked></td>
+        <td><div class="ttl">P03 Interview</div><div class="sub2">Aoife Brennan</div></td>
+        <td class="num">15:00<div class="sub2">1h</div></td>
+        <td class="num">15:06<div class="sub2">47m 52s</div></td>
+        <td class="size">1.0 GB</td><td></td></tr>
+      <tr><td class="tick"><input type="checkbox" checked></td>
+        <td><div class="ttl">Catch-up with Tomas</div><div class="sub2">Tomas Lind</div></td>
+        <td class="num">16:30<div class="sub2">30m</div></td>
+        <td class="num">16:31<div class="sub2">24m 40s</div></td>
+        <td class="size">402 MB</td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="bar"><span>9 meetings in window · 4 you can fetch · 4 organised by someone else</span>
+    <span class="grow"></span><button class="btn">Import 4 Recordings</button></div>
+</div>
+
+<p class="why good"><b>Everything in this window except the tick, the size and the clock comes from
+the calendar.</b> Titles, attendee lines, the Scheduled column, the un-recorded row, and all three
+numbers in the footer. That is not a decoration layer — it is most of the screen.</p>
+
+<h3>B · The common corporate tenant — <code>Files.Read</code> only</h3>
+
+<div class="win">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Microsoft Teams</div>
+      <div class="s">martin@clientco.com</div></div>
+    <div class="grow"></div>
+    <div class="pick">Last 30 days ⌄</div><div class="filter">Filter</div></div>
+  <table>
+    <thead><tr><th class="tick"></th><th>Meeting</th><th>Recorded</th>
+      <th class="r">Size</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr class="day"><th colspan="5">Wed 13 Aug</th></tr>
+      <tr><td class="tick"><input type="checkbox" checked></td>
+        <td><div class="ttl">P04 Interview</div></td>
+        <td class="num">09:34<div class="sub2">52m 11s</div></td>
+        <td class="size">1.1 GB</td><td></td></tr>
+      <tr><td class="tick"><input type="checkbox" checked></td>
+        <td><div class="ttl">P05 Interview</div></td>
+        <td class="num">11:02<div class="sub2">48m 03s</div></td>
+        <td class="size">1.0 GB</td><td></td></tr>
+      <tr class="day"><th colspan="5">Fri 8 Aug</th></tr>
+      <tr><td class="tick"><input type="checkbox" checked></td>
+        <td><div class="ttl">P03 Interview</div></td>
+        <td class="num">15:06<div class="sub2">47m 52s</div></td>
+        <td class="size">1.0 GB</td><td></td></tr>
+      <tr><td class="tick"><input type="checkbox" checked></td>
+        <td><div class="ttl">Meeting with Tomas Lind</div></td>
+        <td class="num">16:31<div class="sub2">24m 40s</div></td>
+        <td class="size">402 MB</td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="bar"><span>4 recordings in the last 30 days</span>
+    <span class="grow"></span><button class="btn">Import 4 Recordings</button></div>
+</div>
+
+<p class="why"><b>Four things vanished and one changed identity — and reviewed 17 Aug, only one of
+them matters.</b> Gone: every attendee line, the whole Scheduled column, the <i>Weekly sync — Not
+recorded</i> row, and two of the three footer numbers. Changed: <i>Catch-up with Tomas</i> was the
+calendar subject, and the filename says <code>Meeting with Tomas Lind</code>.</p>
+
+<p class="why good"><b>The un-recorded row and the title change are both accepted, not problems.</b>
+A meeting nobody recorded cannot be analysed whether we list it or not, so the row was never doing
+work for the researcher. And they do not find a session by its canonical title — they know they
+spoke to a person on a day, and there are usually a handful. The rename-before-drop pass in the
+researcher's own workflow already absorbs it, and session names stay editable in the report.</p>
+
+<p class="why good"><b>And the good titles are nearly always there anyway — because scheduling
+discipline pays off in the <i>filename</i>, not in the calendar API.</b> A researcher schedules
+their sessions; it is the job. Teams writes the meeting subject into the recording's filename, so
+<code>P04 Interview</code> survives with no calendar scope at all. The degenerate
+<code>Meeting with Tomas Lind</code> shape only appears on an unscheduled call — and an ad-hoc
+hour-long research interview is rare by definition. Note the specimen above: the ad-hoc row is the
+24-minute catch-up, not one of the interviews. <b>We were about to buy with a scope something the
+filename gives away free.</b></p>
+
+<p class="why"><b>And the footer's safety rail mostly survives — an earlier draft of this page had
+this wrong.</b> §6's first honest-batch requirement is “show the join's arithmetic”, because the
+feature's designed output and its failure output are both <i>a shorter list</i>. But the part that
+answers <i>did the listing finish?</i> is <code>ListOutcome</code> —
+<code>exhausted</code> / <code>pageCapHit</code> / <code>failed</code> — and that comes off the
+<b>recordings</b> walk, which needs no calendar. What is genuinely lost is the cross-check against
+the diary, and at a handful of interviews the researcher's own memory is a better one than a footer:
+they know they ran six sessions, so four rows is a question they ask unprompted.</p>
+
+<p class="why bad"><b>What is left, and it is a short list: the roster and the schedule.</b> The
+attendee line feeds the drop-yourself rule, the externality marker, and §4's organiser framing. The
+Scheduled column exists to make Teams' recording-vs-booking gap legible. Both are real losses —
+A is the better window and worth reaching for — but neither stops the researcher identifying and
+importing the right sessions, which is what the window is for.</p>
+
+<p class="why good"><b>Note the column count: five, not six. When there is no scheduled data at all,
+the column goes — it does not render a stripe of em-dashes.</b> A column of forty dashes is chrome
+advertising an absence, which is the opposite of the house rule that absence is itself information.
+The same applies to the attendee sub-line: no roster, no line, no explanatory placeholder under
+every title. <b>The window's columns are derived from what the grant actually returned</b>, so B is
+a smaller window rather than a damaged one — and the em-dash stays available for the row-level
+case, where <i>this</i> recording has no match but others do.</p>
+
+<h3>C · The consent that never lands — everything refused</h3>
+
+<div class="grid2">
+<div>
+<div class="screen">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Microsoft Teams</div></div></div>
+  <div class="body">
+    <h4>Your organisation needs to approve Bristlenose</h4>
+    <p>Sign-in finished, but ClientCo requires an administrator to approve apps before they can read
+    your meeting recordings.</p>
+    <div class="btnrow">
+      <button class="btn">Send your admin a link</button>
+      <span class="ghostbtn">Try again</span>
+    </div>
+  </div>
+</div>
+<p class="why dead"><b>This is the state we would land in today if the consent request is
+all-or-nothing</b> — and we currently ask for <code>Files.Read</code>, <code>Calendars.Read</code>,
+<code>User.Read</code> and <code>offline_access</code> in a single authorize call. If Entra evaluates
+that set as a unit, one admin-gated member takes the whole request down and <b>the researcher does
+not get the degraded video-only window in B. They get nothing.</b> Scenario B is only reachable if we
+ask twice. <span class="tag unk">unmeasured</span></p>
+</div>
+
+<div>
+<div class="screen">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div>
+    <div class="titles"><div class="t">Import from Microsoft Teams</div></div></div>
+  <div class="body">
+    <h4>Sign-in didn't finish</h4>
+    <p>You may have closed the window — or your organisation may need to approve Bristlenose first.
+    We can't tell which from here.</p>
+    <div class="btnrow"><span class="ghostbtn">Try again</span></div>
+  </div>
+</div>
+<p class="why"><b>Shipped today, and correct — but it is the <i>weaker</i> of the two.</b>
+<code>Phase.signInIncomplete</code> exists precisely because
+<code>ASWebAuthenticationSession</code> reports plain cancellation whether the researcher closed
+the tab or Entra refused before any redirect. It names both possibilities honestly. The screen on
+the left is better whenever we can tell — and <code>AADSTS90094</code> in the callback <i>is</i>
+us being told. We already parse it; we just don't act differently on it.</p>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>2 — Finding → data → what the user sees</h2>
+<p class="sub">Each row is one technical fact, the field it takes away, and the pixels that change.
+This is the table to argue with; the windows above are just it, rendered.</p>
+
+<div class="t2">
+<table>
+<tr><th>Technical finding</th><th>What the data loses</th><th>What the researcher sees</th></tr>
+
+<tr><td class="k"><code>Calendars.Read</code> is admin-gated<br><span class="tag doc">documented</span></td>
+  <td class="dimc"><code>calendarView</code> returns 403. <code>events</code> is empty, so
+  <code>matched</code> is nil for every row.</td>
+  <td>No attendee line. No Scheduled column. Titles fall back to the filename.</td></tr>
+
+<tr><td class="k">A meeting with no recording has no <code>driveItem</code></td>
+  <td class="dimc">Un-recorded meetings existed only as calendar events. Nothing in
+  <code>/Recordings</code> represents them.</td>
+  <td><b>Accepted.</b> “Not recorded” rows disappear — and a meeting nobody recorded cannot be
+  analysed whether we list it or not. The row was diagnostics, and the researcher's own memory of
+  how many sessions they ran is the better diagnostic at this scale.</td></tr>
+
+<tr><td class="k"><code>JoinArithmetic</code> is computed from
+  <code>events</code></td>
+  <td class="dimc"><code>eventsInWindow</code> falls back to <code>rows.count</code>;
+  <code>organisedByOthers</code> counts zero by design when the scope is declined.
+  <b><code>outcome</code> is unaffected</b> — it comes off the recordings walk.</td>
+  <td>Footer drops from three numbers to one. <b>The completeness rail survives</b>: a truncated or
+  failed listing still declares itself. Only the diary cross-check is lost.</td></tr>
+
+<tr><td class="k">Title is <code>matched?.subject ?? parsed.title</code></td>
+  <td class="dimc">Always <code>parsed.title</code> — the filename segment before the timestamp.</td>
+  <td><b>Accepted.</b> Recognition is by person and day over a handful of sessions, not by title.
+  “Meeting with Tomas Lind” names the human; “Weekly sync” names nothing. Renaming already happens
+  by hand before the drop, and session names stay editable in the report.</td></tr>
+
+<tr><td class="k">Attendee/domain filtering needs the roster</td>
+  <td class="dimc">Nothing to filter on.</td>
+  <td>Filter narrows to title text only. Minor at a handful of rows; it is the 200-meeting month
+  that wanted attendee search, and that is not this user.</td></tr>
+
+<tr><td class="k">Entra may evaluate a scope set as a unit
+  <span class="tag unk">unmeasured</span></td>
+  <td class="dimc">One authorize call carrying an admin-gated scope may return no code at all.</td>
+  <td><b>Not a degraded window — no window.</b> Decides whether we ship one consent step or two.</td></tr>
+
+<tr><td class="k">A hand-rolled flow sends no Primary Refresh Token
+  <span class="tag doc">documented</span></td>
+  <td class="dimc">Device-compliance and hybrid-join state can't be evaluated, so a
+  compliant-device Conditional Access policy refuses the token after a successful sign-in
+  (<code>AADSTS53003</code>).</td>
+  <td>Sign-in appears to work, then fails. Indistinguishable from a refused consent unless we read
+  the error code — and unfixable by the researcher, their admin, or us.</td></tr>
+
+<tr><td class="k"><code>/Recordings</code> may be a localised folder name
+  <span class="tag unk">unmeasured</span></td>
+  <td class="dimc">The hardcoded path 404s on a non-English tenant.</td>
+  <td>Currently indistinguishable from a personal account: we set
+  <code>tier = .personal</code> and report an empty list. <b>A wrong, confident explanation.</b></td></tr>
+</table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>3 — The two walls, and why they need different words</h2>
+<p class="sub">Real products treat this as a support problem, not an engineering one. Morgen's and
+GReminders' answer to the same wall is a walkthrough plus a pre-built admin-consent URL carrying
+their client id. Nobody engineers around it. The variable worth modelling is which of Entra's two
+screens the researcher hit, because one has a door and one does not.</p>
+
+<div class="grid2">
+<div>
+<h3>Their tenant enables the request workflow</h3>
+<div class="screen"><div class="body">
+  <h4>Ask ClientCo to approve Bristlenose</h4>
+  <p>Microsoft will show you a box to explain why you need it. Your IT team gets the request by
+  email — most approve within a day.</p>
+  <div class="btnrow"><button class="btn">Continue to Microsoft</button></div>
+</div></div>
+<p class="why good">The researcher has a door. We hand them to it and say what happens next, because
+the Entra screen itself says nothing about timescale. <b>Route back into the window on success</b> —
+this is the one branch where retrying is the right instinct.</p>
+</div>
+
+<div>
+<h3>Their tenant does not</h3>
+<div class="screen"><div class="body">
+  <h4>Only ClientCo's IT team can approve this</h4>
+  <p>Microsoft won't let you send the request yourself. Send this link to whoever manages your
+  Microsoft 365 account.</p>
+  <div class="btnrow"><button class="btn">Copy link for your admin</button>
+    <span class="ghostbtn">Import from Finder instead</span></div>
+</div></div>
+<p class="why bad">No door, so <b>“Try again” must not appear</b> — it sends someone at a wall only
+a third party can remove. The escape hatch is the honest one: the recording is two clicks away in
+Teams, and drag-drop already works. Naming that is not an admission of defeat; it is the appliance
+coping.</p>
+</div>
+</div>
+
+<p class="why"><b>Both screens need a scope line the researcher can hand over.</b> An admin asked to
+approve an unknown app will ask what it reads. Today our consent screen says “unverified” and “the
+publisher has not provided links to their terms” — so the first thing their IT sees about us is an
+absence. That is <code>docs/design-cloud-import.md</code> §10's already-owed consent debt showing
+through Microsoft's own UI, and it is ours to fix, not Microsoft's.</p>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>4 — Three shapes, and the third one only became visible once B was drawn</h2>
+<p class="sub">Once the un-recorded row and the title change are accepted as fine, the calendar is
+buying two things: the attendee line and the Scheduled column. That is a much smaller prize than
+the design assumed, and it makes a third option live.</p>
+
+<div class="t2">
+<table>
+<tr><th></th><th>One call — today</th><th>Two calls — split</th><th>No calendar at all</th></tr>
+<tr><td class="k">Open tenant</td>
+  <td class="dimc">Scenario A. One prompt.</td>
+  <td class="dimc">Scenario A. <b>Two</b> prompts — a cost paid by the best-case user.</td>
+  <td class="dimc">Scenario B. One prompt.</td></tr>
+<tr><td class="k">Default-policy tenant</td>
+  <td class="dimc"><b>Scenario C.</b> Nothing works.</td>
+  <td class="dimc"><b>Scenario B.</b> Video imports; roster offered, declined gracefully.</td>
+  <td class="dimc"><b>Scenario B.</b> Identical to every other tenant.</td></tr>
+<tr><td class="k">Admin approves later</td>
+  <td class="dimc">Re-run the whole sign-in.</td>
+  <td class="dimc">Add the calendar grant alone.</td>
+  <td class="dimc">Nothing to approve.</td></tr>
+<tr><td class="k">What the researcher loses</td>
+  <td class="dimc">Everything, on a common tenant.</td>
+  <td class="dimc">Nothing they can't recover by asking.</td>
+  <td class="dimc">Attendee line + Scheduled column, on every tenant.</td></tr>
+<tr><td class="k">What we stop building</td>
+  <td class="dimc">—</td>
+  <td class="dimc">—</td>
+  <td class="dimc"><b>The consent split, the ReadBasic switch, the roster-absence messaging, the
+  two consent walls, and the whole <code>calendarView</code> path</b> — pagination, timezone
+  pinning, the ±30-minute join, and its tests.</td></tr>
+</table>
+</div>
+
+<p class="why good"><b>Decided 17 Aug: two calls. A is the target, B is the fallback, and the
+split is what makes “both” possible.</b> A is the better window and worth reaching for — the roster
+and the schedule are real. But reaching for it must not risk the video, and on a single call it
+does exactly that: one admin-gated member takes the whole request down and the researcher gets
+scenario C. Splitting is the only shape where a refused calendar costs the calendar and nothing
+else.</p>
+
+<p class="why"><b>The third column stays on the table, unbuilt.</b> Dropping the calendar entirely
+was a real option and it deletes the most code — but it also gives up A permanently for every
+tenant in order to simplify the tenants that were going to end at B anyway. Held in reserve: if the
+measurement below shows most tenants refuse, the split degenerates into it at no extra cost, since
+B is already the fallback we built. <i>(Teams-specific either way — Google's adapter lists
+<b>through</b> <code>calendar.events.readonly</code>, so there the same move would remove the
+listing itself.)</i></p>
+
+<p class="why bad"><b>What the split costs, stated so it is a decision and not a drift.</b> The
+best-case researcher on a permissive tenant sees <b>two consent prompts instead of one</b>. That is
+a real regression for the luckiest user, paid so the common user gets a working window instead of a
+wall. The second prompt should be asked at a moment where its value is obvious — after the list is
+on screen, offering to name the people, not as a second gate in front of an empty window.</p>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>5 — Changes needed to deliver this</h2>
+<p class="sub"><b>Decided 17 Aug: aim for A, fall back to B, and let the columns follow the data.</b>
+The identifying tuple a researcher recognises a session by — <i>date, time, duration</i> — is
+calendar-independent (duration comes off the driveItem's own <code>video</code>/<code>audio</code>
+media facet), which is why B is a good product rather than a broken one. A is still better and
+worth reaching for; the work is making the reach safe.</p>
+
+<ol class="chg">
+<li><b>Split the consent into two authorize calls.</b> <code>Files.Read</code> +
+<code>User.Read</code> + <code>offline_access</code> at sign-in; the calendar as a separate,
+declinable grant asked <i>after</i> the list is on screen, where its value is visible.
+<code>MicrosoftScopes.requested</code> becomes two sets and <code>TeamsSource.signIn</code> stops
+treating the calendar as part of getting in. <b>This is the change everything else depends on</b> —
+and it is gated on the measurement in §6.</li>
+
+<li><b>Switch <code>Calendars.Read</code> → <code>Calendars.ReadBasic</code>.</b> Both are on the
+blocked list, so the 15 Aug rationale (“ReadBasic needs admin consent and Read does not”) is void.
+Same gate, strictly less data — it restores the data-minimisation position we gave up, and the
+<code>$select</code> compensating control stays as defence in depth.</li>
+
+<li><b>Derive the columns from the grant, don't render empty ones.</b> No scheduled data at all →
+<b>the Scheduled column does not exist</b>, not a stripe of em-dashes. No roster → no attendee
+sub-line and no placeholder under every title. The em-dash survives for the row-level case, where
+one recording lacks a match and its neighbours have one. This is the concrete difference between
+window A and window B in §1, and it is a rendering rule rather than a message.</li>
+
+<li><b>Offer the calendar once, where it reads as an offer.</b> Not a banner over an empty window
+and not an error — a quiet line near the roster's absence that explains what the second grant would
+add and lets them ask. It must survive being declined without nagging.</li>
+
+<li><b>Branch the consent refusal on <code>AADSTS90094</code> into the two walls in §3</b>, and only
+show “Try again” where the request workflow actually exists. Needed for the calendar grant, and
+still needed for sign-in itself: <code>Files.Read</code> is not on Microsoft's blocked list, but
+§3's warning stands — under a verified-publishers consent policy the self-consentable set is the
+OIDC scopes plus <code>User.Read</code>, and <code>Files.Read</code> is not in it.</li>
+
+<li><b>Classify <code>AADSTS53003</code> distinctly.</b> Conditional Access is neither a consent
+problem nor a licence problem, and today it lands in <code>unexpected</code> and fails closed with
+no explanation. Nobody — not the researcher, not their admin, not us — can fix it from here, so say
+precisely that.</li>
+
+<li><s>Stop diagnosing a 404 on <code>/Recordings</code> as a personal account.</s>
+<b>Done 17 Aug</b> — the listing now addresses <code>/me/drive/special/recordings/children</code>,
+the alias Graph documents as existing to avoid a path lookup “which would require localization”.
+No new scope; <code>Files.Read</code> is its least-privileged permission, and it survives the user
+renaming the folder too. The tier moved with it: Graph answers <b>403 or 404</b> when a read-only
+app asks for a special folder that doesn't exist, so the drive is now the discriminator — if
+<code>/me/drive</code> answers we hold <code>Files.Read</code>, the refusal is about the folder, and
+<code>driveType</code> names the tier as a field instead of a guess.</li>
+
+<li><b>Teams token persistence + refresh</b> — <code>MicrosoftGrant</code> in
+<code>CloudGrantStore</code>, plus a <code>cloud-microsoft-teams</code> entry in
+<code>KeychainHelper.serviceNames</code>, which is an allowlist: an unregistered key persists
+nothing, silently. <b>Two grants, one record</b> — the same “make half-restoring unrepresentable”
+shape the Google grant just took. <i>Blocked — both files are held by the Google session.</i></li>
+</ol>
+
+<p class="why good"><b>One change died on its own merits</b> — marking filename-derived titles as
+filename-derived. Recognition runs on person and day over a handful of sessions, researchers nearly
+always schedule so the filename carries a real subject anyway, renaming happens by hand before the
+drop, and session names stay editable in the report. Four mechanisms already cover it.</p>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>6 — Open questions</h2>
+<p class="sub">Three of the six closed on 17 Aug. The one I had marked dissolved is live again and is
+now the gate on the whole plan.</p>
+
+<ul class="q">
+<li><b>Does one admin-gated scope fail the whole authorize request?</b>
+<span class="tag unk">gates change 1</span> If a mixed request fails whole, the split is mandatory —
+it is the only way to reach for A without risking B. If it degrades instead, granting what it can,
+then today's single call already delivers A-when-possible and most of this plan is unnecessary.
+<b>Nothing else should be built until this is known.</b> Cheap: two authorize URLs against a
+non-admin on a default-policy tenant, one carrying <code>Files.Read</code> alone and one carrying
+both. Read both screens. Needs someone else's tenant — ours always says yes.</li>
+
+<li><b>Do we chase Publisher Verification now?</b> <span class="tag unk">the real unknown</span>
+It does not lift the admin gate on the calendar, but it is the thing standing between a researcher
+and <code>Files.Read</code> on a restrictive tenant. Under a verified-publishers consent policy the
+self-consentable set is the OIDC scopes plus <code>User.Read</code>, and <code>Files.Read</code> is
+not in it. If that policy is common, Publisher Verification stops being paperwork and becomes
+<b>the gate on the entire feature</b>. Partner Center account plus a verified domain.</li>
+
+<li><s>Does the <code>/Recordings</code> folder name localise?</s> <b>Closed 17 Aug —
+and it never needed the tenant.</b> Graph's own special-folder documentation states that the
+alias exists so callers avoid a path lookup “which would require localization”, which is Microsoft
+saying the name localises and shipping the fix in the same sentence. <span class="tag doc">
+documented</span>, not measured — the German Learn page is machine-translated and contradicts
+itself on the folder's name, so it settles nothing either way. It did not matter: the alias is
+correct under both answers, costs no scope, and is strictly more robust. Shipped.</li>
+
+<li><b>What does the footer say?</b> Smaller than it was, now that <code>ListOutcome</code> is
+established as the surviving rail. “4 recordings in the last 30 days” is true and reads like
+certainty; is there wording that conveys <i>this is your Recordings folder, which is not the same
+as everything you recorded</i> without becoming a permanent apology? A copy question, not a
+structural one.</li>
+</ul>
+
+<div class="ask">
+<b>Closed 17 Aug 2026.</b><br><br>
+<b>Is scenario B a good enough product?</b> — <b>Yes</b>, and better than expected. Date, time and
+duration are enough to be fairly sure which session is which, and all three are
+calendar-independent (duration comes off the driveItem's media facet).<br><br>
+<b>Is the roster worth a second prompt?</b> — <b>Yes, as a second prompt and never as a gate.</b>
+A is the better window and worth aiming for; B is a fine place to land. That is precisely the
+two-call shape, and it is why the question above matters.<br><br>
+<b>Should we mark filename-derived titles?</b> — <b>No.</b> Researchers nearly always schedule, so
+the filename carries a real meeting subject; the ad-hoc case is rare by definition and names the
+human anyway.<br><br>
+<b>What does the window do with a column it has no data for?</b> — <b>Drops it.</b> Not em-dashes.
+Columns derive from what the grant returned; the em-dash is for the row-level miss.
+</div>
+
+</div>

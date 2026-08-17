@@ -643,6 +643,7 @@
     "statusInThisProject": "In questo progetto",
     "signingInBody": "Completa l'accesso a {{platform}} nel browser.",
     "signingInCancel": "Annulla",
+    "done": "Fine",
     "heldImported": "Gi\u00e0 in questo progetto.",
     "heldNotDownloaded": "Gi\u00e0 importata: il file \u00e8 su {{provider}} e va scaricato l\u00ec.",
     "heldDriveNotConnected": "Gi\u00e0 importata: \u00ab{{volume}}\u00bb non \u00e8 collegato.",

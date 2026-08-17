@@ -34,6 +34,9 @@ struct CloudImportWindow: View {
     /// when they invoked Import.
     @EnvironmentObject private var coordinator: CloudImportCoordinator
     @EnvironmentObject private var i18n: I18n
+    /// Closes the import window once a batch has landed — the one place this
+    /// view ends itself rather than handing back to the researcher.
+    @Environment(\.dismiss) private var dismiss
     /// Supplies every vendor-specific string. A `switch` on platform inside a
     /// view body is the smell this replaces.
     let platform: CloudPlatform
@@ -557,6 +560,16 @@ struct CloudImportWindow: View {
         } else if let terminus = store.terminus, terminus.failed > 0 {
             Button(i18n.t("desktop.cloudImport.retryFailed", ["count": String(terminus.failed)])) { start() }
                 .buttonStyle(.borderedProminent)
+        } else if store.terminus != nil, store.tickedCount == 0 {
+            // A batch finished, nothing failed, and nothing is left ticked —
+            // because a row that landed stops being tickable. Without this the
+            // button fell back to a **disabled "Import 0 Recordings"**, which
+            // is a dead end dressed as an action: the work is done, the window
+            // says zero, and there is nothing to press. Done is what actually
+            // happened, and it closes.
+            Button(i18n.t("desktop.cloudImport.done")) { dismiss() }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
         } else {
             // A specific verb carrying the count, never "OK" — HIG: "a specific
             // button title… helps people understand the action they're taking."

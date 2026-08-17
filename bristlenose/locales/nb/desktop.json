@@ -643,6 +643,7 @@
     "statusInThisProject": "I dette prosjektet",
     "signingInBody": "Fullf\u00f8r p\u00e5loggingen til {{platform}} i nettleseren.",
     "signingInCancel": "Avbryt",
+    "done": "Ferdig",
     "heldImported": "Allerede i dette prosjektet.",
     "heldNotDownloaded": "Allerede importert \u2014 filen ligger p\u00e5 {{provider}} og m\u00e5 lastes ned der.",
     "heldDriveNotConnected": "Allerede importert \u2014 \u00ab{{volume}}\u00bb er ikke tilkoblet.",

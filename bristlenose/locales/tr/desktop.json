@@ -643,6 +643,7 @@
     "statusInThisProject": "Bu projede",
     "signingInBody": "{{platform}} oturum a\u00e7ma i\u015flemini taray\u0131c\u0131n\u0131zda tamamlay\u0131n.",
     "signingInCancel": "\u0130ptal",
+    "done": "Bitti",
     "heldImported": "Zaten bu projede.",
     "heldNotDownloaded": "Zaten i\u00e7e aktar\u0131ld\u0131 \u2014 dosya {{provider}} \u00fczerinde ve oradan indirilmesi gerekiyor.",
     "heldDriveNotConnected": "Zaten i\u00e7e aktar\u0131ld\u0131 \u2014 \u201c{{volume}}\u201d ba\u011fl\u0131 de\u011fil.",

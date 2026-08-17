@@ -615,6 +615,7 @@
     "statusInThisProject": "\u5728\u9019\u500b\u5c08\u6848\u4e2d",
     "signingInBody": "\u8acb\u5728\u700f\u89bd\u5668\u4e2d\u5b8c\u6210 {{platform}} \u767b\u5165\u3002",
     "signingInCancel": "\u53d6\u6d88",
+    "done": "\u5b8c\u6210",
     "heldImported": "\u5df2\u5728\u9019\u500b\u5c08\u6848\u4e2d\u3002",
     "heldNotDownloaded": "\u5df2\u532f\u5165\u2014\u2014\u6a94\u6848\u5728 {{provider}}\uff0c\u9700\u8981\u5728\u90a3\u88e1\u4e0b\u8f09\u3002",
     "heldDriveNotConnected": "\u5df2\u532f\u5165\u2014\u2014\u300c{{volume}}\u300d\u672a\u9023\u63a5\u3002",

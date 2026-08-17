@@ -682,6 +682,7 @@
     "statusInThisProject": "V tomto projektu",
     "signingInBody": "Dokon\u010dete p\u0159ihl\u00e1\u0161en\u00ed k {{platform}} v prohl\u00ed\u017ee\u010di.",
     "signingInCancel": "Zru\u0161it",
+    "done": "Hotovo",
     "heldImported": "U\u017e je v tomto projektu.",
     "heldNotDownloaded": "U\u017e importov\u00e1no \u2014 soubor je na {{provider}} a je pot\u0159eba ho st\u00e1hnout tam.",
     "heldDriveNotConnected": "U\u017e importov\u00e1no \u2014 \u201e{{volume}}\u201c nen\u00ed p\u0159ipojeno.",

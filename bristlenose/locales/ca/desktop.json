@@ -643,6 +643,7 @@
     "statusInThisProject": "En aquest projecte",
     "signingInBody": "Acaba d'iniciar la sessi\u00f3 a {{platform}} al navegador.",
     "signingInCancel": "Cancel\u00b7la",
+    "done": "Fet",
     "heldImported": "Ja \u00e9s en aquest projecte.",
     "heldNotDownloaded": "Ja importat: el fitxer \u00e9s a {{provider}} i cal baixar-lo all\u00e0.",
     "heldDriveNotConnected": "Ja importat: \u00ab{{volume}}\u00bb no est\u00e0 connectat.",

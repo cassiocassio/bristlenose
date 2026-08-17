@@ -643,6 +643,7 @@
     "statusInThisProject": "In this project",
     "signingInBody": "Finish signing in to {{platform}} in your browser.",
     "signingInCancel": "Cancel",
+    "done": "Done",
     "heldImported": "Already in this project.",
     "heldNotDownloaded": "Already imported \u2014 the file is on {{provider}} and needs downloading there.",
     "heldDriveNotConnected": "Already imported \u2014 \u201c{{volume}}\u201d isn't connected.",

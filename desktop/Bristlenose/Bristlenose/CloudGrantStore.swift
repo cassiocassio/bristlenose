@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import OSLog
 
@@ -59,6 +60,49 @@ struct MicrosoftGrant: Codable, Equatable, Sendable {
     var identity: String?
 }
 
+/// Which Keychain item a given sign-in lives in.
+///
+/// **One item per account, keyed on a hash of the signed-in address.** The
+/// service name already differs per platform (`cloud-microsoft-teams` vs
+/// `cloud-google-meet`), so `(service, account)` is platform-scoped without the
+/// platform appearing here — adding it would key the same fact twice.
+///
+/// **Hashed, never the raw address.** `kSecAttrAccount` is unencrypted item
+/// metadata: it is readable in Keychain Access without unlocking the item's
+/// data, and a client's email address sitting there is exactly the leak this
+/// project cares about. Same reasoning, same shape as `MCPTokenStore`, which
+/// hashes a project path for the same reason.
+///
+/// **The address is the identifier, and that is a v1 decision.** Microsoft's
+/// token carries an immutable object id and Google's a `sub`, either of which
+/// would survive a rename — but a researcher who renames their account and
+/// signs in again, acquiring a second row for the same account, is an edge case
+/// not worth the parsing. The second row is visible, it is labelled with its
+/// address, and it has a Disconnect button.
+enum CloudAccountKey {
+
+    /// Where a grant whose address never arrived is stored.
+    ///
+    /// `/me` can fail while the tokens are perfectly good, and a sign-in with no
+    /// address is still a sign-in worth keeping. One slot, because there can
+    /// only be one unidentified account per service before the identity lands
+    /// and moves it.
+    static let unidentified = "unidentified"
+
+    /// The single fixed slot every cloud grant used before per-account keying.
+    /// Read once by `migrateLegacyItems`, then deleted; nothing writes here.
+    static let legacy = KeychainHelper.account
+
+    static func derive(_ identity: String?) -> String {
+        guard let identity, !identity.isEmpty else { return unidentified }
+        // Lowercased: mail servers treat the domain case-insensitively and
+        // providers hand back whatever casing the directory holds, so the same
+        // account must not key two ways because Graph capitalised it today.
+        let digest = SHA256.hash(data: Data(identity.lowercased().utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+}
+
 /// Where a cloud sign-in lives between window opens.
 ///
 /// The Keychain, via the same helper the LLM provider keys use: a refresh
@@ -67,15 +111,35 @@ struct MicrosoftGrant: Codable, Equatable, Sendable {
 /// data-protection keychain and iCloud Keychain sync from `KeychainHelper`,
 /// which is right for a revocable per-user credential and matches how every
 /// other secret in this app is held.
+///
+/// **iCloud Keychain sync is deliberate and settled (18 Aug 2026)**, and it
+/// contradicts `docs/design-cloud-import.md` §7 and §10, which both still say
+/// non-synchronizable. Those sections are wrong. The realistic loss event is
+/// the Mac being stolen, iCloud Keychain is end-to-end encrypted regardless of
+/// Advanced Data Protection, and the grant permits downloading recordings from
+/// an account the researcher is already signed into on the same devices all
+/// day. `MCPTokenStore` is non-synchronizable for a reason that does not apply
+/// here: that token names a server on *this* machine.
+///
+/// **Storage is injected rather than reached for.** Every function takes a
+/// `KeychainStore`, defaulting to the live one, because the house rule is that
+/// tests never touch the real Keychain — a SIGKILL bypasses teardown, so
+/// cleanup is not crash-safe and a stray test could overwrite a real
+/// credential. The keying, the migration and the enumeration are exactly the
+/// parts worth pinning, and they are unpinnable without this.
 enum CloudGrantStore {
     private static let log = Logger(subsystem: "app.bristlenose", category: "cloud-import")
 
     /// Namespaced away from the LLM providers, which share this helper's
     /// keyspace.
     private static let googleAccount = "cloud-google-meet"
+    private static let teamsAccount = "cloud-microsoft-teams"
 
-    static func loadGoogle() -> GoogleGrant? {
-        guard let raw = KeychainHelper.get(provider: googleAccount),
+    // MARK: - Google
+
+    static func loadGoogle(account: String,
+                           store: any KeychainStore = KeychainHelper.liveStore) -> GoogleGrant? {
+        guard let raw = store.get(provider: googleAccount, account: account),
               let data = raw.data(using: .utf8)
         else { return nil }
         guard let grant = try? JSONDecoder().decode(GoogleGrant.self, from: data) else {
@@ -83,71 +147,102 @@ enum CloudGrantStore {
             // costs one sign-in; keeping it would fail the same way on every
             // launch, silently, forever.
             log.notice("cloud_grant google decode failed — discarding")
-            clearGoogle()
+            clearGoogle(account: account, store: store)
             return nil
         }
         return grant
     }
 
-    /// Save, or — on nil — forget.
+    /// Save, or — on nil — forget. Returns the key the grant now lives under.
     ///
     /// One entry point for both because the callers that need to forget are
     /// exactly the callers that would otherwise leave a dead grant behind: a
     /// refresh that failed, a sign-in that was revoked. A separate `clear`
     /// that someone forgets to call is how a revoked account keeps its
     /// "signed in" appearance until the user reinstalls.
-    static func saveGoogle(_ grant: GoogleGrant?) {
-        guard let grant else { clearGoogle(); return }
+    ///
+    /// `previousKey` is what makes the identity arriving *late* survivable. A
+    /// grant restored without an address opens at `unidentified`, and Google's
+    /// adapter then fetches the address on its first listing — so the key it
+    /// should be stored under changes mid-session. Without the old key to
+    /// delete, that leaves two items for one account and the pane shows the
+    /// same person twice.
+    @discardableResult
+    static func saveGoogle(_ grant: GoogleGrant?,
+                           previousKey: String,
+                           store: any KeychainStore = KeychainHelper.liveStore) -> String {
+        guard let grant else {
+            clearGoogle(account: previousKey, store: store)
+            return previousKey
+        }
+        let key = CloudAccountKey.derive(grant.identity)
         guard let data = try? JSONEncoder().encode(grant),
               let raw = String(data: data, encoding: .utf8)
         else {
             log.error("cloud_grant google encode failed")
-            return
+            return previousKey
         }
-        if !KeychainHelper.set(provider: googleAccount, value: raw) {
+        if !store.set(provider: googleAccount, account: key, value: raw) {
             // Not fatal, and deliberately not surfaced: the session still
             // works, it just will not survive the window closing. Logged
             // because "why am I signing in again?" is otherwise unanswerable.
             log.error("cloud_grant google keychain write refused")
+            return previousKey
         }
+        // Only after the new item is safely written. Deleting first would turn
+        // a refused write into a lost sign-in.
+        if previousKey != key { clearGoogle(account: previousKey, store: store) }
+        return key
     }
 
-    static func clearGoogle() {
-        KeychainHelper.delete(provider: googleAccount)
+    static func clearGoogle(account: String,
+                            store: any KeychainStore = KeychainHelper.liveStore) {
+        store.delete(provider: googleAccount, account: account)
     }
 
-    private static let teamsAccount = "cloud-microsoft-teams"
+    // MARK: - Teams
 
-    static func loadTeams() -> MicrosoftGrant? {
-        guard let raw = KeychainHelper.get(provider: teamsAccount),
+    static func loadTeams(account: String,
+                          store: any KeychainStore = KeychainHelper.liveStore) -> MicrosoftGrant? {
+        guard let raw = store.get(provider: teamsAccount, account: account),
               let data = raw.data(using: .utf8)
         else { return nil }
         guard let grant = try? JSONDecoder().decode(MicrosoftGrant.self, from: data) else {
             log.notice("cloud_grant teams decode failed — discarding")
-            clearTeams()
+            clearTeams(account: account, store: store)
             return nil
         }
         return grant
     }
 
-    /// Save, or — on nil — forget. Same one-entry-point rule as Google: the
-    /// callers that need to forget are exactly the ones that would otherwise
-    /// leave a revoked grant looking live.
-    static func saveTeams(_ grant: MicrosoftGrant?) {
-        guard let grant else { clearTeams(); return }
+    /// Save, or — on nil — forget. Same one-entry-point and same rekey rule as
+    /// Google above.
+    @discardableResult
+    static func saveTeams(_ grant: MicrosoftGrant?,
+                          previousKey: String,
+                          store: any KeychainStore = KeychainHelper.liveStore) -> String {
+        guard let grant else {
+            clearTeams(account: previousKey, store: store)
+            return previousKey
+        }
+        let key = CloudAccountKey.derive(grant.identity)
         guard let data = try? JSONEncoder().encode(grant),
               let raw = String(data: data, encoding: .utf8)
         else {
             log.error("cloud_grant teams encode failed")
-            return
+            return previousKey
         }
-        if !KeychainHelper.set(provider: teamsAccount, value: raw) {
+        if !store.set(provider: teamsAccount, account: key, value: raw) {
             log.error("cloud_grant teams keychain write refused")
+            return previousKey
         }
+        if previousKey != key { clearTeams(account: previousKey, store: store) }
+        return key
     }
 
-    static func clearTeams() {
-        KeychainHelper.delete(provider: teamsAccount)
+    static func clearTeams(account: String,
+                           store: any KeychainStore = KeychainHelper.liveStore) {
+        store.delete(provider: teamsAccount, account: account)
     }
 
     // MARK: - The platform-agnostic surface the Accounts pane talks to
@@ -155,33 +250,69 @@ enum CloudGrantStore {
     /// One connected account.
     struct Connection: Equatable, Identifiable, Sendable {
         let platform: CloudPlatform
+        /// Which Keychain item this row is. Carried rather than re-derived
+        /// because the address is optional and two rows can share a platform —
+        /// so this is the only thing that identifies a row well enough to
+        /// disconnect it.
+        let accountKey: String
         /// The address signed in with. **Optional on purpose**: a grant stored
         /// before the identity travelled with it, or one whose `/me` lookup
         /// failed, is still a real connection that a researcher must be able to
         /// see and remove. A row with no address beats no row.
         let address: String?
-        var id: String { platform.rawValue }
+        /// Platform *and* account: a consultant with a personal Microsoft
+        /// account and a client's has two Teams rows, and a list keyed on the
+        /// platform alone cannot hold both.
+        var id: String { "\(platform.rawValue)/\(accountKey)" }
     }
 
-    /// Every platform currently holding a sign-in, in the order §5 sequences
-    /// them.
-    static func connections() -> [Connection] {
-        CloudPlatform.built.compactMap { platform in
-            switch platform {
-            case .teams:
-                return loadTeams().map { Connection(platform: platform, address: $0.identity) }
-            case .meet:
-                return loadGoogle().map { Connection(platform: platform, address: $0.identity) }
-            case .zoom:
-                // No store yet — Zoom is parked and cannot sign in, so there is
-                // never a grant to find. An explicit case rather than a
-                // `default` so wiring Zoom's store is a compile-time prompt.
-                return nil
+    /// Every account currently holding a sign-in, platforms in the order §5
+    /// sequences them.
+    static func connections(store: any KeychainStore = KeychainHelper.liveStore) -> [Connection] {
+        migrateLegacyItems(store: store)
+        return CloudPlatform.built.flatMap { platform -> [Connection] in
+            accountKeys(for: platform, store: store).compactMap { key in
+                switch platform {
+                case .teams:
+                    return loadTeams(account: key, store: store)
+                        .map { Connection(platform: platform, accountKey: key, address: $0.identity) }
+                case .meet:
+                    return loadGoogle(account: key, store: store)
+                        .map { Connection(platform: platform, accountKey: key, address: $0.identity) }
+                case .zoom:
+                    // No store yet — Zoom is parked and cannot sign in, so there
+                    // is never a grant to find. An explicit case rather than a
+                    // `default` so wiring Zoom's store is a compile-time prompt.
+                    return nil
+                }
             }
         }
     }
 
-    /// Forget one platform's sign-in.
+    /// The key an import window should open against, or nil when nothing is
+    /// connected.
+    ///
+    /// **First, not chosen.** Choosing between two accounts belongs at the
+    /// moment of use, where the researcher knows which client they are working
+    /// on — a picker in the import window, and only once a second account
+    /// exists (§3 issue 4). Until that ships this returns the first, which is
+    /// the only account there is: nothing yet offers a way to add a second.
+    static func firstAccountKey(for platform: CloudPlatform,
+                                store: any KeychainStore = KeychainHelper.liveStore) -> String? {
+        migrateLegacyItems(store: store)
+        return accountKeys(for: platform, store: store).first
+    }
+
+    private static func accountKeys(for platform: CloudPlatform,
+                                    store: any KeychainStore) -> [String] {
+        switch platform {
+        case .teams: return store.accounts(provider: teamsAccount)
+        case .meet:  return store.accounts(provider: googleAccount)
+        case .zoom:  return []
+        }
+    }
+
+    /// Forget one account's sign-in.
     ///
     /// **Removing the stored copy is not the whole job.** A live adapter in an
     /// open import window holds its tokens in memory, so clearing the Keychain
@@ -189,22 +320,126 @@ enum CloudGrantStore {
     /// account the researcher has just disconnected — the disconnect would look
     /// done and not be, which is the worst shape for a control whose entire
     /// purpose is revocation. The notification is how the live session learns.
-    static func disconnect(_ platform: CloudPlatform) {
+    ///
+    /// It carries the account key as well as the platform because with two
+    /// accounts on one platform, matching on the platform alone would close a
+    /// window signed in to the *other* one.
+    static func disconnect(_ platform: CloudPlatform,
+                           accountKey: String,
+                           store: any KeychainStore = KeychainHelper.liveStore) {
         switch platform {
-        case .teams: clearTeams()
-        case .meet:  clearGoogle()
+        case .teams: clearTeams(account: accountKey, store: store)
+        case .meet:  clearGoogle(account: accountKey, store: store)
         case .zoom:  break
         }
         NotificationCenter.default.post(
             name: .bristlenoseCloudAccountDisconnected,
             object: nil,
-            userInfo: ["platform": platform.rawValue])
+            userInfo: ["platform": platform.rawValue, "account": accountKey])
+    }
+
+    // MARK: - Migration
+
+    /// Move anything stored under the old fixed key to its per-account key.
+    ///
+    /// Runs on every read rather than behind a once-flag: it is one Keychain
+    /// miss in the ordinary case, and a flag is a thing to reset in tests and
+    /// to get wrong across processes.
+    ///
+    /// **The old item is deleted.** Leaving it would mean every future
+    /// enumeration finds an account under a key nothing derives, so the pane
+    /// would show a duplicate row that reappears each time it is removed. If
+    /// the rewrite fails the researcher signs in again — stated plainly here
+    /// rather than answered with a fallback chain to maintain forever.
+    static func migrateLegacyItems(store: any KeychainStore = KeychainHelper.liveStore) {
+        migrate(provider: teamsAccount, store: store) { raw in
+            (try? JSONDecoder().decode(MicrosoftGrant.self, from: raw))?.identity
+        }
+        migrate(provider: googleAccount, store: store) { raw in
+            (try? JSONDecoder().decode(GoogleGrant.self, from: raw))?.identity
+        }
+    }
+
+    private static func migrate(provider: String,
+                                store: any KeychainStore,
+                                identity: (Data) -> String?) {
+        guard let raw = store.get(provider: provider, account: CloudAccountKey.legacy),
+              let data = raw.data(using: .utf8)
+        else { return }
+        // An undecodable legacy blob still moves. Its key would be
+        // `unidentified` either way, and `load` discards what it cannot read —
+        // so this leaves the deletion to the reader rather than doing it here,
+        // where a decoder change would look like a data loss bug.
+        let key = CloudAccountKey.derive(identity(data))
+        guard store.set(provider: provider, account: key, value: raw) else {
+            log.error("cloud_grant migration write refused — leaving the legacy item in place")
+            return
+        }
+        store.delete(provider: provider, account: CloudAccountKey.legacy)
+        log.info("cloud_grant migrated a sign-in to per-account storage")
+    }
+}
+
+/// The account key a live session is currently writing under.
+///
+/// A box rather than a captured `var` because an adapter publishes its grant
+/// from `Task.detached` through a `@Sendable` closure, so the key is read and
+/// written off the main actor — and because it *moves*: a session restored
+/// without an address starts at `unidentified` and rekeys the moment the
+/// identity lands. Both the save path and the disconnect matcher need the
+/// current value, not the one captured at open time.
+final class CloudAccountKeyBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: String
+
+    init(_ value: String) { self.value = value }
+
+    var current: String {
+        lock.lock(); defer { lock.unlock() }
+        return value
+    }
+
+    /// Hand `body` the current key and store what it returns — one critical
+    /// section, because read-modify-write is the whole point.
+    func update(_ body: (String) -> String) {
+        lock.lock(); defer { lock.unlock() }
+        value = body(value)
+    }
+}
+
+/// Whether a disconnect reaches a live import session.
+///
+/// A free function rather than a branch inside the coordinator's notification
+/// block, because it is the decision worth pinning and a `NotificationCenter`
+/// observer is an awkward place to test one.
+enum CloudDisconnectMatch {
+
+    /// - Parameters:
+    ///   - liveAccountKey: nil when the session holds no credentials — a
+    ///     fixture window, or one opened before the key was known.
+    ///   - notedAccountKey: nil when the notification predates account keys or
+    ///     is malformed.
+    ///
+    /// **Unknown on either side drops the session.** The costs are not
+    /// symmetric: dropping a session that would have survived costs a re-open,
+    /// while keeping one that should have gone leaves a window listing and
+    /// fetching under an account the researcher believes they disconnected —
+    /// which is the exact failure the disconnect control exists to prevent.
+    static func dropsSession(livePlatform: CloudPlatform,
+                             liveAccountKey: String?,
+                             notedPlatform: String?,
+                             notedAccountKey: String?) -> Bool {
+        // Fail closed in the safe direction: an unreadable payload must not be
+        // read as "disconnect whatever is open".
+        guard let notedPlatform, notedPlatform == livePlatform.rawValue else { return false }
+        guard let notedAccountKey, let liveAccountKey else { return true }
+        return notedAccountKey == liveAccountKey
     }
 }
 
 extension Notification.Name {
     /// Posted after a cloud sign-in is forgotten. `userInfo["platform"]` carries
-    /// the `CloudPlatform` raw value.
+    /// the `CloudPlatform` raw value and `userInfo["account"]` the account key.
     static let bristlenoseCloudAccountDisconnected =
         Notification.Name("bristlenoseCloudAccountDisconnected")
 }

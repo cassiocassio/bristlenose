@@ -25,9 +25,11 @@ struct AccountsSettingsView: View {
     @EnvironmentObject private var i18n: I18n
 
     @State private var connections: [CloudGrantStore.Connection] = []
-    /// The platform awaiting confirmation, if any. Held rather than passed so
-    /// the alert survives the list reloading underneath it.
-    @State private var pendingDisconnect: CloudPlatform?
+    /// The connection awaiting confirmation, if any. Held rather than passed so
+    /// the alert survives the list reloading underneath it — and the whole
+    /// connection rather than its platform, because two accounts can share one
+    /// and disconnecting must name which.
+    @State private var pendingDisconnect: CloudGrantStore.Connection?
 
     var body: some View {
         Form {
@@ -56,13 +58,15 @@ struct AccountsSettingsView: View {
         .onReceive(NotificationCenter.default.publisher(
             for: .bristlenoseCloudAccountDisconnected)) { _ in reload() }
         .alert(
-            "Disconnect \(pendingDisconnect?.displayName ?? "")?",
+            // The address, when there is one: with two accounts on a platform
+            // its name alone does not say which is about to go.
+            "Disconnect \(pendingDisconnect?.address ?? pendingDisconnect?.platform.displayName ?? "")?",
             isPresented: Binding(
                 get: { pendingDisconnect != nil },
                 set: { if !$0 { pendingDisconnect = nil } })
         ) {
             Button("Disconnect", role: .destructive) {
-                if let platform = pendingDisconnect { disconnect(platform) }
+                if let connection = pendingDisconnect { disconnect(connection) }
                 pendingDisconnect = nil
             }
             Button("Cancel", role: .cancel) { pendingDisconnect = nil }
@@ -101,7 +105,7 @@ struct AccountsSettingsView: View {
                 }
             }
             Spacer()
-            Button("Disconnect…") { pendingDisconnect = connection.platform }
+            Button("Disconnect…") { pendingDisconnect = connection }
         }
     }
 
@@ -109,8 +113,8 @@ struct AccountsSettingsView: View {
         connections = CloudGrantStore.connections()
     }
 
-    private func disconnect(_ platform: CloudPlatform) {
-        CloudGrantStore.disconnect(platform)
+    private func disconnect(_ connection: CloudGrantStore.Connection) {
+        CloudGrantStore.disconnect(connection.platform, accountKey: connection.accountKey)
         reload()
     }
 }

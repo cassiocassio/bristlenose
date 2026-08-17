@@ -30,6 +30,11 @@ final class CloudImportCoordinator: ObservableObject {
 
     private var disconnectObserver: NSObjectProtocol?
 
+    /// Which Keychain item the live session is signed in to, or nil when the
+    /// window is showing fixtures. Held in a box because it moves: a session
+    /// restored without an address rekeys once the identity lands.
+    private var accountKeyBox: CloudAccountKeyBox?
+
     init() {
         // Disconnecting an account in Settings must reach a window that is
         // already open. Without this the Keychain copy goes and the live
@@ -43,8 +48,18 @@ final class CloudImportCoordinator: ObservableObject {
             queue: .main
         ) { [weak self] note in
             let raw = note.userInfo?["platform"] as? String
+            let account = note.userInfo?["account"] as? String
             MainActor.assumeIsolated {
-                guard let self, let raw, self.platform.rawValue == raw else { return }
+                guard let self else { return }
+                // The account is matched as well as the platform, or
+                // disconnecting the personal Teams account would close a window
+                // signed in to the work one.
+                guard CloudDisconnectMatch.dropsSession(
+                    livePlatform: self.platform,
+                    liveAccountKey: self.accountKeyBox?.current,
+                    notedPlatform: raw,
+                    notedAccountKey: account)
+                else { return }
                 // Drop the store rather than re-opening on the sign-in button:
                 // the window's whole state — ticks, outcomes, the batch — belongs
                 // to a session that no longer exists.
@@ -71,6 +86,15 @@ final class CloudImportCoordinator: ObservableObject {
         preselectedProjectID = projectID
         fixtureScenario = nil
 
+        // Which account this window is for. `firstAccountKey` is the whole of
+        // the choice today because nothing yet offers a way to connect a second
+        // — the picker belongs at the moment of use and arrives with Add
+        // Account. A window opened before anyone has signed in writes its first
+        // grant under `unidentified` and rekeys when `/me` answers.
+        let key = CloudGrantStore.firstAccountKey(for: platform) ?? CloudAccountKey.unidentified
+        let box = CloudAccountKeyBox(key)
+        accountKeyBox = box
+
         switch platform {
         case .meet:
             guard let config = GoogleOAuthConfig.resolve() else {
@@ -78,7 +102,7 @@ final class CloudImportCoordinator: ObservableObject {
             }
             // Restore the previous sign-in if one survived. Both grants and
             // the identity, or none of them — see `GoogleGrant`.
-            let saved = CloudGrantStore.loadGoogle()
+            let saved = CloudGrantStore.loadGoogle(account: key)
             store = CloudImportStore(
                 source: GoogleMeetSource(
                     config: config,
@@ -87,7 +111,9 @@ final class CloudImportCoordinator: ObservableObject {
                         (tokens: $0.tokens, fileIDs: Set($0.fileIDs))
                     },
                     restoredIdentity: saved?.identity,
-                    onGrantChanged: { CloudGrantStore.saveGoogle($0) }),
+                    onGrantChanged: { grant in
+                        box.update { CloudGrantStore.saveGoogle(grant, previousKey: $0) }
+                    }),
                 platform: platform)
 
         case .zoom:
@@ -109,13 +135,15 @@ final class CloudImportCoordinator: ObservableObject {
             }
             // Restore the previous sign-in if one survived. One grant here, not
             // Google's two — see `MicrosoftGrant`.
-            let savedTeams = CloudGrantStore.loadTeams()
+            let savedTeams = CloudGrantStore.loadTeams(account: key)
             store = CloudImportStore(
                 source: TeamsSource(
                     config: config,
                     restoredTokens: savedTeams?.tokens,
                     restoredIdentity: savedTeams?.identity,
-                    onGrantChanged: { CloudGrantStore.saveTeams($0) }),
+                    onGrantChanged: { grant in
+                        box.update { CloudGrantStore.saveTeams(grant, previousKey: $0) }
+                    }),
                 platform: platform)
         }
     }
@@ -129,6 +157,10 @@ final class CloudImportCoordinator: ObservableObject {
         self.platform = platform
         preselectedProjectID = projectID
         fixtureScenario = scenario
+        // No account: a fixture session holds no credentials, so there is no
+        // key to match a disconnect against. It is dropped on any disconnect of
+        // its platform, which is the erring-toward-dropping rule above.
+        accountKeyBox = nil
         store = CloudImportStore(
             source: FixtureCloudSource(scenario: scenario, platform: platform),
             platform: platform)

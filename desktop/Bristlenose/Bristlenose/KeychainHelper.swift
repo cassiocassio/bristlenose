@@ -6,10 +6,43 @@ import Security
 /// Abstraction for credential storage. Production uses macOS Keychain
 /// via `KeychainHelper`, tests use `InMemoryKeychain` to avoid touching
 /// real credentials.
+///
+/// **The account string is a second axis, and it is load-bearing for cloud
+/// sign-ins.** An LLM provider key is one per provider, so it lives at the fixed
+/// `KeychainHelper.account` — and it must, because the Python side reads it
+/// there (`credentials_macos.py`). A cloud sign-in is one per *account*: a
+/// consultant has a personal Microsoft account and one per client. Stored at a
+/// fixed account string the second sign-in takes `SecItemUpdate` and overwrites
+/// the first in place — no error, `set` returns `true`, and the first account
+/// stops working at its next refresh with nothing anywhere saying why.
+///
+/// So the account-bearing methods are the real ones and the fixed-account
+/// convenience forms below delegate to them.
 protocol KeychainStore {
-    func get(provider: String) -> String?
-    @discardableResult func set(provider: String, value: String) -> Bool
-    func delete(provider: String)
+    func get(provider: String, account: String) -> String?
+    @discardableResult func set(provider: String, account: String, value: String) -> Bool
+    func delete(provider: String, account: String)
+    /// Every account string currently holding an item for this provider.
+    ///
+    /// The enumeration half of per-account storage: without it a caller can
+    /// read a key it already knows but can never discover what is stored, which
+    /// is what a list of connected accounts is made of.
+    func accounts(provider: String) -> [String]
+}
+
+extension KeychainStore {
+    func get(provider: String) -> String? {
+        get(provider: provider, account: KeychainHelper.account)
+    }
+
+    @discardableResult
+    func set(provider: String, value: String) -> Bool {
+        set(provider: provider, account: KeychainHelper.account, value: value)
+    }
+
+    func delete(provider: String) {
+        delete(provider: provider, account: KeychainHelper.account)
+    }
 }
 
 // MARK: - Real implementation
@@ -50,7 +83,10 @@ enum KeychainHelper {
     static let liveStore: any KeychainStore = LiveKeychain()
 
     /// Read a key from Keychain. Returns nil if not found.
-    static func get(provider: String) -> String? {
+    ///
+    /// `account` defaults to the fixed string the LLM provider keys use. Cloud
+    /// sign-ins pass a per-account key instead — see `KeychainStore`.
+    static func get(provider: String, account: String = KeychainHelper.account) -> String? {
         guard let service = serviceNames[provider] else { return nil }
 
         let query: [String: Any] = [
@@ -96,7 +132,9 @@ enum KeychainHelper {
     /// Sharing capability) is required for the data-protection keychain under App
     /// Sandbox — see docs/private/handoffs/keychain-sandbox-entitlement.md.
     @discardableResult
-    static func set(provider: String, value: String) -> Bool {
+    static func set(provider: String,
+                    account: String = KeychainHelper.account,
+                    value: String) -> Bool {
         guard let service = serviceNames[provider],
               let data = value.data(using: .utf8)
         else { return false }
@@ -144,7 +182,7 @@ enum KeychainHelper {
     }
 
     /// Delete a key from Keychain. No-op if not found.
-    static func delete(provider: String) {
+    static func delete(provider: String, account: String = KeychainHelper.account) {
         guard let service = serviceNames[provider] else { return }
 
         let query: [String: Any] = [
@@ -159,6 +197,38 @@ enum KeychainHelper {
         if status != errSecSuccess && status != errSecItemNotFound {
             logKeychainError("SecItemDelete", status: status)
         }
+    }
+
+    /// Every account string currently holding an item for this provider.
+    ///
+    /// `kSecMatchLimitAll` + `kSecReturnAttributes` — attributes, deliberately
+    /// **not** `kSecReturnData`: enumerating is a question about which accounts
+    /// exist, and answering it should not decrypt every stored credential to
+    /// find out. Callers read the ones they need afterwards.
+    ///
+    /// Sorted, so the order is at least stable. Keychain's own is not specified,
+    /// and a list of accounts that shuffles between openings looks broken.
+    static func accounts(provider: String) -> [String] {
+        guard let service = serviceNames[provider] else { return [] }
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
+            kSecMatchLimit as String: kSecMatchLimitAll,
+            kSecReturnAttributes as String: true,
+        ]
+
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        if status != errSecSuccess && status != errSecItemNotFound {
+            logKeychainError("SecItemCopyMatching (all)", status: status)
+        }
+
+        guard status == errSecSuccess, let items = result as? [[String: Any]] else { return [] }
+        return items.compactMap { $0[kSecAttrAccount as String] as? String }.sorted()
     }
 
     /// Check if any usable API key exists across all supported providers.
@@ -200,32 +270,50 @@ enum KeychainHelper {
 /// Thin wrapper that delegates to `KeychainHelper` static methods,
 /// conforming to `KeychainStore` for dependency injection.
 private struct LiveKeychain: KeychainStore {
-    func get(provider: String) -> String? { KeychainHelper.get(provider: provider) }
-    @discardableResult func set(provider: String, value: String) -> Bool { KeychainHelper.set(provider: provider, value: value) }
-    func delete(provider: String) { KeychainHelper.delete(provider: provider) }
+    func get(provider: String, account: String) -> String? {
+        KeychainHelper.get(provider: provider, account: account)
+    }
+    @discardableResult func set(provider: String, account: String, value: String) -> Bool {
+        KeychainHelper.set(provider: provider, account: account, value: value)
+    }
+    func delete(provider: String, account: String) {
+        KeychainHelper.delete(provider: provider, account: account)
+    }
+    func accounts(provider: String) -> [String] { KeychainHelper.accounts(provider: provider) }
 }
 
 // MARK: - In-memory mock (for tests)
 
 /// Dictionary-backed keychain mock. No real Keychain access, no side effects.
 /// Uses the same provider validation as `KeychainHelper` (unknown providers return nil/false).
+///
+/// **Keyed on `(provider, account)`, exactly as the real Keychain is.** Keying
+/// it on the provider alone would reproduce the very bug per-account storage
+/// exists to fix — a second account's write silently replacing the first — so
+/// every test written against it would pass on the broken code.
 final class InMemoryKeychain: KeychainStore {
-    private var storage: [String: String] = [:]
+    private struct Key: Hashable { let provider: String; let account: String }
+    private var storage: [Key: String] = [:]
 
-    func get(provider: String) -> String? {
+    func get(provider: String, account: String) -> String? {
         guard KeychainHelper.serviceNames[provider] != nil else { return nil }
-        guard let value = storage[provider], !value.isEmpty else { return nil }
+        guard let value = storage[Key(provider: provider, account: account)], !value.isEmpty
+        else { return nil }
         return value
     }
 
     @discardableResult
-    func set(provider: String, value: String) -> Bool {
+    func set(provider: String, account: String, value: String) -> Bool {
         guard KeychainHelper.serviceNames[provider] != nil else { return false }
-        storage[provider] = value
+        storage[Key(provider: provider, account: account)] = value
         return true
     }
 
-    func delete(provider: String) {
-        storage.removeValue(forKey: provider)
+    func delete(provider: String, account: String) {
+        storage.removeValue(forKey: Key(provider: provider, account: account))
+    }
+
+    func accounts(provider: String) -> [String] {
+        storage.keys.filter { $0.provider == provider }.map(\.account).sorted()
     }
 }

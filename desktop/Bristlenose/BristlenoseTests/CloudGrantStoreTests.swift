@@ -5,12 +5,16 @@ import Testing
 
 // What survives the window closing.
 //
-// Deliberately NOT testing `CloudGrantStore.saveGoogle` / `loadGoogle`: those
-// go through `KeychainHelper` to the real Keychain, and the house rule is that
-// tests never touch it — a SIGKILL bypasses teardown, so cleanup is not
-// crash-safe and a stray test could overwrite a real credential.
+// This file tests the encoded *shape* only. The storage around it — per-account
+// keying, enumeration, migration — lives in `CloudAccountKeyTests`, which drives
+// the same functions with an injected `InMemoryKeychain`. Neither file touches
+// the real Keychain: the house rule, because a SIGKILL bypasses teardown, so
+// cleanup is not crash-safe and a stray test could overwrite a real credential.
+// _(This header used to say the store could not be tested at all. It gained an
+// injectable `KeychainStore` on 18 Aug 2026, which is what made the keying
+// testable.)_
 //
-// What IS worth pinning is the shape in between, because it fails silently:
+// The shape is worth its own file because it fails silently:
 // a field added to `GoogleGrant` and not carried by the encoder does not
 // break a build or a test, it just quietly stops being restored, and the
 // symptom lands weeks later as "why am I signing in again?".

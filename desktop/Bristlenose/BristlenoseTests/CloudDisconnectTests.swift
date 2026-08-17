@@ -73,13 +73,69 @@ struct CloudDisconnectTests {
         #expect(coordinator.store != nil)
     }
 
-    @Test("Connection identity is the platform, so a list can't hold two of one")
+    @Test("Connection identity is platform AND account, so a list can hold two of one")
     func connectionIdentity() {
-        // `Identifiable` off the platform rather than the address: the address
-        // is optional, and two rows for one platform is not a state that should
-        // be representable in a list keyed this way.
-        let connection = CloudGrantStore.Connection(platform: .teams, address: nil)
-        #expect(connection.id == CloudPlatform.teams.rawValue)
+        // _Reversed 18 Aug 2026._ This previously asserted `id ==
+        // platform.rawValue`, on the reasoning that "two rows for one platform
+        // is not a state that should be representable". It is exactly the state
+        // that must be representable: a consultant has a personal Microsoft
+        // account and one per client. Keyed on the platform alone, `ForEach`
+        // renders one row and the second account silently disappears from the
+        // pane while sitting perfectly well in the Keychain.
+        //
+        // Not the address either — that is optional, and a grant whose `/me`
+        // lookup failed is still a real connection that must be removable.
+        let work = CloudGrantStore.Connection(
+            platform: .teams, accountKey: "aaa", address: "martin@clientco.com")
+        let personal = CloudGrantStore.Connection(
+            platform: .teams, accountKey: "bbb", address: nil)
+        #expect(work.id != personal.id)
+    }
+
+    @Test("Disconnecting the other account on the same platform leaves the window alone")
+    func otherAccountOnSamePlatformIsIgnored() {
+        // The off-by-one the account key exists for. Two Teams accounts, and
+        // removing the personal one must not empty a window signed in to the
+        // work one — where the ticks, the outcomes and the batch live.
+        #expect(!CloudDisconnectMatch.dropsSession(
+            livePlatform: .teams,
+            liveAccountKey: "work",
+            notedPlatform: CloudPlatform.teams.rawValue,
+            notedAccountKey: "personal"))
+    }
+
+    @Test("Disconnecting the account the window is signed in to drops it")
+    func matchingAccountDrops() {
+        #expect(CloudDisconnectMatch.dropsSession(
+            livePlatform: .teams,
+            liveAccountKey: "work",
+            notedPlatform: CloudPlatform.teams.rawValue,
+            notedAccountKey: "work"))
+    }
+
+    @Test("An unknown account on either side drops, because the safe direction is dropping")
+    func unknownAccountDrops() {
+        // A session with no key holds no credentials (a fixture window) or has
+        // not learned one yet; a notification with no key predates them. Either
+        // way the choice is between a needless re-open and a window fetching
+        // under a disconnected account, and only one of those is recoverable by
+        // noticing.
+        #expect(CloudDisconnectMatch.dropsSession(
+            livePlatform: .teams, liveAccountKey: nil,
+            notedPlatform: CloudPlatform.teams.rawValue, notedAccountKey: "work"))
+        #expect(CloudDisconnectMatch.dropsSession(
+            livePlatform: .teams, liveAccountKey: "work",
+            notedPlatform: CloudPlatform.teams.rawValue, notedAccountKey: nil))
+    }
+
+    @Test("A different platform never matches, whatever the account says")
+    func platformStillGatesFirst() {
+        #expect(!CloudDisconnectMatch.dropsSession(
+            livePlatform: .meet, liveAccountKey: "same",
+            notedPlatform: CloudPlatform.teams.rawValue, notedAccountKey: "same"))
+        #expect(!CloudDisconnectMatch.dropsSession(
+            livePlatform: .meet, liveAccountKey: nil,
+            notedPlatform: nil, notedAccountKey: nil))
     }
 
     private func post(_ platform: CloudPlatform) {

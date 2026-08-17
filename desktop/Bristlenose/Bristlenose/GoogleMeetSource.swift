@@ -1185,8 +1185,49 @@ final class GoogleMeetSource: CloudImportSource {
 
     // MARK: Fetching
 
-    /// Ask for the file grant over the whole ticked batch, in one Picker round
-    /// trip. Called by the store before the first `fetch`.
+    /// Whether a batch needs a Picker round trip, and what to ask for.
+    ///
+    /// Pure, because both decisions in it are wrong in ways that are invisible
+    /// at the call site: asking when we needn't puts a browser, an account
+    /// chooser and a consent screen in front of a researcher who granted these
+    /// files five minutes ago, and asking too narrowly guarantees another round
+    /// trip the moment they tick anything else — which, to them, is
+    /// indistinguishable from the first one not having worked.
+    enum MediaGrantPlan: Equatable {
+        /// Every file in the batch is already granted and the token is good.
+        case alreadyHeld
+        /// Round-trip the Picker for these file ids.
+        case ask(fileIDs: [String])
+
+        /// - Parameter batch: the file ids this batch actually needs.
+        /// - Parameter listing: every file id in the window, which is what we
+        ///   ask for when we ask at all — the grant binds to ids, so the
+        ///   cheapest moment to cover a file is while the researcher is already
+        ///   looking at a consent screen. They can still deselect in the
+        ///   Picker, and `grantedFileIDs` records what came back, never what
+        ///   was requested.
+        /// - Parameter tokenUsable: caller has already refreshed if it could.
+        ///   A held file with a dead token must still re-ask, or `fetch` sails
+        ///   past its `grantedFileIDs` guard and 401s — the harder failure to
+        ///   read, because it looks like a network fault rather than a
+        ///   permission one.
+        static func decide(
+            batch: [String],
+            listing: Set<String>,
+            granted: Set<String>,
+            tokenUsable: Bool
+        ) -> MediaGrantPlan {
+            if tokenUsable, batch.allSatisfy(granted.contains) { return .alreadyHeld }
+            // Sorted so one listing produces one request, stably, rather than
+            // following dictionary order — a live URL stays diffable between
+            // runs, and the tests are not asserting a hash ordering.
+            return .ask(fileIDs: listing.union(batch).sorted())
+        }
+    }
+
+    /// Ask for the file grant, in one Picker round trip covering the whole
+    /// listing — or in none at all when we already hold everything the batch
+    /// needs. Called by the store before the first `fetch`.
     /// Google's batch preparation IS the Picker round trip.
     @MainActor
     func prepareBatch(rowIDs: [String]) async throws {
@@ -1197,14 +1238,50 @@ final class GoogleMeetSource: CloudImportSource {
     func requestMediaGrant(for rowIDs: [String]) async throws {
         let wanted = rowIDs.compactMap { driveFileIDs[$0] }
         guard !wanted.isEmpty else { return }
+
+        // The token is consulted before the plan because the two expire
+        // independently, and only one of them needs the researcher: a missing
+        // *file* is theirs to widen, an aged *token* is ours to renew. Doing
+        // the renewal first means an expired token never becomes a consent
+        // screen.
+        let plan = MediaGrantPlan.decide(
+            batch: wanted,
+            listing: Set(driveFileIDs.values),
+            granted: grantedFileIDs,
+            tokenUsable: try await refreshedMediaTokenIsUsable())
+
+        guard case .ask(let fileIDs) = plan else { return }
+
         let client = GoogleOAuthClient(config: config, session: session)
-        let (tokens, picked) = try await client.pickMedia(fileIDs: wanted)
+        let (tokens, picked) = try await client.pickMedia(fileIDs: fileIDs)
         mediaToken = tokens
         // Honour what was granted, never what was asked for: the researcher
         // may deselect inside the Picker, and treating the request as the
         // answer would produce a batch that 403s on exactly the rows they
         // chose to remove.
         grantedFileIDs.formUnion(picked)
+    }
+
+    /// Whether the media token is good, refreshing it in place if it has aged
+    /// out and we hold the means to.
+    ///
+    /// Separated from the grant check because the failure modes are opposite:
+    /// a missing *file* needs the researcher (only they can widen the grant),
+    /// while an expired *token* needs nothing from them at all. Conflating
+    /// them is how a silent refresh becomes a consent screen.
+    @MainActor
+    private func refreshedMediaTokenIsUsable() async throws -> Bool {
+        guard let current = mediaToken else { return false }
+        guard current.isExpired else { return true }
+        guard let refreshToken = current.refreshToken else { return false }
+        let client = GoogleOAuthClient(config: config, session: session)
+        // A refresh that fails is not an error to surface — it means we fall
+        // through to the Picker, which is the remedy anyway.
+        guard let renewed = try? await client.refresh(
+            refreshToken: refreshToken, knownGrants: GoogleScopes.mediaGrant)
+        else { return false }
+        mediaToken = renewed
+        return true
     }
 
     func fetch(

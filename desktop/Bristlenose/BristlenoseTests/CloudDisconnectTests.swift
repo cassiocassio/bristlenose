@@ -86,9 +86,10 @@ struct CloudDisconnectTests {
         // Not the address either — that is optional, and a grant whose `/me`
         // lookup failed is still a real connection that must be removable.
         let work = CloudGrantStore.Connection(
-            platform: .teams, accountKey: "aaa", address: "martin@clientco.com")
+            platform: .teams, accountKey: "aaa",
+            address: "martin@clientco.com", needsSignIn: false)
         let personal = CloudGrantStore.Connection(
-            platform: .teams, accountKey: "bbb", address: nil)
+            platform: .teams, accountKey: "bbb", address: nil, needsSignIn: false)
         #expect(work.id != personal.id)
     }
 

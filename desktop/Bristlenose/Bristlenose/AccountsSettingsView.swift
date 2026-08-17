@@ -132,8 +132,16 @@ struct AccountsSettingsView: View {
             if section.service.connectsFromHere {
                 Button("Connect…") { connect(section.service) }
             }
-        case .connected, .attention:
+        case .connected:
             Button("Disconnect…") { pendingDisconnect = section }
+        case .attention(_, let attention):
+            // Disconnect stays available on a row that says something is wrong
+            // — that is exactly the row a researcher wants rid of — with the
+            // recovery trailing it, where the default action belongs.
+            Button("Disconnect…") { pendingDisconnect = section }
+            if attention.isRecoverable, section.service.connectsFromHere {
+                Button("Sign In…") { connect(section.service) }
+            }
         }
     }
 

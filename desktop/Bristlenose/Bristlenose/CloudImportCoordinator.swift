@@ -102,7 +102,12 @@ final class CloudImportCoordinator: ObservableObject {
             }
             // Restore the previous sign-in if one survived. Both grants and
             // the identity, or none of them — see `GoogleGrant`.
-            let saved = CloudGrantStore.loadGoogle(account: key)
+            //
+            // `.usable` drops a grant the provider ended. **The identity has to
+            // go with it**: `CloudImportStore` picks its opening phase from
+            // `accountEmail`, so restoring the address alone would open the
+            // window on `.loading` holding no token at all.
+            let saved = CloudGrantStore.loadGoogle(account: key)?.usable
             store = CloudImportStore(
                 source: GoogleMeetSource(
                     config: config,
@@ -134,8 +139,9 @@ final class CloudImportCoordinator: ObservableObject {
                 store = CloudImportStore(source: UnconfiguredCloudSource(), platform: platform); return
             }
             // Restore the previous sign-in if one survived. One grant here, not
-            // Google's two — see `MicrosoftGrant`.
-            let savedTeams = CloudGrantStore.loadTeams(account: key)
+            // Google's two — see `MicrosoftGrant`. `.usable` drops one the
+            // provider ended, identity included; see the Google case above.
+            let savedTeams = CloudGrantStore.loadTeams(account: key)?.usable
             store = CloudImportStore(
                 source: TeamsSource(
                     config: config,

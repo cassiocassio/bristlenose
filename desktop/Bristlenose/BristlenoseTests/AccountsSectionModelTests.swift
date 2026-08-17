@@ -15,10 +15,13 @@ struct AccountsSectionModelTests {
 
     private let allAvailable: Set<CloudPlatform> = [.teams, .meet, .zoom]
 
-    private func connection(_ platform: CloudPlatform, _ address: String?) -> CloudGrantStore.Connection {
+    private func connection(_ platform: CloudPlatform,
+                            _ address: String?,
+                            needsSignIn: Bool = false) -> CloudGrantStore.Connection {
         CloudGrantStore.Connection(platform: platform,
                                    accountKey: CloudAccountKey.derive(address),
-                                   address: address)
+                                   address: address,
+                                   needsSignIn: needsSignIn)
     }
 
     private func sections(available: Set<CloudPlatform>? = nil,
@@ -149,6 +152,78 @@ struct AccountsSectionModelTests {
         // reads as connected and the truth arrives in the import window.
         let result = sections(connections: [connection(.teams, "martin@outlook.com")])
         #expect(state(result, "teams") == .connected(identity: "martin@outlook.com"))
+    }
+
+    @Test("A revoked sign-in stays on the list instead of vanishing")
+    func revokedGrantKeepsItsRow() {
+        // Rescues "it just stopped working and I don't know why". Before the
+        // grant survived its own refusal this account disappeared from the
+        // pane entirely, which reads exactly like having disconnected it
+        // yourself — and left nothing anywhere naming the cause.
+        let result = sections(connections: [connection(.teams, "martin@clientco.com",
+                                                       needsSignIn: true)])
+        #expect(state(result, "teams")
+                == .attention(identity: "martin@clientco.com", .signInAgain))
+    }
+
+    @Test("A refusal outranks the account tier")
+    func refusalBeatsTier() {
+        // A revoked consumer Google sign-in is both, and only one is worth
+        // saying: telling someone their account is the wrong kind, when what
+        // actually happened is that their session ended, sends them to fix
+        // something that is not broken.
+        let result = sections(connections: [connection(.meet, "martin@gmail.com",
+                                                       needsSignIn: true)])
+        #expect(state(result, "meet") == .attention(identity: "martin@gmail.com", .signInAgain))
+    }
+
+    @Test("Only the recoverable cause offers a way back")
+    func recoverability() {
+        // The wrong kind of account cannot be fixed by signing in again — the
+        // same account would come back — so offering the verb would be a
+        // button that reliably does nothing.
+        #expect(AccountAttention.signInAgain.isRecoverable)
+        #expect(!AccountAttention.cannotHoldRecordings.isRecoverable)
+    }
+
+    @Test("A revoked account can still be removed")
+    func revokedKeepsItsAccountKey() {
+        let result = sections(connections: [connection(.teams, "martin@clientco.com",
+                                                       needsSignIn: true)])
+        #expect(result.first { $0.service.id == "teams" }?.accountKey
+                == CloudAccountKey.derive("martin@clientco.com"))
+    }
+
+    @Test("A revoked grant is never usable, so it cannot restore a session")
+    func revokedGrantIsInert() {
+        // The guard that keeps a kept grant from becoming an unbreakable retry
+        // loop — a revoked refresh token fails identically forever, which is
+        // exactly why the old code deleted it.
+        let teams = MicrosoftGrant.revoked(identity: "martin@clientco.com")
+        #expect(teams.usable == nil)
+        #expect(teams.tokens.refreshToken == nil, "a tombstone must carry no way to retry")
+        #expect(teams.identity == "martin@clientco.com", "the account is still nameable")
+
+        let google = GoogleGrant.revoked(identity: "martin@finca342.org")
+        #expect(google.usable == nil)
+        #expect(google.tokens.refreshToken == nil)
+        #expect(google.media == nil, "the Picker grant goes with the listing grant")
+    }
+
+    @Test("A working grant is usable, and a grant from before the flag existed still decodes")
+    func liveGrantIsUsable() throws {
+        // The optional matters: the synthesised decoder does not apply property
+        // defaults for a missing key, it throws — and `loadTeams` discards what
+        // it cannot decode, so a non-optional field would have dropped every
+        // sign-in stored before this change.
+        let legacyJSON = """
+        {"tokens":{"accessToken":"a","refreshToken":"r","expiresAt":760000000},\
+        "identity":"martin@clientco.com"}
+        """
+        let decoded = try JSONDecoder().decode(MicrosoftGrant.self,
+                                               from: Data(legacyJSON.utf8))
+        #expect(decoded.needsSignIn == nil)
+        #expect(decoded.usable != nil)
     }
 
     @Test("An account needing attention can still be disconnected")

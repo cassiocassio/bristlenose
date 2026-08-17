@@ -33,6 +33,22 @@ struct GoogleGrant: Codable, Equatable, Sendable {
     /// invisible and everyone would conclude it hadn't worked.
     var identity: String?
 
+    /// The provider ended this sign-in. See `MicrosoftGrant.needsSignIn`.
+    var needsSignIn: Bool? = nil
+
+    /// This grant if it can still be used, nil if the provider ended it.
+    var usable: GoogleGrant? { needsSignIn == true ? nil : self }
+
+    /// The account, kept without its credential.
+    static func revoked(identity: String?) -> GoogleGrant {
+        GoogleGrant(
+            tokens: GoogleTokens(accessToken: "", refreshToken: nil,
+                                 expiresAt: .distantPast, granted: []),
+            media: nil,
+            identity: identity,
+            needsSignIn: true)
+    }
+
     /// The Picker grant is a **pair**. `fetch` guards on the file ids *before*
     /// it reads the token, so a token kept without its ids sits unused behind
     /// a failing guard — restored, and inert. Keeping them in one value makes
@@ -58,6 +74,39 @@ struct MicrosoftGrant: Codable, Equatable, Sendable {
     /// so a restore without it opens on the sign-in button while holding a
     /// working token, and the restore reads as a failure.
     var identity: String?
+
+    /// The provider ended this sign-in, and the account is kept anyway.
+    ///
+    /// **Keeping it is the point.** A refused refresh used to delete the grant,
+    /// which meant a revoked session *vanished from Settings ▸ Accounts* —
+    /// indistinguishable from having disconnected it yourself, and the
+    /// researcher's only evidence was that importing had quietly stopped
+    /// working. The row survives its own credential so the pane can name the
+    /// cause and offer a way back.
+    ///
+    /// Optional rather than a defaulted `Bool` because the synthesised decoder
+    /// does **not** apply property defaults for a missing key — it throws, and
+    /// `loadTeams` discards what it cannot decode. A non-optional would have
+    /// dropped every sign-in stored before this field existed.
+    var needsSignIn: Bool? = nil
+
+    /// This grant if it can still be used, nil if the provider ended it.
+    ///
+    /// The guard that keeps a kept grant inert. A revoked refresh token fails
+    /// identically forever, so one that reached an adapter would turn a single
+    /// honest sign-in into an unbreakable loop of failed listings — which is
+    /// exactly why the old code deleted it. `revoked` also strips the refresh
+    /// token, so even a caller that ignores this cannot build a retry loop.
+    var usable: MicrosoftGrant? { needsSignIn == true ? nil : self }
+
+    /// The account, kept without its credential.
+    static func revoked(identity: String?) -> MicrosoftGrant {
+        MicrosoftGrant(
+            tokens: MicrosoftTokenResponse(accessToken: "", refreshToken: nil,
+                                           expiresAt: .distantPast),
+            identity: identity,
+            needsSignIn: true)
+    }
 }
 
 /// Which Keychain item a given sign-in lives in.
@@ -260,6 +309,9 @@ enum CloudGrantStore {
         /// failed, is still a real connection that a researcher must be able to
         /// see and remove. A row with no address beats no row.
         let address: String?
+        /// The provider ended this sign-in and the row is a tombstone: real,
+        /// nameable, removable, and holding nothing that works.
+        let needsSignIn: Bool
         /// Platform *and* account: a consultant with a personal Microsoft
         /// account and a client's has two Teams rows, and a list keyed on the
         /// platform alone cannot hold both.
@@ -274,11 +326,15 @@ enum CloudGrantStore {
             accountKeys(for: platform, store: store).compactMap { key in
                 switch platform {
                 case .teams:
-                    return loadTeams(account: key, store: store)
-                        .map { Connection(platform: platform, accountKey: key, address: $0.identity) }
+                    return loadTeams(account: key, store: store).map {
+                        Connection(platform: platform, accountKey: key,
+                                   address: $0.identity, needsSignIn: $0.needsSignIn == true)
+                    }
                 case .meet:
-                    return loadGoogle(account: key, store: store)
-                        .map { Connection(platform: platform, accountKey: key, address: $0.identity) }
+                    return loadGoogle(account: key, store: store).map {
+                        Connection(platform: platform, accountKey: key,
+                                   address: $0.identity, needsSignIn: $0.needsSignIn == true)
+                    }
                 case .zoom:
                     // No store yet — Zoom is parked and cannot sign in, so there
                     // is never a grant to find. An explicit case rather than a

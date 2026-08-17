@@ -86,6 +86,12 @@ enum AccountService: Hashable, Identifiable, Sendable {
 /// One slot in the row rather than two states, because the causes are mutually
 /// exclusive in practice and the row draws identically for both.
 enum AccountAttention: Equatable, Sendable {
+    /// The provider ended the session. Rescues *"it just stopped working and I
+    /// don't know why"* — before the grant survived its own refusal, a revoked
+    /// sign-in disappeared from this pane entirely, which reads exactly like
+    /// having disconnected it yourself.
+    case signInAgain
+
     /// Signed in perfectly well, and this account can never hold a recording —
     /// a consumer Google account, where Meet recording is a Workspace feature.
     /// Rescues *"I signed in and there's nothing there"*, which is otherwise
@@ -94,10 +100,15 @@ enum AccountAttention: Equatable, Sendable {
 
     var sentence: String {
         switch self {
+        case .signInAgain:
+            return "The provider ended this sign-in. Signing in again restores it."
         case .cannotHoldRecordings:
             return "This account can't hold meeting recordings, so there's nothing to import."
         }
     }
+
+    /// Whether the researcher can put it right from here.
+    var isRecoverable: Bool { self == .signInAgain }
 }
 
 /// What one service's section shows.
@@ -180,7 +191,7 @@ enum AccountsSectionModel {
             return AccountSection(service: .cloud(platform), state: .notConnected, accountKey: nil)
         }
         let state: AccountSectionState
-        if let attention = attention(for: platform, address: connection.address) {
+        if let attention = attention(for: platform, connection: connection) {
             state = .attention(identity: connection.address, attention)
         } else {
             state = .connected(identity: connection.address)
@@ -190,10 +201,16 @@ enum AccountsSectionModel {
                               accountKey: connection.accountKey)
     }
 
-    /// What is wrong with an otherwise-working account, when it can be known
-    /// from the address alone.
+    /// What needs the researcher, when it can be known without a call.
     ///
-    /// **Google only, and that asymmetry is real rather than an omission.**
+    /// **A refusal outranks the account tier.** A revoked personal Google
+    /// sign-in is both, and only one of the two is worth saying: telling
+    /// someone their account is the wrong kind, when the thing that actually
+    /// happened is that their session ended, sends them to fix something that
+    /// is not broken.
+    ///
+    /// The tier half is **Google only, and that asymmetry is real rather than
+    /// an omission.**
     /// `GoogleAccountTier(email:)` is pure string work — a `gmail.com` address
     /// is a consumer account, and Meet recording is a Workspace feature, so the
     /// verdict is free and always current. Microsoft's equivalent is a personal
@@ -204,11 +221,16 @@ enum AccountsSectionModel {
     /// personal Microsoft account reads as `.connected` and the researcher
     /// learns the truth in the import window, as they do today.
     private static func attention(for platform: CloudPlatform,
-                                  address: String?) -> AccountAttention? {
+                                  connection: CloudGrantStore.Connection) -> AccountAttention? {
+        if connection.needsSignIn { return .signInAgain }
         switch platform {
         case .meet:
-            guard address != nil else { return nil }
-            return GoogleAccountTier(email: address).canHoldMeetRecordings
+            // An address we never learnt is `.unknown`, whose
+            // `canHoldMeetRecordings` is false — reading that as "wrong kind of
+            // account" would tell a Workspace researcher their account is wrong
+            // because one `/me` call failed.
+            guard connection.address != nil else { return nil }
+            return GoogleAccountTier(email: connection.address).canHoldMeetRecordings
                 ? nil
                 : .cannotHoldRecordings
         case .teams, .zoom:

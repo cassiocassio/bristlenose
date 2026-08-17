@@ -332,6 +332,20 @@ final class GoogleMeetSource: CloudImportSource {
         Task.detached(priority: .utility) { onGrantChanged(snapshot) }
     }
 
+    /// Record that Google ended the session, **keeping the account**.
+    ///
+    /// This used to publish nil, which deleted the grant — so a revoked
+    /// sign-in vanished from Settings ▸ Accounts, indistinguishable from
+    /// having disconnected it yourself. The tombstone keeps the row and
+    /// carries no working credential: `revoked` strips the refresh token and
+    /// the media grant, so the unbreakable-retry-loop this path guards against
+    /// cannot form even if the flag were ignored.
+    private func publishRefusal() {
+        let snapshot = GoogleGrant.revoked(identity: identity)
+        guard let onGrantChanged else { return }
+        Task.detached(priority: .utility) { onGrantChanged(snapshot) }
+    }
+
     /// Renew the listing token when it has aged out, or report that we cannot.
     ///
     /// **The listing path had no expiry check at all** before 17 Aug 2026,
@@ -354,7 +368,7 @@ final class GoogleMeetSource: CloudImportSource {
         guard current.isExpired else { return true }
         guard let refreshToken = current.refreshToken else {
             tokens = nil
-            publishGrant()
+            publishRefusal()
             return false
         }
         let client = GoogleOAuthClient(config: config, session: session)
@@ -362,7 +376,7 @@ final class GoogleMeetSource: CloudImportSource {
             refreshToken: refreshToken, knownGrants: current.granted)
         else {
             tokens = nil
-            publishGrant()
+            publishRefusal()
             return false
         }
         tokens = renewed

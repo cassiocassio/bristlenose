@@ -205,6 +205,21 @@ final class TeamsSource: CloudImportSource {
         Task.detached(priority: .utility) { onGrantChanged(snapshot) }
     }
 
+    /// Record that the provider ended the session, **keeping the account**.
+    ///
+    /// This used to publish nil, which deleted the grant — so a revoked session
+    /// vanished from Settings ▸ Accounts, indistinguishable from having
+    /// disconnected it yourself, and the only evidence was that importing had
+    /// quietly stopped working. The tombstone keeps the row and carries no
+    /// working credential: `revoked` strips the refresh token and dates the
+    /// access token to the distant past, so the unbreakable-retry-loop this
+    /// path was guarding against cannot form even if the flag were ignored.
+    private func publishRefusal() {
+        let snapshot = MicrosoftGrant.revoked(identity: identity)
+        guard let onGrantChanged else { return }
+        Task.detached(priority: .utility) { onGrantChanged(snapshot) }
+    }
+
     /// Renew the token when it has aged out, or report that we cannot.
     ///
     /// The listing path had no expiry check at all before this, which was
@@ -213,9 +228,9 @@ final class TeamsSource: CloudImportSource {
     /// one — an hour-old token is the ordinary case.
     ///
     /// Returns false when the grant is gone for good, **having already told the
-    /// store to forget it**: a revoked refresh token fails identically forever,
-    /// so keeping it turns one honest sign-in into an unbreakable loop of failed
-    /// listings.
+    /// store the account needs signing in again**: a revoked refresh token fails
+    /// identically forever, so the credential must not survive, but the
+    /// *account* does — see `publishRefusal`.
     ///
     /// `@MainActor` because `MicrosoftOAuthClient`'s initialiser is — it can
     /// carry an anchor window. The refresh itself is a plain POST with no UI, so
@@ -226,13 +241,13 @@ final class TeamsSource: CloudImportSource {
         guard current.isExpired() else { return true }
         guard let refreshToken = current.refreshToken else {
             tokens = nil
-            publishGrant()
+            publishRefusal()
             return false
         }
         let client = MicrosoftOAuthClient(config: config, session: session)
         guard let renewed = try? await client.refresh(refreshToken: refreshToken) else {
             tokens = nil
-            publishGrant()
+            publishRefusal()
             return false
         }
         // Carry the refresh token forward when the response omitted it — see

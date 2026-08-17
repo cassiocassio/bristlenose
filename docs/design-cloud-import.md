@@ -42,6 +42,46 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
 
 ## Changelog
 
+- _2026-08-17 (evening — the window stops being a dead end)_ — six fixes to
+  the **shared** import window, so Teams inherits every one. Ordered by how
+  badly each read to the researcher:
+  1. **The sign-in could spin forever with no way out.** Measured:
+     `import_phase signedOut -> signingIn` and then silence. The cause was
+     mundane and invisible — a stack of Google sign-in and consent windows
+     sitting behind Chrome, unseen. The flow was working the whole time. **The
+     fix is not a timeout**: on macOS `ASWebAuthenticationSession` opens the
+     *real* default browser, so nothing reports a cancellation when a tab is
+     buried, and a genuine sign-in can take minutes — any deadline safe enough
+     is useless, any deadline useful enough cancels people mid-password. It now
+     names the platform, points at the browser, and offers Cancel.
+  2. **"Queued" was a lie while the batch waited on the Picker.** Nothing was
+     queued; we were waiting on a person. Its own state now, glyphless because
+     the taxonomy says pending and running are status, not kinds.
+  3. **Stop could not actually stop a browser round trip**, so a stopped batch
+     could have its grant land minutes later and quietly start transferring.
+     A generation counter makes a late return inert — same shape as (1).
+  4. **Per-row cancel.** One stalled 465 MB transfer forced abandoning the four
+     beside it. Each row now runs in its own cancellable `Task`; the transfer
+     genuinely stops, because `URLSession.download(for:delegate:)` bridges task
+     cancellation and `CloudDownloader` re-checks before anything reaches the
+     project folder.
+  5. **Stop becomes Done**, instead of falling back to a disabled "Import 0
+     Recordings" — a dead end dressed as an action. And at zero the count is
+     dropped entirely: a number inside a verb reads as a defect. A hidden
+     sizing ghost — the real string in the real locale — stops the button
+     growing under a stationary pointer when the first box is ticked.
+  6. **New projects remember where studies live.** Both doors hardcoded
+     `~/Documents`, the same decision written twice. One owner now
+     (`ProjectFolderDefaults`), and it learns. A Settings row was asked for and
+     deliberately not built: it would write the same value, so it can be added
+     the moment remembering proves insufficient.
+  Also measured, closing an item this doc flagged as decisive: **Google's
+  Picker has a select-all**, so seeding it with the whole listing is nearly
+  free and the listing-wide grant stays. And the one that cost the most:
+  `KeychainHelper.serviceNames` is an **allowlist**, so the grant store shipped
+  against an unregistered key and persisted nothing at all — no error, no
+  crash, and a symptom that would have surfaced weeks later as "why am I
+  signing in again?".
 - _2026-08-17 (researched, 21 primary sources, adversarially verified)_ — what
   the platform actually permits, against Google's own current docs (most "Last
   updated 2026-07-22"). Four things that change what we do:

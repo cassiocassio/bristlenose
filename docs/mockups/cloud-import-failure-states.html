@@ -571,6 +571,70 @@ lands a second copy under the canonical name, the pipeline scans the folder, and
 becomes two sessions with two participants — the same corruption as the Zoom rendition case, arriving
 by a different door.</p>
 
+<h3>The case that defeats all three layers: renamed <i>and trimmed</i></h3>
+<p class="sub">The maintainer's own routine, stated 17 Aug 2026: <i>“I often rename and trim manually
+downloaded videos before dragging and dropping into folders to process.”</i> Download from Drive by
+hand → rename → trim → drag in. Then open cloud import and the same meeting is listed.</p>
+
+<div class="t">
+<table>
+<tr><th>Layer</th><th>Verdict</th><th>Why</th></tr>
+<tr class="gap"><td class="st">Row id in the record</td><td class="words">blind</td>
+  <td class="act">It never came through us. A key we mint cannot cover a file that arrived by another
+  door.</td></tr>
+<tr class="gap"><td class="st">Size</td><td class="words">blind</td>
+  <td class="act">Trimming changes it, by construction.</td></tr>
+<tr class="gap"><td class="st">Content hash</td><td class="words">blind</td>
+  <td class="act">Trimming changes every byte after the cut, and most tools re-write the container
+  besides.</td></tr>
+</table>
+</div>
+
+<p class="why bad"><b>So this is a boundary, not a cost question.</b> For files arriving by a route we
+do not mint keys for, the only usable signals are <b>intrinsic to the media</b>. No amount of
+bookkeeping on our side reaches them.</p>
+
+<h3>What is intrinsic, ranked by what survives a trim</h3>
+<div class="t">
+<table>
+<tr><th>Signal</th><th>Survives a trim?</th><th>Cost</th><th>Status</th></tr>
+<tr><td class="st"><b>Media creation timestamp</b><br><span class="none">container metadata</span></td>
+  <td class="act"><b>Unknown — and knowable in a minute.</b> <code>-c copy</code> trims preserve
+  metadata; a QuickTime re-export may not.</td>
+  <td class="act">One <code>ffprobe</code> per file, milliseconds. ffprobe is already bundled.</td>
+  <td class="words">measure first</td></tr>
+<tr><td class="st"><b>Audio fingerprint</b><br><span class="none">chromaprint-style</span></td>
+  <td class="act">By design — that is the whole point of the technique. Robust to trims, re-encodes
+  and level changes.</td>
+  <td class="act">Sub-second per minute of audio. “Computers are fast and good at this kind of
+  thing” is exactly right.</td>
+  <td class="words">new dependency</td></tr>
+<tr><td class="st">Duration, with tolerance</td>
+  <td class="act">Partly — a trim makes it <i>shorter</i>, so “is this file a sub-interval of that
+  meeting?” is weak but non-zero.</td>
+  <td class="act">Free; already read.</td><td class="words">weak, free</td></tr>
+</table>
+</div>
+
+<p class="why good"><b>The next step is a specimen, not a decision.</b> Both artefacts exist on the
+maintainer's machine right now — a Meet download and the trimmed, renamed copy of it. Comparing
+<code>ffprobe -show_format -show_streams</code> on the pair settles in one minute what actually
+survives <i>that</i> workflow, and turns this whole section from a design argument into a
+measurement. Six reasoned-not-measured claims about cloud import have already turned out wrong; this
+is the same shape and the specimen is free.</p>
+
+<h3>Whatever the signal, the response is a note — never a block</h3>
+<p class="why"><b>A researcher may legitimately want both</b> — the trimmed working copy and the full
+original. So the finding is <i>“this project may already contain this meeting”</i>, naming the file
+it resembles, with the checkbox <b>still live</b>. A false positive that mentions costs a glance; a
+false positive that refuses costs them a recording and teaches them the feature is wrong about their
+own folder.</p>
+
+<p class="why"><b>And the habit is itself a finding.</b> Trimming before import is manual work done
+because there is nowhere else to do it. That is a different conversation from this document, but it
+is worth noticing that the duplicate hazard here is partly self-inflicted by a missing capability
+rather than by the import path.</p>
+
 <p class="why"><b>And it belongs in the project, not in the app.</b> The project folder is what the
 researcher owns, moves between machines and hands to a colleague — the same reasoning that puts
 re-identification keys under <code>.bristlenose/</code> rather than in preferences. A record kept in

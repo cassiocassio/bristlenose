@@ -58,7 +58,19 @@ struct CloudImportWindow: View {
         .navigationSubtitle(subtitle)
         .searchable(text: $store.filterText, placement: .toolbar, prompt: i18n.t("desktop.cloudImport.filter"))
         .toolbar { windowScopePicker }
-        .task {
+        // Keyed on the **store instance**, not on appear. There is one import
+        // window globally (§9), and re-opening it builds a fresh store behind
+        // a view SwiftUI is free to reuse — in which case a plain `.task`
+        // never fires again and the new store is left un-scanned and, on the
+        // same path, un-listed. The identity of the store is the thing that
+        // actually changed, so it is what this watches.
+        .task(id: ObjectIdentifier(store)) {
+            // Re-scanned here as well as on a destination change, because
+            // re-opening on the *same* project moves nothing the `.onChange`
+            // below would notice — while the folder itself may well have
+            // gained files in the days between visits, which is exactly the
+            // routine this serves.
+            store.setDestination(destinationFolder(for: destination))
             if store.accountEmail != nil, store.listing == nil { await store.load() }
         }
         // Follows how the window was opened, including a re-open from a
@@ -77,6 +89,10 @@ struct CloudImportWindow: View {
         // save sheet would arrive after the researcher thought they were done
         // deciding.
         .onChange(of: destination) { previous, next in
+            // Ask the new folder what it already holds, before anything else —
+            // the answer decides which rows can still be ticked, and a wrong
+            // one withholds a recording rather than merely wasting a fetch.
+            store.setDestination(destinationFolder(for: next))
             guard next == .newProject, previous != .newProject else { return }
             makeNewProject(revertingTo: previous)
         }
@@ -558,34 +574,47 @@ struct CloudImportWindow: View {
     }
 
     private func startFetch(into projectID: UUID) {
-        guard let project = projectIndex.projects.first(where: { $0.id == projectID })
-        else { return }
-
-        // Borrow the project's security-scoped lease rather than rebuilding a
-        // raw path. Under App Sandbox a `URL(fileURLWithPath:)` into a
-        // user-chosen folder has no grant behind it, so the whole multi-gigabyte
-        // transfer would run and then fail at the publish move — surfacing as
-        // "The download failed", which reads as a network fault. Debug builds
-        // are unsandboxed, so a green run there proves nothing about TestFlight.
-        //
-        // `leaseURL` returns a URL with scope already open and owned by
-        // `ProjectIndex`; per its contract we must not call
-        // start/stopAccessingSecurityScopedResource ourselves.
-        //
-        // Still owed, and deliberately not done here because it changes the
-        // surface: the picker offers projects whose lease is unavailable
-        // (`.cantFind`, `.inCloud`, past the watcher cap, or no bookmark data).
-        // Falling back to the raw path keeps today's behaviour for those rather
-        // than introducing a refusal state this pass has no design for.
-        // No empty-path fallback. `URL(fileURLWithPath: "")` is the cwd, not a
-        // refusal, and it published a real recording into the sandbox container
-        // while the window said "Imported" (16 Aug 2026). The picker no longer
-        // offers unlocated projects, so this guard should be unreachable — it
-        // is here because "should be unreachable" is what the last one said.
-        guard !project.path.isEmpty else { return }
-        let folder = projectIndex.leaseURL(projectID: projectID)
-            ?? URL(fileURLWithPath: project.path)
+        guard let folder = destinationFolder(for: .project(projectID)) else { return }
         store.startFetch(destination: folder)
+    }
+
+    /// The folder behind a choice, or nil when there isn't one to point at.
+    ///
+    /// One resolution for both readers — the fetch that writes into it and the
+    /// scan that reads what it already holds. Two copies would be two chances
+    /// to drop the security scope, and the one that dropped it would fail
+    /// differently: the fetch loudly at the publish move, the scan silently as
+    /// an empty folder, which reads as "nothing here" rather than as a refusal
+    /// and would quietly turn the already-imported check off.
+    ///
+    /// Borrows the project's security-scoped lease rather than rebuilding a
+    /// raw path. Under App Sandbox a `URL(fileURLWithPath:)` into a
+    /// user-chosen folder has no grant behind it, so the whole multi-gigabyte
+    /// transfer would run and then fail at the publish move — surfacing as
+    /// "The download failed", which reads as a network fault. Debug builds
+    /// are unsandboxed, so a green run there proves nothing about TestFlight.
+    ///
+    /// `leaseURL` returns a URL with scope already open and owned by
+    /// `ProjectIndex`; per its contract we must not call
+    /// start/stopAccessingSecurityScopedResource ourselves.
+    ///
+    /// Still owed, and deliberately not done here because it changes the
+    /// surface: the picker offers projects whose lease is unavailable
+    /// (`.cantFind`, `.inCloud`, past the watcher cap, or no bookmark data).
+    /// Falling back to the raw path keeps today's behaviour for those rather
+    /// than introducing a refusal state this pass has no design for.
+    ///
+    /// No empty-path fallback. `URL(fileURLWithPath: "")` is the cwd, not a
+    /// refusal, and it published a real recording into the sandbox container
+    /// while the window said "Imported" (16 Aug 2026). The picker no longer
+    /// offers unlocated projects, so that guard should be unreachable — it is
+    /// here because "should be unreachable" is what the last one said.
+    private func destinationFolder(for choice: CloudImportDestinations.Choice) -> URL? {
+        guard case .project(let id) = choice,
+              let project = projectIndex.projects.first(where: { $0.id == id }),
+              !project.path.isEmpty
+        else { return nil }
+        return projectIndex.leaseURL(projectID: id) ?? URL(fileURLWithPath: project.path)
     }
 
     private var subtitle: String {

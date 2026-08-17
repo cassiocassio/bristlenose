@@ -276,6 +276,38 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// How far a local file's length may sit from this platform's stated
+    /// duration and still be the same recording.
+    ///
+    /// A tolerance is needed at all because the two are **different
+    /// quantities**. The container's duration is media length; the API's is
+    /// wall-clock between recording events, which brackets the encode rather
+    /// than measuring it. They agree to within seconds, never exactly.
+    ///
+    /// **Teams is the tight one.** Graph's `video`/`audio` facet carries the
+    /// container's own duration in milliseconds — the same measurement, so the
+    /// only slack is rounding.
+    ///
+    /// **Meet is the wall-clock case**: `endTime − startTime` on the
+    /// conference record's recording.
+    ///
+    /// **Zoom reports whole minutes** (`meeting.duration`), so its own
+    /// granularity is 60s and nothing below that could ever match. This is
+    /// stated rather than fixed: at ±90s two interviews booked back to back
+    /// for the same length are indistinguishable, so on Zoom the check is
+    /// coarse by construction and one of them will simply lose the contest and
+    /// stay fetchable. Sharpening it means reading `recording_end −
+    /// recording_start` off the recordings endpoint, which is work for
+    /// whenever Zoom is unparked (`BristlenoseFlags.cloudImportZoom`) and can
+    /// be measured against a real account rather than reasoned about.
+    var durationTolerance: TimeInterval {
+        switch self {
+        case .teams: return 2
+        case .meet:  return 15
+        case .zoom:  return 90
+        }
+    }
+
     /// Whether a sign-in commonly stalls on someone else's approval, with no
     /// error ever reaching this app.
     ///

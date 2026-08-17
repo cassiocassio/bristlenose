@@ -43,9 +43,9 @@ final class CloudImportCoordinator: ObservableObject {
         switch platform {
         case .meet:
             guard let config = GoogleOAuthConfig.resolve() else {
-                store = CloudImportStore(source: UnconfiguredCloudSource()); return
+                store = CloudImportStore(source: UnconfiguredCloudSource(), platform: platform); return
             }
-            store = CloudImportStore(source: GoogleMeetSource(config: config))
+            store = CloudImportStore(source: GoogleMeetSource(config: config), platform: platform)
 
         case .zoom:
             // Zoom needs TWO values, not one: a public client ID *and* an HTTPS
@@ -53,18 +53,18 @@ final class CloudImportCoordinator: ObservableObject {
             // client ID the way Google does — it is whatever was registered in
             // the app's OAuth allow list, matched exactly.
             guard let config = ZoomOAuthConfig.resolve() else {
-                store = CloudImportStore(source: UnconfiguredCloudSource()); return
+                store = CloudImportStore(source: UnconfiguredCloudSource(), platform: platform); return
             }
-            store = CloudImportStore(source: ZoomSource(config: config))
+            store = CloudImportStore(source: ZoomSource(config: config), platform: platform)
 
         case .teams:
             // One value, not two: unlike Zoom, Microsoft derives nothing from
             // the client ID but accepts a conventional custom-scheme redirect,
             // so the redirect and tenant both have sane defaults.
             guard let config = MicrosoftOAuthConfig.resolve() else {
-                store = CloudImportStore(source: UnconfiguredCloudSource()); return
+                store = CloudImportStore(source: UnconfiguredCloudSource(), platform: platform); return
             }
-            store = CloudImportStore(source: TeamsSource(config: config))
+            store = CloudImportStore(source: TeamsSource(config: config), platform: platform)
         }
     }
 
@@ -77,7 +77,9 @@ final class CloudImportCoordinator: ObservableObject {
         self.platform = platform
         preselectedProjectID = projectID
         fixtureScenario = scenario
-        store = CloudImportStore(source: FixtureCloudSource(scenario: scenario, platform: platform))
+        store = CloudImportStore(
+            source: FixtureCloudSource(scenario: scenario, platform: platform),
+            platform: platform)
     }
 }
 

@@ -505,7 +505,14 @@ struct CloudImportRow: Identifiable, Equatable {
     let attendees: [Attendee]
 
     /// Local file state — shared with the Teams side.
-    let localState: ImportRowState
+    ///
+    /// The one `var` on this type, and deliberately: every other field is a
+    /// fact about the *remote* listing and is fixed the moment the adapter
+    /// built the row, while this one answers a question about the destination
+    /// folder that only the destination knows. A `with`-style mutation cannot
+    /// drop a field the way re-invoking this type's eighteen-argument
+    /// initialiser silently can.
+    var localState: ImportRowState
 
     /// Per-artifact availability, resolved at list time.
     let video: ArtifactAvailability
@@ -614,6 +621,19 @@ struct CloudImportRow: Identifiable, Equatable {
         self.roster = roster
         self.transcript = transcript
         self.organiser = organiser
+    }
+
+    /// The same row, marked as already sitting in the destination project.
+    ///
+    /// The single legal write to `localState` after listing, and the only
+    /// producer `.imported` has ever had. Which rows earn it is
+    /// `CloudImportLocalMatch.alreadyPresent`'s judgement, not this method's —
+    /// it exists so the transition is one greppable name rather than a bare
+    /// field assignment scattered across the store.
+    func markedAsAlreadyInProject() -> CloudImportRow {
+        var copy = self
+        copy.localState = .imported
+        return copy
     }
 
     /// Whether this row has a file behind it at all.

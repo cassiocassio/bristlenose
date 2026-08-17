@@ -42,6 +42,49 @@ trued-against: HEAD@main on 2026-08-16 (ffdd0eef)
 
 ## Changelog
 
+- _2026-08-17_ — **item 1 of the design session is built: already-in-this-project,
+  by duration.** `ImportRowState.imported` has a producer for the first time —
+  it was written, localised into 21 languages ("Already in this project."), and
+  reachable from no code path since the day it was added. The cheap half only,
+  as scoped: a pure matcher (`CloudImportLocalMatch.alreadyPresent`) plus one
+  folder scan when the destination popup changes. No schema, no persistence, no
+  privacy question.
+  - **One file may satisfy at most one row**, and that rule is the design, not
+    an optimisation. The two failure directions are not symmetric: missing a
+    match costs a duplicate the researcher can delete, while inventing one
+    marks a recording `.imported` — which offers no tick and no override, so it
+    silently withholds a file they do not have. Ties go to the closest pair and
+    every row that loses stays fetchable.
+  - **Tolerance is per platform**, because the two quantities being compared
+    are different measurements: a container's duration is media length, the
+    API's is wall-clock between recording events. Teams ±2s (Graph serves the
+    container's own duration in ms), Meet ±15s (`endTime − startTime`), Zoom
+    ±90s — Zoom reports **whole minutes**, so nothing under 60s could ever
+    match. Stated rather than papered over; sharpening it means reading
+    `recording_end − recording_start` off the recordings endpoint, which waits
+    until Zoom is unparked and can be measured rather than reasoned about.
+  - **The split that was there.** `fetchOrder` read `listing.rows` while the
+    outline drew a marked copy — harmless until the two disagree, at which
+    point the window says "already in this project" and the batch fetches it
+    anyway, producing exactly the duplicate the mark exists to prevent. Both
+    now read one stored `rows`. Pinned by two tests that were each confirmed to
+    **fail** with the split reintroduced.
+  - Measured, not assumed: the scan was run against the ten real FOSSDA
+    interview recordings held locally, measuring all ten — and excluding the
+    manifest and the three output directories beside them — to within 0.5s of
+    `mdls`'s `kMDItemDurationSeconds`.
+  - Durations come from **AVFoundation**, not a shelled-out ffprobe — native,
+    sandbox-clean, no subprocess. A dataless placeholder is never opened:
+    reading a container header faults the file in, which is the case where the
+    `FileManager` equivalent blocks indefinitely with no error and no
+    cancellation. Two signals guard it (`ubiquitousItemDownloadingStatus`, and
+    allocated-size-zero over a non-zero logical size, for providers that
+    publish no status).
+  - Not done, and deliberately: no rescan after a batch finishes (the outcome
+    already reports the row), and no pruning of a tick that a scan later
+    invalidates — `isSelectable` drops it from `fetchOrder`, so the Import
+    button's count simply falls, which is the honest reading of "you already
+    have two of these".
 - _2026-08-17 (design session, mostly unbuilt)_ — a long design pass over what
   happens **after** the researcher presses Import. Two mockups carry it:
   `docs/mockups/cloud-import-sidebar-progress.html` (the closed-window case) and

@@ -49,8 +49,26 @@ final class CloudImportStore: ObservableObject {
                 """)
         }
     }
-    @Published private(set) var listing: MeetingListing? { didSet { rebuildOutline() } }
+    @Published private(set) var listing: MeetingListing? { didSet { rebuild() } }
     @Published private(set) var accountEmail: String?
+
+    /// The listing's rows **with the destination scan applied** — the one
+    /// place the list is read from.
+    ///
+    /// Nothing outside `rebuild()` may read `listing.rows`, and that is the
+    /// whole point of it being stored. `fetchOrder` used to read the listing
+    /// directly while the outline read a marked copy, which is a split that
+    /// costs nothing until the two disagree: the window would draw a row as
+    /// already held while the batch quietly fetched it anyway.
+    @Published private(set) var rows: [CloudImportRow] = []
+
+    /// Recordings measured in the destination folder, or empty when there is
+    /// no destination yet. An input to `rebuild()` alongside the listing and
+    /// the filter — it arrives on its own schedule and must not depend on
+    /// which of the two landed first.
+    @Published private(set) var destinationRecordings: [LocalRecording] = [] {
+        didSet { rebuild() }
+    }
 
     /// The list as the grid draws it: days, meetings, recordings, plus the three
     /// counts the footer is allowed to state.
@@ -79,7 +97,7 @@ final class CloudImportStore: ObservableObject {
     /// a tick — one model for intent, one for navigation.
     @Published var focusedRowID: String?
 
-    @Published var filterText: String = "" { didSet { rebuildOutline() } }
+    @Published var filterText: String = "" { didSet { rebuild() } }
 
     /// Per-row fetch state, keyed by row id.
     @Published private(set) var progress: [String: FetchProgress] = [:]
@@ -91,16 +109,22 @@ final class CloudImportStore: ObservableObject {
     @Published var windowDays: Int = 30
 
     private let source: CloudImportSource
+    /// Only for `durationTolerance` — the store still never asks its source
+    /// which kind it is. The tolerance is a property of where the *duration*
+    /// came from, so it cannot be a constant here.
+    private let platform: CloudPlatform
     private var listTask: Task<Void, Never>?
     private var fetchTask: Task<Void, Never>?
+    private var scanTask: Task<Void, Never>?
 
     /// Bounded concurrency. §9: the benefit is resilience — one stalled file
     /// doesn't block the batch — not throughput, since a single 1.3 GB transfer
     /// already saturates a modest uplink.
     private let maxConcurrentFetches = 3
 
-    init(source: CloudImportSource) {
+    init(source: CloudImportSource, platform: CloudPlatform = .meet) {
         self.source = source
+        self.platform = platform
         self.accountEmail = source.accountEmail
         self.phase = source.accountEmail == nil ? .signedOut : .loading
     }
@@ -116,13 +140,61 @@ final class CloudImportStore: ObservableObject {
     /// that nothing had changed.
     @Published private(set) var outlineGeneration: Int = 0
 
-    private func rebuildOutline() {
+    /// Recompute `rows` and `outline` from the three things they depend on:
+    /// the listing, the destination scan, and the filter.
+    ///
+    /// The scan is applied **before** the filter, not after, so a row hidden by
+    /// a filter keystroke is still marked when the filter clears — and, more
+    /// importantly, so `fetchOrder` sees the same marks the window drew.
+    private func rebuild() {
+        let listed = listing?.rows ?? []
+        let held = CloudImportLocalMatch.alreadyPresent(
+            rows: listed,
+            local: destinationRecordings,
+            tolerance: platform.durationTolerance)
+        rows = listed.map { held.contains($0.id) ? $0.markedAsAlreadyInProject() : $0 }
+
         // The predicate lives on the row — titles *and* people, diacritic-
         // insensitive, covering names behind the `+N` overflow. See
         // `CloudImportRow.matches(filter:)` for why each of those is deliberate.
-        let filtered = (listing?.rows ?? []).filter { $0.matches(filter: filterText) }
+        let filtered = rows.filter { $0.matches(filter: filterText) }
         outline = CloudImportOutline.build(rows: filtered)
         outlineGeneration &+= 1
+    }
+
+    /// Point the check at the chosen project's folder, or at nothing.
+    ///
+    /// Called on every destination change, because the answer is a fact about
+    /// *that* folder: the same listing against two projects has two different
+    /// sets of already-held rows, and a stale answer is the one that withholds
+    /// a recording the researcher does not have.
+    ///
+    /// A nil folder — the popup still reading "New Project…" — clears the
+    /// marks rather than leaving the previous project's. There is nothing in
+    /// an unnamed project yet, so every row is fetchable, which is true.
+    func setDestination(_ folder: URL?) {
+        scanTask?.cancel()
+        guard let folder else {
+            destinationRecordings = []
+            return
+        }
+        scanTask = Task { [weak self] in
+            let found = await CloudImportLocalMatch.scan(folder: folder)
+            // A destination changed while the scan ran. Publishing now would
+            // mark rows against a folder the researcher has already left.
+            guard !Task.isCancelled else { return }
+            self?.applyDestinationScan(found)
+        }
+    }
+
+    /// Publish what a scan measured.
+    ///
+    /// Split out from `setDestination` because the measurement and its
+    /// consequences are worth exercising apart: a folder of real 50-minute
+    /// recordings is not something a test can conjure, while "a held row
+    /// leaves the batch" is exactly what has to be pinned.
+    func applyDestinationScan(_ found: [LocalRecording]) {
+        destinationRecordings = found
     }
 
     /// Rows after the filter, **in the order they appear on screen**.
@@ -152,8 +224,13 @@ final class CloudImportStore: ObservableObject {
     /// retention is an admin policy — fall back to oldest-first, on the same
     /// reasoning one level down: the oldest recording is the one nearest
     /// whatever policy eventually removes it.
+    /// Reads `rows`, never `listing`. A row the destination already holds is
+    /// not selectable, so it drops out here — which is what keeps a stale tick
+    /// from fetching a file the window has just drawn as held. That also means
+    /// the Import button's count falls as the scan lands, which is the honest
+    /// reading of "you already have two of these".
     var fetchOrder: [CloudImportRow] {
-        (listing?.rows ?? [])
+        rows
             .filter { ticked.contains($0.id) && $0.isSelectable }
             .sorted { lhs, rhs in
                 switch (lhs.expiresAt, rhs.expiresAt) {
@@ -179,7 +256,6 @@ final class CloudImportStore: ObservableObject {
     /// true the window says it once, at the top, instead of repeating it on
     /// every row — the difference between one sentence and eleven dead ticks.
     var blanketRefusal: ArtifactAvailability? {
-        let rows = listing?.rows ?? []
         guard !rows.isEmpty else { return nil }
         let reasons = Set(rows.map(\.video))
         guard reasons.count == 1, let only = reasons.first, !only.isAvailable else { return nil }

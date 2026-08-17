@@ -220,7 +220,11 @@ enum GoogleOAuthError: LocalizedError, Equatable {
 }
 // MARK: - Tokens
 
-struct GoogleTokens: Equatable {
+/// `Codable` so a sign-in can outlive the window — see `CloudGrantStore`. The
+/// synthesised conformance is deliberate: every member is already a value the
+/// encoder handles, and a hand-rolled one would be a second place to forget a
+/// field the moment one is added.
+struct GoogleTokens: Equatable, Codable {
     let accessToken: String
     let refreshToken: String?
     let expiresAt: Date

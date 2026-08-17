@@ -273,15 +273,84 @@ final class GoogleMeetSource: CloudImportSource {
     ///   it reads `mediaToken`, so a token restored without its file ids sits
     ///   unused behind a failing guard — a seam that looks restored and is not.
     ///   Restore both or neither.
+    /// - Parameter restoredIdentity: the signed-in address, restored alongside
+    ///   the tokens. Without it `CloudImportStore` opens on `.signedOut` —
+    ///   it decides that from `accountEmail` — so a perfectly good restored
+    ///   token would sit behind a sign-in button and the whole restore would
+    ///   look like it had failed.
+    ///
+    /// - Parameter onGrantChanged: called whenever the grant materially moves
+    ///   — signed in, refreshed, Picker granted, or revoked. **Nil means
+    ///   forget it**, and the revoked case is why this is one callback rather
+    ///   than a `save`: a store that is only ever told about successes keeps a
+    ///   dead grant looking live until the app is reinstalled.
     init(config: GoogleOAuthConfig,
          session: URLSession? = nil,
          restoredTokens: GoogleTokens? = nil,
-         restoredMediaGrant: (tokens: GoogleTokens, fileIDs: Set<String>)? = nil) {
+         restoredMediaGrant: (tokens: GoogleTokens, fileIDs: Set<String>)? = nil,
+         restoredIdentity: String? = nil,
+         onGrantChanged: (@Sendable (GoogleGrant?) -> Void)? = nil) {
         self.config = config
         self.sessionOwner = session.map(CloudSessionOwner.init(adopting:)) ?? CloudSessionOwner()
         self.tokens = restoredTokens
         self.mediaToken = restoredMediaGrant?.tokens
         self.grantedFileIDs = restoredMediaGrant?.fileIDs ?? []
+        self.identity = restoredIdentity
+        self.onGrantChanged = onGrantChanged
+    }
+
+    private let onGrantChanged: (@Sendable (GoogleGrant?) -> Void)?
+
+    /// Publish the current grant, or its absence.
+    ///
+    /// Called after every move rather than at chosen moments, because the
+    /// moment that matters is the one nobody remembers to instrument — a
+    /// silent refresh an hour in, whose new refresh token is the only one that
+    /// will still work tomorrow.
+    private func publishGrant() {
+        guard let tokens else { onGrantChanged?(nil); return }
+        let media = mediaToken.map {
+            GoogleGrant.MediaGrant(tokens: $0, fileIDs: grantedFileIDs.sorted())
+        }
+        onGrantChanged?(GoogleGrant(tokens: tokens, media: media, identity: identity))
+    }
+
+    /// Renew the listing token when it has aged out, or report that we cannot.
+    ///
+    /// **The listing path had no expiry check at all** before 17 Aug 2026,
+    /// which was survivable only because the token was minted at sign-in and
+    /// used minutes later. The moment a sign-in outlives the window — which is
+    /// the entire point of restoring one — an hour-old token is the normal
+    /// case rather than the edge one.
+    ///
+    /// Returns false when the grant is gone for good, having already told the
+    /// store to forget it: a refresh token Google has revoked will fail
+    /// identically forever, and keeping it turns one honest sign-in into an
+    /// unbreakable loop of failed listings.
+    /// `@MainActor` because `GoogleOAuthClient`'s initialiser is — it can carry
+    /// an anchor window. The refresh itself is a plain POST with no UI, so the
+    /// hop costs nothing and buys the same isolation the media-token twin
+    /// already has.
+    @MainActor
+    private func renewedListingTokenIfNeeded() async -> Bool {
+        guard let current = tokens else { return false }
+        guard current.isExpired else { return true }
+        guard let refreshToken = current.refreshToken else {
+            tokens = nil
+            publishGrant()
+            return false
+        }
+        let client = GoogleOAuthClient(config: config, session: session)
+        guard let renewed = try? await client.refresh(
+            refreshToken: refreshToken, knownGrants: current.granted)
+        else {
+            tokens = nil
+            publishGrant()
+            return false
+        }
+        tokens = renewed
+        publishGrant()
+        return true
     }
 
     var accountEmail: String? { identity }
@@ -297,6 +366,10 @@ final class GoogleMeetSource: CloudImportSource {
         let granted = try await client.signIn(scopes: GoogleScopes.requested, requireAll: false)
         tokens = granted
         identity = try? await fetchIdentity(accessToken: granted.accessToken)
+        // After the identity, not before: `accountEmail` is what decides the
+        // window's opening phase on the next restore, so a grant saved without
+        // it restores to a sign-in button while holding a working token.
+        publishGrant()
     }
 
     /// One `files.get` for `size`, using the media grant.
@@ -337,7 +410,12 @@ final class GoogleMeetSource: CloudImportSource {
     // MARK: Listing
 
     func list(window: DateInterval) async -> MeetingListing {
-        guard let tokens else {
+        // Renew before reading, not after failing. A restored sign-in is
+        // routinely older than an access token's hour, so on the restore path
+        // "expired" is the ordinary case — and a 401 here surfaces as
+        // needsReauthentication, which sends the researcher through a sign-in
+        // they did not need.
+        guard await renewedListingTokenIfNeeded(), let tokens else {
             return empty(window, outcome: .failed(after: 0,
                                                   outcome: .needsReauthentication(reason: "no token")))
         }
@@ -1260,6 +1338,9 @@ final class GoogleMeetSource: CloudImportSource {
         // answer would produce a batch that 403s on exactly the rows they
         // chose to remove.
         grantedFileIDs.formUnion(picked)
+        // The grant the researcher just sat through a browser for. Not saving
+        // it here is what made every window open ask again.
+        publishGrant()
     }
 
     /// Whether the media token is good, refreshing it in place if it has aged

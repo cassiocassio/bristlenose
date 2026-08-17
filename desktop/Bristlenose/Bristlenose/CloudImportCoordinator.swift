@@ -45,7 +45,19 @@ final class CloudImportCoordinator: ObservableObject {
             guard let config = GoogleOAuthConfig.resolve() else {
                 store = CloudImportStore(source: UnconfiguredCloudSource(), platform: platform); return
             }
-            store = CloudImportStore(source: GoogleMeetSource(config: config), platform: platform)
+            // Restore the previous sign-in if one survived. Both grants and
+            // the identity, or none of them — see `GoogleGrant`.
+            let saved = CloudGrantStore.loadGoogle()
+            store = CloudImportStore(
+                source: GoogleMeetSource(
+                    config: config,
+                    restoredTokens: saved?.tokens,
+                    restoredMediaGrant: saved?.media.map {
+                        (tokens: $0.tokens, fileIDs: Set($0.fileIDs))
+                    },
+                    restoredIdentity: saved?.identity,
+                    onGrantChanged: { CloudGrantStore.saveGoogle($0) }),
+                platform: platform)
 
         case .zoom:
             // Zoom needs TWO values, not one: a public client ID *and* an HTTPS

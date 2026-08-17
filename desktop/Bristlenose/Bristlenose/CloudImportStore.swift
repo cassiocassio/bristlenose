@@ -279,27 +279,66 @@ final class CloudImportStore: ObservableObject {
 
     // MARK: - Actions
 
+    private var signInTask: Task<Void, Never>?
+
+    /// Bumped on every start and every cancel, so a sign-in the researcher has
+    /// walked away from cannot come back later and overwrite the phase they
+    /// are now looking at.
+    private var signInGeneration = 0
+
     func signIn() {
+        signInTask?.cancel()
+        signInGeneration &+= 1
+        let mine = signInGeneration
         phase = .signingIn
-        Task { @MainActor in
+        signInTask = Task { @MainActor [weak self] in
+            guard let self else { return }
             do {
-                try await source.signIn()
-                guard source.accountEmail != nil else {
+                try await self.source.signIn()
+                guard self.signInGeneration == mine else { return }
+                guard self.source.accountEmail != nil else {
                     // Signed in, apparently, but no account came back. On the
                     // admin-gated platforms this is the pre-approval wall.
-                    phase = .signInIncomplete
+                    self.phase = .signInIncomplete
                     return
                 }
-                accountEmail = source.accountEmail
-                await load()
+                self.accountEmail = self.source.accountEmail
+                await self.load()
             } catch let error as ZoomOAuthError where error == .cancelled {
-                phase = .signInIncomplete
+                guard self.signInGeneration == mine else { return }
+                self.phase = .signInIncomplete
             } catch let error as GoogleOAuthError where error == .cancelled {
-                phase = .signInIncomplete
+                guard self.signInGeneration == mine else { return }
+                self.phase = .signInIncomplete
             } catch {
-                phase = .failed(error.localizedDescription)
+                guard self.signInGeneration == mine else { return }
+                self.phase = .failed(error.localizedDescription)
             }
         }
+    }
+
+    /// Give up on a sign-in that is not coming back.
+    ///
+    /// **On macOS `ASWebAuthenticationSession` opens the researcher's real
+    /// default browser, not an embedded view** — so when they abandon the tab,
+    /// close it, or simply lose it behind another window, nothing reports a
+    /// cancellation and the `await` never returns. Measured 17 Aug 2026:
+    /// `import_phase signedOut -> signingIn` and then silence, with the window
+    /// spinning indefinitely and no way out but quitting the app.
+    ///
+    /// Deliberately **not** a timeout. A real sign-in can legitimately take
+    /// minutes — a password, then 2FA, then an account chooser — so any
+    /// deadline long enough to be safe is far too long to be useful, and any
+    /// deadline short enough to be useful cancels people mid-password. The
+    /// honest mechanism is to say what we are waiting for and let them stop.
+    ///
+    /// The in-flight session is not itself cancellable; bumping the generation
+    /// is what makes its eventual return inert.
+    func cancelSignIn() {
+        signInTask?.cancel()
+        signInTask = nil
+        signInGeneration &+= 1
+        phase = .signedOut
     }
 
     func load() async {

@@ -641,6 +641,8 @@
     "attendeeCount_other": "{{count}} participantes",
     "allAlreadyHere": "Todas as grava\u00e7\u00f5es desta reuni\u00e3o j\u00e1 est\u00e3o aqui.",
     "statusInThisProject": "Neste projeto",
+    "signingInBody": "Conclua o login no {{platform}} no navegador.",
+    "signingInCancel": "Cancelar",
     "heldImported": "J\u00e1 est\u00e1 neste projeto.",
     "heldNotDownloaded": "J\u00e1 importada \u2014 o arquivo est\u00e1 no {{provider}} e precisa ser baixado l\u00e1.",
     "heldDriveNotConnected": "J\u00e1 importada \u2014 \u201c{{volume}}\u201d n\u00e3o est\u00e1 conectado.",

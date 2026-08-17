@@ -147,8 +147,21 @@ struct CloudImportWindow: View {
             signedOutView
 
         case .signingIn:
-            ProgressView().controlSize(.small)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // A bare spinner here was a dead end. The sign-in happens in the
+            // researcher's *real browser* — so the thing they need to know is
+            // that we are waiting on a window that is somewhere else, and the
+            // thing they need is a way out when it never comes back.
+            VStack(spacing: 12) {
+                ProgressView().controlSize(.small)
+                Text(i18n.t("desktop.cloudImport.signingInBody",
+                            ["platform": platform.displayName]))
+                    .font(.callout).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button(i18n.t("desktop.cloudImport.signingInCancel")) {
+                    store.cancelSignIn()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         case .loading:
             VStack(spacing: 10) {

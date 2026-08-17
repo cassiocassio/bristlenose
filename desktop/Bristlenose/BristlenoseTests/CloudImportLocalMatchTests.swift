@@ -38,12 +38,14 @@ struct CloudImportLocalMatchTests {
         LocalRecording(name: name, duration: duration)
     }
 
+    /// Meet unless stated: the platform this was designed against, and the one
+    /// whose duration is the loosest of the three.
     private func held(
         _ rows: [CloudImportRow],
         _ local: [LocalRecording],
-        tolerance: TimeInterval = 15
+        platform: CloudPlatform = .meet
     ) -> Set<String> {
-        CloudImportLocalMatch.alreadyPresent(rows: rows, local: local, tolerance: tolerance)
+        CloudImportLocalMatch.alreadyPresent(rows: rows, local: local, platform: platform)
     }
 
     // MARK: - The case it exists for
@@ -161,19 +163,60 @@ struct CloudImportLocalMatchTests {
     @Test("Each platform's tolerance matches where its duration came from")
     func toleranceFollowsProvenance() {
         // Teams serves the container's own duration in milliseconds — the same
-        // measurement, so a match should be near-exact and a 10s gap is a
-        // different recording.
-        let teams = [row("a", duration: 3000)]
-        #expect(held(teams, [file("t.mp4", 3001)], tolerance: CloudPlatform.teams.durationTolerance) == ["a"])
-        #expect(held(teams, [file("t.mp4", 3010)], tolerance: CloudPlatform.teams.durationTolerance).isEmpty)
+        // measurement, so a match is near-exact and a 10s gap is a different
+        // recording.
+        let hour = [row("a", duration: 3000)]
+        #expect(held(hour, [file("t.mp4", 3001)], platform: .teams) == ["a"])
+        #expect(held(hour, [file("t.mp4", 3010)], platform: .teams).isEmpty)
 
         // Meet's is wall-clock between recording events, which brackets the
         // encode rather than measuring it. The same 10s gap is the same file.
-        #expect(held(teams, [file("m.mp4", 3010)], tolerance: CloudPlatform.meet.durationTolerance) == ["a"])
+        #expect(held(hour, [file("m.mp4", 3010)], platform: .meet) == ["a"])
 
-        // Zoom reports whole minutes, so nothing under a minute could ever
-        // match. Stated rather than fixed — see `durationTolerance`.
-        #expect(CloudPlatform.zoom.durationTolerance > 60)
+        // Zoom reports whole minutes, so its quantisation error alone is up to
+        // 30s before any real drift — nothing under a minute could ever match,
+        // and scaling cannot help a number that arrives pre-rounded. Flat, and
+        // never below its own granularity. Stated rather than fixed; see
+        // `durationTolerance(forListed:)`.
+        #expect(CloudPlatform.zoom.durationTolerance(forListed: 20) > 60)
+        #expect(CloudPlatform.zoom.durationTolerance(forListed: 20)
+                == CloudPlatform.zoom.durationTolerance(forListed: 3000))
+    }
+
+    @Test("A short recording gets a short window, which is where the flat one did harm")
+    func toleranceScalesWithTheRecording() {
+        // Measured on a real Meet account, 17 Aug 2026. The folder held two
+        // copies of a 20.75s recording and no copy of the 30.25s one — and at
+        // a flat 15s the 30.25s row was marked "already in this project",
+        // which takes its tick away and offers no override. 9.5s apart is not
+        // the same recording; on a 20-second file 15s is 75%.
+        let short = [row("a", duration: 30.25)]
+        #expect(held(short, [file("wrong.mp4", 20.75)]).isEmpty)
+
+        // …while the correct match still lands.
+        #expect(held(short, [file("right.mp4", 30.4)]) == ["a"])
+
+        // And the long case, which the flat value got right, still is: a
+        // 35-minute recording keeps a window measured in seconds, not
+        // percentage points.
+        let long = [row("b", duration: 2152.8)]
+        #expect(held(long, [file("long.mp4", 2160)]) == ["b"])
+        #expect(held(long, [file("other.mp4", 2100)]).isEmpty)
+    }
+
+    @Test("The four short recordings that collided no longer do")
+    func realWorldShortRecordingsNoLongerCollide() {
+        // The exact folder from that session: four Meet recordings, every one
+        // of them inside 15s of every other. The one-to-one rule kept the
+        // aggregate answer right only because all four happened to be present
+        // — with any of them missing, the pairing was arbitrary and a row the
+        // researcher did NOT have could be marked as held.
+        let rows = [row("a", duration: 14), row("b", duration: 20.75),
+                    row("c", duration: 28.25), row("d", duration: 30.25)]
+        // Only two of the four are actually on disk.
+        let onDisk = [file("one.mp4", 14), file("two.mp4", 28.25)]
+        #expect(held(rows, onDisk) == ["a", "c"],
+                "each file must claim its own row, not the nearest unclaimed one")
     }
 }
 

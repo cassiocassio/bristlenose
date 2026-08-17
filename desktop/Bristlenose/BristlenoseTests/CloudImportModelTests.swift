@@ -219,16 +219,41 @@ struct ImportRowStateTests {
         #expect(!ImportRowState.noLongerAvailable.showsCheckbox)
     }
 
-    /// Absence is information. The checkbox already says imported or not, so the
-    /// Status column carries only what the checkbox cannot.
-    @Test("The common states leave the Status column empty")
-    func commonStatesAreSilent() {
+    /// Absence is information — but only for the state that genuinely has
+    /// nothing to say. `.imported` was in here until 17 Aug 2026 on the
+    /// argument that the checkbox already says imported or not; the checkbox
+    /// draws an already-held row *ticked and disabled*, which is the same
+    /// picture as a row the researcher ticked. A window where every row was
+    /// already in the project rendered five ticks, an empty Status column and
+    /// an **Import 0 Recordings** button, and nothing on screen resolved it.
+    @Test("Only the nothing-to-say state leaves the Status column empty")
+    func onlyNotImportedIsSilent() {
         #expect(ImportRowState.notImported.isSilent)
-        #expect(ImportRowState.imported.isSilent)
         // And the states that do speak are not silent, or the property would
         // be trivially true and this test would pass on a broken switch.
+        #expect(!ImportRowState.imported.isSilent)
         #expect(!ImportRowState.damaged.isSilent)
         #expect(!ImportRowState.viewOnly.isSilent)
+    }
+
+    /// The glyph vocabulary is `MessageKind`'s and nothing else's —
+    /// `docs/design-pipeline-diagnostic-popover.md` is explicit that the five
+    /// kinds are the whole set and that anything not fitting maps to the
+    /// nearest. This window had been minting its own.
+    @Test("Every speaking state maps to one of the five house kinds")
+    func speakingStatesCarryAKind() {
+        for state: ImportRowState in [.imported, .notDownloaded(provider: "Dropbox"),
+                                      .driveNotConnected(volume: "T7"), .damaged,
+                                      .viewOnly, .noLongerAvailable] {
+            #expect(state.messageKind != nil, "\(state) says something but names no kind")
+        }
+        // Silent means no kind, not `.info` with an empty string.
+        #expect(ImportRowState.notImported.messageKind == nil)
+        // The states the researcher can act on are the warning ones, and the
+        // held-but-fine ones stay neutral — a wall of orange would mean nothing.
+        #expect(ImportRowState.imported.messageKind == .info)
+        #expect(ImportRowState.damaged.messageKind == .warning)
+        #expect(ImportRowState.viewOnly.messageKind == .warning)
     }
 
     @Test("Only actionable conditions are warning-coloured")

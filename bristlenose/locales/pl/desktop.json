@@ -696,6 +696,7 @@
     "attendeeCount_many": "{{count}} uczestnik\u00f3w",
     "attendeeCount_other": "{{count}} uczestnik\u00f3w",
     "allAlreadyHere": "Wszystkie nagrania tego spotkania ju\u017c tu s\u0105.",
+    "statusInThisProject": "W tym projekcie",
     "heldImported": "Ju\u017c w tym projekcie.",
     "heldNotDownloaded": "Ju\u017c zaimportowano \u2014 plik jest na {{provider}} i trzeba go tam pobra\u0107.",
     "heldDriveNotConnected": "Ju\u017c zaimportowano \u2014 \u201e{{volume}}\u201d nie jest pod\u0142\u0105czony.",

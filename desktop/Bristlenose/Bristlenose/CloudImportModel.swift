@@ -255,24 +255,67 @@ enum ImportRowState: Equatable {
     /// Whether this state has anything to say in the Status column.
     ///
     /// Policy, not wording — the same split as `CloudPlatform.mandatesAccountNoun`.
-    /// "The common states are silent" is an invariant a test should be able to
+    /// "The common state is silent" is an invariant a test should be able to
     /// assert without standing up a locale bundle, and once `statusLabel` took
     /// an `I18n` the old assertion (`statusLabel == nil`) quietly promoted a
     /// non-optional function to `Optional` and became **always false**. It
     /// failed loudly, which is the only reason it isn't still sitting there
     /// looking like a passing test.
+    ///
+    /// **`.imported` was silent here until 17 Aug 2026, and that was wrong the
+    /// moment it got a producer.** The argument for its silence was that the
+    /// checkbox already says imported or not — but an already-held row draws
+    /// *ticked and disabled*, which at a glance is the same picture as a row
+    /// the researcher ticked themselves. A window where every row was already
+    /// in the project therefore rendered five ticks, an empty Status column,
+    /// and an **Import 0 Recordings** button, with the only explanation living
+    /// in a hover tooltip nobody hovers. Five ticks and a zero is not a
+    /// contradiction the researcher should have to resolve.
     var isSilent: Bool {
         switch self {
-        case .notImported, .imported: return true
+        case .notImported: return true
         default: return false
+        }
+    }
+
+    /// Which of the five house kinds this state speaks in.
+    ///
+    /// `docs/design-pipeline-diagnostic-popover.md` owns the vocabulary and is
+    /// explicit that it is the *whole* vocabulary: "anything that doesn't fit
+    /// these five maps to the nearest existing kind". This window had been
+    /// minting its own — bare `checkmark` rather than `checkmark.circle`, and
+    /// no glyph at all on the states that warn — so the mapping is stated here,
+    /// once, rather than decided again at each render.
+    ///
+    /// Nil where the row says nothing, which is not the same as `.info` with an
+    /// empty string.
+    var messageKind: MessageKind? {
+        switch self {
+        case .notImported:
+            return nil
+        case .imported, .notDownloaded, .driveNotConnected:
+            // Neutral note, no action needed. The file is held; where it is
+            // held is the only thing left to say.
+            return .info
+        case .damaged, .viewOnly, .noLongerAvailable:
+            // Recoverable, partial, or withheld — the three the researcher can
+            // actually act on, and the only three that earn the eye.
+            return .warning
         }
     }
 
     @MainActor
     func statusLabel(_ i18n: I18n) -> String? {
         switch self {
-        case .notImported, .imported:
+        case .notImported:
             return nil
+        case .imported:
+            // Deliberately not "Imported" — that word is the *outcome* of a
+            // fetch we just ran, and reusing it would collapse "I brought this
+            // down for you a moment ago" into "this was already on your disk".
+            // Completes the sibling paradigm instead: "On Dropbox", "On “T7”",
+            // "In this project".
+            return i18n.t("desktop.cloudImport.statusInThisProject")
         case .notDownloaded(let provider):
             return i18n.t("desktop.cloudImport.statusOnProvider", ["provider": provider])
         case .driveNotConnected(let volume):

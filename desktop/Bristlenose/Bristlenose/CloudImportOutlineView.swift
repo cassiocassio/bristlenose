@@ -858,23 +858,32 @@ extension CloudImportOutlineView {
             if let progress = store.progress[row.id] {
                 view.configureProgress(progress.fraction, name: row.title, i18n: i18n)
             } else if let outcome = store.outcomes[row.id] {
+                // Every glyph and tint below comes from `MessageKind`, which
+                // `docs/design-pipeline-diagnostic-popover.md` states is the
+                // whole vocabulary these surfaces may draw from. This window
+                // used to mint its own — a bare `checkmark` where the table
+                // says `checkmark.circle`, and bare text with no glyph at all
+                // for the states that fail or warn.
                 switch outcome {
                 case .imported:
-                    view.configureText(i18n.t("desktop.cloudImport.statusImported"), colour: .systemGreen, bold: true,
-                                       symbol: "checkmark")
+                    view.configure(i18n.t("desktop.cloudImport.statusImported"),
+                                   kind: .success, bold: true)
                 case .failed(let reason, _):
-                    view.configureText(reason, colour: .systemRed, bold: false)
+                    view.configure(reason, kind: .error, bold: false)
                 case .cancelled:
-                    view.configureText(i18n.t("desktop.cloudImport.statusStopped"), colour: .secondaryLabelColor, bold: false)
+                    // `skipped`, not `error`: the researcher stopped this on
+                    // purpose. Nothing went wrong, and a red cross would say
+                    // that something did.
+                    view.configure(i18n.t("desktop.cloudImport.statusStopped"),
+                                   kind: .skipped, bold: false)
                 }
             } else if store.isFetching && store.ticked.contains(row.id) {
-                view.configureText(i18n.t("desktop.cloudImport.statusQueued"), colour: .secondaryLabelColor, bold: false)
-            } else if let label = row.statusLabel(i18n) {
-                view.configureText(
-                    label,
-                    colour: row.localState.isWarning ? .systemOrange : .secondaryLabelColor,
-                    bold: false
-                )
+                // Deliberately glyphless: the taxonomy is explicit that
+                // pending and running are *status*, not kinds.
+                view.configureText(i18n.t("desktop.cloudImport.statusQueued"),
+                                   colour: .secondaryLabelColor, bold: false)
+            } else if let label = row.statusLabel(i18n), let kind = row.localState.messageKind {
+                view.configure(label, kind: kind, bold: false)
             } else {
                 view.configureEmpty()
             }
@@ -1202,6 +1211,17 @@ private final class StatusCellView: OutlineCellView {
     ///   an image view where it has a role and can be hidden from the
     ///   accessibility tree — `desktop/CLAUDE.md` § Native primitives first:
     ///   "SF Symbols / real file icons for glyphs".
+    /// Render a status in one of the five house kinds.
+    ///
+    /// The only way this cell should acquire a glyph. `MessageKind` pairs the
+    /// SF Symbol with its tint — including the fill weight, which carries
+    /// inline visual weight (filled for states that earn the eye, outline for
+    /// the quiet ones) — so taking them apart at a call site is how a window
+    /// ends up with a green tick that isn't the house green tick.
+    func configure(_ text: String, kind: MessageKind, bold: Bool) {
+        configureText(text, colour: NSColor(kind.tint), bold: bold, symbol: kind.symbolName)
+    }
+
     func configureText(_ text: String, colour: NSColor, bold: Bool, symbol: String? = nil) {
         bar.isHidden = true
         row.isHidden = false

@@ -612,6 +612,7 @@
     "meetingRecordingCount_other": "{{count}} \u6bb5\u9304\u5f71",
     "attendeeCount_other": "{{count}} \u4f4d\u53c3\u8207\u8005",
     "allAlreadyHere": "\u9019\u5834\u6703\u8b70\u7684\u9304\u5f71\u90fd\u5df2\u7d93\u5728\u9019\u88e1\u4e86\u3002",
+    "statusInThisProject": "\u5728\u9019\u500b\u5c08\u6848\u4e2d",
     "heldImported": "\u5df2\u5728\u9019\u500b\u5c08\u6848\u4e2d\u3002",
     "heldNotDownloaded": "\u5df2\u532f\u5165\u2014\u2014\u6a94\u6848\u5728 {{provider}}\uff0c\u9700\u8981\u5728\u90a3\u88e1\u4e0b\u8f09\u3002",
     "heldDriveNotConnected": "\u5df2\u532f\u5165\u2014\u2014\u300c{{volume}}\u300d\u672a\u9023\u63a5\u3002",

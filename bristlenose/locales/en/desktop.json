@@ -640,6 +640,7 @@
     "attendeeCount_one": "{{count}} attendee",
     "attendeeCount_other": "{{count}} attendees",
     "allAlreadyHere": "Every recording of this meeting is already here.",
+    "statusInThisProject": "In this project",
     "heldImported": "Already in this project.",
     "heldNotDownloaded": "Already imported \u2014 the file is on {{provider}} and needs downloading there.",
     "heldDriveNotConnected": "Already imported \u2014 \u201c{{volume}}\u201d isn't connected.",

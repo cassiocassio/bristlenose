@@ -640,6 +640,7 @@
     "attendeeCount_one": "{{count}} participant",
     "attendeeCount_other": "{{count}} participants",
     "allAlreadyHere": "Tous les enregistrements de cette r\u00e9union sont d\u00e9j\u00e0 l\u00e0.",
+    "statusInThisProject": "Dans ce projet",
     "heldImported": "D\u00e9j\u00e0 dans ce projet.",
     "heldNotDownloaded": "D\u00e9j\u00e0 import\u00e9 : le fichier est sur {{provider}} et doit y \u00eatre t\u00e9l\u00e9charg\u00e9.",
     "heldDriveNotConnected": "D\u00e9j\u00e0 import\u00e9 : \u00ab\u00a0{{volume}}\u00a0\u00bb n\u2019est pas connect\u00e9.",

@@ -640,6 +640,7 @@
     "attendeeCount_one": "{{count}} assistent",
     "attendeeCount_other": "{{count}} assistents",
     "allAlreadyHere": "Tots els enregistraments d\u2019aquesta reuni\u00f3 ja hi s\u00f3n.",
+    "statusInThisProject": "En aquest projecte",
     "heldImported": "Ja \u00e9s en aquest projecte.",
     "heldNotDownloaded": "Ja importat: el fitxer \u00e9s a {{provider}} i cal baixar-lo all\u00e0.",
     "heldDriveNotConnected": "Ja importat: \u00ab{{volume}}\u00bb no est\u00e0 connectat.",

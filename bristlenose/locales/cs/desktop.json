@@ -679,6 +679,7 @@
     "attendeeCount_few": "{{count}} \u00fa\u010dastn\u00edci",
     "attendeeCount_other": "{{count}} \u00fa\u010dastn\u00edk\u016f",
     "allAlreadyHere": "V\u0161echny nahr\u00e1vky t\u00e9to sch\u016fzky u\u017e tu jsou.",
+    "statusInThisProject": "V tomto projektu",
     "heldImported": "U\u017e je v tomto projektu.",
     "heldNotDownloaded": "U\u017e importov\u00e1no \u2014 soubor je na {{provider}} a je pot\u0159eba ho st\u00e1hnout tam.",
     "heldDriveNotConnected": "U\u017e importov\u00e1no \u2014 \u201e{{volume}}\u201c nen\u00ed p\u0159ipojeno.",

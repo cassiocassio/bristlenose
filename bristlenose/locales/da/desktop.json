@@ -640,6 +640,7 @@
     "attendeeCount_one": "{{count}} deltager",
     "attendeeCount_other": "{{count}} deltagere",
     "allAlreadyHere": "Alle optagelser fra dette m\u00f8de er her allerede.",
+    "statusInThisProject": "I dette projekt",
     "heldImported": "Allerede i dette projekt.",
     "heldNotDownloaded": "Allerede importeret \u2014 filen ligger p\u00e5 {{provider}} og skal hentes der.",
     "heldDriveNotConnected": "Allerede importeret \u2014 \u201c{{volume}}\u201d er ikke tilsluttet.",

@@ -300,11 +300,59 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
     /// recording_start` off the recordings endpoint, which is work for
     /// whenever Zoom is unparked (`BristlenoseFlags.cloudImportZoom`) and can
     /// be measured against a real account rather than reasoned about.
-    var durationTolerance: TimeInterval {
+    ///
+    /// **It scales with the recording, and that is the whole point.** A flat
+    /// tolerance is wrong at both ends, and the short end is where it does
+    /// harm: 15s against a 35-minute interview is 0.7% and sane, while 15s
+    /// against a 20-second recording is **75%** and matches essentially
+    /// anything. Measured on a real Meet account 17 Aug 2026 — a folder of
+    /// recordings at 14s, 20.75s, 20.75s and 28.25s had every one of them
+    /// inside 15s of every other, and a 30.25s row was marked "already in this
+    /// project" by a folder that held two copies of a *different* 20.75s
+    /// recording and no copy of it. Proportional collapses that: at 2% the
+    /// same row gets a 1s window and correctly finds nothing.
+    ///
+    /// The floor keeps very short recordings from demanding sub-second
+    /// agreement between two clocks that were never going to agree that
+    /// closely; the cap keeps a 90-minute interview from accepting a
+    /// two-minute discrepancy as the same file.
+    func durationTolerance(forListed duration: TimeInterval) -> TimeInterval {
+        let proportional = duration * rate
+        return min(cap, max(floor, proportional))
+    }
+
+    /// Cap · floor · rate, per platform. Split out so the three numbers sit
+    /// beside each other and can be argued about as a set.
+    private var cap: TimeInterval {
         switch self {
         case .teams: return 2
         case .meet:  return 15
         case .zoom:  return 90
+        }
+    }
+
+    private var floor: TimeInterval {
+        switch self {
+        // Graph serves the container's own duration in milliseconds, so the
+        // only disagreement is rounding.
+        case .teams: return 0.5
+        case .meet:  return 1
+        // Flat, and equal to the cap: minute-granular at source, so the
+        // quantisation error alone is up to 30s before any real drift, and a
+        // proportional term multiplied by a rate of zero would silently pin
+        // this to the floor and make the cap unreachable. Saying floor == cap
+        // is the honest way to write "this one does not scale".
+        case .zoom:  return 90
+        }
+    }
+
+    private var rate: Double {
+        switch self {
+        case .teams: return 0.01
+        case .meet:  return 0.02
+        // Proportional cannot help a quantity that arrives rounded to the
+        // minute — the cap and floor carry it entirely.
+        case .zoom:  return 0
         }
     }
 

@@ -60,12 +60,14 @@ enum CloudImportLocalMatch {
     /// while inventing one silently withholds a recording. So ties resolve to
     /// the closest pair, and every row that loses a contest stays fetchable.
     ///
-    /// - Parameter tolerance: see `CloudPlatform.durationTolerance` — the two
-    ///   quantities being compared are not the same measurement.
+    /// - Parameter platform: supplies the tolerance, which is **per row** —
+    ///   see `CloudPlatform.durationTolerance(forListed:)`. The two quantities
+    ///   being compared are not the same measurement, and how far apart they
+    ///   may drift scales with the recording.
     static func alreadyPresent(
         rows: [CloudImportRow],
         local: [LocalRecording],
-        tolerance: TimeInterval
+        platform: CloudPlatform
     ) -> Set<String> {
         guard !local.isEmpty else { return [] }
 
@@ -83,6 +85,10 @@ enum CloudImportLocalMatch {
 
         var pairs: [(rowID: String, file: Int, delta: TimeInterval)] = []
         for candidate in candidates {
+            // Per row, not per platform: a 35-minute interview and a
+            // 20-second test recording listed side by side need very
+            // different windows, and the flat one was 75% of the short one.
+            let tolerance = platform.durationTolerance(forListed: candidate.length)
             for (index, file) in local.enumerated() where file.duration > 0 {
                 let delta = abs(file.duration - candidate.length)
                 if delta <= tolerance {

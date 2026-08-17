@@ -151,7 +151,7 @@ final class CloudImportStore: ObservableObject {
         let held = CloudImportLocalMatch.alreadyPresent(
             rows: listed,
             local: destinationRecordings,
-            tolerance: platform.durationTolerance)
+            platform: platform)
         rows = listed.map { held.contains($0.id) ? $0.markedAsAlreadyInProject() : $0 }
 
         // The predicate lives on the row — titles *and* people, diacritic-

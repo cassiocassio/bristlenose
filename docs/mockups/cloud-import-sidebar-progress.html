@@ -1,0 +1,457 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud import — the ring in the sidebar, and who tells it what</title>
+<style>
+:root{
+  --bg:#f2f2f7; --page:#fff; --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93;
+  --line:#d8d8dc; --hairline:#e6e6ea; --chrome:#ececed; --chrome2:#e4e4e6;
+  --accent:#007aff; --warn:#c9500f; --good:#1a7f37; --grouphdr:#f0f0f3;
+  --track:#d8d8dc;
+  --shadow:0 12px 40px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.10);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161618; --page:#1e1e20; --ink:#f2f2f7; --dim:#a1a1a6; --faint:#78787d;
+    --line:#3a3a3d; --hairline:#2c2c2f; --chrome:#2a2a2c; --chrome2:#242426;
+    --accent:#0a84ff; --warn:#ff9f45; --good:#4ac26b; --grouphdr:#28282b;
+    --track:#3a3a3d;
+    --shadow:0 12px 40px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;padding:40px 24px 90px;
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:15px;font-weight:700;margin:38px 0 10px}
+h3{font-size:13px;font-weight:700;margin:22px 0 8px;color:var(--dim)}
+.sub{color:var(--dim);margin:0 0 8px;max-width:82ch}
+.meta{color:var(--faint);font-size:12px;margin:0 0 30px}
+.why{border-left:2px solid var(--accent);padding:2px 0 2px 12px;margin:14px 0 0;
+     color:var(--dim);font-size:12.5px;max-width:90ch}
+.why b{color:var(--ink);font-weight:600}
+.why.bad{border-color:var(--warn)}
+.why.good{border-color:var(--good)}
+.ask{background:var(--grouphdr);border:.5px solid var(--line);border-radius:8px;
+     padding:12px 14px;margin:0 0 26px;font-size:12.5px;color:var(--dim);max-width:98ch}
+.ask b{color:var(--ink)}
+code{font:11.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+     background:var(--grouphdr);border-radius:4px;padding:1px 5px}
+
+/* ── object graph ─────────────────────────────────────────────── */
+.graph{background:var(--page);border:.5px solid var(--line);border-radius:10px;
+       padding:20px;box-shadow:var(--shadow)}
+.tier{margin-bottom:18px}
+.tier:last-child{margin-bottom:0}
+.tierhdr{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+         color:var(--faint);margin-bottom:8px}
+.boxes{display:flex;gap:10px;flex-wrap:wrap}
+.box{border:.5px solid var(--line);border-radius:7px;padding:8px 11px;background:var(--grouphdr);
+     min-width:150px}
+.box .n{font-weight:650;font-size:12.5px}
+.box .d{color:var(--faint);font-size:11px;margin-top:2px;line-height:1.35}
+.box.hot{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.box.gone{border-style:dashed;opacity:.62}
+.waterline{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--warn);
+           font-size:11.5px;font-weight:600}
+.waterline:before,.waterline:after{content:"";flex:1;height:0;border-top:1px dashed var(--warn)}
+
+/* ── sequence ─────────────────────────────────────────────────── */
+.seq{background:var(--page);border:.5px solid var(--line);border-radius:10px;
+     box-shadow:var(--shadow);overflow:hidden}
+.seq table{border-collapse:collapse;width:100%;font-size:12.5px}
+.seq th{text-align:left;font-size:11px;letter-spacing:.03em;text-transform:uppercase;
+        color:var(--faint);font-weight:700;padding:10px 14px;background:var(--grouphdr);
+        border-bottom:.5px solid var(--line);white-space:nowrap}
+.seq td{padding:9px 14px;border-bottom:.5px solid var(--hairline);vertical-align:top}
+.seq tr:last-child td{border-bottom:0}
+.seq td.who{white-space:nowrap;font-weight:600;width:1%}
+.seq td.msg{font:11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--accent);
+            white-space:nowrap;width:1%}
+.seq td.note{color:var(--dim)}
+.seq tr.mark td{background:color-mix(in srgb,var(--warn) 9%,transparent)}
+.seq tr.mark td.msg{color:var(--warn)}
+
+/* ── sidebar rows ─────────────────────────────────────────────── */
+.side{background:var(--page);border:.5px solid var(--line);border-radius:10px;
+      box-shadow:var(--shadow);overflow:hidden;width:290px}
+.side .hdr{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+           color:var(--faint);padding:10px 14px 4px}
+.row{display:flex;align-items:center;gap:9px;padding:6px 12px;min-height:32px}
+.row.sel{background:color-mix(in srgb,var(--accent) 15%,transparent);border-radius:7px;
+         margin:0 6px;padding:6px 8px}
+.row .ico{width:17px;text-align:center;color:var(--accent);flex:none;font-size:13px}
+.row .txt{flex:1;min-width:0}
+.row .t1{font-size:12.5px;font-weight:500;line-height:1.25;
+         white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .t2{font-size:11px;color:var(--dim);line-height:1.25;margin-top:1px;
+         white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .slot{width:16px;height:16px;flex:none}
+.states{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.state{width:300px}
+.state .cap{font-size:11px;color:var(--faint);margin:0 0 6px 2px}
+.state .cap b{color:var(--ink);font-weight:650}
+
+/* ── weighting proof ──────────────────────────────────────────── */
+.proof{background:var(--page);border:.5px solid var(--line);border-radius:10px;
+       box-shadow:var(--shadow);overflow:hidden}
+.proof table{border-collapse:collapse;width:100%;font-size:12.5px}
+.proof th{text-align:left;font-size:11px;letter-spacing:.03em;text-transform:uppercase;
+          color:var(--faint);font-weight:700;padding:10px 14px;background:var(--grouphdr);
+          border-bottom:.5px solid var(--line)}
+.proof td{padding:9px 14px;border-bottom:.5px solid var(--hairline)}
+.proof tr:last-child td{border-bottom:0}
+.proof td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.proof tr.tot td{font-weight:700;background:var(--grouphdr)}
+.bar{height:7px;border-radius:4px;background:var(--track);overflow:hidden;min-width:120px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.bar.bad i{background:var(--warn)}
+.verdict{display:flex;gap:26px;flex-wrap:wrap;margin-top:16px}
+.verdict .v{flex:1;min-width:280px;border:.5px solid var(--line);border-radius:9px;
+            padding:14px 16px;background:var(--page)}
+.verdict .v.no{border-color:var(--warn)}
+.verdict .v.yes{border-color:var(--good)}
+.verdict .vh{font-weight:700;font-size:12.5px;margin-bottom:8px;display:flex;
+             align-items:center;gap:8px}
+.verdict .vb{color:var(--dim);font-size:12px}
+.ringrow{display:flex;align-items:center;gap:12px;margin:10px 0}
+.ringrow .lbl{font-size:12px;color:var(--dim)}
+.ringrow .big{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+</style>
+
+<div class="wrap">
+
+<h1>The ring in the sidebar, and who tells it what</h1>
+<p class="sub">The researcher presses Import, sees it working, and closes the window — because it
+looks like it is working. From that moment the only place the download exists on screen is the
+project's own row. This is what goes there, and how it gets there.</p>
+<p class="meta">Design artefact · 17 Aug 2026 · relates to <code>docs/design-cloud-import.md</code> §9,
+<code>docs/design-sidebar-activity-indicators.md</code></p>
+
+<div class="ask">
+<b>The finding that shapes all of this: the component already exists.</b>
+<code>ProjectRowActivityIndicator.Kind</code> already has <code>.copying(fraction:)</code> —
+“a drag-import copy is in flight into this project, <i>fraction</i> is the 0…1 byte ratio, always
+determinate” — rendered identically to the run ring and sharing its hover-to-cancel, differing only
+in the <code>onStop</code> closure the call site supplies. <b>A cloud download is a copy from
+further away.</b> Nothing needs drawing. The work is entirely in the plumbing, and in one number.
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2>1 — What survives the window closing</h2>
+<p class="sub">This is the load-bearing fact and it is already true: the store that owns the download
+lives <i>above</i> the window, so closing the window changes nothing about the transfer.</p>
+
+<div class="graph">
+  <div class="tier">
+    <div class="tierhdr">App level — <code>@StateObject</code> in <code>BristlenoseApp</code></div>
+    <div class="boxes">
+      <div class="box hot"><div class="n">CloudImportCoordinator</div>
+        <div class="d">owns the store · survives close</div></div>
+      <div class="box hot"><div class="n">→ CloudImportStore</div>
+        <div class="d">ticks, <code>progress[rowID]</code>, outcomes, the URLSession tasks</div></div>
+      <div class="box"><div class="n">PipelineRunner</div>
+        <div class="d"><code>state[projectID]</code>, <code>liveData</code>, <code>ringFraction</code></div></div>
+      <div class="box"><div class="n">CopyMachinery</div>
+        <div class="d"><code>@Published inFlight</code> — one at a time, matched by projectID</div></div>
+      <div class="box"><div class="n">ProjectIndex</div>
+        <div class="d">projects, folders, watchers, leases</div></div>
+    </div>
+  </div>
+
+  <div class="waterline">everything below is destroyed when the researcher closes the import window</div>
+
+  <div class="tier">
+    <div class="tierhdr">Window scene <code>"cloud-import"</code></div>
+    <div class="boxes">
+      <div class="box gone"><div class="n">CloudImportWindow</div>
+        <div class="d">footer, picker, terminus line</div></div>
+      <div class="box gone"><div class="n">CloudImportOutlineView</div>
+        <div class="d">the grid, per-row bars in the Status column</div></div>
+    </div>
+  </div>
+
+  <div class="tier">
+    <div class="tierhdr">Main window — reads, never owns</div>
+    <div class="boxes">
+      <div class="box"><div class="n">ProjectSidebarOutline</div>
+        <div class="d">AppKit source list · builds <code>Kind</code> per row</div></div>
+      <div class="box hot"><div class="n">→ SidebarActivityRing</div>
+        <div class="d">16pt · determinate arc · hover swaps to ✕</div></div>
+    </div>
+  </div>
+</div>
+
+<p class="why"><b>So there is no “keep it alive” problem to solve.</b> The transfer already outlives the
+window. What is missing is only that nothing above the waterline currently <i>publishes</i> a
+per-project number, and nothing in the sidebar currently <i>looks</i> for one.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2>2 — The traffic, in order</h2>
+<p class="sub">Five messages. Three of them already exist and are used by drag-and-drop today;
+the two marked in orange are the new ones.</p>
+
+<div class="seq">
+<table>
+<tr><th>#</th><th>From → to</th><th>Message</th><th>Why it is there</th></tr>
+
+<tr><td>1</td><td class="who">Window → Store</td>
+  <td class="msg">startFetch(destination:)</td>
+  <td class="note">Exists. The lease URL, so the publish move lands inside the sandbox grant.</td></tr>
+
+<tr class="mark"><td>2</td><td class="who">Store → Runner</td>
+  <td class="msg">beginReceiving(projectID:<br>weights:)</td>
+  <td class="note"><b>New.</b> Declares the batch <i>before</i> the first byte, so the row is already
+  showing something when the window closes two seconds later. <code>weights</code> is what the
+  denominator is built from — see §4. Sibling of the existing
+  <code>beginAddingInterviews(projectID:count:)</code>, which is the same act with no fraction.</td></tr>
+
+<tr class="mark"><td>3</td><td class="who">Store → Runner</td>
+  <td class="msg">receiving(projectID:<br>fraction:)</td>
+  <td class="note"><b>New.</b> One weighted number for the whole batch, recomputed on each
+  <code>FetchProgress</code>. Clamped monotonic by <code>RunProgressMath.clampedFraction</code> —
+  the same function the run ring uses, for the same reason.</td></tr>
+
+<tr><td>4</td><td class="who">Runner → Row</td>
+  <td class="msg">Kind.copying(fraction:)</td>
+  <td class="note">Exists, unchanged. Three renderers already switch on it
+  (<code>ProjectRow</code>, <code>ProjectSidebarOutline</code>, <code>ProjectSubtitle</code>).</td></tr>
+
+<tr><td>5</td><td class="who">Row → Store</td>
+  <td class="msg">onStop → stopFetch()</td>
+  <td class="note">The ring's hover-✕ already carries an <code>onStop</code> closure; the call site
+  supplies it. Cancel the batch from the row, with the window shut.</td></tr>
+</table>
+</div>
+
+<p class="why"><b>Why the Runner in the middle rather than the row reading the store directly.</b>
+Download and analysis are consecutive on the same project, and the row must never show two things at
+once or flicker at the handover. One owner of “is this project busy, and how busy” is what makes the
+seam invisible. It is also where the precedent is: <code>CopyMachinery</code> already publishes
+exactly this shape and the row already merges it.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2>3 — The row across the whole arc</h2>
+<p class="sub">One row, five moments. The ring never empties and refills within a phase; the
+subtitle is what names which phase you are in.</p>
+
+<div class="states">
+
+  <div class="state">
+    <p class="cap"><b>1.</b> Import pressed, window still open</p>
+    <div class="side">
+      <div class="hdr">Projects</div>
+      <div class="row"><div class="ico">▤</div><div class="txt">
+        <div class="t1">rename</div></div><div class="slot"></div></div>
+      <div class="row sel"><div class="ico">§</div><div class="txt">
+        <div class="t1">IKEA with uxfriends</div>
+        <div class="t2">Receiving 4 recordings…</div></div>
+        <div class="slot">
+          <svg width="16" height="16" viewBox="0 0 16 16">
+            <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--track)" stroke-width="2"/>
+            <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--accent)" stroke-width="2"
+              stroke-linecap="round" stroke-dasharray="40.8" stroke-dashoffset="40.0"
+              transform="rotate(-90 8 8)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="state">
+    <p class="cap"><b>2.</b> Window closed — nothing changes</p>
+    <div class="side">
+      <div class="hdr">Projects</div>
+      <div class="row"><div class="ico">▤</div><div class="txt">
+        <div class="t1">rename</div></div><div class="slot"></div></div>
+      <div class="row sel"><div class="ico">§</div><div class="txt">
+        <div class="t1">IKEA with uxfriends</div>
+        <div class="t2">Downloading · 3 of 4</div></div>
+        <div class="slot">
+          <svg width="16" height="16" viewBox="0 0 16 16">
+            <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--track)" stroke-width="2"/>
+            <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--accent)" stroke-width="2"
+              stroke-linecap="round" stroke-dasharray="40.8" stroke-dashoffset="26.9"
+              transform="rotate(-90 8 8)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="state">
+    <p class="cap"><b>3.</b> Pointer over the ring — cancel the batch</p>
+    <div class="side">
+      <div class="hdr">Projects</div>
+      <div class="row"><div class="ico">▤</div><div class="txt">
+        <div class="t1">rename</div></div><div class="slot"></div></div>
+      <div class="row sel"><div class="ico">§</div><div class="txt">
+        <div class="t1">IKEA with uxfriends</div>
+        <div class="t2">Downloading · 3 of 4</div></div>
+        <div class="slot" style="color:var(--dim);font-size:15px;line-height:16px;text-align:center">⊗</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="state">
+    <p class="cap"><b>4.</b> Last file lands — the ring restarts, the words change</p>
+    <div class="side">
+      <div class="hdr">Projects</div>
+      <div class="row"><div class="ico">▤</div><div class="txt">
+        <div class="t1">rename</div></div><div class="slot"></div></div>
+      <div class="row sel"><div class="ico">§</div><div class="txt">
+        <div class="t1">IKEA with uxfriends</div>
+        <div class="t2">Transcribing · 1 of 4 · ~6 min left</div></div>
+        <div class="slot">
+          <svg width="16" height="16" viewBox="0 0 16 16">
+            <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--track)" stroke-width="2"/>
+            <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--accent)" stroke-width="2"
+              stroke-linecap="round" stroke-dasharray="40.8" stroke-dashoffset="35.5"
+              transform="rotate(-90 8 8)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="state">
+    <p class="cap"><b>5.</b> Done — the row goes quiet (Schema E)</p>
+    <div class="side">
+      <div class="hdr">Projects</div>
+      <div class="row"><div class="ico">▤</div><div class="txt">
+        <div class="t1">rename</div></div><div class="slot"></div></div>
+      <div class="row sel"><div class="ico">§</div><div class="txt">
+        <div class="t1">IKEA with uxfriends</div></div><div class="slot"></div></div>
+    </div>
+  </div>
+
+</div>
+
+<p class="why"><b>Two sweeps, not one blended bar.</b> A single 0→100% spanning both phases needs a
+weight for “how much of the wall clock is download vs transcription”, and that ratio swings from 10:1
+to 1:20 depending on file size and whether the model is cached. A ring built on a number that wrong
+stalls visibly at the seam, which is the specific way a progress indicator loses the user's trust.
+Two honest sweeps with the subtitle naming the phase costs one restart and lies about nothing.</p>
+
+<p class="why"><b>And they cancel differently.</b> Stopping a download is not stopping an analysis —
+different confirmations, different consequences, different recovery. The hover-✕ must mean the right
+thing at each moment, and a blended ring has no moment to switch on.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2>4 — The denominator is the whole design</h2>
+<p class="sub">“% of total downloads” sounds like one number. It is a choice about what
+<i>total</i> means, and on Meet the obvious answer is not available: <b>the file sizes are not known
+at list time</b> — Google's per-file grant arrives through the Picker, after ticking, so the Size
+column is empty by construction.</p>
+
+<h3>The batch from 16 Aug, as the window showed it</h3>
+
+<div class="proof">
+<table>
+<tr><th>Recording</th><th class="num">Duration</th><th class="num">By file count</th>
+    <th class="num">By duration</th><th>Share of the work</th></tr>
+<tr><td>Recording 2 — <i>test</i></td><td class="num">52s</td>
+    <td class="num">25.0%</td><td class="num">2.3%</td>
+    <td><div class="bar"><i style="width:2.3%"></i></div></td></tr>
+<tr><td>osp-jwrt-wff <span style="color:var(--faint)">· instant</span></td><td class="num">14s</td>
+    <td class="num">25.0%</td><td class="num">0.6%</td>
+    <td><div class="bar"><i style="width:0.6%"></i></div></td></tr>
+<tr><td>Banyalbufar discussion</td><td class="num">46s</td>
+    <td class="num">25.0%</td><td class="num">2.0%</td>
+    <td><div class="bar"><i style="width:2.0%"></i></div></td></tr>
+<tr><td>twk-fnyg-myw <span style="color:var(--faint)">· instant</span></td><td class="num">35m 00s</td>
+    <td class="num">25.0%</td><td class="num">95.1%</td>
+    <td><div class="bar"><i style="width:95.1%"></i></div></td></tr>
+<tr class="tot"><td>Four recordings</td><td class="num">36m 52s</td>
+    <td class="num">100%</td><td class="num">100%</td><td></td></tr>
+</table>
+</div>
+
+<div class="verdict">
+  <div class="v no">
+    <div class="vh">✗ Weighted by file count</div>
+    <div class="ringrow">
+      <svg width="30" height="30" viewBox="0 0 16 16">
+        <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--track)" stroke-width="2"/>
+        <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--warn)" stroke-width="2"
+          stroke-linecap="round" stroke-dasharray="40.8" stroke-dashoffset="10.2"
+          transform="rotate(-90 8 8)"/>
+      </svg>
+      <div><div class="big">75%</div>
+        <div class="lbl">three small files done</div></div>
+    </div>
+    <div class="vb">Reads as nearly finished with <b>95% of the bytes still to come</b>. The ring
+    then sits motionless for minutes — the exact shape of progress UI that teaches people to
+    distrust every progress indicator you ever ship.</div>
+  </div>
+
+  <div class="v yes">
+    <div class="vh">✓ Weighted by duration</div>
+    <div class="ringrow">
+      <svg width="30" height="30" viewBox="0 0 16 16">
+        <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--track)" stroke-width="2"/>
+        <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--good)" stroke-width="2"
+          stroke-linecap="round" stroke-dasharray="40.8" stroke-dashoffset="38.8"
+          transform="rotate(-90 8 8)"/>
+      </svg>
+      <div><div class="big">4.9%</div>
+        <div class="lbl">same moment, honest</div></div>
+    </div>
+    <div class="vb">Duration <b>is</b> known at list time — it comes from the Meet API with the
+    recording — and for a fixed codec it tracks bytes closely. It is an estimate, and it is the best
+    one available before a single byte moves.</div>
+  </div>
+</div>
+
+<p class="why good"><b>Then refine, and clamp.</b> Each download's real <code>Content-Length</code>
+arrives as it starts, so the denominator can be corrected from estimate to measurement file by file
+— which can move the fraction <i>down</i>. That is precisely what
+<code>RunProgressMath.clampedFraction(raw:previous:)</code> already exists for, one feature over: a
+ring whose total is a prediction, which must never go backwards. Third reuse, same reason.</p>
+
+<p class="why"><b>Fallback, stated: equal weight.</b> A row whose duration is unknown counts as the
+batch's mean. Rare on Meet, likelier on a platform that lists without durations, and the ring still
+converges on 100% because the numerator and denominator use the same weights.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2>5 — What this reuses, and what it deliberately does not</h2>
+
+<div class="seq">
+<table>
+<tr><th>Piece</th><th>Reused?</th><th>Reason</th></tr>
+<tr><td><code>SidebarActivityRing</code></td><td style="color:var(--good);font-weight:650">yes</td>
+  <td class="note">16pt determinate arc with hover-to-✕. Already renders <code>.copying</code>
+  identically to <code>.running</code>.</td></tr>
+<tr><td><code>Kind.copying(fraction:)</code></td><td style="color:var(--good);font-weight:650">yes</td>
+  <td class="note">Already means “a determinate, cancellable transfer into this project”. A
+  download is one.</td></tr>
+<tr><td><code>RunProgressMath.clampedFraction</code></td><td style="color:var(--good);font-weight:650">yes</td>
+  <td class="note">A fraction over a predicted total must be monotonic. Identical problem, identical
+  answer.</td></tr>
+<tr><td><code>ProjectSubtitle</code> precedence</td><td style="color:var(--good);font-weight:650">yes</td>
+  <td class="note">So “Downloading · 3 of 4” competes for the line under the same rules as
+  “Transcribing”, instead of racing it.</td></tr>
+<tr><td>Per-row bars in the import window</td><td style="color:var(--warn);font-weight:650">no</td>
+  <td class="note">One file, known byte total, rows compared down a column — a bar is right and is
+  already there. A ring there would be borrowing a shape without its reason.</td></tr>
+<tr><td>The Welford ETA</td><td style="color:var(--warn);font-weight:650">no</td>
+  <td class="note">Downloads have measured bytes, not a modelled stage duration. Nothing to predict
+  beyond bandwidth, which no history makes more accurate.</td></tr>
+<tr><td>A global toolbar pill</td><td style="color:var(--warn);font-weight:650">no</td>
+  <td class="note">Per-project activity lives on the project's row — settled 19 Jun 2026, and it is
+  why the drag-import copy pill was removed.</td></tr>
+</table>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2>6 — Open, and genuinely open</h2>
+<p class="why"><b>Two projects receiving at once.</b> <code>CopyMachinery</code> allows exactly one
+in-flight copy and refuses a second. The import store is per-window and there is one window globally,
+so today it cannot happen either — but the ring is per-row and would render N of them correctly, so
+this is a policy question rather than a rendering one.</p>
+<p class="why"><b>What the row says when the batch was stopped or partly failed.</b> The ring
+disappears; the words are what remain. That belongs with the decision about whether a partial batch
+starts an analysis at all — same fork, and it should be answered once.</p>
+
+</div>

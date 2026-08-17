@@ -200,18 +200,20 @@ the two marked in orange are the new ones.</p>
   <td class="msg">startFetch(destination:)</td>
   <td class="note">Exists. The lease URL, so the publish move lands inside the sandbox grant.</td></tr>
 
-<tr class="mark"><td>2</td><td class="who">Store → Runner</td>
-  <td class="msg">beginReceiving(projectID:<br>weights:)</td>
-  <td class="note"><b>New.</b> Declares the batch <i>before</i> the first byte, so the row is already
-  showing something when the window closes two seconds later. <code>weights</code> is what the
-  denominator is built from — see §4. Sibling of the existing
-  <code>beginAddingInterviews(projectID:count:)</code>, which is the same act with no fraction.</td></tr>
+<tr><td>2</td><td class="who">Store → Runner</td>
+  <td class="msg">beginAddingInterviews(<br>projectID:count:floor:)</td>
+  <td class="note">Exists, unchanged. The gesture ack — <i>“Adding 4 interviews…”</i> — declares the
+  batch <b>before the first byte</b>, so the row is already saying something when the window closes
+  two seconds later. <code>floor</code> is already a parameter; a download wants it held until the
+  first fraction arrives rather than the 2s a clonefile needs.</td></tr>
 
-<tr class="mark"><td>3</td><td class="who">Store → Runner</td>
-  <td class="msg">receiving(projectID:<br>fraction:)</td>
-  <td class="note"><b>New.</b> One weighted number for the whole batch, recomputed on each
-  <code>FetchProgress</code>. Clamped monotonic by <code>RunProgressMath.clampedFraction</code> —
-  the same function the run ring uses, for the same reason.</td></tr>
+<tr class="mark"><td>3</td><td class="who">Store → row</td>
+  <td class="msg">CopyDisplay<br>.copying(fraction:)</td>
+  <td class="note"><b>The only new plumbing.</b> Not a new verb and not a new type —
+  <code>copyDisplay(for:)</code> is already the row's channel for “a determinate transfer is landing
+  in this project”, fed by <code>CopyMachinery</code>. It gains a second source. One weighted number
+  per batch, recomputed on each <code>FetchProgress</code>, clamped monotonic by
+  <code>RunProgressMath.clampedFraction</code>.</td></tr>
 
 <tr><td>4</td><td class="who">Runner → Row</td>
   <td class="msg">Kind.copying(fraction:)</td>
@@ -234,7 +236,8 @@ exactly this shape and the row already merges it.</p>
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2>3 — The row across the whole arc</h2>
 <p class="sub">One row, five moments. The ring never empties and refills within a phase; the
-subtitle is what names which phase you are in.</p>
+subtitle is what names which phase you are in — and the download phase names nothing, because a
+percentage needs no verb.</p>
 
 <div class="states">
 
@@ -246,7 +249,7 @@ subtitle is what names which phase you are in.</p>
         <div class="t1">rename</div></div><div class="slot"></div></div>
       <div class="row sel"><div class="ico">§</div><div class="txt">
         <div class="t1">IKEA with uxfriends</div>
-        <div class="t2">Receiving 4 recordings…</div></div>
+        <div class="t2">Adding 4 interviews…</div></div>
         <div class="slot">
           <svg width="16" height="16" viewBox="0 0 16 16">
             <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--track)" stroke-width="2"/>
@@ -260,14 +263,14 @@ subtitle is what names which phase you are in.</p>
   </div>
 
   <div class="state">
-    <p class="cap"><b>2.</b> Window closed — nothing changes</p>
+    <p class="cap"><b>2.</b> Window closed — a bare percentage, no verb</p>
     <div class="side">
       <div class="hdr">Projects</div>
       <div class="row"><div class="ico">▤</div><div class="txt">
         <div class="t1">rename</div></div><div class="slot"></div></div>
       <div class="row sel"><div class="ico">§</div><div class="txt">
         <div class="t1">IKEA with uxfriends</div>
-        <div class="t2">Downloading · 3 of 4</div></div>
+        <div class="t2">38%</div></div>
         <div class="slot">
           <svg width="16" height="16" viewBox="0 0 16 16">
             <circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--track)" stroke-width="2"/>
@@ -288,7 +291,7 @@ subtitle is what names which phase you are in.</p>
         <div class="t1">rename</div></div><div class="slot"></div></div>
       <div class="row sel"><div class="ico">§</div><div class="txt">
         <div class="t1">IKEA with uxfriends</div>
-        <div class="t2">Downloading · 3 of 4</div></div>
+        <div class="t2">38%</div></div>
         <div class="slot" style="color:var(--dim);font-size:15px;line-height:16px;text-align:center">⊗</div>
       </div>
     </div>
@@ -505,13 +508,89 @@ discipline: the ring fills from the first byte, the words hold until the rate se
 </div>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2>6 — Open, and genuinely open</h2>
+<h2>6 — Three of four arrive. Now what?</h2>
+<p class="sub"><b>Process what landed.</b> Refusing to would be treating an ordinary Tuesday as an
+emergency: incremental analysis is the shipped model, so a partial batch is not a special case —
+the CLI rescans the folder at run time, re-transcribes only the new sessions, re-clusters, and
+curation survives the re-import. Three now and the fourth tomorrow <i>is</i> the design working.</p>
+
+<p class="why"><b>The one thing that genuinely changes is theme boundaries.</b> Themes over three
+interviews are not a subset of themes over four — they are a different answer. But that is inherent
+to incremental analysis and is already what happens every time anybody adds a file. It argues for
+saying so, not for blocking.</p>
+
+<h3>So the risk is not the analysis. It is that nobody knows the fourth is missing.</h3>
+<p class="sub">Once the import window is closed, a failed row lives in <code>store.outcomes</code>
+and appears nowhere. The researcher sees a finished report over three interviews and no signal at all
+that a fourth exists in the cloud and never came down. <b>That is this feature's own failure mode —
+a shorter set that reads as complete — arriving after the window that was built to prevent it has
+been dismissed.</b></p>
+
+<div class="seq">
+<table>
+<tr><th>What happened</th><th>Process?</th><th>What the row owes the researcher</th></tr>
+
+<tr><td class="who">All four arrived</td>
+  <td style="color:var(--good);font-weight:650">yes</td>
+  <td class="note">Nothing. Schema E — a clean row is silent.</td></tr>
+
+<tr class="mark"><td class="who">One failed<br><span style="font-weight:400;color:var(--faint)">network, 403, expiry</span></td>
+  <td style="color:var(--good);font-weight:650">yes, the three</td>
+  <td class="note"><b>A shortfall that outlives the window</b>, with retry reachable — the Drive file
+  ids are still in the store, so retrying needs no re-list. This is the line that has no home today.</td></tr>
+
+<tr><td class="who">Researcher pressed Stop</td>
+  <td style="color:var(--good);font-weight:650">yes, whatever landed</td>
+  <td class="note"><b>Nothing.</b> A decision is not a shortfall. Nagging about files they chose to
+  abandon tells them they got it wrong — and Stop was in the download footer, so reading it as “and
+  don't analyse what already arrived” infers more than the button said.</td></tr>
+
+<tr class="mark"><td class="who">None arrived</td>
+  <td style="color:var(--warn);font-weight:650">no</td>
+  <td class="note">The failure, and only that. A run over an empty delta is a no-op wearing work's
+  clothes — a ring, a stage ladder, and a green finish over nothing.</td></tr>
+
+<tr class="mark"><td class="who">Disk filled mid-batch</td>
+  <td style="color:var(--warn);font-weight:650">no</td>
+  <td class="note">The disk, in its own words. Transcription writes too, so chaining into a run turns
+  one legible failure into two — the second of which blames the pipeline. §4's size sweep is what
+  lets this be caught <i>before</i> the first byte instead.</td></tr>
+
+<tr class="mark"><td class="who">Project folder vanished<br><span style="font-weight:400;color:var(--faint)">unmounted, moved</span></td>
+  <td style="color:var(--warn);font-weight:650">no</td>
+  <td class="note">The lease was resolved at start and died in flight, so every publish fails. The
+  row already has vocabulary for an unreachable project; reuse it rather than reporting N download
+  failures.</td></tr>
+</table>
+</div>
+
+<p class="why good"><b>The rule under the table.</b> Process when something landed <i>and</i> the
+next phase can plausibly run. Never let a certainly-failing situation be handed forward — one clear
+failure beats a clear one followed by a confusing one.</p>
+
+<p class="why"><b>And the distinction that does the real work: failed is a fault, cancelled is a
+decision.</b> They arrive identically at the row — files that did not come down — and must not be
+treated identically. <code>FetchOutcome</code> already tells them apart, and it was made to
+(<code>URLError(.cancelled)</code> used to be recorded as a failure, so the terminus counted the
+user's own choice as a fault and offered Retry for rows they had deliberately abandoned).</p>
+
+<h3>The one that is genuinely unowned: quitting mid-batch</h3>
+<p class="why bad">The transfers use an ordinary <code>URLSession</code>, not a background one, so
+quitting the app kills them. What remains is <code>.part</code> files on disk and nothing anywhere
+that remembers a batch was in flight — no resume, no shortfall, no mention. That is the same shape as
+the stranded-run problem the pipeline's event log was built to solve, and it wants the same answer:
+<b>write the batch's intent somewhere durable before the first byte</b>, so the next launch can say
+what happened even though the store that knew is gone.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2>7 — Still open</h2>
 <p class="why"><b>Two projects receiving at once.</b> <code>CopyMachinery</code> allows exactly one
 in-flight copy and refuses a second. The import store is per-window and there is one window globally,
 so today it cannot happen either — but the ring is per-row and would render N of them correctly, so
 this is a policy question rather than a rendering one.</p>
-<p class="why"><b>What the row says when the batch was stopped or partly failed.</b> The ring
-disappears; the words are what remain. That belongs with the decision about whether a partial batch
-starts an analysis at all — same fork, and it should be answered once.</p>
+<p class="why"><b>Where a persistent shortfall renders.</b> Schema E says a clean row is silent and a
+delta earns a line, which is the right home — but the existing deltas
+(<code>unanalysedCount</code>, <code>missingCount</code>) are read from the folder, and “four were
+promised, three came” is knowledge only the import held.</p>
 
 </div>

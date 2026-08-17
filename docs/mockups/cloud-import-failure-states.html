@@ -613,35 +613,42 @@ duration + creation-time pair works on Teams and collapses to <b>duration alone<
 is the platform this was being designed for. One <code>ffprobe</code> run, ten seconds, and it
 retires a plan that read as obviously correct.</p>
 
-<h3>But the stated case needs no metadata at all</h3>
-<p class="sub"><i>“You grab the first few files, then come back to import two more, and the ones you
-did on Wednesday are there already.”</i> Wednesday's files came <b>through the importer</b> — so the
-per-project record answers that exactly, by row id, with no file inspection and no ambiguity. Green
-on four of six is a record lookup.</p>
+<h3>The 99.9% case, stated 17 Aug 2026</h3>
+<p class="sub"><i>“Download manually, rename to make a nice clean name, drop in a folder, process.
+Two days later, with more interviews, you go the file-importer route and we are smart enough to say
+‘you got those already in this project’.”</i></p>
 
-<p class="why"><b>Media matching is only for files that arrived by hand</b>, and it degrades in a
-knowable order:</p>
+<p class="why bad"><b>Note what that rules out: the per-project record cannot help here.</b> Those
+files never came through the importer, so there is no row id to have recorded. The record answers a
+different question — what <i>we</i> fetched, and what we were asked for and never got. For the case
+the researcher actually lives in, <b>the duration scan is the entire answer</b>, not a fallback.</p>
 
 <div class="t">
 <table>
-<tr><th>How the file got there</th><th>Meet</th><th>Teams</th></tr>
-<tr><td class="st">Through the importer</td>
-  <td style="color:var(--good);font-weight:650">exact — row id</td>
-  <td style="color:var(--good);font-weight:650">exact — row id</td></tr>
-<tr><td class="st">By hand, any name</td>
-  <td class="act"><b>duration</b> — sub-second precision, and 50-minute interviews do not collide.
-  <code>encoder=Google</code> corroborates the provenance.</td>
-  <td class="act"><b>duration + creation_time</b> — the pair, as hoped.</td></tr>
-<tr class="gap"><td class="st">By hand, then trimmed</td>
-  <td class="words">nothing survives</td>
-  <td class="act">creation_time alone, <i>if</i> the trim preserved it.</td></tr>
+<tr><th>Route in</th><th>Answered by</th><th>Meet</th><th>Teams</th></tr>
+<tr><td class="st">By hand, renamed<br><span class="none">the 99.9% case</span></td>
+  <td class="act"><b>duration scan</b> of the destination folder</td>
+  <td style="color:var(--good);font-weight:650">works — sub-second, <code>encoder=Google</code> corroborates</td>
+  <td style="color:var(--good);font-weight:650">works — plus <code>creation_time</code></td></tr>
+<tr><td class="st">Through the importer</td><td class="act">the per-project record, by row id</td>
+  <td style="color:var(--good);font-weight:650">exact</td>
+  <td style="color:var(--good);font-weight:650">exact</td></tr>
+<tr><td class="st">By hand, then trimmed</td><td class="act">—</td>
+  <td class="words">unrecognisable</td>
+  <td class="act"><code>creation_time</code>, if the trim kept it</td></tr>
 </table>
 </div>
 
-<p class="why"><b>Accept the trimmed-Meet gap rather than reach for fingerprinting.</b> Audio
-fingerprinting solves it and is IP-protection technology — a dependency, a compute budget and a
-capability, for one cell of this table. The honest position is that a hand-trimmed Meet recording is
-unrecognisable, said once, rather than a new subsystem.</p>
+<p class="why good"><b>So the cheap half ships first and alone.</b> A pure matcher — rows with
+durations against local media files with durations — plus one folder scan whenever the destination
+popup changes, feeding <code>ImportRowState.imported</code>, which is written, translated into 21
+languages, and has never had a producer. No schema, no persistence, no privacy question. The record
+is a separate and larger thing for the jobs only it can do.</p>
+
+<p class="why"><b>Trimming is out of scope, decided.</b> “If the user bothers to trim the video —
+whatever.” Audio fingerprinting would solve it and is IP-protection technology: a dependency, a
+compute budget and a capability, for one cell of that table. A hand-trimmed Meet recording is
+unrecognisable, said once, and never reached for again.</p>
 
 <p class="why"><b>One thing to check before wiring it: how close is the container's duration to the
 API's?</b> Google's <code>endTime − startTime</code> is wall-clock between recording events; the

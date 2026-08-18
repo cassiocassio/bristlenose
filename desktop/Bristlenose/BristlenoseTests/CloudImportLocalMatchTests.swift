@@ -323,3 +323,112 @@ struct CloudImportDestinationScanTests {
         #expect(await CloudImportLocalMatch.scan(folder: missing).isEmpty)
     }
 }
+
+
+// MARK: - Reconstructing what we fetched, from the bytes alone
+
+// The per-project record, and the argument for not having one.
+//
+// The plan called for a persisted artefact — what we fetched, what never
+// arrived, what was in flight when the app quit — with a schema, a migration
+// story and a privacy question, since it would name meetings and platforms.
+// It is not needed. `CloudDownloader` verifies every transfer while the bytes
+// are still in the system temp directory and publishes with an atomic rename,
+// so the destination folder cannot hold a plausible-looking file that never
+// really arrived. The folder *is* the record; a ledger could only be a second,
+// staler copy, and the one that disagrees the moment a researcher moves a file.
+//
+// What the folder cannot answer by itself is which broken file belongs to
+// which row, and that is what these pin.
+@Suite("What the destination folder can be asked")
+struct CloudImportGoodnessTests {
+
+    private func row(_ id: String, title: String, at: Date,
+                     ordinal: Int? = nil) -> CloudImportRow {
+        CloudImportRow(
+            id: id, title: title, startsAt: at, duration: 600, sizeBytes: nil,
+            expiresAt: nil, attendees: [], localState: .notImported,
+            video: .available, roster: .available, transcript: .available,
+            organiser: nil, recordedAt: at, siblingOrdinal: ordinal)
+    }
+
+    /// The name the downloader would have written for this row.
+    private func writtenName(_ row: CloudImportRow, ext: String = "mp4") -> String {
+        CloudDownloadNaming.filename(
+            title: row.title, startsAt: row.startsAt,
+            fileExtension: ext, part: row.siblingOrdinal)
+    }
+
+    @Test("A file we wrote that will not open marks its row damaged")
+    func unreadableOwnFileIsDamaged() {
+        let subject = row("a", title: "P07 Interview", at: Date(timeIntervalSince1970: 1_760_000_000))
+        let scan = LocalScan(unreadable: [writtenName(subject)])
+        #expect(CloudImportLocalMatch.damaged(rows: [subject], scan: scan) == ["a"])
+    }
+
+    @Test("Zoom's audio-only rendition matches the same row as an mp4 would")
+    func extensionDoesNotDecideTheMatch() {
+        // The extension is chosen at fetch time from whatever Zoom offers, so
+        // it is not knowable from the row. Matching on the stem is what keeps
+        // the `.m4a` case working without the row having to predict it.
+        let subject = row("a", title: "P07 Interview", at: Date(timeIntervalSince1970: 1_760_000_000))
+        let scan = LocalScan(unreadable: [writtenName(subject, ext: "m4a")])
+        #expect(CloudImportLocalMatch.damaged(rows: [subject], scan: scan) == ["a"])
+    }
+
+    @Test("A broken file that is not ours is left alone")
+    func unrelatedBrokenFileIsNotClaimed() {
+        // A researcher's own corrupt download of the same meeting, under their
+        // own name. We have no basis to speak about it, and a row wrongly
+        // marked damaged sends them to re-fetch a recording they already have
+        // a good copy of somewhere else.
+        let subject = row("a", title: "P07 Interview", at: Date(timeIntervalSince1970: 1_760_000_000))
+        let scan = LocalScan(unreadable: ["interview-final-FINAL.mp4"])
+        #expect(CloudImportLocalMatch.damaged(rows: [subject], scan: scan).isEmpty)
+    }
+
+    @Test("Nothing broken, nothing claimed")
+    func cleanFolderClaimsNothing() {
+        let subject = row("a", title: "P07 Interview", at: Date(timeIntervalSince1970: 1_760_000_000))
+        #expect(CloudImportLocalMatch.damaged(rows: [subject], scan: LocalScan()).isEmpty)
+    }
+
+    @Test("Two recordings of one call are told apart by their sibling ordinal")
+    func siblingsDoNotCollide() {
+        // Two halves of one interview carry the same title and the same start,
+        // so the ordinal is the only thing separating their filenames. Without
+        // it a single damaged half would condemn both rows.
+        let base = Date(timeIntervalSince1970: 1_760_000_000)
+        let first = row("a", title: "P07 Interview", at: base)
+        let second = row("b", title: "P07 Interview", at: base, ordinal: 2)
+        let scan = LocalScan(unreadable: [writtenName(second)])
+        let damaged = CloudImportLocalMatch.damaged(rows: [first, second], scan: scan)
+        #expect(damaged == ["b"], "only the half that is actually broken")
+    }
+
+    @Test("Only formats AVFoundation can judge are eligible for a damage verdict")
+    func unsupportedContainersAreNotJudged() {
+        // The false positive that would matter most. `mediaExtensions` accepts
+        // mkv, webm and avi so their durations can be matched — but
+        // AVFoundation cannot open any of them, so a perfectly healthy `.mkv`
+        // probes as unreadable. Calling that damaged would accuse a
+        // researcher's own material of being broken because Apple never
+        // shipped a demuxer for it.
+        for container in ["mkv", "webm", "avi"] {
+            #expect(!CloudImportLocalMatch.judgeableExtensions.contains(container),
+                    "\(container) cannot be judged by a failed AVFoundation open")
+        }
+        // And the formats we actually write must be judgeable, or the check is
+        // decorative.
+        #expect(CloudImportLocalMatch.judgeableExtensions.isSuperset(of: ["mp4", "m4a"]))
+    }
+
+    @Test("Every judgeable format is one the duration match already scans")
+    func judgeableIsASubsetOfScanned() {
+        // A format we would judge but never look at cannot produce a verdict,
+        // and the mismatch would be invisible — the check would simply never
+        // fire for it.
+        #expect(CloudImportLocalMatch.mediaExtensions
+                    .isSuperset(of: CloudImportLocalMatch.judgeableExtensions))
+    }
+}

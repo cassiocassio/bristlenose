@@ -43,6 +43,43 @@ struct LocalRecording: Equatable, Sendable {
     let duration: TimeInterval
 }
 
+/// What one look at the destination folder found.
+///
+/// **The whole per-project record, and there is deliberately no other one.**
+/// The plan called for a persisted artefact — what we fetched, what never
+/// arrived, what was in flight when the app quit — with a schema, a migration
+/// story and a privacy question, since it would name meetings and platforms.
+/// It is not needed, because `CloudDownloader` was built so the folder answers
+/// all three: verification happens while the bytes are still outside the
+/// destination name and the final rename is atomic, so *"what you can see on
+/// disk is true"* (its own words). A record would be a second, staler copy of
+/// something already trustworthy, and the one that can disagree.
+struct LocalScan: Equatable, Sendable {
+    /// Files that opened and measured. The duration match runs on these.
+    var recordings: [LocalRecording] = []
+
+    /// Files that are present, materialised, in a format we can judge — and
+    /// will not open.
+    ///
+    /// **Judgeable is the load-bearing word.** `mediaExtensions` includes
+    /// `mkv`, `webm` and `avi`, none of which AVFoundation can open *at all*,
+    /// so "did not open" is not evidence of damage for a researcher's own
+    /// files — it is evidence of a container Apple never shipped support for.
+    /// Only formats we ourselves write are listed here. See `judgeableExtensions`.
+    var unreadable: [String] = []
+
+    /// Leftover `.part` files: a download that was interrupted, almost always
+    /// by the app quitting mid-batch.
+    ///
+    /// This is the *only* on-disk trace an in-flight quit can leave, and that
+    /// is by construction rather than by luck: the transfer streams to the
+    /// system temp directory, is verified there, and only then moves to `.part`
+    /// and atomically renames. So a killed app leaves either nothing or an
+    /// obviously-unfinished sibling — never a plausible-looking recording under
+    /// the real name.
+    var interrupted: [String] = []
+}
+
 enum CloudImportLocalMatch {
 
     // MARK: - The decision
@@ -117,6 +154,39 @@ enum CloudImportLocalMatch {
         return claimedRows
     }
 
+    // MARK: - Goodness
+
+    /// Rows whose file is present and will not open.
+    ///
+    /// **Matched by name, not by duration — and the inversion is deliberate.**
+    /// Everywhere else this type matches on duration precisely *because*
+    /// filenames diverge: ours are machine-local, the vendor's are
+    /// account-local, and a researcher renames things. None of that applies
+    /// here. A damaged file has no readable duration to match on, and the only
+    /// files we are willing to call damaged are ones **we wrote ourselves**,
+    /// under a name `CloudDownloadNaming` computed from the row in front of us.
+    /// So the name is exact by construction, and a researcher's own broken
+    /// download of the same meeting is correctly left alone.
+    ///
+    /// Compared on the stem, so Zoom's audio-only `.m4a` rendition matches the
+    /// same row as an `.mp4` would — the extension is decided at fetch time
+    /// from the file Zoom offers, and is not knowable from the row.
+    static func damaged(rows: [CloudImportRow], scan: LocalScan) -> Set<String> {
+        guard !scan.unreadable.isEmpty else { return [] }
+        let broken = Set(scan.unreadable.map { ($0 as NSString).deletingPathExtension })
+
+        var damaged: Set<String> = []
+        for row in rows {
+            let expected = CloudDownloadNaming.filename(
+                title: row.title, startsAt: row.startsAt,
+                fileExtension: "mp4", part: row.siblingOrdinal)
+            if broken.contains((expected as NSString).deletingPathExtension) {
+                damaged.insert(row.id)
+            }
+        }
+        return damaged
+    }
+
     // MARK: - The scan
 
     /// Extensions worth opening for a duration.
@@ -143,23 +213,82 @@ enum CloudImportLocalMatch {
     /// Never throws: a folder we cannot read yields no matches, which leaves
     /// every row fetchable. That is the safe direction.
     static func scan(folder: URL) async -> [LocalRecording] {
-        let files = mediaFiles(in: folder)
-        guard !files.isEmpty else { return [] }
+        await inspect(folder: folder).recordings
+    }
 
-        let found = await withTaskGroup(of: LocalRecording?.self) { group in
+    /// Formats a failed open is real evidence about.
+    ///
+    /// **The list is "what we write", not "what we accept".** `mediaExtensions`
+    /// is the wider set the duration match reads, and it includes `mkv`,
+    /// `webm` and `avi` — containers AVFoundation cannot open at all. A
+    /// researcher's own `.mkv` therefore fails to probe on a perfectly healthy
+    /// file, and calling that damaged would accuse their material of being
+    /// broken because Apple never shipped a demuxer for it.
+    ///
+    /// Every cloud download lands as `.mp4`, or `.m4a` for Zoom's audio-only
+    /// rendition. Both are natively supported, so for these — and only these —
+    /// "materialised and will not open" means the file is bad.
+    static let judgeableExtensions: Set<String> = ["mp4", "m4a", "mov", "m4v"]
+
+    /// One look at the destination folder: what opened, what did not, and what
+    /// was left half-written.
+    ///
+    /// The same single pass the duration match already paid for — the probe was
+    /// always distinguishing these cases and throwing two of them away.
+    static func inspect(folder: URL) async -> LocalScan {
+        var result = LocalScan(interrupted: partFiles(in: folder))
+
+        let files = mediaFiles(in: folder)
+        guard !files.isEmpty else { return result }
+
+        let probed = await withTaskGroup(of: (URL, LocalRecording?).self) { group in
             for url in files {
-                group.addTask { await probe(url) }
+                group.addTask { (url, await probe(url)) }
             }
-            var measured: [LocalRecording] = []
-            for await recording in group {
-                if let recording { measured.append(recording) }
-            }
-            return measured
+            var out: [(URL, LocalRecording?)] = []
+            for await pair in group { out.append(pair) }
+            return out
         }
+
+        for (url, recording) in probed {
+            if let recording {
+                result.recordings.append(recording)
+            } else if judgeableExtensions.contains(url.pathExtension.lowercased()),
+                      isMaterialised(url) {
+                // Materialised, ours, and it will not open. Not a placeholder
+                // (that is `isMaterialised`'s job) and not an unsupported
+                // container (that is `judgeableExtensions`'), so what is left is
+                // a file that has actually gone bad since it landed —
+                // truncated by a sync, corrupted on disk, or half-copied by
+                // something that is not us.
+                result.unreadable.append(url.lastPathComponent)
+            }
+        }
+
         // A task group completes out of order. Sorting restores a stable input
         // for the tie-break above, which is otherwise decided by whichever
         // header happened to be read first.
-        return found.sorted { $0.name < $1.name }
+        result.recordings.sort { $0.name < $1.name }
+        result.unreadable.sort()
+        return result
+    }
+
+    /// Interrupted downloads, by the final name they were heading for.
+    ///
+    /// Returned as `foo.mp4`, not `foo.mp4.part`, because the caller's question
+    /// is always "what happened to this recording" and the `.part` suffix is
+    /// our own plumbing.
+    private static func partFiles(in folder: URL) -> [String] {
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: folder,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+        ) else { return [] }
+
+        return contents
+            .filter { $0.pathExtension.lowercased() == "part" }
+            .map { $0.deletingPathExtension().lastPathComponent }
+            .sorted()
     }
 
     private static func mediaFiles(in folder: URL) -> [URL] {

@@ -636,6 +636,24 @@ struct CloudImportRow: Identifiable, Equatable {
         return copy
     }
 
+    /// The same row, marked as holding a file that will not open.
+    ///
+    /// `.damaged`'s first producer. Sibling to the method above and the only
+    /// other legal write to `localState` after listing. Which rows earn it is
+    /// `CloudImportLocalMatch.damaged`'s judgement — and it is deliberately
+    /// narrow: only a file we downloaded ourselves, in a format AVFoundation
+    /// can actually judge, that is materialised and still will not open.
+    ///
+    /// The state stays **fetchable** on purpose, unlike `.imported`. A damaged
+    /// file is the one case where re-downloading is exactly what the researcher
+    /// wants, so the row must keep its checkbox — the mark says why it is worth
+    /// ticking, not that it is spoken for.
+    func markedAsDamaged() -> CloudImportRow {
+        var copy = self
+        copy.localState = .damaged
+        return copy
+    }
+
     /// Whether this row has a file behind it at all.
     ///
     /// Not the same question as `isSelectable`, which also asks whether we

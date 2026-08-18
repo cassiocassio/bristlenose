@@ -78,13 +78,25 @@ final class CloudImportStore: ObservableObject {
     /// already held while the batch quietly fetched it anyway.
     @Published private(set) var rows: [CloudImportRow] = []
 
-    /// Recordings measured in the destination folder, or empty when there is
-    /// no destination yet. An input to `rebuild()` alongside the listing and
-    /// the filter — it arrives on its own schedule and must not depend on
-    /// which of the two landed first.
-    @Published private(set) var destinationRecordings: [LocalRecording] = [] {
+    /// What the destination folder holds — measured, broken, and half-written.
+    ///
+    /// An input to `rebuild()` alongside the listing and the filter: it arrives
+    /// on its own schedule and must not depend on which of the two landed
+    /// first.
+    ///
+    /// **This is the per-project record.** There is no persisted one and there
+    /// is not going to be: `CloudDownloader` verifies every transfer while the
+    /// bytes are still outside the destination name and publishes with an
+    /// atomic rename, so the folder cannot hold a plausible-looking file that
+    /// never really arrived. A stored ledger could only be a second, staler
+    /// copy of that — and the one that disagrees after the researcher moves a
+    /// file, which they do.
+    @Published private(set) var destinationScan: LocalScan = LocalScan() {
         didSet { rebuild() }
     }
+
+    /// The measured files alone. Read by the duration match and the tests.
+    var destinationRecordings: [LocalRecording] { destinationScan.recordings }
 
     /// The list as the grid draws it: days, meetings, recordings, plus the three
     /// counts the footer is allowed to state.
@@ -168,7 +180,16 @@ final class CloudImportStore: ObservableObject {
             rows: listed,
             local: destinationRecordings,
             platform: platform)
-        rows = listed.map { held.contains($0.id) ? $0.markedAsAlreadyInProject() : $0 }
+        // Damage is checked *after* the held set and wins over it, though the
+        // two cannot overlap in practice: a file that will not open has no
+        // readable duration, so it can never have been duration-matched into
+        // `held` in the first place. Ordered anyway, because the invariant that
+        // makes them disjoint lives in another file.
+        let broken = CloudImportLocalMatch.damaged(rows: listed, scan: destinationScan)
+        rows = listed.map { row in
+            if broken.contains(row.id) { return row.markedAsDamaged() }
+            return held.contains(row.id) ? row.markedAsAlreadyInProject() : row
+        }
 
         // The predicate lives on the row — titles *and* people, diacritic-
         // insensitive, covering names behind the `+N` overflow. See
@@ -191,11 +212,11 @@ final class CloudImportStore: ObservableObject {
     func setDestination(_ folder: URL?) {
         scanTask?.cancel()
         guard let folder else {
-            destinationRecordings = []
+            destinationScan = LocalScan()
             return
         }
         scanTask = Task { [weak self] in
-            let found = await CloudImportLocalMatch.scan(folder: folder)
+            let found = await CloudImportLocalMatch.inspect(folder: folder)
             // A destination changed while the scan ran. Publishing now would
             // mark rows against a folder the researcher has already left.
             guard !Task.isCancelled else { return }
@@ -209,8 +230,22 @@ final class CloudImportStore: ObservableObject {
     /// consequences are worth exercising apart: a folder of real 50-minute
     /// recordings is not something a test can conjure, while "a held row
     /// leaves the batch" is exactly what has to be pinned.
+    func applyDestinationScan(_ found: LocalScan) {
+        destinationScan = found
+        if !found.interrupted.isEmpty {
+            // Counted, never named: a basename here can identify a participant,
+            // the same rule `LocalRecording.name` carries. No row state and no
+            // words on screen — an interrupted download left no final file, so
+            // its row is already fetchable, which is both true and the action.
+            // This is the trace that makes "the app was killed mid-batch"
+            // findable afterwards rather than invisible.
+            Self.log.info("import_scan interrupted=\(found.interrupted.count, privacy: .public)")
+        }
+    }
+
+    /// Convenience for callers that only care about the measured files.
     func applyDestinationScan(_ found: [LocalRecording]) {
-        destinationRecordings = found
+        applyDestinationScan(LocalScan(recordings: found))
     }
 
     /// Rows after the filter, **in the order they appear on screen**.

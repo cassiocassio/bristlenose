@@ -177,6 +177,38 @@ _GMEET_TAIL_RE = re.compile(
 )
 
 
+# Bristlenose's own cloud-import naming: "2026-08-12 1400 — P07 Interview.mp4"
+# (`CloudDownloadNaming.filename`, desktop side). Date first so a Finder listing
+# is chronological, title second so the researcher can see which session it is.
+#
+# **Why this has to be stripped, and it is not cosmetic.** We *rename on
+# download*, so none of the platform patterns above can ever fire on a file we
+# fetched ourselves — their whole job is to recognise the vendor's convention,
+# and by the time the file is on disk it no longer wears one. Without this rule
+# a cloud-imported video and a hand-fetched transcript of the same meeting
+# normalise differently and become **two sessions**: the video re-transcribed by
+# Whisper, and a phantom media-less session holding the transcript.
+#
+# That is the exact workflow it breaks. Neither Dovetail nor Marvin trusts the
+# platforms' transcripts either — everyone reprocesses — but a researcher who
+# fetches the Teams transcript by hand gets *accurate speaker names* out of it,
+# which is a real time saver and the reason to do it at all. Splitting the pair
+# threw away precisely that.
+#
+# The date goes for the same reason it goes on every pattern above: it is the
+# one field the video and its transcript are guaranteed to share, so keeping it
+# cannot help pairing, and dropping it is what lets the two meet. The known
+# consequence — two same-titled meetings on different days collapsing into one
+# session — is a pre-existing property of every rule here, not something this
+# one introduces.
+#
+# The sibling ordinal (" (2)") is deliberately NOT stripped: two halves of one
+# call stay two sessions, which is what happens today for platform-named files.
+_BN_DOWNLOAD_PREFIX_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}\s+\d{4}\s*[—–-]\s*",
+)
+
+
 def _normalise_stem(stem: str) -> str:
     """Normalise a filename stem for session matching.
 
@@ -192,14 +224,19 @@ def _normalise_stem(stem: str) -> str:
             stem = stem[: -len(suffix)]
             break
 
-    # 2. Teams: strip "-Meeting Recording" / "-meeting transcript" + date prefix
+    # 2. Bristlenose's own download naming, first: a file we fetched wears no
+    #    vendor convention at all, so none of the platform rules below can see
+    #    it. Stripping the stamp is what lets it meet a hand-fetched transcript.
+    stem = _BN_DOWNLOAD_PREFIX_RE.sub("", stem)
+
+    # 3. Teams: strip "-Meeting Recording" / "-meeting transcript" + date prefix
     stem = _TEAMS_SUFFIX_RE.sub("", stem)
 
-    # 3. Zoom cloud: strip "Audio Transcript_" prefix and trailing "_ID_DATE"
+    # 4. Zoom cloud: strip "Audio Transcript_" prefix and trailing "_ID_DATE"
     stem = _ZOOM_CLOUD_PREFIX_RE.sub("", stem)
     stem = _ZOOM_CLOUD_TAIL_RE.sub("", stem)
 
-    # 4. Google Meet: the dated tail first — it needs the trailing kind in order
+    # 5. Google Meet: the dated tail first — it needs the trailing kind in order
     #    to match, and `_GMEET_TRANSCRIPT_SUFFIX_RE` would otherwise eat it.
     stem = _GMEET_TAIL_RE.sub("", stem)
     stem = _GMEET_TRANSCRIPT_SUFFIX_RE.sub("", stem)

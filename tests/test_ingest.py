@@ -101,6 +101,63 @@ class TestNormaliseStem:
         transcript = _normalise_stem("meeting with martin storey")
         assert recording == transcript == "meeting with martin storey"
 
+    # -- Bristlenose's own cloud-import naming -------------------------------
+
+    def test_cloud_import_pairs_with_a_hand_fetched_teams_transcript(self) -> None:
+        """The workflow this rule exists for, and it was broken until 18 Aug 2026.
+
+        Cloud import *renames on download* — "2026-08-12 1400 — P07 Interview.mp4"
+        — so by the time the file is on disk it wears no vendor convention and
+        none of the platform rules above can see it. The researcher then fetches
+        the Teams transcript by hand, which is worth doing because it carries
+        accurate speaker names that Whisper has to guess at.
+
+        Unpaired, that costs exactly what it was meant to save: two sessions,
+        the video re-transcribed from scratch with the names thrown away, and a
+        phantom media-less session holding the transcript.
+        """
+        imported = _normalise_stem("2026-08-12 1400 — p07 interview")
+        transcript = _normalise_stem("p07 interview-20260812_140000-meeting transcript")
+        assert imported == transcript == "p07 interview"
+
+    def test_cloud_import_pairs_with_a_hand_fetched_meet_transcript(self) -> None:
+        imported = _normalise_stem("2026-08-12 1400 — p07 interview")
+        transcript = _normalise_stem(
+            "p07 interview - 2026_08_12 14_00 bst - notes by gemini"
+        )
+        assert imported == transcript == "p07 interview"
+
+    def test_cloud_import_sibling_halves_stay_apart(self) -> None:
+        """The ordinal is deliberately not stripped.
+
+        Two recordings of one call are two files the researcher may want kept
+        distinct, and that is already how platform-named siblings behave. Left
+        alone rather than folded in, because collapsing them is a different
+        decision from pairing a video with its transcript.
+        """
+        first = _normalise_stem("2026-08-12 1400 — p07 interview")
+        second = _normalise_stem("2026-08-12 1400 — p07 interview (2)")
+        assert first != second
+
+    def test_cloud_import_untitled_recording_keeps_its_stamp(self) -> None:
+        """A meeting with no title is named from the stamp alone.
+
+        There is no title to pair on, so the stamp must survive as the whole
+        key — stripping it would leave an empty stem, and every untitled
+        recording in the folder would collapse into one session.
+        """
+        assert _normalise_stem("2026-08-12 1400") == "2026-08-12 1400"
+
+    def test_a_researchers_own_dated_filename_is_not_mistaken_for_ours(self) -> None:
+        """The prefix rule needs the separator, not just a leading date.
+
+        Researchers date their own files. "2026-08-12 kickoff notes" has no
+        " — " after a four-digit time, so it is left whole; treating any leading
+        date as ours would silently re-key files we never touched.
+        """
+        assert _normalise_stem("2026-08-12 kickoff notes") == "2026-08-12 kickoff notes"
+        assert _normalise_stem("2026-08-12 1400 debrief") == "2026-08-12 1400 debrief"
+
     def test_teams_hyphenated_title_survives(self) -> None:
         """The hyphen separator makes a hyphenated title the interesting case.
 

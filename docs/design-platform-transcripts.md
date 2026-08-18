@@ -1,4 +1,21 @@
+---
+status: partial
+last-trued: 2026-08-18
+trued-against: HEAD@main on 2026-08-18 (04e7c72e)
+---
+
 # Platform transcript ingestion — design doc
+
+## Changelog
+
+- _2026-08-18_ — trued up: the Meet **matching strategy** was superseded in
+  three separate places and contradicted the doc's own 1d correction 45 lines
+  below it. All three struck and pointed at `_GMEET_TAIL_RE`
+  (`s01_ingest.py:169,204`), which strips the whole dated tail — necessary
+  because recording and Doc carry *different* timestamps, so a suffix-only
+  strip leaves two keys that never join. The third copy, in the Phase-3 scope
+  table at `:410`, was found by a mechanical grep rather than by reading.
+  Cloud-import passages checked and left untouched: correct cross-references.
 
 **Status**: Phase 1 shipped (Zoom + Teams "it just works"). Researchers can drop a folder of Teams `.docx` + `.mp4` or Zoom `.vtt` + `.mp4` and Bristlenose uses the platform transcript directly, skipping both audio extraction and Whisper. **Google Meet `.docx` joined them 16 Aug 2026** (`29f5d9be`) — parser 2d and pairing 1d below. The rest of Phase 2 (filename metadata) and Phase 3 (supplementary sources, manual overrides) remain open.
 
@@ -127,9 +144,23 @@ misattribution issues. Note the parser reads them via `[^:]`, so native-script n
 (`田中:`, `김영희:`) survive — the Latin-only speaker regex tracked against
 `s03_parse_subtitles.py` does not apply to this path.
 
-**Matching strategy**: Recording and transcript share the calendar event title and a
+**Matching strategy**: ~~Recording and transcript share the calendar event title and a
 date/time stamp. Match by title prefix after stripping the parenthetical date and
-`- Transcript` suffix.
+`- Transcript` suffix.~~ **Superseded — see the 1d correction below, which this
+paragraph contradicted for long enough to be worth flagging.** _Trued 18 Aug 2026._
+
+Match after `_GMEET_TAIL_RE` ([`s01_ingest.py:169`](../bristlenose/stages/s01_ingest.py:169),
+applied at [`:204`](../bristlenose/stages/s01_ingest.py:204)) has removed the
+**entire** ` - {date} {time} [TZ] - {kind}` tail. The two named strips above match
+nothing Google actually emits, and stripping only the suffix would not be enough
+even if they did: **the recording and the Doc carry different timestamps**, so a
+suffix-only strip leaves two keys that still differ and the pair never joins.
+
+Worth keeping as a shape rather than a correction: this doc carried the wrong rule
+at `:130` and the right one at `:167`, forty-five lines apart, both in the present
+tense. A reader who stops at the first one gets a plausible, specific, wrong
+instruction — which is the failure mode a *contradiction* has and a plain
+staleness does not.
 
 **Timestamps**: Only ~5-minute granularity in transcripts. This is a significant
 limitation — deep-linking to exact moments in video will be approximate at best.
@@ -393,7 +424,7 @@ Covers the remaining ~5% of the market but includes some quick wins.
 
 | Item | Cluster | Scope |
 |------|---------|-------|
-| 1d. Google Meet title+date matching | 1 | Strip parenthetical date + `- Transcript` |
+| ~~1d. Google Meet title+date matching~~ **shipped** | 1 | ~~Strip parenthetical date + `- Transcript`~~ → `_GMEET_TAIL_RE` strips the whole dated tail (`s01_ingest.py:169`). _Third copy of the superseded rule, found 18 Aug by a mechanical grep rather than by reading — see §Matching strategy._ |
 | 2d. Google Meet DOCX parser | 2 | Different heuristic from Teams DOCX |
 | 5c. Attendee list from Meet DOCX | 5 | Extract attendees to seed `people.yaml` |
 | 4d. Google Meet timestamp interpolation | 4 | Handle 5-minute granularity |

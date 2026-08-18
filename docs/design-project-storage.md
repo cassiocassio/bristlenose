@@ -1,4 +1,20 @@
+---
+status: partial
+last-trued: 2026-08-18
+trued-against: HEAD@main on 2026-08-18 (04e7c72e)
+---
+
 # Project storage — policy
+
+## Changelog
+
+- _2026-08-18_ — trued up: §3's provider-classifier finding was reported open
+  and had been fixed structurally; flipped it, re-anchored (`ProjectIndex.swift:650`
+  had rotted onto `setFolderCollapsed`), and recorded the larger unstated win —
+  the old allowlist reported BN's own default project location as "On this Mac"
+  on any Mac with iCloud Drive on. Cloud-import passages checked and left
+  untouched: all three are correct cross-references. Anchors:
+  `ProjectIndex.swift:907-928`, `:914-919`.
 
 **Status: decided (28 Jul 2026). This is the standing answer to "should Bristlenose do something about where the media lives?"**
 
@@ -107,7 +123,11 @@ Row shows a red ✗ and `ffprobe timed out after 30s probing <file>` — which a
 
 **`.inCloud` is unreachable in the normal case.** [`ProjectAvailability.swift:141`](../desktop/Bristlenose/Bristlenose/ProjectAvailability.swift:141) short-circuits on `fileExists(atPath: path)` — the project *folder*. With every file in the folder evicted, `os.path.exists()` is still true and `listdir` still returns entries, so availability resolves to `.ready` and step 5 never runs. The cloud glyph therefore cannot appear for evicted media in an existing folder, at any free-space level. Meanwhile [`ProjectFolderWatcher.swift:228`](../desktop/Bristlenose/Bristlenose/ProjectFolderWatcher.swift:228) *already* calls `isCloudEvicted` on every non-resident file and discards the result with `continue` — the count is computed and thrown away. Turning that into `evictedFiles` gives whole-vs-partial for free.
 
-**The provider classifier is an allowlist of three.** [`ProjectIndex.swift:650`](../desktop/Bristlenose/Bristlenose/ProjectIndex.swift:650) matches OneDrive, Dropbox and iCloud Drive only, so **Google Drive (`GoogleDrive-<email>`) and Box (`Box-Box`) fall through to `.local`** and get no cloud classification at all. Everything under `~/Library/CloudStorage/` is File Provider storage by definition, so the rule should be structural — match the directory, take the first component as the label, split on `-` for the provider family — rather than an allowlist that needs editing per provider.
+**~~The provider classifier is an allowlist of three.~~ Fixed — it is structural now.** _Trued 18 Aug 2026._ The finding was right and the prescription was taken verbatim: [`ProjectIndex.swift:907`](../desktop/Bristlenose/Bristlenose/ProjectIndex.swift:907) matches `/Library/CloudStorage/`, takes the first path component and splits it on `-`, so **Box and Google Drive work without being enumerated** — the code comment says so in this doc's own words. `providerNames` ([`:924`](../desktop/Bristlenose/Bristlenose/ProjectIndex.swift:924)) now maps only the three whose on-disk container name differs from the product name a researcher would recognise (`GoogleDrive`, `ProtonDrive`, `pCloudDrive`); an unknown provider keeps its own name rather than being flattened to a generic "Cloud".
+
+_(The original anchor in this bullet, `ProjectIndex.swift:650`, had rotted — it now lands on `setFolderCollapsed`. Worth noting as a mechanism rather than a typo: a line-number anchor into a file under active work is a citation with a short half-life, and it fails **silently** because the link still resolves.)_
+
+**The fix carried a win this bullet never predicted, and it is the more serious of the two.** The old three-prefix allowlist had no way to catch a *home* folder that Desktop & Documents sync had taken over — `~/Documents` has no distinguishing path shape at all — so it reported **Bristlenose's own default project location as "On this Mac" on any Mac with iCloud Drive turned on** ([`:914-919`](../desktop/Bristlenose/Bristlenose/ProjectIndex.swift:914)). The stated symptom was two named third-party providers going unclassified; the unstated one was the default case being wrong for a large fraction of users. Resolved by falling through to the File Provider flag (`isUbiquitous`) once the path-shape tests miss.
 
 **Name the provider, and say so — attribution is the point.** "Dropbox / Google Drive are not special-cased" (`design-sidebar-activity-indicators.md`) rejected provider-specific *behaviour* — download buttons, progress affordances, integrations. It does not forbid *naming what is already happening*, and the sibling state already sets the precedent: `cantFind(.unmountedVolume(name:))` names the volume rather than saying "a drive is missing". Two reasons it earns its place: each provider has a **different fix path** (Dropbox's menu-bar item, iCloud's Settings pane, the OneDrive client), so a generic "the cloud" leaves the researcher nowhere to go — which matters given BN can't tell a healthy fetch from a stalled one. And **it is right for BN to say when the slowness is not its own**: an unexplained three-minute stall reads as "Bristlenose is slow"; "Fetching from Dropbox…" reads as "the network is slow". Explaining a wait you don't control is not offloading work onto the user (`feedback_appliance_copes_dont_offload_to_user`) — it is the opposite of pretending.
 

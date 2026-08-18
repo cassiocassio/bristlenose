@@ -432,7 +432,15 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   well-translated-but-different sentence would defeat it. **Reuse that
   loctable trick for any future pre-announcement of a system prompt**;
   `plutil -convert json -o - <loctable>` reads it, and it carries 42
-  locales.
+  locales. **It covers stock control _labels_ too, which is the commoner
+  case** — AppKit's own `Common.loctable` carries `Choose`, the
+  `NSOpenPanel` button, so a panel we present reads the exact word the
+  researcher already sees in every other open panel on their Mac
+  (`Auswählen`, `Choisir`, `選択`, `Выбрать`). Used for Settings ▸ General
+  in `38b76bfa`. **Check the loctables before hand-translating any string
+  that names a system control** — and note Apple's locale codes differ
+  from ours, so four of ours need an alias to find their row: `nb`→`no`,
+  `pt-BR`→`pt`, `pt-PT`→`pt_PT`, `zh-Hant`→`zh_TW`.
 - **Known gaps, deliberate:** the handshake follows the *fronted* serve
   only (a parked warm sidecar's live `/mcp` is not advertised — v1 scope);
   `MCPTokenStore.revoke()` unwired (Turn Off Agent Access deletes the

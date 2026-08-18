@@ -995,6 +995,32 @@ There is no published head-to-head, and there probably cannot easily be one: ven
 
 **Where the user starts, and how they get back.** `File ▸ Import from Teams…` as a sibling to the existing `File ▸ Add Files… ⇧⌘A` (whose own comment calls it "the menu twin of drag-drop") — **flat while there is one platform, a submenu at three**: a one-item submenu is a Mac smell, so this becomes `File ▸ Import ▸ Microsoft Teams… / Zoom… / Google Meet…` when the second lands, and takes the fuller product name there for parallelism. Also a project context-menu twin following the Agent Access pattern (context menu *hides* when unavailable, menu-bar twin *dims*), and `Bristlenose ▸ Accounts…` mirroring `Connect an Agent…`. Account lifecycle — sign in, sign out, "Connected as…", the scope disclosure — belongs in a **Settings ▸ Accounts** pane; the import surface shows a read-only account line only. One place to disconnect, not two. _Shipped 18 Aug 2026 (`d3b66642`), and **not** on the Mail Accounts pattern this sentence named._ Sidebar-and-detail is right when there is a detail worth showing; with four fixed services, one account each and a single verb, it would be chrome around nothing. What shipped is a **section per service**, each carrying one row in one of four states — unavailable, not connected, connected, needs attention. Two things about it are load-bearing. **The pane makes no network call**: every state is derived from the Keychain, the OAuth config and the address stored beside the tokens, so anything knowable only from a call has to be persisted when that call happens (Google's account tier falls out of the address domain and is free; Microsoft's `DriveTier` does not and is still owed a writer). And **connecting stays at the point of intent** — Connect… posts the same notification the File menu does and opens the import window, so there is one sign-in flow rather than a second one in Settings. Full state engine and the reasoning: `docs/mockups/settings-accounts-generalised.html`.
 
+Two decisions the pane settled that are easy to re-propose, so they are recorded
+here rather than only in commit bodies:
+
+**One account per service, for v1.** The storage holds several — that is the
+whole of the keying change — but the pane renders the first, because nothing yet
+offers a way to connect a second. The long-term shape is named and is *not* this
+pane grown a bit: an Internet-Accounts-style console holding arbitrary N accounts
+across M services, with its own Add Account. macOS System Settings ▸ Internet
+Accounts is the reference. Consequence to know: a second account reachable by
+iCloud sync from another Mac is currently stored, invisible, and un-removable.
+
+**A parked service is not listed at all.** `AccountService.all` reads
+`CloudPlatform.shipping`, so Zoom is absent rather than present-and-inert. This
+reversed a deliberate earlier call to list all four — the argument for listing
+was that a catalogue hiding what is not ready cannot answer "what can this thing
+talk to?", and it was wrong about the reader: a permanent row saying Bristlenose
+cannot sign in to Zoom answers a question nobody asked and spends a quarter of
+the pane doing it. Safe **only** because a parked platform cannot hold a grant;
+re-check that before parking a service that has ever stored a sign-in.
+
+**And no vendor glyphs anywhere** — not in the pane, not in `File ▸ Import`.
+§9a's licence boundary stands, and the licences are settled against: nice to
+have, not worth three trademark conversations. A generic SF Symbol is *lawful*
+but was never the argument for having one — beside a vendor's name it reads as
+their mark. `CloudPlatform.symbolName` is deleted.
+
 **One window, globally, with the destination pre-selected by how you opened it.** Opening from a project's context menu pre-selects that project; opening from the File menu pre-selects the current one. Re-opening after a close is the **File** menu's job, not the Window menu's — HIG is explicit that the Window menu lists *currently open* windows (alphabetically) and that reopening belongs in File. Two consequences: the scene takes **`.commandsRemoved()`**, since a titled SwiftUI `Window` otherwise auto-contributes a Window-menu reopen entry that HIG says shouldn't be there — the project's existing rule for auxiliary windows, now with a second reason — while the window still appears in the open-windows list *while open*, because that listing is AppKit enumerating real `NSWindow`s rather than the scene contributing a command (verify on device). And note HIG's *"avoid listing panels or other modal views"* is a third independent argument for this being a window rather than a sheet. **Double-click on a project row is not available** as a door — `project_sidebar_rename_gestures_decided` already reserves it for opening the project itself.
 
 **The fetch's progress belongs on the project's sidebar row, in the existing ring and subtitle.** Per-file state stays in the import window; the project's aggregate rides its row, so closing the window loses nothing. Prose stays minimal — the `RunProgressSubtitle` ladder (`stage · N of M · ETA`) is the vocabulary to extend, **not** `ProjectSubtitle.copying(fraction:)`, which carries a single 0–1 number with no item identity, count or ETA and therefore cannot say "Fetching 3 of 7 · 12 min left". Note `SubtitleVariant.isDiagnostic` is deliberately exhaustive with no `default`, so a new case forces an explicit decision — budget for that rather than being surprised by it.

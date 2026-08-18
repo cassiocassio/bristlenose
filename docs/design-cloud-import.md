@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-08-18 (fourth pass, post-Accounts-pane — §7 keying, §9 lifecycle, §10 costs)
-trued-against: HEAD@main on 2026-08-18 (a27f85b4)
+last-trued: 2026-08-18 (fifth pass — the status block, which four passes had left describing a pre-registration world)
+trued-against: HEAD@main on 2026-08-18 (fde38a42)
 ---
 
 > **Truing status:** Partial — trued **twice** on 15 Aug 2026, and the second
@@ -36,11 +36,45 @@ trued-against: HEAD@main on 2026-08-18 (a27f85b4)
 > when Zoom is picked back up. Pick-up brief:
 > `cloud-import-zoom-parked.md` in the maintainer's private handoffs.
 >
-> **Still pre-contact:** nothing has completed a **download** on any platform.
-> Treat every claim about the transfer path as untested — the three claims about
-> the *listing* path that met reality this week were all wrong.
+> **Fifth pass, 18 Aug 2026 — the status block was the stalest thing in the
+> file.** Four passes had trued individual sections while the block a cold reader
+> reads *first* still said no Google client existed, no token persisted, no
+> adapter derived row state and nothing had ever downloaded. All four were false,
+> and each was contradicted by this same document elsewhere — the download by its
+> own changelog, the persistence by §7. A section-by-section pass does not reach
+> a summary, and a summary is what gets believed. Corrected from measurement;
+> §9a still carries two claims of the same kind and is banner-flagged for its own
+> pass.
+>
+> **No longer pre-contact.** The whole loop — tick, Picker, download, ingest —
+> has run end to end on Meet, and Teams has downloaded from Graph. The transfer
+> path is no longer the untested half; **third-party consent is**, and no amount
+> of local testing can reach it.
 
 ## Changelog
+
+- _2026-08-18 (fifth pass — the summary, which four section passes had missed)_ —
+  trued up: rewrote the **status block** and truing banner, which carried four
+  false load-bearing claims (no Google OAuth client; no token persisted; no
+  adapter derives row state; nothing has ever downloaded) — each contradicted by
+  this same document elsewhere, and the reason a cold reader would have concluded
+  the feature did not work. Split the answered Picker probe from its still-open
+  attendee sub-risk. Banner-flagged **§9a** as partially-trued and corrected its
+  two flatly-false as-built claims ("there is no Settings ▸ Accounts pane"; "there
+  are no `desktop.cloudImport.*` keys at all" — there are 120, seeded across 21
+  locales since 16 Aug). §10: two of three registrations now exist, so the gate
+  **moved to verification** rather than closing, with Google's sensitive-scope
+  review named as the longer pole and the MSA precondition on Publisher
+  Verification recorded. Preserved §9's sidebar prescription and recorded that
+  reality answered it a third way (`importingBatch`, count-only, copy ring
+  reused). Added the Scheduled column as-built with its three invariants; added
+  the three-way Entra refusal taxonomy and `worthRetrying` to §6 req.5; added
+  §7's new **"The grant's lifecycle"** subsection promoting four guards out of
+  commit bodies; refreshed §9's test inventory and recorded that CI never
+  compiles the Swift target. Anchors: `60321ec5`, `84d7c55e`, `d345cb56`,
+  `357818b5`, `f8e78ae4`, `af9b38b4`, `d054b3d6`, `2cb58cf6`, `c837f8b5`,
+  `49ec8a50`; `CloudImportOutline.swift:258`, `TeamsOAuth.swift:111-155`,
+  `CloudImportStore.swift:23-52,165-171,683`, `ProjectSubtitle.swift:58-67`.
 
 - _2026-08-18 — Settings ▸ Accounts, and the storage under it_ — three
   commits and a truing pass over the sections they contradicted.
@@ -356,7 +390,7 @@ trued-against: HEAD@main on 2026-08-18 (a27f85b4)
     invalidates — `isSelectable` drops it from `fetchOrder`, so the Import
     button's count simply falls, which is the honest reading of "you already
     have two of these".
-- _2026-08-17 (design session, mostly unbuilt)_ — a long design pass over what
+- _2026-08-17 (design session — **items 1 and 2 have since shipped**; see the 18 Aug entry)_ — a long design pass over what
   happens **after** the researcher presses Import. Two mockups carry it:
   `docs/mockups/cloud-import-sidebar-progress.html` (the closed-window case) and
   `docs/mockups/cloud-import-failure-states.html` (a pre-mortem over every
@@ -467,23 +501,28 @@ trued-against: HEAD@main on 2026-08-18 (a27f85b4)
 
 # Cloud import — capturing originals from Teams, Zoom and Meet
 
-**Status: designed 28 Jul 2026. Revised 14 Aug 2026 after a permissions/benchmark pass and a six-agent review. Revised again 15 Aug 2026, when Google, Zoom and Teams were researched and all three adapters were built. Post-TF, not cohort-blocking.**
+**Status: designed 28 Jul 2026. Revised 14 Aug 2026 after a permissions/benchmark pass and a six-agent review. Revised again 15 Aug 2026, when Google, Zoom and Teams were researched and all three adapters were built. Status block corrected 18 Aug 2026 against measurement — it had drifted a full phase behind the code. Post-TF, not cohort-blocking.**
 
 **What exists as of 15 Aug 2026.** All three platforms are live behind `File ▸ Import`, on one shared spine: `CloudImportSource` (the protocol), `CloudImportStore` (the state machine), `CloudImportWindow` (the surface), `CloudPlatform` (everything vendor-shaped the UI says), `CloudImportCoordinator` (which source the window holds), and `CloudDownloader` + `CloudDownloadVerification` (§6's "prove the bytes arrived", once, for all three). Per-platform adapters carry only what genuinely differs: the endpoints, the scope vocabulary, the error dialects, the OAuth ceremony, and each vendor's own way of failing quietly. A `FixtureCloudSource` drives every state from the Diagnostics menu without an account.
 
-**What is not built — and the first item means nothing works yet.**
+**What is not built.** _Rewritten 18 Aug 2026 from measurement. This block
+previously opened "and the first item means nothing works yet" and then listed
+four things that had shipped — see the changelog. The heading is kept short
+deliberately: a status block that editorialises about its own worst item is how
+this one stayed wrong through four passes._
 
-- **Teams is registered and signs in. Google and Zoom are not.** A Microsoft 365 Business Basic tenant (`bristlenose.onmicrosoft.com`, £6.48/mo, **monthly**) and an Entra app registration were created 15 Aug 2026 — multitenant + personal accounts, redirect `msauth.app.bristlenose://auth` as a public client, public client flows on, delegated `Files.Read` / `Calendars.Read` / `offline_access` / `User.Read`. The client ID lives in the app's sandboxed `UserDefaults`, **not in this repo**. Google's and Zoom's configs still read a client ID and return `nil`, so neither can sign in.
-  - **A Google tenant now exists, and it is not the same thing as a Google registration.** _16 Aug 2026._ A Workspace **Business Standard** tenant was bought on a throwaway domain (Flexible/monthly, ~£11.80/user; the domain was taken at signup rather than pointed at `bristlenose.app`, whose MX carries live mail). It has recorded a real Meet, which is what §3's and §6's Google findings are measured against. **No OAuth client is registered in any Google Cloud project**, so `GoogleMeetConfig` still returns `nil` and nothing can sign in. When one is created it belongs in a Cloud project owned by an account that outlives the tenant — the throwaway domain is a *data source*, not the app's identity, and an OAuth client registered inside it dies with it.
+- **Teams and Google are registered and both sign in. Zoom is not, and is parked.** A Microsoft 365 Business Basic tenant (`bristlenose.onmicrosoft.com`, £6.48/mo, **monthly**) and an Entra app registration were created 15 Aug 2026 — multitenant + personal accounts, redirect `msauth.app.bristlenose://auth` as a public client, public client flows on, delegated `Files.Read` / `Calendars.Read` / `offline_access` / `User.Read`. The client ID lives in the app's sandboxed `UserDefaults`, **not in this repo**. Zoom's config still reads a client ID and returns `nil`, so it cannot sign in — which costs nothing today, because Zoom is parked behind `BristlenoseFlags.cloudImportZoom` (default off, `c837f8b5`).
+  - **A Google tenant now exists, and it is not the same thing as a Google registration.** _16 Aug 2026._ A Workspace **Business Standard** tenant was bought on a throwaway domain (Flexible/monthly, ~£11.80/user; the domain was taken at signup rather than pointed at `bristlenose.app`, whose MX carries live mail). It has recorded a real Meet, which is what §3's and §6's Google findings are measured against. ~~**No OAuth client is registered in any Google Cloud project**, so `GoogleMeetConfig` still returns `nil` and nothing can sign in.~~ **Superseded 18 Aug 2026 — a client exists and has completed a live sign-in** (`2cb58cf6`; the measurement is recorded in this doc's changelog). As with Microsoft, the client ID lives only in the app's sandboxed `UserDefaults` on the dev Mac and is **in no file in this repo** (`GoogleOAuth.swift:166-180` reads `UserDefaults` before `Info.plist`), so a clean checkout still reveals nothing and the claim above stayed plausible for two days. The placement rule below survives the correction and is the part that matters: it belongs in a Cloud project owned by an account that outlives the tenant — the throwaway domain is a *data source*, not the app's identity, and an OAuth client registered inside it dies with it.
   - **`CFBundleURLTypes` turned out not to be required, and this doc said it was.** Teams signed in with no URL type registered in the target: `ASWebAuthenticationSession(url:callbackURLScheme:)` has the OS route the callback to the initiating session directly, never through LaunchServices — which is the security property §2 chose it for in the first place. **Zoom's `associated-domains` entitlement and a deployed `apple-app-site-association` file are still genuinely required**, because Zoom refuses custom schemes and its callback is HTTPS.
-- **No token is persisted, and no refresh is wired.** §2 and §7 describe a Keychain refresh token keyed on `(platform, account)`; nothing writes to the Keychain, and `refresh` is never called. Access tokens last about an hour on all three, so even once registration lands, a long batch can 401 mid-flight and every launch will re-prompt.
-- **No adapter derives local row state.** §6's `stat`-based six/seven-state model is implemented in `ImportRowState` and exercised only by `FixtureCloudSource`; all three live adapters hardcode `.notImported`.
+- ~~**No token is persisted, and no refresh is wired.**~~ **Shipped — see §7.** One Keychain item per `(platform, account)` (`8901845f`), written through a single owner (`357818b5`), renewed before both the listing and the fetch (`342cb5c5`, `a10b45c8`), and exercised through the adapter's real entry point over a stubbed transport (`af9b38b4`). The hour-long access token this bullet warned about is the thing the renewal exists for. What is still true and worth keeping: a grant is only as durable as the refresh token behind it, and Google's expires weekly while the app sits in Testing status.
+- **No *adapter* derives local row state — and none needs to.** The claim was literally true of the adapters and misleading as written: the derivation moved up into the store, where it belongs, because it is a fact about the *destination folder* rather than about any vendor. `CloudImportStore.rebuild()` marks rows already held by scanning the destination and matching on duration (`CloudImportStore.swift:165-171`, `CloudImportLocalMatch.swift:80`), so `.imported` has a live producer for every platform at once. **Unverified for Teams**: the 2s duration tolerance has never been checked against a real Graph pair, and the Google equivalent was wrong on first contact — it withheld a recording the researcher did not have, which is the failure direction with no override.
 - **Where the full list lives.** Done/undone in dependency order is kept in the `cloud-import-state-of-play` handoff, with the maintainer's private planning notes outside the public tree — so it is gitignored and a grep of a clean checkout will not find it. This status block is the public summary; that handoff is the working document.
-- **Live acceptance — Teams has now met a real recording; nothing has been fetched.** On 15 Aug 2026 the shipped code signed in to a live tenant, listed `/Recordings` over Graph and rendered the window. It has still never completed a **download**, on any platform. Two parsers broke on first contact and are fixed (`8b8eafc9`) — see §6.
+- **Live acceptance — the whole loop has now run, on both live platforms.** On 15 Aug 2026 the shipped code signed in to a live Microsoft tenant, listed `/Recordings` over Graph and rendered the window; two parsers broke on first contact and are fixed (`8b8eafc9`) — see §6. On 17 Aug the Meet loop completed end to end — tick → Picker → download → **Imported** — and on 18 Aug the stored Picker grant was measured surviving a relaunch (`2cb58cf6`). ~~It has still never completed a download, on any platform.~~ **That sentence was false for a day before this pass caught it**, and it is the one most worth flagging: it sat in the summary while the changelog above it described the completed download, so the two halves of this file disagreed about whether the feature worked.
   Of the four open probes, one is answered and one is now known to be unanswerable by us:
   - ✅ **Is the transcript a sibling file in OneDrive?** **No** — see §3. §1, §3 and §5 stand unrevised.
   - 🔒 **Can a researcher self-consent in a real client tenant?** Still open, and **our own tenant can never answer it**: the owner is Global Administrator, so consent always succeeds and the org-wide consent checkbox only renders for admins. This needs a cohort member in a tenant we do not administer — see §5.
-  - ⬜ Does the Google Picker surface a Meet recording? **Still untouched, but now cheap** — a Google tenant exists with a real recording in it (below). The sub-risk is *also* still open and needs a second body: the 16 Aug call was solo, so nothing has yet been observed about what an **attendee** sees in their own Drive after the July shortcut change. Invite a free `@gmail.com` to a recorded call and both questions close together.
+  - ✅ **Does the Google Picker surface a Meet recording?** **Yes — answered 17 Aug 2026**, by a completed round trip rather than by inspection.
+  - ⬜ *The sub-risk survives the answer, and needs a second body.* The 16 Aug call was solo, so nothing has yet been observed about what an **attendee** sees in their own Drive after the July shortcut change. Invite a free `@gmail.com` to a recorded call. Split out because folding it into the row above is what let an answered probe keep reading as open.
   - ⬜ Does Graph serve `expirationDateTime` per driveItem? Untouched — but now cheaply answerable, and a captured response from the app's own listing may already contain it, since that listing sets no `$select`.
   - ⬜ *New, same cost:* does business OneDrive return `sha256Hash`, or only `quickXorHash`? One listing settles it, and §6's verification ladder degrades differently depending on the answer.
 
@@ -551,6 +590,14 @@ Three artifacts, not one — and **they do not share a gate**. The 28 Jul versio
 > **That is not the same as saying the video import works today.** §5 records, from the Entra UI itself on 16 Aug, that *"End users cannot grant consent to newly registered multitenant apps without verified publishers"* — so until **Publisher Verification** is done, a cohort researcher cannot self-consent to `Files.Read` either. Two independent gates, and they fail at the same screen: this one is ours to clear (MPN account, DNS-verified domain), the `Calendars.Read` one is the tenant's and we can never clear it. Fixing publisher verification restores the reduced window, **not** the full one. That window was reviewed 17 Aug and judged **a good product rather than a degraded one**: researchers recognise a session by person and day over a handful of sessions, and Teams bakes the meeting subject into the recording filename, so scheduling discipline pays off in the *filename* rather than in the calendar API.
 >
 > **Consequent decision: aim for the full window, fall back to the reduced one, and let the columns follow the data** — a column with no data anywhere is dropped, not ruled with em-dashes; the em-dash is for the row-level miss. Modelled in `docs/mockups/cloud-import-consent-reality.html`.
+>
+> **Shipped 18 Aug 2026** (`60321ec5`, `84d7c55e`): `CloudImportOutline.showsScheduledColumn(for:)` decides it, `syncScheduledColumn` owns the column, pinned by `CloudImportScheduledColumnTests.swift`. Three things about the as-built are not obvious from the decision above.
+>
+> **The rule is about the data, never the platform.** This section reaches it as a `Calendars.Read` consequence, but Meet arrives at the identical state by a different road — a month of instant meetings — and the two are indistinguishable at the row. One data-driven rule serves both; a permission-driven one would need to tell apart cases that carry no distinguishing evidence.
+>
+> **It is asked of the whole listing, not the filtered outline** the grid is built from. Otherwise a filter keystroke that happens to leave only instant meetings takes the column away mid-type.
+>
+> **An empty listing keeps it, and the column is *removed* rather than hidden.** Knowing there is no scheduled data requires having listed something. And `NSTableColumn.isHidden` is persisted by `autosaveTableColumns`, which this outline sets — so hiding would strand the column hidden after a tenant later granted the calendar. Removing carries no such memory. (AppKit offers no animated column insert either: rows have `withAnimation:` variants, columns have none, and `NSTableColumn` is not an animatable property container. The transition is unobservable anyway — the grid only mounts once rows exist, and sign-in happens in the researcher's real browser, in front of the window.)
 >
 > **The measurement this now hangs on**, and it needs a tenant we do not control: does a single authorize request carrying one admin-gated scope **fail as a whole**, or degrade and grant the rest? If it fails whole, the consent must be split into two calls so a refused calendar costs only the calendar. If it degrades, today's single call already does the right thing.
 
@@ -707,7 +754,7 @@ So the order stands as **Teams → Zoom → Meet**, on unchanged reasoning — T
 
 ## 6. Shape — the staircase
 
-- **v1** — _as designed: Teams only, `Files.Read` + `Calendars.Read`. **What shipped 15 Aug 2026 is v1 across all three platforms**, because the research that repriced Google and Zoom arrived before the Teams build did._ List the researcher's own recordings, join to a calendar window for the roster where the platform has one. **Multi-select with per-row outcome.** Download into a destination project. ⚠️ Still owed at v1: `(platform, remoteID, account)` provenance per imported session, and the derived `stat`-based import state below — all three adapters currently hardcode `.notImported`.
+- **v1** — _as designed: Teams only, `Files.Read` + `Calendars.Read`. **What shipped 15 Aug 2026 is v1 across all three platforms**, because the research that repriced Google and Zoom arrived before the Teams build did._ List the researcher's own recordings, join to a calendar window for the roster where the platform has one. **Multi-select with per-row outcome.** Download into a destination project. ⚠️ Still owed at v1: `(platform, remoteID, account)` provenance per imported session. ~~And the derived `stat`-based import state below — all three adapters currently hardcode `.notImported`.~~ _Corrected 18 Aug 2026: literally true of the adapters and misleading as written._ The derivation moved up into `CloudImportStore.rebuild()`, where it serves every platform at once, because already-held-ness is a fact about the destination folder rather than about any vendor. What **is** still owed is the Teams half of the measurement: the 2s duration tolerance has never been checked against a real Graph pair.
 - **v1.1** — within-file resume (Range requests), and attendee/`@domain`/description search (which needs the `Calendars.Read` upgrade).
 - **Then** Zoom (review already in flight per §5), then Google (only if asked).
 
@@ -811,6 +858,20 @@ Note the collapse: **the remote axis mostly does not produce states.** An expire
 
 From inside the app, "you closed the window" and "your organisation has to approve this first" are **indistinguishable** — `ASWebAuthenticationSession` reports plain cancellation for both. So the state must not be called *cancelled*: that word sends someone to retry, forever, against a wall only somebody else can remove. It names both possibilities, the researcher's own action first, and it is the one requirement here that shipped complete (`CloudImportStore.Phase.signInIncomplete`, `CloudPlatform.signInMayAwaitAdminApproval`, and a Diagnostics fixture, since a tenant whose admin has not approved us cannot be conjured).
 
+**Its sibling state, and the three refusals it tells apart.** _Added 18 Aug 2026 (`7da5f42b`, landed `d345cb56`)._ The paragraph above is right that *cancellation* and *awaiting approval* are indistinguishable — but Entra's own error codes distinguish three refusals that arrive on the same screen, and only one is worth retrying. `MicrosoftSignInRefusal` classifies them (`TeamsOAuth.swift:111-155`):
+
+| Code | Meaning | Retry? |
+|---|---|---|
+| `AADSTS65004` | They read the consent screen and said no | **Yes** — the one case where the button is right |
+| `AADSTS90094` / `65001` | The tenant requires an administrator | No — only their IT can lift it |
+| `AADSTS53003` | Conditional Access; the sign-in *succeeded* and the token was refused anyway | No — not fixable by anyone in the conversation |
+
+So `.failed` carries `worthRetrying:` (`CloudImportStore.swift:23-52`) and the window shows Try Again only when a second attempt could differ. Anything unclassifiable is presumed retryable: an unnecessary button wastes a click, a withheld one strands someone a retry would have rescued.
+
+Two corrections came with it, both of the same shape — an affordance that could not work. **Cancelling a Teams sign-in now reaches `signInIncomplete`**; there were catches for Zoom and Google and none for Microsoft, so abandoning a Teams sign-in landed on the error screen while the same act on the other two landed on the calm one. And **Try Again retries the sign-in, not the listing** — it called `load()` with no token, because `.failed`'s doc comment said "listing failed outright" while its only construction site was the sign-in catch. The wrong comment is what propagated the bug.
+
+**One rule worth promoting out of the code comment: match the full `AADSTSnnnnn`, never the bare number.** Entra's descriptions carry correlation IDs and timestamps, so `contains("65001")` can be satisfied by a digit run inside an unrelated failure — and misclassify it as an admin gate, which is exactly the verdict that removes the retry button.
+
 **The unit of recovery is the file, not the batch.** `.part` plus derived already-imported state means an interrupted batch loses at most one file's progress, so within-file Range resume can stay at v1.1 without v1 shipping a batch that can't recover.
 
 **Built 15 Aug 2026 — one download path, three platforms** (`CloudDownloadVerification`, `CloudDownloader`). The sequence is the design, and every step exists because of a failure the previous step cannot catch:
@@ -863,6 +924,44 @@ The 80/20 split held, and is now observable rather than estimated — **shared s
 
 **Key the credential on `(platform, account)`. Shipped 18 Aug 2026** (`8901845f`), and this paragraph's diagnosis was exact: `KeychainHelper` keyed every item on a fixed account string, so a second sign-in hit `errSecDuplicateItem`, took the `SecItemUpdate` path and **overwrote the first account's token in place** — no error, `set` returned `true`, and the first account stopped working at its next refresh with nothing anywhere saying why. It is now one Keychain item per account, `kSecAttrAccount` a SHA-256 hash, following `MCPTokenStore` as prescribed, plus a `kSecMatchLimitAll` enumeration this helper had no equivalent of and a one-shot migration off the old fixed key.
 
+### The grant's lifecycle — four guards, all bought by a real loss
+
+_Added 18 Aug 2026._ Keying was the first bug in this seam and not the last.
+Every credential-loss defect found since went through **one function**,
+`onGrantChanged` — the callback an adapter fires when its tokens move — which is
+why these belong together rather than as four scattered notes.
+
+**One owner for the write** (`357818b5`). Per-adapter `Task.detached` publishes
+have no relative ordering, so a refusal could land *after* a successful
+re-sign-in and tombstone a working grant. A serial `CloudGrantWriter` owns both
+the key and the write, holding no lock across the Keychain call. The contract
+that falls out: `onGrantChanged` must not block.
+
+**A tombstone only on a 4xx from the token endpoint** (`f8e78ae4`, `af9b38b4`).
+`try? await client.refresh()` made a dropped connection indistinguishable from
+an authoritative refusal, and `revoked()` strips the refresh token — so **one
+wifi blip permanently destroyed a working sign-in**, on the aged-out-token path,
+which is the ordinary next-morning case rather than an exotic one.
+
+**A passive read keeps what it cannot parse; only the restore path discards**
+(`d054b3d6`). `connections()` decoded every grant just to draw a Settings row,
+so *opening the pane* deleted blobs it could not read — and with iCloud sync on,
+an older Mac propagates that deletion everywhere. Chesterton's fence moved to
+where the discarding is intended, not removed.
+
+**The account key never goes backwards** (`f8e78ae4`). A transient `/me` failure
+nil-ing a known-good address re-derived the anonymous key and let the rekey
+delete the correctly-keyed item. Rekeying now only ever leaves the anonymous
+slot.
+
+Two testing rules came out of the same work and generalise past this feature.
+`StubURLProtocol` registers **process-wide**, so grant-lifecycle suites must be
+`.serialized` or they see each other's stubs. And **a fake that cannot fail can
+only prove the happy path**: `InMemoryKeychain` had no refusal mode, so every
+failure branch was unreachable by any test — including `-34018` on every write,
+which is the *ordinary* state of an ad-hoc-signed local build. Sibling to the
+lesson §9's Testing paragraph already carries.
+
 Two departures from the prescription above, both deliberate.
 
 **The stable identifier is the signed-in address, not an id claim.** Microsoft's `oid`+`tid` and Google's `sub` would survive a rename; parsing them was cut for v1 because the only failure they prevent is a researcher who renames their account, signs in again, and acquires a second row for the same account — a row that is visible, labelled with its address, and removable. The hashing survives untouched and for exactly the reason stated: `kSecAttrAccount` is unencrypted metadata, and a client's email address readable in Keychain Access is the leak this project cares about.
@@ -899,6 +998,25 @@ There is no published head-to-head, and there probably cannot easily be one: ven
 **One window, globally, with the destination pre-selected by how you opened it.** Opening from a project's context menu pre-selects that project; opening from the File menu pre-selects the current one. Re-opening after a close is the **File** menu's job, not the Window menu's — HIG is explicit that the Window menu lists *currently open* windows (alphabetically) and that reopening belongs in File. Two consequences: the scene takes **`.commandsRemoved()`**, since a titled SwiftUI `Window` otherwise auto-contributes a Window-menu reopen entry that HIG says shouldn't be there — the project's existing rule for auxiliary windows, now with a second reason — while the window still appears in the open-windows list *while open*, because that listing is AppKit enumerating real `NSWindow`s rather than the scene contributing a command (verify on device). And note HIG's *"avoid listing panels or other modal views"* is a third independent argument for this being a window rather than a sheet. **Double-click on a project row is not available** as a door — `project_sidebar_rename_gestures_decided` already reserves it for opening the project itself.
 
 **The fetch's progress belongs on the project's sidebar row, in the existing ring and subtitle.** Per-file state stays in the import window; the project's aggregate rides its row, so closing the window loses nothing. Prose stays minimal — the `RunProgressSubtitle` ladder (`stage · N of M · ETA`) is the vocabulary to extend, **not** `ProjectSubtitle.copying(fraction:)`, which carries a single 0–1 number with no item identity, count or ETA and therefore cannot say "Fetching 3 of 7 · 12 min left". Note `SubtitleVariant.isDiagnostic` is deliberately exhaustive with no `default`, so a new case forces an explicit decision — budget for that rather than being surprised by it.
+
+> **Shipped 18 Aug 2026 (`d345cb56`), and reality answered a third way.** The
+> prescription above is preserved because the reasoning is sound and the
+> conclusion was wrong in an instructive direction: it argued *up* the ladder,
+> toward more prose, when the right move was *down*. What shipped is a new
+> `SubtitleVariant.importingBatch(done:total:)` rendering **"3 of 4" and nothing
+> else** — no verb, no ETA — because the download phase needs no verb at all and
+> a count is the whole question a closed window leaves: not how fast, not which
+> file, but how many are still to wait for. And the **copy ring is reused as-is**
+> rather than extended, because `Kind.ring` already means "a determinate,
+> cancellable transfer into this project" and a download is exactly that; hover
+> still gives the cancel, now wired to `stopFetch`.
+>
+> Two invariants that came with it and are checkable: progress counts rows that
+> have **settled**, whatever the outcome, since a ring stalled at 3 because the
+> fourth failed is a ring saying nothing; and `batch = nil` is generation-guarded
+> (`CloudImportStore.swift:683`) so a superseded batch cannot blank its
+> replacement's indicator. The `isDiagnostic` warning above was accurate — the
+> new case did force the explicit decision it predicted.
 
 **Microsoft owns the sign-in vocabulary — look it up, don't write it.** Their branding guidelines permit exactly two strings on the button: **"Sign in with Microsoft"**, or **"Sign in"** if space is tight. "Sign in *to* Microsoft" is not a variant. The Microsoft logo is required beside it, unaltered, and ships as official light/dark SVG and PNG assets to download rather than redraw. The account noun is **"work or school account"** — mandatory alongside the button so users recognise whether it applies to them — and "enterprise account", "business account" and "corporate account" are explicitly forbidden, as are *Azure* and *Active Directory* anywhere an end user can see them (fine in this doc and with IT admins). Once signed in, prefer the organisation's own name over a generic. Two consequences worth carrying: their guidelines **require a way to sign out and switch account** ("people are often associated with more than one organization"), which independently confirms §7's `(platform, account)` keying — today's single-slot storage would let a second client tenant silently overwrite the first. And Microsoft publishes a **Terminology Search and a UI String Search** so localised apps match their own products, which is the same trick as the `TCC.loctable` lift for the macOS prompt: the 20 translations of this button are *looked up*, not machine-translated.
 
@@ -962,11 +1080,37 @@ What shipped: seven Swift test files — `CloudDownloadTests`, `GoogleMeetImport
 
 Two things this cost, both worth recording. The adapters gained a `restoredTokens:` initialiser parameter — not a test hook but the Keychain-restore seam §2 already owed, since an adapter must be constructible already-authenticated. And an early draft of these tests **passed for the wrong reason**: with no token injected, the adapters' guard short-circuited before the network, so assertions about request counts were satisfied by zero requests. A test that cannot fail on the bug it names is worse than no test, and it took injecting a token to make them honest.
 
+_Inventory refreshed 18 Aug 2026._ Five files have joined since this paragraph
+was written: `GrantLifecycleTests.swift` (three tests through the adapter's real
+entry point over the stubbed transport, verified honest by reverting
+`renewedTokenIfNeeded` and watching them fail), `CloudAccountKeyTests.swift`,
+`CloudDisconnectTests.swift`, `CloudImportScheduledColumnTests.swift` and
+`TeamsSignInFailureTests.swift`. See §7's lifecycle subsection for the two
+constraints they imposed.
+
+**And one thing no test caught, because nothing runs it.** `c837f8b5` records
+that `main` did not build the Mac app: `CloudPlatform.swift:52` read a flag from
+a file that was never committed. **CI does not compile the Swift target at
+all**, so a green suite says nothing about whether the desktop app builds — it
+was found only by building in a throwaway worktree at HEAD. Worth knowing before
+trusting a green run on anything desktop-shaped.
+
 The live `ASWebAuthenticationSession` round trip against a real tenant categorically is not unit-testable; the internal TF cohort covers what CI cannot. Cloud import is a new **ingest** surface — network-sourced, unlike the 16 file-shaped ones — and its section in `docs/testing/coverage-inventory.md` was owed *before* the build and is now owed *after* it.
 
 ---
 
 ## 9a. Vendor branding — three surfaces, three rule sets
+
+> **Partially trued, 18 Aug 2026 — two as-built claims corrected below, the rest
+> of this section is NOT trued and wants its own pass.** It carries a fresh
+> 16 Aug header and was skipped by the 18 Aug pass whose commit says "true §7,
+> §9 and §10 against the pane that shipped" — so both the front-matter and that
+> commit message imply this section is current, and it was not. Known remaining:
+> line anchors have drifted (`CloudPlatform.swift#L104` now lands on
+> `mandatesAccountNoun`; `CloudImportWindow.swift#L571` → `VendorMark` moved to
+> `:746`), and Order-of-work item 1 is genuinely still open
+> (`CloudPlatform.swift:12` "Zoom has its own" is uncorrected). Folding a full
+> §9a pass into a §7/§9/§10 sweep is precisely what missed it the first time.
 
 _Written 16 Aug 2026, from the vendors' own current guidelines. Extends §9's
 "Microsoft owns the sign-in vocabulary" paragraph, which is verified and stands;
@@ -1036,9 +1180,16 @@ standalone logo (`ms-symbollockup_mssymbol_19.svg`) *and* four full-button
 lockups (light/dark × long/short). Take the standalone — see "the lockup trap"
 below. Also owed, and this one is a missing **feature** rather than a wrong
 pixel: *"DO provide a way for users to sign out and switch to another user
-account."* There is no Settings ▸ Accounts pane.
+account."* ~~There is no Settings ▸ Accounts pane.~~ **Shipped — corrected
+18 Aug 2026.** Settings ▸ Accounts exists (`d3b66642`), lists every connected
+service with a Disconnect whose confirmation states plainly that it is *not*
+revocation at the provider, survives a revoked credential rather than making the
+row vanish (`a27f85b4`), and keeps one Keychain item per account (`8901845f`).
 [CloudImportSource.swift:55](../desktop/Bristlenose/Bristlenose/CloudImportSource.swift#L55)
-already cites §9's "one place to disconnect, not two" — the place does not exist.
+cites §9's "one place to disconnect, not two" — **the place now exists**, and §9
+at the Accounts-pane subsection has said so since the fourth pass. That this
+paragraph and that one disagreed inside a single file is the tell this section
+was never read during it.
 This is the same requirement §7's `(platform, account)` keying arrives at from
 the other direction, so it is one piece of work, not two.
 
@@ -1104,8 +1255,16 @@ housekeeping.
 
 Both vendors mandate localised button text, and both publish official
 translations — Microsoft's Terminology Search and UI String Search, and Google's
-encouragement to localise. The window is hardcoded English throughout (§10 already
-books this as realised debt): there are no `desktop.cloudImport.*` keys at all.
+encouragement to localise. ~~The window is hardcoded English throughout (§10
+already books this as realised debt): there are no `desktop.cloudImport.*` keys
+at all.~~ **False since 16 Aug 2026 (`49ec8a50`) — corrected 18 Aug.** There are
+**120** `desktop.cloudImport.*` keys in `bristlenose/locales/en/desktop.json`,
+seeded across all 21 full locales (`ja`/`ko`/`zh-Hant` correctly omit the 16
+`_one` plural forms; `zh-Hant-HK` correctly inherits), reached from 36
+`i18n.t("desktop.cloudImport…")` call sites in `CloudImportWindow.swift`. Note
+the date: the keys landed *before* the pass that left this claim standing.
+**Still genuinely owed:** the two vendor-mandated button strings, which is the
+part the paragraph below is actually about.
 For the two vendor-mandated strings specifically, **look the translations up
 rather than machine-translating them** — the same move as the `TCC.loctable` lift
 for the macOS permission prompt, where recognition is the whole mechanism.
@@ -1151,10 +1310,14 @@ Service (Zoom Marks clause) and `brand.zoom.com`.
 
 ## 10. Costs to be honest about
 
-- One OAuth app registration before any third party has to say yes; three by the end. **None of the three exists yet** — see the status block; this is now the gate on everything else in this doc.
-- **Microsoft Publisher Verification may be a prerequisite** (§3) — a Partner Center account and a verified domain, not just a form.
+- One OAuth app registration before any third party has to say yes; three by the end. ~~**None of the three exists yet**~~ — **two of three now exist** (Entra 15 Aug, Google Cloud 18 Aug `2cb58cf6`); Zoom's is unstarted and parked. **The gate moved rather than closing.** Registration is no longer what stands between us and a third party saying yes — *verification* is, and it is a different, slower animal on each platform:
+  - **Microsoft Publisher Verification** — free, and "verified in minutes" once the business-identity check clears; that check is the slow part. It gates consent from tenants other than our own, so Teams import is not broken today, it is un-shippable to anyone else.
+  - **Google sensitive-scope verification** — also free (no assessment, no assessor, no fee) but **weeks** of review, justification and a demo video, because the listing needs `calendar.events.readonly` and the Meet conference-records scope and both are sensitive (`5cf82309`).
+
+  So they are one item to start, not two — and **Google sets the date**, being the longer pole by an order of magnitude. Neither is started.
+- **Microsoft Publisher Verification is a prerequisite** (§3) — a Partner Center account and a verified domain, not just a form. **One precondition worth checking before starting rather than after:** Microsoft's own requirements say apps registered *using a Microsoft account* cannot be publisher-verified. If our Entra registration was made with an MSA rather than a work account in the tenant, it must be re-registered with a **new client ID** — free today, since no client ID is baked into anything in `desktop/`, and expensive the moment a cohort tester holds a stored grant.
 - Three APIs that will change underneath us.
-- **i18n — now realised debt, not a future cost.** The shipped window is hardcoded English throughout ("Import 1 Recording", "Filter", the plan-refusal sentences). A window with this many states needs `desktop.*` keys across the **21** full locale directories (plus the `zh-Hant-HK` override fork), CLDR plurals on every count-bearing string, and `scripts/check-locales.py` only warns — nothing fails if it is skipped.
+- ~~**i18n — now realised debt, not a future cost.** The shipped window is hardcoded English throughout.~~ **Paid, 16 Aug 2026 (`49ec8a50`)** — 120 `desktop.cloudImport.*` keys across the 21 full locale directories, CLDR plurals on the count-bearing strings, `zh-Hant-HK` inheriting rather than pinned. Two vendor-mandated button strings remain, and §9a says to look those up rather than machine-translate them. The warning underneath still stands and is why this cannot be booked as closed: **`scripts/check-locales.py` only warns — nothing fails if it is skipped**, so the gap that reappears will do so silently.
 - **A corporate tenant credential in the Keychain is a different class from a personal LLM key.** The iCloud-sync decision for API keys is settled and disclosed and is not reopened here; the question this raised was whether a *client's* IT policy permits their tenant credential to leave the managed device. ~~Non-synchronizable is the answer for this one (§7).~~ **Answered the other way, 18 Aug 2026: cloud grants sync, like every other secret this app holds.** iCloud Keychain is end-to-end encrypted regardless of ADP, so the exposure is not to Apple; and the credential is a scoped, revocable grant to download recordings from an account the researcher is signed into on those same devices anyway. Weighed against a stolen Mac with no recovery path, the sync is the safer default. The governance question is real but belongs in disclosure, not in storage — see the consent line below. Reasoning in full at §7.
 - **The destination is often itself a cloud folder.** On a Mac, project folders frequently live under `~/Library/CloudStorage/`, so the feature's default behaviour is to pull media out of the client's tenant and write it into whatever cloud that folder syncs to — a second vendor, unasked, and per `design-project-storage.md` plausibly outside the team's governance boundary. Detect with `cloud_provider_for(destination)` and disclose before the fetch. Secondary effects: the reverse sync competes for the same uplink, and the provider may later evict the file, so the retention clock runs against bytes BN cannot read without coordination.
 - ~~No disconnect, revoke or multi-account story exists yet (§7, §9).~~ **Two of the three now exist** (18 Aug 2026). Disconnect shipped in Settings ▸ Accounts, and it reaches an open import window rather than only the Keychain — removing the stored copy while a live adapter holds tokens in memory would leave a control that appears to work and does not. Multi-account *storage* shipped; multi-account *choosing* is deferred by decision, because nothing yet offers a way to connect a second account. **Revocation is still the gap, and the honest sentence is that Bristlenose cannot do it**: the disconnect confirmation says so in as many words and points the researcher at their account settings. An Entra admin can revoke tenant-wide from Enterprise Applications — worth stating, because it is a strong answer.

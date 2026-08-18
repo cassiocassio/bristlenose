@@ -95,7 +95,7 @@ final class SettingsWindow {
                 // lifecycle here — "one place to disconnect, not two".
                 PkgSettings.Pane(
                     identifier: .accounts,
-                    title: "Accounts",
+                    title: i18n.t("desktop.settingsTabs.accounts"),
                     toolbarIcon: symbol("person.crop.circle")
                 ) {
                     // The serve is needed for one thing only: disconnecting

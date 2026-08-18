@@ -363,6 +363,7 @@
     "exportShortcut": "Exporteer (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Accounts",
     "general": "Algemeen",
     "appearance": "Weergave",
     "llm": "LLM-provider",
@@ -544,6 +545,28 @@
     "removedBatch": "%d projecten verwijderd.",
     "undo": "Herstel",
     "removed": "Project verwijderd."
+  },
+  "accounts": {
+    "notAvailable": "Niet beschikbaar",
+    "notConnected": "Niet verbonden",
+    "connected": "Verbonden",
+    "cantSignIn": "Bristlenose kan niet inloggen bij {{service}}.",
+    "cantSignInStranded": "Bristlenose kan in deze build niet inloggen bij {{service}}, maar deze login is nog steeds opgeslagen.",
+    "connectMiroElsewhere": "Verbind Miro via \"Naar Miro sturen\" in het Exporteer-menu van een project.",
+    "signInAgain": "De aanbieder heeft deze login be\u00ebindigd. Opnieuw inloggen herstelt hem.",
+    "cannotHoldRecordings": "Dit account kan geen vergaderopnames bevatten, dus er is niets om te importeren.",
+    "connect": "Verbind\u2026",
+    "connectAccessibility": "Verbind {{service}}",
+    "signIn": "Log in\u2026",
+    "signInAccessibility": "Log in bij {{service}}",
+    "disconnect": "Verbinding verbreken\u2026",
+    "disconnectAccessibility": "Verbinding met {{service}} verbreken",
+    "disconnectTitle": "Verbinding met {{account}} verbreken?",
+    "disconnectConfirm": "Verbinding verbreken",
+    "cancel": "Annuleer",
+    "disconnectMiro": "Bristlenose vergeet dit token en stuurt geen citaten meer naar je borden. Borden die je al hebt gemaakt, blijven in Miro.",
+    "disconnectCloud": "Bristlenose vergeet deze login en toont je opnames niet meer. Opnames die je al hebt ge\u00efmporteerd, blijven in je projecten.",
+    "disconnectRevocation": "Dit trekt de toegang van Bristlenose bij de aanbieder niet in \u2014 dat doe je daar in de instellingen van je account."
   },
   "mcpAgents": {
     "header": "Agents lezen het project dat in Bristlenose is geselecteerd",

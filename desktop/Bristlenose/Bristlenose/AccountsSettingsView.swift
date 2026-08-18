@@ -20,12 +20,20 @@ import SwiftUI
 // connect is a pasted token inside the export sheet, which needs a running
 // serve and an open project.
 //
-// English-only, like the rest of the cloud-import surface (§10 records that as
-// realised i18n debt for the whole feature, not an oversight here). The copy
-// wants settling before 21 locales are asked to carry it.
+// Localised through `desktop.accounts.*`. It shipped English-only on the stated
+// grounds that the cloud-import surface around it was English too — which was
+// already false when this was written: that debt was paid on 16 Aug 2026
+// (`49ec8a50`), two days before this pane landed. Nothing caught it, and nothing
+// could have: `scripts/check-locales.py` diffs each locale *against English*, so
+// a pane never enrolled in `en` has nothing to be reported missing from. An
+// absent en key is invisible to the gate by construction.
+//
+// The vendor names are the deliberate exception and stay untranslated — see
+// `AccountService.displayName` and `CloudPlatform.displayName`.
 
 struct AccountsSettingsView: View {
     @ObservedObject var serveManager: ServeManager
+    @EnvironmentObject private var i18n: I18n
 
     @State private var sections: [AccountSection]
     /// The section awaiting confirmation, if any. Held rather than passed so
@@ -81,7 +89,9 @@ struct AccountsSettingsView: View {
         .alert(
             // The address when there is one: with two accounts on a platform
             // the service name alone does not say which is about to go.
-            "Disconnect \(pendingDisconnect?.state.identity ?? pendingDisconnect?.service.displayName ?? "")?",
+            i18n.t("desktop.accounts.disconnectTitle",
+                   ["account": pendingDisconnect?.state.identity
+                       ?? pendingDisconnect?.service.displayName ?? ""]),
             isPresented: Binding(
                 get: { pendingDisconnect != nil },
                 set: { if !$0 { pendingDisconnect = nil } }),
@@ -92,11 +102,11 @@ struct AccountsSettingsView: View {
             // the destructive style for actions people did *not* deliberately
             // choose — Empty Trash is their own counter-example. Dropping it
             // also restores Return-to-confirm.
-            Button("Disconnect") {
+            Button(i18n.t("desktop.accounts.disconnectConfirm")) {
                 disconnect(section)
                 pendingDisconnect = nil
             }
-            Button("Cancel", role: .cancel) { pendingDisconnect = nil }
+            Button(i18n.t("desktop.accounts.cancel"), role: .cancel) { pendingDisconnect = nil }
         } message: { section in
             // Says what it does AND what it does not do. Removing our copy is
             // not revocation, and a researcher who believes it is would stop
@@ -141,12 +151,12 @@ struct AccountsSettingsView: View {
         switch state {
         // No "yet" — user-facing text makes no promises, and a roadmap is not
         // this row's job.
-        case .unavailable(let stranded): return stranded ?? "Not available"
-        case .notConnected: return "Not connected"
+        case .unavailable(let stranded): return stranded ?? i18n.t("desktop.accounts.notAvailable")
+        case .notConnected: return i18n.t("desktop.accounts.notConnected")
         // The address is the headline once there is one — with a service name
         // already in the header above, repeating it here would say nothing.
-        case .connected(let identity):    return identity ?? "Connected"
-        case .attention(let identity, _): return identity ?? "Connected"
+        case .connected(let identity):    return identity ?? i18n.t("desktop.accounts.connected")
+        case .attention(let identity, _): return identity ?? i18n.t("desktop.accounts.connected")
         }
     }
 
@@ -156,18 +166,17 @@ struct AccountsSettingsView: View {
             // A stranded grant gets the fuller sentence: otherwise the row reads
             // as "nothing is stored here", which is the reading that would leave
             // a client's credential on disk untouched.
-            return stranded == nil
-                ? "Bristlenose can't sign in to \(section.service.displayName)."
-                : "Bristlenose can't sign in to \(section.service.displayName) in this "
-                  + "build, but this sign-in is still stored."
+            return i18n.t(stranded == nil ? "desktop.accounts.cantSignIn"
+                                          : "desktop.accounts.cantSignInStranded",
+                          ["service": section.service.displayName])
         case .notConnected:
             return section.service.connectsFromHere
                 ? nil
-                : "Connect Miro from Send to Miro, in a project's Export menu."
+                : i18n.t("desktop.accounts.connectMiroElsewhere")
         case .connected:
             return nil
         case .attention(_, let attention):
-            return attention.sentence
+            return attention.sentence(i18n)
         }
     }
 
@@ -184,8 +193,9 @@ struct AccountsSettingsView: View {
             }
         case .notConnected:
             if section.service.connectsFromHere {
-                Button("Connect…") { connect(section.service) }
-                    .accessibilityLabel("Connect \(section.service.displayName)")
+                Button(i18n.t("desktop.accounts.connect")) { connect(section.service) }
+                    .accessibilityLabel(i18n.t("desktop.accounts.connectAccessibility",
+                                               ["service": section.service.displayName]))
             }
         case .connected:
             disconnectButton(section)
@@ -195,8 +205,9 @@ struct AccountsSettingsView: View {
             // recovery trailing it, where the default action belongs.
             disconnectButton(section)
             if attention.isRecoverable, section.service.connectsFromHere {
-                Button("Sign In…") { connect(section.service) }
-                    .accessibilityLabel("Sign in to \(section.service.displayName)")
+                Button(i18n.t("desktop.accounts.signIn")) { connect(section.service) }
+                    .accessibilityLabel(i18n.t("desktop.accounts.signInAccessibility",
+                                               ["service": section.service.displayName]))
             }
         }
     }
@@ -206,8 +217,9 @@ struct AccountsSettingsView: View {
     /// Voice Control do not, and four identical "Disconnect…" entries in a list
     /// of buttons is unusable.
     private func disconnectButton(_ section: AccountSection) -> some View {
-        Button("Disconnect…") { pendingDisconnect = section }
-            .accessibilityLabel("Disconnect \(section.service.displayName)")
+        Button(i18n.t("desktop.accounts.disconnect")) { pendingDisconnect = section }
+            .accessibilityLabel(i18n.t("desktop.accounts.disconnectAccessibility",
+                                       ["service": section.service.displayName]))
     }
 
     // MARK: - Doing things
@@ -268,15 +280,15 @@ struct AccountsSettingsView: View {
     /// `default:` arm quietly rendered the *cloud* wording for a nil section,
     /// the shape that stops being unreachable the moment a fifth service lands.
     private func disconnectWarning(for section: AccountSection) -> String {
-        let revocation = "\n\nThis doesn't revoke Bristlenose's access at the provider — "
-            + "do that in your account settings there."
+        // The revocation sentence is joined on rather than written into both
+        // service keys: the join is a paragraph break, which is structural and
+        // survives translation, and the sentence that matters most is then
+        // translated once per locale instead of twice.
+        let body: String
         switch section.service {
-        case .miro:
-            return "Bristlenose will forget this token and stop sending quotes to your boards. "
-                + "Boards you've already created stay in Miro." + revocation
-        case .cloud:
-            return "Bristlenose will forget this sign-in and stop listing your recordings. "
-                + "Recordings you've already imported stay in your projects." + revocation
+        case .miro:  body = i18n.t("desktop.accounts.disconnectMiro")
+        case .cloud: body = i18n.t("desktop.accounts.disconnectCloud")
         }
+        return body + "\n\n" + i18n.t("desktop.accounts.disconnectRevocation")
     }
 }

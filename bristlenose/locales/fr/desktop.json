@@ -363,6 +363,7 @@
     "exportShortcut": "Exporter (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Comptes",
     "general": "G\u00e9n\u00e9ral",
     "appearance": "Apparence",
     "llm": "Fournisseur LLM",
@@ -544,6 +545,28 @@
     "removedBatch": "%d projets retir\u00e9s.",
     "undo": "Annuler",
     "removed": "Projet retir\u00e9."
+  },
+  "accounts": {
+    "notAvailable": "Non disponible",
+    "notConnected": "Non connect\u00e9",
+    "connected": "Connect\u00e9",
+    "cantSignIn": "Bristlenose ne peut pas se connecter \u00e0 {{service}}.",
+    "cantSignInStranded": "Bristlenose ne peut pas se connecter \u00e0 {{service}} dans cette version, mais cette connexion est toujours enregistr\u00e9e.",
+    "connectMiroElsewhere": "Connectez Miro depuis \u00ab Envoyer vers Miro \u00bb, dans le menu Exporter d\u2019un projet.",
+    "signInAgain": "Le fournisseur a mis fin \u00e0 cette connexion. Vous reconnecter la r\u00e9tablit.",
+    "cannotHoldRecordings": "Ce compte ne peut pas h\u00e9berger d\u2019enregistrements de r\u00e9union : il n\u2019y a donc rien \u00e0 importer.",
+    "connect": "Se connecter\u2026",
+    "connectAccessibility": "Se connecter \u00e0 {{service}}",
+    "signIn": "Se reconnecter\u2026",
+    "signInAccessibility": "Se reconnecter \u00e0 {{service}}",
+    "disconnect": "Se d\u00e9connecter\u2026",
+    "disconnectAccessibility": "Se d\u00e9connecter de {{service}}",
+    "disconnectTitle": "D\u00e9connecter {{account}} ?",
+    "disconnectConfirm": "Se d\u00e9connecter",
+    "cancel": "Annuler",
+    "disconnectMiro": "Bristlenose oubliera ce jeton et cessera d\u2019envoyer des citations vers vos tableaux. Les tableaux que vous avez d\u00e9j\u00e0 cr\u00e9\u00e9s restent dans Miro.",
+    "disconnectCloud": "Bristlenose oubliera cette connexion et cessera de lister vos enregistrements. Les enregistrements d\u00e9j\u00e0 import\u00e9s restent dans vos projets.",
+    "disconnectRevocation": "Cela ne r\u00e9voque pas l\u2019acc\u00e8s de Bristlenose chez le fournisseur \u2014 faites-le dans les r\u00e9glages de votre compte l\u00e0-bas."
   },
   "mcpAgents": {
     "header": "Les agents lisent le projet s\u00e9lectionn\u00e9 dans Bristlenose",

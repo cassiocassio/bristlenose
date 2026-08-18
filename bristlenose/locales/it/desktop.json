@@ -363,6 +363,7 @@
     "exportShortcut": "Esporta (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Account",
     "general": "Generale",
     "appearance": "Aspetto",
     "llm": "Provider LLM",
@@ -544,6 +545,28 @@
     "removedBatch": "%d progetti rimossi.",
     "undo": "Annulla",
     "removed": "Progetto rimosso."
+  },
+  "accounts": {
+    "notAvailable": "Non disponibile",
+    "notConnected": "Non connesso",
+    "connected": "Connesso",
+    "cantSignIn": "Bristlenose non pu\u00f2 accedere a {{service}}.",
+    "cantSignInStranded": "In questa build Bristlenose non pu\u00f2 accedere a {{service}}, ma questo accesso \u00e8 ancora memorizzato.",
+    "connectMiroElsewhere": "Connetti Miro da \"Invia a Miro\", nel menu Esporta di un progetto.",
+    "signInAgain": "Il fornitore ha terminato questo accesso. Accedere di nuovo lo ripristina.",
+    "cannotHoldRecordings": "Questo account non pu\u00f2 contenere registrazioni di riunioni, quindi non c\u2019\u00e8 nulla da importare.",
+    "connect": "Connetti\u2026",
+    "connectAccessibility": "Connetti {{service}}",
+    "signIn": "Accedi\u2026",
+    "signInAccessibility": "Accedi a {{service}}",
+    "disconnect": "Disconnetti\u2026",
+    "disconnectAccessibility": "Disconnetti {{service}}",
+    "disconnectTitle": "Disconnettere {{account}}?",
+    "disconnectConfirm": "Disconnetti",
+    "cancel": "Annulla",
+    "disconnectMiro": "Bristlenose dimenticher\u00e0 questo token e smetter\u00e0 di inviare citazioni alle tue bacheche. Le bacheche gi\u00e0 create restano in Miro.",
+    "disconnectCloud": "Bristlenose dimenticher\u00e0 questo accesso e smetter\u00e0 di elencare le tue registrazioni. Le registrazioni gi\u00e0 importate restano nei tuoi progetti.",
+    "disconnectRevocation": "Questo non revoca l\u2019accesso di Bristlenose presso il fornitore \u2014 fallo nelle impostazioni del tuo account l\u00ec."
   },
   "mcpAgents": {
     "header": "Gli agenti leggono il progetto selezionato in Bristlenose",

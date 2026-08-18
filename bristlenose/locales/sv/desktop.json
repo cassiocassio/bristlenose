@@ -363,6 +363,7 @@
     "exportShortcut": "Exportera (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Konton",
     "general": "Allm\u00e4nt",
     "appearance": "Utseende",
     "llm": "LLM-leverant\u00f6r",
@@ -544,6 +545,28 @@
     "removedBatch": "%d projekt borttagna.",
     "undo": "Ångra",
     "removed": "Projektet borttaget."
+  },
+  "accounts": {
+    "notAvailable": "Inte tillg\u00e4nglig",
+    "notConnected": "Inte ansluten",
+    "connected": "Ansluten",
+    "cantSignIn": "Bristlenose kan inte logga in p\u00e5 {{service}}.",
+    "cantSignInStranded": "Bristlenose kan inte logga in p\u00e5 {{service}} i den h\u00e4r versionen, men inloggningen \u00e4r fortfarande sparad.",
+    "connectMiroElsewhere": "Anslut Miro fr\u00e5n \u201dSkicka till Miro\u201d i menyn Exportera i ett projekt.",
+    "signInAgain": "Leverant\u00f6ren avslutade den h\u00e4r inloggningen. Logga in igen f\u00f6r att \u00e5terst\u00e4lla den.",
+    "cannotHoldRecordings": "Det h\u00e4r kontot kan inte inneh\u00e5lla m\u00f6tesinspelningar, s\u00e5 det finns inget att importera.",
+    "connect": "Anslut\u2026",
+    "connectAccessibility": "Anslut {{service}}",
+    "signIn": "Logga in\u2026",
+    "signInAccessibility": "Logga in p\u00e5 {{service}}",
+    "disconnect": "Koppla fr\u00e5n\u2026",
+    "disconnectAccessibility": "Koppla fr\u00e5n {{service}}",
+    "disconnectTitle": "Koppla fr\u00e5n {{account}}?",
+    "disconnectConfirm": "Koppla fr\u00e5n",
+    "cancel": "Avbryt",
+    "disconnectMiro": "Bristlenose gl\u00f6mmer den h\u00e4r token och slutar skicka citat till dina tavlor. Tavlor du redan har skapat blir kvar i Miro.",
+    "disconnectCloud": "Bristlenose gl\u00f6mmer den h\u00e4r inloggningen och slutar visa dina inspelningar. Inspelningar du redan har importerat blir kvar i dina projekt.",
+    "disconnectRevocation": "Det \u00e5terkallar inte Bristlenoses \u00e5tkomst hos leverant\u00f6ren \u2014 det g\u00f6r du i inst\u00e4llningarna f\u00f6r ditt konto d\u00e4r."
   },
   "mcpAgents": {
     "header": "Agenter l\u00e4ser det projekt som \u00e4r valt i Bristlenose",

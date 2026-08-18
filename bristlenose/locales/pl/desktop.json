@@ -381,6 +381,7 @@
     "exportShortcut": "Eksportuj (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Konta",
     "general": "Og\u00f3lne",
     "appearance": "Wygląd",
     "llm": "Dostawca LLM",
@@ -568,6 +569,28 @@
     "removedBatch": "Usunięto %d projektów.",
     "undo": "Cofnij",
     "removed": "Projekt usunięty."
+  },
+  "accounts": {
+    "notAvailable": "Niedost\u0119pne",
+    "notConnected": "Niepo\u0142\u0105czono",
+    "connected": "Po\u0142\u0105czono",
+    "cantSignIn": "Bristlenose nie mo\u017ce zalogowa\u0107 si\u0119 do {{service}}.",
+    "cantSignInStranded": "W tej kompilacji Bristlenose nie mo\u017ce zalogowa\u0107 si\u0119 do {{service}}, ale to logowanie jest nadal zapisane.",
+    "connectMiroElsewhere": "Miro po\u0142\u0105czysz przez \u201eWy\u015blij do Miro\u201d w menu Eksportuj projektu.",
+    "signInAgain": "Dostawca zako\u0144czy\u0142 to logowanie. Ponowne zalogowanie je przywr\u00f3ci.",
+    "cannotHoldRecordings": "To konto nie mo\u017ce przechowywa\u0107 nagra\u0144 spotka\u0144, wi\u0119c nie ma czego importowa\u0107.",
+    "connect": "Po\u0142\u0105cz\u2026",
+    "connectAccessibility": "Po\u0142\u0105cz {{service}}",
+    "signIn": "Zaloguj si\u0119\u2026",
+    "signInAccessibility": "Zaloguj si\u0119 do {{service}}",
+    "disconnect": "Roz\u0142\u0105cz\u2026",
+    "disconnectAccessibility": "Roz\u0142\u0105cz {{service}}",
+    "disconnectTitle": "Roz\u0142\u0105czy\u0107 {{account}}?",
+    "disconnectConfirm": "Roz\u0142\u0105cz",
+    "cancel": "Anuluj",
+    "disconnectMiro": "Bristlenose zapomni ten token i przestanie wysy\u0142a\u0107 cytaty na Twoje tablice. Tablice, kt\u00f3re ju\u017c utworzono, pozostan\u0105 w Miro.",
+    "disconnectCloud": "Bristlenose zapomni to logowanie i przestanie wy\u015bwietla\u0107 Twoje nagrania. Nagrania, kt\u00f3re ju\u017c zaimportowano, pozostan\u0105 w Twoich projektach.",
+    "disconnectRevocation": "To nie cofa dost\u0119pu Bristlenose u dostawcy \u2014 zr\u00f3b to tam w ustawieniach swojego konta."
   },
   "mcpAgents": {
     "header": "Agenci odczytuj\u0105 projekt wybrany w Bristlenose",

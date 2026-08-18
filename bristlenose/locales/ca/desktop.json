@@ -363,6 +363,7 @@
     "exportShortcut": "Exporta (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Comptes",
     "general": "General",
     "appearance": "Aspecte",
     "llm": "Proveïdor d'LLM",
@@ -544,6 +545,28 @@
     "removedBatch": "S'han eliminat %d projectes.",
     "undo": "Desfés",
     "removed": "S'ha eliminat el projecte."
+  },
+  "accounts": {
+    "notAvailable": "No disponible",
+    "notConnected": "No connectat",
+    "connected": "Connectat",
+    "cantSignIn": "Bristlenose no pot iniciar la sessi\u00f3 a {{service}}.",
+    "cantSignInStranded": "Bristlenose no pot iniciar la sessi\u00f3 a {{service}} en aquesta versi\u00f3, per\u00f2 aquesta sessi\u00f3 encara est\u00e0 desada.",
+    "connectMiroElsewhere": "Connecta el Miro des d\u2019\u00abEnvia al Miro\u00bb, al men\u00fa Exporta d\u2019un projecte.",
+    "signInAgain": "El prove\u00efdor ha tancat aquesta sessi\u00f3. Si la tornes a iniciar, es restaura.",
+    "cannotHoldRecordings": "Aquest compte no pot allotjar enregistraments de reunions, aix\u00ed que no hi ha res per importar.",
+    "connect": "Connecta\u2026",
+    "connectAccessibility": "Connecta {{service}}",
+    "signIn": "Inicia la sessi\u00f3\u2026",
+    "signInAccessibility": "Inicia la sessi\u00f3 a {{service}}",
+    "disconnect": "Desconnecta\u2026",
+    "disconnectAccessibility": "Desconnecta {{service}}",
+    "disconnectTitle": "Vols desconnectar {{account}}?",
+    "disconnectConfirm": "Desconnecta",
+    "cancel": "Cancel\u00b7la",
+    "disconnectMiro": "Bristlenose oblidar\u00e0 aquest testimoni i deixar\u00e0 d\u2019enviar cites als teus taulers. Els taulers que ja has creat es queden al Miro.",
+    "disconnectCloud": "Bristlenose oblidar\u00e0 aquest inici de sessi\u00f3 i deixar\u00e0 de llistar els teus enregistraments. Els enregistraments que ja has importat es queden als teus projectes.",
+    "disconnectRevocation": "Aix\u00f2 no revoca l\u2019acc\u00e9s de Bristlenose al prove\u00efdor: fes-ho a la configuraci\u00f3 del teu compte all\u00e0."
   },
   "mcpAgents": {
     "header": "Els agents llegeixen el projecte que estigui seleccionat al Bristlenose",

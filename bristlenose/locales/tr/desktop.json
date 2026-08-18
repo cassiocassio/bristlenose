@@ -363,6 +363,7 @@
     "exportShortcut": "Dışa Aktar (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Hesaplar",
     "general": "Genel",
     "appearance": "Görünüm",
     "llm": "LLM Sa\u011flay\u0131c\u0131s\u0131",
@@ -544,6 +545,28 @@
     "removedBatch": "%d proje kaldırıldı.",
     "undo": "Geri Al",
     "removed": "Proje kaldırıldı."
+  },
+  "accounts": {
+    "notAvailable": "Kullan\u0131lam\u0131yor",
+    "notConnected": "Ba\u011fl\u0131 de\u011fil",
+    "connected": "Ba\u011fland\u0131",
+    "cantSignIn": "Bristlenose {{service}} hizmetinde oturum a\u00e7am\u0131yor.",
+    "cantSignInStranded": "Bristlenose bu s\u00fcr\u00fcmde {{service}} hizmetinde oturum a\u00e7am\u0131yor, ancak bu oturum a\u00e7ma bilgisi h\u00e2l\u00e2 saklan\u0131yor.",
+    "connectMiroElsewhere": "Miro'yu bir projenin D\u0131\u015fa Aktar men\u00fcs\u00fcndeki \"Miro'ya G\u00f6nder\" ile ba\u011flay\u0131n.",
+    "signInAgain": "Sa\u011flay\u0131c\u0131 bu oturumu sonland\u0131rd\u0131. Yeniden oturum a\u00e7mak onu geri y\u00fckler.",
+    "cannotHoldRecordings": "Bu hesap toplant\u0131 kay\u0131tlar\u0131n\u0131 tutamaz, bu y\u00fczden i\u00e7e aktar\u0131lacak bir \u015fey yok.",
+    "connect": "Ba\u011flan\u2026",
+    "connectAccessibility": "{{service}} ba\u011flan",
+    "signIn": "Oturum a\u00e7\u2026",
+    "signInAccessibility": "{{service}} hizmetinde oturum a\u00e7",
+    "disconnect": "Ba\u011flant\u0131y\u0131 kes\u2026",
+    "disconnectAccessibility": "{{service}} ba\u011flant\u0131s\u0131n\u0131 kes",
+    "disconnectTitle": "{{account}} ba\u011flant\u0131s\u0131 kesilsin mi?",
+    "disconnectConfirm": "Ba\u011flant\u0131y\u0131 kes",
+    "cancel": "\u0130ptal",
+    "disconnectMiro": "Bristlenose bu jetonu unutacak ve panolar\u0131n\u0131za al\u0131nt\u0131 g\u00f6ndermeyi b\u0131rakacak. Zaten olu\u015fturdu\u011funuz panolar Miro'da kal\u0131r.",
+    "disconnectCloud": "Bristlenose bu oturum a\u00e7ma bilgisini unutacak ve kay\u0131tlar\u0131n\u0131z\u0131 listelemeyi b\u0131rakacak. Zaten i\u00e7e aktard\u0131\u011f\u0131n\u0131z kay\u0131tlar projelerinizde kal\u0131r.",
+    "disconnectRevocation": "Bu, Bristlenose'un sa\u011flay\u0131c\u0131daki eri\u015fimini iptal etmez \u2014 bunu oradaki hesap ayarlar\u0131n\u0131zdan yap\u0131n."
   },
   "mcpAgents": {
     "header": "Ajanlar, Bristlenose'ta se\u00e7ili olan projeyi okur",

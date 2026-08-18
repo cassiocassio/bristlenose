@@ -363,6 +363,7 @@
     "exportShortcut": "Eksportér (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Konti",
     "general": "Generelt",
     "appearance": "Udseende",
     "llm": "LLM-udbyder",
@@ -544,6 +545,28 @@
     "removedBatch": "%d projekter fjernet.",
     "undo": "Fortryd",
     "removed": "Projekt fjernet."
+  },
+  "accounts": {
+    "notAvailable": "Ikke tilg\u00e6ngelig",
+    "notConnected": "Ikke forbundet",
+    "connected": "Forbundet",
+    "cantSignIn": "Bristlenose kan ikke logge ind p\u00e5 {{service}}.",
+    "cantSignInStranded": "Bristlenose kan ikke logge ind p\u00e5 {{service}} i denne version, men dette login er stadig gemt.",
+    "connectMiroElsewhere": "Forbind Miro fra \u201eSend til Miro\u201c i menuen Eksport\u00e9r i et projekt.",
+    "signInAgain": "Udbyderen afsluttede dette login. Log ind igen for at gendanne det.",
+    "cannotHoldRecordings": "Denne konto kan ikke indeholde m\u00f8deoptagelser, s\u00e5 der er ikke noget at importere.",
+    "connect": "Forbind\u2026",
+    "connectAccessibility": "Forbind {{service}}",
+    "signIn": "Log ind\u2026",
+    "signInAccessibility": "Log ind p\u00e5 {{service}}",
+    "disconnect": "Afbryd forbindelse\u2026",
+    "disconnectAccessibility": "Afbryd forbindelsen til {{service}}",
+    "disconnectTitle": "Afbryd forbindelsen til {{account}}?",
+    "disconnectConfirm": "Afbryd forbindelse",
+    "cancel": "Annull\u00e9r",
+    "disconnectMiro": "Bristlenose glemmer dette token og holder op med at sende citater til dine tavler. Tavler, du allerede har oprettet, bliver i Miro.",
+    "disconnectCloud": "Bristlenose glemmer dette login og holder op med at vise dine optagelser. Optagelser, du allerede har importeret, bliver i dine projekter.",
+    "disconnectRevocation": "Det tilbagekalder ikke Bristlenoses adgang hos udbyderen \u2014 det g\u00f8r du i indstillingerne for din konto der."
   },
   "mcpAgents": {
     "header": "Agenter l\u00e6ser det projekt, der er valgt i Bristlenose",

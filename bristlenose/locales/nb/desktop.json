@@ -363,6 +363,7 @@
     "exportShortcut": "Eksporter (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Kontoer",
     "general": "Generelt",
     "appearance": "Utseende",
     "llm": "LLM-leverand\u00f8r",
@@ -544,6 +545,28 @@
     "removedBatch": "%d prosjekter fjernet.",
     "undo": "Angre",
     "removed": "Prosjekt fjernet."
+  },
+  "accounts": {
+    "notAvailable": "Utilgjengelig",
+    "notConnected": "Ikke tilkoblet",
+    "connected": "Tilkoblet",
+    "cantSignIn": "Bristlenose kan ikke logge inn p\u00e5 {{service}}.",
+    "cantSignInStranded": "Bristlenose kan ikke logge inn p\u00e5 {{service}} i denne versjonen, men denne innloggingen er fortsatt lagret.",
+    "connectMiroElsewhere": "Koble til Miro fra \u00abSend til Miro\u00bb i Eksporter-menyen i et prosjekt.",
+    "signInAgain": "Leverand\u00f8ren avsluttet denne innloggingen. Logg inn p\u00e5 nytt for \u00e5 gjenopprette den.",
+    "cannotHoldRecordings": "Denne kontoen kan ikke inneholde m\u00f8teopptak, s\u00e5 det er ingenting \u00e5 importere.",
+    "connect": "Koble til\u2026",
+    "connectAccessibility": "Koble til {{service}}",
+    "signIn": "Logg inn\u2026",
+    "signInAccessibility": "Logg inn p\u00e5 {{service}}",
+    "disconnect": "Koble fra\u2026",
+    "disconnectAccessibility": "Koble fra {{service}}",
+    "disconnectTitle": "Koble fra {{account}}?",
+    "disconnectConfirm": "Koble fra",
+    "cancel": "Avbryt",
+    "disconnectMiro": "Bristlenose glemmer dette tokenet og slutter \u00e5 sende sitater til tavlene dine. Tavler du allerede har opprettet, blir v\u00e6rende i Miro.",
+    "disconnectCloud": "Bristlenose glemmer denne innloggingen og slutter \u00e5 vise opptakene dine. Opptak du allerede har importert, blir v\u00e6rende i prosjektene dine.",
+    "disconnectRevocation": "Dette opphever ikke Bristlenoses tilgang hos leverand\u00f8ren \u2014 det gj\u00f8r du i innstillingene for kontoen din der."
   },
   "mcpAgents": {
     "header": "Agenter leser prosjektet som er valgt i Bristlenose",

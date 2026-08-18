@@ -363,6 +363,7 @@
     "exportShortcut": "Exportieren (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Accounts",
     "general": "Allgemein",
     "appearance": "Erscheinungsbild",
     "llm": "LLM-Anbieter",
@@ -544,6 +545,28 @@
     "removedBatch": "%d Projekte entfernt.",
     "undo": "Widerrufen",
     "removed": "Projekt entfernt."
+  },
+  "accounts": {
+    "notAvailable": "Nicht verf\u00fcgbar",
+    "notConnected": "Nicht verbunden",
+    "connected": "Verbunden",
+    "cantSignIn": "Bristlenose kann sich nicht bei {{service}} anmelden.",
+    "cantSignInStranded": "Bristlenose kann sich in diesem Build nicht bei {{service}} anmelden, aber diese Anmeldung ist weiterhin gespeichert.",
+    "connectMiroElsewhere": "Verbinde Miro \u00fcber \"An Miro senden\" im Men\u00fc Exportieren eines Projekts.",
+    "signInAgain": "Der Anbieter hat diese Anmeldung beendet. Eine erneute Anmeldung stellt sie wieder her.",
+    "cannotHoldRecordings": "Dieser Account kann keine Meeting-Aufzeichnungen enthalten, also gibt es nichts zu importieren.",
+    "connect": "Verbinden\u2026",
+    "connectAccessibility": "{{service}} verbinden",
+    "signIn": "Anmelden\u2026",
+    "signInAccessibility": "Bei {{service}} anmelden",
+    "disconnect": "Trennen\u2026",
+    "disconnectAccessibility": "{{service}} trennen",
+    "disconnectTitle": "{{account}} trennen?",
+    "disconnectConfirm": "Trennen",
+    "cancel": "Abbrechen",
+    "disconnectMiro": "Bristlenose vergisst dieses Token und sendet keine Zitate mehr an deine Boards. Bereits erstellte Boards bleiben in Miro.",
+    "disconnectCloud": "Bristlenose vergisst diese Anmeldung und listet deine Aufzeichnungen nicht mehr auf. Bereits importierte Aufzeichnungen bleiben in deinen Projekten.",
+    "disconnectRevocation": "Das widerruft nicht den Zugriff von Bristlenose beim Anbieter \u2014 das machst du dort in den Einstellungen deines Accounts."
   },
   "mcpAgents": {
     "header": "Agenten lesen das in Bristlenose ausgew\u00e4hlte Projekt",

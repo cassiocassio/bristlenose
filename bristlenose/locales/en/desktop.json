@@ -363,6 +363,7 @@
     "exportShortcut": "Export (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Accounts",
     "general": "General",
     "appearance": "Appearance",
     "llm": "LLM Provider",
@@ -544,6 +545,28 @@
     "removedBatch": "%d projects removed.",
     "undo": "Undo",
     "removed": "Project removed."
+  },
+  "accounts": {
+    "notAvailable": "Not available",
+    "notConnected": "Not connected",
+    "connected": "Connected",
+    "cantSignIn": "Bristlenose can't sign in to {{service}}.",
+    "cantSignInStranded": "Bristlenose can't sign in to {{service}} in this build, but this sign-in is still stored.",
+    "connectMiroElsewhere": "Connect Miro from Send to Miro, in a project's Export menu.",
+    "signInAgain": "The provider ended this sign-in. Signing in again restores it.",
+    "cannotHoldRecordings": "This account can't hold meeting recordings, so there's nothing to import.",
+    "connect": "Connect\u2026",
+    "connectAccessibility": "Connect {{service}}",
+    "signIn": "Sign In\u2026",
+    "signInAccessibility": "Sign in to {{service}}",
+    "disconnect": "Disconnect\u2026",
+    "disconnectAccessibility": "Disconnect {{service}}",
+    "disconnectTitle": "Disconnect {{account}}?",
+    "disconnectConfirm": "Disconnect",
+    "cancel": "Cancel",
+    "disconnectMiro": "Bristlenose will forget this token and stop sending quotes to your boards. Boards you've already created stay in Miro.",
+    "disconnectCloud": "Bristlenose will forget this sign-in and stop listing your recordings. Recordings you've already imported stay in your projects.",
+    "disconnectRevocation": "This doesn't revoke Bristlenose's access at the provider \u2014 do that in your account settings there."
   },
   "mcpAgents": {
     "header": "Agents read whichever project is selected in Bristlenose",

@@ -380,6 +380,7 @@
     "exportShortcut": "Exportovat (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "\u00da\u010dty",
     "general": "Obecn\u00e9",
     "appearance": "Vzhled",
     "llm": "Poskytovatel LLM",
@@ -567,6 +568,28 @@
     "removedBatch": "Odebráno %d projektů.",
     "undo": "Zpět",
     "removed": "Projekt odebrán."
+  },
+  "accounts": {
+    "notAvailable": "Nedostupn\u00e9",
+    "notConnected": "Nep\u0159ipojeno",
+    "connected": "P\u0159ipojeno",
+    "cantSignIn": "Bristlenose se nem\u016f\u017ee p\u0159ihl\u00e1sit k {{service}}.",
+    "cantSignInStranded": "Bristlenose se v tomto sestaven\u00ed nem\u016f\u017ee p\u0159ihl\u00e1sit k {{service}}, ale toto p\u0159ihl\u00e1\u0161en\u00ed je st\u00e1le ulo\u017een\u00e9.",
+    "connectMiroElsewhere": "Miro p\u0159ipojte p\u0159es \u201eOdeslat do Mira\u201c v nab\u00eddce Exportovat u projektu.",
+    "signInAgain": "Poskytovatel toto p\u0159ihl\u00e1\u0161en\u00ed ukon\u010dil. Op\u011btovn\u00e9 p\u0159ihl\u00e1\u0161en\u00ed ho obnov\u00ed.",
+    "cannotHoldRecordings": "Tento \u00fa\u010det nem\u016f\u017ee obsahovat nahr\u00e1vky sch\u016fzek, tak\u017ee nen\u00ed co importovat.",
+    "connect": "P\u0159ipojit\u2026",
+    "connectAccessibility": "P\u0159ipojit {{service}}",
+    "signIn": "P\u0159ihl\u00e1sit se\u2026",
+    "signInAccessibility": "P\u0159ihl\u00e1sit se k {{service}}",
+    "disconnect": "Odpojit\u2026",
+    "disconnectAccessibility": "Odpojit {{service}}",
+    "disconnectTitle": "Odpojit {{account}}?",
+    "disconnectConfirm": "Odpojit",
+    "cancel": "Zru\u0161it",
+    "disconnectMiro": "Bristlenose zapomene tento token a p\u0159estane pos\u00edlat citace na va\u0161e n\u00e1st\u011bnky. N\u00e1st\u011bnky, kter\u00e9 jste u\u017e vytvo\u0159ili, z\u016fstanou v Miru.",
+    "disconnectCloud": "Bristlenose zapomene toto p\u0159ihl\u00e1\u0161en\u00ed a p\u0159estane vypisovat va\u0161e nahr\u00e1vky. Nahr\u00e1vky, kter\u00e9 jste u\u017e importovali, z\u016fstanou ve va\u0161ich projektech.",
+    "disconnectRevocation": "T\u00edm se neodvol\u00e1 p\u0159\u00edstup Bristlenose u poskytovatele \u2014 to ud\u011blejte tam v nastaven\u00ed sv\u00e9ho \u00fa\u010dtu."
   },
   "mcpAgents": {
     "header": "Agenti \u010dtou projekt vybran\u00fd v Bristlenose",

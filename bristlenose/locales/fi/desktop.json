@@ -363,6 +363,7 @@
     "exportShortcut": "Vie (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Tilit",
     "general": "Yleiset",
     "appearance": "Ulkoasu",
     "llm": "LLM-palveluntarjoaja",
@@ -544,6 +545,28 @@
     "removedBatch": "%d projektia poistettu.",
     "undo": "Kumoa",
     "removed": "Projekti poistettu."
+  },
+  "accounts": {
+    "notAvailable": "Ei k\u00e4ytett\u00e4viss\u00e4",
+    "notConnected": "Ei yhteytt\u00e4",
+    "connected": "Yhdistetty",
+    "cantSignIn": "Bristlenose ei voi kirjautua palveluun {{service}}.",
+    "cantSignInStranded": "Bristlenose ei voi kirjautua palveluun {{service}} t\u00e4ss\u00e4 versiossa, mutta t\u00e4m\u00e4 kirjautuminen on yh\u00e4 tallessa.",
+    "connectMiroElsewhere": "Yhdist\u00e4 Miro projektin Vie-valikon kohdasta \u201dL\u00e4het\u00e4 Miroon\u201d.",
+    "signInAgain": "Palveluntarjoaja p\u00e4\u00e4tti t\u00e4m\u00e4n kirjautumisen. Uusi kirjautuminen palauttaa sen.",
+    "cannotHoldRecordings": "T\u00e4m\u00e4 tili ei voi sis\u00e4lt\u00e4\u00e4 kokoustallenteita, joten tuotavaa ei ole.",
+    "connect": "Yhdist\u00e4\u2026",
+    "connectAccessibility": "Yhdist\u00e4 {{service}}",
+    "signIn": "Kirjaudu\u2026",
+    "signInAccessibility": "Kirjaudu palveluun {{service}}",
+    "disconnect": "Katkaise yhteys\u2026",
+    "disconnectAccessibility": "Katkaise yhteys palveluun {{service}}",
+    "disconnectTitle": "Katkaistaanko yhteys tiliin {{account}}?",
+    "disconnectConfirm": "Katkaise yhteys",
+    "cancel": "Peruuta",
+    "disconnectMiro": "Bristlenose unohtaa t\u00e4m\u00e4n tunnuksen eik\u00e4 en\u00e4\u00e4 l\u00e4het\u00e4 sitaatteja tauluillesi. Jo luodut taulut s\u00e4ilyv\u00e4t Mirossa.",
+    "disconnectCloud": "Bristlenose unohtaa t\u00e4m\u00e4n kirjautumisen eik\u00e4 en\u00e4\u00e4 listaa tallenteitasi. Jo tuodut tallenteet s\u00e4ilyv\u00e4t projekteissasi.",
+    "disconnectRevocation": "T\u00e4m\u00e4 ei peru Bristlenosen k\u00e4ytt\u00f6oikeutta palveluntarjoajalla \u2014 tee se siell\u00e4 tilisi asetuksissa."
   },
   "mcpAgents": {
     "header": "Agentit lukevat Bristlenosessa valittuna olevaa projektia",

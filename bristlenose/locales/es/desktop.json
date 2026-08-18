@@ -363,6 +363,7 @@
     "exportShortcut": "Exportar (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Cuentas",
     "general": "General",
     "appearance": "Apariencia",
     "llm": "Proveedor de LLM",
@@ -544,6 +545,28 @@
     "removedBatch": "%d proyectos eliminados.",
     "undo": "Deshacer",
     "removed": "Proyecto eliminado."
+  },
+  "accounts": {
+    "notAvailable": "No disponible",
+    "notConnected": "No conectado",
+    "connected": "Conectado",
+    "cantSignIn": "Bristlenose no puede iniciar sesi\u00f3n en {{service}}.",
+    "cantSignInStranded": "Bristlenose no puede iniciar sesi\u00f3n en {{service}} en esta versi\u00f3n, pero este inicio de sesi\u00f3n sigue guardado.",
+    "connectMiroElsewhere": "Conecta Miro desde \"Enviar a Miro\", en el men\u00fa Exportar de un proyecto.",
+    "signInAgain": "El proveedor cerr\u00f3 este inicio de sesi\u00f3n. Volver a iniciar sesi\u00f3n lo restaura.",
+    "cannotHoldRecordings": "Esta cuenta no puede guardar grabaciones de reuniones, as\u00ed que no hay nada que importar.",
+    "connect": "Conectar\u2026",
+    "connectAccessibility": "Conectar {{service}}",
+    "signIn": "Iniciar sesi\u00f3n\u2026",
+    "signInAccessibility": "Iniciar sesi\u00f3n en {{service}}",
+    "disconnect": "Desconectar\u2026",
+    "disconnectAccessibility": "Desconectar {{service}}",
+    "disconnectTitle": "\u00bfDesconectar {{account}}?",
+    "disconnectConfirm": "Desconectar",
+    "cancel": "Cancelar",
+    "disconnectMiro": "Bristlenose olvidar\u00e1 este token y dejar\u00e1 de enviar citas a tus tableros. Los tableros que ya creaste siguen en Miro.",
+    "disconnectCloud": "Bristlenose olvidar\u00e1 este inicio de sesi\u00f3n y dejar\u00e1 de mostrar tus grabaciones. Las grabaciones que ya importaste siguen en tus proyectos.",
+    "disconnectRevocation": "Esto no revoca el acceso de Bristlenose en el proveedor: hazlo en los ajustes de tu cuenta all\u00ed."
   },
   "mcpAgents": {
     "header": "Los agentes leen el proyecto seleccionado en Bristlenose",

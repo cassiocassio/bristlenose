@@ -363,6 +363,7 @@
     "exportShortcut": "Exportar (⌘⇧E)"
   },
   "settingsTabs": {
+    "accounts": "Contas",
     "general": "Geral",
     "appearance": "Aparência",
     "llm": "Provedor de LLM",
@@ -544,6 +545,28 @@
     "removedBatch": "%d projetos removidos.",
     "undo": "Desfazer",
     "removed": "Projeto removido."
+  },
+  "accounts": {
+    "notAvailable": "Indispon\u00edvel",
+    "notConnected": "N\u00e3o conectado",
+    "connected": "Conectado",
+    "cantSignIn": "O Bristlenose n\u00e3o consegue fazer login no {{service}}.",
+    "cantSignInStranded": "O Bristlenose n\u00e3o consegue fazer login no {{service}} nesta vers\u00e3o, mas este login continua guardado.",
+    "connectMiroElsewhere": "Conecte o Miro em \"Enviar para o Miro\", no menu Exportar de um projeto.",
+    "signInAgain": "O provedor encerrou este login. Fazer login de novo o restaura.",
+    "cannotHoldRecordings": "Esta conta n\u00e3o pode guardar grava\u00e7\u00f5es de reuni\u00f5es, ent\u00e3o n\u00e3o h\u00e1 nada para importar.",
+    "connect": "Conectar\u2026",
+    "connectAccessibility": "Conectar {{service}}",
+    "signIn": "Fazer login\u2026",
+    "signInAccessibility": "Fazer login no {{service}}",
+    "disconnect": "Desconectar\u2026",
+    "disconnectAccessibility": "Desconectar {{service}}",
+    "disconnectTitle": "Desconectar {{account}}?",
+    "disconnectConfirm": "Desconectar",
+    "cancel": "Cancelar",
+    "disconnectMiro": "O Bristlenose vai esquecer este token e parar de enviar cita\u00e7\u00f5es para seus quadros. Os quadros que voc\u00ea j\u00e1 criou continuam no Miro.",
+    "disconnectCloud": "O Bristlenose vai esquecer este login e parar de listar suas grava\u00e7\u00f5es. As grava\u00e7\u00f5es que voc\u00ea j\u00e1 importou continuam nos seus projetos.",
+    "disconnectRevocation": "Isso n\u00e3o revoga o acesso do Bristlenose no provedor \u2014 fa\u00e7a isso nas configura\u00e7\u00f5es da sua conta l\u00e1."
   },
   "mcpAgents": {
     "header": "Os agentes leem o projeto selecionado no Bristlenose",

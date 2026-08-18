@@ -354,6 +354,7 @@
     "exportShortcut": "輸出（⌘⇧E）"
   },
   "settingsTabs": {
+    "accounts": "\u5e33\u6236",
     "general": "\u4e00\u822c",
     "appearance": "外觀",
     "llm": "LLM \u4f9b\u61c9\u5546",
@@ -532,6 +533,28 @@
     "removedBatch": "已移除 %d 個專案。",
     "undo": "還原",
     "removed": "已移除專案。"
+  },
+  "accounts": {
+    "notAvailable": "\u7121\u6cd5\u4f7f\u7528",
+    "notConnected": "\u5c1a\u672a\u9023\u63a5",
+    "connected": "\u5df2\u9023\u7dda",
+    "cantSignIn": "Bristlenose \u7121\u6cd5\u767b\u5165 {{service}}\u3002",
+    "cantSignInStranded": "\u9019\u500b\u7248\u672c\u7684 Bristlenose \u7121\u6cd5\u767b\u5165 {{service}}\uff0c\u4f46\u9019\u7b46\u767b\u5165\u8cc7\u8a0a\u4ecd\u7136\u4fdd\u5b58\u8457\u3002",
+    "connectMiroElsewhere": "\u8acb\u5728\u5c08\u6848\u7684\u300c\u532f\u51fa\u300d\u9078\u55ae\u4e2d\u9078\u64c7\u300c\u50b3\u9001\u81f3 Miro\u300d\u4f86\u9023\u63a5 Miro\u3002",
+    "signInAgain": "\u670d\u52d9\u4f9b\u61c9\u5546\u5df2\u7d50\u675f\u9019\u6b21\u767b\u5165\u3002\u91cd\u65b0\u767b\u5165\u5373\u53ef\u6062\u5fa9\u3002",
+    "cannotHoldRecordings": "\u9019\u500b\u5e33\u6236\u7121\u6cd5\u4fdd\u5b58\u6703\u8b70\u9304\u5f71\uff0c\u56e0\u6b64\u6c92\u6709\u53ef\u532f\u5165\u7684\u9805\u76ee\u3002",
+    "connect": "\u9023\u63a5\u2026",
+    "connectAccessibility": "\u9023\u63a5 {{service}}",
+    "signIn": "\u767b\u5165\u2026",
+    "signInAccessibility": "\u767b\u5165 {{service}}",
+    "disconnect": "\u4e2d\u65b7\u9023\u63a5\u2026",
+    "disconnectAccessibility": "\u4e2d\u65b7 {{service}} \u7684\u9023\u63a5",
+    "disconnectTitle": "\u8981\u4e2d\u65b7 {{account}} \u7684\u9023\u63a5\u55ce\uff1f",
+    "disconnectConfirm": "\u4e2d\u65b7\u9023\u63a5",
+    "cancel": "\u53d6\u6d88",
+    "disconnectMiro": "Bristlenose \u6703\u5fd8\u8a18\u9019\u500b\u6b0a\u6756\uff0c\u4e26\u505c\u6b62\u50b3\u9001\u5f15\u6587\u5230\u4f60\u7684\u770b\u677f\u3002\u4f60\u5df2\u5efa\u7acb\u7684\u770b\u677f\u6703\u7559\u5728 Miro\u3002",
+    "disconnectCloud": "Bristlenose \u6703\u5fd8\u8a18\u9019\u6b21\u767b\u5165\uff0c\u4e26\u505c\u6b62\u5217\u51fa\u4f60\u7684\u9304\u5f71\u3002\u4f60\u5df2\u532f\u5165\u7684\u9304\u5f71\u6703\u7559\u5728\u4f60\u7684\u5c08\u6848\u4e2d\u3002",
+    "disconnectRevocation": "\u9019\u4e0d\u6703\u64a4\u92b7 Bristlenose \u5728\u670d\u52d9\u4f9b\u61c9\u5546\u7aef\u7684\u5b58\u53d6\u6b0a\uff0c\u8acb\u5230\u90a3\u88e1\u7684\u5e33\u6236\u8a2d\u5b9a\u4e2d\u64a4\u92b7\u3002"
   },
   "mcpAgents": {
     "header": "\u4ee3\u7406\u6703\u8b80\u53d6 Bristlenose \u4e2d\u9078\u53d6\u7684\u5c08\u6848",

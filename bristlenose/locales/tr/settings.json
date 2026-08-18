@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "Yeni projeler i\u00e7in varsay\u0131lan konum",
+    "lastLocationUsed": "Son kullan\u0131lan konum",
+    "chooseOther": "Di\u011fer\u2026",
+    "useLastLocation": "Son kullan\u0131lan konumu kullan",
+    "choosePrompt": "Se\u00e7",
+    "chooseMessage": "Yeni projelerin nerede olu\u015fturulaca\u011f\u0131n\u0131 se\u00e7in.",
+    "inProvider": "{{provider}} i\u00e7inde",
+    "volumeOffline": "Ba\u011fl\u0131 olmayan \u201c{{volume}}\u201d biriminde.",
+    "folderDeleted": "Bu klas\u00f6r silinmi\u015f.",
+    "fallbackNote": "Yeni projeler son kullan\u0131lan konumda olu\u015fturulacak."
+  },
   "heading": "Ayarlar",
   "appearance": {
     "diagnosticsLegend": "Tan\u0131lama men\u00fcs\u00fcn\u00fc g\u00f6ster",

@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "Standardort f\u00fcr neue Projekte",
+    "lastLocationUsed": "Zuletzt verwendeter Ort",
+    "chooseOther": "Andere\u2026",
+    "useLastLocation": "Zuletzt verwendeten Ort verwenden",
+    "choosePrompt": "Ausw\u00e4hlen",
+    "chooseMessage": "Ort ausw\u00e4hlen, an dem neue Projekte erstellt werden.",
+    "inProvider": "in {{provider}}",
+    "volumeOffline": "Auf \u201e{{volume}}\u201c, das nicht angeschlossen ist.",
+    "folderDeleted": "Dieser Ordner wurde gel\u00f6scht.",
+    "fallbackNote": "Neue Projekte werden am zuletzt verwendeten Ort erstellt."
+  },
   "heading": "Einstellungen",
   "appearance": {
     "diagnosticsLegend": "Diagnosemen\u00fc anzeigen",

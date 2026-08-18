@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "V\u00fdchoz\u00ed um\u00edst\u011bn\u00ed nov\u00fdch projekt\u016f",
+    "lastLocationUsed": "Posledn\u00ed pou\u017eit\u00e9 um\u00edst\u011bn\u00ed",
+    "chooseOther": "Jin\u00e9\u2026",
+    "useLastLocation": "Pou\u017e\u00edt posledn\u00ed um\u00edst\u011bn\u00ed",
+    "choosePrompt": "Vybrat",
+    "chooseMessage": "Vyberte, kde se maj\u00ed vytv\u00e1\u0159et nov\u00e9 projekty.",
+    "inProvider": "ve slu\u017eb\u011b {{provider}}",
+    "volumeOffline": "Na disku \u201e{{volume}}\u201c, kter\u00fd nen\u00ed p\u0159ipojen.",
+    "folderDeleted": "Tato slo\u017eka byla smaz\u00e1na.",
+    "fallbackNote": "Nov\u00e9 projekty se budou vytv\u00e1\u0159et v posledn\u00edm pou\u017eit\u00e9m um\u00edst\u011bn\u00ed."
+  },
   "heading": "Nastavení",
   "appearance": {
     "diagnosticsLegend": "Zobrazit nab\u00eddku Diagnostika",

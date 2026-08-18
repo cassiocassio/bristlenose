@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "Domy\u015blna lokalizacja nowych projekt\u00f3w",
+    "lastLocationUsed": "Ostatnio u\u017cywana lokalizacja",
+    "chooseOther": "Inna\u2026",
+    "useLastLocation": "U\u017cyj ostatniej lokalizacji",
+    "choosePrompt": "Wybierz",
+    "chooseMessage": "Wybierz, gdzie maj\u0105 by\u0107 tworzone nowe projekty.",
+    "inProvider": "w us\u0142udze {{provider}}",
+    "volumeOffline": "Na \u201e{{volume}}\u201d, kt\u00f3ry nie jest pod\u0142\u0105czony.",
+    "folderDeleted": "Ten folder zosta\u0142 usuni\u0119ty.",
+    "fallbackNote": "Nowe projekty b\u0119d\u0105 tworzone w ostatnio u\u017cywanej lokalizacji."
+  },
   "heading": "Ustawienia",
   "appearance": {
     "diagnosticsLegend": "Poka\u017c menu Diagnostyka",

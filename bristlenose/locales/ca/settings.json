@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "Ubicaci\u00f3 per omissi\u00f3 dels projectes nous",
+    "lastLocationUsed": "\u00daltima ubicaci\u00f3 utilitzada",
+    "chooseOther": "Altra\u2026",
+    "useLastLocation": "Utilitza l'\u00faltima ubicaci\u00f3",
+    "choosePrompt": "Selecciona",
+    "chooseMessage": "Trieu on s'han de crear els projectes nous.",
+    "inProvider": "a {{provider}}",
+    "volumeOffline": "A \u00ab{{volume}}\u00bb, que no est\u00e0 connectat.",
+    "folderDeleted": "Aquesta carpeta s'ha eliminat.",
+    "fallbackNote": "Els projectes nous comen\u00e7aran a l'\u00faltima ubicaci\u00f3 utilitzada."
+  },
   "heading": "Configuració",
   "appearance": {
     "diagnosticsLegend": "Mostra el menú Diagnòstic",

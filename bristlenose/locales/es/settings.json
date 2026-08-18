@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "Ubicaci\u00f3n por omisi\u00f3n de los proyectos nuevos",
+    "lastLocationUsed": "\u00daltima ubicaci\u00f3n utilizada",
+    "chooseOther": "Otra\u2026",
+    "useLastLocation": "Usar la \u00faltima ubicaci\u00f3n",
+    "choosePrompt": "Seleccionar",
+    "chooseMessage": "Selecciona d\u00f3nde se crear\u00e1n los proyectos nuevos.",
+    "inProvider": "en {{provider}}",
+    "volumeOffline": "En \u00ab{{volume}}\u00bb, que no est\u00e1 conectado.",
+    "folderDeleted": "Esta carpeta se ha eliminado.",
+    "fallbackNote": "Los proyectos nuevos se crear\u00e1n en la \u00faltima ubicaci\u00f3n utilizada."
+  },
   "heading": "Ajustes",
   "appearance": {
     "diagnosticsLegend": "Mostrar el men\u00fa Diagn\u00f3stico",

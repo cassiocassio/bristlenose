@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "Localiza\u00e7\u00e3o predefinida para novos projetos",
+    "lastLocationUsed": "\u00daltima localiza\u00e7\u00e3o usada",
+    "chooseOther": "Outra\u2026",
+    "useLastLocation": "Usar \u00faltima localiza\u00e7\u00e3o",
+    "choosePrompt": "Escolher",
+    "chooseMessage": "Escolha onde os novos projetos devem ser criados.",
+    "inProvider": "em {{provider}}",
+    "volumeOffline": "Em \u00ab{{volume}}\u00bb, que n\u00e3o est\u00e1 ligado.",
+    "folderDeleted": "Esta pasta foi eliminada.",
+    "fallbackNote": "Os novos projetos ser\u00e3o criados na \u00faltima localiza\u00e7\u00e3o usada."
+  },
   "heading": "Definições",
   "appearance": {
     "diagnosticsLegend": "Mostrar o menu Diagn\u00f3stico",

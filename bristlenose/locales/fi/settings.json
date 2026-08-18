@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "Uusien projektien oletussijainti",
+    "lastLocationUsed": "Viimeksi k\u00e4ytetty sijainti",
+    "chooseOther": "Muu\u2026",
+    "useLastLocation": "K\u00e4yt\u00e4 viimeksi k\u00e4ytetty\u00e4 sijaintia",
+    "choosePrompt": "Valitse",
+    "chooseMessage": "Valitse, mihin uudet projektit luodaan.",
+    "inProvider": "palvelussa {{provider}}",
+    "volumeOffline": "Taltiolla \u201d{{volume}}\u201d, jota ei ole yhdistetty.",
+    "folderDeleted": "T\u00e4m\u00e4 kansio on poistettu.",
+    "fallbackNote": "Uudet projektit luodaan viimeksi k\u00e4ytettyyn sijaintiin."
+  },
   "heading": "Asetukset",
   "appearance": {
     "diagnosticsLegend": "N\u00e4yt\u00e4 Diagnostiikka-valikko",

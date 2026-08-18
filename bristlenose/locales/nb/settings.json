@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "Standardplassering for nye prosjekter",
+    "lastLocationUsed": "Sist brukte plassering",
+    "chooseOther": "Annet\u2026",
+    "useLastLocation": "Bruk sist brukte plassering",
+    "choosePrompt": "Velg",
+    "chooseMessage": "Velg hvor nye prosjekter skal opprettes.",
+    "inProvider": "i {{provider}}",
+    "volumeOffline": "P\u00e5 \u00ab{{volume}}\u00bb, som ikke er tilkoblet.",
+    "folderDeleted": "Denne mappen er slettet.",
+    "fallbackNote": "Nye prosjekter opprettes p\u00e5 sist brukte plassering."
+  },
   "heading": "Innstillinger",
   "appearance": {
     "diagnosticsLegend": "Vis Diagnostikk-menyen",

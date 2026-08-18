@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "Emplacement par d\u00e9faut des nouveaux projets",
+    "lastLocationUsed": "Dernier emplacement utilis\u00e9",
+    "chooseOther": "Autre\u2026",
+    "useLastLocation": "Utiliser le dernier emplacement",
+    "choosePrompt": "Choisir",
+    "chooseMessage": "Choisissez l\u2019emplacement o\u00f9 les nouveaux projets seront cr\u00e9\u00e9s.",
+    "inProvider": "dans {{provider}}",
+    "volumeOffline": "Sur \u00ab {{volume}} \u00bb, qui n\u2019est pas connect\u00e9.",
+    "folderDeleted": "Ce dossier a \u00e9t\u00e9 supprim\u00e9.",
+    "fallbackNote": "Les nouveaux projets seront cr\u00e9\u00e9s au dernier emplacement utilis\u00e9."
+  },
   "heading": "Réglages",
   "appearance": {
     "diagnosticsLegend": "Afficher le menu Diagnostics",

@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "Standaardlocatie voor nieuwe projecten",
+    "lastLocationUsed": "Laatstgebruikte locatie",
+    "chooseOther": "Andere\u2026",
+    "useLastLocation": "Gebruik laatstgebruikte locatie",
+    "choosePrompt": "Kies",
+    "chooseMessage": "Kies waar nieuwe projecten moeten worden aangemaakt.",
+    "inProvider": "in {{provider}}",
+    "volumeOffline": "Op \u2018{{volume}}\u2019, dat niet is aangesloten.",
+    "folderDeleted": "Deze map is verwijderd.",
+    "fallbackNote": "Nieuwe projecten worden aangemaakt op de laatstgebruikte locatie."
+  },
   "heading": "Instellingen",
   "appearance": {
     "diagnosticsLegend": "Toon het menu Diagnose",

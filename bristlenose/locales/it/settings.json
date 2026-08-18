@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "Posizione predefinita dei nuovi progetti",
+    "lastLocationUsed": "Ultima posizione utilizzata",
+    "chooseOther": "Altra\u2026",
+    "useLastLocation": "Usa l\u2019ultima posizione",
+    "choosePrompt": "Scegli",
+    "chooseMessage": "Scegli dove creare i nuovi progetti.",
+    "inProvider": "in {{provider}}",
+    "volumeOffline": "Su \u201c{{volume}}\u201d, che non \u00e8 collegato.",
+    "folderDeleted": "Questa cartella \u00e8 stata eliminata.",
+    "fallbackNote": "I nuovi progetti verranno creati nell\u2019ultima posizione utilizzata."
+  },
   "heading": "Impostazioni",
   "appearance": {
     "diagnosticsLegend": "Mostra il menu Diagnostica",

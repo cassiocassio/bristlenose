@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "\u65b0\u5c08\u6848\u7684\u9810\u8a2d\u4f4d\u7f6e",
+    "lastLocationUsed": "\u4e0a\u6b21\u4f7f\u7528\u7684\u4f4d\u7f6e",
+    "chooseOther": "\u5176\u4ed6\u2026",
+    "useLastLocation": "\u4f7f\u7528\u4e0a\u6b21\u7684\u4f4d\u7f6e",
+    "choosePrompt": "\u9078\u64c7",
+    "chooseMessage": "\u9078\u64c7\u65b0\u5c08\u6848\u7684\u5efa\u7acb\u4f4d\u7f6e\u3002",
+    "inProvider": "\u4f4d\u65bc {{provider}}",
+    "volumeOffline": "\u4f4d\u65bc\u300c{{volume}}\u300d\uff0c\u4f46\u5c1a\u672a\u9023\u63a5\u3002",
+    "folderDeleted": "\u6b64\u6a94\u6848\u593e\u5df2\u88ab\u522a\u9664\u3002",
+    "fallbackNote": "\u65b0\u5c08\u6848\u5c07\u5efa\u7acb\u5728\u4e0a\u6b21\u4f7f\u7528\u7684\u4f4d\u7f6e\u3002"
+  },
   "heading": "設定",
   "appearance": {
     "diagnosticsLegend": "\u986f\u793a\u300c\u8a3a\u65b7\u300d\u9078\u55ae",

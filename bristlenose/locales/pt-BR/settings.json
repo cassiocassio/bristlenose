@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "Local padr\u00e3o para novos projetos",
+    "lastLocationUsed": "\u00daltimo local usado",
+    "chooseOther": "Outro\u2026",
+    "useLastLocation": "Usar \u00faltimo local",
+    "choosePrompt": "Escolher",
+    "chooseMessage": "Escolha onde os novos projetos ser\u00e3o criados.",
+    "inProvider": "em {{provider}}",
+    "volumeOffline": "Em \u201c{{volume}}\u201d, que n\u00e3o est\u00e1 conectado.",
+    "folderDeleted": "Esta pasta foi apagada.",
+    "fallbackNote": "Os novos projetos ser\u00e3o criados no \u00faltimo local usado."
+  },
   "heading": "Ajustes",
   "appearance": {
     "diagnosticsLegend": "Mostrar o menu Diagn\u00f3stico",

@@ -1,4 +1,16 @@
 {
+  "general": {
+    "projectFolderLegend": "Standardplats f\u00f6r nya projekt",
+    "lastLocationUsed": "Senast anv\u00e4nda plats",
+    "chooseOther": "Annan\u2026",
+    "useLastLocation": "Anv\u00e4nd senast anv\u00e4nda plats",
+    "choosePrompt": "V\u00e4lj",
+    "chooseMessage": "V\u00e4lj var nya projekt ska skapas.",
+    "inProvider": "i {{provider}}",
+    "volumeOffline": "P\u00e5 \u201d{{volume}}\u201d, som inte \u00e4r ansluten.",
+    "folderDeleted": "Den h\u00e4r mappen har raderats.",
+    "fallbackNote": "Nya projekt skapas p\u00e5 den senast anv\u00e4nda platsen."
+  },
   "heading": "Inställningar",
   "appearance": {
     "diagnosticsLegend": "Visa menyn Diagnostik",

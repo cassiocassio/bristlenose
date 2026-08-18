@@ -5,9 +5,10 @@ import SwiftUI
 //
 // §9 puts account lifecycle here: "One place to disconnect, not two." A section
 // per service rather than one list of connected accounts, because with a fixed
-// catalogue of four the question "what can this thing talk to?" is worth
-// answering as plainly as "what have I connected?" — and a permanent
-// Not-connected row answers it without a modal to open.
+// catalogue the question "what have I connected?" and the question "what could
+// I connect?" have the same answer shape — and a permanent Not-connected row
+// answers the second without a modal to open. Services that cannot be connected
+// at all are not listed; see `AccountService.all`.
 //
 // **The pane makes no network calls.** Every state comes off disk; see
 // `AccountsSectionModel` for why, and for which state is still owed a writer.
@@ -46,14 +47,13 @@ struct AccountsSettingsView: View {
     var body: some View {
         Form {
             ForEach(sections) { section in
-                Section {
+                // Header text only. No glyph — see `AccountService` — and no
+                // footer: the line under each row explained what the service is
+                // for, which is a question the researcher settled before they
+                // came here, and four permanent sales lines under four state
+                // rows is what the row was competing with.
+                Section(section.service.displayName) {
                     row(section)
-                } header: {
-                    Label(section.service.displayName, systemImage: section.service.symbolName)
-                } footer: {
-                    Text(section.service.purpose)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
                 }
             }
         }

@@ -27,13 +27,26 @@ enum AccountService: Hashable, Identifiable, Sendable {
     case cloud(CloudPlatform)
     case miro
 
-    /// Every service, in the order the pane lists them: the meeting platforms
-    /// in §5's sequence, then Miro, the only one that sends rather than fetches.
+    /// Every service the pane lists: the meeting platforms in §5's sequence,
+    /// then Miro, the only one that sends rather than fetches.
     ///
-    /// All four always, including the ones that cannot be connected yet. A
-    /// catalogue that hides what is not ready cannot answer "what can this
-    /// thing talk to?", which is half of what a researcher opens this pane for.
-    static let all: [AccountService] = CloudPlatform.built.map(Self.cloud) + [.miro]
+    /// **`shipping`, not `built` — a parked service is not listed at all.** This
+    /// read `built` for one release, on the argument that a catalogue which
+    /// hides what is not ready cannot answer "what can this thing talk to?".
+    /// That argument was wrong about the reader: a permanent row saying
+    /// Bristlenose cannot sign in to Zoom answers a question nobody asked, and
+    /// spends a quarter of the pane doing it. A service appears when connecting
+    /// to it is possible.
+    ///
+    /// A computed `var` rather than a `static let`: `shipping` reads a
+    /// UserDefaults flag, and a stored property would freeze whatever it said
+    /// at first access.
+    ///
+    /// Safe only because a parked platform cannot hold a grant — `accountKeys`
+    /// returns nothing for one, so hiding it cannot strand a credential where
+    /// no UI can reach it. Check that again before parking a service that has
+    /// ever stored a sign-in.
+    static var all: [AccountService] { CloudPlatform.shipping.map(Self.cloud) + [.miro] }
 
     var id: String {
         switch self {
@@ -49,23 +62,13 @@ enum AccountService: Hashable, Identifiable, Sendable {
         }
     }
 
-    var symbolName: String {
-        switch self {
-        case .cloud(let platform): return platform.symbolName
-        case .miro: return "square.on.square.dashed"
-        }
-    }
-
-    /// What the account is for. Sits in the section footer, so it reads as
-    /// "why would I connect this" rather than as instructions.
-    var purpose: String {
-        switch self {
-        case .cloud(.teams): return "Bring recordings in from OneDrive without downloading them by hand."
-        case .cloud(.meet):  return "Bring recordings in from Drive without downloading them by hand."
-        case .cloud(.zoom):  return "Bring cloud recordings in without downloading them by hand."
-        case .miro:          return "Send quotes to a board."
-        }
-    }
+    // **No symbol, deliberately.** The section headers carried SF Symbols
+    // standing in for vendor marks — a person glyph for Teams, a camera for
+    // Meet, a stacked rectangle for Miro. None of them is the thing they name,
+    // and a glyph that is not the product's own mark is decoration wearing the
+    // costume of identification. The real marks need a licence from all three
+    // vendors (§9a), so until then the name does the work, which is also what
+    // System Settings and Mail do with their own account group headers.
 
     /// Whether connecting is something this pane can start.
     ///

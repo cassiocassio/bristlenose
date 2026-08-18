@@ -40,11 +40,29 @@ struct AccountsSectionModelTests {
 
     // MARK: The catalogue
 
-    @Test("All four services are always listed, connected or not")
+    @Test("Every connectable service is listed, connected or not")
     func catalogueIsFixed() {
-        // A catalogue that hides what is not ready cannot answer "what can this
-        // thing talk to?", which is half of why the pane is opened.
-        #expect(sections().map(\.service.id) == ["teams", "meet", "zoom", "miro"])
+        // The list is the catalogue: a service appears whether or not there is
+        // a sign-in for it, so "what could I connect?" is answerable without a
+        // modal. `AccountService.all` decides membership; this pins that the
+        // pane renders one section per member, in order.
+        #expect(sections().map(\.service.id) == AccountService.all.map(\.id))
+        #expect(sections().map(\.service.id).contains("miro"))
+    }
+
+    @Test("A parked service is not listed at all")
+    func parkedServiceIsAbsent() {
+        // _Reversed 18 Aug 2026._ Zoom used to get a permanent row reading
+        // "Not available — Bristlenose can't sign in to Zoom", on the argument
+        // that a catalogue hiding what is not ready cannot say what the app can
+        // talk to. That answers a question nobody asked and spends a quarter of
+        // the pane doing it. `AccountService.all` reads `CloudPlatform.shipping`
+        // now, so a parked platform is simply absent — safe only because a
+        // parked platform cannot hold a grant.
+        #expect(!AccountService.all.map(\.id).contains("zoom"),
+                "Zoom is parked and must not be offered a row")
+        #expect(CloudGrantStore.connections(store: InMemoryKeychain())
+                .allSatisfy { $0.platform != .zoom })
     }
 
     @Test("Nothing connected reads as not connected, not as broken")
@@ -59,10 +77,12 @@ struct AccountsSectionModelTests {
 
     @Test("A service this build can't sign in to says so, and offers no verb")
     func unavailableWhenNoClient() {
-        // Zoom today: parked behind a flag, no OAuth client. Not the
-        // researcher's doing and not something they can fix.
-        let result = sections(available: [.teams, .meet])
-        #expect(state(result, "zoom") == .unavailable(strandedIdentity: nil))
+        // Not the parked case any more — a parked service is absent entirely.
+        // This is the other route in: a build carrying no OAuth client for a
+        // platform that is otherwise shipping. Not the researcher's doing and
+        // not something they can fix, so the row carries no way to connect.
+        let result = sections(available: [.meet])
+        #expect(state(result, "teams") == .unavailable(strandedIdentity: nil))
     }
 
     @Test("Unavailable wins over a grant left behind by an earlier build")
@@ -126,7 +146,7 @@ struct AccountsSectionModelTests {
         let result = sections(connections: [connection(.meet, "martin@finca342.org")])
         #expect(state(result, "meet") == .connected(identity: "martin@finca342.org"))
         #expect(state(result, "teams") == .notConnected)
-        #expect(state(result, "zoom") == .notConnected)
+        #expect(state(result, "miro") == .notConnected)
     }
 
     // MARK: Needs attention

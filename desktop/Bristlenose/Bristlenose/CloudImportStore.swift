@@ -278,6 +278,28 @@ final class CloudImportStore: ObservableObject {
         return only
     }
 
+    /// The files this batch actually wrote.
+    ///
+    /// Read off `outcomes`, which `startFetch` clears, so this is the current
+    /// batch by construction rather than by bookkeeping — a Retry that
+    /// re-fetches two failed rows reports those two and not the eighteen the
+    /// first batch already handed over.
+    var landedFiles: [URL] {
+        outcomes.values.compactMap {
+            guard case .imported(_, let url) = $0 else { return nil }
+            return url
+        }
+    }
+
+    /// Called once when a batch settles, with the project it was aimed at and
+    /// the files that reached it.
+    ///
+    /// **Wired for live sessions only** (`CloudImportCoordinator.openLive`).
+    /// The fixture source simulates transfers and writes no bytes, so a
+    /// Diagnostics scenario must not be able to start a real, billable run
+    /// against a project that gained nothing.
+    var onBatchSettled: ((CloudImportBatchResult) -> Void)?
+
     /// The terminus (§6's fourth honest-batch requirement):
     /// `20 requested · 18 imported · 2 failed`. Nil until a batch has run.
     var terminus: (requested: Int, imported: Int, failed: Int)? {
@@ -677,6 +699,16 @@ final class CloudImportStore: ObservableObject {
                 }
             }
             isFetching = false
+            // Hand the landed files on **before** the ring clears: `batch` is
+            // what carries the destination project, and this is the last
+            // moment it exists. Same generation guard as the line below, for
+            // the same reason and one worse consequence — a superseded batch
+            // firing here would start a run against the project the *replaced*
+            // batch was aimed at.
+            if self.fetchGeneration == mine, let settled = self.batch {
+                onBatchSettled?(CloudImportBatchResult(
+                    projectID: settled.projectID, landed: self.landedFiles))
+            }
             // The row's ring is driven off this, so clearing it is what makes
             // the sidebar go quiet. Guarded on the generation: a superseded
             // batch must not blank the indicator of the one that replaced it.

@@ -48,6 +48,71 @@ final class CloudImportCoordinator: ObservableObject {
         CloudGrantStore.firstAccountKey(for: $0)
     }
 
+    /// Set once at launch by `BristlenoseApp`, like `SettingsWindow`'s pair.
+    ///
+    /// The coordinator is where the pipeline handoff belongs because it is the
+    /// **only** single owner in the picture: the store outlives the window (a
+    /// batch keeps running when it closes), and the obvious alternative — a
+    /// `NotificationCenter` post observed in `ContentView` — is answered by
+    /// *every open window*, so a researcher with two windows open would get two
+    /// runs started for one batch. That is the exact defect the nine Project
+    /// menu receivers were removed for on 16 Aug 2026.
+    weak var projectIndex: ProjectIndex?
+    weak var pipelineRunner: PipelineRunner?
+
+    /// Hand a settled live batch to the pipeline.
+    ///
+    /// Deliberately **not** called from `openFixture`: the fixture source
+    /// simulates transfers and writes no bytes, so wiring it there would let
+    /// the Diagnostics menu start a real, billable run against a project that
+    /// gained nothing.
+    private func wireBatchHandoff() {
+        store?.onBatchSettled = { [weak self] result in
+            self?.handOffToPipeline(result)
+        }
+    }
+
+    /// Decide in `CloudImportHandoff`, act here. The split is what makes the
+    /// four decline branches testable — none of them is reachable by hand,
+    /// since each needs a live tenant, a real download and a subprocess in a
+    /// particular state.
+    private func handOffToPipeline(_ result: CloudImportBatchResult) {
+        guard let index = projectIndex,
+              let project = index.projects.first(where: { $0.id == result.projectID })
+        else { return }
+
+        let action = CloudImportHandoff.decide(
+            landed: result.landed.count,
+            shape: project.inputFiles == nil ? .folder : .fileSubset,
+            state: pipelineRunner?.state[result.projectID])
+
+        // Seeding suppresses the row's new-files count pill, so it happens only
+        // where a run is about to be the acknowledgement. On every decline the
+        // files stay *unseeded* on purpose — the pill is then the thing that
+        // says "these arrived and nothing read them", from the sidebar, with
+        // the import window long closed. See `seedsWatcher`.
+        if CloudImportHandoff.seedsWatcher(action) {
+            index.seedKnownBasenames(
+                projectID: result.projectID,
+                basenames: Set(result.landed.map { $0.lastPathComponent }))
+        }
+
+        switch action {
+        case .analyse:
+            // Fresh or incremental is the pipeline's call, not ours: a
+            // folder-shaped project rescans its folder at run time, so an
+            // already-analysed one folds the new recordings in and re-uses the
+            // per-session cache for the rest.
+            pipelineRunner?.start(project: project)
+        case .registerOnly:
+            // The CLI has no `--files`, so it cannot scope a run to just these.
+            // Recording them means the next full run sees them.
+            index.addFiles(to: result.projectID, files: result.landed.map(\.path))
+        case .nothing:
+            break
+        }
+    }
+
     init() {
         // Disconnecting an account in Settings must reach a window that is
         // already open. Without this the Keychain copy goes and the live
@@ -131,6 +196,14 @@ final class CloudImportCoordinator: ObservableObject {
             preselectedProjectID = projectID
             return
         }
+
+        // Wire the pipeline handoff on **every** exit from here, including the
+        // three `UnconfiguredCloudSource` early returns below. A `defer`
+        // rather than a line repeated after each of the five `store =`
+        // assignments: the failure mode of the repeated form is silent — the
+        // one branch that forgot it downloads perfectly and then does nothing,
+        // which is indistinguishable from the bug this whole change fixes.
+        defer { wireBatchHandoff() }
 
         self.platform = platform
         preselectedProjectID = projectID

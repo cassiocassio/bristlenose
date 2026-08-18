@@ -819,7 +819,15 @@ xcodebuild test -project desktop/Bristlenose/Bristlenose.xcodeproj -scheme Brist
 
 Or in Xcode: Cmd+U.
 
-**Concurrent `xcodebuild test` runs across worktrees hang in teardown — read the per-test "passed" lines, not the exit code.** When two worktrees run `xcodebuild test-without-building` for the same `Bristlenose` scheme at the same time (e.g. two Claude sessions, this branch + a sibling like `warm-sidecar-pool`), they contend on the shared macOS test host and **wedge in post-execution teardown** — the tests themselves run and pass, but `xcodebuild` never returns. A `timeout`-wrapped run then exits 124, and a manual `kill` of the wedged process shows up as exit 144 (128+SIGTERM) — **both look like test failures but aren't.** Diagnose by reading the log: `grep -c "Test case.*passed"` and `grep -cE "✘|recorded an issue|Testing failed"` (zero failures + "Testing started completed" = green, regardless of the wrapper exit code). It clears on its own once the sibling run finishes (then a clean run returns exit 0). Hit 19 Jun 2026 on `project-status-line` while `warm-sidecar-pool` was testing concurrently.
+**Concurrent `xcodebuild test` runs across worktrees hang in teardown — read the per-test "passed" lines, not the exit code.** When two worktrees run `xcodebuild test-without-building` for the same `Bristlenose` scheme at the same time (e.g. two Claude sessions, this branch + a sibling like `warm-sidecar-pool`), they contend on the shared macOS test host and **wedge in post-execution teardown** — the tests themselves run and pass, but `xcodebuild` never returns. A `timeout`-wrapped run then exits 124, and a manual `kill` of the wedged process shows up as exit 144 (128+SIGTERM) — **both look like test failures but aren't.** Diagnose by reading the log — but **not with the two greps this line used to recommend, because both lie in opposite directions** (18 Aug 2026). `grep -cE "✘|recorded an issue"` returned **0 on a genuinely red run**: with `xcodebuild`'s default reporter, a Swift Testing failure is written as `Test case 'Suite/name()' failed on 'My Mac …'` and carries no `✘` and no "recorded an issue" at all. The obvious repair, `grep -c "Test case.*failed"`, then fails the *other* way — it matches every test whose **name** contains the word (`failedDeclines()`, `failedRowsAreNotAnnounced()`, `failedWithDiagnosticMapsToHeaderCase()`), all of which go on to say `passed`, so a clean suite reports six failures. Both mistakes were made in one sitting, five minutes apart, and the first was reported to the user as green.
+
+**Anchor on the verdict token, never on the line:**
+
+```bash
+grep -oE "' (passed|failed) on" run.log | grep -c failed   # 0 = green
+```
+
+Same family as the piped-`pytest`-exit-code gotcha in the root `CLAUDE.md`: the number that looks like a test result is produced by something that never examined a test. It clears on its own once the sibling run finishes (then a clean run returns exit 0). Hit 19 Jun 2026 on `project-status-line` while `warm-sidecar-pool` was testing concurrently.
 
 ### Testability refactors
 

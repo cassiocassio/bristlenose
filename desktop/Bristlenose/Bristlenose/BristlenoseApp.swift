@@ -152,6 +152,12 @@ struct BristlenoseApp: App {
                     // payloads, the agent-access list).
                     SettingsWindow.shared.serveManager = serveManager
                     SettingsWindow.shared.projectIndex = projectIndex
+                    // What a landed cloud batch is handed to. The coordinator
+                    // is the one app-wide owner of the import store, so it is
+                    // the only place this can live without a second open window
+                    // starting a second run for the same batch.
+                    cloudImport.projectIndex = projectIndex
+                    cloudImport.pipelineRunner = pipelineRunner
                     volumeWatcher.projectIndex = projectIndex
                     projectIndex.refreshAvailability()
                     // The handshake writer's policy input: which projects have

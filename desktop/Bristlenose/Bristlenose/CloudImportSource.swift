@@ -41,7 +41,18 @@ struct FetchProgress: Equatable {
 /// The outcome of one row's fetch. Per-row, never per-batch: §6's "the unit of
 /// recovery is the file, not the batch".
 enum FetchOutcome: Equatable {
-    case imported(bytes: Int64)
+    /// `at` is the file that now exists — taken from the same
+    /// `CloudDownloadRequest.destination` the downloader renamed its `.part`
+    /// onto, so it cannot drift from where the bytes actually landed.
+    ///
+    /// It is carried rather than recomputed because the batch's *next* step
+    /// needs the names: handing the landed files to the pipeline means seeding
+    /// the folder watcher with them, and each adapter names files its own way
+    /// (`CloudDownloadNaming`, per-platform extensions, sibling ordinals). A
+    /// second derivation in the store would be a second chance to disagree,
+    /// and the disagreement would surface as a surprise-files count pill on a
+    /// row that had just imported them deliberately.
+    case imported(bytes: Int64, at: URL)
     /// Carries a *sentence*, not a code — this string is rendered in the row.
     case failed(reason: String, isRetryable: Bool)
     case cancelled
@@ -236,7 +247,16 @@ final class FixtureCloudSource: CloudImportSource {
                 }
             }
         }
-        return .imported(bytes: total)
+        // Where the bytes *would* have gone. The fixture writes no file, which
+        // is why `CloudImportCoordinator` wires the pipeline handoff for live
+        // sessions only — a Diagnostics scenario must never start a real run
+        // against a project that gained nothing. Naming it honestly anyway
+        // keeps the outcome the same shape on both paths, so the store's
+        // accumulation is exercised by the fixture scenarios too.
+        let name = CloudDownloadNaming.filename(
+            title: row.title, startsAt: row.startsAt, fileExtension: "mp4",
+            part: row.siblingOrdinal)
+        return .imported(bytes: total, at: destination.appendingPathComponent(name))
     }
 
     // MARK: Shapes

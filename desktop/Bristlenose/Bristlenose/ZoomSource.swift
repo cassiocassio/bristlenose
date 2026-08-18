@@ -370,7 +370,7 @@ final class ZoomSource: CloudImportSource {
                     bytesExpected: total
                 ))
             }
-            return .imported(bytes: bytes)
+            return .imported(bytes: bytes, at: request.destination)
         } catch let error as CloudDownloadError {
             if case .cancelled = error { return .cancelled }
             return .failed(

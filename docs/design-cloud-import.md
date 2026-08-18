@@ -516,6 +516,24 @@ this one stayed wrong through four passes._
   - **`CFBundleURLTypes` turned out not to be required, and this doc said it was.** Teams signed in with no URL type registered in the target: `ASWebAuthenticationSession(url:callbackURLScheme:)` has the OS route the callback to the initiating session directly, never through LaunchServices — which is the security property §2 chose it for in the first place. **Zoom's `associated-domains` entitlement and a deployed `apple-app-site-association` file are still genuinely required**, because Zoom refuses custom schemes and its callback is HTTPS.
 - ~~**No token is persisted, and no refresh is wired.**~~ **Shipped — see §7.** One Keychain item per `(platform, account)` (`8901845f`), written through a single owner (`357818b5`), renewed before both the listing and the fetch (`342cb5c5`, `a10b45c8`), and exercised through the adapter's real entry point over a stubbed transport (`af9b38b4`). The hour-long access token this bullet warned about is the thing the renewal exists for. What is still true and worth keeping: a grant is only as durable as the refresh token behind it, and Google's expires weekly while the app sits in Testing status.
 - **No *adapter* derives local row state — and none needs to.** The claim was literally true of the adapters and misleading as written: the derivation moved up into the store, where it belongs, because it is a fact about the *destination folder* rather than about any vendor. `CloudImportStore.rebuild()` marks rows already held by scanning the destination and matching on duration (`CloudImportStore.swift:165-171`, `CloudImportLocalMatch.swift:80`), so `.imported` has a live producer for every platform at once. **Unverified for Teams**: the 2s duration tolerance has never been checked against a real Graph pair, and the Google equivalent was wrong on first contact — it withheld a recording the researcher did not have, which is the failure direction with no override.
+- **The batch now hands its files to the pipeline.** _18 Aug 2026._ Until this
+  landed, a batch ended at the bytes: the recordings arrived in the destination
+  folder, the sidebar ring cleared, and nothing started — one step short of this
+  document's own one-sentence spec, *"download and ingest"*, and the half a
+  researcher notices, because a folder of MP4s is the drudgery they were
+  delegating. A settled batch now announces what it landed
+  (`CloudImportStore.onBatchSettled`), a pure decision picks the action
+  (`CloudImportHandoff.decide`), and the coordinator performs it. A folder-shaped
+  project runs — fresh if new, incremental if already analysed, which is the
+  pipeline's call and not ours; a file-subset project has the paths registered
+  but starts nothing, because the CLI has no `--files` to scope a run with. Four
+  states decline: nothing landed, a run already going, a previous run failed
+  (re-running unbidden burns spend repeating a known failure), and the project
+  unreachable. **Declines do not seed the folder watcher**, so the project row's
+  existing new-files count pill is what says "these arrived and nothing read
+  them" — which is why this path needed no new message anywhere. The fixture
+  source is deliberately not wired: it simulates transfers and writes no bytes,
+  so a Diagnostics scenario must never start a real, billable run.
 - **Where the full list lives.** Done/undone in dependency order is kept in the `cloud-import-state-of-play` handoff, with the maintainer's private planning notes outside the public tree — so it is gitignored and a grep of a clean checkout will not find it. This status block is the public summary; that handoff is the working document.
 - **Live acceptance — the whole loop has now run, on both live platforms.** On 15 Aug 2026 the shipped code signed in to a live Microsoft tenant, listed `/Recordings` over Graph and rendered the window; two parsers broke on first contact and are fixed (`8b8eafc9`) — see §6. On 17 Aug the Meet loop completed end to end — tick → Picker → download → **Imported** — and on 18 Aug the stored Picker grant was measured surviving a relaunch (`2cb58cf6`). ~~It has still never completed a download, on any platform.~~ **That sentence was false for a day before this pass caught it**, and it is the one most worth flagging: it sat in the summary while the changelog above it described the completed download, so the two halves of this file disagreed about whether the feature worked.
   Of the four open probes, one is answered and one is now known to be unanswerable by us:

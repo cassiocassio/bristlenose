@@ -11,6 +11,16 @@ stickies, and text all confirmed against Miro's REST API. Now offered as **Send
 to Miro** in the SPA export menu, connecting via **paste-token**; **one-click
 OAuth is phase 2** (see _Implementation status_ at the foot of this doc).
 
+**Phase 2 is written but dormant, which is not the same as unbuilt** — `routes/miro.py` carries
+`auth-url`, the PKCE exchange and the `/miro/callback` handler in full, and none of it is
+reachable: `miro_client_id` defaults to `""`, no SPA component calls `auth-url`, and the Swift
+host never sets `MIRO_CLIENT_ID`. Worth stating plainly because dormant-but-present code gets
+neither the testing of a shipped path nor the scrutiny of a proposed one. It cost exactly that on
+18 Aug 2026: the callback reported "Connected to Miro ✓" without ever reading the token back, and
+had no in-session fallback, so a credential-store write that silently no-opped (the ordinary
+sandbox case) left the token in **no** store at all while the browser tab said it had worked.
+Fixed in `d3c5f572`; nobody had hit it because nobody can reach the path.
+
 ---
 
 ## Context
@@ -606,10 +616,16 @@ future OAuth button lives, and the Keychain+env layer below is reused by OAuth):
 OAuth (the real solution) reuses this same Keychain+env layer for its access/refresh
 tokens — only the *acquisition* (ASWebAuthenticationSession) and the token-handoff
 trigger change. The native sheet's **Disconnect** (`MiroSheetModel.disconnect()`) clears
-three of the four copies — see `design-desktop-settings.md` Tab 4 for the fourth, env-injected one, which both disconnect paths now drain via `.bristlenosePrefsChanged`: the in-session cache + Python store (`MiroAPI.disconnect`, best-effort, logged
-on failure) **and** the Swift Keychain copy (`KeychainHelper.delete("miro")`) — closing the
-gap the bridge path left open. (The web panel's Disconnect still clears only the
-Python/session copies; on desktop that path isn't reached.)
+nothing of its own any more: since 18 Aug 2026 it calls `MiroConnectionStore.disconnect`, the
+single sequence Settings ▸ Accounts also calls, which takes all four copies — the in-session
+cache + Python store (`MiroAPI.disconnect`, best-effort, logged on failure), the Swift Keychain
+copy, the cached identity line, and the env-injected one, drained by the
+`.bristlenosePrefsChanged` serve restart. Before that the sheet took three and left the fourth,
+so a sidecar that had already baked `BRISTLENOSE_MIRO_ACCESS_TOKEN` went on exporting after a
+disconnect the researcher had been shown as complete. `design-desktop-settings.md` Tab 4 has why
+there are two surfaces at all — they answer different needs, and neither is the lesser copy.
+(The web panel's Disconnect still clears only the Python/session copies; on desktop that path
+isn't reached.)
 
 **Also note:** the native sheet does **not** carry the global Anonymise payload the old
 `dispatch("sendToMiro")` did (anonymise→Miro is deferred — names are already excluded by

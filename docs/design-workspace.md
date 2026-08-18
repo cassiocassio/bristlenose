@@ -562,16 +562,56 @@ one.
   no meaning once that is false, and makes a window change shape while you are
   looking at it because you closed a different one. Rejected.
 
-**⌥⌘N makes a child unless there is no master (decided 18 Aug 2026).** The
-condition is `hasMaster`, **not** "no windows open" — closing the master while
-children remain is reachable, and under a window-count rule ⌥⌘N would mint
-another child, leaving a screen of lens windows with no project list and no way
-to get one short of relaunching. With `hasMaster` that state has a one-keystroke
-exit using the command already in the researcher's fingers, which is what
-replaces promotion. A welcome-screen window counts as a master (it carries the
-list); Settings and the Import window do not, as the roster already has it. A new
-child opens at the **lens of the window it was spun off from** — the gesture reads
-as "duplicate this view, now re-point it".
+**⌥⌘N is gated on what is *served*, not on what windows exist (decided
+18 Aug 2026).** ⌥⌘N means one thing everywhere — *another lens window on the
+study I am looking at* — so it needs a study to be looking at:
+
+| State | ⌥⌘N |
+| --- | --- |
+| No windows at all | **master** — the menu bar outlives windows, and this is the way back from empty |
+| Welcome master, nothing served | **dimmed** — you would simply get two welcome screens |
+| Anything served (master, master + children, **or children only**) | **child** |
+
+Children-only still gives a child, not a master: the rule stays one sentence
+rather than gaining a special case, and one more lens is what the researcher
+almost certainly wanted. **The cost is real and is accepted knowingly** — with the
+master closed there is no project list anywhere and every study-axis command is
+dimmed, so the route back is *close every window, then ⌥⌘N*. Reachable by
+ordinary tidying; the master/child mockup's E4b carries the one alternative worth
+considering (keeping `⌘N New Project` live in a child, which `NewItemFallback`
+already almost does).
+
+Note what "served, not windows" quietly handles: a master that returns to the
+welcome screen while children are open does **not** stop the serve —
+`stopServeIfLastProjectWindow` keeps it up while any other window still shows a
+project, and the children do — so the study stays served, the children keep
+working, and ⌥⌘N stays live.
+
+A new child opens at the **lens of the window it was spun off from** — the gesture
+reads as "duplicate this view, now re-point it".
+
+**A child's sidebar is the master's minus one section.** Same width, same rows,
+same metrics; `Views` simply moves up into the space `Studies` vacated. An
+omission, not a different control — which is what makes it one flag rather than a
+second window type.
+
+**`View ▸ Show Projects` keeps its name and dims in a child.** It reads slightly
+oddly against a sidebar with no projects in it, and that is accepted: renaming it
+to something neutral now means renaming it back at 3b, and a label that churns
+twice is worse than one that is briefly imprecise.
+
+**Two "open in new window" commands, two labels.** Right-click a lens →
+**Open in New Window** (a child at that lens — the most direct form of the gesture,
+and it beats ⌥⌘N-then-re-point when the target lens is known). Right-click a
+project → **Open Project in New Window**, which stays dimmed until 3b. The longer
+label is on the item that does the bigger thing.
+
+**The video pop-out regression is parked, not fixed.** A plain `NSWindow` rather
+than a scene, so `@FocusedValue(\.bridge)` goes nil and every Video menu item dims
+exactly when the video window is frontmost. A regression from `b72c23eb`, not a
+pre-existing wart — the menu worked when one app-level handler served every
+window. Master/child does not address it: the pop-out is a third window shape and
+"front window" routing has no answer for a key window that is not a scene.
 
 **Deferred deliberately — pin vs hide-by-default-switchable.** Both answers ship
 the same first version; they diverge only on what happens when someone tries to

@@ -82,7 +82,9 @@
   .wbody { display:flex; min-height:132px; }
   .side { width:118px; background:var(--win-side); border-right:1px solid var(--win-edge);
           padding:7px 6px; font-size:11px; }
-  .side.lensonly { width:104px; }
+  /* No width override: a child's sidebar IS the master's, minus the Studies
+     section. Same width, same rows, same metrics — Views simply moves up into
+     the space Studies vacated. It is an omission, not a different control. */
   .side h5 { margin:0 0 4px; padding:0 4px; font-size:9.5px; text-transform:uppercase;
              letter-spacing:.07em; color:var(--page-mute); font-family:var(--mono); font-weight:600; }
   .srow { padding:3px 6px; border-radius:5px; white-space:nowrap; overflow:hidden;
@@ -290,22 +292,32 @@
 <table>
   <thead><tr><th>State</th><th>⌥⌘N makes</th><th>Why</th></tr></thead>
   <tbody>
-    <tr><td>Zero windows</td><td class="y">master</td><td>nothing to inherit from; you need a project list to get anywhere</td></tr>
-    <tr><td>Master on welcome (<b>nothing served</b>)</td><td class="d">master <span class="tag dec">decide</span></td>
-        <td>a child of nothing is an empty lens rail — see E4</td></tr>
+    <tr><td>Zero windows</td><td class="y">master</td>
+        <td>the menu bar outlives windows, so this is the documented way back from empty</td></tr>
+    <tr><td>Welcome master, <b>nothing served</b></td><td class="n">disabled</td>
+        <td>you would simply get two welcome screens</td></tr>
     <tr><td>Master with a project</td><td class="y">child</td><td>the normal case</td></tr>
     <tr><td>Master + children</td><td class="y">child</td><td></td></tr>
-    <tr><td><b>Children only</b> — master closed</td><td class="y">master</td>
-        <td>the gap a window-count rule misses; this is what replaces promotion</td></tr>
+    <tr><td><b>Children only</b> — master closed</td><td class="y">child</td>
+        <td>⌥⌘N means "another lens window", always — see the note</td></tr>
+    <tr><td>Welcome master + children <em>(serve still up)</em></td><td class="y">child</td>
+        <td>something <em>is</em> served — the children are showing it</td></tr>
     <tr><td>Only Settings / Import open</td><td class="y">master</td><td>the roster deliberately doesn't count them</td></tr>
   </tbody>
 </table>
 
 <div class="note">
-  <p>The condition is <code>hasMaster</code>, <b>not</b> <code>windowCount == 0</code>. Closing the
-  master while children remain is reachable, and under a window-count rule ⌥⌘N would mint another
-  child — leaving a screen of lens windows with no project list and no way to get one short of
-  relaunching. A welcome-screen window <em>counts</em> as a master: it carries the list.</p>
+  <p><b>The condition is what is <em>served</em>, not what windows exist</b> (decided 18 Aug 2026).
+  ⌥⌘N means one thing everywhere — <em>another lens window on the study I am looking at</em> — and
+  it needs a study to be looking at. So it is disabled exactly when nothing is served and a window
+  is already open, which is the two-welcomes case and nothing else. With no windows at all it still
+  makes a master, because the menu bar outlives windows and that is the way back from empty.</p>
+  <p><b>Note the case this quietly handles.</b> A master that returns to the welcome screen while
+  children are open does <em>not</em> stop the serve — <code>stopServeIfLastProjectWindow</code>
+  keeps it up while any other window still shows a project, and the children do. So the study stays
+  served, the children keep working, and ⌥⌘N stays live because there is still something to be a
+  child of. "Is anything served" is the right question; "is the front window a welcome screen" is
+  not.</p>
 </div>
 
 <!-- ════════════════════════════════════════════════════════ -->
@@ -368,6 +380,10 @@
 </div>
 
 <div class="note">
+  <p><span class="tag ships">decided</span> <b><code>View ▸ Show Projects</code> keeps its name</b>
+  and simply dims in a child. It reads slightly oddly against a sidebar that has no projects in it,
+  and that is accepted: renaming it to something neutral like "Sidebar" now would mean renaming it
+  back at 3b, and a menu item whose label churns twice is worse than one that is briefly imprecise.</p>
   <p><b>Why the whole New/Add/Import family dims in a child.</b> They all act on
   <em>which study</em> — the axis a child deliberately doesn't have. Dimming them is the same
   statement the missing project list makes, in the place a Mac user checks when a click does
@@ -382,7 +398,7 @@
   <figure>
     <figcaption>right-click a project row — <b>master only</b></figcaption>
     <div class="menu">
-      <div class="mi"><span>Open in New Window</span></div>
+      <div class="mi"><span>Open <b>Project</b> in New Window</span></div>
       <div class="sep"></div>
       <div class="mi"><span>Rename…</span></div>
       <div class="mi"><span>Move to ▸</span></div>
@@ -410,12 +426,12 @@
 </div>
 
 <div class="note decbox">
-  <p><span class="tag dec">decide</span> <b>Does the lens-row context menu offer "Open in New Window"?</b>
-  It is the most natural place for the gesture — right-click Quotes, get a Quotes window — and it
-  would make ⌥⌘N's "opens at the parent's lens" rule redundant for the deliberate case. But it
-  collides in name with the <em>project</em>-row item, which means something different
-  (open <em>that study</em>, Stage 3b). Two commands, one label, two menus. Either rename one,
-  or don't ship the lens-row one until 3b settles the other.</p>
+  <p><span class="tag ships">decided</span> <b>Both ship, and the project one is renamed.</b>
+  Right-click a lens → <b>Open in New Window</b> (a child at that lens — the most direct form of
+  the gesture, and it beats ⌥⌘N-then-re-point for the deliberate case). Right-click a project →
+  <b>Open Project in New Window</b>. Two commands, two labels, no collision — and the longer label
+  is on the item that does the bigger thing, which is the right way round. The project one stays
+  dimmed until 3b; the lens one works today.</p>
 </div>
 
 <!-- ════════════════════════════════════════════════════════ -->
@@ -509,12 +525,21 @@ That is a better justification than the one <code>window-menu-naming.html</code>
 ("two views of one project, not two projects"), which was only ever true of Stage 3a.
 <b>That mockup's E4 card needs correcting, not just reconciling with its own summary.</b></p>
 
-<h3><span class="n">E4</span> ⌥⌘N while the master shows the welcome screen <span class="tag dec">decide</span></h3>
-<p>Nothing is served, so a child would be an empty lens rail pointing at no study. Three answers:
-<b>(a)</b> ⌥⌘N makes a <em>master</em> — the <code>hasMaster</code> rule becomes "has a master
-<em>with a project</em>"; <b>(b)</b> ⌥⌘N dims; <b>(c)</b> the child shows the welcome screen too,
-which is a second window offering a project list it doesn't have. <b>(a)</b> is the only one that
-leaves the researcher somewhere useful, and it costs one clause.</p>
+<h3><span class="n">E4</span> ⌥⌘N while nothing is served <span class="tag ships">decided — dims</span></h3>
+<p>A child of nothing is an empty lens rail, and making a second <em>master</em> just gives you two
+welcome screens. So the item <b>dims</b>. It is the one state where ⌥⌘N has nothing to mean.
+With no windows at all it stays live and makes a master, because the menu bar outlives windows and
+that is the documented way back from empty.</p>
+
+<h3><span class="n">E4b</span> Children only — the master was closed <span class="tag warn">accepted, with a cost</span></h3>
+<p>⌥⌘N makes <b>another child</b>. The rule stays one sentence — <em>another lens window on the
+study I am looking at</em> — rather than gaining a special case, and the researcher gets what they
+almost certainly wanted, which is one more lens.</p>
+<p><b>What it costs, stated plainly:</b> with the master closed there is no project list anywhere,
+New Project / New Folder / Add Files / Import are all dimmed (they act on the study axis a child
+does not have), and <code>Open in New Window</code> is dimmed until 3b. So the only route back to a
+project list is <b>close every window, then ⌥⌘N</b>. That is a mild dead end, and it is reachable
+by ordinary tidying. It wants an explicit accept rather than a discovery. <span class="tag dec">decide</span></p>
 
 <h3><span class="n">E5</span> A run is in progress</h3>
 <p>The subtitle narrates the run. With the current <code>.key</code>-only rule, opening Settings or
@@ -527,6 +552,13 @@ it reads as the run having stopped. <span class="tag dec">decide</span></p>
 and <b>every Video menu item dims exactly when the video window is what you're looking at</b>.
 Master/child doesn't fix this — the pop-out is a third shape, and "front window" routing has no
 answer for a key window that isn't a scene.</p>
+<p><span class="tag warn">parked 18 Aug 2026 — solve later</span> Deliberately not fixed with this
+work, and deliberately written down in three places so it cannot be lost: here, Finding 22 of the
+workspace review log, and <code>docs/design-workspace.md</code>. It is a regression from
+<code>b72c23eb</code> (the per-window bridge), not a pre-existing wart — the Video menu worked
+before, when one app-level handler served every window. The general case is the same one E-series
+finding 26 names: <b>a key window that is not a scene</b>, which also covers open/save panels. Fix
+the pop-out first, then re-check whether the general case still bites.</p>
 
 <h3><span class="n">E7</span> Relaunch</h3>
 <p>Children have no selection to restore — they take the served study. So only the master's
@@ -537,20 +569,39 @@ restored window lands on the same study; harmless once only one window reads it.
 <!-- ════════════════════════════════════════════════════════ -->
 <h2>8 · What this sheet asks you to decide</h2>
 <table>
-  <thead><tr><th></th><th>Question</th><th>Cheapest coherent answer</th></tr></thead>
+  <thead><tr><th></th><th>Still open</th><th>Cheapest coherent answer</th></tr></thead>
   <tbody>
-    <tr><td><span class="n">E4</span></td><td>⌥⌘N with nothing served</td><td>make a master — one clause on <code>hasMaster</code></td></tr>
-    <tr><td><span class="n">§5</span></td><td>lens-row "Open in New Window"</td><td>hold until 3b, or rename — two commands share one label</td></tr>
-    <tr><td><span class="n">E5</span></td><td>who narrates when a panel is frontmost</td><td>nobody, and say so — or keep one narrator</td></tr>
-    <tr><td><span class="n">E3</span></td><td>correct <code>window-menu-naming.html</code>'s E4 card</td><td>its premise was Stage-3a-only; the ordinal survives</td></tr>
+    <tr><td><span class="n">E4b</span></td><td><b>The orphan dead end.</b> Master closed, children
+        only: no project list, every study-axis command dimmed, so the way back is close-everything
+        then ⌥⌘N. Reachable by ordinary tidying.</td>
+        <td>Accept it and say so — or keep <b>⌘N New Project</b> live in a child, which already has
+        a fallback that opens a window (<code>NewItemFallback</code>) and would be the one study-axis
+        command that stays lit. Costs the clean "the whole family dims" rule.</td></tr>
+    <tr><td><span class="n">E5</span></td><td>Who narrates a run when Settings or Import is
+        frontmost — today nobody does, and every subtitle drops to its resting count mid-run.</td>
+        <td>Either keep one narrator (the last key project window) or accept silence and state it.
+        Nobody decided the no-window case; it currently reads as the run having stopped.</td></tr>
+    <tr><td><span class="n">E3</span></td><td><code>window-menu-naming.html</code>'s E4 card still
+        argues <em>against</em> the ordinal, on a premise ("two views of one project, not two
+        projects") that was only ever true of Stage 3a.</td>
+        <td>Correct the card, don't just reconcile it with its own summary — the reasoning is what
+        the next reader will cite.</td></tr>
+    <tr><td><span class="n">—</span></td><td><b>Pin vs hide-by-default-switchable</b>, deferred on
+        purpose by the design doc.</td>
+        <td>Its own test still stands and needs the child to exist first: spin off a Quotes window
+        and go ten minutes without reaching for the project list.</td></tr>
   </tbody>
 </table>
 
 <div class="note">
-  <p><b>Not asked here, because they're settled:</b> a child holds a lens not a project; ⌥⌘N is
-  gated on <code>hasMaster</code> not window count; promotion is rejected; a new child opens at its
-  parent's lens; switching the master takes the children. All recorded in
-  <code>docs/design-workspace.md</code> §"What a child window is" and its changelog.</p>
+  <p><b>Settled 18 Aug 2026 — not reopened here.</b> A child holds a <em>lens, not a project</em>
+  and reads its title from the serve. Its sidebar is the master's <em>minus the Studies section</em>
+  — same width, same metrics, Views simply moves up. ⌥⌘N is gated on <em>what is served</em>: child
+  when something is, master when no window is open, dimmed otherwise; children-only still gives a
+  child. Promotion rejected. A new child opens at its parent's lens. Switching the master takes the
+  children. <code>View ▸ Show Projects</code> keeps its name and dims. Lens row gets
+  <b>Open in New Window</b>, project row gets <b>Open Project in New Window</b>. Video pop-out
+  parked. All in <code>docs/design-workspace.md</code> §"What a child window is" and its changelog.</p>
 </div>
 
 </div>

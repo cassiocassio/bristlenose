@@ -30,6 +30,8 @@ final class StubURLProtocol: URLProtocol {
         var status: Int = 200
         var headers: [String: String] = ["Content-Type": "video/mp4"]
         var body: Data = Data()
+        /// When set, the request fails at the transport rather than answering.
+        var failure: URLError?
 
         /// A 302 to `location`. `URLSession` will consult the task delegate's
         /// `willPerformHTTPRedirection` before issuing the second request,
@@ -57,6 +59,16 @@ final class StubURLProtocol: URLProtocol {
             Stub(status: status,
                  headers: ["Content-Type": "application/json"],
                  body: Data(raw.utf8))
+        }
+
+        /// The connection never completed — no status line at all.
+        ///
+        /// A distinct outcome from any HTTP status, and since 18 Aug 2026 the
+        /// adapters branch on precisely that difference: a 4xx from the token
+        /// endpoint is the provider refusing, while this is a train tunnel. One
+        /// destroys the stored grant, the other must not.
+        static func transportFailure(_ error: URLError.Code = .notConnectedToInternet) -> Stub {
+            Stub(failure: URLError(error))
         }
     }
 
@@ -99,6 +111,11 @@ final class StubURLProtocol: URLProtocol {
         // test that under-stubs fails on an assertion instead of a timeout.
         let stub = Self.queued.isEmpty ? Stub(body: Data()) : Self.queued.removeFirst()
         Self.lock.unlock()
+
+        if let failure = stub.failure {
+            client?.urlProtocol(self, didFailWithError: failure)
+            return
+        }
 
         guard let url = request.url,
               let response = HTTPURLResponse(url: url, statusCode: stub.status,

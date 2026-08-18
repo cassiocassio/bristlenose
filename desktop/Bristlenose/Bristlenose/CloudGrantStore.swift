@@ -467,30 +467,72 @@ enum CloudGrantStore {
     }
 }
 
-/// The account key a live session is currently writing under.
+/// The one place a live session's grant is written.
 ///
-/// A box rather than a captured `var` because an adapter publishes its grant
-/// from `Task.detached` through a `@Sendable` closure, so the key is read and
-/// written off the main actor — and because it *moves*: a session restored
-/// without an address starts at `unidentified` and rekeys the moment the
-/// identity lands. Both the save path and the disconnect matcher need the
-/// current value, not the one captured at open time.
-final class CloudAccountKeyBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var value: String
+/// **Serial by construction, and that is the whole point.** Each adapter
+/// published through `Task.detached`, and two detached tasks have no relative
+/// ordering — so a refusal published moments before a successful re-sign-in
+/// could land *after* it and write a tombstone over a working grant. The
+/// account then silently reverted to "sign in again" with nothing anywhere
+/// explaining it. A serial queue makes the order the publishes were made in the
+/// order they land, by construction rather than by comparison.
+///
+/// It also closes the other half. The value it replaced held a lock across the
+/// Keychain write, while the disconnect matcher read the key on the main actor
+/// through the same lock — so a write parked on an authorisation prompt (routine
+/// on an ad-hoc build) blocked the main thread, which is exactly what the
+/// detached hop existed to prevent, re-entered through the mutex. Here the write
+/// happens on the queue under no lock at all, and `currentKey`'s lock is held
+/// for a pointer swap and nothing else.
+///
+/// The key *moves*, which is why this owns it rather than the caller: a session
+/// restored without an address starts at `unidentified` and rekeys the moment
+/// the identity lands.
+final class CloudGrantWriter: @unchecked Sendable {
 
-    init(_ value: String) { self.value = value }
+    /// One queue, no concurrency. `.utility` because nothing waits on it.
+    private let queue = DispatchQueue(label: "app.bristlenose.cloud-grant", qos: .utility)
 
-    var current: String {
-        lock.lock(); defer { lock.unlock() }
-        return value
+    /// The authoritative key. Touched only on `queue`, so it needs no lock.
+    private var key: String
+
+    /// A copy for readers that must not block — the disconnect matcher runs on
+    /// the main actor. Deliberately a *snapshot*: it can lag an in-flight write
+    /// by the length of one Keychain call, and that is the right trade. Erring
+    /// stale makes `CloudDisconnectMatch` see an unknown key, and unknown drops
+    /// the session, which is already the safe direction.
+    private let snapshotLock = NSLock()
+    private var snapshot: String
+
+    init(key: String) {
+        self.key = key
+        self.snapshot = key
     }
 
-    /// Hand `body` the current key and store what it returns — one critical
-    /// section, because read-modify-write is the whole point.
-    func update(_ body: (String) -> String) {
-        lock.lock(); defer { lock.unlock() }
-        value = body(value)
+    var currentKey: String {
+        snapshotLock.lock(); defer { snapshotLock.unlock() }
+        return snapshot
+    }
+
+    /// Enqueue a write and return immediately.
+    ///
+    /// `write` is handed the key the grant is currently stored under and returns
+    /// the one it now lives under — `CloudGrantStore.saveTeams`/`saveGoogle`'s
+    /// `previousKey` contract, which is why this is a closure rather than a
+    /// grant: the store owns the rekey decision, and this owns the ordering.
+    func publish(_ write: @escaping @Sendable (String) -> String) {
+        queue.async { [self] in
+            let next = write(key)
+            key = next
+            snapshotLock.lock(); snapshot = next; snapshotLock.unlock()
+        }
+    }
+
+    /// Wait for every enqueued write to finish. **Tests only** — production has
+    /// nothing that needs to know, and a synchronous barrier on the main actor
+    /// would reintroduce the block this type exists to remove.
+    func settleForTesting() {
+        queue.sync {}
     }
 }
 

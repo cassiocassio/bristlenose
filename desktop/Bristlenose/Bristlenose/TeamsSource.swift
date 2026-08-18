@@ -202,10 +202,19 @@ final class TeamsSource: CloudImportSource {
     /// The snapshot is taken here, on the caller's actor, so what gets written
     /// is what was true at the call rather than whatever the adapter has drifted
     /// to by the time the write lands.
+    /// **Handed to the callback synchronously — the hop lives in the writer.**
+    ///
+    /// This used to be `Task.detached`, for a good reason: a Keychain write can
+    /// block on an authorisation prompt, and one raised from the main actor sits
+    /// behind the auth window with everything stalled. But two detached tasks
+    /// have no relative ordering, so a refusal published just before a
+    /// successful re-sign-in could land *after* it and tombstone a working
+    /// grant. `CloudGrantWriter` answers both: it enqueues on a serial queue, so
+    /// publishes land in the order they were made **and** off this thread.
+    /// The contract that replaces the hop: `onGrantChanged` must not block.
     private func publishGrant() {
         let snapshot = tokens.map { MicrosoftGrant(tokens: $0, identity: identity) }
-        guard let onGrantChanged else { return }
-        Task.detached(priority: .utility) { onGrantChanged(snapshot) }
+        onGrantChanged?(snapshot)
     }
 
     /// Record that the provider ended the session, **keeping the account**.
@@ -219,8 +228,7 @@ final class TeamsSource: CloudImportSource {
     /// path was guarding against cannot form even if the flag were ignored.
     private func publishRefusal() {
         let snapshot = MicrosoftGrant.revoked(identity: identity)
-        guard let onGrantChanged else { return }
-        Task.detached(priority: .utility) { onGrantChanged(snapshot) }
+        onGrantChanged?(snapshot)
     }
 
     /// Renew the token when it has aged out, or report that we cannot.

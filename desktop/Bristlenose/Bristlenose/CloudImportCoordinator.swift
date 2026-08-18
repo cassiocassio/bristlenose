@@ -30,10 +30,10 @@ final class CloudImportCoordinator: ObservableObject {
 
     private var disconnectObserver: NSObjectProtocol?
 
-    /// Which Keychain item the live session is signed in to, or nil when the
-    /// window is showing fixtures. Held in a box because it moves: a session
+    /// The live session's grant writer, or nil when the window is showing
+    /// fixtures. It owns the Keychain account key, which moves: a session
     /// restored without an address rekeys once the identity lands.
-    private var accountKeyBox: CloudAccountKeyBox?
+    private var grantWriter: CloudGrantWriter?
 
     init() {
         // Disconnecting an account in Settings must reach a window that is
@@ -56,7 +56,7 @@ final class CloudImportCoordinator: ObservableObject {
                 // signed in to the work one.
                 guard CloudDisconnectMatch.dropsSession(
                     livePlatform: self.platform,
-                    liveAccountKey: self.accountKeyBox?.current,
+                    liveAccountKey: self.grantWriter?.currentKey,
                     notedPlatform: raw,
                     notedAccountKey: account)
                 else { return }
@@ -129,8 +129,8 @@ final class CloudImportCoordinator: ObservableObject {
         // Account. A window opened before anyone has signed in writes its first
         // grant under `unidentified` and rekeys when `/me` answers.
         let key = CloudGrantStore.firstAccountKey(for: platform) ?? CloudAccountKey.unidentified
-        let box = CloudAccountKeyBox(key)
-        accountKeyBox = box
+        let writer = CloudGrantWriter(key: key)
+        grantWriter = writer
 
         switch platform {
         case .meet:
@@ -153,8 +153,10 @@ final class CloudImportCoordinator: ObservableObject {
                         (tokens: $0.tokens, fileIDs: Set($0.fileIDs))
                     },
                     restoredIdentity: saved?.identity,
+                    // Enqueues and returns — the writer owns both the hop off
+                    // the caller's thread and the ordering between publishes.
                     onGrantChanged: { grant in
-                        box.update { CloudGrantStore.saveGoogle(grant, previousKey: $0) }
+                        writer.publish { CloudGrantStore.saveGoogle(grant, previousKey: $0) }
                     }),
                 platform: platform)
 
@@ -185,7 +187,7 @@ final class CloudImportCoordinator: ObservableObject {
                     restoredTokens: savedTeams?.tokens,
                     restoredIdentity: savedTeams?.identity,
                     onGrantChanged: { grant in
-                        box.update { CloudGrantStore.saveTeams(grant, previousKey: $0) }
+                        writer.publish { CloudGrantStore.saveTeams(grant, previousKey: $0) }
                     }),
                 platform: platform)
         }
@@ -203,7 +205,7 @@ final class CloudImportCoordinator: ObservableObject {
         // No account: a fixture session holds no credentials, so there is no
         // key to match a disconnect against. It is dropped on any disconnect of
         // its platform, which is the erring-toward-dropping rule above.
-        accountKeyBox = nil
+        grantWriter = nil
         store = CloudImportStore(
             source: FixtureCloudSource(scenario: scenario, platform: platform),
             platform: platform)

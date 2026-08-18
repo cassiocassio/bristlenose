@@ -112,6 +112,57 @@ struct GrantLifecycleTests {
                 "a network blip published \(published.count) grant(s); it must publish none")
     }
 
+    @Test("Publishes land in the order they were made")
+    func writesAreOrdered() {
+        // The hazard this replaced: `publishGrant` and `publishRefusal` each
+        // fired `Task.detached`, and two detached tasks have no relative
+        // ordering — so a refusal published moments before a successful
+        // re-sign-in could land *after* it and write a tombstone over a working
+        // grant. The account then silently reverted to "sign in again" with
+        // nothing to explain it, which is unreproducible on demand and so
+        // effectively undiagnosable.
+        //
+        // Asserting order rather than racing it: a hundred enqueues that come
+        // back in sequence is what "serial by construction" means, and it fails
+        // deterministically on a concurrent queue rather than one run in twenty.
+        let writer = CloudGrantWriter(key: "start")
+        let recorder = OrderRecorder()
+
+        for step in 0..<100 {
+            writer.publish { previous in
+                recorder.record(saw: previous, wrote: "k\(step)")
+                return "k\(step)"
+            }
+        }
+        writer.settleForTesting()
+
+        #expect(recorder.observed.count == 100, "a publish was dropped")
+        // Each write must have seen exactly what the one before it wrote.
+        let outOfOrder = recorder.observed.enumerated().filter { index, entry in
+            entry.saw != (index == 0 ? "start" : "k\(index - 1)")
+        }
+        #expect(outOfOrder.isEmpty, "publishes interleaved: \(outOfOrder.prefix(3))")
+        #expect(writer.currentKey == "k99")
+    }
+
+    /// The writes happen on the writer's own queue, so the recorder is reached
+    /// off the test's thread. Locked rather than `nonisolated(unsafe)` for the
+    /// same reason the stub's queue is.
+    private final class OrderRecorder: @unchecked Sendable {
+        private let lock = NSLock()
+        private var entries: [(saw: String, wrote: String)] = []
+
+        func record(saw: String, wrote: String) {
+            lock.lock(); defer { lock.unlock() }
+            entries.append((saw, wrote))
+        }
+
+        var observed: [(saw: String, wrote: String)] {
+            lock.lock(); defer { lock.unlock() }
+            return entries
+        }
+    }
+
     @Test("A 5xx is not a refusal either")
     func serverErrorLeavesTheGrantAlone() async {
         // Same rule, the other shape. Microsoft having a bad afternoon is not

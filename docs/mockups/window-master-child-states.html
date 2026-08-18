@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Master &amp; child windows — states, transitions, menus</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --page-bg:   light-dark(#e8e8ec, #1c1c1e);
+    --page-fg:   light-dark(#1d1d1f, #f2f2f7);
+    --page-mute: light-dark(#6e6e73, #98989d);
+    --rule:      light-dark(#d2d2d7, #3a3a3c);
+    --card:      light-dark(#fdfdfd, #242426);
+
+    --menu-bg:   light-dark(#f6f6f8, #2e2e30);
+    --menu-edge: light-dark(#00000022, #ffffff1f);
+    --menu-dim:  light-dark(#9a9a9f, #78787d);
+    --menu-sep:  light-dark(#0000001a, #ffffff1a);
+    --menu-shadow: light-dark(0 12px 34px #00000026, 0 12px 34px #00000066);
+
+    --win-chrome: light-dark(#e4e4e9, #333335);
+    --win-body:   light-dark(#ffffff, #1e1e20);
+    --win-side:   light-dark(#f1f1f4, #262628);
+    --win-edge:   light-dark(#c9c9ce, #3f3f42);
+
+    --accent:  light-dark(#007aff, #0a84ff);
+    --warn-bg: light-dark(#fff4e0, #3a2f18);
+    --warn-fg: light-dark(#8a5a00, #f5c563);
+    --bad-bg:  light-dark(#ffe9e9, #3a1f1f);
+    --bad-fg:  light-dark(#9a2020, #ff8a8a);
+    --ok-bg:   light-dark(#e6f6ec, #16301f);
+    --ok-fg:   light-dark(#1c6b38, #7fdaa1);
+    --dec-bg:  light-dark(#eae6ff, #26214a);
+    --dec-fg:  light-dark(#4b3ca8, #b3a6ff);
+
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --ui: -apple-system, "SF Pro Text", BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:40px 32px 120px; background:var(--page-bg); color:var(--page-fg);
+         font:15px/1.55 var(--ui); }
+  .wrap { max-width:1240px; margin:0 auto; }
+  h1 { font-size:26px; letter-spacing:-.02em; margin:0 0 6px; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--page-mute);
+       font-family:var(--mono); font-weight:600; margin:56px 0 4px; padding-bottom:8px;
+       border-bottom:1px solid var(--rule); }
+  h3 { font-size:15px; margin:30px 0 12px; font-weight:590; }
+  .lede { color:var(--page-mute); margin:0 0 4px; max-width:76ch; }
+  p { max-width:80ch; }
+  code { font-family:var(--mono); font-size:.88em;
+         background:light-dark(#00000009,#ffffff12); padding:1px 5px; border-radius:4px; }
+
+  .tag { display:inline-block; font-size:10.5px; font-family:var(--mono); font-weight:600;
+         text-transform:uppercase; letter-spacing:.06em; padding:2px 7px; border-radius:5px;
+         vertical-align:2px; margin-left:7px; }
+  .ships { background:var(--ok-bg); color:var(--ok-fg); }
+  .gone  { background:var(--bad-bg); color:var(--bad-fg); }
+  .dec   { background:var(--dec-bg); color:var(--dec-fg); }
+  .warn  { background:var(--warn-bg); color:var(--warn-fg); }
+
+  .key-bar { display:flex; gap:24px; flex-wrap:wrap; align-items:center; margin:22px 0 0;
+             padding:12px 16px; border:1px solid var(--rule); border-radius:10px;
+             background:var(--card); font-size:13px; }
+
+  .row { display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start; margin:18px 0 0; }
+  figure { margin:0; }
+  figcaption { font-size:12px; color:var(--page-mute); margin:0 0 8px; font-family:var(--mono); }
+
+  /* ── window chrome ─────────────────────────────────────── */
+  .win { width:330px; border:1px solid var(--win-edge); border-radius:9px; overflow:hidden;
+         background:var(--win-body); box-shadow:0 6px 20px light-dark(#0000001f,#00000055); }
+  .win.wide { width:420px; }
+  .win.dimmed { opacity:.55; }
+  .titlebar { background:var(--win-chrome); border-bottom:1px solid var(--win-edge);
+              padding:7px 10px 8px; text-align:center; position:relative; }
+  .lights { position:absolute; left:9px; top:10px; display:flex; gap:5px; }
+  .lights i { width:9px; height:9px; border-radius:50%; display:block; }
+  .lights i:nth-child(1){ background:#ff5f57 } .lights i:nth-child(2){ background:#febc2e }
+  .lights i:nth-child(3){ background:#28c840 }
+  .wtitle { font-size:12.5px; font-weight:600; line-height:1.25; }
+  .wsub { font-size:11px; color:var(--page-mute); line-height:1.3; }
+  .wbody { display:flex; min-height:132px; }
+  .side { width:118px; background:var(--win-side); border-right:1px solid var(--win-edge);
+          padding:7px 6px; font-size:11px; }
+  .side.lensonly { width:104px; }
+  .side h5 { margin:0 0 4px; padding:0 4px; font-size:9.5px; text-transform:uppercase;
+             letter-spacing:.07em; color:var(--page-mute); font-family:var(--mono); font-weight:600; }
+  .srow { padding:3px 6px; border-radius:5px; white-space:nowrap; overflow:hidden;
+          text-overflow:ellipsis; }
+  .srow.sel { background:var(--accent); color:#fff; }
+  .srow.mute { color:var(--page-mute); }
+  .sgap { height:9px; }
+  .pane { flex:1; padding:10px; font-size:11.5px; color:var(--page-mute);
+          display:flex; align-items:center; justify-content:center; text-align:center; }
+  .pane.real { color:var(--page-fg); }
+  .pane.bad { background:var(--bad-bg); color:var(--bad-fg); font-weight:600; }
+
+  /* ── menus ─────────────────────────────────────────────── */
+  .menu { background:var(--menu-bg); border:.5px solid var(--menu-edge); border-radius:10px;
+          box-shadow:var(--menu-shadow); padding:5px 0; min-width:236px; width:max-content;
+          max-width:460px; font-size:13px; }
+  .mi { display:flex; align-items:baseline; gap:8px; padding:3px 12px 3px 22px; white-space:nowrap; }
+  .mi .kbd { margin-left:auto; padding-left:26px; color:var(--menu-dim); font-size:12px; }
+  .mi.off { color:var(--menu-dim); }
+  .mi.off .kbd { opacity:.6; }
+  .mi.hid { display:none; }
+  .mi.mark { background:var(--accent); color:#fff; border-radius:4px; margin:0 5px; padding-left:17px; }
+  .mi.mark .kbd { color:#ffffffcc; }
+  .sep { height:1px; background:var(--menu-sep); margin:5px 10px; }
+  .mtitle { font-size:11px; font-family:var(--mono); color:var(--page-mute); margin:0 0 6px; }
+
+  /* ── tables ────────────────────────────────────────────── */
+  table { border-collapse:collapse; width:100%; margin:14px 0 0; font-size:13.5px; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--rule);
+           vertical-align:top; }
+  th { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--page-mute);
+       font-family:var(--mono); font-weight:600; }
+  td.y { color:var(--ok-fg); font-weight:600; }
+  td.n { color:var(--bad-fg); font-weight:600; }
+  td.d { color:var(--menu-dim); }
+  tbody tr:hover { background:light-dark(#00000006,#ffffff08); }
+
+  .note { border:1px solid var(--rule); border-left:3px solid var(--accent);
+          background:var(--card); border-radius:0 9px 9px 0; padding:12px 16px; margin:18px 0 0; }
+  .note.warnbox { border-left-color:var(--warn-fg); }
+  .note.decbox { border-left-color:var(--dec-fg); }
+  .note p { margin:0 0 8px; } .note p:last-child { margin:0; }
+
+  .steps { counter-reset:s; list-style:none; padding:0; margin:16px 0 0; max-width:80ch; }
+  .steps li { counter-increment:s; position:relative; padding:0 0 14px 34px; }
+  .steps li::before { content:counter(s); position:absolute; left:0; top:1px; width:22px;
+    height:22px; border-radius:50%; background:var(--accent); color:#fff; font-size:12px;
+    font-weight:600; display:flex; align-items:center; justify-content:center; }
+  .n { display:inline-flex; align-items:center; justify-content:center; min-width:26px;
+       height:20px; padding:0 6px; border-radius:5px; background:light-dark(#00000010,#ffffff18);
+       font-family:var(--mono); font-size:11.5px; font-weight:600; margin-right:8px; }
+  .arrow { align-self:center; font-size:20px; color:var(--page-mute); padding:0 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Master &amp; child windows — every state, every route between them</h1>
+<p class="lede">
+  Stage 3a as decided 18 Aug 2026. One serve, one project at a time, N windows, N lenses.
+  <b>Masters get projects, children get lenses.</b> This sheet exists to be judged the way
+  the app is judged — by the surfaces a researcher can actually see.
+</p>
+
+<div class="key-bar">
+  <span><b>Master</b> — has the project list, picks the study</span>
+  <span><b>Child</b> — lens rail only, inherits the served study</span>
+  <span class="tag ships">ships</span><span>as specified</span>
+  <span class="tag gone">bug</span><span>shipped today, wrong</span>
+  <span class="tag dec">decide</span><span>open</span>
+</div>
+
+<div class="note">
+  <p><b>The one rule everything else falls out of:</b> a child has no project of its own.
+  Its title is read from <em>what is being served</em>, never from a per-window selection.
+  A child therefore cannot name a study it isn't showing — the failure is unrepresentable
+  rather than guarded.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2>1 · The surfaces a user judges by</h2>
+<p class="lede">Every claim below is a thing on screen. If two of them can disagree, that's the bug.</p>
+
+<table>
+  <thead><tr><th>Surface</th><th>Master reads it from</th><th>Child reads it from</th><th>Can it lie?</th></tr></thead>
+  <tbody>
+    <tr><td>Window <b>title</b></td><td>its own <code>selection</code></td><td><b>the serve</b></td>
+        <td class="d">Master: only during a switch (guarded). Child: never.</td></tr>
+    <tr><td>Window <b>subtitle</b></td><td>lens counts over the bridge</td><td>same</td>
+        <td class="d">No — the bridge is per-window and reports what that window shows.</td></tr>
+    <tr><td><b>Sidebar</b> — project list</td><td>present, one row selected</td><td><b>absent</b></td>
+        <td class="n">Today: yes. Master's highlight and title share one source, so they agree <em>and</em> are wrong together.</td></tr>
+    <tr><td><b>Sidebar</b> — lens rail</td><td>present, own lens</td><td>present, own lens</td><td class="y">No</td></tr>
+    <tr><td><b>Window menu</b> row</td><td>title + subtitle, as rendered</td><td>same</td>
+        <td class="d">Inherits whatever the title does.</td></tr>
+    <tr><td><b>Content pane</b></td><td>the serve</td><td>the serve</td><td class="y">No — it is the source of truth</td></tr>
+    <tr><td><b>View ▸ Show Projects</b></td><td>live</td><td><b>dimmed</b></td>
+        <td class="y">No — dimming is the child's only structural cue</td></tr>
+  </tbody>
+</table>
+
+<div class="note warnbox">
+  <p><b>The correction this sheet is built on.</b> The design doc argued a master is
+  <em>safer</em> than a child because a wrong title is contradicted by the sidebar. It isn't:
+  in a master the title and the sidebar highlight both derive from the same per-window
+  <code>selection</code>, while the content comes from the shared serve. They agree with each
+  other and are wrong together. <b>Two cues from one source are one cue drawn twice</b> — which
+  makes the master the more deceptive shape, because it looks corroborated.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2>2 · The two window types</h2>
+
+<div class="row">
+  <figure>
+    <figcaption>master · project selected <span class="tag ships">ships</span></figcaption>
+    <div class="win">
+      <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div>
+        <div class="wtitle">IKEA Study</div><div class="wsub">16 Sessions · 18h 23m</div></div>
+      <div class="wbody">
+        <div class="side">
+          <h5>Studies</h5>
+          <div class="srow sel">IKEA Study</div>
+          <div class="srow">Nokia Diary</div>
+          <div class="sgap"></div>
+          <h5>Views</h5>
+          <div class="srow sel">Sessions</div>
+          <div class="srow mute">Quotes</div>
+          <div class="srow mute">Analysis</div>
+        </div>
+        <div class="pane real">Sessions</div>
+      </div>
+    </div>
+  </figure>
+
+  <div class="arrow">→</div>
+
+  <figure>
+    <figcaption>child · ⌥⌘N from the master <span class="tag dec">to build</span></figcaption>
+    <div class="win">
+      <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div>
+        <div class="wtitle">IKEA Study</div><div class="wsub">16 Sessions · 18h 23m</div></div>
+      <div class="wbody">
+        <div class="side lensonly">
+          <h5>Views</h5>
+          <div class="srow sel">Sessions</div>
+          <div class="srow mute">Quotes</div>
+          <div class="srow mute">Analysis</div>
+          <div class="srow mute">Codebook</div>
+          <div class="srow mute">Project</div>
+        </div>
+        <div class="pane real">Sessions</div>
+      </div>
+    </div>
+  </figure>
+
+  <div class="arrow">→</div>
+
+  <figure>
+    <figcaption>child · re-pointed (step 2 of 2)</figcaption>
+    <div class="win">
+      <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div>
+        <div class="wtitle">IKEA Study</div><div class="wsub">312 quotes</div></div>
+      <div class="wbody">
+        <div class="side lensonly">
+          <h5>Views</h5>
+          <div class="srow mute">Sessions</div>
+          <div class="srow sel">Quotes</div>
+          <div class="srow mute">Analysis</div>
+          <div class="srow mute">Codebook</div>
+          <div class="srow mute">Project</div>
+        </div>
+        <div class="pane real">Quotes</div>
+      </div>
+    </div>
+  </figure>
+</div>
+
+<div class="note">
+  <p><b>A new child opens at its parent's lens</b>, then gets re-pointed. Two steps, and the
+  first one is never a surprise — the gesture reads as "duplicate this view, now change it".
+  Opening at a fixed default would cost the same two steps but start somewhere nobody asked for.</p>
+  <p>The child is <b>one flag</b>, not a second window type: <code>ProjectSidebarOutline</code>
+  already folds the lens rows into the same <code>NSOutlineView</code> as the project list, so
+  this is a section omitted.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2>3 · The happy path</h2>
+
+<ol class="steps">
+  <li>Launch. No windows → <b>master</b>, welcome screen, project list present.</li>
+  <li>Pick <b>IKEA Study</b>. Serve starts. Title and sidebar agree because there is one window.</li>
+  <li><b>⌥⌘N</b> → child on IKEA Study at Sessions (the master's lens). No project list.</li>
+  <li>Click <b>Quotes</b> in the child. Now: Sessions in the master, Quotes in the child.
+      Two lenses, one study, both titles true. <em>This is the feature.</em></li>
+  <li><b>⌥⌘N</b> ×3 more → three more children. Five transcripts side by side is the observed case.</li>
+  <li>Close a child. Nothing else moves.</li>
+  <li>Close the last window. Serve stops (<code>stopServeIfLastProjectWindow</code>).</li>
+</ol>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2>4 · What ⌥⌘N makes, and why the condition is not "no windows"</h2>
+
+<table>
+  <thead><tr><th>State</th><th>⌥⌘N makes</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Zero windows</td><td class="y">master</td><td>nothing to inherit from; you need a project list to get anywhere</td></tr>
+    <tr><td>Master on welcome (<b>nothing served</b>)</td><td class="d">master <span class="tag dec">decide</span></td>
+        <td>a child of nothing is an empty lens rail — see E4</td></tr>
+    <tr><td>Master with a project</td><td class="y">child</td><td>the normal case</td></tr>
+    <tr><td>Master + children</td><td class="y">child</td><td></td></tr>
+    <tr><td><b>Children only</b> — master closed</td><td class="y">master</td>
+        <td>the gap a window-count rule misses; this is what replaces promotion</td></tr>
+    <tr><td>Only Settings / Import open</td><td class="y">master</td><td>the roster deliberately doesn't count them</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <p>The condition is <code>hasMaster</code>, <b>not</b> <code>windowCount == 0</code>. Closing the
+  master while children remain is reachable, and under a window-count rule ⌥⌘N would mint another
+  child — leaving a screen of lens windows with no project list and no way to get one short of
+  relaunching. A welcome-screen window <em>counts</em> as a master: it carries the list.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2>5 · Menu states, by window type</h2>
+<p class="lede">Dimmed, never hidden — except where the item is gone for good.</p>
+
+<div class="row">
+  <figure>
+    <figcaption>File · from a master</figcaption>
+    <div class="menu">
+      <div class="mi"><span>New Project</span><span class="kbd">⌘N</span></div>
+      <div class="mi"><span>New Folder</span><span class="kbd">⇧⌘N</span></div>
+      <div class="mi"><span>New Window</span><span class="kbd">⌥⌘N</span></div>
+      <div class="sep"></div>
+      <div class="mi off"><span>Open in New Window</span><span class="kbd">⌃⌘O</span></div>
+      <div class="sep"></div>
+      <div class="mi"><span>Add Files…</span></div>
+      <div class="mi"><span>Import ▸</span></div>
+    </div>
+  </figure>
+
+  <figure>
+    <figcaption>File · from a child</figcaption>
+    <div class="menu">
+      <div class="mi off"><span>New Project</span><span class="kbd">⌘N</span></div>
+      <div class="mi off"><span>New Folder</span><span class="kbd">⇧⌘N</span></div>
+      <div class="mi"><span>New Window</span><span class="kbd">⌥⌘N</span></div>
+      <div class="sep"></div>
+      <div class="mi off"><span>Open in New Window</span><span class="kbd">⌃⌘O</span></div>
+      <div class="sep"></div>
+      <div class="mi off"><span>Add Files…</span></div>
+      <div class="mi off"><span>Import ▸</span></div>
+    </div>
+  </figure>
+
+  <figure>
+    <figcaption>View · master / child</figcaption>
+    <div class="menu">
+      <div class="mi"><span>Show Projects</span><span class="kbd">⌃⌘S</span></div>
+      <div class="mi off"><span>Show Projects <em>(child)</em></span><span class="kbd">⌃⌘S</span></div>
+      <div class="sep"></div>
+      <div class="mi"><span>Sessions</span><span class="kbd">⌘1</span></div>
+      <div class="mi"><span>Quotes</span><span class="kbd">⌘2</span></div>
+      <div class="mi"><span>Analysis</span><span class="kbd">⌘3</span></div>
+    </div>
+  </figure>
+
+  <figure>
+    <figcaption>Window · two windows, one study</figcaption>
+    <div class="menu">
+      <div class="mi"><span>Minimize</span><span class="kbd">⌘M</span></div>
+      <div class="mi"><span>Zoom</span></div>
+      <div class="sep"></div>
+      <div class="mi"><span>Bring All to Front</span></div>
+      <div class="sep"></div>
+      <div class="mi mark"><span>IKEA Study <em>(16 Sessions · 18h 23m)</em></span></div>
+      <div class="mi"><span>IKEA Study <em>(312 quotes)</em></span></div>
+    </div>
+  </figure>
+</div>
+
+<div class="note">
+  <p><b>Why the whole New/Add/Import family dims in a child.</b> They all act on
+  <em>which study</em> — the axis a child deliberately doesn't have. Dimming them is the same
+  statement the missing project list makes, in the place a Mac user checks when a click does
+  nothing. The lens rows stay live, because that is the axis a child owns.</p>
+  <p><b>Measured, not assumed:</b> AppKit's automatic Window-menu path renders
+  <code>Title (Subtitle)</code> — verified 18 Aug 2026 with two throwaway binaries. So two
+  windows on one study at different lenses are already distinguishable without an ordinal.</p>
+</div>
+
+<h3>Context menus</h3>
+<div class="row">
+  <figure>
+    <figcaption>right-click a project row — <b>master only</b></figcaption>
+    <div class="menu">
+      <div class="mi"><span>Open in New Window</span></div>
+      <div class="sep"></div>
+      <div class="mi"><span>Rename…</span></div>
+      <div class="mi"><span>Move to ▸</span></div>
+      <div class="mi"><span>Show in Finder</span></div>
+      <div class="sep"></div>
+      <div class="mi"><span>Analyse</span></div>
+      <div class="mi"><span>Remove…</span></div>
+    </div>
+  </figure>
+  <figure>
+    <figcaption>right-click a lens row — master <em>and</em> child</figcaption>
+    <div class="menu">
+      <div class="mi"><span>Open in New Window</span></div>
+    </div>
+  </figure>
+  <figure>
+    <figcaption>right-click the content pane — child</figcaption>
+    <div class="menu">
+      <div class="mi"><span>Back</span></div>
+      <div class="mi"><span>Reload</span></div>
+      <div class="sep"></div>
+      <div class="mi off"><span>Show Projects</span></div>
+    </div>
+  </figure>
+</div>
+
+<div class="note decbox">
+  <p><span class="tag dec">decide</span> <b>Does the lens-row context menu offer "Open in New Window"?</b>
+  It is the most natural place for the gesture — right-click Quotes, get a Quotes window — and it
+  would make ⌥⌘N's "opens at the parent's lens" rule redundant for the deliberate case. But it
+  collides in name with the <em>project</em>-row item, which means something different
+  (open <em>that study</em>, Stage 3b). Two commands, one label, two menus. Either rename one,
+  or don't ship the lens-row one until 3b settles the other.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2>6 · Transitions</h2>
+
+<table>
+  <thead><tr><th></th><th>Trigger</th><th>What moves</th><th>What the user sees</th></tr></thead>
+  <tbody>
+    <tr><td><span class="n">T1</span></td><td>⌥⌘N from a master</td><td>new child, parent's lens</td>
+        <td>a second window, same title, same view — then they re-point it</td></tr>
+    <tr><td><span class="n">T2</span></td><td>Master switches study</td><td><b>every child follows</b></td>
+        <td>all titles change together; all panes change together; nothing disagrees</td></tr>
+    <tr><td><span class="n">T3</span></td><td>Child switches lens</td><td>that child only</td>
+        <td>its subtitle changes; nothing else moves</td></tr>
+    <tr><td><span class="n">T4</span></td><td>Master closes, children remain</td><td>nothing — <b>no promotion</b></td>
+        <td>children keep working; ⌥⌘N brings a master back</td></tr>
+    <tr><td><span class="n">T5</span></td><td>Last window closes</td><td>serve stops</td><td>—</td></tr>
+    <tr><td><span class="n">T6</span></td><td>Dock icon, no windows</td><td>master</td>
+        <td>the roster answers, not AppKit's <code>hasVisibleWindows</code></td></tr>
+  </tbody>
+</table>
+
+<div class="note warnbox">
+  <p><b>T2 is the accepted oddity.</b> Switching the master to another study takes the children
+  with it, so you cannot peek at study B while keeping study A's transcripts open.
+  <b>Accepted 18 Aug 2026</b> — odd, manageable through beta, and better than any alternative
+  before 3b. It is the Stage 3a constraint stated honestly rather than hidden behind a window
+  that lies. Removing it is exactly what 3b buys, which gives that stage a one-line headline:
+  <em>"you can now have two studies open at once."</em></p>
+  <p><b>T4 is why promotion was rejected.</b> Promotion would exist only to paper over there being
+  one serve, would be deleted at 3b, and would make a window change shape while you're looking at
+  it because you closed a <em>different</em> one. An orphaned child is a working window, and the
+  recovery is a keystroke already in the researcher's fingers.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2>7 · Edge cases</h2>
+
+<h3><span class="n">E1</span> Two windows, two studies <span class="tag gone">ships today — the bug</span></h3>
+<div class="row">
+  <figure>
+    <figcaption>today: master + master</figcaption>
+    <div class="win">
+      <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div>
+        <div class="wtitle">IKEA Study</div><div class="wsub">16 Sessions · 18h 23m</div></div>
+      <div class="wbody">
+        <div class="side"><h5>Studies</h5><div class="srow sel">IKEA Study</div>
+          <div class="srow">Nokia Diary</div></div>
+        <div class="pane bad">Nokia Diary's<br>quotes</div>
+      </div>
+    </div>
+  </figure>
+  <figure>
+    <figcaption>as specified: master + child</figcaption>
+    <div class="win">
+      <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div>
+        <div class="wtitle">Nokia Diary</div><div class="wsub">204 quotes</div></div>
+      <div class="wbody">
+        <div class="side lensonly"><h5>Views</h5><div class="srow mute">Sessions</div>
+          <div class="srow sel">Quotes</div></div>
+        <div class="pane real">Nokia Diary's<br>quotes</div>
+      </div>
+    </div>
+  </figure>
+</div>
+<p>The title says IKEA, the sidebar highlights IKEA, the pane shows Nokia — and
+<b>Send to Miro exports Nokia's quotes to a board named IKEA</b>. The child shape makes it
+unrepresentable: no selection, no second source, title read from the serve.</p>
+
+<h3><span class="n">E2</span> Master mid-switch <span class="tag dec">the master still needs a guard</span></h3>
+<p>Between "user clicks study B" and "sidecar for B is up", the master's title already says B while
+the pane still shows A. Short, real, and the one place a master can lie. Guard the mount on
+<code>serveManager.currentProjectPath == project.path</code>; show the boot state, never a sibling's
+report. Children are immune — they follow the serve, so they simply arrive when it does.</p>
+
+<h3><span class="n">E3</span> Two children, same study, same lens</h3>
+<div class="row">
+  <figure>
+    <figcaption>the only case an ordinal fires</figcaption>
+    <div class="menu">
+      <div class="mi"><span>Bring All to Front</span></div>
+      <div class="sep"></div>
+      <div class="mi mark"><span>IKEA Study <em>(312 quotes)</em></span></div>
+      <div class="mi"><span>IKEA Study 2 <em>(312 quotes)</em></span></div>
+    </div>
+  </figure>
+</div>
+<p>Different studies are told apart by name; different lenses by subtitle. The ordinal is a
+<b>last resort</b> for genuinely byte-identical rows — the case Finder and Mail both leave stuck.
+That is a better justification than the one <code>window-menu-naming.html</code> rejected it on
+("two views of one project, not two projects"), which was only ever true of Stage 3a.
+<b>That mockup's E4 card needs correcting, not just reconciling with its own summary.</b></p>
+
+<h3><span class="n">E4</span> ⌥⌘N while the master shows the welcome screen <span class="tag dec">decide</span></h3>
+<p>Nothing is served, so a child would be an empty lens rail pointing at no study. Three answers:
+<b>(a)</b> ⌥⌘N makes a <em>master</em> — the <code>hasMaster</code> rule becomes "has a master
+<em>with a project</em>"; <b>(b)</b> ⌥⌘N dims; <b>(c)</b> the child shows the welcome screen too,
+which is a second window offering a project list it doesn't have. <b>(a)</b> is the only one that
+leaves the researcher somewhere useful, and it costs one clause.</p>
+
+<h3><span class="n">E5</span> A run is in progress</h3>
+<p>The subtitle narrates the run. With the current <code>.key</code>-only rule, opening Settings or
+the Import window means <em>no</em> window narrates and every subtitle drops back to its resting
+count. Consistent with "only the front window narrates" — but nobody decided the no-window case, and
+it reads as the run having stopped. <span class="tag dec">decide</span></p>
+
+<h3><span class="n">E6</span> The video pop-out <span class="tag gone">regression</span></h3>
+<p>It is a plain <code>NSWindow</code>, not a scene, so <code>@FocusedValue(\.bridge)</code> goes nil
+and <b>every Video menu item dims exactly when the video window is what you're looking at</b>.
+Master/child doesn't fix this — the pop-out is a third shape, and "front window" routing has no
+answer for a key window that isn't a scene.</p>
+
+<h3><span class="n">E7</span> Relaunch</h3>
+<p>Children have no selection to restore — they take the served study. So only the master's
+selection needs persisting, which makes the restore story <em>simpler</em> under this shape than
+under all-masters. Today one global <code>@AppStorage("selectedProjectID")</code> means every
+restored window lands on the same study; harmless once only one window reads it.</p>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2>8 · What this sheet asks you to decide</h2>
+<table>
+  <thead><tr><th></th><th>Question</th><th>Cheapest coherent answer</th></tr></thead>
+  <tbody>
+    <tr><td><span class="n">E4</span></td><td>⌥⌘N with nothing served</td><td>make a master — one clause on <code>hasMaster</code></td></tr>
+    <tr><td><span class="n">§5</span></td><td>lens-row "Open in New Window"</td><td>hold until 3b, or rename — two commands share one label</td></tr>
+    <tr><td><span class="n">E5</span></td><td>who narrates when a panel is frontmost</td><td>nobody, and say so — or keep one narrator</td></tr>
+    <tr><td><span class="n">E3</span></td><td>correct <code>window-menu-naming.html</code>'s E4 card</td><td>its premise was Stage-3a-only; the ordinal survives</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <p><b>Not asked here, because they're settled:</b> a child holds a lens not a project; ⌥⌘N is
+  gated on <code>hasMaster</code> not window count; promotion is rejected; a new child opens at its
+  parent's lens; switching the master takes the children. All recorded in
+  <code>docs/design-workspace.md</code> §"What a child window is" and its changelog.</p>
+</div>
+
+</div>
+</body>
+</html>

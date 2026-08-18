@@ -3,9 +3,10 @@ import SwiftUI
 
 /// Settings tab for app-level behaviour — currently just where new projects go.
 ///
-/// **Why a pane of its own.** The other four are chrome (Appearance), the two
-/// engines (LLM Provider, Transcription), and who can read your work (MCP
-/// Agents). A storage location is none of those, and putting it in Appearance
+/// **Why a pane of its own.** The others are chrome (Appearance), the engines
+/// (LLM Provider, Transcription), the services you have signed into (Accounts),
+/// and who can read your work (MCP Agents). A storage location is none of
+/// those, and putting it in Appearance
 /// because Appearance is the roomiest is how Appearance stops meaning anything.
 /// It is called General, and it is first, because that is the pane a Mac user
 /// checks for "where do new things go" — and because it will absorb the next
@@ -45,15 +46,21 @@ struct GeneralSettingsView: View {
                 LabeledContent {
                     folderMenu
                 } label: {
-                    // "Initial default location for new projects" — says
-                    // *initial* and *default* rather than naming the folder,
-                    // because the panel still lets the researcher go anywhere.
-                    // A terser "New project folder" left that implicit and read
-                    // as a constraint. No section header above it: with one row
-                    // the header only repeated the label.
+                    // "Default location for new projects" — names what the
+                    // setting does rather than the folder it holds, because the
+                    // panel still lets the researcher go anywhere; a terser
+                    // "New project folder" read as a constraint. No section
+                    // header above it: with one row the header only repeated
+                    // the label.
                     Text(i18n.t("settings.general.projectFolderLegend"))
-                    Text(explanation)
-                        .foregroundStyle(.secondary)
+                    // No second line when nothing is configured: the popup
+                    // already reads "Last location used", and a sentence
+                    // explaining that the app remembers only restates the
+                    // control sitting next to it.
+                    if let explanation {
+                        Text(explanation)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -116,12 +123,13 @@ struct GeneralSettingsView: View {
 
     // MARK: - The second line
 
-    /// Whichever fact matters in the current state: what the app will do if you
-    /// leave this alone, where the folder is, or why it can't be reached.
-    private var explanation: String {
+    /// Whichever fact matters in the current state — where the folder is, or
+    /// why it can't be reached. `nil` while nothing is configured: the popup
+    /// says "Last location used", and the row needs no gloss on that.
+    private var explanation: String? {
         switch configured {
         case .notSet:
-            return i18n.t("settings.general.projectFolderHelp")
+            return nil
 
         case .resolved(let url):
             // Finder's own abbreviation. `UserHome`, not `NSHomeDirectory()`,

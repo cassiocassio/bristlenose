@@ -372,11 +372,27 @@ final class GoogleMeetSource: CloudImportSource {
             return false
         }
         let client = GoogleOAuthClient(config: config, session: session)
-        guard let renewed = try? await client.refresh(
-            refreshToken: refreshToken, knownGrants: current.granted)
-        else {
-            tokens = nil
-            publishRefusal()
+        let renewed: GoogleTokens
+        do {
+            renewed = try await client.refresh(
+                refreshToken: refreshToken, knownGrants: current.granted)
+        } catch {
+            // **Only an authoritative refusal writes a tombstone.** `try?` here
+            // treated a dropped connection exactly like a revoked grant, so a
+            // moment of bad wifi stripped the refresh token permanently and
+            // told the researcher Google had ended their session. This path
+            // runs when a token has aged out — the ordinary next-morning case
+            // the whole restore feature exists to serve.
+            //
+            // A 4xx from the token endpoint is Google saying no. Anything else
+            // leaves the grant intact for the next attempt.
+            if case GoogleOAuthError.tokenExchangeFailed(let status, _) = error,
+               (400...499).contains(status) {
+                tokens = nil
+                publishRefusal()
+            } else {
+                Self.log.notice("meet refresh failed without a verdict — keeping the grant")
+            }
             return false
         }
         tokens = renewed
@@ -396,7 +412,12 @@ final class GoogleMeetSource: CloudImportSource {
         // failure. Declining Meet costs the transcript and keeps the list.
         let granted = try await client.signIn(scopes: GoogleScopes.requested, requireAll: false)
         tokens = granted
-        identity = try? await fetchIdentity(accessToken: granted.accessToken)
+        // `?? identity` is load-bearing: the address derives the Keychain
+        // account key, so a transient userinfo failure that nils a known-good
+        // one re-derives `unidentified` and `saveGoogle` deletes the correctly
+        // keyed item as a stale rekey. A cosmetic lookup must not be able to
+        // destroy a credential.
+        identity = (try? await fetchIdentity(accessToken: granted.accessToken)) ?? identity
         // After the identity, not before: `accountEmail` is what decides the
         // window's opening phase on the next restore, so a grant saved without
         // it restores to a sign-in button while holding a working token.
@@ -458,7 +479,14 @@ final class GoogleMeetSource: CloudImportSource {
         // "nobody pressed record" to a claim about the account's plan. One
         // call, once, closes both.
         if identity == nil {
-            identity = try? await fetchIdentity(accessToken: tokens.accessToken)
+            identity = (try? await fetchIdentity(accessToken: tokens.accessToken)) ?? identity
+            // **Publish, or the backfill goes nowhere.** `saveGoogle`'s
+            // `previousKey` contract and the rekey it performs both rest on
+            // this call: without it the address is known in memory and the
+            // stored grant stays under the anonymous key, so the account is
+            // nameless in Settings ▸ Accounts and the consumer-account check
+            // has nothing to check. Guarded, so a failed lookup does not write.
+            if identity != nil { publishGrant() }
         }
 
         // Ids from an earlier window are not merely clutter. `fetch` resolves a

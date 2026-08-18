@@ -89,5 +89,21 @@ enum MiroConnectionStore {
         }
         store.delete(provider: provider, account: KeychainHelper.account)
         forgetIdentity()
+
+        // **Clearing the Keychain and the fronted session is still not enough.**
+        // `overlayMiroToken` injects `BRISTLENOSE_MIRO_ACCESS_TOKEN` into every
+        // sidecar at spawn, and the server resolves the credential store *first*
+        // — which falls through to that env var. So a serve started while the
+        // token existed keeps a working copy no HTTP call can unset, and the
+        // parked sidecar `ServeManager` holds keeps one too. Until both are
+        // respawned the pane's confirmation — "stop sending quotes to your
+        // boards" — is simply untrue.
+        //
+        // `.bristlenosePrefsChanged` is the existing mechanism for exactly this
+        // ("the sidecar's baked env is stale"): it drains the parked slot and
+        // restarts the fronted serve. The restart cost is the usual one, and it
+        // is the right trade here — a deliberate, rare act, performed from
+        // Settings rather than mid-report.
+        NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
     }
 }

@@ -161,9 +161,12 @@ enum CloudAccountKey {
 /// which is right for a revocable per-user credential and matches how every
 /// other secret in this app is held.
 ///
-/// **iCloud Keychain sync is deliberate and settled (18 Aug 2026)**, and it
-/// contradicts `docs/design-cloud-import.md` §7 and §10, which both still say
-/// non-synchronizable. Those sections are wrong. The realistic loss event is
+/// **iCloud Keychain sync is deliberate and settled (18 Aug 2026)** — see
+/// `docs/design-cloud-import.md` §7, "Non-synchronizable was reversed", which
+/// records the decision and the reasoning. _(Both §7 and §10 said the opposite
+/// until `4e7aeb18` trued them; this comment used to say they were wrong, which
+/// now reads as confusion rather than as the justification it is.)_ The
+/// realistic loss event is
 /// the Mac being stolen, iCloud Keychain is end-to-end encrypted regardless of
 /// Advanced Data Protection, and the grant permits downloading recordings from
 /// an account the researcher is already signed into on the same devices all
@@ -240,7 +243,15 @@ enum CloudGrantStore {
         }
         // Only after the new item is safely written. Deleting first would turn
         // a refused write into a lost sign-in.
-        if previousKey != key { clearGoogle(account: previousKey, store: store) }
+        // **Only rekey out of the anonymous slot.** `previousKey` exists for one
+        // case — a session that opened at `unidentified` and learnt its address
+        // — and an unguarded delete silently generalises that to "the
+        // researcher signed in as somebody else", which removes the account
+        // they were previously using. That would make this change's own thesis
+        // false: the second sign-in would still eat the first, just one layer up.
+        if previousKey != key, previousKey == CloudAccountKey.unidentified {
+            clearGoogle(account: previousKey, store: store)
+        }
         return key
     }
 
@@ -285,7 +296,15 @@ enum CloudGrantStore {
             log.error("cloud_grant teams keychain write refused")
             return previousKey
         }
-        if previousKey != key { clearTeams(account: previousKey, store: store) }
+        // **Only rekey out of the anonymous slot.** `previousKey` exists for one
+        // case — a session that opened at `unidentified` and learnt its address
+        // — and an unguarded delete silently generalises that to "the
+        // researcher signed in as somebody else", which removes the account
+        // they were previously using. That would make this change's own thesis
+        // false: the second sign-in would still eat the first, just one layer up.
+        if previousKey != key, previousKey == CloudAccountKey.unidentified {
+            clearTeams(account: previousKey, store: store)
+        }
         return key
     }
 
@@ -427,6 +446,18 @@ enum CloudGrantStore {
         // so this leaves the deletion to the reader rather than doing it here,
         // where a decoder change would look like a data loss bug.
         let key = CloudAccountKey.derive(identity(data))
+        // **Never overwrite an item that is already there.** With iCloud
+        // Keychain sync on, a two-Mac fleet on two versions can loop: the new
+        // build migrates and deletes the legacy item, the old build sees
+        // nothing, prompts a re-sign-in and writes the legacy key again, and
+        // the new build migrates *again* — over a grant it has since refreshed,
+        // reverting to a rotated-away refresh token. The same shape happens on
+        // a plain downgrade. Deleting the legacy item is still right: it has
+        // already been superseded.
+        guard store.get(provider: provider, account: key) == nil else {
+            store.delete(provider: provider, account: CloudAccountKey.legacy)
+            return
+        }
         guard store.set(provider: provider, account: key, value: raw) else {
             log.error("cloud_grant migration write refused — leaving the legacy item in place")
             return

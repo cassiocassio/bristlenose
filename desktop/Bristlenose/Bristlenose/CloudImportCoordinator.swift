@@ -60,6 +60,17 @@ final class CloudImportCoordinator: ObservableObject {
                     notedPlatform: raw,
                     notedAccountKey: account)
                 else { return }
+                // **Stop the transfer before dropping the reference.**
+                // Releasing the store cancels nothing: `fetchTask` captures
+                // `self` strongly and the per-row tasks deliberately do not
+                // inherit cancellation from it (`stopFetch`'s own comment says
+                // so). So a disconnect during a batch used to clear the row in
+                // Settings while gigabytes kept arriving from the account just
+                // removed — the precise failure this notification exists to
+                // prevent, one layer down. Second-order: with `store` nil,
+                // `isFetching` reads false, so the guard in `openLive` would
+                // let a new batch start alongside the orphaned one.
+                self.store?.stopFetch()
                 // Drop the store rather than re-opening on the sign-in button:
                 // the window's whole state — ticks, outcomes, the batch — belongs
                 // to a session that no longer exists.

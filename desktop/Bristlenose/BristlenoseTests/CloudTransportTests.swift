@@ -612,7 +612,13 @@ struct ListingTransportTests {
         // the regression sat for a day in a test whose entire subject is
         // *noticing that a walk did not finish*. Worth the irony being written
         // down rather than quietly corrected.
-        #expect(StubURLProtocol.requests.count <= 40,
+        //
+        // 40 → 41 on 18 Aug 2026, and the same way: `list` gained a `/me`
+        // backfill for a sign-in whose address never arrived, so an adapter
+        // restored without one makes exactly one extra request. Two bounded
+        // paginators plus one bookkeeping call. It is skipped entirely when the
+        // listing failed — see `unlicensedNeverLoops`, whose bound is unmoved.
+        #expect(StubURLProtocol.requests.count <= 41,
                 "neither paginator may exceed its cap: \(StubURLProtocol.requests.count)")
     }
 

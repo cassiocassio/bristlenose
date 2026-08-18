@@ -115,8 +115,13 @@ enum AccountAttention: Equatable, Sendable {
 enum AccountSectionState: Equatable, Sendable {
     /// Nothing to offer: no OAuth client is registered in this build, or the
     /// service is parked behind a flag. Not the researcher's doing and not
-    /// something they can fix, so it carries no verb.
-    case unavailable
+    /// something they can fix, so it offers no way to connect.
+    ///
+    /// `strandedIdentity` is set when a sign-in is nonetheless stored — a grant
+    /// that outlived the client id it was obtained with. It is the only reason
+    /// this state ever carries an account key, and the row says so rather than
+    /// implying nothing is there.
+    case unavailable(strandedIdentity: String?)
     case notConnected
     case connected(identity: String?)
     case attention(identity: String?, AccountAttention)
@@ -124,7 +129,8 @@ enum AccountSectionState: Equatable, Sendable {
     /// The account this row is about, when there is one to name.
     var identity: String? {
         switch self {
-        case .unavailable, .notConnected: return nil
+        case .notConnected: return nil
+        case .unavailable(let identity): return identity
         case .connected(let identity): return identity
         case .attention(let identity, _): return identity
         }
@@ -182,8 +188,19 @@ enum AccountsSectionModel {
         // Unavailable is checked first and unconditionally. A grant left behind
         // by an earlier build whose client id has since gone would otherwise
         // render as a working connection nothing can use.
+        //
+        // **But it still carries the account key.** This guard exists precisely
+        // because a stored grant can outlive its client id — and the first
+        // version answered that by making the grant *undeletable*, in a pane
+        // whose whole purpose is deleting it. A client's refresh token with no
+        // UI anywhere to remove it is a worse outcome than a row that offers
+        // Disconnect on a service it cannot currently sign in to. Connect stays
+        // suppressed; only the removal survives.
         guard available else {
-            return AccountSection(service: .cloud(platform), state: .unavailable, accountKey: nil)
+            let stranded = connections.first { $0.platform == platform }
+            return AccountSection(service: .cloud(platform),
+                                  state: .unavailable(strandedIdentity: stranded?.address),
+                                  accountKey: stranded?.accountKey)
         }
         // First, not chosen: one account per service today, and nothing yet
         // offers a way to connect a second.

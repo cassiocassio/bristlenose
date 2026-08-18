@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 // The live Teams adapter, over Microsoft Graph.
 //
@@ -138,6 +139,8 @@ private struct GraphCalendarView: Decodable {
 // MARK: - The adapter
 
 final class TeamsSource: CloudImportSource {
+    private static let log = Logger(subsystem: "app.bristlenose", category: "cloud-import.teams")
+
     private let config: MicrosoftOAuthConfig
     private let sessionOwner: CloudSessionOwner
     private var session: URLSession { sessionOwner.session }
@@ -245,9 +248,27 @@ final class TeamsSource: CloudImportSource {
             return false
         }
         let client = MicrosoftOAuthClient(config: config, session: session)
-        guard let renewed = try? await client.refresh(refreshToken: refreshToken) else {
-            tokens = nil
-            publishRefusal()
+        let renewed: MicrosoftTokenResponse
+        do {
+            renewed = try await client.refresh(refreshToken: refreshToken)
+        } catch {
+            // **Only an authoritative refusal writes a tombstone.** `try?` here
+            // treated a dropped connection exactly like a revoked grant — so a
+            // moment of bad wifi stripped the refresh token, permanently, and
+            // told the researcher their provider had ended the session. This
+            // path runs precisely when a token has aged out, which is the
+            // ordinary morning-after case the whole restore feature exists for.
+            //
+            // A 4xx from the token endpoint is Microsoft saying no. Anything
+            // else — a `URLError`, a 5xx — leaves the grant untouched so the
+            // next attempt can succeed.
+            if case MicrosoftOAuthError.tokenExchangeFailed(let status, _) = error,
+               (400...499).contains(status) {
+                tokens = nil
+                publishRefusal()
+            } else {
+                Self.log.notice("teams refresh failed without a verdict — keeping the grant")
+            }
             return false
         }
         // Carry the refresh token forward when the response omitted it — see
@@ -282,7 +303,12 @@ final class TeamsSource: CloudImportSource {
     func signIn() async throws {
         let client = MicrosoftOAuthClient(config: config, session: session)
         tokens = try await client.signIn()
-        identity = try? await fetchIdentity()
+        // `?? identity` is load-bearing. The address is what derives the
+        // Keychain account key, so letting a transient `/me` failure nil a
+        // known-good one re-derives `unidentified` — and `saveTeams` then
+        // deletes the correctly-keyed item as a stale rekey. A cosmetic lookup
+        // must not be able to destroy a credential.
+        identity = (try? await fetchIdentity()) ?? identity
         publishGrant()
     }
 
@@ -405,6 +431,30 @@ final class TeamsSource: CloudImportSource {
         // free from the filename, which is why §6 could move title filtering
         // out of the calendar's reach entirely.
         let events = await calendarEvents(window: window)
+
+        // Backfill the address if sign-in never got it — mirroring Google's,
+        // which Teams was missing entirely. Without it a grant whose `/me`
+        // failed once stays under the anonymous key **permanently**: nameless
+        // in Settings ▸ Accounts, and occupying the one slot every other
+        // unnamed sign-in shares. `publishGrant` is the half that moves it —
+        // see `saveTeams(previousKey:)`.
+        //
+        // **After the two reads, not before**, for two reasons. It is
+        // bookkeeping, and nobody should wait on it for their recordings. And
+        // the transport tests pin the listing's request sequence — a `/me` call
+        // at the front makes `requests.first` the wrong URL, which is the tests
+        // doing their job. It still lands before `organisedByOthers` reads it
+        // below, which is the only thing in this method that needs it.
+        // Not after a failed listing: on an unlicensed or unauthorised account
+        // every Graph call fails identically, and a third doomed request buys
+        // nothing while making a network trace look like the retry loop the
+        // classifier exists to prevent.
+        var listingFailed = false
+        if case .failed = outcome { listingFailed = true }
+        if identity == nil, !listingFailed, let restored = try? await fetchIdentity() {
+            identity = restored
+            publishGrant()
+        }
 
         let rows = items.compactMap { makeRow($0, window: window, events: events) }
         return MeetingListing(

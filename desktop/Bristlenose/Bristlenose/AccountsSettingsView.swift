@@ -25,7 +25,6 @@ import SwiftUI
 
 struct AccountsSettingsView: View {
     @ObservedObject var serveManager: ServeManager
-    @EnvironmentObject private var i18n: I18n
 
     @State private var sections: [AccountSection]
     /// The section awaiting confirmation, if any. Held rather than passed so
@@ -66,22 +65,43 @@ struct AccountsSettingsView: View {
         // underneath it.
         .onReceive(NotificationCenter.default.publisher(
             for: .bristlenoseCloudAccountDisconnected)) { _ in reload() }
+        // **Re-read whenever the window is looked at.** `.onAppear` fires on
+        // entering the hierarchy, not on regaining key — so the pane's own
+        // primary action (Connect… → sign in → come back) left a row still
+        // reading "Not connected", inviting the researcher to click it again.
+        // Keying on the window rather than adding a connected-side notification
+        // costs no new protocol and covers every writer for free, including the
+        // Miro export sheet, which posts nothing at all.
+        .onReceive(NotificationCenter.default.publisher(
+            for: NSWindow.didBecomeKeyNotification)) { _ in reload() }
+        // `presenting:` rather than a bare `isPresented:` — the closures get a
+        // non-optional section that survives the dismissal animation, so the
+        // title cannot flash "Disconnect ?" on the way out and the message has
+        // no nil branch to fall down (which rendered the *cloud* copy for Miro).
         .alert(
-            "Disconnect \(pendingDisconnect?.service.displayName ?? "")?",
+            // The address when there is one: with two accounts on a platform
+            // the service name alone does not say which is about to go.
+            "Disconnect \(pendingDisconnect?.state.identity ?? pendingDisconnect?.service.displayName ?? "")?",
             isPresented: Binding(
                 get: { pendingDisconnect != nil },
-                set: { if !$0 { pendingDisconnect = nil } })
-        ) {
-            Button("Disconnect", role: .destructive) {
-                if let section = pendingDisconnect { disconnect(section) }
+                set: { if !$0 { pendingDisconnect = nil } }),
+            presenting: pendingDisconnect
+        ) { section in
+            // **No `role: .destructive`.** The researcher clicked Disconnect…;
+            // this button performs their original intent, and Apple reserves
+            // the destructive style for actions people did *not* deliberately
+            // choose — Empty Trash is their own counter-example. Dropping it
+            // also restores Return-to-confirm.
+            Button("Disconnect") {
+                disconnect(section)
                 pendingDisconnect = nil
             }
             Button("Cancel", role: .cancel) { pendingDisconnect = nil }
-        } message: {
+        } message: { section in
             // Says what it does AND what it does not do. Removing our copy is
             // not revocation, and a researcher who believes it is would stop
             // one step short of the thing that actually protects a client.
-            Text(disconnectWarning(for: pendingDisconnect))
+            Text(disconnectWarning(for: section))
         }
     }
 
@@ -103,13 +123,25 @@ struct AccountsSettingsView: View {
             action(section)
         }
         // Unavailable is not a failure and not the researcher's doing, so it
-        // recedes rather than shouting.
-        .opacity(section.state == .unavailable ? 0.55 : 1)
+        // recedes — via the hierarchical style, never `.opacity`. A manual alpha
+        // compounds with the detail line's own `.secondary` (landing near 0.28
+        // effective, under the 4.5:1 floor) and, worse, does not respond to
+        // Increase Contrast. The system styles carry accessible variants; a
+        // hardcoded number cannot.
+        .foregroundStyle(isUnavailable(section) ? AnyShapeStyle(.tertiary)
+                                                : AnyShapeStyle(.primary))
+    }
+
+    private func isUnavailable(_ section: AccountSection) -> Bool {
+        if case .unavailable = section.state { return true }
+        return false
     }
 
     private func headline(_ state: AccountSectionState) -> String {
         switch state {
-        case .unavailable:  return "Not available yet"
+        // No "yet" — user-facing text makes no promises, and a roadmap is not
+        // this row's job.
+        case .unavailable(let stranded): return stranded ?? "Not available"
         case .notConnected: return "Not connected"
         // The address is the headline once there is one — with a service name
         // already in the header above, repeating it here would say nothing.
@@ -120,8 +152,14 @@ struct AccountsSettingsView: View {
 
     private func detail(_ section: AccountSection) -> String? {
         switch section.state {
-        case .unavailable:
-            return "Bristlenose can't sign in to \(section.service.displayName) yet."
+        case .unavailable(let stranded):
+            // A stranded grant gets the fuller sentence: otherwise the row reads
+            // as "nothing is stored here", which is the reading that would leave
+            // a client's credential on disk untouched.
+            return stranded == nil
+                ? "Bristlenose can't sign in to \(section.service.displayName)."
+                : "Bristlenose can't sign in to \(section.service.displayName) in this "
+                  + "build, but this sign-in is still stored."
         case .notConnected:
             return section.service.connectsFromHere
                 ? nil
@@ -137,24 +175,39 @@ struct AccountsSettingsView: View {
     private func action(_ section: AccountSection) -> some View {
         switch section.state {
         case .unavailable:
-            // No verb, deliberately: there is nothing the researcher can do,
-            // and a disabled button would imply there is.
-            EmptyView()
+            // No way to connect — nothing the researcher can do about a missing
+            // client id, and a disabled Connect would imply there is. But a
+            // grant stored here must still be removable, or a client's
+            // credential sits on disk with no UI anywhere that can reach it.
+            if section.accountKey != nil {
+                disconnectButton(section)
+            }
         case .notConnected:
             if section.service.connectsFromHere {
                 Button("Connect…") { connect(section.service) }
+                    .accessibilityLabel("Connect \(section.service.displayName)")
             }
         case .connected:
-            Button("Disconnect…") { pendingDisconnect = section }
+            disconnectButton(section)
         case .attention(_, let attention):
             // Disconnect stays available on a row that says something is wrong
             // — that is exactly the row a researcher wants rid of — with the
             // recovery trailing it, where the default action belongs.
-            Button("Disconnect…") { pendingDisconnect = section }
+            disconnectButton(section)
             if attention.isRecoverable, section.service.connectsFromHere {
                 Button("Sign In…") { connect(section.service) }
+                    .accessibilityLabel("Sign in to \(section.service.displayName)")
             }
         }
+    }
+
+    /// The service name rides the accessibility label, not the visible title.
+    /// Sighted readers take it from the section header; the VoiceOver rotor and
+    /// Voice Control do not, and four identical "Disconnect…" entries in a list
+    /// of buttons is unusable.
+    private func disconnectButton(_ section: AccountSection) -> some View {
+        Button("Disconnect…") { pendingDisconnect = section }
+            .accessibilityLabel("Disconnect \(section.service.displayName)")
     }
 
     // MARK: - Doing things
@@ -177,7 +230,10 @@ struct AccountsSettingsView: View {
     /// and it is not parked. `CloudPlatform.offered` already owns the parking
     /// half; the config resolvers own the other.
     private static func availablePlatforms() -> Set<CloudPlatform> {
-        Set(CloudPlatform.offered(zoomEnabled: BristlenoseFlags.cloudImportZoom).filter { platform in
+        // `shipping`, not a re-derivation — its own doc-comment names "a
+        // Settings ▸ Accounts pane" as the caller that should inherit the
+        // parking rather than spelling it out a second time.
+        Set(CloudPlatform.shipping.filter { platform in
             switch platform {
             case .teams: return MicrosoftOAuthConfig.resolve() != nil
             case .meet:  return GoogleOAuthConfig.resolve() != nil
@@ -208,14 +264,17 @@ struct AccountsSettingsView: View {
         }
     }
 
-    private func disconnectWarning(for section: AccountSection?) -> String {
+    /// Non-optional and exhaustive over `AccountService` — the previous
+    /// `default:` arm quietly rendered the *cloud* wording for a nil section,
+    /// the shape that stops being unreachable the moment a fifth service lands.
+    private func disconnectWarning(for section: AccountSection) -> String {
         let revocation = "\n\nThis doesn't revoke Bristlenose's access at the provider — "
             + "do that in your account settings there."
-        switch section?.service {
+        switch section.service {
         case .miro:
             return "Bristlenose will forget this token and stop sending quotes to your boards. "
                 + "Boards you've already created stay in Miro." + revocation
-        default:
+        case .cloud:
             return "Bristlenose will forget this sign-in and stop listing your recordings. "
                 + "Recordings you've already imported stay in your projects." + revocation
         }

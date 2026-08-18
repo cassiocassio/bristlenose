@@ -62,7 +62,7 @@ struct AccountsSectionModelTests {
         // Zoom today: parked behind a flag, no OAuth client. Not the
         // researcher's doing and not something they can fix.
         let result = sections(available: [.teams, .meet])
-        #expect(state(result, "zoom") == .unavailable)
+        #expect(state(result, "zoom") == .unavailable(strandedIdentity: nil))
     }
 
     @Test("Unavailable wins over a grant left behind by an earlier build")
@@ -71,9 +71,31 @@ struct AccountsSectionModelTests {
         // would otherwise render as a working connection nothing can use.
         let result = sections(available: [.meet],
                               connections: [connection(.teams, "martin@clientco.com")])
-        #expect(state(result, "teams") == .unavailable)
-        #expect(result.first { $0.service.id == "teams" }?.accountKey == nil,
-                "an unavailable service must not offer something to disconnect")
+        #expect(state(result, "teams")
+                == .unavailable(strandedIdentity: "martin@clientco.com"))
+    }
+
+    @Test("A grant stranded on an unavailable service can still be removed")
+    func strandedGrantIsStillDisconnectable() {
+        // _Reversed 18 Aug 2026._ This assertion used to be
+        // `accountKey == nil`, with the comment "an unavailable service must not
+        // offer something to disconnect" — which pinned a defect rather than a
+        // property. The `.unavailable` guard exists *because* a stored grant can
+        // outlive its client id, and answering that by making the grant
+        // undeletable leaves a client's refresh token on disk with no UI
+        // anywhere that can reach it, in a pane whose entire purpose is removal.
+        // Connect stays suppressed; only the removal survives.
+        let result = sections(available: [.meet],
+                              connections: [connection(.teams, "martin@clientco.com")])
+        #expect(result.first { $0.service.id == "teams" }?.accountKey
+                == CloudAccountKey.derive("martin@clientco.com"))
+    }
+
+    @Test("An unavailable service with nothing stored offers nothing to remove")
+    func unavailableWithoutAGrantHasNoKey() {
+        let result = sections(available: [.meet])
+        #expect(state(result, "teams") == .unavailable(strandedIdentity: nil))
+        #expect(result.first { $0.service.id == "teams" }?.accountKey == nil)
     }
 
     // MARK: Connected

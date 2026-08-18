@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import Security
 
 // MARK: - Protocol
@@ -59,6 +60,8 @@ extension KeychainStore {
 /// For protocol-based usage (e.g. dependency injection in tests), use
 /// `KeychainHelper.liveStore` which returns a `KeychainStore` instance.
 enum KeychainHelper {
+
+    private static let log = Logger(subsystem: "app.bristlenose", category: "keychain")
 
     static let account = "bristlenose"
 
@@ -257,11 +260,15 @@ enum KeychainHelper {
 
     // MARK: - Private
 
+    /// **Not `#if DEBUG`.** A Keychain read that fails returns nil, and an
+    /// enumeration that fails returns `[]` — which the Accounts pane renders as
+    /// "Not connected" while live grants sit on disk, inviting a re-sign-in
+    /// nobody needed. Without a line here that state is unfalsifiable on a
+    /// tester's machine, and the cohort is people you cannot screen-share with
+    /// on demand. The `OSStatus` is not sensitive; nothing else is logged.
     private static func logKeychainError(_ operation: String, status: OSStatus) {
-        #if DEBUG
         let message = SecCopyErrorMessageString(status, nil) as String? ?? "unknown"
-        print("[KeychainHelper] \(operation) failed: \(status) (\(message))")
-        #endif
+        log.error("\(operation, privacy: .public) failed: \(status, privacy: .public) (\(message, privacy: .public))")
     }
 }
 

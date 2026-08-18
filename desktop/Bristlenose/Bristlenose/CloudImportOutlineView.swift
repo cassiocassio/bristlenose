@@ -116,6 +116,9 @@ struct CloudImportOutlineView: NSViewRepresentable {
         // on `controlBackgroundColor`: two greys and a seam, at its worst in
         // the one-or-two-row state that is this window's commonest.
         context.coordinator.outline = outline
+        // Before the first reload, so the column set is right on the first
+        // frame rather than corrected on the second.
+        context.coordinator.syncScheduledColumn()
         context.coordinator.reload(force: true)
         // The list is what this window is for, so it takes the keyboard rather
         // than leaving it to the toolbar's filter field. Without this the
@@ -169,11 +172,11 @@ struct CloudImportOutlineView: NSViewRepresentable {
         outline.addTableColumn(column(Column.tick, "", width: 26, max: 26))
         outline.addTableColumn(column(Column.meeting, i18n.t("desktop.cloudImport.columnMeeting"),
                                       width: 320, min: 200))
-        // Added and removed live by `syncScheduledColumn`, because whether the
-        // listing carries scheduled times is a fact about the *data* — and on
-        // Teams, about a permission the tenant may have declined.
-        outline.addTableColumn(column(Column.scheduled, i18n.t("desktop.cloudImport.columnScheduled"),
-                                      width: 92, min: 72, max: 160))
+        // Scheduled is NOT added here. It is owned entirely by
+        // `syncScheduledColumn`, which the caller runs before the first reload —
+        // because whether the listing carries scheduled times is a fact about
+        // the *data*, and adding it here first would mean a frame in which a
+        // column the tenant cannot fill exists.
         outline.addTableColumn(column(Column.recorded, i18n.t("desktop.cloudImport.columnRecorded"),
                                       width: 92, min: 72, max: 160))
         outline.addTableColumn(column(Column.size, i18n.t("desktop.cloudImport.columnSize"),

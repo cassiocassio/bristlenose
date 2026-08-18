@@ -244,10 +244,13 @@ enum CloudImportOutline {
     /// as recordings that lost their meetings, rather than as a permission the
     /// tenant declined to give.
     ///
-    /// **An empty listing keeps the column.** Knowing there is no scheduled
-    /// data requires having listed something; nothing listed is not evidence,
-    /// and dropping the column on the empty state only to restore it a moment
-    /// later is jitter with no information in it.
+    /// **An empty listing keeps the column** — though nothing reaches that
+    /// branch today, and the first version of this comment claimed a flicker it
+    /// had not checked for. The window draws a `ContentUnavailableView` rather
+    /// than the grid whenever the outline is empty, so the table only ever
+    /// mounts with rows already in it. The clause stays because "no rows" is
+    /// not evidence that nothing was scheduled, and a caller that asks earlier
+    /// should get that answer rather than a confident no.
     ///
     /// Ask this of the **whole** listing, never of the filtered subset the
     /// outline is built from — otherwise a filter keystroke that happens to

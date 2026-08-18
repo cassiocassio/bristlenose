@@ -7,7 +7,7 @@ import SwiftUI
 // so `Settings` there resolves to the package, not SwiftUI's `Settings` scene).
 // A bare `Settings.Pane` here would resolve to SwiftUI's `Settings` and fail.
 
-// Stable identifiers for the five Settings panes (also used for deep-linking —
+// Stable identifiers for the six Settings panes (also used for deep-linking —
 // e.g. the welcome "Setup →" opens `.llm`; Bristlenose ▸ Connect an Agent…
 // opens `.mcpAgents`).
 extension PkgSettings.PaneIdentifier {

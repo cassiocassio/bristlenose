@@ -1,11 +1,12 @@
 ---
 status: current
-last-trued: 2026-07-26
+last-trued: 2026-08-18 (cloud-import slice — the Accounts pane was missing from the pane enumeration entirely)
 trued-against: HEAD@main on 2026-07-26 (Settings package migration + Tab 1 pickers/toggles + canActivate/.outOfCredit)
 ---
 
 ## Changelog
 
+- _2026-08-18_ — **Truing pass (`--topic cloud-import`): the pane count was five and six ship.** **Accounts** landed 18 Aug between Transcription and MCP Agents and was enumerated nowhere in this doc — added as Tab 4 below, along with the five decisions that were only in code comments. Same sweep: the locale count 21 → 22 (Catalan, 0.26.0) in three places here, and the matching "five Settings panes" comment in `SettingsView.swift:10`. **Flagged, not fixed** (belongs to an i18n pass, not this doc): the Accounts pane ships **unlocalised** — zero `i18n.t` call sites in `AccountsSettingsView.swift`, its title hardcoded `"Accounts"` (`SettingsView.swift:97`) while the other five read `desktop.settingsTabs.*`, and no `accounts` key in `en/desktop.json`. `check-locales.py` diffs en→locale, so **an absent en key can never be reported missing** — no gate catches this class.
 - _2026-08-17_ — **New first pane, General, holding one row: where new projects go.** Three of the four project-creation doors (loose-file drops on the sidebar and on the welcome screen, the import window) open an `NSSavePanel` and now share a three-rung ladder in `ProjectFolderDefaults`: **configured** (this pane) → **remembered** (the parent of the last project made) → **`~/Documents`**. The fourth door, `+ New Project`, deliberately proposes nothing and **must stay that way** — `ProjectIndex.renameProject` writes `.name` and never `.path`, so eagerly creating `<configured>/New project/` and dropping into inline rename would leave the sidebar saying "Ikea Study" while the folder on disk stayed `New project`, silently and permanently. Here the folder *is* the document, so two names for one document is the worst available outcome; the invariant that prevents it is precisely that the placeholder has no path. Also fixed in the same pass: **the `~/Documents` floor never resolved to `~/Documents`** — `FileManager.urls(for: .documentDirectory, in: .userDomainMask)` returns the app's *private container* Documents under App Sandbox (the container symlinks Desktop/Downloads/Movies/Music/Pictures out to the real folders but keeps Documents private), so a project made from a first-run panel would have landed inside the container: invisible in Finder, wiped by `reset-sandbox-state.sh`. New `UserHome` reads the passwd entry via `getpwuid`, which the sandbox does not rewrite, and also repairs two dead `NSHomeDirectory()` comparisons that meant the undo toast and the location breadcrumb never abbreviated to `~` (VoiceOver read "Users, cassio, …" first). And `ProjectIndex.detectLocation`'s three-prefix cloud allowlist became structural (`isUbiquitousItemKey` + a `CloudStorage/<Provider>` read), which adds Google Drive/Box/Proton and — the real bug — stops reporting a **synced `~/Documents` as "On this Mac"**, i.e. the app's own default location on any Mac with iCloud Drive on. Anchors: `GeneralSettingsView.swift`, `ProjectFolderDefaults.swift`, `UserHome.swift`, `SettingsView.swift` (`.general`, first), `ProjectIndex.swift` (`cloudProviderLabel`), `RemoveToast.swift`, `ContentView.swift` (`breadcrumbSegments`).
 - _2026-08-04_ — **Switching light↔dark no longer restarts the serve (and so no longer cold-remounts the report).** The Appearance picker's `.onChange` posted `.bristlenosePrefsChanged`, which `ServeManager` answers with `restartIfRunning()` — drain the warm sidecar, shut down, respawn. Because the respawn takes a fresh `bind(0)` port, the detail WebView's `.id("<project>-<port>")` changed and SwiftUI tore down and rebuilt the whole `NSViewRepresentable`: the SPA cold-mounted, losing route, scroll position, open panels and focus, plus a couple of seconds of sidecar boot — all to serve **byte-identical HTML**, since `appearance` appears nowhere in `BristlenoseShared.childEnvironment`. Deleted; the pref now reaches the report purely through `NSApp.appearance` → WKWebView → `prefers-color-scheme`. The control experiment that proves the restart was always redundant: on "auto", flipping the *system* theme posts nothing, restarts nothing, and re-themes the report anyway. Typography and Language keep their posts — they genuinely produce env vars (`BRISTLENOSE_TYPOGRAPHY`, `BRISTLENOSE_WHISPER_LANGUAGE`). Same pass trued two stale claims here: the `syncAppearance()` bridge call (removed 30 Jul 2026) and the mapping table's "bridge, not env". Anchors: `AppearanceSettingsView.swift` (the comment where the `.onChange` was), `ServeManager.swift:421` (`restartIfRunning`), `ContentView.swift:2306` (the port-keyed `.id`).
 - _2026-07-31_ — **Settings window follows the appearance preference live.** The window is AppKit-hosted (the `Settings` package's `SettingsWindowController`), so the panes' `.preferredColorScheme` never reaches the window chrome — only `window.appearance` does, and that was set once in `show()` ("changing appearance while Settings is open is an accepted edge"). Clicking Dark in the Appearance pane left the Settings window itself light until reopened. Now `SettingsPaneChrome` re-applies `SettingsWindow.applyAppearance()` via `.onChange(of: appearance)` — sufficient because the Appearance pane is the pref's only writer, so the modifier is on-screen whenever the value changes. Anchors: `SettingsView.swift` (`applyAppearance`, `SettingsPaneChrome`).
@@ -22,9 +23,9 @@ trued-against: HEAD@main on 2026-07-26 (Settings package migration + Tab 1 picke
 
 # Desktop Settings Window (Cmd+,)
 
-Canonical macOS Settings window with 5 icon-toolbar panes (General, Appearance, LLM Provider, Transcription, MCP Agents), built on **Sindre Sorhus's `Settings` package** — an AppKit `SettingsWindowController` swapping `NSViewController` panes — **NOT** a SwiftUI `Settings {}` + `TabView`. Constant 660pt width; the window sizes each pane to its `view.fittingSize` fresh on every switch and animates `NSWindow.setFrame` in **both** directions, so shorter panes genuinely shrink. The high-water-mark that a SwiftUI `Settings`+`TabView` suffers — it grows to the tallest tab and never shrinks back, because a greedy `.formStyle(.grouped)` Form gives the window no natural-height signal — is architecturally absent here. **Do NOT reintroduce a `TabView`**: the whole hand-rolled `NSWindow.setFrame` shim + per-tab height constants that a TabView required were deleted when the package landed (they high-water-marked and slid content under the toolbar; the package is the canonical fix — Apple Forums 682046 documents the TabView sizing behaviour, and fittingSize + animated setFrame via VC-swap is the MASPreferences-lineage standard the package implements).
+Canonical macOS Settings window with 6 icon-toolbar panes (General, Appearance, LLM Provider, Transcription, Accounts, MCP Agents), built on **Sindre Sorhus's `Settings` package** — an AppKit `SettingsWindowController` swapping `NSViewController` panes — **NOT** a SwiftUI `Settings {}` + `TabView`. Constant 660pt width; the window sizes each pane to its `view.fittingSize` fresh on every switch and animates `NSWindow.setFrame` in **both** directions, so shorter panes genuinely shrink. The high-water-mark that a SwiftUI `Settings`+`TabView` suffers — it grows to the tallest tab and never shrinks back, because a greedy `.formStyle(.grouped)` Form gives the window no natural-height signal — is architecturally absent here. **Do NOT reintroduce a `TabView`**: the whole hand-rolled `NSWindow.setFrame` shim + per-tab height constants that a TabView required were deleted when the package landed (they high-water-marked and slid content under the toolbar; the package is the canonical fix — Apple Forums 682046 documents the TabView sizing behaviour, and fittingSize + animated setFrame via VC-swap is the MASPreferences-lineage standard the package implements).
 
-`SettingsWindow` (`SettingsView.swift`) owns the controller and wraps the five SwiftUI pane views (each with `.environmentObject(i18n)` + a `SettingsPaneChrome` modifier for live palette tint + appearance). `AppDelegate.showSettingsWindow(_:)` answers the responder-chain callers (web bridge "open-settings", out-of-credit pill); `CommandGroup(replacing: .appSettings)` provides the App-menu item + Cmd+,; the welcome "Setup →" deep-links via `SettingsWindow.shared.show(pane: .llm)`. **Namespace gotcha:** the package's `enum Settings` collides with SwiftUI's `struct Settings` (scene), so the pane types are reached through `PkgSettings` — a typealias defined in `SettingsPackageAlias.swift`, a deliberately SwiftUI-free file where `Settings` resolves unambiguously to the package.
+`SettingsWindow` (`SettingsView.swift`) owns the controller and wraps the six SwiftUI pane views (each with `.environmentObject(i18n)` + a `SettingsPaneChrome` modifier for live palette tint + appearance). `AppDelegate.showSettingsWindow(_:)` answers the responder-chain callers (web bridge "open-settings", out-of-credit pill); `CommandGroup(replacing: .appSettings)` provides the App-menu item + Cmd+,; the welcome "Setup →" deep-links via `SettingsWindow.shared.show(pane: .llm)`. **Namespace gotcha:** the package's `enum Settings` collides with SwiftUI's `struct Settings` (scene), so the pane types are reached through `PkgSettings` — a typealias defined in `SettingsPackageAlias.swift`, a deliberately SwiftUI-free file where `Settings` resolves unambiguously to the package.
 
 Help text in Appearance + Transcription is an **in-cell subtitle** (title + secondary `Text` in the control's label — the System Settings idiom, no row keyline); the Language picker sits under Typography. Working context lives in `desktop/CLAUDE.md`. Related: `design-settings-ui.md` (serve-mode web UI — complementary, not competing: web UI is the CLI/serve path; this is the embedded-alpha path), `design-keychain.md` §Desktop (sandboxed) credential path (canonical home for the Swift→env-var→Python architecture).
 
@@ -42,18 +43,18 @@ Help text in Appearance + Transcription is an **in-cell subtitle** (title + seco
 
 **Known consequence, not yet addressed:** this pane converts an occasional cloud-folder *choice* into the configured default at every door — one of which (drag-import) holds `FileManager.copyItem`, which blocks **indefinitely and uncancellably** on a dataless source. The pane does not cause that bug, but it multiplies the rate at which it is reached, which is what makes the coordinated-reads work in `design-project-storage.md` §3 stop being deferrable.
 
-**Why a pane and not a row in Appearance.** The others are chrome, the two engines, and who can read your work; a storage location is none of those, and Appearance-as-the-roomiest-pane is how Appearance stops meaning anything. Deliberately *not* named "Storage" — `design-project-storage.md` spent nine rejected models establishing that Bristlenose manages none, and that name re-opens every one of them. "General" is the pane a Mac user checks for app-level behaviour, and it absorbs the next two or three preferences without a rename. Its 21 locale strings reuse the already-reviewed `settings.settingsNav.general` twin, which matches macOS's own System Settings term in each language (一般, 일반, Allgemein, Основные).
+**Why a pane and not a row in Appearance.** The others are chrome, the two engines, and who can read your work; a storage location is none of those, and Appearance-as-the-roomiest-pane is how Appearance stops meaning anything. Deliberately *not* named "Storage" — `design-project-storage.md` spent nine rejected models establishing that Bristlenose manages none, and that name re-opens every one of them. "General" is the pane a Mac user checks for app-level behaviour, and it absorbs the next two or three preferences without a rename. Its 22 locale strings reuse the already-reviewed `settings.settingsNav.general` twin, which matches macOS's own System Settings term in each language (一般, 일반, Allgemein, Основные).
 
 **Deliberately not built:** the save-panel accessory-view checkbox ("Use this location for new projects"). The HIG sanctions accessory views, and it was the right answer while the choice was *nothing vs something* — but once this row exists, a checkbox writing the same value is a second writer on the surface where the researcher is mid-task and least wants a policy decision, and it cannot serve the placeholder door, which never opens a panel. If a second path is wanted, the good one is a project-row context item ("Use This Folder for New Projects") — a verb on a folder whose grant we already hold, same shape as Turn On Agent Access: the menu is the act, the pane is the audit.
 
 ## Tab 1: Appearance (paintbrush)
 
-Grouped controls, top to bottom: **Application appearance** radio (auto/light/dark), **Colour palette** pop-up (default/edo), **Typography** pop-up (SF Pro/Inter), **Language** pop-up (21 locale autonyms) with a Weblate contribute link as the section footer, then three toggles — **random project icons**, **show-analysis-animation**, **show-diagnostics-menu** — each carrying its help text as an in-cell subtitle (title + secondary `Text` in the control's label, the System Settings idiom, no row keyline). Anchors: `AppearanceSettingsView.swift:38` (palette), `:49` (typography), `:63` (language), `:100`/`:108`/`:121` (toggles).
+Grouped controls, top to bottom: **Application appearance** radio (auto/light/dark), **Colour palette** pop-up (default/edo), **Typography** pop-up (SF Pro/Inter), **Language** pop-up (22 locale autonyms) with a Weblate contribute link as the section footer, then three toggles — **random project icons**, **show-analysis-animation**, **show-diagnostics-menu** — each carrying its help text as an in-cell subtitle (title + secondary `Text` in the control's label, the System Settings idiom, no row keyline). Anchors: `AppearanceSettingsView.swift:38` (palette), `:49` (typography), `:63` (language), `:100`/`:108`/`:121` (toggles).
 
 - **Appearance** — `@AppStorage("appearance")` drives `.preferredColorScheme` on the main window (a SwiftUI scene); the Settings window is AppKit-hosted, so it follows `window.appearance` instead — set in `SettingsWindow.show()` and re-applied live by `SettingsPaneChrome.onChange` when the pref changes (see 31 Jul changelog entry). **It reaches the web report through the platform, not through us** — `AppAppearance` sets `NSApp.appearance`, the WKWebView inherits its window's effective appearance, and the report CSS follows `prefers-color-scheme`. No bridge call and no env var: the `syncAppearance()` this bullet used to name was removed 30 Jul 2026 (nothing consumed it — see `BridgeHandler.swift:258`), and there is no `.onChange` posting `.bristlenosePrefsChanged` either (see 4 Aug changelog entry). The web Settings modal hides its own appearance picker in embedded mode — native wins.
 - **Colour palette** — live swap, no restart: posts `.bristlenosePaletteChanged` → `bridgeHandler.setColorPalette()`; the `@AppStorage("palette")` value also seeds `BRISTLENOSE_PALETTE` for the next serve start. Options mirror the frontend `PALETTES` list.
 - **Typography** — SF Pro (native scale) vs Inter (matches the web report). Lands on the next serve start via `BRISTLENOSE_TYPOGRAPHY` (posts `.bristlenosePrefsChanged`). See `docs/design-native-typography-grid.md`.
-- **Language** — `@AppStorage("language")`, 21 autonyms (never translated). `.onChange` calls `i18n.setLocale` and posts `.bristlenosePrefsChanged` to restart serve (`BRISTLENOSE_WHISPER_LANGUAGE`).
+- **Language** — `@AppStorage("language")`, 22 autonyms (never translated). `.onChange` calls `i18n.setLocale` and posts `.bristlenosePrefsChanged` to restart serve (`BRISTLENOSE_WHISPER_LANGUAGE`).
 
 > **Superseded 2026 (in-app picker shipped).** The earlier design had **no in-app language picker** and delegated entirely to System Settings → General → Language & Region → Apps → Bristlenose (`INFOPLIST_KEY_UIPrefersShowingLanguageSettings = YES`; `I18n.swift` reads `Bundle.preferredLocalizations(from:forPreferences:)` on launch). That macOS path still exists, but the in-app Language picker above is now the primary control. Canonical locale-negotiation design: `docs/design-locale-negotiation.md`. The web Settings modal in CLI serve mode keeps its own language picker — browsers have no per-site override.
 
@@ -72,6 +73,56 @@ Right detail pane shows the selected provider's settings: API key (`SecureField`
 ## Tab 3: Transcription (waveform)
 
 Whisper backend picker (Auto/MLX/faster-whisper) + model picker (large-v3-turbo through tiny). `@AppStorage` for both.
+
+## Tab 4: Accounts (person.crop.circle) — what Bristlenose talks to on your behalf
+
+One section per service — the shipping meeting platforms in `design-cloud-import.md` §5's sequence,
+then Miro, the only one that *sends* rather than fetches. Anchors: `AccountsSectionModel.swift`
+(the model), `AccountsSettingsView.swift` (the view), `SettingsView.swift:96-113` (registration).
+
+**The pane makes no network call, and that is the design.** Every state is derived from what is
+already on disk — the Keychain, the OAuth config, and the address stored beside the tokens. A
+Settings pane that probed on appear would be slow, would do I/O the researcher did not ask for, and
+would turn *"you are offline"* into something the pane **asserts** rather than observes.
+Reachability belongs in the import window, where a call is actually being made. The consequence is
+worth stating plainly because it constrains every future row: **any state knowable only from a call
+must be persisted when that call happens**, not discovered here. Google's account tier is free
+because it falls out of the address domain; Microsoft's does not, and is the one state still owed a
+writer.
+
+**Four states** (`AccountSectionState`): `unavailable(strandedIdentity:)` · `notConnected` ·
+`connected(identity:)` · `attention(identity:, AccountAttention)`. Only `attention` is recoverable
+from here (`isRecoverable` ⇔ `.signInAgain`). `strandedIdentity` is the sharp edge: a grant that
+outlived the client id it was obtained with. It is the only reason `unavailable` ever carries an
+account key, and the row **says so** rather than implying nothing is there.
+
+**`AccountService` is deliberately not `CloudPlatform`.** That enum means "a meeting platform with
+an import adapter", and adding `.miro` would put Miro in the import window's platform picker, in
+`CloudPlatform.built`, and in the fixture harness. To the person using it they are the same kind of
+thing — an account you connect, see, and remove — so the sameness lives in `AccountService` instead
+of being forced into the platform enum.
+
+**The list reads `shipping`, not `built` — a parked service is not listed at all.** It read `built`
+for one release, on the argument that a catalogue hiding what is not ready cannot answer "what can
+this thing talk to?". That argument was wrong about the reader: a permanent row saying Bristlenose
+cannot sign in to Zoom answers a question nobody asked and spends a quarter of the pane doing it.
+**Safe only because a parked platform cannot hold a grant** — `accountKeys` returns nothing for one,
+so hiding it cannot strand a credential where no UI can reach it. *Check that again before parking a
+service that has ever stored a sign-in.*
+
+**No SF-Symbol stand-ins for vendor marks — the missing icons are the answer, not an interim.** The
+licence boundary is the sign-in button: the name is free, the product mark needs a licence from each
+vendor, and Google's brand terms ban monochrome treatments outright. A borrowed glyph would be a
+worse lie than an absent one.
+
+**Cross-pane dependency — Settings is now the only Miro disconnect surface**, which is why this pane
+takes `serveManager` (`SettingsView.swift:96-113`). Disconnecting must clear the **running sidecar's
+in-memory token** as well as the Keychain one; clearing only the Keychain leaves the live serve
+process still authenticated until it restarts. This coupling belongs in this doc and nowhere else.
+
+**MCP Agents (Tab 5) stays enumerated-but-not-sectioned by design** — its pane is specified in
+`docs/design-mcp-extension.md` §3.7. Accounts, by contrast, had no home at all; its behavioural spec
+is here and its per-platform sign-in flows are in `docs/design-cloud-import.md` §9.
 
 ## Preferences → serve process
 

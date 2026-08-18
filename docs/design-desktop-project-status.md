@@ -1,11 +1,12 @@
 ---
-status: current
-last-trued: 2026-07-29
-trued-against: HEAD@main + a code-grounded walk of ProjectSubtitle / ProjectIndex / ProjectFolderWatcher on 2026-07-29
+status: partial
+last-trued: 2026-08-18 (cloud-import slice; the 29 Jul "unreachable branches" claim expired the day after it was written)
+trued-against: HEAD@main on 2026-08-18 + a code-grounded walk of ProjectSubtitle / ProjectIndex / CompletionRescan
 ---
 
 ## Changelog
 
+- _2026-08-18_ — **Truing pass (`--topic cloud-import`).** Three corrections, one addition. (1) **The 29 Jul "two shipped branches are unreachable" finding has half-expired** — `lastPipelineRunAt` gained a write site on **30 Jul**, *one day after* it was written up (`ProjectIndex.recordPipelineRun`, `ProjectIndex.swift:586`, called from `ContentView.swift:591`; commit *"desktop: Connect Agent sheet + menu item, and /api/health advertises the mount"*). So `+N unanalysed` **does** render now, and the TRAP below is closed rather than pending. `.ready(date:)` is still never drawn — but by Schema E's design, not by accident, which is the opposite kind of fact. Left as the clearest example in this doc of why a dated counterfactual needs re-checking before it's cited. (2) **The precedence chain named 9–10 states against an enum that has 17** — completed, with the idle tier's real order read off `resolveIdle`. (3) **Schema E's "the collapse rule is exactly one state" is now two.** (4) **Cloud import added to §4's catalogue** — a per-project transfer whose window can be closed, carrying three rulings that were only in code comments. Also fixed §4's "File import / copy" row, stale since 19 Jun and self-flagged as unaddressed in the 15 Jul entry.
 - _2026-07-29_ — **Schema E: the clean row is silent** (new subsection below, after Precedence). A `.ready` row with no delta now renders **no subtitle at all** and collapses to a single line; only exceptions get a line. Supersedes the June "every row shows a date" deferral **on its merits** — the deferral's trigger (concurrent multi-project execution) has *not* fired. Three further corrections from the same walk. (1) **The "never composed" hard rule is now overridden for `.completedPartial`** — see the new subsection; the rule survives everywhere else. (2) **Two shipped branches are unreachable and were never noticed**: `lastPipelineRunAt` has no write site in any build, so `.ready(date:)` never rendered *and* `ProjectIndex.swift:892` gates the `+N unanalysed` delta on it, so that never rendered either. (3) **Cloud fetch/eviction is an extension of this model, not a separate feature** — new rulings folded into the kinds table; spec in `docs/mockups/cloud-fetch-states.html` + the cloud-fetch handoff.
 - _2026-07-15_ — **Truing pass (`--topic` failure-taxonomy).** Two corrections. (1) **§4: `.status` is a multi-pill shelf, not a single pill.** The 19 Jun "app-global only (the Ollama download)" wording read as *one* pill; three now mount (Ollama download, provider out-of-credit, alpha-expiry), each its own `ToolbarItem(placement: .status)` sharing the new `StatusPill` envelope. The axis is unchanged and still right — only the singular framing was stale. Ordering/contention between co-occurring pills is now an **open question** (only pairwise non-co-occurrence is encoded in code). (2) **§3: "Swift only renders it" is no longer strictly true** — an `out_of_credit` verdict now mutates app-global Swift state (sticky verdict → the pill), and the stderr fallback re-derives a provider-scoped credit/rate split when a crash leaves no structured cause. Also: `quota` narrowed to rate-limit, `out_of_credit` added (see [design-pipeline-resilience.md](design-pipeline-resilience.md)). **Not addressed** (pre-existing, flagged): §4's "File import / copy" catalogue row still says copy surfaces in a toolbar pill — stale since 19 Jun and contradicted by this doc's own §§ above; §9 Anchors omits the new pill/model files.
 - _2026-06-23_ — added the **native window title + subtitle** as a third per-project status surface (project identity + a lens-contextual count), shipped on `mac-app-layout-reorg`. Updated the Shipped block + the §4 placement axis; the old toolbar-pill title + `WindowTitleManager` are gone (see `desktop/CLAUDE.md` "Native window title + subtitle live on the DETAIL view"). The two-streams framing (row + detail pane) is now three (+ window chrome).
@@ -121,8 +122,16 @@ Worked rulings (the precedents):
 When several conditions are true, the row shows one winner (never composed), most-demanding first:
 
 `drive-unplugged (cantFind) › failed › running` *(the verb ladder; retries ride it as info)* `›
-stopped / partial › copying › downloading-from-iCloud › files-missing › unanalysed › starting ›
-ready`
+stopped / partial › adding-interviews › importing-batch › copying › downloading-from-iCloud ›
+files-missing › unanalysed › starting › ready`
+
+**`SubtitleVariant` is the single source of truth and currently has 17 cases**
+(`ProjectSubtitle.swift:17-87`) — more than this chain names. The chain is the *architecture*, and
+deliberately skips the mechanical companions (`.copyCancelling`, `.stopping`, `.queued(position:)`,
+`.failedDiagnostic`, `.unreachable`, `.deltaOnly`, `.placeholder`), each of which sits immediately
+beside the state it qualifies. Read the enum for the full list; read this for the ordering argument.
+The **idle tier**'s real order is settled in `resolveIdle` (`ProjectSubtitle.swift:218-250`):
+`.addingInterviews` › `.importingBatch` › `.copying` / `.copyCancelling` › delta › `.ready`.
 
 Baked-in rulings (user, 18 Jun 2026): **`cantFind` / drive-unplugged outranks ALL activity states**
 (failed, running, copying) — you can't open the report if the folder's gone, `copying` ⊥ `cantFind` by
@@ -135,17 +144,25 @@ is "weather", not a dead end) keep a *starting* order, to be tuned once it's see
 ### Schema E — the clean row is silent (settled 29 Jul 2026)
 
 Precedence picks a winner; **Schema E decides whether the winner is drawn at all.** A `.ready` row
-with no delta renders **no subtitle line** and collapses to a single 32pt row. Everything else in
-`SubtitleVariant` already has something to say, so the collapse rule is exactly one state.
+with no delta renders **no subtitle line** and collapses to a single 32pt row. Almost everything else
+in `SubtitleVariant` has something to say, so the collapse rule was exactly one state when it was
+settled — **it is two since 18 Aug 2026**. `.importingBatch` also draws nothing, but on the SwiftUI
+row only, and for an unrelated reason: that row passes `importBatch: nil` because the cloud batch is
+published to the AppKit sidebar (`ProjectRow.swift:232-237`). Schema E is a *design* silence; that
+one is a *migration* silence, and it disappears at the AppKit cutover.
 
 This **supersedes** the June position ("for TF/alpha every row shows a date so the rhythm is
 consistent and the few non-`.ready` rows stand out") — it does **not** fulfil its trigger, which was
 concurrent multi-project execution and has not fired. Recorded so a later reader doesn't
 reverse it back. Three reasons:
 
-- **The counterfactual already ran.** `lastPipelineRunAt` has never had a write site in any build, so
+- **The counterfactual already ran.** `lastPipelineRunAt` had no write site in any build, so
   `.ready(date:)` was permanently unreachable and the bare date **never once rendered** — months of
   daily use, every cohort build, and nobody filed it.
+  > **The evidence expired on 30 Jul 2026, one day after this was written** — the field gained a
+  > write site (`ProjectIndex.swift:586`). The *argument* survives intact and is why Schema E stands:
+  > nobody missed the date across all those months. But it can no longer be cited as a live
+  > observation, and a reader reaching for it as proof should reach for the months, not the nil.
 - **The June reasoning was backwards against `absence is information`.** A subtitle on every row
   distinguishes exceptions by *content*, which must be read; absent subtitles distinguish them by
   *presence*, which is pre-attentive. User: *"a whole wall of greens and one red is not helpful —
@@ -161,11 +178,21 @@ succeed, so the list is a uniform stack of single-line rows with the occasional 
 **An Appearance pref to restore the always-on date is noted for a future experiment — not built.**
 
 **TRAP — `lastPipelineRunAt` must still be written**, even though the date is no longer displayed.
-`ProjectIndex.swift:892` gates the `+N` drift delta on it being non-nil (the F14 policy: no drift
-before an analysis baseline exists). Because the field is always nil today, **`+N unanalysed` has
-never rendered either**. Skip the write on the grounds that "we don't show the date any more" and the
-sidebar is permanently blank while *looking* finished. The field becomes write-only — a reviewer
-should not delete it as unused.
+`ProjectIndex.swift:1152` gates the `+N` drift delta on it being non-nil (the F14 policy: no drift
+before an analysis baseline exists). Skip the write on the grounds that "we don't show the date any
+more" and the sidebar is permanently blank while *looking* finished. The field is **write-only** —
+a reviewer must not delete it as unused.
+
+> **Closed 30 Jul 2026** — the write site landed the day after this trap was written:
+> `ProjectIndex.recordPipelineRun` (`ProjectIndex.swift:586`), called on run completion from
+> `ContentView.swift:591` via `CompletionRescan.projectsFinishingRun`. **`+N unanalysed` renders.**
+> The invariant above is unchanged and still load-bearing — it is now *maintained* rather than
+> *pending*, so the danger has inverted: the risk is no longer forgetting to add the write, it is
+> deleting it during a cleanup because the date it feeds is never displayed.
+>
+> `.ready(date:)` **does** remain undrawn, and that half of the 29 Jul finding still holds — but for
+> a different reason: `resolveIdle` takes `lastRunAt` and deliberately never returns `.ready(date:)`
+> (`ProjectSubtitle.swift:218`). That is Schema E working as designed, not a dead branch.
 
 **Open — the drift and failure clauses can describe the same file.** `newFiles` is
 "on-disk and not in the DB's ingested set" (`ProjectFolderWatcher.performScanLocked`), and a file
@@ -270,7 +297,8 @@ architecture, not a string reference):
 | **Availability / storage** | folder reachable — volume / network / bookmark / iCloud · `ProjectAvailability`, `ProjectFolderWatcher` | leading glyph + subtitle qualifier + row dim + tooltip | iCloud **download progress** (`Progress?` captured, shown as a static glyph); auto-retry-on-remount |
 | **Run lifecycle (desktop brackets)** | queue / stop / scan / orphan-attach + Python's outcome+category · `PipelineRunner` | subtitle (precedence chain) + activity pill + diagnostic popover | a "Preparing…" beat before the first Python event; queue-position movement |
 | **Sidecar / serve** | is *this project's* serve process up · `ServeManager`, `BootView` | **detail-pane BootView only — not the row** | whether a per-row "starting…" belongs there (open) |
-| **File import / copy** | drag-import byte progress, disk-space precheck · `CopyMachinery` | **toolbar pill + sheet + toast — not the row** | progress on the **target project's row** |
+| **File import / copy** | drag-import byte progress, disk-space precheck · `CopyMachinery` | **the target project's row** — `.addingInterviews` ack, then `.copying(fraction:)` + hover-cancel ring | evicted-source precheck; a copy that outlives the window |
+| **Cloud import (Meet / Teams)** | per-batch done/total for a remote fetch into this project · `CloudImportStore.batch` | **the row** — `.importingBatch` renders "3 of 4" with **no verb**, reusing `Kind.ring` + hover-cancel → `stopFetch` (AppKit sidebar; the SwiftUI row draws nothing) | per-file granularity on the row (the window has it); reopening the window from the ring |
 | **Source watch / count** | # interviews, unanalysed/missing delta · `ProjectFolderWatcher`, `SourceFilesReader` | title-right count + subtitle delta + tooltip | a "scanning…" tick; evicted-vs-deleted split in "missing" |
 
 ### The placement axis — per-project on the row, app-global in the title-bar pill (settled, user 19 Jun 2026)
@@ -408,6 +436,12 @@ two fidelities. As of 19 Jun the subtitle's arbitration is no longer trapped in 
   renders the winner), `RunProgressSubtitle.swift`, `EventLogReader.swift`, `ProjectAvailability.swift`,
   `SourceFilesReader.swift`, `PipelineRunner.swift` (`PipelineState`, `categoriseFailure`),
   `ServeManager.swift`, `CopyMachinery.swift`; Python `bristlenose/events.py`, `bristlenose/timing.py`.
+- **Code (sidebar rendering, added 18 Aug 2026):** `ProjectSidebarOutline.swift` (the **AppKit**
+  source list — the path new sidebar work lands on; `ProjectRow.swift` above is the being-deleted
+  SwiftUI one, see `design-desktop-sidebar-appkit.md`), `SidebarSubtitleText.swift`,
+  `SidebarActivityRing.swift`, `ProjectRowActivityIndicator.swift`, `CloudImportStore.swift`
+  (`BatchProgress`), `CompletionRescan.swift` (the `lastPipelineRunAt` write path), `StatusPill.swift`,
+  `OutOfCreditPill.swift` (the last two flagged in the 15 Jul entry and unactioned until now).
 - **Handoffs (internal):** `cached-run-progress-emit` (bucket-2 coverage, ready), `warm-sidecar-pool`
   (Phase A2 fast switching), `progress-text-detail-pane` (the demoted during-run pane item, folded
   into the detail-pane-set design).

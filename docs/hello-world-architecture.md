@@ -98,7 +98,7 @@ class Pipeline:
 **Why `Console(width=min(80, ...))`?** The `Console()` inside `min()` is a throwaway Rich instance that auto-detects the real terminal width. The outer `Console(width=...)` is the one that formats output. This caps line width at 80 characters for clean, Cargo-style output:
 
 ```
-Bristlenose v0.10.2 · Claude · Apple Silicon
+Bristlenose v0.26.0 · Claude · Apple Silicon
 
 2 sessions in hello-world-study/
 
@@ -121,21 +121,29 @@ def ingest(input_dir: Path) -> list[InputSession]:
     """Discover files, classify types, group into sessions."""
 ```
 
-**File classification** maps extensions to types:
+**File classification** maps extensions to types. `classify_file()` reads four
+module-level sets in `bristlenose/models.py`, which is the single source of
+truth — there are 27 extensions as of 19 Aug 2026, and the abridged sample below
+is illustrative, not the list:
 
 ```python
-_EXT_MAP = {
-    ".mp4": FileType.VIDEO,
-    ".mov": FileType.VIDEO,
-    ".webm": FileType.VIDEO,
-    ".mp3": FileType.AUDIO,
-    ".wav": FileType.AUDIO,
-    ".m4a": FileType.AUDIO,
-    ".vtt": FileType.SUBTITLE_VTT,
-    ".srt": FileType.SUBTITLE_SRT,
-    ".docx": FileType.DOCX,
-}
+# bristlenose/models.py — abridged; see ALL_EXTENSIONS for the real set
+AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ...}
+VIDEO_EXTENSIONS = {".mp4", ".m4v", ".mov", ".mkv", ".webm", ".wmv", ...}
+
+def classify_file(path: Path) -> FileType | None:
+    ext = path.suffix.lower()
+    if ext in AUDIO_EXTENSIONS:
+        return FileType.AUDIO
+    if ext in VIDEO_EXTENSIONS:
+        return FileType.VIDEO
+    ...
+    return None          # unsupported — reported, never silently dropped
 ```
+
+> **Corrected 2026-08-19.** This block previously showed a dict named `_EXT_MAP`.
+> No such symbol has ever existed — a reader who greps for it finds nothing. The
+> real mechanism is the set-membership function above.
 
 For our Hello World study, the scan finds:
 

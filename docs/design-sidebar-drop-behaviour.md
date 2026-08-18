@@ -1,8 +1,19 @@
 ---
-status: draft
+status: pending
 scope: v1 — unambiguous cases only
 last-updated: 2026-05-15
+last-trued: 2026-08-19
+trued-against: working tree on 2026-08-19 (extension-set parity + format widening)
 ---
+
+> **Trued 2026-08-19.** The V1 design below is still unshipped and still the
+> plan — `DropEvaluator`, `containsRecognisedMedia` and `dropTargetIsRefused`
+> have no implementation yet, and the row-state toasts this doc retires are
+> still firing. Two things underneath it changed and are corrected in place:
+> the media allowlist grew 16 → 27, and the **"mild" severity claim about
+> allowlist drift was wrong** — see §Media allowlist, which now carries the
+> measured failure mode and names the gate that pins it. Open question 3 is
+> answered and closed.
 
 > **Status:** Draft V1. Captures the unambiguous-cases-first revision of drop behaviour. **Sequenced after the current `multi-project-drag-onto` branch ships** — see §"Relationship to current branch work" below. The toasts live through cohort 1; this design picks them up for cohort 2 once the wordless-cursor model has been validated against real researcher use. Harder cases (bulk import, multi-project folders, multi-platform mixed folders, merge semantics) are deferred to a sibling V2 doc — `design-sidebar-drop-v2.md`.
 
@@ -179,15 +190,52 @@ classifyTarget(location):
 
 **BN-project marker.** Folder contains `bristlenose-output/.bristlenose/pipeline-manifest.json` (the canonical "analysed" artefact, matching what `PipelineRunner.readManifestState` reads). Same predicate as `LocateFlow.folderLooksAnalysed(url:)` ([LocateFlow.swift:59](../desktop/Bristlenose/Bristlenose/LocateFlow.swift#L59)). Tightened 2026-05-15 (sidebar-analysed-honesty, `626cca7`) — was previously `["manifest.json", ".bristlenose"]`; the bare `.bristlenose/` directory is a "looks started" marker (created early in stage 1), not "looks analysed."
 
-**Media allowlist.** `bristlenose.models.ALL_EXTENSIONS`:
+**Media allowlist.** `bristlenose.models.ALL_EXTENSIONS` — 27 extensions
+(widened from 16 on 19 Aug 2026, after a format-torture drop showed 16 real
+recordings being declined that ffprobe reads perfectly):
 
 ```
-{.wav, .mp3, .m4a, .flac, .ogg, .wma, .aac,           # AUDIO
- .mp4, .m4v, .mov, .avi, .mkv, .webm,                  # VIDEO
- .srt, .vtt, .docx}                                    # TRANSCRIPTS
+{.wav, .mp3, .m4a, .flac, .ogg, .wma, .aac,                        # AUDIO
+ .aiff, .aif, .caf,
+ .mp4, .m4v, .mov, .avi, .mkv, .webm,                              # VIDEO
+ .wmv, .asf, .mts, .m2ts, .3gp, .flv, .mpg, .mpeg,
+ .srt, .vtt, .docx}                                                # TRANSCRIPTS
 ```
 
-Swift mirrors this list statically. If it ever drifts, the failure mode is "we don't light up green plus for a format we technically support" — mild.
+### Extension-set invariants
+
+Three things a contributor will otherwise re-derive wrongly.
+
+**There are three Swift mirrors, not one.**
+`ContentView.acceptedExtensions` (drag-drop gate),
+`ProjectFolderWatcher.eligibleExtensions` (folder watcher), and
+`CloudImportLocalMatch.mediaExtensions` (cloud destination scan — media only,
+no subtitle or document types). Updating one and believing you are done is
+exactly what happened: `0cfc99da` gave drag-drop the full set, `10680cbd` gave
+the watcher nine, and nobody ever saw both lists at once.
+
+**Drift is silent, not mild.** ~~If it ever drifts, the failure mode is "we
+don't light up green plus for a format we technically support" — mild.~~ That
+was wrong in direction and in severity. The real drift was *accept-but-don't-
+watch*: a dropped `.mkv`, `.webm`, `.avi`, `.m4v`, `.flac`, `.ogg`, `.wma` or
+`.aac` was accepted, copied and analysed, and then invisible to the watcher —
+**no new-files count pill, ever, and no missing-file warning if it later
+vanished.** Under-acceptance would have been self-correcting, because the user
+sees a refusal immediately. This was not: it produced no signal at all, for the
+life of the project. Measured at 26 of 58 files in an adversarial corpus.
+
+**It is pinned mechanically.** `tests/test_accepted_extension_parity.py` parses
+the Swift literals rather than duplicating them, so it fails on *source* drift
+instead of on a stale copy inside the test. Three assertions: drag-drop ⊇
+canonical, watcher ⊇ drag-drop, cloud-scan ⊇ canonical media.
+
+**`.ts` is excluded on purpose and must stay excluded.** macOS maps `.ts` to
+MPEG-2 transport stream, so a dev machine indexes tens of thousands of
+TypeScript files as video. Accepting it by suffix would ingest a frontend
+checkout as recordings. `.mts` is accepted because AVCHD camcorders really do
+write it, but the same ambiguity exists (`.d.mts` declaration files) — content
+sniffing, not suffix, is the only safe route if transport streams ever need
+first-class support.
 
 **Depth.** Strictly ≤ 1. Mirrors [`s01_ingest.discover_files()`](../bristlenose/stages/s01_ingest.py#L42), which recurses one level. Deeper trees refuse cleanly during drag; the user drops one level deeper and it works.
 
@@ -200,7 +248,7 @@ Called frequently as the cursor moves. Must be:
 - **Cheap.** One `iterdir` on the drop target + one `iterdir` per direct sub-folder. No content reads.
 - **Cacheable per drag session.** Same target → same answer until the drag ends.
 - **Wordless.** Returns an enum, no human-readable strings.
-- **Platform-agnostic.** Knows nothing about Teams, Zoom, Meet. The seven-extension allowlist and the `bristlenose-output/` marker are all the structural knowledge it has.
+- **Platform-agnostic.** Knows nothing about Teams, Zoom, Meet. The 27-extension allowlist and the `bristlenose-output/` marker are all the structural knowledge it has.
 
 Swift signature sketch:
 
@@ -251,7 +299,7 @@ All platform-specific intelligence (Teams/Zoom/Meet naming, session grouping, pa
 
 ### Add (V1 net-new work)
 
-- **`containsRecognisedMedia(url:)` in Swift.** Sibling to existing `containedAnalysedProjectName`. Scans top level + one level down for files matching the seven-extension allowlist. ~30 lines.
+- **`containsRecognisedMedia(url:)` in Swift.** Sibling to existing `containedAnalysedProjectName`. Scans top level + one level down for files matching the 27-extension allowlist. ~30 lines.
 - **`DropEvaluator`.** Pure function that composes predicates and returns `DropAcceptance`. Testable without UI. Lives next to `LocateFlow.swift` patterns; unit-tested via the helper extraction convention in `desktop/CLAUDE.md` ("If a SwiftUI view is making a decision, the decision belongs in a testable helper"). Today's row-state rejection logic in `handleDropOnProject` becomes one of the `DropEvaluator` cases.
 - **Drag-enter cursor-state wiring.** Today the per-row `.dropDestination` closure sets `dropTargetProjectID` only when targeted; V1 also drives `dropTargetIsRefused` (or similar) so the cursor + highlight reflect the rejection during the drag, not after the release.
 - **Single-nested-project import code path.** When `DropEvaluator` returns `.acceptAsSingleNestedImport(url)`, create a project entry pointing at the nested folder. Existing `ProjectIndex.addProject` shape; new caller.
@@ -265,7 +313,7 @@ All platform-specific intelligence (Teams/Zoom/Meet naming, session grouping, pa
 - **Folder-contains-project rejection toast** ([ContentView.swift:936](../desktop/Bristlenose/Bristlenose/ContentView.swift#L936)). Replaced by routing to import (rule 2b).
 - **BN-project-on-project rejection toast** ([ContentView.swift:924](../desktop/Bristlenose/Bristlenose/ContentView.swift#L924)). Replaced by accent-flash no-op.
 - **`removeBlockedByRun` toasts** ([ContentView.swift:692, 716](../desktop/Bristlenose/Bristlenose/ContentView.swift#L692)). Out of scope for the drop matrix but on the same removal list — disable the menu item instead.
-- **i18n keys** for the above: `desktop.chrome.dropProjectOntoProjectToast`, `desktop.chrome.dropFolderContainsProject`, `desktop.chrome.dropOntoRunningProject`, `desktop.chrome.dropOntoAnalysedProject`, `desktop.chrome.dropOntoFailedProject`, `desktop.chrome.dropOntoUnreachableProject`, `desktop.toast.removeBlockedByRun`. Seven keys × six locales = 42 entries removed. The copy-related keys (pill, cancelling, disk-space) stay — they describe a real ongoing workflow.
+- **i18n keys** for the above: `desktop.chrome.dropProjectOntoProjectToast`, `desktop.chrome.dropFolderContainsProject`, `desktop.chrome.dropOntoRunningProject`, `desktop.chrome.dropOntoAnalysedProject`, `desktop.chrome.dropOntoFailedProject`, `desktop.chrome.dropOntoUnreachableProject`, `desktop.toast.removeBlockedByRun`. Seven keys × 21 full locales = 147 entries removed. The copy-related keys (pill, cancelling, disk-space) stay — they describe a real ongoing workflow.
 
 ### Keep (cohort 1 work V1 builds on)
 
@@ -295,7 +343,7 @@ All platform-specific intelligence (Teams/Zoom/Meet naming, session grouping, pa
 
 1. **Single-file drop project name.** `Sarah-interview.mp4` dropped directly creates a one-file project. Filename stem (`Sarah-interview`) as the project name? Prompt? _Tentative: filename stem, user can rename inline._
 2. **Drop on empty sidebar vs onto a project row.** This doc treats them uniformly under the V1 predicate. Existing code distinguishes (`handleDropOnProject` adds files to an existing project; sidebar drops create new projects). Need to decide: does dropping media onto an existing project row still mean "add to this project"? _Tentative: yes, that's the explicit user aim; predicates only apply to empty-sidebar drops._
-3. **Drift-detection for the extension allowlist.** Swift static-with-test, or sidecar-served at launch? _Tentative: static-with-test. The list has changed once in the project's lifetime._
+3. ~~**Drift-detection for the extension allowlist.** Swift static-with-test, or sidecar-served at launch? _Tentative: static-with-test. The list has changed once in the project's lifetime._~~ **Answered 2026-08-19 — static-with-test, shipped** as `tests/test_accepted_extension_parity.py`. Note the tentative rationale was already false when written and is more so now: the list has changed twice, most recently 16 → 27. Frequency was never the argument — the parity gate earns its keep because drift is *silent*, not because it is *frequent*.
 
 ## Out of scope
 

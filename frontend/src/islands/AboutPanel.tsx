@@ -57,8 +57,9 @@ function AboutSection({ version }: { version: string | null }) {
 
       <h3>Input</h3>
       <p>
-        Video (mp4, mov, avi, mkv, webm), audio (wav, mp3, m4a, flac, ogg, wma,
-        aac), or existing transcripts (vtt, srt, docx). Recordings from Zoom,
+        Video (mp4, m4v, mov, avi, mkv, webm, wmv, asf, mts, m2ts, 3gp, flv,
+        mpg, mpeg), audio (wav, mp3, m4a, flac, ogg, wma, aac, aiff, aif, caf),
+        or existing transcripts (vtt, srt, docx). Recordings from Zoom,
         Teams, and Google Meet are detected automatically &mdash; files from the
         same session are grouped together. Other sources (Otter.ai, Rev, Loom,
         OBS, Voice Memos) work when exported in any of these formats.

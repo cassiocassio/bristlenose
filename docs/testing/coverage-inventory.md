@@ -6,7 +6,7 @@ When you add an ingest format, **a cloud ingest source**, an export, a lens, or 
 
 ---
 
-## 1. Ingest formats (16 claimed — README:233)
+## 1. Ingest formats (27 claimed — README:233)
 
 Four decode paths converge on one transcript. Source: `bristlenose/models.py:97-101`.
 
@@ -19,11 +19,11 @@ Four decode paths converge on one transcript. Source: `bristlenose/models.py:97-
 
 **Key insight (from acceptance-matrix):** transcription is provider-independent, so the media path is *one representative cell*, not a format×provider matrix. Container-decode is a thin ffmpeg/Whisper concern — one clip per container proves the decode path; you don't re-run it per provider.
 
-**Correct layer for format coverage (post-review 2026-07-07):** all 16 extensions collapse to 4 decode paths by suffix (`classify_file`, `models.py:108`). Proving "`.flac` ingests" does **not** need a full LLM leg — that re-runs Whisper+Claude to test a suffix table and a codec. So the 16-format check is a **cheap pytest** (`tests/test_format_ingest_coverage.py`): `classify_file` routes each extension + ffmpeg **re-encodes** (codec-family, not `-c copy` remux) a tiny clip per container and decodes it back (`ffmpeg -f null -`). One representative media `run` (in the acceptance matrix) covers the transcribe→analysis handoff. The genuine *format-parity* question (Teams vs Meet vs Zoom `.docx`/`.vtt` parse-shapes) is where a real LLM leg earns its keep — see §Transcript below.
+**Correct layer for format coverage (post-review 2026-07-07):** all 27 extensions collapse to 4 decode paths by suffix (`classify_file`, `models.py:108`). Proving "`.flac` ingests" does **not** need a full LLM leg — that re-runs Whisper+Claude to test a suffix table and a codec. So the 27-format check is a **cheap pytest** (`tests/test_format_ingest_coverage.py`): `classify_file` routes each extension + ffmpeg **re-encodes** (codec-family, not `-c copy` remux) a tiny clip per container and decodes it back (`ffmpeg -f null -`). One representative media `run` (in the acceptance matrix) covers the transcribe→analysis handoff. The genuine *format-parity* question (Teams vs Meet vs Zoom `.docx`/`.vtt` parse-shapes) is where a real LLM leg earns its keep — see §Transcript below.
 
 **Ingest invariants:** same-stem merge (`p1.mp4`+`p1.srt` = one session, subtitle skips transcription — README:231); mixed-format folder; `._*`/`.DS_Store` ignored (`is_os_metadata`, `utils/fs.py`).
 
-**Test-data gap:** the 10 container/subtitle formats are covered by the cheap pytest above (fixtures generated at test-time via ffmpeg — no committed binaries). `.docx` is the one that needs **real** exports (a synthetic docx parses by construction against the Teams-shaped parser `s04_parse_docx.py:16`, proving nothing — the Meet leg specifically tests whether Google Meet's real shape parses). Prefer a **public-domain** source (a FOSSDA transcript → Google Doc → export) over a real client call; regression-pin `git check-ignore` on the gitignored format-acceptance fixture slot. Recipe: [test-data-generation.md](test-data-generation.md).
+**Test-data gap:** the 26 container/subtitle formats are covered by the cheap pytest above (fixtures generated at test-time via ffmpeg — no committed binaries). `.docx` is the one that needs **real** exports (a synthetic docx parses by construction against the Teams-shaped parser `s04_parse_docx.py:16`, proving nothing — the Meet leg specifically tests whether Google Meet's real shape parses). Prefer a **public-domain** source (a FOSSDA transcript → Google Doc → export) over a real client call; regression-pin `git check-ignore` on the gitignored format-acceptance fixture slot. Recipe: [test-data-generation.md](test-data-generation.md).
 
 ---
 
@@ -31,7 +31,7 @@ Four decode paths converge on one transcript. Source: `bristlenose/models.py:97-
 
 Added 15 Aug 2026, when three adapters shipped. `design-cloud-import.md` §9 asked
 for this section *before* the build; it is here after. Cloud import is a **source**,
-not a format — the 16 above are unchanged, because what lands on disk is still an
+not a format — the 27 above are unchanged, because what lands on disk is still an
 ordinary `.mp4`/`.m4a`.
 
 | Platform | Adapter | Artifacts reachable | Live-tested? |

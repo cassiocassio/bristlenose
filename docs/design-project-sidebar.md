@@ -457,7 +457,7 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 - ~~Duplicate folder drop warning~~ — **shipped** as `duplicateDropAlert` (`ContentView.swift:301-323`)
 - ~~Toast for "added interviews to project"~~ — **shipped** (`desktop.chrome.addedInterviews`, `ContentView.swift:586-592`)
 - Empty state `ContentUnavailableView` as drag target
-- ~~UTType validation for media files~~ — **shipped** as extension allow-list (`acceptedExtensions`, `ContentView.swift:410-419`); not UTType-based but equivalent outcome
+- ~~UTType validation for media files~~ — **shipped** as extension allow-list (`acceptedExtensions`, `ContentView.swift:1219-1230`); not UTType-based but equivalent outcome
 
 > **Superseded 2026-04-23 — items that actually did ship:**
 > - **Multi-select** shipped via `List(selection: Set<SidebarSelection>)` (`ContentView.swift` sidebar). Context-menu Delete uses the Finder pattern (`removeFromSidebarContextMenu`, `ContentView.swift:797`) — right-clicking a row in the selection acts on the whole selection; right-clicking outside acts only on that row. ⌘⌫ bulk-deletes. The earlier "context-menu Delete deletes only focused row" bug is resolved; verified by smoke 21 May 2026.
@@ -465,7 +465,7 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 > - **Duplicate folder drop warning** shipped as `duplicateDropAlert` with Open Existing / Create Anyway / Cancel (`ContentView.swift:301-323`).
 > - **"Added interviews to project" toast** shipped via `desktop.chrome.addedInterviews` format string (`ContentView.swift:586-592`) for `.idle` / `.scanning` targets.
 > - **Drag-to-folder (internal)** shipped via `.draggable` + `SidebarDropDelegate` hit-test on folder rows.
-> - **File-type validation** shipped as extension allow-list (`acceptedExtensions` Set in `ContentView.swift:410-419`) — not UTType-based as originally specced, but equivalent outcome for accepted formats.
+> - **File-type validation** shipped as extension allow-list (`acceptedExtensions` Set in `ContentView.swift:1219-1230`) — not UTType-based as originally specced, but equivalent outcome for accepted formats. **It is one of three Swift mirrors** of `bristlenose.models.ALL_EXTENSIONS`, pinned since 19 Aug 2026 by `tests/test_accepted_extension_parity.py`; see `design-sidebar-drop-behaviour.md` §Extension-set invariants for why drift here is silent rather than mild.
 > - **Subset-project state** (drag of single file(s)) shipped via `UnsupportedSubsetView` — displays "Bristlenose analyses folders" detail view for projects created from individual files.
 >
 > Still accurately parked: drag-to-reorder, spring-loaded folders, empty-state ContentUnavailableView.

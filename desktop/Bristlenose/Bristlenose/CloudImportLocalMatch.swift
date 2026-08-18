@@ -253,7 +253,9 @@ enum CloudImportLocalMatch {
     /// length to compare and would cost an `AVAsset` open to learn that.
     static let mediaExtensions: Set<String> = [
         "mp4", "m4v", "mov", "webm", "mkv", "avi",
-        "m4a", "mp3", "wav", "aac", "flac",
+        "wmv", "asf", "mts", "m2ts", "3gp", "flv", "mpg", "mpeg",
+        "m4a", "mp3", "wav", "aac", "flac", "ogg", "wma",
+        "aiff", "aif", "caf",
     ]
 
     /// Read every top-level recording in `folder` and measure it.

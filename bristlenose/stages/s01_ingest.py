@@ -7,6 +7,7 @@ import platform
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import NamedTuple
 
 from bristlenose.models import (
     FileType,
@@ -18,6 +19,22 @@ from bristlenose.utils.audio import probe_duration
 from bristlenose.utils.fs import is_os_metadata
 
 logger = logging.getLogger(__name__)
+
+
+class SkippedFile(NamedTuple):
+    """A file the scan declined, and why — so the decline can be *stated*.
+
+    Discovery used to drop unrecognised files at DEBUG level, which reads as
+    "there was nothing there" rather than "there was something and we ignored
+    it". For a researcher that difference is a missing participant they still
+    believe is in the report.
+
+    OS metadata (``._foo.mp4``, ``.DS_Store``) is deliberately NOT collected —
+    it is genuine noise the user never created and does not want listed.
+    """
+
+    path: Path
+    reason: str
 
 
 def _get_creation_time(path: Path) -> datetime:
@@ -40,8 +57,15 @@ def _get_creation_time(path: Path) -> datetime:
     return datetime.fromtimestamp(ts, tz=timezone.utc)
 
 
-def discover_files(input_dir: Path) -> list[InputFile]:
+def discover_files(
+    input_dir: Path, skipped: list[SkippedFile] | None = None
+) -> list[InputFile]:
     """Scan an input directory for supported files.
+
+    Args:
+        input_dir: Directory to scan.
+        skipped: Optional list to collect files that were declined. Pass one to
+            report them to the user; omit it and the behaviour is unchanged.
 
     Returns a list of InputFile objects sorted by creation date.
     """
@@ -56,20 +80,25 @@ def discover_files(input_dir: Path) -> list[InputFile]:
                 if is_os_metadata(sub_entry):
                     continue
                 if sub_entry.is_file():
-                    _try_add_file(sub_entry, files)
+                    _try_add_file(sub_entry, files, skipped)
         elif entry.is_file():
-            _try_add_file(entry, files)
+            _try_add_file(entry, files, skipped)
 
     # Sort by creation date, then filename as tiebreaker
     files.sort(key=lambda f: (f.created_at, f.path.name))
     return files
 
 
-def _try_add_file(path: Path, files: list[InputFile]) -> None:
+def _try_add_file(
+    path: Path, files: list[InputFile], skipped: list[SkippedFile] | None = None
+) -> None:
     """Classify a file and add it to the list if supported."""
     file_type = classify_file(path)
     if file_type is None:
+        suffix = path.suffix.lower() or "(no extension)"
         logger.debug("Skipping unsupported file: %s", path.name)
+        if skipped is not None:
+            skipped.append(SkippedFile(path, f"unsupported file type {suffix}"))
         return
 
     created_at = _get_creation_time(path)
@@ -335,7 +364,19 @@ def ingest(input_dir: Path) -> list[InputSession]:
         List of InputSession objects, ordered by participant number.
     """
     logger.info("Ingesting files from %s", input_dir)
-    files = discover_files(input_dir)
+    skipped: list[SkippedFile] = []
+    files = discover_files(input_dir, skipped)
+
+    # Say what was left out, by name. A count alone does not let a researcher
+    # work out which participant is missing.
+    for entry in skipped:
+        logger.warning("Not analysed: %s — %s", entry.path.name, entry.reason)
+    if skipped:
+        logger.warning(
+            "%d file(s) in %s were not analysed; see the lines above",
+            len(skipped),
+            input_dir,
+        )
 
     if not files:
         logger.warning("No supported files found in %s", input_dir)

@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ingest refusals — what the researcher sees</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css). Palette swap via
+   data-color-theme; dark via light-dark() + color-scheme.
+   MessageKind symbol/tint values are lifted from
+   desktop/Bristlenose/Bristlenose/MessageKind.swift, not invented.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+  /* macOS system semantic colours, per MessageKind.tint */
+  --sys-orange:            light-dark(#c93400, #ff9f0a);
+  --sys-green:             light-dark(#1d7f3a, #30d158);
+  --sys-cyan:              light-dark(#0071a4, #64d2ff);
+  --sys-red:               light-dark(#c9342b, #ff453a);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:980px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:70ch; margin:.4rem 0; }
+.controls { display:flex; gap:.4rem; align-items:center; margin-bottom:var(--bn-space-lg); flex-wrap:wrap; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* ── zone key ─────────────────────────────────────────────────────────── */
+.key { display:flex; gap:1.4rem; flex-wrap:wrap; font-size:var(--bn-text-label); color:var(--bn-colour-muted);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.7rem 1rem; margin-bottom:var(--bn-space-xl); }
+.key b { font-weight:490; color:var(--bn-colour-text); }
+.key .sw-a { display:inline-block; width:26px; height:13px; border:1px solid var(--bn-colour-border-hover); border-radius:2px; background:var(--bn-colour-bg); vertical-align:-2px; margin-right:.4rem; }
+.key .sw-c { display:inline-block; width:26px; height:13px; border-radius:2px; vertical-align:-2px; margin-right:.4rem;
+  background:repeating-linear-gradient(135deg, transparent 0 4px, var(--bn-colour-border) 4px 5px); border:1px solid var(--bn-colour-border); }
+
+/* ── artefact framing ─────────────────────────────────────────────────── */
+.frame { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg); overflow:hidden; background:var(--bn-colour-quote-bg); margin-bottom:.9rem; }
+.frame-bar { display:flex; align-items:center; gap:.45rem; padding:.5rem .8rem; background:var(--bn-colour-badge-bg); border-bottom:1px solid var(--bn-colour-border); }
+.frame-bar .tl { width:10px; height:10px; border-radius:50%; background:var(--bn-off-track); }
+.frame-bar .cap { margin-left:.5rem; font-size:var(--bn-text-badge); font-family:var(--bn-font-mono); color:var(--bn-colour-muted); }
+.frame-body { padding:1.6rem; display:flex; justify-content:center; }
+
+/* ── commentary ───────────────────────────────────────────────────────── */
+.comm { border-left:3px solid var(--bn-colour-accent); padding:1rem 1.2rem; margin:0 0 3rem;
+  background:repeating-linear-gradient(135deg, transparent 0 7px, light-dark(rgba(0,0,0,.022), rgba(255,255,255,.022)) 7px 8px); }
+.comm .tag { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-accent); font-weight:490; }
+.comm h3 { font-size:var(--bn-text-label); font-weight:490; margin:1rem 0 .3rem; }
+.comm p { font-size:var(--bn-text-label); color:var(--bn-colour-muted); max-width:74ch; margin:.35rem 0; }
+.comm code { font-family:var(--bn-font-mono); font-size:.95em; background:var(--bn-colour-badge-bg); padding:.05rem .3rem; border-radius:var(--bn-radius-sm); color:var(--bn-colour-badge-text); }
+.sec-head { margin:2.8rem 0 .9rem; }
+.sec-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.sec-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0; max-width:74ch; }
+
+/* ── macOS popover ────────────────────────────────────────────────────── */
+.macstage { display:flex; gap:0; align-items:flex-start; }
+.sidebar { width:212px; flex-shrink:0; background:light-dark(#f2f2f4, #1c1c1e); border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-md) 0 0 var(--bn-radius-md); padding:.5rem .35rem; align-self:stretch; }
+.sb-sect { font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted); padding:.3rem .55rem .25rem; font-weight:490; }
+.sb-row { display:flex; align-items:flex-start; gap:.45rem; padding:.32rem .55rem; border-radius:5px; font-size:var(--bn-text-label); }
+.sb-row.sel { background:var(--bn-colour-accent); color:#fff; }
+.sb-row.sel .sb-sub { color:rgba(255,255,255,.82); }
+.sb-name { font-weight:490; }
+.sb-sub { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); margin-top:.05rem; }
+.sb-glyph { margin-left:auto; flex-shrink:0; width:15px; height:15px; margin-top:1px; }
+.sb-glyph svg { width:100%; height:100%; display:block; }
+
+.pop { width:430px; background:light-dark(rgba(252,252,254,.98), rgba(42,42,45,.98));
+  border:1px solid light-dark(rgba(0,0,0,.14), rgba(255,255,255,.14)); border-radius:10px;
+  box-shadow:0 14px 44px var(--bn-colour-shadow); margin-left:14px; position:relative; }
+.pop::before { content:""; position:absolute; left:-7px; top:26px; width:12px; height:12px; transform:rotate(45deg);
+  background:light-dark(rgba(252,252,254,.98), rgba(42,42,45,.98)); border-left:1px solid light-dark(rgba(0,0,0,.14), rgba(255,255,255,.14));
+  border-bottom:1px solid light-dark(rgba(0,0,0,.14), rgba(255,255,255,.14)); }
+.pop-h { padding:.85rem 1rem .7rem; border-bottom:1px solid var(--bn-colour-border); }
+.pop-title { font-size:var(--bn-text-body); font-weight:490; }
+.pop-sub { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); margin-top:.1rem; }
+.pop-b { padding:.55rem 0; max-height:none; }
+.grp { padding:.45rem 1rem .1rem; font-size:var(--bn-text-badge); font-weight:490; color:var(--bn-colour-muted);
+  display:flex; align-items:center; gap:.4rem; }
+.grp .n { font-family:var(--bn-font-mono); }
+.row { display:flex; align-items:flex-start; gap:.5rem; padding:.24rem 1rem; font-size:var(--bn-text-label); }
+.row .ic { width:14px; height:14px; flex-shrink:0; margin-top:2px; }
+.row .ic svg { width:100%; height:100%; display:block; }
+.row .fn { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.row .why { margin-left:auto; flex-shrink:0; color:var(--bn-colour-muted); font-size:var(--bn-text-badge); padding-left:.6rem; }
+.row.stage .fn { font-family:var(--bn-font-body); font-size:var(--bn-text-label); }
+.row.more { color:var(--bn-colour-muted); font-size:var(--bn-text-badge); padding-left:2rem; font-style:italic; }
+.pop-div { height:1px; background:var(--bn-colour-border); margin:.5rem 0; }
+.pop-f { padding:.6rem 1rem .75rem; border-top:1px solid var(--bn-colour-border); display:flex; gap:.5rem; justify-content:flex-end; }
+.mbtn { font:inherit; font-size:var(--bn-text-badge); font-weight:490; padding:.24rem .7rem; border-radius:5px;
+  border:1px solid var(--bn-colour-border-hover); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.mbtn.primary { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.tint-warn { color:var(--sys-orange); } .tint-ok { color:var(--sys-green); }
+.tint-skip { color:var(--sys-cyan); } .tint-err { color:var(--sys-red); }
+
+/* ── CLI ──────────────────────────────────────────────────────────────── */
+.term { background:light-dark(#1e1e1e,#0c0c0c); border-radius:var(--bn-radius-md); padding:1rem 1.1rem;
+  font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); line-height:1.75; color:#d4d4d4; overflow-x:auto; width:100%; }
+.term .g { color:#4ec9b0; } .term .o { color:#dcb67a; } .term .d { color:#7a7a7a; } .term .w { color:#ffffff; }
+.term pre { margin:0; }
+
+/* rejected alternative — deliberately shown small */
+.alt { display:flex; gap:1.4rem; flex-wrap:wrap; margin-top:.9rem; }
+.alt-card { flex:1; min-width:250px; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.8rem .9rem; background:var(--bn-colour-bg); }
+.alt-card .h { font-size:var(--bn-text-badge); font-weight:490; margin-bottom:.5rem; font-family:var(--bn-font-mono); text-transform:uppercase; letter-spacing:.05em; }
+.alt-card.no .h { color:var(--sys-red); } .alt-card.yes .h { color:var(--bn-positive); }
+.dimmed { opacity:.42; }
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+@media (max-width:720px) { .macstage { flex-direction:column; } .pop { margin-left:0; margin-top:1rem; width:100%; } .pop::before { display:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="masthead">
+  <div class="eyebrow">Mockup · ingest</div>
+  <h1>What the researcher sees when files don't make it</h1>
+  <p>A 58-file folder dropped on a project. Measured, not imagined — these counts come from
+     <code>experiments/folder-of-horrors/acceptance.py</code> run against the real stages:
+     38 analysed, 4 unusable, 16 in formats we don't read.</p>
+  <p>The question this answers: damaged files and declined formats have <b>different causes</b>
+     but the <b>same consequence</b> — a recording the researcher expected is not in the report.</p>
+</div>
+
+<div class="controls">
+  <span class="lbl">Palette</span>
+  <button class="pbtn on" onclick="setPal('default',this)">Default</button>
+  <button class="pbtn" onclick="setPal('edo',this)">Edo</button>
+</div>
+
+<div class="key">
+  <span><span class="sw-a"></span><b>Artefact</b> — real pixels, nothing that isn't in the product</span>
+  <span><span class="sw-c"></span><b>Commentary</b> — reasoning, not shipped</span>
+</div>
+
+<!-- ══════════════════ PRIMARY SURFACE ══════════════════ -->
+<div class="sec-head">
+  <h2>Primary — macOS diagnostic popover</h2>
+  <p class="sub">Anchored off the sidebar row's status glyph, as today.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">Bristlenose — sidebar row → diagnostics</span></div>
+  <div class="frame-body">
+    <div class="macstage">
+      <div class="sidebar">
+        <div class="sb-sect">Projects</div>
+        <div class="sb-row"><div><div class="sb-name">Onboarding diaries</div></div></div>
+        <div class="sb-row sel">
+          <div style="min-width:0">
+            <div class="sb-name">Worst UX study</div>
+            <div class="sb-sub">38 sessions · 20 not included</div>
+          </div>
+          <span class="sb-glyph tint-warn" style="color:#fff">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/>
+            <rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#c93400"/><circle cx="8" cy="11.7" r=".85" fill="#c93400"/></svg>
+          </span>
+        </div>
+        <div class="sb-row"><div><div class="sb-name">Pharmacy handover</div></div></div>
+      </div>
+
+      <div class="pop">
+        <div class="pop-h">
+          <div class="pop-title">Analysis complete</div>
+          <div class="pop-sub">38 of 58 files · 14 min 22 s</div>
+        </div>
+        <div class="pop-b">
+          <div class="row stage"><span class="ic tint-ok"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 8.2 7 10.2 11 5.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="fn">Transcribed 38 sessions</span><span class="why">12 m 04 s</span></div>
+          <div class="row stage"><span class="ic tint-ok"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 8.2 7 10.2 11 5.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="fn">Extracted 291 quotes</span><span class="why">1 m 47 s</span></div>
+
+          <div class="pop-div"></div>
+
+          <div class="grp">Not in this report <span class="n">· 20 files</span></div>
+
+          <div class="row"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span>
+            <span class="fn">p07 failed download.mp4</span><span class="why">file is empty</span></div>
+          <div class="row"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span>
+            <span class="fn">interview half sent.mp4</span><span class="why">transfer incomplete</span></div>
+          <div class="row"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span>
+            <span class="fn">notes-not-video.mp4</span><span class="why">not a recording</span></div>
+          <div class="row"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span>
+            <span class="fn">forgot-to-talk.mp4</span><span class="why">no sound</span></div>
+          <div class="row"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span>
+            <span class="fn">skype-for-business.wmv</span><span class="why">Windows Media</span></div>
+          <div class="row"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span>
+            <span class="fn">avchd-camcorder.mts</span><span class="why">AVCHD</span></div>
+          <div class="row"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span>
+            <span class="fn">feature-phone.3gp</span><span class="why">3GPP</span></div>
+          <div class="row"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span>
+            <span class="fn">dvd-era-archive.mpg</span><span class="why">MPEG program stream</span></div>
+          <div class="row"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span>
+            <span class="fn">adobe-connect-webinar.flv</span><span class="why">Flash Video</span></div>
+          <div class="row"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span>
+            <span class="fn">tape-capture.dv</span><span class="why">DV</span></div>
+          <div class="row more">…and 10 more</div>
+        </div>
+        <div class="pop-f">
+          <button class="mbtn">Copy Diagnostics</button>
+          <button class="mbtn primary">Show All 20 Files…</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>The header states the cost before the detail</h3>
+  <p>“Analysis complete · 38 of 58 files”. The run <i>succeeded</i> — 38 sessions are in the report —
+     so the title is not a failure. But <code>38 of 58</code> is in the subtitle, not buried, because a
+     researcher who reads only the title must still learn that twenty files are missing.</p>
+
+  <h3>One list, not two — because the consequence is one thing</h3>
+  <p>A zero-byte upload and a <code>.wmv</code> have nothing in common technically: one is a broken file,
+     the other is a deliberate policy of ours. Split into “Errors” and “Skipped” they read as two unrelated
+     footnotes. Under one heading — <b>Not in this report</b> — they read as what they are: the list of
+     participants who won't appear. The cause lives in the trailing column, where it belongs.</p>
+
+  <h3>Every row is <code>.warning</code> — none is <code>.skipped</code></h3>
+  <p><code>MessageKind.swift</code> already carries the argument. <code>.warning</code> is
+     <code>exclamationmark.triangle.fill</code>, and the comment beside it reads <i>“filled · caution earns
+     weight”</i>. <code>.skipped</code> is <code>minus.circle.fill</code> in cyan — <i>“intentionally
+     untouched”</i>. A recording the researcher deliberately handed us is precisely <b>not</b> intentionally
+     untouched. Using <code>.skipped</code> for the declined formats would be technically defensible from
+     our side of the boundary and wrong from theirs.</p>
+
+  <h3>Truncation is real and is why the footer button exists</h3>
+  <p><code>STAGE_FAILED_MAX = 10</code> caps the per-stage <code>failed[]</code> list, so the popover shows
+     ten and one overflow row. That's correct for a diagnostic — but ten of twenty is useless if the
+     missing one is P14. <b>Show All 20 Files…</b> is not decoration; it's the only complete list.</p>
+
+  <h3>Basenames only</h3>
+  <p><code>StageFailure.source_file</code> is documented as basename-only because a diagnostic is
+     copy-pasteable, and a full path leaks the researcher's directory structure into a support thread.
+     The mockup honours that: no row shows a path.</p>
+</div>
+
+<!-- ══════════════════ SECONDARY SURFACE ══════════════════ -->
+<div class="sec-head">
+  <h2>Secondary — CLI</h2>
+  <p class="sub">Same run, same taxonomy. The pipeline ships on both channels, so the vocabulary has to survive the trip.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">bristlenose run ~/studies/worst-ux/</span></div>
+  <div class="frame-body">
+<div class="term"><pre>  <span class="d">42 sessions in worst-ux/</span>
+
+ <span class="g">✓</span> <span class="w">Ingested 42 sessions (38 video, 4 audio)</span>                 <span class="d">0.4s</span>
+ <span class="o">⚠</span> <span class="w">16 files not analysed — format not read</span>
+     <span class="d">skype-for-business.wmv      Windows Media</span>
+     <span class="d">avchd-camcorder.mts         AVCHD</span>
+     <span class="d">feature-phone.3gp           3GPP</span>
+     <span class="d">… and 13 more — see bristlenose.log</span>
+ <span class="g">✓</span> <span class="w">Transcribed 38 sessions</span>                                <span class="d">12m 04s</span>
+ <span class="o">⚠</span> <span class="w">4 files unusable</span>
+     <span class="d">p07 failed download.mp4     file is empty</span>
+     <span class="d">interview half sent.mp4     transfer incomplete</span>
+     <span class="d">notes-not-video.mp4         not a recording</span>
+     <span class="d">forgot-to-talk.mp4          no sound</span>
+ <span class="g">✓</span> <span class="w">Extracted 291 quotes</span>                                   <span class="d">1m 47s</span>
+ <span class="g">✓</span> <span class="w">Report written</span>                                         <span class="d">0.9s</span>
+
+  <span class="w">Report:</span> <span class="d">worst-ux/bristlenose-output/bristlenose-worst-ux-report.html</span>
+  <span class="o">⚠</span> <span class="d">20 of 58 files are not in this report.</span></pre></div>
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>The closing line repeats the cost</h3>
+  <p>A long run scrolls. The two <code>⚠</code> lines will have left the screen by the time the report path
+     appears, and the researcher's eye goes to the last line. Restating it there costs one line and is the
+     difference between noticing and not.</p>
+  <h3>Nothing new was invented for this</h3>
+  <p><code>_print_warn_step()</code> already exists in <code>pipeline.py</code>, documented as
+     “partially-succeeded pipeline step (WARNING)”, and <code>_print_stage</code> already right-aligns the
+     trailing column at 58 characters. The per-file lines are indented detail under a stage line, which is
+     the shape the CLI already uses.</p>
+</div>
+
+<!-- ══════════════════ THE REJECTED ALTERNATIVE ══════════════════ -->
+<div class="sec-head">
+  <h2>The alternative, and why not</h2>
+  <p class="sub">Splitting by cause, and letting the policy decline be the quiet one.</p>
+</div>
+
+<div class="comm" style="border-left-color:var(--sys-red)">
+  <span class="tag" style="color:var(--sys-red)">Commentary · rejected</span>
+  <div class="alt">
+    <div class="alt-card no">
+      <div class="h">✗ Split by cause</div>
+      <div class="row" style="padding-left:0"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span><span class="fn">p07 failed download.mp4</span></div>
+      <div class="grp dimmed" style="padding-left:0">Skipped · 16 files</div>
+      <div class="row dimmed" style="padding-left:0"><span class="ic tint-skip"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4" fill="currentColor"/><rect x="4.6" y="7.3" width="6.8" height="1.4" rx=".7" fill="#fff"/></svg></span><span class="fn">skype-for-business.wmv</span></div>
+      <div class="row dimmed" style="padding-left:0"><span class="ic tint-skip"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4" fill="currentColor"/><rect x="4.6" y="7.3" width="6.8" height="1.4" rx=".7" fill="#fff"/></svg></span><span class="fn">avchd-camcorder.mts</span></div>
+    </div>
+    <div class="alt-card yes">
+      <div class="h">✓ Shipped — one list</div>
+      <div class="row" style="padding-left:0"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span><span class="fn">p07 failed download.mp4</span><span class="why">file is empty</span></div>
+      <div class="row" style="padding-left:0"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span><span class="fn">skype-for-business.wmv</span><span class="why">Windows Media</span></div>
+      <div class="row" style="padding-left:0"><span class="ic tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span><span class="fn">avchd-camcorder.mts</span><span class="why">AVCHD</span></div>
+    </div>
+  </div>
+  <p style="margin-top:1rem">The left-hand version is the honest engineering model: nothing went wrong with
+     the <code>.wmv</code>, we simply don't read it. But it renders sixteen missing participants in dim cyan
+     under a heading that means “nothing to see”. That is the demotion we spent the day removing from the
+     ingest path — reintroduced at the last surface before the researcher's eye.</p>
+  <p><b>The open question this doesn't settle:</b> if the accepted-format list widens, the sixteen mostly
+     disappear and only the four damaged files need this surface at all. Worth deciding the format policy
+     before building the grouping.</p>
+</div>
+
+</div>
+<script>
+function setPal(p, btn) {
+  document.documentElement.setAttribute('data-color-theme', p);
+  document.querySelectorAll('.controls .pbtn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+</script>
+</body>
+</html>

@@ -7,7 +7,11 @@ import logging
 from pathlib import Path
 
 from bristlenose.models import FileType, InputSession
-from bristlenose.utils.audio import extract_audio_from_video, has_audio_stream
+from bristlenose.utils.audio import (
+    MediaFileDamagedError,
+    extract_audio_from_video,
+    has_audio_stream,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -101,32 +105,76 @@ async def _extract_one(
 
     Raises:
         AudioToolError: if ffprobe/ffmpeg fails to run (broken toolchain,
-            missing binary, corrupt file). The error propagates through
-            ``asyncio.gather`` and aborts the run — a broken media toolchain
-            must never be mislabelled as "no audio stream" and degrade to an
-            empty, confidently-"successful" report. A video that *genuinely*
-            has no audio stream is a separate, non-fatal case (skipped below).
+            missing binary). The error propagates through ``asyncio.gather``
+            and aborts the run — a broken media toolchain must never be
+            mislabelled as "no audio stream" and degrade to an empty,
+            confidently-"successful" report.
+
+    Two cases are deliberately NOT fatal, because neither is evidence that the
+    toolchain is broken, and both are things one participant can do to one file:
+
+    - ``MediaFileDamagedError`` — ffprobe ran and rejected this file. Recorded
+      on ``InputFile.error`` and skipped, so the run continues and the
+      researcher is told which upload was unusable. Before this, a single
+      zero-byte upload aborted the whole batch: at n=100 that is 99 healthy
+      recordings lost to one failed transfer.
+    - a video with no audio stream at all (a silent screen recording), which is
+      valid and merely untranscribable — also recorded, so its absence from the
+      report is stated rather than inferred.
     """
     async with semaphore:
         # has_audio_stream and extract_audio_from_video are blocking
-        # (subprocess.run) — run in the default thread-pool executor. An
-        # AudioToolError from either is intentionally NOT caught: it must
-        # fail the run loud rather than silently skip transcription.
-        has_audio = await asyncio.to_thread(has_audio_stream, video_path)
-        if not has_audio:
-            logger.warning(
-                "%s: Video file %s has no audio stream, skipping.",
-                session.session_id,
-                video_path.name,
-            )
+        # (subprocess.run) — run in the default thread-pool executor. A bare
+        # AudioToolError from either is intentionally NOT caught: it must fail
+        # the run loud rather than silently skip transcription. Its
+        # MediaFileDamagedError subclass IS caught — that one is a verdict on
+        # the file, not on the tool.
+        try:
+            has_audio = await asyncio.to_thread(has_audio_stream, video_path)
+        except MediaFileDamagedError as exc:
+            _record_unusable(session, video_path, "damaged or unreadable", exc)
             return
 
-        extracted = await asyncio.to_thread(
-            extract_audio_from_video, video_path, output_path
-        )
+        if not has_audio:
+            _record_unusable(session, video_path, "no audio track", None)
+            return
+
+        try:
+            extracted = await asyncio.to_thread(
+                extract_audio_from_video, video_path, output_path
+            )
+        except MediaFileDamagedError as exc:
+            _record_unusable(session, video_path, "damaged or unreadable", exc)
+            return
         session.audio_path = extracted
         logger.info(
             "%s: Extracted audio from %s",
             session.session_id,
             video_path.name,
         )
+
+
+def _record_unusable(
+    session: InputSession,
+    video_path: Path,
+    reason: str,
+    exc: Exception | None,
+) -> None:
+    """Mark *video_path* unusable on the session, so its absence can be reported.
+
+    Writes to ``InputFile.error``, which exists on the model for exactly this and
+    was unwired until now. A file that leaves no trace here becomes a silently
+    missing participant — the one outcome that changes a finding's prevalence
+    without changing anything on screen.
+    """
+    for input_file in session.files:
+        if input_file.path == video_path:
+            input_file.error = reason
+            break
+    logger.warning(
+        "%s: %s — %s; skipping this file, the run continues.%s",
+        session.session_id,
+        video_path.name,
+        reason,
+        f" ({exc})" if exc else "",
+    )

@@ -1219,8 +1219,10 @@ struct ContentView: View {
     private static let acceptedExtensions: Set<String> = [
         // Audio
         "wav", "mp3", "m4a", "flac", "ogg", "wma", "aac",
+        "aiff", "aif", "caf",
         // Video
         "mp4", "m4v", "mov", "avi", "mkv", "webm",
+        "wmv", "asf", "mts", "m2ts", "3gp", "flv", "mpg", "mpeg",
         // Subtitles
         "srt", "vtt",
         // Documents

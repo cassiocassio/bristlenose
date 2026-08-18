@@ -92,8 +92,26 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
     private static let scanDebounce: DispatchTimeInterval = .milliseconds(300)
 
     /// Eligible top-level extensions. Lowercased; comparison is case-insensitive.
+    ///
+    /// **Must stay in step with `ContentView.acceptedExtensions` and, through it,
+    /// `bristlenose/models.py`'s `ALL_EXTENSIONS`.** This set gates both halves of
+    /// `UnanalysedState`, so anything missing here gets no new-files count and no
+    /// missing-file warning — while drag-and-drop happily accepts, copies and
+    /// analyses it. The two sets were written in separate commits (`0cfc99da` for
+    /// drag-drop, `10680cbd` here) and silently disagreed for months: a dropped
+    /// `.mkv`, `.webm`, `.avi`, `.m4v`, `.flac`, `.ogg`, `.wma` or `.aac` was
+    /// invisible to the watcher. Pinned by `tests/test_accepted_extension_parity.py`.
     static let eligibleExtensions: Set<String> = [
-        "mp4", "mov", "m4a", "mp3", "wav", "vtt", "srt", "docx", "txt"
+        // Audio
+        "wav", "mp3", "m4a", "flac", "ogg", "wma", "aac",
+        "aiff", "aif", "caf",
+        // Video
+        "mp4", "m4v", "mov", "avi", "mkv", "webm",
+        "wmv", "asf", "mts", "m2ts", "3gp", "flv", "mpg", "mpeg",
+        // Subtitles
+        "srt", "vtt",
+        // Documents
+        "docx", "txt",
     ]
 
     // MARK: - NSFilePresenter contract

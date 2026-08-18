@@ -29,6 +29,52 @@ class AudioToolError(RuntimeError):
     """
 
 
+class MediaFileDamagedError(AudioToolError):
+    """ffprobe *ran correctly* and reported that this particular file is unusable.
+
+    A subclass of :class:`AudioToolError` so existing fail-loud handlers keep
+    working unchanged, but distinguishable by callers that can sensibly carry
+    on: one participant's truncated upload is not a broken toolchain, and it
+    must not take the other ninety-nine recordings down with it.
+
+    The distinction is deliberately conservative — see
+    :func:`_looks_like_toolchain_failure`. When the failure cannot be
+    confidently attributed to the file, it is reported as a toolchain failure,
+    because under-reporting a broken tool is the more dangerous error.
+    """
+
+
+# Signatures of a *tool* that could not run, as opposed to a *file* it refused.
+# A dynamic-linker failure also exits non-zero (the snap's missing libblas.so.3
+# is the recorded case), so exit status alone cannot separate the two.
+_TOOLCHAIN_FAILURE_MARKERS = (
+    "error while loading shared libraries",
+    "cannot open shared object",
+    "library not loaded",
+    "image not found",
+    "symbol not found",
+    "bad cpu type",
+    "command not found",
+    "permission denied",
+    "segmentation fault",
+    "illegal instruction",
+    "killed",
+)
+
+
+def _looks_like_toolchain_failure(stderr: str) -> bool:
+    """True if *stderr* reads as "ffprobe could not run", not "this file is bad".
+
+    Defaults to True on empty output: ffprobe run with ``-v error`` always says
+    something about a file it dislikes, so silence means the process never got
+    far enough to form an opinion.
+    """
+    text = stderr.strip().lower()
+    if not text:
+        return True
+    return any(marker in text for marker in _TOOLCHAIN_FAILURE_MARKERS)
+
+
 def probe_duration(file_path: Path) -> float | None:
     """Probe the duration of an audio or video file using ffprobe.
 
@@ -175,9 +221,13 @@ def has_audio_stream(file_path: Path) -> bool:
         ) from exc
 
     if result.returncode != 0:
-        raise AudioToolError(
+        detail = result.stderr.strip()
+        message = (
             f"ffprobe failed to probe {file_path.name} "
-            f"(exit {result.returncode}): {result.stderr.strip()}"
+            f"(exit {result.returncode}): {detail}"
         )
+        if _looks_like_toolchain_failure(detail):
+            raise AudioToolError(message)
+        raise MediaFileDamagedError(message)
 
     return "audio" in result.stdout

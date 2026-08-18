@@ -230,7 +230,7 @@ Open `interviews/bristlenose-output/bristlenose-interviews-report.html` in your 
 
 Any mix of audio, video, subtitles, or transcripts:
 
-`.wav` `.mp3` `.m4a` `.flac` `.ogg` `.wma` `.aac` `.mp4` `.m4v` `.mov` `.avi` `.mkv` `.webm` `.srt` `.vtt` `.docx`
+`.wav` `.mp3` `.m4a` `.flac` `.ogg` `.wma` `.aac` `.aiff` `.aif` `.caf` `.mp4` `.m4v` `.mov` `.avi` `.mkv` `.webm` `.wmv` `.asf` `.mts` `.m2ts` `.3gp` `.flv` `.mpg` `.mpeg` `.srt` `.vtt` `.docx`
 
 Files sharing a name stem (e.g. `p1.mp4` and `p1.srt`) are treated as one session. Existing subtitles skip transcription.
 

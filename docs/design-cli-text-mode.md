@@ -4,6 +4,15 @@ A pipe-friendly way to run Bristlenose's full pipeline (audio, video, Zoom/Teams
 
 **Status (12 May 2026):** still parked, design stage. Superseded in framing by `docs/design-cli-improvements.md` §Future direction (post-A3): the *concept* lives on — markdown as the CLI deliverable — but the *surface* changed. The `--text` flag proposed below assumed `bristlenose render --text`, but `render` was removed in A3 (12 May). When this revives, the surface is `bristlenose run --static <folder>` (where `--static` is repurposed from "deprecated HTML thing" to "the markdown deliverable for terminal users"). All the design thinking below — sections, quote sequences, sentiment, codebook-tagged quotes, friction blocks — still applies; just substitute `bristlenose run --static` wherever the body says `bristlenose render --text`. Revisit trigger unchanged: 2+ cohort members say "I just wanted a text file I could grep / share / paste."
 
+**Status (19 Aug 2026):** still parked, still design stage — **and the 12 May
+banner above is now itself stale.** It tells you to substitute `bristlenose run
+--static`, but A3 deleted `--static` from `run` in that same pass; only
+`--no-serve` was restored (hidden, and it suppresses auto-serve — it is not a
+markdown deliverable). So the substitution instruction above produces a command
+line that errors. The *concept* is unchanged and still wanted; the **surface is
+undecided again** — see `docs/design-cli-improvements.md` §Future direction.
+Read the 12 May banner as history, not as instructions.
+
 **Original status (Apr 2026):** design stage, parked. Not scheduled. Revisit when the first CLI-native user asks for it, when we want a prompt-regression harness, or when we decide it's time to stop being dogmatic about the GUI being the only surface.
 
 ---
@@ -120,7 +129,11 @@ No input restrictions. **The text flag doesn't change what goes in — only what
 
 - Audio: `.mp3`, `.wav`, `.m4a`, `.aac`, voice memos from phones
 - Video: `.mp4`, `.mov`, `.mkv`, Zoom cloud recordings, Teams exports
-- Existing transcripts: `.txt`, `.srt`, `.vtt`, `.docx`
+- Existing transcripts: `.srt`, `.vtt`, `.docx` — plus `.txt`, but **only via
+  `bristlenose analyze <dir>`**, which reads `s1.txt`-shaped files directly.
+  `classify_file` returns `None` for `.txt`, so on the headline `run` surface a
+  `.txt` is declined; since 19 Aug 2026 it is at least declined *out loud* rather
+  than dropped silently.
 - Mixed folder: all of the above together, like any real recorded project
 
 This matters for the audience. A volunteer football-league committee recorded a roundtable in a pub on someone's phone. A developer ran a 45-minute Zoom user-interview. Neither of them has "transcripts" — they have recordings. The whole pipeline runs, ffmpeg extracts audio, faster-whisper transcribes, PII redaction runs if requested, analysis runs, and markdown comes out the other end. None of that changes just because the output is text.
@@ -298,6 +311,6 @@ Reuse what's already there. Most `format_*` helpers likely exist in `utils/markd
 - `docs/design-deployment-targets.md` — what runs where (macOS, CI, Cloud VM)
 - `docs/design-cli-improvements.md` — other CLI warts tracked
 - `bristlenose/utils/markdown.py` — formatter SSOT
-- `bristlenose/cli.py` `analyze` command at line 1040
+- `bristlenose/cli.py` `analyze` command at line 1362
 - `bristlenose/stages/s12_render/` — deprecated HTML renderer; text mode should NOT depend on it
 - CLAUDE.md note on banned `preview_*` tools (relevant context for why text mode matters in Cloud VM scenarios)

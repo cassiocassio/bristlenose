@@ -1,7 +1,7 @@
 """Format-ingest coverage — every extension we advertise, at the cheapest layer.
 
-We claim 16 input formats (README / manual). All 16 collapse to **4 decode
-paths** by suffix (`classify_file`) — so proving "`.flac` ingests" does NOT need
+We claim 27 input formats (widened from 16 on 18 Aug 2026). All 27 collapse to
+**4 decode paths** by suffix (`classify_file`) — so proving "`.flac` ingests" does NOT need
 a full Whisper+LLM pipeline run; that would re-test a suffix table and a codec at
 the cost of minutes and (for the analysis leg) real money, ten times over. This
 is the right layer instead:
@@ -65,9 +65,21 @@ def test_classify_rejects_unsupported() -> None:
         assert classify_file(Path(f"x{ext}")) is None
 
 
-def test_advertised_count_is_sixteen() -> None:
-    """Pin the claim: 16 formats. If this changes, README/manual + the coverage
-    inventory must change with it (this test is the tripwire)."""
+def test_advertised_count_is_twenty_seven() -> None:
+    """Pin the claim: 27 formats. If this changes, every surface that advertises
+    the list must change with it (this test is the tripwire).
+
+    Five surfaces, no sixth: ``README.md``, ``bristlenose/data/bristlenose.1``
+    (symlinked as ``man/bristlenose.1``), ``_help_workflows`` in ``cli.py``,
+    ``frontend/src/islands/AboutPanel.tsx``, and the website's ``docs-src/cli.md``
+    in the separate deploy repo. Plus ``docs/testing/coverage-inventory.md`` §1,
+    which this module's header cites.
+
+    Widened 16 → 27 on 18 Aug 2026: a format-torture drop showed 16 real
+    recordings being declined that ffprobe read perfectly. ``.ts`` is excluded
+    on purpose and must stay excluded — macOS maps it to MPEG-2 transport
+    stream, so accepting it by suffix would ingest a TypeScript checkout.
+    """
     total = (
         len(AUDIO_EXTENSIONS)
         + len(VIDEO_EXTENSIONS)
@@ -75,7 +87,7 @@ def test_advertised_count_is_sixteen() -> None:
         + len(SUBTITLE_VTT_EXTENSIONS)
         + len(DOCX_EXTENSIONS)
     )
-    assert total == 16
+    assert total == 27
 
 
 # ---------------------------------------------------------------------------
@@ -105,13 +117,30 @@ def _generate(ext: str, dest: Path, *, video: bool) -> subprocess.CompletedProce
     codec (mp4→h264/aac, webm→vp9/opus, ogg→vorbis, flac→flac, …) — the codec a
     real file of this type would carry, not a `-c copy` remux that tests nothing."""
     sine = "sine=frequency=440:duration=0.5"
-    if video:
-        return _ffmpeg(
-            "-f", "lavfi", "-i", "testsrc=duration=0.5:size=128x96:rate=10",
-            "-f", "lavfi", "-i", sine,
-            "-shortest", str(dest),
-        )
-    return _ffmpeg("-f", "lavfi", "-i", sine, str(dest))
+    if not video:
+        return _ffmpeg("-f", "lavfi", "-i", sine, str(dest))
+
+    # MPEG-1/2 program streams reject arbitrary frame rates — the muxer accepts
+    # only the broadcast set (24/25/30/50/60 and their drop-frame variants), so
+    # the generic rate=10 source fails to mux with "Conversion failed!" rather
+    # than anything that names the real cause. 25 is valid for every container
+    # here, so it is used throughout rather than special-cased.
+    rate = 25
+    extra: list[str] = []
+    if ext in {".3gp", ".3g2"}:
+        # 3GPP's default audio codec is AMR-NB, which needs libopencore-amrnb —
+        # absent from every build we ship. Real phone-recorded .3gp files carry
+        # either AMR or AAC, so AAC proves the same decode path honestly rather
+        # than skipping the container we now advertise. The AMR *decoder* is
+        # present, so an AMR file from a participant still reads; only the
+        # encoder used to fabricate a fixture is missing.
+        extra = ["-c:a", "aac"]
+
+    return _ffmpeg(
+        "-f", "lavfi", "-i", f"testsrc=duration=0.5:size=128x96:rate={rate}",
+        "-f", "lavfi", "-i", sine,
+        "-shortest", *extra, str(dest),
+    )
 
 
 def _assert_produce_and_decode(ext: str, tmp_path: Path, *, video: bool) -> None:

@@ -94,8 +94,24 @@ class JourneyStage(str, Enum):
 # ---------------------------------------------------------------------------
 
 
-AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".wma", ".aac"}
-VIDEO_EXTENSIONS = {".mp4", ".m4v", ".mov", ".avi", ".mkv", ".webm"}
+# Every format the bundled ffmpeg already decodes AND a researcher plausibly
+# receives. Widened 18 Aug 2026 after a 58-file format-torture drop showed 16
+# real recordings — a Skype-for-Business .wmv, an AVCHD camcorder .mts, a
+# feature-phone .3gp — being declined despite ffprobe reading them perfectly.
+#
+# Deliberately NOT here: .ts and .mts's sibling spellings are ambiguous.
+# macOS maps `.ts` to MPEG-2 transport stream, so Spotlight indexes 33,381
+# TypeScript files on a dev machine as `public.movie`. Accepting `.ts` by
+# extension would ingest a frontend checkout as video. If transport streams
+# ever need first-class support, gate them on content sniffing, not suffix.
+AUDIO_EXTENSIONS = {
+    ".wav", ".mp3", ".m4a", ".flac", ".ogg", ".wma", ".aac",
+    ".aiff", ".aif", ".caf",
+}
+VIDEO_EXTENSIONS = {
+    ".mp4", ".m4v", ".mov", ".avi", ".mkv", ".webm",
+    ".wmv", ".asf", ".mts", ".m2ts", ".3gp", ".flv", ".mpg", ".mpeg",
+}
 SUBTITLE_SRT_EXTENSIONS = {".srt"}
 SUBTITLE_VTT_EXTENSIONS = {".vtt"}
 DOCX_EXTENSIONS = {".docx"}

@@ -224,6 +224,27 @@ When macOS copies files to a filesystem that can't store xattrs/resource forks n
 
 Any directory scanner that walks a user-supplied folder must filter these. Use `is_os_metadata(path)` from `bristlenose/utils/fs.py` — it catches `._*` AND `.DS_Store`. Already applied at `discover_files` (s01_ingest), `load_transcripts_from_dir` (pipeline.py), and the server importer scan sites. **When adding a new scan site that walks a project folder, call `is_os_metadata` first.** The Swift `ProjectFolderWatcher` already filters via `.skipsHiddenFiles` + `name.hasPrefix(".")`.
 
+### macOS claims `.ts` and `.mts` as VIDEO — never accept a media extension by suffix alone
+
+macOS's UTI table maps `.ts` to `public.mpeg-2-transport-stream` and `.mts` to
+AVCHD, so Spotlight indexes them as `public.movie`. On a dev machine that is
+catastrophically wrong: `mdfind 'kMDItemContentTypeTree == "public.movie"'`
+returned **33,381 `.ts` files** on this Mac, every one of them TypeScript, plus
+268 `.mts` that were all `.d.mts` declaration files. Not a single real transport
+stream among them.
+
+Consequence: `.ts` is **deliberately excluded** from `AUDIO_EXTENSIONS` /
+`VIDEO_EXTENSIONS` in `models.py`, and must stay excluded. Accepting it by
+suffix would make `bristlenose run frontend/` ingest the source tree as
+recordings. `.mts` *is* accepted (AVCHD camcorders genuinely write it and the
+`.d.mts` collision only bites inside `node_modules`, which no researcher drops
+on us) — but if transport streams ever need first-class support, gate on
+content sniffing, never on the extension.
+
+Generalises: any time you reach for Spotlight or a UTI to classify user media,
+sanity-check the result against `file`/`ffprobe` before believing it. The
+system's answer is about *the extension*, not about the bytes.
+
 ### i18n — single source of truth
 
 - **Locale files live in `bristlenose/locales/` only** — `frontend/src/locales/` was deleted. The frontend imports via Vite alias `@locales`. Don't create locale files in the frontend tree. `I18n.swift` (desktop) reads the same JSON at runtime
@@ -374,7 +395,7 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 
 **Ops / release:**
 - `docs/release.md`, `docs/file-map.md`, `CONTRIBUTING.md`, `INSTALL.md`, `SECURITY.md`
-- **`docs/testing/README.md` — the testing & acceptance hub (start here for anything test/QA/acceptance).** Three-tier model (CI · Playwright · acceptance matrix · human walk), `docs/testing/coverage-inventory.md` (the single source of surfaces: 16 formats · 5 exports · 5 lenses · 5 providers), `docs/testing/acceptance-matrix.md` (mechanical tier, Phase-1 plan), `docs/testing/test-data-generation.md` (fixture recipe). Built already: `tests/test_no_fake_success_acceptance.py` (skips without fixtures) + `e2e/`. The by-hand walk lives in the private QA doc.
+- **`docs/testing/README.md` — the testing & acceptance hub (start here for anything test/QA/acceptance).** Three-tier model (CI · Playwright · acceptance matrix · human walk), `docs/testing/coverage-inventory.md` (the single source of surfaces: 27 formats · 5 exports · 5 lenses · 5 providers), `docs/testing/acceptance-matrix.md` (mechanical tier, Phase-1 plan), `docs/testing/test-data-generation.md` (fixture recipe). Built already: `tests/test_no_fake_success_acceptance.py` (skips without fixtures) + `e2e/`. The by-hand walk lives in the private QA doc.
 - `docs/design-ci.md`, `docs/archive/design-test-strategy.md`, `docs/design-playwright-testing.md`, `docs/design-test-philosophy.md`
 - `docs/design-doctor-and-snap.md`, `docs/design-homebrew-packaging.md`
 - `docs/design-cli-improvements.md`, `docs/design-llm-call-telemetry.md`, `docs/design-performance.md`

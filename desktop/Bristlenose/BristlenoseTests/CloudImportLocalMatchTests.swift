@@ -406,6 +406,37 @@ struct CloudImportGoodnessTests {
         #expect(damaged == ["b"], "only the half that is actually broken")
     }
 
+    @Test("An evicted recording is held, not missing")
+    func evictedFileIsNotRefetched() {
+        // The expensive confusion this exists to prevent: a project folder under
+        // ~/Library/CloudStorage whose provider has dehydrated a recording to
+        // reclaim space. With no evidence the row reads as never-imported and
+        // the researcher re-downloads gigabytes they already own — spending an
+        // expiry-limited remote read on a problem Dropbox can solve for free.
+        let subject = row("a", title: "P07 Interview", at: Date(timeIntervalSince1970: 1_760_000_000))
+        let scan = LocalScan(evicted: [writtenName(subject)], syncProvider: "Dropbox")
+        #expect(CloudImportLocalMatch.evicted(rows: [subject], scan: scan) == ["a"])
+    }
+
+    @Test("An evicted file is never also reported as damaged")
+    func evictedIsNotDamaged() {
+        // The two are mutually exclusive and the ordering enforces it, but the
+        // *reason* is worth a test: a placeholder cannot be opened by design,
+        // so judging it would report every evicted recording as broken — the
+        // most alarming possible reading of a perfectly healthy file.
+        let subject = row("a", title: "P07 Interview", at: Date(timeIntervalSince1970: 1_760_000_000))
+        let scan = LocalScan(evicted: [writtenName(subject)], syncProvider: "iCloud Drive")
+        #expect(CloudImportLocalMatch.damaged(rows: [subject], scan: scan).isEmpty,
+                "unreadable and evicted are different findings")
+    }
+
+    @Test("A damaged file is not mistaken for an evicted one")
+    func damagedIsNotEvicted() {
+        let subject = row("a", title: "P07 Interview", at: Date(timeIntervalSince1970: 1_760_000_000))
+        let scan = LocalScan(unreadable: [writtenName(subject)])
+        #expect(CloudImportLocalMatch.evicted(rows: [subject], scan: scan).isEmpty)
+    }
+
     @Test("Only formats AVFoundation can judge are eligible for a damage verdict")
     func unsupportedContainersAreNotJudged() {
         // The false positive that would matter most. `mediaExtensions` accepts

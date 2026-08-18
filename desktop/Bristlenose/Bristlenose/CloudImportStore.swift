@@ -186,7 +186,19 @@ final class CloudImportStore: ObservableObject {
         // `held` in the first place. Ordered anyway, because the invariant that
         // makes them disjoint lives in another file.
         let broken = CloudImportLocalMatch.damaged(rows: listed, scan: destinationScan)
+        let dehydrated = CloudImportLocalMatch.evicted(rows: listed, scan: destinationScan)
         rows = listed.map { row in
+            // Evicted first: it is the only one of the three that is not a
+            // problem at all, and a placeholder can never have been
+            // duration-matched into `held` or opened into `broken` — reading it
+            // as either would take a healthy file and call it missing or bad.
+            if dehydrated.contains(row.id), let provider = destinationScan.syncProvider {
+                // Only when the provider can be named. An evicted file in a
+                // folder we cannot attribute would render "on ." — and a row
+                // that cannot say *where* the bytes went is less use than one
+                // that stays fetchable.
+                return row.markedAsNotDownloaded(provider: provider)
+            }
             if broken.contains(row.id) { return row.markedAsDamaged() }
             return held.contains(row.id) ? row.markedAsAlreadyInProject() : row
         }
@@ -215,8 +227,11 @@ final class CloudImportStore: ObservableObject {
             destinationScan = LocalScan()
             return
         }
+        // Read here, on the main actor, and handed to the scan — see its note.
+        let provider = ProjectIndex.cloudProviderLabel(for: folder.path)
         scanTask = Task { [weak self] in
-            let found = await CloudImportLocalMatch.inspect(folder: folder)
+            let found = await CloudImportLocalMatch.inspect(
+                folder: folder, syncProvider: provider)
             // A destination changed while the scan ran. Publishing now would
             // mark rows against a folder the researcher has already left.
             guard !Task.isCancelled else { return }

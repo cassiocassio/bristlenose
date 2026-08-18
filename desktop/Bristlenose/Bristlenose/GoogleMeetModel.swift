@@ -654,6 +654,24 @@ struct CloudImportRow: Identifiable, Equatable {
         return copy
     }
 
+    /// The same row, marked as held-but-dehydrated by the destination's cloud.
+    ///
+    /// `.notDownloaded`'s first producer. **Not an error state**, and the
+    /// naming in `ImportRowState` says so: this is a healthy file that iCloud
+    /// Drive or OneDrive has evicted to reclaim space, and colouring it as a
+    /// failure repeats the "ffprobe timed out, so my video is broken" defect.
+    ///
+    /// Unlike `.damaged` this is **not** fetchable, which is the whole value:
+    /// without it an evicted recording reads as never-imported and the
+    /// researcher re-downloads gigabytes they already own, spending an
+    /// expiry-limited remote read on a problem their own file provider can
+    /// solve for free.
+    func markedAsNotDownloaded(provider: String) -> CloudImportRow {
+        var copy = self
+        copy.localState = .notDownloaded(provider: provider)
+        return copy
+    }
+
     /// Whether this row has a file behind it at all.
     ///
     /// Not the same question as `isSelectable`, which also asks whether we

@@ -68,6 +68,32 @@ struct LocalScan: Equatable, Sendable {
     /// Only formats we ourselves write are listed here. See `judgeableExtensions`.
     var unreadable: [String] = []
 
+    /// Files that are here, are ours, and have been **evicted** by the cloud
+    /// provider the *destination folder* syncs to.
+    ///
+    /// Not an error and not a missing file — a healthy recording that iCloud
+    /// Drive, Dropbox or OneDrive has dehydrated to a placeholder to reclaim
+    /// space. Mac project folders routinely live under
+    /// `~/Library/CloudStorage/`, so this is ordinary rather than exotic.
+    ///
+    /// Worth its own case because the alternative is expensive: with no
+    /// evidence, an evicted recording reads as never-imported, and the
+    /// researcher re-downloads gigabytes they already own — spending an
+    /// expiry-limited remote read to solve a purely local problem.
+    var evicted: [String] = []
+
+    /// Which cloud syncs the destination folder, if any — "iCloud Drive",
+    /// "Dropbox", "OneDrive".
+    ///
+    /// Carried so `.notDownloaded` can *name* the provider, which is the
+    /// difference between an actionable sentence and a shrug: "on iCloud Drive"
+    /// tells a researcher exactly which app to go and fetch it from, while
+    /// "not downloaded" invites them to press ours.
+    ///
+    /// Attribution, never a warning — a project inside the client's synced tree
+    /// is the intended configuration.
+    var syncProvider: String?
+
     /// Leftover `.part` files: a download that was interrupted, almost always
     /// by the app quitting mid-batch.
     ///
@@ -172,19 +198,50 @@ enum CloudImportLocalMatch {
     /// same row as an `.mp4` would — the extension is decided at fetch time
     /// from the file Zoom offers, and is not knowable from the row.
     static func damaged(rows: [CloudImportRow], scan: LocalScan) -> Set<String> {
-        guard !scan.unreadable.isEmpty else { return [] }
-        let broken = Set(scan.unreadable.map { ($0 as NSString).deletingPathExtension })
+        rowsMatching(rows, filenames: scan.unreadable)
+    }
 
-        var damaged: Set<String> = []
+    /// Rows whose file is here but dehydrated by the destination's own cloud.
+    ///
+    /// Same name-based identification as `damaged`, and for the same reason: an
+    /// evicted file cannot be measured — reading its duration would fault the
+    /// whole recording back down, which is the one thing this check exists to
+    /// avoid — so duration matching is not merely inconvenient here, it is
+    /// self-defeating.
+    static func evicted(rows: [CloudImportRow], scan: LocalScan) -> Set<String> {
+        rowsMatching(rows, filenames: scan.evicted)
+    }
+
+    /// Rows whose downloaded filename appears in `filenames`.
+    ///
+    /// **Matched by name, inverting this file's own rule, and deliberately.**
+    /// Everywhere else the match is on duration precisely *because* filenames
+    /// diverge: ours are machine-local, the vendor's account-local, and
+    /// researchers rename things. None of that applies to these two cases —
+    /// neither a broken nor an evicted file has a readable duration to match
+    /// on, and the only files we are willing to speak about are ones **we wrote
+    /// ourselves**, under a name `CloudDownloadNaming` computed from the row in
+    /// front of us. Exact by construction, and a researcher's own copy of the
+    /// same meeting is correctly left alone.
+    ///
+    /// Compared on the stem, so Zoom's audio-only `.m4a` rendition matches the
+    /// same row an `.mp4` would — the extension is chosen at fetch time from
+    /// whatever the platform offers and is not knowable from the row.
+    private static func rowsMatching(_ rows: [CloudImportRow],
+                                     filenames: [String]) -> Set<String> {
+        guard !filenames.isEmpty else { return [] }
+        let stems = Set(filenames.map { ($0 as NSString).deletingPathExtension })
+
+        var matched: Set<String> = []
         for row in rows {
             let expected = CloudDownloadNaming.filename(
                 title: row.title, startsAt: row.startsAt,
                 fileExtension: "mp4", part: row.siblingOrdinal)
-            if broken.contains((expected as NSString).deletingPathExtension) {
-                damaged.insert(row.id)
+            if stems.contains((expected as NSString).deletingPathExtension) {
+                matched.insert(row.id)
             }
         }
-        return damaged
+        return matched
     }
 
     // MARK: - The scan
@@ -235,8 +292,15 @@ enum CloudImportLocalMatch {
     ///
     /// The same single pass the duration match already paid for — the probe was
     /// always distinguishing these cases and throwing two of them away.
-    static func inspect(folder: URL) async -> LocalScan {
-        var result = LocalScan(interrupted: partFiles(in: folder))
+    /// - Parameter syncProvider: which cloud syncs `folder`, supplied by the
+    ///   caller rather than read here. `ProjectIndex.cloudProviderLabel` is
+    ///   main-actor isolated and this runs off it; hopping actors mid-scan to
+    ///   fetch one label would be a lot of ceremony for a string the caller
+    ///   already has.
+    static func inspect(folder: URL, syncProvider: String? = nil) async -> LocalScan {
+        var result = LocalScan(
+            syncProvider: syncProvider,
+            interrupted: partFiles(in: folder))
 
         let files = mediaFiles(in: folder)
         guard !files.isEmpty else { return result }
@@ -253,8 +317,13 @@ enum CloudImportLocalMatch {
         for (url, recording) in probed {
             if let recording {
                 result.recordings.append(recording)
-            } else if judgeableExtensions.contains(url.pathExtension.lowercased()),
-                      isMaterialised(url) {
+            } else if !isMaterialised(url) {
+                // Checked before damage, because a placeholder cannot be
+                // opened *by design* — judging it would report every evicted
+                // recording as broken, which is the most alarming possible
+                // reading of a healthy file.
+                result.evicted.append(url.lastPathComponent)
+            } else if judgeableExtensions.contains(url.pathExtension.lowercased()) {
                 // Materialised, ours, and it will not open. Not a placeholder
                 // (that is `isMaterialised`'s job) and not an unsupported
                 // container (that is `judgeableExtensions`'), so what is left is
@@ -270,6 +339,7 @@ enum CloudImportLocalMatch {
         // header happened to be read first.
         result.recordings.sort { $0.name < $1.name }
         result.unreadable.sort()
+        result.evicted.sort()
         return result
     }
 

@@ -71,17 +71,31 @@ enum MiroConnectionStore {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    /// Forget the token — both copies.
-    ///
-    /// The running serve first, then the durable copy, matching the order the
-    /// export sheet already uses. `MiroAPI.disconnect` swallows its own
-    /// failures by design (it logs, and the local copy goes regardless), so a
-    /// sidecar that has already gone away cannot strand the Keychain item.
+    /// Convenience for callers holding a `ServeManager` rather than a client.
     static func disconnect(servePort: Int?,
                            authToken: String?,
                            store: any KeychainStore = KeychainHelper.liveStore) async {
-        if let servePort {
-            await MiroAPI(port: servePort, token: authToken).disconnect()
+        await disconnect(api: servePort.map { MiroAPI(port: $0, token: authToken) },
+                         store: store)
+    }
+
+    /// Forget the token — every copy. The whole sequence, and the only copy of it.
+    ///
+    /// The running serve first, then the durable copy, matching the order the
+    /// export sheet already used. `MiroAPI.disconnect` swallows its own
+    /// failures by design (it logs, and the local copy goes regardless), so a
+    /// sidecar that has already gone away cannot strand the Keychain item.
+    ///
+    /// The Send-to-Miro sheet had its own three-step version until 18 Aug 2026
+    /// — API, Keychain, identity — missing only the notification below, which
+    /// is the step that makes the other three true. Disconnecting from the
+    /// sheet therefore left the running sidecar exporting happily to the board
+    /// the researcher had just been told they were disconnected from. Two
+    /// surfaces performing one irreversible act must not be two sequences.
+    static func disconnect(api: MiroAPI?,
+                           store: any KeychainStore = KeychainHelper.liveStore) async {
+        if let api {
+            await api.disconnect()
         } else {
             // Nothing in memory to clear: the next sidecar reads the Keychain,
             // which is about to be empty.
@@ -102,8 +116,10 @@ enum MiroConnectionStore {
         // `.bristlenosePrefsChanged` is the existing mechanism for exactly this
         // ("the sidecar's baked env is stale"): it drains the parked slot and
         // restarts the fronted serve. The restart cost is the usual one, and it
-        // is the right trade here — a deliberate, rare act, performed from
-        // Settings rather than mid-report.
+        // is the right trade here — a deliberate, rare act. It also rotates the
+        // kernel-assigned port, so a caller holding a `MiroAPI` built from the
+        // old one must not keep using it: the sheet dismisses itself for this
+        // reason.
         NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
     }
 }

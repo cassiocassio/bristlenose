@@ -66,9 +66,17 @@ enum AccountService: Hashable, Identifiable, Sendable {
     // standing in for vendor marks — a person glyph for Teams, a camera for
     // Meet, a stacked rectangle for Miro. None of them is the thing they name,
     // and a glyph that is not the product's own mark is decoration wearing the
-    // costume of identification. The real marks need a licence from all three
-    // vendors (§9a), so until then the name does the work, which is also what
-    // System Settings and Mail do with their own account group headers.
+    // costume of identification — beside the vendor's name it reads *as* the
+    // mark, which makes lawful-but-misleading a worse place than absent.
+    //
+    // **Not an interim.** The real marks would need a trademark licence from
+    // all three vendors (§9a), and that paperwork is settled against, 18 Aug
+    // 2026 — so this is the answer, not a wait. The name does the work, which
+    // is what System Settings and Mail do with their own account group headers.
+    // `File ▸ Import` keeps its SF Symbols and is a different case: there the
+    // glyph sits in a column of other menu glyphs and reads as menu furniture.
+    // The test is whether a reader would take the glyph for the vendor's own
+    // mark.
 
     /// Whether connecting is something this pane can start.
     ///

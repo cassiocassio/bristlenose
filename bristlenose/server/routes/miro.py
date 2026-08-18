@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from bristlenose import miro_client
 from bristlenose.config import load_settings
 from bristlenose.credentials import (
+    CredentialStore,
     get_credential,
     get_credential_source,
     get_credential_store,
@@ -83,6 +84,41 @@ def _check_project(db: Session, project_id: int) -> Project:
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return project
+
+
+def _store_token_verified(store: CredentialStore, key: str, value: str) -> bool:
+    """Store a credential and read it back. True only if it round-tripped.
+
+    ``CredentialStore.set`` is not a promise. ``MacOSCredentialStore.set``
+    swallows every subprocess failure *by design* — under App Sandbox
+    ``/usr/bin/security`` is not reachable, so the write is a silent no-op and
+    a clean return says only that nothing raised, never that anything was
+    written. The Swift side has the same shape one layer over:
+    ``KeychainHelper.serviceNames`` is an allowlist, and an unregistered key
+    writes false and reads nil, which is how ``CloudGrantStore`` shipped
+    persisting nothing at all with no error anywhere. Verify, don't assume.
+
+    A read-back returning a *different* value counts as failure too: an
+    environment variable shadows both the file and keychain reads, so the token
+    just stored is then not the token that will be used.
+    """
+    try:
+        store.set(key, value)
+    except NotImplementedError:
+        # EnvCredentialStore — read-only, and honest about it.
+        logger.warning("No writable credential store — %s not persisted", key)
+        return False
+    try:
+        stored = store.get(key)
+    except Exception:  # a store that cannot answer cannot prove anything
+        stored = None
+    if stored != value:
+        logger.warning(
+            "%s did not round-trip the credential store (%s) — not persisted",
+            key, type(store).__name__,
+        )
+        return False
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -162,13 +198,9 @@ def miro_connect(
             status_code=502, detail=f"Could not validate Miro token: {error}"
         )
 
-    # Store in credential store
+    # Store in credential store, and read back rather than trusting the write.
     store = get_credential_store()
-    try:
-        store.set("miro", token)
-    except NotImplementedError:
-        # EnvCredentialStore — can't persist, but token is valid
-        logger.warning("No system credential store available — token not persisted")
+    persisted = _store_token_verified(store, "miro", token)
 
     # In-session fallback: under App Sandbox the Python keychain write above is a
     # silent no-op, and the durable token (Swift writes Keychain via the
@@ -189,8 +221,9 @@ def miro_connect(
     # the token value. "keychain"/"env" = survives restart; "none" = relies on
     # the desktop Keychain (bridge) for cross-restart persistence.
     logger.info(
-        "miro_token_trace event=connect_stored store=%s persisted_source=%s session_cache=set",
-        type(store).__name__, get_credential_source("miro"),
+        "miro_token_trace event=connect_stored store=%s persisted_source=%s "
+        "verified=%s session_cache=set",
+        type(store).__name__, get_credential_source("miro"), persisted,
     )
 
     return MiroStatusResponse(
@@ -349,13 +382,41 @@ def miro_callback(request: Request, code: str = "", state: str = "") -> HTMLResp
             "Close this tab and try again.</p>",
             status_code=502,
         )
-    try:
-        store.set("miro", access)
-        if tokens.get("refresh_token"):
-            store.set("miro_refresh", tokens["refresh_token"])
-    except NotImplementedError:
-        logger.warning("No system credential store — Miro token not persisted")
+    persisted = _store_token_verified(store, "miro", access)
+    if tokens.get("refresh_token"):
+        _store_token_verified(store, "miro_refresh", tokens["refresh_token"])
+
+    # In-session fallback — `miro_connect` has had this since the sandbox work
+    # and this path never did, which is the whole bug. A store that no-ops left
+    # the token in NO store at all: this tab said "connected" while status,
+    # export and Settings ▸ Accounts all said otherwise, with nothing anywhere
+    # to explain the contradiction. Cache the identity too, for the same reason
+    # `miro_connect` does — so the sheet can name the account.
+    request.app.state.miro_session_token = access
+    request.app.state.miro_account = miro_client.get_token_info(access)
+
+    logger.info(
+        "miro_token_trace event=callback_stored store=%s persisted_source=%s "
+        "verified=%s session_cache=set",
+        type(store).__name__, get_credential_source("miro"), persisted,
+    )
+
+    if persisted:
+        return HTMLResponse(
+            "<h2>Connected to Miro ✓</h2><p>You can close this tab and return to "
+            "Bristlenose.</p><script>setTimeout(function(){window.close()},800)</script>"
+        )
+
+    # Not a 502: the token is valid and now cached, so this session genuinely is
+    # connected and refusing it would discard a working connection. What must
+    # not happen is the bare ✓, which claims a durable copy that does not exist.
+    # Unlike the paste path there is no `store-miro-token` bridge to write the
+    # Keychain natively — that message comes from the SPA and this page is a
+    # browser tab — so on the sandboxed desktop the token dies with the sidecar
+    # too. No auto-close: a page that shuts itself cannot be read.
     return HTMLResponse(
-        "<h2>Connected to Miro ✓</h2><p>You can close this tab and return to "
-        "Bristlenose.</p><script>setTimeout(function(){window.close()},800)</script>"
+        "<h2>Connected to Miro — but not saved</h2><p>The connection works now. "
+        "Bristlenose could not write to the system credential store, so you will "
+        "have to connect again after restarting.</p><p>You can close this tab and "
+        "return to Bristlenose.</p>"
     )

@@ -87,9 +87,10 @@ struct CloudDisconnectTests {
         // lookup failed is still a real connection that must be removable.
         let work = CloudGrantStore.Connection(
             platform: .teams, accountKey: "aaa",
-            address: "martin@clientco.com", needsSignIn: false)
+            address: "martin@clientco.com", needsSignIn: false, driveTier: .business)
         let personal = CloudGrantStore.Connection(
-            platform: .teams, accountKey: "bbb", address: nil, needsSignIn: false)
+            platform: .teams, accountKey: "bbb", address: nil, needsSignIn: false,
+            driveTier: nil)
         #expect(work.id != personal.id)
     }
 

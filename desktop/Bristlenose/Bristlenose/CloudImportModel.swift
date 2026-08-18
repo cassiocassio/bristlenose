@@ -182,6 +182,24 @@ enum DriveTier: Equatable {
     /// account they are attached to the meeting chat instead and never reach the
     /// drive — verified 15 Aug 2026.
     var canHoldTeamsRecordings: Bool { self == .business }
+
+    /// A token that round-trips through `init(driveType:)`, for persisting the
+    /// verdict on the grant so Settings ▸ Accounts can read it without a call.
+    ///
+    /// **Canonical, not verbatim.** Graph says either `business` or
+    /// `documentLibrary` for a work drive and `init` maps both to `.business`,
+    /// so this emits `business` for both — the distinction is one nothing reads
+    /// and re-deriving is what matters. Nil where there is nothing worth
+    /// storing: an empty `unknown` is the "we never found out" case, and
+    /// writing it down would make a failed lookup indistinguishable from an
+    /// answered one.
+    var driveType: String? {
+        switch self {
+        case .business:            return "business"
+        case .personal:            return "personal"
+        case .unknown(let raw):    return raw.isEmpty ? nil : raw
+        }
+    }
 }
 
 // MARK: - Row state

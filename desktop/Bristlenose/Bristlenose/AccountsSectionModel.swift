@@ -269,7 +269,27 @@ enum AccountsSectionModel {
             return GoogleAccountTier(email: connection.address).canHoldMeetRecordings
                 ? nil
                 : .cannotHoldRecordings
-        case .teams, .zoom:
+        case .teams:
+            // **Only what a listing actually established.** Nil means nobody
+            // has asked yet — a researcher who signed in and never opened the
+            // window — and silence is the only honest thing to render for it.
+            // Guessing from an address would be wrong in the direction that
+            // matters: plenty of work tenants use consumer-looking domains, and
+            // telling a researcher their perfectly good account is the wrong
+            // kind is worse than saying nothing.
+            // **`.personal` only — deliberately not `!canHoldTeamsRecordings`.**
+            // That property is false for `.unknown` as well, which is correct
+            // where it is used (deciding whether to *expect* recordings) and
+            // wrong here: an unrecognised `driveType` is a drive kind this code
+            // has not met, and reading it as "personal" would turn every future
+            // Microsoft drive type into an accusation against a working
+            // account. Same failure direction the Google branch guards above.
+            guard connection.driveTier == .personal else { return nil }
+            return .cannotHoldRecordings
+        case .zoom:
+            // Parked, and its tier question is answered by the provider at
+            // listing time rather than by anything stored. Separate from
+            // `.teams` so unparking Zoom is a compile-time prompt.
             return nil
         }
     }

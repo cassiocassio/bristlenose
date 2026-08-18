@@ -213,8 +213,28 @@ final class TeamsSource: CloudImportSource {
     /// publishes land in the order they were made **and** off this thread.
     /// The contract that replaces the hop: `onGrantChanged` must not block.
     private func publishGrant() {
-        let snapshot = tokens.map { MicrosoftGrant(tokens: $0, identity: identity) }
+        let snapshot = tokens.map {
+            MicrosoftGrant(tokens: $0, identity: identity, driveType: tier.driveType)
+        }
         onGrantChanged?(snapshot)
+    }
+
+    /// Persist the drive tier the moment a listing establishes it.
+    ///
+    /// Settings ▸ Accounts cannot ask — it makes no network calls — so this is
+    /// the only path by which the pane ever learns that a personal Microsoft
+    /// account has no `/Recordings` folder and never will. Without it that
+    /// account reads as plainly *connected* and the researcher finds out in the
+    /// import window, one empty list later.
+    ///
+    /// Called from both places the tier is settled, and guarded on a real
+    /// change: the business path gets it free off the listing's own
+    /// `parentReference`, the personal path pays for `GET /me/drive` precisely
+    /// because the folder was absent. Re-publishing an unchanged tier would
+    /// rewrite the Keychain item on every listing for no new fact.
+    private func publishTierIfChanged(from previous: DriveTier) {
+        guard tier != previous, tokens != nil else { return }
+        publishGrant()
     }
 
     /// Record that the provider ended the session, **keeping the account**.
@@ -415,7 +435,14 @@ final class TeamsSource: CloudImportSource {
                 // that they had none, with `isExact` true.
                 let folderAbsent = error.outcome == .notFound || error.outcome == .scopeNotGranted
                 if folderAbsent, pagesFetched == 0, let readTier = await fetchDriveTier() {
+                    let before = tier
                     tier = readTier
+                    // The one path that *pays* for the tier, and the one whose
+                    // answer Settings ▸ Accounts most needs: no `/Recordings`
+                    // folder means a personal account, which will never have
+                    // one. Written to the grant here or the pane can never say
+                    // so — it makes no calls of its own.
+                    publishTierIfChanged(from: before)
                     return empty(window, outcome: .exhausted)
                 }
                 // A 404 on a later page falls through to the ordinary failure
@@ -431,7 +458,12 @@ final class TeamsSource: CloudImportSource {
         }
 
         if let driveType = items.first?.parentReference?.driveType {
+            let before = tier
             tier = DriveTier(driveType: driveType)
+            // Free — the listing already carried it. Published so a business
+            // account is positively *known* to be fine rather than merely
+            // un-flagged, which is what stops the pane guessing from silence.
+            publishTierIfChanged(from: before)
         }
 
         // The roster is a separate, optional read. A researcher who declined

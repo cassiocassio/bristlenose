@@ -17,11 +17,13 @@ struct AccountsSectionModelTests {
 
     private func connection(_ platform: CloudPlatform,
                             _ address: String?,
-                            needsSignIn: Bool = false) -> CloudGrantStore.Connection {
+                            needsSignIn: Bool = false,
+                            driveTier: DriveTier? = nil) -> CloudGrantStore.Connection {
         CloudGrantStore.Connection(platform: platform,
                                    accountKey: CloudAccountKey.derive(address),
                                    address: address,
-                                   needsSignIn: needsSignIn)
+                                   needsSignIn: needsSignIn,
+                                   driveTier: driveTier)
     }
 
     private func sections(available: Set<CloudPlatform>? = nil,
@@ -185,15 +187,49 @@ struct AccountsSectionModelTests {
         #expect(state(result, "meet") == .connected(identity: nil))
     }
 
-    @Test("A personal Microsoft account is NOT flagged, because the pane cannot know")
-    func teamsTierIsNotClaimed() {
-        // The asymmetry, pinned so it reads as a known gap rather than a bug.
-        // Microsoft's equivalent comes from `GET /me/drive?$select=driveType` —
-        // a call this pane does not make. Until the adapter writes its
-        // `DriveTier` verdict onto the grant, a personal Microsoft account
-        // reads as connected and the truth arrives in the import window.
+    @Test("A personal Microsoft account is flagged once a listing has established it")
+    func teamsPersonalTierIsFlagged() {
+        // _Inverted 18 Aug 2026._ This asserted the opposite — that the pane
+        // could not know — and was correct while nothing persisted the verdict.
+        // It is kept rather than deleted because the reason it was true is the
+        // reason the fix has the shape it does: the pane still makes **no**
+        // network call, and `GET /me/drive?$select=driveType` is still the only
+        // way to learn this. What changed is that `TeamsSource` now writes what
+        // the listing already told it onto the grant, so the pane reads a fact
+        // instead of making a call.
+        let result = sections(connections: [
+            connection(.teams, "martin@outlook.com", driveTier: .personal)])
+        #expect(state(result, "teams")
+                == .attention(identity: "martin@outlook.com", .cannotHoldRecordings))
+    }
+
+    @Test("A work Microsoft account is left alone")
+    func teamsBusinessTierIsNotFlagged() {
+        let result = sections(connections: [
+            connection(.teams, "martin@clientco.com", driveTier: .business)])
+        #expect(state(result, "teams") == .connected(identity: "martin@clientco.com"))
+    }
+
+    @Test("A Microsoft account nobody has listed yet is not accused of anything")
+    func teamsUnestablishedTierIsNotAnAccusation() {
+        // The state that keeps the old test's lesson alive. Sign in, never open
+        // the import window, and no listing has run — so nothing knows. Nil must
+        // read as silence, not as a verdict, and it is the state every account
+        // passes through.
         let result = sections(connections: [connection(.teams, "martin@outlook.com")])
-        #expect(state(result, "teams") == .connected(identity: "martin@outlook.com"))
+        #expect(state(result, "teams") == .connected(identity: "martin@outlook.com"),
+                "an unasked question is not an answer")
+    }
+
+    @Test("An unrecognised drive type is not treated as a personal account")
+    func teamsUnknownTierIsNotFlagged() {
+        // `DriveTier.unknown` means Graph returned something this code has not
+        // seen. Reading that as "cannot hold recordings" would turn every future
+        // Microsoft drive type into an accusation against a working account —
+        // the same failure direction the Google test above guards.
+        let result = sections(connections: [
+            connection(.teams, "martin@clientco.com", driveTier: .unknown("sharePoint"))])
+        #expect(state(result, "teams") == .connected(identity: "martin@clientco.com"))
     }
 
     @Test("A revoked sign-in stays on the list instead of vanishing")

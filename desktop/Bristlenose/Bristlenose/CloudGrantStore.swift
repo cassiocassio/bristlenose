@@ -90,6 +90,27 @@ struct MicrosoftGrant: Codable, Equatable, Sendable {
     /// dropped every sign-in stored before this field existed.
     var needsSignIn: Bool? = nil
 
+    /// Graph's raw `driveType` for this account, once a listing has established
+    /// it. Nil until then.
+    ///
+    /// **The raw string, not a `DriveTier`.** `DriveTier` carries an associated
+    /// value on its `unknown` case, so encoding it would mean a hand-written
+    /// Codable conformance and a second home for the "documentLibrary counts as
+    /// business" mapping. This is the exact token Graph returned;
+    /// `DriveTier(driveType:)` stays the only derivation.
+    ///
+    /// **Why persist it at all.** Settings ▸ Accounts makes no network calls —
+    /// that is the design, not an omission — so the only way the pane can tell a
+    /// researcher their personal Microsoft account cannot hold Teams recordings
+    /// is if something that *did* call wrote the answer down. Google's
+    /// equivalent is free (it reads the address domain); Microsoft's costs
+    /// `GET /me/drive?$select=driveType`, and the listing already pays it.
+    ///
+    /// Optional for the same decoder reason as `needsSignIn` above: the
+    /// synthesised decoder does not apply property defaults for a missing key,
+    /// so a non-optional would discard every sign-in stored before this field.
+    var driveType: String? = nil
+
     /// This grant if it can still be used, nil if the provider ended it.
     ///
     /// The guard that keeps a kept grant inert. A revoked refresh token fails
@@ -352,6 +373,15 @@ enum CloudGrantStore {
         /// The provider ended this sign-in and the row is a tombstone: real,
         /// nameable, removable, and holding nothing that works.
         let needsSignIn: Bool
+        /// What a past listing established about the account's drive, or nil if
+        /// none ever has.
+        ///
+        /// Microsoft only. Google's equivalent is derived from the address for
+        /// free and needs no storage; Zoom's tier question is answered by the
+        /// provider at listing time. **Nil is a real and common state** — a
+        /// researcher who signed in and never listed has an account nobody has
+        /// asked about yet, and the pane must say nothing rather than guess.
+        let driveTier: DriveTier?
         /// Platform *and* account: a consultant with a personal Microsoft
         /// account and a client's has two Teams rows, and a list keyed on the
         /// platform alone cannot hold both.
@@ -372,13 +402,23 @@ enum CloudGrantStore {
                     return loadTeams(account: key, store: store,
                                      discardingUnreadable: false).map {
                         Connection(platform: platform, accountKey: key,
-                                   address: $0.identity, needsSignIn: $0.needsSignIn == true)
+                                   address: $0.identity, needsSignIn: $0.needsSignIn == true,
+                                   // `map`, not a default: a grant stored before
+                                   // the field existed, or by a session that
+                                   // never listed, has no verdict — and "not
+                                   // asked" must not read as "asked and found
+                                   // nothing".
+                                   driveTier: $0.driveType.map(DriveTier.init(driveType:)))
                     }
                 case .meet:
                     return loadGoogle(account: key, store: store,
                                       discardingUnreadable: false).map {
                         Connection(platform: platform, accountKey: key,
-                                   address: $0.identity, needsSignIn: $0.needsSignIn == true)
+                                   address: $0.identity, needsSignIn: $0.needsSignIn == true,
+                                   // Google's tier comes from the address, free,
+                                   // in `AccountsSectionModel`. Nothing to store
+                                   // and nothing to carry.
+                                   driveTier: nil)
                     }
                 case .zoom:
                     // No store yet — Zoom is parked and cannot sign in, so there

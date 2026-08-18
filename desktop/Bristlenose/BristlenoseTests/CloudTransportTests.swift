@@ -581,13 +581,100 @@ struct ListingTransportTests {
                                expiresAt: Date().addingTimeInterval(-3600))
     }
 
-    private func teamsSource(tokens: MicrosoftTokenResponse? = nil) -> TeamsSource {
+    private func teamsSource(
+        tokens: MicrosoftTokenResponse? = nil,
+        onGrantChanged: (@Sendable (MicrosoftGrant?) -> Void)? = nil
+    ) -> TeamsSource {
         TeamsSource(
             config: MicrosoftOAuthConfig(clientID: "cid", tenant: "common",
                                          redirectURI: "msauth.test://auth"),
             session: StubURLProtocol.session(),
             restoredTokens: tokens ?? MicrosoftTokenResponse(
-                data: Data(#"{"access_token":"T","expires_in":3600}"#.utf8))!)
+                data: Data(#"{"access_token":"T","expires_in":3600}"#.utf8))!,
+            onGrantChanged: onGrantChanged)
+    }
+
+    // MARK: - The tier reaches Settings ▸ Accounts
+
+    // Both halves of one seam, and the producer half is the one that can die
+    // silently: Settings ▸ Accounts makes no network calls, so if the adapter
+    // stops writing the verdict the pane simply shows nothing — which is also
+    // exactly what it correctly shows for an account nobody has listed yet.
+    // A dead producer and a working one are indistinguishable from the pane.
+
+    @Test("A personal account's tier is written onto the grant, not just held in memory")
+    func personalTierIsPersisted() async throws {
+        // Without this the pane can never say it. `source.accountTier` being
+        // right — which `personalTierComesFromTheDrive` already pins — buys
+        // nothing on its own, because that value dies with the window.
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"error":{"code":"itemNotFound","message":"not found"}}"#,
+                                      status: 404))
+        StubURLProtocol.enqueue(.json(#"{"driveType":"personal"}"#))
+
+        let published = Published()
+        let source = teamsSource(onGrantChanged: { published.record($0) })
+        _ = await source.list(window: window)
+
+        #expect(published.last??.driveType == "personal",
+                "the pane reads this field and makes no call of its own")
+    }
+
+    @Test("A work account's tier rides the listing it came free with")
+    func businessTierIsPersisted() async throws {
+        // The ordinary path: `parentReference.driveType` is already on every
+        // item, so this costs no extra request. Pinned because a positively
+        // *known* business account is what stops the pane inferring anything
+        // from silence.
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"value":[{"id":"1","name":"2026-08-12 14-00-00.mp4","size":100,"createdDateTime":"2026-08-12T14:00:00Z","parentReference":{"driveType":"business"}}]}"#))
+        StubURLProtocol.enqueue(.json(#"{"value":[]}"#))   // the roster read
+
+        let published = Published()
+        let source = teamsSource(onGrantChanged: { published.record($0) })
+        _ = await source.list(window: window)
+
+        #expect(published.last??.driveType == "business")
+    }
+
+    @Test("An unchanged tier does not rewrite the Keychain item on every listing")
+    func unchangedTierIsNotRepublished() async throws {
+        // `publishTierIfChanged` guards on a real change. Without the guard
+        // every listing would rewrite the stored grant for no new fact — and a
+        // write is the operation that can fail, race a concurrent refusal, or
+        // lose a rekey.
+        StubURLProtocol.reset()
+        for _ in 0..<2 {
+            StubURLProtocol.enqueue(.json(#"{"value":[{"id":"1","name":"2026-08-12 14-00-00.mp4","size":100,"createdDateTime":"2026-08-12T14:00:00Z","parentReference":{"driveType":"business"}}]}"#))
+            StubURLProtocol.enqueue(.json(#"{"value":[]}"#))
+        }
+
+        let published = Published()
+        let source = teamsSource(onGrantChanged: { published.record($0) })
+        _ = await source.list(window: window)
+        let afterFirst = published.count
+        _ = await source.list(window: window)
+
+        #expect(published.count == afterFirst,
+                "the second listing established nothing new")
+    }
+
+    /// Collects grant publishes off whatever thread the writer contract allows.
+    private final class Published: @unchecked Sendable {
+        private let lock = NSLock()
+        private var grants: [MicrosoftGrant?] = []
+        func record(_ grant: MicrosoftGrant?) {
+            lock.lock(); defer { lock.unlock() }
+            grants.append(grant)
+        }
+        var last: MicrosoftGrant?? {
+            lock.lock(); defer { lock.unlock() }
+            return grants.last
+        }
+        var count: Int {
+            lock.lock(); defer { lock.unlock() }
+            return grants.count
+        }
     }
 
     @Test("An unfollowed continuation reports pageCapHit, never exhausted")

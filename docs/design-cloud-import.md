@@ -1389,7 +1389,7 @@ Service (Zoom Marks clause) and `brand.zoom.com`.
 ## 11. Related
 
 - **`docs/design-project-storage.md`** — what happens to media once BN has it; the other half of this pair
-- The review log for this doc — 32 findings from the 14 Aug six-agent pass — lives with the maintainer's private review notes, kept outside the public tree
+- The review log for this doc lives with the maintainer's private review notes, kept outside the public tree. **Correction, 18 Aug 2026:** this line used to say it held "32 findings from the 14 Aug six-agent pass". It does not, and they are not recoverable — the log's own pass index now records the gap and the five findings rescued from a handoff. The 18 Aug pass is in there in full.
 - `docs/methodology/consent-gradient.md` — the governance model provenance and retention sit inside
 - `docs/design-pipeline-diagnostic-popover.md` — read before adding any new error/status message
 - `docs/design-keychain.md` · `docs/design-modularity.md` · `docs/testing/coverage-inventory.md`

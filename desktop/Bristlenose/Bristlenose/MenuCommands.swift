@@ -445,8 +445,14 @@ private struct FileMenuContent: View {
             ForEach(CloudPlatform.shipping) { platform in
                 let busyElsewhere = cloudImport.isFetching && cloudImport.platform != platform
                 let showing = cloudImport.isFetching && cloudImport.platform == platform
-                Button(platform.displayName + (showing ? "" : "…"),
-                       systemImage: platform.symbolName) {
+                // No glyph. It was a stand-in — a person for Teams, a camera
+                // for Meet — carried because a generic SF Symbol is *lawful*
+                // where the vendor's real mark is not. Lawful was never the
+                // argument for having one: it is there because we can, not
+                // because it helps, and every other item in this menu bar is a
+                // plain title. See `AccountService` for the same removal in
+                // Settings ▸ Accounts, and why the real marks are not coming.
+                Button(platform.displayName + (showing ? "" : "…")) {
                     NotificationCenter.default.post(name: .openCloudImport, object: platform)
                 }
                 .disabled(busyElsewhere)

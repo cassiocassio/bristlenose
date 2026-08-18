@@ -141,16 +141,6 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
         URL(string: "https://bristlenose.app/docs/recording-permissions.html#\(rawValue)")!
     }
 
-    /// SF Symbol for menus. A placeholder in every case: each vendor requires
-    /// its own unaltered mark on the sign-in button, shipped as an official
-    /// asset rather than redrawn.
-    var symbolName: String {
-        switch self {
-        case .teams: return "person.2.badge.gearshape"
-        case .meet:  return "video"
-        case .zoom:  return "video.badge.waveform"
-        }
-    }
 
     // MARK: Capability differences the UI must render
 

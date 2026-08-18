@@ -139,6 +139,52 @@ struct CloudDisconnectTests {
             notedPlatform: nil, notedAccountKey: nil))
     }
 
+    @Test("A live window is signed in to the account the store found")
+    func liveSessionCarriesItsAccountKey() async {
+        // The composition nothing pinned. The three fixture tests above set no
+        // account key at all — `openFixture` leaves it nil — and their `post`
+        // helper sends no account either, so `dropsSession` short-circuits to
+        // the old platform-only check and they pass identically against the
+        // pre-change code. What was untested is the wiring the whole per-account
+        // change turns on: `open` finds a key, hands it to the writer, and the
+        // disconnect matcher reads it back.
+        let coordinator = CloudImportCoordinator()
+        coordinator.accountKeyResolver = { _ in "work-account" }
+        coordinator.openLive(.teams, preselecting: nil)
+        #expect(coordinator.store != nil, "live store did not open")
+
+        // The *other* account on the same platform must not touch it.
+        post(.teams, account: "personal-account")
+        await settle()
+        #expect(coordinator.store != nil,
+                "disconnecting a different account closed this window")
+
+        post(.teams, account: "work-account")
+        await settle()
+        #expect(coordinator.store == nil,
+                "the window outlived the account it was actually signed in to")
+    }
+
+    @Test("A window opened before anyone signed in uses the anonymous slot")
+    func liveSessionWithNoStoredAccount() async {
+        // `?? CloudAccountKey.unidentified` — the first grant such a window
+        // writes lands there and rekeys when the address arrives.
+        let coordinator = CloudImportCoordinator()
+        coordinator.accountKeyResolver = { _ in nil }
+        coordinator.openLive(.teams, preselecting: nil)
+
+        post(.teams, account: CloudAccountKey.unidentified)
+        await settle()
+        #expect(coordinator.store == nil)
+    }
+
+    private func post(_ platform: CloudPlatform, account: String) {
+        NotificationCenter.default.post(
+            name: .bristlenoseCloudAccountDisconnected,
+            object: nil,
+            userInfo: ["platform": platform.rawValue, "account": account])
+    }
+
     private func post(_ platform: CloudPlatform) {
         NotificationCenter.default.post(
             name: .bristlenoseCloudAccountDisconnected,

@@ -35,6 +35,19 @@ final class CloudImportCoordinator: ObservableObject {
     /// restored without an address rekeys once the identity lands.
     private var grantWriter: CloudGrantWriter?
 
+    /// Which account a window opens against.
+    ///
+    /// A seam, and a small one on purpose. The composition it exposes —
+    /// `openLive` finds a key, hands it to the writer, and the disconnect
+    /// matcher reads it back — is the wiring the whole per-account change turns
+    /// on, and it was pinned by nothing: the fixture tests set no key at all, so
+    /// the matcher short-circuited to the old platform-only check and passed
+    /// identically against the pre-change code. Injecting a whole `KeychainStore`
+    /// would have been the heavier way to reach the same assertion.
+    var accountKeyResolver: (CloudPlatform) -> String? = {
+        CloudGrantStore.firstAccountKey(for: $0)
+    }
+
     init() {
         // Disconnecting an account in Settings must reach a window that is
         // already open. Without this the Keychain copy goes and the live
@@ -128,7 +141,7 @@ final class CloudImportCoordinator: ObservableObject {
         // — the picker belongs at the moment of use and arrives with Add
         // Account. A window opened before anyone has signed in writes its first
         // grant under `unidentified` and rekeys when `/me` answers.
-        let key = CloudGrantStore.firstAccountKey(for: platform) ?? CloudAccountKey.unidentified
+        let key = accountKeyResolver(platform) ?? CloudAccountKey.unidentified
         let writer = CloudGrantWriter(key: key)
         grantWriter = writer
 

@@ -190,7 +190,8 @@ enum CloudGrantStore {
     // MARK: - Google
 
     static func loadGoogle(account: String,
-                           store: any KeychainStore = KeychainHelper.liveStore) -> GoogleGrant? {
+                           store: any KeychainStore = KeychainHelper.liveStore,
+                           discardingUnreadable: Bool = true) -> GoogleGrant? {
         guard let raw = store.get(provider: googleAccount, account: account),
               let data = raw.data(using: .utf8)
         else { return nil }
@@ -198,6 +199,20 @@ enum CloudGrantStore {
             // A blob we cannot read is a blob from an older shape. Dropping it
             // costs one sign-in; keeping it would fail the same way on every
             // launch, silently, forever.
+            //
+            // **But only where a sign-in immediately follows.** That reasoning
+            // was written when `load` meant "restore a window", and it stopped
+            // being true when `connections()` began decoding every stored grant
+            // just to draw a Settings row — at which point merely opening the
+            // pane deleted anything it could not parse, for services the
+            // researcher was not even using. With iCloud sync on, that deletion
+            // then propagates: an older Mac that cannot read a newer blob
+            // destroys it everywhere. Chesterton's fence, moved rather than
+            // removed.
+            guard discardingUnreadable else {
+                log.notice("cloud_grant google decode failed — keeping")
+                return nil
+            }
             log.notice("cloud_grant google decode failed — discarding")
             clearGoogle(account: account, store: store)
             return nil
@@ -263,11 +278,17 @@ enum CloudGrantStore {
     // MARK: - Teams
 
     static func loadTeams(account: String,
-                          store: any KeychainStore = KeychainHelper.liveStore) -> MicrosoftGrant? {
+                          store: any KeychainStore = KeychainHelper.liveStore,
+                          discardingUnreadable: Bool = true) -> MicrosoftGrant? {
         guard let raw = store.get(provider: teamsAccount, account: account),
               let data = raw.data(using: .utf8)
         else { return nil }
         guard let grant = try? JSONDecoder().decode(MicrosoftGrant.self, from: data) else {
+            // Same rule as Google's above, and the same reason.
+            guard discardingUnreadable else {
+                log.notice("cloud_grant teams decode failed — keeping")
+                return nil
+            }
             log.notice("cloud_grant teams decode failed — discarding")
             clearTeams(account: account, store: store)
             return nil
@@ -345,12 +366,17 @@ enum CloudGrantStore {
             accountKeys(for: platform, store: store).compactMap { key in
                 switch platform {
                 case .teams:
-                    return loadTeams(account: key, store: store).map {
+                    // Non-destructive: this is a read to *draw a row*, and a
+                    // Settings pane must not delete a credential it merely
+                    // failed to parse. The restore path keeps the discard.
+                    return loadTeams(account: key, store: store,
+                                     discardingUnreadable: false).map {
                         Connection(platform: platform, accountKey: key,
                                    address: $0.identity, needsSignIn: $0.needsSignIn == true)
                     }
                 case .meet:
-                    return loadGoogle(account: key, store: store).map {
+                    return loadGoogle(account: key, store: store,
+                                      discardingUnreadable: false).map {
                         Connection(platform: platform, accountKey: key,
                                    address: $0.identity, needsSignIn: $0.needsSignIn == true)
                     }

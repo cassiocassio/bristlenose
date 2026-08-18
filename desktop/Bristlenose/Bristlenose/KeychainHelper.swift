@@ -302,6 +302,22 @@ final class InMemoryKeychain: KeychainStore {
     private struct Key: Hashable { let provider: String; let account: String }
     private var storage: [Key: String] = [:]
 
+    /// Make writes fail, as the real Keychain does.
+    ///
+    /// **Without this every failure branch in the grant store is unreachable by
+    /// any test** — the refused-write returns, the refused migration, the guard
+    /// that keeps `previousKey` from advancing. That is the same class of hole
+    /// as a mock keyed on the provider alone: a fake that cannot fail can only
+    /// prove the happy path, and the happy path is not where credentials get
+    /// lost. `-34018` on every write is the *documented ordinary state* of an
+    /// ad-hoc-signed build, so this is a real mode, not a hypothetical.
+    var refuseWrites = false
+
+    /// Make enumeration fail, which the real one signals as an empty result —
+    /// indistinguishable from "no accounts", and the reason a failed read shows
+    /// the researcher "Not connected" over a live grant.
+    var refuseEnumeration = false
+
     func get(provider: String, account: String) -> String? {
         guard KeychainHelper.serviceNames[provider] != nil else { return nil }
         guard let value = storage[Key(provider: provider, account: account)], !value.isEmpty
@@ -311,6 +327,7 @@ final class InMemoryKeychain: KeychainStore {
 
     @discardableResult
     func set(provider: String, account: String, value: String) -> Bool {
+        guard !refuseWrites else { return false }
         guard KeychainHelper.serviceNames[provider] != nil else { return false }
         storage[Key(provider: provider, account: account)] = value
         return true
@@ -321,6 +338,7 @@ final class InMemoryKeychain: KeychainStore {
     }
 
     func accounts(provider: String) -> [String] {
-        storage.keys.filter { $0.provider == provider }.map(\.account).sorted()
+        guard !refuseEnumeration else { return [] }
+        return storage.keys.filter { $0.provider == provider }.map(\.account).sorted()
     }
 }

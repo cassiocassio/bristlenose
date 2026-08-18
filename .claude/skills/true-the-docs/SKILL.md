@@ -341,6 +341,33 @@ new section authoritative.
   classification output; don't fold into B or C silently. **Inverse
   case** (header conservative, body shipped) is the same failure mode
   in reverse — also flag.
+- **A section-scoped sweep never reaches the summary, and the summary is what
+  gets believed.** Distinct from patched-but-aspirational above (which is a
+  doc's *header* vs its body) — this is a `--topic` or section-list pass truing
+  §7, §9 and §10 while the status block, abstract or "what is not built" list at
+  the top goes untouched, because no section in the list is called that. The
+  document then contradicts itself, and the two halves have different readers:
+  the summary is read by anyone arriving cold, the sections by anyone already
+  deep in. Worse, the sweep's own commit message ("trued §7, §9 and §10 against
+  the pane that shipped") reassures the *next* pass that the doc is current.
+  Measured 18 Aug 2026 on `design-cloud-import.md`: four passes had trued
+  sections while the status block still said no OAuth client existed, no token
+  persisted, no adapter derived row state, and nothing had ever downloaded — all
+  four false, each contradicted elsewhere in the same file. **Rule: any
+  section-scoped pass must additionally re-read the doc's status block,
+  front-matter claims and any "what is not built" list, whether or not they are
+  in the named scope.** They are summaries *of* the sections being trued, so
+  they are never out of scope in substance even when they are in name.
+- **The same stale claim usually lives in more than one file — and the tense
+  sweep is what finds the copies.** Same session, same day: the cloud-import
+  status block, `TODO.md`'s dated entry for the same feature, and (for a
+  different theme) `design-platform-transcripts.md`'s Phase-3 scope table each
+  carried a superseded claim that reading had already "finished" correcting.
+  The third was caught only by verification check 1 grepping for the old
+  wording. **Corollary: after truing a claim, grep the repo for its distinctive
+  phrasing before believing you are done** — and prefer correcting a summary
+  *in place* over adding a fresh dated entry beside it, which manufactures the
+  second copy the next pass will miss.
 - **Leak-scan trap when updating orphan refs.** Public-doc Edit/Write
   operations that touch a leak-pattern stem (`100days`, `qa-backlog`,
   `succession-plan`, etc.) are blocked by the PreToolUse hook. When

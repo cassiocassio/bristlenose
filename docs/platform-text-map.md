@@ -2,7 +2,7 @@
 
 Inventory of all user-facing text in Bristlenose, categorised by which platform sees it. Used by the user-documentation-review agent to verify platform correctness, by translators to know which keys need desktop variants, and by contributors to decide whether new text needs `dt()` or `ct()` wrapping.
 
-**Last updated**: 26 Mar 2026
+**Last updated**: 18 Aug 2026 (partial — scope note, `settingsTabs` row and locale count only; the Desktop-only table itself is three sweeps behind, see the note under it)
 
 ---
 
@@ -18,7 +18,7 @@ Three helpers in `frontend/src/utils/platformTranslation.ts`:
 
 Platform detection: `isDesktop()` reads `data-platform="desktop"` from `<html>`, set by the server when launched from the macOS desktop app. Memoised after first read.
 
-Desktop namespace: `desktop.json` locale files, loaded conditionally by `i18n/index.ts` only when `isDesktop()` is true.
+Desktop namespace: `desktop.json` locale files, loaded conditionally by `i18n/index.ts` only when `isDesktop()` is true — **and loaded natively by `I18n.swift` too** (`namespaces = ["common", "settings", "enums", "desktop"]`), which is the half that matters most here. Several sections in the table below have **zero** React call sites and exist only for Swift (`chrome.*`, `aiConsent.*`, `sessionsPopover.*`, `settingsTabs.*`, `accounts.*`). Reading this doc as React-scoped is how the Settings ▸ Accounts pane shipped unlocalised on 18 Aug 2026: a native-only view whose author had no reason to think this map applied. It does — the decision tree at the end terminates at "desktop only → write in `desktop.json` directly", and that branch is where native panes land.
 
 ---
 
@@ -46,13 +46,15 @@ Keys in `desktop.json` that only render inside the macOS app shell. CLI serve mo
 | `menu.*` | ~96 | macOS menu bar: App, File, Edit, View, Project, Folder, Codes, Quotes, Video, Help |
 | `toolbar.*` | ~21 | Native toolbar labels with keyboard shortcut hints |
 | `chrome.*` | ~11 | Server status ("Starting server..."), project panels, drag-and-drop prompts |
-| `settingsTabs.*` | ~3 | Native Settings window tab labels (Appearance, LLM, Transcription) |
+| `settingsTabs.*` | 6 | Native Settings window tab labels (General, Appearance, LLM Provider, Transcription, Accounts, MCP Agents) |
 | `sessionsPopover.*` | 5–7 | Native session-switcher popover: "All Sessions" row, count subtitle (plural forms; cs/pl/ru/uk carry `_few`/`_many`), empty and failure states. Row title reuses `common.autocode.sessionLabel`; the unnamed-speaker placeholder reuses `common.sessions.speakerPlaceholder.*`; Retry reuses `common.buttons.retry` |
 | `aiConsent.*` | ~15 | First-run cloud provider consent dialog |
 | `help.*` (overrides) | 3 | Desktop variants for forked keys (see Forked section below) |
 | `configReference.*` | 1 | Desktop variant for config reference intro |
 
-**Total**: ~150 keys. **i18n**: all 20 full locales.
+**Total**: ~150 keys across the rows listed. **i18n**: all 21 full locales, plus `zh-Hant-HK` as a thin override that inherits via `zh-Hant → en`.
+
+> **This table is a partial inventory — 8 of `desktop.json`'s 22 sections, ~150 of its ~598 keys.** Absent and substantial: `cloudImport.*` (120), `ollamaSetup.*` (43), `llmSettings.*` (36), `pipeline.*` (35), `accounts.*` (20), and nine smaller ones. Nothing obliges an update when a new `desktop.*` section lands, so it drifts silently — the same failure class as the locale allow-lists in `tests/test_pipeline_diagnostic_locale_keys.py`. **Regenerate from `bristlenose/locales/en/desktop.json` rather than trusting the counts here**; a full refresh (plus the `dt()` rows below, which claim 4 keys where 1 live call site survives) is a mechanical one-pass job that has not been done.
 
 ---
 

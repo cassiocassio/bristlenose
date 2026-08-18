@@ -132,8 +132,11 @@ bristlenose/locales/<code>/preflight.json   ~33 keys (root namespace, not under 
 ```
 
 Mirror an existing locale (`es/` is a good "average" baseline; `cs/` is a
-good plural reference). Empty values are fine — the test suite will tell
-you which are missing.
+good plural reference). Empty values are fine — `check-locales.py` will tell
+you which are missing. **What it will not tell you is a key `en` itself lacks**: it diffs each locale
+against English, so a surface that was never i18n-ified is invisible to it in every locale at once.
+That is the wiring gap described under "Region-subtagged locales + parity drift" below, and no run of
+this script — `--strict` included — will ever surface one.
 
 ## Step 3 — Seed the strings (fill-empty-only)
 
@@ -271,7 +274,10 @@ verify three quick surfaces:
 - A pipeline run shows the localised activity status.
 - The transcript page loading / error / empty states are localised.
 
-The 30 seconds of clicking catches anything the test suite missed.
+The 30 seconds of clicking catches anything the test suite missed **in these three surfaces**. It
+will not catch a whole view that was never enrolled in English — nothing on this list would have
+caught Settings ▸ Accounts shipping entirely hardcoded on 18 Aug 2026. If a pane or window landed
+since the last locale wave, open it too.
 
 ## Step 11 — Native-speaker review is a FINAL gate, not the first step
 
@@ -334,7 +340,11 @@ looks complete. Before landing: **rebase onto current `main`, then run
 Classify each English-in-locale string first: a **seed gap** (wired via `t()`,
 key exists in `en`, missing in your locale → you seed it) vs a **wiring gap**
 (hardcoded literal or generated string → English in *every* locale → not
-fixable by seeding; needs i18n-ification first). Do NOT preemptively add the
+fixable by seeding; needs i18n-ification first). **Note the asymmetry: only the seed gaps appear in
+those warnings.** A wiring gap is invisible to `check-locales.py` by construction — the key is absent
+from `en`, and `en` is what every locale is diffed against — so the drift list is a complete account
+of one kind of gap and silent about the other. Find wiring gaps by reading recently-added views for
+`t(` / `i18n.t(` call sites, not by re-running the script. Do NOT preemptively add the
 drift keys to your branch's `en` before rebasing — it breaks internal parity and
 risks a merge conflict. Rebase first, then seed your locale only.
 

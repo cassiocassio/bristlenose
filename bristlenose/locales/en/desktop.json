@@ -241,6 +241,7 @@
       "sessionsCount": "{{complete}} of {{total}}",
       "etaMinutes": "~{{count}} min left",
       "etaUnderMinute": "<1 min left",
+      "importBatch": "{{done}} of {{total}}",
       "copying": "Copying \u00b7 {{percent}}%",
       "stage": {
         "transcribe": "Transcribing",

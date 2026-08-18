@@ -241,6 +241,7 @@
       "sessionsCount": "{{complete}} av {{total}}",
       "etaMinutes": "~{{count}} min kvar",
       "etaUnderMinute": "<1 min kvar",
+      "importBatch": "{{done}} av {{total}}",
       "copying": "Kopierar · {{percent}} %",
       "stage": {
         "transcribe": "Transkriberar",

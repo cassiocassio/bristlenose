@@ -241,6 +241,7 @@
       "sessionsCount": "{{complete}} / {{total}}",
       "etaMinutes": "~{{count}} min jäljellä",
       "etaUnderMinute": "<1 min jäljellä",
+      "importBatch": "{{done}} / {{total}}",
       "copying": "Kopioidaan · {{percent}} %",
       "stage": {
         "transcribe": "Litteroidaan",

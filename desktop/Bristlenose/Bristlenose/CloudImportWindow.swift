@@ -217,13 +217,24 @@ struct CloudImportWindow: View {
                 Button(i18n.t("desktop.cloudImport.tryAgain"), action: store.signIn)
             }
 
-        case .failed(let message):
+        case .failed(let message, let worthRetrying):
             ContentUnavailableView {
                 Label(i18n.t("desktop.cloudImport.loadFailedTitle"), systemImage: "exclamationmark.triangle")
             } description: {
                 Text(message)
             } actions: {
-                Button(i18n.t("desktop.cloudImport.tryAgain")) { Task { await store.load() } }
+                // Two corrections in one line. It retries the **sign-in**: this
+                // state is only ever reached from the sign-in catch, so the
+                // listing it used to re-run had no credentials to run with. And
+                // it appears only when a second attempt could differ — an admin
+                // wall and a Conditional Access refusal get no button at all,
+                // because the message already names the only move there is and
+                // it is not one this window can make. A button that cannot work
+                // does not read as absent; it reads as the researcher failing to
+                // click it correctly.
+                if worthRetrying {
+                    Button(i18n.t("desktop.cloudImport.tryAgain"), action: store.signIn)
+                }
             }
 
         case .loaded:
@@ -667,7 +678,7 @@ struct CloudImportWindow: View {
 
     private func startFetch(into projectID: UUID) {
         guard let folder = destinationFolder(for: .project(projectID)) else { return }
-        store.startFetch(destination: folder)
+        store.startFetch(destination: folder, projectID: projectID)
     }
 
     /// The folder behind a choice, or nil when there isn't one to point at.

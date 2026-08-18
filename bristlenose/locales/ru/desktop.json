@@ -257,6 +257,7 @@
       "sessionsCount": "{{complete}} из {{total}}",
       "etaMinutes": "~{{count}} мин осталось",
       "etaUnderMinute": "<1 мин осталось",
+      "importBatch": "{{done}} \u0438\u0437 {{total}}",
       "copying": "Копирование · {{percent}}%",
       "stage": {
         "transcribe": "Транскрибирование",

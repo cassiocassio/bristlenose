@@ -241,6 +241,7 @@
       "sessionsCount": "{{complete}} af {{total}}",
       "etaMinutes": "~{{count}} min. tilbage",
       "etaUnderMinute": "<1 min. tilbage",
+      "importBatch": "{{done}} af {{total}}",
       "copying": "Kopierer · {{percent}}%",
       "stage": {
         "transcribe": "Transskriberer",

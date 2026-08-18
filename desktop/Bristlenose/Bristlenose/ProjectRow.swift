@@ -229,6 +229,12 @@ struct ProjectRow: View {
         // `resolve` arbitrates the precedence; this switch only *renders* the
         // winner — i18n + date formatting live here, not in the resolver.
         switch subtitleVariant {
+        case .importingBatch:
+            // Unreachable on this row: it passes `importBatch: nil`, because
+            // the cloud batch is published to the AppKit sidebar, which is the
+            // shipped one. Drawn as nothing rather than duplicating the count
+            // string, which would then be two places to keep in step.
+            EmptyView()
         case .cantFind:
             // `resolve` returns `.cantFind` exactly when `availability` is
             // `.cantFind`, so we derive the reason-aware glyph + factual text
@@ -303,6 +309,12 @@ struct ProjectRow: View {
             return reason
         case .addingInterviews(let count):
             return i18n.plural("desktop.chrome.addingInterviews", count: count)
+        case .importingBatch:
+            // Unreachable here: this row passes `importBatch: nil` (the batch
+            // is published to the AppKit sidebar, which is the shipped row).
+            // Rendered as nothing rather than duplicating the count string,
+            // which would then be two places to keep in step.
+            return nil
         case .copying(let fraction):
             // Byte-% (no file-item "N of M" source exists). "%" placement is
             // per-locale in the string; the number is a 0…100 int (no grouping
@@ -491,6 +503,9 @@ struct ProjectRow: View {
             // Adding-interviews gesture store — that lives on the AppKit sidebar.
             addingCount: nil,
             copy: copyState,
+            // Same reason as `addingCount` above: the cloud batch is published
+            // to the AppKit sidebar, which is the shipped row.
+            importBatch: nil,
             lastRunAt: project.lastPipelineRunAt,
             missingCount: unanalysed?.missingFiles.count ?? 0,
             unanalysedCount: unanalysed?.newFiles.count ?? 0
@@ -643,6 +658,9 @@ struct ProjectRow: View {
     private var pipelineStateAccessibilityPhrase: String? {
         let variant = subtitleVariant
         switch variant {
+        case .importingBatch:
+            // As above — never produced for this row.
+            return nil
         case .failed(let summary):
             return summary
         case .failedDiagnostic:

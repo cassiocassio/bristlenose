@@ -257,6 +257,7 @@
       "sessionsCount": "{{complete}} з {{total}}",
       "etaMinutes": "залишилося ~{{count}} хв",
       "etaUnderMinute": "залишилося <1 хв",
+      "importBatch": "{{done}} \u0437 {{total}}",
       "copying": "Копіювання · {{percent}}%",
       "stage": {
         "transcribe": "Транскрибування",

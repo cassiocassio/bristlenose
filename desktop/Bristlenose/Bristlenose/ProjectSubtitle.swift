@@ -56,6 +56,15 @@ enum SubtitleVariant: Equatable {
     /// placement axis). Mac direct manipulation: feedback appears on the row you
     /// dropped onto.
     case copying(fraction: Double)
+    /// A cloud-import batch is landing recordings in THIS project. Renders
+    /// **"3 of 4" and nothing else** — the download phase needs no verb at all
+    /// (`docs/mockups/cloud-import-sidebar-progress.html` §3). A count, because
+    /// a count is the question a closed window leaves: not how fast, not which
+    /// file, but how many are still to wait for.
+    ///
+    /// `done` counts rows that have *settled*, whatever the outcome. A ring
+    /// stalled at 3 because the fourth failed is a ring saying nothing.
+    case importingBatch(done: Int, total: Int)
     /// A copy into THIS project is being cancelled (rollback in flight). Renders
     /// "Cancelling…" + an indeterminate spinner — the immediate ack for the
     /// row's hover-cancel, mirroring what the removed toolbar pill showed.
@@ -90,8 +99,8 @@ extension SubtitleVariant {
         case .failed, .failedDiagnostic, .completedPartial:
             return true
         case .cantFind, .stopping, .running, .queued, .stopped, .partial,
-             .unreachable, .addingInterviews, .copying, .copyCancelling,
-             .ready, .deltaOnly, .placeholder:
+             .unreachable, .addingInterviews, .copying, .importingBatch,
+             .copyCancelling, .ready, .deltaOnly, .placeholder:
             return false
         }
     }
@@ -149,6 +158,7 @@ enum ProjectSubtitle {
         isStopping: Bool,
         addingCount: Int?,
         copy: CopyDisplay?,
+        importBatch: (done: Int, total: Int)?,
         lastRunAt: Date?,
         missingCount: Int,
         unanalysedCount: Int
@@ -187,6 +197,7 @@ enum ProjectSubtitle {
             return resolveIdle(
                 addingCount: addingCount,
                 copy: copy,
+                importBatch: importBatch,
                 lastRunAt: lastRunAt,
                 missingCount: missingCount,
                 unanalysedCount: unanalysedCount
@@ -207,6 +218,7 @@ enum ProjectSubtitle {
     private static func resolveIdle(
         addingCount: Int?,
         copy: CopyDisplay?,
+        importBatch: (done: Int, total: Int)?,
         lastRunAt: Date?,
         missingCount: Int,
         unanalysedCount: Int
@@ -216,7 +228,18 @@ enum ProjectSubtitle {
         // to `.running` automatically — that's returned by the main switch before
         // we ever reach the idle tier.
         if let addingCount { return .addingInterviews(count: addingCount) }
-        // An active import (or its cancellation) outranks the resting date/delta.
+        // A cloud batch outranks a local copy, and both outrank the resting
+        // date/delta. The order matters in exactly one situation and it is a
+        // real one: a researcher can drop files on a project while a cloud
+        // batch is landing in it. The batch is the longer-running and less
+        // visible of the two — a local clonefile is near-instant and the
+        // researcher just watched themselves start it — so the batch keeps the
+        // line. Nothing is lost: the copy's own ~2s "Adding N interviews…" ack
+        // has already been shown above.
+        if let importBatch {
+            return .importingBatch(done: importBatch.done, total: importBatch.total)
+        }
+        // An active local copy (or its cancellation) outranks the resting date/delta.
         if let copy {
             switch copy {
             case .copying(let fraction): return .copying(fraction: fraction)

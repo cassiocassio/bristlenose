@@ -668,7 +668,8 @@ struct CloudImportStoreTests {
         let store = await self.store(.partialFailure)
         store.selectAllVisible()
         let requested = store.tickedCount
-        store.startFetch(destination: URL(fileURLWithPath: NSTemporaryDirectory()))
+        store.startFetch(destination: URL(fileURLWithPath: NSTemporaryDirectory()),
+                         projectID: UUID())
 
         // Wait for the batch rather than sleeping a fixed interval.
         for _ in 0..<200 where store.isFetching {
@@ -688,7 +689,8 @@ struct CloudImportStoreTests {
     func failedRowsStayTicked() async {
         let store = await self.store(.partialFailure)
         store.selectAllVisible()
-        store.startFetch(destination: URL(fileURLWithPath: NSTemporaryDirectory()))
+        store.startFetch(destination: URL(fileURLWithPath: NSTemporaryDirectory()),
+                         projectID: UUID())
         for _ in 0..<200 where store.isFetching {
             try? await Task.sleep(for: .milliseconds(50))
         }

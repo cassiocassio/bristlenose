@@ -36,7 +36,7 @@ enum SidebarSubtitleText {
         case .completedPartial:
             return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")  // :252-254
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
-             .addingInterviews, .copying, .copyCancelling:
+             .addingInterviews, .copying, .importingBatch, .copyCancelling:
             return activityText(variant, progress: progress, separator: " · ", i18n: i18n)  // :255-259
         case .ready(let date, let delta):
             return readyText(date: date, delta: delta, i18n: i18n)           // :260-267
@@ -55,6 +55,15 @@ enum SidebarSubtitleText {
                              separator: String,
                              i18n: I18n) -> String? {
         switch variant {
+        case .importingBatch(let done, let total):
+            // **The whole sentence, and it has no verb.**
+            // `docs/mockups/cloud-import-sidebar-progress.html` §3: "the
+            // download phase needs no verb at all — '3 of 4' is the whole
+            // sentence." A count rather than a percentage or an ETA, because a
+            // count is the question a closed window leaves: not how fast, not
+            // which file, but how many are still to wait for.
+            return i18n.t("desktop.chrome.pipeline.importBatch",
+                          ["done": String(done), "total": String(total)])
         case .stopping:
             return i18n.t("desktop.chrome.pipeline.stopping")
         case .running:

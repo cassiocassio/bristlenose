@@ -233,6 +233,7 @@
       "sessionsCount": "{{total}} 個中的 {{complete}} 個",
       "etaMinutes": "約剩 {{count}} 分鐘",
       "etaUnderMinute": "剩不到 1 分鐘",
+      "importBatch": "{{total}} \u500b\u4e2d\u7684 {{done}} \u500b",
       "copying": "正在拷貝 · {{percent}}%",
       "stage": {
         "transcribe": "正在轉錄逐字稿",

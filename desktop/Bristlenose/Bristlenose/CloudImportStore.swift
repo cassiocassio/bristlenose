@@ -20,9 +20,25 @@ final class CloudImportStore: ObservableObject {
         case signingIn
         case loading
         case loaded
-        /// Listing failed outright — distinct from a listing that partly
-        /// succeeded, which is `.loaded` with a non-exhausted outcome.
-        case failed(String)
+        /// A sign-in that ended in a real error, and whether trying again could
+        /// plausibly work.
+        ///
+        /// **It is not a listing failure**, whatever this comment used to say —
+        /// and the old wording is worth recording, because the window built its
+        /// Try-again button on it and had that button re-run `load()`. There is
+        /// exactly one construction site and it is the sign-in catch below, so
+        /// the listing has never been the thing that failed, and retrying it
+        /// with no token was never going to help. A partly-succeeded listing is
+        /// `.loaded` with a non-exhausted outcome; a listing that fails outright
+        /// does not reach here.
+        ///
+        /// `worthRetrying` is false for the two Entra walls — the admin one and
+        /// Conditional Access — where the same click yields the same refusal
+        /// forever. Anything we cannot classify is presumed retryable: offering
+        /// a button that turns out not to help is the recoverable way to be
+        /// wrong, and withholding one from someone a retry would have rescued is
+        /// not.
+        case failed(String, worthRetrying: Bool)
 
         /// The consent flow ended and we hold no credentials.
         ///
@@ -310,9 +326,20 @@ final class CloudImportStore: ObservableObject {
             } catch let error as GoogleOAuthError where error == .cancelled {
                 guard self.signInGeneration == mine else { return }
                 self.phase = .signInIncomplete
+            } catch let error as MicrosoftOAuthError where error == .cancelled {
+                // Third of three, and it was missing — so closing the Teams
+                // sign-in window landed on the error screen while doing the same
+                // thing on Meet or Zoom landed on the calm one. Abandoning a
+                // sign-in is not a fault on any platform.
+                guard self.signInGeneration == mine else { return }
+                self.phase = .signInIncomplete
             } catch {
                 guard self.signInGeneration == mine else { return }
-                self.phase = .failed(error.localizedDescription)
+                // The refusal itself knows whether a second attempt could
+                // differ; nothing else in this app does.
+                let refusal = (error as? MicrosoftOAuthError)?.refusal
+                self.phase = .failed(error.localizedDescription,
+                                     worthRetrying: refusal?.isWorthRetrying ?? true)
             }
         }
     }
@@ -534,9 +561,25 @@ final class CloudImportStore: ObservableObject {
     /// away from cannot come back later and start transferring files.
     private var fetchGeneration = 0
 
-    func startFetch(destination: URL) {
+    /// Which project this batch is landing in, and how far along it is.
+    ///
+    /// Published so the **sidebar row** can show the batch after the window is
+    /// closed — the only thing that can answer "is it still going?" once the
+    /// window that started it is gone. `total` is fixed at the moment Import is
+    /// pressed rather than recomputed, so the denominator cannot move under a
+    /// count the researcher is watching.
+    struct BatchProgress: Equatable {
+        let projectID: UUID
+        let done: Int
+        let total: Int
+    }
+
+    @Published private(set) var batch: BatchProgress?
+
+    func startFetch(destination: URL, projectID: UUID) {
         guard !isFetching, !fetchOrder.isEmpty else { return }
         isFetching = true
+        batch = BatchProgress(projectID: projectID, done: 0, total: fetchOrder.count)
         fetchGeneration &+= 1
         let mine = fetchGeneration
         outcomes.removeAll()
@@ -604,6 +647,16 @@ final class CloudImportStore: ObservableObject {
                         self.outcomes[row.id] = outcome
                         self.progress[row.id] = nil
                         self.rowTasks[row.id] = nil
+                        // Counted on *settling*, not on succeeding: the row
+                        // question behind "3 of 4" is how many are still to
+                        // wait for, and a failed or cancelled one is no longer
+                        // being waited for. A ring that stalls at 3 because the
+                        // fourth failed is the ring saying nothing at all.
+                        if let current = self.batch {
+                            self.batch = BatchProgress(projectID: current.projectID,
+                                                       done: current.done + 1,
+                                                       total: current.total)
+                        }
                         // A row that landed stops being tickable; one that
                         // failed stays ticked so Retry has something to act on.
                         if case .imported = outcome { self.ticked.remove(row.id) }
@@ -624,6 +677,10 @@ final class CloudImportStore: ObservableObject {
                 }
             }
             isFetching = false
+            // The row's ring is driven off this, so clearing it is what makes
+            // the sidebar go quiet. Guarded on the generation: a superseded
+            // batch must not blank the indicator of the one that replaced it.
+            if self.fetchGeneration == mine { self.batch = nil }
         }
     }
 
@@ -661,6 +718,7 @@ final class CloudImportStore: ObservableObject {
         // leave every download running.
         for task in rowTasks.values { task.cancel() }
         rowTasks.removeAll()
+        batch = nil
         // Bumped so an in-flight grant that returns after this — which it will,
         // since cancelling the Task does not close the browser window — cannot
         // resume the batch behind the researcher's back.

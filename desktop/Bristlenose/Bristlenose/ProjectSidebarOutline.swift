@@ -99,6 +99,10 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     let pipelineRunner: PipelineRunner
     @ObservedObject var liveData: PipelineLiveData
     let copyMachinery: CopyMachinery
+    /// The one import coordinator, so a row can show a cloud batch after the
+    /// window that started it is closed. Plain ref for the same reason as
+    /// `copyMachinery` — the batch is read live, not observed for transitions.
+    let cloudImport: CloudImportCoordinator
     /// Path of the project currently being served (fronted + running), or
     /// nil. The antenna badge's solid tier: a project with Agent Access on
     /// whose serve is up is exposed NOW — the handshake follows the fronted
@@ -131,6 +135,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.pipelineRunner = pipelineRunner
         controller.liveData = liveData
         controller.copyMachinery = copyMachinery
+        controller.cloudImport = cloudImport
         controller.servingProjectPath = servingProjectPath
         // Refresh the callbacks each update so they capture the live binding —
         // the AppKit delegate does not fire for programmatic selection, so the
@@ -209,6 +214,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     weak var pipelineRunner: PipelineRunner?
     weak var liveData: PipelineLiveData?
     weak var copyMachinery: CopyMachinery?
+    weak var cloudImport: CloudImportCoordinator?
     var lensItems: [LensItem] = LensItem.all
     var onSelectionChange: (Set<SidebarSelection>) -> Void = { _ in }
     var onActivateLens: (Tab) -> Void = { _ in }
@@ -1480,6 +1486,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             isStopping: liveData?.progress[id]?.isStopping ?? false,
             addingCount: pipelineRunner?.addingInterviews[id],
             copy: copyDisplay(for: project),
+            importBatch: importBatchDisplay(for: project),
             lastRunAt: project.lastPipelineRunAt,
             missingCount: projectIndex?.unanalysed[id]?.missingFiles.count ?? 0,
             unanalysedCount: projectIndex?.unanalysed[id]?.newFiles.count ?? 0
@@ -1493,6 +1500,18 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         case .copying: return .copying(fraction: f.progress)
         case .cancelling: return .cancelling
         }
+    }
+
+    /// Per-project cloud-import batch, or nil when none is landing here.
+    ///
+    /// The whole point of the sidebar ring: once the import window is closed,
+    /// this is the only thing that can answer "is it still going?". Matched on
+    /// the destination project so a batch landing in *another* study does not
+    /// light up this row.
+    private func importBatchDisplay(for project: Project) -> (done: Int, total: Int)? {
+        guard let batch = cloudImport?.store?.batch, batch.projectID == project.id
+        else { return nil }
+        return (done: batch.done, total: batch.total)
     }
 
     /// Subtitle PREFIX glyph (symbol + tint) for a variant, or nil. Mirrors the glyph
@@ -1818,6 +1837,16 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             return .ring(fraction: fraction, onStop: nil)
         case .none:
             break
+        }
+        // The cloud batch reuses the copy ring exactly — `Kind.ring` already
+        // means "a determinate, cancellable transfer into this project", which
+        // is precisely what a download is. Nothing new is drawn.
+        if let batch = importBatchDisplay(for: project) {
+            let fraction = batch.total > 0
+                ? Double(batch.done) / Double(batch.total)
+                : 0
+            return .ring(fraction: fraction,
+                         onStop: { [weak self] in self?.cloudImport?.store?.stopFetch() })
         }
         if let copy = copyDisplay(for: project) {
             switch copy {

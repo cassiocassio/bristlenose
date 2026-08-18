@@ -23,7 +23,8 @@ import Testing
         copy: CopyDisplay? = nil,
         lastRunAt: Date? = nil,
         missingCount: Int = 0,
-        unanalysedCount: Int = 0
+        unanalysedCount: Int = 0,
+        importBatch: (done: Int, total: Int)? = nil
     ) -> SubtitleVariant {
         ProjectSubtitle.resolve(
             availability: availability,
@@ -31,6 +32,7 @@ import Testing
             isStopping: isStopping,
             addingCount: addingCount,
             copy: copy,
+            importBatch: importBatch,
             lastRunAt: lastRunAt,
             missingCount: missingCount,
             unanalysedCount: unanalysedCount

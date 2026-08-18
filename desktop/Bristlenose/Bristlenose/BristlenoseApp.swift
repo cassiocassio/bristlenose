@@ -129,6 +129,13 @@ struct BristlenoseApp: App {
                 .environmentObject(toast)
                 .environmentObject(removalStore)
                 .environmentObject(copyMachinery)
+                // The main window reads this so a sidebar row can show a cloud
+                // batch after the import window is closed. It was already
+                // injected into the import scene (:238) and nowhere else — and
+                // an `@EnvironmentObject` that is declared but not injected is
+                // a **launch crash**, not a nil: SwiftUI traps in
+                // `EnvironmentObject.error()` the first time the body reads it.
+                .environmentObject(cloudImport)
                 .environmentObject(ollamaDownload)
                 .environmentObject(outOfCredit)
                 .environmentObject(i18n)

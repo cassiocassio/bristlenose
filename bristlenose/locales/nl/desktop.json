@@ -241,6 +241,7 @@
       "sessionsCount": "{{complete}} van {{total}}",
       "etaMinutes": "~{{count}} min resterend",
       "etaUnderMinute": "<1 min resterend",
+      "importBatch": "{{done}} van {{total}}",
       "copying": "Kopiëren · {{percent}}%",
       "stage": {
         "transcribe": "Transcriberen",

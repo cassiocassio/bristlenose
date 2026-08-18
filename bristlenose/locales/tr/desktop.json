@@ -241,6 +241,7 @@
       "sessionsCount": "{{total}} içinden {{complete}}",
       "etaMinutes": "~{{count}} dk kaldı",
       "etaUnderMinute": "<1 dk kaldı",
+      "importBatch": "{{total}} \u00f6\u011feden {{done}}",
       "copying": "Kopyalanıyor · %{{percent}}",
       "stage": {
         "transcribe": "Döküm yapılıyor",

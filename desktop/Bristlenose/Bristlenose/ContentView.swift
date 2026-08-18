@@ -160,6 +160,9 @@ struct ContentView: View {
     @EnvironmentObject var toast: ToastStore
     @EnvironmentObject var removalStore: UndoableRemovalStore
     @EnvironmentObject var copyMachinery: CopyMachinery
+    /// Read only to hand to the sidebar, so a row can show a cloud batch after
+    /// the import window is closed.
+    @EnvironmentObject var cloudImport: CloudImportCoordinator
     @EnvironmentObject var ollamaDownload: OllamaDownloadModel
     @EnvironmentObject var outOfCredit: OutOfCreditModel
     @EnvironmentObject var i18n: I18n
@@ -2044,6 +2047,7 @@ struct ContentView: View {
                 pipelineRunner: pipelineRunner,
                 liveData: pipelineRunner.liveData,
                 copyMachinery: copyMachinery,
+                cloudImport: cloudImport,
                 // Exposure, not activity (§5a-bis): the badge's solid tier
                 // is "this project's serve is up" — the handshake follows
                 // the fronted running serve, so this path IS handshake-live.

@@ -237,7 +237,16 @@
             max-content max-content minmax(0, 1fr) minmax(0, 1.5fr)
             minmax(9rem, 15rem);
     }
-    .bn-cell-sentiment { display: none; }
+    /* 0-2-0 to clear `.bn-sessions-head .bn-sessions-cell { display: flex }`
+       above, which is also 0-2-0 but earlier in source. A bare
+       `.bn-cell-sentiment` is 0-1-0 and loses outright — and it loses ONLY in
+       the header, so the column vanished from every body row while its title
+       stayed, kept a track the grid no longer had, and the explicitly-placed
+       Duration/Interviews cell landed on top of it. That is the header text
+       reported overlapping on 17 Aug 2026 ("Senatidmoent" = Sentiment over
+       Duration). Same trap as `.bn-sessions-h2` below, which was already
+       raised for exactly this reason. */
+    .bn-sessions-row .bn-cell-sentiment { display: none; }
     .bn-cell-duration,
     .bn-cell-file { grid-column: 5; }
 }
@@ -267,7 +276,10 @@
         grid-template-columns:
             max-content minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
     }
-    .bn-cell-thumb { display: none; }
+    /* 0-2-0 for the same reason as sentiment above — otherwise the header
+       keeps an (empty) thumbnail track that no body row has, and everything
+       to its right sits one column off. */
+    .bn-sessions-row .bn-cell-thumb { display: none; }
     .bn-cell-duration,
     .bn-cell-file { grid-column: 4; }
 }

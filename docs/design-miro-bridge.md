@@ -606,7 +606,7 @@ future OAuth button lives, and the Keychain+env layer below is reused by OAuth):
 OAuth (the real solution) reuses this same Keychain+env layer for its access/refresh
 tokens — only the *acquisition* (ASWebAuthenticationSession) and the token-handoff
 trigger change. The native sheet's **Disconnect** (`MiroSheetModel.disconnect()`) clears
-all three: the in-session cache + Python store (`MiroAPI.disconnect`, best-effort, logged
+three of the four copies — see `design-desktop-settings.md` Tab 4 for the fourth, env-injected one, which both disconnect paths now drain via `.bristlenosePrefsChanged`: the in-session cache + Python store (`MiroAPI.disconnect`, best-effort, logged
 on failure) **and** the Swift Keychain copy (`KeychainHelper.delete("miro")`) — closing the
 gap the bridge path left open. (The web panel's Disconnect still clears only the
 Python/session copies; on desktop that path isn't reached.)
@@ -639,7 +639,7 @@ disambiguator — reused across accounts, SSO).
   link). The **visual chrome redesign** (colon-grid / glyph / real button to match macOS) is
   a deliberately **deferred web-design pass** — not drift; keep the same status→account→
   destination information architecture when it lands. Identity strings are **render-only**:
-  never logged, persisted, or in the HTML export (security-reviewed CLEAN). The web
+  never logged or in the HTML export, and the **token** is never in `UserDefaults` — but as of 18 Aug the *display line alone* (`userName · orgName`) is cached there (`MiroConnectionStore.swift:35`), because Settings ▸ Accounts can be open with no serve to fetch it from. That is a delta against the original security review's wording and is recorded rather than glossed (security-reviewed CLEAN). The web
   `common.miro.boardDestination` and desktop `desktop.miro.boardDestination` are separate
   keys (i18next vs `I18n.swift`) with byte-identical values across all 7 locales.
 

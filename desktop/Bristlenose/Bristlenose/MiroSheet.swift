@@ -139,12 +139,20 @@ final class MiroSheetModel: ObservableObject {
         busy = false
     }
 
+    /// Disconnect through the one shared sequence.
+    ///
+    /// This was four steps inline — API, Keychain, identity, prefs-changed —
+    /// duplicating `MiroConnectionStore.disconnect` step for step. Two surfaces
+    /// performing one irreversible act must not be two sequences: the fourth
+    /// step was missing here until 18 Aug 2026, and a running serve kept
+    /// exporting to the board the researcher had just disconnected from. The
+    /// reasoning for each step now lives once, at the shared implementation.
+    ///
+    /// The caller dismisses the sheet afterwards — see `MiroSheet`.
     func disconnect() async {
         busy = true
         error = nil
-        await api.disconnect()
-        KeychainHelper.delete(provider: "miro")  // also clear the Swift-stored copy
-        MiroConnectionStore.forgetIdentity()     // …and the line Settings shows
+        await MiroConnectionStore.disconnect(api: api)
         token = ""
         userName = nil
         teamName = nil
@@ -290,7 +298,14 @@ struct MiroSheet: View {
                         Image(systemName: "checkmark.circle").foregroundStyle(.green)
                         Text(model.dt("connected"))
                         Spacer()
-                        Button(model.t("disconnect")) { Task { await model.disconnect() } }
+                        // Dismiss after: disconnecting restarts the serve on a
+                        // fresh kernel-assigned port, so this sheet's `MiroAPI`
+                        // — built with the old one at init — is dead the moment
+                        // it returns. Leaving the sheet up would offer a Connect
+                        // field posting into a closed port.
+                        Button(model.t("disconnect")) {
+                            Task { await model.disconnect(); dismiss() }
+                        }
                             .controlSize(.small).disabled(model.busy)
                     }
                 }

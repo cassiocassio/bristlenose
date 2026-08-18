@@ -115,7 +115,7 @@ licence boundary is the sign-in button: the name is free, the product mark needs
 vendor, and Google's brand terms ban monochrome treatments outright. A borrowed glyph would be a
 worse lie than an absent one.
 
-**Cross-pane dependency — Settings is now the only Miro disconnect surface**, which is why this pane
+**Cross-pane dependency — Settings is the only surface that *fully* disconnects Miro** (the export sheet's Disconnect clears the Keychain copy, the server's session cache and the cached identity; until 18 Aug it left a fourth copy — `overlayMiroToken` bakes `BRISTLENOSE_MIRO_ACCESS_TOKEN` into every sidecar at spawn and the server resolves the credential store first, falling through to env, so no HTTP call can unset it. **Both paths now post `.bristlenosePrefsChanged`**, which drains the parked slot and restarts the fronted serve — a serve restart is the cost, and the right trade for a deliberate, rare act), which is why this pane
 takes `serveManager` (`SettingsView.swift:96-113`). Disconnecting must clear the **running sidecar's
 in-memory token** as well as the Keychain one; clearing only the Keychain leaves the live serve
 process still authenticated until it restarts. This coupling belongs in this doc and nowhere else.
@@ -130,7 +130,7 @@ is here and its per-platform sign-in flows are in `docs/design-cloud-import.md` 
 
 API keys are injected via `ServeManager.overlayAPIKeys()` (C3, Apr 2026) — Swift reads Keychain via `Security.framework` (through the `KeychainStore` protocol; tests use `InMemoryKeychain`) and sets `BRISTLENOSE_<PROVIDER>_API_KEY` on the same env dict. Python never touches Keychain in this deployment; pydantic-settings reads the env vars directly. **Threat-model rationale** (from `ServeManager.swift:366-371` comment): env vars are visible to same-UID attackers via `ps -E`, but a same-UID attacker can already call `SecItemCopyMatching` directly; the net delta is small. Sandbox protects against *other* UIDs, not same-UID code execution. Documenting the residual risk honestly beats security theatre (keychain-access-groups wouldn't raise the bar against the real threat model). Full credential-flow discussion in `design-keychain.md` §Desktop (sandboxed) credential path.
 
-`ServeManager` subscribes to `Notification.Name.bristlenosePrefsChanged`. When any settings view posts this notification and a serve process is running, `restartIfRunning()` stops and re-starts with the new environment.
+`ServeManager` subscribes to `Notification.Name.bristlenosePrefsChanged`. When any writer posts this notification — not only a settings view; `MiroConnectionStore` and `MiroSheetModel` both do and a serve process is running, `restartIfRunning()` stops and re-starts with the new environment.
 
 | Setting | UserDefaults key | Env var |
 |---------|-----------------|---------|

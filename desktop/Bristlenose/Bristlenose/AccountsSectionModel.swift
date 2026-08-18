@@ -73,10 +73,13 @@ enum AccountService: Hashable, Identifiable, Sendable {
     // all three vendors (§9a), and that paperwork is settled against, 18 Aug
     // 2026 — so this is the answer, not a wait. The name does the work, which
     // is what System Settings and Mail do with their own account group headers.
-    // `File ▸ Import` keeps its SF Symbols and is a different case: there the
-    // glyph sits in a column of other menu glyphs and reads as menu furniture.
-    // The test is whether a reader would take the glyph for the vendor's own
-    // mark.
+    //
+    // `File ▸ Import` lost its symbols too (`5e426843`) — this comment briefly
+    // claimed the menu was "a different case, menu furniture in a column of
+    // other glyphs", and that was checked and false: those three items were the
+    // only `systemImage` in the entire menu bar. The one surface where a vendor
+    // mark belongs is the **sign-in button**, which §9a says the vendor requires
+    // and grants.
 
     /// Whether connecting is something this pane can start.
     ///
@@ -109,12 +112,17 @@ enum AccountAttention: Equatable, Sendable {
     /// indistinguishable from having no recordings.
     case cannotHoldRecordings
 
-    var sentence: String {
+    /// Takes `I18n` rather than reading a global, and stays out of the state
+    /// engine above it: this enum is a pure value the view renders, so the
+    /// locale arrives with the render, not with the verdict. Same shape as
+    /// `CloudPlatform.windowTitle(_:)`.
+    @MainActor
+    func sentence(_ i18n: I18n) -> String {
         switch self {
         case .signInAgain:
-            return "The provider ended this sign-in. Signing in again restores it."
+            return i18n.t("desktop.accounts.signInAgain")
         case .cannotHoldRecordings:
-            return "This account can't hold meeting recordings, so there's nothing to import."
+            return i18n.t("desktop.accounts.cannotHoldRecordings")
         }
     }
 

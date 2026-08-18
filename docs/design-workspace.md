@@ -8,6 +8,7 @@ last-trued: 2026-08-15
 ## Changelog
 
 - _2026-08-17b_ — **Two more from the six-window run, both "harmless at N=1, total at N=2".** (1) **Going to the welcome screen put every window on Welcome.** `SidebarDeselectMonitor` uses `NSEvent.addLocalMonitorForEvents`, which is **app**-wide: each window installs one, each sees every click anywhere in the app, and each then called its *own* `deselect`. One click in one window's empty sidebar area deselected all six. Now scoped — the monitor compares `event.window` against its own host view's window. Worth noting the shape, since it is the second instance today: a per-window callback hung off an app-wide channel. The first was the menu-bar broadcasts. (2) **The ordinal's group key was the wrong key.** It was keyed on the *lens*, on the stated assumption that "different lenses already read differently, because the subtitle carries the per-lens count" — which is **false**, and the Window menu proved it: `countSubtitle` returns the session count for Project, for Sessions *and* for a window with no lens yet, so three windows drew `IKEA with uxfriends (1 Session · 18m)` and none of them was numbered, while a fourth carried a "2". Keyed on the rendered subtitle now, so the collision test is the thing the reader is actually looking at rather than a proxy for it. The run narration is deliberately excluded from the key — its stage and ETA change every second and would reshuffle numbers throughout a run.
+- _2026-08-18_ — **First review of the multi-window work, and the child window is specified rather than assumed.** Seven agents plus a parsimony pass; 34 findings, log kept with the maintainer's private review notes. The headline confirms constraint 5 as shipped reality: `File ▸ New Window` opens a **full master** with a live project list, so two windows on two studies render one study's participant data under the other's name — and the blast radius crosses an outbound edge, since `Send to Miro` exports the wrong study's quotes to a board named for the right one. The restrictive child shape decided on 16 Aug was never built; the code shipped permissive, the one direction this section had ruled out ("loosening later is trivial and tightening after people rely on it is not"). **Three decisions close it without waiting on 3b:** a child holds a *lens, not a project* and reads its title from the serve, so it cannot drift; ⌥⌘N makes a child unless `hasMaster`; and **promotion is rejected** — it would exist only to paper over the single serve, would be deleted at 3b, and would change a window's shape because a different window closed. Switching the master takes the children with it: **accepted**, odd but manageable through beta, and the honest form of the Stage 3a constraint. Also corrected here: the "a master has two cues" reasoning, which is false — both cues come from one source. Separately measured by the review rather than reasoned: AppKit's automatic Window-menu path **does** render `Title (Subtitle)` (two throwaway binaries), so keying the duplicate group on the rendered subtitle is correct by construction, and `desktop/CLAUDE.md`'s 15.0 deployment target is stale against 26.1.
 - _2026-08-17_ — **First real multi-window run: the felt feature works, and it found two bugs.** Four windows on one study, four different lenses, four independent sidebars and subtitles — which was structurally impossible before Stage 3a. Confirmed too that lens choices in one window don't disturb the others. **Bug 1, serious: opening a new window reset every other window to the Project dashboard, and so did going to the welcome screen.** One cause — selection is per window, the sidecar is not. Every arm of `applySelectionChange` that isn't "serve this project" called `serveManager.stop()` on everyone's behalf, and a new window hits that arm before it restores its project. The blast radius is total because killing the serve mints a new port on the next start and every window's web view is keyed on the port (`ServeSession.viewID`), so they all remount at `/report/`. Fixed at both ends: a window only stops the serve when no *other* window still shows a project (`WindowRoster.anyProjectShown(excluding:)`), and `switchProject` no-ops when it is already serving that exact path — which a second window asks for by definition. **Bug 2: the ordinal suffix numbered a window that was alone.** Windows transit the Project lens on open, so ⌥⌘N four times claims 1–4 there and the survivor keeps a number that refers to nothing. The gap rule is kept exactly where it was decided; a window left *alone* in its group now gives its number up, which also retires the "lone Study 2" case that had been accepted as odd.
 - _2026-08-16i_ — **P3b: a project reopens where you were on the page, not just on the right lens.** New `anchor-change` message inbound and the existing retry-aware `window.scrollToAnchor` outbound. Anchors as decided: Quotes → group heading (sections *and* themes — both are `QuoteGroup`, and watching only themes would leave the Sections half always restoring to the top), Sessions → session, Analysis and Project → top; Codebook taken as its framework header. **Sessions is the case that shapes the design** — its position is a route, not an offset, so it restores by navigating and its value comes from `SessionsRouteMemory` rather than the scroll reporter; one stored field plus `LensAnchor`'s per-lens table beats two fields kept mutually exclusive by convention. The message **names its lens**, because `anchor-change` and `route-change` are independent and a bare nil can't distinguish "scrolled back to the top of Quotes" from "left Quotes" — without it, every lens switch would wipe a good remembered position (same guard, same reason, as `lensSubtitle`/`lensSubtitleTab`). Capture is debounced to scroll-settle and written only on change, which also dissolved the stress test's teardown-race worry: there is nothing left to grab at `onDisappear`. No validation that a stored anchor still exists — the content is mutable, so the check would be a lie by the time it mattered; it fails honestly at the top instead. **Stage 3a and P3 are now complete, and none of it has been seen on screen.**
 - _2026-08-16h_ — **P3a: a project opens where you left it.** The lens half of the restore, and it turned out to need **no new bridge plumbing** — the lens is derivable from the `route-change` path that already flows, so the stress test's "bigger than copy `SessionsRouteMemory`" warning applies only to the anchor half. `LensMemory` holds the decision (unknown lens degrades to the dashboard rather than crashing or being honoured blindly; a never-opened project has no memory, which lands it on the dashboard without needing a rule); `Project.lastLens` persists it in `projects.json`, machine-local and deliberately not inside the researcher's project folder. Two guards share one piece of state: the restore must not re-fire on a run-completion reload's `isReady`, and the capture must not run before the restore or the SPA's initial dashboard landing overwrites the memory it is about to restore from. **P3b (the anchor) is specified but not started** — Quotes → theme heading, Sessions → session, Analysis → top; Codebook taken as its group heading by inference, one table entry to change. Twice while writing the back-compat test I hand-wrote a `projects.json` fixture and twice the format guess was wrong (the envelope's `version`, then `.prettyPrinted` + `.sortedKeys`) — it now round-trips through the real encoder and strips the key by parsing, which is the version that encodes no guess.
@@ -535,14 +536,60 @@ second keeps the feature. Nothing is traded.
 inert (`View ▸ Show Projects` dims). Not because the pin is certainly right, but
 because loosening later is trivial and tightening after people rely on it is not.
 
+**A child holds a lens, not a project (decided 18 Aug 2026).** Read
+"masters get projects, children get lenses" literally: a child has no `selection`
+of its own, and its title comes from *what is being served*, not from a per-window
+pick. Three things follow, and the third is why this shape rather than the obvious
+one.
+
+- **A child cannot name a study it isn't showing.** The failure this whole
+  section exists to prevent becomes unrepresentable rather than guarded — there
+  is no second source to drift from. (The guard is still owed on the *master*,
+  for the async gap while it switches.)
+- **Switching the master takes the children with it.** Every window is showing
+  the same study by construction, so the switch moves all of them coherently and
+  every title stays true. **Accepted 18 Aug 2026** — a bit odd, manageable
+  through beta, and better than any alternative available before 3b. The cost is
+  real and worth stating: you cannot peek at another study while keeping
+  transcripts open. That is the Stage 3a constraint surfaced honestly instead of
+  hidden behind a window that lies, and removing it is exactly what 3b buys —
+  which gives that stage a one-line headline.
+- **Nothing here is built to be deleted at 3b.** "A child's project is the served
+  one" is not thrown away when serves become per-window; it is *re-scoped*, the
+  same sentence with a narrower subject. This is the argument against the obvious
+  alternative — giving a child its own project and then **promoting** an orphaned
+  child to a master. Promotion exists only to paper over "there is one serve", has
+  no meaning once that is false, and makes a window change shape while you are
+  looking at it because you closed a different one. Rejected.
+
+**⌥⌘N makes a child unless there is no master (decided 18 Aug 2026).** The
+condition is `hasMaster`, **not** "no windows open" — closing the master while
+children remain is reachable, and under a window-count rule ⌥⌘N would mint
+another child, leaving a screen of lens windows with no project list and no way
+to get one short of relaunching. With `hasMaster` that state has a one-keystroke
+exit using the command already in the researcher's fingers, which is what
+replaces promotion. A welcome-screen window counts as a master (it carries the
+list); Settings and the Import window do not, as the roster already has it. A new
+child opens at the **lens of the window it was spun off from** — the gesture reads
+as "duplicate this view, now re-point it".
+
 **Deferred deliberately — pin vs hide-by-default-switchable.** Both answers ship
 the same first version; they diverge only on what happens when someone tries to
 get the list back, which is observable in use rather than predictable. The test:
 spin off a Quotes window and go ten minutes without reaching for the project list.
 If the hand goes there it is a hide, and the serve question reopens.
 
-**Accepted for alpha — a child's title is its only cue.** A master has two, the
-sidebar selection and the title; strip the list and the title stands alone. Fine
+**Superseded 18 Aug 2026 — "a master has two cues" was wrong.** The reasoning
+below held that a master is safer because a wrong title is contradicted by the
+sidebar. It is not: in the shipped master the title *and* the sidebar highlight
+both derive from the same per-window `selection`, while the content comes from the
+shared serve — so they agree with each other and are wrong together. Two cues from
+one source are one cue drawn twice, and the master is therefore the *more*
+deceptive shape, because it looks corroborated. Under the decision above a child
+reads its title from the serve and cannot drift at all. Original text kept:
+
+> **Accepted for alpha — a child's title is its only cue.** A master has two, the
+> sidebar selection and the title; strip the list and the title stands alone. Fine
 at alpha, since the failure needs two windows *and* a stale title. But it promotes
 constraint 5 from a nice-to-have to a **Stage 3a acceptance criterion**: in a
 master a wrong title is contradicted by the sidebar, in a child there is nothing

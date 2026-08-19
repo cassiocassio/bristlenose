@@ -97,7 +97,18 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
     /// Confined to `scanQueue`.
     private var knownBasenames: Set<String>
     /// Confined to `scanQueue`. Suppresses no-op `onChange` calls.
-    private var lastPublished: UnanalysedState = .empty
+    /// Nil until the first scan publishes — **not** seeded to `.empty`.
+    ///
+    /// Seeding it to `.empty` meant "we have already published nothing", so a
+    /// scan of an empty folder equalled it and was suppressed. The project's
+    /// entry in `ProjectIndex.unanalysed` therefore stayed *absent*, which is
+    /// the same signal as "no watcher running" — and consumers that treat
+    /// absent as unknown could not tell a folder we had looked at and found
+    /// empty from one we had never looked at. `canAnalyse` resolves unknown to
+    /// *offer*, so Analyse kept appearing on empty projects even after it
+    /// learned to check. Publishing the first scan unconditionally makes
+    /// absence mean only what it says.
+    private var lastPublished: UnanalysedState?
     /// Confined to `scanQueue`. Pending debounced scan; replaced on each new
     /// event so a burst of Finder callbacks collapses to one scan after the
     /// debounce window expires.
@@ -283,10 +294,20 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
             totalDurationSeconds: snapshot.totalDurationSeconds,
             hasIngestableFiles: hasIngestable
         )
-        if state == lastPublished { return }
+        guard Self.shouldPublish(state, lastPublished: lastPublished) else { return }
         lastPublished = state
         let cb = onChange
         DispatchQueue.main.async { cb(state) }
+    }
+
+    /// Whether a freshly-computed state is worth publishing.
+    ///
+    /// Pure so the first-scan invariant can be tested without an
+    /// `NSFilePresenter`, a lease or a temp folder: a `nil` previous value
+    /// means nothing has been published yet, so **every** first scan goes out —
+    /// including one that found nothing.
+    static func shouldPublish(_ state: UnanalysedState, lastPublished: UnanalysedState?) -> Bool {
+        state != lastPublished
     }
 
     // MARK: - Filters (also used by unit tests via DropDecision-style pure helpers)

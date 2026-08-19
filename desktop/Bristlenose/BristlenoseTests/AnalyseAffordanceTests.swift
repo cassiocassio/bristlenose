@@ -81,6 +81,34 @@ import Foundation
             state(newFiles: 0, sessions: 14, ingestable: false)))
     }
 
+    // MARK: - The first scan must publish, or "absent" is ambiguous
+
+    @Test func firstScanPublishesEvenWhenItFoundNothing() {
+        // The hole this suite missed on its first pass. `lastPublished` was
+        // seeded to `.empty`, so a scan of an empty folder equalled it and was
+        // suppressed — the project's entry stayed absent, absent reads as
+        // "unknown", unknown resolves to *offer*, and Analyse kept appearing on
+        // empty projects even after canAnalyse learned to check. Caught by a
+        // screenshot of a build that already contained the fix.
+        #expect(ProjectFolderWatcher.shouldPublish(.empty, lastPublished: nil),
+                "an empty folder must publish its emptiness, not stay silent")
+    }
+
+    @Test func repeatScansStillDeduplicate() {
+        // The property the seed was there to provide, which must survive.
+        #expect(!ProjectFolderWatcher.shouldPublish(.empty, lastPublished: .empty))
+        let s = state(newFiles: 2, sessions: 5)
+        #expect(!ProjectFolderWatcher.shouldPublish(s, lastPublished: s))
+        #expect(ProjectFolderWatcher.shouldPublish(s, lastPublished: .empty))
+    }
+
+    @Test func anEmptyFolderOncePublishedHidesAnalyse() {
+        // End to end through the two halves: publish `.empty`, and the
+        // predicate reads it as "nothing to do".
+        #expect(ProjectFolderWatcher.shouldPublish(.empty, lastPublished: nil))
+        #expect(!SidebarOutlineController.hasWorkToDo(.empty))
+    }
+
     // MARK: - The companion-type exclusion
 
     @Test func companionExtensionsAreNotIngestable() {

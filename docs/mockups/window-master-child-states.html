@@ -538,8 +538,29 @@ almost certainly wanted, which is one more lens.</p>
 <p><b>What it costs, stated plainly:</b> with the master closed there is no project list anywhere,
 New Project / New Folder / Add Files / Import are all dimmed (they act on the study axis a child
 does not have), and <code>Open in New Window</code> is dimmed until 3b. So the only route back to a
-project list is <b>close every window, then ⌥⌘N</b>. That is a mild dead end, and it is reachable
-by ordinary tidying. It wants an explicit accept rather than a discovery. <span class="tag dec">decide</span></p>
+project list is <b>close every window, then ⌥⌘N</b>.</p>
+<p><span class="tag ships">accepted 18 Aug 2026</span> Not nice, and lived with until 3b — at which
+point every window can serve its own study and the state stops existing. Every alternative is worse,
+and the reasons are worth keeping so none of them gets re-proposed:</p>
+<table>
+  <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+  <tbody>
+    <tr><td>Refuse to close the master</td>
+        <td><b>You can always close a Mac window.</b> A window that refuses is one of the few
+        genuinely un-Mac behaviours — even sheets and panels close.</td></tr>
+    <tr><td>Close the children with it</td>
+        <td>The nearest real idiom (closing a document closes its inspectors) is the opposite move —
+        close <em>more</em>, not refuse. And it destroys a deliberate arrangement: five transcript
+        windows the researcher placed by hand.</td></tr>
+    <tr><td>Promote a child to master</td>
+        <td>Already rejected — exists only to paper over the single serve, deleted at 3b, and makes
+        a window change shape while you are looking at it because a <em>different</em> one closed.</td></tr>
+    <tr><td>Keep <code>⌘N New Project</code> live in a child</td>
+        <td>Workable, and the closest call: <code>NewItemFallback</code> already almost does it. But
+        it breaks the one clean rule a child has — every study-axis command dims — for a state that
+        disappears at 3b.</td></tr>
+  </tbody>
+</table>
 
 <h3><span class="n">E5</span> A run is in progress</h3>
 <p>The subtitle narrates the run. With the current <code>.key</code>-only rule, opening Settings or

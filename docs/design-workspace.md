@@ -577,9 +577,19 @@ rather than gaining a special case, and one more lens is what the researcher
 almost certainly wanted. **The cost is real and is accepted knowingly** — with the
 master closed there is no project list anywhere and every study-axis command is
 dimmed, so the route back is *close every window, then ⌥⌘N*. Reachable by
-ordinary tidying; the master/child mockup's E4b carries the one alternative worth
-considering (keeping `⌘N New Project` live in a child, which `NewItemFallback`
-already almost does).
+ordinary tidying, and **accepted 18 Aug 2026** — lived with until 3b, at which
+point every window serves its own study and the state stops existing.
+
+Every alternative is worse, recorded so none is re-proposed. **Refusing to close
+the master** is out on the strongest ground available: *you can always close a Mac
+window* — a window that refuses is one of the few genuinely un-Mac behaviours, and
+even sheets and panels close. **Closing the children with it** inverts the nearest
+real idiom (closing a document closes its inspectors is *close more*, not *refuse
+to close*) and destroys a deliberate arrangement of hand-placed windows.
+**Promotion** is rejected above. **Keeping `⌘N New Project` live in a child** is the
+closest call — `NewItemFallback` already almost does it — but it breaks the one
+clean rule a child has, that every study-axis command dims, to rescue a state that
+disappears at 3b.
 
 Note what "served, not windows" quietly handles: a master that returns to the
 welcome screen while children are open does **not** stop the serve —

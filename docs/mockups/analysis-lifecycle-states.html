@@ -918,6 +918,12 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
      has. On the system undo stack it survives until the next undoable act and lands in Edit ▸ Undo
      free. The vanishing row gets the poof the HIG names for exactly this — “<i>scale up and fade
      out to give the impression of the item evaporating</i>”.</p>
+  <h3>Remove from Sidebar isn’t offered while a run is going</h3>
+  <p>It used to be offered, refused, and explained by a toast naming the project. Now the context
+     menu omits the item and the Project menu dims it — the same hide-versus-dim split as everywhere
+     else. For a <em>mixed</em> selection the removable rows go and the running one stays, selected
+     and visible: the thing that changed is the message, and no sentence is needed to narrate a row
+     still on screen.</p>
   <h3>Retry keeps the home it was given</h3>
   <p>The popover deliberately has no action row: “<i>Retry / Change provider / Re-analyse… live in
      the project’s natural run affordance</i>”. So the toast pointing at the toolbar was signposting
@@ -1095,6 +1101,7 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
         Your work on this study will be discarded:<br>
         &nbsp;&nbsp;47 edited quotes<br>
         &nbsp;&nbsp;12 tags<br>
+        &nbsp;&nbsp;8 starred quotes<br>
         &nbsp;&nbsp;3 renamed speakers<br>
         &nbsp;&nbsp;2 named themes
       </div>
@@ -1117,6 +1124,17 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
      No <code>--clean</code>, no folder paths, no mention of an output directory — the researcher
      should never need a model of where Bristlenose keeps its working files, and the moment a message
      tells them to go and delete one, that model has leaked.</p>
+  <h3>Stars were a hole in this drawing — added 19 Aug 2026</h3>
+  <p>The list had four lines and <code>--clean</code> destroys five things. A confirmation that
+     measures cannot be silent about one of the losses; implementing the picture literally would
+     have broken the picture’s own purpose. Zero-count kinds are omitted from the rendered list —
+     a “0 tags” line is noise in something whose whole job is to be read at a glance.</p>
+  <h3>“Nothing to lose” means nothing of <em>theirs</em></h3>
+  <p><code>--clean</code> is <code>rmtree</code>, so a re-analysis always destroys the existing
+     analysis too — which briefly looked like an argument that the silent case can never happen. It
+     isn’t: derived output is the thing the researcher just asked to have rebuilt, and the sheet’s
+     opening line already says so. The counted block is about their work, and when there is none the
+     sheet does not appear.</p>
   <h3>What is deliberately absent</h3>
   <p>No “don’t ask again”. The cost is real every time, and the count changes every time.</p>
 </div>

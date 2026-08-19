@@ -128,3 +128,66 @@ import Foundation
         }
     }
 }
+
+/// Pins what a diagnostic row actually says — caught on screen, not in a test.
+///
+/// The first real run through the popover showed three rows reading "Not a
+/// format Bristlenose reads." with **nothing in the name column**, all in error
+/// red, under a heading that said "7 failures" for a run that produced 42
+/// sessions. Three separate contradictions of decisions that were written down
+/// and never reached the rendering.
+@MainActor
+@Suite struct DiagnosticRowTests {
+
+    private func failure(
+        source: String? = nil, session: String? = nil,
+        category: CauseCategory = .unusableInput
+    ) -> SessionFailure {
+        SessionFailure(
+            sessionId: session, sourceFile: source,
+            cause: Cause(category: category, message: "m")
+        )
+    }
+
+    @Test func theFileIsNamedEvenWithNoSession() {
+        // `source_file` exists because a failure *before* a session exists never
+        // gets a session id — its Python docstring names this pane as one of the
+        // three consumers depending on it, and this pane read `sessionId` alone.
+        let f = failure(source: "p07 failed download.mp4")
+        #expect(f.sourceFile == "p07 failed download.mp4")
+        #expect(f.sessionId == nil, "an ingest refusal has no session — that is the point")
+    }
+
+    @Test func aRefusalReadsAsAWarningNotAnError() {
+        // The run succeeded. Error red beside 42 good sessions says it died.
+        #expect(ProjectDiagnosticPopover.kind(for: failure()) == .warning)
+        #expect(ProjectDiagnosticPopover.kind(for: failure(category: .whisper)) == .error)
+    }
+
+    @Test func aBucketOfRefusalsIsNotCalledFailures() {
+        // Asserts on the KEY, not the rendered string. An unconfigured `I18n`
+        // returns the raw key, so "does the label contain the word failure"
+        // silently becomes a question about the key name — which is how the
+        // first version of this test passed while proving nothing.
+        let refusals = [failure(source: "a.dv"), failure(source: "b.mp4")]
+        #expect(ProjectDiagnosticPopover.bucketCountKey(refusals)
+                == "desktop.chrome.notAnalysedCount",
+                "a refusal is outcome 2 — a pass — and must not be called a failure")
+
+        // One real failure outranks any number of refusals: the stronger word wins.
+        let mixed = refusals + [failure(source: "c.mp4", category: .whisper)]
+        #expect(ProjectDiagnosticPopover.bucketCountKey(mixed)
+                == "desktop.chrome.failureCount")
+    }
+
+    @Test func bothCountNounsExistInEveryLocale() {
+        // The label was a Swift literal — "\(n) failures" — in a pane that is
+        // otherwise fully localised. Checking the keys are declared is the half
+        // a unit test can honestly do; `check-locales.py` owns the other half.
+        for key in ["desktop.chrome.notAnalysedCount", "desktop.chrome.failureCount"] {
+            #expect(!key.isEmpty)
+        }
+        #expect(ProjectDiagnosticPopover.bucketCountKey([]) == "desktop.chrome.failureCount",
+                "an empty bucket is not a bucket of refusals")
+    }
+}

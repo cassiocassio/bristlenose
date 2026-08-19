@@ -222,6 +222,10 @@
     "reAnalyseRebuild_one": "Bristlenose transkriberar och analyserar 1 intervju p\u00e5 nytt fr\u00e5n b\u00f6rjan.",
     "reAnalyseRebuild_other": "Bristlenose transkriberar och analyserar alla {{count}} intervjuer p\u00e5 nytt fr\u00e5n b\u00f6rjan.",
     "reAnalyseLossHeader": "Ditt arbete med den h\u00e4r studien kasseras:",
+    "notAnalysedCount_one": "1 fil inte analyserad",
+    "notAnalysedCount_other": "{{count}} filer inte analyserade",
+    "failureCount_one": "1 fel",
+    "failureCount_other": "{{count}} fel",
     "reAnalyseLoss": {
       "editedQuotes_one": "1 redigerat citat",
       "editedQuotes_other": "{{count}} redigerade citat",

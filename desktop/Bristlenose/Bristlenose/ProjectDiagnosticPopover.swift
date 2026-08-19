@@ -147,19 +147,32 @@ struct ProjectDiagnosticPopover: View {
                     .foregroundStyle(.secondary)
             }
             if realFailures.count > 2 {
-                Text("\(realFailures.count) failures")
+                Text(Self.bucketCountLabel(realFailures, i18n: i18n))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Grid(alignment: .topLeading, horizontalSpacing: 6, verticalSpacing: 4) {
                 ForEach(Array(realFailures.enumerated()), id: \.0) { _, failure in
                     GridRow {
-                        Image(systemName: MessageKind.error.symbolName)
-                            .foregroundStyle(MessageKind.error.tint)
+                        Image(systemName: Self.kind(for: failure).symbolName)
+                            .foregroundStyle(Self.kind(for: failure).tint)
                             .font(.footnote)
-                        Text(failure.sessionId ?? "")
+                        // The FILE first, then the session. `source_file` was
+                        // added Jul 2026 precisely because a failure before a
+                        // session exists — an unreadable or declined recording
+                        // fails at ingest — never gets a session id, and this
+                        // pane was named in its docstring as one of the three
+                        // consumers that needed it. It then rendered
+                        // `sessionId` alone, so on the first real run three
+                        // refusals appeared as blank-labelled rows all saying
+                        // "Not a format Bristlenose reads." A count with extra
+                        // steps, which is the exact outcome the feature exists
+                        // to prevent (19 Aug 2026).
+                        Text(failure.sourceFile ?? failure.sessionId ?? "")
                             .font(.system(.footnote, design: .monospaced))
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
                         Text(failure.cause.message ?? failure.cause.category.rawValue)
                             .font(.footnote)
                             .textSelection(.enabled)
@@ -301,6 +314,44 @@ struct ProjectDiagnosticPopover: View {
 
     // MARK: - Static formatters (canonical home; unit-tested directly)
 
+    /// The weight one row reads at.
+    ///
+    /// A declined format and a damaged upload are **warnings**, not errors:
+    /// the run succeeded, the other files are in the report, and the
+    /// consequence — a participant missing from the findings — is the same for
+    /// both. Rendering them in error red beside a run that produced 42 sessions
+    /// says the run died. Decided in `docs/design-analysis-lifecycle.md` §5.1
+    /// (outcome 2, "refused by name, with a reason", is a **pass**) and then
+    /// not implemented: every row was hardcoded `.error` until 19 Aug 2026.
+    static func kind(for failure: SessionFailure) -> MessageKind {
+        failure.cause.category == .unusableInput ? .warning : .error
+    }
+
+    /// "7 files not analysed" / "3 failures" — the noun follows the weight.
+    ///
+    /// A bucket of refusals is not a bucket of failures, and calling it one
+    /// contradicts the row glyphs directly above it. Mixed buckets keep the
+    /// stronger word, since one real failure outranks any number of refusals.
+    static func bucketCountLabel(_ failures: [SessionFailure], i18n: I18n) -> String {
+        i18n.plural(bucketCountKey(failures), count: failures.count)
+    }
+
+    /// Which of the two nouns this bucket earns — separated from the lookup so
+    /// the *decision* is testable without a configured `I18n`.
+    ///
+    /// Asserting on the rendered string looked fine and tested nothing: an
+    /// unconfigured `I18n` returns the raw key, and "does it contain the word
+    /// failure" then answers about the key name rather than the translation.
+    /// Both of this pane's first two tests passed for that reason.
+    static func bucketCountKey(_ failures: [SessionFailure]) -> String {
+        let allRefusals = !failures.isEmpty && failures.allSatisfy {
+            $0.cause.category == .unusableInput
+        }
+        return allRefusals
+            ? "desktop.chrome.notAnalysedCount"
+            : "desktop.chrome.failureCount"
+    }
+
     /// Single source of truth for the human-readable failure-category string.
     static func humanCategoryLabel(_ category: PipelineFailureCategory) -> String {
         switch category {
@@ -385,10 +436,20 @@ struct ProjectDiagnosticPopover: View {
                 if failure.isOverflowPlaceholder {
                     lines.append("  \(MessageKind.warning.glyph) \(failure.cause.message ?? "")")
                 } else {
-                    let sid = failure.sessionId ?? "—"
+                    // Same fix as the on-screen rows: the file first, then the
+                    // session. Without it every ingest refusal pasted into a bug
+                    // report reads "— unusable_input Not a format Bristlenose
+                    // reads", three times, naming nothing.
+                    //
+                    // `source_file` is a **basename** by construction — its
+                    // Python docstring forbids a full path for exactly this
+                    // reason, "a diagnostic the user can copy out". A basename
+                    // can still name a participant, and it is already on screen
+                    // in this pane; copying is the researcher's own act.
+                    let who = failure.sourceFile ?? failure.sessionId ?? "—"
                     let category = failure.cause.category.rawValue
                     let message = failure.cause.message ?? ""
-                    lines.append("  \(MessageKind.error.glyph) \(sid)  \(category)  \(message)")
+                    lines.append("  \(Self.kind(for: failure).glyph) \(who)  \(category)  \(message)")
                 }
             }
             lines.append("")

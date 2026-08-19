@@ -222,6 +222,10 @@
     "reAnalyseRebuild_one": "Bristlenose transcriur\u00e0 i analitzar\u00e0 1 entrevista de nou des de zero.",
     "reAnalyseRebuild_other": "Bristlenose transcriur\u00e0 i analitzar\u00e0 les {{count}} entrevistes de nou des de zero.",
     "reAnalyseLossHeader": "La vostra feina en aquest estudi es descartar\u00e0:",
+    "notAnalysedCount_one": "1 fitxer sense analitzar",
+    "notAnalysedCount_other": "{{count}} fitxers sense analitzar",
+    "failureCount_one": "1 error",
+    "failureCount_other": "{{count}} errors",
     "reAnalyseLoss": {
       "editedQuotes_one": "1 cita editada",
       "editedQuotes_other": "{{count}} cites editades",

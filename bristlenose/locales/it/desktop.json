@@ -222,6 +222,10 @@
     "reAnalyseRebuild_one": "Bristlenose trascriver\u00e0 e analizzer\u00e0 1 intervista da capo.",
     "reAnalyseRebuild_other": "Bristlenose trascriver\u00e0 e analizzer\u00e0 tutte le {{count}} interviste da capo.",
     "reAnalyseLossHeader": "Il tuo lavoro su questo studio verr\u00e0 eliminato:",
+    "notAnalysedCount_one": "1 file non analizzato",
+    "notAnalysedCount_other": "{{count}} file non analizzati",
+    "failureCount_one": "1 errore",
+    "failureCount_other": "{{count}} errori",
     "reAnalyseLoss": {
       "editedQuotes_one": "1 citazione modificata",
       "editedQuotes_other": "{{count}} citazioni modificate",

@@ -222,6 +222,10 @@
     "reAnalyseRebuild_one": "O Bristlenose vai transcrever e analisar 1 entrevista de novo, do zero.",
     "reAnalyseRebuild_other": "O Bristlenose vai transcrever e analisar todas as {{count}} entrevistas de novo, do zero.",
     "reAnalyseLossHeader": "O seu trabalho neste estudo ser\u00e1 descartado:",
+    "notAnalysedCount_one": "1 ficheiro n\u00e3o analisado",
+    "notAnalysedCount_other": "{{count}} ficheiros n\u00e3o analisados",
+    "failureCount_one": "1 falha",
+    "failureCount_other": "{{count}} falhas",
     "reAnalyseLoss": {
       "editedQuotes_one": "1 cita\u00e7\u00e3o editada",
       "editedQuotes_other": "{{count}} cita\u00e7\u00f5es editadas",

@@ -222,6 +222,10 @@
     "reAnalyseRebuild_one": "Bristlenose transcribeert en analyseert 1 interview opnieuw, vanaf nul.",
     "reAnalyseRebuild_other": "Bristlenose transcribeert en analyseert alle {{count}} interviews opnieuw, vanaf nul.",
     "reAnalyseLossHeader": "Je werk aan dit onderzoek gaat verloren:",
+    "notAnalysedCount_one": "1 bestand niet geanalyseerd",
+    "notAnalysedCount_other": "{{count}} bestanden niet geanalyseerd",
+    "failureCount_one": "1 fout",
+    "failureCount_other": "{{count}} fouten",
     "reAnalyseLoss": {
       "editedQuotes_one": "1 bewerkt citaat",
       "editedQuotes_other": "{{count}} bewerkte citaten",

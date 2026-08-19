@@ -222,6 +222,10 @@
     "reAnalyseRebuild_one": "Bristlenose 1 g\u00f6r\u00fc\u015fmeyi ba\u015ftan yeniden yaz\u0131ya d\u00f6kecek ve analiz edecek.",
     "reAnalyseRebuild_other": "Bristlenose {{count}} g\u00f6r\u00fc\u015fmenin tamam\u0131n\u0131 ba\u015ftan yeniden yaz\u0131ya d\u00f6kecek ve analiz edecek.",
     "reAnalyseLossHeader": "Bu \u00e7al\u0131\u015fmadaki eme\u011finiz silinecek:",
+    "notAnalysedCount_one": "1 dosya analiz edilmedi",
+    "notAnalysedCount_other": "{{count}} dosya analiz edilmedi",
+    "failureCount_one": "1 hata",
+    "failureCount_other": "{{count}} hata",
     "reAnalyseLoss": {
       "editedQuotes_one": "1 d\u00fczenlenmi\u015f al\u0131nt\u0131",
       "editedQuotes_other": "{{count}} d\u00fczenlenmi\u015f al\u0131nt\u0131",

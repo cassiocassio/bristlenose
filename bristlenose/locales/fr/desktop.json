@@ -222,6 +222,10 @@
     "reAnalyseRebuild_one": "Bristlenose va retranscrire et analyser 1 entretien depuis le d\u00e9but.",
     "reAnalyseRebuild_other": "Bristlenose va retranscrire et analyser les {{count}} entretiens depuis le d\u00e9but.",
     "reAnalyseLossHeader": "Votre travail sur cette \u00e9tude sera supprim\u00e9 :",
+    "notAnalysedCount_one": "1 fichier non analys\u00e9",
+    "notAnalysedCount_other": "{{count}} fichiers non analys\u00e9s",
+    "failureCount_one": "1 \u00e9chec",
+    "failureCount_other": "{{count}} \u00e9checs",
     "reAnalyseLoss": {
       "editedQuotes_one": "1 verbatim modifi\u00e9",
       "editedQuotes_other": "{{count}} verbatim modifi\u00e9s",

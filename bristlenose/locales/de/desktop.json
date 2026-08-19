@@ -222,6 +222,10 @@
     "reAnalyseRebuild_one": "Bristlenose transkribiert und analysiert 1 Interview noch einmal von Grund auf.",
     "reAnalyseRebuild_other": "Bristlenose transkribiert und analysiert alle {{count}} Interviews noch einmal von Grund auf.",
     "reAnalyseLossHeader": "Ihre Arbeit an dieser Studie wird verworfen:",
+    "notAnalysedCount_one": "1 Datei nicht analysiert",
+    "notAnalysedCount_other": "{{count}} Dateien nicht analysiert",
+    "failureCount_one": "1 Fehler",
+    "failureCount_other": "{{count}} Fehler",
     "reAnalyseLoss": {
       "editedQuotes_one": "1 bearbeitetes Zitat",
       "editedQuotes_other": "{{count}} bearbeitete Zitate",

@@ -222,6 +222,10 @@
     "reAnalyseRebuild_one": "Bristlenose litteroi ja analysoi 1 haastattelun uudelleen alusta asti.",
     "reAnalyseRebuild_other": "Bristlenose litteroi ja analysoi kaikki {{count}} haastattelua uudelleen alusta asti.",
     "reAnalyseLossHeader": "Ty\u00f6si t\u00e4ss\u00e4 tutkimuksessa hyl\u00e4t\u00e4\u00e4n:",
+    "notAnalysedCount_one": "1 tiedosto analysoimatta",
+    "notAnalysedCount_other": "{{count}} tiedostoa analysoimatta",
+    "failureCount_one": "1 virhe",
+    "failureCount_other": "{{count}} virhett\u00e4",
     "reAnalyseLoss": {
       "editedQuotes_one": "1 muokattu sitaatti",
       "editedQuotes_other": "{{count}} muokattua sitaattia",

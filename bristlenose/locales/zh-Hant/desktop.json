@@ -213,6 +213,8 @@
     "reAnalyseConfirmTitle": "\u8981\u91cd\u65b0\u5206\u6790\u300c{{project}}\u300d\u55ce\uff1f",
     "reAnalyseRebuild_other": "Bristlenose \u6703\u628a\u5168\u90e8 {{count}} \u5834\u8a2a\u8ac7\u5f9e\u982d\u91cd\u65b0\u8f49\u9304\u4e26\u5206\u6790\u3002",
     "reAnalyseLossHeader": "\u4f60\u5728\u9019\u500b\u7814\u7a76\u4e2d\u7684\u6210\u679c\u90fd\u6703\u88ab\u6368\u68c4\uff1a",
+    "notAnalysedCount_other": "{{count}} \u500b\u6a94\u6848\u672a\u5206\u6790",
+    "failureCount_other": "{{count}} \u500b\u932f\u8aa4",
     "reAnalyseLoss": {
       "editedQuotes_other": "\u5df2\u7de8\u8f2f\u7684\u5f15\u8ff0 {{count}} \u5247",
       "tags_other": "\u6a19\u7c64 {{count}} \u500b",

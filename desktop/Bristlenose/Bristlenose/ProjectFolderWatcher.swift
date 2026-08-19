@@ -26,9 +26,25 @@ struct UnanalysedState: Equatable {
     /// window subtitle ("16 Sessions · 18h 23m"). Nil when the DB isn't
     /// readable; 0 when there are no sessions yet. Mirrors `sessionCount`.
     let totalDurationSeconds: Double?
+    /// Whether the folder holds anything the pipeline would actually ingest.
+    ///
+    /// **Deliberately not derived from `newFiles`.** `newFiles` answers "what
+    /// drifted since the last run", and `ProjectIndex` zeroes it for projects
+    /// that have never been analysed (F14 policy). So a fresh folder full of
+    /// recordings reports `newFiles: []` — reading that as "nothing to do"
+    /// would hide Analyse on exactly the project that needs it. This field
+    /// answers the different question, "is there anything here", and survives
+    /// the F14 gate untouched.
+    ///
+    /// Excludes companion types (`.txt`): the watcher accepts them so a note
+    /// dropped beside the recordings is carried into the project, but
+    /// `classify_file` returns `None` for them, so a folder holding only notes
+    /// has nothing to analyse.
+    let hasIngestableFiles: Bool
 
     static let empty = UnanalysedState(
-        newFiles: [], missingFiles: [], sessionCount: nil, totalDurationSeconds: nil
+        newFiles: [], missingFiles: [], sessionCount: nil, totalDurationSeconds: nil,
+        hasIngestableFiles: false
     )
 
     /// True when there's nothing to render for the data-state deltas (no
@@ -113,6 +129,12 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         // Documents
         "docx", "txt",
     ]
+
+    /// Accepted into a project, but never ingested — `classify_file` returns
+    /// `None`. Carried so a researcher's notes travel with the recordings;
+    /// excluded from `hasIngestableFiles` so a folder of only notes doesn't
+    /// look analysable.
+    static let companionExtensions: Set<String> = ["txt"]
 
     // MARK: - NSFilePresenter contract
 
@@ -248,11 +270,18 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         }
         missingFiles.sort { $0.lastPathComponent < $1.lastPathComponent }
 
+        // Computed from the raw enumeration, before any drift logic — see the
+        // field's doc comment for why it must not come from `newFiles`.
+        let hasIngestable = topLevelEligible.contains {
+            !Self.companionExtensions.contains($0.pathExtension.lowercased())
+        }
+
         let state = UnanalysedState(
             newFiles: newFiles,
             missingFiles: missingFiles,
             sessionCount: snapshot.sessionCount,
-            totalDurationSeconds: snapshot.totalDurationSeconds
+            totalDurationSeconds: snapshot.totalDurationSeconds,
+            hasIngestableFiles: hasIngestable
         )
         if state == lastPublished { return }
         lastPublished = state

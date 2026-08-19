@@ -1704,13 +1704,40 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// the "No interviews to analyse yet" empty state. Excludes analysed
     /// projects (`.ready` / `.completedPartial` — Re-analyse is a separate,
     /// destructive action) and bare "New Project" placeholders (empty path).
+    /// Whether **Analyse** is worth offering — i.e. whether running it would
+    /// visibly do anything.
+    ///
+    /// Three questions, in order: is this the right kind of project, is the
+    /// pipeline free, and *is there work to do*. The third was missing, so the
+    /// item appeared highlighted on an empty project beside a pane reading
+    /// "Add interview recordings or transcripts to get started", and again on a
+    /// fully-analysed project where it is a measured 0.1s of cache hits and a
+    /// re-render — teaching the researcher the button is broken rather than
+    /// that they picked the wrong one.
+    ///
+    /// The matrix this implements is `docs/design-analysis-lifecycle.md` §4.1.
     private func canAnalyse(_ id: UUID, state: PipelineState?) -> Bool {
         guard let p = projectIndex?.projects.first(where: { $0.id == id }),
               p.inputFiles == nil, !p.path.isEmpty else { return false }
         switch state ?? .idle {
-        case .idle, .stopped, .failed, .failedWithDiagnostic: return true
+        case .idle, .stopped, .failed, .failedWithDiagnostic: break
         default: return false
         }
+        return Self.hasWorkToDo(projectIndex?.unanalysed[id])
+    }
+
+    /// The "is there work to do" half of `canAnalyse`, pure so it can be tested
+    /// without an outline view.
+    ///
+    /// `nil` means no watcher is running yet (project not ready, or the first
+    /// scan hasn't landed) — **not** "nothing to do". Unknown resolves to
+    /// *offer*: wrongly showing a control the researcher can retry costs a
+    /// click, wrongly hiding one leaves them with no way forward at all.
+    nonisolated static func hasWorkToDo(_ data: UnanalysedState?) -> Bool {
+        guard let data else { return true }
+        guard data.hasIngestableFiles else { return false }
+        let alreadyAnalysed = (data.sessionCount ?? 0) > 0
+        return !alreadyAnalysed || !data.newFiles.isEmpty
     }
 
     private func isFailureState(_ state: PipelineState?) -> Bool {

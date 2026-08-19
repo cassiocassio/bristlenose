@@ -1154,7 +1154,11 @@ final class ProjectIndex: ObservableObject {
                 newFiles: [],
                 missingFiles: state.missingFiles,
                 sessionCount: state.sessionCount,
-                totalDurationSeconds: state.totalDurationSeconds
+                totalDurationSeconds: state.totalDurationSeconds,
+                // NOT gated — this answers "is there anything here", not
+                // "what drifted", and it is what `canAnalyse` reads to decide
+                // whether to offer Analyse on a never-analysed project.
+                hasIngestableFiles: state.hasIngestableFiles
             )
         } else {
             gated = state

@@ -6,7 +6,7 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
 
@@ -60,9 +60,14 @@ from bristlenose.models import (
     ThemeGroup,
     TranscriptSegment,
 )
+from bristlenose.refusals import UnusableReason
+from bristlenose.refusals import stage_failure as refusal_stage_failure
 from bristlenose.ui_kinds import MessageKind, cli_prefix
 from bristlenose.utils.fs import is_os_metadata
 from bristlenose.utils.text import count_noun
+
+if TYPE_CHECKING:  # annotation only — s01 stays a lazy import
+    from bristlenose.stages.s01_ingest import SkippedFile
 
 logger = logging.getLogger(__name__)
 console = Console(width=min(80, Console().width))
@@ -152,6 +157,36 @@ def _print_stage(
         trailing = ""
     padding = max(1, 58 - len(message))
     console.print(f" {cli_prefix(kind)} {message}{' ' * padding}{trailing}")
+
+
+def _print_refusals(failed: list[StageFailure]) -> None:
+    """Name every file that isn't in the report, and why.
+
+    **WARNING, not SKIPPED.** A refused format and a damaged upload have
+    different causes and the same consequence — a participant missing from the
+    findings — so they read at the same weight. Dimming one of them to
+    "skipped" grey would rank a policy decision as less important than a defect,
+    when to the researcher chasing a missing interview they are the same event.
+
+    Every entry is listed rather than counted. A count tells a researcher that
+    something is missing; only the name tells them *which participant*, which is
+    the whole difference between a number and an action. The desktop popover
+    truncates at ten plus an overflow row — this is where the full list lives.
+
+    Filenames go through `escape()`: Rich eats `[...]` as style markup, so a
+    file named `p07 [pilot].mp4` would otherwise print as `p07 .mp4` with no
+    error anywhere.
+    """
+    from rich.markup import escape
+
+    console.print()
+    console.print(
+        f"   {cli_prefix(MessageKind.WARNING)} "
+        f"[dim yellow]{count_noun(len(failed), 'file')} not analysed[/dim yellow]"
+    )
+    for entry in failed:
+        name = escape(entry.source_file or "(unnamed)")
+        console.print(f"     [dim yellow]{name} — {entry.cause.message}[/dim yellow]")
 
 
 def _print_step(message: str, elapsed: float) -> None:
@@ -613,7 +648,8 @@ class Pipeline:
         # the session-count guard needs terminal input if triggered.
         mark_stage_running(manifest, STAGE_INGEST)
         t0 = time.perf_counter()
-        sessions = ingest(input_dir)
+        declined: list[SkippedFile] = []
+        sessions = ingest(input_dir, declined)
         if not sessions:
             console.print("[red]No supported files found.[/red]")
             return self._empty_result(output_dir)
@@ -730,6 +766,7 @@ class Pipeline:
                 f"Extracted audio from {count_noun(len(sessions), 'session')}",
                 time.perf_counter() - t0,
             )
+            self._record_ingest_outcome(sessions, declined, elapsed_s=ingest_elapsed)
             mark_stage_complete(manifest, STAGE_EXTRACT_AUDIO)
             write_manifest(manifest, output_dir)
 
@@ -1896,7 +1933,8 @@ class Pipeline:
 
         # ── Stage 1: Ingest ──
         t0 = time.perf_counter()
-        sessions = ingest(input_dir)
+        declined: list[SkippedFile] = []
+        sessions = ingest(input_dir, declined)
         if not sessions:
             console.print("[red]No supported files found.[/red]")
             raise PipelineAbandonedError(
@@ -1936,6 +1974,7 @@ class Pipeline:
                 f"Extracted audio from {count_noun(len(sessions), 'session')}",
                 time.perf_counter() - t0,
             )
+            self._record_ingest_outcome(sessions, declined, elapsed_s=ingest_elapsed)
 
             # ── Stages 3-5: Transcribe ──
             status.update("[dim]Transcribing...[/dim]")
@@ -2311,6 +2350,68 @@ class Pipeline:
             pipeline_warning=_p_warning_a,
             summary=self._summary,
         )
+
+    def _record_ingest_outcome(
+        self,
+        sessions: list[InputSession],
+        declined: list[SkippedFile],
+        *,
+        elapsed_s: float | None = None,
+    ) -> None:
+        """Put stages 1-2's per-file outcomes on the run summary.
+
+        Two halves, one rollup, because they are one thing to the researcher: a
+        recording that isn't in the findings. The scan **declined** some files
+        by extension; s02 **accepted** others and then couldn't read them. Both
+        are named, with a reason, on the terminus summary — the difference
+        between "17 files were silently dropped" and "17 files were refused, and
+        here they are" (docs/design-analysis-lifecycle.md §5.1, outcomes 2 and 3).
+
+        **A non-empty ``failed`` here does not mean the run failed.** Nothing in
+        this method raises, changes control flow, or touches the run's outcome;
+        it only records. The run that produced 38 good sessions out of 58 files
+        is a success that has something to say.
+
+        Called after s02 so both halves are known. Directories the scan couldn't
+        open are included: a `.Trash` inside the study folder is not a
+        participant, but a *permission-denied* on a folder the researcher chose
+        is worth stating rather than quietly walking past.
+        """
+        failed: list[StageFailure] = [
+            refusal_stage_failure(
+                source_file=entry.path.name, reason=entry.reason, stage="s01_ingest"
+            )
+            for entry in declined
+        ]
+        succeeded = 0
+        for session in sessions:
+            for input_file in session.files:
+                if input_file.error is None:
+                    succeeded += 1
+                    continue
+                # s02 wrote the reason token; unrecognised values are possible
+                # only if that contract drifts, and a shrug beats a KeyError
+                # inside failure reporting.
+                try:
+                    reason = UnusableReason(input_file.error)
+                except ValueError:
+                    reason = UnusableReason.UNREADABLE
+                failed.append(
+                    refusal_stage_failure(
+                        source_file=input_file.path.name,
+                        reason=reason,
+                        stage="s02_extract_audio",
+                        session_id=session.session_id,
+                    )
+                )
+        self._summary.ingest = StageOutcome(
+            attempted=succeeded + len(failed),
+            succeeded=succeeded,
+            failed=failed,
+            duration_ms=int(elapsed_s * 1000) if elapsed_s is not None else None,
+        )
+        if failed:
+            _print_refusals(failed)
 
     async def _gather_all_segments(
         self,

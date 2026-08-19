@@ -107,6 +107,11 @@ class CauseCategoryEnum(str, Enum):
     DISK = "disk"
     OUTPUT_TRUNCATED = "output_truncated"
     CLOUD_FETCH = "cloud_fetch"  # cloud placeholder never materialised; NOT a damaged file
+    # One input file isn't in the report. Covers both halves of that outcome —
+    # a format we decline and a file we can't read — because they are the same
+    # consequence for the researcher and must carry the same weight on screen;
+    # the specific reason rides in ``Cause.message``. See bristlenose/refusals.py.
+    UNUSABLE_INPUT = "unusable_input"
     UNKNOWN = "unknown"
 
 
@@ -232,6 +237,17 @@ class PipelineSummary(BaseModel):
     ``transcribe-only``). Empty ``failed`` list means full success.
     """
 
+    # Stage 1-2. ``attempted`` counts every candidate the scan considered,
+    # ``succeeded`` the files that reached a session, ``failed`` one entry per
+    # file left out — declined by format, or accepted and then unreadable.
+    #
+    # The slot did not exist until Aug 2026, which is why refusals reached no
+    # surface at all: ``StageFailure.source_file`` had been added in Jul 2026
+    # for exactly this case, and three consumers already keyed on it, but there
+    # was nowhere in the summary to put one. A non-empty ``failed`` here does
+    # NOT mean the run failed — outcome 2 of the taxonomy in
+    # docs/design-analysis-lifecycle.md §5.1 is a pass.
+    ingest: StageOutcome | None = None
     transcripts: StageOutcome | None = None
     topics: StageOutcome | None = None
     quotes: StageOutcome | None = None
@@ -452,33 +468,43 @@ def _truncate_failed(outcome: StageOutcome | None) -> StageOutcome | None:
     })
 
 
+#: Every ``PipelineSummary`` field that holds a ``StageOutcome``, derived from
+#: the model rather than listed by hand.
+#:
+#: It *was* listed by hand, in four places inside one function, and adding the
+#: ``ingest`` bucket in Aug 2026 walked straight into it: the new bucket was the
+#: only one that could plausibly hold dozens of entries (one per declined file
+#: in a folder of sixty), and it was the one bucket the cap did not reach. The
+#: cap exists to keep the terminus line under 64 KB and to give the popover its
+#: "+N more" row; a bucket outside it defeats both, silently.
+_OUTCOME_FIELDS: tuple[str, ...] = tuple(
+    name
+    for name, field in PipelineSummary.model_fields.items()
+    if field.annotation is not None and "StageOutcome" in str(field.annotation)
+)
+
+
 def _truncate_event_summary(event: AnyEvent) -> AnyEvent:
     """Apply STAGE_FAILED_MAX to a terminus event's per-stage failed lists.
 
-    No-op for RunStartedEvent (no summary field) and for events whose
-    summary.{transcripts,topics,quotes,themes} all stay under the cap.
+    No-op for RunStartedEvent (no summary field) and for events whose every
+    outcome bucket stays under the cap. Buckets are discovered from the model,
+    so a new one is capped the day it is added.
     """
     summary = getattr(event, "summary", None)
     if summary is None:
         return event
-    new_t = _truncate_failed(summary.transcripts)
-    new_topics = _truncate_failed(summary.topics)
-    new_q = _truncate_failed(summary.quotes)
-    new_th = _truncate_failed(summary.themes)
-    if (
-        new_t is summary.transcripts
-        and new_topics is summary.topics
-        and new_q is summary.quotes
-        and new_th is summary.themes
-    ):
+    updates = {}
+    for name in _OUTCOME_FIELDS:
+        current = getattr(summary, name)
+        capped = _truncate_failed(current)
+        if capped is not current:
+            updates[name] = capped
+    if not updates:
         return event  # nothing changed
-    new_summary = summary.model_copy(update={
-        "transcripts": new_t,
-        "topics": new_topics,
-        "quotes": new_q,
-        "themes": new_th,
-    })
-    return event.model_copy(update={"summary": new_summary})
+    return event.model_copy(
+        update={"summary": summary.model_copy(update=updates)}
+    )
 
 
 def append_event(events_file: Path, event: AnyEvent) -> None:

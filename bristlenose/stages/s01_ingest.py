@@ -15,6 +15,7 @@ from bristlenose.models import (
     InputSession,
     classify_file,
 )
+from bristlenose.refusals import MESSAGES, UnusableReason
 from bristlenose.utils.audio import probe_duration
 from bristlenose.utils.fs import is_dataless, is_os_metadata
 
@@ -34,7 +35,14 @@ class SkippedFile(NamedTuple):
     """
 
     path: Path
-    reason: str
+    #: Why, as a token the summary can turn into a sentence. Prose stays out of
+    #: the scan so the log and the researcher-facing surfaces can word it
+    #: differently without this stage knowing they exist.
+    reason: UnusableReason
+    #: Extra context for the log only — an errno string, say. Never reaches
+    #: ``Cause.message``: ``pipeline-events.jsonl`` is a re-identification
+    #: surface and an OS error can name paths.
+    detail: str | None = None
 
 
 def _get_creation_time(path: Path) -> datetime:
@@ -82,6 +90,12 @@ class UnsuitableInputDirError(ValueError):
 # so it works at any depth. Measured before choosing: a whole-filesystem scan at
 # this depth visits ~4,000 entries and finds 5 media files, so the cap is not
 # what protects against a silly drop — `_refuse_reason` is.
+#: Our own output directory, which by default lives *inside* the input
+#: folder. Matches `ProjectFolderWatcher.filterEligible`'s exclusion. The
+#: literal is repeated in `cli.py` (six sites) — worth one shared constant,
+#: but that is a separate sweep, not this one.
+OUTPUT_DIR_NAME = "bristlenose-output"
+
 _MAX_SCAN_DEPTH = 3
 
 
@@ -157,12 +171,18 @@ def _scan_dir(
         entries = sorted(directory.iterdir())
     except PermissionError:
         if skipped is not None:
-            skipped.append(SkippedFile(directory, "folder could not be read (permission denied)"))
+            skipped.append(
+                SkippedFile(
+                    directory, UnusableReason.UNREADABLE_FOLDER, "permission denied"
+                )
+            )
         logger.warning("Skipping unreadable directory: %s", directory)
         return
     except OSError as exc:
         if skipped is not None:
-            skipped.append(SkippedFile(directory, f"folder could not be read ({exc.strerror})"))
+            skipped.append(
+                SkippedFile(directory, UnusableReason.UNREADABLE_FOLDER, exc.strerror)
+            )
         logger.warning("Skipping unreadable directory %s: %s", directory, exc)
         return
 
@@ -171,6 +191,19 @@ def _scan_dir(
             continue
         try:
             if entry.is_dir():
+                # Never descend into our own output, and never report what is
+                # in there as declined. The default output directory lives
+                # *inside* the input folder, so a re-run scans the last run's
+                # artefacts: with refusals now surfaced by name, the first thing
+                # a researcher saw was "bristlenose.db — not a format
+                # Bristlenose reads", which is noise they did not create and
+                # cannot act on. Same argument the OS-metadata filter above
+                # already makes. `ProjectFolderWatcher.filterEligible` has
+                # excluded this name since it was written; discovery had not,
+                # which is the same scanner-parity gap
+                # `tests/test_accepted_extension_parity.py` exists to catch.
+                if entry.name == OUTPUT_DIR_NAME:
+                    continue
                 if depth + 1 < _MAX_SCAN_DEPTH:
                     _scan_dir(entry, depth + 1, files, skipped)
             elif entry.is_file():
@@ -188,7 +221,9 @@ def _try_add_file(
         suffix = path.suffix.lower() or "(no extension)"
         logger.debug("Skipping unsupported file: %s", path.name)
         if skipped is not None:
-            skipped.append(SkippedFile(path, f"unsupported file type {suffix}"))
+            skipped.append(
+                SkippedFile(path, UnusableReason.UNSUPPORTED_FORMAT, suffix)
+            )
         return
 
     created_at = _get_creation_time(path)
@@ -448,23 +483,35 @@ def group_into_sessions(files: list[InputFile]) -> list[InputSession]:
     return sessions
 
 
-def ingest(input_dir: Path) -> list[InputSession]:
+def ingest(
+    input_dir: Path, skipped: list[SkippedFile] | None = None
+) -> list[InputSession]:
     """Full ingestion pipeline: discover files, group into sessions.
 
     Args:
         input_dir: Directory containing input files.
+        skipped: Optional list to collect what was declined, so the caller can
+            put it on the run's terminus summary. Omit it and the behaviour is
+            unchanged — the refusals are still logged, they just reach no
+            surface but the log. Mirrors ``discover_files``.
 
     Returns:
         List of InputSession objects, ordered by participant number.
     """
     logger.info("Ingesting files from %s", input_dir)
-    skipped: list[SkippedFile] = []
+    if skipped is None:
+        skipped = []
     files = discover_files(input_dir, skipped)
 
     # Say what was left out, by name. A count alone does not let a researcher
     # work out which participant is missing.
     for entry in skipped:
-        logger.warning("Not analysed: %s — %s", entry.path.name, entry.reason)
+        logger.warning(
+            "Not analysed: %s — %s%s",
+            entry.path.name,
+            MESSAGES[entry.reason],
+            f" ({entry.detail})" if entry.detail else "",
+        )
     if skipped:
         logger.warning(
             "%d file(s) in %s were not analysed; see the lines above",

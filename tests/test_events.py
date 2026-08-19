@@ -139,7 +139,11 @@ def test_cause_category_matches_swift_enum():
     expected = {
         "user_signal", "auth", "out_of_credit", "quota", "api_request",
         "api_server", "network", "whisper", "missing_dep", "missing_input",
-        "missing_binary", "disk", "output_truncated", "cloud_fetch", "unknown",
+        "missing_binary", "disk", "output_truncated", "cloud_fetch",
+        # One input file isn't in the report — declined by format, or accepted
+        # and then unreadable. Mirrored as `.unusableInput` in Swift.
+        "unusable_input",
+        "unknown",
     }
     actual = {c.value for c in CauseCategoryEnum}
     assert actual == expected

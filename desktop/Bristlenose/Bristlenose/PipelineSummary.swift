@@ -8,6 +8,15 @@ import Foundation
 /// wire are absorbed; do not rename or repurpose existing ones without
 /// coordinating with `bristlenose/events.py` and bumping the fixture version.
 struct PipelineSummary: Codable, Equatable {
+    /// Stages 1-2. Files declined by format, and files accepted and then found
+    /// unreadable — one bucket, because to the researcher they are one event:
+    /// a participant missing from the findings.
+    ///
+    /// **A non-empty `failed` here does not mean the run failed.** It is
+    /// counted by `totalFailureCount`, which gates `.completedPartial` — which
+    /// is correct and deliberate: a run that produced 38 sessions out of 58
+    /// files IS partial, and saying so is the whole point.
+    var ingest: StageOutcome?
     var transcripts: StageOutcome?
     var topics: StageOutcome?
     var quotes: StageOutcome?
@@ -17,6 +26,7 @@ struct PipelineSummary: Codable, Equatable {
     /// whole summary (dominant-category counting, plaintext rendering).
     var allBuckets: [(name: BucketName, outcome: StageOutcome)] {
         [
+            (.ingest, ingest),
             (.transcripts, transcripts),
             (.topics, topics),
             (.quotes, quotes),
@@ -70,7 +80,22 @@ struct PipelineSummary: Codable, Equatable {
     }
 
     enum BucketName: String {
-        case transcripts, topics, quotes, themes
+        case ingest, transcripts, topics, quotes, themes
+
+        /// What the researcher reads. The popover used to render
+        /// `rawValue.capitalized`, which happened to be legible for four
+        /// nouns it was never asked to translate — and then `ingest` arrived,
+        /// which is our word for it, not theirs. "Files" is the word already
+        /// on the empty-project pane and in the unanalysed sheet.
+        var label: String {
+            switch self {
+            case .ingest:      return "Files"
+            case .transcripts: return "Transcripts"
+            case .topics:      return "Topics"
+            case .quotes:      return "Quotes"
+            case .themes:      return "Themes"
+            }
+        }
     }
 }
 
@@ -184,5 +209,29 @@ enum CauseCategory: String, Codable, Equatable, CaseIterable {
     /// provider vs re-export the recording), and mislabelling a slow download as
     /// a corrupt file is the defect this category exists to end.
     case cloudFetch = "cloud_fetch"
+    /// One input file isn't in the report — declined by format, or accepted and
+    /// then unreadable. Both halves share this category because they share a
+    /// consequence for the researcher: a participant missing from the findings.
+    /// The specific reason rides in `Cause.message`. Mirrors Python
+    /// `CauseCategoryEnum.UNUSABLE_INPUT` (`bristlenose/refusals.py`).
+    case unusableInput = "unusable_input"
     case unknown
+
+    /// Decode an unrecognised category as `.unknown` instead of throwing.
+    ///
+    /// `outputTruncated` above records what happens without this, in the past
+    /// tense: it "was missing here, so an `output_truncated` cause failed to
+    /// decode **the whole summary**". That is the shape of the bug — the
+    /// category sits inside `Cause` inside `StageFailure` inside the summary,
+    /// so one unrecognised word costs every per-stage row on the event. The
+    /// fix then was to add the missing case; adding cases does not prevent the
+    /// next one, and this does. `unusable_input` would have done it again to
+    /// any build shipped before Aug 2026.
+    ///
+    /// `CaseIterable` conformance is preserved — the synthesised `allCases`
+    /// is unaffected by a custom decoder.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = CauseCategory(rawValue: raw) ?? .unknown
+    }
 }

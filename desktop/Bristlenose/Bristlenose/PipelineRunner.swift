@@ -20,10 +20,17 @@ enum PipelineFailureCategory: String, Codable, Equatable {
     case disk
     case whisper
     case unknown
+
+
     // Phase 1f Slice 4 — additive. Names match Python `CauseCategoryEnum`
     // exactly (snake_case round-trips through `String` rawValue). No
     // existing case is renamed — the Swift/Python boundary is contractually
     // stable. See docs/design-pipeline-resilience.md §"Cross-boundary naming".
+    /// One input file isn't in the report — declined by format, or accepted
+    /// and then unreadable. Both halves share this category because they share
+    /// a consequence; the specific reason rides in `Cause.message`. Mirrors
+    /// Python `CauseCategoryEnum.UNUSABLE_INPUT` (`bristlenose/refusals.py`).
+    case unusableInput = "unusable_input"
     case userSignal = "user_signal"
     case apiRequest = "api_request"
     case apiServer = "api_server"
@@ -39,6 +46,21 @@ enum PipelineFailureCategory: String, Codable, Equatable {
     /// even after the pipeline split the session into smaller chunks.
     /// Recovery is a larger-output model or manual pre-segmentation.
     case outputTruncated = "output_truncated"
+
+    /// Decode an unrecognised category as `.unknown` instead of throwing.
+    ///
+    /// Without this, a category added on the Python side and not yet mirrored
+    /// here fails to decode — and because the category sits inside `Cause`
+    /// inside the terminus event, the failure takes **the whole event** with
+    /// it: no summary, no per-stage rows, no cause at all, for a run that
+    /// merely used a newer word. The "schema-additive" contract this enum is
+    /// documented under only holds if the reader tolerates what it has not
+    /// heard of, and until Aug 2026 it did not. A stale label is a far smaller
+    /// loss than a blank diagnostic.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = PipelineFailureCategory(rawValue: raw) ?? .unknown
+    }
 }
 
 // MARK: - Neutral progress struct
@@ -1794,6 +1816,13 @@ var args = ["run", project.path, "--no-serve"]
         case .missingBinary: return "FFmpeg couldn't be found."
         case .outputExists: return "Already analysed — re-analysing would replace the existing results."
         case .outputTruncated: return "This session is too dense for \(subject)'s output limit — try a model with a larger output, or split the recording."
+        case .unusableInput:
+            // Never rendered as a run headline in practice — this category
+            // arrives per-file inside a stage outcome, where the row shows
+            // `Cause.message` ("The file is empty…") beside the filename. The
+            // arm exists so the switch stays exhaustive and a future caller
+            // that does reach it says something true.
+            return "Some files couldn't be analysed."
         case .unknown:    return "Something went wrong during analysis."
         }
     }

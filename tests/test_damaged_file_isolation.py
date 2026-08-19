@@ -24,6 +24,7 @@ from pathlib import Path
 import pytest
 
 from bristlenose.models import FileType, InputFile, InputSession
+from bristlenose.refusals import UnusableReason
 from bristlenose.stages import s02_extract_audio
 from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
 from bristlenose.utils.audio import (
@@ -110,7 +111,10 @@ class TestBatchSurvival:
         asyncio.run(extract_audio_for_sessions([session], tmp_path / "work"))
 
         assert session.files[0].error, "the file was skipped without recording why"
-        assert "damaged" in session.files[0].error
+        # A zero-byte file is the everyday shape of a failed upload, and the
+        # classifier now says so rather than shrugging "damaged" — the
+        # difference between "ask the participant to re-send" and a guess.
+        assert session.files[0].error == UnusableReason.EMPTY.value
 
     def test_a_silent_video_is_recorded_too(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -120,7 +124,7 @@ class TestBatchSurvival:
 
         asyncio.run(extract_audio_for_sessions([session], tmp_path / "work"))
 
-        assert session.files[0].error == "no audio track"
+        assert session.files[0].error == UnusableReason.NO_AUDIO.value
 
     def test_a_broken_toolchain_still_aborts_the_run(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -155,7 +159,9 @@ class TestUnsupportedFilesAreStated:
         assert [s.path.name for s in skipped] == ["tape-capture.dv"], (
             "OS metadata must stay silent; a real file the user created must not"
         )
-        assert ".dv" in skipped[0].reason
+        assert skipped[0].reason is UnusableReason.UNSUPPORTED_FORMAT
+        # The extension survives for the log, but never reaches Cause.message.
+        assert skipped[0].detail == ".dv"
 
     def test_omitting_the_collector_keeps_the_old_signature(self, tmp_path: Path) -> None:
         from bristlenose.stages.s01_ingest import discover_files

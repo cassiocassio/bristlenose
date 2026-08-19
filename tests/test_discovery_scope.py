@@ -21,6 +21,7 @@ from pathlib import Path
 
 import pytest
 
+from bristlenose.refusals import UnusableReason
 from bristlenose.stages import s01_ingest
 from bristlenose.stages.s01_ingest import (
     SkippedFile,
@@ -120,7 +121,9 @@ class TestResilience:
             os.chmod(locked, 0o755)
 
         assert [f.path.name for f in found] == ["good.mp4"]
-        assert any("permission denied" in s.reason for s in skipped), (
+        assert any(
+            s.reason is UnusableReason.UNREADABLE_FOLDER for s in skipped
+        ), (
             "the unreadable folder was stepped over without being reported"
         )
 

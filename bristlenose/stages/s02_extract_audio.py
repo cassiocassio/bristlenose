@@ -7,6 +7,7 @@ import logging
 from pathlib import Path
 
 from bristlenose.models import FileType, InputSession
+from bristlenose.refusals import MESSAGES, UnusableReason, classify_unreadable
 from bristlenose.utils.audio import (
     MediaFileDamagedError,
     extract_audio_from_video,
@@ -132,11 +133,13 @@ async def _extract_one(
         try:
             has_audio = await asyncio.to_thread(has_audio_stream, video_path)
         except MediaFileDamagedError as exc:
-            _record_unusable(session, video_path, "damaged or unreadable", exc)
+            _record_unusable(
+                session, video_path, classify_unreadable(video_path), exc
+            )
             return
 
         if not has_audio:
-            _record_unusable(session, video_path, "no audio track", None)
+            _record_unusable(session, video_path, UnusableReason.NO_AUDIO, None)
             return
 
         try:
@@ -144,7 +147,9 @@ async def _extract_one(
                 extract_audio_from_video, video_path, output_path
             )
         except MediaFileDamagedError as exc:
-            _record_unusable(session, video_path, "damaged or unreadable", exc)
+            _record_unusable(
+                session, video_path, classify_unreadable(video_path), exc
+            )
             return
         session.audio_path = extracted
         logger.info(
@@ -157,24 +162,29 @@ async def _extract_one(
 def _record_unusable(
     session: InputSession,
     video_path: Path,
-    reason: str,
+    reason: UnusableReason,
     exc: Exception | None,
 ) -> None:
     """Mark *video_path* unusable on the session, so its absence can be reported.
 
-    Writes to ``InputFile.error``, which exists on the model for exactly this and
-    was unwired until now. A file that leaves no trace here becomes a silently
-    missing participant — the one outcome that changes a finding's prevalence
-    without changing anything on screen.
+    Writes the reason's **token** (not prose) to ``InputFile.error``, which
+    exists on the model for exactly this and was unwired until now. The token is
+    the contract with `Pipeline._ingest_outcome`, which turns it into the
+    sentence the researcher reads; keeping prose out of the model means the two
+    surfaces can word it differently without this stage knowing they exist.
+
+    A file that leaves no trace here becomes a silently missing participant —
+    the one outcome that changes a finding's prevalence without changing
+    anything on screen.
     """
     for input_file in session.files:
         if input_file.path == video_path:
-            input_file.error = reason
+            input_file.error = reason.value
             break
     logger.warning(
-        "%s: %s — %s; skipping this file, the run continues.%s",
+        "%s: %s — %s skipping this file, the run continues.%s",
         session.session_id,
         video_path.name,
-        reason,
+        MESSAGES[reason],
         f" ({exc})" if exc else "",
     )

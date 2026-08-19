@@ -140,7 +140,7 @@ struct ProjectDiagnosticPopover: View {
 
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Text(name.rawValue.capitalized)
+                Text(name.label)
                     .font(.callout.weight(.semibold))
                 Text("(\(outcome.succeeded)/\(outcome.attempted))")
                     .font(.caption)
@@ -318,6 +318,7 @@ struct ProjectDiagnosticPopover: View {
         case .missingBinary: return "Missing tool"
         case .outputExists: return "Already analysed"
         case .outputTruncated: return "Output limit reached"
+        case .unusableInput: return "Not analysed"
         case .unknown:    return "Failed"
         }
     }

@@ -158,7 +158,7 @@ These are either native-only (Finder, print) or depend on features not yet built
 > | `openInNewWindow` | ⇧⌘O | **Shipped** (bridge) | `bridgeHandler.menuAction("openInNewWindow")` (`MenuCommands.swift:123-126`). Active, not `.disabled` |
 > | `chooseIcon` | — | **Shipped** (project-row context menu) | SF Symbol picker via `IconPickerPopover` (`ContentView.swift:967-969`) |
 > | `aiPrivacy` | — | **Shipped** (NotificationCenter) | Posts `.showAIConsentSheet` (`MenuCommands.swift:93-96`); opens AIConsentView |
-> | `reAnalyse` | — | **Future (shipped as `.disabled(true)`)** | `MenuCommands.swift:397-400` with "Future — Phase 2+" comment. Will dispatch via bridge once incremental re-analyse pipeline lands |
+> | `reAnalyse` | — | **Shipped 19 Aug 2026** | No longer a bridge action at all: it routes natively via `windowCommands?.perform(.reAnalyseProject)`, because it deletes a directory and spawns a subprocess and never touched the web view. The bridge event it used to send had no listener anywhere in `frontend/src`, which is plausibly why it stalled. See `docs/design-analysis-lifecycle.md` §6.1 |
 > | `archive` (project) | — | Future | `MenuCommands.swift:402-405`, `.disabled(true)`, Phase 5 |
 > | `archiveFolder` | — | Future | Phase 5 |
 > | `checkSystemHealth` | — | **Shipped** (native window — no bridge) | No longer a `menuAction()` dispatch. Diagnostics ▸ **Check Health** → `openWindow(id: "health")` (`MenuCommands.swift` `DiagnosticsMenuContent`), opening the native Health window `DoctorReportView`, which fetches `GET /api/doctor` (local doctor checks, bearer-authed). The old bridge action was dead (no frontend consumer); wired 28 Jul 2026. See `docs/fix-the-menus.md`. |

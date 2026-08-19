@@ -1,7 +1,8 @@
 ---
 status: current
 last-trued: 2026-08-19
-trued-against: HEAD@main on 2026-08-19 + an empirical run of the format-torture corpus
+trued-against: HEAD@main 3acfcef0 on 2026-08-19 (nine shipped commits + an
+  empirical run of the format-torture corpus)
 ---
 
 # The analysis lifecycle — analyse, re-analyse, incremental
@@ -32,7 +33,7 @@ doc and one of those disagree, **the owning doc wins** and this one is stale.
 |---|---|---|---|
 | **Analyse** | "There's nothing here yet — do the study." | No | Shipped |
 | **Incremental** | "Three new interviews arrived — fold them in." | No | Shipped 0.20.0 (level 2) |
-| **Re-analyse** | "Throw the analysis away and start over." | **Yes** | **Not implemented** — see §6 |
+| **Re-analyse** | "Throw the analysis away and start over." | **Yes** | Shipped 19 Aug 2026 — see §6.1 |
 
 The failure mode to design against is *collapsing them*. If "re-analyse" and
 "analyse the new files" become one control, the safe verb disappears and the
@@ -232,8 +233,9 @@ Where each verb can be reached, and what gates it.
 
 ### 4.1 Enablement matrix
 
-The two verbs failed in opposite directions. **Re-analyse…** is `.disabled(true)`
-and can never light up — still true. **Analyse** was offered whenever the project
+The two verbs failed in opposite directions, and both are fixed as of 19 Aug
+2026. **Re-analyse…** was `.disabled(true)` and could never light up; it now has
+a real predicate and both menus (§6.1). **Analyse** was offered whenever the project
 was folder-shaped, had a path, and wasn't running: `canAnalyse` never asked
 whether there was anything to analyse, so it appeared on a project with no
 recordings at all, beside an empty state saying "Add interview recordings or
@@ -259,7 +261,8 @@ Both verbs need the same input: *does this project have work to do?*
 | `cantFind` / evicted | — | — | hide | hide | hide |
 
 Read "hide" as hide in a **context** menu and dim in the **menu bar**, per the
-rule below. The one exception is *unimplemented*, which hides in both.
+rule below. The one exception is *unimplemented*, which hides in both — a
+rule that now applies only to **Archive…**, since Re-analyse shipped.
 
 Two things fell out of writing it down. **"Analysed, nothing new" is the state
 that wants Re-analyse and nothing else** — offering Analyse there is offering a
@@ -273,9 +276,9 @@ things — "is there work" and "how much" — but cannot contradict each other.
 **Dim vs hide.** `MenuCommands.swift` states the rule in its own comment —
 *"dimmed (not hidden) when it isn't running, per menu-bar HIG (context menus
 hide instead)"*. That is right for **Stop Analysis**: state-dependent, so
-dimming honestly means "not right now". It is wrong for **Re-analyse…** and
-**Archive…**, which are `.disabled(true)` hardcoded with no state that could
-ever enable them. Dimming says "not yet in this situation"; the truth is "not
+dimming honestly means "not right now". It was wrong for **Re-analyse…** and is
+still wrong for **Archive…**, hardcoded `.disabled(true)` with no state that
+could ever enable it. Dimming says "not yet in this situation"; the truth is "not
 in this build". A researcher reasonably hunts for the state that lights it up,
 and there isn't one. **Unimplemented ⇒ hide.**
 
@@ -308,7 +311,7 @@ the ⊘ pointer, and the item springing back.
 | Outcome | Was | Is |
 |---|---|---|
 | Project is **running** | toast: "Finish or stop the current run…" | not a drop target — `validateDrop → []` |
-| Project **failed** | toast: "Use Retry on the toolbar…" | nothing; Retry is the context menu's **Analyse**, which already accepts `.failed` |
+| Project **failed** | toast: "Use Retry on the toolbar…" | still not a drop target, and no message: Retry is the context menu's **Analyse**, which already accepts `.failed`. Only the *grammar* of the refusal changed here, not the set of things refused |
 | Folder **unreachable** | toast: "…isn't reachable right now" | not a drop target; the row's `cantFind` subtitle + glyph already say so, permanently, and outrank all activity |
 | **File-subset**, analysed | toast: "Files added. They won't be in the report…" | the row's `+N unanalysed` delta |
 | **No project selected** | toast: "Select a project first…" | File ▸ Add Files… dims; unreachable by drag, since you drop *on* something |

@@ -266,6 +266,27 @@ system's answer is about *the extension*, not about the bytes.
 
 See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check, `useMemo` deps, sentiment tag translation, Intl.DateTimeFormat quirks, Korean plurals, data vs chrome translation, German typographic quote JSON escaping, test mocking requirements). **For a whole new language, `docs/adding-a-language.md` is the canonical step-by-step** — the summary above is a lossy index over it and has drifted before (it undercounted the registration sites while that guide's Step 8 was correct, 3 Aug 2026). When the two disagree, trust the guide and fix the summary.
 
+### A file-wide regex over locale JSON deletes same-named keys in other namespaces
+
+Pruning a retired key with `re.sub(r'^\s*"undo":\s*.*?,\s*\n', "", s, flags=re.M)`
+across a whole `desktop.json` also deletes `menu.edit.undo` — same key name, different
+namespace, and the pattern has no idea which block it is in. Done 19 Aug 2026 while
+removing `toast.undo`; it took `menu.edit.undo` ("Undo") out of all 21 locales, and the
+Edit-menu fallback label with it. `check-locales.py` stayed **green**, because English
+lost the key too and the gate diffs each locale *against English* (the blind spot the
+i18n section above already documents from the other direction).
+
+Two more traps in the same family, both hit in that pass: a key that is **last in its
+block has no trailing comma**, so a `,\s*\n`-anchored pattern silently skips it (the
+prune "succeeded" and the key was still there); and removing the last key of a block
+leaves `"toast": {}`, which is valid JSON and invisible to every gate.
+
+**Rule: scope the prune to the block.** Parse, locate the namespace, and rewrite only
+within it — or match the fully-qualified path, never the bare key name. Verify with
+`git diff` on one locale and read every `-` line before repeating across 21;
+`json.load` + key-list comparison before/after is the cheap check that catches all
+three.
+
 ### Other gotchas
 
 - **Rich's `console.print()` eats `[name]` as markup tags.** Square-bracket sequences are parsed as Rich style markup; unknown style names (e.g. `[serve]`, `[apple]`) are silently consumed, so `pip install bristlenose[serve]` renders as `pip install bristlenose`. Two fixes by site type: (1) plain-text output (doctor fix messages, log lines) → `console.print(text, markup=False)`; (2) sites with intentional Rich markup interpolating user-supplied text → `from rich.markup import escape; console.print(f"[bold]{escape(value)}[/bold]")`. Audit any new `console.print` that interpolates package-spec / file-glob / version-range text

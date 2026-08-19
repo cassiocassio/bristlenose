@@ -24,6 +24,42 @@ Three things surfaced while building it, all fixed in the same commit: the scan 
 
 **Still unverified in that doc, and stated as such in its banner:** the LLM prompt texts quoted in Parts 3–4, and the SQL in §8.2.
 
+---
+
+### 19 Aug 2026 — the analysis lifecycle, and every toast in the app
+
+**Shipped:** the five planned slices (`docs/design-analysis-lifecycle.md` §6 —
+detail-pane count, unanalysed-sheet verb, freshest-failure headline, refusal
+surfacing, Re-analyse end to end with the counted sheet the mockup drew), plus
+three affordances that were being offered with nothing behind them — Analyse on
+an empty project, Re-analyse on an unanalysed one, and **Turn On Agent Access on
+a project with 0 sessions**, which passed both arms of a gate named for
+"analysed" and tested for "has been run at".
+
+**All six `desktop.toast.*` messages removed.** Four drop refusals now answered
+by `validateDrop` returning `[]` — no highlight, the operation-not-allowed
+pointer, the item springing back — one by a dimmed menu item, and the removal
+toast by an undo that no longer expires. Decisions and the HIG citation in
+§4.2; the superseded drawings are kept beside the replacements in
+`docs/mockups/analysis-lifecycle-states.html`.
+
+**Owed, in priority order:**
+
+1. **The Re-analyse sheet's pixels have never been seen.** Counts are
+   unit-tested, layout is not. First thing to look at on the next `.app` pass.
+2. **Nine `toast.show(` call sites survive** in flows nobody reviewed —
+   feedback, copy errors, cloud import. The rule applies to them; the decision
+   hasn't been taken.
+3. **Three design docs still propose toast-based undo**
+   (`design-project-sidebar.md`, `design-sidebar-tag-assign.md`,
+   `design-quote-triage.md`). None is built. `design-undo-debt.md` asks for one
+   sweep, not per-doc.
+4. **Whether a failed project should accept dropped files at all.** The refusal
+   is unchanged — only its grammar moved from a toast to the ⊘ pointer — but
+   copying files into a project whose run failed is arguably harmless and
+   useful. Not decided.
+5. Non-English strings for the sheet are machine-seeded, pending native review.
+
 **18 Aug 2026 — the child window is built, and the first run on screen raised a question that may replace it.** Seven commits, 1138 desktop tests green, ship-blocker closed: a child holds a lens rather than a project and reads its title from the serve, so it cannot name a study it isn't showing — unrepresentable rather than guarded. Decisions, states and menu enablement are in `docs/design-workspace.md` §"What a child window is" and `docs/mockups/window-master-child-states.html`. **The open question is whether master/child survives:** a relaunch bug briefly gave every window a project list, and the reaction to that state — keep the list everywhere and accept that clicking jumps all windows — describes a simpler peer model that closes the same defect with no role, no sidebar omission and no menu gating. It was a reaction to a bug, so it needs asking rather than acting on; the argument both ways is in the `child-windows-outstanding` brief among the maintainer's private handoffs. **Also owed:** the lens-row and project-row context menus (the last specced piece), and 32 untriaged findings from the first review this area has ever had.
 
 

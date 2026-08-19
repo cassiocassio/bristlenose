@@ -28,7 +28,7 @@
     },
     "edit": {
       "undoRemove": "Vrátit zpět odebrání „%@“",
-      "undo": "Zpět",
+      "undo": "Zp\u011bt",
       "redo": "Znovu",
       "find": "Hledat…",
       "findNext": "Najít další",
@@ -233,19 +233,14 @@
     "welcomeTitle": "Vítejte v Bristlenose",
     "welcomeBody": "Přetáhněte složku s nahrávkami rozhovorů do postranního panelu nebo klikněte na + Nový projekt a začněte.",
     "dropProjectOntoProjectToast": "„%@“ už je projekt Bristlenose — přetáhněte místo toho jeho zdrojové soubory.",
-    "dropOntoRunningProject": "Před přidáním dalších dokončete nebo zastavte aktuální běh.",
-    "dropOntoFileSubsetProject": "Soubory p\u0159id\u00e1ny. Ve zpr\u00e1v\u011b se objev\u00ed a\u017e po op\u011btovn\u00e9 anal\u00fdze projektu.",
     "reAnalyseConfirmTitle": "Znovu analyzovat \u201e{{project}}\u201c?",
     "reAnalyseConfirmBody": "Sou\u010dasn\u00e1 anal\u00fdza se sma\u017ee a znovu sestav\u00ed z nahr\u00e1vek. V\u0161e, co jste upravili \u2014 citace, \u0161t\u00edtky, obl\u00edben\u00e9, jm\u00e9na mluv\u010d\u00edch, n\u00e1zvy t\u00e9mat \u2014 se ztrat\u00ed s n\u00ed.",
     "addFilesPrompt": "P\u0159idat",
     "addFilesMessage": "P\u0159idat sezen\u00ed do \u201e%@\u201c",
-    "addFilesNoProject": "Nejprve vyberte projekt a pot\u00e9 do n\u011bj p\u0159idejte soubory.",
     "addingInterviews_one": "P\u0159id\u00e1v\u00e1n\u00ed 1 rozhovoru\u2026",
     "addingInterviews_few": "P\u0159id\u00e1v\u00e1n\u00ed {{count}} rozhovor\u016f\u2026",
     "addingInterviews_many": "P\u0159id\u00e1v\u00e1n\u00ed {{count}} rozhovoru\u2026",
     "addingInterviews_other": "P\u0159id\u00e1v\u00e1n\u00ed {{count}} rozhovor\u016f\u2026",
-    "dropOntoFailedProject": "Tento běh zkuste znovu pomocí tlačítka Zkusit znovu na nástrojové liště.",
-    "dropOntoUnreachableProject": "Složka tohoto projektu je nyní nedostupná.",
     "dropFolderContainsProject": "Tato složka obsahuje projekt Bristlenose „%@“. Přetáhněte samotný projekt nebo jeho zdrojové soubory zvlášť.",
     "copyingPill": "Kopírování do %@",
     "copyCancelling": "Rušení…",
@@ -569,12 +564,7 @@
     "loadFailed": "Nepoda\u0159ilo se na\u010d\u00edst sezen\u00ed"
   },
   "toast": {
-    "removedBatchAnnouncement": "Odebráno %d projektů. Stisknutím Command-Z vrátíte zpět.",
-    "removedAnnouncement": "Odebráno „%@“. Stisknutím Command-Z vrátíte zpět.",
-    "removeBlockedByRun": "Před odebráním zastavte běh na „%@“.",
-    "removedBatch": "Odebráno %d projektů.",
-    "undo": "Zpět",
-    "removed": "Projekt odebrán."
+    "removeBlockedByRun": "Před odebráním zastavte běh na „%@“."
   },
   "accounts": {
     "notAvailable": "Nedostupn\u00e9",

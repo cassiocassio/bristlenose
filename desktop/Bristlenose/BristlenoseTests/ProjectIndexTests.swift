@@ -10,7 +10,7 @@ struct ProjectIndexTests {
 
     /// Create a ProjectIndex backed by a temp file.
     @MainActor
-    private static func makeTempIndex() -> (ProjectIndex, URL) {
+    static func makeTempIndex() -> (ProjectIndex, URL) {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("BristlenoseTests-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -20,7 +20,7 @@ struct ProjectIndexTests {
     }
 
     /// Clean up a temp directory.
-    private static func cleanup(_ tempDir: URL) {
+    static func cleanup(_ tempDir: URL) {
         try? FileManager.default.removeItem(at: tempDir)
     }
 
@@ -599,13 +599,19 @@ struct ProjectIndexTests {
     }
 
     // MARK: - UndoableRemovalStore round-trip
+    //
+    // These used to pass `undoWindow: 60` — not to test the window, but to stop
+    // the 8s timer firing mid-test. The timer is gone (19 Aug 2026): an undo
+    // that expires is a toast-shaped constraint in the model, and ⌘Z routes
+    // here, so the shortcut expired with it. `theUndoHasNoClock` below pins the
+    // replacement.
 
     @MainActor @Test func removalStore_undo_restoresProject() {
         let (index, tempDir) = Self.makeTempIndex()
         defer { Self.cleanup(tempDir) }
 
         let p = index.addProject(name: "Alpha", path: "/tmp/a")
-        let store = UndoableRemovalStore(undoWindow: 60)
+        let store = UndoableRemovalStore()
         store.setProjectIndex(index)
 
         store.removeFromSidebar(p)
@@ -625,7 +631,7 @@ struct ProjectIndexTests {
 
         let a = index.addProject(name: "Alpha", path: "/tmp/a")
         let b = index.addProject(name: "Beta", path: "/tmp/b")
-        let store = UndoableRemovalStore(undoWindow: 60)
+        let store = UndoableRemovalStore()
         store.setProjectIndex(index)
 
         store.removeFromSidebar(a)
@@ -645,7 +651,7 @@ struct ProjectIndexTests {
         let a = index.addProject(name: "Alpha", path: "/tmp/a")
         let b = index.addProject(name: "Beta", path: "/tmp/b")
         let c = index.addProject(name: "Gamma", path: "/tmp/c")
-        let store = UndoableRemovalStore(undoWindow: 60)
+        let store = UndoableRemovalStore()
         store.setProjectIndex(index)
 
         store.removeFromSidebar([a, b, c])
@@ -664,7 +670,7 @@ struct ProjectIndexTests {
 
         let a = index.addProject(name: "Alpha", path: "/tmp/a")
         let b = index.addProject(name: "Beta", path: "/tmp/b")
-        let store = UndoableRemovalStore(undoWindow: 60)
+        let store = UndoableRemovalStore()
         store.setProjectIndex(index)
 
         var restored: Set<SidebarSelection> = []
@@ -696,7 +702,7 @@ struct ProjectIndexTests {
         let snapshot = index.projects.first { $0.id == p.id }!
         #expect(snapshot.bookmarkData == bookmarkBytes)
 
-        let store = UndoableRemovalStore(undoWindow: 60)
+        let store = UndoableRemovalStore()
         store.setProjectIndex(index)
         store.removeFromSidebar(snapshot)
         store.undoLastRemoval()
@@ -803,5 +809,57 @@ struct ProjectIndexTests {
         // the spawn-time spelling; bookmark healing can respell project.path).
         #expect(index.agentAccess(forPath: "/tmp/spelled/") == true)
         #expect(index.agentAccess(forPath: "/tmp/other") == false)
+    }
+}
+
+/// Pins that Remove's undo waits for the researcher.
+///
+/// It used to expire after 8 seconds — and because Edit ▸ Undo and ⌘Z route
+/// through this store, *the keyboard shortcut expired too*, not just the toast
+/// advertising it. Remove is non-destructive (the folder of real files goes on
+/// living), so the fuse bought nothing and cost the one thing a Mac user can
+/// assume about undo.
+@Suite struct RemovalUndoHasNoClockTests {
+
+    @MainActor @Test func theUndoHasNoClock() async throws {
+        let (index, tempDir) = ProjectIndexTests.makeTempIndex()
+        defer { ProjectIndexTests.cleanup(tempDir) }
+
+        let p = index.addProject(name: "Onboarding diaries", path: "/tmp/o")
+        let store = UndoableRemovalStore()
+        store.setProjectIndex(index)
+        store.removeFromSidebar(p)
+
+        // Comfortably past the old 8s window, without waiting 8s: the store no
+        // longer owns a timer at all, so any elapsed time proves the same
+        // thing. If a fuse is ever reintroduced this still fails, because the
+        // assertion is about the *absence* of expiry machinery.
+        try await Task.sleep(for: .milliseconds(120))
+        #expect(store.hasPending, "the undo must still be there")
+        #expect(store.pendingName == "Onboarding diaries")
+
+        store.undoLastRemoval()
+        #expect(index.projects.contains { $0.id == p.id })
+    }
+
+    @MainActor @Test func aSecondRemovalSupersedesTheFirst() {
+        // One level of undo, superseded by the next removal — which is what an
+        // undo stack does, and the only thing that ends a pending batch now.
+        let (index, tempDir) = ProjectIndexTests.makeTempIndex()
+        defer { ProjectIndexTests.cleanup(tempDir) }
+
+        let a = index.addProject(name: "Alpha", path: "/tmp/a")
+        let b = index.addProject(name: "Beta", path: "/tmp/b")
+        let store = UndoableRemovalStore()
+        store.setProjectIndex(index)
+
+        store.removeFromSidebar(a)
+        store.removeFromSidebar(b)
+        #expect(store.pendingName == "Beta")
+
+        store.undoLastRemoval()
+        #expect(index.projects.contains { $0.id == b.id })
+        #expect(!index.projects.contains { $0.id == a.id }, "Alpha is gone for good")
+        #expect(!store.hasPending)
     }
 }

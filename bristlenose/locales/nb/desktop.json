@@ -218,17 +218,12 @@
     "welcomeTitle": "Velkommen til Bristlenose",
     "welcomeBody": "Dra en mappe med intervjuopptak inn i sidepanelet, eller klikk + Nytt prosjekt for å starte.",
     "dropProjectOntoProjectToast": "«%@» er allerede et Bristlenose-prosjekt – dra kildefilene i stedet.",
-    "dropOntoRunningProject": "Fullfør eller stopp den pågående kjøringen før du legger til mer.",
-    "dropOntoFileSubsetProject": "Filer lagt til. De kommer f\u00f8rst med i rapporten n\u00e5r prosjektet analyseres p\u00e5 nytt.",
     "reAnalyseConfirmTitle": "Analysere \u201c{{project}}\u201d p\u00e5 nytt?",
     "reAnalyseConfirmBody": "Den n\u00e5v\u00e6rende analysen slettes og bygges opp igjen fra opptakene. Alt du har redigert \u2014 sitater, tagger, favoritter, talernavn, temanavn \u2014 g\u00e5r tapt.",
     "addFilesPrompt": "Legg til",
     "addFilesMessage": "Legg til \u00f8kter i \u00ab%@\u00bb",
-    "addFilesNoProject": "Velg et prosjekt f\u00f8rst, og legg deretter til filer i det.",
     "addingInterviews_one": "Legger til 1 intervju\u2026",
     "addingInterviews_other": "Legger til {{count}} intervjuer\u2026",
-    "dropOntoFailedProject": "Bruk Prøv igjen på verktøylinjen for å kjøre på nytt.",
-    "dropOntoUnreachableProject": "Mappen til dette prosjektet er ikke tilgjengelig akkurat nå.",
     "dropFolderContainsProject": "Denne mappen inneholder Bristlenose-prosjektet «%@». Dra prosjektet selv, eller kildefilene separat.",
     "copyingPill": "Kopierer til %@",
     "copyCancelling": "Avbryter…",
@@ -544,12 +539,7 @@
     "loadFailed": "Kunne ikke laste inn \u00f8kter"
   },
   "toast": {
-    "removedBatchAnnouncement": "Fjernet %d prosjekter. Trykk Kommando-Z for å angre.",
-    "removedAnnouncement": "Fjernet «%@». Trykk Kommando-Z for å angre.",
-    "removeBlockedByRun": "Stopp kjøringen på «%@» før du fjerner det.",
-    "removedBatch": "%d prosjekter fjernet.",
-    "undo": "Angre",
-    "removed": "Prosjekt fjernet."
+    "removeBlockedByRun": "Stopp kjøringen på «%@» før du fjerner det."
   },
   "accounts": {
     "notAvailable": "Utilgjengelig",

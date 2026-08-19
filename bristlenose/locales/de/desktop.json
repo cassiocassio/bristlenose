@@ -218,17 +218,12 @@
     "welcomeTitle": "Willkommen bei Bristlenose",
     "welcomeBody": "Ziehen Sie einen Ordner mit Interview-Aufnahmen in die Seitenleiste, oder klicken Sie auf + Neues Projekt, um zu starten.",
     "dropProjectOntoProjectToast": "„%@“ ist bereits ein Bristlenose-Projekt — ziehen Sie stattdessen die Quelldateien.",
-    "dropOntoRunningProject": "Beenden oder stoppen Sie den laufenden Vorgang, bevor Sie weitere hinzuf\u00fcgen.",
-    "dropOntoFileSubsetProject": "Dateien hinzugef\u00fcgt. Sie erscheinen erst im Bericht, wenn das Projekt erneut analysiert wird.",
     "reAnalyseConfirmTitle": "\u201e{{project}}\u201c erneut analysieren?",
     "reAnalyseConfirmBody": "Die aktuelle Analyse wird gel\u00f6scht und aus den Aufnahmen neu erstellt. Alles, was Sie bearbeitet haben \u2013 Zitate, Tags, Favoriten, Sprechernamen, Themennamen \u2013, geht dabei verloren.",
     "addFilesPrompt": "Hinzuf\u00fcgen",
     "addFilesMessage": "Interviews zu \u201e%@\u201c hinzuf\u00fcgen",
-    "addFilesNoProject": "W\u00e4hlen Sie zuerst ein Projekt aus und f\u00fcgen Sie dann Dateien hinzu.",
     "addingInterviews_one": "1 Interview wird hinzugef\u00fcgt\u2026",
     "addingInterviews_other": "{{count}} Interviews werden hinzugef\u00fcgt\u2026",
-    "dropOntoFailedProject": "Verwenden Sie \u201eErneut versuchen\u201c in der Symbolleiste, um diesen Vorgang erneut zu starten.",
-    "dropOntoUnreachableProject": "Der Ordner dieses Projekts ist derzeit nicht erreichbar.",
     "dropFolderContainsProject": "Dieser Ordner enth\u00e4lt das Bristlenose-Projekt \u201e%@\u201c. Ziehen Sie das Projekt selbst oder seine Quelldateien einzeln.",
     "copyingPill": "Kopiere zu %@",
     "copyCancelling": "Abbrechen\u2026",
@@ -544,12 +539,7 @@
     "loadFailed": "Interviews konnten nicht geladen werden"
   },
   "toast": {
-    "removedBatchAnnouncement": "%d Projekte entfernt. Dr\u00fccken Sie Befehl-Z, um den Vorgang r\u00fcckg\u00e4ngig zu machen.",
-    "removedAnnouncement": "\u201e%@\u201c entfernt. Dr\u00fccken Sie Befehl-Z, um den Vorgang r\u00fcckg\u00e4ngig zu machen.",
-    "removeBlockedByRun": "Beenden Sie den Lauf von \u201e%@\u201c, bevor Sie ihn entfernen.",
-    "removedBatch": "%d Projekte entfernt.",
-    "undo": "Widerrufen",
-    "removed": "Projekt entfernt."
+    "removeBlockedByRun": "Beenden Sie den Lauf von \u201e%@\u201c, bevor Sie ihn entfernen."
   },
   "accounts": {
     "notAvailable": "Nicht verf\u00fcgbar",

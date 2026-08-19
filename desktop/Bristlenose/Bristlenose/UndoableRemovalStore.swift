@@ -1,16 +1,27 @@
 import Foundation
 import SwiftUI
 
-/// Tracks projects that have been removed from the sidebar and can still be
-/// restored via Undo (toast button or Cmd+Z) before the auto-dismiss window
-/// elapses.
+/// Tracks projects removed from the sidebar and still restorable via Undo.
 ///
 /// HANDOFF §5: removal skips the confirm dialog because undo is available.
 /// While a pending removal exists, the Edit > Undo command and Cmd+Z route to
 /// `undoLastRemoval()` instead of the web-side undo, with the menu label
 /// changing to "Undo Remove `<name>`" (single) or "Undo Remove `<N>` Projects"
-/// (batch). After the window elapses (default 8s), the projects are gone for
-/// good (the on-disk folder is untouched — only the sidebar entries).
+/// (batch). The on-disk folder is untouched throughout — only the sidebar
+/// entries go.
+///
+/// **There is no clock, as of 19 Aug 2026.** The undo used to expire after 8
+/// seconds — and because Cmd+Z routes here, *the keyboard shortcut expired
+/// too*, not just the toast that advertised it. That is a toast-shaped
+/// constraint leaking into the model: a Mac user's one assumption about undo is
+/// that it waits for them. Remove is already non-destructive, so the fuse
+/// bought nothing and cost the guarantee. A pending removal now survives until
+/// the next one supersedes it, which is what an undo stack does.
+///
+/// The toast that carried the Undo button is gone with it — see
+/// `docs/design-analysis-lifecycle.md` §4.2 for why floating notifications are
+/// not the feedback surface here. Edit ▸ Undo names the action, permanently,
+/// where every Mac user already looks.
 ///
 /// **Batch semantics.** A single `Pending` may carry one or many entries. The
 /// multi-row case (Cmd+Backspace with N rows selected) creates ONE Pending
@@ -21,9 +32,13 @@ import SwiftUI
 /// is a different feature.
 ///
 /// **Cmd+Z routing.** Wired via the Edit menu's `keyboardShortcut("z")` in
-/// `MenuCommands.UndoRedoMenuContent`. Not via `NSUndoManager` — the SwiftUI
-/// menu interception is sufficient for the sidebar scope and avoids braiding
-/// removal-undo with whatever responder chain happens to hold focus.
+/// `MenuCommands.UndoRedoMenuContent`. Deliberately **not** `NSUndoManager`:
+/// that would braid removal-undo with whatever responder chain holds focus,
+/// and the report's WKWebView owns text-editing undo. `UndoRedoMenuContent`
+/// already gates the whole Edit ▸ Undo item behind `!isEditing` for exactly
+/// that reason. With the fuse gone, this route delivers what the system
+/// manager would — an undo that names its action and waits — without the
+/// braiding.
 @MainActor
 final class UndoableRemovalStore: ObservableObject {
 
@@ -60,22 +75,12 @@ final class UndoableRemovalStore: ObservableObject {
 
     @Published private(set) var pending: Pending?
 
-    /// Duration the toast stays on-screen and the undo window is open.
-    /// Plan §5 picks 8s as a starting point; parameterised in case cohort
-    /// feedback later says 8s feels rushed.
-    let undoWindow: TimeInterval
-
-    private var dismissTask: Task<Void, Never>?
     private weak var projectIndex: ProjectIndex?
 
     /// Closure the store invokes when an undo restores a batch. The caller
     /// (ContentView) applies the prior selection set. Optional — wired via
     /// `setOnUndo` so the store doesn't reach into SwiftUI state directly.
     private var onUndo: ((Set<SidebarSelection>) -> Void)?
-
-    init(undoWindow: TimeInterval = 8) {
-        self.undoWindow = undoWindow
-    }
 
     func setProjectIndex(_ index: ProjectIndex) {
         self.projectIndex = index
@@ -120,7 +125,6 @@ final class UndoableRemovalStore: ObservableObject {
         for project in projects {
             index.removeProject(id: project.id)
         }
-        scheduleAutoDismiss()
     }
 
     /// Convenience overload for the single-project case (context-menu single
@@ -133,7 +137,6 @@ final class UndoableRemovalStore: ObservableObject {
     /// Re-applies the captured selection via the registered `onUndo` callback.
     func undoLastRemoval() {
         guard let batch = pending, let index = projectIndex else { return }
-        dismissTask?.cancel()
         for entry in batch.entries {
             index.restoreProject(entry.project,
                                  folderId: entry.folderId,
@@ -145,22 +148,14 @@ final class UndoableRemovalStore: ObservableObject {
         }
     }
 
-    /// Commit the pending removal (the user accepted, time ran out, or a new
-    /// batch arrived). After this the projects are gone for good.
+    /// Commit the pending removal, because a newer one is superseding it.
+    /// After this the earlier batch is gone for good.
+    ///
+    /// Nothing else calls this — in particular no timer does. One level of
+    /// undo, superseded by the next removal, is the whole model.
     func commitIfPending() {
         guard pending != nil else { return }
-        dismissTask?.cancel()
         pending = nil
-    }
-
-    private func scheduleAutoDismiss() {
-        dismissTask?.cancel()
-        dismissTask = Task { [weak self] in
-            guard let self else { return }
-            try? await Task.sleep(for: .seconds(self.undoWindow))
-            guard !Task.isCancelled else { return }
-            await MainActor.run { self.commitIfPending() }
-        }
     }
 }
 
@@ -170,6 +165,12 @@ extension Notification.Name {
     /// Posted by `UndoableRemovalStore.undoLastRemoval()` so ContentView can
     /// re-apply the captured selection set. `userInfo["selection"]` is a
     /// `Set<SidebarSelection>`.
+    /// Posted synchronously **before** projects leave the model, so the sidebar
+    /// can puff their rows while the rects still exist.
+    /// `userInfo["ids"]` is a `[UUID]`.
+    static let bristlenoseWillRemoveProjects =
+        Notification.Name("bristlenoseWillRemoveProjects")
+
     static let undoableRemovalRestoredSelection =
         Notification.Name("bristlenoseUndoableRemovalRestoredSelection")
 }

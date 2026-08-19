@@ -28,7 +28,7 @@
     },
     "edit": {
       "undoRemove": "Ångra ta bort ”%@”",
-      "undo": "Ångra",
+      "undo": "\u00c5ngra",
       "redo": "Gör om",
       "find": "Sök…",
       "findNext": "Sök nästa",
@@ -218,17 +218,12 @@
     "welcomeTitle": "Välkommen till Bristlenose",
     "welcomeBody": "Dra en mapp med intervjuinspelningar till sidofältet, eller klicka på + Nytt projekt för att börja.",
     "dropProjectOntoProjectToast": "”%@” är redan ett Bristlenose-projekt – dra dess källfiler i stället.",
-    "dropOntoRunningProject": "Slutför eller stoppa den pågående körningen innan du lägger till fler.",
-    "dropOntoFileSubsetProject": "Filer tillagda. De kommer med i rapporten f\u00f6rst n\u00e4r projektet analyseras igen.",
     "reAnalyseConfirmTitle": "Analysera \u201c{{project}}\u201d igen?",
     "reAnalyseConfirmBody": "Den nuvarande analysen tas bort och byggs upp p\u00e5 nytt fr\u00e5n inspelningarna. Allt du har redigerat \u2014 citat, taggar, favoriter, talarnamn, temanamn \u2014 f\u00f6rsvinner med den.",
     "addFilesPrompt": "L\u00e4gg till",
     "addFilesMessage": "L\u00e4gg till sessioner i \u201d%@\u201d",
-    "addFilesNoProject": "V\u00e4lj ett projekt f\u00f6rst och l\u00e4gg sedan till filer i det.",
     "addingInterviews_one": "L\u00e4gger till 1 intervju\u2026",
     "addingInterviews_other": "L\u00e4gger till {{count}} intervjuer\u2026",
-    "dropOntoFailedProject": "Använd Försök igen i verktygsfältet för att köra igen.",
-    "dropOntoUnreachableProject": "Projektets mapp går inte att nå just nu.",
     "dropFolderContainsProject": "Den här mappen innehåller Bristlenose-projektet ”%@”. Dra själva projektet, eller dess källfiler separat.",
     "copyingPill": "Kopierar till %@",
     "copyCancelling": "Avbryter…",
@@ -544,12 +539,7 @@
     "loadFailed": "Kunde inte l\u00e4sa in sessioner"
   },
   "toast": {
-    "removedBatchAnnouncement": "Tog bort %d projekt. Tryck på Kommando-Z för att ångra.",
-    "removedAnnouncement": "Tog bort ”%@”. Tryck på Kommando-Z för att ångra.",
-    "removeBlockedByRun": "Stoppa körningen på ”%@” innan du tar bort det.",
-    "removedBatch": "%d projekt borttagna.",
-    "undo": "Ångra",
-    "removed": "Projektet borttaget."
+    "removeBlockedByRun": "Stoppa körningen på ”%@” innan du tar bort det."
   },
   "accounts": {
     "notAvailable": "Inte tillg\u00e4nglig",

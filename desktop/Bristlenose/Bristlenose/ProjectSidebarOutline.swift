@@ -416,6 +416,17 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             object: nil
         )
 
+        // Fired synchronously by `ContentView` just before rows leave the
+        // model, so their rects are still computable. App-wide rather than
+        // per-window on purpose: only the window actually showing a given row
+        // finds a non-zero rect, so every other window's handler is a no-op.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleWillRemoveProjects(_:)),
+            name: .bristlenoseWillRemoveProjects,
+            object: nil
+        )
+
         // Menu-bar "Rename …" (Project menu) arrives per window as
         // `renameRequest` on the representable — see `applyRenameRequest`. It
         // used to be two `NotificationCenter` observers, which meant Rename in
@@ -1077,6 +1088,17 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // path (the two payload types are mutually exclusive on the pasteboard).
         if pasteboardHasFileURLs(info.draggingPasteboard) {
             guard let target = externalDropTarget(item: item) else { return [] }
+            // Answer during the drag, not after it. Returning `[]` makes AppKit
+            // draw no row highlight, swap the pointer to operation-not-allowed,
+            // and spring the item back — the whole refusal, in every language,
+            // for free. Until Aug 2026 this returned `.copy` for any project
+            // row and left the question to `ContentView`, which could then only
+            // answer with a toast three seconds after the researcher had
+            // already let go. `docs/design-analysis-lifecycle.md` §4.2.
+            if case .project(let id) = target,
+               !Self.acceptsFinderDrop(state: pipelineRunner?.state[id]) {
+                return []
+            }
             // Retarget the highlight to match where the drop will actually land:
             // a project/folder row (drop-on) or the whole list (root). Without
             // this the outline draws an insertion line mid-list for a drop that
@@ -1244,6 +1266,24 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     }
 
     /// Resolve where an external drop lands (pure logic in `SidebarExternalDrop.resolve`).
+    /// Whether a Finder drop on a project can be accepted, decided from the
+    /// state alone so `validateDrop` can answer mid-drag.
+    ///
+    /// The same three refusals `ContentView` used to make after the drop, moved
+    /// to where the HIG puts them. `.failed` is a policy refusal rather than a
+    /// physical one — copying is possible, but the run would not start and the
+    /// files would sit unanalysed — and it is kept as-is here: this change swaps
+    /// the *grammar* of the refusal, not the set of things refused. Whether a
+    /// failed project should accept files at all is a separate question.
+    nonisolated static func acceptsFinderDrop(state: PipelineState?) -> Bool {
+        switch state {
+        case .running, .queued, .failed, .failedWithDiagnostic, .unreachable:
+            return false
+        default:
+            return true
+        }
+    }
+
     private func externalDropTarget(item: Any?) -> SidebarExternalDrop? {
         SidebarExternalDrop.resolve(droppedOn: (item as? OutlineNode)?.kind)
     }
@@ -1817,6 +1857,32 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     private func isFailureState(_ state: PipelineState?) -> Bool {
         switch state { case .failed, .failedWithDiagnostic, .completedPartial: return true; default: return false }
+    }
+
+    /// Puff the rows that are about to be removed.
+    ///
+    /// Must run **before** the model loses them — a rect is only computable
+    /// while the row still exists — which is why this is driven by a
+    /// *will*-remove notification rather than by noticing rows vanish.
+    ///
+    /// `NSAnimationEffect.poof` is the system idiom the drag-and-drop HIG names
+    /// for exactly this: *"scale up and fade out to give the impression of the
+    /// item evaporating."* The row used to just blink out of existence, which
+    /// gives the eye nothing to follow and no sense that anything reversible
+    /// happened.
+    @objc private func handleWillRemoveProjects(_ note: Notification) {
+        guard let ids = note.userInfo?["ids"] as? [UUID],
+              let window = outlineView.window else { return }
+        for id in ids {
+            let rect = rowRect(forNodeID: id)
+            guard rect != .zero else { continue }
+            let inWindow = outlineView.convert(rect, to: nil)
+            let onScreen = window.convertToScreen(inWindow)
+            NSAnimationEffect.poof.show(
+                centeredAt: NSPoint(x: onScreen.midX, y: onScreen.midY),
+                size: .zero
+            ) {}
+        }
     }
 
     /// The row rect (outline-view coords) of the project/folder node with `id`, for

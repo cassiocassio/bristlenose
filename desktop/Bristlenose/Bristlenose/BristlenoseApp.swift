@@ -153,7 +153,6 @@ struct BristlenoseApp: App {
                 .environmentObject(outOfCredit)
                 .environmentObject(i18n)
                 .overlay { ToastOverlay().environmentObject(toast) }
-                .overlay { RemoveToast().environmentObject(removalStore).environmentObject(i18n) }
                 .onAppear {
                     // The AppKit Settings window is built lazily on first open;
                     // hand it the app's i18n so its SwiftUI panes can translate.

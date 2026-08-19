@@ -28,7 +28,7 @@
     },
     "edit": {
       "undoRemove": "還原移除「%@」",
-      "undo": "還原",
+      "undo": "\u9084\u539f",
       "redo": "重做",
       "find": "尋找…",
       "findNext": "尋找下一個",
@@ -210,16 +210,11 @@
     "welcomeTitle": "歡迎使用 Bristlenose",
     "welcomeBody": "將一個裝有訪談錄音的檔案夾拖移到側邊欄，或按一下「+ 新增專案」開始。",
     "dropProjectOntoProjectToast": "「%@」已是 Bristlenose 專案 — 請改為拖移其來源檔案。",
-    "dropOntoRunningProject": "在加入更多項目之前，請先完成或停止目前的執行。",
-    "dropOntoFileSubsetProject": "\u5df2\u52a0\u5165\u6a94\u6848\u3002\u5fc5\u9808\u91cd\u65b0\u5206\u6790\u5c08\u6848\uff0c\u9019\u4e9b\u6a94\u6848\u624d\u6703\u51fa\u73fe\u5728\u5831\u544a\u4e2d\u3002",
     "reAnalyseConfirmTitle": "\u8981\u91cd\u65b0\u5206\u6790\u300c{{project}}\u300d\u55ce\uff1f",
     "reAnalyseConfirmBody": "\u76ee\u524d\u7684\u5206\u6790\u6703\u88ab\u522a\u9664\uff0c\u4e26\u4f9d\u9304\u97f3\u91cd\u65b0\u5efa\u7acb\u3002\u4f60\u7de8\u8f2f\u904e\u7684\u4e00\u5207\u2014\u2014\u5f15\u8ff0\u3001\u6a19\u7c64\u3001\u661f\u865f\u3001\u767c\u8a00\u8005\u540d\u7a31\u3001\u4e3b\u984c\u540d\u7a31\u2014\u2014\u90fd\u6703\u4e00\u4f75\u6d88\u5931\u3002",
     "addFilesPrompt": "\u52a0\u5165",
     "addFilesMessage": "\u5c07\u5de5\u4f5c\u968e\u6bb5\u52a0\u5165\u300c%@\u300d",
-    "addFilesNoProject": "\u8acb\u5148\u9078\u53d6\u5c08\u6848\uff0c\u518d\u52a0\u5165\u6a94\u6848\u3002",
     "addingInterviews_other": "\u6b63\u5728\u52a0\u5165 {{count}} \u5247\u8a2a\u8ac7\u2026",
-    "dropOntoFailedProject": "請使用工具列上的「重試」再次執行。",
-    "dropOntoUnreachableProject": "此專案的檔案夾目前無法存取。",
     "dropFolderContainsProject": "此檔案夾包含 Bristlenose 專案「%@」。請拖移專案本身，或分開拖移其來源檔案。",
     "copyingPill": "正在拷貝到 %@",
     "copyCancelling": "正在取消…",
@@ -531,12 +526,7 @@
     "loadFailed": "\u7121\u6cd5\u8f09\u5165\u5834\u6b21"
   },
   "toast": {
-    "removedBatchAnnouncement": "已移除 %d 個專案。按 Command-Z 還原。",
-    "removedAnnouncement": "已移除「%@」。按 Command-Z 還原。",
-    "removeBlockedByRun": "在移除「%@」之前，請先停止其執行。",
-    "removedBatch": "已移除 %d 個專案。",
-    "undo": "還原",
-    "removed": "已移除專案。"
+    "removeBlockedByRun": "在移除「%@」之前，請先停止其執行。"
   },
   "accounts": {
     "notAvailable": "\u7121\u6cd5\u4f7f\u7528",

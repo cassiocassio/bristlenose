@@ -234,19 +234,14 @@
     "welcomeTitle": "Witamy w Bristlenose",
     "welcomeBody": "Przeciągnij folder z nagraniami wywiadów na pasek boczny lub kliknij + Nowy projekt, aby rozpocząć.",
     "dropProjectOntoProjectToast": "„%@” jest już projektem Bristlenose — przeciągnij zamiast tego jego pliki źródłowe.",
-    "dropOntoRunningProject": "Zakończ lub zatrzymaj bieżącą analizę, zanim dodasz więcej.",
-    "dropOntoFileSubsetProject": "Pliki dodane. Pojawi\u0105 si\u0119 w raporcie dopiero po ponownej analizie projektu.",
     "reAnalyseConfirmTitle": "Przeanalizowa\u0107 ponownie \u201e{{project}}\u201d?",
     "reAnalyseConfirmBody": "Bie\u017c\u0105ca analiza zostanie usuni\u0119ta i zbudowana od nowa z nagra\u0144. Wszystko, co edytowano \u2014 cytaty, tagi, ulubione, nazwy m\u00f3wc\u00f3w, nazwy temat\u00f3w \u2014 przepadnie razem z ni\u0105.",
     "addFilesPrompt": "Dodaj",
     "addFilesMessage": "Dodaj sesje do \u201e%@\u201d",
-    "addFilesNoProject": "Najpierw wybierz projekt, a nast\u0119pnie dodaj do niego pliki.",
     "addingInterviews_one": "Dodawanie {{count}} wywiadu\u2026",
     "addingInterviews_few": "Dodawanie {{count}} wywiad\u00f3w\u2026",
     "addingInterviews_many": "Dodawanie {{count}} wywiad\u00f3w\u2026",
     "addingInterviews_other": "Dodawanie {{count}} wywiad\u00f3w\u2026",
-    "dropOntoFailedProject": "Użyj przycisku Spróbuj ponownie na pasku narzędzi, aby powtórzyć tę analizę.",
-    "dropOntoUnreachableProject": "Folder tego projektu jest obecnie nieosiągalny.",
     "dropFolderContainsProject": "Ten folder zawiera projekt Bristlenose „%@”. Przeciągnij sam projekt lub jego pliki źródłowe osobno.",
     "copyingPill": "Kopiowanie do %@",
     "copyCancelling": "Anulowanie…",
@@ -570,12 +565,7 @@
     "loadFailed": "Nie uda\u0142o si\u0119 wczyta\u0107 sesji"
   },
   "toast": {
-    "removedBatchAnnouncement": "Usunięto %d projektów. Naciśnij Command-Z, aby cofnąć.",
-    "removedAnnouncement": "Usunięto „%@”. Naciśnij Command-Z, aby cofnąć.",
-    "removeBlockedByRun": "Zatrzymaj analizę projektu „%@”, zanim go usuniesz.",
-    "removedBatch": "Usunięto %d projektów.",
-    "undo": "Cofnij",
-    "removed": "Projekt usunięty."
+    "removeBlockedByRun": "Zatrzymaj analizę projektu „%@”, zanim go usuniesz."
   },
   "accounts": {
     "notAvailable": "Niedost\u0119pne",

@@ -218,17 +218,12 @@
     "welcomeTitle": "Bienvenue dans Bristlenose",
     "welcomeBody": "Glissez un dossier d’enregistrements d’entretiens dans la barre latérale, ou cliquez sur + Nouveau projet pour commencer.",
     "dropProjectOntoProjectToast": "« %@ » est déjà un projet Bristlenose — glissez plutôt ses fichiers sources.",
-    "dropOntoRunningProject": "Terminez ou arr\u00eatez l\u2019analyse en cours avant d\u2019en ajouter.",
-    "dropOntoFileSubsetProject": "Fichiers ajout\u00e9s. Ils ne figureront dans le rapport qu'apr\u00e8s une nouvelle analyse du projet.",
     "reAnalyseConfirmTitle": "R\u00e9analyser \u00ab {{project}} \u00bb ?",
     "reAnalyseConfirmBody": "L'analyse actuelle est supprim\u00e9e puis reconstruite \u00e0 partir des enregistrements. Tout ce que vous avez modifi\u00e9 \u2014 citations, \u00e9tiquettes, favoris, noms des participants, noms des th\u00e8mes \u2014 dispara\u00eet avec elle.",
     "addFilesPrompt": "Ajouter",
     "addFilesMessage": "Ajouter des entretiens \u00e0 \u00ab\u00a0%@\u00a0\u00bb",
-    "addFilesNoProject": "S\u00e9lectionnez d\u2019abord un projet, puis ajoutez-y des fichiers.",
     "addingInterviews_one": "Ajout de {{count}} entretien\u2026",
     "addingInterviews_other": "Ajout de {{count}} entretiens\u2026",
-    "dropOntoFailedProject": "Utilisez R\u00e9essayer dans la barre d\u2019outils pour relancer cette analyse.",
-    "dropOntoUnreachableProject": "Le dossier de ce projet n\u2019est pas accessible pour le moment.",
     "dropFolderContainsProject": "Ce dossier contient le projet Bristlenose \u00ab\u00a0%@\u00a0\u00bb. Glissez le projet lui-m\u00eame, ou ses fichiers sources s\u00e9par\u00e9ment.",
     "copyingPill": "Copie vers %@",
     "copyCancelling": "Annulation\u2026",
@@ -544,12 +539,7 @@
     "loadFailed": "\u00c9chec du chargement des entretiens"
   },
   "toast": {
-    "removedBatchAnnouncement": "%d projets retir\u00e9s. Appuyez sur Commande-Z pour annuler.",
-    "removedAnnouncement": "\u00ab\u00a0%@\u00a0\u00bb a \u00e9t\u00e9 retir\u00e9. Appuyez sur Commande-Z pour annuler.",
-    "removeBlockedByRun": "Arr\u00eatez l\u2019analyse de \u00ab\u00a0%@\u00a0\u00bb avant de la retirer.",
-    "removedBatch": "%d projets retir\u00e9s.",
-    "undo": "Annuler",
-    "removed": "Projet retir\u00e9."
+    "removeBlockedByRun": "Arr\u00eatez l\u2019analyse de \u00ab\u00a0%@\u00a0\u00bb avant de la retirer."
   },
   "accounts": {
     "notAvailable": "Non disponible",

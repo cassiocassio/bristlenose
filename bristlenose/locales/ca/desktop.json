@@ -28,7 +28,7 @@
     },
     "edit": {
       "undoRemove": "Desfés l'eliminació de “%@”",
-      "undo": "Desfés",
+      "undo": "Desf\u00e9s",
       "redo": "Refés",
       "find": "Cerca…",
       "findNext": "Cerca la següent",
@@ -218,17 +218,12 @@
     "welcomeTitle": "Et donem la benvinguda al Bristlenose",
     "welcomeBody": "Arrossega una carpeta d'enregistraments d'entrevistes a la barra lateral, o fes clic a + Projecte nou per començar.",
     "dropProjectOntoProjectToast": "“%@” ja és un projecte del Bristlenose — arrossega'n els fitxers d'origen.",
-    "dropOntoRunningProject": "Acaba o atura l'execució actual abans d'afegir-ne més.",
-    "dropOntoFileSubsetProject": "Fitxers afegits. No seran a l'informe fins que no es torni a analitzar el projecte.",
     "reAnalyseConfirmTitle": "Voleu tornar a analitzar \u00ab{{project}}\u00bb?",
     "reAnalyseConfirmBody": "L'an\u00e0lisi actual s'elimina i es reconstrueix a partir dels enregistraments. Tot el que h\u00e0giu editat \u2014cites, etiquetes, preferits, noms de participants, noms de temes\u2014 es perd.",
     "addFilesPrompt": "Afegeix",
     "addFilesMessage": "Afegeix sessions a “%@”",
-    "addFilesNoProject": "Selecciona primer un projecte i després afegeix-hi fitxers.",
     "addingInterviews_one": "S'està afegint 1 entrevista…",
     "addingInterviews_other": "S'estan afegint {{count}} entrevistes…",
-    "dropOntoFailedProject": "Fes servir «Torna-ho a provar» a la barra d'eines per repetir aquesta execució.",
-    "dropOntoUnreachableProject": "Ara mateix no es pot accedir a la carpeta d'aquest projecte.",
     "dropFolderContainsProject": "Aquesta carpeta conté el projecte del Bristlenose “%@”. Arrossega el projecte mateix, o els seus fitxers d'origen per separat.",
     "copyingPill": "S'està copiant a %@",
     "copyCancelling": "S'està cancel·lant…",
@@ -544,12 +539,7 @@
     "loadFailed": "No s'han pogut carregar les sessions"
   },
   "toast": {
-    "removedBatchAnnouncement": "S'han eliminat %d projectes. Prem Ordre-Z per desfer-ho.",
-    "removedAnnouncement": "S'ha eliminat “%@”. Prem Ordre-Z per desfer-ho.",
-    "removeBlockedByRun": "Atura l'execució de “%@” abans d'eliminar-lo.",
-    "removedBatch": "S'han eliminat %d projectes.",
-    "undo": "Desfés",
-    "removed": "S'ha eliminat el projecte."
+    "removeBlockedByRun": "Atura l'execució de “%@” abans d'eliminar-lo."
   },
   "accounts": {
     "notAvailable": "No disponible",

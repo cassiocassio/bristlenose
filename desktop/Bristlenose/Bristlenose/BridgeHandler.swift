@@ -179,6 +179,12 @@ final class BridgeHandler: ObservableObject {
     /// the sidebar's context menu asks the same question of
     /// `SidebarOutlineController.reAnalyseIsOffered` and hides instead.
     @Published var selectedProjectIsAnalysed: Bool = false
+    /// Whether a project — not a folder, not nothing — is selected in this
+    /// window. Read by File ▸ Add Files…, which is selection-targeted and was
+    /// gated only on having a window: it stayed enabled with nothing selected,
+    /// let the researcher pick files, and then told them off. Dimming is the
+    /// menu-bar answer to "not right now".
+    @Published var hasSelectedProject: Bool = false
 
     /// Reference to the WKWebView for outbound calls (goBack, switchToTab).
     /// Set by WebView.makeNSView, cleared on reset(). Weak to avoid retain cycles.
@@ -669,6 +675,7 @@ final class BridgeHandler: ObservableObject {
         selectedProjectAvailable = true
         selectedProjectIsRunning = false
         selectedProjectIsAnalysed = false
+        hasSelectedProject = false
         webView = nil
     }
 

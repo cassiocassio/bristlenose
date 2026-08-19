@@ -416,7 +416,11 @@ private struct FileMenuContent: View {
             windowCommands?.perform(.addFiles)
         }
         .keyboardShortcut("a", modifiers: [.command, .shift])
-        .disabled(!WindowCommand.addFiles.isEnabled(hasKeyWindow: windowCommands != nil))
+        // Selection-targeted (group 3), so it needs a selected project as well
+        // as a window — it was gated on the window alone, which let a
+        // researcher pick files with nothing selected and then be told off.
+        .disabled(!bridgeHandler.hasSelectedProject
+                  || !WindowCommand.addFiles.isEnabled(hasKeyWindow: windowCommands != nil))
 
         // Import ▸ — cloud sources, beside Add Files… because that is the same
         // act from a different place (`docs/design-cloud-import.md` §9).

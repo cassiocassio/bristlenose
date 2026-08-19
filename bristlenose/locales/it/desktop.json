@@ -218,17 +218,12 @@
     "welcomeTitle": "Ti diamo il benvenuto in Bristlenose",
     "welcomeBody": "Trascina una cartella di registrazioni di interviste nella barra laterale, oppure fai clic su + Nuovo progetto per iniziare.",
     "dropProjectOntoProjectToast": "“%@” è già un progetto Bristlenose — trascina invece i suoi file di origine.",
-    "dropOntoRunningProject": "Completa o interrompi l'esecuzione corrente prima di aggiungerne altri.",
-    "dropOntoFileSubsetProject": "File aggiunti. Non saranno nel report finch\u00e9 il progetto non viene rianalizzato.",
     "reAnalyseConfirmTitle": "Rianalizzare \u201c{{project}}\u201d?",
     "reAnalyseConfirmBody": "L'analisi attuale viene eliminata e ricostruita dalle registrazioni. Tutto ci\u00f2 che hai modificato \u2014 citazioni, tag, preferiti, nomi dei partecipanti, nomi dei temi \u2014 va perso.",
     "addFilesPrompt": "Aggiungi",
     "addFilesMessage": "Aggiungi sessioni a \u201c%@\u201d",
-    "addFilesNoProject": "Seleziona prima un progetto, poi aggiungi i file.",
     "addingInterviews_one": "Aggiunta di 1 intervista\u2026",
     "addingInterviews_other": "Aggiunta di {{count}} interviste\u2026",
-    "dropOntoFailedProject": "Usa Riprova nella barra degli strumenti per eseguire di nuovo questa analisi.",
-    "dropOntoUnreachableProject": "La cartella di questo progetto non è raggiungibile al momento.",
     "dropFolderContainsProject": "Questa cartella contiene il progetto Bristlenose “%@”. Trascina il progetto stesso, oppure i suoi file di origine separatamente.",
     "copyingPill": "Copia in %@",
     "copyCancelling": "Annullamento…",
@@ -544,12 +539,7 @@
     "loadFailed": "Impossibile caricare le sessioni"
   },
   "toast": {
-    "removedBatchAnnouncement": "Rimossi %d progetti. Premi Comando-Z per annullare.",
-    "removedAnnouncement": "Rimosso “%@”. Premi Comando-Z per annullare.",
-    "removeBlockedByRun": "Interrompi l'esecuzione su “%@” prima di rimuoverlo.",
-    "removedBatch": "%d progetti rimossi.",
-    "undo": "Annulla",
-    "removed": "Progetto rimosso."
+    "removeBlockedByRun": "Interrompi l'esecuzione su “%@” prima di rimuoverlo."
   },
   "accounts": {
     "notAvailable": "Non disponibile",

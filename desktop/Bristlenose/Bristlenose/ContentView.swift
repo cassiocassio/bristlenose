@@ -908,10 +908,10 @@ struct ContentView: View {
     /// same intake path as a drop: guards → copy → incremental run for
     /// folder-shaped analysed projects). Toasts if no single project is selected.
     private func addFilesToSelectedProject() {
-        guard let id = selectedProjectID else {
-            toast.show(i18n.t("desktop.chrome.addFilesNoProject"))
-            return
-        }
+        // Unreachable from the menu, which now dims without a selection, and
+        // unreachable by drag, where you drop *on* something. Kept as a guard,
+        // not as a message: there is no researcher to inform here.
+        guard let id = selectedProjectID else { return }
         let projectName = projectIndex.projects.first(where: { $0.id == id })?.name ?? ""
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
@@ -952,6 +952,7 @@ struct ContentView: View {
                 bridgeHandler.selectedProjectPath = project.path
                 bridgeHandler.selectedProjectAvailable = project.isAvailable
                 bridgeHandler.selectedProjectRevealablePath = revealPath(for: project) ?? ""
+                bridgeHandler.hasSelectedProject = true
                 bridgeHandler.selectedProjectIsRunning =
                     isRunningOrQueued(pipelineRunner.state[id])
                 bridgeHandler.selectedProjectIsAnalysed =
@@ -994,6 +995,7 @@ struct ContentView: View {
             bridgeHandler.selectedProjectRevealablePath = ""
             bridgeHandler.selectedProjectIsRunning = false
             bridgeHandler.selectedProjectIsAnalysed = false
+            bridgeHandler.hasSelectedProject = false
             bridgeHandler.selectedFolderName =
                 projectIndex.folders.first { $0.id == id }?.name ?? ""
             stopServeIfLastProjectWindow()
@@ -1004,6 +1006,7 @@ struct ContentView: View {
             bridgeHandler.selectedProjectRevealablePath = ""
             bridgeHandler.selectedProjectIsRunning = false
             bridgeHandler.selectedProjectIsAnalysed = false
+            bridgeHandler.hasSelectedProject = false
             bridgeHandler.selectedFolderName = ""
             stopServeIfLastProjectWindow()
         }
@@ -1277,6 +1280,13 @@ struct ContentView: View {
             ))
         }
         guard !removable.isEmpty else { return }
+        // Puff the rows before they leave the model — the rect is only
+        // computable while the row exists. See `handleWillRemoveProjects`.
+        NotificationCenter.default.post(
+            name: .bristlenoseWillRemoveProjects,
+            object: nil,
+            userInfo: ["ids": removable.map(\.id)]
+        )
         // Don't leave a warm sidecar serving a project the user just removed.
         serveManager.dropParked(forPaths: Set(removable.map(\.path)))
         let priorSelection = selection
@@ -1753,24 +1763,19 @@ struct ContentView: View {
         // `.ready` is intentionally NOT an early return; we copy the files
         // into the project folder (so they live alongside the analysed
         // sources) but don't auto-run — re-analysis is post-TF.
-        switch pipelineRunner.state[id] {
-        case .running, .queued:
-            toast.show(i18n.t("desktop.chrome.dropOntoRunningProject"))
-            return
-        case .failed:
-            // Don't silently retry a known-broken pipeline (would burn
-            // LLM spend repeating the same failure). User explicitly
-            // re-runs from the toolbar pill's Retry button.
-            toast.show(i18n.t("desktop.chrome.dropOntoFailedProject"))
-            return
-        case .unreachable:
-            // Volume not mounted / folder gone — copying would fail with
-            // a generic OS error. Surface the real cause.
-            toast.show(i18n.t("desktop.chrome.dropOntoUnreachableProject"))
-            return
-        default:
-            break
-        }
+        // Belt-and-braces only. `SidebarOutlineController.acceptsFinderDrop`
+        // refuses these three during the drag — no row highlight, the
+        // operation-not-allowed pointer, the item springing back — so a drop
+        // in these states should never arrive here. It is kept because the
+        // pane's own `.dropDestination` is a second door, and because a silent
+        // return is the correct answer either way.
+        //
+        // The three toasts that used to live here are gone. They announced at
+        // drop-time what the drag now says, and one of them ("Use Retry on the
+        // toolbar") signposted a control that is one right-click away.
+        // `docs/design-analysis-lifecycle.md` §4.2.
+        guard SidebarOutlineController.acceptsFinderDrop(state: pipelineRunner.state[id])
+        else { return }
 
         let alreadyAnalysed: Bool = {
             if case .ready = pipelineRunner.state[id] { return true }
@@ -1814,28 +1819,27 @@ struct ContentView: View {
                         files: copied
                     )
                 }
-                // Seed the folder watcher with the copied filenames so the
-                // count pill stays hidden — they're "known," not surprise
-                // drops. Handoff §Watcher lifecycle / Stacking rule.
-                projectIndex.seedKnownBasenames(
-                    projectID: id,
-                    basenames: Set(copied.map { $0.lastPathComponent })
-                )
+                if wasFolderShaped {
+                    // Seed the watcher with the copied names so the "+N
+                    // unanalysed" pill stays hidden — a run starts immediately
+                    // below, so they are "known", not surprise drops. Handoff
+                    // §Watcher lifecycle / Stacking rule.
+                    projectIndex.seedKnownBasenames(
+                        projectID: id,
+                        basenames: Set(copied.map { $0.lastPathComponent })
+                    )
+                }
+                // ...and deliberately NOT on the file-subset path, where no run
+                // starts. Those files are exactly the drift the pill exists for,
+                // so seeding them switched off the only durable signal the
+                // researcher had — which is precisely why a toast had grown here
+                // to replace it. The row now says "+N unanalysed" and keeps
+                // saying it. `docs/design-analysis-lifecycle.md` §4.2.
                 if alreadyAnalysed && !wasFolderShaped {
-                    // File-subset project: the copy succeeded, so the files ARE
-                    // in the folder — and a run is folder-scoped
-                    // (`["run", project.path]`, `PipelineRunner:1222`), so a
-                    // full re-analysis would pick them up. What is missing is a
-                    // way to start one: `canAnalyse` requires `inputFiles ==
-                    // nil`, and Re-analyse is not built.
-                    //
-                    // The old copy said this "isn't supported yet", which was
-                    // wrong twice — inclusion is entirely possible and costs a
-                    // re-run, and the sentence generalised to every analysed
-                    // project when a folder-shaped one folds new files in
-                    // incrementally. Say what happened and what it costs; when
-                    // Re-analyse ships, offer it here rather than describing it.
-                    toast.show(i18n.t("desktop.chrome.dropOntoFileSubsetProject"))
+                    // The copy succeeded and the files are in the folder; a run
+                    // is folder-scoped (`["run", project.path]`), so a
+                    // re-analysis picks them up. The row carries that state now
+                    // — nothing to announce.
                     return
                 }
                 if wasFolderShaped {
@@ -2527,6 +2531,7 @@ struct ContentView: View {
         } else {
             bridgeHandler.selectedProjectIsRunning = false
             bridgeHandler.selectedProjectIsAnalysed = false
+            bridgeHandler.hasSelectedProject = false
         }
     }
 

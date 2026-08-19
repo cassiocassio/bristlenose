@@ -218,17 +218,12 @@
     "welcomeTitle": "Tervetuloa Bristlenoseen",
     "welcomeBody": "Vedä haastattelutallenteiden kansio sivupalkkiin tai napsauta + Uusi projekti aloittaaksesi.",
     "dropProjectOntoProjectToast": "”%@” on jo Bristlenose-projekti — vedä sen sijaan sen lähdetiedostot.",
-    "dropOntoRunningProject": "Viimeistele tai pysäytä nykyinen ajo ennen kuin lisäät lisää.",
-    "dropOntoFileSubsetProject": "Tiedostot lis\u00e4tty. Ne tulevat raporttiin vasta, kun projekti analysoidaan uudelleen.",
     "reAnalyseConfirmTitle": "Analysoidaanko \u201c{{project}}\u201d uudelleen?",
     "reAnalyseConfirmBody": "Nykyinen analyysi poistetaan ja rakennetaan uudelleen tallenteista. Kaikki muokkaamasi \u2014 sitaatit, tunnisteet, suosikit, puhujien nimet, teemojen nimet \u2014 katoaa sen mukana.",
     "addFilesPrompt": "Lis\u00e4\u00e4",
     "addFilesMessage": "Lis\u00e4\u00e4 istuntoja kohteeseen \u201d%@\u201d",
-    "addFilesNoProject": "Valitse ensin projekti ja lis\u00e4\u00e4 sitten tiedostoja siihen.",
     "addingInterviews_one": "Lis\u00e4t\u00e4\u00e4n 1 haastattelu\u2026",
     "addingInterviews_other": "Lis\u00e4t\u00e4\u00e4n {{count}} haastattelua\u2026",
-    "dropOntoFailedProject": "Käytä työkalupalkin Yritä uudelleen -toimintoa yrittääksesi tätä ajoa uudelleen.",
-    "dropOntoUnreachableProject": "Tämän projektin kansio ei ole juuri nyt tavoitettavissa.",
     "dropFolderContainsProject": "Tämä kansio sisältää Bristlenose-projektin ”%@”. Vedä projekti itse tai sen lähdetiedostot erikseen.",
     "copyingPill": "Kopioidaan kohteeseen %@",
     "copyCancelling": "Peruutetaan…",
@@ -544,12 +539,7 @@
     "loadFailed": "Istuntojen lataus ep\u00e4onnistui"
   },
   "toast": {
-    "removedBatchAnnouncement": "Poistettiin %d projektia. Kumoa painamalla Komento-Z.",
-    "removedAnnouncement": "Poistettu ”%@”. Kumoa painamalla Komento-Z.",
-    "removeBlockedByRun": "Pysäytä ajo kohteessa ”%@” ennen sen poistamista.",
-    "removedBatch": "%d projektia poistettu.",
-    "undo": "Kumoa",
-    "removed": "Projekti poistettu."
+    "removeBlockedByRun": "Pysäytä ajo kohteessa ”%@” ennen sen poistamista."
   },
   "accounts": {
     "notAvailable": "Ei k\u00e4ytett\u00e4viss\u00e4",

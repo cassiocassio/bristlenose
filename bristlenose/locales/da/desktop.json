@@ -218,17 +218,12 @@
     "welcomeTitle": "Velkommen til Bristlenose",
     "welcomeBody": "Træk en mappe med interviewoptagelser ind i sidepanelet, eller klik på + Nyt projekt for at starte.",
     "dropProjectOntoProjectToast": "“%@” er allerede et Bristlenose-projekt — træk dets kildefiler i stedet.",
-    "dropOntoRunningProject": "Afslut eller stop den igangværende kørsel, før du tilføjer mere.",
-    "dropOntoFileSubsetProject": "Filer tilf\u00f8jet. De kommer f\u00f8rst med i rapporten, n\u00e5r projektet analyseres igen.",
     "reAnalyseConfirmTitle": "Analys\u00e9r \u201c{{project}}\u201d igen?",
     "reAnalyseConfirmBody": "Den nuv\u00e6rende analyse slettes og bygges op igen ud fra optagelserne. Alt, du har redigeret \u2014 citater, tags, favoritter, talernavne, temanavne \u2014 g\u00e5r tabt.",
     "addFilesPrompt": "Tilf\u00f8j",
     "addFilesMessage": "Tilf\u00f8j sessioner til \u201c%@\u201d",
-    "addFilesNoProject": "V\u00e6lg f\u00f8rst et projekt, og tilf\u00f8j derefter filer til det.",
     "addingInterviews_one": "Tilf\u00f8jer 1 interview\u2026",
     "addingInterviews_other": "Tilf\u00f8jer {{count}} interviews\u2026",
-    "dropOntoFailedProject": "Brug Prøv igen på værktøjslinjen for at forsøge denne kørsel igen.",
-    "dropOntoUnreachableProject": "Dette projekts mappe er ikke tilgængelig lige nu.",
     "dropFolderContainsProject": "Denne mappe indeholder Bristlenose-projektet “%@”. Træk selve projektet, eller dets kildefiler separat.",
     "copyingPill": "Kopierer til %@",
     "copyCancelling": "Annullerer…",
@@ -544,12 +539,7 @@
     "loadFailed": "Kunne ikke indl\u00e6se sessioner"
   },
   "toast": {
-    "removedBatchAnnouncement": "Fjernede %d projekter. Tryk på Kommando-Z for at fortryde.",
-    "removedAnnouncement": "Fjernede “%@”. Tryk på Kommando-Z for at fortryde.",
-    "removeBlockedByRun": "Stop kørslen på “%@”, før du fjerner det.",
-    "removedBatch": "%d projekter fjernet.",
-    "undo": "Fortryd",
-    "removed": "Projekt fjernet."
+    "removeBlockedByRun": "Stop kørslen på “%@”, før du fjerner det."
   },
   "accounts": {
     "notAvailable": "Ikke tilg\u00e6ngelig",

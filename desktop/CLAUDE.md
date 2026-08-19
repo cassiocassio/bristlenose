@@ -361,6 +361,17 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   `mcp.active` (that poll still feeds `agentActiveNow` for the install
   row's status line). Precedence unchanged: ring > copy > agent > cloud —
   during a run the ring hides the antenna, accepted deliberately.
+  **But `servingProjectPath` is NOT the spec** (verified 19 Aug 2026):
+  §5a-bis says solid means *handshake live*, and `syncHandshake()` also
+  requires `mcpInstanceID` + `mcpToken`. `mcpInstanceID` is nilled on every
+  start/park/re-point and refilled only by an `/api/health` read, while
+  `state` hits `.running` at the stdout port parse — so the antenna goes
+  solid with no handshake on every start and every switch, and *stays* that
+  way if the health read keeps failing (`pollAgentActivity` calls
+  `syncHandshake()` only inside its successful-fetch branch). Over-claims in
+  the mild direction, so it's a correctness bug, not a security one. Fix is
+  to publish `handshakeProjectPath` from `syncHandshake`'s two exits and read
+  that — don't re-derive a predicate its owner already computes.
 
 - **Token: `MCPTokenStore.swift`** — durable per-project bearer, minted
   host-side, data-protection Keychain (account = SHA-256 of the

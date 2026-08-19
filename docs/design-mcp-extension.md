@@ -1650,6 +1650,33 @@ That is a capability, and capabilities are persistent state.
 >
 > **And the Settings half of the pairing below was cut.** See the note at the
 > end of this section.
+>
+> **Correction, 19 Aug 2026 — "to spec" was too generous, and the sentence
+> above names why.** The badge is driven by *the serving path*; the spec below
+> says **shared && handshake live**. Those are not the same predicate, and the
+> code has the weaker one. Measured:
+>
+> | | Predicate |
+> | --- | --- |
+> | Antenna solid (`ProjectSidebarOutline.swift:1886`) | `agentAccess ∧ .running ∧ samePath(currentProjectPath, path)` |
+> | Handshake written (`ServeManager.syncHandshake():927`) | the same **plus** `mcpInstanceID ≠ nil ∧ mcpToken ≠ nil` |
+>
+> `mcpInstanceID` is nilled on every start, park and warm re-point and refilled
+> only by an `/api/health` read — but `state` reaches `.running` when the port
+> is parsed from stdout, *before* that read. So the antenna goes solid with no
+> handshake on **every start and every switch**; **permanently** if the health
+> read keeps failing (`pollAgentActivity` calls `syncHandshake()` only inside
+> its successful-fetch branch); and permanently on a build predating
+> `instance_id`, where the handshake is documented as unwritable-and-fail-safe
+> and the badge does not mirror the fail-safe.
+>
+> The over-claim is in the mild direction — the researcher is told they are
+> more exposed than they are — so this is a correctness defect, not a security
+> one. The fix is to stop re-deriving a predicate `syncHandshake` already
+> computes: publish `handshakeProjectPath` from its two exits and let the
+> sidebar read that. Four lines, and it stays correct when there is more than
+> one serve, which is why it also closes the only handshake work item the
+> independent-windows plan was carrying.
 
 This superseded what was built at the time. That badge was driven by
 `mcp.active` on `/api/health` — a 120-second *activity* window meaning "an

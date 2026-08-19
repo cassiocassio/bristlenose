@@ -517,6 +517,34 @@ prefix sorts every window under one letter and destroys the scan. The shipped sc
 is title = project name, subtitle = count or live run state; the options weighed and
 the edge cases are drawn in `docs/mockups/window-menu-naming.html`.
 
+## Window tabbing — kept (decided 18 Aug 2026)
+
+macOS window tabbing is **on**, and nobody chose it: `WindowGroup` brings it
+free, so the Window menu carries Merge All Windows, Show Previous/Next Tab and
+Move Tab to New Window. Noticed on screen 18 Aug 2026 during the first
+multi-window run.
+
+**Kept.** It is a platform behaviour a Mac user already knows, it costs nothing,
+and it earns its keep on a small screen — where five windows is unmanageable and
+five tabs is not. Ambivalence recorded honestly: it has not been used in anger,
+and a tab bar sitting above a sidebar that already has a lens rail is a real
+question. Revisit on use, not on principle.
+
+**It is also evidence about the window model, and this is the part worth
+keeping.** Tabs make the master/child amputation *worse*: two tabs in one window,
+one carrying a project list and one not, means switching tabs makes a whole
+sidebar section appear and disappear. That is precisely the "a window changes
+shape while you are looking at it" objection used to reject promotion — and here
+it fires on an ordinary gesture rather than an edge case. Under a peer model
+every tab is structurally identical and the interaction is a non-event.
+
+**Untested, and worth checking before relying on it:** whether a tab merged into
+another window fires the `.onDisappear` that `WindowRoster.release` hangs off.
+If it does not, the roster leaks an entry — which silently kills the Dock-icon
+reopen and stops the serve ever being torn down (review findings 4 and 18).
+
+---
+
 ## What a child window is (decided 16 Aug 2026)
 
 Spinning a window off a study gives a **child**: same project, its own lens, and

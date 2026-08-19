@@ -4,6 +4,16 @@
 >
 > **Who it's for:** Two audiences. If you're a researcher who wants to understand *why* Bristlenose does what it does, read the plain-language explanations. If you're an engineer who wants to understand *how*, read the code fragments. Both are interleaved throughout.
 
+> **Partially trued, 19 Aug 2026.** The pipeline half (Parts 1–5) was checked
+> against the code on 18 Aug during the ingest work. This pass corrected the
+> rendering and browser half — three file paths that pointed at files which do
+> not exist, §8.4's island-injection description, Part 13's dev workflow, every
+> number in Part 15, and an Epilogue that described the product as one where "no
+> data leaves the machine". **Not** re-verified: the LLM prompt texts quoted in
+> Parts 3–4, and the SQL in §8.2. Treat a code fragment here as illustrative of
+> shape, not as a current copy — the anchors are given so you can read the real
+> thing.
+
 ---
 
 ## The Study
@@ -888,16 +898,24 @@ For our study, if Alice expressed delight about Python's simplicity and Bob expr
 
 ---
 
-## Part 6: HTML Rendering (Stage 12)
+## Part 6: HTML Rendering (Stage 12) — the deprecated byproduct
+
+> **Read this part as history.** Stage 12's static Jinja2 renderer is a **sealed
+> byproduct**, not the product. The React SPA under `frontend/` is what a
+> researcher actually uses, served by `bristlenose serve`; the offline
+> leave-behind comes from the **Export HTML** toolbar button, which embeds the
+> React bundle and never calls this code. New features and design changes do not
+> land here. It is described because the pipeline still runs it and its CSS is
+> shared — not because it is the destination.
 
 ### 6.1 Report Assembly
 
-**What happens:** All pipeline outputs are assembled into a single interactive HTML file.
+**What happens:** All pipeline outputs are assembled into a single HTML file.
 
-**Why:** Researchers need a tangible deliverable they can open, read, share, and present. The HTML report is self-contained — CSS and JS are embedded, no internet connection needed.
+**Why it existed:** before the SPA, this was the deliverable — self-contained, CSS and JS embedded, openable with no server.
 
 ```python
-# bristlenose/stages/render_html.py
+# bristlenose/stages/s12_render/report.py
 def render_html(
     screen_clusters: list[ScreenCluster],
     theme_groups: list[ThemeGroup],
@@ -905,6 +923,8 @@ def render_html(
     project_name: str,
     output_dir: Path,
     all_quotes: list[ExtractedQuote] | None = None,
+    color_scheme: str = "auto",
+    display_names: dict[str, str] | None = None,
     people: PeopleFile | None = None,
     transcripts: list[FullTranscript] | None = None,
     analysis: object | None = None,
@@ -951,7 +971,7 @@ html_path.write_text("\n".join(parts), encoding="utf-8")
 **What happens:** Each quote becomes an interactive HTML blockquote.
 
 ```python
-# bristlenose/stages/render_html.py
+# bristlenose/stages/s12_render/quote_format.py
 def _format_quote_html(quote: ExtractedQuote, video_map: dict | None = None) -> str:
     quote_id = f"q-{quote.participant_id}-{int(quote.start_timecode)}"
     # ...
@@ -1308,13 +1328,38 @@ def import_project(db: Session, project_dir: Path) -> None:
 
 **Critical design rule:** Researcher state is **never** overwritten. If a researcher has starred a quote, hidden it, or edited its text, those rows in `QuoteState`/`QuoteEdit` survive re-imports.
 
-### 8.4 React Island Injection
+### 8.4 The SPA mount — and the island era it replaced
 
-**What happens:** When the browser requests the report HTML, the server replaces static Jinja2 sections with React mount points.
+**What happens:** the server serves one page whose body is a single empty div, and React mounts the whole application into it.
 
-**Why:** This is the migration strategy from static HTML to interactive React. Instead of rewriting everything at once, each section is replaced independently. The static HTML still works if JavaScript fails.
+```python
+# bristlenose/server/app.py — the dev mount, abridged
+'<div id="bn-app-root" data-project-id="1"></div>\n'
+```
 
-**Step 1 — Render time (Python):** The HTML renderer wraps content in comment markers:
+```typescript
+// frontend/src/main.tsx
+const appRoot = document.getElementById("bn-app-root");
+if (appRoot) {
+    if (!isExportMode()) redirectHashToPathname();
+    createRoot(appRoot).render(<RouterProvider router={router} />);
+}
+```
+
+**If the bundle is missing, serve mode returns a 500 — it does not fall back.**
+`_mount_prod_report` used to serve the static-rendered HTML when `static/` had no
+SPA, and that fallback is exactly why this section's original advice was wrong.
+A page that renders *something* when the bundle is absent looks like success:
+the report appeared, minus editing, minus search, minus video playback. It
+masked a whole class of build failure until the fallback was removed and
+replaced with a page that says what is wrong. **The graceful degradation praised
+below was the defect.**
+
+---
+
+**What follows is the island era, kept because the migration is instructive — not because any of it still runs.** The regex transform (`_transform_report_html`) no longer exists, and the seven mount points below are reachable only through `main.tsx`'s legacy branch, which fires when `#bn-app-root` is *absent* — i.e. for standalone transcript pages and the static render, never for serve.
+
+**Step 1 — Render time (Python):** The HTML renderer wrapped content in comment markers:
 
 ```html
 <!-- bn-quote-sections -->
@@ -1326,7 +1371,7 @@ def import_project(db: Session, project_dir: Path) -> None:
 <!-- /bn-quote-sections -->
 ```
 
-**Step 2 — Serve time (Python):** Regex replaces the markers with React divs:
+**Step 2 — Serve time (Python):** a regex replaced the markers with React divs:
 
 ```python
 # bristlenose/server/app.py
@@ -1346,7 +1391,7 @@ def _transform_report_html(html: str) -> str:
     return html
 ```
 
-**Step 3 — Browser time (React):** The island mounts:
+**Step 3 — Browser time (React):** the island mounted:
 
 ```typescript
 // frontend/src/main.tsx
@@ -1357,7 +1402,7 @@ if (sectionsRoot) {
 }
 ```
 
-**Current React islands:**
+**The islands, as they were:**
 
 | Mount point | Component | What it renders |
 |------------|-----------|-----------------|
@@ -1532,7 +1577,8 @@ export function QuoteSections({ projectId }: { projectId: string }) {
 **The QuoteCard component (simplified):**
 
 ```typescript
-// frontend/src/components/QuoteCard.tsx
+// frontend/src/islands/QuoteCard.tsx — heavily simplified; the real props
+// object carries ~20 fields (tag vocabularies, hidden-group sets, edit state)
 export function QuoteCard({ quote, onStar, onHide, onTag, onEdit }: QuoteCardProps) {
     return (
         <blockquote
@@ -1848,7 +1894,7 @@ With our 2-session study, everything is evenly distributed — no real signals e
 **Python side — data injection:**
 
 ```python
-# bristlenose/stages/render_html.py
+# bristlenose/stages/s12_render/report.py — _serialize_analysis lives in standalone_pages.py
 analysis_json = _serialize_analysis(analysis)
 parts.append(f"<script>window.BRISTLENOSE_ANALYSIS = {analysis_json};</script>")
 ```
@@ -1976,16 +2022,14 @@ export default defineConfig({
 });
 ```
 
-**Dev mode workflow:**
+**Dev mode workflow — one terminal, not two:**
 ```bash
-# Terminal 1: Start FastAPI
 bristlenose serve --dev hello-world-study/
-
-# Terminal 2: Start Vite dev server
-cd frontend && npm run dev
-# → http://localhost:5173 with hot reload
-# → API calls proxied to :8150
+# → --dev starts Vite on :5173 itself, as a subprocess, and cleans it up on exit
+# → open http://localhost:8150/report/ (not :5173 — the FastAPI page loads the
+#   Vite client and src/main.tsx from :5173, so HMR works through :8150)
 ```
+Run `npm run dev` by hand only if you want Vite without the server.
 
 ### 13.2 TypeScript → React → DOM
 
@@ -2117,14 +2161,16 @@ For our Hello World study (2 sessions, ~2 minutes total):
 | **Extracted quotes** | ~8 |
 | **Sections** | ~1 |
 | **Themes** | ~1 |
-| **SQLite tables** | 24 |
+| **SQLite tables** | 29 |
 | **SQLite rows** | ~50 |
-| **CSS files concatenated** | 42 |
-| **JS modules loaded** | 23 (report) or 5 (transcript) |
-| **React components rendered** | ~7 islands, ~16 primitives |
+| **CSS files concatenated** | 65 (`_THEME_FILES`) |
+| **JS modules loaded** | 26 report, 6 transcript (`_JS_FILES` / `_TRANSCRIPT_JS_FILES`) — **static render only**; the SPA loads one bundle |
+| **React components available** | 60 in `components/`, 16 in `islands/` |
 | **Total pipeline time** | ~13 seconds |
 
 For a real 10-session study (~30 min each), multiply tokens by ~50×, cost by ~50×, and time by ~5× (LLM calls dominate, and they're concurrent).
+
+_Counts measured 19 Aug 2026, and every one of them had drifted — tables 24→29, CSS 42→65, JS 23→26. They are given with the symbol that produces them so the next reader can re-measure rather than trust this table._
 
 ---
 
@@ -2134,12 +2180,14 @@ For a real 10-session study (~30 min each), multiply tokens by ~50×, cost by ~5
 
 **For the engineer:** The architecture is shaped by three constraints:
 
-1. **Local-first:** No data leaves the machine. This rules out cloud databases, server-side rendering farms, and hosted LLM APIs for transcription (Whisper runs locally).
+1. **The pipeline is yours; the analysis is a call.** Ingestion, audio extraction and transcription run on the researcher's own machine — Whisper is local, and that is a real property. The *analysis* is an outbound request to Claude, ChatGPT, Azure OpenAI or Gemini, which is the normal and recommended path; Ollama is a supported minority option. This document previously said "no data leaves the machine", which was never true of the stage it spends Part 4 describing. What the architecture actually buys is an **artefact the researcher owns** — a folder of files on their disk, not a row in someone's SaaS — and that is the claim worth making. Participant-data obligations (PII redaction, re-identification keys, retention) are unaffected by any of this; see `docs/methodology/consent-gradient.md`.
 
 2. **Resumable:** LLM calls are expensive. The manifest + intermediate JSON system means you never pay twice for the same work. A crash at Stage 11 loses zero progress from Stages 1–10.
 
-3. **Progressive enhancement:** The static HTML report works offline with vanilla JS. Serve mode adds React islands for richer interaction. The same CSS tokens power both. This isn't an accident — it's how you migrate a working product without breaking it.
+3. **One product, one byproduct.** The React SPA *is* the report; the static renderer of Part 6 is a sealed byproduct that no longer receives features. The migration that got us here did run through progressive enhancement — islands injected into static HTML, section by section — and that was the right way to move a working product. It is finished. Its last remnant, a fallback to static HTML when the bundle was missing, was removed because it turned a build failure into a report that merely looked thin (§8.4).
 
 The Hello World study is trivially small. But the architecture handles 50-session studies with 20-hour transcripts and 500+ quotes using the same pipeline, the same database schema, the same React components. The only things that scale are LLM tokens (linear with transcript length) and rendering time (linear with quote count). Everything else is O(1).
+
+The thing a two-file study cannot show you is what happens when one of those fifty files is bad. A zero-byte upload, a half-sent download, a `.mts` off a camcorder: the interesting engineering is in refusing each by name and analysing the other forty-nine, and it is worth reading `docs/design-analysis-lifecycle.md` §5 next for the four outcomes that produced.
 
 That's the whole stack. From a `.mp4` file to a `<blockquote>` in your browser and back again when you click ★.

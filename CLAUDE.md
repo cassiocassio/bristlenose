@@ -54,7 +54,7 @@ Analysis page: `bristlenose/analysis/` — signal concentration metrics, pure ma
 
 LLM prompts: Markdown files in `bristlenose/llm/prompts/`. Archive old versions to `bristlenose/llm/prompts-archive/`. See `bristlenose/llm/CLAUDE.md`.
 
-Report JavaScript: 17 modules in `bristlenose/theme/js/`. See `bristlenose/theme/js/MODULES.md`.
+Report JavaScript: the frozen vanilla modules in `bristlenose/theme/js/`. See `bristlenose/theme/js/MODULES.md` — and take the count from `_JS_FILES` in `stages/s12_render/theme_assets.py`, never from prose. This line said 17, MODULES.md said 20, `hello-world-architecture.md` said 23, and the list held 26 (19 Aug 2026). A number that lives in four documents is a number that is wrong in three of them.
 
 Video thumbnails: `bristlenose/utils/video.py` — auto-extracted keyframes per session. See `docs/design-html-report.md`.
 

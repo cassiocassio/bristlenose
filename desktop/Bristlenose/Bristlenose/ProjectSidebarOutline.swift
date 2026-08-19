@@ -103,13 +103,17 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// window that started it is closed. Plain ref for the same reason as
     /// `copyMachinery` — the batch is read live, not observed for transitions.
     let cloudImport: CloudImportCoordinator
-    /// Path of the project currently being served (fronted + running), or
-    /// nil. The antenna badge's solid tier: a project with Agent Access on
-    /// whose serve is up is exposed NOW — the handshake follows the fronted
-    /// serve, so this is "handshake live" without reading the file
-    /// (§5a-bis: exposure, not activity). Value-typed so a change re-runs
+    /// Path of the project the MCP handshake currently names, or nil. The
+    /// antenna badge's solid tier: exposed NOW means an agent can reach this
+    /// project, which is exactly "a handshake exists naming it" (§5a-bis:
+    /// exposure, not activity).
+    ///
+    /// This is `ServeManager.handshakeProjectPath` — the writer's own answer,
+    /// not a re-derivation. It used to be "serve is up + fronted", which is
+    /// the writer's predicate minus two conjuncts and went solid with no
+    /// handshake on every start and switch. Value-typed so a change re-runs
     /// `updateNSViewController` → reload.
-    let servingProjectPath: String?
+    let handshakeProjectPath: String?
     /// Per-window "begin rename on the sole selected row", bumped by the
     /// menu-bar Project ▸ Rename items via this window's `WindowCommandSink`.
     ///
@@ -136,7 +140,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.liveData = liveData
         controller.copyMachinery = copyMachinery
         controller.cloudImport = cloudImport
-        controller.servingProjectPath = servingProjectPath
+        controller.handshakeProjectPath = handshakeProjectPath
         // Refresh the callbacks each update so they capture the live binding —
         // the AppKit delegate does not fire for programmatic selection, so the
         // funnel is the SwiftUI binding itself (§2.5).
@@ -221,8 +225,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var onExternalDrop: (SidebarExternalDrop, [URL]) -> Void = { _, _ in }
     var onLocate: (UUID) -> Void = { _ in }
     var onShowInFinder: (UUID) -> Void = { _ in }
-    /// See the representable's `servingProjectPath`.
-    var servingProjectPath: String?
+    /// See the representable's `handshakeProjectPath`.
+    var handshakeProjectPath: String?
     var canShowInFinder: (UUID) -> Bool = { _ in false }
     /// See the representable's `canShareWithAgents` / `mcpMounted`.
     var canShareWithAgents: (UUID) -> Bool = { _ in false }
@@ -1885,7 +1889,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             }
         }
         if project.agentAccess {
-            return .agent(exposedNow: AgentActivity.samePath(servingProjectPath, project.path))
+            return .agent(exposedNow: AgentActivity.samePath(handshakeProjectPath, project.path))
         }
         if case .inCloud = project.availability { return .cloud }
         return .none

@@ -81,6 +81,23 @@ final class ServeManager: ObservableObject {
     /// port something else now owns).
     private(set) var mcpInstanceID: String?
 
+    /// The project path the MCP handshake currently names, or nil when no
+    /// handshake exists. **Written by `syncHandshake()` and nowhere else** —
+    /// it is that function's own answer, published rather than re-derived.
+    ///
+    /// The sidebar antenna's solid tier reads this. It used to read
+    /// "serve is up + this is the fronted project", which is `syncHandshake`'s
+    /// predicate minus `mcpInstanceID` and `mcpToken` — and `mcpInstanceID` is
+    /// nilled on every start, park and warm re-point, refilled only by an
+    /// `/api/health` read that lands *after* `state` reaches `.running`. So the
+    /// badge went solid with no handshake on every start and every switch, and
+    /// stayed that way if the health read kept failing. §5a-bis always
+    /// specified "shared && handshake live"; this is that value.
+    ///
+    /// Publishing it also makes the badge correct when there is more than one
+    /// serve, which is why the independent-windows stage needs nothing here.
+    @Published private(set) var handshakeProjectPath: String?
+
     /// Injected at app level: does the project at this path have Agent
     /// Access on? Kept as a closure so ServeManager doesn't grow a
     /// ProjectIndex dependency. Unset (nil) reads as access-off: no
@@ -182,7 +199,7 @@ final class ServeManager: ObservableObject {
         // none of which run the delete-on-stop path). Unconditional at host
         // launch: no sidecar is running yet, so any file here is stale, and a
         // stale file names a port something else may now own.
-        MCPHandshake.remove()
+        dropHandshake()
     }
 
     /// The URL to load in WKWebView when serve is running.
@@ -283,7 +300,7 @@ final class ServeManager: ObservableObject {
         // The new one is written when this serve reaches .running and its
         // instance_id has been read from /api/health (syncHandshake).
         mcpInstanceID = nil
-        MCPHandshake.remove()
+        dropHandshake()
 
         // External mode: no subprocess. Just point at the existing server.
         // No handshake either — we didn't spawn it, so we don't know its
@@ -421,7 +438,7 @@ final class ServeManager: ObservableObject {
         // The serve is going away — an agent must not find a live-looking
         // handshake naming a port about to be freed.
         mcpInstanceID = nil
-        MCPHandshake.remove()
+        dropHandshake()
 
         // External mode: no subprocess was spawned — just reset state.
         if case .external = mode, process == nil {
@@ -490,7 +507,7 @@ final class ServeManager: ObservableObject {
         // Safe before the supersession guard below: a superseding start()
         // already removed + will rewrite its own on .running.
         mcpInstanceID = nil
-        MCPHandshake.remove()
+        dropHandshake()
 
         if case .external = mode, process == nil {
             readTask?.cancel()
@@ -694,7 +711,7 @@ final class ServeManager: ObservableObject {
         // sidecar is deliberately not advertised (design §3.6 records the
         // parked-badge question as scope for the UI pass).
         mcpInstanceID = nil
-        MCPHandshake.remove()
+        dropHandshake()
         if case .running(let port) = state, let proc = process, let path = currentProjectPath {
             let entry = ParkedSidecar(
                 projectPath: path, port: port, authToken: authToken,
@@ -821,7 +838,7 @@ final class ServeManager: ObservableObject {
             // port. (The sidecar deletes its own on a graceful exit; this
             // covers the crash where its atexit never ran.)
             mcpInstanceID = nil
-            MCPHandshake.remove()
+            dropHandshake()
             let lastLines = outputLines.suffix(5).joined(separator: "\n")
             if case .running = state {
                 state = .failed(error: "Server exited with code \(status)\n\(lastLines)")
@@ -913,10 +930,25 @@ final class ServeManager: ObservableObject {
         }
     }
 
+    /// Delete the handshake file AND clear the path the sidebar reads. One
+    /// function because the two must not drift: a bare `MCPHandshake.remove()`
+    /// would leave the antenna solid for a project no agent can reach, which is
+    /// the exact defect publishing the path was meant to close. Every lifecycle
+    /// edge that used to call `remove()` directly calls this.
+    private func dropHandshake() {
+        MCPHandshake.remove()
+        if handshakeProjectPath != nil { handshakeProjectPath = nil }
+    }
+
     /// Reconcile the MCP handshake file with the current serve state: write
     /// it when the fronted project is `.running` with Agent Access on and
     /// the serve's `instance_id` is known; delete it otherwise. Idempotent —
     /// safe to call from every lifecycle edge and the 20s poll.
+    ///
+    /// The predicate lives in `HandshakeExposure.write` so the sidebar and
+    /// this writer cannot hold different opinions about what "exposed" means
+    /// — the badge reads `handshakeProjectPath`, which only this function
+    /// sets, from that one decision.
     ///
     /// The gate order is deliberate: `mcpToken` here is always the SCOPED
     /// token (`start()` never leaves it nil while a sidecar is spawned, and
@@ -925,15 +957,18 @@ final class ServeManager: ObservableObject {
     /// proxy's health probe / 404 path produces the honest "built without
     /// agent support" sentence, which beats a missing-file "isn't open".
     private func syncHandshake() {
-        guard case .running(let port) = state,
-              let path = currentProjectPath,
-              let instanceID = mcpInstanceID,
-              let token = mcpToken,
-              agentAccessResolver?(path) == true else {
-            MCPHandshake.remove()
+        guard let plan = HandshakeExposure.write(
+            state: state,
+            currentProjectPath: currentProjectPath,
+            instanceID: mcpInstanceID,
+            token: mcpToken,
+            agentAccess: { agentAccessResolver?($0) ?? false }
+        ) else {
+            dropHandshake()
             return
         }
-        MCPHandshake.write(port: port, token: token, instanceID: instanceID)
+        MCPHandshake.write(port: plan.port, token: plan.token, instanceID: plan.instanceID)
+        if handshakeProjectPath != plan.path { handshakeProjectPath = plan.path }
     }
 
     /// Strip ANSI escape sequences and OSC 8 hyperlinks for clean display.

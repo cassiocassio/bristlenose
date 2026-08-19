@@ -2096,11 +2096,11 @@ struct ContentView: View {
                 liveData: pipelineRunner.liveData,
                 copyMachinery: copyMachinery,
                 cloudImport: cloudImport,
-                // Exposure, not activity (§5a-bis): the badge's solid tier
-                // is "this project's serve is up" — the handshake follows
-                // the fronted running serve, so this path IS handshake-live.
-                servingProjectPath: serveManager.runningPort != nil
-                    ? serveManager.currentProjectPath : nil,
+                // Exposure, not activity (§5a-bis). Read the handshake
+                // writer's own answer rather than re-deriving it: "serve is
+                // up" is that predicate minus mcpInstanceID and mcpToken,
+                // and the gap is reachable on every start and switch.
+                handshakeProjectPath: serveManager.handshakeProjectPath,
                 renameRequest: renameRequest
             )
             .navigationTitle(i18n.t("desktop.chrome.projects"))

@@ -46,6 +46,10 @@ class UnusableReason(str, Enum):
     #: A directory we were not allowed to open (``~/.Trash`` is the everyday
     #: one). Recorded and stepped over, never fatal.
     UNREADABLE_FOLDER = "unreadable_folder"
+    #: Decoded and transcribed fine, and produced no words. A sound effect, a
+    #: test tone, a recording of a room. Distinct from ``NO_AUDIO``: there IS an
+    #: audio stream, it simply has nobody talking in it.
+    NO_SPEECH = "no_speech"
     #: Couldn't be read and we can't say more than that.
     UNREADABLE = "unreadable"
 
@@ -61,6 +65,7 @@ MESSAGES: dict[UnusableReason, str] = {
     UnusableReason.INCOMPLETE: "The file is incomplete — the transfer stopped early.",
     UnusableReason.NOT_A_RECORDING: "Not a recording, despite the file extension.",
     UnusableReason.NO_AUDIO: "No sound in this file — there is nothing to transcribe.",
+    UnusableReason.NO_SPEECH: "No speech found — nothing was said in this recording.",
     UnusableReason.UNREADABLE_FOLDER: "This folder couldn't be opened.",
     UnusableReason.UNREADABLE: "The file couldn't be read.",
 }

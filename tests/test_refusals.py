@@ -178,3 +178,44 @@ class TestScannerParity:
         discover_files(tmp_path, skipped)
         names = {s.path.name for s in skipped}
         assert names == {"tape.dv"}, f"unexpected refusals: {names}"
+
+
+class TestSilentSessionsAreStated:
+    """A recording with no speech in it is an outcome, not a success.
+
+    Measured on the torture corpus 20 Aug 2026: the terminus reported
+    ``transcripts: attempted=57 succeeded=57 failed=0`` and then
+    ``topics: attempted=42``. Fifteen sessions disappeared between the two with
+    nothing recorded anywhere — the researcher saw gaps in the session numbering
+    (#2, #7, #8 …) and had no way to learn which files they were. Eleven were
+    sound effects and test tones; four were the damaged files.
+
+    The gaps themselves are **deliberate** — session ids are not renumbered to
+    close them, because a gap makes a failure visible. That only works if
+    something explains each gap.
+    """
+
+    def test_a_silent_session_is_not_counted_as_a_success(self) -> None:
+        from bristlenose.refusals import UnusableReason, stage_failure
+
+        f = stage_failure(
+            source_file="Electronic Hit FX 04.caf",
+            reason=UnusableReason.NO_SPEECH,
+            stage="s05_transcribe",
+            session_id="s4",
+        )
+        assert f.cause.category is CauseCategoryEnum.UNUSABLE_INPUT
+        assert f.session_id == "s4"
+        assert f.source_file == "Electronic Hit FX 04.caf"
+
+    def test_no_speech_is_distinct_from_no_audio(self) -> None:
+        # Different remedies. `NO_AUDIO` means the file has no audio stream at
+        # all — re-export it. `NO_SPEECH` means it decoded and transcribed fine
+        # and nobody was talking — it is not an interview.
+        assert MESSAGES[UnusableReason.NO_AUDIO] != MESSAGES[UnusableReason.NO_SPEECH]
+        assert "nothing was said" in MESSAGES[UnusableReason.NO_SPEECH]
+
+    def test_every_reason_still_has_a_sentence(self) -> None:
+        # NO_SPEECH is the sixth; the table must keep pace with the enum.
+        for reason in UnusableReason:
+            assert MESSAGES[reason].strip(), reason

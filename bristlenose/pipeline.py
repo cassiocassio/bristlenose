@@ -986,22 +986,56 @@ class Pipeline:
                 f.session_id for f in _fresh_transcript_outcome.failed
                 if f.session_id is not None
             }
+            # A session that raised nothing and produced no words is neither a
+            # success nor a reason to abandon — it is an *outcome*, and it has
+            # to be stated. Counting it as a success is how fifteen sessions
+            # disappeared between `transcripts: 57/57` and `topics: 42/42` on
+            # the torture corpus while the summary reported zero failures: the
+            # researcher saw gaps in the session numbering and had nothing
+            # anywhere telling them which files, or why. Silently dropped is
+            # outcome 3 in docs/design-analysis-lifecycle.md §5.1 — the classic
+            # failure this whole surface exists to end.
+            #
+            # The comment above records why `succeeded` was moved off
+            # `session_segments` in the first place: doing it naively fired the
+            # abandon check on every silent recording. That fix is preserved —
+            # these are excluded from `succeeded` **and** from the abandon
+            # predicate below.
+            _silent_sids = {
+                s.session_id for s in sessions
+                if s.session_id not in _failed_sids
+                and not session_segments.get(s.session_id)
+            }
+            _silent_failures = [
+                refusal_stage_failure(
+                    source_file=next((f.path.name for f in s.files), s.session_id),
+                    reason=UnusableReason.NO_SPEECH,
+                    stage="s05_transcribe",
+                    session_id=s.session_id,
+                )
+                for s in sessions if s.session_id in _silent_sids
+            ]
             _succeeded_sids = [
                 s.session_id for s in sessions
                 if s.session_id not in _failed_sids
+                and s.session_id not in _silent_sids
             ]
             self._summary.transcripts = StageOutcome(
                 attempted=len(sessions),
                 succeeded=len(_succeeded_sids),
-                failed=list(_fresh_transcript_outcome.failed),
+                failed=list(_fresh_transcript_outcome.failed) + _silent_failures,
                 duration_ms=(
                     int(_transcribe_elapsed * 1000)
                     if _transcribe_elapsed is not None else None
                 ),
             )
+            # Abandon only when nothing came back at all. A run of entirely
+            # silent recordings is a *stated* outcome, not a crash — the
+            # researcher gets a report saying so rather than an abandoned run.
             if (
                 self._summary.transcripts.attempted > 0
                 and self._summary.transcripts.succeeded == 0
+                and not _silent_sids
             ):
                 raise PipelineAbandonedError(
                     cause=_dominant_cause(

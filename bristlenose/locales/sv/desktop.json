@@ -219,7 +219,21 @@
     "welcomeBody": "Dra en mapp med intervjuinspelningar till sidofältet, eller klicka på + Nytt projekt för att börja.",
     "dropProjectOntoProjectToast": "”%@” är redan ett Bristlenose-projekt – dra dess källfiler i stället.",
     "reAnalyseConfirmTitle": "Analysera \u201c{{project}}\u201d igen?",
-    "reAnalyseConfirmBody": "Den nuvarande analysen tas bort och byggs upp p\u00e5 nytt fr\u00e5n inspelningarna. Allt du har redigerat \u2014 citat, taggar, favoriter, talarnamn, temanamn \u2014 f\u00f6rsvinner med den.",
+    "reAnalyseRebuild_one": "Bristlenose transkriberar och analyserar 1 intervju p\u00e5 nytt fr\u00e5n b\u00f6rjan.",
+    "reAnalyseRebuild_other": "Bristlenose transkriberar och analyserar alla {{count}} intervjuer p\u00e5 nytt fr\u00e5n b\u00f6rjan.",
+    "reAnalyseLossHeader": "Ditt arbete med den h\u00e4r studien kasseras:",
+    "reAnalyseLoss": {
+      "editedQuotes_one": "1 redigerat citat",
+      "editedQuotes_other": "{{count}} redigerade citat",
+      "tags_one": "1 tagg",
+      "tags_other": "{{count}} taggar",
+      "starred_one": "1 stj\u00e4rnm\u00e4rkt citat",
+      "starred_other": "{{count}} stj\u00e4rnm\u00e4rkta citat",
+      "renamedSpeakers_one": "1 omd\u00f6pt talare",
+      "renamedSpeakers_other": "{{count}} omd\u00f6pta talare",
+      "namedThemes_one": "1 namngivet tema",
+      "namedThemes_other": "{{count}} namngivna teman"
+    },
     "addFilesPrompt": "L\u00e4gg till",
     "addFilesMessage": "L\u00e4gg till sessioner i \u201d%@\u201d",
     "addingInterviews_one": "L\u00e4gger till 1 intervju\u2026",
@@ -537,9 +551,6 @@
     "allCount_other": "Alla {{count}} sessioner",
     "noSessions": "Inga sessioner \u00e4nnu",
     "loadFailed": "Kunde inte l\u00e4sa in sessioner"
-  },
-  "toast": {
-    "removeBlockedByRun": "Stoppa körningen på ”%@” innan du tar bort det."
   },
   "accounts": {
     "notAvailable": "Inte tillg\u00e4nglig",

@@ -219,7 +219,21 @@
     "welcomeBody": "Ziehen Sie einen Ordner mit Interview-Aufnahmen in die Seitenleiste, oder klicken Sie auf + Neues Projekt, um zu starten.",
     "dropProjectOntoProjectToast": "„%@“ ist bereits ein Bristlenose-Projekt — ziehen Sie stattdessen die Quelldateien.",
     "reAnalyseConfirmTitle": "\u201e{{project}}\u201c erneut analysieren?",
-    "reAnalyseConfirmBody": "Die aktuelle Analyse wird gel\u00f6scht und aus den Aufnahmen neu erstellt. Alles, was Sie bearbeitet haben \u2013 Zitate, Tags, Favoriten, Sprechernamen, Themennamen \u2013, geht dabei verloren.",
+    "reAnalyseRebuild_one": "Bristlenose transkribiert und analysiert 1 Interview noch einmal von Grund auf.",
+    "reAnalyseRebuild_other": "Bristlenose transkribiert und analysiert alle {{count}} Interviews noch einmal von Grund auf.",
+    "reAnalyseLossHeader": "Ihre Arbeit an dieser Studie wird verworfen:",
+    "reAnalyseLoss": {
+      "editedQuotes_one": "1 bearbeitetes Zitat",
+      "editedQuotes_other": "{{count}} bearbeitete Zitate",
+      "tags_one": "1 Tag",
+      "tags_other": "{{count}} Tags",
+      "starred_one": "1 markiertes Zitat",
+      "starred_other": "{{count}} markierte Zitate",
+      "renamedSpeakers_one": "1 umbenannte sprechende Person",
+      "renamedSpeakers_other": "{{count}} umbenannte sprechende Personen",
+      "namedThemes_one": "1 benanntes Thema",
+      "namedThemes_other": "{{count}} benannte Themen"
+    },
     "addFilesPrompt": "Hinzuf\u00fcgen",
     "addFilesMessage": "Interviews zu \u201e%@\u201c hinzuf\u00fcgen",
     "addingInterviews_one": "1 Interview wird hinzugef\u00fcgt\u2026",
@@ -537,9 +551,6 @@
     "allCount_other": "Alle {{count}} Interviews",
     "noSessions": "Noch keine Interviews",
     "loadFailed": "Interviews konnten nicht geladen werden"
-  },
-  "toast": {
-    "removeBlockedByRun": "Beenden Sie den Lauf von \u201e%@\u201c, bevor Sie ihn entfernen."
   },
   "accounts": {
     "notAvailable": "Nicht verf\u00fcgbar",

@@ -219,7 +219,21 @@
     "welcomeBody": "Drag a folder of interview recordings into the sidebar, or click + New Project to start.",
     "dropProjectOntoProjectToast": "“%@” is already a Bristlenose project — drag its source files instead.",
     "reAnalyseConfirmTitle": "Re-analyse \u201c{{project}}\u201d?",
-    "reAnalyseConfirmBody": "The current analysis is deleted and rebuilt from the recordings. Anything you edited \u2014 quotes, tags, stars, speaker names, theme names \u2014 goes with it.",
+    "reAnalyseRebuild_one": "Bristlenose will transcribe and analyse 1 interview again from scratch.",
+    "reAnalyseRebuild_other": "Bristlenose will transcribe and analyse all {{count}} interviews again from scratch.",
+    "reAnalyseLossHeader": "Your work on this study will be discarded:",
+    "reAnalyseLoss": {
+      "editedQuotes_one": "1 edited quote",
+      "editedQuotes_other": "{{count}} edited quotes",
+      "tags_one": "1 tag",
+      "tags_other": "{{count}} tags",
+      "starred_one": "1 starred quote",
+      "starred_other": "{{count}} starred quotes",
+      "renamedSpeakers_one": "1 renamed speaker",
+      "renamedSpeakers_other": "{{count}} renamed speakers",
+      "namedThemes_one": "1 named theme",
+      "namedThemes_other": "{{count}} named themes"
+    },
     "addFilesPrompt": "Add",
     "addFilesMessage": "Add sessions to “%@”",
     "addingInterviews_one": "Adding 1 interview…",
@@ -537,9 +551,6 @@
     "allCount_other": "All {{count}} sessions",
     "noSessions": "No sessions yet",
     "loadFailed": "Couldn't load sessions"
-  },
-  "toast": {
-    "removeBlockedByRun": "Stop the run on \u201c%@\u201d before removing it."
   },
   "accounts": {
     "notAvailable": "Not available",

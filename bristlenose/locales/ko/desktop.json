@@ -211,7 +211,15 @@
     "welcomeBody": "인터뷰 녹음 폴더를 사이드바로 드래그하거나, + 새 프로젝트를 클릭하여 시작하세요.",
     "dropProjectOntoProjectToast": "\"%@\"은(는) 이미 Bristlenose 프로젝트입니다 — 원본 파일을 드래그하세요.",
     "reAnalyseConfirmTitle": "\u201c{{project}}\u201d\uc744(\ub97c) \uc7ac\ubd84\uc11d\ud558\uc2dc\uaca0\uc2b5\ub2c8\uae4c?",
-    "reAnalyseConfirmBody": "\ud604\uc7ac \ubd84\uc11d\uc744 \uc0ad\uc81c\ud558\uace0 \ub179\uc74c\uc5d0\uc11c \ub2e4\uc2dc \ub9cc\ub4ed\ub2c8\ub2e4. \ud3b8\uc9d1\ud55c \ub0b4\uc6a9(\uc778\uc6a9, \ud0dc\uadf8, \uc990\uaca8\ucc3e\uae30, \ud654\uc790 \uc774\ub984, \ud14c\ub9c8 \uc774\ub984)\ub3c4 \ubaa8\ub450 \uc0ac\ub77c\uc9d1\ub2c8\ub2e4.",
+    "reAnalyseRebuild_other": "Bristlenose\uac00 \uc778\ud130\ubdf0 {{count}}\uac1c\ub97c \ubaa8\ub450 \ucc98\uc74c\ubd80\ud130 \ub2e4\uc2dc \uc804\uc0ac\ud558\uace0 \ubd84\uc11d\ud569\ub2c8\ub2e4.",
+    "reAnalyseLossHeader": "\uc774 \uc5f0\uad6c\uc5d0\uc11c \ud55c \uc791\uc5c5\uc774 \uc0ad\uc81c\ub429\ub2c8\ub2e4:",
+    "reAnalyseLoss": {
+      "editedQuotes_other": "\ud3b8\uc9d1\ud55c \uc778\uc6a9\ubb38 {{count}}\uac1c",
+      "tags_other": "\ud0dc\uadf8 {{count}}\uac1c",
+      "starred_other": "\ubcc4\ud45c\ud55c \uc778\uc6a9\ubb38 {{count}}\uac1c",
+      "renamedSpeakers_other": "\uc774\ub984\uc744 \ubc14\uafbc \ud654\uc790 {{count}}\uba85",
+      "namedThemes_other": "\uc774\ub984\uc744 \uc9c0\uc815\ud55c \ud14c\ub9c8 {{count}}\uac1c"
+    },
     "addFilesPrompt": "\ucd94\uac00",
     "addFilesMessage": "\u201c%@\u201d\uc5d0 \uc138\uc158 \ucd94\uac00",
     "addingInterviews_other": "\uc778\ud130\ubdf0 {{count}}\uac1c \ucd94\uac00 \uc911\u2026",
@@ -524,9 +532,6 @@
     "allCount_other": "\ubaa8\ub4e0 \uc138\uc158 {{count}}\uac1c",
     "noSessions": "\uc544\uc9c1 \uc138\uc158\uc774 \uc5c6\uc2b5\ub2c8\ub2e4",
     "loadFailed": "\uc138\uc158\uc744 \ub85c\ub4dc\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4"
-  },
-  "toast": {
-    "removeBlockedByRun": "\u201c%@\u201d \uc2e4\ud589\uc744 \uc911\uc9c0\ud55c \ud6c4 \uc81c\uac70\ud558\uc138\uc694."
   },
   "accounts": {
     "notAvailable": "\uc0ac\uc6a9\ud560 \uc218 \uc5c6\uc74c",

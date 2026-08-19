@@ -219,7 +219,21 @@
     "welcomeBody": "Vedä haastattelutallenteiden kansio sivupalkkiin tai napsauta + Uusi projekti aloittaaksesi.",
     "dropProjectOntoProjectToast": "”%@” on jo Bristlenose-projekti — vedä sen sijaan sen lähdetiedostot.",
     "reAnalyseConfirmTitle": "Analysoidaanko \u201c{{project}}\u201d uudelleen?",
-    "reAnalyseConfirmBody": "Nykyinen analyysi poistetaan ja rakennetaan uudelleen tallenteista. Kaikki muokkaamasi \u2014 sitaatit, tunnisteet, suosikit, puhujien nimet, teemojen nimet \u2014 katoaa sen mukana.",
+    "reAnalyseRebuild_one": "Bristlenose litteroi ja analysoi 1 haastattelun uudelleen alusta asti.",
+    "reAnalyseRebuild_other": "Bristlenose litteroi ja analysoi kaikki {{count}} haastattelua uudelleen alusta asti.",
+    "reAnalyseLossHeader": "Ty\u00f6si t\u00e4ss\u00e4 tutkimuksessa hyl\u00e4t\u00e4\u00e4n:",
+    "reAnalyseLoss": {
+      "editedQuotes_one": "1 muokattu sitaatti",
+      "editedQuotes_other": "{{count}} muokattua sitaattia",
+      "tags_one": "1 tunniste",
+      "tags_other": "{{count}} tunnistetta",
+      "starred_one": "1 t\u00e4hdell\u00e4 merkitty sitaatti",
+      "starred_other": "{{count}} t\u00e4hdell\u00e4 merkitty\u00e4 sitaattia",
+      "renamedSpeakers_one": "1 uudelleennimetty puhuja",
+      "renamedSpeakers_other": "{{count}} uudelleennimetty\u00e4 puhujaa",
+      "namedThemes_one": "1 nimetty teema",
+      "namedThemes_other": "{{count}} nimetty\u00e4 teemaa"
+    },
     "addFilesPrompt": "Lis\u00e4\u00e4",
     "addFilesMessage": "Lis\u00e4\u00e4 istuntoja kohteeseen \u201d%@\u201d",
     "addingInterviews_one": "Lis\u00e4t\u00e4\u00e4n 1 haastattelu\u2026",
@@ -537,9 +551,6 @@
     "allCount_other": "Kaikki {{count}} istuntoa",
     "noSessions": "Ei viel\u00e4 istuntoja",
     "loadFailed": "Istuntojen lataus ep\u00e4onnistui"
-  },
-  "toast": {
-    "removeBlockedByRun": "Pysäytä ajo kohteessa ”%@” ennen sen poistamista."
   },
   "accounts": {
     "notAvailable": "Ei k\u00e4ytett\u00e4viss\u00e4",

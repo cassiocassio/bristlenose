@@ -211,7 +211,15 @@
     "welcomeBody": "將一個裝有訪談錄音的檔案夾拖移到側邊欄，或按一下「+ 新增專案」開始。",
     "dropProjectOntoProjectToast": "「%@」已是 Bristlenose 專案 — 請改為拖移其來源檔案。",
     "reAnalyseConfirmTitle": "\u8981\u91cd\u65b0\u5206\u6790\u300c{{project}}\u300d\u55ce\uff1f",
-    "reAnalyseConfirmBody": "\u76ee\u524d\u7684\u5206\u6790\u6703\u88ab\u522a\u9664\uff0c\u4e26\u4f9d\u9304\u97f3\u91cd\u65b0\u5efa\u7acb\u3002\u4f60\u7de8\u8f2f\u904e\u7684\u4e00\u5207\u2014\u2014\u5f15\u8ff0\u3001\u6a19\u7c64\u3001\u661f\u865f\u3001\u767c\u8a00\u8005\u540d\u7a31\u3001\u4e3b\u984c\u540d\u7a31\u2014\u2014\u90fd\u6703\u4e00\u4f75\u6d88\u5931\u3002",
+    "reAnalyseRebuild_other": "Bristlenose \u6703\u628a\u5168\u90e8 {{count}} \u5834\u8a2a\u8ac7\u5f9e\u982d\u91cd\u65b0\u8f49\u9304\u4e26\u5206\u6790\u3002",
+    "reAnalyseLossHeader": "\u4f60\u5728\u9019\u500b\u7814\u7a76\u4e2d\u7684\u6210\u679c\u90fd\u6703\u88ab\u6368\u68c4\uff1a",
+    "reAnalyseLoss": {
+      "editedQuotes_other": "\u5df2\u7de8\u8f2f\u7684\u5f15\u8ff0 {{count}} \u5247",
+      "tags_other": "\u6a19\u7c64 {{count}} \u500b",
+      "starred_other": "\u52a0\u661f\u865f\u7684\u5f15\u8ff0 {{count}} \u5247",
+      "renamedSpeakers_other": "\u5df2\u6539\u540d\u7684\u767c\u8a00\u8005 {{count}} \u4f4d",
+      "namedThemes_other": "\u5df2\u547d\u540d\u7684\u4e3b\u984c {{count}} \u500b"
+    },
     "addFilesPrompt": "\u52a0\u5165",
     "addFilesMessage": "\u5c07\u5de5\u4f5c\u968e\u6bb5\u52a0\u5165\u300c%@\u300d",
     "addingInterviews_other": "\u6b63\u5728\u52a0\u5165 {{count}} \u5247\u8a2a\u8ac7\u2026",
@@ -524,9 +532,6 @@
     "allCount_other": "\u5168\u90e8 {{count}} \u5834\u6b21",
     "noSessions": "\u5c1a\u7121\u5834\u6b21",
     "loadFailed": "\u7121\u6cd5\u8f09\u5165\u5834\u6b21"
-  },
-  "toast": {
-    "removeBlockedByRun": "在移除「%@」之前，請先停止其執行。"
   },
   "accounts": {
     "notAvailable": "\u7121\u6cd5\u4f7f\u7528",

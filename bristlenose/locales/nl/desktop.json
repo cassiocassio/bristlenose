@@ -219,7 +219,21 @@
     "welcomeBody": "Sleep een map met interviewopnamen naar de zijbalk of klik op + Nieuw project om te beginnen.",
     "dropProjectOntoProjectToast": "“%@” is al een Bristlenose-project — sleep in plaats daarvan de bronbestanden.",
     "reAnalyseConfirmTitle": "\u201c{{project}}\u201d opnieuw analyseren?",
-    "reAnalyseConfirmBody": "De huidige analyse wordt verwijderd en opnieuw opgebouwd uit de opnamen. Alles wat je hebt bewerkt \u2014 citaten, tags, favorieten, sprekersnamen, themanamen \u2014 gaat mee verloren.",
+    "reAnalyseRebuild_one": "Bristlenose transcribeert en analyseert 1 interview opnieuw, vanaf nul.",
+    "reAnalyseRebuild_other": "Bristlenose transcribeert en analyseert alle {{count}} interviews opnieuw, vanaf nul.",
+    "reAnalyseLossHeader": "Je werk aan dit onderzoek gaat verloren:",
+    "reAnalyseLoss": {
+      "editedQuotes_one": "1 bewerkt citaat",
+      "editedQuotes_other": "{{count}} bewerkte citaten",
+      "tags_one": "1 tag",
+      "tags_other": "{{count}} tags",
+      "starred_one": "1 citaat met ster",
+      "starred_other": "{{count}} citaten met ster",
+      "renamedSpeakers_one": "1 hernoemde spreker",
+      "renamedSpeakers_other": "{{count}} hernoemde sprekers",
+      "namedThemes_one": "1 benoemd thema",
+      "namedThemes_other": "{{count}} benoemde thema's"
+    },
     "addFilesPrompt": "Voeg toe",
     "addFilesMessage": "Voeg sessies toe aan \u201c%@\u201d",
     "addingInterviews_one": "1 interview wordt toegevoegd\u2026",
@@ -537,9 +551,6 @@
     "allCount_other": "Alle {{count}} sessies",
     "noSessions": "Nog geen sessies",
     "loadFailed": "Kon sessies niet laden"
-  },
-  "toast": {
-    "removeBlockedByRun": "Stop de run op “%@” voordat je die verwijdert."
   },
   "accounts": {
     "notAvailable": "Niet beschikbaar",

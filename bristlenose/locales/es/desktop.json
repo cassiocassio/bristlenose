@@ -219,7 +219,21 @@
     "welcomeBody": "Arrastra una carpeta con grabaciones de entrevistas a la barra lateral, o haz clic en + Nuevo proyecto para empezar.",
     "dropProjectOntoProjectToast": "«%@» ya es un proyecto de Bristlenose — arrastra sus archivos en su lugar.",
     "reAnalyseConfirmTitle": "\u00bfReanalizar \u00ab{{project}}\u00bb?",
-    "reAnalyseConfirmBody": "El an\u00e1lisis actual se elimina y se reconstruye a partir de las grabaciones. Todo lo que hayas editado \u2014citas, etiquetas, favoritos, nombres de participantes, nombres de temas\u2014 se pierde.",
+    "reAnalyseRebuild_one": "Bristlenose transcribir\u00e1 y analizar\u00e1 1 entrevista de nuevo desde cero.",
+    "reAnalyseRebuild_other": "Bristlenose transcribir\u00e1 y analizar\u00e1 las {{count}} entrevistas de nuevo desde cero.",
+    "reAnalyseLossHeader": "Tu trabajo en este estudio se descartar\u00e1:",
+    "reAnalyseLoss": {
+      "editedQuotes_one": "1 cita editada",
+      "editedQuotes_other": "{{count}} citas editadas",
+      "tags_one": "1 etiqueta",
+      "tags_other": "{{count}} etiquetas",
+      "starred_one": "1 cita destacada",
+      "starred_other": "{{count}} citas destacadas",
+      "renamedSpeakers_one": "1 participante renombrado",
+      "renamedSpeakers_other": "{{count}} participantes renombrados",
+      "namedThemes_one": "1 tema con nombre",
+      "namedThemes_other": "{{count}} temas con nombre"
+    },
     "addFilesPrompt": "A\u00f1adir",
     "addFilesMessage": "A\u00f1adir sesiones a \u201c%@\u201d",
     "addingInterviews_one": "A\u00f1adiendo 1 entrevista\u2026",
@@ -537,9 +551,6 @@
     "allCount_other": "Las {{count}} sesiones",
     "noSessions": "A\u00fan no hay sesiones",
     "loadFailed": "Error al cargar las sesiones"
-  },
-  "toast": {
-    "removeBlockedByRun": "Detenga la ejecuci\u00f3n de \u00ab%@\u00bb antes de quitarlo."
   },
   "accounts": {
     "notAvailable": "No disponible",

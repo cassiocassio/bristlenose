@@ -1741,7 +1741,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
 
         menu.addItem(.separator())
-        menu.addItem(menuItem("desktop.menu.project.removeFromSidebar", #selector(menuRemoveProject(_:))))
+        // Hidden while the project is running — you cannot remove it, and the
+        // menu is the place to say so. It used to be offered, refused, and
+        // explained by a toast. Context menus hide; the Project-menu twin dims.
+        if !Self.isRunningOrQueued(pipelineRunner?.state[id]) {
+            menu.addItem(menuItem("desktop.menu.project.removeFromSidebar", #selector(menuRemoveProject(_:))))
+        }
     }
 
     private func buildFolderMenu(_ menu: NSMenu, folderID id: UUID) {
@@ -1817,6 +1822,15 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// just the expensive way to do it. Offering both and letting the labels
     /// distinguish them is honest; hiding this one would leave a researcher who
     /// wants a clean rebuild with no route to it.
+    /// Whether a project is mid-run. Shared by the menus so "you cannot remove
+    /// this right now" is one question, asked once.
+    nonisolated static func isRunningOrQueued(_ state: PipelineState?) -> Bool {
+        switch state {
+        case .running, .queued: return true
+        default: return false
+        }
+    }
+
     nonisolated static func reAnalyseIsOffered(
         isFolderShaped: Bool, hasPath: Bool,
         state: PipelineState?, data: UnanalysedState?

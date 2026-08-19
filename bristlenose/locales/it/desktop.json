@@ -219,7 +219,21 @@
     "welcomeBody": "Trascina una cartella di registrazioni di interviste nella barra laterale, oppure fai clic su + Nuovo progetto per iniziare.",
     "dropProjectOntoProjectToast": "“%@” è già un progetto Bristlenose — trascina invece i suoi file di origine.",
     "reAnalyseConfirmTitle": "Rianalizzare \u201c{{project}}\u201d?",
-    "reAnalyseConfirmBody": "L'analisi attuale viene eliminata e ricostruita dalle registrazioni. Tutto ci\u00f2 che hai modificato \u2014 citazioni, tag, preferiti, nomi dei partecipanti, nomi dei temi \u2014 va perso.",
+    "reAnalyseRebuild_one": "Bristlenose trascriver\u00e0 e analizzer\u00e0 1 intervista da capo.",
+    "reAnalyseRebuild_other": "Bristlenose trascriver\u00e0 e analizzer\u00e0 tutte le {{count}} interviste da capo.",
+    "reAnalyseLossHeader": "Il tuo lavoro su questo studio verr\u00e0 eliminato:",
+    "reAnalyseLoss": {
+      "editedQuotes_one": "1 citazione modificata",
+      "editedQuotes_other": "{{count}} citazioni modificate",
+      "tags_one": "1 tag",
+      "tags_other": "{{count}} tag",
+      "starred_one": "1 citazione con stella",
+      "starred_other": "{{count}} citazioni con stella",
+      "renamedSpeakers_one": "1 partecipante rinominato",
+      "renamedSpeakers_other": "{{count}} partecipanti rinominati",
+      "namedThemes_one": "1 tema con nome",
+      "namedThemes_other": "{{count}} temi con nome"
+    },
     "addFilesPrompt": "Aggiungi",
     "addFilesMessage": "Aggiungi sessioni a \u201c%@\u201d",
     "addingInterviews_one": "Aggiunta di 1 intervista\u2026",
@@ -537,9 +551,6 @@
     "allCount_other": "Tutte e {{count}} le sessioni",
     "noSessions": "Ancora nessuna sessione",
     "loadFailed": "Impossibile caricare le sessioni"
-  },
-  "toast": {
-    "removeBlockedByRun": "Interrompi l'esecuzione su “%@” prima di rimuoverlo."
   },
   "accounts": {
     "notAvailable": "Non disponibile",

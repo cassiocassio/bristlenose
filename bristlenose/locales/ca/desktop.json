@@ -219,7 +219,21 @@
     "welcomeBody": "Arrossega una carpeta d'enregistraments d'entrevistes a la barra lateral, o fes clic a + Projecte nou per començar.",
     "dropProjectOntoProjectToast": "“%@” ja és un projecte del Bristlenose — arrossega'n els fitxers d'origen.",
     "reAnalyseConfirmTitle": "Voleu tornar a analitzar \u00ab{{project}}\u00bb?",
-    "reAnalyseConfirmBody": "L'an\u00e0lisi actual s'elimina i es reconstrueix a partir dels enregistraments. Tot el que h\u00e0giu editat \u2014cites, etiquetes, preferits, noms de participants, noms de temes\u2014 es perd.",
+    "reAnalyseRebuild_one": "Bristlenose transcriur\u00e0 i analitzar\u00e0 1 entrevista de nou des de zero.",
+    "reAnalyseRebuild_other": "Bristlenose transcriur\u00e0 i analitzar\u00e0 les {{count}} entrevistes de nou des de zero.",
+    "reAnalyseLossHeader": "La vostra feina en aquest estudi es descartar\u00e0:",
+    "reAnalyseLoss": {
+      "editedQuotes_one": "1 cita editada",
+      "editedQuotes_other": "{{count}} cites editades",
+      "tags_one": "1 etiqueta",
+      "tags_other": "{{count}} etiquetes",
+      "starred_one": "1 cita destacada",
+      "starred_other": "{{count}} cites destacades",
+      "renamedSpeakers_one": "1 participant reanomenat",
+      "renamedSpeakers_other": "{{count}} participants reanomenats",
+      "namedThemes_one": "1 tema amb nom",
+      "namedThemes_other": "{{count}} temes amb nom"
+    },
     "addFilesPrompt": "Afegeix",
     "addFilesMessage": "Afegeix sessions a “%@”",
     "addingInterviews_one": "S'està afegint 1 entrevista…",
@@ -537,9 +551,6 @@
     "allCount_other": "{{count}} sessions en total",
     "noSessions": "Encara no hi ha sessions",
     "loadFailed": "No s'han pogut carregar les sessions"
-  },
-  "toast": {
-    "removeBlockedByRun": "Atura l'execució de “%@” abans d'eliminar-lo."
   },
   "accounts": {
     "notAvailable": "No disponible",

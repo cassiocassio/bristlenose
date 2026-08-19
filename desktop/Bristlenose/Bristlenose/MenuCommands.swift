@@ -1031,7 +1031,9 @@ private struct ProjectMenuContent: View {
                 windowCommands?.perform(.removeFromSidebar)
             }
             .keyboardShortcut(.delete, modifiers: .command)
-            .disabled(!enabled(.removeFromSidebar))
+            // Dims while the selected project is running — the menu-bar half
+            // of the rule the context menu answers by hiding.
+            .disabled(bridgeHandler.selectedProjectIsRunning || !enabled(.removeFromSidebar))
         }
     }
 }

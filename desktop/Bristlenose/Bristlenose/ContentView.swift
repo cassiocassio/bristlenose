@@ -234,8 +234,10 @@ struct ContentView: View {
     /// throws `.insufficientDiskSpace`. Carries needed/available byte counts
     /// for a localised message.
     @State private var copyDiskSpaceAlert: CopyDiskSpaceAlertState?
-    /// The project awaiting a Re-analyse confirmation, if any.
-    @State private var reAnalyseConfirm: Project?
+    /// The project awaiting a Re-analyse confirmation, with the measurements
+    /// the sheet reads out. Nil when nothing is pending — and *never* set for a
+    /// project with no curation, which runs straight away (see `askToReAnalyse`).
+    @State private var reAnalyseConfirm: PendingReAnalyse?
 
     /// Spotlight one-shot confirm sheet — populated when the Locate flow
     /// found a unique high-confidence match. Resolves the awaiting continuation.
@@ -818,25 +820,19 @@ struct ContentView: View {
             diskSpaceMessage: diskSpaceMessage(for:),
             analyseAction: analyseActionForSheet(_:)
         ))
-        .alert(
-            i18n.t("desktop.chrome.reAnalyseConfirmTitle",
-                   ["project": reAnalyseConfirm?.name ?? ""]),
-            isPresented: Binding(
-                get: { reAnalyseConfirm != nil },
-                set: { if !$0 { reAnalyseConfirm = nil } }
-            ),
-            presenting: reAnalyseConfirm
-        ) { project in
-            // Destructive role, and NOT the default action: Return cancels.
-            // The researcher reached a menu item ending in an ellipsis, not a
-            // button labelled "throw this away" — the keyboard should not
-            // finish the sentence for them.
-            Button(i18n.t("desktop.menu.project.reAnalyseConfirm"), role: .destructive) {
-                pipelineRunner.start(project: project, clean: true)
-            }
-            Button(i18n.t("common.buttons.cancel"), role: .cancel) {}
-        } message: { _ in
-            Text(i18n.t("desktop.chrome.reAnalyseConfirmBody"))
+        .sheet(item: $reAnalyseConfirm) { pending in
+            ReAnalyseConfirmSheet(
+                projectName: pending.project.name,
+                sessionCount: pending.sessionCount,
+                counts: pending.counts,
+                onCancel: { reAnalyseConfirm = nil },
+                onConfirm: {
+                    let project = pending.project
+                    reAnalyseConfirm = nil
+                    pipelineRunner.start(project: project, clean: true)
+                }
+            )
+            .environmentObject(i18n)
         }
         .sheet(item: $spotlightConfirm) { state in
             SpotlightConfirmSheet(
@@ -1100,7 +1096,7 @@ struct ContentView: View {
             // promises a question; skipping it on a project that happens to
             // carry no curation would make the ellipsis a lie and would still
             // be throwing away finished work and re-spending on the provider.
-            if let project = selectedProject { reAnalyseConfirm = project }
+            if let project = selectedProject { askToReAnalyse(project) }
         case .removeFromSidebar:
             removeSelectedProjectsFromSidebar()
         }
@@ -1193,6 +1189,30 @@ struct ContentView: View {
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
     }
 
+    /// Ask before rebuilding — unless there is nothing of the researcher's to
+    /// lose, in which case just do what they asked.
+    ///
+    /// The counts come off the project database at the moment of asking rather
+    /// than from anything cached: a sheet that measures has to measure now. The
+    /// read is a handful of `COUNT(*)`s over an already-open-and-closed
+    /// connection, and it happens once per menu click.
+    private func askToReAnalyse(_ project: Project) {
+        let counts = CurationCountsReader.read(
+            projectRoot: URL(fileURLWithPath: project.path))
+        guard !counts.isEmpty else {
+            // Nothing curated: the analysis is derived output the researcher
+            // just asked to have rebuilt, so there is nothing to weigh and a
+            // modal would be a speed bump.
+            pipelineRunner.start(project: project, clean: true)
+            return
+        }
+        reAnalyseConfirm = PendingReAnalyse(
+            project: project,
+            sessionCount: projectIndex.unanalysed[project.id]?.sessionCount ?? 0,
+            counts: counts
+        )
+    }
+
     /// The sheet's primary action, or `nil` when **Analyse** is not on offer
     /// for this project right now.
     ///
@@ -1269,16 +1289,13 @@ struct ContentView: View {
             guard case .project(let id) = sel else { return nil }
             return projectIndex.projects.first { $0.id == id }
         }
-        let (removable, blockedNames) = partitionRemovable(candidates)
-        if !blockedNames.isEmpty {
-            // One toast even when multiple are blocked — the first name is
-            // enough to point the user at the issue.
-            let first = blockedNames.first ?? ""
-            toast.show(String(
-                format: i18n.t("desktop.toast.removeBlockedByRun"),
-                first
-            ))
-        }
+        // A running project is not removable, and both menus now decline to
+        // offer the command for one — so this partition is the multi-select
+        // case. The removable rows go and the running one stays, selected and
+        // visible, which is the feedback: the thing that changed is the
+        // message. There used to be a toast naming the blocked project; it was
+        // telling the researcher something the sidebar was about to show them.
+        let (removable, _) = partitionRemovable(candidates)
         guard !removable.isEmpty else { return }
         // Puff the rows before they leave the model — the rect is only
         // computable while the row exists. See `handleWillRemoveProjects`.
@@ -1305,14 +1322,10 @@ struct ContentView: View {
             return
         }
         guard let project = projectIndex.projects.first(where: { $0.id == id }) else { return }
-        let (removable, blockedNames) = partitionRemovable([project])
-        if let first = blockedNames.first {
-            toast.show(String(
-                format: i18n.t("desktop.toast.removeBlockedByRun"),
-                first
-            ))
-            return
-        }
+        // Unreachable while running — the context menu omits the item entirely
+        // for a running project (`buildProjectMenu`). Kept as a guard, without
+        // a message: there is nothing to tell someone who was never offered it.
+        let (removable, _) = partitionRemovable([project])
         guard !removable.isEmpty else { return }
         serveManager.dropParked(forPaths: Set(removable.map(\.path)))
         removalStore.removeFromSidebar(removable, priorSelection: selection)
@@ -2164,7 +2177,9 @@ struct ContentView: View {
                     // Targets the *clicked* project, not the selection — a
                     // right-click on a row the user hasn't selected must not
                     // wipe the one they had selected.
-                    reAnalyseConfirm = projectIndex.projects.first { $0.id == id }
+                    if let p = projectIndex.projects.first(where: { $0.id == id }) {
+                        askToReAnalyse(p)
+                    }
                 },
                 onShowInFinder: { id in
                     if let p = projectIndex.projects.first(where: { $0.id == id }) { revealInFinder(p) }

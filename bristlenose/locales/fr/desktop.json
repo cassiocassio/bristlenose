@@ -219,7 +219,21 @@
     "welcomeBody": "Glissez un dossier d’enregistrements d’entretiens dans la barre latérale, ou cliquez sur + Nouveau projet pour commencer.",
     "dropProjectOntoProjectToast": "« %@ » est déjà un projet Bristlenose — glissez plutôt ses fichiers sources.",
     "reAnalyseConfirmTitle": "R\u00e9analyser \u00ab {{project}} \u00bb ?",
-    "reAnalyseConfirmBody": "L'analyse actuelle est supprim\u00e9e puis reconstruite \u00e0 partir des enregistrements. Tout ce que vous avez modifi\u00e9 \u2014 citations, \u00e9tiquettes, favoris, noms des participants, noms des th\u00e8mes \u2014 dispara\u00eet avec elle.",
+    "reAnalyseRebuild_one": "Bristlenose va retranscrire et analyser 1 entretien depuis le d\u00e9but.",
+    "reAnalyseRebuild_other": "Bristlenose va retranscrire et analyser les {{count}} entretiens depuis le d\u00e9but.",
+    "reAnalyseLossHeader": "Votre travail sur cette \u00e9tude sera supprim\u00e9 :",
+    "reAnalyseLoss": {
+      "editedQuotes_one": "1 verbatim modifi\u00e9",
+      "editedQuotes_other": "{{count}} verbatim modifi\u00e9s",
+      "tags_one": "1 \u00e9tiquette",
+      "tags_other": "{{count}} \u00e9tiquettes",
+      "starred_one": "1 verbatim favori",
+      "starred_other": "{{count}} verbatim favoris",
+      "renamedSpeakers_one": "1 participant renomm\u00e9",
+      "renamedSpeakers_other": "{{count}} participants renomm\u00e9s",
+      "namedThemes_one": "1 th\u00e8me nomm\u00e9",
+      "namedThemes_other": "{{count}} th\u00e8mes nomm\u00e9s"
+    },
     "addFilesPrompt": "Ajouter",
     "addFilesMessage": "Ajouter des entretiens \u00e0 \u00ab\u00a0%@\u00a0\u00bb",
     "addingInterviews_one": "Ajout de {{count}} entretien\u2026",
@@ -537,9 +551,6 @@
     "allCount_other": "Les {{count}} entretiens",
     "noSessions": "Pas encore d\u2019entretiens",
     "loadFailed": "\u00c9chec du chargement des entretiens"
-  },
-  "toast": {
-    "removeBlockedByRun": "Arr\u00eatez l\u2019analyse de \u00ab\u00a0%@\u00a0\u00bb avant de la retirer."
   },
   "accounts": {
     "notAvailable": "Non disponible",

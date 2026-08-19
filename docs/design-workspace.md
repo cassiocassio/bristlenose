@@ -530,13 +530,21 @@ five tabs is not. Ambivalence recorded honestly: it has not been used in anger,
 and a tab bar sitting above a sidebar that already has a lens rail is a real
 question. Revisit on use, not on principle.
 
-**It is also evidence about the window model, and this is the part worth
-keeping.** Tabs make the master/child amputation *worse*: two tabs in one window,
-one carrying a project list and one not, means switching tabs makes a whole
-sidebar section appear and disappear. That is precisely the "a window changes
-shape while you are looking at it" objection used to reject promotion — and here
-it fires on an ordinary gesture rather than an edge case. Under a peer model
-every tab is structurally identical and the interaction is a non-event.
+**Tabs are a bonus, not an argument, and not a route around anything**
+(clarified 18 Aug 2026). Two windows on a big screen beat two tabs whenever the
+task genuinely needs both in view; tabs earn their keep on a small screen and
+when the clutter matters more than the comparison. And they avoid no work: a tab
+*is* a window — N tabs is N `WindowGroup` instances, N bridges, N of every
+per-window cost — so they do nothing about the shared serve and cannot stand in
+for Stage 3b.
+
+One minor corroboration, recorded at its actual weight: tabs sit slightly badly
+with the master/child amputation, since two tabs in one window — one with a
+project list, one without — make a whole sidebar section appear and disappear on
+an ordinary tab switch. Worth noting when the window model is decided; **not**
+a reason to decide it. The reasons that carry that call are that 3b's
+`columnVisibility = .detailOnly` gives the same felt result for two lines, and
+that a peer window is what a 3b window *is*.
 
 **Untested, and worth checking before relying on it:** whether a tab merged into
 another window fires the `.onDisappear` that `WindowRoster.release` hangs off.

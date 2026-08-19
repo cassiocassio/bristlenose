@@ -1212,6 +1212,21 @@ setting parallelism aside.
 
 ### 3.6a The per-project control — decided strings and placement
 
+> **Corrected 19 Aug 2026 — "analysed" now means sessions exist.** The gate read
+> `sessionCount != nil || lastPipelineRunAt != nil`, and a project with nothing
+> to serve satisfied *both* arms: a readable database holding zero sessions
+> gives a non-nil count, and `lastPipelineRunAt` is stamped by a run that
+> **failed**. Caught on screen — the context menu offered **Turn On Agent
+> Access** on a project reading `0` sessions beside `+57 unanalysed`, whose only
+> run was an eleven-hour hang. The count now decides whenever it is known, and
+> the run stamp is consulted only when it is not, which is the window that
+> second signal was added for rather than a second way to say yes. A known zero
+> is an answer. Pinned by `zeroSessionsIsAnAnswer_notAMissingOne`.
+>
+> Same shape as the Analyse and Re-analyse predicates trued the same day
+> (`docs/design-analysis-lifecycle.md` §4.1): an affordance offered because
+> *something* was on disk, rather than because there was anything behind it.
+
 **`Turn On Agent Access` ⇄ `Turn Off Agent Access`.** Title case, no ellipsis,
 no vendor name, in both the project context menu and its Project-menu twin.
 Locale keys `menu.project.turnOnAgentAccess` / `turnOffAgentAccess` × 20 full

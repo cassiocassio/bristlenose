@@ -124,4 +124,27 @@ struct AgentAccessPolicyTests {
         analysed.lastPipelineRunAt = Date()
         #expect(AgentAccessPolicy.canShare(analysed, sessionCount: nil) == true)
     }
+
+    @Test func zeroSessionsIsAnAnswer_notAMissingOne() throws {
+        // Caught on screen 19 Aug 2026: the context menu offered Turn On Agent
+        // Access on a project reading `0` sessions and `+57 unanalysed`. Both
+        // arms of the old test said yes to it — `sessionCount != nil` is true
+        // for a readable DB holding nothing, and the run stamp came from a run
+        // that FAILED. There was nothing behind the door.
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AgentAccessPolicyTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        var p = Project(id: UUID(), name: "folder-of-horrors", path: dir.path)
+        #expect(AgentAccessPolicy.canShare(p, sessionCount: 0) == false)
+
+        // And a failed run does not rescue it: a known zero outranks the stamp,
+        // which is only consulted when the count is genuinely unknown.
+        p.lastPipelineRunAt = Date()
+        #expect(AgentAccessPolicy.canShare(p, sessionCount: 0) == false,
+                "a run that produced nothing is not an analysis")
+        // The window the stamp exists for still works — count not yet read.
+        #expect(AgentAccessPolicy.canShare(p, sessionCount: nil) == true)
+    }
 }

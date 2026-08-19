@@ -5,11 +5,20 @@ import Foundation
 ///
 /// `canShowInFinder` was the wrong predicate: it is file-presence, so a
 /// never-analysed folder passes it with no quotes to read. This one requires
-/// locatable AND analysed. "Analysed" is either signal the host has:
-/// - the watcher read a session count from the project DB (works for
-///   projects analysed before `lastPipelineRunAt` existed), or
-/// - a pipeline run completed this install (`lastPipelineRunAt`), which
-///   covers the freshly-analysed window before the watcher's next tick.
+/// locatable AND analysed.
+///
+/// **"Analysed" means sessions exist, not that a run happened** — corrected 19
+/// Aug 2026, when the context menu offered Turn On Agent Access on a project
+/// showing `0` sessions and `+57 unanalysed`. Both arms of the old test were
+/// satisfied by a project with nothing to serve: `sessionCount != nil` is true
+/// whenever the DB is merely *readable*, and zero is a perfectly readable
+/// count; `lastPipelineRunAt != nil` is stamped by a run that **failed**, which
+/// is exactly how that project got its eleven hours of nothing.
+///
+/// So the count decides when it is known, and the run stamp is consulted only
+/// when it is not — which is the window the second signal existed for (freshly
+/// analysed, watcher hasn't ticked yet), rather than a second way to say yes.
+/// A known zero is an answer, not a missing one.
 ///
 /// One home for the rule — the context menu (via the ContentView-injected
 /// closure), the menu-bar twin, and the Settings agent-access list all call
@@ -20,7 +29,8 @@ import Foundation
 /// permission, not an error.
 enum AgentAccessPolicy {
     static func canShare(_ project: Project, sessionCount: Int?) -> Bool {
-        project.availability.isReady
-            && (sessionCount != nil || project.lastPipelineRunAt != nil)
+        guard project.availability.isReady else { return false }
+        if let sessionCount { return sessionCount > 0 }
+        return project.lastPipelineRunAt != nil
     }
 }

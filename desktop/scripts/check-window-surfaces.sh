@@ -25,13 +25,15 @@ die() { echo "FAIL: $*" >&2; exit 1; }
 #   - the sync itself (the one sanctioned reader)
 #   - the mount guard (content, not chrome — it decides what to *render*, and
 #     refusing to render another study's report is the point)
-#   - servingProjectPath (the agent-access antenna: exposure, not identity —
-#     "this project's serve is up" is genuinely a fact about the serve)
+# The antenna used to need an exemption here (it read the serve to decide its
+# solid tier). It no longer does: since 19 Aug it reads
+# `ServeManager.handshakeProjectPath` — the handshake writer's own published
+# answer — so the badge is not a second source either. Exemption removed rather
+# than kept "just in case"; an allowlist entry matching nothing is an invitation.
 hits=$(grep -n "currentProjectPath" "$CV" \
   | grep -vE "^[0-9]+: *//" \
   | grep -vE "flatMap \{ path in" \
-  | grep -vE "currentProjectPath != project.path" \
-  | grep -vE "servingProjectPath|\? serveManager.currentProjectPath : nil" || true)
+  | grep -vE "currentProjectPath != project.path" || true)
 if [ -n "$hits" ]; then
   echo "$hits" >&2
   die "a chrome surface reads the serve directly — that is the second source the peer model deletes"

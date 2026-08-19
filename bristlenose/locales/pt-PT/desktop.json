@@ -202,6 +202,8 @@
     "interviewCount_other": "{{count}} entrevistas",
     "unanalysedSubtitle_one": "+1 não analisada",
     "unanalysedSubtitle_other": "+{{count}} não analisadas",
+    "filesToAnalyse_one": "1 ficheiro para analisar",
+    "filesToAnalyse_other": "{{count}} ficheiros para analisar",
     "titleSessions_one": "{{count}} sessão",
     "titleSessions_other": "{{count}} sessões",
     "missingSubtitle_one": "1 em falta",

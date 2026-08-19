@@ -40,11 +40,22 @@ struct UnanalysedState: Equatable {
     /// dropped beside the recordings is carried into the project, but
     /// `classify_file` returns `None` for them, so a folder holding only notes
     /// has nothing to analyse.
-    let hasIngestableFiles: Bool
+    ///
+    /// **A count, not a flag, because the detail pane promises the number.**
+    /// "6 files to analyse" and the decision to offer Analyse at all have to
+    /// come from one measurement or the app contradicts itself — and a stored
+    /// `Bool` would also make `Equatable` blind to a seventh file arriving in a
+    /// never-analysed folder (F14 zeroes `newFiles`, so nothing else in the
+    /// published state would move), leaving the pane's count stale.
+    let ingestableFileCount: Int
+
+    /// Whether the folder holds anything the pipeline would ingest. Derived, so
+    /// the gate and the promised count cannot drift apart.
+    var hasIngestableFiles: Bool { ingestableFileCount > 0 }
 
     static let empty = UnanalysedState(
         newFiles: [], missingFiles: [], sessionCount: nil, totalDurationSeconds: nil,
-        hasIngestableFiles: false
+        ingestableFileCount: 0
     )
 
     /// True when there's nothing to render for the data-state deltas (no
@@ -283,16 +294,14 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
 
         // Computed from the raw enumeration, before any drift logic — see the
         // field's doc comment for why it must not come from `newFiles`.
-        let hasIngestable = topLevelEligible.contains {
-            !Self.companionExtensions.contains($0.pathExtension.lowercased())
-        }
+        let ingestableCount = Self.ingestableCount(topLevelEligible)
 
         let state = UnanalysedState(
             newFiles: newFiles,
             missingFiles: missingFiles,
             sessionCount: snapshot.sessionCount,
             totalDurationSeconds: snapshot.totalDurationSeconds,
-            hasIngestableFiles: hasIngestable
+            ingestableFileCount: ingestableCount
         )
         guard Self.shouldPublish(state, lastPublished: lastPublished) else { return }
         lastPublished = state
@@ -320,6 +329,17 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
 
     func isEligibleExtension(_ url: URL) -> Bool {
         Self.eligibleExtensions.contains(url.pathExtension.lowercased())
+    }
+
+    /// The ingestable subset of an eligible list, by count.
+    ///
+    /// The pane promises this number ("6 files to analyse") and the Analyse
+    /// predicate gates on whether it is above zero, so it is derived once here
+    /// rather than at each reader. Drops companions: five recordings beside a
+    /// `notes.txt` are five files to analyse, and promising six would be a
+    /// number the run then contradicts.
+    static func ingestableCount(_ eligible: [URL]) -> Int {
+        eligible.filter { !companionExtensions.contains($0.pathExtension.lowercased()) }.count
     }
 
     /// Pure helper exposed for unit testing — filters a candidate URL list to

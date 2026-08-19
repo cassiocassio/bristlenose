@@ -342,13 +342,13 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
 
 <!-- ══════════ MENU ══════════ -->
 <div class="sec-head">
-  <h2>The context menu — today and proposed</h2>
+  <h2>The context menu — before and after</h2>
   <p class="sub">Selected project is analysed and idle. Nothing is running.</p>
 </div>
 
 <div class="frame">
   <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
-    <span class="cap">left: shipped · right: proposed</span></div>
+    <span class="cap">left: before 19 Aug · then as built · Re-analyse… still proposed</span></div>
   <div class="frame-body">
 
     <div class="menu">
@@ -365,7 +365,7 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
     </div>
 
     <div class="menu">
-      <div class="mi hl"><span class="mi-ico">▷</span> Analyse</div>
+      <div class="sb-lab" style="padding:.2rem .6rem .35rem">Analysed, nothing new</div>
       <div class="mi new"><span class="mi-ico">↻</span> Re-analyse…</div>
       <div class="msep"></div>
       <div class="mi"><span class="mi-ico">🗂</span> Show in Finder <span class="sc">⇧⌘R</span></div>
@@ -380,8 +380,6 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
 
     <div class="menu">
       <div class="sb-lab" style="padding:.2rem .6rem .35rem">Empty — no recordings at all</div>
-      <div class="mi dis"><span class="mi-ico">▷</span> Analyse</div>
-      <div class="msep"></div>
       <div class="mi"><span class="mi-ico">🗂</span> Show in Finder <span class="sc">⇧⌘R</span></div>
       <div class="mi"><span class="mi-ico">✏️</span> Rename…</div>
       <div class="msep"></div>
@@ -410,13 +408,14 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
      what’s new and curation survives. Nothing new gets built here. What’s wrong today is that the
      control gives no clue whether edits survive; naming it for the state answers that in the label
      instead of in a doc the researcher will never read.</p>
-  <h3>The empty project is the clearest false affordance in the app</h3>
-  <p>First menu: the detail pane behind it says “Add interview recordings or transcripts to get
-     started”, while the context menu’s first and highlighted item offers to analyse them.
-     <code>canAnalyse</code> checks the project’s <em>kind</em>, its path and the pipeline state —
-     it never asks whether there is any media. The data to ask with already exists
-     (<code>UnanalysedState.newFiles</code>, <code>sessionCount</code>); see §4.1 of the design doc
-     for the full matrix.</p>
+  <h3>The empty project was the clearest false affordance in the app</h3>
+  <p>First menu, as it was: the detail pane behind it said “Add interview recordings or transcripts
+     to get started”, while the context menu’s first and highlighted item offered to analyse them.
+     <code>canAnalyse</code> checked the project’s <em>kind</em>, its path and the pipeline state —
+     never whether there was any media. Fixed 19 Aug 2026: <code>hasWorkToDo</code> asks the third
+     question, so Analyse is absent on an empty project and on an analysed one with nothing new, and
+     the pane counts the same field rather than asserting emptiness. See §4.1 of the design doc for
+     the full matrix.</p>
   <h3>Where this affordance actually earns its place</h3>
   <p>Not as an alternative to drag-drop or <b>File ▸ Add Files…</b> — both of those already fold new
      files into a folder-shaped project. It earns its place on the one route that has no drop event
@@ -633,12 +632,12 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
 <!-- ══════════ DETAIL PANE ══════════ -->
 <div class="sec-head">
   <h2>The detail pane — three states, not one</h2>
-  <p class="sub">Shown for any folder-shaped project that has never produced a report. Today it says the same thing whether the folder is empty or full.</p>
+  <p class="sub">Shown for any folder-shaped project that has never produced a report. It used to say the same thing whether the folder was empty or full. <b>Shipped 19&nbsp;Aug&nbsp;2026.</b></p>
 </div>
 
 <div class="frame">
   <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
-    <span class="cap">left: today, folder holds 6 files · right: proposed</span></div>
+    <span class="cap">left: before, folder holds 6 files · centre and right: as built</span></div>
   <div class="frame-body">
 
     <div class="pane">
@@ -665,11 +664,13 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
 
 <div class="comm">
   <span class="tag">Commentary</span>
-  <h3>The left pane is telling you to add the files you already added</h3>
-  <p>It is gated on <code>case .idle</code> alone — “has never produced a report” — and never asks
-     whether the folder has anything in it. Before <code>canAnalyse</code> learned to check, both
-     surfaces were wrong together and looked coherent; now the menu offers <b>Analyse</b> while the
-     pane says there is nothing to analyse. The menu is the half that is right.</p>
+  <h3>The left pane was telling you to add the files you already added</h3>
+  <p>It was gated on <code>case .idle</code> alone — “has never produced a report” — and never asked
+     whether the folder had anything in it. Before <code>canAnalyse</code> learned to check, both
+     surfaces were wrong together and looked coherent; fixing only the menu left it offering
+     <b>Analyse</b> while the pane denied there was anything to analyse. The menu was the half that
+     was right, so the pane was brought to it — and to the same measurement, so the two can say
+     different things but cannot contradict each other.</p>
   <h3>Files, not sessions — because only one of those is a fact</h3>
   <p>Files are what we know before stage 1; sessions are what <code>group_into_sessions</code>
      decides. Six files from a Teams export can be three sessions, so a session count here would be a
@@ -679,7 +680,13 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
   <h3>The description is cut, not rewritten</h3>
   <p>With an <b>Analyse</b> button below it, a sentence explaining how to get started restates the
      control beside it. The count carries what the button cannot — that we saw the files — and the
-     button carries the verb.</p>
+     button carries the verb. It is the menu’s verb, literally: the button reuses
+     <code>desktop.menu.project.analyse</code>, so the two surfaces say the same word.</p>
+  <h3>Counted before grouping, and minus the notes</h3>
+  <p>The number is the ingestable subset of the watcher’s own enumeration, so five recordings beside
+     a <code>notes.txt</code> read “5 files to analyse” — five is what a run then ingests. When the
+     watcher has not reported yet, the pane shows the drop target rather than guessing a count: a
+     pane that guessed would be asserting something it had not measured.</p>
 </div>
 
 <!-- ══════════ SEQUENCES ══════════ -->

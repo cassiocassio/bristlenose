@@ -202,6 +202,8 @@
     "interviewCount_other": "{{count}} haastattelua",
     "unanalysedSubtitle_one": "+1 analysoimaton",
     "unanalysedSubtitle_other": "+{{count}} analysoimatonta",
+    "filesToAnalyse_one": "1 analysoitava tiedosto",
+    "filesToAnalyse_other": "{{count}} analysoitavaa tiedostoa",
     "titleSessions_one": "{{count}} istunto",
     "titleSessions_other": "{{count}} istuntoa",
     "missingSubtitle_one": "1 puuttuu",

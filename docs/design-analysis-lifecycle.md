@@ -216,9 +216,9 @@ Where each verb can be reached, and what gates it.
 
 | Affordance | Surface | Enabled when | State today |
 |---|---|---|---|
-| **Analyse** | sidebar context menu, Project menu | folder-shaped, has path, not running — **does not check for media** | Shipped, over-offered (§4.1) |
+| **Analyse** | sidebar context menu, Project menu | folder-shaped, has path, not running, **and there is work to do** | Shipped (`8975254a`, `1c5bebfa`) |
 | **Analyse** (auto) | after a cloud-import batch lands | folder-shaped project | Shipped (`1490dcde`) |
-| **Analyse** | the project detail pane | never run **and** files present | **Gap — see §6.3** |
+| **Analyse** | the project detail pane | never run **and** files present | Shipped (§6.3) |
 | **File ▸ Add Files…** | File menu | a project is selected | Shipped |
 | **+N unanalysed** pill → sheet | row subtitle | `newFiles` non-empty | Shipped |
 | **Analyse** (folder-shaped) | context menu | `newFiles` non-empty | Shipped — **already incremental**, but unlabelled as such |
@@ -229,24 +229,28 @@ Where each verb can be reached, and what gates it.
 | **Locate…** | context menu, Project menu | `cantFind` | Shipped |
 | **Show Diagnostics…** | failure glyph, context menu | `failed` / `completedPartial` | Shipped |
 
-### 4.1 Enablement matrix — the logic that is missing
+### 4.1 Enablement matrix
 
-The two verbs fail in opposite directions today. **Re-analyse…** is
-`.disabled(true)` and can never light up. **Analyse** is offered whenever the
-project is folder-shaped, has a path, and isn't running — `canAnalyse`
-(`ProjectSidebarOutline.swift:1707`) **never asks whether there is anything to
-analyse**, so it appears on a project with no recordings at all, beside an empty
-state that says "Add interview recordings or transcripts to get started".
+The two verbs failed in opposite directions. **Re-analyse…** is `.disabled(true)`
+and can never light up — still true. **Analyse** was offered whenever the project
+was folder-shaped, had a path, and wasn't running: `canAnalyse` never asked
+whether there was anything to analyse, so it appeared on a project with no
+recordings at all, beside an empty state saying "Add interview recordings or
+transcripts to get started". **Fixed 19 Aug 2026** — `hasWorkToDo`
+(`ProjectSidebarOutline.swift`) now answers the third question, and the detail
+pane reads the same measurement (§6.3).
 
-Both need the same missing input: *does this project have work to do?*
-`UnanalysedState` already carries it — `newFiles` (eligible, not yet ingested)
-and `sessionCount` (rows in `sessions`).
+Both verbs need the same input: *does this project have work to do?*
+`UnanalysedState` carries it — `newFiles` (eligible, not yet ingested),
+`sessionCount` (rows in `sessions`), and `ingestableFileCount`, which answers
+"is there anything here at all" and survives the F14 zeroing that hides
+`newFiles` from a never-analysed project.
 
 | Project state | `newFiles` | `sessionCount` | **Analyse** | **Re-analyse…** | **Stop** |
 |---|---|---|---|---|---|
-| Empty — no media at all | 0 | nil / 0 | **hide** ← *shown today* | hide | hide |
+| Empty — no media at all | 0 | nil / 0 | **hide** ✅ | hide | hide |
 | Has media, never analysed | >0 | nil / 0 | **Analyse** | hide | hide |
-| Analysed, nothing new | 0 | >0 | **hide** — measured: 0.1s, all cached, no visible change | **Re-analyse…** ← *dimmed today* | hide |
+| Analysed, nothing new | 0 | >0 | **hide** ✅ — measured: 0.1s, all cached, no visible change | **Re-analyse…** ← *still dimmed* | hide |
 | Analysed, new files present | >0 | >0 | **Analyse *N* New Files** | Re-analyse… | hide |
 | Running | — | — | hide | hide | **Stop Analysis** ⌘. |
 | Failed / partial | any | any | Analyse (retry) | Re-analyse… | hide |
@@ -256,13 +260,14 @@ and `sessionCount` (rows in `sessions`).
 Read "hide" as hide in a **context** menu and dim in the **menu bar**, per the
 rule below. The one exception is *unimplemented*, which hides in both.
 
-Two things fall out of writing it down. **"Analysed, nothing new" is the state
+Two things fell out of writing it down. **"Analysed, nothing new" is the state
 that wants Re-analyse and nothing else** — offering Analyse there is offering a
 no-op that hits cache and changes nothing, which teaches the researcher that the
 button does nothing rather than that they picked the wrong one. And **the empty
-project is the clearest false affordance in the app**: the detail pane already
-says there is nothing to analyse, while the context menu's first and highlighted
-item says otherwise.
+project was the clearest false affordance in the app**: the detail pane said
+there was nothing to analyse while the context menu's first and highlighted item
+said otherwise. Both halves now read one field, so they can state different
+things — "is there work" and "how much" — but cannot contradict each other.
 
 **Dim vs hide.** `MenuCommands.swift` states the rule in its own comment —
 *"dimmed (not hidden) when it isn't running, per menu-bar HIG (context menus
@@ -305,6 +310,8 @@ ninety-nine good ones. Outcome 3 costs one participant; outcome 4 costs the stud
 | Cloud placeholders downloaded to read their length | invisible cost | discovery no longer materialises |
 | >16 sessions prompted a headless sidecar | **11-hour hang** | count guard removed; sidecar stdin `/dev/null` |
 | Failed run's husk walled off the retry | dead end | guard tests for a *deliverable*, not for existence |
+| **Analyse** offered on a project with no recordings | false affordance | `canAnalyse` asks whether there is work to do |
+| The empty-state pane said "add files" to a project with files | the app contradicting itself on screen | the pane counts the same field the menu gates on |
 
 ### 5.3 Open
 
@@ -313,7 +320,6 @@ ninety-nine good ones. Outcome 3 costs one participant; outcome 4 costs the stud
 | **Stale cause outranks the live one** | A refused new attempt shows the *previous* run's cause. Observed: headline read "EOF when reading a line" (an 11-hour-old run) while the real blocker, "Output directory already exists", sat below it in Last output. | Diagnostic popover — the freshest attempt must own the headline |
 | **`--clean` advice in a GUI** | The app cannot pass a flag. The advice is unfollowable, and the only way out is deleting a folder — a mental model of our plumbing that no researcher should need | Re-analyse… (§6), so the app does it |
 | **Re-analyse… permanently dimmed** | False affordance; teaches that the app is broken | Implement or hide |
-| **The empty-state pane asserts emptiness without checking** | A project holding two recordings shows "Drag Interviews Here — Add interview recordings or transcripts to get started": it tells the researcher to add the files they already added. Gated on `case .idle` alone (`ContentView.swift:2652`), i.e. "never produced a report" — it never asks whether the folder has anything in it. | §6.3 |
 | **`EOFError` surfaces raw** | "EOF when reading a line" names the mechanism, not the problem | `failure_classifier` — map it to a bug signature |
 
 ### 5.4 Edge cases
@@ -336,7 +342,7 @@ ninety-nine good ones. Outcome 3 costs one participant; outcome 4 costs the stud
 
 ---
 
-## 6. Gaps
+## 6. Gaps — and what has closed
 
 ### 6.1 Re-analyse is a placeholder at both ends
 
@@ -389,24 +395,25 @@ does the incremental work. It is two smaller things:
 Sequencing note: fix the dead end before adding a menu item. A sheet that can
 act on what it reports may make the extra context-menu entry unnecessary.
 
-### 6.3 The detail pane says "add files" to a project that has files
+### 6.3 The detail pane says "add files" to a project that has files — **shipped 19 Aug 2026**
 
-The same defect as §4.1, in the other surface. `dragInterviewsPane` is shown for
+The same defect as §4.1, in the other surface. `dragInterviewsPane` was shown for
 any folder-shaped project whose pipeline state is `.idle` — "has never produced
 a report" — with no knowledge of whether the folder is empty. So a project
-holding two `.mp4`s reads *"Add interview recordings or transcripts to get
+holding two `.mp4`s read *"Add interview recordings or transcripts to get
 started."*
 
 Before `canAnalyse` learned to check, both surfaces were wrong together and
-looked coherent. Now the menu knows and the pane doesn't, so the app contradicts
-itself on screen: the menu offers **Analyse**, the pane says there is nothing to
-analyse. The menu is the half that is right.
+looked coherent. Fixing only the menu made the app contradict itself on screen:
+the menu offered **Analyse** while the pane said there was nothing to analyse.
+The menu was the half that was right, so the pane was brought to it rather than
+the other way round.
 
 **Three states, not one:**
 
 | Condition | Copy | Action |
 |---|---|---|
-| Never run, **no files** | "Drag Interviews Here" + today's description | — |
+| Never run, **no files** | "Drag Interviews Here" + the existing description | — |
 | Never run, **files present** | **"6 files to analyse"**, no description | **Analyse** |
 | Path empty | "Drag Interviews Here" | — |
 
@@ -426,6 +433,20 @@ analyses five. Needs `_one` / `_other` plural forms, following
 
 **The description line is cut, not rewritten.** With an Analyse button below it,
 a sentence explaining how to get started restates the control beside it.
+
+**As built.** `UnanalysedState.ingestableFileCount` replaced the boolean the
+menu had been using, and `hasIngestableFiles` became `count > 0` — one
+measurement, so the number the pane promises and the flag the menu gates on
+cannot drift. The count is taken from the raw enumeration before any drift
+logic, minus companion types, by `ProjectFolderWatcher.ingestableCount`; the
+pane reads it through `ContentView.filesToAnalyse`, whose one deliberate
+divergence from `hasWorkToDo` is that **unknown resolves to the drop target
+rather than to a count** — hiding a menu item leaves no way forward, but the
+pane's alternative is not a dead end, and a pane that guessed a number would be
+asserting something it had not measured. The button reuses
+`desktop.menu.project.analyse`, so the pane and the menu say the same word.
+Plurals are `desktop.chrome.filesToAnalyse_one`/`_other` across the 21 full
+locales.
 
 ---
 

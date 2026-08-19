@@ -202,6 +202,8 @@
     "interviewCount_other": "{{count}} intervjuer",
     "unanalysedSubtitle_one": "+1 uanalysert",
     "unanalysedSubtitle_other": "+{{count}} uanalyserte",
+    "filesToAnalyse_one": "1 fil til analyse",
+    "filesToAnalyse_other": "{{count}} filer til analyse",
     "titleSessions_one": "{{count}} økt",
     "titleSessions_other": "{{count}} økter",
     "missingSubtitle_one": "1 mangler",

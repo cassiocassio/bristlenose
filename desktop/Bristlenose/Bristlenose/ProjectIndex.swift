@@ -1155,10 +1155,11 @@ final class ProjectIndex: ObservableObject {
                 missingFiles: state.missingFiles,
                 sessionCount: state.sessionCount,
                 totalDurationSeconds: state.totalDurationSeconds,
-                // NOT gated — this answers "is there anything here", not
-                // "what drifted", and it is what `canAnalyse` reads to decide
-                // whether to offer Analyse on a never-analysed project.
-                hasIngestableFiles: state.hasIngestableFiles
+                // NOT gated — this answers "how much is here", not "what
+                // drifted", and it is what `canAnalyse` reads to decide whether
+                // to offer Analyse on a never-analysed project, and what the
+                // detail pane counts in "6 files to analyse".
+                ingestableFileCount: state.ingestableFileCount
             )
         } else {
             gated = state

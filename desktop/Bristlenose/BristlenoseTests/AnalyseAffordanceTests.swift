@@ -17,14 +17,14 @@ import Foundation
     private func state(
         newFiles: Int = 0,
         sessions: Int? = nil,
-        ingestable: Bool = true
+        files: Int = 1
     ) -> UnanalysedState {
         UnanalysedState(
             newFiles: (0..<newFiles).map { URL(fileURLWithPath: "/tmp/p\($0).mp4") },
             missingFiles: [],
             sessionCount: sessions,
             totalDurationSeconds: nil,
-            hasIngestableFiles: ingestable
+            ingestableFileCount: files
         )
     }
 
@@ -33,7 +33,7 @@ import Foundation
     @Test func emptyProject_isNotOffered() {
         // The bug: highlighted "Analyse" beside "Add interview recordings…".
         #expect(!SidebarOutlineController.hasWorkToDo(
-            state(newFiles: 0, sessions: nil, ingestable: false)))
+            state(newFiles: 0, sessions: nil, files: 0)))
     }
 
     @Test func mediaButNeverAnalysed_isOffered() {
@@ -42,7 +42,7 @@ import Foundation
         // none. Reading that as "nothing to do" would hide Analyse on exactly
         // the project that needs it.
         #expect(SidebarOutlineController.hasWorkToDo(
-            state(newFiles: 0, sessions: nil, ingestable: true)))
+            state(newFiles: 0, sessions: nil, files: 1)))
     }
 
     @Test func analysedWithNothingNew_isNotOffered() {
@@ -50,19 +50,19 @@ import Foundation
         // control whose only observable effect is a re-render teaches the
         // researcher the button is broken. This state wants Re-analyse…
         #expect(!SidebarOutlineController.hasWorkToDo(
-            state(newFiles: 0, sessions: 14, ingestable: true)))
+            state(newFiles: 0, sessions: 14, files: 1)))
     }
 
     @Test func analysedWithNewFiles_isOffered() {
         #expect(SidebarOutlineController.hasWorkToDo(
-            state(newFiles: 3, sessions: 14, ingestable: true)))
+            state(newFiles: 3, sessions: 14, files: 1)))
     }
 
     @Test func failedRunWithMediaPresent_isOffered() {
         // Nothing was ingested, so every file still reads as new — the retry
         // must stay reachable.
         #expect(SidebarOutlineController.hasWorkToDo(
-            state(newFiles: 5, sessions: 0, ingestable: true)))
+            state(newFiles: 5, sessions: 0, files: 1)))
     }
 
     // MARK: - Unknown state
@@ -78,7 +78,7 @@ import Foundation
         // Folder emptied after an analysis: nothing left to ingest, so Analyse
         // has nothing to do regardless of the session count on record.
         #expect(!SidebarOutlineController.hasWorkToDo(
-            state(newFiles: 0, sessions: 14, ingestable: false)))
+            state(newFiles: 0, sessions: 14, files: 0)))
     }
 
     // MARK: - The first scan must publish, or "absent" is ambiguous
@@ -122,5 +122,53 @@ import Foundation
             #expect(!ProjectFolderWatcher.companionExtensions.contains(real),
                     "\(real) is ingestable and must not be treated as a companion")
         }
+    }
+
+    // MARK: - The pane promises a number, and it has to be the same measurement
+
+    @Test func paneCountsWhatTheMenuGatesOn() {
+        // One field, two readers. The menu asks "is there anything here" and the
+        // pane asks "how much" — if those came from separate measurements the
+        // app could offer Analyse beside a pane denying there was anything to
+        // analyse, which is the bug this whole slice exists to close.
+        for n in [0, 1, 6, 58] {
+            let d = state(newFiles: 0, sessions: nil, files: n)
+            #expect(ContentView.filesToAnalyse(d) == n)
+            #expect(SidebarOutlineController.hasWorkToDo(d) == (n > 0))
+        }
+    }
+
+    @Test func unknownStateShowsTheDropTargetRatherThanACount() {
+        // Deliberately the opposite resolution to `hasWorkToDo(nil)`. Hiding a
+        // menu item leaves no way forward, so unknown resolves to *offer*; the
+        // pane's alternative is the drop target, which is the right thing to
+        // show when we do not yet know what the folder holds. A pane that
+        // guessed a count would be asserting something it has not measured.
+        #expect(ContentView.filesToAnalyse(nil) == 0)
+        #expect(SidebarOutlineController.hasWorkToDo(nil))
+    }
+
+    @Test func companionFilesAreNotCounted() {
+        // The acceptance criterion, end to end through the two pure helpers the
+        // watcher itself uses: five recordings beside a researcher's notes are
+        // "5 files to analyse", because five is what a run then ingests.
+        // `isDirectory: true` is load-bearing: `filterEligible` compares each
+        // candidate's parent against the root, and a parent URL always carries
+        // the trailing slash a file-style `URL(fileURLWithPath:)` omits — so a
+        // file-style root matches nothing and the filter silently returns [].
+        // Production passes the watcher's real directory URL, which has it.
+        let root = URL(fileURLWithPath: "/tmp/study", isDirectory: true)
+        let dropped = ["a.mp4", "b.mov", "c.m4a", "d.srt", "e.docx", "notes.txt"]
+            .map { root.appendingPathComponent($0) }
+        let eligible = ProjectFolderWatcher.filterEligible(at: root, candidates: dropped)
+        #expect(eligible.count == 6, "the notes travel with the recordings")
+        #expect(ProjectFolderWatcher.ingestableCount(eligible) == 5)
+    }
+
+    @Test func aFolderOfOnlyNotesOffersNothing() {
+        let root = URL(fileURLWithPath: "/tmp/study", isDirectory: true)
+        let eligible = ProjectFolderWatcher.filterEligible(
+            at: root, candidates: ["one.txt", "two.txt"].map(root.appendingPathComponent))
+        #expect(ProjectFolderWatcher.ingestableCount(eligible) == 0)
     }
 }

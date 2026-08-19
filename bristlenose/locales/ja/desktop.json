@@ -197,6 +197,7 @@
     "newProjectSaveMessage_other": "\u30a4\u30f3\u30bf\u30d3\u30e5\u30fc\u306f\u3053\u306e\u30d5\u30a9\u30eb\u30c0\u306b\u30b3\u30d4\u30fc\u3055\u308c\u307e\u3059\u3002",
     "interviewCount_other": "\u30a4\u30f3\u30bf\u30d3\u30e5\u30fc {{count}} \u4ef6",
     "unanalysedSubtitle_other": "\u672a\u5206\u6790 +{{count}} \u4ef6",
+    "filesToAnalyse_other": "\u5206\u6790\u3059\u308b\u30d5\u30a1\u30a4\u30eb {{count}} \u4ef6",
     "titleSessions_other": "{{count}} \u30bb\u30c3\u30b7\u30e7\u30f3",
     "missingSubtitle_other": "{{count}} \u4ef6\u4e0d\u8db3",
     "tooltipWaiting": "{{count}} \u4ef6\u5f85\u6a5f\u4e2d",

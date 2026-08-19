@@ -197,6 +197,7 @@
     "newProjectSaveMessage_other": "\u4f60\u7684\u8a2a\u8ac7\u5c07\u62f7\u8c9d\u5230\u6b64\u6a94\u6848\u593e\u3002",
     "interviewCount_other": "{{count}} 則訪談",
     "unanalysedSubtitle_other": "+{{count}} 則未分析",
+    "filesToAnalyse_other": "{{count}} \u500b\u6a94\u6848\u5f85\u5206\u6790",
     "titleSessions_other": "{{count}} 個工作階段",
     "missingSubtitle_other": "{{count}} 則遺失",
     "tooltipWaiting": "{{count}} 則等待中",

@@ -2742,20 +2742,61 @@ struct ContentView: View {
         }
     }
 
-    /// Detail pane for a project with nothing to show yet — no folder at all, or
-    /// a folder that has never produced a report.
+    /// How many files a run would ingest — the number the pane promises.
     ///
-    /// Accepts a Finder drop right here, routed through the same
+    /// Reads the same field the Analyse predicate gates on, so the pane and the
+    /// menu cannot disagree about whether there is anything here. Absent state
+    /// (no watcher yet) counts as zero: `hasWorkToDo` resolves unknown to
+    /// *offer* because hiding a control leaves no way forward, but the pane's
+    /// alternative is not a dead end — it is the drop target, which is the
+    /// right thing to show when we do not yet know what the folder holds.
+    nonisolated static func filesToAnalyse(_ data: UnanalysedState?) -> Int {
+        data?.ingestableFileCount ?? 0
+    }
+
+    /// Detail pane for a project with nothing to show yet — no folder at all, a
+    /// folder that has never produced a report, or one holding recordings that
+    /// have not been analysed.
+    ///
+    /// Two states, because "add some interviews" is a lie to a researcher who
+    /// has already added six. With files present the pane counts them and
+    /// carries the same **Analyse** the sidebar offers; the description line is
+    /// dropped, since a sentence about how to get started only restates the
+    /// button beneath it.
+    ///
+    /// **Files, not sessions.** Files are what we know before stage 1; sessions
+    /// are what `group_into_sessions` decides, and six files from a Teams export
+    /// can be three sessions. A session count here would be a prediction the
+    /// sidebar then contradicts — the app disagreeing with itself about the size
+    /// of the study.
+    ///
+    /// Accepts a Finder drop in both states, routed through the same
     /// `handleDropOnProject` as the project's sidebar row (→
     /// `establishEmptyProject` for the no-folder case, → auto-run for a folder
     /// drop), so the "Drag interviews here" copy is a promise the pane can keep.
     @ViewBuilder
     private func dragInterviewsPane(_ project: Project) -> some View {
-        ContentUnavailableView(
-            i18n.t("desktop.chrome.dragInterviews"),
-            systemImage: "square.and.arrow.down",
-            description: Text(i18n.t("desktop.chrome.dragInterviewsDescription"))
-        )
+        let waiting = Self.filesToAnalyse(projectIndex.unanalysed[project.id])
+        Group {
+            if waiting > 0 {
+                ContentUnavailableView {
+                    Label(i18n.plural("desktop.chrome.filesToAnalyse", count: waiting),
+                          systemImage: "square.and.arrow.down")
+                } description: {
+                    EmptyView()
+                } actions: {
+                    Button(i18n.t("desktop.menu.project.analyse")) {
+                        pipelineRunner.start(project: project)
+                    }
+                }
+            } else {
+                ContentUnavailableView(
+                    i18n.t("desktop.chrome.dragInterviews"),
+                    systemImage: "square.and.arrow.down",
+                    description: Text(i18n.t("desktop.chrome.dragInterviewsDescription"))
+                )
+            }
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay {
             if emptyProjectDropTargeted {

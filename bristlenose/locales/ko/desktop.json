@@ -197,6 +197,7 @@
     "newProjectSaveMessage_other": "\uc778\ud130\ubdf0\uac00 \uc774 \ud3f4\ub354\uc5d0 \ubcf5\uc0ac\ub429\ub2c8\ub2e4.",
     "interviewCount_other": "\uc778\ud130\ubdf0 {{count}}\uac1c",
     "unanalysedSubtitle_other": "\ubbf8\ubd84\uc11d +{{count}}\uac1c",
+    "filesToAnalyse_other": "\ubd84\uc11d\ud560 \ud30c\uc77c {{count}}\uac1c",
     "titleSessions_other": "{{count}}\uac1c \uc138\uc158",
     "missingSubtitle_other": "{{count}}\uac1c \ub204\ub77d",
     "tooltipWaiting": "{{count}}\uac1c \ub300\uae30 \uc911",

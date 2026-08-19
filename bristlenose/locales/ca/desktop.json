@@ -202,6 +202,8 @@
     "interviewCount_other": "{{count}} entrevistes",
     "unanalysedSubtitle_one": "+1 sense analitzar",
     "unanalysedSubtitle_other": "+{{count}} sense analitzar",
+    "filesToAnalyse_one": "1 fitxer per analitzar",
+    "filesToAnalyse_other": "{{count}} fitxers per analitzar",
     "titleSessions_one": "{{count}} sessió",
     "titleSessions_other": "{{count}} sessions",
     "missingSubtitle_one": "1 que falta",

@@ -202,6 +202,8 @@
     "interviewCount_other": "{{count}} görüşme",
     "unanalysedSubtitle_one": "+1 analiz edilmemiş",
     "unanalysedSubtitle_other": "+{{count}} analiz edilmemiş",
+    "filesToAnalyse_one": "Analiz edilecek 1 dosya",
+    "filesToAnalyse_other": "Analiz edilecek {{count}} dosya",
     "titleSessions_one": "{{count}} Oturum",
     "titleSessions_other": "{{count}} Oturum",
     "missingSubtitle_one": "1 eksik",

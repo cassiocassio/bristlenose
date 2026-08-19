@@ -181,8 +181,9 @@
     <tr><td><b>Window menu</b> row</td><td>title + subtitle, as rendered</td><td>same</td>
         <td class="d">Inherits whatever the title does.</td></tr>
     <tr><td><b>Content pane</b></td><td>the serve</td><td>the serve</td><td class="y">No — it is the source of truth</td></tr>
-    <tr><td><b>View ▸ Show Projects</b></td><td>live</td><td><b>dimmed</b></td>
-        <td class="y">No — dimming is the child's only structural cue</td></tr>
+    <tr><td><b>View ▸ Show Projects</b></td><td>live</td><td><b>live</b></td>
+        <td class="y">No — a child has a sidebar (the lens rail) and hiding it is
+        a real thing to want. The name is right for 3b; only 3a makes it read oddly.</td></tr>
   </tbody>
 </table>
 
@@ -357,7 +358,7 @@
     <figcaption>View · master / child</figcaption>
     <div class="menu">
       <div class="mi"><span>Show Projects</span><span class="kbd">⌃⌘S</span></div>
-      <div class="mi off"><span>Show Projects <em>(child)</em></span><span class="kbd">⌃⌘S</span></div>
+      <div class="mi"><span>Show Projects <em>(child — also live)</em></span><span class="kbd">⌃⌘S</span></div>
       <div class="sep"></div>
       <div class="mi"><span>Sessions</span><span class="kbd">⌘1</span></div>
       <div class="mi"><span>Quotes</span><span class="kbd">⌘2</span></div>
@@ -380,10 +381,12 @@
 </div>
 
 <div class="note">
-  <p><span class="tag ships">decided</span> <b><code>View ▸ Show Projects</code> keeps its name</b>
-  and simply dims in a child. It reads slightly oddly against a sidebar that has no projects in it,
-  and that is accepted: renaming it to something neutral like "Sidebar" now would mean renaming it
-  back at 3b, and a menu item whose label churns twice is worse than one that is briefly imprecise.</p>
+  <p><span class="tag ships">decided</span> <b><code>View ▸ Show Projects</code> keeps its name
+  and stays live in a child.</b> An earlier draft dimmed it — written when a child was going to have
+  no sidebar at all. The child we settled on keeps the lens rail, so it <em>has</em> a sidebar and
+  hiding it to widen the content is a real thing to want; dimming would remove a capability to make
+  a label read better. The name stays because it is right for the <em>destination</em>: at 3b it
+  will still be called Projects in a window that has them. 3a is the temporary state, not the name.</p>
   <p><b>Why the whole New/Add/Import family dims in a child.</b> They all act on
   <em>which study</em> — the axis a child deliberately doesn't have. Dimming them is the same
   statement the missing project list makes, in the place a Mac user checks when a click does

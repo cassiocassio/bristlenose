@@ -605,10 +605,18 @@ same metrics; `Views` simply moves up into the space `Studies` vacated. An
 omission, not a different control — which is what makes it one flag rather than a
 second window type.
 
-**`View ▸ Show Projects` keeps its name and dims in a child.** It reads slightly
-oddly against a sidebar with no projects in it, and that is accepted: renaming it
-to something neutral now means renaming it back at 3b, and a label that churns
-twice is worse than one that is briefly imprecise.
+**`View ▸ Show Projects` keeps its name *and stays live* in a child (revised
+18 Aug 2026).** The earlier line here said it dims. That was written when a child
+was going to have **no sidebar at all** — the Claude Desktop shape this section
+cites. The child we settled on keeps the lens rail, so it *does* have a sidebar,
+and hiding it to widen the content is a real thing a researcher wants. Dimming
+would remove a capability to make a label read better.
+
+The label stays, and the reason is the destination rather than the workaround:
+**at 3b it will still be called Projects even in a window that has them** — 3a is
+the temporary state, not the name. A label that churns twice is worse than one
+that is briefly imprecise, and this one is only imprecise while a child cannot
+hold a project, which is exactly the thing 3b removes.
 
 **Two "open in new window" commands, two labels.** Right-click a lens →
 **Open in New Window** (a child at that lens — the most direct form of the gesture,

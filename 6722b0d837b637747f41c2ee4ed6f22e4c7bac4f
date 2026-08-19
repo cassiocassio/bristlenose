@@ -1,0 +1,54 @@
+This commit also contains an unrelated ingest changeset, which its subject
+does not describe. Two sessions were live in this tree on 19 Aug 2026; a
+broad `git add` from the window-naming session swept up an index that had
+been staged, path by path, by the other. Nothing was lost and nothing was
+overwritten - but `git log` will not lead anyone to the work below, hence
+this note.
+
+The ingest half is every file except docs/mockups/window-menu-naming.html.
+Its intended message follows verbatim.
+
+---
+
+ingest: refuse roots structurally, walk three levels, drop the count prompt
+
+A 57-session drop sat blocked for eleven hours at 2.7 seconds of CPU. The
+sidecar had reached Confirm.ask("Continue?") - the >16-session guard - on
+stdin it inherited from the Xcode console, so it was waiting on a terminal
+nobody could see. No terminus event, sidebar still showing it as running.
+
+The guard is gone rather than fixed, because count was never the right
+axis. A thousand ten-second video answers to one question is an ordinary
+unmoderated study; ten ninety-minute interviews is five times the work at
+one percent of the file count. It blocked the cheap case and waved the
+expensive one through. It also fired after the scan it was meant to gate,
+so it never protected the part that costs anything.
+
+What it looked like it was protecting - someone dropping a filesystem
+root - is now handled where it belongs. _refuse_reason rejects filesystem
+and system roots by name before anything touches the disk. Measured
+first: a whole-filesystem walk finds 5 media files in 0.3s, so depth was
+never the hazard either.
+
+Depth 1 -> 3, because real folders nest: project/week1/zoom1/video.mp4.
+This removes Zoom's special-casing rather than deepening it - the Zoom
+rule keys on the containing directory name, so it works at any depth and
+zoom1/ becomes just a folder that happens to hold media.
+
+Two resilience fixes found while measuring. Dropping a home folder raised
+PermissionError out of iterdir on .Trash and destroyed the entire scan -
+one bad entry killing everything, the same shape as the zero-byte file
+that aborted a 42-session run the night before. And discovery probed
+duration on every media file, which materialises cloud placeholders
+first: scanning a folder of evicted recordings downloaded all of them to
+learn their length. Ten such files sit within three levels of this home
+directory. Duration at scan time is a nicety; the bytes are genuinely
+needed at transcription, where the wait is expected and attributable.
+
+Defence in depth: the sidecar's stdin is now /dev/null, so no prompt
+anyone adds upstream can ever block a headless run again.
+
+Verified: 4016 passed, 83 skipped, 22 xfailed; ruff clean; corpus
+acceptance unchanged at 53 ingested / 5 refused / 0 dropped / 0 aborts.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>

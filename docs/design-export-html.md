@@ -52,6 +52,14 @@ The HTML export is the "accountability copy" — a stakeholder or client can ope
   offline-by-default and can't silently drift
 - **Read-only**: mutating affordances (star/hide/tag/edit, codebook authoring) gated
   at the store-action layer; `apiGet` fails loud on an uncovered read offline
+- **Anti-drift selector gate** (`tests/test_export_css_selectors.py`) — the CSS half
+  of read-only (`theme/templates/export.css`) can't fail loudly on its own, so every
+  class it hides must still be rendered somewhere in `frontend/src`. Renaming a
+  control now fails the build instead of silently un-hiding it in every export.
+  Added 15 Aug 2026 after five selectors were found stale at once (`.badge-accept`,
+  `.bn-counter`, `.bn-tag-input`, `.codebook-add-tag`, `.codebook-picker-btn`);
+  matching is whole-class-token, because `.badge-accept` substring-matches the live
+  `badge-accept-flash` and a naive search would have passed the original bug
 - **Locale baked** to the researcher's current UI language (not the recipient's browser)
 - Optional anonymisation (report data + source filenames)
 - Works offline in any modern browser (Chromium + WebKit e2e, incl. a link-integrity crawl)

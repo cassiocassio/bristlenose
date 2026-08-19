@@ -211,6 +211,53 @@ This is a convenience, not a correction tool. The quotes page is for curating at
 
 **11a. `person_links` table** — map speaker codes across sessions to a single person
 **11b. Merge UI** — on the project page speaker summary (Layer 2)
+**11c. Give `people.yaml` a person↔session split** — the prerequisite, and currently a live bug
+
+#### 11c: the two persistence layers disagree today
+
+`compute_participant_stats()` (`bristlenose/people.py`) keys its output by
+speaker code alone, and `assign_speaker_codes()`
+(`stages/s05b_identify_speakers.py:450`) resets its moderator/observer counters
+every session — so every session's first moderator is `m1`. In a multi-session
+study, session 2's `m1` overwrites session 1's and `people.yaml` ends up with
+**one** `m1` entry for the whole study, carrying the last session's stats and
+`session_id`. Same for `o1`.
+
+Two consequences beyond the lost stats:
+
+- The sessions table groups by `computed.session_id`, so every session except
+  the last shows no moderator at all.
+- `merge_people()` preserves *editable* fields by key while replacing
+  *computed*, so a name the researcher typed for session 1's moderator stays
+  attached to an entry whose stats are now session 2's — **mislabelling**, not
+  just loss.
+
+The serve-mode DB has no such collision: `SessionSpeaker`
+(`server/models.py:265`) joins person↔session and models per-session moderators
+correctly. (Its docstring already names cross-session moderator linking as the
+reason it exists.) One caveat — `_import_speakers()` fills `Person` name fields
+via a flat `people[code]` lookup, so the *names* it imports inherit the YAML
+collision even though the *rows* are per-session; fixing 11c fixes that too.
+
+Each collision now logs a WARNING from `bristlenose.people` so it is announced
+rather than silent (15 Aug 2026), and
+`tests/test_people.py::test_multi_session_moderator_codes_collide_and_are_warned`
+pins the behaviour. It is still lossy — the flat key cannot represent two
+different moderators, so this is a documented limitation awaiting 11c, not a
+resolved issue.
+
+**Why it wasn't just fixed in place:** re-keying the dict by `(session_id, code)`
+reshapes `people.yaml` — the one file researchers hand-edit, with files in the
+field since the 14 Jul TestFlight. `merge_people()` preserves existing entries
+*by key*, so a reshape without a migration leaves every old `m1` entry stranded
+and the researcher's typed name does not follow to the new `s1:m1` key —
+silently orphaning hand-typed names, the same failure class this fixes. The
+readers to update in the same change: `build_display_name_map`,
+`auto_populate_names`, `suggest_short_names`, the static render's sessions table
+(`s12_render/dashboard.py:64`) plus `html_helpers`/`report`/`render_output`, the
+importer's `people[code]` lookup, `_write_through_people_yaml`
+(`server/routes/data.py`), and `theme/js/names.js`. The right shape to converge
+on is the DB's, not a second invention.
 
 - [design-multi-project.md](design-multi-project.md) — person identity, single-project assumption inventory
 

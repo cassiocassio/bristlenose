@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en" data-palette="default" data-appearance="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome — cell-colour gradient playground</title>
+<style>
+  :root{ --ink:#1a1a1a; --faint:#6b7280; --line:#e5e7eb; --bg:#f4f4f5; --paper:#fff; --card:#f9f9fa; --tag:#9a9a9a; --accent:#007aff; --accent-soft:#e8f0fe; }
+  :root[data-appearance="dark"]{ --ink:#e5e7eb; --faint:#9ca3af; --line:#2d2d2d; --bg:#161618; --paper:#1c1c1e; --card:#232326; --tag:#888; --accent:#0a84ff; --accent-soft:#1e293b; }
+  :root[data-palette="edo"]{ --ink:#1b2230; --faint:#4a698a; --line:#d4c9a8; --bg:#efe9db; --paper:#fdfbf7; --card:#f7f2e6; --tag:#9c8f70; --accent:#0f5c9e; --accent-soft:#e0e8f0; }
+  :root[data-palette="edo"][data-appearance="dark"]{ --ink:#e8e3d6; --faint:#7ba8a0; --line:#2d2820; --bg:#141210; --paper:#1a1816; --card:#211e18; --tag:#7a7060; --accent:#4d9fe0; --accent-soft:#1e2830; }
+
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+  *{ box-sizing:border-box; }
+  body{ margin:0; padding:24px; font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif; color:var(--ink); background:var(--bg); }
+  .page{ max-width:940px; margin:0 auto; }
+  .page h1{ font-size:18px; margin:0 0 4px; font-weight:600; }
+  .page .lede{ margin:0 0 14px; color:var(--faint); max-width:88ch; font-size:12px; }
+  .controls{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:0 0 14px; font-size:12px; }
+  .controls label{ color:var(--faint); display:flex; gap:5px; align-items:center; cursor:pointer; }
+  .controls select{ font:inherit; }
+  .controls input[type="range"]{ width:90px; accent-color:var(--accent); }
+  .controls .pct{ font-family:ui-monospace,Menlo,monospace; font-size:10px; min-width:4ch; }
+
+  /* ============ full-size preview (same skeleton as welcome-fibonacci-rotating) ============ */
+  .screen{ aspect-ratio:8/5; width:100%; background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:20px; display:flex; position:relative; overflow:hidden; }
+  .flex{ display:flex; gap:8px; flex:1 1 0; min-width:0; min-height:0; }
+  .col{ flex-direction:column; }
+  .b62{ flex:1.618 1 0; } .b38{ flex:1 1 0; }
+  .sq{ border:0.5px solid var(--line); border-radius:8px; padding:10px 11px; display:flex; flex-direction:column; gap:4px; min-width:0; min-height:0; overflow:hidden; position:relative; transition:background .25s ease; }
+  .sq.lg{ border-radius:10px; padding:16px; }
+
+  .tag{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--tag); font-weight:600; }
+  .lnk{ color:var(--accent); text-decoration:none; }
+  .body{ font-size:12px; color:var(--faint); line-height:1.45; }
+  .body .t{ font-size:15px; color:var(--ink); font-weight:600; display:block; margin-bottom:2px; }
+  .tipbody{ font-size:11px; color:var(--faint); line-height:1.4; }
+  .drop{ margin-top:auto; border:1.5px dotted var(--line); border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:3px; align-items:flex-start; background:var(--paper); }
+  .drop-ic{ color:var(--faint); margin-bottom:2px; }
+  .drop-title{ font-size:15px; font-weight:600; color:var(--ink); }
+  .drop-sub{ font-size:13px; color:var(--faint); line-height:1.4; max-width:34ch; }
+  .ai-glyph{ font-size:18px; color:var(--faint); }
+  .ai-label{ font-size:12px; font-weight:600; margin-top:2px; }
+  .ai-link{ font-size:11px; color:var(--accent); margin-top:1px; }
+
+  /* ============ readout ============ */
+  .readout{ margin:10px 0 20px; }
+  .readout .vname{ font-size:13px; font-weight:600; }
+  .readout .vname .recipe{ font-weight:400; color:var(--faint); font-family:ui-monospace,Menlo,monospace; font-size:11px; margin-left:8px; }
+  .readout .vnote{ font-size:12px; color:var(--faint); margin:2px 0 8px; }
+  .swrow{ display:flex; gap:10px; flex-wrap:wrap; }
+  .swchip{ display:flex; gap:6px; align-items:center; font-size:10px; color:var(--faint); }
+  .swchip i{ width:22px; height:22px; border-radius:5px; border:0.5px solid rgba(128,128,128,.35); flex:none; }
+  .swchip .hex{ font-family:ui-monospace,Menlo,monospace; color:var(--ink); display:block; }
+
+  /* ============ gallery ============ */
+  .gallery h2{ font-size:13px; margin:22px 0 2px; font-weight:600; }
+  .gallery .gnote{ font-size:11px; color:var(--faint); margin:0 0 8px; }
+  .thumbs{ display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
+  @media (max-width:760px){ .thumbs{ grid-template-columns:repeat(2,1fr); } }
+  .thumb{ font:inherit; text-align:left; background:var(--card); color:inherit; border:1px solid var(--line); border-radius:10px; padding:8px; cursor:pointer; display:flex; flex-direction:column; gap:6px; }
+  .thumb:hover{ border-color:var(--faint); }
+  .thumb.sel{ outline:2px solid var(--accent); outline-offset:1px; }
+  .thumb .nm{ font-size:11px; font-weight:600; }
+  .thumb .rc{ font-size:9.5px; color:var(--faint); font-family:ui-monospace,Menlo,monospace; }
+  .mini{ aspect-ratio:8/5; width:100%; background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:6px; display:flex; overflow:hidden; }
+  .mf{ display:flex; gap:3px; flex:1 1 0; min-width:0; min-height:0; }
+  .mcol{ flex-direction:column; }
+  .ms{ border:0.5px solid var(--line); border-radius:3px; min-width:0; min-height:0; transition:background .25s ease; }
+
+  .foot{ margin:22px 0 0; font-size:11px; color:var(--faint); max-width:88ch; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Welcome — cell-colour gradient playground</h1>
+  <p class="lede">Variations of how colour moves across the five spiral cells (Study tools → Science → Tip → AI → Delight, big → small, winding into the eye). Shipped v1 mixes the palette <b>accent</b> into the card base at 3&nbsp;→&nbsp;26&nbsp;% — this is open decision&nbsp;#3 in <code>design-welcome-screen.md</code>. Every variant is defined against the palette variables, so it tracks Default/Edo × light/dark automatically. Click a thumbnail to load it into the big preview; the swatch row gives the resolved per-cell colours for the Swift handoff. <b>Reverse</b> flips whichever gradient is showing — colour on the stage, quiet eye — and applies to every thumbnail too. <b>Glow</b> lays a radial accent wash on the pane behind the spiral, anchored at the eye (at the stage when reversed); <b>Glass</b> makes every cell slightly translucent so it picks the wash up. Opens on the current pick: <b>Whisper · reversed</b>, glow 11&nbsp;%, glass 28&nbsp;%. Hue-walk variants use OKLCH relative colours — current Safari/Chrome only.</p>
+
+  <div class="controls">
+    <label>Palette <select id="pal"><option value="default">Default</option><option value="edo">Edo</option></select></label>
+    <label>Appearance <select id="app"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    <label><input type="checkbox" id="rev" checked> Reverse</label>
+    <label>Glow <input type="range" id="glow" min="0" max="30" value="11"> <span class="pct" id="glowPct">11 %</span></label>
+    <label>Glass <input type="range" id="glass" min="0" max="60" value="28"> <span class="pct" id="glassPct">28 %</span></label>
+  </div>
+
+  <div class="screen" id="screen">
+    <div class="flex">
+      <div class="sq lg b62" id="cell0">
+        <span class="tag">Study tools</span>
+        <div class="body"><span class="t">AutoCode</span>Let AutoCode propose tags across every quote — you Accept or Deny. <a class="lnk" href="#">AI&nbsp;helps&nbsp;tag&nbsp;→</a></div>
+        <div class="drop">
+          <svg class="drop-ic" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/><path d="M8 10l4 4 4-4"/><path d="M12 3v11"/></svg>
+          <div class="drop-title">Drop a folder</div>
+          <div class="drop-sub">Drag a folder of recordings or transcripts here to add it as a project.</div>
+        </div>
+      </div>
+      <div class="flex col b38">
+        <div class="sq lg b62" id="cell1">
+          <span class="tag">Scientific background</span>
+          <div class="body"><span class="t">Emergent themes</span>Themes emerge from participants’ own words, not a fixed taxonomy (Braun&nbsp;&amp;&nbsp;Clarke, 2006). <a class="lnk" href="#">Learn&nbsp;→</a></div>
+        </div>
+        <div class="flex b38">
+          <div class="sq b62" id="cell2">
+            <span class="tag">Tip</span>
+            <div class="tipbody">Press <b>s</b> to star, <b>h</b> to hide — then filter to what matters. <a class="lnk" href="#">Keyboard&nbsp;shortcuts&nbsp;→</a></div>
+          </div>
+          <div class="flex col b38">
+            <div class="sq b62" id="cell3">
+              <span class="tag">AI</span>
+              <span class="ai-glyph">✦</span>
+              <div class="ai-label">Set up your AI</div>
+              <div class="ai-link">Setup →</div>
+            </div>
+            <div class="sq b38" id="cell4">
+              <a class="lnk" href="#" style="font-size:12px; line-height:1.35">Review AI &amp; privacy settings…</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="readout">
+    <div class="vname"><span id="roName"></span><span class="recipe" id="roRecipe"></span></div>
+    <div class="vnote" id="roNote"></div>
+    <div class="swrow" id="roSwatches"></div>
+  </div>
+
+  <div class="gallery" id="gallery"></div>
+
+  <p class="foot"><b>Porting note.</b> Group A is a one-line Swift change — the five <code>tint:</code> values in <code>WelcomeHomeView.swift</code> (an <code>accent.opacity(t)</code> overlay is exactly <code>color-mix(in srgb, accent t%, card)</code>). Groups B and C need real per-cell colours (or a hue-rotation helper) per palette × appearance — lift them from the swatch row in all four combinations. The Glow + Glass layer maps to a <code>RadialGradient</code> behind the spiral plus alpha on the cell fills — both cheap in SwiftUI; the swatch row shows the cell alpha when Glass is on.</p>
+</div>
+
+<script>
+/* ============ variant recipes ============ */
+const mix  = p => `color-mix(in srgb, var(--accent) ${p}%, var(--card))`;
+const hue  = d => `oklch(from var(--accent) l c calc(h + ${d}))`;
+const mixC = (c,p) => `color-mix(in srgb, ${c} ${p}%, var(--card))`;
+
+const VARIANTS = [
+  {id:'a1', group:'A', name:'v1 · shipped', recipe:'accent 3·7·12·18·26 %',
+   note:'The baseline — big spaces calm, the eye carries the colour.',
+   cells:[3,7,12,18,26].map(mix)},
+  {id:'a2', group:'A', name:'Whisper', recipe:'accent 2·4·6·8·11 %',
+   note:'Same shape, half the volume — for when v1 reads too sweet.',
+   cells:[2,4,6,8,11].map(mix)},
+  {id:'a3', group:'A', name:'Steep eye', recipe:'accent 0·4·12·26·44 %',
+   note:'The big cell goes fully quiet; all the colour concentrates at the eye.',
+   cells:[0,4,12,26,44].map(mix)},
+
+  {id:'b1', group:'B', name:'Cool walk', recipe:'hue −12°/cell · 5→24 %',
+   note:'One hue family drifting cooler as the spiral winds in.',
+   cells:[5,10,15,20,24].map((p,i)=>mixC(hue(-12*i),p))},
+  {id:'b2', group:'B', name:'Warm walk', recipe:'hue +14°/cell · 5→24 %',
+   note:'Drifts warm instead — blue at the stage, violet by the eye.',
+   cells:[5,10,15,20,24].map((p,i)=>mixC(hue(14*i),p))},
+  {id:'b3', group:'B', name:'Golden angle', recipe:'hue +137.5°/cell · 9 %',
+   note:'Hue advances by the golden angle per cell — five families, all pastel.',
+   cells:[0,1,2,3,4].map(i=>mixC(hue(137.5*i),9))},
+  {id:'b4', group:'B', name:'Spectrum arc', recipe:'hue +45°/cell · 5→21 %',
+   note:'Walks a quarter-turn per cell, landing on the accent’s complement at the eye.',
+   cells:[5,9,13,17,21].map((p,i)=>mixC(hue(45*i),p))},
+
+  {id:'c1', group:'C', name:'No tint (control)', recipe:'card only',
+   note:'The seam-alignment-pure null option — surfaces stay system-semantic, only accents carry palette.',
+   cells:[0,0,0,0,0].map(()=> 'var(--card)')},
+  {id:'c2', group:'C', name:'Ink ramp', recipe:'ink 0·2·4·6·9 %',
+   note:'Depth without hue — ink mixed into card, so the gradient survives seam-alignment scruples.',
+   cells:[0,2,4,6,9].map(p=>mixC('var(--ink)',p))},
+  {id:'c3', group:'C', name:'Pigment hand-off', recipe:'accent 4·9·14 % → h+150° 18·26 %',
+   note:'Accent owns the stage; a derived counter-pigment takes over at the eye.',
+   cells:[mix(4), mix(9), mix(14), mixC(hue(150),18), mixC(hue(150),26)]},
+];
+
+const GROUPS = [
+  {key:'A', title:'A · Strength ramps (accent only)', note:'What ships today, at different volumes. A one-line Swift change each — the Reverse toggle above flips any of them.'},
+  {key:'B', title:'B · Hue walks', note:'Strength still ramps, but the hue moves as the spiral winds in. Derived from the accent, so they track palette.'},
+  {key:'C', title:'C · Other mechanisms', note:'The null option, a neutral ramp, and a two-pigment hand-off. (The old Spiral-glow card graduated into the global Glow + Glass sliders.)'},
+];
+
+/* ============ mini spiral builder ============ */
+function miniSpiral(){
+  const cells = [];
+  const sq = cls => { const d=document.createElement('div'); d.className='ms '+cls; cells.push(d); return d; };
+  const fx = cls => { const d=document.createElement('div'); d.className='mf '+(cls||''); return d; };
+  const root = fx();
+  root.append(sq('b62'));
+  const colR = fx('mcol b38'); root.append(colR);
+  colR.append(sq('b62'));
+  const rowB = fx('b38'); colR.append(rowB);
+  rowB.append(sq('b62'));
+  const colS = fx('mcol b38'); rowB.append(colS);
+  colS.append(sq('b62'));
+  colS.append(sq('b38'));
+  return {root, cells};
+}
+
+/* global layers — initial state read from the controls' HTML defaults */
+let reversed = document.getElementById('rev').checked;
+let glow  = +document.getElementById('glow').value;
+let glass = +document.getElementById('glass').value;
+
+const cellsOf = v => reversed ? [...v.cells].reverse() : v.cells;
+/* premultiplied interpolation means mixing toward transparent keeps the channels, drops alpha */
+const glassWrap = bg => glass > 0 ? `color-mix(in srgb, ${bg} ${100-glass}%, transparent)` : bg;
+function sheet(){
+  if(glow <= 0) return '';
+  const pos = reversed ? '14% 18%' : '86% 84%';
+  const ext = reversed ? '72%' : '62%';
+  return `radial-gradient(circle at ${pos}, color-mix(in srgb, var(--accent) ${glow}%, var(--paper)), var(--paper) ${ext})`;
+}
+
+function paint(cellEls, container, v){
+  cellsOf(v).forEach((bg,i)=> cellEls[i].style.background = glassWrap(bg));
+  container.style.background = sheet();
+}
+const painted = [];   // every mini spiral, repainted when a global layer changes
+
+/* ============ full preview + readout ============ */
+const CELL_NAMES = ['Study tools','Science','Tip','AI','Delight'];
+const previewCells = [0,1,2,3,4].map(i=>document.getElementById('cell'+i));
+const screenEl = document.getElementById('screen');
+let selected = VARIANTS[0];
+
+function toHex(c){
+  let m = c.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+))?\s*\)/);
+  let r,g,b,a=1;
+  if(m){ r=+m[1]; g=+m[2]; b=+m[3]; a = m[4]===undefined?1:+m[4]; }
+  else{
+    m = c.match(/color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\)/);
+    if(!m) return c;
+    r=+m[1]*255; g=+m[2]*255; b=+m[3]*255; a = m[4]===undefined?1:+m[4];
+  }
+  const hex = '#'+[r,g,b].map(x=>Math.round(x).toString(16).padStart(2,'0')).join('');
+  return a < 1 ? `${hex} · ${Math.round(a*100)}%` : hex;
+}
+
+/* Transition-free probes: the visible cells animate background for .25s, so
+   sampling them mid-switch reads an interpolated colour. Probes resolve instantly. */
+const probeWrap = document.createElement('div');
+probeWrap.style.cssText = 'position:absolute; visibility:hidden; pointer-events:none;';
+document.body.append(probeWrap);
+const probes = [0,1,2,3,4].map(()=>{ const d=document.createElement('div'); probeWrap.append(d); return d; });
+
+function updateReadout(){
+  document.getElementById('roName').textContent = selected.name;
+  document.getElementById('roRecipe').textContent = selected.recipe + (reversed ? ' · reversed' : '');
+  document.getElementById('roNote').textContent = selected.note;
+  const wrap = document.getElementById('roSwatches');
+  wrap.innerHTML = '';
+  cellsOf(selected).forEach((bg,i)=>{
+    probes[i].style.background = glassWrap(bg);
+    const resolved = getComputedStyle(probes[i]).backgroundColor;
+    const chip = document.createElement('div');
+    chip.className = 'swchip';
+    chip.innerHTML = `<i style="background:${resolved}"></i><span><span class="hex">${toHex(resolved)}</span>${CELL_NAMES[i]}</span>`;
+    wrap.append(chip);
+  });
+}
+
+function select(v){
+  selected = v;
+  paint(previewCells, screenEl, v);
+  document.querySelectorAll('.thumb').forEach(b=>{
+    const on = b.dataset.id === v.id;
+    b.classList.toggle('sel', on);
+    b.setAttribute('aria-pressed', on);
+  });
+  updateReadout();
+}
+
+/* ============ gallery ============ */
+const gallery = document.getElementById('gallery');
+GROUPS.forEach(g=>{
+  const h = document.createElement('h2'); h.textContent = g.title; gallery.append(h);
+  const n = document.createElement('p'); n.className='gnote'; n.textContent = g.note; gallery.append(n);
+  const row = document.createElement('div'); row.className='thumbs'; gallery.append(row);
+  VARIANTS.filter(v=>v.group===g.key).forEach(v=>{
+    const b = document.createElement('button');
+    b.type='button'; b.className='thumb'; b.dataset.id=v.id; b.setAttribute('aria-pressed','false');
+    const {root, cells} = miniSpiral();
+    const mini = document.createElement('div'); mini.className='mini'; mini.append(root);
+    paint(cells, mini, v);
+    painted.push({cells, mini, v});
+    b.append(mini);
+    const nm = document.createElement('div'); nm.className='nm'; nm.textContent=v.name; b.append(nm);
+    const rc = document.createElement('div'); rc.className='rc'; rc.textContent=v.recipe; b.append(rc);
+    b.onclick = ()=> select(v);
+    row.append(b);
+  });
+});
+
+/* ============ palette / appearance wiring ============ */
+const root = document.documentElement;
+document.getElementById('pal').onchange = e=>{ root.setAttribute('data-palette', e.target.value); updateReadout(); };
+document.getElementById('app').onchange = e=>{ root.setAttribute('data-appearance', e.target.value); updateReadout(); };
+const repaintAll = ()=>{
+  painted.forEach(p=> paint(p.cells, p.mini, p.v));
+  paint(previewCells, screenEl, selected);
+  updateReadout();
+};
+document.getElementById('rev').onchange = e=>{ reversed = e.target.checked; repaintAll(); };
+document.getElementById('glow').oninput = e=>{ glow = +e.target.value; document.getElementById('glowPct').textContent = glow+' %'; repaintAll(); };
+document.getElementById('glass').oninput = e=>{ glass = +e.target.value; document.getElementById('glassPct').textContent = glass+' %'; repaintAll(); };
+
+select(VARIANTS.find(v=>v.id==='a2'));   // the current pick: Whisper, reversed (checkbox default)
+</script>
+</body>
+</html>

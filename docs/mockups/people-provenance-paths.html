@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Speaker names — happy and unhappy paths · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css). The speaker-cell and
+   sessions-grid rules below are lifted from
+   bristlenose/theme/molecules/person-badge.css and
+   bristlenose/theme/organisms/sessions-grid.css, including the real container
+   queries — so the degradation ladder in this file behaves as it ships.
+   Reviews: docs/private/reviews/people-lens.md (Phase 0 plan-review).
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:1040px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:70ch; margin:.4rem 0; }
+.controls { display:flex; gap:.4rem; align-items:center; margin:var(--bn-space-lg) 0 var(--bn-space-xl); flex-wrap:wrap; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* ── zone key ─────────────────────────────────────────────────────────── */
+.key { display:flex; gap:1.5rem; flex-wrap:wrap; padding:.9rem 1.1rem; border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-lg); margin-bottom:var(--bn-space-xl); }
+.key-item { display:flex; gap:.6rem; align-items:flex-start; font-size:var(--bn-text-label); flex:1; min-width:16rem; }
+.key-swatch { width:2.4rem; height:2.4rem; border-radius:var(--bn-radius-md); flex-shrink:0; }
+.key-swatch.artefact { border:1px solid var(--bn-colour-border-hover); background:var(--bn-colour-bg); }
+.key-swatch.commentary { border-left:3px solid var(--bn-colour-muted);
+  background-image:repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--bn-colour-muted) 12%, transparent) 5px 10px); }
+.key-item b { font-weight:490; display:block; }
+.key-item span { color:var(--bn-colour-muted); }
+
+/* ── bench scaffolding ────────────────────────────────────────────────── */
+.bench { margin:3rem 0; }
+.bench-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.bench-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1.1rem; max-width:74ch; }
+.part { font-size:var(--bn-text-caption); font-weight:490; color:var(--bn-colour-accent); text-transform:uppercase;
+  letter-spacing:.05em; margin:3.5rem 0 .3rem; font-family:var(--bn-font-mono); border-top:1px solid var(--bn-colour-border); padding-top:1.4rem; }
+.part:first-of-type { margin-top:1rem; }
+
+/* frame = screenshot chrome. Everything INSIDE .screen is product pixels. */
+.frame { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg); overflow:hidden;
+  box-shadow:0 2px 10px var(--bn-colour-shadow); margin-bottom:.9rem; background:var(--bn-colour-bg); }
+.chrome { display:flex; align-items:center; gap:.5rem; padding:.4rem .7rem; border-bottom:1px solid var(--bn-colour-border);
+  background:var(--bn-colour-quote-bg); font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.06em; }
+.chrome .dots { display:flex; gap:4px; }
+.chrome .dots i { width:8px; height:8px; border-radius:50%; background:var(--bn-off-track); display:block; }
+.chrome .tag { margin-left:auto; }
+.chrome .tag.shipped { color:var(--bn-colour-muted); }
+.chrome .tag.proposed { color:var(--bn-colour-accent); }
+.screen { padding:1rem 1.1rem; }
+
+/* commentary zone — deliberately not-the-product */
+.note { border-left:3px solid var(--bn-colour-muted); border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0;
+  padding:.9rem 1.1rem; margin-bottom:2.2rem;
+  background-image:repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--bn-colour-muted) 9%, transparent) 6px 12px); }
+.note-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.08em;
+  color:var(--bn-colour-muted); margin-bottom:.5rem; }
+.st { display:grid; grid-template-columns:auto 1fr; gap:.3rem .8rem; font-size:var(--bn-text-label); align-items:baseline; }
+.st dt { font-weight:490; color:var(--bn-colour-muted); white-space:nowrap; }
+.st dd { margin:0; }
+.note p { font-size:var(--bn-text-label); margin:.7rem 0 0; max-width:76ch; }
+.note code { font-family:var(--bn-font-mono); font-size:.95em; background:var(--bn-colour-badge-bg); padding:0 .25rem; border-radius:var(--bn-radius-sm); }
+.verdict { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase;
+  letter-spacing:.06em; padding:.1rem .45rem; border-radius:var(--bn-radius-sm); margin-bottom:.5rem; }
+.verdict.ok { background:color-mix(in srgb, var(--bn-positive) 18%, transparent); color:var(--bn-positive); }
+.verdict.bad { background:color-mix(in srgb, #dc2626 16%, transparent); color:light-dark(#b91c1c,#f87171); }
+.verdict.warn { background:color-mix(in srgb, #d97706 18%, transparent); color:light-dark(#b45309,#fbbf24); }
+
+/* ══ REAL sessions-grid rules (sessions-grid.css) ═══════════════════════ */
+.bn-session-table { container-type:inline-size; container-name:bn-sessions; }
+.bn-sessions-grid {
+  display:grid; font-size:var(--bn-text-label);
+  grid-template-columns:
+    max-content max-content max-content minmax(11rem,1fr) max-content max-content minmax(9rem,15rem);
+}
+.bn-sessions-row { display:grid; grid-column:1/-1; grid-template-columns:subgrid; align-items:start;
+  border-bottom:1px solid var(--bn-colour-border); }
+.bn-sessions-row:last-child { border-bottom:none; }
+.bn-sessions-row[data-session] { cursor:pointer; }
+.bn-sessions-cell { padding:.5rem var(--bn-space-md); min-width:0; }
+.bn-sessions-head { border-bottom-width:2px; }
+.bn-sessions-head .bn-sessions-cell { padding-block:.6rem; font-weight:var(--bn-weight-emphasis);
+  display:flex; flex-direction:column; align-items:flex-start; gap:.1rem; }
+.bn-sessions-h1,.bn-sessions-h2 { display:block; }
+.bn-sessions-h2 { font-weight:var(--bn-weight-normal); color:var(--bn-colour-muted); }
+.bn-cell-id > a { color:var(--bn-colour-accent); text-decoration:none; }
+.bn-cell-duration { text-align:right; }
+.bn-video-thumb { width:96px; height:54px; border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg);
+  border:1px solid var(--bn-colour-border); display:block; }
+.bn-session-journey { color:var(--bn-colour-muted); font-size:var(--bn-text-badge); }
+.bn-cell-file { color:var(--bn-colour-accent); overflow-wrap:anywhere; }
+.bn-spark { display:inline-flex; gap:2px; align-items:flex-end; height:14px; }
+.bn-spark i { width:5px; display:block; border-radius:1px; background:var(--bn-off-track); }
+
+/* ══ REAL person-badge rules (person-badge.css) ═════════════════════════ */
+.bn-person-badge { display:inline-flex; align-items:center; gap:0; white-space:nowrap; }
+.bn-speaker-badge--split { display:inline-flex; align-items:center; gap:0; padding:0;
+  border-radius:var(--bn-radius-sm); overflow:hidden; background:none; vertical-align:baseline; }
+.bn-speaker-badge--split .bn-speaker-badge-code {
+  font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) .4rem;
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text);
+  border:1px solid var(--bn-colour-border); border-right:none;
+  border-radius:var(--bn-radius-sm) 0 0 var(--bn-radius-sm); }
+.bn-speaker-badge--split .bn-speaker-badge-code:last-child {
+  border-radius:var(--bn-radius-sm); border-right:1px solid var(--bn-colour-border); }
+.bn-session-speaker-entry { display:inline-flex; align-items:center; gap:.35rem; white-space:nowrap; }
+.bn-session-speakers { display:flex; flex-direction:column; gap:.2rem; align-items:flex-start; }
+.bn-speaker-editable-name { font-family:var(--bn-font-body); font-size:inherit;
+  font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); border-radius:var(--bn-radius-sm);
+  padding:var(--bn-space-xs) .2rem; min-width:2rem; }
+.bn-speaker-editable-name.unnamed { font-weight:var(--bn-weight-normal); font-style:italic; color:var(--bn-colour-muted); }
+.bn-speaker-name-short { display:none; }
+.bn-name-pencil { font-size:var(--bn-text-micro); opacity:.4; color:var(--bn-colour-muted); padding:0 .1rem; }
+
+/* section heading + moderator line (the shipped header prose) */
+.bn-section-heading { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); margin:0 0 .15rem; }
+.bn-session-moderators { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:0 0 .9rem; }
+
+/* ── REAL container-query ladder (sessions-grid.css rungs) ─────────────── */
+@container bn-sessions (max-width: 1285px) {
+  .bn-sessions-grid { grid-template-columns:
+    max-content max-content minmax(0,1fr) minmax(0,1.5fr) max-content max-content minmax(0,1fr); }
+}
+@container bn-sessions (max-width: 968px) { .bn-cell-sentiment { display:none; } }
+@container bn-sessions (max-width: 750px) {
+  .bn-cell-speakers .bn-speaker-name-full { display:none; }
+  .bn-cell-speakers .bn-speaker-name-short { display:inline-block; }
+}
+@container bn-sessions (max-width: 700px) { .bn-cell-thumb { display:none; } }
+@container bn-sessions (max-width: 560px) { .bn-cell-start .bn-session-journey { display:none; } }
+@container bn-sessions (max-width: 480px) {
+  .bn-cell-speakers .bn-speaker-editable-name,
+  .bn-cell-speakers .bn-speaker-name-full,
+  .bn-cell-speakers .bn-speaker-name-short,
+  .bn-cell-speakers .bn-name-pencil { display:none; }
+}
+
+/* ══ PROPOSED elements — not shipped. Flagged in the frame chrome. ══════ */
+/* 0a inline provenance chip */
+.bn-name-source { font-family:var(--bn-font-body); font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-sm); padding:0 .25rem; white-space:nowrap; }
+/* a11y alternative: mark only the guess, as a treatment of the name */
+.bn-name-inferred { font-style:italic; }
+/* ux alternative: one absent-when-zero line under the section heading */
+.bn-unchecked-line { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:0 0 .9rem; }
+.bn-unchecked-line b { font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); }
+
+.width-strip { display:flex; gap:.4rem; align-items:center; font-family:var(--bn-font-mono);
+  font-size:var(--bn-text-micro); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.4rem; }
+
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="masthead">
+  <div class="eyebrow">Bristlenose · mockup</div>
+  <h1>Speaker names: happy and unhappy paths</h1>
+  <p>What the Sessions lens actually says, and what is actually true, across the cases the
+     People-lens Phase 0 plan makes assumptions about. Parts 1 and 4 are shipped behaviour.
+     Parts 2 and 3 are proposals — every proposed element is flagged in its frame chrome.</p>
+  <p>Study used throughout: <b>Ward handover app — round 2</b>. Twelve sessions. Rachel Okonjo
+     moderated sessions 1–8; Priya Raman moderated 9–12.</p>
+</div>
+
+<div class="controls">
+  <span class="lbl">Palette</span>
+  <button class="pbtn on" onclick="setTheme('default',this)">Default</button>
+  <button class="pbtn" onclick="setTheme('edo',this)">Edo</button>
+  <span class="lbl" style="margin-left:1rem">Appearance follows your system light/dark</span>
+</div>
+
+<div class="key">
+  <div class="key-item">
+    <span class="key-swatch artefact"></span>
+    <span><b>Artefact</b> Inside a frame is product only — real tokens, real component classes,
+      the real container-query ladder. No labels that would not ship.</span>
+  </div>
+  <div class="key-item">
+    <span class="key-swatch commentary"></span>
+    <span><b>Commentary</b> Hatched, ruled, mono-labelled. Says / true, and the consequence.
+      Never the product.</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">Part 1 — shipped today</div>
+
+<!-- 1. HAPPY -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>1 · The common case, and the reason none of this is noticed</h2>
+    <p class="sub">One moderator across the study. Names came from the Teams transcript, so they
+      are records rather than inferences. Every word on this screen is true.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Sessions · 1240px container <span class="tag shipped">shipped</span></div>
+    <div class="screen">
+      <h3 class="bn-section-heading">Ward handover app — round 2</h3>
+      <p class="bn-session-moderators">Moderated by Rachel Okonjo</p>
+      <div class="bn-session-table"><div class="bn-sessions-grid">
+        <div class="bn-sessions-row bn-sessions-head">
+          <div class="bn-sessions-cell bn-cell-id"><span class="bn-sessions-h1">#</span></div>
+          <div class="bn-sessions-cell bn-cell-thumb"></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><span class="bn-sessions-h1">Speakers</span></div>
+          <div class="bn-sessions-cell bn-cell-start"><span class="bn-sessions-h1">Start</span><span class="bn-sessions-h2">User journey</span></div>
+          <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-sessions-h1">Sentiment</span></div>
+          <div class="bn-sessions-cell bn-cell-duration"><span class="bn-sessions-h1">Duration</span></div>
+          <div class="bn-sessions-cell bn-cell-file"><span class="bn-sessions-h1">Interviews</span></div>
+        </div>
+        <div class="bn-sessions-row" data-session="s1">
+          <div class="bn-sessions-cell bn-cell-id"><a href="#">#1</a></div>
+          <div class="bn-sessions-cell bn-cell-thumb"><span class="bn-video-thumb"></span></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Rachel</span><span class="bn-speaker-name-short">Rachel</span><span class="bn-name-pencil">&#x270E;</span></span>
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Sarah C.</span><span class="bn-speaker-name-short">Sarah</span><span class="bn-name-pencil">&#x270E;</span></span>
+          </div></div>
+          <div class="bn-sessions-cell bn-cell-start">14 Jan 2026, 09:15<div class="bn-session-journey">Handover list → Patient detail → Escalation</div></div>
+          <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-spark"><i style="height:6px"></i><i style="height:11px"></i><i style="height:4px"></i><i style="height:9px"></i></span></div>
+          <div class="bn-sessions-cell bn-cell-duration">42:10</div>
+          <div class="bn-sessions-cell bn-cell-file">handover-s1.mp4</div>
+        </div>
+        <div class="bn-sessions-row" data-session="s2">
+          <div class="bn-sessions-cell bn-cell-id"><a href="#">#2</a></div>
+          <div class="bn-sessions-cell bn-cell-thumb"><span class="bn-video-thumb"></span></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Rachel</span><span class="bn-speaker-name-short">Rachel</span><span class="bn-name-pencil">&#x270E;</span></span>
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p2</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Dr. Amara Nwosu</span><span class="bn-speaker-name-short">Amara</span><span class="bn-name-pencil">&#x270E;</span></span>
+          </div></div>
+          <div class="bn-sessions-cell bn-cell-start">14 Jan 2026, 11:00<div class="bn-session-journey">Handover list → Night summary</div></div>
+          <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-spark"><i style="height:9px"></i><i style="height:5px"></i><i style="height:12px"></i><i style="height:7px"></i></span></div>
+          <div class="bn-sessions-cell bn-cell-duration">38:44</div>
+          <div class="bn-sessions-cell bn-cell-file">handover-s2.mp4</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict ok">true as shown</span>
+    <dl class="st">
+      <dt>Screen says</dt><dd>Rachel moderated. Sarah C. and Amara took part.</dd>
+      <dt>Actually true</dt><dd>Identical.</dd>
+    </dl>
+    <p>Worth dwelling on, because it is most studies. A single moderator, platform-sourced names,
+      and the per-session numbering of <code>m1</code> never gets exercised. Everything after this
+      bench is invisible until a study has two moderators — which is exactly the study a researcher
+      does not run until they are busy.</p>
+  </div>
+</div>
+
+<!-- 2. THE COLLISION -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>2 · Two moderators, and the screen cannot say so</h2>
+    <p class="sub">Same study, sessions 8 and 9 — the handover between Rachel and Priya. Nothing on
+      screen changes.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Sessions · 1240px container <span class="tag shipped">shipped</span></div>
+    <div class="screen">
+      <h3 class="bn-section-heading">Ward handover app — round 2</h3>
+      <p class="bn-session-moderators">Moderated by Rachel Okonjo</p>
+      <div class="bn-session-table"><div class="bn-sessions-grid">
+        <div class="bn-sessions-row bn-sessions-head">
+          <div class="bn-sessions-cell bn-cell-id"><span class="bn-sessions-h1">#</span></div>
+          <div class="bn-sessions-cell bn-cell-thumb"></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><span class="bn-sessions-h1">Speakers</span></div>
+          <div class="bn-sessions-cell bn-cell-start"><span class="bn-sessions-h1">Start</span><span class="bn-sessions-h2">User journey</span></div>
+          <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-sessions-h1">Sentiment</span></div>
+          <div class="bn-sessions-cell bn-cell-duration"><span class="bn-sessions-h1">Duration</span></div>
+          <div class="bn-sessions-cell bn-cell-file"><span class="bn-sessions-h1">Interviews</span></div>
+        </div>
+        <div class="bn-sessions-row" data-session="s8">
+          <div class="bn-sessions-cell bn-cell-id"><a href="#">#8</a></div>
+          <div class="bn-sessions-cell bn-cell-thumb"><span class="bn-video-thumb"></span></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Rachel</span><span class="bn-speaker-name-short">Rachel</span><span class="bn-name-pencil">&#x270E;</span></span>
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p8</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Sarah K.</span><span class="bn-speaker-name-short">Sarah</span><span class="bn-name-pencil">&#x270E;</span></span>
+          </div></div>
+          <div class="bn-sessions-cell bn-cell-start">22 Jan 2026, 16:30<div class="bn-session-journey">Handover list → Escalation</div></div>
+          <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-spark"><i style="height:5px"></i><i style="height:10px"></i><i style="height:8px"></i><i style="height:6px"></i></span></div>
+          <div class="bn-sessions-cell bn-cell-duration">45:02</div>
+          <div class="bn-sessions-cell bn-cell-file">handover-s8.mp4</div>
+        </div>
+        <div class="bn-sessions-row" data-session="s9">
+          <div class="bn-sessions-cell bn-cell-id"><a href="#">#9</a></div>
+          <div class="bn-sessions-cell bn-cell-thumb"><span class="bn-video-thumb"></span></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Rachel</span><span class="bn-speaker-name-short">Rachel</span><span class="bn-name-pencil">&#x270E;</span></span>
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Konstantinos</span><span class="bn-speaker-name-short">Kostas</span><span class="bn-name-pencil">&#x270E;</span></span>
+          </div></div>
+          <div class="bn-sessions-cell bn-cell-start">26 Jan 2026, 09:00<div class="bn-session-journey">Handover list → Patient detail</div></div>
+          <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-spark"><i style="height:11px"></i><i style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i></span></div>
+          <div class="bn-sessions-cell bn-cell-duration">51:18</div>
+          <div class="bn-sessions-cell bn-cell-file">handover-s9.mp4</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict bad">screen is wrong</span>
+    <dl class="st">
+      <dt>Screen says</dt><dd>Rachel moderated the study, including session 9.</dd>
+      <dt>Actually true</dt><dd>Priya Raman moderated session 9. Rachel has never met participant p9.</dd>
+    </dl>
+    <p><code>m1</code> means "first moderator <em>in this session</em>", so both rows legitimately
+      carry it. The name is wrong for a different reason: <code>people.yaml</code> is keyed by
+      speaker code alone, so it holds exactly one <code>m1</code> entry and every session's
+      moderator row is filled from it. The header sentence then dedupes by name and finds one.</p>
+    <p>The sharpest thing about this bench is what it took to build: <b>the fixture cannot exist in
+      the product.</b> There is no way to store two different <code>m1</code> names, so there is no
+      test that can fail here today. Removing the header dedupe would render
+      "Moderated by Rachel, Rachel, Rachel" — worse, not better.</p>
+  </div>
+</div>
+
+<!-- 3. MISLABEL AFTER RE-RUN -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>3 · A correction that survives, attached to the wrong person</h2>
+    <p class="sub">The researcher typed "Rachel" over an unidentified moderator after run 1. Run 2
+      adds sessions 9–12. The typed name is preserved; the statistics underneath it are replaced.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Sessions · after re-run <span class="tag shipped">shipped</span></div>
+    <div class="screen">
+      <h3 class="bn-section-heading">Ward handover app — round 2</h3>
+      <p class="bn-session-moderators">Moderated by Rachel Okonjo</p>
+      <div class="bn-session-table"><div class="bn-sessions-grid">
+        <div class="bn-sessions-row bn-sessions-head">
+          <div class="bn-sessions-cell bn-cell-id"><span class="bn-sessions-h1">#</span></div>
+          <div class="bn-sessions-cell bn-cell-thumb"></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><span class="bn-sessions-h1">Speakers</span></div>
+          <div class="bn-sessions-cell bn-cell-start"><span class="bn-sessions-h1">Start</span><span class="bn-sessions-h2">User journey</span></div>
+          <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-sessions-h1">Sentiment</span></div>
+          <div class="bn-sessions-cell bn-cell-duration"><span class="bn-sessions-h1">Duration</span></div>
+          <div class="bn-sessions-cell bn-cell-file"><span class="bn-sessions-h1">Interviews</span></div>
+        </div>
+        <div class="bn-sessions-row" data-session="s12">
+          <div class="bn-sessions-cell bn-cell-id"><a href="#">#12</a></div>
+          <div class="bn-sessions-cell bn-cell-thumb"><span class="bn-video-thumb"></span></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Rachel</span><span class="bn-speaker-name-short">Rachel</span><span class="bn-name-pencil">&#x270E;</span></span>
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p12</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">田中由紀</span><span class="bn-speaker-name-short">田中由紀</span><span class="bn-name-pencil">&#x270E;</span></span>
+          </div></div>
+          <div class="bn-sessions-cell bn-cell-start">3 Feb 2026, 14:20<div class="bn-session-journey">Night summary → Escalation</div></div>
+          <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-spark"><i style="height:8px"></i><i style="height:12px"></i><i style="height:5px"></i><i style="height:9px"></i></span></div>
+          <div class="bn-sessions-cell bn-cell-duration">36:55</div>
+          <div class="bn-sessions-cell bn-cell-file">handover-s12.mp4</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict bad">worse than a blank</span>
+    <dl class="st">
+      <dt>Screen says</dt><dd>Rachel moderated session 12, in a name the researcher typed themselves.</dd>
+      <dt>Actually true</dt><dd>Priya did. The statistics on this row are Priya's; the name is Rachel's.</dd>
+    </dl>
+    <p><code>merge_people()</code> preserves <em>editable</em> fields by key and replaces
+      <em>computed</em> ones. So a name a human vouched for stays bonded to a row whose numbers have
+      moved underneath it. This is the case that argues loudest against shipping provenance first:
+      today it is a wrong name, and a "you set this" mark would make it a wrong name wearing the most
+      authoritative label in the set.</p>
+  </div>
+</div>
+
+<!-- 4. LADDER -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>4 · The narrow-width ladder, where the badge is all that is left</h2>
+    <p class="sub">The real container queries, at three real widths. Drag your window — the frames
+      are containers, so the ladder runs live.</p>
+  </div>
+
+  <div class="width-strip">1240px container — everything</div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Sessions <span class="tag shipped">shipped</span></div>
+    <div class="screen"><div class="bn-session-table" style="width:1240px;max-width:100%"><div class="bn-sessions-grid">
+      <div class="bn-sessions-row" data-session="s8">
+        <div class="bn-sessions-cell bn-cell-id"><a href="#">#8</a></div>
+        <div class="bn-sessions-cell bn-cell-thumb"><span class="bn-video-thumb"></span></div>
+        <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+          <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Rachel</span><span class="bn-speaker-name-short">Rachel</span></span>
+          <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p8</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Sarah K.</span><span class="bn-speaker-name-short">Sarah</span></span>
+        </div></div>
+        <div class="bn-sessions-cell bn-cell-start">22 Jan 2026, 16:30<div class="bn-session-journey">Handover list → Escalation</div></div>
+        <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-spark"><i style="height:5px"></i><i style="height:10px"></i><i style="height:8px"></i></span></div>
+        <div class="bn-sessions-cell bn-cell-duration">45:02</div>
+        <div class="bn-sessions-cell bn-cell-file">handover-s8.mp4</div>
+      </div>
+    </div></div></div>
+  </div>
+
+  <div class="width-strip">620px container — names have shortened, journey has gone</div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Sessions <span class="tag shipped">shipped</span></div>
+    <div class="screen"><div class="bn-session-table" style="width:620px;max-width:100%"><div class="bn-sessions-grid">
+      <div class="bn-sessions-row" data-session="s8">
+        <div class="bn-sessions-cell bn-cell-id"><a href="#">#8</a></div>
+        <div class="bn-sessions-cell bn-cell-thumb"><span class="bn-video-thumb"></span></div>
+        <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+          <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Rachel</span><span class="bn-speaker-name-short">Rachel</span></span>
+          <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p8</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Sarah K.</span><span class="bn-speaker-name-short">Sarah</span></span>
+        </div></div>
+        <div class="bn-sessions-cell bn-cell-start">22 Jan, 16:30<div class="bn-session-journey">Handover list → Escalation</div></div>
+        <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-spark"><i style="height:5px"></i><i style="height:10px"></i></span></div>
+        <div class="bn-sessions-cell bn-cell-duration">45:02</div>
+        <div class="bn-sessions-cell bn-cell-file">handover-s8.mp4</div>
+      </div>
+    </div></div></div>
+  </div>
+
+  <div class="width-strip">460px container — rung 3, badges only</div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Sessions <span class="tag shipped">shipped</span></div>
+    <div class="screen"><div class="bn-session-table" style="width:460px;max-width:100%"><div class="bn-sessions-grid">
+      <div class="bn-sessions-row" data-session="s8">
+        <div class="bn-sessions-cell bn-cell-id"><a href="#">#8</a></div>
+        <div class="bn-sessions-cell bn-cell-thumb"><span class="bn-video-thumb"></span></div>
+        <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+          <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Rachel</span><span class="bn-speaker-name-short">Rachel</span></span>
+          <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p8</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Sarah K.</span><span class="bn-speaker-name-short">Sarah</span></span>
+        </div></div>
+        <div class="bn-sessions-cell bn-cell-start">22 Jan, 16:30<div class="bn-session-journey">Handover list → Escalation</div></div>
+        <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-spark"><i style="height:5px"></i></span></div>
+        <div class="bn-sessions-cell bn-cell-duration">45:02</div>
+        <div class="bn-sessions-cell bn-cell-file">handover-s8.mp4</div>
+      </div>
+    </div></div></div>
+  </div>
+
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict warn">right rule, wrong population</span>
+    <dl class="st">
+      <dt>Screen says</dt><dd>At rung 3, two speakers identified only as <code>m1</code> and <code>p8</code>.</dd>
+      <dt>Actually true</dt><dd><code>p8</code> is a complete identity — <code>p</code> codes are
+        study-global, so p8 is one person everywhere. <code>m1</code> is not; it is a seat number.</dd>
+    </dl>
+    <p>The ladder sheds name detail and keeps the badge because the badge is the stable identity
+      anchor. That was reasoned about participants and it is correct for them. For session-scoped
+      codes it inverts: the badge is the <em>least</em> identifying thing on the row, and rung 3
+      keeps precisely the half that carries no information.</p>
+    <p>New evidence about a case the 0.25.0 decision did not consider — not a reversal of it.
+      Also note rung 3 currently exposes no speaker name to a screen reader at any width;
+      the 750–480px half of that was fixed on 17 Aug, this rung was not.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">Part 2 — provenance as Phase 0 proposes it</div>
+
+<!-- 5. CHIPS AT SCALE -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>5 · Four states, inline, at study scale</h2>
+    <p class="sub">The plan's five states (four visible, one rendering nothing) on a realistic
+      mixed study: platform names, an LLM guess, a researcher correction, an unnamed speaker.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Sessions · 1240px container <span class="tag proposed">proposed — not shipped</span></div>
+    <div class="screen">
+      <h3 class="bn-section-heading">Ward handover app — round 2</h3>
+      <p class="bn-session-moderators">Moderated by Rachel Okonjo</p>
+      <div class="bn-session-table"><div class="bn-sessions-grid">
+        <div class="bn-sessions-row bn-sessions-head">
+          <div class="bn-sessions-cell bn-cell-id"><span class="bn-sessions-h1">#</span></div>
+          <div class="bn-sessions-cell bn-cell-thumb"></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><span class="bn-sessions-h1">Speakers</span></div>
+          <div class="bn-sessions-cell bn-cell-start"><span class="bn-sessions-h1">Start</span><span class="bn-sessions-h2">User journey</span></div>
+          <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-sessions-h1">Sentiment</span></div>
+          <div class="bn-sessions-cell bn-cell-duration"><span class="bn-sessions-h1">Duration</span></div>
+          <div class="bn-sessions-cell bn-cell-file"><span class="bn-sessions-h1">Interviews</span></div>
+        </div>
+        <div class="bn-sessions-row" data-session="s3">
+          <div class="bn-sessions-cell bn-cell-id"><a href="#">#3</a></div>
+          <div class="bn-sessions-cell bn-cell-thumb"><span class="bn-video-thumb"></span></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Rachel</span><span class="bn-speaker-name-short">Rachel</span></span>
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Sarah C.</span><span class="bn-speaker-name-short">Sarah</span><span class="bn-name-source">From the transcript</span></span>
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Nina</span><span class="bn-speaker-name-short">Nina</span><span class="bn-name-source">Heard in the session</span></span>
+          </div></div>
+          <div class="bn-sessions-cell bn-cell-start">16 Jan 2026, 10:05<div class="bn-session-journey">Handover list → Patient detail</div></div>
+          <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-spark"><i style="height:7px"></i><i style="height:11px"></i><i style="height:5px"></i></span></div>
+          <div class="bn-sessions-cell bn-cell-duration">44:20</div>
+          <div class="bn-sessions-cell bn-cell-file">handover-s3.mp4</div>
+        </div>
+        <div class="bn-sessions-row" data-session="s4">
+          <div class="bn-sessions-cell bn-cell-id"><a href="#">#4</a></div>
+          <div class="bn-sessions-cell bn-cell-thumb"><span class="bn-video-thumb"></span></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Rachel</span><span class="bn-speaker-name-short">Rachel</span></span>
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Kostas</span><span class="bn-speaker-name-short">Kostas</span><span class="bn-name-source">You set this</span></span>
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p6</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full unnamed">Participant</span><span class="bn-speaker-name-short unnamed">Participant</span></span>
+          </div></div>
+          <div class="bn-sessions-cell bn-cell-start">17 Jan 2026, 13:40<div class="bn-session-journey">Night summary → Escalation</div></div>
+          <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-spark"><i style="height:10px"></i><i style="height:6px"></i><i style="height:9px"></i></span></div>
+          <div class="bn-sessions-cell bn-cell-duration">39:12</div>
+          <div class="bn-sessions-cell bn-cell-file">handover-s4.mp4</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict warn">correct, and too loud</span>
+    <dl class="st">
+      <dt>Screen says</dt><dd>Four different things about four names, on every row, for ever.</dd>
+      <dt>Actually true</dt><dd>One of them changes what the researcher should do.</dd>
+    </dl>
+    <p>"From the transcript", "You set this" and the unnamed placeholder all mean <em>leave it
+      alone</em>. Only "Heard in the session" is a claim worth checking. Two rows carry six marks
+      here; a twelve-session study carries thirty-odd. That is the one-ring rule failing by the
+      product's own written test — a mark that reads well on one object reads as noise on twenty.</p>
+    <p>The moderator rows carry no mark at all, which is the plan's own recommendation
+      (participants only, because moderator provenance would inherit the collision). Bench 7 is
+      what that absence looks like next to two other absences.</p>
+  </div>
+</div>
+
+<!-- 6. WIDTH -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>6 · What the chips do to the one cell with no width to give</h2>
+    <p class="sub">The same rows at 900px container — a 14&Prime; MacBook with the native sidebar open
+      is around 1150px, so this is not an edge case.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Sessions · 900px container <span class="tag proposed">proposed — not shipped</span></div>
+    <div class="screen"><div class="bn-session-table" style="width:900px;max-width:100%"><div class="bn-sessions-grid">
+      <div class="bn-sessions-row" data-session="s3">
+        <div class="bn-sessions-cell bn-cell-id"><a href="#">#3</a></div>
+        <div class="bn-sessions-cell bn-cell-thumb"><span class="bn-video-thumb"></span></div>
+        <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+          <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Sarah C.</span><span class="bn-speaker-name-short">Sarah</span><span class="bn-name-source">From the transcript</span></span>
+          <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Nina</span><span class="bn-speaker-name-short">Nina</span><span class="bn-name-source">Heard in the session</span></span>
+        </div></div>
+        <div class="bn-sessions-cell bn-cell-start">16 Jan 2026, 10:05<div class="bn-session-journey">Handover list → Patient detail</div></div>
+        <div class="bn-sessions-cell bn-cell-sentiment"><span class="bn-spark"><i style="height:7px"></i><i style="height:11px"></i></span></div>
+        <div class="bn-sessions-cell bn-cell-duration">44:20</div>
+        <div class="bn-sessions-cell bn-cell-file">handover-s3.mp4</div>
+      </div>
+    </div></div></div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict bad">costs the whole table, not one row</span>
+    <p>Rows are one parent grid with <code>grid-template-columns: subgrid</code>, so the speakers
+      track is sized once and shared by every row. The single widest speaker entry in the study
+      sets the column width for all twelve. Below the 1285px switch the track becomes
+      <code>minmax(0,1fr)</code> and the cost lands as row height instead — which is where the
+      desktop app always sits.</p>
+    <p>Nothing catches a regression here: no test asserts horizontal overflow on this grid at any
+      width, and the e2e perf gate is calibrated on a one-session, two-speaker fixture where
+      speaker content is about 6% of the page rather than 60%.</p>
+  </div>
+</div>
+
+<!-- 7. THREE ABSENCES -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>7 · Three different truths, one identical rendering</h2>
+    <p class="sub">Same cell, three unrelated causes. Nothing distinguishes them.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Sessions <span class="tag proposed">proposed — not shipped</span></div>
+    <div class="screen"><div class="bn-session-table"><div class="bn-sessions-grid" style="grid-template-columns:max-content 1fr">
+      <div class="bn-sessions-row"><div class="bn-sessions-cell bn-cell-id"><a href="#">#5</a></div>
+        <div class="bn-sessions-cell bn-cell-speakers"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Rachel</span></span></div></div>
+      <div class="bn-sessions-row"><div class="bn-sessions-cell bn-cell-id"><a href="#">#6</a></div>
+        <div class="bn-sessions-cell bn-cell-speakers"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p7</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Marcus</span></span></div></div>
+      <div class="bn-sessions-row"><div class="bn-sessions-cell bn-cell-id"><a href="#">#7</a></div>
+        <div class="bn-sessions-cell bn-cell-speakers"><span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p8</span></span></span><span class="bn-speaker-editable-name bn-speaker-name-full">Sarah K.</span></span></div></div>
+    </div></div></div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict bad">unreadable by construction</span>
+    <dl class="st">
+      <dt>Row #5</dt><dd>A moderator. Deliberately unmarked — provenance is participants-only.</dd>
+      <dt>Row #6</dt><dd>A participant whose <code>people.yaml</code> predates the field. Nothing recorded.</dd>
+      <dt>Row #7</dt><dd>Nothing is wrong with this name. The <code>/people</code> request failed and the whole map is missing.</dd>
+    </dl>
+    <p>Three conditions, one pixel. Two are fine and one is a fault, and the researcher has no way
+      to tell which they are looking at. The empty-string sentinel carries the first two on its
+      own — decided before the field ships, or the ambiguity is baked into every file on disk.</p>
+    <p>The third used to be entirely silent; it now logs. Names still render either way, because
+      <code>/sessions</code> carries a server-resolved name of its own — which is exactly why the
+      failure is invisible.</p>
+  </div>
+</div>
+
+<!-- 8. UNREPRESENTABLE -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>8 · The state the design cannot record</h2>
+    <p class="sub">Left: the LLM guessed "Nina". Right: the researcher read it, checked it against
+      the recording, agreed, and committed the same string.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> before / after a human verified it <span class="tag proposed">proposed — not shipped</span></div>
+    <div class="screen" style="display:flex;gap:2.5rem;flex-wrap:wrap">
+      <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span><span class="bn-speaker-editable-name">Nina</span><span class="bn-name-source">Heard in the session</span></span>
+      <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span><span class="bn-speaker-editable-name">Nina</span><span class="bn-name-source">Heard in the session</span></span>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict bad">the valuable act is invisible</span>
+    <p>Provenance is written on change. Confirming a correct guess produces a no-op diff, so the
+      mark never moves — and from that moment it is actively lying, because a human <em>has</em>
+      vouched for the name. For a feature whose entire purpose is trust, human ratification of a
+      machine guess is the most valuable state in the set, and it is the one state the design
+      cannot express.</p>
+    <p>The inverse fails too. Delete a name deliberately and the next pipeline run refills it from
+      the model — now wearing "You set this", telling the researcher they typed the name they
+      removed.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">Part 3 — the two zero-geometry alternatives</div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>9 · One line under the heading, absent when zero</h2>
+    <p class="sub">Same study, same facts, no cell geometry spent. Four agents proposed some form
+      of this independently.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Sessions <span class="tag proposed">proposed — not shipped</span></div>
+    <div class="screen">
+      <h3 class="bn-section-heading">Ward handover app — round 2</h3>
+      <p class="bn-session-moderators">Moderated by Rachel Okonjo</p>
+      <p class="bn-unchecked-line"><b>3 names</b> were heard in the sessions and haven&rsquo;t been checked.</p>
+      <div class="bn-session-table"><div class="bn-sessions-grid" style="grid-template-columns:max-content 1fr max-content">
+        <div class="bn-sessions-row"><div class="bn-sessions-cell bn-cell-id"><a href="#">#3</a></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span></span></span><span class="bn-speaker-editable-name">Sarah C.</span></span>
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span><span class="bn-speaker-editable-name bn-name-inferred">Nina</span></span>
+          </div></div>
+          <div class="bn-sessions-cell bn-cell-duration">44:20</div></div>
+        <div class="bn-sessions-row"><div class="bn-sessions-cell bn-cell-id"><a href="#">#4</a></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span></span></span><span class="bn-speaker-editable-name">Kostas</span></span>
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p6</span></span></span><span class="bn-speaker-editable-name bn-name-inferred">Marcus</span></span>
+          </div></div>
+          <div class="bn-sessions-cell bn-cell-duration">39:12</div></div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict ok">says the same thing, costs nothing</span>
+    <p>The count line carries the only actionable fact. The italic on <code>Nina</code> and
+      <code>Marcus</code> is the second alternative folded in — provenance as a treatment
+      <em>of</em> the name rather than an object beside it, marking only the state that is a claim.</p>
+    <p>Consequences that fall out for free: no cell width spent, so bench 6 evaporates; it survives
+      every ladder rung including rung 3, because a treatment disappears with the thing it treats;
+      one locale string instead of roughly 210 across 21 locales; and it gives a <em>sweep</em>
+      affordance — "check these three before I share this" is a batch task, and a per-row mark makes
+      you hunt for the marks instead of counting them.</p>
+    <p>It also needs a non-colour channel by WCAG 1.4.1, which italic already is. Absent when the
+      count is zero: chrome for exceptions only.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">Part 4 — what leaves the building</div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>10 · The anonymised leave-behind</h2>
+    <p class="sub">The researcher ticked "Remove participant names from labels" and emailed the
+      HTML to the client.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> exported report · anonymise on <span class="tag shipped">shipped</span></div>
+    <div class="screen">
+      <h3 class="bn-section-heading">Ward handover app — round 2</h3>
+      <p class="bn-session-moderators">Moderated by Rachel Okonjo · Observed by Tom Bexley</p>
+      <div class="bn-session-table"><div class="bn-sessions-grid" style="grid-template-columns:max-content 1fr max-content">
+        <div class="bn-sessions-row"><div class="bn-sessions-cell bn-cell-id"><a href="#">#9</a></div>
+          <div class="bn-sessions-cell bn-cell-speakers"><div class="bn-session-speakers">
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span><span class="bn-speaker-editable-name">Rachel</span></span>
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">o1</span></span></span><span class="bn-speaker-editable-name">Tom Bexley</span></span>
+            <span class="bn-session-speaker-entry"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span><span class="bn-speaker-editable-name unnamed">Participant</span></span>
+          </div></div>
+          <div class="bn-sessions-cell bn-cell-duration">51:18</div></div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict bad">three problems, one screen</span>
+    <dl class="st">
+      <dt>Screen says</dt><dd>p9 is anonymous. Rachel moderated. Tom observed.</dd>
+      <dt>Actually true</dt><dd>Priya moderated this session, not Rachel — a named individual,
+        wrongly attributed, in a document now outside the organisation and undetectable by its
+        recipient.</dd>
+      <dt>Also in the page</dt><dd>p9&rsquo;s job title, LLM-extracted, never rendered anywhere,
+        present in View Source. "Senior Charge Nurse, Neonatal ICU" identifies one person in a
+        twelve-participant study.</dd>
+    </dl>
+    <p>Observer names ride through anonymisation with moderator names. The rationale — research
+      team, not its subjects — holds for a moderator; <code>o1</code> is routinely a client-side
+      stakeholder the researcher did not choose. The checkbox hint says only "Moderator names are
+      preserved."</p>
+    <p>And if provenance shipped in the embed, "Heard in the session" against a blanked
+      <code>p9</code> would tell the recipient that a real name exists, that it is in this
+      session&rsquo;s transcript body, and that the pipeline already located it — a signpost aimed
+      precisely at the participant whose name was deliberately removed.</p>
+  </div>
+</div>
+
+</div>
+<script>
+function setTheme(t, btn) {
+  document.documentElement.setAttribute('data-color-theme', t);
+  document.querySelectorAll('.controls .pbtn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+</script>
+</body>
+</html>

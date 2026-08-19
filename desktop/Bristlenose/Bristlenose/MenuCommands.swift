@@ -1004,10 +1004,17 @@ private struct ProjectMenuContent: View {
             .keyboardShortcut(".", modifiers: .command)
             .disabled(!bridgeHandler.selectedProjectIsRunning || !enabled(.stopProject))
 
+            // Routed natively (`windowCommands`), not through the web bridge —
+            // it deletes a directory and spawns a subprocess, and the bridge
+            // event it used to send had no listener anywhere in `frontend/src`.
+            // Dims rather than hides, per menu-bar HIG; the context-menu twin
+            // in `ProjectSidebarOutline.buildProjectMenu` hides instead.
             Button(i18n.t("desktop.menu.project.reAnalyse"), systemImage: "arrow.clockwise") {
-                bridgeHandler.menuAction("reAnalyse")
+                windowCommands?.perform(.reAnalyseProject)
             }
-            .disabled(true)  // Future — Phase 2+
+            .disabled(!bridgeHandler.selectedProjectIsAnalysed
+                      || bridgeHandler.selectedProjectIsRunning
+                      || !enabled(.reAnalyseProject))
 
             Button(i18n.t("desktop.menu.project.archive"), systemImage: "archivebox") {
                 bridgeHandler.menuAction("archive")

@@ -234,6 +234,8 @@ struct ContentView: View {
     /// throws `.insufficientDiskSpace`. Carries needed/available byte counts
     /// for a localised message.
     @State private var copyDiskSpaceAlert: CopyDiskSpaceAlertState?
+    /// The project awaiting a Re-analyse confirmation, if any.
+    @State private var reAnalyseConfirm: Project?
 
     /// Spotlight one-shot confirm sheet — populated when the Locate flow
     /// found a unique high-confidence match. Resolves the awaiting continuation.
@@ -816,6 +818,26 @@ struct ContentView: View {
             diskSpaceMessage: diskSpaceMessage(for:),
             analyseAction: analyseActionForSheet(_:)
         ))
+        .alert(
+            i18n.t("desktop.chrome.reAnalyseConfirmTitle",
+                   ["project": reAnalyseConfirm?.name ?? ""]),
+            isPresented: Binding(
+                get: { reAnalyseConfirm != nil },
+                set: { if !$0 { reAnalyseConfirm = nil } }
+            ),
+            presenting: reAnalyseConfirm
+        ) { project in
+            // Destructive role, and NOT the default action: Return cancels.
+            // The researcher reached a menu item ending in an ellipsis, not a
+            // button labelled "throw this away" — the keyboard should not
+            // finish the sentence for them.
+            Button(i18n.t("desktop.menu.project.reAnalyseConfirm"), role: .destructive) {
+                pipelineRunner.start(project: project, clean: true)
+            }
+            Button(i18n.t("common.buttons.cancel"), role: .cancel) {}
+        } message: { _ in
+            Text(i18n.t("desktop.chrome.reAnalyseConfirmBody"))
+        }
         .sheet(item: $spotlightConfirm) { state in
             SpotlightConfirmSheet(
                 project: state.project,
@@ -932,9 +954,18 @@ struct ContentView: View {
                 bridgeHandler.selectedProjectRevealablePath = revealPath(for: project) ?? ""
                 bridgeHandler.selectedProjectIsRunning =
                     isRunningOrQueued(pipelineRunner.state[id])
+                bridgeHandler.selectedProjectIsAnalysed =
+                    SidebarOutlineController.reAnalyseIsOffered(
+                        isFolderShaped: project.inputFiles == nil,
+                        hasPath: !project.path.isEmpty,
+                        state: pipelineRunner.state[id],
+                        data: projectIndex.unanalysed[id]
+                    )
                 projectIndex.updateLastOpened(id: id)
-                // Gate serve on consent + availability — no data leaves the machine
-                // before the user has seen the AI data disclosure (Apple 5.1.2(i)).
+                // Gate serve on consent + availability — nothing is sent to a
+                // provider before the user has seen the AI data disclosure
+                // (Apple 5.1.2(i)). ("No data leaves the machine" is not the
+                // claim: the analysis IS an outbound call. See SECURITY.md.)
                 if hasConsent && !project.path.isEmpty && project.isAvailable {
                     let path = project.path
                     // Serialize switches: cancel any in-flight switch before
@@ -962,6 +993,7 @@ struct ContentView: View {
             bridgeHandler.selectedProjectPath = ""
             bridgeHandler.selectedProjectRevealablePath = ""
             bridgeHandler.selectedProjectIsRunning = false
+            bridgeHandler.selectedProjectIsAnalysed = false
             bridgeHandler.selectedFolderName =
                 projectIndex.folders.first { $0.id == id }?.name ?? ""
             stopServeIfLastProjectWindow()
@@ -971,6 +1003,7 @@ struct ContentView: View {
             bridgeHandler.selectedProjectPath = ""
             bridgeHandler.selectedProjectRevealablePath = ""
             bridgeHandler.selectedProjectIsRunning = false
+            bridgeHandler.selectedProjectIsAnalysed = false
             bridgeHandler.selectedFolderName = ""
             stopServeIfLastProjectWindow()
         }
@@ -1057,6 +1090,14 @@ struct ContentView: View {
             if let project = selectedProject { locateProject(project) }
         case .stopProject:
             if let project = selectedProject { pipelineRunner.cancel(project: project) }
+        case .reAnalyseProject:
+            // Ask, always. `--clean` is `shutil.rmtree(output_dir)` — the whole
+            // directory, database included — so this discards the analysis and
+            // every edit made on top of it. The ellipsis on the menu item
+            // promises a question; skipping it on a project that happens to
+            // carry no curation would make the ellipsis a lie and would still
+            // be throwing away finished work and re-spending on the provider.
+            if let project = selectedProject { reAnalyseConfirm = project }
         case .removeFromSidebar:
             removeSelectedProjectsFromSidebar()
         }
@@ -2115,6 +2156,12 @@ struct ContentView: View {
                 onLocate: { id in
                     if let p = projectIndex.projects.first(where: { $0.id == id }) { locateProject(p) }
                 },
+                onReAnalyse: { id in
+                    // Targets the *clicked* project, not the selection — a
+                    // right-click on a row the user hasn't selected must not
+                    // wipe the one they had selected.
+                    reAnalyseConfirm = projectIndex.projects.first { $0.id == id }
+                },
                 onShowInFinder: { id in
                     if let p = projectIndex.projects.first(where: { $0.id == id }) { revealInFinder(p) }
                 },
@@ -2479,6 +2526,7 @@ struct ContentView: View {
             bridgeHandler.selectedProjectIsRunning = isRunningOrQueued(pipelineRunner.state[id])
         } else {
             bridgeHandler.selectedProjectIsRunning = false
+            bridgeHandler.selectedProjectIsAnalysed = false
         }
     }
 

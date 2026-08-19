@@ -77,6 +77,10 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// owns the in-`projectIndex` ones — rename / move / icon / cancel — directly).
     /// Mirror the SwiftUI `ProjectRow`/`FolderRow` `.contextMenu` items.
     let onLocate: (UUID) -> Void
+    /// Right-click ▸ Re-analyse…. Handed to `ContentView` rather than run
+    /// here: the act is destructive and its confirmation belongs with the
+    /// window that can present one.
+    let onReAnalyse: (UUID) -> Void
     let onShowInFinder: (UUID) -> Void
     let canShowInFinder: (UUID) -> Bool
     /// Turn On/Off Agent Access gating: locatable AND analysed (policy in
@@ -150,6 +154,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.onActivateLens = onActivateLens
         controller.onExternalDrop = onExternalDrop
         controller.onLocate = onLocate
+        controller.onReAnalyse = onReAnalyse
         controller.onShowInFinder = onShowInFinder
         controller.canShowInFinder = canShowInFinder
         controller.canShareWithAgents = canShareWithAgents
@@ -224,6 +229,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var onActivateLens: (Tab) -> Void = { _ in }
     var onExternalDrop: (SidebarExternalDrop, [URL]) -> Void = { _, _ in }
     var onLocate: (UUID) -> Void = { _ in }
+    var onReAnalyse: (UUID) -> Void = { _ in }
     var onShowInFinder: (UUID) -> Void = { _ in }
     /// See the representable's `handshakeProjectPath`.
     var handshakeProjectPath: String?
@@ -1633,6 +1639,13 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             menu.addItem(menuItem("desktop.menu.project.analyse", #selector(menuAnalyse(_:))))
             menu.addItem(.separator())
         }
+        // Present or absent — never dimmed. The menu-bar twin in
+        // `ProjectMenuContent` dims instead, which is the rule this file's
+        // lifecycle block already states.
+        if canReAnalyse(id, state: state) {
+            menu.addItem(menuItem("desktop.menu.project.reAnalyse", #selector(menuReAnalyse(_:))))
+            menu.addItem(.separator())
+        }
         if case .cantFind = availability {
             menu.addItem(menuItem("desktop.chrome.locate", #selector(menuLocate(_:))))
             menu.addItem(.separator())
@@ -1720,6 +1733,17 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// that they picked the wrong one.
     ///
     /// The matrix this implements is `docs/design-analysis-lifecycle.md` §4.1.
+    private func canReAnalyse(_ id: UUID, state: PipelineState?) -> Bool {
+        guard let p = projectIndex?.projects.first(where: { $0.id == id })
+        else { return false }
+        return Self.reAnalyseIsOffered(
+            isFolderShaped: p.inputFiles == nil,
+            hasPath: !p.path.isEmpty,
+            state: state,
+            data: projectIndex?.unanalysed[id]
+        )
+    }
+
     private func canAnalyse(_ id: UUID, state: PipelineState?) -> Bool {
         guard let p = projectIndex?.projects.first(where: { $0.id == id })
         else { return false }
@@ -1740,6 +1764,31 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// second copy of "folder-shaped, has a path, pipeline free" is how they
     /// would come to disagree — the same failure the pane and the menu had
     /// about whether there was anything to analyse at all.
+    /// Whether **Re-analyse…** is worth offering: there is an analysis to
+    /// throw away, and the pipeline is free to rebuild it.
+    ///
+    /// The mirror image of `analyseIsOffered`. Analyse asks "is there work to
+    /// do"; Re-analyse asks "is there a *result* to replace", which is why
+    /// "analysed, nothing new" — the one state where Analyse is a no-op — is
+    /// exactly the state this belongs in.
+    ///
+    /// Deliberately does NOT require `newFiles` to be empty: re-analysing a
+    /// drifted project is legitimate (it picks the new files up as well), it is
+    /// just the expensive way to do it. Offering both and letting the labels
+    /// distinguish them is honest; hiding this one would leave a researcher who
+    /// wants a clean rebuild with no route to it.
+    nonisolated static func reAnalyseIsOffered(
+        isFolderShaped: Bool, hasPath: Bool,
+        state: PipelineState?, data: UnanalysedState?
+    ) -> Bool {
+        guard isFolderShaped, hasPath else { return false }
+        switch state ?? .idle {
+        case .idle, .stopped, .failed, .failedWithDiagnostic: break
+        default: return false
+        }
+        return (data?.sessionCount ?? 0) > 0
+    }
+
     nonisolated static func analyseIsOffered(
         isFolderShaped: Bool, hasPath: Bool,
         state: PipelineState?, data: UnanalysedState?
@@ -1796,6 +1845,13 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         guard let id = menuClickedNodeID,
               let project = projectIndex?.projects.first(where: { $0.id == id }) else { return }
         pipelineRunner?.start(project: project)
+    }
+
+    /// Re-analyse is destructive, so this asks the *window* rather than
+    /// starting anything: `--clean` is `rmtree(output_dir)`, and the
+    /// confirmation lives with the window that can present a sheet.
+    @objc private func menuReAnalyse(_ sender: NSMenuItem) {
+        if let id = menuClickedNodeID { onReAnalyse(id) }
     }
 
     @objc private func menuCancelCopy(_ sender: NSMenuItem) {

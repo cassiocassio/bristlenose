@@ -70,6 +70,15 @@ enum WindowCommand: Equatable {
     case locateProject
     /// Project ▸ Stop Analysis (⌘.).
     case stopProject
+    /// Project ▸ Re-analyse… — destructive; the window asks first.
+    ///
+    /// Routed here rather than through `bridgeHandler.menuAction("reAnalyse")`,
+    /// which is where it went until Aug 2026 while `.disabled(true)` hid the
+    /// fact that **nothing listened**: zero hits for `reAnalyse` anywhere in
+    /// `frontend/src`. It never touched the web view in the first place — it
+    /// deletes a directory and spawns a subprocess — so the bridge was the
+    /// wrong road as well as a dead one.
+    case reAnalyseProject
     /// Project ▸ Remove from Sidebar (⌘⌫).
     case removeFromSidebar
 }

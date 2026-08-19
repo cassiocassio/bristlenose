@@ -174,6 +174,11 @@ final class BridgeHandler: ObservableObject {
     /// Project ▸ Stop Analysis (⌘.) — the menu-bar accelerator for the
     /// hover-× / context-menu Stop. Dimmed (not hidden) when false, per HIG.
     @Published var selectedProjectIsRunning: Bool = false
+    /// Whether the selected project has an analysis that Re-analyse could
+    /// replace. Read by the Project menu, which dims rather than hides —
+    /// the sidebar's context menu asks the same question of
+    /// `SidebarOutlineController.reAnalyseIsOffered` and hides instead.
+    @Published var selectedProjectIsAnalysed: Bool = false
 
     /// Reference to the WKWebView for outbound calls (goBack, switchToTab).
     /// Set by WebView.makeNSView, cleared on reset(). Weak to avoid retain cycles.
@@ -663,6 +668,7 @@ final class BridgeHandler: ObservableObject {
         selectedFolderName = ""
         selectedProjectAvailable = true
         selectedProjectIsRunning = false
+        selectedProjectIsAnalysed = false
         webView = nil
     }
 

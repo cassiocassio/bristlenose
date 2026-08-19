@@ -234,3 +234,74 @@ import Foundation
             data: data(newFiles: 0, sessions: 14)))
     }
 }
+
+/// Pins when **Re-analyse…** is worth offering — the mirror of `analyseIsOffered`.
+///
+/// It was `.disabled(true)` hardcoded, firing a bridge event that nothing in
+/// `frontend/src` listened for. Dimming said "not right now" when the truth was
+/// "not in this build", which sends a researcher hunting for a state that does
+/// not exist.
+@Suite struct ReAnalyseOfferedTests {
+
+    private func data(newFiles: Int = 0, sessions: Int? = nil, files: Int = 1) -> UnanalysedState {
+        UnanalysedState(
+            newFiles: (0..<newFiles).map { URL(fileURLWithPath: "/tmp/p\($0).mp4") },
+            missingFiles: [], sessionCount: sessions, totalDurationSeconds: nil,
+            ingestableFileCount: files
+        )
+    }
+
+    @Test func analysedAndIdleIsTheStateItBelongsIn() {
+        // The one state where Analyse is a measured no-op is exactly the state
+        // Re-analyse is for.
+        let d = data(newFiles: 0, sessions: 14)
+        #expect(SidebarOutlineController.reAnalyseIsOffered(
+            isFolderShaped: true, hasPath: true, state: .idle, data: d))
+        #expect(!SidebarOutlineController.analyseIsOffered(
+            isFolderShaped: true, hasPath: true, state: .idle, data: d))
+    }
+
+    @Test func nothingToReplaceMeansNothingToOffer() {
+        // A project that has never produced an analysis has nothing to throw
+        // away — that is Analyse's job, and offering both would be two names
+        // for one act.
+        for sessions in [nil, 0] {
+            #expect(!SidebarOutlineController.reAnalyseIsOffered(
+                isFolderShaped: true, hasPath: true, state: .idle,
+                data: data(sessions: sessions)))
+        }
+        #expect(!SidebarOutlineController.reAnalyseIsOffered(
+            isFolderShaped: true, hasPath: true, state: .idle, data: nil))
+    }
+
+    @Test func aRunningProjectIsNotOffered() {
+        #expect(!SidebarOutlineController.reAnalyseIsOffered(
+            isFolderShaped: true, hasPath: true, state: .running, data: data(sessions: 14)))
+    }
+
+    @Test func aDriftedProjectIsOfferedBoth() {
+        // Deliberate: re-analysing a drifted project is legitimate — it picks
+        // the new files up too, just the expensive way. Hiding it would leave a
+        // researcher who wants a clean rebuild with no route to one; the labels
+        // are what distinguish the two.
+        let d = data(newFiles: 3, sessions: 14)
+        #expect(SidebarOutlineController.reAnalyseIsOffered(
+            isFolderShaped: true, hasPath: true, state: .idle, data: d))
+        #expect(SidebarOutlineController.analyseIsOffered(
+            isFolderShaped: true, hasPath: true, state: .idle, data: d))
+    }
+
+    @Test func aFileSubsetProjectIsNotOffered() {
+        #expect(!SidebarOutlineController.reAnalyseIsOffered(
+            isFolderShaped: false, hasPath: true, state: .idle, data: data(sessions: 14)))
+    }
+
+    @Test func aFailedRunCanStillBeRebuiltFromScratch() {
+        // Sessions on record plus a failed attempt: the retry is Analyse, but a
+        // clean rebuild has to stay reachable — it is the only route past an
+        // output directory the CLI refuses to overwrite.
+        #expect(SidebarOutlineController.reAnalyseIsOffered(
+            isFolderShaped: true, hasPath: true,
+            state: .failed("boom", category: .unknown), data: data(sessions: 14)))
+    }
+}

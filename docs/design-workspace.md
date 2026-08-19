@@ -1,9 +1,35 @@
 ---
-status: pending
-last-trued: 2026-08-15
+status: partial
+last-trued: 2026-08-18
+trued-against: HEAD@main on 2026-08-18 (e646e0d0)
 ---
 
-> **Pending / aspirational.** Forward-looking design (post-TestFlight multi-project + multi-window). The **serve/view family (A/B/C) is still open**; several *window-level* decisions were taken 15 Aug 2026 and are marked as such in §"Effectively decided vs genuinely open". The "What shipped" section names the A1/A2 increments already on the path (verified against shipped Swift); the rest is not built. Check `TODO.md` / `docs/ROADMAP.md` for status.
+> **Partial — Stage 3a is built; Stage 3b is the open architecture.** This doc
+> was `status: pending` until 18 Aug 2026, and the banner below said "the rest is
+> not built". That stopped being true on 16 Aug and nobody moved it: **four
+> sessions trued individual sections while the header stayed a phase behind**,
+> which is the same failure `design-cloud-import.md` had and the reason the
+> truing skill now requires a section-scoped pass to re-read its own summary.
+>
+> **Built and green:** the whole of Stage 3a — per-window `BridgeHandler`,
+> per-window lens and anchor, the window roster, ordinals, `File ▸ New Window`,
+> `applicationShouldHandleReopen`, menu-command routing to the front window, and
+> (18 Aug) the **child window**: a window that holds a lens rather than a project
+> and reads its title from the serve, so it cannot name a study it isn't showing.
+>
+> **Still open, and it is the one big call:** the serve/view family (A/B/C, now
+> *presumed A*) and Stage 3b — per-window serve, two studies visible at once.
+> Sized 18 Aug at **weeks, not days**: `ServeManager` is ~1,050 lines with 18
+> pieces of singleton state to make multi-instance, plus a `WindowGroup(for:)`
+> scene restructure, plus constraint 7 (the MCP handshake assumes one fronted
+> serve) which this doc requires answered *on paper* before the stage begins.
+>
+> **One decision is live rather than settled** — whether the shipped master/child
+> shape survives, or is replaced by a peer model in which every window keeps its
+> project list and takes its study from the serve. The argument both ways, and
+> the select-vs-deselect refinement it turns on, is in the
+> `child-windows-outstanding` brief among the maintainer's private handoffs.
+> Nothing further should be built on the child until that is answered.
 
 ## Changelog
 
@@ -26,13 +52,29 @@ last-trued: 2026-08-15
 
 # Workspace — genuine multi-project + multi-window (post-TF)
 
-**Status:** Problem definition + option range. The end goal is fixed; the
-**architecture is open** — the serve/view family (A/B/C) is the one big call and is
-deliberately unmade here. What *has* been decided since is window-level and local:
-what a window opens onto, what restores, and the command that creates one. Those are
-marked in §"Effectively decided vs genuinely open"; everything else remains the
-"promote to a design doc when post-TF planning starts" artefact that the planner's
-Workspace item pointed at.
+**Status:** _Corrected 18 Aug 2026 — this block described the doc as it was
+before Stage 3a shipped._ The end goal is fixed and the **serve/view architecture
+is still the one big call** (A/B/C, presumed A, unmade here) — that much is
+unchanged. What has changed is the volume of settled work below it: this is no
+longer "problem definition + option range" but a doc whose window-level half is
+**built and shipping** and whose serve-level half is not.
+
+Window-level and decided (see §"Effectively decided vs genuinely open", and the
+changelog for dates): what a window opens onto, what restores, the command that
+creates one, the duplicate ordinal and its group key, what a child window is and
+what it may not do, how ⌥⌘N is gated, which window narrates a run, and window
+tabbing. Serve-level and open: everything Stage 3b needs.
+
+Original text preserved below, because the pivot from "an artefact the planner
+pointed at" to a shipping design is worth being able to trace:
+
+> **Status:** Problem definition + option range. The end goal is fixed; the
+> **architecture is open** — the serve/view family (A/B/C) is the one big call and is
+> deliberately unmade here. What *has* been decided since is window-level and local:
+> what a window opens onto, what restores, and the command that creates one. Those are
+> marked in §"Effectively decided vs genuinely open"; everything else remains the
+> "promote to a design doc when post-TF planning starts" artefact that the planner's
+> Workspace item pointed at.
 
 This supersedes the earlier one-line sketch's *assumption* (one serve process
 serving N mounted projects) — see "What we now know" — but keeps its bones: the

@@ -1,8 +1,8 @@
 ---
 status: current
 last-trued: 2026-08-19
-trued-against: HEAD@main 3acfcef0 on 2026-08-19 (nine shipped commits + an
-  empirical run of the format-torture corpus)
+trued-against: HEAD@main 6497711a on 2026-08-20 (the corpus run through the
+  desktop app, not just the harness)
 ---
 
 # The analysis lifecycle — analyse, re-analyse, incremental
@@ -363,10 +363,20 @@ the one previously considered worst.
 | 1 | Ingested and analysed | ✅ |
 | 2 | Refused **by name, with a reason** | ✅ — a stated refusal is a pass |
 | 3 | Silently dropped | ❌ the classic failure |
+| 3b | Dropped **while the summary reports success** | ❌❌ the same loss, plus a false alibi |
 | 4 | **Took the whole batch down** | ❌❌ worse at scale |
 
 Outcome 4 matters because it inverts with n: one bad file among a hundred costs
 ninety-nine good ones. Outcome 3 costs one participant; outcome 4 costs the study.
+
+**3b was found on 20 Aug 2026 and is worth separating from 3.** A plain silent
+drop leaves nothing behind; 3b leaves a *record that says everything worked*.
+The terminus read `transcripts: attempted=57 succeeded=57 failed=0` and then
+`topics: attempted=42` — fifteen sessions gone between two adjacent lines, with
+the stage that lost them reporting a clean sweep. Anyone debugging it starts by
+trusting the summary, which is the one artefact actively lying. The tell is
+**a bucket whose `attempted` does not match the next bucket's**, and nothing in
+the schema requires them to agree.
 
 ### 5.2 Fixed
 
@@ -385,16 +395,28 @@ ninety-nine good ones. Outcome 3 costs one participant; outcome 4 costs the stud
 | **Re-analyse… permanently dimmed** | false affordance | routed natively, real predicate, both menus |
 | Refusals and damaged files reached only the log | a missing participant nobody is told about | `PipelineSummary.ingest` + per-cause reasons |
 | An unrecognised cause category failed the **whole** event decode | no summary, no rows, no cause | both Swift enums decode unknown as `.unknown` |
+| Refusals rendered as **anonymous rows** in the popover | outcome 3 wearing outcome 2's clothes — a count with extra steps | the pane reads `source_file`, the field added for exactly this |
+| Fifteen silent recordings dropped under `succeeded=57` | **outcome 3b** | `NO_SPEECH` — stated, counted out of `succeeded`, excluded from the abandon check |
 | **Analyse** offered on a project with no recordings | false affordance | `canAnalyse` asks whether there is work to do |
 | The empty-state pane said "add files" to a project with files | the app contradicting itself on screen | the pane counts the same field the menu gates on |
 
 ### 5.3 Open
 
-**Empty, as of 19 Aug 2026** — every row that stood here has moved up to §5.2.
-That is a statement about this list, not about the product: it means the
-failure modes *observed on the corpus* are closed, and the next entry will come
-from the next thing someone actually runs. A section that stays empty is a
-section nobody is exercising.
+**Empty again, as of 20 Aug 2026 — and it did not stay empty for a day.**
+
+The note that stood here yesterday said an empty list "means the failure modes
+*observed on the corpus* are closed, and the next entry will come from the next
+thing someone actually runs." That happened within twenty-four hours, and how it
+happened is the useful part: **the corpus harness had been run repeatedly and
+found nothing; a single screenshot of the same corpus in the desktop app found
+three defects.** Anonymous diagnostic rows, refusals in error red, and fifteen
+sessions dropped behind a `succeeded=57` — none visible to 4,037 passing tests,
+because a test asserts what someone thought to ask.
+
+So the standing instruction is not "keep this list empty". It is **run the
+corpus through the `.app` after any pipeline change, not just the suite**, and
+expect this section to refill. A section that stays empty is still a section
+nobody is exercising.
 
 ### 5.4 Edge cases
 

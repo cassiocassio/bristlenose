@@ -66,11 +66,15 @@ toast by an undo that no longer expires. Decisions and the HIG citation in
    i18n review flagged (Finding 13, deferred): it is the single source for both
    the UI label and the English-only copy payload, so localising it in place
    breaks the plaintext. Needs a UI-vs-plaintext split, not a translation.
-7. **Unexplained, noticed 20 Aug:** the Sessions table's ID column skips numbers
-   (#1, #3, #4 … #9, #10, #11, #15) on the torture corpus. Nine gaps against
-   seven refusals, so they do not simply correspond. Either ingest numbers files
-   it then drops, or the table filters rows it has. Worth ten minutes before a
-   cohort tester asks why their study starts at #3.
+7. ~~**Unexplained:** the Sessions table's ID column skips numbers.~~ **Answered
+   and fixed the same day (`6497711a`).** Fifteen gaps, not nine: four were the
+   damaged files already named, and eleven were sound effects and test tones
+   that transcribed to nothing and were counted as *successes*. Session ids are
+   assigned contiguously at ingest, so a gap always means a session was created
+   and then lost. **The gaps stay** — deliberate for alpha: a researcher's
+   folder will not contain eleven sound effects, and a gap makes a failure
+   visible. What was missing was something explaining each one, which is now
+   the `NO_SPEECH` row in the diagnostic.
 
 **18 Aug 2026 — the child window is built, and the first run on screen raised a question that may replace it.** Seven commits, 1138 desktop tests green, ship-blocker closed: a child holds a lens rather than a project and reads its title from the serve, so it cannot name a study it isn't showing — unrepresentable rather than guarded. Decisions, states and menu enablement are in `docs/design-workspace.md` §"What a child window is" and `docs/mockups/window-master-child-states.html`. **The open question is whether master/child survives:** a relaunch bug briefly gave every window a project list, and the reaction to that state — keep the list everywhere and accept that clicking jumps all windows — describes a simpler peer model that closes the same defect with no role, no sidebar omission and no menu gating. It was a reaction to a bug, so it needs asking rather than acting on; the argument both ways is in the `child-windows-outstanding` brief among the maintainer's private handoffs. **Also owed:** the lens-row and project-row context menus (the last specced piece), and 32 untriaged findings from the first review this area has ever had.
 

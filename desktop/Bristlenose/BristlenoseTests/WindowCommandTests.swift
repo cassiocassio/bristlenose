@@ -183,3 +183,45 @@ struct ChildCommandGateTests {
                 != WindowCommandSink(windowID: id, role: .child, perform: { _ in }))
     }
 }
+
+
+// MARK: - What ⌥⌘N can do
+
+// It means one thing everywhere — another lens window on the study I am looking
+// at — so it needs a study to be looking at. The interesting cases are the two
+// ends: nothing open at all, and a welcome master with nothing served.
+@Suite("New Window gate")
+struct NewWindowGateTests {
+
+    @Test("With no window open it stays live, whatever the serve is doing")
+    func emptyStateIsTheWayBack() {
+        // The menu bar outlives windows, so this is the documented route back
+        // from empty. Gating it on the serve here would make the app
+        // unreachable after closing its last window.
+        #expect(NewWindowGate.isEnabled(servedPath: nil, hasProjectWindow: false))
+        #expect(NewWindowGate.isEnabled(servedPath: "/s/a", hasProjectWindow: false))
+    }
+
+    @Test("A welcome master with nothing served dims it")
+    func nothingToBeAChildOf() {
+        // The one state where the command has nothing to mean: pressing it
+        // would produce a second welcome screen.
+        #expect(!NewWindowGate.isEnabled(servedPath: nil, hasProjectWindow: true))
+    }
+
+    @Test("Anything served keeps it live")
+    func servedStudyEnablesIt() {
+        #expect(NewWindowGate.isEnabled(servedPath: "/s/a", hasProjectWindow: true))
+    }
+
+    @Test("A welcome master with children keeps it live")
+    func welcomeMasterWithChildrenStillHasAStudy() {
+        // The case the naive rule gets wrong. A master that went back to the
+        // welcome screen while children are open does not stop the serve —
+        // stopServeIfLastProjectWindow keeps it up while another window still
+        // shows a project — so there is still a study to be a child of, even
+        // though the front window shows Welcome. "Is anything served" is the
+        // right question; "is the front window a welcome screen" is not.
+        #expect(NewWindowGate.isEnabled(servedPath: "/s/a", hasProjectWindow: true))
+    }
+}

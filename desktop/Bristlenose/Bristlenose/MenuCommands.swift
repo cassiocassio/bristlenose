@@ -55,7 +55,8 @@ struct MenuCommands: Commands {
         }
 
         CommandGroup(replacing: .newItem) {
-            FileMenuContent(bridgeHandler: bridgeHandler, projectIndex: projectIndex, i18n: i18n, cloudImport: cloudImport)
+            FileMenuContent(bridgeHandler: bridgeHandler, projectIndex: projectIndex,
+                            i18n: i18n, cloudImport: cloudImport, serveManager: serveManager)
         }
 
         CommandGroup(replacing: .undoRedo) {
@@ -368,6 +369,9 @@ private struct FileMenuContent: View {
     @ObservedObject var projectIndex: ProjectIndex
     @ObservedObject var i18n: I18n
     @ObservedObject var cloudImport: CloudImportCoordinator
+    /// Only for ⌥⌘N's gate — see the button. The File menu asks one question of
+    /// it: is any study currently being served.
+    @ObservedObject var serveManager: ServeManager
     @FocusedValue(\.windowCommands) private var windowCommands
     @Environment(\.openWindow) private var openWindow
 
@@ -400,10 +404,31 @@ private struct FileMenuContent: View {
         //
         // A new window inherits the persisted project selection, so this is
         // "same study, another lens" — the case that wants two windows open.
+        // **Gated on what is *served*, not on what windows exist.** ⌥⌘N means one
+        // thing everywhere — another lens window on the study I am looking at —
+        // so it needs a study to be looking at. With nothing served and a window
+        // already open, pressing it would produce a second welcome screen, which
+        // is the one state where the command has nothing to mean.
+        //
+        // With **no** window open at all it stays live and opens a master: the
+        // menu bar outlives windows, and this is the documented way back from
+        // empty. `WindowRoster` answers that half, deliberately not AppKit's
+        // `hasVisibleWindows`, which counts Settings and the Import window.
+        //
+        // Note the case this shape handles for free: a master that has returned
+        // to the welcome screen while children are open does *not* stop the
+        // serve — `stopServeIfLastProjectWindow` keeps it up while any other
+        // window still shows a project — so the study stays served, the children
+        // keep working, and ⌥⌘N stays live because there is still something to
+        // be a child of. "Is anything served" is the right question; "is the
+        // front window a welcome screen" is not.
         Button(i18n.t("desktop.menu.file.newWindow"), systemImage: "macwindow") {
             openWindow(id: "main")
         }
         .keyboardShortcut("n", modifiers: [.command, .option])
+        .disabled(!NewWindowGate.isEnabled(
+            servedPath: serveManager.currentProjectPath,
+            hasProjectWindow: WindowRoster.shared.hasProjectWindow))
 
         // Add Files… — the menu twin of drag-drop. ⇧⌘A mirrors Apple Mail's
         // File ▸ Attach Files. Fires unconditionally (like New Project/Folder);

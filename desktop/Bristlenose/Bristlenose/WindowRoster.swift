@@ -295,3 +295,26 @@ enum WindowProjectResolution {
         }
     }
 }
+
+
+/// Whether `File ▸ New Window` (⌥⌘N) can do anything.
+///
+/// Two inputs, one line, and it is a separate type only because a menu is the
+/// hardest place in the app to test a decision.
+enum NewWindowGate {
+
+    /// - Parameters:
+    ///   - servedPath: what the sidecar is serving, or nil.
+    ///   - hasProjectWindow: whether any project window is open. Settings and
+    ///     the Import window are deliberately not counted — `WindowRoster`
+    ///     already makes that distinction for the Dock-icon reopen.
+    static func isEnabled(servedPath: String?, hasProjectWindow: Bool) -> Bool {
+        // Nothing open: the menu bar outlives windows, so this is the way back
+        // from empty and must stay live whatever the serve is doing.
+        if !hasProjectWindow { return true }
+        // A window is open, so ⌥⌘N means "another lens window on the study I am
+        // looking at". With nothing served there is no such study, and the
+        // result would be a second welcome screen.
+        return servedPath != nil
+    }
+}

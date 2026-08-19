@@ -143,9 +143,34 @@
 <div class="wrap">
 
 <h1>Master &amp; child windows — every state, every route between them</h1>
+
+<div class="note" style="border-left:4px solid var(--bad-fg); background:var(--bad-bg); color:var(--bad-fg); padding:14px 16px; margin:18px 0;">
+  <p style="margin:0 0 8px"><b>SUPERSEDED 19 Aug 2026 — the master/child model was deleted the day after it shipped.</b>
+  It was replaced by <b>peer windows</b> (<code>348b5122</code>): every window keeps its project
+  list and takes its study from the serve. Read this sheet as history, not as spec.</p>
+
+  <p style="margin:0 0 8px"><b>Dead — do not build from these:</b> §2 (two window types),
+  §4 (the ⌥⌘N gate — <code>NewWindowGate</code> is deleted), §5 (menu states by window type —
+  there are no window types), and the study-axis dimming throughout. <code>WindowRoster.Role</code>,
+  <code>role(for:)</code> and the <code>role:</code> parameter on every menu site went with them.</p>
+
+  <p style="margin:0 0 8px"><b>Still live, and the reason this file is kept:</b>
+  <b>§1 "The surfaces a user judges by"</b> — the framing that caught a window
+  disagreeing with itself in three places, and the method the peer work was reviewed by.
+  <b>The context menus</b> (<i>Open in New Window</i> on the lens row; <i>Open Project in
+  New Window</i> on the project row) are still specced and still unbuilt.
+  <b>§7's video pop-out defect</b> (Finding 22) is still open.</p>
+
+  <p style="margin:0"><b>What replaces it:</b> peer today, and Stage 3b next — every window
+  shows any project, any lens, or Welcome, independently. Under 3b the sheet's central
+  question (which window may change the study?) dissolves: all of them may, and each
+  changes only itself.</p>
+</div>
+
 <p class="lede">
-  Stage 3a as decided 18 Aug 2026. One serve, one project at a time, N windows, N lenses.
-  <b>Masters get projects, children get lenses.</b> This sheet exists to be judged the way
+  <s>Stage 3a as decided 18 Aug 2026. One serve, one project at a time, N windows, N lenses.
+  <b>Masters get projects, children get lenses.</b></s>
+  This sheet exists to be judged the way
   the app is judged — by the surfaces a researcher can actually see.
 </p>
 

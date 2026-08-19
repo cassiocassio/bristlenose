@@ -234,3 +234,114 @@ struct WindowRosterTests {
         #expect(roster.claim(windowID: onTranscript, showing: row(study, sameRow)) == 3)
     }
 }
+
+
+// MARK: - Master and child
+
+// Masters get projects, children get lenses. The role is what makes a child
+// unable to name a study it isn't showing: it has no project of its own, so
+// there is no second source to drift from the serve.
+//
+// Every case here is a state the researcher can reach by ordinary use, and two
+// of them (the order race, and the master closing) are the ones that would
+// otherwise be found by a cohort tester.
+@MainActor
+@Suite("Window roles", .serialized)
+struct WindowRoleTests {
+
+    private func fresh() -> WindowRoster {
+        let r = WindowRoster.shared
+        r.resetForTesting()
+        return r
+    }
+
+    @Test("The first project window is the master")
+    func firstWindowIsMaster() {
+        let r = fresh()
+        #expect(r.role(for: UUID()) == .master)
+    }
+
+    @Test("A window opened alongside one is a child")
+    func secondWindowIsChild() {
+        let r = fresh()
+        let first = UUID()
+        _ = r.role(for: first)
+        r.claim(windowID: first, showing: nil)
+        #expect(r.role(for: UUID()) == .child)
+    }
+
+    @Test("The role is fixed — a master stays a master when company arrives")
+    func masterDoesNotBecomeChild() {
+        // The whole point of caching it. Recomputed, a master would flip to
+        // child the instant a second window opened beside it, and the project
+        // list would vanish from the window the researcher was working in.
+        let r = fresh()
+        let master = UUID()
+        #expect(r.role(for: master) == .master)
+        r.claim(windowID: master, showing: nil)
+
+        let child = UUID()
+        #expect(r.role(for: child) == .child)
+        r.claim(windowID: child, showing: nil)
+
+        #expect(r.role(for: master) == .master, "asking again must not re-decide")
+    }
+
+    @Test("Claiming before asking does not make the first window a child")
+    func roleSurvivesTheObserverRace() {
+        // Two observers register a window — .onAppear and .onChange(initial:) —
+        // and their order is not guaranteed. If claim lands first the window is
+        // already in `held`, so a rule that asked "is anyone here" without
+        // excluding the asker would call the very first window a child and ship
+        // an app whose only window has no project list.
+        let r = fresh()
+        let only = UUID()
+        r.claim(windowID: only, showing: nil)
+        #expect(r.role(for: only) == .master)
+    }
+
+    @Test("With the master closed, a new window is still a child")
+    func childrenOnlyYieldsAnotherChild() {
+        // Decided 18 Aug 2026, and it is the one case where "am I first" and
+        // "does a master exist" disagree. ⌥⌘N means one thing everywhere —
+        // another lens window on the study I am looking at — and the cost (no
+        // route back to a project list without closing everything) is accepted
+        // knowingly rather than patched with a special case.
+        let r = fresh()
+        let master = UUID(), child = UUID()
+        _ = r.role(for: master); r.claim(windowID: master, showing: nil)
+        _ = r.role(for: child);  r.claim(windowID: child, showing: nil)
+
+        r.release(windowID: master)
+        #expect(r.hasMaster == false, "the role goes with the window — no promotion")
+        #expect(r.role(for: UUID()) == .child)
+    }
+
+    @Test("A surviving child is not promoted")
+    func noPromotion() {
+        // Promotion would make a window change shape because a *different*
+        // window closed, and it would be deleted at Stage 3b. Pinned so nobody
+        // adds it back as a convenience.
+        let r = fresh()
+        let master = UUID(), child = UUID()
+        _ = r.role(for: master); r.claim(windowID: master, showing: nil)
+        _ = r.role(for: child);  r.claim(windowID: child, showing: nil)
+
+        r.release(windowID: master)
+        #expect(r.role(for: child) == .child)
+    }
+
+    @Test("Close everything and the next window is a master again")
+    func emptyRosterRestoresAMaster() {
+        // The documented way back from the orphan state: close every window,
+        // then ⌥⌘N.
+        let r = fresh()
+        let a = UUID(), b = UUID()
+        _ = r.role(for: a); r.claim(windowID: a, showing: nil)
+        _ = r.role(for: b); r.claim(windowID: b, showing: nil)
+        r.release(windowID: a); r.release(windowID: b)
+
+        #expect(r.hasProjectWindow == false)
+        #expect(r.role(for: UUID()) == .master)
+    }
+}

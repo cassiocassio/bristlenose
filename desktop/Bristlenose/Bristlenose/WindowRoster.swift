@@ -65,7 +65,56 @@ final class WindowRoster: ObservableObject {
     /// duplicate group, since two "Welcome" windows aren't worth numbering.
     private var held: [UUID: (group: Group?, ordinal: Int)] = [:]
 
+    /// Master or child, decided once per window and never recomputed.
+    ///
+    /// Masters get projects, children get lenses (`design-workspace.md` §"What a
+    /// child window is"). A child has no project of its own — its title is read
+    /// from what is being served — which is what makes it impossible for a child
+    /// to name a study it isn't showing.
+    private var roles: [UUID: Role] = [:]
+
+    enum Role: Equatable {
+        /// Carries the project list and picks the study.
+        case master
+        /// Carries the lens rail only, and inherits the served study.
+        case child
+    }
+
     private init() {}
+
+    /// What kind of window this is — assigned on first ask, then fixed.
+    ///
+    /// **The rule is "am I the first project window", not "does a master
+    /// exist".** Those differ in exactly one state and it is the one that was
+    /// decided 18 Aug 2026: with the master closed and children still open, a
+    /// new window is a **child**, because ⌥⌘N means one thing everywhere —
+    /// another lens window on the study I am looking at — and gaining a special
+    /// case there buys a project list nobody asked for at the cost of a rule
+    /// that no longer fits in a sentence. (The cost of that is a mild dead end;
+    /// see the design doc, where it is accepted knowingly.)
+    ///
+    /// **Self is excluded deliberately.** Two observers register a window —
+    /// `.onAppear` and `.onChange(of: windowGroup, initial: true)` — and their
+    /// order is not guaranteed, so if `claim` happens to land first the window
+    /// would find itself in `held` and conclude it had company. Excluding the
+    /// asker makes the answer independent of that race, the same reasoning
+    /// `anyProjectShown(excluding:)` already carries.
+    ///
+    /// **Fixed once**, so a master does not become a child the moment a second
+    /// window opens beside it.
+    func role(for windowID: UUID) -> Role {
+        if let existing = roles[windowID] { return existing }
+        let hasCompany = held.keys.contains { $0 != windowID }
+        let assigned: Role = hasCompany ? .child : .master
+        roles[windowID] = assigned
+        return assigned
+    }
+
+    /// Whether any live window carries the project list.
+    ///
+    /// Read by the ⌥⌘N gate's zero-windows case. Note this is **not** what
+    /// decides the role — see `role(for:)`.
+    var hasMaster: Bool { roles.values.contains(.master) }
 
     /// Is any project window open? (Settings and the Import window are not
     /// project windows and are deliberately not counted.)
@@ -114,7 +163,7 @@ final class WindowRoster: ObservableObject {
     /// its number up — see `compact` for the case that earned it.
     @discardableResult
     func claim(windowID: UUID, showing group: Group?) -> Int {
-        release(windowID: windowID)
+        releaseOrdinal(windowID: windowID)
         guard let group else {
             // Still a window, still counts for `hasProjectWindow` — just not a
             // member of any duplicate group.
@@ -136,6 +185,25 @@ final class WindowRoster: ObservableObject {
     /// Give back whatever `windowID` holds. Safe to call for a window that
     /// holds nothing.
     func release(windowID: UUID) {
+        releaseOrdinal(windowID: windowID)
+        // The role goes with the window. Deliberately *not* reassigned to a
+        // survivor: promotion was rejected (design doc, §"What a child window
+        // is") — it would exist only to paper over there being one serve, would
+        // be deleted at Stage 3b, and would change a window's shape while the
+        // researcher is looking at it because a *different* window closed.
+        roles.removeValue(forKey: windowID)
+    }
+
+    /// Give back the ordinal, keeping the window on the roster.
+    ///
+    /// **Split out from `release` on 18 Aug 2026, and the split is load-bearing.**
+    /// `release` was doing two unrelated jobs — "this window now shows something
+    /// else, take its number back" (called by `claim`) and "this window is gone"
+    /// (called by `.onDisappear`). Harmless while a number was all it held; the
+    /// moment a *role* was added, every `claim` silently wiped it and the first
+    /// window would lose its project list the first time it changed lens. Caught
+    /// by `masterDoesNotBecomeChild`, which is why that test exists.
+    private func releaseOrdinal(windowID: UUID) {
         assignments.removeValue(forKey: windowID)
         guard let (group, ordinal) = held.removeValue(forKey: windowID),
               let group else { return }
@@ -186,5 +254,9 @@ final class WindowRoster: ObservableObject {
         taken.removeAll()
         held.removeAll()
         assignments.removeAll()
+        // Roles are sticky by design, so a suite that forgot this would leak a
+        // master from one case into the next and every later window would come
+        // back a child.
+        roles.removeAll()
     }
 }

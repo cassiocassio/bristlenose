@@ -218,6 +218,7 @@ Where each verb can be reached, and what gates it.
 |---|---|---|---|
 | **Analyse** | sidebar context menu, Project menu | folder-shaped, has path, not running — **does not check for media** | Shipped, over-offered (§4.1) |
 | **Analyse** (auto) | after a cloud-import batch lands | folder-shaped project | Shipped (`1490dcde`) |
+| **Analyse** | the project detail pane | never run **and** files present | **Gap — see §6.3** |
 | **File ▸ Add Files…** | File menu | a project is selected | Shipped |
 | **+N unanalysed** pill → sheet | row subtitle | `newFiles` non-empty | Shipped |
 | **Analyse** (folder-shaped) | context menu | `newFiles` non-empty | Shipped — **already incremental**, but unlabelled as such |
@@ -312,6 +313,7 @@ ninety-nine good ones. Outcome 3 costs one participant; outcome 4 costs the stud
 | **Stale cause outranks the live one** | A refused new attempt shows the *previous* run's cause. Observed: headline read "EOF when reading a line" (an 11-hour-old run) while the real blocker, "Output directory already exists", sat below it in Last output. | Diagnostic popover — the freshest attempt must own the headline |
 | **`--clean` advice in a GUI** | The app cannot pass a flag. The advice is unfollowable, and the only way out is deleting a folder — a mental model of our plumbing that no researcher should need | Re-analyse… (§6), so the app does it |
 | **Re-analyse… permanently dimmed** | False affordance; teaches that the app is broken | Implement or hide |
+| **The empty-state pane asserts emptiness without checking** | A project holding two recordings shows "Drag Interviews Here — Add interview recordings or transcripts to get started": it tells the researcher to add the files they already added. Gated on `case .idle` alone (`ContentView.swift:2652`), i.e. "never produced a report" — it never asks whether the folder has anything in it. | §6.3 |
 | **`EOFError` surfaces raw** | "EOF when reading a line" names the mechanism, not the problem | `failure_classifier` — map it to a bug signature |
 
 ### 5.4 Edge cases
@@ -386,6 +388,44 @@ does the incremental work. It is two smaller things:
 
 Sequencing note: fix the dead end before adding a menu item. A sheet that can
 act on what it reports may make the extra context-menu entry unnecessary.
+
+### 6.3 The detail pane says "add files" to a project that has files
+
+The same defect as §4.1, in the other surface. `dragInterviewsPane` is shown for
+any folder-shaped project whose pipeline state is `.idle` — "has never produced
+a report" — with no knowledge of whether the folder is empty. So a project
+holding two `.mp4`s reads *"Add interview recordings or transcripts to get
+started."*
+
+Before `canAnalyse` learned to check, both surfaces were wrong together and
+looked coherent. Now the menu knows and the pane doesn't, so the app contradicts
+itself on screen: the menu offers **Analyse**, the pane says there is nothing to
+analyse. The menu is the half that is right.
+
+**Three states, not one:**
+
+| Condition | Copy | Action |
+|---|---|---|
+| Never run, **no files** | "Drag Interviews Here" + today's description | — |
+| Never run, **files present** | **"6 files to analyse"**, no description | **Analyse** |
+| Path empty | "Drag Interviews Here" | — |
+
+**Why "files" and not "sessions".** Files are what we know before stage 1;
+sessions are what `group_into_sessions` decides. A folder of six files from a
+Teams export can be three sessions (same-stem merge, Zoom local folders), so a
+session count here would be a prediction the sidebar could then contradict —
+the app disagreeing with itself about the size of the study. Counting files and
+calling them files cannot be falsified. It is also the established vocabulary
+for this moment: `unanalysedSheetTitle` is already "Unanalysed files in
+{{project}}", and the `+N unanalysed` pill counts files too.
+
+**Count the ingestable ones**, using the same filter as `hasIngestableFiles` —
+otherwise a folder with five recordings and a `notes.txt` promises six and
+analyses five. Needs `_one` / `_other` plural forms, following
+`unanalysedSubtitle_one`/`_other`.
+
+**The description line is cut, not rewritten.** With an Analyse button below it,
+a sentence explaining how to get started restates the control beside it.
 
 ---
 

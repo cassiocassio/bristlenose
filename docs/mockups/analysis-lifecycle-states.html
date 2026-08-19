@@ -150,6 +150,29 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
 .sm .ed.user { stroke:var(--bn-colour-accent); stroke-dasharray:5 3; }
 .sm .et { fill:var(--bn-colour-muted); font-family:var(--bn-font-mono); font-size:9.5px; text-anchor:middle; }
 .sm .et.user { fill:var(--bn-colour-accent); }
+.sq { width:100%; min-width:820px; height:auto; display:block; }
+.sq .p { fill:var(--bn-colour-bg); stroke:var(--bn-colour-border-hover); stroke-width:1.2; }
+.sq .p.actor { stroke:var(--bn-colour-accent); stroke-width:1.8; }
+.sq .pt { fill:var(--bn-colour-text); font-family:var(--bn-font-body); font-size:11.5px; font-weight:490; text-anchor:middle; }
+.sq .life { stroke:var(--bn-colour-border); stroke-width:1; stroke-dasharray:3 4; }
+.sq .msg { stroke:var(--bn-colour-text); stroke-width:1.2; fill:none; opacity:.75; }
+.sq .msg.ret { stroke:var(--bn-colour-accent); stroke-dasharray:5 3; }
+.sq .mt { fill:var(--bn-colour-text); font-family:var(--bn-font-mono); font-size:10px; opacity:.85; }
+.sq .mt.ret { fill:var(--bn-colour-accent); }
+.sq .self { fill:none; stroke:var(--bn-colour-muted); stroke-width:1.1; }
+.sq .st2 { fill:var(--bn-colour-muted); font-family:var(--bn-font-mono); font-size:9.5px; }
+.sq .noteb { fill:var(--bn-colour-quote-bg); stroke:var(--bn-colour-border); stroke-width:1; }
+.sq .noten { fill:var(--bn-colour-muted); font-family:var(--bn-font-mono); font-size:9.5px; }
+.pane { width:400px; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  background:var(--bn-colour-bg); padding:2.6rem 1.6rem; text-align:center; }
+.pane .picon { font-size:2rem; opacity:.32; line-height:1; }
+.pane h4 { font-size:1.35rem; font-weight:490; margin:1rem 0 .4rem; color:var(--bn-colour-muted); }
+.pane h4.live { color:var(--bn-colour-text); }
+.pane p { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:.2rem 0 0; }
+.pane .abtn { margin-top:1.2rem; font:inherit; font-size:var(--bn-text-label); font-weight:490;
+  padding:.36rem 1.3rem; border-radius:6px; border:1px solid var(--bn-colour-accent);
+  background:var(--bn-colour-accent); color:#fff; cursor:pointer; }
+.sqcap { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin:1.4rem 0 .4rem; }
 .legend { display:flex; gap:1.6rem; flex-wrap:wrap; font-size:var(--bn-text-badge); color:var(--bn-colour-muted); padding:.5rem 0 0; }
 .legend i { display:inline-block; width:26px; height:0; border-top:1.5px solid var(--bn-colour-muted); vertical-align:4px; margin-right:.35rem; }
 .legend i.user { border-top-style:dashed; border-color:var(--bn-colour-accent); }
@@ -603,6 +626,213 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
   <p>It is meaningless in all three columns shown and lights up only in <code>cantFind</code> — a
      state the menu bar can reach but these three columns can’t. Included precisely to show a
      correctly-dimmed item beside the incorrectly-dimmed one.</p>
+</div>
+
+
+
+<!-- ══════════ DETAIL PANE ══════════ -->
+<div class="sec-head">
+  <h2>The detail pane — three states, not one</h2>
+  <p class="sub">Shown for any folder-shaped project that has never produced a report. Today it says the same thing whether the folder is empty or full.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">left: today, folder holds 6 files · right: proposed</span></div>
+  <div class="frame-body">
+
+    <div class="pane">
+      <div class="picon">⤓</div>
+      <h4>Drag Interviews Here</h4>
+      <p>Add interview recordings or transcripts to get started.</p>
+    </div>
+
+    <div class="pane">
+      <div class="picon">⤓</div>
+      <h4 class="live">6 files to analyse</h4>
+      <button class="abtn">Analyse</button>
+    </div>
+
+    <div class="pane">
+      <div class="sb-lab" style="padding:0 0 .6rem">Folder genuinely empty — unchanged</div>
+      <div class="picon">⤓</div>
+      <h4>Drag Interviews Here</h4>
+      <p>Add interview recordings or transcripts to get started.</p>
+    </div>
+
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>The left pane is telling you to add the files you already added</h3>
+  <p>It is gated on <code>case .idle</code> alone — “has never produced a report” — and never asks
+     whether the folder has anything in it. Before <code>canAnalyse</code> learned to check, both
+     surfaces were wrong together and looked coherent; now the menu offers <b>Analyse</b> while the
+     pane says there is nothing to analyse. The menu is the half that is right.</p>
+  <h3>Files, not sessions — because only one of those is a fact</h3>
+  <p>Files are what we know before stage 1; sessions are what <code>group_into_sessions</code>
+     decides. Six files from a Teams export can be three sessions, so a session count here would be a
+     prediction the sidebar could then contradict — the app disagreeing with itself about the size of
+     the study. It is also the vocabulary already in use for this moment:
+     <code>unanalysedSheetTitle</code> reads “Unanalysed files in {{project}}”.</p>
+  <h3>The description is cut, not rewritten</h3>
+  <p>With an <b>Analyse</b> button below it, a sentence explaining how to get started restates the
+     control beside it. The count carries what the button cannot — that we saw the files — and the
+     button carries the verb.</p>
+</div>
+
+<!-- ══════════ SEQUENCES ══════════ -->
+<div class="sec-head">
+  <h2>The three sequences</h2>
+  <p class="sub">Same three verbs, unrolled in time. Blue dashed arrows are what comes back to the researcher.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">sequences · analyse · incremental · re-analyse</span></div>
+  <div class="frame-body" style="display:block; padding:1.2rem 1.2rem 1.6rem">
+    <div class="sqcap">1 · Analyse — the happy path</div>
+    <div class="sm-wrap"><svg class="sq" viewBox="0 0 960 460" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Analyse happy path sequence">
+      <defs>
+        <marker id="sqa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--bn-colour-text)" opacity=".75"/></marker>
+        <marker id="sqa2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--bn-colour-accent)"/></marker>
+      </defs>
+      <rect class="p actor" x="18" y="40" width="144" height="30" rx="6"/>
+      <text class="pt" x="90" y="59">Researcher</text>
+      <line class="life" x1="90" y1="70" x2="90" y2="450"/>
+      <rect class="p" x="208" y="40" width="144" height="30" rx="6"/>
+      <text class="pt" x="280" y="59">Sidebar row</text>
+      <line class="life" x1="280" y1="70" x2="280" y2="450"/>
+      <rect class="p" x="418" y="40" width="144" height="30" rx="6"/>
+      <text class="pt" x="490" y="59">PipelineRunner</text>
+      <line class="life" x1="490" y1="70" x2="490" y2="450"/>
+      <rect class="p" x="618" y="40" width="144" height="30" rx="6"/>
+      <text class="pt" x="690" y="59">Sidecar</text>
+      <line class="life" x1="690" y1="70" x2="690" y2="450"/>
+      <rect class="p" x="808" y="40" width="144" height="30" rx="6"/>
+      <text class="pt" x="880" y="59">Project folder</text>
+      <line class="life" x1="880" y1="70" x2="880" y2="450"/>
+      
+      <line class="msg" x1="90" y1="110" x2="280" y2="110" marker-end="url(#sqa)"/>
+      <text class="mt" x="185.0" y="105" text-anchor="middle">Analyse</text>
+      <line class="msg" x1="280" y1="144" x2="490" y2="144" marker-end="url(#sqa)"/>
+      <text class="mt" x="385.0" y="139" text-anchor="middle">run(project, clean: false)</text>
+      <line class="msg" x1="490" y1="178" x2="690" y2="178" marker-end="url(#sqa)"/>
+      <text class="mt" x="590.0" y="173" text-anchor="middle">spawn: run &lt;path&gt; --no-serve · stdin /dev/null</text>
+      <line class="msg" x1="690" y1="212" x2="880" y2="212" marker-end="url(#sqa)"/>
+      <text class="mt" x="785.0" y="207" text-anchor="middle">refuse_reason() — is this a study folder?</text>
+      <line class="msg" x1="690" y1="246" x2="880" y2="246" marker-end="url(#sqa)"/>
+      <text class="mt" x="785.0" y="241" text-anchor="middle">scan, depth ≤ 3</text>
+      <line class="msg ret" x1="690" y1="280" x2="280" y2="280" marker-end="url(#sqa2)"/>
+      <text class="mt ret" x="485.0" y="275" text-anchor="middle">run_started</text>
+      <path class="self" d="M280,294 h26 v16 h-26" marker-end="url(#sqa)"/>
+      <text class="st2" x="312" y="307">spinner + Stop ⌘.</text>
+      <path class="self" d="M690,330 h26 v16 h-26" marker-end="url(#sqa)"/>
+      <text class="st2" x="722" y="343">stages 1–12</text>
+      <line class="msg ret" x1="690" y1="372" x2="280" y2="372" marker-end="url(#sqa2)"/>
+      <text class="mt ret" x="485.0" y="367" text-anchor="middle">stage progress</text>
+      <line class="msg ret" x1="690" y1="406" x2="280" y2="406" marker-end="url(#sqa2)"/>
+      <text class="mt ret" x="485.0" y="401" text-anchor="middle">run_completed</text>
+      <path class="self" d="M280,420 h26 v16 h-26" marker-end="url(#sqa)"/>
+      <text class="st2" x="312" y="433">session count + date</text>
+    </svg></div>
+    <div class="sqcap">2 · Incremental — new files fold in</div>
+    <div class="sm-wrap"><svg class="sq" viewBox="0 0 960 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Incremental sequence">
+      <defs>
+        <marker id="sqa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--bn-colour-text)" opacity=".75"/></marker>
+        <marker id="sqa2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--bn-colour-accent)"/></marker>
+      </defs>
+      <rect class="p" x="38" y="40" width="144" height="30" rx="6"/>
+      <text class="pt" x="110" y="59">Finder</text>
+      <line class="life" x1="110" y1="70" x2="110" y2="390"/>
+      <rect class="p" x="258" y="40" width="144" height="30" rx="6"/>
+      <text class="pt" x="330" y="59">ProjectFolderWatcher</text>
+      <line class="life" x1="330" y1="70" x2="330" y2="390"/>
+      <rect class="p" x="508" y="40" width="144" height="30" rx="6"/>
+      <text class="pt" x="580" y="59">Sidebar row</text>
+      <line class="life" x1="580" y1="70" x2="580" y2="390"/>
+      <rect class="p" x="748" y="40" width="144" height="30" rx="6"/>
+      <text class="pt" x="820" y="59">Sidecar</text>
+      <line class="life" x1="820" y1="70" x2="820" y2="390"/>
+      
+      <line class="msg" x1="110" y1="110" x2="330" y2="110" marker-end="url(#sqa)"/>
+      <text class="mt" x="220.0" y="105" text-anchor="middle">file added — NSFilePresenter fires</text>
+      <path class="self" d="M330,124 h26 v16 h-26" marker-end="url(#sqa)"/>
+      <text class="st2" x="362" y="137">debounce 300ms</text>
+      <line class="msg" x1="330" y1="166" x2="580" y2="166" marker-end="url(#sqa)"/>
+      <text class="mt" x="455.0" y="161" text-anchor="middle">UnanalysedState(newFiles: 3)</text>
+      <path class="self" d="M580,180 h26 v16 h-26" marker-end="url(#sqa)"/>
+      <text class="st2" x="612" y="193">“+3 unanalysed”</text>
+      <line class="msg" x1="580" y1="222" x2="820" y2="222" marker-end="url(#sqa)"/>
+      <text class="mt" x="700.0" y="217" text-anchor="middle">Analyse — manifest present, cache honoured</text>
+      <path class="self" d="M820,236 h26 v16 h-26" marker-end="url(#sqa)"/>
+      <text class="st2" x="852" y="249">cached stages skipped</text>
+      <path class="self" d="M820,272 h26 v16 h-26" marker-end="url(#sqa)"/>
+      <text class="st2" x="852" y="285">new sessions only</text>
+      <line class="msg ret" x1="820" y1="314" x2="580" y2="314" marker-end="url(#sqa2)"/>
+      <text class="mt ret" x="700.0" y="309" text-anchor="middle">run_completed</text>
+      <rect class="noteb" x="600" y="336" width="330" height="46" rx="6"/><text class="noten" x="614" y="354">curation survives — cached stages don’t regenerate</text><text class="noten" x="614" y="370">quotes, so stable keys don’t move (importer.py:216)</text>
+    </svg></div>
+    <div class="sqcap">3 · Re-analyse — the destructive one</div>
+    <div class="sm-wrap"><svg class="sq" viewBox="0 0 960 376" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Re-analyse sequence">
+      <defs>
+        <marker id="sqa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--bn-colour-text)" opacity=".75"/></marker>
+        <marker id="sqa2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--bn-colour-accent)"/></marker>
+      </defs>
+      <rect class="p actor" x="38" y="40" width="144" height="30" rx="6"/>
+      <text class="pt" x="110" y="59">Researcher</text>
+      <line class="life" x1="110" y1="70" x2="110" y2="366"/>
+      <rect class="p" x="268" y="40" width="144" height="30" rx="6"/>
+      <text class="pt" x="340" y="59">Row / Project menu</text>
+      <line class="life" x1="340" y1="70" x2="340" y2="366"/>
+      <rect class="p" x="518" y="40" width="144" height="30" rx="6"/>
+      <text class="pt" x="590" y="59">Confirmation</text>
+      <line class="life" x1="590" y1="70" x2="590" y2="366"/>
+      <rect class="p" x="768" y="40" width="144" height="30" rx="6"/>
+      <text class="pt" x="840" y="59">Sidecar</text>
+      <line class="life" x1="840" y1="70" x2="840" y2="366"/>
+      
+      <line class="msg" x1="110" y1="110" x2="340" y2="110" marker-end="url(#sqa)"/>
+      <text class="mt" x="225.0" y="105" text-anchor="middle">Re-analyse…</text>
+      <line class="msg" x1="340" y1="144" x2="590" y2="144" marker-end="url(#sqa)"/>
+      <text class="mt" x="465.0" y="139" text-anchor="middle">count what would be lost</text>
+      <line class="msg ret" x1="590" y1="178" x2="110" y2="178" marker-end="url(#sqa2)"/>
+      <text class="mt ret" x="350.0" y="173" text-anchor="middle">“47 quotes · 12 tags · 3 renamed speakers”</text>
+      <line class="msg" x1="110" y1="212" x2="590" y2="212" marker-end="url(#sqa)"/>
+      <text class="mt" x="350.0" y="207" text-anchor="middle">Re-analyse</text>
+      <line class="msg" x1="590" y1="246" x2="840" y2="246" marker-end="url(#sqa)"/>
+      <text class="mt" x="715.0" y="241" text-anchor="middle">run --clean</text>
+      <path class="self" d="M840,260 h26 v16 h-26" marker-end="url(#sqa)"/>
+      <text class="st2" x="872" y="273">delete output · full pipeline</text>
+      <line class="msg ret" x1="840" y1="302" x2="340" y2="302" marker-end="url(#sqa2)"/>
+      <text class="mt ret" x="590.0" y="297" text-anchor="middle">run_completed</text>
+      <rect class="noteb" x="430" y="326" width="360" height="32" rx="6"/><text class="noten" x="444" y="346">nothing to lose → no modal at all; a count of zero isn’t a question</text>
+    </svg></div>
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>Only one of the three has a gate in it</h3>
+  <p>Analyse and incremental run straight through; re-analyse stops to ask. That asymmetry is the
+     whole design — and it is why the confirmation must <em>count</em>. A modal that merely warns
+     adds a step to two-thirds of the flows for no information.</p>
+  <h3>The incremental sequence starts outside the app</h3>
+  <p>Its first message comes from <b>Finder</b>, not the researcher. That is the case with no drop
+     event and no menu action to hang off, which is exactly why the watcher exists — and why the
+     sheet it feeds needs a primary action rather than only <b>Close</b>.</p>
+  <h3>Re-analyse deletes before it produces</h3>
+  <p>Between <code>--clean</code> and <code>run_completed</code> the project has no old analysis and
+     no new one. If that run fails, the row lands in <b>Empty</b> — correct by the state machine, and
+     worth confirming it is what the row actually shows, because the researcher will read it as
+     “my study is gone”.</p>
 </div>
 
 <!-- ══════════ CONFIRM ══════════ -->

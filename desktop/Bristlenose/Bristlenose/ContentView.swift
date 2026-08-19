@@ -344,13 +344,11 @@ struct ContentView: View {
     /// "sidecar for B is up" its title already says B while the pane shows A —
     /// see the mount site in `detail`.
     private var windowProject: Project? {
-        switch windowRole {
-        case .master:
-            return selectedProject
-        case .child:
-            guard let path = serveManager.currentProjectPath else { return nil }
-            return projectIndex.projects.first { $0.path == path }
-        }
+        WindowProjectResolution.project(
+            role: windowRole,
+            selected: selectedProject,
+            servedPath: serveManager.currentProjectPath,
+            projects: projectIndex.projects)
     }
 
     /// The window's title: the project's name, or "Welcome" with none selected,

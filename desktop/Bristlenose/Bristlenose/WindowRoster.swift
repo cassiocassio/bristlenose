@@ -260,3 +260,38 @@ final class WindowRoster: ObservableObject {
         roles.removeAll()
     }
 }
+
+
+/// Which study a window is about.
+///
+/// A one-function type, and it earns its keep: this is the decision that makes a
+/// child unable to name a study it isn't showing, and inside a `ContentView`
+/// computed property it would be untestable — reachable only with a live serve,
+/// a real `ProjectIndex` and two windows. `desktop/CLAUDE.md` § Testing: "if a
+/// SwiftUI view is making a decision, the decision belongs in a testable helper".
+enum WindowProjectResolution {
+
+    /// - Parameters:
+    ///   - role: master picks, child inherits.
+    ///   - selected: the window's own selection. **Only a master has one.**
+    ///   - servedPath: what the sidecar is currently serving, or nil.
+    ///   - projects: the index, to resolve `servedPath` back to a project.
+    static func project(role: WindowRoster.Role,
+                        selected: Project?,
+                        servedPath: String?,
+                        projects: [Project]) -> Project? {
+        switch role {
+        case .master:
+            // The master's answer can disagree with the serve during a switch.
+            // That is real, and it is handled at the mount site by refusing to
+            // render another study's report — not here, because the *title*
+            // should follow the researcher's click immediately. The window
+            // saying "B" while showing a boot state is honest; saying "A" after
+            // they clicked B is not.
+            return selected
+        case .child:
+            guard let servedPath else { return nil }
+            return projects.first { $0.path == servedPath }
+        }
+    }
+}

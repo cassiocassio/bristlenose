@@ -345,3 +345,77 @@ struct WindowRoleTests {
         #expect(r.role(for: UUID()) == .master)
     }
 }
+
+
+// MARK: - Which study a window is about
+
+// The decision that closes constraint 5. A master picks its study; a child
+// inherits the served one and has no selection to disagree with.
+@MainActor
+@Suite("Window project resolution")
+struct WindowProjectResolutionTests {
+
+    private func project(_ name: String, _ path: String) -> Project {
+        Project(id: UUID(), name: name, path: path)
+    }
+
+    @Test("A master shows what it selected")
+    func masterFollowsSelection() {
+        let a = project("IKEA Study", "/s/a")
+        let resolved = WindowProjectResolution.project(
+            role: .master, selected: a, servedPath: "/s/a", projects: [a])
+        #expect(resolved?.path == "/s/a")
+    }
+
+    @Test("A master mid-switch still names what the researcher clicked")
+    func masterLeadsTheServe() {
+        // Deliberate, and the reason the guard lives at the mount site instead
+        // of here: after clicking B the title should say B immediately, with the
+        // pane showing a boot state. A title that lagged back to A would be
+        // lying about the click that just happened.
+        let a = project("IKEA Study", "/s/a")
+        let b = project("Nokia Diary", "/s/b")
+        let resolved = WindowProjectResolution.project(
+            role: .master, selected: b, servedPath: "/s/a", projects: [a, b])
+        #expect(resolved?.path == "/s/b")
+    }
+
+    @Test("A child shows the served study, whatever anyone selected")
+    func childFollowsTheServe() {
+        // The whole point. Even handed a selection — which a child never has —
+        // it takes the serve, so no argument between the two is representable.
+        let a = project("IKEA Study", "/s/a")
+        let b = project("Nokia Diary", "/s/b")
+        let resolved = WindowProjectResolution.project(
+            role: .child, selected: a, servedPath: "/s/b", projects: [a, b])
+        #expect(resolved?.path == "/s/b",
+                "a child must never be able to name a study it isn't showing")
+    }
+
+    @Test("A child with nothing served shows nothing")
+    func childWithNoServe() {
+        let a = project("IKEA Study", "/s/a")
+        #expect(WindowProjectResolution.project(
+            role: .child, selected: a, servedPath: nil, projects: [a]) == nil)
+    }
+
+    @Test("A child whose served path is not in the index shows nothing")
+    func childWithUnknownServe() {
+        // Fails to the welcome title rather than to a stale name. A window that
+        // kept naming the last study it knew about is exactly the drift the
+        // child shape exists to prevent.
+        let a = project("IKEA Study", "/s/a")
+        #expect(WindowProjectResolution.project(
+            role: .child, selected: a, servedPath: "/s/gone", projects: [a]) == nil)
+    }
+
+    @Test("A master with no selection shows nothing, even while a serve runs")
+    func masterOnWelcomeKeepsItsWelcome() {
+        // A master that has gone back to the welcome screen while children keep
+        // the serve up must not silently re-adopt the served study — it said
+        // Welcome because the researcher deselected.
+        let a = project("IKEA Study", "/s/a")
+        #expect(WindowProjectResolution.project(
+            role: .master, selected: nil, servedPath: "/s/a", projects: [a]) == nil)
+    }
+}

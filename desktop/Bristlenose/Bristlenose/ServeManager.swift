@@ -3,6 +3,7 @@
 // owns the process rather than to whichever view happens to be on screen. Nothing
 // else in this file touches UI; keep it that way.
 import AppKit
+import Combine
 import Darwin
 import Foundation
 import OSLog
@@ -38,12 +39,31 @@ enum ServeState: Equatable {
 @MainActor
 final class ServeManager: ObservableObject {
 
-    @Published var state: ServeState = .idle
-    @Published var outputLines: [String] = []
+    /// The one sidecar, today. Stage 3b turns this into a dictionary keyed on
+    /// `Project.ID`; everything below forwards, so the ~50 existing call sites
+    /// do not move when it does.
+    ///
+    /// Its `objectWillChange` is re-published by `init` — a nested
+    /// `ObservableObject` does NOT propagate through `@EnvironmentObject` on
+    /// its own, and the failure is silent (a boot spinner that never clears).
+    @Published private(set) var instance = ServeInstance()
+    private var instanceObservation: AnyCancellable?
+
+    var state: ServeState {
+        get { instance.state }
+        set { instance.state = newValue }
+    }
+    var outputLines: [String] {
+        get { instance.outputLines }
+        set { instance.outputLines = newValue }
+    }
 
     /// Bristlenose version from `/api/health` — fetched after server starts.
     /// Shown in the About panel alongside the Xcode build number.
-    @Published var serverVersion: String?
+    var serverVersion: String? {
+        get { instance.serverVersion }
+        set { instance.serverVersion = newValue }
+    }
     /// Whether this sidecar mounted the MCP endpoint (the optional `mcp`
     /// extra). Drives the Connect Agent sheet's unavailable state.
     @Published var mcpMounted: Bool = false
@@ -51,7 +71,10 @@ final class ServeManager: ObservableObject {
     /// within `Self.agentActivityWindow`. Stateless HTTP has no connection
     /// to observe, so "connected" is defined as recent tool activity —
     /// drives the sidebar's antenna badge.
-    @Published var agentActiveNow: Bool = false
+    var agentActiveNow: Bool {
+        get { instance.agentActiveNow }
+        set { instance.agentActiveNow = newValue }
+    }
 
     /// Tool-call freshness (seconds) that still counts as "connected".
     /// Wider than the poll so a conversation with thinking gaps between
@@ -62,7 +85,10 @@ final class ServeManager: ObservableObject {
     /// Bearer token for localhost API access control.
     /// Parsed from stdout line: `[bristlenose] auth-token: <token>`
     /// Injected into WKWebView via WKUserScript.
-    @Published var authToken: String?
+    var authToken: String? {
+        get { instance.authToken }
+        set { instance.authToken = newValue }
+    }
 
     /// The MCP-scoped token injected for the fronted serve — what the Connect
     /// Agent sheet hands out and what the handshake file carries. Durable
@@ -150,6 +176,21 @@ final class ServeManager: ObservableObject {
             self.state = .failed(error: error.localizedDescription)
         }
 
+        // Re-publish the instance's changes as our own. A nested
+        // `ObservableObject` does NOT propagate through `@EnvironmentObject`:
+        // without this every `serveManager.state` read still returns the right
+        // value, but no view is ever told to re-read it. The failure is silent
+        // — boot spinner never clears, antenna never updates, toolbar never
+        // enables — which is why the forwarding is established here, at one
+        // instance, rather than discovered at N.
+        //
+        // Placed after the `mode` switch, not at the top: Swift forbids using
+        // `self` before every stored property is initialised, and the switch's
+        // failure arm writes `self.state`, which is itself a forwarder.
+        instanceObservation = instance.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }
+
         // One long-lived poll, not per-start tasks: it re-reads `state` each
         // cycle, so serve lifecycle churn can't leak or race it (the same
         // reasoning as the single `generation` token — one owner, no epochs).
@@ -210,10 +251,7 @@ final class ServeManager: ObservableObject {
 
     /// The kernel-assigned port when serve is running (nil otherwise). Used by
     /// native localhost API clients (e.g. `MiroAPI`) alongside `authToken`.
-    var runningPort: Int? {
-        guard case .running(let port) = state else { return nil }
-        return port
-    }
+    var runningPort: Int? { instance.runningPort }
 
     private var process: Process?
     private var readTask: Task<Void, Never>?
@@ -225,13 +263,17 @@ final class ServeManager: ObservableObject {
     /// Last project path passed to start() — used by restartIfRunning() and the
     /// DEBUG menu's reveal/log/provenance actions (the served project is the one
     /// whose report is on screen). Read-only outside ServeManager.
-    /// **`@Published` since 19 Aug 2026, and it has to be.** Peer windows sync
+    /// **Observable since 19 Aug 2026, and it has to be.** Peer windows sync
     /// their selection from this, and it was a plain stored property — the sync
     /// appeared to work only because `state` happens to be written in the same
     /// synchronous block. That is a coincidence, not a design, and the first
     /// reordering of those two lines would have broken every sibling window
-    /// silently.
-    @Published private(set) var currentProjectPath: String?
+    /// silently. Now stored on `ServeInstance`, whose change notification the
+    /// fleet re-publishes; the observability survives the move.
+    private(set) var currentProjectPath: String? {
+        get { instance.currentProjectPath }
+        set { instance.currentProjectPath = newValue }
+    }
 
     /// The most-recently-fronted project's sidecar, kept warm so switching
     /// back is an instant hand-off (Phase A2 warm-sidecar pool, single-slot).

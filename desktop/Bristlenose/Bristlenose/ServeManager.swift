@@ -90,22 +90,18 @@ final class ServeManager: ObservableObject {
         set { instance.authToken = newValue }
     }
 
-    /// The MCP-scoped token injected for the fronted serve — what the Connect
-    /// Agent sheet hands out and what the handshake file carries. Durable
-    /// (Keychain, per project) in the normal case; when the Keychain refuses
-    /// (always on ad-hoc builds, -34018) this is an *ephemeral
-    /// process-lifetime scoped* token instead — never nil while a sidecar is
-    /// spawned, and NEVER the unscoped `authToken` (which opens /api/*:
-    /// participant names, curation writes). Design §3.1: write a scoped
-    /// token or write nothing.
-    private(set) var mcpToken: String?
+    /// See `ServeInstance.mcpToken`. Forwarded so `MCPAgentsSettingsView` and
+    /// the handshake writer keep one spelling while the state moves.
+    private(set) var mcpToken: String? {
+        get { instance.mcpToken }
+        set { instance.mcpToken = newValue }
+    }
 
-    /// This serve's `mcp.instance_id` from `/api/health` — minted fresh by
-    /// the server each start. The handshake carries it so the proxy can
-    /// verify it is talking to *this* serve before the bearer leaves the
-    /// machine's memory (a stale handshake surviving SIGKILL can name a
-    /// port something else now owns).
-    private(set) var mcpInstanceID: String?
+    /// See `ServeInstance.mcpInstanceID`.
+    private(set) var mcpInstanceID: String? {
+        get { instance.mcpInstanceID }
+        set { instance.mcpInstanceID = newValue }
+    }
 
     /// The project path the MCP handshake currently names, or nil when no
     /// handshake exists. **Written by `syncHandshake()` and nowhere else** —
@@ -253,12 +249,24 @@ final class ServeManager: ObservableObject {
     /// native localhost API clients (e.g. `MiroAPI`) alongside `authToken`.
     var runningPort: Int? { instance.runningPort }
 
-    private var process: Process?
-    private var readTask: Task<Void, Never>?
-    private var timeoutTask: Task<Void, Never>?
+    private var process: Process? {
+        get { instance.process }
+        set { instance.process = newValue }
+    }
+    private var readTask: Task<Void, Never>? {
+        get { instance.readTask }
+        set { instance.readTask = newValue }
+    }
+    private var timeoutTask: Task<Void, Never>? {
+        get { instance.timeoutTask }
+        set { instance.timeoutTask = newValue }
+    }
     /// Incremented on each start() AND on each warm re-point — late completions
     /// (a superseded readiness wait) check this before writing terminal state.
-    private var generation: Int = 0
+    private var generation: Int {
+        get { instance.generation }
+        set { instance.generation = newValue }
+    }
 
     /// Last project path passed to start() — used by restartIfRunning() and the
     /// DEBUG menu's reveal/log/provenance actions (the served project is the one

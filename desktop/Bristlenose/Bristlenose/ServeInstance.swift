@@ -52,6 +52,40 @@ final class ServeInstance: ObservableObject {
     /// than `==`.
     @Published var currentProjectPath: String?
 
+    /// The MCP-scoped token this sidecar was spawned with — what the Connect
+    /// Agent sheet hands out and what the handshake carries. Durable (Keychain,
+    /// per project) normally; an *ephemeral process-lifetime scoped* token when
+    /// the Keychain refuses. Never nil while a sidecar is spawned, and NEVER the
+    /// unscoped `authToken`, which opens `/api/*`.
+    ///
+    /// Per-serve because it is per-*project*: two projects must not be able to
+    /// read each other through one bearer.
+    var mcpToken: String?
+
+    /// This serve's `mcp.instance_id` from `/api/health`, minted fresh by the
+    /// server each start, so the proxy can verify it is talking to *this* serve
+    /// before the bearer leaves memory.
+    ///
+    /// Nil until the first health read lands — which is *after* `state` reaches
+    /// `.running`, and the gap that made the antenna over-claim before
+    /// `3ac773fa`.
+    var mcpInstanceID: String?
+
+    /// The sidecar process and the tasks draining it.
+    var process: Process?
+    var readTask: Task<Void, Never>?
+    var timeoutTask: Task<Void, Never>?
+
+    /// Epoch for this instance's start attempts. A late completion from a
+    /// superseded attempt checks it before writing terminal state.
+    ///
+    /// **One counter per instance, and no second one** — `desktop/CLAUDE.md`'s
+    /// standing rule against scattering ad-hoc cancellation checks. It becomes
+    /// simpler at N, not harder: today one counter guards two distinct events (a
+    /// cold start and a warm re-point), and the re-point is what Stage 3b
+    /// deletes.
+    var generation: Int = 0
+
     /// The kernel-assigned port while running (nil otherwise).
     var runningPort: Int? {
         guard case .running(let port) = state else { return nil }

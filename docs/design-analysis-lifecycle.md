@@ -281,6 +281,70 @@ and there isn't one. **Unimplemented ⇒ hide.**
 
 ---
 
+
+### 4.2 Drop outcomes — how a refusal is stated
+
+**Decided 19 Aug 2026.** Drag-and-drop is an analysis-triggering affordance, and
+until now four of its five outcomes were announced by a floating toast. All five
+are removed. The reasoning, once they were drawn in a column
+(`docs/mockups/analysis-lifecycle-states.html` §"Dropping files"), is that they
+answer at drop-time what the drag itself should have answered — or repeat
+something the row already says permanently.
+
+Apple's drag-and-drop guidance is explicit, and it costs no words in any
+language:
+
+> Show people whether a destination can accept dragged content. For example, you
+> might display an insertion point or highlight a containing view only when the
+> destination can accept a dragged item, and show no visual feedback — or an
+> explicit "not allowed" image, like the `circle.slash` from SF Symbols — when it
+> can't.
+
+…and for the pointer specifically: *"Consider changing the pointer appearance to
+indicate what will happen when people drop content… the operation not allowed
+pointer."* Returning `[]` from `validateDrop` buys the lot — no row highlight,
+the ⊘ pointer, and the item springing back.
+
+| Outcome | Was | Is |
+|---|---|---|
+| Project is **running** | toast: "Finish or stop the current run…" | not a drop target — `validateDrop → []` |
+| Project **failed** | toast: "Use Retry on the toolbar…" | nothing; Retry is the context menu's **Analyse**, which already accepts `.failed` |
+| Folder **unreachable** | toast: "…isn't reachable right now" | not a drop target; the row's `cantFind` subtitle + glyph already say so, permanently, and outrank all activity |
+| **File-subset**, analysed | toast: "Files added. They won't be in the report…" | the row's `+N unanalysed` delta |
+| **No project selected** | toast: "Select a project first…" | File ▸ Add Files… dims; unreachable by drag, since you drop *on* something |
+| **Folder-shaped** | *(no toast)* | unchanged — the run starts, and the run is the acknowledgement |
+
+**The root cause was one line.** `validateDrop` returned `.copy` for any project
+row unconditionally and left every question to `ContentView` after the fact, so a
+post-hoc message was the only grammar available. The AppKit side's own comment
+said as much: *"The AppKit side just collects URLs + target."*
+
+**The file-subset case is the instructive one.** Its toast existed because we had
+deliberately switched off the persistent signal: the drop calls
+`seedKnownBasenames`, commented *"so the count pill stays hidden — they're
+'known,' not surprise drops."* That is right for a folder-shaped project, where a
+run starts immediately. On a file-subset project nothing starts, so those files
+are precisely the drift the pill exists for. Suppressing the durable signal is
+what created the appetite for a transient one.
+
+**Removal, same family.** `UndoableRemovalStore` avoids `NSUndoManager` on
+purpose and expires after 8s — so ⌘Z expires too, not only the toast. Remove is
+already non-destructive (the folder of real files goes on living), so the fuse
+buys nothing and costs the one guarantee a Mac user has about undo. It moves to
+the system undo stack, where it survives until the next undoable act and appears
+in Edit ▸ Undo for free, and the vanishing row gets `NSAnimationEffect.poof` —
+the idiom the same HIG page names: *"scale up and fade out to give the impression
+of the item evaporating."*
+
+**The standing rule this implements** is `feedback_native_chrome_vocabulary` §6,
+which already said it: *"Existing `toast.show(...)` call sites are 'needed
+feedback, hadn't designed the chrome yet' placeholders. Don't add new ones."*
+These were those placeholders. What kept them alive was that no mockup had ever
+drawn them — the rule was in a memory file, and the review happens on the
+drawing.
+
+---
+
 ## 5. Failure modes
 
 Every row below was observed, not imagined. The corpus that produced them is
@@ -377,18 +441,26 @@ bridge — the bridge event had no listener anywhere in `frontend/src`, and the
 act never touched the web view. `reAnalyseIsOffered` is the mirror of
 `analyseIsOffered`; a *drifted* project is offered both, deliberately.
 
-**The confirmation always asks, and does not count — a deliberate departure
-from the plan.** `--clean` is `shutil.rmtree(output_dir)`: the whole directory,
-database included. There is therefore no zero case to be silent about — even a
-project carrying no curation loses a finished analysis and re-spends on the
-provider — and a modal that sometimes did not appear would make the item's
-ellipsis a lie. Counting what is lost is still worth building; it needs a DB
-read before the sheet, and it refines this rather than gating it.
+**The confirmation is the sheet drawn in §"The confirmation — measured, not
+vague"** — counted losses, and silence when there are none. An interim
+`.alert` shipped first with neither, described in its own commit as "a
+deliberate departure from the plan". It was a departure from the **drawn spec**,
+decided in code, and that is the thing this document exists to prevent; it is
+being replaced rather than defended.
+
+**The finding that prompted the departure is real, and does not change the
+design.** `--clean` is `shutil.rmtree(output_dir)`, so a re-analysis always
+destroys the existing analysis, not only the curation on top of it. But derived
+output is not a loss for the researcher to weigh — it is the thing they just
+asked to have rebuilt, and the sheet's opening line already states it ("…will
+transcribe and analyse all 14 interviews again from scratch"). The counted block
+is about *their* work. So "silence when there is nothing to lose" is coherent:
+confirm when their work is at risk, and otherwise do what was asked.
 
 **This also settles §7's codebook question, for now.** "Does Re-analyse keep
 the codebook?" has one answer today — nothing is kept, because the mechanism is
-`rmtree` — so the confirmation is truthful without waiting on the design call.
-What stays open is whether Re-analyse should *learn* to preserve it, which is a
+`rmtree` — so the sheet is truthful without waiting on the design call. What
+stays open is whether Re-analyse should *learn* to preserve it, which is a
 feature and a methodology decision, not a precondition.
 
 ### 6.2 The Finder-side path dead-ends — **shipped 19 Aug 2026**

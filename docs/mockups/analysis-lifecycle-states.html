@@ -177,6 +177,59 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
 .legend i { display:inline-block; width:26px; height:0; border-top:1.5px solid var(--bn-colour-muted); vertical-align:4px; margin-right:.35rem; }
 .legend i.user { border-top-style:dashed; border-color:var(--bn-colour-accent); }
 @media (prefers-reduced-motion: reduce) { .spin { animation:none; } }
+
+/* ── Drop-outcome toasts (§Drop outcomes) ───────────────────────────────
+   Geometry lifted from ToastSurface.swift so this reads at shipped size:
+   HStack spacing 12 · padding 16/10 · corner 8 · .callout (13pt) ·
+   .regularMaterial · shadow black@10% r4 y2. ToastOverlay pins it to the
+   window bottom with 16pt of clearance, horizontally centred.            */
+.win { position:relative; height:300px; border-radius:var(--bn-radius-lg);
+       overflow:hidden; border:1px solid var(--bn-colour-border);
+       background:var(--bn-colour-bg); display:flex; }
+.win-side { width:158px; flex:none; border-right:1px solid var(--bn-colour-border);
+            background:var(--bn-colour-badge-bg); padding:.7rem .55rem; }
+.win-side .r { font-size:var(--bn-text-caption); color:var(--bn-colour-muted);
+               padding:.28rem .4rem; border-radius:var(--bn-radius-sm);
+               white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.win-side .r.sel { background:var(--bn-colour-hover); color:var(--bn-colour-text); }
+.win-main { flex:1; position:relative; padding:.9rem 1rem; }
+.win-main .ghost { height:9px; border-radius:3px; background:var(--bn-colour-border);
+                   opacity:.5; margin-bottom:.5rem; }
+.toast { display:inline-flex; align-items:center; gap:12px;
+         padding:10px 16px; border-radius:8px;
+         background:light-dark(rgba(246,246,248,.92), rgba(56,56,60,.94));
+         backdrop-filter:saturate(180%) blur(20px);
+         box-shadow:0 2px 4px rgba(0,0,0,.10);
+         font-size:13px; line-height:1.25; color:var(--bn-colour-text);
+         border:.5px solid light-dark(rgba(0,0,0,.06), rgba(255,255,255,.10)); }
+.toast .act { font-size:13px; color:var(--bn-colour-accent); }
+.toast-dock { position:absolute; left:0; right:0; bottom:16px;
+              display:flex; justify-content:center; pointer-events:none; }
+.toast-stack { display:flex; flex-direction:column; gap:.85rem; align-items:flex-start;
+               width:100%; max-width:640px; }
+.toast-row { display:flex; align-items:center; gap:.9rem; width:100%; }
+.toast-row .when { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+                   color:var(--bn-colour-muted); width:150px; flex:none; text-align:right; }
+
+/* ── Decided: native drop feedback (§Drop outcomes) ─────────────────────
+   NSDragOperation [] → AppKit draws no row highlight, swaps the pointer to
+   operation-not-allowed, and springs the item back. Nothing to localise.   */
+.cursor { display:inline-flex; align-items:center; gap:.4rem;
+          font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.cursor .glyph { display:inline-flex; align-items:center; justify-content:center;
+                 width:22px; height:22px; border-radius:50%;
+                 border:1.5px solid var(--bn-colour-muted); position:relative; }
+.cursor .glyph::after { content:""; position:absolute; width:1.5px; height:20px;
+                        background:var(--bn-colour-muted); transform:rotate(45deg); }
+.ghost-drag { display:inline-flex; align-items:center; gap:.4rem; padding:.3rem .55rem;
+              border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg);
+              border:1px solid var(--bn-colour-border); font-size:var(--bn-text-caption);
+              opacity:.75; }
+.superseded { opacity:.5; }
+.super-note { border-left:3px solid var(--bn-off-track); background:transparent;
+              padding:.7rem 1rem; margin:0 0 1.2rem; font-size:var(--bn-text-label);
+              color:var(--bn-colour-muted); }
+.super-note b { color:var(--bn-colour-text); }
 </style>
 </head>
 <body>
@@ -687,6 +740,188 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
      a <code>notes.txt</code> read “5 files to analyse” — five is what a run then ingests. When the
      watcher has not reported yet, the pane shows the drop target rather than guessing a count: a
      pane that guessed would be asserting something it had not measured.</p>
+</div>
+
+
+<!-- ══════════ DROP OUTCOMES ══════════ -->
+<div class="sec-head">
+  <h2>Dropping files — the five outcomes, as shipped</h2>
+  <p class="sub">Drag-and-drop is an analysis-triggering affordance, and four of its five outcomes
+     say so with a floating toast. None of this had ever been drawn. Shown here at
+     <code>ToastSurface</code>’s real geometry so it can be judged rather than imagined.</p>
+</div>
+
+<div class="super-note">
+  <b>Superseded 19 Aug 2026 — kept as the evidence, not as the spec.</b> All five are being
+  removed. Drawing them was what made them reviewable, and the review killed them: four say at
+  drop-time what the drag itself should have said, and the fifth duplicates a status line that was
+  already there. The replacement is the next section. Nothing below this note describes intended
+  behaviour.
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">in place: dropped on a running project · toast floats over the report, 3s</span></div>
+  <div class="frame-body" style="display:block; padding:1.4rem">
+    <div class="win">
+      <div class="win-side">
+        <div class="r">Pilot round</div>
+        <div class="r sel">IKEA with uxfriends</div>
+        <div class="r">Onboarding v2</div>
+      </div>
+      <div class="win-main">
+        <div class="ghost" style="width:58%"></div>
+        <div class="ghost" style="width:82%"></div>
+        <div class="ghost" style="width:74%"></div>
+        <div class="ghost" style="width:41%"></div>
+        <div class="ghost" style="width:66%"></div>
+        <div class="toast-dock">
+          <span class="toast">Finish or stop the current run before adding more.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">the whole vocabulary, one column — left: what triggers it</span></div>
+  <div class="frame-body" style="display:block; padding:1.6rem 1.4rem">
+    <div class="toast-stack">
+      <div class="toast-row"><span class="when">running</span>
+        <span class="toast">Finish or stop the current run before adding more.</span></div>
+      <div class="toast-row"><span class="when">failed</span>
+        <span class="toast">Use Retry on the toolbar to try this run again.</span></div>
+      <div class="toast-row"><span class="when">unreachable</span>
+        <span class="toast">This project’s folder isn’t reachable right now.</span></div>
+      <div class="toast-row"><span class="when">file-subset</span>
+        <span class="toast">Files added. They won’t be in the report until the project is analysed again.</span></div>
+      <div class="toast-row"><span class="when">no selection</span>
+        <span class="toast">Select a project first, then add files to it.</span></div>
+      <div class="toast-row"><span class="when">folder-shaped</span>
+        <span class="sb-lab" style="padding:0">no toast — the run starts, and the run is the acknowledgement</span></div>
+      <div class="toast-row"><span class="when">removed (8s)</span>
+        <span class="toast">Removed “IKEA with uxfriends”.<span class="act">Undo</span></span></div>
+    </div>
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>Read as a column, they don’t agree with each other</h3>
+  <p>Two tell you what to do (<em>finish or stop</em>, <em>use Retry</em>), two state a fact
+     (<em>isn’t reachable</em>, <em>files added</em>), one does both. They were written one at a
+     time at their own call sites, five months apart, and never seen side by side — which is
+     precisely what a mockup is for and precisely what this one omitted.</p>
+  <h3>Every one of them violates a rule this project already wrote down</h3>
+  <p><b>“Existing <code>toast.show(...)</code> call sites are ‘needed feedback, hadn’t designed the
+     chrome yet’ placeholders. Don’t add new ones.”</b> Four of the five are drop <em>refusals</em>,
+     and the recorded alternatives are named: a predictive cursor badge during the drag (Finder’s
+     ⊘), persistent inline state on the row, a sheet at the locus of action, or silence. A refusal
+     that a researcher can only learn about by catching a 3-second float is the weakest of those,
+     and it is the one we shipped.</p>
+  <h3>The drag already knows — which is where the answer probably is</h3>
+  <p>Three of these are decidable <em>before</em> the drop: the project is running, the folder is
+     unreachable, no project is selected. Finder answers that class with the cursor
+     (<code>NSDragOperation.forbidden</code> → ⊘), before commit and without interrupting. Only the
+     file-subset case is genuinely post-hoc, because the copy succeeds and the consequence is about
+     the report, not the drop — and a consequence about the report belongs on the row or the pane
+     that shows the report’s state, where it survives longer than three seconds.</p>
+</div>
+
+
+<!-- ══════════ DROP OUTCOMES — DECIDED ══════════ -->
+<div class="sec-head">
+  <h2>Dropping files — what replaces them</h2>
+  <p class="sub">Four of the five need no message at all: the drag already knows. The fifth is a
+     statement about the report, so it belongs where the report’s state lives.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">mid-drag over a running project · no highlight · pointer swaps · springs back</span></div>
+  <div class="frame-body" style="display:block; padding:1.4rem">
+    <div class="win">
+      <div class="win-side">
+        <div class="r">Pilot round</div>
+        <div class="r">IKEA with uxfriends</div>
+        <div class="r">Onboarding v2</div>
+        <div class="sb-lab" style="padding:.8rem .4rem .2rem">no row highlight — the drop is refused</div>
+        <div class="ghost-drag">📄 p07.mp4 &nbsp;<span class="cursor"><span class="glyph"></span></span></div>
+      </div>
+      <div class="win-main">
+        <div class="ghost" style="width:58%"></div>
+        <div class="ghost" style="width:82%"></div>
+        <div class="ghost" style="width:74%"></div>
+        <div class="ghost" style="width:41%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">after a drop on a file-subset project · the row says it, and keeps saying it</span></div>
+  <div class="frame-body" style="display:block; padding:1.4rem">
+    <div class="win" style="height:150px">
+      <div class="win-side" style="width:240px">
+        <div class="r">Pilot round</div>
+        <div class="r sel" style="line-height:1.35">IKEA with uxfriends<br>
+          <span style="font-size:var(--bn-text-micro); color:var(--bn-colour-muted)">+3 unanalysed</span></div>
+        <div class="r">Onboarding v2</div>
+      </div>
+      <div class="win-main"><div class="ghost" style="width:58%"></div>
+        <div class="ghost" style="width:74%"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">left: File menu with nothing selected · right: removal, on the undo stack</span></div>
+  <div class="frame-body">
+    <div class="menu">
+      <div class="mi"><span class="mi-ico">＋</span> New Project <span class="sc">⌘N</span></div>
+      <div class="mi dis"><span class="mi-ico">📄</span> Add Files… <span class="sc">⇧⌘A</span></div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">⬆︎</span> Export Report… <span class="sc">⇧⌘E</span></div>
+    </div>
+    <div class="menu">
+      <div class="mi"><span class="mi-ico">↩︎</span> Undo Remove Project <span class="sc">⌘Z</span></div>
+      <div class="mi dis"><span class="mi-ico">↪︎</span> Redo <span class="sc">⇧⌘Z</span></div>
+      <div class="sb-lab" style="padding:.7rem .6rem .2rem">no clock — lives until the next undoable act</div>
+    </div>
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>The HIG answers four of the five, and it costs no words</h3>
+  <p>“<i>Show people whether a destination can accept dragged content… show no visual feedback — or
+     an explicit ‘not allowed’ image, like the <code>circle.slash</code> from SF Symbols — when it
+     can’t.</i>” And for macOS: “<i>Consider changing the pointer appearance… the operation not
+     allowed pointer.</i>” Returning <code>[]</code> from <code>validateDrop</code> buys all of it —
+     no highlight, the ⊘ pointer, and the item springing back — in every language at once. Today we
+     return <code>.copy</code> for any project row, accept the drop, then scold; the AppKit comment
+     admits it, saying policy lives in <code>ContentView</code>.</p>
+  <h3>The file-subset toast existed because we had deliberately turned off the signal</h3>
+  <p>The drop calls <code>seedKnownBasenames</code>, commented “<i>so the count pill stays hidden —
+     they’re ‘known,’ not surprise drops</i>”. That is right for a folder-shaped project, where a run
+     starts at once. On a file-subset project nothing starts, so those files are exactly the drift
+     the pill is for — and suppressing the persistent signal is what created the appetite for a
+     transient one. Stop seeding on that branch and the row says <code>+3 unanalysed</code> by
+     itself, permanently, re-readable.</p>
+  <h3>An undo with a fuse is a toast wearing a menu item</h3>
+  <p><code>UndoableRemovalStore</code> avoids <code>NSUndoManager</code> on purpose and expires at
+     8&nbsp;s — so ⌘Z expires too, not just the toast. Remove is already non-destructive (the folder
+     of real files goes on living), so the fuse buys nothing and costs the one guarantee a Mac user
+     has. On the system undo stack it survives until the next undoable act and lands in Edit ▸ Undo
+     free. The vanishing row gets the poof the HIG names for exactly this — “<i>scale up and fade
+     out to give the impression of the item evaporating</i>”.</p>
+  <h3>Retry keeps the home it was given</h3>
+  <p>The popover deliberately has no action row: “<i>Retry / Change provider / Re-analyse… live in
+     the project’s natural run affordance</i>”. So the toast pointing at the toolbar was signposting
+     a control one right-click away. It goes; nothing replaces it.</p>
 </div>
 
 <!-- ══════════ SEQUENCES ══════════ -->

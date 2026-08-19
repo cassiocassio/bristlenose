@@ -95,11 +95,42 @@ extension WindowCommand {
         }
     }
 
+    /// Commands that act on **which study** — the axis a child window does not
+    /// have.
+    ///
+    /// A child holds a lens, not a project (`design-workspace.md` §"What a child
+    /// window is"). It has no selection and no project list, so every one of
+    /// these would either act on nothing or act on a study the window has no
+    /// claim to. Dimming them says the same thing the missing project list says,
+    /// in the place a Mac user looks when a click does nothing.
+    ///
+    /// The lens commands are deliberately absent from this list: switching view
+    /// is the axis a child owns, and is the entire reason it exists.
+    ///
+    /// `removeFromSidebar`, `renameProject`, `renameFolder`, `deleteFolder`,
+    /// `moveProject` and `locateProject` are not listed because they already
+    /// require a sidebar selection, which a child never has — they dim through
+    /// `hasKeyWindow` and their own guards without needing to be named here.
+    /// Listing them anyway would be a second rule saying the same thing.
+    var actsOnTheStudyAxis: Bool {
+        switch self {
+        case .newProject, .newFolder, .addFiles: return true
+        default: return false
+        }
+    }
+
     /// Whether the menu item is enabled, given whether a project window is
-    /// frontmost. The one decision every converted site shares, in one place so
-    /// the sites cannot drift apart on it.
-    func isEnabled(hasKeyWindow: Bool) -> Bool {
-        hasKeyWindow || hasAppLevelFallback
+    /// frontmost and what kind of window it is. The one decision every converted
+    /// site shares, in one place so the sites cannot drift apart on it.
+    ///
+    /// The role is checked **first and unconditionally**: a study-axis command
+    /// in a child stays dim even though `newProject` and `newFolder` carry an
+    /// app-level fallback. That fallback exists for "no window is frontmost, so
+    /// make one" — a genuinely different situation from "the frontmost window is
+    /// one that deliberately cannot do this".
+    func isEnabled(hasKeyWindow: Bool, role: WindowRoster.Role = .master) -> Bool {
+        if role == .child, actsOnTheStudyAxis { return false }
+        return hasKeyWindow || hasAppLevelFallback
     }
 }
 
@@ -111,10 +142,18 @@ extension WindowCommand {
 /// front window changes, which is the only change the menu needs to notice.
 struct WindowCommandSink: Equatable {
     let windowID: UUID
+    /// Master or child. Carried on the sink because it is a property of the
+    /// window the menu is currently targeting, and the menu has no other way to
+    /// ask — `focusedSceneValue` gives it this sink and nothing else.
+    let role: WindowRoster.Role
     let perform: (WindowCommand) -> Void
 
+    /// Identity **and** role. The role is fixed for a window's life, so this
+    /// adds no churn — but leaving it out would mean a menu built against a
+    /// master staying enabled when focus moved to a child with the same body
+    /// pass, which is the one moment the enablement has to change.
     static func == (lhs: WindowCommandSink, rhs: WindowCommandSink) -> Bool {
-        lhs.windowID == rhs.windowID
+        lhs.windowID == rhs.windowID && lhs.role == rhs.role
     }
 }
 

@@ -690,7 +690,7 @@ struct ContentView: View {
         // life inside the WKWebView, and a view-scoped value would drop out.
         .focusedSceneValue(
             \.windowCommands,
-            WindowCommandSink(windowID: windowID, perform: { perform($0) })
+            WindowCommandSink(windowID: windowID, role: windowRole, perform: { perform($0) })
         )
         // The state half of the same seam: the menu bar reads *this* window's
         // lens, undo stack and selection mirror when it is frontmost.

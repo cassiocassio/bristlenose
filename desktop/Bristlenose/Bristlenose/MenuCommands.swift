@@ -344,7 +344,7 @@ private struct AppMenuContent: View {
         Button(i18n.t("desktop.menu.app.aiPrivacy"), systemImage: "hand.raised") {
             windowCommands?.perform(.showAIConsent)
         }
-        .disabled(!WindowCommand.showAIConsent.isEnabled(hasKeyWindow: windowCommands != nil))
+        .disabled(!WindowCommand.showAIConsent.isEnabled(hasKeyWindow: windowCommands != nil, role: windowCommands?.role ?? .master))
 
         Divider()
 
@@ -412,7 +412,7 @@ private struct FileMenuContent: View {
             windowCommands?.perform(.addFiles)
         }
         .keyboardShortcut("a", modifiers: [.command, .shift])
-        .disabled(!WindowCommand.addFiles.isEnabled(hasKeyWindow: windowCommands != nil))
+        .disabled(!WindowCommand.addFiles.isEnabled(hasKeyWindow: windowCommands != nil, role: windowCommands?.role ?? .master))
 
         // Import ▸ — cloud sources, beside Add Files… because that is the same
         // act from a different place (`docs/design-cloud-import.md` §9).
@@ -730,7 +730,7 @@ private struct ViewMenuContent: View {
             }
             .keyboardShortcut("l", modifiers: [.command, .option])
             .disabled(!WindowCommand.showSessionsSwitcher
-                .isEnabled(hasKeyWindow: windowCommands != nil))
+                .isEnabled(hasKeyWindow: windowCommands != nil, role: windowCommands?.role ?? .master))
         } else {
             Button(i18n.t(PanelToggle.labelKey(
                 panel: leftPanelKey ?? "Contents",
@@ -889,7 +889,7 @@ private struct ProjectMenuContent: View {
     /// selection guard, which still reads app-global `BridgeHandler` state
     /// until Stage 3a makes it per-window.
     private func enabled(_ command: WindowCommand) -> Bool {
-        command.isEnabled(hasKeyWindow: windowCommands != nil)
+        command.isEnabled(hasKeyWindow: windowCommands != nil, role: windowCommands?.role ?? .master)
     }
 
     var body: some View {
@@ -1280,7 +1280,7 @@ private struct QuotesMenuContent: View {
         Button(i18n.t("common.miro.menuLabel")) {
             windowCommands?.perform(.showMiro)
         }
-        .disabled(!WindowCommand.showMiro.isEnabled(hasKeyWindow: windowCommands != nil))
+        .disabled(!WindowCommand.showMiro.isEnabled(hasKeyWindow: windowCommands != nil, role: windowCommands?.role ?? .master))
 
         Divider()
 
@@ -1405,7 +1405,7 @@ private struct HelpMenuContent: View {
         Button(i18n.t("desktop.chrome.welcomeTitle")) {
             windowCommands?.perform(.showWelcome)
         }
-        .disabled(!WindowCommand.showWelcome.isEnabled(hasKeyWindow: windowCommands != nil))
+        .disabled(!WindowCommand.showWelcome.isEnabled(hasKeyWindow: windowCommands != nil, role: windowCommands?.role ?? .master))
 
         Button(i18n.t("desktop.menu.help.keyboardShortcuts")) {
             Self.open("https://bristlenose.app/docs/keyboard-shortcuts.html")

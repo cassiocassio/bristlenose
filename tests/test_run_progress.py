@@ -184,7 +184,7 @@ def test_emit_stage_entry_emits_verb_vocabulary_not_manifest_names():
     # silently drops the latter (no verb, no error). Real sink, not a stub,
     # so a zero-emit regression can't pass vacuously (silent-failure-hunter).
     collected: list[dict[str, object]] = []
-    pipeline = Pipeline(BristlenoseSettings(), skip_confirm=True)
+    pipeline = Pipeline(BristlenoseSettings())
     pipeline.set_progress_sink(lambda **fields: collected.append(fields))
 
     for stage in (STAGE_SPEAKERS, STAGE_TOPICS, STAGE_QUOTES, STAGE_CLUSTER, STAGE_RENDER):
@@ -209,7 +209,7 @@ def test_emit_stage_entry_carries_last_known_eta():
     # determinate ring keeps its fill (no backward jump, no blank) as the verb
     # advances. The only warm-path coverage needed — _emit_remaining unchanged.
     collected: list[dict[str, object]] = []
-    pipeline = Pipeline(BristlenoseSettings(), skip_confirm=True)
+    pipeline = Pipeline(BristlenoseSettings())
     pipeline.set_progress_sink(lambda **fields: collected.append(fields))
     pipeline._last_eta_remaining = 90.0
     pipeline._last_predicted_total = 300.0
@@ -240,7 +240,7 @@ def test_emit_remaining_clears_carried_eta_when_estimate_goes_cold():
     # branch fails this test — which the carry test alone would not catch.
     collected: list[dict[str, object]] = []
     pipeline = Pipeline(
-        BristlenoseSettings(), skip_confirm=True, estimator=_ColdEstimator(),
+        BristlenoseSettings(), estimator=_ColdEstimator(),
     )
     pipeline.set_progress_sink(lambda **fields: collected.append(fields))
     # An earlier stage left a carried ETA in place:

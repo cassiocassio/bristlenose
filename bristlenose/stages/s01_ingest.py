@@ -16,7 +16,7 @@ from bristlenose.models import (
     classify_file,
 )
 from bristlenose.utils.audio import probe_duration
-from bristlenose.utils.fs import is_os_metadata
+from bristlenose.utils.fs import is_dataless, is_os_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +57,58 @@ def _get_creation_time(path: Path) -> datetime:
     return datetime.fromtimestamp(ts, tz=timezone.utc)
 
 
+class UnsuitableInputDirError(ValueError):
+    """The folder is not a plausible study folder — refuse it by name.
+
+    Raised for filesystem and system roots. Deliberately NOT raised for a
+    merely-large folder: a thousand ten-second video answers to one question is
+    an ordinary unmoderated study, while ten ninety-minute interviews is five
+    times the work at one percent of the file count. Volume is the wrong axis;
+    what makes a drop wrong is *what it is*, not how much of it there is.
+    """
+
+
+# Files at most this many levels below the drop point are ingested.
+#
+#   project/interview.mp4              level 1  ✓
+#   project/week1/interview.mp4        level 2  ✓
+#   project/week1/zoom1/video.mp4      level 3  ✓
+#   project/a/b/c/video.mp4            level 4  ✗
+#
+# Three is what real folder shapes need: a study grouped into weeks or rounds,
+# each holding per-meeting folders from Zoom. It is also what stops Zoom being a
+# special case — `zoom1/` is just a folder that happens to contain media, and
+# `group_into_sessions` keys the Zoom rule on the *containing* directory name,
+# so it works at any depth. Measured before choosing: a whole-filesystem scan at
+# this depth visits ~4,000 entries and finds 5 media files, so the cap is not
+# what protects against a silly drop — `_refuse_reason` is.
+_MAX_SCAN_DEPTH = 3
+
+
+def _refuse_reason(input_dir: Path) -> str | None:
+    """Return why *input_dir* cannot be a study folder, or None if it can.
+
+    Structural, not numeric, and it runs before anything touches the disk hard.
+    Only the roots themselves are refused — `~/Documents` and `~/Desktop` are
+    entirely reasonable places to keep a study, so refusing them would be wrong.
+    """
+    resolved = input_dir.resolve()
+    home = Path.home().resolve()
+
+    if resolved == Path(resolved.anchor):
+        return "it is the root of the filesystem"
+    if resolved == home:
+        return "it is your home folder"
+    system_roots = {
+        Path("/Applications"), Path("/System"), Path("/Library"), Path("/Volumes"),
+        Path("/private"), Path("/usr"), Path("/bin"), Path("/sbin"), Path("/etc"),
+        Path("/var"), Path("/opt"), Path("/cores"), home / "Library",
+    }
+    if resolved in system_roots:
+        return "it is a system folder"
+    return None
+
+
 def discover_files(
     input_dir: Path, skipped: list[SkippedFile] | None = None
 ) -> list[InputFile]:
@@ -68,25 +120,63 @@ def discover_files(
             report them to the user; omit it and the behaviour is unchanged.
 
     Returns a list of InputFile objects sorted by creation date.
-    """
-    files: list[InputFile] = []
 
-    for entry in sorted(input_dir.iterdir()):
-        if is_os_metadata(entry):
-            continue
-        if entry.is_dir():
-            # Recurse one level into subdirectories
-            for sub_entry in sorted(entry.iterdir()):
-                if is_os_metadata(sub_entry):
-                    continue
-                if sub_entry.is_file():
-                    _try_add_file(sub_entry, files, skipped)
-        elif entry.is_file():
-            _try_add_file(entry, files, skipped)
+    Raises:
+        UnsuitableInputDirError: *input_dir* is a filesystem or system root.
+    """
+    reason = _refuse_reason(input_dir)
+    if reason is not None:
+        raise UnsuitableInputDirError(
+            f"{input_dir} can't be analysed because {reason}. "
+            "Point Bristlenose at the folder holding your recordings."
+        )
+
+    files: list[InputFile] = []
+    _scan_dir(input_dir, 0, files, skipped)
 
     # Sort by creation date, then filename as tiebreaker
     files.sort(key=lambda f: (f.created_at, f.path.name))
     return files
+
+
+def _scan_dir(
+    directory: Path,
+    depth: int,
+    files: list[InputFile],
+    skipped: list[SkippedFile] | None,
+) -> None:
+    """Walk *directory*, descending while files stay within _MAX_SCAN_DEPTH.
+
+    An unreadable directory is recorded and stepped over, never fatal. Dropping
+    a folder containing one protected directory — `~/.Trash` is the everyday
+    case — used to raise PermissionError out of `iterdir` and destroy the whole
+    scan, which is the same one-bad-entry-kills-everything shape as the
+    zero-byte file that aborted a 42-session run.
+    """
+    try:
+        entries = sorted(directory.iterdir())
+    except PermissionError:
+        if skipped is not None:
+            skipped.append(SkippedFile(directory, "folder could not be read (permission denied)"))
+        logger.warning("Skipping unreadable directory: %s", directory)
+        return
+    except OSError as exc:
+        if skipped is not None:
+            skipped.append(SkippedFile(directory, f"folder could not be read ({exc.strerror})"))
+        logger.warning("Skipping unreadable directory %s: %s", directory, exc)
+        return
+
+    for entry in entries:
+        if is_os_metadata(entry):
+            continue
+        try:
+            if entry.is_dir():
+                if depth + 1 < _MAX_SCAN_DEPTH:
+                    _scan_dir(entry, depth + 1, files, skipped)
+            elif entry.is_file():
+                _try_add_file(entry, files, skipped)
+        except OSError as exc:  # a single unstatable entry must not end the walk
+            logger.warning("Skipping unreadable entry %s: %s", entry, exc)
 
 
 def _try_add_file(
@@ -104,9 +194,13 @@ def _try_add_file(
     created_at = _get_creation_time(path)
     size_bytes = path.stat().st_size
 
-    # Probe duration for audio/video files
+    # Probe duration for audio/video files — but never fault a cloud placeholder
+    # in to do it. `probe_duration` materialises before probing, so scanning a
+    # folder holding evicted recordings would download them all just to learn
+    # their length. Duration at scan time is a nicety; the bytes are genuinely
+    # needed at transcription, where the wait is expected and attributable.
     duration: float | None = None
-    if file_type in (FileType.AUDIO, FileType.VIDEO):
+    if file_type in (FileType.AUDIO, FileType.VIDEO) and not is_dataless(path):
         duration = probe_duration(path)
 
     files.append(

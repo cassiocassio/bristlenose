@@ -122,7 +122,7 @@ def _run_pipeline(input_file: Path, provider: str, tmp_path: Path):
     output_dir = input_dir / "bristlenose-output"
 
     settings = BristlenoseSettings(llm_provider=provider)
-    pipeline = Pipeline(settings=settings, skip_confirm=True)
+    pipeline = Pipeline(settings=settings)
     result = asyncio.run(pipeline.run(input_dir, output_dir))
     return result, OutputPaths(output_dir, result.project_name)
 

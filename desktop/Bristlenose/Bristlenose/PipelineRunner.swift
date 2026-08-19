@@ -1219,7 +1219,7 @@ final class PipelineRunner: ObservableObject {
         // flag was spelled `--static` and conflated with the static-render
         // surface; A3 dropped `--static` and kept `--no-serve` as the honest
         // hidden flag — see bristlenose/cli.py.)
-        var args = ["run", project.path, "--no-serve"]
+var args = ["run", project.path, "--no-serve"]
         if clean { args.append("--clean") }
         proc.arguments = args
         // Complete subprocess environment — minimal var allowlist, prefs, TLS
@@ -1236,6 +1236,12 @@ final class PipelineRunner: ObservableObject {
         let pipe = Pipe()
         proc.standardOutput = pipe
         proc.standardError = pipe
+        // Defence in depth for the same failure. stdout/stderr are piped, but
+        // stdin was inherited — under Xcode that is the console TTY, so any
+        // prompt sees a terminal and waits for a human who cannot see it.
+        // With /dev/null the read returns EOF and the run ends with an error
+        // instead of hanging, whatever future prompt someone adds upstream.
+        proc.standardInput = FileHandle.nullDevice
         let handle = pipe.fileHandleForReading
 
         let projectID = project.id

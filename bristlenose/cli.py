@@ -1058,10 +1058,6 @@ def run(
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose logging."),
     ] = False,
-    yes: Annotated[
-        bool,
-        typer.Option("--yes", "-y", help="Skip confirmation for large session counts."),
-    ] = False,
     no_fetch: Annotated[
         bool,
         typer.Option(
@@ -1202,7 +1198,7 @@ def run(
     estimator, on_event = _build_estimator(settings)
     pipeline = Pipeline(
         settings, verbose=verbose, on_event=on_event,
-        estimator=estimator, skip_confirm=yes,
+        estimator=estimator,
     )
     try:
         with run_lifecycle(output_dir, KindEnum.RUN) as _run_handle:
@@ -1306,10 +1302,6 @@ def transcribe(
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose logging."),
     ] = False,
-    yes: Annotated[
-        bool,
-        typer.Option("--yes", "-y", help="Skip confirmation for large session counts."),
-    ] = False,
     no_fetch: Annotated[
         bool,
         typer.Option(
@@ -1340,7 +1332,7 @@ def transcribe(
 
     from bristlenose.pipeline import Pipeline
 
-    pipeline = Pipeline(settings, verbose=verbose, skip_confirm=yes)
+    pipeline = Pipeline(settings, verbose=verbose)
     try:
         with run_lifecycle(output_dir, KindEnum.TRANSCRIBE_ONLY) as _run_handle:
             result = asyncio.run(pipeline.run_transcription_only(input_dir, output_dir))
@@ -1392,10 +1384,6 @@ def analyze(
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose logging."),
-    ] = False,
-    yes: Annotated[
-        bool,
-        typer.Option("--yes", "-y", help="Skip confirmation for large session counts."),
     ] = False,
     no_fetch: Annotated[
         bool,
@@ -1460,7 +1448,7 @@ def analyze(
     estimator, on_event = _build_estimator(settings)
     pipeline = Pipeline(
         settings, verbose=verbose, on_event=on_event,
-        estimator=estimator, skip_confirm=yes,
+        estimator=estimator,
     )
     try:
         with run_lifecycle(output_dir, KindEnum.ANALYZE) as _run_handle:

@@ -67,7 +67,6 @@ from bristlenose.utils.text import count_noun
 logger = logging.getLogger(__name__)
 console = Console(width=min(80, Console().width))
 
-_MAX_SESSIONS_NO_CONFIRM = 16
 
 
 def _dominant_cause(
@@ -420,7 +419,6 @@ class Pipeline:
         verbose: bool = False,
         on_event: object | None = None,
         estimator: object | None = None,
-        skip_confirm: bool = False,
     ) -> None:
         self.settings = settings
         self.verbose = verbose
@@ -429,7 +427,6 @@ class Pipeline:
         self._on_event = on_event
         # TimingEstimator — typed as object for the same reason.
         self._estimator = estimator
-        self._skip_confirm = skip_confirm
         # Structured progress sink (RunHandle.progress) — set inside the
         # run_lifecycle block by the CLI. None on no-lifecycle paths.
         self._progress_sink: object | None = None
@@ -547,18 +544,6 @@ class Pipeline:
             predicted_total_seconds=self._last_predicted_total,
         )
 
-    def _confirm_large_session_count(self, count: int, source_dir: Path) -> bool:
-        """Prompt for confirmation when session count exceeds threshold.
-
-        Returns True to proceed, False to abort.
-        """
-        from rich.prompt import Confirm
-
-        console.print(
-            f"\n[yellow]Found {count_noun(count, 'session')} in {source_dir.name}/.[/yellow]"
-        )
-        return Confirm.ask("Continue?", default=True)
-
     async def run(self, input_dir: Path, output_dir: Path) -> PipelineResult:
         """Run the full pipeline: ingest → transcribe → analyse → output.
 
@@ -634,11 +619,6 @@ class Pipeline:
             return self._empty_result(output_dir)
 
         ingest_elapsed = time.perf_counter() - t0
-
-        # ── Session-count guard ───────────────────────────────────
-        if len(sessions) > _MAX_SESSIONS_NO_CONFIRM and not self._skip_confirm:
-            if not self._confirm_large_session_count(len(sessions), input_dir):
-                return self._empty_result(output_dir)
 
         # ── Print found-sessions line, then ingest checkmark ──
         console.print(
@@ -1930,11 +1910,6 @@ class Pipeline:
 
         ingest_elapsed = time.perf_counter() - t0
 
-        # ── Session-count guard ───────────────────────────────────
-        if len(sessions) > _MAX_SESSIONS_NO_CONFIRM and not self._skip_confirm:
-            if not self._confirm_large_session_count(len(sessions), input_dir):
-                return self._empty_result(output_dir)
-
         # ── Print found-sessions line, then ingest checkmark ──
         console.print(
             f"  [dim]{count_noun(len(sessions), 'session')} in {input_dir.name}/[/dim]\n",
@@ -2096,13 +2071,6 @@ class Pipeline:
         if not clean_transcripts:
             console.print("[red]No transcript files found.[/red]")
             return self._empty_result(output_dir)
-
-        # ── Session-count guard ───────────────────────────────────
-        if len(clean_transcripts) > _MAX_SESSIONS_NO_CONFIRM and not self._skip_confirm:
-            if not self._confirm_large_session_count(
-                len(clean_transcripts), transcripts_dir
-            ):
-                return self._empty_result(output_dir)
 
         llm_client = LLMClient(self.settings)
         concurrency = self.settings.llm_concurrency

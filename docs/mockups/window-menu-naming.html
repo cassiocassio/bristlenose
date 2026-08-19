@@ -174,8 +174,11 @@
       <li><b>E1 · Welcome</b> — shipped. <code>welcome.windowTitle</code> in 21 locales.</li>
       <li><b>E2 · unanalysed</b> — bare title. Already the behaviour, no change.</li>
       <li><b>E3 · localised subtitle</b> — already the behaviour, no change.</li>
-      <li><b>E4 · ordinal suffix</b> — accepted, <b>blocked</b>: there is never more than one
-      window per project until selection and the bridge stop being singletons.</li>
+      <li><b>E4 · ordinal suffix</b> — <b>shipped</b> (<code>70fbfc0d</code>, refined
+      <code>9f4183af</code> / <code>29f70e33</code>). This line and the E4 card used to disagree —
+      the card recommended accepting the duplicate, this summary said accepted-but-blocked, and the
+      code shipped the ordinal. Reconciled 18 Aug 2026 in favour of the ordinal; see the card for
+      why the "not two projects" premise did not survive.</li>
       <li><b>E5 · folder as disambiguator only</b> — shipped. Triggered by a name clash in the
       <i>index</i>, not by which windows are open, so a project's subtitle can't change shape
       because a window opened elsewhere.</li>
@@ -368,7 +371,7 @@
   <h2>4 · Edge cases — these force a decision</h2>
 
   <div class="case">
-    <h3><span class="n">E4</span> Two windows, same project, same lens <span class="tag dec">decide</span></h3>
+    <h3><span class="n">E4</span> Two windows, same project, same lens <span class="tag ships">shipped — ordinal kept</span></h3>
     <div class="row">
       <figure>
         <figcaption>unresolvable by naming</figcaption>
@@ -386,13 +389,35 @@
       </figure>
     </div>
     <div class="note">
-      <p>Mail, Finder and Safari all permit duplicate rows and do nothing about it. The ordinal
-      suffix is the <i>document</i> convention (<code>Untitled 2</code>) and it is wrong here —
-      these are two views of one project, not two projects, and numbering implies the second is a
-      copy.</p>
-      <p><span class="verdict">Recommendation: accept the duplicate.</span> If the two windows
-      genuinely diverge — different filter, different scroll — the subtitle already diverges with
-      them, because it is computed from live filter state.</p>
+      <p><b>Corrected 18 Aug 2026 — the recommendation below was reasoned from a premise that was
+      only ever temporary, and the code shipped the other way.</b> The ordinal <b>stays</b>.</p>
+      <p>The argument turned on "these are two views of one project, <i>not two projects</i>". That
+      described <b>Stage 3a</b> — one serve, one study at a time — and not the product. The end goal
+      is explicitly both: <code>docs/design-workspace.md</code> §"Stage 3b" is <i>"two projects
+      visible at once ⇒ two sidecars"</i>, and the memory objection that was holding it open was
+      measured and retired on 16 Aug (~140 MB per additional project, flat from 1 to 8 windows).</p>
+      <p>Under the real model the ordinal fires far more narrowly than this card assumed — two
+      different studies are told apart by <i>name</i>, two lenses by <i>subtitle</i>, so the suffix
+      only ever appears when two rows are <b>genuinely byte-identical</b>. That is precisely the
+      case Mail, Finder and Safari leave you stuck in, and "numbering implies the second is a copy"
+      is weakest exactly where the ordinal actually fires — because in that case the two rows really
+      are indistinguishable.</p>
+      <p>Two things settled since, both worth not re-deriving. <b>Measured:</b> AppKit's
+      <i>automatic</i> Window-menu path renders <code>Title (Subtitle)</code>; the manual
+      <code>addWindowsItem</code> path renders title only. So keying the duplicate group on the
+      rendered subtitle is correct by construction, not by luck. <b>And master/child makes this
+      common rather than exotic:</b> a child is a second window on the same study, so two children
+      at one lens is the ordinary shape of the feature, not an edge.</p>
+      <p><i>Superseded text, kept because the reasoning is worth seeing:</i></p>
+      <blockquote>
+        <p>Mail, Finder and Safari all permit duplicate rows and do nothing about it. The ordinal
+        suffix is the <i>document</i> convention (<code>Untitled 2</code>) and it is wrong here —
+        these are two views of one project, not two projects, and numbering implies the second is a
+        copy.</p>
+        <p><span class="verdict">Recommendation: accept the duplicate.</span> If the two windows
+        genuinely diverge — different filter, different scroll — the subtitle already diverges with
+        them, because it is computed from live filter state.</p>
+      </blockquote>
     </div>
   </div>
 

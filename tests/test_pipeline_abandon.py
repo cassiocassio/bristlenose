@@ -262,7 +262,7 @@ def test_pipeline_run_abandons_when_all_transcribe_fail(tmp_path: Path) -> None:
     # preflight-abort path.
     settings.no_fetch = False
 
-    pipeline = Pipeline(settings, skip_confirm=True)
+    pipeline = Pipeline(settings)
 
     input_dir = tmp_path / "input"
     input_dir.mkdir()
@@ -577,7 +577,7 @@ def test_run_analysis_only_abandons_at_s08_for_quota_failure(tmp_path: Path) -> 
     settings.color_scheme = "default"
     settings.pii_enabled = False
 
-    pipeline = Pipeline(settings, skip_confirm=True)
+    pipeline = Pipeline(settings)
     output_dir = tmp_path / "output"
 
     async def _failing_analyze(**_kw):

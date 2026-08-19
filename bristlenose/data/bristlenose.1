@@ -264,10 +264,6 @@ Development mode: enable the responsive playground in the served report
 (grid overlay, breakpoint widget, design-system browser). Has no effect with
 \fB\-\-no\-serve\fR.
 .TP
-.BR \-y ", " \-\-yes
-Skip the "Found N sessions in ..." confirmation prompt when ingest discovers
-more than 16 sessions. Use for scripting and CI.
-.TP
 .BR \-\-no\-fetch
 Abort instead of downloading missing runtime-fetched models (Whisper, spaCy)
 or installing system binaries (ffmpeg via Homebrew). Run
@@ -283,9 +279,6 @@ Output directory. Default: \fIbristlenose-output/\fR inside the input folder.
 .TP
 .BR \-w ", " \-\-whisper\-model " " \fIMODEL\fR
 Whisper model size.
-.TP
-.BR \-y ", " \-\-yes
-Skip the large-session-count confirmation prompt.
 .TP
 .BR \-\-no\-fetch
 Abort instead of downloading the Whisper model if it isn't cached.
@@ -308,9 +301,6 @@ LLM provider. Same values as for \fBrun\fR.
 .BR \-\-codebook " " \fISLUG\fR
 Apply a codebook framework during analysis. Run \fBbristlenose codebooks\fR to
 list the available slugs.
-.TP
-.BR \-y ", " \-\-yes
-Skip the large-session-count confirmation prompt.
 .TP
 .BR \-\-no\-fetch
 Abort instead of downloading missing runtime-fetched models. Used together

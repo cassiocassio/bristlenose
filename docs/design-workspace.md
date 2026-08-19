@@ -4,7 +4,7 @@ last-trued: 2026-08-18
 trued-against: HEAD@main on 2026-08-18 (e646e0d0)
 ---
 
-> **Partial — Stage 3a is built; Stage 3b is the open architecture.** This doc
+> **Partial — Stage 3a is built; Stage 3b is next and unblocked.** This doc
 > was `status: pending` until 18 Aug 2026, and the banner below said "the rest is
 > not built". That stopped being true on 16 Aug and nobody moved it: **four
 > sessions trued individual sections while the header stayed a phase behind**,
@@ -17,12 +17,15 @@ trued-against: HEAD@main on 2026-08-18 (e646e0d0)
 > (18 Aug) the **child window**: a window that holds a lens rather than a project
 > and reads its title from the serve, so it cannot name a study it isn't showing.
 >
-> **Still open, and it is the one big call:** the serve/view family (A/B/C, now
-> *presumed A*) and Stage 3b — per-window serve, two studies visible at once.
-> Sized 18 Aug at **weeks, not days**: `ServeManager` is ~1,050 lines with 18
-> pieces of singleton state to make multi-instance, plus a `WindowGroup(for:)`
-> scene restructure, plus constraint 7 (the MCP handshake assumes one fronted
-> serve) which this doc requires answered *on paper* before the stage begins.
+> **Next, and no longer blocked:** Stage 3b — per-window serve, two studies
+> visible at once. Family **A** is presumed (16 Aug) and **constraint 7 is
+> answered** (19 Aug: one connection for V1, the handshake naming the most
+> recently fronted study with Agent Access on and a running serve). **Re-sized
+> 19 Aug to ~3–5 sessions** — the 18 Aug "weeks, not days" was a line count
+> presented as an analysis; classified, the per-serve half of `ServeManager` is
+> a near-verbatim extraction and the A2 warm pool is *deleted* rather than made
+> N-way, because parking exists only to make single-serve switching fast. See
+> §"Implementation plan" for the working and the stop condition.
 >
 > **One decision is live rather than settled** — whether the shipped master/child
 > shape survives, or is replaced by a peer model in which every window keeps its
@@ -34,6 +37,7 @@ trued-against: HEAD@main on 2026-08-18 (e646e0d0)
 ## Changelog
 
 - _2026-08-17b_ — **Two more from the six-window run, both "harmless at N=1, total at N=2".** (1) **Going to the welcome screen put every window on Welcome.** `SidebarDeselectMonitor` uses `NSEvent.addLocalMonitorForEvents`, which is **app**-wide: each window installs one, each sees every click anywhere in the app, and each then called its *own* `deselect`. One click in one window's empty sidebar area deselected all six. Now scoped — the monitor compares `event.window` against its own host view's window. Worth noting the shape, since it is the second instance today: a per-window callback hung off an app-wide channel. The first was the menu-bar broadcasts. (2) **The ordinal's group key was the wrong key.** It was keyed on the *lens*, on the stated assumption that "different lenses already read differently, because the subtitle carries the per-lens count" — which is **false**, and the Window menu proved it: `countSubtitle` returns the session count for Project, for Sessions *and* for a window with no lens yet, so three windows drew `IKEA with uxfriends (1 Session · 18m)` and none of them was numbered, while a fourth carried a "2". Keyed on the rendered subtitle now, so the collision test is the thing the reader is actually looking at rather than a proxy for it. The run narration is deliberately excluded from the key — its stage and ETA change every second and would reshuffle numbers throughout a run.
+- _2026-08-19_ — **Peer replaces master/child, and Stage 3b turns out to be smaller than its own estimate.** The master/child model shipped 18 Aug and was deleted the day after (`348b5122`): every window keeps its project list and takes its study from the serve, which closes constraint 5 the same way the child did while deleting the role, the sidebar omission, the ⌥⌘N gate and the study-axis dimming. Selection is shared, **deselect is local** — the refinement without which one window going to Welcome would stop the serve for all of them, which is precisely the bug fixed on 17 Aug. Then **3b was re-sized by classifying `ServeManager` rather than counting it**: 15 of ~21 properties are per-serve and adjacent, 13 of 22 methods move wholesale, and the A2 warm pool — the hardest ~150 lines — is *deleted*, because parking exists only to make single-serve switching fast and per-project serves have nothing to park. ~3–5 sessions rather than weeks, each step green, so **no branch** (with a stated stop condition). **Constraint 7 answered**: one connection for V1, the handshake naming the most recently fronted study with Agent Access on and a running serve — today's semantics extended, no new state. Along the way the **antenna badge was found over-claiming**: its solid tier re-derived the handshake writer's predicate and was missing two conjuncts, so it read "an agent can reach this" during every start and every switch, and permanently whenever `/api/health` never answered. §5a-bis had specified *handshake live* since July; the badge shipped weaker. Fixed by publishing the writer's own answer (`HandshakeExposure`, `3ac773fa`) — which, not assuming a single serve, is why 3b needs no handshake work. Recorded but **not fixed**: the antenna exists only on the AppKit sidebar, which is default-off, so no cohort tester has ever seen it.
 - _2026-08-18_ — **First review of the multi-window work, and the child window is specified rather than assumed.** Seven agents plus a parsimony pass; 34 findings, log kept with the maintainer's private review notes. The headline confirms constraint 5 as shipped reality: `File ▸ New Window` opens a **full master** with a live project list, so two windows on two studies render one study's participant data under the other's name — and the blast radius crosses an outbound edge, since `Send to Miro` exports the wrong study's quotes to a board named for the right one. The restrictive child shape decided on 16 Aug was never built; the code shipped permissive, the one direction this section had ruled out ("loosening later is trivial and tightening after people rely on it is not"). **Three decisions close it without waiting on 3b:** a child holds a *lens, not a project* and reads its title from the serve, so it cannot drift; ⌥⌘N makes a child unless `hasMaster`; and **promotion is rejected** — it would exist only to paper over the single serve, would be deleted at 3b, and would change a window's shape because a different window closed. Switching the master takes the children with it: **accepted**, odd but manageable through beta, and the honest form of the Stage 3a constraint. Also corrected here: the "a master has two cues" reasoning, which is false — both cues come from one source. Separately measured by the review rather than reasoned: AppKit's automatic Window-menu path **does** render `Title (Subtitle)` (two throwaway binaries), so keying the duplicate group on the rendered subtitle is correct by construction, and `desktop/CLAUDE.md`'s 15.0 deployment target is stale against 26.1.
 - _2026-08-17_ — **First real multi-window run: the felt feature works, and it found two bugs.** Four windows on one study, four different lenses, four independent sidebars and subtitles — which was structurally impossible before Stage 3a. Confirmed too that lens choices in one window don't disturb the others. **Bug 1, serious: opening a new window reset every other window to the Project dashboard, and so did going to the welcome screen.** One cause — selection is per window, the sidecar is not. Every arm of `applySelectionChange` that isn't "serve this project" called `serveManager.stop()` on everyone's behalf, and a new window hits that arm before it restores its project. The blast radius is total because killing the serve mints a new port on the next start and every window's web view is keyed on the port (`ServeSession.viewID`), so they all remount at `/report/`. Fixed at both ends: a window only stops the serve when no *other* window still shows a project (`WindowRoster.anyProjectShown(excluding:)`), and `switchProject` no-ops when it is already serving that exact path — which a second window asks for by definition. **Bug 2: the ordinal suffix numbered a window that was alone.** Windows transit the Project lens on open, so ⌥⌘N four times claims 1–4 there and the survivor keeps a number that refers to nothing. The gap rule is kept exactly where it was decided; a window left *alone* in its group now gives its number up, which also retires the "lone Study 2" case that had been accepted as odd.
 - _2026-08-16i_ — **P3b: a project reopens where you were on the page, not just on the right lens.** New `anchor-change` message inbound and the existing retry-aware `window.scrollToAnchor` outbound. Anchors as decided: Quotes → group heading (sections *and* themes — both are `QuoteGroup`, and watching only themes would leave the Sections half always restoring to the top), Sessions → session, Analysis and Project → top; Codebook taken as its framework header. **Sessions is the case that shapes the design** — its position is a route, not an offset, so it restores by navigating and its value comes from `SessionsRouteMemory` rather than the scroll reporter; one stored field plus `LensAnchor`'s per-lens table beats two fields kept mutually exclusive by convention. The message **names its lens**, because `anchor-change` and `route-change` are independent and a bare nil can't distinguish "scrolled back to the top of Quotes" from "left Quotes" — without it, every lens switch would wipe a good remembered position (same guard, same reason, as `lensSubtitle`/`lensSubtitleTab`). Capture is debounced to scroll-settle and written only on change, which also dissolved the stress test's teardown-race worry: there is nothing left to grab at `onDisappear`. No validation that a stored anchor still exists — the content is mutable, so the check would be a lie by the time it mattered; it fails honestly at the top instead. **Stage 3a and P3 are now complete, and none of it has been seen on screen.**
@@ -440,6 +444,44 @@ app-level `@StateObject` injected into `WindowGroup(id: "main")`:
   blocked on the family choice (A/B/C) above. "Sidebar closed by default" is ~2
   lines at the *end* of this stage (seed `columnVisibility = .detailOnly` when the
   window opens with a project value) — none of the cost is there.
+
+  > **Re-sized 19 Aug 2026, and it is smaller than the 18 Aug figure.** That
+  > figure — *"weeks, not days; `ServeManager` is ~1,050 lines with 18 pieces of
+  > singleton state"* — was a **line count presented as an analysis**. Classified
+  > instead: **15 of ~21 properties are per-serve and sit together** at the top of
+  > the file, and **13 of 22 methods move wholesale**. That is an extraction, not
+  > an untangling.
+  >
+  > **And the hardest ~150 lines are deleted rather than made N-way.** The A2 warm
+  > pool — `switchProject`, `detachFronted`, `adoptFronted`, `tearDownEntry`,
+  > `drainParked`, `dropParked`, `ParkedSidecar`, `RepointDecision` — exists for
+  > exactly one reason: switching a *single* serve between projects is slow, so the
+  > outgoing sidecar is kept warm. Per-project serves have nothing to park. The
+  > frightening part of "server rework" is the concurrency-shaped code, and most of
+  > it is what goes away.
+  >
+  > Consequences: **~3–5 sessions**, not 6–10; the stage decomposes into steps that
+  > each compile and each keep the serve working (extract `ServeInstance` with the
+  > fleet holding exactly one → refcount → let the dictionary hold N); and
+  > therefore **no branch** — the branch was insurance against `main` being
+  > unshippable for a stretch, and that premise came from the old estimate. Stop
+  > condition stated: if a checkpoint arrives where `main` cannot serve a report,
+  > branch *there*.
+  >
+  > **Constraint 7 is answered** (19 Aug): one connection for V1, and the
+  > handshake names *the most recently fronted study with Agent Access on and a
+  > running serve* — today's semantics extended unchanged, needing no new state and
+  > keeping §5a-bis's "only one row can carry it" true by construction. The
+  > predicate already lives in `HandshakeExposure` and assumes nothing about serve
+  > count (`3ac773fa`), so the stage needs no handshake work.
+  >
+  > **The six UX questions are answered on paper before the build**, in the
+  > maintainer's stage plan (kept outside the public tree). The one worth naming
+  > here: **the lens collapse dissolves.** Today a switch remounts every window and
+  > each restores `project.lastLens`, so all N land on the same lens — the entire
+  > point of multi-window evaporating on the first switch. Under 3b a switch
+  > touches one window; the others are not remounted and keep their lens. That is
+  > the stage's biggest user-visible win, and it is the first check in its QA walk.
 
 **The open question this section used to end on is answered** (15 Aug 2026): double-
 click means *new window on that project* (the Notes model). The "same project,

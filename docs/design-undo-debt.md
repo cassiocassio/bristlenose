@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-07-28
-trued-against: HEAD@main on 2026-07-28
+last-trued: 2026-08-19
+trued-against: HEAD@main (9b919d8b) on 2026-08-19
 ---
 
 # Away with Undo Debt
@@ -42,14 +42,28 @@ Two corollaries:
   Edit menu's "Undo &lt;action&gt;". Discoverable, no arbitrary time window, consistent
   app-wide, zero attention-theft.
 
-  > **Contradicted by shipped behaviour (flagged 2026-07-28).** The one undo
-  > affordance that exists **is** a toast — `RemoveToast.swift` +
-  > `UndoableRemovalStore(undoWindow: 8)`. Three other design docs also propose
-  > toast-based undo (`design-project-sidebar.md`, `design-sidebar-tag-assign.md`,
-  > `design-quote-triage.md`). The posture is four-way inconsistent: banned here,
-  > proposed in three docs, shipped in code. **This ban needs a carve-out or a
-  > reversal before anyone builds** — as written it forbids what the app already
-  > does. Resolve in one sweep, not per-doc.
+  > **Resolved 19 Aug 2026 — in favour of the ban.** The contradiction flagged
+  > on 28 Jul is closed: `RemoveToast.swift` is deleted, `undoWindow` is gone,
+  > and with it every other `desktop.toast.*` message in the app (six in total —
+  > four drop refusals, an Add-Files scold, and this one). The 8s fuse mattered
+  > more than the toast did: ⌘Z routes through the same store, so **the keyboard
+  > shortcut expired too**. Remove is non-destructive, so the window bought
+  > nothing and cost the one thing a Mac user can assume about undo.
+  >
+  > **One deviation from the mechanism this ban names, deliberately.** The undo
+  > is *not* on `NSUndoManager`. `UndoRedoMenuContent` gates the whole Edit ▸
+  > Undo item behind `!bridgeHandler.isEditing` because the report's WKWebView
+  > owns text-editing undo; adopting the system manager would braid removal-undo
+  > back into that responder chain, which is why the custom route exists. With
+  > the fuse gone it delivers what the ban actually asks for — an undo that names
+  > its action, appears in the Edit menu, and waits. If the WKWebView ever stops
+  > owning that chain, this is the first thing to revisit.
+  >
+  > **Still outstanding: the three docs that propose toast-based undo**
+  > (`design-project-sidebar.md`, `design-sidebar-tag-assign.md`,
+  > `design-quote-triage.md`). The posture is no longer four-way inconsistent —
+  > it is banned here, absent from the code, and still *proposed* in those three.
+  > They want the same sweep, and none of them has been built.
 
 **"Undo debt"** = the set of mutating actions not yet wired into that single ⌘Z story.
 
@@ -85,7 +99,7 @@ Sidebar / `ProjectIndex` mutations (desktop chrome). Append as new ones surface.
 | Action | Mutates | Undoable today | ⌘Z should restore | Notes |
 |---|---|---|---|---|
 | **Delete folder** | folder removed; contained projects orphaned to root (`folderId = nil`) | ❌ none (immediate) | the folder + each project's prior `folderId` | the trigger for this doc; non-destructive but silently scatters an organised folder |
-| **Remove project from sidebar** | project removed from sidebar (on-disk folder untouched) | ✅ 8 s toast **and ⌘Z** | the project row | _Corrected 28 Jul 2026: ⌘Z already works here (`UndoRedoMenuContent` → `removalStore.undoLastRemoval()`); only the **toast retirement** is outstanding. The row read as "no ⌘Z yet"._ |
+| **Remove project from sidebar** | project removed from sidebar (on-disk folder untouched) | ✅ **⌘Z, no time limit** | the project row | _Closed 19 Aug 2026 (`5598bd39`): toast deleted, 8s fuse deleted. A pending removal now survives until the next one supersedes it — one level of undo, which is what an undo stack does. The vanishing row gets `NSAnimationEffect.poof`, the idiom the drag-and-drop HIG names. Not on `NSUndoManager` — see the note above._ |
 | **Move project** (to folder / to root) | project `folderId` — and, once reorder lands, `position` | ❌ none | prior `folderId` **and** prior `position` | a move that lands at a chosen index changes both fields; today `moveProject` sets only `folderId` and leaves `position` at its old in-folder value, so the inverse is currently under-specified in the same way the forward action is |
 | **Rename** project / folder | `name` | ❌ field-local only (while the NSTextField edits) | prior name | the *committed* rename should ⌘Z, not just the edit-in-progress |
 | **Choose Icon** (set / clear) | project `icon` | ❌ none | prior icon | |

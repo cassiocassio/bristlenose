@@ -268,7 +268,7 @@ Project
 │ Rename                        │
 │ Move to                ▶     │   (when folders exist)
 ├──────────────────────────────┤
-│ Re-analyse…                   │   (disabled — Phase 2+)
+│ Re-analyse…                   │   (shipped 19 Aug 2026 — dims unless analysed)
 │ Archive                       │   (disabled — Phase 5)
 ├──────────────────────────────┤
 │ Delete                 ⌘⌫    │
@@ -299,7 +299,7 @@ All items disabled when nothing is selected.
 │ Move to                ▶     │
 │ Choose Icon…                  │
 ├──────────────────────────────┤
-│ Re-analyse…                   │   (disabled)
+│ Re-analyse…                   │   (shipped — dims unless analysed)
 │ Archive                       │   (disabled)
 ├──────────────────────────────┤
 │ Delete                        │

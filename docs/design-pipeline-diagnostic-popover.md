@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-07-15
-trued-against: HEAD@main (a44823c0) + uncommitted out-of-credit work on 2026-07-15
+last-trued: 2026-08-19
+trued-against: HEAD@main (9b919d8b) on 2026-08-19
 ---
 
 > **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`) — the toolbar pill was deleted.**
@@ -36,6 +36,7 @@ trued-against: HEAD@main (a44823c0) + uncommitted out-of-credit work on 2026-07-
 
 ## Changelog
 
+- _2026-08-19_ — **`UNUSABLE_INPUT` added; the `ingest` bucket reaches the popover; every toast deleted.** Refusals and damaged files had nowhere to go — `PipelineSummary` had buckets for transcripts / topics / quotes / themes and nothing for stages 1–2, so `StageFailure.source_file` (added Jul 2026 for exactly this) had no slot. The new bucket renders **first** and is labelled **Files**, not "Ingest": `BucketName.label` replaced `rawValue.capitalized`, which happened to be legible for four nouns it was never asked to translate. A declined format and an unreadable file share one category because they share a consequence — a participant missing from the findings — and differ only in `Cause.message`; both read as **WARNING**, never `skipped`, because a policy decision must not rank below a defect when the researcher is chasing a missing interview. The **two-mirror trap** the 15 Jul entry names bit again in a new place: `PipelineFailureCategory` and `PipelineSummary::CauseCategory` are *different case sets* and both decoded unknown values by throwing, so one unmirrored word failed the whole terminus event. Both now fall back to `.unknown`; adding cases does not prevent the next one. Separately, **all six `desktop.toast.*` messages were removed** — see the retired row in the display-kind catalogue and the new anti-pattern. Anchors: `bristlenose/refusals.py`, `events.py` `_OUTCOME_FIELDS`, `PipelineSummary.swift`, `ProjectDiagnosticPopover.humanCategoryLabel`; commits `7a09ce88`, `5598bd39`, `3acfcef0`.
 - _2026-07-15_ — **`OUT_OF_CREDIT` added to the failure taxonomy; `QUOTA` narrowed to rate-limit.** Billing exhaustion is now its own non-retryable category (Anthropic serves it as a 400 + "credit balance is too low", OpenAI as a 429 `insufficient_quota`); `QUOTA` means a transient throttle worth retrying. Trued: the pill precedence chain (AUTH > **OUT_OF_CREDIT** > MISSING_BINARY > QUOTA > NETWORK > UNKNOWN), the pill-label locale list, and the failure-category enum row — which now names **both** Swift mirrors. Rewrote step 6 of the "read this before adding a new error" contract into an explicit five-site checklist plus the **two-mirror trap**: this very pass shipped a category that compiled clean while leaving `PipelineSummary::CauseCategory` unable to decode it. The old "the popover renders any registered category automatically" line was the false reassurance that let it through — removed. Classifier lives at `bristlenose/llm/failure_classifier.py`.
 - _2026-06-21_ — extended the top banner to note `CopyProgressPill` was also deleted (copy progress moved onto the project row, commit `4313bff`); updated the determinate-progress + copying rows in the state-catalog tables to point at the row indicator (`ProjectRowActivityIndicator` / `ProjectSubtitle`) instead of the deleted pill. `OllamaDownloadPill` is now the only surviving toolbar pill.
 - _2026-06-05_ — **Popover & status-surface state catalog + display-kind
@@ -228,7 +229,7 @@ different form when that's more appropriate and natural to the moment.
 | **Choice / picker** | grid or radio list of options | `IconPickerPopover` (symbol grid); Ollama model picker (radio list) | shipped |
 | **Dialog / confirmation** (blocking on the user) | prompt + action button(s) | 4 `.alert` sites; AI & Privacy consent sheet; OllamaDownloadPill needs-Ollama phase | shipped |
 | **Terminal failure with reason** | failure buckets + reason + Copy / Show Log | diagnostic popover (`unifiedPopoverBody`) | shipped |
-| **Ephemeral note** (toast) | bottom-of-window, auto-dismiss or undo | informational toast (3s); undoable-removal toast (8s) — `ToastSurface` | shipped (see toast anti-pattern) |
+| **Ephemeral note** (toast) | bottom-of-window, auto-dismiss or undo | ~~informational toast (3s); undoable-removal toast (8s) — `ToastSurface`~~ | **retired 19 Aug 2026** — all six removed; the display-kind has no shipped instance on the Mac. See the anti-pattern below |
 | **Info / explanatory card** | full-content prose + per-item actions | `UnsupportedSubsetView` | shipped |
 | **Success poster** | small graphical summary of a settled good state | — _none_ | **not shipped** — the one genuine candidate-new (optional; see deferred appendix) |
 
@@ -494,6 +495,25 @@ When you find yourself wanting to surface a new error, status, or note,
    > `CauseCategoryEnum` changes; the Python-side parity test
    > (`tests/test_events.py::test_cause_category_matches_swift_enum`) pins the
    > *value set* but can't see either Swift file.
+   >
+   > **Aug 2026 — it bit again, and the fix is structural this time.** Adding
+   > `unusable_input` walked into the same shape, plus one the Jul entry
+   > didn't name: **the two mirrors are not the same case set.**
+   > `output_exists` exists only on `PipelineFailureCategory`,
+   > `unusable_input` on both, and neither list is a superset of the other —
+   > deliberately, since a refusal of the whole *attempt* can never describe
+   > one file. Both enums also decoded an unrecognised value by **throwing**,
+   > and the category sits inside `Cause` inside `StageFailure` inside the
+   > summary, so one unmirrored word cost the entire terminus event: no
+   > summary, no per-stage rows, no cause, for a run that merely used a newer
+   > word. Adding the missing case — the Jul fix — does nothing for the next
+   > one. Both now decode unknown as `.unknown`
+   > (`init(from decoder:)` on each), so the "schema-additive" contract this
+   > enum is documented under finally holds in the direction that matters.
+   > Pinned by `IngestOutcomeTests.everyKnownCategoryStillDecodesToItself`
+   > and `.theTwoCategoryEnumsAreDeliberatelyDifferentSets`. **Grep both
+   > enums still — the fallback keeps the event readable, it does not make
+   > the label right.**
 
 ## Anti-patterns
 
@@ -547,6 +567,7 @@ When you find yourself wanting to surface a new error, status, or note,
 - **Don't bypass `MessageKind` for "just one weird case".** If a
   message looks like it doesn't fit, it almost certainly does and
   you're over-thinking it. Re-read the kind table.
+- **Don't reach for a toast. There are none left on the Mac, and that was a decision.** All six `desktop.toast.*` messages went on 19 Aug 2026 — four drop refusals, an Add-Files scold, and the undoable-removal toast whose 8s window also expired ⌘Z. The replacements are the system's own: `validateDrop` returning `[]` so AppKit draws no highlight, swaps to the operation-not-allowed pointer and springs the item back; a persistent `+N unanalysed` row delta; a dimmed menu item; `NSAnimationEffect.poof`; and Edit ▸ Undo with no clock. **This document already contained the argument** — the bullet below calls transient UI "the auto-dismissing-toast anti-pattern" while the catalogue above listed two toasts as shipped. What was missing was not the rule but the *drawing*: no mockup had ever rendered them, and the review happens on the mockup. Rationale and the HIG citation: `docs/design-analysis-lifecycle.md` §4.2.
 - **Don't let in-flight progress flick past unread.** When stages advance
   faster than a human can read, a replace-in-place running surface is the
   auto-dismissing-toast anti-pattern in another costume — transient UI for

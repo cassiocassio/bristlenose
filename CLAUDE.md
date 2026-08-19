@@ -197,6 +197,8 @@ Bit on 4 Aug 2026: `build_report.py` forced `Console(width=92)` regardless of th
 
 **When you've verified something only through a pipe, say so** — and prefer running it bare at least once (or with a pty) before claiming it works. The related house idiom is already documented above: `Console(width=min(80, Console().width))` — never force a console wider than the terminal.
 
+**The desktop analogue, and it is the more expensive one: a test suite hides the whole rendered surface.** On 20 Aug 2026 the format-torture corpus had been run through the acceptance harness repeatedly and reported clean. One screenshot of the *same corpus* in the `.app` produced three defects — diagnostic rows that named no file, refusals rendered in error red, and fifteen sessions dropped behind a `transcripts: succeeded=57` that the next bucket contradicted with `attempted=42`. None was visible to 4,037 passing tests, because a test asserts what someone thought to ask, and nobody had thought to ask what the pane *said*. **After any pipeline or diagnostic change, run the corpus through the app once and look at it** — `experiments/folder-of-horrors/synthesise.sh` builds it. The tell for that last class is generic and worth carrying: **a summary bucket whose `attempted` disagrees with the next bucket's**, which nothing in the schema forbids.
+
 ### A backgrounded `pytest … | tail`'s reported exit code is `tail`'s, not pytest's
 
 Sibling to the two above, and the one most likely to produce a **confident false

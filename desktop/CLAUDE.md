@@ -800,6 +800,7 @@ These are the layered blockers that broke desktop ChatGPT runs end-to-end. Each 
 - KeychainHelper tests always use `InMemoryKeychain`, never real SecItem — avoids overwriting real API keys (SIGKILL bypasses teardown, so cleanup is not crash-safe)
 - ProjectIndex tests always use `ProjectIndex(fileURL: tempURL)`, never the default Application Support path
 - I18n tests use `configure(localesDirectory:)` with fixtures in `BristlenoseTests/Fixtures/`, never `findLocalesDirectory()` (which hardcodes dev paths)
+- **A bare `I18n()` in a test returns the raw key, so any assertion on rendered text is silently an assertion about the key name.** `t()` falls back to returning the key on a miss, and an unconfigured instance misses everything. So `#expect(!label.lowercased().contains("failure"))` passes when `label` is `desktop.chrome.notAnalysedCount` — not because the copy is right, but because the *identifier* happens not to contain the word. Two tests passed this way on 20 Aug 2026 and a third failed, which is the only reason it was noticed. **Assert on the decision, not the translation:** extract the key choice into a pure function (`bucketCountKey`) and test that; leave whether the key resolves to good copy to `check-locales.py` and a native reviewer
 
 ### Test target setup
 

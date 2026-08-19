@@ -93,18 +93,25 @@ final class WindowRoster: ObservableObject {
     /// that no longer fits in a sentence. (The cost of that is a mild dead end;
     /// see the design doc, where it is accepted knowingly.)
     ///
-    /// **Self is excluded deliberately.** Two observers register a window —
-    /// `.onAppear` and `.onChange(of: windowGroup, initial: true)` — and their
-    /// order is not guaranteed, so if `claim` happens to land first the window
-    /// would find itself in `held` and conclude it had company. Excluding the
-    /// asker makes the answer independent of that race, the same reasoning
-    /// `anyProjectShown(excluding:)` already carries.
+    /// **Company is measured against `roles`, not `held` — and that is the whole
+    /// correctness of this method.** `held` is populated by `claim`, which runs
+    /// from a *different* observer (`.onChange(of: windowGroup, initial: true)`)
+    /// than the one that asks this (`.onAppear`). Reading `held` therefore made
+    /// the answer depend on the interleaving of two observers across every open
+    /// window — and at **relaunch, when macOS restores them all at once, every
+    /// `.onAppear` can run before the first `claim` lands, so every restored
+    /// window saw an empty roster and every one became a master.** Observed on
+    /// screen, 18 Aug 2026: five restored windows, five project lists.
+    ///
+    /// `roles` is written synchronously *here*, so the first caller finds it
+    /// empty and takes master, and every later caller sees that entry. No second
+    /// observer, no ordering to get wrong.
     ///
     /// **Fixed once**, so a master does not become a child the moment a second
     /// window opens beside it.
     func role(for windowID: UUID) -> Role {
         if let existing = roles[windowID] { return existing }
-        let hasCompany = held.keys.contains { $0 != windowID }
+        let hasCompany = roles.keys.contains { $0 != windowID }
         let assigned: Role = hasCompany ? .child : .master
         roles[windowID] = assigned
         return assigned

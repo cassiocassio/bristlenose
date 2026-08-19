@@ -287,6 +287,34 @@ struct WindowRoleTests {
         #expect(r.role(for: master) == .master, "asking again must not re-decide")
     }
 
+    @Test("Restoring five windows at once yields one master, not five")
+    func batchRestoreDoesNotMintFiveMasters() {
+        // **The bug this method was rewritten for, seen on screen 18 Aug 2026:
+        // five restored windows, five project lists.** At relaunch macOS brings
+        // every window back at once, so several `.onAppear` blocks run before
+        // the first `claim` — and while the company test read `held` (which only
+        // `claim` writes) each of them saw an empty roster and took master.
+        //
+        // The batch is the shape that matters: no interleaved claims at all.
+        let r = fresh()
+        let windows = (0..<5).map { _ in UUID() }
+        let roles = windows.map { r.role(for: $0) }
+
+        #expect(roles.filter { $0 == .master }.count == 1,
+                "exactly one window carries the project list")
+        #expect(roles.first == .master, "and it is the first one back")
+        #expect(roles.dropFirst().allSatisfy { $0 == .child })
+    }
+
+    @Test("Asking is enough — a window never claimed still counts as company")
+    func askingRegisters() {
+        // The property the fix turns on: `role(for:)` writes its own answer, so
+        // it does not depend on a second observer having run.
+        let r = fresh()
+        _ = r.role(for: UUID())
+        #expect(r.role(for: UUID()) == .child)
+    }
+
     @Test("Claiming before asking does not make the first window a child")
     func roleSurvivesTheObserverRace() {
         // Two observers register a window — .onAppear and .onChange(initial:) —

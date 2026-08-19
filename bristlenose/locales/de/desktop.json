@@ -218,7 +218,7 @@
     "welcomeBody": "Ziehen Sie einen Ordner mit Interview-Aufnahmen in die Seitenleiste, oder klicken Sie auf + Neues Projekt, um zu starten.",
     "dropProjectOntoProjectToast": "„%@“ ist bereits ein Bristlenose-Projekt — ziehen Sie stattdessen die Quelldateien.",
     "dropOntoRunningProject": "Beenden oder stoppen Sie den laufenden Vorgang, bevor Sie weitere hinzuf\u00fcgen.",
-    "dropOntoAnalysedProject": "Das Hinzuf\u00fcgen weiterer Interviews zu einem analysierten Projekt wird noch nicht unterst\u00fctzt.",
+    "dropOntoFileSubsetProject": "Dateien hinzugef\u00fcgt. Sie erscheinen erst im Bericht, wenn das Projekt erneut analysiert wird.",
     "addFilesPrompt": "Hinzuf\u00fcgen",
     "addFilesMessage": "Interviews zu \u201e%@\u201c hinzuf\u00fcgen",
     "addFilesNoProject": "W\u00e4hlen Sie zuerst ein Projekt aus und f\u00fcgen Sie dann Dateien hinzu.",

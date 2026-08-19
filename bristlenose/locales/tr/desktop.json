@@ -218,7 +218,7 @@
     "welcomeBody": "Görüşme kayıtlarından oluşan bir klasörü kenar çubuğuna sürükleyin ya da başlamak için + Yeni Proje’ye tıklayın.",
     "dropProjectOntoProjectToast": "“%@” zaten bir Bristlenose projesi — bunun yerine kaynak dosyalarını sürükleyin.",
     "dropOntoRunningProject": "Daha fazla eklemeden önce geçerli çalıştırmayı bitirin ya da durdurun.",
-    "dropOntoAnalysedProject": "Analiz edilmiş bir projeye fazladan görüşme eklemek henüz desteklenmiyor.",
+    "dropOntoFileSubsetProject": "Dosyalar eklendi. Proje yeniden analiz edilene kadar raporda yer almazlar.",
     "addFilesPrompt": "Ekle",
     "addFilesMessage": "\u201c%@\u201d projesine oturum ekleyin",
     "addFilesNoProject": "\u00d6nce bir proje se\u00e7in, sonra ona dosya ekleyin.",

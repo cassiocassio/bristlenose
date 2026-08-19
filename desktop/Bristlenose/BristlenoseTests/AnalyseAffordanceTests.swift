@@ -172,3 +172,65 @@ import Foundation
         #expect(ProjectFolderWatcher.ingestableCount(eligible) == 0)
     }
 }
+
+/// Pins that every surface offering **Analyse** asks one question.
+///
+/// The context menu and the unanalysed sheet both offer the verb. They agreed
+/// by coincidence for as long as only one of them existed; `analyseIsOffered`
+/// makes them agree by construction, the same way `ingestableFileCount` made
+/// the pane and the menu agree about whether there was anything to analyse.
+@Suite struct AnalyseOfferedTests {
+
+    private func data(newFiles: Int = 0, sessions: Int? = nil, files: Int = 1) -> UnanalysedState {
+        UnanalysedState(
+            newFiles: (0..<newFiles).map { URL(fileURLWithPath: "/tmp/p\($0).mp4") },
+            missingFiles: [], sessionCount: sessions, totalDurationSeconds: nil,
+            ingestableFileCount: files
+        )
+    }
+
+    @Test func theEverydayCase_analysedProjectWithFinderAdditions() {
+        // What the sheet exists for: files arrived in Finder, the watcher saw
+        // them, and the sheet can now start the run it is describing.
+        #expect(SidebarOutlineController.analyseIsOffered(
+            isFolderShaped: true, hasPath: true, state: .idle,
+            data: data(newFiles: 3, sessions: 14)))
+    }
+
+    @Test func aFileSubsetProjectIsNotOffered() {
+        // The CLI cannot scope a run to a file list, so the sheet stays
+        // informational rather than dimming a control nothing could enable.
+        #expect(!SidebarOutlineController.analyseIsOffered(
+            isFolderShaped: false, hasPath: true, state: .idle,
+            data: data(newFiles: 3, sessions: 14)))
+    }
+
+    @Test func aPlaceholderWithNoFolderIsNotOffered() {
+        #expect(!SidebarOutlineController.analyseIsOffered(
+            isFolderShaped: true, hasPath: false, state: .idle, data: data(newFiles: 3)))
+    }
+
+    @Test func aRunningProjectIsNotOffered() {
+        #expect(!SidebarOutlineController.analyseIsOffered(
+            isFolderShaped: true, hasPath: true, state: .running,
+            data: data(newFiles: 3, sessions: 14)))
+    }
+
+    @Test func aStoppedOrFailedProjectKeepsTheRetry() {
+        for state in [PipelineState.stopped(stagesComplete: []), .failed("boom", category: .unknown)] {
+            #expect(SidebarOutlineController.analyseIsOffered(
+                isFolderShaped: true, hasPath: true, state: state,
+                data: data(newFiles: 5, sessions: 0)),
+                "\(state) must stay retryable")
+        }
+    }
+
+    @Test func nothingToDoIsNotOffered() {
+        // Analysed, nothing new — the state that wants Re-analyse and nothing
+        // else. The sheet cannot reach this case (it opens on deltas), but the
+        // predicate is shared, so it is pinned here too.
+        #expect(!SidebarOutlineController.analyseIsOffered(
+            isFolderShaped: true, hasPath: true, state: .idle,
+            data: data(newFiles: 0, sessions: 14)))
+    }
+}

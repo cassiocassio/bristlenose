@@ -218,7 +218,7 @@
     "welcomeBody": "Sleep een map met interviewopnamen naar de zijbalk of klik op + Nieuw project om te beginnen.",
     "dropProjectOntoProjectToast": "“%@” is al een Bristlenose-project — sleep in plaats daarvan de bronbestanden.",
     "dropOntoRunningProject": "Voltooi of stop de huidige run voordat je meer toevoegt.",
-    "dropOntoAnalysedProject": "Extra interviews toevoegen aan een geanalyseerd project wordt nog niet ondersteund.",
+    "dropOntoFileSubsetProject": "Bestanden toegevoegd. Ze staan pas in het rapport nadat het project opnieuw is geanalyseerd.",
     "addFilesPrompt": "Voeg toe",
     "addFilesMessage": "Voeg sessies toe aan \u201c%@\u201d",
     "addFilesNoProject": "Selecteer eerst een project en voeg er daarna bestanden aan toe.",

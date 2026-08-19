@@ -218,7 +218,7 @@
     "welcomeBody": "Trascina una cartella di registrazioni di interviste nella barra laterale, oppure fai clic su + Nuovo progetto per iniziare.",
     "dropProjectOntoProjectToast": "“%@” è già un progetto Bristlenose — trascina invece i suoi file di origine.",
     "dropOntoRunningProject": "Completa o interrompi l'esecuzione corrente prima di aggiungerne altri.",
-    "dropOntoAnalysedProject": "L'aggiunta di altre interviste a un progetto analizzato non è ancora supportata.",
+    "dropOntoFileSubsetProject": "File aggiunti. Non saranno nel report finch\u00e9 il progetto non viene rianalizzato.",
     "addFilesPrompt": "Aggiungi",
     "addFilesMessage": "Aggiungi sessioni a \u201c%@\u201d",
     "addFilesNoProject": "Seleziona prima un progetto, poi aggiungi i file.",

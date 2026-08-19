@@ -218,7 +218,7 @@
     "welcomeBody": "Vedä haastattelutallenteiden kansio sivupalkkiin tai napsauta + Uusi projekti aloittaaksesi.",
     "dropProjectOntoProjectToast": "”%@” on jo Bristlenose-projekti — vedä sen sijaan sen lähdetiedostot.",
     "dropOntoRunningProject": "Viimeistele tai pysäytä nykyinen ajo ennen kuin lisäät lisää.",
-    "dropOntoAnalysedProject": "Ylimääräisten haastattelujen lisääminen analysoituun projektiin ei ole vielä tuettua.",
+    "dropOntoFileSubsetProject": "Tiedostot lis\u00e4tty. Ne tulevat raporttiin vasta, kun projekti analysoidaan uudelleen.",
     "addFilesPrompt": "Lis\u00e4\u00e4",
     "addFilesMessage": "Lis\u00e4\u00e4 istuntoja kohteeseen \u201d%@\u201d",
     "addFilesNoProject": "Valitse ensin projekti ja lis\u00e4\u00e4 sitten tiedostoja siihen.",

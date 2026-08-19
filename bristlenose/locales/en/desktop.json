@@ -218,7 +218,7 @@
     "welcomeBody": "Drag a folder of interview recordings into the sidebar, or click + New Project to start.",
     "dropProjectOntoProjectToast": "“%@” is already a Bristlenose project — drag its source files instead.",
     "dropOntoRunningProject": "Finish or stop the current run before adding more.",
-    "dropOntoAnalysedProject": "Adding extra interviews to an analysed project isn't supported yet.",
+    "dropOntoFileSubsetProject": "Files added. They won't be in the report until the project is analysed again.",
     "addFilesPrompt": "Add",
     "addFilesMessage": "Add sessions to “%@”",
     "addFilesNoProject": "Select a project first, then add files to it.",

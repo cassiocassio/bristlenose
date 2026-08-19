@@ -233,7 +233,7 @@
     "welcomeBody": "Přetáhněte složku s nahrávkami rozhovorů do postranního panelu nebo klikněte na + Nový projekt a začněte.",
     "dropProjectOntoProjectToast": "„%@“ už je projekt Bristlenose — přetáhněte místo toho jeho zdrojové soubory.",
     "dropOntoRunningProject": "Před přidáním dalších dokončete nebo zastavte aktuální běh.",
-    "dropOntoAnalysedProject": "Přidávání dalších rozhovorů do analyzovaného projektu zatím není podporováno.",
+    "dropOntoFileSubsetProject": "Soubory p\u0159id\u00e1ny. Ve zpr\u00e1v\u011b se objev\u00ed a\u017e po op\u011btovn\u00e9 anal\u00fdze projektu.",
     "addFilesPrompt": "P\u0159idat",
     "addFilesMessage": "P\u0159idat sezen\u00ed do \u201e%@\u201c",
     "addFilesNoProject": "Nejprve vyberte projekt a pot\u00e9 do n\u011bj p\u0159idejte soubory.",

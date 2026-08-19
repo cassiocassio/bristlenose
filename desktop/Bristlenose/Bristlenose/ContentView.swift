@@ -92,12 +92,20 @@ private struct CopyDropPresentation: ViewModifier {
     @Binding var copyDiskSpaceAlert: CopyDiskSpaceAlertState?
     let i18n: I18n
     let diskSpaceMessage: (CopyDiskSpaceAlertState) -> String
+    /// Resolves the sheet's primary action, or `nil` when this project cannot
+    /// run right now. Resolved per presentation rather than captured once, so
+    /// the answer reflects the pipeline state at the moment the sheet opens.
+    let analyseAction: (NewFilesSheetState) -> (() -> Void)?
 
     func body(content: Content) -> some View {
         content
             .sheet(item: $newFilesSheet) { state in
-                NewFilesSheet(state: state, onDismiss: { newFilesSheet = nil })
-                    .environmentObject(i18n)
+                NewFilesSheet(
+                    state: state,
+                    onDismiss: { newFilesSheet = nil },
+                    onAnalyse: analyseAction(state)
+                )
+                .environmentObject(i18n)
             }
             .alert(
                 i18n.t("desktop.chrome.copyDiskSpaceTitle"),
@@ -805,7 +813,8 @@ struct ContentView: View {
             newFilesSheet: $newFilesSheet,
             copyDiskSpaceAlert: $copyDiskSpaceAlert,
             i18n: i18n,
-            diskSpaceMessage: diskSpaceMessage(for:)
+            diskSpaceMessage: diskSpaceMessage(for:),
+            analyseAction: analyseActionForSheet(_:)
         ))
         .sheet(item: $spotlightConfirm) { state in
             SpotlightConfirmSheet(
@@ -1138,6 +1147,25 @@ struct ContentView: View {
     private func revealInFinder(_ project: Project) {
         guard let path = revealPath(for: project) else { return }
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
+    }
+
+    /// The sheet's primary action, or `nil` when **Analyse** is not on offer
+    /// for this project right now.
+    ///
+    /// Asks `SidebarOutlineController.analyseIsOffered` — the same predicate
+    /// the context menu asks — rather than re-deriving "folder-shaped, has a
+    /// path, pipeline free". Two copies of that reasoning is how a sheet comes
+    /// to offer a run the menu says is unavailable.
+    private func analyseActionForSheet(_ sheet: NewFilesSheetState) -> (() -> Void)? {
+        guard let project = projectIndex.projects.first(where: { $0.id == sheet.projectID })
+        else { return nil }
+        guard SidebarOutlineController.analyseIsOffered(
+            isFolderShaped: project.inputFiles == nil,
+            hasPath: !project.path.isEmpty,
+            state: pipelineRunner.state[project.id],
+            data: projectIndex.unanalysed[project.id]
+        ) else { return nil }
+        return { pipelineRunner.start(project: project) }
     }
 
     /// Open the watcher-mode unanalysed-files sheet for a project. No-op if
@@ -1753,10 +1781,20 @@ struct ContentView: View {
                     basenames: Set(copied.map { $0.lastPathComponent })
                 )
                 if alreadyAnalysed && !wasFolderShaped {
-                    // File-subset project: files are in the folder but the CLI
-                    // can't scope a `--files` run, so it won't pick them up
-                    // until a full re-analysis. Informational only.
-                    toast.show(i18n.t("desktop.chrome.dropOntoAnalysedProject"))
+                    // File-subset project: the copy succeeded, so the files ARE
+                    // in the folder — and a run is folder-scoped
+                    // (`["run", project.path]`, `PipelineRunner:1222`), so a
+                    // full re-analysis would pick them up. What is missing is a
+                    // way to start one: `canAnalyse` requires `inputFiles ==
+                    // nil`, and Re-analyse is not built.
+                    //
+                    // The old copy said this "isn't supported yet", which was
+                    // wrong twice — inclusion is entirely possible and costs a
+                    // re-run, and the sentence generalised to every analysed
+                    // project when a folder-shaped one folds new files in
+                    // incrementally. Say what happened and what it costs; when
+                    // Re-analyse ships, offer it here rather than describing it.
+                    toast.show(i18n.t("desktop.chrome.dropOntoFileSubsetProject"))
                     return
                 }
                 if wasFolderShaped {

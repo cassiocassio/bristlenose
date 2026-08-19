@@ -218,7 +218,7 @@
     "welcomeBody": "Arrossega una carpeta d'enregistraments d'entrevistes a la barra lateral, o fes clic a + Projecte nou per començar.",
     "dropProjectOntoProjectToast": "“%@” ja és un projecte del Bristlenose — arrossega'n els fitxers d'origen.",
     "dropOntoRunningProject": "Acaba o atura l'execució actual abans d'afegir-ne més.",
-    "dropOntoAnalysedProject": "Encara no es poden afegir entrevistes a un projecte ja analitzat.",
+    "dropOntoFileSubsetProject": "Fitxers afegits. No seran a l'informe fins que no es torni a analitzar el projecte.",
     "addFilesPrompt": "Afegeix",
     "addFilesMessage": "Afegeix sessions a “%@”",
     "addFilesNoProject": "Selecciona primer un projecte i després afegeix-hi fitxers.",

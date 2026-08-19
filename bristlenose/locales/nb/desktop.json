@@ -218,7 +218,7 @@
     "welcomeBody": "Dra en mappe med intervjuopptak inn i sidepanelet, eller klikk + Nytt prosjekt for å starte.",
     "dropProjectOntoProjectToast": "«%@» er allerede et Bristlenose-prosjekt – dra kildefilene i stedet.",
     "dropOntoRunningProject": "Fullfør eller stopp den pågående kjøringen før du legger til mer.",
-    "dropOntoAnalysedProject": "Å legge til flere intervjuer i et analysert prosjekt støttes ikke ennå.",
+    "dropOntoFileSubsetProject": "Filer lagt til. De kommer f\u00f8rst med i rapporten n\u00e5r prosjektet analyseres p\u00e5 nytt.",
     "addFilesPrompt": "Legg til",
     "addFilesMessage": "Legg til \u00f8kter i \u00ab%@\u00bb",
     "addFilesNoProject": "Velg et prosjekt f\u00f8rst, og legg deretter til filer i det.",

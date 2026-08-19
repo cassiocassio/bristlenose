@@ -234,7 +234,7 @@
     "welcomeBody": "Przeciągnij folder z nagraniami wywiadów na pasek boczny lub kliknij + Nowy projekt, aby rozpocząć.",
     "dropProjectOntoProjectToast": "„%@” jest już projektem Bristlenose — przeciągnij zamiast tego jego pliki źródłowe.",
     "dropOntoRunningProject": "Zakończ lub zatrzymaj bieżącą analizę, zanim dodasz więcej.",
-    "dropOntoAnalysedProject": "Dodawanie kolejnych wywiadów do przeanalizowanego projektu nie jest jeszcze obsługiwane.",
+    "dropOntoFileSubsetProject": "Pliki dodane. Pojawi\u0105 si\u0119 w raporcie dopiero po ponownej analizie projektu.",
     "addFilesPrompt": "Dodaj",
     "addFilesMessage": "Dodaj sesje do \u201e%@\u201d",
     "addFilesNoProject": "Najpierw wybierz projekt, a nast\u0119pnie dodaj do niego pliki.",

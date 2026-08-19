@@ -62,6 +62,16 @@ struct NewFilesSheetState: Identifiable {
 struct NewFilesSheet: View {
     let state: NewFilesSheetState
     let onDismiss: () -> Void
+    /// The act the sheet is describing, when it is available.
+    ///
+    /// The sheet used to end in **Close** and nothing else — it reported files
+    /// that were not in the analysis and offered no way to put them there,
+    /// which is a dead end at exactly the moment the researcher has decided to
+    /// act. `nil` when the project cannot run right now (already running, or
+    /// a file-subset project the CLI cannot scope), in which case the sheet
+    /// stays informational rather than dimming a control it can never enable —
+    /// the context-menu rule, applied to a sheet.
+    var onAnalyse: (() -> Void)?
     @EnvironmentObject var i18n: I18n
 
     private var heading: String {
@@ -122,6 +132,18 @@ struct NewFilesSheet: View {
                     // that a Close button is the dismissive action, not the
                     // affirmative (Return) one.
                     .keyboardShortcut(.cancelAction)
+                if let onAnalyse {
+                    // Same key as the context menu and the empty-project pane,
+                    // so all three say one word. Trailing and default: Return
+                    // does the thing the sheet exists to offer, and the run is
+                    // stoppable and leaves curation intact, so it is not the
+                    // kind of act that wants a confirmation in front of it.
+                    Button(i18n.t("desktop.menu.project.analyse")) {
+                        onAnalyse()
+                        onDismiss()
+                    }
+                    .keyboardShortcut(.defaultAction)
+                }
             }
         }
         .padding(20)

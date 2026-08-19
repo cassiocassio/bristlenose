@@ -1721,13 +1721,35 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     ///
     /// The matrix this implements is `docs/design-analysis-lifecycle.md` §4.1.
     private func canAnalyse(_ id: UUID, state: PipelineState?) -> Bool {
-        guard let p = projectIndex?.projects.first(where: { $0.id == id }),
-              p.inputFiles == nil, !p.path.isEmpty else { return false }
+        guard let p = projectIndex?.projects.first(where: { $0.id == id })
+        else { return false }
+        return Self.analyseIsOffered(
+            isFolderShaped: p.inputFiles == nil,
+            hasPath: !p.path.isEmpty,
+            state: state,
+            data: projectIndex?.unanalysed[id]
+        )
+    }
+
+    /// The whole predicate, pure — so every surface that offers **Analyse**
+    /// asks one question rather than re-deriving three.
+    ///
+    /// The unanalysed sheet is the second caller: it lists files that are not
+    /// in the analysis, so its primary action is the same verb the context menu
+    /// offers, and the two must agree about when that verb is available. A
+    /// second copy of "folder-shaped, has a path, pipeline free" is how they
+    /// would come to disagree — the same failure the pane and the menu had
+    /// about whether there was anything to analyse at all.
+    nonisolated static func analyseIsOffered(
+        isFolderShaped: Bool, hasPath: Bool,
+        state: PipelineState?, data: UnanalysedState?
+    ) -> Bool {
+        guard isFolderShaped, hasPath else { return false }
         switch state ?? .idle {
         case .idle, .stopped, .failed, .failedWithDiagnostic: break
         default: return false
         }
-        return Self.hasWorkToDo(projectIndex?.unanalysed[id])
+        return hasWorkToDo(data)
     }
 
     /// The "is there work to do" half of `canAnalyse`, pure so it can be tested

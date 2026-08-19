@@ -1483,10 +1483,20 @@ var args = ["run", project.path, "--no-serve"]
         status: Int32, lines: [String]
     ) -> PipelineState {
         // Prefer the structured cause emitted by the Python abandon path
-        // (`pipeline-events.jsonl` → `run_failed` → `cause.{category,message}`).
-        // Stdout regex is a best-effort fallback for older Python versions
-        // and crash-style failures that exit before writing a terminus event.
-        let derived = project.flatMap { Self.deriveFailureFromEvents(project: $0) }
+        // (`pipeline-events.jsonl` → `run_failed` → `cause.{category,message}`)
+        // — but only when that terminus belongs to THIS attempt. The file is
+        // append-only, so an attempt refused before the lifecycle opens finds a
+        // previous run's cause sitting at the tail. Stdout regex is then the
+        // fallback, as it already is for older Python versions and crash-style
+        // failures that exit before writing a terminus at all.
+        let liveProgress = liveData.progress[projectID]
+        let derived = project.flatMap {
+            Self.deriveFailureFromEvents(
+                project: $0,
+                spawnedAt: liveProgress?.startedAt,
+                attachedFromOrphan: liveProgress?.attachedFromOrphan ?? false
+            )
+        }
         // The run used whatever provider was active when it spawned; unless the
         // user switched since exit (rare, and harmless), that's still the live
         // `activeProvider`. Same source `overlayAPIKeys` reads at spawn time.
@@ -1668,12 +1678,67 @@ var args = ["run", project.path, "--no-serve"]
         return hasDone && hasReport
     }
 
+    /// Wire format for `started_at`: Python writes
+    /// `datetime.now(utc).isoformat()` with `+00:00` swapped for `Z`, so
+    /// microseconds are present whenever they are non-zero and absent when they
+    /// are not. Both spellings have to parse — the committed smoke fixture uses
+    /// the second.
+    private static let iso8601WithFraction: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    private static let iso8601Plain = ISO8601DateFormatter()
+
+    nonisolated static func parseEventTimestamp(_ raw: String) -> Date? {
+        iso8601WithFraction.date(from: raw) ?? iso8601Plain.date(from: raw)
+    }
+
+    /// A terminus event may describe a *previous* run, and must not be allowed
+    /// to headline this one.
+    ///
+    /// `pipeline-events.jsonl` is append-only and is never truncated between
+    /// runs, so its tail can hold a `run_failed` from hours ago. An attempt that
+    /// is **refused before the lifecycle opens** — `outputExists` is the
+    /// everyday one — writes no terminus of its own, so a naive tail read
+    /// returns the stale one, and it then outranks the live stdout carrying the
+    /// real blocker. Observed 19 Aug 2026: the popover headlined "EOF when
+    /// reading a line" from an eleven-hour-old run while "Output directory
+    /// already exists" sat below it under *Last output*. The researcher is told
+    /// about a failure that is not the one standing in their way.
+    ///
+    /// `applyEventProgress` already guards this exact trap for the progress
+    /// ring, and says so in its comment — but it gates by **run id**, which the
+    /// failure path cannot use: a refused attempt never mints one. So this gates
+    /// by time instead. A terminus that predates our spawn is not ours.
+    ///
+    /// Permissive on every unknown — no spawn time, an unparseable stamp, or an
+    /// adopted orphan (whose run legitimately began before we attached) all
+    /// return `true`. Suppressing a real cause is worse than showing a stale
+    /// one; the grace window absorbs sub-second ordering between our `Date()`
+    /// and Python's first write.
+    nonisolated static func terminusIsCurrentAttempt(
+        eventStartedAt: String?, spawnedAt: Date?, attachedFromOrphan: Bool
+    ) -> Bool {
+        if attachedFromOrphan { return true }
+        guard let spawnedAt,
+              let raw = eventStartedAt,
+              let eventStart = parseEventTimestamp(raw) else { return true }
+        return eventStart >= spawnedAt.addingTimeInterval(-terminusGraceSeconds)
+    }
+
+    /// Slack between our spawn `Date()` and the run's own `started_at`. Small
+    /// enough that the eleven-hour case this exists for can never pass.
+    static let terminusGraceSeconds: TimeInterval = 5
+
     /// Read the structured `cause` from `<project>/bristlenose-output/.bristlenose/
-    /// pipeline-events.jsonl` if a `run_failed` terminus is present. Returns
-    /// `(category, message)` or `nil` when the events log is missing, the most
-    /// recent event isn't `run_failed`, or the line can't be decoded.
+    /// pipeline-events.jsonl` if a `run_failed` terminus is present **and it
+    /// belongs to the attempt that just ended**. Returns `(category, message)`,
+    /// or `nil` when the events log is missing, the most recent event isn't
+    /// `run_failed`, the line can't be decoded, or the terminus predates this
+    /// attempt (see `terminusIsCurrentAttempt`).
     private static func deriveFailureFromEvents(
-        project: Project
+        project: Project, spawnedAt: Date?, attachedFromOrphan: Bool
     ) -> (PipelineFailureCategory, String?)? {
         let eventsURL = URL(fileURLWithPath: project.path)
             .appendingPathComponent("bristlenose-output")
@@ -1682,6 +1747,18 @@ var args = ["run", project.path, "--no-serve"]
         guard let event = EventLogReader.tailEvent(at: eventsURL),
               event.event == "run_failed",
               let cause = event.cause else {
+            return nil
+        }
+        guard terminusIsCurrentAttempt(
+            eventStartedAt: event.startedAt,
+            spawnedAt: spawnedAt,
+            attachedFromOrphan: attachedFromOrphan
+        ) else {
+            Self.logger.info(
+                """
+                ignoring stale run_failed terminus                 started_at=\(event.startedAt, privacy: .public) — it predates this attempt
+                """
+            )
             return nil
         }
         return (cause.category, cause.message)

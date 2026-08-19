@@ -218,7 +218,7 @@
     "welcomeBody": "Arrastra una carpeta con grabaciones de entrevistas a la barra lateral, o haz clic en + Nuevo proyecto para empezar.",
     "dropProjectOntoProjectToast": "«%@» ya es un proyecto de Bristlenose — arrastra sus archivos en su lugar.",
     "dropOntoRunningProject": "Termina o det\u00e9n la ejecuci\u00f3n actual antes de a\u00f1adir m\u00e1s.",
-    "dropOntoAnalysedProject": "A\u00fan no se admite a\u00f1adir entrevistas a un proyecto analizado.",
+    "dropOntoFileSubsetProject": "Archivos a\u00f1adidos. No estar\u00e1n en el informe hasta que se vuelva a analizar el proyecto.",
     "addFilesPrompt": "A\u00f1adir",
     "addFilesMessage": "A\u00f1adir sesiones a \u201c%@\u201d",
     "addFilesNoProject": "Selecciona primero un proyecto y luego a\u00f1ade archivos.",

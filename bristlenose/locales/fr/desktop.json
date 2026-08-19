@@ -218,7 +218,7 @@
     "welcomeBody": "Glissez un dossier d’enregistrements d’entretiens dans la barre latérale, ou cliquez sur + Nouveau projet pour commencer.",
     "dropProjectOntoProjectToast": "« %@ » est déjà un projet Bristlenose — glissez plutôt ses fichiers sources.",
     "dropOntoRunningProject": "Terminez ou arr\u00eatez l\u2019analyse en cours avant d\u2019en ajouter.",
-    "dropOntoAnalysedProject": "L\u2019ajout d\u2019entretiens suppl\u00e9mentaires \u00e0 un projet analys\u00e9 n\u2019est pas encore pris en charge.",
+    "dropOntoFileSubsetProject": "Fichiers ajout\u00e9s. Ils ne figureront dans le rapport qu'apr\u00e8s une nouvelle analyse du projet.",
     "addFilesPrompt": "Ajouter",
     "addFilesMessage": "Ajouter des entretiens \u00e0 \u00ab\u00a0%@\u00a0\u00bb",
     "addFilesNoProject": "S\u00e9lectionnez d\u2019abord un projet, puis ajoutez-y des fichiers.",

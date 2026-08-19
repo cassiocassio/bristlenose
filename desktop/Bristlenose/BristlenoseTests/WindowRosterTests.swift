@@ -235,215 +235,63 @@ struct WindowRosterTests {
     }
 }
 
+// MARK: - Keeping a peer window in step with the serve
 
-// MARK: - Master and child
-
-// Masters get projects, children get lenses. The role is what makes a child
-// unable to name a study it isn't showing: it has no project of its own, so
-// there is no second source to drift from the serve.
-//
-// Every case here is a state the researcher can reach by ordinary use, and two
-// of them (the order race, and the master closing) are the ones that would
-// otherwise be found by a cohort tester.
+// The whole mechanism of the peer model, and the seam where this class of bug
+// has already shipped twice in three days — `9f4183af` ("stop one window's
+// selection from resetting all the others") and `29f70e33` ("one window's
+// empty-sidebar click was deselecting all of them"). Third occurrence of a named
+// pattern, so it gets a helper and a suite rather than a comment.
 @MainActor
-@Suite("Window roles", .serialized)
-struct WindowRoleTests {
-
-    private func fresh() -> WindowRoster {
-        let r = WindowRoster.shared
-        r.resetForTesting()
-        return r
-    }
-
-    @Test("The first project window is the master")
-    func firstWindowIsMaster() {
-        let r = fresh()
-        #expect(r.role(for: UUID()) == .master)
-    }
-
-    @Test("A window opened alongside one is a child")
-    func secondWindowIsChild() {
-        let r = fresh()
-        let first = UUID()
-        _ = r.role(for: first)
-        r.claim(windowID: first, showing: nil)
-        #expect(r.role(for: UUID()) == .child)
-    }
-
-    @Test("The role is fixed — a master stays a master when company arrives")
-    func masterDoesNotBecomeChild() {
-        // The whole point of caching it. Recomputed, a master would flip to
-        // child the instant a second window opened beside it, and the project
-        // list would vanish from the window the researcher was working in.
-        let r = fresh()
-        let master = UUID()
-        #expect(r.role(for: master) == .master)
-        r.claim(windowID: master, showing: nil)
-
-        let child = UUID()
-        #expect(r.role(for: child) == .child)
-        r.claim(windowID: child, showing: nil)
-
-        #expect(r.role(for: master) == .master, "asking again must not re-decide")
-    }
-
-    @Test("Restoring five windows at once yields one master, not five")
-    func batchRestoreDoesNotMintFiveMasters() {
-        // **The bug this method was rewritten for, seen on screen 18 Aug 2026:
-        // five restored windows, five project lists.** At relaunch macOS brings
-        // every window back at once, so several `.onAppear` blocks run before
-        // the first `claim` — and while the company test read `held` (which only
-        // `claim` writes) each of them saw an empty roster and took master.
-        //
-        // The batch is the shape that matters: no interleaved claims at all.
-        let r = fresh()
-        let windows = (0..<5).map { _ in UUID() }
-        let roles = windows.map { r.role(for: $0) }
-
-        #expect(roles.filter { $0 == .master }.count == 1,
-                "exactly one window carries the project list")
-        #expect(roles.first == .master, "and it is the first one back")
-        #expect(roles.dropFirst().allSatisfy { $0 == .child })
-    }
-
-    @Test("Asking is enough — a window never claimed still counts as company")
-    func askingRegisters() {
-        // The property the fix turns on: `role(for:)` writes its own answer, so
-        // it does not depend on a second observer having run.
-        let r = fresh()
-        _ = r.role(for: UUID())
-        #expect(r.role(for: UUID()) == .child)
-    }
-
-    @Test("Claiming before asking does not make the first window a child")
-    func roleSurvivesTheObserverRace() {
-        // Two observers register a window — .onAppear and .onChange(initial:) —
-        // and their order is not guaranteed. If claim lands first the window is
-        // already in `held`, so a rule that asked "is anyone here" without
-        // excluding the asker would call the very first window a child and ship
-        // an app whose only window has no project list.
-        let r = fresh()
-        let only = UUID()
-        r.claim(windowID: only, showing: nil)
-        #expect(r.role(for: only) == .master)
-    }
-
-    @Test("With the master closed, a new window is still a child")
-    func childrenOnlyYieldsAnotherChild() {
-        // Decided 18 Aug 2026, and it is the one case where "am I first" and
-        // "does a master exist" disagree. ⌥⌘N means one thing everywhere —
-        // another lens window on the study I am looking at — and the cost (no
-        // route back to a project list without closing everything) is accepted
-        // knowingly rather than patched with a special case.
-        let r = fresh()
-        let master = UUID(), child = UUID()
-        _ = r.role(for: master); r.claim(windowID: master, showing: nil)
-        _ = r.role(for: child);  r.claim(windowID: child, showing: nil)
-
-        r.release(windowID: master)
-        #expect(r.hasMaster == false, "the role goes with the window — no promotion")
-        #expect(r.role(for: UUID()) == .child)
-    }
-
-    @Test("A surviving child is not promoted")
-    func noPromotion() {
-        // Promotion would make a window change shape because a *different*
-        // window closed, and it would be deleted at Stage 3b. Pinned so nobody
-        // adds it back as a convenience.
-        let r = fresh()
-        let master = UUID(), child = UUID()
-        _ = r.role(for: master); r.claim(windowID: master, showing: nil)
-        _ = r.role(for: child);  r.claim(windowID: child, showing: nil)
-
-        r.release(windowID: master)
-        #expect(r.role(for: child) == .child)
-    }
-
-    @Test("Close everything and the next window is a master again")
-    func emptyRosterRestoresAMaster() {
-        // The documented way back from the orphan state: close every window,
-        // then ⌥⌘N.
-        let r = fresh()
-        let a = UUID(), b = UUID()
-        _ = r.role(for: a); r.claim(windowID: a, showing: nil)
-        _ = r.role(for: b); r.claim(windowID: b, showing: nil)
-        r.release(windowID: a); r.release(windowID: b)
-
-        #expect(r.hasProjectWindow == false)
-        #expect(r.role(for: UUID()) == .master)
-    }
-}
-
-
-// MARK: - Which study a window is about
-
-// The decision that closes constraint 5. A master picks its study; a child
-// inherits the served one and has no selection to disagree with.
-@MainActor
-@Suite("Window project resolution")
-struct WindowProjectResolutionTests {
+@Suite("Selection follows the served study")
+struct SelectionSyncTests {
 
     private func project(_ name: String, _ path: String) -> Project {
         Project(id: UUID(), name: name, path: path)
     }
 
-    @Test("A master shows what it selected")
-    func masterFollowsSelection() {
-        let a = project("IKEA Study", "/s/a")
-        let resolved = WindowProjectResolution.project(
-            role: .master, selected: a, servedPath: "/s/a", projects: [a])
-        #expect(resolved?.path == "/s/a")
+    @Test("A window on another study is moved to the served one")
+    func followsTheServe() {
+        let a = project("IKEA", "/s/a"), b = project("Nokia", "/s/b")
+        #expect(SelectionSync.resolve(current: [.project(a.id)], served: b)
+                == [.project(b.id)])
     }
 
-    @Test("A master mid-switch still names what the researcher clicked")
-    func masterLeadsTheServe() {
-        // Deliberate, and the reason the guard lives at the mount site instead
-        // of here: after clicking B the title should say B immediately, with the
-        // pane showing a boot state. A title that lagged back to A would be
-        // lying about the click that just happened.
-        let a = project("IKEA Study", "/s/a")
-        let b = project("Nokia Diary", "/s/b")
-        let resolved = WindowProjectResolution.project(
-            role: .master, selected: b, servedPath: "/s/a", projects: [a, b])
-        #expect(resolved?.path == "/s/b")
+    @Test("A window parked on Welcome stays there")
+    func deselectIsLocal() {
+        // Rule 1, and the reason it exists: propagating an empty selection is
+        // the 17 Aug bug where one click on empty sidebar space sent every
+        // window to Welcome and stopped the serve.
+        let b = project("Nokia", "/s/b")
+        #expect(SelectionSync.resolve(current: [], served: b) == nil)
     }
 
-    @Test("A child shows the served study, whatever anyone selected")
-    func childFollowsTheServe() {
-        // The whole point. Even handed a selection — which a child never has —
-        // it takes the serve, so no argument between the two is representable.
-        let a = project("IKEA Study", "/s/a")
-        let b = project("Nokia Diary", "/s/b")
-        let resolved = WindowProjectResolution.project(
-            role: .child, selected: a, servedPath: "/s/b", projects: [a, b])
-        #expect(resolved?.path == "/s/b",
-                "a child must never be able to name a study it isn't showing")
+    @Test("A window already on the served study is left alone")
+    func noRedundantWrite() {
+        // Rule 2, and it is what breaks the feedback path rather than merely
+        // tidying it: selection drives switchProject, so rewriting an
+        // already-correct selection would re-enter the serve lifecycle in every
+        // window on every publish.
+        let a = project("IKEA", "/s/a")
+        #expect(SelectionSync.resolve(current: [.project(a.id)], served: a) == nil)
     }
 
-    @Test("A child with nothing served shows nothing")
-    func childWithNoServe() {
-        let a = project("IKEA Study", "/s/a")
-        #expect(WindowProjectResolution.project(
-            role: .child, selected: a, servedPath: nil, projects: [a]) == nil)
+    @Test("Nothing served changes nothing")
+    func nilServeIsNotAnInstruction() {
+        // Rule 3. `stop()` used to leave `currentProjectPath` populated, and a
+        // brand-new or volume-ejected study is deliberately unserved while
+        // still being the thing its window is about.
+        let a = project("IKEA", "/s/a")
+        #expect(SelectionSync.resolve(current: [.project(a.id)], served: nil) == nil)
     }
 
-    @Test("A child whose served path is not in the index shows nothing")
-    func childWithUnknownServe() {
-        // Fails to the welcome title rather than to a stale name. A window that
-        // kept naming the last study it knew about is exactly the drift the
-        // child shape exists to prevent.
-        let a = project("IKEA Study", "/s/a")
-        #expect(WindowProjectResolution.project(
-            role: .child, selected: a, servedPath: "/s/gone", projects: [a]) == nil)
-    }
-
-    @Test("A master with no selection shows nothing, even while a serve runs")
-    func masterOnWelcomeKeepsItsWelcome() {
-        // A master that has gone back to the welcome screen while children keep
-        // the serve up must not silently re-adopt the served study — it said
-        // Welcome because the researcher deselected.
-        let a = project("IKEA Study", "/s/a")
-        #expect(WindowProjectResolution.project(
-            role: .master, selected: nil, servedPath: "/s/a", projects: [a]) == nil)
+    @Test("A multi-selection survives a sibling's click")
+    func multiSelectIsNotDisturbed() {
+        // Falls out of rule 1 rather than needing its own branch: three studies
+        // being dragged into a folder is "not empty", so the drag is not yanked
+        // out from under the researcher by a click in another window.
+        let a = project("IKEA", "/s/a"), b = project("Nokia", "/s/b")
+        let multi: Set<SidebarSelection> = [.project(a.id), .project(b.id)]
+        #expect(SelectionSync.resolve(current: multi, served: b) == [.project(b.id)])
     }
 }

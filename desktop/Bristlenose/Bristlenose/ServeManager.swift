@@ -208,7 +208,13 @@ final class ServeManager: ObservableObject {
     /// Last project path passed to start() — used by restartIfRunning() and the
     /// DEBUG menu's reveal/log/provenance actions (the served project is the one
     /// whose report is on screen). Read-only outside ServeManager.
-    private(set) var currentProjectPath: String?
+    /// **`@Published` since 19 Aug 2026, and it has to be.** Peer windows sync
+    /// their selection from this, and it was a plain stored property — the sync
+    /// appeared to work only because `state` happens to be written in the same
+    /// synchronous block. That is a coincidence, not a design, and the first
+    /// reordering of those two lines would have broken every sibling window
+    /// silently.
+    @Published private(set) var currentProjectPath: String?
 
     /// The most-recently-fronted project's sidecar, kept warm so switching
     /// back is an instant hand-off (Phase A2 warm-sidecar pool, single-slot).

@@ -110,16 +110,16 @@ struct WindowCommandTests {
         // Two body passes of the same window build two different closures. The
         // menu must read that as "same window", or every re-render looks like
         // the front window changed.
-        #expect(WindowCommandSink(windowID: windowA, role: .master, perform: { _ in })
-                == WindowCommandSink(windowID: windowA, role: .master, perform: { _ in }))
-        #expect(WindowCommandSink(windowID: windowA, role: .master, perform: { _ in })
-                != WindowCommandSink(windowID: windowB, role: .master, perform: { _ in }))
+        #expect(WindowCommandSink(windowID: windowA, perform: { _ in })
+                == WindowCommandSink(windowID: windowA, perform: { _ in }))
+        #expect(WindowCommandSink(windowID: windowA, perform: { _ in })
+                != WindowCommandSink(windowID: windowB, perform: { _ in }))
     }
 
     @Test("a command reaches the sink it was handed to")
     func sinkDeliversTheCommand() {
         var received: [WindowCommand] = []
-        let sink = WindowCommandSink(windowID: UUID(), role: .master) { received.append($0) }
+        let sink = WindowCommandSink(windowID: UUID()) { received.append($0) }
 
         sink.perform(.renameProject)
         sink.perform(.moveProject(toFolder: nil))
@@ -129,99 +129,5 @@ struct WindowCommandTests {
 }
 
 
-// MARK: - What a child window may not do
-
-// A child holds a lens, not a project. Every command that acts on *which study*
-// dims, which is the same statement the missing project list makes — in the
-// place a Mac user looks when a click does nothing.
-@Suite("Study-axis commands dim in a child")
-struct ChildCommandGateTests {
-
-    @Test("The study-axis commands dim in a child even with the window frontmost")
-    func studyAxisDimsInAChild() {
-        for command: WindowCommand in [.newProject, .newFolder, .addFiles] {
-            #expect(!command.isEnabled(hasKeyWindow: true, role: .child),
-                    "\(command) acts on which study — a child has no such axis")
-        }
-    }
-
-    @Test("The app-level fallback does not rescue them")
-    func fallbackDoesNotOverrideTheRole() {
-        // newProject and newFolder carry hasAppLevelFallback, so they stay lit
-        // with no window frontmost at all. That is for "nothing is focused, so
-        // make something" — a different situation from "the focused window is
-        // one that deliberately cannot do this". The role is checked first, and
-        // this pins that ordering.
-        #expect(WindowCommand.newProject.isEnabled(hasKeyWindow: false, role: .master))
-        #expect(!WindowCommand.newProject.isEnabled(hasKeyWindow: false, role: .child))
-    }
-
-    @Test("Lens and window-targeted commands stay live in a child")
-    func theChildKeepsItsOwnAxis() {
-        // Switching view is the axis a child owns and the entire reason it
-        // exists. If this ever goes red the child has become a read-only pane.
-        for command: WindowCommand in [.showSessionsSwitcher, .showMiro, .showWelcome] {
-            #expect(command.isEnabled(hasKeyWindow: true, role: .child),
-                    "\(command) is not about which study")
-        }
-    }
-
-    @Test("A master is unaffected — the gate is additive")
-    func masterBehaviourIsUnchanged() {
-        for command: WindowCommand in [.newProject, .newFolder, .addFiles] {
-            #expect(command.isEnabled(hasKeyWindow: true, role: .master))
-        }
-    }
-
-    @Test("Two windows differing only in role are different menu targets")
-    func sinkEqualityIncludesRole() {
-        // Without this the menu built against a master would stay enabled when
-        // focus moved to a child on the same body pass — the one moment the
-        // enablement actually has to change.
-        let id = UUID()
-        #expect(WindowCommandSink(windowID: id, role: .master, perform: { _ in })
-                != WindowCommandSink(windowID: id, role: .child, perform: { _ in }))
-    }
-}
 
 
-// MARK: - What ⌥⌘N can do
-
-// It means one thing everywhere — another lens window on the study I am looking
-// at — so it needs a study to be looking at. The interesting cases are the two
-// ends: nothing open at all, and a welcome master with nothing served.
-@Suite("New Window gate")
-struct NewWindowGateTests {
-
-    @Test("With no window open it stays live, whatever the serve is doing")
-    func emptyStateIsTheWayBack() {
-        // The menu bar outlives windows, so this is the documented route back
-        // from empty. Gating it on the serve here would make the app
-        // unreachable after closing its last window.
-        #expect(NewWindowGate.isEnabled(servedPath: nil, hasProjectWindow: false))
-        #expect(NewWindowGate.isEnabled(servedPath: "/s/a", hasProjectWindow: false))
-    }
-
-    @Test("A welcome master with nothing served dims it")
-    func nothingToBeAChildOf() {
-        // The one state where the command has nothing to mean: pressing it
-        // would produce a second welcome screen.
-        #expect(!NewWindowGate.isEnabled(servedPath: nil, hasProjectWindow: true))
-    }
-
-    @Test("Anything served keeps it live")
-    func servedStudyEnablesIt() {
-        #expect(NewWindowGate.isEnabled(servedPath: "/s/a", hasProjectWindow: true))
-    }
-
-    @Test("A welcome master with children keeps it live")
-    func welcomeMasterWithChildrenStillHasAStudy() {
-        // The case the naive rule gets wrong. A master that went back to the
-        // welcome screen while children are open does not stop the serve —
-        // stopServeIfLastProjectWindow keeps it up while another window still
-        // shows a project — so there is still a study to be a child of, even
-        // though the front window shows Welcome. "Is anything served" is the
-        // right question; "is the front window a welcome screen" is not.
-        #expect(NewWindowGate.isEnabled(servedPath: "/s/a", hasProjectWindow: true))
-    }
-}

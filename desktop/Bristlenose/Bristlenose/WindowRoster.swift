@@ -65,63 +65,8 @@ final class WindowRoster: ObservableObject {
     /// duplicate group, since two "Welcome" windows aren't worth numbering.
     private var held: [UUID: (group: Group?, ordinal: Int)] = [:]
 
-    /// Master or child, decided once per window and never recomputed.
-    ///
-    /// Masters get projects, children get lenses (`design-workspace.md` §"What a
-    /// child window is"). A child has no project of its own — its title is read
-    /// from what is being served — which is what makes it impossible for a child
-    /// to name a study it isn't showing.
-    private var roles: [UUID: Role] = [:]
-
-    enum Role: Equatable {
-        /// Carries the project list and picks the study.
-        case master
-        /// Carries the lens rail only, and inherits the served study.
-        case child
-    }
 
     private init() {}
-
-    /// What kind of window this is — assigned on first ask, then fixed.
-    ///
-    /// **The rule is "am I the first project window", not "does a master
-    /// exist".** Those differ in exactly one state and it is the one that was
-    /// decided 18 Aug 2026: with the master closed and children still open, a
-    /// new window is a **child**, because ⌥⌘N means one thing everywhere —
-    /// another lens window on the study I am looking at — and gaining a special
-    /// case there buys a project list nobody asked for at the cost of a rule
-    /// that no longer fits in a sentence. (The cost of that is a mild dead end;
-    /// see the design doc, where it is accepted knowingly.)
-    ///
-    /// **Company is measured against `roles`, not `held` — and that is the whole
-    /// correctness of this method.** `held` is populated by `claim`, which runs
-    /// from a *different* observer (`.onChange(of: windowGroup, initial: true)`)
-    /// than the one that asks this (`.onAppear`). Reading `held` therefore made
-    /// the answer depend on the interleaving of two observers across every open
-    /// window — and at **relaunch, when macOS restores them all at once, every
-    /// `.onAppear` can run before the first `claim` lands, so every restored
-    /// window saw an empty roster and every one became a master.** Observed on
-    /// screen, 18 Aug 2026: five restored windows, five project lists.
-    ///
-    /// `roles` is written synchronously *here*, so the first caller finds it
-    /// empty and takes master, and every later caller sees that entry. No second
-    /// observer, no ordering to get wrong.
-    ///
-    /// **Fixed once**, so a master does not become a child the moment a second
-    /// window opens beside it.
-    func role(for windowID: UUID) -> Role {
-        if let existing = roles[windowID] { return existing }
-        let hasCompany = roles.keys.contains { $0 != windowID }
-        let assigned: Role = hasCompany ? .child : .master
-        roles[windowID] = assigned
-        return assigned
-    }
-
-    /// Whether any live window carries the project list.
-    ///
-    /// Read by the ⌥⌘N gate's zero-windows case. Note this is **not** what
-    /// decides the role — see `role(for:)`.
-    var hasMaster: Bool { roles.values.contains(.master) }
 
     /// Is any project window open? (Settings and the Import window are not
     /// project windows and are deliberately not counted.)
@@ -193,12 +138,6 @@ final class WindowRoster: ObservableObject {
     /// holds nothing.
     func release(windowID: UUID) {
         releaseOrdinal(windowID: windowID)
-        // The role goes with the window. Deliberately *not* reassigned to a
-        // survivor: promotion was rejected (design doc, §"What a child window
-        // is") — it would exist only to paper over there being one serve, would
-        // be deleted at Stage 3b, and would change a window's shape while the
-        // researcher is looking at it because a *different* window closed.
-        roles.removeValue(forKey: windowID)
     }
 
     /// Give back the ordinal, keeping the window on the roster.
@@ -261,67 +200,53 @@ final class WindowRoster: ObservableObject {
         taken.removeAll()
         held.removeAll()
         assignments.removeAll()
-        // Roles are sticky by design, so a suite that forgot this would leak a
-        // master from one case into the next and every later window would come
-        // back a child.
-        roles.removeAll()
     }
 }
 
 
-/// Which study a window is about.
+
+
+
+/// Keeping a peer window's sidebar selection in step with the one served study.
 ///
-/// A one-function type, and it earns its keep: this is the decision that makes a
-/// child unable to name a study it isn't showing, and inside a `ContentView`
-/// computed property it would be untestable — reachable only with a live serve,
-/// a real `ProjectIndex` and two windows. `desktop/CLAUDE.md` § Testing: "if a
-/// SwiftUI view is making a decision, the decision belongs in a testable helper".
-enum WindowProjectResolution {
+/// **Factored out because this is the whole mechanism of the peer model, and
+/// because per-window selection leaking across windows has already shipped
+/// twice** — `9f4183af` ("stop one window's selection from resetting all the
+/// others") and `29f70e33` ("one window's empty-sidebar click was deselecting
+/// all of them"), both inside three days. A third instance of a named pattern is
+/// not speculative, and `desktop/CLAUDE.md` § Testing is explicit that a decision
+/// a view makes belongs in a testable helper.
+enum SelectionSync {
 
+    /// The selection this window should adopt, or **nil for "leave it alone"**.
+    ///
     /// - Parameters:
-    ///   - role: master picks, child inherits.
-    ///   - selected: the window's own selection. **Only a master has one.**
-    ///   - servedPath: what the sidecar is currently serving, or nil.
-    ///   - projects: the index, to resolve `servedPath` back to a project.
-    static func project(role: WindowRoster.Role,
-                        selected: Project?,
-                        servedPath: String?,
-                        projects: [Project]) -> Project? {
-        switch role {
-        case .master:
-            // The master's answer can disagree with the serve during a switch.
-            // That is real, and it is handled at the mount site by refusing to
-            // render another study's report — not here, because the *title*
-            // should follow the researcher's click immediately. The window
-            // saying "B" while showing a boot state is honest; saying "A" after
-            // they clicked B is not.
-            return selected
-        case .child:
-            guard let servedPath else { return nil }
-            return projects.first { $0.path == servedPath }
-        }
-    }
-}
-
-
-/// Whether `File ▸ New Window` (⌥⌘N) can do anything.
-///
-/// Two inputs, one line, and it is a separate type only because a menu is the
-/// hardest place in the app to test a decision.
-enum NewWindowGate {
-
-    /// - Parameters:
-    ///   - servedPath: what the sidecar is serving, or nil.
-    ///   - hasProjectWindow: whether any project window is open. Settings and
-    ///     the Import window are deliberately not counted — `WindowRoster`
-    ///     already makes that distinction for the Dock-icon reopen.
-    static func isEnabled(servedPath: String?, hasProjectWindow: Bool) -> Bool {
-        // Nothing open: the menu bar outlives windows, so this is the way back
-        // from empty and must stay live whatever the serve is doing.
-        if !hasProjectWindow { return true }
-        // A window is open, so ⌥⌘N means "another lens window on the study I am
-        // looking at". With nothing served there is no such study, and the
-        // result would be a second welcome screen.
-        return servedPath != nil
+    ///   - current: this window's selection right now.
+    ///   - served: the study the sidecar is serving, or nil.
+    ///
+    /// Three deliberate no-ops, each guarding something that has bitten:
+    ///
+    /// 1. **An empty selection is left empty.** A window parked on Welcome stays
+    ///    there. Deselect is local — propagating it is the 17 Aug bug where one
+    ///    click on empty sidebar space sent every window to Welcome and stopped
+    ///    the serve.
+    /// 2. **A selection already on the served study is left alone.** This is what
+    ///    breaks the feedback path: selection drives `switchProject`, and
+    ///    `switchProject` moves the serve, so a sync that rewrote an
+    ///    already-correct selection would re-enter the serve lifecycle on every
+    ///    window, every time.
+    /// 3. **A nil serve changes nothing.** `stop()` leaves `currentProjectPath`
+    ///    populated, and a brand-new or volume-ejected study is deliberately
+    ///    unserved while still being the thing its window is about.
+    ///
+    /// Note it returns a **whole selection**, not a project: a multi-selection
+    /// (three studies being dragged into a folder) is "not empty", so rule 1
+    /// leaves it untouched and the drag survives a sibling's click.
+    static func resolve(current: Set<SidebarSelection>,
+                        served: Project?) -> Set<SidebarSelection>? {
+        guard !current.isEmpty else { return nil }
+        guard let served else { return nil }
+        if current == [.project(served.id)] { return nil }
+        return [.project(served.id)]
     }
 }

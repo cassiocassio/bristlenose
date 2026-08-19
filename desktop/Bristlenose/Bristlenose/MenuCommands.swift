@@ -345,7 +345,7 @@ private struct AppMenuContent: View {
         Button(i18n.t("desktop.menu.app.aiPrivacy"), systemImage: "hand.raised") {
             windowCommands?.perform(.showAIConsent)
         }
-        .disabled(!WindowCommand.showAIConsent.isEnabled(hasKeyWindow: windowCommands != nil, role: windowCommands?.role ?? .master))
+        .disabled(!WindowCommand.showAIConsent.isEnabled(hasKeyWindow: windowCommands != nil))
 
         Divider()
 
@@ -404,31 +404,10 @@ private struct FileMenuContent: View {
         //
         // A new window inherits the persisted project selection, so this is
         // "same study, another lens" — the case that wants two windows open.
-        // **Gated on what is *served*, not on what windows exist.** ⌥⌘N means one
-        // thing everywhere — another lens window on the study I am looking at —
-        // so it needs a study to be looking at. With nothing served and a window
-        // already open, pressing it would produce a second welcome screen, which
-        // is the one state where the command has nothing to mean.
-        //
-        // With **no** window open at all it stays live and opens a master: the
-        // menu bar outlives windows, and this is the documented way back from
-        // empty. `WindowRoster` answers that half, deliberately not AppKit's
-        // `hasVisibleWindows`, which counts Settings and the Import window.
-        //
-        // Note the case this shape handles for free: a master that has returned
-        // to the welcome screen while children are open does *not* stop the
-        // serve — `stopServeIfLastProjectWindow` keeps it up while any other
-        // window still shows a project — so the study stays served, the children
-        // keep working, and ⌥⌘N stays live because there is still something to
-        // be a child of. "Is anything served" is the right question; "is the
-        // front window a welcome screen" is not.
         Button(i18n.t("desktop.menu.file.newWindow"), systemImage: "macwindow") {
             openWindow(id: "main")
         }
         .keyboardShortcut("n", modifiers: [.command, .option])
-        .disabled(!NewWindowGate.isEnabled(
-            servedPath: serveManager.currentProjectPath,
-            hasProjectWindow: WindowRoster.shared.hasProjectWindow))
 
         // Add Files… — the menu twin of drag-drop. ⇧⌘A mirrors Apple Mail's
         // File ▸ Attach Files. Fires unconditionally (like New Project/Folder);
@@ -437,7 +416,7 @@ private struct FileMenuContent: View {
             windowCommands?.perform(.addFiles)
         }
         .keyboardShortcut("a", modifiers: [.command, .shift])
-        .disabled(!WindowCommand.addFiles.isEnabled(hasKeyWindow: windowCommands != nil, role: windowCommands?.role ?? .master))
+        .disabled(!WindowCommand.addFiles.isEnabled(hasKeyWindow: windowCommands != nil))
 
         // Import ▸ — cloud sources, beside Add Files… because that is the same
         // act from a different place (`docs/design-cloud-import.md` §9).
@@ -755,7 +734,7 @@ private struct ViewMenuContent: View {
             }
             .keyboardShortcut("l", modifiers: [.command, .option])
             .disabled(!WindowCommand.showSessionsSwitcher
-                .isEnabled(hasKeyWindow: windowCommands != nil, role: windowCommands?.role ?? .master))
+                .isEnabled(hasKeyWindow: windowCommands != nil))
         } else {
             Button(i18n.t(PanelToggle.labelKey(
                 panel: leftPanelKey ?? "Contents",
@@ -914,7 +893,7 @@ private struct ProjectMenuContent: View {
     /// selection guard, which still reads app-global `BridgeHandler` state
     /// until Stage 3a makes it per-window.
     private func enabled(_ command: WindowCommand) -> Bool {
-        command.isEnabled(hasKeyWindow: windowCommands != nil, role: windowCommands?.role ?? .master)
+        command.isEnabled(hasKeyWindow: windowCommands != nil)
     }
 
     var body: some View {
@@ -1305,7 +1284,7 @@ private struct QuotesMenuContent: View {
         Button(i18n.t("common.miro.menuLabel")) {
             windowCommands?.perform(.showMiro)
         }
-        .disabled(!WindowCommand.showMiro.isEnabled(hasKeyWindow: windowCommands != nil, role: windowCommands?.role ?? .master))
+        .disabled(!WindowCommand.showMiro.isEnabled(hasKeyWindow: windowCommands != nil))
 
         Divider()
 
@@ -1430,7 +1409,7 @@ private struct HelpMenuContent: View {
         Button(i18n.t("desktop.chrome.welcomeTitle")) {
             windowCommands?.perform(.showWelcome)
         }
-        .disabled(!WindowCommand.showWelcome.isEnabled(hasKeyWindow: windowCommands != nil, role: windowCommands?.role ?? .master))
+        .disabled(!WindowCommand.showWelcome.isEnabled(hasKeyWindow: windowCommands != nil))
 
         Button(i18n.t("desktop.menu.help.keyboardShortcuts")) {
             Self.open("https://bristlenose.app/docs/keyboard-shortcuts.html")

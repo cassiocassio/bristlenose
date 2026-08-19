@@ -240,14 +240,6 @@ struct ContentView: View {
     /// menu bar compares, since the sink's closure is rebuilt every body pass.
     @State private var windowID = UUID()
 
-    /// Master or child. Decided once by `WindowRoster` when this window appears
-    /// and never recomputed — see `WindowRoster.role(for:)`.
-    ///
-    /// Defaults to `.master` so that any path which somehow renders before
-    /// `.onAppear` behaves exactly as the app did before children existed. A
-    /// window that wrongly shows the project list is recoverable; one that
-    /// wrongly hides it is a dead end.
-    @State private var windowRole: WindowRoster.Role = .master
 
     /// Bumped by Project ▸ Rename …; consumed by this window's sidebar outline.
     /// See `ProjectSidebarOutline.renameRequest`.
@@ -343,13 +335,16 @@ struct ContentView: View {
     /// The master still needs a guard, because between "clicked study B" and
     /// "sidecar for B is up" its title already says B while the pane shows A —
     /// see the mount site in `detail`.
-    private var windowProject: Project? {
-        WindowProjectResolution.project(
-            role: windowRole,
-            selected: selectedProject,
-            servedPath: serveManager.currentProjectPath,
-            projects: projectIndex.projects)
-    }
+    /// The project this window is about — its **own selection**, kept in step
+    /// with the serve by the sync above.
+    ///
+    /// Deliberately not derived from the serve. Four detail panes exist for
+    /// studies that are legitimately *not* served — a volume-ejected project, a
+    /// brand-new one with no path yet, an unsupported subset, a never-analysed
+    /// folder — and reading the serve here would render Welcome for all of them,
+    /// so `File ▸ New Project` would show the welcome screen instead of its drop
+    /// target. The **content** gates on the serve; the **window** does not.
+    private var windowProject: Project? { selectedProject }
 
     /// The window's title: the project's name, or "Welcome" with none selected,
     /// plus an ordinal when a sibling window already shows the same lens of the
@@ -669,8 +664,23 @@ struct ContentView: View {
         // sidebar disappears (window close, scene teardown), clear
         // any stale drop-target highlight state so it doesn't
         // persist into the next appearance. (gruber-pass, fce69e4.)
-        .onAppear {
-            windowRole = WindowRoster.shared.role(for: windowID)
+        // **Peer windows: the selection follows the one served study.**
+        //
+        // Keyed on `state` reaching `.running`, deliberately **not** on
+        // `currentProjectPath`. `ServeManager` writes the path *before* it
+        // publishes `.starting`, so syncing off the path fires in every sibling
+        // while the sidecar is still booting — and `switchProject`'s same-path
+        // no-op is `.running`-gated, so each sibling would miss it, fall to the
+        // cold-start branch, tear down the half-started process and respawn.
+        // Six windows, six kill-and-respawn cycles on one click.
+        .onChange(of: serveManager.state) { _, newState in
+            guard case .running = newState else { return }
+            let served = serveManager.currentProjectPath.flatMap { path in
+                projectIndex.projects.first { $0.path == path }
+            }
+            if let next = SelectionSync.resolve(current: selection, served: served) {
+                selection = next
+            }
         }
         .onDisappear {
             dropTargetProjectID = nil
@@ -690,7 +700,7 @@ struct ContentView: View {
         // life inside the WKWebView, and a view-scoped value would drop out.
         .focusedSceneValue(
             \.windowCommands,
-            WindowCommandSink(windowID: windowID, role: windowRole, perform: { perform($0) })
+            WindowCommandSink(windowID: windowID, perform: { perform($0) })
         )
         // The state half of the same seam: the menu bar reads *this* window's
         // lens, undo stack and selection mirror when it is frontmost.
@@ -2122,17 +2132,7 @@ struct ContentView: View {
         .padding(.top, 6)
         .padding(.bottom, 2)
 
-        // **Masters get projects, children get lenses.** This is the whole of
-        // the child window: one section omitted. The rail above keeps its place
-        // and its metrics, so a child's sidebar is the master's with the studies
-        // gone — not a narrower rail, and not a second control to maintain.
-        //
-        // The New Folder toolbar button and the "Projects" column title ride on
-        // this List deliberately: both act on the study axis, which is the axis
-        // a child does not have.
-        if windowRole == .master {
-            projectList
-        }
+        projectList
         }
     }
 

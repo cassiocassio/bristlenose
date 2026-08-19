@@ -562,11 +562,31 @@ and the reasons are worth keeping so none of them gets re-proposed:</p>
   </tbody>
 </table>
 
-<h3><span class="n">E5</span> A run is in progress</h3>
-<p>The subtitle narrates the run. With the current <code>.key</code>-only rule, opening Settings or
-the Import window means <em>no</em> window narrates and every subtitle drops back to its resting
-count. Consistent with "only the front window narrates" — but nobody decided the no-window case, and
-it reads as the run having stopped. <span class="tag dec">decide</span></p>
+<h3><span class="n">E5</span> A run is in progress <span class="tag ships">decided — narrate on <code>main</code></span></h3>
+<p>The subtitle narrates the run, and the rule was <code>.key</code>-only — so opening Settings
+meant <em>no</em> window narrated, every subtitle dropped back to its resting count, and it read as
+the run having stopped. The intent was always "one window narrates, not five", and
+<b><code>main</code> expresses that where <code>key</code> does not</b>: AppKit keeps
+<code>mainWindow</code> on the frontmost main-capable window when a panel takes key.</p>
+<p><b>Measured, and it went against the guess.</b> The Settings window <b>cannot become main</b> —
+the package overrides it (<code>SettingsWindowController.swift:168</code>,
+<code>override var canBecomeMain: Bool { false }</code>). So gating on <code>isMainWindow</code>
+fixes the Settings case in <b>one line</b>, with no roster change and no most-recently-key list —
+the structure the design declined for command routing stays declined.</p>
+<table>
+  <thead><tr><th>Frontmost</th><th>A project window narrates?</th><th></th></tr></thead>
+  <tbody>
+    <tr><td>Settings</td><td class="y">yes</td><td>free — it cannot take main</td></tr>
+    <tr><td>Import · Shoal · System Health</td><td class="n">no</td>
+        <td>plain <code>Window</code> scenes, so ordinary <code>NSWindow</code>s that do take main
+        — <b>accepted</b></td></tr>
+  </tbody>
+</table>
+<p>Import is a busy foreground task of its own; the other two are decorative or debug. Revisit only
+if it bites — then <code>UtilityWindow</code> (macOS 26, makes an <code>NSPanel</code>) for Shoal and
+System Health but <b>not</b> Import, or the roster MRU, earned rather than anticipated.
+<b>The cheap test for the next window that raises this:</b> open it over a project window and watch
+that window's title bar — main draws at full contrast, not-main goes grey.</p>
 
 <h3><span class="n">E6</span> The video pop-out <span class="tag gone">regression</span></h3>
 <p>It is a plain <code>NSWindow</code>, not a scene, so <code>@FocusedValue(\.bridge)</code> goes nil

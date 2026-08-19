@@ -895,6 +895,36 @@ reload half needed nothing: `scheduleReportReloadOnCompletion` already runs per
 fans it out by construction. The narration half was the real question, and it is
 **key window only** — see the P2 table.
 
+**Refined 18 Aug 2026 — narrate on `main`, not `key`.** Key-only had a case
+nobody had considered: open Settings and *no* window narrates, so every subtitle
+drops back to its resting count mid-run and pops back on return, which reads as
+the run having stopped. The intent was "one window narrates, not five", and
+`main` expresses that where `key` does not — AppKit keeps `mainWindow` on the
+frontmost main-capable window when a panel takes key, which is precisely this
+situation (HIG, Windows: *"another window — such as a panel floating above the
+main window — might be key instead"*).
+
+**Measured rather than assumed**, and it went against the guess: the Settings
+window **cannot become main** — the package overrides it,
+`SettingsWindowController.swift:168`, `override var canBecomeMain: Bool { false }`.
+So gating on `isMainWindow` fixes the Settings case for one line, with no roster
+change and no most-recently-key list — the structure this doc declined for
+command routing stays declined.
+
+**Accepted: the Import window is not fixed by this.** `Import`, `Shoal
+Screensaver` and `System Health` are plain SwiftUI `Window` scenes, so they are
+ordinary `NSWindow`s and *do* take main; with one of them frontmost, narration
+still goes quiet. Settings is the case that actually happens mid-run; Import is a
+busy foreground task of its own and the other two are decorative or debug.
+Revisit only if it bites in use — at which point the options are `UtilityWindow`
+(macOS 26, makes an `NSPanel`) for Shoal and System Health but **not** for
+Import, which is a real task window, or the roster MRU, earned by evidence
+instead of anticipated.
+
+**The cheap test, for the next window that raises this question:** open it over a
+project window and watch the project window's title bar. Main draws at full
+contrast; not-main goes grey. Same fact, visible, no instrumentation.
+
 **P2 — nothing refcounts windows. ✅ Answered.** The serve question is
 decided — **it stays up**, so closing the last window is not a teardown event and
 needs no refcount for that. The partition follows: with the serve up, reopening

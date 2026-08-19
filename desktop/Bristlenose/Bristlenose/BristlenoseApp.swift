@@ -78,6 +78,18 @@ struct BristlenoseApp: App {
 
     // State lifted from ContentView so .commands and .onReceive can access them.
     @StateObject private var serveManager = ServeManager()
+
+    /// One serve per project (Stage 3b). Injected alongside `serveManager`
+    /// rather than replacing it: the fleet is live and observable, but until
+    /// `ContentView` derives its manager from it (§1a-ter A3, which turns
+    /// `serveManager` optional) the app still runs the single manager above.
+    ///
+    /// Additive on purpose. The migration re-derives `applySelectionChange`
+    /// from a different premise — a window changing study *observes a different
+    /// manager* rather than switching one — and that is a re-write, not a
+    /// line-by-line move. Landing the fleet first means the crossing is one
+    /// well-scoped change with everything under it already proven.
+    @StateObject private var serveFleet = ServeFleet()
     @StateObject private var projectIndex = ProjectIndex()
 
     /// Owns the single import window's store. App-level rather than
@@ -124,6 +136,7 @@ struct BristlenoseApp: App {
             ContentView()
                 .frame(minWidth: 700, minHeight: 500)
                 .environmentObject(serveManager)
+                .environmentObject(serveFleet)
                 .environmentObject(projectIndex)
                 .environmentObject(pipelineRunner)
                 .environmentObject(toast)

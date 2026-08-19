@@ -240,6 +240,15 @@ struct ContentView: View {
     /// menu bar compares, since the sink's closure is rebuilt every body pass.
     @State private var windowID = UUID()
 
+    /// Master or child. Decided once by `WindowRoster` when this window appears
+    /// and never recomputed — see `WindowRoster.role(for:)`.
+    ///
+    /// Defaults to `.master` so that any path which somehow renders before
+    /// `.onAppear` behaves exactly as the app did before children existed. A
+    /// window that wrongly shows the project list is recoverable; one that
+    /// wrongly hides it is a dead end.
+    @State private var windowRole: WindowRoster.Role = .master
+
     /// Bumped by Project ▸ Rename …; consumed by this window's sidebar outline.
     /// See `ProjectSidebarOutline.renameRequest`.
     @State private var renameRequest = 0
@@ -314,8 +323,34 @@ struct ContentView: View {
     /// not-yet-reported lens all render the same session count — see
     /// `WindowRoster.Group`.
     private var windowGroup: WindowRoster.Group? {
-        guard let id = selectedProject?.id else { return nil }
+        guard let id = windowProject?.id else { return nil }
         return WindowRoster.Group(projectID: id, subtitle: countSubtitle)
+    }
+
+    /// The project this window is *about* — the single source its whole chrome
+    /// reads from.
+    ///
+    /// **A master picks it; a child inherits it.** The master's comes from its
+    /// own `selection`. A child has no selection at all — "masters get projects,
+    /// children get lenses" is meant literally — so its project is whatever the
+    /// sidecar is currently serving.
+    ///
+    /// That asymmetry is the whole design. A child has no second source, so it
+    /// has nothing to drift *from*, so it cannot name a study it isn't showing.
+    /// The failure `design-workspace.md` constraint 5 describes becomes
+    /// unrepresentable rather than guarded.
+    ///
+    /// The master still needs a guard, because between "clicked study B" and
+    /// "sidecar for B is up" its title already says B while the pane shows A —
+    /// see the mount site in `detail`.
+    private var windowProject: Project? {
+        switch windowRole {
+        case .master:
+            return selectedProject
+        case .child:
+            guard let path = serveManager.currentProjectPath else { return nil }
+            return projectIndex.projects.first { $0.path == path }
+        }
     }
 
     /// The window's title: the project's name, or "Welcome" with none selected,
@@ -323,7 +358,7 @@ struct ContentView: View {
     /// same study (mockup E4 — nine identical Window-menu rows is the case that
     /// earned it).
     private var windowTitle: String {
-        let base = selectedProject?.name ?? i18n.t("desktop.welcome.windowTitle")
+        let base = windowProject?.name ?? i18n.t("desktop.welcome.windowTitle")
         return base + WindowRoster.suffix(for: windowRoster.assignments[windowID] ?? 1)
     }
 
@@ -636,6 +671,9 @@ struct ContentView: View {
         // sidebar disappears (window close, scene teardown), clear
         // any stale drop-target highlight state so it doesn't
         // persist into the next appearance. (gruber-pass, fce69e4.)
+        .onAppear {
+            windowRole = WindowRoster.shared.role(for: windowID)
+        }
         .onDisappear {
             dropTargetProjectID = nil
             dropTargetFolderID = nil
@@ -2063,6 +2101,10 @@ struct ContentView: View {
         }
     }
 
+    /// The sidebar. In a child this is the *same* view with the project list
+    /// omitted — same width, same metrics, the lens rail simply sitting where it
+    /// always sat. An omission, not a second control, which is what keeps the
+    /// child one flag rather than a window type of its own.
     private var swiftUISidebar: some View {
         VStack(spacing: 0) {
         // Lens rail — relocates the former toolbar tab Picker into the top of the
@@ -2073,12 +2115,34 @@ struct ContentView: View {
         LensRail(
             bridgeHandler: bridgeHandler,
             i18n: i18n,
-            isEnabled: selectedProject != nil && bridgeHandler.isReady
+            // `windowProject`, not `selectedProject`: a child has no selection,
+            // so reading the selection here would dim the lens rail — the one
+            // control a child exists for — in every child window.
+            isEnabled: windowProject != nil && bridgeHandler.isReady
         )
         .padding(.horizontal, 8)
         .padding(.top, 6)
         .padding(.bottom, 2)
 
+        // **Masters get projects, children get lenses.** This is the whole of
+        // the child window: one section omitted. The rail above keeps its place
+        // and its metrics, so a child's sidebar is the master's with the studies
+        // gone — not a narrower rail, and not a second control to maintain.
+        //
+        // The New Folder toolbar button and the "Projects" column title ride on
+        // this List deliberately: both act on the study axis, which is the axis
+        // a child does not have.
+        if windowRole == .master {
+            projectList
+        }
+        }
+    }
+
+    /// The studies list — a master's half of the sidebar.
+    ///
+    /// Extracted from `swiftUISidebar` unchanged so the child gate is one
+    /// `if` rather than an indentation change over seventy lines.
+    private var projectList: some View {
         List(selection: $selection) {
             // "+ New Project" lives outside the Section. Per desktop/CLAUDE.md:
             // `Section + Button + ForEach.onMove + conditional Text` drops
@@ -2150,7 +2214,6 @@ struct ContentView: View {
             }
         }
         .navigationTitle(i18n.t("desktop.chrome.projects"))
-        }
     }
 
     // MARK: - Sidebar rows
@@ -2546,7 +2609,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private var detail: some View {
-        if let project = selectedProject {
+        if let project = windowProject {
             if !project.isAvailable {
                 // Project directory is not accessible — volume ejected or folder moved.
                 unavailableProjectView(project)
@@ -2598,6 +2661,25 @@ struct ContentView: View {
                 ZStack {
                     switch serveManager.state {
                     case .idle, .starting:
+                        BootView(phase: .startingSidecar)
+
+                    // **The window's project is not what the sidecar is serving.**
+                    //
+                    // Only a master can reach this: it owns a `selection`, and
+                    // between "clicked study B" and "sidecar for B is up" its
+                    // title already says B while the pane would still show A.
+                    // Rendering the boot state is the honest answer; rendering
+                    // the running serve would put another study's participant
+                    // data under this window's name, which is the failure
+                    // `design-workspace.md` constraint 5 describes and the one
+                    // that reaches an outbound edge — `Send to Miro` would
+                    // export the wrong study's quotes to a board named for the
+                    // right one.
+                    //
+                    // A child cannot arrive here mismatched: `windowProject` is
+                    // *derived* from `currentProjectPath`, so the two agree by
+                    // construction. The guard is the master's alone.
+                    case .running where serveManager.currentProjectPath != project.path:
                         BootView(phase: .startingSidecar)
 
                     case .running(let port):

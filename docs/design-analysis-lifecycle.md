@@ -219,13 +219,14 @@ Where each verb can be reached, and what gates it.
 | **Analyse** | sidebar context menu, Project menu | folder-shaped, has path, not running, **and there is work to do** | Shipped (`8975254a`, `1c5bebfa`) |
 | **Analyse** (auto) | after a cloud-import batch lands | folder-shaped project | Shipped (`1490dcde`) |
 | **Analyse** | the project detail pane | never run **and** files present | Shipped (§6.3) |
+| **Analyse** | the unanalysed sheet | the sheet is open **and** `analyseIsOffered` | Shipped (§6.2) |
 | **File ▸ Add Files…** | File menu | a project is selected | Shipped |
 | **+N unanalysed** pill → sheet | row subtitle | `newFiles` non-empty | Shipped |
 | **Analyse** (folder-shaped) | context menu | `newFiles` non-empty | Shipped — **already incremental**, but unlabelled as such |
-| Primary action on the unanalysed sheet | sheet | `newFiles` non-empty | **Absent — only Close. See §6.2** |
+| Primary action on the unanalysed sheet | sheet | `newFiles` non-empty | Shipped (§6.2) |
 | **Stop Analysis** ⌘. | Project menu, row hover-× | running | Shipped |
-| **Re-analyse…** | Project menu | — | **`.disabled(true)`, unimplemented** |
-| **Re-analyse…** | sidebar context menu | — | **Absent** |
+| **Re-analyse…** | Project menu | `sessionCount > 0`, not running | Shipped — dims (§6.1) |
+| **Re-analyse…** | sidebar context menu | `sessionCount > 0`, not running | Shipped — hides (§6.1) |
 | **Locate…** | context menu, Project menu | `cantFind` | Shipped |
 | **Show Diagnostics…** | failure glyph, context menu | `failed` / `completedPartial` | Shipped |
 
@@ -312,15 +313,21 @@ ninety-nine good ones. Outcome 3 costs one participant; outcome 4 costs the stud
 | Failed run's husk walled off the retry | dead end | guard tests for a *deliverable*, not for existence |
 | **Analyse** offered on a project with no recordings | false affordance | `canAnalyse` asks whether there is work to do |
 | The empty-state pane said "add files" to a project with files | the app contradicting itself on screen | the pane counts the same field the menu gates on |
+| A stale terminus headlined a fresh attempt | wrong diagnosis, 11 hours old | the terminus must post-date the spawn (§5.3 → fixed) |
+| **`--clean` advice in a GUI** | unfollowable — the app cannot pass a flag | Re-analyse… does it, with a confirmation |
+| **Re-analyse… permanently dimmed** | false affordance | routed natively, real predicate, both menus |
+| Refusals and damaged files reached only the log | a missing participant nobody is told about | `PipelineSummary.ingest` + per-cause reasons |
+| An unrecognised cause category failed the **whole** event decode | no summary, no rows, no cause | both Swift enums decode unknown as `.unknown` |
+| **Analyse** offered on a project with no recordings | false affordance | `canAnalyse` asks whether there is work to do |
+| The empty-state pane said "add files" to a project with files | the app contradicting itself on screen | the pane counts the same field the menu gates on |
 
 ### 5.3 Open
 
-| Failure | Consequence | Where it should be fixed |
-|---|---|---|
-| **Stale cause outranks the live one** | A refused new attempt shows the *previous* run's cause. Observed: headline read "EOF when reading a line" (an 11-hour-old run) while the real blocker, "Output directory already exists", sat below it in Last output. | Diagnostic popover — the freshest attempt must own the headline |
-| **`--clean` advice in a GUI** | The app cannot pass a flag. The advice is unfollowable, and the only way out is deleting a folder — a mental model of our plumbing that no researcher should need | Re-analyse… (§6), so the app does it |
-| **Re-analyse… permanently dimmed** | False affordance; teaches that the app is broken | Implement or hide |
-| **`EOFError` surfaces raw** | "EOF when reading a line" names the mechanism, not the problem | `failure_classifier` — map it to a bug signature |
+**Empty, as of 19 Aug 2026** — every row that stood here has moved up to §5.2.
+That is a statement about this list, not about the product: it means the
+failure modes *observed on the corpus* are closed, and the next entry will come
+from the next thing someone actually runs. A section that stays empty is a
+section nobody is exercising.
 
 ### 5.4 Edge cases
 
@@ -344,7 +351,7 @@ ninety-nine good ones. Outcome 3 costs one participant; outcome 4 costs the stud
 
 ## 6. Gaps — and what has closed
 
-### 6.1 Re-analyse is a placeholder at both ends
+### 6.1 Re-analyse is a placeholder at both ends — **shipped 19 Aug 2026**
 
 `MenuCommands.swift:1003` is `.disabled(true)  // Future — Phase 2+`, and the
 action it fires — `bridgeHandler.menuAction("reAnalyse")` — dispatches an event
@@ -365,7 +372,26 @@ Implementing it needs four things, not one:
 4. **The context menu**, where by the codebase's own rule it is present or
    absent, never dimmed.
 
-### 6.2 The Finder-side path dead-ends
+**As built.** Routed via `windowCommands` (`.reAnalyseProject`), not the web
+bridge — the bridge event had no listener anywhere in `frontend/src`, and the
+act never touched the web view. `reAnalyseIsOffered` is the mirror of
+`analyseIsOffered`; a *drifted* project is offered both, deliberately.
+
+**The confirmation always asks, and does not count — a deliberate departure
+from the plan.** `--clean` is `shutil.rmtree(output_dir)`: the whole directory,
+database included. There is therefore no zero case to be silent about — even a
+project carrying no curation loses a finished analysis and re-spends on the
+provider — and a modal that sometimes did not appear would make the item's
+ellipsis a lie. Counting what is lost is still worth building; it needs a DB
+read before the sheet, and it refines this rather than gating it.
+
+**This also settles §7's codebook question, for now.** "Does Re-analyse keep
+the codebook?" has one answer today — nothing is kept, because the mechanism is
+`rmtree` — so the confirmation is truthful without waiting on the design call.
+What stays open is whether Re-analyse should *learn* to preserve it, which is a
+feature and a methodology decision, not a precondition.
+
+### 6.2 The Finder-side path dead-ends — **shipped 19 Aug 2026**
 
 There are three ways new interviews reach an existing project. Two are wired:
 

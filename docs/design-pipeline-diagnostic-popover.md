@@ -108,6 +108,11 @@ in the popover, the pill, the sidebar glyph, or any toast.** New
 messages must declare a kind from the taxonomy below — not invent their
 own glyph or colour.
 
+> **Where the failures come from:** [design-analysis-lifecycle.md](design-analysis-lifecycle.md)
+> §5 catalogues the observed failure modes of analyse / re-analyse / incremental and which of
+> the four outcomes each lands in. This doc stays the owner of the *taxonomy* those failures
+> are rendered with.
+
 ## What the popover is for
 
 - **Telling an alpha tester what failed and helping them tell us.** The

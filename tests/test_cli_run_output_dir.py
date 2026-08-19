@@ -22,7 +22,7 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
-from bristlenose.cli import _is_leftover_log_only_output, app
+from bristlenose.cli import _has_no_deliverable, app
 
 
 @pytest.fixture()
@@ -100,7 +100,14 @@ class TestZeroConfigTwoRunSequence:
         assert not (tmp_path / "bristlenose-output").exists()
 
 
-class TestIsLeftoverLogOnlyOutput:
+class TestHasNoDeliverable:
+    """Whether a leftover output directory may be silently reused.
+
+    The question is "is there an analysis here to protect?", not "which files
+    are these?". Everything Bristlenose produces lands at the top level;
+    everything under `.bristlenose/` is internal state.
+    """
+
     def _output_with_state_dir(self, tmp_path: Path) -> Path:
         out = tmp_path / "bristlenose-output"
         (out / ".bristlenose").mkdir(parents=True)
@@ -110,20 +117,48 @@ class TestIsLeftoverLogOnlyOutput:
         out = self._output_with_state_dir(tmp_path)
         (out / ".bristlenose" / "bristlenose.log").write_text("x")
         (out / ".bristlenose" / "bristlenose.log.1").write_text("x")
-        assert _is_leftover_log_only_output(out)
+        assert _has_no_deliverable(out)
 
     def test_os_metadata_is_ignored(self, tmp_path: Path) -> None:
         out = self._output_with_state_dir(tmp_path)
         (out / ".DS_Store").write_bytes(b"\x00")
         (out / ".bristlenose" / "bristlenose.log").write_text("x")
-        assert _is_leftover_log_only_output(out)
+        assert _has_no_deliverable(out)
 
-    def test_pipeline_state_blocks(self, tmp_path: Path) -> None:
+    def test_the_husk_a_hung_run_leaves_is_reusable(self, tmp_path: Path) -> None:
+        """The regression. **This assertion is deliberately the reverse of the
+        one it replaces** (`test_pipeline_state_blocks`, which required an
+        events file to block reuse).
+
+        A run hung for eleven hours on 19 Aug 2026 left exactly this shape. Not
+        one of these files is an analysis — they are state and telemetry — but
+        the old allowlist saw non-log filenames and refused, so the retry was
+        walled off behind "use --clean", advice the desktop app cannot follow.
+        The researcher was stuck with no way forward from inside the app.
+        """
         out = self._output_with_state_dir(tmp_path)
-        (out / ".bristlenose" / "pipeline-events.jsonl").write_text("{}\n")
-        assert not _is_leftover_log_only_output(out)
+        for name in ("bristlenose.log", "bristlenose.db", "bristlenose.db-wal",
+                     "bristlenose.db-shm", "pipeline-events.jsonl",
+                     "shoal-feed.jsonl", "last-run-failure.log"):
+            (out / ".bristlenose" / name).write_text("x")
+        (out / ".bristlenose" / "intermediate").mkdir()
 
-    def test_user_visible_content_blocks(self, tmp_path: Path) -> None:
+        assert _has_no_deliverable(out), (
+            "a directory holding only internal state walled off the retry"
+        )
+
+    def test_a_real_deliverable_still_blocks(self, tmp_path: Path) -> None:
+        """The protection that must survive: never silently overwrite output."""
         out = self._output_with_state_dir(tmp_path)
         (out / "themes.json").write_text("{}")
-        assert not _is_leftover_log_only_output(out)
+        assert not _has_no_deliverable(out)
+
+    def test_a_rendered_report_still_blocks(self, tmp_path: Path) -> None:
+        out = self._output_with_state_dir(tmp_path)
+        (out / "bristlenose-study-report.html").write_text("<html></html>")
+        assert not _has_no_deliverable(out)
+
+    def test_transcripts_still_block(self, tmp_path: Path) -> None:
+        out = self._output_with_state_dir(tmp_path)
+        (out / "transcripts-raw").mkdir()
+        assert not _has_no_deliverable(out)

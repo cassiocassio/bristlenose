@@ -6,6 +6,12 @@ trued-against: HEAD@main on 2026-07-28
 
 # Incremental analysis and codebook lock
 
+> **Cross-cutting view:** [design-analysis-lifecycle.md](design-analysis-lifecycle.md) draws
+> analyse / re-analyse / incremental as one state machine, with sequence diagrams, the
+> affordance inventory and the observed failure modes. This doc remains the owner of *why*
+> incremental works the way it does — the stickies model, immutable vs fluid, identity
+> reconciliation. Where the two disagree, this one wins.
+
 ## Changelog
 
 - _2026-07-28_ — added front-matter (had none, so this doc was invisible to every

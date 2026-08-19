@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analysis lifecycle — every row state and affordance</title>
+<style>
+/* REAL Bristlenose tokens, inlined from bristlenose/theme/tokens.css +
+   colors/palette-*.css. MessageKind tints from MessageKind.swift. */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg: light-dark(#ffffff,#111111);
+  --bn-colour-text: light-dark(#1a1a1a,#e5e7eb);
+  --bn-colour-muted: light-dark(#6b7280,#9ca3af);
+  --bn-colour-border: light-dark(#e5e7eb,#2d2d2d);
+  --bn-colour-accent: light-dark(#007aff,#0a84ff);
+  --bn-colour-hover: light-dark(#e8f0fe,#1e293b);
+  --bn-colour-quote-bg: light-dark(#f9fafb,#1a1a1a);
+  --bn-colour-badge-bg: light-dark(#f3f4f6,#252525);
+  --bn-colour-badge-text: light-dark(#374151,#d1d5db);
+  --bn-colour-border-hover: light-dark(#d1d5db,#3a3a3a);
+  --bn-colour-shadow: light-dark(rgba(0,0,0,.1),rgba(0,0,0,.4));
+  --bn-off-track: light-dark(#c7ccd1,#3a3f45);
+  --bn-positive: light-dark(#16a34a,#4ade80);
+  --sys-orange: light-dark(#c93400,#ff9f0a);
+  --sys-green: light-dark(#1d7f3a,#30d158);
+  --sys-red: light-dark(#c9342b,#ff453a);
+  --sys-cyan: light-dark(#0071a4,#64d2ff);
+  --sidebar-bg: light-dark(#f2f2f4,#1c1c1e);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg: light-dark(#fdfbf7,#1a1816);
+  --bn-colour-text: light-dark(#1b2230,#e8e3d6);
+  --bn-colour-muted: light-dark(#4a698a,#7ba8a0);
+  --bn-colour-border: light-dark(#d4c9a8,#2d2820);
+  --bn-colour-accent: light-dark(#0f5c9e,#4d9fe0);
+  --bn-colour-hover: light-dark(#ede5d1,#252118);
+  --bn-colour-quote-bg: light-dark(#f0e9d8,#211e18);
+  --bn-colour-badge-bg: light-dark(#e8dfc9,#2d2820);
+  --bn-colour-badge-text: light-dark(#2d3654,#c4b898);
+  --bn-colour-border-hover: light-dark(#b8ad91,#4a4030);
+  --bn-colour-shadow: light-dark(rgba(30,20,10,.12),rgba(0,0,0,.4));
+  --bn-off-track: light-dark(#c9bd9c,#4a4030);
+  --sidebar-bg: light-dark(#f0e9d8,#211e18);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1000px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:72ch; margin:.4rem 0; }
+.controls { display:flex; gap:.4rem; align-items:center; margin-bottom:var(--bn-space-lg); }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.key { display:flex; gap:1.4rem; flex-wrap:wrap; font-size:var(--bn-text-label); color:var(--bn-colour-muted);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.7rem 1rem; margin-bottom:var(--bn-space-xl); }
+.key b { font-weight:490; color:var(--bn-colour-text); }
+.key .sw-a { display:inline-block; width:26px; height:13px; border:1px solid var(--bn-colour-border-hover); border-radius:2px; background:var(--bn-colour-bg); vertical-align:-2px; margin-right:.4rem; }
+.key .sw-c { display:inline-block; width:26px; height:13px; border-radius:2px; vertical-align:-2px; margin-right:.4rem;
+  background:repeating-linear-gradient(135deg,transparent 0 4px,var(--bn-colour-border) 4px 5px); border:1px solid var(--bn-colour-border); }
+.sec-head { margin:2.6rem 0 .9rem; }
+.sec-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.sec-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0; max-width:74ch; }
+.frame { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg); overflow:hidden; background:var(--bn-colour-quote-bg); margin-bottom:.9rem; }
+.frame-bar { display:flex; align-items:center; gap:.45rem; padding:.5rem .8rem; background:var(--bn-colour-badge-bg); border-bottom:1px solid var(--bn-colour-border); }
+.frame-bar .tl { width:10px; height:10px; border-radius:50%; background:var(--bn-off-track); }
+.frame-bar .cap { margin-left:.5rem; font-size:var(--bn-text-badge); font-family:var(--bn-font-mono); color:var(--bn-colour-muted); }
+.frame-body { padding:1.4rem; display:flex; justify-content:center; gap:2rem; flex-wrap:wrap; }
+.comm { border-left:3px solid var(--bn-colour-accent); padding:1rem 1.2rem; margin:0 0 2.4rem;
+  background:repeating-linear-gradient(135deg,transparent 0 7px,light-dark(rgba(0,0,0,.022),rgba(255,255,255,.022)) 7px 8px); }
+.comm .tag { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-accent); font-weight:490; }
+.comm h3 { font-size:var(--bn-text-label); font-weight:490; margin:.9rem 0 .3rem; }
+.comm p { font-size:var(--bn-text-label); color:var(--bn-colour-muted); max-width:76ch; margin:.35rem 0; }
+.comm code { font-family:var(--bn-font-mono); font-size:.95em; background:var(--bn-colour-badge-bg); padding:.05rem .3rem; border-radius:var(--bn-radius-sm); color:var(--bn-colour-badge-text); }
+
+/* ── sidebar rows ─────────────────────────────────────────────────────── */
+.sb { width:268px; background:var(--sidebar-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.45rem .35rem; }
+.sb-lab { font-size:var(--bn-text-micro); font-family:var(--bn-font-mono); text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted); padding:.15rem .55rem .4rem; }
+.row { display:flex; align-items:flex-start; gap:.5rem; padding:.35rem .55rem; border-radius:5px; }
+.row + .row { margin-top:.1rem; }
+.row.sel { background:var(--bn-colour-accent); }
+.row.sel .r-name, .row.sel .r-sub, .row.sel .r-count { color:#fff; }
+.row.sel .r-sub { opacity:.85; }
+.r-ico { width:17px; height:17px; flex-shrink:0; margin-top:1px; opacity:.85; }
+.r-ico svg { width:100%; height:100%; display:block; }
+.r-body { flex:1; min-width:0; }
+.r-name { font-size:var(--bn-text-label); font-weight:490; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.r-sub { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); margin-top:.05rem; display:flex; align-items:center; gap:.3rem; }
+.r-count { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; flex-shrink:0; margin-top:1px; }
+.g { width:12px; height:12px; flex-shrink:0; }
+.g svg { width:100%; height:100%; display:block; }
+.tint-warn { color:var(--sys-orange); } .tint-err { color:var(--sys-red); }
+.tint-ok { color:var(--sys-green); } .tint-info { color:var(--bn-colour-accent); }
+.spin { width:12px; height:12px; border:1.6px solid var(--bn-off-track); border-top-color:var(--bn-colour-accent); border-radius:50%; animation:sp .9s linear infinite; flex-shrink:0; }
+@keyframes sp { to { transform:rotate(360deg); } }
+.stateno { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.06em; padding:.1rem .55rem .25rem; }
+
+/* ── macOS menu ───────────────────────────────────────────────────────── */
+.menu { width:296px; background:light-dark(rgba(246,246,248,.98),rgba(56,56,58,.98));
+  border:1px solid light-dark(rgba(0,0,0,.12),rgba(255,255,255,.12)); border-radius:8px;
+  box-shadow:0 12px 36px var(--bn-colour-shadow); padding:.28rem; }
+.mi { display:flex; align-items:center; gap:.55rem; padding:.26rem .6rem; border-radius:5px; font-size:var(--bn-text-label); }
+.mi .mi-ico { width:15px; text-align:center; opacity:.75; font-size:.8rem; }
+.mi .sc { margin-left:auto; color:var(--bn-colour-muted); font-size:var(--bn-text-badge); font-family:var(--bn-font-mono); }
+.mi.dis { opacity:.36; }
+.mi.hl { background:var(--bn-colour-accent); color:#fff; }
+.mi.hl .sc { color:rgba(255,255,255,.8); }
+.mi.new { background:light-dark(rgba(0,122,255,.1),rgba(10,132,255,.16)); box-shadow:inset 0 0 0 1px var(--bn-colour-accent); }
+.msep { height:1px; background:light-dark(rgba(0,0,0,.11),rgba(255,255,255,.13)); margin:.28rem .5rem; }
+
+/* ── confirm sheet ────────────────────────────────────────────────────── */
+.sheet { width:420px; background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border);
+  border-radius:12px; box-shadow:0 18px 52px var(--bn-colour-shadow); padding:1.4rem 1.5rem 1.1rem; text-align:center; }
+.sheet .icn { font-size:2rem; line-height:1; margin-bottom:.6rem; }
+.sheet h4 { font-size:var(--bn-text-heading); font-weight:490; margin:0 0 .4rem; }
+.sheet p { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:.3rem 0; }
+.sheet .btns { display:flex; gap:.5rem; justify-content:flex-end; margin-top:1.2rem; }
+.sbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.34rem .95rem; border-radius:6px;
+  border:1px solid var(--bn-colour-border-hover); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.sbtn.destructive { background:var(--sys-red); border-color:var(--sys-red); color:#fff; }
+.sbtn.default { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.loss { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); text-align:left;
+  background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border); border-radius:6px;
+  padding:.6rem .8rem; margin:.9rem 0 0; color:var(--bn-colour-text); }
+.sm-wrap { width:100%; overflow-x:auto; }
+.sm { width:100%; min-width:900px; height:auto; display:block; }
+.sm .st { fill:var(--bn-colour-bg); stroke:var(--bn-colour-border-hover); stroke-width:1.2; }
+.sm .st.run { stroke:var(--bn-colour-accent); stroke-width:2; }
+.sm .st.bad { stroke:var(--sys-orange); }
+.sm .st.err { stroke:var(--sys-red); }
+.sm .lbl { fill:var(--bn-colour-text); font-family:var(--bn-font-body); font-size:13px; font-weight:490; text-anchor:middle; }
+.sm .sub { fill:var(--bn-colour-muted); font-family:var(--bn-font-mono); font-size:9.5px; text-anchor:middle; }
+.sm .ed { stroke:var(--bn-colour-muted); stroke-width:1.3; fill:none; }
+.sm .ed.user { stroke:var(--bn-colour-accent); stroke-dasharray:5 3; }
+.sm .et { fill:var(--bn-colour-muted); font-family:var(--bn-font-mono); font-size:9.5px; text-anchor:middle; }
+.sm .et.user { fill:var(--bn-colour-accent); }
+.legend { display:flex; gap:1.6rem; flex-wrap:wrap; font-size:var(--bn-text-badge); color:var(--bn-colour-muted); padding:.5rem 0 0; }
+.legend i { display:inline-block; width:26px; height:0; border-top:1.5px solid var(--bn-colour-muted); vertical-align:4px; margin-right:.35rem; }
+.legend i.user { border-top-style:dashed; border-color:var(--bn-colour-accent); }
+@media (prefers-reduced-motion: reduce) { .spin { animation:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="masthead">
+  <div class="eyebrow">Mockup · analysis lifecycle</div>
+  <h1>Every row state, and the affordance each one offers</h1>
+  <p>Companion to <code>docs/design-analysis-lifecycle.md</code>, which carries the state machine,
+     the sequence diagrams and the failure-mode tables. This is the pixels.</p>
+  <p>States are the shipped Swift types — <code>ProjectAvailability</code> and
+     <code>SubtitleVariant</code>. Nothing here invents a state; two affordances are proposed
+     and are marked as such.</p>
+</div>
+
+<div class="controls">
+  <span class="lbl">Palette</span>
+  <button class="pbtn on" onclick="setPal('default',this)">Default</button>
+  <button class="pbtn" onclick="setPal('edo',this)">Edo</button>
+</div>
+
+<div class="key">
+  <span><span class="sw-a"></span><b>Artefact</b> — real pixels</span>
+  <span><span class="sw-c"></span><b>Commentary</b> — reasoning, not shipped</span>
+</div>
+
+<!-- ══════════ ROW STATES ══════════ -->
+<div class="sec-head">
+  <h2>The row-state ladder</h2>
+  <p class="sub">One project, walked through every state it can occupy. Schema E — a clean row shows no status line at all.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">sidebar · project row states</span></div>
+  <div class="frame-body">
+
+    <div class="sb">
+      <div class="sb-lab">Healthy</div>
+
+      <div class="stateno">empty</div>
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body"><div class="r-name">Onboarding diaries</div></div>
+      </div>
+
+      <div class="stateno">running</div>
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body">
+          <div class="r-name">Onboarding diaries</div>
+          <div class="r-sub"><span class="spin"></span> Transcribing · 6 of 14</div>
+        </div>
+      </div>
+
+      <div class="stateno">analysed</div>
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body">
+          <div class="r-name">Onboarding diaries</div>
+          <div class="r-sub">Yesterday</div>
+        </div>
+        <span class="r-count">14</span>
+      </div>
+
+      <div class="stateno">drifted — new files</div>
+      <div class="row sel">
+        <span class="r-ico">📁</span>
+        <div class="r-body">
+          <div class="r-name">Onboarding diaries</div>
+          <div class="r-sub">+3 unanalysed</div>
+        </div>
+        <span class="r-count">14</span>
+      </div>
+
+      <div class="stateno">missing — files removed</div>
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body">
+          <div class="r-name">Onboarding diaries</div>
+          <div class="r-sub">2 files missing</div>
+        </div>
+        <span class="r-count">14</span>
+      </div>
+    </div>
+
+    <div class="sb">
+      <div class="sb-lab">Distress</div>
+
+      <div class="stateno">completedPartial</div>
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body">
+          <div class="r-name">Pharmacy handover</div>
+          <div class="r-sub"><span class="g tint-warn"><svg viewBox="0 0 16 16"><path d="M8 1.6 15 14.2H1Z" fill="currentColor"/><rect x="7.3" y="5.6" width="1.4" height="4.4" rx=".7" fill="#fff"/><circle cx="8" cy="11.7" r=".85" fill="#fff"/></svg></span> Partial completion</div>
+        </div>
+        <span class="r-count">11</span>
+      </div>
+
+      <div class="stateno">failed</div>
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body">
+          <div class="r-name">Pharmacy handover</div>
+          <div class="r-sub"><span class="g tint-err"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.6" fill="currentColor"/><path d="M5.6 5.6 10.4 10.4M10.4 5.6 5.6 10.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg></span> Ran out of credit</div>
+        </div>
+        <span class="r-count">0</span>
+      </div>
+
+      <div class="stateno">stranded → reconciled</div>
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body">
+          <div class="r-name">Pharmacy handover</div>
+          <div class="r-sub"><span class="g tint-err"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.6" fill="currentColor"/><path d="M5.6 5.6 10.4 10.4M10.4 5.6 5.6 10.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg></span> Run didn’t finish</div>
+        </div>
+        <span class="r-count">0</span>
+      </div>
+
+      <div class="stateno">cantFind</div>
+      <div class="row">
+        <span class="r-ico" style="opacity:.45">📁</span>
+        <div class="r-body">
+          <div class="r-name" style="opacity:.55">Pharmacy handover</div>
+          <div class="r-sub">Samsung T7 · missing</div>
+        </div>
+      </div>
+
+      <div class="stateno">inCloud — downloading</div>
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body">
+          <div class="r-name">Pharmacy handover</div>
+          <div class="r-sub"><span class="g tint-info"><svg viewBox="0 0 16 16"><path d="M4.5 12h7a3 3 0 0 0 .3-6 4 4 0 0 0-7.7.9A2.6 2.6 0 0 0 4.5 12z" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></span> Downloading · 62%</div>
+        </div>
+      </div>
+
+      <div class="stateno">stopping</div>
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body">
+          <div class="r-name">Pharmacy handover</div>
+          <div class="r-sub">Stopping…</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>Drifted and Missing are different states because they want different verbs</h3>
+  <p><code>UnanalysedState</code> already carries <code>newFiles</code> and <code>missingFiles</code>
+     separately. New files invite an action — fold them in. Missing files invite <em>none</em>: it is a
+     statement of fact, and offering a button there would be a call to action for a situation with no
+     action. Merging them into one “needs attention” state would manufacture that button.</p>
+  <h3>Stranded is a real state, not a bug</h3>
+  <p>A process that dies without writing a terminus event looks, on disk, exactly like one still
+     running. Reconciling on next start is what turns it into a stated failure. Without that step the
+     row spins forever — which is precisely what an eleven-hour hang looked like on 19 Aug 2026.</p>
+</div>
+
+<!-- ══════════ MENU ══════════ -->
+<div class="sec-head">
+  <h2>The context menu — today and proposed</h2>
+  <p class="sub">Selected project is analysed and idle. Nothing is running.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">left: shipped · right: proposed</span></div>
+  <div class="frame-body">
+
+    <div class="menu">
+      <div class="mi hl"><span class="mi-ico">▷</span> Analyse</div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">🗂</span> Show in Finder <span class="sc">⇧⌘R</span></div>
+      <div class="mi"><span class="mi-ico">✏️</span> Rename…</div>
+      <div class="mi"><span class="mi-ico">◔</span> Choose Icon</div>
+      <div class="mi"><span class="mi-ico">📁</span> Move to <span class="sc">›</span></div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">((•))</span> Turn On Agent Access</div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">⊖</span> Remove from Sidebar <span class="sc">⌘⌫</span></div>
+    </div>
+
+    <div class="menu">
+      <div class="mi hl"><span class="mi-ico">▷</span> Analyse</div>
+      <div class="mi new"><span class="mi-ico">↻</span> Re-analyse…</div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">🗂</span> Show in Finder <span class="sc">⇧⌘R</span></div>
+      <div class="mi"><span class="mi-ico">✏️</span> Rename…</div>
+      <div class="mi"><span class="mi-ico">◔</span> Choose Icon</div>
+      <div class="mi"><span class="mi-ico">📁</span> Move to <span class="sc">›</span></div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">((•))</span> Turn On Agent Access</div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">⊖</span> Remove from Sidebar <span class="sc">⌘⌫</span></div>
+    </div>
+
+    <div class="menu">
+      <div class="sb-lab" style="padding:.2rem .6rem .35rem">Empty — no recordings at all</div>
+      <div class="mi dis"><span class="mi-ico">▷</span> Analyse</div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">🗂</span> Show in Finder <span class="sc">⇧⌘R</span></div>
+      <div class="mi"><span class="mi-ico">✏️</span> Rename…</div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">⊖</span> Remove from Sidebar <span class="sc">⌘⌫</span></div>
+    </div>
+
+    <div class="menu">
+      <div class="sb-lab" style="padding:.2rem .6rem .35rem">Drifted — new files present</div>
+      <div class="mi hl new"><span class="mi-ico">＋</span> Analyse 3 New Files</div>
+      <div class="mi new"><span class="mi-ico">↻</span> Re-analyse…</div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">🗂</span> Show in Finder <span class="sc">⇧⌘R</span></div>
+      <div class="mi"><span class="mi-ico">✏️</span> Rename…</div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">⊖</span> Remove from Sidebar <span class="sc">⌘⌫</span></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>“Analyse 3 New Files” is a relabel, not a new command</h3>
+  <p>For a <b>folder-shaped</b> project the CLI already rescans the folder at run time, so plain
+     <b>Analyse</b> <em>is</em> the incremental verb — the per-session cache re-transcribes only
+     what’s new and curation survives. Nothing new gets built here. What’s wrong today is that the
+     control gives no clue whether edits survive; naming it for the state answers that in the label
+     instead of in a doc the researcher will never read.</p>
+  <h3>The empty project is the clearest false affordance in the app</h3>
+  <p>First menu: the detail pane behind it says “Add interview recordings or transcripts to get
+     started”, while the context menu’s first and highlighted item offers to analyse them.
+     <code>canAnalyse</code> checks the project’s <em>kind</em>, its path and the pipeline state —
+     it never asks whether there is any media. The data to ask with already exists
+     (<code>UnanalysedState.newFiles</code>, <code>sessionCount</code>); see §4.1 of the design doc
+     for the full matrix.</p>
+  <h3>Where this affordance actually earns its place</h3>
+  <p>Not as an alternative to drag-drop or <b>File ▸ Add Files…</b> — both of those already fold new
+     files into a folder-shaped project. It earns its place on the one route that has no drop event
+     and no menu action to hang off: <b>files added in Finder</b>. That is what
+     <code>ProjectFolderWatcher</code> is for, and today it detects the situation, reports it as
+     “+N unanalysed”, and offers nothing — the sheet’s only button is <b>Close</b>.</p>
+  <h3>Never dimmed, in a context menu</h3>
+  <p><code>MenuCommands.swift</code> states the rule in its own comment: menu-bar items dim,
+     <em>context menus hide instead</em>. So Re-analyse… is present here only when it can run.
+     Today it is <code>.disabled(true)</code> hardcoded in the Project menu with no state that could
+     ever enable it — dimming says “not right now” when the truth is “not in this build”, which sends
+     people hunting for a state that does not exist.</p>
+  <h3>Against hiding it behind Option</h3>
+  <p>Option-reveal is for alternates you already know about — Save As…, Quit and Discard Windows.
+     Recovering from a bad run is an ordinary need, not a power-user variant, and putting a
+     destructive action behind an invisible modifier with no confirmation inverts the safety.
+     The <code>…</code> already carries the promise that something will be asked.</p>
+</div>
+
+
+<!-- ══════════ STATE MACHINE ══════════ -->
+<div class="sec-head">
+  <h2>The state machine</h2>
+  <p class="sub">Every state a project row can occupy, and what moves it. Solid = the system moved it; dashed = the researcher did.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">project lifecycle · analyse · re-analyse · incremental</span></div>
+  <div class="frame-body" style="display:block; padding:1.6rem 1.2rem">
+   <div class="sm-wrap">
+    <svg class="sm" viewBox="0 0 980 470" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="State machine for project analysis lifecycle">
+      <defs>
+        <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--bn-colour-muted)"/>
+        </marker>
+        <marker id="au" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--bn-colour-accent)"/>
+        </marker>
+      </defs>
+
+      <circle cx="20" cy="174" r="6" fill="var(--bn-colour-muted)"/>
+      <text class="et" x="20" y="196">start</text>
+
+      <!-- states -->
+      <rect class="st" x="48"  y="150" width="132" height="48" rx="9"/>
+      <text class="lbl" x="114" y="172">Empty</text><text class="sub" x="114" y="187">no deliverable</text>
+
+      <rect class="st run" x="270" y="150" width="132" height="48" rx="9"/>
+      <text class="lbl" x="336" y="172">Running</text><text class="sub" x="336" y="187">spinner · Stop ⌘.</text>
+
+      <rect class="st" x="500" y="150" width="132" height="48" rx="9"/>
+      <text class="lbl" x="566" y="172">Analysed</text><text class="sub" x="566" y="187">count · date</text>
+
+      <rect class="st" x="748" y="66"  width="132" height="48" rx="9"/>
+      <text class="lbl" x="814" y="88">Drifted</text><text class="sub" x="814" y="103">+N unanalysed</text>
+
+      <rect class="st" x="748" y="150" width="132" height="48" rx="9"/>
+      <text class="lbl" x="814" y="172">Missing</text><text class="sub" x="814" y="187">N files gone</text>
+
+      <rect class="st bad" x="748" y="234" width="132" height="48" rx="9"/>
+      <text class="lbl" x="814" y="256">Unreachable</text><text class="sub" x="814" y="271">Locate…</text>
+
+      <rect class="st bad" x="500" y="300" width="132" height="48" rx="9"/>
+      <text class="lbl" x="566" y="322">Partial</text><text class="sub" x="566" y="337">reduced fidelity</text>
+
+      <rect class="st err" x="270" y="380" width="132" height="48" rx="9"/>
+      <text class="lbl" x="336" y="402">Failed</text><text class="sub" x="336" y="417">diagnostic popover</text>
+
+      <rect class="st err" x="48"  y="380" width="132" height="48" rx="9"/>
+      <text class="lbl" x="114" y="402">Stranded</text><text class="sub" x="114" y="417">no terminus event</text>
+
+      <!-- edges -->
+      <path class="ed" d="M26,174 L46,174" marker-end="url(#a)"/>
+
+      <path class="ed user" d="M180,166 L268,166" marker-end="url(#au)"/>
+      <text class="et user" x="224" y="158">Analyse</text>
+
+      <path class="ed" d="M402,166 L498,166" marker-end="url(#a)"/>
+      <text class="et" x="450" y="158">run_completed</text>
+
+      <path class="ed user" d="M498,186 L404,186" marker-end="url(#au)"/>
+      <text class="et user" x="451" y="200">Re-analyse…</text>
+
+      <path class="ed" d="M336,198 C336,250 430,262 498,300" marker-end="url(#a)"/>
+      <text class="et" x="430" y="252">partial</text>
+
+      <path class="ed" d="M320,198 L320,378" marker-end="url(#a)"/>
+      <text class="et" x="286" y="300">run_failed</text>
+
+      <path class="ed user" d="M352,378 L352,200" marker-end="url(#au)"/>
+      <text class="et user" x="392" y="300">Analyse (retry)</text>
+
+      <path class="ed" d="M290,198 C210,240 130,300 118,378" marker-end="url(#a)"/>
+      <text class="et" x="176" y="300">process dies</text>
+
+      <path class="ed" d="M180,404 L268,404" marker-end="url(#a)"/>
+      <text class="et" x="224" y="396">reconciled on next start</text>
+
+      <path class="ed" d="M598,152 C660,120 700,98 746,92" marker-end="url(#a)"/>
+      <text class="et" x="672" y="114">new files seen</text>
+
+      <path class="ed" d="M632,168 L746,168" marker-end="url(#a)" marker-start="url(#a)"/>
+      <text class="et" x="689" y="160">removed / restored</text>
+
+      <path class="ed" d="M598,196 C660,226 700,248 746,254" marker-end="url(#a)" marker-start="url(#a)"/>
+      <text class="et" x="672" y="238">unmounted / Locate…</text>
+
+      <path class="ed user" d="M814,64 C814,20 420,14 340,148" marker-end="url(#au)"/>
+      <text class="et user" x="578" y="24">Analyse — folds in incrementally, edits survive</text>
+
+      <path class="ed user" d="M500,318 C440,318 392,268 380,200" marker-end="url(#au)"/>
+      <text class="et user" x="447" y="292">Re-analyse…</text>
+    </svg>
+   </div>
+   <div class="legend">
+     <span><i></i>system transition</span>
+     <span><i class="user"></i>researcher action</span>
+     <span><b style="color:var(--sys-orange)">▬</b> degraded</span>
+     <span><b style="color:var(--sys-red)">▬</b> failure</span>
+   </div>
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>Running is the only hub — every verb passes through it</h3>
+  <p>Analyse, incremental and re-analyse are three doors into one room. That is why they can share a
+     pipeline and still need separate labels: the researcher is choosing what they’ll lose on the way
+     in, not which machine runs.</p>
+  <h3>Stranded exists because a dead process looks exactly like a live one</h3>
+  <p>Nothing on disk distinguishes “running” from “died without saying so”. Only the reconciliation on
+     next start closes it, which is why it earns a box rather than being folded into Failed. An
+     eleven-hour spinner on 19 Aug 2026 was this state, unnamed.</p>
+  <h3>Missing and Unreachable are reversible; Drifted is not</h3>
+  <p>Two edges are double-headed — files come back, volumes remount, and the row should return to
+     Analysed on its own. Drifted only leaves via a run. That asymmetry is why Missing gets no button
+     and Drifted does.</p>
+</div>
+
+<!-- ══════════ PROJECT MENU ══════════ -->
+<div class="sec-head">
+  <h2>The Project menu — dim, don’t hide</h2>
+  <p class="sub">Same states as the context menu, opposite convention: a menu-bar item stays put and dims. Unimplemented is the exception — it hides in both.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">Project menu · left: empty project · centre: analysed · right: running</span></div>
+  <div class="frame-body">
+
+    <div class="menu">
+      <div class="sb-lab" style="padding:.2rem .6rem .35rem">Empty</div>
+      <div class="mi dis"><span class="mi-ico">▷</span> Analyse</div>
+      <div class="mi dis"><span class="mi-ico">↻</span> Re-analyse…</div>
+      <div class="mi dis"><span class="mi-ico">⏹</span> Stop Analysis <span class="sc">⌘.</span></div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">🗂</span> Show in Finder <span class="sc">⇧⌘R</span></div>
+      <div class="mi dis"><span class="mi-ico">🔍</span> Locate…</div>
+      <div class="mi"><span class="mi-ico">✏️</span> Rename…</div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">⊖</span> Remove from Sidebar <span class="sc">⌘⌫</span></div>
+    </div>
+
+    <div class="menu">
+      <div class="sb-lab" style="padding:.2rem .6rem .35rem">Analysed · 3 new files</div>
+      <div class="mi new"><span class="mi-ico">＋</span> Analyse 3 New Files</div>
+      <div class="mi new"><span class="mi-ico">↻</span> Re-analyse…</div>
+      <div class="mi dis"><span class="mi-ico">⏹</span> Stop Analysis <span class="sc">⌘.</span></div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">🗂</span> Show in Finder <span class="sc">⇧⌘R</span></div>
+      <div class="mi dis"><span class="mi-ico">🔍</span> Locate…</div>
+      <div class="mi"><span class="mi-ico">✏️</span> Rename…</div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">⊖</span> Remove from Sidebar <span class="sc">⌘⌫</span></div>
+    </div>
+
+    <div class="menu">
+      <div class="sb-lab" style="padding:.2rem .6rem .35rem">Running</div>
+      <div class="mi dis"><span class="mi-ico">▷</span> Analyse</div>
+      <div class="mi dis"><span class="mi-ico">↻</span> Re-analyse…</div>
+      <div class="mi"><span class="mi-ico">⏹</span> Stop Analysis <span class="sc">⌘.</span></div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">🗂</span> Show in Finder <span class="sc">⇧⌘R</span></div>
+      <div class="mi dis"><span class="mi-ico">🔍</span> Locate…</div>
+      <div class="mi"><span class="mi-ico">✏️</span> Rename…</div>
+      <div class="msep"></div>
+      <div class="mi"><span class="mi-ico">⊖</span> Remove from Sidebar <span class="sc">⌘⌫</span></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>Dimming is a promise that some state enables it</h3>
+  <p>Every dimmed item above lights up in one of the other two columns — that is what makes the dim
+     honest. <b>Re-analyse…</b> today is <code>.disabled(true)</code> hardcoded, so it is dim in all
+     three, which reads as “not yet” and means “not ever, in this build”. That is the difference
+     between a state-dependent control and a placeholder, and the fix is to hide placeholders.</p>
+  <h3>The empty column is the bug, drawn</h3>
+  <p>Left column: <b>Analyse</b> is dimmed because there are no recordings. Today it is
+     <em>enabled and highlighted</em> — <code>canAnalyse</code> checks the project’s kind, its path
+     and the pipeline state, never whether there is any media to analyse.</p>
+  <h3>Locate… earns its dim</h3>
+  <p>It is meaningless in all three columns shown and lights up only in <code>cantFind</code> — a
+     state the menu bar can reach but these three columns can’t. Included precisely to show a
+     correctly-dimmed item beside the incorrectly-dimmed one.</p>
+</div>
+
+<!-- ══════════ CONFIRM ══════════ -->
+<div class="sec-head">
+  <h2>The confirmation — measured, not vague</h2>
+  <p class="sub">Shown only when there is something to lose. Silence when there isn’t.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">Re-analyse… · curation present</span></div>
+  <div class="frame-body">
+    <div class="sheet">
+      <div class="icn">↻</div>
+      <h4>Re-analyse “Onboarding diaries”?</h4>
+      <p>Bristlenose will transcribe and analyse all 14 interviews again from scratch.</p>
+      <div class="loss">
+        Your work on this study will be discarded:<br>
+        &nbsp;&nbsp;47 edited quotes<br>
+        &nbsp;&nbsp;12 tags<br>
+        &nbsp;&nbsp;3 renamed speakers<br>
+        &nbsp;&nbsp;2 named themes
+      </div>
+      <div class="btns">
+        <button class="sbtn">Cancel</button>
+        <button class="sbtn destructive">Re-analyse</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>A terse modal measures</h3>
+  <p>“This cannot be undone” tells a researcher nothing they can weigh. Four counted lines let them
+     decide in one read — and if the counts come back zero, there is nothing to weigh and the modal
+     should not appear at all. That is the difference between a confirmation and a speed bump.</p>
+  <h3>Cancel is the default; the destructive button is not blue</h3>
+  <p>Return cancels. The destructive action carries the system red and sits where the eye lands last.
+     No <code>--clean</code>, no folder paths, no mention of an output directory — the researcher
+     should never need a model of where Bristlenose keeps its working files, and the moment a message
+     tells them to go and delete one, that model has leaked.</p>
+  <h3>What is deliberately absent</h3>
+  <p>No “don’t ask again”. The cost is real every time, and the count changes every time.</p>
+</div>
+
+</div>
+<script>
+function setPal(p, btn) {
+  document.documentElement.setAttribute('data-color-theme', p);
+  document.querySelectorAll('.controls .pbtn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+</script>
+</body>
+</html>

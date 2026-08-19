@@ -942,15 +942,30 @@ def _build_estimator(settings: object) -> tuple[object, object]:
     return estimator, _on_event
 
 
-def _is_leftover_log_only_output(output_dir: Path) -> bool:
-    """True when *output_dir* holds nothing but logs from a run that never started.
+def _has_no_deliverable(output_dir: Path) -> bool:
+    """True when *output_dir* holds no analysis worth protecting — only state.
 
-    A run that exits before the pipeline begins (failed preflight, api-key
-    abort) leaves only ``<output>/.bristlenose/bristlenose.log`` behind. That
-    detritus must not wall off the user's next attempt with
-    "Output directory already exists".
+    A run that dies before producing anything still leaves a directory behind,
+    and that detritus must not wall off the user's next attempt with "Output
+    directory already exists". The advice attached to that refusal — *use
+    --clean* — is unusable from the desktop app, which has no way to pass a
+    flag, so a researcher who hits it is simply stuck.
+
+    **The test is "is there a deliverable?", not "which files are these?"**
+    This was previously an allowlist of one filename prefix (`bristlenose.log`
+    and its rotations), which meant any run that got marginally further defeated
+    it. A hung run on 19 Aug 2026 left a db, an events file, a shoal feed and a
+    `last-run-failure.log` beside the log; every one of those is state or
+    telemetry, none is an analysis, and the allowlist refused all of them —
+    walling off the retry in exactly the way this function exists to prevent.
+
+    Everything Bristlenose *produces* — the report, `sessions/`,
+    `transcripts-raw/`, `assets/` — lands at the top level of the output
+    directory. Everything under `.bristlenose/` is internal state. So a folder
+    containing nothing but `.bristlenose/` has nothing to lose, whatever is
+    inside it. The resume path (a valid manifest) is handled by the caller
+    before this is reached.
     """
-    from bristlenose.logging import _LOG_FILENAME
     from bristlenose.utils.fs import is_os_metadata
 
     for entry in output_dir.iterdir():
@@ -958,12 +973,6 @@ def _is_leftover_log_only_output(output_dir: Path) -> bool:
             continue
         if entry.name != ".bristlenose" or not entry.is_dir():
             return False
-        for state_file in entry.iterdir():
-            if is_os_metadata(state_file):
-                continue
-            # bristlenose.log plus RotatingFileHandler backups (.log.1, …)
-            if not state_file.name.startswith(_LOG_FILENAME):
-                return False
     return True
 
 
@@ -1087,11 +1096,11 @@ def run(
                 console.print(f"[dim]{format_resume_summary(_status)}[/dim]")
             else:
                 console.print("[dim]Resuming from previous run...[/dim]")
-        elif _is_leftover_log_only_output(output_dir):
-            # Only a .bristlenose/ log survives from a run that exited before
-            # the pipeline started (failed preflight, api-key abort). Reuse
-            # the directory silently — demanding --clean here walls off the
-            # user's second attempt.
+        elif _has_no_deliverable(output_dir):
+            # Nothing but internal state survives from a run that produced no
+            # analysis. Reuse the directory silently — demanding --clean here
+            # walls off the user's second attempt, and the desktop app has no
+            # way to pass --clean at all.
             output_exists = False
         else:
             console.print(

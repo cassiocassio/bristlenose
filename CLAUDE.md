@@ -354,6 +354,7 @@ See `docs/design-i18n.md` for implementation gotchas (Apple glossary cross-check
 - `docs/design-minimap.md`, `docs/design-inspector-panel.md`, `docs/design-finding-weight.md`
 
 **Pipeline / backend:**
+- `docs/design-analysis-lifecycle.md` — **the cross-cutting view of analyse / re-analyse / incremental**: one state machine, sequence diagrams, the affordance inventory, and the observed failure modes (four outcomes, not three). Read before adding or changing any analysis-triggering control
 - `docs/design-pipeline-resilience.md` — manifest, event sourcing, resume, provenance
 - `docs/design-pipeline-diagnostic-popover.md` — **read before adding any new error / status / message that surfaces in the popover, the pill, the sidebar glyph, or any toast.** Five-kind `MessageKind` taxonomy (`bristlenose/ui_kinds.py`), length budgets, anti-patterns, flowchart for fitting new messages into the existing vocabulary instead of inventing new glyphs/colours
 - `docs/design-platform-transcripts.md`, `docs/design-transcript-coverage.md`

@@ -87,6 +87,16 @@ final class WindowRoster: ObservableObject {
     /// whether that window's own roster entry has been updated yet. Two
     /// observers drive this (`selection` and `windowGroup`) and their order
     /// isn't guaranteed.
+    /// Every project a live window is currently showing.
+    ///
+    /// Stage 3b's serve lifecycle reads this rather than counting opens and
+    /// closes — see `ServeReaping`. Derived state cannot drift the way a
+    /// refcount can: a missed `.onDisappear` delays the next sweep's answer
+    /// instead of stranding a sidecar forever.
+    var shownProjects: Set<UUID> {
+        Set(held.values.compactMap { $0.group?.projectID })
+    }
+
     func anyProjectShown(excluding windowID: UUID) -> Bool {
         held.contains { $0.key != windowID && $0.value.group != nil }
     }

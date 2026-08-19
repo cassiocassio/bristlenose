@@ -154,7 +154,9 @@ consistent with `docs/methodology/tag-rejections-are-great.md`, which permits
 only opt-in *aggregate rejection rates* off-device — never reasons, never quote
 content. The decision log is the per-researcher seed of the documented ten-year
 "cultivation ratchet"; the off-device aggregate is a separate, later, consented
-layer. `SECURITY.md`'s "nothing leaves your laptop" posture holds unchanged.
+layer. Nothing here changes what `SECURITY.md` enumerates as leaving the
+machine — the decision log is written to disk and read from disk, and adds no
+sixth egress path to that list of five.
 
 ## Engine — `bristlenose/server/codebook_builder.py`
 

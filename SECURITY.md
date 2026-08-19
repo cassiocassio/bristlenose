@@ -1,8 +1,10 @@
 # Security
 
-## Local-first architecture
+## Where Bristlenose runs, and what it sends
 
-Bristlenose runs on your laptop. There is no Bristlenose server, no account, and no telemetry.
+Bristlenose runs on your laptop. There is no Bristlenose server, no account, and no telemetry — nothing is sent to us, ever.
+
+It is **not** a tool where nothing leaves your machine, and you should not choose it believing that. The analysis is an outbound call to a cloud LLM provider, and that is the normal, recommended path. Every case where data does leave is listed below under [Data leaves your machine only when](#data-leaves-your-machine-only-when) — five of them, in full. Ollama closes the largest one, at the cost of speed and analysis quality.
 
 **Transcription** happens locally using Whisper (faster-whisper or MLX Whisper). Audio never leaves your machine.
 

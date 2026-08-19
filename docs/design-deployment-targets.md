@@ -105,7 +105,7 @@ cd frontend && npm ci && npm run build 2>&1 | tail -10
 | Prompt iteration on synthetic fixtures | ✅ | `api.anthropic.com` reachable; commit a small fixture to the branch first |
 | CLI feature development (new commands, stages, render tweaks) | ✅ | Full pipeline code runs; use a tiny committed fixture instead of `trial-runs/` |
 | Transcribing a short sample | ✅ (slow) | `faster-whisper` CPU only — fine for a 1-minute test clip, painful for a 90-min interview |
-| `bristlenose run` on *real* interviews | ❌ | Interview data never leaves laptop; violates local-first promise. Use a synthetic fixture if you need to exercise the pipeline |
+| `bristlenose run` on *real* interviews | ❌ | Participant recordings must not be copied onto an ephemeral VM we do not control — a governance obligation, not a local-first promise. Use a synthetic fixture if you need to exercise the pipeline |
 | Browser QA of `bristlenose serve` | ⚠️ unknown | Port-forwarding from Claude Cloud VM to iPad browser not confirmed. `preview_*` in-assistant tools are banned (CLAUDE.md). Worth testing once |
 | `/deploy-website` | ❌ | Needs user's SSH agent |
 | Snap/Homebrew release | ❌ | Needs signing keys, tags on user's machine |

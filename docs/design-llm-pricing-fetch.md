@@ -22,7 +22,7 @@ Anthropic, OpenAI, and Google change frontier-model pricing roughly four to ten 
 
 **Concrete failure:** Anthropic halves Sonnet 4 input pricing tomorrow morning. A user on Bristlenose v0.15.x runs `bristlenose run` against a 12-session project. The pre-run forecast prints `~$3.20` when the real cost is `~$1.90`. The user either over-budgets (mild) or, worse, picks a smaller / cheaper model than they actually needed. Slice C makes the forecast *self-correcting from local history* but does nothing about the rate sheet itself — local medians × stale rates still gives the wrong dollar figure.
 
-We need a way to refresh the price table between releases without forcing users onto a release cadence and without compromising the local-first promise.
+We need a way to refresh the price table between releases without forcing users onto a release cadence and without adding a channel that reports anything about the user back to us.
 
 ## Approach
 
@@ -154,7 +154,7 @@ A future improvement is a scheduled GitHub Action that diffs the three pricing p
 
 ## Trust posture
 
-This feature must not undermine the local-first claims in [SECURITY.md](../SECURITY.md). Specifically:
+This feature must not add a sixth entry to [SECURITY.md](../SECURITY.md)'s list of when data leaves your machine. Specifically:
 
 - **Read-only HTTP GET.** No POST, no PUT, no headers beyond `User-Agent: bristlenose/<version>`. The server log on DreamHost sees an IP and a timestamp — same as someone visiting `bristlenose.app` in a browser. No PII, no project data, no key fingerprints, no opaque identifiers.
 - **No cookies, no fingerprinting, no analytics.** DreamHost's default access log is the only record. We don't add JS, beacons, or any second-leg request.
@@ -214,6 +214,6 @@ When the network-fetch slice ships for public-beta GM:
 
 - Current pricing module: [bristlenose/llm/pricing.py](../bristlenose/llm/pricing.py)
 - Slice B telemetry stamping: [design-cost-forecast-phase1.md §schema](design-cost-forecast-phase1.md)
-- Local-first promises this must not undermine: [SECURITY.md](../SECURITY.md)
+- The egress list this must not lengthen: [SECURITY.md](../SECURITY.md) §"Data leaves your machine only when"
 - Static-site deploy mechanism: deploy script in the separate private deploy repo (reads `bristlenose/llm/pricing.json` from this public repo at deploy time)
 - Deploy target: `bristlenose.app`

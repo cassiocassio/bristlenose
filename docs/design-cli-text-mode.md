@@ -54,7 +54,7 @@ Concretely, the AI-first crowd looks like:
 - Running codebooks — "give me every quote tagged `mental-model`"
 - Quote attribution with timecodes
 - Sentiment and friction points as data, not charts
-- **Local models, end-to-end.** Ollama for analysis + text output = nothing leaves the laptop, including the thinking. That's a stronger local-first story than "local pipeline but your themes went through Anthropic's API"
+- **Local models, end-to-end.** Ollama for analysis + text output = nothing leaves the laptop, including the thinking. This is the one configuration where that sentence is true, which is exactly why it is a niche worth naming rather than the product's pitch
 - Ingesting whatever they've got — phone voice memos, Zoom recordings, Teams exports, old `.srt` files, a `.docx` someone sent. Audio/video ingestion is not a "researcher feature" they need to skip; it's core and it works fine headless
 
 **What they don't care about (and why the GUI isn't right for them):**
@@ -68,7 +68,7 @@ Concretely, the AI-first crowd looks like:
 Text-only mode is not *just* a contributor affordance. It's a **second legitimate product surface** for a different audience — the AI-first, local-model-running, CLI-native, self-hosting crowd. That audience probably won't pay for an App Store subscription, but:
 
 - They're the people who write blog posts, star repos, submit PRs, file interesting bug reports, and tell other technical people about tools
-- They align with the "local-first, AGPL, nothing leaves your laptop" story better than almost any other audience — they're already sceptical of cloud SaaS, already comfortable running a pipeline locally, already running local models for exactly this reason
+- They are the audience for whom the Ollama path is a *feature* rather than a slower fallback — already sceptical of cloud SaaS, already comfortable running a pipeline locally, already running local models for exactly this reason. Note this is an argument for serving a niche well, not a licence to pitch Bristlenose as local-first: for everyone else the cloud call is the recommended path
 - The text-mode + Ollama pairing is arguably Bristlenose's strongest privacy story: audio in → transcription local (faster-whisper) → analysis local (Ollama) → markdown out. No cloud anywhere in the loop. No provider that could subpoena your themes
 - If we ship a snap and a working CLI, they have a path in. If we ship only a Mac app, we don't exist for them
 - It's just cool. That's not nothing. A tool that does one serious thing well from the terminal earns a kind of trust that a glossy app doesn't

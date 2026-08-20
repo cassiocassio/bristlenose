@@ -329,6 +329,32 @@ final class ServeManager: ObservableObject {
             log.notice("serve start refused — alpha build expired")
             return
         }
+        // **Already serving, or starting, exactly this project? Nothing to do.**
+        //
+        // This guard used to live in `switchProject(to:)`, whose comment said
+        // plainly that re-pointing at the same project "is actively harmful".
+        // Stage 3b deleted `switchProject` — a window observes a different
+        // manager rather than switching one — and the guard did not come with
+        // it, which put the harm back with nothing to catch it.
+        //
+        // Reachable the moment two windows show one study: each window's
+        // selection path calls `start()` on the SAME manager, and the second
+        // call hits the `stop()` below, SIGINTs a sidecar that is still booting,
+        // and the first window's readiness watcher reports the corpse —
+        // "Server exited before becoming ready (code 2)". Observed on screen
+        // 20 Aug 2026.
+        //
+        // `.failed` and `.idle` deliberately fall through: Retry must work, and
+        // so must a first start. `samePath` because bookmark healing can respell
+        // `Project.path` while this holds the spawn-time spelling.
+        if let current = currentProjectPath,
+           AgentActivity.samePath(current, projectPath) {
+            switch state {
+            case .running, .starting: return
+            case .idle, .failed: break
+            }
+        }
+
         if process != nil {
             stop()
         }

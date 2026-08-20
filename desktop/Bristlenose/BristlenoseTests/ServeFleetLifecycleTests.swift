@@ -123,3 +123,57 @@ struct ServeFleetLifecycleTests {
         #expect(fleet.manager(for: Self.b).handshakeOwner == false)
     }
 }
+
+/// The guard that came off `switchProject` when Stage 3b deleted it.
+///
+/// Two windows on one study both call `start()` on the same manager. Without a
+/// same-path guard the second call tears down a sidecar that is still booting,
+/// and the first window reports the corpse: "Server exited before becoming
+/// ready (code 2)". Observed on screen before this existed.
+@Suite("ServeManager same-path start guard")
+@MainActor
+struct ServeManagerStartGuardTests {
+
+    @Test func startingTheProjectItIsAlreadyRunningIsANoOp() {
+        let m = ServeManager()
+        m.instance.currentProjectPath = "/p/A"
+        m.instance.state = .running(port: 5000)
+
+        m.start(projectPath: "/p/A")
+
+        #expect(m.state == .running(port: 5000), "a second start tore down a healthy sidecar")
+    }
+
+    @Test func startingWhileTheSameProjectIsStillBootingIsANoOp() {
+        let m = ServeManager()
+        m.instance.currentProjectPath = "/p/A"
+        m.instance.state = .starting
+
+        m.start(projectPath: "/p/A")
+
+        #expect(m.state == .starting, "a second start interrupted a boot in progress")
+    }
+
+    /// Path respelling must not defeat it — bookmark healing rewrites
+    /// `Project.path` while the manager holds the spawn-time spelling.
+    @Test func theGuardStandardisesPaths() {
+        let m = ServeManager()
+        m.instance.currentProjectPath = "/p/./A"
+        m.instance.state = .running(port: 5000)
+
+        m.start(projectPath: "/p/A")
+
+        #expect(m.state == .running(port: 5000))
+    }
+
+    /// Retry after a failure must actually retry.
+    @Test func aFailedServeCanBeRestartedOnTheSameProject() {
+        let m = ServeManager()
+        m.instance.currentProjectPath = "/p/A"
+        m.instance.state = .failed(error: "boom")
+
+        m.start(projectPath: "/p/A")
+
+        #expect(m.state != .failed(error: "boom"), "Retry was swallowed by the guard")
+    }
+}

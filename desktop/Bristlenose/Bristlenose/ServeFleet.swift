@@ -32,9 +32,15 @@ import Foundation
 @MainActor
 final class ServeFleet: ObservableObject {
 
-    /// One manager per project. `@Published` so views can observe the *set*
-    /// changing; individual managers are observed through `observations`.
-    @Published private(set) var managers: [UUID: ServeManager] = [:]
+    /// One manager per project.
+    ///
+    /// Deliberately **not** `@Published`. `manager(for:)` mints on first use and
+    /// is called from `body` (`ContentView.serveManager`, the detail pane), so a
+    /// published write there would fire `objectWillChange` mid-view-update —
+    /// *"Publishing changes from within view updates is not allowed; this will
+    /// cause undefined behavior."* The `observations` fan-out already notifies
+    /// on anything a view can see, so nothing is lost by dropping it.
+    private(set) var managers: [UUID: ServeManager] = [:]
 
     /// The project whose serve is fronted — what app-level surfaces
     /// (`MenuCommands`, Settings ▸ MCP Agents) resolve "which instance" to.

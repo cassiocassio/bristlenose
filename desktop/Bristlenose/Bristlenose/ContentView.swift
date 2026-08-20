@@ -705,15 +705,6 @@ struct ContentView: View {
         // sidebar disappears (window close, scene teardown), clear
         // any stale drop-target highlight state so it doesn't
         // persist into the next appearance. (gruber-pass, fce69e4.)
-        // **Peer windows: the selection follows the one served study.**
-        //
-        // Keyed on `state` reaching `.running`, deliberately **not** on
-        // `currentProjectPath`. `ServeManager` writes the path *before* it
-        // publishes `.starting`, so syncing off the path fires in every sibling
-        // while the sidecar is still booting — and `switchProject`'s same-path
-        // no-op is `.running`-gated, so each sibling would miss it, fall to the
-        // cold-start branch, tear down the half-started process and respawn.
-        // Six windows, six kill-and-respawn cycles on one click.
         .onDisappear {
             dropTargetProjectID = nil
             dropTargetFolderID = nil

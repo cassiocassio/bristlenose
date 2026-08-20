@@ -66,6 +66,15 @@ final class ServeFleet: ObservableObject {
     /// the antenna lying, which is the defect `3ac773fa` closed.
     @Published var handshakeProjectPath: String?
 
+    /// When an agent last called a tool on the **exposed** serve, or nil.
+    ///
+    /// Fleet-level and read from `exposedProject` for the same reason as
+    /// `handshakeProjectPath`: exposure is singular, so activity is too. The
+    /// fronted project is NOT the right source — you can be looking at one
+    /// study while an agent reads the one you exposed, and the antenna that
+    /// radiates has to be the exposed one or it is pointing at the wrong row.
+    @Published var lastAgentCallAt: Date?
+
     /// Nested `ObservableObject`s do not propagate through `@EnvironmentObject`,
     /// and the failure is silent — so every manager's change is re-published as
     /// the fleet's own. Same contract `ServeManager` holds over `ServeInstance`,
@@ -287,5 +296,8 @@ final class ServeFleet: ObservableObject {
 
         let path = exposedProject.flatMap { managers[$0]?.handshakeProjectPath }
         if path != handshakeProjectPath { handshakeProjectPath = path }
+
+        let calledAt = exposedProject.flatMap { managers[$0]?.lastAgentCallAt }
+        if calledAt != lastAgentCallAt { lastAgentCallAt = calledAt }
     }
 }

@@ -41,6 +41,29 @@ final class ServeInstance: ObservableObject {
     /// `ServeManager.agentActivityWindow`.
     @Published var agentActiveNow: Bool = false
 
+    /// Monotonic MCP tool-call count from the authed `/api/agent-activity`.
+    /// The sidebar antenna animates on the EDGE (any increase), never on the
+    /// absolute value — so a serve restart, which resets the server's counter
+    /// to 0, must read as "new serve" rather than as a burst of activity.
+    /// `noteAgentCallCount` owns that rule.
+    @Published var agentCallCount: Int = 0
+
+    /// When the count last INCREASED. The sidebar's envelope is computed from
+    /// this — a retriggerable hold, so a burst of calls is one animation
+    /// rather than one per call. Nil = no activity observed on this serve.
+    @Published var lastAgentCallAt: Date?
+
+    /// Fold a fresh reading into `agentCallCount`, returning true if this was
+    /// real activity. A decrease means the sidecar restarted and the server's
+    /// counter went back to 0: adopt the new baseline silently, because
+    /// animating there would claim an agent asked something when nothing did.
+    func noteAgentCallCount(_ fresh: Int) -> Bool {
+        defer { agentCallCount = fresh }
+        guard fresh > agentCallCount else { return false }
+        lastAgentCallAt = Date()
+        return true
+    }
+
     /// Bearer token for localhost API access control, parsed from stdout and
     /// injected into the WKWebView. Unscoped — it opens `/api/*`, so it is
     /// never what the handshake carries.

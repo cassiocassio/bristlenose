@@ -88,3 +88,25 @@ def health(request: Request) -> dict[str, object]:
         ),
     }
     return payload
+
+
+@router.get("/agent-activity")
+def agent_activity(request: Request) -> dict[str, int]:
+    """Monotonic count of MCP tool calls this serve has answered.
+
+    Deliberately NOT part of the ``/api/health`` payload. That route is
+    auth-exempt, and a counter is precisely the activity timeline health
+    refuses to publish — its ``active`` bool is coarse *on purpose*, so no
+    local process can derive when the researcher's agent was working. This
+    route sits behind the bearer, so only the desktop host (which already
+    holds the token) can read it.
+
+    A counter rather than a timestamp, for two reasons: the host only needs
+    the *edge* (any increment → animate the sidebar antenna), and an integer
+    cannot be skewed by the monotonic clock's sleep pause the way an elapsed
+    reading can.
+
+    Resets to 0 when the serve restarts. The host treats a DECREASE as a new
+    serve, not as activity — see ``ServeInstance.agentCallCount``.
+    """
+    return {"calls": int(getattr(request.app.state, "mcp_tool_calls", 0) or 0)}

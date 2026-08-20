@@ -82,6 +82,29 @@ final class ServeManager: ObservableObject {
     static let agentActivityWindow = 120
     private var agentPollTask: Task<Void, Never>?
 
+    /// When an agent last asked this serve something — the sidebar antenna's
+    /// animation trigger. See `ServeInstance.lastAgentCallAt`.
+    var lastAgentCallAt: Date? { instance.lastAgentCallAt }
+
+    /// Fast poll for the antenna animation, distinct from the 20-second
+    /// `agentPollTask` that drives the coarse `agentActiveNow` bool.
+    ///
+    /// Two polls rather than one fast one, deliberately. This one reads the
+    /// AUTHED `/api/agent-activity` and only runs while the app is frontmost
+    /// — nobody is watching an animation in a background window, and a
+    /// permanent 1.5s request would be a wasteful idle cost on battery for a
+    /// signal with no viewer. The 20-second poll keeps running regardless,
+    /// because `mounted` / `instance_id` / the handshake self-heal ride on it
+    /// and those matter whether or not anyone is looking.
+    private var agentPulseTask: Task<Void, Never>?
+
+    /// Cadence of the fast poll. The blur this imposes is real and accepted:
+    /// several tool calls inside one interval collapse to a single edge, so
+    /// the animation says "an agent asked something", never "it asked six
+    /// times". Measured traffic makes that the right unit anyway — a single
+    /// question fired six calls inside one second.
+    static let agentPulseInterval = Duration.milliseconds(1500)
+
     /// Bearer token for localhost API access control.
     /// Parsed from stdout line: `[bristlenose] auth-token: <token>`
     /// Injected into WKWebView via WKUserScript.
@@ -209,6 +232,16 @@ final class ServeManager: ObservableObject {
             }
         }
 
+        // Same one-owner shape as `agentPollTask`: re-reads `state` and the
+        // frontmost flag each cycle rather than being started and stopped by
+        // lifecycle events, so serve churn and app activation can't race it.
+        agentPulseTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.agentPulseInterval)
+                await self?.pollAgentPulse()
+            }
+        }
+
         // NO per-instance prefs observer. One existed here while there was one
         // manager; with one per project it becomes "restart all N" — N cold
         // report remounts in windows nobody is looking at, which is precisely
@@ -310,6 +343,7 @@ final class ServeManager: ObservableObject {
         // ServeManager is app-lifetime today, but the poll loop shouldn't
         // outlive its owner if that ever changes.
         agentPollTask?.cancel()
+        agentPulseTask?.cancel()
     }
 
     /// Start serving a project. Callers must call `stop()` or
@@ -979,6 +1013,52 @@ final class ServeManager: ObservableObject {
         }
         if parsed.mounted != mcpMounted { mcpMounted = parsed.mounted }
         if parsed.active != agentActiveNow { agentActiveNow = parsed.active }
+    }
+
+    /// One cycle of the antenna-animation poll.
+    ///
+    /// Silent by design: every arm that can't produce a reading simply
+    /// returns. A failed read must not animate (that would claim activity
+    /// that didn't happen) and must not clear anything either — the envelope
+    /// decays on its own from `lastAgentCallAt`, so a dropped poll costs at
+    /// most one interval of latency, never a false state.
+    /// Is any Bristlenose window actually on screen?
+    ///
+    /// **Not `NSApp.isActive`.** That was the first gate and it was precisely
+    /// backwards: the scenario this animation exists for is a Claude window
+    /// covering everything except the sidebar strip — which means Bristlenose
+    /// is NOT frontmost exactly when the researcher is watching the antenna.
+    /// Gating on frontmost would have switched the feature off during its
+    /// primary use.
+    ///
+    /// `occlusionState` answers the question actually being asked: is any
+    /// pixel of any window on screen? It is false for minimised windows, for
+    /// windows fully covered by another app, and for windows on another
+    /// Space — all cases where nobody can see the antenna and the poll is
+    /// pure battery cost.
+    @MainActor
+    private static func anyWindowVisible() -> Bool {
+        NSApp.windows.contains { $0.isVisible && $0.occlusionState.contains(.visible) }
+    }
+
+    @MainActor
+    private func pollAgentPulse() async {
+        guard Self.anyWindowVisible(),
+              case .running(let port) = state,
+              let token = authToken,
+              let url = URL(string: "http://127.0.0.1:\(port)/api/agent-activity") else { return }
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let calls = json["calls"] as? Int else { return }
+        // A completion that lands after a project switch must not attribute
+        // the old serve's count to the new one — the same ownership check
+        // `fetchServerVersion` makes, for the same reason.
+        guard case .running(let current) = state, current == port else { return }
+        _ = instance.noteAgentCallCount(calls)
     }
 
     /// Fetch the Bristlenose version (and MCP availability) from the serve

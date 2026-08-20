@@ -2353,6 +2353,7 @@ struct ContentView: View {
                 // up" is that predicate minus mcpInstanceID and mcpToken,
                 // and the gap is reachable on every start and switch.
                 handshakeProjectPath: serveFleet.handshakeProjectPath,
+                lastAgentCallAt: serveFleet.lastAgentCallAt,
                 renameRequest: renameRequest
             )
             .navigationTitle(i18n.t("desktop.chrome.projects"))

@@ -836,9 +836,17 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
     # pauses across sleep, so elapsed time under-counts by the sleep — fine
     # for health's 2-minute freshness bool, wrong for anything longer.
     app.state.mcp_last_tool_call = None
+    # Monotonic call count for the sidebar antenna's activity animation. A
+    # COUNTER, not a timestamp: the host animates on any increment, and an
+    # integer is immune to the sleep-pause skew described above (a lid close
+    # cannot make the count go backwards or stall). Read via the authed
+    # /api/agent-activity — never /api/health, which is auth-exempt and
+    # deliberately publishes only the coarse `active` bool.
+    app.state.mcp_tool_calls = 0
 
     def _record_activity() -> None:
         app.state.mcp_last_tool_call = time.monotonic()
+        app.state.mcp_tool_calls = int(getattr(app.state, "mcp_tool_calls", 0) or 0) + 1
 
     server = create_mcp_server(session_factory, _last_run, _record_activity)
     http_app = server.streamable_http_app(

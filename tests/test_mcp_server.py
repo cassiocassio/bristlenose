@@ -898,6 +898,32 @@ class TestHealthAdvertisesMount:
             assert after["active"] is True
             assert "active_seconds_ago" not in after
 
+    def test_agent_activity_counter_increments_per_tool_call(self) -> None:
+        # The sidebar antenna's animation trigger. Counts, not timestamps —
+        # the host animates on the EDGE, and an integer can't be skewed by
+        # the monotonic clock's sleep pause.
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "test-mcp-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            hdr = {"Authorization": "Bearer test-mcp-token"}
+            assert client.get("/api/agent-activity", headers=hdr).json()["calls"] == 0
+            for expected in (1, 2):
+                resp = _rpc(client, "test-mcp-token", "tools/call",
+                            {"name": "get_project_overview", "arguments": {}})
+                assert resp.status_code == 200
+                got = client.get("/api/agent-activity", headers=hdr).json()["calls"]
+                assert got == expected
+
+    def test_agent_activity_requires_the_bearer(self) -> None:
+        # The whole reason this isn't in the /api/health payload: health is
+        # auth-exempt, and a call counter IS the activity timeline health
+        # deliberately withholds from every local process.
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "test-mcp-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            assert client.get("/api/agent-activity").status_code == 401
+            assert "calls" not in client.get("/api/health").json()["mcp"]
+
     def test_absent_mount_reports_false(self, monkeypatch) -> None:
         # create_app imports the symbol at call time, so patch the source
         # module — patching the app module's namespace would silently no-op.

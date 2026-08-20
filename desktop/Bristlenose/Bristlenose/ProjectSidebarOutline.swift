@@ -129,6 +129,12 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// handshake on every start and switch. Value-typed so a change re-runs
     /// `updateNSViewController` → reload.
     let handshakeProjectPath: String?
+    /// When an agent last called a tool on the fronted serve, or nil. Drives
+    /// the antenna's radiating animation — see `AgentWave`. Value-typed so a
+    /// new call re-runs `updateNSViewController`; the controller owns the
+    /// frame clock from there, so SwiftUI sees one change per burst rather
+    /// than one per animation frame.
+    let lastAgentCallAt: Date?
     /// Per-window "begin rename on the sole selected row", bumped by the
     /// menu-bar Project ▸ Rename items via this window's `WindowCommandSink`.
     ///
@@ -170,6 +176,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.canShowInFinder = canShowInFinder
         controller.canShareWithAgents = canShareWithAgents
         controller.mcpMounted = mcpMounted
+        controller.noteAgentCall(at: lastAgentCallAt)
         controller.onRemoveProject = onRemoveProject
         controller.onOpenInNewWindow = onOpenInNewWindow
         controller.onOpenLensInNewWindow = onOpenLensInNewWindow
@@ -1412,6 +1419,136 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         return tab.label
     }
 
+    // MARK: - Agent activity animation (the antenna radiates)
+
+    /// Envelope for the antenna's radiating animation.
+    ///
+    /// The unit is the BURST, not the call. Measured traffic (bristlenose.log,
+    /// 30 Jul) shows one question firing six tool calls inside a single second,
+    /// and another spreading three over ten seconds — so a per-call animation
+    /// would either stack six deep or chop one question into three. `hold` is
+    /// therefore **retriggerable**: every call restarts it, and the sign-off
+    /// fires once, when the agent has actually stopped asking.
+    ///
+    /// The two taps at the end are that sign-off. They are the informative
+    /// moment — not "a call happened" (you already knew, the antenna was
+    /// radiating) but "it has finished reading".
+    enum AgentWave {
+        static let hold: TimeInterval = 4.0      // retriggerable
+        static let tail: TimeInterval = 0.5      // radiate through the decay
+        static let gap: TimeInterval = 0.9       // silence before the sign-off
+        static let tap: TimeInterval = 0.65
+        static let tapGap: TimeInterval = 0.45
+        /// One frame of the flipbook. `antenna.radiowaves.left.and.right` has
+        /// exactly THREE variable-value renderings (measured 20 Aug: edges at
+        /// 0.0 / 0.05 / 0.55 — mast, mast+inner, mast+both), so a "sweep" is
+        /// 3 frames at this period, not a continuous ramp.
+        static let framePeriod: TimeInterval = 0.3
+
+        static var duration: TimeInterval { hold + tail + gap + tap + tapGap + tap }
+
+        /// Is the antenna radiating `e` seconds after the last tool call?
+        static func radiating(at e: TimeInterval) -> Bool {
+            if e < 0 { return false }
+            if e < hold + tail { return true }              // hold + decay tail
+            var c = hold + tail + gap
+            if e < c { return false }
+            if e < c + tap { return true }                  // sign-off tap 1
+            c += tap + tapGap
+            if e < c { return false }
+            return e < c + tap                             // sign-off tap 2
+        }
+
+        /// Seconds since the current radiating segment began, so each tap
+        /// restarts the flipbook at the mast rather than resuming mid-sweep.
+        static func segmentElapsed(at e: TimeInterval) -> TimeInterval {
+            if e < hold + tail { return e }
+            let firstTap = hold + tail + gap
+            if e < firstTap + tap { return e - firstTap }
+            return e - (firstTap + tap + tapGap)
+        }
+    }
+
+    /// The three measured frames, built once. Index 2 (both arc pairs) is the
+    /// REST state, so an idle animated row is pixel-identical to a row that
+    /// never animates — the animation departs from rest and returns to it,
+    /// and introduces no new resting appearance.
+    private static let agentWaveFrames: [NSImage?] = {
+        let cfg = ProjectCellSpec.subtitleGlyphConfig
+        return [0.0, 0.3, 1.0].map {
+            NSImage(systemSymbolName: "antenna.radiowaves.left.and.right",
+                    variableValue: $0, accessibilityDescription: nil)?
+                .withSymbolConfiguration(cfg)
+        }
+    }()
+
+    private var agentCallAt: Date?
+    private var agentWaveTimer: Timer?
+    /// The live badge for the radiating project, so the flipbook can advance
+    /// without a `reloadData` — which at ~3fps would be both wasteful and
+    /// destructive (it tears down an open inline rename).
+    private weak var agentAntennaView: NSImageView?
+
+    /// Adopt a new "last call" time and run the envelope to completion.
+    func noteAgentCall(at date: Date?) {
+        guard let date, date != agentCallAt else {
+            if date == nil { stopAgentWave() }
+            return
+        }
+        agentCallAt = date
+        // Reduce Motion: the exposure tiers still carry everything that
+        // MATTERS (can be reached / is reachable now). Activity is the
+        // additive nicety, so dropping it costs no information.
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+        guard agentWaveTimer == nil else { return }   // retrigger: envelope reads the new date
+        let timer = Timer(timeInterval: AgentWave.framePeriod, repeats: true) { [weak self] timer in
+            MainActor.assumeIsolated {
+                // Self-invalidating rather than torn down in `deinit`: the
+                // run loop holds the timer, so a controller that goes away
+                // mid-envelope (window closed) would otherwise leave a 3Hz
+                // no-op firing for the life of the app, once per closed
+                // window.
+                guard let self else { return timer.invalidate() }
+                self.tickAgentWave()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)   // .common: keep radiating during a scroll
+        agentWaveTimer = timer
+        tickAgentWave()
+    }
+
+    private func tickAgentWave() {
+        guard let start = agentCallAt else { return stopAgentWave() }
+        let e = Date().timeIntervalSince(start)
+        guard e < AgentWave.duration else { return stopAgentWave() }
+        let frame: Int
+        if AgentWave.radiating(at: e) {
+            frame = min(2, Int(AgentWave.segmentElapsed(at: e) / AgentWave.framePeriod) % 3)
+        } else {
+            frame = 2                                  // between taps: rest
+        }
+        agentAntennaView?.image = Self.agentWaveFrames[frame]
+    }
+
+    private func stopAgentWave() {
+        agentWaveTimer?.invalidate()
+        agentWaveTimer = nil
+        agentAntennaView?.image = Self.agentWaveFrames[2]
+    }
+
+    /// The frame a freshly-built badge should show, so a cell rebuilt mid-
+    /// animation (the sidebar reloads on every progress tick) lands on the
+    /// current frame instead of snapping back to rest.
+    private var currentAgentWaveFrame: NSImage? {
+        guard agentWaveTimer != nil, let start = agentCallAt else {
+            return Self.agentWaveFrames[2]
+        }
+        let e = Date().timeIntervalSince(start)
+        guard AgentWave.radiating(at: e) else { return Self.agentWaveFrames[2] }
+        let i = min(2, Int(AgentWave.segmentElapsed(at: e) / AgentWave.framePeriod) % 3)
+        return Self.agentWaveFrames[i]
+    }
+
     /// The agent-access antenna, built once for both cell layouts so the
     /// two can't drift. Solid (secondary, the quiet ambient family the
     /// iCloud glyph belongs to) = exposed now; pale (tertiary) = shared but
@@ -1420,14 +1557,25 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     private func agentBadgeView(exposedNow: Bool) -> NSImageView {
         let tooltip = i18n?.t("desktop.mcpAgents.badgeTooltip")
         let antenna = NSImageView()
-        antenna.image = NSImage(systemSymbolName: "antenna.radiowaves.left.and.right",
-                                accessibilityDescription: tooltip)
+        // Only the solid tier animates, and it takes the CURRENT frame rather
+        // than the rest glyph: the sidebar reloads on every progress tick, so
+        // a cell rebuilt mid-sweep would otherwise snap back to rest and read
+        // as a stutter. Pale rows (exposed but not open) can't be reached by
+        // an agent, so there is nothing for them to radiate about.
+        antenna.image = exposedNow
+            ? currentAgentWaveFrame
+            : NSImage(systemSymbolName: "antenna.radiowaves.left.and.right",
+                      accessibilityDescription: tooltip)
         antenna.symbolConfiguration = ProjectCellSpec.subtitleGlyphConfig
         antenna.contentTintColor = exposedNow ? .secondaryLabelColor : .tertiaryLabelColor
         antenna.toolTip = tooltip
         antenna.translatesAutoresizingMaskIntoConstraints = false
         antenna.setContentHuggingPriority(.required, for: .horizontal)
         antenna.setContentCompressionResistancePriority(.required, for: .horizontal)
+        // Last solid badge built wins the animation. There is at most one —
+        // the handshake names a single project — and a rebuild replaces the
+        // weak reference for free, so view churn needs no bookkeeping.
+        if exposedNow { agentAntennaView = antenna }
         return antenna
     }
 

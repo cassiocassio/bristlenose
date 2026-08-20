@@ -387,15 +387,6 @@ private struct FileMenuContent: View {
         }?.id
     }
 
-    /// Open a main window on `project`, revealing an existing one if there is
-    /// one. `WindowSeed.revealing` makes the value stable per study, so
-    /// SwiftUI's per-value dedup does the revealing — the right shape for
-    /// "open THIS study", and the wrong one for New Window.
-    private func openMainWindow(on project: UUID?) {
-        guard let project else { openWindow(id: "main", value: WindowSeed.fresh()); return }
-        openWindow(id: "main", value: WindowSeed.revealing(project: project))
-    }
-
     var body: some View {
         Button(i18n.t("desktop.menu.file.newProject"), systemImage: "plus") {
             newItem(.newProject) {
@@ -509,31 +500,35 @@ private struct FileMenuContent: View {
             Label("Import", systemImage: "square.and.arrow.down")
         }
 
-        // Open the SELECTED project in a new window — the menu twin of
-        // double-clicking a sidebar row. Distinct from New Window above, which
-        // opens another view of the project already showing.
+        // **`File ▸ Open in New Window` (⇧⌘O) was retired here on 20 Aug 2026,
+        // and the reason is structural rather than a matter of user
+        // sophistication.**
         //
-// **Live since 20 Aug 2026.** It was dimmed from the day it shipped
-        // because `menuAction("openInNewWindow")` had no SPA handler and never
-        // did — a silent no-op. It needed a window that could carry a project
-        // value, which `WindowGroup(for:)` now provides, so the route is native
-        // and the SPA is not involved at all.
+        // Its distinction from New Window was "opens the SELECTED project"
+        // versus "another view of the one showing". That works in Finder, where
+        // selection and current-folder are genuinely independent — you view A,
+        // select B, and B is selected-but-not-shown. **Bristlenose has no such
+        // state:** selecting a study in the sidebar IS how a window comes to
+        // show it, so the two inputs are one input. The code said so too — both
+        // items read `frontProjectID`; there was never a selection input here.
         //
-        // Enabled only when there IS a selected study: with none it would be
-        // indistinguishable from New Window, and two menu items doing one thing
-        // is a menu lying about what the app can do.
+        // Worse than no difference: ⌥⌘N always spawned, ⇧⌘O sometimes revealed,
+        // and only when its target window had itself arrived by a reveal and
+        // never switched study. `design-workspace.md` rules that shape out —
+        // "an invisible clock deciding where you land is an unlearnable rule…
+        // either always or never".
         //
-        // This one KEEPS its value, which is why the two commands are now
-        // genuinely different rather than accidentally the same. Passing a value
-        // means SwiftUI's per-value dedup applies — so on a study that already
-        // has a window, this reveals that window rather than opening a duplicate.
-        // For "open THIS study" that is the right answer and matches how a
-        // reveal-or-open command should behave; for New Window above it was not.
-        Button(i18n.t("desktop.menu.file.openInNewWindow"), systemImage: "macwindow.badge.plus") {
-            openMainWindow(on: frontProjectID)
-        }
-        .keyboardShortcut("o", modifiers: [.command, .shift])
-        .disabled(frontProjectID == nil)
+        // **The three sidebar context-menu items stay**, because a clicked row
+        // genuinely can be a study the window is not showing — an arbitrary
+        // target, which the menu bar does not have. That is the real split:
+        // arbitrary-target versus current-target, not two spellings of one.
+        //
+        // Cost, stated: those items now have no menu-bar twin, and the lens one
+        // is pointer-only (there is no default system key for a context menu).
+        // The capability is still reachable — select a study, ⌥⌘N — but the lens
+        // accelerator is not, and the honest fix is a *named* menu item
+        // ("Open Codebooks in New Window") rather than restoring this one.
+        // ⇧⌘O is free.
 
         Divider()
 

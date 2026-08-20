@@ -16,7 +16,9 @@ import SwiftUI
 /// English-only, matching the Diagnostics menu that opens it (and `doctor.py`,
 /// which is English-only in alpha).
 struct DoctorReportView: View {
-    @EnvironmentObject var serveManager: ServeManager
+    /// The fleet, not a manager: under Stage 3b there is one serve per project,
+    /// and this view is about whichever is fronted.
+    @EnvironmentObject var serveFleet: ServeFleet
     @State private var loadState: LoadState = .loading
 
     enum LoadState: Equatable {
@@ -140,8 +142,8 @@ struct DoctorReportView: View {
     @MainActor
     private func load() async {
         loadState = .loading
-        guard let port = serveManager.runningPort,
-              let token = serveManager.authToken,
+        guard let port = serveFleet.fronted?.runningPort,
+              let token = serveFleet.fronted?.authToken,
               let url = URL(string: "http://127.0.0.1:\(port)/api/doctor") else {
             loadState = .unavailable
             return

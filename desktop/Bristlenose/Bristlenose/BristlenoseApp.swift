@@ -77,7 +77,6 @@ struct BristlenoseApp: App {
     @Environment(\.openWindow) private var openWindow
 
     // State lifted from ContentView so .commands and .onReceive can access them.
-    @StateObject private var serveManager = ServeManager()
 
     /// One serve per project (Stage 3b). Injected alongside `serveManager`
     /// rather than replacing it: the fleet is live and observable, but until
@@ -135,7 +134,6 @@ struct BristlenoseApp: App {
         WindowGroup(id: "main") {
             ContentView()
                 .frame(minWidth: 700, minHeight: 500)
-                .environmentObject(serveManager)
                 .environmentObject(serveFleet)
                 .environmentObject(projectIndex)
                 .environmentObject(pipelineRunner)
@@ -162,7 +160,7 @@ struct BristlenoseApp: App {
                     appDelegate.openProjectWindow = { openWindow(id: "main") }
                     // The MCP Agents pane's live inputs (Now-showing line,
                     // payloads, the agent-access list).
-                    SettingsWindow.shared.serveManager = serveManager
+                    SettingsWindow.shared.serveManager = serveFleet.frontedOrIdle
                     SettingsWindow.shared.projectIndex = projectIndex
                     // What a landed cloud batch is handed to. The coordinator
                     // is the one app-wide owner of the import store, so it is
@@ -176,7 +174,7 @@ struct BristlenoseApp: App {
                     // Agent Access on. A closure, not a stored ProjectIndex —
                     // ServeManager stays ignorant of the sidebar model.
                     // (Both objects are app-lifetime; the capture is benign.)
-                    serveManager.agentAccessResolver = { [weak projectIndex] path in
+                    serveFleet.agentAccessResolver = { [weak projectIndex] path in
                         projectIndex?.agentAccess(forPath: path) ?? false
                     }
                     pipelineRunner.setProjectIndex(projectIndex)
@@ -226,7 +224,7 @@ struct BristlenoseApp: App {
             // 3a), so the menu bar reads the key window's through
             // `@FocusedValue(\.bridge)`. Passing an app-level one here is what
             // made every window show the same lens.
-            MenuCommands(serveManager: serveManager, projectIndex: projectIndex, removalStore: removalStore, i18n: i18n, ollamaDownload: ollamaDownload, cloudImport: cloudImport)
+            MenuCommands(serveManager: serveFleet.frontedOrIdle, projectIndex: projectIndex, removalStore: removalStore, i18n: i18n, ollamaDownload: ollamaDownload, cloudImport: cloudImport)
         }
         .commands {
             // The Settings window is an AppKit `SettingsWindowController`
@@ -285,7 +283,7 @@ struct BristlenoseApp: App {
         // auto-populate the Window menu".
         Window("System Health", id: "health") {
             DoctorReportView()
-                .environmentObject(serveManager)
+                .environmentObject(serveFleet)
                 .tint(paletteAccent)
         }
         .defaultSize(width: 480, height: 420)
@@ -311,7 +309,7 @@ struct BristlenoseApp: App {
         // shared ServeManager.
         Window("Run Inspector", id: "run-inspector") {
             RunInspectorView()
-                .environmentObject(serveManager)
+                .environmentObject(serveFleet)
                 .tint(paletteAccent)
         }
         .defaultSize(width: 1000, height: 720)

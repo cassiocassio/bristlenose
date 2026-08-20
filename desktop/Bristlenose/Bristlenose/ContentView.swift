@@ -152,7 +152,19 @@ struct LocateErrorState: Identifiable {
 /// (Cmd+1-5 still switch tabs) — see design-desktop-nav-toolbar-rearrangement.md.
 struct ContentView: View {
 
-    @EnvironmentObject var serveManager: ServeManager
+    @EnvironmentObject var serveFleet: ServeFleet
+
+    /// This window's serve, or nil when it shows no study.
+    ///
+    /// Optional by decision, not by accident: a window with no study genuinely
+    /// has no serve, and every alternative is a hack — an idle manager keyed on
+    /// the window id mixes the fleet's key space, and a shared null manager is a
+    /// second source of state by another name. The type now enforces what a gate
+    /// used to: **no window may read a serve it has no study for**, which is
+    /// `design-workspace.md` constraint 5 expressed as a type.
+    var serveManager: ServeManager? {
+        selectedProject.map { serveFleet.manager(for: $0.id) }
+    }
     /// **This window's** bridge to its web view — Stage 3a.
     ///
     /// Was one app-level `@StateObject` injected into every window, which meant
@@ -472,16 +484,16 @@ struct ContentView: View {
     /// Inject the native locale as a URL query parameter so the React SPA
     /// can detect it synchronously on first render (prevents language flash).
     private var serveURLWithLocale: URL? {
-        guard var components = serveManager.serveURL.flatMap({
+        guard var components = serveManager?.serveURL.flatMap({
             URLComponents(url: $0, resolvingAgainstBaseURL: false)
-        }) else { return serveManager.serveURL }
+        }) else { return serveManager?.serveURL }
         let locale = i18n.locale
         if locale != "en" {
             var items = components.queryItems ?? []
             items.append(URLQueryItem(name: "locale", value: locale))
             components.queryItems = items
         }
-        return components.url ?? serveManager.serveURL
+        return components.url ?? serveManager?.serveURL
     }
 
     /// SwiftUI's spelling of the appearance preference. `AppAppearance` already
@@ -541,7 +553,7 @@ struct ContentView: View {
             // happens and branch-verification from a screenshot matters most.
             // .thinMaterial + .secondary stay on the system grid (adapts to
             // light/dark automatically); no off-grid colours or opacities.
-            Text(BuildInfo.current.oneLine(sidecar: serveManager.mode?.shortSummary ?? "?"))
+            Text(BuildInfo.current.oneLine(sidecar: serveManager?.mode?.shortSummary ?? "?"))
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
@@ -605,7 +617,7 @@ struct ContentView: View {
         .onChange(of: consentVersion) { _, _ in
             if hasConsent, let project = selectedProject {
                 if !project.path.isEmpty && project.isAvailable {
-                    serveManager.start(projectPath: project.path)
+                    serveFleet.manager(for: project.id).start(projectPath: project.path)
                 }
             }
         }
@@ -685,15 +697,6 @@ struct ContentView: View {
         // no-op is `.running`-gated, so each sibling would miss it, fall to the
         // cold-start branch, tear down the half-started process and respawn.
         // Six windows, six kill-and-respawn cycles on one click.
-        .onChange(of: serveManager.state) { _, newState in
-            guard case .running = newState else { return }
-            let served = serveManager.currentProjectPath.flatMap { path in
-                projectIndex.projects.first { $0.path == path }
-            }
-            if let next = SelectionSync.resolve(current: selection, served: served) {
-                selection = next
-            }
-        }
         .onDisappear {
             dropTargetProjectID = nil
             dropTargetFolderID = nil
@@ -764,10 +767,10 @@ struct ContentView: View {
         .onAppear { consumePendingSelection() }
         .onChange(of: projectIndex.pendingSelection) { _, _ in consumePendingSelection() }
         .sheet(isPresented: $showingMiroSheet) {
-            if let port = serveManager.runningPort {
+            if let port = serveManager?.runningPort {
                 MiroSheet(
                     port: port,
-                    token: serveManager.authToken,
+                    token: serveManager?.authToken,
                     projectName: selectedProject?.name ?? "",
                     i18n: i18n
                 )
@@ -783,7 +786,7 @@ struct ContentView: View {
             showingFeedbackSheet = true
         }
         .sheet(isPresented: $showingFeedbackSheet) {
-            if let port = serveManager.runningPort {
+            if let port = serveManager?.runningPort {
                 FeedbackSheet(port: port, i18n: i18n, onToast: { toast.show($0) })
             } else {
                 FeedbackSheet(config: .serverless, i18n: i18n, onToast: { toast.show($0) })
@@ -890,7 +893,7 @@ struct ContentView: View {
                     bridgeHandler.selectedProjectAvailable = true
                     bridgeHandler.selectedProjectRevealablePath = url.path
                     if selection.contains(.project(project.id)), hasConsent {
-                        serveManager.start(projectPath: url.path)
+                        serveFleet.manager(for: project.id).start(projectPath: url.path)
                     }
                 } else {
                     locateError = LocateErrorState(project: project, pickedURL: url)
@@ -965,13 +968,24 @@ struct ContentView: View {
                 // claim: the analysis IS an outbound call. See SECURITY.md.)
                 if hasConsent && !project.path.isEmpty && project.isAvailable {
                     let path = project.path
-                    // Serialize switches: cancel any in-flight switch before
-                    // starting the next, so only one is ever live. switchProject
-                    // honours the cancellation (bails before start()), so a
-                    // superseded switch can't clobber the winner's sidecar.
+                    // No switch: under the fleet a window *observes a different
+                    // manager*, and that manager starts its own sidecar. The old
+                    // `switchProject`'s same-path no-op, generation bump and
+                    // liveness probe all guarded ONE shared serve from concurrent
+                    // switchers; none has a per-project analogue.
+                    //
+                    // `switchTask` stays, and stays per-window: it serialises
+                    // *this window's* async work, not the serve. That distinction
+                    // is what keeps one epoch counter per instance rather than two
+                    // ownership axes accreting.
                     switchTask?.cancel()
                     switchTask = Task { @MainActor in
-                        await serveManager.switchProject(to: path)
+                        guard !Task.isCancelled else { return }
+                        serveFleet.manager(for: id).start(projectPath: path)
+                        // App-level windows (System Health, Run Inspector) and
+                        // the boot log are about "the serve you are looking at".
+                        // The window that most recently adopted a study is it.
+                        serveFleet.frontedProject = id
                     }
                 } else {
                     // Not serving this project (empty path, unavailable, or
@@ -1027,7 +1041,7 @@ struct ContentView: View {
     private func stopServeIfLastProjectWindow() {
         switchTask?.cancel()
         guard !windowRoster.anyProjectShown(excluding: windowID) else { return }
-        serveManager.stop()
+        serveManager?.stop()
     }
 
     // MARK: - Notification receivers (extracted to reduce body complexity)
@@ -1055,7 +1069,7 @@ struct ContentView: View {
             // The native sheet drives the same Python REST endpoints the web
             // panel uses, so it needs a live serve. The entry is only reachable
             // with a project open; this is the belt.
-            if serveManager.runningPort != nil { showingMiroSheet = true }
+            if serveManager?.runningPort != nil { showingMiroSheet = true }
         case .showWelcome:
             // Deselect — the same effect as clicking the sidebar's empty space.
             selection = []
@@ -1268,7 +1282,7 @@ struct ContentView: View {
                     bridgeHandler.selectedProjectAvailable = true
                     bridgeHandler.selectedProjectRevealablePath = url.path
                     if selection.contains(.project(project.id)), hasConsent {
-                        serveManager.start(projectPath: url.path)
+                        serveFleet.manager(for: project.id).start(projectPath: url.path)
                     }
                 case .invalidFolder(let pickedURL):
                     locateError = LocateErrorState(project: project, pickedURL: pickedURL)
@@ -1305,7 +1319,7 @@ struct ContentView: View {
             userInfo: ["ids": removable.map(\.id)]
         )
         // Don't leave a warm sidecar serving a project the user just removed.
-        serveManager.dropParked(forPaths: Set(removable.map(\.path)))
+        for project in removable { serveFleet.discard(project.id) }
         let priorSelection = selection
         for project in removable {
             selection.remove(.project(project.id))
@@ -1327,7 +1341,7 @@ struct ContentView: View {
         // a message: there is nothing to tell someone who was never offered it.
         let (removable, _) = partitionRemovable([project])
         guard !removable.isEmpty else { return }
-        serveManager.dropParked(forPaths: Set(removable.map(\.path)))
+        for project in removable { serveFleet.discard(project.id) }
         removalStore.removeFromSidebar(removable, priorSelection: selection)
     }
 
@@ -1980,10 +1994,12 @@ struct ContentView: View {
         // list.bullet double-meaning; the menu twin is what keeps it honest.
         if bridgeHandler.activeTab == .sessions {
             ToolbarItem(placement: .navigation) {
-                SessionsSwitcherButton(bridgeHandler: bridgeHandler,
-                                       serveManager: serveManager,
-                                       i18n: i18n,
-                                       presentRequest: sessionsSwitcherRequest)
+                if let serveManager {
+                    SessionsSwitcherButton(bridgeHandler: bridgeHandler,
+                                           serveManager: serveManager,
+                                           i18n: i18n,
+                                           presentRequest: sessionsSwitcherRequest)
+                }
             }
         }
 
@@ -2193,7 +2209,7 @@ struct ContentView: View {
                             $0, sessionCount: projectIndex.unanalysed[id]?.sessionCount)
                     } ?? false
                 },
-                mcpMounted: serveManager.mcpMounted,
+                mcpMounted: serveFleet.mcpMounted,
                 onRemoveProject: { id in removeFromSidebarContextMenu(targetingProject: id) },
                 onRemoveFolder: { id in deleteFromContextMenu(targetingFolder: id) },
                 pipelineRunner: pipelineRunner,
@@ -2204,7 +2220,7 @@ struct ContentView: View {
                 // writer's own answer rather than re-deriving it: "serve is
                 // up" is that predicate minus mcpInstanceID and mcpToken,
                 // and the gap is reachable on every start and switch.
-                handshakeProjectPath: serveManager.handshakeProjectPath,
+                handshakeProjectPath: serveFleet.handshakeProjectPath,
                 renameRequest: renameRequest
             )
             .navigationTitle(i18n.t("desktop.chrome.projects"))
@@ -2489,7 +2505,7 @@ struct ContentView: View {
                     Self.reloadLog.info("reload abandon attempt=\(attempt)")
                     return
                 }
-                guard case .running = serveManager.state else {
+                guard case .running = serveManager?.state else {
                     Self.reloadLog.info("reload wait attempt=\(attempt)")
                     continue
                 }
@@ -2763,7 +2779,14 @@ struct ContentView: View {
                 dragInterviewsPane(project)
             } else {
                 ZStack {
-                    switch serveManager.state {
+                    // This pane renders ONE project, so it reads that
+                    // project's serve — not `serveManager`, which is derived
+                    // from the window's selection. Under the fleet they agree
+                    // in every normal state, and where they could diverge the
+                    // project is the honest source: it is what the pane is
+                    // about. Non-optional by construction, which is why this
+                    // switch needs no nil arm.
+                    switch serveFleet.manager(for: project.id).state {
                     case .idle, .starting:
                         BootView(phase: .startingSidecar)
 
@@ -2783,7 +2806,8 @@ struct ContentView: View {
                     // A child cannot arrive here mismatched: `windowProject` is
                     // *derived* from `currentProjectPath`, so the two agree by
                     // construction. The guard is the master's alone.
-                    case .running where serveManager.currentProjectPath != project.path:
+                    case .running where serveFleet.manager(for: project.id)
+                        .currentProjectPath != project.path:
                         BootView(phase: .startingSidecar)
 
                     case .running(let port):
@@ -2799,7 +2823,7 @@ struct ContentView: View {
                         WebView(url: serveURLWithLocale,
                                 bridgeHandler: bridgeHandler,
                                 session: ServeSession(projectID: project.id, port: port),
-                                authToken: serveManager.authToken)
+                                authToken: serveManager?.authToken)
                             .id(ServeSession(projectID: project.id, port: port).viewID)
                             .accessibilityLabel(i18n.t("desktop.chrome.reportContent"))
                             .accessibilityHidden(!bridgeHandler.isReady)
@@ -2826,7 +2850,7 @@ struct ContentView: View {
 
                     case .failed(let error):
                         BootView(phase: .failed(message: error, retry: {
-                            serveManager.start(projectPath: project.path)
+                            serveFleet.manager(for: project.id).start(projectPath: project.path)
                         }))
                     }
                 }

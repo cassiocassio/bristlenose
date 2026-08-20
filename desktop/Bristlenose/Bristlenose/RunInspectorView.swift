@@ -18,12 +18,14 @@ import WebKit
 // authenticated fetches, so a one-shot fetch is sufficient.
 
 struct RunInspectorView: View {
-    @EnvironmentObject private var serveManager: ServeManager
+    /// The fleet, not a manager: under Stage 3b there is one serve per project,
+    /// and this view is about whichever is fronted.
+    @EnvironmentObject private var serveFleet: ServeFleet
 
     /// `/api/dev/run` on the running server, derived from the published serve URL
     /// (which points at `/report/`). Nil until the server is up.
     private var inspectorURL: URL? {
-        guard let base = serveManager.serveURL,
+        guard let base = serveFleet.fronted?.serveURL,
               var comps = URLComponents(url: base, resolvingAgainstBaseURL: false)
         else { return nil }
         comps.path = "/api/dev/run"
@@ -32,7 +34,7 @@ struct RunInspectorView: View {
 
     var body: some View {
         Group {
-            if let url = inspectorURL, let token = serveManager.authToken {
+            if let url = inspectorURL, let token = serveFleet.fronted?.authToken {
                 RunInspectorWebView(url: url, authToken: token)
             } else {
                 ContentUnavailableView(

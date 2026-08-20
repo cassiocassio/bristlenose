@@ -27,7 +27,9 @@ struct BootView: View {
     let phase: Phase
     @EnvironmentObject var i18n: I18n
     @State private var detailsExpanded = false
-    @EnvironmentObject var serveManager: ServeManager
+    /// The fleet, not a manager: under Stage 3b there is one serve per project,
+    /// and this view is about whichever is fronted.
+    @EnvironmentObject var serveFleet: ServeFleet
 
     private var statusText: String {
         switch phase {
@@ -116,7 +118,7 @@ struct BootView: View {
                 }
                 if detailsExpanded {
                     ScrollView {
-                        Text(serveManager.outputLines.suffix(40).joined(separator: "\n"))
+                        Text((serveFleet.fronted?.outputLines ?? []).suffix(40).joined(separator: "\n"))
                             .font(.system(.caption, design: .monospaced))
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)

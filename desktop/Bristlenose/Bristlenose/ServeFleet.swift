@@ -44,6 +44,22 @@ final class ServeFleet: ObservableObject {
     /// owner. `ServeReaping` and `ServeEnvStaleness` both read it.
     @Published private(set) var exposedProject: UUID?
 
+    /// Whether this build mounted the MCP endpoint (the optional `mcp` extra).
+    ///
+    /// Fleet-level because it is per-**build**, not per-serve: every instance
+    /// spawns the same sidecar binary, so the answer is identical for all of
+    /// them. Per-instance it would force the sidebar's agent-access gate and the
+    /// Settings pane to pick an instance and read `false` when none is running.
+    @Published var mcpMounted: Bool = false
+
+    /// The project path the MCP handshake currently names, or nil.
+    ///
+    /// Fleet-level for the sharper reason: the handshake is **one global file**
+    /// with seven independent delete edges. Per-instance, one project's start
+    /// would delete another's file while the first still published "exposed" —
+    /// the antenna lying, which is the defect `3ac773fa` closed.
+    @Published var handshakeProjectPath: String?
+
     /// Nested `ObservableObject`s do not propagate through `@EnvironmentObject`,
     /// and the failure is silent — so every manager's change is re-published as
     /// the fleet's own. Same contract `ServeManager` holds over `ServeInstance`,
@@ -59,6 +75,7 @@ final class ServeFleet: ObservableObject {
     func manager(for project: UUID) -> ServeManager {
         if let existing = managers[project] { return existing }
         let created = ServeManager()
+        created.agentAccessResolver = agentAccessResolver
         managers[project] = created
         observations[project] = created.objectWillChange.sink { [weak self] _ in
             self?.objectWillChange.send()
@@ -73,6 +90,38 @@ final class ServeFleet: ObservableObject {
         observations[project] = nil
         if frontedProject == project { frontedProject = nil }
         if exposedProject == project { exposedProject = nil }
+    }
+
+    /// The fronted project's manager, if there is one.
+    ///
+    /// For app-level windows — System Health, Run Inspector — and for the boot
+    /// pane's log tail. They are about "the serve you are looking at", which is
+    /// a real notion at N and the honest replacement for the app-wide
+    /// `ServeManager` that used to be injected into them.
+    var fronted: ServeManager? {
+        frontedProject.flatMap { managers[$0] }
+    }
+
+    /// A never-started manager, handed to app-level surfaces when nothing is
+    /// fronted.
+    ///
+    /// This is **not** the "null manager" the optional `ContentView.serveManager`
+    /// exists to avoid. That one would have been a second source of truth about
+    /// *a window's* serve. This one answers a different question — "what is the
+    /// fronted serve doing?" — and when nothing is fronted, `.idle` is the
+    /// truthful answer rather than a stand-in for one. It never spawns, and no
+    /// window can reach it.
+    private let idle = ServeManager()
+
+    /// The fronted manager for surfaces that must always have one: the menu bar
+    /// and Settings, which exist with no window open.
+    var frontedOrIdle: ServeManager { fronted ?? idle }
+
+    /// Injected once and applied to every manager the fleet creates — the
+    /// handshake writer's policy input. Set on the fleet rather than on each
+    /// manager so a project whose serve starts later cannot miss it.
+    var agentAccessResolver: ((String) -> Bool)? {
+        didSet { managers.values.forEach { $0.agentAccessResolver = agentAccessResolver } }
     }
 
     func isRunning(_ project: UUID) -> Bool {

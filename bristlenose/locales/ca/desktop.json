@@ -580,7 +580,7 @@
     "disconnectRevocation": "Aix\u00f2 no revoca l\u2019acc\u00e9s de Bristlenose al prove\u00efdor: fes-ho a la configuraci\u00f3 del teu compte all\u00e0."
   },
   "mcpAgents": {
-    "header": "Els agents llegeixen un projecte alhora: el darrer que has activat",
+    "header": "Els agents nom\u00e9s veuen projectes oberts amb acc\u00e9s d'agent",
     "nowShowing": "Els agents estan llegint: {{project}}",
     "install": "Instal\u00b7la l'extensi\u00f3\u2026",
     "extensionBuild": "Extensi\u00f3 {{version}}",
@@ -598,7 +598,7 @@
     "clients": {
       "generic": "MCP genèric"
     },
-    "badgeTooltip": "L'acc\u00e9s d'agents est\u00e0 activat per a aquest projecte. Els agents llegeixen un projecte alhora."
+    "badgeTooltip": "L'acc\u00e9s d'agent est\u00e0 activat per a aquest projecte."
   },
   "cloudImport": {
     "destinationNewProject": "Projecte nou\u2026",

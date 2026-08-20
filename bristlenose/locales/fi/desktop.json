@@ -580,7 +580,7 @@
     "disconnectRevocation": "T\u00e4m\u00e4 ei peru Bristlenosen k\u00e4ytt\u00f6oikeutta palveluntarjoajalla \u2014 tee se siell\u00e4 tilisi asetuksissa."
   },
   "mcpAgents": {
-    "header": "Agentit lukevat yht\u00e4 projektia kerrallaan \u2013 viimeksi k\u00e4ytt\u00f6\u00f6n ottamaasi",
+    "header": "Agentit n\u00e4kev\u00e4t vain avoimet projektit, joilla on agenttik\u00e4ytt\u00f6oikeus",
     "nowShowing": "Agentit lukevat: {{project}}",
     "install": "Asenna laajennus\u2026",
     "extensionBuild": "Laajennus {{version}}",
@@ -598,7 +598,7 @@
     "clients": {
       "generic": "Yleinen MCP"
     },
-    "badgeTooltip": "Agenttik\u00e4ytt\u00f6 on p\u00e4\u00e4ll\u00e4 t\u00e4ss\u00e4 projektissa. Agentit lukevat yht\u00e4 projektia kerrallaan."
+    "badgeTooltip": "Agenttik\u00e4ytt\u00f6oikeus on k\u00e4yt\u00f6ss\u00e4 t\u00e4ss\u00e4 projektissa."
   },
   "cloudImport": {
     "destinationNewProject": "Uusi projekti\u2026",

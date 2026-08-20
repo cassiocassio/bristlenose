@@ -580,7 +580,7 @@
     "disconnectRevocation": "Dit trekt de toegang van Bristlenose bij de aanbieder niet in \u2014 dat doe je daar in de instellingen van je account."
   },
   "mcpAgents": {
-    "header": "Agents lezen \u00e9\u00e9n project tegelijk \u2014 het laatste dat je hebt ingeschakeld",
+    "header": "Agents zien alleen geopende projecten met agenttoegang",
     "nowShowing": "Agents lezen nu: {{project}}",
     "install": "Extensie installeren\u2026",
     "extensionBuild": "Extensie {{version}}",
@@ -598,7 +598,7 @@
     "clients": {
       "generic": "Generieke MCP"
     },
-    "badgeTooltip": "Agenttoegang staat aan voor dit project. Agents lezen \u00e9\u00e9n project tegelijk."
+    "badgeTooltip": "Agenttoegang staat aan voor dit project."
   },
   "cloudImport": {
     "destinationNewProject": "Nieuw project\u2026",

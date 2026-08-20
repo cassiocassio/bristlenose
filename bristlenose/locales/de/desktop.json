@@ -580,7 +580,7 @@
     "disconnectRevocation": "Das widerruft nicht den Zugriff von Bristlenose beim Anbieter \u2014 das machst du dort in den Einstellungen deines Accounts."
   },
   "mcpAgents": {
-    "header": "Agenten lesen jeweils ein Projekt \u2013 das zuletzt aktivierte",
+    "header": "Agenten sehen nur ge\u00f6ffnete Projekte mit Agentenzugriff",
     "nowShowing": "Agenten lesen gerade: {{project}}",
     "install": "Erweiterung installieren\u2026",
     "extensionBuild": "Erweiterung {{version}}",
@@ -598,7 +598,7 @@
     "clients": {
       "generic": "Generisches MCP"
     },
-    "badgeTooltip": "Der Agentenzugriff ist f\u00fcr dieses Projekt aktiviert. Agenten lesen jeweils ein Projekt."
+    "badgeTooltip": "Agentenzugriff ist f\u00fcr dieses Projekt aktiviert."
   },
   "cloudImport": {
     "destinationNewProject": "Neues Projekt\u2026",

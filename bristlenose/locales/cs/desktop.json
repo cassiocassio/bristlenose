@@ -621,7 +621,7 @@
     "disconnectRevocation": "T\u00edm se neodvol\u00e1 p\u0159\u00edstup Bristlenose u poskytovatele \u2014 to ud\u011blejte tam v nastaven\u00ed sv\u00e9ho \u00fa\u010dtu."
   },
   "mcpAgents": {
-    "header": "Agenti \u010dtou v\u017edy jeden projekt \u2013 ten, kter\u00fd jste zapnuli naposledy",
+    "header": "Agenti vid\u00ed pouze otev\u0159en\u00e9 projekty s p\u0159\u00edstupem agenta",
     "nowShowing": "Agenti \u010dtou: {{project}}",
     "install": "Instalovat roz\u0161\u00ed\u0159en\u00ed\u2026",
     "extensionBuild": "Roz\u0161\u00ed\u0159en\u00ed {{version}}",
@@ -639,7 +639,7 @@
     "clients": {
       "generic": "Obecn\u00e9 MCP"
     },
-    "badgeTooltip": "P\u0159\u00edstup agent\u016f je pro tento projekt zapnut\u00fd. Agenti \u010dtou v\u017edy jeden projekt."
+    "badgeTooltip": "P\u0159\u00edstup agenta je pro tento projekt zapnut\u00fd."
   },
   "cloudImport": {
     "destinationNewProject": "Nov\u00fd projekt\u2026",

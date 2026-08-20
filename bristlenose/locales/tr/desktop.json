@@ -580,7 +580,7 @@
     "disconnectRevocation": "Bu, Bristlenose'un sa\u011flay\u0131c\u0131daki eri\u015fimini iptal etmez \u2014 bunu oradaki hesap ayarlar\u0131n\u0131zdan yap\u0131n."
   },
   "mcpAgents": {
-    "header": "Arac\u0131lar ayn\u0131 anda tek bir projeyi okur \u2014 en son a\u00e7t\u0131\u011f\u0131n\u0131z proje",
+    "header": "Arac\u0131lar yaln\u0131zca arac\u0131 eri\u015fimi olan a\u00e7\u0131k projeleri g\u00f6r\u00fcr",
     "nowShowing": "Arac\u0131lar \u015funu okuyor: {{project}}",
     "install": "Geni\u015fletmeyi Y\u00fckle\u2026",
     "extensionBuild": "Geni\u015fletme {{version}}",
@@ -598,7 +598,7 @@
     "clients": {
       "generic": "Genel MCP"
     },
-    "badgeTooltip": "Bu proje i\u00e7in arac\u0131 eri\u015fimi a\u00e7\u0131k. Arac\u0131lar ayn\u0131 anda tek bir projeyi okur."
+    "badgeTooltip": "Bu proje i\u00e7in arac\u0131 eri\u015fimi a\u00e7\u0131k."
   },
   "cloudImport": {
     "destinationNewProject": "Yeni Proje\u2026",

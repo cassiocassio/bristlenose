@@ -54,7 +54,7 @@
     "clearAriaLabel": "検索をクリア"
   },
   "quotes": {
-    "unhideHeader": "再表示:",
+    "unhideHeader": "再表示：",
     "unhideAll": "すべて再表示",
     "dismissModeratorQuestion": "モデレーターの質問を非表示",
     "showModeratorQuestion": "モデレーターの質問を表示",
@@ -69,7 +69,7 @@
     "starredQuotes": "スター付きの発言",
     "sections": "セクション",
     "themes": "テーマ",
-    "failedToLoad": "発言の読み込みに失敗しました: {{error}}",
+    "failedToLoad": "発言の読み込みに失敗しました：{{error}}",
     "loading": "発言を読み込み中…",
     "contents": "目次",
     "toggleContents": "目次を表示/非表示",
@@ -78,9 +78,9 @@
     "uncategorisedIntro_other": "{{count}} quotes you kept aren\u2019t in any section or theme right now \u2014 but they\u2019re safe here, nothing was lost."
   },
   "sessions": {
-    "moderatedBy": "モデレーター: {{names}}",
-    "observer_one": "オブザーバー: {{names}}",
-    "observer_other": "オブザーバー: {{names}}",
+    "moderatedBy": "モデレーター：{{names}}",
+    "observer_one": "オブザーバー：{{names}}",
+    "observer_other": "オブザーバー：{{names}}",
     "colId": "ID",
     "colSpeakers": "話者",
     "colStart": "開始",
@@ -96,7 +96,7 @@
       "participant": "\u53c2\u52a0\u8005",
       "observer": "\u30aa\u30d6\u30b6\u30fc\u30d0\u30fc"
     },
-    "failedToLoad": "セッションの読み込みに失敗しました: {{error}}",
+    "failedToLoad": "セッションの読み込みに失敗しました：{{error}}",
     "loading": "セッションを読み込み中…"
   },
   "dashboard": {
@@ -126,7 +126,7 @@
     "nothingOmitted": "除外された発言はありません — 参加者の発言はすべてレポートに含まれています。",
     "showOmitted": "除外された発言を表示",
     "coverageSession": "セッション {{number}}",
-    "failedToLoad": "ダッシュボードの読み込みに失敗しました: {{error}}",
+    "failedToLoad": "ダッシュボードの読み込みに失敗しました：{{error}}",
     "loading": "ダッシュボードを読み込み中…"
   },
   "toolbar": {
@@ -168,8 +168,8 @@
     "unstarred": "発言のスターを外しました",
     "hidden": "発言を非表示にしました",
     "restored": "発言を復元しました",
-    "tagAdded": "タグを追加: {{name}}",
-    "tagRemoved": "タグを削除: {{name}}",
+    "tagAdded": "タグを追加：{{name}}",
+    "tagRemoved": "タグを削除：{{name}}",
     "navigatedTo": "{{label}} に移動しました",
     "transcript": "トランスクリプト",
     "playing": "{{pid}} を再生中",
@@ -182,7 +182,7 @@
     "cancelAriaLabel": "キャンセル",
     "dismiss": "閉じる",
     "durationIn": "{{duration}} 後",
-    "failed": "{{label}} に失敗しました: {{error}}。",
+    "failed": "{{label}} に失敗しました：{{error}}。",
     "failedNoError": "{{label}} に失敗しました。",
     "cancelled": "{{label}} をキャンセルしました。"
   },
@@ -399,7 +399,7 @@
     "signals": {
       "intro": "分析ページではシグナルが表示されます — レポートの各セクション内で、統計的に目立つ感情やコードブックタグの集中です。シグナルカードは 2 種類あります。",
       "sentimentHeading": "感情シグナル",
-      "sentimentIntro": "各発言には、UX リサーチ向けに設計された 7 種類の感情のうち 1 つがタグ付けされます:",
+      "sentimentIntro": "各発言には、UX リサーチ向けに設計された 7 種類の感情のうち 1 つがタグ付けされます：",
       "frustrationDesc": "困難、いらだち、フリクション。性能やインタラクションの問題を示します。",
       "confusionDesc": "理解できていない、不確かさ。情報設計やラベリングの問題を示します。",
       "doubtDesc": "懐疑、心配、不信。信頼性や信用の問題を示します。何かを理解することと信頼することは別物で、それぞれ異なるデザイン上の対応が必要なため、混乱とは区別されます。",
@@ -441,7 +441,7 @@
     "heading": "分析",
     "loadingData": "分析データを読み込み中…",
     "noData": "分析データはありません。パイプラインを実行するか、コードブックタグを適用して分析を生成してください。",
-    "tagError": "タグ分析エラー: {{error}}",
+    "tagError": "タグ分析エラー：{{error}}",
     "signals": "シグナル",
     "sentiment": "感情",
     "sentimentSubtitle": "AI が検出した感情的な反応",
@@ -485,7 +485,7 @@
   "codebook": {
     "heading": "コードブック",
     "description": "タグをグループ間でドラッグして並べ替えます。タグまたはタイトルをクリックして名前を変更します。タグを別のタグにドロップすると統合されます。",
-    "errorLoading": "コードブックの読み込みエラー: {{error}}",
+    "errorLoading": "コードブックの読み込みエラー：{{error}}",
     "addTag": "+ タグ",
     "addSubtitle": "サブタイトルを追加…",
     "total": "合計",
@@ -579,7 +579,7 @@
       "done": "✦ {{total}} 件の発言を {{duration}} でオートコードしました。",
       "report": "レポート",
       "failed": "✦ オートコードに失敗しました",
-      "failedWithError": "✦ オートコードに失敗しました: {{error}}",
+      "failedWithError": "✦ オートコードに失敗しました：{{error}}",
       "dismiss": "閉じる"
     },
     "chip": {

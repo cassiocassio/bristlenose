@@ -1,6 +1,16 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 19 Aug 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
+Last updated: 20 Aug 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
+
+**20 Aug 2026 — the day has no session entry; these are its owed items, transcribed from the commit bodies so they are not only there.** Thirty-odd commits landed the workspace 3b fleet, per-window studies, derived agent scope, mcpb schema 2 and the welcome shelf. `/end-session` ran and signed off, but did not write this file, so every obligation below was reachable only via `git log`.
+
+- **A stable per-project key is still owed** (`142df986`). Tool results name their project now, which makes drift visible — but the id still does not mean one thing and names are not unique.
+- **The 90s serve-reap grace is a guess and is labelled one** (`4ec46822`). Measure it against how often testers close-and-reopen before treating it as a number.
+- **The `.mcpb` staleness class is fixed; the mechanism deserves a re-read** (`f5301982`, `391991c1`). The proxy source was edited, the pack step was never re-run, and every artefact downstream stayed eleven days old through six reinstall attempts **with a green freshness gate the whole way**. One real reinstall before shipping.
+- **The `≤480px` speaker-name rung still hides both spans**, so the assistive-tech gap survives at the narrowest width. It wants a visually-hidden swap rather than a delete. (Noted in the code; the 750–480px half was fixed in `cb4f1e28`.)
+
+_The 19 Aug owed list below is unchanged and still the priority — the Re-analyse sheet's pixels have never been on screen._
+
 
 **19 Aug 2026 — a 58-file adversarial drop found a fourth failure outcome nobody had named, and the accepted-format list grew 16 → 27.** An acceptance harness drove the real stages over a deliberately horrible folder. First run: **38 ingested, 0 refused, 17 silently dropped, 3 aborting the whole batch** — and 16 of the 17 drops were real media with a real audio track. After: **53 / 5 / 0 / 0**.
 

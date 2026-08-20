@@ -930,6 +930,39 @@ class TestHealthAdvertisesMount:
             assert client.get("/api/agent-activity").status_code == 401
             assert "calls" not in client.get("/api/health").json()["mcp"]
 
+    def test_out_of_scope_refuses_tools_without_reaping_the_serve(self) -> None:
+        # The headline safety claim: closing a window makes a project
+        # unreadable IMMEDIATELY, not when its sidecar is reaped 90s later,
+        # and not merely because a polite proxy stopped routing to it. This
+        # replays a call straight at the port with a valid bearer — exactly
+        # what an agent holding a cached handshake would do.
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "test-mcp-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            hdr = {"Authorization": "Bearer test-mcp-token"}
+            ok = _rpc(client, "test-mcp-token", "tools/call",
+                      {"name": "get_project_overview", "arguments": {}})
+            assert ok.status_code == 200
+            assert "isError" not in ok.json().get("result", {}) or \
+                not ok.json()["result"].get("isError")
+
+            client.put("/api/agent-scope", json={"readable": False}, headers=hdr)
+
+            refused = _rpc(client, "test-mcp-token", "tools/call",
+                           {"name": "get_project_overview", "arguments": {}})
+            body = refused.text
+            assert "out of scope" in body, body
+            # …and the refusal is not counted as activity, or the sidebar
+            # antenna would radiate for a project just taken out of scope.
+            assert client.get("/api/agent-activity", headers=hdr).json()["calls"] == 1
+
+    def test_scope_gate_needs_the_bearer(self) -> None:
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "test-mcp-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            assert client.put("/api/agent-scope", json={"readable": False}).status_code == 401
+            assert app.state.agent_readable is True
+
     def test_absent_mount_reports_false(self, monkeypatch) -> None:
         # create_app imports the symbol at call time, so patch the source
         # module — patching the app module's namespace would silently no-op.
@@ -1012,6 +1045,40 @@ class TestProjectIdentityInEveryPayload:
             if not isinstance(project, dict) or not project.get("name"):
                 missing.append(name)
         assert not missing, f"tools returning no project identity: {missing}"
+
+    def test_every_tool_carries_a_stable_key(self, db, _tools) -> None:
+        # The name cannot disambiguate — a real sidebar holds "New Project",
+        # "New Project 2" and "New Project3". The key is what a citation is
+        # anchored on once two studies can be in scope at once.
+        keys = {name: call(db)["project"].get("key") for name, call in _tools.items()}
+        assert all(keys.values()), f"tools with no project key: {keys}"
+        assert len(set(keys.values())) == 1, keys
+
+    def test_the_key_is_opaque_and_leaks_no_path(self, db) -> None:
+        from bristlenose.server.mcp_server import _project_key
+        from bristlenose.server.models import Project
+
+        project = db.query(Project).first()
+        key = _project_key(project)
+        assert len(key) == 8 and key.isalnum()
+        # §7 forbids filesystem paths reaching the agent. A digest is not a path.
+        assert "/" not in key
+        for part in filter(None, project.input_dir.split("/")):
+            assert part not in key
+
+    def test_the_key_is_stable_across_equivalent_spellings(self, db) -> None:
+        # /private/var and /var name the same folder; keying one project twice
+        # would break every citation that spans a restart.
+        from bristlenose.server.mcp_server import _project_key
+
+        class _P:
+            def __init__(self, d): self.input_dir = d
+
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            real = os.path.realpath(d)
+            assert _project_key(_P(d)) == _project_key(_P(real))
 
     def test_the_name_is_the_real_one(self, db, _tools) -> None:
         # Not just "a name is present" — the SAME name from every tool, so a

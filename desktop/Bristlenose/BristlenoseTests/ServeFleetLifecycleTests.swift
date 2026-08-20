@@ -80,7 +80,7 @@ struct ServeFleetLifecycleTests {
             m.instance.state = .running(port: port)
             m.instance.currentProjectPath = "/p/\(id)"
         }
-        fleet.setExposed(Self.a)
+        fleet.setHandshakeProjectPathsForTest(["/p/\(Self.a)"])
         fleet.frontedProject = nil
 
         fleet.applyEnvChange()
@@ -110,17 +110,15 @@ struct ServeFleetLifecycleTests {
         #expect(fleet.frontedProject == Self.b)
     }
 
-    /// The fleet must designate exactly one handshake owner, or a second
-    /// running project's 20-second poll deletes the exposed project's file.
-    @Test func onlyTheExposedManagerOwnsTheHandshake() {
+    /// There is no owner to designate any more. One file, one writer (the
+    /// fleet), and membership derived from the window roster — which is what
+    /// makes the old flapping impossible rather than merely unlikely: a
+    /// designated slot could point at a project whose sidecar had been reaped,
+    /// and did, five times across five consecutive tool calls on 20 Aug.
+    @Test func everyManagerReportsHandshakeChangesToTheFleet() {
         let fleet = ServeFleet()
-        fleet.manager(for: Self.a)
-        fleet.manager(for: Self.b)
-
-        fleet.setExposed(Self.a)
-
-        #expect(fleet.manager(for: Self.a).handshakeOwner)
-        #expect(fleet.manager(for: Self.b).handshakeOwner == false)
+        #expect(fleet.manager(for: Self.a).onHandshakeDirty != nil)
+        #expect(fleet.manager(for: Self.b).onHandshakeDirty != nil)
     }
 }
 

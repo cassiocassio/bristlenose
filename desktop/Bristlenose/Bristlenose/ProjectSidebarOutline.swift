@@ -123,18 +123,18 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// project, which is exactly "a handshake exists naming it" (§5a-bis:
     /// exposure, not activity).
     ///
-    /// This is `ServeManager.handshakeProjectPath` — the writer's own answer,
+    /// This is `ServeFleet.handshakeProjectPaths` — the writer's own answer,
     /// not a re-derivation. It used to be "serve is up + fronted", which is
     /// the writer's predicate minus two conjuncts and went solid with no
     /// handshake on every start and switch. Value-typed so a change re-runs
     /// `updateNSViewController` → reload.
-    let handshakeProjectPath: String?
+    let handshakeProjectPaths: Set<String>
     /// When an agent last called a tool on the fronted serve, or nil. Drives
     /// the antenna's radiating animation — see `AgentWave`. Value-typed so a
     /// new call re-runs `updateNSViewController`; the controller owns the
     /// frame clock from there, so SwiftUI sees one change per burst rather
     /// than one per animation frame.
-    let lastAgentCallAt: Date?
+    let lastAgentCallAt: [UUID: Date]
     /// Per-window "begin rename on the sole selected row", bumped by the
     /// menu-bar Project ▸ Rename items via this window's `WindowCommandSink`.
     ///
@@ -161,7 +161,6 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.liveData = liveData
         controller.copyMachinery = copyMachinery
         controller.cloudImport = cloudImport
-        controller.handshakeProjectPath = handshakeProjectPath
         // Refresh the callbacks each update so they capture the live binding —
         // the AppKit delegate does not fire for programmatic selection, so the
         // funnel is the SwiftUI binding itself (§2.5).
@@ -176,7 +175,8 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.canShowInFinder = canShowInFinder
         controller.canShareWithAgents = canShareWithAgents
         controller.mcpMounted = mcpMounted
-        controller.noteAgentCall(at: lastAgentCallAt)
+        controller.handshakeProjectPaths = handshakeProjectPaths
+        controller.noteAgentCalls(lastAgentCallAt)
         controller.onRemoveProject = onRemoveProject
         controller.onOpenInNewWindow = onOpenInNewWindow
         controller.onOpenLensInNewWindow = onOpenLensInNewWindow
@@ -251,8 +251,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var onLocate: (UUID) -> Void = { _ in }
     var onReAnalyse: (UUID) -> Void = { _ in }
     var onShowInFinder: (UUID) -> Void = { _ in }
-    /// See the representable's `handshakeProjectPath`.
-    var handshakeProjectPath: String?
+    /// See the representable's `handshakeProjectPaths`.
+    var handshakeProjectPaths: Set<String> = []
     var canShowInFinder: (UUID) -> Bool = { _ in false }
     /// See the representable's `canShareWithAgents` / `mcpMounted`.
     var canShareWithAgents: (UUID) -> Bool = { _ in false }
@@ -1482,32 +1482,29 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
     }()
 
-    private var agentCallAt: Date?
+    private var agentCallAt: [UUID: Date] = [:]
     private var agentWaveTimer: Timer?
     /// The live badge for the radiating project, so the flipbook can advance
     /// without a `reloadData` — which at ~3fps would be both wasteful and
     /// destructive (it tears down an open inline rename).
-    private weak var agentAntennaView: NSImageView?
+    /// The live badge per animating project. A map, because scope is plural:
+    /// a cross-study question lights several antennas in sequence, and the
+    /// sidebar is replicated in every window, so the row that radiates has to
+    /// be chosen by project rather than by "the one exposed project".
+    private var agentAntennaViews: [UUID: NSImageView] = [:]
 
-    /// Adopt a new "last call" time and run the envelope to completion.
-    func noteAgentCall(at date: Date?) {
-        guard let date, date != agentCallAt else {
-            if date == nil { stopAgentWave() }
-            return
-        }
-        agentCallAt = date
+    /// Adopt fresh per-project call times and run the envelope to completion.
+    func noteAgentCalls(_ calls: [UUID: Date]) {
+        guard calls != agentCallAt else { return }
+        agentCallAt = calls
+        guard !calls.isEmpty else { return stopAgentWave() }
         // Reduce Motion: the exposure tiers still carry everything that
         // MATTERS (can be reached / is reachable now). Activity is the
         // additive nicety, so dropping it costs no information.
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
-        guard agentWaveTimer == nil else { return }   // retrigger: envelope reads the new date
+        guard agentWaveTimer == nil else { return }   // retrigger: envelope reads the new times
         let timer = Timer(timeInterval: AgentWave.framePeriod, repeats: true) { [weak self] timer in
             MainActor.assumeIsolated {
-                // Self-invalidating rather than torn down in `deinit`: the
-                // run loop holds the timer, so a controller that goes away
-                // mid-envelope (window closed) would otherwise leave a 3Hz
-                // no-op firing for the life of the app, once per closed
-                // window.
                 guard let self else { return timer.invalidate() }
                 self.tickAgentWave()
             }
@@ -1518,29 +1515,45 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     }
 
     private func tickAgentWave() {
-        guard let start = agentCallAt else { return stopAgentWave() }
-        let e = Date().timeIntervalSince(start)
-        guard e < AgentWave.duration else { return stopAgentWave() }
-        let frame: Int
-        if AgentWave.radiating(at: e) {
-            frame = min(2, Int(AgentWave.segmentElapsed(at: e) / AgentWave.framePeriod) % 3)
-        } else {
-            frame = 2                                  // between taps: rest
+        let now = Date()
+        var anyLive = false
+        for (id, view) in agentAntennaViews {
+            guard let start = agentCallAt[id] else {
+                view.image = Self.agentWaveFrames[2]
+                continue
+            }
+            let e = now.timeIntervalSince(start)
+            guard e < AgentWave.duration else {
+                view.image = Self.agentWaveFrames[2]
+                continue
+            }
+            anyLive = true
+            let frame = AgentWave.radiating(at: e)
+                ? min(2, Int(AgentWave.segmentElapsed(at: e) / AgentWave.framePeriod) % 3)
+                : 2
+            view.image = Self.agentWaveFrames[frame]
         }
-        agentAntennaView?.image = Self.agentWaveFrames[frame]
+        // Also true when no row is on screen: the timer must not outlive the
+        // envelope just because the researcher scrolled the row out of view.
+        if !anyLive, !agentCallAt.values.contains(where: { now.timeIntervalSince($0) < AgentWave.duration }) {
+            stopAgentWave()
+        }
     }
 
     private func stopAgentWave() {
         agentWaveTimer?.invalidate()
         agentWaveTimer = nil
-        agentAntennaView?.image = Self.agentWaveFrames[2]
+        for view in agentAntennaViews.values { view.image = Self.agentWaveFrames[2] }
     }
 
     /// The frame a freshly-built badge should show, so a cell rebuilt mid-
     /// animation (the sidebar reloads on every progress tick) lands on the
     /// current frame instead of snapping back to rest.
-    private var currentAgentWaveFrame: NSImage? {
-        guard agentWaveTimer != nil, let start = agentCallAt else {
+    /// The frame a freshly-built badge should show, so a cell rebuilt mid-
+    /// animation (the sidebar reloads on every progress tick) lands on the
+    /// current frame instead of snapping back to rest.
+    private func currentAgentWaveFrame(for id: UUID?) -> NSImage? {
+        guard agentWaveTimer != nil, let id, let start = agentCallAt[id] else {
             return Self.agentWaveFrames[2]
         }
         let e = Date().timeIntervalSince(start)
@@ -1554,7 +1567,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// iCloud glyph belongs to) = exposed now; pale (tertiary) = shared but
     /// the project isn't open. Never a control — status is attention, not
     /// affordance (§5a-bis, the Mail model).
-    private func agentBadgeView(exposedNow: Bool) -> NSImageView {
+    private func agentBadgeView(exposedNow: Bool, projectID: UUID?) -> NSImageView {
         let tooltip = i18n?.t("desktop.mcpAgents.badgeTooltip")
         let antenna = NSImageView()
         // Only the solid tier animates, and it takes the CURRENT frame rather
@@ -1563,7 +1576,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // as a stutter. Pale rows (exposed but not open) can't be reached by
         // an agent, so there is nothing for them to radiate about.
         antenna.image = exposedNow
-            ? currentAgentWaveFrame
+            ? currentAgentWaveFrame(for: projectID)
             : NSImage(systemSymbolName: "antenna.radiowaves.left.and.right",
                       accessibilityDescription: tooltip)
         antenna.symbolConfiguration = ProjectCellSpec.subtitleGlyphConfig
@@ -1575,7 +1588,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // Last solid badge built wins the animation. There is at most one —
         // the handshake names a single project — and a rebuild replaces the
         // weak reference for free, so view churn needs no bookkeeping.
-        if exposedNow { agentAntennaView = antenna }
+        if exposedNow, let projectID { agentAntennaViews[projectID] = antenna }
         return antenna
     }
 
@@ -1584,7 +1597,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     ///   Only project rows pass it — lens and folder rows can't be shared.
     private func iconCell(symbol: String, text: String, dimmed: Bool = false,
                           trailing: String? = nil,
-                          agentExposedNow: Bool? = nil) -> NSTableCellView {
+                          agentExposedNow: Bool? = nil,
+                          agentProjectID: UUID? = nil) -> NSTableCellView {
         let cell = NSTableCellView()
         let imageView = NSImageView()
         imageView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
@@ -1625,7 +1639,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         var trailingAnchorView: NSView = cell
         var trailingInset: CGFloat = -4
         if let agentExposedNow {
-            let antenna = agentBadgeView(exposedNow: agentExposedNow)
+            let antenna = agentBadgeView(exposedNow: agentExposedNow, projectID: agentProjectID)
             cell.addSubview(antenna)
             constraints += [
                 antenna.trailingAnchor.constraint(equalTo: cell.trailingAnchor,
@@ -2281,7 +2295,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             }
         }
         if project.agentAccess {
-            return .agent(exposedNow: AgentActivity.samePath(handshakeProjectPath, project.path))
+            return .agent(exposedNow: handshakeProjectPaths.contains { AgentActivity.samePath($0, project.path) })
         }
         if case .inCloud = project.availability { return .cloud }
         return .none
@@ -2425,7 +2439,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         case .agent(let exposedNow):
             // Exposure, not activity (§5a-bis). Same builder as the
             // single-line collapse, so the two layouts can't drift.
-            let antenna = agentBadgeView(exposedNow: exposedNow)
+            let antenna = agentBadgeView(exposedNow: exposedNow, projectID: diagnosticsProjectID)
             cell.addSubview(antenna)
             constraints += [
                 antenna.trailingAnchor.constraint(equalTo: cell.trailingAnchor,

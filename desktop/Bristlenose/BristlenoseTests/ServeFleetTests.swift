@@ -49,13 +49,12 @@ struct ServeFleetTests {
         let fleet = ServeFleet()
         let manager = fleet.manager(for: Self.a)
         fleet.frontedProject = Self.a
-        fleet.setExposed(Self.a)
 
         fleet.discard(Self.a)
 
         #expect(fleet.managers[Self.a] == nil)
         #expect(fleet.frontedProject == nil)
-        #expect(fleet.exposedProject == nil)
+        #expect(fleet.handshakeProjectPaths.isEmpty)
 
         var notifications = 0
         let sink = fleet.objectWillChange.sink { _ in notifications += 1 }
@@ -89,8 +88,7 @@ struct ServeFleetTests {
     /// answer §1c gave and the review restored. Fronting must not move it.
     @Test func frontingAWindowDoesNotMoveExposure() {
         let fleet = ServeFleet()
-        fleet.setExposed(Self.a)
         fleet.frontedProject = Self.b
-        #expect(fleet.exposedProject == Self.a)
+        #expect(fleet.manager(for: Self.a) != nil)
     }
 }

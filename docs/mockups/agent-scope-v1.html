@@ -1,0 +1,438 @@
+<meta charset="utf-8">
+<title>Agent scope — V1 states</title>
+<style>
+  :root {
+    --bg: #f2f2f7; --card: #ffffff; --sidebar: #f7f7f9;
+    --label: #1d1d1f; --secondary: #6e6e73; --tertiary: #aeaeb2;
+    --accent: #007aff; --sep: rgba(0,0,0,.10);
+    --sel: rgba(0,0,0,.075); --code-bg: #f5f5f7;
+    --good: #34c759; --warn: #ff9f0a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1e; --card: #2c2c2e; --sidebar: #262628;
+      --label: #f5f5f7; --secondary: #98989d; --tertiary: #5a5a5e;
+      --accent: #0a84ff; --sep: rgba(255,255,255,.12);
+      --sel: rgba(255,255,255,.09); --code-bg: #1c1c1e;
+      --good: #30d158; --warn: #ffd60a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 28px 80px;
+    background: var(--bg); color: var(--label);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 600; letter-spacing: -.4px; margin: 0 0 6px; }
+  .sub { color: var(--secondary); margin: 0 0 28px; font-size: 14px; }
+
+  .rule {
+    background: var(--card); border: 1px solid var(--sep); border-radius: 12px;
+    padding: 18px 22px; margin-bottom: 20px;
+  }
+  .rule .r { font-size: 17px; letter-spacing: -.2px; }
+  .rule .n { color: var(--secondary); font-size: 13.5px; margin-top: 8px; }
+  .rule .n + .n { margin-top: 5px; }
+  b { font-weight: 600; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--sep); border-radius: 12px;
+    margin-bottom: 20px; overflow: hidden;
+  }
+  .hd { padding: 14px 20px; border-bottom: 1px solid var(--sep); display: flex; gap: 10px; align-items: baseline; }
+  .hd .num {
+    font-size: 11px; font-weight: 600; color: var(--secondary);
+    border: 1px solid var(--sep); border-radius: 5px; padding: 1px 6px; flex: none;
+  }
+  .hd h2 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -.2px; }
+  .hd .tag { margin-left: auto; font-size: 12px; color: var(--secondary); text-align: right; }
+
+  .body { display: grid; grid-template-columns: 240px 1fr; }
+  @media (max-width: 760px) { .body { grid-template-columns: 1fr; } }
+
+  .side { background: var(--sidebar); border-right: 1px solid var(--sep); padding: 10px 0; }
+  @media (max-width: 760px) { .side { border-right: 0; border-bottom: 1px solid var(--sep); } }
+  .side .grouphd {
+    font-size: 11px; font-weight: 600; color: var(--secondary);
+    padding: 6px 16px 4px;
+  }
+  .row {
+    display: flex; align-items: center; gap: 7px;
+    padding: 5px 12px 5px 16px; margin: 0 6px; border-radius: 6px; font-size: 13px;
+  }
+  .row.sel { background: var(--sel); }
+  .row .ic { width: 17px; text-align: center; font-size: 13px; flex: none; }
+  .row .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row.sel .nm { font-weight: 500; }
+  .row .ct { color: var(--tertiary); font-size: 11.5px; flex: none; }
+
+  svg.ant { flex: none; display: block; }
+  .ant .mast, .ant .arc { stroke: currentColor; }
+  .ant .arc { fill: none; }
+  .lit { color: var(--label); } .pale { color: var(--tertiary); }
+
+  .right { padding: 18px 22px; }
+  .windows { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .win { border: 1px solid var(--sep); border-radius: 7px; overflow: hidden; min-width: 150px; background: var(--card); }
+  .win .bar { display: flex; align-items: center; gap: 5px; padding: 6px 9px; border-bottom: 1px solid var(--sep); background: var(--sidebar); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .win .ttl { font-size: 11.5px; color: var(--secondary); margin-left: 4px; }
+  .win .cnt { padding: 10px 11px; font-size: 12.5px; color: var(--secondary); }
+  .win.gone { opacity: .38; }
+  .win.min { border-style: dashed; }
+
+  .says { background: var(--code-bg); border: 1px solid var(--sep); border-radius: 9px; padding: 13px 15px; font-size: 13.5px; }
+  .says .who { font-size: 10.5px; font-weight: 600; letter-spacing: .05em; color: var(--secondary); text-transform: uppercase; margin-bottom: 6px; }
+  .says p { margin: 0 0 8px; } .says p:last-child { margin: 0; }
+  .says em { color: var(--secondary); font-style: normal; }
+
+  .why { margin-top: 14px; font-size: 13px; color: var(--secondary); padding-left: 13px; border-left: 2px solid var(--sep); }
+  .why b { color: var(--label); }
+  .why p { margin: 0 0 9px; } .why p:last-child { margin: 0; }
+
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--sep); border-radius: 9px;
+    padding: 14px 16px; overflow-x: auto; margin: 0;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; line-height: 1.55;
+  }
+  .k { color: var(--accent); } .c { color: var(--secondary); }
+
+  .legend { display: flex; gap: 26px; flex-wrap: wrap; padding: 16px 20px; }
+  .leg { display: flex; gap: 9px; align-items: center; font-size: 13px; }
+  .leg .t { color: var(--secondary); } .leg .t b { color: var(--label); display: block; }
+
+  ul.settled { margin: 0; padding: 4px 22px 18px 38px; columns: 2; column-gap: 34px; }
+  @media (max-width: 760px) { ul.settled { columns: 1; } }
+  ul.settled li { font-size: 13px; margin-bottom: 7px; break-inside: avoid; color: var(--secondary); }
+  ul.settled li b { color: var(--label); }
+
+  .q { padding: 4px 22px 20px; }
+  .q .item { display: grid; grid-template-columns: 76px 1fr; gap: 14px; padding: 13px 0; border-top: 1px solid var(--sep); }
+  .q .item:first-child { border-top: 0; }
+  .pill { font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 3px 0; }
+  .p-now { color: var(--warn); } .p-v2 { color: var(--secondary); } .p-watch { color: var(--accent); }
+  .q .item h3 { font-size: 13.5px; font-weight: 600; margin: 0 0 4px; }
+  .q .item p { margin: 0; font-size: 13px; color: var(--secondary); }
+
+  /* --- Settings pane (macOS grouped form) --- */
+  .pane { padding: 20px 22px 22px; }
+  .pane .ptitle { font-size: 17px; font-weight: 600; letter-spacing: -.2px; margin: 0 0 14px; }
+  .summary {
+    background: var(--code-bg); border: 1px solid var(--sep); border-radius: 9px;
+    padding: 12px 15px; margin-bottom: 20px;
+  }
+  .summary .big { font-size: 14.5px; font-weight: 600; }
+  .summary .hint { font-size: 13px; color: var(--secondary); margin-top: 2px; }
+  .sect { font-size: 11px; font-weight: 600; color: var(--secondary); margin: 0 0 6px 3px; }
+  .grp {
+    background: var(--card); border: 1px solid var(--sep); border-radius: 9px;
+    overflow: hidden; margin-bottom: 7px;
+  }
+  @media (prefers-color-scheme: dark) { .grp { background: #3a3a3c; } }
+  .grow {
+    display: flex; align-items: center; gap: 9px; padding: 9px 13px;
+    border-top: 1px solid var(--sep); font-size: 13.5px;
+  }
+  .grow:first-child { border-top: 0; }
+  .grow .ic { width: 18px; text-align: center; flex: none; }
+  .grow .nm { flex: 1; }
+  .grow .meta { color: var(--secondary); font-size: 12.5px; flex: none; }
+  .grow .now { color: var(--accent); font-size: 12px; font-weight: 600; flex: none; }
+  .btn {
+    font-size: 12px; padding: 2px 9px; border-radius: 5px;
+    border: 1px solid var(--sep); color: var(--label); background: transparent; flex: none;
+  }
+  .foot { font-size: 12.5px; color: var(--secondary); margin: 0 0 20px 3px; }
+  .sw { width: 34px; height: 20px; border-radius: 10px; background: var(--good); position: relative; flex: none; }
+  .sw::after { content: ""; position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+  .popup {
+    font-size: 12.5px; padding: 3px 22px 3px 9px; border-radius: 5px;
+    border: 1px solid var(--sep); position: relative; flex: none;
+  }
+  .popup::after { content: "⌄"; position: absolute; right: 7px; top: 1px; color: var(--secondary); }
+</style>
+
+<div class="wrap">
+<h1>Agent scope — V1</h1>
+<p class="sub">What an agent can see, and how the researcher controls it. Windows are the control; nothing else designates scope.</p>
+
+<div class="rule">
+  <div class="r"><b>Scope = every open project window whose project has Agent Access on.</b></div>
+  <div class="n">Nothing is designated, nothing persists, nothing follows focus. Widen by opening a window, narrow by closing one. ⌘` changes nothing.</div>
+  <div class="n"><b>Derived from the window roster, never from running serves.</b> A sidecar lingers 90 s after its window closes so ⌘W-then-Dock-click stays free — but scope is a permission, not a cache, and the two must not share a predicate.</div>
+  <div class="n"><b>Closing is immediately safe.</b> The sidecar stays warm; its <code>/mcp</code> surface goes dark the moment the window closes — so a cached port and bearer buy nothing.</div>
+</div>
+
+<div class="card">
+  <div class="hd"><h2>The antenna, three tiers</h2><span class="tag">already shipped — the meanings sharpen, the glyph doesn't change</span></div>
+  <div class="legend">
+    <div class="leg"><span style="width:18px;display:inline-block"></span>
+      <span class="t"><b>No antenna</b>Agent Access off. Absence is the information.</span></div>
+    <div class="leg">
+      <svg class="ant pale" width="17" height="12" viewBox="0 0 17 12"><path class="arc" d="M4.4 2.2a7 7 0 0 0 0 7.6M1.6 .6a10 10 0 0 0 0 10.8M12.6 2.2a7 7 0 0 1 0 7.6M15.4 .6a10 10 0 0 1 0 10.8" stroke-width="1.3" stroke-linecap="round"/><path class="mast" d="M8.5 3.4v5.2" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="t"><b>Pale</b>Access on, no window. Not in scope — open one and it is.</span></div>
+    <div class="leg">
+      <svg class="ant lit" width="17" height="12" viewBox="0 0 17 12"><path class="arc" d="M4.4 2.2a7 7 0 0 0 0 7.6M1.6 .6a10 10 0 0 0 0 10.8M12.6 2.2a7 7 0 0 1 0 7.6M15.4 .6a10 10 0 0 1 0 10.8" stroke-width="1.3" stroke-linecap="round"/><path class="mast" d="M8.5 3.4v5.2" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="t"><b>Solid</b>In scope right now. Radiates while an agent is reading.</span></div>
+  </div>
+</div>
+
+<!-- 1 -->
+<div class="card">
+  <div class="hd"><span class="num">1</span><h2>One window, access on</h2><span class="tag">scope = 1</span></div>
+  <div class="body">
+    <div class="side">
+      <div class="grouphd">Projects</div>
+      <div class="row sel"><span class="ic">🏉</span><span class="nm">foo</span><span class="ct">3</span><svg class="ant lit" width="17" height="12" viewBox="0 0 17 12"><path class="arc" d="M4.4 2.2a7 7 0 0 0 0 7.6M1.6 .6a10 10 0 0 0 0 10.8M12.6 2.2a7 7 0 0 1 0 7.6M15.4 .6a10 10 0 0 1 0 10.8" stroke-width="1.3" stroke-linecap="round"/><path class="mast" d="M8.5 3.4v5.2" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <div class="row"><span class="ic">🌪</span><span class="nm">folder-of-horrors</span><span class="ct">42</span></div>
+      <div class="row"><span class="ic">🎓</span><span class="nm">New Project 2</span><span class="ct"></span></div>
+      <div class="row"><span class="ic">🐟</span><span class="nm">IKEA with uxfriends</span><span class="ct">1</span></div>
+    </div>
+    <div class="right">
+      <div class="windows"><div class="win"><div class="bar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="ttl">foo</span></div><div class="cnt">1 window · 1 serve</div></div></div>
+      <div class="says"><div class="who">Claude</div><p>I can see one project: <b>foo</b> — 3 sessions, 44 quotes.</p></div>
+      <div class="why">The simple case. One window, one project in scope. Nothing to disambiguate, so nothing to confirm.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 2 -->
+<div class="card">
+  <div class="hd"><span class="num">2</span><h2>Two windows, both access on</h2><span class="tag">scope = 2 · confirm</span></div>
+  <div class="body">
+    <div class="side">
+      <div class="grouphd">Projects</div>
+      <div class="row sel"><span class="ic">🏉</span><span class="nm">foo</span><span class="ct">3</span><svg class="ant lit" width="17" height="12" viewBox="0 0 17 12"><path class="arc" d="M4.4 2.2a7 7 0 0 0 0 7.6M1.6 .6a10 10 0 0 0 0 10.8M12.6 2.2a7 7 0 0 1 0 7.6M15.4 .6a10 10 0 0 1 0 10.8" stroke-width="1.3" stroke-linecap="round"/><path class="mast" d="M8.5 3.4v5.2" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <div class="row"><span class="ic">🌪</span><span class="nm">folder-of-horrors</span><span class="ct">42</span></div>
+      <div class="row"><span class="ic">🎓</span><span class="nm">New Project 2</span><span class="ct"></span></div>
+      <div class="row"><span class="ic">🐟</span><span class="nm">IKEA with uxfriends</span><span class="ct">1</span><svg class="ant lit" width="17" height="12" viewBox="0 0 17 12"><path class="arc" d="M4.4 2.2a7 7 0 0 0 0 7.6M1.6 .6a10 10 0 0 0 0 10.8M12.6 2.2a7 7 0 0 1 0 7.6M15.4 .6a10 10 0 0 1 0 10.8" stroke-width="1.3" stroke-linecap="round"/><path class="mast" d="M8.5 3.4v5.2" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    </div>
+    <div class="right">
+      <div class="windows">
+        <div class="win"><div class="bar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="ttl">foo</span></div><div class="cnt">frontmost</div></div>
+        <div class="win"><div class="bar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="ttl">IKEA with uxfriends</span></div><div class="cnt">behind</div></div>
+      </div>
+      <div class="says"><div class="who">Claude</div>
+        <p>You have two projects open: <b>foo</b> (3 sessions) and <b>IKEA with uxfriends</b> (1 session).</p>
+        <p><em>Which should I look at — or both?</em></p></div>
+      <div class="why"><b>Frontmost is irrelevant.</b> foo being in front gives it no priority. This sentence is what replaces every silent re-pointing bug.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 3 -->
+<div class="card">
+  <div class="hd"><span class="num">3</span><h2>Two windows, one has access off</h2><span class="tag">scope = 1</span></div>
+  <div class="body">
+    <div class="side">
+      <div class="grouphd">Projects</div>
+      <div class="row sel"><span class="ic">🏉</span><span class="nm">foo</span><span class="ct">3</span><svg class="ant lit" width="17" height="12" viewBox="0 0 17 12"><path class="arc" d="M4.4 2.2a7 7 0 0 0 0 7.6M1.6 .6a10 10 0 0 0 0 10.8M12.6 2.2a7 7 0 0 1 0 7.6M15.4 .6a10 10 0 0 1 0 10.8" stroke-width="1.3" stroke-linecap="round"/><path class="mast" d="M8.5 3.4v5.2" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <div class="row"><span class="ic">🌪</span><span class="nm">folder-of-horrors</span><span class="ct">42</span></div>
+      <div class="row"><span class="ic">🎓</span><span class="nm">New Project 2</span><span class="ct"></span></div>
+      <div class="row"><span class="ic">🔒</span><span class="nm">Acme — pre-announce</span><span class="ct">6</span></div>
+    </div>
+    <div class="right">
+      <div class="windows">
+        <div class="win"><div class="bar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="ttl">foo</span></div><div class="cnt">access on</div></div>
+        <div class="win"><div class="bar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="ttl">Acme — pre-announce</span></div><div class="cnt">access <b>off</b></div></div>
+      </div>
+      <div class="says"><div class="who">Claude</div><p>I can see one project: <b>foo</b>.</p></div>
+      <div class="why">The confidential study is <b>open on screen and invisible to the agent</b> — no antenna, no handshake row, not even its name. Open ≠ shared. Access is the permission; the window is only the scope.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 4 -->
+<div class="card">
+  <div class="hd"><span class="num">4</span><h2>Minimised — in scope, deliberately</h2><span class="tag">scope = 2</span></div>
+  <div class="body">
+    <div class="side">
+      <div class="grouphd">Projects</div>
+      <div class="row sel"><span class="ic">🏉</span><span class="nm">foo</span><span class="ct">3</span><svg class="ant lit" width="17" height="12" viewBox="0 0 17 12"><path class="arc" d="M4.4 2.2a7 7 0 0 0 0 7.6M1.6 .6a10 10 0 0 0 0 10.8M12.6 2.2a7 7 0 0 1 0 7.6M15.4 .6a10 10 0 0 1 0 10.8" stroke-width="1.3" stroke-linecap="round"/><path class="mast" d="M8.5 3.4v5.2" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <div class="row"><span class="ic">🐟</span><span class="nm">IKEA with uxfriends</span><span class="ct">1</span><svg class="ant lit" width="17" height="12" viewBox="0 0 17 12"><path class="arc" d="M4.4 2.2a7 7 0 0 0 0 7.6M1.6 .6a10 10 0 0 0 0 10.8M12.6 2.2a7 7 0 0 1 0 7.6M15.4 .6a10 10 0 0 1 0 10.8" stroke-width="1.3" stroke-linecap="round"/><path class="mast" d="M8.5 3.4v5.2" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    </div>
+    <div class="right">
+      <div class="windows">
+        <div class="win"><div class="bar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="ttl">foo</span></div><div class="cnt">on screen</div></div>
+        <div class="win min"><div class="bar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="ttl">IKEA with uxfriends</span></div><div class="cnt">minimised · still in scope</div></div>
+      </div>
+      <div class="says"><div class="who">Claude</div><p>Two projects: <b>foo</b> and <b>IKEA with uxfriends</b>.</p></div>
+      <div class="why">
+        <p><b>Minimising is how you hold a project in scope on a small screen.</b> Cross-project work needs several windows; the Dock is where they go. Intentional retention, so it counts.</p>
+        <p>The cost, accepted: the antenna that would tell you is <i>inside</i> the minimised window. Scope is real and unseeable — which is what promotes an always-on count from nice-to-have to the only way to check.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5 -->
+<div class="card">
+  <div class="hd"><span class="num">5</span><h2>You close a window mid-conversation</h2><span class="tag">2 → 1 · immediate</span></div>
+  <div class="body">
+    <div class="side">
+      <div class="grouphd">Projects</div>
+      <div class="row sel"><span class="ic">🏉</span><span class="nm">foo</span><span class="ct">3</span><svg class="ant lit" width="17" height="12" viewBox="0 0 17 12"><path class="arc" d="M4.4 2.2a7 7 0 0 0 0 7.6M1.6 .6a10 10 0 0 0 0 10.8M12.6 2.2a7 7 0 0 1 0 7.6M15.4 .6a10 10 0 0 1 0 10.8" stroke-width="1.3" stroke-linecap="round"/><path class="mast" d="M8.5 3.4v5.2" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <div class="row"><span class="ic">🐟</span><span class="nm">IKEA with uxfriends</span><span class="ct">1</span><svg class="ant pale" width="17" height="12" viewBox="0 0 17 12"><path class="arc" d="M4.4 2.2a7 7 0 0 0 0 7.6M1.6 .6a10 10 0 0 0 0 10.8M12.6 2.2a7 7 0 0 1 0 7.6M15.4 .6a10 10 0 0 1 0 10.8" stroke-width="1.3" stroke-linecap="round"/><path class="mast" d="M8.5 3.4v5.2" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    </div>
+    <div class="right">
+      <div class="windows">
+        <div class="win"><div class="bar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="ttl">foo</span></div><div class="cnt">still open</div></div>
+        <div class="win gone"><div class="bar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="ttl">IKEA with uxfriends</span></div><div class="cnt">⌘W · sidecar warm 90 s, <b>unreadable now</b></div></div>
+      </div>
+      <div class="says"><div class="who">Claude</div><p><em>IKEA with uxfriends has left scope — its window closed. I still have foo. Shall I carry on with just that?</em></p></div>
+      <div class="why">
+        <p><b>This is the whole scope control.</b> The tool result is the only channel we have into the other app, so the departure is announced there, not in a dialog.</p>
+        <p>The sidecar stays warm for 90 s so reopening is instant — but its <code>/mcp</code> surface is already dark. <b>Close a window and you are safe from prying robots immediately</b>, not eventually, and not merely because a well-behaved proxy re-read a file.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- settings pane -->
+<div class="card">
+  <div class="hd"><h2>Settings ▸ MCP Agents — where you check the scope</h2><span class="tag">the pane exists; today it shows only the serving project</span></div>
+  <div class="pane">
+    <div class="ptitle">MCP Agents</div>
+
+    <div class="summary">
+      <div class="big">2 projects readable by agents.</div>
+      <div class="hint">Close a window to remove one. Turn off Agent Access to stop a project being readable at all.</div>
+    </div>
+
+    <div class="sect">IN SCOPE</div>
+    <div class="grp">
+      <div class="grow">
+        <span class="ic">🏉</span><span class="nm">foo</span>
+        <span class="now">reading now</span>
+        <svg class="ant lit" width="17" height="12" viewBox="0 0 17 12"><path class="arc" d="M4.4 2.2a7 7 0 0 0 0 7.6M1.6 .6a10 10 0 0 0 0 10.8M12.6 2.2a7 7 0 0 1 0 7.6M15.4 .6a10 10 0 0 1 0 10.8" stroke-width="1.3" stroke-linecap="round"/><path class="mast" d="M8.5 3.4v5.2" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <button class="btn">Turn Off</button>
+      </div>
+      <div class="grow">
+        <span class="ic">🐟</span><span class="nm">IKEA with uxfriends</span>
+        <span class="meta">minimised</span>
+        <svg class="ant lit" width="17" height="12" viewBox="0 0 17 12"><path class="arc" d="M4.4 2.2a7 7 0 0 0 0 7.6M1.6 .6a10 10 0 0 0 0 10.8M12.6 2.2a7 7 0 0 1 0 7.6M15.4 .6a10 10 0 0 1 0 10.8" stroke-width="1.3" stroke-linecap="round"/><path class="mast" d="M8.5 3.4v5.2" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <button class="btn">Turn Off</button>
+      </div>
+    </div>
+    <p class="foot">Open, with Agent Access on. This is the list an agent sees.</p>
+
+    <div class="sect">READY WHEN YOU OPEN THEM</div>
+    <div class="grp">
+      <div class="grow">
+        <span class="ic">🌪</span><span class="nm">folder-of-horrors</span>
+        <span class="meta">42 sessions</span>
+        <svg class="ant pale" width="17" height="12" viewBox="0 0 17 12"><path class="arc" d="M4.4 2.2a7 7 0 0 0 0 7.6M1.6 .6a10 10 0 0 0 0 10.8M12.6 2.2a7 7 0 0 1 0 7.6M15.4 .6a10 10 0 0 1 0 10.8" stroke-width="1.3" stroke-linecap="round"/><path class="mast" d="M8.5 3.4v5.2" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <button class="btn">Turn Off</button>
+      </div>
+    </div>
+    <p class="foot">Agent Access is on, but no window is open. An agent can name these; it cannot read them.</p>
+
+    <div class="sect">CONNECTION</div>
+    <div class="grp">
+      <div class="grow"><span class="nm">Agent</span><span class="popup">Claude Desktop</span></div>
+      <div class="grow"><span class="nm">Extension</span><span class="meta">Installed · v0.1.0</span><button class="btn">Reveal…</button></div>
+    </div>
+    <p class="foot">macOS will ask once whether Claude may access data from other apps. That prompt is how the extension finds Bristlenose.</p>
+
+    <div class="sect">PRIVACY</div>
+    <div class="grp">
+      <div class="grow"><span class="nm">Hide names</span><span class="sw"></span></div>
+    </div>
+    <p class="foot" style="margin-bottom:0">Agents see speaker codes (p1, m1) instead of names. Job titles and personas still travel — they are what lets an agent judge whether two studies are comparable.</p>
+  </div>
+
+  <div class="right" style="padding:0 22px 20px">
+    <div class="why">
+      <p><b>The summary line is the whole point.</b> A count plus the sentence that changes it. That is what a researcher wants when they are worried, and it is the one thing no other surface can give them once windows are minimised.</p>
+      <p><b>Two sections, because "readable" and "permitted" are different facts</b> — and the pale set is exactly what an agent may name but not read. Grouping them under one list would blur the distinction the whole model rests on.</p>
+      <p><b>Turn Off appears on every row</b>, in scope or not: it is the permission control, and it works from here whatever the windows are doing. Closing a window is a thing you do in the app, so the pane says so rather than offering a Close button that reaches out of Settings.</p>
+      <p><b>"Hide names", not "Anonymise"</b> — with the footnote saying plainly what still travels. The switch strips names; it does not de-identify, and the honest label is the smaller one.</p>
+      <p><b>"reading now"</b> rides the same per-project activity signal as the sidebar antenna. While this pane is open it is the one always-visible readout of which study is being touched.</p>
+    </div>
+  </div>
+</div>
+
+<!-- payload -->
+<div class="card">
+  <div class="hd"><h2>What a quote looks like when two studies are in scope</h2><span class="tag">the citation currency changes</span></div>
+  <div class="right">
+<pre><span class="c">// p1 alone is no longer a citation — p1 in foo and p1 in IKEA are different humans.</span>
+{
+  <span class="k">"scope"</span>: { <span class="k">"n"</span>: 2, <span class="k">"fp"</span>: "7c31be04" },   <span class="c">// count phrases the warning; fp catches a same-size swap</span>
+  <span class="k">"project"</span>: { <span class="k">"key"</span>: "a3f9c210", <span class="k">"name"</span>: "IKEA with uxfriends" },
+  <span class="k">"quote_id"</span>: "q-p1-174",
+  <span class="k">"participant"</span>: "p1",
+  <span class="k">"role"</span>: "Practice manager",          <span class="c">// people.yaml — modelled today, not yet exposed</span>
+  <span class="k">"session_date"</span>: "2026-03-09",
+  <span class="k">"text"</span>: "Express delivery is the way to go."
+}</pre>
+    <div class="why" style="margin-top:16px">
+      <p><b>Provenance is mandatory; pooling is permitted.</b> The danger was never mixing studies — it was mixing them silently. With the project on every quote and the role beside it, the agent can say the sentence that makes cross-study evidence legitimate: <em>"this came from a usability study of product X, this from a discovery of product Y — both experienced practice managers."</em></p>
+      <p><b>Grouping is not comparability.</b> A folder named "All discovery" may hold six unrelated clients. What licenses pooling is the population and the question, never the container.</p>
+      <p><b>What <code>scope</code> guarantees is detectability, not compliance.</b> Claude will notice a widening and clarify because the instructions say so; another client may not. The enforceable control stays app-side — the antenna, the window, the quit.</p>
+    </div>
+  </div>
+</div>
+
+<!-- settled -->
+<div class="card">
+  <div class="hd"><h2>Settled</h2><span class="tag">decided this pass — not open for re-litigation</span></div>
+  <ul class="settled">
+    <li><b>Windows are the scope control.</b> Not a slot, not focus, not a designation.</li>
+    <li><b>Derived from the window roster</b>, never from serve liveness.</li>
+    <li><b>Live-queried from <code>NSApp.windows</code></b>, not from notifications — which is what makes tabs safe. Visibility was considered and rejected: gating on occlusion would collapse scope the moment the Claude window covers Bristlenose.</li>
+    <li><b>Closing is immediately safe</b> — the MCP surface goes dark while the sidecar stays warm.</li>
+    <li><b>Minimised counts.</b> Intentional retention on a small screen.</li>
+    <li><b>Agent Access stays a per-project persisted permission.</b> The window is scope, not permission.</li>
+    <li><b>Count + fingerprint on every result</b>; the full list only from enumerate.</li>
+    <li><b>Stable project key</b> is the first field of every citation.</li>
+    <li><b>Provenance mandatory, pooling permitted</b>, population licenses it.</li>
+    <li><b>The pale set may be named; the full sidebar never.</b> A permitted project is one the researcher blessed; a project with access off stays invisible in every direction — no name, no count, no acknowledgement.</li>
+    <li><b><code>role</code> travels even when Anonymise is on.</b> It is what licenses cross-study pooling, and the transcripts already went to a cloud LLM to be analysed at all.</li>
+    <li><b>One global Anonymise is fine for V1.</b> It returns with folders, not on a date.</li>
+    <li><b>No always-on scope count in V1.</b> The unseen-scope set is always a subset of what was already blessed — minimising can hide that something is readable, never expose something that wasn't.</li>
+    <li><b>Quit ends everything</b> — verified: the sidecar's parent-death watcher exits within ~2 s even on force-quit.</li>
+    <li><b>Dropped as too edge-casy:</b> capturing scope at query time against an in-flight window change.</li>
+  </ul>
+</div>
+
+<!-- open -->
+<div class="card">
+  <div class="hd"><h2>Still open</h2><span class="tag">ordered by when they have to be answered</span></div>
+  <div class="q">
+    <div class="item"><div class="pill p-now">Before ship</div><div>
+      <h3>Tab release is unmeasured, and the roster is now a security boundary</h3>
+      <p><code>ServeReaping</code>'s own comment: a tab merged into another window may not fire <code>.onDisappear</code> at all. When that governed memory it cost 140&nbsp;MB; now it governs what an agent can read. The fix is settled — live-derive <code>shownProjects</code> from <code>NSApp.windows</code> on a sweep rather than trusting notifications — so what is owed is the <b>measurement</b>, not a decision. The only open item left before ship.</p></div></div>
+
+    <div class="item"><div class="pill p-now">Copy</div><div>
+      <h3>"Anonymise" over-promises once <code>role</code> travels</h3>
+      <p>The switch now means <i>names stripped</i>, not <i>de-identified</i> — and a job title beside verbatim quotes in a six-person study is a re-identification path a researcher reading that word would assume was closed. "Hide names" is smaller and true.</p></div></div>
+
+    <div class="item"><div class="pill p-now">Copy</div><div>
+      <h3><code>role</code> and <code>persona</code> are freeform</h3>
+      <p>Researcher-typed strings, no controlled vocabulary — nothing stops <code>Practice manager, Acme Leeds</code> going in the box. Their help text gives no reason to think the field ever leaves the machine. A hint at the field, not a validator.</p></div></div>
+
+    <div class="item"><div class="pill p-watch">Watch in use</div><div>
+      <h3>Ten windows means ten projects in scope</h3>
+      <p>The rule stays clear; the scope broadens quietly. The fingerprint plus the agent's clarification is probably enough. First thing to watch with a real researcher.</p></div></div>
+
+    <div class="item"><div class="pill p-watch">Build, post-V1</div><div>
+      <h3>Somewhere to read the scope set</h3>
+      <p>With minimised windows in scope the sidebar is unreliable, and that is accepted for V1. The cheap version is not a menu-bar extra: <b>Settings ▸ MCP Agents already exists</b> and shows only the serving project. Listing the scope set there gives a worried researcher somewhere to look.</p></div></div>
+
+    <div class="item"><div class="pill p-watch">Build</div><div>
+      <h3>Activity animation must be per project, in every window</h3>
+      <p>Per <i>project</i>, not per window — two windows on one study share a serve, and the sidebar is replicated, so the row radiates in every open sidebar at once. Most of it already works: each sidecar counts its own calls and each <code>ServeManager</code> polls its own port. The only collapse is <code>refreshAppLevelFacts</code> squeezing N answers into one, because there was only ever one exposed project. Fleet publishes a map; the sidebar keys by row.</p>
+      <p style="margin-top:7px">It improves in the plural world rather than merely porting: a cross-study query lights several antennas in sequence, so you watch the shape of the question move across your studies.</p></div></div>
+
+    <div class="item"><div class="pill p-v2">V2</div><div>
+      <h3>Folders as a share unit</h3>
+      <p>Twenty studies on one product is the real prize. Nothing here blocks it: a folder share is just another source of set membership, and the handshake shape, routing and citation format all stay put. Global Anonymise returns here.</p></div></div>
+  </div>
+</div>
+
+</div>

@@ -58,15 +58,16 @@ struct ServeFleetRemovalTests {
         #expect(fleet.frontedProject == Self.kept)
     }
 
-    /// Removing the exposed project must clear exposure, or the handshake would
-    /// keep naming a study that no longer exists.
-    @Test func removingTheExposedProjectClearsExposure() {
+    /// Removing a project must take it out of the handshake. Under derived
+    /// scope that is automatic — it has no manager and no window, so it cannot
+    /// satisfy either conjunct — but `discard` still re-derives explicitly so
+    /// the file stops naming it in the same turn rather than at the next sweep.
+    @Test func removingAProjectTakesItOutOfTheHandshake() {
         let fleet = ServeFleet()
         fleet.manager(for: Self.removed)
-        fleet.setExposed(Self.removed)
 
         fleet.discard(Self.removed)
 
-        #expect(fleet.exposedProject == nil)
+        #expect(fleet.handshakeProjectPaths.isEmpty)
     }
 }

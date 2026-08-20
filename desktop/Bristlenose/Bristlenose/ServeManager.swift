@@ -129,14 +129,9 @@ final class ServeManager: ObservableObject {
     /// May this instance write or delete the handshake file?
     ///
     /// There is **one** handshake naming **one** project, so exactly one manager
-    /// may own it — `ServeFleet` designates. Without this, `syncHandshake`'s
-    /// else-arm runs from every instance's 20-second activity poll, so a second
-    /// running, non-exposed project deletes the exposed project's file within
-    /// 20 seconds, repeatedly. Defaults to true so a lone manager (tests, the
-    /// CLI-shaped path) behaves exactly as before.
-    var handshakeOwner: Bool = true {
-        didSet { if handshakeOwner != oldValue { syncHandshake() } }
-    }
+    /// Set by the fleet when this manager's contribution to the handshake
+    /// may have changed.
+    var onHandshakeDirty: (() -> Void)?
 
     /// The project path the MCP handshake currently names, or nil when no
     /// handshake exists. **Written by `syncHandshake()` and nowhere else** —
@@ -153,7 +148,26 @@ final class ServeManager: ObservableObject {
     ///
     /// Publishing it also makes the badge correct when there is more than one
     /// serve, which is why the independent-windows stage needs nothing here.
-    @Published private(set) var handshakeProjectPath: String?
+    /// This serve's stable project key, from `/api/health`'s
+    /// `mcp.project_key`. **Carried, never computed:** Python owns the digest,
+    /// and two implementations of it would diverge and break every citation
+    /// that crosses the language boundary.
+    @Published private(set) var projectKey: String?
+
+    /// Put this serve in or out of agent scope. Scope is a permission and
+    /// serve lifetime is a cache: a project whose window just closed must stop
+    /// answering NOW, not when its sidecar is reaped 90 s later, and not merely
+    /// because a polite proxy stopped routing to it.
+    func setAgentScope(readable: Bool) {
+        guard case .running(let port) = state, let token = authToken,
+              let url = URL(string: "http://127.0.0.1:\(port)/api/agent-scope") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["readable": readable])
+        URLSession.shared.dataTask(with: request).resume()
+    }
 
     /// Injected at app level: does the project at this path have Agent
     /// Access on? Kept as a closure so ServeManager doesn't grow a
@@ -275,12 +289,12 @@ final class ServeManager: ObservableObject {
         }
 
         // Sweep a SIGKILL leftover (force quit, OOM, the Xcode stop button —
-        // none of which run the delete-on-stop path). Gated on `handshakeOwner`:
+        // none of which run the delete-on-stop path). The fleet re-derives:
         // it was unconditional while there was one manager per app, and with one
         // per project it meant minting a second project's manager deleted the
         // FIRST project's live handshake. Only the designated owner may touch
         // the file — one global fact, one writer.
-        if handshakeOwner { dropHandshake() }
+        dropHandshake()
     }
 
     /// The URL to load in WKWebView when serve is running.
@@ -1001,6 +1015,7 @@ final class ServeManager: ObservableObject {
         if let (data, _) = try? await URLSession.shared.data(from: url),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             parsed = AgentActivity.parse(json)
+            if let key = AgentActivity.projectKey(json), key != projectKey { projectKey = key }
             if let iid = AgentActivity.instanceID(json) {
                 mcpInstanceID = iid
             }
@@ -1086,6 +1101,7 @@ final class ServeManager: ObservableObject {
                 // the §5b corollary ("handshake exists" implies "port
                 // answers").
                 self.mcpInstanceID = AgentActivity.instanceID(json)
+                self.projectKey = AgentActivity.projectKey(json)
                 self.syncHandshake()
             }
         } catch {
@@ -1102,11 +1118,10 @@ final class ServeManager: ObservableObject {
     /// would leave the antenna solid for a project no agent can reach, which is
     /// the exact defect publishing the path was meant to close. Every lifecycle
     /// edge that used to call `remove()` directly calls this.
-    private func dropHandshake() {
-        guard handshakeOwner else { return }
-        MCPHandshake.remove()
-        if handshakeProjectPath != nil { handshakeProjectPath = nil }
-    }
+    /// Same derivation, opposite intent. This manager no longer decides
+    /// whether the file should exist — it says "my contribution changed" and
+    /// the fleet recomputes from the window roster.
+    private func dropHandshake() { onHandshakeDirty?() }
 
     /// Reconcile the MCP handshake file with the current serve state: write
     /// it when the fronted project is `.running` with Agent Access on and
@@ -1115,7 +1130,7 @@ final class ServeManager: ObservableObject {
     ///
     /// The predicate lives in `HandshakeExposure.write` so the sidebar and
     /// this writer cannot hold different opinions about what "exposed" means
-    /// — the badge reads `handshakeProjectPath`, which only this function
+    /// — the badge reads the fleet's derived set, which only the fleet
     /// sets, from that one decision.
     ///
     /// The gate order is deliberate: `mcpToken` here is always the SCOPED
@@ -1124,21 +1139,12 @@ final class ServeManager: ObservableObject {
     /// `/api/*`. No `mcpMounted` gate: on a build without the mcp extra the
     /// proxy's health probe / 404 path produces the honest "built without
     /// agent support" sentence, which beats a missing-file "isn't open".
-    private func syncHandshake() {
-        guard handshakeOwner else { return }
-        guard let plan = HandshakeExposure.write(
-            state: state,
-            currentProjectPath: currentProjectPath,
-            instanceID: mcpInstanceID,
-            token: mcpToken,
-            agentAccess: { agentAccessResolver?($0) ?? false }
-        ) else {
-            dropHandshake()
-            return
-        }
-        MCPHandshake.write(port: plan.port, token: plan.token, instanceID: plan.instanceID)
-        if handshakeProjectPath != plan.path { handshakeProjectPath = plan.path }
-    }
+    /// The handshake is one file listing every in-scope project, so the
+    /// **fleet** owns it — a per-manager writer would have N writers racing
+    /// over one path. These call sites stay where they are: they encode when
+    /// the answer can change (start, stop, adopt, re-point, health read), and
+    /// re-deriving the whole set is cheap.
+    private func syncHandshake() { onHandshakeDirty?() }
 
     /// Strip ANSI escape sequences and OSC 8 hyperlinks for clean display.
     private static let ansiRegex = try! NSRegularExpression(

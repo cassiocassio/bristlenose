@@ -185,17 +185,6 @@ struct BristlenoseApp: App {
                     serveFleet.agentAccessResolver = { [weak projectIndex] path in
                         projectIndex?.agentAccess(forPath: path) ?? false
                     }
-                    // Exposure is durable, so re-adopt it here — after the
-                    // resolver exists and the index has loaded, and BEFORE any
-                    // manager is created, so the restored owner is set on the
-                    // first `manager(for:)` rather than needing a re-point.
-                    // Without this, Agent Access was silently session-scoped:
-                    // the menu still said "Turn Off", the antenna was still
-                    // drawn, and every agent got "Bristlenose isn't open"
-                    // until the researcher toggled it off and on again.
-                    serveFleet.restoreExposure { id in
-                        projectIndex.projects.first { $0.id == id }?.agentAccess ?? false
-                    }
                     // A sidecar bakes provider, model, key, anonymise and
                     // consent into its environment at spawn. One notification,
                     // N sidecars — the action is a fan-out, not a restart.

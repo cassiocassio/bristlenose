@@ -48,7 +48,6 @@ final class ServeFleet: ObservableObject {
 
     /// The project the MCP handshake names, or nil. Fleet-level: one file, one
     /// owner. `ServeReaping` and `ServeEnvStaleness` both read it.
-    @Published private(set) var exposedProject: UUID?
 
     /// Whether this build mounted the MCP endpoint (the optional `mcp` extra).
     ///
@@ -64,16 +63,33 @@ final class ServeFleet: ObservableObject {
     /// with seven independent delete edges. Per-instance, one project's start
     /// would delete another's file while the first still published "exposed" —
     /// the antenna lying, which is the defect `3ac773fa` closed.
-    @Published var handshakeProjectPath: String?
+    /// The project paths the handshake currently names — the sidebar's solid
+    /// antenna tier, and now a set rather than one designated winner.
+    @Published private(set) var handshakeProjectPaths: Set<String> = []
+
+    /// Seam for tests that need a derived set without a window server behind
+    /// them. Production writes it only through `syncHandshake`.
+    func setHandshakeProjectPathsForTest(_ paths: Set<String>) { handshakeProjectPaths = paths }
 
     /// When an agent last called a tool on the **exposed** serve, or nil.
     ///
-    /// Fleet-level and read from `exposedProject` for the same reason as
+    /// `ServeEnvStaleness` asks "is this the project an agent can reach right
+    /// now" to decide restart-now vs restart-later. Under derived scope that is
+    /// a set, and any member of it deserves the eager restart — so this hands
+    /// it one member rather than teaching that pure function about plurality.
+    var exposedProjectForStaleness: UUID? {
+        managers.first { handshakeProjectPaths.contains($0.value.currentProjectPath ?? "") }?.key
+    }
+
+    /// Fleet-level and read from the derived set for the same reason as
     /// `handshakeProjectPath`: exposure is singular, so activity is too. The
     /// fronted project is NOT the right source — you can be looking at one
     /// study while an agent reads the one you exposed, and the antenna that
     /// radiates has to be the exposed one or it is pointing at the wrong row.
-    @Published var lastAgentCallAt: Date?
+    /// When an agent last asked about each project. A **map**, because scope
+    /// is plural: a cross-study question lights several antennas in sequence,
+    /// and collapsing it to one would pick an arbitrary winner.
+    @Published private(set) var lastAgentCallAt: [UUID: Date] = [:]
 
     /// Nested `ObservableObject`s do not propagate through `@EnvironmentObject`,
     /// and the failure is silent — so every manager's change is re-published as
@@ -92,7 +108,7 @@ final class ServeFleet: ObservableObject {
         let created = ServeManager()
         created.agentAccessResolver = agentAccessResolver
         managers[project] = created
-        created.handshakeOwner = (project == exposedProject)
+        created.onHandshakeDirty = { [weak self] in self?.syncHandshake() }
         observations[project] = created.objectWillChange.sink { [weak self] _ in
             guard let self else { return }
             self.objectWillChange.send()
@@ -121,26 +137,8 @@ final class ServeFleet: ObservableObject {
         // Through `setExposed`, not a bare assignment: the project is being
         // removed from the sidebar, so the stored id must go too or a later
         // launch would try to re-expose something that no longer exists.
-        if exposedProject == project { setExposed(nil) }
-    }
-
-    /// Where the exposure slot survives a quit. Plain camelCase, matching the
-    /// app's other defaults keys (`palette`, `language`, `llmModel`).
-    private static let exposureDefaultsKey = "exposedProjectID"
-
-    /// Re-adopt the stored exposure at launch, if the permission still holds.
-    ///
-    /// Deliberately a no-op once something is already exposed — this is a
-    /// launch-time restore, not a reconciler, and it must never fight a
-    /// deliberate toggle that has already happened this session.
-    func restoreExposure(stillPermitted: (UUID) -> Bool) {
-        guard exposedProject == nil else { return }
-        let stored = UserDefaults.standard.string(forKey: Self.exposureDefaultsKey)
-        switch ExposureRestore.decide(stored: stored, stillPermitted: stillPermitted) {
-        case .adopt(let id): setExposed(id)
-        case .clear:         UserDefaults.standard.removeObject(forKey: Self.exposureDefaultsKey)
-        case .none:          break
-        }
+        // The project is going; re-derive so its row leaves the handshake.
+        syncHandshake()
     }
 
     /// The fronted project's manager, if there is one.
@@ -242,7 +240,7 @@ final class ServeFleet: ObservableObject {
             switch ServeEnvStaleness.action(project: id,
                                             isRunning: manager.runningPort != nil,
                                             isFronted: id == frontedProject,
-                                            exposedProject: exposedProject) {
+                                            exposedProject: exposedProjectForStaleness) {
             case .restartNow:          manager.restartIfRunning()
             case .restartOnNextFront:  staleProjects.insert(id)
             case .nothing:             break
@@ -262,23 +260,51 @@ final class ServeFleet: ObservableObject {
         }
     }
 
-    /// Designate which project the handshake names. Exposure follows a
-    /// deliberate act — turning Agent Access on — never an incidental one like
-    /// fronting a window, which would silently re-point an external agent at a
-    /// different study because someone pressed ⌘\`.
-    func setExposed(_ project: UUID?) {
-        exposedProject = project
-        // Durable, because the permission it accompanies is. See
-        // `ExposureRestore` for the failure this closes.
-        if let project {
-            UserDefaults.standard.set(project.uuidString, forKey: Self.exposureDefaultsKey)
-        } else {
-            UserDefaults.standard.removeObject(forKey: Self.exposureDefaultsKey)
+    /// Re-derive the handshake from the window roster and write it.
+    ///
+    /// One file, one writer, and no owner to designate. Called whenever any
+    /// manager's contribution may have changed and on every roster sweep —
+    /// derivation is cheap and cannot drift, which a designated slot could and
+    /// did (five different answers across five consecutive tool calls, 20 Aug).
+    func syncHandshake() {
+        let shown = WindowRoster.shared.shownProjects
+        var candidates: [UUID: HandshakeExposure.Candidate] = [:]
+        for (id, manager) in managers {
+            guard let path = manager.currentProjectPath else { continue }
+            candidates[id] = HandshakeExposure.Candidate(
+                path: path,
+                name: URL(fileURLWithPath: path).lastPathComponent,
+                state: manager.state,
+                instanceID: manager.mcpInstanceID,
+                token: manager.mcpToken,
+                key: manager.projectKey)
         }
-        // One handshake, one writer. Every other manager is muted, or its
-        // 20-second activity poll would delete this one's file.
-        for (id, manager) in managers { manager.handshakeOwner = (id == project) }
-        refreshAppLevelFacts()
+        let resolver = agentAccessResolver
+        let access: (UUID) -> Bool = { id in
+            guard let path = candidates[id]?.path else { return false }
+            return resolver?(path) ?? false
+        }
+
+        let entries = HandshakeExposure.entries(
+            candidates: candidates, shown: shown, agentAccess: access)
+        if entries.isEmpty {
+            MCPHandshake.remove()
+        } else {
+            MCPHandshake.write(entries: entries)
+        }
+
+        let paths = Set(entries.map(\.path))
+        if paths != handshakeProjectPaths { handshakeProjectPaths = paths }
+
+        // The gate. This is what makes closing a window safe NOW rather than
+        // when the sidecar is reaped 90 s later — and safe against an agent
+        // holding a cached port and bearer, not only against a proxy that
+        // politely re-reads the file.
+        let readable = HandshakeExposure.readableProjects(
+            candidates: candidates, shown: shown, agentAccess: access)
+        for (id, manager) in managers {
+            manager.setAgentScope(readable: readable.contains(id))
+        }
     }
 
     /// Mirror the facts that are about the app rather than a sidecar.
@@ -294,10 +320,10 @@ final class ServeFleet: ObservableObject {
         let mounted = managers.values.contains { $0.mcpMounted }
         if mounted != mcpMounted { mcpMounted = mounted }
 
-        let path = exposedProject.flatMap { managers[$0]?.handshakeProjectPath }
-        if path != handshakeProjectPath { handshakeProjectPath = path }
-
-        let calledAt = exposedProject.flatMap { managers[$0]?.lastAgentCallAt }
-        if calledAt != lastAgentCallAt { lastAgentCallAt = calledAt }
+        var calls: [UUID: Date] = [:]
+        for (id, manager) in managers where manager.lastAgentCallAt != nil {
+            calls[id] = manager.lastAgentCallAt
+        }
+        if calls != lastAgentCallAt { lastAgentCallAt = calls }
     }
 }

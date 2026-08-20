@@ -63,7 +63,7 @@ struct ServeInstanceObservationTests {
     }
 
     /// `mcpMounted` answers "does this build have the mcp extra" and is
-    /// identical across every instance; `handshakeProjectPath` names one global
+    /// identical across every instance; `projectKey` names one global
     /// file with seven independent delete edges. Both were misclassified as
     /// per-serve on the first pass — per-instance, the second would let one
     /// project's start delete another's handshake while the first still
@@ -71,6 +71,6 @@ struct ServeInstanceObservationTests {
     @Test func fleetLevelStateDidNotMoveOntoTheInstance() {
         let manager = ServeManager()
         #expect(manager.mcpMounted == false)
-        #expect(manager.handshakeProjectPath == nil)
+        #expect(manager.projectKey == nil)
     }
 }

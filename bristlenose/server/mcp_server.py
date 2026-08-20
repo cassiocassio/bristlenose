@@ -26,8 +26,10 @@ change. The serve is single-project today, so the id is always 1.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import os
 import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
@@ -189,6 +191,34 @@ def _get_project(db: Any, project_id: int) -> Any:
     return project
 
 
+def _project_key(project: Any) -> str:
+    """Stable, opaque identity for one project — the first field of a citation.
+
+    ``project_id`` is a **slot**, not a name: the serve is single-project, so it
+    is always 1, and *which* project that means changes with the window the
+    researcher has open. Observed live 20 Aug 2026 — the same id returned "foo"
+    and then "IKEA with uxfriends" inside one conversation.
+
+    The name does not disambiguate either. A real sidebar holds "New Project",
+    "New Project 2", "New Project 3" and "New Project3"; two of those echoing
+    identical ``{id: 1, name: ...}`` payloads are indistinguishable.
+
+    So: sha256 of the resolved input path. Stable across restarts, unique per
+    project, and it leaks no filesystem path — §7 forbids paths reaching the
+    agent, and a digest is not a path. Resolved first because ``/private/var``
+    and ``/var`` spell the same folder two ways and would otherwise key one
+    project twice (the same standardisation ``AgentActivity.samePath`` makes on
+    the desktop side).
+    """
+    real = os.path.realpath(project.input_dir or "")
+    return hashlib.sha256(real.encode("utf-8")).hexdigest()[:8]
+
+
+def _project_identity(project: Any) -> dict[str, Any]:
+    """The identity block every tool payload carries."""
+    return {"key": _project_key(project), "id": project.id, "name": project.name}
+
+
 def _curation_maps(
     db: Any, project_id: int,
 ) -> tuple[list, set[int], set[int], dict[int, str], set[tuple[int, str]]]:
@@ -341,7 +371,7 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict | None) 
     ]
 
     overview: dict[str, Any] = {
-        "project": {"id": project.id, "name": project.name},
+        "project": _project_identity(project),
         "last_run": last_run,  # outcome/completed_at of the newest pipeline run
         "sessions": {"count": len(sessions), "items": session_rows},
         "participants": {
@@ -501,7 +531,7 @@ def _tool_search_quotes(
         # uxfriends" in one session. Without the echo, quotes from study B
         # arrive under study A's frame with nothing to signal the change:
         # correct retrieval, wrong attribution, no error anywhere.
-        "project": {"id": project.id, "name": project.name},
+        "project": _project_identity(project),
         "total_matched": len(matched),
         "returned": len(rows),
         "offset": offset,
@@ -575,7 +605,7 @@ def _tool_get_signals(db: Any, project_id: int, lens: str, limit: int) -> dict:
         # uxfriends" in one session. Without the echo, quotes from study B
         # arrive under study A's frame with nothing to signal the change:
         # correct retrieval, wrong attribution, no error anywhere.
-        "project": {"id": project.id, "name": project.name},
+        "project": _project_identity(project),
         "lens": lens,
         # Named for what it measures — the overview's participants.count is
         # session speakers, a different denominator (impl-review finding 7).
@@ -614,7 +644,7 @@ def _tool_get_framework(db: Any, project_id: int, framework_id: str) -> dict:
             # uxfriends" in one session. Without the echo, quotes from study B
             # arrive under study A's frame with nothing to signal the change:
             # correct retrieval, wrong attribution, no error anywhere.
-            "project": {"id": project.id, "name": project.name},
+            "project": _project_identity(project),
             "kind": "template",
             "id": template.id,
             "title": template.title,
@@ -715,7 +745,7 @@ def _tool_get_framework(db: Any, project_id: int, framework_id: str) -> dict:
         # uxfriends" in one session. Without the echo, quotes from study B
         # arrive under study A's frame with nothing to signal the change:
         # correct retrieval, wrong attribution, no error anywhere.
-        "project": {"id": project.id, "name": project.name},
+        "project": _project_identity(project),
         "kind": "live_codebook",
         "id": LIVE_CODEBOOK_ID,
         "title": "This project's codebook",
@@ -735,8 +765,18 @@ def create_mcp_server(
     session_factory: Callable[[], Any],
     last_run: Callable[[], dict | None],
     on_tool_call: Callable[[], None] | None = None,
+    readable: Callable[[], bool] | None = None,
 ) -> Any:
     """Build the MCPServer with the four §9a tools registered.
+
+    ``readable`` gates every tool on whether this project is currently in
+    scope. The desktop flips it false the instant the project's last window
+    closes — *before* the sidecar is reaped, which happens 90 s later so
+    ⌘W-then-Dock-click stays free. Without this gate "close a window and you
+    are safe from prying robots" would rest on the proxy politely re-reading
+    the handshake, and an agent that had already cached the port and bearer
+    would keep reading. A permission must not depend on the other app's
+    manners. Absent (the CLI, which has no windows) means always readable.
 
     ``on_tool_call`` fires on every tool invocation that reaches a tool
     body — including ones our own validation rejects (a mistyped filter is
@@ -757,6 +797,16 @@ def create_mcp_server(
 
     def _run(tool: str, project_id: int, fn: Callable[[Any], Any]) -> Any:
         start = time.perf_counter()
+        # Checked BEFORE the activity recorder: a refused call is not activity,
+        # and counting it would radiate the sidebar antenna for a project the
+        # researcher has just taken out of scope.
+        if readable is not None and not readable():
+            logger.info("mcp_tool_out_of_scope | tool=%s", tool)
+            raise ToolInputError(
+                "this project is not open in Bristlenose, so it is out of "
+                "scope right now — its window was closed. Ask the person to "
+                "open it again if they want you to read it."
+            )
         if on_tool_call is not None:
             try:  # decoration — must never fail the tool call
                 on_tool_call()
@@ -877,6 +927,9 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
     # on an NTP step. Trade-off, documented in health.py: mach_absolute_time
     # pauses across sleep, so elapsed time under-counts by the sleep — fine
     # for health's 2-minute freshness bool, wrong for anything longer.
+    # Scope gate. True by default: the CLI has no windows, so a CLI serve is
+    # always in scope. The desktop drives it from the window roster.
+    app.state.agent_readable = True
     app.state.mcp_last_tool_call = None
     # Monotonic call count for the sidebar antenna's activity animation. A
     # COUNTER, not a timestamp: the host animates on any increment, and an
@@ -890,7 +943,10 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
         app.state.mcp_last_tool_call = time.monotonic()
         app.state.mcp_tool_calls = int(getattr(app.state, "mcp_tool_calls", 0) or 0) + 1
 
-    server = create_mcp_server(session_factory, _last_run, _record_activity)
+    def _readable() -> bool:
+        return bool(getattr(app.state, "agent_readable", True))
+
+    server = create_mcp_server(session_factory, _last_run, _record_activity, _readable)
     http_app = server.streamable_http_app(
         streamable_http_path="/",
         json_response=True,

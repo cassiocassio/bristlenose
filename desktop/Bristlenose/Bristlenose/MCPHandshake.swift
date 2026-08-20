@@ -70,6 +70,42 @@ enum MCPHandshake {
         return try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
     }
 
+    /// Schema 2: the same file, carrying a project **set**.
+    ///
+    /// Scope became plural when it stopped being a designated slot and started
+    /// being derived from the window roster — several projects can be open with
+    /// Agent Access on, and all of them are reachable.
+    ///
+    /// **The schema-1 keys are still written**, pointing at the first entry.
+    /// A `.mcpb` extension installed weeks ago has no upgrade path (design §6
+    /// risk 3, "live and unmitigated"), so a v2-only file would silently break
+    /// every proxy already in the field. With the fallback, an old proxy keeps
+    /// working and simply sees one project — degraded, never broken. An empty
+    /// set writes no schema-1 keys at all, which an old proxy reads as "not
+    /// open": the correct answer.
+    static func payload(entries: [HandshakeExposure.Entry], now: Date = Date()) -> Data {
+        let formatter = ISO8601DateFormatter()
+        var object: [String: Any] = [
+            "schema": 2,
+            "updated_at": formatter.string(from: now),
+            "projects": entries.map {
+                [
+                    "key": $0.key,
+                    "name": $0.name,
+                    "port": $0.port,
+                    "token": $0.token,
+                    "instance_id": $0.instanceID,
+                ]
+            },
+        ]
+        if let first = entries.first {
+            object["port"] = first.port
+            object["token"] = first.token
+            object["instance_id"] = first.instanceID
+        }
+        return try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+    }
+
     /// Write (atomically, 0600, symlink-refusing) into `directory`.
     /// Returns false — with a log line, never a dialog — when the write path
     /// refuses; a missing handshake degrades to the proxy's "isn't open"
@@ -78,6 +114,15 @@ enum MCPHandshake {
     static func write(
         port: Int, token: String, instanceID: String, directory: URL? = nil
     ) -> Bool {
+        write(entries: [HandshakeExposure.Entry(key: "", name: "", path: "",
+                                                port: port, token: token,
+                                                instanceID: instanceID)],
+              directory: directory)
+    }
+
+    /// Write the whole exposed set. See `payload(entries:)`.
+    @discardableResult
+    static func write(entries: [HandshakeExposure.Entry], directory: URL? = nil) -> Bool {
         guard let dir = directory ?? defaultDirectory() else { return false }
         do {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -86,7 +131,7 @@ enum MCPHandshake {
             return false
         }
 
-        let data = payload(port: port, token: token, instanceID: instanceID)
+        let data = payload(entries: entries)
         let finalURL = dir.appendingPathComponent(filename)
         var tempURL = dir.appendingPathComponent(".\(filename).tmp-\(UUID().uuidString)")
 
@@ -132,7 +177,7 @@ enum MCPHandshake {
             log.error("handshake rename failed: errno=\(renameErrno, privacy: .public)")
             return false
         }
-        log.info("handshake written port=\(port, privacy: .public)")
+        log.info("handshake written projects=\(entries.count, privacy: .public)")
         return true
     }
 

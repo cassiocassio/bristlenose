@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 
@@ -9,6 +10,7 @@ from fastapi import APIRouter, Request
 
 from bristlenose import __version__
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 
@@ -58,6 +60,26 @@ def build_health_payload(*, dev: bool = False) -> dict[str, object]:
     }
 
 
+def _project_key_or_none(request: Request) -> str | None:
+    """This serve's project key, or None before a project is loaded."""
+    factory = getattr(request.app.state, "db_factory", None)
+    if factory is None:
+        return None
+    try:
+        from bristlenose.server.mcp_server import _project_key
+        from bristlenose.server.models import Project
+
+        db = factory()
+        try:
+            project = db.query(Project).first()
+            return _project_key(project) if project is not None else None
+        finally:
+            db.close()
+    except Exception:  # health must never fail on a decoration
+        logger.exception("health_project_key_failed")
+        return None
+
+
 @router.get("/health")
 def health(request: Request) -> dict[str, object]:
     """Return server status and version."""
@@ -82,6 +104,12 @@ def health(request: Request) -> dict[str, object]:
         # before transmitting the bearer, so a stale file cannot hand a
         # durable credential to whatever now owns that ephemeral port.
         "instance_id": getattr(request.app.state, "mcp_instance_id", None),
+        # The stable per-project key, computed HERE and nowhere else. The
+        # desktop carries it into the handshake rather than deriving its own:
+        # two implementations of one digest is a divergence waiting to break
+        # every citation that spans the two languages. Opaque by construction
+        # — a digest is not a path — so it is safe on this auth-exempt route.
+        "project_key": _project_key_or_none(request),
         "active": (
             last_call is not None
             and (time.monotonic() - last_call) <= MCP_ACTIVE_WINDOW_SECONDS
@@ -110,3 +138,22 @@ def agent_activity(request: Request) -> dict[str, int]:
     serve, not as activity — see ``ServeInstance.agentCallCount``.
     """
     return {"calls": int(getattr(request.app.state, "mcp_tool_calls", 0) or 0)}
+
+
+@router.put("/agent-scope")
+def set_agent_scope(request: Request, body: dict[str, bool]) -> dict[str, bool]:
+    """Put this serve in or out of agent scope. Desktop host only.
+
+    Scope is a permission; serve lifetime is a cache. They must not share a
+    predicate. ``ServeReaping`` keeps a sidecar warm for 90 s after its last
+    window closes so ⌘W-then-Dock-click is free — but a project whose window
+    just closed must stop being readable *now*, not in 90 s, and not merely
+    because a well-behaved proxy re-read the handshake and stopped routing.
+    An agent that already holds the port and bearer must be refused at the
+    door.
+
+    Authed, like everything under ``/api/`` that is not ``/api/health``.
+    """
+    readable = bool(body.get("readable", True))
+    request.app.state.agent_readable = readable
+    return {"readable": readable}

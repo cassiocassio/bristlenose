@@ -2352,7 +2352,7 @@ struct ContentView: View {
                 // writer's own answer rather than re-deriving it: "serve is
                 // up" is that predicate minus mcpInstanceID and mcpToken,
                 // and the gap is reachable on every start and switch.
-                handshakeProjectPath: serveFleet.handshakeProjectPath,
+                handshakeProjectPaths: serveFleet.handshakeProjectPaths,
                 lastAgentCallAt: serveFleet.lastAgentCallAt,
                 renameRequest: renameRequest
             )

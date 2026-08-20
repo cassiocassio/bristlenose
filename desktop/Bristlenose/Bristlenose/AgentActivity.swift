@@ -25,6 +25,17 @@ enum AgentActivity {
         return (iid?.isEmpty == false) ? iid : nil
     }
 
+    /// This serve's stable project key from `mcp.project_key` — the digest
+    /// Python computes from the resolved input path. Read, never re-derived:
+    /// one implementation of the key means a citation cannot mean two things.
+    /// Nil on builds that predate it, which simply keeps that project out of
+    /// the handshake rather than exposing it under an unknown identity.
+    static func projectKey(_ json: [String: Any]?) -> String? {
+        guard let mcp = json?["mcp"] as? [String: Any] else { return nil }
+        let key = mcp["project_key"] as? String
+        return (key?.isEmpty == false) ? key : nil
+    }
+
     /// Project-path identity for the connect sheet + badge. Bookmark healing
     /// (`refreshAvailability`) can respell `project.path` (`/private/…`,
     /// symlink resolution) while `currentProjectPath` holds the spawn-time

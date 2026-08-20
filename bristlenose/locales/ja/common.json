@@ -54,7 +54,7 @@
     "clearAriaLabel": "検索をクリア"
   },
   "quotes": {
-    "unhideHeader": "再表示：",
+    "unhideHeader": "再表示:",
     "unhideAll": "すべて再表示",
     "dismissModeratorQuestion": "モデレーターの質問を非表示",
     "showModeratorQuestion": "モデレーターの質問を表示",
@@ -69,7 +69,7 @@
     "starredQuotes": "スター付きの発言",
     "sections": "セクション",
     "themes": "テーマ",
-    "failedToLoad": "発言の読み込みに失敗しました：{{error}}",
+    "failedToLoad": "発言の読み込みに失敗しました: {{error}}",
     "loading": "発言を読み込み中…",
     "contents": "目次",
     "toggleContents": "目次を表示/非表示",
@@ -78,9 +78,9 @@
     "uncategorisedIntro_other": "{{count}} quotes you kept aren\u2019t in any section or theme right now \u2014 but they\u2019re safe here, nothing was lost."
   },
   "sessions": {
-    "moderatedBy": "モデレーター：{{names}}",
-    "observer_one": "オブザーバー：{{names}}",
-    "observer_other": "オブザーバー：{{names}}",
+    "moderatedBy": "モデレーター: {{names}}",
+    "observer_one": "オブザーバー: {{names}}",
+    "observer_other": "オブザーバー: {{names}}",
     "colId": "ID",
     "colSpeakers": "話者",
     "colStart": "開始",
@@ -96,7 +96,7 @@
       "participant": "\u53c2\u52a0\u8005",
       "observer": "\u30aa\u30d6\u30b6\u30fc\u30d0\u30fc"
     },
-    "failedToLoad": "セッションの読み込みに失敗しました：{{error}}",
+    "failedToLoad": "セッションの読み込みに失敗しました: {{error}}",
     "loading": "セッションを読み込み中…"
   },
   "dashboard": {
@@ -126,7 +126,7 @@
     "nothingOmitted": "除外された発言はありません — 参加者の発言はすべてレポートに含まれています。",
     "showOmitted": "除外された発言を表示",
     "coverageSession": "セッション {{number}}",
-    "failedToLoad": "ダッシュボードの読み込みに失敗しました：{{error}}",
+    "failedToLoad": "ダッシュボードの読み込みに失敗しました: {{error}}",
     "loading": "ダッシュボードを読み込み中…"
   },
   "toolbar": {
@@ -168,8 +168,8 @@
     "unstarred": "発言のスターを外しました",
     "hidden": "発言を非表示にしました",
     "restored": "発言を復元しました",
-    "tagAdded": "タグを追加：{{name}}",
-    "tagRemoved": "タグを削除：{{name}}",
+    "tagAdded": "タグを追加: {{name}}",
+    "tagRemoved": "タグを削除: {{name}}",
     "navigatedTo": "{{label}} に移動しました",
     "transcript": "トランスクリプト",
     "playing": "{{pid}} を再生中",
@@ -182,7 +182,7 @@
     "cancelAriaLabel": "キャンセル",
     "dismiss": "閉じる",
     "durationIn": "{{duration}} 後",
-    "failed": "{{label}} に失敗しました：{{error}}。",
+    "failed": "{{label}} に失敗しました: {{error}}。",
     "failedNoError": "{{label}} に失敗しました。",
     "cancelled": "{{label}} をキャンセルしました。"
   },
@@ -387,7 +387,7 @@
       "cannotTitle": "検出できないもの",
       "cannotBody": "センシティブな個人情報の開示 — 健康状態、民族性、政治的信条、宗教、性的指向、労働組合への加入。会話音声からこれらを自動ツールで確実に検出することはできません。トランスクリプトを外部に共有する前に、人による確認が必要です。",
       "cannotIndirect": "間接的な特定 — 単独では無害でも、組み合わせると個人を特定できる事実。たとえば「サリー州の住宅金融組合に勤務する 38 歳のアクセシビリティテスター」と言えば、たった一人に絞り込めるかもしれません。職位と勤務先の組み合わせ、希少な疾患と地域の組み合わせ、学校名と子どもの年齢の組み合わせは、いずれも特定を可能にします。これにはリサーチャーの判断が必要です。",
-      "speakerIdNote": "注: 話者識別では、話者の識別に名前と役割の情報が必要なため、個人情報の削除を実行する前に、トランスクリプトの一部を LLM に送信します。Ollama を使う場合は、これもマシン内に留まります。",
+      "speakerIdNote": "注：話者識別では、話者の識別に名前と役割の情報が必要なため、個人情報の削除を実行する前に、トランスクリプトの一部を LLM に送信します。Ollama を使う場合は、これもマシン内に留まります。",
       "actionTitle": "推奨されるアクション",
       "actionReview": "削除後は必ず pii_summary.txt の監査ファイルを確認してください — 検出され置換されたものすべてが一覧されており、誤検出 (過剰な削除) や見逃し (検出されなかったもの) を確認できます。",
       "actionThreshold": "機密データを扱う場合は、信頼度しきい値を下げて (BRISTLENOSE_PII_SCORE_THRESHOLD=0.5) より多く検出してください。誤検出も増えます。",
@@ -399,7 +399,7 @@
     "signals": {
       "intro": "分析ページではシグナルが表示されます — レポートの各セクション内で、統計的に目立つ感情やコードブックタグの集中です。シグナルカードは 2 種類あります。",
       "sentimentHeading": "感情シグナル",
-      "sentimentIntro": "各発言には、UX リサーチ向けに設計された 7 種類の感情のうち 1 つがタグ付けされます：",
+      "sentimentIntro": "各発言には、UX リサーチ向けに設計された 7 種類の感情のうち 1 つがタグ付けされます:",
       "frustrationDesc": "困難、いらだち、フリクション。性能やインタラクションの問題を示します。",
       "confusionDesc": "理解できていない、不確かさ。情報設計やラベリングの問題を示します。",
       "doubtDesc": "懐疑、心配、不信。信頼性や信用の問題を示します。何かを理解することと信頼することは別物で、それぞれ異なるデザイン上の対応が必要なため、混乱とは区別されます。",
@@ -413,7 +413,7 @@
       "intensityMetricDesc": "<strong>平均強度</strong>: 1〜3 スケールの平均的な強さ。これら 3 つを正規化して掛け合わせ、総合シグナルスコアを算出します。",
       "thresholds": "信頼度しきい値: <strong>強い</strong> は集中度 2× 以上、参加者 5 名以上、発言 6 件以上を必要とします。<strong>中程度</strong> は 1.5× 以上、参加者 3 名以上、発言 4 件以上が必要です。それ以外はすべて <strong>萌芽的</strong> に分類されます。",
       "frameworkHeading": "フレームワークシグナル",
-      "frameworkBody": "フレームワークシグナルは同じ集中度の計算式を使いますが、列が感情ではなくコードブックのグループ (例: Norman の発見可能性、Garrett の構造) になります。タグの寄与度は重み付けされます: リサーチャーが承認したタグは 1.0、オートコードの提案は LLM の信頼度スコア、却下された提案は除外されます。",
+      "frameworkBody": "フレームワークシグナルは同じ集中度の計算式を使いますが、列が感情ではなくコードブックのグループ (例：Norman の発見可能性、Garrett の構造) になります。タグの寄与度は重み付けされます: リサーチャーが承認したタグは 1.0、オートコードの提案は LLM の信頼度スコア、却下された提案は除外されます。",
       "patternTypesBody": "上位のシグナルについては、LLM がタグの定義を通じてタグ付けされた発言を解釈し、解釈的な名前、パターン分類、1 文の発見を生成します。4 つのパターンタイプ: <strong>サクセス</strong> (肯定的な証拠 — ユーザーの期待が満たされた)、<strong>ギャップ</strong> (否定的 — ずれ、フリクション、隠れた機能)、<strong>テンション</strong> (肯定と否定が混在)、<strong>リカバリー</strong> (否定の後に肯定 — 最初は混乱したが、ユーザーが解決にたどり着いた)。",
       "referencesHeading": "参考文献",
       "refEmotionScience": "感情科学",
@@ -441,7 +441,7 @@
     "heading": "分析",
     "loadingData": "分析データを読み込み中…",
     "noData": "分析データはありません。パイプラインを実行するか、コードブックタグを適用して分析を生成してください。",
-    "tagError": "タグ分析エラー：{{error}}",
+    "tagError": "タグ分析エラー: {{error}}",
     "signals": "シグナル",
     "sentiment": "感情",
     "sentimentSubtitle": "AI が検出した感情的な反応",
@@ -485,7 +485,7 @@
   "codebook": {
     "heading": "コードブック",
     "description": "タグをグループ間でドラッグして並べ替えます。タグまたはタイトルをクリックして名前を変更します。タグを別のタグにドロップすると統合されます。",
-    "errorLoading": "コードブックの読み込みエラー：{{error}}",
+    "errorLoading": "コードブックの読み込みエラー: {{error}}",
     "addTag": "+ タグ",
     "addSubtitle": "サブタイトルを追加…",
     "total": "合計",
@@ -579,7 +579,7 @@
       "done": "✦ {{total}} 件の発言を {{duration}} でオートコードしました。",
       "report": "レポート",
       "failed": "✦ オートコードに失敗しました",
-      "failedWithError": "✦ オートコードに失敗しました：{{error}}",
+      "failedWithError": "✦ オートコードに失敗しました: {{error}}",
       "dismiss": "閉じる"
     },
     "chip": {

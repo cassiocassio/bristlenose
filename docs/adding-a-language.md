@@ -201,6 +201,41 @@ Sentiment, Codes, Participants, Transcript, Project). Source the Apple
 verbs from `applelocalization.com` or whatever your Apple-glossary tool
 of choice is.
 
+## Step 5a — CJK punctuation, if the language is ja / zh / ko
+
+Settled 20 Aug 2026 by measuring the shipping systems, after a sweep that had
+it backwards. **Don't reason it out from a style guide** — the translation
+industry and the OS vendors genuinely disagree, and for a Mac app the vendors
+win.
+
+| language | labels (`Name:`) | prose lead-ins (`Note:`, `e.g.:`) |
+|---|---|---|
+| Japanese | halfwidth `:` + space | fullwidth `：`, no space |
+| Chinese (both) | fullwidth `：`, no space | fullwidth `：`, no space |
+
+Evidence, from `.loctable` files on this machine: Apple ja is 431 halfwidth to
+2 fullwidth and ships `名前:` in its own Save dialog; Microsoft ja is 38,041 to
+88. Apple zh-Hant is 239 fullwidth to 0. The same source string settles it —
+`便名: %@` in Japanese, `航班：%@` in Chinese. The JTF translation-industry
+guide says fullwidth for Japanese and would have you do the opposite; it is
+the right authority for a translated document and the wrong one for macOS
+chrome.
+
+Two mechanical traps when checking or fixing this:
+
+- **Fullwidth punctuation carries its own spacing.** `：` has roughly half an
+  em of built-in right side bearing, so it takes no following space. Swapping
+  the character without deleting the space double-counts it.
+- **Kinsoku (禁則) tables look like violations and aren't.** Strings that
+  enumerate punctuation for line-breaking rules (`、。，．・：；？！…`) contain
+  a `：` that is data, not usage. Filter them before counting.
+
+Reproduce the measurement rather than trusting this table if you doubt it:
+`plutil -convert json -o - <file>.loctable` over
+`/System/Library/**/*.loctable`, then count by language section. The full
+reasoning and the community argument are in `.claude/agents/i18n-review.md`
+§6a.
+
 ## Step 6 — Pickers (three sites)
 
 ```

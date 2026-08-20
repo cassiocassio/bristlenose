@@ -131,6 +131,44 @@ If the audit scope includes `desktop/`:
 - No trailing commas (invalid JSON).
 - Keys should be sorted consistently across files (same order as English).
 
+## 6a. CJK punctuation — SETTLED, do not re-derive
+
+Measured 20 Aug 2026 against the shipping systems, after a sweep that got the
+polarity exactly backwards. The answer differs **per language** and differs
+between **vendors and the translation industry**. Do not reason from a style
+guide here; the numbers below are from `.loctable` files on the machine.
+
+**Japanese — halfwidth `:` for labels.**
+
+| source | position |
+|---|---|
+| Apple macOS, 246 loctables | 431 halfwidth : 2 fullwidth |
+| Microsoft Office, ~11k files | 38,041 halfwidth : 88 fullwidth |
+| JTF style guide (translation industry) | fullwidth, and colons should be rare |
+
+Both OS vendors classify `:` as an internationally-used symbol rather than
+Japanese 約物, which is why they land opposite the JTF guide. Apple's own Save
+dialog ships `名前:`. For a macOS app, the platform wins — a label that reads
+differently from every other label on the user's Mac is the defect.
+
+Keep `label: value` with a halfwidth colon and a following space.
+
+**Japanese — fullwidth `：` for the prose connectives.** `注：` (Note),
+`例：` (e.g.), and similar lead-ins are the one place both vendors *do* use
+fullwidth. Note fullwidth punctuation carries ~half an em of built-in right
+side bearing, so it takes **no following space** — `注： x` is double-spaced
+and wrong.
+
+**Chinese — fullwidth `：` throughout, labels included.** Apple ships 239
+fullwidth : 0 halfwidth in zh-Hant (249 : 1 in zh-Hans). The same string proves
+the split is deliberate: `便名: %@` in Japanese, `航班：%@` in Chinese.
+
+**When auditing, beware two false positives.** Kinsoku (禁則) line-breaking
+tables are strings that enumerate punctuation (`、。，．・：；？！…`) — that
+`：` is data, not usage; 30 of Microsoft's 118 fullwidth hits were these.
+And locale JSON mixes literal Unicode with `\u` escapes, sometimes within one
+file, so a literal search finds nothing — try both encodings.
+
 ## 7. Apple glossary cross-check (reminder only)
 
 For any new keys that touch macOS system vocabulary (menu items, toolbar labels,

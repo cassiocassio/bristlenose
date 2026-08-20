@@ -36,7 +36,7 @@
   "language": {
     "legend": "言語",
     "description": "インターフェイスの表示言語を切り替えます。レポート内容は翻訳されません。",
-    "helpTranslate": "Bristlenose の翻訳にご協力ください："
+    "helpTranslate": "Bristlenose の翻訳にご協力ください:"
   },
   "settingsNav": {
     "general": "一般",

@@ -1054,6 +1054,39 @@ class TestProjectIdentityInEveryPayload:
         assert all(keys.values()), f"tools with no project key: {keys}"
         assert len(set(keys.values())) == 1, keys
 
+    def test_two_projects_get_different_keys(self, db) -> None:
+        # Distinctness is the ONLY property the key exists for, and it was the
+        # one property untested: replacing _project_key's body with a constant
+        # left the whole suite green. Sameness, opacity and stability all pass
+        # trivially for "deadbeef".
+        from bristlenose.server.mcp_server import _project_key
+
+        class _P:
+            def __init__(self, d): self.input_dir = d
+
+        assert _project_key(_P("/studies/acme")) != _project_key(_P("/studies/zeta"))
+        # …including the shape that actually occurs: same basename, different
+        # client. The handshake sorts on basename, so these collide there.
+        assert _project_key(_P("/clients/acme/interviews")) != \
+            _project_key(_P("/clients/zeta/interviews"))
+
+    def test_a_project_with_no_input_dir_has_no_key(self, db) -> None:
+        # realpath("") is the CWD — a well-formed, stable, WRONG key that every
+        # such project collides on. Refuse rather than mint it.
+        import pytest as _pytest
+
+        from bristlenose.server.mcp_server import _project_identity, _project_key
+
+        class _P:
+            input_dir = ""
+            id = 1
+            name = "nameless"
+
+        with _pytest.raises(ValueError):
+            _project_key(_P())
+        # …and the payload omits the key rather than shipping a fake one.
+        assert "key" not in _project_identity(_P())
+
     def test_the_key_is_opaque_and_leaks_no_path(self, db) -> None:
         from bristlenose.server.mcp_server import _project_key
         from bristlenose.server.models import Project

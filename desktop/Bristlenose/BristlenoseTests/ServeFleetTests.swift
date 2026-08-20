@@ -89,6 +89,9 @@ struct ServeFleetTests {
     @Test func frontingAWindowDoesNotMoveExposure() {
         let fleet = ServeFleet()
         fleet.frontedProject = Self.b
-        #expect(fleet.manager(for: Self.a) != nil)
+        // `manager(for:)` returns a NON-optional and mints on first call, so the
+        // old `!= nil` assertion was true before the fleet existed. Assert the
+        // property the test is named for instead.
+        #expect(fleet.handshakeProjectPaths.isEmpty)
     }
 }

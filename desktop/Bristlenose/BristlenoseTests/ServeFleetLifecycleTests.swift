@@ -117,8 +117,14 @@ struct ServeFleetLifecycleTests {
     /// and did, five times across five consecutive tool calls on 20 Aug.
     @Test func everyManagerReportsHandshakeChangesToTheFleet() {
         let fleet = ServeFleet()
-        #expect(fleet.manager(for: Self.a).onHandshakeDirty != nil)
-        #expect(fleet.manager(for: Self.b).onHandshakeDirty != nil)
+        // Not just "the closure was assigned" — firing it must actually
+        // re-derive. The deleted test it replaced pinned an observable effect;
+        // asserting a non-nil closure would pin an implementation detail one
+        // step upstream of the thing that matters.
+        let manager = fleet.manager(for: Self.a)
+        #expect(manager.onHandshakeDirty != nil)
+        manager.onHandshakeDirty?()
+        #expect(fleet.handshakeProjectPaths.isEmpty)   // no window, no scope
     }
 }
 

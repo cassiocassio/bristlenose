@@ -62,6 +62,9 @@ def build_health_payload(*, dev: bool = False) -> dict[str, object]:
 
 def _project_key_or_none(request: Request) -> str | None:
     """This serve's project key, or None before a project is loaded."""
+    cached = getattr(request.app.state, "project_key", None)
+    if cached is not None:
+        return cached
     factory = getattr(request.app.state, "db_factory", None)
     if factory is None:
         return None
@@ -71,8 +74,16 @@ def _project_key_or_none(request: Request) -> str | None:
 
         db = factory()
         try:
-            project = db.query(Project).first()
-            return _project_key(project) if project is not None else None
+            # `_get_project`'s ordering, not `.first()` — health must name the
+            # same project every tool payload does, or the two disagree inside
+            # one process, which is the divergence the single-implementation
+            # rule exists to prevent.
+            project = db.query(Project).order_by(Project.id).first()
+            if project is None:
+                return None
+            key = _project_key(project)
+            request.app.state.project_key = key   # invariant for this serve
+            return key
         finally:
             db.close()
     except Exception:  # health must never fail on a decoration
@@ -154,6 +165,9 @@ def set_agent_scope(request: Request, body: dict[str, bool]) -> dict[str, bool]:
 
     Authed, like everything under ``/api/`` that is not ``/api/health``.
     """
-    readable = bool(body.get("readable", True))
+    # Absent means CLOSED. On a route whose whole purpose is closing a
+    # permission, a missing field defaulting to True lets a malformed body
+    # re-open scope — the wrong direction for the only failure it can have.
+    readable = bool(body.get("readable"))
     request.app.state.agent_readable = readable
     return {"readable": readable}

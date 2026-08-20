@@ -13,23 +13,25 @@ struct ServeEnvStalenessTests {
     @Test func aStoppedInstanceNeedsNothing() {
         #expect(ServeEnvStaleness.action(
             project: Self.background, isRunning: false, isFronted: false,
-            exposedProject: nil) == .nothing)
+            isExposed: false) == .nothing)
     }
 
     @Test func theInstanceOnScreenRestartsNow() {
         #expect(ServeEnvStaleness.action(
             project: Self.onScreen, isRunning: true, isFronted: true,
-            exposedProject: nil) == .restartNow)
+            isExposed: false) == .restartNow)
     }
 
     /// The exception that makes lazy safe. A background sidecar is harmless
-    /// while nobody can read it — and exactly one project is readable by an
-    /// external agent at a time. Turn anonymise on, and that one must not keep
-    /// serving real names because nobody happens to be looking at its window.
+    /// while nobody can read it. Since 20 Aug 2026 scope is PLURAL, so this
+    /// is asked per project rather than against one designated winner — and
+    /// every exposed project earns the eager restart, because any of them can
+    /// go on serving real names after anonymise is turned on, unattended,
+    /// until someone fronts its window.
     @Test func theExposedInstanceRestartsNowEvenWithNoOneLookingAtIt() {
         #expect(ServeEnvStaleness.action(
             project: Self.exposed, isRunning: true, isFronted: false,
-            exposedProject: Self.exposed) == .restartNow)
+            isExposed: true) == .restartNow)
     }
 
     /// The reason lazy was chosen over restart-all: no gratuitous cold SPA
@@ -37,7 +39,7 @@ struct ServeEnvStalenessTests {
     @Test func anUnexposedBackgroundInstanceWaitsUntilSomeoneLooksAtIt() {
         #expect(ServeEnvStaleness.action(
             project: Self.background, isRunning: true, isFronted: false,
-            exposedProject: Self.exposed) == .restartOnNextFront)
+            isExposed: false) == .restartOnNextFront)
     }
 
     /// The arm that was rejected: fronted-only would have left this one stale
@@ -45,7 +47,7 @@ struct ServeEnvStalenessTests {
     @Test func aBackgroundInstanceIsNeverLeftAlone() {
         let action = ServeEnvStaleness.action(
             project: Self.background, isRunning: true, isFronted: false,
-            exposedProject: nil)
+            isExposed: false)
         #expect(action != .nothing)
         #expect(action == .restartOnNextFront)
     }
@@ -53,6 +55,6 @@ struct ServeEnvStalenessTests {
     @Test func frontedAndExposedIsStillJustOneRestart() {
         #expect(ServeEnvStaleness.action(
             project: Self.exposed, isRunning: true, isFronted: true,
-            exposedProject: Self.exposed) == .restartNow)
+            isExposed: true) == .restartNow)
     }
 }

@@ -20,31 +20,11 @@ struct MCPHandshakeTests {
         try? FileManager.default.removeItem(at: dir)
     }
 
-    @Test func payload_carriesSchemaPortTokenInstanceAndTimestamp_andNoProject() throws {
-        let data = MCPHandshake.payload(
-            port: 58735, token: "tok", instanceID: "abc123",
-            now: Date(timeIntervalSince1970: 1_790_000_000)
-        )
-        let object = try #require(
-            try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        )
-        #expect(object["schema"] as? Int == 1)
-        #expect(object["port"] as? Int == 58735)
-        #expect(object["token"] as? String == "tok")
-        #expect(object["instance_id"] as? String == "abc123")
-        #expect(object["updated_at"] as? String != nil)
-        // No project field, EVER — MCPTokenStore.accountKey hashes the path
-        // precisely so folder names never become readable metadata.
-        #expect(object["project"] == nil)
-        #expect(object["path"] == nil)
-        #expect(object.count == 5)
-    }
-
     @Test func write_landsAtMode0600_withTheExpectedContent() throws {
         let dir = Self.makeTempDir()
         defer { Self.cleanup(dir) }
 
-        #expect(MCPHandshake.write(port: 1234, token: "t", instanceID: "i", directory: dir))
+        #expect(MCPHandshake.write(entries: [Self.entry("i", port: 1234)], directory: dir))
         let url = dir.appendingPathComponent(MCPHandshake.filename)
         let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
         let mode = (attrs[.posixPermissions] as? NSNumber)?.uint16Value ?? 0
@@ -70,7 +50,7 @@ struct MCPHandshakeTests {
         let final = dir.appendingPathComponent(MCPHandshake.filename)
         try FileManager.default.createSymbolicLink(at: final, withDestinationURL: target)
 
-        #expect(MCPHandshake.write(port: 9, token: "t", instanceID: "i", directory: dir))
+        #expect(MCPHandshake.write(entries: [Self.entry("i", port: 9)], directory: dir))
 
         let targetData = try Data(contentsOf: target)
         #expect(targetData.isEmpty, "the symlink target must never receive the bearer")
@@ -86,8 +66,8 @@ struct MCPHandshakeTests {
         let dir = Self.makeTempDir()
         defer { Self.cleanup(dir) }
 
-        #expect(MCPHandshake.write(port: 1, token: "a", instanceID: "one", directory: dir))
-        #expect(MCPHandshake.write(port: 2, token: "b", instanceID: "two", directory: dir))
+        #expect(MCPHandshake.write(entries: [Self.entry()], directory: dir))
+        #expect(MCPHandshake.write(entries: [Self.entry("two", port: 2)], directory: dir))
         let url = dir.appendingPathComponent(MCPHandshake.filename)
         let object = try JSONSerialization.jsonObject(
             with: Data(contentsOf: url)
@@ -96,11 +76,18 @@ struct MCPHandshakeTests {
         #expect(object?["instance_id"] as? String == "two")
     }
 
+    /// One realistic entry, so the write tests exercise the shape production
+    /// actually writes rather than a fabricated `key: ""`.
+    private static func entry(_ name: String = "one", port: Int = 1) -> HandshakeExposure.Entry {
+        HandshakeExposure.Entry(key: "k-\(name)", name: name, path: "/p/\(name)",
+                                port: port, token: "a", instanceID: name)
+    }
+
     @Test func remove_deletesTheFile_andIsSilentWhenAbsent() {
         let dir = Self.makeTempDir()
         defer { Self.cleanup(dir) }
 
-        MCPHandshake.write(port: 1, token: "a", instanceID: "one", directory: dir)
+        MCPHandshake.write(entries: [Self.entry()], directory: dir)
         MCPHandshake.remove(directory: dir)
         let url = dir.appendingPathComponent(MCPHandshake.filename)
         #expect(!FileManager.default.fileExists(atPath: url.path))
@@ -111,9 +98,41 @@ struct MCPHandshakeTests {
         let dir = Self.makeTempDir()
         defer { Self.cleanup(dir) }
 
-        #expect(MCPHandshake.write(port: 1, token: "a", instanceID: "one", directory: dir))
+        #expect(MCPHandshake.write(entries: [Self.entry()], directory: dir))
         let leftovers = try FileManager.default.contentsOfDirectory(atPath: dir.path)
             .filter { $0.contains(".tmp-") }
         #expect(leftovers.isEmpty, "temp files must be renamed or unlinked: \(leftovers)")
     }
+    /// The F9 pin, moved onto the writer production actually uses. It sat on
+    /// `payload(port:token:instanceID:)` until 20 Aug 2026 — an overload with
+    /// no production caller — so it was green while guarding nothing.
+    @Test func schemaTwoCarriesNoPath() throws {
+        let entry = HandshakeExposure.Entry(
+            key: "a3f9c210", name: "Acme Q3", path: "/Users/r/clients/Acme Q3",
+            port: 8150, token: "tok", instanceID: "inst")
+        let object = try #require(
+            try JSONSerialization.jsonObject(with: MCPHandshake.payload(entries: [entry]))
+                as? [String: Any])
+        #expect(object["schema"] as? Int == 2)
+        #expect(object["path"] == nil)
+        #expect(object["project"] == nil)
+        let projects = try #require(object["projects"] as? [[String: Any]])
+        #expect(projects.count == 1)
+        #expect(projects[0]["path"] == nil)
+        #expect(projects[0]["key"] as? String == "a3f9c210")
+        // Schema-1 keys still ride along for a .mcpb installed weeks ago.
+        #expect(object["port"] as? Int == 8150)
+    }
+
+    /// An empty set writes no schema-1 keys, which an old proxy reads as
+    /// "not open" — the correct answer, not a dangling port.
+    @Test func anEmptySetAdvertisesNothing() throws {
+        let object = try #require(
+            try JSONSerialization.jsonObject(with: MCPHandshake.payload(entries: []))
+                as? [String: Any])
+        #expect(object["port"] == nil)
+        #expect(object["token"] == nil)
+        #expect((object["projects"] as? [[String: Any]])?.isEmpty == true)
+    }
+
 }

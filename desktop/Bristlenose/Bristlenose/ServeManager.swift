@@ -159,15 +159,47 @@ final class ServeManager: ObservableObject {
     /// answering NOW, not when its sidecar is reaped 90 s later, and not merely
     /// because a polite proxy stopped routing to it.
     func setAgentScope(readable: Bool) {
-        guard case .running(let port) = state, let token = authToken,
+        guard case .running(let port) = state,
               let url = URL(string: "http://127.0.0.1:\(port)/api/agent-scope") else { return }
+        guard let token = authToken else {
+            // Loud, not silent: a `.running` serve with no token means the
+            // revocation cannot be sent at all, and the fleet has already
+            // told the sidebar it happened.
+            log.error("agent-scope \(readable ? "open" : "CLOSE", privacy: .public) skipped — no auth token")
+            return
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try? JSONSerialization.data(withJSONObject: ["readable": readable])
-        URLSession.shared.dataTask(with: request).resume()
+
+        // Read the echo back. `CredentialStore.set()` returning cleanly is not
+        // evidence anything was stored — the same rule one layer over. A PUT
+        // that 401s or is refused leaves the serve on its previous value, and
+        // for `readable: false` that previous value is "open": the exact
+        // property this call exists to establish, failing silently.
+        //
+        // It self-heals — every sync re-pushes to every manager, and the 20s
+        // poll drives a sync — but a systematically-failing serve must be
+        // greppable rather than invisible.
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            let echoed = data
+                .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+                .flatMap { $0["readable"] as? Bool }
+            if let error {
+                Self.scopeLog.error("agent-scope PUT failed: \(error.localizedDescription, privacy: .public)")
+            } else if status != 200 || echoed != readable {
+                Self.scopeLog.error(
+                    "agent-scope PUT not honoured — status=\(status, privacy: .public) echoed=\(String(describing: echoed), privacy: .public) wanted=\(readable, privacy: .public)")
+            }
+        }.resume()
     }
+
+    /// Non-isolated so the `URLSession` completion (which runs off the main
+    /// actor) can log without hopping.
+    private static let scopeLog = Logger(subsystem: "app.bristlenose", category: "serve")
 
     /// Injected at app level: does the project at this path have Agent
     /// Access on? Kept as a closure so ServeManager doesn't grow a

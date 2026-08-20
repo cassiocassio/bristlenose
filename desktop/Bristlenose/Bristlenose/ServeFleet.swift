@@ -73,14 +73,6 @@ final class ServeFleet: ObservableObject {
 
     /// When an agent last called a tool on the **exposed** serve, or nil.
     ///
-    /// `ServeEnvStaleness` asks "is this the project an agent can reach right
-    /// now" to decide restart-now vs restart-later. Under derived scope that is
-    /// a set, and any member of it deserves the eager restart — so this hands
-    /// it one member rather than teaching that pure function about plurality.
-    var exposedProjectForStaleness: UUID? {
-        managers.first { handshakeProjectPaths.contains($0.value.currentProjectPath ?? "") }?.key
-    }
-
     /// Fleet-level and read from the derived set for the same reason as
     /// `handshakeProjectPath`: exposure is singular, so activity is too. The
     /// fronted project is NOT the right source — you can be looking at one
@@ -195,6 +187,13 @@ final class ServeFleet: ObservableObject {
     /// sidecar forever — which a paired acquire/release cannot promise, and a
     /// tab merged into another window may not fire at all.
     func sweep(shownProjects: Set<UUID>, memoryPressure: Bool = false) {
+        // Scope is a function of this roster, so every sweep re-derives it.
+        // Without this the only path to a re-derivation was some manager's
+        // 20-second health poll, which made "closing a window is immediately
+        // safe" mean "within twenty seconds, if that poll succeeds" — the
+        // claim the whole change exists to make true. `deferred` so it runs
+        // after the reaping decisions below, on every exit.
+        defer { syncHandshake() }
         let now = ContinuousClock.now
         for id in runningProjects where !shownProjects.contains(id) {
             if unshownSince[id] == nil { unshownSince[id] = now }
@@ -240,7 +239,7 @@ final class ServeFleet: ObservableObject {
             switch ServeEnvStaleness.action(project: id,
                                             isRunning: manager.runningPort != nil,
                                             isFronted: id == frontedProject,
-                                            exposedProject: exposedProjectForStaleness) {
+                                            isExposed: isExposed(id)) {
             case .restartNow:          manager.restartIfRunning()
             case .restartOnNextFront:  staleProjects.insert(id)
             case .nothing:             break
@@ -258,6 +257,17 @@ final class ServeFleet: ObservableObject {
         if staleProjects.remove(project) != nil {
             managers[project]?.restartIfRunning()
         }
+    }
+
+    /// Is this project reachable by an agent right now?
+    ///
+    /// EVERY member of the exposed set deserves the eager restart, not one
+    /// arbitrary member: an in-scope serve left on the old environment keeps
+    /// answering with real participant names after the researcher turned
+    /// Anonymise on, unattended, until someone fronts its window.
+    func isExposed(_ project: UUID) -> Bool {
+        guard let path = managers[project]?.currentProjectPath else { return false }
+        return handshakeProjectPaths.contains(path)
     }
 
     /// Re-derive the handshake from the window roster and write it.

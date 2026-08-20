@@ -45,16 +45,20 @@ enum ServeEnvStaleness {
     ///   - project: the instance's project.
     ///   - isRunning: whether it has a live sidecar.
     ///   - isFronted: whether a key window is showing it right now.
-    ///   - exposedProject: the project the MCP handshake currently names, if
+    ///   - isExposed: is THIS project reachable by an agent right now? Plural
+    ///     since 037b371e — every member of the exposed set earns the eager
+    ///     restart, because an in-scope serve left on the old environment goes
+    ///     on answering with real participant names after Anonymise is turned
+    ///     on, unattended, until someone fronts its window. Previously this
     ///     any. This is `ServeManager.handshakeProjectPath`'s project — the one
     ///     an external agent can read without anyone watching.
     static func action(project: UUID,
                        isRunning: Bool,
                        isFronted: Bool,
-                       exposedProject: UUID?) -> Action {
+                       isExposed: Bool) -> Action {
         guard isRunning else { return .nothing }
         if isFronted { return .restartNow }
-        if project == exposedProject { return .restartNow }
+        if isExposed { return .restartNow }
         return .restartOnNextFront
     }
 }

@@ -1398,7 +1398,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 if case .agent(let now) = cellRightSlot(for: project) { exposed = now }
                 return hideIconIfRevealing(
                     iconCell(symbol: symbol, text: project.name, trailing: count,
-                             agentExposedNow: exposed), id: id)
+                             agentExposedNow: exposed,
+                             agentProjectID: id), id: id)
             }
             let prefix = subtitlePrefixGlyph(for: variant, availability: project.availability)
             let diagnosticsID = variant.isDiagnostic ? id : nil
@@ -1406,6 +1407,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 projectTwoLineCell(symbol: symbol, name: project.name, count: count,
                                    subtitle: subtitle, available: project.availability.isReady,
                                    prefixGlyph: prefix, diagnosticsProjectID: diagnosticsID,
+                                   agentProjectID: id,
                                    rightSlot: cellRightSlot(for: project),
                                    shimmer: shimmerSubtitle(for: variant)),
                 id: id)
@@ -1588,7 +1590,14 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // Last solid badge built wins the animation. There is at most one —
         // the handshake names a single project — and a rebuild replaces the
         // weak reference for free, so view churn needs no bookkeeping.
-        if exposedNow, let projectID { agentAntennaViews[projectID] = antenna }
+        // Registered on the way in, pruned on the way out — the map holds
+        // STRONG references to cell subviews, and cells are rebuilt on every
+        // progress tick, so an add-only map would retain a detached view per
+        // project ever exposed in this window.
+        if let projectID {
+            if exposedNow { agentAntennaViews[projectID] = antenna }
+            else { agentAntennaViews[projectID] = nil }
+        }
         return antenna
     }
 
@@ -2310,6 +2319,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                                     subtitle: String, available: Bool,
                                     prefixGlyph: (symbol: String, color: NSColor)?,
                                     diagnosticsProjectID: UUID?,
+                                    agentProjectID: UUID?,
                                     rightSlot: RightSlot,
                                     shimmer: Bool) -> NSTableCellView {
         let cell = NSTableCellView()
@@ -2439,7 +2449,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         case .agent(let exposedNow):
             // Exposure, not activity (§5a-bis). Same builder as the
             // single-line collapse, so the two layouts can't drift.
-            let antenna = agentBadgeView(exposedNow: exposedNow, projectID: diagnosticsProjectID)
+            let antenna = agentBadgeView(exposedNow: exposedNow, projectID: agentProjectID)
             cell.addSubview(antenna)
             constraints += [
                 antenna.trailingAnchor.constraint(equalTo: cell.trailingAnchor,

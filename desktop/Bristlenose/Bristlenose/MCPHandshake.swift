@@ -30,7 +30,10 @@ import OSLog
 /// study (design §3.1's leading argument). Revisit with O_NOFOLLOW_ANY
 /// if a CLI handshake writer ever ships.
 ///
-/// **No `project` field, ever.** `MCPTokenStore.accountKey` hashes the project
+/// **No path, ever — and `name` is the deliberate exception.** Schema 2 carries
+/// the folder basename so a proxy can label a project for the agent; a bare
+/// digest is useless in a chooser. That is a narrowing of the original rule,
+/// not an accident: the *path* still never appears. `MCPTokenStore.accountKey` hashes the project
 /// path precisely so client folder names never become readable metadata;
 /// a cleartext path here would undo that for no gain — the proxy doesn't
 /// need it, and tool payloads carry the project.
@@ -55,21 +58,6 @@ enum MCPHandshake {
     /// the filesystem. Schema 1: `{schema, port, token, instance_id,
     /// updated_at}`. Keyed so a project *set* can arrive in phase 2 without a
     /// schema break (design §3.3a: don't bake "the project" into the shape).
-    static func payload(port: Int, token: String, instanceID: String, now: Date = Date()) -> Data {
-        let formatter = ISO8601DateFormatter()
-        let object: [String: Any] = [
-            "schema": 1,
-            "port": port,
-            "token": token,
-            "instance_id": instanceID,
-            "updated_at": formatter.string(from: now),
-        ]
-        // Keys sorted for a stable on-disk shape; the payload is a small flat
-        // dict so JSONSerialization cannot fail — the try! is load-bearing
-        // documentation that failure here is programmer error, not runtime.
-        return try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
-    }
-
     /// Schema 2: the same file, carrying a project **set**.
     ///
     /// Scope became plural when it stopped being a designated slot and started
@@ -110,17 +98,7 @@ enum MCPHandshake {
     /// Returns false — with a log line, never a dialog — when the write path
     /// refuses; a missing handshake degrades to the proxy's "isn't open"
     /// sentence, which is the designed failure surface.
-    @discardableResult
-    static func write(
-        port: Int, token: String, instanceID: String, directory: URL? = nil
-    ) -> Bool {
-        write(entries: [HandshakeExposure.Entry(key: "", name: "", path: "",
-                                                port: port, token: token,
-                                                instanceID: instanceID)],
-              directory: directory)
-    }
-
-    /// Write the whole exposed set. See `payload(entries:)`.
+    /// Writes the whole exposed set — see `payload(entries:)`.
     @discardableResult
     static func write(entries: [HandshakeExposure.Entry], directory: URL? = nil) -> Bool {
         guard let dir = directory ?? defaultDirectory() else { return false }

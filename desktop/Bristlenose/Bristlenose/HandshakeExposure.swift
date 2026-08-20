@@ -93,7 +93,17 @@ enum HandshakeExposure {
                              token: token,
                              instanceID: instanceID)
             }
-            .sorted { ($0.name.localizedStandardCompare($1.name)) == .orderedAscending }
+            // (name, key) — never name alone. Folder basenames collide
+            // routinely ("~/clients/acme/interviews", "~/clients/zeta/
+            // interviews"), Dictionary iteration order is arbitrary, and
+            // position 0 is load-bearing: the schema-1 fallback copies
+            // `first`'s port and token. An unstable first entry re-points an
+            // old proxy at a different study between two syncs, which is the
+            // flapping this change exists to kill.
+            .sorted {
+                let byName = $0.name.localizedStandardCompare($1.name)
+                return byName == .orderedSame ? $0.key < $1.key : byName == .orderedAscending
+            }
     }
 
     /// Which projects should have their `/mcp` surface **live**.

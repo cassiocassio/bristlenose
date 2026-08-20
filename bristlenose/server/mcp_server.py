@@ -210,13 +210,29 @@ def _project_key(project: Any) -> str:
     project twice (the same standardisation ``AgentActivity.samePath`` makes on
     the desktop side).
     """
-    real = os.path.realpath(project.input_dir or "")
+    raw = project.input_dir
+    if not raw:
+        # `os.path.realpath("")` returns the CWD, which mints a perfectly
+        # well-formed key that is WRONG and that every project with an empty
+        # input_dir collides on. An unidentifiable project must be visibly
+        # unidentifiable — the caller omits `key` rather than shipping a lie.
+        raise ValueError("project has no input_dir, so it has no stable key")
+    real = os.path.realpath(raw)
     return hashlib.sha256(real.encode("utf-8")).hexdigest()[:8]
 
 
 def _project_identity(project: Any) -> dict[str, Any]:
-    """The identity block every tool payload carries."""
-    return {"key": _project_key(project), "id": project.id, "name": project.name}
+    """The identity block every tool payload carries.
+
+    `key` is omitted rather than faked when it cannot be computed: a citation
+    anchored on a wrong-but-plausible key is worse than one anchored on none.
+    """
+    identity: dict[str, Any] = {"id": project.id, "name": project.name}
+    try:
+        identity["key"] = _project_key(project)
+    except ValueError:
+        logger.warning("project_key_unavailable | project=%s", project.id)
+    return identity
 
 
 def _curation_maps(

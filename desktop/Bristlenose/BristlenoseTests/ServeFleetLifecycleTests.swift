@@ -234,3 +234,36 @@ struct WindowSeedTests {
         #expect(try JSONDecoder().decode(WindowSeed.self, from: data) == seed)
     }
 }
+
+/// Restoration decoding. A scene value that throws does not fail loudly — it
+/// silently loses the researcher's windows, which come back on Welcome.
+@Suite("WindowSeed decoding")
+struct WindowSeedDecodingTests {
+
+    @Test func aBareUUIDFromTheOlderBuildStillDecodes() throws {
+        let legacy = UUID()
+        let data = try JSONEncoder().encode(legacy)
+        let seed = try JSONDecoder().decode(WindowSeed.self, from: data)
+        #expect(seed.project == legacy, "an upgraded window lost its study")
+        #expect(seed.token == legacy)
+    }
+
+    @Test func aPayloadMissingTheTokenStillDecodes() throws {
+        let id = UUID()
+        let json = #"{"project":"\#(id.uuidString)"}"#.data(using: .utf8)!
+        let seed = try JSONDecoder().decode(WindowSeed.self, from: json)
+        #expect(seed.project == id)
+    }
+
+    @Test func aCurrentPayloadRoundTripsUnchanged() throws {
+        let seed = WindowSeed.fresh(project: UUID(), lens: "quotes")
+        let data = try JSONEncoder().encode(seed)
+        #expect(try JSONDecoder().decode(WindowSeed.self, from: data) == seed)
+    }
+
+    @Test func aSeedWithNoStudySurvivesTheRoundTrip() throws {
+        let seed = WindowSeed.fresh()
+        let data = try JSONEncoder().encode(seed)
+        #expect(try JSONDecoder().decode(WindowSeed.self, from: data) == seed)
+    }
+}

@@ -33,7 +33,7 @@ Text in `common.json`, `settings.json`, `enums.json`, and `server.json` that ren
 | `enums.json` | ~11 | Sentiment display names, provider labels |
 | `server.json` | ~5 | Server health check labels |
 
-**i18n**: all 20 full locales (+ the `zh-Hant-HK` override fork).
+**i18n**: all 21 full locales (+ the `zh-Hant-HK` override fork).
 
 ---
 
@@ -64,12 +64,12 @@ Text that only appears in terminal output. Never rendered in the web UI or deskt
 
 | Source | Key count | Content | i18n? |
 |---|---|---|---|
-| `cli.json` | ~19 | CLI stage names, progress output, error messages | 20 locales |
-| `doctor.json` | ~6 | `bristlenose doctor` health check output | 20 locales |
-| `pipeline.json` | ~4 | Pipeline stage display names | 20 locales |
+| `cli.json` | ~19 | CLI stage names, progress output, error messages | 21 locales |
+| `doctor.json` | ~6 | `bristlenose doctor` health check output | 21 locales |
+| `pipeline.json` | ~4 | Pipeline stage display names | 21 locales |
 | `cli.py` help strings | ~30 | Typer `--help` flag descriptions | English only |
 | `bristlenose.1` man page | 517 lines | Full man page | English only |
-| `preflight.json` | ~25 | First-run preflight banners, prompts, error recovery (Whisper download, ffmpeg install table, API-key validation, closing line) | 20 locales (en source; machine-seeded locales pending native review) |
+| `preflight.json` | ~25 | First-run preflight banners, prompts, error recovery (Whisper download, ffmpeg install table, API-key validation, closing line) | 21 locales (en source; machine-seeded locales pending native review) |
 
 **Gap**: CLI `--help` strings and the man page are English-only and not wired through i18next. Translating these is a future task (low priority — CLI users overwhelmingly work in English).
 
@@ -109,11 +109,11 @@ The `ct()` helper is defined, tested, and ready — but has **zero production ca
 
 | Category | Keys | i18n coverage | Mechanism |
 |---|---|---|---|
-| Shared | ~456 | 20 locales | `t()` |
-| Desktop-only | ~150 | 20 locales | `desktop.json` namespace |
-| CLI-only (translated) | ~29 | 20 locales | `cli.json` / `doctor.json` / `pipeline.json` |
+| Shared | ~456 | 21 locales (+ HK override) | `t()` |
+| Desktop-only | ~150 | 21 locales (+ HK override) | `desktop.json` namespace |
+| CLI-only (translated) | ~29 | 21 locales | `cli.json` / `doctor.json` / `pipeline.json` |
 | CLI-only (untranslated) | ~30 + man page | English only | Typer help strings / `bristlenose.1` |
-| Forked | 4 | 20 locales | `dt()` + `desktop.json` override |
+| Forked | 4 | 21 locales (+ HK override) | `dt()` + `desktop.json` override |
 | CLI-hideable | 0 active | — | `ct()` (ready, unused) |
 
 ---

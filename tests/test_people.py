@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
 import yaml
 
 from bristlenose.models import (
@@ -398,3 +400,61 @@ def test_pct_words_excludes_moderator_from_denominator() -> None:
     assert stats["m1"].pct_words == 0.0
     assert stats["p1"].pct_words == 40.0
     assert stats["p2"].pct_words == 60.0
+
+
+# ---------------------------------------------------------------------------
+# Cross-session moderator / observer code collision (known limitation)
+# ---------------------------------------------------------------------------
+
+
+def test_multi_session_moderator_codes_collide_and_are_warned(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Two sessions, a moderator in each: `m1` collides and the earlier one is lost.
+
+    Participant codes are globally numbered (`p1`, `p2`, ...) so they never
+    collide, but `assign_speaker_codes()` resets its moderator/observer
+    counters per session — so every session's first moderator is `m1`.
+    `compute_participant_stats()` keys its output by speaker code alone, so
+    session 2's `m1` overwrites session 1's, and `merge_people()` carries that
+    into `people.yaml`.
+
+    This pins the limitation, not a desired end state: the flat key cannot
+    represent two different moderators, and fixing it properly means giving
+    `people.yaml` the person↔session split the serve-mode DB already has
+    (`SessionSpeaker`) — Layer 11 in
+    `docs/design-transcript-speaker-editing-roadmap.md`.  What this test
+    *does* require is that the loss is announced rather than silent.
+    """
+    sessions = [_session("p1", 1), _session("p2", 2)]
+    s1_mod = TranscriptSegment(
+        start_time=0.0, end_time=10.0, text="one two three", speaker_code="m1"
+    )
+    s1_p = TranscriptSegment(
+        start_time=11.0, end_time=21.0, text="a b c d", speaker_code="p1"
+    )
+    s2_mod = TranscriptSegment(
+        start_time=0.0, end_time=10.0,
+        text=" ".join(f"w{i}" for i in range(40)), speaker_code="m1",
+    )
+    s2_p = TranscriptSegment(
+        start_time=11.0, end_time=21.0, text="e f g h", speaker_code="p2"
+    )
+    transcripts = [
+        _transcript("p1", [s1_mod, s1_p]),
+        _transcript("p2", [s2_mod, s2_p]),
+    ]
+
+    with caplog.at_level(logging.WARNING, logger="bristlenose.people"):
+        stats = compute_participant_stats(sessions, transcripts)
+
+    # Both participants survive (globally numbered); only one moderator does.
+    assert sorted(stats) == ["m1", "p1", "p2"]
+    # Last session wins — session 1's moderator (3 words) is gone.
+    assert stats["m1"].session_id == "s2"
+    assert stats["m1"].words_spoken == 40
+
+    # The loss must not be silent.
+    warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+    assert any("m1" in w for w in warnings), warnings
+    assert any("s1" in w and "s2" in w for w in warnings), warnings

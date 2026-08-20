@@ -132,6 +132,17 @@ def compute_participant_stats(
     """Compute per-participant stats from session and transcript data.
 
     Returns a dict keyed by ``participant_id``.
+
+    **Known limitation — moderator/observer codes collide across sessions.**
+    Participant codes are globally numbered, but ``assign_speaker_codes()``
+    resets its moderator/observer counters per session, so every session's
+    first moderator is ``m1``.  This dict is keyed by code alone, so in a
+    multi-session study the last session's ``m1`` overwrites the earlier ones
+    and only one survives into ``people.yaml``.  Collisions are collected and
+    reported in a single WARNING rather than passing silently.  The fix is to give
+    ``people.yaml`` the person↔session split the serve-mode DB already has
+    (``SessionSpeaker``) — Layer 11 in
+    ``docs/design-transcript-speaker-editing-roadmap.md``.
     """
     transcript_map: dict[str, FullTranscript] = {
         t.session_id: t for t in transcripts
@@ -139,6 +150,8 @@ def compute_participant_stats(
 
     stats: dict[str, PersonComputed] = {}
     total_words_all = 0
+    # Speaker codes seen in more than one session — see the collision note below.
+    code_sessions: dict[str, list[str]] = {}
 
     for session in sessions:
         sid = session.session_id
@@ -173,6 +186,15 @@ def compute_participant_stats(
         for code, words in code_words.items():
             if code.startswith("p"):
                 total_words_all += words
+            # Speaker code reused across sessions — the earlier entry is about
+            # to be overwritten and its stats lost.  Collected here, reported
+            # once after the loop so a 10-session study doesn't print nine
+            # near-identical warnings at the researcher.  See the docstring:
+            # only codes that reset per session (m/o) reach this in practice.
+            prior = stats.get(code)
+            if prior is not None and prior.session_id != sid:
+                seen = code_sessions.setdefault(code, [prior.session_id])
+                seen.append(sid)
             stats[code] = PersonComputed(
                 participant_id=code,
                 session_id=sid,
@@ -187,6 +209,20 @@ def compute_participant_stats(
                 ),
                 source_file=transcript.source_file,
             )
+
+    if code_sessions:
+        detail = "; ".join(
+            f"{code} in {', '.join(sids)} (only {sids[-1]} survives)"
+            for code, sids in sorted(code_sessions.items())
+        )
+        logger.warning(
+            "Speaker code reused across sessions: %s. people.yaml holds one entry "
+            "per code, so the earlier sessions' stats are discarded. Moderator and "
+            "observer codes restart at 1 each session and cross-session speaker "
+            "identity is not yet modelled — see Layer 11 in "
+            "docs/design-transcript-speaker-editing-roadmap.md.",
+            detail,
+        )
 
     # Second pass: compute pct_words relative to total across all participants.
     # Only count participant codes (pN) for the denominator.

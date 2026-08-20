@@ -420,13 +420,22 @@ private struct FileMenuContent: View {
         // accident. Sits with New Project / New Folder because it is the third
         // New item, and ⌥⌘N keeps that family's shape.
         //
-        // A new window opens on the FRONT window's study, so this is "same
-        // study, another lens" — the case that wants two windows open. Cloning
-        // the front window is the least surprising answer and matches the
-        // already-decided rule for which lens it opens at; with no front window
-        // it falls back to the last-used study.
+        // **Passes no value, deliberately — measured 20 Aug 2026.** SwiftUI keeps
+        // at most one window per unique scene value, so `openWindow(id:value:)`
+        // for a study that already has a window *brings that window forward*
+        // instead of opening another. Observed on screen: ⌥⌘N with two windows
+        // open re-activated one of them rather than making a third.
+        //
+        // That is fatal for this command specifically. New Window's whole job is
+        // "another view of what I'm looking at" — the case that wants two windows
+        // on one study — and it is what the `WindowRoster` ordinals exist to
+        // number. Deduping makes both unreachable.
+        //
+        // With no value the window restores from `persistedProjectID`, which is
+        // the last-*selected* study, so the felt behaviour is unchanged: ⌥⌘N
+        // still opens on what you are looking at. It just always opens.
         Button(i18n.t("desktop.menu.file.newWindow"), systemImage: "macwindow") {
-            openMainWindow(on: frontProjectID)
+            openWindow(id: "main")
         }
         .keyboardShortcut("n", modifiers: [.command, .option])
 
@@ -503,6 +512,13 @@ private struct FileMenuContent: View {
         // Enabled only when there IS a selected study: with none it would be
         // indistinguishable from New Window, and two menu items doing one thing
         // is a menu lying about what the app can do.
+        //
+        // This one KEEPS its value, which is why the two commands are now
+        // genuinely different rather than accidentally the same. Passing a value
+        // means SwiftUI's per-value dedup applies — so on a study that already
+        // has a window, this reveals that window rather than opening a duplicate.
+        // For "open THIS study" that is the right answer and matches how a
+        // reveal-or-open command should behave; for New Window above it was not.
         Button(i18n.t("desktop.menu.file.openInNewWindow"), systemImage: "macwindow.badge.plus") {
             openMainWindow(on: frontProjectID)
         }

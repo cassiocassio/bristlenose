@@ -20,6 +20,19 @@ DEFAULT_HELP_URL = "https://bristlenose.app/docs/"
 DEFAULT_TELEMETRY_URL = "https://bristlenose.app/telemetry.php"
 DEV_TELEMETRY_URL = "/api/dev/telemetry"
 
+#: The agent-surface contract this build speaks.
+#:
+#: Deliberately NOT the Bristlenose version. A `.mcpb` extension never
+#: auto-updates — there is only uninstall/reinstall — so the proxy in the
+#: field can be months behind the app, and comparing release versions would
+#: cry wolf on every patch. This number moves only when the proxy would
+#: actually get something wrong: the handshake's shape, the routing rules, or
+#: the meaning of an existing tool argument.
+#:
+#: 1 — single-project handshake, no routing.
+#: 2 — `projects` list, routed by project key, scope stamped on results.
+MCP_CONTRACT = 2
+
 #: Tool-call freshness that still counts as "an agent is connected now".
 #: Wider than the desktop's 20s poll so thinking gaps between tool calls
 #: don't flicker the sidebar badge.
@@ -121,6 +134,7 @@ def health(request: Request) -> dict[str, object]:
         # every citation that spans the two languages. Opaque by construction
         # — a digest is not a path — so it is safe on this auth-exempt route.
         "project_key": _project_key_or_none(request),
+        "contract": MCP_CONTRACT,
         "active": (
             last_call is not None
             and (time.monotonic() - last_call) <= MCP_ACTIVE_WINDOW_SECONDS

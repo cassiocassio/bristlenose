@@ -71,11 +71,26 @@ def _server_tools() -> list[dict]:
         return resp.json()["result"]["tools"]
 
 
+#: Tools the PROXY implements and the server deliberately does not.
+#: `list_projects` is answered from the handshake with no upstream call and no
+#: bearer transmitted — the proxy is the only party that knows the whole set,
+#: since each serve knows only itself. Not drift; the gate must still catch
+#: everything else.
+_PROXY_ONLY_TOOLS = {"list_projects"}
+
+#: Arguments the PROXY consumes and strips before forwarding. `project` names
+#: which serve to route to; a single-project server would reject it as unknown.
+_PROXY_ONLY_ARGS = {"project"}
+
+
 class TestProxyToolParity:
     def test_tool_names_match(self) -> None:
         proxy = {t["name"] for t in _proxy_tools()}
         server = {t["name"] for t in _server_tools()}
-        assert proxy == server
+        assert proxy - _PROXY_ONLY_TOOLS == server, (
+            "a tool exists on one side only — if that is deliberate, add it to "
+            "_PROXY_ONLY_TOOLS with the reason"
+        )
 
     def test_params_and_required_match_per_tool(self) -> None:
         proxy = {t["name"]: t for t in _proxy_tools()}
@@ -83,7 +98,8 @@ class TestProxyToolParity:
         for name, server_tool in server.items():
             proxy_schema = proxy[name]["inputSchema"]
             server_schema = server_tool["inputSchema"]
-            assert set(proxy_schema.get("properties", {})) == set(
+            proxy_props = set(proxy_schema.get("properties", {})) - _PROXY_ONLY_ARGS
+            assert proxy_props == set(
                 server_schema.get("properties", {})
             ), f"{name}: property names drifted"
             assert set(proxy_schema.get("required", [])) == set(
@@ -93,6 +109,8 @@ class TestProxyToolParity:
             # pass on names alone. The server wraps optional params in
             # anyOf/[type, "null"]; accept the proxy naming the non-null arm.
             for prop, proxy_spec in proxy_schema.get("properties", {}).items():
+                if prop in _PROXY_ONLY_ARGS:
+                    continue
                 server_spec = server_schema["properties"][prop]
                 server_types = _flat_types(server_spec)
                 proxy_type = proxy_spec.get("type")
@@ -106,3 +124,14 @@ class TestProxyToolParity:
         # a blank description degrades tool choice silently.
         for tool in _proxy_tools():
             assert tool.get("description"), f"{tool['name']}: empty description"
+
+    def test_proxy_only_additions_are_optional(self) -> None:
+        # The compatibility rule that makes a stale extension degrade rather
+        # than break: an installed .mcpb never auto-updates, so a REQUIRED
+        # param the old proxy doesn't know about would make every call fail.
+        # Additive-and-optional is the whole contract.
+        for tool in _proxy_tools():
+            required = set(tool["inputSchema"].get("required", []))
+            assert not (required & _PROXY_ONLY_ARGS), (
+                f"{tool['name']}: proxy-only args must never be required"
+            )

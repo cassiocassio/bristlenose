@@ -110,19 +110,70 @@ enum AgentProjectRegister {
             }
     }
 
-    /// What an agent can read **right now**: projects, and the sessions in them.
+    /// One row, as VoiceOver should hear it.
     ///
-    /// Deliberately computed from the same predicate as the rows rather than
-    /// from `ServeFleet.handshakeProjectPaths`, so the headline count and the
-    /// ticks under it cannot disagree. The handshake additionally requires a
-    /// token and an instance id, which arrive a beat later on a cold start — a
-    /// roll-up that dropped to zero for that beat would read as a fault.
+    /// The row is four cells in an `HStack`, so nothing associates a number
+    /// with the column header promising it: unlabelled, a reader hears the
+    /// project name and the tick and learns neither the group — which decides
+    /// whether an agent can read it **now** — nor the count nor the time.
+    /// `SessionsPopoverSpec.accessibilityLabel(for:)` and `ProjectRow` already
+    /// solve this for the same stacked-row shape; this is the third call site,
+    /// which is where the pattern stops being a coincidence.
     ///
-    /// Sessions sums only the counts we have. An unknown count contributes
-    /// nothing rather than being guessed at, which can make the total an
-    /// undercount — correct, and the alternative is a number nobody can check.
-    static func readable(_ rows: [Row]) -> (projects: Int, sessions: Int) {
-        let live = rows.filter { $0.group == .windowOpen && $0.access }
-        return (live.count, live.compactMap(\.sessions).reduce(0, +))
+    /// **Commas, never `·`.** Straight from `SessionsPopoverSpec`: VoiceOver
+    /// pauses on a comma and reads nothing at all for a middot, so the visible
+    /// separator and the spoken one are deliberately different characters.
+    ///
+    /// **The group is repeated on every row on purpose.** The group header is
+    /// reachable in a linear read but not in Tab order — the checkbox is the
+    /// pane's only focusable row element — so this is the only way the tick and
+    /// the group travel together for a keyboard user, which is the pairing the
+    /// whole table exists to show.
+    ///
+    /// Takes rendered strings rather than keys so a test can assert the
+    /// *joining* without an `I18n`; a bare `I18n()` returns the raw key, so a
+    /// copy assertion here would silently be an assertion about identifiers.
+    /// Empty parts are dropped rather than announced as pauses.
+    static func accessibilityLabel(name: String,
+                                   group: String,
+                                   sessions: String?,
+                                   lastAsked: String) -> String {
+        [name, group, sessions, lastAsked]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+    }
+
+    /// What an agent can read **right now**: projects, the sessions in them,
+    /// and how many of those projects have not reported a count yet.
+    ///
+    /// **`gate` is `ServeFleet.readableProjects` — the set `syncHandshake`
+    /// pushes to every serve — not a second opinion of it.** An earlier version
+    /// re-derived `windowOpen && access` here, which was right for the same two
+    /// inputs and wrong in the ways two implementations of one rule are always
+    /// wrong: it counted a project whose sidecar had *failed*, and it read the
+    /// permission by a different key than the handshake did. The headline now
+    /// prints the gate, so it cannot disagree with what the gate closes on.
+    ///
+    /// The set is deliberately wider than the handshake's `entries`, which also
+    /// wants a token and an instance id — those arrive a beat later on a cold
+    /// start, and a roll-up that dropped to zero for that beat would read as a
+    /// fault.
+    ///
+    /// `unknown` exists because the row policy and the roll-up policy were
+    /// different, and only one of them was right. A row with no session count
+    /// renders blank — never a guess. The sum had no such option: it rendered
+    /// "0 sessions" identically for *we know there are none* and *we know
+    /// nothing at all*, and the second is the ordinary state a second after
+    /// launch, before the folder watcher's first scan lands. Returning the
+    /// count of unknowns lets the caller drop the clause instead of fabricating
+    /// a zero — absence being information, which is the rule the rows already
+    /// follow.
+    static func readable(_ rows: [Row],
+                         gate: Set<UUID>) -> (projects: Int, sessions: Int, unknown: Int) {
+        let live = rows.filter { gate.contains($0.id) }
+        return (live.count,
+                live.compactMap(\.sessions).reduce(0, +),
+                live.filter { $0.sessions == nil }.count)
     }
 }

@@ -24,12 +24,29 @@ import SwiftUI
 ///   URL + token — the fallback that makes replacing hand-paste safe).
 struct MCPAgentsSettingsView: View {
 
-    @ObservedObject var serveManager: ServeManager
     @ObservedObject var projectIndex: ProjectIndex
-    /// The fleet, for the projects register: `lastAgentCallAt` is per-project
-    /// and `serveManager` is one instance, so the fronted serve cannot answer
-    /// for the study an agent is actually reading.
+    /// The fleet — the pane's only serve input, deliberately.
+    ///
+    /// It used to also take a `ServeManager`, resolved by `SettingsWindow` as
+    /// `serveFleet?.frontedOrIdle`. That looked like a live read and was a
+    /// snapshot: the Settings package's `Pane.init` calls its content builder
+    /// eagerly and `controller` is a `private lazy var`, so the builder runs
+    /// exactly once per process. Launch to Welcome, ⌘, then open a project and
+    /// the connection half stayed wired to the idle stand-in — "Start the
+    /// project before connecting an agent" printed directly above "Readable
+    /// now: 1 project". One pane, two contradictory claims, on the surface
+    /// whose only job is being right about exposure.
+    ///
+    /// `SettingsView`'s own doc-comment records this bug as fixed by holding
+    /// the fleet so panes "resolve the current one when they are built" — the
+    /// panes are built once, so that was half a fix. Computing it in `body`
+    /// is the other half. `frontedProject` is `@Published` and the fleet
+    /// re-publishes every manager's changes, so observing the fleet alone is
+    /// enough.
     @ObservedObject var serveFleet: ServeFleet
+
+    /// The fronted serve, resolved per render.
+    private var serveManager: ServeManager { serveFleet.frontedOrIdle }
     /// The window half of the exposure rule. `shownProjects` is derived from
     /// private state, but every write to it also writes the published
     /// `assignments`, so observing the roster is enough to keep the groups true.
@@ -157,11 +174,32 @@ struct MCPAgentsSettingsView: View {
             copied = false
         }
         // A receipt is about what you just did, so it does not outlive the
-        // visit. `.onAppear` fires each time the pane is shown, which is what
-        // makes "gone next time you open it" literal — the Settings package
-        // builds its panes once and keeps them, so relying on the view being
-        // recreated would have been relying on something that does not happen.
-        .onAppear { revokedThisSession.removeAll() }
+        // visit — and the visit is the WINDOW being open, not the pane being
+        // on screen.
+        //
+        // This was `.onAppear`, which is wrong in both directions. Too often:
+        // the Settings package's tab transition removes and re-adds pane
+        // views, so unticking a row, clicking Appearance and clicking back
+        // erased the receipt — and a row that vanishes is exactly the "removed
+        // the project" reading the receipt exists to prevent. Too rarely:
+        // `show(pane:)` early-returns when the pane is already active and
+        // `showWindow` never touches the view hierarchy, so ⌘W then ⌘, may
+        // leave a stale one, and `Bristlenose ▸ Connect an Agent…` with the
+        // pane already open is a guaranteed no-op.
+        //
+        // Both failures came from hanging a lifetime on a third-party
+        // package's view-lifecycle behaviour. The window closing is an event
+        // we own, and it is what "next time the pane opens" already meant.
+        .onReceive(NotificationCenter.default.publisher(
+            for: NSWindow.willCloseNotification)) { note in
+            // Identity, not a title or an identifier string: the Settings
+            // window is the one `SettingsWindow` owns, and comparing the
+            // object is the only test that cannot be fooled by a localised
+            // title or an untitled auxiliary window.
+            guard let closing = note.object as? NSWindow,
+                  closing === SettingsWindow.shared.window else { return }
+            revokedThisSession.removeAll()
+        }
     }
 
     /// Everything above the divider: how an agent connects. Machine-wide, and
@@ -278,30 +316,44 @@ struct MCPAgentsSettingsView: View {
     /// "Projects", and what an agent can read right now.
     @ViewBuilder
     private func registerHeader(_ rows: [AgentProjectRegister.Row]) -> some View {
-        let readable = AgentProjectRegister.readable(rows)
+        let readable = AgentProjectRegister.readable(rows, gate: serveFleet.readableProjects)
         HStack(alignment: .firstTextBaseline, spacing: RegisterLayout.gap) {
             // The sidebar's own word for the same set — reused rather than
             // reworded, so one concept keeps one noun across two surfaces.
             Text(i18n.t("desktop.chrome.projects"))
-                .font(.callout.weight(.bold))
+                .font(.headline)
             Spacer(minLength: RegisterLayout.gap)
-            // Suppressed when there is nothing shared: "0 projects · 0 sessions"
-            // restates the empty state directly beneath it.
-            if !rows.isEmpty {
-                Text(i18n.t("desktop.mcpAgents.rollup", [
-                    "projects": i18n.plural("desktop.mcpAgents.projects",
-                                            count: readable.projects),
-                    "sessions": i18n.plural("desktop.connectAgent.sessions",
-                                            count: readable.sessions),
-                ]))
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
+            // Says nothing when there is nothing readable — which covers the
+            // empty register AND the ordinary case where every armed project
+            // is closed. An earlier version suppressed only the first, so
+            // opening Settings from Welcome printed "Readable now: 0 projects
+            // · 0 sessions" over a full table: a readout, not a headline.
+            if readable.projects > 0 {
+                Text(rollupText(readable))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
             }
         }
         .padding(.horizontal, RegisterLayout.inset)
         .padding(.top, 15)
         .padding(.bottom, 8)
+    }
+
+    /// The headline, with the sessions clause dropped when any of the readable
+    /// projects has not reported a count. A partial sum rendered as a total is
+    /// a fabricated number, and the rows already refuse to fabricate one.
+    private func rollupText(
+        _ readable: (projects: Int, sessions: Int, unknown: Int)
+    ) -> String {
+        let projects = i18n.plural("desktop.mcpAgents.projects", count: readable.projects)
+        guard readable.unknown == 0 else {
+            return i18n.t("desktop.mcpAgents.rollupProjectsOnly", ["projects": projects])
+        }
+        return i18n.t("desktop.mcpAgents.rollup", [
+            "projects": projects,
+            "sessions": i18n.plural("desktop.connectAgent.sessions", count: readable.sessions),
+        ])
     }
 
     /// Outside the scroller, so it stays put once the list is long enough to
@@ -319,7 +371,13 @@ struct MCPAgentsSettingsView: View {
             Text(i18n.t("desktop.mcpAgents.colLastAsked"))
                 .frame(width: RegisterLayout.lastAsked, alignment: .leading)
         }
-        .font(.caption.weight(.semibold))
+        // Subheadline (11), not Caption 1 (10). The mockup draws this at
+        // 11.5px and its own comments fix px↦pt at 1:1; every element it drew
+        // at 12 is right in the build and every element it drew at 11.5 had
+        // rounded down two rungs. Caption also has no Bold on its ladder —
+        // the HIG gives it Medium as the emphasized weight — so the group
+        // header below was asking for a weight that does not exist.
+        .font(.subheadline.weight(.semibold))
         .foregroundStyle(.secondary)
         .padding(.horizontal, RegisterLayout.inset)
         .frame(height: 26)
@@ -365,9 +423,21 @@ struct MCPAgentsSettingsView: View {
     ) -> some View {
         ForEach(groups, id: \.group) { entry in
             Section {
-                ForEach(entry.rows) { row in
+                // The separator rides INSIDE the row rather than following it,
+                // which fixes three departures from the drawing at once: no
+                // stray hairline under the last row of a group (the mockup
+                // says `tr:last-child td{border-bottom:0}`), full bleed rather
+                // than leading-inset — matching what the column header and the
+                // group header in this same file already do — and a row pitch
+                // that really is 32pt, so `RegisterLayout.ceiling` is exact.
+                // Inset separators made the ceiling short by a divider per row,
+                // which clipped the ninth row: a sliver of a TENTH row is a
+                // good scroll cue, a sliver of the row you promised is not.
+                ForEach(Array(entry.rows.enumerated()), id: \.element.id) { index, row in
                     registerRow(row, now: now)
-                    Divider().padding(.leading, RegisterLayout.inset)
+                        .overlay(alignment: .bottom) {
+                            if index < entry.rows.count - 1 { Divider() }
+                        }
                 }
             } header: {
                 groupHeader(entry.group)
@@ -392,59 +462,136 @@ struct MCPAgentsSettingsView: View {
         Text(i18n.t(group == .windowOpen
                     ? "desktop.mcpAgents.groupActive"
                     : "desktop.mcpAgents.groupAvailable"))
-            .font(.caption.weight(.bold))
+            .font(.subheadline.weight(.semibold))
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, RegisterLayout.inset)
             .frame(height: RegisterLayout.groupHeader)
-            .background(Color(nsColor: .underPageBackgroundColor))
+            // `underPageBackgroundColor` is the backdrop BEHIND a document —
+            // Preview's surround — and it measures 0.588 grey at 89.8% alpha,
+            // i.e. ≈#A1A1A1 over white. The mockup draws #f0f0f3. Dark was a
+            // bullseye and light was off by 43% luminance, which is the
+            // fingerprint of a token chosen while running in Dark: exactly the
+            // "correct in Automatic, wrong the moment you force Light" class
+            // desktop/CLAUDE.md's appearance section names.
+            //
+            // `tertiarySystemFill` lands on the drawing in BOTH modes (black
+            // and white at 4.7%). It is translucent by design, so it needs an
+            // opaque backer — which the pinned case needs anyway: a header
+            // that floats over scrolling rows must not let them show through.
+            .background {
+                Color(nsColor: .windowBackgroundColor)
+                Color(nsColor: .tertiarySystemFill)
+            }
             .overlay(alignment: .bottom) { Divider() }
     }
 
     private func registerRow(_ row: AgentProjectRegister.Row, now: Date) -> some View {
-        HStack(spacing: RegisterLayout.gap) {
-            Toggle(isOn: accessBinding(row)) { EmptyView() }
-                .toggleStyle(.checkbox)
-                .labelsHidden()
-                // The shipped sidebar verb, swapping with what the click will
-                // do — one grammar in two renderings. A context menu carries a
-                // verb; a table carries a checkbox; neither invents a word.
-                .help(i18n.t(row.access ? "desktop.menu.project.turnOffAgentAccess"
-                                        : "desktop.menu.project.turnOnAgentAccess"))
-                .accessibilityLabel(row.name)
-                .accessibilityHint(i18n.t(row.access
-                                          ? "desktop.menu.project.turnOffAgentAccess"
-                                          : "desktop.menu.project.turnOnAgentAccess"))
-                .frame(width: RegisterLayout.access, alignment: .leading)
+        let asked = lastAskedString(row.lastAsked, now: now)
+        return HStack(spacing: RegisterLayout.gap) {
+            // The label is a `Color.clear` sized to the whole cell, because a
+            // Toggle's label is part of its hit area on macOS and its bounds
+            // are otherwise just the ~14pt tick. `.frame` on the Toggle
+            // reserves the column without extending the control, so 38 of the
+            // 54 points looked clickable and were not — on a permission
+            // control, and against the HIG's 20pt macOS minimum. The mockup
+            // had this right (`<label class="cell-hit">` wraps the input) and
+            // the first build dropped it.
+            Toggle(isOn: accessBinding(row)) {
+                Color.clear
+                    .frame(width: RegisterLayout.access, height: RegisterLayout.row)
+                    .contentShape(Rectangle())
+            }
+            .toggleStyle(.checkbox)
+            // Re-ticking is a GRANT, so it answers to the same policy the
+            // sidebar's context menu does — `AgentAccessPolicy.canShare`,
+            // locatable and analysed. Without this the register was the one
+            // Agent Access writer that skipped it: untick a row, let the
+            // project's last session go or unplug the drive, re-tick, and it
+            // granted what the sidebar would refuse to offer. Unticking is
+            // never disabled; revoking is always allowed.
+            .disabled(!row.access && !canGrant(row))
+            // The shipped sidebar verb, swapping with what the click will
+            // do — one grammar in two renderings. A context menu carries a
+            // verb; a table carries a checkbox; neither invents a word.
+            .help(i18n.t(row.access ? "desktop.menu.project.turnOffAgentAccess"
+                                    : "desktop.menu.project.turnOnAgentAccess"))
+            // The whole row, spoken. See `AgentProjectRegister.accessibilityLabel`
+            // for why the group repeats and why the separator is a comma.
+            // The checked/unchecked value is the platform's, and it already
+            // covers the receipt — so "Access turned off" is deliberately NOT
+            // in here, or the control would announce its own state twice.
+            .accessibilityLabel(AgentProjectRegister.accessibilityLabel(
+                name: row.name,
+                group: i18n.t(row.group == .windowOpen
+                              ? "desktop.mcpAgents.groupActive"
+                              : "desktop.mcpAgents.groupAvailable"),
+                sessions: row.sessions.map {
+                    i18n.plural("desktop.connectAgent.sessions", count: $0)
+                },
+                lastAsked: "\(i18n.t("desktop.mcpAgents.colLastAsked")) \(asked)"))
+            .accessibilityHint(i18n.t(row.access
+                                      ? "desktop.menu.project.turnOffAgentAccess"
+                                      : "desktop.menu.project.turnOnAgentAccess"))
+            .frame(width: RegisterLayout.access, alignment: .leading)
 
             HStack(spacing: 7) {
+                // Hidden: the glyph is a recognition aid, the name is the
+                // identity, and `Image(systemName:)` otherwise announces the
+                // symbol's own description between the checkbox and the name.
+                // `ProjectRow` hides the same glyph for the same reason.
+                // Sized explicitly because inheriting `.callout` renders it at
+                // 12pt, while the sidebar draws the same symbol at 16 in a
+                // 20pt column — a researcher's chosen icon should not shrink
+                // between two lists of the same projects.
                 Image(systemName: row.icon ?? IconPickerPopover.defaultIcon)
+                    .font(.system(size: 15))
                     .frame(width: 17)
+                    .accessibilityHidden(true)
                 Text(row.name)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 if row.isReceipt {
                     // The receipt: what you just did, not what is true. Gone
-                    // next time the pane opens.
+                    // next time the pane opens. `.fixedSize` so a long project
+                    // name squeezes itself rather than truncating the caption —
+                    // "Access turned…" is worse than a shortened name.
                     Text(i18n.t("desktop.mcpAgents.receiptOff"))
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(.subheadline)
+                        .fixedSize()
                 }
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             // Blank when unknown, never a guess — the count a researcher would
-            // check against the sidebar has to be one we actually hold.
+            // check against the sidebar has to be one we actually hold. The
+            // roll-up above drops its sessions clause entirely in that case
+            // rather than summing to a confident zero.
             Text(row.sessions.map(String.init) ?? "")
                 .monospacedDigit()
-                .foregroundStyle(.secondary)
                 .frame(width: RegisterLayout.sessions, alignment: .trailing)
 
-            lastAskedText(row.lastAsked, now: now)
+            Text(asked)
+                .monospacedDigit()
+                .lineLimit(1)
                 .frame(width: RegisterLayout.lastAsked, alignment: .leading)
         }
         .font(.callout)
-        .foregroundStyle(row.isReceipt ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.primary))
+        // One style for the whole row, and `.secondary` rather than `.tertiary`.
+        // Measured under both appearances, tertiary is 1.88:1 in light and
+        // 2.24:1 in dark — a quarter of the 4.5:1 line, and UNCHANGED under
+        // Increase Contrast, so the HIG's "at least offer a higher-contrast
+        // scheme" escape hatch does not apply. It is also semantically wrong:
+        // tertiary is Apple's disabled-text colour and a receipt row is
+        // reversible, not disabled. The unticked box and the caption already
+        // carry the meaning; the dim is emphasis.
+        //
+        // Set here and nowhere else. The cells used to set `.secondary` on
+        // themselves, and an inner style beats the row's — so a revoked row
+        // rendered its name dim and its session count and timestamp at full
+        // weight, the number louder than the thing it counts.
+        .foregroundStyle(row.isReceipt ? AnyShapeStyle(.tertiary)
+                                       : AnyShapeStyle(.secondary))
         .padding(.horizontal, RegisterLayout.inset)
         .frame(height: RegisterLayout.row)
     }
@@ -452,30 +599,52 @@ struct MCPAgentsSettingsView: View {
     /// Past tense, always. MCP is request/response — there is no continuous
     /// reading state to report, and the app's own rule is that we can offer but
     /// cannot observe.
-    private func lastAskedText(_ date: Date?, now: Date) -> some View {
-        let text: String
-        if let date {
-            // Under five minutes reads as "Just now" — the sidebar's own
-            // threshold, so two surfaces describing one instant agree.
-            let elapsed = now.timeIntervalSince(date)
-            if elapsed >= 0 && elapsed < 5 * 60 {
-                text = i18n.t("desktop.chrome.dateRelativeJustNow")
-            } else {
-                let f = RelativeDateTimeFormatter()
-                f.locale = Locale(identifier: i18n.locale)
-                f.unitsStyle = .short
-                text = f.localizedString(for: date, relativeTo: now)
-            }
-        } else {
+    ///
+    /// Returns a string rather than a `Text` because the row's accessibility
+    /// label needs the same words the cell shows; two renderings of one fact
+    /// is how they drift.
+    private func lastAskedString(_ date: Date?, now: Date) -> String {
+        guard let date else {
             // A word, not an em dash: VoiceOver announces a dash as nothing at
             // all, and "we have no record" is the fact worth hearing.
-            text = i18n.t("desktop.mcpAgents.lastAskedNever")
+            return i18n.t("desktop.mcpAgents.lastAskedNever")
         }
-        return Text(text)
-            .foregroundStyle(date == nil ? AnyShapeStyle(.tertiary)
-                                         : AnyShapeStyle(.secondary))
-            .monospacedDigit()
-            .lineLimit(1)
+        // Under five minutes reads as "Just now" — the sidebar's own threshold,
+        // so two surfaces describing one instant agree. A NEGATIVE elapsed
+        // lands here too, deliberately: the timeline entry can lag the stamp by
+        // up to a minute, and the guard used to be `elapsed >= 0`, which sent
+        // exactly that anticipated case to the formatter and rendered "in 45
+        // sec" — future tense, in the column whose whole rule is past tense.
+        let elapsed = now.timeIntervalSince(date)
+        if elapsed < 5 * 60 {
+            return i18n.t("desktop.chrome.dateRelativeJustNow")
+        }
+        return Self.relativeFormatter(locale: i18n.locale)
+            .localizedString(for: date, relativeTo: now)
+    }
+
+    /// Cached, per locale. `RelativeDateTimeFormatter`'s initialiser loads CLDR
+    /// relative-time data, and this was being constructed per row per tick;
+    /// `LLMSettingsView` keeps one in a `static let` for the same reason.
+    private static var formatterCache: (locale: String, formatter: RelativeDateTimeFormatter)?
+
+    private static func relativeFormatter(locale: String) -> RelativeDateTimeFormatter {
+        if let cached = formatterCache, cached.locale == locale { return cached.formatter }
+        let f = RelativeDateTimeFormatter()
+        f.locale = Locale(identifier: locale)
+        f.unitsStyle = .short
+        formatterCache = (locale, f)
+        return f
+    }
+
+    /// Can this row be re-ticked? The sidebar's rule, read here rather than
+    /// re-derived — `canShare` wants locatable AND analysed, and a receipt row
+    /// can lose either while the pane is open.
+    private func canGrant(_ row: AgentProjectRegister.Row) -> Bool {
+        guard let project = projectIndex.projects.first(where: { $0.id == row.id })
+        else { return false }
+        return AgentAccessPolicy.canShare(
+            project, sessionCount: projectIndex.unanalysed[row.id]?.sessionCount)
     }
 
     /// Revoking is one click and no dialog; granting is a deliberate act in the
@@ -485,7 +654,11 @@ struct MCPAgentsSettingsView: View {
         Binding(
             get: { row.access },
             set: { enabled in
-                projectIndex.setAgentAccess(id: row.id, enabled: enabled)
+                // The receipt follows the model, not the click. Re-ticking a
+                // project the policy now refuses (its last session went, or
+                // the drive was unplugged) leaves the row where it was rather
+                // than showing a grant that did not happen.
+                guard projectIndex.setAgentAccess(id: row.id, enabled: enabled) else { return }
                 if enabled {
                     revokedThisSession.remove(row.id)
                 } else {
@@ -504,7 +677,18 @@ struct MCPAgentsSettingsView: View {
             // Names the menu-bar path, not a gesture: the HIG calls it
             // Control-click or secondary click, never right-click, and requires
             // every context-menu command to exist in the menu bar anyway.
-            Text(i18n.t("desktop.mcpAgents.emptyHint"))
+            //
+            // The command is INTERPOLATED, not re-typed. It is an ordinary
+            // runtime lookup — only the menu TITLE is stuck in English, because
+            // SwiftUI `CommandMenu` titles cannot take a runtime string — and
+            // hardcoding it had already drifted on day one: ca and fr wrote the
+            // hint with a typographic apostrophe while the menu item carries an
+            // ASCII one, so the pane named a menu item using a spelling the
+            // menu does not use. Interpolating makes that impossible, and makes
+            // any future reword of the command reach this sentence in all 21.
+            Text(i18n.t("desktop.mcpAgents.emptyHint", [
+                "command": i18n.t("desktop.menu.project.turnOnAgentAccess"),
+            ]))
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

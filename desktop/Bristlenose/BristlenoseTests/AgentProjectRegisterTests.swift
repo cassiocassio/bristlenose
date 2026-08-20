@@ -113,47 +113,86 @@ struct AgentProjectRegisterTests {
 
     // MARK: - The headline
 
-    @Test("readable counts only what a window is holding with access on")
-    func readableIsBothHalves() {
-        let open = UUID(), closed = UUID()
+    @Test("readable prints the gate set, not a second opinion of it")
+    func readableIsTheGate() {
+        // The whole point of taking `gate`: the headline is the set
+        // `syncHandshake` pushes to every serve, so it cannot disagree with
+        // what the gate closes on. A row can be window-open and ticked and
+        // still be outside the gate — a failed sidecar is the live case.
+        let open = UUID(), failed = UUID(), closed = UUID()
         let rows = AgentProjectRegister.rows(
             candidates: [candidate("open", id: open, sessions: 3),
+                         candidate("failed", id: failed, sessions: 7),
                          candidate("closed", id: closed, sessions: 42)],
-            shown: [open], receipts: [])
-        let r = AgentProjectRegister.readable(rows)
+            shown: [open, failed], receipts: [])
+        let r = AgentProjectRegister.readable(rows, gate: [open])
         #expect(r.projects == 1)
         #expect(r.sessions == 3)
+        #expect(r.unknown == 0)
     }
 
     @Test("a revoked row stops counting as readable immediately")
     func receiptIsNotReadable() {
         // The receipt is still on screen; it must not still be in the headline,
-        // or the one number the pane exists to be right about is wrong.
+        // or the one number the pane exists to be right about is wrong. The
+        // gate is re-derived on the same act, so it drops the id too.
         let id = UUID()
         let rows = AgentProjectRegister.rows(
             candidates: [candidate("revoked", id: id, access: false, sessions: 9)],
             shown: [id], receipts: [id])
         #expect(rows.count == 1)
-        #expect(AgentProjectRegister.readable(rows).projects == 0)
-        #expect(AgentProjectRegister.readable(rows).sessions == 0)
+        #expect(AgentProjectRegister.readable(rows, gate: []).projects == 0)
+        #expect(AgentProjectRegister.readable(rows, gate: []).sessions == 0)
     }
 
-    @Test("an unknown session count contributes nothing rather than a guess")
+    @Test("an unknown session count is counted as unknown, not summed as zero")
     func unknownSessionsDoNotInvent() {
+        // The sum is honest and the caller is TOLD it is partial, so it can
+        // drop the clause instead of printing a confident "4 sessions" for a
+        // set whose second member has never been scanned.
         let a = UUID(), b = UUID()
         let rows = AgentProjectRegister.rows(
             candidates: [candidate("known", id: a, sessions: 4),
                          candidate("unknown", id: b, sessions: nil)],
             shown: [a, b], receipts: [])
-        let r = AgentProjectRegister.readable(rows)
+        let r = AgentProjectRegister.readable(rows, gate: [a, b])
         #expect(r.projects == 2)
         #expect(r.sessions == 4)
+        #expect(r.unknown == 1)
     }
 
     @Test("nothing shared reads as zero, not as an absent number")
     func emptyRegister() {
-        let r = AgentProjectRegister.readable([])
+        let r = AgentProjectRegister.readable([], gate: [])
         #expect(r.projects == 0)
         #expect(r.sessions == 0)
+        #expect(r.unknown == 0)
+    }
+
+    // MARK: - What VoiceOver hears
+
+    @Test("the row label joins with commas, because a middot announces as nothing")
+    func labelJoinsWithCommas() {
+        // Straight from SessionsPopoverSpec: VoiceOver pauses on a comma and
+        // reads nothing at all for `·`, so the spoken separator is not the
+        // visible one.
+        let label = AgentProjectRegister.accessibilityLabel(
+            name: "Acme Study", group: "Active",
+            sessions: "3 sessions", lastAsked: "Last asked 12 min ago")
+        #expect(label == "Acme Study, Active, 3 sessions, Last asked 12 min ago")
+    }
+
+    @Test("an absent session count is dropped, not announced as a pause")
+    func labelDropsUnknownSessions() {
+        let label = AgentProjectRegister.accessibilityLabel(
+            name: "Acme Study", group: "Active", sessions: nil, lastAsked: "Never")
+        #expect(label == "Acme Study, Active, Never")
+    }
+
+    @Test("an empty part is dropped rather than doubling a separator")
+    func labelDropsEmptyParts() {
+        let label = AgentProjectRegister.accessibilityLabel(
+            name: "Acme Study", group: "", sessions: "", lastAsked: "Never")
+        #expect(label == "Acme Study, Never")
     }
 }

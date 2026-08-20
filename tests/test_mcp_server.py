@@ -1046,6 +1046,47 @@ class TestHealthAdvertisesMount:
             # antenna would radiate for a project just taken out of scope.
             assert client.get("/api/agent-activity", headers=hdr).json()["calls"] == 1
 
+    def test_desktop_hosted_serve_starts_out_of_scope(self, monkeypatch) -> None:
+        # The Settings register's central claim is that a project with Agent
+        # Access off is not shared — it is absent from the table by design.
+        # With an unconditional `agent_readable = True` that was true by
+        # CONVERGENCE: the host's first PUT closed it, and until then a study
+        # answered anything holding its DURABLE Keychain bearer. One localhost
+        # round-trip wide, and it is the only state where a project the pane
+        # does not list is genuinely readable.
+        #
+        # A desktop-hosted serve has an owner that derives scope from the
+        # window roster, so it starts closed and the host opens it.
+        monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "test-mcp-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            assert app.state.agent_readable is False
+            refused = _rpc(client, "test-mcp-token", "tools/call",
+                           {"name": "get_project_overview", "arguments": {}})
+            assert "out of scope" in refused.text, refused.text
+
+            # …and the host can open it, which is the whole contract.
+            hdr = {"Authorization": "Bearer test-mcp-token"}
+            client.put("/api/agent-scope", json={"readable": True}, headers=hdr)
+            ok = _rpc(client, "test-mcp-token", "tools/call",
+                      {"name": "get_project_overview", "arguments": {}})
+            assert "out of scope" not in ok.text
+
+    def test_cli_serve_stays_in_scope(self, monkeypatch) -> None:
+        # A CLI serve has no windows, so there is no roster to derive scope
+        # from and nothing will ever PUT. The researcher's own `serve` IS the
+        # grant, so the gate stays open — the fail-closed default is desktop
+        # only, and getting that backwards would break every CLI agent.
+        monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "test-mcp-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            assert app.state.agent_readable is True
+            ok = _rpc(client, "test-mcp-token", "tools/call",
+                      {"name": "get_project_overview", "arguments": {}})
+            assert "out of scope" not in ok.text
+
     def test_scope_gate_needs_the_bearer(self) -> None:
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
         app.state.auth_token = "test-mcp-token"

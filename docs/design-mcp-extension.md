@@ -1707,8 +1707,13 @@ surface** — which pairs with the Settings list rather than duplicating it: the
 sidebar answers *what is exposed right now*, Settings answers *what have I
 shared*.
 
-**Only one row can carry it.** The handshake exists for the fronted shared
-project only, so at most one project is exposed at a time. Simple and honest.
+**~~Only one row can carry it.~~ Superseded 20 Aug 2026.** This said the
+handshake existed for the fronted shared project only, so at most one project
+was exposed at a time. That stopped being true when `HandshakeExposure` made
+scope plural and derived: the file now carries a row per project, and every
+project with a live window and Agent Access on is exposed simultaneously. The
+antenna is unaffected — it was already per-row — but the *count* it implied
+was wrong, which is what the Settings register below now answers.
 
 **The state set — three, after cutting two.**
 
@@ -1740,6 +1745,22 @@ and "exposed with codes only" is a materially different governance fact, but it
 is a second axis, and two axes on one glyph is unreadable. It belongs in the
 tooltip and the Settings list.
 
+> **UNCUT 21 Aug 2026 — and the reason the cut was right is the reason it
+> came back.** The cut argued that a second list rendering *the same fact*
+> was a duplicate. It was, while exposure was singular: the sidebar's antenna
+> could carry the whole story, because there was only ever one story. Plural
+> scope (20 Aug) broke that premise — an antenna per row shows you one
+> project's state at a time and never the *set*, so "what have I shared?"
+> stopped having an answer anywhere. The register answers it, and it is a
+> different fact rather than the same one rendered twice.
+>
+> What it is NOT is the matrix that was removed: no per-row Anonymise (that
+> switch is global and stays above the divider), and only projects with Agent
+> Access **on** are listed, so it never becomes a per-project control surface.
+> Granting still lives in the sidebar; the register can only revoke. Spec:
+> `docs/mockups/mcp-agents-pane.html`. The original cut, kept because its
+> argument is still the one that bounds the design:
+>
 > **CUT 1 Aug 2026: the Settings agent-access list.** It was built in
 > `be325728` — every project as a row with a live checkbox, Anonymise on the
 > open project's row — and removed in `76d9e92a` on the user's call as the

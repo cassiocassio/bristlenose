@@ -135,11 +135,12 @@ final class SettingsWindow {
                     // window can open; the guard is defensive shape, not a
                     // real state.
                     Group {
-                        if let serve = self.serveManager, let index = self.projectIndex,
-                           let fleet = self.serveFleet {
-                            MCPAgentsSettingsView(serveManager: serve,
-                                                  projectIndex: index,
-                                                  serveFleet: fleet)
+                        if let index = self.projectIndex, let fleet = self.serveFleet {
+                            // No `serveManager` here on purpose — this closure
+                            // runs ONCE, so anything resolved in it is pinned
+                            // for the process. The pane computes the fronted
+                            // serve in its own body.
+                            MCPAgentsSettingsView(projectIndex: index, serveFleet: fleet)
                         }
                     }
                     .environmentObject(i18n)
@@ -150,6 +151,15 @@ final class SettingsWindow {
             animated: true
         )
     }()
+
+    /// The window itself, for panes that need to know when the visit ends.
+    ///
+    /// `MCPAgentsSettingsView`'s revocation receipts live for one visit, and
+    /// "the visit" is this window being open — not the pane being on screen,
+    /// which the package's tab transition changes underneath it. Reading
+    /// `controller.window` would build the controller on first access; the
+    /// panes only ask once they exist, so by then it is built.
+    var window: NSWindow? { controller.window }
 
     /// Open the Settings window on the last-used pane (Cmd+, / menu).
     func show() {

@@ -271,7 +271,7 @@ is the one moment the audit surface has to point at the management surface.</p>
   <tr><td><code>mcpAgents.colLastAsked</code></td><td>—</td><td><b>Last asked</b></td><td>New · 21</td></tr>
   <tr><td><code>mcpAgents.lastAskedNever</code></td><td>—</td><td><b>Never</b> <span style="color:var(--faint)">— an em-dash announces as nothing</span></td><td>New · 21</td></tr>
   <tr><td><code>mcpAgents.receiptOff</code></td><td>—</td><td><b>Access turned off</b> <span style="color:var(--faint)">— session receipt, gone next open; short to match the column header</span></td><td>New · 21</td></tr>
-  <tr><td><code>mcpAgents.windowMinimised</code></td><td>—</td><td><b>minimised</b> <span style="color:var(--faint)">— explains an Active row with no visible window</span></td><td>New · 21</td></tr>
+  <tr><td><code>mcpAgents.windowMinimised</code></td><td>—</td><td><b>minimised</b> <span style="color:var(--faint)">— explains an Active row with no visible window</span></td><td><b>DEFERRED 21 Aug 2026</b> — not seeded, not built<br><span style="color:var(--faint)">`WindowRoster` deliberately holds no window state (its own doc comment declines to become "an approximation of AppKit's <code>mainWindow</code>"), so this needs new per-window observers plumbed into it. And minimised is only one of four reasons an Active row has no visible window — behind Settings, another Space, and a window tab are the others — so singling it out is arbitrary unless it is the common one. The group header already carries the fact that decides exposure. Additive whenever it is wanted.</span></td></tr>
   <tr><td><code>mcpAgents.emptyTitle</code></td><td>—</td><td><b>No projects are shared with agents</b></td><td>New · 21</td></tr>
   <tr><td><code>mcpAgents.emptyHint</code></td><td>—</td><td><b>Select a project, then choose Project ▸ Turn On Agent Access.</b> <span style="color:var(--faint)">— names the menu-bar path, not a gesture: the HIG calls it Control-click or secondary click, never right-click, and requires every context-menu command to exist in the menu bar anyway</span></td><td>New · 21</td></tr>
   <tr><td><code>mcpAgents.sessionScopeNote</code></td><td>—</td><td><b>Last asked covers this session only — no history is kept.</b> <span style="color:var(--faint)">— the times live in memory per serve, so a project asked yesterday reads Never after a relaunch. Saying so is cheaper than a persistence store, and the reason is a policy rather than an apology: this is the same discipline that keeps an activity timeline off the auth-exempt health route.</span></td><td>New · 21</td></tr>
@@ -317,8 +317,16 @@ is the one moment the audit surface has to point at the management surface.</p>
   should never scroll — past that the sticky headers, which were drawn before
   anything could scroll under them, finally do the job they were drawn for.
   <b>It is a maximum, not a height</b> — fewer than nine rows and the table is
-  as tall as its rows, so the pane shrinks and the Settings package animates
-  the window down, which is the behaviour it was adopted for. Watch this in
+  as tall as its rows, so the pane reports a smaller <code>fittingSize</code>
+  and the Settings package sizes the window to it. <b>Precisely: the package
+  calls <code>setWindowFrame</code> from two places only, both tab
+  activation</b> (measured 21 Aug 2026), so the shrink happens every time you
+  arrive at the pane and <i>not</i> live while you are looking at it — a row
+  appearing or disappearing under your eyes compresses rather than resizes.
+  That does not weaken the rule: a clamped greedy <code>ScrollView</code> would
+  report 342pt for two rows <i>at activation too</i>, so the pane would open
+  tall and empty every single time. The switch pays for itself at the only
+  moment the package measures anything. Watch this in
   the build: SwiftUI's <code>ScrollView</code> is greedy along its scroll axis,
   so <code>ScrollView { rows }.frame(maxHeight: 342)</code> claims all 342pt
   even for two rows and the shrink never happens. Switch on the row count
@@ -455,10 +463,21 @@ is the one moment the audit surface has to point at the management surface.</p>
   that isn't. It earns its place in the cloud-import grid, which spans weeks of
   meetings; here it would be furniture.</li>
 
-  <li><b>Keyboard and VoiceOver, which a mockup cannot show but the spec must
-  state:</b> rows are selectable, arrows move between them, Space toggles the focused
-  row's Agent Access. The antenna needs an accessibility label per tier — it is
-  otherwise a bare glyph.</li>
+  <li><b>Keyboard and VoiceOver — what was specified, and what shipped
+  (21 Aug 2026).</b> The spec asked for selectable rows, arrows between them,
+  Space on the focused row. <b>Built:</b> each row's checkbox is focusable and
+  Space toggles it; there is no selection model and no arrow navigation.
+  <b>The honest cost:</b> Tab only reaches checkboxes when System Settings ▸
+  Keyboard ▸ Keyboard navigation is on, and it is <i>off</i> by default — and
+  this pane has no text fields, so on a stock Mac Tab does nothing here. Arrow
+  traversal is what <code>Table</code> would have given free, and is the
+  strongest argument against the hand-built table; it lost to the pane-shrink
+  behaviour, which <code>Table</code> cannot provide because it has no intrinsic
+  height. What was bought back instead: a composed per-row accessibility label
+  (<code>AgentProjectRegister.accessibilityLabel</code>, commas not middots,
+  carrying name + group + sessions + last-asked), the glyph hidden, and the
+  full cell as the checkbox's hit area. Revisit if a cohort tester reaches for
+  the arrows.</li>
 </ul>
 
 <p class="why"><b>Resolved:</b> the sidebar's context menu uses a verb swap

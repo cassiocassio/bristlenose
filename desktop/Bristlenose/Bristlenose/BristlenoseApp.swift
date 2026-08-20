@@ -185,6 +185,14 @@ struct BristlenoseApp: App {
                     serveFleet.agentAccessResolver = { [weak projectIndex] path in
                         projectIndex?.agentAccess(forPath: path) ?? false
                     }
+                    // …and the same permission keyed by id, which is what
+                    // `syncHandshake` reads. The path-keyed form resolves
+                    // first-match, so two entries whose paths standardise
+                    // equal could answer for each other; the Settings register
+                    // keys on the id, and the two must read one value.
+                    serveFleet.agentAccessByID = { [weak projectIndex] id in
+                        projectIndex?.projects.first { $0.id == id }?.agentAccess ?? false
+                    }
                     // A sidecar bakes provider, model, key, anonymise and
                     // consent into its environment at spawn. One notification,
                     // N sidecars — the action is a fan-out, not a restart.
@@ -195,15 +203,14 @@ struct BristlenoseApp: App {
                     agentAccessFanOut = NotificationCenter.default.addObserver(
                         forName: .bristlenoseAgentAccessChanged, object: nil, queue: .main
                     ) { note in
-                        guard let id = note.userInfo?["id"] as? UUID,
-                              let enabled = note.userInfo?["enabled"] as? Bool else { return }
+                        // The payload is deliberately unread. Scope is derived
+                        // from the permission plus the window roster, so the
+                        // sweep re-reads every project — which is also what
+                        // makes it correct when several change at once. Binding
+                        // `id`/`enabled` to silence them was the shape that
+                        // left one of the two as a build warning; this target
+                        // has no CI, so warnings are its only mechanical signal.
                         Task { @MainActor in
-                            // Permission changed; scope is derived from it plus
-                            // the window roster, so re-derive rather than
-                            // designate. `id` is unused: the sweep reads every
-                            // project, which is also what makes it correct when
-                            // several change at once.
-                            _ = id
                             serveFleet.syncHandshake()
                         }
                     }

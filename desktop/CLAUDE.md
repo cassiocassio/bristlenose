@@ -343,9 +343,18 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   hint; Claude Code / ChatGPT & Codex / Generic MCP = copyable dialects,
   pinned by `MCPAgentsSettingsViewTests`). Pane width is 660 — identical
   to the other three panes; the Settings package animates height only.
-  **There is deliberately NO per-project list here** (retired 1 Aug 2026
-  as over-build): the sidebar's menu is the act and the antenna is the
-  audit — one concept, one home.
+  **A per-project register sits under the divider** (21 Aug 2026,
+  `docs/mockups/mcp-agents-pane.html`): which studies an agent can read,
+  which could be, sessions, and when each was last asked. It was cut on
+  1 Aug as over-build — *"the sidebar's menu is the act and the antenna is
+  the audit"* — and that argument stopped holding when the handshake went
+  plural on 20 Aug: an antenna per row cannot answer "what have I shared"
+  for N projects at once. **Scope: only projects with Agent Access ON.**
+  An off project is out of scope by definition, not missing — this is a
+  risk register, not a control surface, and granting still happens in the
+  sidebar. The rows are derived by `AgentProjectRegister` and the headline
+  count prints `ServeFleet.readableProjects` — `syncHandshake`'s own gate
+  set — so the audit surface and the gate cannot disagree.
 - **Turn On/Off Agent Access** — verb swap, not a checkmark (§3.6a).
   Context menu (`buildProjectMenu`): its own group below housekeeping,
   HIDDEN unless `AgentAccessPolicy.canShare` (locatable AND analysed —

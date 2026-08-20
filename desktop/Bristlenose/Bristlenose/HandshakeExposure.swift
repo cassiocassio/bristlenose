@@ -119,6 +119,16 @@ enum HandshakeExposure {
     static func readableProjects(candidates: [UUID: Candidate],
                                  shown: Set<UUID>,
                                  agentAccess: (UUID) -> Bool) -> Set<UUID> {
-        Set(candidates.keys.filter { shown.contains($0) && agentAccess($0) })
+        Set(candidates.filter { id, candidate in
+            // `.failed` is excluded, and it is the one serve state that is not
+            // a beat. A starting serve belongs here — that is the whole point
+            // of the set being wider than `entries` — but a sidecar that
+            // failed to spawn cannot answer anything, and leaving it in makes
+            // the Settings register print it under "Readable now" for as long
+            // as the window stays open. Closing the gate on it is a no-op for
+            // the serve and a truthful subtraction for the audit surface.
+            if case .failed = candidate.state { return false }
+            return shown.contains(id) && agentAccess(id)
+        }.keys)
     }
 }

@@ -1010,9 +1010,23 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
     # on an NTP step. Trade-off, documented in health.py: mach_absolute_time
     # pauses across sleep, so elapsed time under-counts by the sleep — fine
     # for health's 2-minute freshness bool, wrong for anything longer.
-    # Scope gate. True by default: the CLI has no windows, so a CLI serve is
-    # always in scope. The desktop drives it from the window roster.
-    app.state.agent_readable = True
+    # Scope gate. Open for a CLI serve — there are no windows, so there is no
+    # roster to derive scope from and the researcher's own `serve` invocation
+    # IS the grant. Closed for a desktop-hosted serve, which has an owner:
+    # `ServeFleet.syncHandshake` derives the readable set from the window
+    # roster and pushes it, so the host decides, not the default.
+    #
+    # This used to be an unconditional True with a CLI-shaped comment. The
+    # desktop pane's claim is that a project absent from the register is not
+    # shared — and with a fail-open default that was true by *convergence*
+    # (the host's first PUT closes it) rather than by construction. A study
+    # whose Agent Access was turned off would answer any caller holding its
+    # durable Keychain bearer for one localhost round-trip after each spawn.
+    # One round trip is small; "true by construction" is the sentence that
+    # survives a hostile reading, and it costs one line.
+    app.state.agent_readable = (
+        os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") != "1"
+    )
     app.state.mcp_last_tool_call = None
     # The proxy's self-reported build, filled by ProxyIdentityRecorder on the
     # first call THROUGH THE EXTENSION. None is not "out of date" — but nor is
@@ -1036,7 +1050,9 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
         app.state.mcp_tool_calls = int(getattr(app.state, "mcp_tool_calls", 0) or 0) + 1
 
     def _readable() -> bool:
-        return bool(getattr(app.state, "agent_readable", True))
+        # Defaults to False: a missing attribute means the mount did not
+        # finish, which is not a reason to answer questions about a study.
+        return bool(getattr(app.state, "agent_readable", False))
 
     server = create_mcp_server(session_factory, _last_run, _record_activity, _readable)
     http_app = server.streamable_http_app(

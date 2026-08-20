@@ -83,6 +83,11 @@ final class ServeFleet: ObservableObject {
     /// and collapsing it to one would pick an arbitrary winner.
     @Published private(set) var lastAgentCallAt: [UUID: Date] = [:]
 
+    /// The projects an agent can reach right now — `syncHandshake`'s own gate
+    /// set, republished rather than re-derived. The audit surface and the gate
+    /// then cannot disagree, because there is only one derivation.
+    @Published private(set) var readableProjects: Set<UUID> = []
+
     /// Nested `ObservableObject`s do not propagate through `@EnvironmentObject`,
     /// and the failure is silent — so every manager's change is re-published as
     /// the fleet's own. Same contract `ServeManager` holds over `ServeInstance`,
@@ -125,6 +130,11 @@ final class ServeFleet: ObservableObject {
         unshownSince[project] = nil
         managers[project] = nil
         observations[project] = nil
+        // The project is leaving the sidebar entirely, so its activity record
+        // goes with it — unlike a reap, which keeps it (see the merge in
+        // `refreshAppLevelFacts`). A removed project has no row to render it.
+        lastAgentCallAt[project] = nil
+        readableProjects.remove(project)
         if frontedProject == project { frontedProject = nil }
         // Through `setExposed`, not a bare assignment: the project is being
         // removed from the sidebar, so the stored id must go too or a later
@@ -161,9 +171,20 @@ final class ServeFleet: ObservableObject {
     /// Injected once and applied to every manager the fleet creates — the
     /// handshake writer's policy input. Set on the fleet rather than on each
     /// manager so a project whose serve starts later cannot miss it.
+    ///
+    /// Path-keyed, and kept for the per-manager consumers that only hold a
+    /// path. `syncHandshake` no longer uses it — see `agentAccessByID`.
     var agentAccessResolver: ((String) -> Bool)? {
         didSet { managers.values.forEach { $0.agentAccessResolver = agentAccessResolver } }
     }
+
+    /// The same permission, keyed the way every other consumer keys it.
+    ///
+    /// The Settings register reads `Project.agentAccess` by `UUID`; so does
+    /// this. One lookup, one answer, and the register's claim that its groups
+    /// cannot disagree with the handshake becomes structural rather than
+    /// coincidental.
+    var agentAccessByID: ((UUID) -> Bool)?
 
     func isRunning(_ project: UUID) -> Bool {
         managers[project]?.runningPort != nil
@@ -289,11 +310,25 @@ final class ServeFleet: ObservableObject {
                 token: manager.mcpToken,
                 key: manager.projectKey)
         }
-        let resolver = agentAccessResolver
-        let access: (UUID) -> Bool = { id in
-            guard let path = candidates[id]?.path else { return false }
-            return resolver?(path) ?? false
-        }
+        // By **id**, not by path. The resolver takes a path and answers
+        // `projects.first { samePath($0.path, path) }?.agentAccess` — first
+        // match wins — while the Settings register reads `agentAccess` keyed
+        // on `UUID`. Two lookups for one predicate, and they can disagree:
+        // two sidebar entries whose paths standardise equal (A on, B off)
+        // make this resolve B's serve through A's flag, so B is exposed while
+        // the register omits it entirely, because access-off means absent.
+        // That is the one state where the pane says "not shared" and an agent
+        // can read. `findByPath` dedupes on exact `==` and `relocateProject`
+        // has no duplicate guard, so it is narrow rather than closed.
+        //
+        // The mirror case is bookmark healing: it respells `project.path`
+        // while the manager holds the spawn-time spelling, so `samePath`
+        // fails, the gate closes, and the register still shows the row
+        // exposed. Over-claim rather than under-claim, but the same defect.
+        //
+        // Keying on the id both sides already have makes them read one value.
+        let byID = agentAccessByID
+        let access: (UUID) -> Bool = { id in byID?(id) ?? false }
 
         let entries = HandshakeExposure.entries(
             candidates: candidates, shown: shown, agentAccess: access)
@@ -315,6 +350,10 @@ final class ServeFleet: ObservableObject {
         for (id, manager) in managers {
             manager.setAgentScope(readable: readable.contains(id))
         }
+        // Published so Settings ▸ MCP Agents can print the gate set itself
+        // rather than computing a second opinion of it. "Readable now: N" is
+        // then the same set the gate closes on, by construction.
+        if readable != readableProjects { readableProjects = readable }
     }
 
     /// Mirror the facts that are about the app rather than a sidecar.
@@ -330,9 +369,18 @@ final class ServeFleet: ObservableObject {
         let mounted = managers.values.contains { $0.mcpMounted }
         if mounted != mcpMounted { mcpMounted = mounted }
 
-        var calls: [UUID: Date] = [:]
-        for (id, manager) in managers where manager.lastAgentCallAt != nil {
-            calls[id] = manager.lastAgentCallAt
+        // Merged, not rebuilt. `refreshAppLevelFacts` is only ever called from
+        // a manager's own change sink, and `discard` drops the manager without
+        // recomputing — so a rebuilt-from-scratch map lost a reaped project's
+        // timestamp the moment SOME OTHER manager's 20 s poll fired. Close a
+        // window, wait out the 90 s grace, and the cell rendered "Never": a
+        // positive claim that no agent ever asked, about a project asked about
+        // twelve minutes ago, appearing only when a second serve happened to
+        // be running. The scope note under the table promises the times last
+        // for the session; the session is not over when a sidecar is reaped.
+        var calls = lastAgentCallAt
+        for (id, manager) in managers {
+            if let at = manager.lastAgentCallAt { calls[id] = at }
         }
         if calls != lastAgentCallAt { lastAgentCallAt = calls }
     }

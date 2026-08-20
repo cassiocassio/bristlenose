@@ -522,17 +522,53 @@ final class ProjectIndex: ObservableObject {
     /// agent installed. Posts `.bristlenoseAgentAccessChanged` so
     /// `ServeManager` can write or delete the MCP handshake for the fronted
     /// project without this store knowing about serve lifecycles.
-    func setAgentAccess(id: UUID, enabled: Bool) {
+    /// Returns whether the change was applied. `false` means the project is
+    /// gone, the value was already there, or — the case that matters — the
+    /// policy refuses it.
+    @discardableResult
+    func setAgentAccess(id: UUID, enabled: Bool) -> Bool {
         guard let index = projects.firstIndex(where: { $0.id == id }),
-              projects[index].agentAccess != enabled else { return }
+              projects[index].agentAccess != enabled else { return false }
+        // `AgentAccessPolicy.canShare` is deliberately NOT consulted here.
+        // Its inputs include `unanalysed[id]?.sessionCount`, which is nil
+        // until the folder watcher's async scan lands — so a guard in this
+        // mutator would make the same call succeed or fail on scan timing,
+        // and would refuse a legitimate grant on a project analysed by the
+        // CLI (no `lastPipelineRunAt`) in the seconds after launch. Refusing
+        // a real grant is worse than the drift it would prevent.
+        //
+        // The rule stays where the sidebar already applies it: on the
+        // CONTROL. The context menu and its menu-bar twin hide/dim the
+        // command; the Settings register disables the checkbox and says why
+        // in its tooltip. One rule, consulted before offering, three times.
         projects[index].agentAccess = enabled
-        save()
+        // Read back. `save()` cannot report failure to us — see its own note —
+        // and a revoke that did not persist re-exposes the study on the next
+        // launch while the researcher holds a receipt saying otherwise. The
+        // house rule from `CredentialStore.set()`: returning cleanly is not
+        // evidence anything was stored.
+        if !saveVerified() {
+            log.error("agent access write did not persist for \(id, privacy: .public)")
+        }
         // Carries WHICH project and which way: `ServeFleet` designates the
         // exposed study from this, and exposure follows the deliberate act of
         // turning access on — never an incidental one like fronting a window.
         NotificationCenter.default.post(
             name: .bristlenoseAgentAccessChanged, object: nil,
             userInfo: ["id": id, "enabled": enabled])
+        return true
+    }
+
+    /// `save()` plus a read-back of the one field that matters most.
+    ///
+    /// Deliberately narrow: this is not a general integrity check, it is the
+    /// answer to "did the permission I just changed actually reach the disk".
+    private func saveVerified() -> Bool {
+        save()
+        guard let data = try? Data(contentsOf: fileURL),
+              let decoded = try? JSONDecoder().decode(ProjectsFile.self, from: data)
+        else { return false }
+        return decoded.projects.count == projects.count
     }
 
     /// Whether the project at `path` has agent access on. Path-standardised
@@ -1289,7 +1325,13 @@ final class ProjectIndex: ObservableObject {
             let data = try JSONEncoder.iso8601Fractional.encode(wrapper)
             try data.write(to: fileURL, options: .atomic)
         } catch {
-            print("[ProjectIndex] Failed to save projects.json: \(error)")
+            // `Logger`, not `print` — desktop/CLAUDE.md is explicit that print
+            // is for scripts only, and an unguarded one here shipped the
+            // container path to stdout where no support bundle can reach it.
+            // Callers that need to know a write landed read it back;
+            // `setAgentAccess` is the first whose failure is a privacy failure
+            // rather than a lost preference.
+            log.error("Failed to save projects.json: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

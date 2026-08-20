@@ -22,6 +22,13 @@ struct BootView: View {
         /// Sidecar failed to start. `message` is shown verbatim under the
         /// status line; `retry` reattempts; `details` reveals raw output.
         case failed(message: String, retry: () -> Void)
+        /// Lazy start: this window has a study but deliberately has not begun
+        /// serving it, because nobody is looking. Renders **at rest** — no verb,
+        /// no motion. `.idle` used to map to `.startingSidecar`, which was true
+        /// when idle only ever meant "about to start"; under lazy start it made
+        /// eleven background windows each animate a claim that nothing was
+        /// happening behind. Absence is the information.
+        case deferred
     }
 
     let phase: Phase
@@ -45,11 +52,21 @@ struct BootView: View {
         project.map { serveFleet.manager(for: $0) }
     }
 
+    private var showsActivity: Bool {
+        if case .deferred = phase { return false }
+        return true
+    }
+
     private var statusText: String {
         switch phase {
         case .startingSidecar: i18n.t("desktop.boot.startingSidecar")
         case .loadingReport: i18n.t("desktop.boot.loadingReport")
         case .failed: i18n.t("desktop.boot.failedTitle")
+        // No verb for a window that has deliberately not begun. Deferring is not
+        // a status the researcher needs narrated, and naming it would invite a
+        // string that has to be true in 21 languages for a state nobody asked
+        // about. The window shows the app at rest until it is looked at.
+        case .deferred: ""
         }
     }
 
@@ -106,6 +123,16 @@ struct BootView: View {
     @ViewBuilder
     private var statusZone: some View {
         switch phase {
+        case .deferred:
+            // Nothing. This window has a study and has deliberately not begun
+            // serving it, because nobody is looking — so there is no activity to
+            // report and a bar would be a claim, not a status. Absence is the
+            // information. It also matters at scale: eleven background windows
+            // each animating an indeterminate bar is visible in Mission Control,
+            // costs battery, and makes "hasn't begun" indistinguishable from
+            // "wedged". The bar starts when the serve does.
+            EmptyView()
+
         case .startingSidecar, .loadingReport:
             // Just the bar — unchanged. The confusing text is what's removed here.
             ProgressView()

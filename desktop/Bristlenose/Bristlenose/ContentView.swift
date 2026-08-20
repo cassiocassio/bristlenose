@@ -313,8 +313,23 @@ struct ContentView: View {
     @State private var switchTask: Task<Void, Never>?
 
     /// A study this window wants served, deferred until the window is looked at.
-    /// See the lazy-start note in `applySelectionChange`.
-    @State private var pendingStart: String?
+    ///
+    /// Carries the **project id as well as the path**. Holding a bare path let a
+    /// stale defer fire against whatever study the window had moved on to:
+    /// defer A → A removed → pick C → lose and regain key → C's manager started
+    /// on A's folder. Window titled C, sidebar highlighting C, sidecar serving
+    /// A — and `Send to Miro` would export A's quotes to a board named C.
+    @State private var pendingStart: (id: UUID, path: String)?
+
+    /// A live mirror of `isKeyWindow`, for reading inside an async Task.
+    ///
+    /// `controlActiveState` is an `@Environment` value resolved into the view
+    /// *value*, so a Task started from `body` captures the state as it was a
+    /// turn ago. A window that became key in between took the defer branch and
+    /// nothing re-armed it — `.onChange(of: isKeyWindow)` had already fired —
+    /// so it sat unstarted until the user clicked away and back. The converse
+    /// bit the folder loop: each window is transiently key as it is created.
+    @State private var windowIsKey = false
     /// In-flight retry task that reloads the detail WebView after a run finishes
     /// — see scheduleReportReloadIfNeeded.
     @State private var reportReloadTask: Task<Void, Never>?
@@ -595,6 +610,7 @@ struct ContentView: View {
         // notifications covered.
         .onChange(of: isKeyWindow, initial: true) { _, isKey in
             bridgeHandler.setWindowActive(isKey)
+            windowIsKey = isKey
             // The other half of lazy start: a window that deferred its serve
             // because nobody was looking at it starts now that they are.
             //
@@ -602,9 +618,12 @@ struct ContentView: View {
             // if a preference or the consent state changed while it was in the
             // background, the exception that makes the lazy env fan-out safe.
             guard isKey else { return }
-            if let path = pendingStart, let id = selectedProjectID {
+            if let pending = pendingStart {
                 pendingStart = nil
-                serveFleet.manager(for: id).start(projectPath: path)
+                // Only if the window still shows the study the defer was for.
+                if pending.id == selectedProjectID {
+                    serveFleet.manager(for: pending.id).start(projectPath: pending.path)
+                }
             }
             if let id = selectedProjectID { serveFleet.front(id) }
         }
@@ -679,34 +698,23 @@ struct ContentView: View {
             // restored windows come back on five studies rather than five
             // copies of whichever was selected last.
             if selection.isEmpty {
-                // **A window opens on a study only if something asked it to.**
+                // **A window opens on a study only if its seed names one.**
                 //
-                // The presence of a seed is that ask. `⌥⌘N` and both Open in New
-                // Window commands always seed; a restored window carries the seed
-                // it wrote back. Launch with nothing to restore, and the Dock
-                // reopen, seed nothing — and those are the two cases that now
-                // land on **Welcome** rather than conjuring a study.
+                // No fallback, deliberately — and this is the second attempt.
+                // The first kept a "last-used study" fallback for a seed with no
+                // project, which made ⌥⌘N from a **Welcome** window open a study:
+                // observed 20 Aug, and wrong twice over. New Window's job is
+                // *another view of what I'm looking at*, and what you are looking
+                // at is Welcome; and the fallback conjured a sidecar on a study
+                // the researcher had not chosen, which is the exact decision the
+                // launch behaviour above exists to stop the app making.
                 //
-                // That is not only taste. Opening straight into a study spawns a
-                // sidecar — a process, a port, ~140 MB — before the researcher
-                // has done anything, and under one-serve-per-project that is a
-                // decision the app should not make on their behalf. The study is
-                // one click away.
-                //
-                // The fallback within a seeded open still matters: ⌥⌘N from a
-                // window with no study seeds no project, and *there* the
-                // last-used study is the right answer. Note "seeded" has to mean
-                // *names a study that exists*, not merely non-nil — the seed
-                // carries a token, so an `??` on nil-ness alone would swallow the
-                // fallback.
-                let known: (UUID?) -> UUID? = { id in
-                    guard let id, projectIndex.projects.contains(where: { $0.id == id })
-                    else { return nil }
-                    return id
-                }
-                let fallback = persistedProjectID.isEmpty
-                    ? nil : UUID(uuidString: persistedProjectID)
-                if let seed, let wanted = known(seed.project) ?? known(fallback) {
+                // Restoration is unaffected: a restored window carries the seed
+                // it wrote back. `@AppStorage("selectedProjectID")` keeps only
+                // its non-window jobs; it stopped being *the* selection the
+                // moment windows became independent.
+                if let wanted = seed?.project,
+                   projectIndex.projects.contains(where: { $0.id == wanted }) {
                     selection = [.project(wanted)]
                 }
             }
@@ -1063,8 +1071,26 @@ struct ContentView: View {
                         // `design-workspace.md`'s memory model already said this
                         // — live-if-visible, discarded-if-occluded — and
                         // `ServeReaping` is the other half.
-                        guard isKeyWindow else {
-                            pendingStart = path
+                        //
+                        // **Live question, parked 20 Aug — judge by feel first.**
+                        // This gates on `isKeyWindow`, which is live-if-*focused*
+                        // and stricter than the model's live-if-*visible*: three
+                        // windows side by side on a big screen are all visible,
+                        // only one is key, so two sit unstarted while you look
+                        // straight at them. `NSWindow.occlusionState` is the
+                        // honest signal and switching is cheap.
+                        //
+                        // Whether any of it is tolerable depends on **cold-start
+                        // time**, which nobody has measured since the A2 warm
+                        // pool was deleted — and that pool existed precisely
+                        // because cold start was "multi-second". Under ~500 ms
+                        // lazy is invisible; at multi-second it grates on every
+                        // switch regardless of the predicate. Measure before
+                        // tuning, and be willing to revert to eager and pay the
+                        // memory: the researcher expects to switch context and
+                        // see their work.
+                        guard windowIsKey else {
+                            pendingStart = (id: id, path: path)
                             return
                         }
                         serveFleet.manager(for: id).start(projectPath: path)
@@ -1088,6 +1114,7 @@ struct ContentView: View {
                 }
             }
         case .folder(let id):
+            pendingStart = nil
             persistedProjectID = ""
             bridgeHandler.selectedProjectPath = ""
             bridgeHandler.selectedProjectRevealablePath = ""
@@ -1099,6 +1126,7 @@ struct ContentView: View {
             stopServeIfLastProjectWindow()
         default:
             // Multi-select or empty — stop serve, clear state.
+            pendingStart = nil
             persistedProjectID = ""
             bridgeHandler.selectedProjectPath = ""
             bridgeHandler.selectedProjectRevealablePath = ""
@@ -2891,7 +2919,13 @@ struct ContentView: View {
                     // about. Non-optional by construction, which is why this
                     // switch needs no nil arm.
                     switch serveFleet.manager(for: project.id).state {
-                    case .idle, .starting:
+                    // `.idle` used to mean "about to start" and mapped to the
+                    // same view as `.starting`. Under lazy start it also means
+                    // "deliberately deferred", and those must not look alike.
+                    case .idle:
+                        BootView(phase: .deferred, project: project.id)
+
+                    case .starting:
                         BootView(phase: .startingSidecar, project: project.id)
 
                     // **The window's project is not what the sidecar is serving.**

@@ -1670,7 +1670,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         case .lens(let tab):
             menuClickedNodeID = nil
             menuClickedLens = tab
-            buildLensMenu(menu)
+            // Only when the lenses are actually live. Lens rows are always
+            // present and merely *dimmed* when no report is showing — so
+            // without this you could right-click a visibly-dimmed Quotes row on
+            // the Welcome screen and get a window on a study you never named.
+            // A context menu shows what is relevant; a dimmed row has nothing.
+            if lensesEnabled { buildLensMenu(menu) }
         case .group:           menuClickedNodeID = nil   // no menu on group headers
         }
     }
@@ -1692,9 +1697,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     @objc private func menuOpenFolderInNewWindows(_ sender: NSMenuItem) {
         guard let id = menuClickedNodeID, let index = projectIndex else { return }
+        _ = index
         // Sidebar order, so the windows arrive in the order the researcher sees
         // them rather than whatever the model iterates in.
-        for project in index.projects where project.folderId == id {
+        for project in index.projects
+        where project.folderId == id
+        {
             onOpenInNewWindow(project.id)
         }
     }

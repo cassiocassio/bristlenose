@@ -1,8 +1,52 @@
 ---
-status: current
-last-trued: 2026-06-21
+status: archived-reference
+last-trued: 2026-08-20
+trued-against: HEAD@main on 2026-08-20
+superseded-by: [docs/design-workspace.md]
 trued-against: HEAD@main on 2026-06-21
 ---
+
+> # ⚠️ SUPERSEDED 20 August 2026 — the mechanism this document describes was deleted
+>
+> **Stage 3b landed one `bristlenose serve` sidecar per project**, and with it the
+> A2 warm-sidecar pool — the entire subject of this doc — became unreachable.
+> `switchProject(to:)` has **zero callers**; `parked` is written only from inside
+> it, so the slot is structurally always nil and `drainParked()` drains nothing.
+> The code still compiles and every anchor below still resolves. **It is dead, not
+> deleted** — which is exactly what makes this banner necessary.
+>
+> **What replaced it, and it is a different shape rather than a better pool:**
+> teardown is now **derived, not paired** — `ServeReaping` answers from
+> `WindowRoster.shownProjects` on every roster change, with a ~90 s grace period
+> (`ServeReaping.swift`), plus **lazy start**: a background window does not spawn
+> a sidecar until it is looked at. No cap, no LRU. This doc predicted "the same
+> small cap + LRU as the sidecar pool, ideally a shared eviction policy", and
+> predicted a view-pool manager for the WebViews. Neither happened;
+> `WindowGroup(id:for:)` per-window scenes did the job. **The delta is preserved
+> deliberately** — the Tier 0/1/2 table and §"What A2 actually bought" are the
+> pre-contact baseline the shipped answer reads against.
+>
+> **One prediction inverted.** §"What A2 actually bought" says A2 "dissolved the
+> crash". Deleting `switchProject` took its same-path guard with it and
+> reintroduced exactly that failure — *"Server exited before becoming ready (code
+> 2)"* — when two windows showed one study. Restored on the manager where it
+> always belonged (`da5081c4`).
+>
+> **Measured since, and this doc has none of it:** one sidecar is **144.7 MB** on a
+> 42-session project; three studies is three sidecars at **140.8 / 138.1 / 137.3 MB**
+> (~416 MB). The per-project cost is flat and does **not** track session count.
+> WebKit dominates at ~70 MB per window content process. See
+> `docs/design-workspace.md` § changelog 2026-08-20.
+>
+> **Still live and NOT superseded:** §"Future optimisations → 1. Fix the
+> warm-switch progress treatment" — the response-time literature
+> (Miller/Nielsen/Doherty), the three-feedback-channel model, and the
+> reject-minimum-display argument survive Stage 3b intact and have no other home.
+> Its prerequisite needs re-anchoring: measure **window-open → SPA `ready` for a
+> lazily-started sidecar**, since no re-point path exists to instrument. That
+> number now decides whether lazy start survives at all.
+>
+> **Successor:** `docs/design-workspace.md`.
 
 ## Changelog
 

@@ -38,7 +38,7 @@ Items that look fully active (no dimming) but do nothing when clicked.
 - [x] **Diagnostics ▸ Check Health** (`checkSystemHealth`) — **wired** (28 Jul
   2026, see "In progress" above). Opens the native Health window; the dead
   bridge action is gone.
-- [ ] **File ▸ Open in New Window** (`openInNewWindow`, ⇧⌘O) — no web handler.
+- [x] **File ▸ Open in New Window** (`openInNewWindow`, ⇧⌘O) — ~~no web handler.~~ **Closed by retirement, 20 Aug 2026**, not by wiring one: the command had no referent distinct from `File ▸ New Window`. The capability lives on in three sidebar context-menu items, which act on a *clicked* row rather than the front window.
   _Only remaining group-A item._
 
 ## Closed 30 Jul 2026 (mechanical sweep)

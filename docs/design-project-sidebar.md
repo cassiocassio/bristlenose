@@ -245,7 +245,7 @@ File
 ┌──────────────────────────────┐
 │ New Project…           ⌘N    │
 │ New Folder…            ⇧⌘N   │
-│ Open in New Window…    ⇧⌘O   │
+│ New Window             ⌥⌘N   │   ← ⇧⌘O retired 20 Aug 2026
 ├──────────────────────────────┤
 │ Export Report…         ⇧⌘E   │
 │ Export Anonymised…            │

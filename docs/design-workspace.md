@@ -579,6 +579,17 @@ gets opened by accident today.
 ⌥⌘N rather than ⌘N because ⌘N is New Project. That is Mail's exact split — ⌘N makes
 a new *thing* (a message), ⌥⌘N makes a new *window onto existing things*.
 
+> **Superseded 20 Aug 2026 — ⇧⌘O was retired, not shipped.** The reasoning below
+> (two different commands: New Window opens another view of the project showing;
+> Open in New Window opens the *selected* project) turned out to have **no
+> referent in this app**. Selecting a study in the sidebar *is* how a window comes
+> to show it, so the two inputs are one input — and the code agreed, both reading
+> `frontProjectID`. The capability survives as three **sidebar context-menu**
+> items, which act on a *clicked* row and therefore do have an arbitrary target
+> the menu bar lacks. Preserved because the argument was right about wanting the
+> capability and wrong about where it lives.
+
+
 **Shipped 16 Aug 2026**, and it turned up a sibling the design hadn't accounted
 for. `File ▸ Open in New Window` (⇧⌘O) already existed — the item whose deadness
 opened this whole line of work — dispatching `menuAction("openInNewWindow")` to

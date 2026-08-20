@@ -98,7 +98,8 @@ item gets an icon.
 | New Project (⌘N) | `plus` (alt `doc.badge.plus`) | Finder New Folder trend | 2 |
 | New Folder (⇧⌘N) | `folder.badge.plus` | Finder | 2 |
 | Add Files… (⇧⌘A) | `plus.rectangle.on.folder` (alt `doc.badge.plus`) | Mail Attach | 2 |
-| Open in New Window (⇧⌘O) | `macwindow.badge.plus` | — | 2 |
+| ~~Open in New Window (⇧⌘O)~~ | ~~`macwindow.badge.plus`~~ | **RETIRED 20 Aug 2026** — see `design-desktop-menu-actions.md` | — |
+| New Window (⌥⌘N) | `macwindow` | Clones the front window's study **and** lens | 1 |
 | Export Report… (⇧⌘E) | `square.and.arrow.up` | Share/Export everywhere; **matches toolbar** | **1** |
 | Export Anonymised… | `square.and.arrow.up` + note | same family as Export; distinguish by label not glyph | 2 |
 | Page Setup… | — | Apple leaves iconless | never |

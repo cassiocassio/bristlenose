@@ -16,10 +16,14 @@
   display: none !important;
 }
 
-/* --- Badge delete/accept/deny buttons (keep badges, hide controls) --- */
+/* --- Badge delete/accept/deny buttons (keep badges, hide controls) ---
+   The accept/deny compartments live inside .badge-action-pill and are named
+   .badge-action-accept / .badge-action-deny (the pill replaced the old inline
+   ✓/✗ — see docs/design-badge-action-pill.md). This rule named the pre-pill
+   .badge-accept / .badge-deny for a while and so matched nothing; hide the
+   container, which covers both compartments however they are named inside. */
 .bn-export-mode .badge-delete,
-.bn-export-mode .badge-accept,
-.bn-export-mode .badge-deny {
+.bn-export-mode .badge-action-pill {
   display: none !important;
 }
 
@@ -36,18 +40,26 @@
   cursor: default !important;
 }
 
-/* --- Tag input ("+ tag" links in codebook and quotes) --- */
-.bn-export-mode .bn-tag-input,
-.bn-export-mode .codebook-add-tag {
+/* --- Tag input ("+ tag" links in codebook and quotes) ---
+   .tag-input-wrap is the container TagInput renders (input + ghost layer +
+   sizer); hiding it covers the whole widget however its innards are named.
+   .tag-add-row is the codebook group's "+ tag" row — it is NOT gated by
+   isReadOnly in CodebookPanel, so this rule is the only thing hiding it. */
+.bn-export-mode .tag-input-wrap,
+.bn-export-mode .tag-add-row {
   display: none !important;
 }
 
-/* --- Hidden-quote counter (unhide controls) --- */
-.bn-export-mode .bn-counter {
+/* --- Hidden-quote counter (unhide controls) ---
+   Counter renders .bn-hidden-badge, not .bn-counter (that name survives only as
+   a data-testid).  Hide the badge and the whole dropdown goes with it. */
+.bn-export-mode .bn-hidden-badge {
   display: none !important;
 }
 
-/* --- Codebook mutation controls --- */
+/* --- Codebook mutation controls ---
+   .codebook-picker-btn is the "Browse codebooks" header button; the picker it
+   opens fetches from a server that isn't there offline. */
 .bn-export-mode .new-group-placeholder,
 .bn-export-mode .codebook-picker-btn,
 .bn-export-mode .autocode-btn,
@@ -61,7 +73,11 @@
   -webkit-user-drag: none;
 }
 
-/* --- Export button itself (hidden when viewing an export) --- */
-.bn-export-mode .bn-export-btn {
-  display: none !important;
-}
+/* --- Export button itself ---
+   No rule needed: ExportDropdown returns null under isExportMode(), so the
+   toolbar control never reaches the DOM.  The rule that used to sit here named
+   .bn-export-btn, a class the SPA has never rendered; removed 15 Aug 2026.
+
+   Every class above is pinned by tests/test_export_css_selectors.py — rename a
+   control in frontend/src and that gate fails rather than this file quietly
+   ceasing to hide it. */

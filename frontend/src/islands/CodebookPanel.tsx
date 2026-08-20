@@ -1059,7 +1059,13 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
             {t("codebook.description")}
           </p>
         </div>
-        <button className="bn-btn bn-btn-primary" onClick={handleOpenPicker} style={{ flexShrink: 0 }}>
+        {/* codebook-picker-btn is the hook export.css hides on — the picker
+            fetches from a server that isn't there in an exported report. */}
+        <button
+          className="bn-btn bn-btn-primary codebook-picker-btn"
+          onClick={handleOpenPicker}
+          style={{ flexShrink: 0 }}
+        >
           {t("codebook.browseCodebooks")}
         </button>
       </div>

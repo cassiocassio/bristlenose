@@ -26,6 +26,7 @@ import {
   starActionIsUnstar,
 } from "./QuotesContext";
 import { EMPTY_TAG_FILTER } from "../utils/filter";
+import { _resetExportCache } from "../utils/exportData";
 
 // ── Mocks ────────────────────────────────────────────────────────────────
 
@@ -346,6 +347,62 @@ describe("QuotesStore", () => {
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.proposedTags["q-P1-120"]).toBeUndefined();
       expect(mockDenyProposal).toHaveBeenCalledWith(42);
+    });
+  });
+
+  describe("proposal triage in export mode", () => {
+    const withProposal = () =>
+      makeQuote({
+        proposed_tags: [
+          {
+            id: 42,
+            tag_name: "Trust",
+            group_name: "UX",
+            colour_set: "ux",
+            colour_index: 2,
+            confidence: 0.8,
+            rationale: "reason",
+          },
+        ],
+      });
+
+    beforeEach(() => {
+      (window as unknown as Record<string, unknown>).BRISTLENOSE_EXPORT = {
+        version: 1,
+        exported_at: "2026-08-15T00:00:00Z",
+        health: {},
+        endpoints: {},
+      };
+      _resetExportCache();
+    });
+
+    afterEach(() => {
+      delete (window as unknown as Record<string, unknown>).BRISTLENOSE_EXPORT;
+      _resetExportCache();
+    });
+
+    it("denyProposedTag is inert — the proposal stays and no call is made", () => {
+      initFromQuotes([withProposal()]);
+      denyProposedTag("q-P1-120", 42);
+      const { result } = renderHook(() => useQuotesStore());
+      // The visible half matters most: without the guard the proposal vanished
+      // optimistically and came back on reload.
+      expect(result.current.proposedTags["q-P1-120"]).toHaveLength(1);
+      expect(mockDenyProposal).not.toHaveBeenCalled();
+    });
+
+    it("acceptProposedTag is inert — no tag is added and no call is made", () => {
+      initFromQuotes([withProposal()]);
+      acceptProposedTag("q-P1-120", 42, {
+        name: "Trust",
+        codebook_group: "UX",
+        colour_set: "ux",
+        colour_index: 2,
+      });
+      const { result } = renderHook(() => useQuotesStore());
+      expect(result.current.proposedTags["q-P1-120"]).toHaveLength(1);
+      expect(result.current.tags["q-P1-120"] ?? []).toHaveLength(0);
+      expect(mockAcceptProposal).not.toHaveBeenCalled();
     });
   });
 

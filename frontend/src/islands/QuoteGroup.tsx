@@ -18,6 +18,7 @@ import type {
   TranscriptSegmentResponse,
 } from "../utils/types";
 import { getModeratorQuestion } from "../utils/api";
+import { isExportMode } from "../utils/exportData";
 import { featureFlags } from "../utils/featureFlags";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
 import { deriveTagVisibility } from "../utils/tagVisibility";
@@ -837,13 +838,17 @@ export function QuoteGroup({
             data-edit-key={`${editKeyBase}:title`}
           />
           {" "}
-          <button
-            className="edit-pencil edit-pencil-inline"
-            aria-label={`Edit ${itemType} title`}
-            onClick={() => setIsEditingHeading(!isEditingHeading)}
-          >
-            &#9998;
-          </button>
+          {/* Removed, not disabled, in an exported report — see the note on
+              the speaker-name pencil in SessionsTable. */}
+          {!isExportMode() && (
+            <button
+              className="edit-pencil edit-pencil-inline"
+              aria-label={`Edit ${itemType} title`}
+              onClick={() => setIsEditingHeading(!isEditingHeading)}
+            >
+              &#9998;
+            </button>
+          )}
           <NewBadge isNew={isNew} dismissKey={editKeyBase} newSince={newSince} />
         </h3>
         <Counter
@@ -871,13 +876,15 @@ export function QuoteGroup({
             data-edit-key={`${editKeyBase}:desc`}
           />
           {" "}
-          <button
-            className="edit-pencil edit-pencil-inline"
-            aria-label={`Edit ${itemType} description`}
-            onClick={() => setIsEditingDesc(!isEditingDesc)}
-          >
-            &#9998;
-          </button>
+          {!isExportMode() && (
+            <button
+              className="edit-pencil edit-pencil-inline"
+              aria-label={`Edit ${itemType} description`}
+              onClick={() => setIsEditingDesc(!isEditingDesc)}
+            >
+              &#9998;
+            </button>
+          )}
         </p>
       )}
       <div className="quote-group" ref={groupRef}>

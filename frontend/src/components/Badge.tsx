@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { isExportMode } from "../utils/exportData";
 
 interface BadgeProps {
   text: string;
@@ -78,7 +79,9 @@ function ProposedBadge({
       onMouseLeave={() => { hoveredRef.current = false; }}
     >
       {text}
-      <span className="badge-action-pill">
+      {/* Removed, not left dead, in an exported report: neither accept nor deny
+          can persist offline. The badge itself stays — it is content. */}
+      {!isExportMode() && <span className="badge-action-pill">
         <span
           className="badge-action-deny"
           role="button"
@@ -117,7 +120,7 @@ function ProposedBadge({
         >
           &#x2713;
         </span>
-      </span>
+      </span>}
       {rationale && <span className="tooltip">{rationale}</span>}
     </span>
   );

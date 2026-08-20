@@ -142,12 +142,29 @@ export function SessionsTable({
       .catch((err: Error) => setError(err.message))
       .finally(() => setIsRefetching(false));
 
-    getPeople().then(setPeopleMap).catch(() => {});
+    // Degraded, not broken: /sessions already carries the server-resolved
+    // display name, so a failure here costs the full-name tooltip and the
+    // short_name preference — not the names themselves. That's why it warns
+    // rather than toasting. But it must not stay silent: an empty catch made
+    // a failed fetch render pixel-identically to a study whose speakers
+    // simply have no names, and those want different reactions.
+    getPeople()
+      .then(setPeopleMap)
+      .catch((err) =>
+        console.warn(
+          "SessionsTable: /people failed; names fall back to /sessions",
+          err,
+        ),
+      );
   }, [projectId, refreshKey]);
 
   const handleNameCommit = useCallback(
     (speakerCode: string, newName: string) => {
       setEditingCode(null);
+      // putPeople already short-circuits offline, but that only suppresses the
+      // WRITE — the optimistic update below is what the researcher would see
+      // change and then silently revert on reload. Guard the visible half too.
+      if (isExportMode()) return;
 
       // Optimistic update: update speakers in all sessions.
       setData((prev) => {
@@ -452,18 +469,31 @@ function SessionRow({
                     swapped by container query, so the ladder stays CSS-only —
                     no width measurement, and it works from file:// in an
                     exported report. Not editable: editing at that width shows
-                    the full name via the pencil path. Hidden from assistive
-                    tech so the name is not announced twice. */}
+                    the full name via the pencil path.
+
+                    NOT aria-hidden. It used to be, to stop the name being
+                    announced twice — but that can't happen: the base rule is
+                    `.bn-speaker-name-short { display: none }` and the ≤750px
+                    rung hides `.bn-speaker-name-full`, so exactly one of the
+                    two is in the tree at any width and `display: none` is
+                    already doing the de-duplication. The aria-hidden meant no
+                    speaker name at all reached assistive tech between 750px
+                    and 480px. (≤480px, rung 3 hides both — still a gap, and it
+                    needs a visually-hidden swap rather than a delete.) */}
                 <span
                   className={`bn-speaker-name-short${displayName ? "" : " unnamed"}`}
-                  aria-hidden="true"
                 >
                   {displayName
                     ? shortName(displayName)
                     : speakerRolePlaceholder(sp.speaker_code, t)}
                 </span>
               </span>
-              {!isEditing && (
+              {/* Not rendered in an exported report: the name edit can't
+                  persist offline, so the control is removed rather than left
+                  dead. export.css hides it too, but that copy is baked
+                  per-project and can be stale — the render gate is the one
+                  that travels with the SPA. */}
+              {!isEditing && !isExportMode() && (
                 <button
                   className="bn-name-pencil"
                   onClick={() => onEditStart(sp.speaker_code)}

@@ -381,6 +381,11 @@ export function acceptProposedTag(
 }
 
 export function denyProposedTag(domId: string, proposalId: number): void {
+  // Read-only in an exported report — same reason as acceptProposedTag above.
+  // This guard is load-bearing beyond the click: the proposed badge also binds
+  // a document-level `d` shortcut while hovered or focused, which no CSS rule
+  // can reach.
+  if (isExportMode()) return;
   setState((prev) => {
     const proposedTags = { ...prev.proposedTags };
     proposedTags[domId] = (proposedTags[domId] || []).filter((p) => p.id !== proposalId);

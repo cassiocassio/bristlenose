@@ -8,6 +8,7 @@ import {
 import { MemoryRouter } from "react-router-dom";
 import { SessionsTable } from "./SessionsTable";
 import { _resetEmbeddedCache } from "../utils/embedded";
+import { _resetExportCache } from "../utils/exportData";
 
 // SessionsTable uses useNavigate (journey deep-links) — provide a Router.
 const render = (ui: Parameters<typeof rtlRender>[0]) =>
@@ -368,5 +369,112 @@ describe("SessionsTable folder proxy", () => {
       data: { uri: FOLDER_URI },
     });
     expect(writeText).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Export mode (offline leave-behind) — read-only
+// ---------------------------------------------------------------------------
+
+describe("SessionsTable in export mode", () => {
+  beforeEach(() => {
+    // Export mode has no server: apiGet resolves reads from the embedded blob
+    // and throws on a miss, so both endpoints the table fetches must be here.
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_EXPORT = {
+      version: 1,
+      exported_at: "2026-08-15T00:00:00Z",
+      health: {},
+      endpoints: { "/sessions": sessionsResponse, "/people": peopleResponse },
+    };
+    _resetExportCache();
+  });
+
+  afterEach(() => {
+    delete (window as unknown as Record<string, unknown>).BRISTLENOSE_EXPORT;
+    _resetExportCache();
+  });
+
+  it("does not render the name pencil (removed, not left dead)", async () => {
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+
+    // Positive assertion first: without it, this test would also pass if the
+    // table failed to render at all — and "nothing rendered" is exactly the
+    // failure a queryBy(...).toBeNull() assertion cannot distinguish.
+    expect(screen.getByTestId("bn-name-p1").textContent).toBe("Alice");
+
+    expect(screen.queryByTestId("bn-name-pencil-p1")).toBeNull();
+    expect(screen.queryByTestId("bn-name-pencil-m1")).toBeNull();
+  });
+
+  it("does not enter edit mode when the name text is clicked", async () => {
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+
+    const nameEl = screen.getByTestId("bn-name-p1");
+    fireEvent.click(nameEl.parentElement!);
+
+    expect(nameEl.getAttribute("contenteditable")).not.toBe("true");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Degraded reads and assistive-tech exposure
+// ---------------------------------------------------------------------------
+
+describe("SessionsTable when /people fails", () => {
+  it("still renders speaker names from /sessions, and says so", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      (url: string) => {
+        if (url.includes("/people")) {
+          return Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+        }
+        return Promise.resolve({ ok: true, json: async () => sessionsResponse });
+      },
+    );
+
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+
+    // The outcome that matters: a failed /people is a degraded read, not a
+    // blank table. /sessions already carries a server-resolved display name,
+    // so the names must survive it.
+    expect(screen.getByTestId("bn-name-p1").textContent).toBe("Alice");
+    // getAll, not get: m1 appears in both sessions and the test id is keyed by
+    // speaker code, so two rows carry the same one. That duplication is the
+    // per-session/global code split showing through into the DOM.
+    const moderators = screen.getAllByTestId("bn-name-m1");
+    expect(moderators).toHaveLength(2);
+    moderators.forEach((el) => expect(el.textContent).toBe("Sarah"));
+
+    // And it must not be silent. Before this, an empty catch made a broken
+    // fetch indistinguishable from speakers who genuinely have no names.
+    await waitFor(() => expect(warn).toHaveBeenCalled());
+    warn.mockRestore();
+  });
+});
+
+describe("SessionsTable speaker names and assistive tech", () => {
+  beforeEach(mockFetchResponses);
+
+  it("does not hide the narrow-width short name from assistive tech", async () => {
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+
+    // Between 750px and 480px container width the CSS ladder hides
+    // .bn-speaker-name-full and shows .bn-speaker-name-short. While the short
+    // span carried aria-hidden, that band exposed NO speaker name at all — a
+    // screen reader heard the badge code and nothing else.
+    //
+    // Honest about what this can and can't prove: jsdom applies no container
+    // queries, so this pins the attribute rather than the announcement. The
+    // announcement itself needs a real engine (axe-core in the e2e layer),
+    // which does not exist yet. It still fails if the aria-hidden returns.
+    const shortNames = document.querySelectorAll(".bn-speaker-name-short");
+    expect(shortNames.length).toBeGreaterThan(0);
+    shortNames.forEach((el) => {
+      expect(el.getAttribute("aria-hidden")).toBeNull();
+    });
   });
 });

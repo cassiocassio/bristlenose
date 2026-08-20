@@ -354,6 +354,19 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   antenna icon, no shortcut. `Bristlenose ▸ Connect an Agent…` opens the
   pane. "No agent installed" is never a gate — unknowable, and access is
   a permission, not a connection.
+- **"Close windows when quitting an application" is ON by default, so most users
+  never get window restoration at all.** System Settings ▸ Desktop & Dock. While
+  it is on — the macOS default — the system discards window state at quit for
+  *every* app, and no amount of correct `WindowGroup(for:)` / scene-value code
+  restores anything. Confirmed 20 Aug 2026 as the cause of an "always opens on
+  Welcome" report, after two other explanations had been chased; restoration
+  worked immediately once it was turned off. **Design consequence, not just a QA
+  note:** the restore-on-quit half of the launch behaviour is a *minority* path.
+  Welcome-on-launch is what nearly everyone gets, every time — which strengthens
+  the case for it being good rather than merely tolerable, and means the scene
+  value earns its keep through ⌥⌘N and the context menus rather than through
+  restoration.
+
 - **Cmd-R from Xcode cannot test window restoration — and it fails by giving a
   confident wrong answer.** macOS writes window state on a **graceful** quit
   (`applicationShouldTerminate` → `NSQuitAlwaysKeepsWindows`). Xcode's Stop

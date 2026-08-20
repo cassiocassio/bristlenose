@@ -167,3 +167,4 @@ acceptance-runs/
 # Local publish target for upload-dmg.sh — host + path, never committed
 # (public repo; a shared-host account and path would be permanent in history).
 desktop/scripts/.ship-local.conf
+experiments/antenna-blink/antenna-blink

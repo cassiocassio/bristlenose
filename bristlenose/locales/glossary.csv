@@ -489,12 +489,12 @@ Agent,Агент,uk,AI agent (MCP client); tr/zh-Hant choice pending native revi
 Agent,Agent,da,AI agent (MCP client); tr/zh-Hant choice pending native review
 Agent,Agent,sv,AI agent (MCP client); tr/zh-Hant choice pending native review
 Agent,Agent,nb,AI agent (MCP client); tr/zh-Hant choice pending native review
-Agent,Ajan,tr,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,Aracı,tr,AI agent (MCP client); tr/zh-Hant choice pending native review — aracı chosen over ajan (espionage sense) and matches "aracı erişimi" = Agent Access
 Agent,Agent,nl,AI agent (MCP client); tr/zh-Hant choice pending native review
 Agent,Agentti,fi,AI agent (MCP client); tr/zh-Hant choice pending native review
 Agent,Agente,pt-BR,AI agent (MCP client); tr/zh-Hant choice pending native review
 Agent,Agente,pt-PT,AI agent (MCP client); tr/zh-Hant choice pending native review
-Agent,代理,zh-Hant,AI agent (MCP client); tr/zh-Hant choice pending native review
+Agent,代理程式,zh-Hant,AI agent (MCP client); tr/zh-Hant choice pending native review — bare 代理 reads as proxy/agency and the artefact IS a proxy
 Focus Mode,Režim soustředění,cs,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
 Focus Mode,Fokustilstand,da,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).
 Focus Mode,Fokusmodus,de,Bristlenose feature: distraction-free reading state for the report. NOT Apple's system Focus (notification filtering) - do not reuse that term where it differs (e.g. it: Full Immersion).

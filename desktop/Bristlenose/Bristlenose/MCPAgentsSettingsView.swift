@@ -26,11 +26,24 @@ struct MCPAgentsSettingsView: View {
 
     @ObservedObject var serveManager: ServeManager
     @ObservedObject var projectIndex: ProjectIndex
+    /// The fleet, for the projects register: `lastAgentCallAt` is per-project
+    /// and `serveManager` is one instance, so the fronted serve cannot answer
+    /// for the study an agent is actually reading.
+    @ObservedObject var serveFleet: ServeFleet
+    /// The window half of the exposure rule. `shownProjects` is derived from
+    /// private state, but every write to it also writes the published
+    /// `assignments`, so observing the roster is enough to keep the groups true.
+    @ObservedObject private var windowRoster = WindowRoster.shared
 
     @EnvironmentObject private var i18n: I18n
     @State private var client: AgentClient = .claudeDesktop
     @State private var copied = false
     @State private var copiedResetTask: Task<Void, Never>?
+    /// Projects unticked while this pane has been open. They stay on screen as
+    /// dimmed receipts and can be re-ticked to undo; cleared on `.onAppear`, so
+    /// "gone next time the pane opens" is literal rather than approximately
+    /// true. Deliberately not persisted: a receipt is about what you just did.
+    @State private var revokedThisSession: Set<UUID> = []
     /// Global Anonymise for agents. Rides the serve env
     /// (`BRISTLENOSE_MCP_ANONYMISE`, injected by `overlayPreferences`) and
     /// applies via the prefs-changed serve restart — the same lifecycle as
@@ -112,14 +125,6 @@ struct MCPAgentsSettingsView: View {
 
     // MARK: - Derived serve state
 
-    /// The project currently serving (fronted + running) — the pane's
-    /// "Now showing" subject and the only row whose Anonymise is readable.
-    private var servingProject: Project? {
-        guard serveManager.runningPort != nil,
-              let path = serveManager.currentProjectPath else { return nil }
-        return projectIndex.projects.first { AgentActivity.samePath($0.path, path) }
-    }
-
     private var endpoint: String? {
         serveManager.runningPort.map { "http://127.0.0.1:\($0)/mcp/" }
     }
@@ -135,14 +140,37 @@ struct MCPAgentsSettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            connectionSection
+                .padding(20)
+            Divider()
+            projectsSection
+        }
+        // 660, matching Appearance / LLM Provider / Transcription exactly —
+        // the Settings package animates HEIGHT per pane, but width jumps
+        // read as a bug. Depth is whatever this content needs (fittingSize);
+        // the fixed verticals are payloadPane's (so switching CLIENT tabs
+        // never reflows) and the register's ceiling (so the window cannot
+        // grow with the project count).
+        .frame(width: 660)
+        .onChange(of: client) {
+            copiedResetTask?.cancel()
+            copied = false
+        }
+        // A receipt is about what you just did, so it does not outlive the
+        // visit. `.onAppear` fires each time the pane is shown, which is what
+        // makes "gone next time you open it" literal — the Settings package
+        // builds its panes once and keeps them, so relying on the view being
+        // recreated would have been relying on something that does not happen.
+        .onAppear { revokedThisSession.removeAll() }
+    }
+
+    /// Everything above the divider: how an agent connects. Machine-wide, and
+    /// unchanged in structure by this addition.
+    private var connectionSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
             Text(i18n.t("desktop.mcpAgents.header"))
                 .font(.title3.weight(.semibold))
                 .fixedSize(horizontal: false, vertical: true)
-
-            if let project = servingProject {
-                nowShowingLine(project)
-                    .padding(.top, 2)
-            }
 
             // The one governance control on the pane — global, off by
             // default (= names accompany codes, matching the export
@@ -173,31 +201,317 @@ struct MCPAgentsSettingsView: View {
             payloadPane
                 .padding(.top, 10)
         }
-        .padding(20)
-        // 660, matching Appearance / LLM Provider / Transcription exactly —
-        // the Settings package animates HEIGHT per pane, but width jumps
-        // read as a bug. Depth is whatever this content needs (fittingSize);
-        // the only fixed vertical is payloadPane's, which exists so
-        // switching CLIENT tabs never reflows within the pane.
-        .frame(width: 660)
-        .onChange(of: client) {
-            copiedResetTask?.cancel()
-            copied = false
+    }
+
+    // MARK: - The projects register
+
+    /// Geometry. Fixed column widths rather than a `Grid`, because the column
+    /// header sits OUTSIDE the scroller — so it stays put when the list scrolls
+    /// — and a `Grid` cannot align across that boundary. Fixed widths make the
+    /// header and the rows share an edge by construction rather than by eye.
+    private enum RegisterLayout {
+        /// The pane's own padding, so the section header, the column header and
+        /// the row content share one leading edge.
+        static let inset: CGFloat = 20
+        static let gap: CGFloat = 10
+        static let access: CGFloat = 54
+        static let sessions: CGFloat = 70
+        static let lastAsked: CGFloat = 110
+        static let row: CGFloat = 32
+        static let groupHeader: CGFloat = 27
+        /// Rows before the list starts scrolling. Nine because the common case
+        /// should never scroll; past that the pinned group headers finally earn
+        /// the pinning.
+        static let maxRows = 9
+
+        /// A **maximum**, not a height — and it is derived from the groups that
+        /// actually exist so the viewport shows nine rows either way.
+        static func ceiling(groups: Int) -> CGFloat {
+            CGFloat(maxRows) * row + CGFloat(groups) * groupHeader
         }
     }
 
-    // MARK: - Header pieces
+    /// The register, derived on every read.
+    private var registerRows: [AgentProjectRegister.Row] {
+        AgentProjectRegister.rows(
+            candidates: projectIndex.projects.map { project in
+                AgentProjectRegister.Candidate(
+                    id: project.id,
+                    name: project.name,
+                    icon: project.icon,
+                    access: project.agentAccess,
+                    sessions: projectIndex.unanalysed[project.id]?.sessionCount,
+                    lastAsked: serveFleet.lastAgentCallAt[project.id])
+            },
+            // The same set `ServeFleet.syncHandshake` derives exposure from, so
+            // a group header cannot disagree with what an agent can reach.
+            shown: windowRoster.shownProjects,
+            receipts: revokedThisSession)
+    }
 
-    private func nowShowingLine(_ project: Project) -> some View {
-        // Sessions only when known — the host's snapshot carries sessions,
-        // not quotes; never invent a number (sheet precedent).
-        var line = i18n.t("desktop.mcpAgents.nowShowing", ["project": project.name])
-        if let sessions = projectIndex.unanalysed[project.id]?.sessionCount {
-            line += " · " + i18n.plural("desktop.connectAgent.sessions", count: sessions)
+    @ViewBuilder
+    private var projectsSection: some View {
+        let rows = registerRows
+        VStack(alignment: .leading, spacing: 0) {
+            registerHeader(rows)
+            if rows.isEmpty {
+                emptyRegister
+            } else {
+                columnHeader
+                registerBody(rows)
+                // The times live in memory per serve, so a project asked about
+                // yesterday reads "Never" after a relaunch. Saying so is cheaper
+                // than a persistence store, and it is a policy rather than an
+                // apology — the same discipline that keeps an activity timeline
+                // off the auth-exempt health route.
+                Text(i18n.t("desktop.mcpAgents.sessionScopeNote"))
+                    .font(.footnote)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, RegisterLayout.inset)
+                    .padding(.top, 8)
+            }
         }
-        return Text(line)
-            .font(.body)
-            .foregroundStyle(.secondary)
+        .padding(.bottom, 16)
+    }
+
+    /// "Projects", and what an agent can read right now.
+    @ViewBuilder
+    private func registerHeader(_ rows: [AgentProjectRegister.Row]) -> some View {
+        let readable = AgentProjectRegister.readable(rows)
+        HStack(alignment: .firstTextBaseline, spacing: RegisterLayout.gap) {
+            // The sidebar's own word for the same set — reused rather than
+            // reworded, so one concept keeps one noun across two surfaces.
+            Text(i18n.t("desktop.chrome.projects"))
+                .font(.callout.weight(.bold))
+            Spacer(minLength: RegisterLayout.gap)
+            // Suppressed when there is nothing shared: "0 projects · 0 sessions"
+            // restates the empty state directly beneath it.
+            if !rows.isEmpty {
+                Text(i18n.t("desktop.mcpAgents.rollup", [
+                    "projects": i18n.plural("desktop.mcpAgents.projects",
+                                            count: readable.projects),
+                    "sessions": i18n.plural("desktop.connectAgent.sessions",
+                                            count: readable.sessions),
+                ]))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+            }
+        }
+        .padding(.horizontal, RegisterLayout.inset)
+        .padding(.top, 15)
+        .padding(.bottom, 8)
+    }
+
+    /// Outside the scroller, so it stays put once the list is long enough to
+    /// move — which is the whole reason a column header exists.
+    private var columnHeader: some View {
+        HStack(spacing: RegisterLayout.gap) {
+            // Headed, so the column does not read as the cloud-import grid's
+            // batch-selection ticks. The full verb lives in each row's tooltip.
+            Text(i18n.t("desktop.mcpAgents.colAccess"))
+                .frame(width: RegisterLayout.access, alignment: .leading)
+            Text(i18n.t("desktop.mcpAgents.colProject"))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(i18n.t("desktop.mcpAgents.colSessions"))
+                .frame(width: RegisterLayout.sessions, alignment: .trailing)
+            Text(i18n.t("desktop.mcpAgents.colLastAsked"))
+                .frame(width: RegisterLayout.lastAsked, alignment: .leading)
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, RegisterLayout.inset)
+        .frame(height: 26)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .overlay(alignment: .bottom) { Divider() }
+    }
+
+    /// Nine rows or fewer render as a plain stack with **no scroller**, so the
+    /// pane shrinks to its content and the Settings package animates the window
+    /// down — the behaviour that package was adopted for.
+    ///
+    /// This has to switch on the row count rather than clamp a `ScrollView`:
+    /// SwiftUI's `ScrollView` is greedy along its scroll axis, so
+    /// `ScrollView { rows }.frame(maxHeight: ceiling)` claims the whole ceiling
+    /// for two rows and the shrink never happens. The count is known before
+    /// layout, so no measurement is needed — the same reasoning that makes the
+    /// Sessions grid container queries rather than JS width-switching.
+    @ViewBuilder
+    private func registerBody(_ rows: [AgentProjectRegister.Row]) -> some View {
+        // A minute is the finest distinction "12 minutes ago" can draw, so the
+        // clock that drives it ticks once a minute. `TimelineView` stops when
+        // the pane is off screen; a `Timer` publisher would not.
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let groups = Self.grouped(rows)
+            if rows.count <= RegisterLayout.maxRows {
+                VStack(spacing: 0) { groupedRows(groups, now: context.date) }
+            } else {
+                ScrollView(.vertical) {
+                    LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        groupedRows(groups, now: context.date)
+                    }
+                }
+                .frame(height: RegisterLayout.ceiling(groups: groups.count))
+            }
+        }
+    }
+
+    /// Rows in group order, each group behind its own pinnable header.
+    @ViewBuilder
+    private func groupedRows(
+        _ groups: [(group: AgentProjectRegister.Group, rows: [AgentProjectRegister.Row])],
+        now: Date
+    ) -> some View {
+        ForEach(groups, id: \.group) { entry in
+            Section {
+                ForEach(entry.rows) { row in
+                    registerRow(row, now: now)
+                    Divider().padding(.leading, RegisterLayout.inset)
+                }
+            } header: {
+                groupHeader(entry.group)
+            }
+        }
+    }
+
+    /// Stable group order — window-open first, and only groups that have rows.
+    /// An empty "Available when opened" header would be a promise about a set
+    /// with nothing in it.
+    private static func grouped(
+        _ rows: [AgentProjectRegister.Row]
+    ) -> [(group: AgentProjectRegister.Group, rows: [AgentProjectRegister.Row])] {
+        [AgentProjectRegister.Group.windowOpen, .availableWhenOpened]
+            .compactMap { group in
+                let members = rows.filter { $0.group == group }
+                return members.isEmpty ? nil : (group, members)
+            }
+    }
+
+    private func groupHeader(_ group: AgentProjectRegister.Group) -> some View {
+        Text(i18n.t(group == .windowOpen
+                    ? "desktop.mcpAgents.groupActive"
+                    : "desktop.mcpAgents.groupAvailable"))
+            .font(.caption.weight(.bold))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, RegisterLayout.inset)
+            .frame(height: RegisterLayout.groupHeader)
+            .background(Color(nsColor: .underPageBackgroundColor))
+            .overlay(alignment: .bottom) { Divider() }
+    }
+
+    private func registerRow(_ row: AgentProjectRegister.Row, now: Date) -> some View {
+        HStack(spacing: RegisterLayout.gap) {
+            Toggle(isOn: accessBinding(row)) { EmptyView() }
+                .toggleStyle(.checkbox)
+                .labelsHidden()
+                // The shipped sidebar verb, swapping with what the click will
+                // do — one grammar in two renderings. A context menu carries a
+                // verb; a table carries a checkbox; neither invents a word.
+                .help(i18n.t(row.access ? "desktop.menu.project.turnOffAgentAccess"
+                                        : "desktop.menu.project.turnOnAgentAccess"))
+                .accessibilityLabel(row.name)
+                .accessibilityHint(i18n.t(row.access
+                                          ? "desktop.menu.project.turnOffAgentAccess"
+                                          : "desktop.menu.project.turnOnAgentAccess"))
+                .frame(width: RegisterLayout.access, alignment: .leading)
+
+            HStack(spacing: 7) {
+                Image(systemName: row.icon ?? IconPickerPopover.defaultIcon)
+                    .frame(width: 17)
+                Text(row.name)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                if row.isReceipt {
+                    // The receipt: what you just did, not what is true. Gone
+                    // next time the pane opens.
+                    Text(i18n.t("desktop.mcpAgents.receiptOff"))
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Blank when unknown, never a guess — the count a researcher would
+            // check against the sidebar has to be one we actually hold.
+            Text(row.sessions.map(String.init) ?? "")
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(width: RegisterLayout.sessions, alignment: .trailing)
+
+            lastAskedText(row.lastAsked, now: now)
+                .frame(width: RegisterLayout.lastAsked, alignment: .leading)
+        }
+        .font(.callout)
+        .foregroundStyle(row.isReceipt ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.primary))
+        .padding(.horizontal, RegisterLayout.inset)
+        .frame(height: RegisterLayout.row)
+    }
+
+    /// Past tense, always. MCP is request/response — there is no continuous
+    /// reading state to report, and the app's own rule is that we can offer but
+    /// cannot observe.
+    private func lastAskedText(_ date: Date?, now: Date) -> some View {
+        let text: String
+        if let date {
+            // Under five minutes reads as "Just now" — the sidebar's own
+            // threshold, so two surfaces describing one instant agree.
+            let elapsed = now.timeIntervalSince(date)
+            if elapsed >= 0 && elapsed < 5 * 60 {
+                text = i18n.t("desktop.chrome.dateRelativeJustNow")
+            } else {
+                let f = RelativeDateTimeFormatter()
+                f.locale = Locale(identifier: i18n.locale)
+                f.unitsStyle = .short
+                text = f.localizedString(for: date, relativeTo: now)
+            }
+        } else {
+            // A word, not an em dash: VoiceOver announces a dash as nothing at
+            // all, and "we have no record" is the fact worth hearing.
+            text = i18n.t("desktop.mcpAgents.lastAskedNever")
+        }
+        return Text(text)
+            .foregroundStyle(date == nil ? AnyShapeStyle(.tertiary)
+                                         : AnyShapeStyle(.secondary))
+            .monospacedDigit()
+            .lineLimit(1)
+    }
+
+    /// Revoking is one click and no dialog; granting is a deliberate act in the
+    /// sidebar. Asymmetric consequences, asymmetric protection — an accidental
+    /// revoke costs a trip to the sidebar, an accidental grant costs exposure.
+    private func accessBinding(_ row: AgentProjectRegister.Row) -> Binding<Bool> {
+        Binding(
+            get: { row.access },
+            set: { enabled in
+                projectIndex.setAgentAccess(id: row.id, enabled: enabled)
+                if enabled {
+                    revokedThisSession.remove(row.id)
+                } else {
+                    revokedThisSession.insert(row.id)
+                }
+            })
+    }
+
+    /// The one moment the audit surface points at the management surface —
+    /// necessarily, since a researcher who has never granted access has nothing
+    /// here to act on.
+    private var emptyRegister: some View {
+        VStack(spacing: 3) {
+            Text(i18n.t("desktop.mcpAgents.emptyTitle"))
+                .font(.callout.weight(.semibold))
+            // Names the menu-bar path, not a gesture: the HIG calls it
+            // Control-click or secondary click, never right-click, and requires
+            // every context-menu command to exist in the menu bar anyway.
+            Text(i18n.t("desktop.mcpAgents.emptyHint"))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, RegisterLayout.inset)
+        .padding(.vertical, 26)
     }
 
     /// The machine-wide install row. Open, don't reveal (§3.4): the Mac

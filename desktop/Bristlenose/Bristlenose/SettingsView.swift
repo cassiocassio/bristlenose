@@ -135,8 +135,11 @@ final class SettingsWindow {
                     // window can open; the guard is defensive shape, not a
                     // real state.
                     Group {
-                        if let serve = self.serveManager, let index = self.projectIndex {
-                            MCPAgentsSettingsView(serveManager: serve, projectIndex: index)
+                        if let serve = self.serveManager, let index = self.projectIndex,
+                           let fleet = self.serveFleet {
+                            MCPAgentsSettingsView(serveManager: serve,
+                                                  projectIndex: index,
+                                                  serveFleet: fleet)
                         }
                     }
                     .environmentObject(i18n)

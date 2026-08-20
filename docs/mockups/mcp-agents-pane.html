@@ -80,8 +80,10 @@ h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
 
 /* --- the new section --- */
 .divider{height:1px;background:var(--line);margin:18px 0 0}
-/* Left edge 10px = the table's own cell padding, so "Projects", the checkbox
-   column and the rows all share one edge. */
+/* One left edge at 20px — the pane's own padding — shared by "Projects", the
+   column header and every row. The table's cells carry the same 20px rather
+   than a narrower cell padding of their own; an earlier note here said 10px,
+   which no rule ever set. Built at 20 (`RegisterLayout.inset`). */
 .shead{padding:15px 20px 8px 20px;display:flex;align-items:baseline;gap:10px}
 .shead .t{font-size:13px;font-weight:700}
 .shead .grow{margin-left:auto}
@@ -96,10 +98,10 @@ h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
 table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
 /* height pinned so the group header's `top` is derived, not guessed. */
 thead th{position:sticky;top:0;z-index:3;text-align:left;font-weight:600;
-  color:var(--dim);font-size:11.5px;line-height:1;height:26px;padding:0 10px;background:var(--thead);
+  color:var(--dim);font-size:11.5px;line-height:1;height:26px;padding:0 20px;background:var(--thead);
   border-bottom:.5px solid var(--line);white-space:nowrap}
 thead th.r{text-align:right}
-td{padding:7px 10px;vertical-align:baseline;border-bottom:.5px solid var(--hairline)}
+td{padding:7px 20px;vertical-align:baseline;border-bottom:.5px solid var(--hairline)}
 tr:last-child td{border-bottom:0}
 .num{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;
      color:var(--dim);min-width:70px;width:1%}
@@ -117,14 +119,14 @@ tr.doneoff .receipt{color:var(--faint);font-size:11.5px}
 .pname{display:flex;align-items:baseline;gap:7px}
 .pname .grow{margin-left:auto}
 tr.grp th{position:sticky;top:26px;z-index:2;background:var(--grouphdr);
-  font-weight:700;color:var(--ink);font-size:11.5px;padding:5px 10px;
+  font-weight:700;color:var(--ink);font-size:11.5px;padding:5px 20px;
   border-top:.5px solid var(--line);border-bottom:.5px solid var(--line);text-align:left}
 input[type=checkbox]{margin:0;accent-color:var(--accent)}
 .cell-hit{display:block;padding:2px 0}
 svg.ant{stroke:currentColor;fill:none;vertical-align:-1px}
 .ant.lit{color:var(--ink)} .ant.pale{color:var(--faint)}
 
-.scopenote{margin:8px 10px 0;font-size:11.5px;color:var(--faint)}
+.scopenote{margin:8px 20px 0;font-size:11.5px;color:var(--faint)}
 .legend{margin:30px 0 0;font-size:12.5px;color:var(--dim);max-width:88ch}
 .legend li{margin:0 0 11px}
 .legend b{color:var(--ink)}
@@ -355,11 +357,6 @@ is the one moment the audit surface has to point at the management surface.</p>
   explanation.</li>
 
 
-  <li><b>This is a risk register, not the control surface</b> — which is what
-  makes it fine that it lists only projects with Agent Access on. It answers
-  "what is exposed, and what could be", not "what do I have". Granting access to
-  something not listed happens in the sidebar, where the project lives.</li>
-
   <li><b>A checkbox, because ticked-state is readable at a glance</b> — which is
   the whole job of a register. It is genuinely two-way <i>for rows already in the
   register</i>: untick to revoke, re-tick to undo, within the session. That is not
@@ -395,15 +392,21 @@ is the one moment the audit surface has to point at the management surface.</p>
   same words the sidebar's menu item uses. One grammar, two renderings, no new
   string, and gruber's two-grammars objection disappears.</li>
 
-  <li><b>Dropping the checkbox column also fixed the alignment.</b> Project now
-  starts at the leading edge, so the section header, the column header and the
-  row content share one left edge instead of three.</li>
+  <li><b>Access leads, and it is headed.</b> Two earlier bullets here described
+  the opposite — a checkbox dropped from the columns, the control moved to the
+  trailing edge — and were residue from an iteration this drawing already
+  replaced. They were removed on 21 Aug 2026 while building, because a legend
+  that contradicts its own drawing sends the reader to argue with the picture.
+  The reason the column is headed rather than a bare tick strip is unchanged and
+  is in the strings table: unheaded, it reads as the cloud-import grid's
+  batch-selection column. <b>Everything shares one left edge</b> — section
+  header, column header and row content all at 20px.</li>
 
-  <li><b>The table now earns being a table.</b> Project, Sessions, Last asked —
-  three columns, all variable, none determined by the grouping. The two that
-  were constant (Windows, then the antenna) are gone, and the control moved to
-  the trailing edge where it is an affordance rather than a column of identical
-  ticks.</li>
+  <li><b>The table earns being a table.</b> Access, Project, Sessions, Last
+  asked — four columns, none of them determined by the grouping. The two that
+  were (Windows, then the antenna) are gone; that test is what convicted them,
+  and Access survives it because a row's tick genuinely varies within a
+  group.</li>
 
   <li><b>The pane is the audit surface; the sidebar is the management surface.</b>
   Revoke is available wherever exposure is visible; grant lives in one place. That
@@ -431,11 +434,15 @@ is the one moment the audit surface has to point at the management surface.</p>
   test that convicted the Windows column. Vocabulary continuity with the sidebar
   was its only remaining job, and that is not information.</li>
 
-  <li><b>This mockup is a spec, not an as-built.</b> It draws two projects readable
-  at once; <code>ServeFleet.exposedProject</code> is singular today and the
-  handshake is one file. The plural handshake is owed work — do not build this
-  table against the current model or it will report two readable projects when
-  one is.</li>
+  <li><b>The plural model this needed is built.</b> This bullet used to say
+  "do not build this table against the current model" — <code>exposedProject</code>
+  was a single designated slot, so drawing two readable projects would have been
+  a lie. That slot was replaced by <code>HandshakeExposure</code> on 20 Aug 2026,
+  hours after this was drawn: scope is derived from the window roster and the
+  file carries a row per project. The table reads the same two predicates the
+  handshake does — <code>WindowRoster.shownProjects</code> for the group,
+  <code>Project.agentAccess</code> for the tick — so a header here cannot
+  disagree with what an agent can reach.</li>
 
   <li><b>"Active" collides three ways in this codebase</b> — <code>agentActiveNow</code>
   and <code>mcp.active</code> mean <i>an agent asked recently</i>, and

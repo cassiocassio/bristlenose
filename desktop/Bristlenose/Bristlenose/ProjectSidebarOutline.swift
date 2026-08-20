@@ -96,6 +96,12 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// Window`. Specced with the child-window work and unbuilt until now; it is
     /// what makes "that study, over there" one gesture.
     let onOpenInNewWindow: (UUID) -> Void
+
+    /// Open the current study at a given lens in a new window — the gesture
+    /// that makes "Quotes here, Codebook there" one step instead of
+    /// open-then-navigate. Specced with the child-window work, unbuilt until
+    /// the scene value could carry a lens.
+    let onOpenLensInNewWindow: (Tab) -> Void
     let onRemoveFolder: (UUID) -> Void
     /// Live per-project run/copy data for the rich cell. `liveData` is
     /// `@ObservedObject` (Phase 3) so high-frequency progress ticks (ring fraction /
@@ -166,6 +172,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.mcpMounted = mcpMounted
         controller.onRemoveProject = onRemoveProject
         controller.onOpenInNewWindow = onOpenInNewWindow
+        controller.onOpenLensInNewWindow = onOpenLensInNewWindow
         controller.onRemoveFolder = onRemoveFolder
         controller.update(
             roots: OutlineTree.build(
@@ -245,6 +252,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var mcpMounted: Bool = false
     var onRemoveProject: (UUID) -> Void = { _ in }
     var onOpenInNewWindow: (UUID) -> Void = { _ in }
+    var onOpenLensInNewWindow: (Tab) -> Void = { _ in }
     var onRemoveFolder: (UUID) -> Void = { _ in }
 
     /// Re-entrancy guard (spec §2.5): suppress the selection callback while we
@@ -258,6 +266,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// shut. (A row moving under it via a structural change is the rare residual;
     /// transient dismissal covers it. The §2.5 targeted-`reloadItem` is the full fix.)
     private var activePopover: NSPopover?
+
+    /// The lens of the right-clicked row, captured in `menuNeedsUpdate` for the
+    /// same reason `menuClickedNodeID` is — the action fires after the menu has
+    /// closed, when `clickedRow` is gone.
+    private var menuClickedLens: Tab?
 
     /// The project/folder id of the right-clicked row, captured in `menuNeedsUpdate`
     /// and read by the menu actions (stable while the menu is open — you can't
@@ -1654,7 +1667,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         switch node.kind {
         case .project(let id): menuClickedNodeID = id; buildProjectMenu(menu, projectID: id)
         case .folder(let id):  menuClickedNodeID = id; buildFolderMenu(menu, folderID: id)
-        case .group, .lens:    menuClickedNodeID = nil   // no menu on group headers / lens rows
+        case .lens(let tab):
+            menuClickedNodeID = nil
+            menuClickedLens = tab
+            buildLensMenu(menu)
+        case .group:           menuClickedNodeID = nil   // no menu on group headers
         }
     }
 
@@ -1663,6 +1680,18 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         mi.target = self
         mi.isEnabled = enabled
         return mi
+    }
+
+    /// One item, deliberately. A lens row's only useful context action is to
+    /// take that lens somewhere else; everything else about a lens belongs to
+    /// the study.
+    private func buildLensMenu(_ menu: NSMenu) {
+        menu.addItem(menuItem("desktop.menu.file.openInNewWindow",
+                              #selector(menuOpenLensInNewWindow(_:))))
+    }
+
+    @objc private func menuOpenLensInNewWindow(_ sender: NSMenuItem) {
+        if let tab = menuClickedLens { onOpenLensInNewWindow(tab) }
     }
 
     private func buildProjectMenu(_ menu: NSMenu, projectID id: UUID) {

@@ -210,7 +210,7 @@ struct ContentView: View {
     /// ⌥⌘N, which deliberately passes no value so SwiftUI's per-value window
     /// dedup cannot swallow the command — and then `persistedProjectID` supplies
     /// the last-used study, which is what that global is now for.
-    @Binding var sceneProject: UUID?
+    @Binding var seed: WindowSeed?
 
     @State private var selection: Set<SidebarSelection> = []
     /// Tracks whether the project list sidebar column is visible.
@@ -663,9 +663,19 @@ struct ContentView: View {
             // restored windows come back on five studies rather than five
             // copies of whichever was selected last.
             if selection.isEmpty {
-                let wanted = sceneProject
-                    ?? (persistedProjectID.isEmpty ? nil : UUID(uuidString: persistedProjectID))
-                if let wanted, projectIndex.projects.contains(where: { $0.id == wanted }) {
+                // The seed's study first, the last-used one only as a fallback —
+                // and "first" has to mean *if it names a study that exists*, not
+                // merely "if it is non-nil". ⌥⌘N seeds a window with no project,
+                // and an `??` on nil-ness alone would swallow the fallback and
+                // land it on Welcome.
+                let known: (UUID?) -> UUID? = { id in
+                    guard let id, projectIndex.projects.contains(where: { $0.id == id })
+                    else { return nil }
+                    return id
+                }
+                let fallback = persistedProjectID.isEmpty
+                    ? nil : UUID(uuidString: persistedProjectID)
+                if let wanted = known(seed?.project) ?? known(fallback) {
                     selection = [.project(wanted)]
                 }
             }
@@ -747,8 +757,12 @@ struct ContentView: View {
         .onChange(of: bridgeHandler.isReady) { _, ready in
             guard ready, let id = selectedProjectID, lensRestoredFor != id else { return }
             lensRestoredFor = id
-            guard let project = projectIndex.projects.first(where: { $0.id == id }),
-                  let tab = LensMemory.restore(project.lastLens) else { return }
+            guard let project = projectIndex.projects.first(where: { $0.id == id }) else { return }
+            // The seed's lens wins over the study's remembered one: it is a
+            // deliberate "open THIS lens over there", and it is what makes the
+            // lens row's Open in New Window one gesture rather than two.
+            guard let tab = LensMemory.restore(seed?.lens)
+                    ?? LensMemory.restore(project.lastLens) else { return }
             bridgeHandler.activateLens(tab)
             restoreAnchor(project.lastAnchor, on: tab)
         }
@@ -965,7 +979,12 @@ struct ContentView: View {
                 persistedProjectID = id.uuidString
                 // …and into this window's scene value, so restoration brings it
                 // back on the study it was SHOWING, not the one it opened on.
-                if sceneProject != id { sceneProject = id }
+                if seed?.project != id {
+                    // Keep this window's own token — replacing it would change
+                    // the window's identity mid-life. Clear the seeded lens once
+                    // consumed, so a later switch honours the study's own memory.
+                    seed = WindowSeed(token: seed?.token ?? UUID(), project: id, lens: nil)
+                }
                 bridgeHandler.selectedProjectPath = project.path
                 bridgeHandler.selectedProjectAvailable = project.isAvailable
                 bridgeHandler.selectedProjectRevealablePath = revealPath(for: project) ?? ""
@@ -2236,7 +2255,17 @@ struct ContentView: View {
                 // window this reveals it rather than opening a duplicate, which
                 // is what a reveal-or-open command should do. ⌥⌘N is the one
                 // that must always spawn, and it passes a fresh token instead.
-                onOpenInNewWindow: { id in openWindow(id: "main", value: id) },
+                onOpenInNewWindow: { id in
+                    openWindow(id: "main", value: WindowSeed.revealing(project: id))
+                },
+                onOpenLensInNewWindow: { lens in
+                    // This study, that lens, over there — one gesture. Fresh
+                    // token so it always opens, even alongside a window already
+                    // on this study, which is the entire point.
+                    openWindow(id: "main",
+                               value: WindowSeed.fresh(project: selectedProject?.id,
+                                                       lens: LensMemory.remember(lens)))
+                },
                 onRemoveFolder: { id in deleteFromContextMenu(targetingFolder: id) },
                 pipelineRunner: pipelineRunner,
                 liveData: pipelineRunner.liveData,

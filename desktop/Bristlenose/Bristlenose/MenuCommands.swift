@@ -387,10 +387,13 @@ private struct FileMenuContent: View {
         }?.id
     }
 
-    /// Open a main window on `project`, or on the last-used study when nil.
+    /// Open a main window on `project`, revealing an existing one if there is
+    /// one. `WindowSeed.revealing` makes the value stable per study, so
+    /// SwiftUI's per-value dedup does the revealing — the right shape for
+    /// "open THIS study", and the wrong one for New Window.
     private func openMainWindow(on project: UUID?) {
-        if let project { openWindow(id: "main", value: project) }
-        else { openWindow(id: "main") }
+        guard let project else { openWindow(id: "main", value: WindowSeed.fresh()); return }
+        openWindow(id: "main", value: WindowSeed.revealing(project: project))
     }
 
     var body: some View {
@@ -431,11 +434,18 @@ private struct FileMenuContent: View {
         // on one study — and it is what the `WindowRoster` ordinals exist to
         // number. Deduping makes both unreachable.
         //
-        // With no value the window restores from `persistedProjectID`, which is
-        // the last-*selected* study, so the felt behaviour is unchanged: ⌥⌘N
-        // still opens on what you are looking at. It just always opens.
+        // Passing NO value was the first repair and it did not work either:
+        // `nil` is itself a unique value, so exactly one no-value window can
+        // exist. With nil plus one project that is a hard ceiling of two, and
+        // which two depends on the order you opened them in. Both observed.
+        //
+        // `WindowSeed.fresh` mints a token nobody else holds, so this always
+        // opens — and it can now carry the front window's study AND lens, which
+        // is what the command always meant and what dedup made impossible.
         Button(i18n.t("desktop.menu.file.newWindow"), systemImage: "macwindow") {
-            openWindow(id: "main")
+            openWindow(id: "main", value: WindowSeed.fresh(
+                project: frontProjectID,
+                lens: LensMemory.remember(bridgeHandler.activeTab)))
         }
         .keyboardShortcut("n", modifiers: [.command, .option])
 

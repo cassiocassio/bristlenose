@@ -177,3 +177,60 @@ struct ServeManagerStartGuardTests {
         #expect(m.state != .failed(error: "boom"), "Retry was swallowed by the guard")
     }
 }
+
+/// The scene value, and the dedup behaviour it exists to control.
+///
+/// SwiftUI keys window identity on the whole value. Three failures were observed
+/// on screen before this type existed: New Window passing a project re-activated
+/// the window that had it; passing `nil` capped the app at two windows, because
+/// nil is itself a unique value; and which two you got depended on the order you
+/// opened them in.
+@Suite("WindowSeed")
+struct WindowSeedTests {
+
+    private static let a = UUID()
+    private static let b = UUID()
+
+    /// New Window must ALWAYS open. Two fresh seeds for the same study must not
+    /// be equal, or dedup swallows the command and the window ordinals with it.
+    @Test func twoFreshSeedsForOneStudyAreDistinct() {
+        let first = WindowSeed.fresh(project: Self.a)
+        let second = WindowSeed.fresh(project: Self.a)
+        #expect(first != second)
+        #expect(first.project == second.project)
+    }
+
+    /// …including with no study at all, which is the case that capped the app
+    /// at two windows.
+    @Test func twoSeedsWithNoStudyAreStillDistinct() {
+        #expect(WindowSeed.fresh() != WindowSeed.fresh())
+    }
+
+    /// Open in New Window must reveal rather than duplicate, so its value has to
+    /// be STABLE for a study — that is what makes dedup work FOR it.
+    @Test func revealingTheSameStudyTwiceProducesTheSameValue() {
+        #expect(WindowSeed.revealing(project: Self.a) == WindowSeed.revealing(project: Self.a))
+        #expect(WindowSeed.revealing(project: Self.a) != WindowSeed.revealing(project: Self.b))
+    }
+
+    /// The two shapes must never collide: a reveal must not be satisfied by a
+    /// window some New Window happened to open, and vice versa.
+    @Test func freshAndRevealingNeverCollide() {
+        #expect(WindowSeed.fresh(project: Self.a) != WindowSeed.revealing(project: Self.a))
+    }
+
+    /// The lens rides along — this is what makes the lens row's Open in New
+    /// Window one gesture rather than open-then-navigate.
+    @Test func aSeedCarriesItsLens() {
+        let seed = WindowSeed.fresh(project: Self.a, lens: "codebook")
+        #expect(seed.lens == "codebook")
+        #expect(seed.project == Self.a)
+    }
+
+    /// It is a scene value, so it must survive restoration.
+    @Test func itRoundTripsThroughCoding() throws {
+        let seed = WindowSeed.fresh(project: Self.a, lens: "quotes")
+        let data = try JSONEncoder().encode(seed)
+        #expect(try JSONDecoder().decode(WindowSeed.self, from: data) == seed)
+    }
+}

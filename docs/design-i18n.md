@@ -292,6 +292,40 @@ Every language has a standard word for common UI actions. Getting it wrong makes
 
 **Rule: for standard UI verbs (Save, Cancel, Delete, Close, Undo, Export, Search), always use Apple's term for the target platform.** Cross-check against Microsoft for general IT terms. If both agree, it's definitive. If they differ (rare for basics), prefer Apple since we're a macOS-native app.
 
+### CJK punctuation: measured on the platform, not taken from a style guide
+
+Corollary of the Apple-wins rule above, and it bites harder because the
+"obvious" authority points the other way. Settled 20 Aug 2026 by counting
+`.loctable` files, after a sweep that got the polarity exactly backwards in
+both directions.
+
+| | labels (`Name:`) | prose lead-ins (`Note:`, `e.g.:`) |
+|---|---|---|
+| Japanese | halfwidth `:` + space | fullwidth `：`, no space |
+| Chinese (Hant + Hans) | fullwidth `：`, no space | fullwidth `：`, no space |
+
+The counts: Apple ja 431 halfwidth to 2 fullwidth, and its own Save dialog
+ships `名前:`; Microsoft ja 38,041 to 88; Apple zh-Hant 239 fullwidth to 0.
+The same source string shows the per-language split is deliberate — `便名: %@`
+in Japanese, `航班：%@` in Chinese.
+
+**The JTF style guide says the opposite for Japanese**, and it is not wrong —
+it is the right authority for a translated *document* and the wrong one for
+macOS chrome. Both OS vendors classify `:` as an internationally-used symbol
+rather than Japanese 約物, which is why they diverge from it. A label that
+reads differently from every other label on the user's Mac is the defect,
+whatever the guide says.
+
+Two traps when auditing this. Fullwidth punctuation carries ~half an em of
+built-in right side bearing, so `：` takes **no** following space — swapping
+the character without deleting the space double-counts it. And kinsoku (禁則)
+line-breaking tables are strings that enumerate punctuation
+(`、。，．・：；？！…`), where the `：` is data rather than usage; 30 of
+Microsoft's 118 fullwidth hits were these.
+
+Full reasoning, counts and the reproduce command: `.claude/agents/i18n-review.md`
+§6a and `docs/adding-a-language.md` Step 5a.
+
 ### Process for adding a new language
 
 #### Step 1: Machine-translate as draft

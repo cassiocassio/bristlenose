@@ -314,6 +314,16 @@ is the one moment the audit surface has to point at the management surface.</p>
   342px holds nine rows plus both group headers. Nine because the common case
   should never scroll — past that the sticky headers, which were drawn before
   anything could scroll under them, finally do the job they were drawn for.
+  <b>It is a maximum, not a height</b> — fewer than nine rows and the table is
+  as tall as its rows, so the pane shrinks and the Settings package animates
+  the window down, which is the behaviour it was adopted for. Watch this in
+  the build: SwiftUI's <code>ScrollView</code> is greedy along its scroll axis,
+  so <code>ScrollView { rows }.frame(maxHeight: 342)</code> claims all 342pt
+  even for two rows and the shrink never happens. Switch on the row count
+  instead — nine or fewer renders a plain <code>VStack</code> with no scroller
+  at all, more than nine renders the bounded one. The count is known before
+  layout, so this needs no measurement, same reasoning as the Sessions grid
+  being container queries rather than JS width-switching.
   This is also what keeps <b>the pane's geometry rule intact</b>: the fixed
   170pt payload holds only the client tabs, hint and install row, so switching
   Claude&nbsp;Desktop → Claude&nbsp;Code reflows inside that region and the table

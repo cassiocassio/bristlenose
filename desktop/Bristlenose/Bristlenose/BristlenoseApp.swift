@@ -198,8 +198,13 @@ struct BristlenoseApp: App {
                         guard let id = note.userInfo?["id"] as? UUID,
                               let enabled = note.userInfo?["enabled"] as? Bool else { return }
                         Task { @MainActor in
-                            if enabled { serveFleet.setExposed(id) }
-                            else if serveFleet.exposedProject == id { serveFleet.setExposed(nil) }
+                            // Permission changed; scope is derived from it plus
+                            // the window roster, so re-derive rather than
+                            // designate. `id` is unused: the sweep reads every
+                            // project, which is also what makes it correct when
+                            // several change at once.
+                            _ = id
+                            serveFleet.syncHandshake()
                         }
                     }
                     prefsFanOut = NotificationCenter.default.addObserver(

@@ -198,17 +198,18 @@ struct ContentView: View {
     /// Selection binding for the List — uses `SidebarSelection` enum so both
     /// projects and folders are selectable. UUID-based to survive field mutations.
     /// Set enables Cmd+click / Shift+click multi-select natively.
-    /// The project this window was opened onto, from its scene value.
+    /// This window's study, as its scene value.
     ///
     /// Stage 3b: `WindowGroup(for:)` carries it, so restoration gives each
     /// window **its own** study back rather than all of them the last-used one.
-    /// `File ▸ Open in New Window` and a sidebar double-click both pass it.
     ///
-    /// nil means "no particular study" — a plain ⌘N or a restored window that
-    /// never had one — and then `persistedProjectID` supplies the last-used
-    /// study, which is what that global is now for (it stopped being *the*
-    /// selection the moment windows became independent).
-    let initialProject: UUID?
+    /// A **binding**, because it is written as well as read: a window that
+    /// switches study writes the new one back, or restoration would return it to
+    /// whatever it was opened on. nil means "no particular study" — a plain
+    /// ⌥⌘N, which deliberately passes no value so SwiftUI's per-value window
+    /// dedup cannot swallow the command — and then `persistedProjectID` supplies
+    /// the last-used study, which is what that global is now for.
+    @Binding var sceneProject: UUID?
 
     @State private var selection: Set<SidebarSelection> = []
     /// Tracks whether the project list sidebar column is visible.
@@ -661,7 +662,7 @@ struct ContentView: View {
             // restored windows come back on five studies rather than five
             // copies of whichever was selected last.
             if selection.isEmpty {
-                let wanted = initialProject
+                let wanted = sceneProject
                     ?? (persistedProjectID.isEmpty ? nil : UUID(uuidString: persistedProjectID))
                 if let wanted, projectIndex.projects.contains(where: { $0.id == wanted }) {
                     selection = [.project(wanted)]
@@ -961,6 +962,9 @@ struct ContentView: View {
             bridgeHandler.selectedFolderName = ""
             if let project = projectIndex.projects.first(where: { $0.id == id }) {
                 persistedProjectID = id.uuidString
+                // …and into this window's scene value, so restoration brings it
+                // back on the study it was SHOWING, not the one it opened on.
+                if sceneProject != id { sceneProject = id }
                 bridgeHandler.selectedProjectPath = project.path
                 bridgeHandler.selectedProjectAvailable = project.isAvailable
                 bridgeHandler.selectedProjectRevealablePath = revealPath(for: project) ?? ""

@@ -137,7 +137,10 @@ struct BristlenoseApp: App {
         // open — `openWindow(id:)` against a `WindowGroup` spawns a window,
         // which is what both of them want.
         WindowGroup(id: "main", for: UUID.self) { $projectID in
-            ContentView(initialProject: projectID)
+            // The BINDING, not a snapshot. A window that switches study must
+            // write the new one back, or restoration returns it to the study it
+            // was *opened* on rather than the one it was showing.
+            ContentView(sceneProject: $projectID)
                 .frame(minWidth: 700, minHeight: 500)
                 .environmentObject(serveFleet)
                 .environmentObject(projectIndex)

@@ -152,6 +152,7 @@ struct LocateErrorState: Identifiable {
 /// (Cmd+1-5 still switch tabs) — see design-desktop-nav-toolbar-rearrangement.md.
 struct ContentView: View {
 
+    @Environment(\.openWindow) private var openWindow
     @EnvironmentObject var serveFleet: ServeFleet
 
     /// This window's serve, or nil when it shows no study.
@@ -2230,6 +2231,12 @@ struct ContentView: View {
                 },
                 mcpMounted: serveFleet.mcpMounted,
                 onRemoveProject: { id in removeFromSidebarContextMenu(targetingProject: id) },
+                // Passes the project as the scene value, so per-value window
+                // dedup applies deliberately: on a study that already has a
+                // window this reveals it rather than opening a duplicate, which
+                // is what a reveal-or-open command should do. ⌥⌘N is the one
+                // that must always spawn, and it passes a fresh token instead.
+                onOpenInNewWindow: { id in openWindow(id: "main", value: id) },
                 onRemoveFolder: { id in deleteFromContextMenu(targetingFolder: id) },
                 pipelineRunner: pipelineRunner,
                 liveData: pipelineRunner.liveData,

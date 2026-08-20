@@ -91,6 +91,11 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// Access item hides (genuinely impossible, permanently, §3.6a).
     let mcpMounted: Bool
     let onRemoveProject: (UUID) -> Void
+
+    /// Open a study in a new window — the sidebar twin of `File ▸ Open in New
+    /// Window`. Specced with the child-window work and unbuilt until now; it is
+    /// what makes "that study, over there" one gesture.
+    let onOpenInNewWindow: (UUID) -> Void
     let onRemoveFolder: (UUID) -> Void
     /// Live per-project run/copy data for the rich cell. `liveData` is
     /// `@ObservedObject` (Phase 3) so high-frequency progress ticks (ring fraction /
@@ -160,6 +165,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.canShareWithAgents = canShareWithAgents
         controller.mcpMounted = mcpMounted
         controller.onRemoveProject = onRemoveProject
+        controller.onOpenInNewWindow = onOpenInNewWindow
         controller.onRemoveFolder = onRemoveFolder
         controller.update(
             roots: OutlineTree.build(
@@ -238,6 +244,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var canShareWithAgents: (UUID) -> Bool = { _ in false }
     var mcpMounted: Bool = false
     var onRemoveProject: (UUID) -> Void = { _ in }
+    var onOpenInNewWindow: (UUID) -> Void = { _ in }
     var onRemoveFolder: (UUID) -> Void = { _ in }
 
     /// Re-entrancy guard (spec §2.5): suppress the selection callback while we
@@ -1697,6 +1704,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         if canShowInFinder(id) {
             menu.addItem(menuItem("desktop.menu.project.showInFinder", #selector(menuShowInFinder(_:))))
         }
+        // Short form, as Finder uses for a folder — you can only right-click a
+        // project row or a lens row, never both, so context does the
+        // disambiguating that a longer label would.
+        menu.addItem(menuItem("desktop.menu.file.openInNewWindow",
+                              #selector(menuOpenInNewWindow(_:))))
+        menu.addItem(.separator())
         menu.addItem(menuItem("desktop.menu.project.rename", #selector(menuRename(_:))))
         menu.addItem(menuItem("desktop.menu.project.chooseIcon", #selector(menuChooseIcon(_:))))
 
@@ -1977,6 +1990,10 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     @objc private func menuRemoveProject(_ sender: NSMenuItem) {
         if let id = menuClickedNodeID { onRemoveProject(id) }
+    }
+
+    @objc private func menuOpenInNewWindow(_ sender: NSMenuItem) {
+        if let id = menuClickedNodeID { onOpenInNewWindow(id) }
     }
 
     @objc private func menuRemoveFolder(_ sender: NSMenuItem) {

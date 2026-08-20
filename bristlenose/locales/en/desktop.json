@@ -579,8 +579,8 @@
     "disconnectRevocation": "This doesn't revoke Bristlenose's access at the provider \u2014 do that in your account settings there."
   },
   "mcpAgents": {
-    "header": "Agents read whichever project is selected in Bristlenose",
-    "nowShowing": "Now showing: {{project}}",
+    "header": "Agents read one project at a time \u2014 the one you turned on most recently",
+    "nowShowing": "Agents are reading: {{project}}",
     "install": "Install Extension\u2026",
     "extensionSubtitle": "Extension \u00b7 {{size}}",
     "recentActivity": "An agent has asked about this project recently",
@@ -591,7 +591,7 @@
     "clients": {
       "generic": "Generic MCP"
     },
-    "badgeTooltip": "Shared with agents. Any connected agent can read this project's quotes when you ask it to."
+    "badgeTooltip": "Agent Access is on for this project. Agents read one project at a time."
   },
   "cloudImport": {
     "destinationNewProject": "New Project\u2026",

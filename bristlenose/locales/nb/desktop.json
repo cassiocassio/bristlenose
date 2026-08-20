@@ -579,8 +579,8 @@
     "disconnectRevocation": "Dette opphever ikke Bristlenoses tilgang hos leverand\u00f8ren \u2014 det gj\u00f8r du i innstillingene for kontoen din der."
   },
   "mcpAgents": {
-    "header": "Agenter leser prosjektet som er valgt i Bristlenose",
-    "nowShowing": "Viser n\u00e5: {{project}}",
+    "header": "Agenter leser ett prosjekt om gangen \u2013 det du sist slo p\u00e5",
+    "nowShowing": "Agenter leser: {{project}}",
     "install": "Installer utvidelse\u2026",
     "extensionSubtitle": "Utvidelse \u00b7 {{size}}",
     "recentActivity": "En agent har nylig spurt om dette prosjektet",
@@ -591,7 +591,7 @@
     "clients": {
       "generic": "Generisk MCP"
     },
-    "badgeTooltip": "Delt med agenter. Enhver tilkoblet agent kan lese sitatene i dette prosjektet n\u00e5r du ber om det."
+    "badgeTooltip": "Agenttilgang er p\u00e5 for dette prosjektet. Agenter leser ett prosjekt om gangen."
   },
   "cloudImport": {
     "destinationNewProject": "Nytt prosjekt\u2026",

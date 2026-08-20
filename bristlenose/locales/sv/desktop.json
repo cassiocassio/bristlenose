@@ -579,8 +579,8 @@
     "disconnectRevocation": "Det \u00e5terkallar inte Bristlenoses \u00e5tkomst hos leverant\u00f6ren \u2014 det g\u00f6r du i inst\u00e4llningarna f\u00f6r ditt konto d\u00e4r."
   },
   "mcpAgents": {
-    "header": "Agenter l\u00e4ser det projekt som \u00e4r valt i Bristlenose",
-    "nowShowing": "Visas nu: {{project}}",
+    "header": "Agenter l\u00e4ser ett projekt i taget \u2013 det du senast aktiverade",
+    "nowShowing": "Agenter l\u00e4ser: {{project}}",
     "install": "Installera till\u00e4gg\u2026",
     "extensionSubtitle": "Till\u00e4gg \u00b7 {{size}}",
     "recentActivity": "En agent har nyligen fr\u00e5gat om det h\u00e4r projektet",
@@ -591,7 +591,7 @@
     "clients": {
       "generic": "Generisk MCP"
     },
-    "badgeTooltip": "Delas med agenter. Alla anslutna agenter kan l\u00e4sa projektets citat n\u00e4r du ber om det."
+    "badgeTooltip": "Agent\u00e5tkomst \u00e4r p\u00e5 f\u00f6r det h\u00e4r projektet. Agenter l\u00e4ser ett projekt i taget."
   },
   "cloudImport": {
     "destinationNewProject": "Nytt projekt\u2026",

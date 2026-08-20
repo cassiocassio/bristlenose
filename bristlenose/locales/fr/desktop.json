@@ -579,8 +579,8 @@
     "disconnectRevocation": "Cela ne r\u00e9voque pas l\u2019acc\u00e8s de Bristlenose chez le fournisseur \u2014 faites-le dans les r\u00e9glages de votre compte l\u00e0-bas."
   },
   "mcpAgents": {
-    "header": "Les agents lisent le projet s\u00e9lectionn\u00e9 dans Bristlenose",
-    "nowShowing": "Affich\u00e9 actuellement : {{project}}",
+    "header": "Les agents lisent un projet \u00e0 la fois : le dernier que vous avez activ\u00e9",
+    "nowShowing": "Les agents lisent : {{project}}",
     "install": "Installer l'extension\u2026",
     "extensionSubtitle": "Extension \u00b7 {{size}}",
     "recentActivity": "Un agent a interrog\u00e9 ce projet r\u00e9cemment",
@@ -591,7 +591,7 @@
     "clients": {
       "generic": "MCP g\u00e9n\u00e9rique"
     },
-    "badgeTooltip": "Partag\u00e9 avec les agents. Tout agent connect\u00e9 peut lire les citations de ce projet \u00e0 votre demande."
+    "badgeTooltip": "L'acc\u00e8s des agents est activ\u00e9 pour ce projet. Les agents lisent un projet \u00e0 la fois."
   },
   "cloudImport": {
     "destinationNewProject": "Nouveau projet\u2026",

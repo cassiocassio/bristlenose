@@ -579,8 +579,8 @@
     "disconnectRevocation": "T\u00e4m\u00e4 ei peru Bristlenosen k\u00e4ytt\u00f6oikeutta palveluntarjoajalla \u2014 tee se siell\u00e4 tilisi asetuksissa."
   },
   "mcpAgents": {
-    "header": "Agentit lukevat Bristlenosessa valittuna olevaa projektia",
-    "nowShowing": "Nyt n\u00e4kyviss\u00e4: {{project}}",
+    "header": "Agentit lukevat yht\u00e4 projektia kerrallaan \u2013 viimeksi k\u00e4ytt\u00f6\u00f6n ottamaasi",
+    "nowShowing": "Agentit lukevat: {{project}}",
     "install": "Asenna laajennus\u2026",
     "extensionSubtitle": "Laajennus \u00b7 {{size}}",
     "recentActivity": "Agentti kysyi \u00e4skett\u00e4in t\u00e4st\u00e4 projektista",
@@ -591,7 +591,7 @@
     "clients": {
       "generic": "Yleinen MCP"
     },
-    "badgeTooltip": "Jaettu agenteille. Yhdistetty agentti voi lukea t\u00e4m\u00e4n projektin lainauksia pyynn\u00f6st\u00e4si."
+    "badgeTooltip": "Agenttik\u00e4ytt\u00f6 on p\u00e4\u00e4ll\u00e4 t\u00e4ss\u00e4 projektissa. Agentit lukevat yht\u00e4 projektia kerrallaan."
   },
   "cloudImport": {
     "destinationNewProject": "Uusi projekti\u2026",

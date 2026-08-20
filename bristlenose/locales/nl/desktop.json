@@ -579,8 +579,8 @@
     "disconnectRevocation": "Dit trekt de toegang van Bristlenose bij de aanbieder niet in \u2014 dat doe je daar in de instellingen van je account."
   },
   "mcpAgents": {
-    "header": "Agents lezen het project dat in Bristlenose is geselecteerd",
-    "nowShowing": "Nu zichtbaar: {{project}}",
+    "header": "Agents lezen \u00e9\u00e9n project tegelijk \u2014 het laatste dat je hebt ingeschakeld",
+    "nowShowing": "Agents lezen nu: {{project}}",
     "install": "Extensie installeren\u2026",
     "extensionSubtitle": "Extensie \u00b7 {{size}}",
     "recentActivity": "Een agent heeft onlangs naar dit project gevraagd",
@@ -591,7 +591,7 @@
     "clients": {
       "generic": "Generieke MCP"
     },
-    "badgeTooltip": "Gedeeld met agents. Elke verbonden agent kan de citaten van dit project lezen wanneer je daarom vraagt."
+    "badgeTooltip": "Agenttoegang staat aan voor dit project. Agents lezen \u00e9\u00e9n project tegelijk."
   },
   "cloudImport": {
     "destinationNewProject": "Nieuw project\u2026",

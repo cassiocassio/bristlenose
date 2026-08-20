@@ -579,8 +579,8 @@
     "disconnectRevocation": "Questo non revoca l\u2019accesso di Bristlenose presso il fornitore \u2014 fallo nelle impostazioni del tuo account l\u00ec."
   },
   "mcpAgents": {
-    "header": "Gli agenti leggono il progetto selezionato in Bristlenose",
-    "nowShowing": "In mostra: {{project}}",
+    "header": "Gli agenti leggono un progetto alla volta: l'ultimo che hai attivato",
+    "nowShowing": "Gli agenti stanno leggendo: {{project}}",
     "install": "Installa estensione\u2026",
     "extensionSubtitle": "Estensione \u00b7 {{size}}",
     "recentActivity": "Un agente ha interrogato di recente questo progetto",
@@ -591,7 +591,7 @@
     "clients": {
       "generic": "MCP generico"
     },
-    "badgeTooltip": "Condiviso con gli agenti. Qualsiasi agente collegato pu\u00f2 leggere le citazioni di questo progetto su tua richiesta."
+    "badgeTooltip": "L'accesso degli agenti \u00e8 attivo per questo progetto. Gli agenti leggono un progetto alla volta."
   },
   "cloudImport": {
     "destinationNewProject": "Nuovo progetto\u2026",

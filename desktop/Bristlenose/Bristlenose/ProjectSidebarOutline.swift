@@ -1747,15 +1747,24 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // lifecycle block above already follows (a menu-*bar* item would
         // dim instead). Fixes the pre-existing `enabled:` gating here
         // (design-mcp-extension §3.6a's "two corrections to shipped code").
-        if canShowInFinder(id) {
-            menu.addItem(menuItem("desktop.menu.project.showInFinder", #selector(menuShowInFinder(_:))))
-        }
+        // **Open first, and in its own group.** Clicking the row already opens
+        // the study in *this* window, so this is the variant of the row's own
+        // purpose — the primary action, and primary goes first. Finder does the
+        // same, leading with its open verbs and pushing reveal-elsewhere down.
+        //
+        // Separated from Show in Finder deliberately: sharing a group claimed
+        // the two were the same kind of thing, and they are not. This one
+        // navigates inside Bristlenose; that one hands off to another app.
+        //
         // Short form, as Finder uses for a folder — you can only right-click a
         // project row or a lens row, never both, so context does the
         // disambiguating that a longer label would.
         menu.addItem(menuItem("desktop.menu.file.openInNewWindow",
                               #selector(menuOpenInNewWindow(_:))))
         menu.addItem(.separator())
+        if canShowInFinder(id) {
+            menu.addItem(menuItem("desktop.menu.project.showInFinder", #selector(menuShowInFinder(_:))))
+        }
         menu.addItem(menuItem("desktop.menu.project.rename", #selector(menuRename(_:))))
         menu.addItem(menuItem("desktop.menu.project.chooseIcon", #selector(menuChooseIcon(_:))))
 

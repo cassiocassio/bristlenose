@@ -367,6 +367,15 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   value earns its keep through ⌥⌘N and the context menus rather than through
   restoration.
 
+  **Do NOT add a Bristlenose preference for this** (decided 20 Aug 2026, after a
+  review floated a Settings ▸ General row for the "it forgot where I was" case).
+  macOS already owns the decision globally, and duplicating a system preference
+  inside an app reads as not trusting the platform. The behaviour follows the
+  setting either way: off gives the old Mac thing, on gives Welcome — and
+  Welcome is a decent landing rather than a consolation prize, which is what
+  makes honouring the setting cheap. Safari does invent its own ("Safari opens
+  with:"); treat that as the odd one out, not the model.
+
 - **Cmd-R from Xcode cannot test window restoration — and it fails by giving a
   confident wrong answer.** macOS writes window state on a **graceful** quit
   (`applicationShouldTerminate` → `NSQuitAlwaysKeepsWindows`). Xcode's Stop

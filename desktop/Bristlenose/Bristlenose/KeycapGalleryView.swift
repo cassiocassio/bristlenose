@@ -209,7 +209,7 @@ struct KeycapGalleryView: View {
         let isSplit = forceSplit || (split && !forceJoined)
         return HStack(spacing: isSplit ? 4 : (skin == .bare ? 0 : 2)) {
             ForEach(Array(tokens.enumerated()), id: \.offset) { _, tok in
-                Keycap(token: tok, skin: skin, useSF: useSF, tintOverride: tintOverride)
+                GalleryKeycap(token: tok, skin: skin, useSF: useSF, tintOverride: tintOverride)
             }
         }
     }
@@ -237,10 +237,14 @@ struct KeycapGalleryView: View {
     }
 }
 
-// MARK: - Keycap primitive
+// MARK: - Gallery keycap primitive (all six skins)
 
-/// One key. The skin owns the decoration; the token owns the glyph source.
-private struct Keycap: View {
+/// One key, in any of the six skins — the comparison harness. The SHIPPING cap
+/// is `Keycap` in `Keycap.swift`: Skin A only, the inline-prose default, which
+/// graduated out of here per design-keycaps.md §"Implementation plan" step 3.
+/// This one keeps every skin so a candidate can still be held against the CSS
+/// gallery by eye.
+private struct GalleryKeycap: View {
     let token: KeyToken
     let skin: CapSkin
     let useSF: Bool

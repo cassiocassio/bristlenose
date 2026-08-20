@@ -229,6 +229,11 @@ private struct DebugMenuContent: View {
 
         Button("Keycap Gallery") { openWindow(id: "keycap-gallery") }
 
+        // Stress rig for content degradation in the fixed welcome geometry —
+        // scale vs ellipsis vs clause-split vs authored ladder, over a corpus
+        // of clause shapes, meaning traps and head-final scripts.
+        Button("Degradation Lab") { openWindow(id: "degradation-lab") }
+
         // Debug lens — test content on a visible grid, inside the report
         // webview itself (measures the production CSS in situ). Routes the
         // SPA to /report/specimen; needs a served project.

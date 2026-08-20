@@ -17,7 +17,9 @@ import Combine
 //                             NOT the real ShoalView boids — that's the delight /
 //                             analysing screensaver, which wants a big canvas.
 // Study tools: AutoCode · Codebooks (manual tags) · Tag · Star & hide ·
-//   Connect an AI agent — all webviews (see that brief's build-target section).
+//   Connect an AI agent · Send to Miro — webviews (see that brief's build-target
+//   section) — and Ingest · Video clips, native SwiftUI (SF Symbols + SF Pro,
+//   replacing the last PNG screenshots on 14 Aug 2026).
 //
 // Native pieces use exact-ish fonts (SF Mono for the chips); the webviews reuse
 // the mockup CSS/JS verbatim — slight font-rendering differences accepted.
@@ -27,7 +29,7 @@ import Combine
 /// Which illustration a Welcome-screen rotator slot carries (`.none` = plain text slot).
 enum WelcomeIllustration: Equatable {
     case none, sentimentFan, books, emergentThemes, quote, signal,
-         autocode, manualTags, tag, starHide, agentChat
+         autocode, manualTags, tag, starHide, agentChat, ingest, clips, miro
 }
 
 /// sRGB colour from a 0xRRGGBB literal (file-private helper).
@@ -66,6 +68,7 @@ struct SentimentFanView: View {
     private let topRow = [0, 1, 2, 3]
     private let bottomRow = [4, 5, 6]
     private let gap: CGFloat = 8
+    private static var tempo: Double { WelcomeTempo.stretch(for: .sentimentFan) }
 
     var body: some View {
         GeometryReader { geo in
@@ -76,8 +79,8 @@ struct SentimentFanView: View {
                         .offset(dealt ? homeOffset(i, in: geo.size) : .zero)   // deck = centre
                         .zIndex(Double(i))
                         .animation(reduceMotion ? nil
-                                   : .easeInOut(duration: 1.0).delay(Double(i) * 0.12),
-                                   value: dealt)                                // per-chip deal stagger (half speed)
+                                   : .easeInOut(duration: 1.0 * Self.tempo).delay(Double(i) * 0.12 * Self.tempo),
+                                   value: dealt)                                // per-chip deal stagger, on the group tempo
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
@@ -88,9 +91,9 @@ struct SentimentFanView: View {
         .task(id: active && !reduceMotion) {
             guard active && !reduceMotion else { await MainActor.run { dealt = true }; return }
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2.4))    // gathered (deck) hold — half speed
+                try? await Task.sleep(for: .seconds(2.4 * Self.tempo))    // gathered (deck) hold — clears the 3s opening floor at the group tempo
                 await MainActor.run { dealt = true }
-                try? await Task.sleep(for: .seconds(5.6))    // dealt (readable) hold — half speed
+                try? await Task.sleep(for: .seconds(5.6 * Self.tempo))    // dealt (readable) hold — likewise clears the 3s end floor
                 await MainActor.run { dealt = false }
             }
         }
@@ -143,6 +146,11 @@ private struct SentimentChipSizeKey: PreferenceKey {
 /// the sentiments — so the framework-vs-method distinction stays an
 /// implementation detail. Extend by adding a `Book` + its `welcome-book-<slug>`
 /// imageset. Real cover when the asset lands; typographic placeholder until then.
+///
+/// Bending: the caption and link hold fixed semantic sizes and shed WORDS when
+/// the slot is short (clause cut, then ellipsis); only the cover fan scales,
+/// because only it cannot reflow. Until 20 Aug 2026 a single `scaleEffect`
+/// wrapped the lot, so a narrow window shrank the prose along with the covers.
 struct BookShelfView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var front = 0
@@ -173,40 +181,20 @@ struct BookShelfView: View {
     private let cardW: CGFloat = 106     // 80×114 grown ~33% to use more of the cell
     private let cardH: CGFloat = 152
     private let off: CGFloat = 34        // horizontal peek between covers — more separation, less overlap
-    // Natural (unscaled) height: caption (2-line reserve ~60) + covers (cardH + 8) + link.
-    private let naturalHeight: CGFloat = 252
+    /// Width the fan wants: one full cover plus a peek per extra cover.
+    private var fanWidth: CGFloat { cardW + off * CGFloat(max(0, books.count - 1)) }
+    /// Caption reserve: two lines of `.body`, held constant so the fan does not
+    /// jump as the front cover changes and the line length with it.
+    private let captionReserve: CGFloat = 38
     @Environment(\.welcomeAnimationActive) private var active
-    private let timer = Timer.publish(every: 3.8, on: .main, in: .common).autoconnect()
+    private let timer = Timer.publish(every: 3.8 * WelcomeTempo.stretch(for: .books), on: .main, in: .common).autoconnect()
 
     var body: some View {
         let n = books.count
         let current = books[min(front, n - 1)]
-        let shelf = VStack(alignment: .leading, spacing: 6) {
-            // Caption — synced to the front cover, cross-fades on change.
-            VStack(alignment: .leading, spacing: 2) {
-                Text(current.author).font(.title3).fontWeight(.semibold)
-                Text(current.line)
-                    .font(.body).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(height: 38, alignment: .topLeading)   // reserve 2 lines so the fan doesn't jump
-            }
-            .id("cap-\(front)")
-            .transition(.opacity)
-
-            // The fan of covers — front on top, LEFT-aligned so it opens rightward into the cell.
-            ZStack {
-                ForEach(books.indices, id: \.self) { i in
-                    let d = ((i - front) % n + n) % n
-                    bookCard(books[i])
-                        .offset(x: CGFloat(d) * off)
-                        .opacity(d > 3 ? 0 : 1 - Double(d) * 0.14)   // show up to 4; fade with depth
-                        .zIndex(Double(100 - d))
-                }
-            }
-            .frame(height: cardH + 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityHidden(true)   // covers are decorative; the caption conveys the book
-
+        return VStack(alignment: .leading, spacing: 6) {
+            caption(current)
+            coverFan
             if let url = URL(string: current.href) {
                 Link("Learn more →", destination: url)
                     .font(.callout)
@@ -219,16 +207,82 @@ struct BookShelfView: View {
             guard active && !reduceMotion else { return }   // baton: advance only while holding it
             withAnimation(.easeInOut(duration: 0.6)) { front = (front + 1) % n }
         }
+    }
 
-        // Self-scale to the height the fixed golden slot offers (never upscale), so the
-        // shelf bends to the geometry the way the webview illustrations do — the covers
-        // draw at fixed sizes and can't reflow, so a uniform scale is how it fits.
-        return GeometryReader { geo in
-            let s = min(1, geo.size.height / naturalHeight)
-            shelf
-                .frame(width: geo.size.width, height: naturalHeight, alignment: .topLeading)
-                .scaleEffect(s, anchor: .topLeading)
+    // Caption — synced to the front cover, cross-fades on change.
+    //
+    // Fixed semantic sizes. It used to sit inside the whole-shelf `scaleEffect`
+    // below, which meant a short cell shrank the PROSE: at the 700pt minimum
+    // window the scale reaches 0.29, rendering `.title3` smaller than the
+    // unscaled `.subheadline` cell tag beside it — the type hierarchy inverted.
+    // Scaling is for the covers, which cannot reflow; text bends by losing
+    // words, never by losing size. (docs/design-welcome-screen.md §2.)
+    private func caption(_ b: Book) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(b.author).font(.title3).fontWeight(.semibold)
+            // Longest candidate that fits, in order. NO `.fixedSize` — that
+            // would force each candidate to demand its full height and defeat
+            // the fit test. The ellipsis is the last resort, not the first:
+            // it is honest (`…` marks omission) but it promises a disclosure
+            // this cell cannot offer, so a shorter complete reading wins.
+            ViewThatFits(in: .vertical) {
+                captionLine(b.line, limit: nil)
+                if let short = WelcomeClauseFit.shortened(b.line) {
+                    captionLine(short, limit: nil)
+                }
+                captionLine(b.line, limit: 2)
+            }
+            .frame(height: captionReserve, alignment: .topLeading)
         }
+        .id("cap-\(front)")
+        .transition(.opacity)
+    }
+
+    private func captionLine(_ s: String, limit: Int?) -> some View {
+        Text(s)
+            .font(.body).foregroundStyle(.secondary)
+            .lineLimit(limit)
+            .truncationMode(.tail)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    // The fan of covers — front on top, LEFT-aligned so it opens rightward.
+    //
+    // The ONLY thing that scales, and on BOTH axes: the fan is 208pt wide at
+    // four covers while the science cell is ~165pt at minimum window size, so a
+    // height-only scale drops the fourth cover off the edge. (The old
+    // whole-shelf scale hid this by shrinking the fan horizontally too.)
+    //
+    // `aspectRatio` is load-bearing, not tidiness. `scaleEffect` is a DRAWING
+    // transform — it never changes the frame the layout reserved. So when width
+    // was the binding constraint the fan drew `cardH × widthRatio` tall inside a
+    // frame the VStack had sized from leftover *height*, and the two disagreed:
+    // the covers spilled downward over the Learn-more link, and the unused
+    // reserve read as a gap under the caption. Giving the box the fan's natural
+    // ratio makes the reserved frame and the drawn size the same thing, so one
+    // `s` satisfies both axes and the VStack packs tight underneath.
+    private var coverFan: some View {
+        GeometryReader { geo in
+            let s = min(1, geo.size.width / fanWidth, geo.size.height / cardH)
+            ZStack {
+                ForEach(books.indices, id: \.self) { i in
+                    let d = ((i - front) % books.count + books.count) % books.count
+                    bookCard(books[i])
+                        .offset(x: CGFloat(d) * off)
+                        .opacity(d > 3 ? 0 : 1 - Double(d) * 0.14)   // show up to 4; fade with depth
+                        .zIndex(Double(100 - d))
+                }
+            }
+            // topLeading on both: GeometryReader places content at the top, so a
+            // centre anchor would scale about the midline of the unscaled box.
+            .frame(width: fanWidth, height: cardH, alignment: .topLeading)
+            .scaleEffect(s, anchor: .topLeading)
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+        }
+        .aspectRatio(fanWidth / cardH, contentMode: .fit)
+        .frame(maxWidth: fanWidth, maxHeight: cardH, alignment: .topLeading)   // never upscale
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityHidden(true)   // covers are decorative; the caption conveys the book
     }
 
     @ViewBuilder private func bookCard(_ b: Book) -> some View {
@@ -430,12 +484,308 @@ struct AgentChatIllustrationView: View {
     }
 }
 
+/// Study-tools #6 — Ingest: one example of every kind of file or folder Bristlenose
+/// imports, as a native list — SF Symbols for the icons, SF Pro for the names, and a
+/// small surtitle over each name saying what kind it is and which formats that path
+/// ingests (the four decode paths of `classify_file` in `bristlenose/models.py`, plus
+/// the folder shapes `discover_files` walks). Each icon blinks in, then the name types
+/// out. Reduce Motion — or losing the baton — shows the finished list. Content sits at
+/// x = 0: the Swift frame owns the cell inset (no second, illustration-side padding).
+struct IngestIllustrationView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
+
+    private struct Row { let icon, surtitle, name: String }
+    private static let rows: [Row] = [
+        .init(icon: "film",
+              surtitle: "Video — MP4 · MOV · MKV · WebM · AVI · M4V",
+              name: "usability-test-03.mp4"),
+        .init(icon: "waveform",
+              surtitle: "Audio — WAV · MP3 · M4A · FLAC · OGG · AAC · WMA",
+              name: "interview-with-anna.m4a"),
+        .init(icon: "captions.bubble",
+              surtitle: "Captions — VTT · SRT, matched to their video by name",
+              name: "usability-test-03.vtt"),
+        .init(icon: "doc.text",
+              surtitle: "Transcripts — Word exports from Zoom, Teams or Meet",
+              name: "Discovery call - Transcript.docx"),
+        .init(icon: "folder",
+              surtitle: "Folders — one session’s files together, any mix",
+              name: "2026-01-15 14.30 Usability study"),
+    ]
+
+    @State private var iconOn = [Bool](repeating: false, count: 5)
+    @State private var detailOn = [Bool](repeating: false, count: 5)
+    @State private var typed = [Int](repeating: 0, count: 5)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(Self.rows.indices, id: \.self) { i in row(i) }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .accessibilityHidden(true)
+        .task(id: active && !reduceMotion) { await drive() }
+    }
+
+    private func row(_ i: Int) -> some View {
+        let r = Self.rows[i]
+        // Opacity (never conditional views) so every row keeps its space — nothing
+        // reflows while icons blink and names type.
+        return VStack(alignment: .leading, spacing: 1) {
+            Text(r.surtitle)
+                .font(.system(size: 10.5)).foregroundStyle(.secondary)
+                .opacity(detailOn[i] ? 1 : 0)
+            HStack(spacing: 8) {
+                Image(systemName: r.icon)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 18)
+                    .opacity(iconOn[i] ? 1 : 0)
+                Text(String(r.name.prefix(typed[i])))
+                    .font(.system(size: 13))
+                Spacer(minLength: 0)
+            }
+            .frame(height: 18)
+        }
+    }
+
+    @MainActor private func setComplete() {
+        iconOn = [Bool](repeating: true, count: 5)
+        detailOn = [Bool](repeating: true, count: 5)
+        typed = Self.rows.map(\.name.count)
+    }
+
+    private static var tempo: Double { WelcomeTempo.stretch(for: .ingest) }
+    /// One beat, scaled by the group tempo (× this illustration's local pace).
+    private func nap(_ ms: Double) async {
+        try? await Task.sleep(for: .milliseconds(ms * Self.tempo))
+    }
+
+    private func drive() async {
+        guard active && !reduceMotion else { await MainActor.run { setComplete() }; return }
+        while !Task.isCancelled {
+            await MainActor.run {
+                iconOn = [Bool](repeating: false, count: 5)
+                detailOn = [Bool](repeating: false, count: 5)
+                typed = [Int](repeating: 0, count: 5)
+            }
+            // Rest on the empty opening frame (absolute — holds don't scale).
+            try? await Task.sleep(for: .seconds(WelcomeTempo.leadInSeconds))
+            for i in Self.rows.indices {
+                if Task.isCancelled { return }
+                // Blink: on — off — on, hard cuts (a fade would read as a fade-in).
+                await MainActor.run { iconOn[i] = true }
+                await nap(90)
+                await MainActor.run { iconOn[i] = false }
+                await nap(70)
+                await MainActor.run {
+                    iconOn[i] = true
+                    withAnimation(.easeOut(duration: 0.25)) { detailOn[i] = true }
+                }
+                await nap(140)
+                for c in 1...Self.rows[i].name.count {
+                    if Task.isCancelled { return }
+                    await MainActor.run { typed[i] = c }
+                    await nap(26)
+                }
+                await nap(280)
+            }
+            // Rest on the finished list before looping.
+            try? await Task.sleep(for: .seconds(WelcomeTempo.holdEndSeconds))
+        }
+    }
+}
+
+/// Study-tools #7 — Video clips: the real Export-menu item (film icon, "Extract Video
+/// Clips…", its "Trimmed clip per quote" subtitle) drawn native, a pointer slides in
+/// and clicks it — with the macOS highlight-flash a real menu does — then the clips
+/// land one at a time: fake thumbnail first, filename assembling one logical unit at a
+/// beat (participant code · timecode · quote snippet · .mp4) so the naming scheme
+/// reads. Pause on the finished set, then loop back to the menu choice.
+struct ClipsIllustrationView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
+
+    private struct Clip { let units: [String]; let a, b: UInt }
+    private static let clips: [Clip] = [
+        .init(units: ["p1", "00m14", "Ive got this little thing", ".mp4"], a: 0x8FA1B8, b: 0x39445A),
+        .init(units: ["p1", "02m46", "its a new thing", ".mp4"], a: 0xD9B38A, b: 0x6E5136),
+        .init(units: ["p2", "07m11", "back to the homepage", ".mp4"], a: 0x9CBCAA, b: 0x46685A),
+    ]
+    /// First n units joined the way the exporter names files: spaces between units,
+    /// the extension glued on.
+    private static func filename(_ clip: Clip, units n: Int) -> String {
+        var s = ""
+        for (i, u) in clip.units.prefix(n).enumerated() {
+            if i > 0 && !u.hasPrefix(".") { s += " " }
+            s += u
+        }
+        return s
+    }
+
+    @State private var menuOn = false
+    @State private var highlight = false
+    @State private var pressed = false
+    @State private var pointerOn = false
+    @State private var pointerHome = false
+    @State private var thumbOn = [false, false, false]
+    @State private var unitsShown = [0, 0, 0]
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            rows
+            menu.opacity(menuOn ? 1 : 0)
+            pointer
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .accessibilityHidden(true)
+        .task(id: active && !reduceMotion) { await drive() }
+    }
+
+    private var rows: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            ForEach(Self.clips.indices, id: \.self) { i in
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(LinearGradient(colors: [rgb(Self.clips[i].a), rgb(Self.clips[i].b)],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 34, height: 19)
+                        .overlay(RoundedRectangle(cornerRadius: 3)
+                            .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5))
+                        .opacity(thumbOn[i] ? 1 : 0)
+                        .scaleEffect(thumbOn[i] ? 1 : 0.7)
+                    Text(Self.filename(Self.clips[i], units: unitsShown[i]))
+                        .font(.system(size: 13))
+                    Spacer(minLength: 0)
+                }
+                .frame(height: 19)
+            }
+        }
+    }
+
+    // The Export-menu row, verbatim strings from the real menu. Approximated menu
+    // surface (windowBackgroundColor + shadow) — a real NSMenu material isn't
+    // reachable from a decorative SwiftUI view, and the row is the point.
+    private var menu: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "film")
+                .font(.system(size: 15))
+                .foregroundStyle(highlight ? AnyShapeStyle(.white) : AnyShapeStyle(Color.accentColor))
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Extract Video Clips…")
+                    .font(.system(size: 13))
+                    .foregroundStyle(highlight ? .white : .primary)
+                Text("Trimmed clip per quote")
+                    .font(.system(size: 11))
+                    .foregroundStyle(highlight ? AnyShapeStyle(.white.opacity(0.85)) : AnyShapeStyle(.secondary))
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 9).padding(.vertical, 5)
+        .frame(width: 218, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 5)
+            .fill(highlight ? Color.accentColor : Color.clear))
+        .padding(5)
+        .background(RoundedRectangle(cornerRadius: 8)
+            .fill(Color(nsColor: .windowBackgroundColor))
+            .shadow(color: .black.opacity(0.25), radius: 10, y: 4))
+        .overlay(RoundedRectangle(cornerRadius: 8)
+            .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5))
+    }
+
+    private var pointer: some View {
+        Image(systemName: "cursorarrow")
+            .font(.system(size: 15, weight: .medium))
+            .foregroundStyle(.primary)
+            .shadow(color: .black.opacity(0.35), radius: 0.8, y: 0.5)
+            .scaleEffect(pressed ? 0.85 : 1, anchor: .topLeading)
+            .offset(x: pointerHome ? 130 : 230, y: pointerHome ? 26 : 78)
+            .opacity(pointerOn ? 1 : 0)
+    }
+
+    @MainActor private func setComplete() {
+        menuOn = false; pointerOn = false; highlight = false; pressed = false; pointerHome = false
+        thumbOn = [true, true, true]
+        unitsShown = Self.clips.map(\.units.count)
+    }
+
+    @MainActor private func reset() {
+        menuOn = false; pointerOn = false; highlight = false; pressed = false; pointerHome = false
+        thumbOn = [false, false, false]
+        unitsShown = [0, 0, 0]
+    }
+
+    private static var tempo: Double { WelcomeTempo.stretch(for: .clips) }
+    /// One beat, scaled by the group tempo (× this illustration's local pace).
+    private func nap(_ ms: Double) async {
+        try? await Task.sleep(for: .milliseconds(ms * Self.tempo))
+    }
+
+    private func drive() async {
+        guard active && !reduceMotion else { await MainActor.run { setComplete() }; return }
+        while !Task.isCancelled {
+            await MainActor.run { reset() }
+            // Rest on the empty opening frame (absolute — holds don't scale).
+            try? await Task.sleep(for: .seconds(WelcomeTempo.leadInSeconds))
+            await MainActor.run { withAnimation(.easeOut(duration: 0.25)) { menuOn = true; pointerOn = true } }
+            await nap(250)
+            await MainActor.run { withAnimation(.easeInOut(duration: 0.55 * Self.tempo)) { pointerHome = true } }
+            await nap(620)
+            await MainActor.run { highlight = true }
+            await nap(350)
+            await MainActor.run { withAnimation(.easeIn(duration: 0.09)) { pressed = true } }
+            await nap(100)
+            await MainActor.run { withAnimation(.easeOut(duration: 0.12)) { pressed = false } }
+            for _ in 0..<2 {   // the real menu's confirmation flash
+                await MainActor.run { highlight = false }
+                await nap(70)
+                await MainActor.run { highlight = true }
+                await nap(70)
+            }
+            await nap(180)
+            await MainActor.run { withAnimation(.easeIn(duration: 0.3)) { menuOn = false; pointerOn = false } }
+            await nap(380)
+            for i in Self.clips.indices {
+                if Task.isCancelled { return }
+                await MainActor.run { withAnimation(.spring(duration: 0.3, bounce: 0.35)) { thumbOn[i] = true } }
+                await nap(330)
+                for u in 1...Self.clips[i].units.count {
+                    if Task.isCancelled { return }
+                    await MainActor.run { unitsShown[i] = u }
+                    await nap(430)
+                }
+                await nap(240)
+            }
+            // Rest on the finished set before looping back to the menu.
+            try? await Task.sleep(for: .seconds(WelcomeTempo.holdEndSeconds))
+        }
+    }
+}
+
+/// Study-tools #8 — Send to Miro: just the stickies, no board chrome (the toolbar and
+/// grid distract; the famous colours ARE the recognition). Webview so the sticky type
+/// and hand-set line wrapping stay exact. Appears in order, then holds.
+struct MiroIllustrationView: View {
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.welcomeAnimationActive) private var active
+
+    var body: some View {
+        let still = reduceMotion || !active   // baton: animate only while this cell holds it
+        return IllustrationWebView(html: WelcomeIllustrationHTML.miro(dark: scheme == .dark, reduce: still))
+            .id("miro-\(scheme)-\(still)")
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
 // MARK: - Embedded HTML (ported verbatim from docs/mockups/welcome-science-animations.html)
 
 enum WelcomeIllustrationHTML {
 
     static func quote(dark: Bool, reduce: Bool) -> String {
-        """
+        let kind = WelcomeIllustration.quote
+        return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-reduce="\(reduce ? "1" : "0")">
         <head><meta charset="utf-8"><style>
           :root{ --ink:#1a1a1a; --faint:#6b7280; --danger:#dc2626; }
@@ -456,6 +806,7 @@ enum WelcomeIllustrationHTML {
         <body><div class="q" id="q"></div>
         <script>
           var R = document.documentElement.getAttribute("data-reduce")==="1" || matchMedia("(prefers-reduced-motion:reduce)").matches;
+          var PACE=\(WelcomeTempo.jsStretch(for: kind));
           var T=[{t:"So, ",x:1},{t:"um, ",x:1},{t:"The checkout",k:1},{t:", like,",x:1},{t:" was",k:1},
                  {t:" honestly,",x:1},{t:" the—the",x:1},{t:" confusing",k:1},{t:", you know?",x:1},
                  {t:" I couldn’t",k:1},{t:" actually",x:1},{t:" figure out where to",k:1},{t:" pay.",k:1}];
@@ -466,12 +817,13 @@ enum WelcomeIllustrationHTML {
           var S=[["",3800],["marked",3000],["marked tidied",4800],["marked",1400],["",1000]];
           var i=0;
           function set(){ q.className="q "+S[i][0]; }
-          if(R){ i=1; set(); } else { set(); (function loop(){ setTimeout(function(){ i=(i+1)%S.length; set(); loop(); }, S[i][1]); })(); }
+          if(R){ i=1; set(); } else { set(); (function loop(){ setTimeout(function(){ i=(i+1)%S.length; set(); loop(); }, Math.round(S[i][1]*PACE)); })(); }
         </script></body></html>
         """
     }
 
     static func signal(dark: Bool, palette: String, reduce: Bool) -> String {
+        let kind = WelcomeIllustration.signal
         let accent = palette == "edo" ? (dark ? "#4d9fe0" : "#0f5c9e") : (dark ? "#0a84ff" : "#007aff")
         return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-reduce="\(reduce ? "1" : "0")">
@@ -568,6 +920,7 @@ enum WelcomeIllustrationHTML {
           </div>
         <script>
           var R = document.documentElement.getAttribute("data-reduce")==="1" || matchMedia("(prefers-reduced-motion:reduce)").matches;
+          var PACE=\(WelcomeTempo.jsStretch(for: kind));
           function flapWord(host, word){
             host.innerHTML="";
             String(word).split("").forEach(function(ch,i){
@@ -575,7 +928,7 @@ enum WelcomeIllustrationHTML {
               var r=document.createElement("span"); r.className="roll";
               r.textContent = ch===" " ? " " : ch;
               f.appendChild(r); host.appendChild(f);
-              if(!R) setTimeout(function(){ f.classList.add("flip"); setTimeout(function(){ f.classList.remove("flip"); },300); }, i*40);
+              if(!R) setTimeout(function(){ f.classList.add("flip"); setTimeout(function(){ f.classList.remove("flip"); },300); }, Math.round(i*40*PACE));
             });
           }
           var SIGNALS=[
@@ -635,14 +988,15 @@ enum WelcomeIllustrationHTML {
           set();
           requestAnimationFrame(fit);
           window.addEventListener('resize', fit);
-          if(!R) setInterval(function(){ idx=(idx+1)%SIGNALS.length; set(); }, 2800);
+          if(!R) setInterval(function(){ idx=(idx+1)%SIGNALS.length; set(); }, Math.round(2800*PACE));
         </script>
         </body></html>
         """
     }
 
     static func emergentThemes(dark: Bool, reduce: Bool) -> String {
-        """
+        let kind = WelcomeIllustration.emergentThemes
+        return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-reduce="\(reduce ? "1" : "0")">
         <head><meta charset="utf-8"><style>
           :root{ --ink:#1a1a1a; --faint:#6b7280; }
@@ -657,12 +1011,13 @@ enum WelcomeIllustrationHTML {
         <body>
         <script>
           var R = document.documentElement.getAttribute("data-reduce")==="1" || matchMedia("(prefers-reduced-motion:reduce)").matches;
+          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
           var SH={ A:{ name:"How to begin unclear", words:["“where do I start?”","confusing","too many steps","I gave up"] },
                    B:{ name:"Intuitive",            words:["“found it fast”","really clear","one tap","obvious"] } };
           var host=document.body, fishes=[], labels={};
           ["A","B"].forEach(function(key){ SH[key].words.forEach(function(txt){
             var el=document.createElement("span"); el.className="fish"; el.textContent=txt; host.appendChild(el);
-            fishes.push({ el:el, key:key, phase:Math.random()*6.28, freq:0.6+Math.random()*0.6, amp:8+Math.random()*6 });
+            fishes.push({ el:el, key:key, phase:Math.random()*6.28, freq:(0.6+Math.random()*0.6)/PACE, amp:8+Math.random()*6 });
           }); });
           ["A","B"].forEach(function(key){ var l=document.createElement("div"); l.className="tl"; l.innerHTML='<div class="n">'+SH[key].name+'</div>'; host.appendChild(l); labels[key]=l; });
           function homes(W,H){ var cx=W/2, cy=H/2;
@@ -677,10 +1032,11 @@ enum WelcomeIllustrationHTML {
             fishes.forEach(function(f,i){ f.el.style.transform="translate(-50%,-50%) translate("+h0.split[i].x+"px,"+h0.split[i].y+"px)"; });
             posLabels(); labels.A.classList.add("on"); labels.B.classList.add("on");
           } else {
-            var CYCLE=8200, SWOOP=1600, t0=performance.now();
+            var CYCLE=Math.round(8200*PACE), SWOOP=Math.round(1600*PACE), t0=performance.now()+LEAD;   // LEAD rests on the gathered flock
             function ease(x){ return x<0.5 ? 2*x*x : 1-Math.pow(-2*x+2,2)/2; }
             function tick(now){ var W=host.clientWidth||300, H=host.clientHeight||140, hm=homes(W,H); posLabels();
-              var p=((now-t0)%CYCLE)/CYCLE, blend, show;
+              var el=now-t0; if(el<0) el=0;   // pre-LEAD: hold the opening flock
+              var p=(el%CYCLE)/CYCLE, blend, show;
               if(p<SWOOP/CYCLE){ blend=ease(p/(SWOOP/CYCLE)); show=false; }
               else if(p<0.5){ blend=1; show=true; }
               else if(p<0.5+SWOOP/CYCLE){ blend=1-ease((p-0.5)/(SWOOP/CYCLE)); show=false; }
@@ -707,7 +1063,8 @@ enum WelcomeIllustrationHTML {
     /// is accepted, goes solid, then a 3-play burst rests. Tag + quote CSS copied
     /// from badge.css / blockquote.css (dark-mode selector adapted to data-appearance).
     static func autocode(dark: Bool, palette: String, reduce: Bool) -> String {
-        """
+        let kind = WelcomeIllustration.autocode
+        return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
         <head><meta charset="utf-8"><style>
           :root{
@@ -791,9 +1148,9 @@ enum WelcomeIllustrationHTML {
         <script>
           var host=document.getElementById("ac");
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
-          var PACE=1.3;
-          function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
-          function nap(ms){ return sleep(Math.round(ms*PACE)); }
+          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
+          function sleep(ms){ return new Promise(function(r){ setTimeout(r, Math.round(ms*PACE)); }); }
+          function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           var QUOTES=[
             { time:"11:30", speaker:"p1", role:"Participant", sentiment:"Satisfaction", q:"In the end, browsing rather than searching works. Yeah, it did.", code:"visible options", codeClass:"code-blue" },
             { time:"13:08", speaker:"p1", role:"Participant", sentiment:"Satisfaction", q:"Is it normal it’s called a shopping bag? On another site it’d feel weird — you’re used to a cart.", code:"platform convention", codeClass:"code-violet" }
@@ -841,7 +1198,7 @@ enum WelcomeIllustrationHTML {
             var d = REDUCED ? QUOTES[0] : QUOTES[Math.floor(Math.random()*QUOTES.length)];
             await runCard(d, false);
           }
-          run();
+          if(REDUCED){ run(); } else { setTimeout(run, LEAD); }   // rest on the empty opening frame first
         </script>
         </body></html>
         """
@@ -852,7 +1209,8 @@ enum WelcomeIllustrationHTML {
     /// real codebook OKLCH colours (ux 250 / opp 75). The human counterpart to
     /// AutoCode; one group per turn (the baton owns the rhythm).
     static func manualTags(dark: Bool, palette: String, reduce: Bool) -> String {
-        """
+        let kind = WelcomeIllustration.manualTags
+        return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
         <head><meta charset="utf-8"><style>
           :root{
@@ -909,9 +1267,9 @@ enum WelcomeIllustrationHTML {
         <script>
           var host=document.getElementById("mt");
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
-          var PACE=1.3;
-          function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
-          function nap(ms){ return sleep(Math.round(ms*PACE)); }
+          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
+          function sleep(ms){ return new Promise(function(r){ setTimeout(r, Math.round(ms*PACE)); }); }
+          function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           var GROUPS=[
             { cls:"grp-ux",  title:"A/B homepage trial",
               subtitle:"Reactions to the two homepage variants we tested.",
@@ -956,7 +1314,7 @@ enum WelcomeIllustrationHTML {
             var g = REDUCED ? GROUPS[0] : GROUPS[Math.floor(Math.random()*GROUPS.length)];
             await buildGroup(g);
           }
-          run();
+          if(REDUCED){ run(); } else { setTimeout(run, LEAD); }   // rest on the empty opening frame first
         </script>
         </body></html>
         """
@@ -967,7 +1325,8 @@ enum WelcomeIllustrationHTML {
     /// (real .bn-focused.bn-selected), the `t` keycap presses under the cursor, and a code
     /// types itself in as a real .badge-user chip. Real selection colours; plays once/turn.
     static func tag(dark: Bool, palette: String, reduce: Bool) -> String {
-        """
+        let kind = WelcomeIllustration.tag
+        return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
         <head><meta charset="utf-8"><style>
           :root{
@@ -1054,9 +1413,9 @@ enum WelcomeIllustrationHTML {
         <script>
           var host=document.getElementById("stage");
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
-          var PACE=1.3;
-          function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
-          function nap(ms){ return sleep(Math.round(ms*PACE)); }
+          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
+          function sleep(ms){ return new Promise(function(r){ setTimeout(r, Math.round(ms*PACE)); }); }
+          function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           function settle(){ return new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); }); }
           var PTR_SVG='<svg width="21" height="21" viewBox="0 0 12 19"><path d="M1.2 1.2 L1.2 14.6 L4.8 11.3 L7.1 16.8 L9.3 15.8 L7.0 10.4 L11.4 10.4 Z" fill="#ffffff" stroke="#111111" stroke-width="1.1" stroke-linejoin="round"/></svg>';
           function mkPointer(){ var p=document.createElement("div"); p.className="ptr"; p.innerHTML='<span class="ptr-ico">'+PTR_SVG+'</span>'; host.appendChild(p); return p; }
@@ -1111,7 +1470,7 @@ enum WelcomeIllustrationHTML {
             await leaveCap(cap);
             card.classList.remove("bn-focused","bn-selected"); fadePtr(p);
           }
-          runTag();
+          if(REDUCED){ runTag(); } else { setTimeout(runTag, LEAD); }   // rest on the opening frame first
         </script>
         </body></html>
         """
@@ -1121,7 +1480,8 @@ enum WelcomeIllustrationHTML {
     /// `s` stars it (real #999/#ccc tint differential + weight bump + star-pop); then card B,
     /// `h` collapses it away (real .bn-hiding) and the "N hidden" count ticks up. Plays once/turn.
     static func starHide(dark: Bool, palette: String, reduce: Bool) -> String {
-        """
+        let kind = WelcomeIllustration.starHide
+        return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
         <head><meta charset="utf-8"><style>
           :root{
@@ -1211,9 +1571,9 @@ enum WelcomeIllustrationHTML {
         <script>
           var host=document.getElementById("stage");
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
-          var PACE=1.3;
-          function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
-          function nap(ms){ return sleep(Math.round(ms*PACE)); }
+          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
+          function sleep(ms){ return new Promise(function(r){ setTimeout(r, Math.round(ms*PACE)); }); }
+          function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           function settle(){ return new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); }); }
           var PTR_SVG='<svg width="21" height="21" viewBox="0 0 12 19"><path d="M1.2 1.2 L1.2 14.6 L4.8 11.3 L7.1 16.8 L9.3 15.8 L7.0 10.4 L11.4 10.4 Z" fill="#ffffff" stroke="#111111" stroke-width="1.1" stroke-linejoin="round"/></svg>';
           var HIDE_SVG='<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"><path d="M2 8s2.3-4 6-4 6 4 6 4-2.3 4-6 4-6-4-6-4Z"/><circle cx="8" cy="8" r="1.7"/><line x1="3.2" y1="12.8" x2="12.8" y2="3.2"/></svg>';
@@ -1276,7 +1636,7 @@ enum WelcomeIllustrationHTML {
             await leaveCap(capH);
             fadePtr(p);
           }
-          runStarHide();
+          if(REDUCED){ runStarHide(); } else { setTimeout(runStarHide, LEAD); }   // rest on the opening frame first
         </script>
         </body></html>
         """
@@ -1289,7 +1649,8 @@ enum WelcomeIllustrationHTML {
     /// Terminal panel is drawn (no window chrome, no screenshot), theme + palette
     /// aware like the other webview illustrations.
     static func agentChat(dark: Bool, palette: String, reduce: Bool) -> String {
-        """
+        let kind = WelcomeIllustration.agentChat
+        return """
         <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-palette="\(palette)" data-reduce="\(reduce ? "1" : "0")">
         <head><meta charset="utf-8"><style>
           /* Claude Code's own scheme, following the welcome screen's appearance:
@@ -1315,12 +1676,13 @@ enum WelcomeIllustrationHTML {
           }
           *{ box-sizing:border-box; }
           html,body{ margin:0; height:100%; overflow:hidden; background:transparent; }
-          body{ position:relative; }
-          /* Fixed natural size, centred, uniformly scaled to fit (same fit() pattern as
-             the signal card) — internal layout never reflows, the whole panel scales. */
-          .term{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); transform-origin:center;
-                 width:430px; border:1px solid var(--term-border); border-radius:8px; background:var(--term-bg);
-                 padding:12px 14px; font-family:var(--bn-font-mono); font-size:11.5px; line-height:1.55;
+          body{ display:flex; align-items:center; }
+          /* Full width of the cell, normal flow, left origin (design-welcome-screen §2 —
+             no centring, no scale): rows wrap to the width they're given; if the slot
+             runs short the panel clips its own bottom (the reserved answer air first). */
+          .term{ width:100%; max-height:100%; overflow:hidden;
+                 border:1px solid var(--term-border); border-radius:8px; background:var(--term-bg);
+                 padding:12px 14px; font-family:var(--bn-font-mono); font-size:12.5px; line-height:1.55;
                  color:var(--term-ink); }
           .row{ white-space:pre-wrap; margin:0 0 4px; min-height:1.55em; }
           .row:last-child{ margin-bottom:0; }
@@ -1352,9 +1714,9 @@ enum WelcomeIllustrationHTML {
           </div>
         <script>
           var REDUCED=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
-          var PACE=1.3;
-          function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
-          function nap(ms){ return sleep(Math.round(ms*PACE)); }
+          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
+          function sleep(ms){ return new Promise(function(r){ setTimeout(r, Math.round(ms*PACE)); }); }
+          function nap(ms){ return sleep(ms); }   // PACE lives in sleep now; nap kept as the beat verb
           function settle(){ return new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); }); }
           function q(id){ return document.getElementById(id); }
           var QUESTION="where did participants struggle in checkout?";
@@ -1396,14 +1758,62 @@ enum WelcomeIllustrationHTML {
             await nap(650);
             await streamAnswer();
           }
+          if(REDUCED){ fillStill(); } else { setTimeout(runAgentChat, LEAD); }   // rest on the empty prompt first
+        </script>
+        </body></html>
+        """
+    }
+
+    static func miro(dark: Bool, reduce: Bool) -> String {
+        let kind = WelcomeIllustration.miro
+        return """
+        <!doctype html><html data-appearance="\(dark ? "dark" : "light")" data-reduce="\(reduce ? "1" : "0")">
+        <head><meta charset="utf-8"><style>
+          /* Just the stickies — no Miro chrome, no dotted board grid (too distracting;
+             the famous colours carry the recognition). Colours sampled from a real
+             board capture: the pink and the two yellows. Miro's own face isn't freely
+             licensable, so Inter (the report face) leads the stack; the line wrapping
+             is hand-set with <br> so the ragged edges stay EXACTLY the board's at any
+             font fallback — that sameness is what tricks the eye. Sticky ink stays
+             dark in both appearances (paper is paper); only the shadow deepens. */
+          html,body{ margin:0; height:100%; overflow:hidden; background:transparent; }
+          body{ position:relative; }
+          .board{ position:absolute; left:0; top:50%; transform:translateY(-50%); transform-origin:left center;
+                  display:flex; align-items:center; gap:6px; }
+          .sticky{ display:flex; flex-direction:column; align-items:center; justify-content:center;
+                   font-family:"Inter","Open Sans","Helvetica Neue",Arial,sans-serif; color:#1f1f1f;
+                   text-align:center; box-shadow:0 3px 7px rgba(0,0,0,.16);
+                   opacity:0; transform:translateY(8px) scale(.9);
+                   transition:opacity .32s ease, transform .38s cubic-bezier(.2,.85,.3,1.15); }
+          html[data-appearance="dark"] .sticky{ box-shadow:0 4px 9px rgba(0,0,0,.4); }
+          .sticky.on{ opacity:1; transform:translateY(0) scale(1); }
+          .pink{ background:#f3cbe6; width:150px; height:140px; }
+          .y1{ background:#fbf5a5; width:142px; height:140px; font-size:12px; line-height:1.32; }
+          .y2{ background:#f8efa0; width:138px; height:120px; font-size:12px; line-height:1.32; }
+          .pink .t1{ font-size:17px; font-weight:700; }
+          .pink .t2{ font-size:14px; margin-top:2px; }
+          .attr{ font-style:italic; margin-top:3px; }
+          @media (prefers-reduced-motion:reduce){ *{ transition:none !important; } }
+        </style></head>
+        <body>
+          <div class="board" id="board">
+            <div class="sticky pink"><div class="t1">Homepage</div><div class="t2">2 quote(s)</div></div>
+            <div class="sticky y1">“I’ve got these…<br>categorizations<br>that I can go to<br>but… that’s<br>probably…<br>quite busy.<br><span class="attr">— P1 · 8:27</span></div>
+            <div class="sticky y2">“The obvious<br>thing to pick<br>here is<br>kitchenware<br>and tableware.”<br><span class="attr">— P1 · 9:10</span></div>
+          </div>
+        <script>
+          var R=document.documentElement.getAttribute("data-reduce")==="1"||matchMedia("(prefers-reduced-motion:reduce)").matches;
+          var PACE=\(WelcomeTempo.jsStretch(for: kind)), LEAD=\(WelcomeTempo.jsLeadMs);
+          var S=[].slice.call(document.querySelectorAll(".sticky"));
           function fit(){
-            var c=document.getElementById("term");
-            var s=Math.min(0.9,(window.innerWidth-8)/c.offsetWidth,(window.innerHeight-8)/c.offsetHeight);
-            if(isFinite(s) && s>0) c.style.transform='translate(-50%,-50%) scale('+s+')';
+            var b=document.getElementById("board");
+            var s=Math.min((window.innerWidth-2)/b.offsetWidth,(window.innerHeight-4)/b.offsetHeight);
+            if(isFinite(s)&&s>0) b.style.transform="translateY(-50%) scale("+s+")";
           }
           requestAnimationFrame(fit);
-          window.addEventListener('resize', fit);
-          if(REDUCED){ fillStill(); requestAnimationFrame(fit); } else { runAgentChat(); }
+          window.addEventListener("resize",fit);
+          if(R){ S.forEach(function(el){ el.classList.add("on"); }); }
+          else{ S.forEach(function(el,i){ setTimeout(function(){ el.classList.add("on"); }, LEAD+Math.round(i*480*PACE)); }); }
         </script>
         </body></html>
         """

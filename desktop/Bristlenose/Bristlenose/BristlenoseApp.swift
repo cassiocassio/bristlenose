@@ -384,6 +384,15 @@ struct BristlenoseApp: App {
         .defaultSize(width: 680, height: 720)
         .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
 
+        // DEBUG-only degradation rig — how welcome-cell content gives way when
+        // the fixed golden slot is too short. Diagnostics ▸ Degradation Lab.
+        Window("Degradation Lab", id: "degradation-lab") {
+            WelcomeDegradationLab()
+                .tint(paletteAccent)
+        }
+        .defaultSize(width: 1240, height: 900)
+        .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
+
         #endif
     }
 }

@@ -26,7 +26,6 @@ private struct SlotItem: Identifiable {
     let href: String
     var linkLabel2: String? = nil   // optional second CTA — e.g. Codebooks offers both paths (manual vs framework)
     var href2: String? = nil
-    var image: String? = nil   // imageset name; nil = text-only slot (Science/Tips, art-pending tools)
     var illustration: WelcomeIllustration = .none   // looping illustration for this slot (WelcomeIllustrations.swift)
     // Where the PRIMARY CTA goes when it should stay in the app — set instead of `href`,
     // which the slot then leaves empty. For a tool whose first step is *setup*, sending the
@@ -47,16 +46,17 @@ private enum SlotDestination {
 private enum WelcomeContent {
     static let docs = "https://bristlenose.app/docs/"
 
-    // Draft PNG screenshots (light-mode captures) while the set is tuned — see design-welcome-screen.md §Cell 1.
-    // image = nil → text-only slot; illustration != .none → a drawn looping illustration replaces the screenshot
-    // (WelcomeIllustrations.swift). CTA labels are per-tool (doc §Cell 1 pool).
+    // Every tool slot carries a drawn looping illustration (WelcomeIllustrations.swift);
+    // the draft PNG screenshots are gone — the last three (clips, Miro, ingest) converted
+    // 14 Aug 2026, completing the "no screenshots long-term" decision recorded in
+    // design-welcome-screen.md §Cell 1. CTA labels are per-tool (doc §Cell 1 pool).
     static let studyTools: [SlotItem] = [
         .init(title: "AutoCode", text: "Let AutoCode propose tags across every quote — you Accept or Deny.", linkLabel: "AI helps tag →", href: docs + "use-codebooks.html", illustration: .autocode),
         .init(title: "Codebooks", text: "Build a codebook, or start from a ready-made framework.", linkLabel: "Code by hand →", href: docs + "tag-for-meaning.html", linkLabel2: "Research frameworks →", href2: docs + "codebook-frameworks.html", illustration: .manualTags),
         .init(title: "Tag", text: "Select one or more quotes, and press `t` to tag them with a code from your codebook.", linkLabel: "Manual tagging →", href: docs + "tag-for-meaning.html", illustration: .tag),
         .init(title: "Star & hide", text: "Press `s` to keep the quotes that matter, `h` to hide the rest.", linkLabel: "Keyboard shortcuts →", href: docs + "keyboard-shortcuts.html", illustration: .starHide),
-        .init(title: "Video clips", text: "Turn selected quotes into video clips.", linkLabel: "Export options →", href: docs + "export-clips.html", image: "welcome-clips"),
-        .init(title: "Send to Miro", text: "Send quotes to a Miro board.", linkLabel: "Connect to Miro →", href: docs + "send-to-miro.html", image: "welcome-miro"),
+        .init(title: "Video clips", text: "Turn selected quotes into video clips.", linkLabel: "Export options →", href: docs + "export-clips.html", illustration: .clips),
+        .init(title: "Send to Miro", text: "Send quotes to a Miro board.", linkLabel: "Connect to Miro →", href: docs + "send-to-miro.html", illustration: .miro),
         // The only slot whose first step is setup, so the primary CTA opens the control
         // (Settings ▸ MCP Agents) rather than a docs page — same destination as the
         // Bristlenose ▸ Connect an Agent… menu item, and the same "…" that says it opens
@@ -65,7 +65,7 @@ private enum WelcomeContent {
               linkLabel: "Connect an agent…", href: "",
               linkLabel2: "Learn more →", href2: docs + "connect-an-agent.html",
               illustration: .agentChat, primaryDestination: .mcpAgentsSettings),
-        .init(title: "Ingest", text: "Drop a folder of recordings or transcripts — Bristlenose transcribes, analyses and reports back.", linkLabel: "Import options →", href: docs + "first-analysis.html", image: "welcome-ingest"),
+        .init(title: "Ingest", text: "Drop a folder of recordings or transcripts — Bristlenose transcribes, analyses and reports back.", linkLabel: "Import options →", href: docs + "first-analysis.html", illustration: .ingest),
         // WITHHELD from the desktop pool (2 Aug 2026) — this slot taught a tool the .app cannot run.
         // Presidio + spaCy are in the sidecar spec's `excludes=[]` (desktop/bristlenose-sidecar.spec),
         // `pii_enabled` defaults false and is only settable by the CLI's `--redact-pii`, and no desktop
@@ -224,7 +224,8 @@ struct WelcomeHomeView: View {
         }
     }
 
-    // MARK: cells (tints: big → small = 0.03 → 0.26 of the palette accent)
+    // MARK: cells (tints resolve per cell via WelcomeCellTint — v1 ramp by default,
+    // the flagged Whisper-reversed candidate under BristlenoseWelcomeTintCandidate)
 
     // Info cells — calm, ignorable; NOT whole-clickable (D3).
     private var studyToolsCell: some View {
@@ -237,7 +238,7 @@ struct WelcomeHomeView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             dropCard
         }
-        .welcomeCell(tint: 0.03, large: true)
+        .welcomeCell(.studyTools, large: true)
         .environment(\.welcomeAnimationActive, baton.isActive(.studyTools))
     }
 
@@ -250,7 +251,7 @@ struct WelcomeHomeView: View {
                         })
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .welcomeCell(tint: 0.07, large: true)
+        .welcomeCell(.science, large: true)
         .environment(\.welcomeAnimationActive, baton.isActive(.science))
     }
 
@@ -260,14 +261,14 @@ struct WelcomeHomeView: View {
             SlotRotator(items: WelcomeContent.tips, storageKey: "welcome.rotator.tip", curriculum: true)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .welcomeCell(tint: 0.12)
+        .welcomeCell(.tip)
     }
 
     // The card is inert; the Setup link is the only target (design-welcome-screen.md §2).
     @ViewBuilder private var aiCell: some View {
         if aiConfigured {
             VStack(alignment: .leading, spacing: 6) { tag("AI"); slotBody(aiItem) }
-                .welcomeCell(tint: 0.18)
+                .welcomeCell(.ai)
         } else {
             VStack(alignment: .leading, spacing: 6) {
                 tag("AI")
@@ -283,7 +284,7 @@ struct WelcomeHomeView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .welcomeCell(tint: 0.18)
+            .welcomeCell(.ai)
             .environment(\.welcomeAnimationActive, baton.isActive(.ai))
             .onAppear { baton.report(.ai, wants: true, turn: 8) }
         }
@@ -291,7 +292,7 @@ struct WelcomeHomeView: View {
 
     // Action cell — whole card clickable (D3). Placeholder until the swimming fish.
     private var delightCell: some View {
-        CardButton(tint: 0.26, action: { openURL(url(WelcomeContent.docs + "privacy.html")) }) {
+        CardButton(tint: .delight, action: { openURL(url(WelcomeContent.docs + "privacy.html")) }) {
             Text("Review AI & privacy settings…")
                 .font(.body).foregroundStyle(.secondary)
         }
@@ -387,7 +388,7 @@ private struct GoldenSplit<Major: View, Minor: View>: View {
 // MARK: - Clickable card (whole-cell action, hover highlight)
 
 private struct CardButton<Content: View>: View {
-    let tint: Double
+    let tint: WelcomeCellTint
     var large: Bool = false
     var alignment: Alignment = .topLeading
     let action: () -> Void
@@ -397,7 +398,7 @@ private struct CardButton<Content: View>: View {
     var body: some View {
         Button(action: action) {
             content
-                .welcomeCell(tint: tint, large: large, alignment: alignment)
+                .welcomeCell(tint, large: large, alignment: alignment)
                 .overlay(
                     RoundedRectangle(cornerRadius: large ? 10 : 8)
                         .fill(Color.primary.opacity(hover ? 0.06 : 0))
@@ -434,17 +435,28 @@ private struct MorphingAIIcon: View {
     }
 }
 
-// Markdown → AttributedString, forcing `code` spans (key references, written as
-// `t` / `s` / `h`) to a same-size monospaced run so a bare key reads unambiguously
-// as a key — the text-only path of docs/design-keycaps.md (lowercase bare keys,
-// glyph-safe font, no drawn cap). Drawn caps can't flow mid-sentence in `Text`.
-private func welcomeKeyMarkdown(_ s: String) -> AttributedString {
-    var attr = (try? AttributedString(markdown: s)) ?? AttributedString(s)
-    let codeRanges = attr.runs
-        .filter { $0.inlinePresentationIntent?.contains(.code) == true }
-        .map(\.range)
-    for r in codeRanges { attr[r].font = .system(.body, design: .monospaced).weight(.medium) }
-    return attr
+// Markdown → `Text`, rendering `code` spans (key references, written as `t` /
+// `s` / `h`) as a real drawn keycap — Skin A · Flat, the inline-prose default in
+// docs/design-keycaps.md §2. This used to emit a bare monospaced run, because a
+// cap is a `View` and a `View` cannot flow inside wrapping `Text`; `KeycapInline`
+// rasterises the cap once and interpolates it as an image, which flows and wraps
+// natively, so the sentence stays a single `Text` and keeps its truncation and
+// `ViewThatFits` behaviour. Bold and the rest of the markdown survive because the
+// parse still happens first and only the `code` runs are substituted.
+@MainActor
+private func welcomeKeyText(_ s: String, dark: Bool) -> Text {
+    let attr = (try? AttributedString(markdown: s)) ?? AttributedString(s)
+    var out = Text(verbatim: "")
+    for run in attr.runs {
+        let slice = AttributedString(attr[run.range])
+        if run.inlinePresentationIntent?.contains(.code) == true,
+           let cap = KeycapInline.run(String(slice.characters), dark: dark) {
+            out = out + cap
+        } else {
+            out = out + Text(slice)
+        }
+    }
+    return out
 }
 
 // MARK: - Slot rotator (manual content carousel, in place)
@@ -467,6 +479,8 @@ private struct SlotRotator: View {
     @State private var started = false
     @State private var hovering = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Caps are rasterised per appearance, so the rotator has to know it.
+    @Environment(\.colorScheme) private var scheme
 
     init(items: [SlotItem], storageKey: String, curriculum: Bool = false, onCurrent: ((SlotItem) -> Void)? = nil) {
         self.items = items
@@ -560,20 +574,8 @@ private struct SlotRotator: View {
                     tipBody(item.text)
                 }
             } else if !item.text.isEmpty {
-                Text(welcomeKeyMarkdown(item.text))
+                welcomeKeyText(item.text, dark: scheme == .dark)
                     .font(.body).foregroundStyle(.secondary)
-            }
-            if let name = item.image, let ns = NSImage(named: name) {   // nil-guard = graceful before the PNG lands
-                Image(nsImage: ns)
-                    .resizable().scaledToFit()
-                    // 85% of native size at its own aspect ratio (starting guess); shrinks if the
-                    // cell is narrower, never upscales past 85%. ns.size is points (@2x asset → px/2).
-                    .frame(maxWidth: ns.size.width * 0.85, maxHeight: ns.size.height * 0.85, alignment: .leading)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5))   // faint keyline = illustration, not live UX
-                    .accessibilityLabel(Text("\(item.title ?? "") example"))
-                    .padding(.vertical, 8)   // one macOS grid square top & bottom
             }
             if item.illustration != .none {
                 illustrationView(item.illustration)
@@ -581,8 +583,13 @@ private struct SlotRotator: View {
                     // leftover space in the fixed golden slot and shrinks (self-scaling) when
                     // the cell is short, so the CONTENT bends to the geometry instead of
                     // overflowing it (design-welcome-screen.md — geometry is fixed).
+                    // topLeading, not leading: `.leading` centres VERTICALLY, which
+                    // was invisible while every illustration filled its box. The book
+                    // shelf now sizes to its content, so a centring frame would split
+                    // the leftover above and below it and read as a gap under the
+                    // caption. Cell content aligns top-leading (§2).
                     .frame(maxWidth: .infinity, maxHeight: illustrationNaturalHeight(item.illustration),
-                           alignment: .leading)
+                           alignment: .topLeading)
                     .padding(.vertical, 8)
                     // The books shelf renders real author + line + link → keep it accessible;
                     // the other illustrations are decorative (the title/text carry the meaning).
@@ -617,7 +624,7 @@ private struct SlotRotator: View {
     // ViewThatFits's fit test. Plain Text lets ViewThatFits measure the true wrapped
     // height against the cell's real height and pick the candidate that fits.
     private func tipBody(_ s: String) -> some View {
-        Text(welcomeKeyMarkdown(s))
+        welcomeKeyText(s, dark: scheme == .dark)
             .font(.body).foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .topLeading)
     }
@@ -625,7 +632,8 @@ private struct SlotRotator: View {
     // Natural (maximum) height of a science-cell looping illustration. The illustration
     // renders AT this height when the golden slot has room and SHRINKS BELOW it when the
     // slot is short — every illustration self-scales to the frame it's handed (the four
-    // webviews fit() themselves, the fan is a GeometryReader, the book shelf scales via
+    // webviews fit() themselves, the fan is a GeometryReader, and the book shelf scales
+    // ONLY its cover fan (its caption holds fixed type and sheds words instead) via
     // its own GeometryReader), so a smaller frame simply makes them smaller. The height
     // is thus a cap, not a pin — the cell geometry stays fixed and the content bends.
     private func illustrationNaturalHeight(_ kind: WelcomeIllustration) -> CGFloat {
@@ -639,7 +647,10 @@ private struct SlotRotator: View {
         case .manualTags:     return 176
         case .tag:            return 160
         case .starHide:       return 190   // toolbar + two compact cards
-        case .agentChat:      return 160   // one terminal panel (430×~140 at scale ≤0.9)
+        case .agentChat:      return 160   // full-width terminal panel (~155 natural at 12.5px type; clips its reserved answer air first when short)
+        case .ingest:         return 196   // five surtitled rows (5×32 + 4×8)
+        case .clips:          return 100   // three thumbnail rows; the menu + pointer play out in the same region
+        case .miro:           return 148   // sticky row (140) + shadow room
         case .books:          return 252   // caption + covers + link (see BookShelfView.naturalHeight)
         }
     }
@@ -661,6 +672,9 @@ private struct SlotRotator: View {
         case .tag:            TagIllustrationView()
         case .starHide:       StarHideIllustrationView()
         case .agentChat:      AgentChatIllustrationView()
+        case .ingest:         IngestIllustrationView()
+        case .clips:          ClipsIllustrationView()
+        case .miro:           MiroIllustrationView()
         }
     }
 
@@ -756,27 +770,72 @@ private struct SwipeCatcher: NSViewRepresentable {
     }
 }
 
+// MARK: - Cell tints (v1 + the flagged candidate)
+
+/// Per-cell accent tint, big → small down the spiral. Carries BOTH colour sets:
+/// v1 (the shipping default — 3→26 %, the eye carries the colour) and the
+/// working candidate from `docs/mockups/welcome-gradient-playground.html`
+/// (Whisper reversed — 11→2 %, colour on the stage, quiet eye; open decision #3
+/// in `docs/design-welcome-screen.md` §2). Resolution is the one place the two
+/// sets meet; flip via `BristlenoseFlags.welcomeTintCandidate`.
+enum WelcomeCellTint {
+    case studyTools, science, tip, ai, delight
+
+    /// v1 ramp, shipped since the first fibonacci build.
+    var v1: Double {
+        switch self {
+        case .studyTools: return 0.03
+        case .science: return 0.07
+        case .tip: return 0.12
+        case .ai: return 0.18
+        case .delight: return 0.26
+        }
+    }
+
+    /// Whisper reversed — the playground pick (14 Aug 2026).
+    var candidate: Double {
+        switch self {
+        case .studyTools: return 0.11
+        case .science: return 0.08
+        case .tip: return 0.06
+        case .ai: return 0.04
+        case .delight: return 0.02
+        }
+    }
+
+    func value(candidate on: Bool) -> Double { on ? candidate : v1 }
+}
+
+/// Palette accent shared by the cell fills and the candidate pane glow.
+private enum WelcomePalette {
+    static func accent(edo: Bool) -> Color {
+        Color(edo ? "PaletteEdoAccent" : "PaletteDefaultAccent")
+    }
+}
+
 // MARK: - Cell surface (accent-tint over the control background)
 
 private extension View {
-    func welcomeCell(tint: Double, large: Bool = false, alignment: Alignment = .topLeading) -> some View {
+    func welcomeCell(_ tint: WelcomeCellTint, large: Bool = false, alignment: Alignment = .topLeading) -> some View {
         modifier(WelcomeCellStyle(tint: tint, large: large, alignment: alignment))
     }
 }
 
-/// Cell surface, sourced from the active palette so a Default↔Edo swap updates
+/// Cell surface, opaque, sourced from the active palette so a Default↔Edo swap updates
 /// the grid live. Colours come from the asset-catalog palette tokens (no
 /// hardcoded hex): Default = system control surface + blue accent (measured);
-/// Edo = warm washi paper + Prussian accent (demonstrative). Colours still to
-/// be tuned (per docs/design-welcome-screen.md open decisions).
+/// Edo = warm washi paper + Prussian accent (demonstrative). Two colour sets —
+/// v1 by default, the Whisper-reversed candidate under
+/// `BristlenoseFlags.welcomeTintCandidate` (see `WelcomeCellTint`).
 private struct WelcomeCellStyle: ViewModifier {
-    let tint: Double
+    let tint: WelcomeCellTint
     var large: Bool = false
     var alignment: Alignment = .topLeading
     @AppStorage("palette") private var palette: String = "default"
+    @AppStorage(BristlenoseFlags.welcomeTintCandidateKey) private var candidate = false
 
     private var isEdo: Bool { palette == "edo" }
-    private var accent: Color { Color(isEdo ? "PaletteEdoAccent" : "PaletteDefaultAccent") }
+    private var accent: Color { WelcomePalette.accent(edo: isEdo) }
     private var surface: Color { isEdo ? Color("PaletteEdoPaper") : Color(nsColor: .controlBackgroundColor) }
 
     func body(content: Content) -> some View {
@@ -787,7 +846,8 @@ private struct WelcomeCellStyle: ViewModifier {
             .background(
                 RoundedRectangle(cornerRadius: r)
                     .fill(surface)
-                    .overlay(RoundedRectangle(cornerRadius: r).fill(accent.opacity(tint)))
+                    .overlay(RoundedRectangle(cornerRadius: r)
+                        .fill(accent.opacity(tint.value(candidate: candidate))))
             )
             // Backstop for the fixed geometry: content is meant to bend to the slot, but if
             // any ever exceeds it, clip to the cell rather than letting it break the spiral.

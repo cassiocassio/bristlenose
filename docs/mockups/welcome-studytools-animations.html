@@ -183,9 +183,13 @@
   .tool-cell .summary{    /* .font(.body).foregroundStyle(.secondary) — APP voice, so label/13 not body/15 */
     font-size:var(--bn-text-label); line-height:var(--bn-text-label-lh);
     font-weight:400; color:var(--faint); }
-  /* Bare key reference IN THE BODY LINE: shipped as a SAME-SIZE monospaced run, not a drawn
-     keycap — design-keycaps.md text-only path, rendered in Swift by welcomeKeyMarkdown()
-     from a markdown backtick (a drawn cap can't flow mid-sentence in SwiftUI Text). Keys stay
+  /* Bare key reference IN THE BODY LINE: since 20 Aug 2026 this ships as a REAL DRAWN CAP —
+     Skin A / Flat, design-keycaps.md's inline-prose default — rendered in Swift by
+     welcomeKeyText() from a markdown backtick. It was a same-size monospaced run until then,
+     because a cap is a View and a View can't flow inside a wrapping Text; that constraint is
+     still true, and is why the Swift side rasterises the cap and interpolates it as an image
+     rather than switching the sentence to a flow layout. This mockup keeps the mono styling
+     below as the pre-20-Aug baseline. Keys stay
      lowercase (the unmodified-key rule). NB the two treatments coexist on purpose: the body
      line gets the mono run, while INSIDE the Tag / Star & hide illustrations a raised cap is
      drawn and pressed — that's a picture of a keypress, not flowing text. */

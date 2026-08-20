@@ -79,27 +79,73 @@ final class WelcomeBaton: ObservableObject {
     }
 }
 
+// MARK: - One tempo for every welcome illustration
+
+/// Group + per-illustration animation tempo (14 Aug 2026 — the set played too
+/// "look at me"). `speed` is the fraction of the originally-authored speed the
+/// whole group runs at: 0.6 = 60%. `stretch` (1/speed) is the multiplier every
+/// authored duration passes through — Swift natives via `stretch(for:)`, the
+/// webviews via the interpolated `PACE` their `sleep()` scales by. Each
+/// illustration can ALSO carry a local `pace` multiplier (>1 = slower still),
+/// so one can be tuned without moving the group — the five tool webviews keep
+/// the ×1.3 they were hand-tuned to before the group knob existed. Every play
+/// additionally rests on its opening frame for `leadInSeconds` and on its
+/// finished frame for `holdEndSeconds` before looping or handing the baton on
+/// (holds are absolute — they don't scale). `welcomeTurn` derives from the
+/// same numbers, so turn lengths track any tweak here.
+enum WelcomeTempo {
+    static let speed: Double = 0.6
+    static var stretch: Double { 1.0 / speed }
+    static let leadInSeconds: Double = 3.0
+    static let holdEndSeconds: Double = 3.0
+
+    /// Local multiplier on top of the group tempo (individual tweak point).
+    static func pace(_ kind: WelcomeIllustration) -> Double {
+        switch kind {
+        case .autocode, .manualTags, .tag, .starHide, .agentChat: return 1.3
+        default: return 1.0
+        }
+    }
+
+    /// Effective duration multiplier for one illustration.
+    static func stretch(for kind: WelcomeIllustration) -> Double { stretch * pace(kind) }
+
+    /// Interpolation helpers for the webview illustrations' scripts.
+    static func jsStretch(for kind: WelcomeIllustration) -> String {
+        String(format: "%.3f", stretch(for: kind))
+    }
+    static var jsLeadMs: Int { Int(leadInSeconds * 1000) }
+}
+
 // MARK: - Per-illustration turn length
 
 extension WelcomeIllustration {
     /// How long one turn of this illustration runs before the baton passes on.
-    /// Continuous loops (shoal/signal/fan/books/quote) are "showcase" lengths — a cut
-    /// mid-loop just freezes to the still. AutoCode is a discrete play, so its turn
-    /// covers one full run.
+    /// The switch carries the AUTHORED play length (original speed, holds
+    /// excluded); the shipped turn stretches with `WelcomeTempo` and adds the
+    /// lead-in + end holds, so tempo tweaks never orphan the turn lengths.
+    /// Continuous loops (shoal/signal/fan/books/quote) are "showcase" lengths —
+    /// a cut mid-loop just freezes to the still.
     var welcomeTurn: Double {
+        let base: Double
         switch self {
         case .none:           return 0
-        case .sentimentFan:   return 11   // half-speed deal → a full cycle needs a longer turn
-        case .books:          return 9
-        case .emergentThemes: return 9
-        case .quote:          return 10
-        case .signal:         return 11
-        case .autocode:       return 12
-        case .manualTags:     return 13
-        case .tag:            return 12   // one play (arc → click → t → type) then hold
-        case .starHide:       return 14   // two beats (star A, hide B) then hold
-        case .agentChat:      return 13   // one play (type → tool call → streamed answer) then hold
+        case .sentimentFan:   base = 11
+        case .books:          base = 9
+        case .emergentThemes: base = 9
+        case .quote:          base = 10
+        case .signal:         base = 11
+        case .autocode:       base = 12
+        case .manualTags:     base = 13
+        case .tag:            base = 12   // one play (arc → click → t → type) then hold
+        case .starHide:       base = 14   // two beats (star A, hide B) then hold
+        case .agentChat:      base = 13   // one play (type → tool call → streamed answer) then hold
+        case .ingest:         base = 12   // five rows blink + type, then hold
+        case .clips:          base = 14   // menu click → three clips land unit by unit, then hold
+        case .miro:           base = 9    // three stickies pop in order, then hold
         }
+        return base * WelcomeTempo.stretch(for: self)
+            + WelcomeTempo.leadInSeconds + WelcomeTempo.holdEndSeconds
     }
 }
 

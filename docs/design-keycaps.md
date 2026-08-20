@@ -1,7 +1,17 @@
+---
+status: partial
+last-trued: 2026-08-20
+trued-against: uncommitted working tree @main on 2026-08-20
+---
+
 # Design: Keycaps — showing a key to press, everywhere
 
-**Status:** **Decided** (19 Jul 2026) — the § Recommendation skin assignment is the committed design. Implementation pending (§ Implementation plan).
-**Date:** 19 Jul 2026
+**Status:** **Decided** (19 Jul 2026) — the § Recommendation skin assignment is the committed design. **Partially implemented (20 Aug 2026): step 3 shipped**, Skin A only, in the welcome cells. Steps 1, 2, 4 and 5 pending (§ Implementation plan).
+**Date:** 19 Jul 2026 · **Last trued:** 20 Aug 2026
+
+## Changelog
+
+- _2026-08-20_ — **Step 3 shipped: the SwiftUI cap graduated out of `#if DEBUG`, Skin A only.** `Keycap` now lives in `desktop/Bristlenose/Bristlenose/Keycap.swift` — **Skin A · Flat alone**, because the first consumer is the welcome cells' body copy and §2 names Flat as the inline-prose default; Raised (B) is for surfaces where the key *is* the content and would shout inside a paragraph. The gallery's six-skin primitive stays as the comparison harness, renamed `GalleryKeycap` so the shipping name is the unqualified one. Colours are byte-matched via `KeycapPalette`. **The flow problem §3 implied is real and is solved by rasterising, not by layout:** a cap is a `View` and cannot flow inside a wrapping `Text`, and rebuilding a sentence as a flow of word-views would lose truncation, `lineLimit` and `ViewThatFits` — all of which belong to `Text`. `KeycapInline` renders the cap once per (key, appearance) through `ImageRenderer` and interpolates it as an image, which flows and breaks lines natively. Appearance is passed **explicitly**: `ImageRenderer` resolves colours against the app appearance rather than the view's `colorScheme`, so an implicit read silently produces a light cap on a dark cell. Consumer + rationale: [`design-welcome-screen.md`](design-welcome-screen.md) §Cell 1 key-reference note.
 **Mockups:** [`docs/mockups/keycap-gallery.html`](mockups/keycap-gallery.html) (web) · `desktop/Bristlenose/Bristlenose/KeycapGalleryView.swift` (native, Debug ▸ Keycap Gallery)
 **Sibling:** [`design-keyboard-shortcuts.md`](design-keyboard-shortcuts.md) owns *which* shortcuts exist, platform detection, the help modal, and tooltips. **This doc owns the visual/implementation primitive** — the cap itself — shared by all of them.
 
@@ -82,6 +92,9 @@ Base — one class, glyph-safe font:
   font-size: var(--bn-text-label); font-weight: 500; line-height: 1;
   color: var(--bn-colour-text); border-radius: 5px; vertical-align: middle;
 }
+/* `vertical-align: middle` is the web's answer to inline baseline alignment.
+   The native side cannot use it and needs an explicit `baselineOffset` — see
+   §3 decision 3. Fixing one seam does NOT fix the other. */
 .combo         { display: inline-flex; align-items: center; }
 .combo.joined  { gap: 0; }               /* menu-bar style */
 .combo.split   { gap: 0.28rem; }         /* teachable */
@@ -140,7 +153,18 @@ These are the choices that were previously unmade on the Swift side.
 
 2. **Caps are for teaching surfaces; native menus get bare glyphs.** This is the native-primitives rule applied to keys: **there is no stock "keycap view," so a drawn cap (A–E) is a justified custom primitive for help/onboarding/teaching UI. But `NSMenu`/`NSMenuItem` already renders shortcuts as bare right-aligned grey glyphs — never draw a cap there.** Skin F documents exactly what the OS does; use it for any list-row or menu-style hint, and let real `NSMenuItem`s render their own `keyboardShortcut`. Departing from bare-glyph inside a menu context would be uncanny-valley.
 
-3. **Menu titles stay English; the cap is chrome, not data.** Consistent with the SwiftUI `CommandMenu` limitation already documented — the glyph map is UI chrome rendered per-surface, not translated content.
+3. **An inline cap MUST be baseline-corrected; it does not sit right by default.** `Text` aligns an interpolated image's **bottom edge** to the text baseline, so a cap dropped into a sentence rides high by its own descender space plus half its vertical centring slack — visibly floating above the line, which reads as a rendering bug rather than a key. The correction is `Text(cap).baselineOffset(-d)` where `d` is the distance from the cap's bottom edge up to the baseline of the glyph **inside** it:
+
+   ```swift
+   let f = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .medium)
+   let lineHeight = f.ascender - f.descender      // descender is negative
+   let topInset = (box - lineHeight) / 2          // Text is centred in the cap
+   let d = box - (topInset + f.ascender)          // 5.19pt at fontSize 11
+   ```
+
+   Derive it from `NSFont` metrics, never eyeball a constant — the number moves with `fontSize` and a hardcoded one silently rots. `KeycapInline.run(_:dark:)` returns the cap **already corrected**, and callers should use it in preference to `image(_:dark:)`: the correction is not optional, and pre-applying it is the only way a caller cannot forget. This is the native counterpart of the CSS's `vertical-align: middle` — same problem, different mechanism, so the two seams need separate fixes and neither implies the other.
+
+4. **Menu titles stay English; the cap is chrome, not data.** Consistent with the SwiftUI `CommandMenu` limitation already documented — the glyph map is UI chrome rendered per-surface, not translated content.
 
 ## §4 — CLI
 
@@ -169,7 +193,7 @@ The extraction the shortcuts doc anticipated (`design-keyboard-shortcuts.md` lin
 
 1. **Promote the cap CSS** out of `help-overlay.css` into `atoms/kbd.css` (a real atom in `_THEME_FILES`), add the six skins + the new tokens. `help-overlay.css` then consumes `.cap` instead of styling `<kbd>` itself.
 2. **React `Kbd` component** wrapping `.cap`, driven by the existing `KeyCombo` model in `ShortcutsSection.tsx`, `isMac()`/`isDesktop()`-aware. Docs site imports the same CSS.
-3. **Swift `Keycap` view** — graduate `KeycapGalleryView.swift`'s primitive out of `#if DEBUG` into a shipping helper for teaching UI; the gallery stays as the harness.
+3. ~~**Swift `Keycap` view** — graduate `KeycapGalleryView.swift`'s primitive out of `#if DEBUG` into a shipping helper for teaching UI; the gallery stays as the harness.~~ ✅ **Done 20 Aug 2026** — `Keycap.swift`, Skin A only (add further skins when a surface actually needs one, not speculatively). Gallery primitive renamed `GalleryKeycap` and retained. Inline flow via `KeycapInline` + `ImageRenderer`; see the changelog entry above for why rasterising beats a flow layout here.
 4. **CLI helper** — a tiny formatter mapping the glyph map to bare glyphs for terminal help.
 5. **Kill the hand-typed glyph strings** in `desktop.json` (`"…(⌘⌥L)"`) once native menu items carry real `keyboardShortcut`s + the shared formatter — removes the 20-locale drift risk.
 

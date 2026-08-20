@@ -109,7 +109,29 @@ final class ServeFleet: ObservableObject {
         managers[project] = nil
         observations[project] = nil
         if frontedProject == project { frontedProject = nil }
-        if exposedProject == project { exposedProject = nil }
+        // Through `setExposed`, not a bare assignment: the project is being
+        // removed from the sidebar, so the stored id must go too or a later
+        // launch would try to re-expose something that no longer exists.
+        if exposedProject == project { setExposed(nil) }
+    }
+
+    /// Where the exposure slot survives a quit. Plain camelCase, matching the
+    /// app's other defaults keys (`palette`, `language`, `llmModel`).
+    private static let exposureDefaultsKey = "exposedProjectID"
+
+    /// Re-adopt the stored exposure at launch, if the permission still holds.
+    ///
+    /// Deliberately a no-op once something is already exposed — this is a
+    /// launch-time restore, not a reconciler, and it must never fight a
+    /// deliberate toggle that has already happened this session.
+    func restoreExposure(stillPermitted: (UUID) -> Bool) {
+        guard exposedProject == nil else { return }
+        let stored = UserDefaults.standard.string(forKey: Self.exposureDefaultsKey)
+        switch ExposureRestore.decide(stored: stored, stillPermitted: stillPermitted) {
+        case .adopt(let id): setExposed(id)
+        case .clear:         UserDefaults.standard.removeObject(forKey: Self.exposureDefaultsKey)
+        case .none:          break
+        }
     }
 
     /// The fronted project's manager, if there is one.
@@ -237,6 +259,13 @@ final class ServeFleet: ObservableObject {
     /// different study because someone pressed ⌘\`.
     func setExposed(_ project: UUID?) {
         exposedProject = project
+        // Durable, because the permission it accompanies is. See
+        // `ExposureRestore` for the failure this closes.
+        if let project {
+            UserDefaults.standard.set(project.uuidString, forKey: Self.exposureDefaultsKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: Self.exposureDefaultsKey)
+        }
         // One handshake, one writer. Every other manager is muted, or its
         // 20-second activity poll would delete this one's file.
         for (id, manager) in managers { manager.handshakeOwner = (id == project) }

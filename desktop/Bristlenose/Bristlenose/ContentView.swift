@@ -311,6 +311,10 @@ struct ContentView: View {
     /// the cancellation (guards before `start()`), so a superseded switch bails
     /// rather than clobbering the winner's sidecar.
     @State private var switchTask: Task<Void, Never>?
+
+    /// A study this window wants served, deferred until the window is looked at.
+    /// See the lazy-start note in `applySelectionChange`.
+    @State private var pendingStart: String?
     /// In-flight retry task that reloads the detail WebView after a run finishes
     /// — see scheduleReportReloadIfNeeded.
     @State private var reportReloadTask: Task<Void, Never>?
@@ -591,6 +595,18 @@ struct ContentView: View {
         // notifications covered.
         .onChange(of: isKeyWindow, initial: true) { _, isKey in
             bridgeHandler.setWindowActive(isKey)
+            // The other half of lazy start: a window that deferred its serve
+            // because nobody was looking at it starts now that they are.
+            //
+            // Also tells the fleet this is the fronted study — which restarts it
+            // if a preference or the consent state changed while it was in the
+            // background, the exception that makes the lazy env fan-out safe.
+            guard isKey else { return }
+            if let path = pendingStart, let id = selectedProjectID {
+                pendingStart = nil
+                serveFleet.manager(for: id).start(projectPath: path)
+            }
+            if let id = selectedProjectID { serveFleet.front(id) }
         }
         .onReceive(NotificationCenter.default.publisher(for: .bristlenosePaletteChanged)) { _ in
             // Colour-palette picker changed — apply live to the report webview
@@ -663,11 +679,26 @@ struct ContentView: View {
             // restored windows come back on five studies rather than five
             // copies of whichever was selected last.
             if selection.isEmpty {
-                // The seed's study first, the last-used one only as a fallback —
-                // and "first" has to mean *if it names a study that exists*, not
-                // merely "if it is non-nil". ⌥⌘N seeds a window with no project,
-                // and an `??` on nil-ness alone would swallow the fallback and
-                // land it on Welcome.
+                // **A window opens on a study only if something asked it to.**
+                //
+                // The presence of a seed is that ask. `⌥⌘N` and both Open in New
+                // Window commands always seed; a restored window carries the seed
+                // it wrote back. Launch with nothing to restore, and the Dock
+                // reopen, seed nothing — and those are the two cases that now
+                // land on **Welcome** rather than conjuring a study.
+                //
+                // That is not only taste. Opening straight into a study spawns a
+                // sidecar — a process, a port, ~140 MB — before the researcher
+                // has done anything, and under one-serve-per-project that is a
+                // decision the app should not make on their behalf. The study is
+                // one click away.
+                //
+                // The fallback within a seeded open still matters: ⌥⌘N from a
+                // window with no study seeds no project, and *there* the
+                // last-used study is the right answer. Note "seeded" has to mean
+                // *names a study that exists*, not merely non-nil — the seed
+                // carries a token, so an `??` on nil-ness alone would swallow the
+                // fallback.
                 let known: (UUID?) -> UUID? = { id in
                     guard let id, projectIndex.projects.contains(where: { $0.id == id })
                     else { return nil }
@@ -675,7 +706,7 @@ struct ContentView: View {
                 }
                 let fallback = persistedProjectID.isEmpty
                     ? nil : UUID(uuidString: persistedProjectID)
-                if let wanted = known(seed?.project) ?? known(fallback) {
+                if let seed, let wanted = known(seed.project) ?? known(fallback) {
                     selection = [.project(wanted)]
                 }
             }
@@ -1018,6 +1049,24 @@ struct ContentView: View {
                     switchTask?.cancel()
                     switchTask = Task { @MainActor in
                         guard !Task.isCancelled else { return }
+                        // **Lazy: a background window does not spawn a sidecar.**
+                        //
+                        // The appliance copes rather than asking the researcher
+                        // to. Select twelve projects and open them all and you
+                        // get twelve windows and one or two serves — the rest
+                        // start when you look at them. Which is why the folder
+                        // command needs no "are you sure" dialog counting
+                        // servers at you: Finder, InDesign and Photoshop all let
+                        // you select-all-and-open without a word, and the cost
+                        // should be ours to manage.
+                        //
+                        // `design-workspace.md`'s memory model already said this
+                        // — live-if-visible, discarded-if-occluded — and
+                        // `ServeReaping` is the other half.
+                        guard isKeyWindow else {
+                            pendingStart = path
+                            return
+                        }
                         serveFleet.manager(for: id).start(projectPath: path)
                         // App-level windows (System Health, Run Inspector) and
                         // the boot log are about "the serve you are looking at".

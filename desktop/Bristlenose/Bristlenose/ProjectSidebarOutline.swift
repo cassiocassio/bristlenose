@@ -1690,6 +1690,15 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                               #selector(menuOpenLensInNewWindow(_:))))
     }
 
+    @objc private func menuOpenFolderInNewWindows(_ sender: NSMenuItem) {
+        guard let id = menuClickedNodeID, let index = projectIndex else { return }
+        // Sidebar order, so the windows arrive in the order the researcher sees
+        // them rather than whatever the model iterates in.
+        for project in index.projects where project.folderId == id {
+            onOpenInNewWindow(project.id)
+        }
+    }
+
     @objc private func menuOpenLensInNewWindow(_ sender: NSMenuItem) {
         if let tab = menuClickedLens { onOpenLensInNewWindow(tab) }
     }
@@ -1792,6 +1801,20 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     }
 
     private func buildFolderMenu(_ menu: NSMenu, folderID id: UUID) {
+        // Plural, Safari's shape for a bookmark folder — and **no confirmation**,
+        // deliberately. Researchers select-all-and-open in Finder, InDesign and
+        // Photoshop without being asked, and a dialog counting servers at them
+        // would offload our resource management onto them. Lazy sidecar start is
+        // what makes it honest: twelve windows, one or two serves, the rest
+        // starting when they are looked at.
+        //
+        // Only when the folder actually holds more than one study; a folder of
+        // one is served by the project row's own item.
+        if (projectIndex?.projects.filter { $0.folderId == id }.count ?? 0) > 1 {
+            menu.addItem(menuItem("desktop.menu.file.openAllInNewWindows",
+                                  #selector(menuOpenFolderInNewWindows(_:))))
+            menu.addItem(.separator())
+        }
         menu.addItem(menuItem("desktop.menu.folder.rename", #selector(menuRename(_:))))
         menu.addItem(menuItem("desktop.menu.folder.archive", #selector(menuNoop(_:)), enabled: false))  // Phase 5
         menu.addItem(.separator())

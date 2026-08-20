@@ -354,6 +354,18 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   antenna icon, no shortcut. `Bristlenose ▸ Connect an Agent…` opens the
   pane. "No agent installed" is never a gate — unknowable, and access is
   a permission, not a connection.
+- **Cmd-R from Xcode cannot test window restoration — and it fails by giving a
+  confident wrong answer.** macOS writes window state on a **graceful** quit
+  (`applicationShouldTerminate` → `NSQuitAlwaysKeepsWindows`). Xcode's Stop
+  button sends **SIGKILL**, so nothing is saved, and every Cmd-R launch looks
+  exactly like "nothing to restore". You get that result whether restoration
+  works perfectly or is entirely broken. Wider than restoration: SIGKILL also
+  skips `applicationWillTerminate`, serve teardown, and the handshake's
+  delete-on-stop, so none of those run in a Cmd-R session either. To test any
+  of it: `open -n <built>.app`, arrange windows, **⌘Q the app itself**, then
+  `open` again. Same family as the stale-server-on-8150 trap in the root
+  `CLAUDE.md` — a check that reports confidently while measuring something else.
+
 - **The antenna badge means exposure, not activity** (§5a-bis).
   `cellRightSlot` `.agent(exposedNow:)`: no badge when access is off;
   tertiary (pale) when on-but-not-open; secondary (solid) when the serve

@@ -375,6 +375,24 @@ private struct FileMenuContent: View {
     @FocusedValue(\.windowCommands) private var windowCommands
     @Environment(\.openWindow) private var openWindow
 
+    /// The study the front window is on, if any.
+    ///
+    /// Via the bridge's path rather than an id because that is what the front
+    /// window publishes; `samePath` because bookmark healing can respell
+    /// `Project.path` while the bridge holds the spelling it was given.
+    private var frontProjectID: UUID? {
+        guard !bridgeHandler.selectedProjectPath.isEmpty else { return nil }
+        return projectIndex.projects.first {
+            AgentActivity.samePath($0.path, bridgeHandler.selectedProjectPath)
+        }?.id
+    }
+
+    /// Open a main window on `project`, or on the last-used study when nil.
+    private func openMainWindow(on project: UUID?) {
+        if let project { openWindow(id: "main", value: project) }
+        else { openWindow(id: "main") }
+    }
+
     var body: some View {
         Button(i18n.t("desktop.menu.file.newProject"), systemImage: "plus") {
             newItem(.newProject) {
@@ -402,10 +420,13 @@ private struct FileMenuContent: View {
         // accident. Sits with New Project / New Folder because it is the third
         // New item, and ⌥⌘N keeps that family's shape.
         //
-        // A new window inherits the persisted project selection, so this is
-        // "same study, another lens" — the case that wants two windows open.
+        // A new window opens on the FRONT window's study, so this is "same
+        // study, another lens" — the case that wants two windows open. Cloning
+        // the front window is the least surprising answer and matches the
+        // already-decided rule for which lens it opens at; with no front window
+        // it falls back to the last-used study.
         Button(i18n.t("desktop.menu.file.newWindow"), systemImage: "macwindow") {
-            openWindow(id: "main")
+            openMainWindow(on: frontProjectID)
         }
         .keyboardShortcut("n", modifiers: [.command, .option])
 
@@ -473,19 +494,20 @@ private struct FileMenuContent: View {
         // double-clicking a sidebar row. Distinct from New Window above, which
         // opens another view of the project already showing.
         //
-        // Dimmed, because it cannot work yet: `menuAction("openInNewWindow")`
-        // has no handler in the SPA and never did, so this was a silent no-op
-        // from the day it shipped. It needs a window that can carry a project
-        // value (`WindowGroup(for:)`), which is Stage 3b and blocked on the
-        // serve/view family call. Dimmed rather than deleted because the
-        // command is designed and wanted — and a menu is a promise about what
-        // the app can do, so an item that does nothing is worse than one that
-        // says it can't yet.
+// **Live since 20 Aug 2026.** It was dimmed from the day it shipped
+        // because `menuAction("openInNewWindow")` had no SPA handler and never
+        // did — a silent no-op. It needed a window that could carry a project
+        // value, which `WindowGroup(for:)` now provides, so the route is native
+        // and the SPA is not involved at all.
+        //
+        // Enabled only when there IS a selected study: with none it would be
+        // indistinguishable from New Window, and two menu items doing one thing
+        // is a menu lying about what the app can do.
         Button(i18n.t("desktop.menu.file.openInNewWindow"), systemImage: "macwindow.badge.plus") {
-            bridgeHandler.menuAction("openInNewWindow")
+            openMainWindow(on: frontProjectID)
         }
         .keyboardShortcut("o", modifiers: [.command, .shift])
-        .disabled(true)  // Stage 3b — docs/design-workspace.md
+        .disabled(frontProjectID == nil)
 
         Divider()
 

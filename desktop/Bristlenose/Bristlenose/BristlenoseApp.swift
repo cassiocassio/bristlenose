@@ -131,8 +131,8 @@ struct BristlenoseApp: App {
         // `id` is what `File ▸ New Window` (⌥⌘N) and the Dock-icon reopen both
         // open — `openWindow(id:)` against a `WindowGroup` spawns a window,
         // which is what both of them want.
-        WindowGroup(id: "main") {
-            ContentView()
+        WindowGroup(id: "main", for: UUID.self) { $projectID in
+            ContentView(initialProject: projectID)
                 .frame(minWidth: 700, minHeight: 500)
                 .environmentObject(serveFleet)
                 .environmentObject(projectIndex)

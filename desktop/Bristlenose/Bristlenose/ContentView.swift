@@ -198,6 +198,18 @@ struct ContentView: View {
     /// Selection binding for the List — uses `SidebarSelection` enum so both
     /// projects and folders are selectable. UUID-based to survive field mutations.
     /// Set enables Cmd+click / Shift+click multi-select natively.
+    /// The project this window was opened onto, from its scene value.
+    ///
+    /// Stage 3b: `WindowGroup(for:)` carries it, so restoration gives each
+    /// window **its own** study back rather than all of them the last-used one.
+    /// `File ▸ Open in New Window` and a sidebar double-click both pass it.
+    ///
+    /// nil means "no particular study" — a plain ⌘N or a restored window that
+    /// never had one — and then `persistedProjectID` supplies the last-used
+    /// study, which is what that global is now for (it stopped being *the*
+    /// selection the moment windows became independent).
+    let initialProject: UUID?
+
     @State private var selection: Set<SidebarSelection> = []
     /// Tracks whether the project list sidebar column is visible.
     /// Used to gate sidebar-specific toolbar items — if the user has hidden
@@ -644,11 +656,16 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            // Restore last-selected project from persisted ID.
-            if selection.isEmpty, !persistedProjectID.isEmpty,
-               let id = UUID(uuidString: persistedProjectID),
-               projectIndex.projects.contains(where: { $0.id == id }) {
-                selection = [.project(id)]
+            // This window's own study first; the last-used one only as a
+            // fallback. Under Stage 3b the scene value is per window, so five
+            // restored windows come back on five studies rather than five
+            // copies of whichever was selected last.
+            if selection.isEmpty {
+                let wanted = initialProject
+                    ?? (persistedProjectID.isEmpty ? nil : UUID(uuidString: persistedProjectID))
+                if let wanted, projectIndex.projects.contains(where: { $0.id == wanted }) {
+                    selection = [.project(wanted)]
+                }
             }
             // First-run consent check.
             if !hasConsent {

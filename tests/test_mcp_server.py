@@ -134,7 +134,7 @@ def _hide(db, dom_start: float, participant: str = "p1") -> None:
 class TestOverview:
     def test_shape_and_counts(self, db) -> None:
         overview = _tool_get_project_overview(db, 1, {"outcome": "completed"})
-        assert overview["quotes"]["total"] == 4
+        assert overview["quotes"]["visible"] == 4
         assert overview["quotes"]["hidden_by_researcher"] == 0
         assert overview["sessions"]["count"] == 1
         assert overview["last_run"] == {"outcome": "completed"}
@@ -156,10 +156,16 @@ class TestOverview:
     def test_hidden_quote_leaves_counts(self, db) -> None:
         _hide(db, 26)
         overview = _tool_get_project_overview(db, 1, None)
-        assert overview["quotes"]["total"] == 3
+        assert overview["quotes"]["visible"] == 3
         assert overview["quotes"]["hidden_by_researcher"] == 1
         dashboard = next(s for s in overview["sections"] if s["label"] == "Dashboard")
         assert dashboard["quote_count"] == 1
+        # The buckets are DISJOINT, and the section counts live in the same
+        # universe as `visible`. A reader that sums them gets a corpus that
+        # doesn't exist — which happened: 14 + 7 was announced as "21 quotes",
+        # and the phantom 7 was then reported to the researcher as unsectioned
+        # coverage in their own study.
+        assert sum(s["quote_count"] for s in overview["sections"]) <= overview["quotes"]["visible"]
 
     def test_unknown_project_lists_valid_ids(self, db) -> None:
         with pytest.raises(ToolInputError, match=r"unknown project_id 7.*\[1\]"):
@@ -967,3 +973,48 @@ class TestHealthAdvertisesMount:
 
         result = anyio.run(_call)
         assert result is not None
+
+
+class TestProjectIdentityInEveryPayload:
+    """`project_id` is a SLOT, not a name.
+
+    It resolves to whichever project is currently exposed, so a researcher
+    switching studies mid-conversation silently re-points it. Observed 20 Aug
+    2026 through the installed extension: the same id returned "foo" and then
+    "IKEA with uxfriends" in one session, and the agent noticed only because
+    the overview happened to carry a name to compare.
+
+    The tool that carries the EVIDENCE carried no identity at all — so quotes
+    from the second study would arrive under the first study's frame, correctly
+    retrieved and wrongly attributed, with no error anywhere. That is the worst
+    shape a bug can take in a research deliverable.
+
+    Parametrised over every tool deliberately: a per-tool test invites the NEXT
+    tool to ship without an echo, which is exactly how search_quotes came to
+    lack one.
+    """
+
+    @pytest.fixture()
+    def _tools(self):
+        return {
+            "get_project_overview": lambda db: _tool_get_project_overview(db, 1, None),
+            "search_quotes": lambda db: _search(db),
+            "get_signals": lambda db: _tool_get_signals(db, 1, "sentiment", 10),
+            "get_framework": lambda db: _tool_get_framework(db, 1, LIVE_CODEBOOK_ID),
+            "get_framework_template": lambda db: _tool_get_framework(db, 1, "uxr"),
+        }
+
+    def test_every_tool_names_its_project(self, db, _tools) -> None:
+        missing = []
+        for name, call in _tools.items():
+            payload = call(db)
+            project = payload.get("project")
+            if not isinstance(project, dict) or not project.get("name"):
+                missing.append(name)
+        assert not missing, f"tools returning no project identity: {missing}"
+
+    def test_the_name_is_the_real_one(self, db, _tools) -> None:
+        # Not just "a name is present" — the SAME name from every tool, so a
+        # consumer can compare across calls and notice a switch.
+        names = {name: call(db)["project"]["name"] for name, call in _tools.items()}
+        assert len(set(names.values())) == 1, names

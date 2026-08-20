@@ -17,8 +17,20 @@ trued-against: HEAD@main on 2026-08-18 (e646e0d0)
 > (18 Aug) the **child window**: a window that holds a lens rather than a project
 > and reads its title from the serve, so it cannot name a study it isn't showing.
 >
-> **Next, and no longer blocked:** Stage 3b — per-window serve, two studies
-> visible at once. Family **A** is presumed (16 Aug) and **constraint 7 is
+> **Stage 3b is BUILT (20 Aug 2026), pending its on-device walk.** Every window
+> shows its own study: one sidecar per project (`ServeFleet`, keyed on
+> `Project.ID`), `ContentView.serveManager` optional and fleet-derived,
+> `SelectionSync` deleted, `WindowGroup(id:for:)` carrying each window's study,
+> and `File ▸ Open in New Window` live after being dimmed since the day it
+> shipped. The lens collapse dissolves — a switch touches one window, so
+> siblings are never remounted and keep their lens.
+>
+> Owed before it ships: the QA walk (kept with the maintainer's private plans),
+> whose §0a carries four things only the running app can answer — chiefly
+> whether SwiftUI's per-value window dedup defeats ⌥⌘N.
+>
+> **Superseded framing, kept because it was true for four days:** Stage 3b —
+> per-window serve, two studies visible at once. Family **A** is presumed (16 Aug) and **constraint 7 is
 > answered** (19 Aug: one connection for V1, the handshake naming the most
 > recently fronted study with Agent Access on and a running serve). **Re-sized
 > 19 Aug to ~3–5 sessions** — the 18 Aug "weeks, not days" was a line count

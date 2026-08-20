@@ -1045,4 +1045,104 @@ describe("useKeyboardShortcuts", () => {
       unmount();
     });
   });
+
+  // ── Bare keys are inert under a ⌘/Ctrl/⌥ chord ──────────────────────
+  //
+  // Every one of these matched on `key` alone, so the browser's own chord
+  // fired *and* the report acted: ⌘S starred the focused quote while Save
+  // Page opened, ⌘X toggled selection alongside Cut. Only `z` had the guard.
+  //
+  // These assert the negative — `handled === false`, i.e. preventDefault was
+  // never called — because that is the whole defect: the report must decline
+  // the chord so the browser or the OS gets it whole. The positive (the bare
+  // key still works) is already covered by the describe blocks above, and
+  // asserting it again here is what would catch a guard inverted by mistake.
+  describe("bare keys decline modifier chords", () => {
+    function dispatchKey(key: string, options: Partial<KeyboardEventInit> = {}): boolean {
+      const event = new KeyboardEvent("keydown", {
+        key,
+        bubbles: true,
+        cancelable: true,
+        ...options,
+      });
+      return !document.dispatchEvent(event);
+    }
+
+    // Route-scoped keys need the lens that enables them, or they would read as
+    // declined for the wrong reason and pass against an unguarded handler.
+    const cases: Array<[string, string]> = [
+      ["[", "/report/quotes/"],
+      ["]", "/report/quotes/"],
+      ["\\", "/report/quotes/"],
+      ["§", "/report/quotes/"],
+      ["m", "/report/analysis"],
+      ["/", "/report/quotes/"],
+      ["j", "/report/quotes/"],
+      ["k", "/report/quotes/"],
+      ["z", "/report/quotes/"],
+    ];
+
+    for (const [key, route] of cases) {
+      for (const modifier of ["metaKey", "ctrlKey", "altKey"] as const) {
+        it(`${key} is inert with ${modifier}`, () => {
+          const { unmount } = renderWithProviders(undefined, route);
+          let handled = true;
+          act(() => {
+            handled = dispatchKey(key, { [modifier]: true });
+          });
+          expect(handled).toBe(false);
+          unmount();
+        });
+      }
+    }
+
+    // x, h and s are NOT in the loop above, and the reason is the whole point
+    // of writing this suite against the unfixed source first: all three bail
+    // early when no quote is focused, so on a bare harness they read as
+    // "declined" whether the guard exists or not. Nine vacuous passes, and
+    // ⌘S — the case that started this — among them. They need a focused quote
+    // before the assertion means anything.
+    for (const key of ["x", "h", "s"]) {
+      for (const modifier of ["metaKey", "ctrlKey", "altKey"] as const) {
+        it(`${key} is inert with ${modifier} even with a focused quote`, () => {
+          const { getCtx, unmount } = renderWithProviders(undefined, "/report/quotes/");
+          act(() => {
+            getCtx().registerVisibleQuoteIds("test", ["q-1", "q-2"]);
+            getCtx().setFocus("q-1");
+          });
+
+          let handled = true;
+          act(() => {
+            handled = dispatchKey(key, { [modifier]: true });
+          });
+          expect(handled).toBe(false);
+          // Nothing moved, either — declining the chord and then acting anyway
+          // would still star the quote behind Save Page.
+          expect(getCtx().selectedIds.size).toBe(0);
+
+          unmount();
+        });
+      }
+    }
+
+    // The one chord that must still be handled: ⌘. shares its handler with
+    // the bare \\ and § aliases, and guarding the whole condition rather than
+    // the bare branches would have killed it.
+    it("⌘. still toggles both sidebars", () => {
+      const { unmount } = renderWithProviders(undefined, "/report/quotes/");
+      expect(dispatchKey(".", { metaKey: true })).toBe(true);
+      unmount();
+    });
+
+    // Shift is not a chord for this purpose — Shift+j/k is a real binding.
+    it("Shift+j is still handled", () => {
+      const { unmount } = renderWithProviders(undefined, "/report/quotes/");
+      let handled = false;
+      act(() => {
+        handled = dispatchKey("j", { shiftKey: true });
+      });
+      expect(handled).toBe(true);
+      unmount();
+    });
+  });
 });

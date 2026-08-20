@@ -343,6 +343,18 @@ export function useKeyboardShortcuts({
     const handleKeydown = (e: KeyboardEvent) => {
       const key = e.key;
 
+      // A bare-key shortcut must not fire as part of a ⌘/Ctrl/⌥ chord. Each
+      // handler below matched on `key` alone, so ⌘S starred the focused quote
+      // *and* opened Save Page, ⌘X toggled selection alongside Cut, and any
+      // future chord landing on one of these letters would have doubled up
+      // silently. The isEditing() guard doesn't help: the chords that collide
+      // are most wanted just after an edit commits, when isEditing() is false.
+      //
+      // ⌥ is belt-and-braces on a Mac — ⌥s arrives as "ß", so it never matches
+      // — but it costs nothing and keeps the rule one clause rather than two.
+      // Shift is deliberately absent: Shift+j/k is a real binding.
+      const bare = !e.metaKey && !e.ctrlKey && !e.altKey;
+
       // Ctrl+Shift+P — toggle responsive playground (dev-only)
       if (key === "P" && e.ctrlKey && e.shiftKey) {
         e.preventDefault();
@@ -462,7 +474,7 @@ export function useKeyboardShortcuts({
       // browser only — embedded removed the Sessions left panel in favour of
       // the native switcher popover, and toggling a panel that isn't there
       // would flip the store flag with no pixels to show for it)
-      if (key === "[") {
+      if (key === "[" && bare) {
         const loc = locationRef.current.pathname;
         const onSessions = loc.startsWith("/report/sessions");
         if (
@@ -478,7 +490,7 @@ export function useKeyboardShortcuts({
       }
 
       // ] — toggle tag sidebar (quotes tab only)
-      if (key === "]") {
+      if (key === "]" && bare) {
         if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
           e.preventDefault();
           sidebarAnimations.toggleTags();
@@ -491,7 +503,10 @@ export function useKeyboardShortcuts({
       // British and the closest thing a Mac has to Photoshop's Tab. It stays a
       // web-layer alias rather than the advertised binding because US ANSI has
       // no § key at all (⌥6) — the menu advertises ⌘⌥\, which everyone has.
-      if (key === "\\" || key === "§" || (key === "." && (e.metaKey || e.ctrlKey))) {
+      if (
+        ((key === "\\" || key === "§") && bare) ||
+        (key === "." && (e.metaKey || e.ctrlKey))
+      ) {
         if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
           e.preventDefault();
           sidebarAnimations.toggleBoth();
@@ -500,7 +515,7 @@ export function useKeyboardShortcuts({
       }
 
       // m — toggle heatmap inspector panel (analysis tab only)
-      if (key === "m") {
+      if (key === "m" && bare) {
         if (pathMatches(locationRef.current.pathname, "/report/analysis")) {
           e.preventDefault();
           toggleInspector();
@@ -509,7 +524,7 @@ export function useKeyboardShortcuts({
       }
 
       // / — focus search
-      if (key === "/") {
+      if (key === "/" && bare) {
         e.preventDefault();
         focusSearchInput();
         return;
@@ -560,7 +575,7 @@ export function useKeyboardShortcuts({
       }
 
       // Shift+j/k — extend selection along DOM order
-      if ((key === "j" || key === "k") && e.shiftKey) {
+      if ((key === "j" || key === "k") && e.shiftKey && bare) {
         e.preventDefault();
         handleShiftMove(key === "j" ? 1 : -1);
         return;
@@ -571,14 +586,14 @@ export function useKeyboardShortcuts({
       // whatever the layout, and they're what the native Quotes menu's
       // Next/Previous Quote drive. Two coherent models, not one compromised
       // one — in a single column they coincide.
-      if (key === "j" || key === "k") {
+      if ((key === "j" || key === "k") && bare) {
         e.preventDefault();
         moveFocus(key === "j" ? 1 : -1);
         return;
       }
 
       // x — toggle selection on focused quote
-      if (key === "x" && focusedIdRef.current) {
+      if (key === "x" && bare && focusedIdRef.current) {
         e.preventDefault();
         toggleSelection(focusedIdRef.current);
         if (!anchorIdRef.current) setAnchor(focusedIdRef.current);
@@ -586,7 +601,7 @@ export function useKeyboardShortcuts({
       }
 
       // h — hide
-      if (key === "h") {
+      if (key === "h" && bare) {
         if (selectedIdsRef.current.size > 0 || focusedIdRef.current) {
           e.preventDefault();
           handleHide();
@@ -595,7 +610,7 @@ export function useKeyboardShortcuts({
       }
 
       // s — star
-      if (key === "s") {
+      if (key === "s" && bare) {
         if (selectedIdsRef.current.size > 0 || focusedIdRef.current) {
           e.preventDefault();
           handleStar();
@@ -606,16 +621,15 @@ export function useKeyboardShortcuts({
       // z — focus mode (quotes lens only)
       //
       // Needs no focused or selected quote (it's a view state, not a quote
-      // mutation), but does need two guards the sibling bare keys don't:
+      // mutation), but does need a route guard the sibling bare keys don't:
       //
-      // 1. Modifiers. ⌘Z is Undo, and the report has inline quote/heading/name
-      //    editing, so an unguarded bare `z` would swallow it — the isEditing()
-      //    guard above doesn't help, because Undo is most wanted just *after*
-      //    an edit commits, when isEditing() is already false.
+      // 1. Modifiers, via the shared `bare` predicate — ⌘Z is Undo, and the
+      //    report has inline quote/heading/name editing. This was the first
+      //    handler to need the guard, and for a while the only one with it.
       // 2. Route. The recede transform is defined for quote cards; the native
       //    View-menu twin dims off this lens, and the two must agree or the
       //    menu says "unavailable" while the key still works.
-      if (key === "z" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (key === "z" && bare) {
         if (pathMatches(locationRef.current.pathname, "/report/quotes")) {
           e.preventDefault();
           toggleFocusMode();

@@ -77,15 +77,29 @@ final class ServeFleet: ObservableObject {
         let created = ServeManager()
         created.agentAccessResolver = agentAccessResolver
         managers[project] = created
+        created.handshakeOwner = (project == exposedProject)
         observations[project] = created.objectWillChange.sink { [weak self] _ in
-            self?.objectWillChange.send()
+            guard let self else { return }
+            self.objectWillChange.send()
+            // The mirrored facts follow the managers rather than being pushed
+            // from call sites, so no site can forget to update them.
+            Task { @MainActor in self.refreshAppLevelFacts() }
         }
         return created
     }
 
-    /// Drop a project's manager and stop observing it. The caller stops the
-    /// sidecar first — this is bookkeeping, not teardown.
+    /// Stop a project's sidecar and drop its manager.
+    ///
+    /// **Stops first.** An earlier version left teardown to the caller and was
+    /// bookkeeping only — which meant `ContentView`'s project-removal path
+    /// (the successor to `dropParked`) forgot the manager while its sidecar
+    /// kept running: ~140 MB and a live port serving a study the researcher had
+    /// just deleted, with nothing reporting it. Strictly worse than the
+    /// behaviour it replaced.
     func discard(_ project: UUID) {
+        managers[project]?.stop()
+        SharedConfigStore.shared.release(projectID: project)
+        unshownSince[project] = nil
         managers[project] = nil
         observations[project] = nil
         if frontedProject == project { frontedProject = nil }
@@ -133,11 +147,110 @@ final class ServeFleet: ObservableObject {
         Set(managers.filter { $0.value.runningPort != nil }.keys)
     }
 
+    /// When each running project last had no window. `ServeReaping` turns this
+    /// plus the roster into a verdict; nothing here is a refcount.
+    private var unshownSince: [UUID: ContinuousClock.Instant] = [:]
+    private var reapTask: Task<Void, Never>?
+
+    /// Re-judge every running sidecar against the windows that exist now.
+    ///
+    /// Call on any roster change. It is a **sweep, not a reaction to one
+    /// window**: the verdict is a function of `shownProjects`, so a missed
+    /// `.onDisappear` delays an answer by one sweep instead of stranding a
+    /// sidecar forever — which a paired acquire/release cannot promise, and a
+    /// tab merged into another window may not fire at all.
+    func sweep(shownProjects: Set<UUID>, memoryPressure: Bool = false) {
+        let now = ContinuousClock.now
+        for id in runningProjects where !shownProjects.contains(id) {
+            if unshownSince[id] == nil { unshownSince[id] = now }
+        }
+        for id in shownProjects { unshownSince[id] = nil }
+
+        let running = Dictionary(uniqueKeysWithValues: runningProjects.map { id in
+            (id, unshownSince[id].map { now - $0 })
+        })
+        let verdicts = ServeReaping.sweep(running: running,
+                                          shownProjects: shownProjects,
+                                          memoryPressure: memoryPressure)
+        for (id, verdict) in verdicts where verdict == .reapNow {
+            discard(id)
+        }
+        // Something is waiting out its grace period — come back and finish the
+        // job. Without this the reap would only ever happen on the *next*
+        // roster change, so closing the last window and walking away would
+        // leave the sidecar up indefinitely: the timer is the decision.
+        reapTask?.cancel()
+        reapTask = nil
+        if verdicts.values.contains(.reapAfterGrace) {
+            reapTask = Task { [weak self] in
+                try? await Task.sleep(for: ServeReaping.defaultGrace)
+                guard !Task.isCancelled, let self else { return }
+                // Re-read the roster rather than replaying the snapshot: a study
+                // that regained a window during the grace period must not be
+                // reaped out from under it.
+                self.sweep(shownProjects: WindowRoster.shared.shownProjects)
+            }
+        }
+    }
+
+    /// A preference or the consent state changed, so every running sidecar's
+    /// baked environment is stale. Fan out per `ServeEnvStaleness`.
+    ///
+    /// Restarting all N would be N cold report remounts in windows nobody is
+    /// looking at; restarting only the fronted one would leave the rest serving
+    /// under a consent the researcher just changed. So: lazy, except the
+    /// exposed instance, which an agent can read while unattended.
+    func applyEnvChange() {
+        for (id, manager) in managers {
+            switch ServeEnvStaleness.action(project: id,
+                                            isRunning: manager.runningPort != nil,
+                                            isFronted: id == frontedProject,
+                                            exposedProject: exposedProject) {
+            case .restartNow:          manager.restartIfRunning()
+            case .restartOnNextFront:  staleProjects.insert(id)
+            case .nothing:             break
+            }
+        }
+    }
+
+    /// Marked stale by `applyEnvChange`, restarted when a window fronts them.
+    private(set) var staleProjects: Set<UUID> = []
+
+    /// Call when a window adopts `project`. Restarts it if its environment went
+    /// stale while nobody was looking.
+    func front(_ project: UUID) {
+        frontedProject = project
+        if staleProjects.remove(project) != nil {
+            managers[project]?.restartIfRunning()
+        }
+    }
+
     /// Designate which project the handshake names. Exposure follows a
     /// deliberate act — turning Agent Access on — never an incidental one like
     /// fronting a window, which would silently re-point an external agent at a
     /// different study because someone pressed ⌘\`.
     func setExposed(_ project: UUID?) {
         exposedProject = project
+        // One handshake, one writer. Every other manager is muted, or its
+        // 20-second activity poll would delete this one's file.
+        for (id, manager) in managers { manager.handshakeOwner = (id == project) }
+        refreshAppLevelFacts()
+    }
+
+    /// Mirror the facts that are about the app rather than a sidecar.
+    ///
+    /// They are `@Published` on the fleet and read by the sidebar, and they had
+    /// **no writer at all** when the fleet first landed — so `mcpMounted` was
+    /// permanently false, which hides *Turn On Agent Access* entirely, and the
+    /// antenna could never go solid. A declared-and-read-but-never-written
+    /// property reads exactly like a truthful "no", which is why it survived a
+    /// green suite.
+    func refreshAppLevelFacts() {
+        // Per-build, so any instance answers for all of them.
+        let mounted = managers.values.contains { $0.mcpMounted }
+        if mounted != mcpMounted { mcpMounted = mounted }
+
+        let path = exposedProject.flatMap { managers[$0]?.handshakeProjectPath }
+        if path != handshakeProjectPath { handshakeProjectPath = path }
     }
 }

@@ -25,11 +25,25 @@ struct BootView: View {
     }
 
     let phase: Phase
+
+    /// The study this pane is booting, when it has one. Defaulted so the
+    /// call sites that genuinely have no project (pre-selection boot) need
+    /// no argument.
+    var project: UUID? = nil
+
     @EnvironmentObject var i18n: I18n
     @State private var detailsExpanded = false
-    /// The fleet, not a manager: under Stage 3b there is one serve per project,
-    /// and this view is about whichever is fronted.
     @EnvironmentObject var serveFleet: ServeFleet
+
+    /// The serve this pane is about.
+    ///
+    /// Deliberately NOT `serveFleet.fronted`: a pane showing a *failed* boot is
+    /// by definition not running, so it is very unlikely to be the fronted one —
+    /// and "Show Details" would then print another study's log, or nothing.
+    /// `project` is the honest source; nil only where the pane has none.
+    private var serveManagerForPane: ServeManager? {
+        project.map { serveFleet.manager(for: $0) }
+    }
 
     private var statusText: String {
         switch phase {
@@ -118,7 +132,7 @@ struct BootView: View {
                 }
                 if detailsExpanded {
                     ScrollView {
-                        Text((serveFleet.fronted?.outputLines ?? []).suffix(40).joined(separator: "\n"))
+                        Text((serveManagerForPane?.outputLines ?? []).suffix(40).joined(separator: "\n"))
                             .font(.system(.caption, design: .monospaced))
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)

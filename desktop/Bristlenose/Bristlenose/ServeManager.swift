@@ -103,6 +103,18 @@ final class ServeManager: ObservableObject {
         set { instance.mcpInstanceID = newValue }
     }
 
+    /// May this instance write or delete the handshake file?
+    ///
+    /// There is **one** handshake naming **one** project, so exactly one manager
+    /// may own it — `ServeFleet` designates. Without this, `syncHandshake`'s
+    /// else-arm runs from every instance's 20-second activity poll, so a second
+    /// running, non-exposed project deletes the exposed project's file within
+    /// 20 seconds, repeatedly. Defaults to true so a lone manager (tests, the
+    /// CLI-shaped path) behaves exactly as before.
+    var handshakeOwner: Bool = true {
+        didSet { if handshakeOwner != oldValue { syncHandshake() } }
+    }
+
     /// The project path the MCP handshake currently names, or nil when no
     /// handshake exists. **Written by `syncHandshake()` and nowhere else** —
     /// it is that function's own answer, published rather than re-derived.
@@ -197,15 +209,12 @@ final class ServeManager: ObservableObject {
             }
         }
 
-        prefsObserver = NotificationCenter.default.addObserver(
-            forName: .bristlenosePrefsChanged,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                self?.restartIfRunning()
-            }
-        }
+        // NO per-instance prefs observer. One existed here while there was one
+        // manager; with one per project it becomes "restart all N" — N cold
+        // report remounts in windows nobody is looking at, which is precisely
+        // the arm `ServeEnvStaleness` declines. The fan-out is the fleet's
+        // (`ServeFleet.applyEnvChange`), which restarts the fronted and exposed
+        // instances now and marks the rest to restart when someone looks at them.
 
         agentAccessObserver = NotificationCenter.default.addObserver(
             forName: .bristlenoseAgentAccessChanged,
@@ -233,10 +242,12 @@ final class ServeManager: ObservableObject {
         }
 
         // Sweep a SIGKILL leftover (force quit, OOM, the Xcode stop button —
-        // none of which run the delete-on-stop path). Unconditional at host
-        // launch: no sidecar is running yet, so any file here is stale, and a
-        // stale file names a port something else may now own.
-        dropHandshake()
+        // none of which run the delete-on-stop path). Gated on `handshakeOwner`:
+        // it was unconditional while there was one manager per app, and with one
+        // per project it meant minting a second project's manager deleted the
+        // FIRST project's live handshake. Only the designated owner may touch
+        // the file — one global fact, one writer.
+        if handshakeOwner { dropHandshake() }
     }
 
     /// The URL to load in WKWebView when serve is running.
@@ -986,6 +997,7 @@ final class ServeManager: ObservableObject {
     /// the exact defect publishing the path was meant to close. Every lifecycle
     /// edge that used to call `remove()` directly calls this.
     private func dropHandshake() {
+        guard handshakeOwner else { return }
         MCPHandshake.remove()
         if handshakeProjectPath != nil { handshakeProjectPath = nil }
     }
@@ -1007,6 +1019,7 @@ final class ServeManager: ObservableObject {
     /// proxy's health probe / 404 path produces the honest "built without
     /// agent support" sentence, which beats a missing-file "isn't open".
     private func syncHandshake() {
+        guard handshakeOwner else { return }
         guard let plan = HandshakeExposure.write(
             state: state,
             currentProjectPath: currentProjectPath,

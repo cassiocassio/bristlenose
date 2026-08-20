@@ -89,6 +89,11 @@ struct BristlenoseApp: App {
     /// line-by-line move. Landing the fleet first means the crossing is one
     /// well-scoped change with everything under it already proven.
     @StateObject private var serveFleet = ServeFleet()
+
+    /// Holds the prefs/consent observer that fans out to every sidecar.
+    @State private var prefsFanOut: (any NSObjectProtocol)?
+    /// Holds the agent-access observer that designates the exposed study.
+    @State private var agentAccessFanOut: (any NSObjectProtocol)?
     @StateObject private var projectIndex = ProjectIndex()
 
     /// Owns the single import window's store. App-level rather than
@@ -160,7 +165,7 @@ struct BristlenoseApp: App {
                     appDelegate.openProjectWindow = { openWindow(id: "main") }
                     // The MCP Agents pane's live inputs (Now-showing line,
                     // payloads, the agent-access list).
-                    SettingsWindow.shared.serveManager = serveFleet.frontedOrIdle
+                    SettingsWindow.shared.serveFleet = serveFleet
                     SettingsWindow.shared.projectIndex = projectIndex
                     // What a landed cloud batch is handed to. The coordinator
                     // is the one app-wide owner of the import store, so it is
@@ -176,6 +181,28 @@ struct BristlenoseApp: App {
                     // (Both objects are app-lifetime; the capture is benign.)
                     serveFleet.agentAccessResolver = { [weak projectIndex] path in
                         projectIndex?.agentAccess(forPath: path) ?? false
+                    }
+                    // A sidecar bakes provider, model, key, anonymise and
+                    // consent into its environment at spawn. One notification,
+                    // N sidecars — the action is a fan-out, not a restart.
+                    // Exposure follows turning Agent Access ON — a deliberate
+                    // act with a visible control — never fronting a window,
+                    // which would silently re-point an external agent at a
+                    // different study because someone pressed Cmd-backtick.
+                    agentAccessFanOut = NotificationCenter.default.addObserver(
+                        forName: .bristlenoseAgentAccessChanged, object: nil, queue: .main
+                    ) { note in
+                        guard let id = note.userInfo?["id"] as? UUID,
+                              let enabled = note.userInfo?["enabled"] as? Bool else { return }
+                        Task { @MainActor in
+                            if enabled { serveFleet.setExposed(id) }
+                            else if serveFleet.exposedProject == id { serveFleet.setExposed(nil) }
+                        }
+                    }
+                    prefsFanOut = NotificationCenter.default.addObserver(
+                        forName: .bristlenosePrefsChanged, object: nil, queue: .main
+                    ) { _ in
+                        Task { @MainActor in serveFleet.applyEnvChange() }
                     }
                     pipelineRunner.setProjectIndex(projectIndex)
                     pipelineRunner.scanAllProjects(projectIndex.projects)

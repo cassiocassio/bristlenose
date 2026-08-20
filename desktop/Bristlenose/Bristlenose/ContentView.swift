@@ -720,6 +720,10 @@ struct ContentView: View {
             // Give the ordinal back. Deliberately does NOT renumber the
             // survivors — see `WindowRoster.claim`.
             WindowRoster.shared.release(windowID: windowID)
+            // This window's study may have just lost its last window. The sweep
+            // decides — it is a function of the roster, so it is safe to call
+            // more often than strictly needed and safe to miss once.
+            serveFleet.sweep(shownProjects: WindowRoster.shared.shownProjects)
         }
     }
 
@@ -742,6 +746,7 @@ struct ContentView: View {
         // covers the window opening already showing something.
         .onChange(of: windowGroup, initial: true) { _, group in
             windowRoster.claim(windowID: windowID, showing: group)
+            serveFleet.sweep(shownProjects: windowRoster.shownProjects)
         }
         // Restore the lens this project was left on, once the report is up.
         // `isReady` is cleared by `BridgeHandler.reset()` on every project
@@ -1001,8 +1006,10 @@ struct ContentView: View {
                         serveFleet.manager(for: id).start(projectPath: path)
                         // App-level windows (System Health, Run Inspector) and
                         // the boot log are about "the serve you are looking at".
-                        // The window that most recently adopted a study is it.
-                        serveFleet.frontedProject = id
+                        // The window that most recently adopted a study is it —
+                        // and `front` also restarts it if a preference or the
+                        // consent state changed while nobody was looking at it.
+                        serveFleet.front(id)
                     }
                 } else {
                     // Not serving this project (empty path, unavailable, or
@@ -2805,7 +2812,7 @@ struct ContentView: View {
                     // switch needs no nil arm.
                     switch serveFleet.manager(for: project.id).state {
                     case .idle, .starting:
-                        BootView(phase: .startingSidecar)
+                        BootView(phase: .startingSidecar, project: project.id)
 
                     // **The window's project is not what the sidecar is serving.**
                     //
@@ -2825,7 +2832,7 @@ struct ContentView: View {
                     // construction. The guard is the master's alone.
                     case .running where serveFleet.manager(for: project.id)
                         .currentProjectPath != project.path:
-                        BootView(phase: .startingSidecar)
+                        BootView(phase: .startingSidecar, project: project.id)
 
                     case .running(let port):
                         // Key on project id AND serve port. A warm-pool re-point
@@ -2868,7 +2875,7 @@ struct ContentView: View {
                     case .failed(let error):
                         BootView(phase: .failed(message: error, retry: {
                             serveFleet.manager(for: project.id).start(projectPath: project.path)
-                        }))
+                        }), project: project.id)
                     }
                 }
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: bridgeHandler.isReady)

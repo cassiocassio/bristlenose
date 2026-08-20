@@ -33,8 +33,12 @@ grep -q "selectedProject.map { serveFleet.manager(for: \$0.id) }" "$CV" \
 
 # 2. No ServeManager may be injected app-wide. One shared manager in the
 #    environment IS the shared serve, whatever the window model says.
-if grep -nE "\.environmentObject\(serveManager\)" "$APP" >&2; then
-  die "a ServeManager is injected app-wide — that is the shared serve returning"
+# Matches the fleet's stand-in too: after the crossing a returning shared serve
+# would be spelled `.environmentObject(serveFleet.frontedOrIdle)`, which the
+# original pattern missed — so this assertion passed vacuously the moment it
+# was written.
+if grep -nE "\.environmentObject\((serveManager|.*frontedOrIdle|.*\.fronted)\)" "$APP" >&2; then
+  die "a single ServeManager is injected app-wide — that is the shared serve returning"
 fi
 
 # 3. App-level facts are read off the fleet, never off a window's serve. Both
@@ -53,4 +57,16 @@ if grep -rn "SelectionSync" "$(dirname "$0")/../Bristlenose" >&2; then
   die "SelectionSync is back — windows are being forced onto one study again"
 fi
 
-echo "window surfaces: per-window serve, app-level facts on the fleet — clean"
+# 5. The app-level facts must be WRITTEN, not just declared and read. Both
+#    shipped with no writer at all: `mcpMounted` was permanently false, which
+#    hides Turn On Agent Access entirely, and `handshakeProjectPath` permanently
+#    nil, so the antenna could never go solid for a study an agent could reach.
+#    A property that is read but never assigned reads exactly like a truthful
+#    "no", which is why a green suite never noticed.
+FLEET="$(dirname "$0")/../Bristlenose/Bristlenose/ServeFleet.swift"
+grep -q "if mounted != mcpMounted { mcpMounted = mounted }" "$FLEET" \
+  || die "ServeFleet.mcpMounted has no writer — Turn On Agent Access would be hidden everywhere"
+grep -q "if path != handshakeProjectPath { handshakeProjectPath = path }" "$FLEET" \
+  || die "ServeFleet.handshakeProjectPath has no writer — the antenna could never go solid"
+
+echo "window surfaces: per-window serve, app-level facts written and on the fleet — clean"

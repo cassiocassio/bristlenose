@@ -527,7 +527,12 @@ final class ProjectIndex: ObservableObject {
               projects[index].agentAccess != enabled else { return }
         projects[index].agentAccess = enabled
         save()
-        NotificationCenter.default.post(name: .bristlenoseAgentAccessChanged, object: nil)
+        // Carries WHICH project and which way: `ServeFleet` designates the
+        // exposed study from this, and exposure follows the deliberate act of
+        // turning access on — never an incidental one like fronting a window.
+        NotificationCenter.default.post(
+            name: .bristlenoseAgentAccessChanged, object: nil,
+            userInfo: ["id": id, "enabled": enabled])
     }
 
     /// Whether the project at `path` has agent access on. Path-standardised

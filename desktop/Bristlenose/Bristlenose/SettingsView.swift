@@ -42,7 +42,17 @@ final class SettingsWindow {
     /// The MCP Agents pane's live inputs, set at launch like `i18n`: the
     /// serve state (Now-showing line, payload values) and the project index
     /// (the agent-access list). App-lifetime objects; plain strong refs.
-    var serveManager: ServeManager?
+    /// The fleet, read at use time.
+    ///
+    /// This was a `ServeManager?` assigned once at first-window `.onAppear` —
+    /// which is *before* anything is fronted, so it captured a manager that
+    /// never spawns, and Settings ▸ MCP Agents then reported "built without
+    /// agent support" for the whole session with a live serve running. Holding
+    /// the fleet means the panes resolve the current one when they are built.
+    var serveFleet: ServeFleet?
+
+    /// The fronted serve, or the fleet's idle stand-in.
+    private var serveManager: ServeManager? { serveFleet?.frontedOrIdle }
     var projectIndex: ProjectIndex?
 
     private lazy var controller: SettingsWindowController = {

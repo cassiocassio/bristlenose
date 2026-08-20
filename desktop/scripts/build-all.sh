@@ -84,6 +84,15 @@ bn_check 1 ok "logging hygiene" "no credential-shaped log calls"
 "$SCRIPT_DIR/check-appearance-seam.sh" "$ROOT" >/dev/null
 bn_check 1 ok "appearance seam" "one mapping, applied app-wide"
 
+# 1a-bis. Window surfaces — asserts each window's serve is ITS OWN, and that
+# app-level facts (mcpMounted, the MCP handshake) are read off the fleet rather
+# than off one window's serve. Written 19 Aug, repointed 20 Aug for the
+# per-project serve — and NEVER WIRED until now, which is why two of its four
+# invariants had already regressed by the time anyone ran it. A gate nothing
+# invokes is a comment. <1s.
+"$SCRIPT_DIR/check-window-surfaces.sh" >/dev/null
+bn_check 1 ok "window surfaces" "per-window serve, app-level facts on the fleet"
+
 # 1a-ter. Menu routing — asserts the menu bar sends commands to the front
 # window rather than broadcasting them to all of them. The drift is measured:
 # the broadcast count grew 16 → 19 between 28 Jul and 15 Aug 2026 because

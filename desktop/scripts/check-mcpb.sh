@@ -19,7 +19,10 @@
 
 set -euo pipefail
 
-MCPB="${1:?usage: check-mcpb.sh <path-to-.mcpb>}"
+MCPB="${1:?usage: check-mcpb.sh <path-to-.mcpb> [expected-version]}"
+# Optional so a hand-run `check-mcpb.sh foo.mcpb` still works; supplied by
+# build-mcpb.sh, which knows what it just stamped.
+EXPECTED_VERSION="${2:-}"
 
 if [ ! -f "$MCPB" ]; then
     echo "error: no such .mcpb: $MCPB" >&2
@@ -37,7 +40,7 @@ if [ -z "$PY" ]; then
     exit 1
 fi
 
-"$PY" - "$MCPB" <<'PYEOF'
+"$PY" - "$MCPB" "$EXPECTED_VERSION" <<'PYEOF'
 import json
 import sys
 import zipfile
@@ -50,6 +53,7 @@ MACHO_MAGICS = {
 ALLOWED = {"manifest.json", "server/index.js"}
 
 path = sys.argv[1]
+expected_version = sys.argv[2] if len(sys.argv) > 2 else ""
 failures: list[str] = []
 
 with zipfile.ZipFile(path) as z:
@@ -70,6 +74,11 @@ with zipfile.ZipFile(path) as z:
         data = z.read(name)
         if data[:4] in MACHO_MAGICS:
             failures.append(f"Mach-O magic in member: {name}")
+        if name == "server/index.js" and b'"0.0.0-dev"' in data:
+            failures.append(
+                "proxy VERSION is the unstamped placeholder — "
+                "build-mcpb.sh must stamp it before packing"
+            )
         if b"BRISTLENOSE_DEV_MCP_HANDSHAKE" in data:
             failures.append(
                 f"dev handshake override shipped in {name} — "
@@ -105,6 +114,21 @@ with zipfile.ZipFile(path) as z:
                    f"platforms must be ['darwin'], got {compat.get('platforms')!r}")
             expect(compat.get("runtimes", {}).get("node", "").startswith(">="),
                    "runtimes.node floor missing")
+            # A pack that never got stamped would claim 0.0.0 forever and
+            # be indistinguishable in the field from a correctly-built one
+            # — which is precisely the confusion the stamp exists to end.
+            expect(m.get("version") not in (None, "", "0.0.0"),
+                   f"manifest version is the unstamped placeholder "
+                   f"({m.get('version')!r}) — build-mcpb.sh must stamp it")
+            # Equality, not just non-placeholder. "Not 0.0.0" would pass a
+            # .mcpb packed at 0.25.3 sitting in a 0.26.0 app — the exact
+            # staleness the version display exists to expose, waved through
+            # by the gate meant to prevent it.
+            if expected_version:
+                expect(m.get("version") == expected_version,
+                       f"manifest version {m.get('version')!r} != expected "
+                       f"{expected_version!r} — the pack is stale")
+
             server = m.get("server", {})
             expect(server.get("type") == "node", "server.type must be 'node'")
             expect(server.get("entry_point") in names,

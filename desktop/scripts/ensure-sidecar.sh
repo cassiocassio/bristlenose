@@ -111,6 +111,31 @@ else
     _log "ffmpeg: present"
 fi
 
+# --- 1b. Agent extension (.mcpb) — repack whenever the proxy source moved -----
+#
+# This is the Cmd+R self-heal for the .mcpb, and it exists because its absence
+# produced a textbook false green (20 Aug 2026, review Finding 28).
+#
+# `desktop/mcpb/**` is inside sidecar_source_hash, so editing the proxy marks
+# the PYINSTALLER SIDECAR stale. ensure-sidecar then rebuilt the sidecar — an
+# expensive rebuild for an unrelated reason — and re-stamped the fingerprint,
+# after which check-sidecar-freshness.sh reported "matches source" while
+# Resources/Bristlenose.mcpb still held the PRE-EDIT zip. Install from the app,
+# get the old proxy, with a green gate the whole way. Exactly the class this
+# repo has already been bitten by via theme/ and llm/prompts/.
+#
+# build-mcpb.sh is ~200ms and self-gates via check-mcpb.sh, so the parsimonious
+# fix is to always run it rather than to add a second freshness gate for a
+# condition this makes impossible. Skipped under DRY_RUN like every other
+# mutating step.
+if [ "$DRY_RUN" = 0 ]; then
+    bash "$SCRIPT_DIR/build-mcpb.sh" >>"$LOG" 2>&1 \
+        || { echo "error: build-mcpb.sh failed (see $LOG)" >&2; exit 1; }
+    _log "mcpb: repacked"
+else
+    _log "mcpb: skipped (dry-run)"
+fi
+
 # --- 2. Identity transition → force a clean P rebuild (never re-sign incrementally) ---
 prev_identity=""
 # TAB-delimited (NOT ':') — real Apple identities contain a colon

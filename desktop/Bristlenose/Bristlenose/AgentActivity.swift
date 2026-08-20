@@ -36,6 +36,25 @@ enum AgentActivity {
         return (key?.isEmpty == false) ? key : nil
     }
 
+    /// The proxy's self-reported build, from the AUTHED `/api/agent-activity`
+    /// payload (never `/api/health` — that route is auth-exempt and this
+    /// describes the researcher's agent setup, not the server's liveness).
+    ///
+    /// Nil is NOT "out of date". It means no EXTENSION build has identified
+    /// itself — which covers both "nothing has called yet" and "an agent
+    /// called through the Generic MCP path", since a non-`.mcpb` client sends
+    /// no header. Pair with the payload's `calls` to tell those apart; a
+    /// serve nobody has queried must not read as stale either way.
+    ///
+    /// Diagnostic only. Compatibility is `mcp.contract`'s job — a `.mcpb`
+    /// never auto-updates, so the proxy in the field is routinely older than
+    /// the app and comparing release versions as a GATE would cry wolf on
+    /// every patch (see `MCP_CONTRACT` in routes/health.py).
+    static func proxyVersion(_ json: [String: Any]?) -> String? {
+        let raw = json?["proxy_version"] as? String
+        return (raw?.isEmpty == false) ? raw : nil
+    }
+
     /// Project-path identity for the connect sheet + badge. Bookmark healing
     /// (`refreshAvailability`) can respell `project.path` (`/private/…`,
     /// symlink resolution) while `currentProjectPath` holds the spawn-time

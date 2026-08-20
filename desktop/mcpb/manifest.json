@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "bristlenose",
   "display_name": "Bristlenose",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Ask your Bristlenose study — quotes, themes, signals, frameworks — from your agent. Read-only.",
   "author": { "name": "Bristlenose" },
   "server": {

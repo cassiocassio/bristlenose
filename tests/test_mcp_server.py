@@ -920,6 +920,96 @@ class TestHealthAdvertisesMount:
                 got = client.get("/api/agent-activity", headers=hdr).json()["calls"]
                 assert got == expected
 
+    def test_agent_activity_reports_the_proxy_build(self) -> None:
+        # The gap this closes: the host could report the .mcpb it BUNDLED but
+        # never the proxy actually running, and a `.mcpb` has no auto-update
+        # — so a reinstall that quietly re-laid a stale copy looked identical
+        # to a working one. The proxy has always sent this header; nothing
+        # read it until now.
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "test-mcp-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            hdr = {"Authorization": "Bearer test-mcp-token"}
+            resp = client.post(
+                "/mcp/",
+                headers={
+                    **hdr, **_PROTO_HEADERS,
+                    "X-Bristlenose-Proxy-Version": "0.26.0+854270a",
+                    "X-Bristlenose-Proxy-Contract": "2",
+                },
+                json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                      "params": {"name": "get_project_overview", "arguments": {}}},
+            )
+            assert resp.status_code == 200, resp.text
+            got = client.get("/api/agent-activity", headers=hdr).json()
+            assert got["proxy_version"] == "0.26.0+854270a"
+            assert got["proxy_contract"] == "2"
+
+    def test_proxy_version_is_null_until_an_agent_calls(self) -> None:
+        # "No agent has called yet" and "the agent is running a stale build"
+        # are different facts and the host renders them differently. A serve
+        # nobody has queried must not read as out-of-date.
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "test-mcp-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            got = client.get(
+                "/api/agent-activity",
+                headers={"Authorization": "Bearer test-mcp-token"},
+            ).json()
+            assert got["proxy_version"] is None
+
+    def test_proxy_version_rejects_anything_that_is_not_a_version(self) -> None:
+        # Self-reported by another vendor's process and interpolated into a
+        # localised sentence in the pane that neighbours Turn On/Off Agent
+        # Access. REJECT rather than sanitise: filtering `9.9.9\tevil` down to
+        # `9.9.9evil` yields neither what was sent nor an honest "unreadable",
+        # just something that looks like a version — the worst outcome for a
+        # field whose whole job is "is this the build I packed".
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "test-mcp-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            hdr = {"Authorization": "Bearer test-mcp-token"}
+            for hostile in (
+                "9.9.9\tevil" + "A" * 400,          # over-long, control char
+                "0.26.0 (revoked - re-auth now)",    # a sentence
+                "0.26.0 <b>x</b>",                   # markup
+                "   ",                               # whitespace only
+            ):
+                resp = client.post(
+                    "/mcp/",
+                    headers={**hdr, **_PROTO_HEADERS,
+                             "X-Bristlenose-Proxy-Version": hostile},
+                    json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                          "params": {"name": "get_project_overview", "arguments": {}}},
+                )
+                assert resp.status_code == 200, resp.text
+                got = client.get("/api/agent-activity", headers=hdr).json()
+                assert got["proxy_version"] is None, hostile
+
+    def test_unauthenticated_caller_cannot_write_the_proxy_version(self) -> None:
+        # The browser-explainer exemption in middleware.py lets an unauthed
+        # GET /mcp/ with Accept: text/html through so a naive click gets a
+        # human page. That request reaches the recorder, so without a method
+        # gate any local process could park chosen text in a native Settings
+        # label with no bearer and no tool call — and could write the `None`
+        # sentinel that means "no extension build has identified itself".
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        app.state.auth_token = "test-mcp-token"
+        with TestClient(app, base_url="http://127.0.0.1:8150") as client:
+            page = client.get(
+                "/mcp/",
+                headers={"Accept": "text/html",
+                         "X-Bristlenose-Proxy-Version": "0.26.0-OUT-OF-DATE"},
+            )
+            # The exemption itself is deliberate and must keep working.
+            assert page.status_code == 200
+            got = client.get(
+                "/api/agent-activity",
+                headers={"Authorization": "Bearer test-mcp-token"},
+            ).json()
+            assert got["proxy_version"] is None
+            assert got["calls"] == 0
+
     def test_agent_activity_requires_the_bearer(self) -> None:
         # The whole reason this isn't in the /api/health payload: health is
         # auth-exempt, and a call counter IS the activity timeline health

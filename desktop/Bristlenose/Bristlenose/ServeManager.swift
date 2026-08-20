@@ -76,6 +76,13 @@ final class ServeManager: ObservableObject {
         set { instance.agentActiveNow = newValue }
     }
 
+    /// The `.mcpb` proxy build that last called the fronted serve. Nil until
+    /// an agent actually asks something — "not heard from" is not "stale".
+    var agentProxyVersion: String? {
+        get { instance.agentProxyVersion }
+        set { instance.agentProxyVersion = newValue }
+    }
+
     /// Tool-call freshness (seconds) that still counts as "connected".
     /// Wider than the poll so a conversation with thinking gaps between
     /// tool calls doesn't flicker the badge.
@@ -448,6 +455,12 @@ final class ServeManager: ObservableObject {
         // Old project's agent activity must not light the new project's
         // badge for a poll tick (same class as the authToken reset below).
         agentActiveNow = false
+        // Same argument, same tick: a fresh project must not claim an agent
+        // build it has never been told about. Sticky is scoped to a serve —
+        // without this the field is the only one on ServeInstance no
+        // lifecycle transition clears, and its own doc-comment says it must
+        // not survive a switch.
+        agentProxyVersion = nil
         generation += 1
         state = .starting
         outputLines = []
@@ -605,6 +618,10 @@ final class ServeManager: ObservableObject {
         // The serve is going away — an agent must not find a live-looking
         // handshake naming a port about to be freed.
         mcpInstanceID = nil
+        // …and the pane must not go on naming the build of an agent that has
+        // nothing left to talk to. Without this, a stopped serve still reads
+        // "agent using 0.25.3+abc".
+        agentProxyVersion = nil
         dropHandshake()
 
         // External mode: no subprocess was spawned — just reset state.
@@ -904,6 +921,12 @@ final class ServeManager: ObservableObject {
     /// by the caller before the liveness probe.
     private func adoptFronted(_ entry: ParkedSidecar, path: String) {
         agentActiveNow = false
+        // Not restored from the parked entry: ParkedSidecar doesn't carry it,
+        // and re-deriving it here would be a guess. The next poll re-learns it
+        // from the serve itself within one interval, which is the honest
+        // answer — nil reads as "no extension build has said yet", never as
+        // the previous project's.
+        agentProxyVersion = nil
         // Restore the token the parked sidecar was SPAWNED with — not a
         // fresh Keychain read. On the Keychain-refusal path the spawn-time
         // value is an ephemeral mint; re-minting here would produce a token
@@ -1106,6 +1129,12 @@ final class ServeManager: ObservableObject {
         // `fetchServerVersion` makes, for the same reason.
         guard case .running(let current) = state, current == port else { return }
         _ = instance.noteAgentCallCount(calls)
+        // Sticky within a serve: a later poll can't UNSAY which proxy called.
+        // Clearing on a nil would flap the label between polls for a serve
+        // whose agent has simply gone quiet.
+        if let version = AgentActivity.proxyVersion(json), version != agentProxyVersion {
+            agentProxyVersion = version
+        }
     }
 
     /// Fetch the Bristlenose version (and MCP availability) from the serve

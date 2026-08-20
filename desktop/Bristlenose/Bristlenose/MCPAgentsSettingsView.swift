@@ -220,7 +220,7 @@ struct MCPAgentsSettingsView: View {
             if MCPExtensionInstaller.claudeDesktopCanInstall {
                 // The pane's ONE prominent action (HIG: a single filled
                 // button per surface; the per-tab Copy stays bordered).
-                Button(i18n.t("desktop.mcpAgents.install")) {
+                Button(i18n.t(extensionState.buttonKey)) {
                     MCPExtensionInstaller.install()
                 }
                 .buttonStyle(.borderedProminent)
@@ -246,18 +246,55 @@ struct MCPAgentsSettingsView: View {
         )
     }
 
+    /// What we ship, compared against what called us. Derived, never assumed.
+    private var extensionState: MCPExtensionState {
+        MCPExtensionState.compare(
+            bundled: MCPExtensionInstaller.bundledStamp,
+            running: serveManager.agentProxyVersion
+        )
+    }
+
     private var installSubtitle: String {
-        // "An agent has asked about this project recently" is the better
-        // fact when we have it (mcp.active — the visit-two "did it take?"
-        // answer, §3.4); the static size line otherwise. We never claim
-        // "Installed": we cannot observe the other app.
+        // Two facts want this one slot, and activity wins while it lasts.
+        //
+        // "An agent has asked about this project recently" is the visit-two
+        // "did it take?" answer (§3.4) and is TRANSIENT — `mcp.active` is a
+        // tool call within the last two minutes. The build identity is
+        // PERMANENT. A transient fact displacing a permanent one for two
+        // minutes loses nothing; the reverse would lose the install
+        // confirmation entirely. Decided 20 Aug 2026.
+        //
+        // The size ("Extension · 8 KB") held this slot until the same pass
+        // and was dropped: it answered no question anyone asks, while the
+        // build number is something a researcher might act on.
+        //
+        // We still never claim "Installed" — naming our OWN build is not a
+        // claim about Claude Desktop's state.
         if serveManager.agentActiveNow {
             return i18n.t("desktop.mcpAgents.recentActivity")
         }
-        return i18n.t(
-            "desktop.mcpAgents.extensionSubtitle",
-            ["size": MCPExtensionInstaller.bundledSizeDisplay ?? "4 KB"]
-        )
+        let identity = MCPExtensionState.identity(bundled: MCPExtensionInstaller.bundledStamp)
+        guard let identity else { return i18n.t("desktop.mcpAgents.extensionUnknownBuild") }
+        return i18n.t("desktop.mcpAgents.extensionBuild", ["version": identity])
+    }
+
+    /// The comparison line — and ONLY a comparison, never a restatement.
+    ///
+    /// It appears solely when the running proxy differs from the one we ship,
+    /// so its presence is itself the signal and the remedy is the button
+    /// directly above it. Naming both versions unconditionally (the first cut)
+    /// made the in-sync resting state read as a mismatch, because a
+    /// release-only string sits beside a release+hash one. A diagnostic that
+    /// cries wolf at rest gets ignored.
+    ///
+    /// Deliberately NOT a warning and not phrased as one. An older proxy in
+    /// the field is the normal resting state, not a fault — `mcp.contract`
+    /// decides whether it can still be understood. This reports; it does not
+    /// judge, and it never says "older" unless semver actually ordered it.
+    private var buildLine: String? {
+        guard let key = extensionState.footnoteKey,
+              let installed = extensionState.installedDisplay else { return nil }
+        return i18n.t(key, ["version": installed])
     }
 
     // MARK: - Client tabs
@@ -279,6 +316,17 @@ struct MCPAgentsSettingsView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 installRow
+                // Directly under the row it describes, because it is a fact
+                // ABOUT the thing that row installs — not a consequence of
+                // pressing it (that's the prompt note below, which is
+                // deliberately placed by WHEN it happens, not by topic).
+                if let buildLine {
+                    Text(buildLine)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                }
                 // Pre-announce the one-time macOS prompt (§5c, §6.1). A
                 // prompt you were told to expect reads as a boundary
                 // working; an unannounced one reads as a fault — and this
@@ -444,6 +492,51 @@ enum MCPExtensionInstaller {
               let size = try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int
         else { return nil }
         return ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file)
+    }
+
+    /// The packed proxy's stamped `<release>+<hash>`, read from the sibling
+    /// file `build-mcpb.sh` writes beside the archive in the same run.
+    ///
+    /// Why a sibling file rather than the archive itself: the app needs the
+    /// HASH to answer "is the copy running inside Claude Desktop the one I
+    /// ship?", and it cannot get it from the `.mcpb`. `CFBundleShortVersionString`
+    /// is release-only, and reading the zip would mean shelling out to
+    /// `unzip`, which App Sandbox blocks. Without the hash, two packs of the
+    /// same release are indistinguishable — precisely the case that cost six
+    /// reinstall cycles on 20 Aug 2026.
+    ///
+    /// The "a second artefact goes stale invisibly" objection is answered by
+    /// construction, not by promise: `build-mcpb.sh` writes both files on
+    /// adjacent lines of one run, `ensure-sidecar.sh` repacks on every Cmd+R
+    /// so neither can lag the source, and this accessor requires both to
+    /// exist AND to agree on the release half before trusting the hash.
+    ///
+    /// Falls back to the app's own release when the stamp file is absent —
+    /// an older bundle, or a build that predates it — so the pane degrades to
+    /// release-only rather than to a confident wrong answer. Returns nil when
+    /// no extension is bundled at all (`Bristlenose.mcpb` is gitignored, so a
+    /// fresh clone has none), because a pane whose job is telling the truth
+    /// about builds must not name a version for a file that isn't there.
+    static var bundledStamp: String? {
+        guard bundledExtensionExists else { return nil }
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        guard let stampURL = Bundle.main.resourceURL?
+                .appendingPathComponent("\(filename).version"),
+              let raw = try? String(contentsOf: stampURL, encoding: .utf8)
+        else { return (appVersion?.isEmpty == false) ? appVersion : nil }
+
+        let stamp = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !stamp.isEmpty else { return (appVersion?.isEmpty == false) ? appVersion : nil }
+
+        // Cross-check the halves. A stamp naming a different release than the
+        // app means the two artefacts were assembled apart — exactly the
+        // staleness this is meant to expose, so believe neither's hash and
+        // fall back to the release we can vouch for.
+        if let appVersion, !appVersion.isEmpty,
+           MCPExtensionState.release(of: stamp) != appVersion {
+            return appVersion
+        }
+        return stamp
     }
 
     /// Is anything registered to open a `.mcpb`? Answered by LaunchServices

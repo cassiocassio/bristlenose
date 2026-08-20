@@ -48,6 +48,11 @@ final class ServeInstance: ObservableObject {
     /// `noteAgentCallCount` owns that rule.
     @Published var agentCallCount: Int = 0
 
+    /// The build of the `.mcpb` proxy that last called this serve, as it
+    /// reported itself. Per-serve because it is a property of the agent
+    /// talking to THIS sidecar, and it must not survive a project switch.
+    @Published var agentProxyVersion: String?
+
     /// When the count last INCREASED. The sidebar's envelope is computed from
     /// this — a retriggerable hold, so a burst of calls is one animation
     /// rather than one per call. Nil = no activity observed on this serve.

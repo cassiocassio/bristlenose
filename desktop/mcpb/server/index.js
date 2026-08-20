@@ -22,7 +22,8 @@ const HANDSHAKES = [
   path.join(os.homedir(), "Library/Application Support/Bristlenose/mcp-handshake.json"),
 ].filter(Boolean);
 
-const VERSION = "0.1.0";
+const VERSION = "0.0.0-dev";  // stamped at pack time by build-mcpb.sh;
+                              // "-dev" means an unpacked dev-loop install.
 const log = (...a) => console.error("[bn-proxy]", ...a);
 
 // Every failure sentence ends with this. A model handed "no data" will
@@ -232,18 +233,28 @@ const CONTRACT = 2;
 function readHandshake() {
   let denied = false;
   for (const p of HANDSHAKES) {
+    let parsed;
     try {
-      const hs = { ...JSON.parse(fs.readFileSync(p, "utf8")), _path: p };
+      parsed = { ...JSON.parse(fs.readFileSync(p, "utf8")), _path: p };
       tccBlocked = false;
-      return normalise(hs);
     } catch (e) {
       if (e.code === "EPERM" || e.code === "EACCES") {
         denied = true;
         if (!tccBlocked) log("handshake read permission-blocked (TCC)", p, e.code);
       } else if (e.code !== "ENOENT") {
-        log("handshake unreadable", p, e.code);
+        // `e.code` is undefined for a SyntaxError, so the old log line read
+        // "handshake unreadable <path> undefined" and named nothing. A torn
+        // or truncated write is exactly the case that reaches here.
+        log("handshake unreadable", p, e.code || e.name, e.message);
       }
+      continue;
     }
+    // normalise() is PURE and deliberately outside the try. Inside it, any
+    // bug in normalise — a rename, a typo, `.projects` on a non-object —
+    // was caught, logged as an unreadable handshake, and surfaced as
+    // "Bristlenose isn't open": a remedy the researcher has already
+    // performed and which cannot fix a code defect (review Finding 34).
+    return normalise(parsed);
   }
   if (denied) {
     tccBlocked = true;
@@ -298,7 +309,13 @@ async function probe(entry) {
     // squatter mimicking the health shape, not an old Bristlenose. A
     // `j.mcp?.instance_id &&` conjunct here would skip the comparison and
     // transmit the bearer — the exact hole the check exists to close.
-    if (entry.instance_id && j.mcp?.instance_id !== entry.instance_id)
+    // Note the shape: NOT `entry.instance_id &&`. That is the same hole the
+    // comment above warns about, entered from the entry side — a handshake
+    // entry with a falsy instance_id would skip verification entirely and
+    // transmit the bearer to an unverified port. MCPHandshake.payload always
+    // writes the field under both schemas, so falsy means MALFORMED, not an
+    // older host (review Finding 36).
+    if (!entry.instance_id || j.mcp?.instance_id !== entry.instance_id)
       return { ok: false, why: "stale-instance" };
     // Health says the build has no /mcp mount: report it before the bearer
     // is ever transmitted. Absent mcp block = older build; let the call's
@@ -309,7 +326,17 @@ async function probe(entry) {
     // extension is behind.
     if ((j.mcp?.contract ?? 1) > CONTRACT) return { ok: false, why: "outdated" };
     return { ok: true, health: j };
-  } catch { return { ok: false, why: "no-answer" }; }
+  } catch (e) {
+    // Same family as callUpstream's. A bare catch here maps a malformed
+    // entry.port, a missing global `fetch` (Node < 18 despite the manifest
+    // floor), a non-JSON body from a port squatter, and any future
+    // ReferenceError onto the single word "no-answer" — and thence to the
+    // same infinite-retry "starting" sentence. Distinguish the genuine
+    // timeout from everything else, and say which.
+    const timedOut = e && e.name === "AbortError";
+    if (!timedOut) log("probe threw", entry.port, e && e.name, e && e.message);
+    return { ok: false, why: timedOut ? "no-answer" : "probe-error" };
+  }
   finally { clearTimeout(t); }
 }
 
@@ -343,6 +370,14 @@ async function state(wantedKey) {
     if (p.why === "no-answer") return { kind: "starting" };
     if (p.why === "no-mcp") return { kind: "no-mcp" };
     if (p.why === "outdated") return { kind: "outdated" };
+    // `why` used to be captured here and never read, collapsing three
+    // distinct rejections into "Bristlenose isn't open" (review Finding 35).
+    // `unhealthy` means the serve is up and broken, so that sentence is
+    // simply false; `not-bristlenose` means SOMETHING ELSE IS ANSWERING ON
+    // THIS PORT — the exact event the instance_id + probe apparatus exists to
+    // detect — and it was the quietest of the three. Only `stale-instance`
+    // genuinely reads as closed.
+    log("probe rejected", entry.port, p.why);
     return { kind: "closed", why: p.why };
   }
   return { kind: "ready", entry, hs, scope };
@@ -371,7 +406,7 @@ const projectList = (entries) =>
 async function callUpstream(entry, msg, scope) {
   let r;
   try {
-    r = await fetch(`http://127.0.0.1:${hs.port}/mcp/`, {
+    r = await fetch(`http://127.0.0.1:${entry.port}/mcp/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -389,7 +424,14 @@ async function callUpstream(entry, msg, scope) {
         params: { ...msg.params, arguments: stripProject(msg.params?.arguments) },
       }),
     });
-  } catch {
+  } catch (e) {
+    // LOG, always. Narrowing this catch is a separate decision; logging is
+    // not narrowing, and it is the entire difference between six reinstall
+    // cycles and one line. This is where `ReferenceError: hs is not defined`
+    // was swallowed on every call for eleven days while the user was told
+    // "Bristlenose is starting — ask again in a moment" (review Finding 34).
+    // stderr is captured in Claude Desktop's own MCP log.
+    log("upstream call failed", entry.port, e && e.name, e && e.message);
     // Died between probe and call — the next call re-reads and recovers.
     return text(MSG.starting);
   }
@@ -487,11 +529,36 @@ process.stdin.on("data", async (d) => {
   while ((i = buf.indexOf("\n")) >= 0) {
     const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
     if (!line) continue;
-    let msg; try { msg = JSON.parse(line); } catch { continue; }
-    const result = await handle(msg);
+    let msg;
+    try { msg = JSON.parse(line); }
+    catch (e) {
+      // Was a bare `continue`. A malformed frame is dropped either way, but
+      // the client is left waiting forever on that id with nothing anywhere
+      // saying why (review Finding 46).
+      log("dropped unparseable frame", e && e.message);
+      continue;
+    }
+    // Error boundary. `handle` is async and this listener is async, so an
+    // uncaught throw in there becomes an unhandled rejection, Node exits, and
+    // Claude Desktop shows "Server disconnected" with no diagnostic and the
+    // pending id unanswered — the loudest possible failure carrying the least
+    // possible information (review Finding 34). Answer the id with something
+    // honest instead, and say what happened on stderr.
+    let result;
+    try {
+      result = await handle(msg);
+    } catch (e) {
+      log("handler threw", msg && msg.method, e && e.name, e && e.message);
+      result = text(MSG.upstream("handler error"));
+    }
     if (msg.id !== undefined)
       process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: msg.id, result }) + "\n");
   }
 });
+// Last resort. Nothing should reach these now that `handle` has a boundary,
+// but a proxy that dies silently is the exact failure mode this whole review
+// pass was about — so if it does die, it says so first.
+process.on("unhandledRejection", (e) => log("fatal: unhandled rejection", e && e.message));
+process.on("uncaughtException", (e) => log("fatal: uncaught exception", e && e.message));
 process.stdin.on("end", () => process.exit(0));
 log("started; handshake candidates:", HANDSHAKES.length);

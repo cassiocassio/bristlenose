@@ -144,7 +144,7 @@ def health(request: Request) -> dict[str, object]:
 
 
 @router.get("/agent-activity")
-def agent_activity(request: Request) -> dict[str, int]:
+def agent_activity(request: Request) -> dict[str, int | str | None]:
     """Monotonic count of MCP tool calls this serve has answered.
 
     Deliberately NOT part of the ``/api/health`` payload. That route is
@@ -162,7 +162,22 @@ def agent_activity(request: Request) -> dict[str, int]:
     Resets to 0 when the serve restarts. The host treats a DECREASE as a new
     serve, not as activity — see ``ServeInstance.agentCallCount``.
     """
-    return {"calls": int(getattr(request.app.state, "mcp_tool_calls", 0) or 0)}
+    return {
+        "calls": int(getattr(request.app.state, "mcp_tool_calls", 0) or 0),
+        # What the proxy says it is, as opposed to what the app bundled. A
+        # `.mcpb` has no auto-update, so those two diverge silently and the
+        # host has never been able to tell — see ProxyIdentityRecorder.
+        #
+        # Here and not on /api/health for the same reason `calls` is here:
+        # that route is auth-exempt, and this describes the researcher's
+        # agent setup rather than the server's own liveness.
+        #
+        # null until an EXTENSION build identifies itself. Not "stale", and
+        # not quite "nobody called" either — a Generic-MCP client sends no
+        # header, so pair this with `calls` before concluding anything.
+        "proxy_version": getattr(request.app.state, "mcp_proxy_version", None),
+        "proxy_contract": getattr(request.app.state, "mcp_proxy_contract", None),
+    }
 
 
 @router.put("/agent-scope")

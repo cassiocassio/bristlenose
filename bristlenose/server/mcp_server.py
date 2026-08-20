@@ -30,6 +30,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
@@ -161,6 +162,72 @@ class BrowserExplainerApp:
                 })
                 await send({"type": "http.response.body", "body": body})
                 return
+        await self.inner(scope, receive, send)
+
+
+class ProxyIdentityRecorder:
+    """ASGI wrapper: record the extension proxy's self-reported build.
+
+    The proxy has stamped ``X-Bristlenose-Proxy-Version`` on every call since
+    it shipped, and nothing read it — so the host could report the version it
+    *bundled* but never the one actually running. Those two diverge for the
+    whole life of a ``.mcpb``: it has no auto-update, reinstall is the only
+    delivery, and a reinstall that quietly re-lays a stale copy is
+    indistinguishable from a working one at every surface the user can see.
+
+    Recorded here rather than in ``_record_activity`` because that hook runs
+    inside the tool implementation and never sees the request. A separate
+    wrapper from ``BrowserExplainerApp`` for the ordinary reason: two
+    concerns, two wrappers.
+
+    Diagnostic only. Compatibility is decided by ``MCP_CONTRACT``, which is
+    deliberately not a release version (see ``routes/health.py``) — this
+    value must never become a gate, or it starts crying wolf on every patch.
+    """
+
+    #: A version grammar, not a character budget. "Printable ASCII, 64 chars"
+    #: is comfortably a short imperative with a hostname — and this value is
+    #: interpolated into a localised sentence in the pane that neighbours the
+    #: Turn On/Off Agent Access controls. Real values are `0.26.0+854270a`
+    #: and `2`, both of which this renders byte-identically, while a sentence
+    #: becomes structurally unrepresentable. Excluding `<>&` falls out for
+    #: free, which pays off the export-JSON scar here rather than at some
+    #: future render site that inherits the string.
+    _ALLOWED = re.compile(r"^[A-Za-z0-9.+_:-]+$")
+    _MAX_LEN = 64
+
+    def __init__(self, inner: ASGIApp, state: Any) -> None:
+        self.inner = inner
+        self.state = state
+
+    @classmethod
+    def _clean(cls, raw: bytes) -> str | None:
+        text = raw.decode("latin-1", errors="replace").strip()
+        # REJECT, never splice. Filtering characters out turns `9.9.9\tevil`
+        # into `9.9.9evil` — neither what was sent nor an honest "unreadable",
+        # just something that looks like a version. For a field whose whole
+        # job is "is the proxy running the build I packed", a plausible wrong
+        # answer is the worst outcome available; None says "can't tell", which
+        # the host already renders correctly.
+        if not text or len(text) > cls._MAX_LEN or not cls._ALLOWED.match(text):
+            return None
+        return text
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        # POST ONLY, and that is load-bearing rather than tidy. `middleware.py`
+        # deliberately exempts a browser-shaped GET (`Accept: text/html`) from
+        # auth so a naive click gets the explainer page — and that request
+        # reaches this wrapper. Without the method gate, any local process can
+        # curl 64 chosen characters into a native label beside the Turn On/Off
+        # Agent Access controls, with no bearer and no tool call, and can write
+        # the `None` sentinel that means "no agent has called yet". Every real
+        # proxy call is a POST (index.js), and POST has no auth exemption.
+        if scope["type"] == "http" and scope.get("method") == "POST":
+            for name, value in scope.get("headers", []):
+                if name == b"x-bristlenose-proxy-version":
+                    self.state.mcp_proxy_version = self._clean(value)
+                elif name == b"x-bristlenose-proxy-contract":
+                    self.state.mcp_proxy_contract = self._clean(value)
         await self.inner(scope, receive, send)
 
 
@@ -947,6 +1014,15 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
     # always in scope. The desktop drives it from the window roster.
     app.state.agent_readable = True
     app.state.mcp_last_tool_call = None
+    # The proxy's self-reported build, filled by ProxyIdentityRecorder on the
+    # first call THROUGH THE EXTENSION. None is not "out of date" — but nor is
+    # it simply "nobody has called": any MCP client that isn't our .mcpb sends
+    # no header at all, and the Generic MCP tab is a supported path. So None
+    # means "no EXTENSION build has identified itself", which `calls` in the
+    # same payload disambiguates (calls > 0 and version None = a non-extension
+    # agent). Don't let a future gate read more into it than that.
+    app.state.mcp_proxy_version = None
+    app.state.mcp_proxy_contract = None
     # Monotonic call count for the sidebar antenna's activity animation. A
     # COUNTER, not a timestamp: the host animates on any increment, and an
     # integer is immune to the sleep-pause skew described above (a lid close
@@ -968,5 +1044,5 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
         json_response=True,
         stateless_http=True,
     )
-    app.mount("/mcp", BrowserExplainerApp(http_app))
+    app.mount("/mcp", ProxyIdentityRecorder(BrowserExplainerApp(http_app), app.state))
     return server

@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Re-analyse confirmation — the shipped pixels</title>
+<style>
+/* Page chrome uses the REAL Bristlenose web tokens (inlined from
+   bristlenose/theme/tokens.css + colors/palette-*.css) — but the ARTEFACT does
+   not, and must not: ReAnalyseConfirmSheet is native SwiftUI. Its pixels come
+   from macOS system metrics, transcribed from the Swift source. See the key. */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg: light-dark(#ffffff,#111111);
+  --bn-colour-text: light-dark(#1a1a1a,#e5e7eb);
+  --bn-colour-muted: light-dark(#6b7280,#9ca3af);
+  --bn-colour-border: light-dark(#e5e7eb,#2d2d2d);
+  --bn-colour-accent: light-dark(#007aff,#0a84ff);
+  --bn-colour-quote-bg: light-dark(#f9fafb,#1a1a1a);
+  --bn-colour-badge-bg: light-dark(#f3f4f6,#252525);
+  --bn-colour-badge-text: light-dark(#374151,#d1d5db);
+  --bn-colour-border-hover: light-dark(#d1d5db,#3a3a3a);
+  --bn-colour-shadow: light-dark(rgba(0,0,0,.1),rgba(0,0,0,.4));
+  --bn-off-track: light-dark(#c7ccd1,#3a3f45);
+  --sys-red: light-dark(#c9342b,#ff453a);
+  --sys-orange: light-dark(#c93400,#ff9f0a);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg: light-dark(#fdfbf7,#1a1816);
+  --bn-colour-text: light-dark(#1b2230,#e8e3d6);
+  --bn-colour-muted: light-dark(#4a698a,#7ba8a0);
+  --bn-colour-border: light-dark(#d4c9a8,#2d2820);
+  --bn-colour-accent: light-dark(#0f5c9e,#4d9fe0);
+  --bn-colour-quote-bg: light-dark(#f0e9d8,#211e18);
+  --bn-colour-badge-bg: light-dark(#e8dfc9,#2d2820);
+  --bn-colour-badge-text: light-dark(#2d3654,#c4b898);
+  --bn-colour-border-hover: light-dark(#b8ad91,#4a4030);
+  --bn-colour-shadow: light-dark(rgba(30,20,10,.12),rgba(0,0,0,.4));
+  --bn-off-track: light-dark(#c9bd9c,#4a4030);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1020px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:74ch; margin:.4rem 0; }
+.controls { display:flex; gap:.4rem; align-items:center; margin-bottom:var(--bn-space-lg); }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.key { display:flex; gap:1.4rem; flex-wrap:wrap; font-size:var(--bn-text-label); color:var(--bn-colour-muted);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.7rem 1rem; margin-bottom:var(--bn-space-xl); }
+.key b { font-weight:490; color:var(--bn-colour-text); }
+.key .sw-a { display:inline-block; width:26px; height:13px; border:1px solid var(--bn-colour-border-hover); border-radius:2px; background:var(--bn-colour-bg); vertical-align:-2px; margin-right:.4rem; }
+.key .sw-c { display:inline-block; width:26px; height:13px; border-radius:2px; vertical-align:-2px; margin-right:.4rem;
+  background:repeating-linear-gradient(135deg,transparent 0 4px,var(--bn-colour-border) 4px 5px); border:1px solid var(--bn-colour-border); }
+.sec-head { margin:2.6rem 0 .9rem; }
+.sec-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.sec-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0; max-width:74ch; }
+.frame { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg); overflow:hidden; background:var(--bn-colour-quote-bg); margin-bottom:.9rem; }
+.frame-bar { display:flex; align-items:center; gap:.45rem; padding:.5rem .8rem; background:var(--bn-colour-badge-bg); border-bottom:1px solid var(--bn-colour-border); }
+.frame-bar .tl { width:10px; height:10px; border-radius:50%; background:var(--bn-off-track); }
+.frame-bar .cap { margin-left:.5rem; font-size:var(--bn-text-badge); font-family:var(--bn-font-mono); color:var(--bn-colour-muted); }
+.frame-body { padding:1.9rem 1.4rem; display:flex; justify-content:center; gap:2.4rem; flex-wrap:wrap; align-items:flex-start; }
+.comm { border-left:3px solid var(--bn-colour-accent); padding:1rem 1.2rem; margin:0 0 2.4rem;
+  background:repeating-linear-gradient(135deg,transparent 0 7px,light-dark(rgba(0,0,0,.022),rgba(255,255,255,.022)) 7px 8px); }
+.comm .tag { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-accent); font-weight:490; }
+.comm h3 { font-size:var(--bn-text-label); font-weight:490; margin:.9rem 0 .3rem; }
+.comm p { font-size:var(--bn-text-label); color:var(--bn-colour-muted); max-width:78ch; margin:.35rem 0; }
+.comm code { font-family:var(--bn-font-mono); font-size:.95em; background:var(--bn-colour-badge-bg); padding:.05rem .3rem; border-radius:var(--bn-radius-sm); color:var(--bn-colour-badge-text); }
+.comm .warn { color:var(--sys-orange); font-weight:490; }
+table.m { border-collapse:collapse; font-size:var(--bn-text-badge); margin:.6rem 0 .2rem; width:100%; max-width:70ch; }
+table.m th, table.m td { text-align:left; padding:.22rem .7rem .22rem 0; border-bottom:1px solid var(--bn-colour-border); vertical-align:top; }
+table.m th { color:var(--bn-colour-text); font-weight:490; }
+table.m td { color:var(--bn-colour-muted); }
+table.m code { background:none; padding:0; color:var(--bn-colour-badge-text); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   ARTEFACT — native macOS. Nothing below this line uses a --bn-* token.
+   Every number is transcribed from ReAnalyseConfirmSheet.swift or from
+   macOS system metrics. See the metrics table in the commentary.
+   ══════════════════════════════════════════════════════════════════════ */
+.mac { font-family:-apple-system, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing:antialiased; }
+.mac.lt { color-scheme:light; }
+.mac.dk { color-scheme:dark; }
+
+/* the host window a sheet drops out of */
+.win { width:520px; border-radius:10px; overflow:hidden;
+  background:light-dark(#f6f6f6,#2a2a2c);
+  box-shadow:0 22px 60px rgba(0,0,0,.30), 0 0 0 .5px light-dark(rgba(0,0,0,.16),rgba(255,255,255,.10));
+  position:relative; }
+.win-tb { height:38px; display:flex; align-items:center; gap:8px; padding:0 13px;
+  background:light-dark(#e9e9e9,#3a3a3c);
+  border-bottom:.5px solid light-dark(rgba(0,0,0,.13),rgba(255,255,255,.10)); }
+.win-tb i { width:12px; height:12px; border-radius:50%; display:block; }
+.win-tb .r { background:#ff5f57; } .win-tb .y { background:#febc2e; } .win-tb .g { background:#28c840; }
+.win-tb .t { margin-left:6px; font-size:13px; font-weight:590; color:light-dark(rgba(0,0,0,.75),rgba(255,255,255,.8)); }
+.win-body { height:330px; background:light-dark(#fff,#1e1e1e); }
+.win-dim { position:absolute; inset:38px 0 0 0; background:rgba(0,0,0,.20); }
+.win .msheet { position:absolute; top:14px; left:50%; transform:translateX(-50%); }
+
+/* ── THE SHEET ── .frame(width: 420) · .padding(22) · VStack spacing 14 ── */
+.msheet {
+  width:420px; padding:22px;
+  display:flex; flex-direction:column; align-items:flex-start; gap:14px;
+  border-radius:10px;
+  background:light-dark(#ececec,#323232);          /* windowBackgroundColor */
+  box-shadow:0 16px 44px rgba(0,0,0,.32), 0 0 0 .5px light-dark(rgba(0,0,0,.18),rgba(255,255,255,.10));
+  color:light-dark(rgba(0,0,0,.85),rgba(255,255,255,.85));   /* labelColor */
+}
+.msheet .icn { width:26px; height:26px; color:light-dark(rgba(0,0,0,.5),rgba(255,255,255,.55)); }
+.msheet .icn svg { width:100%; height:100%; display:block; }
+/* .font(.headline) — macOS 13pt semibold */
+.msheet .ttl { font-size:13px; line-height:16px; font-weight:600; margin:0; }
+/* .font(.callout) + .secondary — macOS 12pt regular */
+.msheet .sub { font-size:12px; line-height:15px; font-weight:400; margin:0;
+  color:light-dark(rgba(0,0,0,.5),rgba(255,255,255,.55)); }
+/* the counted block — inner VStack spacing 3, .padding(.vertical, 2) */
+.msheet .loss { display:flex; flex-direction:column; gap:3px; padding:2px 0; margin:0; }
+.msheet .loss .hd { font-size:12px; line-height:15px; font-weight:500; }
+.msheet .loss .ln { font-size:12px; line-height:15px; font-weight:400; padding-left:12px;
+  color:light-dark(rgba(0,0,0,.5),rgba(255,255,255,.55)); }
+/* HStack { Spacer(); Cancel; Re-analyse } .padding(.top, 4) */
+.msheet .btns { align-self:stretch; display:flex; justify-content:flex-end; gap:10px; padding-top:4px; }
+.mbtn { font:inherit; font-size:13px; line-height:1; height:22px; min-width:66px; padding:0 13px;
+  border-radius:6px; border:.5px solid light-dark(rgba(0,0,0,.20),rgba(255,255,255,.14));
+  background:light-dark(#fff,#5c5c5e); color:light-dark(rgba(0,0,0,.85),rgba(255,255,255,.85));
+  box-shadow:0 .5px 1px light-dark(rgba(0,0,0,.10),rgba(0,0,0,.30)); cursor:default; }
+/* .keyboardShortcut(.defaultAction) — the default button carries the accent fill */
+.mbtn.def { background:light-dark(#007aff,#0a84ff); border-color:transparent; color:#fff;
+  box-shadow:0 .5px 1.5px rgba(0,0,0,.22); }
+/* role: .destructive — the LABEL goes red; the bezel stays ordinary */
+.mbtn.destr { color:light-dark(#d70015,#ff453a); }
+.msheet.wide-name .ttl { max-width:376px; }
+.stateno { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  text-transform:uppercase; letter-spacing:.06em; text-align:center; padding-top:.7rem; }
+.col { display:flex; flex-direction:column; align-items:center; }
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="masthead">
+  <div class="eyebrow">Mockup · desktop · destructive confirmation</div>
+  <h1>Re-analyse confirmation — the shipped pixels</h1>
+  <p>Every number below is transcribed from <code>ReAnalyseConfirmSheet.swift</code> and the strings
+     from <code>bristlenose/locales/en/desktop.json</code>. This is a render of what the code
+     produces, not a proposal for what it should be.</p>
+  <p>The intent drawing lives in <b>analysis-lifecycle-states.html</b> §“The confirmation — measured,
+     not vague”. It was drawn in the web design system; the sheet is native. Where the two differ,
+     this page shows the native side.</p>
+</div>
+
+<div class="controls">
+  <span class="lbl">Page palette</span>
+  <button class="pbtn on" onclick="setPal('default', this)">Default</button>
+  <button class="pbtn" onclick="setPal('edo', this)">Edo</button>
+</div>
+
+<div class="key">
+  <span><span class="sw-a"></span><b>Artefact</b> — native macOS pixels. No labels that aren’t in the product.</span>
+  <span><span class="sw-c"></span><b>Commentary</b> — hatched. Why it looks like that, and what to check.</span>
+  <span><b>Note</b> — the page palette switch themes this document, never the sheet: a native sheet
+    follows the system appearance, not the report theme.</span>
+</div>
+
+<!-- ══════════ A · CANONICAL ══════════ -->
+<div class="sec-head">
+  <h2>As it appears — light and dark</h2>
+  <p class="sub">A project with fourteen sessions and all five kinds of curation present.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">Project ▸ Re-analyse… · light appearance</span></div>
+  <div class="frame-body">
+    <div class="mac lt">
+      <div class="win">
+        <div class="win-tb"><i class="r"></i><i class="y"></i><i class="g"></i><span class="t">Onboarding diaries</span></div>
+        <div class="win-body"></div>
+        <div class="win-dim"></div>
+        <div class="msheet">
+          <div class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+          <p class="ttl">Re-analyse “Onboarding diaries”?</p>
+          <p class="sub">Bristlenose will transcribe and analyse all 14 interviews again from scratch.</p>
+          <div class="loss">
+            <span class="hd">Your work on this study will be discarded:</span>
+            <span class="ln">47 edited quotes</span>
+            <span class="ln">12 tags</span>
+            <span class="ln">8 starred quotes</span>
+            <span class="ln">3 renamed speakers</span>
+            <span class="ln">2 named themes</span>
+          </div>
+          <div class="btns">
+            <button class="mbtn def">Cancel</button>
+            <button class="mbtn destr">Re-analyse</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">Project ▸ Re-analyse… · dark appearance</span></div>
+  <div class="frame-body">
+    <div class="mac dk">
+      <div class="win">
+        <div class="win-tb"><i class="r"></i><i class="y"></i><i class="g"></i><span class="t">Onboarding diaries</span></div>
+        <div class="win-body"></div>
+        <div class="win-dim"></div>
+        <div class="msheet">
+          <div class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+          <p class="ttl">Re-analyse “Onboarding diaries”?</p>
+          <p class="sub">Bristlenose will transcribe and analyse all 14 interviews again from scratch.</p>
+          <div class="loss">
+            <span class="hd">Your work on this study will be discarded:</span>
+            <span class="ln">47 edited quotes</span>
+            <span class="ln">12 tags</span>
+            <span class="ln">8 starred quotes</span>
+            <span class="ln">3 renamed speakers</span>
+            <span class="ln">2 named themes</span>
+          </div>
+          <div class="btns">
+            <button class="mbtn def">Cancel</button>
+            <button class="mbtn destr">Re-analyse</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>The blue button is Cancel</h3>
+  <p><code>.keyboardShortcut(.defaultAction)</code> is on Cancel, and on macOS the default button
+     carries the accent fill. So the prominent blue control in a destructive confirmation is the way
+     <em>out</em>, and the destructive action is the quiet one beside it — red label, ordinary bezel,
+     no shortcut at all. The code says this is deliberate: the researcher arrived from a menu item
+     ending in an ellipsis, so Return must not finish the sentence for them.</p>
+  <p>The intent drawing showed the opposite weighting — a plain Cancel next to a filled red
+     <b>Re-analyse</b>. The built sheet is the more careful of the two, but it is <em>not</em> what
+     the drawing depicts, and the drawing is still what the doc points at.</p>
+  <h3>One thing to decide, now that it is visible</h3>
+  <p>The accent-filled default sits to the <b>left</b> of the red one, because the layout is
+     <code>Spacer, Cancel, Re-analyse</code>. Worth a look with fresh eyes: on macOS the eye expects
+     the rightmost button to be the one Return fires, and here it is not. Nothing is broken — Escape
+     and Return both cancel — but the two signals point in opposite directions.</p>
+  <h3>Type is 13/12, not the report scale</h3>
+  <p>Native text styles: <code>.headline</code> is 13pt semibold and <code>.callout</code> is 12pt.
+     The whole sheet therefore runs a little smaller and tighter than the drawing, which used
+     <code>--bn-text-heading</code> (18px) for the title and the mono face for the counted lines.
+     The counted lines here are the system face at 12pt, secondary, indented 12pt — a list, not a
+     code block.</p>
+  <table class="m">
+    <tr><th>Element</th><th>Swift</th><th>Rendered</th></tr>
+    <tr><td>Sheet</td><td><code>.frame(width: 420)</code> · <code>.padding(22)</code></td><td>420 × 307pt measured, 376pt content</td></tr>
+    <tr><td>Stack</td><td><code>VStack(alignment:.leading, spacing:14)</code></td><td>14pt between every block</td></tr>
+    <tr><td>Icon</td><td><code>arrow.clockwise</code>, <code>.system(size:26)</code>, secondary</td><td>26pt, ~50% label</td></tr>
+    <tr><td>Title</td><td><code>.font(.headline)</code></td><td>13pt semibold</td></tr>
+    <tr><td>Rebuild line</td><td><code>.callout</code>, secondary, <code>.fixedSize(vertical:)</code></td><td>12pt, wraps to 2 lines</td></tr>
+    <tr><td>Loss header</td><td><code>.callout.weight(.medium)</code></td><td>12pt medium, full label</td></tr>
+    <tr><td>Loss lines</td><td><code>.callout</code>, secondary, <code>.padding(.leading,12)</code></td><td>12pt, 3pt apart, 12pt indent</td></tr>
+    <tr><td>Buttons</td><td><code>.defaultAction</code> / <code>role:.destructive</code></td><td>22pt tall, accent fill / red label</td></tr>
+  </table>
+  <h3>Heights, measured</h3>
+  <p>The canonical sheet above is <b>420 × 307pt</b>. The stars-only sheet further down is
+     <b>235pt</b> — the counted block is the only part that varies, and four omitted lines take 72pt
+     with them. The long-name sheet is <b>323pt</b>, because the title takes a second line.</p>
+  <h3>Two approximations, declared</h3>
+  <p>The glyph is a stroked stand-in — the real one is the filled SF Symbol <code>arrow.clockwise</code>,
+     which is slightly heavier and sits a touch lower on its baseline. And the gap between the two
+     buttons is SwiftUI’s platform default rather than a number in the source; 10pt is drawn here.
+     Neither changes a decision, but neither is measured.</p>
+</div>
+
+<!-- ══════════ B · THE OTHER COUNTS ══════════ -->
+<div class="sec-head">
+  <h2>What the counts do to it</h2>
+  <p class="sub">Zero-count kinds are omitted, so the sheet’s height is a function of how much
+     the researcher has done. Three real shapes.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">singulars · one loss only · the shortest sheet</span></div>
+  <div class="frame-body">
+    <div class="mac lt col">
+      <div class="msheet">
+        <div class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+        <p class="ttl">Re-analyse “Pilot”?</p>
+        <p class="sub">Bristlenose will transcribe and analyse 1 interview again from scratch.</p>
+        <div class="loss">
+          <span class="hd">Your work on this study will be discarded:</span>
+          <span class="ln">1 edited quote</span>
+          <span class="ln">1 tag</span>
+          <span class="ln">1 starred quote</span>
+          <span class="ln">1 renamed speaker</span>
+          <span class="ln">1 named theme</span>
+        </div>
+        <div class="btns">
+          <button class="mbtn def">Cancel</button>
+          <button class="mbtn destr">Re-analyse</button>
+        </div>
+      </div>
+      <div class="stateno">every _one form</div>
+    </div>
+    <div class="mac lt col">
+      <div class="msheet">
+        <div class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+        <p class="ttl">Re-analyse “Ward rounds”?</p>
+        <p class="sub">Bristlenose will transcribe and analyse all 9 interviews again from scratch.</p>
+        <div class="loss">
+          <span class="hd">Your work on this study will be discarded:</span>
+          <span class="ln">6 starred quotes</span>
+        </div>
+        <div class="btns">
+          <button class="mbtn def">Cancel</button>
+          <button class="mbtn destr">Re-analyse</button>
+        </div>
+      </div>
+      <div class="stateno">stars only — four kinds omitted</div>
+    </div>
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>The one-line case is the one to look hardest at</h3>
+  <p>With a single loss line the counted block is a header and one indented item, and the 14pt
+     gaps above and below leave it floating in the middle of a sheet that is otherwise mostly air.
+     It still reads, but it is the shape where “measured, not vague” buys least — six starred quotes
+     is a smaller thing to weigh than the sheet’s own ceremony.</p>
+  <h3>There is no zero case here, by construction</h3>
+  <p><code>askToReAnalyse</code> reads the counts first and starts the run without asking when they
+     are all zero. So the sheet has a floor of one line and no empty state to draw.</p>
+</div>
+
+<!-- ══════════ C · EDGES ══════════ -->
+<div class="sec-head">
+  <h2>Two edges the drawing never had to answer</h2>
+  <p class="sub">One the gate prevents, one it doesn’t. Drawn as the code would render them.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">sessionCount nil (blocked upstream) · long project name</span></div>
+  <div class="frame-body">
+    <div class="mac lt col">
+      <div class="msheet">
+        <div class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+        <p class="ttl">Re-analyse “Onboarding diaries”?</p>
+        <p class="sub">Bristlenose will transcribe and analyse all 0 interviews again from scratch.</p>
+        <div class="loss">
+          <span class="hd">Your work on this study will be discarded:</span>
+          <span class="ln">47 edited quotes</span>
+          <span class="ln">12 tags</span>
+          <span class="ln">8 starred quotes</span>
+          <span class="ln">3 renamed speakers</span>
+          <span class="ln">2 named themes</span>
+        </div>
+        <div class="btns">
+          <button class="mbtn def">Cancel</button>
+          <button class="mbtn destr">Re-analyse</button>
+        </div>
+      </div>
+      <div class="stateno">what <code>?? 0</code> would render — the gate prevents it</div>
+    </div>
+    <div class="mac lt col">
+      <div class="msheet wide-name">
+        <div class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+        <p class="ttl">Re-analyse “Q3 Renewals — Enterprise Admin Diary Study (Wave 2)”?</p>
+        <p class="sub">Bristlenose will transcribe and analyse all 22 interviews again from scratch.</p>
+        <div class="loss">
+          <span class="hd">Your work on this study will be discarded:</span>
+          <span class="ln">118 edited quotes</span>
+          <span class="ln">64 tags</span>
+          <span class="ln">31 starred quotes</span>
+          <span class="ln">9 renamed speakers</span>
+          <span class="ln">7 named themes</span>
+        </div>
+        <div class="btns">
+          <button class="mbtn def">Cancel</button>
+          <button class="mbtn destr">Re-analyse</button>
+        </div>
+      </div>
+      <div class="stateno">a real client folder name</div>
+    </div>
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>“all 0 interviews” cannot happen — and the reason lives in another file</h3>
+  <p>The sheet takes its count from
+     <code>projectIndex.unanalysed[project.id]?.sessionCount ?? 0</code>, and that snapshot is nil
+     until the folder watcher’s async scan lands. The curation counts come from a direct database
+     read and do <em>not</em> wait for the watcher, so on the face of it the sheet could show five
+     accurate loss lines above a sentence saying nothing will be rebuilt.</p>
+  <p>It can’t, because <code>reAnalyseIsOffered</code> ends with
+     <code>(data?.sessionCount ?? 0) > 0</code> — the command is unavailable in exactly the window
+     where the sheet would say zero, and all three routes to <code>askToReAnalyse</code> pass that
+     gate. So the drawing above is what the fallback <em>would</em> render, kept for the record.</p>
+  <p>What is worth naming is the coupling: the sheet’s second line is only ever true because a
+     predicate in a different file happens to test the same value. Nothing in the sheet says so, and
+     nothing would fail if the gate loosened.</p>
+  <h3>One stale comment, same vintage</h3>
+  <p>The menu-command case in <code>ContentView.swift</code> is commented “Ask, always … skipping it
+     on a project that happens to carry no curation would make the ellipsis a lie”. The function it
+     calls does exactly that skip, four lines into its own body, with the opposite rationale. Both
+     landed in the same commit on 19 Aug, so this is a comment left behind by a decision rather than
+     a live disagreement — but it argues a real point (a re-analysis re-spends on the provider even
+     with nothing curated) against behaviour that has already shipped.</p>
+  <h3>The long name is drawn wrapping; check that it does</h3>
+  <p>The title has no <code>.fixedSize</code>, while the line directly beneath it does. That
+     asymmetry usually means the modifier was added after something truncated. If the title
+     truncates to one line with an ellipsis, a researcher with two similarly-named waves loses the
+     one word that tells them which study they are about to destroy — and the title is the only
+     place the project is named.</p>
+  <h3>What is deliberately absent, and still is</h3>
+  <p>No folder path, no <code>--clean</code>, no output directory, no “don’t ask again”. The cost is
+     real every time and the count changes every time. The pixels keep that promise.</p>
+</div>
+
+</div>
+<script>
+function setPal(p, btn) {
+  document.documentElement.setAttribute('data-color-theme', p);
+  document.querySelectorAll('.controls .pbtn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+</script>
+</body>
+</html>

@@ -505,8 +505,9 @@ toast goes with it"). No re-analyse `.alert` survives in `ContentView.swift`.
 **The drawing is the intent; the pixels are in a second file.**
 [`docs/mockups/reanalyse-sheet-pixels.html`](mockups/reanalyse-sheet-pixels.html)
 renders the shipped sheet at native metrics — 420 × 307pt, macOS 13/12pt type,
-six states. Read it beside the drawing rather than instead of it: they disagree
-about the buttons, which is §7's live question.
+six states. Read it beside the drawing rather than instead of it: the two state
+the same button rules and render them with opposite emphasis, which is §7's live
+question.
 
 **The finding that prompted the departure is real, and does not change the
 design.** `--clean` is `shutil.rmtree(output_dir)`, so a re-analysis always

@@ -305,3 +305,190 @@ import Foundation
             state: .failed("boom", category: .unknown), data: data(sessions: 14)))
     }
 }
+
+/// Pins **which pipeline states can start a run at all** — the shared gate under
+/// both verbs, and the half that had no test.
+///
+/// `AnalyseAffordanceTests` above covers "is there work to do" thoroughly and
+/// passed throughout, because every one of its cases leaves `state` at its
+/// `.idle` default. The state axis was never varied, so an allowlist that
+/// silently refused `.ready` — a finished analysis — sailed past a green suite
+/// and shipped a project on which the context menu offered neither **Analyse**
+/// nor **Re-analyse…** and the Project menu showed Re-analyse permanently
+/// dimmed. Two surfaces agreeing, both wrong, exactly as designed.
+///
+/// The regression is worth naming precisely: `a1de4e51`'s message says
+/// Re-analyse belongs in "the one state where Analyse is a measured no-op —
+/// analysed, nothing new", and the switch it shipped excluded that state. Intent
+/// and implementation disagreed and nothing could tell.
+///
+/// Matrix: `docs/design-analysis-lifecycle.md` §4.1.
+@Suite struct PipelineFreeGateTests {
+
+    private func analysed(newFiles: Int = 0, sessions: Int? = 3) -> UnanalysedState {
+        UnanalysedState(
+            newFiles: (0..<newFiles).map { URL(fileURLWithPath: "/tmp/p\($0).mp4") },
+            missingFiles: [],
+            sessionCount: sessions,
+            totalDurationSeconds: nil,
+            ingestableFileCount: 4
+        )
+    }
+
+    private func offered(_ state: PipelineState?, _ data: UnanalysedState)
+        -> (analyse: Bool, reAnalyse: Bool) {
+        (
+            SidebarOutlineController.analyseIsOffered(
+                isFolderShaped: true, hasPath: true, state: state, data: data),
+            SidebarOutlineController.reAnalyseIsOffered(
+                isFolderShaped: true, hasPath: true, state: state, data: data)
+        )
+    }
+
+    // MARK: - Terminal states can start a run
+
+    @Test func readyOffersReAnalyse() {
+        // THE defect. A finished analysis is precisely what Re-analyse replaces.
+        #expect(SidebarOutlineController.pipelineIsFree(.ready(Date())))
+        #expect(offered(.ready(Date()), analysed()).reAnalyse)
+    }
+
+    @Test func readyAndDriftedOffersBoth() {
+        // A researcher drops a fourth recording into an analysed folder in
+        // Finder. Analyse folds it in; Re-analyse rebuilds from scratch and
+        // picks it up the expensive way. Both are legitimate, so both show.
+        let r = offered(.ready(Date()), analysed(newFiles: 1))
+        #expect(r.analyse)
+        #expect(r.reAnalyse)
+    }
+
+    @Test func completedPartialOffersBoth() {
+        // A report exists at reduced fidelity — the state most likely to WANT a
+        // rebuild, and it was refused one.
+        let r = offered(.completedPartial(summary: PipelineSummary()), analysed(newFiles: 1))
+        #expect(r.analyse)
+        #expect(r.reAnalyse)
+    }
+
+    @Test func transcribeOnlyPartialCanContinue() {
+        // `.partial` is a clean transcribe-only run: transcripts, no analysis.
+        // "Continue (analyse)" is its documented CTA, so the gate must not be
+        // what stops it.
+        #expect(SidebarOutlineController.pipelineIsFree(.partial(kind: "transcribe-only", stagesComplete: [])))
+    }
+
+    @Test func stoppedAndFailedStillOffered() {
+        // Already true before the fix — pinned so the fix didn't narrow anything.
+        #expect(SidebarOutlineController.pipelineIsFree(.stopped(stagesComplete: [])))
+        #expect(SidebarOutlineController.pipelineIsFree(.failed("boom", category: .unknown)))
+        #expect(SidebarOutlineController.pipelineIsFree(.idle))
+    }
+
+    // MARK: - Busy and unknown states cannot
+
+    @Test func runningAndQueuedRefuse() {
+        // Single-slot FIFO: a second run cannot start.
+        #expect(!SidebarOutlineController.pipelineIsFree(.running))
+        #expect(!SidebarOutlineController.pipelineIsFree(.queued(position: 1)))
+        #expect(!offered(.running, analysed()).analyse)
+        #expect(!offered(.running, analysed()).reAnalyse)
+    }
+
+    @Test func scanningRefuses() {
+        // The manifest read hasn't resolved — we don't yet know what a run would
+        // be doing. Deliberately NOT the `hasWorkToDo(nil)` "unknown resolves to
+        // offer" case: that one is about the *watcher*, this is about whether a
+        // run can start.
+        #expect(!SidebarOutlineController.pipelineIsFree(.scanning))
+    }
+
+    @Test func unreachableRefuses() {
+        // A run against a vanished folder is doomed; availability tops the
+        // severity chain (`design-desktop-project-status.md` §5).
+        #expect(!SidebarOutlineController.pipelineIsFree(.unreachable(reason: "unmounted")))
+    }
+
+    // MARK: - The gate is not the only guard
+
+    @Test func readyButNoSessionsRefusesReAnalyse() {
+        // Free pipeline, but nothing to throw away — `sessionCount` still rules.
+        #expect(!offered(.ready(Date()), analysed(newFiles: 0, sessions: 0)).reAnalyse)
+    }
+}
+
+/// Pins the F14 drift gate — the policy that can **delete evidence** before any
+/// predicate reads it, and the layer with no coverage until 21 Aug 2026.
+///
+/// The suites above feed `UnanalysedState` values straight to `hasWorkToDo`, so
+/// they test the state the watcher *produces*. The app stores a gated copy, and
+/// the gate ran on a different question from the predicate three lines below it:
+/// it asked `lastPipelineRunAt == nil` (a host-side stamp written only when a run
+/// finishes in-app) while `hasWorkToDo` asked `sessionCount > 0` (the analysis
+/// DB). For a project analysed by the CLI, imported, or analysed by an older
+/// build, those disagree — and the disagreement composes into "no drift to show,
+/// so nothing to analyse", with the drift deleted by the half that said the
+/// project was new.
+@Suite struct DriftGateTests {
+
+    private func state(newFiles: Int, sessions: Int?, files: Int = 4) -> UnanalysedState {
+        UnanalysedState(
+            newFiles: (0..<newFiles).map { URL(fileURLWithPath: "/tmp/p\($0).mp4") },
+            missingFiles: [],
+            sessionCount: sessions,
+            totalDurationSeconds: nil,
+            ingestableFileCount: files
+        )
+    }
+
+    @Test func cliAnalysedProjectKeepsItsDrift() {
+        // THE defect, at the layer that caused it. Three sessions in the DB and
+        // a fourth file on disk: a baseline exists, so the drift is real and
+        // must survive the gate. Under the old predicate this project had no
+        // `lastPipelineRunAt`, so `newFiles` was emptied here and **Analyse
+        // disappeared** — the researcher's only route was the destructive
+        // Re-analyse, which was itself hidden by the state-gate bug.
+        let gated = ProjectIndex.driftGated(state(newFiles: 1, sessions: 3))
+        #expect(gated.newFiles.count == 1)
+        #expect(SidebarOutlineController.hasWorkToDo(gated))
+    }
+
+    @Test func neverAnalysedProjectIsStillGated() {
+        // The policy the gate exists for, unchanged: before any baseline every
+        // file is "to be analysed", so calling them an exception is noise.
+        let gated = ProjectIndex.driftGated(state(newFiles: 6, sessions: nil))
+        #expect(gated.newFiles.isEmpty)
+    }
+
+    @Test func zeroSessionsIsTreatedAsNoBaseline() {
+        // A run that produced nothing is not a baseline. `0` and `nil` agree.
+        #expect(ProjectIndex.driftGated(state(newFiles: 6, sessions: 0)).newFiles.isEmpty)
+    }
+
+    @Test func gatingNeverTouchesTheOtherFields() {
+        // The gate suppresses one *display* signal. Everything the Analyse
+        // predicate and the detail pane count must pass through untouched —
+        // this is what keeps a fresh folder of recordings analysable.
+        let gated = ProjectIndex.driftGated(state(newFiles: 6, sessions: nil, files: 6))
+        #expect(gated.ingestableFileCount == 6)
+        #expect(gated.hasIngestableFiles)
+        #expect(SidebarOutlineController.hasWorkToDo(gated))
+    }
+
+    @Test func gatedNeverAnalysedProjectStillOffersAnalyse() {
+        // End to end through both halves, in the order the app runs them:
+        // watcher → gate → predicate. The F14 trap the original suite named.
+        let gated = ProjectIndex.driftGated(state(newFiles: 6, sessions: nil, files: 6))
+        #expect(SidebarOutlineController.analyseIsOffered(
+            isFolderShaped: true, hasPath: true, state: .idle, data: gated))
+    }
+
+    @Test func analysedAndCleanOffersNothingNew() {
+        // The invariant the fix must NOT break: a genuinely clean analysed
+        // project still shouldn't offer Analyse, because running it is a
+        // measured no-op. Re-analyse is the verb for that state.
+        let gated = ProjectIndex.driftGated(state(newFiles: 0, sessions: 3))
+        #expect(!SidebarOutlineController.hasWorkToDo(gated))
+        #expect(SidebarOutlineController.reAnalyseIsOffered(
+            isFolderShaped: true, hasPath: true, state: .ready(Date()), data: gated))
+    }
+}

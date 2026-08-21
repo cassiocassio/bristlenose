@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import OSLog
 
@@ -382,6 +383,52 @@ final class ProjectIndex: ObservableObject {
         }
         load()
         syncWatchers()
+        observeActivation()
+    }
+
+    /// Rescan every live watcher when the app comes forward.
+    ///
+    /// `ProjectFolderWatcher` is an `NSFilePresenter`, which is push-only: it
+    /// hears about changes made *through* `NSFileCoordinator`. A move from
+    /// Terminal, an rsync, a sync client writing in place, or anything at all
+    /// that happens while Bristlenose is not running leaves no callback behind,
+    /// and the only other rescan we had fired on a run reaching its terminus —
+    /// so a folder that drifted while the app was closed stayed misreported
+    /// until the next analysis, which is the one thing the drift was supposed to
+    /// prompt.
+    ///
+    /// Activation is the cheap, correct moment: a researcher who adds files in
+    /// Finder switches back to Bristlenose to act on them, so the poll lands
+    /// exactly when the answer is about to be read and never while they are
+    /// still copying. A scan is a `contentsOfDirectory` plus one SQLite read,
+    /// debounced and off the main queue, and `shouldPublish` drops it when
+    /// nothing moved — so the common case (nothing changed) costs nothing
+    /// downstream.
+    private func observeActivation() {
+        activationObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                for watcher in self.watchers.values { watcher.refresh() }
+            }
+        }
+    }
+
+    /// Token for the activation observer, released in `deinit`.
+    ///
+    /// Block-based `addObserver(forName:…)` registrations are **not** dropped
+    /// when the observer deallocates — the centre keeps the block alive until
+    /// the token is removed. The app-lifetime index would never notice, but the
+    /// tests build a fresh `ProjectIndex(fileURL:)` per case, so a discarded
+    /// token would accumulate a dead block per test.
+    private var activationObserver: (any NSObjectProtocol)?
+
+    deinit {
+        if let activationObserver {
+            NotificationCenter.default.removeObserver(activationObserver)
+        }
     }
 
     // MARK: - CRUD
@@ -609,17 +656,22 @@ final class ProjectIndex: ObservableObject {
 
     /// Stamp the moment a pipeline run finished, whatever its outcome.
     ///
-    /// **This field is deliberately write-only today — do not delete it as
-    /// unused.** Its sole job is to open the F14 drift gate in
-    /// `handleWatcherUpdate`, which suppresses the `+N unanalysed` delta until a
-    /// project has an analysis baseline. It is *not* rendered anywhere: the
-    /// sidebar's bare-date subtitle was retired on 29 Jul 2026 (Schema E — a
-    /// clean row shows no status line at all; see
-    /// `docs/design-desktop-project-status.md` §"Schema E").
+    /// **This field is write-only AND no longer read by anything (21 Aug 2026).**
+    /// It used to gate the F14 drift suppression in `handleWatcherUpdate`, which
+    /// is why an earlier version of this comment said "do not delete it as
+    /// unused". That gate now measures the baseline directly from the analysis
+    /// DB's `sessionCount` instead — this timestamp was a proxy for it with a
+    /// single write site (below), so any project analysed outside the app read
+    /// as never-analysed and lost its drift delta. See the gate for the full
+    /// failure it caused.
     ///
-    /// Before this existed the field had **no write site in any build**, so both
-    /// the date *and* the drift delta were structurally unreachable — the delta
-    /// silently, because the gate below could never open.
+    /// Retained, not resurrected by accident: the deferred Appearance
+    /// preference that restores the always-on status line needs a last-run date
+    /// to render, and re-deriving one later is harder than keeping the stamp. If
+    /// that preference is abandoned, this and its write site go together.
+    /// It is *not* rendered anywhere today: the sidebar's bare-date subtitle was
+    /// retired on 29 Jul 2026 (Schema E — a clean row shows no status line at
+    /// all; see `docs/design-desktop-project-status.md` §"Schema E").
     ///
     /// Two future homes are noted and neither is built: an Appearance pref
     /// restoring the always-on status line, and a metadata block on the project
@@ -1182,16 +1234,40 @@ final class ProjectIndex: ObservableObject {
         // result still in-flight). Without this guard we'd republish state
         // for a project the user has dismissed.
         guard watchers[projectID] != nil else { return }
-        // F14 policy: suppress newFiles for projects that have never been
+        unanalysed[projectID] = Self.driftGated(state)
+    }
+
+    /// Apply the F14 drift gate — pure, so the one policy that can *delete*
+    /// evidence before any predicate reads it is testable on its own.
+    ///
+    /// It was a private `if` inside `handleWatcherUpdate` when it was wrong, and
+    /// nothing in the suite could reach it: `AnalyseAffordanceTests` fed
+    /// `UnanalysedState` values straight to `hasWorkToDo`, so every test saw the
+    /// state the watcher *produced*, never the state the app actually stored.
+    /// The gap between the two was the bug.
+    ///
+    /// F14 policy: suppress newFiles for projects that have never been
         // analysed. The +N delta means "new since the last analysis run" —
         // before there's been a run, every file in the folder is "to be
         // analysed" by default and surfacing it as an exception would be
         // surprising. Session count + missingFiles are unaffected (neither
         // can be non-empty pre-analysis anyway).
-        let project = projects.first { $0.id == projectID }
-        let gated: UnanalysedState
-        if project?.lastPipelineRunAt == nil {
-            gated = UnanalysedState(
+        //
+        // **The baseline is measured, not inferred.** This gate asked
+        // `lastPipelineRunAt == nil`, which is a host-side timestamp with a
+        // single write site — `recordPipelineRun`, reached only when a run
+        // finishes *in the app*. A project analysed by the CLI, imported, or
+        // analysed by a build predating that write site therefore read as
+        // "never analysed" and had its drift erased — while `hasWorkToDo`,
+        // three lines downstream, read the same project as "already analysed"
+        // from `sessionCount`. The two compose into a dead end: no delta on the
+        // row, and Analyse hidden because the evidence for it had been deleted
+        // before the predicate ran. `sessionCount` is the analysis DB's own
+        // answer to "is there a baseline", so both halves now ask one question.
+        // Nil (DB unreadable) stays gated — unknown is not a licence to shout.
+        nonisolated static func driftGated(_ state: UnanalysedState) -> UnanalysedState {
+            guard (state.sessionCount ?? 0) == 0 else { return state }
+            return UnanalysedState(
                 newFiles: [],
                 missingFiles: state.missingFiles,
                 sessionCount: state.sessionCount,
@@ -1202,11 +1278,7 @@ final class ProjectIndex: ObservableObject {
                 // detail pane counts in "6 files to analyse".
                 ingestableFileCount: state.ingestableFileCount
             )
-        } else {
-            gated = state
         }
-        unanalysed[projectID] = gated
-    }
 
     /// Scan all mounted volumes for a relative path.
     /// Handles "Samsung T7" → "Samsung T7 1" renames.

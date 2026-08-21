@@ -123,6 +123,63 @@ enum SidebarSubtitleText {
         i18n.plural("desktop.chrome.\(prefix)", count: count)
     }
 
+    /// The composed hover tooltip — everything the one-line subtitle could not
+    /// say. Mirrors `ProjectRow.rowTooltip` (`ProjectRow.swift:617-640`).
+    ///
+    /// **A v1 stopgap, and deliberately not the design.** `design-desktop-
+    /// project-status.md` §5 fixes one condition per line and forbids composing
+    /// two, so a running project's drift and a drifted project's session count
+    /// are *deliberately* dropped from the visible row. §5 names **the detail
+    /// pane** as where the non-winners get room — "that's its reason to exist".
+    /// It does not say hover. This tooltip is `ProjectRow`'s own local answer,
+    /// ported here only so the AppKit cell isn't strictly worse than the row it
+    /// replaces; the intended direction is a cycling departure-board line that
+    /// shows each condition in turn, which is a real design and not this.
+    ///
+    /// So: **do not grow this.** Hover is a rock to look under — it is
+    /// undiscoverable, unavailable to touch and keyboard, and every segment
+    /// added here is one the row should have found a way to say. If you are
+    /// reaching for it to surface something new, that is the signal the row
+    /// needs the departure board, not that the tooltip needs another clause.
+    ///
+    /// PII: **counts only — never interpolate `newFiles` / `missingFiles`
+    /// basenames.** Accessibility services have system-wide read access, and the
+    /// watcher's filenames-stay-UI-only invariant means rendered text and
+    /// nothing else. `RunProgressEvent` is counts/timings, so the progress
+    /// ladder is safe to lead with.
+    ///
+    /// Returns `nil` when there is nothing to add, so the caller can leave
+    /// `toolTip` unset rather than showing an empty bubble.
+    static func tooltip(for variant: SubtitleVariant,
+                        data: UnanalysedState?,
+                        progress: PipelineProgress?,
+                        i18n: I18n) -> String? {
+        var parts: [String] = []
+        // Lead with the FULL progress ladder while a run is in flight: the
+        // visible subtitle truncates it on a narrow column, so hover is also
+        // where the untruncated form lives. `.stopping` is excluded — it
+        // outranks progress and has nothing to expand.
+        if case .running = variant,
+           let ladder = activityText(variant, progress: progress,
+                                     separator: " · ", i18n: i18n) {
+            parts.append(ladder)
+        }
+        if let count = data?.sessionCount {
+            parts.append(deltaText(prefix: "interviewCount", count: count, i18n: i18n))
+        }
+        if let data {
+            if !data.newFiles.isEmpty {
+                parts.append(i18n.t("desktop.chrome.tooltipWaiting",
+                                    ["count": String(data.newFiles.count)]))
+            }
+            if !data.missingFiles.isEmpty {
+                parts.append(deltaText(prefix: "missingSubtitle",
+                                       count: data.missingFiles.count, i18n: i18n))
+            }
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
     /// Bare progressive-coarsen date. Verbatim `ProjectRow.formatBareDate`
     /// (`:528-557`) — Just now / Today / Yesterday / D MMM / MMM YYYY; future
     /// dates (clock skew) skip the relative branches.

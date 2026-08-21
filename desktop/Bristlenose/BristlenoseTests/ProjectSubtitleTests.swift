@@ -254,3 +254,48 @@ import Testing
         #expect(!SubtitleVariant.placeholder.isDiagnostic)
     }
 }
+
+/// Pins the one invariant in the row tooltip that has teeth: **counts only,
+/// never filenames.**
+///
+/// The composition is a v1 stopgap ported from `ProjectRow` (see its doc
+/// comment for why it is not the design), so its wording is not worth pinning —
+/// and a bare `I18n()` returns raw keys anyway, which would make any assertion
+/// on rendered text secretly an assertion about key names. What IS worth
+/// pinning is that a future edit cannot leak a participant's name: the watcher's
+/// filenames-stay-UI-only invariant exists because accessibility services have
+/// system-wide read access, and `toolTip` is exactly such a surface.
+@MainActor
+@Suite struct SidebarTooltipPIITests {
+
+    private func state(newFiles: [String], missing: [String], sessions: Int?) -> UnanalysedState {
+        UnanalysedState(
+            newFiles: newFiles.map { URL(fileURLWithPath: "/tmp/\($0)") },
+            missingFiles: missing.map { URL(fileURLWithPath: "/tmp/\($0)") },
+            sessionCount: sessions,
+            totalDurationSeconds: nil,
+            ingestableFileCount: newFiles.count
+        )
+    }
+
+    @Test func tooltipNeverCarriesABasename() {
+        let data = state(newFiles: ["p1-Myrle-Krantz-interview.mp4"],
+                         missing: ["p2-Daniel-Ruggeri.mov"],
+                         sessions: 3)
+        let tip = SidebarSubtitleText.tooltip(
+            for: .deltaOnly(.unanalysed(count: 1)), data: data, progress: nil, i18n: I18n()
+        ) ?? ""
+        #expect(!tip.contains("Myrle"))
+        #expect(!tip.contains("Krantz"))
+        #expect(!tip.contains("Ruggeri"))
+        #expect(!tip.contains(".mp4"))
+        #expect(!tip.contains("/tmp/"))
+    }
+
+    @Test func nothingToSayMeansNoBubble() {
+        // nil, not "" — an empty tooltip still shows a bubble on some AppKit
+        // paths, and a project with nothing to add should have none.
+        #expect(SidebarSubtitleText.tooltip(
+            for: .placeholder, data: nil, progress: nil, i18n: I18n()) == nil)
+    }
+}

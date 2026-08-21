@@ -865,6 +865,16 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             // Cancel / empty / unchanged: revert the visible label to the model
             // (Finder keeps the folder + its prior name; never writes a blank label).
             field.stringValue = model ?? field.stringValue
+            // ...and reload, because this branch mutates nothing. `update()`
+            // *stores* every model tick that arrives during an edit but skips
+            // the reload (the guard above — a `reloadData` would tear down the
+            // live field editor). The commit branch gets its reload for free
+            // from the rename republishing; this one has no such republish, so
+            // anything that landed mid-edit — a watcher delta, a session count,
+            // a run reaching its terminus — stays undrawn until some unrelated
+            // tick happens by. Escape out of a rename and the row could sit
+            // stale indefinitely.
+            reloadAndRestore()
         }
     }
 
@@ -1386,6 +1396,13 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 SidebarSubtitleText.text(for: variant, availability: project.availability,
                                          progress: liveData?.progress[id], i18n: $0)
             }
+            // Hover carries what the single-line subtitle had to drop. Computed
+            // for BOTH cell shapes — the Schema E clean row returns early below,
+            // and it is a legitimate tooltip case (session count with no delta).
+            let tip = i18n.flatMap {
+                SidebarSubtitleText.tooltip(for: variant, data: projectIndex?.unanalysed[id],
+                                            progress: liveData?.progress[id], i18n: $0)
+            }
             // No subtitle (Schema E's clean row — the DEFAULT since 29 Jul —
             // or a defensive nil) → single-line collapse (ProjectCellSpec).
             // The agent badge must survive that collapse: exposure is
@@ -1397,24 +1414,42 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 var exposed: Bool?
                 if case .agent(let now) = cellRightSlot(for: project) { exposed = now }
                 return hideIconIfRevealing(
-                    iconCell(symbol: symbol, text: project.name, trailing: count,
-                             agentExposedNow: exposed,
-                             agentProjectID: id), id: id)
+                    withTooltip(tip,
+                                iconCell(symbol: symbol, text: project.name, trailing: count,
+                                         agentExposedNow: exposed,
+                                         agentProjectID: id)), id: id)
             }
             let prefix = subtitlePrefixGlyph(for: variant, availability: project.availability)
             let diagnosticsID = variant.isDiagnostic ? id : nil
             return hideIconIfRevealing(
-                projectTwoLineCell(symbol: symbol, name: project.name, count: count,
-                                   subtitle: subtitle, available: project.availability.isReady,
-                                   prefixGlyph: prefix, diagnosticsProjectID: diagnosticsID,
-                                   agentProjectID: id,
-                                   rightSlot: cellRightSlot(for: project),
-                                   shimmer: shimmerSubtitle(for: variant)),
+                withTooltip(tip,
+                    projectTwoLineCell(symbol: symbol, name: project.name, count: count,
+                                       subtitle: subtitle, available: project.availability.isReady,
+                                       prefixGlyph: prefix, diagnosticsProjectID: diagnosticsID,
+                                       agentProjectID: id,
+                                       rightSlot: cellRightSlot(for: project),
+                                       shimmer: shimmerSubtitle(for: variant))),
                 id: id)
         }
     }
 
     // MARK: - Cells
+
+    /// Attach the composed hover tooltip to a built cell, or leave it unset.
+    ///
+    /// `nil` leaves `toolTip` alone rather than writing an empty string — an
+    /// empty tooltip still shows a bubble on some AppKit paths, and a project
+    /// with nothing to add should have no bubble at all. Applied to the cell
+    /// view (not the row) so the tracking area matches the drawn content, and
+    /// applied to BOTH cell shapes through this one function so the single-line
+    /// and two-line rows cannot drift apart on whether they answer a hover.
+    /// Generic over the cell type so the concrete `NSTableCellView` survives —
+    /// a plain `NSView` return would erase it and `hideIconIfRevealing` (which
+    /// takes the cell) stops compiling.
+    private func withTooltip<V: NSView>(_ tip: String?, _ view: V) -> V {
+        if let tip, !tip.isEmpty { view.toolTip = tip }
+        return view
+    }
 
     private func lensLabel(_ tab: Tab) -> String {
         if let i18n { return tab.fullLocalizedLabel(i18n) }
@@ -2084,15 +2119,42 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
     }
 
+    /// Whether the pipeline is free to start a run for this project — the shared
+    /// gate under both **Analyse** and **Re-analyse…**, so the two cannot drift
+    /// apart about when a run is possible.
+    ///
+    /// **Exhaustive, no `default`** — same convention as
+    /// `SubtitleVariant.isDiagnostic`. The allowlist this replaced named four
+    /// terminal states and silently refused every other one, which is how
+    /// `.ready` — a finished analysis, the single state `reAnalyseIsOffered`
+    /// exists to serve — came to offer neither verb. `a1de4e51`'s own message
+    /// names that state as the target ("the one state where Analyse is a
+    /// measured no-op … is exactly the state this belongs in") while its switch
+    /// excluded it; `.completedPartial` and `.partial` were excluded the same
+    /// way. A new state must now be classified here rather than inheriting a
+    /// refusal by falling through a `default`.
+    ///
+    /// Refuses exactly the four states where a run cannot start: `.scanning`
+    /// (the manifest read hasn't resolved, so we don't yet know what we'd be
+    /// doing), `.running` / `.queued` (the single-slot FIFO is occupied), and
+    /// `.unreachable` (the folder isn't there). Every *terminal* state — ready,
+    /// partial, stopped, failed — can start one.
+    nonisolated static func pipelineIsFree(_ state: PipelineState?) -> Bool {
+        switch state ?? .idle {
+        case .idle, .ready, .partial, .completedPartial,
+             .stopped, .failed, .failedWithDiagnostic:
+            return true
+        case .scanning, .running, .queued, .unreachable:
+            return false
+        }
+    }
+
     nonisolated static func reAnalyseIsOffered(
         isFolderShaped: Bool, hasPath: Bool,
         state: PipelineState?, data: UnanalysedState?
     ) -> Bool {
         guard isFolderShaped, hasPath else { return false }
-        switch state ?? .idle {
-        case .idle, .stopped, .failed, .failedWithDiagnostic: break
-        default: return false
-        }
+        guard pipelineIsFree(state) else { return false }
         return (data?.sessionCount ?? 0) > 0
     }
 
@@ -2101,10 +2163,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         state: PipelineState?, data: UnanalysedState?
     ) -> Bool {
         guard isFolderShaped, hasPath else { return false }
-        switch state ?? .idle {
-        case .idle, .stopped, .failed, .failedWithDiagnostic: break
-        default: return false
-        }
+        guard pipelineIsFree(state) else { return false }
         return hasWorkToDo(data)
     }
 

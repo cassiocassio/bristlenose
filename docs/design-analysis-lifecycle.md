@@ -1,9 +1,36 @@
 ---
 status: current
-last-trued: 2026-08-19
-trued-against: HEAD@main 6497711a on 2026-08-20 (the corpus run through the
-  desktop app, not just the harness)
+last-trued: 2026-08-21
+trued-against: HEAD@main 19797094 on 2026-08-21 (the shipped confirmation
+  sheet read against its own pixels, not only its call sites)
 ---
+
+## Changelog
+
+- _2026-08-21_ — **Truing pass (`--topic` analysis lifecycle).** Three claims this doc
+  made were false against the sidebar that ships. (1) §4's inventory listed the
+  `+N unanalysed` pill → sheet route as **Shipped**; it exists only on the SwiftUI
+  row and is unreachable on the AppKit outline. (2) §4.1's matrix said Re-analyse
+  was "live since 19 Aug" and cited a line number; the predicate shipped that day
+  but refused `.ready` — the exact state the row describes — until 21 Aug. (3)
+  §6.2 recorded both of its fixes as done; one never reached the shipped substrate
+  and the other's recommendation was reversed without a note. New **§6.1a** records
+  the state-gate regression and the "green suite, unvaried axis" reason nothing
+  caught it. The through-line worth carrying: **one door, three independent locks**
+  — drift gate, state gate, and the unported sheet route — so fixing two of them
+  still left the third invisible.
+- _2026-08-21_ — trued up: §3.3's "being replaced" now records the sheet as
+  shipped and points at the pixel render beside the intent drawing (whose
+  commentary now carries the same note); §7's first
+  two questions marked settled in place (counting shipped; the codebook answer
+  §3.3 already claimed to settle), and the button-weighting delta added as the
+  live one. Anchors: `ReAnalyseConfirmSheet.swift`,
+  `CurationCountsReader.swift:71-84`, commit "the confirmation measures, and
+  the last toast goes with it", `docs/mockups/reanalyse-sheet-pixels.html`.
+- _2026-08-20_ — trued up: affordance table's Re-analyse column marked live;
+  the count-bearing Analyse label recorded as still unbuilt. Anchors:
+  `ProjectSidebarOutline.swift:2087`, `MenuCommands.swift:1064`,
+  `NewFilesSheet.swift:141`.
 
 # The analysis lifecycle — analyse, re-analyse, incremental
 
@@ -222,12 +249,12 @@ Where each verb can be reached, and what gates it.
 | **Analyse** | the project detail pane | never run **and** files present | Shipped (§6.3) |
 | **Analyse** | the unanalysed sheet | the sheet is open **and** `analyseIsOffered` | Shipped (§6.2) |
 | **File ▸ Add Files…** | File menu | a project is selected | Shipped |
-| **+N unanalysed** pill → sheet | row subtitle | `newFiles` non-empty | Shipped |
+| **+N unanalysed** pill → sheet | row subtitle | `newFiles` non-empty | **SwiftUI row only — unreachable on the shipped AppKit sidebar** (21 Aug 2026) |
 | **Analyse** (folder-shaped) | context menu | `newFiles` non-empty | Shipped — **already incremental**, but unlabelled as such |
 | Primary action on the unanalysed sheet | sheet | `newFiles` non-empty | Shipped (§6.2) |
 | **Stop Analysis** ⌘. | Project menu, row hover-× | running | Shipped |
-| **Re-analyse…** | Project menu | `sessionCount > 0`, not running | Shipped — dims (§6.1) |
-| **Re-analyse…** | sidebar context menu | `sessionCount > 0`, not running | Shipped — hides (§6.1) |
+| **Re-analyse…** | Project menu | `sessionCount > 0`, **pipeline free**, not running | Shipped — dims (§6.1); state gate fixed 21 Aug (`06b57843`) |
+| **Re-analyse…** | sidebar context menu | `sessionCount > 0`, **pipeline free**, not running | Shipped — hides (§6.1); state gate fixed 21 Aug (`06b57843`) |
 | **Locate…** | context menu, Project menu | `cantFind` | Shipped |
 | **Show Diagnostics…** | failure glyph, context menu | `failed` / `completedPartial` | Shipped |
 
@@ -253,7 +280,7 @@ Both verbs need the same input: *does this project have work to do?*
 |---|---|---|---|---|---|
 | Empty — no media at all | 0 | nil / 0 | **hide** ✅ | hide | hide |
 | Has media, never analysed | >0 | nil / 0 | **Analyse** | hide | hide |
-| Analysed, nothing new | 0 | >0 | **hide** ✅ — measured: 0.1s, all cached, no visible change | **Re-analyse…** ✅ live since 19 Aug 2026 (`reAnalyseIsOffered`, `ProjectSidebarOutline.swift:2087`; `MenuCommands.swift:1064`) | hide |
+| Analysed, nothing new | 0 | >0 | **hide** ✅ — measured: 0.1s, all cached, no visible change | **Re-analyse…** ✅ — shipped 19 Aug but **did not work until 21 Aug**: the predicate's state allowlist excluded `.ready`, the exact state this row describes (see §6.1a) | hide |
 | Analysed, new files present | >0 | >0 | **Analyse** — *not* "Analyse *N* New Files": the count-bearing label is still unbuilt, the shipped key is `desktop.menu.project.analyse` and the sheet reuses it (`NewFilesSheet.swift:141`) | Re-analyse… | hide |
 | Running | — | — | hide | hide | **Stop Analysis** ⌘. |
 | Failed / partial | any | any | Analyse (retry) | Re-analyse… | hide |
@@ -470,8 +497,16 @@ act never touched the web view. `reAnalyseIsOffered` is the mirror of
 vague"** — counted losses, and silence when there are none. An interim
 `.alert` shipped first with neither, described in its own commit as "a
 deliberate departure from the plan". It was a departure from the **drawn spec**,
-decided in code, and that is the thing this document exists to prevent; it is
-being replaced rather than defended.
+decided in code, and that is the thing this document exists to prevent; it was
+replaced rather than defended, and **the sheet shipped 19 Aug 2026**
+(`ReAnalyseConfirmSheet.swift`, commit "the confirmation measures, and the last
+toast goes with it"). No re-analyse `.alert` survives in `ContentView.swift`.
+
+**The drawing is the intent; the pixels are in a second file.**
+[`docs/mockups/reanalyse-sheet-pixels.html`](mockups/reanalyse-sheet-pixels.html)
+renders the shipped sheet at native metrics — 420 × 307pt, macOS 13/12pt type,
+six states. Read it beside the drawing rather than instead of it: they disagree
+about the buttons, which is §7's live question.
 
 **The finding that prompted the departure is real, and does not change the
 design.** `--clean` is `shutil.rmtree(output_dir)`, so a re-analysis always
@@ -488,7 +523,46 @@ the codebook?" has one answer today — nothing is kept, because the mechanism i
 stays open is whether Re-analyse should *learn* to preserve it, which is a
 feature and a methodology decision, not a precondition.
 
-### 6.2 The Finder-side path dead-ends — **shipped 19 Aug 2026**
+### 6.1a Both verbs refused the states they were built for — **fixed 21 Aug 2026**
+
+§6.1 gave **Re-analyse…** a real predicate on 19 Aug. The predicate did not work,
+and neither did **Analyse**, for the same reason and in the same shape.
+
+Each verb carried its own copy of a state allowlist naming four terminal states —
+`.idle`, `.stopped`, `.failed`, `.failedWithDiagnostic` — and refusing every other
+one through a `default`. `.ready` was not in it. So a **successfully analysed
+project could be neither analysed nor re-analysed**: the context menu offered
+neither verb, and the Project menu showed Re-analyse permanently dimmed. Two
+surfaces agreeing, both wrong, exactly as written.
+
+`a1de4e51`'s own message names the target state in as many words — *"the one state
+where Analyse is a measured no-op — analysed, nothing new — is exactly the state
+this belongs in"* — while the switch it shipped excluded that state.
+`.completedPartial` and `.partial` were excluded the same way, so the two states
+most likely to *want* a rebuild were the two most reliably refused.
+
+**Why nothing caught it.** `AnalyseAffordanceTests` covered "is there work to do"
+thoroughly and passed throughout, because every one of its cases left `state` at
+its `.idle` default. The state axis had no coverage at all. A green suite is not
+evidence about an axis it never varies.
+
+**As built.** One exhaustive `pipelineIsFree`, no `default`, shared by both verbs
+so they cannot drift apart about when a run is possible. It refuses exactly the
+four states where a run genuinely cannot start — `.scanning` (the manifest read
+has not resolved), `.running` / `.queued` (single-slot FIFO), `.unreachable` (the
+folder is not there) — and permits every terminal state. A new `PipelineState`
+case must now be classified there rather than inheriting a refusal by falling
+through. Pinned by `PipelineFreeGateTests`, six of whose cases fail on the
+pre-fix tree.
+
+**This was the second of three locks on the same door.** The first was the drift
+gate measuring a different thing from the predicate it fed
+(`design-desktop-project-status.md`, the retired `lastPipelineRunAt` trap); the
+third is §6.2's sheet route, which never reached the shipped sidebar at all.
+Any one of them alone was enough to make a Finder-added recording a dead end,
+which is why fixing two of them still left the third invisible.
+
+### 6.2 The Finder-side path dead-ends — **partially shipped 19 Aug 2026**
 
 There are three ways new interviews reach an existing project. Two are wired:
 
@@ -517,6 +591,35 @@ does the incremental work. It is two smaller things:
 
 Sequencing note: fix the dead end before adding a menu item. A sheet that can
 act on what it reports may make the extra context-menu entry unnecessary.
+
+> **Re-read 21 Aug 2026 — one of the two fixes above never reached the shipped
+> sidebar, and this section recorded both as done.**
+>
+> **(1) The sheet's primary action is unreachable.** `NewFilesSheet` did gain its
+> Analyse button, but the only thing that opens it in watcher mode is
+> `openUnanalysedSheet`, wired from `ProjectRow.swift:441` — the **SwiftUI** row,
+> which is the flag-off path being deleted. The AppKit outline that actually
+> renders the sidebar never wired it, so `NewFilesSheetSource.watcher` cannot be
+> reached in the app anyone runs. The fix this section describes is live code on a
+> surface no one sees. `desktop/CLAUDE.md` warns about exactly this for context-menu
+> items ("added only to the SwiftUI menu never appears"); it is broader than menus.
+>
+> **(2) The label recommendation was reversed without a note.** Item 2 argues for
+> naming the control for its state — *Analyse 3 New Files*. The sheet ships
+> `desktop.menu.project.analyse`, one word, with a comment justifying cross-surface
+> consistency instead. That is a defensible call and §4.1's matrix already records
+> the shipped shape; what was missing is that this section still reads as though its
+> own recommendation had been taken.
+>
+> **Where it landed.** The dead end is now closed by the *menu*, not the sheet:
+> §6.1a's gate fix plus the drift-gate fix make **Analyse** appear on a drifted
+> project, which is the verb this section wanted the sheet to carry. That inverts
+> the sequencing note below — which supposed the sheet would come first and might
+> make the menu entry unnecessary. The opposite happened, and the surviving half is
+> the better one. The sheet is now scaffolding with no route, and its own header
+> already asks to be retired; the settled direction (21 Aug) is to retire it rather
+> than port it, since a list of files is a data view and the popover is reserved for
+> failure diagnostics.
 
 ### 6.3 The detail pane says "add files" to a project that has files — **shipped 19 Aug 2026**
 
@@ -575,12 +678,26 @@ locales.
 
 ## 7. Open questions
 
-- **Does the confirmation count, or estimate?** Counting edits exactly needs a
-  DB query before the modal. Estimating is cheaper and vaguer. A terse modal
-  measures — see the house rule — which argues for counting.
-- **Should Re-analyse offer to keep the codebook?** The codebook is curation
-  too, but it is also the thing most likely to be *wanted* across a re-run.
-  `design-incremental-analysis.md` §"What's immutable" is the place to settle it.
+- ~~**Does the confirmation count, or estimate?**~~ **Settled — it counts.**
+  `CurationCountsReader` runs five `COUNT(*)`s against the project database at
+  the moment of asking, and zero-count kinds are omitted from the list. The
+  argument recorded here (a terse modal measures) is the one that won.
+- ~~**Should Re-analyse offer to keep the codebook?**~~ **Settled for now** —
+  §3.3 already says so, and this line contradicted it. Nothing is kept, because
+  the mechanism is `rmtree`. What stays open is whether Re-analyse should
+  *learn* to preserve the codebook, which is a feature and a methodology call;
+  `design-incremental-analysis.md` §"What's immutable" is still where that
+  lands.
+- **Which way should the confirmation's buttons read?** The built sheet puts
+  `.keyboardShortcut(.defaultAction)` on **Cancel**, so on macOS the accent-
+  filled default button is the way *out*, and the destructive action sits to its
+  right as a red label on an ordinary bezel. The drawing states the same two
+  rules and renders them the other way round — a plain Cancel beside a filled red
+  **Re-analyse** — because a web mockup treats "default" as a keyboard property
+  and macOS *draws* it. The rules never diverged; the emphasis did. What is
+  genuinely open: the accent-filled default sits on the **left**, which is not
+  where the eye expects the Return key to live. Evidence side by side in
+  [`mockups/reanalyse-sheet-pixels.html`](mockups/reanalyse-sheet-pixels.html).
 - **What happens to a project mid-re-analysis that fails?** It has no old
   analysis (deleted) and no new one. That is a new `Empty` — correct by this
   machine, and worth confirming it is what the row actually shows.

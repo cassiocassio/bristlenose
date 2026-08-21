@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-08-18 (cloud-import slice; the 29 Jul "unreachable branches" claim expired the day after it was written)
-trued-against: HEAD@main on 2026-08-18 + a code-grounded walk of ProjectSubtitle / ProjectIndex / CompletionRescan
+last-trued: 2026-08-21
+trued-against: HEAD@main 06b57843 on 2026-08-21 (the F14 drift gate)
 ---
 
 ## Changelog
@@ -193,6 +193,29 @@ a reviewer must not delete it as unused.
 > `.ready(date:)` **does** remain undrawn, and that half of the 29 Jul finding still holds — but for
 > a different reason: `resolveIdle` takes `lastRunAt` and deliberately never returns `.ready(date:)`
 > (`ProjectSubtitle.swift:218`). That is Schema E working as designed, not a dead branch.
+
+> **Retired 21 Aug 2026 — the trap above is void, and its "Closed" note was half true.**
+> The gate no longer reads `lastPipelineRunAt` at all. It reads `sessionCount` — the analysis DB's
+> own answer to "is there a baseline" — via the now-pure `ProjectIndex.driftGated`. So the field is
+> genuinely unread, and a reviewer deleting it is no longer breaking the sidebar. It is retained for
+> the deferred Appearance pref, which is a weaker reason than the one stated above; if that pref is
+> abandoned, the field and its write site go together.
+>
+> **Why the trap was wrong, and why it read as right for three weeks.** `lastPipelineRunAt` was
+> only ever a *proxy* for "has been analysed", with a single write site reached only when a run
+> finishes **in the app**. Anything analysed by the CLI, imported, or analysed by a build predating
+> 30 Jul therefore read as never-analysed and had its drift silently deleted — while `hasWorkToDo`,
+> three lines downstream, read the same project as *already* analysed from `sessionCount`. The two
+> compose into a dead end: no delta on the row, and **Analyse** hidden, because the evidence for it
+> had been erased before the predicate ran. "`+N unanalysed` renders" was true only for the projects
+> the write site could reach, which is why nobody caught it.
+>
+> The generalisable lesson, and the reason this is written up rather than quietly patched: **a gate
+> and the predicate it feeds must measure the same thing.** Two questions that sound identical
+> ("has this been analysed?") resolved against two different sources, and the disagreement was
+> invisible precisely because each half was individually defensible. Fixed in `06b57843`, pinned by
+> `DriftGateTests` — which had to be created, because the gate was a private `if` and nothing in
+> the suite could reach it.
 
 **Open — the drift and failure clauses can describe the same file.** `newFiles` is
 "on-disk and not in the DB's ingested set" (`ProjectFolderWatcher.performScanLocked`), and a file

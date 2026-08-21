@@ -15,8 +15,8 @@
   "appearance": {
     "diagnosticsLegend": "Tan\u0131lama men\u00fcs\u00fcn\u00fc g\u00f6ster",
     "diagnosticsHelp": "Analizleri incelemek i\u00e7in ara\u00e7lar i\u00e7eren bir Tan\u0131lama men\u00fcs\u00fc ekler. Rapor g\u00f6r\u00fcn\u00fcm\u00fcnde Web Denetleyici'yi de etkinle\u015ftirir.",
-    "animationLegend": "Show animation while analysing",
-    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
+    "animationLegend": "Çözümleme sırasında animasyonu göster",
+    "animationHelp": "Bir proje çözümlenirken ana pencerede sürü hâlinde uçuşan sözcük animasyonunu oynatır. Bunun yerine sade ilerlemeyi görmek için kapatın.",
     "randomIconsLegend": "Yeni projelere rastgele bir simge ata",
     "randomIconsHelp": "Her yeni proje, kenar çubuğunda kolayca tanınabilmesi için ayırt edici bir simge alır. Sade halkayı korumak ve simgeleri kendiniz seçmek için bunu kapatın.",
     "legend": "Uygulama görünümü",

@@ -608,5 +608,10 @@
   "emptyState": {
     "prePipeline": "Deixa-hi anar una carpeta d'entrevistes per començar l'anàlisi",
     "postZeroQuotes": "L'anàlisi ha acabat però no s'ha trobat cap cita. Comprova els fitxers d'origen o prova un altre proveïdor d'LLM."
+  },
+  "newBadge": {
+    "label": "Nou",
+    "tooltip": "Fes clic per descartar-ho",
+    "ariaLabel": "Nou — fes clic per descartar-ho"
   }
 }

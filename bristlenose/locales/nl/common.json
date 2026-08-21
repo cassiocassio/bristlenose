@@ -8,7 +8,7 @@
     "quotes": "Citaten",
     "sessions": "Sessies",
     "analysis": "Analyse",
-    "codebook": "Codeboek",
+    "codebook": "Codeboeken",
     "settings": "Instellingen",
     "about": "Over",
     "help": "Help"
@@ -77,9 +77,9 @@
     "loading": "Citaten laden…",
     "contents": "Inhoud",
     "toggleContents": "Inhoudsopgave in-/uitschakelen",
-    "uncategorisedHeading": "Needs a home",
-    "uncategorisedIntro_one": "1 quote you kept isn\u2019t in any section or theme right now \u2014 but it\u2019s safe here, nothing was lost.",
-    "uncategorisedIntro_other": "{{count}} quotes you kept aren\u2019t in any section or theme right now \u2014 but they\u2019re safe here, nothing was lost."
+    "uncategorisedHeading": "Zoekt een plek",
+    "uncategorisedIntro_one": "1 citaat dat je hebt bewaard, zit op dit moment in geen enkele sectie of thema — maar het staat hier veilig, er is niets verloren gegaan.",
+    "uncategorisedIntro_other": "{{count}} citaten die je hebt bewaard, zitten op dit moment in geen enkele sectie of thema — maar ze staan hier veilig, er is niets verloren gegaan."
   },
   "sessions": {
     "speakerPlaceholder": {
@@ -488,7 +488,7 @@
     "pendingWeighted": "(tags in behandeling gewogen op AI-betrouwbaarheid)"
   },
   "codebook": {
-    "heading": "Codeboek",
+    "heading": "Codeboeken",
     "description": "Sleep tags tussen groepen om te herordenen. Klik op een tag of titel om die te hernoemen. Zet een tag op een andere om ze samen te voegen.",
     "errorLoading": "Fout bij laden van codeboek: {{error}}",
     "addTag": "+ tag",
@@ -503,45 +503,47 @@
     "tagOnQuotes_other": "Deze tag staat op {{count}} citaten.",
     "newGroup": "Nieuwe groep",
     "newCode": "Nieuwe code",
-    "browseCodebooks": "Codeboeken bladeren",
-    "browseTitle": "Codeboeken bladeren",
-    "browseSubtitle": "Importeer een raamwerk-codeboek of maak je eigen",
+    "browseCodebooks": "Codeboekbibliotheek",
+    "browseTitle": "Codeboekbibliotheek",
+    "browseSubtitle": "Installeer codeboeken in je project, of maak je eigen",
     "frameworksHeader": "Codeboekraamwerken",
     "yourCodebooksHeader": "Jouw codeboeken",
     "createNew": "Nieuw codeboek maken",
     "comingSoon": "Binnenkort beschikbaar",
-    "previouslyImported": "Eerder geïmporteerd — direct herstellen",
-    "importCodebook": "Codeboek importeren",
-    "importingCodebook": "Importeren…",
+    "previouslyImported": "Eerder geïnstalleerd — direct opnieuw installeren",
+    "importCodebook": "Installeer",
+    "importingCodebook": "Bezig met installeren…",
     "restoreCodebook": "Codeboek herstellen",
     "restoringCodebook": "Herstellen…",
     "restoreHelp": "Herstelt eerdere tags en AutoCode-resultaten",
-    "importHelp": "Voegt toe aan bestaande tags en taggroepen",
+    "importHelp": "Installeert de tags en taggroepen naast je eigen",
     "tagGroups": "Taggroepen",
     "codebookFramework": "Codeboekraamwerk",
-    "autoCodeQuotes": "✦ AutoCode citaten",
+    "autoCodeQuotes": "Pas toe",
     "viewReport": "Rapport bekijken",
-    "removeFromCodebook": "Uit codeboek verwijderen",
-    "hideTitle": "\"{{label}}\" verbergen?",
+    "removeFromCodebook": "Verwijder",
+    "hideTitle": "‘{{label}}’ verwijderen?",
     "tagsRemovedFromQuotes_one": "Tags worden verwijderd van {{count}} citaat.",
     "tagsRemovedFromQuotes_other": "Tags worden verwijderd van {{count}} citaten.",
     "noQuotesTagged": "Er zijn momenteel geen citaten getagd.",
     "loadingImpact": "Impact laden…",
-    "autoCodePreserved": "AutoCode-resultaten blijven bewaard — herstel ze direct via Codeboeken bladeren.",
-    "restoreAnytime": "Herstel op elk moment via Codeboeken bladeren.",
+    "autoCodePreserved": "AutoCode-resultaten blijven behouden — installeer het op elk moment opnieuw vanuit de Codeboekbibliotheek.",
+    "restoreAnytime": "Installeer het op elk moment opnieuw vanuit de Codeboekbibliotheek.",
     "mergeTitle": "\"{{source}}\" samenvoegen met \"{{target}}\"?",
     "mergeBody": "Alle citaten getagd met <strong>{{source}}</strong> worden opnieuw getagd als <strong>{{target}}</strong>. Dit kan niet ongedaan worden gemaakt.",
     "merge": "Samenvoegen",
-    "hide": "Verberg",
+    "hide": "Verwijder",
     "projectTagsHeading": "Tags van {{project}}",
     "codebookLab": "Codeboeklab",
-    "yourTags": "Jouw tags",
-    "builtIn": "Ingebouwd",
-    "frameworks": "Raamwerken",
+    "yourTags": "Handmatige tags",
+    "builtIn": "Standaard",
+    "frameworks": "Bibliotheek",
     "sentimentTitle": "Emotionele en cognitieve signalen",
     "uncategorised": "Niet-gecategoriseerd",
     "uncategorisedSubtitle": "Tags nog niet aan een groep toegewezen",
-    "deleteGroupAriaLabel": "Groep {{name}} verwijderen"
+    "deleteGroupAriaLabel": "Groep {{name}} verwijderen",
+    "foldedSummary_one": "{{count}} tag · {{coded}} gecodeerd",
+    "foldedSummary_other": "{{count}} tags · {{coded}} gecodeerd"
   },
   "autocode": {
     "lowerThreshold": "Ondergrens",
@@ -606,5 +608,10 @@
   "emptyState": {
     "prePipeline": "Sleep een map met interviews om de analyse te starten",
     "postZeroQuotes": "De analyse is klaar, maar er zijn geen citaten gevonden. Controleer de bronbestanden of probeer een andere LLM-provider."
+  },
+  "newBadge": {
+    "label": "Nieuw",
+    "tooltip": "Klik om te sluiten",
+    "ariaLabel": "Nieuw – klik om te sluiten"
   }
 }

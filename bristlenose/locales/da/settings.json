@@ -15,8 +15,8 @@
   "appearance": {
     "diagnosticsLegend": "Vis menuen Diagnostik",
     "diagnosticsHelp": "Tilf\u00f8jer menuen Diagnostik med v\u00e6rkt\u00f8jer til at unders\u00f8ge analyser. Sl\u00e5r ogs\u00e5 webinspekt\u00f8ren til i rapportvisningen.",
-    "animationLegend": "Show animation while analysing",
-    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
+    "animationLegend": "Vis animation under analysen",
+    "animationHelp": "Afspil en animation med ord i sværm i hovedvinduet, mens et projekt analyseres. Slå det fra for at se det almindelige forløb i stedet.",
     "randomIconsLegend": "Tildel et tilfældigt ikon til nye projekter",
     "randomIconsHelp": "Hvert nyt projekt får et karakteristisk ikon, så det er nemt at genkende i sidepanelet. Slå dette fra for at beholde den enkle ring og vælge ikoner selv.",
     "legend": "Programmets udseende",

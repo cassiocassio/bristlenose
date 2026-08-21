@@ -14,7 +14,8 @@
     "app": {
       "about": "Bristlenose 정보",
       "aiPrivacy": "AI 및 개인정보…",
-      "connectAgent": "\uc5d0\uc774\uc804\ud2b8 \uc5f0\uacb0\u2026"
+      "connectAgent": "\uc5d0\uc774\uc804\ud2b8 \uc5f0\uacb0\u2026",
+      "settings": "\uc124\uc815\u2026"
     },
     "file": {
       "newProject": "새 프로젝트…",
@@ -253,7 +254,9 @@
         "cluster": "\ud14c\ub9c8 \uadf8\ub8f9\ud654 \uc911",
         "render": "\ubcf4\uace0\uc11c \uc791\uc131 \uc911"
       }
-    }
+    },
+    "folderNamePlaceholder": "\ud3f4\ub354 \uc774\ub984",
+    "projectNamePlaceholder": "\ud504\ub85c\uc81d\ud2b8 \uc774\ub984"
   },
   "pipeline": {
     "status": {
@@ -429,7 +432,6 @@
     "pricingLink": "요금제",
     "lastVerified": "마지막 확인 %@",
     "revalidating": "마지막 검증이 거부됨 — 다시 확인 중…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "이 제공자 사용",
       "ollama": "로컬 Ollama 모델 사용"
@@ -697,6 +699,13 @@
     "errorSignedOut": "\ub85c\uadf8\uc544\uc6c3\ub418\uc5c8\uc2b5\ub2c8\ub2e4.",
     "untitledMeeting": "\uc81c\ubaa9 \uc5c6\ub294 \ud68c\uc758",
     "zoomCloudRecordingOff": "\uc774 Zoom \uacc4\uc815\uc740 \ud074\ub77c\uc6b0\ub4dc \ub179\ud654\uac00 \uaebc\uc838 \uc788\uc5b4 Bristlenose\uac00 \uac00\uc838\uc62c \uac83\uc774 \uc5c6\uc2b5\ub2c8\ub2e4. Mac\uc5d0 \uc800\uc7a5\ud55c \ub179\ud654\ub294 Finder\uc5d0\uc11c \ub04c\uc5b4\ub2e4 \ub193\uc744 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
-    "zoomTranscriptOff": "Zoom \ub179\ud654 \uc124\uc815\uc5d0\uc11c '\uc624\ub514\uc624 \uc2a4\ud06c\ub9bd\ud2b8 \uc0dd\uc131'\uc774 \uaebc\uc838 \uc788\uc5b4 \uc774 \ub179\ud654\uc5d0\ub294 \uc2a4\ud06c\ub9bd\ud2b8\uac00 \ud568\uaed8 \uc624\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4."
+    "zoomTranscriptOff": "Zoom \ub179\ud654 \uc124\uc815\uc5d0\uc11c '\uc624\ub514\uc624 \uc2a4\ud06c\ub9bd\ud2b8 \uc0dd\uc131'\uc774 \uaebc\uc838 \uc788\uc5b4 \uc774 \ub179\ud654\uc5d0\ub294 \uc2a4\ud06c\ub9bd\ud2b8\uac00 \ud568\uaed8 \uc624\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+    "restoredEmptyTitle": "\uc544\uc9c1 \uac00\uc838\uc62c \ud56d\ubaa9\uc774 \uc5c6\uc74c",
+    "restoredEmptyBody": "\ud30c\uc77c \u25b8 \uac00\uc838\uc624\uae30\ub97c \uc120\ud0dd\ud558\uc5ec \uc2dc\uc791\ud558\uc2ed\uc2dc\uc624."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose\ub294 \ud3f4\ub354\ub97c \ubd84\uc11d\ud569\ub2c8\ub2e4",
+    "body": "\uc774 \ud504\ub85c\uc81d\ud2b8\ub294 \uac1c\ubcc4 \ud30c\uc77c\ub85c \ub9cc\ub4e4\uc5b4\uc838\uc11c \ubd84\uc11d\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.",
+    "filesHeading": "\uc774 \ud504\ub85c\uc81d\ud2b8\uc758 \ud30c\uc77c"
   }
 }

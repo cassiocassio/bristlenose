@@ -276,7 +276,7 @@ struct BristlenoseApp: App {
             // on AppDelegate handles the responder-chain callers (web bridge,
             // out-of-credit pill).
             CommandGroup(replacing: .appSettings) {
-                Button("Settings…") { SettingsWindow.shared.show() }
+                Button(i18n.t("desktop.menu.app.settings")) { SettingsWindow.shared.show() }
                     .keyboardShortcut(",", modifiers: .command)
             }
         }

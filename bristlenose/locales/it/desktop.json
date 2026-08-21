@@ -14,7 +14,8 @@
     "app": {
       "about": "Informazioni su Bristlenose",
       "aiPrivacy": "IA e privacy…",
-      "connectAgent": "Collega un agente\u2026"
+      "connectAgent": "Collega un agente\u2026",
+      "settings": "Impostazioni…"
     },
     "file": {
       "newProject": "Nuovo progetto…",
@@ -270,7 +271,9 @@
         "cluster": "Raggruppamento dei temi",
         "render": "Generazione del report"
       }
-    }
+    },
+    "folderNamePlaceholder": "Nome della cartella",
+    "projectNamePlaceholder": "Nome del progetto"
   },
   "pipeline": {
     "status": {
@@ -447,7 +450,6 @@
     "pricingLink": "Prezzi",
     "lastVerified": "Ultima verifica %@",
     "revalidating": "L'ultima convalida è stata rifiutata — nuovo controllo in corso…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Usa questo provider",
       "ollama": "Usa il modello Ollama locale"
@@ -735,6 +737,13 @@
     "errorSignedOut": "Disconnesso.",
     "untitledMeeting": "Riunione senza titolo",
     "zoomCloudRecordingOff": "La registrazione nel cloud \u00e8 disattivata per questo account Zoom, quindi Bristlenose non ha nulla da scaricare. Le registrazioni salvate sul tuo Mac si possono comunque trascinare dal Finder.",
-    "zoomTranscriptOff": "\u00abCrea trascrizione audio\u00bb \u00e8 disattivato nelle impostazioni di registrazione di Zoom, quindi queste registrazioni non avranno trascrizioni."
+    "zoomTranscriptOff": "\u00abCrea trascrizione audio\u00bb \u00e8 disattivato nelle impostazioni di registrazione di Zoom, quindi queste registrazioni non avranno trascrizioni.",
+    "restoredEmptyTitle": "Non c’è ancora nulla da importare",
+    "restoredEmptyBody": "Scegli Archivio ▸ Importa per iniziare."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose analizza cartelle",
+    "body": "Questo progetto è stato creato da file singoli, quindi non può essere analizzato.",
+    "filesHeading": "File di questo progetto"
   }
 }

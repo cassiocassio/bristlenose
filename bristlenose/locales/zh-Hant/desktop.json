@@ -14,7 +14,8 @@
     "app": {
       "about": "關於 Bristlenose",
       "aiPrivacy": "AI 與隱私…",
-      "connectAgent": "\u9023\u63a5\u4ee3\u7406\u2026"
+      "connectAgent": "\u9023\u63a5\u4ee3\u7406\u2026",
+      "settings": "設定⋯"
     },
     "file": {
       "newProject": "新增專案…",
@@ -253,7 +254,9 @@
         "cluster": "正在分組歸納主軸",
         "render": "正在建立報告"
       }
-    }
+    },
+    "folderNamePlaceholder": "檔案夾名稱",
+    "projectNamePlaceholder": "專案名稱"
   },
   "pipeline": {
     "status": {
@@ -429,7 +432,6 @@
     "pricingLink": "定價",
     "lastVerified": "上次驗證於 %@",
     "revalidating": "上次驗證遭拒 — 正在重新檢查…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "使用此供應商",
       "ollama": "使用本機 Ollama 模型"
@@ -697,6 +699,13 @@
     "errorSignedOut": "\u5df2\u767b\u51fa\u3002",
     "untitledMeeting": "\u672a\u547d\u540d\u7684\u6703\u8b70",
     "zoomCloudRecordingOff": "\u9019\u500b Zoom \u5e33\u6236\u5df2\u95dc\u9589\u96f2\u7aef\u9304\u5f71\uff0c\u56e0\u6b64 Bristlenose \u6c92\u6709\u53ef\u53d6\u5f97\u7684\u5167\u5bb9\u3002\u5132\u5b58\u5728\u4f60 Mac \u4e0a\u7684\u9304\u5f71\u4ecd\u53ef\u5f9e Finder \u62d6\u5165\u3002",
-    "zoomTranscriptOff": "Zoom \u9304\u5f71\u8a2d\u5b9a\u4e2d\u7684\u300c\u5efa\u7acb\u97f3\u8a0a\u9010\u5b57\u7a3f\u300d\u5df2\u95dc\u9589\uff0c\u56e0\u6b64\u9019\u4e9b\u9304\u5f71\u4e0d\u6703\u9644\u5e36\u9010\u5b57\u7a3f\u3002"
+    "zoomTranscriptOff": "Zoom \u9304\u5f71\u8a2d\u5b9a\u4e2d\u7684\u300c\u5efa\u7acb\u97f3\u8a0a\u9010\u5b57\u7a3f\u300d\u5df2\u95dc\u9589\uff0c\u56e0\u6b64\u9019\u4e9b\u9304\u5f71\u4e0d\u6703\u9644\u5e36\u9010\u5b57\u7a3f\u3002",
+    "restoredEmptyTitle": "目前沒有可輸入的項目",
+    "restoredEmptyBody": "選擇「檔案」▸「輸入」以開始。"
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose 分析的是檔案夾",
+    "body": "這個專案是由個別檔案建立的，因此無法分析。",
+    "filesHeading": "這個專案的檔案"
   }
 }

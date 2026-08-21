@@ -15,8 +15,8 @@
   "appearance": {
     "diagnosticsLegend": "Poka\u017c menu Diagnostyka",
     "diagnosticsHelp": "Dodaje menu Diagnostyka z narz\u0119dziami do badania przebiegu analiz. W\u0142\u0105cza tak\u017ce inspektora WWW w widoku raportu.",
-    "animationLegend": "Show animation while analysing",
-    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
+    "animationLegend": "Pokazuj animację podczas analizy",
+    "animationHelp": "Odtwarzaj w oknie głównym animację słów w locie stadnym podczas analizy projektu. Wyłącz ją, aby zamiast tego zobaczyć zwykły postęp.",
     "randomIconsLegend": "Przypisuj losową ikonę nowym projektom",
     "randomIconsHelp": "Każdy nowy projekt otrzymuje charakterystyczną ikonę, aby łatwo było go rozpoznać na pasku bocznym. Wyłącz tę opcję, aby zachować zwykły pierścień i samodzielnie wybierać ikony.",
     "legend": "Wygląd aplikacji",

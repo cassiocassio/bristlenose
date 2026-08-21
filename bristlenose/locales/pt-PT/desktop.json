@@ -14,7 +14,8 @@
     "app": {
       "about": "Acerca do Bristlenose",
       "aiPrivacy": "IA e Privacidade…",
-      "connectAgent": "Ligar um agente\u2026"
+      "connectAgent": "Ligar um agente\u2026",
+      "settings": "Defini\u00e7\u00f5es\u2026"
     },
     "file": {
       "newProject": "Novo Projeto…",
@@ -270,7 +271,9 @@
         "cluster": "A agrupar temas",
         "render": "A criar relatório"
       }
-    }
+    },
+    "folderNamePlaceholder": "Nome da pasta",
+    "projectNamePlaceholder": "Nome do projeto"
   },
   "pipeline": {
     "status": {
@@ -447,7 +450,6 @@
     "pricingLink": "Preços",
     "lastVerified": "Última verificação %@",
     "revalidating": "A última validação foi rejeitada — a verificar novamente…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Usar este fornecedor",
       "ollama": "Usar o modelo Ollama local"
@@ -735,6 +737,13 @@
     "errorSignedOut": "Sess\u00e3o terminada.",
     "untitledMeeting": "Reuni\u00e3o sem t\u00edtulo",
     "zoomCloudRecordingOff": "A grava\u00e7\u00e3o na nuvem est\u00e1 desativada nesta conta Zoom, pelo que n\u00e3o h\u00e1 nada para o Bristlenose transferir. As grava\u00e7\u00f5es guardadas no seu Mac podem continuar a ser arrastadas do Finder.",
-    "zoomTranscriptOff": "\u00abCriar transcri\u00e7\u00e3o de \u00e1udio\u00bb est\u00e1 desativado nas defini\u00e7\u00f5es de grava\u00e7\u00e3o do Zoom, pelo que estas grava\u00e7\u00f5es n\u00e3o trar\u00e3o transcri\u00e7\u00f5es."
+    "zoomTranscriptOff": "\u00abCriar transcri\u00e7\u00e3o de \u00e1udio\u00bb est\u00e1 desativado nas defini\u00e7\u00f5es de grava\u00e7\u00e3o do Zoom, pelo que estas grava\u00e7\u00f5es n\u00e3o trar\u00e3o transcri\u00e7\u00f5es.",
+    "restoredEmptyTitle": "Ainda n\u00e3o h\u00e1 nada para importar",
+    "restoredEmptyBody": "Escolha Ficheiro \u25b8 Importar para come\u00e7ar."
+  },
+  "unsupportedSubset": {
+    "title": "O Bristlenose analisa pastas",
+    "body": "Este projeto foi criado a partir de ficheiros soltos, pelo que n\u00e3o pode ser analisado.",
+    "filesHeading": "Ficheiros deste projeto"
   }
 }

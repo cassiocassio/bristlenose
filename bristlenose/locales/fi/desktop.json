@@ -14,7 +14,8 @@
     "app": {
       "about": "Tietoja Bristlenosesta",
       "aiPrivacy": "Tekoäly ja yksityisyys…",
-      "connectAgent": "Yhdist\u00e4 agentti\u2026"
+      "connectAgent": "Yhdist\u00e4 agentti\u2026",
+      "settings": "Asetukset…"
     },
     "file": {
       "newProject": "Uusi projekti…",
@@ -270,7 +271,9 @@
         "cluster": "Ryhmitellään teemoja",
         "render": "Rakennetaan raporttia"
       }
-    }
+    },
+    "folderNamePlaceholder": "Kansion nimi",
+    "projectNamePlaceholder": "Projektin nimi"
   },
   "pipeline": {
     "status": {
@@ -447,7 +450,6 @@
     "pricingLink": "Hinnoittelu",
     "lastVerified": "Viimeksi vahvistettu %@",
     "revalidating": "Viimeisin vahvistus hylättiin — tarkistetaan uudelleen…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Käytä tätä palveluntarjoajaa",
       "ollama": "Käytä paikallista Ollama-mallia"
@@ -735,6 +737,13 @@
     "errorSignedOut": "Kirjauduttu ulos.",
     "untitledMeeting": "Nimet\u00f6n kokous",
     "zoomCloudRecordingOff": "Pilvitallennus on pois k\u00e4yt\u00f6st\u00e4 t\u00e4ll\u00e4 Zoom-tilill\u00e4, joten Bristlenosella ei ole mit\u00e4\u00e4n haettavaa. Omalle Macille tallennetut tallenteet voi yh\u00e4 vet\u00e4\u00e4 sis\u00e4\u00e4n Finderista.",
-    "zoomTranscriptOff": "\u201dLuo \u00e4\u00e4nitekstitys\u201d on pois k\u00e4yt\u00f6st\u00e4 Zoomin tallennusasetuksissa, joten n\u00e4iden tallenteiden mukana ei tule tekstityksi\u00e4."
+    "zoomTranscriptOff": "\u201dLuo \u00e4\u00e4nitekstitys\u201d on pois k\u00e4yt\u00f6st\u00e4 Zoomin tallennusasetuksissa, joten n\u00e4iden tallenteiden mukana ei tule tekstityksi\u00e4.",
+    "restoredEmptyTitle": "Ei vielä mitään tuotavaa",
+    "restoredEmptyBody": "Aloita valitsemalla Arkisto ▸ Tuo."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose analysoi kansioita",
+    "body": "Tämä projekti luotiin yksittäisistä tiedostoista, joten sitä ei voi analysoida.",
+    "filesHeading": "Tämän projektin tiedostot"
   }
 }

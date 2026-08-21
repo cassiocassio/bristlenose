@@ -14,7 +14,8 @@
     "app": {
       "about": "Sobre el Bristlenose",
       "aiPrivacy": "IA i privadesa…",
-      "connectAgent": "Connecta un agent…"
+      "connectAgent": "Connecta un agent…",
+      "settings": "Configuració…"
     },
     "file": {
       "newProject": "Projecte nou…",
@@ -147,7 +148,7 @@
       "volumeUp": "Apuja el volum",
       "volumeDown": "Abaixa el volum",
       "mute": "Silencia",
-      "pictureInPicture": "Imatge dins imatge",
+      "pictureInPicture": "Imatge sobre imatge",
       "fullscreen": "Pantalla completa"
     },
     "help": {
@@ -270,7 +271,9 @@
         "cluster": "S'estan agrupant els temes",
         "render": "S'està generant l'informe"
       }
-    }
+    },
+    "folderNamePlaceholder": "Nom de la carpeta",
+    "projectNamePlaceholder": "Nom del projecte"
   },
   "pipeline": {
     "status": {
@@ -447,7 +450,6 @@
     "pricingLink": "Preus",
     "lastVerified": "Última verificació: %@",
     "revalidating": "L'última validació s'ha rebutjat — s'està tornant a comprovar…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Utilitza aquest proveïdor",
       "ollama": "Utilitza el model local d'Ollama"
@@ -735,6 +737,13 @@
     "errorSignedOut": "Sessi\u00f3 tancada.",
     "untitledMeeting": "Reuni\u00f3 sense t\u00edtol",
     "zoomCloudRecordingOff": "L\u2019enregistrament al n\u00favol est\u00e0 desactivat en aquest compte de Zoom, aix\u00ed que Bristlenose no t\u00e9 res per baixar. Els enregistraments desats al teu Mac encara es poden arrossegar des del Finder.",
-    "zoomTranscriptOff": "\u00abCrea una transcripci\u00f3 d\u2019\u00e0udio\u00bb est\u00e0 desactivat als ajustos d\u2019enregistrament del Zoom, aix\u00ed que aquests enregistraments no portaran transcripcions."
+    "zoomTranscriptOff": "\u00abCrea una transcripci\u00f3 d\u2019\u00e0udio\u00bb est\u00e0 desactivat als ajustos d\u2019enregistrament del Zoom, aix\u00ed que aquests enregistraments no portaran transcripcions.",
+    "restoredEmptyTitle": "Encara no hi ha res per importar",
+    "restoredEmptyBody": "Tria Arxiu ▸ Importa per començar."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose analitza carpetes",
+    "body": "Aquest projecte s’ha creat a partir de fitxers solts, per això no es pot analitzar.",
+    "filesHeading": "Fitxers d’aquest projecte"
   }
 }

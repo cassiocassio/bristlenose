@@ -7,5 +7,18 @@
   "status": {
     "healthy": "正常",
     "degraded": "效能降低"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "還沒有可分析的訪談。",
+    "noRunDesktopLong": "把訪談資料夾拖到這裡即可開始。",
+    "noRunCliShort": "這裡還沒有內容。",
+    "cancelledShort": "上次執行已取消。",
+    "cancelledLong": "準備好後再重新執行。",
+    "failedShort": "上次執行失敗。",
+    "recentLog": "近期記錄：",
+    "showDetails": "顯示詳細資訊",
+    "sendFeedback": "傳送意見回饋",
+    "help": "輔助說明",
+    "cliExitedWithCode": "CLI 以代碼 {code} 結束"
   }
 }

@@ -8,7 +8,7 @@
     "quotes": "Citat",
     "sessions": "Sessioner",
     "analysis": "Analys",
-    "codebook": "Kodbok",
+    "codebook": "Kodböcker",
     "settings": "Inställningar",
     "about": "Om",
     "help": "Hjälp"
@@ -77,9 +77,9 @@
     "loading": "Läser in citat…",
     "contents": "Innehåll",
     "toggleContents": "Växla innehållsförteckning",
-    "uncategorisedHeading": "Needs a home",
-    "uncategorisedIntro_one": "1 quote you kept isn\u2019t in any section or theme right now \u2014 but it\u2019s safe here, nothing was lost.",
-    "uncategorisedIntro_other": "{{count}} quotes you kept aren\u2019t in any section or theme right now \u2014 but they\u2019re safe here, nothing was lost."
+    "uncategorisedHeading": "Söker en plats",
+    "uncategorisedIntro_one": "1 citat du har behållit hör just nu inte till någon sektion eller något tema — men det ligger tryggt här, ingenting har gått förlorat.",
+    "uncategorisedIntro_other": "{{count}} citat du har behållit hör just nu inte till någon sektion eller något tema — men de ligger tryggt här, ingenting har gått förlorat."
   },
   "sessions": {
     "speakerPlaceholder": {
@@ -488,7 +488,7 @@
     "pendingWeighted": "(väntande taggar viktade efter AI-konfidens)"
   },
   "codebook": {
-    "heading": "Kodbok",
+    "heading": "Kodböcker",
     "description": "Dra taggar mellan grupper för att omorganisera. Klicka på en tagg eller titel för att byta namn. Släpp en tagg på en annan för att slå samman.",
     "errorLoading": "Fel vid inläsning av kodbok: {{error}}",
     "addTag": "+ tagg",
@@ -503,45 +503,47 @@
     "tagOnQuotes_other": "Den här taggen finns på {{count}} citat.",
     "newGroup": "Ny grupp",
     "newCode": "Ny kod",
-    "browseCodebooks": "Bläddra bland kodböcker",
-    "browseTitle": "Bläddra bland kodböcker",
-    "browseSubtitle": "Importera en ramverkskodbok eller skapa din egen",
+    "browseCodebooks": "Kodboksbibliotek",
+    "browseTitle": "Kodboksbibliotek",
+    "browseSubtitle": "Installera kodböcker i projektet, eller skapa egna",
     "frameworksHeader": "Kodboksramverk",
     "yourCodebooksHeader": "Dina kodböcker",
     "createNew": "Skapa ny kodbok",
     "comingSoon": "Kommer snart",
-    "previouslyImported": "Tidigare importerad — återställ direkt",
-    "importCodebook": "Importera kodbok",
-    "importingCodebook": "Importerar…",
+    "previouslyImported": "Installerad tidigare — installera om direkt",
+    "importCodebook": "Installera",
+    "importingCodebook": "Installerar…",
     "restoreCodebook": "Återställ kodbok",
     "restoringCodebook": "Återställer…",
     "restoreHelp": "Återställer tidigare taggar och AutoCode-resultat",
-    "importHelp": "Läggs till i befintliga taggar och tagggrupper",
+    "importHelp": "Installerar dess taggar och tagg-grupper vid sidan av dina egna",
     "tagGroups": "Tagggrupper",
     "codebookFramework": "Kodboksramverk",
-    "autoCodeQuotes": "✦ AutoCode-citat",
+    "autoCodeQuotes": "Använd",
     "viewReport": "Visa rapport",
-    "removeFromCodebook": "Ta bort från kodbok",
-    "hideTitle": "Dölj ”{{label}}”?",
+    "removeFromCodebook": "Avinstallera",
+    "hideTitle": "Avinstallera ”{{label}}”?",
     "tagsRemovedFromQuotes_one": "Taggar tas bort från {{count}} citat.",
     "tagsRemovedFromQuotes_other": "Taggar tas bort från {{count}} citat.",
     "noQuotesTagged": "Inga citat är taggade för närvarande.",
     "loadingImpact": "Läser in påverkan…",
-    "autoCodePreserved": "AutoCode-resultat bevaras — återställ direkt från Bläddra bland kodböcker.",
-    "restoreAnytime": "Återställ när som helst från Bläddra bland kodböcker.",
+    "autoCodePreserved": "AutoCode-resultaten bevaras — installera om när som helst från Kodboksbiblioteket.",
+    "restoreAnytime": "Installera om när som helst från Kodboksbiblioteket.",
     "mergeTitle": "Slå samman ”{{source}}” med ”{{target}}”?",
     "mergeBody": "Alla citat taggade <strong>{{source}}</strong> kommer att omtaggas <strong>{{target}}</strong>. Detta kan inte ångras.",
     "merge": "Slå samman",
-    "hide": "Dölj",
+    "hide": "Avinstallera",
     "projectTagsHeading": "Taggar för {{project}}",
     "codebookLab": "Kodbokslabb",
-    "yourTags": "Dina taggar",
-    "builtIn": "Inbyggd",
-    "frameworks": "Ramverk",
+    "yourTags": "Manuella taggar",
+    "builtIn": "Förval",
+    "frameworks": "Bibliotek",
     "sentimentTitle": "Känslomässiga och kognitiva signaler",
     "uncategorised": "Okategoriserat",
     "uncategorisedSubtitle": "Taggar som ännu inte tilldelats någon grupp",
-    "deleteGroupAriaLabel": "Radera grupp {{name}}"
+    "deleteGroupAriaLabel": "Radera grupp {{name}}",
+    "foldedSummary_one": "{{count}} tagg · {{coded}} kodade",
+    "foldedSummary_other": "{{count}} taggar · {{coded}} kodade"
   },
   "autocode": {
     "lowerThreshold": "Nedre tröskel",
@@ -606,5 +608,10 @@
   "emptyState": {
     "prePipeline": "Släpp en mapp med intervjuer för att starta analysen",
     "postZeroQuotes": "Analysen slutfördes men inga citat hittades. Kontrollera källfilerna eller prova en annan LLM-leverantör."
+  },
+  "newBadge": {
+    "label": "Nytt",
+    "tooltip": "Klicka för att avfärda",
+    "ariaLabel": "Nytt – klicka för att avfärda"
   }
 }

@@ -14,7 +14,8 @@
     "app": {
       "about": "Over Bristlenose",
       "aiPrivacy": "AI en privacy…",
-      "connectAgent": "Een agent verbinden\u2026"
+      "connectAgent": "Een agent verbinden\u2026",
+      "settings": "Instellingen…"
     },
     "file": {
       "newProject": "Nieuw project…",
@@ -147,7 +148,7 @@
       "volumeUp": "Volume omhoog",
       "volumeDown": "Volume omlaag",
       "mute": "Demp",
-      "pictureInPicture": "Beeld-in-beeld",
+      "pictureInPicture": "Beeld in beeld",
       "fullscreen": "Volledig scherm"
     },
     "help": {
@@ -270,7 +271,9 @@
         "cluster": "Thema's groeperen",
         "render": "Rapport bouwen"
       }
-    }
+    },
+    "folderNamePlaceholder": "Mapnaam",
+    "projectNamePlaceholder": "Projectnaam"
   },
   "pipeline": {
     "status": {
@@ -447,7 +450,6 @@
     "pricingLink": "Prijzen",
     "lastVerified": "Laatst geverifieerd %@",
     "revalidating": "Laatste validatie is geweigerd — opnieuw controleren…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Gebruik deze provider",
       "ollama": "Gebruik het lokale Ollama-model"
@@ -735,6 +737,13 @@
     "errorSignedOut": "Uitgelogd.",
     "untitledMeeting": "Vergadering zonder titel",
     "zoomCloudRecordingOff": "Cloudopname staat uit voor dit Zoom-account, dus er is niets voor Bristlenose om op te halen. Opnames op je eigen Mac kun je nog steeds vanuit de Finder naar binnen slepen.",
-    "zoomTranscriptOff": "\u2018Audiotranscriptie maken\u2019 staat uit in je Zoom-opname-instellingen, dus bij deze opnames komen geen transcripties."
+    "zoomTranscriptOff": "\u2018Audiotranscriptie maken\u2019 staat uit in je Zoom-opname-instellingen, dus bij deze opnames komen geen transcripties.",
+    "restoredEmptyTitle": "Nog niets om te importeren",
+    "restoredEmptyBody": "Kies Archief ▸ Importeer om te beginnen."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose analyseert mappen",
+    "body": "Dit project is gemaakt van losse bestanden en kan daarom niet worden geanalyseerd.",
+    "filesHeading": "Bestanden in dit project"
   }
 }

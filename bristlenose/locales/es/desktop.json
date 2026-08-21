@@ -14,7 +14,8 @@
     "app": {
       "about": "Acerca de Bristlenose",
       "aiPrivacy": "IA y privacidad…",
-      "connectAgent": "Conectar un agente\u2026"
+      "connectAgent": "Conectar un agente\u2026",
+      "settings": "Ajustes\u2026"
     },
     "file": {
       "newProject": "Nuevo proyecto…",
@@ -270,7 +271,9 @@
         "cluster": "Agrupando temas",
         "render": "Generando informe"
       }
-    }
+    },
+    "folderNamePlaceholder": "Nombre de la carpeta",
+    "projectNamePlaceholder": "Nombre del proyecto"
   },
   "pipeline": {
     "status": {
@@ -447,7 +450,6 @@
     "pricingLink": "Precios",
     "lastVerified": "Última verificación %@",
     "revalidating": "La última validación falló: volviendo a comprobar…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Usar este proveedor",
       "ollama": "Usar el modelo local de Ollama"
@@ -735,6 +737,13 @@
     "errorSignedOut": "Sesi\u00f3n cerrada.",
     "untitledMeeting": "Reuni\u00f3n sin t\u00edtulo",
     "zoomCloudRecordingOff": "La grabaci\u00f3n en la nube est\u00e1 desactivada en esta cuenta de Zoom, as\u00ed que no hay nada que Bristlenose pueda descargar. Las grabaciones guardadas en tu Mac se pueden arrastrar desde el Finder.",
-    "zoomTranscriptOff": "\u00abCrear transcripci\u00f3n de audio\u00bb est\u00e1 desactivado en los ajustes de grabaci\u00f3n de Zoom, as\u00ed que estas grabaciones no traer\u00e1n transcripciones."
+    "zoomTranscriptOff": "\u00abCrear transcripci\u00f3n de audio\u00bb est\u00e1 desactivado en los ajustes de grabaci\u00f3n de Zoom, as\u00ed que estas grabaciones no traer\u00e1n transcripciones.",
+    "restoredEmptyTitle": "Todav\u00eda no hay nada que importar",
+    "restoredEmptyBody": "Selecciona Archivo \u25b8 Importar para empezar."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose analiza carpetas",
+    "body": "Este proyecto se cre\u00f3 a partir de archivos sueltos, as\u00ed que no se puede analizar.",
+    "filesHeading": "Archivos de este proyecto"
   }
 }

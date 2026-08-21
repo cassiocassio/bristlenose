@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const STORAGE_PREFIX = "bn-new-dismissed:";
 
@@ -34,6 +35,7 @@ interface NewBadgeProps {
 }
 
 export function NewBadge({ isNew, dismissKey, newSince }: NewBadgeProps) {
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useState(() => readDismissed(dismissKey, newSince));
 
   const handleDismiss = useCallback(() => {
@@ -52,12 +54,12 @@ export function NewBadge({ isNew, dismissKey, newSince }: NewBadgeProps) {
     <button
       type="button"
       className="bn-new-badge"
-      title="Click to dismiss"
-      aria-label="New — click to dismiss"
+      title={t("newBadge.tooltip")}
+      aria-label={t("newBadge.ariaLabel")}
       onClick={handleDismiss}
       data-testid={`bn-new-${dismissKey}`}
     >
-      New
+      {t("newBadge.label")}
     </button>
   );
 }

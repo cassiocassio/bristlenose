@@ -14,7 +14,8 @@
     "app": {
       "about": "About Bristlenose",
       "aiPrivacy": "AI & Privacy…",
-      "connectAgent": "Connect an Agent\u2026"
+      "connectAgent": "Connect an Agent\u2026",
+      "settings": "Settings…"
     },
     "file": {
       "newProject": "New Project…",
@@ -270,7 +271,9 @@
         "cluster": "Grouping themes",
         "render": "Building report"
       }
-    }
+    },
+    "folderNamePlaceholder": "Folder name",
+    "projectNamePlaceholder": "Project name"
   },
   "pipeline": {
     "status": {
@@ -735,6 +738,13 @@
     "errorSignedOut": "Signed out.",
     "untitledMeeting": "Untitled meeting",
     "zoomCloudRecordingOff": "Cloud recording is turned off for this Zoom account, so there's nothing for Bristlenose to fetch. Recordings saved to your own Mac can still be dragged in from Finder.",
-    "zoomTranscriptOff": "\u201cCreate audio transcript\u201d is off in your Zoom recording settings, so no transcripts will come with these recordings."
+    "zoomTranscriptOff": "\u201cCreate audio transcript\u201d is off in your Zoom recording settings, so no transcripts will come with these recordings.",
+    "restoredEmptyTitle": "Nothing to import yet",
+    "restoredEmptyBody": "Choose File ▸ Import to start."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose analyses folders",
+    "body": "This project was created from individual files, so it can’t be analysed.",
+    "filesHeading": "Files in this project"
   }
 }

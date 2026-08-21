@@ -1,22 +1,22 @@
 {
   "whisper": {
-    "banner_intro": "Bristlenose needs the Whisper transcription model ({size}).",
-    "verb_downloading": "Downloading",
-    "verb_resuming": "Resuming download",
+    "banner_intro": "Bristlenose a besoin du mod\u00e8le de transcription Whisper ({size}).",
+    "verb_downloading": "T\u00e9l\u00e9chargement",
+    "verb_resuming": "Reprise du t\u00e9l\u00e9chargement",
     "fetching": "{verb} {repo_id}...",
-    "ready": "Whisper model ready",
-    "aborted_no_fetch": "Whisper model {repo_id} is not in cache and --no-fetch is set. Run `bristlenose doctor --fetch` to fetch it ahead of time, or re-run without --no-fetch."
+    "ready": "Mod\u00e8le Whisper pr\u00eat",
+    "aborted_no_fetch": "Le mod\u00e8le Whisper {repo_id} n\u2019est pas en cache et --no-fetch est activ\u00e9. Lancez `bristlenose doctor --fetch` pour le r\u00e9cup\u00e9rer \u00e0 l\u2019avance, ou relancez sans --no-fetch."
   },
   "ffmpeg": {
-    "banner_missing": "ffmpeg is required to read video files. Not found on PATH.",
-    "prompt_brew_install": "Run `brew install ffmpeg` now?",
-    "installed": "ffmpeg installed",
-    "aborted": "ffmpeg is required but was not found. Install it using the command above and re-run.",
+    "banner_missing": "ffmpeg est n\u00e9cessaire pour lire les fichiers vid\u00e9o. Introuvable dans le PATH.",
+    "prompt_brew_install": "Ex\u00e9cuter `brew install ffmpeg` maintenant ?",
+    "installed": "ffmpeg install\u00e9",
+    "aborted": "ffmpeg est n\u00e9cessaire mais introuvable. Installez-le avec la commande ci-dessus, puis relancez.",
     "label_macos": "macOS",
     "label_ubuntu": "Ubuntu / Debian",
     "label_fedora": "Fedora / RHEL",
     "label_arch": "Arch / Manjaro",
-    "label_other": "Other",
+    "label_other": "Autre",
     "cmd_macos": "brew install ffmpeg",
     "cmd_ubuntu": "sudo apt install ffmpeg",
     "cmd_fedora": "sudo dnf install ffmpeg",
@@ -24,22 +24,22 @@
     "cmd_other": "https://ffmpeg.org/download.html"
   },
   "api_key": {
-    "source_attribution": "Using {provider_display} API key from {source}. Verifying: ~$0.0001, no transcript content.",
-    "rejected_invalid_key": "Your {provider_display} API key was rejected (HTTP 401).\nCheck the key at {keys_url}\nand re-run.",
-    "no_credit": "Your {provider_display} account has no API credit available.\nTop up at {billing_url}\n({minimum_note})\nand re-run.",
-    "model_unavailable": "The requested model is not available for your {provider_display} account. Check available models at {console_url} and either enable the model or change `--llm-model` to one your account can use.",
-    "rate_limit": "{provider_display} is rate-limiting this account. Wait a minute and re-run, or reduce `llm_concurrency` in your bristlenose.toml.",
-    "generic": "Provider says: {message}.\nIf this looks like a credit-balance issue, top up at the provider's billing console and re-run.",
-    "network": "Couldn't reach the provider: {message}.\nCheck DNS / VPN / proxy settings, then re-run.",
-    "azure_deployment_unavailable": "Azure deployment wasn't found. This is your Azure portal **deployment name**, not a model id \u2014 check it in the Azure portal under Azure OpenAI \u2192 Deployments. Update BRISTLENOSE_AZURE_DEPLOYMENT (or azure_deployment in bristlenose.toml) and re-run. Underlying: {message}.",
-    "google_model_unavailable": "Gemini denied access to the requested model. This is usually a tier gate, region restriction, or billing not enabled \u2014 check the Google Cloud Console at {console_url}. If billing is set up, try a different model via --llm-model. Underlying: {message}.",
-    "local_server_down": "Ollama doesn't appear to be running. Start it with \u0060ollama serve\u0060 (or open the Ollama app on macOS), then re-run. Underlying: {message}.",
-    "local_model_not_pulled": "The requested local model isn't pulled. Run \u0060ollama pull <model>\u0060 to download it (check the model name in bristlenose.toml or --llm-model), then re-run. Underlying: {message}."
+    "source_attribution": "Utilisation de la cl\u00e9 API {provider_display} depuis {source}. V\u00e9rification : ~0,0001 $, aucun contenu de transcription.",
+    "rejected_invalid_key": "Votre cl\u00e9 API {provider_display} a \u00e9t\u00e9 refus\u00e9e (HTTP 401).\nV\u00e9rifiez la cl\u00e9 sur {keys_url}\npuis relancez.",
+    "no_credit": "Votre compte {provider_display} n\u2019a plus de cr\u00e9dit API.\nRechargez-le sur {billing_url}\n({minimum_note})\npuis relancez.",
+    "model_unavailable": "Le mod\u00e8le demand\u00e9 n\u2019est pas disponible pour votre compte {provider_display}. Consultez les mod\u00e8les disponibles sur {console_url} et activez le mod\u00e8le, ou remplacez `--llm-model` par un mod\u00e8le accessible \u00e0 votre compte.",
+    "rate_limit": "{provider_display} limite le d\u00e9bit de ce compte. Attendez une minute et relancez, ou r\u00e9duisez `llm_concurrency` dans votre bristlenose.toml.",
+    "generic": "Le fournisseur indique : {message}.\nSi cela ressemble \u00e0 un probl\u00e8me de solde, rechargez dans la console de facturation du fournisseur puis relancez.",
+    "network": "Impossible de joindre le fournisseur : {message}.\nV\u00e9rifiez les r\u00e9glages DNS / VPN / proxy, puis relancez.",
+    "azure_deployment_unavailable": "Le d\u00e9ploiement Azure est introuvable. Il s\u2019agit du **nom de d\u00e9ploiement** du portail Azure, pas d\u2019un identifiant de mod\u00e8le \u2014 v\u00e9rifiez-le dans le portail Azure, sous Azure OpenAI \u2192 D\u00e9ploiements. Mettez \u00e0 jour BRISTLENOSE_AZURE_DEPLOYMENT (ou azure_deployment dans bristlenose.toml) puis relancez. Cause : {message}.",
+    "google_model_unavailable": "Gemini a refus\u00e9 l\u2019acc\u00e8s au mod\u00e8le demand\u00e9. C\u2019est g\u00e9n\u00e9ralement une question de palier, de restriction r\u00e9gionale ou de facturation non activ\u00e9e \u2014 v\u00e9rifiez la console Google Cloud sur {console_url}. Si la facturation est en place, essayez un autre mod\u00e8le via --llm-model. Cause : {message}.",
+    "local_server_down": "Ollama ne semble pas \u00eatre en cours d\u2019ex\u00e9cution. D\u00e9marrez-le avec `ollama serve` (ou ouvrez l\u2019app Ollama sous macOS), puis relancez. Cause : {message}.",
+    "local_model_not_pulled": "Le mod\u00e8le local demand\u00e9 n\u2019est pas t\u00e9l\u00e9charg\u00e9. Lancez `ollama pull <model>` pour le r\u00e9cup\u00e9rer (le nom du mod\u00e8le figure dans bristlenose.toml ou dans --llm-model), puis relancez. Cause : {message}."
   },
   "pii": {
-    "downloading": "Downloading PII detector (~12 MB, one-off)..."
+    "downloading": "T\u00e9l\u00e9chargement du d\u00e9tecteur de donn\u00e9es personnelles (~12 Mo, une seule fois)\u2026"
   },
   "closing": {
-    "no_more_questions": "No more questions.{estimate_suffix} Ctrl+C anytime."
+    "no_more_questions": "Plus de questions.{estimate_suffix} Ctrl+C \u00e0 tout moment."
   }
 }

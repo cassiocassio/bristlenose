@@ -7,5 +7,18 @@
   "status": {
     "healthy": "Integro",
     "degraded": "Degradato"
+  },
+  "statusPage": {
+    "noRunDesktopShort": "Non ci sono ancora interviste da analizzare.",
+    "noRunDesktopLong": "Trascina qui una cartella di interviste per iniziare.",
+    "noRunCliShort": "Qui non c’è ancora niente.",
+    "cancelledShort": "L’ultima esecuzione è stata annullata.",
+    "cancelledLong": "Riesegui quando vuoi.",
+    "failedShort": "L’ultima esecuzione non è riuscita.",
+    "recentLog": "Log recente:",
+    "showDetails": "Mostra i dettagli",
+    "sendFeedback": "Invia un feedback",
+    "help": "Aiuto",
+    "cliExitedWithCode": "La CLI è terminata con codice {code}"
   }
 }

@@ -608,5 +608,10 @@
   "emptyState": {
     "prePipeline": "Drop a folder of interviews to start analysis",
     "postZeroQuotes": "Analysis finished but found no quotes. Check the source files or try a different LLM provider."
+  },
+  "newBadge": {
+    "label": "New",
+    "tooltip": "Click to dismiss",
+    "ariaLabel": "New — click to dismiss"
   }
 }

@@ -14,7 +14,8 @@
     "app": {
       "about": "Om Bristlenose",
       "aiPrivacy": "AI och integritet…",
-      "connectAgent": "Anslut en agent\u2026"
+      "connectAgent": "Anslut en agent\u2026",
+      "settings": "Inställningar…"
     },
     "file": {
       "newProject": "Nytt projekt…",
@@ -270,7 +271,9 @@
         "cluster": "Grupperar teman",
         "render": "Bygger rapport"
       }
-    }
+    },
+    "folderNamePlaceholder": "Mappnamn",
+    "projectNamePlaceholder": "Projektnamn"
   },
   "pipeline": {
     "status": {
@@ -447,7 +450,6 @@
     "pricingLink": "Priser",
     "lastVerified": "Senast verifierad %@",
     "revalidating": "Den senaste valideringen avvisades – kontrollerar igen…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Använd den här leverantören",
       "ollama": "Använd den lokala Ollama-modellen"
@@ -735,6 +737,13 @@
     "errorSignedOut": "Utloggad.",
     "untitledMeeting": "M\u00f6te utan titel",
     "zoomCloudRecordingOff": "Molninspelning \u00e4r avst\u00e4ngd f\u00f6r det h\u00e4r Zoom-kontot, s\u00e5 det finns inget f\u00f6r Bristlenose att h\u00e4mta. Inspelningar som sparats p\u00e5 din egen Mac kan fortfarande dras in fr\u00e5n Finder.",
-    "zoomTranscriptOff": "\u201dSkapa ljudtranskription\u201d \u00e4r avst\u00e4ngt i dina Zoom-inspelningsinst\u00e4llningar, s\u00e5 de h\u00e4r inspelningarna kommer utan transkriptioner."
+    "zoomTranscriptOff": "\u201dSkapa ljudtranskription\u201d \u00e4r avst\u00e4ngt i dina Zoom-inspelningsinst\u00e4llningar, s\u00e5 de h\u00e4r inspelningarna kommer utan transkriptioner.",
+    "restoredEmptyTitle": "Inget att importera ännu",
+    "restoredEmptyBody": "Välj Arkiv ▸ Importera för att börja."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose analyserar mappar",
+    "body": "Det här projektet skapades från enskilda filer och kan därför inte analyseras.",
+    "filesHeading": "Filer i det här projektet"
   }
 }

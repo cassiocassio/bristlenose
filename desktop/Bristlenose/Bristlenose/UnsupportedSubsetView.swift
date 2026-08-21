@@ -11,25 +11,26 @@ import SwiftUI
 /// Plan §Phase 3 point 2 (third branch) and §point 3 (unsupported-subset
 /// state). No "coming soon" copy — alpha doesn't promise it.
 struct UnsupportedSubsetView: View {
+    @EnvironmentObject var i18n: I18n
     let project: Project
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
                 Label {
-                    Text("Bristlenose analyses folders").font(.title3.weight(.semibold))
+                    Text(i18n.t("desktop.unsupportedSubset.title")).font(.title3.weight(.semibold))
                 } icon: {
                     Image(systemName: "doc.on.doc")
                         .foregroundStyle(.secondary)
                         .imageScale(.large)
                 }
-                Text("This project was created from individual files, so it can't be analysed.")
+                Text(i18n.t("desktop.unsupportedSubset.body"))
                     .foregroundStyle(.secondary)
             }
             .padding(.bottom, 4)
 
             if let files = project.inputFiles, !files.isEmpty {
-                Text("Files in this project")
+                Text(i18n.t("desktop.unsupportedSubset.filesHeading"))
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.secondary)
 
@@ -74,7 +75,7 @@ struct UnsupportedSubsetView: View {
             Button {
                 NSWorkspace.shared.activateFileViewerSelecting([url])
             } label: {
-                Text("Show in Finder")
+                Text(i18n.t("desktop.menu.project.showInFinder"))
                     .font(.caption)
             }
             .buttonStyle(.borderless)

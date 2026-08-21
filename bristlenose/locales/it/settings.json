@@ -15,8 +15,8 @@
   "appearance": {
     "diagnosticsLegend": "Mostra il menu Diagnostica",
     "diagnosticsHelp": "Aggiunge un menu Diagnostica con strumenti per esaminare le analisi. Attiva anche Ispettore web nella vista del report.",
-    "animationLegend": "Show animation while analysing",
-    "animationHelp": "Play a flocking-words animation in the main window while a project is analysing. Turn this off to see the plain progress instead.",
+    "animationLegend": "Mostra l’animazione durante l’analisi",
+    "animationHelp": "Riproduce un’animazione di parole in stormo nella finestra principale mentre un progetto viene analizzato. Disattivala per vedere invece l’avanzamento semplice.",
     "randomIconsLegend": "Assegna un'icona casuale ai nuovi progetti",
     "randomIconsHelp": "Ogni nuovo progetto riceve un'icona distintiva, così è facile riconoscerlo nella barra laterale. Disattivare questa opzione per mantenere l'anello semplice e scegliere le icone manualmente.",
     "legend": "Aspetto dell'applicazione",

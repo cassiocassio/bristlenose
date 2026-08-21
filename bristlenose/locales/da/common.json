@@ -8,7 +8,7 @@
     "quotes": "Citater",
     "sessions": "Sessioner",
     "analysis": "Analyse",
-    "codebook": "Kodebog",
+    "codebook": "Kodebøger",
     "settings": "Indstillinger",
     "about": "Om",
     "help": "Hjælp"
@@ -77,9 +77,9 @@
     "loading": "Indlæser citater…",
     "contents": "Indhold",
     "toggleContents": "Vis/skjul indholdsfortegnelse",
-    "uncategorisedHeading": "Needs a home",
-    "uncategorisedIntro_one": "1 quote you kept isn\u2019t in any section or theme right now \u2014 but it\u2019s safe here, nothing was lost.",
-    "uncategorisedIntro_other": "{{count}} quotes you kept aren\u2019t in any section or theme right now \u2014 but they\u2019re safe here, nothing was lost."
+    "uncategorisedHeading": "Mangler et hjem",
+    "uncategorisedIntro_one": "1 citat, du har beholdt, er ikke i nogen sektion eller noget tema lige nu — men det er sikkert her, intet gik tabt.",
+    "uncategorisedIntro_other": "{{count}} citater, du har beholdt, er ikke i nogen sektion eller noget tema lige nu — men de er sikre her, intet gik tabt."
   },
   "sessions": {
     "speakerPlaceholder": {
@@ -488,7 +488,7 @@
     "pendingWeighted": "(afventende tags vægtet efter AI-tillid)"
   },
   "codebook": {
-    "heading": "Kodebog",
+    "heading": "Kodebøger",
     "description": "Træk tags mellem grupper for at omorganisere. Klik på et tag eller en titel for at omdøbe det. Slip et tag på et andet for at flette dem.",
     "errorLoading": "Fejl ved indlæsning af kodebog: {{error}}",
     "addTag": "+ tag",
@@ -503,45 +503,47 @@
     "tagOnQuotes_other": "Dette tag er på {{count}} citater.",
     "newGroup": "Ny gruppe",
     "newCode": "Ny kode",
-    "browseCodebooks": "Gennemse kodebøger",
-    "browseTitle": "Gennemse kodebøger",
-    "browseSubtitle": "Importér en framework-kodebog, eller opret din egen",
+    "browseCodebooks": "Kodebogsbibliotek",
+    "browseTitle": "Kodebogsbibliotek",
+    "browseSubtitle": "Installer kodebøger i dit projekt, eller opret dine egne",
     "frameworksHeader": "Kodebogsframeworks",
     "yourCodebooksHeader": "Dine kodebøger",
     "createNew": "Opret ny kodebog",
     "comingSoon": "Kommer snart",
-    "previouslyImported": "Tidligere importeret — gendan med det samme",
-    "importCodebook": "Importér kodebog",
-    "importingCodebook": "Importerer…",
+    "previouslyImported": "Installeret tidligere — geninstaller med det samme",
+    "importCodebook": "Installer",
+    "importingCodebook": "Installerer…",
     "restoreCodebook": "Gendan kodebog",
     "restoringCodebook": "Gendanner…",
     "restoreHelp": "Gendanner tidligere tags og AutoCode-resultater",
-    "importHelp": "Føjer til eksisterende tags og tag-grupper",
+    "importHelp": "Installerer dets tags og tag-grupper sammen med dine egne",
     "tagGroups": "Tag-grupper",
     "codebookFramework": "Kodebogsframework",
-    "autoCodeQuotes": "✦ AutoCode-citater",
+    "autoCodeQuotes": "Anvend",
     "viewReport": "Vis rapport",
-    "removeFromCodebook": "Fjern fra kodebog",
-    "hideTitle": "Skjul „{{label}}“?",
+    "removeFromCodebook": "Fjern",
+    "hideTitle": "Fjern „{{label}}“?",
     "tagsRemovedFromQuotes_one": "Tags fjernes fra {{count}} citat.",
     "tagsRemovedFromQuotes_other": "Tags fjernes fra {{count}} citater.",
     "noQuotesTagged": "Ingen citater er tagget i øjeblikket.",
     "loadingImpact": "Indlæser effekt…",
-    "autoCodePreserved": "AutoCode-resultater bevares — gendan med det samme fra Gennemse kodebøger.",
-    "restoreAnytime": "Gendan når som helst fra Gennemse kodebøger.",
+    "autoCodePreserved": "AutoCode-resultaterne bevares — geninstaller når som helst fra Kodebogsbiblioteket.",
+    "restoreAnytime": "Geninstaller når som helst fra Kodebogsbiblioteket.",
     "mergeTitle": "Flet „{{source}}“ ind i „{{target}}“?",
     "mergeBody": "Alle citater tagget med <strong>{{source}}</strong> vil blive omtagget til <strong>{{target}}</strong>. Dette kan ikke fortrydes.",
     "merge": "Flet",
-    "hide": "Skjul",
+    "hide": "Fjern",
     "projectTagsHeading": "{{project}}-tags",
     "codebookLab": "Kodebogslaboratorium",
-    "yourTags": "Dine tags",
-    "builtIn": "Indbygget",
-    "frameworks": "Frameworks",
+    "yourTags": "Manuelle tags",
+    "builtIn": "Standard",
+    "frameworks": "Bibliotek",
     "sentimentTitle": "Følelsesmæssige og kognitive signaler",
     "uncategorised": "Ikke-kategoriseret",
     "uncategorisedSubtitle": "Tags, der endnu ikke er tildelt en gruppe",
-    "deleteGroupAriaLabel": "Slet gruppe {{name}}"
+    "deleteGroupAriaLabel": "Slet gruppe {{name}}",
+    "foldedSummary_one": "{{count}} tag · {{coded}} kodet",
+    "foldedSummary_other": "{{count}} tags · {{coded}} kodet"
   },
   "autocode": {
     "lowerThreshold": "Nedre tærskel",
@@ -606,5 +608,10 @@
   "emptyState": {
     "prePipeline": "Slip en mappe med interviews for at starte analysen",
     "postZeroQuotes": "Analysen er færdig, men fandt ingen citater. Tjek kildefilerne, eller prøv en anden LLM-udbyder."
+  },
+  "newBadge": {
+    "label": "Ny",
+    "tooltip": "Klik for at afvise",
+    "ariaLabel": "Ny – klik for at afvise"
   }
 }

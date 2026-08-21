@@ -14,7 +14,8 @@
     "app": {
       "about": "O aplikaci Bristlenose",
       "aiPrivacy": "AI a soukromí…",
-      "connectAgent": "P\u0159ipojit agenta\u2026"
+      "connectAgent": "P\u0159ipojit agenta\u2026",
+      "settings": "Nastaven\u00ed\u2026"
     },
     "file": {
       "newProject": "Nový projekt…",
@@ -303,7 +304,9 @@
         "cluster": "Seskupov\u00e1n\u00ed t\u00e9mat",
         "render": "Vytv\u00e1\u0159en\u00ed zpr\u00e1vy"
       }
-    }
+    },
+    "folderNamePlaceholder": "N\u00e1zev slo\u017eky",
+    "projectNamePlaceholder": "N\u00e1zev projektu"
   },
   "pipeline": {
     "status": {
@@ -482,7 +485,6 @@
     "pricingLink": "Ceník",
     "lastVerified": "Naposledy ověřeno %@",
     "revalidating": "Poslední ověření bylo zamítnuto — opětovná kontrola…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Použít tohoto poskytovatele",
       "ollama": "Použít místní model Ollama"
@@ -794,6 +796,13 @@
     "errorSignedOut": "Odhl\u00e1\u0161eno.",
     "untitledMeeting": "Sch\u016fzka bez n\u00e1zvu",
     "zoomCloudRecordingOff": "Nahr\u00e1v\u00e1n\u00ed do cloudu je u tohoto \u00fa\u010dtu Zoom vypnut\u00e9, tak\u017ee Bristlenose nem\u00e1 co st\u00e1hnout. Nahr\u00e1vky ulo\u017een\u00e9 ve va\u0161em Macu lze st\u00e1le p\u0159et\u00e1hnout z Finderu.",
-    "zoomTranscriptOff": "\u201eVytvo\u0159it p\u0159epis zvuku\u201c je v nastaven\u00ed nahr\u00e1v\u00e1n\u00ed Zoomu vypnut\u00e9, tak\u017ee k t\u011bmto nahr\u00e1vk\u00e1m nep\u0159ijdou p\u0159episy."
+    "zoomTranscriptOff": "\u201eVytvo\u0159it p\u0159epis zvuku\u201c je v nastaven\u00ed nahr\u00e1v\u00e1n\u00ed Zoomu vypnut\u00e9, tak\u017ee k t\u011bmto nahr\u00e1vk\u00e1m nep\u0159ijdou p\u0159episy.",
+    "restoredEmptyTitle": "Zat\u00edm nen\u00ed co importovat",
+    "restoredEmptyBody": "Za\u010dn\u011bte volbou Soubor \u25b8 Importovat."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose analyzuje slo\u017eky",
+    "body": "Tento projekt vznikl z jednotliv\u00fdch soubor\u016f, tak\u017ee ho nelze analyzovat.",
+    "filesHeading": "Soubory v tomto projektu"
   }
 }

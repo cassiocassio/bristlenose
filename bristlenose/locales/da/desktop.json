@@ -14,7 +14,8 @@
     "app": {
       "about": "Om Bristlenose",
       "aiPrivacy": "AI og anonymitet…",
-      "connectAgent": "Forbind en agent\u2026"
+      "connectAgent": "Forbind en agent\u2026",
+      "settings": "Indstillinger…"
     },
     "file": {
       "newProject": "Nyt projekt…",
@@ -270,7 +271,9 @@
         "cluster": "Grupperer temaer",
         "render": "Bygger rapport"
       }
-    }
+    },
+    "folderNamePlaceholder": "Mappenavn",
+    "projectNamePlaceholder": "Projektnavn"
   },
   "pipeline": {
     "status": {
@@ -447,7 +450,6 @@
     "pricingLink": "Priser",
     "lastVerified": "Senest bekræftet %@",
     "revalidating": "Seneste validering blev afvist — tjekker igen…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Brug denne udbyder",
       "ollama": "Brug den lokale Ollama-model"
@@ -735,6 +737,13 @@
     "errorSignedOut": "Logget ud.",
     "untitledMeeting": "M\u00f8de uden titel",
     "zoomCloudRecordingOff": "Skyoptagelse er sl\u00e5et fra p\u00e5 denne Zoom-konto, s\u00e5 der er intet for Bristlenose at hente. Optagelser gemt p\u00e5 din egen Mac kan stadig tr\u00e6kkes ind fra Finder.",
-    "zoomTranscriptOff": "\u201cOpret lydudskrift\u201d er sl\u00e5et fra i dine Zoom-optagelsesindstillinger, s\u00e5 disse optagelser kommer uden udskrifter."
+    "zoomTranscriptOff": "\u201cOpret lydudskrift\u201d er sl\u00e5et fra i dine Zoom-optagelsesindstillinger, s\u00e5 disse optagelser kommer uden udskrifter.",
+    "restoredEmptyTitle": "Der er endnu intet at importere",
+    "restoredEmptyBody": "Vælg Arkiv ▸ Importer for at begynde."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose analyserer mapper",
+    "body": "Dette projekt blev oprettet ud fra enkeltfiler, så det kan ikke analyseres.",
+    "filesHeading": "Filer i dette projekt"
   }
 }

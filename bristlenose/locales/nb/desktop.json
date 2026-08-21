@@ -14,7 +14,8 @@
     "app": {
       "about": "Om Bristlenose",
       "aiPrivacy": "KI og personvern…",
-      "connectAgent": "Koble til en agent\u2026"
+      "connectAgent": "Koble til en agent\u2026",
+      "settings": "Innstillinger…"
     },
     "file": {
       "newProject": "Nytt prosjekt…",
@@ -147,7 +148,7 @@
       "volumeUp": "Øk volumet",
       "volumeDown": "Senk volumet",
       "mute": "Demp lyd",
-      "pictureInPicture": "Bilde-i-bilde",
+      "pictureInPicture": "Bilde i bilde",
       "fullscreen": "Fullskjerm"
     },
     "help": {
@@ -270,7 +271,9 @@
         "cluster": "Grupperer temaer",
         "render": "Bygger rapport"
       }
-    }
+    },
+    "folderNamePlaceholder": "Mappenavn",
+    "projectNamePlaceholder": "Prosjektnavn"
   },
   "pipeline": {
     "status": {
@@ -447,7 +450,6 @@
     "pricingLink": "Priser",
     "lastVerified": "Sist bekreftet %@",
     "revalidating": "Forrige validering ble avvist – sjekker på nytt…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Bruk denne leverandøren",
       "ollama": "Bruk den lokale Ollama-modellen"
@@ -735,6 +737,13 @@
     "errorSignedOut": "Logget ut.",
     "untitledMeeting": "M\u00f8te uten tittel",
     "zoomCloudRecordingOff": "Skyopptak er sl\u00e5tt av for denne Zoom-kontoen, s\u00e5 det er ingenting for Bristlenose \u00e5 hente. Opptak lagret p\u00e5 din egen Mac kan fortsatt dras inn fra Finder.",
-    "zoomTranscriptOff": "\u00abLag lydtranskripsjon\u00bb er sl\u00e5tt av i Zoom-opptaksinnstillingene dine, s\u00e5 disse opptakene kommer uten transkripsjoner."
+    "zoomTranscriptOff": "\u00abLag lydtranskripsjon\u00bb er sl\u00e5tt av i Zoom-opptaksinnstillingene dine, s\u00e5 disse opptakene kommer uten transkripsjoner.",
+    "restoredEmptyTitle": "Ingenting å importere ennå",
+    "restoredEmptyBody": "Velg Arkiv ▸ Importer for å begynne."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose analyserer mapper",
+    "body": "Dette prosjektet ble opprettet fra enkeltfiler, så det kan ikke analyseres.",
+    "filesHeading": "Filer i dette prosjektet"
   }
 }

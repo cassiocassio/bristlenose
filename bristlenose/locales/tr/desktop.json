@@ -14,7 +14,8 @@
     "app": {
       "about": "Bristlenose Hakkında",
       "aiPrivacy": "Yapay Zekâ ve Gizlilik…",
-      "connectAgent": "Ajan Ba\u011fla\u2026"
+      "connectAgent": "Ajan Ba\u011fla\u2026",
+      "settings": "Ayarlar…"
     },
     "file": {
       "newProject": "Yeni Proje…",
@@ -147,7 +148,7 @@
       "volumeUp": "Sesi Yükselt",
       "volumeDown": "Sesi Azalt",
       "mute": "Sesi Kapat",
-      "pictureInPicture": "Görüntü İçinde Görüntü",
+      "pictureInPicture": "Resim İçinde Resim",
       "fullscreen": "Tam Ekran"
     },
     "help": {
@@ -270,7 +271,9 @@
         "cluster": "Temalar gruplanıyor",
         "render": "Rapor oluşturuluyor"
       }
-    }
+    },
+    "folderNamePlaceholder": "Klasör adı",
+    "projectNamePlaceholder": "Proje adı"
   },
   "pipeline": {
     "status": {
@@ -447,7 +450,6 @@
     "pricingLink": "Fiyatlandırma",
     "lastVerified": "Son doğrulama %@",
     "revalidating": "Son doğrulama reddedildi — yeniden denetleniyor…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Bu sağlayıcıyı kullan",
       "ollama": "Yerel Ollama modelini kullan"
@@ -735,6 +737,13 @@
     "errorSignedOut": "Oturum kapat\u0131ld\u0131.",
     "untitledMeeting": "Ba\u015fl\u0131ks\u0131z toplant\u0131",
     "zoomCloudRecordingOff": "Bu Zoom hesab\u0131nda bulut kayd\u0131 kapal\u0131, bu y\u00fczden Bristlenose\u2019un alaca\u011f\u0131 bir \u015fey yok. Kendi Mac\u2019inize kaydedilenler yine de Finder\u2019dan s\u00fcr\u00fcklenebilir.",
-    "zoomTranscriptOff": "Zoom kay\u0131t ayarlar\u0131n\u0131zda \u201cSes d\u00f6k\u00fcm\u00fc olu\u015ftur\u201d kapal\u0131, bu y\u00fczden bu kay\u0131tlarla birlikte d\u00f6k\u00fcm gelmeyecek."
+    "zoomTranscriptOff": "Zoom kay\u0131t ayarlar\u0131n\u0131zda \u201cSes d\u00f6k\u00fcm\u00fc olu\u015ftur\u201d kapal\u0131, bu y\u00fczden bu kay\u0131tlarla birlikte d\u00f6k\u00fcm gelmeyecek.",
+    "restoredEmptyTitle": "Henüz alınacak bir şey yok",
+    "restoredEmptyBody": "Başlamak için Dosya ▸ Al’ı seçin."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose klasörleri çözümler",
+    "body": "Bu proje tek tek dosyalardan oluşturuldu, bu yüzden çözümlenemez.",
+    "filesHeading": "Bu projedeki dosyalar"
   }
 }

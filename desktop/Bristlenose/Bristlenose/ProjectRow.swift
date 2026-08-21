@@ -472,7 +472,7 @@ struct ProjectRow: View {
 
     @ViewBuilder
     private var renameField: some View {
-        TextField("Project name", text: $editText)
+        TextField(i18n.t("desktop.chrome.projectNamePlaceholder"), text: $editText)
             .textFieldStyle(.plain)
             .focused($isTextFieldFocused)
             .onSubmit { commitRename() }

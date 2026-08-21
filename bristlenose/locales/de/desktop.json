@@ -14,7 +14,8 @@
     "app": {
       "about": "Über Bristlenose",
       "aiPrivacy": "KI & Datenschutz…",
-      "connectAgent": "Agent verbinden \u2026"
+      "connectAgent": "Agent verbinden \u2026",
+      "settings": "Einstellungen…"
     },
     "file": {
       "newProject": "Neues Projekt…",
@@ -270,7 +271,9 @@
         "cluster": "Themen werden gruppiert",
         "render": "Bericht wird erstellt"
       }
-    }
+    },
+    "folderNamePlaceholder": "Ordnername",
+    "projectNamePlaceholder": "Projektname"
   },
   "pipeline": {
     "status": {
@@ -447,7 +450,6 @@
     "pricingLink": "Preise",
     "lastVerified": "Zuletzt überprüft %@",
     "revalidating": "Letzte Überprüfung wurde abgelehnt – wird erneut geprüft…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Diesen Anbieter verwenden",
       "ollama": "Lokales Ollama-Modell verwenden"
@@ -735,6 +737,13 @@
     "errorSignedOut": "Abgemeldet.",
     "untitledMeeting": "Besprechung ohne Titel",
     "zoomCloudRecordingOff": "Cloud-Aufzeichnung ist f\u00fcr dieses Zoom-Konto ausgeschaltet, also gibt es f\u00fcr Bristlenose nichts abzurufen. Auf deinem Mac gespeicherte Aufzeichnungen lassen sich weiterhin aus dem Finder hereinziehen.",
-    "zoomTranscriptOff": "\u201eAudiotranskript erstellen\u201c ist in deinen Zoom-Aufzeichnungseinstellungen aus, daher kommen zu diesen Aufzeichnungen keine Transkripte."
+    "zoomTranscriptOff": "\u201eAudiotranskript erstellen\u201c ist in deinen Zoom-Aufzeichnungseinstellungen aus, daher kommen zu diesen Aufzeichnungen keine Transkripte.",
+    "restoredEmptyTitle": "Noch nichts zu importieren",
+    "restoredEmptyBody": "Wählen Sie „Ablage“ ▸ „Importieren“, um zu beginnen."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose analysiert Ordner",
+    "body": "Dieses Projekt wurde aus einzelnen Dateien erstellt und kann daher nicht analysiert werden.",
+    "filesHeading": "Dateien in diesem Projekt"
   }
 }

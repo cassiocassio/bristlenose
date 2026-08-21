@@ -54,14 +54,23 @@ RECURRING_ONE_LOCALES = {"ru", "uk"}
 PLURAL_SUFFIXES = ("_one", "_two", "_few", "_many", "_zero")
 
 
+# JSON has no comments, so the locale files carry notes-to-maintainers as
+# `_comment_*` pseudo-keys. They are not strings anyone renders, so they belong
+# in `en` alone — without this filter the gate would demand all 21 locales carry
+# a copy of a note about two of them, which is how one ended up duplicated 20
+# times (21 Aug 2026).
+def _is_comment_key(key: str) -> bool:
+    return key.rsplit(".", 1)[-1].startswith("_comment")
+
+
 def flatten(obj: dict, prefix: str = "") -> dict[str, str]:
-    """Flatten nested JSON into dotted keys."""
+    """Flatten nested JSON into dotted keys, dropping `_comment_*` pseudo-keys."""
     result: dict[str, str] = {}
     for key, value in obj.items():
         full_key = f"{prefix}.{key}" if prefix else key
         if isinstance(value, dict):
             result.update(flatten(value, full_key))
-        else:
+        elif not _is_comment_key(full_key):
             result[full_key] = str(value)
     return result
 

@@ -14,7 +14,8 @@
     "app": {
       "about": "À propos de Bristlenose",
       "aiPrivacy": "IA et confidentialité…",
-      "connectAgent": "Connecter un agent\u2026"
+      "connectAgent": "Connecter un agent\u2026",
+      "settings": "R\u00e9glages\u2026"
     },
     "file": {
       "newProject": "Nouveau projet…",
@@ -147,7 +148,7 @@
       "volumeUp": "Augmenter le volume",
       "volumeDown": "Diminuer le volume",
       "mute": "Couper le son",
-      "pictureInPicture": "Image dans l'image",
+      "pictureInPicture": "Image dans l\u2019image",
       "fullscreen": "Plein écran"
     },
     "help": {
@@ -270,7 +271,9 @@
         "cluster": "Regroupement des th\u00e8mes",
         "render": "Cr\u00e9ation du rapport"
       }
-    }
+    },
+    "folderNamePlaceholder": "Nom du dossier",
+    "projectNamePlaceholder": "Nom du projet"
   },
   "pipeline": {
     "status": {
@@ -447,7 +450,6 @@
     "pricingLink": "Tarifs",
     "lastVerified": "Dernière vérification %@",
     "revalidating": "La dernière validation a été rejetée — nouvelle vérification…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Utiliser ce fournisseur",
       "ollama": "Utiliser le modèle Ollama local"
@@ -735,6 +737,13 @@
     "errorSignedOut": "D\u00e9connect\u00e9.",
     "untitledMeeting": "R\u00e9union sans titre",
     "zoomCloudRecordingOff": "L\u2019enregistrement dans le cloud est d\u00e9sactiv\u00e9 sur ce compte Zoom : Bristlenose n\u2019a donc rien \u00e0 r\u00e9cup\u00e9rer. Les enregistrements conserv\u00e9s sur votre Mac peuvent toujours \u00eatre gliss\u00e9s depuis le Finder.",
-    "zoomTranscriptOff": "\u00ab\u00a0Cr\u00e9er une transcription audio\u00a0\u00bb est d\u00e9sactiv\u00e9 dans vos r\u00e9glages d\u2019enregistrement Zoom : ces enregistrements n\u2019auront donc pas de transcription."
+    "zoomTranscriptOff": "\u00ab\u00a0Cr\u00e9er une transcription audio\u00a0\u00bb est d\u00e9sactiv\u00e9 dans vos r\u00e9glages d\u2019enregistrement Zoom : ces enregistrements n\u2019auront donc pas de transcription.",
+    "restoredEmptyTitle": "Rien \u00e0 importer pour l\u2019instant",
+    "restoredEmptyBody": "Choisissez Fichier \u25b8 Importer pour commencer."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose analyse des dossiers",
+    "body": "Ce projet a \u00e9t\u00e9 cr\u00e9\u00e9 \u00e0 partir de fichiers isol\u00e9s ; il ne peut donc pas \u00eatre analys\u00e9.",
+    "filesHeading": "Fichiers de ce projet"
   }
 }

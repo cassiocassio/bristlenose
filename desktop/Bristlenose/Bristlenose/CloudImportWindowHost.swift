@@ -8,6 +8,7 @@ import SwiftUI
 /// crash or show an empty table that looks like "no meetings".
 struct CloudImportWindowHost: View {
     @EnvironmentObject var coordinator: CloudImportCoordinator
+    @EnvironmentObject var i18n: I18n
 
     var body: some View {
         Group {
@@ -15,11 +16,11 @@ struct CloudImportWindowHost: View {
                 CloudImportWindow(store: store, platform: coordinator.platform)
             } else {
                 ContentUnavailableView {
-                    Label("Nothing to import yet", systemImage: "square.and.arrow.down")
+                    Label(i18n.t("desktop.cloudImport.restoredEmptyTitle"), systemImage: "square.and.arrow.down")
                 } description: {
                     // Reached on macOS state restoration, when the platform is by
                     // definition unknown — so it must not name one.
-                    Text("Choose File ▸ Import to start.")
+                    Text(i18n.t("desktop.cloudImport.restoredEmptyBody"))
                 }
             }
         }

@@ -20,7 +20,7 @@ struct FolderRow: View {
     var body: some View {
         Label {
             if isRenaming {
-                TextField("Folder name", text: $editText)
+                TextField(i18n.t("desktop.chrome.folderNamePlaceholder"), text: $editText)
                     .textFieldStyle(.plain)
                     .focused($isTextFieldFocused)
                     .onSubmit {

@@ -186,6 +186,13 @@ private enum WelcomeContent {
 // MARK: - View
 
 struct WelcomeHomeView: View {
+    // Restored 21 Aug 2026. The bento rewrite (`a310bca6`) replaced three
+    // `i18n.t("desktop.welcome.…")` call sites with the same English verbatim,
+    // so the keys stayed translated in all 21 locales while the view stopped
+    // reading them. Nothing could report it: `check-locales.py` diffs key sets,
+    // and the keys were never missing.
+    @EnvironmentObject var i18n: I18n
+
     /// TODO: bind to real provider-configured state.
     var aiConfigured: Bool = false
     /// Folders/files dropped on the Drop-a-folder card → create a project.
@@ -293,7 +300,7 @@ struct WelcomeHomeView: View {
     // Action cell — whole card clickable (D3). Placeholder until the swimming fish.
     private var delightCell: some View {
         CardButton(tint: .delight, action: { openURL(url(WelcomeContent.docs + "privacy.html")) }) {
-            Text("Review AI & privacy settings…")
+            Text(i18n.t("desktop.welcome.aiPrivacyLink"))
                 .font(.body).foregroundStyle(.secondary)
         }
     }
@@ -329,8 +336,8 @@ struct WelcomeHomeView: View {
             Image(systemName: dropTargeted ? "tray.and.arrow.down.fill" : "tray.and.arrow.down")
                 .font(.system(size: 24, weight: .light))
                 .foregroundStyle(dropTargeted ? Color.accentColor : .secondary)
-            Text("Drop a folder").font(.title3).fontWeight(.semibold)
-            Text("Drag a folder of recordings or transcripts here to add it as a project.")
+            Text(i18n.t("desktop.welcome.dropFolderTitle")).font(.title3).fontWeight(.semibold)
+            Text(i18n.t("desktop.welcome.dropFolderHint"))
                 .font(.body).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -858,18 +865,30 @@ private struct WelcomeCellStyle: ViewModifier {
 
 // MARK: - Previews
 
+/// Previews need the same `I18n` the app injects, or SwiftUI traps on the
+/// missing environment object. Configure it from disk so the canvas shows real
+/// strings rather than raw keys.
+@MainActor
+private func previewI18n() -> I18n {
+    let i18n = I18n()
+    if let dir = I18n.findLocalesDirectory() { i18n.configure(localesDirectory: dir) }
+    return i18n
+}
+
 #Preview("Home · light") {
-    WelcomeHomeView().frame(width: 940, height: 600)
+    WelcomeHomeView().frame(width: 940, height: 600).environmentObject(previewI18n())
 }
 #Preview("Home · dark") {
     WelcomeHomeView().frame(width: 940, height: 600).preferredColorScheme(.dark)
+        .environmentObject(previewI18n())
 }
 #Preview("Home · wide (fills width, top-pinned)") {
-    WelcomeHomeView().frame(width: 1200, height: 760)
+    WelcomeHomeView().frame(width: 1200, height: 760).environmentObject(previewI18n())
 }
 #Preview("Home · narrow") {
-    WelcomeHomeView().frame(width: 560, height: 520)
+    WelcomeHomeView().frame(width: 560, height: 520).environmentObject(previewI18n())
 }
 #Preview("Home · AI configured") {
     WelcomeHomeView(aiConfigured: true).frame(width: 940, height: 600)
+        .environmentObject(previewI18n())
 }

@@ -14,7 +14,8 @@
     "app": {
       "about": "Bristlenose — informacje",
       "aiPrivacy": "AI i prywatność…",
-      "connectAgent": "Po\u0142\u0105cz agenta\u2026"
+      "connectAgent": "Po\u0142\u0105cz agenta\u2026",
+      "settings": "Ustawienia…"
     },
     "file": {
       "newProject": "Nowy projekt…",
@@ -304,7 +305,9 @@
         "cluster": "Grupowanie motywów",
         "render": "Tworzenie raportu"
       }
-    }
+    },
+    "folderNamePlaceholder": "Nazwa folderu",
+    "projectNamePlaceholder": "Nazwa projektu"
   },
   "pipeline": {
     "status": {
@@ -483,7 +486,6 @@
     "pricingLink": "Cennik",
     "lastVerified": "Ostatnio zweryfikowano %@",
     "revalidating": "Ostatnia weryfikacja została odrzucona — ponowne sprawdzanie…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Użyj tego dostawcy",
       "ollama": "Użyj lokalnego modelu Ollama"
@@ -811,6 +813,13 @@
     "errorSignedOut": "Wylogowano.",
     "untitledMeeting": "Spotkanie bez tytu\u0142u",
     "zoomCloudRecordingOff": "Nagrywanie w chmurze jest wy\u0142\u0105czone na tym koncie Zoom, wi\u0119c Bristlenose nie ma czego pobra\u0107. Nagrania zapisane na Macu wci\u0105\u017c mo\u017cna przeci\u0105gn\u0105\u0107 z Findera.",
-    "zoomTranscriptOff": "\u201eUtw\u00f3rz transkrypcj\u0119 audio\u201d jest wy\u0142\u0105czone w ustawieniach nagrywania Zoom, wi\u0119c do tych nagra\u0144 nie b\u0119dzie transkrypcji."
+    "zoomTranscriptOff": "\u201eUtw\u00f3rz transkrypcj\u0119 audio\u201d jest wy\u0142\u0105czone w ustawieniach nagrywania Zoom, wi\u0119c do tych nagra\u0144 nie b\u0119dzie transkrypcji.",
+    "restoredEmptyTitle": "Nie ma jeszcze nic do zaimportowania",
+    "restoredEmptyBody": "Wybierz Plik ▸ Importuj, aby zacząć."
+  },
+  "unsupportedSubset": {
+    "title": "Bristlenose analizuje foldery",
+    "body": "Ten projekt powstał z pojedynczych plików, więc nie można go przeanalizować.",
+    "filesHeading": "Pliki w tym projekcie"
   }
 }

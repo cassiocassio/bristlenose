@@ -596,7 +596,7 @@
     "sessionScopeNote": "\u00ab\u202fDerni\u00e8re demande\u202f\u00bb n\u2019est m\u00e9moris\u00e9e que tant que Bristlenose fonctionne ; aucun historique n\u2019est conserv\u00e9.",
     "projects_one": "{{count}} projet",
     "projects_other": "{{count}} projets",
-    "header": "Les agents ne voient que les projets ouverts avec l'acc\u00e8s agent",
+    "header": "Les agents ne voient que les projets ouverts",
     "install": "Installer l\u2019extension\u2026",
     "extensionBuild": "Extension {{version}}",
     "reinstall": "R\u00e9installer l\u2019extension\u2026",

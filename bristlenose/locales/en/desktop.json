@@ -596,7 +596,7 @@
     "sessionScopeNote": "Last asked is remembered only while Bristlenose is running \u2014 no history is kept.",
     "projects_one": "{{count}} project",
     "projects_other": "{{count}} projects",
-    "header": "Agents see only open projects with Agent Access",
+    "header": "Agents only see open projects",
     "install": "Install Extension\u2026",
     "extensionBuild": "Extension {{version}}",
     "reinstall": "Reinstall Extension\u2026",

@@ -158,7 +158,7 @@ struct MCPAgentsSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             connectionSection
-                .padding(20)
+                .padding(Spacing.margin)
             Divider()
             projectsSection
         }
@@ -172,7 +172,18 @@ struct MCPAgentsSettingsView: View {
         .onChange(of: client) {
             copiedResetTask?.cancel()
             copied = false
+            // Each dialect is a different number of lines, and the Claude
+            // Desktop tab is shorter than all three. The package only sizes
+            // the window when you arrive at a PANE, so an in-pane change has
+            // to ask for it.
+            refit()
         }
+        // The register's height is data — a row arriving or leaving, the
+        // empty state resolving into a table, a second group header appearing
+        // when the first window opens. `rows.count` and the group count are
+        // the two things that move it.
+        .onChange(of: registerRows.count) { refit() }
+        .onChange(of: windowRoster.shownProjects.count) { refit() }
         // A receipt is about what you just did, so it does not outlive the
         // visit — and the visit is the WINDOW being open, not the pane being
         // on screen.
@@ -202,30 +213,57 @@ struct MCPAgentsSettingsView: View {
         }
     }
 
+    /// Ask the Settings window to take the height this pane now needs.
+    ///
+    /// After the change, not during it: SwiftUI has not laid the new content
+    /// out when `onChange` fires, so measuring here would measure the old
+    /// height. One turn of the main queue is enough and is what the package's
+    /// own transition completion effectively waits for.
+    private func refit() {
+        DispatchQueue.main.async { SettingsWindow.shared.refitToContent() }
+    }
+
     /// Everything above the divider: how an agent connects. Machine-wide, and
     /// unchanged in structure by this addition.
     private var connectionSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(i18n.t("desktop.mcpAgents.header"))
-                .font(.title3.weight(.semibold))
-                .fixedSize(horizontal: false, vertical: true)
-
-            // The one governance control on the pane — global, off by
-            // default (= names accompany codes, matching the export
-            // surfaces' default). Same strings as Export: one word for one
-            // concept. Applies via the prefs-changed serve restart.
-            Toggle(isOn: $mcpAnonymise) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(i18n.t("desktop.menu.quotes.anonymise"))
-                    Text(i18n.t("desktop.menu.quotes.anonymiseHint"))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            // Body copy, not a title. It was `.title3.weight(.semibold)` —
+            // a headline announcing a rule — which gave the pane two
+            // competing headings once the register below grew its own, and
+            // made a caveat look like a banner. It is a sentence about how
+            // the pane behaves, so it is set like one, and it now says only
+            // the surprising half: that a closed project is not visible.
+            // The Agent Access half is the register's tick column, three
+            // inches below, which is a better place to learn it than a
+            // qualifier in a heading.
+            //
+            // The governance switch rides the same line, trailing —
+            // baseline-aligned so "Anonymise" sits on the sentence's
+            // baseline rather than the switch's centre. Both facts are about
+            // WHAT AN AGENT SEES, which is one thought and now reads as one
+            // row instead of two stacked claims.
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.group) {
+                Text(i18n.t("desktop.mcpAgents.header"))
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: Spacing.group)
+                // Global, off by default (= names accompany codes, matching
+                // the export surfaces' default). Same strings as Export: one
+                // word for one concept. Applies via the prefs-changed serve
+                // restart.
+                Toggle(isOn: $mcpAnonymise) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(i18n.t("desktop.menu.quotes.anonymise"))
+                        Text(i18n.t("desktop.menu.quotes.anonymiseHint"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-            }
-            .toggleStyle(.switch)
-            .padding(.top, 14)
-            .onChange(of: mcpAnonymise) {
-                NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+                .toggleStyle(.switch)
+                .fixedSize()
+                .onChange(of: mcpAnonymise) {
+                    NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+                }
             }
 
             Picker("", selection: $client) {
@@ -234,11 +272,37 @@ struct MCPAgentsSettingsView: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .accessibilityLabel(i18n.t("desktop.connectAgent.clientPicker"))
-            .padding(.top, 14)
+            .padding(.top, Spacing.group)
 
             payloadPane
-                .padding(.top, 10)
+                .padding(.top, Spacing.related)
         }
+    }
+
+    // MARK: - Spacing
+
+    /// The pane's vertical rhythm, named once.
+    ///
+    /// Sibling panes (Appearance, General, Transcription) get theirs free from
+    /// `Form` + `.formStyle(.grouped)`. This one is hand-built — a segmented
+    /// control and a monospaced dialect box do not sit in a Form — so the
+    /// rhythm has to be stated rather than inherited, and stated once rather
+    /// than as a scatter of 10s and 14s.
+    ///
+    /// Three steps, which is what the HIG's layout guidance reduces to for a
+    /// stack of controls: things that belong together sit close, separate
+    /// concerns sit apart, and the window margin is the largest gap on the
+    /// pane so nothing appears to float outside it.
+    private enum Spacing {
+        /// Window margin — leading, trailing, top, and the gap below the last
+        /// thing in the pane. A bottom smaller than the top reads as content
+        /// that has been cut off.
+        static let margin: CGFloat = 20
+        /// Between separate concerns.
+        static let group: CGFloat = 20
+        /// Between a control and the thing that explains or serves it: a hint
+        /// and its box, a section heading and its column header.
+        static let related: CGFloat = 8
     }
 
     // MARK: - The projects register
@@ -248,9 +312,11 @@ struct MCPAgentsSettingsView: View {
     /// — and a `Grid` cannot align across that boundary. Fixed widths make the
     /// header and the rows share an edge by construction rather than by eye.
     private enum RegisterLayout {
-        /// The pane's own padding, so the section header, the column header and
-        /// the row content share one leading edge.
-        static let inset: CGFloat = 20
+        /// The window margin, so the section header, the column header and
+        /// the row content share one leading edge with the connection half
+        /// above the divider. Same number as `Spacing.margin`, named here
+        /// because the columns are measured from it.
+        static let inset: CGFloat = Spacing.margin
         static let gap: CGFloat = 10
         static let access: CGFloat = 54
         static let sessions: CGFloat = 70
@@ -307,10 +373,10 @@ struct MCPAgentsSettingsView: View {
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, RegisterLayout.inset)
-                    .padding(.top, 8)
+                    .padding(.top, Spacing.related)
             }
         }
-        .padding(.bottom, 16)
+        .padding(.bottom, Spacing.margin)
     }
 
     /// "Projects", and what an agent can read right now.
@@ -336,8 +402,8 @@ struct MCPAgentsSettingsView: View {
             }
         }
         .padding(.horizontal, RegisterLayout.inset)
-        .padding(.top, 15)
-        .padding(.bottom, 8)
+        .padding(.top, Spacing.margin)
+        .padding(.bottom, Spacing.related)
     }
 
     /// The headline, with the sessions clause dropped when any of the readable
@@ -797,12 +863,27 @@ struct MCPAgentsSettingsView: View {
 
     // MARK: - Client tabs
 
-    /// Fixed height — switching clients never reflows the pane (geometry is
-    /// fixed, content bends). Branch order is load-bearing, inherited from
-    /// the sheet: not-running speaks before any build-capability claim.
+    /// Sized to its content, and the window follows.
+    ///
+    /// This was pinned at 170pt so switching client tabs could never reflow
+    /// the pane. That was free while the payload was the LAST thing in the
+    /// window — dead space at the bottom of a window is invisible — and it
+    /// stopped being free the moment the register appeared below it: the
+    /// Claude Desktop tab needs about 150pt less than the tallest tab, so the
+    /// reflow protection rendered as a chasm through the middle of the pane.
+    ///
+    /// The package's own mechanism replaces it. `setWindowFrame` sizes the
+    /// window from `view.fittingSize`, and an honest `fittingSize` is exactly
+    /// what an unpinned payload reports — so the window now takes the height
+    /// each tab actually needs. It calls that only on tab activation, so
+    /// `SettingsWindow.refitToContent()` runs the same arithmetic when the
+    /// client picker or the register changes shape underneath it.
+    ///
+    /// Branch order is load-bearing, inherited from the sheet: not-running
+    /// speaks before any build-capability claim.
     @ViewBuilder
     private var payloadPane: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Spacing.related) {
             if client == .claudeDesktop {
                 // The install row IS this tab's payload — the .mcpb is
                 // Claude Desktop-only, so it belongs under that tab, in
@@ -896,9 +977,8 @@ struct MCPAgentsSettingsView: View {
                     copyButton(live: true)
                 }
             }
-            Spacer(minLength: 0)
         }
-        .frame(height: 170, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     /// One definition of the dialect box, so the live and placeholder states

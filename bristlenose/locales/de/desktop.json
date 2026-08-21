@@ -596,7 +596,7 @@
     "sessionScopeNote": "\u201eLetzte Anfrage\u201c wird nur gespeichert, solange Bristlenose l\u00e4uft; es wird kein Verlauf angelegt.",
     "projects_one": "{{count}} Projekt",
     "projects_other": "{{count}} Projekte",
-    "header": "Agenten sehen nur ge\u00f6ffnete Projekte mit Agentenzugriff",
+    "header": "Agenten sehen nur ge\u00f6ffnete Projekte",
     "install": "Erweiterung installieren\u2026",
     "extensionBuild": "Erweiterung {{version}}",
     "reinstall": "Erweiterung neu installieren\u2026",

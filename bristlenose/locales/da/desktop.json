@@ -596,7 +596,7 @@
     "sessionScopeNote": "\u201cSidst spurgt\u201d huskes kun, mens Bristlenose k\u00f8rer; der gemmes ingen historik.",
     "projects_one": "{{count}} projekt",
     "projects_other": "{{count}} projekter",
-    "header": "Agenter ser kun \u00e5bne projekter med agentadgang",
+    "header": "Agenter ser kun \u00e5bne projekter",
     "install": "Installer udvidelse\u2026",
     "extensionBuild": "Udvidelse {{version}}",
     "reinstall": "Geninstaller udvidelse\u2026",

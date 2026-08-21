@@ -639,7 +639,7 @@
     "projects_few": "{{count}} projekty",
     "projects_many": "{{count}} projektu",
     "projects_other": "{{count}} projekt\u016f",
-    "header": "Agenti vid\u00ed pouze otev\u0159en\u00e9 projekty s p\u0159\u00edstupem agenta",
+    "header": "Agenti vid\u00ed pouze otev\u0159en\u00e9 projekty",
     "install": "Instalovat roz\u0161\u00ed\u0159en\u00ed\u2026",
     "extensionBuild": "Roz\u0161\u00ed\u0159en\u00ed {{version}}",
     "reinstall": "P\u0159einstalovat roz\u0161\u00ed\u0159en\u00ed\u2026",

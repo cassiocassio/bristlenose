@@ -596,7 +596,7 @@
     "sessionScopeNote": "\u201cUltima richiesta\u201d viene ricordata solo mentre Bristlenose \u00e8 in esecuzione; non viene conservata alcuna cronologia.",
     "projects_one": "{{count}} progetto",
     "projects_other": "{{count}} progetti",
-    "header": "Gli agenti vedono solo i progetti aperti con accesso agente",
+    "header": "Gli agenti vedono solo i progetti aperti",
     "install": "Installa estensione\u2026",
     "extensionBuild": "Estensione {{version}}",
     "reinstall": "Reinstalla estensione\u2026",

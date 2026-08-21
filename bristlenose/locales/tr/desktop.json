@@ -596,7 +596,7 @@
     "sessionScopeNote": "\u201cSon sorulma\u201d yaln\u0131zca Bristlenose \u00e7al\u0131\u015f\u0131rken hat\u0131rlan\u0131r; ge\u00e7mi\u015f saklanmaz.",
     "projects_one": "{{count}} proje",
     "projects_other": "{{count}} proje",
-    "header": "Arac\u0131lar yaln\u0131zca arac\u0131 eri\u015fimi olan a\u00e7\u0131k projeleri g\u00f6r\u00fcr",
+    "header": "Arac\u0131lar yaln\u0131zca a\u00e7\u0131k projeleri g\u00f6r\u00fcr",
     "install": "Geni\u015fletmeyi Y\u00fckle\u2026",
     "extensionBuild": "Geni\u015fletme {{version}}",
     "reinstall": "Geni\u015fletmeyi Yeniden Y\u00fckle\u2026",

@@ -152,6 +152,38 @@ final class SettingsWindow {
         )
     }()
 
+    /// Re-fit the window to the pane's current content height.
+    ///
+    /// The package sizes the window from `view.fittingSize`, which is the
+    /// right mechanism — but it runs it only at tab activation
+    /// (`immediatelyDisplayTab` and `animateTabTransition`, its only two
+    /// callers). A pane whose own content changes shape while it is on screen
+    /// — MCP Agents switching client tabs, or its projects register gaining a
+    /// row — therefore compresses or clips instead of resizing.
+    ///
+    /// This is the same arithmetic, on demand: ask the content for the height
+    /// it wants and set the frame from the top-left, so the title bar stays
+    /// put and the window grows or shrinks downward. Deliberately NOT a
+    /// reimplementation of layout — `fittingSize` is still the package's
+    /// answer, and if the package ever gains a public re-fit this becomes a
+    /// one-line forward.
+    func refitToContent(animated: Bool = true) {
+        guard let window = controller.window,
+              let content = window.contentViewController?.view else { return }
+        content.layoutSubtreeIfNeeded()
+        let fitting = content.fittingSize
+        guard fitting.height > 0 else { return }
+        let target = window.frameRect(
+            forContentRect: CGRect(origin: .zero, size: fitting)).size
+        // A sub-point difference is layout noise, and setting the frame to it
+        // would animate the window on every render pass.
+        guard abs(target.height - window.frame.height) > 0.5 else { return }
+        var frame = window.frame
+        frame.origin.y += frame.height - target.height
+        frame.size.height = target.height
+        (animated ? window.animator() : window).setFrame(frame, display: false)
+    }
+
     /// The window itself, for panes that need to know when the visit ends.
     ///
     /// `MCPAgentsSettingsView`'s revocation receipts live for one visit, and

@@ -596,7 +596,7 @@
     "sessionScopeNote": "\u201dSenast fr\u00e5gad\u201d kommer ih\u00e5g bara medan Bristlenose k\u00f6rs; ingen historik sparas.",
     "projects_one": "{{count}} projekt",
     "projects_other": "{{count}} projekt",
-    "header": "Agenter ser bara \u00f6ppna projekt med agent\u00e5tkomst",
+    "header": "Agenter ser bara \u00f6ppna projekt",
     "install": "Installera till\u00e4gg\u2026",
     "extensionBuild": "Till\u00e4gg {{version}}",
     "reinstall": "Installera om till\u00e4gg\u2026",

@@ -596,7 +596,7 @@
     "sessionScopeNote": "\u00ab\u00daltima consulta\u00bb solo se recuerda mientras Bristlenose est\u00e1 en marcha; no se guarda historial.",
     "projects_one": "{{count}} proyecto",
     "projects_other": "{{count}} proyectos",
-    "header": "Los agentes solo ven proyectos abiertos con acceso de agente",
+    "header": "Los agentes solo ven proyectos abiertos",
     "install": "Instalar extensi\u00f3n\u2026",
     "extensionBuild": "Extensi\u00f3n {{version}}",
     "reinstall": "Reinstalar extensi\u00f3n\u2026",

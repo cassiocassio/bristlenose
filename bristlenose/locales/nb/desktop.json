@@ -596,7 +596,7 @@
     "sessionScopeNote": "\u00abSist spurt\u00bb huskes bare mens Bristlenose kj\u00f8rer; ingen historikk lagres.",
     "projects_one": "{{count}} prosjekt",
     "projects_other": "{{count}} prosjekter",
-    "header": "Agenter ser bare \u00e5pne prosjekter med agenttilgang",
+    "header": "Agenter ser bare \u00e5pne prosjekter",
     "install": "Installer utvidelse\u2026",
     "extensionBuild": "Utvidelse {{version}}",
     "reinstall": "Installer utvidelse p\u00e5 nytt\u2026",

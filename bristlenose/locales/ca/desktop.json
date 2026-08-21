@@ -596,7 +596,7 @@
     "sessionScopeNote": "\u00abDarrera consulta\u00bb nom\u00e9s es recorda mentre el Bristlenose s\u2019executa; no es desa cap historial.",
     "projects_one": "{{count}} projecte",
     "projects_other": "{{count}} projectes",
-    "header": "Els agents nom\u00e9s veuen projectes oberts amb acc\u00e9s d'agent",
+    "header": "Els agents nom\u00e9s veuen projectes oberts",
     "install": "Instal\u00b7la l'extensi\u00f3\u2026",
     "extensionBuild": "Extensi\u00f3 {{version}}",
     "reinstall": "Torna a instal\u00b7lar l'extensi\u00f3\u2026",

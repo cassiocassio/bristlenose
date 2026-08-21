@@ -640,7 +640,7 @@
     "projects_few": "{{count}} projekty",
     "projects_many": "{{count}} projekt\u00f3w",
     "projects_other": "{{count}} projekt\u00f3w",
-    "header": "Agenci widz\u0105 tylko otwarte projekty z dost\u0119pem agenta",
+    "header": "Agenci widz\u0105 tylko otwarte projekty",
     "install": "Zainstaluj rozszerzenie\u2026",
     "extensionBuild": "Rozszerzenie {{version}}",
     "reinstall": "Zainstaluj rozszerzenie ponownie\u2026",

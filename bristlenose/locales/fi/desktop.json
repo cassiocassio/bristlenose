@@ -596,7 +596,7 @@
     "sessionScopeNote": "\u201dViimeksi kysytty\u201d muistetaan vain Bristlenosen ollessa k\u00e4ynniss\u00e4; historiaa ei tallenneta.",
     "projects_one": "{{count}} projekti",
     "projects_other": "{{count}} projektia",
-    "header": "Agentit n\u00e4kev\u00e4t vain avoimet projektit, joilla on agenttik\u00e4ytt\u00f6oikeus",
+    "header": "Agentit n\u00e4kev\u00e4t vain avoimet projektit",
     "install": "Asenna laajennus\u2026",
     "extensionBuild": "Laajennus {{version}}",
     "reinstall": "Asenna laajennus uudelleen\u2026",

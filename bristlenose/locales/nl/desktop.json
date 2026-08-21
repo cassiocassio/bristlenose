@@ -596,7 +596,7 @@
     "sessionScopeNote": "\u201cLaatst gevraagd\u201d wordt alleen onthouden zolang Bristlenose actief is; er wordt geen geschiedenis bewaard.",
     "projects_one": "{{count}} project",
     "projects_other": "{{count}} projecten",
-    "header": "Agents zien alleen geopende projecten met agenttoegang",
+    "header": "Agenten zien alleen geopende projecten",
     "install": "Extensie installeren\u2026",
     "extensionBuild": "Extensie {{version}}",
     "reinstall": "Extensie opnieuw installeren\u2026",

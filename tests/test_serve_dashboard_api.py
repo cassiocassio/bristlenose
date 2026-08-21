@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
+from bristlenose.server.models import CodebookGroup, Quote, QuoteTag, TagDefinition
 from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
@@ -18,10 +19,14 @@ _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 
 
 @pytest.fixture()
-def client() -> TestClient:
+def app_fx():
+    return create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+
+
+@pytest.fixture()
+def client(app_fx) -> TestClient:
     """Create a test client with imported smoke-test data."""
-    app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-    return AuthTestClient(app)
+    return AuthTestClient(app_fx)
 
 
 @pytest.fixture()
@@ -88,13 +93,19 @@ class TestDashboardStats:
 
     def test_ai_tags_count(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/dashboard").json()
-        # All 4 quotes have sentiment tags.
+        # Sentiment auto-import creates one source="pipeline" tag per quote.
         assert data["stats"]["ai_tags_count"] == 4
 
-    def test_user_tags_count_includes_auto_imported_sentiment(self, client: TestClient) -> None:
-        """Sentiment auto-import creates 4 QuoteTags (one per smoke-test quote)."""
+    def test_user_tags_count_excludes_machine_tags(self, client: TestClient) -> None:
+        """A project the researcher has not tagged reports zero user tags.
+
+        The smoke fixture's 4 tags are all sentiment auto-import
+        (``source="pipeline"``).  Counting those as the researcher's work is
+        what made the dashboard say "30 user tags" for a project whose
+        Re-analyse sheet counted none.
+        """
         data = client.get("/api/projects/1/dashboard").json()
-        assert data["stats"]["user_tags_count"] == 4
+        assert data["stats"]["user_tags_count"] == 0
 
     def test_user_tags_count_after_tagging(self, client: TestClient) -> None:
         """After adding user tags, the count updates."""
@@ -104,6 +115,36 @@ class TestDashboardStats:
         )
         data = client.get("/api/projects/1/dashboard").json()
         assert data["stats"]["user_tags_count"] == 2
+
+    def test_accepted_autocode_tag_counts_as_ai_not_user(
+        self, client: TestClient, app_fx
+    ) -> None:
+        """A machine tag outside the sentiment framework lands in the AI half.
+
+        Guards the gap the provenance split could otherwise open: filtering
+        user tags to ``source == "human"`` without widening the AI half to
+        ``source != "human"`` would leave an accepted AutoCode tag counted in
+        neither column.
+        """
+        db = app_fx.state.db_factory()
+        try:
+            group = CodebookGroup(name="Trust wobbles", subtitle="", colour_set="trust")
+            db.add(group)
+            db.flush()
+            tag = TagDefinition(codebook_group_id=group.id, name="hesitation")
+            db.add(tag)
+            db.flush()
+            quote = db.query(Quote).filter_by(project_id=1).first()
+            db.add(QuoteTag(
+                quote_id=quote.id, tag_definition_id=tag.id, source="autocode"
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+        stats = client.get("/api/projects/1/dashboard").json()["stats"]
+        assert stats["ai_tags_count"] == 5
+        assert stats["user_tags_count"] == 0
 
     def test_stats_has_all_fields(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/dashboard").json()

@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 20 Aug 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
+Last updated: 21 Aug 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
 
 **20 Aug 2026 — the day has no session entry; these are its owed items, transcribed from the commit bodies so they are not only there.** Thirty-odd commits landed the workspace 3b fleet, per-window studies, derived agent scope, mcpb schema 2 and the welcome shelf. `/end-session` ran and signed off, but did not write this file, so every obligation below was reachable only via `git log`.
 
@@ -10,6 +10,13 @@ Last updated: 20 Aug 2026. _This file is a capture inbox + session context, not 
 - **The `≤480px` speaker-name rung still hides both spans**, so the assistive-tech gap survives at the narrowest width. It wants a visually-hidden swap rather than a delete. (Noted in the code; the 750–480px half was fixed in `cb4f1e28`.)
 
 **21 Aug 2026 — Catalan's native pass has an owner and a horizon: J, over the next few weeks.** That is the reviewer obligation `project_catalan_locale_glossary_first` exists to protect, and it is now scheduled rather than open-ended. **It is also a release fork, so decide it deliberately:** 0.26.0 currently carries `ca` as ~1,220 machine-seeded strings on top of a glossary nobody native has read. Either the release waits weeks for J, or it ships `ca` unreviewed and J's pass lands in a later version. Shipping first is defensible — the channels are internal TestFlight and an expiring `.dmg`, and localisation here is recognition, not utility, so an imperfect Catalan that improves is not the same failure as a wrong one that stays. But it is a choice, not a default, and it should not be made by the release simply happening.
+
+**21 Aug 2026 — the MCP Agents pane grew a projects register, and eight reviewers left two questions that are the maintainer's, not theirs.** The table ships (`2741a61c`, `5f5c8eda`, `028d539b`): which studies an agent can read, which could be, sessions, last asked, and a checkbox that revokes. Twenty-nine review findings were fixed in the same pass. **The two that need a decision are recorded only in the maintainer's review log, which is kept outside the public tree** — so they are transcribed here, which is the whole reason this file exists:
+
+- **Does "Readable now" mean permission, or reachability?** (Finding 84.) The string promises reachability; the code computes permission plus a serve-state term. Renaming it to something like "In scope" is immune to serve state and costs 21 locales; keeping the current noun means the predicate has to keep chasing serve states. William called this the one that has to be decided before its dependent finding can be.
+- **There is no durable record of which agent read which study, and the pane now says so on screen.** (Finding 87.) `.bristlenose/llm-calls.jsonl` durably logs what we send to Anthropic; nothing logs what we serve an agent, and the agent path is the one where a third party's process pulls participant quotes. Either state the minimisation reasoning in `SECURITY.md` so the answer is a policy, or mirror `llm-calls.jsonl` as a per-project `mcp-calls.jsonl`. Decide it rather than let a procurement reviewer discover it.
+
+Also owed, smaller: **no arrow-key navigation in the register** — Full Keyboard Access is off by default, so on a stock Mac Tab reaches nothing in that pane; the composed accessibility label recovers most of it and the mockup legend now says so honestly. And **`main` had not compiled for a day** (`f9af3a8e`) because a reader landed in one commit and its definition sat uncommitted in the shared tree — the trap `desktop/CLAUDE.md` opens with, fired for real, and invisible to CI because CI does not build the Swift target.
 
 _The 19 Aug owed list below is unchanged and still the priority — the Re-analyse sheet's pixels have never been on screen._
 

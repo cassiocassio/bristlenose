@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-07-28
-trued-against: HEAD@main on 2026-07-28
+last-trued: 2026-08-21
+trued-against: HEAD@main 19797094 on 2026-08-21
 ---
 
 # Incremental analysis and codebook lock
@@ -14,6 +14,12 @@ trued-against: HEAD@main on 2026-07-28
 
 ## Changelog
 
+- _2026-08-21_ — trued up: added one dated note to §"Edit-preservation schema
+  (the `source` column convention)" recording that the shipped `QuoteTag.source`
+  enum grew past the two values this doc proposes. The proposal prose is
+  **preserved unedited** — it was the plan, and the delta between plan and
+  shipped is the point. No other edit. Anchors:
+  `bristlenose/server/models.py:490`, `bristlenose/server/importer.py:1397`.
 - _2026-07-28_ — added front-matter (had none, so this doc was invisible to every
   front-matter-driven sweep). Banner added below: the carry-forward mechanism this
   doc specifies is **not** the one that shipped — the build routed around
@@ -593,6 +599,14 @@ A useful entry-point feature even before the full incremental design lands: *"re
 Every user-editable field needs a `source: 'human' | 'autocode'` discriminator. Re-runs never overwrite `source='human'` rows. One migration touches four tables (Rule of Three earns the convention):
 
 - `QuoteTag.source` — already exists (Mar 2026 work). Pattern proven.
+
+> _Note, 21 Aug 2026 — what shipped._ `QuoteTag.source` carries **four** values,
+> not the two proposed here: `human`, `pipeline` (sentiment auto-import),
+> `autocode`, and `codebook-builder`. The proposal above is preserved as
+> written; treat [design-codebook-state-model.md](design-codebook-state-model.md)
+> §2 as the current definition. The practical consequence is that `!=
+> "autocode"` is **not** a valid test for "the researcher did this" — only
+> `== "human"` is.
 - `Quote.starred_source` — new column (or sibling table `QuoteStar(quote_id, source, set_at)` if multi-user becomes a thing).
 - `Quote.hidden_source` — same shape as starred.
 - `Person.renamed_source` — same.

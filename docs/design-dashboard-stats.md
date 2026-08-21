@@ -1,10 +1,37 @@
+---
+status: partial
+last-trued: 2026-08-21
+trued-against: HEAD@main 19797094 on 2026-08-21
+---
+
+> **Truing status:** Partial — this is a Feb 2026 inventory of what the dashboard
+> does *not* show, and it has not been re-verified item by item. The 2026-08-21
+> pass checked only the entries touching the stat row and coverage: those are
+> corrected inline or marked **✅ SHIPPED**. **Every other entry is as compiled in
+> Feb 2026 and may since have shipped** — verify against
+> `frontend/src/islands/Dashboard.tsx` before treating any of them as a gap.
+
+## Changelog
+
+- _2026-08-21_ — trued up: corrected §"What the dashboard currently shows"
+  (three featured cards → five; card grouping restated as it renders); marked
+  **Coverage stats** and priority item 4 as shipped (`CoverageBox`,
+  `frontend/src/islands/Dashboard.tsx:562`); corrected the sentiment line — the
+  AI-tags stat now counts machine-authored *tag rows*, not tagged quotes; noted
+  per-session `sentiment_counts` now ships in the API payload but is still
+  unrendered. Added front-matter (had none, so this doc was invisible to every
+  front-matter-driven sweep). Anchors: `frontend/src/islands/Dashboard.tsx:472,562`,
+  `bristlenose/server/routes/dashboard.py:505`, commit subject "dashboard: user
+  tags counted every tag".
+- _2026-02_ — compiled (initial inventory).
+
 # Dashboard Stats Coverage — Future Improvements
 
 Inventory of data available in the pipeline that the Project Dashboard tab does not currently show. Compiled Feb 2026.
 
 ## What the dashboard currently shows
 
-Six stat cards (sessions, duration, words, quotes, themes/sections, AI tags, user tags), a simplified session table (ID, participants, date, duration, filename), three featured quote cards, and two navigation lists (sections, themes).
+Five stat cards holding eight values — sessions; duration + words; quotes + themes; sections; AI tags + user tags (the paired cards render each half only when non-zero) — a simplified session table (ID, participants, date, duration, filename), **five** featured quote cards (`Dashboard.tsx:472` slices a pool of nine to five, starred first), two navigation lists (sections, themes), and the transcript-coverage box.
 
 ---
 
@@ -23,9 +50,9 @@ All available in `PersonComputed` / `PersonEditable` / `SpeakerInfo`:
 
 ### Sentiment breakdown
 
-- **Sentiment distribution** at project level (the Quotes tab has the histogram; dashboard only shows a count of tagged quotes)
+- **Sentiment distribution** at project level (the Quotes tab has the histogram; the dashboard shows only a bare count). _Note, 21 Aug 2026:_ that count is no longer "tagged quotes" — the **AI tags** stat counts machine-authored `quote_tags` rows (`source != "human"`), paired with **user tags** (`source == "human"`), so the two halves partition every tag on the project. It read every tag as a user tag until `dashboard.py:505` was fixed.
 - **Per-sentiment counts** (e.g. 14 friction, 9 delight, 6 surprise…)
-- **Sentiment sparklines** per session (already computed for the Sessions tab table, omitted from dashboard session table)
+- **Sentiment sparklines** per session — _partly closed 2026-08-21:_ `sentiment_counts` now ships per session in the dashboard API payload (`DashboardSessionResponse`), but the dashboard session table still does not render it. The data is there; only the rendering is missing.
 
 ### Top signals from Analysis
 
@@ -35,7 +62,11 @@ All computed in `bristlenose/analysis/`, only shown on the Analysis tab:
 - **N_eff (agreement breadth)** — Simpson's effective number of voices per signal
 - **Mean intensity** per signal
 
-### Coverage stats
+### Coverage stats — ✅ SHIPPED (by 2026-08-21)
+
+> **Shipped.** `CoverageBox` (`frontend/src/islands/Dashboard.tsx:562`) renders all
+> three figures as a segmented bar with a legend, plus an expandable
+> omitted-by-session list. Retained below as the original inventory entry.
 
 Available in `CoverageStats`:
 
@@ -94,7 +125,7 @@ The richest untapped areas, roughly in priority order:
 1. **Sentiment breakdown** — a mini donut or bar showing the distribution across 7 sentiments, not just a raw count. Small effort, high insight density
 2. **Per-participant stats** — words/time distribution as a small table or bar chart. Already computed in `PersonComputed`
 3. **Top signals** — surface the top 2–3 analysis signals (name + confidence badge). Already computed, just needs rendering
-4. **Coverage stats** — "82% of transcript in report" as a single stat card. Very small effort
+4. ~~**Coverage stats** — "82% of transcript in report" as a single stat card. Very small effort~~ — **✅ shipped**, as a full coverage box rather than a stat card
 5. **Section/theme quote counts** — append "(12 quotes)" to the existing section/theme nav lists
 6. **Session sparklines and journeys** — already computed for Sessions tab; the dashboard table just doesn't include them
 7. **Date range** — "14 Jan – 3 Feb 2026" in the stats row or header

@@ -21,8 +21,19 @@ import Foundation
 /// A known zero is an answer, not a missing one.
 ///
 /// One home for the rule — the context menu (via the ContentView-injected
-/// closure), the menu-bar twin, and the Settings agent-access list all call
-/// it, so they cannot drift.
+/// closure), the menu-bar twin, and the Settings register's Access checkbox
+/// all call it, so they cannot drift.
+///
+/// **All three consult it before OFFERING, never inside the mutator.** The
+/// register briefly did the other thing: it called `setAgentAccess` directly,
+/// which made this comment false for a day (21 Aug 2026, caught in review).
+/// The fix was not to move the guard into `ProjectIndex` — `canShare` reads
+/// `unanalysed[id]?.sessionCount`, which is nil until the folder watcher's
+/// async scan lands, so a guard there would make one call succeed or fail on
+/// scan timing and would refuse a legitimate grant on a CLI-analysed project
+/// in the seconds after launch. Refusing a real grant is worse than the drift.
+/// So: the menus hide or dim the command, the checkbox disables itself, and
+/// the mutator stays a mutator.
 ///
 /// Deliberately NOT here: "is an agent installed" — unknowable (we can
 /// offer; we cannot observe), and turning access on with no agent is a

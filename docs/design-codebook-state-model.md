@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-07-26
-trued-against: HEAD@main on 2026-07-26
+last-trued: 2026-08-21
+trued-against: HEAD@main 19797094 on 2026-08-21
 ---
 
 > **Truing status:** Partial — the state model (§1–6, §8) is current (trued
@@ -11,6 +11,16 @@ trued-against: HEAD@main on 2026-07-26
 
 ## Changelog
 
+- _2026-08-21_ — trued up: §2's **Tag provenance** glossary row named two
+  `QuoteTag.source` values (`human` | `autocode`); it ships **four**. Added
+  `pipeline` and `codebook-builder`, and a note under §3a that both arrive by
+  paths the tag FSM does not model. The two-value model is what made the
+  dashboard's "user tags" stat count machine sentiment tags as the
+  researcher's: `== "human"` and `!= "autocode"` are only equivalent if
+  `pipeline` does not exist. Anchors: `bristlenose/server/importer.py:1397`,
+  `bristlenose/server/routes/codebook_builder.py:435`,
+  `bristlenose/server/models.py:490`, commit subject "dashboard: user tags
+  counted every tag".
 - _2026-07-26_ — trued up: noted in §4a that the crash-orphaned-job edge (a job
   stranded `running`/`pending` by a serve crash) is now caught by startup
   reconciliation, distinct from the still-deferred per-session "coded" stamp;
@@ -47,7 +57,7 @@ Precise words, because loose ones (mixing "hide" with "disable") caused the chur
 | **Enable / Disable** | *On/off axis*, auto-generated codebooks only. Disable = turn the whole codebook off but keep its results. "Set aside, might return." |
 | **Apply (AutoCode)** | Spend the LLM to tag quotes with a codebook. The one deliberate cost. |
 | **Hide / Show** (the *eye*) | *View axis*, per group, any codebook incl. the floor. Tactical, in-the-moment declutter. Reversible in a click; **auto-unhides** when you reach for a hidden tag. |
-| **Tag provenance** | How a tag was applied: `human` (you) vs `autocode` (accepted a suggestion). |
+| **Tag provenance** | How a tag was applied — `QuoteTag.source`, **four** values: `human` (you typed or picked it; the column default), `autocode` (you accepted a suggestion), `pipeline` (the sentiment auto-import, one tag per quote carrying a sentiment), `codebook-builder` (the dynamic-codebook apply pass). Only `human` is researcher effort; the other three are machine-authored. |
 | **Proposal disposition** | An autocode suggestion's state: `pending` / `accepted` / `denied`. Denied is retained (telemetry), just not shown. |
 
 **The organising sentence:** *disable every auto-generated codebook and you're back to
@@ -102,6 +112,14 @@ re-paying to bring it back.
 
 Provenance (`source`) is independent of the tag's *origin* (its group's `framework_id`).
 "I hand-applied a Garrett tag" (`human`) ≠ "autocode applied a Garrett tag" (`autocode`).
+
+**Two machine sources bypass this FSM entirely** — neither passes through
+`ProposedTag`, so neither appears above: the sentiment auto-import writes
+`source="pipeline"` on import (`importer.py:1397`, one tag per quote carrying a
+sentiment) and the dynamic codebook builder writes `source="codebook-builder"`
+on apply (`routes/codebook_builder.py:435`). Any code asking "did the researcher
+do this?" must test `source == "human"` — **not** `source != "autocode"`, which
+silently counts both of these as human work.
 
 ### 3b. Codebook lifecycle (toggleable tier) — per (project, codebook)
 

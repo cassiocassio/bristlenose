@@ -499,13 +499,29 @@ def get_dashboard(
         # --- Quotes (all, for stats + featured selection) ---
         all_quotes = db.query(Quote).filter_by(project_id=project_id).all()
         n_quotes = len(all_quotes)
-        n_ai_tagged = sum(1 for q in all_quotes if q.sentiment is not None)
 
-        # User tags count.
+        # The tag pair.  Both halves count rows in ``quote_tags``, split on
+        # provenance, so they are comparable and together account for every
+        # tag on the project — a tag is machine-authored or it is the
+        # researcher's, never neither.
+        #
+        # ``source == "human"`` matches the desktop Re-analyse sheet's count
+        # (``CurationCountsReader``) exactly, so the two surfaces cannot report
+        # different numbers for the same database.  Note this is deliberately
+        # NOT the Freeze pin predicate (``importer._pinned_quote_ids``), which
+        # additionally excludes sentiment-framework tags: a hand-applied
+        # "frustration" is a user tag here even though it is not researcher
+        # commitment there.
         n_user_tags = (
             db.query(QuoteTag)
             .join(Quote, QuoteTag.quote_id == Quote.id)
-            .filter(Quote.project_id == project_id)
+            .filter(Quote.project_id == project_id, QuoteTag.source == "human")
+            .count()
+        )
+        n_ai_tags = (
+            db.query(QuoteTag)
+            .join(Quote, QuoteTag.quote_id == Quote.id)
+            .filter(Quote.project_id == project_id, QuoteTag.source != "human")
             .count()
         )
 
@@ -604,7 +620,7 @@ def get_dashboard(
                 quotes_count=n_quotes,
                 sections_count=len(screen_clusters),
                 themes_count=len(theme_groups),
-                ai_tags_count=n_ai_tagged,
+                ai_tags_count=n_ai_tags,
                 user_tags_count=n_user_tags,
             ),
             sessions=session_rows,

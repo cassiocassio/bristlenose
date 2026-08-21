@@ -1,13 +1,21 @@
 ---
 status: partial
-last-trued: 2026-07-28
-trued-against: HEAD@main on 2026-07-28
+last-trued: 2026-08-21
+trued-against: HEAD@main 19797094 on 2026-08-21
 ---
 
 # Curation persistence across incremental re-runs
 
 ## Changelog
 
+- _2026-08-21_ — trued up: §"What we persist" described `source` as
+  (`human` | `autocode`); it ships **four** values — `pipeline` and
+  `codebook-builder` are also machine-authored. Corrected in place, since a
+  two-value reading makes `!= "autocode"` look like a valid human test and it
+  is not. Anchors: `bristlenose/server/models.py:490`,
+  `bristlenose/server/importer.py:1397`,
+  `bristlenose/server/routes/codebook_builder.py:435`,
+  [design-codebook-state-model.md](design-codebook-state-model.md) §2.
 - _2026-07-28_ — first truing. **Added front-matter** (this doc is the canonical
   answer to "what survives a re-run" and had none, so it was invisible to every
   front-matter-driven sweep). Added §"What still destroys curation" — the doc
@@ -194,7 +202,7 @@ _Rows whose resolution says **surface** / **ask** / **dissent** describe the des
 
 ## 13. Data model — what implementers need
 
-**Per quote:** `durable_id` (minted on first human touch, **run-independent** — so external references like board exports / clip links stay valid), `source` (`human` | `autocode`), `is_starred`, `is_edited` + `frozen_text`, `frozen_form` (verbatim span at pin-time), `is_hidden`, `tags[]`. A quote is **pinned** iff `is_starred ∨ is_edited ∨ human-tags present ∨ researcher-placed` — **four** arms. The fourth is the *placement* arm: a quote the researcher deliberately filed into a section or theme (`assigned_by == "researcher"` on either join) freezes, because moving a quote is human investment. _Note `importer.py:1409`'s own docstring **headline** states only the first three while its body documents the fourth — the headline undercounts the implementation, and that error propagated into this doc._ **`frozen_form` and `durable_id` are re-identification keys — never serialised to the `/quotes` payload or any export** (enforced + regression-pinned: `TestFrozenFormStaysOffTheExportBoundary`).
+**Per quote:** `durable_id` (minted on first human touch, **run-independent** — so external references like board exports / clip links stay valid), `source` (**four** values — `human`, `pipeline`, `autocode`, `codebook-builder`; only `human` is researcher effort, so the pin test is `== "human"`, never `!= "autocode"`), `is_starred`, `is_edited` + `frozen_text`, `frozen_form` (verbatim span at pin-time), `is_hidden`, `tags[]`. A quote is **pinned** iff `is_starred ∨ is_edited ∨ human-tags present ∨ researcher-placed` — **four** arms. The fourth is the *placement* arm: a quote the researcher deliberately filed into a section or theme (`assigned_by == "researcher"` on either join) freezes, because moving a quote is human investment. _Note `importer.py:1409`'s own docstring **headline** states only the first three while its body documents the fourth — the headline undercounts the implementation, and that error propagated into this doc._ **`frozen_form` and `durable_id` are re-identification keys — never serialised to the `/quotes` payload or any export** (enforced + regression-pinned: `TestFrozenFormStaysOffTheExportBoundary`).
 
 **Per section/theme:** a **durable identity** (`section#ID` / `theme#ID`) keyed to a **membership signature** (sections) or **star-anchor set + custom name** (human-committed themes) — *not* to the label; `auto_label` (machine, regenerated); `custom_name` (human, bound to the durable ID, `source=human`, sticky).
 

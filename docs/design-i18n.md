@@ -780,16 +780,19 @@ high-frequency UI vocabulary and the l10n industry treats `zh-TW`/`zh-HK` as sep
 - **CLI terminal chrome is English-only in alpha**, so the localised Chinese experience appears
   via `bristlenose serve` + the SPA (shipped inside both the CLI package and the `.app`).
 
-**Catalan (`ca`) — reviewer-led, deliberately out of chart order (planned 3 Aug 2026; glossary
-ratified and locale seeded 14 Aug 2026 — 1,247 keys, `9aa11beb` + `b983a7ae`; awaiting the native
-review the whole approach is built around).** Catalan does
+**Catalan (`ca`) — glossary-first, deliberately out of chart order (planned 3 Aug 2026; glossary
+built and locale seeded 14 Aug 2026 — 1,247 keys, `9aa11beb` + `b983a7ae`).** **The ratification step
+this approach is built around has not run** — the glossary was assembled from Apple's shipped `ca`
+strings, the Microsoft style guide and Softcatalà/TERMCAT, and the seed was built against it unreviewed.
+Nothing here, glossary or strings, has been seen by a native reviewer yet; the table goes to them first. Catalan does
 not appear on the prioritisation chart above and would not score well on it: small absolute market,
 modest Mac-installed reach, and a UR community that is real (Barcelona design industry — Elisava,
 IED, BAU) but concentrated. It is being built anyway because **the chart measures the wrong scarce
 resource.** Every locale in this project is gated on a native reviewer, not on translation capacity —
 that is precisely why `nl`, `fi`, `pl`, `ru`, `uk` and `tr` all sit machine-seeded and unreviewed
-today. Catalan has committed native reviewers (Mallorca) before a single string is seeded, which
-inverts the usual bottleneck. Reviewer availability is a legitimate override of the two-axis model;
+today. Catalan has native reviewers lined up (Mallorca) and a glossary built to spend them on the ~30
+decisions that propagate rather than on 1,247 strings, which is what would invert the usual
+bottleneck — *if* the ratification pass happens before they are asked to proofread. Reviewer availability is a legitimate override of the two-axis model;
 the chart ranks *candidates we would have to go and find someone for*.
 
 **The real reason, recorded so it is not re-litigated on the wrong axis (14 Aug 2026).** The
@@ -1219,4 +1222,5 @@ Reference material moved from root `CLAUDE.md` to reduce CLAUDE.md bloat. Core i
 - **Data-level vs chrome-level translation** — UI chrome (buttons, headings, labels) translates via `t()`. API data (codebook names, quote text, section labels) stays in the original language. Exceptions: sentiment group name/subtitle and uncategorised group are server constants that get client-side translation
 - **German typographic quotes break JSON** — `„"` (U+201E / U+201C) look like JSON string delimiters to parsers. Escape as `\u201e` / `\u201c` in locale JSON files. Caught in `de/desktop.json` during platform text fork work
 - **Tests that mock `../utils/platform` must include `isDesktop`** — `HelpModal.test.tsx` mocked only `isMac`, which broke when `ContributingSection` started importing `dt()` (which imports `isDesktop`). Always mock `{ isMac, isDesktop, _resetPlatformCache }` together
+- **…and three more holes below that one, all sharing a cause: every gate we own asks "is the key there?", never "is the value right?" or "does anyone read it?"** Found by sweep on 21 Aug 2026; full account and detection recipes in `docs/i18n-defects.md`. **(3) Value drift** — `en` gets reworded and the translations keep the old words. The key is present on both sides, so a key-set diff sees nothing. Live instance: the Codebook Library rewrite (`7530106e` 17 Jul, `e8745070` 26 Jul) changed 13 `codebook.*` values — Browse→Library, Import→**Install**, Remove/Hide→**Uninstall**, "AutoCode quotes"→**Apply** — and 19 locales kept the July words for five weeks. `codebook.autoCodeQuotes` labelled one button "Apply" in English and "✦ AutoCode citas" in Spanish. Detect by comparing, per key, the last commit that changed `en`'s value against the last that changed each locale's. **(4) Untranslated value** — a locale's value is byte-identical English. Same blindness, opposite direction. 28 findings, the largest being the whole `preflight.*` surface sitting in English in **de/es/fr/ja/ko**, the five *oldest* locales, which never received the wave the later ones did (and which `bristlenose --lang=de` reaches today). Detect by byte-comparing values against `en` and discarding the legitimately-invariant ones — shell commands, URLs, pure-`{placeholder}` strings. **(5) Orphan key** — present in every locale, read by no call site. `3f49d170` retired the SPA help modal and left three `dt()` overrides behind in 21 files. Detect by grepping the **fully-qualified** key; a bare-leaf match finds doc comments and test fixtures and will report dead keys as alive, which is exactly what happened on the first pass here.
 - **An absent `en` key can never be reported missing — `check-locales.py` is blind to a surface that was never enrolled in English.** The script flattens every `en/<ns>.json` key and diffs each locale *against* it, so English is the iteration domain: a view whose strings are all hardcoded literals has nothing to be missing **from**, in any locale, and the run is green. This is a **different hole** from the allow-list one (`tests/test_pipeline_diagnostic_locale_keys.py` checking hardcoded lists rather than real parity), and unlike that one **no `--strict` closes it** — `--strict` only promotes warnings drawn from the same en-derived set. Shipped instance: the macOS Settings ▸ Accounts pane, 18 Aug 2026, every string a Swift literal and the pane title hardcoded while its five siblings read `desktop.settingsTabs.*`; `check-locales.py` was green throughout, and `design-cloud-import.md` §10 had predicted this exact recurrence in writing two days earlier. Fixed in `d0478b15`. **The only gate is the diff** — a new user-facing view gets read for `i18n.t(` / `t("` call sites when it lands, because nothing mechanical will ask again. Applies to `.swift` as much as `.tsx`; the 18 Aug instance was Swift, which no `frontend/src` grep would have reached

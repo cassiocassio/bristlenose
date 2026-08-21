@@ -524,10 +524,20 @@ The constraint is **file contention on `CodebookPanel.tsx`**, not logic. Buckets
   still-open Library (the "one footprint" ideal). Cause: the confirm overlay is
   z-index 150, the picker 200, so in-place stacking needs a z-index change to the
   shared merge-confirm — a taste refinement, not a bug.
-- **i18n follow-up (deferred):** add `codebook.foldedSummary` to 19 locales (ko +
-  zh-Hant `_other`-only; cs/pl/ru/uk 4 plural forms; the rest `_one`/`_other`) and
-  re-translate the 10 drifted `codebook.*` rename keys × 19 = 190 strings. English
-  was settled first per the hand-tune-copy-before-i18n rule; exclude zh-Hant-HK.
+- **i18n follow-up — DONE, 21 Aug 2026, and it was bigger than this line said.**
+  `codebook.foldedSummary` is seeded in all 19 locales with the plural shapes
+  described (ko + zh-Hant `_other`-only; cs/pl/ru/uk four forms; the rest
+  `_one`/`_other`; zh-Hant-HK inherits). The rename drift was **13** keys, not 10 —
+  `browseCodebooks`, `browseTitle`, `browseSubtitle`, `previouslyImported`,
+  `importCodebook`, `importingCodebook`, `importHelp`, `autoCodeQuotes`,
+  `removeFromCodebook`, `hideTitle`, `autoCodePreserved`, `restoreAnytime`, `hide` —
+  and it had been live since `7530106e`/`e8745070` in July without anyone noticing,
+  because a key that is present on both sides is invisible to `check-locales.py`.
+  The worst of them labelled one button **"Apply"** in English and **"✦ AutoCode
+  citas"** in Spanish. Install / Uninstall / Apply are Apple's own imperatives,
+  measured from the shipping macOS loctables and recorded in
+  `bristlenose/locales/glossary.csv`; all 13 × 19 are machine-seeded and owe a
+  native pass. Full account: `docs/i18n-defects.md` item 10.
 
 Highest-leverage next: the persistence flag (now view-only, so smaller). Best
 parallel win meanwhile: the `✦` sweep (isolated, mechanical) or the re-apply gate

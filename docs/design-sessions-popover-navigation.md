@@ -402,9 +402,11 @@ Three commits, so reverting the last alone restores the sidebar.
 4. `SpeakerBadgeCell` — system semantics on Default, `SidebarPalette` on Edo.
 5. Session fetch + narrow `Decodable`, port-keyed, post-await guarded.
 6. Swift `finderDate` mirror.
-7. i18n: seed `sessions.speakerPlaceholder.{participant,moderator,observer}` in
-   all 20 locales (**they exist only in `en` today** — the reuse is not free),
-   plus `desktop.sessionsPopover.*` for the new strings. Swift keys carry their
+7. i18n: `sessions.speakerPlaceholder.{participant,moderator,observer}` are
+   **seeded in all 21 full locales** (verified 21 Aug 2026) — this step used to say
+   they existed only in `en`, which stopped being true at some point nothing
+   recorded. The reuse is now free. Still needed: `desktop.sessionsPopover.*` for
+   the new strings. Swift keys carry their
    namespace: `common.sessions.speakerPlaceholder.participant`. The count string
    goes through `I18n.plural(_:count:)`, reusing the reviewed four-form twin at
    `desktop.connectAgent.sessions_*`. Glossary row for "All Sessions".

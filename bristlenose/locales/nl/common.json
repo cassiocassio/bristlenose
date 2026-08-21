@@ -522,7 +522,7 @@
     "autoCodeQuotes": "Pas toe",
     "viewReport": "Rapport bekijken",
     "removeFromCodebook": "Verwijder",
-    "hideTitle": "‘{{label}}’ verwijderen?",
+    "hideTitle": "“{{label}}” verwijderen?",
     "tagsRemovedFromQuotes_one": "Tags worden verwijderd van {{count}} citaat.",
     "tagsRemovedFromQuotes_other": "Tags worden verwijderd van {{count}} citaten.",
     "noQuotesTagged": "Er zijn momenteel geen citaten getagd.",

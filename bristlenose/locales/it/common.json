@@ -522,7 +522,7 @@
     "autoCodeQuotes": "Applica",
     "viewReport": "Visualizza report",
     "removeFromCodebook": "Disinstalla",
-    "hideTitle": "Disinstallare «{{label}}»?",
+    "hideTitle": "Disinstallare “{{label}}”?",
     "tagsRemovedFromQuotes_one": "I tag verranno rimossi da {{count}} citazione.",
     "tagsRemovedFromQuotes_other": "I tag verranno rimossi da {{count}} citazioni.",
     "noQuotesTagged": "Al momento nessuna citazione è etichettata.",

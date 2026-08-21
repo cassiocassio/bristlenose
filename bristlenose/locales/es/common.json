@@ -522,7 +522,7 @@
     "autoCodeQuotes": "Aplicar",
     "viewReport": "Ver informe",
     "removeFromCodebook": "Desinstalar",
-    "hideTitle": "¿Desinstalar «{{label}}»?",
+    "hideTitle": "¿Desinstalar “{{label}}”?",
     "tagsRemovedFromQuotes_one": "Las etiquetas se eliminarán de {{count}} cita.",
     "tagsRemovedFromQuotes_other": "Las etiquetas se eliminarán de {{count}} citas.",
     "noQuotesTagged": "No hay citas etiquetadas actualmente.",

@@ -19,9 +19,10 @@ trued-against: HEAD@main 19797094 on 2026-08-21
   researcher's: `== "human"` and `!= "autocode"` are only equivalent if
   `pipeline` does not exist. Anchors: `bristlenose/server/importer.py:1397`,
   `bristlenose/server/routes/codebook_builder.py:435`,
-  `bristlenose/server/models.py:490`, commit `3c04a291` (this fix landed
-  inside a concurrent session's commit, whose subject names the re-analyse
-  sheet rather than this change).
+  `bristlenose/server/models.py:490`. No commit anchor: this landed inside a
+  concurrently-running session's commit and had migrated between two of them
+  within a minute, so any SHA here would be stale on arrival — use
+  `git log -S'QuoteTag.source != "human"'` to find it.
 - _2026-07-26_ — trued up: noted in §4a that the crash-orphaned-job edge (a job
   stranded `running`/`pending` by a serve crash) is now caught by startup
   reconciliation, distinct from the still-deferred per-session "coded" stamp;

@@ -26,11 +26,72 @@
  * to the page datum is page-layout geometry, not the atom's business, so that
  * rule stays in templates/report.css — an atom should not know where on a
  * page it sits.
+ *
+ * THE ATOM IS THE ROW, NOT THE TEXT (20 Aug 2026). It renders as a wrapper
+ * carrying the keyline, with the <h1> and an optional action inside. Before
+ * this, the class sat on the <h1> itself, and Codebook — the only lens with a
+ * zone-level action — wrapped that h1 in its own flex column to get a button
+ * beside it. Two defects followed from that one wrapper:
+ *
+ *   1. The rule stopped short of the pane by the button's width. `max-width:
+ *      none` makes the box as wide as its CONTAINING BLOCK, and the containing
+ *      block had become the flex column, not the pane.
+ *   2. The datum rule in templates/report.css
+ *      (`.center > main > section:first-of-type > .section-heading`) no longer
+ *      matched — the heading was a grandchild — so the first zone title on
+ *      Codebook sat 40px below the datum every other lens flushes to.
+ *
+ * Both are structural: any construction that leaves a column around the
+ * heading reproduces them. Making the atom itself the row removes the reason
+ * to wrap. The action is a SIBLING of the h1, not a child, so the heading
+ * still announces as just its own text.
+ *
+ * `align-items: flex-end` is a rule-relative alignment, deliberately: the
+ * action's bottom edge lands on the same line as the title text's, so both sit
+ * one `padding-bottom` (6.4px) above the keyline and the row reads as having
+ * a single bottom gutter. It also keeps the row's height equal to the h1's
+ * line box (28px x 1.45 = 40.6px, against a 33.65px button), so A ROW WITH AN
+ * ACTION IS EXACTLY AS TALL AS A ROW WITHOUT ONE — the keyline lands at the
+ * same y on every lens, which is the whole point of a shared atom. Do not
+ * switch to `baseline`: it pushes the button below the h1's line box, grows
+ * the row, and drifts Codebook's rule off every other lens's.
  */
 
 .section-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    /* Title text can never crash into the action, at any width or locale. */
+    gap: var(--bn-space-lg);
     max-width: none;
     margin: 2.5rem 0 1rem;
     padding-bottom: 0.4rem;
     border-bottom: 1px solid var(--bn-colour-keyline);
+}
+
+/* The inner heading carries the type and nothing else — no margin of its own
+   (the base h1 rule sets one), no reading-width cap (the `h1, h2, h3,
+   .description` group in templates/report.css would otherwise re-apply it),
+   and no rule (the wrapper owns that). `min-width: 0` lets a long title wrap
+   inside its flex item rather than push the action off the right edge. */
+.section-heading > :is(h1, h2) {
+    margin: 0;
+    max-width: none;
+    min-width: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+/* The action slot. Deliberately the same construction as
+   `.framework-section-actions` (organisms/codebook-panel.css) one scale down —
+   flex row, centred, `--bn-space-sm` between siblings, never shrinks — so the
+   three title-left / action-right rows a lens can stack (zone title, framework
+   header, group header) are one pattern at three sizes rather than three
+   patterns. The atom owns the space between title and action via `gap`, so
+   this slot carries no margins of its own. */
+.section-heading-action {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    flex-shrink: 0;
 }

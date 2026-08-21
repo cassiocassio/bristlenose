@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { toast } from "../utils/toast";
 import { isExportMode } from "../utils/exportData";
+import { ct } from "../utils/platformTranslation";
 import { Badge, ConfirmDialog, EditableText, MicroBar, SectionHeading, TagInput, ThresholdReviewModal } from "../components";
 import { addJob } from "../contexts/ActivityStore";
 import {
@@ -1018,19 +1019,19 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
 
   if (error) {
     return (
-      <>
+      <section>
         <SectionHeading>{t("codebook.heading")}</SectionHeading>
         <p className="codebook-description">{t("codebook.errorLoading", { error })}</p>
-      </>
+      </section>
     );
   }
 
   if (!data) {
     return (
-      <>
+      <section>
         <SectionHeading>{t("codebook.heading")}</SectionHeading>
         <p className="codebook-description">{t("labels.loading")}</p>
-      </>
+      </section>
     );
   }
 
@@ -1050,25 +1051,38 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
     frameworkById.get(fid)!.push(g);
   }
 
+  // The Library action rides in the zone title's action slot on the web, and
+  // in the native toolbar on desktop (ContentView.swift, the Codebook branch
+  // of `toolbarTrailing`) — so `ct()` suppresses the in-pane copy there rather
+  // than showing the same action twice on one screen. Same reasoning that
+  // retired the sidebar's "Codebook Library →" on 14 Aug 2026.
+  const browseLabel = ct(t, "codebook.browseCodebooks");
+  const browseAction = browseLabel ? (
+    /* codebook-picker-btn is the hook export.css hides on — the picker
+       fetches from a server that isn't there in an exported report. */
+    <button
+      className="bn-btn codebook-picker-btn"
+      onClick={handleOpenPicker}
+      data-testid="bn-codebook-browse-btn"
+    >
+      {browseLabel}
+    </button>
+  ) : null;
+
   return (
-    <>
-      <div className="codebook-header">
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <SectionHeading>{t("codebook.heading")}</SectionHeading>
-          <p className="codebook-description">
-            {t("codebook.description")}
-          </p>
-        </div>
-        {/* codebook-picker-btn is the hook export.css hides on — the picker
-            fetches from a server that isn't there in an exported report. */}
-        <button
-          className="bn-btn bn-btn-primary codebook-picker-btn"
-          onClick={handleOpenPicker}
-          style={{ flexShrink: 0 }}
-        >
-          {t("codebook.browseCodebooks")}
-        </button>
-      </div>
+    // Zone title must be a direct child of a <section> that is a direct child
+    // of <main> — that is the whole of the flush-to-datum contract in
+    // templates/report.css (`.center > main > section:first-of-type >
+    // .section-heading`), and it is how Quotes and Sessions land on the datum.
+    // Codebook rendered a bare fragment until 20 Aug 2026, so the selector
+    // never matched and this lens opened 40px lower than the other three. The
+    // rule needed no widening; this lens needed enrolling. Same reason
+    // SessionsTable.tsx carries the identical comment.
+    <section>
+      <SectionHeading action={browseAction}>{t("codebook.heading")}</SectionHeading>
+      <p className="codebook-description">
+        {t("codebook.description")}
+      </p>
 
       <div className="codebook-grid" id="codebook-grid">
         {/* Anchor for sidebar "Your tags" scroll — must be a real box (not display:contents) */}
@@ -1530,6 +1544,6 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
         </div>,
         document.body,
       )}
-    </>
+    </section>
   );
 }

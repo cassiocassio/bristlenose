@@ -14,6 +14,24 @@ trued-against: HEAD@main on 2026-07-26 (uncommitted Phase B change in-tree)
 
 ## Changelog
 
+- _2026-08-20_ — **Codebook was never enrolled in the datum system, and now is.**
+  The flush-to-datum rule requires a lens to render its zone title as the direct
+  child of a `<section>` that is the direct child of `<main>`; Codebook rendered a
+  bare fragment, so `.center > main > section:first-of-type > .section-heading`
+  never matched and the lens opened **40px below** Sessions and Quotes for the whole
+  life of the rule (measured 271 vs 231 in Chromium). The rule needed no widening —
+  the lens needed a `<section>`. Sibling defect from the same construction: the
+  title had been wrapped in a per-lens flex column (`.codebook-header`) so the
+  Library button could sit beside it, which also drew the keyline only as wide as
+  that column. Both fixed by making `.section-heading` **the row rather than the
+  text** — a wrapper carrying the keyline, with the `<h1>` and an optional action
+  inside, one shape on every lens whether or not it has an action. `.codebook-header`
+  deleted. Step 5's gate is **no longer wholly deferred**: `e2e/tests/lens-datum.spec.ts`
+  asserts per lens, on both engines, that the first zone title computes
+  `margin-top: 0` — verified to go red on the pre-fix code. Anchors:
+  `bristlenose/theme/atoms/section-heading.css`,
+  `frontend/src/components/SectionHeading.tsx`,
+  `frontend/src/islands/CodebookPanel.tsx`.
 - _2026-08-06_ — added §"Sessions lens conformance pass": the Sessions lens
   was rebuilt as a container-query grid (`9f1f8058`), measured against the two
   invariants (no page-geometry drift found), and the remaining adoption specced
@@ -325,7 +343,36 @@ shrinks to match in the same pass.)
 4. **Keyline token + playground toggle.** Keyline token
    (`--bn-colour-keyline`) shipped; playground A/B toggle not yet wired.
 5. **`__bnLayoutAudit` + Playwright alignment gate** — locks it all in.
-   **Deferred** — the audit probe + per-route CI assertion is future work.
+   **Partially shipped 2026-08-20.** `e2e/tests/lens-datum.spec.ts` asserts, per
+   titled lens on Chromium + WebKit, that the first `.section-heading` computes
+   `margin-top: 0` — i.e. that the lens is enrolled in the datum system at all.
+   That is the assertion that would have caught the Codebook regression; it was
+   verified red against the pre-fix code before being trusted green.
+
+   It deliberately does **not** assert the four lenses share a first-ink `y`.
+   Measured in browser mode: sessions 231, codebook 231, quotes 270, analysis 262
+   — and the two outliers are legitimate. Quotes carries a web `div.toolbar` above
+   its first `<section>` (native chrome in the app, so absent there); Analysis
+   renders an intro `<p class="description">` above its heading inside the padded
+   `.analysis-center`. Asserting equal tops would encode that incidental chrome and
+   go red on a legitimate change. `margin-top` is the contract; first-ink `y` is a
+   consequence of it plus whatever the lens legitimately puts above the title.
+
+   Still deferred: the `__bnLayoutAudit` probe itself, and the content-edge /
+   radius-tier assertions. The **horizontal** half has no cheap gate — a keyline
+   truncated by a wrapper is not distinguishable from a correctly-narrow parent
+   without hard-coding the Analysis inset as an exception, so it rests on the
+   atom being the only box that carries the rule.
+
+   **Latent trap introduced by the same change, recorded not fixed:** the Analysis
+   selector is `.analysis-center > .section-heading:first-of-type`, and
+   `:first-of-type` is resolved by **tag**, not class. `.section-heading` is now a
+   `<div>`, so that selector means "the first `div` child, if it carries the class".
+   It matches today only because Analysis's preceding sibling is a `<p>`. Add any
+   `<div>` above the heading in `.analysis-center` and Analysis silently drops off
+   the datum exactly as Codebook did. `lens-datum.spec.ts` covers Analysis, so it
+   would go red — which is the reason to leave the selector alone rather than
+   invent a third one.
 
 Trunk throughout; each step an independently-green commit. (The former
 "frost quest" step is gone — scroll-underlap turned out to already work

@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Codebooks lens header — where the Library button lives · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css), copied from
+   docs/mockups/codebook-library-states.html per the bn-mockup recipe.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+  /* real geometry from templates/report.css — the datum is inset + space-xl */
+  --bn-toolbar-inset: 52px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+  --bn-colour-keyline:     light-dark(#e5e7eb, #2d2d2d);
+  --bn-chrome:             light-dark(#f6f6f6, #1c1c1c);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+  --bn-colour-keyline:     light-dark(#d4c9a8, #2d2820);
+  --bn-chrome:             light-dark(#f4eee1, #221f18);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:1080px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:70ch; margin:.4rem 0; }
+
+/* ── the two-zone key (bn-mockup rule 4) ──────────────────────────────── */
+.key { display:flex; gap:1.25rem; flex-wrap:wrap; align-items:stretch; margin:0 0 var(--bn-space-xl); }
+.key > div { flex:1; min-width:220px; padding:.7rem .9rem; font-size:var(--bn-text-label); line-height:1.45; }
+.key-a { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); background:var(--bn-colour-bg); }
+.key-c { border-left:3px solid var(--bn-colour-accent); background:
+   repeating-linear-gradient(135deg, transparent 0 6px, light-dark(rgba(0,0,0,.028),rgba(255,255,255,.03)) 6px 12px); }
+.key strong { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:.2rem; }
+
+.controls { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; margin-bottom:var(--bn-space-xl); position:sticky; top:0; z-index:20;
+  background:var(--bn-colour-bg); padding:.6rem 0; border-bottom:1px solid var(--bn-colour-border); }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+.bench { margin:3rem 0 0; }
+.bench-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.bench-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1.1rem; max-width:74ch; }
+.optlabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.05em;
+  color:var(--bn-colour-muted); margin:0 0 .45rem; }
+
+/* ── commentary zone — deliberately not-the-product ───────────────────── */
+.comment { border-left:3px solid var(--bn-colour-accent); padding:.75rem 1rem; margin:.9rem 0 0;
+  background: repeating-linear-gradient(135deg, transparent 0 6px, light-dark(rgba(0,0,0,.028),rgba(255,255,255,.03)) 6px 12px);
+  font-size:var(--bn-text-label); line-height:1.55; }
+.comment .tag { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.05em;
+  color:var(--bn-colour-accent); display:block; margin-bottom:.3rem; }
+.comment ul { margin:.35rem 0 0; padding-left:1.1rem; }
+.comment li { margin:.2rem 0; }
+.comment .pro::before { content:"+ "; color:var(--bn-positive); font-weight:700; }
+.comment .con::before { content:"\2212 "; color:light-dark(#b91c1c,#f87171); font-weight:700; }
+.comment code { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); background:var(--bn-colour-badge-bg); padding:.05rem .3rem; border-radius:var(--bn-radius-sm); }
+
+/* ══ ARTEFACT ZONE ════════════════════════════════════════════════════ */
+/* screenshot chrome */
+.frame { border:1px solid var(--bn-colour-border); border-radius:10px; overflow:hidden;
+  box-shadow:0 6px 24px var(--bn-colour-shadow); background:var(--bn-colour-bg); }
+.frame-chrome { height:26px; background:var(--bn-chrome); border-bottom:1px solid var(--bn-colour-border);
+  display:flex; align-items:center; padding:0 .55rem; gap:5px; }
+.frame-chrome i { width:9px; height:9px; border-radius:50%; display:block; background:var(--bn-off-track); }
+.frame-chrome .cap { margin-left:auto; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted); }
+
+/* native toolbar strip — real height (--bn-toolbar-inset) */
+.tbar { height:var(--bn-toolbar-inset); background:var(--bn-chrome); border-bottom:1px solid var(--bn-colour-border);
+  display:flex; align-items:center; gap:.5rem; padding:0 .85rem; }
+.tbar .proj { font-size:var(--bn-text-label); font-weight:490; }
+.tbar .proj small { display:block; font-size:var(--bn-text-micro); color:var(--bn-colour-muted); font-weight:420; }
+.tbar .spacer { flex:1; }
+.tb-item { display:inline-flex; align-items:center; gap:.3rem; font-size:var(--bn-text-caption); color:var(--bn-colour-text);
+  padding:.25rem .5rem; border-radius:var(--bn-radius-md); white-space:nowrap; }
+.tb-item svg { width:14px; height:14px; }
+.tb-item.dim { color:var(--bn-colour-muted); }
+.tb-item.new { background:var(--bn-colour-hover); color:var(--bn-colour-accent); box-shadow:inset 0 0 0 1px color-mix(in oklab, var(--bn-colour-accent) 35%, transparent); }
+
+.pane { display:flex; min-height:330px; }
+/* codebook left column (Manual tags / Default / Library) */
+.lcol { width:200px; flex-shrink:0; border-right:1px solid var(--bn-colour-border); padding:var(--bn-space-xl) .9rem 1rem; }
+.lcol .grp { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-weight:490;
+  border-bottom:1px solid var(--bn-colour-keyline); padding-bottom:.2rem; margin:0 0 .35rem; }
+.lcol .grp + .grp { margin-top:1rem; }
+.lcol .row { font-size:var(--bn-text-label); padding:.2rem .4rem; border-radius:var(--bn-radius-sm); color:var(--bn-colour-muted); }
+.lcol .row.sel { background:var(--bn-colour-hover); color:var(--bn-colour-accent); }
+.lcol .row.live { color:var(--bn-colour-text); }
+.lcol .row .dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--bn-colour-accent); margin-right:.35rem; vertical-align:middle; }
+
+/* centre — the real datum: body pad-top = --bn-space-xl below the toolbar */
+.centre { flex:1; min-width:0; padding:var(--bn-space-xl) var(--bn-space-xl) 1.5rem; position:relative; }
+
+/* the .section-heading ATOM, verbatim from atoms/section-heading.css */
+.section-heading { max-width:none; margin:2.5rem 0 1rem; padding-bottom:.4rem;
+  border-bottom:1px solid var(--bn-colour-keyline);
+  font-size:var(--bn-text-display); font-weight:var(--bn-weight-strong); letter-spacing:-.01em; }
+.flush .section-heading { margin-top:0; }           /* the datum rule */
+.codebook-description { font-size:var(--bn-text-body); color:var(--bn-colour-muted); margin:0; max-width:66ch; }
+
+/* .codebook-header, verbatim from organisms/codebook-panel.css */
+.codebook-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--bn-space-sm); }
+
+/* .framework-section-header, verbatim */
+.framework-section-header { display:flex; justify-content:space-between; align-items:flex-start;
+  padding-bottom:var(--bn-space-md); border-bottom:1px solid var(--bn-colour-keyline);
+  margin:var(--bn-space-md) 0 var(--bn-space-sm); }
+.framework-section-title { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); }
+
+/* buttons — bn-btn / bn-btn-primary / bn-btn-secondary */
+.bn-btn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.35rem .9rem;
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; white-space:nowrap; }
+.bn-btn-primary { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.bn-btn-lg { font-size:var(--bn-text-body); padding:.5rem 1.15rem; }
+
+/* dashed add-card, mirroring .new-group-placeholder */
+.dashed { border:1px dashed var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.2rem;
+  color:var(--bn-colour-muted); font-size:var(--bn-text-label); padding:1.5rem 1rem; min-height:96px; }
+.dashed .plus { font-size:var(--bn-text-title); line-height:1; }
+.tagrow { display:flex; gap:.75rem; margin-top:.6rem; }
+.tagcard { flex:1; background:var(--bn-colour-quote-bg); border-radius:var(--bn-radius-lg); padding:.85rem 1rem; }
+.tagcard .t { font-size:var(--bn-text-label); font-weight:490; }
+.tagcard .s { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.1rem; }
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; margin:.5rem .25rem 0 0; }
+.sw { display:inline-block; position:relative; width:38px; height:22px; border-radius:11px; background:var(--bn-colour-accent); vertical-align:middle; flex-shrink:0; }
+.sw::after { content:""; position:absolute; top:2px; left:18px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.28); }
+
+/* ── datum guide — a REVIEW INSTRUMENT, toggled off for the clean artefact ── */
+.guide { position:absolute; left:0; right:0; top:0; height:1px; pointer-events:none; opacity:0; transition:opacity .2s ease;
+  background:repeating-linear-gradient(90deg, var(--bn-colour-accent) 0 5px, transparent 5px 10px); }
+.guide::after { content:attr(data-l); position:absolute; right:0; top:-15px; font-family:var(--bn-font-mono);
+  font-size:var(--bn-text-micro); color:var(--bn-colour-accent); letter-spacing:.05em; }
+body.guides .guide { opacity:1; }
+.guide.low { background:repeating-linear-gradient(90deg, light-dark(#b91c1c,#f87171) 0 5px, transparent 5px 10px); }
+.guide.low::after { color:light-dark(#b91c1c,#f87171); }
+
+/* construction demos for the keyline bench */
+.zh { display:flex; justify-content:space-between; align-items:baseline; gap:var(--bn-space-lg);
+  max-width:none; margin:0 0 1rem; padding-bottom:.4rem; border-bottom:1px solid var(--bn-colour-keyline); }
+.zh h1 { font-size:var(--bn-text-display); font-weight:var(--bn-weight-strong); letter-spacing:-.01em; margin:0; }
+.rulemark { position:absolute; height:14px; border-left:1px dashed light-dark(#b91c1c,#f87171);
+  border-right:1px dashed light-dark(#b91c1c,#f87171); opacity:0; transition:opacity .2s ease; }
+.rulemark::after { content:attr(data-l); position:absolute; left:50%; transform:translateX(-50%); top:14px;
+  font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:light-dark(#b91c1c,#f87171); white-space:nowrap; }
+body.guides .rulemark { opacity:1; }
+
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; align-items:start; }
+@media (max-width:900px){ .grid2 { grid-template-columns:1fr; } }
+
+table.sum { width:100%; border-collapse:collapse; font-size:var(--bn-text-label); margin-top:.6rem; }
+table.sum th, table.sum td { text-align:left; padding:.4rem .6rem; border-bottom:1px solid var(--bn-colour-border); vertical-align:top; }
+table.sum th { font-weight:490; color:var(--bn-colour-muted); font-size:var(--bn-text-caption); text-transform:uppercase; letter-spacing:.04em; }
+table.sum td:first-child { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); white-space:nowrap; }
+@media (prefers-reduced-motion: reduce){ * { transition:none !important; } }
+</style>
+</head>
+<body class="guides">
+<div class="wrap">
+
+<div class="masthead">
+  <div class="eyebrow">Bristlenose · mockup · codebooks lens</div>
+  <h1>Where the “Codebook Library” button lives</h1>
+  <p>The Codebooks lens opens with its zone title <strong>40px below the datum</strong> that Quotes, Sessions and
+     Analysis all flush to. The cause is structural, not cosmetic — and the Library button is what put it there.
+     Five ways out, drawn in the shipped design system. <strong>Built: C + D</strong> — toolbar item on desktop, demoted secondary in-pane on web, one flush full-width rule on both.</p>
+</div>
+
+<div class="key">
+  <div class="key-a"><strong>Artefact</strong>Inside a window frame: the real pixels, real tokens, real component classes. Nothing in here is commentary.</div>
+  <div class="key-c"><strong>Commentary</strong>Hatched, blue-ruled: why it works, what it costs. Never ships.</div>
+</div>
+
+<div class="controls">
+  <span class="lbl">palette</span>
+  <button class="pbtn on" onclick="setTheme('default',this)">default</button>
+  <button class="pbtn" onclick="setTheme('edo',this)">edo</button>
+  <span class="lbl" style="margin-left:1rem">instrument</span>
+  <button class="pbtn on" id="gbtn" onclick="toggleGuides(this)">datum guide</button>
+  <span style="font-size:var(--bn-text-caption);color:var(--bn-colour-muted);margin-left:.5rem">off = clean artefact</span>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>The measurement</h2>
+    <p class="sub">Both frames are the same geometry: 52px toolbar inset + 32px body pad = a content datum at 84px.
+       Sessions puts its zone title there. Codebooks does not.</p>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <p class="optlabel">Sessions — the reference</p>
+      <div class="frame">
+        <div class="frame-chrome"><i></i><i></i><i></i><span class="cap">sessions</span></div>
+        <div class="tbar"><div class="proj">foo<small>7 sessions</small></div><div class="spacer"></div>
+          <span class="tb-item dim">Export</span><span class="tb-item dim">Search</span></div>
+        <div class="pane">
+          <div class="centre flush">
+            <div class="guide" data-l="datum 84"></div>
+            <h1 class="section-heading">Sessions</h1>
+            <p class="codebook-description">Moderated by Martin Storey</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="optlabel">Codebooks — today</p>
+      <div class="frame">
+        <div class="frame-chrome"><i></i><i></i><i></i><span class="cap">codebooks</span></div>
+        <div class="tbar"><div class="proj">foo<small>1 codebook · 7 tags</small></div><div class="spacer"></div>
+          <span class="tb-item dim">Export</span><span class="tb-item dim">Search</span></div>
+        <div class="pane">
+          <div class="centre">
+            <div class="guide" data-l="datum 84"></div>
+            <div class="guide low" style="top:40px" data-l="title +40"></div>
+            <div class="codebook-header">
+              <div style="flex:1;min-width:0">
+                <h1 class="section-heading">Codebooks</h1>
+                <p class="codebook-description">Drag tags between groups to reorganise. Click a tag or title to rename it. Drop a tag on another to merge.</p>
+              </div>
+              <button class="bn-btn bn-btn-primary" style="flex-shrink:0">Codebook Library</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="comment">
+    <span class="tag">Why — and it is a regression, not an original sin</span>
+    <p style="margin:.2rem 0">The datum rule is a single selector in <code>templates/report.css:87</code>:</p>
+    <p style="margin:.35rem 0"><code>.center &gt; main &gt; section:first-of-type &gt; .section-heading { margin-top: 0 }</code></p>
+    <p style="margin:.35rem 0">Sessions and Quotes render <code>&lt;section&gt;</code> as the direct child of <code>&lt;main&gt;</code>, so it matches.
+      Codebooks renders a fragment whose first child is <code>&lt;div class="codebook-header"&gt;</code> — a flex row holding the h1 and the button.
+      Two mismatches at once: not a <code>&lt;section&gt;</code>, and the heading is a grandchild. The selector misses, the
+      atom's <code>margin: 2.5rem 0 1rem</code> stands, and the title drops 40px.</p>
+    <p style="margin:.35rem 0">This appeared on <strong>6 Aug 2026</strong>, when Codebooks' h1 was given the <code>.section-heading</code> class it had
+      always been missing (<code>docs/design-lens-template.md</code> § "Systematising the heading"). Before that it had no class,
+      no rule, and — by luck — no margin either. The 22 Jul audit measured Codebooks at 84px, dead on the datum.
+      Fixing the missing rule handed it the missing margin.</p>
+    <p style="margin:.35rem 0">Because <code>align-items: flex-start</code> puts the button at the top of the row while the h1's own margin
+      pushes it down inside its flex item, <strong>the button now sits higher than the title it belongs to</strong>. That is what the eye
+      is objecting to, and it is why "move the button" and "fix the alignment" feel like the same request.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>Five options</h2>
+    <p class="sub">A is the pure alignment fix. B is your proposal. C is the toolbar. D and E move the button
+       to somewhere the page already teaches.</p>
+  </div>
+
+  <!-- A -->
+  <p class="optlabel">A — flush the heading, leave the button where it is</p>
+  <div class="frame">
+    <div class="frame-chrome"><i></i><i></i><i></i><span class="cap">option a</span></div>
+    <div class="tbar"><div class="proj">foo<small>1 codebook · 7 tags</small></div><div class="spacer"></div>
+      <span class="tb-item dim">Export</span><span class="tb-item dim">Search</span></div>
+    <div class="pane">
+      <div class="lcol">
+        <p class="grp">Manual tags</p><div class="row sel">foo</div>
+        <p class="grp">Default</p><div class="row live"><span class="dot"></span>Emotional and cognitive signals</div>
+        <div class="row">Bristlenose UXR Codebook</div><div class="row">Command-Line UX</div>
+      </div>
+      <div class="centre flush">
+        <div class="guide" data-l="datum 84"></div>
+        <div class="codebook-header">
+          <div style="flex:1;min-width:0">
+            <h1 class="section-heading">Codebooks</h1>
+            <p class="codebook-description">Drag tags between groups to reorganise. Click a tag or title to rename it. Drop a tag on another to merge.</p>
+          </div>
+          <button class="bn-btn bn-btn-primary" style="flex-shrink:0">Codebook Library</button>
+        </div>
+        <div class="framework-section-header">
+          <div class="framework-section-title">foo tags</div>
+          <button class="bn-btn">Codebook lab</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="comment">
+    <span class="tag">A · one line of CSS</span>
+    <ul>
+      <li class="pro">Fixes the stated defect exactly. Title and button top-align; the row sits on the datum; Codebooks reads like every other lens.</li>
+      <li class="pro">Zero markup change, zero locale change, zero desktop change. Wrap the fragment in <code>&lt;section&gt;</code> and the existing selector reaches it — no new rule at all.</li>
+      <li class="con">Leaves a filled-blue primary button as the loudest thing on a page whose actual job is organising tags. The heading row now shouts twice.</li>
+      <li class="con">Puts a primary button directly above the <em>secondary</em> "Codebook lab" button 16px below it — an experiment ranked louder than the shipping feature.</li>
+    </ul>
+  </div>
+
+  <!-- B -->
+  <p class="optlabel" style="margin-top:2rem">B — under the heading (your proposal)</p>
+  <div class="frame">
+    <div class="frame-chrome"><i></i><i></i><i></i><span class="cap">option b</span></div>
+    <div class="tbar"><div class="proj">foo<small>1 codebook · 7 tags</small></div><div class="spacer"></div>
+      <span class="tb-item dim">Export</span><span class="tb-item dim">Search</span></div>
+    <div class="pane">
+      <div class="lcol">
+        <p class="grp">Manual tags</p><div class="row sel">foo</div>
+        <p class="grp">Default</p><div class="row live"><span class="dot"></span>Emotional and cognitive signals</div>
+        <div class="row">Bristlenose UXR Codebook</div><div class="row">Command-Line UX</div>
+      </div>
+      <div class="centre flush">
+        <div class="guide" data-l="datum 84"></div>
+        <h1 class="section-heading">Codebooks</h1>
+        <p class="codebook-description">Drag tags between groups to reorganise. Click a tag or title to rename it. Drop a tag on another to merge.</p>
+        <div style="margin-top:var(--bn-space-md)">
+          <button class="bn-btn bn-btn-primary">Codebook Library</button>
+        </div>
+        <div class="framework-section-header" style="margin-top:var(--bn-space-lg)">
+          <div class="framework-section-title">foo tags</div>
+          <button class="bn-btn">Codebook lab</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="comment">
+    <span class="tag">B · heading owns the datum outright</span>
+    <ul>
+      <li class="pro">The strongest alignment of the five — nothing shares the title's row, so the title <em>is</em> the first ink, exactly like Quotes and Analysis.</li>
+      <li class="pro">Reading order becomes honest: what this page is → how to use it → the one thing to click. The button follows the sentence that motivates it.</li>
+      <li class="pro">Structurally the simplest possible markup: drop the flex wrapper entirely, and the datum selector matches for free.</li>
+      <li class="con">Costs a band of vertical space at the top of the lens — roughly 50px before any tag appears, on the page most likely to be scrolled.</li>
+      <li class="con">A left-aligned filled button under body text reads as a form's submit. Softening it to secondary fixes that but then it competes with "Codebook lab" for the same weight.</li>
+    </ul>
+  </div>
+
+  <!-- C -->
+  <p class="optlabel" style="margin-top:2rem">C — the toolbar's empty contextual slot</p>
+  <div class="frame">
+    <div class="frame-chrome"><i></i><i></i><i></i><span class="cap">option c · desktop</span></div>
+    <div class="tbar"><div class="proj">foo<small>1 codebook · 7 tags</small></div><div class="spacer"></div>
+      <span class="tb-item dim">Export</span>
+      <span class="tb-item new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h4v16H4z"/><path d="M10 4h4v16h-4z"/><path d="m16.5 4.7 3.4.9-3.6 14-3.4-.9z"/></svg>Library</span>
+      <span class="tb-item dim">Search</span></div>
+    <div class="pane">
+      <div class="lcol">
+        <p class="grp">Manual tags</p><div class="row sel">foo</div>
+        <p class="grp">Default</p><div class="row live"><span class="dot"></span>Emotional and cognitive signals</div>
+        <div class="row">Bristlenose UXR Codebook</div><div class="row">Command-Line UX</div>
+      </div>
+      <div class="centre flush">
+        <div class="guide" data-l="datum 84"></div>
+        <h1 class="section-heading">Codebooks</h1>
+        <p class="codebook-description">Drag tags between groups to reorganise. Click a tag or title to rename it. Drop a tag on another to merge.</p>
+        <div class="framework-section-header" style="margin-top:var(--bn-space-lg)">
+          <div class="framework-section-title">foo tags</div>
+          <button class="bn-btn">Codebook lab</button>
+        </div>
+        <div class="tagrow">
+          <div class="tagcard"><div class="t">Uncategorised</div><div class="s">Tags not yet assigned to any group</div><span class="badge">+ tag</span></div>
+          <div class="dashed" style="flex:1"><span class="plus">+</span><span>New group</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="comment">
+    <span class="tag">C · fills a gap that already exists</span>
+    <ul>
+      <li class="pro">This is <strong>not a new idiom</strong>. <code>ContentView.swift:2208–2229</code> already gives Quotes two contextual toolbar items
+        (starred filter, tag sidebar) and Analysis one (heatmap). Codebooks is the lens with an empty contextual slot — and a
+        loud in-pane button instead.</li>
+      <li class="pro">Content pane opens perfectly clean: title, description, work. Identical to Quotes and Analysis.</li>
+      <li class="pro">The action is already in the native <strong>Codes ▸ Browse Codebooks…</strong> menu (<code>MenuCommands.swift:1157</code>), so a toolbar
+        item is the standard macOS promotion of an existing menu command — not an invention. <code>books.vertical</code> is already its symbol.</li>
+      <li class="con">The existing contextual items are <em>toggles</em>; this one opens a modal. Defensible (Export is a menu-opener in the same
+        capsule, and Xcode/Keynote put library-openers in the toolbar) but it is a widening of the slot's meaning.</li>
+      <li class="con">Web serve mode has no native toolbar, so the SPA still needs an in-page entry. That is what <code>ct()</code> exists for —
+        show the in-page button on web, hide it on desktop — but it is a two-surface answer, not one.</li>
+      <li class="con">Toolbar real estate on Codebooks would then be Export · Library · Search, and Search there is currently a
+        <em>disabled</em> placeholder. Adding a live item beside a dead one sharpens the dead one.</li>
+    </ul>
+  </div>
+
+  <!-- D -->
+  <p class="optlabel" style="margin-top:2rem">D — flush, and demote to secondary</p>
+  <div class="frame">
+    <div class="frame-chrome"><i></i><i></i><i></i><span class="cap">option d</span></div>
+    <div class="tbar"><div class="proj">foo<small>1 codebook · 7 tags</small></div><div class="spacer"></div>
+      <span class="tb-item dim">Export</span><span class="tb-item dim">Search</span></div>
+    <div class="pane">
+      <div class="lcol">
+        <p class="grp">Manual tags</p><div class="row sel">foo</div>
+        <p class="grp">Default</p><div class="row live"><span class="dot"></span>Emotional and cognitive signals</div>
+        <div class="row">Bristlenose UXR Codebook</div><div class="row">Command-Line UX</div>
+      </div>
+      <div class="centre flush">
+        <div class="guide" data-l="datum 84"></div>
+        <div class="codebook-header">
+          <div style="flex:1;min-width:0">
+            <h1 class="section-heading">Codebooks</h1>
+            <p class="codebook-description">Drag tags between groups to reorganise. Click a tag or title to rename it. Drop a tag on another to merge.</p>
+          </div>
+          <button class="bn-btn" style="flex-shrink:0">Codebook Library</button>
+        </div>
+        <div class="framework-section-header">
+          <div class="framework-section-title">foo tags</div>
+          <button class="bn-btn">Codebook lab</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="comment">
+    <span class="tag">D · A, plus honesty about rank</span>
+    <ul>
+      <li class="pro">Same one-line geometry fix as A, and it settles the second problem A leaves behind: the page now has a consistent
+        title-left / action-right rhythm at three descending scales — h1 + Library, then "foo tags" + Codebook lab, then each
+        framework + its switch.</li>
+      <li class="pro">Matches what the button actually is: a browse affordance, not the page's primary act. The page's real primary
+        acts (rename, drag, merge) have no buttons at all.</li>
+      <li class="con">Loses the only bit of colour drawing a first-time user toward the one place codebooks come from. Discoverability
+        of the Library is already thin — the sidebar's "Codebook Library →" button was removed on 14 Aug precisely because it
+        duplicated this one (<code>CodebookSidebar.tsx:159</code>).</li>
+      <li class="con">Three same-weight bordered buttons stacked down the left-to-right axis can read as undifferentiated.</li>
+    </ul>
+  </div>
+
+  <!-- E -->
+  <p class="optlabel" style="margin-top:2rem">E — an add-card at the foot of the list</p>
+  <div class="frame">
+    <div class="frame-chrome"><i></i><i></i><i></i><span class="cap">option e</span></div>
+    <div class="tbar"><div class="proj">foo<small>1 codebook · 7 tags</small></div><div class="spacer"></div>
+      <span class="tb-item dim">Export</span><span class="tb-item dim">Search</span></div>
+    <div class="pane">
+      <div class="lcol">
+        <p class="grp">Manual tags</p><div class="row sel">foo</div>
+        <p class="grp">Default</p><div class="row live"><span class="dot"></span>Emotional and cognitive signals</div>
+        <div class="row">Bristlenose UXR Codebook</div><div class="row">Command-Line UX</div>
+      </div>
+      <div class="centre flush">
+        <div class="guide" data-l="datum 84"></div>
+        <h1 class="section-heading">Codebooks</h1>
+        <p class="codebook-description">Drag tags between groups to reorganise. Click a tag or title to rename it. Drop a tag on another to merge.</p>
+        <div class="framework-section-header" style="margin-top:var(--bn-space-lg)">
+          <div class="framework-section-title">Emotional &amp; Cognitive Signals</div>
+          <div style="display:flex;gap:.6rem;align-items:center"><button class="bn-btn">Uninstall</button><span class="sw"></span></div>
+        </div>
+        <div class="tagrow">
+          <div class="tagcard"><div class="t">Sentiment</div><div class="s">AI-detected emotional responses</div>
+            <span class="badge" style="background:var(--bn-emo-1-bg)">Frustration</span>
+            <span class="badge" style="background:var(--bn-emo-1-bg)">Confusion</span></div>
+          <div class="dashed" style="flex:1"><span class="plus">+</span><span>Add a codebook</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="comment">
+    <span class="tag">E · the page's own vocabulary</span>
+    <ul>
+      <li class="pro">Reuses an idiom this exact page already teaches twice: <code>.new-group-placeholder</code> ("+ New group") and the
+        library modal's own <code>.tile-create</code>. A dashed card meaning "one more of these" needs no explanation here.</li>
+      <li class="pro">Puts the affordance where the need arises — at the end of the codebooks you have, in the moment you notice you
+        want another. Header buttons ask before the user has the question.</li>
+      <li class="pro">Header is fully clean; the datum problem disappears with the wrapper.</li>
+      <li class="con">Below the fold on any project with more than one codebook installed. A researcher who never scrolls never learns
+        the Library exists — the opposite of A's problem.</li>
+      <li class="con">A dashed card is a <em>create</em> gesture everywhere else in the app; here it opens a browse modal. Near-miss on an
+        established meaning, which is worse than an unfamiliar one.</li>
+      <li class="con">New CSS/markup, not a one-liner. The largest build of the five.</li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>The keyline — same wrapper, second defect</h2>
+    <p class="sub">The rule under “Codebooks” stops short of the pane edge by exactly the button’s width. It is not a
+       styling oversight: the h1 is <em>pane-wide by declaration</em> and <em>column-wide by containing block</em>.</p>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <p class="optlabel">Today — and option A/D as first drawn</p>
+      <div class="frame">
+        <div class="frame-chrome"><i></i><i></i><i></i><span class="cap">truncated</span></div>
+        <div class="pane">
+          <div class="centre flush" style="min-height:0;padding-bottom:2.2rem">
+            <div class="rulemark" style="right:var(--bn-space-xl);top:44px;width:126px" data-l="rule stops here"></div>
+            <div class="codebook-header">
+              <div style="flex:1;min-width:0">
+                <h1 class="section-heading">Codebooks</h1>
+                <p class="codebook-description">Drag tags between groups to reorganise.</p>
+              </div>
+              <button class="bn-btn" style="flex-shrink:0">Codebook Library</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="optlabel">R3 — the atom becomes the row</p>
+      <div class="frame">
+        <div class="frame-chrome"><i></i><i></i><i></i><span class="cap">full width</span></div>
+        <div class="pane">
+          <div class="centre flush" style="min-height:0;padding-bottom:2.2rem">
+            <div class="zh"><h1>Codebooks</h1><button class="bn-btn">Codebook Library</button></div>
+            <p class="codebook-description">Drag tags between groups to reorganise.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="comment">
+    <span class="tag">Why it truncates</span>
+    <p style="margin:.2rem 0">The atom sets <code>max-width: none</code> so the rule spans the pane — but the h1’s
+      <em>containing block</em> is <code>&lt;div style="flex:1;min-width:0"&gt;</code>, the left column of the flex row.
+      “Full width” resolves to the width of that column, which is the pane minus the button. Every other lens draws
+      its rule pane-wide because its heading’s containing block <em>is</em> the pane.</p>
+    <p style="margin:.35rem 0">So the wrapper causes both defects at once: the datum miss (heading is a grandchild, selector
+      doesn’t reach) and the short rule (heading is column-width, not pane-width). Any fix that keeps a flex column
+      around the heading keeps the second one.</p>
+  </div>
+
+  <div class="comment">
+    <span class="tag">Four ways to get the rule back to the pane edge</span>
+    <ul>
+      <li class="con"><strong>R1 — move the border to <code>.codebook-header</code></strong> and null it on the h1. Works, and it is
+        precisely the drift the atom was created to stop: Codebooks’ rule would be drawn by a different box than every
+        other lens’s, re-opening the “a class you have to remember” failure the atom’s own header comment describes.</li>
+      <li class="con"><strong>R2 — <code>.section-heading</code> becomes a flex row, action inside the h1.</strong> Border spans the
+        pane by construction, one CSS change, and <code>.framework-section-header</code> on this very page is the precedent one
+        scale down. Cost: a <code>&lt;button&gt;</code> inside an <code>&lt;h1&gt;</code> is valid HTML but VoiceOver reads
+        “Codebooks Codebook Library, heading level one”. The h2-scale precedent avoids this only because its title is a plain div.</li>
+      <li class="pro"><strong>R3 — the atom becomes a wrapper (recommended).</strong> <code>&lt;div class="section-heading"&gt;&lt;h1&gt;…&lt;/h1&gt;{action}&lt;/div&gt;</code>.
+        The border sits on one box that spans the pane by construction; the button is a <em>sibling</em> of the heading, so the
+        heading announces as just “Codebooks”; the datum selector is untouched (it matches the class, not the tag); and the
+        static-render templates that write <code>&lt;h2 class="section-heading"&gt;</code> keep working, because the CSS never
+        requires an inner element. All 19 call sites are unchanged — <code>SectionHeading.tsx</code> absorbs the shape, which is the
+        entire reason that component exists.</li>
+      <li class="con"><strong>R4 — sidestep.</strong> Put the web button under the description (option B) so nothing shares the row on
+        either surface. Zero atom change, but it abandons the right-aligned action D was chosen for, and leaves the atom unable to
+        carry a zone-level action the next time one is wanted.</li>
+    </ul>
+    <p style="margin:.7rem 0 0">Worth noting the stakes: under <strong>C</strong> the desktop heading row is bare — the button is in the
+      toolbar — so the truncation only ever shows on the web SPA. That lowers the urgency, not the correctness. Doing R3 now
+      makes a zone-level action free on Quotes, Sessions and Analysis too, which is the same argument that made
+      <code>SectionHeading</code> a component rather than a class.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>Built — C + D on R3</h2>
+    <p class="sub">Shipped 20 Aug 2026. The numbers below are the ones the atom now guarantees.</p>
+  </div>
+  <div class="comment">
+    <span class="tag">Commentary — as built</span>
+    <p style="margin:.2rem 0"><code>.section-heading</code> is now the row, not the text: a wrapper carrying the keyline,
+      with the <code>&lt;h1&gt;</code> and an optional action inside. The shape does not vary with the action —
+      <strong>every zone title in the app is the same box</strong>, so a change to the title treatment lands on all five
+      lenses identically, and a lens that grows an action later gets the geometry the others already have.
+      <code>.codebook-header</code> is deleted; it was the only per-lens header wrapper and it caused both defects.</p>
+    <table class="sum">
+      <tr><th>Measure</th><th>Value</th><th>Why</th></tr>
+      <tr><td>row height</td><td>40.6px</td><td>the h1&rsquo;s line box (28px &times; 1.45) &mdash; the 33.65px button fits inside it, so
+        <strong>a row with an action is exactly as tall as a row without one</strong> and the keyline lands at the same y on every lens</td></tr>
+      <tr><td>button&nbsp;&rarr;&nbsp;keyline</td><td>6.4px</td><td><code>align-items: flex-end</code> lands the action&rsquo;s bottom on the
+        title text&rsquo;s, so both sit one <code>padding-bottom</code> above the rule &mdash; one bottom gutter, not two</td></tr>
+      <tr><td>row top&nbsp;&rarr;&nbsp;button</td><td>6.95px</td><td>falls out of the above; puts the button&rsquo;s optical centre within
+        <strong>0.5px</strong> of the capitals&rsquo; centre, with no magic number to maintain</td></tr>
+      <tr><td>title&nbsp;&rarr;&nbsp;action</td><td>24px</td><td><code>gap: var(--bn-space-lg)</code> &mdash; text cannot crash into the
+        action at any width or locale; <code>min-width: 0</code> makes a long title wrap rather than push the action off</td></tr>
+      <tr><td>right edge</td><td>pane edge</td><td>the keyline and the action both end where the content margin does, level with
+        &ldquo;Codebook lab&rdquo; in the framework header below</td></tr>
+    </table>
+    <p style="margin:.7rem 0 0"><strong>No new exceptions.</strong> The action slot is the same construction as
+      <code>.framework-section-actions</code> one scale down (flex, centred, <code>--bn-space-sm</code>, never shrinks), so the three
+      title-left / action-right rows a lens stacks are one pattern at three sizes. The button is the stock <code>.bn-btn</code> atom,
+      demoted from <code>.bn-btn-primary</code>. Desktop reuses the existing <code>Codes &#9656; Browse Codebooks&hellip;</code> action string,
+      symbol and help text; the only new locale key is the toolbar&rsquo;s one-word label.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="bench">
+  <div class="bench-head"><h2>Side by side</h2></div>
+  <div class="comment" style="border-left-color:var(--bn-colour-muted)">
+    <span class="tag" style="color:var(--bn-colour-muted)">Commentary — comparison</span>
+    <table class="sum">
+      <tr><th>Option</th><th>Datum fixed</th><th>Discoverability</th><th>Build</th><th>Surfaces</th></tr>
+      <tr><td>A flush only</td><td>yes</td><td>unchanged (loud)</td><td>1 line</td><td>one</td></tr>
+      <tr><td>B under heading</td><td>yes, most cleanly</td><td>unchanged</td><td>markup only</td><td>one</td></tr>
+      <tr><td>C toolbar</td><td>yes</td><td>higher on desktop, unchanged on web</td><td>Swift + <code>ct()</code> gate</td><td>two</td></tr>
+      <tr><td>D flush + secondary</td><td>yes</td><td>lower</td><td>1 line + class</td><td>one</td></tr>
+      <tr><td>E add-card</td><td>yes</td><td>lower until scrolled</td><td>new component</td><td>one</td></tr>
+    </table>
+    <p style="margin:.7rem 0 0">Every option fixes the datum, because every option removes the flex wrapper or flushes past it.
+      The alignment is therefore <em>not</em> the deciding question — it is free in all five. The deciding question is how loudly
+      a browse affordance should speak on a page whose real work is silent (drag, rename, merge).</p>
+    <p style="margin:.5rem 0 0"><strong>C + D compose.</strong> Toolbar item on desktop, quiet secondary in-pane on web, one flush
+      heading on both. That is the shape the codebase is already bent toward: an empty contextual toolbar slot on exactly this
+      lens, a native menu item already wired, and a <code>ct()</code> helper built for this fork.</p>
+  </div>
+</div>
+
+</div>
+<script>
+function setTheme(t, el){
+  document.documentElement.setAttribute('data-color-theme', t);
+  el.parentNode.querySelectorAll('.pbtn').forEach(b=>{ if(b!==el && b.onclick && b.textContent.match(/default|edo/)) b.classList.remove('on'); });
+  el.classList.add('on');
+}
+function toggleGuides(el){
+  document.body.classList.toggle('guides');
+  el.classList.toggle('on', document.body.classList.contains('guides'));
+}
+</script>
+</body>
+</html>

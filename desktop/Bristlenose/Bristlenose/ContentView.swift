@@ -2218,6 +2218,30 @@ struct ContentView: View {
                 }
             }
 
+            // Contextual — Codebook tab: the Codebook Library picker. Promotes
+            // the existing `Codes ▸ Browse Codebooks…` menu command (same
+            // action string, same `books.vertical` symbol) into the toolbar,
+            // which is the standard macOS promotion for a command the lens is
+            // about. The web SPA keeps its own in-pane button; `ct()` in
+            // CodebookPanel.tsx suppresses that copy here so the action appears
+            // once per surface, not twice on one screen.
+            if bridgeHandler.activeTab == .codebook {
+                ToolbarItem(placement: .primaryAction) {
+                    // The help string is reused, not minted — it is the menu
+                    // command's own label, already reviewed in all 21 locales.
+                    // The label is a new key because neither candidate twin
+                    // worked: `codebook.browseCodebooks` is a verb phrase up to
+                    // 31 chars ("Parcourir les grilles de codage"), and
+                    // `codebook.frameworks` still reads "Frameworks" in all 20
+                    // non-en locales — its English value drifted to "Library"
+                    // without a re-seed, which no locale gate can detect.
+                    Button { bridgeHandler.menuAction("browseCodebooks") } label: {
+                        Label(i18n.t("desktop.toolbar.library"), systemImage: "books.vertical")
+                    }
+                    .help(i18n.t("desktop.menu.codes.browseCodebooks"))
+                }
+            }
+
             // Contextual — Analysis tab: heatmap inspector toggle
             if bridgeHandler.activeTab == .analysis {
                 ToolbarItem(placement: .primaryAction) {

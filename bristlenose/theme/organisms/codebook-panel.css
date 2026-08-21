@@ -477,13 +477,14 @@
 }
 
 /* ── Codebook header ─────────────────────────────────────────────────── */
-
-.codebook-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: var(--bn-space-sm);
-}
+/* `.codebook-header` was removed 20 Aug 2026. It was a flex column wrapped
+   around the zone title so the Library button could sit beside it, and it cost
+   two defects: it broke the datum rule in templates/report.css (the heading
+   became a grandchild, so the selector stopped matching and the title sat 40px
+   low) and it truncated the keyline to the column's width instead of the
+   pane's. Both are now the atom's business — `<SectionHeading action={…}>`,
+   atoms/section-heading.css. Don't reintroduce a per-lens header wrapper: the
+   whole point of the atom is that every lens's title row is the same box. */
 
 /* ── Framework section header (title + author + border-bottom) ────── */
 /* Mirrors .codebook-modal-header / .preview-header pattern:

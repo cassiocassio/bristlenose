@@ -21,8 +21,9 @@ trued-against: HEAD@main 19797094 on 2026-08-21
   per-session `sentiment_counts` now ships in the API payload but is still
   unrendered. Added front-matter (had none, so this doc was invisible to every
   front-matter-driven sweep). Anchors: `frontend/src/islands/Dashboard.tsx:472,562`,
-  `bristlenose/server/routes/dashboard.py:505`, commit subject "dashboard: user
-  tags counted every tag".
+  `bristlenose/server/routes/dashboard.py:505`, commit `3c04a291` (this fix
+  landed inside a concurrent session's commit, whose subject names the
+  re-analyse sheet rather than this change).
 - _2026-02_ — compiled (initial inventory).
 
 # Dashboard Stats Coverage — Future Improvements

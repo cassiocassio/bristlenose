@@ -1,18 +1,49 @@
 ---
-status: draft
+status: mixed
+last-trued: 2026-08-21
+trued-against: HEAD@main on 2026-08-21 (faaab2a4)
+split-candidate: true
 ---
 
 # MCP server — connecting a project or folder to an agent
 
-_The §9a spike is built and accepted (30 Jul 2026) — see §9a-results. Phases
-2–3 (folder scope, writes) remain design._
+_The §9a spike is built and accepted (30 Jul 2026) — see §9a-results. Phase 2
+(folder scope) and phase 3 (writes) remain design._
 
-> **Status: Phase 1 shipped, phases 2–3 draft.** This doc fixes the scope model, the object surface,
-> the read/write posture, and the transport. The
-> sequencing in §9 assumes single-project first; folder scope lands with the
-> instance-level project index from [`design-multi-project.md`](design-multi-project.md).
+> **Status: Phase 1 shipped and since extended; phases 2–3 draft.** This doc
+> fixes the scope model, the object surface, the read/write posture, and the
+> transport. **The sequencing in §9 assumed single-project first, and that
+> assumption expired on 20–21 Aug 2026** — agent scope became plural and
+> derived (one sidecar per project, the handshake carrying a row each, the
+> proxy routing by project key) *without* folder scope or the instance-level
+> project index. Read §9 as the original sequencing, not as the current one;
+> the plural-scope model it did not anticipate is specified in
+> [`design-mcp-extension.md`](design-mcp-extension.md).
+
+> **Truing status:** Partial — §1–§5, §7 and §9a are current (trued
+> 2026-08-21). §4's tool table, §6a's parked warm-pool question and §8's
+> build gate carry inline banners: each describes something that either
+> shipped differently or was never built. See changelog.
 
 ## Changelog
+
+- _21 Aug 2026_ — trued up: status block corrected (the single-project
+  sequencing assumption expired when scope went plural and derived); §4 tool
+  table given a Status column — 4 of 11 tools shipped, `list_projects` lives
+  in the proxy not the server, and the Resources block is entirely unbuilt;
+  §6a's parked fronted-vs-parked question marked half-resolved (the exposure
+  predicate is settled; the warm pool survives as single-slot
+  `ParkedSidecar`) and a live inconsistency flagged — `ServeEnvStaleness`
+  still reasons on one-exposed-project-at-a-time; §8's
+  `MCP_EXPOSED`/`MCP_DENIED`
+  gate marked never-built, having read as shipped policy since 30 Jul.
+  Anchors: the four `@server.tool()` definitions in
+  `bristlenose/server/mcp_server.py` and the `e.key === wantedKey` route in
+  `desktop/mcpb/server/index.js` (named by symbol, not line — both files
+  moved during this pass); commit subjects "agent scope:
+  derived from the window roster, and plural", "mcpb: the proxy speaks
+  schema 2, and knows when it has fallen behind", "mcp: every tool result
+  names its project, and the visible count says visible".
 
 - _30 Jul 2026_ — **§9a spike built, reviewed, and accepted.** Added §9a-results: all three questions answered (object model carried a blind agent's session; all four testable invariants landed via `instructions` alone, so nothing moves into tool responses; a realistic session is ~10k tokens = 18× compression on the fossda corpus, making §Context's leverage claim a number). Acceptance also caught a participant name inside verbatim quote text — the structural boundary held, and it validates the "attribution is anonymised; quote text is verbatim" wording. Quote-exclusivity recorded as untested (this corpus partitions cleanly). Header trued: no longer "nothing built".
 
@@ -501,7 +532,10 @@ that as chronology. Label it *order added*, not *timeline*, unless real dates ex
 There are ~70 project GET routes. Mirroring them into 70 tools destroys the
 model's ability to choose. Strava ships eight. Budget accordingly.
 
-**Resources** (stable, enumerable, cheap to hold in context):
+**Resources** (stable, enumerable, cheap to hold in context) — **none of
+these are built** (verified 21 Aug 2026: zero `server.resource` registrations
+in `bristlenose/server/mcp_server.py`). Everything shipped is a tool. Retained
+as design; the split below is still the intended one:
 
 - `bristlenose://codebook` — groups, tags, and each code's `apply_when`/`not_this`
 - `bristlenose://frameworks` — every framework available, built-in *and*
@@ -512,19 +546,26 @@ model's ability to choose. Strava ships eight. Budget accordingly.
 **Tools** (parameterised, potentially large — all summarise-first, all with hard
 limits):
 
-| Tool | Purpose |
-|---|---|
-| `list_projects` | what's in scope, with size hints |
-| `get_project_overview` | sections, themes, counts, top signals — the cheap orienting call |
-| `search_quotes` | by tag / sentiment / person / section / theme / `starred_only`; paginated, capped |
-| `get_signals` | computed concentration/agreement/intensity, with elaboration where cached |
-| `get_themes` | theme groups with representative quotes |
-| `get_session_journey` | per-participant journey with timecode anchors |
-| `get_transcript` | one session, range-bounded — never whole-corpus |
-| `read_code_across_studies` | folder scope: one code across the back-catalogue, with per-study denominators and whether the code came from a shared framework (§3b) |
-| `find_duplicate_codes` | near-duplicate labels across the folder — a consolidation aid for hand-rolled tags, never a merge recommendation (§3b) |
-| `get_framework` | one framework in full — the stance, not just the tag list (§5a) |
-| `draft_framework` | write a YAML to the user codebook dir; authoring, not applying (§5a) |
+> **Status column added 21 Aug 2026.** This table read as the shipped
+> surface for three weeks. Four tools shipped; `list_projects` shipped
+> somewhere the table did not anticipate — the `.mcpb` proxy, which answers
+> it from the handshake file without a server round-trip, because under
+> plural scope the set of readable projects is a property of the *host*, not
+> of any one sidecar. The rest remain design.
+
+| Tool | Purpose | Status |
+|---|---|---|
+| `list_projects` | what's in scope, with size hints | **shipped in the proxy** (`desktop/mcpb/server/index.js`), not the server |
+| `get_project_overview` | sections, themes, counts, top signals — the cheap orienting call | **shipped** |
+| `search_quotes` | by tag / sentiment / person / section / theme / `starred_only`; paginated, capped | **shipped** |
+| `get_signals` | computed concentration/agreement/intensity, with elaboration where cached | **shipped** (cache hits only — no tool calls an LLM) |
+| `get_themes` | theme groups with representative quotes | design — themes ride in `get_project_overview` |
+| `get_session_journey` | per-participant journey with timecode anchors | design |
+| `get_transcript` | one session, range-bounded — never whole-corpus | design |
+| `read_code_across_studies` | folder scope: one code across the back-catalogue, with per-study denominators and whether the code came from a shared framework (§3b) | design (phase 2) |
+| `find_duplicate_codes` | near-duplicate labels across the folder — a consolidation aid for hand-rolled tags, never a merge recommendation (§3b) | design (phase 2) |
+| `get_framework` | one framework in full — the stance, not just the tag list (§5a) | **shipped** |
+| `draft_framework` | write a YAML to the user codebook dir; authoring, not applying (§5a) | design — would be the first tool that writes |
 
 **The three-transcript ceiling is the design constraint.** If `search_quotes` can
 return 400 rows unbounded, the ceiling has been rebuilt inside our own server.
@@ -849,12 +890,33 @@ above:
   gated path to persons, read at tool-call time so a flip takes effect on
   the agent's next call. Names appear in the overview speaker map only;
   quotes always cite codes. The CLI does not yet expose the switch.
-- **Open model question (parked):** the sheet and badge only know the
-  *fronted* serve. The warm-sidecar pool keeps the previous project's
-  sidecar (and its live `/mcp`) parked — an agent can be querying project A
-  while A's row shows nothing and A's sheet says "start the project".
-  Decide whether "running" for this feature means fronted-only or
-  fronted+parked before wiring the sheet to parked endpoints.
+- **Open model question (parked) — half resolved, half still live (21 Aug
+  2026).** The *exposure* half is settled and the answer is neither option
+  below: "fronted" stopped being the predicate when scope became derived
+  from the window roster, so every project with an open window and Agent
+  Access on is exposed simultaneously, each with its own sidecar and its own
+  `/mcp` (see [`design-mcp-extension.md`](design-mcp-extension.md)). The
+  *warm pool* half is **not** gone — it shipped as a single slot, class
+  `ParkedSidecar`, and `ServeManager` still holds at most one. Stage 3b
+  intends to remove it (`ServeEnvStaleness.swift`: "the warm pool goes, and
+  every serve has a window"), which has not fully landed.
+
+  **Live inconsistency worth resolving, not just recording:**
+  `ServeEnvStaleness.swift` justifies its lazy stale-env strategy on the
+  premise that "exactly one project is exposed to an external agent at a
+  time", and restarts only the exposed instance immediately. Under plural
+  derived scope that premise is false, so the governance argument it makes —
+  flip Anonymise on and no agent keeps reading real names — covers one
+  instance where it now needs to cover N. This is a code-side question, not
+  a doc-side one; flagged here because this section is where the exposure
+  model is specified. Original text preserved:
+
+  > the sheet and badge only know the *fronted* serve. The warm-sidecar pool
+  > keeps the previous project's sidecar (and its live `/mcp`) parked — an
+  > agent can be querying project A while A's row shows nothing and A's
+  > sheet says "start the project". Decide whether "running" for this
+  > feature means fronted-only or fronted+parked before wiring the sheet to
+  > parked endpoints.
 
 ---
 
@@ -871,6 +933,17 @@ anonymisation boundary; real names are a per-connection opt-in.
 ---
 
 ## 8. Anti-drift, mechanically
+
+> **Never built — this section is a proposal, not a description (marked 21
+> Aug 2026).** `MCP_EXPOSED` and `MCP_DENIED` have zero occurrences anywhere
+> in the tree. The section has read as shipped policy since 30 Jul, and the
+> closing sentence below — which asserts the property is "true rather than
+> aspirational" — is exactly backwards about this doc's own gate. The
+> mechanism it copies *is* real (`tests/test_serve_export_coverage.py`); the
+> MCP twin was never written. What actually holds the line today is §7's
+> allowlist by construction: no tool takes a path, and the four shipped
+> tools each query fixed tables. That is a weaker guarantee than a build
+> gate, because it is a convention a new tool can break silently.
 
 Copy the export pattern. `tests/test_serve_export_coverage.py` reads
 `app.openapi()` and fails if any project GET read is unclassified. Do the same

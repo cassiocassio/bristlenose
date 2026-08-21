@@ -18,6 +18,8 @@ Last updated: 21 Aug 2026. _This file is a capture inbox + session context, not 
 
 Also owed, smaller: **no arrow-key navigation in the register** — Full Keyboard Access is off by default, so on a stock Mac Tab reaches nothing in that pane; the composed accessibility label recovers most of it and the mockup legend now says so honestly. And **`main` had not compiled for a day** (`f9af3a8e`) because a reader landed in one commit and its definition sat uncommitted in the shared tree — the trap `desktop/CLAUDE.md` opens with, fired for real, and invisible to CI because CI does not build the Swift target.
 
+**21 Aug 2026 — plural agent scope left one premise behind in the code.** Surfaced by a `--topic mcp` truing pass, flagged in `docs/design-mcp-server.md` §6a. `ServeEnvStaleness.swift` justifies its lazy stale-env strategy on *"exactly one project is exposed to an external agent at a time"* and restarts only the exposed instance immediately. Derived scope made that false: N projects can be exposed at once, so flipping **Anonymise** on now needs to reach N sidecars where the code reaches one. That is the governance case the comment itself makes, so it is the one worth not leaving to a later reader. Related, same pass: `design-mcp-server.md` §8 prescribes an `MCP_EXPOSED`/`MCP_DENIED` build gate that has **never existed** — zero occurrences in the tree — and had read as shipped policy since 30 Jul; the doc now says so, but the gate is still owed if the property is wanted.
+
 _The 19 Aug owed list below is unchanged and still the priority — the Re-analyse sheet's pixels have never been on screen._
 
 

@@ -141,6 +141,13 @@ _RETRYABLE: dict[CauseCategoryEnum, bool] = {
     # Re-running the same provider/model truncates again deterministically;
     # recovery requires switching model or pre-segmenting, so not retryable.
     CauseCategoryEnum.OUTPUT_TRUNCATED: False,
+    # A cloud download that failed part-way — the recording is still there and
+    # the next attempt may well get it, so this reads like NETWORK.
+    CauseCategoryEnum.CLOUD_FETCH: True,
+    # A file we refused: zero bytes, a truncated container, a text file wearing
+    # a media extension. Re-running refuses it identically, like MISSING_INPUT
+    # — the remedy is a different file, not another attempt.
+    CauseCategoryEnum.UNUSABLE_INPUT: False,
     CauseCategoryEnum.UNKNOWN: True,
 }
 

@@ -169,6 +169,20 @@ def test_is_retryable_rule():
     assert is_retryable(CauseCategoryEnum.UNKNOWN) is True
 
 
+def test_every_cause_category_has_a_retryable_verdict():
+    """`is_retryable` indexes `_RETRYABLE` directly, so a category with no entry
+    is a KeyError rather than a default.
+
+    The hand-written test above named ten of sixteen categories, so the two
+    added since — `cloud_fetch` (18 Aug) and `unusable_input` (19 Aug) — were
+    both missing from the map and both raised, with nothing failing: the rule
+    was only ever asserted for the categories someone remembered to list.
+    Iterate the enum instead, so a new category cannot ship without a verdict.
+    """
+    for category in CauseCategoryEnum:
+        assert isinstance(is_retryable(category), bool), category
+
+
 # ---------------------------------------------------------------------------
 # PipelineSummary on terminus events
 # ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 ---
 status: mixed
-last-trued: 2026-05-16
-trued-against: HEAD@cantfind-remount-recovery on 2026-05-16
+last-trued: 2026-08-21
+trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
 split-candidate: true
 ---
 
@@ -43,7 +43,18 @@ split-candidate: true
 
 ## Context
 
-Bristlenose currently assumes a single project per server instance. The DB schema already has a `Project` table and routes accept `{project_id}`, but the frontend hardcodes project ID 1 and there's no cross-project awareness.
+Bristlenose assumes a single project per server instance. The DB schema already has a `Project` table and routes accept `{project_id}`, but the frontend hardcodes project ID 1 and there's no cross-project awareness.
+
+> **Read that sentence as being about the *server*, not the app — 21 Aug 2026.**
+> It is still exactly true of one sidecar (`bristlenose/server/CLAUDE.md`:
+> "Project ID is always 1"). It stopped being true of the **desktop app** on
+> 20 Aug, when Stage 3b shipped `ServeFleet` — one `ServeManager` per
+> `Project.ID`, `ContentView.serveManager` fleet-derived, `SelectionSync`
+> deleted, and `WindowGroup(id:for:)` carrying each window's study. Several
+> studies are open at once today; each gets its own single-project sidecar.
+> So the constraint was never lifted, it was **routed around**, and a reader
+> taking this paragraph as the current limit will design against something the
+> app already solved. See `docs/design-workspace.md` §Stages.
 
 Multi-project is the natural consequence of a subscription model — nobody pays monthly for a single study. It's a commercial wedge for the paid tier. The desktop app is the natural home for multi-project UX (project list, switching, cross-project views). CLI stays directory-native but accumulates awareness over time.
 

@@ -23,7 +23,32 @@ trued-against: HEAD@main (6497711a) on 2026-08-20
 > `OllamaDownloadPill` is now the **only** surviving toolbar pill; read the `CopyProgressPill` mentions
 > in the tables below as the row's copy indicator. See `design-desktop-project-status.md` §4.
 
-> **Truing status:** Current — schema (v5), IA, message-kind taxonomy,
+> **Truing status — corrected 21 Aug 2026. This said "Current" and was a false
+> pass signal.** The changelog is the freshest part of this doc; the *spec
+> sections beneath it were not brought forward with it*, so a reader who trusts
+> the banner reads a body describing a deleted view. Concretely: the schema is
+> **v6**, not v5 (`tests/fixtures/pipeline-summary-contract.json` — v6 added
+> `source_file`, `cloud_fetch`, `run_completed_partial_cloud_fetch`,
+> `run_completed_cached_stage`); `PipelineActivityItem.swift` **does not
+> exist** and `unifiedPopoverBody` / `runningPopoverBody` have **zero call
+> sites**, yet the display-kind catalogue still lists both as *shipped*; the
+> failure-row spec still says rows lead with a red `xmark.circle.fill` and a
+> monospaced session id, when since 19 Aug they lead with the **file name** and
+> take a per-failure kind, so refusals render warning-orange; and the "there are
+> no toasts left on the Mac" claim confuses the six deleted `desktop.toast.*`
+> **strings** with the `ToastView` **surface**, which is live at ~8 call sites.
+> Read the changelog for state and treat §§ below it as a phase behind.
+>
+> **One item here is a defect, not drift:** `unusable_input` completed three of
+> this doc's own five checklist sites and not the other two — it is absent from
+> `PipelineSummary.pillPrecedence` and from `desktop.pipeline.diagnostic.pill.*`
+> (6 keys). So a run whose only failures are **refused files** collapses to
+> `.unknown` and the pill reads **"Run had failures"** — exactly the
+> false-severity wording the 19 Aug work fixed *inside* the popover and not on
+> the pill the sidebar shows. Needs an English string settled before it can be
+> seeded to 21 locales.
+>
+> **Historic banner text follows.** Current — schema (v5), IA, message-kind taxonomy,
 > fixture contract, CLI vocabulary, Swift popover, and pass-4 cleanup all
 > shipped. Python emitter shipped via `bristlenose/ui_kinds.py` (1ab06bf) and
 > `pipeline-summary-events` merge (efe4064), fixture v5 contract locked.

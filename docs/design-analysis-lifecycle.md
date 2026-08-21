@@ -253,8 +253,8 @@ Both verbs need the same input: *does this project have work to do?*
 |---|---|---|---|---|---|
 | Empty — no media at all | 0 | nil / 0 | **hide** ✅ | hide | hide |
 | Has media, never analysed | >0 | nil / 0 | **Analyse** | hide | hide |
-| Analysed, nothing new | 0 | >0 | **hide** ✅ — measured: 0.1s, all cached, no visible change | **Re-analyse…** ← *still dimmed* | hide |
-| Analysed, new files present | >0 | >0 | **Analyse *N* New Files** | Re-analyse… | hide |
+| Analysed, nothing new | 0 | >0 | **hide** ✅ — measured: 0.1s, all cached, no visible change | **Re-analyse…** ✅ live since 19 Aug 2026 (`reAnalyseIsOffered`, `ProjectSidebarOutline.swift:2087`; `MenuCommands.swift:1064`) | hide |
+| Analysed, new files present | >0 | >0 | **Analyse** — *not* "Analyse *N* New Files": the count-bearing label is still unbuilt, the shipped key is `desktop.menu.project.analyse` and the sheet reuses it (`NewFilesSheet.swift:141`) | Re-analyse… | hide |
 | Running | — | — | hide | hide | **Stop Analysis** ⌘. |
 | Failed / partial | any | any | Analyse (retry) | Re-analyse… | hide |
 | File-subset, analysed | >0 | >0 | hide *(correct today)* | **Re-analyse…** — the only route | hide |

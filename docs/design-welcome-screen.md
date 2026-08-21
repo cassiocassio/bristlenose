@@ -23,7 +23,7 @@ trued-against: uncommitted working tree @main on 2026-08-20
 
 **Copy & i18n:** copy is hand-tuned **English** while the layout iterates — **do not add locale keys or wire i18n yet.** The localisation pass (German et al., which will stress the fixed geometry — expected, and handled *then* by editorial fit + condense-to-fit) is deliberately deferred to *much* later, post-iteration. No rush.
 
-**The retired view's locale keys are kept on purpose — do not sweep them as orphans.** `desktop.welcome.*` and `desktop.chrome.{welcomeTitle,noProjectSelected,selectProject}` survive in the 20 full locales even though `WelcomeView.swift` is gone (`zh-Hant-HK` carries only its genuine `welcome.subtitle` override and inherits the rest, per the override-fork rule). Two reasons: they are already-translated raw material for the deferred localisation pass above, and three of them are **verbatim-live copy today** — `welcome.dropFolderTitle` ≡ "Drop a folder" (`WelcomeHomeView.swift:189`), `welcome.dropFolderHint` (`:190`), `welcome.aiPrivacyLink` (`:157`). A grep for unreferenced keys will flag all of them; that grep is wrong here. (`chrome.emptyStateHint` is separately live — sidebar chrome, `ContentView.swift:1810`.)
+**The retired view's locale keys are kept on purpose — do not sweep them as orphans.** `desktop.welcome.*` and `desktop.chrome.{welcomeTitle,noProjectSelected,selectProject}` survive in the 21 full locales (22 directories counting the `zh-Hant-HK` override fork — this said 20 until 21 Aug 2026; Catalan landed 14 Aug) even though `WelcomeView.swift` is gone (`zh-Hant-HK` carries only its genuine `welcome.subtitle` override and inherits the rest, per the override-fork rule). Two reasons: they are already-translated raw material for the deferred localisation pass above, and three of them are **verbatim-live copy today** — `welcome.dropFolderTitle` ≡ "Drop a folder" (`WelcomeHomeView.swift:189`), `welcome.dropFolderHint` (`:190`), `welcome.aiPrivacyLink` (`:157`). A grep for unreferenced keys will flag all of them; that grep is wrong here. (`chrome.emptyStateHint` is separately live — sidebar chrome, `ContentView.swift:1810`.)
 
 British spelling. Terminology follows `docs/glossary.md` (quote, theme, session, codebook/code/tag, sentiment, signal, speaker code). Only shipped features appear — nothing aspirational (no slides export, no Word export, no Focus Mode).
 
@@ -35,7 +35,7 @@ Spec'd here, absent from `WelcomeHomeView.swift` — do not read the sections be
 
 | Item | Where spec'd | Note |
 |---|---|---|
-| "Show Welcome when Bristlenose opens" checkbox | §1 | Not in `AppearanceSettingsView`. Restore-last is unconditional today. |
+| "Show Welcome when Bristlenose opens" checkbox | §1 | Still absent from `AppearanceSettingsView` (verified 21 Aug 2026). But "restore-last is unconditional" is stale: since `292c96da` a window opens on a study only if its seed names one, so **Welcome-on-launch** is what is unconditional. |
 | Delight cell — swimming fish | §3 Cell 5 | Placeholder link only. |
 | AI cell — configured-state **rotator** | §3 Cell 4 | Configured pool exists but picks **once at construction**, at random. Not a `SlotRotator`. |
 | AI cell — set-up links (`Docs`) | §3 Cell 4 | Only a single `Setup →` deep-link to Settings. |
@@ -53,7 +53,18 @@ The macOS first-run / empty-state pane. **Not a sales pitch** — the user has a
 **Entry points (as shipped):**
 1. **First run**, no projects → Welcome.
 2. **No project selected** (closed/deleted the selected one) → Welcome.
-3. **Launch with projects → restore the last project + lens** (macOS state restoration, the Mac-library convention). Welcome is *not* the launch surface. If the last project was deleted between sessions, restore falls back to Welcome.
+3. ~~**Launch with projects → restore the last project + lens** (macOS state restoration, the Mac-library convention). Welcome is *not* the launch surface. If the last project was deleted between sessions, restore falls back to Welcome.~~
+
+   > **Reversed 20 Aug 2026 (`292c96da`) — Welcome *is* the launch surface now,
+   > and this entry was still saying the opposite when the doc was last edited
+   > the same afternoon.** A window opens on a study **only if its seed names
+   > one** (`ContentView.swift:700-719`). There is deliberately no last-used
+   > fallback: it was tried and removed, because it made ⌥⌘N from a Welcome
+   > window open a study, and because it conjured a sidecar on a study the
+   > researcher had not chosen. So a genuine restore still comes back on its own
+   > study — each window on the study it wrote back, not five copies of the last
+   > selected — but **launch with nothing to restore, and a Dock reopen, land on
+   > Welcome.**
 4. **Help ▸ Welcome to Bristlenose** — the explicit, re-openable way home once projects exist (no keyboard shortcut). Clears the project selection (`selection = []`), landing on state 2.
 5. **Click the sidebar's empty space** — `SidebarDeselectMonitor` clears the selection, same as (4). The Help item is its discoverable, labelled twin (a click can't advertise itself).
 
@@ -61,7 +72,11 @@ The macOS first-run / empty-state pane. **Not a sales pitch** — the user has a
 
 **Menu placement — Help, not Window (decided 2026-07-25).** The re-open entry lives under **Help** with no shortcut. It is deliberately *not* a sidebar "Home" target (that reads as primary nav for a surface belonging to no project). _Superseded baseline:_ an earlier spec proposed `Window ▸ Welcome to Bristlenose` (⌘⇧1), citing the Xcode precedent. That was weighed and rejected — Welcome is neither a window nor a file; it's semantically *help*, so Help is the honest home. The keyboard shortcut was dropped as unmemorable (discoverability comes from living in Help). This matches the prior-art consensus — an empty-state affordance for the primary action plus a re-openable menu item as the optional layered supplement, never a blocking onboarding wizard (NN/g, Apple HIG, IBM Carbon; the Xcode/VS Code/Omniverse re-open pattern). The prior "not click-empty-space (unreliable on macOS)" note is retired: empty-space deselection ships (entry point 5) and the Help item reuses it.
 
-**Still planned, not built** — see §0: the Appearance checkbox that would make Welcome the launch surface instead of restore-last.
+**Still planned, not built** — see §0: the Appearance checkbox. Note what it is
+*for* changed on 20 Aug: Welcome is already the launch surface for a window with
+no seeded study, so the checkbox is no longer the thing that would make it one.
+What remains unbuilt is the **user's control over it** — today the behaviour is
+unconditional in both directions.
 
 So the rotating content is seen **when you visit home** (first run / after closing the last project / new study), not literally every launch.
 

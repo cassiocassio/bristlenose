@@ -1,7 +1,7 @@
 ---
 status: shipped
-last-trued: 2026-08-02
-trued-against: HEAD@main on 2026-08-02
+last-trued: 2026-08-21
+trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
 ---
 
 # The Bristlenose extension — connecting Claude Desktop without a config file
@@ -30,13 +30,13 @@ over a real study through the installed extension.
 | Piece | State | Anchor |
 |---|---|---|
 | Handshake file (`mcp-handshake.json`, 0600, container) | Shipped | `desktop/Bristlenose/Bristlenose/MCPHandshake.swift` |
-| Node proxy inside the `.mcpb` | Shipped — **308 lines**, zero deps | `desktop/mcpb/server/index.js`, `manifest.json` |
+| Node proxy inside the `.mcpb` | Shipped — **564 lines**, zero deps (308 at 2 Aug; schema-2 + staleness detection since) | `desktop/mcpb/server/index.js`, `manifest.json` |
 | Settings ▸ MCP Agents (4th pane, antenna) | Shipped | `desktop/Bristlenose/Bristlenose/MCPAgentsSettingsView.swift` |
 | `Turn On / Turn Off Agent Access` verb swap | Shipped | `AgentAccessPolicy.swift`, `ProjectSidebarOutline.swift:1736` |
 | Exposure badge (no badge / pale / solid) | Shipped | `ProjectSidebarOutline.swift:1327` `agentBadgeView` |
 | Scope model | **Not Option B.** Option A + explicit per-project allowlist | §3.3 SUPERSEDED |
 | Anonymise | **Global on desktop**, not per-project | §3.3 SUPERSEDED, `MCPAgentsSettingsView.swift:38` |
-| Settings agent-access project list | **Built, then cut** (1 Aug, user call) | `76d9e92a` |
+| Settings agent-access project list | **Uncut and shipped 21 Aug 2026** — cut 1 Aug (`76d9e92a`), rebuilt as the projects register | §5a-bis, `AgentProjectRegister.swift`, `2741a61c` / `5f5c8eda` / `028d539b` |
 | `bristlenose mcp-proxy` CLI subcommand | **Not shipped** | §7 Q3 |
 | Directory submission | Not done — local install only | §7 Q4, as recommended |
 
@@ -241,13 +241,32 @@ on warm re-point, and removes it on stop:
 ~/Library/Containers/app.bristlenose/Data/Library/Application Support/Bristlenose/mcp-handshake.json
 ```
 
+> **Schema 2 since 19 Aug 2026 — the payload below is the schema-1 shape and is
+> still written, but only as a fallback.** Scope went plural when it stopped
+> being a designated slot and started being derived from the window roster
+> (`HandshakeExposure`), so the file now carries a project **set**. The
+> schema-1 keys are retained pointing at the first entry, because a `.mcpb`
+> installed weeks ago has no upgrade path (§6 risk 3) and a v2-only file would
+> silently break every proxy in the field. An empty set writes no schema-1 keys
+> at all, which an old proxy reads as "not open" — the correct answer. Source of
+> truth: `MCPHandshake.payload` (`MCPHandshake.swift:74`).
+
 ```json
 {
-  "schema": 1,
+  "schema": 2,
+  "updated_at": "2026-08-19T01:19:46Z",
+  "projects": [
+    {
+      "key": "<SHA-256 of the project path>",
+      "name": "<folder basename>",
+      "port": 58735,
+      "token": "<MCP-scoped bearer>",
+      "instance_id": "<random per serve start, echoed by /api/health>"
+    }
+  ],
   "port": 58735,
   "token": "<MCP-scoped bearer>",
-  "instance_id": "<random per serve start, echoed by /api/health>",
-  "updated_at": "2026-07-31T01:19:46Z"
+  "instance_id": "<schema-1 fallback: the first entry, repeated>"
 }
 ```
 
@@ -276,6 +295,18 @@ readable metadata; writing `"path": "/Users/…"` in cleartext into a file with
 the same reader set would contradict that decision for no gain. The proxy
 doesn't need it — tool payloads carry the project and the overview is the
 authority.
+
+> **Refined by schema 2, 19 Aug 2026 — half of this held and half was traded.**
+> The **path is still never written**: `Entry` carries one
+> (`HandshakeExposure.swift:58`) and `payload` deliberately does not serialise
+> it. What schema 2 does add per entry is `key` (the same SHA-256, so the proxy
+> can address one project of several) and `name` — the folder **basename**, in
+> cleartext. That is a real narrowing of the rule above, taken because a proxy
+> serving several projects has to name them to the agent and to the user in its
+> own error strings (`MSG.ambiguous`, `MSG.unknownProject`). `~/Clients/Acme/`
+> now yields `Acme` in the handshake file; it did not before. The file is still
+> 0600 in the container, so the reader set is unchanged — but a reader who has
+> it learns study names it previously could not.
 
 **Write it the way this codebase already writes credentials.** Not
 `Data.write(to:options:.atomic)` — that has no way to express a mode and lands
@@ -404,7 +435,9 @@ memory.
 
 ### 3.2 The proxy
 
-`server/index.js`, ~150 lines, using the official MCP SDK's own transports:
+`server/index.js` — ~150 lines as designed, **564 as shipped** (schema-2 project
+selection and staleness detection are the difference) — using the official MCP
+SDK's own transports:
 `StdioServerTransport` on the client side, `StreamableHTTPClientTransport`
 (with the `Authorization` header from the handshake) toward BN, piping messages
 between them.
@@ -1827,7 +1860,7 @@ decision, and three others that must not be undone:
 | Switched to another shared project | Handshake rewritten; the next call picks it up ~~and §3.2a marks it in the transcript~~ — **the marking did not ship**; see the §3.2a banner |
 
 > **As built.** All four rows hold. The three states below shipped as three of
-> the proxy's **six** messages (`desktop/mcpb/server/index.js` `MSG`) — §5c
+> the proxy's **nine** messages (`desktop/mcpb/server/index.js` `MSG`; six until 19 Aug 2026 — `ambiguous` and `unknownProject` exist *because* scope went plural, and `permission` came with them) — §5c
 > added `noAgentSupport` (404) and `authFailed` (401), and the TCC correction
 > added `permission`. "Three states" here means the *cold-start* discrimination
 > specifically, which is still exactly three; it is not the message count.

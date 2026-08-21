@@ -1,11 +1,13 @@
 ---
-status: current
-last-trued: 2026-04-30
-trued-against: HEAD@first-run on 2026-04-30
+status: mixed
+last-trued: 2026-08-21
+trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
+split-candidate: true
 ---
 
 ## Changelog
 
+- _2026-08-21_ — **Trued after 113 days at `status: current`, which was the most misleading line in it.** The header asserted currency over an April body while four sections had gone wrong in the same direction — each one *understating* what ships. (1) The distribution callout said "No `.dmg`. No Sparkle."; the `.dmg` has been a live channel since August (`build-dmg.sh`, `check-dmg-shippable.sh`, `upload-dmg.sh`, Developer ID cert, 30-day expiry) and only the Sparkle half survived. The §"macOS `.dmg` — deferred" heading was wrong the same way — and `docs/design-desktop-distribution.md:17` forwards readers *here* as the live answer, so the two docs formed a loop pointing at a dead decision. (2) §UI locales said "all 6 (en, es, fr, de, ko, ja)" against 22 locale directories; rewritten to name the source rather than a number, since that number has moved five times. (3) The component inventory still has **no MCP row**, though the `mcp` extra shipped 30 Jul, the sidecar installs it, and `Bristlenose.mcpb` ships inside the bundle — a channel-splittable component invisible to the doc whose whole job is "what ships where". (4) §Credential stores still omits the `KeychainHelper.serviceNames` allowlist and the store-then-read-back rule, both of which live in root `CLAUDE.md`; the canonical cross-channel credential section is the one place they are not. 3 and 4 are flagged, not written — they want a component-inventory pass rather than a banner. Status moved `current → mixed`, `split-candidate: true`: the Background Assets strategy (§Tier 0/1/2, ~90 lines) has **no code anywhere** and is plan, not record, sitting inside what read as a shipped-state doc.
 - _2026-04-30_ — Trued §"Local LLM" against Beat 3b shipped reality. Desktop GUI hardwires the Ollama URL to `localhost:11434` (commit `dbd54ec`) — editable field removed as a trust-boundary closure (paste-an-attacker-URL → silent transcript exfil). CLI/CI override path preserved via parent-process `BRISTLENOSE_LOCAL_URL` env var only. First-run detection / install / model-pull lives in `OllamaSetupSheet.swift` (Beat 3b, `07ee058`) — HTTP-only daemon probe, no `Process()` exec, no filesystem polling.
 
 # Modular Packaging and Optional Components (CLI + macOS)
@@ -134,7 +136,12 @@ Awkwardness: Background Assets natively targets data files, not Python packages.
 
 ### UI locales
 
-Tiny (~100 KB per language). Bundle all 6 (en, es, fr, de, ko, ja) on every channel. No optionality needed.
+Tiny (~100 KB per language). Bundle **all of them** on every channel — no
+optionality needed, and the count is deliberately not written here because it
+moves: as of 21 Aug 2026 it is 22 locale directories (21 full locales plus
+`zh-Hant-HK`, a thin override fork). `bristlenose/locales/` is the source;
+`bristlenose doctor`'s `Bundle: locales` check is the gate. (This line read
+"all 6 (en, es, fr, de, ko, ja)" from 30 Apr until now.)
 
 ### Credential stores (platform-native, no fork)
 
@@ -160,6 +167,18 @@ Two channel-specific build extras:
 
 ## Acquisition mechanisms by channel
 
+> **Superseded in part, 21 Aug 2026 — the `.dmg` shipped.** The half of this
+> callout that says "no Sparkle" is still right and still the decision. The half
+> that says "no `.dmg`" is not: a direct-download `.dmg` is one of **five live
+> release channels** (`docs/release-channels.md`), built by
+> `desktop/scripts/build-dmg.sh`, gated by `check-dmg-shippable.sh`, uploaded by
+> `upload-dmg.sh`, signed with a Developer ID Application certificate, and
+> carrying a 30-day expiry from the build. It is an *expiring alpha* channel
+> rather than the parallel commercial channel this callout ruled out — which is
+> why Sparkle stayed rejected: an expiring build has no update story to tell.
+> The §"macOS `.dmg` — deferred" heading below is wrong for the same reason.
+> Read `docs/release-channels.md` for what actually ships.
+
 > **Distribution decision (28 Apr 2026).** The macOS `.app` ships **App Store only** (alpha, beta, and early commercial). Direct download via Developer ID + notarytool + Sparkle is **not** maintained as a parallel channel — it's deferred until the App Store cut becomes material relative to the cost of running a parallel direct-distribution channel (memo trigger: ~10k paying users, or first enterprise MDM ask). Today's `desktop/scripts/build-all.sh` produces a `.pkg` for App Store Connect upload via Transporter / `xcrun altool --upload-app`. No `.dmg`. No Sparkle. Pricing via Apple In-App Purchase, not Stripe — App Store handles payments, tax, refunds, chargebacks, IAP infrastructure, and a chunk of trust signal that an indie can't manufacture cheaply.
 
 ### macOS `.app` (TestFlight / App Store)
@@ -174,7 +193,7 @@ Two channel-specific build extras:
 
 **Rule:** if Apple can host it, let Apple host it. Apple-Hosted Background Assets wins on signing, trust, CDN, resumability, storage management, and Privacy Manifest posture. Roll-your-own downloads are for cases Background Assets can't cover (e.g. extending `sys.path` with downloaded Python packages — still needs manual unpack but the asset can still be delivered via Background Assets).
 
-### macOS `.dmg` — deferred (not "rejected"; revisit at ~10k paying users)
+### macOS `.dmg` — SHIPPED 2026-08 (this heading said "deferred" until 21 Aug 2026)
 
 Would have shipped via Developer ID + notarytool + Sparkle for in-app updates. Status updated 28 Apr 2026 from "rejected" to "deferred" per the distribution-decision callout above. The Sparkle/notarytool flow is preserved as a future-state subsection in `docs/design-desktop-python-runtime.md` §"Deferred — Developer ID flow". Re-add this row to the active mechanisms table when the trigger conditions fire.
 

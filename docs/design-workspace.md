@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-08-18
-trued-against: HEAD@main on 2026-08-18 (e646e0d0)
+last-trued: 2026-08-21
+trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
 ---
 
 > **Partial — Stage 3a is built; Stage 3b is next and unblocked.** This doc
@@ -25,9 +25,12 @@ trued-against: HEAD@main on 2026-08-18 (e646e0d0)
 > shipped. The lens collapse dissolves — a switch touches one window, so
 > siblings are never remounted and keep their lens.
 >
-> Owed before it ships: the QA walk (kept with the maintainer's private plans),
-> whose §0a carries four things only the running app can answer — chiefly
-> whether SwiftUI's per-value window dedup defeats ⌥⌘N.
+> Owed before it ships: the QA walk (kept with the maintainer's private plans).
+> Its §0a headline question — whether SwiftUI's per-value window dedup defeats
+> ⌥⌘N — **was answered by using the app on 20 Aug: it did**, three times over
+> (it ate ⌥⌘N, then its `nil` replacement, then capped windows at two), and is
+> fixed by minting a fresh token that names no project. See the _2026-08-20_
+> changelog entry. What the walk still owes is everything else on screen.
 >
 > **Superseded framing, kept because it was true for four days:** Stage 3b —
 > per-window serve, two studies visible at once. Family **A** is presumed (16 Aug) and **constraint 7 is
@@ -39,15 +42,18 @@ trued-against: HEAD@main on 2026-08-18 (e646e0d0)
 > N-way, because parking exists only to make single-serve switching fast. See
 > §"Implementation plan" for the working and the stop condition.
 >
-> **One decision is live rather than settled** — whether the shipped master/child
-> shape survives, or is replaced by a peer model in which every window keeps its
-> project list and takes its study from the serve. The argument both ways, and
-> the select-vs-deselect refinement it turns on, is in the
-> `child-windows-outstanding` brief among the maintainer's private handoffs.
-> Nothing further should be built on the child until that is answered.
+> **That decision is settled: peer won.** The master/child shape shipped 18 Aug
+> and was deleted the next day (`348b5122`) in favour of the peer model — every
+> window keeps its project list and takes its study from the serve. Selection is
+> shared, deselect is local. `isChild` and `hasMaster` no longer exist anywhere
+> in the app. This banner asked readers to build nothing further on the child
+> until the question was answered; it had already been answered when the
+> sentence was written, and §"What a child window is" below is retained as
+> history rather than spec — see the banner on it.
 
 ## Changelog
 
+- _2026-08-21_ — **Trued against `ae05b1c0`: the header was arguing a question its own changelog had closed two days earlier.** Five summaries were stale in the same direction — every one of them said less was built than is. (1) The banner's last paragraph called the master/child-versus-peer choice "live rather than settled" and told the reader to build nothing further on the child; peer had shipped on 19 Aug (`348b5122`) and the entry recording it sat forty lines below. (2) "Owed before it ships … chiefly whether SwiftUI's per-value window dedup defeats ⌥⌘N" — it did, was found by using the app on 20 Aug, and was fixed the same day. (3) §"Window-scoping the menu commands" opened "Stage 1 is built, Stages 2–3 are not" while the §Stages list four lines down marked 2 and 3a ✅ on 16 Aug. (4) The three blockers were all cleared and none was annotated, though constraint 6 beside them had been. (5) Stage 3b carried no ✅ and still read "blocked on the family choice". §"What a child window is" (170 lines) now carries a superseded banner rather than an edit — it is the argument peer was chosen against, and deleting it would lose why. **The pattern worth naming: a doc trued four times in section scope, whose header drifted further each pass.** That is the failure this doc's own 18 Aug banner describes happening to `design-cloud-import.md`, recurring here while the sentence describing it was on screen.
 - _2026-08-17b_ — **Two more from the six-window run, both "harmless at N=1, total at N=2".** (1) **Going to the welcome screen put every window on Welcome.** `SidebarDeselectMonitor` uses `NSEvent.addLocalMonitorForEvents`, which is **app**-wide: each window installs one, each sees every click anywhere in the app, and each then called its *own* `deselect`. One click in one window's empty sidebar area deselected all six. Now scoped — the monitor compares `event.window` against its own host view's window. Worth noting the shape, since it is the second instance today: a per-window callback hung off an app-wide channel. The first was the menu-bar broadcasts. (2) **The ordinal's group key was the wrong key.** It was keyed on the *lens*, on the stated assumption that "different lenses already read differently, because the subtitle carries the per-lens count" — which is **false**, and the Window menu proved it: `countSubtitle` returns the session count for Project, for Sessions *and* for a window with no lens yet, so three windows drew `IKEA with uxfriends (1 Session · 18m)` and none of them was numbered, while a fourth carried a "2". Keyed on the rendered subtitle now, so the collision test is the thing the reader is actually looking at rather than a proxy for it. The run narration is deliberately excluded from the key — its stage and ETA change every second and would reshuffle numbers throughout a run.
 - _2026-08-20_ — **Stage 3b is built, and the memory question is finally measured on a real study.** Every window shows its own study: `ServeFleet` (one `ServeManager` per project, keyed on `Project.ID` — never on the path, which bookmark healing respells), `ContentView.serveManager` optional and fleet-derived so the compiler enforces what a gate used to, `SelectionSync` deleted, `WindowGroup(id:for:)` carrying each window's study as a **binding** (written back, or restoration returns a window to the study it was *opened* on), and `File ▸ Open in New Window` live after being dimmed since the day it shipped. **The lens collapse dissolves** — a switch touches one window, so siblings are never remounted. **Measured 20 Aug, both axes.** 32 windows on one study: **ONE sidecar, 144.7 MB**, on a 42-session project. Three studies at once: **three sidecars, 140.8 / 138.1 / 137.3 MB — ~416 MB total.** So the per-project penalty is ~140 MB flat, exactly as the 16 Aug estimate said ("~140 MB per additional project: 140–280 MB at the expected 2–3"), and it does **not** grow with session count — the original figure came off a *three*-session project and carried two caveats saying it was a floor needing re-measurement before it entered a budget. Both discharged. The dominant cost is WebKit — ~70 MB per window's content process — exactly as this doc predicted when it said N retained WebViews cost the same under every family. **Three window bugs and one serve failure were found by using the app, none by the suite** (1212 green throughout): SwiftUI's per-value window dedup ate ⌥⌘N, then ate its `nil` replacement, then capped windows at two — fixed by minting a fresh token that names no project; and `start()`'s same-path no-op, which had lived in the deleted `switchProject`, came off with it, so a second window on one study SIGINT'd a booting sidecar ("exited before becoming ready (code 2)"). Two reviews found the same shape four times over — a value or a call that exists, is tested, and is never reached: `ServeReaping` and `ServeEnvStaleness` had no caller, `mcpMounted` and `handshakeProjectPath` no writer (which hid *Turn On Agent Access* everywhere and could never light the antenna), `setExposed` no caller, and `check-window-surfaces.sh` was **never wired into any build**, which is why two of its four invariants had already regressed.
 - _2026-08-19_ — **Peer replaces master/child, and Stage 3b turns out to be smaller than its own estimate.** The master/child model shipped 18 Aug and was deleted the day after (`348b5122`): every window keeps its project list and takes its study from the serve, which closes constraint 5 the same way the child did while deleting the role, the sidebar omission, the ⌥⌘N gate and the study-axis dimming. Selection is shared, **deselect is local** — the refinement without which one window going to Welcome would stop the serve for all of them, which is precisely the bug fixed on 17 Aug. Then **3b was re-sized by classifying `ServeManager` rather than counting it**: 15 of ~21 properties are per-serve and adjacent, 13 of 22 methods move wholesale, and the A2 warm pool — the hardest ~150 lines — is *deleted*, because parking exists only to make single-serve switching fast and per-project serves have nothing to park. ~3–5 sessions rather than weeks, each step green, so **no branch** (with a stated stop condition). **Constraint 7 answered**: one connection for V1, the handshake naming the most recently fronted study with Agent Access on and a running serve — today's semantics extended, no new state. Along the way the **antenna badge was found over-claiming**: its solid tier re-derived the handshake writer's predicate and was missing two conjuncts, so it read "an agent can reach this" during every start and every switch, and permanently whenever `/api/health` never answered. §5a-bis had specified *handshake live* since July; the badge shipped weaker. Fixed by publishing the writer's own answer (`HandshakeExposure`, `3ac773fa`) — which, not assuming a single serve, is why 3b needs no handshake work. Recorded but **not fixed**: the antenna exists only on the AppKit sidebar, which is default-off, so no cohort tester has ever seen it.
@@ -403,7 +409,11 @@ all reports) + per-project **worker** subprocesses for runs (semaphore-capped).
 ## Window-scoping the menu commands (the Notes-experience prerequisite)
 
 Prompted by "double-click a project → new window, sidebar closed" (28 Jul 2026).
-Assessed against shipped code; **Stage 1 is built**, Stages 2–3 are not.
+Assessed against shipped code. **Superseded as a status line, 21 Aug 2026:** this
+read "Stage 1 is built, Stages 2–3 are not" from 28 Jul until now, while the
+§Stages list beneath it marked 2 and 3a ✅ on 16 Aug and 3b shipped 20 Aug. **All
+four stages are built.** The paragraphs below are kept as the original framing —
+they are why the stages exist — but read §Stages, not this line, for state.
 
 **The finding that reframes it:** the sidebar wasn't shared state. `ContentView`
 owns `columnVisibility` as `@State`, so it was always per-window — but the
@@ -412,8 +422,12 @@ windows moved in lockstep. This is systemic: there were **17** `post` sites in
 `MenuCommands.swift` and **zero** uses of `FocusedValue` anywhere in the app. With
 two windows open, New Project fires twice and Rename prompts in both.
 
-Three blockers sit under the Notes experience, all from every model being one
-app-level `@StateObject` injected into `WindowGroup(id: "main")`:
+Three blockers sat under the Notes experience, all from every model being one
+app-level `@StateObject` injected into `WindowGroup(id: "main")`. **All three are
+now cleared (21 Aug 2026)** — 1 by `ServeFleet` (one `ServeManager` per
+`Project.ID`, `ServeFleet.swift:33`), 2 by Stage 3a's per-window `BridgeHandler`,
+3 by `WindowGroup(id: "main", for: WindowSeed.self)` (`BristlenoseApp.swift:139`).
+Kept because the diagnosis is what the stages were shaped around:
 
 1. **One `ServeManager`** — one sidecar, one port, one warm-park slot; and
    `create_app(project_dir)` is single-project-per-process (constraint 1 above).
@@ -452,9 +466,11 @@ app-level `@StateObject` injected into `WindowGroup(id: "main")`:
   Stage 2 alone does **not** get you here: `@FocusedValue` routes the *command* to
   the right window, but the lens is shared because the *state* is shared. 3a is the
   one that fixes it.
-- **Stage 3b — per-window serve + `WindowGroup(for:)` (cross-project windows).**
-  Two projects visible at once ⇒ two sidecars (constraint 1). This is the part
-  blocked on the family choice (A/B/C) above. "Sidebar closed by default" is ~2
+- **Stage 3b — per-window serve + `WindowGroup(for:)` (cross-project windows).
+  ✅ Shipped 20 Aug 2026** (`a53905f2`; see the _2026-08-20_ changelog entry).
+  Two projects visible at once ⇒ two sidecars (constraint 1). Family **A** was
+  the call, and the ~140 MB-per-project figure it rested on was re-measured on a
+  42-session study rather than the three-session one it came off. "Sidebar closed by default" is ~2
   lines at the *end* of this stage (seed `columnVisibility = .detailOnly` when the
   window opens with a project value) — none of the cost is there.
 
@@ -662,6 +678,17 @@ reopen and stops the serve ever being torn down (review findings 4 and 18).
 ---
 
 ## What a child window is (decided 16 Aug 2026)
+
+> **Superseded 19 Aug 2026 — this whole section describes a model that was
+> deleted.** The master/child shape shipped 18 Aug and was replaced the next day
+> (`348b5122`) by the **peer** model: every window keeps its project list and
+> takes its study from the serve. `isChild` and `hasMaster` exist nowhere in the
+> app; ⌥⌘N has no dim gate (`MenuCommands.swift:441`); and both the lens-row and
+> project-row context menus ship the same live **Open in New Window**, with a
+> third item, **Open in New Windows**, on folder rows holding more than one
+> study. Kept unedited because it is the reasoning the peer decision was taken
+> *against* — read it as the losing argument, not as spec. Nothing below this
+> banner describes shipped behaviour.
 
 Spinning a window off a study gives a **child**: same project, its own lens, and
 **no project list**. Masters get projects, children get lenses. One `ContentView`,

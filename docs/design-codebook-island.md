@@ -1,4 +1,42 @@
+---
+status: archived-reference
+last-trued: 2026-08-21
+trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
+---
+
 # Codebook React Island — Design Decisions
+
+> **Historical — the migration this doc plans completed in February 2026.**
+> Everything here is written in the future tense about work that is six months
+> done: the React SPA is the product, and `bristlenose/theme/js/codebook.js` is
+> a frozen byproduct. Read it as a **decision log**, not as a plan, and not as a
+> description of the current lens.
+>
+> **Still live rationale** — decisions 1, 2, 3, 6, 7, 9 and 10 were spot-checked
+> on 21 Aug 2026 and hold: `.group-title-input` is absent from
+> `codebook-panel.css`; `TagInput` still takes `vocabulary={[]}` with
+> `exclude={allTagNames}`; the 6% `color-mix` accent survives; `ConfirmDialog`
+> and `EditableText` shipped. The `data-badge-type` / `data-tag-name` reasoning
+> in decision 1 is still true, and true only of the frozen vanilla tree.
+>
+> **Superseded** — the "14 primitives, 12 files, 136 Vitest tests" figure is now
+> 16 primitives / 182 tests (`docs/design-react-component-library.md`). And
+> decision 4 justified `MicroBar` on "two consumers from day one": the second
+> consumer never arrived — `Metric.tsx` still hand-rolls `conc-bar-track` /
+> `conc-bar-fill` and never imports it, leaving `MicroBar`'s `track` prop dead
+> in the app. Worth knowing before citing this doc as precedent for extracting a
+> primitive on the strength of a promised second caller.
+>
+> **Nothing here covers what shipped over it since** — the `.section-heading`
+> row wrapper and `<section>` datum enrolment that deleted `.codebook-header`,
+> `SectionHeading.tsx`, the desktop toolbar Library action, or the 14 Aug
+> Codebook→**Codebooks** relabel. For the current lens see
+> `docs/design-codebook-library.md`.
+>
+> **Archive move deferred, deliberately:** nine files reference this path,
+> including root `CLAUDE.md`. Moving it to `docs/archive/` needs the pointer
+> sweep that only `/true-the-docs --claude-pointers` does, so the banner lands
+> here and the move waits rather than stranding nine references.
 
 _Audit completed 17 Feb 2026. Decisions agreed before planning session._
 

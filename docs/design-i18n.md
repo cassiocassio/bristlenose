@@ -1,4 +1,15 @@
+---
+status: mixed
+last-trued: 2026-08-21
+trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
+split-candidate: true
+---
+
 # Internationalisation — Codebook & Sentiment Translation
+
+## Changelog
+
+- _2026-08-21_ — **First front-matter, and two sections that described the opposite of what ships.** This doc had no `status`/`last-trued` at all, so nothing signalled that a March-2026 body was carrying 20–21 Aug additions (the CJK punctuation finding, Catalan, the gotchas) on top of it. Corrected: (1) §"No in-app language picker on desktop" — there **is** one, a 22-entry autonym `Picker` at `AppearanceSettingsView.swift:63`, and the `UIPrefersShowingLanguageSettings` key it credited appears nowhere in `project.pbxproj`. Both halves false, and `docs/design-locale-negotiation.md` repeats both and has not been touched since May. (2) §"Toolbar overflow: `_short` keys" described a live mechanism — zero `common.nav.*Short` keys exist in any locale, so `Tab.localizedLabel` falls through every time; the es/fr table illustrates a convention rather than describing strings. **Left flagged rather than rewritten**, because they want a measuring pass not a banner: the namespace inventory (`common ~34` against a measured 539; 8 namespaces against 9; "~180 keys × 7 languages" against 1,445 × 21) and `findLocalesDirectory()`'s priority list, which is inverted and missing its first branch (`Bundle.main.resourcePath`). `docs/platform-text-map.md` already carries the correct counts, regenerated — two docs on one subject, one measured and one three orders stale.
 
 ## Why we localise at all — read this before evaluating any locale
 
@@ -255,13 +266,37 @@ Low-frequency content. Researchers see it once.
 3. `BridgeHandler.syncLocale()` pushes locale to web via `callAsyncJavaScript`.
 4. Startup flash prevention: locale injected as `?locale=es` URL query param on WKWebView load → `LocaleStore.ts` detects synchronously before first render.
 5. In embedded mode, the web language picker is hidden — System Settings is the single control point. The web picker remains visible and usable in real-browser CLI serve mode (no per-site language override exists in browsers, so the in-app picker is the only escape hatch there).
-6. **No in-app language picker on desktop.** Settings → Appearance contains a hint paragraph pointing users to System Settings → Apps → Bristlenose. `INFOPLIST_KEY_UIPrefersShowingLanguageSettings = YES` (in `project.pbxproj`) forces that section to appear in System Settings even for users with only one preferred language configured globally.
+6. ~~**No in-app language picker on desktop.** Settings → Appearance contains a hint paragraph pointing users to System Settings → Apps → Bristlenose. `INFOPLIST_KEY_UIPrefersShowingLanguageSettings = YES` (in `project.pbxproj`) forces that section to appear in System Settings even for users with only one preferred language configured globally.~~
+
+   > **False in both halves — corrected 21 Aug 2026.** Settings ▸ Appearance
+   > ships a **22-entry `Picker`** listing every locale by its own autonym
+   > (`AppearanceSettingsView.swift:63`), and it is the control the desktop
+   > actually uses — it is registration site 9 of the ten a new language needs
+   > (`docs/adding-a-language.md` Step 8). There is no hint paragraph. And
+   > `UIPrefersShowingLanguageSettings` appears **nowhere** in `project.pbxproj`
+   > (zero grep hits), so the System Settings mechanism this described was
+   > either never wired or was removed without the doc moving. **Note
+   > `docs/design-locale-negotiation.md` repeats both claims verbatim and has
+   > not been touched since May 2026** — it inherits this correction and has
+   > not yet had it applied.
 
 ### `CommandMenu` titles stay in English
 
 SwiftUI's `CommandMenu("Project")` takes `LocalizedStringKey` which resolves from `.lproj` bundles, not runtime JSON. Rather than maintaining a second localisation format for 4 strings, menu titles ("Project", "Codes", "Quotes", "Video") stay in English. Menu *items* inside are translated via `I18n.t()`. This matches ATLAS.ti and MAXQDA precedent — both keep English menu titles even in localised UIs.
 
 ### Toolbar overflow: `_short` keys
+
+> **The mechanism is live; the data is gone — measured 21 Aug 2026.** There are
+> **no `common.nav.*Short` keys in any of the 22 locale directories**; the last
+> one went with `8a99912a` ("drop `nav.codebookShort`, a key English never
+> had"). `Tab.localizedLabel` (`Tab.swift:25`) still prefers a `…Short` key and
+> so now falls through to the full label every single time, in every locale.
+> The table below is therefore an illustration of a convention, not a
+> description of shipped strings — neither `Códigos` nor `Codage` exists. Adding
+> one back would work, and the fallback is doing its job; but nothing today
+> uses it, so treat this section as available-and-unused rather than as
+> in-force. (Other `*Short` keys — `stageShort`, `failedShort` — are a
+> different convention in `server.json`/`desktop.json` and are unaffected.)
 
 "Libro de códigos" (es) and "Grille de codage" (fr) are ~2× wider than "Codebook". The toolbar segmented control uses `common.nav.{tab}Short` keys where available, falling back to the full `common.nav.{tab}` key. Only add `_short` variants where the full label exceeds ~10 characters.
 

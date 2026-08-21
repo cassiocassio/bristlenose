@@ -139,6 +139,32 @@ contract — including that `--list-providers` refuses API-key auth while
 bloats a log 12,000× — is in `docs/design-testflight-upload.md` § Observed
 contract. Don't re-derive either.
 
+### "Is this Swift file in the Xcode project?" is not a question `project.pbxproj` can answer
+
+`Bristlenose.xcodeproj` uses **`PBXFileSystemSynchronizedRootGroup`** (Xcode 16+),
+which references the *folder*, not the files. Membership is by living on disk
+under `Bristlenose/` or `BristlenoseTests/` — so no individual `.swift` filename
+appears in `project.pbxproj` at all, and the obvious audit
+
+```
+grep -q "$(basename "$f")" project.pbxproj || echo "MISSING FROM PROJECT: $f"
+```
+
+reports **every** Swift file as missing. On 21 Aug 2026 that was 250 files,
+printed as a wall of `MISSING FROM PROJECT:` against a project that builds
+clean — alarming, entirely false, and it cost a cycle to disbelieve.
+
+The check the grep was reaching for is real but different: a file can be
+*written and never committed*, which is how `main` stopped building on 18 Aug
+(`c837f8b5` — `CloudPlatform.swift:52` read a flag whose file was untracked).
+**Ask git, not the pbxproj:** `git status --porcelain -- 'desktop/**/*.swift'`.
+An untracked `.swift` is the actual failure mode; an unlisted one is the norm.
+
+Tell that you are in this trap: the "missing" list is *all* of them, or the
+count matches `ls desktop/Bristlenose/Bristlenose/*.swift | wc -l`. Confirm with
+`grep -c PBXFileSystemSynchronizedRootGroup project.pbxproj` — non-zero means
+filenames were never going to be in there.
+
 ### macOS BSD userland — use GNU coreutils
 
 macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat`, `readlink`, `tar`, and others. These differ from the GNU versions in subtle, bug-inducing ways:

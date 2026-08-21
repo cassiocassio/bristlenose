@@ -28,7 +28,13 @@ extension PkgSettings.PaneIdentifier {
 /// Form gives the window no natural content-height signal). The package sizes each
 /// pane to its `view.fittingSize` fresh on every switch and animates the window in
 /// both directions, so shorter tabs genuinely shrink and the high-water-mark is
-/// architecturally absent. Do NOT reintroduce a TabView here.
+/// architecturally absent.
+///
+/// **On every switch is the whole contract** — `setWindowFrame` has exactly two
+/// callers and both are tab activation, and the pane view is pinned by required
+/// constraints that beat `NSHostingView`'s 750-priority intrinsic height. So a
+/// pane whose height depends on its own state compresses or clips rather than
+/// resizing; it must call `refitToContent()`. See `docs/design-desktop-settings.md`. Do NOT reintroduce a TabView here.
 /// See `docs/design-desktop-settings.md` for the research trail.
 @MainActor
 final class SettingsWindow {

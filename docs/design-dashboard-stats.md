@@ -37,6 +37,19 @@ Five stat cards holding eight values — sessions; duration + words; quotes + th
 
 ---
 
+## Known gaps in what *is* shown
+
+- **The AI-tags stat links to `analysis:section-x-sentiment`** — correct while that
+  stat counted sentiment, and only partly correct since 21 Aug 2026, when it became
+  a count of all machine-authored tags (`source != "human"`). A project with
+  accepted AutoCode or codebook-builder tags sends the reader to a sentiment matrix
+  that does not show them. **Deliberately left alone** in that pass: retargeting a
+  stat card is a navigation-design decision, not a truing edit. The candidates are
+  `codebook` (where every tag lives, but then both halves of the pair point at the
+  same place) or splitting the card. Unresolved.
+
+---
+
 ## Available but not shown
 
 ### Per-participant stats

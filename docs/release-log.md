@@ -29,8 +29,10 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ## 0.27.0 — 22 Aug 2026 · Tier 1
 
-**Channels:** TestFlight · `.dmg` · PyPI · GitHub Release · Homebrew · Snap edge.
-Website deploy owed at close.
+**Channels:** TestFlight · `.dmg` · PyPI · GitHub Release · Homebrew · Snap edge
+· website. **All seven verified on 0.27.0 the same night** — the website was owed
+at close and deployed shortly after, so this release closed complete rather than
+partial.
 
 **What shipped.** The full fortnight: N windows per study, cloud import from
 Teams and Meet, MCP Agents projects register, ingest refusals (27 formats, up
@@ -142,9 +144,18 @@ last time something ran it.**
 
 ### Owed out of this release
 
-- **Website deploy.** At close the live changelog named **0.26.0** — a version
-  never published and no longer in `CHANGELOG.md` — while the download button
-  served 0.27.0. Actively wrong, not merely stale.
+- ~~**Website deploy.**~~ ✅ **done 22 Aug 2026, same night.** At close the live
+  changelog named **0.26.0** — a version never published and no longer in
+  `CHANGELOG.md` — while the download button served 0.27.0. Actively wrong rather
+  than merely stale, and the reason it was: that page renders from
+  `CHANGELOG.md` at build time, so renaming the entry made every *previously*
+  deployed copy of the site wrong the moment the rename landed. **A version
+  abandoned before publication leaves a footprint on any surface already
+  rendered from the changelog** — a `/bn-release` that abandons a tag should
+  treat the website deploy as part of that decision, not as a later step.
+  Verified: `0.27.0` present, `0.26.0` absent, sequence clean, and the four pages
+  the deploy was also carrying now resolve (`recording-permissions.html` had been
+  a live 404).
 - **Preflight cannot see `skip-worktree` files.** Add `git ls-files -v | grep '^S'`
   to `check-release-ready.sh` as a warning row. It would have caught failure 3
   before 11 minutes of build.

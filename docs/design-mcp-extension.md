@@ -75,9 +75,14 @@ did not account for.
   derivation, and the audit surface and the gate must not be able to
   disagree — and states the rule that bounds the predicate from here: a
   terminal serve state may be subtracted, a transient one may never be. Also
-  names the dependent question it unblocks (whether the roll-up should
-  announce when it changes) and why that recommendation is only safe under
-  permission semantics.
+  decides the dependent question in the same breath — **the roll-up speaks
+  when it moves**, because the count changing is already feedback and it
+  shipped to eyes only. New §5a-quater keeps the revocation receipt exactly
+  as built and refuses both alternatives: an ever-shared list would make the
+  register an audit history two days after §7a put history in the log, and
+  the undo route cites an 8-second toast deleted on 19 Aug. It also fixes the
+  receipt's contrast, which the record said had been fixed and had not —
+  `.tertiary` at 1.88:1 survived on the wrong arm of a ternary.
 - _2 Aug 2026_ — **trued against shipped reality.** Frontmatter `draft` →
   `shipped`; Status table added. Marked the four decisions that did not
   survive: §3.3's Option B (shipped model is Option A restricted by a
@@ -1905,22 +1910,125 @@ it. It was preferred to the reviewer's "In scope" on translation grounds:
 *scope* is our vocabulary, not a researcher's, and it renders as legalese in
 several of the 21.
 
-**The dependent finding this unblocks: should the roll-up announce when it
-changes?** The accessibility review recommended posting an announcement only
-when the number actually *moves* — which makes silence on an *Available when
-opened* row correct information rather than an omission, since unticking one
-changes nothing an agent can reach. That recommendation is only safe under
-permission semantics. Under reachability the number would move on serve events
-the researcher did not cause — a sidecar dying, a health poll landing — and
-VoiceOver would announce a change nobody made, which is the anti-pattern the
-recommendation was trying to avoid. So the announcement question is now
-decidable, and the answer it depends on is recorded above. It is **not** decided
-here; it is a product call about how chatty the pane should be, and the pane has
-not been seen on screen yet.
+**The dependent finding, decided in the same breath: the roll-up speaks when it
+moves.** The accessibility review recommended posting an announcement only when
+the number actually *moves*, which makes silence on an *Available when opened*
+row correct information rather than an omission. That recommendation is only
+safe under permission semantics — under reachability the number would move on
+serve events the researcher did not cause, and VoiceOver would announce changes
+nobody made, which is the anti-pattern it was trying to avoid. Taken, with three
+refinements the review did not reach:
 
-**Not reopened by this:** the placement debate (header accessory vs footer) and
-the revocation receipt's lifetime. Both are independent of what the number
-means.
+- **It is parity, not chatter — which is what settles the "how chatty" question
+  it was handed back as.** The count changing is *already* feedback; it ships to
+  eyes only. A sighted researcher sees "2 projects" become "1 project" in the
+  moment they untick. VoiceOver hears the checkbox say "unchecked" and nothing
+  about the aggregate. Not announcing isn't restraint, it's giving one reader
+  less than the other.
+- **The grant direction is the stronger case, and the finding framed only the
+  revoke.** It asked "did I just reduce what an agent can read?" — but re-ticking
+  a receipt is a **grant**, and it moves the same number. Silent feedback is
+  least acceptable in the direction that increases exposure.
+- **Speak the new value, and speak it at zero too.** The announcement is
+  `rollupText` — the string already localised in all 21, so this costs no locale
+  work. The header stays silent at zero (a readout of two zeros is not a
+  headline, Finding 61), but reaching zero is the single transition most worth
+  hearing and it is exactly when the visible text disappears, so the spoken form
+  is computed independently of the visual suppression.
+
+Mechanics: posted to `NSApp` (the SDK requires the application element) at
+**medium** priority, so it queues behind the checkbox's own value change rather
+than cutting across it — the control answers for itself first, then the
+aggregate. Gated on the Settings window being key, because opening a project
+window from the main window also moves the count and speaking about agent scope
+at someone who is not in Settings is the chatter this was weighed against.
+
+**One honest qualification.** "The number only moves when the researcher moves
+it" is not quite true and the section above should not be read as claiming it:
+a **terminally** failed serve is subtracted, so a sidecar dying moves it too.
+That is a real event and worth hearing, and it is precisely the class the
+terminal/transient rule admits — the flapping cases stay out. **Unverified with
+VoiceOver**, which joins the standing debt of never having seen this pane on a
+screen.
+
+## 5a-quater. The revocation receipt stays as built — decided 22 Aug 2026
+
+Untick a row and it does not vanish: it stays in place, dimmed, captioned
+*"Access turned off"*, and re-tickable. The receipt clears when the Settings
+window closes. A Mac review accepted the no-confirmation asymmetry — revoking is
+the safe direction and a confirm would be ceremony — but challenged the
+lifetime: the row is two-way *only for one visit*, after which it is gone, which
+is the *"I removed the project"* reading the receipt exists to prevent, arriving
+one Settings visit late. No reference pattern has "the row exists for one
+visit"; Little Snitch keeps a revoked rule permanently, greyed.
+
+**Decision: keep it exactly as built. Both alternatives are refused, and the
+premise is narrower than stated.**
+
+**The receipt prevents a *disappearance*, not an *absence*.** A row vanishing
+under the cursor at the moment you click reads as "I deleted something". A row
+simply not being in the list next Tuesday reads as "that project isn't shared" —
+which is true, and identical to what a project that was never shared looks like,
+because those two states *are* identical. Nothing vanished in front of anyone on
+a later visit, so the misreading cannot occur there. The lifetime is therefore
+not a deferral of the problem; it is the exact span in which the problem exists.
+
+**Refused: the row stays permanently, and the register becomes "what you have
+ever shared".** The register's scope is settled — only projects with Agent
+Access **on**, a risk register rather than a control surface, granting still in
+the sidebar (§5a-bis's UNCUT note). An ever-shared list grows without bound and
+never shrinks, which is a worse answer to *"what have I shared?"* than a list of
+what **is** shared. It would also make the register an **audit history** two days
+after [`design-mcp-server.md`](design-mcp-server.md) §7a decided that history
+lives in the log and the register holds present state. The Little Snitch analogy
+breaks on one detail: a revoked LS rule is still a rule, a persistent object with
+a continuing effect (deny). A Bristlenose project with access off has no object
+and no effect — it is just a project. Keeping the row would mean inventing an
+artefact to hold a receipt.
+
+**Refused: it vanishes on the click and undo carries the receipt.** The
+mechanism this cites — *"`UndoableRemovalStore`'s existing 8 s toast+undo … the
+app's established grammar for a reversible act"* — was **deleted two days before
+the review ran**. The toast is gone with every other `desktop.toast.*` message
+(19 Aug), and the 8-second fuse went with it, because *"a toast-shaped
+constraint leaking into the model"* is what it was. Braiding a permission revoke
+into what remains would be worse than merely late: that store holds **one**
+pending slot, and *"if a second batch arrives while a first is still pending,
+the first commits silently"* — so revoking agent access would quietly destroy an
+undoable project removal. And ⌘Z in a Settings window is not a Mac idiom.
+**A preference control is its own undo: you re-tick it.** That is the affordance
+System Settings, Little Snitch and Safari's per-site permissions all rely on, and
+it is present and in place here.
+
+**No timer, and the reason is this app's own.** Finding 51's reviewers offered
+time-boxing (`[UUID: Date]`) as an alternative to clearing on window close, and
+it is tempting for the one gap left — a Settings window left open for days keeps
+a stale receipt on screen. It is refused twice over: a row that vanishes on a
+timer is precisely the harm the receipt exists to prevent, and the app removed an
+8-second fuse from undo on 19 Aug for exactly the reason a new one would fail
+here. The residual staleness is a receipt that is still *accurate*, in a window
+nobody is looking at, that resolves the moment it is closed and reopened — the
+normal way anyone returns to Settings.
+
+**What did change: the receipt was failing its contrast measurement, and the
+record said it had been fixed.** Finding 64 measured `.tertiary` at **1.88:1**
+light / 2.24:1 dark — a quarter of the 4.5:1 line, and *unchanged* under Increase
+Contrast, so the HIG's higher-contrast escape hatch does not apply — and
+prescribed `.secondary` throughout the register. The review log records that as
+resolved. It was not: `.primary` moved to `.secondary` on the wrong arm of the
+ternary, so the receipt kept the failing value on the one row whose whole job is
+naming the project you just revoked, and the register's scope note kept it too.
+Both are now `.secondary`, set once on the row. The receipt is carried by the
+unticked checkbox and the caption; the dim was emphasis, and it was the emphasis
+that failed.
+
+**Left deliberately for a human with the pane on screen:** the mockup draws a
+*two-step* relationship — rows at ink, receipts at `--faint` (≈3.2:1) — which
+means `.primary` on rows and `.secondary` on receipts. The register is currently
+uniform `.secondary`, which is what Finding 64's fix literally said and what
+clears the measurement. Restoring the two steps is one token, and it is a taste
+call on a pane that has still never been seen rendered.
+
 
 ## 5b. The acceptance criterion: zero setup on return
 

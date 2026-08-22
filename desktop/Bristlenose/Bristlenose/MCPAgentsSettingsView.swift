@@ -184,6 +184,18 @@ struct MCPAgentsSettingsView: View {
         // the two things that move it.
         .onChange(of: registerRows.count) { refit() }
         .onChange(of: windowRoster.shownProjects.count) { refit() }
+        // The count moving is already feedback — to eyes only. A sighted
+        // researcher sees "2 projects" become "1 project" in the moment they
+        // untick; VoiceOver hears the checkbox say "unchecked" and nothing
+        // about the aggregate. Speaking it is parity, not chatter.
+        //
+        // Safe only because the roll-up counts a permission
+        // (`design-mcp-extension.md` §5a-ter). It moves when the researcher
+        // acts — tick, untick, open or close a window — or when a serve
+        // TERMINALLY fails, which is worth hearing. Under the reachability
+        // reading it would have moved on every transient beat and announced
+        // changes nobody made, which is the anti-pattern.
+        .onChange(of: spokenRollup) { _, now in announceRollup(now) }
         // A receipt is about what you just did, so it does not outlive the
         // visit — and the visit is the WINDOW being open, not the pane being
         // on screen.
@@ -211,6 +223,39 @@ struct MCPAgentsSettingsView: View {
                   closing === SettingsWindow.shared.window else { return }
             revokedThisSession.removeAll()
         }
+    }
+
+    /// The roll-up as VoiceOver should hear it.
+    ///
+    /// Computed even when `registerHeader` suppresses it — the header stays
+    /// silent at zero because a readout of two zeros is not a headline, but
+    /// reaching zero is the single transition most worth hearing, and it is
+    /// exactly when the text disappears.
+    private var spokenRollup: String {
+        rollupText(AgentProjectRegister.readable(registerRows,
+                                                 gate: serveFleet.readableProjects))
+    }
+
+    /// Post the roll-up to VoiceOver.
+    ///
+    /// `NSApp`, because the SDK says an announcement "should be posted for the
+    /// application element". Medium priority so it queues behind the
+    /// checkbox's own value change rather than cutting across it — the
+    /// control answers for itself first, then the aggregate.
+    ///
+    /// Gated on the Settings window being key: opening a project window from
+    /// the main window also moves the count, and speaking about agent scope
+    /// at someone who is not in Settings is the chatter this decision was
+    /// weighed against.
+    private func announceRollup(_ text: String) {
+        guard SettingsWindow.shared.window?.isKeyWindow == true else { return }
+        NSAccessibility.post(
+            element: NSApp as Any,
+            notification: .announcementRequested,
+            userInfo: [
+                .announcement: text,
+                .priority: NSAccessibilityPriorityLevel.medium.rawValue,
+            ])
     }
 
     /// Ask the Settings window to take the height this pane now needs.
@@ -370,7 +415,11 @@ struct MCPAgentsSettingsView: View {
                 // off the auth-exempt health route.
                 Text(i18n.t("desktop.mcpAgents.sessionScopeNote"))
                     .font(.footnote)
-                    .foregroundStyle(.tertiary)
+                    // `.secondary`, for the reason spelled out on the row
+                    // style below: `.tertiary` measures 1.88:1 and does not
+                    // improve under Increase Contrast. "Throughout the
+                    // register" included this line and it was missed.
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, RegisterLayout.inset)
                     .padding(.top, Spacing.related)
@@ -643,21 +692,32 @@ struct MCPAgentsSettingsView: View {
                 .frame(width: RegisterLayout.lastAsked, alignment: .leading)
         }
         .font(.callout)
-        // One style for the whole row, and `.secondary` rather than `.tertiary`.
-        // Measured under both appearances, tertiary is 1.88:1 in light and
+        // One style for the whole register, receipt rows included.
+        //
+        // Measured under both appearances, `.tertiary` is 1.88:1 in light and
         // 2.24:1 in dark — a quarter of the 4.5:1 line, and UNCHANGED under
         // Increase Contrast, so the HIG's "at least offer a higher-contrast
         // scheme" escape hatch does not apply. It is also semantically wrong:
         // tertiary is Apple's disabled-text colour and a receipt row is
-        // reversible, not disabled. The unticked box and the caption already
-        // carry the meaning; the dim is emphasis.
+        // reversible, not disabled. The unticked box and the "Access turned
+        // off" caption already carry the receipt; the dim was emphasis, and
+        // it was the emphasis that failed.
         //
-        // Set here and nowhere else. The cells used to set `.secondary` on
-        // themselves, and an inner style beats the row's — so a revoked row
-        // rendered its name dim and its session count and timestamp at full
-        // weight, the number louder than the thing it counts.
-        .foregroundStyle(row.isReceipt ? AnyShapeStyle(.tertiary)
-                                       : AnyShapeStyle(.secondary))
+        // This ternary survived the fix that was recorded as having removed
+        // it (22 Aug 2026): `.primary` moved to `.secondary` on the wrong
+        // arm, so the receipt kept the 1.88:1 it was flagged for — on the one
+        // row whose whole job is naming the project you just revoked. Set
+        // here and nowhere else: the cells used to set `.secondary` on
+        // themselves and an inner style beats the row's, so a revoked row
+        // rendered its name dim and its count and timestamp at full weight,
+        // the number louder than the thing it counts.
+        //
+        // The mockup draws a two-step relationship (rows at ink, receipts at
+        // `--faint` ≈ 3.2:1). Restoring that means `.primary` here and
+        // `.secondary` on receipts — a one-token change, deliberately not
+        // taken blind: it is a taste call, and this pane has never been seen
+        // on a screen. The measured accessibility failure is fixed either way.
+        .foregroundStyle(.secondary)
         .padding(.horizontal, RegisterLayout.inset)
         .frame(height: RegisterLayout.row)
     }

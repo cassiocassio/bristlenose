@@ -143,10 +143,18 @@ success independently instead of subtracting failures).
 Written against the defect in `d776059e`, and verified to go red on the commit
 before it: *"stage 'transcripts' left 1 session(s) in no bucket."*
 
-**Known gap, deliberate.** A zero-cue `.vtt` reaches the same orchestrator state
-as a silent recording — segments absent, nothing raised — for free. It does not
-prove Whisper returns nothing for actual silence. Closing that means shipping
-audio and a model download; the media cell above is where it belongs.
+**Not a gap — a closed decision (22 Aug 2026).** A zero-cue `.vtt` reaches the
+same orchestrator state as a silent recording: segments absent, nothing raised.
+It does not additionally prove that *Whisper* returns nothing for real silence,
+and **that is accepted, not owed.** Closing it would mean shipping audio and a
+model download to re-test a transcription engine's own behaviour, when the thing
+being guarded here is the orchestrator's arithmetic — which the free fixture
+exercises exactly. Don't re-open it; the cost is real and the return is a second
+route to a state already covered.
+
+(This does not cancel the **Transcription cell** described above. That one exists
+for different reasons — extract-audio, Whisper, and the handoff into analysis —
+and is still unbuilt.)
 
 **Scoping insight that bounds the fragile part:** the desktop app is a thin
 shell over the Python sidecar — ~80% of "out-of-box behaviour" *is* CLI/serve

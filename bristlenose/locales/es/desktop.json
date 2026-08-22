@@ -351,6 +351,7 @@
     "dropFolderTitle": "Suelta una carpeta",
     "dropFolderHint": "Arrastra aquí una carpeta de grabaciones o transcripciones para añadirla como proyecto.",
     "aiPrivacyLink": "Revisar ajustes de IA y privacidad…",
+    "aiSetup": "Configurar",
     "steps": {
       "ingestTitle": "Añade entrevistas",
       "ingestDetail": "Audio, vídeo o transcripciones existentes.",

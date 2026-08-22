@@ -351,6 +351,7 @@
     "dropFolderTitle": "Déposez un dossier",
     "dropFolderHint": "Glissez ici un dossier d’enregistrements ou de transcriptions pour l’ajouter comme projet.",
     "aiPrivacyLink": "Vérifier les réglages IA et confidentialité…",
+    "aiSetup": "Configurer",
     "steps": {
       "ingestTitle": "Ajoutez les entretiens",
       "ingestDetail": "Audio, vidéo ou transcriptions existantes.",

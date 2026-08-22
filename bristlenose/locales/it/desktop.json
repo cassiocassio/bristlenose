@@ -351,6 +351,7 @@
     "dropFolderTitle": "Trascina una cartella",
     "dropFolderHint": "Trascina qui una cartella di registrazioni o trascrizioni per aggiungerla come progetto.",
     "aiPrivacyLink": "Rivedi le impostazioni di IA e privacy…",
+    "aiSetup": "Configura",
     "steps": {
       "ingestTitle": "Aggiungi le interviste",
       "ingestDetail": "Audio, video o trascrizioni esistenti.",

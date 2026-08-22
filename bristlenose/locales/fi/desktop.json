@@ -351,6 +351,7 @@
     "dropFolderTitle": "Pudota kansio",
     "dropFolderHint": "Vedä tallenteiden tai litterointien kansio tähän lisätäksesi sen projektiksi.",
     "aiPrivacyLink": "Tarkastele tekoäly- ja yksityisyysasetuksia…",
+    "aiSetup": "Ota k\u00e4ytt\u00f6\u00f6n",
     "steps": {
       "ingestTitle": "Lisää haastattelut",
       "ingestDetail": "Ääntä, videota tai olemassa olevia litterointeja.",

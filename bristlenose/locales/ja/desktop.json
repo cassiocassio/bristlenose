@@ -400,6 +400,7 @@
     "dropFolderTitle": "フォルダをドロップ",
     "dropFolderHint": "録音や書き起こしのフォルダをここにドラッグするとプロジェクトとして追加されます。",
     "aiPrivacyLink": "AI とプライバシー設定を確認…",
+    "aiSetup": "\u8a2d\u5b9a",
     "steps": {
       "ingestTitle": "インタビューを追加",
       "ingestDetail": "音声・動画・既存の書き起こし。",

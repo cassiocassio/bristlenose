@@ -351,6 +351,7 @@
     "dropFolderTitle": "Slip en mappe",
     "dropFolderHint": "Træk en mappe med optagelser eller transskriptioner hertil for at tilføje den som et projekt.",
     "aiPrivacyLink": "Gennemgå indstillinger for AI og anonymitet…",
+    "aiSetup": "Indstil",
     "steps": {
       "ingestTitle": "Tilføj interviews",
       "ingestDetail": "Lyd, video eller eksisterende transskriptioner.",

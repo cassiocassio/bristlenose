@@ -386,6 +386,7 @@
     "dropFolderTitle": "Přetáhněte složku",
     "dropFolderHint": "Přetáhněte sem složku nahrávek nebo přepisů a přidejte ji jako projekt.",
     "aiPrivacyLink": "Zkontrolovat nastavení AI a soukromí…",
+    "aiSetup": "Nastavit",
     "steps": {
       "ingestTitle": "Přidat rozhovory",
       "ingestDetail": "Audio, video nebo existující přepisy.",

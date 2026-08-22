@@ -333,6 +333,7 @@
     "dropFolderTitle": "폴더 놓기",
     "dropFolderHint": "녹음 또는 전사본 폴더를 여기에 끌어다 놓아 프로젝트로 추가하세요.",
     "aiPrivacyLink": "AI 및 개인정보 설정 확인…",
+    "aiSetup": "\uc124\uc815",
     "steps": {
       "ingestTitle": "인터뷰 추가",
       "ingestDetail": "오디오, 비디오 또는 기존 전사본.",

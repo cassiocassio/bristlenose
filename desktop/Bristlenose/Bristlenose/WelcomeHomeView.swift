@@ -287,7 +287,17 @@ struct WelcomeHomeView: View {
                 Button {
                     SettingsWindow.shared.show(pane: .llm)
                 } label: {
-                    Text("Setup →").font(.callout).foregroundStyle(Color.accentColor)
+                    // The fourth call site `a310bca6` replaced with English
+                    // verbatim; the 21 Aug restoration caught the other three.
+                    // "Set Up" not "Setup" because this performs the action —
+                    // Apple maintains both and translates them differently
+                    // (ca `Configura` vs `Configuració`). Values are Apple's own,
+                    // borrowed per-locale from `CCS_Localizable.loctable`, so the
+                    // link reads the verb macOS already uses. The arrow stays in
+                    // code: translators get a clean word, and a glyph in 21 files
+                    // is a glyph that goes missing from one of them.
+                    Text(i18n.t("desktop.welcome.aiSetup") + " →")
+                        .font(.callout).foregroundStyle(Color.accentColor)
                 }
                 .buttonStyle(.plain)
             }

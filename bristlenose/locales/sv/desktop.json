@@ -351,6 +351,7 @@
     "dropFolderTitle": "Släpp en mapp",
     "dropFolderHint": "Dra en mapp med inspelningar eller transkriptioner hit för att lägga till den som ett projekt.",
     "aiPrivacyLink": "Granska AI- och integritetsinställningar…",
+    "aiSetup": "St\u00e4ll in",
     "steps": {
       "ingestTitle": "Lägg till intervjuer",
       "ingestDetail": "Ljud, video eller befintliga transkriptioner.",

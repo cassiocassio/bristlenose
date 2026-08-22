@@ -351,6 +351,7 @@
     "dropFolderTitle": "Sleep een map",
     "dropFolderHint": "Sleep hier een map met opnamen of transcripten om die als project toe te voegen.",
     "aiPrivacyLink": "Bekijk AI- en privacyinstellingen…",
+    "aiSetup": "Configureer",
     "steps": {
       "ingestTitle": "Interviews toevoegen",
       "ingestDetail": "Audio, video of bestaande transcripten.",

@@ -351,6 +351,7 @@
     "dropFolderTitle": "Slipp en mappe",
     "dropFolderHint": "Dra en mappe med opptak eller transkripsjoner hit for å legge den til som et prosjekt.",
     "aiPrivacyLink": "Gå gjennom innstillinger for KI og personvern…",
+    "aiSetup": "Konfigurer",
     "steps": {
       "ingestTitle": "Legg til intervjuer",
       "ingestDetail": "Lyd, video eller eksisterende transkripsjoner.",

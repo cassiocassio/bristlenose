@@ -387,6 +387,7 @@
     "dropFolderTitle": "Upuść folder",
     "dropFolderHint": "Przeciągnij tutaj folder z nagraniami lub transkrypcjami, aby dodać go jako projekt.",
     "aiPrivacyLink": "Przejrzyj ustawienia AI i prywatności…",
+    "aiSetup": "Konfiguruj",
     "steps": {
       "ingestTitle": "Dodaj wywiady",
       "ingestDetail": "Dźwięk, wideo lub istniejące transkrypcje.",

@@ -351,6 +351,7 @@
     "dropFolderTitle": "Deixa-hi anar una carpeta",
     "dropFolderHint": "Arrossega aquí una carpeta d'enregistraments o transcripcions per afegir-la com a projecte.",
     "aiPrivacyLink": "Revisa la configuració d'IA i privadesa…",
+    "aiSetup": "Configura",
     "steps": {
       "ingestTitle": "Afegeix entrevistes",
       "ingestDetail": "Àudio, vídeo o transcripcions existents.",

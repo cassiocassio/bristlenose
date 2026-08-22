@@ -351,6 +351,7 @@
     "dropFolderTitle": "Bir klasör bırakın",
     "dropFolderHint": "Kayıtlardan ya da dökümlerden oluşan bir klasörü proje olarak eklemek için buraya sürükleyin.",
     "aiPrivacyLink": "Yapay zekâ ve gizlilik ayarlarını gözden geçirin…",
+    "aiSetup": "Ayarla",
     "steps": {
       "ingestTitle": "Görüşme ekleyin",
       "ingestDetail": "Ses, video ya da var olan dökümler.",

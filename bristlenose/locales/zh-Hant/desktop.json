@@ -333,6 +333,7 @@
     "dropFolderTitle": "放入檔案夾",
     "dropFolderHint": "將一個裝有錄音或逐字稿的檔案夾拖移到此處，即可加為專案。",
     "aiPrivacyLink": "查看 AI 與隱私設定…",
+    "aiSetup": "\u8a2d\u5b9a",
     "steps": {
       "ingestTitle": "加入訪談",
       "ingestDetail": "音訊、影片或現有逐字稿。",

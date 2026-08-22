@@ -351,6 +351,7 @@
     "dropFolderTitle": "Ordner ablegen",
     "dropFolderHint": "Ziehen Sie hier einen Ordner mit Aufnahmen oder Transkripten als neues Projekt hinein.",
     "aiPrivacyLink": "KI- und Datenschutz-Einstellungen prüfen…",
+    "aiSetup": "Konfigurieren",
     "steps": {
       "ingestTitle": "Interviews hinzufügen",
       "ingestDetail": "Audio, Video oder vorhandene Transkripte.",

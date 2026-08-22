@@ -351,6 +351,7 @@
     "dropFolderTitle": "Largue uma pasta",
     "dropFolderHint": "Arraste uma pasta de gravações ou transcrições para aqui para a adicionar como projeto.",
     "aiPrivacyLink": "Rever definições de IA e privacidade…",
+    "aiSetup": "Configurar",
     "steps": {
       "ingestTitle": "Adicionar entrevistas",
       "ingestDetail": "Áudio, vídeo ou transcrições existentes.",

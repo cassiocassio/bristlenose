@@ -59,17 +59,44 @@ SHOTS: list[dict] = [
 ]
 
 
-def sh(*cmd: str) -> str:
-    return subprocess.run(cmd, capture_output=True, text=True).stdout.strip()
-
-
 def osa(script: str) -> tuple[int, str]:
     p = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
     return p.returncode, (p.stderr or p.stdout).strip()
 
 
-def read_appearance() -> str:
-    return sh("defaults", "read", BUNDLE_ID, "appearance") or "auto"
+def read_appearance() -> str | None:
+    """The stored appearance, or None when there is no stored value.
+
+    None is deliberately distinct from "auto". `defaults read` exits non-zero
+    both when the key is unset and when the read fails, and collapsing those
+    into a literal "auto" turns a failed read into a silent state change: the
+    restore would write "auto" over whatever the user actually had. None means
+    "there was nothing here", and restore deletes the key rather than inventing
+    a value for it.
+    """
+    p = subprocess.run(["defaults", "read", BUNDLE_ID, "appearance"],
+                       capture_output=True, text=True)
+    return p.stdout.strip() if p.returncode == 0 else None
+
+
+def restore_appearance(original: str | None, relaunch: bool) -> None:
+    """Put the preference back, including back to absent.
+
+    `relaunch` must match the run's: --relaunch exists because a live write may
+    not reach a running app, so restoring without it would leave the on-disk
+    value and the visible window disagreeing — worse than either being wrong.
+    """
+    if original is None:
+        subprocess.run(["defaults", "delete", BUNDLE_ID, "appearance"],
+                       capture_output=True)
+        if relaunch:
+            osa(f'tell application id "{BUNDLE_ID}" to quit')
+            time.sleep(1.2)
+            subprocess.run(["open", "-b", BUNDLE_ID], check=False)
+        print("app appearance restored to: (unset)")
+        return
+    set_appearance(original, relaunch=relaunch)
+    print(f"app appearance restored to: {original}")
 
 
 def set_appearance(value: str, relaunch: bool) -> None:
@@ -107,6 +134,10 @@ def windows() -> list[tuple[int, str, int, int]]:
 
 
 def capture(win_id: int, dest: Path, shadow: bool) -> bool:
+    # shots/ persists between runs, so without this a failed screencapture
+    # leaves yesterday's file satisfying dest.exists() and the run reports a
+    # success it didn't have.
+    dest.unlink(missing_ok=True)
     cmd = ["screencapture", "-x", f"-l{win_id}"]
     if not shadow:
         cmd.append("-o")
@@ -124,6 +155,9 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=Path("shots"))
     ap.add_argument("--no-shadow", action="store_true",
                     help="omit the window shadow (tighter crop, no transparent margin)")
+    ap.add_argument("--window", type=int, metavar="ID",
+                    help="capture this window id (from --list); required when the "
+                         "app has more than one qualifying window open")
     ap.add_argument("--relaunch", action="store_true",
                     help="quit+reopen the app between modes, if the live pref write "
                          "doesn't repaint it")
@@ -153,7 +187,27 @@ def main() -> int:
             if not live:
                 print(f"  ! no window after switching to {mode}", file=sys.stderr)
                 continue
-            win_id = live[0][0]
+            # Don't guess. Quartz ordering isn't documented, and the app can
+            # legitimately have several qualifying windows (Settings is its own
+            # window; so is open-in-new-window). Picking one by size or position
+            # would silently hero-shot the Settings panel one day.
+            if args.window is not None:
+                ids = [w[0] for w in live]
+                if args.window not in ids:
+                    print(f"  ! window {args.window} is gone (ids now: {ids}) — a "
+                          f"relaunch mints new ids, so --window can't survive one.",
+                          file=sys.stderr)
+                    return 1
+                win_id = args.window
+            elif len(live) > 1:
+                print("  ! more than one Bristlenose window is open; refusing to "
+                      "guess which one you meant. Close the extras, or re-run "
+                      "with --window <id>:", file=sys.stderr)
+                for wid, title, w, h in live:
+                    print(f"      {wid:>8}  {w}x{h}  {title}", file=sys.stderr)
+                return 1
+            else:
+                win_id = live[0][0]
             for shot in SHOTS:
                 if shot["setup"]:
                     rc, err = osa(shot["setup"])
@@ -169,18 +223,24 @@ def main() -> int:
                     osa('tell application "System Events" to key code 53')  # esc
                     time.sleep(0.2)
     finally:
-        set_appearance(original, relaunch=False)
-        print(f"app appearance restored to: {original}")
+        restore_appearance(original, relaunch=args.relaunch)
 
     # The failure this spike was built to catch: a mode switch that didn't take
     # produces byte-identical pairs, which look like success in a file listing.
+    # Compare only pairs BOTH written by this run — otherwise a stale file from
+    # a previous run gets compared against a fresh one and the guard goes quiet.
+    identical = False
     for shot in SHOTS:
         pair = [args.out / f"{shot['id']}-{m}@2x.png" for m in ("light", "dark")]
-        if all(p.exists() for p in pair) and pair[0].read_bytes() == pair[1].read_bytes():
+        if all(p in written for p in pair) and pair[0].read_bytes() == pair[1].read_bytes():
+            identical = True
             print(f"  ! {shot['id']}: light and dark are IDENTICAL — the appearance "
                   f"change did not reach the app. Try --relaunch.", file=sys.stderr)
 
-    return 0 if written else 1
+    # Gate the exit code on it. "Files appeared" is the question that misled us
+    # the first time round; two copies of the same window is a failed run, and a
+    # build step wiring this in must be able to tell.
+    return 0 if written and not identical else 1
 
 
 if __name__ == "__main__":

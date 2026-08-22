@@ -193,7 +193,12 @@ The sessions grid in the Sessions tab, and the (still tabular) session list on t
   templates layer, which concatenates after organisms, so it would beat `.bn-sessions-cell`'s
   `min-width: 0` and reinstate the rigidity the shrink pair removes. The lens uses `.bn-cell-start`
 - **`.bn-session-journey`** — user journey path below start date. `font-size: 0.82rem`, `color: var(--bn-colour-muted)`, `white-space: normal` (wraps). Content: "Homepage → Tropical Fish → Equipment → …"
-- **`.bn-session-duration`** — `text-align: right`. Format: `MM:SS` or `HH:MM:SS`. In the Sessions
+- **`.bn-session-duration`** — `text-align: right`. **The two surfaces sharing this class put different
+  text in it, on purpose.** The React SPA renders `formatDurationHuman` (`26m` / `1h 3m` — matching the
+  native sessions popover and the `duration_human` API field); the sealed static render still emits
+  `MM:SS` / `HH:MM:SS` via `_session_duration` → `format_timecode`, and stays that way because it is a
+  frozen byproduct. Changed 22 Aug 2026: a colon-separated duration sat in a column beside dates and
+  start times read as a time of day. In the Sessions
   lens the duration flips to left-aligned once it stacks above the filename, via
   `.bn-sessions-row .bn-cell-duration` — **0-2-0 on purpose**, because this rule sits in the later
   templates layer and a bare `.bn-cell-duration` ties on specificity and loses on source order

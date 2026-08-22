@@ -1,33 +1,51 @@
 import { describe, expect, it } from "vitest";
-import { formatCompactDuration, formatCompactDate } from "./format";
+import { formatDurationHuman, formatCompactDate } from "./format";
 
-describe("formatCompactDuration", () => {
-  it("returns em-dash for 0 seconds", () => {
-    expect(formatCompactDuration(0)).toBe("\u2014");
+describe("formatDurationHuman", () => {
+  // ── The shared table ────────────────────────────────────────────────
+  // These cases are lifted from DurationFormatTests.swift, which pins the
+  // Swift mirror to Python's `_format_duration_human`. Same inputs, same
+  // expected strings — so if any surface drifts, one of the two suites goes
+  // red. Change a value here only in lockstep with the Swift table.
+  it.each([
+    [66_180, "18h 23m"], // the window subtitle's worked example
+    [3_600, "1h"], //        whole hours drop the minute part
+    [3_661, "1h 1m"],
+    [3_780, "1h 3m"], //     the case the sidebar used to render "1h 03"
+    [240, "4m"],
+    [60, "1m"],
+    [1_591, "26m"], //       the grid case that used to read "26:31"
+    [59, "<1m"], //          honest about sub-minute, never "0m"
+    [30, "<1m"],
+  ])("formats %i seconds as %s", (seconds, expected) => {
+    expect(formatDurationHuman(seconds)).toBe(expected);
+  });
+
+  // ── The one deliberate divergence from Swift/Python ──────────────────
+  // Swift and Python return "0m" here because they format aggregate totals,
+  // where zero is a real answer. This formats a per-row cell, where zero
+  // means unknown — 8% of the local trial-run corpus. Rendering "0m" would
+  // assert a measurement nobody made. See the note on the function.
+  it("returns em-dash for 0 seconds, NOT the Swift/Python 0m", () => {
+    expect(formatDurationHuman(0)).toBe("\u2014");
   });
 
   it("returns em-dash for negative seconds", () => {
-    expect(formatCompactDuration(-10)).toBe("\u2014");
+    expect(formatDurationHuman(-10)).toBe("\u2014");
   });
 
-  it("formats minutes only (no hours)", () => {
-    expect(formatCompactDuration(2820)).toBe("47m");
+  // Truncation, not rounding — matches Python's floor division so a session
+  // one second short of the next minute never reads as having reached it.
+  it("truncates fractional seconds rather than rounding up", () => {
+    expect(formatDurationHuman(119.9)).toBe("1m");
+    expect(formatDurationHuman(3_599.9)).toBe("59m");
   });
 
-  it("formats exactly 1 hour", () => {
-    expect(formatCompactDuration(3600)).toBe("1h 00");
-  });
-
-  it("formats 1 hour 3 minutes with zero-padded minutes", () => {
-    expect(formatCompactDuration(3780)).toBe("1h 03");
-  });
-
-  it("formats 2 hours 23 minutes", () => {
-    expect(formatCompactDuration(8580)).toBe("2h 23");
-  });
-
-  it("formats 0 minutes (e.g. 30 seconds)", () => {
-    expect(formatCompactDuration(30)).toBe("0m");
+  // The whole point of the change: no output may look like a clock time.
+  it("never emits a colon (the ambiguity this format exists to remove)", () => {
+    for (const s of [1, 59, 60, 1_591, 3_600, 3_780, 16_139, 66_180]) {
+      expect(formatDurationHuman(s)).not.toContain(":");
+    }
   });
 });
 

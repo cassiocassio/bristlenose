@@ -1,17 +1,3 @@
-/** Format seconds as MM:SS or HH:MM:SS. */
-export function formatDuration(seconds: number): string {
-  if (seconds <= 0) return "\u2014"; // em dash
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  const mm = String(m).padStart(2, "0");
-  const ss = String(s).padStart(2, "0");
-  if (h > 0) {
-    return `${h}:${mm}:${ss}`;
-  }
-  return `${mm}:${ss}`;
-}
-
 /**
  * Format a date string as Finder-style relative date, locale-aware.
  * Uses Intl.DateTimeFormat for month/day names and Intl.RelativeTimeFormat
@@ -52,7 +38,16 @@ export function formatFinderDate(isoDate: string | null, locale?: string): strin
   return `${dateFmt.format(dt)}, ${timePart}`;
 }
 
-/** Format seconds as a timecode string (MM:SS or HH:MM:SS). Unlike formatDuration, always returns a timecode — never an em-dash. */
+/**
+ * Format seconds as a timecode string (MM:SS or HH:MM:SS).
+ *
+ * This is a POSITION in a recording — where a quote sits — not an elapsed
+ * span. `MM:SS` is right for a position and wrong for a duration; for a
+ * duration use `formatDurationHuman` below. The Sessions grid used to render
+ * durations in this shape and read as a time of day.
+ *
+ * Always returns a timecode — never an em-dash.
+ */
 export function formatTimecode(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -67,13 +62,44 @@ export function stripSmartQuotes(text: string): string {
   return text.replace(/^[\u201c\u201d"]+|[\u201c\u201d"]+$/g, "").trim();
 }
 
-/** Compact duration: "47m" / "1h 03" / "2h 23". Returns em-dash for 0/negative. */
-export function formatCompactDuration(seconds: number): string {
-  if (seconds <= 0) return "\u2014";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h === 0) return `${m}m`;
-  return `${h}h ${String(m).padStart(2, "0")}`;
+/**
+ * Human-readable duration: `"26m"` / `"1h 3m"` / `"1h"` / `"<1m"`.
+ *
+ * The house format for an elapsed span, and a mirror of two existing
+ * implementations that already agree: Python's `_format_duration_human`
+ * (`bristlenose/server/routes/dashboard.py`, which feeds the `duration_human`
+ * and `total_duration_human` API fields) and Swift's `DurationFormat.human`
+ * (`desktop/…/DurationFormat.swift`, the window subtitle and the native
+ * sessions popover). Keep all three in step — `DurationFormatTests.swift`
+ * pins the Swift side to the same table this file's tests use.
+ *
+ * Replaces the former `MM:SS` / `HH:MM:SS` rendering on the Sessions grid,
+ * which read as a *time of day* when sat in a column beside dates and start
+ * times (`26:31` is ambiguous at a glance; `1:03:00` more so).
+ *
+ * ── The one deliberate divergence from Python/Swift ────────────────────
+ * A non-positive duration returns an em-dash, NOT `"0m"`. This is not drift.
+ * Python and Swift format *aggregate totals* ("16 Sessions · 18h 23m"), where
+ * a real zero is a real answer. This function formats a *per-row cell*, where
+ * a zero means the duration is unknown — 19 of 236 sessions in the local
+ * trial-run corpus (8%) have `duration_seconds == 0`, and rendering those as
+ * `"0m"` would assert a measured zero that nobody measured. The em-dash is
+ * this file's established convention for an absent cell value, shared with
+ * `formatFinderDate` and `formatCompactDate` directly above.
+ *
+ * The `h` / `m` abbreviations are knowingly unlocalised, matching the Python
+ * source and the note in `DurationFormat.swift`. Changing that is a separate
+ * decision with a 22-locale cost — don't do it here.
+ */
+export function formatDurationHuman(seconds: number): string {
+  if (seconds <= 0) return "\u2014"; // em dash — unknown, not measured-zero
+  // Truncate to whole seconds first, then integer-divide, matching Python's
+  // `int(seconds // 3600)` / `int((seconds % 3600) // 60)`.
+  const total = Math.floor(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  return m > 0 ? `${m}m` : "<1m";
 }
 
 /** Compact date: "12 Feb" or "Wed 12 Feb" (includeDay=true). Locale-aware. Returns em-dash for null/invalid. */

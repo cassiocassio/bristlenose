@@ -17,7 +17,7 @@ import { PlayerContext } from "../contexts/PlayerContext";
 import { apiGet } from "../utils/api";
 import { reportHref } from "../utils/reportHref";
 import { refetchOverlayProps } from "../hooks/useRefetching";
-import { formatDuration, formatFinderDate, formatFinderFilename, formatTimecode } from "../utils/format";
+import { formatDurationHuman, formatFinderDate, formatFinderFilename, formatTimecode } from "../utils/format";
 import type {
   CoverageResponse,
   DashboardResponse,
@@ -318,7 +318,7 @@ function CompactSessionRow({
         <div>{formatFinderDate(session_date, i18n.language)}</div>
       </td>
       <td className="bn-session-duration">
-        {formatDuration(duration_seconds)}
+        {formatDurationHuman(duration_seconds)}
       </td>
       <td>{sourceEl}</td>
     </tr>

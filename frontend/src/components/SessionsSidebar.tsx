@@ -14,7 +14,7 @@ import { useMatch, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { apiGet } from "../utils/api";
 import { reportHref } from "../utils/reportHref";
-import { formatCompactDuration, formatCompactDate } from "../utils/format";
+import { formatDurationHuman, formatCompactDate } from "../utils/format";
 import { useProjectId } from "../hooks/useProjectId";
 import type { SessionsListResponse, SessionResponse, SpeakerResponse } from "../utils/types";
 
@@ -56,7 +56,10 @@ function getShortName(name: string): string {
 // These match the CSS in sidebar.css. If the CSS changes, update here.
 const BADGE_W = 24;       // .badge width
 const GAP = 6;            // flex gap in session-entry-row
-const DURATION_W = 36;    // "1h 03" at tabular-nums
+const DURATION_W = 43;    // "4h 28m" — 6 mono chars at ~7.2px (was 36 = 5 chars,
+                          // "1h 03"). 6 is the widest across the 236-session local
+                          // trial-run corpus; the constant has always been a
+                          // typical-widest estimate, not an absolute worst case.
 const SEP_W = 10;         // " · " separator
 const DATE_SHORT_W = 42;  // "12 Feb"
 const DATE_DOW_W = 70;    // "Wed 12 Feb"
@@ -206,7 +209,7 @@ export function SessionsSidebar() {
         const path = `/report/sessions/${session.session_id}`;
         const participants = session.speakers.filter((sp) => sp.role === "participant");
         const moderator = session.speakers.filter(isModerator);
-        const duration = formatCompactDuration(session.duration_seconds);
+        const duration = formatDurationHuman(session.duration_seconds);
         const dateStr = formatCompactDate(session.session_date, showDow, i18n.language);
 
         if (shape.isOneToOne) {

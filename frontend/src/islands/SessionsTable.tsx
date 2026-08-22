@@ -22,7 +22,7 @@ import type { PersonData } from "../utils/api";
 import { postProjectAction } from "../shims/bridge";
 import { isEmbedded } from "../utils/embedded";
 import { isExportMode } from "../utils/exportData";
-import { formatDuration, formatFinderDate, formatFinderFilename } from "../utils/format";
+import { formatDurationHuman, formatFinderDate, formatFinderFilename } from "../utils/format";
 import type { SessionResponse, SessionsListResponse } from "../utils/types";
 import { refetchOverlayProps } from "../hooks/useRefetching";
 
@@ -530,7 +530,7 @@ function SessionRow({
           Below the switch a container query drops them into one column,
           stacked — so the merge is CSS, not a second markup path. */}
       <div className="bn-sessions-cell bn-cell-duration bn-session-duration" role="cell">
-        {formatDuration(duration_seconds)}
+        {formatDurationHuman(duration_seconds)}
       </div>
       <div className="bn-sessions-cell bn-cell-file" role="cell">{sourceEl}</div>
     </div>

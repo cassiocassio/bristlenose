@@ -194,16 +194,20 @@ const MULTI_MODERATOR: SessionsListResponse = {
 // Computed breakpoints (from computeBreakpoints):
 // baseShort = 24 + 6 + 42 + 6 + 16 = 94
 // baseFull  = 24 + 6 + 77 + 6 + 16 = 129
-// durationAt = 94 + 42 + 36 + 10 = 182
-// dowAt      = 94 + 70 + 36 + 10 = 210
-// fullNameAt = 129 + 42 + 36 + 10 = 217
+// durationAt = 94 + 42 + 43 + 10 = 189
+// dowAt      = 94 + 70 + 43 + 10 = 217
+// fullNameAt = 129 + 42 + 43 + 10 = 224
 // thumbAt    = Infinity (no video)
+//
+// (DURATION_W went 36 -> 43 on 22 Aug 2026 with the move to
+// formatDurationHuman: "4h 28m" is 6 mono chars where "1h 03" was 5. Each
+// threshold above shifted +7px with it.)
 //
 // So for this data set:
 // - 180px: date only, short names
-// - 185px: + duration
-// - 215px: + day-of-week
-// - 220px: + full names
+// - 190px: + duration
+// - 220px: + day-of-week
+// - 225px: + full names
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -326,7 +330,7 @@ describe("SessionsSidebar", () => {
   });
 
   it("shows duration when wide enough for content", async () => {
-    // durationAt ~182px, so 200px should show it
+    // durationAt ~189px, so 200px should show it
     initialWidth = 200;
     mockApiGet.mockResolvedValue(ONE_TO_ONE);
     renderInRouter("/report/sessions");
@@ -334,6 +338,23 @@ describe("SessionsSidebar", () => {
     await waitFor(() => {
       expect(screen.getByText("47m")).toBeDefined();
     });
+  });
+
+  it("renders an hour-plus duration with its trailing unit", async () => {
+    // s2 is 3780s. The retired formatCompactDuration rendered this as
+    // "1h 03" — a bare number, sat one interpunct away from a date
+    // ("1h 03 \u00b7 13 Feb"). formatDurationHuman keeps the unit, and matches
+    // what the native sessions popover renders for the same session.
+    // The sub-hour assertion above cannot catch this: both formats agree
+    // below an hour and only diverge past it.
+    initialWidth = 400;
+    mockApiGet.mockResolvedValue(ONE_TO_ONE);
+    renderInRouter("/report/sessions");
+
+    await waitFor(() => {
+      expect(screen.getByText("1h 3m")).toBeDefined();
+    });
+    expect(screen.queryByText("1h 03")).toBeNull();
   });
 
   it("shows short names at narrow width, full names when wide enough", async () => {

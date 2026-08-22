@@ -106,6 +106,22 @@ describe("SessionsTable", () => {
     expect(screen.getByText("#2")).toBeTruthy();
   });
 
+  it("renders durations as spans, never as clock times", async () => {
+    // The defect this pins: the Duration column used to render MM:SS, so a
+    // 30-minute session read "30:00" in a row that also carries a date and a
+    // start time — a time of day at a glance. s1 is 1800s, s2 is 2400s.
+    mockFetchResponses();
+    render(<SessionsTable projectId="1" />);
+    expect(await screen.findByText("30m")).toBeTruthy();
+    expect(screen.getByText("40m")).toBeTruthy();
+    // The invariant, not just the two examples: no duration cell may contain
+    // a colon. Anchored on the cell class so a timecode elsewhere on the page
+    // (quote positions legitimately use MM:SS) can never satisfy this.
+    for (const cell of document.querySelectorAll(".bn-cell-duration")) {
+      expect(cell.textContent).not.toContain(":");
+    }
+  });
+
   it("renders code-only badges (no name in badge)", async () => {
     mockFetchResponses();
     const { container } = render(<SessionsTable projectId="1" />);

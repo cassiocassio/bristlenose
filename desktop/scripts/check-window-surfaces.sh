@@ -45,7 +45,7 @@ fi
 #    were misclassified as per-serve during the 3b plan and caught by review:
 #    mcpMounted is per-BUILD, and the handshake is ONE global file whose
 #    per-instance delete edges would let one project erase another's exposure.
-for fact in mcpMounted handshakeProjectPath; do
+for fact in mcpMounted handshakeProjectPaths; do
   if grep -nE "serveManager\??\.$fact" "$CV" >&2; then
     die "$fact is an app-level fact and must be read from serveFleet, not a window's serve"
   fi
@@ -63,10 +63,20 @@ fi
 #    nil, so the antenna could never go solid for a study an agent could reach.
 #    A property that is read but never assigned reads exactly like a truthful
 #    "no", which is why a green suite never noticed.
+#
+#    THESE TWO STRINGS ARE LOAD-BEARING AND MUST MOVE WITH ANY RENAME. They are
+#    exact source lines, so a rename does not adapt them — it makes them
+#    unmatchable, and the gate then fails permanently on correct code. That
+#    happened: `037b371e` (20 Aug 2026) made the handshake scope plural,
+#    `handshakeProjectPath` -> `handshakeProjectPaths`, and this assertion kept
+#    the singular. It went unnoticed for two days only because nothing ran a
+#    full build in between; the first release build after it failed pre-flight
+#    naming a defect that was not there. Failing loud beats the export-CSS
+#    class, which fails silent — but it is the same rename hazard.
 FLEET="$(dirname "$0")/../Bristlenose/Bristlenose/ServeFleet.swift"
 grep -q "if mounted != mcpMounted { mcpMounted = mounted }" "$FLEET" \
   || die "ServeFleet.mcpMounted has no writer — Turn On Agent Access would be hidden everywhere"
-grep -q "if path != handshakeProjectPath { handshakeProjectPath = path }" "$FLEET" \
-  || die "ServeFleet.handshakeProjectPath has no writer — the antenna could never go solid"
+grep -q "if paths != handshakeProjectPaths { handshakeProjectPaths = paths }" "$FLEET" \
+  || die "ServeFleet.handshakeProjectPaths has no writer — the antenna could never go solid"
 
 echo "window surfaces: per-window serve, app-level facts written and on the fleet — clean"

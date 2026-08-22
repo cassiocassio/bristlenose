@@ -4,10 +4,27 @@ last-trued: 2026-08-21
 trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
 ---
 
-> **Partial — Stage 3a is built; Stage 3b is next and unblocked.** This doc
-> was `status: pending` until 18 Aug 2026, and the banner below said "the rest is
-> not built". That stopped being true on 16 Aug and nobody moved it: **four
-> sessions trued individual sections while the header stayed a phase behind**,
+> **Built — the implementation plan is complete and the family question is
+> closed.** (`status: partial` rather than `current` because Phase B and Tier-2,
+> both always orthogonal to this work, were never started.) Stage 3b
+> landed 20 Aug 2026 (`ServeFleet`, one sidecar per project), which decided A/B/C
+> **by construction: Family A**. What is left is short and listed in §"What is
+> still open"; everything above it is a record of why each call went the way it
+> did, which is the part worth keeping.
+>
+> This banner has now been a phase behind **five** times. It said `status:
+> pending` until 18 Aug, then "Stage 3b is next and unblocked" until 21 Aug —
+> while the changelog two lines below recorded 3b as built on the 20th. The 21 Aug
+> entry names the pattern exactly ("a doc trued four times in section scope, whose
+> header drifted further each pass") and the header then drifted a fifth time,
+> because the pass that wrote that sentence was trued against a commit that
+> predated 3b. **If you true one thing in this doc, true the header** — a
+> section-scoped pass reliably misses it, and the doc's own history is now five
+> data points for that. Original note follows:
+>
+> This doc was `status: pending` until 18 Aug 2026, and the banner below said
+> "the rest is not built". That stopped being true on 16 Aug and nobody moved it:
+> **four sessions trued individual sections while the header stayed a phase behind**,
 > which is the same failure `design-cloud-import.md` had and the reason the
 > truing skill now requires a section-scoped pass to re-read its own summary.
 >
@@ -53,6 +70,7 @@ trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
 
 ## Changelog
 
+- _2026-08-21b_ — **The header drifted a fifth time, and the family call is recorded as closed.** The 21 Aug pass named the pattern precisely — *"a doc trued four times in section scope, whose header drifted further each pass"* — and then the header drifted again, for a reason worth stating: that pass was trued against `ae05b1c0`, which **predates Stage 3b landing on the 20th**. So the banner said "Stage 3b is next and unblocked" while the changelog two lines below said it was built, and §"Effectively decided vs genuinely open" still argued *presumed A, decide late* with a paragraph on what would reopen the call and another on the spike that would settle it — all three answered days earlier, in this file. **Truing against a commit is not the same as truing against the doc's own changelog**, and this is the second time the gap between those two has produced the identical failure. The banner now says so and asks the next reader to true the header first. Substantively: Family A is recorded as **decided by construction** (`ServeFleet`, one sidecar per project), with both measured axes (32 windows → one sidecar, 144.7 MB; three studies → ~416 MB) discharging the two caveats the 16 Aug estimate carried, and constraint 7 recorded as answered by `HandshakeExposure` — exposure derived from the window roster, never stored, and deliberately decoupled from the 90-second reaping grace so that closing a window stops an agent reading immediately rather than eventually. New §"What is still open": two loose ends Stage 3b left on top of Stage 3a (a redundant serve-teardown guard of mine, and the unreachable `switchProject`/parking machinery), M1/M2 retired rather than outstanding, and Phase B as the only genuinely unstarted item.
 - _2026-08-21_ — **Trued against `ae05b1c0`: the header was arguing a question its own changelog had closed two days earlier.** Five summaries were stale in the same direction — every one of them said less was built than is. (1) The banner's last paragraph called the master/child-versus-peer choice "live rather than settled" and told the reader to build nothing further on the child; peer had shipped on 19 Aug (`348b5122`) and the entry recording it sat forty lines below. (2) "Owed before it ships … chiefly whether SwiftUI's per-value window dedup defeats ⌥⌘N" — it did, was found by using the app on 20 Aug, and was fixed the same day. (3) §"Window-scoping the menu commands" opened "Stage 1 is built, Stages 2–3 are not" while the §Stages list four lines down marked 2 and 3a ✅ on 16 Aug. (4) The three blockers were all cleared and none was annotated, though constraint 6 beside them had been. (5) Stage 3b carried no ✅ and still read "blocked on the family choice". §"What a child window is" (170 lines) now carries a superseded banner rather than an edit — it is the argument peer was chosen against, and deleting it would lose why. **The pattern worth naming: a doc trued four times in section scope, whose header drifted further each pass.** That is the failure this doc's own 18 Aug banner describes happening to `design-cloud-import.md`, recurring here while the sentence describing it was on screen.
 - _2026-08-17b_ — **Two more from the six-window run, both "harmless at N=1, total at N=2".** (1) **Going to the welcome screen put every window on Welcome.** `SidebarDeselectMonitor` uses `NSEvent.addLocalMonitorForEvents`, which is **app**-wide: each window installs one, each sees every click anywhere in the app, and each then called its *own* `deselect`. One click in one window's empty sidebar area deselected all six. Now scoped — the monitor compares `event.window` against its own host view's window. Worth noting the shape, since it is the second instance today: a per-window callback hung off an app-wide channel. The first was the menu-bar broadcasts. (2) **The ordinal's group key was the wrong key.** It was keyed on the *lens*, on the stated assumption that "different lenses already read differently, because the subtitle carries the per-lens count" — which is **false**, and the Window menu proved it: `countSubtitle` returns the session count for Project, for Sessions *and* for a window with no lens yet, so three windows drew `IKEA with uxfriends (1 Session · 18m)` and none of them was numbered, while a fourth carried a "2". Keyed on the rendered subtitle now, so the collision test is the thing the reader is actually looking at rather than a proxy for it. The run narration is deliberately excluded from the key — its stage and ETA change every second and would reshuffle numbers throughout a run.
 - _2026-08-20_ — **Stage 3b is built, and the memory question is finally measured on a real study.** Every window shows its own study: `ServeFleet` (one `ServeManager` per project, keyed on `Project.ID` — never on the path, which bookmark healing respells), `ContentView.serveManager` optional and fleet-derived so the compiler enforces what a gate used to, `SelectionSync` deleted, `WindowGroup(id:for:)` carrying each window's study as a **binding** (written back, or restoration returns a window to the study it was *opened* on), and `File ▸ Open in New Window` live after being dimmed since the day it shipped. **The lens collapse dissolves** — a switch touches one window, so siblings are never remounted. **Measured 20 Aug, both axes.** 32 windows on one study: **ONE sidecar, 144.7 MB**, on a 42-session project. Three studies at once: **three sidecars, 140.8 / 138.1 / 137.3 MB — ~416 MB total.** So the per-project penalty is ~140 MB flat, exactly as the 16 Aug estimate said ("~140 MB per additional project: 140–280 MB at the expected 2–3"), and it does **not** grow with session count — the original figure came off a *three*-session project and carried two caveats saying it was a floor needing re-measurement before it entered a budget. Both discharged. The dominant cost is WebKit — ~70 MB per window's content process — exactly as this doc predicted when it said N retained WebViews cost the same under every family. **Three window bugs and one serve failure were found by using the app, none by the suite** (1212 green throughout): SwiftUI's per-value window dedup ate ⌥⌘N, then ate its `nil` replacement, then capped windows at two — fixed by minting a fresh token that names no project; and `start()`'s same-path no-op, which had lived in the deleted `switchProject`, came off with it, so a second window on one study SIGINT'd a booting sidecar ("exited before becoming ready (code 2)"). Two reviews found the same shape four times over — a value or a call that exists, is tested, and is never reached: `ServeReaping` and `ServeEnvStaleness` had no caller, `mcpMounted` and `handshakeProjectPath` no writer (which hid *Turn On Agent Access* everywhere and could never light the antenna), `setExposed` no caller, and `check-window-surfaces.sh` was **never wired into any build**, which is why two of its four invariants had already regressed.
@@ -156,7 +174,7 @@ These are established facts (verified during A2), not assumptions:
    WebView still cold-mounts the SPA on switch (required by the per-sidecar token +
    per-project isolation). Browser-back-*instant* needs the rendered **view**
    retained, not just the server. Full tier model + the WebKit-vs-Safari reasoning:
-   `docs/design-desktop-switch-performance.md`.
+   `docs/archive/design-desktop-switch-performance.md`.
 3. **Memory is the governing cost.** Each warm sidecar is a Python process (~70–90
    MB) and each retained WebView is a live WebKit content process + a rendered
    heap. N of each, on the 8 GB Apple-Silicon floor, is real pressure — any
@@ -310,7 +328,7 @@ all reports) + per-project **worker** subprocesses for runs (semaphore-capped).
   browser-back feel regardless of family (even Family B benefits from not
   re-mounting). The threshold-aware switch-progress treatment (instrument first,
   spinner only > ~1 s) is the near-term polish. Detail:
-  `docs/design-desktop-switch-performance.md`.
+  `docs/archive/design-desktop-switch-performance.md`.
 - **Multi-window → Phase C.** `WindowGroup(for: Project.ID)` + a per-window serve
   registry + fixing the hard-coded `/api/projects/1/` frontend sites. Composes
   with A/B/C. Non-negotiable for the paid product (the free CLI+Safari path
@@ -356,55 +374,79 @@ all reports) + per-project **worker** subprocesses for runs (semaphore-capped).
   the lens + an anchor and nothing else; `File ▸ New Window` (⌥⌘N) replaces
   `Window ▸ Bristlenose`; window title = project name, subtitle = count or live run
   state. All four sit in the two new sections below and none of them waits on A/B/C.
-- **Presumed Family A, decide late (16 Aug 2026).** Not yet formally chosen, but
-  no longer wide open: stop spending anything on keeping B or C alive, and don't
-  wait on the call to proceed (the plan's first two items are family-independent).
+- **Family A — decided by construction, 20 Aug 2026.** Not chosen on paper and
+  then built: built, and the choice fell out. `ServeFleet` holds one
+  `ServeManager` per project (keyed on `Project.ID`, never the path — bookmark
+  healing respells the path and a path-keyed fleet would mint two sidecars for
+  one study). B's single-project→multi-tenant server rework was never started and
+  now never will be.
 
-  **What changed:** the family question was held open by an *unquantified* memory
-  cost, and it is now quantified. A sidecar is **~140 MB and flat from 1 to 8
-  windows** — measured 16 Aug 2026, two sidecars serving eight windows. Since
-  every family needs one live WebView per window, sidecar count is the *only*
-  thing A/B/C differ on, so A's whole penalty is ~140 MB per additional project:
-  140–280 MB at the expected 2–3. On 16 GB that is not an argument, and it was the
-  argument. Weigh it against A's zero server rework (B needs single-project →
-  multi-tenant, the ~12 hardcoded `/api/projects/1/` frontend sites, and per-project
-  media/event routing), A's reversibility (retained-WebView work survives a later
-  move to B; B's surgery does not survive a move back), free isolation (each
-  sidecar is already its own origin/token/store), and no shared fate.
+  **Both axes were measured on a real study before the call closed**, which is
+  what the 16 Aug caveats demanded. 32 windows on one 42-session study: **one
+  sidecar, 144.7 MB**. Three studies at once: **three sidecars, 140.8 / 138.1 /
+  137.3 MB, ~416 MB total**. So the per-project penalty is ~140 MB *flat* — it
+  does not grow with session count, which is precisely what the earlier
+  three-session figure could not establish. The dominant cost is WebKit at ~70 MB
+  per window's content process, exactly as this doc predicted when it argued that
+  N retained WebViews cost the same under every family, and therefore that sidecar
+  count was the only thing A/B/C differed on.
 
-  **Two caveats on the number.** It came off a **3-session** project, so it is a
-  floor rather than a typical figure — re-measure against a real 40-session study
-  before it enters a budget. And it is one reading, one machine, Debug build.
+  **Constraint 7 (the MCP handshake) is answered, and it answered smaller than
+  feared.** `HandshakeExposure` makes exposure a *pure function of the window
+  roster*: scope is every open project window whose project has Agent Access on.
+  Nothing designates it, nothing persists it, nothing follows focus — widen by
+  opening a window, narrow by closing one. Two properties are load-bearing and
+  worth keeping: it is **derived, never stored**, so it cannot flap the way a
+  single `exposedProject` slot did (five states across five calls, measured
+  20 Aug); and it is deliberately **decoupled from serve liveness**, because
+  `ServeReaping` keeps a sidecar warm for 90 s after its last window closes, and
+  if permission shared a predicate with that cache then "close the window to stop
+  an agent reading it" would be false for a minute and a half.
 
-  **A's one genuinely new problem is constraint 7** (the MCP handshake). It is
-  smaller than it looks — agent access is already per-project and opt-in, and the
-  handshake already ships a deliberate v1 limitation — but it touches a contract
-  with software installed inside another vendor's app, so it gets designed on
-  paper before Stage 3b, not discovered mid-build.
+  **What A cost that the argument for it did not predict.** Three window bugs and
+  one serve failure were found by *using* the app, none by the 1212-test suite:
+  SwiftUI's per-value window dedup ate ⌥⌘N (twice, then capped windows at two),
+  and `start()`'s same-path no-op — which had lived inside the deleted
+  `switchProject` — came off with it, so a second window on one study SIGINT'd a
+  booting sidecar. Two reviews then found the same shape four times over: a value
+  or call that exists, is tested, and is never reached. The pattern is worth
+  carrying forward more than any of the individual fixes.
 
-  **What would reopen the call:** the sidecar figure landing far higher against a
-  real study, or the expected project count turning out to be ~8–10 rather than
-  2–3.
 
-  **What settles it is a spike, not a survey** (revised 16 Aug 2026). The earlier
-  framing — "pick it with real multi-project-machine data", i.e. how many projects a
-  researcher keeps live — asked the wrong question: that number is ~2–3 and it is
-  the *small* axis (see §"Windows and projects are different axes"). The number that
-  actually decides is **the marginal cost of the Nth window on the same project,
-  versus the Nth project.** Windows on one project share an origin, a port and a
-  data store; windows on different projects cannot. Whether WebKit collapses
-  same-origin views onto one content process is what makes a dozen windows either
-  ~300 MB or ~2 GB, and it is a day's measurement rather than a cohort question.
-  Run it before the family call, because it moves constraint 3 (memory as the
-  governing cost) more than any argument in this section does.
+## What is still open
 
-  Weigh alongside it, in both directions: **for A** — it extends shipped, proven A2,
-  and it is the reversible option (the retained-WebView work survives a later move
-  to B, whereas B's single-project→multi-tenant surgery does not survive a move
-  back); and its governing objection, memory on the 8 GB floor, is the one that
-  erodes with time, since base Apple Silicon is already 16 GB and this ships
-  post-TF. **Against A** — constraint 7, the MCP handshake, which B and C fit
-  natively and A does not.
+Short, and none of it blocks anything. Kept here so the next planning pass reads
+one list instead of inferring it from five section statuses.
+
+**Two loose ends left by Stage 3b's landing on top of Stage 3a:**
+
+- **`ContentView.stopServeIfLastProjectWindow` is now a second mechanism deciding
+  sidecar lifetime.** It was written 17 Aug against one shared serve, and asks
+  "does any *other* window show any project". `ServeReaping` now asks the right
+  question — a sweep over `shownProjects`, with a stated preference for a sweep
+  over a refcount ("a missed `.onDisappear` delays an answer by one sweep instead
+  of stranding a sidecar forever"). The guard is not wrong, just coarser and
+  redundant. Two things deciding one lifetime is how drift starts; delete it and
+  let the reaper own the question.
+- **`switchProject`, `detachFronted`, `adoptFronted`, `tearDownEntry` and
+  `ParkedSidecar` are unreachable.** Stage 3b removed the last caller. The A2
+  warm-pool design they implement is history (`docs/archive/design-desktop-switch-performance.md`);
+  the same-path guard that lived inside `switchProject` is the one part that
+  mattered and it now lives in `start()`.
+
+**Deliberately not done:**
+
+- **M1 / M2 are retired, not outstanding.** Both existed to quantify the memory
+  objection that held the family call open. The call is closed and the numbers
+  were taken on a real study (above), so there is nothing left for them to decide.
+- **Tier-2 retained views** — the instant-switch half. Never started, and Stage 3b
+  weakened the case for it: a switch now touches one window rather than remounting
+  siblings, which is where most of the felt cost was.
+- **Phase B (parallel runs, cap-2 + queue)** — orthogonal to all of the above and
+  untouched. The only genuinely unstarted item on the original plan.
+
+**Unverified rather than unbuilt:** the antenna badge exists only on the AppKit
+sidebar, which is default-off, so no cohort tester has seen it.
 
 ## Window-scoping the menu commands (the Notes-experience prerequisite)
 
@@ -1169,13 +1211,22 @@ in favour of dimming, which is what the app already did. See the P2 section.
 
 ## Sequencing
 
-Post-TF. A1 ✅ and A2 ✅ already removed the "stuck on one project" felt blocker,
-so this is enhancement, not blocker-fix — but it is the **paid-product** bar (the
-free CLI+Safari path sets it). The phases compose: Phase B (parallel runs) and the
-serve/view family choice are independent; Phase C (multi-window) + Tier-2 (retained
-views) are the instant-multi-window pair. Likely order once planning opens:
-choose the family → Tier-2 retained views → Phase C multi-window → Phase B
-parallel runs (or B earlier if run-throughput feedback demands it).
+**Superseded by what happened — kept because the plan's order was wrong in an
+instructive way.** It read: choose the family → Tier-2 retained views → Phase C
+multi-window → Phase B parallel runs, all post-TF.
+
+What actually ran was **Phase C first, in window-level slices, and the family
+choice last** — Stages 2 and 3a (the exception this section already carved out)
+turned out to carry most of the felt value, and building 3b on top *made* the
+family choice rather than waiting on it. Tier-2 was never reached and is now
+weaker (a switch touches one window). Phase B is untouched.
+
+The lesson worth keeping: the item this section ranked first — the architectural
+call — was the one that resolved for free once the two family-independent slices
+were built. Original text: *"A1 ✅ and A2 ✅ already removed the 'stuck on one
+project' felt blocker, so this is enhancement, not blocker-fix — but it is the
+**paid-product** bar (the free CLI+Safari path sets it)."* That framing still
+holds; only the ordering was wrong.
 
 **Stages 2 and 3a are the exception to "post-TF".** Neither waits on the family
 call, and Stage 2's bugs are **live today, not hypothetical**: a second window is
@@ -1190,7 +1241,7 @@ true is Stage 2 → Stage 3a, in that order, independent of everything else here
 
 ## References
 
-- `docs/design-desktop-switch-performance.md` — the switch-latency slice (tiers,
+- `docs/archive/design-desktop-switch-performance.md` — the switch-latency slice (tiers,
   WebKit≠Safari, the instant-switch path). This doc is the umbrella; that one is
   the latency sub-concern.
 - `docs/mockups/window-menu-naming.html` — the window-title/Window-menu naming

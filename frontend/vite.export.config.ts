@@ -18,6 +18,18 @@ export default defineConfig({
   resolve: {
     alias: {
       "@locales": path.resolve(__dirname, "../bristlenose/locales"),
+      // The export carries its locale resources in BRISTLENOSE_EXPORT, embedded
+      // by the server for the chosen language and its fallback chain. Swap the
+      // serve-mode loader for a stub so its dynamic import never enters this
+      // build's module graph.
+      //
+      // This has to be an alias, not a build-time flag: vite's
+      // dynamic-import-vars plugin expands `locales/${locale}/${ns}.json` into a
+      // glob over all 192 files during *transform*, before any dead-code pass
+      // could remove an unreachable branch — and inlineDynamicImports then folds
+      // every one of them into the single chunk. That was 1,802 KB of a 3.38 MB
+      // report. See docs/design-export-locale.md.
+      "./localeLoader": path.resolve(__dirname, "src/i18n/localeLoader.export.ts"),
     },
   },
   build: {

@@ -156,6 +156,23 @@
     color: var(--bn-colour-muted);
 }
 
+/* Export language line — the governing control sits trailing on its own line,
+   so the researcher reads "Language  [Deutsch]" rather than meeting a question.
+   Same token scale as the checkbox below it; they are siblings in the dialog. */
+.bn-export-locale {
+    display: flex;
+    gap: var(--bn-space-sm);
+    align-items: center;
+    justify-content: space-between;
+    font-size: var(--bn-text-label);
+    margin: var(--bn-space-md) 0;
+}
+
+.bn-export-locale .bn-locale-select {
+    flex: 0 1 auto;
+    min-width: 12ch;
+}
+
 /* Export checkbox layout */
 .bn-export-checkbox {
     display: flex;

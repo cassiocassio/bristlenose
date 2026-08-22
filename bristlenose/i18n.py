@@ -15,6 +15,7 @@ Usage:
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from functools import lru_cache
 from pathlib import Path
 
@@ -50,6 +51,33 @@ def _resolution_order(locale: str) -> tuple[str, ...]:
     if "en" not in order:
         order.append("en")
     return tuple(order)
+
+
+def locale_resources(
+    locale: str, namespaces: Sequence[str]
+) -> dict[str, dict[str, object]]:
+    """Every namespace in ``locale``'s resolution order, keyed locale -> namespace.
+
+    Built for the HTML export, which inlines the chrome strings for exactly the
+    languages the report can render in rather than all 22.  Returns the whole
+    **chain**, never the leaf: ``zh-Hant-HK`` is deliberately a thin override
+    fork carrying only genuine HK-idiom differences, so shipping it alone would
+    render raw keys — ``codebook.frameworks`` — at whoever the report was sent
+    to.  English rides under every locale for the same reason: it costs ~35 KB
+    and removes the failure mode where a future key gap prints a key name in an
+    artefact nobody can correct after it has been sent.
+
+    Locales that contribute no files are omitted rather than returned empty, so
+    the caller can embed the result without pruning.
+    """
+    out: dict[str, dict[str, object]] = {}
+    for loc in _resolution_order(locale if locale in SUPPORTED_LOCALES else "en"):
+        bundle = {
+            ns: data for ns in namespaces if (data := _load_namespace(loc, ns))
+        }
+        if bundle:
+            out[loc] = bundle
+    return out
 
 
 def _resolve(data: object, parts: list[str]) -> str | None:

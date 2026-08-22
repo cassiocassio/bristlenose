@@ -73,6 +73,15 @@
   -webkit-user-drag: none;
 }
 
+/* --- Language picker ---
+   The export carries only the chosen language and its fallback chain (since
+   23 Aug 2026), so a picker offering 22 would offer 21 that resolve to English.
+   Gated in JSX too — SettingsModal and SettingsPanel both check isExportMode()
+   — this is the defence-in-depth half. */
+.bn-export-mode .bn-locale-group {
+  display: none !important;
+}
+
 /* --- Export button itself ---
    No rule needed: ExportDropdown returns null under isExportMode(), so the
    toolbar control never reaches the DOM.  The rule that used to sit here named

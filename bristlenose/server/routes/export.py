@@ -18,6 +18,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.encoders import jsonable_encoder
 from starlette.responses import Response
 
+from bristlenose.i18n import SUPPORTED_LOCALES, locale_resources
 from bristlenose.server.routes.health import build_health_payload
 
 logger = logging.getLogger(__name__)
@@ -228,6 +229,14 @@ def _build_logo_data_uris() -> dict[str, str]:
 # ---------------------------------------------------------------------------
 # HTML builder
 # ---------------------------------------------------------------------------
+
+# The namespaces the web report actually renders from.  The SPA's own loader
+# asks for exactly these three; `desktop`, `cli`, `doctor`, `preflight`,
+# `server` and `pipeline` are unreachable from a browser report and used to
+# ship anyway — 1,802 KB of a 3.38 MB export, including Czech text for a
+# --whisper-model flag.  See docs/design-export-locale.md.
+_EXPORT_NAMESPACES = ("common", "settings", "enums")
+
 
 def _build_export_html(
     export_data: dict,
@@ -477,6 +486,13 @@ def export_report(
         # this offline so the report reads in the language it was written in,
         # not the recipient's browser language.
         "locale": locale or None,
+        # The chrome strings for that language and everything it falls back to,
+        # embedded rather than bundled.  The export build no longer inlines any
+        # locale JSON, so this is the only copy the offline report has — see
+        # locale_resources() for why it is the whole chain and never the leaf.
+        "localeResources": locale_resources(
+            locale or "en", _EXPORT_NAMESPACES
+        ),
         "health": build_health_payload(),
         "logos": _build_logo_data_uris(),
         "endpoints": endpoints,
@@ -506,7 +522,14 @@ def export_report(
     # --- Filename ---
     project_name = project_info.project_name  # type: ignore[union-attr]
     slug = slugify(project_name) if project_name else "bristlenose"
-    filename = f"{slug}-report.html"
+    # The language is part of what this file IS now, not a rendering choice the
+    # reader can undo, so it belongs in the name — otherwise a researcher
+    # exporting fr/de/it for a Swiss client gets three identical filenames in
+    # Downloads.  The locale token rather than the native language name because
+    # the rest of this filename is a slug; "acme-research-report (Deutsch).html"
+    # would be two naming conventions in one string.
+    lang = locale if locale in SUPPORTED_LOCALES else "en"
+    filename = f"{slug}-report-{lang}.html"
 
     return Response(
         content=html,

@@ -11,6 +11,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SUPPORTED_LOCALES, type Locale } from "../i18n";
 import { setLocale, useLocaleStore } from "../i18n/LocaleStore";
+import { LOCALE_LABELS } from "../i18n/localeLabels";
+import { isExportMode } from "../utils/exportData";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -27,31 +29,6 @@ const OPTIONS: { value: Appearance; labelKey: string }[] = [
   { value: "dark", labelKey: "appearance.dark" },
 ];
 
-/** Display labels for supported locales. Always in the locale's own language. */
-const LOCALE_LABELS: Record<Locale, string> = {
-  en: "English",
-  es: "Español",
-  ca: "Català",
-  ja: "日本語",
-  fr: "Français",
-  de: "Deutsch",
-  ko: "한국어",
-  cs: "Čeština",
-  it: "Italiano",
-  pl: "Polski",
-  ru: "Русский",
-  uk: "Українська",
-  da: "Dansk",
-  sv: "Svenska",
-  nb: "Norsk bokmål",
-  tr: "Türkçe",
-  nl: "Nederlands",
-  fi: "Suomi",
-  "pt-BR": "Português (Brasil)",
-  "pt-PT": "Português (Portugal)",
-  "zh-Hant": "繁體中文",
-  "zh-Hant-HK": "繁體中文（香港）",
-};
 
 // ---------------------------------------------------------------------------
 // Configuration reference data
@@ -823,7 +800,9 @@ export function SettingsPanel() {
         ))}
       </fieldset>
 
-      <fieldset className="bn-setting-group">
+      {/* See SettingsModal for why this is hidden in an exported report. */}
+      {!isExportMode() && (
+      <fieldset className="bn-setting-group bn-locale-group">
         <legend>{t("language.legend")}</legend>
         <p className="bn-setting-description">
           {t("language.description")}
@@ -850,6 +829,7 @@ export function SettingsPanel() {
           </a>
         </p>
       </fieldset>
+      )}
 
       <hr />
 

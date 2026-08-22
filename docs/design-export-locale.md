@@ -1,12 +1,12 @@
 ---
-status: proposed
+status: shipped
 last-trued: 2026-08-23
 trued-against: HEAD@main (628d0b99) on 2026-08-23
 ---
 
 # Export locale — one language per deliverable
 
-**Status:** proposed, not built · 23 Aug 2026
+**Status:** shipped 23 Aug 2026 · measured, not estimated
 **Supersedes nothing.** Extends the locale bake shipped 26 Jul 2026 (`30c5c2f7`,
 `22980677`), described in [`design-export-html.md`](design-export-html.md).
 
@@ -14,6 +14,26 @@ An exported report is a document a researcher hands to someone. Documents have a
 language. This proposes that the language is **chosen at the moment of export,
 defaulted to the researcher's own**, and that the file then carries that language
 and no other — which halves it, and is the smaller half of the argument.
+
+---
+
+## 0. Measured outcome
+
+| | Before | After |
+|---|---:|---:|
+| Export build `app.js` | 2,523 KB | **780 KB** |
+| Exported report, English | 3.38 MB | **1.55 MB** |
+| Exported report, German | — | 1.59 MB |
+| Exported report, `zh-Hant-HK` | — | 1.61 MB |
+
+Verified by sampling real locale strings against the built bundle and against a
+generated export, **through the same `ensure_ascii` + `< > &` escaping the embed
+uses** — comparing raw literals reports every non-ASCII string as absent, which
+briefly made two correct German strings look missing. Japanese absent from a
+German export; German present including umlauts and `ß`.
+
+Serve mode is unaffected: it still code-splits locales into lazy chunks, so the
+saving is not paid for anywhere else.
 
 ---
 
@@ -186,16 +206,24 @@ be re-baselined to accommodate a defect** — see `docs/release-log.md`, 0.27.0.
 
 ## 4. Open questions
 
-1. **Native or researcher's language in the filename?** `LOCALE_LABELS` holds
-   native names, and the researcher picked "Deutsch" from that list — but they
-   are the one filing the file. `Acme Research (Deutsch).html` or
-   `(German).html`. Genuine coin-flip; decide deliberately rather than by
-   whichever is easier to implement.
-2. **Does the data/chrome boundary hold under a single locale?** A German export
-   must translate chrome and leave participant-derived content alone — quote
-   text, speaker names, LLM-generated theme names. `design-i18n.md` has the
-   boundary; today's all-locales export would hide any place that gets it wrong,
-   so this wants checking *before* baking one locale, not after.
+1. ~~**Native or researcher's language in the filename?**~~ **Decided: the
+   locale token.** `smoke-test-report-de.html`. Neither native name nor English
+   name, because the rest of that filename is a slug — `acme-research-report
+   (Deutsch).html` is two naming conventions in one string. The token is also
+   guaranteed to be one of `SUPPORTED_LOCALES` before it is interpolated, so a
+   query parameter cannot reach the filename (pinned by
+   `test_an_unknown_locale_cannot_reach_the_filename`). Note this changes
+   *every* export filename, English included, which is correct: the language is
+   now a property of the file rather than of how it happens to render.
+2. **Does the data/chrome boundary hold under a single locale?** *Partly
+   answered, deliberately not closed.* The two halves are now structurally
+   separate in the embed — chrome arrives in `localeResources`, participant data
+   in `endpoints` — so nothing can silently translate a quote. What that does
+   **not** prove is the render side: a component keying an English data value
+   into a translated label would still be wrong, and a one-locale export makes
+   it visible in one language instead of switchable. Worth an eye when the
+   Sessions/sentiment surfaces next get one; not a blocker, and not claimed as
+   verified.
 3. **Is the picker for anyone, or only for the default?** If researchers almost
    never export in a language other than their own, the control is one nobody
    touches — and that is acceptable, because the default delivers both the size

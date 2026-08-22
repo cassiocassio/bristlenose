@@ -15,6 +15,8 @@ import enCommon from "@locales/en/common.json";
 import enSettings from "@locales/en/settings.json";
 import enEnums from "@locales/en/enums.json";
 import enDesktop from "@locales/en/desktop.json";
+import { getExportData } from "../utils/exportData";
+import { loadLocaleResources } from "./localeLoader";
 
 export const SUPPORTED_LOCALES = ["en", "es", "ca", "ja", "fr", "de", "ko", "cs", "it", "pl", "ru", "uk", "da", "sv", "nb", "tr", "nl", "fi", "pt-BR", "pt-PT", "zh-Hant", "zh-Hant-HK"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -34,22 +36,30 @@ const LAZY_NAMESPACES: readonly string[] = _isDesktopMode
   : [...NAMESPACES];
 
 /**
- * Lazily load a non-English locale's translation bundles.
- * Returns a resources object keyed by namespace.
+ * Register the locale resources an exported report carries with it.
+ *
+ * The server embeds the chosen language and its whole fallback chain — never
+ * the leaf alone, since `zh-Hant-HK` is a thin override fork that ships no
+ * `enums.json` at all and would render raw keys on its own. Registering every
+ * locale in the embed (not just the requested one) is what lets i18next's
+ * `fallbackLng` resolve as it does online.
+ *
+ * Returns true when the embed supplied something, so the caller can skip the
+ * network path that an offline `file://` artefact has no way to use.
  */
-async function loadLocaleResources(
-  locale: Locale,
-): Promise<Record<string, Record<string, unknown>>> {
-  const resources: Record<string, Record<string, unknown>> = {};
-  for (const ns of LAZY_NAMESPACES) {
-    try {
-      const mod = await import(`../../../bristlenose/locales/${locale}/${ns}.json`);
-      resources[ns] = mod.default ?? mod;
-    } catch {
-      // Missing file — English fallback will be used for this namespace.
+function registerEmbeddedResources(locale: Locale): boolean {
+  const embedded = getExportData()?.localeResources;
+  if (!embedded) return false;
+  let registered = false;
+  for (const [loc, namespaces] of Object.entries(embedded)) {
+    for (const [ns, bundle] of Object.entries(namespaces)) {
+      i18n.addResourceBundle(loc, ns, bundle, true, true);
+      if (loc === locale) registered = true;
     }
   }
-  return resources;
+  // A chain whose leaf contributes nothing still counts: the resources needed
+  // to render `locale` are present, they are just under its fallbacks.
+  return Object.keys(embedded).length > 0 || registered;
 }
 
 /**
@@ -59,7 +69,9 @@ export async function ensureLocaleLoaded(locale: Locale): Promise<void> {
   if (locale === "en") return;
   if (i18n.hasResourceBundle(locale, "common")) return;
 
-  const resources = await loadLocaleResources(locale);
+  if (registerEmbeddedResources(locale)) return;
+
+  const resources = await loadLocaleResources(locale, LAZY_NAMESPACES);
   for (const [ns, bundle] of Object.entries(resources)) {
     i18n.addResourceBundle(locale, ns, bundle, true, true);
   }

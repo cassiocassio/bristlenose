@@ -14,6 +14,8 @@ import { useInert } from "../hooks/useInert";
 import { useProjectId } from "../hooks/useProjectId";
 import { isExportMode } from "../utils/exportData";
 import { resolveBrowserLang } from "../i18n/LocaleStore";
+import { LOCALE_LABELS } from "../i18n/localeLabels";
+import { SUPPORTED_LOCALES, type Locale } from "../i18n";
 
 interface ExportDialogProps {
   open: boolean;
@@ -27,6 +29,11 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
   useInert(open);
   const projectId = useProjectId();
   const [anonymise, setAnonymise] = useState(false);
+  // Defaults to the researcher's own language, which is what the export has
+  // baked since 30c5c2f7. Stated rather than silent so they can SEE which
+  // language they are about to hand a client — a researcher running the UI in
+  // a machine-seeded locale pending native review would otherwise never know.
+  const [exportLocale, setExportLocale] = useState<Locale>("en");
   const [error, setError] = useState<string | null>(null);
   const triggerRef = useRef<Element | null>(null);
 
@@ -34,6 +41,7 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
   useEffect(() => {
     if (open) {
       setAnonymise(initialAnonymise);
+      setExportLocale(resolveBrowserLang(i18n.language) ?? "en");
       setError(null);
       triggerRef.current = document.activeElement;
     } else if (triggerRef.current instanceof HTMLElement) {
@@ -74,7 +82,7 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
     // (see AppLayout.triggerReportDownload).
     const params = new URLSearchParams();
     if (anonymise) params.set("anonymise", "true");
-    params.set("locale", resolveBrowserLang(i18n.language) ?? "en");
+    params.set("locale", exportLocale);
     const url = `/api/projects/${projectId}/export?${params.toString()}`;
     const a = document.createElement("a");
     a.href = url;
@@ -83,7 +91,7 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
     a.click();
     document.body.removeChild(a);
     onClose();
-  }, [anonymise, onClose, projectId]);
+  }, [anonymise, exportLocale, onClose, projectId]);
 
   if (isExportMode()) return null;
 
@@ -101,6 +109,21 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
         <p className="bn-modal-subtitle">
           {t("export.subtitle")}
         </p>
+        <label className="bn-export-locale">
+          <span>{t("settings:language.legend")}</span>
+          <select
+            className="bn-locale-select"
+            value={exportLocale}
+            onChange={(e) => setExportLocale(e.target.value as Locale)}
+            data-testid="bn-export-locale-select"
+          >
+            {SUPPORTED_LOCALES.map((loc) => (
+              <option key={loc} value={loc}>
+                {LOCALE_LABELS[loc]}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="bn-export-checkbox">
           <input
             type="checkbox"

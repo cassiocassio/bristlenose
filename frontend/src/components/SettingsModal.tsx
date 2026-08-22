@@ -22,6 +22,8 @@ import { ModalNav, type NavItem } from "./ModalNav";
 import { isEmbedded } from "../utils/embedded";
 import { dt } from "../utils/platformTranslation";
 import { PALETTES, isPalette, readSavedPalette, type Palette } from "../utils/bootPalette";
+import { LOCALE_LABELS } from "../i18n/localeLabels";
+import { isExportMode } from "../utils/exportData";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -42,31 +44,6 @@ const PALETTE_KEY = "bristlenose-palette";
 const PALETTE_ATTR = "data-color-theme";
 const PALETTE_KEYS = PALETTES.map((value) => ({ value, labelKey: `palette.${value}` }));
 
-/** Display labels for supported locales. Always in the locale's own language. */
-const LOCALE_LABELS: Record<Locale, string> = {
-  en: "English",
-  es: "Español",
-  ca: "Català",
-  ja: "日本語",
-  fr: "Français",
-  de: "Deutsch",
-  ko: "한국어",
-  cs: "Čeština",
-  it: "Italiano",
-  pl: "Polski",
-  ru: "Русский",
-  uk: "Українська",
-  da: "Dansk",
-  sv: "Svenska",
-  nb: "Norsk bokmål",
-  tr: "Türkçe",
-  nl: "Nederlands",
-  fi: "Suomi",
-  "pt-BR": "Português (Brasil)",
-  "pt-PT": "Português (Portugal)",
-  "zh-Hant": "繁體中文",
-  "zh-Hant-HK": "繁體中文（香港）",
-};
 
 // ── Appearance helpers ────────────────────────────────────────────────────
 
@@ -397,8 +374,14 @@ function GeneralSection() {
         </select>
       </fieldset>
 
-      {!isEmbedded() && (
-        <fieldset className="bn-setting-group">
+      {/* Hidden in an exported report: since 23 Aug the export carries only the
+          chosen language and its fallback chain, so a picker offering 22 would
+          be offering 21 that resolve to English. It was never a working control
+          there anyway — a switch writes localStorage, which detectLocale ranks
+          BELOW the baked export locale, so a reload silently reverted it.
+          See docs/design-export-locale.md §1.2. */}
+      {!isEmbedded() && !isExportMode() && (
+        <fieldset className="bn-setting-group bn-locale-group">
           <legend>{t("language.legend")}</legend>
           <p className="bn-setting-description">
             {t("language.description")}

@@ -68,6 +68,25 @@ class TestExportEndpoint:
         resp = client.get("/api/projects/1/export")
         assert 'class="bn-export-mode"' in resp.text
 
+    def test_filename_carries_the_language(self, client: TestClient) -> None:
+        """Three languages for a Swiss client must not be three identical
+        filenames in Downloads."""
+        cd = client.get("/api/projects/1/export?locale=de").headers["content-disposition"]
+        assert "-report-de.html" in cd
+
+    def test_filename_language_defaults_to_english(self, client: TestClient) -> None:
+        cd = client.get("/api/projects/1/export").headers["content-disposition"]
+        assert "-report-en.html" in cd
+
+    def test_an_unknown_locale_cannot_reach_the_filename(self, client: TestClient) -> None:
+        """The token is interpolated into a filename, so it is only ever one of
+        SUPPORTED_LOCALES — never caller-controlled text."""
+        cd = client.get("/api/projects/1/export?locale=../../etc/passwd").headers[
+            "content-disposition"
+        ]
+        assert "-report-en.html" in cd
+        assert "passwd" not in cd
+
 
 # ---------------------------------------------------------------------------
 # Embedded data structure
@@ -90,6 +109,34 @@ class TestExportData:
     def test_has_exported_at(self, client: TestClient) -> None:
         data = self._extract_export_data(client.get("/api/projects/1/export").text)
         assert "exported_at" in data
+
+    def test_embeds_the_chosen_language_and_its_fallbacks(
+        self, client: TestClient
+    ) -> None:
+        data = self._extract_export_data(
+            client.get("/api/projects/1/export?locale=zh-Hant-HK").text
+        )
+        assert list(data["localeResources"]) == ["zh-Hant-HK", "zh-Hant", "en"]
+
+    def test_embeds_no_other_language(self, client: TestClient) -> None:
+        """A German report carrying Japanese is the 1,802 KB this replaced."""
+        data = self._extract_export_data(
+            client.get("/api/projects/1/export?locale=de").text
+        )
+        assert set(data["localeResources"]) == {"de", "en"}
+
+    def test_embedded_strings_cannot_break_out_of_the_script(
+        self, client: TestClient
+    ) -> None:
+        """localeResources rides the same json.dumps as the rest of the embed,
+        so it inherits the < > & escaping. ensure_ascii alone does NOT escape
+        those — they are ASCII — and a literal </script> would end the data
+        block early. Pinned because this is a new payload on that seam."""
+        html = client.get("/api/projects/1/export?locale=de").text
+        marker = "window.BRISTLENOSE_EXPORT="
+        block = html[html.index(marker) : html.index(";\n</script>", html.index(marker))]
+        assert "</script>" not in block
+        assert "<" not in block.split(marker, 1)[1]
 
     def test_endpoints_is_path_keyed(self, client: TestClient) -> None:
         """The embed is a path-keyed map, mirroring the SPA's relative API paths."""

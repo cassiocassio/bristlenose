@@ -27,6 +27,13 @@ export interface ExportData {
   /** Researcher's UI language at export time (baked so the offline report
    *  reads in the language it was written in, not the recipient's browser). */
   locale?: string | null;
+  /** Chrome strings for `locale` and everything it falls back to, keyed
+   *  locale → namespace → bundle. Embedded rather than bundled: the export is a
+   *  single-file build, so a bundled locale glob would inline all 22 languages
+   *  into every report. Always the whole chain — `zh-Hant-HK` ships no
+   *  `enums.json`, so its leaf alone would render raw keys.
+   *  See docs/design-export-locale.md. */
+  localeResources?: Record<string, Record<string, Record<string, unknown>>>;
   health: HealthResponse;
   logos?: { light?: string; dark?: string };
   /** Path-keyed embed: relative API path → the endpoint's JSON response. */

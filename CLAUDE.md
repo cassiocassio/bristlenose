@@ -316,6 +316,17 @@ within it — or match the fully-qualified path, never the bare key name. Verify
 `json.load` + key-list comparison before/after is the cheap check that catches all
 three.
 
+**And scoping to the block is not enough if the namespace name repeats.**
+`en/common.json` carries two `"codebook"` blocks — a nested prose/methodology one
+(`sectionsTitle`/`sectionsBody`/`themesBody`) and the real top-level namespace, the one
+that holds `codebook.frameworks`. A first-match `^\s*"codebook"\s*:\s*\{` plus
+brace-matching selects the *prose* block, and the key you came for simply isn't in it
+(measured 21 Aug 2026). How that fails depends on the tool: assert "exactly one match
+inside the block" and it fails loudly; reach for a bare `re.sub` and it changes nothing,
+reports success, and joins the silent-no-op family above. **Select the block by
+*content* — the one that actually carries the key, asserted unique — or by
+fully-qualified path, never by first match on the name.**
+
 ### Other gotchas
 
 - **Rich's `console.print()` eats `[name]` as markup tags.** Square-bracket sequences are parsed as Rich style markup; unknown style names (e.g. `[serve]`, `[apple]`) are silently consumed, so `pip install bristlenose[serve]` renders as `pip install bristlenose`. Two fixes by site type: (1) plain-text output (doctor fix messages, log lines) → `console.print(text, markup=False)`; (2) sites with intentional Rich markup interpolating user-supplied text → `from rich.markup import escape; console.print(f"[bold]{escape(value)}[/bold]")`. Audit any new `console.print` that interpolates package-spec / file-glob / version-range text

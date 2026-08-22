@@ -169,6 +169,49 @@ tables are strings that enumerate punctuation (`、。，．・：；？！…`)
 And locale JSON mixes literal Unicode with `\u` escapes, sometimes within one
 file, so a literal search finds nothing — try both encodings.
 
+## 6b. Quote glyphs — MEASURED, do not re-derive
+
+Measured 21 Aug 2026 across every `/System/Library/**/*.loctable`, for the same
+reason as §6a and after making the same class of error. `codebook.hideTitle`
+quotes a user's codebook name, and eight locales were writing a straight `"`.
+Rewriting it meant choosing pairs — and reaching for `«…»` in Italian, Spanish
+and European Portuguese from typographic reputation was **wrong in all three**.
+
+| locale | Apple ships | count | `«…»` |
+|---|---|---|---|
+| it, es, pt-BR, pt-PT, nl, da, tr, ko, ca | `“…”` | 692 – 39,356 | 9 |
+| de, cs | `„…“` | 30,260 – 53,483 | — |
+| fi, sv, pl | `”…”` | 18,323 – 33,039 | — |
+| fr, ru, uk, nb | `«…»` | 29,377 – 51,000 | — |
+| zh-Hant | `「…」` | 67,034 | — |
+
+**The constant `9` is the tell.** Nine `«…»` strings appear in *every* language
+that does not use the caporale — the same handful of shared tables, not usage.
+A glyph whose count does not vary with the language is not that language's
+convention.
+
+**Three false positives to beware.**
+
+1. **Raw counts are inflated by embedded English.** Japanese reads `“…” 45,215`
+   against `「…」 1,747`, which is not a recommendation to quote a user's file
+   name with `“…”` — it is Apple quoting English product names inside Japanese
+   strings. For quoting *user-supplied text* in a dialog, ja and zh want the
+   corner bracket. Sanity-check a lopsided count against a string you can name.
+2. **`nb` has no table.** Apple's key is `no`. A locale that returns nothing is
+   a missing key, not a missing convention.
+3. **Polish shows two pairs high** (`”…”` 33,039, `„…“` 32,880) because the
+   Polish pair is asymmetric — `„…”`, opening low and closing high. Counting
+   glyphs separately splits one convention across two rows.
+
+Reproduce by walking each `.loctable`'s target-language table and counting
+strings containing each opening glyph — see the §6a recipe, same shape.
+
+**Two known divergences left in place** (21 Aug 2026): `da` carries `„…“` where
+Apple ships `“…”`, and `ca` carries `«…»` where Apple ships `“…”`. Both predate
+the sweep and are unlikely to be confined to one key; booked as Question B in
+`docs/i18n-defects.md`. A full sweep for quote glyphs across all locale files is
+a **measurement** task before it is an editing one.
+
 ## 7. Apple glossary cross-check (reminder only)
 
 For any new keys that touch macOS system vocabulary (menu items, toolbar labels,

@@ -375,7 +375,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
-**0.26.0** — _21 Aug 2026_
+**0.26.0** — _22 Aug 2026_
 
 - **Open as many studies as you want, each in its own window — and as many windows on one study as you need.** The Mac app showed one study at a time; now every window holds its own. **File ▸ New Window** (⌥⌘N) opens another view of the study you're on, each window on its own lens — quotes here, the transcript they came from there, the analysis beside it. **Open in New Window** brings up a different study alongside; on a folder, **Open in New Windows** opens every study in it at once. Windows keep their own lens, sidebar and scroll position, and their titles say which study each is showing. Bristlenose now opens on the Welcome screen rather than reopening whatever you had last.
 - **Bring in recordings from Teams and Google Meet without downloading them by hand.** Connect a work account and **File ▸ Import** lists the meetings you recorded: filter by title or attendee, choose how far back to look, tick what you want. Bristlenose fetches the recordings and transcripts, puts them in a project and starts the analysis — recognising recordings you already have on disk, and saying plainly when one has expired or your account can't reach it. Connect and disconnect in **Settings ▸ Accounts**. Zoom isn't offered yet.

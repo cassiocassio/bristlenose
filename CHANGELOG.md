@@ -2,7 +2,7 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
-**0.26.0** — _21 Aug 2026_
+**0.26.0** — _22 Aug 2026_
 
 As many studies open as you want, each in its own window; recordings pulled straight from Teams and Meet; and a folder that no longer fails as a whole because one file in it is broken.
 

@@ -1241,6 +1241,74 @@ A German researcher using Don Norman's framework against mixed German/English in
 
 The LLM handles this natively. The display layer translates. No prompt or transcript translation needed.
 
+## Divergence markers — recording that a difference is on purpose
+
+**The problem they solve.** Three of the five i18n failure modes are invisible to
+a key-set diff (`docs/i18n-defects.md`), and the nastiest is **value drift**: an
+`en` value gets reworded and the translations keep the old words. A detector can
+find it by comparing when `en` last changed against when each locale last
+changed — but that same detector cannot tell drift from a divergence someone
+*meant*, because the two are byte-for-byte identical in the data.
+
+Both live cases arrived within a day of each other:
+
+- `desktop.welcome.aiSetup` — `en` keeps the noun **Setup**, the 20 locales take
+  a verb (`ca Configura`, `de Konfigurieren`, `fi Ota käyttöön`). Deliberate:
+  part of speech follows each language's UI convention, not English's.
+- `desktop.menu.video.pictureInPicture` — `it`, `pt-BR` and `pt-PT` keep the
+  English because Apple does; the other 17 use their own name.
+
+Neither is a defect. Both would be re-reported on every sweep forever, and —
+worse — would train whoever runs the sweep to skim past exactly the shape that
+hid the Codebook Library rewording for five weeks.
+
+**The convention.** A `_divergent_<leaf>` pseudo-key, sibling to the key it
+describes, in **`en` only** — it describes the relationship between English and
+every locale, so a per-locale copy would be 21 places to keep true instead of one.
+
+```json
+"welcome": {
+  "aiSetup": "Setup",
+  "_divergent_aiSetup": "en:7013af \u2014 English keeps the noun; the 20 locales take a verb (ca Configura, de Konfigurieren\u2026). Part of speech follows each language's UI convention, not English's. Deliberate \u2014 see 89b11f5a and the call-site comment in WelcomeHomeView.swift."
+}
+```
+
+`en:<6 hex>` is the first six characters of `sha256` of the English value the
+note was written against. `scripts/check-locales.py` recomputes it and **errors**
+when it no longer matches.
+
+**The pin is the whole point.** A bare "this divergence is intended" flag rots
+the way any status rots — item 2 of the defect register is a "deliberate"
+rationale that was already false when it was written, and nothing re-checked it.
+Pinning the value means the note can only stay silent while the thing it
+describes is unchanged. Reword `Setup` -> `Set Up` and CI stops:
+
+```
+X en/desktop.json: `welcome.aiSetup` divergence marker is STALE - it was
+  written against a different English value (pinned en:7013af, current
+  en:75f9c0 = 'Set Up'). Re-read the reason: if the divergence still holds,
+  re-pin it; if the reword undid it, delete the marker and re-translate.
+```
+
+Three failures, all errors rather than warnings, because a marker is an
+*assertion* and a false assertion is worse than none: **stale pin**, **marker
+for a key that doesn't exist** (typo, or the key was deleted and the note left
+behind), and **malformed** (no pin - the error prints the pin you need).
+
+**Writing one.** Get the pin from `value_pin()` in `scripts/check-locales.py`, or
+just write `en:000000` and let the error tell you the right value - that is the
+intended workflow, not a hack. Then say *why* in prose. The prose is the part
+that matters; a future reader needs the reasoning, not permission to ignore a
+warning. Name the commit or the call-site comment that carries the fuller
+argument.
+
+**What this is not.** It is not a suppression list for translations nobody has
+got to yet - that is a missing translation, and `--strict` is the gate for it.
+It is not per-locale: if one locale diverges for its own reason, say so in the
+prose. And it does not make a drift *detector* exist - the detector is still
+recommendation 1 in `docs/i18n-defects.md`. This is the half that makes the
+detector's output trustworthy once it does.
+
 ## i18n Implementation Gotchas (from CLAUDE.md)
 
 Reference material moved from root `CLAUDE.md` to reduce CLAUDE.md bloat. Core i18n rules still live there; these are the detail-level gotchas.

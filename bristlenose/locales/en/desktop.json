@@ -149,6 +149,7 @@
       "volumeDown": "Volume Down",
       "mute": "Mute",
       "pictureInPicture": "Picture in Picture",
+      "_divergent_pictureInPicture": "en:d55e9e — it, pt-BR and pt-PT keep the English because Apple does; the other 17 use their own name for the macOS feature, measured from the shipping loctables. Naming a system feature something the user's own Mac does not call it is the defect, so matching English here is the fix, not a gap. See .claude/agents/i18n-review.md §6b.",
       "fullscreen": "Fullscreen"
     },
     "help": {
@@ -352,6 +353,7 @@
     "dropFolderHint": "Drag a folder of recordings or transcripts here to add it as a project.",
     "aiPrivacyLink": "Review AI & privacy settings…",
     "aiSetup": "Setup",
+    "_divergent_aiSetup": "en:7013af — English keeps the noun; the 20 locales take a verb (ca Configura, de Konfigurieren, fi Ota käyttöön, ru Настроить). Part of speech follows each language's UI convention, not English's: a link that performs the action takes a verb there, and Apple's noun forms read as section titles. Deliberate — see 89b11f5a and the call-site comment in WelcomeHomeView.swift.",
     "steps": {
       "ingestTitle": "Add interviews",
       "ingestDetail": "Audio, video, or existing transcripts.",

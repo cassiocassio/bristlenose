@@ -17,6 +17,9 @@ Checks:
 3. No orphan keys in non-English locales (keys English doesn't have)
 4. No empty string values
 5. Interpolation placeholders ({{ var }}) in English exist in translations
+6. Divergence markers are current — a ``_divergent_<key>`` note in ``en`` pins
+   the English value it was written against, so a later reword of that value
+   invalidates the note instead of silently keeping a stale "this is fine".
 
 A *genuine* missing key — non-plural and not covered by a fallback base — renders
 English silently. It is a WARNING by default and an ERROR under ``--strict``.
@@ -59,8 +62,79 @@ PLURAL_SUFFIXES = ("_one", "_two", "_few", "_many", "_zero")
 # in `en` alone — without this filter the gate would demand all 21 locales carry
 # a copy of a note about two of them, which is how one ended up duplicated 20
 # times (21 Aug 2026).
+# `_divergent_<leaf>` records that a key's translations differ from English on
+# purpose — a different part of speech, a term the platform keeps in English,
+# a deliberate register fork. Without it a drift detector re-reports the same
+# intentional divergence forever, and — worse — cannot tell it apart from the
+# accidental kind, which is exactly how the Codebook Library rewording went
+# unnoticed for five weeks (docs/i18n-defects.md item 10).
+DIVERGENT_PREFIX = "_divergent_"
+DIVERGENCE_PIN_RE = re.compile(r"^en:([0-9a-f]{6})\b")
+
+PSEUDO_KEY_PREFIXES = ("_comment", DIVERGENT_PREFIX)
+
+
 def _is_comment_key(key: str) -> bool:
-    return key.rsplit(".", 1)[-1].startswith("_comment")
+    """Pseudo-keys: notes to maintainers, not strings anyone renders."""
+    return key.rsplit(".", 1)[-1].startswith(PSEUDO_KEY_PREFIXES)
+
+
+def value_pin(value: str) -> str:
+    """The 6-hex pin a divergence marker carries for the English value it
+    describes. Short on purpose — it is read by eye as often as by machine, and
+    the prose beside it is what actually explains the divergence."""
+    import hashlib
+
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:6]
+
+
+def check_divergence_markers(raw: dict, ns: str) -> list[str]:
+    """Validate every `_divergent_*` marker in one English namespace.
+
+    Errors, not warnings: a marker asserts "the difference here is intended",
+    and an assertion that has quietly stopped being true is worse than no
+    assertion. All three failures are cheap to fix, and the message says how.
+    """
+    problems: list[str] = []
+
+    def walk(node: dict, path: str) -> None:
+        for key, value in node.items():
+            if isinstance(value, dict):
+                walk(value, f"{path}.{key}" if path else key)
+                continue
+            if not key.startswith(DIVERGENT_PREFIX):
+                continue
+            leaf = key[len(DIVERGENT_PREFIX):]
+            dotted = f"{path}.{leaf}" if path else leaf
+            target = node.get(leaf)
+            if target is None:
+                problems.append(
+                    f"{SOURCE_LANG}/{ns}.json: divergence marker for `{dotted}`, "
+                    f"which does not exist — typo, or the key was removed and its "
+                    f"marker left behind"
+                )
+                continue
+            match = DIVERGENCE_PIN_RE.match(str(value))
+            if not match:
+                problems.append(
+                    f"{SOURCE_LANG}/{ns}.json: `{dotted}` marker is malformed — it "
+                    f"must start `en:{value_pin(str(target))}` followed by the "
+                    f"reason. See design-i18n.md \u00a7 Divergence markers"
+                )
+                continue
+            expected = value_pin(str(target))
+            if match.group(1) != expected:
+                problems.append(
+                    f"{SOURCE_LANG}/{ns}.json: `{dotted}` divergence marker is STALE "
+                    f"— it was written against a different English value "
+                    f"(pinned en:{match.group(1)}, current en:{expected} = "
+                    f"{str(target)!r}). Re-read the reason: if the divergence still "
+                    f"holds, re-pin it; if the reword undid it, delete the marker "
+                    f"and re-translate."
+                )
+
+    walk(raw, "")
+    return problems
 
 
 def flatten(obj: dict, prefix: str = "") -> dict[str, str]:
@@ -145,6 +219,13 @@ def main() -> int:
         if isinstance(en_keys, json.JSONDecodeError):
             errors.append(f"{SOURCE_LANG}/{ns}.json: invalid JSON — {en_keys}")
             continue
+
+        # Divergence markers live in `en` only — they describe the relationship
+        # between English and every locale, so a per-locale copy would be 21
+        # places to keep true instead of one.
+        en_path = LOCALES_DIR / SOURCE_LANG / f"{ns}.json"
+        with open(en_path, encoding="utf-8") as fh:
+            errors.extend(check_divergence_markers(json.load(fh), ns))
 
         for lang in languages:
             tr_keys = load_locale(lang, ns)

@@ -215,6 +215,35 @@ Two of `build-dmg.sh` stage 10's four final gates were written this way and were
 
 **Rule: an assertion uses `|| die`, never `&& ok`.** If you want the success line too, `cmd || die "…"; ok "…"`. Applies equally to `cmd && a || b` chains — the `||` arm swallows a genuine failure of `a` as well. Audit any `check-*.sh` or build script for `&& ok`, `&& echo`, `&& printf` where the left side is a real check.
 
+### A one-line fix landing on the wrong arm of a ternary is invisible to every gate
+
+`.foregroundStyle(a ? .tertiary : .primary)` needed `.tertiary` → `.secondary`.
+What landed was `.primary` → `.secondary` — the *other* arm. Both results are
+valid Swift, both are real style tokens, the file compiled, the suite stayed
+green, and the finding was written up as **resolved** in the review notes kept
+outside the public tree. The failing value sat on the shipped surface for a day
+(22 Aug 2026), on the one row whose whole job is naming the project you just
+revoked.
+
+Nothing mechanical can catch this: a ternary's two arms are the same type, so
+swapping which one you edited produces working code either way. Two habits do:
+
+1. **The tell is a comment that argues against its own code.** The block above
+   the line spent eight lines explaining why `.tertiary` fails — 1.88:1,
+   unimproved by Increase Contrast, semantically Apple's *disabled* colour — and
+   then applied it. When prose and code disagree at arm's length, the code
+   usually lost an edit, not the argument.
+2. **Re-read the diff hunk, not the file.** `git show <sha> -- <file>` on the
+   fix shows `- a ? .tertiary : .primary` / `+ a ? .tertiary : .secondary` in
+   two adjacent lines, where the intent was to change the first token. Reading
+   the finished file instead invites you to see what you meant.
+
+Generalises past styles to any two-branch expression where both values
+typecheck: `if/else` returns, `??` defaults, dictionary fallbacks, ternaries in
+JSX. **And it generalises past code: a finding marked "resolved" is a claim
+about intent, not evidence about the tree.** Verify a resolution by reading the
+line it names.
+
 ### Verifying only through a pipe hides the entire TTY code path
 
 `foo | tail`, `foo | grep`, `foo > file` all make stdout a non-tty, and any well-behaved CLI *changes behaviour* accordingly: Rich/`clig.dev`-style renderers skip animation, spinners and live regions don't start, colour drops. So a bug that only exists in the animated path is **invisible to every piped run** and instantly visible to the human who runs it bare.

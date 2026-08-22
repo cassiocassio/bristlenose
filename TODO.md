@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 21 Aug 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
+Last updated: 22 Aug 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
 
 **20 Aug 2026 — the day has no session entry; these are its owed items, transcribed from the commit bodies so they are not only there.** Thirty-odd commits landed the workspace 3b fleet, per-window studies, derived agent scope, mcpb schema 2 and the welcome shelf. `/end-session` ran and signed off, but did not write this file, so every obligation below was reachable only via `git log`.
 

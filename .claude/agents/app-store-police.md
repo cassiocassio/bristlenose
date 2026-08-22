@@ -297,6 +297,29 @@ This is the single biggest trap for Python-on-Mac apps. Be explicit: if the app 
 - "We don't collect data" claims must be defensible (no analytics, no crash reporting that includes content)
 - Usage-description strings must describe *why* not *what*
 
+### §4.8 — Login Services (connecting a Microsoft or Google work account)
+
+**The false positive to NOT raise.** Bristlenose lets a researcher connect their own Microsoft or Google work account under `File ▸ Import` to fetch their own meeting recordings. That is **not** a §4.8 trigger, and flagging it as a missing "Sign in with Apple" is wrong. 4.8 governs a *third-party login used to set up or authenticate the user's primary account with the app* — and it carries an explicit exception, verbatim:
+
+> *"Your app is a client for a specific third-party service and users are required to sign in to their mail, social media, or other third-party account directly to access their content."*
+
+Bristlenose has **no account system at all** — no Bristlenose account, no server, no sign-in of its own. The OAuth grant reaches the user's own files and nothing else. Two independent limbs of the exception apply. Do not raise it.
+
+### §5.1.1 / §5.1.2 — Cloud import is INGRESS, and that is the whole distinction
+
+**Keep these two straight; they are orthogonal and conflating them produces bad findings in both directions.**
+
+- **§5.1.2(i) — sharing data OUT.** *"You must clearly disclose where personal data will be shared with third parties, including with third-party AI, and obtain explicit permission before doing so."* This is what `AIConsentView` exists for: transcript text going **to** Claude / ChatGPT / Azure / Gemini. Explicit permission genuinely is required here, and the consent dialog + version log is how it is obtained.
+- **Cloud import shares nothing.** It *downloads* the researcher's own recordings **from** their own account **to** their own Mac. Nothing is transmitted to anyone; the outbound traffic is the user's sign-in and a query for their own file list. So the "explicit permission" limb of 5.1.2 is not engaged, and the consent screen the user *does* see is Microsoft's or Google's own, listing the scopes in the vendor's words — a more specific disclosure than ours would be.
+
+**Consequently: do NOT ask for cloud import to be added to `AIConsentView`, and do not treat its absence as a stale consent version.** The two surfaces answer different questions. The vendor-name overlap is coincidental — the Gemini *API key* and the Google Meet *OAuth client* are different consoles, different credentials, different data flows (`docs/design-cloud-import.md`; `GoogleOAuth.swift` vs the Gemini provider). Where the user gets their recordings from is their business.
+
+Nor is the dialog's *"Raw audio and video recordings — always stays on your device"* falsified by import: import's entire job is to put recordings **on** the device, and nothing ever uploads them.
+
+**What §5.1.1 DOES require, and where it is satisfied:** clear disclosure of the third-party data source and what happens to the data after — what is accessed, how, retention, and how to revoke. That lives in the privacy policy at `https://bristlenose.app/privacy.html` (the canonical URL all three consoles point at), which names the vendors, the read-only scoping, the Keychain/iCloud behaviour, and revocation via Entra ▸ Enterprise Applications or Google Account ▸ Security. Check that page is current before submission — **not** the docs page at `/docs/privacy.html`, which is documentation and deliberately not the policy.
+
+**Out of scope entirely: our own test tenants.** The Microsoft 365 and Google Workspace subscriptions in the maintainer's account register are internal QA infrastructure for reproducing cohort-reported enterprise bugs. No user ever sees them, they appear in no declaration, and they have nothing to do with any App Store privacy question. Don't drag them into a review finding.
+
 ### §5.2 — Intellectual property
 - Any trademarks in screenshots, code, or metadata that aren't yours
 - "Compatible with" / "Works with" claims needing authorisation

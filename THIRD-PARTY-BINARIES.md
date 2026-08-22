@@ -79,17 +79,17 @@ procurement; under-listing would be a compliance risk.
 | `alembic` | 1.18.5 | MIT | <https://alembic.sqlalchemy.org> |
 | `annotated-doc` | 0.0.5 | MIT | <https://github.com/fastapi/annotated-doc> |
 | `annotated-types` | 0.8.0 | MIT | <https://github.com/annotated-types/annotated-types> |
-| `anthropic` | 0.120.2 | MIT License | <https://github.com/anthropics/anthropic-sdk-python> |
+| `anthropic` | 0.122.0 | MIT License | <https://github.com/anthropics/anthropic-sdk-python> |
 | `anyio` | 4.14.2 | MIT | <https://anyio.readthedocs.io/en/stable/versionhistory.html> |
 | `ast_serialize` | 0.6.0 | MIT | <https://github.com/mypyc/ast_serialize> |
 | `attrs` | 26.1.0 | MIT | <https://www.attrs.org/en/stable/changelog.html> |
-| `av` | 18.0.0 | BSD-3-Clause | <https://pyav.basswood.io> |
+| `av` | 18.1.0 | BSD-3-Clause | <https://pyav.basswood.io> |
 | `blis` | 1.3.3 | BSD License | <https://github.com/explosion/cython-blis> |
 | `catalogue` | 2.0.10 | MIT License | <https://github.com/explosion/catalogue> |
 | `certifi` | 2026.7.22 | Mozilla Public License 2.0 (MPL 2.0) | <https://github.com/certifi/python-certifi> |
 | `cffi` | 2.1.1 | MIT-0 | <https://cffi.readthedocs.io/en/latest/whatsnew.html> |
-| `chardet` | 7.4.3 | 0BSD | <https://github.com/chardet/chardet> |
-| `charset-normalizer` | 3.4.9 | MIT | <https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md> |
+| `chardet` | 7.5.1 | 0BSD | <https://github.com/chardet/chardet> |
+| `charset-normalizer` | 3.5.0 | MIT | <https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md> |
 | `click` | 8.4.2 | BSD-3-Clause | <https://github.com/pallets/click/> |
 | `cloudpathlib` | 0.24.0 | MIT License | <https://github.com/drivendataorg/cloudpathlib> |
 | `confection` | 1.3.3 | MIT License | <https://github.com/explosion/confection> |
@@ -100,19 +100,19 @@ procurement; under-listing would be a compliance risk.
 | `en_core_web_sm` | 3.8.0 | MIT | <https://explosion.ai> |
 | `et_xmlfile` | 2.0.0 | MIT License | <https://foss.heptapod.net/openpyxl/et_xmlfile> |
 | `fastapi` | 0.141.1 | MIT | <https://github.com/fastapi/fastapi> |
-| `filelock` | 3.32.2 | MIT | <https://github.com/tox-dev/py-filelock> |
+| `filelock` | 3.32.3 | MIT | <https://github.com/tox-dev/py-filelock> |
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.7.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
-| `google-auth` | 2.56.2 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
-| `google-genai` | 2.16.0 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
+| `google-auth` | 2.56.3 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
+| `google-genai` | 2.18.1 | Apache-2.0 | <https://github.com/googleapis/python-genai> |
 | `h11` | 0.16.0 | MIT License | <https://github.com/python-hyper/h11> |
-| `hf-xet` | 1.5.2 | Apache-2.0 | <https://github.com/huggingface/xet-core> |
+| `hf-xet` | 1.6.0 | Apache-2.0 | <https://github.com/huggingface/xet-core> |
 | `httpcore` | 1.0.9 | BSD-3-Clause | <https://www.encode.io/httpcore/> |
-| `httpcore2` | 2.9.1 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
+| `httpcore2` | 2.10.0 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
 | `httptools` | 0.8.0 | MIT | <https://github.com/MagicStack/httptools> |
 | `httpx` | 0.28.1 | BSD License | <https://github.com/encode/httpx> |
-| `httpx2` | 2.9.1 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
-| `huggingface_hub` | 1.26.0 | Apache Software License | <https://github.com/huggingface/huggingface_hub> |
+| `httpx2` | 2.10.0 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
+| `huggingface_hub` | 1.27.0 | Apache Software License | <https://github.com/huggingface/huggingface_hub> |
 | `idna` | 3.18 | BSD-3-Clause | <https://github.com/kjd/idna> |
 | `inflect` | 7.5.0 | MIT License | <https://github.com/jaraco/inflect> |
 | `Jinja2` | 3.1.6 | BSD License | <https://github.com/pallets/jinja/> |
@@ -137,19 +137,19 @@ procurement; under-listing would be a compliance risk.
 | `networkx` | 3.6.1 | BSD-3-Clause | <https://networkx.org/> |
 | `numba` | 0.66.0 | BSD License | <https://numba.pydata.org> |
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
-| `openai` | 2.53.0 | Apache Software License | <https://github.com/openai/openai-python> |
+| `openai` | 3.0.0 | Apache Software License | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
 | `opentelemetry-api` | 1.44.0 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
-| `packaging` | 26.2 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
+| `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
 | `pathspec` | 1.1.1 | Mozilla Public License 2.0 (MPL 2.0) | <https://python-path-specification.readthedocs.io/en/latest/index.html> |
-| `phonenumbers` | 9.0.36 | Apache-2.0 | <https://github.com/daviddrysdale/python-phonenumbers> |
+| `phonenumbers` | 9.0.37 | Apache-2.0 | <https://github.com/daviddrysdale/python-phonenumbers> |
 | `preshed` | 3.0.13 | MIT License | <https://github.com/explosion/preshed> |
 | `protobuf` | 7.35.1 | 3-Clause BSD License | <https://developers.google.com/protocol-buffers/> |
 | `pyasn1` | 0.6.4 | BSD-2-Clause | <https://github.com/pyasn1/pyasn1> |
 | `pyasn1_modules` | 0.4.2 | BSD License | <https://github.com/pyasn1/pyasn1-modules> |
 | `pycparser` | 3.0 | BSD-3-Clause | <https://github.com/eliben/pycparser> |
 | `pydantic` | 2.13.4 | MIT | <https://github.com/pydantic/pydantic> |
-| `pydantic-settings` | 2.14.2 | MIT | <https://github.com/pydantic/pydantic-settings> |
+| `pydantic-settings` | 2.15.0 | MIT | <https://github.com/pydantic/pydantic-settings> |
 | `pydantic_core` | 2.46.4 | MIT | <https://github.com/pydantic> |
 | `Pygments` | 2.20.0 | BSD-2-Clause | <https://pygments.org> |
 | `PyJWT` | 2.13.0 | MIT | <https://github.com/jpadilla/pyjwt> |
@@ -179,7 +179,7 @@ procurement; under-listing would be a compliance risk.
 | `tenacity` | 9.1.4 | Apache Software License | <https://github.com/jd/tenacity> |
 | `thinc` | 8.3.13 | MIT License | <https://github.com/explosion/thinc> |
 | `tiktoken` | 0.13.0 | MIT | <https://github.com/openai/tiktoken> |
-| `tldextract` | 5.3.1 | BSD-3-Clause | <https://github.com/john-kurkowski/tldextract> |
+| `tldextract` | 5.3.2 | BSD-3-Clause | <https://github.com/john-kurkowski/tldextract> |
 | `tokenizers` | 0.23.1 | Apache Software License | <https://github.com/huggingface/tokenizers> |
 | `tqdm` | 4.70.0 | MPL-2.0 AND MIT | <https://tqdm.github.io> |
 | `truststore` | 0.10.4 | MIT | <https://github.com/sethmlarson/truststore> |

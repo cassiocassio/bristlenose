@@ -744,6 +744,97 @@ These are the reason it is a skill at all, and none of them should migrate:
 > whenever the skill grows a new warning.
 
 
+## 18 · Build report — what shipped, and what building it taught
+
+**Built 23 Aug 2026**, commits `74527daf` (A0–A9) and `3dbb9dd0` (A10).
+**9 of 11 Tier A items.** 109 shell assertions green across six suites, 79 of
+them new. `ruff check .` clean.
+
+| | Item | Status |
+|---|---|---|
+| A0 | `.gitignore` `.release/` | ✅ verified with `git check-ignore` |
+| A1 | `--progress` TTY-gated | ✅ |
+| A2 | Per-attempt altool logs + UUID sidecar | ✅ |
+| A3 | `publish state`, tri-state | ✅ |
+| A4 | Dependency drift at preflight | ✅ **fired on the live tree immediately** |
+| A6 | `verify-channels.sh` | ✅ 51 assertions |
+| A7 | The `SKILL.md` rule | ✅ |
+| A8 | `shippable diff` | ✅ 10 assertions |
+| A9 | `SIGN_IDENTITY` required | ✅ exit 2 in 0s |
+| A10 | Doc-surface parity | ✅ 18 assertions |
+| **A5** | **Gate freshness** | ❌ **not built** — see below |
+
+### A5 is deferred, and the reason is a real design gap not a time gap
+
+Gate freshness needs *"when did gate X last run, at what sha"*, and **nothing in
+the tree records that.** The plan proposed `.release/gates.jsonl` appended by
+each gate — which means touching 13 `check-*.sh` scripts to add a stamp, on the
+theory that the stamp is worth having. That is not a Tier A shape: it is a
+cross-cutting change to every gate, justified by one incident, and it needs the
+`absent = stale` decision made first or it warns on all 13 gates for several
+releases and trains everyone to ignore it. **Left undone deliberately rather
+than half-done.**
+
+### Five bugs found by building it — four of them in my own new code
+
+The synthetic suites earned their keep on the first run, and what they caught is
+more interesting than what they confirmed.
+
+1. **A plain substring test made `0.28.10` satisfy `0.28.1`.** `verify-channels`
+   would have reported a channel verified when it was not. Same family as
+   `CLAUDE.md`'s `.badge-accept` / `.badge-accept-flash` note, and the same fix:
+   match whole tokens. Both verdicts now check version boundaries.
+2. **The anti-trivial-pass guard was itself passing trivially.**
+   `grep -c . || echo 0` prints the count **and** exits non-zero when the count
+   is zero, so the `||` arm appends a second line and the numeric test
+   mis-evaluates. The guard written to stop a gate passing by seeing nothing was
+   passing by seeing nothing.
+3. **A test harness that could hide a real failure.** The deliberate-failure
+   check ran inside `$( )` — a subshell — so its `FAIL++` was lost, and the
+   harness decremented anyway. A suite with exactly one real failure would have
+   reported zero and exited green.
+4. **The doc gate enumerated 2 flags out of 25 and reported success.** Typer
+   renders help inside Rich box-drawing, so the `^ +` anchor matched no command
+   row and no subcommand was ever enumerated. It printed "2 flag(s) checked ·
+   0 gaps" and exited 0.
+5. **An injection test that appeared to prove the gate blind, and was itself
+   wrong.** `--llm` appears in the man page **3× plain and 5× escaped**;
+   removing only the escaped form left it findable. Worth recording because the
+   instinct on a red injection test is to distrust the gate, and here the gate
+   was right.
+
+The shape they share: **every one is a check that reports success while seeing
+nothing.** That is the same defect class as release-log 0.27.0 #1, arriving in
+the code written to prevent it.
+
+### Two design corrections found by running it, not by reasoning
+
+- **A4 was graded `bad`, and is now `warn`.** `build-all.sh` step 2b already
+  hard-fails on the identical condition, so a release physically cannot ship a
+  stale inventory. A duplicate gate adds only a false-positive path — the tool's
+  own output warns that per-platform venv differences flag drift that isn't real
+  off the canonical runner. **Warn early, refuse late.**
+- **A10's first cut printed 16 warnings on a clean tree, forever.** Treating
+  README, the man page and `cli.md` as peers is wrong: the man page is the
+  complete reference, the other two are curated. Scoping them to flags new since
+  the tag takes a permanent 16 down to 0.
+
+### One fail-open found while depending on it
+
+`build-all.sh`'s supply-chain gate skipped **entirely** when `pip-licenses` was
+absent, so a signed build from a venv missing the `[release]` extra lost its only
+inventory check silently. Found because A4's downgrade rested on that gate
+existing — and verifying the thing you are about to depend on is how you find
+that it does not. Now: skip on an ad-hoc build, **fail on a real identity**.
+
+### Live findings on the current tree
+
+- `dependency drift` — **stale inventory right now.** Same class as 0.27.0 build
+  failure 2, caught at preflight instead of 11 minutes into a build.
+- `shippable diff` — correctly read the fortnight as *desktop-only, a rebuild
+  not a release* before the concurrent session's frontend work landed.
+
+
 ## See also
 
 - `docs/design-bn-release-skill.md` — D1 refined here (§7); its `scripts/release-cli.sh` slot is what Tier B would fill

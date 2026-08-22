@@ -37,6 +37,25 @@
 #   2  Usage error.
 set -uo pipefail
 
+# verdict_shippable <last_tag> <wheel_diff> <desktop_diff> — PURE, no git.
+#   Extracted so scripts/test-preflight-substance.sh can drive every branch with
+#   synthetic input instead of manufacturing repositories. Same probe/decide split
+#   verify-channels.sh and test-upload-dmg.sh use.
+#   Prints one of: no-tag | release | rebuild | nothing
+verdict_shippable() {
+    local tag="${1-}" wheel="${2-}" desk="${3-}"
+    [ -z "$tag" ]   && { echo no-tag;  return; }
+    [ -n "$wheel" ] && { echo release; return; }
+    [ -n "$desk" ]  && { echo rebuild; return; }
+    echo nothing
+}
+
+# Sourcing hook: CHECK_RELEASE_READY_LIB=1 exposes the pure verdict_* helpers
+# without running a single check. Placed before argument parsing so a caller's
+# own $@ is never interpreted as ours.
+[ "${CHECK_RELEASE_READY_LIB:-0}" = "1" ] && return 0 2>/dev/null
+
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
@@ -372,6 +391,88 @@ fi
 
 RUFF=$( .venv/bin/ruff check . 2>&1 | tail -1 )
 grep -q 'All checks passed' <<<"$RUFF" && ok "ruff" "clean" || bad "ruff" "$RUFF"
+fi
+
+# ---------------------------------------------------------------------------
+head_ "Substance"
+
+# A8 · Nothing to ship.
+#
+# The skill's Phase 1 calls this "cheap and common" and gives the exact command —
+# and nothing ran it. A week of docs, tooling and CI work produces a long git log
+# and an empty diff where it counts, and the wheel would then be byte-identical to
+# the version already on PyPI. That is a decision (re-use the tag) not a release,
+# and it is the one check that can save the whole 1h55.
+#
+# Note the paths: bristlenose/ and frontend/ are what the wheel ships. desktop/
+# is deliberately NOT here — a desktop-only change warrants a Mac rebuild even
+# when the wheel is unchanged, so this row reports, it does not refuse.
+LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+_wheel_diff=""; _desk_diff=""
+if [ -n "$LAST_TAG" ]; then
+    _wheel_diff=$(git diff "$LAST_TAG"..HEAD --stat -- bristlenose/ frontend/ 2>/dev/null | tail -1)
+    _desk_diff=$(git diff "$LAST_TAG"..HEAD --stat -- desktop/ 2>/dev/null | tail -1)
+fi
+case "$(verdict_shippable "$LAST_TAG" "$_wheel_diff" "$_desk_diff")" in
+    no-tag)  warn "shippable diff" "no previous tag — cannot compare" ;;
+    release) ok   "shippable diff" "$LAST_TAG..HEAD ·$(printf '%s' "$_wheel_diff" | sed 's/^ *//')" ;;
+    rebuild) warn "shippable diff" "wheel byte-identical to $LAST_TAG — desktop-only, a rebuild not a release" ;;
+    nothing) warn "shippable diff" "NOTHING SHIPPABLE since $LAST_TAG — re-use the tag, do not bump" ;;
+esac
+
+# A4 · Dependency drift.
+#
+# release-log 0.27.0 #5: openai>=1.50 resolved to 3.0.0 mid-release. The
+# assessment (does every constructor still work?) is judgement and stays human.
+# The TIMING was not: "10pm, mid-release" is the wrong moment to discover a major.
+#
+# build-all.sh already runs this exact check at step 2b and hard-fails on drift.
+# Running it HERE moves discovery ~40 minutes earlier, into the step the skill
+# calls "always first, always free". Same command, same artefact, no new machinery.
+if [ ! -x .venv/bin/python ]; then
+    warn "dependency drift" "no venv — cannot resolve"
+elif [ ! -f THIRD-PARTY-BINARIES.md ]; then
+    warn "dependency drift" "no inventory to compare against"
+else
+    _dep_out=$(.venv/bin/python scripts/generate-third-party-binaries.py --check 2>&1); _dep_rc=$?
+    # WARN, not BAD, and the reasoning matters because the first draft had it wrong.
+    # build-all.sh step 2b already runs this same check and HARD-FAILS on drift, so
+    # a release physically cannot ship a stale inventory whatever this row says. The
+    # preflight's job here is early warning — moving discovery from 10pm mid-build to
+    # the free first step — not a second gate on the same condition.
+    #
+    # And the tool's own output says per-platform venv differences (mlx, av, torch)
+    # can flag drift that isn't real on a non-canonical machine. A duplicate gate that
+    # false-positives is exactly the "gate that cries wolf gets switched off" failure
+    # from release-log 0.27.0 #4. Warn early, refuse late.
+    case "$_dep_rc" in
+        0) ok   "dependency drift" "inventory matches the resolved set" ;;
+        1) warn "dependency drift" "inventory stale — regenerate now, or build-all will refuse later" ;;
+        *) warn "dependency drift" "could not run the check (exit $_dep_rc) — unverified" ;;
+    esac
+fi
+
+# A3 · The publish hold, as a state rather than an existence claim.
+#
+# The existing "publish hold" row proves the required-reviewer GATE exists.
+# This one asks a different question: is a deployment CURRENTLY waiting?
+# release-log 0.27.0 #6 — the maintainer reported having approved and
+# pending_deployments still showed pending, because the confirm button is
+# "Approve and deploy" and ticking the environment is not pressing it.
+#
+# Tri-state, and this is the row where it matters most: `gh api` with expired
+# auth returns empty and exits non-zero. Folding empty to "nothing pending"
+# would be a NETWORK FAULT READING AS A HUMAN APPROVAL.
+if ! command -v gh >/dev/null 2>&1; then
+    warn "publish state" "gh not installed — unverified"
+else
+    _run=$(gh run list --workflow=release.yml --limit 1 --json databaseId,status \
+             --jq '.[0] | select(.status=="waiting") | .databaseId' 2>/dev/null || echo "QUERY_FAILED")
+    case "$_run" in
+        QUERY_FAILED) warn "publish state" "could not query release runs — unverified" ;;
+        "")           ok   "publish state" "no run waiting on approval" ;;
+        *)            warn "publish state" "run $_run is WAITING on the pypi approval" ;;
+    esac
 fi
 
 # ---------------------------------------------------------------------------

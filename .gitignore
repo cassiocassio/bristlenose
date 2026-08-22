@@ -168,4 +168,13 @@ acceptance-runs/
 # Local publish target for upload-dmg.sh — host + path, never committed
 # (public repo; a shared-host account and path would be permanent in history).
 desktop/scripts/.ship-local.conf
+
+# Release-run machinery: the per-attempt event transcript and one log per step.
+# Never committed. The step logs carry whatever a build tool printed, which for
+# upload-dmg.sh includes $BRISTLENOSE_DMG_REMOTE — the host+path ruled permanent
+# above. Machinery, not history: docs/release-log.md is the committed record.
+# No negation belongs here. The .bristlenose/ negations exist for a tracked test
+# fixture; nothing in .release/ is ever a contract, so if you find yourself
+# adding a `!` line, the thing you want belongs somewhere else.
+.release/
 experiments/antenna-blink/antenna-blink

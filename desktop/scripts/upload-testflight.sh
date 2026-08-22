@@ -183,7 +183,18 @@ ok "app record" "$APPLE_ID"
 # ---------------------------------------------------------------------------
 printf '\n'
 say "3. Transferring — 90 s to first byte is normal; the log below is live"
-UPLOAD_LOG="$LOG_DIR/upload-altool.log"
+# Per-attempt, not a fixed name. The Delivery UUID is parsed out of this log and
+# the skill calls it "the one probe you cannot reconstruct later" — but it WAS
+# reconstructable, right up until the next upload overwrote the file. Every
+# upload spends a build number forever, so every upload's log is evidence about
+# a spent number and must not be clobbered by the next one.
+#
+# Ordinal, not a timestamp: `ls` sorts them in upload order, and nothing here is
+# allowed to call date(1) for a filename (BSD/GNU divergence, CLAUDE.md).
+_n=1
+while [ -e "$LOG_DIR/upload-altool.$_n.log" ]; do _n=$((_n+1)); done
+UPLOAD_LOG="$LOG_DIR/upload-altool.$_n.log"
+ATTEMPT="$_n"
 say "   $UPLOAD_LOG"
 printf '\n'
 
@@ -209,6 +220,10 @@ tr '\r' '\n' < "$UPLOAD_LOG" | grep -vE '^\s*\[[#-]*\]|Uploading to App Store Co
 # The delivery UUID is the only handle on a delivery that goes missing. Print it
 # on EVERY path, including failure, before anything else can go wrong.
 DELIVERY=$(sed -n 's/.*Delivery UUID: *\([0-9a-f-]*\).*/\1/p' "$CLEAN" | head -1)
+
+# Write the UUID beside the log under its own name, so recovering it later is an
+# `ls` rather than a re-parse of a file format Apple owns and can change.
+[ -n "$DELIVERY" ] && printf '%s\n' "$DELIVERY" > "$LOG_DIR/delivery-uuid.$ATTEMPT.txt"
 [ -n "$DELIVERY" ] && ok "delivery" "$DELIVERY"
 
 if [ "$ALTOOL_RC" -ne 0 ]; then

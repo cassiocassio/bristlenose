@@ -286,7 +286,14 @@ else
 # rsync over scp for --partial: a dropped connection resumes instead of
 # restarting 644 MB from zero, and shared-host idle timeouts mid-transfer are
 # routine. --inplace targets the staging name, never the live file.
-    rsync -e "ssh ${SSH_OPTS[*]}" --partial --inplace --progress \
+    # --progress writes carriage returns, not newlines. Piped or redirected that
+    # renders as one enormous line, so `tail` on the log shows the START of it —
+    # a healthy transfer at 81% reads as frozen at 0% across repeated polls, and
+    # nearly caused an interruption of a working upload (release-log 0.27.0 #2).
+    # Same TTY gate upload-testflight.sh:198 already applies to --show-progress.
+    RSYNC_ARGS=(-e "ssh ${SSH_OPTS[*]}" --partial --inplace)
+    [ -t 1 ] && RSYNC_ARGS+=(--progress)
+    rsync "${RSYNC_ARGS[@]}" \
         "$DMG_PATH" "$REMOTE_HOST:$REMOTE_DIR/$STAGING" \
         || die "upload failed"
     ok "uploaded to $STAGING"

@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Release machine — happy and sad paths</title>
+<style>
+:root{
+  --bg:#faf9f7; --panel:#ffffff; --ink:#1c1f23; --ink2:#5a616a; --ink3:#8b929b;
+  --rule:#e3e1dd; --term-bg:#1b1d21; --term-fg:#d9dce1; --term-dim:#6e757e;
+  --ok:#3fa66a; --warn:#d2a03c; --fail:#e05b52; --hold:#c98a3e; --info:#68a6d1;
+  --accent:#2c6a70;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#131519;--panel:#191c20;--ink:#e6e8ea;--ink2:#a5acb4;--ink3:#767d86;--rule:#2a2e34;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.6 "IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:48px 24px 100px}
+h1{font-size:30px;letter-spacing:-.02em;margin:0 0 6px}
+.sub{color:var(--ink2);margin:0 0 8px;max-width:70ch}
+.meta{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--ink3);
+  letter-spacing:.04em;margin:0 0 40px}
+h2{font-size:20px;letter-spacing:-.01em;margin:52px 0 4px;padding-top:22px;border-top:1px solid var(--rule)}
+h2 .tag{font:11px/1 ui-monospace,Menlo,monospace;color:#fff;background:var(--accent);
+  padding:3px 7px;border-radius:3px;vertical-align:3px;margin-right:9px;letter-spacing:.06em}
+h2 .tag.bad{background:var(--fail)}
+h2 .tag.hold{background:var(--hold)}
+.cap{color:var(--ink2);margin:6px 0 16px;max-width:72ch;font-size:14.5px}
+.cap b{color:var(--ink)}
+pre.term{background:var(--term-bg);color:var(--term-fg);border-radius:7px;
+  padding:20px 22px;overflow-x:auto;margin:0 0 10px;
+  font:12.5px/1.62 ui-monospace,"SF Mono",Menlo,"IBM Plex Mono",monospace;
+  white-space:pre;border:1px solid #000}
+.ok{color:var(--ok)} .warn{color:var(--warn)} .fail{color:var(--fail)}
+.hold{color:var(--hold)} .info{color:var(--info)} .dim{color:var(--term-dim)}
+.b{font-weight:600;color:#fff}
+.note{font-size:13px;color:var(--ink3);margin:0 0 6px;
+  font-family:ui-monospace,Menlo,monospace;letter-spacing:.02em}
+code{font:12.5px ui-monospace,Menlo,monospace;background:rgba(128,128,128,.13);
+  padding:1px 5px;border-radius:3px}
+.legend{display:flex;gap:22px;flex-wrap:wrap;font-size:13px;color:var(--ink2);
+  border:1px solid var(--rule);border-radius:6px;padding:14px 18px;margin:0 0 8px;background:var(--panel)}
+.legend span{white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Release machine — happy and sad paths</h1>
+<p class="sub">Terminal mockups for <code>scripts/release.sh</code> — <b>Tier B</b> of
+<code>docs/design-release-machine.md</code>, drawn so the option stays open at full
+information. Tier A ships first and changes none of these screens except adding
+<code>verify</code>.</p>
+<p class="sub" style="font-size:14px"><b>Conformance is partial and deliberate.</b> Glyph vocabulary, phases,
+<code>· · ·</code> leaders and 92-col width follow <code>desktop/scripts/REPORT-STYLE.md</code>.
+Three departures the existing renderer cannot produce, which is why §12 item 5 carries a
+renderer cost the first draft did not budget: <b>detail sits inline</b> in the right cluster
+rather than on the indent line (rule 5), so a 14-step release reads as 14 lines rather than
+28 — which in turn makes rule 8's single right edge impossible; <b>no header/footer panels</b>;
+and <b>no separate 1…N display number</b>, the <code>[tag]</code> carrying both. Amend
+REPORT-STYLE.md for list-shaped callers, or conform — but not silently.</p>
+<p class="meta">docs/design-release-machine.md · failure modes F1–F10 · 23 Aug 2026</p>
+
+<div class="legend">
+  <span><span class="ok">✓</span> ok</span>
+  <span><span class="info">ℹ</span> info</span>
+  <span><span class="warn">⚠</span> warn</span>
+  <span><span class="fail">✗</span> fail</span>
+  <span><span class="dim">—</span> skip</span>
+  <span class="dim">glyph vocabulary from bristlenose/ui_kinds.py — never extended</span>
+</div>
+
+<h2><span class="tag">HAPPY</span>plan</h2>
+<p class="cap">Always first, always free. Note row 4: <b>gate freshness</b> (F5) — the
+check that would have caught 0.27.0's build failure 1 before eleven minutes of build,
+by noticing a gate hadn't run since the commits it guards.</p>
+<pre class="term">$ ./scripts/release.sh plan 0.28.0
+
+<span class="b">Release 0.28.0 · Tier 1 · minor</span>
+<span class="dim">  from v0.27.0 · 23 commits · bristlenose/ frontend/ desktop/ touched</span>
+
+<span class="b">PRE-FLIGHT</span> <span class="dim">4 steps</span>
+  <span class="ok">✓</span> preflight          <span class="dim">· · · · · · · · · · · ·</span> check-release-ready.sh 0.28.0   <span class="dim">[1]</span>
+  <span class="ok">✓</span> prose present      <span class="dim">· · · · · · · · · · · ·</span> CHANGELOG + README carry 0.28.0 <span class="dim">[2]</span>
+  <span class="warn">⚠</span> gate freshness     <span class="dim">· · · · · · · · · · · ·</span> 1 stale                         <span class="dim">[3]</span>
+      <span class="warn">⚠</span> check-window-surfaces  last green at 4d462e6e <span class="dim">·</span> 6 commits behind HEAD
+      <span class="dim">a gate is only as fresh as the last time something ran it</span>
+  <span class="ok">✓</span> skip-worktree      <span class="dim">· · · · · · · · · · · ·</span> 2 tracked, both match HEAD      <span class="dim">[4]</span>
+
+<span class="b">PUBLISH · reversible</span> <span class="dim">3 steps</span>
+  <span class="dim">—</span> bump + commit + tag  <span class="dim">· · · · · · · · · ·</span> bump-version.py minor           <span class="dim">[5]</span>
+  <span class="dim">—</span> push main + tag      <span class="dim">· · · · · · · · · ·</span> two pushes, never --tags        <span class="dim">[6]</span>
+  <span class="dim">—</span> mac artefacts        <span class="dim">· · · · · · · · · ·</span> build-all · build-dmg  ~65 min  <span class="dim">[7]</span>
+
+<span class="b">GATE</span>
+  <span class="dim">—</span> ci green             <span class="dim">· · · · · · · · · ·</span> both runs <span class="dim">·</span> gate:ci                <span class="dim">[8]</span>
+
+<span class="b">PUBLISH · irreversible</span> <span class="dim">5 steps</span>
+  <span class="dim">—</span> upload testflight    <span class="dim">· · · · · · · · · ·</span> <span class="warn">soft — spends build 2857</span>     <span class="dim">[9]</span>
+  <span class="dim">—</span> upload dmg           <span class="dim">· · · · · · · · · ·</span> <span class="warn">permalink swaps</span>              <span class="dim">[10]</span>
+  <span class="dim">—</span> approve publish      <span class="dim">· · · · · · · · · ·</span> <span class="fail">HARD — gate:approval</span>         <span class="dim">[11]</span>
+  <span class="dim">—</span> website deploy       <span class="dim">· · · · · · · · · ·</span> manual <span class="dim">·</span> after PyPI 200         <span class="dim">[12]</span>
+  <span class="dim">—</span> snap edge            <span class="dim">· · · · · · · · · ·</span> gh workflow run snap.yml        <span class="dim">[13]</span>
+
+<span class="dim">  estimate  ~1h55 pipeline  ·  excludes human decision time
+  events    .release/0.28.0/events.jsonl</span>
+
+<span class="warn">⚠</span> <span class="b">1 warning.</span> Run anyway with <span class="b">run 0.28.0</span>, or clear it first:
+    <span class="dim">desktop/scripts/check-window-surfaces.sh</span></pre>
+
+<h2><span class="tag">HAPPY</span>run — to the approval gate</h2>
+<p class="cap">Each step prints the command before running it — the conductor rule, applied
+to the driver. The run <b>stops at the hard gate and exits 0</b>: a release waiting on a
+person is behaving correctly, not failing (F6).</p>
+<pre class="term">$ ./scripts/release.sh run 0.28.0
+
+<span class="b">PRE-FLIGHT</span>
+  <span class="ok">✓</span> preflight          <span class="dim">· · · · · · · · · · · ·</span> 31 checks, 0 fail        <span class="dim">[1]    52s</span>
+  <span class="ok">✓</span> gate freshness     <span class="dim">· · · · · · · · · · · ·</span> all green at HEAD        <span class="dim">[3]     2s</span>
+
+<span class="b">PUBLISH · reversible</span>
+  <span class="dim">$ ./scripts/bump-version.py minor</span>
+  <span class="ok">✓</span> bump + commit + tag  <span class="dim">· · · · · · · · · ·</span> v0.28.0 == HEAD          <span class="dim">[5]     4s</span>
+  <span class="dim">$ git push origin main && git push origin v0.28.0</span>
+  <span class="ok">✓</span> push main + tag      <span class="dim">· · · · · · · · · ·</span> 2 runs in flight         <span class="dim">[6]    11s</span>
+  <span class="dim">$ SIGN_IDENTITY="$SIGN_IDENTITY" desktop/scripts/build-all.sh</span>
+  <span class="dim">      builds the sidecar, archives, exports — cold caches after a bump</span>
+  <span class="ok">✓</span> build-all            <span class="dim">· · · · · · · · · ·</span> 4 phases, 15 gates       <span class="dim">[7a] 11m02s</span>
+  <span class="ok">✓</span> build-dmg            <span class="dim">· · · · · · · · · ·</span> notarised, stapled       <span class="dim">[7b] 28m40s</span>
+      <span class="dim">art  dmg = Bristlenose-0.28.0.dmg · 651 MB · expires 22 Sep</span>
+
+<span class="b">GATE</span>
+  <span class="ok">✓</span> ci green             <span class="dim">· · · · · · · · · ·</span> CI 37m · Release 39m     <span class="dim">[8]  2m18s</span>
+
+<span class="b">PUBLISH · irreversible</span>
+  <span class="dim">$ desktop/scripts/upload-testflight.sh</span>          <span class="warn">spends build 2857 · not reusable</span>
+  <span class="ok">✓</span> upload testflight    <span class="dim">· · · · · · · · · ·</span> build 2857 accepted      <span class="dim">[9]  5m41s</span>
+      <span class="dim">art  delivery-uuid = 8f3c1a04-… · recorded, no longer hand-captured</span>
+  <span class="ok">✓</span> upload dmg           <span class="dim">· · · · · · · · · ·</span> permalink swapped        <span class="dim">[10] 12m22s</span>
+
+<span class="info">ℹ</span> <span class="b">HELD</span> · approve publish <span class="dim">[11]</span>
+    <span class="dim">gate:approval · nothing publishes until a human approves</span>
+    <span class="dim">→</span> https://github.com/cassiocassio/bristlenose/actions/runs/4471002
+    <span class="dim">   Review deployments ▸ pypi ▸ <span class="b">Approve and deploy</span>  ← ticking the box is not pressing it</span>
+    <span class="dim">   expires 22 Sep 2026</span>
+
+<span class="dim">  resume with  ./scripts/release.sh run 0.28.0
+  8 of 13 steps done · nothing unrecoverable has happened</span>
+
+$ echo $?
+<span class="ok">0</span></pre>
+
+<h2><span class="tag bad">F1</span>a step fails</h2>
+<p class="cap">The 0.27.0 failure made structurally impossible. The driver redirects — never
+pipes — so <code>$?</code> is the build's own status, and the tail is printed through
+<code>tr '\r' '\n'</code> so a <code>rsync --progress</code>-style carriage-return log doesn't
+render as one frozen line (tricky things #1 and #2, fixed in one place).</p>
+<pre class="term">$ ./scripts/release.sh run 0.28.0
+
+<span class="dim">  … 4 steps ok, skipped …</span>
+
+  <span class="dim">$ SIGN_IDENTITY="$SIGN_IDENTITY" desktop/scripts/build-all.sh</span>
+  <span class="fail">✗</span> build-all            <span class="dim">· · · · · · · · · ·</span> <span class="fail">exit 1 at step 1/11</span>       <span class="dim">[7a]   26s</span>
+
+    <span class="dim">PRE-FLIGHT · window surfaces</span>
+    <span class="fail">✗</span> assertion unsatisfiable: no line matches 'handshakeProjectPath'
+    <span class="dim">      ServeFleet.swift renamed it plural in 037b371e (20 Aug)</span>
+    <span class="fail">✗ Build failed</span>
+
+    <span class="dim">.release/0.28.0/logs/build-all.1.log · last 20 lines above</span>
+
+<span class="fail">✗</span> <span class="b">Stopped at build-all.</span> Nothing irreversible has happened.
+
+    the failing check, on its own (&lt;1s):
+      <span class="b">desktop/scripts/check-window-surfaces.sh</span>
+
+    the whole step, once it passes:
+      <span class="b">SIGN_IDENTITY="$SIGN_IDENTITY" desktop/scripts/build-all.sh</span>
+
+    or fix and resume:
+      <span class="b">./scripts/release.sh run 0.28.0</span>        <span class="dim">picks up at build-all</span>
+
+<span class="dim">  4 of 14 steps done · tag v0.28.0 exists on origin and publishes nothing
+  to abandon:  git push --delete origin v0.28.0 && git tag -d v0.28.0</span>
+
+$ echo $?
+<span class="fail">1</span></pre>
+
+<h2><span class="tag bad">F3</span>the stranded step</h2>
+<p class="cap">Driver killed mid-upload — laptop slept, Ctrl-C, a self-imposed
+<code>timeout</code>. The fold sees a <code>running</code> with no terminus and reports
+<b>unknown</b>. It is <b>never auto-retried</b>: a half-finished upload is exactly where
+guessing is worst. Note the driver reads the script's own resume design rather than
+assuming the worst.</p>
+<pre class="term">$ ./scripts/release.sh run 0.28.0
+
+<span class="warn">⚠</span> <span class="b">Previous attempt did not finish cleanly.</span>
+
+  <span class="warn">⚠</span> upload-dmg           <span class="dim">· · · · · · · · · ·</span> <span class="warn">unknown</span> — started 21:04, no terminus
+      <span class="dim">last event  @bn bar parent=upload-dmg:3 done=118 total=651  (18%)</span>
+      <span class="dim">probe       HEAD https://bristlenose.app/dmg/… → 302 → 0.27.0</span>
+      <span class="dim">            the permalink still serves the OLD version — the swap is atomic
+            and had not happened, so this transfer was genuinely incomplete</span>
+      <span class="dim">on disk     .upload-Bristlenose-0.28.0.dmg.part  ·  118 MB  ·  rsync --partial resumes</span>
+
+  <span class="dim">This step is not auto-retried. Choose:</span>
+    <span class="b">./scripts/release.sh retry upload-dmg</span>   <span class="dim">resumes the partial transfer</span>
+    <span class="b">./scripts/release.sh run 0.28.0 --skip upload-dmg</span>  <span class="dim">ship the rest, dmg later</span>
+
+<span class="dim">  everything before it is recorded ok · 10 of 14 steps done</span>
+
+$ echo $?
+<span class="fail">1</span></pre>
+
+<h2><span class="tag bad">F4</span>the log and the world disagree</h2>
+<p class="cap">The case D1 exists for. The log says we uploaded; the channel says otherwise.
+<b>The probe wins</b>, the disagreement is appended as an event rather than silently
+resolved, and the run refuses to report complete. This is also what caught 0.27.0's
+tricky thing #6 — a gate believed cleared that <code>pending_deployments</code> said was
+still pending.</p>
+<pre class="term">$ ./scripts/release.sh verify 0.28.0
+
+<span class="b">Channels · 0.28.0</span>
+
+  <span class="ok">✓</span> PyPI               <span class="dim">· · · · · · · ·</span> 200 <span class="dim">· /pypi/bristlenose/0.28.0/json</span>
+  <span class="ok">✓</span> GitHub Release     <span class="dim">· · · · · · · ·</span> v0.28.0 <span class="dim">· 2 assets</span>
+  <span class="ok">✓</span> Homebrew           <span class="dim">· · · · · · · ·</span> bristlenose-0.28.0.tar.gz
+  <span class="ok">✓</span> TestFlight         <span class="dim">· · · · · · · ·</span> build 2857 <span class="dim">· Ready to Test</span>
+  <span class="ok">✓</span> .dmg               <span class="dim">· · · · · · · ·</span> 302 → Bristlenose-0.28.0.dmg
+  <span class="fail">✗</span> Snap               <span class="dim">· · · · · · · ·</span> <span class="fail">edge = 0.27.0 rev 9</span>
+      <span class="dim">log    step snap-edge status=ok at 22:41 (workflow conclusion: success)</span>
+      <span class="dim">probe  api.snapcraft.io channel-map → edge 0.27.0</span>
+      <span class="fail">the workflow uploaded; the store has not released it</span>
+      <span class="dim">→ gh workflow run snap.yml --ref v0.28.0</span>
+  <span class="fail">✗</span> Website            <span class="dim">· · · · · · · ·</span> <span class="fail">changelog names 0.27.0</span>
+      <span class="dim">→ cd ../bristlenose-site && ./build.py && ./deploy.sh</span>
+
+<span class="dim">  expiry   .dmg 22 Sep (30d from build) · TestFlight 21 Nov (90d from upload)</span>
+
+<span class="fail">✗</span> <span class="b">5 of 7 channels on 0.28.0 · 2 outstanding</span>
+
+$ echo $?
+<span class="fail">1</span></pre>
+
+<h2><span class="tag hold">F6</span>status — the default</h2>
+<p class="cap">What you type mid-release to answer "where am I". Folded from the log, costs
+nothing. <b>Pipeline time sums the measured steps and shows the remainder</b> rather than
+deriving itself as <code>wall − held</code>, which would reconcile by construction — the same
+tautology as <code>attempted == succeeded + failed</code>. The unaccounted row is the only one
+of the four that can ever catch anything. <b>The 21:00 weekday nudge is absent here by design</b>:
+it prints only when it would change the answer (weekday, before 21:00), and on the 0.27.0
+evidence base a release reaches this gate after 21:00 by its own duration.</p>
+<pre class="term">$ ./scripts/release.sh
+
+<span class="b">0.28.0 · Tier 1 · held</span> <span class="dim">· started 19:41 · 3h07 ago · 1 of 2 attempts in .release/</span>
+
+  <span class="ok">✓</span> preflight  <span class="ok">✓</span> prose  <span class="ok">✓</span> gate-freshness  <span class="ok">✓</span> skip-worktree
+  <span class="ok">✓</span> bump-version  <span class="ok">✓</span> push  <span class="ok">✓</span> build-all  <span class="ok">✓</span> build-dmg
+  <span class="ok">✓</span> ci-green   <span class="ok">✓</span> upload-testflight  <span class="ok">✓</span> upload-dmg
+  <span class="info">ℹ</span> approve publish   <span class="dim">held 1h48 · expires 22 Sep</span>
+  <span class="dim">—</span> website-deploy  <span class="dim">—</span> snap-edge
+
+<span class="b">  11 done · 1 held · 2 pending</span>   <span class="dim">= 14</span>
+
+  <span class="dim">pipeline time    1h01   measured · sum of 11 steps
+  waiting on you   1h48   1 held interval
+  unaccounted        18m  between steps — driver idle, or a gap in the log
+  wall clock       3h07</span>
+
+  <span class="dim">→</span> approve at <span class="dim">github.com/…/runs/4471002</span> then <span class="b">release.sh run 0.28.0</span></pre>
+
+<h2><span class="tag">DATA</span>what the log holds</h2>
+<p class="cap">Six event kinds, all of them <code>report.sh</code>'s existing vocabulary. The
+sink adds <code>run</code>, <code>seq</code>, <code>attempt</code> and <code>exit</code>;
+everything else passes through. <b>State is folded from this on every read, never
+stored</b> — so derived state cannot drift from the record, because it is the record.</p>
+<pre class="term"><span class="dim">.release/0.28.0/events.jsonl</span>
+
+{"ts":"2026-08-23T19:41:02Z","run":"0.28.0","seq":1,"kind":"meta","tier":1,"bump":"minor"}
+{"ts":"…19:41:04Z","run":"0.28.0","seq":2,"kind":"step","step":"preflight","attempt":1,"status":"start"}
+{"ts":"…19:41:56Z","run":"0.28.0","seq":3,"kind":"step","step":"preflight","attempt":1,
+ "status":"ok","exit":0,"elapsed":52,"detail":"31 checks, 0 fail"}
+{"ts":"…19:43:11Z","run":"0.28.0","seq":8,"kind":"step","step":"build-all","attempt":1,
+ "status":"fail","exit":1,"log":".release/0.28.0/logs/build-all.1.log",
+ "detail":"window surfaces: assertion unsatisfiable"}
+{"ts":"…20:58:40Z","run":"0.28.0","seq":22,"kind":"art","key":"delivery-uuid",
+ "value":"8f3c1a04-2b77-4e19-9c31-6ad0f1e2c845"}
+{"ts":"…21:02:14Z","run":"0.28.0","seq":24,"kind":"gate","step":"approve-publish",
+ "result":"held","evidence":"pending_deployments: pypi"}
+{"ts":"…22:50:31Z","run":"0.28.0","seq":31,"kind":"check","step":"snap-edge",
+ "result":"disagree","evidence":"log=ok probe=edge:0.27.0"}
+{"ts":"…22:51:02Z","run":"0.28.0","seq":32,"kind":"done","status":"partial"}</pre>
+<p class="note">gitignored — machinery, not history. docs/release-log.md stays the committed
+human record, and now gets its numbers from here rather than from recall.</p>
+
+</div>
+</body>
+</html>

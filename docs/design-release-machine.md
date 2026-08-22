@@ -1,0 +1,753 @@
+# The release machine — architecture
+
+**Status:** proposed, 23 Aug 2026. **Rewritten after review** — the first draft's
+central structural choice was wrong and its scope was too large. Both are
+recorded in §14 rather than quietly dropped.
+
+**Refines D1** of `docs/design-bn-release-skill.md` and implements part of the
+"what to build first" list that doc left open. **Corroborated by**
+`docs/design-release-system-audit.md` §6.3, which reached the same finding
+independently on 14 Aug — *"Phase 6 preaches probe-don't-remember, then needs a
+remembered delivery UUID; the dmg resume path exists as header prose, not
+mechanism; the mid-flight channel-state matrix has no representation anywhere."*
+
+**Companion mockup:** `docs/mockups/release-machine-paths.html`.
+
+**Prior art surveyed:** Debian `britney2`, Fedora Bodhi, openSUSE Factory /
+`totest-manager`, the Linux kernel `-rc` cadence, Mozilla's train model,
+GoReleaser, JReleaser, release-please, Spinnaker/Temporal, in-toto/SLSA (§2).
+
+---
+
+## 1 · The problem, stated from evidence
+
+`docs/release-log.md`'s 0.27.0 entry is the input. Nine tricky things. The first
+draft claimed three of them were one failure — *"a fact existed and was never
+recorded"* — and built a conveyor around that claim. **Review falsified it:**
+
+| # | Symptom | Actually |
+|---|---|---|
+| 1 | Five runs reported exit 0; three had failed | **Recorded.** The log said `✗ Build failed`. It was *read* wrong |
+| 6 | "I approved it" vs `pending_deployments` pending | **Recorded.** The API said pending. It was *read* wrong |
+| 7 | Perf red for four runs, nobody knew | Genuinely unrecorded — and it is a *workflow*, not a channel |
+
+Two of three are **reading** failures, not recording failures. That matters
+because `docs/design-release-system-audit.md` §6.4 already names the cost of the
+obvious fix: *"Knowledge quadruplication. Drift between copies is
+unpredictability on a delay."* A fourth artefact to read is not obviously the
+cure for a reading problem.
+
+So the scope is now **two tiers**, and the second is conditional:
+
+- **Tier A — make the existing facts read correctly, and probe what isn't
+  probed.** ~120 lines across files that already exist. Closes 6 of 9.
+- **Tier B — the event log and driver.** Closes the remaining two (measured
+  timings, stranded steps) at roughly three times the cost. **Deferred until
+  Tier A has run for two releases** and the release log says whether the gap is
+  still worth closing.
+
+## 2 · What the prior art agrees on
+
+Nine systems, one shape: a **conveyor** that owns order and state; **gates that
+can only say no**; and a small number of **human verdicts that are named,
+located and few**. The property that matters most:
+
+> **The human decision is a verdict, not work.** Fedora has one Go/No-Go.
+> openSUSE has one Factory Maintainer acceptance. Debian's overrides are
+> committed hint files. Nowhere does a human *perform a step*.
+
+`/bn-release` already has all three layers. The conveyor is the weak one — but
+see §1: weak is not the same as absent, and the cheapest repairs are to the
+reading, not to the recording.
+
+Borrowings that survive review:
+
+| From | Idea | Where |
+|---|---|---|
+| Debian age policy | a gate has a freshness property | §5 A5 |
+| in-toto | "did the step run" is evidence, not memory | §7, deferred |
+| Spinnaker | Manual Judgment is a modelled stage | already shipped — the `pypi` hold |
+| `check-release-ready.sh` | **probes are tri-state** | §5 A6 — in-house, not borrowed |
+
+## 3 · What `report.sh` is, and what it is not
+
+`desktop/scripts/report.sh` emits six event kinds — `meta · step · check · gate
+· art · done` — with `bn_trap_fail` guaranteeing a terminus on any exit path.
+The first draft called this "the conveyor's event protocol, unpersisted" and
+proposed persisting it inside `build_report.py`. **That was wrong, in four
+independent ways, all reproduced during review:**
+
+1. **`bn_autowrap` takes `PIPESTATUS[0]` and discards the renderer's status**
+   (`report.sh:114-117`). A sink inside `build_report.py` sits in the one
+   process whose exit code is thrown away by design. Sink fails → `rc=0`, zero
+   events, nothing says so.
+2. **`_BN_ACTIVE` suppression is process-tree-based, not stream-based**
+   (`report.sh:49-50, 100-101`). A driver that renders its own output silences
+   every child's events — measured at 0 bytes. This is also why
+   `build-all.sh:76-107` invoking five `check-*.sh` children as `>/dev/null`
+   means **one** script emits during a real release, not six.
+3. **`printf '%q'` emits ANSI-C `$'…'` for control characters; `shlex.split`
+   raises on an apostrophe inside one; `parse_event` returns `None` and the line
+   is dropped.** rsync's carriage returns and altool's *"Couldn't communicate"*
+   are exactly the adoption targets.
+4. **`_st()` maps any unrecognised status to `INFO`, and `_on_done` treats
+   anything ≠ `fail` as success.** `@bn done status=partial` renders a **green
+   ✓ Done** and exits 0 — the design's own failure class, aimed at itself.
+
+**Conclusion: `report.sh` is a presentation protocol and should stay one.** It
+is good at its job (`PIPESTATUS[0]` is correct on precisely the hazard the
+release log records; the EXIT trap does not perturb the script's status). If
+Tier B is ever built, **the driver is the sole event producer** — it writes the
+log itself from what it observes, and never parses the `@bn` stream.
+
+## 4 · Tier A — the work that is actually justified
+
+Every item closes a numbered incident, touches a file that already exists, and
+is independently shippable.
+
+| | Change | File | Closes |
+|---|---|---|---|
+| **A0** | `.gitignore` rule for `.release/` | `.gitignore` | prerequisite for A7 — see §6 |
+| **A1** | TTY-gate `--progress` on `[ -t 1 ]` | `upload-dmg.sh:289` | #2 |
+| **A2** | Per-attempt upload log naming + `bn_art key=delivery` | `upload-testflight.sh:186,211` | the un-reconstructable UUID |
+| **A3** | `pending_deployments` row, tri-state | `check-release-ready.sh` | #6 |
+| **A4** | Dependency-drift row | `check-release-ready.sh` | #5 + the `openai` owed item |
+| **A5** | Gate-freshness row | `check-release-ready.sh` + `.release/gates.jsonl` | build failure 1 |
+| **A6** | `verify-channels.sh` | new, ~120 lines | #7, #8 · Phase 6 executable |
+| **A7** | One rule in `SKILL.md` | `.claude/skills/bn-release/SKILL.md` | #1 |
+| **A8** | Nothing-to-ship check | `check-release-ready.sh` | Phase 1's cheapest test, currently prose |
+| **A9** | Refuse ad-hoc `SIGN_IDENTITY` | `build-all.sh:37,110` | six gates silently off |
+| **A10** | Doc-surface flag parity | `check-release-ready.sh` | Phase 2.2, currently prose |
+
+**A1 is the model for the whole tier.** `upload-testflight.sh:202` already gates
+`--show-progress` on `[ -t 1 ]`. The first draft proposed `tr '\r' '\n'` in a
+driver; the sibling script solved it properly one directory over, in one line,
+and fixes the log for a human tailing it too. **Look next door before designing.**
+
+**A4 is the highest-value item and was absent from the first draft.**
+`THIRD-PARTY-BINARIES.md` is a committed, per-package resolved inventory;
+`generate-third-party-binaries.py --check` already hard-fails `build-all.sh`
+(it fired on 0.27.0's build failure 2). Running that same comparison in the
+**preflight** moves discovery of `openai 2.9.1 → 3.0.0` from 10pm mid-release to
+the free first step. Grade minor/patch `warn`, major `bad`. Cost: one script
+invocation the build already makes, ~40 minutes earlier.
+
+**A7 is the one that closes #1, and it is a sentence, not a system.** The pipe
+that lost three build failures was the *agent's* (`build-all.sh … | tail` in a
+background task), one level above the script — `upload-testflight.sh:202-205`
+already implements redirect-then-`$?` verbatim and #1 happened anyway. The fix
+is the rule `CLAUDE.md` already uses for pytest, applied to release steps:
+
+> **Never report a step's outcome from a background task's exit code.** Redirect
+> to a file, read the file, quote its verdict line.
+
+## 5 · Contracts the Tier A rows must honour
+
+**A5 · gate freshness needs a cross-release home.** Nothing records a gate's
+last-run sha today. Freshness is inherently cross-version, so it cannot live in
+a per-version directory: `.release/gates.jsonl`, appended by each gate (id, sha,
+verdict, ts). **Absent = stale, reported as `never run under the freshness
+system`** — not as a failure, so the first releases' noise is self-explaining
+rather than training anyone to ignore it.
+
+And it must **stop `run`, not just warn in `plan`.** The first draft made it a
+warning on a screen offering `Run anyway` — under which 0.27.0's build failure 1
+survives this design entirely. Override is `--allow-stale-gates`, recorded, so
+the next release log can count how often it was used. *A bypass nobody counts is
+a bypass that becomes the default.*
+
+**A6 · every probe is tri-state, and the pattern is in-house.**
+`check-release-ready.sh:204-215` and `:337-372` are exemplary and
+`verify-channels.sh` should copy them rather than re-derive:
+
+```bash
+CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$URL" 2>/dev/null || echo "000")
+case "$CODE" in
+  200) ok   "PyPI" "$V published" ;;
+  404) bad  "PyPI" "$V not published" ;;
+  *)   warn "PyPI" "could not reach PyPI (HTTP $CODE) — unverified" ;;
+esac
+```
+
+> **A successful probe wins. An unsuccessful probe wins over nothing.**
+
+A failed probe must never read as a negative one. `gh api …/pending_deployments`
+with expired auth returns empty — folded naively that is *"no pending
+deployment"*, i.e. **a network fault reading as a human approval.** This is
+release-log #8's class (*"I can't probe this" was itself an unchecked claim*)
+and the house rule from `design-release-system-audit.md` §3 covers it: **a check
+that could not run reports that it could not run.**
+
+**A6 · probe for the abandoned version, not just the target.** 0.27.0's real
+website failure was the live changelog naming **0.26.0** — a version that no
+longer existed — while the download served 0.27.0. A presence-of-target probe
+passes the moment 0.28.0 appears and would not have caught it. Where a surface
+renders from `CHANGELOG.md`, assert **absence of abandoned versions** too.
+
+**A6 · assertions use `|| die`, never `&& ok`.** `verify-channels.sh` is nothing
+but assertions, making it the highest-risk new file in the repo for the defect
+`CLAUDE.md` documents at length and that `build-dmg.sh` shipped twice.
+
+## 6 · Security contracts
+
+Five findings, one of them proven by execution. **A0 is not optional and is not
+"assumed".**
+
+1. **`.release/` is not gitignored today.** Verified: `git check-ignore` exits 1,
+   `git add -An .release/` stages the log and every step log. The first draft
+   asserted the property in its data-structures section and assigned it to
+   nobody. It is now **A0**, before anything creates the directory. No negation
+   — the `.bristlenose/` fixture negations exist for a committed test contract
+   and nothing here will ever need one; say so in the comment so a future
+   session doesn't invent one.
+2. **`upload-dmg.sh`'s stdout carries the publish host and path**
+   (`:173,219,223,225,367`), a string `.gitignore`'s own comment says *"would be
+   permanent in history"*. Any move of its log out from behind `desktop/build/`'s
+   ignore rule is a leak path. A0 first; and **echoed commands name env vars
+   rather than expanding them** — `upload-testflight.sh:296-297` already
+   demonstrates the house pattern.
+3. **Any log the release writes is 0600 + `O_NOFOLLOW`**, matching
+   `bristlenose/llm/telemetry.py:268-269`. Different asset class from the
+   re-identification keys — no participant data goes near this — but the same
+   handling mechanism, because a 0644 exception invites the next one.
+4. **Anything folded into `docs/release-log.md` needs a positive allowlist.**
+   That file is tracked and public, and it is the only path in this design
+   reaching git history — the one surface with no undo. Permitted: step names,
+   statuses, exit codes, elapsed times, attempt counts, held intervals, channel
+   verdicts. Never: `art` values, `log=` paths, `$HOME`-rooted paths, anything
+   from `.ship-local.conf`.
+5. **Out of band, and worth acting on separately: `pre-commit` is not
+   installed.** `.git/hooks/` holds only `commit-msg`; `pre-commit` is on neither
+   `PATH` nor `.venv/bin`. So `.pre-commit-config.yaml`'s **gitleaks** hook and
+   its `tracked-vs-gitignore` sibling have never run here, while `SECURITY.md:233`
+   states *"gitleaks pre-commit hook locally"* as a control. Either run
+   `pre-commit install` or correct the claim — a security doc asserting an
+   uninstalled control is worse than one that doesn't.
+
+## 7 · Tier B — the event log, and why it waits
+
+If Tier A leaves a gap worth closing, it is these two: **measured timings**
+(§8's honesty mechanisation) and **stranded steps** (which has happened once).
+The design, recorded now so it isn't re-derived:
+
+**The driver is the sole event producer.** It writes `.release/<version>/events.jsonl`
+from what it observes — step name, start, exit code, elapsed, log path — and
+never parses `@bn`. That single placement kills §3's four defects, the two-writer
+`seq` collision, and the discarded-stdout problem, and it removes the five-script
+adoption entirely.
+
+**Fold, don't store.** Run state is derived on every read. This preserves D1:
+
+> **State someone else owns, you probe. State you own, you record.** An
+> append-only log *records*; a state file *asserts*.
+
+**But the skip decision is an assertion, and must be probed.** `run` skipping a
+step recorded `ok` is a claim about the present drawn from a statement about the
+past — and it goes stale exactly as 0.26.0's would have, whose log would say
+`push main + tag ok` for a tag that was then deleted. **Before skipping any step
+in the irreversible block, probe it.** Skipping on the log alone is fine for the
+reversible block, and that asymmetry is deliberate.
+
+**Verdict precedence — fail wins, absence is not ok:**
+
+| script says | exit | verdict |
+|---|---|---|
+| `fail` | 0 | **fail** |
+| `ok` | ≠ 0 | **fail** — never ok |
+| nothing | 0 | **`unverified`** — not ok |
+| nothing | ≠ 0 | fail |
+
+The third row is the common one: `website deploy` runs in another repo,
+`approve publish` is a browser, `snap edge` is `gh workflow run`. The fold must
+distinguish *"no events because this step doesn't emit"* from *"no events
+because it died before its first emit"*.
+
+**The fold fails loud on corruption.** F3 makes a truncated final line the
+*expected* case, so: fail on any unparseable line except a single trailing
+partial one, reported by name. **Spend `seq`** — a gap is free, mechanical proof
+of a lost event, and `attempt` numbering derives from the fold, so a dropped
+line risks `logs/<step>.<n>.log` colliding and *overwriting the evidence of the
+failure being debugged*.
+
+**A step that recorded nothing is not a step that succeeded.** Assert it per
+step. This is the single structural check that catches most of §3's class.
+
+**Mechanisms that must be named correctly:** `flock` does not exist on macOS
+(verified — `lockf` and `shlock` do). Use a `mkdir` mutex with the pid inside,
+which makes the stale-lock case legible — and F3 produces stale locks by
+construction. `date -v+30d`, not `date -d`. Validate the version argument with
+the `case` guard at `upload-dmg.sh:123-131`: the realistic failure isn't
+traversal, it's `0.28.O` folding a fresh empty log and reporting *"0 of 13 steps
+done"* for a release eight steps in.
+
+**Exit-code vocabulary**, because the first draft had `held` and `complete` both
+exiting 0, and `verify` exiting 1 on what it called a normal outcome:
+`0` complete · `75` held (`EX_TEMPFAIL`) · `1` failed · `2` lock held · `3`
+stranded. *Held is not an error* stays a **presentation** rule.
+
+**Tamper-evidence is separable from signing.** Signing (in-toto proper) is
+correctly out of scope for a single-maintainer laptop and always will be. A
+`prev` SHA-256 chain is ~3 lines, needs no keys, and is the property "an
+append-only log cannot be wrong" already claims. Build that, or soften the claim.
+
+## 8 · Logging and reporting
+
+Tier A adds no new artefact. `docs/release-log.md` stays human-written, and
+Phase 7's timings stay honestly marked `estimated`.
+
+If Tier B lands, Phase 7 reads the fold — and **must fail loud and mark its
+numbers `estimated` when the log is absent or incomplete**, or it reproduces the
+exact honesty gap it exists to close, now wearing a "measured" label.
+
+The timing split must not reconcile by construction. `pipeline = wall − held` is
+a tautology of the same family as `attempted == succeeded + failed`, which
+`CLAUDE.md` documents at length. Sum what was measured and show the remainder:
+
+```
+  pipeline time    1h01   measured · sum of 8 steps
+  waiting on you   1h48   3 held intervals
+  unaccounted        18m  between steps — driver idle, or a gap in the log
+  wall clock       3h07
+```
+
+The fourth row is the only one that could ever catch anything.
+
+## 9 · Configurability
+
+Tier A: none. Every row is a preflight check or a one-line script change.
+
+Tier B, if built — `--tier`, `--build-only`, `--skip <step>`, `retry <step>`,
+`--allow-stale-gates`. **`--from <step>` is deliberately absent:** it lets a
+human assert a position the log doesn't support, which is exactly the
+"state file that can be wrong" capability §7 spends its argument removing,
+re-entering as a flag. **One namespace** — the log's `step` identifier
+everywhere, in `--skip`, in `retry`, and on every screen.
+
+Credentials stay in `desktop/scripts/.ship-local.conf`. Note the file holds two
+sensitivity classes, which the first draft collapsed into one row: three ASC
+identifiers that `upload-testflight.sh:53-54` correctly calls non-secret, and
+`BRISTLENOSE_DMG_REMOTE`, which `.gitignore` separately rules must never be
+committed. The `.p8` lives outside the repo entirely.
+
+## 10 · DUX
+
+Tier A changes nothing a human types except adding `verify-channels.sh`.
+
+Tier B's subcommands are `plan · run · status · verify · retry` — **five, and
+each earns its place.** `verify` is not `status --channels` because they are
+different cost classes: one folds a local file instantly, the other makes seven
+network probes.
+
+Five rules:
+
+1. **Every step prints the command before running it** — the conductor rule,
+   applied to the driver.
+2. **A failure prints the exact line to re-run — innermost first.** The first
+   draft's F1 offered an 11-minute rebuild that would fail identically; the
+   command wanted is `check-window-surfaces.sh`, which runs in under a second.
+3. **`status` is the default with no arguments** — and names which attempt it
+   picked, since two version directories is the 0.26.0/0.27.0 situation exactly.
+4. **Nothing irreversible runs without printing its consequence immediately
+   before it.** The first draft marked these in `plan`, where nothing happens,
+   and dropped them from `run`, where the act occurs.
+5. **Every echoed command is redacted the same way a log tail is.** Rules 1 and
+   5 together create a credential-echo surface, and the transcript is what gets
+   pasted into a bug report.
+
+**`run` = resume needs no defence beyond an internal one:** `bristlenose run
+<folder>` already resumes from its own event log. Same verb, same laptop, same
+semantics.
+
+**Gap to name or refuse:** if `run` always resumes and `retry` is scoped to
+stranded steps, there is no verb for *redo a step that already succeeded* — a
+`.dmg` rebuild after a fix, with `build-dmg` recorded `ok`.
+
+**And there is no `abandon`,** in a design built on a release whose headline was
+an abandoned tag. The 0.27.0 log records the second-order consequence: the live
+changelog renders from `CHANGELOG.md` at build time, so *"a version abandoned
+before publication leaves a footprint on any surface already rendered from the
+changelog"* — and its conclusion is that abandoning should treat the website
+deploy as part of that decision. Either add the verb or print the consequence
+alongside the raw `git push --delete` recipe.
+
+## 11 · Options considered
+
+| | Option | Verdict |
+|---|---|---|
+| **A** | Status quo | Rejected — but less decisively than the first draft claimed. Two of three headline failures were reading failures, which Tier A fixes without new machinery |
+| **B** | GoReleaser / JReleaser | Rejected. Covers Homebrew, Snap, GitHub Release, notarization, SBOM — but assumes it owns the conveyor. An Xcode archive, `notarytool`, an rsync behind an SSH agent, a spent build number and a browser approval are not plugin-shaped. Three of seven channels adopted, four hand-driven, **and the order then lives in two places** |
+| **C** | Temporal / durable execution | Theoretically exact, rejected on proportion: a server and workers under a process that runs twice a month on one laptop |
+| **D** | Makefile | Rejected. Targets model dependencies, not irreversibility order, and timestamps are the state file D1 refuses |
+| **E** | Python driver | Rejected narrowly — every step, gate and probe is already shell or `curl` |
+| **F** | `.release-state.json` | Rejected — D1's actual target, and it remains right |
+| **G** | Event log + thin shell driver, all at once | **Rejected on review.** Right shape, wrong size and wrong sink placement |
+| **H** | **Tier A now; Tier B on evidence** | **Recommended** |
+
+### Why H
+
+1. **Tier A closes 6 of 9 incidents for ~120 lines**, in files that already
+   exist, with no new artefact to read — which matters because two of the three
+   headline failures were reading failures and §6.4 of the audit warns that a
+   fourth copy is unpredictability on a delay.
+2. **A4 alone closes the one owed item the first draft skipped**, using an
+   inventory already in git and a generator the build already runs.
+3. **It keeps every existing gate where it is** — inside the irreversible act.
+4. **It does not weaken D1**, and §7 records the refinement for when it's needed.
+5. **Tier B is designed, not deferred vaguely.** §3 and §7 hold the four defects
+   and the precedence table, so the option stays open at full information.
+
+## 12 · Build order
+
+**Tier A**, in dependency order. A0 first, and only A0 is a prerequisite.
+
+| | Step | Closes | Note |
+|---|---|---|---|
+| **A0** | `.gitignore` for `.release/` | — | Prerequisite. Also stops the preflight's untracked row drowning in machine files |
+| **A1** | TTY-gate `--progress` | #2 | One line |
+| **A2** | Per-attempt log + `art` delivery | UUID | One line each |
+| **A3** | `pending_deployments` row | #6 | Tri-state |
+| **A4** | Dependency-drift row | #5, owed | Highest value |
+| **A6** | `verify-channels.sh` | #7, #8 | The only substantial one |
+| **A5** | Gate freshness | build fail 1 | Needs A0 for `.release/gates.jsonl` |
+| **A9** | Refuse ad-hoc `SIGN_IDENTITY` | 6 silent gates | One line. Sibling already does it |
+| **A8** | Nothing-to-ship check | wasted releases | One `git diff --stat` |
+| **A7** | The `SKILL.md` rule | #1 | A sentence |
+| **A10** | Doc-surface flag parity | doc drift | The only fiddly one — roff escapes |
+
+**Tier B is gated on evidence, not on time:** build it when two consecutive
+release-log entries show a stranded step or an unusable timing estimate. If they
+don't, that is the answer.
+
+## 13 · Tests
+
+Not blanket coverage — two named gaps, at the cheapest layer, in the house style
+that `desktop/scripts/test-upload-dmg.sh` already demonstrates (pure decision
+functions extracted and sourced, every assertion proven to fail on its own
+violation, honest `skip` when an artefact isn't on disk).
+
+| | What | Why |
+|---|---|---|
+| **T1** | `verify-channels.sh`'s **probe-verdict decision**, canned inputs | Not the network round trip — the tri-state decision. `200`/`404`/`000` in, ok/bad/warn out. This is A6's whole risk |
+| **T2** | The **fold**, if Tier B lands | Its output authorises skipping irreversible steps. Synthetic `events.jsonl` in, state out. No I/O, no mocking — the plan's own words ("a pure function of the log") make the case |
+
+Deliberately **not** tested: any fake-GitHub / fake-Apple / fake-PyPI rehearsal
+harness. That is Options B/C's proportion problem recreated as test
+infrastructure for a process that has a real acceptance test every time it runs.
+
+**Noted, separate cleanup:** `test-upload-dmg.sh` and `test-ensure-sidecar.sh`
+duplicate an identical `ok()/bad()` pair; `test-check-pkg-shippable.sh`
+reinvents it a third way. Three near-duplicates is the Rule-of-Three trigger,
+and this plan would add a fourth. A ~10-line `desktop/scripts/test-lib.sh`, as
+its own commit, not a blocker here.
+
+## 14 · What the first draft got wrong
+
+Recorded rather than deleted, because the errors are more instructive than the
+corrections.
+
+1. **The sink was placed in `build_report.py`** — inside the one process whose
+   exit code `bn_autowrap` discards, behind a process-tree suppression flag,
+   behind a parser that drops events on an apostrophe. It would have reproduced
+   the plan's own failure class on the audit trail, where nothing downstream
+   would ever notice. §3.
+2. **"Structurally impossible" was overclaimed for F1.** `upload-testflight.sh:202-205`
+   already implements redirect-then-`$?` and #1 happened anyway, because the
+   pipe was the agent's. The driver moves the boundary up one level; it does not
+   remove it. §4 A7.
+3. **The premise was wrong.** Two of the three "unrecorded facts" were recorded
+   and misread. §1.
+4. **`.gitignore` was asserted, not assigned.** §6.
+5. **`@bn done status=partial` renders green.** The design's own class. §3.
+6. **`flock` was specified on a platform that lacks it.** §7.
+7. **§12 claimed independence it didn't have** — gate freshness lived in `plan`,
+   a driver subcommand from the step after it.
+8. **The mockup fabricated evidence.** `ProjectWindowController.swift` does not
+   exist; `build-all.sh` has 11 steps, not 18; `check-window-surfaces` is a
+   `bn_check` under step 1, not step 2. A screen whose job is trustworthy detail
+   cannot be the one carrying invented detail.
+
+## 15 · Open questions
+
+1. **Approval: probe-only. Confirmed — but the reasoning changes.** Filed as
+   *"a product question about ceremony"* it gets re-litigated at 11pm by someone
+   correctly observing that ceremony is friction. The durable justification is
+   **untrusted input**: the driver feeds an agent `git log` subjects, failing
+   step-log tails containing third-party build output, and third-party API
+   responses. A verb the agent can invoke is a verb that text can reach — the
+   same channel `bristlenose/llm/billing_hints.py` already escapes provider
+   exception strings for. Note also that probe-only guards the *hard* line and
+   nothing else: `run` already crosses the soft line.
+2. **`.release/` vs `.bristlenose/release/` — closed, `.release/` wins**, and
+   not on cost. `.bristlenose/` is the per-run state dir holding `pii_summary.txt`
+   and `llm-calls.jsonl`; nesting release machinery there means `rm -rf
+   .bristlenose` to purge participant data also destroys the release record.
+3. **Does Tier A make Tier B unnecessary?** The honest answer is that two
+   releases of evidence will say. That is the same discipline `docs/release-log.md`
+   was started under, applied to this document.
+
+## 16 · Adversary review — what a well-resourced attacker gets
+
+Written 23 Aug 2026 at the maintainer's request. Posture: an attacker with
+abundant automation, starting from **only what is public** — the GitHub repo,
+PyPI, the Homebrew tap, the Snap store, `bristlenose.app`. Goal: ship code to
+Bristlenose users, or reach the maintainer's Mac.
+
+**The prize is the Mac, not the repo.** One laptop holds the Apple Distribution
+identity, the ASC API key, the SSH agent for the web host, a `gh` token with
+repo scope, and `.ship-local.conf`. Every chain below is scored on whether it
+reaches that machine or the artefacts it signs.
+
+### What already holds — measured, not assumed
+
+Say this first, because it changes which chains are worth an attacker's time.
+
+- **No self-hosted runners.** All nine workflows are `ubuntu-latest` /
+  `macos-latest` / `macos-15`. This closes the worst class outright — a fork PR
+  cannot reach hardware.
+- **Secret-bearing jobs are unreachable from a fork PR.** `snap.yml`'s publish
+  job gates on `github.event_name == 'workflow_dispatch'`;
+  `install-test.yml`'s key-bearing `full-run` gates on `schedule ||
+  workflow_dispatch`. Both carry the reasoning inline.
+- **`contents: read` at top level on 8 of 9 workflows**, with per-job escalation.
+- **Trusted Publishing** — no long-lived PyPI token exists to steal. PEP 740
+  provenance and SBOM attestations are already generated.
+- **Third-party actions that touch secrets are SHA-pinned** —
+  `peter-evans/repository-dispatch@ff45666b…`, `snapcore/action-publish@214b86e5…`.
+- **The `pypi` environment hold** means no automated path publishes.
+
+That is a genuinely hard target. The chains below are what remains.
+
+### C1 — The dependency floor. Cheapest path, needs no contact with the repo.
+
+`pyproject.toml:44-46` is floor-only by written policy and **there is no lock
+file**. 0.27.0 proved the consequence empirically: `openai>=1.50` resolved to
+**3.0.0** during the release build, discovered at 10pm.
+
+So the attack is: compromise **any** package in the transitive tree — or just
+its maintainer's account — and wait. `build-all.sh` runs PyInstaller against a
+fresh resolve on the maintainer's Mac. Arbitrary code executes at build time on
+the machine holding the signing identity, and the resulting sidecar is then
+**signed, notarised and shipped to TestFlight by the legitimate pipeline.**
+
+Nothing in the current design detects it. `THIRD-PARTY-BINARIES.md --check`
+fires *during* the build, after the resolve.
+
+**Mitigations.**
+1. **A4 promoted from `warn` to a hard stop on a major**, and moved before any
+   build. Detection is not the same as refusal.
+2. **Hash-pin the build environment.** The runtime policy can stay floor-only —
+   it is defensible, and pinning without a renovation bot ships known-vulnerable
+   transitives for eighteen months. But the *sidecar build* should resolve from
+   a committed `requirements-build.txt` with `--require-hashes`, regenerated
+   deliberately. That splits "we take upgrades quickly" from "a release resolves
+   what a release resolved."
+3. **`art key=deps-sha`** recording the resolved set per release, so *"which
+   versions were in build 2856"* stops being unanswerable.
+
+### C2 — Prompt injection into the release agent. The novel one.
+
+The repo is public, so anyone can open a PR or file an issue. The release agent
+reads, as a matter of design: `git log <last-tag>..HEAD` subjects and bodies
+(Phase 1), the diff, **failing step-log tails containing third-party build
+output** (pip, npm, `xcodebuild`, `notarytool`), and third-party API responses
+(PyPI JSON, `api.snapcraft.io`, the GitHub API).
+
+It reads them at 11pm, holding Bash, after a human has granted **one
+authorisation, not per channel** — a property §2 correctly wants for human
+factors and which an attacker inherits.
+
+`SECURITY.md:98-110` already accepts untrusted-text-reaching-a-model as live
+risk, and `bristlenose/llm/billing_hints.py` escapes provider exception strings
+on exactly this reasoning. The release path is the same channel, one layer out,
+and is not covered.
+
+**Mitigations.**
+1. **The driver never constructs a command from repo or network content.** Step
+   commands come from the driver's own `case`. Nothing read from a log, a diff,
+   a commit message or an API response is ever interpolated into a command,
+   `eval`-ed, or used to select a step.
+2. **Quote, never interpolate.** Log tails and probe output are printed inside
+   an explicit fenced block labelled as untrusted, so injected text is visibly
+   data. This is what §15's answer to the approval question already depends on.
+3. **Keep approval probe-only.** §15 records this; C2 is the reason, and it is
+   the reason that survives an 11pm re-litigation.
+4. Worth stating plainly: **`run` and `retry` already cross the soft line.** The
+   agent can spend a build number and swap the public `.dmg` permalink today.
+   Probe-only guards the hard line and nothing else.
+
+### C3 — Mutable action tags inside the privileged jobs.
+
+The pinning discipline is real but partial: third parties that touch secrets are
+pinned; **`actions/*` are not.** Three jobs matter:
+
+| Job | Permission | Unpinned action |
+|---|---|---|
+| `release.yml` `publish` | `id-token: write` (PyPI OIDC) | `actions/download-artifact@v4` |
+| `release.yml` `github-release` | `contents: write` | `actions/checkout@v4` |
+| tap `update-formula` | `contents: write` on the tap | `actions/checkout@v4` |
+
+**The approval hold does not mitigate this.** It gates when the job *starts*; a
+compromised action then runs *after* approval, holding the OIDC token. The
+attacker's whole objective is to be inside that job at the moment the human
+approves — and the human approves on schedule, every release.
+
+`codeql.yml` additionally has **no top-level `permissions:` block**, so it
+inherits the repository default rather than `contents: read`.
+
+**Mitigations.** SHA-pin `actions/*` in those three jobs at minimum, with the
+same inline-comment discipline the existing pins carry. Keep the
+`pypa/gh-action-pypi-publish@release/v1` exception — it is PyPA's documented
+guidance and the comment already explains why. Add `permissions: contents: read`
+to `codeql.yml`. Enable Dependabot for `github-actions` so pins do not rot.
+
+### C4 — The Homebrew tap is the softest distribution channel.
+
+`update-formula.yml` holds `contents: write`, is driven by `repository_dispatch`,
+and computes the formula by fetching the sdist URL **and its sha256 from PyPI**.
+
+That sha256 is integrity-in-transit, not provenance: it is fetched from the same
+place as the artefact, so it proves the download matches what PyPI served — and
+nothing about whether what PyPI served is legitimate. Anyone who reaches PyPI
+via C1 or C3 gets Homebrew for free, automatically, within minutes, and the tap
+signs nothing.
+
+`brew install` is also the channel with the *least* platform-level defence: no
+notarisation, no Gatekeeper, no App Sandbox. It is a `pip install` in a trench
+coat.
+
+**Mitigation.** The provenance already exists and is not being checked — PEP 740
+attestations are generated by the publish step. Have the tap workflow verify the
+attestation (`gh attestation verify`, or PyPI's `/integrity` endpoint) before
+writing the formula, and fail closed. This converts the tap from "trusts PyPI"
+to "trusts a signature chained to this repository."
+
+### C5 — The website: the phishing surface, and `CHANGELOG.md` as an injection path.
+
+`bristlenose.app` serves the `.dmg`, and `/privacy.html` is the canonical URL
+that **Apple, Microsoft Entra and Google Cloud all point at**. Its build renders
+`CHANGELOG.md` live from this repo.
+
+Two consequences. **First, `CHANGELOG.md` is a public-repo file that renders to
+HTML on a domain three vendor consoles trust.** If that renderer passes raw HTML
+through — common in Markdown pipelines unless explicitly disabled — a merged PR
+touching the changelog is stored XSS on the domain that carries the privacy
+policy and the download button. **Confirmed 23 Aug 2026 by running the site's own
+`md_to_html()` against a changelog-shaped payload: raw HTML survives verbatim.**
+`build.py:189` calls `markdown.Markdown(extensions=["tables","fenced_code",
+"attr_list","sane_lists"])` — Python-Markdown 3.10.2, whose `safe_mode` was
+removed at 3.0 — and no sanitiser (`bleach`, `nh3`) appears anywhere in the
+repo. A `<script>` tag in `CHANGELOG.md` renders as a `<script>` tag on
+`bristlenose.app`.
+
+Blast radius is small and the fix is surgical: **exactly one page is sourced
+from the public repo** (`build.py:46`, `src="CHANGELOG.md"`), and **no markdown
+file in the site uses raw HTML** — only three hand-authored `content/*.html`
+files do, and those bypass the renderer. So escaping raw HTML for
+externally-sourced pages costs nothing and closes the boundary at the one place
+it is crossed. Do that rather than sanitising everything: one trust boundary,
+one control.
+
+**Second, the `.dmg` permalink is a bare `mod_alias` redirect** with no published
+checksum. The real defence is Gatekeeper — an attacker with the web host cannot
+serve a `.dmg` that launches without a valid Developer ID signature and staple.
+That defence is sound and worth naming as the reason this is MEDIUM not HIGH.
+Still: publish the `.dmg` sha256 next to it, so the integrity claim does not rest
+entirely on a control the user cannot see.
+
+### C6 — This design's own new surface
+
+Already covered in §6 and folded in: `.release/` unignored (A0),
+`upload-dmg.sh`'s host+path on stdout, 0600 + `O_NOFOLLOW`, the allowlist on
+what reaches the public release log, and the un-installed `pre-commit` hook that
+`SECURITY.md:233` claims. Two additions from this review:
+
+- **The fold never interpolates log content into a shell command**, and the
+  driver never `eval`s. C2's rule, applied to the artefact this design adds.
+- **`--allow-stale-gates` and any future bypass records an event.** A bypass
+  nobody counts becomes the default, and a bypass an attacker can induce
+  silently is worse.
+
+### Priority
+
+| | Chain | Reaches | Cost to attacker | Fix |
+|---|---|---|---|---|
+| 1 | **C1** dependency floor | signing Mac | low — one PyPI package | hash-pinned build env |
+| 2 | **C3** mutable action tags | PyPI OIDC, repo, tap | low if a tag is ever repointed | SHA-pin three jobs |
+| 3 | **C4** tap trusts PyPI's own hash | every `brew` user | free, follows C1/C3 | verify PEP 740 attestation |
+| 4 | **C2** injection into the agent | signing Mac | moderate — needs a merged PR or a dep | never build commands from content |
+| 5 | **C5** changelog → HTML | vendor-trusted domain | moderate | confirm the renderer escapes |
+
+C1 and C3 are the two where a *single* external compromise reaches the signing
+machine or the publishing right, and both are cheap to close. **They should be
+done before Tier A**, because neither depends on any of it.
+
+
+## 17 · Skill → script: what moves, what stays
+
+The maintainer's question, answered as an audit rather than an assertion:
+**everything `bn-release` knows that is mechanical should be in a script, and
+this table says where each piece lands.** The test applied to each row is the
+one `docs/design-bn-release-skill.md` already settled — *a precondition inside a
+script is structurally unskippable; one in a skill is an instruction a model can
+misread.*
+
+### Already mechanical — no action
+
+| Skill knowledge | Lives in |
+|---|---|
+| Version agreement across four files | `check-release-ready.sh` § Version consistency |
+| CHANGELOG/README entry exists and is well-formed | § Prose |
+| PyPI immutability · tag vs HEAD | § Not already released (tag→HEAD closed by audit §3.1) |
+| Certs, profile expiry, ASC config, `.ship-local.conf` | § Mac channels |
+| CI evidence for HEAD | § CI |
+| `publish hold` still exists | § CI |
+| `skip-worktree` divergence | added 22 Aug, found a second defect on first run |
+| Every `check-*` precondition | inside the irreversible act it guards |
+
+### Moving into a script — the gaps this review found
+
+| | Skill knowledge, today | Why it must be mechanical |
+|---|---|---|
+| **A8** | *"Check nothing-to-ship first, because it is cheap and it is common"* + the exact `git diff --stat -- bristlenose/ frontend/` | Phase 1's cheapest test has **zero** coverage. It decides whether a release should happen at all, and it is a one-line diff. Prose at 11pm is the wrong place for it |
+| **A9** | *"`SIGN_IDENTITY` is not optional. Unset it defaults to `-` and six gates go off, no warning, and you find out 35 minutes later at the upload"* | Measured true: `build-all.sh:37` defaults to `-`, and `:110`'s `if [ "$SIGN_IDENTITY" != "-" ]` skips the identity, profile and notary checks. **`build-dmg.sh` already refuses ad-hoc outright** — so this is sibling inconsistency, not a hard problem |
+| **A10** | *"New CLI surface must reach `README.md`, `man/bristlenose.1` and the website's `docs-src/cli.md`"*, plus the roff-normalisation gotcha | The *judgement* (does this flag need documenting?) stays. The *parity* (a flag in `--help` absent from three surfaces) is a diff. The gotcha — `sed 's/\\-/-/g'` then strip `\fB` escapes, or every flag reads as missing — is a script detail, and cost a cycle on 31 Jul |
+| **A6** | The seven-channel probe table · the two Snap probes · the expiry clocks · *"I can't probe this is itself a claim"* | Already A6. That last one is encoded by the table being exhaustive rather than by a reminder |
+| **A2** | *"Capture the delivery UUID when `upload-testflight.sh` prints it — the one probe you cannot reconstruct later"* | A remembered value in a doc that preaches probe-don't-remember. `art` closes it |
+| Tier B | Order · bump-commit-tag as one unit · tag **after** the commit · verify `tag == HEAD` · two pushes never `--tags` | The driver's `case`. Until Tier B, these stay prose — which is the honest cost of deferring it |
+| Tier B | Consequence printed at the irreversible line (DUX rule 4) | Needs the driver |
+
+### Staying in the skill — deliberately
+
+These are the reason it is a skill at all, and none of them should migrate:
+
+- **minor vs patch.** A month of refactoring can be invisible; one sentence in an
+  LLM prompt re-judges every analysis. Never inferred from the diff.
+- **Does the CHANGELOG entry describe what actually shipped?** Reading prose
+  against a diff. *"Bug fixes"* over a feature-bearing range is the failure to
+  catch, and no script can.
+- **Does the website still describe the product?** Homepage rows drift and
+  nothing trues them.
+- **Tier 1 vs Tier 2.** An audience decision.
+- **Drafting the prose** — CHANGELOG, `cli.md`, App Store What's New.
+- **Triage under partial failure.** Shell reports per-channel truth well;
+  deciding what to retry is judgement.
+- **Phase 7 sections 3 and 4** — what went wrong, and what misled you. Sections
+  2's *numbers* come from the fold if Tier B lands; the reading of them does not.
+
+### The rule this audit produces
+
+> **If the skill's prose contains an imperative with a testable subject, it is a
+> missing gate.** *"`SIGN_IDENTITY` is not optional"*, *"check nothing-to-ship
+> first"*, *"capture the UUID"* and *"never one `--tags`"* are all instructions
+> to a reader about a condition a script could assert. Four of them, found by
+> reading the skill against its own scripts — which is a pass worth repeating
+> whenever the skill grows a new warning.
+
+
+## See also
+
+- `docs/design-bn-release-skill.md` — D1 refined here (§7); its `scripts/release-cli.sh` slot is what Tier B would fill
+- `docs/design-release-system-audit.md` — §3 the fail-open cluster, §6.3 this finding independently derived
+- `docs/release-log.md` — the evidence
+- `desktop/scripts/REPORT-STYLE.md` — the presentation protocol, staying presentation
+- `bristlenose/events.py`, `bristlenose/run_lifecycle.py` — the same pattern, for user runs

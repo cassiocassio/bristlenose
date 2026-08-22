@@ -73,6 +73,16 @@ fail).
    does and why it's slow*. Skip it for the trivially self-evident steps.
 5. **Detail on the indented line**, not crammed inline — evidence (`220 binaries
    signed`, `flags=0x10000(runtime)`) sits under the step at the 8-col indent.
+   **Exception — list-shaped callers** (amended 23 Aug 2026): a caller whose whole
+   output *is* the step list, rather than a build with steps in it, may put short
+   detail inline and right-align the composite `detail  [tag]  elapsed` as one
+   blob — ragged left edge on the detail, clean right edge on the tags. The
+   trade is explicit: a 14-row release overview reads as 14 lines instead of 28,
+   and rule 8's single right edge is preserved *because* the whole cluster is
+   aligned as a unit. Applies only when every detail is short enough not to wrap;
+   the moment one does, that row falls back to the indent line. `release.sh` is
+   the first such caller (`docs/design-release-machine.md` §10); `build-all.sh`
+   and the `check-*` family are **not** — they are builds, and stay on the rule.
 6. **Append-only, not a redrawing tree** — each step prints its final line when it
    completes (cargo/uv style). Spinners/bars are transient *during* a step, then
    resolve to a static line. This keeps `tail -f` on the log files sane and CI
@@ -80,7 +90,10 @@ fail).
 7. **Airy leaders** — spaced `· · ·` between name and the right cluster, not a
    solid dotted run.
 8. **Width** — target 92 cols; wrap narrative to width−indent; right cluster
-   (`[tag]  elapsed`) is right-aligned.
+   (`[tag]  elapsed`) is right-aligned. Under rule 5's list-shaped exception the
+   right cluster is `detail  [tag]  elapsed` and is right-aligned as one unit —
+   **never** align the tags while letting detail float, which is what produces a
+   `[n]` column that wanders and is the failure this amendment exists to forbid.
 
 ## Adopting the style in a sibling script (the recipe)
 

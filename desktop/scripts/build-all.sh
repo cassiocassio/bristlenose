@@ -21,8 +21,9 @@
 #   desktop/scripts/build-all.sh
 #
 # Environment (passed through to child scripts):
-#   SIGN_IDENTITY  codesign identity; default "-" = ad-hoc.
+#   SIGN_IDENTITY  codesign identity. REQUIRED — there is no default.
 #                  Alpha: "Apple Distribution: Martin Storey (Z56GZVA2QB)"
+#                  Ad-hoc must be asked for: SIGN_IDENTITY=- (see below).
 #   SIGN_JOBS      parallelism for sign-sidecar.sh; default hw.ncpu.
 #   ALLOW_RESIGN   pass-through for sign-sidecar.sh re-sign override.
 #   NOTARY_PROFILE notarytool --keychain-profile; default "bristlenose-notary"
@@ -34,7 +35,30 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DESKTOP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ROOT="$(cd "$DESKTOP_DIR/.." && pwd)"
 
-SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+# SIGN_IDENTITY has no default, deliberately. It used to default to "-" (ad-hoc),
+# and the `if [ "$SIGN_IDENTITY" != "-" ]` guard below then skipped the identity,
+# provisioning-profile and notarytool checks — six gates silently off, discovered
+# ~35 minutes later at the upload. The skill compensated with a prose warning,
+# which is a gate living in the wrong place: build-dmg.sh already refuses ad-hoc
+# outright, so this was sibling inconsistency, not a hard problem.
+#
+# The shape is: the ACCIDENT fails, the INTENT works. Forgetting to set it is now
+# a hard stop; a deliberate unsigned dev build says SIGN_IDENTITY=- and gets the
+# old behaviour, loudly labelled.
+if [ -z "${SIGN_IDENTITY:-}" ]; then
+    echo "error: SIGN_IDENTITY is not set." >&2
+    echo >&2
+    echo "  A release build wants the Apple Distribution identity:" >&2
+    echo "    SIGN_IDENTITY=\"Apple Distribution: Martin Storey (Z56GZVA2QB)\" \\" >&2
+    echo "      desktop/scripts/build-all.sh" >&2
+    echo >&2
+    echo "  A deliberately unsigned local build must say so:" >&2
+    echo "    SIGN_IDENTITY=- desktop/scripts/build-all.sh" >&2
+    echo >&2
+    echo "  Unset used to mean ad-hoc, which silently skipped the identity," >&2
+    echo "  provisioning-profile and notarytool checks." >&2
+    exit 2
+fi
 NOTARY_PROFILE="${NOTARY_PROFILE:-bristlenose-notary}"
 TEAM_ID="Z56GZVA2QB"
 PROFILE_NAME="Bristlenose Mac App Store"
@@ -106,6 +130,11 @@ bn_check 1 ok "menu routing" "commands target a window, not every window"
 # ~60ms; fail-closed on parse errors.
 "$SCRIPT_DIR/check-bundle-manifest.sh" "$ROOT" >/dev/null
 bn_check 1 ok "bundle manifest" "every runtime dir covered by spec"
+
+if [ "$SIGN_IDENTITY" = "-" ]; then
+    bn_check 1 warn "signing identity" \
+        "ad-hoc (SIGN_IDENTITY=-) — identity, profile and notarytool checks SKIPPED"
+fi
 
 if [ "$SIGN_IDENTITY" != "-" ]; then
     # Capture output before grepping (SIGPIPE + pipefail trap —
@@ -237,8 +266,23 @@ if [ -x "$PYTHON_BIN" ] && "$PYTHON_BIN" -c "import importlib.util, sys; sys.exi
     _bn_t2b=$SECONDS
     "$PYTHON_BIN" "$ROOT/scripts/generate-third-party-binaries.py" --check >/dev/null
     bn_step_ok 2b elapsed=$((SECONDS-_bn_t2b)) detail="THIRD-PARTY-BINARIES.md fresh"
+elif [ "$SIGN_IDENTITY" != "-" ]; then
+    # A check that could not run must report that it could not run
+    # (docs/design-release-system-audit.md §3, the fail-open cluster).
+    #
+    # The skip below is correct for an ad-hoc dev build — friction-free is the
+    # point. On a REAL signing identity it is a release build, and silently
+    # skipping the only gate on "THIRD-PARTY-BINARIES.md is stale" means shipping
+    # an unverified supply-chain inventory. That gate fired for real on 0.27.0
+    # (build failure 2); losing it to a venv missing the release extra would be
+    # invisible, which is the worst property a gate can have.
+    echo "error: pip-licenses is not installed, so the supply-chain inventory" >&2
+    echo "       cannot be verified — and this is a signed build." >&2
+    echo "         .venv/bin/pip install -e '.[release]'" >&2
+    echo "       For a deliberately unsigned local build, use SIGN_IDENTITY=-." >&2
+    exit 1
 else
-    bn_step_skip 2b phase=Build name="Supply-chain inventory" detail="pip-licenses not installed (release extra)"
+    bn_step_skip 2b phase=Build name="Supply-chain inventory" detail="pip-licenses not installed (ad-hoc build)"
 fi
 
 # ------------------------------------------------------------

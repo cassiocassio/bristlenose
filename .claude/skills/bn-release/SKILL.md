@@ -86,6 +86,19 @@ and fix, whatever your own reading says.** It checks tree, version agreement
 across four files, changelog format and non-emptiness, tag, PyPI immutability,
 certs, profile expiry, ASC config, CI status.
 
+**Three rows are new (23 Aug 2026) and each replaces a paragraph this skill used
+to carry as prose** — a warning to a reader about a condition a script can
+assert is a missing gate, not a documentation problem:
+
+- **`shippable diff`** — Phase 1's nothing-to-ship test, which this skill called
+  "cheap and common" and nothing ever ran. It distinguishes a real release from
+  a desktop-only rebuild from nothing at all.
+- **`dependency drift`** — `THIRD-PARTY-BINARIES.md` against the resolved set.
+  Warns here; `build-all.sh` step 2b still hard-fails later. Moves discovery of
+  a major arriving mid-release ~40 minutes earlier, into the free step.
+- **`publish state`** — is a run *currently* waiting on the pypi approval.
+  Distinct from the existing `publish hold` row, which proves the gate exists.
+
 **Expect it to fail on this first run, and do not treat that as a stop.** On a
 genuine release the CHANGELOG and README entries for the target version cannot
 exist yet — Phase 3 is where you write them. So the shape is **preflight → prose
@@ -212,10 +225,13 @@ the same bump, and after step 1 the tree already satisfies its publish-pending
 case, whose instruction is *"push the existing tag"*. Its Step 6 (PyPI verify)
 is the only piece you borrow, after the approval.
 
-**`SIGN_IDENTITY` is not optional.** Unset, it defaults to `-` (ad-hoc), and
-`build-all.sh` then silently skips the identity check, the provisioning-profile
-check and the notarytool check — six gates off, no warning, and you find out 35
-minutes later at the upload. `build-dmg.sh` needs no such care: it defaults to
+**`SIGN_IDENTITY` is not optional — and since 23 Aug 2026 the script enforces
+that rather than this paragraph.** It used to default to `-` (ad-hoc), which
+silently skipped the identity, provisioning-profile and notarytool checks: six
+gates off, no warning, discovered 35 minutes later at the upload. `build-all.sh`
+now **refuses to start** with it unset (exit 2, immediately), and a deliberately
+unsigned local build must say `SIGN_IDENTITY=-`, which reports the skipped gates
+as a warning rather than saying nothing. The accident fails; the intent works. `build-dmg.sh` needs no such care: it defaults to
 the Developer ID identity and refuses ad-hoc outright.
 
 **Why the tag goes out at the start.** The old order held the tag back because
@@ -249,6 +265,27 @@ If a step fails, say which command failed and where its log is. **You are a
 conductor, not a wrapper** — every step must remain runnable by hand.
 
 ## Phase 6 · Verify by asking, never by remembering
+
+```bash
+./scripts/verify-channels.sh <X.Y.Z> [--abandoned <X.Y.Z>]
+```
+
+**That script is this table, executable** — seven channels, every probe
+tri-state, exit 0 only when all of them are on the version. Run it rather than
+running the rows by hand; the table below is now its documentation, not its
+substitute.
+
+**The rule it enforces, which the prose form could not:** *a successful probe
+wins; an unsuccessful probe wins over nothing.* `curl` writes `000` on a
+connection failure and `gh api` returns empty on expired auth — folded naively,
+either reads as "not published" or, worse at the approval gate, as a network
+fault reading as a human approval. Unreachable is its own verdict and is **not**
+ok.
+
+Pass `--abandoned <version>` whenever a tag was abandoned this cycle. 0.27.0's
+real website failure was the live changelog naming **0.26.0** — a version that
+never published — while the download served 0.27.0; a presence-of-target probe
+passes the moment the target appears and would not have caught it.
 
 No state file. Probe each channel; re-running this skill is therefore the resume
 mechanism, and the resume path gets exercised every run rather than only in
@@ -344,6 +381,15 @@ the skill is one nobody is reading.
 
 ## Rules
 
+- **Never report a step's outcome from a background task's exit code.** Redirect
+  to a file, read the file, quote its verdict line. A backgrounded
+  `build-all.sh … | tail` reports **`tail`'s** status, not the build's: on
+  0.27.0 all five build and upload runs reported exit 0 and **three had failed
+  outright**, printing `✗ Build failed`. Reading the notification instead of the
+  log would have carried three failed builds forward as successes. The scripts
+  already do this correctly internally (`upload-testflight.sh:202` redirects and
+  reads `$?`); the pipe that lost the verdict was **yours**, one level up. Same
+  rule `CLAUDE.md` already states for pytest, and it applies to every step here.
 - **Never bypass a script's internal gate.** If `check-pkg-shippable.sh` refuses,
   the answer is to fix the artefact, never to work around the check.
 - **A partial release is a normal outcome**, not an error. PyPI can succeed while

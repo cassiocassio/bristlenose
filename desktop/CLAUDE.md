@@ -901,3 +901,34 @@ Two injection points exist for safe testing:
 - `docs/design-desktop-python-runtime.md` — canonical shipping architecture for the Mac sidecar specifically (write-up due as part of Track C C0)
 - `docs/private/road-to-app-store.md` — current Apple-side gate sequence to TestFlight
 - `desktop/v0.1-archive/README.md` — v0.1 bundling pipeline reference
+
+### Settling a SwiftUI layout question without a build-and-click
+
+A layout question — does this wrap or truncate, is that modifier doing
+anything, how tall is this actually — is answerable in about two minutes
+without launching the app, and reasoning about SwiftUI's layout rules instead
+is how you get it wrong. Write a throwaway `main.swift` that reproduces the
+*exact* modifier chain, run it through `ImageRenderer`, and read `nsImage.size`
+/ dump the PNG:
+
+```swift
+let r = ImageRenderer(content: TheView()); r.scale = 2
+print(r.nsImage!.size)                      // 420.0 x 330.5
+```
+
+`swiftc main.swift -o probe` — no project changes, no target membership, no
+scheme. Set `NSApplication.shared.setActivationPolicy(.prohibited)` first so
+nothing appears on screen.
+
+**The strong form is differential.** Render the view twice, once with the
+modifier under suspicion and once without, and compare the PNGs with `cmp`.
+Byte-identical output proves the modifier is a no-op on that layout — which is
+a much better answer than "it looked the same to me". Used 22 Aug 2026 to
+settle whether `ReAnalyseConfirmSheet`'s title wraps (it does) and whether the
+missing `.fixedSize` on it was a latent bug (it isn't).
+
+**It also catches your CSS mockups lying.** The HTML stand-in for that sheet
+measured ~7.5pt short of the real thing on every height — SF Symbol line boxes
+and push-button metrics are the usual culprits. Quote SwiftUI's numbers in
+docs, not the mockup's.
+

@@ -342,3 +342,44 @@ should not be raised again.
 
 _See also: `docs/design-diagnostics-menu.md` (the audience tiers), `TODO.md`
 (the 18 Aug Settings ▸ General item, which carries the re-runnable checks)_
+
+## Destructive confirmations: Cancel is never the default
+
+**Decided 22 Aug 2026**, after the Re-analyse sheet shipped doing the opposite
+and a render made it visible. Applies to every confirmation in the Mac app, not
+just that one — recorded here rather than only in
+`design-analysis-lifecycle.md` §7 because the next confirmation someone builds
+will not be an analysis one.
+
+Three rules, from the HIG's *Alerts* guidance (its default/Cancel section was
+revised 2 Feb 2024):
+
+1. **Don't make Cancel the default button.** If the worry is people pressing
+   Return without reading, Apple's answer is to give *no* button the default —
+   not to move the default onto Cancel.
+2. **The default button goes on the trailing side.** Cancel sits leading.
+3. **The destructive style is for actions people did _not_ deliberately
+   choose.** Empty Trash is Apple's own counter-example: the person chose it, so
+   the alert does not restyle the button, and Return-to-confirm is the greater
+   convenience. A confirmation reached from a menu item ending in an ellipsis is
+   always this case.
+
+The Re-analyse sheet broke all three, and all three followed from breaking the
+first — `.keyboardShortcut(.defaultAction)` sat on Cancel, so the accent fill
+landed on the escape hatch, to the *left* of a red-labelled destructive button.
+Fixed in `ReAnalyseConfirmSheet.swift`.
+
+**Two confirmations already conformed and are the pattern to copy:**
+`ContentView.swift`'s Locate-error alert (default on the action) and
+`AccountsSettingsView.swift`'s Disconnect (destructive role deliberately
+omitted, with the Empty Trash reasoning in a comment). Both are native
+`.alert`s, so AppKit places their buttons. The Re-analyse sheet hand-rolls its
+row — which is how it drifted out of a convention it never opted into, and is
+the tell to watch for in any future custom sheet.
+
+**Nothing mechanical catches a breach of this.** Both arms typecheck, the suite
+stays green, and the sheet had a comment confidently explaining the wrong
+choice. It was found by rendering the sheet and looking at it.
+
+_See also: `docs/design-analysis-lifecycle.md` §7,
+`docs/mockups/reanalyse-sheet-pixels.html` (before/after)_

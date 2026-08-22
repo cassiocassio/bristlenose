@@ -55,7 +55,7 @@ Then the net that should have caught it (`f28aaf7e`): **`transcribe:no-key`**, t
 
 **21 Aug 2026 — plural agent scope left one premise behind in the code.** Surfaced by a `--topic mcp` truing pass, flagged in `docs/design-mcp-server.md` §6a. `ServeEnvStaleness.swift` justifies its lazy stale-env strategy on *"exactly one project is exposed to an external agent at a time"* and restarts only the exposed instance immediately. Derived scope made that false: N projects can be exposed at once, so flipping **Anonymise** on now needs to reach N sidecars where the code reaches one. That is the governance case the comment itself makes, so it is the one worth not leaving to a later reader. Related, same pass: `design-mcp-server.md` §8 prescribes an `MCP_EXPOSED`/`MCP_DENIED` build gate that has **never existed** — zero occurrences in the tree — and had read as shipped policy since 30 Jul; the doc now says so, but the gate is still owed if the property is wanted.
 
-_The 19 Aug owed list below is unchanged and still the priority — the Re-analyse sheet's pixels have never been on screen._
+_The 19 Aug owed list below is otherwise unchanged. Its item 1 — the Re-analyse sheet's pixels — was closed 22 Aug 2026; items 2–4 remain._
 
 
 **19 Aug 2026 — a 58-file adversarial drop found a fourth failure outcome nobody had named, and the accepted-format list grew 16 → 27.** An acceptance harness drove the real stages over a deliberately horrible folder. First run: **38 ingested, 0 refused, 17 silently dropped, 3 aborting the whole batch** — and 16 of the 17 drops were real media with a real audio track. After: **53 / 5 / 0 / 0**.
@@ -101,11 +101,21 @@ toast by an undo that no longer expires. Decisions and the HIG citation in
 
 **Owed, in priority order:**
 
-1. **The Re-analyse sheet's pixels have never been seen.** Counts are
-   unit-tested, layout is not. First thing to look at on the next `.app` pass.
-   The popover has now had exactly this treatment and it found three defects
-   in one screenshot (`04bf7a23`) — anonymous rows, error-red refusals, and an
-   untranslated "7 failures" — none of which a green suite could see.
+1. ~~**The Re-analyse sheet's pixels have never been seen.**~~ ✅ **done 22 Aug
+   2026** — rendered at native metrics (`e583105e`), and it yielded the same way
+   the popover did: three findings a green suite could not see. (a) The buttons
+   broke the HIG on three counts — `.defaultAction` on **Cancel**, so the accent
+   fill sat on the escape hatch, left of a red destructive button; fixed, and the
+   rule promoted to `design-decisions.md` because it governs every confirmation,
+   not this one. (b) The title *wraps* — settled by rendering the layout chain
+   through `ImageRenderer` twice, with and without `.fixedSize`, and getting
+   byte-identical PNGs (`9dee6868`); the CSS mock's heights were ~7.5pt light and
+   are corrected. (c) A failed re-analysis stopped being a failure overnight
+   (`1d5639f5`) — `parseManifest` answered `.idle` at its manifest guard without
+   reading the events log beside it, so the row went blank on the next launch and
+   **Show Diagnostics…**, gated on the failure state, went with it. Pixels and the
+   two sidebar rows in `docs/mockups/reanalyse-sheet-pixels.html` and
+   `analysis-lifecycle-states.html`.
 2. **Nine `toast.show(` call sites survive** in flows nobody reviewed —
    feedback, copy errors, cloud import. The rule applies to them; the decision
    hasn't been taken.

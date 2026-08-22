@@ -102,6 +102,7 @@ desktop/Bristlenose/Resources/.bristlenose-sidecar.selftest-stamp
 desktop/Bristlenose/Resources/ffmpeg
 desktop/Bristlenose/Resources/ffprobe
 desktop/Bristlenose/Resources/Bristlenose.mcpb
+desktop/Bristlenose/Resources/Bristlenose.mcpb.version
 # No trailing slash: in the main repo `models` is a directory, but /new-feature
 # worktrees symlink it from main — a dir-only pattern (`models/`) misses the
 # symlink and `git add -A` would stage a machine-specific link. This matches both.

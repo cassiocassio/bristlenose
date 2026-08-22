@@ -62,7 +62,7 @@ not a new invention, which is most of why it is cheap.
 | `duration_human` | elapsed span | `_format_duration_human` | `formatDurationHuman` | `DurationFormat.human` | **aligned**, pinned |
 | `finder_date` | Finder-style relative timestamp | `format_finder_date` | `formatFinderDate` | `SessionsFinderDate.format` | **aligned by pair**, one deliberate fork |
 | `timecode` | position in a recording | `format_timecode` | `formatTimecode` | — | **aligned**, pinned · also parsed |
-| `finder_filename` | middle-ellipsis truncation | `format_finder_filename` | `formatFinderFilename` | — | **divergent** — off-by-one |
+| `finder_filename` | middle-ellipsis truncation | `format_finder_filename` | `formatFinderFilename` | — | **aligned**, pinned |
 | `plural_category` | count-dependent noun forms | `count_noun` (inflect) | i18next CLDR | `I18n.pluralCategory` | **deliberately forked** |
 
 Per-entry detail, measured values and the exact case tables live in the JSON
@@ -130,9 +130,9 @@ KNOWN-WRONG section about the underlying value. That is the standard.
 
 ## 4. The gaps
 
-`timecode` was one of these and closed on 22 Aug 2026; its record is kept
-below because the way it closed is the useful part. `finder_filename` remains
-open and needs a decision before it needs code.
+Both gaps found in the 22 Aug 2026 audit closed the same day. Their records are
+kept because *how* they closed is the useful part — one of them turned out not to
+be the kind of format everyone assumed it was.
 
 ### `timecode` — closed 22 Aug 2026
 
@@ -175,13 +175,40 @@ screen and Class W on disk. Two things follow, and both are pinned in
 before changing a rendered format, check whether anything parses it back — and
 check every reader, not the one named after the format.**
 
-### `finder_filename` — off-by-one
+### `finder_filename` — closed 22 Aug 2026
 
-Python renders `interview-wi…n-final.mov`; TypeScript renders
-`interview-wit…-final.mov`. They disagree on 1 of 4 sampled realistic filenames
-and agree on the rest, which is why it has never surfaced. Low impact, low fix
-cost — but it still needs a decision on which front/back split is correct, so it
-is not trivial-by-inspection.
+One operator. Both sides split the budget 2:1 front-to-back; Python floored the
+front (`budget * 2 // 3`) and TypeScript ceiled it (`Math.ceil`). So they
+disagreed for every 3-, 4- and 6-character extension and agreed only on 2- and
+5-character ones — which is to say they disagreed on **every common media file**
+(`.mov`, `.mp4`, `.vtt`, `.m4a`, `.wav`) and agreed on `.docx`. The original
+"disagrees on 1 of 4 sampled names" reading was an artefact of the sample, not a
+random off-by-one.
+
+**Decided:** round up, adopting the TypeScript form. Neither lost information —
+the difference was one character of balance, and both preserved the
+discriminating parts of the real corpus's worst case (`09-heather-meeker-pt1.mp4`
+against `10-heather-meeker-pt2.mp4`, which differ at *both* ends). TypeScript won
+on two grounds: it is the live surface — the Sessions grid and Dashboard filename
+column, where the Python side feeds only the sealed static render and the dev
+route — so adopting it changed nothing any user sees; and it is the front-heavier
+form, which is what the Python docstring said it wanted.
+
+**The docstring was wrong too.** It claimed `format_finder_filename("Fishkeeping
+Research S3.vtt")` returns `Fishkeeping Rese…S3.vtt` — an output *neither*
+implementation ever produced, and much more front-heavy than either. Corrected in
+the same commit. A worked example that no code path produces is worse than no
+example, because it reads as the specification.
+
+Verified by exhaustive sweep rather than by sampling: 472 synthetic names
+(extension lengths 0–7 × stem lengths 1–59) plus the real trial-corpus
+filenames, zero mismatches.
+
+One thing this format is not, and is worth stating so nobody "fixes" it: the
+character budget is an approximation by construction. Finder truncates by **pixel
+width** with `NSLineBreakByTruncatingMiddle`, not by character count. These
+functions match Finder's *shape*, not its arithmetic, and a proportional font
+makes exact parity impossible anyway.
 
 ### Not a gap: two local `formatDuration` twins
 

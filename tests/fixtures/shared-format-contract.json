@@ -147,25 +147,42 @@
       "also_parsed": "UNLIKE every other entry here, this format has a PARSED half. Transcript .txt/.md files are a round-trip format — the pipeline writes them with format_timecode and reads them back on resume and re-analysis via the regex at bristlenose/pipeline.py (search 'Parse transcript lines'). So timecode is Class R on screen and Class W on disk. Consequences: (1) the reader's leading field must stay `\\d{1,2}` — it was `\\d{2}` until 22 Aug 2026 and a `[1:00:00]` segment was then dropped SILENTLY, no error, a short transcript the only symptom; (2) that tolerance is permanent backward compatibility, because transcripts already on researchers' disks carry the old `[01:00:00]` form. Both directions are pinned in tests/test_transcript_writing.py (test_parser_mixed_timecode_formats and test_parser_still_reads_legacy_zero_padded_hours). Before changing a rendered format, check whether anything parses it back."
     },
     "finder_filename": {
-      "status": "divergent",
+      "status": "aligned",
       "datum": "A filename truncated Finder-style with a middle ellipsis, default budget 24 chars.",
-      "canonical": null,
-      "observed": {
-        "_inputs": [
-          "interview-with-rachel-chen-final.mov",
-          "a-very-long-transcript-name-indeed.docx"
-        ],
-        "bristlenose/utils/markdown.py::format_finder_filename": [
-          "interview-wi…n-final.mov",
-          "a-very-long-…indeed.docx"
-        ],
-        "frontend/src/utils/format.ts::formatFinderFilename": [
-          "interview-wit…-final.mov",
-          "a-very-long-…indeed.docx"
-        ]
+      "canonical": "frontend/src/utils/format.ts::formatFinderFilename",
+      "decision": "22 Aug 2026: round the 2:1 front/back split UP, adopting the TypeScript form. The two sides used the same ratio and differed only in rounding — floor in Python, ceil in TypeScript — so they disagreed for every 3-, 4- and 6-character extension (i.e. every common media file) and agreed only on 2- and 5-character ones. Neither lost information; the difference was one character of balance. TypeScript won because it is the live surface — the Sessions grid and Dashboard filename column — while the Python side feeds only the sealed static render and the dev route, so adopting it changed nothing any user sees. It is also the front-heavier form, which is what the Python docstring said it wanted.",
+      "implementations": {
+        "python": "bristlenose/utils/markdown.py::format_finder_filename — sealed static render (s12_render/dashboard.py) and the dev route (server/routes/dev.py)",
+        "typescript": "frontend/src/utils/format.ts::formatFinderFilename — Sessions grid and Dashboard filename column; the live surface",
+        "swift": "none"
       },
-      "gap": "Off-by-one in the front/back split: the two sides disagree on 1 of 4 sampled realistic filenames and agree on the rest, which is why it never surfaced. Low user impact (a character's difference in a truncation), low fix cost — but it needs a decision on which split is right, so it is not trivial-by-inspection.",
-      "swift": "No Swift implementation."
+      "cases": [
+        [
+          "report.html",
+          "report.html"
+        ],
+        [
+          "Fishkeeping Research S3.vtt",
+          "Fishkeeping R…rch S3.vtt"
+        ],
+        [
+          "interview-with-rachel-chen-final.mov",
+          "interview-wit…-final.mov"
+        ],
+        [
+          "a-very-long-transcript-name-indeed.docx",
+          "a-very-long-…indeed.docx"
+        ],
+        [
+          "09-heather-meeker-pt1.mp4",
+          "09-heather-me…er-pt1.mp4"
+        ],
+        [
+          "noextensionbutverylongindeed",
+          "noextensionbutverylongi…"
+        ]
+      ],
+      "notes": "Verified by exhaustive sweep: 472 synthetic names (extension lengths 0-7 x stem lengths 1-59) plus the real trial-corpus filenames, zero mismatches. The Python docstring's worked example was ALSO wrong before this — it claimed 'Fishkeeping Rese...S3.vtt', an output neither implementation ever produced, and was corrected in the same commit. The character budget is itself an approximation: Finder truncates by pixel width with NSLineBreakByTruncatingMiddle, not by character count, so this matches Finder's shape rather than its arithmetic."
     },
     "finder_date": {
       "status": "aligned-by-pair",

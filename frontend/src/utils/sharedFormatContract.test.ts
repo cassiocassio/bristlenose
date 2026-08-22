@@ -31,16 +31,20 @@ import { formatDurationHuman, formatFinderFilename, formatTimecode } from "./for
 interface FormatSpec {
   status: string;
   datum?: string;
-  cases?: [number, string][] | null;
+  // Inputs are not all numeric — a duration and a timecode take seconds, a
+  // filename takes a string.
+  cases?: [number | string, string][] | null;
   observed?: Record<string, unknown>;
 }
 
 const contract = contractJson as unknown as { formats: Record<string, FormatSpec> };
 
-/** The TypeScript implementation for each aligned format. */
-const IMPLS: Record<string, (seconds: number) => string> = {
-  duration_human: formatDurationHuman,
-  timecode: formatTimecode,
+/** The TypeScript implementation for each aligned format. The cast at each
+ *  boundary is the one place the heterogeneous case table is narrowed. */
+const IMPLS: Record<string, (value: number | string) => string> = {
+  duration_human: (v) => formatDurationHuman(v as number),
+  timecode: (v) => formatTimecode(v as number),
+  finder_filename: (v) => formatFinderFilename(v as string),
 };
 
 describe("shared format contract — aligned formats", () => {
@@ -68,8 +72,8 @@ describe("shared format contract — aligned formats", () => {
         expect(spec.cases?.length ?? 0).toBeGreaterThan(0);
       });
 
-      it.each(spec.cases ?? [])("%i seconds renders as %s", (seconds, expected) => {
-        expect(impl(seconds)).toBe(expected);
+      it.each(spec.cases ?? [])("%s renders as %s", (value, expected) => {
+        expect(impl(value)).toBe(expected);
       });
     });
   }
@@ -82,7 +86,7 @@ describe("shared format contract — one implementation per language", () => {
   // that renders a timecode agrees with the canonical helper.
   it("every TypeScript timecode surface renders the canonical format", () => {
     for (const [seconds, expected] of contract.formats.timecode.cases ?? []) {
-      expect(formatTimecode(seconds)).toBe(expected);
+      expect(formatTimecode(seconds as number)).toBe(expected);
     }
     // The shape that was wrong: an unpadded minute field.
     expect(formatTimecode(330)).toBe("05:30");
@@ -90,20 +94,5 @@ describe("shared format contract — one implementation per language", () => {
     // ...and the shape that would be wrong the other way: a padded hour.
     expect(formatTimecode(3930)).toBe("1:05:30");
     expect(formatTimecode(3930)).not.toBe("01:05:30");
-  });
-});
-
-describe("shared format contract — catalogued divergences", () => {
-  // Not enforcement: these assert that the register still describes reality,
-  // so a fixed format does not stay filed as broken. When one fires, promote
-  // the entry to `aligned` rather than editing the expectation away.
-
-  it("finder_filename observed values are accurate for TypeScript", () => {
-    const spec = contract.formats.finder_filename;
-    if (spec.status !== "divergent") return;
-
-    const observed = spec.observed as { _inputs: string[] } & Record<string, string[]>;
-    const recorded = observed["frontend/src/utils/format.ts::formatFinderFilename"];
-    expect(observed._inputs.map((n) => formatFinderFilename(n))).toEqual(recorded);
   });
 });

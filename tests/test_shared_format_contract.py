@@ -49,29 +49,35 @@ def _python_impl(name: str):
         from bristlenose.utils.timecodes import format_timecode
 
         return format_timecode
+    if name == "finder_filename":
+        from bristlenose.utils.markdown import format_finder_filename
+
+        return format_finder_filename
     return None
 
 
 # ── The aligned set — the actual pins ────────────────────────────────────
 
 
-def _aligned_cases() -> list[tuple[str, float, str]]:
-    out: list[tuple[str, float, str]] = []
+def _aligned_cases() -> list[tuple[str, Any, str]]:
+    """Flatten every aligned entry's cases. Inputs are not all numeric — a
+    duration and a timecode take seconds, a filename takes a string."""
+    out: list[tuple[str, Any, str]] = []
     for name, spec in _formats().items():
         if spec.get("status") != "aligned":
             continue
-        for seconds, expected in spec.get("cases") or []:
-            out.append((name, seconds, expected))
+        for value, expected in spec.get("cases") or []:
+            out.append((name, value, expected))
     return out
 
 
-@pytest.mark.parametrize(("fmt", "seconds", "expected"), _aligned_cases())
-def test_aligned_format_matches_contract(fmt: str, seconds: float, expected: str) -> None:
+@pytest.mark.parametrize(("fmt", "value", "expected"), _aligned_cases())
+def test_aligned_format_matches_contract(fmt: str, value: Any, expected: str) -> None:
     """Every case in an aligned entry holds on the Python side."""
     impl = _python_impl(fmt)
     assert impl is not None, f"no Python implementation registered for aligned format {fmt!r}"
-    assert impl(seconds) == expected, (
-        f"{fmt}({seconds}) drifted from the shared contract. "
+    assert impl(value) == expected, (
+        f"{fmt}({value!r}) drifted from the shared contract. "
         f"If this change is intended, update {CONTRACT.name} and the TypeScript "
         f"and Swift implementations in the SAME commit."
     )
@@ -110,18 +116,6 @@ def test_timecode_has_exactly_one_python_implementation() -> None:
     assert u is m is e is c, (
         "a second Python timecode implementation has appeared — import "
         "bristlenose.utils.timecodes.format_timecode rather than writing a local copy"
-    )
-
-
-def test_observed_values_in_the_register_are_accurate() -> None:
-    """The catalogued Python outputs are measured, not typed from memory."""
-    from bristlenose.utils.markdown import format_finder_filename
-
-    fn = _formats()["finder_filename"]["observed"]
-    key = "bristlenose/utils/markdown.py::format_finder_filename"
-    assert [format_finder_filename(n) for n in fn["_inputs"]] == fn[key], (
-        f"{key} no longer renders what the register says it does — "
-        f"update the `observed` block in {CONTRACT.name}"
     )
 
 

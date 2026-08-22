@@ -509,8 +509,8 @@ def format_finder_date(dt: datetime, *, now: datetime | None = None) -> str:
 def format_finder_filename(name: str, *, max_len: int = 24) -> str:
     """Truncate a filename in macOS Finder style, keeping the extension.
 
-    Finder shows the start of the stem, an ellipsis, then the extension:
-    ``Fishkeeping Rese\u2026S3.vtt``.
+    Finder shows the start of the stem, an ellipsis, then the tail of the stem
+    and the extension: ``Fishkeeping R\u2026rch S3.vtt``.
 
     When the name fits within *max_len* it is returned unchanged.  The
     extension (including the dot) is always preserved in full.  If the stem
@@ -529,7 +529,7 @@ def format_finder_filename(name: str, *, max_len: int = 24) -> str:
         >>> format_finder_filename("report.html")
         'report.html'
         >>> format_finder_filename("Fishkeeping Research S3.vtt", max_len=24)
-        'Fishkeeping Rese\u2026S3.vtt'
+        'Fishkeeping R\u2026rch S3.vtt'
     """
     if len(name) <= max_len:
         return name
@@ -548,8 +548,16 @@ def format_finder_filename(name: str, *, max_len: int = 24) -> str:
         # Extension alone fills the budget — just truncate.
         return name[: max_len - 1] + "\u2026"
 
-    # Split budget: more at the front, less at the back.
-    front = budget * 2 // 3
+    # Split budget: more at the front, less at the back (2:1).
+    #
+    # Rounded UP, matching `formatFinderFilename` in frontend/src/utils/format.ts,
+    # which is the live surface (the Sessions grid and Dashboard filename column);
+    # this Python side feeds only the sealed static render and the dev route. The
+    # two rounded differently until 22 Aug 2026 — floor here, ceil there — so they
+    # disagreed for every 3-, 4- and 6-character extension, i.e. every common media
+    # file, and agreed only on 2- and 5-character ones. Neither lost information;
+    # they simply never matched. See docs/design-shared-formats.md.
+    front = -(-budget * 2 // 3)  # ceil(budget * 2 / 3)
     back = budget - front
     if back > 0:
         return stem[:front] + "\u2026" + stem[-back:] + ext

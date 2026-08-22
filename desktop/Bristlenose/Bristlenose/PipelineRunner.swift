@@ -933,7 +933,10 @@ final class PipelineRunner: ObservableObject {
         return out.sorted()
     }
 
-    private static func parseManifest(at url: URL) async -> PipelineState {
+    /// Internal rather than private so `EventLogReaderTests` can pin the guard
+    /// order below — the bug it had was in *reaching* `deriveState`, which the
+    /// reader's own tests cannot see because they call it directly.
+    static func parseManifest(at url: URL) async -> PipelineState {
         let fm = FileManager.default
         let parentDir = url.deletingLastPathComponent()
             .deletingLastPathComponent()  // strip .bristlenose/, keep bristlenose-output/
@@ -948,7 +951,33 @@ final class PipelineRunner: ObservableObject {
             return .unreachable(reason: "Can't find this folder.")
         }
 
+        let dotBristlenose = url.deletingLastPathComponent()
+        let eventsURL = dotBristlenose.appendingPathComponent(EventLogReader.filename)
+        let pidURL = dotBristlenose.appendingPathComponent(EventLogReader.pidFilename)
+
         guard fm.fileExists(atPath: url.path) else {
+            // No manifest is not the same as no history, and this used to
+            // return `.idle` without asking. `--clean` deletes the manifest,
+            // and the pipeline does not write a new one until ingest has
+            // finished (`pipeline.py` runs `ingest()` before `write_manifest`),
+            // so every re-analysis passes through a window where `run_failed`
+            // is on disk and the manifest is not — and ingest is where the
+            // batch-killing failures live. Answering `.idle` there dropped the
+            // failure on the floor: the row went silent, and `Show Diagnostics…`
+            // is gated on the failure state, so the recorded cause became
+            // unreachable through the UI at the same moment.
+            //
+            // `stagesComplete: []` because there is no manifest to read it
+            // from. Only `.partial` / `.stopped` consult it, and neither is
+            // reachable without a manifest.
+            if fm.fileExists(atPath: eventsURL.path),
+               let derived = EventLogReader.deriveState(
+                   eventsURL: eventsURL,
+                   pidURL: pidURL,
+                   stagesComplete: [],
+               ) {
+                return derived
+            }
             return .idle
         }
 
@@ -972,9 +1001,6 @@ final class PipelineRunner: ObservableObject {
         // Phase 1f Slice 4 — prefer the events log when present. Falls back
         // to the strict manifest inference below for projects that predate
         // the events log (backward compatibility).
-        let dotBristlenose = url.deletingLastPathComponent()
-        let eventsURL = dotBristlenose.appendingPathComponent(EventLogReader.filename)
-        let pidURL = dotBristlenose.appendingPathComponent(EventLogReader.pidFilename)
         if fm.fileExists(atPath: eventsURL.path) {
             let stagesComplete = stagesCompleteFromStages(stages)
             if let derived = EventLogReader.deriveState(

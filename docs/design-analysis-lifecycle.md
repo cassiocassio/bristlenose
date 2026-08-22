@@ -7,6 +7,13 @@ trued-against: HEAD@main 19797094 on 2026-08-21 (the shipped confirmation
 
 ## Changelog
 
+- _2026-08-22_ — §7's last question answered, and it was a defect rather than a
+  design gap: a re-analysis that failed before ingest completed read as *never
+  analysed* on the next launch, because `parseManifest` returned `.idle` at the
+  manifest guard without reading the events log beside it. §5.2 and §5.4 updated;
+  two rows drawn in the lifecycle mockup. Anchors: `PipelineRunner.parseManifest`,
+  `EventLogReaderTests.manifestAbsentButRunFailedPresentStillReportsFailure`,
+  `pipeline.py:652`/`:672`.
 - _2026-08-22_ — §7's title-wrapping question settled by measurement: the long
   name wraps, and adding `.fixedSize` to the title renders byte-identically, so
   the modifier would be a no-op. Sheet heights corrected to the SwiftUI figures
@@ -136,7 +143,9 @@ stateDiagram-v2
     note right of Empty
         No deliverable on disk.
         A husk from a dead run
-        counts as Empty — see §5.4
+        counts as Empty ONLY if
+        nothing recorded a failure
+        — see §5.4
     end note
 
     Running --> Analysed: run_completed
@@ -437,6 +446,7 @@ the schema requires them to agree.
 | An unrecognised cause category failed the **whole** event decode | no summary, no rows, no cause | both Swift enums decode unknown as `.unknown` |
 | Refusals rendered as **anonymous rows** in the popover | outcome 3 wearing outcome 2's clothes — a count with extra steps | the pane reads `source_file`, the field added for exactly this |
 | Fifteen silent recordings dropped under `succeeded=57` | **outcome 3b** | `NO_SPEECH` — stated, counted out of `succeeded`, excluded from the abandon check |
+| A failed **re-analysis** read as *never analysed* after relaunch | the failure recorded and never read | `parseManifest` consults the events log when the manifest is absent |
 | **Analyse** offered on a project with no recordings | false affordance | `canAnalyse` asks whether there is work to do |
 | The empty-state pane said "add files" to a project with files | the app contradicting itself on screen | the pane counts the same field the menu gates on |
 
@@ -466,6 +476,7 @@ nobody is exercising.
 | Output dir exists **with** a report | refuse, offer Re-analyse… | refuses; offer missing |
 | Manifest present, run incomplete | resume | ✅ shipped |
 | Run stranded, no terminus | reconcile to `failed` on next start | ✅ shipped |
+| **Re-analysis fails before the manifest is written** | keep saying it failed, and keep the cause reachable | ✅ fixed 22 Aug 2026 — the guard consulted the manifest and gave up before reaching the events log |
 | Project folder is `/` or `$HOME` | refuse by name, before scanning | ✅ fixed 19 Aug |
 | Folder holds a protected subdirectory | step over it, record it | ✅ fixed 19 Aug |
 | Media at depth 4+ | not ingested | by design — `_MAX_SCAN_DEPTH = 3` |
@@ -726,6 +737,19 @@ locales.
   this layout and its absence is not a latent bug. The sheet grows 16pt to hold
   the second line (420 × 330.5pt, against 314.5pt for a short name). Render in
   [`mockups/reanalyse-sheet-pixels.html`](mockups/reanalyse-sheet-pixels.html).
-- **What happens to a project mid-re-analysis that fails?** It has no old
-  analysis (deleted) and no new one. That is a new `Empty` — correct by this
-  machine, and worth confirming it is what the row actually shows.
+- ~~**What happens to a project mid-re-analysis that fails?**~~ **Answered
+  22 Aug 2026 — and the row was wrong, by a guard order rather than by the state
+  machine.** It lands in `Empty` as predicted, but the reason it *stayed* there
+  was a defect: `parseManifest` returned `.idle` at its manifest-missing guard
+  without consulting the events log sitting beside it. `--clean` deletes the
+  manifest and the pipeline writes a new one only *after* ingest
+  (`pipeline.py:652` runs `ingest()`; `write_manifest` is at `:672`), so every
+  re-analysis passes through a window where `run_failed` is on disk and the
+  manifest is not — and ingest is where §5.2's batch-killing failures live. In
+  that window the row rendered `.placeholder`: silent, and — because
+  **Show Diagnostics…** is gated on the failure state — with the recorded cause
+  unreachable through the UI at the same moment. Fixed: a missing manifest now
+  falls through to the events log with `stagesComplete: []`. Two rows drawn side
+  by side in
+  [`mockups/analysis-lifecycle-states.html`](mockups/analysis-lifecycle-states.html)
+  §"The morning after a failed re-analysis".

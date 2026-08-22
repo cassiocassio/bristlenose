@@ -109,6 +109,7 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
 .tint-ok { color:var(--sys-green); } .tint-info { color:var(--bn-colour-accent); }
 .spin { width:12px; height:12px; border:1.6px solid var(--bn-off-track); border-top-color:var(--bn-colour-accent); border-radius:50%; animation:sp .9s linear infinite; flex-shrink:0; }
 @keyframes sp { to { transform:rotate(360deg); } }
+.pair { display:flex; flex-direction:column; align-items:center; gap:.45rem; }
 .stateno { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.06em; padding:.1rem .55rem .25rem; }
 
 /* ── macOS menu ───────────────────────────────────────────────────────── */
@@ -394,6 +395,91 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
 </div>
 
 <!-- ══════════ MENU ══════════ -->
+<!-- ══════════ THE MORNING AFTER ══════════ -->
+<div class="sec-head">
+  <h2>The morning after a failed re-analysis</h2>
+  <p class="sub">Three projects, one relaunch later. Onboarding diaries was re-analysed yesterday
+     and the run died in ingest. The disk is identical in both sidebars — <code>run_failed</code> is
+     sitting in the events log either way. The only difference is whether the app reads it.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">Tuesday 9am · before the fix / after the fix</span></div>
+  <div class="frame-body">
+    <div class="pair">
+      <div class="sb">
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body"><div class="r-name">Ward rounds</div></div>
+        <span class="r-count">9</span>
+      </div>
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body">
+          <div class="r-name">Onboarding diaries</div>
+        </div>
+      </div>
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body"><div class="r-name">Pharmacy handover</div></div>
+        <span class="r-count">6</span>
+      </div>
+      </div>
+      <div class="stateno">before</div>
+    </div>
+    <div class="pair">
+      <div class="sb">
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body"><div class="r-name">Ward rounds</div></div>
+        <span class="r-count">9</span>
+      </div>
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body">
+          <div class="r-name">Onboarding diaries</div>
+          <div class="r-sub"><span class="g tint-err"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.6" fill="currentColor"/><path d="M5.6 5.6 10.4 10.4M10.4 5.6 5.6 10.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg></span> Couldn’t read one of the recordings</div>
+        </div>
+      </div>
+      <div class="row">
+        <span class="r-ico">📁</span>
+        <div class="r-body"><div class="r-name">Pharmacy handover</div></div>
+        <span class="r-count">6</span>
+      </div>
+      </div>
+      <div class="stateno">after</div>
+    </div>
+  </div>
+</div>
+
+<div class="comm">
+  <span class="tag">Commentary</span>
+  <h3>The tell is a missing number, not a message</h3>
+  <p>On the left the row is not merely quiet — it is quieter than its neighbours. Ward rounds and
+     Pharmacy handover carry their session counts; Onboarding diaries carries nothing, because the
+     database that held the count was deleted and the run never got far enough to build a new one.
+     A researcher may well notice the gap. Nothing on screen lets them explain it, and a row with no
+     count and no status line is exactly what a folder dragged in five minutes ago looks like.</p>
+  <h3>Why the left-hand row says nothing</h3>
+  <p><code>--clean</code> removes the manifest, and the state read on relaunch returns <code>.idle</code>
+     at the manifest guard <em>before</em> it reaches the branch that would consult the events log.
+     The drift gate then correctly declines to shout — with no database it cannot know what is
+     unanalysed — so there is no delta either, and the subtitle resolver falls through to the silent
+     placeholder. Two reasonable rules and one guard in the wrong order produce a row that asserts
+     nothing ever happened.</p>
+  <h3>What the right-hand row restores beyond the line itself</h3>
+  <p>The subtitle is the visible part; the reachability is the substantive part. <b>Show Diagnostics…</b>
+     is gated on the row being in a failure state, so on the left it is absent from the context menu
+     and the glyph is absent from the row — the cause is on disk and every surface that would show it
+     has been switched off by the same wrong answer. On the right the glyph is a button, the menu item
+     is back, and the popover names the file that stopped the run.</p>
+  <h3>Both rows offer Analyse</h3>
+  <p><code>hasWorkToDo</code> reads the ungated file count, so the retry is available in either case.
+     On the left it reads as a first analysis of a folder nobody has touched. On the right it reads
+     as what it is — a retry, after a stated failure.</p>
+</div>
+
 <div class="sec-head">
   <h2>The context menu — before and after</h2>
   <p class="sub">Selected project is analysed and idle. Nothing is running.</p>

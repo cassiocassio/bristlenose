@@ -144,6 +144,57 @@ struct EventLogReaderTests {
         #expect(event?.event == "run_started")
     }
 
+    // MARK: - Reaching the reader at all (parseManifest guard order)
+    //
+    // Every test below this file's other MARK calls `deriveState` directly, so
+    // none of them can see whether the caller ever gets there. That was the
+    // defect: `--clean` removes the manifest, the pipeline writes a new one
+    // only after ingest, and `parseManifest` answered `.idle` at the
+    // manifest-missing guard without consulting the events log. A failed
+    // re-analysis therefore read as "never analysed" on the next launch, and
+    // `Show Diagnostics…` — gated on the failure state — disappeared with it.
+
+    /// A failure recorded on Tuesday is still a failure on Wednesday, even
+    /// though `--clean` took the manifest with it.
+    @Test func manifestAbsentButRunFailedPresentStillReportsFailure() async {
+        let project = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: project) }
+        let dot = project
+            .appendingPathComponent("bristlenose-output", isDirectory: true)
+            .appendingPathComponent(".bristlenose", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dot, withIntermediateDirectories: true)
+        writeEventLog(in: dot, lines: [
+            runStartedLine(),
+            runFailedLine(category: "unusable_input", message: "Couldn't read one of the recordings"),
+        ])
+        // Deliberately no manifest at this path.
+        let manifestURL = dot.appendingPathComponent("manifest.json")
+        #expect(!FileManager.default.fileExists(atPath: manifestURL.path))
+
+        let state = await PipelineRunner.parseManifest(at: manifestURL)
+        guard case .failed = state else {
+            Issue.record("expected .failed with no manifest present, got \(state)")
+            return
+        }
+    }
+
+    /// The case the old guard existed to serve must keep working: a project
+    /// with no manifest *and* no history is genuinely idle, not failed.
+    @Test func manifestAbsentAndNoEventLogIsStillIdle() async {
+        let project = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: project) }
+        let dot = project
+            .appendingPathComponent("bristlenose-output", isDirectory: true)
+            .appendingPathComponent(".bristlenose", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dot, withIntermediateDirectories: true)
+
+        let state = await PipelineRunner.parseManifest(at: dot.appendingPathComponent("manifest.json"))
+        guard case .idle = state else {
+            Issue.record("expected .idle for a project with no manifest and no events, got \(state)")
+            return
+        }
+    }
+
     // MARK: - State derivation
 
     @Test func deriveStateMissingFileReturnsNil() {

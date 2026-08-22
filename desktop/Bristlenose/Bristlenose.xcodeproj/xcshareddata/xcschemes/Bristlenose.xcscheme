@@ -63,6 +63,12 @@
             ReferencedContainer = "container:Bristlenose.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "-BristlenoseWelcomeTintCandidate YES"
+            isEnabled = "YES">
+         </CommandLineArgument>
+      </CommandLineArguments>
       <EnvironmentVariables>
          <EnvironmentVariable
             key = "BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE"

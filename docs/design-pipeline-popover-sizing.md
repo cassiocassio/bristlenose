@@ -173,10 +173,16 @@ to exist; it just has to stop being the only mode.
    the measured view must never be the one the resulting frame is applied to.
 5. **Two presenters drifting.** Solved by moving the constants into the view. A
    presenter that still passes a height must fail review.
-6. **The scroller gutter.** With *Always show scroll bars* set in System
-   Settings, a legacy scroller takes ~15pt and will sit on the reason column.
-   The mockup has a toggle; if it overlaps, the scrolling branch needs trailing
-   inset the non-scrolling branch does not.
+6. **The scroller gutter — unverified.** With *Always show scroll bars* set in
+   System Settings, a legacy scroller claims about 15pt. Which way that lands
+   was asserted here before it was checked, and the assertion was probably
+   wrong: SwiftUI's `ScrollView` insets its content for a legacy scroller
+   rather than overlaying it, so the likely effect is not text sitting under a
+   scrollbar but the reason column **narrowing by ~15pt**, re-wrapping, and
+   getting taller — which can push a case that fitted over the ceiling. Benign
+   either way (it scrolls), but it means the fit decision is not scroller-
+   independent. Nobody has run the app with that setting on. The mockup has a
+   toggle for the overlap question; the re-wrap question needs the real app.
 
 ## 7. Decisions taken, and the one real unknown
 

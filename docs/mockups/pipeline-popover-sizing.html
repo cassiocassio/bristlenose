@@ -397,7 +397,7 @@ function popoverHTML(c, mode) {
 
 function caseHTML(c) {
   const today = c.targetOnly ? '' :
-    `<div class="col today"><span class="col-label">Today — fixed 360×320</span>
+    `<div class="col today"><span class="col-label">Before — fixed 360×320</span>
        <div class="stage">${popoverHTML(c,'today')}</div>
        <div class="readout" data-readout></div></div>`;
   const target =
@@ -465,9 +465,9 @@ function antiHTML() {
       <i>fallback</i> chosen only when that body doesn’t fit. <code>MCPAgentsSettingsView.swift:458</code>
       records this same trap one floor up.</p>
     </div>
-    <div class="col"><span class="col-label">Greedy — indistinguishable from today</span>
+    <div class="col"><span class="col-label">Greedy — indistinguishable from before</span>
       <div class="stage nocap">${greedy}</div></div>
-    <div class="col"><span class="col-label">Fallback-only — the target</span>
+    <div class="col"><span class="col-label">Fallback-only — what shipped</span>
       <div class="stage nocap">${popoverHTML(c,'target')}</div></div>
   </div>`;
 }
@@ -476,7 +476,7 @@ function antiHTML() {
 let colMode = 0; // 0 both, 1 today, 2 target
 function cycleCols(btn) {
   colMode = (colMode + 1) % 3;
-  btn.textContent = ['Both columns','Today only','Target only'][colMode];
+  btn.textContent = ['Both columns','Before only','Target only'][colMode];
   btn.classList.toggle('on', colMode !== 0);
   applyCols();
   measure();

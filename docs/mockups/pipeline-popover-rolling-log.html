@@ -51,7 +51,11 @@
   .caption { color:rgba(255,255,255,0.82); font:12px/1.4 var(--sf); max-width:420px; text-align:center; }
   .caption b { color:#fff; }
 
-  /* ---- The popover envelope: fixed 360×320, matching PipelineActivityItem.swift ---- */
+  /* ---- The popover envelope. This mock predates the sizing change (22 Aug 2026):
+         the shipped popover is 360 wide with a 320 CEILING and a content-driven
+         height, not a fixed 360×320. Kept fixed here because these are
+         speculative in-flight-progress layouts, which would fill the box anyway.
+         See docs/design-pipeline-popover-sizing.md. ------------------------- */
   .stage { position:relative; }
   .popover {
     width:360px; height:320px; box-sizing:border-box;
@@ -185,7 +189,9 @@
 </div>
 
 <div class="caption">
-  <b>Approximation, not a spec.</b> Native size (360×320 fixed) and SF system font so wrapping is a fair preview.
+  <b>Approximation, not a spec.</b> Drawn at 360×320 fixed, which is what shipped when this mock was made;
+  since 22 Aug 2026 the height follows content up to a 320 ceiling (docs/design-pipeline-popover-sizing.md).
+  Native size and SF system font so wrapping is a fair preview.
   Glyphs are the settled CLI Unicode vocabulary (✓ ⚠ ✗ — ℹ); natively these render as the same-meaning SF Symbols — nothing settled is changed.
   Human-named phases are illustrative — "where legible phase names live" is an open question. The point is to make the
   <i>collapsing-accordion</i> assumptions concrete (completed phases collapse to one line + outcome glyph; active phase expanded with its live log; rest pending) and let you compare against today and the carousel.

@@ -200,6 +200,8 @@ Order matters and is derived from reversibility, not convenience.
 8  Snap                   gh workflow run snap.yml --ref main       (edge)
                           gh workflow run snap.yml --ref vX.Y.Z     (stable, Tier 2)
 9  Tier 2 only            App Store submission, phased release on
+10 log it                 docs/release-log.md — Phase 7, committed with the
+                          release, from probed numbers not memory
 ```
 
 **Step 1 owns bump, commit and tag as one unit.** `bump-version.py` no longer
@@ -298,6 +300,45 @@ that means anything.
 
 Close with a table of what is now true per channel, plus the expiry clocks —
 **`.dmg` 30 days from the *build*, TestFlight 90 from the *upload*.**
+
+## Phase 7 · Log it
+
+**Append an entry to `docs/release-log.md`.** Started 22 Aug 2026 at the
+maintainer's request, to run for the next few releases and then be judged on
+whether it earned its keep. Read the file's header before writing — it states the
+three questions the log exists to answer, and an entry that answers none of them
+is noise.
+
+Do this **after** Phase 6, so every number in it is one you probed. Commit it with
+the release, not later: a log written the next morning is a log written from
+memory, which is the failure mode it exists to prevent.
+
+Five sections, and the third and fourth are the ones with value:
+
+1. **What shipped** — two or three sentences. Not the changelog; a pointer plus
+   whatever the changelog cannot say, such as a version that was abandoned.
+2. **Timing** — one row per phase. **Mark each measured or estimated, and split
+   out any wall-clock spent waiting on a human.** Without that split the averages
+   slowly come to describe how fast the maintainer answers questions. Compare the
+   total against the skill's own estimate and say where the gap went.
+3. **Builds** — every attempt, not just the one that worked. For each failure:
+   what gate caught it, the real cause, the fix's sha. A gate that fires on a
+   real defect is the system working and belongs in the record as much as a
+   clean run does.
+4. **Tricky things** — the section the maintainer asked for by name. Anything
+   that cost a cycle, misled you, or would mislead the next reader: a tool
+   whose output lies, a check that cannot see what it claims to check, an
+   assumption that turned out unverified. **Write the tell, not just the fix** —
+   the next person meets the symptom before they meet the cause. If a trap here
+   has now appeared twice across entries, that is the signal to build a gate for
+   it, and say so in the entry.
+5. **Skill changes provoked by this release**, and **what is owed** out of it.
+
+**The log is evidence, so let it contradict the skill.** If the measured timings
+keep beating the plan table's estimates, change the estimates. If a step never
+fails, consider whether its ceremony is earned. If a trap recurs, it has stopped
+being a trap and become a missing gate. A release log that only ever agrees with
+the skill is one nobody is reading.
 
 ---
 

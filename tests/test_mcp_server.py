@@ -771,6 +771,13 @@ class TestProtocol:
         app, client = live
         resp = _rpc(client, "test-mcp-token", "tools/list", {}, id_=2)
         tools = {t["name"]: t for t in resp.json()["result"]["tools"]}
+        # The exact-set assertion is the MCP surface's anti-drift gate, not
+        # setup for the schema check below — a fifth tool fails the build.
+        # It is what design-mcp-server.md §8 relies on after the never-built
+        # MCP_EXPOSED/MCP_DENIED route classifier was struck (22 Aug 2026):
+        # MCP exposes tools, not routes, so classifying routes would gate the
+        # wrong surface. If this test is ever split or renamed, this half is
+        # the half that must survive.
         assert set(tools) == {
             "get_project_overview", "search_quotes", "get_signals", "get_framework",
         }

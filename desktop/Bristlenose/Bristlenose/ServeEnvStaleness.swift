@@ -24,11 +24,22 @@ import Foundation
 /// - **Lazy — mark stale, restart when a window fronts that project.** Chosen.
 ///
 /// **With one exception that is what makes lazy safe.** A stale background
-/// instance is only harmless while nobody can read it — and exactly one project
-/// is exposed to an external agent at a time. Anonymise is the sharp case: turn
-/// it on, and an agent must not keep reading real names out of a sidecar nobody
-/// is looking at. So the exposed instance restarts immediately; everything else
-/// waits until someone looks at it.
+/// instance is only harmless while nobody can read it. Anonymise is the sharp
+/// case: turn it on, and an agent must not keep reading real names out of a
+/// sidecar nobody is looking at. So every in-scope instance restarts
+/// immediately; everything else waits until someone looks at it.
+///
+/// **That exception is plural, and was written when it was not.** Until
+/// `037b371e` scope was one designated project, and this comment asserted
+/// "exactly one project is exposed to an external agent at a time" as the
+/// premise the lazy strategy rested on. Derived scope made it false the same
+/// week: N projects can be in scope at once, so the governance case this
+/// comment makes covers N instances, not one. The fan-out already does —
+/// `ServeFleet.applyEnvChange()` asks per project and `isExposed(_:)` reads
+/// the plural `handshakeProjectPaths` — so the *code* was never singular after
+/// `037b371e`; only this paragraph was, for a day, which is long enough for a
+/// reader to act on it. Trued 22 Aug 2026; the premise is the thing to check
+/// if the exposure model changes again.
 enum ServeEnvStaleness {
 
     enum Action: Equatable {

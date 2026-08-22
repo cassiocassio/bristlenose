@@ -392,8 +392,8 @@ struct MCPAgentsSettingsView: View {
             // Says nothing when there is nothing readable — which covers the
             // empty register AND the ordinary case where every armed project
             // is closed. An earlier version suppressed only the first, so
-            // opening Settings from Welcome printed "Readable now: 0 projects
-            // · 0 sessions" over a full table: a readout, not a headline.
+            // opening Settings from Welcome printed "0 projects · 0
+            // sessions" over a full table: a readout, not a headline.
             if readable.projects > 0 {
                 Text(rollupText(readable))
                     .font(.callout)

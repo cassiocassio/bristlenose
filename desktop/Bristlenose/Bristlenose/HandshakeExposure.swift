@@ -116,6 +116,20 @@ enum HandshakeExposure {
     /// window safe *now* rather than when the sidecar is reaped, and safe
     /// against an agent holding a cached port and bearer rather than only
     /// against a proxy that politely re-reads the file.
+    ///
+    /// **The rule that bounds what may be subtracted here, decided 22 Aug
+    /// 2026 (`design-mcp-extension.md` §5a-ter): a terminal serve state may
+    /// be subtracted, a transient one may never be.** This set means *scope*
+    /// — a permission, derived from the window roster — and Settings ▸ MCP
+    /// Agents counts it under "Open to agents". `.failed` qualifies because it
+    /// is not a beat: a sidecar that failed to spawn stays failed until
+    /// something restarts it, so subtracting it cannot flap. `.starting` does
+    /// not, and neither does "has no token yet" — subtract either and the
+    /// count moves for reasons the researcher did not cause, which is the
+    /// flapping the derivation exists to kill. If you find yourself adding a
+    /// second serve-state term, the honest change is a separate display set,
+    /// not another `if` here — and read §5a-ter first, because that was
+    /// weighed and refused.
     static func readableProjects(candidates: [UUID: Candidate],
                                  shown: Set<UUID>,
                                  agentAccess: (UUID) -> Bool) -> Set<UUID> {
@@ -124,7 +138,7 @@ enum HandshakeExposure {
             // a beat. A starting serve belongs here — that is the whole point
             // of the set being wider than `entries` — but a sidecar that
             // failed to spawn cannot answer anything, and leaving it in makes
-            // the Settings register print it under "Readable now" for as long
+            // the Settings register print it under "Open to agents" for as long
             // as the window stays open. Closing the gate on it is a no-op for
             // the serve and a truthful subtraction for the audit surface.
             if case .failed = candidate.state { return false }

@@ -67,6 +67,17 @@ did not account for.
 
 ## Changelog
 
+- _22 Aug 2026_ — **the register's headline says what it computes.** New
+  §5a-ter decides the open question the projects register shipped with:
+  "Readable now" promised reachability while the code computed a permission,
+  so the noun is renamed to **"Open to agents"** (2 keys × 21 locales, no
+  predicate change). Records why reachability was refused — it needs a second
+  derivation, and the audit surface and the gate must not be able to
+  disagree — and states the rule that bounds the predicate from here: a
+  terminal serve state may be subtracted, a transient one may never be. Also
+  names the dependent question it unblocks (whether the roll-up should
+  announce when it changes) and why that recommendation is only safe under
+  permission semantics.
 - _2 Aug 2026_ — **trued against shipped reality.** Frontmatter `draft` →
   `shipped`; Status table added. Marked the four decisions that did not
   survive: §3.3's Option B (shipped model is Option A restricted by a
@@ -1840,6 +1851,76 @@ argued.
 is more accurate than mine was: name the actor, the action and the condition —
 *"Shared with agents. Any connected agent can read this project's quotes when
 you ask it to."*
+
+## 5a-ter. The register counts a permission, not a reachability — decided 22 Aug 2026
+
+The register's headline read **"Readable now: 2 projects · 4 sessions"**, and an
+implementation review asked the question the string cannot answer for itself:
+*does "readable" mean the researcher granted it, or that an agent asking right
+now would get an answer?* Those are different sets, the code computed the first
+with one term of the second bolted on, and the string promised the second.
+
+**Decision: it means the permission. The string was wrong and is renamed to
+"Open to agents".**
+
+Not a preference — §5a-bis's own predicate already settled it, and
+`HandshakeExposure`'s first stated property says so in as many words: *"Scope is
+a permission and serve lifetime is a cache."* Scope is derived from the window
+roster precisely so that closing a window revokes reach **now** rather than in
+ninety seconds when the sidecar is reaped. A count that consulted serve liveness
+would be re-deriving the thing that derivation exists to avoid.
+
+**What picking reachability would have cost, stated so it isn't re-proposed.**
+`readableProjects` is *deliberately wider* than `entries`: it is the gate set,
+and everything outside it gets `PUT /api/agent-scope {readable: false}`. A
+project in scope whose serve is still starting has no token yet, so it is absent
+from the handshake but must be inside the gate. Narrowing the set to what an
+agent can literally reach would either shut the gate on a starting project — PUT
+churn on every launch, reopened on the next sweep — or require a **second
+derivation** for display, which is exactly what `ServeFleet.readableProjects`'s
+doc-comment exists to prevent (*"the audit surface and the gate then cannot
+disagree, because there is only one derivation"*). It would also reintroduce the
+flapping measured on 20 Aug: five different answers across five consecutive tool
+calls. One derivation, one meaning, one string.
+
+**The rule that bounds the predicate from here.** The set may subtract a
+**terminal** serve state; it may never subtract a **transient** one.
+
+- `.failed` qualifies and stays subtracted. A sidecar that failed to spawn stays
+  failed until something restarts it, so the subtraction cannot flap, and a
+  project that can never answer does not belong in an audit count.
+- `.starting`, "has no token yet", "health poll hasn't landed" do not qualify.
+  Each moves the number for a reason the researcher did not cause.
+
+Written into `HandshakeExposure.readableProjects`'s doc-comment as well as here,
+because the next person to reach for a second `if` will be reading the code, not
+this file.
+
+**What the rename costs and does not cost.** Two keys (`mcpAgents.rollup`,
+`mcpAgents.rollupProjectsOnly`) across 21 locales; no predicate change, no test
+change, no behaviour change. "Open to agents" is immune to serve state by
+construction, and it re-uses the pane header's own frame — *"Agents only see
+open projects"* — so a reader can check the headline against the sentence above
+it. It was preferred to the reviewer's "In scope" on translation grounds:
+*scope* is our vocabulary, not a researcher's, and it renders as legalese in
+several of the 21.
+
+**The dependent finding this unblocks: should the roll-up announce when it
+changes?** The accessibility review recommended posting an announcement only
+when the number actually *moves* — which makes silence on an *Available when
+opened* row correct information rather than an omission, since unticking one
+changes nothing an agent can reach. That recommendation is only safe under
+permission semantics. Under reachability the number would move on serve events
+the researcher did not cause — a sidecar dying, a health poll landing — and
+VoiceOver would announce a change nobody made, which is the anti-pattern the
+recommendation was trying to avoid. So the announcement question is now
+decidable, and the answer it depends on is recorded above. It is **not** decided
+here; it is a product call about how chatty the pane should be, and the pane has
+not been seen on screen yet.
+
+**Not reopened by this:** the placement debate (header accessory vs footer) and
+the revocation receipt's lifetime. Both are independent of what the number
+means.
 
 ## 5b. The acceptance criterion: zero setup on return
 

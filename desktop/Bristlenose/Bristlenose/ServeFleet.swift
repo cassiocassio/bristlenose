@@ -46,9 +46,6 @@ final class ServeFleet: ObservableObject {
     /// (`MenuCommands`, Settings ▸ MCP Agents) resolve "which instance" to.
     @Published var frontedProject: UUID?
 
-    /// The project the MCP handshake names, or nil. Fleet-level: one file, one
-    /// owner. `ServeReaping` and `ServeEnvStaleness` both read it.
-
     /// Whether this build mounted the MCP endpoint (the optional `mcp` extra).
     ///
     /// Fleet-level because it is per-**build**, not per-serve: every instance
@@ -57,35 +54,35 @@ final class ServeFleet: ObservableObject {
     /// Settings pane to pick an instance and read `false` when none is running.
     @Published var mcpMounted: Bool = false
 
-    /// The project path the MCP handshake currently names, or nil.
+    /// The project paths the handshake currently names — the sidebar's solid
+    /// antenna tier, and a set rather than one designated winner.
     ///
     /// Fleet-level for the sharper reason: the handshake is **one global file**
     /// with seven independent delete edges. Per-instance, one project's start
     /// would delete another's file while the first still published "exposed" —
     /// the antenna lying, which is the defect `3ac773fa` closed.
-    /// The project paths the handshake currently names — the sidebar's solid
-    /// antenna tier, and now a set rather than one designated winner.
     @Published private(set) var handshakeProjectPaths: Set<String> = []
 
     /// Seam for tests that need a derived set without a window server behind
     /// them. Production writes it only through `syncHandshake`.
     func setHandshakeProjectPathsForTest(_ paths: Set<String>) { handshakeProjectPaths = paths }
 
-    /// When an agent last called a tool on the **exposed** serve, or nil.
-    ///
-    /// Fleet-level and read from the derived set for the same reason as
-    /// `handshakeProjectPath`: exposure is singular, so activity is too. The
-    /// fronted project is NOT the right source — you can be looking at one
-    /// study while an agent reads the one you exposed, and the antenna that
-    /// radiates has to be the exposed one or it is pointing at the wrong row.
     /// When an agent last asked about each project. A **map**, because scope
     /// is plural: a cross-study question lights several antennas in sequence,
     /// and collapsing it to one would pick an arbitrary winner.
+    ///
+    /// Fleet-level and read from the derived set, never from `frontedProject`
+    /// — you can be looking at one study while an agent reads another, and the
+    /// antenna that radiates has to be the one that was asked about.
     @Published private(set) var lastAgentCallAt: [UUID: Date] = [:]
 
-    /// The projects an agent can reach right now — `syncHandshake`'s own gate
-    /// set, republished rather than re-derived. The audit surface and the gate
-    /// then cannot disagree, because there is only one derivation.
+    /// The projects **in scope** for an agent — `syncHandshake`'s own gate set,
+    /// republished rather than re-derived. The audit surface and the gate then
+    /// cannot disagree, because there is only one derivation.
+    ///
+    /// Scope, not reachability: this is what Settings ▸ MCP Agents counts under
+    /// "Open to agents", and the distinction is decided in
+    /// `design-mcp-extension.md` §5a-ter.
     @Published private(set) var readableProjects: Set<UUID> = []
 
     /// Nested `ObservableObject`s do not propagate through `@EnvironmentObject`,
@@ -351,8 +348,8 @@ final class ServeFleet: ObservableObject {
             manager.setAgentScope(readable: readable.contains(id))
         }
         // Published so Settings ▸ MCP Agents can print the gate set itself
-        // rather than computing a second opinion of it. "Readable now: N" is
-        // then the same set the gate closes on, by construction.
+        // rather than computing a second opinion of it. "Open to agents: N"
+        // is then the same set the gate closes on, by construction.
         if readable != readableProjects { readableProjects = readable }
     }
 

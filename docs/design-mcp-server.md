@@ -27,6 +27,24 @@ _The §9a spike is built and accepted (30 Jul 2026) — see §9a-results. Phase 
 
 ## Changelog
 
+- _22 Aug 2026_ — **two deferred decisions taken, and a third premise
+  corrected.** New §7a settles what is recorded when an agent reads a study:
+  the access record **already exists** (`bristlenose.log`, one `mcp_tool` line
+  per call, since the 30 Jul spike — verified against a real project log), so
+  the review's premise that nothing is logged was wrong; a sibling
+  `mcp-calls.jsonl` is refused with reasoning, "which agent" is named as
+  unknowable rather than missing, and the deferral of *surfacing* the record
+  carries its trigger. Mirrored user-facing in `SECURITY.md` § Agent access
+  record. §8's `MCP_EXPOSED`/`MCP_DENIED` gate is **struck** rather than left
+  marked-never-built: MCP exposes tools, not routes, so a route classifier
+  would gate the wrong surface; the property is already held by
+  `test_tool_schemas_take_no_filesystem_paths`'s exact-set assertion, now
+  commented as load-bearing. §6a's `ServeEnvStaleness` inconsistency is
+  **resolved and was never a behaviour gap** — the fan-out has been plural
+  since `037b371e` and its tests said so; only the comment was singular. The
+  register's "Readable now" rename is decided in
+  [`design-mcp-extension.md`](design-mcp-extension.md) §5a-ter.
+
 - _21 Aug 2026_ — trued up: status block corrected (the single-project
   sequencing assumption expired when scope went plural and derived); §4 tool
   table given a Status column — 4 of 11 tools shipped, `list_projects` lives
@@ -901,15 +919,32 @@ above:
   intends to remove it (`ServeEnvStaleness.swift`: "the warm pool goes, and
   every serve has a window"), which has not fully landed.
 
-  **Live inconsistency worth resolving, not just recording:**
-  `ServeEnvStaleness.swift` justifies its lazy stale-env strategy on the
-  premise that "exactly one project is exposed to an external agent at a
-  time", and restarts only the exposed instance immediately. Under plural
-  derived scope that premise is false, so the governance argument it makes —
-  flip Anonymise on and no agent keeps reading real names — covers one
-  instance where it now needs to cover N. This is a code-side question, not
-  a doc-side one; flagged here because this section is where the exposure
-  model is specified. Original text preserved:
+  **~~Live inconsistency worth resolving~~ — resolved, and it was never a
+  behaviour gap (22 Aug 2026).** This said `ServeEnvStaleness.swift` justified
+  its lazy stale-env strategy on the premise that "exactly one project is
+  exposed to an external agent at a time" and restarted only one instance, so
+  the governance argument it makes — flip Anonymise on and no agent keeps
+  reading real names — covered one instance where it needed to cover N. **Half
+  right.** The premise was indeed false and was indeed still written down. The
+  *fan-out* was not: `ServeFleet.applyEnvChange()` asks
+  `ServeEnvStaleness.action` per project and passes `isExposed(id)`, which
+  reads the plural `handshakeProjectPaths` — plural since `037b371e`, the same
+  commit that made scope derived, and pinned by
+  `ServeEnvStalenessTests.theExposedInstanceRestartsNowEvenWithNoOneLookingAtIt`,
+  whose comment already said "since 20 Aug 2026 scope is PLURAL". So every
+  in-scope sidecar has been restarting eagerly the whole time; what survived
+  was a header comment asserting the singular premise, a mangled sentence left
+  by a partial edit, and a stale reference to a `handshakeProjectPath` that no
+  longer exists in the singular. Those are trued in the source, with a note
+  naming the premise as the thing to re-check if the exposure model changes
+  again.
+
+  **The generalisable half:** this was filed as "a code-side question, not a
+  doc-side one" and it was the reverse — the code had already answered it, in
+  the same week, and only the prose disagreed. A comment that states a premise
+  as a *justification* is load-bearing documentation, and it is the artefact
+  nobody re-reads when the premise changes. Check the call site and its tests
+  before recording a code-side gap. Original text preserved:
 
   > the sheet and badge only know the *fronted* serve. The warm-sidecar pool
   > keeps the previous project's sidecar (and its live `/mcp`) parked — an
@@ -930,28 +965,141 @@ fingerprints).
 no MCP tool that takes a path. Anonymisation defaults on, reusing the export
 anonymisation boundary; real names are a per-connection opt-in.
 
+### 7a. What is recorded when an agent reads a study — decided 22 Aug 2026
+
+A security review asked, from the procurement side, whether there is a durable
+record of *which agent read which study*. The framing was an asymmetry:
+`.bristlenose/llm-calls.jsonl` durably logs what Bristlenose sends to a model
+vendor, and the agent path is the one where a **third party's** process pulls
+participant quotes — so it read as the more sensitive path with the weaker
+record. Two options were on the table: state in `SECURITY.md` that MCP access
+is deliberately unlogged, or mirror `llm-calls.jsonl` as a per-project
+`mcp-calls.jsonl`.
+
+**Neither, because the premise was wrong. The access record already exists.**
+`bristlenose serve` configures logging to `<output_dir>/.bristlenose/
+bristlenose.log` at INFO by default, and `mcp_server.py`'s `_run` wrapper emits
+one line per tool call:
+
+```
+2026-07-30 17:14:33 | INFO | bristlenose.server.mcp_server | mcp_tool | tool=search_quotes | project=1 | elapsed_ms=65 | result_bytes=7975
+```
+
+Timestamped, per project, rotating (5 MB × 3), and present since the 30 Jul
+spike — the lines above are from `trial-runs/fossda-opensource`, not a
+reconstruction. Out-of-scope refusals (`mcp_tool_out_of_scope`), input errors
+and tool failures are logged alongside. So the honest answer to "is there a
+record of what an agent was served?" is **yes**, and it has been yes the whole
+time; what was missing was anyone having said so.
+
+**What that record does not contain, and must not claim to.**
+
+- **Which agent.** Not logged, and not loggable. MCP's `initialize` carries a
+  self-asserted `clientInfo`; nothing authenticates it, and reading it would put
+  a client-identity claim on the most trust-sensitive surface in the product.
+  This is §The governing constraint applied literally: we know the protocol,
+  never the client. **A record of "which agent" is not a gap to close — it is a
+  claim we are not able to make**, and a log field spelling `client_name` would
+  be worse than its absence, because a procurement reviewer would believe it.
+- **What was in the answer.** `result_bytes` is a size, not content. Quote text
+  is never logged.
+- **Who asked.** Whether the researcher asked the question or the agent
+  volunteered the call is invisible to us, and belongs to the client.
+
+**`mcp-calls.jsonl` is refused, and the reasoning is the interesting part.**
+`llm-calls.jsonl` is *engineering telemetry* — session ids, prompt shas, timing
+fingerprints, kept for latency baselining — which happens to be classified a
+**re-identification key** (`0600`, `O_NOFOLLOW`, excluded from every export and
+support bundle, §7 above). It is not an egress audit log, so "symmetry with it"
+is the wrong goal. A sibling file would (a) duplicate a record we already keep,
+(b) inherit that entire obligation — a *second* per-project artefact naming
+which studies were read and when, that must never leave the machine — and
+(c) still not answer the question its name implies. Three costs, no new answer.
+
+**And the record that actually matters is the one the researcher controls.**
+What an agent read becomes part of *that agent's* conversation history, in the
+researcher's own account, more complete than anything we could write —
+`SECURITY.md` item 7 already says so. The durable Bristlenose-side fact is the
+**grant**: `agentAccess` is persisted per project and survives a restart, so
+"which studies have I ever opened to an agent?" is answerable from state, not
+from a log. "Last asked" is deliberately in-memory per serve, and the pane says
+so.
+
+**One product-surface correction fell out of this.** `mcpAgents.sessionScopeNote`
+read *"Last asked is remembered only while Bristlenose is running — no history
+is kept."* The second clause is a product-wide negative claim and it is false —
+`bristlenose.log` is a history. It now reads *"Last asked is remembered only
+while a project is open."*, which is true, explains why a project asked about
+yesterday shows **Never**, and makes no claim about the product beyond the
+column it labels. Fixed across 21 locales in the same pass.
+
+**Deferred deliberately, with its trigger.** Nothing surfaces the access record
+to a researcher, and it is not exportable — reading it means opening a hidden
+log file. That is the right shape for alpha (internal TestFlight, a handful of
+researchers who are their own data controllers). **The trigger to revisit is a
+real controller obligation:** a cohort tester or their client asking for an
+access record, a DPIA that names agent access, or external beta — whichever
+lands first. At that point the question is "how is the existing record surfaced
+and scoped", not "should we start logging", and the answer must not grow a
+client-identity field to satisfy it.
+
 ---
 
 ## 8. Anti-drift, mechanically
 
-> **Never built — this section is a proposal, not a description (marked 21
-> Aug 2026).** `MCP_EXPOSED` and `MCP_DENIED` have zero occurrences anywhere
-> in the tree. The section has read as shipped policy since 30 Jul, and the
-> closing sentence below — which asserts the property is "true rather than
-> aspirational" — is exactly backwards about this doc's own gate. The
-> mechanism it copies *is* real (`tests/test_serve_export_coverage.py`); the
-> MCP twin was never written. What actually holds the line today is §7's
-> allowlist by construction: no tool takes a path, and the four shipped
-> tools each query fixed tables. That is a weaker guarantee than a build
-> gate, because it is a convention a new tool can break silently.
+> **Struck 22 Aug 2026 — the prescription below was never built, and is not
+> wanted.** It was written on 30 Jul, read as shipped policy for three weeks,
+> and was marked never-built on 21 Aug. Deciding it properly, rather than
+> leaving it marked: the route-classification gate is a **category error**
+> copied from a surface it does not describe, and the property it wanted is
+> already held by a better-fitted mechanism. The original text is preserved
+> at the end of this section.
 
-Copy the export pattern. `tests/test_serve_export_coverage.py` reads
-`app.openapi()` and fails if any project GET read is unclassified. Do the same
-here: every project route must be classified `MCP_EXPOSED` or `MCP_DENIED`, and
-a new unclassified route fails the build.
+**Why the export gate does not transplant.** `tests/test_serve_export_coverage.py`
+works because export mirrors the REST API: a new project GET route is a real
+gap, so classifying every route is exactly the right question. MCP mirrors
+nothing of the kind. The endpoint exposes **four `@server.tool()` functions**,
+each querying fixed tables; adding a REST route cannot reach the MCP surface at
+all. A gate that classified routes would therefore pass forever while saying
+nothing about the thing it appears to guard — assurance theatre, which is worse
+than a documented convention because it stops people looking.
 
-That is what makes "adding a route is private-by-default" true rather than
-aspirational — the same reason it works for export.
+**The analogous risk is a fifth tool, and that is already pinned.**
+`tests/test_mcp_server.py::TestProtocol::test_tool_schemas_take_no_filesystem_paths`
+asserts the tool inventory **exactly**:
+
+```python
+assert set(tools) == {
+    "get_project_overview", "search_quotes", "get_signals", "get_framework",
+}
+```
+
+…and then bounds every tool's input schema to a twelve-name parameter
+allowlist. A fifth tool fails the build; so does an existing tool growing a
+parameter. `TestMechanicalPins` adds three source-level guards — the MCP modules
+never write, never reach `.bristlenose/`, never touch the re-identifying tables
+— and `test_openapi_is_unaffected_by_the_mount` pins the mount's REST
+invisibility. Together these are stronger than the route classifier would have
+been, because they gate the surface that actually exists.
+
+**One honest weakness, now named.** The exact-set assertion lives in a test
+called `test_tool_schemas_take_no_filesystem_paths`, so the inventory pin is
+load-bearing under a misleading name and a future reader could loosen it while
+tidying. A comment at the assertion says what it is for; if that test is ever
+split or renamed, the exact-set check is the half that must survive.
+
+<details>
+<summary>Original §8, 30 Jul 2026 — the proposal that was never built</summary>
+
+> Copy the export pattern. `tests/test_serve_export_coverage.py` reads
+> `app.openapi()` and fails if any project GET read is unclassified. Do the same
+> here: every project route must be classified `MCP_EXPOSED` or `MCP_DENIED`, and
+> a new unclassified route fails the build.
+>
+> That is what makes "adding a route is private-by-default" true rather than
+> aspirational — the same reason it works for export.
+
+</details>
 
 ---
 

@@ -206,7 +206,7 @@ a shipped key or a marked change — the mockup is the spec</p>
   <div class="shead">
     <span class="t">Projects</span>
     <span class="grow"></span>
-    <span class="roll">Readable now: 2 projects · 4 sessions</span>
+    <span class="roll">Open to agents: 2 projects · 4 sessions</span>
   </div>
 
   <div class="scroll">
@@ -288,8 +288,8 @@ is the one moment the audit surface has to point at the management surface.</p>
   <tr><td><code>mcpAgents.windowMinimised</code></td><td>—</td><td><b>minimised</b> <span style="color:var(--faint)">— explains an Active row with no visible window</span></td><td><b>DEFERRED 21 Aug 2026</b> — not seeded, not built<br><span style="color:var(--faint)">`WindowRoster` deliberately holds no window state (its own doc comment declines to become "an approximation of AppKit's <code>mainWindow</code>"), so this needs new per-window observers plumbed into it. And minimised is only one of four reasons an Active row has no visible window — behind Settings, another Space, and a window tab are the others — so singling it out is arbitrary unless it is the common one. The group header already carries the fact that decides exposure. Additive whenever it is wanted.</span></td></tr>
   <tr><td><code>mcpAgents.emptyTitle</code></td><td>—</td><td><b>No projects are shared with agents</b></td><td>New · 21</td></tr>
   <tr><td><code>mcpAgents.emptyHint</code></td><td>—</td><td><b>Select a project, then choose Project ▸ Turn On Agent Access.</b> <span style="color:var(--faint)">— names the menu-bar path, not a gesture: the HIG calls it Control-click or secondary click, never right-click, and requires every context-menu command to exist in the menu bar anyway</span></td><td>New · 21</td></tr>
-  <tr><td><code>mcpAgents.sessionScopeNote</code></td><td>—</td><td><b>Last asked covers this session only — no history is kept.</b> <span style="color:var(--faint)">— the times live in memory per serve, so a project asked yesterday reads Never after a relaunch. Saying so is cheaper than a persistence store, and the reason is a policy rather than an apology: this is the same discipline that keeps an activity timeline off the auth-exempt health route.</span></td><td>New · 21</td></tr>
-  <tr><td><code>mcpAgents.rollup</code></td><td>—</td><td><b>Readable now: {{p}} projects · {{s}} sessions</b></td><td>New · 21 · plurals</td></tr>
+  <tr><td><code>mcpAgents.sessionScopeNote</code></td><td>—</td><td><b>Last asked is remembered only while a project is open.</b> <span style="color:var(--faint)">— the times live in memory per serve, so a project asked about yesterday reads Never after a relaunch. Reworded 22 Aug 2026: this used to end &ldquo;— no history is kept&rdquo;, which is a product-wide negative claim and is false. Every MCP tool call is logged to the project&rsquo;s <code>bristlenose.log</code>, and has been since 30 Jul. The clause is cut rather than replaced with a pointer — this line labels a column, it is not the privacy notice. That is <code>SECURITY.md</code> &sect; Agent access record; reasoning in <code>design-mcp-server.md</code> §7a.</span></td><td>New · 21</td></tr>
+  <tr><td><code>mcpAgents.rollup</code></td><td>—</td><td><b>Open to agents: {{p}} projects · {{s}} sessions</b> <span style="color:var(--faint)">— renamed from &ldquo;Readable now&rdquo; on 22 Aug 2026. That noun promised reachability while the count is a permission (window open + Agent Access on), so it was true only while the sidecar happened to be healthy. &ldquo;Open to agents&rdquo; is immune to serve state and echoes the header sentence above the table. Decision and the rule bounding the predicate: <code>design-mcp-extension.md</code> §5a-ter.</span></td><td>New · 21 · plurals</td></tr>
 
   <tr><td colspan="4" style="padding-top:12px;color:var(--dim);font-weight:600;font-size:11.5px">STRINGS THE MODEL MAKES FALSE</tr>
   <tr><td><code>mcpAgents.header</code></td>

@@ -254,6 +254,40 @@ Bit on 4 Aug 2026: `build_report.py` forced `Console(width=92)` regardless of th
 
 **The desktop analogue, and it is the more expensive one: a test suite hides the whole rendered surface.** On 20 Aug 2026 the format-torture corpus had been run through the acceptance harness repeatedly and reported clean. One screenshot of the *same corpus* in the `.app` produced three defects — diagnostic rows that named no file, refusals rendered in error red, and fifteen sessions dropped behind a `transcripts: succeeded=57` that the next bucket contradicted with `attempted=42`. None was visible to 4,037 passing tests, because a test asserts what someone thought to ask, and nobody had thought to ask what the pane *said*. **After any pipeline or diagnostic change, run the corpus through the app once and look at it** — `experiments/folder-of-horrors/synthesise.sh` builds it. The tell for that last class is generic and worth carrying: **a summary bucket whose `attempted` disagrees with the next bucket's**, which nothing in the schema forbids.
 
+### `attempted == succeeded + failed` is a TAUTOLOGY in most rollups — it cannot catch a silent drop
+
+The obvious guard against "a session vanished" is per-bucket conservation. It is
+the wrong one nearly everywhere, and it fails in the most flattering way: green on
+the very incident it was written for. Wherever `succeeded` is **derived by
+subtracting** failures — every rollup in `Pipeline.run`, before *and* after
+`6497711a` — the identity holds by construction. The 20 Aug loss reported
+`transcripts: attempted=57 succeeded=57 failed=0`, and `57 == 57 + 0` passes.
+`ingest` is worse still: `pipeline.py` builds it as `attempted=succeeded +
+len(failed)` **literally**. And it false-*positives* where `_record_parse_failure`
+fires per **file** inside `for f in session.files` while the counters are per
+**session** — one session with two bad subtitles gives `1 == 0 + 2`, red on a
+correct run.
+
+It has teeth in exactly one place: **`run_transcription_only`**, whose rollup
+measures success independently (a session counts when it produced segments), so a
+silent recording really does fall out of the sum. That is also the only command
+with **no downstream bucket**, so the cross-bucket check below cannot reach it —
+which is why `scripts/acceptance/invariants.py::assert_sessions_accounted` exists
+and why the `transcribe:no-key` cell drives that command specifically.
+
+**The check that does catch the general case is cross-bucket**, not within-bucket:
+`transcripts → topics → quotes` are all denominated in *sessions* (`s08:51`,
+`s09:128`), so `topics.attempted == transcripts.succeeded` fails on the real bug
+(42 ≠ 57). `themes` is `1 + 1` LLM calls (`s10:49`, `s11:49`) — the chain ends
+before it. Any such check must also be truncation-aware: `_truncate_failed` caps
+`failed` at `STAGE_FAILED_MAX + 1` without touching the counters.
+
+**Naming trap in the same area:** the CLI verb is **`bristlenose transcribe`**.
+`transcribe-only` is the *run kind* (`KindEnum.TRANSCRIBE_ONLY`, what the desktop
+reads from the events log) and is **not** a command — `bristlenose transcribe-only`
+exits with "No such command". The internal function is `run_transcription_only`,
+which makes all three names differ.
+
 ### A backgrounded `pytest … | tail`'s reported exit code is `tail`'s, not pytest's
 
 Sibling to the two above, and the one most likely to produce a **confident false

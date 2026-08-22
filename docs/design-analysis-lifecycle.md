@@ -446,6 +446,7 @@ the schema requires them to agree.
 | An unrecognised cause category failed the **whole** event decode | no summary, no rows, no cause | both Swift enums decode unknown as `.unknown` |
 | Refusals rendered as **anonymous rows** in the popover | outcome 3 wearing outcome 2's clothes — a count with extra steps | the pane reads `source_file`, the field added for exactly this |
 | Fifteen silent recordings dropped under `succeeded=57` | **outcome 3b** | `NO_SPEECH` — stated, counted out of `succeeded`, excluded from the abandon check |
+| The same loss in **`transcribe`**, reported as `42/57` with `failed: 0` | **outcome 3** — honest count, no account | the sibling rollup mirrored: silent sessions stated, and kept out of the abandon predicate |
 | A failed **re-analysis** read as *never analysed* after relaunch | the failure recorded and never read | `parseManifest` consults the events log when the manifest is absent |
 | **Analyse** offered on a project with no recordings | false affordance | `canAnalyse` asks whether there is work to do |
 | The empty-state pane said "add files" to a project with files | the app contradicting itself on screen | the pane counts the same field the menu gates on |

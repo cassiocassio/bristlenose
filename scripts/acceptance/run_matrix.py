@@ -51,7 +51,9 @@ from invariants import (  # noqa: E402
     assert_no_abandoned_stage,
     assert_reid_keys_not_shareable,
     assert_report_non_empty,
+    assert_sessions_accounted,
     assert_terminus_completed,
+    assert_transcripts_present,
 )
 
 from bristlenose import __version__  # noqa: E402
@@ -98,6 +100,10 @@ class Cell:
     kind: str  # "analyze" | "run" | "validate"
 
     def configured(self) -> bool:
+        # "-" is the no-provider column: nothing to configure, so it never skips.
+        # That is the whole point of it — see TRANSCRIBE_CELL.
+        if self.provider == "-":
+            return True
         if self.provider == "local":
             return _ollama_up()
         # Resolve the key the SAME way bristlenose does — Keychain → env → .env — not a
@@ -131,6 +137,16 @@ PROVIDER_CELLS = [
     Cell("run:azure", "azure", "BRISTLENOSE_AZURE_API_KEY", "run"),
     Cell("run:google", "google", "BRISTLENOSE_GOOGLE_API_KEY", "run"),
 ]
+
+# The only cell that needs no provider at all. Every entry above is gated on a
+# configured key or a running Ollama, so on a machine with neither — a fresh clone, a
+# contributor's laptop, CI — the matrix's other free cell validates a *committed
+# fixture* and exercises no pipeline code. This is the first live run that needs no
+# credentials, and `transcribe` is also the only command with no downstream bucket, so
+# cross-bucket continuity can never reach it. What watches it is `assert_sessions_
+# accounted`, which is a tautology nearly everywhere else and has teeth here because
+# this rollup measures success independently rather than by subtracting failures.
+TRANSCRIBE_CELL = Cell("transcribe:no-key", "-", None, "transcribe")
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +205,7 @@ def validate_output_dir(cell_id: str, output_dir: Path, *, quote_floor: int) -> 
     try:
         event = assert_terminus_completed(output_dir)
         assert_no_abandoned_stage(event)
+        assert_sessions_accounted(event)
         assert_report_non_empty(output_dir, quote_floor=quote_floor)
         assert_reid_keys_not_shareable(output_dir)
     except InvariantError as e:
@@ -233,8 +250,14 @@ def run(args: argparse.Namespace) -> int:
 
     if args.self_test:
         # Free: validate the committed smoke fixture end-to-end through the invariants.
-        m.expected = ["validate:smoke"]
+        m.expected.append("validate:smoke")
         m.record(validate_output_dir("validate:smoke", _SMOKE_OUTPUT, quote_floor=3))
+
+    if args.run_transcribe:
+        # Free and live: no key, no Whisper, ~3s. The only cell that drives real
+        # pipeline code on a machine with nothing configured.
+        m.expected.append(TRANSCRIBE_CELL.cell_id)
+        m.record(_run_transcribe_cell(artifact_dir))
 
     if args.run_local or args.run_cloud:
         for cell in PROVIDER_CELLS:
@@ -285,6 +308,100 @@ def _run_provider_cell(cell: Cell, input_dir: Path, artifact_dir: Path) -> CellR
     return res
 
 
+# Two subtitle files, written here rather than committed so the cell is self-
+# describing and coupled to nothing. One carries cues — a session that succeeds
+# without Whisper ever loading. One carries none, which is a session that produces no
+# words: the shape this cell exists to watch. A `.wav` of silence would be the
+# faithful article but drags in a model download; a zero-cue `.vtt` reaches the same
+# orchestrator state — segments absent, nothing raised — for free. Measured 2.6s.
+_FIXTURE_WITH_SPEECH = """WEBVTT
+
+00:00:02.000 --> 00:00:09.000
+<v Moderator>Talk me through what you were trying to do on the checkout page.
+
+00:00:10.000 --> 00:00:18.000
+<v Participant>I kept looking for the total. It was below the fold the whole time.
+"""
+
+# Valid WebVTT, zero cues. A recording of an empty room reaches the pipeline the same
+# way: it decodes, it transcribes, and nobody said anything.
+_FIXTURE_SILENT = "WEBVTT\n\n"
+
+
+def build_transcribe_fixture(dest: Path) -> Path:
+    """Write the two-session fixture and return the input dir."""
+    input_dir = dest / "input"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    (input_dir / "Session 1.vtt").write_text(_FIXTURE_WITH_SPEECH, encoding="utf-8")
+    (input_dir / "Session 2.vtt").write_text(_FIXTURE_SILENT, encoding="utf-8")
+    return input_dir
+
+
+def _assert_silence_was_named(event: dict) -> None:
+    """The fixture's silent session must be named, not merely counted out.
+
+    The arithmetic guard alone would pass a run that recorded the shortfall as an
+    anonymous failure. What a researcher needs is *which file*, so this cell asserts
+    the thing the arithmetic cannot: a `source_file` on the row.
+    """
+    summary = event.get("summary") or {}
+    bucket = summary.get("transcripts")
+    if not isinstance(bucket, dict):
+        raise InvariantError("terminus carried no transcripts bucket")
+    failed = [f for f in bucket.get("failed") or [] if isinstance(f, dict)]
+    if len(failed) != 1:
+        raise InvariantError(
+            f"expected exactly 1 stated silent session, got {len(failed)}: {failed!r}"
+        )
+    named = failed[0].get("source_file")
+    if not named:
+        raise InvariantError(
+            "the silent session was recorded but not named — a count with extra steps"
+        )
+    if named != "Session 2.vtt":
+        raise InvariantError(f"named the wrong file: {named!r}")
+
+
+def _run_transcribe_cell(artifact_dir: Path) -> CellResult:
+    cell_id = TRANSCRIBE_CELL.cell_id
+    work = artifact_dir / cell_id.replace(":", "_")
+    out = work / "output"
+    try:
+        input_dir = build_transcribe_fixture(work)
+    except OSError as e:
+        return CellResult(cell_id, CellOutcome.FAIL_BLOCKING, redact(f"fixture setup failed: {e}"))
+
+    proc = subprocess.run(
+        [bristlenose_exe(), "transcribe", str(input_dir), "--output", str(out)],
+        capture_output=True,
+        text=True,
+        timeout=600,
+        env=os.environ.copy(),
+    )
+    (artifact_dir / f"{cell_id.replace(':', '_')}.log").write_text(
+        redact(proc.stdout + proc.stderr)
+    )
+
+    try:
+        event = assert_terminus_completed(out)
+        assert_no_abandoned_stage(event)
+        assert_sessions_accounted(event)
+        # NOT assert_report_non_empty — `transcribe` writes no report, and letting a
+        # report check pass vacuously here is exactly the fake-success this tier exists
+        # to catch. Its deliverable is the transcripts.
+        assert_transcripts_present(out, floor=1)
+        _assert_silence_was_named(event)
+        assert_reid_keys_not_shareable(out)
+    except InvariantError as e:
+        return CellResult(cell_id, CellOutcome.FAIL_BLOCKING, redact(str(e)))
+    except (OSError, ValueError) as e:
+        return CellResult(cell_id, CellOutcome.FAIL_BLOCKING, redact(f"invariant read error: {e}"))
+
+    if proc.returncode != 0:
+        return CellResult(cell_id, CellOutcome.FAIL_EXPECTED, f"exit {proc.returncode}")
+    return CellResult(cell_id, CellOutcome.PASS, "1 transcribed, 1 silent session named")
+
+
 def _write_summary(artifact_dir: Path, m: Matrix, ok: bool, msg: str) -> None:
     import json
 
@@ -309,12 +426,21 @@ def _print_summary(m: Matrix, ok: bool, msg: str) -> None:
 def main() -> int:
     p = argparse.ArgumentParser(description="Bristlenose acceptance matrix (Phase 1)")
     p.add_argument("--self-test", action="store_true", help="validate the smoke fixture (free)")
+    p.add_argument(
+        "--run-transcribe",
+        action="store_true",
+        help="run the no-key transcribe cell (free, live, ~3s)",
+    )
     p.add_argument("--run-local", action="store_true", help="run the local Ollama cell (free)")
     p.add_argument("--run-cloud", action="store_true", help="run cloud cells (keys + spend)")
     p.add_argument("--input", help="input folder for provider analyze cells")
     args = p.parse_args()
-    if not (args.self_test or args.run_local or args.run_cloud):
-        args.self_test = True  # default to the free proof
+    if not (args.self_test or args.run_transcribe or args.run_local or args.run_cloud):
+        # The free proof is both: a committed fixture read, and one live run that needs
+        # no credentials. Before the second existed, a keyless machine's whole matrix
+        # exercised no pipeline code at all.
+        args.self_test = True
+        args.run_transcribe = True
     return run(args)
 
 

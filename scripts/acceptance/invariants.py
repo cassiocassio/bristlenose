@@ -121,6 +121,103 @@ def assert_no_abandoned_stage(terminus_event: dict) -> None:
             raise InvariantError(f"stage {name!r} fully failed (attempted={attempted}, succeeded=0)")
 
 
+#: Mirrors ``STAGE_FAILED_MAX`` in bristlenose/events.py. Kept as a literal rather
+#: than imported: this harness runs against the *installed* bristlenose, and a guard
+#: that reads its threshold from the code under test cannot catch that code changing
+#: it. If the two drift, `test_truncation_constant_matches_events` says so.
+STAGE_FAILED_MAX = 10
+
+
+def _is_overflow_placeholder(failure: dict) -> bool:
+    """The synthetic "... and N more" row `_truncate_failed` appends.
+
+    Mirrors Swift's `SessionFailure.isOverflowPlaceholder` — session-less, with a
+    message opening "... and ". It stands in for many dropped rows, so it must never
+    be counted as one failure when checking arithmetic.
+    """
+    if failure.get("session_id") is not None:
+        return False
+    message = (failure.get("cause") or {}).get("message") or ""
+    return message.startswith("... and ")
+
+
+def assert_sessions_accounted(terminus_event: dict) -> None:
+    """Every session a stage was handed ended up in exactly one bucket.
+
+    ``attempted == succeeded + failed``. A session in neither is the shape that cost
+    fifteen interviews on the torture corpus: excluded from `succeeded` for having no
+    words, absent from `failed` because nothing raised, and therefore named nowhere.
+
+    **This check is a tautology in most buckets and that is fine** — wherever
+    `succeeded` is derived by subtracting failures it can never fire, and it costs
+    nothing to carry. It has teeth in exactly one place: `bristlenose transcribe`,
+    whose transcripts rollup measures success independently (a session counts when it
+    produced segments), so a silent recording really does fall out of the sum. That is
+    also the one command with no downstream bucket, so cross-bucket continuity cannot
+    reach it.
+
+    Truncation-aware. `_truncate_failed` caps `failed` at ``STAGE_FAILED_MAX`` plus one
+    placeholder without adjusting the counters, so a bucket carrying more than ten real
+    failures legitimately reports fewer rows than it lost — deliberate, and pinned by
+    `test_a_folder_of_sixty_refusals_does_not_blow_the_event_line`. There the sum is
+    checked as an inequality, which still catches a session in no bucket at all.
+
+    Fail-open on an absent summary, matching `assert_no_abandoned_stage`: the terminus
+    already vouched for the run, and rejecting a summary-less pass would fail valid runs
+    (the committed smoke fixture is one).
+    """
+    summary = terminus_event.get("summary")
+    if summary is None:
+        return
+    stages = summary.get("stages", summary) if isinstance(summary, dict) else {}
+    for name, bucket in (stages.items() if isinstance(stages, dict) else []):
+        if not isinstance(bucket, dict):
+            continue
+        attempted, succeeded = bucket.get("attempted"), bucket.get("succeeded")
+        failed = bucket.get("failed")
+        if not isinstance(attempted, int) or not isinstance(succeeded, int):
+            continue  # not a StageOutcome — e.g. new_sessions, reflow_scope
+        if not isinstance(failed, list):
+            failed = []
+        truncated = any(_is_overflow_placeholder(f) for f in failed if isinstance(f, dict))
+        real = [f for f in failed if not (isinstance(f, dict) and _is_overflow_placeholder(f))]
+        if truncated:
+            if attempted < succeeded + len(real):
+                raise InvariantError(
+                    f"stage {name!r} lost sessions: attempted={attempted} < "
+                    f"succeeded={succeeded} + {len(real)} listed failures"
+                )
+        elif attempted != succeeded + len(real):
+            missing = attempted - succeeded - len(real)
+            raise InvariantError(
+                f"stage {name!r} left {missing} session(s) in no bucket: "
+                f"attempted={attempted}, succeeded={succeeded}, failed={len(real)} — "
+                f"a session counted as neither a success nor a stated failure is one "
+                f"nothing anywhere names"
+            )
+
+
+def assert_transcripts_present(output_dir: Path, *, floor: int = 1) -> None:
+    """`bristlenose transcribe` produced the thing it exists to produce.
+
+    Its deliverable is `transcripts-raw/`, not a report — so `assert_report_non_empty`
+    is meaningless here and its absence must not read as coverage. Fail-closed: a
+    missing directory, no files, or files that are all empty is the fake-success shape.
+    """
+    raw = output_dir / "transcripts-raw"
+    if not raw.is_dir():
+        raise InvariantError(
+            f"no transcripts-raw/ in {output_dir} — transcribe produced no deliverable"
+        )
+    written = [p for p in raw.iterdir() if p.is_file() and p.stat().st_size > 0]
+    if len(written) < floor:
+        empties = [p.name for p in raw.iterdir() if p.is_file()]
+        raise InvariantError(
+            f"transcripts-raw/ holds {len(written)} non-empty file(s), floor is {floor}"
+            + (f" (present but empty: {empties})" if empties else " (directory is empty)")
+        )
+
+
 def count_quotes(output_dir: Path) -> int:
     """Total quotes placed in screen clusters (the durable intermediate JSON)."""
     path = output_dir / ".bristlenose" / "intermediate" / "screen_clusters.json"

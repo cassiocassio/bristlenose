@@ -1,7 +1,10 @@
 # Design: Acceptance Matrix — overnight "real" conformance runs
 
-_Status: proposed (29 Jun 2026). Phase 1 not yet built. This doc pins the model, the
-invariants, and the overnight-execution gates before any runner code lands._
+_Status: **partly built** (29 Jun 2026; trued 22 Aug 2026). The runner is
+`scripts/acceptance/run_matrix.py` and seven cells are declared — see "Shipped so
+far" below for what actually exists versus what this doc still only proposes. The
+overnight `nightly.sh`, the desktop tier, and the media cell remain unbuilt. The
+model, invariants and execution gates below are the spec both halves answer to._
 
 _Moved into `docs/testing/` and consolidated 7 Jul 2026. This is the **mechanical tier**
 of the testing set — start at [README.md](README.md) for the whole map. The surfaces this
@@ -110,6 +113,40 @@ So the matrix is not "every fixture × every provider." Three groups:
 
 The whole input funnel (video → audio → words) sits *upstream* of any provider;
 the cloud columns are purely downstream of it.
+
+### Shipped so far (22 Aug 2026)
+
+`scripts/acceptance/run_matrix.py` carries two free cells and the five gated
+provider cells:
+
+| Cell | Drives | Needs | Asserts |
+|---|---|---|---|
+| `validate:smoke` | nothing — reads the committed fixture | — | the four shape invariants |
+| `transcribe:no-key` | `bristlenose transcribe`, live | **nothing** | transcripts written + every session accounted for + the silent one named |
+| `run:{local,anthropic,openai,azure,google}` | `bristlenose run`, live | a provider each | report + quote floor + the shape invariants |
+
+**`transcribe:no-key` is not the "Transcription cell" described above, and does
+not discharge it.** That one is a *media* fixture through `run` on local, and its
+job is Whisper and the extract-audio→analysis handoff. This one feeds two
+subtitle files to `transcribe`, deliberately skipping Whisper, and its job is the
+**accounting**: `attempted == succeeded + failed`, plus the silent session being
+named rather than counted out. The two overlap nowhere; the media cell is still
+owed.
+
+Two things it is the only cell to do. It is the **first live run needing no
+credentials** — before it, a machine with no keys ran only the committed-fixture
+read, exercising no pipeline code at all — and it watches the **one command with
+no downstream bucket**, where cross-bucket continuity can never reach and where
+`attempted == succeeded + failed` stops being a tautology (that rollup measures
+success independently instead of subtracting failures).
+
+Written against the defect in `d776059e`, and verified to go red on the commit
+before it: *"stage 'transcripts' left 1 session(s) in no bucket."*
+
+**Known gap, deliberate.** A zero-cue `.vtt` reaches the same orchestrator state
+as a silent recording — segments absent, nothing raised — for free. It does not
+prove Whisper returns nothing for actual silence. Closing that means shipping
+audio and a model download; the media cell above is where it belongs.
 
 **Scoping insight that bounds the fragile part:** the desktop app is a thin
 shell over the Python sidecar — ~80% of "out-of-box behaviour" *is* CLI/serve

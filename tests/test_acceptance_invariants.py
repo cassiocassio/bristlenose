@@ -20,6 +20,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts" / "acceptance"))
 
 from invariants import (  # noqa: E402
+    STAGE_FAILED_MAX,
     CellOutcome,
     InvariantError,
     assert_absent_over_decoded,
@@ -27,7 +28,9 @@ from invariants import (  # noqa: E402
     assert_nonempty_file,
     assert_reid_keys_not_shareable,
     assert_report_non_empty,
+    assert_sessions_accounted,
     assert_terminus_completed,
+    assert_transcripts_present,
     classify_provider_outcome,
     count_quotes,
 )
@@ -216,3 +219,111 @@ def test_taxonomy_clean_run_passes() -> None:
     assert classify_provider_outcome(configured=True, process_exit=0, empty_report=False) == (
         CellOutcome.PASS
     )
+
+
+# ---------------------------------------------------------------------------
+# Session accounting — the guard that watches `bristlenose transcribe`
+# ---------------------------------------------------------------------------
+
+
+def _bucket(attempted: int, succeeded: int, failed: list | None = None) -> dict:
+    return {"summary": {"transcripts": {
+        "attempted": attempted, "succeeded": succeeded, "failed": failed or [],
+    }}}
+
+
+def _named_failure(name: str) -> dict:
+    return {"session_id": "s9", "source_file": name,
+            "cause": {"category": "unusable_input", "message": "No speech found."}}
+
+
+def _overflow(dropped: int) -> dict:
+    # The synthetic row `_truncate_failed` appends: session-less, "... and N more".
+    return {"session_id": None, "source_file": None,
+            "cause": {"category": "unknown",
+                      "message": f"... and {dropped} more failures truncated"}}
+
+
+def test_accounting_catches_a_session_in_no_bucket() -> None:
+    # The measured shape: 2 attempted, 1 succeeded, nothing recorded as failed.
+    with pytest.raises(InvariantError, match="no bucket"):
+        assert_sessions_accounted(_bucket(2, 1))
+
+
+def test_accounting_passes_when_the_shortfall_is_stated() -> None:
+    # Same arithmetic gap, now explained — which is the entire fix.
+    assert_sessions_accounted(_bucket(2, 1, [_named_failure("Session 2.vtt")]))
+
+
+def test_accounting_passes_on_a_clean_sweep() -> None:
+    assert_sessions_accounted(_bucket(5, 5))
+
+
+def test_accounting_tolerates_absent_summary() -> None:
+    # Fail-OPEN here, like assert_no_abandoned_stage: the terminus already vouched,
+    # and the committed smoke fixture legitimately carries no summary. Failing closed
+    # would reject valid runs.
+    assert_sessions_accounted({"summary": None})
+    assert_sessions_accounted({})
+
+
+def test_accounting_ignores_non_outcome_fields() -> None:
+    # `new_sessions` / `reflow_scope` sit beside the buckets and are not StageOutcomes.
+    assert_sessions_accounted({"summary": {"new_sessions": 3, "reflow_scope": "all"}})
+
+
+def test_accounting_does_not_false_positive_on_a_truncated_bucket() -> None:
+    # 60 real refusals, capped to 10 + a placeholder, counters untouched. The sum can
+    # never balance here, and that is deliberate — pinned by test_refusals.py's
+    # sixty-refusal test. A literal equality check would go red on a correct run.
+    failed = [_named_failure(f"f{i}.mp4") for i in range(STAGE_FAILED_MAX)] + [_overflow(50)]
+    assert_sessions_accounted(_bucket(60, 0, failed))
+
+
+def test_accounting_still_bites_through_truncation() -> None:
+    # Truncation relaxes the check to an inequality, not off. More sessions succeeded
+    # plus listed than were ever attempted is incoherent whatever the cap did.
+    failed = [_named_failure(f"f{i}.mp4") for i in range(STAGE_FAILED_MAX)] + [_overflow(50)]
+    with pytest.raises(InvariantError, match="lost sessions"):
+        assert_sessions_accounted(_bucket(5, 0, failed))
+
+
+def test_truncation_constant_matches_events() -> None:
+    # invariants.py holds its own literal so the guard cannot inherit a changed
+    # threshold from the code it is guarding. This is the seam that says they drifted.
+    from bristlenose import events
+
+    assert STAGE_FAILED_MAX == events.STAGE_FAILED_MAX
+
+
+# ---------------------------------------------------------------------------
+# Transcribe deliverable
+# ---------------------------------------------------------------------------
+
+
+def test_transcripts_absent_directory_is_caught(tmp_path: Path) -> None:
+    with pytest.raises(InvariantError, match="no transcripts-raw"):
+        assert_transcripts_present(tmp_path)
+
+
+def test_transcripts_empty_directory_is_caught(tmp_path: Path) -> None:
+    (tmp_path / "transcripts-raw").mkdir()
+    with pytest.raises(InvariantError, match="floor is 1"):
+        assert_transcripts_present(tmp_path)
+
+
+def test_transcripts_present_but_empty_is_caught(tmp_path: Path) -> None:
+    # The fake-success shape: the files exist, so a bare existence check would pass.
+    raw = tmp_path / "transcripts-raw"
+    raw.mkdir()
+    (raw / "s1.txt").write_text("")
+    with pytest.raises(InvariantError, match="present but empty"):
+        assert_transcripts_present(tmp_path)
+
+
+def test_transcripts_with_content_passes(tmp_path: Path) -> None:
+    raw = tmp_path / "transcripts-raw"
+    raw.mkdir()
+    (raw / "s1.txt").write_text("Moderator: talk me through the checkout page.")
+    assert_transcripts_present(tmp_path)
+

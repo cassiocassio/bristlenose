@@ -319,3 +319,26 @@ The aesthetic is: the pipeline should feel like a build tool, not an app. Resear
 Progressive disclosure prevents nonsensical early estimates: no estimate until n >= 4 runs (insufficient data), point estimate only until n >= 8 (Welford variance with few samples produces absurdly wide ranges — e.g. +/- 16 min on a 14 min estimate with n=2). This means users see increasingly precise estimates as they use the tool more, rather than getting a misleading number on their first run.
 
 _See also: `bristlenose/timing.py`_
+
+## Diagnostics ships English-only, and may not ship at all
+
+**22 Aug 2026 — settled, do not reopen.** The Diagnostics menu's Section 1
+(`MenuCommands.swift`:134–149, above the `exposesDebugTools` guard at :151) and
+the System Health window it opens (`DoctorReportView.swift`, zero `i18n.t` call
+sites) ship on **every channel** and render English in all 21 non-en locales.
+That is accepted for TestFlight, and the whole surface is a **trim / reduce /
+possibly remove entirely** candidate for the Mac App Store build — so localising
+it would be work on a surface that may not ship. Decide its fate first.
+
+This is worth writing down because it looks exactly like a defect and was
+surfaced as one. It is a different class from the project's accepted
+machine-seeded-pending-native-review standard: these strings were **never
+enrolled in English**, so `check-locales.py` and
+`test_pipeline_diagnostic_locale_keys.py` were green throughout — the blind spot
+root `CLAUDE.md` §i18n documents, and the recurrence
+`docs/design-cloud-import.md`:1320 predicted after the Accounts pane. Being
+invisible to the gates is why it is worth recording; the adjudication is why it
+should not be raised again.
+
+_See also: `docs/design-diagnostics-menu.md` (the audience tiers), `TODO.md`
+(the 18 Aug Settings ▸ General item, which carries the re-runnable checks)_

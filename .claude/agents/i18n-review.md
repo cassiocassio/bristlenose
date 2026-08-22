@@ -212,6 +212,41 @@ the sweep and are unlikely to be confined to one key; booked as Question B in
 `docs/i18n-defects.md`. A full sweep for quote glyphs across all locale files is
 a **measurement** task before it is an editing one.
 
+## 6c. Borrow translations from Apple's own .loctable files
+
+**Before machine-seeding a new UI string into 21 locales, check whether macOS
+already ships a translation for it.** For any string naming a standard platform
+action — Choose, Set Up, Open, Duplicate, Move to Trash — Apple has one, in its
+own HIG register, per-language. It beats a machine seed on every axis:
+authoritative, part-of-speech correct for that language, free, and it makes the
+app read the word the OS already uses.
+
+Same corpus as §6a, different use: that section *measures a convention*, this one
+*borrows a value*. `/System/Library/{Frameworks,PrivateFrameworks}/*/Resources/*.loctable`,
+~2200 files, read with `plistlib.load(open(p,'rb'))` — a dict keyed by language,
+each a `{key: translated}` table. Apple's codes differ from ours: `nb`→`no`,
+`pt-BR`→`pt`, `pt-PT`→`pt_PT`, `zh-Hant`→`zh_TW`, `zh-Hant-HK`→`zh_HK`.
+
+Two uses, both proven 22 Aug 2026:
+
+- **Verify** an existing value. `settings.general.choosePrompt` matched AppKit
+  `Common.loctable`'s `Choose` byte-for-byte in all 22 locales — turning a
+  checklist assertion into a mechanical, re-runnable proof needing no human.
+- **Source** a new one. `desktop.welcome.aiSetup` took Apple's per-locale `Set Up`
+  verb from `CCS_Localizable.loctable`; nothing was machine-seeded.
+
+**Sweep the whole corpus, not one file — it settles noun/verb questions a seed
+would flatten.** Apple keeps `Set Up` (verb) and `Setup` (noun) as separate
+strings translated differently: `ca` `Configura` vs `Configuració`, `fi`
+`Ota käyttöön` vs `Käyttöönotto`. The sweep also disconfirms bad hunches — `fi`
+`Ota käyttöön` looks like a spelling-context artefact until it turns up
+identically in six unrelated frameworks.
+
+**Part of speech follows the target language's UI convention, not English's.** A
+link that performs an action takes a verb in most locales even where English uses
+a noun; `desktop.welcome.aiSetup` is deliberately English noun "Setup" against
+verbs elsewhere, and that is correct rather than drift.
+
 ## 7. Apple glossary cross-check (reminder only)
 
 For any new keys that touch macOS system vocabulary (menu items, toolbar labels,

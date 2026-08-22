@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-07-26
-trued-against: HEAD@main on 2026-07-26
+last-trued: 2026-08-22
+trued-against: HEAD@main (ff444036) on 2026-08-22
 ---
 
 # HTML Export — Design Document
@@ -12,6 +12,26 @@ trued-against: HEAD@main on 2026-07-26
 > read-only). Several "future pass" / "open question" items below shipped this
 > session and are marked Done inline. Transcript-zip bundling (Stage 1+) remains
 > aspirational.
+
+> **Truing status:** Current with targeted edits (trued 2026-08-22).
+> §"Open questions" item 1 was rewritten — it claimed the export had been
+> "fully read-only" since 26 Jul, which was measurably false until `cb4f1e28`
+> (20 Aug). The rest of the body is verbatim-accurate. See changelog below.
+
+## Changelog
+
+- _2026-08-22_ — trued up: rewrote §"Open questions" item 1, which summarised the
+  export as fully read-only from 26 Jul while three mutation paths stayed live
+  until 20 Aug (`denyProposedTag` ungated, five `export.css` selectors matching
+  nothing, the codebook "+ tag" row hidden only by one of them). Original claim
+  preserved inline as the 26 Jul baseline. Front-matter had reported
+  `last-trued: 2026-07-26` while the body already carried the 20 Aug selector-gate
+  bullet. Anchors: `bristlenose/theme/templates/export.css`,
+  `tests/test_export_css_selectors.py`, `frontend/src/contexts/QuotesContext.tsx:383`,
+  `frontend/src/islands/CodebookPanel.tsx:449`, commit subject "export mode: five
+  selectors that matched nothing, and a gate so they can't again".
+- _2026-07-26_ — trued up against the export-hardening work (single-file build,
+  hash-router links, locale bake, anti-drift coverage gate, XSS fix, read-only).
 
 Read-only HTML report export with transcript bundling, anonymisation, and polish.
 
@@ -319,10 +339,33 @@ These abstractions serve multiple export features. Build them during item 0 (sec
 
 ## Open questions
 
-1. ~~**Locked read-only mode.**~~ **Shipped 2026-07-26 (`a2880e7e`).** The export is
-   fully read-only — mutating store actions (star/hide/tag/edit) early-return offline,
-   the two bypass paths (quote-text click, keyboard) are gated, and the Codebook tab is
-   read-only. Decided (user): a baked handover shouldn't offer the pretence of editing.
+1. ~~**Locked read-only mode.**~~ **Shipped 2026-07-26 (`a2880e7e`), completed
+   2026-08-20 (`cb4f1e28`).** Decided (user): a baked handover shouldn't offer the
+   pretence of editing.
+
+   The 26 Jul pass recorded this as settled — "the export is fully read-only —
+   mutating store actions (star/hide/tag/edit) early-return offline, the two bypass
+   paths (quote-text click, keyboard) are gated, and the Codebook tab is read-only."
+   That was the intent, not the state. Three paths stayed live for ~3.5 weeks:
+
+   - `denyProposedTag` had no `isExportMode()` guard, though its sibling
+     `acceptProposedTag` did. Clicking ✗ on an autocode proposal removed it
+     optimistically and POSTed to a server that isn't there.
+   - Five `export.css` selectors named classes nothing rendered. The worst pair,
+     `.badge-accept` / `.badge-deny`, had been renamed to `.badge-action-accept` /
+     `.badge-action-deny` by the badge-action-pill redesign, so the accept/deny
+     control was **visible and clickable** in every export from that rename onward.
+   - The codebook "+ tag" row is gated by `!isFramework`, never by `isReadOnly` —
+     one of those dead CSS rules was the only thing hiding it.
+
+   Two lessons encoded rather than recorded. **CSS is not the load-bearing half:**
+   the per-project baked theme copy can be stale, and `display:none` leaves handlers
+   and key bindings live — `denyProposedTag` binds a document-level `d` while the
+   badge is hovered, which no rule can reach. Mutation controls are now *removed*
+   under `isExportMode()`, not hidden. **And a pure-CSS gate cannot fail loudly:**
+   `tests/test_export_css_selectors.py` asserts every class `export.css` hides is
+   still rendered in `frontend/src`, matching on whole class tokens because
+   `.badge-accept` substring-matches the live `badge-accept-flash`.
 2. **VTT transcript format.** Useful for re-import and subtitle tooling. Add as an option alongside `.txt` if researchers ask. Not needed for any current scenario.
 3. **Video in the export (v1/v2).** v1 ships no video/thumbnails. v2 middle-ground =
    "report + starred clips have working video" (inline `<video src="clips/…">` packaged

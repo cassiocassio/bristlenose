@@ -268,9 +268,14 @@ Two facts the inventory settled, recorded here so they aren't re-litigated:
   `ToastSurface`; toolbar/row spinners use `.controlSize(.small)`; status
   glyphs carry severity while text stays `.secondary`; sidebar row indicators
   never stack (single precedence chain failed > running > warning > ready);
-  popovers are **fixed-size** (`PipelineActivityItem.swift` ≈ 59–63: a fixed
-  360×320 envelope, to dodge an NSPopover resize-animation livelock); the app
-  uses `.alert` **exclusively** — never `.confirmationDialog`.
+  the diagnostic popover is **fixed in width and content-sized in height**, 360
+  wide with a 320 ceiling and a scroller only past it (22 Aug 2026 —
+  [`design-pipeline-popover-sizing.md`](design-pipeline-popover-sizing.md); the
+  view owns the constants, presenters pass no frame). It was a fixed 360×320
+  envelope until then, to dodge an NSPopover resize-animation livelock in
+  `PipelineActivityItem.swift` — a file since deleted along with the
+  `ProgressView` that caused it; the app uses `.alert` **exclusively** — never
+  `.confirmationDialog`.
 
 ### The state catalog
 
@@ -837,11 +842,16 @@ running; is there a "jump to live" after paging back?).
 
 **Resizeability** (discussed, resolved): no user drag-resize handle (that
 implies the content wants to be a window); size-to-content auto-fit is fine and
-idiomatic. This aligns with the shipped fixed-size (360×320) popover envelope,
-which exists for a concrete reason — an NSPopover resize-animation livelock. The
-one wrinkle is a carousel of differently-sized windows making the popover height
-jump per page; mitigate with a stable window height or a capped height with
-internal scroll. A live run-status log is legitimate native status chrome; a
+idiomatic. **Auto-fit is now what ships** (22 Aug 2026): 360 wide, height from
+the content, 320 as a ceiling, scroller only past it — the capped-height-with-
+internal-scroll option this paragraph anticipated. The fixed 360×320 envelope it
+used to align with was a mitigation for an NSPopover resize-animation livelock,
+and that livelock belonged to the live activity pill's `ProgressView`; the
+terminal-state popover's body is a pure function of `state`, so its size is
+decided once at present time and never animated. Full reasoning and the failure
+modes: [`design-pipeline-popover-sizing.md`](design-pipeline-popover-sizing.md).
+The one wrinkle a carousel would reintroduce is a popover height that jumps per
+page; a stable per-page height would be needed. A live run-status log is legitimate native status chrome; a
 durable, browsable history is data and belongs in Show Log / the on-disk log /
 the React SPA, not a stretched popover.
 

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnostic popover — content-sized height (spec mock)</title>
+<style>
+  /* ---- Native macOS approximation (NOT the web theme — this mimics a SwiftUI
+         popover so wrapping, row pitch and typography are a fair preview).
+         Sibling of pipeline-popover-rolling-log.html; same envelope, same fonts.
+         Point sizes are written as px, as in that file. ---------------------- */
+  :root {
+    --sf: -apple-system, "SF Pro Text", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --orange: #FF9F0A; --red: #FF3B30; --green: #34C759;
+    --label: rgba(0,0,0,0.85);
+    --secondary: rgba(0,0,0,0.5);
+    --tertiary: rgba(0,0,0,0.3);
+    --pop-bg: rgba(246,246,246,0.94);
+    --pop-border: rgba(0,0,0,0.12);
+    --hair: rgba(0,0,0,0.10);
+    --scale: 1;
+  }
+  body.dark {
+    --label: rgba(255,255,255,0.92);
+    --secondary: rgba(255,255,255,0.55);
+    --tertiary: rgba(255,255,255,0.32);
+    --pop-bg: rgba(40,40,42,0.9);
+    --pop-border: rgba(255,255,255,0.12);
+    --hair: rgba(255,255,255,0.12);
+  }
+  body.bigtext { --scale: 1.25; }
+
+  html,body { margin:0; }
+  body {
+    font-family:var(--sf); color:#fff;
+    background: radial-gradient(120% 120% at 20% 0%, #6a86b8, #3a4a6b 60%, #232a3d);
+    -webkit-font-smoothing:antialiased;
+    padding:28px 24px 80px;
+  }
+  body.dark { background: radial-gradient(120% 120% at 20% 0%, #2b3340, #1a1d24 60%, #0e1014); }
+
+  h1 { font-size:19px; font-weight:600; margin:0 0 4px; }
+  h2 { font-size:15px; font-weight:600; margin:44px 0 4px; letter-spacing:.01em; }
+  .sub { font-size:12.5px; line-height:1.5; color:rgba(255,255,255,0.72); max-width:70ch; margin:0 0 6px; }
+  .sub b { color:#fff; font-weight:600; }
+  .sub code { font-family:var(--mono); font-size:11.5px; background:rgba(255,255,255,0.12); padding:1px 4px; border-radius:4px; }
+  hr.rule { border:0; border-top:1px solid rgba(255,255,255,0.16); margin:10px 0 0; }
+
+  /* ---- chrome ---- */
+  .chrome { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:14px 0 6px; }
+  .chrome button {
+    font:12px/1 var(--sf); padding:6px 11px; border-radius:7px;
+    border:0.5px solid rgba(255,255,255,0.35); background:rgba(255,255,255,0.14);
+    color:#fff; cursor:pointer;
+  }
+  .chrome button.on { background:#fff; color:#1d1d1f; border-color:#fff; }
+
+  /* ---- case layout ---- */
+  .case { display:grid; grid-template-columns: 250px 380px 380px; gap:22px;
+          align-items:start; padding:22px 0; border-top:1px solid rgba(255,255,255,0.14); }
+  .case:first-of-type { border-top:0; }
+  .case .brief h3 { font-size:13.5px; font-weight:600; margin:0 0 5px; }
+  .case .brief p { font-size:12px; line-height:1.5; color:rgba(255,255,255,0.7); margin:0 0 6px; }
+  .case .brief code { font-family:var(--mono); font-size:11px; color:rgba(255,255,255,0.85); }
+  .case .brief .tag {
+    display:inline-block; font-size:10.5px; font-weight:600; letter-spacing:.04em;
+    text-transform:uppercase; padding:2px 7px; border-radius:5px; margin-bottom:7px;
+    background:rgba(255,255,255,0.18);
+  }
+  .tag.thin { background:#2f6f4f; } .tag.mid { background:#5a5330; }
+  .tag.fat { background:#7a3a34; } .tag.edge { background:#3f4a7a; }
+
+  .col { display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
+  .col-label { font-size:11px; letter-spacing:.05em; text-transform:uppercase;
+               color:rgba(255,255,255,0.55); font-weight:600; }
+  .col.hidden { display:none; }
+
+  /* the 320pt ceiling, drawn */
+  .stage { position:relative; padding-top:9px; }
+  .ceiling {
+    position:absolute; left:-8px; right:-58px; top:calc(9px + 320px);
+    border-top:1px dashed rgba(255,255,255,0.42); pointer-events:none;
+  }
+  .ceiling::after {
+    content:"320 ceiling"; position:absolute; right:0; top:-15px;
+    font:10px/1 var(--sf); color:rgba(255,255,255,0.55);
+  }
+  .stage.nocap .ceiling { display:none; }
+
+  /* ---- the popover envelope ---- */
+  .popover {
+    width:360px; box-sizing:border-box;
+    background:var(--pop-bg); backdrop-filter:blur(30px) saturate(1.3);
+    border:0.5px solid var(--pop-border); border-radius:11px;
+    box-shadow:0 12px 34px rgba(0,0,0,0.32);
+    padding:16px; display:flex; flex-direction:column; overflow:hidden;
+    color:var(--label);
+  }
+  body.dark .popover { box-shadow:0 12px 34px rgba(0,0,0,0.55); }
+  .popover.today  { height:320px; }        /* shipped: fixed, both axes */
+  .popover.target { max-height:320px; }    /* proposed: ceiling, not a height */
+  .pop-arrow {
+    position:absolute; top:2px; left:38px; transform:rotate(45deg);
+    width:14px; height:14px; background:var(--pop-bg);
+    border-left:0.5px solid var(--pop-border); border-top:0.5px solid var(--pop-border);
+  }
+
+  /* header row — Text(.headline) + Show Log + copy icon */
+  .head { display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; flex:0 0 auto; }
+  .head .verb { font-size:calc(13px * var(--scale)); font-weight:600; flex:1; line-height:1.25; }
+  .head .btn {
+    font:calc(11px * var(--scale))/1 var(--sf); padding:4px 8px; border-radius:5px;
+    border:0.5px solid var(--hair); background:rgba(127,127,127,0.13);
+    color:var(--label); cursor:default; white-space:nowrap;
+  }
+  .head .btn.icon { padding:4px 7px; }
+
+  /* the scroll region — the ONLY thing that scrolls */
+  .scroll { overflow-y:auto; min-height:0; margin:0 -4px; padding:0 4px; }
+  .popover.today .scroll { flex:1; }
+  body.legacy-scrollbars .scroll::-webkit-scrollbar { width:15px; }
+  body.legacy-scrollbars .scroll::-webkit-scrollbar-thumb {
+    background:rgba(0,0,0,0.32); border-radius:8px; border:4px solid transparent; background-clip:padding-box; }
+  body.legacy-scrollbars.dark .scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.34); background-clip:padding-box; }
+
+  /* buckets */
+  .buckets { display:flex; flex-direction:column; gap:10px; }
+  .bucket { display:flex; flex-direction:column; gap:4px; }
+  .bhead { display:flex; align-items:baseline; gap:6px; }
+  .bname { font-size:calc(12px * var(--scale)); font-weight:600; }
+  .bcount { font-size:calc(10px * var(--scale)); color:var(--secondary); }
+  .bnote { font-size:calc(10px * var(--scale)); color:var(--secondary); }
+
+  .grid { display:grid; grid-template-columns:auto minmax(0,auto) 1fr; column-gap:6px; row-gap:4px; align-items:start; }
+  .g { font-size:calc(10px * var(--scale)); line-height:1.45; padding-top:1px; }
+  .g.warn { color:var(--orange); } .g.err { color:var(--red); }
+  .file {
+    font-family:var(--mono); font-size:calc(10px * var(--scale)); color:var(--secondary);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px; line-height:1.45;
+  }
+  .why { font-size:calc(10px * var(--scale)); line-height:1.45; }
+  .why.over { font-style:italic; color:var(--secondary); }
+
+  /* degraded (.failed, no summary) body */
+  .degraded { display:flex; flex-direction:column; gap:6px; }
+  .degraded .msg { font-size:calc(12px * var(--scale)); line-height:1.35; }
+  .degraded .cat { font-size:calc(10px * var(--scale)); color:var(--secondary); }
+
+  /* readout */
+  .readout { font:11px/1.4 var(--mono); color:rgba(255,255,255,0.72); }
+  .readout .n { color:#fff; font-weight:600; }
+  .readout .pill {
+    display:inline-block; margin-left:6px; padding:1px 6px; border-radius:9px;
+    font:10px/1.5 var(--sf); background:rgba(255,255,255,0.16);
+  }
+  .readout .pill.scrolls { background:#7a3a34; }
+  .readout .pill.fits { background:#2f6f4f; }
+  .readout .pill.waste { background:#5a5330; }
+
+  .note { font-size:12px; line-height:1.55; color:rgba(255,255,255,0.72); max-width:74ch; margin:8px 0 0; }
+  .note b { color:#fff; }
+  .bad { color:#ffb4ac; }
+  .good { color:#a8e6bf; }
+</style>
+</head>
+<body>
+
+<h1>Diagnostic popover — height follows content</h1>
+<p class="sub">
+  Behaviour mock for <code>ProjectDiagnosticPopover</code>. <b>Left column is what ships today</b>
+  (<code>.frame(width:360, height:320)</code>, fixed on both axes, at
+  <code>ProjectRow.swift:423</code> and <code>ProjectSidebarOutline.swift:1829</code>).
+  <b>Right column is the target</b>: width still nailed at 360, height = content, 320 becomes a
+  <i>ceiling</i>, and the scroller appears only when the ceiling is actually reached.
+  Content is real — the fixture scenarios in <code>DiagnosticFixture.swift</code> plus the two
+  screenshots that started this. Approximation, not pixel truth: SF at native point sizes so
+  wrapping is fair.
+</p>
+<hr class="rule">
+
+<div class="chrome">
+  <button id="t-appearance" onclick="toggle('dark', this)">Dark</button>
+  <button id="t-cols" onclick="cycleCols(this)">Both columns</button>
+  <button id="t-scroll" onclick="toggle('legacy-scrollbars', this)">Always-visible scrollbars</button>
+  <button id="t-big" onclick="toggle('bigtext', this)">Larger text (125%)</button>
+  <button onclick="setLocale('en', this)" id="t-en" class="on">English</button>
+  <button onclick="setLocale('de', this)" id="t-de">German chrome</button>
+</div>
+
+<h2>The ladder — thin to fat</h2>
+<p class="sub">Every case is drawn twice with identical content. The dashed line is the 320 ceiling.</p>
+<div id="ladder"></div>
+
+<h2>Edge cases</h2>
+<p class="sub">The places where a naive “just size to content” would misbehave.</p>
+<div id="edges"></div>
+
+<h2>Anti-patterns — what a wrong build looks like</h2>
+<div id="anti"></div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Content. Real strings: DiagnosticFixture.swift scenarios, bristlenose/refusals.py
+// MESSAGES, and the two screenshots (New Project 2 / folder-of-horrors).
+// ---------------------------------------------------------------------------
+const W = 'warn', E = 'err';
+
+const CHROME = {
+  en: { partial:'Partial completion', failed:'Run failed', degraded:'Failed',
+        log:'Show Log', notAnalysed:n => n===1?'1 file not analysed':n+' files not analysed',
+        failures:n => n===1?'1 failure':n+' failures',
+        over:n => '… and '+n+(n===1?' more failure truncated':' more failures truncated') },
+  de: { partial:'Teilweise abgeschlossen', failed:'Lauf fehlgeschlagen', degraded:'Fehlgeschlagen',
+        log:'Protokoll anzeigen', notAnalysed:n => n===1?'1 Datei nicht analysiert':n+' Dateien nicht analysiert',
+        failures:n => n===1?'1 Fehler':n+' Fehler',
+        over:n => '… und '+n+' weitere Fehler abgeschnitten' }
+};
+let LOCALE = 'en';
+
+const REFUSE = {
+  fmt:  'Not a format Bristlenose reads.',
+  empty:'The file is empty — the transfer produced no data.',
+  part: 'The file is incomplete — the transfer stopped early.',
+  notrec:'Not a recording, despite the file extension.',
+  noaud:'No sound in this file — there is nothing to transcribe.',
+};
+
+function rows(n, make) { return Array.from({length:n}, (_, i) => make(i+1)); }
+
+const CASES = [
+  { id:'A', tag:'thin', title:'Degraded — nothing structured on the wire',
+    brief:'<code>.failed(message, category)</code>. No <code>PipelineSummary</code>, so no buckets — one sentence and a category line. The thinnest the popover can be.',
+    head:'degraded',
+    degraded:{ msg:'Anthropic API authentication failed: invalid API key', cat:'Provider key issue' } },
+
+  { id:'B', tag:'thin', title:'One refusal',
+    brief:'A single unreadable file in an otherwise clean run. No count line — that only appears above two failures.',
+    head:'partial',
+    buckets:[{ name:'Files', s:4, a:5, rows:[[W,'interview-3.mov', REFUSE.notrec]] }] },
+
+  { id:'C', tag:'thin', title:'Four refusals — the first screenshot',
+    brief:'<code>New Project 2</code>: the output folder’s own working files, offered as input. Four one-line reasons. <b>Today this fills 42% of the box.</b>',
+    head:'partial',
+    buckets:[{ name:'Files', s:1, a:5, rows:[
+      [W,'bristlenose.db', REFUSE.fmt], [W,'bristlenose.db-shm', REFUSE.fmt],
+      [W,'bristlenose.db-wal', REFUSE.fmt], [W,'bristlenose.log', REFUSE.fmt]] }] },
+
+  { id:'D', tag:'mid', title:'Typical partial — real failures, varied length',
+    brief:'<code>showcase_typical_partial</code>. One bucket, four errors, messages from one line to three. The common bad-Monday shape.',
+    head:'partial',
+    buckets:[{ name:'Transcripts', s:8, a:12, rows:[
+      [E,'s3','Whisper transcription timed out after 600s'],
+      [E,'s7','ffprobe not found at /Applications/Bristlenose.app/Contents/Resources/bin/ffprobe — bundled binary may be missing or unreadable'],
+      [E,'s9','Audio file unreadable: stream has 0 channels (likely corrupt header from a partially-downloaded recording)'],
+      [E,'s11','No space left on device']] }] },
+
+  { id:'E', tag:'mid', title:'Seven refusals — the second screenshot',
+    brief:'<code>folder-of-horrors</code>: 53 of 60 analysed. Mixed one- and two-line reasons. This is the content the 320 box was tuned around — it lands almost exactly flush.',
+    head:'partial',
+    buckets:[{ name:'Files', s:53, a:60, rows:[
+      [W,'manifest.csv', REFUSE.fmt], [W,'probe-all.json', REFUSE.fmt],
+      [W,'tape-capture.dv', REFUSE.fmt],
+      [W,'p07 failed download.mp4', REFUSE.empty],
+      [W,'interview half sent.mp4', REFUSE.part],
+      [W,'notes-not-video.mp4', REFUSE.notrec],
+      [W,'forgot-to-talk.mp4', REFUSE.noaud]] }] },
+
+  { id:'F', tag:'fat', title:'Three buckets, mixed categories',
+    brief:'<code>showcase_failed_multi_category</code>. Eight failures across transcripts, topics and quotes. Over the ceiling — the scroller earns its place.',
+    head:'failed',
+    buckets:[
+      { name:'Transcripts', s:2, a:5, rows:[
+        [E,'s1','Whisper transcription timed out after 600s. Recording length exceeds default cap.'],
+        [E,'s2','ctranslate2 OOM during model load. Free RAM dropped below 1.5 GB threshold.'],
+        [E,'s3','ffprobe not found in PATH — required for video duration detection.']] },
+      { name:'Topics', s:1, a:4, rows:[
+        [E,'s1','Anthropic rate limit reached (retry-after: 30s). Topic segmentation requires ~3000 tokens per session.'],
+        [E,'s2','Anthropic rate limit reached (retry-after: 45s).'],
+        [E,'s4','Anthropic monthly token quota exhausted. Upgrade plan or wait until 2026-06-01.']] },
+      { name:'Quotes', s:0, a:2, rows:[
+        [E,'s1','Anthropic API key rotated mid-run; subsequent calls returned 401.'],
+        [E,'s2','Connection timeout to api.anthropic.com after 60s. Likely captive portal or DNS issue.']] }] },
+
+  { id:'G', tag:'fat', title:'Truncated at the wire cap',
+    brief:'<code>showcase_truncated_varied</code>. <code>STAGE_FAILED_MAX = 10</code> plus the overflow placeholder. Well past the ceiling.',
+    head:'partial',
+    buckets:[{ name:'Transcripts', s:4, a:18, over:4, rows:[
+      [E,'s1','Whisper transcription timed out after 600s for a 52-minute file.'],
+      [E,'s2','ffmpeg not executable: permission denied.'],
+      [E,'s3','No space left on device while writing transcript JSON.'],
+      [E,'s4','ctranslate2 segfault during model decode (signal 11).'],
+      [E,'s5','Download of whisper-large-v3 failed at 47% (connection reset).'],
+      [E,'s6','Audio file unreadable: stream has 0 channels (likely corrupt header).'],
+      [E,'s7','ffprobe missing — can’t extract duration metadata.'],
+      [E,'s8','mlx_whisper failed to load metallib at @rpath/mlx.metallib.'],
+      [E,'s9','Disk full at /tmp during ffmpeg intermediate WAV extraction.'],
+      [E,'s10','Out of memory during beam-search decode.']] }] },
+
+  { id:'H', tag:'fat', title:'Worst case the wire permits',
+    brief:'Five buckets × 10 failures × an overflow row each. Nothing can produce more than this — the ceiling is what makes it survivable.',
+    head:'failed',
+    buckets:['Files','Transcripts','Topics','Quotes','Themes'].map((n, b) => ({
+      name:n, s:0, a:14, over:4,
+      rows: rows(10, i => [E, 's'+(b*10+i), 'Stage failed for session '+(b*10+i)+' — provider returned an unrecoverable error.'])
+    })) },
+];
+
+const EDGES = [
+  { id:'E1', tag:'edge', title:'Exactly at the ceiling — the sliver is the affordance',
+    brief:'Case E plus one more row. The cut lands <i>inside</i> a row, not on a boundary. We do not snap to whole rows: a half-visible row is the thing that says “there’s more”. Snapping would hide it.',
+    head:'partial', targetOnly:true,
+    buckets:[{ name:'Files', s:52, a:60, rows:[
+      [W,'manifest.csv', REFUSE.fmt], [W,'probe-all.json', REFUSE.fmt],
+      [W,'tape-capture.dv', REFUSE.fmt],
+      [W,'p07 failed download.mp4', REFUSE.empty],
+      [W,'interview half sent.mp4', REFUSE.part],
+      [W,'notes-not-video.mp4', REFUSE.notrec],
+      [W,'forgot-to-talk.mp4', REFUSE.noaud],
+      [W,'zoom-chat-log.txt', REFUSE.fmt],
+      [W,'p12 second half.mp4', REFUSE.part],
+      [W,'consent-form-scan.pdf', REFUSE.fmt]] }] },
+
+  { id:'E2', tag:'edge', title:'One block of text taller than the ceiling',
+    brief:'The degraded <code>.failed(message,)</code> body renders whatever the provider said, raw. <code>CAUSE_MESSAGE_MAX</code> is 4096 bytes, so this can be very tall on its own. Nothing is clamped — the text is the payload, and it scrolls.',
+    head:'degraded', targetOnly:true,
+    degraded:{ cat:'Provider rejected request', msg:
+      'Anthropic API returned 400 invalid_request_error: messages.0.content.0.text: text content blocks must contain non-whitespace text. '
+      + 'Request id req_011CQxTvJ8kM3nWpLd7yZaB2, model claude-opus-4-20250514, 187342 input tokens, stop_reason null. '
+      + 'The transcript for this session decoded to an empty string after PII redaction, which usually means every segment was redacted or the source file carried no recognised speech. '
+      + 'Re-run with BRISTLENOSE_LOG_LEVEL=DEBUG to see the redaction spans, or inspect the merged transcript at bristlenose-output/.bristlenose/intermediate/s06_merge_transcript.json before retrying. '
+      + 'No quotes were extracted for this session and it has been left out of the report; the other eleven sessions completed normally.' } },
+
+  { id:'E3', tag:'edge', title:'German chrome — the header can wrap',
+    brief:'“Teilweise abgeschlossen” + “Protokoll anzeigen” + the copy button on one 328pt line. The header sits <i>above</i> the scroll region, so if it wraps it takes room from the body, not from the ceiling. Hit the German toggle to see every case in it.',
+    head:'partial', targetOnly:true, forceLocale:'de',
+    buckets:[{ name:'Files', s:1, a:5, rows:[
+      [W,'bristlenose.db', REFUSE.fmt], [W,'bristlenose.db-shm', REFUSE.fmt],
+      [W,'bristlenose.db-wal', REFUSE.fmt], [W,'bristlenose.log', REFUSE.fmt]] }] },
+
+  { id:'E4', tag:'edge', title:'Overflow row below the fold — open question',
+    brief:'Case G, unscrolled. “… and 4 more failures truncated” is the one row that says the list is <i>incomplete</i>, and it is the row most likely never to be seen. <b>Do we pin it to the bottom of the viewport?</b> Drawn here unpinned (today’s behaviour) — see the spec’s open questions.',
+    head:'partial', targetOnly:true,
+    buckets:[{ name:'Transcripts', s:4, a:18, over:4, rows:[
+      [E,'s1','Whisper transcription timed out after 600s for a 52-minute file.'],
+      [E,'s2','ffmpeg not executable: permission denied.'],
+      [E,'s3','No space left on device while writing transcript JSON.'],
+      [E,'s4','ctranslate2 segfault during model decode (signal 11).'],
+      [E,'s5','Download of whisper-large-v3 failed at 47% (connection reset).'],
+      [E,'s6','Audio file unreadable: stream has 0 channels (likely corrupt header).'],
+      [E,'s7','ffprobe missing — can’t extract duration metadata.'],
+      [E,'s8','mlx_whisper failed to load metallib at @rpath/mlx.metallib.'],
+      [E,'s9','Disk full at /tmp during ffmpeg intermediate WAV extraction.'],
+      [E,'s10','Out of memory during beam-search decode.']] }] },
+];
+
+// ---------------------------------------------------------------------------
+// Rendering
+// ---------------------------------------------------------------------------
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function bucketHTML(b) {
+  const c = CHROME[LOCALE];
+  const n = b.rows.length;
+  const allRefusals = b.rows.every(r => r[0] === W);
+  const note = n > 2 ? `<div class="bnote">${esc(allRefusals ? c.notAnalysed(n) : c.failures(n))}</div>` : '';
+  const body = b.rows.map(r =>
+    `<div class="g ${r[0]}">${r[0]===W?'⚠':'⊗'}</div>` +
+    `<div class="file">${esc(r[1])}</div>` +
+    `<div class="why">${esc(r[2])}</div>`).join('');
+  const over = b.over
+    ? `<div class="g warn">⚠</div><div class="file"></div><div class="why over">${esc(c.over(b.over))}</div>`
+    : '';
+  return `<div class="bucket">
+    <div class="bhead"><span class="bname">${esc(b.name)}</span><span class="bcount">(${b.s}/${b.a})</span></div>
+    ${note}
+    <div class="grid">${body}${over}</div>
+  </div>`;
+}
+
+function popoverHTML(c, mode) {
+  const ch = CHROME[c.forceLocale || LOCALE];
+  const head = c.head === 'partial' ? ch.partial : c.head === 'failed' ? ch.failed : ch.degraded;
+  const body = c.degraded
+    ? `<div class="degraded"><div class="msg">${esc(c.degraded.msg)}</div>
+       <div class="cat">Category: ${esc(c.degraded.cat)}</div></div>`
+    : `<div class="buckets">${c.buckets.map(bucketHTML).join('')}</div>`;
+  return `<div class="popover ${mode}">
+    <div class="head">
+      <span class="verb">${esc(head)}</span>
+      <span class="btn">${esc(ch.log)}</span>
+      <span class="btn icon">⧉</span>
+    </div>
+    <div class="scroll">${body}</div>
+  </div>`;
+}
+
+function caseHTML(c) {
+  const today = c.targetOnly ? '' :
+    `<div class="col today"><span class="col-label">Today — fixed 360×320</span>
+       <div class="stage">${popoverHTML(c,'today')}</div>
+       <div class="readout" data-readout></div></div>`;
+  const target =
+    `<div class="col target"><span class="col-label">Target — 360 wide, 320 ceiling</span>
+       <div class="stage">${popoverHTML(c,'target')}<div class="ceiling"></div></div>
+       <div class="readout" data-readout></div></div>`;
+  return `<div class="case" data-case="${c.id}">
+    <div class="brief">
+      <span class="tag ${c.tag}">${c.tag}</span>
+      <h3>${c.id} · ${esc(c.title)}</h3>
+      <p>${c.brief}</p>
+    </div>
+    ${c.targetOnly ? '<div></div>' : today}
+    ${target}
+  </div>`;
+}
+
+function measure() {
+  document.querySelectorAll('.col').forEach(col => {
+    const pop = col.querySelector('.popover');
+    const out = col.querySelector('[data-readout]');
+    if (!pop || !out) return;
+    const scroll = pop.querySelector('.scroll');
+    const scrolls = scroll.scrollHeight - scroll.clientHeight > 1;
+    const h = Math.round(pop.getBoundingClientRect().height);
+    const isToday = pop.classList.contains('today');
+    let pill;
+    if (isToday) {
+      // Waste is measured against this same case's target column, which IS the
+      // content height — not against scrollHeight, which flex has already stretched.
+      const twin = col.parentElement.querySelector('.col.target .popover');
+      const waste = twin ? Math.max(0, 320 - Math.round(twin.getBoundingClientRect().height)) : 0;
+      pill = scrolls
+        ? '<span class="pill scrolls">scrolls</span>'
+        : '<span class="pill waste">' + waste + 'pt empty</span>';
+    } else {
+      pill = scrolls
+        ? '<span class="pill scrolls">scroller shown</span>'
+        : '<span class="pill fits">no scroller</span>';
+    }
+    out.innerHTML = 'height <span class="n">' + h + 'pt</span>' + pill;
+  });
+}
+
+function renderAll() {
+  document.getElementById('ladder').innerHTML = CASES.map(caseHTML).join('');
+  document.getElementById('edges').innerHTML = EDGES.map(caseHTML).join('');
+  document.getElementById('anti').innerHTML = antiHTML();
+  applyCols();
+  requestAnimationFrame(measure);
+}
+
+// --- anti-patterns -------------------------------------------------------
+function antiHTML() {
+  const c = CASES[2]; // four refusals — the thin case
+  const greedy = popoverHTML(c,'today').replace('class="popover today"','class="popover today"');
+  return `<div class="case">
+    <div class="brief">
+      <span class="tag edge">trap</span>
+      <h3>The greedy ScrollView</h3>
+      <p class="bad"><b>Wrong.</b> <code>ScrollView { body }.frame(maxHeight: 320)</code> looks like the fix and is
+      byte-for-byte today’s bug: SwiftUI’s <code>ScrollView</code> is greedy along its scroll axis, so it claims
+      the whole ceiling for four rows and the shrink never happens.</p>
+      <p class="good"><b>Right.</b> The unscrolled body is what gets measured; the scroller is a
+      <i>fallback</i> chosen only when that body doesn’t fit. <code>MCPAgentsSettingsView.swift:458</code>
+      records this same trap one floor up.</p>
+    </div>
+    <div class="col"><span class="col-label">Greedy — indistinguishable from today</span>
+      <div class="stage nocap">${greedy}</div></div>
+    <div class="col"><span class="col-label">Fallback-only — the target</span>
+      <div class="stage nocap">${popoverHTML(c,'target')}</div></div>
+  </div>`;
+}
+
+// --- chrome --------------------------------------------------------------
+let colMode = 0; // 0 both, 1 today, 2 target
+function cycleCols(btn) {
+  colMode = (colMode + 1) % 3;
+  btn.textContent = ['Both columns','Today only','Target only'][colMode];
+  btn.classList.toggle('on', colMode !== 0);
+  applyCols();
+  measure();
+}
+function applyCols() {
+  document.querySelectorAll('.case').forEach(cs => {
+    const t = cs.querySelector('.col.today'), g = cs.querySelector('.col.target');
+    if (t) t.classList.toggle('hidden', colMode === 2);
+    if (g) g.classList.toggle('hidden', colMode === 1);
+  });
+}
+function toggle(cls, btn) {
+  document.body.classList.toggle(cls);
+  btn.classList.toggle('on', document.body.classList.contains(cls));
+  requestAnimationFrame(measure);
+}
+function setLocale(l) {
+  LOCALE = l;
+  document.getElementById('t-en').classList.toggle('on', l === 'en');
+  document.getElementById('t-de').classList.toggle('on', l === 'de');
+  renderAll();
+}
+renderAll();
+window.addEventListener('resize', measure);
+</script>
+
+<p class="note">
+  <b>Approximation, not pixel truth.</b> Native point sizes and SF so wrapping is a fair preview;
+  the file column truncates at the end here, natively it truncates in the middle
+  (<code>.truncationMode(.middle)</code>). Glyphs stand in for
+  <code>exclamationmark.triangle.fill</code> / <code>xmark.circle.fill</code> at their
+  <code>MessageKind</code> tints — nothing settled is changed. The reason column renders
+  <code>cause.message</code>, which is English on the wire by design
+  (<code>bristlenose/refusals.py</code>); the German toggle therefore moves the chrome only,
+  which is itself worth seeing.
+</p>
+
+</body>
+</html>

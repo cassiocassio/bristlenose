@@ -11,9 +11,10 @@ import SwiftUI
 /// natural run affordance + Settings. The reduced-fidelity `.failed` path (no
 /// `PipelineSummary`) renders `degradedBody`.
 ///
-/// The presenter supplies the size (`.padding(16).frame(width:360,height:320)`)
-/// so the popover envelope matches wherever it's anchored. `showLog()` dismisses
-/// via `@Environment(\.dismiss)`.
+/// **The view owns its own size** — presenters must not pass a frame. Width is
+/// nailed at `Self.width`; height is the content's, capped at `Self.ceiling`.
+/// See `docs/design-pipeline-popover-sizing.md`. `showLog()` dismisses via
+/// `@Environment(\.dismiss)`.
 ///
 /// The static plaintext/overflow formatters below are the canonical home for the
 /// copy-plaintext + overflow-plural logic — unit-tested directly.
@@ -24,46 +25,93 @@ struct ProjectDiagnosticPopover: View {
     @EnvironmentObject var i18n: I18n
     @Environment(\.dismiss) private var dismiss
 
+    /// Total popover width, the 16pt inset included — the column the copy is
+    /// written to. Fixed: only the height moves.
+    static let width: CGFloat = 360
+    /// A **maximum**, not a height. 320 was the shipped fixed height and is a
+    /// good ceiling (it seats roughly seven wrapping rows) and a bad floor —
+    /// four refusals left nearly half the box empty.
+    static let ceiling: CGFloat = 320
+    /// The popover's inset. Inside the envelope, so `width` is the total.
+    private static let inset: CGFloat = 16
+
+    /// Height follows content, capped at `ceiling`; the scroller appears only
+    /// when the cap is actually reached.
+    ///
+    /// **Candidate order is load-bearing.** The un-scrolled body comes first so
+    /// a short diagnostic sizes the popover to itself. The `ScrollView` is the
+    /// FALLBACK and must stay last, because it is greedy along its scroll axis:
+    /// put it first and it "fits" every proposal, the ladder never engages, and
+    /// you have rebuilt the fixed box (`MCPAgentsSettingsView.swift` records the
+    /// same trap one floor up). For the same reason the first candidate must
+    /// never gain a `Spacer()`, a `maxHeight: .infinity`, or a `.fixedSize` —
+    /// see `WelcomeDegradationLab.swift` and `WelcomeHomeView.swift`.
+    ///
+    /// The choice is made in-pass, so there is no measured height fed back into
+    /// the measured subtree — which is what keeps this clear of the NSPopover
+    /// resize-animation livelock the old fixed frame was mitigating (QA, 20 Apr
+    /// 2026). That mitigation was for the live activity pill's `ProgressView`;
+    /// this popover renders terminal states only and its body is a pure function
+    /// of `state` — `liveData` is read solely by the copy action.
     var body: some View {
+        ViewThatFits(in: .vertical) {
+            shell { diagnosticBody }
+            shell { ScrollView { diagnosticBody } }
+        }
+        .frame(width: Self.width)
+        .frame(maxHeight: Self.ceiling)
+    }
+
+    /// Header + body at the popover's inset. Both candidates are this shell;
+    /// they differ only in whether the body scrolls, so the header never does.
+    private func shell(@ViewBuilder _ content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Text(headlineStatus).font(.headline)
-                Spacer()
-                if FileManager.default.fileExists(
-                    atPath: PipelineRunner.logFileURL(for: project).path
-                ) {
-                    Button(i18n.t("desktop.pipeline.diagnostic.action.showLog")) {
-                        showLog()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .help(i18n.t("desktop.pipeline.diagnostic.action.showLogTooltip"))
-                }
-                Button {
-                    copyDiagnosticForCurrentState()
-                } label: {
-                    Image(systemName: "doc.on.doc")
+            header
+            content()
+        }
+        .padding(Self.inset)
+    }
+
+    private var header: some View {
+        HStack(spacing: 8) {
+            Text(headlineStatus).font(.headline)
+            Spacer()
+            if FileManager.default.fileExists(
+                atPath: PipelineRunner.logFileURL(for: project).path
+            ) {
+                Button(i18n.t("desktop.pipeline.diagnostic.action.showLog")) {
+                    showLog()
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-                .help(i18n.t("desktop.pipeline.diagnostic.action.copy"))
+                .help(i18n.t("desktop.pipeline.diagnostic.action.showLogTooltip"))
             }
-            ScrollView {
-                #if DEBUG
-                if isAllGlyphsSwatchMode {
-                    allGlyphsSwatch
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } else if isAllStatesContextMode {
-                    allStatesContext
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    popoverBodyForCurrentState()
-                }
-                #else
-                popoverBodyForCurrentState()
-                #endif
+            Button {
+                copyDiagnosticForCurrentState()
+            } label: {
+                Image(systemName: "doc.on.doc")
             }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .help(i18n.t("desktop.pipeline.diagnostic.action.copy"))
         }
+    }
+
+    @ViewBuilder
+    private var diagnosticBody: some View {
+        #if DEBUG
+        if isAllGlyphsSwatchMode {
+            allGlyphsSwatch
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else if isAllStatesContextMode {
+            allStatesContext
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            popoverBodyForCurrentState()
+        }
+        #else
+        popoverBodyForCurrentState()
+        #endif
     }
 
     private var headlineStatus: String {

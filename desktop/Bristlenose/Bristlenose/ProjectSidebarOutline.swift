@@ -1823,11 +1823,16 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         guard let project = projectIndex?.projects.first(where: { $0.id == id }),
               let state = pipelineRunner?.state[id],
               let liveData, let i18n else { return }
+        // No frame, no padding: the popover owns its own size. The hosting
+        // controller reports it through `fittingSize`, which is what NSPopover
+        // sizes from — `.preferredContentSize` set explicitly so the controller
+        // publishes that size rather than inheriting an ambient one.
+        // `docs/design-pipeline-popover-sizing.md`.
         let content = ProjectDiagnosticPopover(project: project, state: state, liveData: liveData)
             .environmentObject(i18n)
-            .padding(16)
-            .frame(width: 360, height: 320)
-        showRowPopover(NSHostingController(rootView: content), at: rect)
+        let host = NSHostingController(rootView: content)
+        host.sizingOptions = .preferredContentSize
+        showRowPopover(host, at: rect)
     }
 
     /// Build + show the icon-picker popover (context-menu "Choose Icon…"); a pick

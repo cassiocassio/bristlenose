@@ -416,11 +416,12 @@ struct ProjectRow: View {
             }
             .popover(isPresented: $isShowingDiagnostics, arrowEdge: .trailing) {
                 if let state = pipelineState {
+                    // No frame, no padding: the popover owns its own size —
+                    // height follows content, capped at its ceiling.
+                    // `docs/design-pipeline-popover-sizing.md`.
                     ProjectDiagnosticPopover(
                         project: project, state: state, liveData: liveData
                     )
-                    .padding(16)
-                    .frame(width: 360, height: 320)
                 }
             }
             .accessibilityHidden(true)

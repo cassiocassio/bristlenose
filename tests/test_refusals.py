@@ -219,3 +219,139 @@ class TestSilentSessionsAreStated:
         # NO_SPEECH is the sixth; the table must keep pace with the enum.
         for reason in UnusableReason:
             assert MESSAGES[reason].strip(), reason
+
+
+class TestTranscribeOnlyStatesSilenceToo:
+    """`transcribe-only` must tell the same story `run` does.
+
+    The fix on 20 Aug 2026 (`6497711a`) landed in ``Pipeline.run`` and not in
+    its sibling ``run_transcription_only``, whose rollup kept a comment reading
+    "Mirror the run() rollup" while mirroring the shape from *before* that
+    commit. The manifestation differs and costs the same participant: ``run``
+    reported ``57/57`` and hid the loss behind a clean sweep, while
+    ``transcribe-only`` reported ``42/57`` with an empty ``failed`` list — a
+    visible gap with no account of which files or why.
+
+    Reachable through ``bristlenose transcribe-only``; the desktop renders
+    these runs (``EventLogReader.swift``). Neither existing net watched it —
+    the acceptance matrix drives only ``run``, and the corpus-through-the-app
+    walk in docs/design-analysis-lifecycle.md §5.3 triggers ``run()``.
+    """
+
+    @staticmethod
+    def _sessions(tmp_path: Path, n: int) -> list:
+        from datetime import datetime, timezone
+
+        from bristlenose.models import FileType, InputFile, InputSession
+
+        out = []
+        for i in range(1, n + 1):
+            media = tmp_path / f"rec{i}.wav"
+            media.write_bytes(b"fake")
+            out.append(InputSession(
+                session_id=f"s{i}",
+                session_number=i,
+                participant_id=f"p{i}",
+                participant_number=i,
+                session_date=datetime.now(timezone.utc),
+                files=[InputFile(
+                    path=media,
+                    file_type=FileType.AUDIO,
+                    created_at=datetime.now(timezone.utc),
+                    size_bytes=4,
+                    duration_seconds=60.0,
+                )],
+                audio_path=media,
+            ))
+        return out
+
+    @staticmethod
+    def _segment():
+        from bristlenose.models import SpeakerRole, TranscriptSegment
+
+        return TranscriptSegment(
+            segment_index=0,
+            start_time=0.0,
+            end_time=5.0,
+            text="I could not find the checkout button.",
+            speaker_role=SpeakerRole.PARTICIPANT,
+        )
+
+    def _run(self, tmp_path: Path, speaking: set[str], n: int = 3):
+        """Drive run_transcription_only with a chosen set of speaking sessions.
+
+        ``_gather_all_segments`` is the seam, for the same reason
+        test_pipeline_abandon.py patches the transcribe stage rather than the
+        backend: the contract under test is the rollup's reaction to a given
+        (segments, outcome) pair, not the Whisper wiring.
+        """
+        import asyncio
+        from unittest.mock import MagicMock, patch
+
+        from bristlenose.pipeline import Pipeline
+
+        settings = MagicMock()
+        settings.project_name = "silent-mix"
+        settings.write_intermediate = False
+        settings.color_scheme = "default"
+        pipeline = Pipeline(settings)
+
+        input_dir = tmp_path / "in"
+        input_dir.mkdir()
+        output_dir = tmp_path / "out"
+        sessions = self._sessions(input_dir, n)
+
+        async def _fake_gather(_self, _sessions, **_kw):
+            segs = {
+                s.session_id: ([self._segment()] if s.session_id in speaking else [])
+                for s in _sessions
+            }
+            return segs, StageOutcome(attempted=len(_sessions), succeeded=len(speaking))
+
+        async def _passthrough(sess, _tmp, **_kw):
+            return sess
+
+        with (
+            patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
+            patch(
+                "bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
+                new=_passthrough,
+            ),
+            patch.object(Pipeline, "_gather_all_segments", new=_fake_gather),
+        ):
+            asyncio.run(pipeline.run_transcription_only(input_dir, output_dir))
+        return pipeline._summary.transcripts
+
+    def test_a_silent_session_is_named_not_merely_missing(self, tmp_path: Path) -> None:
+        # Two of three recordings have speech. The third must be *stated*,
+        # not left as the arithmetic difference between two numbers.
+        outcome = self._run(tmp_path, speaking={"s1", "s2"})
+
+        assert outcome is not None
+        assert outcome.attempted == 3
+        assert outcome.succeeded == 2
+
+        silent = [f for f in outcome.failed
+                  if f.cause.message == MESSAGES[UnusableReason.NO_SPEECH]]
+        assert len(silent) == 1, (
+            f"the silent session went unstated: failed={outcome.failed!r}"
+        )
+        assert silent[0].session_id == "s3"
+        # The name is the whole point — a count says something is missing,
+        # only the filename says which participant.
+        assert silent[0].source_file == "rec3.wav"
+
+    def test_the_summary_accounts_for_every_session(self, tmp_path: Path) -> None:
+        # attempted == succeeded + failed. On the pre-fix code this read
+        # 3 == 2 + 0, which is the gap the researcher sees and cannot explain.
+        outcome = self._run(tmp_path, speaking={"s1", "s2"})
+        assert outcome.attempted == outcome.succeeded + len(outcome.failed)
+
+    def test_an_all_silent_folder_is_reported_not_abandoned(self, tmp_path: Path) -> None:
+        # `run` treats this as a stated outcome rather than a crash; the
+        # sibling must agree. Pre-fix, succeeded==0 tripped the abandon
+        # predicate and the researcher got an error instead of an answer.
+        outcome = self._run(tmp_path, speaking=set())
+        assert outcome.succeeded == 0
+        assert len(outcome.failed) == 3
+        assert outcome.attempted == outcome.succeeded + len(outcome.failed)

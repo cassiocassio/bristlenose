@@ -2021,20 +2021,53 @@ class Pipeline:
             session_segments, _transcript_outcome_t = await self._gather_all_segments(
                 sessions, on_progress=_on_transcribe_progress
             )
-            # Mirror the run() rollup: one attempt per session, success when
-            # segments are non-empty. Whisper failures already flowed in via
-            # _gather_all_segments.
+            # Mirror the run() rollup — and it must be the *post-6497711a*
+            # shape, not the one this comment used to describe. Counting
+            # success as "has segments" is right as far as it goes, but it
+            # leaves a silent recording in no bucket at all: excluded from
+            # `succeeded` because it has no words, absent from `failed`
+            # because nothing raised. The researcher gets `42/57` and no
+            # account anywhere of which fifteen files or why — outcome 3 in
+            # docs/design-analysis-lifecycle.md §5.1, reached by a different
+            # road than run()'s `57/57` but costing the same participant.
+            #
+            # Two things follow, both mirrored from run(): a silent session is
+            # *stated* as NO_SPEECH rather than merely omitted, and it is kept
+            # out of the abandon predicate — a folder of entirely silent
+            # recordings is an outcome to report, not a crash.
+            _failed_sids_t = {
+                f.session_id for f in _transcript_outcome_t.failed
+                if f.session_id is not None
+            }
+            _silent_sids_t = {
+                s.session_id for s in sessions
+                if s.session_id not in _failed_sids_t
+                and not session_segments.get(s.session_id)
+            }
+            _silent_failures_t = [
+                refusal_stage_failure(
+                    source_file=next((f.path.name for f in s.files), s.session_id),
+                    reason=UnusableReason.NO_SPEECH,
+                    stage="s05_transcribe",
+                    session_id=s.session_id,
+                )
+                for s in sessions if s.session_id in _silent_sids_t
+            ]
+            _succeeded_sids_t = [
+                s.session_id for s in sessions
+                if s.session_id not in _failed_sids_t
+                and s.session_id not in _silent_sids_t
+            ]
             self._summary.transcripts = StageOutcome(
                 attempted=len(sessions),
-                succeeded=sum(
-                    1 for s in sessions if session_segments.get(s.session_id)
-                ),
-                failed=list(_transcript_outcome_t.failed),
+                succeeded=len(_succeeded_sids_t),
+                failed=list(_transcript_outcome_t.failed) + _silent_failures_t,
                 duration_ms=int((time.perf_counter() - t0) * 1000),
             )
             if (
                 self._summary.transcripts.attempted > 0
                 and self._summary.transcripts.succeeded == 0
+                and not _silent_sids_t
             ):
                 raise PipelineAbandonedError(
                     cause=_dominant_cause(

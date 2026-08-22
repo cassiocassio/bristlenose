@@ -22,43 +22,39 @@ the reason and nothing else.
 
 from __future__ import annotations
 
-from enum import Enum
 from pathlib import Path
 
-from bristlenose.events import Cause, CauseCategoryEnum, StageFailure
+from bristlenose.events import Cause, CauseCategoryEnum, StageFailure, UnusableReason
 
-
-class UnusableReason(str, Enum):
-    """Why one input file isn't in the report."""
-
-    #: Extension we don't accept. A decision, not a defect.
-    UNSUPPORTED_FORMAT = "unsupported_format"
-    #: Zero bytes on disk — the everyday shape of a failed upload.
-    EMPTY = "empty"
-    #: Has a recognisable container header but won't decode: the tail is
-    #: missing. A part-sent file share, a cancelled download.
-    INCOMPLETE = "incomplete"
-    #: No container header at all. Something else is wearing a media
-    #: extension — a text file, a PDF, an HTML error page saved by a browser.
-    NOT_A_RECORDING = "not_a_recording"
-    #: Decodes fine, carries no audio stream. Nothing to transcribe.
-    NO_AUDIO = "no_audio"
-    #: A directory we were not allowed to open (``~/.Trash`` is the everyday
-    #: one). Recorded and stepped over, never fatal.
-    UNREADABLE_FOLDER = "unreadable_folder"
-    #: Decoded and transcribed fine, and produced no words. A sound effect, a
-    #: test tone, a recording of a room. Distinct from ``NO_AUDIO``: there IS an
-    #: audio stream, it simply has nobody talking in it.
-    NO_SPEECH = "no_speech"
-    #: Couldn't be read and we can't say more than that.
-    UNREADABLE = "unreadable"
+#: Re-exported so the many ``from bristlenose.refusals import UnusableReason``
+#: call sites keep working. The definition moved to ``events.py`` in Aug 2026
+#: because the reason is now **on the wire** (``Cause.reason``) and ``refusals``
+#: imports ``events``, so it could not stay here without a cycle.
+__all__ = [
+    "MESSAGES",
+    "UnusableReason",
+    "classify_unreadable",
+    "looks_like_a_recording",
+    "stage_failure",
+]
 
 
 #: One short sentence per reason. Deliberately specific — "the file is empty"
 #: and "isn't a recording" send the researcher to different places (re-request
 #: the upload / check what they actually attached), which a shared "couldn't be
-#: read" would not. English-only, like every other `Cause.message`; the
-#: user-facing surfaces localise from the reason, not from this text.
+#: read" would not.
+#:
+#: English-only, like every other `Cause.message` — the events log is a forensic
+#: record, so a run analysed while the UI was German must not read as German
+#: forever. The user-facing surfaces localise from `Cause.reason`, not from this
+#: text: `desktop.pipeline.diagnostic.reason.<value>` in the locale files, keyed
+#: by the same enum. **This text stays the English source of truth** for the CLI
+#: (`_print_refusals`), the log lines in s01/s02, and any reader that predates
+#: the `reason` field.
+#:
+#: Keep the two in step: a new reason needs an entry here *and* a key in all 21
+#: full locales. `tests/test_pipeline_diagnostic_locale_keys.py` enforces the
+#: second half and `test_refusals.py` the first.
 MESSAGES: dict[UnusableReason, str] = {
     UnusableReason.UNSUPPORTED_FORMAT: "Not a format Bristlenose reads.",
     UnusableReason.EMPTY: "The file is empty — the transfer produced no data.",
@@ -157,6 +153,10 @@ def stage_failure(
         cause=Cause(
             category=CauseCategoryEnum.UNUSABLE_INPUT,
             message=MESSAGES[reason],
+            # Both, deliberately. `reason` is what the desktop localises from;
+            # `message` is the English a CLI user reads, an older desktop build
+            # falls back to, and a bug report gets pasted with.
+            reason=reason,
             stage=stage,
             session_id=session_id,
         ),

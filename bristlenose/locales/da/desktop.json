@@ -325,7 +325,17 @@
       },
       "noStructuredCause": "Detaljeret årsag ikke registreret.",
       "overflow_one": "… og {{count}} yderligere fejl blev afkortet",
-      "overflow_other": "… og {{count}} yderligere fejl blev afkortet"
+      "overflow_other": "… og {{count}} yderligere fejl blev afkortet",
+      "reason": {
+        "unsupported_format": "Ikke et format, Bristlenose kan læse.",
+        "empty": "Filen er tom — overførslen gav ingen data.",
+        "incomplete": "Filen er ufuldstændig — overførslen stoppede for tidligt.",
+        "not_a_recording": "Trods filendelsen er det ikke en optagelse.",
+        "no_audio": "Ingen lyd i denne fil — der er intet at transskribere.",
+        "no_speech": "Ingen tale fundet — der blev ikke sagt noget i denne optagelse.",
+        "unreadable_folder": "Denne mappe kunne ikke åbnes.",
+        "unreadable": "Filen kunne ikke læses."
+      }
     }
   },
   "availability": {

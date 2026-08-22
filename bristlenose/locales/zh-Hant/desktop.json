@@ -307,7 +307,17 @@
         "completed_partial": "{{project}} 的分析已完成，但有失敗"
       },
       "noStructuredCause": "未擷取到詳細原因。",
-      "overflow_other": "…另有 {{count}} 則失敗被截斷"
+      "overflow_other": "…另有 {{count}} 則失敗被截斷",
+      "reason": {
+        "unsupported_format": "Bristlenose 無法讀取的格式。",
+        "empty": "檔案是空的 — 傳輸未產生任何資料。",
+        "incomplete": "檔案不完整 — 傳輸提前中斷。",
+        "not_a_recording": "儘管副檔名如此，這並不是錄音。",
+        "no_audio": "這個檔案沒有聲音 — 沒有可轉錄的內容。",
+        "no_speech": "找不到語音 — 這段錄音中沒有人說話。",
+        "unreadable_folder": "無法打開這個檔案夾。",
+        "unreadable": "無法讀取這個檔案。"
+      }
     }
   },
   "availability": {

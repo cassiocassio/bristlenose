@@ -61,6 +61,7 @@ trued-against: HEAD@main (5a380eab) on 2026-08-22
 
 ## Changelog
 
+- _2026-08-22_ — **The reason column started speaking the reader's language.** The pane was half-translated and had been since it shipped: header, count line, bucket labels and Show Log all resolved through `i18n.t`, while the sentence that actually says *why a participant is missing from the findings* rendered English in all 21 non-en locales. Not an oversight — there was nothing to translate **from**. All eight refusals share one `category`, and the discriminator lived only in the English prose of `Cause.message`, so the pane had no key to look up. `refusals.py` had promised the opposite in a comment since Aug 2026 — *"the user-facing surfaces localise from the reason, not from this text"* — describing a field that did not exist. It does now: `Cause.reason` carries `UnusableReason` on the wire (Python `events.py`, Swift `PipelineSummary.swift`, contract fixture **v7** with `run_completed_partial_refusals`, the first scenario to pin a refusal at all — the ingest bucket had shipped uncovered by that contract). `message` stays English on purpose: the events log is a forensic record, so a run analysed while the UI was German must not read as German forever, and `formatDiagnosticPlaintext` keeps the raw English so a pasted bug report reads the same whatever the reporter's language. **Three blind spots made this invisible.** `check-locales.py` diffs each locale against English and so cannot report a key English lacks; `test_pipeline_diagnostic_locale_keys.py` checks hardcoded allow-lists; and `test_swift_contract_parity.py` compares only the *intersection* of fields, so adding `reason` to Python alone would have passed every gate in the repo. The new locale test parametrises over `UnusableReason` itself, which closes the first two for this family — a ninth reason cannot ship without 21 translations. Anchors: `events.py::Cause.reason`, `ProjectDiagnosticPopover.reasonKey` / `.localisedReason`, `IngestOutcomeTests::ReasonLocalisationTests` (21 locales × 8 reasons, plus zh-Hant-HK inheriting rather than dropping to English). Does **not** touch the adjacent open defect in the banner above — a refusal-only run still collapses to `.unknown` and the pill still reads "Run had failures". Find it: `git log -S'localisedReason' --`.
 - _2026-08-22_ — **The popover envelope stopped being fixed, and this doc stopped saying it was.** Height now follows content, 360 stays nailed, 320 becomes a ceiling with a scroller only past it. Two sections here asserted the opposite and both are rewritten: the cross-surface conventions list (which also cited `PipelineActivityItem.swift` ≈ 59–63, a file deleted with the pill) and the Resizeability paragraph under Future direction — which had *already predicted* this outcome, listing "a capped height with internal scroll" as the mitigation, so the rewrite reads as that option being taken rather than a reversal. The livelock provenance is preserved in both, as history: the fixed frame was mitigating an NSPopover resize-animation livelock in the live pill's `ProgressView`, and both the pill and the `ProgressView` are gone, leaving a mitigation with nothing to defend. Reasoning, the behaviour ladder, six failure modes and the mockup: [`design-pipeline-popover-sizing.md`](design-pipeline-popover-sizing.md). Commit `5a380eab`.
 - _2026-08-20_ — **What the pane actually rendered, once someone looked at it.** The 19 Aug entry below recorded three decisions; a screenshot of the first real run showed none of them had reached the rendering. (1) The name column read `sessionId` alone, so every *ingest* refusal — the case `source_file` was added for, because a failure before a session exists never gets a session id — rendered **anonymous**. Three rows saying "Not a format Bristlenose reads." and naming nothing is a count with extra steps, which is the outcome this surface exists to end. Same in `formatDiagnosticPlaintext`, where a pasted bug report showed `—`. (2) Every row was hardcoded `MessageKind.error`; refusals are **warnings**, and error red beside 42 good sessions says the run died. (3) `"\(n) failures"` was a bare Swift literal — untranslated in an otherwise localised pane, and the wrong noun. Now `notAnalysedCount` / `failureCount`, chosen by `bucketCountKey` (a pure function, so the *decision* is testable — the first version of that test asserted on the rendered string and silently checked the key name, because an unconfigured `I18n` returns raw keys). A sixth reason landed the same day: `NO_SPEECH`, for a recording that decoded and transcribed fine with nobody talking — distinct from `NO_AUDIO`, since the remedies differ. Commits `04bf7a23`, `6497711a`.
 - _2026-08-19_ — **`UNUSABLE_INPUT` added; the `ingest` bucket reaches the popover; every toast deleted.** Refusals and damaged files had nowhere to go — `PipelineSummary` had buckets for transcripts / topics / quotes / themes and nothing for stages 1–2, so `StageFailure.source_file` (added Jul 2026 for exactly this) had no slot. The new bucket renders **first** and is labelled **Files**, not "Ingest": `BucketName.label` replaced `rawValue.capitalized`, which happened to be legible for four nouns it was never asked to translate. A declined format and an unreadable file share one category because they share a consequence — a participant missing from the findings — and differ only in `Cause.message`; both read as **WARNING**, never `skipped`, because a policy decision must not rank below a defect when the researcher is chasing a missing interview. The **two-mirror trap** the 15 Jul entry names bit again in a new place: `PipelineFailureCategory` and `PipelineSummary::CauseCategory` are *different case sets* and both decoded unknown values by throwing, so one unmirrored word failed the whole terminus event. Both now fall back to `.unknown`; adding cases does not prevent the next one. Separately, **all six `desktop.toast.*` messages were removed** — see the retired row in the display-kind catalogue and the new anti-pattern. Anchors: `bristlenose/refusals.py`, `events.py` `_OUTCOME_FIELDS`, `PipelineSummary.swift`, `ProjectDiagnosticPopover.humanCategoryLabel`; commits `7a09ce88`, `5598bd39`, `3acfcef0`.
@@ -502,10 +503,12 @@ When you find yourself wanting to surface a new error, status, or note,
    1. `bristlenose/events.py::CauseCategoryEnum` (the single source) **and**
       its `_RETRYABLE` entry — the dict is indexed directly, so a missing
       entry is a `KeyError`, not a default.
-   2. `PipelineSummary.swift::CauseCategory` — **the wire decoder.** It's a
-      plain `String, Codable` with no custom `init(from:)`, so an unknown
-      raw value makes the *whole* `PipelineSummary` decode fail — the
-      diagnostic vanishes rather than degrading.
+   2. `PipelineSummary.swift::CauseCategory` — **the wire decoder.** Since
+      Aug 2026 it has a custom `init(from:)` that decodes an unknown raw
+      value as `.unknown` rather than throwing (see the callout below for
+      what that cost before). So a missing case no longer vanishes the
+      diagnostic — it renders under the wrong label, which is quieter and
+      still wrong. Add the case.
    3. `PipelineRunner.swift::PipelineFailureCategory` — the *other* Swift
       mirror (row summary + popover label). Both `humanSummary` and
       `ProjectDiagnosticPopover.humanCategoryLabel` switch over it
@@ -515,6 +518,27 @@ When you find yourself wanting to surface a new error, status, or note,
    5. The pill-label locale namespace (`desktop.pipeline.diagnostic.pill.*`).
 
    A new toast surface needs `ToastStore.show(_, kind:)`.
+
+   **A new *refusal reason* is a different, smaller change — three sites, and
+   one of them is 21 files.** `UnusableReason` (`bristlenose/events.py`, since
+   Aug 2026; `refusals.py` re-exports it) discriminates *within*
+   `unusable_input`, so none of the five sites above apply — the category
+   already exists. What it needs is:
+
+   1. the enum value, and its sentence in `refusals.py::MESSAGES` — indexed
+      directly, so a missing entry is a `KeyError`, not a default;
+   2. `desktop.pipeline.diagnostic.reason.<value>` in **all 21 full locales**
+      (not `zh-Hant-HK`, which inherits — see the locale-key inventory below);
+   3. nothing on the Swift side. `Cause.reason` is a `String?` and the popover
+      builds the key from it, so a new reason needs no Mac change at all.
+
+   Site 2 is the one that will be forgotten, and `scripts/check-locales.py`
+   **cannot** tell you: it diffs each locale against English, so a key English
+   itself is missing is invisible by construction. The gate that does see it is
+   `tests/test_pipeline_diagnostic_locale_keys.py::test_every_unusable_reason_has_a_localised_string`,
+   which parametrises over the enum rather than an allow-list precisely so the
+   obligation cannot be dropped — add a ninth reason and 21 tests go red on the
+   same commit.
 
    > **The two-mirror trap (learned the hard way, Jul 2026).** One Python enum,
    > *two* Swift mirrors. Adding `out_of_credit` to `events.py` +
@@ -740,9 +764,15 @@ Shipped on this branch, in all six `desktop.json` locale files:
 - `desktop.pipeline.diagnostic.noStructuredCause` — degraded-body hint line ("Detailed cause not captured.") rendered under EventLogReader's reader string in the `.failed` body. Shipped on `unify-failure-popover` (May 2026).
 - `desktop.pipeline.diagnostic.tooltip.completed_partial` — pill help text for `.completedPartial`. Wording uses "Analysis" not "Pipeline" — see the *User-facing vocabulary* note below.
 - `desktop.pipeline.diagnostic.overflow_one` / `_other` — CLDR-plural-keyed truncation marker (en/es/fr/de carry both forms; ko/ja carry `_other` only)
+- `desktop.pipeline.diagnostic.reason.{unsupported_format, empty, incomplete, not_a_recording, no_audio, no_speech, unreadable_folder, unreadable}` — **added 22 Aug 2026**, the sentence that says why a file isn't in the report. Keyed by `UnusableReason` raw value, same convention as `pill.*`. Ships in all 21 full locales; `zh-Hant-HK` deliberately carries none — these eight sentences have no HK-idiom divergence, so seeding them there would pin the fork and break the `zh-Hant-HK → zh-Hant` inheritance that `ReasonLocalisationTests.zhHantHKInheritsRatherThanFallingBackToEnglish` pins.
 
-ja remains machine-fill English stub pending the native-friend
-translation playbook.
+> **The counts above are the May 2026 state and are no longer literal.** "All
+> six `desktop.json` locale files" is now 21 full locales plus the `zh-Hant-HK`
+> override, and the two "`en` only so far" / "machine-fill English stub"
+> caveats are spent — `ja` is a full locale and `pill.*` ships everywhere
+> (`test_pill_categories_present` pins it). Left in place rather than rewritten
+> because the section is dated and reads as history; the live answer is always
+> `scripts/check-locales.py` plus `tests/test_pipeline_diagnostic_locale_keys.py`.
 
 ### User-facing vocabulary: "Analysis", not "Pipeline"
 

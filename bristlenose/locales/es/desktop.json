@@ -325,7 +325,17 @@
       },
       "noStructuredCause": "Causa detallada no registrada.",
       "overflow_one": "\u2026 y {{count}} fallo m\u00e1s truncado",
-      "overflow_other": "\u2026 y {{count}} fallos m\u00e1s truncados"
+      "overflow_other": "\u2026 y {{count}} fallos m\u00e1s truncados",
+      "reason": {
+        "unsupported_format": "No es un formato que Bristlenose pueda leer.",
+        "empty": "El archivo está vacío — la transferencia no produjo datos.",
+        "incomplete": "El archivo está incompleto — la transferencia se detuvo antes de tiempo.",
+        "not_a_recording": "No es una grabación, a pesar de la extensión del archivo.",
+        "no_audio": "Este archivo no tiene sonido — no hay nada que transcribir.",
+        "no_speech": "No se encontró habla — nadie dijo nada en esta grabación.",
+        "unreadable_folder": "No se ha podido abrir esta carpeta.",
+        "unreadable": "No se ha podido leer el archivo."
+      }
     }
   },
   "availability": {

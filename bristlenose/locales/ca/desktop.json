@@ -325,7 +325,17 @@
       },
       "noStructuredCause": "No s'ha capturat la causa detallada.",
       "overflow_one": "… i {{count}} error més truncat",
-      "overflow_other": "… i {{count}} errors més truncats"
+      "overflow_other": "… i {{count}} errors més truncats",
+      "reason": {
+        "unsupported_format": "No és un format que Bristlenose pugui llegir.",
+        "empty": "El fitxer és buit — la transferència no ha produït cap dada.",
+        "incomplete": "El fitxer és incomplet — la transferència s'ha aturat abans d'hora.",
+        "not_a_recording": "No és un enregistrament, malgrat l'extensió del fitxer.",
+        "no_audio": "Aquest fitxer no té so — no hi ha res a transcriure.",
+        "no_speech": "No s'hi ha trobat parla — ningú no hi ha dit res en aquest enregistrament.",
+        "unreadable_folder": "No s'ha pogut obrir aquesta carpeta.",
+        "unreadable": "No s'ha pogut llegir el fitxer."
+      }
     }
   },
   "availability": {

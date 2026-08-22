@@ -361,7 +361,17 @@
       "overflow_one": "… oraz {{count}} kolejne niepowodzenie pominięto",
       "overflow_few": "… oraz {{count}} kolejne niepowodzenia pominięto",
       "overflow_many": "… oraz {{count}} kolejnych niepowodzeń pominięto",
-      "overflow_other": "… oraz {{count}} kolejnych niepowodzeń pominięto"
+      "overflow_other": "… oraz {{count}} kolejnych niepowodzeń pominięto",
+      "reason": {
+        "unsupported_format": "To nie jest format, który Bristlenose potrafi odczytać.",
+        "empty": "Plik jest pusty — transfer nie przyniósł żadnych danych.",
+        "incomplete": "Plik jest niekompletny — transfer zatrzymał się przedwcześnie.",
+        "not_a_recording": "Mimo rozszerzenia to nie jest nagranie.",
+        "no_audio": "Brak dźwięku w tym pliku — nie ma czego transkrybować.",
+        "no_speech": "Nie znaleziono mowy — w tym nagraniu nikt nic nie powiedział.",
+        "unreadable_folder": "Nie udało się otworzyć tego folderu.",
+        "unreadable": "Nie udało się odczytać pliku."
+      }
     }
   },
   "availability": {

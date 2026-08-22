@@ -130,14 +130,25 @@ to exist; it just has to stop being the only mode.
 - **E2 · One block taller than the ceiling.** `CAUSE_MESSAGE_MAX` is 4096 bytes
   (`events.py:37`), so a raw provider error in the degraded body can exceed the
   ceiling on its own. Nothing is clamped — the text is the payload; it scrolls.
-- **E3 · German chrome.** The header sits *above* the scroll region, so if
-  "Teilweise abgeschlossen" + "Protokoll anzeigen" + the copy button wrap, they
-  take room from the body rather than from the ceiling. The reason column itself
-  does **not** move: `Cause.message` is English on the wire by design
-  (`bristlenose/refusals.py` — *"the user-facing surfaces localise from the
-  reason, not from this text"*), and the popover renders it raw. That is a
-  standing i18n gap, out of scope here, but the sizing must not assume English
-  row heights, because closing it will make rows taller.
+- **E3 · German chrome, and now German rows.** The header sits *above* the
+  scroll region, so if "Teilweise abgeschlossen" + "Protokoll anzeigen" + the
+  copy button wrap, they take room from the body rather than from the ceiling.
+  **The reason column now moves too — this changed on 22 Aug 2026, after this
+  section was first written.** It used to be pinned English: `Cause.message` is
+  English on the wire by design and carried no discriminator, so the popover
+  had nothing to key a translation on and rendered it raw. `Cause.reason` now
+  carries `UnusableReason` and the pane resolves
+  `desktop.pipeline.diagnostic.reason.*` in all 21 locales
+  (`design-pipeline-diagnostic-popover.md`, 22 Aug entry). This section
+  predicted the consequence and it has arrived: **rows are taller in some
+  languages than in English, and the ceiling must absorb it.** Measured 22 Aug
+  2026 — the longest English reason is **55** characters (`no_audio`),
+  against **70** in German and **74** in Catalan, so budget about
+  **1.35×** the English column: a reason that sits on one line in English
+  wraps to two elsewhere, and a bucket of ten does it ten times. Measure the
+  ladder against a non-English locale, not the 125% text toggle alone. Re-derive
+  rather than trusting these numbers once more reasons land — they come from
+  `pipeline.diagnostic.reason` in `bristlenose/locales/*/desktop.json`.
 - **E4 · The overflow row below the fold.** "… and 4 more failures truncated" is
   the one row that says the list is *incomplete*, and it is the row most likely
   never to be read. Open question — §7.

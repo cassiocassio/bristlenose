@@ -18,6 +18,8 @@ from pathlib import Path
 
 import pytest
 
+from bristlenose.events import UnusableReason
+
 _LOCALES_DIR = Path(__file__).resolve().parents[1] / "bristlenose" / "locales"
 
 # zh-Hant is a full locale (single-form, like ja/ko). zh-Hant-HK is a thin
@@ -83,6 +85,68 @@ def test_actions_present(locale: str) -> None:
     action = _load_desktop(locale)["pipeline"]["diagnostic"]["action"]
     for key in _REQUIRED_ACTIONS:
         assert key in action, f"locale={locale} missing action.{key}"
+
+
+# NOTE: parametrised over `UnusableReason` itself, deliberately — NOT over an
+# allow-list like the tuples above. Those tuples are the pattern the root
+# CLAUDE.md criticises by name: adding a key never obliges anyone to extend
+# them, so a gap ships silently. Derived from the enum, a ninth refusal reason
+# cannot be added without this test demanding a translation in all 21 locales
+# on the same commit. That is the only mechanism that will ever catch it —
+# `scripts/check-locales.py` diffs each locale *against English*, so it is
+# structurally blind to a key English itself is missing.
+@pytest.mark.parametrize("locale", _ALL_LOCALES)
+def test_every_unusable_reason_has_a_localised_string(locale: str) -> None:
+    """Every refusal reason renders as prose, in every locale.
+
+    Guards the defect this key family was added for: `Cause.message` is English
+    on the wire (the events log is a forensic record), so before
+    `desktop.pipeline.diagnostic.reason.*` existed the popover rendered "Not a
+    format Bristlenose reads." to a German, Japanese or Catalan researcher while
+    the header directly above it read correctly.
+    """
+    reason = _load_desktop(locale)["pipeline"]["diagnostic"]["reason"]
+    for value in UnusableReason:
+        assert value.value in reason, (
+            f"locale={locale} missing diagnostic.reason.{value.value} — "
+            f"add it to all {len(_ALL_LOCALES)} full locales"
+        )
+        assert reason[value.value].strip(), (
+            f"locale={locale} diagnostic.reason.{value.value} is empty"
+        )
+
+
+@pytest.mark.parametrize("locale", [loc for loc in _ALL_LOCALES if loc != "en"])
+def test_reason_strings_are_not_english_placeholders(locale: str) -> None:
+    """A seeded locale must not silently carry the English through.
+
+    Cheap, and it catches the everyday seeding slip: a locale gets the block
+    pasted in but one value never translated. Not a quality bar — a
+    machine-seeded string still passes — just proof that a translation pass
+    touched each value.
+    """
+    english = _load_desktop("en")["pipeline"]["diagnostic"]["reason"]
+    reason = _load_desktop(locale)["pipeline"]["diagnostic"]["reason"]
+    identical = [k for k, v in english.items() if reason.get(k) == v]
+    assert not identical, (
+        f"locale={locale} carries the English verbatim for: {', '.join(identical)}"
+    )
+
+
+def test_reason_keys_are_exactly_the_enum() -> None:
+    """No orphans: a retired reason must lose its key, not linger untranslated.
+
+    The other direction of the test above. A value left behind after an enum
+    rename reads as a complete locale to every count-based check while
+    translating something nothing can emit.
+    """
+    expected = {value.value for value in UnusableReason}
+    for locale in _ALL_LOCALES:
+        actual = set(_load_desktop(locale)["pipeline"]["diagnostic"]["reason"])
+        assert actual == expected, (
+            f"locale={locale} reason keys drifted from UnusableReason: "
+            f"unexpected={sorted(actual - expected)} missing={sorted(expected - actual)}"
+        )
 
 
 @pytest.mark.parametrize("locale", _PLURAL_LOCALES)

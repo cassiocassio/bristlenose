@@ -325,7 +325,17 @@
       },
       "noStructuredCause": "Cause d\u00e9taill\u00e9e non enregistr\u00e9e.",
       "overflow_one": "\u2026 et {{count}} autre \u00e9chec tronqu\u00e9",
-      "overflow_other": "\u2026 et {{count}} autres \u00e9checs tronqu\u00e9s"
+      "overflow_other": "\u2026 et {{count}} autres \u00e9checs tronqu\u00e9s",
+      "reason": {
+        "unsupported_format": "Ce n'est pas un format que Bristlenose peut lire.",
+        "empty": "Le fichier est vide — le transfert n'a produit aucune donnée.",
+        "incomplete": "Le fichier est incomplet — le transfert s'est interrompu.",
+        "not_a_recording": "Ce n'est pas un enregistrement, malgré l'extension du fichier.",
+        "no_audio": "Aucun son dans ce fichier — il n'y a rien à transcrire.",
+        "no_speech": "Aucune parole détectée — rien n'a été dit dans cet enregistrement.",
+        "unreadable_folder": "Impossible d'ouvrir ce dossier.",
+        "unreadable": "Impossible de lire le fichier."
+      }
     }
   },
   "availability": {

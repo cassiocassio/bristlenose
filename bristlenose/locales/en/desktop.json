@@ -326,7 +326,17 @@
       },
       "noStructuredCause": "Detailed cause not captured.",
       "overflow_one": "… and {{count}} more failure truncated",
-      "overflow_other": "… and {{count}} more failures truncated"
+      "overflow_other": "… and {{count}} more failures truncated",
+      "reason": {
+        "unsupported_format": "Not a format Bristlenose reads.",
+        "empty": "The file is empty — the transfer produced no data.",
+        "incomplete": "The file is incomplete — the transfer stopped early.",
+        "not_a_recording": "Not a recording, despite the file extension.",
+        "no_audio": "No sound in this file — there is nothing to transcribe.",
+        "no_speech": "No speech found — nothing was said in this recording.",
+        "unreadable_folder": "This folder couldn't be opened.",
+        "unreadable": "The file couldn't be read."
+      }
     }
   },
   "availability": {

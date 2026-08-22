@@ -325,7 +325,17 @@
       },
       "noStructuredCause": "Yksityiskohtaista syytä ei tallennettu.",
       "overflow_one": "… ja {{count}} muu virhe typistetty",
-      "overflow_other": "… ja {{count}} muuta virhettä typistetty"
+      "overflow_other": "… ja {{count}} muuta virhettä typistetty",
+      "reason": {
+        "unsupported_format": "Ei ole muoto, jota Bristlenose osaa lukea.",
+        "empty": "Tiedosto on tyhjä — siirto ei tuottanut lainkaan dataa.",
+        "incomplete": "Tiedosto on epätäydellinen — siirto keskeytyi ennenaikaisesti.",
+        "not_a_recording": "Tiedostopäätteestä huolimatta tämä ei ole tallenne.",
+        "no_audio": "Tässä tiedostossa ei ole ääntä — litteroitavaa ei ole.",
+        "no_speech": "Puhetta ei löytynyt — tässä tallenteessa ei sanota mitään.",
+        "unreadable_folder": "Tätä kansiota ei voitu avata.",
+        "unreadable": "Tiedostoa ei voitu lukea."
+      }
     }
   },
   "availability": {

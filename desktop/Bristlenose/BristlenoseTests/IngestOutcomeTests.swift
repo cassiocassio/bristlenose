@@ -191,3 +191,138 @@ import Foundation
                 "an empty bucket is not a bucket of refusals")
     }
 }
+
+/// The reason column — the one part of this pane that was never translated.
+///
+/// `Cause.message` is English on the wire by design (the events log is a
+/// forensic record: a run analysed while the UI was German must not read as
+/// German forever), and until Aug 2026 `Cause` carried no discriminator at all.
+/// All eight refusals share one `category`, so the pane had nothing to key a
+/// translation on and rendered the English raw — inside a popover whose header,
+/// count line and Show Log button all translated correctly.
+@Suite struct ReasonLocalisationTests {
+
+    private func cause(reason: String? = nil, message: String? = "English fallback") -> Cause {
+        Cause(category: .unusableInput, message: message, reason: reason)
+    }
+
+    /// The real `bristlenose/locales/`, not a fixture — the point of these
+    /// tests is that the shipped translations are actually reachable.
+    private func localesURL() -> URL {
+        // <worktree>/desktop/Bristlenose/BristlenoseTests/IngestOutcomeTests.swift
+        // → <worktree>/bristlenose/locales
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("bristlenose/locales")
+    }
+
+    // MARK: - The decision, without an I18n
+
+    @Test func aReasonMapsToItsLocaleKey() {
+        #expect(ProjectDiagnosticPopover.reasonKey(for: cause(reason: "empty"))
+                == "desktop.pipeline.diagnostic.reason.empty")
+    }
+
+    @Test func noReasonMeansNoKey() {
+        // An event written by a sidecar older than the field. There is nothing
+        // to look up, and the English must survive rather than the row blanking.
+        #expect(ProjectDiagnosticPopover.reasonKey(for: cause()) == nil)
+        #expect(ProjectDiagnosticPopover.reasonKey(for: cause(reason: "")) == nil)
+    }
+
+    // MARK: - The round trip, against the shipped locale files
+
+    @MainActor
+    private func i18n(_ locale: String) -> I18n {
+        let i = I18n()
+        i.configure(localesDirectory: localesURL())
+        i.setLocale(locale)
+        return i
+    }
+
+    @MainActor @Test func aGermanUserReadsGerman() {
+        let text = ProjectDiagnosticPopover.localisedReason(
+            for: cause(reason: "empty", message: "The file is empty — the transfer produced no data."),
+            i18n: i18n("de")
+        )
+        #expect(text == "Die Datei ist leer — bei der Übertragung wurden keine Daten erzeugt.")
+    }
+
+    @MainActor @Test func everyReasonTranslatesInEveryLocale() {
+        // The whole matrix, because the defect was not one missing string — it
+        // was eight strings in twenty-one languages, and nothing mechanical on
+        // either side could see it. Python's
+        // `test_every_unusable_reason_has_a_localised_string` pins that the keys
+        // exist; this pins that this pane actually resolves them.
+        let reasons = ["unsupported_format", "empty", "incomplete", "not_a_recording",
+                       "no_audio", "no_speech", "unreadable_folder", "unreadable"]
+        let locales = ["en", "es", "ca", "fr", "de", "ko", "ja", "cs", "it", "pl", "ru",
+                       "uk", "da", "sv", "nb", "tr", "nl", "fi", "pt-BR", "pt-PT", "zh-Hant"]
+        for locale in locales {
+            let i = i18n(locale)
+            for reason in reasons {
+                let text = ProjectDiagnosticPopover.localisedReason(
+                    for: cause(reason: reason, message: "ENGLISH"), i18n: i
+                )
+                #expect(text != "ENGLISH",
+                        "locale=\(locale) reason=\(reason) fell back to the English message")
+                #expect(!text.hasPrefix("desktop.pipeline."),
+                        "locale=\(locale) reason=\(reason) leaked the raw key")
+            }
+        }
+    }
+
+    @MainActor @Test func zhHantHKInheritsRatherThanFallingBackToEnglish() {
+        // The Traditional pair: HK is a thin override carrying only genuine HK
+        // idiom, and these eight sentences have none — so they must resolve
+        // through zh-Hant, NOT drop to English. Seeding them into HK would have
+        // pinned the fork and broken exactly this inheritance.
+        let hk = ProjectDiagnosticPopover.localisedReason(
+            for: cause(reason: "empty", message: "ENGLISH"), i18n: i18n("zh-Hant-HK")
+        )
+        let tw = ProjectDiagnosticPopover.localisedReason(
+            for: cause(reason: "empty", message: "ENGLISH"), i18n: i18n("zh-Hant")
+        )
+        #expect(hk == tw)
+        #expect(hk != "ENGLISH")
+    }
+
+    // MARK: - Degrading, never failing
+
+    @MainActor @Test func anUnknownReasonFallsBackToTheEnglish() {
+        // Why `reason` is `String?` and not an enum. A value this build has
+        // never heard of must cost one row its translation — never the decode.
+        let text = ProjectDiagnosticPopover.localisedReason(
+            for: cause(reason: "invented_in_a_later_release", message: "The file couldn't be read."),
+            i18n: i18n("de")
+        )
+        #expect(text == "The file couldn't be read.")
+    }
+
+    @Test func anUnknownReasonDoesNotTakeTheWholeSummaryDown() throws {
+        // The failure mode `CauseCategory` needed a custom decoder to survive:
+        // one unrecognised raw value inside a Cause inside a StageFailure cost
+        // every per-stage row on the event. A plain optional string cannot.
+        let summary = try JSONDecoder().decode(PipelineSummary.self, from: Data("""
+        {"ingest": {"attempted": 2, "succeeded": 1, "duration_ms": 10,
+          "failed": [{"source_file": "x.mp4",
+                      "cause": {"category": "unusable_input", "message": "m",
+                                "reason": "from_the_future"}}]}}
+        """.utf8))
+        #expect(summary.ingest?.failed.count == 1)
+        #expect(summary.ingest?.failed.first?.cause.reason == "from_the_future")
+    }
+
+    @Test func aCauseWithNoReasonStillDecodes() throws {
+        let summary = try JSONDecoder().decode(PipelineSummary.self, from: Data("""
+        {"ingest": {"attempted": 1, "succeeded": 0, "duration_ms": 5,
+          "failed": [{"source_file": "x.mp4",
+                      "cause": {"category": "unusable_input",
+                                "message": "The file couldn't be read."}}]}}
+        """.utf8))
+        #expect(summary.ingest?.failed.first?.cause.reason == nil)
+    }
+}

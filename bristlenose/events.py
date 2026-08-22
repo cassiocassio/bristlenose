@@ -110,9 +110,53 @@ class CauseCategoryEnum(str, Enum):
     # One input file isn't in the report. Covers both halves of that outcome —
     # a format we decline and a file we can't read — because they are the same
     # consequence for the researcher and must carry the same weight on screen;
-    # the specific reason rides in ``Cause.message``. See bristlenose/refusals.py.
+    # the specific reason rides in ``Cause.reason``, which is what the desktop
+    # localises from — ``Cause.message`` is the English fallback, not the
+    # source. See bristlenose/refusals.py.
     UNUSABLE_INPUT = "unusable_input"
     UNKNOWN = "unknown"
+
+
+class UnusableReason(str, Enum):
+    """Why one input file isn't in the report.
+
+    Lives here, not in ``refusals.py``, because it is **on the wire**:
+    ``Cause.reason`` carries it to the desktop, which localises from it.
+    ``refusals.py`` re-exports it, so every existing
+    ``from bristlenose.refusals import UnusableReason`` still resolves — the
+    move is about import direction (``refusals`` imports ``events``, never the
+    reverse), not about where the concept belongs conceptually.
+
+    Values are the localisation key suffix on the Swift side
+    (``desktop.pipeline.diagnostic.reason.<value>``), so **renaming a value is
+    a wire break and a locale break at once**. Adding one obliges a new key in
+    all 21 full locales — pinned by
+    ``tests/test_pipeline_diagnostic_locale_keys.py``, which parametrises over
+    this enum rather than an allow-list precisely so the obligation cannot be
+    forgotten.
+    """
+
+    #: Extension we don't accept. A decision, not a defect.
+    UNSUPPORTED_FORMAT = "unsupported_format"
+    #: Zero bytes on disk — the everyday shape of a failed upload.
+    EMPTY = "empty"
+    #: Has a recognisable container header but won't decode: the tail is
+    #: missing. A part-sent file share, a cancelled download.
+    INCOMPLETE = "incomplete"
+    #: No container header at all. Something else is wearing a media
+    #: extension — a text file, a PDF, an HTML error page saved by a browser.
+    NOT_A_RECORDING = "not_a_recording"
+    #: Decodes fine, carries no audio stream. Nothing to transcribe.
+    NO_AUDIO = "no_audio"
+    #: A directory we were not allowed to open (``~/.Trash`` is the everyday
+    #: one). Recorded and stepped over, never fatal.
+    UNREADABLE_FOLDER = "unreadable_folder"
+    #: Decoded and transcribed fine, and produced no words. A sound effect, a
+    #: test tone, a recording of a room. Distinct from ``NO_AUDIO``: there IS an
+    #: audio stream, it simply has nobody talking in it.
+    NO_SPEECH = "no_speech"
+    #: Couldn't be read and we can't say more than that.
+    UNREADABLE = "unreadable"
 
 
 class EventTypeEnum(str, Enum):
@@ -171,6 +215,25 @@ class Cause(BaseModel):
     category: CauseCategoryEnum
     code: str | None = None
     message: str | None = None
+    #: Which refusal this is, when ``category`` is ``UNUSABLE_INPUT``. None for
+    #: every other category, like ``provider`` / ``exit_code`` / ``signal_name``
+    #: — ``Cause`` is a row of category-specific slots, and this is one more.
+    #:
+    #: **This is the field the desktop localises from.** ``message`` is English
+    #: on the wire by design (the events log is a forensic record — a run
+    #: analysed under one UI language must not render in that language forever),
+    #: so without a discriminator the popover had no choice but to render the
+    #: English raw, which it did in all 21 non-en locales until Aug 2026. The
+    #: comment in ``refusals.py`` promising that "the user-facing surfaces
+    #: localise from the reason, not from this text" described a field that did
+    #: not exist. It does now.
+    #:
+    #: Additive: older readers ignore it and fall back to ``message``, and Swift
+    #: decodes it as a plain optional string rather than an enum so an
+    #: unrecognised value can never fail the decode. ``CauseCategory``'s own doc
+    #: comment records what that costs — one unknown raw value took out the
+    #: whole summary.
+    reason: UnusableReason | None = None
     provider: str | None = None
     stage: str | None = None
     session_id: str | None = None

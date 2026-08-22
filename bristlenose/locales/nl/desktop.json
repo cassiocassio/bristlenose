@@ -325,7 +325,17 @@
       },
       "noStructuredCause": "Gedetailleerde oorzaak niet vastgelegd.",
       "overflow_one": "… en {{count}} andere fout afgekapt",
-      "overflow_other": "… en {{count}} andere fouten afgekapt"
+      "overflow_other": "… en {{count}} andere fouten afgekapt",
+      "reason": {
+        "unsupported_format": "Geen bestandsformaat dat Bristlenose kan lezen.",
+        "empty": "Het bestand is leeg — de overdracht heeft geen gegevens opgeleverd.",
+        "incomplete": "Het bestand is onvolledig — de overdracht is voortijdig gestopt.",
+        "not_a_recording": "Ondanks de bestandsextensie is dit geen opname.",
+        "no_audio": "Geen geluid in dit bestand — er valt niets te transcriberen.",
+        "no_speech": "Geen spraak gevonden — er is niets gezegd in deze opname.",
+        "unreadable_folder": "Deze map kon niet worden geopend.",
+        "unreadable": "Het bestand kon niet worden gelezen."
+      }
     }
   },
   "availability": {

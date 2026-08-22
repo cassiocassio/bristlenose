@@ -325,7 +325,17 @@
       },
       "noStructuredCause": "Detaljerad orsak fångades inte.",
       "overflow_one": "… och {{count}} till fel avkortat",
-      "overflow_other": "… och {{count}} till fel avkortade"
+      "overflow_other": "… och {{count}} till fel avkortade",
+      "reason": {
+        "unsupported_format": "Inte ett format som Bristlenose kan läsa.",
+        "empty": "Filen är tom – överföringen gav inga data.",
+        "incomplete": "Filen är ofullständig – överföringen avbröts i förtid.",
+        "not_a_recording": "Trots filändelsen är det ingen inspelning.",
+        "no_audio": "Inget ljud i den här filen – det finns inget att transkribera.",
+        "no_speech": "Inget tal hittades – inget sades i den här inspelningen.",
+        "unreadable_folder": "Det gick inte att öppna mappen.",
+        "unreadable": "Det gick inte att läsa filen."
+      }
     }
   },
   "availability": {

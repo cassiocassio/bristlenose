@@ -8,12 +8,14 @@ are the three that corpus actually contains.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 
 from bristlenose.events import (
     STAGE_FAILED_MAX,
+    Cause,
     CauseCategoryEnum,
     PipelineSummary,
     RunCompletedEvent,
@@ -355,3 +357,68 @@ class TestTranscribeOnlyStatesSilenceToo:
         assert outcome.succeeded == 0
         assert len(outcome.failed) == 3
         assert outcome.attempted == outcome.succeeded + len(outcome.failed)
+
+
+class TestReasonReachesTheWire:
+    """`Cause.reason` — the discriminator the desktop localises from.
+
+    The defect this class pins: `refusals.py` promised in a comment that "the
+    user-facing surfaces localise from the reason, not from this text", and no
+    such field existed. `Cause` carried `category` (all eight refusals share
+    one) and the English `message`, so `ProjectDiagnosticPopover` had nothing to
+    key a translation on and rendered the English raw — in all 21 non-en
+    locales, inside a popover whose header and count line translated correctly.
+    """
+
+    def test_stage_failure_carries_the_reason(self) -> None:
+        f = stage_failure(
+            source_file="p07-interview.m4a",
+            reason=UnusableReason.EMPTY,
+            stage="s01_ingest",
+        )
+        assert f.cause.reason is UnusableReason.EMPTY
+
+    def test_reason_survives_the_json_round_trip(self) -> None:
+        """It has to reach Swift as a plain string, not a Python enum repr."""
+        f = stage_failure(
+            source_file="p03-consent-form.pdf",
+            reason=UnusableReason.UNSUPPORTED_FORMAT,
+            stage="s01_ingest",
+        )
+        wire = json.loads(f.model_dump_json())
+        assert wire["cause"]["reason"] == "unsupported_format"
+
+    def test_message_is_still_english_on_the_wire(self) -> None:
+        """`reason` is additive — it does not replace `message`.
+
+        The English stays: the CLI prints it, the s01/s02 log lines use it, a
+        desktop build older than Aug 2026 falls back to it, and a diagnostic
+        pasted into a bug report should read the same whatever the reporter's
+        UI language is.
+        """
+        f = stage_failure(
+            source_file="p06.mp4", reason=UnusableReason.EMPTY, stage="s01_ingest"
+        )
+        assert f.cause.message == MESSAGES[UnusableReason.EMPTY]
+
+    def test_every_reason_is_expressible_on_the_wire(self) -> None:
+        """No reason can be emitted that the popover cannot then key on."""
+        for reason in UnusableReason:
+            f = stage_failure(
+                source_file="x.mp4", reason=reason, stage="s01_ingest"
+            )
+            wire = json.loads(f.model_dump_json())
+            assert wire["cause"]["reason"] == reason.value
+            assert wire["cause"]["message"] == MESSAGES[reason]
+
+    def test_absent_reason_still_parses(self) -> None:
+        """An event from a sidecar older than the field must not fail to load.
+
+        Same additive contract the Swift side relies on — and the reason the
+        contract fixture's `run_completed_partial_refusals` deliberately leaves
+        `reason` off its last entry.
+        """
+        cause = Cause.model_validate(
+            {"category": "unusable_input", "message": "The file couldn't be read."}
+        )
+        assert cause.reason is None

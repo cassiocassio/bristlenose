@@ -325,7 +325,17 @@
       },
       "noStructuredCause": "Detaillierte Ursache nicht erfasst.",
       "overflow_one": "… und {{count}} weiterer Fehler gekürzt",
-      "overflow_other": "… und {{count}} weitere Fehler gekürzt"
+      "overflow_other": "… und {{count}} weitere Fehler gekürzt",
+      "reason": {
+        "unsupported_format": "Kein Format, das Bristlenose lesen kann.",
+        "empty": "Die Datei ist leer — bei der Übertragung wurden keine Daten erzeugt.",
+        "incomplete": "Die Datei ist unvollständig — die Übertragung wurde vorzeitig beendet.",
+        "not_a_recording": "Trotz der Dateiendung keine Aufnahme.",
+        "no_audio": "Kein Ton in dieser Datei — es gibt nichts zu transkribieren.",
+        "no_speech": "Keine Sprache gefunden — in dieser Aufnahme wurde nichts gesagt.",
+        "unreadable_folder": "Dieser Ordner konnte nicht geöffnet werden.",
+        "unreadable": "Die Datei konnte nicht gelesen werden."
+      }
     }
   },
   "availability": {

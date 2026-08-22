@@ -221,7 +221,7 @@ struct ProjectDiagnosticPopover: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                             .truncationMode(.middle)
-                        Text(failure.cause.message ?? failure.cause.category.rawValue)
+                        Text(Self.localisedReason(for: failure.cause, i18n: i18n))
                             .font(.footnote)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -425,6 +425,42 @@ struct ProjectDiagnosticPopover: View {
     /// Extract the truncation count from the Python-emitted overflow message and
     /// render it via the active locale's CLDR plural form (Czech needs all of
     /// one/few/many/other). Falls back to the wire string when the regex misses.
+    /// The reason column, translated — or the English on the wire if it can't be.
+    ///
+    /// Reads `cause.reason`, not `cause.message`: the message is English by
+    /// design (forensic record, see `Cause.reason`), so rendering it raw is what
+    /// put "Not a format Bristlenose reads." in front of every German, Japanese
+    /// and Catalan researcher while the header above it read correctly.
+    ///
+    /// Falls back rather than failing, twice over, because both cases are real:
+    /// an event written by a sidecar older than Aug 2026 carries no `reason` at
+    /// all, and `I18n.t` returns the key itself when a locale is missing one.
+    /// Neither should blank the column — the English sentence is worse than a
+    /// translation and far better than nothing.
+    ///
+    /// **View only.** `formatDiagnosticPlaintext` deliberately keeps the raw
+    /// English: a diagnostic pasted into a bug report should read the same
+    /// whatever language the reporter's UI happens to be in.
+    static func localisedReason(for cause: Cause, i18n: I18n) -> String {
+        let english = cause.message ?? cause.category.rawValue
+        guard let key = reasonKey(for: cause) else { return english }
+        let translated = i18n.t(key)
+        return translated == key ? english : translated
+    }
+
+    /// Which locale key this cause's reason maps to, or nil if it has none.
+    ///
+    /// Split out from the lookup for the same reason `bucketCountKey` is split
+    /// from `bucketCountLabel`, and that split is written up two suites down: an
+    /// unconfigured `I18n` returns the raw key, so asserting on the *rendered*
+    /// string quietly becomes a question about the key name. The decision is
+    /// testable here without a configured `I18n`; the translation round-trip is
+    /// tested separately against the real locale files.
+    static func reasonKey(for cause: Cause) -> String? {
+        guard let reason = cause.reason, !reason.isEmpty else { return nil }
+        return "desktop.pipeline.diagnostic.reason.\(reason)"
+    }
+
     static func localisedOverflowText(message: String, i18n: I18n) -> String {
         guard let count = parseOverflowCount(from: message) else {
             return message

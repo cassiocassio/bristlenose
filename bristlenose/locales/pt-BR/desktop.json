@@ -325,7 +325,17 @@
       },
       "noStructuredCause": "Causa detalhada não registrada.",
       "overflow_one": "… e mais {{count}} falha truncada",
-      "overflow_other": "… e mais {{count}} falhas truncadas"
+      "overflow_other": "… e mais {{count}} falhas truncadas",
+      "reason": {
+        "unsupported_format": "Não é um formato que o Bristlenose consiga ler.",
+        "empty": "O arquivo está vazio — a transferência não produziu dados.",
+        "incomplete": "O arquivo está incompleto — a transferência parou antes do fim.",
+        "not_a_recording": "Apesar da extensão, não é uma gravação.",
+        "no_audio": "Sem som neste arquivo — não há nada para transcrever.",
+        "no_speech": "Nenhuma fala encontrada — nada foi dito nesta gravação.",
+        "unreadable_folder": "Não foi possível abrir esta pasta.",
+        "unreadable": "Não foi possível ler o arquivo."
+      }
     }
   },
   "availability": {

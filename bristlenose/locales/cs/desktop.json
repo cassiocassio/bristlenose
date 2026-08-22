@@ -360,7 +360,17 @@
       "overflow_one": "… a {{count}} další chyba skryta",
       "overflow_few": "… a {{count}} další chyby skryty",
       "overflow_many": "… a {{count}} další chyby skryto",
-      "overflow_other": "… a {{count}} dalších chyb skryto"
+      "overflow_other": "… a {{count}} dalších chyb skryto",
+      "reason": {
+        "unsupported_format": "Formát, který Bristlenose neumí přečíst.",
+        "empty": "Soubor je prázdný — přenos nepřinesl žádná data.",
+        "incomplete": "Soubor je neúplný — přenos se předčasně zastavil.",
+        "not_a_recording": "Navzdory příponě nejde o nahrávku.",
+        "no_audio": "V tomto souboru není zvuk — není co přepsat.",
+        "no_speech": "Nebyla nalezena řeč — v této nahrávce nikdo nemluví.",
+        "unreadable_folder": "Tuto složku se nepodařilo otevřít.",
+        "unreadable": "Soubor se nepodařilo přečíst."
+      }
     }
   },
   "availability": {

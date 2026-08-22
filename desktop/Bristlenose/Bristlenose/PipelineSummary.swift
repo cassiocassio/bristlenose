@@ -165,6 +165,24 @@ struct Cause: Codable, Equatable {
     var category: CauseCategory
     var code: String?
     var message: String?
+    /// Which refusal this is, when `category == .unusableInput`. Mirrors Python
+    /// `Cause.reason` (`bristlenose/events.py`).
+    ///
+    /// **This is what the diagnostic popover localises from.** `message` is
+    /// English on the wire by design — the events log is a forensic record, so
+    /// a run analysed under one UI language must not render in that language
+    /// forever — which meant the popover rendered English rows in all 21
+    /// non-en locales while the chrome around them translated correctly.
+    ///
+    /// Deliberately `String?`, not an enum. An unrecognised value must degrade
+    /// to "fall back to `message`", never to a decode failure: `CauseCategory`
+    /// below records what one unknown raw value cost — it took out **the whole
+    /// summary**, every per-stage row on the event. That enum needed a custom
+    /// decoder to survive; a plain optional string cannot fail in the first
+    /// place. Exhaustiveness is pinned on the Python side instead, where the
+    /// locale files live (`tests/test_pipeline_diagnostic_locale_keys.py`
+    /// parametrises over `UnusableReason` itself).
+    var reason: String?
     var provider: String?
     var stage: String?
     var sessionId: String?
@@ -173,7 +191,7 @@ struct Cause: Codable, Equatable {
     var signalName: String?
 
     enum CodingKeys: String, CodingKey {
-        case category, code, message, provider, stage
+        case category, code, message, reason, provider, stage
         case sessionId = "session_id"
         case exitCode = "exit_code"
         case signal
@@ -212,7 +230,8 @@ enum CauseCategory: String, Codable, Equatable, CaseIterable {
     /// One input file isn't in the report — declined by format, or accepted and
     /// then unreadable. Both halves share this category because they share a
     /// consequence for the researcher: a participant missing from the findings.
-    /// The specific reason rides in `Cause.message`. Mirrors Python
+    /// The specific reason rides in `Cause.reason` — `Cause.message` is the
+    /// English fallback, not the source to render. Mirrors Python
     /// `CauseCategoryEnum.UNUSABLE_INPUT` (`bristlenose/refusals.py`).
     case unusableInput = "unusable_input"
     case unknown

@@ -1,6 +1,6 @@
 {
-  "_doc": "Cross-language schema contract between Python (bristlenose/events.py) and Swift (desktop/Bristlenose/Bristlenose/PipelineSummary.swift). Both sides round-trip these scenarios in tests. If you change this file, both sides' tests must continue to pass. Established 7 May 2026 for branches pipeline-summary-events (Python) and pipeline-diagnostic-pill (Swift). Schema version 2: added duration_ms on StageOutcome. Schema version 3: added run_completed_partial_truncated scenario locking STAGE_FAILED_MAX=10 overflow marker shape. Schema version 4: realigned session_id values to ordinal format (s1, s2, ...) matching what bristlenose actually emits at runtime — earlier versions used illustrative descriptive ids that didn't reflect production shape. Schema version 5: added topics bucket to PipelineSummary (between transcripts and quotes) to carry s08 topic-segmentation StageOutcome. Schema-additive — Swift readers that don't yet decode the field still parse fine. Added run_failed_abandoned_at_topics scenario locking the topics-populated shape for the A4-stage-cache-honesty cohort. Schema version 6: added optional source_file on StageFailure (basename of the input file a failure is about — session_id cannot identify a file that failed before a session existed) and the cloud_fetch cause category (a placeholder that never materialised, which must never be reported as a damaged file). Scenario run_completed_partial_cloud_fetch locks both. Schema version 6 also adds run_completed_cached_stage, which locks duration_ms: null for a stage that was present but didn't run. Every prior scenario carried a real duration, so the Swift side's non-optional Int decoded fine in tests while failing on real cached runs — the fixture flattered the code.",
-  "version": 6,
+  "_doc": "Cross-language schema contract between Python (bristlenose/events.py) and Swift (desktop/Bristlenose/Bristlenose/PipelineSummary.swift). Both sides round-trip these scenarios in tests. If you change this file, both sides' tests must continue to pass. Established 7 May 2026 for branches pipeline-summary-events (Python) and pipeline-diagnostic-pill (Swift). Schema version 2: added duration_ms on StageOutcome. Schema version 3: added run_completed_partial_truncated scenario locking STAGE_FAILED_MAX=10 overflow marker shape. Schema version 4: realigned session_id values to ordinal format (s1, s2, ...) matching what bristlenose actually emits at runtime — earlier versions used illustrative descriptive ids that didn't reflect production shape. Schema version 5: added topics bucket to PipelineSummary (between transcripts and quotes) to carry s08 topic-segmentation StageOutcome. Schema-additive — Swift readers that don't yet decode the field still parse fine. Added run_failed_abandoned_at_topics scenario locking the topics-populated shape for the A4-stage-cache-honesty cohort. Schema version 6: added optional source_file on StageFailure (basename of the input file a failure is about — session_id cannot identify a file that failed before a session existed) and the cloud_fetch cause category (a placeholder that never materialised, which must never be reported as a damaged file). Scenario run_completed_partial_cloud_fetch locks both. Schema version 6 also adds run_completed_cached_stage, which locks duration_ms: null for a stage that was present but didn't run. Every prior scenario carried a real duration, so the Swift side's non-optional Int decoded fine in tests while failing on real cached runs — the fixture flattered the code. Schema version 7: added optional `reason` on Cause — the `UnusableReason` discriminator for `unusable_input`, which the desktop popover localises from. Additive: entries in every earlier scenario omit it and must keep decoding. Added run_completed_partial_refusals, the first scenario to cover a refusal at all — the ingest bucket and its Cause shape had shipped unpinned by this contract.",
+  "version": 7,
   "scenarios": {
     "run_completed_partial": {
       "_doc": "Partial run: 3 of 5 transcripts succeeded; pipeline continued and produced a (low-value, dev-feedback) report. Diagnostic pill state .completedPartial on Swift side.",
@@ -544,6 +544,84 @@
           "attempted": 3,
           "succeeded": 3,
           "duration_ms": 38000,
+          "failed": []
+        }
+      }
+    },
+    "run_completed_partial_refusals": {
+      "_doc": "Partial run whose ingest stage refused three files: 5 of 8 recordings reached a session. Locks the shape refusals actually take on the wire, which no earlier scenario covered at all. Three things are pinned here. (a) `reason` on Cause — the UnusableReason discriminator the desktop localises from (`desktop.pipeline.diagnostic.reason.<value>`); before it existed the popover rendered the English `message` raw in all 21 non-en locales. (b) The `ingest` bucket carrying failures while `outcome` is still `completed` — a refusal is outcome 2 of the taxonomy in docs/design-analysis-lifecycle.md §5.1, a pass, and must never read as a dead run. (c) The last entry deliberately omits `reason` entirely, reproducing an event written by a sidecar older than Aug 2026: both sides must fall back to `message` rather than fail the decode or blank the row.",
+      "schema_version": 1,
+      "ts": "2026-08-22T14:20:00Z",
+      "event": "run_completed",
+      "run_id": "01HXYZ0000000000000REFUSE",
+      "kind": "run",
+      "started_at": "2026-08-22T14:00:00Z",
+      "ended_at": "2026-08-22T14:20:00Z",
+      "outcome": "completed",
+      "cause": null,
+      "input_tokens": 14200,
+      "output_tokens": 5100,
+      "cost_usd_estimate": 0.21,
+      "price_table_version": "2026-04-01",
+      "summary": {
+        "ingest": {
+          "attempted": 8,
+          "succeeded": 5,
+          "duration_ms": 3100,
+          "failed": [
+            {
+              "session_id": null,
+              "source_file": "p03-consent-form.pdf",
+              "cause": {
+                "category": "unusable_input",
+                "code": null,
+                "message": "Not a format Bristlenose reads.",
+                "reason": "unsupported_format",
+                "provider": null,
+                "stage": "s01_ingest",
+                "session_id": null,
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": null,
+              "source_file": "p06-interview.mp4",
+              "cause": {
+                "category": "unusable_input",
+                "code": null,
+                "message": "The file is empty — the transfer produced no data.",
+                "reason": "empty",
+                "provider": null,
+                "stage": "s01_ingest",
+                "session_id": null,
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": null,
+              "source_file": "p07-interview.m4a",
+              "cause": {
+                "category": "unusable_input",
+                "code": null,
+                "message": "The file couldn't be read.",
+                "provider": null,
+                "stage": "s01_ingest",
+                "session_id": null,
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            }
+          ]
+        },
+        "transcripts": {
+          "attempted": 5,
+          "succeeded": 5,
+          "duration_ms": 812000,
           "failed": []
         }
       }

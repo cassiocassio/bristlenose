@@ -325,7 +325,17 @@
       },
       "noStructuredCause": "Causa dettagliata non rilevata.",
       "overflow_one": "… e {{count}} altro errore troncato",
-      "overflow_other": "… e altri {{count}} errori troncati"
+      "overflow_other": "… e altri {{count}} errori troncati",
+      "reason": {
+        "unsupported_format": "Non è un formato leggibile da Bristlenose.",
+        "empty": "Il file è vuoto — il trasferimento non ha prodotto dati.",
+        "incomplete": "Il file è incompleto — il trasferimento si è interrotto.",
+        "not_a_recording": "Non è una registrazione, nonostante l'estensione del file.",
+        "no_audio": "Nessun suono in questo file — non c'è nulla da trascrivere.",
+        "no_speech": "Nessun parlato rilevato — in questa registrazione non è stato detto nulla.",
+        "unreadable_folder": "Non è stato possibile aprire questa cartella.",
+        "unreadable": "Non è stato possibile leggere il file."
+      }
     }
   },
   "availability": {

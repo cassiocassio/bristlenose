@@ -325,7 +325,17 @@
       },
       "noStructuredCause": "Ayrıntılı neden yakalanmadı.",
       "overflow_one": "… ve {{count}} hata daha kesildi",
-      "overflow_other": "… ve {{count}} hata daha kesildi"
+      "overflow_other": "… ve {{count}} hata daha kesildi",
+      "reason": {
+        "unsupported_format": "Bristlenose'un okuyabileceği bir biçim değil.",
+        "empty": "Dosya boş — aktarım hiç veri üretmedi.",
+        "incomplete": "Dosya eksik — aktarım erken durdu.",
+        "not_a_recording": "Dosya uzantısına rağmen bir kayıt değil.",
+        "no_audio": "Bu dosyada ses yok — yazıya dökülecek bir şey yok.",
+        "no_speech": "Konuşma bulunamadı — bu kayıtta hiçbir şey söylenmemiş.",
+        "unreadable_folder": "Bu klasör açılamadı.",
+        "unreadable": "Dosya okunamadı."
+      }
     }
   },
   "availability": {

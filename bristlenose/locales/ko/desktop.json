@@ -307,7 +307,17 @@
         "completed_partial": "{{project}} \ubd84\uc11d\uc774 \uc2e4\ud328\uc640 \ud568\uaed8 \uc644\ub8cc\ub428"
       },
       "noStructuredCause": "\uc790\uc138\ud55c \uc6d0\uc778\uc774 \uae30\ub85d\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.",
-      "overflow_other": "\u2026 \uc678 {{count}}\uac1c \uc2e4\ud328 \uc0dd\ub7b5\ub428"
+      "overflow_other": "\u2026 \uc678 {{count}}\uac1c \uc2e4\ud328 \uc0dd\ub7b5\ub428",
+      "reason": {
+        "unsupported_format": "Bristlenose가 읽을 수 있는 형식이 아닙니다.",
+        "empty": "파일이 비어 있습니다 — 전송된 데이터가 없습니다.",
+        "incomplete": "파일이 불완전합니다 — 전송이 도중에 중단되었습니다.",
+        "not_a_recording": "파일 확장자와 달리 녹음이 아닙니다.",
+        "no_audio": "이 파일에 소리가 없습니다 — 전사할 내용이 없습니다.",
+        "no_speech": "음성을 찾을 수 없습니다 — 이 녹음에서 아무 말도 하지 않았습니다.",
+        "unreadable_folder": "이 폴더를 열 수 없습니다.",
+        "unreadable": "파일을 읽을 수 없습니다."
+      }
     }
   },
   "availability": {

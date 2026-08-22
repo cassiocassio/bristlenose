@@ -80,7 +80,11 @@ The HTML export is the "accountability copy" — a stakeholder or client can ope
   `.bn-counter`, `.bn-tag-input`, `.codebook-add-tag`, `.codebook-picker-btn`);
   matching is whole-class-token, because `.badge-accept` substring-matches the live
   `badge-accept-flash` and a naive search would have passed the original bug
-- **Locale baked** to the researcher's current UI language (not the recipient's browser)
+- **Locale baked** to the researcher's current UI language (not the recipient's browser).
+  Note the cost, measured 23 Aug 2026: the single-file build inlines **all 22 locales × 9
+  namespaces** (1,802 KB, ~half the export) so the baked one is available offline. Making
+  that a choice at export time, and carrying one language, is proposed in
+  [`design-export-locale.md`](design-export-locale.md).
 - Optional anonymisation (report data + source filenames)
 - Works offline in any modern browser (Chromium + WebKit e2e, incl. a link-integrity crawl)
 

@@ -166,6 +166,10 @@ table.m code { background:none; padding:0; color:var(--bn-colour-badge-text); }
   <p>The intent drawing lives in <b>analysis-lifecycle-states.html</b> §“The confirmation — measured,
      not vague”. It was drawn in the web design system; the sheet is native. Where the two differ,
      this page shows the native side.</p>
+  <p><b>22 Aug 2026 — the buttons changed.</b> Rendering the sheet is what surfaced it: Cancel held
+     the default and the confirm button carried the destructive style, which the HIG contradicts on
+     three counts. The artefacts below are the corrected sheet; the section directly after this one
+     holds the before-and-after.</p>
 </div>
 
 <div class="controls">
@@ -209,8 +213,8 @@ table.m code { background:none; padding:0; color:var(--bn-colour-badge-text); }
             <span class="ln">2 named themes</span>
           </div>
           <div class="btns">
-            <button class="mbtn def">Cancel</button>
-            <button class="mbtn destr">Re-analyse</button>
+            <button class="mbtn">Cancel</button>
+            <button class="mbtn def">Re-analyse</button>
           </div>
         </div>
       </div>
@@ -240,9 +244,46 @@ table.m code { background:none; padding:0; color:var(--bn-colour-badge-text); }
             <span class="ln">2 named themes</span>
           </div>
           <div class="btns">
-            <button class="mbtn def">Cancel</button>
-            <button class="mbtn destr">Re-analyse</button>
+            <button class="mbtn">Cancel</button>
+            <button class="mbtn def">Re-analyse</button>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ BEFORE / AFTER ══════════ -->
+<div class="sec-head">
+  <h2>What changed, 22 Aug 2026</h2>
+  <p class="sub">Same geometry, same strings. Only which button is the default, and whether the
+     other one is styled destructive.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">before · shipped 19 Aug – 21 Aug</span></div>
+  <div class="frame-body">
+    <div class="mac lt col">
+      <div class="msheet" style="gap:0;padding:14px 22px;">
+        <div class="btns" style="padding-top:0;">
+          <button class="mbtn def">Cancel</button>
+          <button class="mbtn destr">Re-analyse</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="frame">
+  <div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span>
+    <span class="cap">after · conformant</span></div>
+  <div class="frame-body">
+    <div class="mac lt col">
+      <div class="msheet" style="gap:0;padding:14px 22px;">
+        <div class="btns" style="padding-top:0;">
+          <button class="mbtn">Cancel</button>
+          <button class="mbtn def">Re-analyse</button>
         </div>
       </div>
     </div>
@@ -251,20 +292,28 @@ table.m code { background:none; padding:0; color:var(--bn-colour-badge-text); }
 
 <div class="comm">
   <span class="tag">Commentary</span>
-  <h3>The blue button is Cancel</h3>
-  <p><code>.keyboardShortcut(.defaultAction)</code> is on Cancel, and on macOS the default button
-     carries the accent fill. So the prominent blue control in a destructive confirmation is the way
-     <em>out</em>, and the destructive action is the quiet one beside it — red label, ordinary bezel,
-     no shortcut at all. The code says this is deliberate: the researcher arrived from a menu item
-     ending in an ellipsis, so Return must not finish the sentence for them.</p>
-  <p>The intent drawing showed the opposite weighting — a plain Cancel next to a filled red
-     <b>Re-analyse</b>. The built sheet is the more careful of the two, but it is <em>not</em> what
-     the drawing depicts, and the drawing is still what the doc points at.</p>
-  <h3>One thing to decide, now that it is visible</h3>
-  <p>The accent-filled default sits to the <b>left</b> of the red one, because the layout is
-     <code>Spacer, Cancel, Re-analyse</code>. Worth a look with fresh eyes: on macOS the eye expects
-     the rightmost button to be the one Return fires, and here it is not. Nothing is broken — Escape
-     and Return both cancel — but the two signals point in opposite directions.</p>
+  <h3>Three departures, one cause</h3>
+  <p>The sheet put <code>.keyboardShortcut(.defaultAction)</code> on <b>Cancel</b>, and on macOS the
+     default button carries the accent fill — so the prominent blue control in a destructive
+     confirmation was the way <em>out</em>, sitting to the <em>left</em> of a red-labelled
+     <b>Re-analyse</b>. Apple’s alert guidance contradicts that three times over: don’t make Cancel
+     the default; always place the default on the trailing side; and reserve the destructive style
+     for actions people did <em>not</em> deliberately choose. All three follow from the first.</p>
+  <p><b>Empty Trash is Apple’s own example of this exact case.</b> Because the person chose it, the
+     alert does not apply the destructive style, and the convenience of Return-to-confirm outweighs
+     restating that the action destroys. <b>Re-analyse…</b> is chosen from a menu the same way. The
+     sheet’s old comment argued the opposite — Return must not finish the sentence for them — which
+     is a real concern, but the HIG’s answer to it is <em>give no button the default</em>, never
+     <em>put the default on Cancel</em>.</p>
+  <h3>The house had already got this right, twice</h3>
+  <p>Two other confirmations ship in this app and both conform. The Locate-error alert puts the
+     default on its action; the Disconnect-account alert deliberately omits the destructive role,
+     with a comment citing Empty Trash by name and noting that dropping it “also restores
+     Return-to-confirm”. Both are native <code>.alert</code>s, so AppKit places their buttons. This
+     sheet hand-rolls its row, which is how it drifted out of a convention it never opted into.</p>
+  <h3>What the drawing had right all along</h3>
+  <p>The intent drawing gave the trailing button the visual weight — it was only the wrong colour,
+     red where the platform draws blue. The emphasis was never the disagreement; the hue was.</p>
   <h3>Type is 13/12, not the report scale</h3>
   <p>Native text styles: <code>.headline</code> is 13pt semibold and <code>.callout</code> is 12pt.
      The whole sheet therefore runs a little smaller and tighter than the drawing, which used
@@ -280,7 +329,7 @@ table.m code { background:none; padding:0; color:var(--bn-colour-badge-text); }
     <tr><td>Rebuild line</td><td><code>.callout</code>, secondary, <code>.fixedSize(vertical:)</code></td><td>12pt, wraps to 2 lines</td></tr>
     <tr><td>Loss header</td><td><code>.callout.weight(.medium)</code></td><td>12pt medium, full label</td></tr>
     <tr><td>Loss lines</td><td><code>.callout</code>, secondary, <code>.padding(.leading,12)</code></td><td>12pt, 3pt apart, 12pt indent</td></tr>
-    <tr><td>Buttons</td><td><code>.defaultAction</code> / <code>role:.destructive</code></td><td>22pt tall, accent fill / red label</td></tr>
+    <tr><td>Buttons</td><td>Cancel <code>.cancelAction</code> · Re-analyse <code>.defaultAction</code></td><td>22pt tall; default takes the accent fill, trailing</td></tr>
   </table>
   <h3>Heights, measured</h3>
   <p>The canonical sheet above is <b>420 × 307pt</b>. The stars-only sheet further down is
@@ -318,8 +367,8 @@ table.m code { background:none; padding:0; color:var(--bn-colour-badge-text); }
           <span class="ln">1 named theme</span>
         </div>
         <div class="btns">
-          <button class="mbtn def">Cancel</button>
-          <button class="mbtn destr">Re-analyse</button>
+          <button class="mbtn">Cancel</button>
+          <button class="mbtn def">Re-analyse</button>
         </div>
       </div>
       <div class="stateno">every _one form</div>
@@ -334,8 +383,8 @@ table.m code { background:none; padding:0; color:var(--bn-colour-badge-text); }
           <span class="ln">6 starred quotes</span>
         </div>
         <div class="btns">
-          <button class="mbtn def">Cancel</button>
-          <button class="mbtn destr">Re-analyse</button>
+          <button class="mbtn">Cancel</button>
+          <button class="mbtn def">Re-analyse</button>
         </div>
       </div>
       <div class="stateno">stars only — four kinds omitted</div>
@@ -379,8 +428,8 @@ table.m code { background:none; padding:0; color:var(--bn-colour-badge-text); }
           <span class="ln">2 named themes</span>
         </div>
         <div class="btns">
-          <button class="mbtn def">Cancel</button>
-          <button class="mbtn destr">Re-analyse</button>
+          <button class="mbtn">Cancel</button>
+          <button class="mbtn def">Re-analyse</button>
         </div>
       </div>
       <div class="stateno">what <code>?? 0</code> would render — the gate prevents it</div>
@@ -399,8 +448,8 @@ table.m code { background:none; padding:0; color:var(--bn-colour-badge-text); }
           <span class="ln">7 named themes</span>
         </div>
         <div class="btns">
-          <button class="mbtn def">Cancel</button>
-          <button class="mbtn destr">Re-analyse</button>
+          <button class="mbtn">Cancel</button>
+          <button class="mbtn def">Re-analyse</button>
         </div>
       </div>
       <div class="stateno">a real client folder name</div>

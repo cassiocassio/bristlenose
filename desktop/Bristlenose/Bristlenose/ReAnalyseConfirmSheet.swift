@@ -19,6 +19,15 @@ import SwiftUI
 /// about a real loss — implementing the picture literally while breaking its
 /// purpose. Added deliberately, 19 Aug 2026.
 ///
+/// **The buttons follow the HIG, and did not at first.** Cancel led *and* held
+/// `.defaultAction` while the confirm button carried `role: .destructive` —
+/// three departures with one cause. Apple's alert guidance: don't make Cancel
+/// the default; place the default on the trailing side; and reserve the
+/// destructive style for actions people did *not* deliberately choose, Empty
+/// Trash being their example of the case this sheet is in. Corrected 22 Aug
+/// 2026. Pixels before and after:
+/// `docs/mockups/reanalyse-sheet-pixels.html`.
+///
 /// **No folder paths, no `--clean`, no mention of an output directory.** A
 /// researcher should never need a model of where Bristlenose keeps its working
 /// files; the moment a message tells them to go and delete one, that model has
@@ -85,15 +94,24 @@ struct ReAnalyseConfirmSheet: View {
 
             HStack {
                 Spacer()
-                // Cancel is the default: the researcher arrived from a menu item
-                // ending in an ellipsis, not from a button labelled "throw this
-                // away", so Return must not finish the sentence for them.
+                // Cancel leads and takes Escape. Deliberately NOT the default —
+                // the HIG's alert guidance says not to make Cancel the default
+                // button, and offers "give no button the default" as the way to
+                // stop people dismissing on Return without reading. It does not
+                // offer "put the default on Cancel", which is what this sheet
+                // did until 22 Aug 2026.
                 Button(i18n.t("common.buttons.cancel"), action: onCancel)
+                    .keyboardShortcut(.cancelAction)
+                // The default, on the trailing side, and NOT destructive-styled.
+                // The researcher chose Re-analyse… from a menu, so this button
+                // performs their original intent — Apple's own Empty Trash case,
+                // where the convenience of Return-to-confirm outweighs restating
+                // that the action destroys. The destructive style is reserved
+                // for actions people did not deliberately choose.
+                // `AccountsSettingsView`'s Disconnect confirmation had already
+                // applied this rule; this sheet was the outlier of three.
+                Button(i18n.t("desktop.menu.project.reAnalyseConfirm"), action: onConfirm)
                     .keyboardShortcut(.defaultAction)
-                // Destructive role, and no shortcut: the only key that finishes
-                // this sheet is Escape, and Escape cancels.
-                Button(i18n.t("desktop.menu.project.reAnalyseConfirm"),
-                       role: .destructive, action: onConfirm)
             }
             .padding(.top, 4)
         }

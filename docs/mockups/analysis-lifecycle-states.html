@@ -1107,7 +1107,7 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
       </div>
       <div class="btns">
         <button class="sbtn">Cancel</button>
-        <button class="sbtn destructive">Re-analyse</button>
+        <button class="sbtn default">Re-analyse</button>
       </div>
     </div>
   </div>
@@ -1120,12 +1120,13 @@ body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
      decide in one read — and if the counts come back zero, there is nothing to weigh and the modal
      should not appear at all. That is the difference between a confirmation and a speed bump.</p>
   <h3>Cancel is the default; the destructive button is not blue</h3>
-  <p><b>21 Aug 2026 — the rules held, the rendering didn’t.</b> Both statements below are true of
-     the shipped sheet, but on macOS “default” is <em>drawn</em>: the default button takes the accent
-     fill, so the blue control in the built sheet is <b>Cancel</b>, and the destructive action is a
-     red label on an ordinary bezel. This drawing puts the visual weight the other way round — a web
-     mockup’s assumption that “default” is a keyboard property with no appearance. Pixels kept as
-     drawn; the native render is in
+  <p><b>22 Aug 2026 — this drawing was right and the build was not.</b> The heading below states the
+     rule; the build had it inverted, putting <code>.defaultAction</code> on Cancel so the accent
+     fill landed on the way <em>out</em>. Apple’s alert guidance says not to make Cancel the default,
+     to place the default on the trailing side, and to reserve the destructive style for actions
+     people did not deliberately choose — Empty Trash being their example of the case this sheet is
+     in. The code was corrected; this drawing’s only error was the hue, red where the platform draws
+     the default blue, and that is now fixed too. Native render and the before/after:
      <a href="reanalyse-sheet-pixels.html">reanalyse-sheet-pixels.html</a>.</p>
   <p>Return cancels. The destructive action carries the system red and sits where the eye lands last.
      No <code>--clean</code>, no folder paths, no mention of an output directory — the researcher

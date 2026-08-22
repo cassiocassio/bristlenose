@@ -7,6 +7,13 @@ trued-against: HEAD@main 19797094 on 2026-08-21 (the shipped confirmation
 
 ## Changelog
 
+- _2026-08-22_ — the confirmation sheet's buttons made HIG-conformant: Cancel
+  loses `.defaultAction` (gains `.cancelAction`), **Re-analyse** becomes the
+  trailing default and drops `role: .destructive`, so Return confirms the action
+  the researcher chose. §7's button question settled; §3.3 and both mockups
+  follow. Anchors: `ReAnalyseConfirmSheet.swift`, HIG *Alerts* (default/Cancel
+  guidance, revised 2 Feb 2024), `AccountsSettingsView.swift:100`,
+  `ContentView.swift:919`.
 - _2026-08-21_ — **Truing pass (`--topic` analysis lifecycle).** Three claims this doc
   made were false against the sidebar that ships. (1) §4's inventory listed the
   `+N unanalysed` pill → sheet route as **Shipped**; it exists only on the SwiftUI
@@ -505,9 +512,8 @@ toast goes with it"). No re-analyse `.alert` survives in `ContentView.swift`.
 **The drawing is the intent; the pixels are in a second file.**
 [`docs/mockups/reanalyse-sheet-pixels.html`](mockups/reanalyse-sheet-pixels.html)
 renders the shipped sheet at native metrics — 420 × 307pt, macOS 13/12pt type,
-six states. Read it beside the drawing rather than instead of it: the two state
-the same button rules and render them with opposite emphasis, which is §7's live
-question.
+six states, and the before/after of the 22 Aug button correction. The drawing and
+the build now agree.
 
 **The finding that prompted the departure is real, and does not change the
 design.** `--clean` is `shutil.rmtree(output_dir)`, so a re-analysis always
@@ -689,15 +695,20 @@ locales.
   *learn* to preserve the codebook, which is a feature and a methodology call;
   `design-incremental-analysis.md` §"What's immutable" is still where that
   lands.
-- **Which way should the confirmation's buttons read?** The built sheet puts
-  `.keyboardShortcut(.defaultAction)` on **Cancel**, so on macOS the accent-
-  filled default button is the way *out*, and the destructive action sits to its
-  right as a red label on an ordinary bezel. The drawing states the same two
-  rules and renders them the other way round — a plain Cancel beside a filled red
-  **Re-analyse** — because a web mockup treats "default" as a keyboard property
-  and macOS *draws* it. The rules never diverged; the emphasis did. What is
-  genuinely open: the accent-filled default sits on the **left**, which is not
-  where the eye expects the Return key to live. Evidence side by side in
+- ~~**Which way should the confirmation's buttons read?**~~ **Settled 22 Aug 2026
+  — the sheet was wrong on three counts and is fixed.** It put
+  `.keyboardShortcut(.defaultAction)` on **Cancel** and `role: .destructive` on
+  the confirm button. Apple's alert guidance says: don't make Cancel the default;
+  always place the default on the trailing side; and reserve the destructive
+  style for actions people did *not* deliberately choose — Empty Trash is their
+  example of exactly this case, and there the convenience of Return-to-confirm
+  wins. All three followed from the first. **As built now:** Cancel leads with
+  `.cancelAction`, **Re-analyse** is the trailing default and carries no
+  destructive style, so Return confirms. Two other confirmations in the app
+  already conformed (`ContentView.swift`'s Locate-error alert;
+  `AccountsSettingsView.swift`'s Disconnect, whose comment cites Empty Trash) —
+  this sheet was the outlier of three, and the only one that hand-rolls its
+  button row instead of using a native `.alert`. Before/after in
   [`mockups/reanalyse-sheet-pixels.html`](mockups/reanalyse-sheet-pixels.html).
 - **What happens to a project mid-re-analysis that fails?** It has no old
   analysis (deleted) and no new one. That is a new `Empty` — correct by this

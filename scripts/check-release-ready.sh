@@ -79,6 +79,45 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 DIRTY=$(git status --porcelain --untracked-files=no | wc -l | tr -d ' ')
 [ "$DIRTY" = "0" ] && ok "working tree" "clean" || bad "working tree" "$DIRTY uncommitted change(s)"
 
+# A file marked skip-worktree is invisible to `git status`, so the row above can
+# report a clean tree while carrying the modification most likely to stop a
+# release. That is not hypothetical: on 22 Aug 2026 both entitlements files were
+# marked S and carried com.apple.developer.associated-domains for the parked Zoom
+# import. This preflight said "working tree clean", and the Xcode archive then
+# failed eleven minutes into the build on a capability the Mac App Store profile
+# does not have. The entitlements file's own comment had predicted it in writing
+# — "Release will not self-heal" — and nothing was in a position to read it.
+#
+# The FLAG is not the defect and this must not nag about it: skip-worktree is set
+# deliberately, and a marked file matching HEAD is exactly right. The DIVERGENCE
+# is the defect. `git diff` cannot see it either — skip-worktree tells git to
+# trust the index and stop stat-ing the file — so compare content hashes, which
+# is the only reading that does not go through the mechanism being bypassed.
+#
+# Graded `bad`, harder than the `warn` used for untracked files one row down, and
+# deliberately so: an untracked file cannot change a build, and this one did.
+SKIPPED=$(git ls-files -v | sed -n 's/^S //p' || true)
+if [ -z "$SKIPPED" ]; then
+    ok "skip-worktree" "none"
+else
+    SKIP_N=$(grep -c . <<<"$SKIPPED" | tr -d ' ')
+    DIVERGED=""
+    while IFS= read -r f; do
+        [ -n "$f" ] && [ -f "$f" ] || continue
+        have=$(git hash-object -- "$f" 2>/dev/null || echo "")
+        want=$(git rev-parse "HEAD:$f" 2>/dev/null || echo "")
+        if [ -n "$have" ] && [ -n "$want" ] && [ "$have" != "$want" ]; then
+            DIVERGED="${DIVERGED}${f}"$'\n'
+        fi
+    done <<<"$SKIPPED"
+    if [ -z "$DIVERGED" ]; then
+        ok "skip-worktree" "$SKIP_N file(s), all match HEAD"
+    else
+        bad "skip-worktree" "$(grep -c . <<<"$DIVERGED") of $SKIP_N differ from HEAD — git status cannot see this:"
+        grep . <<<"$DIVERGED" | sed 's/^/        /' >&2
+    fi
+fi
+
 # Untracked files are NOT a failure — most are legitimately ignored-adjacent
 # scratch. But they are listed, because a release went out on 7 Aug 2026
 # alongside an untracked design doc that nobody had decided about. Silence is

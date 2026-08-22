@@ -156,9 +156,14 @@ last time something ran it.**
   Verified: `0.27.0` present, `0.26.0` absent, sequence clean, and the four pages
   the deploy was also carrying now resolve (`recording-permissions.html` had been
   a live 404).
-- **Preflight cannot see `skip-worktree` files.** Add `git ls-files -v | grep '^S'`
-  to `check-release-ready.sh` as a warning row. It would have caught failure 3
-  before 11 minutes of build.
+- ~~**Preflight cannot see `skip-worktree` files.**~~ ✅ **done 22 Aug 2026.** Added
+  as a `bad` row, not a warning — an untracked file cannot change a build and
+  this one did. It compares content hashes rather than asking `git diff`, since
+  `diff` goes through the same index-trusting mechanism being bypassed. Verified
+  against both states before committing. **It found a second divergence in the
+  first run:** `BristlenoseDebug.entitlements` had been diverged from HEAD the
+  whole time and nobody knew — only the Release file was ever restored. One row,
+  one previously invisible defect, on the first execution.
 - **Perf red.** Decide: re-baseline with the reason recorded, or make the export
   carry one locale instead of 22. The second is probably right.
 - **`openai` upper bound.** An open floor means the next major also arrives in a

@@ -45,6 +45,10 @@ def _python_impl(name: str):
         from bristlenose.server.routes.dashboard import _format_duration_human
 
         return _format_duration_human
+    if name == "timecode":
+        from bristlenose.utils.timecodes import format_timecode
+
+        return format_timecode
     return None
 
 
@@ -88,55 +92,30 @@ def test_aligned_formats_have_cases_and_an_implementation() -> None:
 # ── The divergent set — catalogue accuracy, not enforcement ──────────────
 
 
-def test_documented_divergences_are_still_real() -> None:
-    """A `divergent` entry that has quietly become aligned is a stale catalogue.
+def test_timecode_has_exactly_one_python_implementation() -> None:
+    """The nine-implementation sprawl closed on 22 Aug 2026 — keep it closed.
 
-    This does NOT assert that the divergence is correct — it asserts that the
-    register still describes reality. When you close one of these gaps the
-    assertion below fires, which is the reminder to promote the entry to
-    `aligned` rather than leave a fixed format filed as broken.
+    `models.format_timecode` is a re-export and the two server modules import
+    the canonical helper, so all four names must be the *same object*. A future
+    copy-paste would make one of them a distinct function and fail here, which
+    is the failure mode the register exists to prevent (8 of the original 9
+    were copy-paste twins of a helper that already existed in the same
+    language).
     """
-    from bristlenose.models import format_timecode as tc_models
-    from bristlenose.server.export_core import _format_timecode as tc_export
-    from bristlenose.utils.timecodes import format_timecode as tc_utils
+    from bristlenose.models import format_timecode as m
+    from bristlenose.server.export_core import format_timecode as e
+    from bristlenose.server.mcp_server import format_timecode as c
+    from bristlenose.utils.timecodes import format_timecode as u
 
-    spec = _formats()["timecode"]
-    if spec.get("status") != "divergent":
-        return  # already promoted; the aligned path covers it
-
-    inputs = spec["observed"]["_inputs"]
-    padded = [tc_utils(i) for i in inputs]
-    assert padded == [tc_models(i) for i in inputs], (
-        "the two shared-library Python timecode helpers have drifted from each "
-        "other — that is a new gap, not the one on file"
-    )
-    assert padded != [tc_export(i) for i in inputs], (
-        "Python timecode implementations now agree. Promote the `timecode` entry "
-        f"in {CONTRACT.name} to `aligned`, register its implementation in "
-        "_python_impl, and give it `cases`."
+    assert u is m is e is c, (
+        "a second Python timecode implementation has appeared — import "
+        "bristlenose.utils.timecodes.format_timecode rather than writing a local copy"
     )
 
 
 def test_observed_values_in_the_register_are_accurate() -> None:
     """The catalogued Python outputs are measured, not typed from memory."""
-    from bristlenose.models import format_timecode as tc_models
-    from bristlenose.server.export_core import _format_timecode as tc_export
-    from bristlenose.server.mcp_server import _format_timecode as tc_mcp
     from bristlenose.utils.markdown import format_finder_filename
-    from bristlenose.utils.timecodes import format_timecode as tc_utils
-
-    tc = _formats()["timecode"]["observed"]
-    inputs = tc["_inputs"]
-    for key, impl in (
-        ("bristlenose/utils/timecodes.py::format_timecode", tc_utils),
-        ("bristlenose/models.py::format_timecode", tc_models),
-        ("bristlenose/server/export_core.py::_format_timecode", tc_export),
-        ("bristlenose/server/mcp_server.py::_format_timecode", tc_mcp),
-    ):
-        assert [impl(i) for i in inputs] == tc[key], (
-            f"{key} no longer renders what the register says it does — "
-            f"update the `observed` block in {CONTRACT.name}"
-        )
 
     fn = _formats()["finder_filename"]["observed"]
     key = "bristlenose/utils/markdown.py::format_finder_filename"

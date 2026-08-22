@@ -42,6 +42,7 @@ from bristlenose.server.grounding import (
     quote_dom_id,
     resolve_speaker_names,
 )
+from bristlenose.utils.timecodes import format_timecode
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Receive, Scope, Send
@@ -234,12 +235,6 @@ class ProxyIdentityRecorder:
 # ---------------------------------------------------------------------------
 # Tool implementations
 # ---------------------------------------------------------------------------
-
-
-def _format_timecode(seconds: float) -> str:
-    total = int(seconds)
-    h, m, s = total // 3600, (total % 3600) // 60, total % 60
-    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
 
 def _get_project(db: Any, project_id: int) -> Any:
@@ -595,7 +590,7 @@ def _tool_search_quotes(
             "text": edited.get(q.id, q.text),  # researcher's edit wins; never truncated
             "participant": q.participant_id,
             "session_id": q.session_id,
-            "timecode": _format_timecode(q.start_timecode),
+            "timecode": format_timecode(q.start_timecode),
             # A researcher-removed badge is curation: report no sentiment.
             "sentiment": None if (q.id, q.sentiment) in deleted else q.sentiment,
             "intensity": q.intensity,

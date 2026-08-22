@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import type { ProposedTagResponse } from "../utils/types";
 import { getTagBg } from "../utils/colours";
 import { reportHref } from "../utils/reportHref";
+import { formatTimecode } from "../utils/format";
 
 type Zone = "accepted" | "tentative" | "excluded";
 
@@ -21,14 +22,6 @@ interface ProposalZoneListProps {
   onAccept?: (proposalId: number) => void;
   onDeny?: (proposalId: number) => void;
   removing: Set<number>;
-}
-
-function formatTimecode(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 const ZONE_LABEL_KEYS: Record<Zone, string> = {

@@ -11,7 +11,7 @@ from bristlenose.models import (
 def test_format_timecode() -> None:
     assert format_timecode(0) == "00:00"
     assert format_timecode(61) == "01:01"
-    assert format_timecode(3661) == "01:01:01"
+    assert format_timecode(3661) == "1:01:01"
     assert format_timecode(3599.9) == "59:59"
 
 
@@ -31,14 +31,17 @@ def test_parse_timecode_with_millis() -> None:
 
 
 def test_format_timecode_boundary_one_hour() -> None:
-    """59:59 → MM:SS, 01:00:00 → HH:MM:SS."""
+    """59:59 → MM:SS, 1:00:00 → H:MM:SS."""
     assert format_timecode(3599) == "59:59"
-    assert format_timecode(3600) == "01:00:00"
+    assert format_timecode(3600) == "1:00:00"
 
 
 def test_format_timecode_long_session() -> None:
-    """Sessions >= 1 hour use HH:MM:SS."""
-    assert format_timecode(7943) == "02:12:23"
+    """Sessions >= 1 hour use H:MM:SS — the hour field is never zero-padded.
+
+    24h+ still renders two digits naturally; that is the field growing, not padding.
+    """
+    assert format_timecode(7943) == "2:12:23"
     assert format_timecode(86400) == "24:00:00"
     assert format_timecode(90061) == "25:01:01"
 

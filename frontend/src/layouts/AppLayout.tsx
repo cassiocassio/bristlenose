@@ -12,6 +12,7 @@ import { Outlet, useNavigate, useMatch, useLocation } from "react-router-dom";
 import { Header } from "../components/Header";
 import { NavBar } from "../components/NavBar";
 import { Footer } from "../components/Footer";
+import { formatTimecode } from "../utils/format";
 import { FeedbackModal } from "../components/FeedbackModal";
 import { SettingsModal } from "../components/SettingsModal";
 import { SidebarLayout, sidebarAnimations } from "../components/SidebarLayout";
@@ -83,14 +84,6 @@ function csvEsc(v: string): string {
     return `"${v.replace(/"/g, '""')}"`;
   }
   return v;
-}
-
-function formatTimecode(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function buildCsvString(

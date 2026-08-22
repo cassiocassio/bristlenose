@@ -1,12 +1,8 @@
 {
   "_doc": "Cross-language RENDER contract: formats that must look identical wherever a user meets them, across Python (CLI + server), TypeScript (React SPA) and Swift (macOS). Sibling of pipeline-summary-contract.json, which does the same job for PARSED contracts — see docs/design-shared-formats.md for the distinction and for why it matters which kind you are holding. Established 22 Aug 2026.",
-
   "_how_to_use": "Each entry carries a `status`. `aligned` entries are ASSERTED by tests/test_shared_format_contract.py and frontend/src/utils/sharedFormatContract.test.ts — their `cases` are the agreed truth and a drifting implementation fails its own suite. `divergent` entries are CATALOGUED ONLY: no test asserts their `observed` values as correct, because they are not. They record measured reality so the gap is visible and countable. Closing a gap means moving the entry to `aligned` in the same commit as the fix.",
-
   "_not_a_codegen_step": "Deliberately hand-maintained, matching the stance in tests/test_swift_contract_parity.py. These are five-line functions doing integer division; a schema compiler in three toolchains would cost more than the drift it prevents. Revisit if a fourth language appears.",
-
   "formats": {
-
     "duration_human": {
       "status": "aligned",
       "datum": "An elapsed span — how long a session ran. NOT a position in a recording (see `timecode`).",
@@ -17,15 +13,42 @@
         "swift": "desktop/Bristlenose/Bristlenose/DurationFormat.swift::DurationFormat.human — window subtitle, sessions popover, cloud import list"
       },
       "cases": [
-        [66180, "18h 23m"],
-        [3600, "1h"],
-        [3661, "1h 1m"],
-        [3780, "1h 3m"],
-        [1591, "26m"],
-        [240, "4m"],
-        [60, "1m"],
-        [59, "<1m"],
-        [30, "<1m"]
+        [
+          66180,
+          "18h 23m"
+        ],
+        [
+          3600,
+          "1h"
+        ],
+        [
+          3661,
+          "1h 1m"
+        ],
+        [
+          3780,
+          "1h 3m"
+        ],
+        [
+          1591,
+          "26m"
+        ],
+        [
+          240,
+          "4m"
+        ],
+        [
+          60,
+          "1m"
+        ],
+        [
+          59,
+          "<1m"
+        ],
+        [
+          30,
+          "<1m"
+        ]
       ],
       "divergences": [
         {
@@ -39,41 +62,111 @@
       ],
       "notes": "The h/m abbreviations are knowingly unlocalised on all three sides. Changing that is a separate decision with a 22-locale cost — see docs/design-shared-formats.md."
     },
-
     "timecode": {
-      "status": "divergent",
+      "status": "aligned",
       "datum": "A POSITION in a recording — where a quote sits. NOT an elapsed span (see `duration_human`).",
-      "canonical": null,
-      "decision": "22 Aug 2026 (Martin): timecodes carry leading zeros; durations do not. This eliminates the unpadded family below. One sub-detail remains open: whether the HOUR field also pads — '01:05:30' (both shared-library Python helpers) or '1:05:30' (format.ts and every unpadded variant). Resolve before implementing.",
-      "observed": {
-        "_inputs": [330, 3930, 45],
-        "bristlenose/utils/timecodes.py::format_timecode": ["05:30", "01:05:30", "00:45"],
-        "bristlenose/models.py::format_timecode": ["05:30", "01:05:30", "00:45"],
-        "bristlenose/server/export_core.py::_format_timecode": ["5:30", "1:05:30", "0:45"],
-        "bristlenose/server/mcp_server.py::_format_timecode": ["5:30", "1:05:30", "0:45"],
-        "frontend/src/utils/format.ts::formatTimecode": ["05:30", "1:05:30", "00:45"],
-        "frontend/src/utils/exportActions.ts::formatTimecode": ["5:30", "1:05:30", "0:45"],
-        "frontend/src/components/ProposalZoneList.tsx::formatTimecode": ["5:30", "1:05:30", "0:45"],
-        "frontend/src/components/AutoCodeReportModal.tsx::formatTimecode": ["5:30", "1:05:30", "0:45"],
-        "frontend/src/layouts/AppLayout.tsx::formatTimecode": ["5:30", "1:05:30", "0:45"]
+      "canonical": "bristlenose/utils/timecodes.py::format_timecode",
+      "decision": "22 Aug 2026 (Martin): pad the MINUTE field, never the HOUR field. Minutes genuinely range 00-59, so padding buys column alignment across a list of quotes. Hours never reach two digits in research data — the longest session in ten years of the maintainer's practice is 90 minutes, and an all-morning symposium tops out near 3h — so padding the hour reserves a column for '09:34:23' that no interview will ever occupy, and makes the reader parse a leading zero that is meaningless 99% of the time. It also matches how video editors render elapsed position, which is the tool researchers use to trim clips from these same recordings. Sub-minute timecodes are explicitly out of scope as a real-world case.",
+      "implementations": {
+        "python": "bristlenose/utils/timecodes.py::format_timecode — the only Python implementation. Re-exported from models.py for the stages that import it there; export_core.py and mcp_server.py import it directly.",
+        "typescript": "frontend/src/utils/format.ts::formatTimecode — the only TypeScript implementation. Imported by exportActions.ts, AppLayout.tsx, ProposalZoneList.tsx and AutoCodeReportModal.tsx, which each held a private copy until 22 Aug 2026.",
+        "swift": "none — the Mac surfaces that show a position go through the SPA."
       },
-      "gap": "9 implementations, 3 distinct formats. format.ts is a hybrid matching neither Python family. USER-VISIBLE TODAY: a quote card renders 05:30 and exporting that same quote to CSV renders 5:30 — one click apart, same datum. Also note 8 of the 9 are copy-paste duplicates of a shared helper that already exists in each language; deduplicating is most of the fix.",
-      "swift": "No Swift implementation — the Mac surfaces that show a position go through the SPA. Nothing owed unless a native transcript view appears."
+      "cases": [
+        [
+          0,
+          "00:00"
+        ],
+        [
+          5,
+          "00:05"
+        ],
+        [
+          10.7,
+          "00:10"
+        ],
+        [
+          45,
+          "00:45"
+        ],
+        [
+          89.9,
+          "01:29"
+        ],
+        [
+          125,
+          "02:05"
+        ],
+        [
+          330,
+          "05:30"
+        ],
+        [
+          599,
+          "09:59"
+        ],
+        [
+          600,
+          "10:00"
+        ],
+        [
+          3599,
+          "59:59"
+        ],
+        [
+          3600,
+          "1:00:00"
+        ],
+        [
+          3605,
+          "1:00:05"
+        ],
+        [
+          3661,
+          "1:01:01"
+        ],
+        [
+          3930,
+          "1:05:30"
+        ],
+        [
+          36000,
+          "10:00:00"
+        ]
+      ],
+      "divergences": [
+        {
+          "inputs": "seconds < 0",
+          "python": "00:00 (clamped via max(0, int(seconds)))",
+          "typescript": "59:50 (no clamp; JS modulo on a negative)",
+          "deliberate": false,
+          "why": "Not reachable from real data — a timecode is a position in a recording and cannot be negative — so this is a latent difference in defensive behaviour rather than a live bug, and is excluded from `cases` rather than fixed. If a clamp is ever added to the TypeScript side, add the case here and it becomes enforced."
+        }
+      ],
+      "notes": "Was 9 implementations across 3 formats until 22 Aug 2026; 8 were copy-paste duplicates of a helper that already existed in the same language. The user-visible symptom was a quote card rendering 05:30 while the CSV export of that same quote rendered 5:30.",
+      "also_parsed": "UNLIKE every other entry here, this format has a PARSED half. Transcript .txt/.md files are a round-trip format — the pipeline writes them with format_timecode and reads them back on resume and re-analysis via the regex at bristlenose/pipeline.py (search 'Parse transcript lines'). So timecode is Class R on screen and Class W on disk. Consequences: (1) the reader's leading field must stay `\\d{1,2}` — it was `\\d{2}` until 22 Aug 2026 and a `[1:00:00]` segment was then dropped SILENTLY, no error, a short transcript the only symptom; (2) that tolerance is permanent backward compatibility, because transcripts already on researchers' disks carry the old `[01:00:00]` form. Both directions are pinned in tests/test_transcript_writing.py (test_parser_mixed_timecode_formats and test_parser_still_reads_legacy_zero_padded_hours). Before changing a rendered format, check whether anything parses it back."
     },
-
     "finder_filename": {
       "status": "divergent",
       "datum": "A filename truncated Finder-style with a middle ellipsis, default budget 24 chars.",
       "canonical": null,
       "observed": {
-        "_inputs": ["interview-with-rachel-chen-final.mov", "a-very-long-transcript-name-indeed.docx"],
-        "bristlenose/utils/markdown.py::format_finder_filename": ["interview-wi…n-final.mov", "a-very-long-…indeed.docx"],
-        "frontend/src/utils/format.ts::formatFinderFilename": ["interview-wit…-final.mov", "a-very-long-…indeed.docx"]
+        "_inputs": [
+          "interview-with-rachel-chen-final.mov",
+          "a-very-long-transcript-name-indeed.docx"
+        ],
+        "bristlenose/utils/markdown.py::format_finder_filename": [
+          "interview-wi…n-final.mov",
+          "a-very-long-…indeed.docx"
+        ],
+        "frontend/src/utils/format.ts::formatFinderFilename": [
+          "interview-wit…-final.mov",
+          "a-very-long-…indeed.docx"
+        ]
       },
       "gap": "Off-by-one in the front/back split: the two sides disagree on 1 of 4 sampled realistic filenames and agree on the rest, which is why it never surfaced. Low user impact (a character's difference in a truncation), low fix cost — but it needs a decision on which split is right, so it is not trivial-by-inspection.",
       "swift": "No Swift implementation."
     },
-
     "finder_date": {
       "status": "aligned-by-pair",
       "datum": "A timestamp rendered the way Finder renders relative dates: Today / Yesterday / absolute.",
@@ -96,7 +189,6 @@
       "cases": null,
       "notes": "Not machine-pinned: all three take a clock and a locale, so a fixture would need injected time and an Intl/CLDR-stable locale on three runtimes. The Swift header (SessionsFinderDate.swift:1-46) is the exemplar contract docstring in this codebase — read it before writing a new mirror. Its KNOWN-WRONG section also records that the underlying VALUE is questionable (st_birthtime, not session start), which is a data problem rather than a format one and is tracked separately."
     },
-
     "plural_category": {
       "status": "deliberately-forked",
       "datum": "Count-dependent noun forms.",

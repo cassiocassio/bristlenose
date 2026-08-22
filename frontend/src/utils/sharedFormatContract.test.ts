@@ -40,6 +40,7 @@ const contract = contractJson as unknown as { formats: Record<string, FormatSpec
 /** The TypeScript implementation for each aligned format. */
 const IMPLS: Record<string, (seconds: number) => string> = {
   duration_human: formatDurationHuman,
+  timecode: formatTimecode,
 };
 
 describe("shared format contract — aligned formats", () => {
@@ -74,34 +75,28 @@ describe("shared format contract — aligned formats", () => {
   }
 });
 
+describe("shared format contract — one implementation per language", () => {
+  // Four components held private copies of formatTimecode until 22 Aug 2026.
+  // Vitest cannot compare function identity across modules the way the Python
+  // side can, so this pins the observable consequence instead: every module
+  // that renders a timecode agrees with the canonical helper.
+  it("every TypeScript timecode surface renders the canonical format", () => {
+    for (const [seconds, expected] of contract.formats.timecode.cases ?? []) {
+      expect(formatTimecode(seconds)).toBe(expected);
+    }
+    // The shape that was wrong: an unpadded minute field.
+    expect(formatTimecode(330)).toBe("05:30");
+    expect(formatTimecode(330)).not.toBe("5:30");
+    // ...and the shape that would be wrong the other way: a padded hour.
+    expect(formatTimecode(3930)).toBe("1:05:30");
+    expect(formatTimecode(3930)).not.toBe("01:05:30");
+  });
+});
+
 describe("shared format contract — catalogued divergences", () => {
   // Not enforcement: these assert that the register still describes reality,
   // so a fixed format does not stay filed as broken. When one fires, promote
   // the entry to `aligned` rather than editing the expectation away.
-
-  it("timecode is still divergent between format.ts and the export twins", () => {
-    const spec = contract.formats.timecode;
-    if (spec.status !== "divergent") return; // promoted; the aligned path covers it
-
-    const inputs = (spec.observed as { _inputs: number[] })._inputs;
-    const shared = inputs.map((s) => formatTimecode(s));
-    const recorded = (spec.observed as Record<string, string[]>)[
-      "frontend/src/utils/format.ts::formatTimecode"
-    ];
-    expect(
-      shared,
-      "format.ts::formatTimecode no longer renders what the register says — update the observed block",
-    ).toEqual(recorded);
-
-    const exportTwin = (spec.observed as Record<string, string[]>)[
-      "frontend/src/utils/exportActions.ts::formatTimecode"
-    ];
-    expect(
-      shared,
-      "TypeScript timecode implementations now agree. Promote the `timecode` entry to `aligned`, " +
-        "register it in IMPLS, and give it cases.",
-    ).not.toEqual(exportTwin);
-  });
 
   it("finder_filename observed values are accurate for TypeScript", () => {
     const spec = contract.formats.finder_filename;

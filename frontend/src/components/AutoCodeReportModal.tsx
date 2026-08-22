@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
+import { formatTimecode } from "../utils/format";
 import {
   getAutoCodeProposals,
   acceptAllProposals,
@@ -24,14 +25,6 @@ interface AutoCodeReportModalProps {
   onClose: () => void;
   onAcceptAll: () => void;
   onTagTentatively: () => void;
-}
-
-function formatTimecode(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 export function AutoCodeReportModal({

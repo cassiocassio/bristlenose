@@ -10,6 +10,10 @@ from pydantic import BaseModel, Field
 
 from bristlenose.events import PipelineSummary
 
+# Re-exported so the many stages importing it from here keep working. There is
+# exactly one implementation, in utils.timecodes — see docs/design-shared-formats.md.
+from bristlenose.utils.timecodes import format_timecode as format_timecode
+
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -416,17 +420,6 @@ PipelineResult.model_rebuild()
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def format_timecode(seconds: float) -> str:
-    """Format seconds as MM:SS or HH:MM:SS (hours only when >= 1 h)."""
-    total = max(0, int(seconds))
-    h = total // 3600
-    m = (total % 3600) // 60
-    s = total % 60
-    if h:
-        return f"{h:02d}:{m:02d}:{s:02d}"
-    return f"{m:02d}:{s:02d}"
 
 
 def parse_timecode(tc: str) -> float:

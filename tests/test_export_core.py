@@ -9,7 +9,6 @@ import pytest
 from bristlenose.server.app import create_app
 from bristlenose.server.export_core import (
     ExportableQuote,
-    _format_timecode,
     csv_safe,
     excel_sheet_name,
     extract_quotes_for_export,
@@ -105,26 +104,11 @@ class TestExcelSheetName:
         assert excel_sheet_name("[]*?/\\") == "Quotes"
 
 
-# ---------------------------------------------------------------------------
-# _format_timecode()
-# ---------------------------------------------------------------------------
-
-
-class TestFormatTimecode:
-    def test_seconds_only(self):
-        assert _format_timecode(5.0) == "0:05"
-
-    def test_minutes_and_seconds(self):
-        assert _format_timecode(125.0) == "2:05"
-
-    def test_hours(self):
-        assert _format_timecode(3661.0) == "1:01:01"
-
-    def test_zero(self):
-        assert _format_timecode(0.0) == "0:00"
-
-    def test_fractional_truncated(self):
-        assert _format_timecode(10.7) == "0:10"
+# _format_timecode() was a private copy of bristlenose.utils.timecodes.format_timecode
+# and was deleted on 22 Aug 2026 when the nine timecode implementations were
+# consolidated to one per language. Its five cases (0, 5, 125, 3661, 10.7 s) moved
+# to tests/fixtures/shared-format-contract.json, where they now hold every
+# implementation rather than this one. See docs/design-shared-formats.md.
 
 
 # ---------------------------------------------------------------------------

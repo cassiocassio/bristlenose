@@ -37,7 +37,7 @@ describe("buildLeanQuotesText", () => {
   it("includes the display name by default (quote · code · name · timecode)", () => {
     initFromQuotes([makeQuote()]);
     const out = buildLeanQuotesText(getQuotesSnapshot(), ["q-p1-1"], false);
-    expect(out).toBe("I was confused by the dashboard\tp1\tAlice\t1:10");
+    expect(out).toBe("I was confused by the dashboard\tp1\tAlice\t01:10");
   });
 
   // PII boundary: anonymise must drop the display-name column entirely, while
@@ -46,7 +46,7 @@ describe("buildLeanQuotesText", () => {
   it("drops the display name when anonymise=true, keeping the code", () => {
     initFromQuotes([makeQuote({ speaker_name: "Alice" })]);
     const out = buildLeanQuotesText(getQuotesSnapshot(), ["q-p1-1"], true);
-    expect(out).toBe("I was confused by the dashboard\tp1\t1:10");
+    expect(out).toBe("I was confused by the dashboard\tp1\t01:10");
     expect(out).not.toContain("Alice");
   });
 

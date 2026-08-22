@@ -377,9 +377,9 @@ def test_parser_mixed_timecode_formats(tmp_path: Path) -> None:
     content = (tmp_path / "s5.txt").read_text()
     assert "[00:00]" in content       # MM:SS
     assert "[59:50]" in content       # MM:SS
-    assert "[01:00:00]" in content    # HH:MM:SS
-    assert "[02:11:40]" in content    # HH:MM:SS
-    assert "Duration: 02:12:23" in content
+    assert "[1:00:00]" in content     # H:MM:SS
+    assert "[2:11:40]" in content     # H:MM:SS
+    assert "Duration: 2:12:23" in content
 
     # Round-trip: parser should recover all timecodes
     loaded = load_transcripts_from_dir(tmp_path)
@@ -387,6 +387,43 @@ def test_parser_mixed_timecode_formats(tmp_path: Path) -> None:
     assert loaded[0].duration_seconds == 7943.0
     times = [seg.start_time for seg in loaded[0].segments]
     assert times == [0.0, 3590.0, 3600.0, 7900.0]
+
+
+def test_parser_still_reads_legacy_zero_padded_hours(tmp_path: Path) -> None:
+    """Transcripts written before 22 Aug 2026 must keep loading, forever.
+
+    The hour field stopped being zero-padded when the nine timecode
+    implementations were consolidated (docs/design-shared-formats.md). Files
+    already on a researcher's disk carry the old `[01:00:00]` form, and the
+    transcript reader is the other half of a round-trip contract — the pipeline
+    writes these files and reads them back on resume and re-analysis.
+
+    This is written as a hand-authored file rather than a round-trip so it
+    cannot silently start testing the *new* format if the writer changes again.
+    The failure it guards against is silent: a non-matching line is skipped, so
+    the symptom is a short transcript, not an error.
+    """
+    from bristlenose.pipeline import load_transcripts_from_dir
+
+    (tmp_path / "s9.txt").write_text(
+        "# Session: s9\n"
+        "# Participant: p9\n"
+        "Duration: 02:12:23\n"
+        "\n"
+        "[00:00] [m1] Start.\n"
+        "[59:50] [p9] Before the hour.\n"
+        "[01:00:00] [p9] Exactly one hour, zero-padded.\n"
+        "[02:11:40] [p9] Late, zero-padded.\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_transcripts_from_dir(tmp_path)
+    assert len(loaded) == 1
+    times = [seg.start_time for seg in loaded[0].segments]
+    assert times == [0.0, 3590.0, 3600.0, 7900.0], (
+        "a legacy zero-padded transcript lost segments — the reader regex must "
+        "accept both [01:00:00] and [1:00:00]"
+    )
 
 
 def test_write_raw_md_long_session(tmp_path: Path) -> None:
@@ -415,5 +452,5 @@ def test_write_raw_md_long_session(tmp_path: Path) -> None:
     write_raw_transcripts_md([long], tmp_path)
     content = (tmp_path / "s6.md").read_text()
     assert "**[00:30] p6**" in content      # MM:SS
-    assert "**[01:01:00] p6**" in content    # HH:MM:SS
-    assert "**Duration:** 02:00:00" in content
+    assert "**[1:01:00] p6**" in content     # H:MM:SS
+    assert "**Duration:** 2:00:00" in content

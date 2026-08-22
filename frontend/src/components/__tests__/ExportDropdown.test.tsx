@@ -241,7 +241,10 @@ describe("ExportDropdown", () => {
       expect(writeText).toHaveBeenCalledOnce();
       const written = writeText.mock.calls[0][0] as string;
       // Tab-separated: quote, participant code, display name, timecode
-      expect(written).toBe("Test quote\tp1\tAlice\t0:10");
+      // Padded minutes, matching the quote card the researcher copied from. These
+      // pinned "0:10" until 22 Aug 2026, i.e. they asserted the card/export
+      // disagreement rather than catching it. See docs/design-shared-formats.md.
+      expect(written).toBe("Test quote\tp1\tAlice\t00:10");
     });
   });
 

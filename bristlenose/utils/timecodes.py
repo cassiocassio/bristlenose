@@ -22,7 +22,7 @@ def format_timecode(seconds: float) -> str:
     m = (total % 3600) // 60
     s = total % 60
     if h:
-        return f"{h:02d}:{m:02d}:{s:02d}"
+        return f"{h}:{m:02d}:{s:02d}"
     return f"{m:02d}:{s:02d}"
 
 

@@ -61,7 +61,7 @@ not a new invention, which is most of why it is cheap.
 |---|---|---|---|---|---|
 | `duration_human` | elapsed span | `_format_duration_human` | `formatDurationHuman` | `DurationFormat.human` | **aligned**, pinned |
 | `finder_date` | Finder-style relative timestamp | `format_finder_date` | `formatFinderDate` | `SessionsFinderDate.format` | **aligned by pair**, one deliberate fork |
-| `timecode` | position in a recording | 4 implementations | 5 implementations | — | **divergent** — 3 formats |
+| `timecode` | position in a recording | `format_timecode` | `formatTimecode` | — | **aligned**, pinned · also parsed |
 | `finder_filename` | middle-ellipsis truncation | `format_finder_filename` | `formatFinderFilename` | — | **divergent** — off-by-one |
 | `plural_category` | count-dependent noun forms | `count_noun` (inflect) | i18next CLDR | `I18n.pluralCategory` | **deliberately forked** |
 
@@ -130,28 +130,50 @@ KNOWN-WRONG section about the underlying value. That is the standard.
 
 ## 4. The gaps
 
-Recorded, not fixed. Each needs a decision before it needs code.
+`timecode` was one of these and closed on 22 Aug 2026; its record is kept
+below because the way it closed is the useful part. `finder_filename` remains
+open and needs a decision before it needs code.
 
-### `timecode` — 9 implementations, 3 distinct formats
+### `timecode` — closed 22 Aug 2026
 
-| Rendering | Implementations |
-|---|---|
-| `05:30` / `01:05:30` / `00:45` | `utils/timecodes.py`, `models.py` |
-| `5:30` / `1:05:30` / `0:45` | `export_core.py`, `mcp_server.py`, and 4 local TypeScript copies |
-| `05:30` / `1:05:30` / `00:45` | `frontend/src/utils/format.ts` — matches neither Python family |
+Was 9 implementations across 3 formats. 8 of them were copy-paste duplicates of a
+helper that already existed in the same language; the user-visible symptom was a
+quote card rendering `05:30` while the CSV export of that same quote rendered
+`5:30`.
 
-**User-visible today:** a quote card renders `05:30`, and exporting that same
-quote to CSV renders `5:30`. One click apart, same datum, same surface.
+**Decided:** pad the minute field, never the hour — `05:30` and `1:12:45`.
+Minutes genuinely range 00–59, so padding buys column alignment down a list of
+quotes. Hours never reach two digits in research data — the longest session in
+ten years of the maintainer's practice is 90 minutes, and an all-morning
+symposium tops out near 3h — so padding the hour reserves a column for
+`09:34:23` that no interview will ever occupy and makes the reader parse a
+leading zero that is meaningless 99% of the time. It also matches how video
+editors render elapsed position, which is the tool researchers use to trim clips
+from these same recordings.
 
-**Decided 22 Aug 2026 (Martin): timecodes carry leading zeros; durations do
-not.** That eliminates the unpadded family — six of the nine implementations.
-One sub-detail is still open: whether the *hour* field also pads, `01:05:30` as
-both shared-library Python helpers do, or `1:05:30` as `format.ts` and every
-unpadded variant do. That needs resolving before anyone writes the fix.
+Now one implementation per language: `bristlenose/utils/timecodes.py` (re-exported
+from `models.py`, imported directly by `export_core.py` and `mcp_server.py`) and
+`frontend/src/utils/format.ts` (imported by the four components that each held a
+private copy).
 
-Note that 8 of the 9 are copy-paste duplicates of a helper that already exists
-in the same language. Deduplicating to one implementation per language is most
-of the work, and is mechanical once the format is settled.
+**This entry is the exception to the whole document: it has a parsed half.**
+Transcript `.txt` / `.md` files are a *round-trip* format — the pipeline writes
+them and reads them back on resume and re-analysis — so `timecode` is Class R on
+screen and Class W on disk. Two things follow, and both are pinned in
+`tests/test_transcript_writing.py`:
+
+1. The reader's leading field must stay `\d{1,2}`. It was `\d{2}`, and when the
+   hour stopped being padded a `[1:00:00]` segment stopped matching and was
+   dropped **silently** — no error, a short transcript the only symptom. This was
+   not predicted by checking `parse_timecode`, which was already tolerant; the
+   transcript line reader is a *different* regex in `pipeline.py`, and it was the
+   round-trip assertion in an existing test that caught it, not the check.
+2. That tolerance is permanent backward compatibility. Transcripts already on a
+   researcher's disk carry the old `[01:00:00]` form and must keep loading.
+
+**The general lesson, and the reason this is recorded rather than quietly fixed:
+before changing a rendered format, check whether anything parses it back — and
+check every reader, not the one named after the format.**
 
 ### `finder_filename` — off-by-one
 

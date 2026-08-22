@@ -2830,11 +2830,21 @@ def load_transcripts_from_dir(
             if line.startswith("#"):
                 continue
 
-            # Parse transcript lines: [MM:SS] or [HH:MM:SS] [speaker_code] text
+            # Parse transcript lines: [MM:SS] or [H:MM:SS] [speaker_code] text
             # The bracket token is the speaker code (p1, m1, o1, ...) or
             # a legacy speaker role (PARTICIPANT, RESEARCHER, etc.).
+            #
+            # The leading field is `\d{1,2}` and must stay tolerant. Transcripts
+            # are a ROUND-TRIP format — the pipeline writes them and reads them
+            # back on resume and re-analysis — so this regex is the reader half
+            # of a contract with `format_timecode`. It was `\d{2}` until 22 Aug
+            # 2026, when the hour field stopped being zero-padded; a segment at
+            # `[1:00:00]` then failed to match and was dropped **silently**, with
+            # no error and a short transcript as the only symptom. Tolerance is
+            # also permanent backward compatibility: transcripts already on disk
+            # carry the old `[01:00:00]` form and must keep loading forever.
             match = re.match(
-                r"\[(\d{2}:\d{2}(?::\d{2})?)\]\s*(?:\[(\w+)\])?\s*(.*)", line
+                r"\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*(?:\[(\w+)\])?\s*(.*)", line
             )
             if match:
                 tc_str, bracket_token, text = match.groups()

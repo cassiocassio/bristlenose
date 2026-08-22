@@ -26,6 +26,7 @@ import { startClipExtraction } from "./api";
 import { addJob } from "../contexts/ActivityStore";
 import { toast } from "./toast";
 import { announce } from "./announce";
+import { formatTimecode } from "./format";
 import type { QuotesState } from "../contexts/QuotesContext";
 
 /** The 11 rich export columns, by i18n key, in ExportableQuote field order. */
@@ -46,14 +47,6 @@ export const QUOTE_EXPORT_COL_KEYS = [
 /** Comma-joined translated headers for the rich CSV / XLSX endpoints. */
 export function buildQuoteColHeaders(t: TFunction): string {
   return QUOTE_EXPORT_COL_KEYS.map((k) => t(k)).join(",");
-}
-
-function formatTimecode(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function tsvEsc(v: string): string {

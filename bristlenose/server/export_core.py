@@ -33,6 +33,7 @@ from bristlenose.server.models import (
     Session as SessionModel,
 )
 from bristlenose.server.routes.data import _parse_dom_quote_id
+from bristlenose.utils.timecodes import format_timecode
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -73,17 +74,6 @@ def excel_sheet_name(name: str, max_length: int = 31) -> str:
     if len(result) > max_length:
         result = result[:max_length].rstrip("' ")
     return result or "Quotes"
-
-
-def _format_timecode(seconds: float) -> str:
-    """Format seconds as ``m:ss`` or ``h:mm:ss``."""
-    total = int(seconds)
-    h = total // 3600
-    m = (total % 3600) // 60
-    s = total % 60
-    if h > 0:
-        return f"{h}:{m:02d}:{s:02d}"
-    return f"{m}:{s:02d}"
 
 
 # ---------------------------------------------------------------------------
@@ -197,7 +187,7 @@ def extract_quotes_for_export(
                 sentiment=q.sentiment or "",
                 tags=tags_str,
                 starred=starred,
-                timecode=_format_timecode(q.start_timecode),
+                timecode=format_timecode(q.start_timecode),
                 session=q.session_id,
                 source_file=source_file,
             )

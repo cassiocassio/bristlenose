@@ -7,6 +7,12 @@ trued-against: HEAD@main 19797094 on 2026-08-21 (the shipped confirmation
 
 ## Changelog
 
+- _2026-08-22_ — §7's title-wrapping question settled by measurement: the long
+  name wraps, and adding `.fixedSize` to the title renders byte-identically, so
+  the modifier would be a no-op. Sheet heights corrected to the SwiftUI figures
+  (314.5 / 330.5pt); the earlier numbers came from the CSS stand-in and ran ~7.5pt
+  light. Anchors: `ReAnalyseConfirmSheet.swift`,
+  `docs/mockups/reanalyse-sheet-pixels.html` §"Rendered by SwiftUI".
 - _2026-08-22_ — the confirmation sheet's buttons made HIG-conformant: Cancel
   loses `.defaultAction` (gains `.cancelAction`), **Re-analyse** becomes the
   trailing default and drops `role: .destructive`, so Return confirms the action
@@ -511,9 +517,10 @@ toast goes with it"). No re-analyse `.alert` survives in `ContentView.swift`.
 
 **The drawing is the intent; the pixels are in a second file.**
 [`docs/mockups/reanalyse-sheet-pixels.html`](mockups/reanalyse-sheet-pixels.html)
-renders the shipped sheet at native metrics — 420 × 307pt, macOS 13/12pt type,
-six states, and the before/after of the 22 Aug button correction. The drawing and
-the build now agree.
+renders the shipped sheet at native metrics — 420 × 314.5pt, macOS 13/12pt type,
+six states, the before/after of the 22 Aug button correction, and one frame put
+through SwiftUI's own `ImageRenderer` rather than CSS. The drawing and the build
+now agree.
 
 **The finding that prompted the departure is real, and does not change the
 design.** `--clean` is `shutil.rmtree(output_dir)`, so a re-analysis always
@@ -709,6 +716,15 @@ locales.
   `AccountsSettingsView.swift`'s Disconnect, whose comment cites Empty Trash) —
   this sheet was the outlier of three, and the only one that hand-rolls its
   button row instead of using a native `.alert`. Before/after in
+  [`mockups/reanalyse-sheet-pixels.html`](mockups/reanalyse-sheet-pixels.html).
+- ~~**Does a long project name wrap or truncate in the confirmation title?**~~
+  **Settled 22 Aug 2026 — it wraps, in full, no ellipsis.** The title carries no
+  `.fixedSize` while the line beneath it does, and that asymmetry looked like the
+  scar of a past truncation. It isn't: rendering the layout chain through
+  `ImageRenderer` with and without `.fixedSize(horizontal: false, vertical: true)`
+  on the title produces **byte-identical** images, so the modifier is a no-op on
+  this layout and its absence is not a latent bug. The sheet grows 16pt to hold
+  the second line (420 × 330.5pt, against 314.5pt for a short name). Render in
   [`mockups/reanalyse-sheet-pixels.html`](mockups/reanalyse-sheet-pixels.html).
 - **What happens to a project mid-re-analysis that fails?** It has no old
   analysis (deleted) and no new one. That is a new `Empty` — correct by this

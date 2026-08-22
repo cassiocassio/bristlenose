@@ -240,7 +240,7 @@ via a flat `people[code]` lookup, so the *names* it imports inherit the YAML
 collision even though the *rows* are per-session; fixing 11c fixes that too.
 
 Each collision now logs a WARNING from `bristlenose.people` so it is announced
-rather than silent (15 Aug 2026), and
+rather than silent (22 Aug 2026), and
 `tests/test_people.py::test_multi_session_moderator_codes_collide_and_are_warned`
 pins the behaviour. It is still lossy — the flat key cannot represent two
 different moderators, so this is a documented limitation awaiting 11c, not a

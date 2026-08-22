@@ -258,7 +258,7 @@ emergencies.
 | GitHub Release | `gh release view vX.Y.Z` |
 | Homebrew | the tap formula's sdist URL names `bristlenose-X.Y.Z.tar.gz` |
 | TestFlight | `xcrun altool --build-status --delivery-id <uuid> …` — **capture the UUID into the plan when `upload-testflight.sh` prints it**; it is the one probe you cannot reconstruct later |
-| Snap | `snap info bristlenose` (no `snap` on macOS — fall back to the workflow run's conclusion, and say that is what you did) |
+| Snap | `curl -s -H 'Snap-Device-Series: 16' https://api.snapcraft.io/v2/snaps/info/bristlenose` — read `channel-map[].version` per channel. Public, unauthenticated, works fine from macOS; `snap info` is the CLI for the same data, not the only way to it |
 | **Website** | `curl -s https://bristlenose.app/docs/changelog.html \| grep -c 'X\.Y\.Z'` → non-zero |
 | `.dmg` | `curl -sI https://bristlenose.app/dmg/Bristlenose.dmg` → 302 to the versioned name |
 
@@ -274,6 +274,27 @@ filename, so there is nothing else to drift.
 Every row must trace to a command you actually ran. If you could not run one, say
 so and name what would run it — never let a channel's status rest on someone
 having told you.
+
+**And "I can't probe this" is itself a claim that must be checked.** The Snap row
+used to say the workflow conclusion was the only probe available on macOS,
+because `snap` is not installed here. That was false: the store has a public
+unauthenticated API, and it answers the question the workflow cannot. **A missing
+CLI is not a missing channel** — nearly every store, registry and CDN in this
+release has an HTTP endpoint behind whatever tool normally reads it, which is
+exactly why the PyPI, Homebrew and `.dmg` rows are already `curl`. Before writing
+"no way to check from here", spend one request finding out. Caught by the
+maintainer, 22 Aug 2026, in a close-out table that had already declared the
+limitation as fact.
+
+**The two Snap probes answer different questions and Tier 2 needs the second.**
+The workflow's `publish-edge` conclusion says the *upload* succeeded; the store
+API says what is actually *released on a channel*, which is the thing a user
+gets. They diverge for real: edge read `0.25.3 rev 9` for several minutes after
+the run reported its build job green. For Tier 1 the run conclusion is a
+reasonable interim signal — say it is interim — but the release is not verified
+until `channel-map` names the new version. For Tier 2, where the whole act is
+promoting an existing revision to `stable`, the store API is the *only* probe
+that means anything.
 
 Close with a table of what is now true per channel, plus the expiry clocks —
 **`.dmg` 30 days from the *build*, TestFlight 90 from the *upload*.**

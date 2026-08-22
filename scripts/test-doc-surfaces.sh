@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# test-doc-surfaces.sh — prove check-doc-surfaces.sh fires, and on what.
+#
+# A gate that reports 0 gaps on a clean tree is either correct or blind, and the
+# two look identical from outside. This suite makes the difference visible:
+# it injects each failure the gate exists to catch and asserts it is caught.
+set -uo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PASS=0; FAIL=0
+ok()  { printf '  \033[32m✓\033[0m %s\n' "$1"; PASS=$((PASS+1)); }
+bad() { printf '  \033[31m✗\033[0m %s\n' "$1" >&2; FAIL=$((FAIL+1)); }
+head_(){ printf '\n\033[1m%s\033[0m\n' "$1"; }
+eq() { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 — expected '$2', got '$3'"; fi; }
+
+DOC_SURFACES_LIB=1 . "$ROOT/scripts/check-doc-surfaces.sh"
+
+head_ "normalise_roff — the trap that produced a whole audit pass of false positives"
+eq "option name escaping"  "--whisper-model" "$(printf '\\-\\-whisper\\-model' | normalise_roff)"
+eq "bold font escapes"     "--llm"           "$(printf '\\fB\\-\\-llm\\fR'     | normalise_roff)"
+eq "italic font escapes"   "--output"        "$(printf '\\fI\\-\\-output\\fP'  | normalise_roff)"
+eq "zero-width marker"     "--dev"           "$(printf '\\&\\-\\-dev'          | normalise_roff)"
+eq "plain text untouched"  "already --fine"  "$(printf 'already --fine'        | normalise_roff)"
+eq "combined"              "--no-fetch"      "$(printf '\\fB\\-\\-no\\-fetch\\fR' | normalise_roff)"
+
+head_ "normalise_roff — proof the naive form fails (this is why the fn exists)"
+_naive=$(printf '\\-\\-whisper\\-model' | grep -oE '\-\-[a-z-]+' || echo NONE)
+eq "naive grep finds nothing usable" "NONE" "$_naive"
+
+head_ "verdict_flag — README and cli.md are curated, man is complete"
+eq "everywhere"                 ok      "$(verdict_flag --x 1 1 1)"
+eq "man+readme, no website repo" ok     "$(verdict_flag --x 1 1 absent)"
+eq "absent from both in-repo"   missing "$(verdict_flag --x 0 0 absent)"
+eq "in man only"                partial "$(verdict_flag --x 0 1 absent)"
+eq "in readme only"             partial "$(verdict_flag --x 1 0 absent)"
+eq "missing from website only"  partial "$(verdict_flag --x 1 1 0)"
+
+head_ "end-to-end — inject each real failure and assert it is caught"
+
+# Baseline must be clean, or the injections prove nothing.
+bash "$ROOT/scripts/check-doc-surfaces.sh" >/tmp/ds-base.log 2>&1
+if [ $? -eq 0 ]; then ok "clean tree passes"; else bad "clean tree already fails — injections meaningless"; fi
+
+# 1 · a flag vanishes from the man page (the complete reference).
+MAN_REAL="$ROOT/bristlenose/data/bristlenose.1"      # man/ is a symlink to this
+cp "$MAN_REAL" /tmp/man.bak
+python3 - "$MAN_REAL" <<'PY'
+import sys,pathlib,re
+p=pathlib.Path(sys.argv[1]); s=p.read_text()
+# remove every mention of --llm, in its roff-escaped form
+# The man page carries this flag in BOTH forms — escaped (\-\-llm) inside .TP
+# option blocks and PLAIN (--llm) inside .EX example blocks, where roff does not
+# escape. An injection that removes only the escaped form leaves the flag findable
+# and the gate correctly reports it present — which reads as "the gate is blind"
+# and is really "the test is."
+s = s.replace(r"\-\-llm", r"\-\-XXGONEXX").replace("--llm", "--XXGONEXX")
+p.write_text(s)
+PY
+bash "$ROOT/scripts/check-doc-surfaces.sh" >/tmp/ds-inj.log 2>&1
+rc=$?
+cp /tmp/man.bak "$MAN_REAL"
+if [ "$rc" -ne 0 ] && grep -q 'absent from the man page' /tmp/ds-inj.log; then
+    ok "removing --llm from the man page fails the gate"
+else
+    bad "man-page removal NOT caught (exit $rc) — gate is blind"
+    tail -5 /tmp/ds-inj.log | sed 's/^/      /'
+fi
+
+# 2 · help parsing breaks → must refuse, not pass by seeing nothing.
+_stub=$(mktemp); printf '#!/bin/sh\necho "no commands here"\n' > "$_stub"; chmod +x "$_stub"
+_out=$(BN_BIN="$_stub" bash "$ROOT/scripts/check-doc-surfaces.sh" 2>&1); rc=$?
+rm -f "$_stub"
+if [ "$rc" -eq 2 ] && printf '%s' "$_out" | grep -q 'help parsing is broken'; then
+    ok "broken help parsing refuses (exit 2) rather than passing on 0 flags"
+else
+    bad "trivial-pass guard did not fire (exit $rc)"
+    printf '%s' "$_out" | tail -3 | sed 's/^/      /'
+fi
+
+# 3 · restoration actually happened.
+if diff -q /tmp/man.bak "$MAN_REAL" >/dev/null; then ok "man page restored"
+else bad "MAN PAGE NOT RESTORED — restore from git immediately"; fi
+
+head_ "meta"
+# Snapshot BEFORE the deliberate failure. Comparing against 0 made this fire
+# spuriously whenever the suite had genuine failures — a meta-check that reports
+# a harness bug every time a real bug exists is worse than none.
+_before=$FAIL
+_r=$(eq "deliberate" ok missing 2>&1)
+case "$_r" in *"expected 'ok', got 'missing'"*) ok "eq() reports a real mismatch" ;;
+             *) bad "eq() cannot fail" ;; esac
+[ "$FAIL" -eq "$_before" ] || bad "harness leaked the deliberate failure into the count"
+
+printf '\n\033[1m%d passed, %d failed\033[0m\n\n' "$PASS" "$FAIL"
+[ "$FAIL" -eq 0 ]

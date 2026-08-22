@@ -452,6 +452,25 @@ else
     esac
 fi
 
+# A10 · Doc-surface parity.
+#
+# Phase 2 item 2 of the skill, made mechanical. The man page is the COMPLETE
+# reference and is hard-gated; README and the website's cli.md are curated and
+# are only asked about flags new since the last tag — otherwise this prints 16
+# warnings on a clean tree forever, which is Risk 2 (preflight fatigue) built by
+# hand. The roff-unescaping the skill warned about in prose lives in that script.
+if [ ! -x scripts/check-doc-surfaces.sh ]; then
+    warn "doc surfaces" "checker missing"
+else
+    _ds=$(bash scripts/check-doc-surfaces.sh 2>&1); _ds_rc=$?
+    _ds_tail=$(printf '%s' "$_ds" | grep -E 'flag\(s\) checked' | sed 's/^ *//')
+    case "$_ds_rc" in
+        0) ok   "doc surfaces" "${_ds_tail:-all flags documented}" ;;
+        2) warn "doc surfaces" "could not enumerate the CLI — unverified" ;;
+        *) bad  "doc surfaces" "$(printf '%s' "$_ds" | grep -c 'absent from the man page') flag(s) absent from the man page" ;;
+    esac
+fi
+
 # A3 · The publish hold, as a state rather than an existence claim.
 #
 # The existing "publish hold" row proves the required-reviewer GATE exists.

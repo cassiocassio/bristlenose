@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Playground — bento homepage from Welcome content</title>
+<style>
+:root{
+  color-scheme:light dark;
+  --ink:light-dark(#1a1a1a,#e6e7e9); --muted:light-dark(#6b7280,#9ca3af); --faint:light-dark(#9aa3ad,#6b7280);
+  --line:light-dark(#e5e7eb,#2a2a2c); --bg:light-dark(#ffffff,#121214); --bg-alt:light-dark(#f8f8f8,#1a1a1d);
+  --accent:light-dark(#2563eb,#6ba2f5); --badge-bg:light-dark(#f3f4f6,#26262a); --badge-text:light-dark(#374151,#cfd3da);
+  --soft:light-dark(#fcfcfd,#181a1d); --danger:light-dark(#dc2626,#f87171); --ok:light-dark(#3a8a55,#5fb87e);
+  --star:light-dark(#d99e21,#e8b84b);
+  --font:"Inter","Segoe UI Variable",system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --w-normal:420; --w-emph:490; --w-strong:700; --r:10px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);font-weight:var(--w-normal);color:var(--ink);background:var(--bg);
+     line-height:1.6;font-size:15px;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ---------- playground chrome (not part of the design) ---------- */
+.lab{position:sticky;top:0;z-index:30;display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+     padding:8px 22px;border-bottom:1px solid var(--line);background:var(--bg-alt);
+     font:12px/1.4 var(--mono);color:var(--muted)}
+.lab strong{color:var(--ink);font-family:var(--font);font-weight:var(--w-strong)}
+.lab label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.lab .key{display:flex;gap:10px;margin-left:auto}
+.lab .key span{display:flex;gap:5px;align-items:center}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.dot.w{background:#8b5cf6}.dot.s{background:#0891b2}.dot.m{background:#65a30d}
+
+.src{display:none;position:absolute;top:10px;right:10px;width:9px;height:9px;border-radius:50%}
+body.show-src .src{display:block}
+[data-src="welcome"] .src{background:#8b5cf6}
+[data-src="site"]    .src{background:#0891b2}
+[data-src="merged"]  .src{background:#65a30d}
+
+/* ---------- page ---------- */
+.wrap{max-width:1240px;margin:0 auto;padding:0 34px}
+.topbar{display:flex;align-items:center;gap:18px;height:54px;border-bottom:1px solid var(--line)}
+.topbar .brand{font-weight:var(--w-strong);letter-spacing:-.01em;font-size:16px;color:var(--ink)}
+.topbar .brand i{color:var(--accent);font-style:normal}
+.topbar nav{display:flex;gap:18px;font-size:14px}
+.topbar nav a{color:var(--muted)}
+
+/* hero */
+.hero{padding:112px 0 24px;max-width:780px}
+.hero h1{font-size:clamp(34px,5vw,54px);line-height:1.08;letter-spacing:-.03em;
+         font-weight:var(--w-strong);margin:0 0 26px}
+.hero p{font-size:20px;line-height:1.6;color:var(--muted);margin:0 0 18px;max-width:660px}
+.hero p em{font-style:normal;color:var(--ink);font-weight:var(--w-emph)}
+.hero .cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:38px;align-items:center}
+.btn{display:inline-block;padding:10px 18px;border-radius:var(--r);font-weight:var(--w-emph);font-size:15px}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.ghost{border:1px solid var(--line);color:var(--ink)}
+.hero .fine{font-size:13px;color:var(--faint);margin-top:28px;max-width:600px;line-height:1.7}
+
+/* band headers */
+.band{margin:104px 0 32px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;
+      padding-bottom:14px;border-bottom:1px solid var(--line)}
+.band h2{font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+         font-weight:var(--w-emph);margin:0}
+.band p{margin:0;color:var(--muted);font-size:14px}
+
+/* ---------- the bento grid ---------- */
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:24px}
+.cell{position:relative;border:1px solid var(--line);border-radius:var(--r);background:var(--soft);
+      padding:30px 28px 26px;display:flex;flex-direction:column;gap:10px;min-width:0;overflow:hidden}
+.cell .tag{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+           font-weight:var(--w-emph);margin-bottom:6px}
+.cell h3{margin:0 0 2px;font-size:18px;line-height:1.3;font-weight:var(--w-strong);letter-spacing:-.015em}
+.cell p{margin:0;font-size:14.5px;line-height:1.62;color:var(--muted);max-width:46ch}
+.cell p b{color:var(--ink);font-weight:var(--w-emph)}
+.cell .more{color:var(--faint);font-size:13.5px}
+.cell .links{margin-top:auto;padding-top:22px;display:flex;gap:18px;flex-wrap:wrap;font-size:13.5px}
+
+.lg{grid-column:span 6}
+.md{grid-column:span 4}
+.sm{grid-column:span 3}
+.wide{grid-column:span 8}
+.full{grid-column:span 12}
+.tall{grid-row:span 2}
+@media (max-width:1000px){
+  .lg,.wide{grid-column:span 12}.md{grid-column:span 6}.sm{grid-column:span 6}.tall{grid-row:auto}
+}
+@media (max-width:620px){ .md,.sm{grid-column:span 12} .grid,.strip{gap:18px} .cell{padding:24px 22px}
+  .band{margin:72px 0 24px} .hero{padding:72px 0 16px} }
+
+/* illustration frame — content starts flush left, per the Welcome alignment rule */
+.ill{margin:18px 0 10px;min-height:118px;display:flex;align-items:flex-start;position:relative}
+.lg .ill{min-height:172px}
+.ill,.ill *{ }
+@media (prefers-reduced-motion:reduce){ .ill *{animation:none !important;transition:none !important} }
+
+/* ---------- keycap (Skin A · flat) ---------- */
+kbd{display:inline-block;min-width:1.5em;padding:1px 5px 2px;border:1px solid var(--line);
+    border-bottom-width:2px;border-radius:4px;background:var(--bg);font:500 11px/1.4 var(--mono);
+    color:var(--ink);text-align:center;vertical-align:1px}
+
+/* ================= mini-animations (cheap CSS impressions) ================= */
+
+/* 1 · Dignity — verbatim → struck → tidied */
+.q-dig{font-size:14.5px;line-height:1.55;color:var(--ink)}
+.q-dig .qm{color:var(--faint)}
+.q-dig .trim{display:inline-block;white-space:pre;max-width:20ch;overflow:hidden;vertical-align:bottom;
+   text-decoration:line-through;text-decoration-color:transparent;animation:trim 9s infinite}
+@keyframes trim{
+  0%,28%   {max-width:20ch;opacity:1;color:inherit;text-decoration-color:transparent}
+  36%,46%  {max-width:20ch;opacity:1;color:var(--danger);text-decoration-color:var(--danger)}
+  56%,88%  {max-width:0;opacity:0;color:var(--danger);text-decoration-color:var(--danger)}
+  96%,100% {max-width:20ch;opacity:1;color:inherit;text-decoration-color:transparent}
+}
+
+/* 2 · Emergent themes — fragments swirl, then swoop into two named themes */
+.flock{position:relative;width:100%;height:130px}
+.flock .frag{position:absolute;font-size:10.5px;padding:2px 7px;border-radius:20px;
+  background:var(--badge-bg);color:var(--badge-text);white-space:nowrap;animation:swoop 11s infinite}
+.flock .lbl{position:absolute;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--faint);font-weight:var(--w-emph);opacity:0;animation:lblIn 11s infinite}
+@keyframes swoop{
+  0%,14%  {transform:translate(var(--x0),var(--y0))}
+  46%,74% {transform:translate(var(--x1),var(--y1))}
+  96%,100%{transform:translate(var(--x0),var(--y0))}
+}
+@keyframes lblIn{0%,26%{opacity:0}46%,74%{opacity:1}92%,100%{opacity:0}}
+
+/* 3 · Seven sentiments — deal out of a gathered deck */
+.fan{position:relative;width:100%;height:96px}
+.chip{position:absolute;left:0;top:34px;font-size:11px;padding:3px 9px;border-radius:20px;
+  border:1px solid var(--line);background:var(--bg);white-space:nowrap;animation:deal 10s infinite}
+@keyframes deal{
+  0%,10%  {transform:translate(28px,0) rotate(-3deg);opacity:.55}
+  40%,76% {transform:translate(var(--tx),var(--ty)) rotate(0);opacity:1}
+  95%,100%{transform:translate(28px,0) rotate(-3deg);opacity:.55}
+}
+
+/* 4 · AutoCode — proposals arrive, you accept or deny */
+.rows{width:100%;display:flex;flex-direction:column;gap:7px}
+.row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.row .txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{font-size:10.5px;padding:2px 8px;border-radius:20px;background:var(--badge-bg);color:var(--badge-text);
+      opacity:0;animation:pop 8s infinite}
+.pill.yes{animation:pop 8s infinite, ok 8s infinite}
+.verdict{font-size:12px;font-weight:var(--w-emph);opacity:0;animation:verdict 8s infinite}
+.verdict.y{color:var(--ok)} .verdict.n{color:var(--danger)}
+@keyframes pop{0%,12%{opacity:0;transform:translateY(3px)}26%,88%{opacity:1;transform:none}100%{opacity:0}}
+@keyframes ok{0%,44%{border-color:transparent}56%,88%{box-shadow:0 0 0 1px var(--ok)}100%{box-shadow:none}}
+@keyframes verdict{0%,48%{opacity:0}60%,88%{opacity:1}100%{opacity:0}}
+
+/* 5 · Star & hide */
+.sh .star{color:var(--line);animation:starIn 8s infinite}
+@keyframes starIn{0%,22%{color:var(--line);transform:none}34%,88%{color:var(--star);transform:scale(1.15)}100%{color:var(--line)}}
+.sh .gone{animation:hideRow 8s infinite;overflow:hidden}
+@keyframes hideRow{0%,46%{opacity:1;max-height:22px}62%,88%{opacity:.18;max-height:22px}100%{opacity:1}}
+
+/* 6 · Tag — press t, a code lands */
+.press{animation:press 7s infinite;display:inline-block}
+@keyframes press{0%,30%{transform:none;background:var(--bg)}36%{transform:translateY(1px);background:var(--badge-bg)}44%,100%{transform:none;background:var(--bg)}}
+.landed{opacity:0;animation:land 7s infinite}
+@keyframes land{0%,40%{opacity:0;transform:translateY(-4px)}52%,88%{opacity:1;transform:none}100%{opacity:0}}
+
+/* 7 · Signals — a histogram with a concentration */
+.hist{display:flex;align-items:flex-end;gap:5px;height:66px}
+.hist i{display:block;width:12px;background:var(--badge-bg);border-radius:2px 2px 0 0;
+        height:12%;animation:grow 6s infinite}
+.hist i.hot{background:var(--accent)}
+@keyframes grow{0%{height:8%}40%,86%{height:var(--h)}100%{height:8%}}
+.sigrow{display:flex;gap:16px;font-size:11px;color:var(--faint);margin-top:8px}
+.sigrow b{color:var(--ink);font-weight:var(--w-emph);font-variant-numeric:tabular-nums}
+
+/* 8 · Agent chat — a question types, an answer cites */
+.chat{width:100%;font-size:12px}
+.chat .you{color:var(--ink)}
+.chat .caret{display:inline-block;width:1px;height:1em;background:var(--accent);vertical-align:-2px;
+  animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.chat .ans{color:var(--muted);margin-top:8px;opacity:0;animation:fadeUp 9s infinite}
+.chat .cite{font-family:var(--mono);font-size:10.5px;color:var(--accent)}
+@keyframes fadeUp{0%,34%{opacity:0;transform:translateY(3px)}46%,90%{opacity:1;transform:none}100%{opacity:0}}
+.typed{display:inline-block;overflow:hidden;white-space:nowrap;vertical-align:bottom;
+  max-width:0;animation:type 9s infinite}
+@keyframes type{0%{max-width:0}26%,90%{max-width:34ch}100%{max-width:0}}
+
+/* 9 · Miro — stickies land */
+.stickies{display:flex;gap:9px;align-items:flex-start}
+.sticky{width:74px;height:74px;padding:7px;font-size:9px;line-height:1.35;border-radius:2px;
+  box-shadow:0 1px 3px rgba(0,0,0,.16);color:#1a1a1a;opacity:0;animation:fadeUp 8s infinite}
+.sticky.p{background:#f7c8dd}.sticky.y{background:#fbf49a}
+.sticky:nth-child(2){animation-delay:.5s}.sticky:nth-child(3){animation-delay:1s}
+
+/* 10 · Clips — thumb, then a filename assembles */
+.clip{display:flex;gap:9px;align-items:center;font-size:11px;color:var(--muted);
+      opacity:0;animation:fadeUp 9s infinite}
+.clip:nth-child(2){animation-delay:.7s}.clip:nth-child(3){animation-delay:1.4s}
+.thumb{width:44px;height:26px;border-radius:3px;background:var(--badge-bg);flex:none;
+       display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:9px}
+.clip code{font-family:var(--mono);font-size:10.5px;color:var(--ink)}
+
+/* 11 · Ingest — a file of every kind blinks in */
+.files{display:flex;gap:16px;flex-wrap:wrap}
+.file{text-align:left;opacity:0;animation:fadeUp 9s infinite}
+.file:nth-child(2){animation-delay:.35s}.file:nth-child(3){animation-delay:.7s}
+.file:nth-child(4){animation-delay:1.05s}.file:nth-child(5){animation-delay:1.4s}
+.file .kind{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.file .glyph{font-size:22px;line-height:1.2}
+.file .nm{font-family:var(--mono);font-size:10.5px;color:var(--ink)}
+
+/* 12 · Book shelf — a fan of covers, front one named */
+.shelf{display:flex;align-items:flex-end;height:118px;position:relative}
+.cover{width:74px;height:106px;border-radius:2px;padding:8px 7px;font-size:8.5px;line-height:1.25;
+  color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.22);margin-right:-40px;position:relative}
+.cover b{display:block;font-size:9.5px;margin-bottom:3px}
+.cover:nth-child(1){background:#2f4858;z-index:4}
+.cover:nth-child(2){background:#6b4f3a;z-index:3}
+.cover:nth-child(3){background:#3d5a45;z-index:2}
+.cover:nth-child(4){background:#5a3d52;z-index:1}
+
+/* strips */
+.strip{margin-top:110px;border-top:1px solid var(--line);padding-top:56px;
+       display:grid;grid-template-columns:repeat(12,1fr);gap:24px}
+.term{font-family:var(--mono);font-size:12.5px;background:var(--bg-alt);border:1px solid var(--line);
+      border-radius:var(--r);padding:14px 16px;color:var(--muted);line-height:1.9;overflow-x:auto}
+.term b{color:var(--ink);font-weight:400}
+.term .c{color:var(--faint)}
+.cost{font-size:34px;font-weight:var(--w-strong);letter-spacing:-.02em}
+.foot{margin-top:110px;border-top:1px solid var(--line);padding:24px 0 60px;color:var(--faint);font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="lab">
+  <strong>Playground</strong> — homepage rebuilt from Welcome-screen content. Not the live site.
+  <label><input type="checkbox" id="srcToggle"> show copy provenance</label>
+  <span class="key">
+    <span><i class="dot w"></i>Welcome</span>
+    <span><i class="dot s"></i>Site</span>
+    <span><i class="dot m"></i>Merged</span>
+  </span>
+</div>
+
+<div class="wrap">
+
+  <div class="topbar">
+    <span class="brand">bristlenose<i>.</i></span>
+    <nav><a href="#">Docs</a><a href="#">Install</a><a href="#">Changelog</a><a href="#">GitHub</a></nav>
+  </div>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero" data-src="merged" style="position:relative"><span class="src"></span>
+    <h1>Closing the gap between interviews and findings.</h1>
+    <p>Drop in a folder of recordings or transcripts. Bristlenose transcribes, analyses,
+       and reports back — <em>quotes pulled out, grouped by screen and theme, sentiment marked</em>.</p>
+    <p>A typical run takes two to five minutes. Built by a practising user researcher, open source, and free.</p>
+    <div class="cta">
+      <a class="btn primary" href="#">Download for Mac</a>
+      <a class="btn ghost" href="#">View on GitHub</a>
+    </div>
+    <p class="fine">The Mac app bundles everything — no command line needed — and runs on macOS 15 (Sequoia)
+       or later on Apple Silicon. Also on Homebrew and pip for the command line.</p>
+  </section>
+
+  <!-- ============ BAND A — the tools ============ -->
+  <div class="band"><h2>What you do with it</h2>
+    <p>Eight study tools, in the order you meet them.</p></div>
+
+  <div class="grid">
+
+    <!-- INGEST — large -->
+    <div class="cell lg tall" data-src="merged"><span class="src"></span>
+      <span class="tag">Ingest</span>
+      <h3>Point it at the folder you already have</h3>
+      <p>Drop a folder of recordings or transcripts — Bristlenose transcribes, analyses and reports back.</p>
+      <p class="more">Audio, video, or transcripts exported from Zoom, Teams or Google Meet. Transcription runs on your laptop.</p>
+      <div class="ill">
+        <div class="files">
+          <div class="file"><div class="kind">Video · mp4 mov</div><div class="glyph">🎬</div><div class="nm">p3-session.mp4</div></div>
+          <div class="file"><div class="kind">Audio · m4a wav</div><div class="glyph">🎙</div><div class="nm">p4-audio.m4a</div></div>
+          <div class="file"><div class="kind">Subtitles · srt vtt</div><div class="glyph">📄</div><div class="nm">p5.srt</div></div>
+          <div class="file"><div class="kind">Document · docx</div><div class="glyph">📃</div><div class="nm">p6-notes.docx</div></div>
+          <div class="file"><div class="kind">Folder</div><div class="glyph">📁</div><div class="nm">interviews/</div></div>
+        </div>
+      </div>
+      <div class="links"><a href="#">Import options →</a><a href="#">Supported files →</a></div>
+    </div>
+
+    <!-- AUTOCODE -->
+    <div class="cell md" data-src="merged"><span class="src"></span>
+      <span class="tag">AutoCode</span>
+      <h3>The model proposes. You decide.</h3>
+      <p>Let AutoCode propose tags across every quote — you Accept or Deny.</p>
+      <div class="ill">
+        <div class="rows">
+          <div class="row"><span class="txt">“I couldn’t figure out where to pay.”</span>
+            <span class="pill yes">Findability</span><span class="verdict y">✓</span></div>
+          <div class="row"><span class="txt">“The confirmation came through fast.”</span>
+            <span class="pill">Trust</span><span class="verdict n">✕</span></div>
+        </div>
+      </div>
+      <div class="links"><a href="#">AI helps tag →</a></div>
+    </div>
+
+    <!-- CODEBOOKS -->
+    <div class="cell md" data-src="merged"><span class="src"></span>
+      <span class="tag">Codebooks</span>
+      <h3>Your codes, or a standard framework</h3>
+      <p>Build a codebook, or start from a ready-made framework.</p>
+      <p class="more">Nielsen’s heuristics, Garrett’s Elements, Norman’s <i>Design of Everyday Things</i>,
+         Morville’s honeycomb, Yablonski’s Laws of UX, or a Command-Line UX set.</p>
+      <div class="links"><a href="#">Code by hand →</a><a href="#">Research frameworks →</a></div>
+    </div>
+
+    <!-- TAG -->
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <span class="tag">Tag</span>
+      <h3>One key, one code</h3>
+      <p>Select one or more quotes, and press <kbd class="press">t</kbd> to tag them with a code from your codebook.</p>
+      <div class="ill" style="min-height:70px">
+        <div class="rows">
+          <div class="row"><span class="txt">3 quotes selected</span>
+            <span class="pill landed" style="animation:land 7s infinite">Checkout</span></div>
+        </div>
+      </div>
+      <div class="links"><a href="#">Manual tagging →</a></div>
+    </div>
+
+    <!-- STAR & HIDE -->
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <span class="tag">Star &amp; hide</span>
+      <h3>Keep the signal, park the rest</h3>
+      <p>Press <kbd>s</kbd> to keep the quotes that matter, <kbd>h</kbd> to hide the rest.</p>
+      <div class="ill sh" style="min-height:70px">
+        <div class="rows">
+          <div class="row"><span class="star">★</span><span class="txt">“That’s the bit I always get stuck on.”</span></div>
+          <div class="row gone"><span style="color:var(--line)">★</span><span class="txt">“Yeah. Mm. Sure.”</span></div>
+        </div>
+      </div>
+      <div class="links"><a href="#">Keyboard shortcuts →</a></div>
+    </div>
+
+    <!-- CONNECT AN AGENT — large -->
+    <div class="cell lg tall" data-src="merged"><span class="src"></span>
+      <span class="tag">Connect an AI agent</span>
+      <h3>Ask your study in your own agent’s window</h3>
+      <p>Chat to your data from Claude Code, Claude Desktop, or any MCP agent.</p>
+      <p class="more">It reads your quotes, themes and codebook, and cites quote IDs you can look up.
+         Read-only, and per project — you turn it on.</p>
+      <div class="ill">
+        <div class="chat">
+          <div class="you">&gt; <span class="typed">what frustrated people about checkout?</span><span class="caret"></span></div>
+          <div class="ans">Three participants hit the same wall — the pay button sits below
+            the fold on the review step. <span class="cite">[q-114, q-207, q-233]</span></div>
+        </div>
+      </div>
+      <div class="links"><a href="#">Connect an agent…</a><a href="#">Learn more →</a></div>
+    </div>
+
+    <!-- VIDEO CLIPS -->
+    <div class="cell md" data-src="merged"><span class="src"></span>
+      <span class="tag">Video clips</span>
+      <h3>Turn selected quotes into video clips</h3>
+      <p>Cut from the original recording without re-encoding, with a few seconds either side.</p>
+      <div class="ill">
+        <div class="rows">
+          <div class="clip"><span class="thumb">▶</span><code>P3 · 00:14:22 · “where to pay”.mp4</code></div>
+          <div class="clip"><span class="thumb">▶</span><code>P5 · 00:31:07 · “went back twice”.mp4</code></div>
+          <div class="clip"><span class="thumb">▶</span><code>P8 · 00:09:41 · “I gave up”.mp4</code></div>
+        </div>
+      </div>
+      <div class="links"><a href="#">Export options →</a></div>
+    </div>
+
+    <!-- MIRO -->
+    <div class="cell md" data-src="site"><span class="src"></span>
+      <span class="tag">Send to Miro</span>
+      <h3>Straight onto the board</h3>
+      <p>Quotes land as sticky notes, grouped by section and theme, coloured by sentiment.
+         Each sticky carries a participant code and timecode, not a name.</p>
+      <div class="ill">
+        <div class="stickies">
+          <div class="sticky p">“I couldn’t figure out where to pay.”<br><br>P3 · 14:22</div>
+          <div class="sticky y">“Went back twice to check.”<br><br>P5 · 31:07</div>
+          <div class="sticky y">“Just gave up in the end.”<br><br>P8 · 09:41</div>
+        </div>
+      </div>
+      <div class="links"><a href="#">Connect to Miro →</a></div>
+    </div>
+
+    <!-- HAND OVER ONE FILE -->
+    <div class="cell md" data-src="site"><span class="src"></span>
+      <span class="tag">Share</span>
+      <h3>Hand over one file</h3>
+      <p>Export the whole report as a single HTML file — quotes, themes, analysis, your edits, all inside it.
+         It opens in any browser straight from the file. No server, no internet, nothing to install.</p>
+      <div class="links"><a href="#">Share a report →</a></div>
+    </div>
+
+    <!-- SPREADSHEET -->
+    <div class="cell sm" data-src="merged"><span class="src"></span>
+      <span class="tag">Export</span>
+      <h3>Into the spreadsheet</h3>
+      <p>Quotes to CSV or Excel, one row each — participant code, section, theme, sentiment, tags, timecode.</p>
+      <div class="links"><a href="#">Export quotes →</a></div>
+    </div>
+
+    <!-- TRANSCRIPTS -->
+    <div class="cell sm" data-src="site"><span class="src"></span>
+      <span class="tag">Transcripts</span>
+      <h3>Word-synced, every speaker</h3>
+      <p>Click any timecode to play from that moment. The transcript scrolls in step, so you never lose your place.</p>
+      <div class="links"><a href="#">Run an analysis →</a></div>
+    </div>
+
+    <!-- LANGUAGES -->
+    <div class="cell sm" data-src="merged"><span class="src"></span>
+      <span class="tag">Languages</span>
+      <h3>Not in English?</h3>
+      <p>Menus and controls in twenty-two languages, from Spanish and Japanese to Ukrainian and
+         Traditional Chinese. The report content stays in the language of the interviews.</p>
+      <div class="links"><a href="#">Languages →</a></div>
+    </div>
+
+  </div>
+
+  <!-- ============ BAND B — the science ============ -->
+  <div class="band"><h2>Why the analysis holds up</h2>
+    <p>The whole Scientific-background cell — nothing on the current site says any of this.</p></div>
+
+  <div class="grid">
+
+    <!-- EMERGENT THEMES -->
+    <div class="cell lg" data-src="welcome"><span class="src"></span>
+      <span class="tag">Emergent themes</span>
+      <h3>The taxonomy comes from them, not from us</h3>
+      <p>Themes emerge from participants’ own words, not a fixed taxonomy (Braun &amp; Clarke, 2006).</p>
+      <div class="ill">
+        <div class="flock">
+          <span class="frag" style="--x0:18px;--y0:14px;--x1:6px;--y1:24px">“where to pay”</span>
+          <span class="frag" style="--x0:150px;--y0:44px;--x1:14px;--y1:48px">“went back twice”</span>
+          <span class="frag" style="--x0:96px;--y0:88px;--x1:2px;--y1:72px">“couldn’t tell if it saved”</span>
+          <span class="frag" style="--x0:210px;--y0:8px;--x1:250px;--y1:24px">“the price changed”</span>
+          <span class="frag" style="--x0:44px;--y0:62px;--x1:258px;--y1:48px">“no receipt”</span>
+          <span class="frag" style="--x0:250px;--y0:76px;--x1:246px;--y1:72px">“who do I ask?”</span>
+          <span class="lbl" style="left:2px;top:2px">Checkout confusion</span>
+          <span class="lbl" style="left:246px;top:2px">Trust &amp; proof</span>
+        </div>
+      </div>
+      <div class="links"><a href="#">Research foundations →</a></div>
+    </div>
+
+    <!-- SIGNALS -->
+    <div class="cell md" data-src="welcome"><span class="src"></span>
+      <span class="tag">Signals</span>
+      <h3>What a signal actually is</h3>
+      <p>A score that combines the strength of participants’ opinions or feelings, their level of
+         focus on an area or theme, and a measure of their agreement.</p>
+      <div class="ill">
+        <div>
+          <div class="hist">
+            <i style="--h:26%"></i><i style="--h:38%"></i><i class="hot" style="--h:84%"></i>
+            <i class="hot" style="--h:96%"></i><i class="hot" style="--h:72%"></i>
+            <i style="--h:30%"></i><i style="--h:18%"></i>
+          </div>
+          <div class="sigrow"><span>Strength <b>0.81</b></span><span>Focus <b>0.74</b></span><span>Agreement <b>0.90</b></span></div>
+        </div>
+      </div>
+      <div class="links"><a href="#">Signals →</a></div>
+    </div>
+
+    <!-- SEVEN SENTIMENTS -->
+    <div class="cell md" data-src="welcome"><span class="src"></span>
+      <span class="tag">Seven sentiments</span>
+      <h3>Grounded, not invented</h3>
+      <p>Seven sentiments, grounded in appraisal theory (Scherer) and core affect (Russell).</p>
+      <div class="ill">
+        <div class="fan">
+          <span class="chip" style="--tx:0px;--ty:-26px">Frustration</span>
+          <span class="chip" style="--tx:84px;--ty:-26px;animation-delay:.12s">Confusion</span>
+          <span class="chip" style="--tx:166px;--ty:-26px;animation-delay:.24s">Delight</span>
+          <span class="chip" style="--tx:238px;--ty:-26px;animation-delay:.36s">Relief</span>
+          <span class="chip" style="--tx:0px;--ty:8px;animation-delay:.48s">Confidence</span>
+          <span class="chip" style="--tx:84px;--ty:8px;animation-delay:.6s">Doubt</span>
+          <span class="chip" style="--tx:162px;--ty:8px;animation-delay:.72s">Indifference</span>
+        </div>
+      </div>
+      <div class="links"><a href="#">Signals →</a></div>
+    </div>
+
+    <!-- DIGNITY -->
+    <div class="cell md" data-src="welcome"><span class="src"></span>
+      <span class="tag">Dignity without distortion</span>
+      <h3>Tidied, never twisted</h3>
+      <p>Quotes are cleaned of filler but the participant’s voice is honoured — the meaning is never edited.</p>
+      <div class="ill">
+        <div class="q-dig"><span class="qm">“</span><span class="trim">So, um, </span>The checkout<span class="trim">, like,</span>
+          was<span class="trim"> honestly,</span><span class="trim"> the—the</span> confusing<span class="trim">, you know?</span>
+          I couldn’t<span class="trim"> actually</span> figure out where to pay.<span class="qm">”</span></div>
+      </div>
+      <div class="links"><a href="#">Research foundations →</a></div>
+    </div>
+
+    <!-- BOOK SHELF -->
+    <div class="cell wide" data-src="welcome"><span class="src"></span>
+      <span class="tag">Standing on shoulders</span>
+      <h3>The thinking the codebooks are built on</h3>
+      <div class="ill">
+        <div class="shelf">
+          <div class="cover"><b>The Design of Everyday Things</b>Don Norman</div>
+          <div class="cover"><b>Usability Engineering</b>Jakob Nielsen</div>
+          <div class="cover"><b>Thematic Analysis</b>Braun &amp; Clarke</div>
+          <div class="cover"><b>Emotion &amp; Adaptation</b>Richard Lazarus</div>
+        </div>
+      </div>
+      <p class="more"><b>Don Norman</b> — the codebook frameworks draw on his principles of human-centred design.</p>
+      <div class="links"><a href="#">Codebook frameworks →</a></div>
+    </div>
+
+  </div>
+
+  <!-- ============ BAND C — the tips ============ -->
+  <div class="band"><h2>Things worth knowing</h2>
+    <p>The Tip curriculum — one line per docs page, in the order the sidebar teaches them.
+       On the site they stop rotating and all show at once.</p></div>
+
+  <div class="grid">
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <p>From a folder of recordings to a readable report in minutes.</p>
+      <div class="links"><a href="#">First analysis →</a></div></div>
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <p>Connect an AI provider to run the analysis. Claude is the recommended default;
+         ChatGPT, Gemini and Azure work too.</p>
+      <div class="links"><a href="#">Set up Claude →</a></div></div>
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <p>No API key? Run <b>Ollama</b> locally — free, no account, nothing uploaded.</p>
+      <div class="links"><a href="#">Set up Ollama →</a></div></div>
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <p>Choose what the AI sees: cloud or local. Cloud models are faster and sharper;
+         local ones never leave your Mac.</p>
+      <div class="links"><a href="#">Cloud or local →</a></div></div>
+
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <p>Drop <b>.srt</b>, <b>.vtt</b> or <b>.docx</b> and skip transcription.</p>
+      <div class="links"><a href="#">Supported files →</a></div></div>
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <p>Name <b>p1.srt</b> next to <b>p1.mp4</b> to merge them automatically.</p>
+      <div class="links"><a href="#">Matching files →</a></div></div>
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <p>Every analysis runs the same twelve stages. Caching means a re-run only redoes
+         what actually changed, keeping the cost down.</p>
+      <div class="links"><a href="#">The pipeline →</a></div></div>
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <p>Everything Bristlenose makes lands in one folder, beside your recordings — yours to keep.</p>
+      <div class="links"><a href="#">Output files →</a></div></div>
+
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <p>Tagging is analysis — group a set of quotes under a code and the findings start to surface.</p>
+      <div class="links"><a href="#">Tag for meaning →</a></div></div>
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <p>Bristlenose reads interviews as sessions and quotes. Sessions, participants, quotes,
+         sections and themes — that’s the whole model.</p>
+      <div class="links"><a href="#">How it works →</a></div></div>
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <p>Make it yours: light, dark, palette and type.</p>
+      <div class="links"><a href="#">Appearance →</a></div></div>
+    <div class="cell sm" data-src="welcome"><span class="src"></span>
+      <p>Every setting has a sensible default you can change.</p>
+      <div class="links"><a href="#">Configuration →</a></div></div>
+  </div>
+
+  <!-- ============ the site's own strips, kept ============ -->
+  <div class="strip">
+    <div class="cell lg" data-src="site"><span class="src"></span>
+      <span class="tag">Try it now</span>
+      <h3>Two commands</h3>
+      <div class="term">
+        <span class="c">$</span> <b>brew install cassiocassio/bristlenose/bristlenose</b> <span class="c"># one-time setup</span><br>
+        <span class="c">$</span> <b>bristlenose ~/Desktop/interviews/</b> <span class="c"># analyse folder</span>
+      </div>
+      <p class="more">The report opens in your browser when it’s done.</p>
+    </div>
+    <div class="cell sm" data-src="site"><span class="src"></span>
+      <span class="tag">Costs</span>
+      <div class="cost">$0.40</div>
+      <p>per hour of interview audio with Claude. Provider costs vary. Bring your own API key.</p>
+    </div>
+    <div class="cell sm" data-src="merged"><span class="src"></span>
+      <span class="tag">Where things live</span>
+      <p>The project file lives on your machine. You pick which provider sees the transcripts.
+         API keys live in your OS keychain.</p>
+      <div class="links"><a href="#">Privacy →</a></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    Playground mockup · <code>docs/mockups/website-bento-welcome.html</code> ·
+    copy lifted from <code>WelcomeHomeView.swift</code> and <code>bristlenose-website/content/index.html</code>.
+  </div>
+
+</div>
+
+<script>
+document.getElementById('srcToggle').addEventListener('change', function(e){
+  document.body.classList.toggle('show-src', e.target.checked);
+});
+</script>
+</body>
+</html>

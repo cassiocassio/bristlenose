@@ -82,7 +82,10 @@ did not account for.
   register an audit history two days after §7a put history in the log, and
   the undo route cites an 8-second toast deleted on 19 Aug. It also fixes the
   receipt's contrast, which the record said had been fixed and had not —
-  `.tertiary` at 1.88:1 survived on the wrong arm of a ternary.
+  `.tertiary` at 1.88:1 survived on the wrong arm of a ternary. The rung was
+  then chosen from a side-by-side: **two steps**, rows at `.primary` and
+  receipts at `.secondary`, which is the mockup's drawing and clears the
+  measurement, rather than the flat `.secondary` Finding 64 asked for.
 - _2 Aug 2026_ — **trued against shipped reality.** Frontmatter `draft` →
   `shipped`; Status table added. Marked the four decisions that did not
   survive: §3.3's Option B (shipped model is Option A restricted by a
@@ -2013,21 +2016,26 @@ normal way anyone returns to Settings.
 **What did change: the receipt was failing its contrast measurement, and the
 record said it had been fixed.** Finding 64 measured `.tertiary` at **1.88:1**
 light / 2.24:1 dark — a quarter of the 4.5:1 line, and *unchanged* under Increase
-Contrast, so the HIG's higher-contrast escape hatch does not apply — and
-prescribed `.secondary` throughout the register. The review log records that as
-resolved. It was not: `.primary` moved to `.secondary` on the wrong arm of the
-ternary, so the receipt kept the failing value on the one row whose whole job is
-naming the project you just revoked, and the register's scope note kept it too.
-Both are now `.secondary`, set once on the row. The receipt is carried by the
-unticked checkbox and the caption; the dim was emphasis, and it was the emphasis
-that failed.
+Contrast, so the HIG's higher-contrast escape hatch does not apply — and it is
+Apple's disabled-text colour, which a reversible row is not. The review log
+records this resolved. It was not: `.primary` moved one arm left instead, so the
+failing value stayed on the one row whose whole job is naming the project you
+just revoked, and the register's scope note kept it too.
 
-**Left deliberately for a human with the pane on screen:** the mockup draws a
-*two-step* relationship — rows at ink, receipts at `--faint` (≈3.2:1) — which
-means `.primary` on rows and `.secondary` on receipts. The register is currently
-uniform `.secondary`, which is what Finding 64's fix literally said and what
-clears the measurement. Restoring the two steps is one token, and it is a taste
-call on a pane that has still never been seen rendered.
+**The rung, decided by the maintainer from a side-by-side, 22 Aug 2026: two
+steps, as the mockup draws them — rows at `.primary`, receipts at `.secondary`.**
+Finding 64's literal prescription was `.secondary` throughout, which clears the
+measurement but flattens the register: the receipt would then read only from the
+unticked box and the caption, and every project name in a permission table would
+sit at 3.95:1 for no reason. The mockup's `--faint` (#8e8e93 ≈ 3.2:1) is nearer
+`.secondary` than any other rung, so two steps is both the drawing and the
+accessible answer. The scope note, which is not a row, stays `.secondary`.
+
+**One deliberate departure from the mockup, so it is not "fixed" later.** The
+drawing dims the *"Never"* cell too (`.last.dash{color:var(--faint)}`). It rides
+the row at `.primary` instead, because "Never" was chosen over an em dash
+*precisely so it would be perceivable* — Finding 64's own note — and colour is
+the wrong channel to make it recede. Weight, if it ever needs to.
 
 
 ## 5b. The acceptance criterion: zero setup on return

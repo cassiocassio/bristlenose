@@ -692,32 +692,31 @@ struct MCPAgentsSettingsView: View {
                 .frame(width: RegisterLayout.lastAsked, alignment: .leading)
         }
         .font(.callout)
-        // One style for the whole register, receipt rows included.
+        // Two steps, as the mockup draws them: rows at ink, the receipt one
+        // step down. `--faint` (#8e8e93 ≈ 3.2:1) is nearer `.secondary` than
+        // anything else on the ladder, so `.secondary` is the faithful rung.
         //
-        // Measured under both appearances, `.tertiary` is 1.88:1 in light and
-        // 2.24:1 in dark — a quarter of the 4.5:1 line, and UNCHANGED under
-        // Increase Contrast, so the HIG's "at least offer a higher-contrast
-        // scheme" escape hatch does not apply. It is also semantically wrong:
-        // tertiary is Apple's disabled-text colour and a receipt row is
-        // reversible, not disabled. The unticked box and the "Access turned
-        // off" caption already carry the receipt; the dim was emphasis, and
-        // it was the emphasis that failed.
+        // The rung that was here is the point. `.tertiary` measures 1.88:1 in
+        // light and 2.24:1 in dark — a quarter of the 4.5:1 line, and
+        // UNCHANGED under Increase Contrast, so the HIG's "at least offer a
+        // higher-contrast scheme" escape hatch does not apply. It is also
+        // semantically wrong: tertiary is Apple's disabled-text colour, and a
+        // receipt row is reversible, not disabled. It survived the fix that
+        // was recorded as having removed it — `.primary` moved one arm left
+        // instead — so the failing value sat on the one row whose whole job
+        // is naming the project you just revoked.
         //
-        // This ternary survived the fix that was recorded as having removed
-        // it (22 Aug 2026): `.primary` moved to `.secondary` on the wrong
-        // arm, so the receipt kept the 1.88:1 it was flagged for — on the one
-        // row whose whole job is naming the project you just revoked. Set
-        // here and nowhere else: the cells used to set `.secondary` on
+        // Set here and nowhere else. The cells used to set `.secondary` on
         // themselves and an inner style beats the row's, so a revoked row
-        // rendered its name dim and its count and timestamp at full weight,
+        // rendered its name dim and its count and timestamp at full weight —
         // the number louder than the thing it counts.
         //
-        // The mockup draws a two-step relationship (rows at ink, receipts at
-        // `--faint` ≈ 3.2:1). Restoring that means `.primary` here and
-        // `.secondary` on receipts — a one-token change, deliberately not
-        // taken blind: it is a taste call, and this pane has never been seen
-        // on a screen. The measured accessibility failure is fixed either way.
-        .foregroundStyle(.secondary)
+        // The "Never" cell therefore rides the row at `.primary` rather than
+        // receding like the mockup's `.last.dash`. Deliberate: "Never" was
+        // chosen over an em dash *so it would be perceivable*, and a colour
+        // is the wrong channel to make it recede. Weight, if anything.
+        .foregroundStyle(row.isReceipt ? AnyShapeStyle(.secondary)
+                                       : AnyShapeStyle(.primary))
         .padding(.horizontal, RegisterLayout.inset)
         .frame(height: RegisterLayout.row)
     }

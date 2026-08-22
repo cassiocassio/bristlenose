@@ -170,7 +170,18 @@ def _quote_dom_id(quote: Quote) -> str:
 
 
 def _format_duration_human(seconds: float) -> str:
-    """Format seconds as a human-readable duration (e.g. '1h 23m', '4m')."""
+    """Format seconds as a human-readable duration (e.g. '1h 23m', '4m').
+
+    **Canonical implementation of the `duration_human` shared render format.**
+    Mirrored by `DurationFormat.human` (Swift) and `formatDurationHuman`
+    (TypeScript); the agreed case table is `tests/fixtures/shared-format-contract.json`
+    and the register is `docs/design-shared-formats.md`. Change this and the
+    mirrors move with it, in the same commit.
+
+    Note this is an ELAPSED SPAN, not a position in a recording — positions use
+    `format_timecode` and render `MM:SS`. Conflating the two is what made the
+    Sessions grid read a duration as a time of day (fixed 22 Aug 2026).
+    """
     if seconds <= 0:
         return "0m"
     h = int(seconds // 3600)

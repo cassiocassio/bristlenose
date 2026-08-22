@@ -10,6 +10,13 @@ import Foundation
 ///
 /// Examples: `66180 → "18h 23m"`, `3600 → "1h"`, `240 → "4m"`, `30 → "<1m"`,
 /// `0 → "0m"`.
+///
+/// Registered as a shared RENDER format in `docs/design-shared-formats.md`;
+/// the case table below is duplicated in `tests/fixtures/shared-format-contract.json`,
+/// which the Python and TypeScript sides assert against. Note the TypeScript
+/// mirror (`formatDurationHuman`) deliberately returns an em-dash rather than
+/// `"0m"` for a non-positive input — it formats per-row cells, where zero means
+/// unknown, not measured. That divergence is recorded in the contract file.
 enum DurationFormat {
     /// Format a non-negative second count the way the dashboard does. The "h"
     /// / "m" abbreviations are deliberately not localised — the Python source

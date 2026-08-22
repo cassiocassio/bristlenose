@@ -16,10 +16,11 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+    "resolveJsonModule": true,
     "types": ["vitest/globals", "@testing-library/jest-dom"],
     "paths": {
       "@locales/*": ["../bristlenose/locales/*"]
     }
   },
-  "include": ["src", "../bristlenose/locales"]
+  "include": ["src", "../bristlenose/locales", "../tests/fixtures/shared-format-contract.json"]
 }

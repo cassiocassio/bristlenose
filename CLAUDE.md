@@ -398,6 +398,7 @@ fully-qualified path, never by first match on the name.**
 **Must-read before writing user-facing text:**
 - `docs/glossary.md` — terminology + tone guide
 - `docs/platform-text-map.md` — shared/desktop/CLI text forking, `dt()`/`ct()` inventory
+- `docs/design-shared-formats.md` — **read before writing any `format*` helper that renders a value a user reads.** The register of formats duplicated across Python / TypeScript / Swift: which agree (pinned by `tests/fixtures/shared-format-contract.json`, asserted from both pytest and vitest), which don't, and which differ on purpose. Two classes: *parsed* contracts, where a mismatch breaks function and which were already handled, and *rendered* ones, where a mismatch is a visible inconsistency — every drift measured in the 22 Aug 2026 audit was the second kind. Nomenclature rule: **one stem per format, house casing per language** (`duration_human` / `formatDurationHuman` / `DurationFormat.human`), because a family with no shared stem is a family no grep will find — which is exactly how session duration reached four live renderings. Known open gaps: `timecode` (9 implementations, 3 formats — a quote card says `05:30` and the CSV of that same quote says `5:30`) and `finder_filename` (off-by-one). **Before adding a `format*` function, check whether the format is already in the register.**
 
 **Must-read before touching tag suggestion, telemetry, or data governance:**
 - `docs/methodology/` — canonical methodology docs. Treat as authoritative: when code and doc disagree, the doc is the spec and the code is wrong.

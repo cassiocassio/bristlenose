@@ -3,6 +3,13 @@ import Testing
 
 @testable import Bristlenose
 
+/// The same case table lives in `tests/fixtures/shared-format-contract.json`
+/// under `duration_human`, where the Python and TypeScript suites assert it.
+/// Keep the two in step; if this file grows a case, add it there too.
+/// (Wiring this suite to read that file directly is a named next step in
+/// `docs/design-shared-formats.md` §6 — `PipelineSummaryTests.swift` already
+/// walks up from `#filePath` to `tests/fixtures/` and is the pattern to copy.)
+///
 /// Pins `DurationFormat.human` to the exact output of the Project dashboard's
 /// `_format_duration_human` (`bristlenose/server/routes/dashboard.py`). The
 /// window subtitle's total-session-time must read identically to the

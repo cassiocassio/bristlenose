@@ -502,8 +502,6 @@
     "browseTitle": "コードブックライブラリ",
     "browseSubtitle": "コードブックをプロジェクトにインストールするか、独自に作成します",
     "frameworksHeader": "コードブックフレームワーク",
-    "yourCodebooksHeader": "あなたのコードブック",
-    "createNew": "新しいコードブックを作成",
     "comingSoon": "近日公開",
     "previouslyImported": "以前インストール済み — すぐに再インストールできます",
     "importCodebook": "インストール",

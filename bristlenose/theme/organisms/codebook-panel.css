@@ -809,22 +809,6 @@
     font-style: italic;
 }
 
-/* Create new codebook card */
-.picker-card-create {
-    border: 1px dashed var(--bn-colour-border);
-    background: transparent;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 140px;
-    gap: var(--bn-space-sm);
-}
-.picker-card-create:hover {
-    border-color: var(--bn-colour-muted);
-    background: var(--bn-hover-bg-subtle);
-}
-
 /* Per-tile Install ↔ Uninstall toggle. Fixed min-width + centred text so the
    button footprint doesn't shift when the label swaps state. Both neutral —
    Uninstall is reversible; it only warms to danger on hover. */

@@ -1426,26 +1426,14 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                         })}
                       </div>
 
-                      <div className="picker-section-header">
-                        <span className="picker-section-title">{t("codebook.yourCodebooksHeader")}</span>
-                      </div>
-                      <div className="picker-row">
-                        <div
-                          className="picker-card picker-card-create"
-                          role="button"
-                          tabIndex={0}
-                          onClick={handleCloseModal}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleCloseModal();
-                            }
-                          }}
-                        >
-                          <span className="new-icon">+</span>
-                          <span className="new-label">{t("codebook.createNew")}</span>
-                        </div>
-                      </div>
+                      {/* "Your codebooks" is not built (design-codebook-library.md
+                          Q2 — per-project; a shared personal shelf deferred). It
+                          shipped as a header plus a "+ Create new codebook" tile
+                          whose only handler closed the modal, so the section's one
+                          affordance silently did nothing. Removed 22 Aug 2026:
+                          an absent control is honest, a no-op one teaches the
+                          researcher the Library is unreliable. Restore header and
+                          tile together, wired to a real create flow. */}
                     </>
                   )}
                 </div>

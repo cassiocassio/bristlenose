@@ -228,6 +228,29 @@ Based on survey of 14 macOS apps:
 - **Commit**: Return. **Cancel**: Escape. ✅ Plus **commit-on-blur** (click-away saves — Finder/Notes/Xcode all do this; cancel-on-blur is a web habit).
 - **No dialog, no sheet** — inline only, always ✅
 
+> **Field geometry: row-width, and that is settled (22 Aug 2026).** The edit box fills
+> the row to the count badge rather than hugging the name, which reads as a lot of empty
+> bezel around a short name. **Measured before deciding, and the measurement splits the
+> way the reference does:** Finder **hugs** the filename; the source lists — Photos, and a
+> folder-bearing outline — run the field **full width** past the text. So hugging is
+> file-browser behaviour, not source-list behaviour, and this sidebar is a source list
+> renaming a *library title* (`renameProject` writes `projects[i].name` into our own index
+> and never touches the folder on disk). Photos is already the reference app for the
+> gesture; it is now also the reference for the geometry.
+>
+> Two things worth keeping so this is not reopened cheaply. **There is no rule to appeal
+> to** — the HIG's Sidebars page says nothing about renaming or inline editing at any
+> width, so the only evidence is what shipped apps do, and the above *is* that evidence.
+> And **hugging is not a cheap change if it is ever wanted**: an editable `NSTextField`
+> has no intrinsic width (`NSViewNoIntrinsicMetric`), so content-hugging priority cannot
+> do it — it needs an `intrinsicContentSize` override measuring through the *field
+> editor's* layout manager, inside the one controller that already needs §2.6's four
+> guard-rails to keep a live field editor alive across a per-tick `reloadData`.
+>
+> Verdict: current behaviour stands. If the empty bezel still grates, the thing to
+> question is the `.squareBezel` + `drawsBackground` treatment being heavy for a source
+> list — which is a separate change and has nothing to do with width.
+
 > **REVERSED 28 Jul 2026.** This section previously concluded: *"Enter key does NOT trigger rename
 > (only Finder/Xcode do this — most apps use Enter to open/activate)."* That was a sound reading of
 > the 14-app survey, and it is preserved here because the reasoning still explains the general case.

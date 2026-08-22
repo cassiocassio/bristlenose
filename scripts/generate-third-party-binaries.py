@@ -96,6 +96,18 @@ NEVER_SHIPPED = {
     "typing-inspection",
     "types-pyyaml",
     "types-requests",
+    # pre-commit and its transitive tail. Declared in [dev] and used by the
+    # gitleaks hook; none of it reaches the sidecar. Listed explicitly because
+    # NEVER_SHIPPED matches names, not dependency trees — same reason
+    # prettytable/wcwidth are named above.
+    "pre-commit",
+    "cfgv",
+    "identify",
+    "nodeenv",
+    "virtualenv",
+    "distlib",
+    "platformdirs",
+    "python-discovery",
     # Already excluded in spec but transitive tail may sneak in
     "presidio-analyzer",
     "presidio-anonymizer",

@@ -65,6 +65,12 @@ dev = [
     "pytest-asyncio>=0.24",
     "ruff>=0.8",
     "mypy>=1.13",
+    # SECURITY.md names the gitleaks pre-commit hook as a control. It was not
+    # declared anywhere, so a rebuilt venv never had it and the claim was false
+    # on this machine for an unknown length of time (found 23 Aug 2026). Declared
+    # here so `pip install -e '.[dev]'` restores the control; the hook itself
+    # still needs `pre-commit install` once per clone.
+    "pre-commit>=4.0",
     "httpx>=0.27",
     "mcp>=2.0",
     "mlx>=0.16; sys_platform == 'darwin' and platform_machine == 'arm64'",

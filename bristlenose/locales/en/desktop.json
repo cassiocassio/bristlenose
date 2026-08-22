@@ -351,7 +351,7 @@
     "dropFolderTitle": "Drop a folder",
     "dropFolderHint": "Drag a folder of recordings or transcripts here to add it as a project.",
     "aiPrivacyLink": "Review AI & privacy settings…",
-    "aiSetup": "Set Up",
+    "aiSetup": "Setup",
     "steps": {
       "ingestTitle": "Add interviews",
       "ingestDetail": "Audio, video, or existing transcripts.",

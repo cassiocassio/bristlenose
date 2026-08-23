@@ -623,6 +623,15 @@ to "trusts a signature chained to this repository."
 
 ### C5 — The website: the phishing surface, and `CHANGELOG.md` as an injection path.
 
+> **FIXED 23 Aug 2026** — website repo `4305119`, **not yet deployed**. Escaping
+> happens at Markdown's raw-HTML stash, for externally-sourced pages only. Two
+> layers were tried and rejected first, both instructive: escaping the *source*
+> double-escapes code spans (`<code>use &lt;provider&gt;</code>` → a visible
+> `&lt;provider&gt;`) and breaks autolinks; escaping at the stash *without*
+> skipping the uicons/callouts preprocessors would eat the HTML those
+> legitimately emit. Real changelog renders byte-identical; an 18-assertion
+> guard asserts payloads inert at the element level, not by substring.
+
 `bristlenose.app` serves the `.dmg`, and `/privacy.html` is the canonical URL
 that **Apple, Microsoft Entra and Google Cloud all point at**. Its build renders
 `CHANGELOG.md` live from this repo.

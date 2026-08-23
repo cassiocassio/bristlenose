@@ -150,15 +150,26 @@ cost differently:**
 | | Line | Crossed by | Cost of being wrong |
 |---|---|---|---|
 | **soft** | a build number is spent forever | `upload-testflight.sh` | recoverable: `--build-only` and rebuild. But the build **reaches cohort testers** and cannot be recalled, only expired in ASC |
-| **hard** | a PyPI version is burned forever | **approving the publish job** in GitHub's UI | unrecoverable: that version can never be re-used |
+| **hard** | a PyPI version is burned forever | **pushing the tag** | unrecoverable: that version can never be re-used |
 
-**Pushing the tag is on neither line.** The `pypi` environment carries a
-required-reviewer hold, so `release.yml` runs its (strict-macOS) CI and then its
-publish job *waits* — up to 30 days — for an approval on the run page. That is
-what lets the tag go out at the start, with `main`, while everything is still
-abandonable: to walk away, don't approve, and delete the tag. The preflight's
-`publish hold` line proves the hold exists — **if it warns, you are in the old
-world where a tag push publishes immediately, and the order below is wrong.**
+**Pushing the tag IS the hard line, since 23 Aug 2026.** The `pypi`
+environment's required-reviewer hold was removed, so `release.yml` now runs to
+completion on a tag: `publish` needs `build` needs `ci`, and `ci.yml` is invoked
+with `strict-macos: true`. A tag push therefore publishes as soon as the full
+matrix, e2e and strict macOS suite pass on the tagged commit.
+
+**The gate did not go away; it stopped being a click.** At the old approval
+moment every fact was already mechanical — both CI runs, the artefact's
+signature and staple, `tag == HEAD`, the version not already on PyPI — and a
+human clicking Approve at 11pm re-verified none of them. The preflight's
+`publish gate` row now asserts the `publish → build → ci(strict)` chain and
+**fails** if it is ever broken.
+
+**Consequence for the order: the tag goes LAST.** After the Mac uploads, after a
+strict verdict. `ci.yml` exposes `strict-macos` on `workflow_dispatch`, so that
+verdict is obtainable on `main` without a tag — which is what keeps the 0.25.2
+lesson intact (every verdict before every irreversible act) now that the tag is
+the act that publishes.
 
 Publishing the `.dmg` sits between the lines — technically re-publishable, but
 the public permalink swaps the moment it lands, so treat it as audience-reaching
@@ -221,26 +232,32 @@ unsigned local build must say `SIGN_IDENTITY=-`, which reports the skipped gates
 as a warning rather than saying nothing. The accident fails; the intent works. `build-dmg.sh` needs no such care: it defaults to
 the Developer ID identity and refuses ad-hoc outright.
 
-**Why the tag goes out at the start.** The old order held the tag back because
-pushing it *was* publishing — so the Mac lane ran first, and its uploads landed
-before the tag run's CI verdict existed. That is the window 0.25.2 died in:
-first CI run green, uploads out, second CI run red, three channels shipped on a
-version the suite then rejected. With the publish hold, the tag is just a ref:
-pushing it early starts the second CI run — the one whose macOS cells actually
-block — while the Mac build runs, and **every** irreversible act now sits behind
-both verdicts. Same failure today costs: nothing. The two runs are also two
-*independent* samples of the suite on the same commit, which is precisely the
-evidence a single green cannot give you on a flaky test.
+**Why the tag goes LAST.** It went first for eight days, and that was correct
+while the hold existed: pushing it was just a ref, it started the strict CI run,
+and every irreversible act sat behind two verdicts. With the hold gone the tag
+publishes, so leaving it first would put the single unrecoverable act *before*
+the strict verdict — worse than the 0.25.2 order it replaced.
+
+Moving it last would normally reintroduce that same window from the other side:
+the Mac artefacts would ship before any strict verdict existed. `ci.yml`'s
+`workflow_dispatch` + `strict-macos` input is what closes it — dispatch the
+strict run on `main`, wait for it, upload, then tag. Two independent strict
+samples of the suite still land before anything irreversible: the dispatched one
+before the uploads, and the tag's own before PyPI.
 
 **Budget cold, not warm.** A version bump invalidates the PyInstaller and
 frontend caches, so the sidecar rebuild inside `build-all.sh` runs ~19 min rather
 than ~6. A full Publish-tier release is **~1h55 wall-clock** under this order —
 the second CI run overlaps the Mac build instead of following it.
 
-**If approval never comes, nothing happens** — the run waits up to 30 days, then
-expires un-published. An abandoned release is: don't approve, delete the tag
-(`git push --delete origin vX.Y.Z && git tag -d vX.Y.Z`), fix, re-tag. The only
-residue is a tag that briefly existed on origin.
+**Abandoning a release is now: do not push the tag.** Everything before it —
+the bump, the commit, `main`, both builds, even the TestFlight and `.dmg`
+uploads — is either reversible or merely audience-reaching, and none of it is on
+PyPI. If the tag is already pushed and its CI is still running, deleting it
+(`git push --delete origin vX.Y.Z && git tag -d vX.Y.Z`) cancels the publish
+only if you win the race; assume you will not. `./scripts/release.sh abandon
+<X.Y.Z>` prints the recipe **and** the website consequence, which is the part
+that was previously remembered rather than printed.
 
 **The website deploys last.** Its changelog page renders live from `CHANGELOG.md`,
 so deploying before PyPI accepts the upload publishes a page announcing a version
@@ -381,13 +398,15 @@ the skill is one nobody is reading.
   the answer is to fix the artefact, never to work around the check.
 - **A partial release is a normal outcome**, not an error. PyPI can succeed while
   Homebrew's poll times out. Report per-channel truth, not one verdict.
-- **Weekday releases land after 9pm London; the landing act is the publish
-  approval.** Pushing `main` and the tag publishes nothing (the hold), building
-  publishes nothing — so the run can *start* any time, and only the approval
-  waits for the window. Weekends unrestricted. It is a guideline — confirm
-  rather than refuse. (A morning approval after an overnight run is a common,
-  sanctioned override: the human is choosing the moment with full information,
-  which is what the guideline exists to protect.)
+- **Weekday releases land after 9pm London; the landing act is the TAG PUSH.**
+  Since 23 Aug 2026 there is no approval to wait on — the `pypi` required-reviewer
+  hold was removed, and `publish → build → ci(strict-macos)` is what now stands
+  between a tag and PyPI. Pushing `main` and building still publish nothing, so
+  the run can *start* any time; only the tag waits for the window. Weekends
+  unrestricted. It is a guideline — confirm rather than refuse. (A morning tag
+  after an overnight build is a common, sanctioned override: the human is
+  choosing the moment with full information, which is what the guideline exists
+  to protect.)
 - **Every upload spends its build number forever.** A replacement needs
   `./scripts/bump-version.py --build-only`.
 - **Do not author the changelog alone.** Draft it; the human decides what users

@@ -367,26 +367,52 @@ else
     esac
 fi
 
-# The publish hold lives in repo SETTINGS (Environments ▸ pypi ▸ required
-# reviewers), not in any file — nothing in the tree proves it exists, and a
-# fresh fork or a deleted environment silently reverts to publish-on-tag. The
-# release ordering (tag pushed EARLY, uploads after both CI verdicts, publish
-# waiting for approval) leans on this setting, so probe it rather than remember
-# it. Deliberately NOT nested in the CI-status branches above: this must report
-# regardless of whether HEAD is pushed or a run exists. Warn, not fail — the
-# flow degrades to pre-hold behaviour, which is worse but not wrong; the
-# operator just needs to know which world they are in before pushing the tag.
-if command -v gh >/dev/null 2>&1; then
-    HOLD=$(gh api repos/cassiocassio/bristlenose/environments/pypi \
-           --jq '[.protection_rules[]? | select(.type == "required_reviewers")] | length' \
-           2>/dev/null || echo "QUERY_FAILED")
-    case "$HOLD" in
-        QUERY_FAILED) warn "publish hold" "could not query the pypi environment — state unknown" ;;
-        0)            warn "publish hold" "NO required reviewer on the pypi environment — a tag push publishes IMMEDIATELY" ;;
-        *)            ok   "publish hold" "pypi environment requires approval before publish" ;;
-    esac
+# What gates PyPI, now that nothing human does.
+#
+# The pypi environment's required-reviewer hold was REMOVED on 23 Aug 2026, and
+# this row changed shape with it. The old row warned when the hold was absent,
+# because the release ordering leaned on it: the tag went out early precisely
+# because it published nothing until a human approved.
+#
+# The hold was answering a question nobody could add information to. At the
+# approval moment every fact is mechanical — both CI runs, the artefact's
+# signature and staple, tag == HEAD — and a human clicking Approve at 11pm
+# re-verifies none of it. 97 releases in 204 days made the ceremony expensive
+# and the judgement empty.
+#
+# So the gate moved from a click to the job graph, and THAT is what this row
+# now asserts: publish `needs: build` needs `ci`, and release.yml invokes ci.yml
+# with strict-macos: true. PyPI cannot receive a version whose full matrix, e2e
+# and strict macOS suite did not pass on the tagged commit. If that chain is
+# ever broken, a tag push publishes untested code — which is the thing the hold
+# was standing in for, and is worth failing over.
+head_ "Publish gate"
+if [ ! -f .github/workflows/release.yml ]; then
+    bad "publish gate" "no release.yml"
 else
-    warn "publish hold" "gh not installed — cannot verify the pypi environment"
+    _rel=$(cat .github/workflows/release.yml)
+    _chain=1
+    printf '%s' "$_rel" | grep -qE '^\s*publish:' || _chain=0
+    printf '%s' "$_rel" | grep -A3 -E '^\s*publish:' | grep -qE 'needs:\s*build' || _chain=0
+    printf '%s' "$_rel" | grep -A3 -E '^\s*build:' | grep -qE 'needs:\s*ci' || _chain=0
+    printf '%s' "$_rel" | grep -qE 'strict-macos:\s*true' || _chain=0
+    if [ "$_chain" = "1" ]; then
+        ok "publish gate" "publish → build → ci (strict macOS) — a tag cannot publish untested code"
+    else
+        bad "publish gate" "the publish→build→ci(strict) chain is broken — a tag push would publish UNGATED"
+    fi
+
+    # And record which world we are in, because the ordering depends on it.
+    if command -v gh >/dev/null 2>&1; then
+        _hold=$(gh api repos/cassiocassio/bristlenose/environments/pypi \
+                  --jq '[.protection_rules[] | select(.type=="required_reviewers")] | length' \
+                  2>/dev/null || echo "QUERY_FAILED")
+        case "$_hold" in
+            QUERY_FAILED) warn "publish hold" "could not query the pypi environment — ordering unverified" ;;
+            0)            ok   "publish hold" "none — the tag push is the release (release.sh run puts it last)" ;;
+            *)            warn "publish hold" "a required reviewer EXISTS — the tag publishes nothing until approved, so release.sh run's tag-last order is wrong for this repo state" ;;
+        esac
+    fi
 fi
 
 RUFF=$( .venv/bin/ruff check . 2>&1 | tail -1 )

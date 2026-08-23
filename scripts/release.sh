@@ -24,6 +24,7 @@
 #   release.sh status
 #   release.sh abandon <X.Y.Z>
 #   release.sh retry <X.Y.Z> <step>
+#   release.sh recover <X.Y.Z>        after a failed or missing release run
 #
 # Exit codes:
 #   0   ready / verified / complete
@@ -138,6 +139,42 @@ probe_done() {
             # cannot be unspent. TestFlight needs an ASC key; there is no probe.
             return 2
             ;;
+    esac
+}
+
+# verdict_recover <published> <run_state> <tag_sha> <head_sha>
+#   The rerun-vs-retag decision, which release-log v0.15.13 got wrong at cost.
+#
+#   `gh run rerun --failed` replays the TAGGED COMMIT, not main's latest. So if
+#   a later commit already fixed the failing step, the rerun fails identically —
+#   which is what happened on v0.15.13 (an e2e Playwright CDN stall; the rerun
+#   of the stale commit failed the same way, and moving the tag to the fix
+#   published cleanly).
+#
+#   It is three cases, not two, and the third is the one people forget: a run
+#   that NEVER FIRED. `git push origin main --tags` bundles the branch and tag
+#   events and the tag-driven workflow gets debounced into never running
+#   (v0.15.0). That needs redelivery of the same sha, not a rerun of nothing.
+#
+#   Prints: published | wait | redeliver | rerun | retag | investigate
+verdict_recover() {
+    local published="${1-}" run_state="${2-}" tag_sha="${3-}" head_sha="${4-}"
+    # Published wins over everything: there is nothing to recover, only to
+    # supersede. Reached first so no branch below can suggest tag surgery on an
+    # immutable version.
+    [ "$published" = yes ] && { echo published; return; }
+    case "$run_state" in
+        none)                echo redeliver ;;
+        queued|in_progress)  echo wait ;;
+        success)             echo investigate ;;   # green but not on PyPI
+        failure|cancelled|timed_out|startup_failure)
+            # THE decision. Same sha means no fix exists yet, so the failure can
+            # only be transient — rerun. A moved HEAD means main carries
+            # something the tagged commit does not, and a rerun would replay the
+            # commit without it.
+            if [ -n "$tag_sha" ] && [ "$tag_sha" = "$head_sha" ]; then echo rerun
+            else echo retag; fi ;;
+        *)                   echo investigate ;;
     esac
 }
 
@@ -343,6 +380,77 @@ cmd_abandon() {
     printf '  The changelog page renders from CHANGELOG.md at BUILD time, so removing\n'
     printf '  the %s entry makes every already-deployed copy of the site wrong.\n\n' "$V"
     printf '    cd ../bristlenose-website && ./build.py && ./deploy.sh\n\n'
+}
+
+cmd_recover() {
+    V="${1-}"
+    [ "$(verdict_version "$V")" = ok ] || die "usage: release.sh recover <X.Y.Z>"
+
+    printf '\n%bRecovering %s%b\n\n' "$B" "$V" "$N"
+
+    _pub=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+             "https://pypi.org/pypi/bristlenose/$V/json" 2>/dev/null || echo 000)
+    _published=no; [ "$_pub" = 200 ] && _published=yes
+
+    _tag_sha=$(git rev-parse "v$V^{}" 2>/dev/null || echo "")
+    _head_sha=$(git rev-parse HEAD 2>/dev/null || echo "")
+
+    if command -v gh >/dev/null 2>&1; then
+        _state=$(gh run list --workflow=release.yml --limit 20 \
+                   --json headBranch,status,conclusion \
+                   --jq "[.[]|select(.headBranch==\"v$V\")]|.[0]|
+                         if . == null then \"none\"
+                         elif .status != \"completed\" then .status
+                         else .conclusion end" 2>/dev/null || echo "QUERY_FAILED")
+    else
+        _state=QUERY_FAILED
+    fi
+    [ -z "$_state" ] || [ "$_state" = null ] && _state=none
+
+    printf '  %bPyPI%b        %s\n' "$D" "$N" \
+        "$([ "$_published" = yes ] && echo "$V is published" || echo "$V not published (HTTP $_pub)")"
+    printf '  %btag%b         %s\n' "$D" "$N" "${_tag_sha:-not found locally}"
+    printf '  %bHEAD%b        %s%s\n' "$D" "$N" "${_head_sha:-?}" \
+        "$([ -n "$_tag_sha" ] && [ "$_tag_sha" != "$_head_sha" ] && echo "  (main has moved past the tag)" || echo "")"
+    printf '  %brelease run%b %s\n\n' "$D" "$N" "$_state"
+
+    if [ "$_state" = QUERY_FAILED ]; then
+        printf '  %b⚠ could not query the release runs — diagnosis unavailable.%b\n\n' "$Y" "$N"
+        return 1
+    fi
+
+    case "$(verdict_recover "$_published" "$_state" "$_tag_sha" "$_head_sha")" in
+        published)
+            printf '  %b✓ Nothing to recover — %s is on PyPI.%b\n' "$G" "$V" "$N"
+            printf '  A PyPI version is immutable. If it is wrong, supersede it.\n\n' ;;
+        wait)
+            printf '  %bℹ The run is still going. Watch it:%b\n\n' "$Y" "$N"
+            printf '    gh run watch $(gh run list --workflow=release.yml --limit 1 --json databaseId --jq ".[0].databaseId") --exit-status\n\n' ;;
+        redeliver)
+            printf '  %bNo run fired for v%s — this is the DEBOUNCE case.%b\n' "$B" "$V" "$N"
+            printf '  A bundled `git push --tags` sends the branch and tag events together\n'
+            printf '  and the tag-driven workflow can be debounced into never firing.\n'
+            printf '  Redelivering the SAME sha is a semantic no-op that re-triggers it:\n\n'
+            printf '    git push --delete origin v%s && git push origin v%s\n\n' "$V" "$V" ;;
+        rerun)
+            printf '  %bThe run failed and the tag IS HEAD — rerun is correct.%b\n' "$B" "$N"
+            printf '  Nothing on main is missing from the tagged commit, so the failure can\n'
+            printf '  only be transient (a CDN stall, a flake, a runner).\n\n'
+            printf '    gh run rerun --failed $(gh run list --workflow=release.yml --limit 1 --json databaseId --jq ".[0].databaseId")\n\n' ;;
+        retag)
+            printf '  %b⚠ The run failed and MAIN HAS MOVED — do NOT rerun.%b\n\n' "$Y" "$N"
+            printf '  `gh run rerun --failed` replays the TAGGED COMMIT, not main. If a later\n'
+            printf '  commit fixed the failing step, the rerun fails identically — which is\n'
+            printf '  what happened on v0.15.13. Move the tag to the fix instead:\n\n'
+            printf '    git tag -f v%s %s\n' "$V" "$(git rev-parse --short HEAD 2>/dev/null)"
+            printf '    git push --delete origin v%s && git push origin v%s\n\n' "$V" "$V"
+            printf '  %bCheck first%b that HEAD actually contains the fix:\n' "$B" "$N"
+            printf '    git log %s..HEAD --oneline\n\n' "${_tag_sha:0:9}" ;;
+        investigate)
+            printf '  %b⚠ The run reports %s but %s is not on PyPI.%b\n' "$Y" "$_state" "$V" "$N"
+            printf '  Neither a rerun nor a retag is indicated. Read the run first:\n\n'
+            printf '    gh run view $(gh run list --workflow=release.yml --limit 1 --json databaseId --jq ".[0].databaseId")\n\n' ;;
+    esac
 }
 
 cmd_run() {
@@ -552,6 +660,7 @@ case "${1-}" in
     abandon) shift; cmd_abandon "$@" ;;
     run)     shift; cmd_run "$@" ;;
     retry)   shift; cmd_retry "$@" ;;
+    recover) shift; cmd_recover "$@" ;;
     -h|--help|help) usage ;;
-    *)       die "unknown command: $1 (try: plan run verify status abandon retry)" ;;
+    *)       die "unknown command: $1 (try: plan run verify status abandon retry recover)" ;;
 esac

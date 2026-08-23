@@ -19,7 +19,7 @@ invisible.
 |---|---|---|---|
 | **1** | **v0.15.5–0.15.9 published nothing, for six days** | Five tags pushed, five workflow runs never delivered to PyPI. Nobody checked, because the tag reaching GitHub *looked* like a release | ✅ `verify-channels.sh` probes the version-specific PyPI endpoint. `run` exits **75** (verification pending), never 0 — so `release.sh run && …` cannot chain off an unpublished release |
 | **2** | **v0.15.0 debounce — `--tags` bundled the pushes** | One `git push origin main --tags` bundled branch and tag events; the tag-driven workflow never fired | ⚠️ The step table has `git push origin main` and `git push origin v<V>` as **two separate steps**, so the shape cannot recur from the driver. Not asserted for a hand-run — the rule lives in prose |
-| **3** | **v0.15.13 — `gh run rerun --failed` replayed the stale commit** | The e2e Playwright CDN stalled. A `--failed` rerun re-ran the *tagged* commit, not `main`'s fix, and failed identically | ✗ **Not caught.** `run` has no rerun path at all; a human still chooses between rerun and moving the tag. `/new-release`'s decision tree owns it, and remains prose |
+| **3** | **v0.15.13 — `gh run rerun --failed` replayed the stale commit** | The e2e Playwright CDN stalled. A `--failed` rerun re-ran the *tagged* commit, not `main`'s fix, and failed identically | ✅ `release.sh recover` probes PyPI, the tag sha and the run state, then names which of **three** cases applies. Tag == HEAD → rerun (no fix can exist). Main moved → **retag**, with the warning that a rerun replays the stale commit. No run at all → redeliver |
 | **4** | **v0.6.7–0.6.13 — seven versions, CI parity** | Local ran `ruff check bristlenose/`, CI runs `ruff check .`. Test-file lint errors were invisible locally | ✅ `run`'s first step is the preflight, whose `CI status` row asks whether **HEAD has a green run** rather than whether local checks pass |
 | **5** | **0.25.2 — three channels shipped on a version the suite then rejected** | First CI run green → uploads out → second CI run red. The uploads preceded the verdict | ✅ This is the whole reason for step `strict-ci`. `ci-green` blocks before `testflight`, and is pinned to `--event workflow_dispatch` **and** to HEAD's sha, so it cannot certify the push-triggered non-strict run or a different commit |
 | **6** | **0.26.0 — tagged with 34 commits of real code past it** | "Docs-only, wheel byte-identical" was asserted without running the diff. Tag abandoned | ✅ `shippable diff` runs the diff and classifies release / rebuild / nothing. ✅ `abandon` now **probes PyPI** and refuses if the version published |
@@ -43,7 +43,11 @@ invisible.
 
 ## Score
 
-**15 caught mechanically · 4 surfaced but not stopped · 2 still invisible.**
+**16 caught mechanically · 4 surfaced but not stopped · 1 still invisible.**
+
+_Updated 23 Aug 2026: incidents 3 and 12 were the two invisible ones. Both are
+now closed — 12 by the advisory-streak row, 3 by `release.sh recover`. What
+remains at ✗ is nothing; the four ⚠️ are genuine partials, not deferrals._
 
 The two that are genuinely invisible are worth naming rather than rounding up:
 
@@ -58,16 +62,25 @@ The gap is one preflight row: `gh run list --workflow=perf.yml --limit 5` and
 warn on a run of failures. It is not built, and it should be — the shape
 generalises to any advisory check the project adds later.
 
-### ✗ 3 — rerun-vs-retag after a workflow failure
+### ✅ 3 — closed, and the third case is the one that gets forgotten
 
-`gh run rerun --failed` replays the **tagged commit**, not `main`'s latest — so
-if a later commit already fixed the failing step, the rerun fails identically.
-The remedy is moving the tag. That decision tree lives in `/new-release` as
-prose and `release.sh` has no rerun path at all.
+`release.sh recover <X.Y.Z>` probes PyPI, the tag sha, HEAD and the run state,
+and names the case:
 
-Under the new model this matters *more*, not less: the tag now publishes, so a
-failed tag run is a release that did not happen, and the choice between rerun
-and re-tag is made at the moment of most pressure.
+- **published** → nothing to recover, only supersede. Reached first, so no
+  branch can suggest tag surgery on an immutable version.
+- **no run fired** → the *debounce* case (v0.15.0). A bundled `push --tags`
+  sends both events together and the tag workflow never runs. Redelivering the
+  same sha is a semantic no-op that re-triggers it.
+- **failed, tag == HEAD** → rerun. Nothing on main is missing from the tagged
+  commit, so the failure can only be transient.
+- **failed, main has moved** → **retag**, with the reason: a `--failed` rerun
+  replays the tagged commit, which is exactly how v0.15.13 failed twice.
+- **green but not on PyPI** → neither. That is the v0.15.5–0.15.9 shape, where
+  five runs looked fine and delivered nothing.
+
+It diagnoses and prints the command; it does not perform tag surgery. The
+diagnosis is mechanical, the act is not.
 
 ---
 

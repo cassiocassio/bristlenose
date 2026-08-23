@@ -216,6 +216,47 @@ case "$_evalline" in
     *)     ok "no pipe on the eval line" ;;
 esac
 
+
+head_ "verdict_recover — rerun vs retag vs redeliver, the v0.15.13 decision"
+# published always wins: nothing to recover, only to supersede. Reached first so
+# no branch can suggest tag surgery on an immutable version.
+eq "published beats a failed run"   published  "$(verdict_recover yes failure aaa bbb)"
+eq "published beats no run at all"  published  "$(verdict_recover yes none aaa aaa)"
+
+# v0.15.0: `git push --tags` bundled the events and the workflow never fired.
+eq "no run fired -> redeliver"      redeliver  "$(verdict_recover no none aaa aaa)"
+
+# v0.15.13: the run failed, main already carried the fix, and a --failed rerun
+# replayed the STALE tagged commit and failed identically.
+eq "failed + main moved -> retag"   retag      "$(verdict_recover no failure aaa bbb)"
+eq "failed + tag IS head -> rerun"  rerun      "$(verdict_recover no failure aaa aaa)"
+eq "cancelled + moved -> retag"     retag      "$(verdict_recover no cancelled aaa bbb)"
+eq "timed_out + same -> rerun"      rerun      "$(verdict_recover no timed_out aaa aaa)"
+eq "startup_failure + same"         rerun      "$(verdict_recover no startup_failure aaa aaa)"
+
+eq "still running -> wait"          wait       "$(verdict_recover no in_progress aaa aaa)"
+eq "queued -> wait"                 wait       "$(verdict_recover no queued aaa aaa)"
+# Green but absent from PyPI is neither a rerun nor a retag — it is the
+# v0.15.5-0.15.9 shape, where five runs looked fine and delivered nothing.
+eq "green but unpublished"          investigate "$(verdict_recover no success aaa aaa)"
+eq "an unknown state is not a fix"  investigate "$(verdict_recover no weird aaa aaa)"
+# An empty tag sha must not be treated as equal to an empty head sha.
+eq "no local tag -> retag, not rerun" retag    "$(verdict_recover no failure '' '')"
+
+head_ "recover — end to end against the real 0.27.0"
+_out=$(bash "$ROOT/scripts/release.sh" recover 0.27.0 2>&1)
+case "$_out" in
+    *"is published"*) ok "recognises a published version" ;;
+    *) bad "did not detect 0.27.0 on PyPI" ;;
+esac
+case "$_out" in
+    *"git tag -f"*|*"rerun --failed"*|*"push --delete"*)
+        bad "offered tag surgery on a PUBLISHED version" ;;
+    *)  ok "offers no tag surgery once published" ;;
+esac
+bash "$ROOT/scripts/release.sh" recover 0.28.O >/dev/null 2>&1
+eq "malformed version refuses" 2 "$?"
+
 head_ "meta"
 _before=$FAIL
 _r=$(eq "deliberate" ok malformed 2>&1)

@@ -6,6 +6,16 @@
 # it injects each failure the gate exists to catch and asserts it is caught.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# The injection below edits a TRACKED file. Without a trap, anything that kills
+# this script between injection and restore — a timeout, Ctrl-C, a failing
+# assertion under `set -e` — leaves the man page damaged and the next run of
+# check-doc-surfaces.sh reports a gap that does not exist. That happened: a
+# 2-minute cap on a batch run killed this mid-injection and the tree carried a
+# missing --llm until someone noticed. Restore from git, always, on every exit
+# path. test-preflight-gates.sh already does this; this file did not.
+_restore() { git -C "$ROOT" checkout -- bristlenose/data/bristlenose.1 2>/dev/null || true; }
+trap _restore EXIT INT TERM
+
 PASS=0; FAIL=0
 ok()  { printf '  \033[32m✓\033[0m %s\n' "$1"; PASS=$((PASS+1)); }
 bad() { printf '  \033[31m✗\033[0m %s\n' "$1" >&2; FAIL=$((FAIL+1)); }

@@ -176,14 +176,22 @@ jobs:
           # a file that every brew user executes. Validate the shape before it
           # reaches sed. Same guard, and the same reasoning, as
           # upload-dmg.sh:123-131 in the main repo.
+          # NEGATED CLASS. `[0-9]*.[0-9]*.[0-9]*` is one digit, ANYTHING, a dot,
+          # … — it accepts 0';id;'.0.0. VERSION arrives on a repository_dispatch
+          # payload derived from a git refname, and refnames permit " ; ( ).
+          # It is written into a Ruby string in a formula every `brew install`
+          # executes, on the channel with no notarisation and no Gatekeeper.
           case "$VERSION" in
+            ""|*[!0-9.]*) echo "::error::refusing: unexpected version shape '$VERSION'"; exit 1 ;;
             [0-9]*.[0-9]*.[0-9]*) : ;;
             *) echo "::error::refusing: unexpected version shape '$VERSION'"; exit 1 ;;
           esac
+          # `[0-9a-f]*` checked only the FIRST character; a 64-char value
+          # beginning `a";system(...)` passed.
           case "$SDIST_SHA" in
-            [0-9a-f]*) [ ${#SDIST_SHA} -eq 64 ] || { echo "::error::sha256 wrong length"; exit 1 ;} ;;
-            *) echo "::error::refusing: sha256 is not hex"; exit 1 ;;
+            *[!0-9a-f]*) echo "::error::refusing: sha256 is not hex"; exit 1 ;;
           esac
+          [ ${#SDIST_SHA} -eq 64 ] || { echo "::error::sha256 is not 64 characters"; exit 1; }
           case "$SDIST_URL" in
             https://files.pythonhosted.org/*) : ;;
             *) echo "::error::refusing: sdist URL is not on files.pythonhosted.org"; exit 1 ;;

@@ -40,13 +40,13 @@ head_ "the step table — structural invariants"
 TBL=$(sed -n "/^cat <<'RUNTBL'$/,/^RUNTBL$/p" "$ROOT/scripts/release.sh" | sed '1d;$d')
 
 # Every irreversible step must state its cost.
-missing=$(printf '%s\n' "$TBL" | awk -F'|' '($3=="soft"||$3=="hard") && $5==""{print $1}' | tr '\n' ' ')
+missing=$(printf '%s\n' "$TBL" | awk -F'|' '($3=="soft"||$3=="hard") && $6==""{print $1}' | tr '\n' ' ')
 if [ -z "$missing" ]; then ok "every irreversible step names its consequence"
 else bad "irreversible steps with no consequence: $missing"; fi
 
 # And no reversible step may claim one — crying wolf on the cheap steps is how
 # the real warnings stop being read.
-noisy=$(printf '%s\n' "$TBL" | awk -F'|' '$3=="plain" && $5!=""{print $1}' | tr '\n' ' ')
+noisy=$(printf '%s\n' "$TBL" | awk -F'|' '$3=="plain" && $6!=""{print $1}' | tr '\n' ' ')
 if [ -z "$noisy" ]; then ok "no reversible step claims a consequence"
 else bad "reversible steps claiming consequences: $noisy"; fi
 
@@ -59,7 +59,7 @@ else bad "gate at '$gate_id' does not precede first irreversible '$first_irrev'"
 
 # The hard line is last of the three: a burned PyPI version is the one thing
 # nothing can undo, so it must not be crossed before the recoverable ones.
-last_irrev=$(printf '%s\n' "$TBL" | awk -F'|' '$3=="soft"||$3=="hard"{i=$1; c=$5} END{print i"|"c}')
+last_irrev=$(printf '%s\n' "$TBL" | awk -F'|' '$3=="soft"||$3=="hard"{i=$1; c=$6} END{print i"|"c}')
 case "$last_irrev" in
     *HARD*) ok "the HARD line is the last irreversible step" ;;
     *)      bad "last irreversible step is not the HARD one: $last_irrev" ;;

@@ -162,7 +162,13 @@ while [ $# -gt 0 ]; do
     esac
 done
 [ -n "$VERSION" ] || { echo "usage: verify-channels.sh <X.Y.Z> [--abandoned <X.Y.Z>]" >&2; exit 2; }
+# NEGATED CLASS FIRST. `[0-9]*.[0-9]*.[0-9]*` reads as "a digit, ANYTHING, a
+# dot, a digit, ANYTHING, a dot, a digit, anything" — it accepts
+# 0';id;'.0.0 and 1x.2y.3"; system("x"). Measured. The strict form is
+# already in scripts/release.sh as verdict_version, with a test asserting
+# 0.28.0;rm -rf / is malformed.
 case "$VERSION" in
+    ""|*[!0-9.]*) echo "refusing: unexpected version shape '$VERSION'" >&2; exit 2 ;;
     [0-9]*.[0-9]*.[0-9]*) : ;;
     *) echo "refusing: unexpected version shape '$VERSION'" >&2; exit 2 ;;
 esac
@@ -233,12 +239,23 @@ if [ -z "$sha" ]; then
 else
     _d=$(printf '%s' "$sha" | awk '{print $1}')
     _f=$(printf '%s' "$sha" | awk '{print $2}')
-    case "$_d" in
-        [0-9a-f]*) [ ${#_d} -eq 64 ] \
-            && row ".dmg sha256" "$(verdict_contains "$_f" "$VERSION")" "${_d:0:16}… $_f" \
-            || row ".dmg sha256" "bad" "digest is not 64 hex chars" ;;
-        *) row ".dmg sha256" "bad" "not a sha256 line" ;;
-    esac
+    # `[0-9a-f]*` validates the FIRST CHARACTER and nothing else — 63 chars of
+    # garbage after a leading `a` read as a valid digest. Negated class again.
+    #
+    # And `cond && row … || row …` is the `&& ok` shape the house forbids: it is
+    # safe only while row's last statement cannot fail, and if anything fallible
+    # is ever added to row, BOTH rows print and two verdicts get pushed.
+    if [ "${#_d}" -ne 64 ]; then
+        row ".dmg sha256" "bad" "digest is not 64 characters"
+    else
+        case "$_d" in
+            *[!0-9a-f]*) row ".dmg sha256" "bad" "digest is not hex" ;;
+            # It checks the FILENAME names this version — not the digest against
+            # 644 MB of artefact. Say which, or the evidence reads as "verified".
+            *) row ".dmg sha256" "$(verdict_contains "$_f" "$VERSION")" \
+                   "filename names $VERSION · ${_d:0:12}…" ;;
+        esac
+    fi
 fi
 
 # 6 · Snap — the store API, public and unauthenticated. The workflow conclusion

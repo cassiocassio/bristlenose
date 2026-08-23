@@ -156,7 +156,10 @@ usage() { sed -n '2,/^set -uo/p' "$0" | sed 's/^# \{0,1\}//;$d'; }
 # The step table. One home. Estimates are MEASURED (docs/release-log.md 0.27.0),
 # not guessed — the plan table's originals were guesses and the log says so.
 #
-#   id | phase | est | consequence | command | tier
+#   id | label | kind | est | tier | consequence | COMMAND (last)
+#
+# command is LAST so `read` gives it the line's remainder: a pipe inside a
+# command would otherwise spill into the next field and silently drop the step.
 #
 # tier is empty for every tier, or 2 for a step only a Tier 2 promotion runs.
 # It exists because the Snap STABLE push is Tier 2 only, and counting its 10
@@ -166,19 +169,25 @@ usage() { sed -n '2,/^set -uo/p' "$0" | sed 's/^# \{0,1\}//;$d'; }
 # happens and withholding it where the act occurs is backwards.
 # ---------------------------------------------------------------------------
 run_steps() {
+# RELEASE_STEPS_FILE is a testability seam, not a feature. scripts/test-release-e2e.sh
+# points it at a table of harmless commands so the REAL cmd_run loop — its event
+# appends, elapsed times, skip logic, probe branch, failure tail and resume — can
+# be driven end to end without performing a release. Same shape as BN_BIN in
+# check-doc-surfaces.sh. Unset in every real invocation.
+if [ -n "${RELEASE_STEPS_FILE:-}" ]; then cat "$RELEASE_STEPS_FILE"; return; fi
 cat <<'RUNTBL'
-preflight|preflight|gate|1m||./scripts/check-release-ready.sh __V__|
-bump|bump + commit|plain|1m||__BUMP__|
-push-main|push main|plain|1m||git push origin main|
-strict-ci|dispatch strict CI on main|plain|1m||gh workflow run ci.yml --ref main -f strict-macos=true|
-build-all|build the app|plain|11m||desktop/scripts/build-all.sh|
-build-dmg|build the dmg|plain|30m||desktop/scripts/build-dmg.sh|
-ci-green|GATE strict CI green|gate|38m||__CIWAIT__|
-testflight|upload to TestFlight|soft|6m|SOFT: spends a build number forever, and it reaches cohort testers|desktop/scripts/upload-testflight.sh|
-dmg|publish the dmg|soft|13m|the public permalink swaps the moment this lands|desktop/scripts/upload-dmg.sh|
-tag|tag + push|hard|2m|HARD: this PUBLISHES. __V__ can never be re-used on PyPI|__TAG__|
-snap|snap edge|plain|10m||gh workflow run snap.yml --ref main|
-snap-stable|snap stable|plain|10m||gh workflow run snap.yml --ref v__V__|2
+preflight|preflight|gate|1m|||./scripts/check-release-ready.sh __V__
+bump|bump + commit|plain|1m|||__BUMP__
+push-main|push main|plain|1m|||git push origin main
+strict-ci|dispatch strict CI on main|plain|1m|||gh workflow run ci.yml --ref main -f strict-macos=true
+build-all|build the app|plain|11m|||desktop/scripts/build-all.sh
+build-dmg|build the dmg|plain|30m|||desktop/scripts/build-dmg.sh
+ci-green|GATE strict CI green|gate|38m|||__CIWAIT__
+testflight|upload to TestFlight|soft|6m||SOFT: spends a build number forever, and it reaches cohort testers|desktop/scripts/upload-testflight.sh
+dmg|publish the dmg|soft|13m||the public permalink swaps the moment this lands|desktop/scripts/upload-dmg.sh
+tag|tag + push|hard|2m||HARD: this PUBLISHES. __V__ can never be re-used on PyPI|__TAG__
+snap|snap edge|plain|10m|||gh workflow run snap.yml --ref main
+snap-stable|snap stable|plain|10m|2||gh workflow run snap.yml --ref v__V__
 RUNTBL
 }
 
@@ -217,7 +226,7 @@ cmd_plan() {
 
     kind=""
     total=0
-    while IFS='|' read -r id label k est cons cmd steptier; do
+    while IFS='|' read -r id label k est steptier cons cmd; do
         [ -z "$id" ] && continue
         [ -n "$steptier" ] && [ "$steptier" != "$TIER" ] && continue
         _band="$k"; case "$k" in soft|hard) _band=irreversible ;; esac
@@ -366,7 +375,19 @@ cmd_run() {
     # the lock and let the loop continue — a running driver with no lock, and a
     # second `run` in another window would have started.
     trap 'rm -rf "$LOCK"; rmdir "$RUNDIR" 2>/dev/null || true' EXIT
-    trap 'exit 130' INT TERM
+    STEP_PID=""
+    # Kill the running step, then leave. Without this the child outlives the
+    # driver: a half-finished upload with nothing watching it.
+    # Kill the step AND its descendants. $STEP_PID is the subshell wrapping the
+    # command; `build-dmg.sh` spawns xcodebuild under that, and killing only the
+    # wrapper orphans a 30-minute build with nothing watching it. pkill -P walks
+    # one generation, which covers the shape every step here has.
+    _stop_step() {
+        [ -n "${STEP_PID:-}" ] || return 0
+        pkill -TERM -P "$STEP_PID" 2>/dev/null || true
+        kill -TERM "$STEP_PID" 2>/dev/null || true
+    }
+    trap '_stop_step; exit 130' INT TERM
 
     printf '\n%bRelease %s%b  bump=%s\n' "$B" "$V" "$N" "$BUMP"
     printf '%b  the tag push publishes. Everything before it is abandonable.%b\n\n' "$D" "$N"
@@ -408,7 +429,7 @@ cmd_run() {
     CI_CMD="_id=\$(gh run list --workflow=ci.yml --event workflow_dispatch --branch main --limit 10 --json databaseId,headSha --jq '[.[]|select(.headSha==\"'\"$CI_SHA\"'\")]|.[0].databaseId') && [ -n \"\$_id\" ] && [ \"\$_id\" != null ] && gh run watch \"\$_id\" --exit-status"
 
     ev_append run started "bump=$BUMP"
-    while IFS='|' read -r id label kind est cons cmd steptier; do
+    while IFS='|' read -r id label kind est steptier cons cmd; do
         [ -z "$id" ] && continue
         # run is Tier 1; a Tier 2 promotion is a different act, not a longer run.
         [ -n "$steptier" ] && continue
@@ -464,8 +485,15 @@ cmd_run() {
         t0=$SECONDS
         # REDIRECT, never pipe. $? is then the command's own status, not tail's.
         # release-log 0.27.0 #1: five runs reported exit 0 and three had failed.
-        eval "$cmd" > "$LOG" 2>&1
+        # Backgrounded + wait, NOT a foreground call: bash defers traps until the
+        # current foreground command returns, so Ctrl-C during a 30-minute build
+        # was queued for 30 minutes — the driver looked hung and the lock
+        # outlived the signal. `wait` is interruptible; the handler kills $STEP_PID.
+        eval "$cmd" > "$LOG" 2>&1 &
+        STEP_PID=$!
+        wait "$STEP_PID"
         rc=$?
+        STEP_PID=""
         el=$(( SECONDS - t0 ))
 
         if [ "$rc" -eq 0 ]; then

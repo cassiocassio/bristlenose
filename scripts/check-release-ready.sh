@@ -390,16 +390,50 @@ head_ "Publish gate"
 if [ ! -f .github/workflows/release.yml ]; then
     bad "publish gate" "no release.yml"
 else
-    _rel=$(cat .github/workflows/release.yml)
-    _chain=1
-    printf '%s' "$_rel" | grep -qE '^\s*publish:' || _chain=0
-    printf '%s' "$_rel" | grep -A3 -E '^\s*publish:' | grep -qE 'needs:\s*build' || _chain=0
-    printf '%s' "$_rel" | grep -A3 -E '^\s*build:' | grep -qE 'needs:\s*ci' || _chain=0
-    printf '%s' "$_rel" | grep -qE 'strict-macos:\s*true' || _chain=0
-    if [ "$_chain" = "1" ]; then
-        ok "publish gate" "publish → build → ci (strict macOS) — a tag cannot publish untested code"
+    # PARSE, don't grep. Four text searches cannot establish a job graph:
+    # `strict-macos:\s*true` was unanchored across the whole file (a comment
+    # matched), `^\s*build:` matches a step key, and -A3 is a three-line window
+    # so a `needs:` on line 5 read as a broken chain. Worse, the mechanism that
+    # makes macOS blocking lives in ci.yml — the file these greps never opened.
+    # Change ci.yml's continue-on-error to a bare `true` and the row still said
+    # the chain was intact. Since the hold was removed this row is the only
+    # thing between a tag push and PyPI.
+    if [ ! -x .venv/bin/python ]; then
+        warn "publish gate" "no venv — cannot parse the workflows"
     else
-        bad "publish gate" "the publish→build→ci(strict) chain is broken — a tag push would publish UNGATED"
+        _gate=$(.venv/bin/python - <<'GATEPY' 2>&1
+import sys, yaml
+
+def needs(job):
+    n = job.get("needs", [])
+    return [n] if isinstance(n, str) else list(n)
+
+try:
+    rel = yaml.safe_load(open(".github/workflows/release.yml"))["jobs"]
+    ci = yaml.safe_load(open(".github/workflows/ci.yml"))["jobs"]
+except Exception as exc:
+    sys.exit(f"could not parse: {exc}")
+
+if "build" not in needs(rel.get("publish", {})):
+    sys.exit("publish does not need build")
+if "ci" not in needs(rel.get("build", {})):
+    sys.exit("build does not need ci")
+if rel.get("ci", {}).get("with", {}).get("strict-macos") is not True:
+    sys.exit("release.yml does not invoke ci.yml with strict-macos: true")
+
+# The property "strict means macOS BLOCKS" is implemented in ci.yml, by a
+# continue-on-error expression that must consult the input. A bare `true`
+# there disarms the whole chain while every string above still matches.
+coe = str(ci.get("test", {}).get("continue-on-error", ""))
+if "strict-macos" not in coe:
+    sys.exit(f"ci.yml test.continue-on-error does not consult strict-macos: {coe!r}")
+print("publish -> build -> ci, and ci.yml honours strict-macos")
+GATEPY
+        ); _gate_rc=$?
+        case "$_gate_rc" in
+            0) ok  "publish gate" "$_gate" ;;
+            *) bad "publish gate" "$_gate" ;;
+        esac
     fi
 
     # And record which world we are in, because the ordering depends on it.

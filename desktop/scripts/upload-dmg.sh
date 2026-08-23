@@ -140,7 +140,13 @@ VERSION="$(sed -n 's/^__version__ *= *"\(.*\)"/\1/p' "$ROOT/bristlenose/__init__
 # the REMOTE shell re-parses. A strict version shape makes that provably safe
 # without quoting gymnastics. (Local paths are a different matter: this repo's
 # worktrees are named `bristlenose_branch <name>/`, with a space.)
+# NEGATED CLASS FIRST. `[0-9]*.[0-9]*.[0-9]*` reads as "a digit, ANYTHING, a
+# dot, a digit, ANYTHING, a dot, a digit, anything" — it accepts
+# 0';id;'.0.0 and 1x.2y.3"; system("x"). Measured. The strict form is
+# already in scripts/release.sh as verdict_version, with a test asserting
+# 0.28.0;rm -rf / is malformed.
 case "$VERSION" in
+    ""|*[!0-9.]*) echo "refusing to publish: unexpected version shape '$VERSION'" >&2; exit 1 ;;
     [0-9]*.[0-9]*.[0-9]*) : ;;
     *) echo "refusing to publish: unexpected version shape '$VERSION'" >&2; exit 1 ;;
 esac

@@ -87,13 +87,14 @@ would be off in every run — configuration for the configurable.
 ```bash
 ./scripts/bump-version.py minor    # or patch — minor = feature, patch = fix
 # ... write CHANGELOG.md + README.md, stage, commit ...
+git push origin main               # publishes nothing; buys CI signal
+gh workflow run ci.yml --ref main -f strict-macos=true   # the strict verdict,
+                                   # obtainable WITHOUT a tag
+# ... strict CI green, Mac artefacts built + uploaded ...
 git tag v<X.Y.Z>                   # after the commit — it must point at it
-git push origin main               # two commands back to back — never `--tags`
-git push origin v<X.Y.Z>           # publishes NOTHING: the pypi environment's
-                                   # the tag publishes; strict CI gates it
-                                   # publish job until you approve the run
-# ... both CI runs green, Mac artefacts built + uploaded ...
-# run page ▸ Review deployments ▸ Approve   ← the release lands HERE
+git push origin v<X.Y.Z>           # ← the release lands HERE. release.yml runs
+                                   #   CI (strict macOS) then publishes. No
+                                   #   approval step since 23 Aug 2026.
 ```
 
 Then **verify PyPI actually accepted it** — a tag reaching GitHub is not a

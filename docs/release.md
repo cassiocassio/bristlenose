@@ -106,10 +106,17 @@ gh api repos/cassiocassio/bristlenose/environments/pypi \
 # 0 = no hold — restore via Settings ▸ Environments ▸ pypi ▸ Required reviewers
 ```
 
-To approve: the release run's page ▸ **Review deployments** ▸ tick `pypi` ▸
-Approve (works from a phone). To abandon instead: don't approve, delete the tag
-(`git push --delete origin vX.Y.Z && git tag -d vX.Y.Z`) — the held run expires
-harmlessly.
+**There is nothing to approve since 23 Aug 2026.** A `0` above is the expected
+state: the hold was removed and the tag push is what publishes. If it reports a
+reviewer, someone restored it, and the tag-last ordering in `scripts/release.sh`
+is wrong for that state.
+
+To abandon: **don't push the tag.** Everything before it — bump, commit, `main`,
+both builds, even the TestFlight and `.dmg` uploads — is reversible or merely
+audience-reaching, and none of it is on PyPI. If the tag is already pushed and
+its CI is still running, deleting it (`git push --delete origin vX.Y.Z && git tag
+-d vX.Y.Z`) cancels the publish only if you win the race; assume you will not.
+`./scripts/release.sh abandon <X.Y.Z>` prints this plus the website consequence.
 
 ### Two mandatory gates — do not skip
 

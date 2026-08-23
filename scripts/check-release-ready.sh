@@ -434,6 +434,24 @@ if [ ! -x .venv/bin/python ]; then
 elif [ ! -f THIRD-PARTY-BINARIES.md ]; then
     warn "dependency drift" "no inventory to compare against"
 else
+    # Two questions, deliberately both asked.
+    #
+    #   generate-third-party-binaries.py --check  →  "is the file stale?"  yes/no
+    #   check-dep-drift.py                        →  "what moved, and is any
+    #                                                 of it a MAJOR?"
+    #
+    # The first is what build-all.sh hard-fails on and is the gate. The second
+    # is what a human needs at the free first step: release-log 0.27.0 #5 is not
+    # a complaint that openai moved, it is a complaint that the discovery moment
+    # was "10pm, mid-release". A yes/no cannot move that moment; a named list can.
+    _drift=$(.venv/bin/python scripts/check-dep-drift.py 2>&1); _drift_rc=$?
+    case "$_drift_rc" in
+        1) bad  "dependency majors" "$(printf '%s' "$_drift" | grep '^MAJOR' | head -3 | tr '\n' ' ')" ;;
+        2) warn "dependency majors" "could not compare — unverified" ;;
+        *) _nmaj=$(printf '%s' "$_drift" | grep -c '^MAJOR' || true)
+           ok "dependency majors" "$(printf '%s' "$_drift" | tail -1)" ;;
+    esac
+
     _dep_out=$(.venv/bin/python scripts/generate-third-party-binaries.py --check 2>&1); _dep_rc=$?
     # WARN, not BAD, and the reasoning matters because the first draft had it wrong.
     # build-all.sh step 2b already runs this same check and HARD-FAILS on drift, so

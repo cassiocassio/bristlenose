@@ -16,6 +16,23 @@
 version: 2
 
 updates:
+  # Every third-party action is SHA-pinned (23 Aug 2026) because a mutable tag
+  # inside a job holding id-token: write or contents: write is a supply-chain
+  # hole that the pypi approval gate does NOT close — the gate controls when the
+  # job starts, so compromised action code would run after approval, holding the
+  # OIDC token.
+  #
+  # Pinning without this block only trades a moving tag for a stale one, and a
+  # stale pin is the failure mode people cite when arguing against pinning at
+  # all. Dependabot proposes the SHA bumps; a human takes them.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+
   - package-ecosystem: "pip"
     directory: "/"
     schedule:

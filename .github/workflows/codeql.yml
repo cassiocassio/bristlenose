@@ -12,6 +12,15 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
+# Least privilege by default. The analyse job below declares the
+# security-events: write it genuinely needs, which fully overrides this.
+# Every other workflow in this directory already carried this line; codeql.yml
+# was the one that did not, so it inherited whatever the repository default
+# happens to be — a setting that lives outside the tree and can change without
+# a commit.
+permissions:
+  contents: read
+
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
@@ -29,10 +38,10 @@ jobs:
         # "typescript" as a separate entry (CodeQL would error).
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@42947a340483f03ba47bb1a039b2c519aab3df85  # v3.37.8
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
@@ -43,9 +52,9 @@ jobs:
           # or future Semgrep rules for those.
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@42947a340483f03ba47bb1a039b2c519aab3df85  # v3.37.8
 
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@42947a340483f03ba47bb1a039b2c519aab3df85  # v3.37.8
         with:
           category: "/language:${{ matrix.language }}"

@@ -517,6 +517,34 @@ for _g in check-window-surfaces check-appearance-seam check-menu-routing \
     fi
 done
 
+# Tap-workflow drift.
+#
+# .github/workflows/homebrew-tap/update-formula.yml is a COPY. The workflow that
+# actually runs lives in cassiocassio/homebrew-bristlenose, and nothing compared
+# them — so the provenance gate added here on 23 Aug 2026 was inert until the
+# file was pushed to the tap, and there was no way to notice.
+#
+# Homebrew is the channel with the least platform defence: no notarisation, no
+# Gatekeeper, no sandbox. A silent divergence between what this repo believes the
+# tap does and what it does is worth one HTTP request per release.
+if ! command -v gh >/dev/null 2>&1; then
+    warn "tap workflow" "gh not installed — drift unverified"
+else
+    _local_wf=".github/workflows/homebrew-tap/update-formula.yml"
+    _live_sha=$(gh api repos/cassiocassio/homebrew-bristlenose/contents/.github/workflows/update-formula.yml \
+                  --jq .sha 2>/dev/null || echo "QUERY_FAILED")
+    case "$_live_sha" in
+        QUERY_FAILED|"") warn "tap workflow" "could not read the tap repo — drift unverified" ;;
+        *)
+            _local_sha=$(git hash-object "$_local_wf" 2>/dev/null || echo "")
+            if [ "$_live_sha" = "$_local_sha" ]; then
+                ok "tap workflow" "tap repo matches this copy"
+            else
+                bad "tap workflow" "DIVERGED from the tap repo — push $_local_wf"
+            fi ;;
+    esac
+fi
+
 # A10 · Doc-surface parity.
 #
 # Phase 2 item 2 of the skill, made mechanical. The man page is the COMPLETE

@@ -45,13 +45,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
 
       # SHA-pinned (supply-chain) — immutable commit, version tracked in comment.
       - uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79  # v1.3.0
         id: snapcraft
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: snap-amd64
           path: ${{ steps.snapcraft.outputs.snap }}
@@ -68,7 +68,7 @@ jobs:
     env:
       HAS_CREDS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS != '' }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
         if: env.HAS_CREDS == 'true'
         with:
           name: snap-amd64
@@ -109,7 +109,7 @@ jobs:
     env:
       HAS_CREDS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS != '' }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
         if: env.HAS_CREDS == 'true'
         with:
           name: snap-amd64

@@ -19,9 +19,25 @@ dd = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(dd)
 
 PASS = FAIL = 0
-def ok(m): globals().__setitem__("PASS", PASS + 1); print(f"  \033[32m✓\033[0m {m}")
-def bad(m): globals().__setitem__("FAIL", FAIL + 1); print(f"  \033[31m✗\033[0m {m}", file=sys.stderr)
-def eq(label, want, got): ok(label) if want == got else bad(f"{label} — expected {want!r}, got {got!r}")
+
+
+def ok(msg: str) -> None:
+    global PASS
+    PASS += 1
+    print(f"  \033[32m✓\033[0m {msg}")
+
+
+def bad(msg: str) -> None:
+    global FAIL
+    FAIL += 1
+    print(f"  \033[31m✗\033[0m {msg}", file=sys.stderr)
+
+
+def eq(label: str, want, got) -> None:
+    if want == got:
+        ok(label)
+    else:
+        bad(f"{label} — expected {want!r}, got {got!r}")
 
 print("\n\033[1mbump_kind — the classification that decides warn vs stop\033[0m")
 eq("the 0.27.0 case: 1.x -> 3.0.0", "major", dd.bump_kind("1.109.1", "3.0.0"))

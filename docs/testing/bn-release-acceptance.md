@@ -6,6 +6,22 @@ trued-against: two live runs (0.25.2, 0.25.3) and the publish-hold rebuild; scor
 
 # Acceptance criteria — `/bn-release`
 
+> **Five cells need re-deriving, 23 Aug 2026.** The `pypi` required-reviewer
+> hold was removed, so **the tag push is now the release** and there is no
+> approval to gate on. **S5** (every irreversible act follows every verdict) is
+> still the right invariant but its evidence changed: the verdict now comes from
+> a `workflow_dispatch` of `ci.yml` with `strict-macos: true` on `main`, before
+> the uploads, and the tag goes last. **S9**, **O5**, **R2** and **R4** all name
+> the approval as the hard line — that is now the tag push. **R2** in particular
+> tested the degraded world by *removing* the reviewer; the two worlds have
+> swapped, so it should now restore one and check the preflight warns that the
+> tag-last ordering is wrong for that state.
+>
+> Left as-is rather than rewritten: these are acceptance criteria, and someone
+> should re-derive them against `scripts/release.sh run` having actually watched
+> it run once.
+
+
 _Written **before** the skill's first run, deliberately — success criteria
 authored after the fact tend to describe what happened. The skill has since run
 live twice (§Scoring log), and the criteria below were rescoped 14 Aug 2026

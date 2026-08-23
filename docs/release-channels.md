@@ -6,13 +6,23 @@ trued-against: the §1+§3.5 release-ordering change — pypi environment hold l
 
 # Release channels — the one-page map
 
+> **Superseded 23 Aug 2026 — the `pypi` required-reviewer hold was REMOVED.**
+> A tag push now publishes. Everything below that describes the publish job
+> waiting for an approval is history, kept because the reasoning for the
+> ordering still holds; only the act that lands the release moved from the
+> approval to the tag. The replacement gate is the job graph:
+> `publish → build → ci(strict-macos: true)`, asserted by
+> `check-release-ready.sh`'s `publish gate` row. See `CLAUDE.md` § Release
+> timing and `scripts/release.sh`.
+
+
 Five channels. **Nothing takes a `--destination` flag.** You choose a channel by
 choosing a *script* or a *trigger*, and the two Mac channels share almost nothing
 but the sidecar.
 
 | Channel | You do | Trigger | Artefact | Lifespan |
 |---|---|---|---|---|
-| **PyPI** | push the tag, then **approve the run** | tag `v*` + approval | sdist + wheel | permanent |
+| **PyPI** | **push the tag** | tag `v*` | sdist + wheel | permanent |
 | **GitHub Release** | *(nothing)* | same tag push | auto notes + assets | permanent |
 | **Homebrew** | *(nothing)* | same tag push, after PyPI | tap formula bump | permanent |
 | **Snap** | run the workflow by hand | `workflow_dispatch` | `.snap` → edge | permanent |
@@ -24,8 +34,10 @@ but the sidecar.
 ## One tag push does six things
 
 Pushing tag `v*` fires `release.yml`, which runs **six jobs in order** — and
-parks at `publish` on the pypi environment's required-reviewer hold until you
-approve the run (14 Aug 2026; probed by `check-release-ready.sh`). There is no separate "make a GitHub release" step — it's job four.
+runs to completion: CI with strict macOS, then publish. The required-reviewer
+hold that used to park it was removed 23 Aug 2026 — `check-release-ready.sh`'s
+`publish gate` row now asserts the `publish → build → ci(strict)` chain instead,
+and fails if it breaks. There is no separate "make a GitHub release" step — it's job four.
 
 ```
 ci → build (sdist, wheel, SBOMs, attestation) → publish (PyPI)
@@ -78,7 +90,7 @@ would be off in every run — configuration for the configurable.
 git tag v<X.Y.Z>                   # after the commit — it must point at it
 git push origin main               # two commands back to back — never `--tags`
 git push origin v<X.Y.Z>           # publishes NOTHING: the pypi environment's
-                                   # required-reviewer hold parks release.yml's
+                                   # the tag publishes; strict CI gates it
                                    # publish job until you approve the run
 # ... both CI runs green, Mac artefacts built + uploaded ...
 # run page ▸ Review deployments ▸ Approve   ← the release lands HERE

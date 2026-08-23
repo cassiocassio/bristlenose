@@ -6,6 +6,16 @@ trued-against: the publish-hold release rebuild (pypi environment hold live, str
 
 # Release Process
 
+> **Superseded 23 Aug 2026 — the `pypi` required-reviewer hold was REMOVED.**
+> A tag push now publishes. Everything below that describes the publish job
+> waiting for an approval is history, kept because the reasoning for the
+> ordering still holds; only the act that lands the release moved from the
+> approval to the tag. The replacement gate is the job graph:
+> `publish → build → ci(strict-macos: true)`, asserted by
+> `check-release-ready.sh`'s `publish gate` row. See `CLAUDE.md` § Release
+> timing and `scripts/release.sh`.
+
+
 > **Truing status:** Partial — CLI channels only, deliberately (see Desktop
 > channels pointer at the end). Head and tail trued 2026-08-14 against the
 > publish-hold rebuild; the 2026-07-16 pass folded in bump-version.py and the

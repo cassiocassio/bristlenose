@@ -74,27 +74,40 @@ git rev-parse HEAD; git rev-parse v<X.Y.Z>^{}   # same SHA — confirm before pu
 
 **If `--dry-run`: print exactly what would run and STOP here.** Log `bash .claude/skills/_shared/wflog.sh new-release dry-run-stop "<X.Y.Z>"`.
 
-## Step 5: Push, approve, verify PyPI (the part that reaches the world)
+## Step 5: Push, verify PyPI (the part that reaches the world)
 
 ```bash
 git push origin main
 git push origin v<X.Y.Z>
 ```
 
-**The tag push no longer publishes.** The `pypi` environment carries a
-required-reviewer hold (14 Aug 2026), so `release.yml` runs CI — with macOS
-cells *blocking*, unlike daily pushes — and then its `publish` job **waits for
-approval** on the run page (up to 30 days). Nothing reaches PyPI, the GitHub
-Release, or Homebrew until the human approves. So after pushing:
+> **Changed 23 Aug 2026 — the tag push IS the release.** The `pypi`
+> environment's required-reviewer hold was removed. There is no approval step
+> any more; `release.yml` runs to completion on a tag.
 
-1. Wait for the release run's CI to go green (and, in the full `/bn-release`
-   flow, for the Mac uploads to complete — the approval comes *last*).
-2. Approve: run page ▸ **Review deployments** ▸ tick `pypi` ▸ Approve.
-3. Only then does the verify loop below have anything to see.
+**Push `main` freely. The tag is the irreversible act — do not push it until
+everything else is done.** Once it lands, `release.yml` runs CI (macOS cells
+*blocking*, unlike daily pushes) and, if green, publishes to PyPI, cuts the
+GitHub Release and dispatches Homebrew — with no further human step.
 
-If the preflight's `publish hold` line **warned**, the hold is gone and the old
-behaviour applies: the tag push publishes immediately — treat the push itself
-as the irreversible act and do not push until everything else is done.
+The gate did not go away, it stopped being a click: `publish` needs `build`
+needs `ci`, and `release.yml` invokes `ci.yml` with `strict-macos: true`. PyPI
+cannot receive a version whose full matrix, e2e and strict macOS suite did not
+pass on the tagged commit. `check-release-ready.sh`'s `publish gate` row
+asserts that chain and **fails** if it is ever broken.
+
+To get a strict verdict *before* committing to the tag, dispatch one on `main`:
+
+```bash
+gh workflow run ci.yml --ref main -f strict-macos=true
+```
+
+That is what `./scripts/release.sh run` does, and it is what keeps every
+verdict ahead of every irreversible act now that the tag publishes.
+
+If the preflight's `publish hold` line reports a reviewer **exists**, someone
+has restored the hold — the tag then publishes nothing until approved, and the
+tag-last ordering above is wrong for that state.
 
 Then the **mandatory** verify loop (a tag reaching GitHub ≠ a release reaching PyPI):
 

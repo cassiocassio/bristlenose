@@ -6,6 +6,16 @@ trued-against: the shipped skill after two live releases and the publish-hold re
 
 # `/bn-release` — orchestrating the five channels
 
+> **Superseded 23 Aug 2026 — the `pypi` required-reviewer hold was REMOVED.**
+> A tag push now publishes. Everything below that describes the publish job
+> waiting for an approval is history, kept because the reasoning for the
+> ordering still holds; only the act that lands the release moved from the
+> approval to the tag. The replacement gate is the job graph:
+> `publish → build → ci(strict-macos: true)`, asserted by
+> `check-release-ready.sh`'s `publish gate` row. See `CLAUDE.md` § Release
+> timing and `scripts/release.sh`.
+
+
 _Plans a skill that runs a release across some or all of PyPI · GitHub Release ·
 Homebrew · Snap · TestFlight · `.dmg`, having first proven the tree, the
 changelog and the docs are actually ready._
@@ -287,6 +297,20 @@ never to wave through a mechanical failure.
 ## Five design decisions
 
 ### D1 — Probe the world; never keep a state file
+
+> **Refined 23 Aug 2026 — the rule holds, its scope was too wide.** The
+> distinction it was missing: **state someone else owns you PROBE; state you own
+> you RECORD.** Probing stays the source of truth for every channel — PyPI, ASC,
+> the Snap store, the CDN — and a local cache of those would be exactly the
+> confidently-wrong artefact this decision refuses. But "did `build-all.sh`
+> succeed" is state *we* own, and reading it from a background task's exit code
+> is what carried three failed builds forward as successes on 0.27.0.
+>
+> `scripts/release.sh` therefore keeps an append-only event log of what the
+> driver itself did, and **folds** run state from it on every read rather than
+> storing it. An append-only log records; a state file asserts. Skipping an
+> irreversible step is still an assertion about the present, so `run` PROBES
+> before skipping one. See `docs/design-release-machine.md` §5, §7.
 
 A release spans 1–2 hours and things fail midway. The obvious answer is a
 `.release-state.json` recording progress. **Don't.** A state file can disagree

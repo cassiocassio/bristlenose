@@ -53,7 +53,15 @@ done
 
 # 4. The peer-era cross-window selection sync must stay deleted. It forced every
 #    window onto one study, which is the constraint 3b removes.
-if grep -rn "SelectionSync" "$(dirname "$0")/../Bristlenose" >&2; then
+# Scoped to the SOURCE dirs, not the whole Bristlenose tree. That tree carries
+# desktop/Bristlenose/build/ and Resources/ — 2.4 GB and 7,596 files of build
+# output, ffmpeg and models — so the unscoped walk cost 22.8s of this gate's 23s
+# runtime while asserting nothing about source. It was also wrong in principle:
+# a stray match inside a build artefact would have failed the gate on clean
+# source. Measured 23s -> 0.1s, 23 Aug 2026.
+_SRC="$(dirname "$0")/../Bristlenose/Bristlenose"
+_TESTS="$(dirname "$0")/../Bristlenose/BristlenoseTests"
+if grep -rn --include='*.swift' "SelectionSync" "$_SRC" "$_TESTS" >&2; then
   die "SelectionSync is back — windows are being forced onto one study again"
 fi
 

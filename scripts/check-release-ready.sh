@@ -452,25 +452,29 @@ else
     esac
 fi
 
-# A10 · Doc-surface parity.
+# A5 · Gate freshness — resolved by RUNNING, not by remembering.
 #
-# Phase 2 item 2 of the skill, made mechanical. The man page is the COMPLETE
-# reference and is hard-gated; README and the website's cli.md are curated and
-# are only asked about flags new since the last tag — otherwise this prints 16
-# warnings on a clean tree forever, which is Risk 2 (preflight fatigue) built by
-# hand. The roff-unescaping the skill warned about in prose lives in that script.
-if [ ! -x scripts/check-doc-surfaces.sh ]; then
-    warn "doc surfaces" "checker missing"
-else
-    _ds=$(bash scripts/check-doc-surfaces.sh 2>&1); _ds_rc=$?
-    _ds_tail=$(printf '%s' "$_ds" | grep -E 'flag\(s\) checked' | sed 's/^ *//')
-    case "$_ds_rc" in
-        0) ok   "doc surfaces" "${_ds_tail:-all flags documented}" ;;
-        2) warn "doc surfaces" "could not enumerate the CLI — unverified" ;;
-        *) bad  "doc surfaces" "$(printf '%s' "$_ds" | grep -c 'absent from the man page') flag(s) absent from the man page" ;;
-    esac
-fi
-
+# The design doc proposed a stamp ledger (.release/gates.jsonl, appended by each
+# gate, compared against HEAD) so the preflight could tell whether a gate was
+# stale. Building it revealed the ledger was unnecessary: these gates cost ~2s in
+# total, so the honest answer to "has this gate run against current source?" is
+# to run it, here, now.
+#
+# That is the same principle D1 already applies to channels — probe, do not
+# remember — and it removes the ledger's whole problem surface: no per-version vs
+# cross-version storage, no absent-vs-stale decision, no stamp call to retrofit
+# into thirteen scripts, and no possibility of a stamp disagreeing with reality.
+#
+# Why it matters: 0.27.0's build failure 1 was check-window-surfaces becoming
+# UNSATISFIABLE after 037b371e renamed the symbol it asserts on. It had been
+# broken for two days and nothing noticed, because the gate only runs during a
+# build and nobody cut one. It cost 11 minutes of build to discover. Running it
+# here costs 2 seconds and finds it before the bump.
+#
+# Only source-only gates are listed. check-release-binary, check-mcpb,
+# check-sidecar-appstore-strings and check-sidecar-freshness need a built
+# artefact or an argument, so they stay build-time and are NOT silently omitted
+# — they are named here so the omission is a decision rather than an oversight.
 # A3 · The publish hold, as a state rather than an existence claim.
 #
 # The existing "publish hold" row proves the required-reviewer GATE exists.
@@ -491,6 +495,44 @@ else
         QUERY_FAILED) warn "publish state" "could not query release runs — unverified" ;;
         "")           ok   "publish state" "no run waiting on approval" ;;
         *)            warn "publish state" "run $_run is WAITING on the pypi approval" ;;
+    esac
+fi
+
+head_ "Gates (source-only — the rest need a built artefact)"
+
+for _g in check-window-surfaces check-appearance-seam check-menu-routing \
+          check-logging-hygiene check-bundle-manifest; do
+    _gs="desktop/scripts/$_g.sh"
+    if [ ! -x "$_gs" ]; then
+        warn "$_g" "missing"
+        continue
+    fi
+    _t0=$SECONDS
+    if _out=$(bash "$_gs" 2>&1); then
+        ok "$_g" "$(( SECONDS - _t0 ))s"
+    else
+        # A gate that fires here is either a real defect or a gate that has
+        # become unsatisfiable. Both are worth 11 minutes of not-building.
+        bad "$_g" "$(printf '%s' "$_out" | grep -vE '^\s*$' | tail -1 | cut -c1-58)"
+    fi
+done
+
+# A10 · Doc-surface parity.
+#
+# Phase 2 item 2 of the skill, made mechanical. The man page is the COMPLETE
+# reference and is hard-gated; README and the website's cli.md are curated and
+# are only asked about flags new since the last tag — otherwise this prints 16
+# warnings on a clean tree forever, which is Risk 2 (preflight fatigue) built by
+# hand. The roff-unescaping the skill warned about in prose lives in that script.
+if [ ! -x scripts/check-doc-surfaces.sh ]; then
+    warn "doc surfaces" "checker missing"
+else
+    _ds=$(bash scripts/check-doc-surfaces.sh 2>&1); _ds_rc=$?
+    _ds_tail=$(printf '%s' "$_ds" | grep -E 'flag\(s\) checked' | sed 's/^ *//')
+    case "$_ds_rc" in
+        0) ok   "doc surfaces" "${_ds_tail:-all flags documented}" ;;
+        2) warn "doc surfaces" "could not enumerate the CLI — unverified" ;;
+        *) bad  "doc surfaces" "$(printf '%s' "$_ds" | grep -c 'absent from the man page') flag(s) absent from the man page" ;;
     esac
 fi
 

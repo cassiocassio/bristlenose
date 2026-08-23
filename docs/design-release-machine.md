@@ -756,8 +756,8 @@ These are the reason it is a skill at all, and none of them should migrate:
 ## 18 · Build report — what shipped, and what building it taught
 
 **Built 23 Aug 2026**, commits `74527daf` (A0–A9) and `3dbb9dd0` (A10).
-**All 11 Tier A items.** 119 shell assertions green across seven suites, 89 of
-them new. `ruff check .` clean.
+**All 11 Tier A items, plus the read-only half of Tier B.** 159 assertions green
+across nine suites. `ruff check .` clean.
 
 | | Item | Status |
 |---|---|---|
@@ -879,6 +879,68 @@ that it does not. Now: skip on an ad-hoc build, **fail on a real identity**.
   real change, whose correct resolution is not the obvious one.**
 - `shippable diff` — correctly read the fortnight as *desktop-only, a rebuild
   not a release* before the concurrent session's frontend work landed.
+
+
+## 19 · Tier B, read-only — shipped 23 Aug 2026
+
+`scripts/release.sh` — `plan` · `verify` · `status` · `abandon`. **No `run`,**
+and that is the decision rather than an omission: §12 gates the driver on
+evidence that has not arrived, so the order still lives with a human and the
+skill. `run` refuses, explains why, and points at `/bn-release`.
+
+**What it does own is the step table**, which until now was prose in
+`SKILL.md` Phase 5 — retyped by a model every release, with estimates nobody had
+measured. Both now live once, with the numbers from `release-log.md`'s 0.27.0
+entry, and the skill defers to it rather than carrying a second copy (§6.4's
+knowledge quadruplication, avoided rather than described).
+
+The consequence of each irreversible step prints **immediately before that
+step**. The first draft marked them in `plan`, where nothing happens, and dropped
+them from the run, where the act occurs.
+
+`abandon` exists because §10 named its absence. The 0.27.0 log's own conclusion
+is that abandoning a tag must treat the website deploy as part of the decision;
+that is now printed with the recipe rather than remembered.
+
+**Exit codes are a vocabulary**: `0` ready · `1` not ready · `2` usage · `75`
+`EX_TEMPFAIL` for held. Held is not an error — a release waiting on a person is
+behaving correctly — but it must be distinguishable from `0`, or
+`release.sh … && deploy-website` fires on a release that has published nothing.
+
+### The step table's structural invariants are pinned
+
+Because a table that says a step is irreversible without saying what it costs
+lies at the exact moment someone is reading it to decide:
+
+- exactly three irreversible steps, each naming its cost
+- no reversible step claiming one
+- the CI gate preceding all three — **moving it after is the 0.25.2 shape**
+- the HARD line last
+- step-id majors contiguous, sub-steps (`4a`, `13a`) allowed per REPORT-STYLE rule 3
+
+Proven to fail on injection.
+
+### Three bugs found building it, two of them mine
+
+1. `status` called `rollup_exit` twice, leaking a bare `0` into the report.
+2. The total counted the **Tier 2-only** Snap stable push into a Tier 1
+   estimate, inflating it by ten minutes. There is now a tier column.
+3. My own contiguity invariant rejected sub-step ids and flagged a *correct*
+   table — the gate-that-cries-wolf shape, in a gate written the same hour.
+
+### And the dependency row learned to say something
+
+`generate-third-party-binaries.py --check` answers *"is the file stale?"*, which
+is the answer that helps nobody decide anything at 10pm.
+`scripts/check-dep-drift.py` names the packages and makes a **major** a hard
+stop. Deliberately **not** an upper bound on `openai`: re-reading release-log #5,
+the complaint is the discovery *moment*, not the bump, and capping contradicts
+the written floor-only policy. The discovery moved; the floor did not.
+
+Its tests found a real gap — versions numerically equal but textually different
+(`1.2.3` vs `1.2.3.post1`, rc, dev) collapsed to `same`, silently dropping a
+change the tool had seen. One of the two failures was the *test* asserting
+`patch` for two identical strings; corrected rather than papered over.
 
 
 ## See also

@@ -176,44 +176,31 @@ always ran.
 
 Order matters and is derived from reversibility, not convenience.
 
+```bash
+./scripts/release.sh plan <X.Y.Z>
 ```
-1  bump + commit + tag    ./scripts/bump-version.py minor|patch     (or --build-only)
-                          git add CHANGELOG.md README.md CLAUDE.md
-                          git commit -m "bump to X.Y.Z"
-                          git tag vX.Y.Z           ← AFTER the commit
-                          verify: git rev-parse HEAD == git rev-parse vX.Y.Z^{}
 
-2  push main AND tag      git push origin main
-                          git push origin vX.Y.Z
-                          Two commands back to back — never one `--tags` (debounce).
-                          Publishes NOTHING: release.yml fires, runs CI with
-                          strict macOS, and its publish job HOLDS on the pypi
-                          environment gate. Two CI runs are now in flight.
+**That prints the ordered steps, and it is the only place they live.** This
+section used to carry the table too, and a step order in two documents is a step
+order wrong in one of them — the failure `docs/design-release-system-audit.md`
+§6.4 calls *"knowledge quadruplication: drift between copies is unpredictability
+on a delay."* The estimates in it are **measured** from `docs/release-log.md`'s
+0.27.0 entry rather than guessed, and the consequence of each irreversible step
+is printed immediately before that step rather than announced on a page where
+nothing happens.
 
-3  Mac artefacts          run WHILE both CI runs execute — builds only, no uploads
-                          SIGN_IDENTITY="Apple Distribution: Martin Storey (Z56GZVA2QB)" \
-                            desktop/scripts/build-all.sh            ~35 min warm / ~50 cold
-                          desktop/scripts/build-dmg.sh              ~30 min, one notary wait
+`scripts/test-release-sh.sh` pins the table's structural invariants: exactly
+three irreversible steps, every one naming its cost, no reversible step claiming
+one, the CI gate preceding all three, and the HARD line last. Both were proven
+to fail on injection — moving the gate after an irreversible act is the 0.25.2
+shape, and it is caught.
 
-4  THE GATE               both CI runs green — the main push run AND the release
-                          run (whose macOS cells are blocking) — and every Mac
-                          build gate green. Nothing irreversible has happened yet.
-                          Any red: don't approve, delete the tag, fix, start over.
-                          Cost so far: nothing.
+**`release.sh` has no `run`, deliberately.** It is the read-only half: `plan`,
+`verify`, `status`, `abandon`. Executing the release is still yours and this
+skill's, because the driver is gated on evidence
+(`docs/design-release-machine.md` §12). What follows is the reasoning the table
+cannot carry.
 
-5  uploads                desktop/scripts/upload-testflight.sh      ← SOFT irreversible
-                          desktop/scripts/upload-dmg.sh             ← public permalink swaps
-
-6  approve publish        GitHub run page ▸ Review deployments ▸ Approve
-                                                                    ← HARD irreversible
-                          Cascade: PyPI → verify-pypi · GitHub Release · Homebrew.
-                          Then → new-release SKILL.md Step 6 for the PyPI verify.
-
-7  website deploy         only AFTER PyPI confirms — see below
-8  Snap                   gh workflow run snap.yml --ref main       (edge)
-                          gh workflow run snap.yml --ref vX.Y.Z     (stable, Tier 2)
-9  Tier 2 only            App Store submission, phased release on
-10 log it                 docs/release-log.md — Phase 7, committed with the
                           release, from probed numbers not memory
 ```
 

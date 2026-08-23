@@ -747,7 +747,7 @@ These are the reason it is a skill at all, and none of them should migrate:
 ## 18 · Build report — what shipped, and what building it taught
 
 **Built 23 Aug 2026**, commits `74527daf` (A0–A9) and `3dbb9dd0` (A10).
-**9 of 11 Tier A items.** 109 shell assertions green across six suites, 79 of
+**All 11 Tier A items.** 119 shell assertions green across seven suites, 89 of
 them new. `ruff check .` clean.
 
 | | Item | Status |
@@ -762,20 +762,43 @@ them new. `ruff check .` clean.
 | A8 | `shippable diff` | ✅ 10 assertions |
 | A9 | `SIGN_IDENTITY` required | ✅ exit 2 in 0s |
 | A10 | Doc-surface parity | ✅ 18 assertions |
-| **A5** | **Gate freshness** | ❌ **not built** — see below |
+| A5 | Gate freshness | ✅ **built, but not as designed** — see below |
 
-### A5 is deferred, and the reason is a real design gap not a time gap
+### A5 shipped without the ledger, and the ledger was the whole problem
 
-Gate freshness needs *"when did gate X last run, at what sha"*, and **nothing in
-the tree records that.** The plan proposed `.release/gates.jsonl` appended by
-each gate — which means touching 13 `check-*.sh` scripts to add a stamp, on the
-theory that the stamp is worth having. That is not a Tier A shape: it is a
-cross-cutting change to every gate, justified by one incident, and it needs the
-`absent = stale` decision made first or it warns on all 13 gates for several
-releases and trains everyone to ignore it. **Left undone deliberately rather
-than half-done.**
+The plan proposed `.release/gates.jsonl`, appended by each of thirteen gates and
+compared against HEAD, so the preflight could tell whether a gate was stale. I
+deferred it because it needed the `absent = stale` decision settled first and
+meant touching every gate.
 
-### Five bugs found by building it — four of them in my own new code
+**Building it showed the ledger was unnecessary.** The source-only gates cost
+~2s in total, so the honest answer to *"has this gate run against current
+source?"* is to run it, in the preflight, now — which is the same principle D1
+already applies to channels. **Probe, do not remember.**
+
+That deletes the entire problem surface the deferral was about: no per-version
+vs cross-version storage, no `absent = stale` rule, no stamp call retrofitted
+into thirteen scripts, and no way for a stamp to disagree with reality. The
+feature that was hardest to design turned out to be the one that shouldn't
+exist.
+
+**What made it affordable was measuring the thing nobody had measured.**
+`check-window-surfaces` cost **23 seconds**, and its `SelectionSync` assertion
+was grepping the whole `desktop/Bristlenose` tree — 2.4 GB, 7,596 files, mostly
+build output and bundled models — to find zero matches. Scoped to the two source
+directories: **23s → 0.07s**, on a gate that runs on every build. It was also
+wrong in principle, because a stray match inside a build artefact would have
+failed the gate on clean source.
+
+Had that gate stayed at 23s, the ledger would have looked necessary and I would
+have built it. **The plan's whole premise was an unmeasured cost.**
+
+Four gates still need a built artefact or an argument
+(`check-release-binary`, `check-mcpb`, `check-sidecar-appstore-strings`,
+`check-sidecar-freshness`). They stay build-time and are **named in the code**
+rather than silently omitted, so the omission is a decision.
+
+### Six bugs found by building it — four of them in my own new code
 
 The synthetic suites earned their keep on the first run, and what they caught is
 more interesting than what they confirmed.
@@ -803,17 +826,25 @@ more interesting than what they confirmed.
    instinct on a red injection test is to distrust the gate, and here the gate
    was right.
 
-The shape they share: **every one is a check that reports success while seeing
-nothing.** That is the same defect class as release-log 0.27.0 #1, arriving in
+6. **A gate spending 23 seconds to assert nothing.** `check-window-surfaces`
+   walked 2.4 GB of build output on every build, and a match inside an artefact
+   would have failed it on clean source. Found only because A5's design turned
+   on whether gates were cheap — a question the plan asserted the answer to
+   without checking.
+
+The shape the first five share: **every one is a check that reports success
+while seeing nothing.** That is the same defect class as release-log 0.27.0 #1, arriving in
 the code written to prevent it.
 
-### Two design corrections found by running it, not by reasoning
+### Three design corrections found by running it, not by reasoning
 
 - **A4 was graded `bad`, and is now `warn`.** `build-all.sh` step 2b already
   hard-fails on the identical condition, so a release physically cannot ship a
   stale inventory. A duplicate gate adds only a false-positive path — the tool's
   own output warns that per-platform venv differences flag drift that isn't real
   off the canonical runner. **Warn early, refuse late.**
+- **A5 needed no ledger.** See above — the plan's central mechanism for this
+  item was answering a question that measurement dissolved.
 - **A10's first cut printed 16 warnings on a clean tree, forever.** Treating
   README, the man page and `cli.md` as peers is wrong: the man page is the
   complete reference, the other two are curated. Scoping them to flags new since
@@ -829,8 +860,14 @@ that it does not. Now: skip on an ad-hoc build, **fail on a real identity**.
 
 ### Live findings on the current tree
 
-- `dependency drift` — **stale inventory right now.** Same class as 0.27.0 build
-  failure 2, caught at preflight instead of 11 minutes into a build.
+- `dependency drift` — fired immediately on a stale inventory. The drift turned
+  out to be **eight rows of `pre-commit`'s dependency tree**, installed ad-hoc
+  earlier the same day. Regenerating would have been wrong: the file lists what
+  ships in the sidecar, for procurement, and none of it ships. Fixed at source
+  instead — `pre-commit` declared in `[dev]` (it was declared nowhere, which is
+  why `SECURITY.md:233`'s claim was false) and its transitive tail added to
+  `NEVER_SHIPPED`. Inventory back to byte-identical. **A gate that fires on a
+  real change, whose correct resolution is not the obvious one.**
 - `shippable diff` — correctly read the fortnight as *desktop-only, a rebuild
   not a release* before the concurrent session's frontend work landed.
 

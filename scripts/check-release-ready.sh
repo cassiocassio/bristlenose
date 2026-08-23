@@ -627,6 +627,43 @@ else
     esac
 fi
 
+# Advisory workflows that have been red for a while.
+#
+# release-log 0.27.0 #7: perf.yml had been red for FOUR consecutive runs and
+# nobody knew, including on the abandoned 0.26.0 tag. It is deliberately
+# non-blocking — post-merge only, so runner noise cannot stall a release — and
+# that decision is right. The consequence is that nothing surfaces a sustained
+# red, which is the same "nobody is looking" shape as the gate that went
+# unsatisfiable for two days.
+#
+# One failure is noise. Three in a row is a signal, and the threshold is the
+# whole design: a row that fires on every flake gets ignored, which is how the
+# advisory workflow became invisible in the first place.
+if ! command -v gh >/dev/null 2>&1; then
+    warn "advisory workflows" "gh not installed — unverified"
+else
+    for _wf in perf.yml codeql.yml; do
+        _runs=$(gh run list --workflow="$_wf" --branch main --limit 5 \
+                  --json conclusion --jq '[.[].conclusion] | join(" ")' 2>/dev/null \
+                || echo "QUERY_FAILED")
+        case "$_runs" in
+            QUERY_FAILED|"") warn "${_wf%.yml} streak" "could not query — unverified" ;;
+            *)
+                _streak=0
+                for _c in $_runs; do
+                    case "$_c" in failure|timed_out) _streak=$((_streak+1)) ;; *) break ;; esac
+                done
+                if [ "$_streak" -ge 3 ]; then
+                    bad  "${_wf%.yml} streak" "red for the last $_streak runs on main — advisory, so nothing else says so"
+                elif [ "$_streak" -gt 0 ]; then
+                    warn "${_wf%.yml} streak" "red for the last $_streak run(s) on main"
+                else
+                    ok   "${_wf%.yml} streak" "latest run on main is not red"
+                fi ;;
+        esac
+    done
+fi
+
 # A10 · Doc-surface parity.
 #
 # Phase 2 item 2 of the skill, made mechanical. The man page is the COMPLETE

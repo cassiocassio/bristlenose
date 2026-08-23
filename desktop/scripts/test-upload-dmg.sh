@@ -157,6 +157,29 @@ if [ -f "$FIXTURE" ] && [ -f "${FIXTURE%.dmg}.manifest.txt" ]; then
         || ok "manifest ↔ image mismatch → refused"
 fi
 
+# ── checksum sidecar ─────────────────────────────────────────────────────────
+# The published digest is the only integrity claim a user can check BEFORE
+# running the app; Gatekeeper's is invisible until launch. The format must be
+# exactly what `shasum -a 256 -c` consumes, or the instruction we imply is wrong.
+SHA64="$(printf 'x' | shasum -a 256 | cut -d' ' -f1)"
+out="$(checksum_sidecar "$SHA64" "Bristlenose-0.28.0.dmg")"
+[ "$out" = "$SHA64  Bristlenose-0.28.0.dmg" ] \
+    && ok "sidecar is shasum -c format (two spaces)" \
+    || bad "sidecar format wrong: $(printf '%q' "$out")"
+
+# Round-trip through the real tool — the only proof that matters. Note $( )
+# strips trailing newlines, so the newline can only be checked via a file.
+_td="$(mktemp -d)"
+printf 'x' > "$_td/Bristlenose-0.28.0.dmg"
+checksum_sidecar "$SHA64" "Bristlenose-0.28.0.dmg" > "$_td/s.sha256"
+[ "$(wc -l < "$_td/s.sha256" | tr -d ' ')" = "1" ] \
+    && ok "sidecar is one newline-terminated line" \
+    || bad "sidecar not newline-terminated — shasum -c needs it"
+( cd "$_td" && shasum -a 256 -c s.sha256 >/dev/null 2>&1 ) \
+    && ok "shasum -a 256 -c accepts what we publish" \
+    || bad "shasum -c REJECTS our sidecar — the verify instruction would not work"
+rm -rf "$_td"
+
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

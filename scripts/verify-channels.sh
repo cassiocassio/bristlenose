@@ -201,6 +201,24 @@ else
         "$(printf '%s' "$dmg" | tr -d '\r' | grep -i '^location:' | head -1 | cut -c1-58)"
 fi
 
+# 5b · The .dmg's published checksum. Gatekeeper is the real control here — an
+# attacker with the web host cannot serve a .dmg that launches without a valid
+# Developer ID signature and staple — but that control is invisible and says
+# nothing a user can check BEFORE running the thing.
+sha=$(fetch "https://bristlenose.app/dmg/Bristlenose.dmg.sha256")
+if [ -z "$sha" ]; then
+    row ".dmg sha256" "unreachable" "no published digest"
+else
+    _d=$(printf '%s' "$sha" | awk '{print $1}')
+    _f=$(printf '%s' "$sha" | awk '{print $2}')
+    case "$_d" in
+        [0-9a-f]*) [ ${#_d} -eq 64 ] \
+            && row ".dmg sha256" "$(verdict_contains "$_f" "$VERSION")" "${_d:0:16}… $_f" \
+            || row ".dmg sha256" "bad" "digest is not 64 hex chars" ;;
+        *) row ".dmg sha256" "bad" "not a sha256 line" ;;
+    esac
+fi
+
 # 6 · Snap — the store API, public and unauthenticated. The workflow conclusion
 # says the UPLOAD succeeded; channel-map says what a user actually gets. They
 # diverge, and Tier 2 can only use the second (release-log 0.27.0 #8).

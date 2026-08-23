@@ -78,6 +78,22 @@ swap_decision() {
 # `deploy.sh` carries `--filter='protect dmg/'`, so rsync never deletes anything
 # from that directory — retention is this script's job or it is nobody's, and
 # the directory grows by ~644 MB per cut against a shared-hosting quota.
+# checksum_sidecar <sha256> <dmg-filename> — the published .sha256 file's body.
+#
+# Standard `shasum -a 256` output, two spaces, so a user can verify with the
+# tool they already have and no instructions from us:
+#
+#     shasum -a 256 -c Bristlenose-0.28.0.dmg.sha256
+#
+# Gatekeeper is the real control on this channel — an attacker with the web host
+# still cannot serve a .dmg that launches without a valid Developer ID signature
+# and staple. But that control is invisible: it either lets the app open or shows
+# a dialog, and it says nothing a user can check BEFORE running the thing. A
+# published digest is the claim they can verify themselves.
+checksum_sidecar() {
+    printf '%s  %s\n' "$1" "$2"
+}
+
 retention_plan() {
     local keep="$1"; shift
     local n=0 name
@@ -321,6 +337,33 @@ ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" \
 ok "swapped in atomically"
 
 # ---------------------------------------------------------------------------
+# 3b. Publish the checksum — after the dmg is live, before the redirect
+# ---------------------------------------------------------------------------
+# ORDER IS THE WHOLE POINT. The digest goes up while the permalink still points
+# at the PREVIOUS release, so at no instant does /dmg/Bristlenose.dmg resolve to
+# a file whose checksum is not already published. Doing it after the redirect
+# would open exactly that window, and it is the window someone downloads in.
+#
+# Versioned name, deliberately: a digest for a versioned file is correct forever
+# and can never go stale. The stable /dmg/Bristlenose.dmg.sha256 is a REDIRECT to
+# this file, added to the same .htaccess that repoints the dmg — so both move in
+# one atomic rename and cannot disagree.
+#
+# REMOTE_SHA is used, not LOCAL_SHA. They were just proven equal by swap_decision
+# above, and publishing what the host actually holds is the honest one: a digest
+# describing bytes we hope are there is a digest that can lie.
+SHA_NAME="$DMG_NAME.sha256"
+SHA_TMP="$(mktemp "${TMPDIR:-/tmp}/bn-sha.XXXXXX")"
+checksum_sidecar "$REMOTE_SHA" "$DMG_NAME" > "$SHA_TMP"
+rsync -e "ssh ${SSH_OPTS[*]}" "$SHA_TMP" "$REMOTE_HOST:$REMOTE_DIR/.$SHA_NAME.part" \
+    || die "checksum upload failed — the dmg is live but unverifiable; publish $SHA_NAME by hand"
+ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" \
+    "chmod 644 '$REMOTE_DIR/.$SHA_NAME.part' && mv -f '$REMOTE_DIR/.$SHA_NAME.part' '$REMOTE_DIR/$SHA_NAME'" \
+    || die "checksum swap failed"
+rm -f "$SHA_TMP"
+ok "published $SHA_NAME"
+
+# ---------------------------------------------------------------------------
 # 4. Repoint the stable URL
 # ---------------------------------------------------------------------------
 # A redirect, not a symlink or a copy: browsers name a download from the FINAL
@@ -335,12 +378,16 @@ cat > "$HT" <<EOF
 # /dmg/Bristlenose.dmg is the permalink handed out in posts and on the site;
 # it always resolves to the current alpha. Rollback = point it at an older file.
 Redirect 302 /dmg/Bristlenose.dmg /dmg/$DMG_NAME
+# The digest permalink moves in the SAME file as the download permalink, so one
+# atomic rename repoints both. They cannot disagree, even for an instant.
+Redirect 302 /dmg/Bristlenose.dmg.sha256 /dmg/$DMG_NAME.sha256
 EOF
 rsync -e "ssh ${SSH_OPTS[*]}" "$HT" "$REMOTE_HOST:$REMOTE_DIR/.htaccess.part" || die "redirect upload failed"
 ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" \
     "chmod 644 '$REMOTE_DIR/.htaccess.part' && mv -f '$REMOTE_DIR/.htaccess.part' '$REMOTE_DIR/.htaccess'" \
     || die "redirect swap failed"
 ok "/dmg/Bristlenose.dmg → /dmg/$DMG_NAME"
+ok "/dmg/Bristlenose.dmg.sha256 → /dmg/$SHA_NAME"
 
 # ---------------------------------------------------------------------------
 # 5. Retention
@@ -353,7 +400,12 @@ DOOMED="$(retention_plan "$KEEP" $(printf '%s ' $REMOTE_LIST))"
 if [ -n "$DOOMED" ]; then
     while IFS= read -r victim; do
         [ -n "$victim" ] || continue
-        ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" "rm -f '$REMOTE_DIR/$victim'" && ok "reaped $victim"
+        # The sidecar goes with its dmg. retention_plan lists only
+        # ^Bristlenose-.*\.dmg$, so a .sha256 left behind would accumulate one
+        # per release forever, and each one would describe a file that no longer
+        # exists — a digest for nothing is worse than no digest.
+        ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" \
+            "rm -f '$REMOTE_DIR/$victim' '$REMOTE_DIR/$victim.sha256'" && ok "reaped $victim (+ .sha256)"
     done <<< "$DOOMED"
 else
     ok "nothing to reap (keeping newest $KEEP)"

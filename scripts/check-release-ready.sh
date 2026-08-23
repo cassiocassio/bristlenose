@@ -474,8 +474,12 @@ else
     case "$_drift_rc" in
         1) bad  "dependency majors" "$(printf '%s' "$_drift" | grep '^MAJOR' | head -3 | tr '\n' ' ')" ;;
         2) warn "dependency majors" "could not compare — unverified" ;;
-        *) _nmaj=$(printf '%s' "$_drift" | grep -c '^MAJOR' || true)
-           ok "dependency majors" "$(printf '%s' "$_drift" | tail -1)" ;;
+        0) # NAME what moved, not just a count. The whole reason this row exists
+           # over the yes/no one below is that a count cannot help you decide.
+           _moved=$(printf '%s' "$_drift" | grep -E '^(minor|patch|absent)' | head -3 | tr '\n' ' ')
+           ok "dependency majors" "${_moved:-$(printf '%s' "$_drift" | tail -1)}" ;;
+        # 127, 139, and any code this script has not been taught are NOT success.
+        *) warn "dependency majors" "unexpected exit $_drift_rc — unverified" ;;
     esac
 
     _dep_out=$(.venv/bin/python scripts/generate-third-party-binaries.py --check 2>&1); _dep_rc=$?

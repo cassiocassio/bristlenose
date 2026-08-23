@@ -140,10 +140,14 @@ for f in $FLAGS; do
     printf '%s' "$f" | grep -qE "^($IGNORE)$" && continue
     TOTAL=$((TOTAL+1))
     r=0; m=0; w=absent
-    printf '%s' "$README" | grep -qF -- "$f" && r=1
-    printf '%s' "$MAN"    | grep -qF -- "$f" && m=1
+    # Whole-token, not substring: a README mentioning --tiered would otherwise
+    # report --tier as documented. Same class as CLAUDE.md's .badge-accept /
+    # .badge-accept-flash note, and the sibling script solved it an hour earlier.
+    _fq=$(printf '%s' "$f" | sed 's/[][\.^$*+?(){}|\/]/\\&/g')
+    printf '%s' "$README" | grep -qE -- "(^|[^a-zA-Z0-9-])${_fq}([^a-zA-Z0-9-]|\$)" && r=1
+    printf '%s' "$MAN"    | grep -qE -- "(^|[^a-zA-Z0-9-])${_fq}([^a-zA-Z0-9-]|\$)" && m=1
     if [ "$WEB_STATE" = present ]; then
-        w=0; printf '%s' "$WEB" | grep -qF -- "$f" && w=1
+        w=0; printf '%s' "$WEB" | grep -qE -- "(^|[^a-zA-Z0-9-])${_fq}([^a-zA-Z0-9-]|\$)" && w=1
     fi
     # The man page owes every flag — that is a hard gate on any tree.
     if [ "$m" = 0 ]; then

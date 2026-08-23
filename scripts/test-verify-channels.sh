@@ -16,16 +16,8 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-PASS=0; FAIL=0
-ok()   { printf '  \033[32m✓\033[0m %s\n' "$1"; PASS=$((PASS+1)); }
-bad()  { printf '  \033[31m✗\033[0m %s\n' "$1" >&2; FAIL=$((FAIL+1)); }
-head_(){ printf '\n\033[1m%s\033[0m\n' "$1"; }
+. "$(dirname "$0")/test-lib.sh"
 
-# eq <label> <expected> <actual>
-eq() {
-    if [ "$2" = "$3" ]; then ok "$1"
-    else bad "$1 — expected '$2', got '$3'"; fi
-}
 
 VERIFY_CHANNELS_LIB=1 . "$ROOT/scripts/verify-channels.sh"
 
@@ -62,6 +54,9 @@ eq "0.28.0 vs 10.28.0"                   bad "$(verdict_contains 'released 10.28
 eq "exact still matches"                 ok  "$(verdict_contains 'released 0.28.1 today' '0.28.1')"
 eq "matches at end of body"              ok  "$(verdict_contains 'released 0.28.1' '0.28.1')"
 eq "matches in a tarball name"           ok  "$(verdict_contains 'bristlenose-0.28.1.tar.gz' 'bristlenose-0.28.1.tar.gz')"
+eq "version followed by .dmg"            ok  "$(verdict_contains 'Location: /dmg/Bristlenose-0.28.0.dmg' '0.28.0')"
+eq "version followed by .tar.gz"         ok  "$(verdict_contains 'bristlenose-0.28.0.tar.gz' '0.28.0')"
+eq "a dot then a DIGIT still rejects"    bad "$(verdict_contains 'released 0.28.0.1 today' '0.28.0.1x')"
 
 head_ "verdict_absent — 0.27.0's real website failure"
 eq "abandoned version present"  bad         "$(verdict_absent 'changelog names 0.26.0' '0.26.0')"
@@ -88,6 +83,9 @@ eq "one bad"                    1 "$(rollup ok bad ok)"
 eq "one unreachable"            1 "$(rollup ok unreachable ok)"
 eq "all unreachable"            1 "$(rollup unreachable unreachable)"
 eq "single ok"                  0 "$(rollup ok)"
+eq "skipped does not fail"      0 "$(rollup ok skipped ok)"
+eq "skipped + bad still fails"  1 "$(rollup ok skipped bad)"
+eq "all skipped passes"         0 "$(rollup skipped skipped)"
 
 head_ "meta — the assertions can actually fail"
 # The deliberate failure runs inside $( ), i.e. a SUBSHELL — so its FAIL++ is
@@ -109,5 +107,4 @@ done
 out=$(bash "$ROOT/scripts/verify-channels.sh" --bogus 2>&1); rc=$?
 [ "$rc" = "2" ] && ok "refused unknown flag" || bad "accepted unknown flag (exit $rc)"
 
-printf '\n\033[1m%d passed, %d failed\033[0m\n\n' "$PASS" "$FAIL"
-[ "$FAIL" -eq 0 ]
+finish

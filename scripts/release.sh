@@ -1,38 +1,41 @@
 #!/usr/bin/env bash
 # release.sh — the conductor's page, executable. READ-ONLY.
 #
-# WHAT THIS IS, AND WHAT IT DELIBERATELY IS NOT
+# WHAT THIS IS
 #
-# docs/design-release-machine.md splits the release into Tier A (gates and
-# probes, all shipped) and Tier B (an event log and a driver that executes).
-# This is Tier B's READ-ONLY half only: plan, verify, status, abandon.
+# The release train. `plan` shows what would happen, `run` does it, `verify`
+# probes every channel, `status` folds the log, `abandon` prints the recipe and
+# its website consequence, `retry` un-strands a step.
 #
-# There is no `run`, and that is a decision rather than an omission. Executing
-# the release means crossing two irreversibility lines — a spent TestFlight
-# build number and a burned PyPI version — and the design gates that work on
-# evidence: build it when two release-log entries show a stranded step or an
-# unusable timing estimate. Neither has happened. `run` therefore refuses and
-# points at /bn-release, which still owns the order.
+# THE TAG IS THE RELEASE (23 Aug 2026). The pypi required-reviewer hold was
+# removed, so `release.yml` runs to completion on a tag push. `run` therefore
+# puts the tag LAST, after the soft uploads, and gets its strict verdict from a
+# `workflow_dispatch` of ci.yml on main — which is what keeps every verdict
+# ahead of every irreversible act now that the tag publishes.
 #
-# What this DOES own is the step table. Until now it lived as prose in
-# SKILL.md Phase 5, which meant a model retyped it every release — and the
-# estimates in it were guesses nobody had measured. Both now live here, once,
-# with the numbers from docs/release-log.md's 0.27.0 entry.
+# The gate is the job graph, not a click: publish needs build needs ci, invoked
+# with strict-macos: true. check-release-ready.sh's `publish gate` row asserts
+# that chain and fails if it breaks.
 #
 # Usage:
-#   release.sh plan <X.Y.Z> [--tier 1|2] [--build-only]
+#   release.sh plan <X.Y.Z> [--tier 1|2]
+#   release.sh run <X.Y.Z> --bump minor|patch|major [--yes]
 #   release.sh verify <X.Y.Z> [--abandoned <X.Y.Z>]
 #   release.sh status
 #   release.sh abandon <X.Y.Z>
+#   release.sh retry <X.Y.Z> <step>
 #
 # Exit codes:
-#   0   ready / verified / informational
-#   1   not ready, or a channel is not on this version
-#   2   usage error
-#   75  EX_TEMPFAIL — a run is held awaiting the publish approval. Not an error:
-#       a release waiting on a person is behaving correctly. Distinguishable
-#       from 0 so `release.sh … && deploy-website` cannot fire on a release that
-#       has published nothing.
+#   0   ready / verified / complete
+#   1   not ready, a step failed, or a channel is not on this version
+#   2   usage error, or another run holds the lock
+#   3   a step is stranded — started, outcome unrecorded, never auto-advanced
+#   75  EX_TEMPFAIL — every act is done, verification is pending. Not an error.
+#       `run` is a launcher, not a foreground poll: release.yml runs the full
+#       matrix before publish, so PyPI, the GitHub Release, Homebrew and Snap
+#       are legitimately absent for ~40 minutes after the tag lands. Kept
+#       distinct from 0 so `release.sh run … && deploy-website` cannot fire on
+#       a release that has not published yet.
 #
 # Sourcing:  RELEASE_LIB=1 source release.sh   → pure helpers, nothing runs.
 
@@ -96,9 +99,19 @@ ev_append() { # ev_append <step> <status> [detail]
 #   machine slept, someone hit Ctrl-C. It is never auto-advanced past.
 fold_status() {
     [ -f "$EVENTS" ] || { echo pending; return; }
+    # TOTAL, deliberately. A write truncated mid-ev_append yields a fragment like
+    # "o", which used to fall through the ok/running cases in cmd_run and EXECUTE
+    # the step — re-publishing 644 MB, or spending a build number. A corrupt line
+    # is the same unknown outcome the stranded branch exists for, and must take
+    # the same path. (Comment lives out here: an apostrophe inside the awk
+    # program would close the shell single-quote.)
     awk -F'"' -v s="$1" '$0 ~ "\"step\":\""s"\"" {
         for (i=1;i<=NF;i++) if ($i=="status") { st=$(i+2) }
-    } END { print (st=="" ? "pending" : st) }' "$EVENTS"
+    } END {
+        out = (st == "" ? "pending" : st)
+        if (out !~ /^(ok|fail|running|pending|skipped)$/) out = "corrupt"
+        print out
+    }' "$EVENTS"
 }
 
 # probe_done <step> — is this irreversible step ALREADY done in the world?
@@ -111,11 +124,19 @@ probe_done() {
             git ls-remote --tags origin "v$V" 2>/dev/null | grep -q .
             ;;
         dmg)
+            # -F on the versioned filename, not a regex on the bare version.
+            # `location:.*$V` treats the dots as wildcards, so 0.28.0 would match
+            # 0X28Y0 — too loose to be a probe that decides whether to re-publish.
             curl -sI --max-time 20 "https://bristlenose.app/dmg/Bristlenose.dmg" 2>/dev/null \
-                | tr -d '\r' | grep -qi "location:.*$V"
+                | tr -d '\r' | grep -qiF "Bristlenose-$V.dmg"
             ;;
         *)
-            return 1
+            # 2 = NO PROBE EXISTS from here. Distinct from 1, which means a probe
+            # ran and the thing is absent. Collapsing them meant a resume after a
+            # SUCCESSFUL TestFlight upload re-ran it and spent a second build
+            # number forever — on the one step whose declared cost is that it
+            # cannot be unspent. TestFlight needs an ASC key; there is no probe.
+            return 2
             ;;
     esac
 }
@@ -144,13 +165,29 @@ usage() { sed -n '2,/^set -uo/p' "$0" | sed 's/^# \{0,1\}//;$d'; }
 # immediately before the step, because announcing it on a page where nothing
 # happens and withholding it where the act occurs is backwards.
 # ---------------------------------------------------------------------------
+run_steps() {
+cat <<'RUNTBL'
+preflight|preflight|gate|1m||./scripts/check-release-ready.sh __V__|
+bump|bump + commit|plain|1m||__BUMP__|
+push-main|push main|plain|1m||git push origin main|
+strict-ci|dispatch strict CI on main|plain|1m||gh workflow run ci.yml --ref main -f strict-macos=true|
+build-all|build the app|plain|11m||desktop/scripts/build-all.sh|
+build-dmg|build the dmg|plain|30m||desktop/scripts/build-dmg.sh|
+ci-green|GATE strict CI green|gate|38m||__CIWAIT__|
+testflight|upload to TestFlight|soft|6m|SOFT: spends a build number forever, and it reaches cohort testers|desktop/scripts/upload-testflight.sh|
+dmg|publish the dmg|soft|13m|the public permalink swaps the moment this lands|desktop/scripts/upload-dmg.sh|
+tag|tag + push|hard|2m|HARD: this PUBLISHES. __V__ can never be re-used on PyPI|__TAG__|
+snap|snap edge|plain|10m||gh workflow run snap.yml --ref main|
+snap-stable|snap stable|plain|10m||gh workflow run snap.yml --ref v__V__|2
+RUNTBL
+}
+
 cmd_plan() {
     V="${1-}"; shift || true
-    TIER=1; BUILD_ONLY=0
+    TIER=1
     while [ $# -gt 0 ]; do
         case "$1" in
-            --tier) TIER="${2:-1}"; shift 2 ;;
-            --build-only) BUILD_ONLY=1; shift ;;
+            --tier) [ $# -ge 2 ] || die "--tier needs a tier"; TIER="$2"; shift 2 ;;
             *) die "unknown argument: $1" ;;
         esac
     done
@@ -158,6 +195,7 @@ cmd_plan() {
         empty)     die "usage: release.sh plan <X.Y.Z>" ;;
         malformed) die "refusing: unexpected version shape '$V'" ;;
     esac
+    case "$TIER" in 1|2) : ;; *) die "--tier must be 1 or 2 (got '$TIER')" ;; esac
 
     LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
     WHEEL=$([ -n "$LAST_TAG" ] && git diff "$LAST_TAG"..HEAD --stat -- bristlenose/ frontend/ 2>/dev/null | tail -1 || echo "")
@@ -165,7 +203,6 @@ cmd_plan() {
     ACT=$(verdict_act "$WHEEL" "$DESK")
 
     printf '\n%sRelease %s · Tier %s%s' "$B" "$V" "$TIER" "$N"
-    [ "$BUILD_ONLY" = "1" ] && printf ' · %s--build-only%s' "$Y" "$N"
     printf '\n%s  from %s · %s commits%s\n\n' "$D" "${LAST_TAG:-<no tag>}" \
         "$([ -n "$LAST_TAG" ] && git rev-list --count "$LAST_TAG"..HEAD 2>/dev/null || echo '?')" "$N"
 
@@ -186,7 +223,10 @@ cmd_plan() {
         _band="$k"; case "$k" in soft|hard) _band=irreversible ;; esac
         if [ "$_band" != "$kind" ]; then
             kind="$_band"
-            case "$k" in
+            # On $_band, not $k. Switching on the raw kind meant soft/hard fell to
+            # the *) arm and every irreversible step was announced REVERSIBLE —
+            # on the one line whose entire job is warning you.
+            case "$_band" in
                 irreversible) printf '\n%bIRREVERSIBLE%b %b- past here nothing can be taken back%b\n' "$B" "$N" "$D" "$N" ;;
                 gate)      printf '\n%bGATE%b %b- every verdict lands before any irreversible act%b\n' "$B" "$N" "$D" "$N" ;;
                 *)         printf '\n%bREVERSIBLE%b\n' "$B" "$N" ;;
@@ -256,73 +296,54 @@ cmd_abandon() {
         ok) : ;;
         *)  die "usage: release.sh abandon <X.Y.Z>" ;;
     esac
-    printf '\n%sAbandoning %s%s\n\n' "$B" "$V" "$N"
-    printf '  %sDelete the tag:%s\n' "$B" "$N"
+    printf '\n%bAbandoning %s%b\n\n' "$B" "$V" "$N"
+
+    # PROBE, do not assert. This used to say "an un-approved run expires in 30
+    # days having published nothing" — written when a hold existed, false since
+    # it was removed this morning. It is the command a frightened person reaches
+    # for at 11pm, and it was telling them a published version never published.
+    _code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+              "https://pypi.org/pypi/bristlenose/$V/json" 2>/dev/null || echo 000)
+    _tagged=no
+    git ls-remote --tags origin "v$V" 2>/dev/null | grep -q . && _tagged=yes
+
+    case "$_code" in
+        200)
+            printf '  %b✗ %s IS ON PYPI AND CANNOT BE ABANDONED.%b\n\n' "$R" "$V" "$N"
+            printf '  A PyPI version is immutable. Deleting the tag changes nothing there,\n'
+            printf '  and Homebrew was dispatched from it.\n\n'
+            printf '  %bSupersede it:%b cut the next version with the fix.\n' "$B" "$N"
+            printf '  Do not re-cut %s — the preflight will refuse, correctly.\n\n' "$V"
+            return 1
+            ;;
+        404) : ;;
+        *)
+            printf '  %b⚠ could not reach PyPI (HTTP %s) — state unconfirmed%b\n\n' "$Y" "$_code" "$N"
+            ;;
+    esac
+
+    if [ "$_tagged" = yes ]; then
+        printf '  %b⚠ v%s is on origin, so release.yml is running.%b\n' "$Y" "$V" "$N"
+        printf '  Deleting the tag cancels the publish only if you win that race:\n\n'
+    else
+        printf '  %b✓ not tagged, not published — nothing has left this machine.%b\n\n' "$G" "$N"
+    fi
     printf '    git push --delete origin v%s && git tag -d v%s\n\n' "$V" "$V"
-    printf '  %sDo not approve the publish job.%s An un-approved run expires in 30 days\n' "$B" "$N"
-    printf '  having published nothing. The only residue is a tag that briefly existed.\n\n'
-    printf '  %s⚠ The website is part of this decision, not a later step.%s\n' "$Y" "$N"
-    printf '  bristlenose.app/docs/changelog.html renders from CHANGELOG.md at BUILD time,\n'
-    printf '  so renaming or removing the %s entry makes every already-deployed copy of\n' "$V"
-    printf '  the site wrong the moment the rename lands — actively wrong, not merely stale.\n'
-    printf '  That is exactly what happened when 0.26.0 was abandoned: the live changelog\n'
-    printf '  named a version nobody could install while the download served 0.27.0.\n\n'
+
+    printf '  %b⚠ The website is part of this decision, not a later step.%b\n' "$Y" "$N"
+    printf '  The changelog page renders from CHANGELOG.md at BUILD time, so removing\n'
+    printf '  the %s entry makes every already-deployed copy of the site wrong.\n\n' "$V"
     printf '    cd ../bristlenose-website && ./build.py && ./deploy.sh\n\n'
-    printf '  %sThen confirm:%s ./scripts/verify-channels.sh <the version you DID ship> --abandoned %s\n\n' "$B" "$N" "$V"
 }
-
-# ---------------------------------------------------------------------------
-# run — execute the release.
-#
-# ORDER, AND WHY IT CHANGED (23 Aug 2026)
-#
-# The pypi environment's required-reviewer hold was removed. That hold was what
-# made "push the tag early" safe: the tag started release.yml and its publish job
-# then waited for a human. Without it a tag push publishes as soon as release.yml
-# is satisfied — so THE TAG PUSH IS NOW THE RELEASE, and it moves to the end.
-#
-# Removing the hold is not removing the gate. publish `needs: build` needs `ci`,
-# and release.yml invokes ci.yml with strict-macos: true. PyPI cannot receive a
-# version whose full matrix, e2e and strict macOS suite did not pass on the
-# tagged commit. The click was replaced by assertions that actually inspect the
-# artefact, which a human clicking approve at 11pm does not.
-#
-# The 0.25.2 lesson is preserved, and step `strict-ci` is what preserves it.
-# Moving the tag last would otherwise ship the Mac artefacts BEFORE any strict
-# verdict — exactly the window 0.25.2 died in. ci.yml exposes strict-macos on
-# workflow_dispatch, so the strict verdict is obtainable on main WITHOUT a tag.
-# Every verdict still lands before every irreversible act; only the act that
-# publishes moved.
-#
-#   id | label | kind | command
-# kind: gate = must pass, no side effect · soft/hard = irreversible · plain
-# ---------------------------------------------------------------------------
-run_steps() {
-cat <<'RUNTBL'
-preflight|preflight|gate|1m||./scripts/check-release-ready.sh __V__|
-bump|bump + commit|plain|1m||__BUMP__|
-push-main|push main|plain|1m||git push origin main|
-strict-ci|dispatch strict CI on main|plain|1m||gh workflow run ci.yml --ref main -f strict-macos=true|
-build-all|build the app|plain|11m||desktop/scripts/build-all.sh|
-build-dmg|build the dmg|plain|30m||desktop/scripts/build-dmg.sh|
-ci-green|GATE strict CI green|gate|38m||__CIWAIT__|
-testflight|upload to TestFlight|soft|6m|SOFT: spends a build number forever, and it reaches cohort testers|desktop/scripts/upload-testflight.sh|
-dmg|publish the dmg|soft|13m|the public permalink swaps the moment this lands|desktop/scripts/upload-dmg.sh|
-tag|tag + push|hard|2m|HARD: this PUBLISHES. __V__ can never be re-used on PyPI|__TAG__|
-snap|snap edge|plain|10m||gh workflow run snap.yml --ref main|
-snap-stable|snap stable|plain|10m||gh workflow run snap.yml --ref v__V__|2
-verify|verify every channel|gate|1m||./scripts/verify-channels.sh __V__|
-RUNTBL
-}
-
 
 cmd_run() {
     V="${1-}"; shift || true
-    BUMP=""; ASSUME_YES=0
+    BUMP=""; ASSUME_YES=0; SKIP=""
     while [ $# -gt 0 ]; do
         case "$1" in
-            --bump) BUMP="${2:-}"; shift 2 ;;
+            --bump) [ $# -ge 2 ] || die "--bump needs a value"; BUMP="$2"; shift 2 ;;
             --yes|-y) ASSUME_YES=1; shift ;;
+            --skip) [ $# -ge 2 ] || die "--skip needs a step"; SKIP="${SKIP:-} $2"; shift 2 ;;
             *) die "unknown argument: $1" ;;
         esac
     done
@@ -341,7 +362,11 @@ cmd_run() {
         exit 2
     fi
     echo $$ > "$LOCK/pid"
-    trap 'rm -rf "$LOCK"; rmdir "$RUNDIR" 2>/dev/null || true' EXIT INT TERM
+    # EXIT cleans up; INT/TERM must also STOP. Trapping INT without exiting released
+    # the lock and let the loop continue — a running driver with no lock, and a
+    # second `run` in another window would have started.
+    trap 'rm -rf "$LOCK"; rmdir "$RUNDIR" 2>/dev/null || true' EXIT
+    trap 'exit 130' INT TERM
 
     printf '\n%bRelease %s%b  bump=%s\n' "$B" "$V" "$N" "$BUMP"
     printf '%b  the tag push publishes. Everything before it is abandonable.%b\n\n' "$D" "$N"
@@ -355,9 +380,32 @@ cmd_run() {
     # After the confirmation, not before: a declined run should leave nothing.
     mkdir -p "$LOGDIR"
 
-    BUMP_CMD="./scripts/bump-version.py $BUMP && git add -A && git commit -m \"bump to $V\""
+    # Pathspec commit, never `git add -A`: the index is shared between concurrent
+    # sessions, and a sweep once carried six unrelated files into someone else's
+    # commit (CLAUDE.md, 21 Aug). bump-version.py already stages what it touches.
+    BUMP_CMD="./scripts/bump-version.py $BUMP && git commit -m \"bump to $V\" -- bristlenose/__init__.py bristlenose/data/bristlenose.1 desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj CHANGELOG.md README.md"
+    # $V and --bump are two sources for one number. `run 0.29.0 --bump minor`
+    # from 0.27.0 writes 0.28.0, commits "bump to 0.29.0", tags v0.29.0 — and
+    # the mismatch surfaces at release.yml's PyPI poll, i.e. AFTER twine has
+    # consumed 0.28.0 immutably. Reconcile immediately after the bump.
+    BUMP_CMD="$BUMP_CMD && [ \"\$(sed -n 's/^__version__ *= *\"\\(.*\\)\"/\\1/p' bristlenose/__init__.py)\" = \"$V\" ]"
     TAG_CMD="git tag v$V && git push origin v$V"
-    CI_CMD="gh run watch \$(gh run list --workflow=ci.yml --branch main --limit 1 --json databaseId --jq '.[0].databaseId') --exit-status"
+    # --event workflow_dispatch is LOAD-BEARING.
+    #
+    # push-main (the step before) creates a ci.yml run on main from a `push`
+    # event, where inputs is empty and macOS is therefore INFORMATIONAL.
+    # strict-ci dispatches a second, strict run seconds later. `--limit 1`
+    # selects by RECENCY, and push webhooks are not ordered against dispatch
+    # API calls — so this gate could watch the non-strict run, go green with
+    # every macOS cell red, and release the uploads. That is the 0.25.2 window
+    # this step exists to close, reopened by the selector.
+    #
+    # Pinned to HEAD too: 41 minutes of build sit between dispatch and watch,
+    # and this repo is trunk-on-main with concurrent sessions. A push in that
+    # window would otherwise become "the newest run" — a verdict about a
+    # DIFFERENT commit. Empty id fails closed (measured: `gh run watch ""` → 1).
+    CI_SHA="$(git rev-parse HEAD)"
+    CI_CMD="_id=\$(gh run list --workflow=ci.yml --event workflow_dispatch --branch main --limit 10 --json databaseId,headSha --jq '[.[]|select(.headSha==\"'\"$CI_SHA\"'\")]|.[0].databaseId') && [ -n \"\$_id\" ] && [ \"\$_id\" != null ] && gh run watch \"\$_id\" --exit-status"
 
     ev_append run started "bump=$BUMP"
     while IFS='|' read -r id label kind est cons cmd steptier; do
@@ -369,24 +417,35 @@ cmd_run() {
         [ "$cmd" = "__TAG__" ] && cmd="$TAG_CMD"
         [ "$cmd" = "__CIWAIT__" ] && cmd="$CI_CMD"
 
+        case " $SKIP " in *" $id "*)
+            printf '  %b—%b %-26s %bskipped by --skip%b\n' "$D" "$N" "$label" "$D" "$N"
+            ev_append "$id" skipped "--skip"; continue ;;
+        esac
         prev="$(fold_status "$id")"
         if [ "$prev" = "ok" ]; then
             case "$kind" in
                 soft|hard)
-                    if probe_done "$id"; then
-                        printf '  %b-%b %-26s %balready done in the world%b\n' "$D" "$N" "$label" "$D" "$N"
-                        continue
-                    fi
-                    printf '  %b!%b %-26s %blog says done, the world disagrees, re-running%b\n' \
-                        "$Y" "$N" "$label" "$D" "$N"
+                    probe_done "$id"; _pd=$?
+                    case "$_pd" in
+                        0) printf '  %b—%b %-26s %balready done in the world%b\n' "$D" "$N" "$label" "$D" "$N"
+                           continue ;;
+                        1) printf '  %b⚠%b %-26s %blog says done, the world disagrees, re-running%b\n' \
+                               "$Y" "$N" "$label" "$D" "$N" ;;
+                        *) # No probe. Refuse to guess on an irreversible step.
+                           printf '\n  %b✗%b %s is recorded done and cannot be probed from here.\n' "$R" "$N" "$label"
+                           printf '    Re-running would spend it again. Confirm by hand, then either\n'
+                           printf '    %brelease.sh run %s --bump %s --skip %s%b to move past it,\n' "$B" "$V" "$BUMP" "$id" "$N"
+                           printf '    or %brelease.sh retry %s %s%b to genuinely redo it.\n\n' "$B" "$V" "$id" "$N"
+                           exit 3 ;;
+                    esac
                     ;;
                 *)
-                    printf '  %b-%b %-26s %bskipped (done)%b\n' "$D" "$N" "$label" "$D" "$N"
+                    printf '  %b—%b %-26s %bskipped (done)%b\n' "$D" "$N" "$label" "$D" "$N"
                     continue
                     ;;
             esac
-        elif [ "$prev" = "running" ]; then
-            printf '\n  %bx%b %s was interrupted and its outcome is unrecorded.\n' "$R" "$N" "$label"
+        elif [ "$prev" = "running" ] || [ "$prev" = "corrupt" ]; then
+            printf '\n  %b✗%b %s was interrupted and its outcome is unrecorded.\n' "$R" "$N" "$label"
             printf '    Check it by hand, then: %brelease.sh retry %s %s%b\n\n' "$B" "$V" "$id" "$N"
             exit 3
         fi
@@ -411,10 +470,10 @@ cmd_run() {
 
         if [ "$rc" -eq 0 ]; then
             ev_append "$id" ok "${el}s"
-            printf '  %bv%b %-26s %b%ss%b\n\n' "$G" "$N" "$label" "$D" "$el" "$N"
+            printf '  %b✓%b %-26s %b%ss%b\n\n' "$G" "$N" "$label" "$D" "$el" "$N"
         else
             ev_append "$id" fail "exit $rc"
-            printf '  %bx%b %-26s %bexit %s%b\n' "$R" "$N" "$label" "$R" "$rc" "$N"
+            printf '  %b✗%b %-26s %bexit %s%b\n' "$R" "$N" "$label" "$R" "$rc" "$N"
             # tr: rsync --progress writes carriage returns, so a raw tail shows
             # the START of one enormous line and a healthy transfer reads frozen.
             tr '\r' '\n' < "$LOG" | grep -vE '^[[:space:]]*$' | tail -12 | sed 's/^/      /'
@@ -428,13 +487,29 @@ $(run_steps)
 EOF
 
     ev_append run completed ""
-    printf '  %bv %s released.%b  ./scripts/release.sh verify %s\n\n' "$G" "$V" "$N" "$V"
+    # 75 = EX_TEMPFAIL: the acts are done, verification is pending. NOT 0.
+    #
+    # `verify` used to be the last step here and it could never pass: release.yml
+    # runs the full CI matrix before publish, so PyPI, the GitHub Release,
+    # Homebrew and Snap are all legitimately absent for ~40 minutes after the tag
+    # lands — and the step was budgeted 1m. A run that always ends red teaches
+    # you to ignore its verdict, which is the one thing it must not do.
+    #
+    # So run is a launcher, not a foreground poll. It reports what it DID; what
+    # LANDED is a separate act, tomorrow morning or in half an hour.
+    printf '  %b✓ every act is done.%b PyPI publishes when the tag run goes green.\n\n' "$G" "$N"
+    printf '    %bgh run watch --exit-status $(gh run list --workflow=release.yml --limit 1 --json databaseId --jq ".[0].databaseId")%b\n' "$D" "$N"
+    printf '    %b./scripts/release.sh verify %s%b   %bthen, and it is not instant%b\n\n' "$B" "$V" "$N" "$D" "$N"
+    return 75
 }
 
 cmd_retry() {
     V="${1-}"; STEP="${2-}"
     [ "$(verdict_version "$V")" = ok ] || die "usage: release.sh retry <X.Y.Z> <step>"
     [ -n "$STEP" ] || die "usage: release.sh retry <X.Y.Z> <step>"
+    # `retry <V> flibbertigibbet` used to print "reset to pending" and exit 0.
+    run_steps | awk -F'|' -v s="$STEP" '$1==s{f=1} END{exit !f}' \
+        || die "no such step '$STEP' (try: $(run_steps | awk -F'|' 'NF>1{printf "%s ", $1}'))"
     EVENTS=".release/$V/events.jsonl"
     [ -f "$EVENTS" ] || die "no run log at $EVENTS"
     printf '{"ts":"%s","run":"%s","step":"%s","status":"pending","detail":"reset by retry"}\n' \

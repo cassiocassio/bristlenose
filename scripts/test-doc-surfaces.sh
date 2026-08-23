@@ -16,11 +16,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 _restore() { git -C "$ROOT" checkout -- bristlenose/data/bristlenose.1 2>/dev/null || true; }
 trap _restore EXIT INT TERM
 
-PASS=0; FAIL=0
-ok()  { printf '  \033[32m✓\033[0m %s\n' "$1"; PASS=$((PASS+1)); }
-bad() { printf '  \033[31m✗\033[0m %s\n' "$1" >&2; FAIL=$((FAIL+1)); }
-head_(){ printf '\n\033[1m%s\033[0m\n' "$1"; }
-eq() { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 — expected '$2', got '$3'"; fi; }
+. "$(dirname "$0")/test-lib.sh"
 
 DOC_SURFACES_LIB=1 . "$ROOT/scripts/check-doc-surfaces.sh"
 
@@ -100,5 +96,4 @@ case "$_r" in *"expected 'ok', got 'missing'"*) ok "eq() reports a real mismatch
              *) bad "eq() cannot fail" ;; esac
 [ "$FAIL" -eq "$_before" ] || bad "harness leaked the deliberate failure into the count"
 
-printf '\n\033[1m%d passed, %d failed\033[0m\n\n' "$PASS" "$FAIL"
-[ "$FAIL" -eq 0 ]
+finish

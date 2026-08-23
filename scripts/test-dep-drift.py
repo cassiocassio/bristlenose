@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import signal
 import subprocess
 import sys
 import tempfile
@@ -17,6 +18,19 @@ HERE = pathlib.Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("dd", HERE / "check-dep-drift.py")
 dd = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(dd)
+
+# This suite MUTATES a tracked file (THIRD-PARTY-BINARIES.md) to prove the gate
+# fires, and restores it in a `finally`. That is not enough: Python's `finally`
+# does NOT run on SIGTERM — measured, not assumed — so a `timeout` around a batch
+# run leaves the inventory corrupted and the next check reports a drift that does
+# not exist. That is exactly what happened to the man page earlier today via the
+# shell sibling, which was fixed with a trap; this is the same wound unstitched.
+def _die(_signum, _frame):
+    raise SystemExit(130)
+
+
+signal.signal(signal.SIGTERM, _die)
+signal.signal(signal.SIGINT, _die)
 
 PASS = FAIL = 0
 

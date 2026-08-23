@@ -69,7 +69,19 @@ verdict_http() {
 _token_present() {
     local body="${1-}" needle="${2-}" esc
     esc=$(printf '%s' "$needle" | sed 's/[][\.^$*+?(){}|\/]/\\&/g')
-    printf '%s' "$body" | grep -qE "(^|[^0-9.])${esc}([^0-9.]|\$)"
+    # Trailing rule is NOT simply [^0-9.]. "Bristlenose-0.28.0.dmg" puts a dot
+    # straight after the version, so that form rejected every correct .dmg — a
+    # green release reporting a red channel, which is worse than the substring
+    # bug it was fixing. What must be excluded is a digit, or a dot FOLLOWED by a
+    # digit (0.28.1 inside 0.28.10). A dot followed by anything else is fine.
+    # Herestring, NOT a pipe. Under `set -o pipefail`, `grep -q` exits at the
+    # first match, the producer takes SIGPIPE and exits 141, and 141 becomes the
+    # pipeline's status — so a match near the TOP of a large body reads as no
+    # match. A changelog's newest entry is always at the top, which made the
+    # Website row red on every correct release and made verdict_absent report a
+    # present abandoned version as gone. check-release-ready.sh:419 already uses
+    # the herestring form.
+    grep -qE -- "(^|[^0-9.])${esc}(\$|[^0-9.]|[.][^0-9])" <<<"$body"
 }
 
 # verdict_contains <haystack> <needle> — did a fetched body name the version?
@@ -123,7 +135,12 @@ verdict_gate() {
 #   unreachable counts as NOT ok — unverified is not verified.
 rollup() {
     local v
-    for v in "$@"; do [ "$v" = ok ] || { echo 1; return; }; done
+    for v in "$@"; do
+        case "$v" in
+            ok|skipped) : ;;   # skipped = no probe exists here, and we said so
+            *)          echo 1; return ;;
+        esac
+    done
     echo 0
 }
 
@@ -158,6 +175,7 @@ row() { # row <name> <verdict> <evidence>
     local glyph
     case "$2" in
         ok)          glyph="${G}✓${N}" ;;
+        skipped)     glyph="${D}—${N}" ;;
         bad)         glyph="${R}✗${N}" ;;
         unreachable) glyph="${Y}⚠${N}" ;;
         *)           glyph="${Y}⚠${N}" ;;
@@ -190,7 +208,11 @@ row "Homebrew" "$(verdict_contains "$tap" "bristlenose-$VERSION.tar.gz")" \
     "$([ -n "$tap" ] && echo "formula fetched" || echo "formula unreachable")"
 
 # 4 · TestFlight — needs ASC credentials; absence is unreachable, not absent.
-row "TestFlight" "unreachable" "needs ASC key — probe with upload-testflight.sh --build-status"
+# `skipped`, not `unreachable`. They are different claims: unreachable means a
+# probe ran and failed; skipped means no probe exists from here. Folding the
+# second into the first made rollup() unable to return 0 on ANY release, so
+# `verify` could never pass and every `run` ended red by construction.
+row "TestFlight" "skipped" "no probe without an ASC key — upload-testflight.sh --build-status"
 
 # 5 · .dmg permalink — a 302 to the versioned name.
 dmg=$(curl -sI --max-time 20 "https://bristlenose.app/dmg/Bristlenose.dmg" 2>/dev/null || true)
@@ -256,9 +278,22 @@ echo
 printf '  %sexpiry   .dmg 30d from the BUILD · TestFlight 90d from the UPLOAD%s\n' "$D" "$N"
 echo
 
+# Floor at the CALL SITE, not inside rollup — rollup is a pure function driven
+# by synthetic input, and a floor there makes it untestable at small scale.
+# A rollup over nothing is not a pass: that is the class this work exists for.
+if [ "${#VERDICTS[@]}" -lt 6 ]; then
+    printf '\n  %b✗%b only %s channel(s) probed — refusing to report a verdict\n\n' \
+        "$R" "$N" "${#VERDICTS[@]}"
+    exit 2
+fi
 RC=$(rollup "${VERDICTS[@]}")
 total=${#VERDICTS[@]}
-oks=0; for v in "${VERDICTS[@]}"; do [ "$v" = ok ] && oks=$((oks+1)); done
+oks=0; skips=0
+for v in "${VERDICTS[@]}"; do
+    [ "$v" = ok ] && oks=$((oks+1))
+    [ "$v" = skipped ] && skips=$((skips+1))
+done
+total=$(( total - skips ))
 if [ "$RC" = "0" ]; then
     printf '  %b %s of %s channels on %s\n\n' "${G}✓${N}" "$oks" "$total" "$VERSION"
 else

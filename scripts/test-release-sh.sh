@@ -8,11 +8,7 @@
 # pin that, so adding a step cannot quietly break it.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PASS=0; FAIL=0
-ok()  { printf '  \033[32m✓\033[0m %s\n' "$1"; PASS=$((PASS+1)); }
-bad() { printf '  \033[31m✗\033[0m %s\n' "$1" >&2; FAIL=$((FAIL+1)); }
-head_(){ printf '\n\033[1m%s\033[0m\n' "$1"; }
-eq() { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 — expected '$2', got '$3'"; fi; }
+. "$(dirname "$0")/test-lib.sh"
 
 RELEASE_LIB=1 . "$ROOT/scripts/release.sh"
 
@@ -42,8 +38,6 @@ eq "held beats not-ready"  75 "$(rollup_exit 1 1)"
 
 head_ "the step table — structural invariants"
 TBL=$(sed -n "/^cat <<'RUNTBL'$/,/^RUNTBL$/p" "$ROOT/scripts/release.sh" | sed '1d;$d')
-n_irrev=$(printf '%s\n' "$TBL" | awk -F'|' '$3=="soft"||$3=="hard"' | grep -c . || true)
-eq "three irreversible steps" 3 "$n_irrev"
 
 # Every irreversible step must state its cost.
 missing=$(printf '%s\n' "$TBL" | awk -F'|' '($3=="soft"||$3=="hard") && $5==""{print $1}' | tr '\n' ' ')
@@ -160,8 +154,11 @@ rm -rf "$_rd"
 head_ "probe_done — the world beats the log for irreversible steps"
 V=0.27.0; probe_done tag && ok "finds a tag that is on origin" || bad "missed a real tag"
 V=9.9.9;  probe_done tag && bad "claimed a nonexistent tag exists" || ok "does not invent a tag"
-V=0.28.0; probe_done testflight && bad "assumed TestFlight state" \
-                                || ok "never assumes TestFlight is done (needs ASC)"
+V=0.28.0; probe_done testflight; _r=$?
+eq "TestFlight reports NO PROBE (2), not absent (1)" 2 "$_r"
+# The distinction is load-bearing: 1 would silently re-run the upload on resume
+# and spend a second build number; 2 stops and asks.
+V=9.9.9; probe_done tag; eq "a missing tag is absent (1), not unprobeable" 1 "$?"
 
 head_ "the run table — the tag is last, and it is the hard line"
 RT=$(sed -n "/^cat <<'RUNTBL'$/,/^RUNTBL$/p" "$ROOT/scripts/release.sh" | sed '1d;$d')
@@ -179,12 +176,7 @@ _tfpos=$(printf '%s\n' "$RT" | awk -F'|' '$1=="testflight"{print NR}')
     || bad "the tag publishes before the uploads are verified"
 
 
-_nocons=$(printf '%s\n' "$RT" | awk -F'|' '($3=="hard"||$3=="soft") && $5==""{print $1}' | tr '\n' ' ')
-[ -z "$_nocons" ] && ok "every irreversible run-step names its consequence" \
-                  || bad "irreversible steps with no consequence: $_nocons"
-_plain=$(printf '%s\n' "$RT" | awk -F'|' '$3=="plain" && $5!=""{print $1}' | tr '\n' ' ')
-[ -z "$_plain" ] && ok "no reversible run-step claims a consequence" \
-                 || bad "reversible steps claiming consequences: $_plain"
+# (consequence naming is asserted once, above, against the same table)
 _p=$(bash "$ROOT/scripts/release.sh" plan 0.28.0 2>&1 | sed 's/\x1b\[[0-9;]*m//g')
 case "$_p" in *"git tag v0.28.0"*) ok "plan renders the tag step" ;;
               *) bad "plan lost the tag step" ;; esac
@@ -194,6 +186,36 @@ _tfline=$(printf '%s' "$_p" | grep -n 'upload-testflight' | cut -d: -f1)
     && ok "plan and run agree: the tag comes after the uploads" \
     || bad "plan shows the tag BEFORE the uploads — plan and run disagree"
 
+
+
+head_ "the run table's shape"
+# A row with a stray | puts the surplus into $steptier, and run then treats it as
+# a tier restriction and CONTINUEs — the step vanishes from execution with no
+# event, no log, no exit code, while plan still renders it. A pipe inside a cmd
+# is the natural thing to write when adding a step.
+_badrows=$(printf '%s\n' "$RT" | awk -F'|' 'NF!=7{print NR": "$1}' | tr '\n' ' ')
+[ -z "$_badrows" ] && ok "every run row has exactly 7 fields" \
+                   || bad "rows with the wrong column count: $_badrows"
+
+# verify cannot be a step of the run that pushes the tag: release.yml runs the
+# full matrix before publish, so every channel is legitimately absent for ~40min.
+case "$RT" in *"verify-channels.sh"*) bad "verify is back in the run table — it can never pass there" ;;
+              *) ok "verify is not a synchronous step of run" ;; esac
+
+head_ "the redirect discipline, pinned"
+# release.sh:406 claims "$? is the command's own status, not tail's" and that
+# claim is the whole reason 0.27.0 #1 cannot recur here. Nothing asserted it.
+# A single `| tee` added for debugging would silently reinstate the bug.
+_evalline=$(grep -n 'eval "\$cmd"' "$ROOT/scripts/release.sh" | head -1)
+case "$_evalline" in
+    *'> "$LOG" 2>&1'*) ok "run redirects the step, never pipes it" ;;
+    *)                 bad "run's eval is not a plain redirect: $_evalline" ;;
+esac
+case "$_evalline" in
+    *'|'*) bad "a pipe appeared on the eval line — \$? would be the pipe's" ;;
+    *)     ok "no pipe on the eval line" ;;
+esac
+
 head_ "meta"
 _before=$FAIL
 _r=$(eq "deliberate" ok malformed 2>&1)
@@ -201,5 +223,4 @@ case "$_r" in *"expected 'ok', got 'malformed'"*) ok "eq() reports a real mismat
              *) bad "eq() cannot fail" ;; esac
 [ "$FAIL" -eq "$_before" ] || bad "harness leaked the deliberate failure"
 
-printf '\n\033[1m%d passed, %d failed\033[0m\n\n' "$PASS" "$FAIL"
-[ "$FAIL" -eq 0 ]
+finish

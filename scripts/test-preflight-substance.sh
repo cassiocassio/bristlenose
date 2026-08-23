@@ -3,11 +3,7 @@
 # synthetic input. No git repositories manufactured, no network, no venv.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PASS=0; FAIL=0
-ok()  { printf '  \033[32m✓\033[0m %s\n' "$1"; PASS=$((PASS+1)); }
-bad() { printf '  \033[31m✗\033[0m %s\n' "$1" >&2; FAIL=$((FAIL+1)); }
-head_(){ printf '\n\033[1m%s\033[0m\n' "$1"; }
-eq() { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 — expected '$2', got '$3'"; fi; }
+. "$(dirname "$0")/test-lib.sh"
 
 # Source the REAL function — no duplicate to drift. The lib guard returns before
 # any check runs, so this costs nothing and cannot test a fiction.
@@ -39,5 +35,4 @@ case "$_r" in *"expected 'release', got 'nothing'"*) ok "eq() reports a real mis
              *) bad "eq() cannot fail — suite is decoration" ;; esac
 [ "$FAIL" -eq 0 ] || bad "harness leaked the deliberate failure into the count"
 
-printf '\n\033[1m%d passed, %d failed\033[0m\n\n' "$PASS" "$FAIL"
-[ "$FAIL" -eq 0 ]
+finish

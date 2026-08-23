@@ -11,10 +11,7 @@
 # works, by breaking the same gate the same way.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
-PASS=0; FAIL=0
-ok()  { printf '  \033[32m✓\033[0m %s\n' "$1"; PASS=$((PASS+1)); }
-bad() { printf '  \033[31m✗\033[0m %s\n' "$1" >&2; FAIL=$((FAIL+1)); }
-head_(){ printf '\n\033[1m%s\033[0m\n' "$1"; }
+. "$(dirname "$0")/test-lib.sh"
 
 FLEET="desktop/Bristlenose/Bristlenose/ServeFleet.swift"
 GATE="desktop/scripts/check-window-surfaces.sh"
@@ -83,5 +80,4 @@ else
     bad "SelectionSync grep is unscoped again — gate will cost ~23s"
 fi
 
-printf '\n\033[1m%d passed, %d failed\033[0m\n\n' "$PASS" "$FAIL"
-[ "$FAIL" -eq 0 ]
+finish

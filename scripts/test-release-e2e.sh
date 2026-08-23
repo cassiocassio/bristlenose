@@ -58,6 +58,9 @@ fresh() {
     # isolate it by cd-ing. So give the sandbox its own copy: ROOT then resolves
     # to $WORK/repo and .release/ lands there, not in the real tree.
     cp "$REL" "$WORK/repo/scripts/release.sh"
+    # release.sh sources project.conf; the sandbox needs it too, or every run
+    # dies before the loop and 28 assertions fail for one missing file.
+    cp "$ROOT/scripts/project.conf" "$WORK/repo/scripts/project.conf"
     ( cd "$WORK/repo" && git init -q . && git commit -q --allow-empty -m init ) 2>/dev/null
 }
 

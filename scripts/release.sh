@@ -128,8 +128,8 @@ probe_done() {
             # -F on the versioned filename, not a regex on the bare version.
             # `location:.*$V` treats the dots as wildcards, so 0.28.0 would match
             # 0X28Y0 — too loose to be a probe that decides whether to re-publish.
-            curl -sI --max-time 20 "https://bristlenose.app/dmg/Bristlenose.dmg" 2>/dev/null \
-                | tr -d '\r' | grep -qiF "Bristlenose-$V.dmg"
+            curl -sI --max-time 20 "$DMG_PERMALINK" 2>/dev/null \
+                | tr -d '\r' | grep -qiF "$(printf "$DMG_VERSIONED" "$V")"
             ;;
         *)
             # 2 = NO PROBE EXISTS from here. Distinct from 1, which means a probe
@@ -182,6 +182,12 @@ verdict_recover() {
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
 
+# Project identity. Everything about WHICH project this is lives in project.conf;
+# everything about HOW a release is ordered and executed lives here. A second
+# project should be a copy of that file, not a fork of this one.
+# shellcheck source=scripts/project.conf
+. "$ROOT/scripts/project.conf"
+
 B=$'\033[1m'; D=$'\033[2m'; G=$'\033[32m'; Y=$'\033[33m'; R=$'\033[31m'; N=$'\033[0m'
 [ -t 1 ] || { B=""; D=""; G=""; Y=""; R=""; N=""; }
 
@@ -216,7 +222,7 @@ cat <<'RUNTBL'
 preflight|preflight|gate|1m|||./scripts/check-release-ready.sh __V__
 bump|bump + commit|plain|1m|||__BUMP__
 push-main|push main|plain|1m|||git push origin main
-strict-ci|dispatch strict CI on main|plain|1m|||gh workflow run ci.yml --ref main -f strict-macos=true
+strict-ci|dispatch strict CI on main|plain|1m|||gh workflow run __WF_CI__ --ref main -f __WF_STRICT__=true
 build-all|build the app|plain|11m|||desktop/scripts/build-all.sh
 build-dmg|build the dmg|plain|30m|||desktop/scripts/build-dmg.sh
 ci-green|GATE strict CI green|gate|38m|||__CIWAIT__
@@ -279,7 +285,7 @@ cmd_plan() {
             esac
         fi
         [ -n "$cons" ] && printf '      %b%s%b\n' "$Y" "${cons//__V__/$V}" "$N"
-        cmd="${cmd//__V__/$V}"
+        cmd="${cmd//__V__/$V}"; cmd="${cmd//__WF_CI__/$WF_CI}"; cmd="${cmd//__WF_STRICT__/$WF_STRICT_INPUT}"
         case "$cmd" in
             __BUMP__)   cmd="./scripts/bump-version.py <minor|patch> && git commit" ;;
             __TAG__)    cmd="git tag v$V && git push origin v$V" ;;
@@ -316,7 +322,7 @@ cmd_status() {
 
     held=0
     if command -v gh >/dev/null 2>&1; then
-        run=$(gh run list --workflow=release.yml --limit 1 --json databaseId,status,conclusion \
+        run=$(gh run list --workflow=$WF_RELEASE --limit 1 --json databaseId,status,conclusion \
                 --jq '.[0] | "\(.databaseId) \(.status) \(.conclusion // "-")"' 2>/dev/null || echo "")
         if [ -z "$run" ]; then
             printf '  %s⚠%s release runs   %scould not query — unverified%s\n' "$Y" "$N" "$D" "$N"
@@ -349,7 +355,7 @@ cmd_abandon() {
     # it was removed this morning. It is the command a frightened person reaches
     # for at 11pm, and it was telling them a published version never published.
     _code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
-              "https://pypi.org/pypi/bristlenose/$V/json" 2>/dev/null || echo 000)
+              "$(printf "$PYPI_JSON" "$V")" 2>/dev/null || echo 000)
     _tagged=no
     git ls-remote --tags origin "v$V" 2>/dev/null | grep -q . && _tagged=yes
 
@@ -389,14 +395,14 @@ cmd_recover() {
     printf '\n%bRecovering %s%b\n\n' "$B" "$V" "$N"
 
     _pub=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
-             "https://pypi.org/pypi/bristlenose/$V/json" 2>/dev/null || echo 000)
+             "$(printf "$PYPI_JSON" "$V")" 2>/dev/null || echo 000)
     _published=no; [ "$_pub" = 200 ] && _published=yes
 
     _tag_sha=$(git rev-parse "v$V^{}" 2>/dev/null || echo "")
     _head_sha=$(git rev-parse HEAD 2>/dev/null || echo "")
 
     if command -v gh >/dev/null 2>&1; then
-        _state=$(gh run list --workflow=release.yml --limit 20 \
+        _state=$(gh run list --workflow=$WF_RELEASE --limit 20 \
                    --json headBranch,status,conclusion \
                    --jq "[.[]|select(.headBranch==\"v$V\")]|.[0]|
                          if . == null then \"none\"
@@ -425,7 +431,7 @@ cmd_recover() {
             printf '  A PyPI version is immutable. If it is wrong, supersede it.\n\n' ;;
         wait)
             printf '  %bℹ The run is still going. Watch it:%b\n\n' "$Y" "$N"
-            printf '    gh run watch $(gh run list --workflow=release.yml --limit 1 --json databaseId --jq ".[0].databaseId") --exit-status\n\n' ;;
+            printf '    gh run watch $(gh run list --workflow=$WF_RELEASE --limit 1 --json databaseId --jq ".[0].databaseId") --exit-status\n\n' ;;
         redeliver)
             printf '  %bNo run fired for v%s — this is the DEBOUNCE case.%b\n' "$B" "$V" "$N"
             printf '  A bundled `git push --tags` sends the branch and tag events together\n'
@@ -436,7 +442,7 @@ cmd_recover() {
             printf '  %bThe run failed and the tag IS HEAD — rerun is correct.%b\n' "$B" "$N"
             printf '  Nothing on main is missing from the tagged commit, so the failure can\n'
             printf '  only be transient (a CDN stall, a flake, a runner).\n\n'
-            printf '    gh run rerun --failed $(gh run list --workflow=release.yml --limit 1 --json databaseId --jq ".[0].databaseId")\n\n' ;;
+            printf '    gh run rerun --failed $(gh run list --workflow=$WF_RELEASE --limit 1 --json databaseId --jq ".[0].databaseId")\n\n' ;;
         retag)
             printf '  %b⚠ The run failed and MAIN HAS MOVED — do NOT rerun.%b\n\n' "$Y" "$N"
             printf '  `gh run rerun --failed` replays the TAGGED COMMIT, not main. If a later\n'
@@ -449,7 +455,7 @@ cmd_recover() {
         investigate)
             printf '  %b⚠ The run reports %s but %s is not on PyPI.%b\n' "$Y" "$_state" "$V" "$N"
             printf '  Neither a rerun nor a retag is indicated. Read the run first:\n\n'
-            printf '    gh run view $(gh run list --workflow=release.yml --limit 1 --json databaseId --jq ".[0].databaseId")\n\n' ;;
+            printf '    gh run view $(gh run list --workflow=$WF_RELEASE --limit 1 --json databaseId --jq ".[0].databaseId")\n\n' ;;
     esac
 }
 
@@ -517,7 +523,7 @@ cmd_run() {
     # from 0.27.0 writes 0.28.0, commits "bump to 0.29.0", tags v0.29.0 — and
     # the mismatch surfaces at release.yml's PyPI poll, i.e. AFTER twine has
     # consumed 0.28.0 immutably. Reconcile immediately after the bump.
-    BUMP_CMD="$BUMP_CMD && [ \"\$(sed -n 's/^__version__ *= *\"\\(.*\\)\"/\\1/p' bristlenose/__init__.py)\" = \"$V\" ]"
+    BUMP_CMD="$BUMP_CMD && [ \"\$(sed -n "$VERSION_REGEX" "$VERSION_FILE")\" = \"$V\" ]"
     TAG_CMD="git tag v$V && git push origin v$V"
     # --event workflow_dispatch is LOAD-BEARING.
     #
@@ -534,14 +540,14 @@ cmd_run() {
     # window would otherwise become "the newest run" — a verdict about a
     # DIFFERENT commit. Empty id fails closed (measured: `gh run watch ""` → 1).
     CI_SHA="$(git rev-parse HEAD)"
-    CI_CMD="_id=\$(gh run list --workflow=ci.yml --event workflow_dispatch --branch main --limit 10 --json databaseId,headSha --jq '[.[]|select(.headSha==\"'\"$CI_SHA\"'\")]|.[0].databaseId') && [ -n \"\$_id\" ] && [ \"\$_id\" != null ] && gh run watch \"\$_id\" --exit-status"
+    CI_CMD="_id=\$(gh run list --workflow=$WF_CI --event workflow_dispatch --branch main --limit 10 --json databaseId,headSha --jq '[.[]|select(.headSha==\"'\"$CI_SHA\"'\")]|.[0].databaseId') && [ -n \"\$_id\" ] && [ \"\$_id\" != null ] && gh run watch \"\$_id\" --exit-status"
 
     ev_append run started "bump=$BUMP"
     while IFS='|' read -r id label kind est steptier cons cmd; do
         [ -z "$id" ] && continue
         # run is Tier 1; a Tier 2 promotion is a different act, not a longer run.
         [ -n "$steptier" ] && continue
-        cmd="${cmd//__V__/$V}"
+        cmd="${cmd//__V__/$V}"; cmd="${cmd//__WF_CI__/$WF_CI}"; cmd="${cmd//__WF_STRICT__/$WF_STRICT_INPUT}"
         [ "$cmd" = "__BUMP__" ] && cmd="$BUMP_CMD"
         [ "$cmd" = "__TAG__" ] && cmd="$TAG_CMD"
         [ "$cmd" = "__CIWAIT__" ] && cmd="$CI_CMD"
@@ -634,7 +640,7 @@ EOF
     # So run is a launcher, not a foreground poll. It reports what it DID; what
     # LANDED is a separate act, tomorrow morning or in half an hour.
     printf '  %b✓ every act is done.%b PyPI publishes when the tag run goes green.\n\n' "$G" "$N"
-    printf '    %bgh run watch --exit-status $(gh run list --workflow=release.yml --limit 1 --json databaseId --jq ".[0].databaseId")%b\n' "$D" "$N"
+    printf '    %bgh run watch --exit-status $(gh run list --workflow=$WF_RELEASE --limit 1 --json databaseId --jq ".[0].databaseId")%b\n' "$D" "$N"
     printf '    %b./scripts/release.sh verify %s%b   %bthen, and it is not instant%b\n\n' "$B" "$V" "$N" "$D" "$N"
     return 75
 }

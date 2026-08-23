@@ -257,6 +257,29 @@ esac
 bash "$ROOT/scripts/release.sh" recover 0.28.O >/dev/null 2>&1
 eq "malformed version refuses" 2 "$?"
 
+
+head_ "project.conf — the identity seam"
+. "$ROOT/scripts/project.conf"
+eq "CHANNELS is set"            0 "$([ -n "$CHANNELS" ] && echo 0 || echo 1)"
+for _c in $CHANNELS; do
+    grep -q "^probe_${_c}()" "$ROOT/scripts/verify-channels.sh" \
+        && ok "channel '$_c' has a probe" \
+        || bad "channel '$_c' is listed with NO probe — it would be silently unchecked"
+done
+# Every unprobeable channel must also be a real channel, or the note is a lie.
+for _u in $CHANNELS_UNPROBEABLE; do
+    case " $CHANNELS " in *" $_u "*) ok "unprobeable '$_u' is a real channel" ;;
+                          *) bad "CHANNELS_UNPROBEABLE names '$_u', which is not in CHANNELS" ;; esac
+done
+# Derived URLs must actually carry the identity, or a rename half-lands.
+case "$DMG_PERMALINK"  in *"$SITE"*)            ok "DMG_PERMALINK derives from SITE" ;;  *) bad "DMG_PERMALINK does not use SITE" ;; esac
+case "$TAP_FORMULA_RAW" in *"$TAP_REPO"*)       ok "TAP_FORMULA_RAW derives from TAP_REPO" ;; *) bad "TAP_FORMULA_RAW does not use TAP_REPO" ;; esac
+case "$SNAP_INFO"      in *"$PROJECT_NAME"*)    ok "SNAP_INFO derives from PROJECT_NAME" ;; *) bad "SNAP_INFO does not use PROJECT_NAME" ;; esac
+[ -f "$ROOT/$VERSION_FILE" ] && ok "VERSION_FILE exists" || bad "VERSION_FILE points at nothing: $VERSION_FILE"
+_v=$(sed -n "$VERSION_REGEX" "$ROOT/$VERSION_FILE")
+case "$_v" in [0-9]*.[0-9]*.[0-9]*) ok "VERSION_REGEX extracts a version ($_v)" ;;
+              *) bad "VERSION_REGEX extracted '$_v'" ;; esac
+
 head_ "meta"
 _before=$FAIL
 _r=$(eq "deliberate" ok malformed 2>&1)

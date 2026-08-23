@@ -152,6 +152,11 @@ rollup() {
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
 
+# Project identity and the channel list. Everything about WHICH project this is
+# lives there; everything about HOW a release is verified lives here.
+# shellcheck source=scripts/project.conf
+. "$ROOT/scripts/project.conf"
+
 VERSION=""; ABANDONED=""
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -190,108 +195,124 @@ row() { # row <name> <verdict> <evidence>
     VERDICTS+=("$2")
 }
 
-fetch() { curl -s --max-time 20 "$1" 2>/dev/null || true; }
+# -f: fail on an HTTP error rather than returning the error PAGE as content.
+# Without it a 404 HTML body reads as a real response — the .dmg digest row
+# reported `bad: not a sha256 line` for a file that simply does not exist yet,
+# which is the "unreachable is not absent" rule this file opens with, broken by
+# its own fetch helper.
+fetch() { curl -sf --max-time 20 "$1" 2>/dev/null || true; }
 code_of() { curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$1" 2>/dev/null || echo 000; }
 
-printf '\n\033[1mChannels · %s\033[0m\n\n' "$VERSION"
+# ---------------------------------------------------------------------------
+# One probe_<channel> per channel, each echoing "<verdict>|<evidence>".
+#
+# The main loop iterates $CHANNELS from project.conf rather than hardcoding
+# rows, so removing a channel removes its probe, its verdict and its line in the
+# rollup — and a channel listed with NO probe is a hard error rather than a
+# silently unchecked channel, which is the defect this whole file exists for.
+# ---------------------------------------------------------------------------
 
-# 1 · PyPI — the version-specific endpoint, which is authoritative. The index
-# endpoint is CDN-cached and reads stale (release.md's own warning).
-c=$(code_of "https://pypi.org/pypi/bristlenose/$VERSION/json")
-row "PyPI" "$(verdict_http "$c")" "HTTP $c"
+probe_pypi() {
+    local url code
+    url=$(printf "$PYPI_JSON" "$VERSION")
+    code=$(code_of "$url")
+    printf '%s|HTTP %s' "$(verdict_http "$code")" "$code"
+}
 
-# 2 · GitHub Release
-if command -v gh >/dev/null 2>&1; then
-    gh_out=$(gh release view "v$VERSION" --json tagName --jq .tagName 2>/dev/null || true)
-    row "GitHub Release" "$(verdict_json_field "$gh_out" "v$VERSION")" "${gh_out:-query failed}"
-else
-    row "GitHub Release" "unreachable" "gh not installed"
-fi
+probe_github() {
+    command -v gh >/dev/null 2>&1 || { printf 'unreachable|gh not installed'; return; }
+    local out
+    out=$(gh release view "v$VERSION" --json tagName --jq .tagName 2>/dev/null || true)
+    printf '%s|%s' "$(verdict_json_field "$out" "v$VERSION")" "${out:-query failed}"
+}
 
-# 3 · Homebrew — the tap formula must name this sdist.
-tap=$(fetch "https://raw.githubusercontent.com/cassiocassio/homebrew-bristlenose/main/Formula/bristlenose.rb")
-row "Homebrew" "$(verdict_contains "$tap" "bristlenose-$VERSION.tar.gz")" \
-    "$([ -n "$tap" ] && echo "formula fetched" || echo "formula unreachable")"
+probe_homebrew() {
+    local tap want
+    tap=$(fetch "$TAP_FORMULA_RAW")
+    want=$(printf "$SDIST_NAME" "$VERSION")
+    printf '%s|%s' "$(verdict_contains "$tap" "$want")" \
+        "$([ -n "$tap" ] && echo "formula fetched" || echo "formula unreachable")"
+}
 
-# 4 · TestFlight — needs ASC credentials; absence is unreachable, not absent.
-# `skipped`, not `unreachable`. They are different claims: unreachable means a
-# probe ran and failed; skipped means no probe exists from here. Folding the
-# second into the first made rollup() unable to return 0 on ANY release, so
-# `verify` could never pass and every `run` ended red by construction.
-row "TestFlight" "skipped" "no probe without an ASC key — upload-testflight.sh --build-status"
+probe_testflight() {
+    printf 'skipped|no probe without an ASC key — upload-testflight.sh --build-status'
+}
 
-# 5 · .dmg permalink — a 302 to the versioned name.
-dmg=$(curl -sI --max-time 20 "https://bristlenose.app/dmg/Bristlenose.dmg" 2>/dev/null || true)
-if [ -z "$dmg" ]; then
-    row ".dmg" "unreachable" "permalink unreachable"
-else
-    row ".dmg" "$(verdict_contains "$dmg" "$VERSION")" \
-        "$(printf '%s' "$dmg" | tr -d '\r' | grep -i '^location:' | head -1 | cut -c1-58)"
-fi
+probe_dmg() {
+    local head want
+    head=$(curl -sI --max-time 20 "$DMG_PERMALINK" 2>/dev/null || true)
+    [ -z "$head" ] && { printf 'unreachable|permalink unreachable'; return; }
+    want=$(printf "$DMG_VERSIONED" "$VERSION")
+    printf '%s|%s' "$(verdict_contains "$head" "$want")" \
+        "$(printf '%s' "$head" | tr -d '\r' | grep -i '^location:' | head -1 | cut -c1-52)"
+}
 
-# 5b · The .dmg's published checksum. Gatekeeper is the real control here — an
-# attacker with the web host cannot serve a .dmg that launches without a valid
-# Developer ID signature and staple — but that control is invisible and says
-# nothing a user can check BEFORE running the thing.
-sha=$(fetch "https://bristlenose.app/dmg/Bristlenose.dmg.sha256")
-if [ -z "$sha" ]; then
-    row ".dmg sha256" "unreachable" "no published digest"
-else
-    _d=$(printf '%s' "$sha" | awk '{print $1}')
-    _f=$(printf '%s' "$sha" | awk '{print $2}')
-    # `[0-9a-f]*` validates the FIRST CHARACTER and nothing else — 63 chars of
-    # garbage after a leading `a` read as a valid digest. Negated class again.
-    #
-    # And `cond && row … || row …` is the `&& ok` shape the house forbids: it is
-    # safe only while row's last statement cannot fail, and if anything fallible
-    # is ever added to row, BOTH rows print and two verdicts get pushed.
-    if [ "${#_d}" -ne 64 ]; then
-        row ".dmg sha256" "bad" "digest is not 64 characters"
-    else
-        case "$_d" in
-            *[!0-9a-f]*) row ".dmg sha256" "bad" "digest is not hex" ;;
-            # It checks the FILENAME names this version — not the digest against
-            # 644 MB of artefact. Say which, or the evidence reads as "verified".
-            *) row ".dmg sha256" "$(verdict_contains "$_f" "$VERSION")" \
-                   "filename names $VERSION · ${_d:0:12}…" ;;
-        esac
-    fi
-fi
-
-# 6 · Snap — the store API, public and unauthenticated. The workflow conclusion
-# says the UPLOAD succeeded; channel-map says what a user actually gets. They
-# diverge, and Tier 2 can only use the second (release-log 0.27.0 #8).
-snap=$(curl -s --max-time 20 -H 'Snap-Device-Series: 16' \
-    "https://api.snapcraft.io/v2/snaps/info/bristlenose" 2>/dev/null || true)
-if [ -z "$snap" ]; then
-    row "Snap (edge)" "unreachable" "store API unreachable"
-else
-    edge=$(printf '%s' "$snap" | python3 -c "
+probe_snap() {
+    local body edge
+    body=$(curl -s --max-time 20 -H 'Snap-Device-Series: 16' "$SNAP_INFO" 2>/dev/null || true)
+    [ -z "$body" ] && { printf 'unreachable|store API unreachable'; return; }
+    edge=$(printf '%s' "$body" | python3 -c "
 import json,sys
-try:
-    d=json.load(sys.stdin)
-except Exception:
-    sys.exit(0)
+try: d=json.load(sys.stdin)
+except Exception: sys.exit(0)
 for m in d.get('channel-map',[]):
     if m.get('channel',{}).get('name')=='edge':
         print(m.get('version','')); break
 " 2>/dev/null || true)
-    row "Snap (edge)" "$(verdict_json_field "$edge" "$VERSION")" "channel-map: ${edge:-unparseable}"
-fi
+    printf '%s|channel-map: %s' "$(verdict_json_field "$edge" "$VERSION")" "${edge:-unparseable}"
+}
 
-# 7 · Website — the STRONGEST probe available: that page renders from
-# CHANGELOG.md at build time, so a hit proves the deploy ran AFTER the entry
-# existed. Manual deploy and unverifiable are different properties.
-site=$(fetch "https://bristlenose.app/docs/changelog.html")
-row "Website" "$(verdict_contains "$site" "$VERSION")" \
-    "$([ -n "$site" ] && echo "changelog fetched" || echo "unreachable")"
+probe_website() {
+    # The STRONGEST probe available: that page renders from CHANGELOG.md at build
+    # time, so a hit proves the deploy ran AFTER the entry existed.
+    SITE_BODY=$(fetch "$CHANGELOG_URL")
+    printf '%s|%s' "$(verdict_contains "$SITE_BODY" "$VERSION")" \
+        "$([ -n "$SITE_BODY" ] && echo "changelog fetched" || echo "unreachable")"
+}
 
+printf '\n\033[1mChannels · %s\033[0m\n\n' "$VERSION"
+
+for _ch in $CHANNELS; do
+    if ! command -v "probe_$_ch" >/dev/null 2>&1 && ! declare -F "probe_$_ch" >/dev/null 2>&1; then
+        printf '  %b✗%b %-18s %sno probe_%s function — channel listed but unchecked%s\n' \
+            "$R" "$N" "$_ch" "$D" "$_ch" "$N"
+        VERDICTS+=("bad")
+        continue
+    fi
+    _res="$(probe_"$_ch")"
+    row "$_ch" "${_res%%|*}" "${_res#*|}"
+done
+
+# The abandoned-version check rides the website body the loop already fetched.
 if [ -n "$ABANDONED" ]; then
-    row "  ↳ $ABANDONED gone" "$(verdict_absent "$site" "$ABANDONED")" \
-        "a version abandoned pre-publication leaves a footprint on any surface already rendered"
+    if [ -z "${SITE_BODY:-}" ]; then
+        row "  ↳ $ABANDONED gone" "unreachable" "changelog not fetched"
+    else
+        row "  ↳ $ABANDONED gone" "$(verdict_absent "$SITE_BODY" "$ABANDONED")" \
+            "a version abandoned pre-publication leaves a footprint on any rendered surface"
+    fi
 fi
 
-echo
+# The .dmg digest, when that channel is in play.
+case " $CHANNELS " in *" dmg "*)
+    sha=$(fetch "$DMG_SHA_URL")
+    if [ -z "$sha" ]; then
+        row ".dmg sha256" "unreachable" "no published digest"
+    else
+        _d=$(printf '%s' "$sha" | awk '{print $1}')
+        _f=$(printf '%s' "$sha" | awk '{print $2}')
+        if [ "${#_d}" -ne 64 ]; then
+            row ".dmg sha256" "bad" "digest is not 64 characters"
+        else
+            case "$_d" in
+                *[!0-9a-f]*) row ".dmg sha256" "bad" "digest is not hex" ;;
+                *) row ".dmg sha256" "$(verdict_contains "$_f" "$VERSION")" \
+                       "filename names $VERSION · ${_d:0:12}…" ;;
+            esac
+        fi
+    fi ;;
+esac
+
 printf '  %sexpiry   .dmg 30d from the BUILD · TestFlight 90d from the UPLOAD%s\n' "$D" "$N"
 echo
 

@@ -164,7 +164,45 @@ last time something ran it.**
   first run:** `BristlenoseDebug.entitlements` had been diverged from HEAD the
   whole time and nobody knew — only the Release file was ever restored. One row,
   one previously invisible defect, on the first execution.
-- **Perf red.** Decide: re-baseline with the reason recorded, or make the export
-  carry one locale instead of 22. The second is probably right.
-- **`openai` upper bound.** An open floor means the next major also arrives in a
-  build, mid-release.
+- ~~**Perf red.**~~ ✅ **done 23 Aug 2026**, `30f9305d` — the export now carries
+  one language rather than 22 (`localeLoader.export.ts`), which was the option
+  this entry called "probably right". Not a re-baseline: the number came down
+  rather than the line moving up.
+- ~~**`openai` upper bound.**~~ ✅ **addressed 23 Aug 2026, but not as written.**
+  Re-reading the complaint: #5 does not say the bump was bad — every constructor
+  survived and it was a non-event. It says *"the discovery moment was 10pm,
+  mid-release, which is the wrong moment for it."* That is a **timing** problem,
+  and a cap is the wrong instrument for it: `pyproject.toml`'s written policy is
+  floor-only, and pinning without a renovation bot ships known-vulnerable
+  transitives for months. So the discovery moved instead of the floor —
+  `scripts/check-dep-drift.py` names every package whose resolved version has
+  drifted from the committed inventory and makes a **major** a hard stop, in the
+  preflight, ~40 minutes before `build-all.sh` would have found it. Whether to
+  cap `openai` remains open and is the maintainer's call; it is no longer a
+  10pm one.
+
+### What this entry produced, beyond the release
+
+The three questions the log's header exists to answer, answered once by this
+entry rather than waiting for a run of them — because six of its nine tricky
+things turned out to be gates that did not exist rather than incidents.
+
+Shipped 23 Aug 2026 (`docs/design-release-machine.md`): all 11 Tier A items —
+`.release/` ignored, `--progress` TTY-gated, per-attempt altool logs, publish
+state, dependency drift, `verify-channels.sh`, the never-read-a-background-exit-code
+rule, `shippable diff`, `SIGN_IDENTITY` required, doc-surface parity, and gate
+freshness. Plus the read-only half of Tier B (`release.sh plan|verify|status|abandon`).
+
+**Two things this entry got wrong, found by building against it:**
+
+1. **#1, #6 and #7 are not one failure.** The entry groups them as "a fact
+   existed and was never recorded". Two of the three were *recorded* — the log
+   said `✗ Build failed`, the API said `pending` — and misread. That distinction
+   changed the design: a fourth artefact to read is not the cure for a reading
+   problem, and Tier B shrank accordingly.
+2. **Failure 1's gate cost 23 seconds and nobody had measured it.** Its
+   `SelectionSync` assertion walked 2.4 GB of build output to find zero matches.
+   Scoped to source: 23s → 0.07s. That measurement is what made gate freshness
+   affordable to solve by *running* the gates rather than by building the stamp
+   ledger the design specified — the feature hardest to design turned out to be
+   the one that should not exist.

@@ -943,6 +943,102 @@ change the tool had seen. One of the two failures was the *test* asserting
 `patch` for two identical strings; corrected rather than papered over.
 
 
+## 20 · If this ever leaves this repo — notes for a future adopter
+
+Written 24 Aug 2026, deliberately as notes rather than work. Nothing here is
+scheduled; it exists so the next person (probably me) does not have to
+re-derive it. The order below is roughly the order it would matter in.
+
+### What is actually reusable
+
+Not the scripts. The **shape**, which is three layers and holds for any project
+that ships to more than one place:
+
+- a **conveyor** that owns order and state and is deliberately dumb,
+- **gates** that can only ever say *no*,
+- a small number of **named, located human verdicts** — and the human decision
+  is a verdict, not work.
+
+Two doctrines under it carry more weight than any code here:
+
+1. **State someone else owns, you probe. State you own, you record.** An
+   append-only log *records*; a state file *asserts*. Fold, never store.
+2. **A successful probe wins; an unsuccessful probe wins over nothing.**
+   `unreachable` is not `absent`, and collapsing them is how a network fault
+   comes to read as a human decision. §5 and §7 are the long form.
+
+The third thing worth carrying is the defect class the whole body of work is
+organised against: **a check that reports success while seeing nothing.** It
+appeared eleven times during this build, several of them in code written that
+same hour to prevent it, and twice in tests written to enforce the rule. Assume
+it will happen to you too, and prefer gates that are *proven to fail on the
+thing they exist to catch* over gates that merely pass on a clean tree.
+
+### How far the extraction actually got
+
+`scripts/` is identity-free in code — measured 24 Aug 2026, one occurrence of
+the org name remains and it is inside a comment. Everything project-specific
+lives in `scripts/project.conf`, and `test-release-sh.sh` fails if any constant
+there loses its last consumer, so it cannot quietly rot back.
+
+`CHANNELS` is the abstraction that earns its keep. Which channels a project
+ships on is the whole difference between a CLI (`pypi homebrew snap`), a Mac app
+(`testflight dmg`) and a hybrid that is both; `verify-channels.sh` iterates it
+and a channel with no `probe_<name>` is a hard error rather than a silent pass.
+A second project is a copy of that conf plus its probes.
+
+**`desktop/scripts/` is not extracted and would be the real work**: 164
+occurrences of the product name across 25 files, plus 12 bundle-id/domain
+literals. That is the macOS build/sign/notarise/upload half, and it is where a
+second Mac app would spend its time. Nothing about it is hard; it is just not
+done, and it should not be attempted speculatively — the Rule of Three has been
+met exactly once.
+
+### Portability, as measured rather than assumed
+
+Run 24 Aug 2026 on `ubuntu:24.04` (aarch64, bash 5.2, `/bin/sh` → dash), repo
+cloned inside the container:
+
+- **The macOS-only surface is exactly four things**, all inside the
+  `SCOPE != cli` block of `check-release-ready.sh`: `security find-identity` /
+  `security cms`, `/usr/libexec/PlistBuddy`, `date -j -f` (BSD-only; GNU has no
+  `-j`) and `stat -f%Lp` (GNU is `-c%a`). So `--cli` is already the portable
+  entry point — that is the design working, but nothing states it and nothing
+  detects the OS.
+- **Everything else ran identically.** The five source gates pass;
+  `verify-channels.sh` exits 1 correctly with `gh` absent reported `unreachable`
+  rather than a false pass; `pkill -P` / `pgrep -f` behave the same; `sed
+  's/\x1b\[…//'` works under both seds; dash does not bite because every test
+  stub body is POSIX. No GNU-only construct anywhere in the chain.
+- **The failures were environmental, not portability.** Four assertions fail on
+  a box with no `user.email` configured, because the sandboxes do `git init &&
+  git commit --allow-empty`. They clear the moment an identity exists. The
+  danger is *which* ones fail: the regression pins for the CI-sha fix, so a
+  clean runner reports a false regression rather than a missing git config.
+
+### The one thing that would most change the odds
+
+**Run the suites in CI, on ubuntu.** As of this note, 325 assertions across
+eight suites execute on exactly one machine, one OS, one shell and one git
+configuration. Two release scripts already run on Linux in CI with no suite
+behind them. The suites need no network, no keys and no release; the marginal
+cost is seconds, and every portability finding above took one `docker run` to
+surface and would never have surfaced otherwise.
+
+### Known gaps
+
+Findings 43–59 in the maintainer's review notes, kept outside the public tree,
+are the live list with severities, reproductions and file:line. In brief, and
+none of them scheduled: `abandon` leaves the abandoned attempt's events armed
+so a re-cut skips the rebuild; `plan --tier 2` prints a run command that cannot
+execute tier 2; `_stop_step` kills one process generation so a deep step tree
+orphans its payload; three probes conflate absent with unreachable; the tap
+workflow copy has diverged from the tap repo again; and `verify-channels.sh`
+still has no driver-level coverage for its remaining rows.
+
+Do not treat that list as a backlog. It is a record of what was known and
+deliberately not done, which is the more useful thing to hand forward.
+
 ## See also
 
 - `docs/design-bn-release-skill.md` — D1 refined here (§7); its `scripts/release-cli.sh` slot is what Tier B would fill

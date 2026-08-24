@@ -10,6 +10,12 @@ exit code means, where constants live — are Part 2 of
 [`desktop/scripts/REPORT-STYLE.md`](../desktop/scripts/REPORT-STYLE.md). This
 file is the index: what to type, and when.
 
+**Thinking of lifting this into another project?** `docs/design-release-machine.md`
+§20 is the honest account: what is actually reusable (the shape and two
+doctrines, not the scripts), how far the identity extraction got, what is
+measured to work on Linux and what is macOS-only, and what was knowingly left
+undone. Read it before assuming any of this is general.
+
 Every script resolves its own paths (via `$0`), so invoke it from anywhere.
 
 ---

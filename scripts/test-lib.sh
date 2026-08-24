@@ -52,10 +52,23 @@ meta_check() {
 }
 
 # guard_tracked <repo-relative path>...
+#
+# Anchored with -C, not left to the caller's cwd: `git checkout -- <path>` from
+# outside a work tree fails, and the `|| true` that keeps the trap quiet would
+# swallow that — a restore that silently does nothing is the failure this exists
+# to prevent, wearing the costume of the fix.
+# It also defines restore_guarded, so a suite that wants to restore MID-run (to
+# assert the gate goes green again) has one spelling of the restore, not two.
 guard_tracked() {
     _GUARDED="$*"
-    # shellcheck disable=SC2064  # expand _GUARDED now, deliberately
-    trap "git checkout -- $_GUARDED 2>/dev/null || true" EXIT INT TERM
+    _GUARD_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    restore_guarded() { git -C "$_GUARD_ROOT" checkout -- $_GUARDED 2>/dev/null || true; }
+    # A signal trap that only restores is not enough: bash RESUMES after the
+    # handler returns, so the suite carries on, re-injects, and is then SIGKILLed
+    # with a dirty tree — the man-page incident, exactly. The signal arms exit.
+    trap restore_guarded EXIT
+    trap 'restore_guarded; exit 130' INT
+    trap 'restore_guarded; exit 143' TERM
 }
 
 finish() {

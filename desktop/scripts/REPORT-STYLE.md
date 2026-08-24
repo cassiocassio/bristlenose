@@ -1,7 +1,11 @@
-# desktop/scripts — build report style
+# Script house style — how a script renders, and how it is shaped
 
-The shared look-and-protocol for build-script CLI output, so every script in this
-folder renders as **one system** and adding a new one raises no design questions.
+Two directories, one set of conventions: `desktop/scripts/` (build the app) and
+`scripts/` (release it, and gate it). **Part 1** is the shared look-and-protocol
+for CLI output, so every script renders as **one system** and adding a new one
+raises no design questions. **Part 2** is the structure the release chain
+settled on — where constants live, how a script decides, what its exit code
+means, and how a test proves any of it.
 
 **Status (Jul 2026): shipped.** `report.sh` (emitter helpers) + `build_report.py`
 (Rich renderer) are wired into `build-all.sh` (validated on a real signed build that
@@ -9,6 +13,8 @@ delivered a TestFlight `.pkg`) and the standalone gates `check-release-binary` /
 `check-bundle-manifest` / `check-logging-hygiene`. Remaining siblings
 (`sign-sidecar.sh` — the bar showcase — `build-sidecar.sh`, `ensure-sidecar.sh`,
 `fetch-ffmpeg.sh`, `sign-ffmpeg.sh`) adopt the recipe below without redesign.
+
+# Part 1 — how a script renders
 
 ## Split of responsibilities
 
@@ -149,6 +155,177 @@ renderer's `@bn bar` path is ready and its parser is hardened (`_int` clamps unt
 counts — a bad `done=`/`total=` must not crash the report). **Never emit a bar for
 work without a real count** — opaque steps spin (rule 6).
 
+# Part 2 — how a script is shaped
+
+Part 1 is what a script *looks* like. This is what it *is*: where its constants
+live, how it decides, what its exit code means, and how a test proves any of it.
+It was settled while building the release chain (`scripts/release.sh`,
+`verify-channels.sh`, `check-release-ready.sh`, `check-doc-surfaces.sh`,
+`check-dep-drift.py`) and is written down because every rule below cost a real
+incident — `docs/release-premortem.md` replays them.
+
+## Identity lives in `scripts/project.conf`, never in a script
+
+Project-specific literals — package name, repo, tap, site, version file, derived
+URLs, workflow filenames — are constants in one sourced file. Not a plugin
+system: there is one project. It exists because ~14 literals across six scripts
+had already drifted into three spellings of the same URL, and because a second
+project should be a copy of that file rather than a fork of the scripts.
+
+**`CHANNELS` is the abstraction that earns its keep.** Which channels a project
+ships on is the whole difference between a CLI (`pypi homebrew snap`), a Mac app
+(`testflight dmg`) and a hybrid that is both. `verify-channels.sh` iterates it
+and calls `probe_<name>` per entry, so removing a channel removes its probe, its
+verdict and its row. A channel listed with **no** probe is a hard error, not a
+skip — otherwise it is a channel silently unchecked, which is the defect this
+whole body of work exists to prevent. A channel that genuinely cannot be probed
+from a dev machine is *named* in `CHANNELS_UNPROBEABLE` and reports `skipped`
+with a reason, never omitted.
+
+## Probes are tri-state, and "I can't probe this" is itself a claim
+
+> A successful probe wins. An unsuccessful probe wins over nothing.
+
+`curl` writes `000` on a connection failure, and `[ "$code" = 200 ]` reads that
+as *not published* — manufacturing a false conclusion from a network fault.
+Every probe returns **ok / bad / unreachable**, and `unreachable` never rolls up
+as pass (`rollup()` accepts `ok` and `skipped` only). `verdict_http` is the
+shared shape; don't re-derive it per channel.
+
+`release.sh`'s `probe_done` carries the same distinction one level further, as
+exit status: `0` done · `1` probed and absent · **`2` no probe exists from
+here**. Collapsing 1 and 2 meant a resume could re-perform an irreversible act
+because "I didn't look" read as "it isn't there".
+
+Two corollaries the log paid for:
+
+- **Match on boundaries, not substrings.** `0.28.10` satisfies a naive test for
+  `0.28.1`, and `location:.*0\.28\.0` treats the dots as wildcards. Probe the
+  versioned filename with `grep -F`, and bound the token so a trailing digit or
+  `.<digit>` disqualifies it (`_token_present` in `verify-channels.sh`).
+- **"There's no endpoint for this" is usually false.** There is no row that
+  says *read the workflow conclusion instead*; every channel has an HTTP
+  endpoint behind whatever CLI normally reads it.
+
+## Exit codes are a vocabulary, not a boolean
+
+A caller chains on these, so each number has to mean one thing:
+
+| | |
+|---|---|
+| `0` | ready / verified / complete |
+| `1` | not ready, a step failed, or a channel is not on this version |
+| `2` | usage error, or another run holds the lock |
+| `3` | stranded — started, outcome unrecorded, never auto-advanced |
+| `75` | `EX_TEMPFAIL` — every act is done, verification is pending |
+
+`75` is the one worth copying. `release.sh run` is a launcher, not a foreground
+poll: after the tag lands, PyPI, the GitHub Release, Homebrew and Snap are
+legitimately absent for ~40 minutes. Kept distinct from `0` so
+`release.sh run … && deploy-website` cannot fire on a release that has not
+published yet. A script that returns `0` for "probably fine" has no way to say
+"done, but don't act on it".
+
+## The pure/impure split, and the sourcing seam
+
+Every decision a script makes lives in a `verdict_*` function above a guard:
+
+```bash
+[ "${RELEASE_LIB:-0}" = "1" ] && return 0 2>/dev/null
+```
+
+Above it: pure functions, no I/O, the whole risk surface. Below it: the driver.
+A suite sources the file with the flag set and drives every worst case with
+synthetic input — no network, no git, no release. The four in use are
+`RELEASE_LIB`, `VERIFY_CHANNELS_LIB`, `CHECK_RELEASE_READY_LIB` and
+`DOC_SURFACES_LIB`; a new decision-bearing script gets its own.
+
+**Testability seams are overrides that make a claim checkable, not features.**
+They must be inert when unset and documented as seams where they're read:
+`BN_BIN` (point the doc gate at a fake CLI so its own failure path fires),
+`RELEASE_STEPS_FILE` (substitute a synthetic step table so `run` is driven end
+to end without performing a release). Both are how a suite proves the *driver*,
+not just the helpers — `test-release-e2e.sh` found two real bugs that way that
+no pure-function test could reach.
+
+## Data tables: put the command last
+
+`release.sh`'s step table is `id|label|kind|est|tier|consequence|COMMAND`, and
+the command is last **because `IFS='|' read` gives the final variable the line's
+remainder**. A pipe inside a command would otherwise spill into the next field
+and silently drop the step. Any `|`-delimited table with a free-text column has
+this shape; put the free-text column last.
+
+## The harness: `scripts/test-lib.sh`
+
+`ok` / `bad` / `head_` / `eq` / `finish`, plus two things worth knowing:
+
+- **`meta_check`** — proves `eq()` can actually fail. A suite whose assertions
+  cannot fail is decoration, and that is not hypothetical: an earlier harness
+  decremented the counter for a deliberate failure, so a suite with exactly one
+  *real* failure reported zero and exited green.
+- **`guard_tracked <paths>`** — restore tracked files on **any** exit path,
+  including a signal. Use it in any suite that mutates the tree to prove a gate
+  fires. `test-doc-surfaces.sh` corrupted the man page exactly once, when a
+  batch timeout killed it mid-injection, and the next gate run reported a gap
+  that did not exist. A test that damages the tree when interrupted is worse
+  than no test, because the damage then reads as a finding.
+
+  Two details in it are load-bearing and were both wrong in the first draft.
+  **The `git checkout` is `-C`-anchored**, because from a cwd outside the work
+  tree it fails and the `|| true` that keeps the trap quiet swallows that — a
+  restore that silently does nothing, wearing the costume of the fix. **And the
+  signal arms `exit`**: a trap that only restores lets bash *resume* after the
+  handler returns, so the suite carries on, re-injects, and is then SIGKILLed
+  with a dirty tree — which is the original incident, reproduced by its own
+  remedy. It also defines `restore_guarded`, so a suite that restores mid-run
+  (to assert the gate goes green again) has one spelling of the restore.
+
+The harness exists because five suites carried a byte-identical copy of the same
+four functions, and the SIGTERM-safe restore added to one of them was never
+propagated to its structural twin. **Scaffolding that is copied is scaffolding
+whose fixes do not travel.**
+
+## Shell traps this codebase has already paid for
+
+Each of these produced a wrong answer that looked right. The tell matters more
+than the rule.
+
+- **Redirect, never pipe, when you need the exit code.** A pipeline's status is
+  its *last* stage without `pipefail`, so `pytest … | tail` reports `tail`'s
+  success. In a step runner: `eval "$cmd" > "$LOG" 2>&1`, then read `$?`.
+- **…and `pipefail` + `grep -q` SIGPIPEs the producer.** `grep -q` exits on its
+  first match, the upstream `curl`/`printf` dies with `141`, and `pipefail`
+  hands you the 141. Use a herestring: `grep -qE -- "$pat" <<<"$body"`.
+- **`cmd && ok "passed"` is a gate that cannot fail.** POSIX exempts the left
+  operand of `&&` from `errexit`. An assertion is `cmd || die "…"`, never
+  `cmd && ok`.
+- **Background the step so traps fire.** Bash defers a trap until the current
+  *foreground* command returns, so SIGTERM during a 30-minute build does
+  nothing. Run it with `&`, `wait "$pid"`, and have the handler `pkill -TERM -P`
+  the child.
+- **Python's `finally` does not run on SIGTERM; bash's `trap EXIT` does.** A
+  Python suite that mutates the tree needs an explicit `signal` handler — the
+  `try/finally` you'd reach for by reflex is not equivalent.
+- **`grep -c . || echo 0`** prints the count *and* the fallback when the count
+  is zero, because `grep` exits non-zero on no match. An anti-trivial-pass guard
+  written this way is itself broken.
+- **zsh does not word-split unquoted variables.** `for f in $LIST` iterates
+  once, over the whole string, and reports success having done nothing.
+
+## The defect class all of this exists to prevent
+
+**A check that reports success while seeing nothing.** It appeared nine times
+during this work, four of them in code written that same hour to prevent it: a
+doc gate that enumerated 2 of 25 flags and passed; a probe matching `0.28.1`
+against a page advertising `0.28.10`; a probe reading a 404 page as content; a
+suite whose own deliberate-failure guard could not fail. (`.bn-export-mode`'s
+CSS gate is the same shape a directory away — `tests/test_export_css_selectors.py`
+and the root `CLAUDE.md` carry that one.) The rule that catches it is not "test
+the gate" but **"prove the gate fails on the thing it exists to catch"** —
+inject the defect, assert the red, restore. Every `scripts/test-*` suite that
+guards a gate does this, and it is why they are worth their weight.
+
 ## See also
 
 - Implementation: `build_report.py` (renderer — `--demo` / `--demo-fail` self-tests)
@@ -157,4 +334,21 @@ work without a real count** — opaque steps spin (rule 6).
 - Glyph/colour source of truth: [`bristlenose/ui_kinds.py`](../../bristlenose/ui_kinds.py).
 - CLI output canon: [clig.dev](https://clig.dev) — human-first, honest progress,
   colour off when not a TTY.
-- [`README.md`](README.md) — the per-script index this style applies to.
+- [`README.md`](README.md) — the per-script index this style applies to
+  (`desktop/scripts/`), and [`scripts/README.md`](../../scripts/README.md) for
+  the release-and-gate half.
+
+Part 2's sources, in the order you'd read them:
+
+- [`scripts/project.conf`](../../scripts/project.conf) — the constants, with the
+  reasoning for each inline.
+- [`scripts/release.sh`](../../scripts/release.sh) — exit-code vocabulary, the
+  pure/impure split, the step table, `probe_done`'s third state.
+- [`scripts/verify-channels.sh`](../../scripts/verify-channels.sh) — the
+  tri-state probe rule and `_token_present`'s boundary matching.
+- [`scripts/test-lib.sh`](../../scripts/test-lib.sh) — the harness, `meta_check`,
+  `guard_tracked`.
+- [`docs/design-release-machine.md`](../../docs/design-release-machine.md) — the
+  architecture these conventions serve, and
+  [`docs/release-premortem.md`](../../docs/release-premortem.md) — the incidents
+  that produced each rule, replayed against the current scripts.

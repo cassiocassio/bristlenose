@@ -529,6 +529,7 @@ fully-qualified path, never by first match on the name.**
 - `docs/design-ci.md`, `docs/archive/design-test-strategy.md`, `docs/design-playwright-testing.md`, `docs/design-test-philosophy.md`
 - `docs/design-doctor-and-snap.md`, `docs/design-homebrew-packaging.md`
 - `docs/design-cli-improvements.md`, `docs/design-llm-call-telemetry.md`, `docs/design-performance.md`
+- **The release chain is executable, and it is documented in three places, not one.** [`scripts/README.md`](scripts/README.md) is the index (what to type: `release.sh plan|run|verify`, the gates, the suites that prove the gates). [`desktop/scripts/REPORT-STYLE.md`](desktop/scripts/REPORT-STYLE.md) Part 2 is the *rules* a script follows — where constants live (`scripts/project.conf`), why probes are tri-state, what each exit code means (`75` = acts done, verification pending), the testability seams, and the shell traps this codebase has already paid for. `docs/design-release-machine.md` is the architecture and `docs/release-premortem.md` replays six months of release incidents against the current scripts.
 - `docs/design-decisions.md` (why)
 - `docs/ROADMAP.md`
 

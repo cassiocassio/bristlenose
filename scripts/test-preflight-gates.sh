@@ -16,8 +16,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
 FLEET="desktop/Bristlenose/Bristlenose/ServeFleet.swift"
 GATE="desktop/scripts/check-window-surfaces.sh"
 
-cleanup() { git checkout -- "$FLEET" 2>/dev/null || true; }
-trap cleanup EXIT
+guard_tracked "$FLEET"   # EXIT *and* signals — a timeout used to leave the tree injected
 
 head_ "baseline"
 git diff --quiet -- "$FLEET" && ok "ServeFleet.swift clean before we start" \
@@ -66,7 +65,7 @@ case "$_out" in
     *)    bad "preflight loop did not report failure (got: $_out)" ;;
 esac
 
-cleanup
+restore_guarded
 head_ "restoration"
 git diff --quiet -- "$FLEET" && ok "ServeFleet.swift restored" || bad "NOT RESTORED — git checkout it"
 bash "$GATE" >/dev/null 2>&1 && ok "gate green again" || bad "gate still failing after restore"

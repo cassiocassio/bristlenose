@@ -116,20 +116,33 @@ fold_status() {
 }
 
 # probe_done <step> — is this irreversible step ALREADY done in the world?
+#   0 = done · 1 = probed, absent · 2 = no probe exists here · 3 = probe FAILED.
+#   3 is not 1. "I could not look" and "I looked and it is not there" lead to
+#   opposite actions on a step that cannot be un-performed.
 #   A recorded `ok` is a statement about the past; skipping an irreversible step
 #   on it is an assertion about the present. 0.26.0's log would have said
 #   "tag pushed ok" for a tag that was then deleted. Probe, then skip.
 probe_done() {
+    local _out _rc
     case "$1" in
         tag)
-            git ls-remote --tags origin "v$V" 2>/dev/null | grep -q .
+            # Capture, THEN test. `git ls-remote | grep -q .` cannot tell an
+            # absent tag (exit 0, no output) from an unreachable remote (exit
+            # non-zero, no output) — both came out as 1, "probed and absent", and
+            # the caller answers that by RE-PERFORMING an irreversible step. A
+            # network blip was enough. Tri-state is the rule everywhere else in
+            # this chain; this is the one place where breaking it re-publishes.
+            _out=$(git ls-remote --tags origin "v$V" 2>/dev/null); _rc=$?
+            [ "$_rc" -ne 0 ] && return 3
+            printf '%s' "$_out" | grep -q .
             ;;
         dmg)
             # -F on the versioned filename, not a regex on the bare version.
             # `location:.*$V` treats the dots as wildcards, so 0.28.0 would match
             # 0X28Y0 — too loose to be a probe that decides whether to re-publish.
-            curl -sI --max-time 20 "$DMG_PERMALINK" 2>/dev/null \
-                | tr -d '\r' | grep -qiF "$(printf "$DMG_VERSIONED" "$V")"
+            _out=$(curl -sI --max-time 20 "$DMG_PERMALINK" 2>/dev/null); _rc=$?
+            if [ "$_rc" -ne 0 ] || [ -z "$_out" ]; then return 3; fi
+            printf '%s' "$_out" | tr -d '\r' | grep -qiF "$(printf "$DMG_VERSIONED" "$V")"
             ;;
         *)
             # 2 = NO PROBE EXISTS from here. Distinct from 1, which means a probe
@@ -222,7 +235,7 @@ cat <<'RUNTBL'
 preflight|preflight|gate|1m|||./scripts/check-release-ready.sh __V__
 bump|bump + commit|plain|1m|||__BUMP__
 push-main|push main|plain|1m|||git push origin main
-strict-ci|dispatch strict CI on main|plain|1m|||gh workflow run __WF_CI__ --ref main -f __WF_STRICT__=true
+strict-ci|dispatch strict CI on main|plain|1m|||__DISPATCH__
 build-all|build the app|plain|11m|||desktop/scripts/build-all.sh
 build-dmg|build the dmg|plain|30m|||desktop/scripts/build-dmg.sh
 ci-green|GATE strict CI green|gate|38m|||__CIWAIT__
@@ -289,7 +302,8 @@ cmd_plan() {
         case "$cmd" in
             __BUMP__)   cmd="./scripts/bump-version.py <minor|patch> && git commit" ;;
             __TAG__)    cmd="git tag v$V && git push origin v$V" ;;
-            __CIWAIT__) cmd="wait for the strict CI run on main" ;;
+            __DISPATCH__) cmd="gh workflow run $WF_CI --ref main -f $WF_STRICT_INPUT=true" ;;
+            __CIWAIT__) cmd="wait for the strict CI run it dispatched" ;;
         esac
         printf '  %b%-10s%b %-50s %b%s%b\n' "$D" "$id" "$N" "$cmd" "$D" "$est" "$N"
         case "$est" in *m) total=$(( total + ${est%m} )) ;; esac
@@ -401,17 +415,28 @@ cmd_recover() {
     _tag_sha=$(git rev-parse "v$V^{}" 2>/dev/null || echo "")
     _head_sha=$(git rev-parse HEAD 2>/dev/null || echo "")
 
+    # The id comes back WITH the state, from the same v$V-filtered query. The
+    # remedies below used to paste `gh run … $(gh run list --limit 1 …)`, which
+    # selects by RECENCY — so recovering an older version while any newer release
+    # run existed reran or viewed the wrong run. cmd_run's own comment condemns
+    # exactly this selector; the commands a frightened person pastes at 11pm were
+    # still using it.
+    _run_id=""
     if command -v gh >/dev/null 2>&1; then
-        _state=$(gh run list --workflow=$WF_RELEASE --limit 20 \
-                   --json headBranch,status,conclusion \
+        _q=$(gh run list --workflow=$WF_RELEASE --limit 20 \
+                   --json databaseId,headBranch,status,conclusion \
                    --jq "[.[]|select(.headBranch==\"v$V\")]|.[0]|
-                         if . == null then \"none\"
-                         elif .status != \"completed\" then .status
-                         else .conclusion end" 2>/dev/null || echo "QUERY_FAILED")
+                         if . == null then \"|none\"
+                         else \"\(.databaseId)|\(if .status != \"completed\" then .status else .conclusion end)\"
+                         end" 2>/dev/null || echo "|QUERY_FAILED")
+        _run_id="${_q%%|*}"; _state="${_q#*|}"
     else
         _state=QUERY_FAILED
     fi
     [ -z "$_state" ] || [ "$_state" = null ] && _state=none
+    # An id-less remedy would be `gh run watch ""` — which fails closed, but
+    # silently and with a useless message. Say which run, or say there isn't one.
+    _run_ref="${_run_id:-<no run id — check \`gh run list --workflow=$WF_RELEASE\`>}"
 
     printf '  %bPyPI%b        %s\n' "$D" "$N" \
         "$([ "$_published" = yes ] && echo "$V is published" || echo "$V not published (HTTP $_pub)")"
@@ -431,7 +456,7 @@ cmd_recover() {
             printf '  A PyPI version is immutable. If it is wrong, supersede it.\n\n' ;;
         wait)
             printf '  %bℹ The run is still going. Watch it:%b\n\n' "$Y" "$N"
-            printf '    gh run watch $(gh run list --workflow=$WF_RELEASE --limit 1 --json databaseId --jq ".[0].databaseId") --exit-status\n\n' ;;
+            printf '    gh run watch %s --exit-status\n\n' "$_run_ref" ;;
         redeliver)
             printf '  %bNo run fired for v%s — this is the DEBOUNCE case.%b\n' "$B" "$V" "$N"
             printf '  A bundled `git push --tags` sends the branch and tag events together\n'
@@ -442,7 +467,7 @@ cmd_recover() {
             printf '  %bThe run failed and the tag IS HEAD — rerun is correct.%b\n' "$B" "$N"
             printf '  Nothing on main is missing from the tagged commit, so the failure can\n'
             printf '  only be transient (a CDN stall, a flake, a runner).\n\n'
-            printf '    gh run rerun --failed $(gh run list --workflow=$WF_RELEASE --limit 1 --json databaseId --jq ".[0].databaseId")\n\n' ;;
+            printf '    gh run rerun --failed %s\n\n' "$_run_ref" ;;
         retag)
             printf '  %b⚠ The run failed and MAIN HAS MOVED — do NOT rerun.%b\n\n' "$Y" "$N"
             printf '  `gh run rerun --failed` replays the TAGGED COMMIT, not main. If a later\n'
@@ -455,7 +480,7 @@ cmd_recover() {
         investigate)
             printf '  %b⚠ The run reports %s but %s is not on PyPI.%b\n' "$Y" "$_state" "$V" "$N"
             printf '  Neither a rerun nor a retag is indicated. Read the run first:\n\n'
-            printf '    gh run view $(gh run list --workflow=$WF_RELEASE --limit 1 --json databaseId --jq ".[0].databaseId")\n\n' ;;
+            printf '    gh run view %s\n\n' "$_run_ref" ;;
     esac
 }
 
@@ -472,6 +497,17 @@ cmd_run() {
     done
     [ "$(verdict_version "$V")" = ok ] || die "usage: release.sh run <X.Y.Z> --bump minor|patch"
     case "$BUMP" in minor|patch|major) : ;; *) die "--bump minor|patch|major is required" ;; esac
+
+    # Validate the skips against the table. `--skip flibbertigibbet` used to be
+    # accepted in silence — the same class cmd_retry already refuses, and here it
+    # is worse: you believe you have skipped the step that spends a build number,
+    # and you have skipped nothing.
+    SKIP_FLAGS=""
+    for _s in $SKIP; do
+        run_steps | awk -F'|' -v s="$_s" '$1==s{f=1} END{exit !f}' \
+            || die "no such step '$_s' (try: $(run_steps | awk -F'|' 'NF>1{printf "%s ", $1}'))"
+        SKIP_FLAGS="$SKIP_FLAGS --skip $_s"
+    done
 
     RUNDIR=".release/$V"; EVENTS="$RUNDIR/events.jsonl"; LOGDIR="$RUNDIR/logs"
 
@@ -535,12 +571,27 @@ cmd_run() {
     # every macOS cell red, and release the uploads. That is the 0.25.2 window
     # this step exists to close, reopened by the selector.
     #
-    # Pinned to HEAD too: 41 minutes of build sit between dispatch and watch,
+    # Pinned to a sha too: 41 minutes of build sit between dispatch and watch,
     # and this repo is trunk-on-main with concurrent sessions. A push in that
     # window would otherwise become "the newest run" — a verdict about a
     # DIFFERENT commit. Empty id fails closed (measured: `gh run watch ""` → 1).
-    CI_SHA="$(git rev-parse HEAD)"
-    CI_CMD="_id=\$(gh run list --workflow=$WF_CI --event workflow_dispatch --branch main --limit 10 --json databaseId,headSha --jq '[.[]|select(.headSha==\"'\"$CI_SHA\"'\")]|.[0].databaseId') && [ -n \"\$_id\" ] && [ \"\$_id\" != null ] && gh run watch \"\$_id\" --exit-status"
+    #
+    # WHICH sha is the whole fix. This was `CI_SHA=$(git rev-parse HEAD)`
+    # evaluated HERE, before the loop — i.e. BEFORE the bump step commits. The
+    # dispatch then ran against post-bump main while the selector filtered on
+    # the pre-bump sha, so a fresh `run` matched nothing and failed closed ~45
+    # minutes in, EVERY TIME. A resume recomputed it post-bump and passed,
+    # which is worse than a consistent failure: it reads as a flaky gate.
+    #
+    # So the dispatch step WRITES the sha it dispatched, and the watch step
+    # READS it. That also survives what a lazy $(git rev-parse HEAD) at watch
+    # time would not — a resume in a new shell, and a concurrent session
+    # committing during the 41 minutes.
+    CI_SHA_FILE="$RUNDIR/ci-sha"
+    DISPATCH_CMD="git rev-parse HEAD > '$CI_SHA_FILE' && gh workflow run $WF_CI --ref main -f $WF_STRICT_INPUT=true"
+    # env.SHA rather than interpolating into the jq program: one less quoting
+    # level, and the sha never passes through a string the shell re-parses.
+    CI_CMD="SHA=\$(cat '$CI_SHA_FILE' 2>/dev/null); [ -n \"\$SHA\" ] || { echo 'strict-ci recorded no dispatched sha — release.sh retry $V strict-ci'; exit 1; }; export SHA; _id=\$(gh run list --workflow=$WF_CI --event workflow_dispatch --branch main --limit 10 --json databaseId,headSha --jq '[.[]|select(.headSha==env.SHA)]|.[0].databaseId'); [ -n \"\$_id\" ] && [ \"\$_id\" != null ] && gh run watch \"\$_id\" --exit-status"
 
     ev_append run started "bump=$BUMP"
     while IFS='|' read -r id label kind est steptier cons cmd; do
@@ -550,6 +601,7 @@ cmd_run() {
         cmd="${cmd//__V__/$V}"; cmd="${cmd//__WF_CI__/$WF_CI}"; cmd="${cmd//__WF_STRICT__/$WF_STRICT_INPUT}"
         [ "$cmd" = "__BUMP__" ] && cmd="$BUMP_CMD"
         [ "$cmd" = "__TAG__" ] && cmd="$TAG_CMD"
+        [ "$cmd" = "__DISPATCH__" ] && cmd="$DISPATCH_CMD"
         [ "$cmd" = "__CIWAIT__" ] && cmd="$CI_CMD"
 
         case " $SKIP " in *" $id "*)
@@ -566,10 +618,17 @@ cmd_run() {
                            continue ;;
                         1) printf '  %b⚠%b %-26s %blog says done, the world disagrees, re-running%b\n' \
                                "$Y" "$N" "$label" "$D" "$N" ;;
-                        *) # No probe. Refuse to guess on an irreversible step.
-                           printf '\n  %b✗%b %s is recorded done and cannot be probed from here.\n' "$R" "$N" "$label"
-                           printf '    Re-running would spend it again. Confirm by hand, then either\n'
-                           printf '    %brelease.sh run %s --bump %s --skip %s%b to move past it,\n' "$B" "$V" "$BUMP" "$id" "$N"
+                        *) # 2 = no probe exists · 3 = the probe could not run.
+                           # Both are "I do not know", and the only safe answer
+                           # on an irreversible step is to stop and ask.
+                           if [ "$_pd" = 3 ]; then
+                               printf '\n  %b✗%b %s is recorded done and the probe could not reach the network.\n' "$R" "$N" "$label"
+                               printf '    An unreachable probe is not an absent artefact. Retry when online, or:\n'
+                           else
+                               printf '\n  %b✗%b %s is recorded done and cannot be probed from here.\n' "$R" "$N" "$label"
+                               printf '    Re-running would spend it again. Confirm by hand, then either\n'
+                           fi
+                           printf '    %brelease.sh run %s --bump %s%s --skip %s%b to move past it,\n' "$B" "$V" "$BUMP" "$SKIP_FLAGS" "$id" "$N"
                            printf '    or %brelease.sh retry %s %s%b to genuinely redo it.\n\n' "$B" "$V" "$id" "$N"
                            exit 3 ;;
                     esac
@@ -578,6 +637,25 @@ cmd_run() {
                     printf '  %b—%b %-26s %bskipped (done)%b\n' "$D" "$N" "$label" "$D" "$N"
                     continue
                     ;;
+            esac
+        elif [ "$prev" = "skipped" ]; then
+            # fold_status returns `skipped`, and this branch did not exist — so a
+            # skipped step fell through and EXECUTED on the next invocation. The
+            # resume line printed after a later failure omitted the --skip flags,
+            # so the documented flow (skip testflight, dmg fails, fix, re-run as
+            # printed) re-spent the build number the skip existed to protect.
+            #
+            # Reversible steps just run: that is what a resume is for. An
+            # irreversible one stops and makes the human say which they meant,
+            # because both readings are defensible and only one is recoverable.
+            case "$kind" in
+                soft|hard)
+                    printf '\n  %b✗%b %s was skipped by --skip on an earlier run.\n' "$R" "$N" "$label"
+                    printf '    It is irreversible, so this will not decide for you:\n'
+                    printf '      %brelease.sh run %s --bump %s%s%b   keep skipping it\n' "$B" "$V" "$BUMP" "$SKIP_FLAGS --skip $id" "$N"
+                    printf '      %brelease.sh retry %s %s%b   run it after all\n\n' "$B" "$V" "$id" "$N"
+                    exit 3 ;;
+                *) : ;;   # reversible — fall through and run it
             esac
         elif [ "$prev" = "running" ] || [ "$prev" = "corrupt" ]; then
             printf '\n  %b✗%b %s was interrupted and its outcome is unrecorded.\n' "$R" "$N" "$label"
@@ -620,8 +698,10 @@ cmd_run() {
             # the START of one enormous line and a healthy transfer reads frozen.
             tr '\r' '\n' < "$LOG" | grep -vE '^[[:space:]]*$' | tail -12 | sed 's/^/      /'
             printf '\n  %blog%b %s\n' "$D" "$N" "$LOG"
-            printf '  %bfix, then%b release.sh run %s --bump %s   %b(resumes here)%b\n\n' \
-                "$B" "$N" "$V" "$BUMP" "$D" "$N"
+            # SKIP_FLAGS, or the printed resume silently drops the skips and the
+            # next invocation re-performs what they were protecting.
+            printf '  %bfix, then%b release.sh run %s --bump %s%s   %b(resumes here)%b\n\n' \
+                "$B" "$N" "$V" "$BUMP" "$SKIP_FLAGS" "$D" "$N"
             exit 1
         fi
     done <<EOF

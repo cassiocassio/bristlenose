@@ -164,6 +164,60 @@ rc=$(drive 1.0.0 --skip tf)
 eq "--skip lets the run proceed" 75 "$rc"
 eq "the skip is recorded, not silent" skipped "$(status_of 1.0.0 tf)"
 
+head_ "8a · a resume must not silently re-run what --skip protected (F38)"
+# The bug: fold_status returns `skipped`, the resume branch handled only ok and
+# running|corrupt, so `skipped` fell through and EXECUTED — re-spending the
+# build number on the one step whose declared cost is that it cannot be unspent.
+fresh
+steps <<'EOF'
+a|first|plain|1m|||true
+tf|upload tf|soft|1m||SOFT: spends a build number|sh -c 'echo SPENT >> spent.txt'
+b|second|plain|1m|||true
+EOF
+rc=$(drive 1.0.0 --skip tf)
+eq "the skipping run completes" 75 "$rc"
+rc=$(drive 1.0.0)
+eq "the bare resume refuses rather than spending it" 3 "$rc"
+[ -f "$WORK/repo/spent.txt" ] && bad "RE-SPENT a step that --skip had protected" \
+                              || ok "the irreversible step was not re-run"
+grep -q 'keep skipping it' "$WORK/out" && ok "offers both readings explicitly" || bad "no guidance"
+rc=$(drive 1.0.0 --skip tf)
+eq "re-skipping proceeds" 75 "$rc"
+[ -f "$WORK/repo/spent.txt" ] && bad "spent it under --skip" || ok "still not spent"
+
+head_ "8b · a skipped REVERSIBLE step just runs on resume"
+fresh
+steps <<'EOF'
+r|reversible|plain|1m|||sh -c 'echo RAN >> ran.txt'
+EOF
+rc=$(drive 1.0.0 --skip r)
+eq "skipped first time" 75 "$rc"
+[ -f "$WORK/repo/ran.txt" ] && bad "ran despite --skip" || ok "not run when skipped"
+rc=$(drive 1.0.0)
+eq "resume proceeds" 75 "$rc"
+[ -f "$WORK/repo/ran.txt" ] && ok "a reversible skip is not sticky" || bad "did not run on resume"
+
+head_ "8c · the resume line a failure prints carries the skips it was given"
+fresh
+steps <<'EOF'
+tf|upload tf|soft|1m||SOFT|true
+boom|fails|plain|1m|||false
+EOF
+rc=$(drive 1.0.0 --skip tf)
+eq "fails at boom" 1 "$rc"
+grep -q -- '--bump patch --skip tf' "$WORK/out" \
+    && ok "the printed resume keeps --skip tf" \
+    || bad "printed a resume that would re-spend tf: $(grep -o 'release.sh run.*' "$WORK/out" | head -1)"
+
+head_ "8d · --skip on a step that does not exist is refused"
+fresh
+steps <<'EOF'
+a|first|plain|1m|||true
+EOF
+rc=$(drive 1.0.0 --skip flibbertigibbet)
+eq "refuses an unknown step id" 2 "$rc"
+grep -q "no such step" "$WORK/out" && ok "names the valid ids" || bad "silent"
+
 head_ "9 · a probe that says DONE skips; one that says ABSENT re-runs"
 fresh
 steps <<'EOF'
@@ -180,6 +234,27 @@ stub git 'case "$*" in *ls-remote*) exit 0 ;; *) exit 0 ;; esac'   # empty outpu
 rc=$(drive 1.0.0)
 [ -f "$WORK/repo/ran.txt" ] && ok "probe says absent -> re-ran" \
                             || bad "did not re-run when the world says absent"
+
+head_ "9a · an UNREACHABLE probe must not read as absent (F41)"
+# `git ls-remote | grep -q .` gave 1 for both "no such tag" and "no network".
+# The caller answers 1 by re-running — so a blip re-pushed a tag, or re-published
+# 644 MB. Tri-state is the rule this whole chain is built on; this was the one
+# place where breaking it costs something irreversible.
+fresh
+steps <<'EOF'
+tag|tag + push|hard|1m||THIS PUBLISHES|sh -c 'echo RERAN >> ran.txt'
+EOF
+mkdir -p "$WORK/repo/.release/1.0.0/logs"
+printf '{"ts":"x","run":"1.0.0","step":"tag","status":"ok","detail":"2s"}\n' \
+     > "$WORK/repo/.release/1.0.0/events.jsonl"
+# ls-remote fails the way an offline remote fails: non-zero, no output.
+stub git 'case "$*" in *ls-remote*) exit 128 ;; *) exit 0 ;; esac'
+rc=$(drive 1.0.0)
+eq "an unreachable probe stops the run" 3 "$rc"
+[ -f "$WORK/repo/ran.txt" ] && bad "RE-RAN an irreversible step on a network failure" \
+                            || ok "did not re-run on an unreachable probe"
+grep -q 'could not reach the network' "$WORK/out" \
+    && ok "and says so, rather than 'the world disagrees'" || bad "wrong diagnosis"
 
 head_ "10 · a command containing quotes, semicolons and a pipe"
 fresh
@@ -265,6 +340,39 @@ if pgrep -f "$WORK/steps.tbl" >/dev/null 2>&1; then
 else
     ok "no orphaned child from this run"
 fi
+
+head_ "17 · the strict-CI gate filters on the POST-BUMP sha (F39)"
+# The regression: CI_SHA was captured before the loop, so the dispatch ran
+# against post-bump main while the watcher filtered on the pre-bump sha —
+# a fresh run failed closed ~45 minutes in, every time.
+fresh
+steps <<'EOF'
+bump|bump + commit|plain|1m|||git commit -q --allow-empty -m bumped
+strict-ci|dispatch strict CI|plain|1m|||__DISPATCH__
+ci-green|GATE strict CI green|gate|1m|||__CIWAIT__
+EOF
+# The stub records what the selector actually filtered on. CI_CMD exports SHA
+# for jq's env.SHA, so the stub can read the same value jq would.
+stub gh 'case "$1 $2" in
+  "run list") printf "%s" "$SHA" > "$PWD/filtered-on" ; echo 12345 ;;
+  "run watch") exit 0 ;;
+  *) exit 0 ;;
+esac'
+rc=$(drive 1.0.0)
+eq "the run completes" 75 "$rc"
+_post=$( cd "$WORK/repo" && git rev-parse HEAD )
+eq "the recorded sha is post-bump HEAD" "$_post" "$(cat "$WORK/repo/.release/1.0.0/ci-sha" 2>/dev/null)"
+eq "the gate filtered on that same sha"  "$_post" "$(cat "$WORK/repo/filtered-on" 2>/dev/null)"
+
+head_ "18 · ci-green with no recorded sha fails closed, it does not watch by recency"
+fresh
+steps <<'EOF'
+ci-green|GATE strict CI green|gate|1m|||__CIWAIT__
+EOF
+stub gh 'echo 99999'
+rc=$(drive 1.0.0)
+eq "no dispatched sha -> the gate fails" 1 "$rc"
+grep -q 'recorded no dispatched sha' "$WORK/out" && ok "and says which step to retry"                                                  || bad "no explanation"
 
 meta_check
 finish

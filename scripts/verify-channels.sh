@@ -265,10 +265,25 @@ for m in d.get('channel-map',[]):
 probe_website() {
     # The STRONGEST probe available: that page renders from CHANGELOG.md at build
     # time, so a hit proves the deploy ran AFTER the entry existed.
-    SITE_BODY=$(fetch "$CHANGELOG_URL")
+    #
+    # Reads $SITE_BODY, fetched by the PARENT below. It used to fetch it here,
+    # which looked right and could not work: the loop calls every probe in a
+    # command substitution, so the assignment died with the subshell and the
+    # --abandoned row that rides this body always read "changelog not fetched"
+    # — one line under a website row saying "changelog fetched". Fails closed,
+    # so it never false-passed; it simply never worked.
     printf '%s|%s' "$(verdict_contains "$SITE_BODY" "$VERSION")" \
         "$([ -n "$SITE_BODY" ] && echo "changelog fetched" || echo "unreachable")"
 }
+
+# Fetched once, in the parent, before the loop — the only scope both the website
+# probe and the --abandoned row below can see. Fetched when EITHER needs it, so
+# --abandoned works against a project whose CHANNELS omit the website.
+SITE_BODY=""
+_need_site=0
+case " $CHANNELS " in *" website "*) _need_site=1 ;; esac
+[ -n "$ABANDONED" ] && _need_site=1
+[ "$_need_site" = 1 ] && SITE_BODY=$(fetch "$CHANGELOG_URL")
 
 printf '\n\033[1mChannels · %s\033[0m\n\n' "$VERSION"
 
@@ -285,7 +300,7 @@ done
 
 # The abandoned-version check rides the website body the loop already fetched.
 if [ -n "$ABANDONED" ]; then
-    if [ -z "${SITE_BODY:-}" ]; then
+    if [ -z "$SITE_BODY" ]; then
         row "  ↳ $ABANDONED gone" "unreachable" "changelog not fetched"
     else
         row "  ↳ $ABANDONED gone" "$(verdict_absent "$SITE_BODY" "$ABANDONED")" \

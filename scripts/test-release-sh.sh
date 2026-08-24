@@ -280,6 +280,44 @@ _v=$(sed -n "$VERSION_REGEX" "$ROOT/$VERSION_FILE")
 case "$_v" in [0-9]*.[0-9]*.[0-9]*) ok "VERSION_REGEX extracts a version ($_v)" ;;
               *) bad "VERSION_REGEX extracted '$_v'" ;; esac
 
+head_ "recover names the run it DIAGNOSED, not the newest one (F42)"
+# The diagnosis filters headBranch=="v$V"; the three pasted remedies used to be
+# `gh run … $(gh run list --limit 1 …)` — recency. Recovering an older version
+# while any newer release run existed reran the wrong one. They also printed a
+# literal, unexpanded $WF_RELEASE, so the paste ran `gh run list --workflow=`.
+_W=$(mktemp -d); trap 'rm -rf "$_W"' EXIT INT TERM
+mkdir -p "$_W/repo/scripts" "$_W/bin"
+cp "$ROOT/scripts/release.sh" "$ROOT/scripts/project.conf" "$_W/repo/scripts/"
+( cd "$_W/repo" && git init -q . && git commit -q --allow-empty -m init && git tag v1.0.0 ) 2>/dev/null
+# 111 is v1.0.0's run; 999 is a newer, unrelated one — what recency would pick.
+cat > "$_W/bin/gh" <<'GHSTUB'
+#!/bin/sh
+case "$*" in
+  *databaseId,headBranch*) echo "111|$BN_FAKE_STATE" ;;
+  *) echo 999 ;;
+esac
+GHSTUB
+printf '#!/bin/sh
+case " $* " in *" -w "*) printf 404 ;; esac
+' > "$_W/bin/curl"
+chmod +x "$_W/bin/gh" "$_W/bin/curl"
+
+for _case in "failure:rerun --failed" "in_progress:watch" "success:view"; do
+    _st="${_case%%:*}"; _want="${_case#*:}"
+    _out=$( cd "$_W/repo" && PATH="$_W/bin:$PATH" BN_FAKE_STATE="$_st" \
+            bash scripts/release.sh recover 1.0.0 2>&1 )
+    _line=$(printf '%s' "$_out" | sed 's/\x1b\[[0-9;]*m//g' | grep -E '^ *gh run' | head -1)
+    case "$_line" in
+        *"gh run $_want 111"*) ok "$_st -> names run 111" ;;
+        *999*)                 bad "$_st -> pasted the NEWEST run (999): $_line" ;;
+        *)                     bad "$_st -> unexpected remedy: ${_line:-<none printed>}" ;;
+    esac
+    case "$_line" in
+        *'$('*|*'$WF'*) bad "$_st -> remedy still carries an unresolved shell expansion: $_line" ;;
+        *)              ok "$_st -> the remedy is paste-ready" ;;
+    esac
+done
+
 head_ "meta"
 _before=$FAIL
 _r=$(eq "deliberate" ok malformed 2>&1)

@@ -107,4 +107,73 @@ done
 out=$(bash "$ROOT/scripts/verify-channels.sh" --bogus 2>&1); rc=$?
 [ "$rc" = "2" ] && ok "refused unknown flag" || bad "accepted unknown flag (exit $rc)"
 
+# ---------------------------------------------------------------------------
+head_ "the DRIVER, not just its verdicts — the half the LIB seam cannot see"
+# --abandoned was structurally broken for as long as the channel loop has
+# existed: probe_website assigned SITE_BODY inside a command substitution, so
+# the row that rides that body always said "changelog not fetched". Every
+# assertion above passed throughout — the bug lived below the seam, which is
+# the argument for this section existing at all.
+# ---------------------------------------------------------------------------
+WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT INT TERM
+mkdir -p "$WORK/repo/scripts" "$WORK/bin"
+cp "$ROOT/scripts/verify-channels.sh" "$ROOT/scripts/project.conf" "$WORK/repo/scripts/"
+
+# One stub for every network dependency. The changelog body is the only thing
+# these tests actually vary; the rest just have to be well-formed enough that
+# the run reaches the rollup.
+cat > "$WORK/bin/curl" <<'CURL'
+#!/bin/sh
+for a in "$@"; do case "$a" in
+  *changelog*) cat "$BN_FAKE_CHANGELOG"; exit 0 ;;
+  *snapcraft*) echo '{"channel-map":[{"channel":{"name":"edge"},"version":"9.9.9"}]}'; exit 0 ;;
+  *.dmg.sha256) exit 22 ;;
+  *dmg*) printf 'HTTP/2 302
+location: https://x/App-9.9.9.dmg
+'; exit 0 ;;
+  *pypi*) case " $* " in *" -w "*) printf '200' ;; esac; exit 0 ;;
+esac; done
+exit 0
+CURL
+cat > "$WORK/bin/gh" <<'GH'
+#!/bin/sh
+echo v9.9.9
+GH
+chmod +x "$WORK/bin/curl" "$WORK/bin/gh"
+
+verify() { ( cd "$WORK/repo" && PATH="$WORK/bin:$PATH" BN_FAKE_CHANGELOG="$WORK/changelog" \
+             bash scripts/verify-channels.sh "$@" ) 2>&1; }
+
+printf '9.9.9 released\n9.8.0 before it\n' > "$WORK/changelog"
+
+# THE ROW, not the whole output. A `case "$out" in *"✗"*"gone"*)` glob matches a
+# ✗ printed by any earlier row, so three of these four assertions passed against
+# the broken script on their first draft — the substring trap this file's own
+# _token_present tests are about, committed in the test that was checking for it.
+gone_row() { printf '%s' "$1" | sed 's/\x1b\[[0-9;]*m//g' | grep 'gone' | head -1; }
+
+out=$(verify 9.9.9 --abandoned 9.8.0)
+case "$(gone_row "$out")" in
+    *"changelog not fetched"*) bad "--abandoned still cannot see the fetched body" ;;
+    *) ok "--abandoned reads the body the website probe fetched" ;;
+esac
+case "$(gone_row "$out")" in
+    *✗*) ok "an abandoned version still on the page is caught" ;;
+    *)   bad "did not catch a present abandoned version: $(gone_row "$out")" ;;
+esac
+
+printf '9.9.9 released\n' > "$WORK/changelog"
+out=$(verify 9.9.9 --abandoned 9.8.0)
+case "$(gone_row "$out")" in
+    *✓*) ok "and clears once the entry is gone" ;;
+    *)   bad "did not clear: $(gone_row "$out")" ;;
+esac
+
+# The direction that matters for the exit code: a present abandoned version
+# must make the whole verify fail, not merely print a red row.
+printf '9.9.9 released\n9.8.0 before it\n' > "$WORK/changelog"
+verify 9.9.9 --abandoned 9.8.0 >/dev/null 2>&1; rc=$?
+[ "$rc" = "1" ] && ok "a present abandoned version fails the rollup" \
+                || bad "rollup passed with the abandoned version still live (exit $rc)"
+
 finish

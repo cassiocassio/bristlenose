@@ -280,6 +280,48 @@ _v=$(sed -n "$VERSION_REGEX" "$ROOT/$VERSION_FILE")
 case "$_v" in [0-9]*.[0-9]*.[0-9]*) ok "VERSION_REGEX extracts a version ($_v)" ;;
               *) bad "VERSION_REGEX extracted '$_v'" ;; esac
 
+head_ "every project.conf constant has a consumer (F44)"
+# The file's own header claimed check-release-ready.sh sourced it. It did not,
+# and carried the PyPI URL, both GitHub repos and the advisory workflow list as
+# literals — while WF_SNAP, WF_ADVISORY and ADVISORY_STREAK_MAX sat in the conf
+# with no reader anywhere. A config nobody reads is worse than a literal: the
+# literal at least does not lie about where the value lives.
+#
+# Comment lines are stripped before searching, so a constant merely NAMED in
+# prose does not count as consumed — which is the shape the old header had.
+_consumers="$ROOT/scripts/release.sh $ROOT/scripts/verify-channels.sh $ROOT/scripts/check-release-ready.sh $ROOT/scripts/project.conf"
+# Collapsed to a STRING and searched with a herestring, never a live pipe. Under
+# `set -o pipefail`, `grep -q` exits at its first match, the upstream grep takes
+# SIGPIPE and exits 141, and 141 becomes the pipeline's status — so a match near
+# the TOP of the stream reads as no match. The first draft of this block did
+# exactly that and reported 15 consumed constants as unconsumed, the ones whose
+# only hit was early in release.sh. Same trap verify-channels.sh's
+# _token_present carries a paragraph about; reproduced here, in the test written
+# to enforce these conventions.
+_haystack=$(grep -hvE '^[[:space:]]*#' $_consumers 2>/dev/null)
+_names=$(grep -oE '^[A-Z][A-Z0-9_]*=' "$ROOT/scripts/project.conf" | tr -d '=')
+_count=$(printf '%s\n' "$_names" | grep -c .)
+[ "${#_haystack}" -gt 10000 ] && ok "read $((${#_haystack}/1024))KB of consumer source" \
+                             || bad "the consumer corpus is ${#_haystack} bytes — nothing would match"
+# A broken extraction finds nothing and every assertion below silently passes.
+[ "$_count" -ge 15 ] && ok "found $_count constants to check" \
+                     || bad "extracted only $_count constants — the regex is wrong, not the conf"
+for _v in $_names; do
+    # \$VAR or \${VAR}, not followed by another name character: CHANNELS must not
+    # be satisfied by CHANNELS_UNPROBEABLE.
+    if grep -qE '\$\{?'"$_v"'\}?([^A-Za-z0-9_]|$)' <<<"$_haystack"; then
+        ok "$_v is read by something"
+    else
+        bad "$_v has no consumer — wire it or delete it"
+    fi
+done
+# And prove that check can fail, on a name that is deliberately absent.
+if grep -qE '\$\{?BN_NO_SUCH_CONSTANT\}?([^A-Za-z0-9_]|$)' <<<"$_haystack"; then
+    bad "the consumer search matches a constant that does not exist"
+else
+    ok "the search reports a genuinely unconsumed name"
+fi
+
 head_ "recover names the run it DIAGNOSED, not the newest one (F42)"
 # The diagnosis filters headBranch=="v$V"; the three pasted remedies used to be
 # `gh run … $(gh run list --limit 1 …)` — recency. Recovering an older version

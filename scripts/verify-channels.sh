@@ -288,14 +288,36 @@ case " $CHANNELS " in *" website "*) _need_site=1 ;; esac
 printf '\n\033[1mChannels · %s\033[0m\n\n' "$VERSION"
 
 for _ch in $CHANNELS; do
+    # CHANNELS_UNPROBEABLE is the allow-list for "no probe exists here", and it
+    # is consulted in BOTH directions. It used to be consulted in neither: the
+    # constant sat in project.conf with no reader while probe_testflight
+    # hardcoded the same fact, so the declaration and the behaviour could
+    # disagree indefinitely and nothing would say so.
+    _declared=0
+    case " $CHANNELS_UNPROBEABLE " in *" $_ch "*) _declared=1 ;; esac
+
     if ! command -v "probe_$_ch" >/dev/null 2>&1 && ! declare -F "probe_$_ch" >/dev/null 2>&1; then
-        printf '  %b✗%b %-18s %sno probe_%s function — channel listed but unchecked%s\n' \
-            "$R" "$N" "$_ch" "$D" "$_ch" "$N"
-        VERDICTS+=("bad")
+        if [ "$_declared" = 1 ]; then
+            row "$_ch" "skipped" "declared unprobeable in project.conf"
+        else
+            printf '  %b✗%b %-18s %sno probe_%s function — channel listed but unchecked%s\n' \
+                "$R" "$N" "$_ch" "$D" "$_ch" "$N"
+            VERDICTS+=("bad")
+        fi
         continue
     fi
+
     _res="$(probe_"$_ch")"
-    row "$_ch" "${_res%%|*}" "${_res#*|}"
+    _verdict="${_res%%|*}"
+    # The other direction, and the one that actually hides a channel: a probe
+    # that answers `skipped` while nothing declares it unprobeable is a channel
+    # excusing itself. `skipped` is the one verdict rollup() accepts as a pass,
+    # so this is the shape that reads verified while checking nothing.
+    if [ "$_verdict" = skipped ] && [ "$_declared" = 0 ]; then
+        row "$_ch" "bad" "reported skipped but is not in CHANNELS_UNPROBEABLE"
+        continue
+    fi
+    row "$_ch" "$_verdict" "${_res#*|}"
 done
 
 # The abandoned-version check rides the website body the loop already fetched.

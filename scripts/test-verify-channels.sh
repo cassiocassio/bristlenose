@@ -169,6 +169,35 @@ case "$(gone_row "$out")" in
     *)   bad "did not clear: $(gone_row "$out")" ;;
 esac
 
+# CHANNELS_UNPROBEABLE, both directions (F44). It had no reader at all: the
+# constant declared testflight unprobeable and probe_testflight independently
+# hardcoded the same fact, so the two could disagree forever in silence.
+printf '9.9.9 released\n' > "$WORK/changelog"
+_conf="$WORK/repo/scripts/project.conf"
+_orig=$(cat "$_conf")
+_tf_row() { printf '%s' "$1" | sed 's/\x1b\[[0-9;]*m//g' | grep 'testflight' | head -1; }
+
+# Declared: probe_testflight answers `skipped`, and that is accepted.
+case "$(_tf_row "$(verify 9.9.9)")" in
+    *—*) ok "a declared-unprobeable channel reports skipped" ;;
+    *)   bad "declared unprobeable but did not report skipped: $(_tf_row "$(verify 9.9.9)")" ;;
+esac
+
+# Undeclared: the SAME probe, the same `skipped`, now with nothing declaring it.
+# That is a channel excusing itself, and `skipped` is the one verdict the rollup
+# accepts as a pass — so this is the shape that reads verified while checking
+# nothing, which is the defect this whole file exists for.
+printf '%s\n' "${_orig//CHANNELS_UNPROBEABLE=\"testflight\"/CHANNELS_UNPROBEABLE=\"\"}" > "$_conf"
+grep -q 'CHANNELS_UNPROBEABLE=""' "$_conf" && ok "the fixture actually undeclared it" \
+                                           || bad "fixture edit did not take — the test below proves nothing"
+case "$(_tf_row "$(verify 9.9.9)")" in
+    *"not in CHANNELS_UNPROBEABLE"*) ok "an undeclared skip is caught" ;;
+    *) bad "a probe excused itself unchallenged: $(_tf_row "$(verify 9.9.9)")" ;;
+esac
+verify 9.9.9 >/dev/null 2>&1; rc=$?
+[ "$rc" = "1" ] && ok "and it fails the rollup" || bad "undeclared skip passed the rollup (exit $rc)"
+printf '%s' "$_orig" > "$_conf"
+
 # The direction that matters for the exit code: a present abandoned version
 # must make the whole verify fail, not merely print a red row.
 printf '9.9.9 released\n9.8.0 before it\n' > "$WORK/changelog"

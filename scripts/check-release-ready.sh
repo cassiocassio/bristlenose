@@ -59,6 +59,14 @@ verdict_shippable() {
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# Project identity. This file's own header claimed it sourced project.conf and
+# it did not — it carried the PyPI URL, both GitHub repos and the advisory
+# workflow list as literals, which is precisely the drift project.conf exists to
+# end. Below the LIB guard on purpose: a caller sourcing this for verdict_* gets
+# the pure functions and nothing else.
+# shellcheck source=scripts/project.conf
+. "$ROOT/scripts/project.conf"
+
 SCOPE=all
 VERSION=""
 for arg in "$@"; do
@@ -79,7 +87,7 @@ warn() { printf '  \033[33m⚠\033[0m %-26s %s\n' "$1" "${2:-}"; WARN=$((WARN+1)
 bad()  { printf '  \033[31m✗\033[0m %-26s %s\n' "$1" "${2:-}" >&2; FAIL=$((FAIL+1)); }
 head_() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 
-CURRENT=$(sed -n 's/^__version__ *= *"\(.*\)"/\1/p' bristlenose/__init__.py | head -1)
+CURRENT=$(sed -n "$VERSION_REGEX" "$VERSION_FILE" | head -1)
 [ -n "$CURRENT" ] || { echo "could not read __version__" >&2; exit 2; }
 TARGET="${VERSION:-$CURRENT}"
 PRE_BUMP=0
@@ -221,7 +229,7 @@ head_ "Not already released"
 # has drifted from HEAD is routine after a published release and alarming before
 # one, and reporting both cases the same way would be crying wolf.
 PYPI_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
-    "https://pypi.org/pypi/bristlenose/$TARGET/json" 2>/dev/null || echo "000")
+    "$(printf "$PYPI_JSON" "$TARGET")" 2>/dev/null || echo "000")
 case "$PYPI_CODE" in
     404) ok "PyPI" "$TARGET not published — free to use" ;;
     200) if [ "$PRE_BUMP" -eq 1 ]; then
@@ -354,7 +362,7 @@ elif ! git branch -r --contains "$SHA" 2>/dev/null | grep -q origin; then
 else
     # gh's built-in --jq, so no external jq dependency. `.[0] // {}` keeps an
     # empty run list from crashing the filter; the result is a bare "|".
-    RUN=$(gh run list --commit "$SHA" --workflow ci.yml --limit 1 \
+    RUN=$(gh run list --commit "$SHA" --workflow "$WF_CI" --limit 1 \
           --json conclusion,status \
           --jq '.[0] // {} | "\(.status // "")|\(.conclusion // "")"' 2>/dev/null \
           || echo "QUERY_FAILED")
@@ -387,8 +395,8 @@ fi
 # ever broken, a tag push publishes untested code — which is the thing the hold
 # was standing in for, and is worth failing over.
 head_ "Publish gate"
-if [ ! -f .github/workflows/release.yml ]; then
-    bad "publish gate" "no release.yml"
+if [ ! -f ".github/workflows/$WF_RELEASE" ]; then
+    bad "publish gate" "no $WF_RELEASE"
 else
     # PARSE, don't grep. Four text searches cannot establish a job graph:
     # `strict-macos:\s*true` was unanchored across the whole file (a comment
@@ -401,16 +409,18 @@ else
     if [ ! -x .venv/bin/python ]; then
         warn "publish gate" "no venv — cannot parse the workflows"
     else
-        _gate=$(.venv/bin/python - <<'GATEPY' 2>&1
+        _gate=$(.venv/bin/python - "$WF_RELEASE" "$WF_CI" "$WF_STRICT_INPUT" <<'GATEPY' 2>&1
 import sys, yaml
+
+REL_WF, CI_WF, STRICT = sys.argv[1], sys.argv[2], sys.argv[3]
 
 def needs(job):
     n = job.get("needs", [])
     return [n] if isinstance(n, str) else list(n)
 
 try:
-    rel = yaml.safe_load(open(".github/workflows/release.yml"))["jobs"]
-    ci = yaml.safe_load(open(".github/workflows/ci.yml"))["jobs"]
+    rel = yaml.safe_load(open(f".github/workflows/{REL_WF}"))["jobs"]
+    ci = yaml.safe_load(open(f".github/workflows/{CI_WF}"))["jobs"]
 except Exception as exc:
     sys.exit(f"could not parse: {exc}")
 
@@ -418,16 +428,16 @@ if "build" not in needs(rel.get("publish", {})):
     sys.exit("publish does not need build")
 if "ci" not in needs(rel.get("build", {})):
     sys.exit("build does not need ci")
-if rel.get("ci", {}).get("with", {}).get("strict-macos") is not True:
-    sys.exit("release.yml does not invoke ci.yml with strict-macos: true")
+if rel.get("ci", {}).get("with", {}).get(STRICT) is not True:
+    sys.exit(f"{REL_WF} does not invoke {CI_WF} with {STRICT}: true")
 
 # The property "strict means macOS BLOCKS" is implemented in ci.yml, by a
 # continue-on-error expression that must consult the input. A bare `true`
 # there disarms the whole chain while every string above still matches.
 coe = str(ci.get("test", {}).get("continue-on-error", ""))
-if "strict-macos" not in coe:
-    sys.exit(f"ci.yml test.continue-on-error does not consult strict-macos: {coe!r}")
-print("publish -> build -> ci, and ci.yml honours strict-macos")
+if STRICT not in coe:
+    sys.exit(f"{CI_WF} test.continue-on-error does not consult {STRICT}: {coe!r}")
+print(f"publish -> build -> ci, and {CI_WF} honours {STRICT}")
 GATEPY
         ); _gate_rc=$?
         case "$_gate_rc" in
@@ -438,7 +448,7 @@ GATEPY
 
     # And record which world we are in, because the ordering depends on it.
     if command -v gh >/dev/null 2>&1; then
-        _hold=$(gh api repos/cassiocassio/bristlenose/environments/pypi \
+        _hold=$(gh api "repos/$GH_REPO/environments/pypi" \
                   --jq '[.protection_rules[] | select(.type=="required_reviewers")] | length' \
                   2>/dev/null || echo "QUERY_FAILED")
         case "$_hold" in
@@ -571,7 +581,7 @@ fi
 if ! command -v gh >/dev/null 2>&1; then
     warn "publish state" "gh not installed — unverified"
 else
-    _run=$(gh run list --workflow=release.yml --limit 1 --json databaseId,status \
+    _run=$(gh run list --workflow="$WF_RELEASE" --limit 1 --json databaseId,status \
              --jq '.[0] | select(.status=="waiting") | .databaseId' 2>/dev/null || echo "QUERY_FAILED")
     case "$_run" in
         QUERY_FAILED) warn "publish state" "could not query release runs — unverified" ;;
@@ -613,7 +623,7 @@ if ! command -v gh >/dev/null 2>&1; then
     warn "tap workflow" "gh not installed — drift unverified"
 else
     _local_wf=".github/workflows/homebrew-tap/update-formula.yml"
-    _live_sha=$(gh api repos/cassiocassio/homebrew-bristlenose/contents/.github/workflows/update-formula.yml \
+    _live_sha=$(gh api "repos/$TAP_REPO/contents/.github/workflows/update-formula.yml" \
                   --jq .sha 2>/dev/null || echo "QUERY_FAILED")
     case "$_live_sha" in
         QUERY_FAILED|"") warn "tap workflow" "could not read the tap repo — drift unverified" ;;
@@ -642,7 +652,7 @@ fi
 if ! command -v gh >/dev/null 2>&1; then
     warn "advisory workflows" "gh not installed — unverified"
 else
-    for _wf in perf.yml codeql.yml; do
+    for _wf in $WF_ADVISORY; do
         _runs=$(gh run list --workflow="$_wf" --branch main --limit 5 \
                   --json conclusion --jq '[.[].conclusion] | join(" ")' 2>/dev/null \
                 || echo "QUERY_FAILED")
@@ -653,7 +663,7 @@ else
                 for _c in $_runs; do
                     case "$_c" in failure|timed_out) _streak=$((_streak+1)) ;; *) break ;; esac
                 done
-                if [ "$_streak" -ge 3 ]; then
+                if [ "$_streak" -ge "$ADVISORY_STREAK_MAX" ]; then
                     bad  "${_wf%.yml} streak" "red for the last $_streak runs on main — advisory, so nothing else says so"
                 elif [ "$_streak" -gt 0 ]; then
                     warn "${_wf%.yml} streak" "red for the last $_streak run(s) on main"

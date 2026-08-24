@@ -242,8 +242,8 @@ ci-green|GATE strict CI green|gate|38m|||__CIWAIT__
 testflight|upload to TestFlight|soft|6m||SOFT: spends a build number forever, and it reaches cohort testers|desktop/scripts/upload-testflight.sh
 dmg|publish the dmg|soft|13m||the public permalink swaps the moment this lands|desktop/scripts/upload-dmg.sh
 tag|tag + push|hard|2m||HARD: this PUBLISHES. __V__ can never be re-used on PyPI|__TAG__
-snap|snap edge|plain|10m|||gh workflow run snap.yml --ref main
-snap-stable|snap stable|plain|10m|2||gh workflow run snap.yml --ref v__V__
+snap|snap edge|plain|10m|||gh workflow run __WF_SNAP__ --ref main
+snap-stable|snap stable|plain|10m|2||gh workflow run __WF_SNAP__ --ref v__V__
 RUNTBL
 }
 
@@ -298,7 +298,7 @@ cmd_plan() {
             esac
         fi
         [ -n "$cons" ] && printf '      %b%s%b\n' "$Y" "${cons//__V__/$V}" "$N"
-        cmd="${cmd//__V__/$V}"; cmd="${cmd//__WF_CI__/$WF_CI}"; cmd="${cmd//__WF_STRICT__/$WF_STRICT_INPUT}"
+        cmd="${cmd//__V__/$V}"; cmd="${cmd//__WF_CI__/$WF_CI}"; cmd="${cmd//__WF_STRICT__/$WF_STRICT_INPUT}"; cmd="${cmd//__WF_SNAP__/$WF_SNAP}"
         case "$cmd" in
             __BUMP__)   cmd="./scripts/bump-version.py <minor|patch> && git commit" ;;
             __TAG__)    cmd="git tag v$V && git push origin v$V" ;;
@@ -598,7 +598,7 @@ cmd_run() {
         [ -z "$id" ] && continue
         # run is Tier 1; a Tier 2 promotion is a different act, not a longer run.
         [ -n "$steptier" ] && continue
-        cmd="${cmd//__V__/$V}"; cmd="${cmd//__WF_CI__/$WF_CI}"; cmd="${cmd//__WF_STRICT__/$WF_STRICT_INPUT}"
+        cmd="${cmd//__V__/$V}"; cmd="${cmd//__WF_CI__/$WF_CI}"; cmd="${cmd//__WF_STRICT__/$WF_STRICT_INPUT}"; cmd="${cmd//__WF_SNAP__/$WF_SNAP}"
         [ "$cmd" = "__BUMP__" ] && cmd="$BUMP_CMD"
         [ "$cmd" = "__TAG__" ] && cmd="$TAG_CMD"
         [ "$cmd" = "__DISPATCH__" ] && cmd="$DISPATCH_CMD"

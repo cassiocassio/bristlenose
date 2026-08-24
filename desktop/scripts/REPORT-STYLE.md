@@ -313,6 +313,47 @@ than the rule.
 - **zsh does not word-split unquoted variables.** `for f in $LIST` iterates
   once, over the whole string, and reports success having done nothing.
 
+## Proving portability, rather than reasoning about it
+
+Parts of this chain are meant to run anywhere, and BSD-vs-GNU divergence is not
+something to settle by argument. One container settles it in about ninety
+seconds:
+
+```bash
+docker run --rm -v "$PWD":/src:ro ubuntu:24.04 bash -c '
+  apt-get update -qq >/dev/null 2>&1
+  apt-get install -y -qq git curl python3 procps ca-certificates >/dev/null 2>&1
+  git config --global --add safe.directory "*"
+  git clone -q /src /work && cd /work
+  for t in scripts/test-*.sh; do bash "$t"; done'
+```
+
+**Mount read-only and `git clone` inside the container.** Several suites mutate
+tracked files to prove a gate fires; a read-write bind mount lets a
+container-side abort damage the host tree, and the clone also gives you a
+committed-state run, which is what CI would actually see.
+
+**Two traps in doing it, both hit 24 Aug 2026.**
+
+1. **A clean container has no `user.email`, so `git commit` fails.** Any sandbox
+   built with `git init && git commit --allow-empty` then has no HEAD, and
+   assertions comparing against `git rev-parse HEAD` compare against the literal
+   string `HEAD`. Four failed this way and cleared the instant an identity
+   existed. The danger is *which* four: they were regression pins for an
+   unrelated fix, so a clean runner reports a false regression rather than a
+   missing config.
+2. **An interactive shell's `grep` may not be the script's `grep`.** Here the
+   Bash tool resolves `grep` to `ugrep` while a script gets `/usr/bin/grep`, so
+   a one-liner typed to debug a script need not behave like the script.
+   `command -v grep` printing a bare name rather than a path is the tell.
+
+Measured portable and worth not re-deriving: `pkill -P` / `pgrep -f`,
+`sed 's/\x1b\[…//'` (both seds take `\x` escapes), `date -u +%Y-%m-%dT%H:%M:%SZ`,
+and POSIX test stubs under dash (Ubuntu's `/bin/sh`). The only BSD-only calls in
+the chain are `date -j -f` (GNU has no `-j`) and `stat -f%Lp` (GNU is `-c%a`),
+both inside the macOS-channel block. `docs/design-release-machine.md` §20 has
+the full account.
+
 ## The defect class all of this exists to prevent
 
 **A check that reports success while seeing nothing.** It appeared nine times

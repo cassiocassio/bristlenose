@@ -1,6 +1,12 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 22 Aug 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
+Last updated: 24 Aug 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
+
+**24 Aug 2026 — the release train was reviewed, five defects fixed, and then deliberately parked.** Findings 38–42 and 44 are fixed and pinned by regression assertions proven red against the pre-fix scripts (`4ac9bc44`, `bfeacd76`). What is left open is a record of what was decided against, not a backlog — `docs/design-release-machine.md` §20 is the account, and the numbered findings live in the review notes kept outside the public tree.
+
+- **Nothing in CI runs any release-chain suite, on any OS** — 325 assertions across eight suites execute on one machine, one shell, one git config. Two release scripts already run on Linux in CI with no suite behind them. This is the single highest-leverage gap: every portability finding took one `docker run` to surface and would not have surfaced otherwise.
+- **The suites depend on ambient git identity** — four assertions fail on a clean runner, and they are the regression pins for an unrelated fix, so the failure reads as a false regression. Fixing this is a precondition for the CI item above, not a follow-on.
+- **The tap workflow copy has diverged from the tap repo again** (`e0e4d0eb` hardened the shape guards locally; nothing pushed them). The preflight's `tap workflow` row says so on every run, which is what it is for. Pushing to the tap is an outward act and was left for you.
 
 **20 Aug 2026 — the day has no session entry; these are its owed items, transcribed from the commit bodies so they are not only there.** Thirty-odd commits landed the workspace 3b fleet, per-window studies, derived agent scope, mcpb schema 2 and the welcome shelf. `/end-session` ran and signed off, but did not write this file, so every obligation below was reachable only via `git log`.
 

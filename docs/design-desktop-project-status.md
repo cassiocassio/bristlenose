@@ -1,8 +1,18 @@
 ---
 status: partial
-last-trued: 2026-08-21
-trued-against: HEAD@main 06b57843 on 2026-08-21 (the F14 drift gate)
+last-trued: 2026-08-27
+trued-against: HEAD@main (2ac83f6d) on 2026-08-27 (the glyph rule + files popover)
 ---
+
+> **Trued 27 Aug 2026.** Three line anchors into `ProjectSubtitle.swift` had
+> rotted — the second time for these — after the file gained `glyphKind`,
+> `glyphAction` and `UnreachableReason`. `resolveIdle` had moved 129 lines and is
+> now anchored **by name as well as by number**, so the next drift is survivable.
+> The enum's case count is unchanged at 17; nothing was added, only classified.
+>
+> §"The glyph rule" is new this session and is the authority on which states earn
+> a glyph and which earn a door.
+
 
 ## Changelog
 
@@ -190,11 +200,11 @@ stopped / partial › adding-interviews › importing-batch › copying › down
 files-missing › unanalysed › starting › ready`
 
 **`SubtitleVariant` is the single source of truth and currently has 17 cases**
-(`ProjectSubtitle.swift:17-87`) — more than this chain names. The chain is the *architecture*, and
+(`ProjectSubtitle.swift:11-96`) — more than this chain names. The chain is the *architecture*, and
 deliberately skips the mechanical companions (`.copyCancelling`, `.stopping`, `.queued(position:)`,
 `.failedDiagnostic`, `.unreachable`, `.deltaOnly`, `.placeholder`), each of which sits immediately
 beside the state it qualifies. Read the enum for the full list; read this for the ordering argument.
-The **idle tier**'s real order is settled in `resolveIdle` (`ProjectSubtitle.swift:218-250`):
+The **idle tier**'s real order is settled in `resolveIdle` (`ProjectSubtitle.resolveIdle`, `ProjectSubtitle.swift:347`):
 `.addingInterviews` › `.importingBatch` › `.copying` / `.copyCancelling` › delta › `.ready`.
 
 Baked-in rulings (user, 18 Jun 2026): **`cantFind` / drive-unplugged outranks ALL activity states**
@@ -256,7 +266,7 @@ a reviewer must not delete it as unused.
 >
 > `.ready(date:)` **does** remain undrawn, and that half of the 29 Jul finding still holds — but for
 > a different reason: `resolveIdle` takes `lastRunAt` and deliberately never returns `.ready(date:)`
-> (`ProjectSubtitle.swift:218`). That is Schema E working as designed, not a dead branch.
+> (`ProjectSubtitle.resolveIdle`). That is Schema E working as designed, not a dead branch.
 
 > **Retired 21 Aug 2026 — the trap above is void, and its "Closed" note was half true.**
 > The gate no longer reads `lastPipelineRunAt` at all. It reads `sessionCount` — the analysis DB's

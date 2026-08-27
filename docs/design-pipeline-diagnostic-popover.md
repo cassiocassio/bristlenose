@@ -1,8 +1,26 @@
 ---
 status: partial
-last-trued: 2026-08-22
-trued-against: HEAD@main (5a380eab) on 2026-08-22
+last-trued: 2026-08-27
+trued-against: HEAD@main (2ac83f6d) on 2026-08-27 (the glyph rule + files popover)
 ---
+
+> **Trued 27 Aug 2026.** Two rows in the state table below had drifted in
+> opposite directions.
+>
+> `.unreachable` described an *intention* — "inline sidebar glyph, greyed project
+> row" — that had never shipped. It ships now, and additionally opens this
+> popover: five `UnreachableReason` cases, each with a `MessageKind` and a locale
+> key, the body carrying the reason and **the folder path** (which appears nowhere
+> else on screen, and is usually the whole diagnosis).
+>
+> `.partial` / `.stopped` read `not-implemented`, which invites someone to
+> implement them. They are a **decision**: a row shows a glyph when there is
+> something the researcher would want to *know and might not*, and a run they
+> stopped is not news. The rule, and the table of which states earn a glyph and
+> which earn a door, is in `docs/design-desktop-project-status.md` §"The glyph
+> rule". A second popover — `ProjectFilesPopover` — now shares this surface for
+> data drift; same shell, same anchoring, different body.
+
 
 > **Trued 2026-06-15 (`per-project-activity` @ `518e6d3`) — the toolbar pill was deleted.**
 > The per-project pipeline pill (`PipelineActivityItem.swift`) was **removed** (commit `8ffa470`)
@@ -300,8 +318,8 @@ rendering in `PipelineActivityItem.swift`:
 | `.failed(message, category)` | Terminal failure with reason _(degraded body)_ | message + `Category:` line | fixture `failed_no_summary` (env, relaunch) |
 | `.completedPartial(summary)` | Terminal failure with reason _(accumulating rows)_ | per-bucket failure grid | fixtures `run_completed_partial`, `run_completed_partial_truncated`, `showcase_partial_dense`, `showcase_truncated_varied`, `showcase_typical_partial`, `showcase_overflow_one` |
 | `.failedWithDiagnostic(summary)` | Terminal failure with reason | per-bucket failure grid | fixtures `run_failed_abandoned`, `run_failed_abandoned_at_topics`, `showcase_failed_auth_burst`, `showcase_failed_multi_category` |
-| `.unreachable(reason)` | _(inline sidebar glyph, not the pill)_ | greyed project row | real-condition-only |
-| `.partial(kind, stages)` / `.stopped(stages)` | _(no pill/popover rendering)_ | — | not-implemented |
+| `.unreachable(reason)` | Inline sidebar glyph **→ popover** | Reason headline + the folder path; row dimmed | real-condition-only |
+| `.partial(kind, stages)` / `.stopped(stages)` | _(no glyph, no popover)_ | — | **by decision, not a gap** — see below |
 | `run_completed_clean` | _(validates clean — no override)_ | pill stays hidden | fixture (env, relaunch) |
 | `showcase_all_glyphs` | Design gallery _(special-cased body)_ | 5-glyph `MessageKind` reference card | fixture (env, relaunch) |
 | `showcase_all_states` | Design gallery _(special-cased body)_ | 5 states, varied message lengths | fixture (env, relaunch) |

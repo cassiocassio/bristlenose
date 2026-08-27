@@ -1,9 +1,17 @@
 ---
 status: current
-last-trued: 2026-08-21
-trued-against: HEAD@main 19797094 on 2026-08-21 (the shipped confirmation
+last-trued: 2026-08-27
+trued-against: HEAD@main (2ac83f6d) on 2026-08-27 (the glyph rule + files popover)
   sheet read against its own pixels, not only its call sites)
 ---
+
+> **Trued 27 Aug 2026.** The affordance inventory below named *the sheet* as the
+> Analyse surface in three rows, and recorded the `+N unanalysed` delta as
+> unreachable on the shipped sidebar. Both were true on 21 Aug. §6.2's amendment
+> already stated the new position, so the table had come to contradict its own
+> document — the summary and the sections having different readers is exactly how
+> that happens. Rows corrected; the amendment is the authority.
+
 
 ## Changelog
 
@@ -30,7 +38,9 @@ trued-against: HEAD@main 19797094 on 2026-08-21 (the shipped confirmation
 - _2026-08-21_ — **Truing pass (`--topic` analysis lifecycle).** Three claims this doc
   made were false against the sidebar that ships. (1) §4's inventory listed the
   `+N unanalysed` pill → sheet route as **Shipped**; it exists only on the SwiftUI
-  row and is unreachable on the AppKit outline. (2) §4.1's matrix said Re-analyse
+  row and is unreachable on the AppKit outline. _(Closed 27 Aug — but not by
+  porting the sheet: the delta opens `ProjectFilesPopover` from the row's ⓘ. See
+  the banner at the top of this file.)_ (2) §4.1's matrix said Re-analyse
   was "live since 19 Aug" and cited a line number; the predicate shipped that day
   but refused `.ready` — the exact state the row describes — until 21 Aug. (3)
   §6.2 recorded both of its fixes as done; one never reached the shipped substrate
@@ -269,11 +279,11 @@ Where each verb can be reached, and what gates it.
 | **Analyse** | sidebar context menu, Project menu | folder-shaped, has path, not running, **and there is work to do** | Shipped (`8975254a`, `1c5bebfa`) |
 | **Analyse** (auto) | after a cloud-import batch lands | folder-shaped project | Shipped (`1490dcde`) |
 | **Analyse** | the project detail pane | never run **and** files present | Shipped (§6.3) |
-| **Analyse** | the unanalysed sheet | the sheet is open **and** `analyseIsOffered` | Shipped (§6.2) |
+| **Analyse** | the files popover | the popover is open **and** `analyseIsOffered` | Shipped 27 Aug (§6.2 amendment) — was the sheet |
 | **File ▸ Add Files…** | File menu | a project is selected | Shipped |
-| **+N unanalysed** pill → sheet | row subtitle | `newFiles` non-empty | **SwiftUI row only — unreachable on the shipped AppKit sidebar** (21 Aug 2026) |
+| **+N unanalysed** ⓘ → files popover | row subtitle — glyph **and** text | `newFiles` non-empty | Shipped 27 Aug on the AppKit sidebar; the fix was a popover, not the sheet |
 | **Analyse** (folder-shaped) | context menu | `newFiles` non-empty | Shipped — **already incremental**, but unlabelled as such |
-| Primary action on the unanalysed sheet | sheet | `newFiles` non-empty | Shipped (§6.2) |
+| Primary action on the files popover | popover header | `newFiles` non-empty | Shipped (§6.2 amendment) |
 | **Stop Analysis** ⌘. | Project menu, row hover-× | running | Shipped |
 | **Re-analyse…** | Project menu | `sessionCount > 0`, **pipeline free**, not running | Shipped — dims (§6.1); state gate fixed 21 Aug (`06b57843`) |
 | **Re-analyse…** | sidebar context menu | `sessionCount > 0`, **pipeline free**, not running | Shipped — hides (§6.1); state gate fixed 21 Aug (`06b57843`) |

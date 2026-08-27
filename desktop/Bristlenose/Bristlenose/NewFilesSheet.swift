@@ -9,12 +9,21 @@ import SwiftUI
 // This sheet is a *data view* (a list of project source files) that sits in
 // native chrome. Native chrome should own navigation / status / system
 // integration; data views belong in the React SPA's project dashboard.
-// Kept here for TF because the watcher's pulse-to-pill-to-sheet end-to-end
-// is the cohort's first visible proof of incremental detection.
 // Retire when EITHER (a) incremental processing lands (no "+N unanalysed"
 // exception state to surface), OR (b) the SPA dashboard grows an
 // "unanalysed files" panel that subsumes this. Sidebar count + delta in
 // `ProjectRow` stays — that's chrome and belongs in native.
+//
+// **Half of it is already gone (27 Aug 2026).** The `.watcher` mode — the
+// "pulse-to-pill-to-sheet" path this header used to describe as the cohort's
+// first visible proof of incremental detection — is now `ProjectFilesPopover`,
+// anchored to the row's ⓘ / ⚠ glyph. The argument was not the one above: a
+// context menu shows verbs and *cannot show a list*, so the file list has no
+// other home, and a modal is the wrong price to pay for reading three
+// filenames. Only `.copy` still has a live route, and it is a completion
+// acknowledgement that probably wants `ToastStore` rather than a sheet at all.
+// So this file is one mode from deletable, and neither (a) nor (b) has to
+// happen first.
 
 /// Source that opened the sheet. `.copy` mirrors the original Phase 2 #11
 /// drag-onto flow ("Added N interviews to X"); `.watcher` is the Phase 2 #14

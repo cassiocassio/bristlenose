@@ -140,5 +140,7 @@ These are working materials for contributors, not part of the application. Users
 | `docs/release.md` | Full release pipeline, secrets, Homebrew tap details, Snap Store setup |
 | `docs/design-doctor-and-snap.md` | Design doc: doctor command + snap packaging (includes implementation notes and local build workflow) |
 | `docs/design-fedora-packaging.md` | Design doc: Fedora / Copr packaging — the offline-`mock` build, the measured `ffmpeg-free` codec verdict, and why the channel is built but unpublished |
+| `docs/design-bun-adoption.md` | Assessment: **don't adopt Bun**, and why — the reason is this repo's shape, not Bun's maturity. Closed question; recorded so it is not re-explored |
+| `docs/design-test-performance.md` | Measurement: CI spends ~32 min on a Python matrix that should take ~5–6. Three changes identified, prerequisite bug fixed, **none applied** |
 | `TODO.md` | Detailed roadmap and task tracking |
 | `CONTRIBUTING.md` | Dev setup, design system docs, release process |

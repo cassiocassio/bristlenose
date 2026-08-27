@@ -159,15 +159,21 @@ Close and reopen your terminal, then:
 pipx install bristlenose
 ```
 
-### Snap (coming soon)
+### Snap
 
-Once available in the Snap Store, this will bundle Python, FFmpeg, and all dependencies into a single package:
+Bundles Python and FFmpeg in a single package, so there is nothing else to install. The transcription model downloads the first time you run an analysis.
 
 ```bash
-sudo snap install bristlenose --classic
+sudo snap install bristlenose --edge
 ```
 
-This is pending Snap Store registration. In the meantime, use the pipx instructions above.
+The `--edge` flag is needed because there is no stable release on the Snap Store yet. The Snap is built for amd64 only — on ARM, use the pipx instructions above.
+
+Recordings in your home directory work straight away. If yours are on a USB stick or an external drive, grant access once:
+
+```bash
+sudo snap connect bristlenose:removable-media
+```
 
 ### Fedora
 

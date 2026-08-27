@@ -1,18 +1,19 @@
 ---
 status: current
-last-trued: 2026-04-21
-trued-against: HEAD@sidecar-signing on 2026-04-21
+last-trued: 2026-08-27
+trued-against: HEAD on 2026-08-27
 ---
 
-> **Truing status:** Current with one structural addition — Part 1 (doctor) and Part 2 (snap) are both shipped as described; Track C (Apr 2026) added a second class of checks (bundle integrity, exposed via `bristlenose doctor --self-test`) which now has its own sub-section below.
+> **Truing status:** Current. Part 1 (doctor) and Part 3 (`--self-test`) are shipped as described. Part 2 (snap) is shipped and published, but **one of its central decisions reversed**: the doc argued for classic confinement, and the snap ships strict. That section is now marked superseded and kept for its reasoning — see "Decision: classic confinement — SUPERSEDED, ships strict". Every `snap install bristlenose --classic` in this doc was wrong and is corrected; `snap install snapcraft --classic` is untouched, because snapcraft itself genuinely is a classic snap.
 
 ## Changelog
 
+- _2026-08-27_ — trued up against `snap/snapcraft.yaml` and the live store API. **Decision reversal recorded:** "Decision: classic confinement" is superseded — `snapcraft.yaml:3` is `confinement: strict` and the published snap reports strict. Kept the original four-point argument and mapped each objection to how it actually resolved (dotfiles: partly real, lived with; paths outside `$HOME`: `removable-media` plug, the one that needs a manual `snap connect`; CUDA: accepted limitation; HF cache: solved via `HF_HOME`/`XDG_CACHE_HOME` → `$SNAP_USER_COMMON`). Corrected six install commands that would fail as written (`--classic` on a strict snap) and added `--edge`, since `latest/edge` is the only channel ever published — deliberately did NOT touch `snap install snapcraft --classic` or `snap install lxd`, which are other snaps and correct. Corrected the yaml sketch's `confinement:`, the pre-launch checklist (classic approval was never requested and blocks nothing; name registration is done, `snap-id` `xzQ4aizlSc3NA6shGdFVmcLTKbPqvPI5`), and Phase 2 steps 3 and 7. Flagged the classic-only rpath linter note as possibly no longer applicable. Sibling fixes in the same pass: `INSTALL.md` §Snap (was "coming soon" + `--classic`) and the website's `docs-src/install.md` (Snap section added). Also corrected a false claim carried on both the website and the homepage — the snap does **not** bundle the transcription model; `snapcraft.yaml` points the Whisper cache at `$SNAP_USER_COMMON`, so models download on first run. Only the spaCy model is bundled.
 - _2026-04-21_ — trued up: added new sub-section "Bundle-integrity checks (`--self-test`)" covering the six `check_bundle_*` functions shipped for desktop sidecar bundle validation; added `--self-test` to the command-to-check matrix; noted `check-bundle-manifest.sh` as sibling gate; promoted docstring invariant (catch BUG-3/4/5 class at build time, not first runtime); corrected Phase 2 snap status (store publication pending, not ✅; CI workflow shipped-but-failing since 2026-04-17; snap-name registration blocked on identity recovery). Anchors: `bristlenose/doctor.py:690-942`, `desktop/scripts/check-bundle-manifest.sh`, commits "bristlenose doctor --self-test for bundle integrity (P2)", "check-bundle-manifest.sh — source→spec coverage gate", "serve fail-loud when React bundle missing (P1)", "bundle React SPA static/ into the sidecar (BUG-3 fix)". Preserved: original doctor seven-checks design and snap build/testing sections (both shipped as described — only store publication status corrected).
 
 # Design: `bristlenose doctor` and Snap packaging
 
-Status: Part 1 (doctor) implemented in v0.6.0. Part 2 (snap) — local build implemented in v0.6.0 (Feb 2026); store publication pending (CI regression since 2026-04-17, snapstore identity recovery pending). Part 3 (bundle-integrity `--self-test`) shipped in Track C (Apr 2026) — see new sub-section under Part 1.
+Status: Part 1 (doctor) implemented in v0.6.0. Part 2 (snap) — **published**: strict-confined, `latest/edge` only (0.27.0, amd64, 22 Aug 2026). No stable channel has ever been released, so `snap install bristlenose` fails without `--edge`. Part 3 (bundle-integrity `--self-test`) shipped in Track C (Apr 2026) — see new sub-section under Part 1.
 
 ---
 
@@ -516,9 +517,31 @@ macOS, dependency sizes, and channel management. Key sources:
 - Argos Translate (ML snap with ctranslate2): https://github.com/argosopentech/argos-translate
 - Snap size discussion: https://forum.snapcraft.io/t/snap-package-file-size-limit-on-the-store/37450
 
-### Decision: classic confinement
+### Decision: classic confinement — SUPERSEDED, ships strict
 
-Strict confinement is not viable for bristlenose because:
+> **Superseded.** `snap/snapcraft.yaml:3` reads `confinement: strict`, and the
+> published snap is strict (`api.snapcraft.io` reports `"confinement":
+> "strict"`, `base: core24`). Classic was never requested, so the 3-5 day
+> approval below never happened and is not a blocker on anything. The original
+> reasoning is kept because it explains the shape of the `plugs:` list —
+> each objection maps to how it was actually resolved:
+>
+> 1. **Dotfiles** — partly real, and lived with. The `home` interface blocks
+>    dotfiles sitting *directly* in `$HOME`, but allows them inside a
+>    subdirectory, so a project-local `.env` (what `_find_env_files()` in
+>    `config.py` walks up to find) is readable; `~/.env` is not. `bristlenose
+>    configure` writing to the credential store is the primary path regardless.
+> 2. **Paths outside `$HOME`** — solved with the `removable-media` plug. It is
+>    the one plug that does not auto-connect, so USB and external drives need a
+>    one-off `sudo snap connect bristlenose:removable-media`. Documented in
+>    `INSTALL.md` and the website install page.
+> 3. **CUDA/GPU** — accepted as a limitation, not solved.
+> 4. **`$HOME` remapping breaking the HF cache** — solved outright by pointing
+>    the caches at `$SNAP_USER_COMMON` (`HF_HOME`, `XDG_CACHE_HOME` in
+>    `snapcraft.yaml`), which survives a revision refresh and is not snapshotted.
+
+The original argument, as written in Feb 2026 — strict confinement is not
+viable for bristlenose because:
 
 1. The `home` interface excludes dotfiles — `.env` files (the primary config
    discovery mechanism) are invisible in strict mode
@@ -578,9 +601,9 @@ against a specific Ubuntu base (core24 = Ubuntu 24.04) which has glibc 2.39, so
 this should not be an issue inside the snap. Monitor upstream:
 https://github.com/OpenNMT/CTranslate2/issues/1849
 
-### Known risk: Presidio and spaCy model in a classic snap
+### Known risk: Presidio and spaCy model in the snap
 
-In a classic snap, `en_core_web_sm` should be bundled at build time. The
+In the snap, `en_core_web_sm` should be bundled at build time. The
 snapcraft.yaml should include a build step that downloads it into the snap's
 Python site-packages. This way `--redact-pii` works without the user installing
 anything extra. If the model is somehow missing at runtime, doctor reports it as
@@ -610,7 +633,7 @@ only build arm64 snaps (most Linux users are amd64).
 multipass launch --name snap-test --cpus 2 --memory 4G --disk 20G
 multipass transfer bristlenose_*.snap snap-test:
 multipass shell snap-test
-sudo snap install --dangerous --classic ./bristlenose_*.snap
+sudo snap install --dangerous ./bristlenose_*.snap
 bristlenose --version
 bristlenose doctor
 ```
@@ -624,18 +647,19 @@ arm64 builds locally. For amd64 testing, use a cloud VM or rely on CI.
 edge      <- every push to main (CI auto-publishes)
 beta      <- manual promotion when feature-complete
 candidate <- release candidates
-stable    <- tagged releases (what `snap install bristlenose --classic` gets)
+stable    <- tagged releases (what `snap install bristlenose` gets — EMPTY as of
+             2026-08-27: only latest/edge has ever been published)
 ```
 
 Testers install from edge:
 ```bash
-sudo snap install bristlenose --edge --classic
+sudo snap install bristlenose --edge
 ```
 
 Channels are public — anyone can install from any channel. For private testing,
 distribute the .snap file directly:
 ```bash
-sudo snap install --dangerous --classic ./bristlenose_0.6.0_amd64.snap
+sudo snap install --dangerous ./bristlenose_0.6.0_amd64.snap
 ```
 
 ### Snapcraft.yaml sketch
@@ -644,7 +668,7 @@ sudo snap install --dangerous --classic ./bristlenose_0.6.0_amd64.snap
 name: bristlenose
 version: '0.6.0'  # updated by CI from bristlenose/__init__.py
 base: core24
-confinement: classic
+confinement: strict     # shipped as strict — see the superseded decision above
 grade: stable
 license: AGPL-3.0-only
 
@@ -761,8 +785,9 @@ but has no ML deps).
 
 **Linter warnings (all cosmetic, non-blocking):**
 - `classic: ELF rpath should be set to...` — hundreds of these for every shared
-  library. Standard for classic confinement snaps that bundle system libraries.
-  The snap works correctly despite these warnings.
+  library. Observed on the classic build; the shipped snap is strict, so this
+  particular warning class may no longer appear. The snap worked correctly
+  despite them.
 - `library: unused library...` — FFmpeg bundles more codecs than bristlenose
   uses directly. Harmless.
 - `library: missing dependency 'libGLU.so.1'` — only for `caca/libgl_plugin.so`
@@ -802,7 +827,7 @@ cd bristlenose
 snapcraft                  # manages its own Ubuntu 24.04 container
 
 # Install and test
-sudo snap install --dangerous --classic bristlenose_*.snap
+sudo snap install --dangerous bristlenose_*.snap
 bristlenose --version
 bristlenose doctor
 ```
@@ -837,7 +862,7 @@ multipass exec snap-test -- bash -c \
 multipass exec snap-test -- sudo snap install snapcraft --classic
 multipass exec snap-test -- bash -c \
   "cd /home/ubuntu/build && sudo snapcraft --destructive-mode"
-multipass exec snap-test -- sudo snap install --dangerous --classic \
+multipass exec snap-test -- sudo snap install --dangerous \
   /home/ubuntu/build/bristlenose_*.snap
 multipass exec snap-test -- bristlenose --version
 multipass exec snap-test -- bristlenose doctor
@@ -979,13 +1004,15 @@ jobs:
 
 ### Pre-launch checklist
 
-1. Register snap name: `snapcraft register bristlenose`
-2. Request classic confinement approval on forum.snapcraft.io (3-5 days)
+1. Register snap name: `snapcraft register bristlenose` — done (`snap-id`
+   `xzQ4aizlSc3NA6shGdFVmcLTKbPqvPI5`)
+2. ~~Request classic confinement approval on forum.snapcraft.io (3-5 days)~~ —
+   not needed, the snap is strict
 3. Export store credentials: `snapcraft export-login --snaps=bristlenose --channels=edge,beta,candidate,stable credentials.txt`
 4. Add `SNAPCRAFT_STORE_CREDENTIALS` to GitHub repo secrets
 5. Build and test locally with Multipass
 6. Push to main, verify edge channel build
-7. Have Linux testers install from edge: `sudo snap install bristlenose --edge --classic`
+7. Have Linux testers install from edge: `sudo snap install bristlenose --edge`
 8. When validated, promote to stable: `snapcraft release bristlenose <revision> stable`
 
 ---
@@ -1011,11 +1038,11 @@ These two workstreams are mostly independent but doctor landed first:
 
 1. ✅ Write `snap/snapcraft.yaml`
 2. ✅ Test locally with Multipass (arm64 on Apple Silicon)
-3. ⬜ Register snap name and request classic confinement (pre-launch, manual). **Blocked** on snapstore identity recovery — pre-existing Ubuntu One account for the preferred name has no recoverable password; decision pending on whether to recover or register an alternative name. Surface for decision: 2026-05-24 reminder.
+3. ✅ Register snap name (`snap-id` `xzQ4aizlSc3NA6shGdFVmcLTKbPqvPI5`). The identity-recovery blocker recorded here was resolved; classic confinement was never requested because the snap ships strict.
 4. 🟡 `.github/workflows/snap.yml` CI workflow — **shipped but failing every push since 2026-04-17** (see `docs/private/qa-backlog.md` + `project_snap_known_failure.md` memory). Fix deferred until after TestFlight alpha; surface 2026-05-24. Not a regression — a persistent known issue parked behind Track C.
 5. ⬜ Add `SNAPCRAFT_STORE_CREDENTIALS` secret (pre-launch, manual; blocked on #3)
 6. ⬜ Build, test from edge channel (blocked on #3, #4, #5)
-7. ⬜ Promote to stable (blocked on #6 + classic confinement approval)
+7. ⬜ Promote to stable. Still open — as of 2026-08-27 `latest/edge` (0.27.0, amd64) is the only channel ever published, so `snap install bristlenose` without `--edge` fails.
 8. ✅ Update README.md and TODO.md
 
 ### Phase 3: Polish

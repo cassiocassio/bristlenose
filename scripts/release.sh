@@ -554,12 +554,27 @@ cmd_run() {
     # Pathspec commit, never `git add -A`: the index is shared between concurrent
     # sessions, and a sweep once carried six unrelated files into someone else's
     # commit (CLAUDE.md, 21 Aug). bump-version.py already stages what it touches.
-    BUMP_CMD="./scripts/bump-version.py $BUMP && git commit -m \"bump to $V\" -- bristlenose/__init__.py bristlenose/data/bristlenose.1 desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj CHANGELOG.md README.md"
+    # Idempotent, because `run` is RESUMABLE and this step is not naturally so.
+    # bump-version.py moves the version relative to wherever it currently is, so
+    # re-running it after a partial failure bumps AGAIN — 0.28.0 becomes 0.29.0
+    # while CHANGELOG still says 0.28.0. That happened on 27 Aug 2026: the
+    # version had already been bumped by hand, `run 0.28.0 --bump minor` bumped
+    # on top of it, and committed the result under the message "bump to 0.28.0".
+    # Skip the bump when the file already reads $V, and only commit if something
+    # actually changed.
+    BUMP_CMD="{ [ \"\$(sed -n '$VERSION_REGEX' '$VERSION_FILE')\" = \"$V\" ] || ./scripts/bump-version.py $BUMP; }"
+    BUMP_CMD="$BUMP_CMD && { git diff --quiet -- bristlenose/__init__.py bristlenose/data/bristlenose.1 desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj CHANGELOG.md README.md && echo 'version files already committed' || git commit -m \"bump to $V\" -- bristlenose/__init__.py bristlenose/data/bristlenose.1 desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj CHANGELOG.md README.md; }"
     # $V and --bump are two sources for one number. `run 0.29.0 --bump minor`
     # from 0.27.0 writes 0.28.0, commits "bump to 0.29.0", tags v0.29.0 — and
     # the mismatch surfaces at release.yml's PyPI poll, i.e. AFTER twine has
     # consumed 0.28.0 immutably. Reconcile immediately after the bump.
-    BUMP_CMD="$BUMP_CMD && [ \"\$(sed -n "$VERSION_REGEX" "$VERSION_FILE")\" = \"$V\" ]"
+    # SINGLE quotes around the regex in the EMITTED command. Interpolating
+    # $VERSION_REGEX into a double-quoted string lets its own quotes close the
+    # outer one, so sed received `s/^__version__` as its whole script and died
+    # with "unterminated substitute pattern" — on every run, correct or not.
+    # The reconciliation this line exists to perform has therefore never once
+    # been performed.
+    BUMP_CMD="$BUMP_CMD && [ \"\$(sed -n '$VERSION_REGEX' '$VERSION_FILE')\" = \"$V\" ]"
     TAG_CMD="git tag v$V && git push origin v$V"
     # --event workflow_dispatch is LOAD-BEARING.
     #

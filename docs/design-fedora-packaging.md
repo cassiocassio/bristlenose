@@ -176,6 +176,30 @@ So the synthesised fixtures were representative: **89 of 102 identifiable video 
 H.264 in exactly the three profiles tested**, and AAC-LC dominates the audio. Every codec in
 that table decodes under `ffmpeg-free` except HEVC.
 
+### `sudo dnf install ffmpeg` is NOT broken — measured twice, claimed wrong twice
+
+`doctor_fixes.py` tells a Fedora user `sudo dnf install ffmpeg`, while `INSTALL.md` and the
+website say `ffmpeg-free`. That looks like a bug, and **two independent reviewers have now
+reported it as one** ("on stock Fedora `dnf install ffmpeg` resolves to nothing").
+
+**It does not. Measured on Fedora 41 and Fedora 42, stock repos, no RPM Fusion:**
+
+```
+$ dnf install --assumeno ffmpeg
+Installing:
+ ffmpeg-free   x86_64   7.1.4-1.fc42   updates
+```
+
+There is no package literally named `ffmpeg` in the stock repos, and dnf5 resolves the
+request to `ffmpeg-free` anyway. The command works, and on a machine that *does* have RPM
+Fusion it installs the fuller build — which is also fine. So the two spellings are an
+inconsistency of *register*, not a defect, and changing it would mean editing `cmd_fedora`
+across 21 locale files for no user-visible gain.
+
+**Recorded here because it has now cost two review cycles.** If a third reviewer raises it,
+this section is the answer; if you still want the change, make it for consistency and say so,
+not as a bug fix.
+
 ### The one real gap: HEVC — and it is not hypothetical
 
 `hevc` is disabled with no `libopenh265` equivalent, so **HEVC video cannot be decoded on

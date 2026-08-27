@@ -1,3 +1,19 @@
+---
+status: current
+last-trued: 2026-08-27
+trued-against: HEAD on 2026-08-27
+---
+
+## Changelog
+
+- _2026-08-27_ — trued for Fedora. Added target 4 (Fedora 43 x86_64), which was
+  exercised end to end on real Intel hardware that day, and corrected the
+  release-pipeline enumeration at target 2, which named three channels when a
+  fourth exists. Front-matter added; the doc had none. Deliberately left the
+  Apr-2026 Cloud VM measurements alone — "2230 tests" reads stale against
+  today's 4243, but the section dates itself, so it is an honest historical
+  measurement rather than rot, and nobody has re-run the suite on a Cloud VM.
+
 # Deployment targets
 
 Where Bristlenose is expected to run, and what each target implies for deps, packaging, and dev workflow. Update as targets are added or confirmed empirically.
@@ -17,7 +33,10 @@ Where Bristlenose is expected to run, and what each target implies for deps, pac
 - Ubuntu runners (see `.github/workflows/`)
 - GNU userland — no BSD gotchas
 - No LLM API keys, no Ollama — all environment-dependent tests must mock
-- Release pipeline: PyPI, Snap, Homebrew tap
+- Release pipeline: PyPI, Snap, Homebrew tap — and a Fedora Copr, **built and
+  proven but not published** (`docs/design-fedora-packaging.md` §7). Every other
+  enumeration of the channel set in this repo still says three, correctly; they
+  all become wrong on the day the Copr publishes.
 
 ### 3. Claude Code Cloud VM (verified Apr 2026)
 
@@ -41,6 +60,26 @@ Where Bristlenose is expected to run, and what each target implies for deps, pac
 - Git fetches go through a proxy (`CCR_TEST_GITPROXY=1`, origin on `127.0.0.1`) — transparent for normal use
 
 **Browser preview of served HTML:** unknown from inside the VM. The Claude Code-in-assistant "preview" tools (`preview_start` etc.) are explicitly banned for Bristlenose (see CLAUDE.md — they fail consistently). Whether the Claude Code *web client* on iPad offers a port-forwarding pane (à la Codespaces) is a UI-side question, not testable from here. If it does, `bristlenose serve --host 0.0.0.0 --port 8150` would be the target. Worth a manual experiment next time you're on iPad.
+
+### 4. Fedora x86_64 (verified 27 Aug 2026)
+
+**Status:** Fedora 43, Python 3.14.7, rpm 6.0.2, GNU userland. Empirically
+verified on real Intel hardware (Xeon Platinum 8488C via `aella up --fedora`,
+which reported `avx2` and `avx512f`), not emulation. That distinction is worth
+keeping: `ctranslate2` picks SIMD kernels at run time, so a qemu-emulated
+x86_64 box is not evidence about how transcription behaves on a real one.
+
+**Verified there:**
+- `mock` build of the RPM with **no network**, exit 0
+- `dnf install` of the result, `bristlenose doctor` green bar the API key
+- A real transcription end to end: Teams-shaped H.264 + AAC `.mp4` → correct
+  transcript, 12.6s
+- `ffmpeg-free` decodes everything the pipeline needs (§2 of the Fedora doc)
+
+**NOT verified there, and do not assume it:** the pytest suite has never been
+run on Fedora or on Python 3.14. `requires-python` allows 3.10+, and the
+vendored wheels resolve for cp314, but that is an install-time fact, not a
+test-suite one.
 
 ### Deferred: Windows x86_64 (CLI only, via Scoop)
 
@@ -108,7 +147,7 @@ cd frontend && npm ci && npm run build 2>&1 | tail -10
 | `bristlenose run` on *real* interviews | ❌ | Participant recordings must not be copied onto an ephemeral VM we do not control — a governance obligation, not a local-first promise. Use a synthetic fixture if you need to exercise the pipeline |
 | Browser QA of `bristlenose serve` | ⚠️ unknown | Port-forwarding from Claude Cloud VM to iPad browser not confirmed. `preview_*` in-assistant tools are banned (CLAUDE.md). Worth testing once |
 | `/deploy-website` | ❌ | Needs user's SSH agent |
-| Snap/Homebrew release | ❌ | Needs signing keys, tags on user's machine |
+| Snap/Homebrew/Copr release | ❌ | Needs signing keys and tags on user's machine; the Copr additionally needs an API token there, which expires every 180 days |
 | Desktop SwiftUI work | ❌ | macOS-only (Xcode) |
 
 ### Notes on "what I wish I'd known on the iPad trip"

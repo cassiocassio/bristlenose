@@ -1,10 +1,34 @@
 ---
-status: current
+status: partial
 last-trued: 2026-08-27
-trued-against: HEAD on 2026-08-27
+trued-against: HEAD on 2026-08-27 — Part 2 (snap) and the fix table only; Part 1 (doctor) is trued to 2026-04-21
 ---
 
-> **Truing status:** Current. Part 1 (doctor) and Part 3 (`--self-test`) are shipped as described. Part 2 (snap) is shipped and published, but **one of its central decisions reversed**: the doc argued for classic confinement, and the snap ships strict. That section is now marked superseded and kept for its reasoning — see "Decision: classic confinement — SUPERSEDED, ships strict". Every `snap install bristlenose --classic` in this doc was wrong and is corrected; `snap install snapcraft --classic` is untouched, because snapcraft itself genuinely is a classic snap.
+> **Truing status: PARTIAL, and read this before trusting Part 1.** The header
+> above said "current" while only Part 2 had been trued — the shape where a fresh
+> date reassures a pointer-sweep and the body still misleads. Corrected 27 Aug
+> 2026.
+>
+> **Trued to HEAD:** Part 2 (snap), and §"Install-method-specific fix table",
+> which was rebuilt from `doctor_fixes.py` (it had four rows against six
+> branching functions and no `rpm` column).
+>
+> **NOT trued — last substantively checked 2026-04-21, and known to have
+> drifted** through the Ollama, serve-deps, brew-tap-trust, auth-token,
+> admin-panel, MCP and RPM work. Specifically suspect: the check counts ("seven
+> checks", "the six checks" — `run_all` runs ten and there are eight bundle
+> checks), the `detect_install_method()` signature and algorithm (it returns
+> `rpm` now, and consults a marker file *before* the path sniffs), the
+> command-to-check matrix (no `serve` column; still carries `render`, a command
+> that no longer exists), and the `bristlenose transcribe-only --prefetch-model`
+> examples, which name neither a real command nor a real flag.
+>
+> Part 3 (`--self-test`) is shipped, but note the corrected invocation site: it
+> runs **pre-sign** in `ensure-sidecar.sh`, not post-sign in `build-all.sh` — a
+> sandbox-signed binary aborts with exit 133, which is how that gate sat dead
+> from 14 Jul 2026.
+
+> **Original banner, 2026-08-27:** Part 1 (doctor) and Part 3 (`--self-test`) are shipped as described. Part 2 (snap) is shipped and published, but **one of its central decisions reversed**: the doc argued for classic confinement, and the snap ships strict. That section is now marked superseded and kept for its reasoning — see "Decision: classic confinement — SUPERSEDED, ships strict". Every `snap install bristlenose --classic` in this doc was wrong and is corrected; `snap install snapcraft --classic` is untouched, because snapcraft itself genuinely is a classic snap.
 
 ## Changelog
 
@@ -457,14 +481,41 @@ bristlenose 0.6.0
 ### Install-method-specific fix table
 
 Most fix messages are install-method-agnostic (API key, network, disk, model
-cache). Only these differ:
+cache). Only these differ.
 
-| fix_key | snap | brew | pip (Linux) | pip (macOS) |
+> **Rebuilt from `bristlenose/doctor_fixes.py` on 2026-08-27.** The previous
+> table had **four** rows against **six** branching functions, no `rpm` column at
+> all, and an `mlx_not_installed` brew cell that named neither the right
+> interpreter nor the right packages. It had been wrong long enough that two
+> independent reviewers and the Fedora design doc each flagged it separately.
+> If you edit a fix function, edit this table in the same commit — nothing
+> mechanical compares them.
+
+Six functions branch on install method (`_fix_brew_tap_untrusted` takes `method`
+and discards it — brew-only by construction, correctly absent):
+
+| fix_key | snap | rpm | brew | pip / pipx |
 |---|---|---|---|---|
-| ffmpeg_missing | "Bug in snap, file issue" | `brew install ffmpeg` | `sudo apt install ffmpeg` (+ Fedora/Arch variants) | `brew install ffmpeg` |
-| spacy_model_missing | "Bug in snap, file issue" | `$(brew --prefix bristlenose)/libexec/bin/python -m spacy download en_core_web_sm` | `python3 -m spacy download en_core_web_sm` | `python3 -m spacy download en_core_web_sm` |
-| mlx_not_installed | N/A (Linux snap) | `$(brew --prefix bristlenose)/libexec/bin/pip install 'bristlenose[apple]'` | N/A (Linux pip) | `pip install 'bristlenose[apple]'` |
-| backend_import_fail | "File issue" | `pip install --upgrade ctranslate2 faster-whisper` | same | same |
+| `ffmpeg_missing` | bug in the snap → `snap refresh` | bug in the RPM → `dnf reinstall` | `brew install ffmpeg` | per-distro list (apt / dnf / pacman), or `brew install ffmpeg` on macOS |
+| `backend_import_fail` | bug in the snap → `snap refresh` | bug in the RPM → `dnf reinstall` | `$(brew --prefix bristlenose)/libexec/bin/python -m pip install --upgrade ctranslate2 faster-whisper` | `pipx inject bristlenose ctranslate2 faster-whisper`, with a venv fallback line |
+| `spacy_model_missing` | bug in the snap → `snap refresh` | bug in the RPM → `dnf reinstall` | `$(brew --prefix bristlenose)/libexec/bin/python -m spacy download en_core_web_sm` | `python3 -m spacy download en_core_web_sm` |
+| `presidio_missing` | bug in the snap → `snap refresh` | bug in the RPM → `dnf reinstall` | `$(brew --prefix bristlenose)/libexec/bin/python -m pip install presidio-analyzer presidio-anonymizer` | `pipx inject bristlenose presidio-analyzer presidio-anonymizer` |
+| `serve_deps_missing` | bug in the snap → `snap refresh` | bug in the RPM → `dnf reinstall` | `brew upgrade cassiocassio/bristlenose/bristlenose` (**fully qualified** — a short name is refused on an untrusted tap) | `pipx install --force 'bristlenose[serve]'` when `"pipx" in sys.prefix`, else `pip install 'bristlenose[serve]'` |
+| `mlx_not_installed` | N/A — Apple-only | N/A — Apple-only | `$(brew --prefix bristlenose)/libexec/bin/python -m pip install mlx mlx-whisper` | `pipx inject bristlenose mlx mlx-whisper`, with a venv fallback |
+
+**The pattern, and the reason the `snap` and `rpm` columns read alike:** both
+bundle everything, so a missing component is a *packaging defect*, not something
+the user should install around. `presidio_missing` lacked its `snap` arm until
+27 Aug 2026 and told snap users to `pipx inject` into a strictly-confined
+install; the invariant is now asserted for both in `tests/test_doctor.py`
+(`test_packaged_fixes_never_suggest_pip`) — no packaged install may be handed a
+`pip` or `pipx` command.
+
+**Not in this table, and a real gap:** the eight `bundle_*` fix keys emitted by
+the bundle-integrity checks (`doctor.py`, e.g. `bundle_dir_missing`,
+`bundle_react_missing`) have **no `_FIX_TABLE` entries at all**, so `get_fix()`
+returns `""` for every one of them. Build-time only, developer-facing, so it has
+never bitten a user — but a failed self-test currently prints no remedy.
 
 ### Brew formula improvements
 

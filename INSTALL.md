@@ -188,6 +188,12 @@ Close and reopen your terminal, then:
 pipx install bristlenose
 ```
 
+`ffmpeg-free` is Fedora's patent-free FFmpeg build, and it handles everything Bristlenose
+needs — including the H.264 + AAC `.mp4` files that Teams, Zoom and Meet produce. One
+exception: it cannot decode **HEVC**, so a video recorded on an iPhone in Apple's "High
+Efficiency" format gets no thumbnail in the report. It still transcribes normally, and
+everything else works. You do not need RPM Fusion.
+
 ### Arch / Manjaro
 
 ```bash

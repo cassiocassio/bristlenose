@@ -1,0 +1,208 @@
+# Bristlenose — Fedora / Copr package.
+#
+# Generated from this template by rpm/make-srpm.sh: @VERSION@ is substituted
+# from bristlenose/__init__.py, which stays the single source of truth for the
+# version (see CLAUDE.md — never add a version to pyproject.toml, and don't add
+# a second one here either).
+#
+# Design, and why it is shaped like this: docs/design-fedora-packaging.md
+
+%global bn_prefix   %{_libdir}/%{name}
+%global bn_python   %{bn_prefix}/bin/python
+%global marker_file     .install-method
+%global spacy_model     en_core_web_sm
+%global spacy_model_ver 3.8.0
+
+# The payload is 106 manylinux wheels — binaries built by upstream against a
+# different toolchain, not compiled here. Every one of rpm's post-build passes
+# assumes it built the binaries itself, and each fails or does harm on wheels:
+#
+#   debug_package        no source to extract debuginfo from
+#   strip                would strip vendored .so files we cannot rebuild
+#   mangle_shebangs      would rewrite the venv's own interpreter lines
+#   python_bytecompile   would compile with the SYSTEM python, not the venv's
+#                        (we do it ourselves in %install, with -s so the
+#                        buildroot prefix never lands in a traceback)
+%global debug_package %{nil}
+%global __brp_strip %{nil}
+%global __brp_strip_static_archive %{nil}
+%global __brp_strip_comment_note %{nil}
+%global __brp_mangle_shebangs %{nil}
+%global __brp_python_bytecompile %{nil}
+
+# ...and rpm's automatic dependency generator must not look inside the venv
+# either. Left on, it scans the vendored .so files and emits both unsatisfiable
+# Requires (soname deps for libraries bundled inside the wheels themselves) and
+# bogus Provides that would leak into the repo's metadata.
+%global __requires_exclude_from ^%{bn_prefix}/.*$
+%global __provides_exclude_from ^%{bn_prefix}/.*$
+
+Name:           bristlenose
+Version:        @VERSION@
+Release:        1%{?dist}
+Summary:        User-research transcription and quote extraction engine
+
+License:        AGPL-3.0-only
+URL:            https://github.com/cassiocassio/bristlenose
+
+# Source0 is the PyPI sdist, NOT a git archive — deliberately. The React SPA
+# under bristlenose/server/static/ is gitignored but declared as a hatch
+# artifact, and release.yml runs `npm run build` before `python -m build`. So
+# the sdist carries the built bundle and the RPM needs no Node.js in mock.
+Source0:        https://pypi.io/packages/source/b/%{name}/%{name}-%{version}.tar.gz
+# Every runtime dependency, as wheels, built by rpm/make-srpm.sh at SRPM time
+# where there IS network. mock has none, so %%install resolves from here alone.
+Source1:        %{name}-vendor-%{version}.tar.gz
+
+# The vendored wheels are cp3XX-specific and x86_64-specific. Fedora on laptops
+# is realistically Intel/AMD (matching the snap, which has only ever published
+# amd64); arm64 wheels exist for everything but an SRPM is one artefact for all
+# arches, so shipping both would double the vendor tarball.
+ExclusiveArch:  x86_64
+
+BuildRequires:  python3-devel >= 3.10
+BuildRequires:  python3-pip
+
+# ffmpeg-free is genuinely sufficient: bristlenose extracts audio with -vn, so
+# it never decodes a video stream to do its work, and H.264 decode is present
+# anyway via libopenh264. The one gap is HEVC, which costs a thumbnail on
+# iPhone-recorded .mov files and nothing else. Measurements and the full
+# 26-file corpus: docs/design-fedora-packaging.md section 2.
+Requires:       /usr/bin/ffmpeg
+Requires:       /usr/bin/ffprobe
+# The venv is built against this exact interpreter and holds cp3XX wheels.
+Requires:       python(abi) = %{python3_version}
+
+%description
+Bristlenose takes a folder of interview recordings — audio, video, or existing
+transcripts — and produces a browsable HTML report: extracted quotes, themes,
+sentiment, friction points and user journeys, which the researcher edits,
+shares, and keeps as a file they own.
+
+The pipeline runs on your own machine. The analysis is a call to a cloud LLM —
+Claude, ChatGPT, Azure OpenAI or Gemini — configured with `bristlenose
+configure`. Local models via Ollama are supported as a slower alternative.
+
+Run `bristlenose doctor` after installing to check the environment.
+
+%prep
+%setup -q -n %{name}-%{version}
+# -> ./vendor/, alongside the unpacked sdist
+tar -xf %{SOURCE1}
+test -d vendor || { echo "vendor/ missing from %{SOURCE1}" >&2; exit 1; }
+
+%build
+# Nothing to compile. The venv is created in %%install so that every path it
+# bakes in is under the buildroot and can be rewritten in one place.
+
+%install
+python3 -m venv %{buildroot}%{bn_prefix}
+
+# --no-index is the whole point: if this ever reaches for the network, the
+# build must fail rather than quietly produce a differently-resolved package.
+%{buildroot}%{bn_prefix}/bin/pip install \
+    --no-index --find-links=vendor --no-cache-dir --no-compile \
+    "%{name}[serve]==%{version}"
+
+# spaCy's model is not on PyPI (it ships from the spacy-models GitHub
+# releases), so it is fetched into vendor/ by name at SRPM time. Installing it
+# here means --redact-pii works out of the box, as it does on the snap.
+%{buildroot}%{bn_prefix}/bin/pip install \
+    --no-index --find-links=vendor --no-cache-dir --no-compile \
+    "%{spacy_model}==%{spacy_model_ver}"
+
+# A venv records the path it was created at, in pyvenv.cfg and in the shebang
+# of every console script. Right now that path is inside the buildroot. Strip
+# it so the installed venv points at its real home. Only regular files: bin/
+# also holds python symlinks, and sed -i would replace a symlink with a copy.
+find %{buildroot}%{bn_prefix}/bin -maxdepth 1 -type f \
+    -exec sed -i 's|%{buildroot}||g' {} +
+sed -i 's|%{buildroot}||g' %{buildroot}%{bn_prefix}/pyvenv.cfg
+
+# Bytecompile with the venv's own interpreter (the system one may differ), and
+# -s so the recorded source path is the installed one. Without -s, a traceback
+# in front of a user would name a directory on a Copr builder.
+%{buildroot}%{bn_prefix}/bin/python -m compileall -q -f \
+    -s %{buildroot} %{buildroot}%{bn_prefix} || :
+
+# Drop pip and the activate scripts. They are of no use inside a tree rpm
+# owns, and `sudo %{bn_prefix}/bin/pip install ...` would desynchronise the
+# file list for good — `rpm -V` dirty forever, orphans left by `dnf remove`.
+rm -f %{buildroot}%{bn_prefix}/bin/pip*
+rm -f %{buildroot}%{bn_prefix}/bin/activate*
+rm -rf %{buildroot}%{bn_prefix}/lib/python%{python3_version}/site-packages/pip \
+       %{buildroot}%{bn_prefix}/lib/python%{python3_version}/site-packages/pip-*.dist-info
+
+# Tell doctor what installed this. Read by doctor_fixes.detect_install_method()
+# from sys.prefix. Without it an RPM install reads as "pip", and every fix
+# message hands the user a pip command — which on Fedora either refuses with
+# EXTERNALLY-MANAGED or installs a SECOND bristlenose into ~/.local/bin that
+# shadows this one on PATH.
+echo rpm > %{buildroot}%{bn_prefix}/%{marker_file}
+
+# The launcher. The venv already generated bin/bristlenose with a correct
+# shebang, so this is a symlink, not a wrapper script to keep in sync.
+mkdir -p %{buildroot}%{_bindir}
+ln -s %{bn_prefix}/bin/%{name} %{buildroot}%{_bindir}/%{name}
+
+# Man page, installed here and NOT in %%post. (The reason is ownership, not
+# Homebrew's link-phase trap — rpm has no link phase. A file created in %%post
+# is in no %%files list, so rpm does not own it: invisible to `rpm -V` and
+# orphaned on `dnf remove`.)
+mkdir -p %{buildroot}%{_mandir}/man1
+install -p -m 0644 %{name}/data/%{name}.1 %{buildroot}%{_mandir}/man1/%{name}.1
+
+# Nothing may point back into the buildroot by this point. Written to a file
+# rather than piped into `grep -q`, which under pipefail reports the producer's
+# SIGPIPE as failure — see the same note in rpm/make-srpm.sh.
+grep -rIl '%{buildroot}' %{buildroot}%{bn_prefix} > %{_builddir}/leaks.txt 2>/dev/null || :
+if [ -s %{_builddir}/leaks.txt ]; then
+    echo "ERROR: buildroot path survives in the installed tree:" >&2
+    cat %{_builddir}/leaks.txt >&2
+    exit 1
+fi
+
+%check
+# Prove the interpreter and the package actually work from their installed
+# layout before this becomes an RPM. Runs against the buildroot copy, so the
+# shebang rewrite above has to have been right.
+%{buildroot}%{bn_prefix}/bin/python -c "import bristlenose; print(bristlenose.__version__)" \
+    | grep -qx '%{version}'
+%{buildroot}%{bn_prefix}/bin/python -c "
+import importlib
+for m in ('faster_whisper','ctranslate2','presidio_analyzer','presidio_anonymizer',
+          'spacy','anthropic','openai','google.genai','fastapi','av','webvtt','pysrt','docx'):
+    importlib.import_module(m)
+print('imports OK')"
+# Both halves of the SPA must be present. static/ is serve mode (a fail-loud
+# 500 page without it); static-export/ is the single-file export build, which
+# was missing from every published wheel until 27 Aug 2026 and made the Export
+# HTML button 500 on every pip install. Assert both, not just the one we
+# happen to remember.
+bn_site=%{buildroot}%{bn_prefix}/lib/python%{python3_version}/site-packages/bristlenose
+test -s "$bn_site/server/static/index.html"
+test -s "$bn_site/server/static-export/app.js"
+test -s "$bn_site/server/static-export/app.css"
+
+# doctor must recognise this as an RPM, not guess "pip".
+test "$(cat %{buildroot}%{bn_prefix}/%{marker_file})" = rpm
+%{buildroot}%{bn_prefix}/bin/python -c "
+import sys
+from bristlenose.doctor_fixes import detect_install_method, get_fix
+assert detect_install_method() == 'rpm', detect_install_method()
+for k in ('ffmpeg_missing','backend_import_fail','spacy_model_missing',
+          'presidio_missing','serve_deps_missing'):
+    t = get_fix(k)
+    assert 'pip install' not in t and 'pipx' not in t, (k, t)
+print('doctor install-method OK')"
+
+%files
+%license LICENSE
+%doc README.md CHANGELOG.md
+%{bn_prefix}/
+%{_bindir}/%{name}
+%{_mandir}/man1/%{name}.1*
+
+%changelog
+* Thu Aug 27 2026 Martin Storey <martin@cassiocassio.co.uk> - @VERSION@-1
+- Initial Copr package.

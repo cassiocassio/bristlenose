@@ -115,6 +115,9 @@ All 12 stages of the pipeline, from ingest to render.
 | File | Role |
 |------|------|
 | `snap/snapcraft.yaml` | Snap recipe: classic confinement, core24, Python plugin, bundles FFmpeg + spaCy model + man page |
+| `rpm/bristlenose.spec.in` | RPM spec template (Fedora / Copr). `@VERSION@` substituted by `make-srpm.sh` from `bristlenose/__init__.py` |
+| `rpm/make-srpm.sh` | Builds the source RPM: fetches the PyPI sdist and vendors every wheel, because `mock` has no network. `BN_LOCAL_DIST=` packages a pre-release build |
+| `.copr/Makefile` | Copr's `make_srpm` entry point — the network-enabled half of the build |
 
 ## Design artifacts (WIP, not shipped to users)
 
@@ -136,5 +139,6 @@ These are working materials for contributors, not part of the application. Users
 | `.github/workflows/homebrew-tap/update-formula.yml` | Reference copy of tap repo workflow (authoritative copy lives in `homebrew-bristlenose`) |
 | `docs/release.md` | Full release pipeline, secrets, Homebrew tap details, Snap Store setup |
 | `docs/design-doctor-and-snap.md` | Design doc: doctor command + snap packaging (includes implementation notes and local build workflow) |
+| `docs/design-fedora-packaging.md` | Design doc: Fedora / Copr packaging — the offline-`mock` build, the measured `ffmpeg-free` codec verdict, and why the channel is built but unpublished |
 | `TODO.md` | Detailed roadmap and task tracking |
 | `CONTRIBUTING.md` | Dev setup, design system docs, release process |

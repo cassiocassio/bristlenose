@@ -262,6 +262,37 @@ for m in d.get('channel-map',[]):
     printf '%s|channel-map: %s' "$(verdict_json_field "$edge" "$VERSION")" "${edge:-unparseable}"
 }
 
+probe_copr() {
+    # Copr's own API, the one copr-cli uses. Unauthenticated for public
+    # projects, so this needs no token — which matters, because a probe that
+    # needs a credential is a probe that quietly stops running.
+    #
+    # 404 means the project does not exist yet, which is the honest state
+    # before the first build and is NOT the same as "built the wrong version".
+    # Reported as unreachable rather than bad, so a not-yet-created channel
+    # cannot read as a broken one.
+    local body ver
+    body=$(fetch "$COPR_BUILDS")
+    [ -z "$body" ] && { printf 'unreachable|no such project yet, or API unreachable'; return; }
+    # Copr reports version-release ("0.27.0-1"); compare the version half.
+    # Newest build first — a later failed build must not be masked by an
+    # earlier success, so this reads the most recent SUCCEEDED build and the
+    # newest build overall, and disagrees loudly when they differ.
+    ver=$(printf '%s' "$body" | python3 -c "
+import json,sys
+try: d=json.load(sys.stdin)
+except Exception: sys.exit(0)
+items=d.get('items') or []
+best=None
+for b in items:
+    if b.get('state')=='succeeded':
+        v=(b.get('source_package') or {}).get('version') or ''
+        if v: best=v.split('-')[0]; break
+print(best or '')
+" 2>/dev/null || true)
+    printf '%s|latest succeeded build: %s' "$(verdict_json_field "$ver" "$VERSION")" "${ver:-none}"
+}
+
 probe_website() {
     # The STRONGEST probe available: that page renders from CHANGELOG.md at build
     # time, so a hit proves the deploy ran AFTER the entry existed.

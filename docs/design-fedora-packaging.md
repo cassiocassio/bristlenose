@@ -619,6 +619,69 @@ Sequence, and it does not commute:
 Doing 4 before 3 ships instructions that fail. That is the one ordering mistake this
 channel makes easy.
 
+### The release train
+
+**Copr is Homebrew-shaped, with one difference that matters.** Both are downstream
+repackagers of the PyPI artefact, so both fire *after* PyPI. `notify-homebrew` in
+`release.yml` is `needs: publish` and dispatches an `update-formula` event at the tap.
+
+The difference: **Homebrew's formula pip-installs from PyPI at *install* time; Copr fetches
+the sdist at *build* time.** `publish` completing means twine uploaded — not that PyPI's CDN
+is serving it yet, which is exactly what `verify-pypi` polls for, up to ten minutes. Homebrew
+tolerates that race because the user installs later. A Copr build triggered on `needs:
+publish` can 404 on `Source0`.
+
+**So the Copr job is `needs: verify-pypi`, not `needs: publish`.** The release train already
+has the gate this channel needs; it just has to be the one it hangs off.
+
+```yaml
+  trigger-copr:
+    # NOT needs: publish — see above. verify-pypi is what proves the sdist is
+    # actually fetchable, and Source0 is fetched during the Copr build.
+    needs: verify-pypi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@…
+      - name: Trigger the Copr build
+        env:
+          COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
+          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+        run: |
+          [ -n "$COPR_TOKEN" ] || { echo "::error::COPR_TOKEN not set"; exit 1; }
+          pip install copr-cli
+          umask 077; mkdir -p ~/.config
+          printf '[copr-cli]\nlogin = %s\nusername = cassiocassio\ntoken = %s\ncopr_url = https://copr.fedorainfracloud.org\n' \
+              "$COPR_LOGIN" "$COPR_TOKEN" > ~/.config/copr
+          copr-cli buildscm bristlenose \
+              --clone-url https://github.com/cassiocassio/bristlenose.git \
+              --commit "$GITHUB_REF_NAME" --method make_srpm
+```
+
+**Not committed yet, deliberately** — it needs two repo secrets and a Copr project, neither
+of which exists, and a job that warns on every release is noise rather than a gate.
+
+**The probe *is* written**: `probe_copr` in `verify-channels.sh`, reading Copr's own
+unauthenticated API, with three cases pinned in `test-verify-channels.sh` — the correct
+version, a stale one, and a *failed* build (which must not read as shipped). It reports
+`unreachable` for a project that does not exist yet, which is honestly different from
+"built the wrong version".
+
+**But `copr` is deliberately held out of `CHANNELS`.** `rollup()` counts `unreachable` as
+not-ok — unverified is not verified — so listing the channel before its first build fails
+every release verification in between, for a reason that is not a defect. `CLAUDE.md`:
+*a gate that cries wolf gets switched off, which is worse than no gate.* The tests enable
+`copr` in their own sandbox instead, so the probe is exercised and the switch is proven to
+work before anyone flips it.
+
+**Flip it in the same commit that creates the Copr project and lands its first green build.**
+That commit is: `copr` into `CHANNELS`, the `trigger-copr` job above, and the two secrets.
+
+**One recurring hazard worth pricing in:** the Copr API token expires every 180 days (this
+one on 23 Feb 2027), so a channel that ships a few times a year will find it dead exactly
+when it is next needed. A date-based reminder exists, but the durable home is
+`check-release-ready.sh` — the token matters at release time, and a gate that fires when it
+matters cannot be missed the way a calendar entry can.
+
 ### What shipped regardless
 
 The export-bundle fix (§2a), which was worth the exercise on its own and is not a Fedora

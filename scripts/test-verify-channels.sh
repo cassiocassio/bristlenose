@@ -127,6 +127,7 @@ cat > "$WORK/bin/curl" <<'CURL'
 for a in "$@"; do case "$a" in
   *changelog*) cat "$BN_FAKE_CHANGELOG"; exit 0 ;;
   *snapcraft*) echo '{"channel-map":[{"channel":{"name":"edge"},"version":"9.9.9"}]}'; exit 0 ;;
+  *copr*) echo '{"items":[{"state":"'"${BN_FAKE_COPR_STATE:-succeeded}"'","source_package":{"version":"'"${BN_FAKE_COPR_VER:-9.9.9-1}"'"}}]}'; exit 0 ;;
   *.dmg.sha256) exit 22 ;;
   *dmg*) printf 'HTTP/2 302
 location: https://x/App-9.9.9.dmg
@@ -168,6 +169,46 @@ case "$(gone_row "$out")" in
     *✓*) ok "and clears once the entry is gone" ;;
     *)   bad "did not clear: $(gone_row "$out")" ;;
 esac
+
+# The Copr row. `copr` is deliberately not in CHANNELS yet (the project does not
+# exist, and an unreachable row would fail every release verification until it
+# does — see project.conf). So these turn it ON in the sandbox: that exercises
+# probe_copr AND proves the switch works, which is the thing someone will flip
+# on the day the channel goes live.
+copr_row() { printf '%s' "$1" | sed 's/\x1b\[[0-9;]*m//g' | grep -i 'copr' | head -1; }
+_cfg="$WORK/repo/scripts/project.conf"
+_cfg_orig=$(cat "$_cfg")
+_with_copr() { printf '%s\n' "${_cfg_orig/CHANNELS=\"pypi/CHANNELS=\"copr pypi}" > "$_cfg"; }
+
+printf '9.9.9 released\n' > "$WORK/changelog"
+_with_copr
+grep -q 'CHANNELS="copr ' "$_cfg" && ok "the fixture actually enabled the copr channel" \
+    || bad "fixture did not enable copr — the rows below prove nothing"
+
+# Copr reports version-release ("9.9.9-1") where every other channel reports a
+# bare version, so the probe has to split it. Comparing the raw field would
+# read `bad` on a correct release, forever.
+out=$(verify 9.9.9)
+case "$(copr_row "$out")" in
+    *✓*) ok "copr: version-release is compared on its version half" ;;
+    *)   bad "copr row not ok for a matching build: $(copr_row "$out")" ;;
+esac
+
+out=$(BN_FAKE_COPR_VER=9.8.0-1 verify 9.9.9)
+case "$(copr_row "$out")" in
+    *✗*) ok "copr: a build of the WRONG version is caught" ;;
+    *)   bad "copr passed on a stale build: $(copr_row "$out")" ;;
+esac
+
+# A failed build must not read as a shipped one. The probe reads the newest
+# SUCCEEDED build; with none, there is nothing to report.
+out=$(BN_FAKE_COPR_STATE=failed verify 9.9.9)
+case "$(copr_row "$out")" in
+    *✓*) bad "copr reported ok with no succeeded build: $(copr_row "$out")" ;;
+    *)   ok "copr: a failed build does not read as shipped" ;;
+esac
+
+printf '%s\n' "$_cfg_orig" > "$_cfg"   # back to shipped CHANNELS for what follows
 
 # CHANNELS_UNPROBEABLE, both directions (F44). It had no reader at all: the
 # constant declared testflight unprobeable and probe_testflight independently

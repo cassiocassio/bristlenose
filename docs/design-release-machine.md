@@ -116,8 +116,28 @@ is independently shippable.
 | **A6** | `verify-channels.sh` | new, ~120 lines | #7, #8 · Phase 6 executable |
 | **A7** | One rule in `SKILL.md` | `.claude/skills/bn-release/SKILL.md` | #1 |
 | **A8** | Nothing-to-ship check | `check-release-ready.sh` | Phase 1's cheapest test, currently prose |
-| **A9** | Refuse ad-hoc `SIGN_IDENTITY` | `build-all.sh:37,110` | six gates silently off |
+| **A9** | Refuse ad-hoc `SIGN_IDENTITY` | `build-all.sh:37,110` | six gates silently off — **shipped, then found insufficient**: see A9-bis |
+| **A9-bis** | Split the overloaded signing variable | `build-all.sh`, `build-dmg.sh`, `check-release-ready.sh` | A9 made the ACCIDENT fail; it could not see that one variable named two certificates |
 | **A10** | Doc-surface flag parity | `check-release-ready.sh` | Phase 2.2, currently prose |
+
+**A9-bis — why A9 was necessary and not sufficient.** A9's principle was right and
+is unchanged: *the ACCIDENT fails, the INTENT works*. What it could not see is that
+`SIGN_IDENTITY` named **two different certificates**. `build-all.sh` signs an App
+Store archive with Apple Distribution; `build-dmg.sh` signs a notarised download
+with Developer ID Application — and both *export* the variable to their child
+signers, so exporting the value one needs silently mis-signed the other.
+
+A9 therefore hardened the half that fails loudly (unset) and left the half that
+fails quietly (set, but for the other script). On 27 Aug 2026 that shipped a `.dmg`
+whose inner app was correctly notarised Developer ID inside an image signed Apple
+Distribution — caught by the last assertion before upload, 30 minutes and one
+notarisation round-trip after the mistake was made.
+
+Fixed by giving each entry point its own variable and asserting the certificate
+*type*, so the wrong cert is refused at second zero. The child contract is
+unchanged. The transferable lesson is narrower than "validate inputs": **a shared
+name is a shared assumption, and an exported one is a shared assumption you cannot
+see from the script that suffers for it.**
 
 **A1 is the model for the whole tier.** `upload-testflight.sh:202` already gates
 `--show-progress` on `[ -t 1 ]`. The first draft proposed `tr '\r' '\n'` in a

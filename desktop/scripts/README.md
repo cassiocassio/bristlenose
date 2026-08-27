@@ -298,12 +298,41 @@ safe to hand a stranger”, so there's no second implementation to drift.
 
 ---
 
-## `SIGN_IDENTITY`
+## Signing identities — there are TWO, and they are not interchangeable
 
-- `-` (default) — ad-hoc. Satisfies Hardened Runtime locally; **not** distributable.
-- `"Apple Distribution: …"` — TestFlight / App Store.
-- `"Developer ID Application: …"` — the `.dmg` channel. `build-dmg.sh` sets this
-  itself; notarisation needs a real cert, so there's no ad-hoc fallback there.
+The two channels want different certificates:
+
+| variable | script | certificate | default |
+|---|---|---|---|
+| `SIGN_IDENTITY_APPSTORE` | `build-all.sh` | `Apple Distribution: …` | **none** — hard stop |
+| `SIGN_IDENTITY_DEVELOPER_ID` | `build-dmg.sh` | `Developer ID Application: …` | its own, correct |
+
+Each entry point asserts the **type** of what it is given, so handing one the
+other's certificate fails immediately rather than at the last Gatekeeper
+assertion. `SIGN_IDENTITY_APPSTORE=-` is the deliberate ad-hoc local build;
+`build-dmg.sh` has no ad-hoc path at all, because notarisation needs a real cert.
+
+Child signers (`sign-sidecar.sh`, `sign-ffmpeg.sh`, `ensure-sidecar.sh`) still
+read plain **`SIGN_IDENTITY`**, exported by whichever parent invoked them. That
+contract is fine: the child signs with whatever its parent chose.
+
+**The trap this replaced.** Both entry points used to read `SIGN_IDENTITY`, and
+both export it. So exporting the value one of them needs silently mis-signed the
+other — and on 27 Aug 2026 it did: `SIGN_IDENTITY` was exported as Apple
+Distribution so `build-all.sh` would run, `build-dmg.sh` inherited it in place of
+its default, and the image was rejected —
+
+```
+✓ inner app Gatekeeper   Notarized Developer ID     ← the app was perfect
+✗ image Gatekeeper       rejected, origin=Apple Distribution
+```
+
+— after a full 30-minute build and a notarisation round-trip. `build-dmg.sh` no
+longer falls back to an ambient `SIGN_IDENTITY`: a value exported for a different
+script is not evidence anyone meant it to apply here. Legacy `SIGN_IDENTITY` still
+works for `build-all.sh`, with a warning. `check-release-ready.sh` also reports a
+stale exported `SIGN_IDENTITY` at preflight, so it costs a second rather than half
+an hour.
 
 `TIMESTAMP_FLAG` follows suit: a real Apple TSA timestamp for a real identity,
 `--timestamp=none` for ad-hoc.

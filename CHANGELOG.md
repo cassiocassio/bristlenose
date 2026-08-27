@@ -2,6 +2,16 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.28.0** — _27 Aug 2026_
+
+Exported reports work outside the Mac app again — and are less than half the size. A project Bristlenose can't reach now tells you why, in your language.
+
+- **Export HTML worked in the Mac app and nowhere else.** The single-file export build is produced by the frontend build and gitignored, and it was never declared for packaging — so it shipped in **no wheel and no sdist ever published**. The **Export HTML** button returned a 500 on every pip, pipx, Homebrew and Snap install. Only the Mac app worked, because it lists that directory separately. Verified against the published 0.27.0 wheel: 226 files of the report app, none of the export one. A test now fails the build if any generated asset directory goes undeclared, so this cannot recur silently.
+- **Exported reports are less than half the size.** Every export carried all 22 languages — 1,802 KB of a 3.38 MB file you hand to a client, including Czech strings for a `--whisper-model` flag. A report now embeds the language you chose, plus its fallback chain, so a missing key can never print a key name at a stakeholder. **3.38 MB → 1.55 MB.**
+- **A project Bristlenose can't reach now says why — in your language, and where you'll see it.** A volume that has gone, a project it can't read, a folder taking too long: five states that rendered as bare English sentences on the row, with no glyph and nothing to click, in every language. They now carry a glyph, a popover with the full explanation, and translations in 21 languages.
+- **`man bristlenose` no longer outlives the package.** Snap and Homebrew installs ship their own man page, but Bristlenose was also dropping a copy into your home directory. `man` reads that first, so it shadowed the packaged one — and because no package owned it, uninstalling left `man bristlenose` still working, showing whatever version last wrote it.
+- **Snap users with a broken PII component are no longer told to run `pipx`.** The suggested fix was `pipx inject` into a strictly-confined install, which cannot work. presidio ships inside the snap, so the answer is `snap refresh`.
+
 **0.27.0** — _22 Aug 2026_
 
 As many studies open as you want, each in its own window; recordings pulled straight from Teams and Meet; and a folder that no longer fails as a whole because one file in it is broken.

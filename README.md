@@ -380,6 +380,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.28.0** — _27 Aug 2026_
+
+- **Export HTML worked in the Mac app and nowhere else.** The single-file export build is produced by the frontend build and gitignored, and it was never declared for packaging — so it shipped in **no wheel and no sdist ever published**. The **Export HTML** button returned a 500 on every pip, pipx, Homebrew and Snap install. Only the Mac app worked, because it lists that directory separately. Verified against the published 0.27.0 wheel: 226 files of the report app, none of the export one. A test now fails the build if any generated asset directory goes undeclared, so this cannot recur silently.
+- **Exported reports are less than half the size.** Every export carried all 22 languages — 1,802 KB of a 3.38 MB file you hand to a client, including Czech strings for a `--whisper-model` flag. A report now embeds the language you chose, plus its fallback chain, so a missing key can never print a key name at a stakeholder. **3.38 MB → 1.55 MB.**
+- **A project Bristlenose can't reach now says why — in your language, and where you'll see it.** A volume that has gone, a project it can't read, a folder taking too long: five states that rendered as bare English sentences on the row, with no glyph and nothing to click, in every language. They now carry a glyph, a popover with the full explanation, and translations in 21 languages.
+- **`man bristlenose` no longer outlives the package.** Snap and Homebrew installs ship their own man page, but Bristlenose was also dropping a copy into your home directory. `man` reads that first, so it shadowed the packaged one — and because no package owned it, uninstalling left `man bristlenose` still working, showing whatever version last wrote it.
+- **Snap users with a broken PII component are no longer told to run `pipx`.** The suggested fix was `pipx inject` into a strictly-confined install, which cannot work. presidio ships inside the snap, so the answer is `snap refresh`.
+
 **0.27.0** — _22 Aug 2026_
 
 - **Open as many studies as you want, each in its own window — and as many windows on one study as you need.** The Mac app showed one study at a time; now every window holds its own. **File ▸ New Window** (⌥⌘N) opens another view of the study you're on, each window on its own lens — quotes here, the transcript they came from there, the analysis beside it. **Open in New Window** brings up a different study alongside; on a folder, **Open in New Windows** opens every study in it at once. Windows keep their own lens, sidebar and scroll position, and their titles say which study each is showing. Bristlenose now opens on the Welcome screen rather than reopening whatever you had last.

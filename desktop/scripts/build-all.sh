@@ -21,9 +21,12 @@
 #   desktop/scripts/build-all.sh
 #
 # Environment (passed through to child scripts):
-#   SIGN_IDENTITY  codesign identity. REQUIRED — there is no default.
+#   SIGN_IDENTITY_APPSTORE
+#                  Apple Distribution codesign identity for the App Store
+#                  archive. REQUIRED — there is no default.
 #                  Alpha: "Apple Distribution: Martin Storey (Z56GZVA2QB)"
-#                  Ad-hoc must be asked for: SIGN_IDENTITY=- (see below).
+#                  Ad-hoc must be asked for: SIGN_IDENTITY_APPSTORE=-.
+#                  Legacy SIGN_IDENTITY is still accepted, with a warning.
 #   SIGN_JOBS      parallelism for sign-sidecar.sh; default hw.ncpu.
 #   ALLOW_RESIGN   pass-through for sign-sidecar.sh re-sign override.
 #   NOTARY_PROFILE notarytool --keychain-profile; default "bristlenose-notary"
@@ -45,20 +48,63 @@ ROOT="$(cd "$DESKTOP_DIR/.." && pwd)"
 # The shape is: the ACCIDENT fails, the INTENT works. Forgetting to set it is now
 # a hard stop; a deliberate unsigned dev build says SIGN_IDENTITY=- and gets the
 # old behaviour, loudly labelled.
+# TWO SCRIPTS, TWO CERTIFICATES, AND THEY ARE NOT INTERCHANGEABLE.
+#
+# This script signs an App Store archive and wants **Apple Distribution**.
+# build-dmg.sh signs a notarised direct download and wants **Developer ID
+# Application**. Both used to read the same `SIGN_IDENTITY`, and both export it
+# to their child signers — so exporting the value one of them needs silently
+# mis-signed the other. On 27 Aug 2026 exactly that happened: SIGN_IDENTITY was
+# exported as Apple Distribution for this script, build-dmg.sh inherited it in
+# place of its Developer ID default, and the .dmg was rejected by Gatekeeper
+# after a full 30-minute build and notarisation round-trip. The inner app was
+# perfect; only the wrapper was wrong.
+#
+# So each entry point now reads its OWN variable and validates the certificate
+# TYPE, which turns that 30-minute failure into an immediate one. Children still
+# receive `SIGN_IDENTITY` — that contract is fine and unchanged.
+SIGN_IDENTITY="${SIGN_IDENTITY_APPSTORE:-${SIGN_IDENTITY:-}}"
+if [ -z "${SIGN_IDENTITY_APPSTORE:-}" ] && [ -n "${SIGN_IDENTITY:-}" ]; then
+    echo "warning: using legacy SIGN_IDENTITY. Prefer SIGN_IDENTITY_APPSTORE —" >&2
+    echo "         SIGN_IDENTITY is also read by build-dmg.sh, which needs a" >&2
+    echo "         DIFFERENT certificate, and exporting it mis-signs whichever" >&2
+    echo "         script you are not thinking about." >&2
+fi
+
 if [ -z "${SIGN_IDENTITY:-}" ]; then
-    echo "error: SIGN_IDENTITY is not set." >&2
+    echo "error: SIGN_IDENTITY_APPSTORE is not set." >&2
     echo >&2
     echo "  A release build wants the Apple Distribution identity:" >&2
-    echo "    SIGN_IDENTITY=\"Apple Distribution: Martin Storey (Z56GZVA2QB)\" \\" >&2
+    echo "    SIGN_IDENTITY_APPSTORE=\"$(security find-identity -v 2>/dev/null \
+        | grep -m1 'Apple Distribution' | sed 's/.*"\(.*\)"/\1/')\" \\" >&2
     echo "      desktop/scripts/build-all.sh" >&2
     echo >&2
     echo "  A deliberately unsigned local build must say so:" >&2
-    echo "    SIGN_IDENTITY=- desktop/scripts/build-all.sh" >&2
+    echo "    SIGN_IDENTITY_APPSTORE=- desktop/scripts/build-all.sh" >&2
     echo >&2
     echo "  Unset used to mean ad-hoc, which silently skipped the identity," >&2
     echo "  provisioning-profile and notarytool checks." >&2
     exit 2
 fi
+
+# Refuse the OTHER script's certificate outright. This is the assertion that
+# would have caught 27 Aug at second zero instead of minute thirty.
+case "$SIGN_IDENTITY" in
+    -) : ;;
+    *"Apple Distribution"*) : ;;
+    *"Developer ID"*)
+        echo "error: that is a Developer ID certificate, which belongs to build-dmg.sh." >&2
+        echo "  got:  $SIGN_IDENTITY" >&2
+        echo "  want: an Apple Distribution identity for the App Store archive." >&2
+        echo "  If SIGN_IDENTITY is exported in your shell for the .dmg build," >&2
+        echo "  unset it and use SIGN_IDENTITY_APPSTORE here instead." >&2
+        exit 2 ;;
+    *)
+        echo "error: unrecognised signing identity for an App Store archive." >&2
+        echo "  got:  $SIGN_IDENTITY" >&2
+        echo "  want: \"Apple Distribution: ...\", or - for a deliberate ad-hoc build." >&2
+        exit 2 ;;
+esac
 NOTARY_PROFILE="${NOTARY_PROFILE:-bristlenose-notary}"
 TEAM_ID="Z56GZVA2QB"
 PROFILE_NAME="Bristlenose Mac App Store"

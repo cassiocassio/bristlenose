@@ -33,7 +33,8 @@
 #   desktop/scripts/build-dmg.sh
 #
 # Environment:
-#   SIGN_IDENTITY  Developer ID Application codesign identity. REQUIRED — no
+#   SIGN_IDENTITY_DEVELOPER_ID
+#                  Developer ID Application codesign identity. REQUIRED — no
 #                  ad-hoc fallback (notarisation needs a real Developer ID cert).
 #                  Default: "Developer ID Application: Martin Storey (Z56GZVA2QB)".
 #   NOTARY_PROFILE notarytool --keychain-profile; default "bristlenose-notary".
@@ -46,7 +47,35 @@ DESKTOP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ROOT="$(cd "$DESKTOP_DIR/.." && pwd)"
 
 TEAM_ID="Z56GZVA2QB"
-SIGN_IDENTITY="${SIGN_IDENTITY:-Developer ID Application: Martin Storey ($TEAM_ID)}"
+# Deliberately does NOT fall back to an ambient $SIGN_IDENTITY. That variable is
+# also read by build-all.sh, which signs an App Store archive with a completely
+# different certificate — and exporting it for that script silently overrode the
+# default below, producing a .dmg signed Apple Distribution. Gatekeeper rejects
+# that, and only after a 30-minute build and a notarisation round-trip (27 Aug
+# 2026). The default is right for this script; an ambient value from elsewhere
+# is not evidence that anyone meant it to apply here.
+SIGN_IDENTITY="${SIGN_IDENTITY_DEVELOPER_ID:-Developer ID Application: Martin Storey ($TEAM_ID)}"
+
+# Refuse the other script's certificate rather than discovering it at the
+# Gatekeeper assertion 30 minutes from now. Uses printf/exit rather than die(),
+# which is not defined until line ~96 — an earlier draft called it here and got
+# "die: command not found", turning a clear refusal into a confusing one.
+case "$SIGN_IDENTITY" in
+    *"Developer ID Application"*) : ;;
+    *"Apple Distribution"*)
+        printf '\033[31merror:\033[0m that is an Apple Distribution certificate, which belongs to build-all.sh.\n' >&2
+        printf '  got:  %s\n' "$SIGN_IDENTITY" >&2
+        printf '  want: a Developer ID Application identity — Gatekeeper rejects a .dmg\n' >&2
+        printf '        signed Apple Distribution, which is what happened on 27 Aug 2026.\n' >&2
+        printf '  If SIGN_IDENTITY is exported in your shell for the App Store build,\n' >&2
+        printf '  unset it: this script defaults correctly on its own.\n' >&2
+        exit 1 ;;
+    *)
+        printf '\033[31merror:\033[0m unrecognised signing identity for a notarised .dmg.\n' >&2
+        printf '  got:  %s\n' "$SIGN_IDENTITY" >&2
+        printf '  want: "Developer ID Application: ..."\n' >&2
+        exit 1 ;;
+esac
 NOTARY_PROFILE="${NOTARY_PROFILE:-bristlenose-notary}"
 
 PROJECT_DIR="$DESKTOP_DIR/Bristlenose"

@@ -290,6 +290,26 @@ security find-identity -v 2>/dev/null | grep -q 'Developer ID Application' \
     && ok "Developer ID" "present" \
     || warn "Developer ID" "absent — .dmg channel unavailable"
 
+# The two build scripts want DIFFERENT certificates and used to read the same
+# variable, so exporting the one build-all.sh needs silently mis-signed the
+# .dmg — caught only by a Gatekeeper assertion 30 minutes and one notarisation
+# round-trip later (27 Aug 2026). They now read SIGN_IDENTITY_APPSTORE and
+# SIGN_IDENTITY_DEVELOPER_ID. This row exists so a stale exported SIGN_IDENTITY
+# is a preflight warning at second zero rather than a build failure at minute
+# thirty.
+if [ -n "${SIGN_IDENTITY:-}" ]; then
+    case "$SIGN_IDENTITY" in
+        *"Apple Distribution"*)
+            warn "SIGN_IDENTITY exported" "Apple Distribution — build-all reads it, build-dmg ignores it. Prefer SIGN_IDENTITY_APPSTORE and unset this" ;;
+        *"Developer ID"*)
+            bad  "SIGN_IDENTITY exported" "Developer ID — build-all.sh will REFUSE this. unset it, or use SIGN_IDENTITY_APPSTORE" ;;
+        -)  warn "SIGN_IDENTITY exported" "ad-hoc (-) — build-all will skip the identity, profile and notarytool checks" ;;
+        *)  bad  "SIGN_IDENTITY exported" "unrecognised: $SIGN_IDENTITY" ;;
+    esac
+else
+    ok "SIGN_IDENTITY" "not exported — each build script resolves its own"
+fi
+
 PROFILE="$HOME/Library/MobileDevice/Provisioning Profiles/Bristlenose_Mac_App_Store.provisionprofile"
 if [ ! -f "$PROFILE" ]; then
     bad "provisioning profile" "missing at the expected path"

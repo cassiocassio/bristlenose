@@ -414,7 +414,15 @@ not build for. Fedora 43 ships **Python 3.14.7**, so the wheelhouse has to be cp
 Checked, because "the wheels exist" is exactly the assumption that would fail late: every
 heavy dependency does publish cp314 — `ctranslate2` 4.8.1, `spacy` 3.8.16, `onnxruntime`
 1.29.0, `blis`, `thinc`, `tokenizers`, `numpy`, `pydantic-core`, and `av` via `cp311-abi3`.
-So F43 is buildable. It has **not been built**.
+
+**And then it was built.** Fedora 43 / Python 3.14.7 / **RPM 6.0.2** — a major rpm version
+ahead of the 4.20.1 the first pass used — `mock` exit 0 with no network, and the whole
+pipeline green afterwards (§6). **Nothing needed fixing for the newer platform**: the
+`python(abi)` requires tracked to 3.14 on its own, the `brp-*` suppressions and the
+`__requires_exclude_from` / `__provides_exclude_from` filters behaved identically under
+rpm 6, and the metadata came out as clean as before — three requires, two provides. The
+one number that moved is the installed size, 815 MB → **823 MB**, which is the newer
+wheels rather than anything we did.
 
 Because of that, the interpreter is now chosen rather than inherited: `make-srpm.sh` takes
 `BN_PYTHON` and refuses to run if it is absent, and `.copr/Makefile` installs `python3.14`
@@ -482,21 +490,18 @@ truing the rest would compound the drift rather than document it.
 
 A container is **not** a Copr build. The tiers actually exercised:
 
-> **Read this table with §4's chroot note.** Everything below ran on **Fedora 42**, which
-> Copr no longer offers as a chroot. The design is unchanged and the cp314 wheels exist,
-> but the build that Copr would actually run — Fedora 43, Python 3.14 — has not been run.
-
 | tier | what it proves | how |
 |---|---|---|
-| container (`fedora:42`, `fedora:41`) | codec support; that an offline `pip install --no-index` of this tree resolves at all | Docker. **Not a mock build** — no chroot, no rpm, network available in the same shell |
-| **`mock` on a real Fedora box** | the no-network `%build` genuinely works, and the spec is correct | `aella up --fedora`, real Intel Xeon 8488C, Fedora 42 |
-| `dnf install` of the built RPM | file placement, the launcher, `doctor`, a real transcription | same box |
-| Copr scratch build | Copr's own SRPM generation and its chroots | **never run** — needs the Copr account |
+| container (`fedora:41/42/43`) | codec support; which Python each release ships; that the wheels exist | Docker. **Not a mock build** — no chroot, no rpm, network available in the same shell |
+| **`mock` on a real Fedora box** | the no-network `%build` genuinely works, and the spec is correct | `aella up --fedora`, real Intel Xeon 8488C — run on **Fedora 42** first, then re-run in full on **Fedora 43 / Python 3.14 / rpm 6.0.2**, which is what Copr actually builds |
+| `dnf install` of the built RPM | file placement, the launcher, the man page, `doctor`, the install-method arm, a real transcription | same box, both releases |
+| **Copr's own builders** | Copr's chroot, its rpm, its mock — the only tier we do not control | uploaded SRPM into an unlisted, auto-deleting project |
 
 The middle two are the ones that matter for correctness and both ran on real x86_64
 hardware, not emulation. The Copr tier is the gate in §7.
 
-**What actually ran, and what it proved:**
+**What actually ran, and what it proved** (all of it twice — once on Fedora 42, then
+again end-to-end on Fedora 43, the release Copr builds for):
 
 - `mock -r fedora-42-x86_64 --rebuild`, **network unavailable throughout** — exit 0. The
   offline `pip install --no-index` resolved all 107 wheels from `vendor/` with no attempt to
@@ -507,10 +512,34 @@ hardware, not emulation. The Copr tier is the gate in §7.
 - `dnf install` of the resulting RPM, then `bristlenose --version`, `bristlenose doctor`
   (all green bar the API key, which is not configured on a throwaway box), the launcher
   symlink, and `man -w bristlenose` resolving to the gzipped page.
-- A real transcription: Teams-shaped H.264+AAC `.mp4` → correct transcript (§2).
+- A real transcription: Teams-shaped H.264+AAC `.mp4` → correct transcript (§2), 12.6s
+  on Fedora 43.
 - `rpm -qp --requires/--provides` on the built package (§4).
+- **The whole thing as a user would do it**, from a clean box:
+  `sudo dnf copr enable cassiocassio/bristlenose-test` then `sudo dnf install bristlenose`.
+  Copr signs what it builds, so the install imported a Copr GPG key and verified against it
+  — which is worth noting against §3's "no Fedora hardening" caveat: the *package* is
+  signed even though the vendored wheels are not built by Fedora.
+- The two things this channel exists to get right, asserted on the installed RPM rather
+  than in a test: `detect_install_method()` returns `rpm`, and the export bundle is
+  present so `_build_export_html` no longer 500s.
 
-**Three defects the tiers caught, in order.** A `tar | grep -q` guard in `make-srpm.sh` that
+**One defect only the *installed* package could have shown.** `_install_man_page`
+([bristlenose/cli.py](../bristlenose/cli.py)) copies the man page into
+`~/.local/share/man/man1/` on first run so a `pipx` user gets `man bristlenose`. It skipped
+snap and Homebrew — via two inline sniffs — because those packagers ship their own. The RPM
+does too, and was not skipped. On the Copr install, `man -w bristlenose` resolved to
+`~/.local/share/man/man1/bristlenose.1`, **not** the rpm-owned
+`/usr/share/man/man1/bristlenose.1.gz`: `man` reads `~/.local` first, so the home copy
+shadows the packaged one, and because no package owns it `dnf remove` leaves it behind and
+`man bristlenose` goes on working after the tool is gone.
+
+Fixed by routing all three through `detect_install_method()` (§5) rather than adding a third
+sniff. Note what found it: not a test, and not `mock` — a `man -w` on a machine where the
+package was actually installed. The class is the one `CLAUDE.md` already names about the
+desktop app: *a test asserts what someone thought to ask.*
+
+**Three further defects the build tiers caught, in order.** A `tar | grep -q` guard in `make-srpm.sh` that
 inverted itself under `set -o pipefail` (grep's early exit SIGPIPEs tar; pipefail reports
 tar's 141 for the whole pipeline) — it declared a good sdist bad on its first run.
 `pip install en_core_web_sm-3.8.0`, which is a filename stem, not a requirement. And the
@@ -518,10 +547,15 @@ export-bundle gap in §2a, which `%check` refused to build past.
 
 ---
 
-## 7. Is this worth publishing?
+## 7. Publishing: decided yes, with the costs recorded
 
-It works. That is now a measured claim, not a hope — §6. The remaining question is whether
-to *publish* it, which is a different question, and the honest answer is that it is close.
+It works. That is a measured claim, not a hope — §6, twice, on both Fedora releases.
+
+**The call has been taken: ship the channel.** This section previously recommended holding,
+and the arguments below are kept rather than deleted — not to relitigate a settled decision,
+but because every one of them is a *recurring cost* that someone has to keep paying, and a
+cost nobody wrote down is a cost that surprises you later. The technical risk is the part
+that has actually gone away.
 
 **For:** two idiomatic `dnf` commands; `dnf upgrade` keeps users current where `pipx`
 silently does not; and the per-release cost really is small, because the wheelhouse is
@@ -549,16 +583,46 @@ like every other channel.
    boundaries — the one recurring cost that is genuinely outside our control.
 5. **815 MB installed**, which §7's own deferred split says is the wrong shape.
 
-**Recommendation: hold.** Keep the machinery — it is written, committed and proven, and
-resuming it is `copr-cli create` plus a scratch build. Publish when there is a Fedora user
-asking, and prefer the subpackage split before the first publish rather than after, so the
-channel does not open on the fat shape and then change what `dnf install bristlenose`
-means. **pipx remains a perfectly good Fedora answer in the meantime**, and — now that
-`ffmpeg-free` is measured rather than assumed (§2) — a correct one.
+### What publishing obliges
 
-Note what shipped regardless: the export-bundle fix (§2a), which was worth the whole
-exercise on its own, and the doctor `rpm` arm (§5), which is right whenever this does
-publish.
+Three of those are one-offs the decision absorbs. Two are standing obligations, and they
+are the ones to hold onto:
+
+- **CVE tracking for the vendored set is ours, permanently.** `dnf` cannot see inside the
+  wheelhouse, so a CVE in `ctranslate2`, `numpy` or `onnxruntime` is invisible to the
+  distro's own machinery. The existing dependency process (`cassandra`,
+  `docs/dependency-premortem-log.md`) is the only thing standing there.
+- **The wheelhouse tracks Fedora's Python, on Fedora's schedule.** Copr dropped `fedora-42`
+  during the writing of this doc. Each Fedora release needs a regenerated wheelhouse and a
+  re-proof, triggered by Fedora's calendar rather than ours. `.copr/Makefile` names
+  `python3.14` explicitly so this fails loudly at build time instead of quietly resolving
+  wrong — but it still needs a human to change the line.
+
+### The ordering constraint — read before publishing
+
+The Copr builds `Source0` from **PyPI**, so it can only build a version PyPI already has.
+`%check` asserts both halves of the SPA, which means **it will refuse every release up to
+and including 0.27.0** — those have no export bundle (§2a). The first publishable build
+therefore waits on the next release.
+
+Sequence, and it does not commute:
+
+1. Release to PyPI, carrying the `static-export` fix. Verify with the version-specific
+   endpoint, not the cached index (`CLAUDE.md`, post-push PyPI verification).
+2. Push `rpm/` and `.copr/` so Copr has something to clone.
+3. `copr-cli create bristlenose --chroot fedora-43-x86_64`, then `buildscm --method
+   make_srpm`. Confirm the build is **succeeded**, not merely submitted.
+4. *Then* the public docs go live — `INSTALL.md` §Fedora, `README.md`, and the website's
+   `docs-src/install.md` + homepage Linux panel all name the Copr, and each of them is a
+   promise that `dnf copr enable` will work.
+
+Doing 4 before 3 ships instructions that fail. That is the one ordering mistake this
+channel makes easy.
+
+### What shipped regardless
+
+The export-bundle fix (§2a), which was worth the exercise on its own and is not a Fedora
+thing at all, and the doctor `rpm` arm (§5).
 
 **Deferred, deliberately:** splitting into `bristlenose` + `bristlenose-transcribe`
 (faster-whisper/ctranslate2) + `bristlenose-redact` (presidio/spacy). It would cut the base

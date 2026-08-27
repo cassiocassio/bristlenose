@@ -81,6 +81,13 @@ Requires Python 3.10 or newer.
 brew install cassiocassio/bristlenose/bristlenose
 brew trust --formula cassiocassio/bristlenose/bristlenose
 
+# Ubuntu / Debian and most other distros (Snap) -- bundles Python + FFmpeg
+sudo snap install bristlenose --edge
+
+# Fedora (Copr) -- bundles Python, pulls FFmpeg from Fedora's own repos
+sudo dnf copr enable cassiocassio/bristlenose
+sudo dnf install bristlenose
+
 # Linux / macOS / Windows (pipx or uv)
 pipx install bristlenose
 uv tool install bristlenose    # alternative
@@ -88,7 +95,9 @@ uv tool install bristlenose    # alternative
 
 The `brew trust` line is a one-off. Homebrew 6.0 and later skip third-party taps during `brew upgrade` unless trusted, so without it Bristlenose installs fine but silently stops receiving updates.
 
-If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu, `winget install FFmpeg` on Windows).
+The Snap and the Fedora package are both **amd64/x86_64 only** — on ARM Linux, use pipx.
+
+If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu, `sudo dnf install ffmpeg-free` on Fedora, `winget install FFmpeg` on Windows).
 
 If you have Anaconda installed, its bundled Python may shadow newer system Pythons. Either `conda deactivate` before running pip/pipx, or install via Homebrew (which uses its own bundled Python 3.12).
 
@@ -314,7 +323,7 @@ Priorities may shift. If something is missing that matters to you, [open an issu
 - **Gemini** -- the least-exercised of the cloud providers
 - **Azure OpenAI** -- enterprise deployments
 - **Windows** -- the pipeline works but hasn't been widely tested
-- **Linux** -- pipx works today; the Snap ships on the edge channel (`snap install bristlenose --edge`)
+- **Linux** -- pipx works today; the Snap ships on the edge channel (`snap install bristlenose --edge`), and Fedora has a Copr (`dnf copr enable cassiocassio/bristlenose`)
 
 ---
 

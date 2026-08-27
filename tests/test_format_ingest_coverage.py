@@ -45,11 +45,11 @@ from bristlenose.models import (
 # ---------------------------------------------------------------------------
 
 _EXPECTED: list[tuple[str, FileType]] = (
-    [(ext, FileType.AUDIO) for ext in AUDIO_EXTENSIONS]
-    + [(ext, FileType.VIDEO) for ext in VIDEO_EXTENSIONS]
-    + [(ext, FileType.SUBTITLE_SRT) for ext in SUBTITLE_SRT_EXTENSIONS]
-    + [(ext, FileType.SUBTITLE_VTT) for ext in SUBTITLE_VTT_EXTENSIONS]
-    + [(ext, FileType.DOCX) for ext in DOCX_EXTENSIONS]
+    [(ext, FileType.AUDIO) for ext in sorted(AUDIO_EXTENSIONS)]
+    + [(ext, FileType.VIDEO) for ext in sorted(VIDEO_EXTENSIONS)]
+    + [(ext, FileType.SUBTITLE_SRT) for ext in sorted(SUBTITLE_SRT_EXTENSIONS)]
+    + [(ext, FileType.SUBTITLE_VTT) for ext in sorted(SUBTITLE_VTT_EXTENSIONS)]
+    + [(ext, FileType.DOCX) for ext in sorted(DOCX_EXTENSIONS)]
 )
 
 

@@ -43,6 +43,19 @@ The pipeline's job is to get from the first to the second — turn flowing text 
 | Editable speaker summary on project page | Not implemented. `SessionsTable` shows speakers read-only |
 | Merge two speakers (cross-session identity) | Not implemented. `person_links` table noted as future work in code comments |
 
+> **Trued 25 Aug 2026 against [`design-people.md`](design-people.md).** The rows
+> still describe the code; two framings around them no longer hold. **Merge is not
+> a feature of its own** — under §E decision 1 a cross-session join is what
+> *naming* does: picking the person from the bank (§B4) links the codes as a side
+> effect, so `person_links` is a back-fill for people named before the bank
+> existed rather than the primary mechanism. §Sequence step 6 reads the same way.
+> **Quote cascade is still unsolved, and §C4 measures why:** `Quote.participant_id`
+> and `TranscriptSegment.speaker_code` are plain strings with no foreign key, and
+> the only FK to `persons` in the schema is `SessionSpeaker.person_id`. The same
+> measurement supplies a row this table lacks — **the Quotes lens applies no
+> read-time membership filter at all**; membership is enforced once, at extraction
+> time.
+
 ## Design
 
 ### Operation 1: Name and edit speakers
@@ -61,6 +74,19 @@ This is also a useful reference — the researcher can see at a glance what the 
 
 **Frontend:**
 - Enhance `SessionsTable.tsx` with inline editing (same pattern as quote inline editing in the report)
+
+> **Trued 25 Aug 2026 against [`design-people.md`](design-people.md).** Three
+> corrections, none of them to the API line above. Naming is a **pick, not a
+> keystroke** — the field offers the bank of instance-scoped `Person` rows that
+> already exist, with **Me** seeded at the top (§B4); a free-text cell recreates
+> the duplicates the bank prevents, and picking an existing name is also the
+> cross-study link. The role vocabulary here (`researcher / participant /
+> observer`) is **not settled** — the user-facing word for the first is under
+> adjudication and `glossary.md` carries no row for any of the three (§H1). And
+> this table is one of five altitudes that read *and* write the same object (§B1),
+> not the place where naming lives: the same acts are drawn on the sidebar, the
+> session, the transcript and the quote card. Each is drawn with an Undo, which §D
+> makes a step-1 gate rather than parallel work.
 
 ### Operation 2: Reassign speech
 
@@ -87,6 +113,25 @@ Options:
 - **C: Rebuild quotes on reassign** — re-run quote extraction for affected timecode ranges. Heavy, but accurate
 
 **Recommendation:** B first (simplest, no cascade logic). Quote cards already support inline editing — adding a speaker dropdown is incremental. Segment reassignment on transcript pages is independent. The researcher fixes each where they see it.
+
+> **Semantics superseded 25 Aug 2026 by [`design-people.md`](design-people.md) §B9
+> — the A/B/C analysis above stands, the conclusion does not.** "Researcher fixes
+> quotes independently of transcripts" is exactly the split brain §B9 forbids: the
+> card would change while the transcript went on showing those words under the old
+> code. A quote is a **view onto speech, not a copy of it**, so re-attributing a
+> quote moves the speech, and the transcript agrees afterwards. Two outcomes, not
+> one: `p`→`p` **re-credits** and the quote survives under a new name; `p`→`m`/`o`
+> **re-attributes the speech**, and the card leaving the Quotes lens is a
+> consequence rather than the action — nothing is withdrawn, there is no hidden
+> state and no reason field, and ⌘Z restores card and speech as one act. The
+> control is §B9's picker — a cast list grouped Participants / Moderators /
+> Observers in code order, code first, with `New Participant…` / `New Moderator…` /
+> `New Observer…` that name in the same action — **not** the flat session speaker
+> list this section assumes, which would let a researcher produce "a quote by the
+> moderator", a thing that cannot exist. Two consequences for cost: a whole-turn
+> quote is one segment update, while a fragment inside a longer turn splits that
+> turn at the quote's own timecodes; and the lens needs the read-time membership
+> filter §C4 measures as absent.
 
 **Stats invalidation:**
 - `SessionSpeaker.words_spoken`, `pct_words`, `pct_time_speaking` become stale after reassignment

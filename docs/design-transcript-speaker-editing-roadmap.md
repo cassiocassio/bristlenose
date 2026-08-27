@@ -78,6 +78,7 @@ Fix "this segment is p2, not p1" — the core Dovetail-style correction.
 **3a. Speaker badge dropdown per segment**
 - Click speaker code badge on a segment → dropdown of available speakers for that session
 - Select → segment reassigned
+- Picker shape is [design-people.md](design-people.md) §B9 — grouped Participants / Moderators / Observers in code order, code-first, and **creatable** (`New Participant…`), because diarisation can merge two people into one code, leaving nobody to reattribute to
 
 **3b. Batch PATCH endpoint**
 - `PATCH /projects/{id}/sessions/{sid}/segments` — accepts `[{segment_id, speaker_code}]`
@@ -96,10 +97,23 @@ Fix "this segment is p2, not p1" — the core Dovetail-style correction.
 
 ### Layer 4: Speaker dropdown on quote cards
 
-Fix "this quote is attributed to the wrong person" without touching the transcript.
+Fix "this quote is attributed to the wrong person."
+
+> **Trued 25 Aug 2026 — semantics and picker shape live in
+> [design-people.md](design-people.md) §B9.** This layer read "…without touching
+> the transcript" and specified "the same speaker list as the session". Both are
+> superseded: a quote is a **view onto speech, not a copy**, so re-attributing a
+> card changes the underlying speech and the transcript agrees afterwards.
+> Picking a moderator or observer means "not a participant quote" — the speech
+> moves and the card falls out of the Quotes lens as a *consequence*, with
+> nothing withdrawn, no hide/hidden vocabulary and no new state. The picker is
+> the grouped, creatable cast list, not a flat session list. One thing this
+> layer must build rather than inherit, measured in §C4: there is no read-time
+> membership filter on the Quotes lens today — membership is enforced at
+> extraction time only.
 
 **4a. Extend quote update API** — add `speaker_code` / `participant_id` to the quote PATCH endpoint
-**4b. Speaker dropdown on QuoteCard** — small dropdown on the quote card, same speaker list as the session
+**4b. Speaker dropdown on QuoteCard** — the §B9 picker on the quote card; the write lands on the speech
 
 **Files:** `QuoteCard.tsx`, `bristlenose/server/routes/data.py`
 
@@ -211,7 +225,18 @@ This is a convenience, not a correction tool. The quotes page is for curating at
 
 **11a. `person_links` table** — map speaker codes across sessions to a single person
 **11b. Merge UI** — on the project page speaker summary (Layer 2)
-**11c. Give `people.yaml` a person↔session split** — the prerequisite, and currently a live bug
+**11c. The `m1` collision in `people.yaml`** — a live bug; the `(session, code)` rekey once recommended below is superseded
+
+> **Trued 25 Aug 2026 — 11a/11b are a back-fill, not the primary mechanism.**
+> [design-people.md](design-people.md) §B4: the bank — picking a known person
+> rather than retyping — prevents the duplicates a links table and a merge UI
+> exist to reconcile, and joining two codes to one person is a consequence of
+> naming (§E decision 1), not a separate act. What is left is the people named
+> before the bank existed: a smaller feature with no matching algorithm in it.
+> Never auto-merge on name equality, at any altitude — `p3` Mary and `p5` Mary
+> are routinely two different people. §C4 also measures `SessionSpeaker.person_id`
+> as the only foreign key to `persons` in the schema, so the join already has a
+> home; whether a separate `person_links` table is needed at all is open.
 
 #### 11c: the two persistence layers disagree today
 
@@ -237,7 +262,10 @@ The serve-mode DB has no such collision: `SessionSpeaker`
 correctly. (Its docstring already names cross-session moderator linking as the
 reason it exists.) One caveat — `_import_speakers()` fills `Person` name fields
 via a flat `people[code]` lookup, so the *names* it imports inherit the YAML
-collision even though the *rows* are per-session; fixing 11c fixes that too.
+collision even though the *rows* are per-session. Under the settled model that
+lookup is corrected by the renumber rather than by a reshape: a second moderator
+becomes `m2`, a distinct key — but only once the two have actually been named
+apart, so the flat-key loss stands until then.
 
 Each collision now logs a WARNING from `bristlenose.people` so it is announced
 rather than silent (22 Aug 2026), and
@@ -246,18 +274,42 @@ pins the behaviour. It is still lossy — the flat key cannot represent two
 different moderators, so this is a documented limitation awaiting 11c, not a
 resolved issue.
 
-**Why it wasn't just fixed in place:** re-keying the dict by `(session_id, code)`
+**Why it wasn't just fixed in place — and part of why the rekey was ultimately
+rejected:** re-keying the dict by `(session_id, code)`
 reshapes `people.yaml` — the one file researchers hand-edit, with files in the
 field since the 14 Jul TestFlight. `merge_people()` preserves existing entries
 *by key*, so a reshape without a migration leaves every old `m1` entry stranded
 and the researcher's typed name does not follow to the new `s1:m1` key —
 silently orphaning hand-typed names, the same failure class this fixes. The
-readers to update in the same change: `build_display_name_map`,
+readers it would have taken with it: `build_display_name_map`,
 `auto_populate_names`, `suggest_short_names`, the static render's sessions table
 (`s12_render/dashboard.py:64`) plus `html_helpers`/`report`/`render_output`, the
 importer's `people[code]` lookup, `_write_through_people_yaml`
-(`server/routes/data.py`), and `theme/js/names.js`. The right shape to converge
-on is the DB's, not a second invention.
+(`server/routes/data.py`), and `theme/js/names.js`.
+
+> **Superseded 25 Aug 2026 — the rekey was considered and rejected.** The
+> recommendation that stood here ("the right shape to converge on is the DB's,
+> not a second invention") is replaced by
+> [design-people.md](design-people.md) §E decision 1, settled 24 Aug 2026. A
+> speaker code is a globally-numbered **slot**; identity is a layer above it;
+> and the invariant is that a name belongs to a code and a code has one name,
+> everywhere in the study. Keying `people.yaml` by `(session, code)` would fix
+> the symptom by breaking that invariant — one code could then carry two names,
+> and "what is `p4` called?" would have more than one answer. So the `m1`
+> collision is re-read as **the name model working correctly on a code that
+> names two people**. The escape is renaming in a session — *"the moderator in
+> s9 is Mike, not Martin"* — which renumbers Mike to `m2`; `people.yaml` keeps
+> its shape and simply gains an `m2` key. The migration risk argued above is
+> therefore not a cost to be paid but part of the case against: under
+> renumbering there is no reshape and no migration.
+>
+> Everything above the recommendation still stands — the collision mechanics,
+> the two consequences, the WARNING and its pinned test, and the `merge_people()`
+> mislabelling. The reader list was enumerated **for the rekey**: because the
+> file keeps its shape, most of those readers need no reshape, and the work moves
+> to the renumber-and-remap path (§D step 4 of `design-people.md` —
+> speaker→person remap, moderator renumber, stats recompute). Which of them that
+> path still touches is a question for it, not for this section.
 
 - [design-multi-project.md](design-multi-project.md) — person identity, single-project assumption inventory
 
@@ -301,4 +353,5 @@ Highest value-to-effort first:
 - [design-speaker-role-detection.md](design-speaker-role-detection.md) — generalised role detection (Layer 0, done)
 - [design-transcript-editing.md](design-transcript-editing.md) — text correction, section strike/exclude, prior art analysis
 - [design-pipeline-resilience.md](design-pipeline-resilience.md) — manifest, event sourcing, re-run integrity
+- [design-people.md](design-people.md) — **the governing doc for identity, naming and attribution** (§E decision 1 settled 24 Aug 2026): codes are slots and identity sits above them, §B4 the bank, §B9 the attribution picker and quote-as-view-onto-speech, §D the sequencing
 - [design-multi-project.md](design-multi-project.md) — person identity, cross-session linking

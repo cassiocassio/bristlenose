@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>People lens — three scopes · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css).
+
+   REUSED verbatim below: .section-heading / .section-heading-action
+   (atoms/section-heading.css), .toolbar-btn / .toolbar-arrow
+   (atoms/button.css), .bn-person-badge / .bn-speaker-badge--split /
+   .bn-speaker-editable-name / .bn-name-pencil (molecules/person-badge.css).
+
+   NEW and therefore FLAGGED: the .bn-people-* organism, the scope popup's
+   contents, the conflict row, the link affordances. Every frame containing a
+   new element says "proposed" in its chrome.
+
+   Companion mockup: people-provenance-paths.html (same fictional study).
+   Reviews: docs/private/reviews/people-lens.md.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+  --bn-colour-keyline:     var(--bn-colour-border);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+  --bn-colour-keyline:     var(--bn-colour-border);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:1120px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:74ch; margin:.4rem 0; }
+.masthead p b { color:var(--bn-colour-text); font-weight:490; }
+.controls { display:flex; gap:.4rem; align-items:center; margin:var(--bn-space-lg) 0 var(--bn-space-xl); flex-wrap:wrap; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* ── zone key ─────────────────────────────────────────────────────────── */
+.key { display:flex; gap:1.5rem; flex-wrap:wrap; padding:.9rem 1.1rem; border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-lg); margin-bottom:var(--bn-space-xl); }
+.key-item { display:flex; gap:.6rem; align-items:flex-start; font-size:var(--bn-text-label); flex:1; min-width:16rem; }
+.key-swatch { width:2.4rem; height:2.4rem; border-radius:var(--bn-radius-md); flex-shrink:0; }
+.key-swatch.artefact { border:1px solid var(--bn-colour-border-hover); background:var(--bn-colour-bg); }
+.key-swatch.commentary { border-left:3px solid var(--bn-colour-muted);
+  background-image:repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--bn-colour-muted) 12%, transparent) 5px 10px); }
+.key-item b { font-weight:490; display:block; }
+.key-item span { color:var(--bn-colour-muted); }
+
+/* ── premise table (commentary furniture, not product) ────────────────── */
+.premise { width:100%; border-collapse:collapse; margin:var(--bn-space-lg) 0 var(--bn-space-xl); font-size:var(--bn-text-label); }
+.premise th, .premise td { text-align:left; vertical-align:top; padding:.55rem .8rem; border-bottom:1px solid var(--bn-colour-border); }
+.premise th { font-weight:490; color:var(--bn-colour-muted); text-transform:uppercase; font-size:var(--bn-text-caption); letter-spacing:.05em; }
+.premise td:first-child { font-weight:490; white-space:nowrap; }
+.premise tr:last-child td { border-bottom:none; }
+
+/* ── bench scaffolding ────────────────────────────────────────────────── */
+.bench { margin:3rem 0; }
+.bench-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.bench-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1.1rem; max-width:78ch; }
+.part { font-size:var(--bn-text-caption); font-weight:490; color:var(--bn-colour-accent); text-transform:uppercase;
+  letter-spacing:.05em; margin:3.5rem 0 .3rem; font-family:var(--bn-font-mono); border-top:1px solid var(--bn-colour-border); padding-top:1.4rem; }
+.part:first-of-type { margin-top:1rem; }
+.part small { display:block; text-transform:none; letter-spacing:0; font-family:var(--bn-font-body);
+  color:var(--bn-colour-muted); font-weight:420; margin-top:.25rem; font-size:var(--bn-text-label); }
+
+/* frame = screenshot chrome. Everything INSIDE .screen is product pixels. */
+.frame { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg); overflow:hidden;
+  box-shadow:0 2px 10px var(--bn-colour-shadow); margin-bottom:.9rem; background:var(--bn-colour-bg); }
+.chrome { display:flex; align-items:center; gap:.5rem; padding:.4rem .7rem; border-bottom:1px solid var(--bn-colour-border);
+  background:var(--bn-colour-quote-bg); font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.06em; }
+.chrome .dots { display:flex; gap:4px; }
+.chrome .dots i { width:8px; height:8px; border-radius:50%; background:var(--bn-off-track); display:block; }
+.chrome .tag { margin-left:auto; }
+.chrome .tag.shipped { color:var(--bn-colour-muted); }
+.chrome .tag.proposed { color:var(--bn-colour-accent); }
+.screen { padding:1rem 1.4rem 1.4rem; }
+
+/* commentary zone — deliberately not-the-product */
+.note { border-left:3px solid var(--bn-colour-muted); border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0;
+  padding:.9rem 1.1rem; margin-bottom:2.2rem;
+  background-image:repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--bn-colour-muted) 9%, transparent) 6px 12px); }
+.note-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.08em;
+  color:var(--bn-colour-muted); margin-bottom:.5rem; }
+.st { display:grid; grid-template-columns:auto 1fr; gap:.3rem .8rem; font-size:var(--bn-text-label); align-items:baseline; }
+.st dt { font-weight:490; color:var(--bn-colour-muted); white-space:nowrap; }
+.st dd { margin:0; }
+.note p { font-size:var(--bn-text-label); margin:.7rem 0 0; max-width:80ch; }
+.note ul { font-size:var(--bn-text-label); margin:.7rem 0 0; padding-left:1.1rem; max-width:80ch; }
+.note li { margin:.25rem 0; }
+.note code { font-family:var(--bn-font-mono); font-size:.95em; background:var(--bn-colour-badge-bg); padding:0 .25rem; border-radius:var(--bn-radius-sm); }
+.verdict { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase;
+  letter-spacing:.06em; padding:.1rem .45rem; border-radius:var(--bn-radius-sm); margin-bottom:.5rem; }
+.verdict.ok { background:color-mix(in srgb, var(--bn-positive) 18%, transparent); color:var(--bn-positive); }
+.verdict.bad { background:color-mix(in srgb, #dc2626 16%, transparent); color:light-dark(#b91c1c,#f87171); }
+.verdict.warn { background:color-mix(in srgb, #d97706 18%, transparent); color:light-dark(#b45309,#fbbf24); }
+.verdict.new { background:color-mix(in srgb, var(--bn-colour-accent) 16%, transparent); color:var(--bn-colour-accent); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   REUSED — atoms/section-heading.css, verbatim
+   ═════════════════════════════════════════════════════════════════════ */
+.section-heading { display:flex; align-items:flex-end; justify-content:space-between;
+  gap:var(--bn-space-lg); max-width:none; margin:0 0 1rem; padding-bottom:.4rem;
+  border-bottom:1px solid var(--bn-colour-keyline); }
+.section-heading > h1 { margin:0; max-width:none; min-width:0; border-bottom:none; padding-bottom:0;
+  font-size:var(--bn-text-display); font-weight:var(--bn-weight-strong); letter-spacing:-.01em; line-height:1.45; }
+.section-heading-action { display:flex; align-items:center; gap:var(--bn-space-sm); flex-shrink:0; }
+
+/* REUSED — atoms/button.css .toolbar-btn (the app's dropdown control) */
+.toolbar-btn { display:inline-flex; align-items:center; gap:var(--bn-space-sm);
+  background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  padding:.4rem .85rem; font-family:var(--bn-font-body); font-size:var(--bn-text-label);
+  color:var(--bn-colour-text); cursor:pointer; }
+.toolbar-btn .toolbar-arrow { color:var(--bn-colour-muted); vertical-align:-.05em; }
+.toolbar-btn .toolbar-icon-svg { color:var(--bn-colour-muted); vertical-align:-.15em; }
+
+/* REUSED — molecules/person-badge.css */
+.bn-person-badge { display:inline-flex; align-items:center; gap:0; white-space:nowrap; }
+.bn-speaker-badge--split { display:inline-flex; align-items:center; gap:0; padding:0;
+  border-radius:var(--bn-radius-sm); overflow:hidden; background:none; vertical-align:baseline; }
+.bn-speaker-badge--split .bn-speaker-badge-code {
+  font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) .4rem;
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text);
+  border:1px solid var(--bn-colour-border); border-right:none;
+  border-radius:var(--bn-radius-sm) 0 0 var(--bn-radius-sm); }
+.bn-speaker-badge--split .bn-speaker-badge-code:last-child {
+  border-radius:var(--bn-radius-sm); border-right:1px solid var(--bn-colour-border); }
+.bn-speaker-editable-name { font-family:var(--bn-font-body); font-size:inherit;
+  font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); border-radius:var(--bn-radius-sm);
+  padding:var(--bn-space-xs) .2rem; min-width:2rem; }
+.bn-speaker-editable-name.unnamed { font-weight:var(--bn-weight-normal); font-style:italic; color:var(--bn-colour-muted); }
+.bn-name-pencil { font-size:var(--bn-text-micro); opacity:.4; color:var(--bn-colour-muted); padding:0 .1rem; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   PROPOSED — the People organism. Same CONSTRUCTION as the shipped
+   sessions grid (parent grid + `grid-template-columns: subgrid` rows, so
+   every row shares one column solve), new class family because it is a
+   different object: one row per PERSON, not per session.
+   ═════════════════════════════════════════════════════════════════════ */
+.bn-people { container-type:inline-size; container-name:bn-people; }
+.bn-people-grid { display:grid; font-size:var(--bn-text-label);
+  grid-template-columns:max-content minmax(11rem,1.4fr) max-content minmax(7rem,1fr) max-content max-content; }
+.bn-people-grid.scope-folder { grid-template-columns:minmax(11rem,1.4fr) max-content minmax(9rem,1.2fr) max-content max-content max-content; }
+.bn-people-grid.scope-everyone { grid-template-columns:minmax(11rem,1.4fr) max-content minmax(9rem,1.2fr) max-content max-content; }
+.bn-people-row { display:grid; grid-column:1/-1; grid-template-columns:subgrid; align-items:start;
+  border-bottom:1px solid var(--bn-colour-border); }
+.bn-people-row:last-child { border-bottom:none; }
+.bn-people-cell { padding:.5rem var(--bn-space-md); min-width:0; }
+.bn-people-head { border-bottom-width:2px; }
+.bn-people-head .bn-people-cell { padding-block:.6rem; font-weight:var(--bn-weight-emphasis);
+  display:flex; flex-direction:column; align-items:flex-start; gap:.1rem; }
+.bn-people-h1,.bn-people-h2 { display:block; }
+.bn-people-h2 { font-weight:var(--bn-weight-normal); color:var(--bn-colour-muted); }
+.bn-cell-num { text-align:right; font-variant-numeric:tabular-nums; }
+.bn-cell-where { color:var(--bn-colour-muted); }
+.bn-cell-where a { color:var(--bn-colour-accent); text-decoration:none; }
+.bn-people-role { color:var(--bn-colour-muted); white-space:nowrap; }
+
+/* The name is the identity anchor at this altitude — the inverse of the
+   sessions grid, where the badge is. A guessed name is set in italic and
+   nothing else (no chip, no dot): one treatment, zero geometry, and it
+   survives every width. */
+.bn-person-name { font-weight:var(--bn-weight-emphasis); }
+.bn-person-name.guess { font-style:italic; font-weight:var(--bn-weight-normal); }
+.bn-person-name.none { font-style:italic; font-weight:var(--bn-weight-normal); color:var(--bn-colour-muted); }
+.bn-person-sub { display:block; color:var(--bn-colour-muted); font-size:var(--bn-text-badge); }
+
+/* Absent-when-zero line under the heading. One string, one sweep. */
+.bn-people-sweep { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:0 0 1rem;
+  display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+.bn-people-sweep b { font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); }
+.bn-people-sweep a { color:var(--bn-colour-accent); text-decoration:none; }
+
+/* A row whose identity is contested. Not an error colour — nothing has gone
+   wrong for the researcher yet, they just have to answer a question. */
+.bn-people-row.contested { background:var(--bn-colour-quote-bg); }
+.bn-contest { display:flex; gap:.5rem; align-items:baseline; color:var(--bn-colour-muted);
+  font-size:var(--bn-text-badge); margin-top:.15rem; }
+.bn-contest b { color:var(--bn-colour-text); font-weight:var(--bn-weight-emphasis); }
+.bn-inline-act { font:inherit; font-size:var(--bn-text-badge); background:none; border:none; padding:0;
+  color:var(--bn-colour-accent); cursor:pointer; text-decoration:none; }
+
+/* The suggestion. Sits under the row it is about, indented to it, and offers
+   exactly two answers plus the escape of ignoring it. */
+.bn-suggest { grid-column:1/-1; display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap;
+  padding:.45rem var(--bn-space-md) .55rem 2.2rem; font-size:var(--bn-text-badge);
+  color:var(--bn-colour-muted); border-top:1px dashed var(--bn-colour-border); }
+.bn-suggest b { color:var(--bn-colour-text); font-weight:var(--bn-weight-emphasis); }
+.bn-suggest-acts { display:flex; gap:.4rem; margin-left:auto; }
+.mini-btn { font:inherit; font-size:var(--bn-text-badge); padding:.15rem .55rem;
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; white-space:nowrap; }
+.mini-btn.primary { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* Sheet — the real app uses a native macOS sheet; this is its web stand-in. */
+.sheet { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg);
+  box-shadow:0 6px 24px var(--bn-colour-shadow); background:var(--bn-colour-bg);
+  padding:1.1rem 1.2rem; max-width:32rem; margin:0 auto; }
+.sheet h4 { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); margin:0 0 .35rem; }
+.sheet p { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:.3rem 0; }
+.sheet-acts { display:flex; gap:.5rem; justify-content:flex-end; margin-top:1rem; }
+.sheet-btn { font:inherit; font-size:var(--bn-text-label); padding:.35rem .9rem; border-radius:var(--bn-radius-md);
+  border:1px solid var(--bn-colour-border); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.sheet-btn.default { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* The link chain — drawn, because a cascade the researcher cannot see is a
+   cascade they cannot consent to. */
+.chain { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; margin:.7rem 0 .3rem;
+  font-size:var(--bn-text-label); }
+.chain .node { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  padding:.2rem .5rem; background:var(--bn-colour-quote-bg); white-space:nowrap; }
+.chain .node small { display:block; color:var(--bn-colour-muted); font-size:var(--bn-text-micro); }
+.chain .rel { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  text-transform:uppercase; letter-spacing:.06em; }
+.chain .rel.new { color:var(--bn-colour-accent); }
+.chain .node.other-folder { border-style:dashed; border-color:var(--bn-colour-accent); }
+
+/* Scope popup menu, open state */
+.menu { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-md);
+  box-shadow:0 4px 16px var(--bn-colour-shadow); background:var(--bn-colour-bg); padding:.25rem;
+  width:19rem; font-size:var(--bn-text-label); }
+.menu-item { display:flex; gap:.5rem; align-items:baseline; padding:.3rem .5rem; border-radius:var(--bn-radius-sm); }
+.menu-item .tick { width:1rem; color:var(--bn-colour-accent); }
+.menu-item .m-sub { margin-left:auto; color:var(--bn-colour-muted); font-size:var(--bn-text-badge); }
+.menu-item.on { background:var(--bn-colour-hover); }
+.menu-sep { height:1px; background:var(--bn-colour-border); margin:.25rem .3rem; }
+.menu-group { font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.06em;
+  color:var(--bn-colour-muted); padding:.35rem .5rem .15rem; }
+
+/* Degradation ladder for the People grid — mirrors the sessions-grid rungs.
+   Note which column dies first: the CODE, not the name. */
+@container bn-people (max-width: 900px) { .bn-people-grid .bn-cell-words { display:none; } }
+@container bn-people (max-width: 720px) { .bn-people-grid .bn-cell-code { display:none; } }
+@container bn-people (max-width: 560px) { .bn-people-grid .bn-cell-role { display:none; } }
+
+.width-strip { display:flex; gap:.4rem; align-items:center; font-family:var(--bn-font-mono);
+  font-size:var(--bn-text-micro); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.4rem; }
+.stacked > div + div { margin-top:.4rem; }
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="masthead">
+  <div class="eyebrow">Bristlenose · mockup</div>
+  <h1>The People lens, at three scopes</h1>
+  <p>One row per <b>person</b> — not per speaker code, not per session. The same lens answers a
+     different question at each of three altitudes, and the change of question is what the scope
+     control is really switching.</p>
+  <p>Fictional corpus used throughout, continuous with
+     <code>people-provenance-paths.html</code>: client folder <b>NHS Trust</b> holds
+     <b>Ward handover app — round 1</b> (8 sessions, Sep 2025), <b>round 2</b> (12 sessions,
+     Jan 2026) and <b>Discharge letters — diary study</b> (on an external drive, currently
+     unplugged). Client folder <b>Kestrel Bank</b> holds <b>Mobile onboarding</b> (6 sessions).
+     At the root, in no folder: <b>Oral history — early free software</b> (10 sessions).</p>
+</div>
+
+<div class="controls">
+  <span class="lbl">Palette</span>
+  <button class="pbtn on" onclick="setTheme('default',this)">Default</button>
+  <button class="pbtn" onclick="setTheme('edo',this)">Edo</button>
+  <span class="lbl" style="margin-left:1rem">Appearance follows your system light/dark</span>
+</div>
+
+<div class="key">
+  <div class="key-item">
+    <span class="key-swatch artefact"></span>
+    <span><b>Artefact</b> Inside a frame is product only — real tokens, the real
+      <code>section-heading</code> atom, the real speaker badge and editable-name rules, the real
+      subgrid construction. No labels that would not ship.</span>
+  </div>
+  <div class="key-item">
+    <span class="key-swatch commentary"></span>
+    <span><b>Commentary</b> Hatched, ruled, mono-labelled. Says / true, and the consequence.
+      Never the product.</span>
+  </div>
+</div>
+
+<table class="premise">
+  <thead><tr><th>Scope</th><th>The question it answers</th><th>What the researcher does here</th><th>What the app may propose</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>This project</td>
+      <td>Are these the right people, with the right names and roles?</td>
+      <td>Confirm a guess, type a name, fix a role, separate one code that holds two humans.</td>
+      <td>Names, roles — it already guessed them during the run.</td>
+    </tr>
+    <tr>
+      <td>This client<br><span style="font-weight:420;color:var(--bn-colour-muted)">(a folder)</span></td>
+      <td>Have I met any of these people before?</td>
+      <td>Say "same person" or "different people" — once, and it holds.</td>
+      <td>Matches, <i>within this folder only</i>.</td>
+    </tr>
+    <tr>
+      <td>Everyone</td>
+      <td>Who do I actually work with?</td>
+      <td>Read. Occasionally assert a link the app is not allowed to suggest.</td>
+      <td><b>Nothing.</b> Cross-folder matching is refused by design, not unbuilt.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note" style="margin-bottom:2.6rem">
+  <div class="note-label">Commentary — why this is not three filters</div>
+  <p>A filter narrows one list. These three change the object. At project scope the identity anchor
+    is the <b>speaker code</b> — <code>p3</code> is who this person is, it is what the quotes say,
+    it is what the export ships. One folder up, the same human is <code>p3</code> in one project and
+    <code>p6</code> in another, so the code stops identifying anything and the <b>name</b> becomes
+    the anchor. That inversion is why the People grid's degradation ladder drops the code column
+    first, where the sessions grid drops the name first and keeps the badge
+    (<code>docs/design-sessions-grid</code> ladder, rung 3). Same product, opposite priority, one
+    altitude apart.</p>
+  <p>It is also why the scope control cannot be a segmented control that quietly re-filters. Moving
+    up a scope changes what a row <i>is</i>, what the columns <i>mean</i>, and — the part with
+    teeth — what the app is <b>willing to propose</b>.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">Part 1 — the object
+  <small>What a row is, and where the scope control lives.</small></div>
+
+<!-- 1 · THE ROW -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>1 · The healthy case, and the row it establishes</h2>
+    <p class="sub">Round 1. One moderator, platform-sourced names, nothing to fix. The sweep line
+      under the heading is absent because its count is zero — which is the only way a count line
+      earns its place.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> People · project scope · 1120px <span class="tag proposed">proposed lens</span></div>
+    <div class="screen">
+      <div class="section-heading">
+        <h1>People</h1>
+        <div class="section-heading-action">
+          <button class="toolbar-btn">Ward handover app — round 1
+            <svg class="toolbar-arrow" width="9" height="6" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1.5 4.5 4.5 8 1.5"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="bn-people"><div class="bn-people-grid">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell bn-cell-code"></div>
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Sessions</span></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Rachel Okonjo</span> <span class="bn-name-pencil">&#x270E;</span><span class="bn-person-sub">Senior UX researcher</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where">all 8</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">12,400</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Sarah Chen</span> <span class="bn-name-pencil">&#x270E;</span><span class="bn-person-sub">Ward sister, acute medicine</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#1</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">4,120</div>
+          <div class="bn-people-cell bn-cell-num">9</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p2</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Dr Amara Nwosu</span> <span class="bn-name-pencil">&#x270E;</span><span class="bn-person-sub">Registrar</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#2</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">3,880</div>
+          <div class="bn-people-cell bn-cell-num">12</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Marcus Bell</span> <span class="bn-name-pencil">&#x270E;</span><span class="bn-person-sub">Healthcare assistant</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#3</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">5,010</div>
+          <div class="bn-people-cell bn-cell-num">7</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Joyce Adeyemi</span> <span class="bn-name-pencil">&#x270E;</span><span class="bn-person-sub">Night charge nurse</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#4</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">4,640</div>
+          <div class="bn-people-cell bn-cell-num">11</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict ok">true as shown</span>
+    <dl class="st">
+      <dt>New here</dt><dd>The whole organism. The <code>section-heading</code> atom, the badge, the editable name and the subgrid construction are all shipped; one row per person is not.</dd>
+      <dt>Reused deliberately</dt><dd>The scope control is <code>.toolbar-btn</code> + <code>.toolbar-arrow</code> — the same control as the tag filter and view switcher — sitting in the <code>section-heading-action</code> slot the Codebook Library button already occupies. No new control was invented for it.</dd>
+    </dl>
+    <p>The job-title line under each name (<code>PersonEditable.role</code>) is worth pausing on: it
+      round-trips through <code>people.yaml</code>, it is filled by the same model pass that guesses
+      the name, and it is <b>rendered nowhere in the app today</b> — <code>get_people</code> builds a
+      three-key dict and drops it. So does <code>persona</code>, so do <code>notes</code>. This lens
+      is the first surface where a researcher could see what the pipeline wrote about a named person.
+      It is also, uncomfortably, already in the anonymised export (see bench 10).</p>
+  </div>
+
+  <div class="frame" style="max-width:34rem">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> scope control, open <span class="tag proposed">proposed</span></div>
+    <div class="screen" style="padding-bottom:1rem">
+      <div class="menu">
+        <div class="menu-group">This project</div>
+        <div class="menu-item on"><span class="tick">&#10003;</span><span>Ward handover app — round 1</span><span class="m-sub">9 people</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-group">Client</div>
+        <div class="menu-item"><span class="tick"></span><span>NHS Trust</span><span class="m-sub">26 people · 4 projects</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item"><span class="tick"></span><span>Everyone</span><span class="m-sub">58 people</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict warn">one honest count, two guesses</span>
+    <p>Only the first count is knowable. <b>26 people</b> for the client is the number of
+      <i>rows</i>, not people — nothing is linked yet, so Rachel is three of those 26. And
+      <b>58</b> silently excludes the diary study, which is on an external drive that is not
+      plugged in. A menu is the wrong place to explain either. The lens has to, on arrival — bench 8.</p>
+    <p>Naming: the middle item carries the folder's real name rather than the word "folder", on the
+      <b>All Sessions</b> precedent in <code>docs/glossary.md</code> — name a scope by its content.
+      "Folder" is the app's word for the container; "NHS Trust" is the researcher's word for who
+      these people are.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">Part 2 — the four shapes of getting it wrong
+  <small>Two moderators · nobody named · roles inverted · the observer nobody invited.</small></div>
+
+<!-- 2 · TWO MODERATORS -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>2 · Two moderators, one code — and the lens is the only surface that could say so</h2>
+    <p class="sub">Round 2. Rachel ran sessions 1&ndash;8, Priya ran 9&ndash;12. The moderator counter
+      resets every session, so both are <code>m1</code>, and <code>people.yaml</code> is keyed by
+      code alone — it is structurally incapable of holding two of them.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> People · project scope · today's data <span class="tag proposed">proposed lens, shipped data</span></div>
+    <div class="screen">
+      <div class="section-heading">
+        <h1>People</h1>
+        <div class="section-heading-action">
+          <button class="toolbar-btn">Ward handover app — round 2
+            <svg class="toolbar-arrow" width="9" height="6" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1.5 4.5 4.5 8 1.5"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="bn-people"><div class="bn-people-grid">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell bn-cell-code"></div>
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Sessions</span></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Rachel Okonjo</span> <span class="bn-name-pencil">&#x270E;</span><span class="bn-person-sub">Senior UX researcher</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where">all 12</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">4,210</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Sarah Chen</span> <span class="bn-name-pencil">&#x270E;</span><span class="bn-person-sub">Ward sister, acute medicine</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#1</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">4,120</div>
+          <div class="bn-people-cell bn-cell-num">9</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict bad">false, and the numbers give it away</span>
+    <dl class="st">
+      <dt>Screen says</dt><dd>Rachel Okonjo moderated all twelve sessions, speaking 4,210 words.</dd>
+      <dt>Actually true</dt><dd>Rachel moderated eight. Priya Raman moderated four. 4,210 is Priya's word count from session&nbsp;12 alone, wearing Rachel's name.</dd>
+    </dl>
+    <p>The two halves come from different places, which is what makes it undetectable by eye on the
+      Sessions lens and detectable <i>here</i>. Editable fields are preserved by key across runs, so
+      Rachel's typed name survives; computed stats are overwritten by key, so the last session in the
+      run wins. The lens puts a name and a word count in the same row for the first time, and
+      <b>4,210 words across twelve sessions</b> is arithmetic nobody who moderates would believe.</p>
+    <p>This is the argument for the lens existing at all, and it is not a UI argument: the
+      serve-mode database already models this correctly — <code>SessionSpeaker</code> joins
+      person&#8596;session per session, and its docstring says cross-session moderator linking is
+      why it exists. <b>The database knows more than the file does.</b> A person-shaped surface is
+      the only one that can show the difference.</p>
+  </div>
+
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> People · after the per-session rekey <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <div class="section-heading">
+        <h1>People</h1>
+        <div class="section-heading-action">
+          <button class="toolbar-btn">Ward handover app — round 2
+            <svg class="toolbar-arrow" width="9" height="6" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1.5 4.5 4.5 8 1.5"/></svg>
+          </button>
+        </div>
+      </div>
+      <p class="bn-people-sweep"><b>One speaker code covers two names.</b> <a href="#">Sort it out</a></p>
+      <div class="bn-people"><div class="bn-people-grid">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell bn-cell-code"></div>
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Sessions</span></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+        </div>
+        <div class="bn-people-row contested">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Rachel Okonjo</span> <span class="bn-name-pencil">&#x270E;</span>
+            <span class="bn-contest">Sessions 9&ndash;12 introduce themselves as <b>Priya Raman</b>. <button class="bn-inline-act">Separate&hellip;</button></span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where">all 12</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">18,900</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Sarah Chen</span> <span class="bn-name-pencil">&#x270E;</span><span class="bn-person-sub">Ward sister, acute medicine</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#1</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">4,120</div>
+          <div class="bn-people-cell bn-cell-num">9</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict new">needs the rekey first — it is not a rendering change</span>
+    <p>The evidence for the contest already exists and is thrown away one step before it could be
+      used. Stage 5b extracts a name per speaker <i>per session</i> from self-introductions; the
+      pipeline then funnels it through a flat <code>{code: info}</code> dict, so session 9's "Priya"
+      overwrites session 1's "Rachel" and no record survives that they disagreed. Rekey that dict —
+      and <code>people.yaml</code> with it — by <code>(session, code)</code>, and the contest becomes
+      a two-line query.</p>
+    <p>Two deliberate restraints in the pixels. <b>No error colour</b>: the row takes
+      <code>--bn-colour-quote-bg</code>, not a red or amber. Nothing has gone wrong for the
+      researcher — the app has a question. <b>No auto-split</b>: two extracted names is strong
+      evidence, not proof, and the same signal fires for one person who says "Rachel here, covering
+      for Priya today". The app states what it heard and where; a human decides.</p>
+    <p>The sweep line says <i>one</i> thing and links to a place, on the pattern four review agents
+      converged on independently: a count line under the heading costs no column width, survives
+      every rung of the degradation ladder, and is one translated string rather than a mark on every
+      one of thirty rows.</p>
+  </div>
+
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Separate — sheet <span class="tag proposed">proposed</span></div>
+    <div class="screen" style="background:var(--bn-colour-quote-bg);padding:1.6rem 1.1rem">
+      <div class="sheet">
+        <h4>Separate m1 into two people?</h4>
+        <p>Bristlenose numbers moderators within each session, so one code can cover more than one
+          person. Sessions 1&ndash;8 and 9&ndash;12 introduce different names.</p>
+        <div class="chain">
+          <span class="node">Rachel Okonjo<small>sessions 1&ndash;8 · 12,100 words</small></span>
+          <span class="rel">and</span>
+          <span class="node">Priya Raman<small>sessions 9&ndash;12 · 6,800 words</small></span>
+        </div>
+        <p>Quotes are not affected — moderators do not have quotes. The speaker code stays
+          <code>m1</code> in both halves and in every transcript.</p>
+        <div class="sheet-acts">
+          <button class="sheet-btn">Cancel</button>
+          <button class="sheet-btn">Keep as one person</button>
+          <button class="sheet-btn default">Separate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <p><b>Three buttons, and the third one matters.</b> "Keep as one person" is not a synonym for
+      Cancel — it records the decision, so the contest never re-appears on the next run. Without it
+      the researcher who genuinely has one moderator with two names is nagged forever, which is how
+      a correctness affordance gets switched off. It is the <code>not_same</code> half of the
+      linking vocabulary, one altitude down.</p>
+    <p>The sentence beginning "Bristlenose numbers moderators&hellip;" is doing the load-bearing
+      work: it explains the consequence <i>before</i> asking the researcher to choose, and it names
+      the mechanism in a way that makes the question answerable rather than mysterious. Cancel is
+      not the default; the trailing button is.</p>
+  </div>
+</div>
+
+<!-- 3 · NOBODY NAMED -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>3 · Nobody named, and the two ways an absent name looks</h2>
+    <p class="sub">The tail of round 2. Four participants, four different relationships between a
+      row and a name: a real record, a guess, a researcher's own typing, and nothing at all. Only
+      one of them is a name in the sense the researcher means.</p>
+  </div>
+  <div class="stacked">
+    <div>
+      <div class="frame">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> A — reuse the shipped placeholder <span class="tag proposed">proposed</span></div>
+        <div class="screen">
+          <p class="bn-people-sweep"><b>1 person has no name. 1 name is a suggestion.</b> <a href="#">Review</a></p>
+          <div class="bn-people"><div class="bn-people-grid">
+            <div class="bn-people-row bn-people-head">
+              <div class="bn-people-cell bn-cell-code"></div>
+              <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+              <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+              <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Sessions</span></div>
+              <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+              <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+            </div>
+            <div class="bn-people-row">
+              <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span></div>
+              <div class="bn-people-cell"><span class="bn-speaker-editable-name unnamed">Participant</span> <span class="bn-name-pencil">&#x270E;</span></div>
+              <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+              <div class="bn-people-cell bn-cell-where"><a href="#">#9</a></div>
+              <div class="bn-people-cell bn-cell-num bn-cell-words">3,400</div>
+              <div class="bn-people-cell bn-cell-num">5</div>
+            </div>
+            <div class="bn-people-row">
+              <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p10</span></span></span></div>
+              <div class="bn-people-cell"><span class="bn-person-name">j.okafor@nhs.example</span> <span class="bn-name-pencil">&#x270E;</span></div>
+              <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+              <div class="bn-people-cell bn-cell-where"><a href="#">#10</a></div>
+              <div class="bn-people-cell bn-cell-num bn-cell-words">4,900</div>
+              <div class="bn-people-cell bn-cell-num">8</div>
+            </div>
+            <div class="bn-people-row">
+              <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p11</span></span></span></div>
+              <div class="bn-people-cell"><span class="bn-person-name guess">Danny</span> <span class="bn-name-pencil">&#x270E;</span></div>
+              <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+              <div class="bn-people-cell bn-cell-where"><a href="#">#11</a></div>
+              <div class="bn-people-cell bn-cell-num bn-cell-words">3,100</div>
+              <div class="bn-people-cell bn-cell-num">6</div>
+            </div>
+            <div class="bn-people-row">
+              <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p12</span></span></span></div>
+              <div class="bn-people-cell"><span class="bn-person-name">Hannah Wu</span> <span class="bn-name-pencil">&#x270E;</span></div>
+              <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+              <div class="bn-people-cell bn-cell-where"><a href="#">#12</a></div>
+              <div class="bn-people-cell bn-cell-num bn-cell-words">5,200</div>
+              <div class="bn-people-cell bn-cell-num">10</div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="frame">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> B — absence, plus the count line <span class="tag proposed">proposed</span></div>
+        <div class="screen">
+          <p class="bn-people-sweep"><b>1 person has no name. 1 name is a suggestion.</b> <a href="#">Review</a></p>
+          <div class="bn-people"><div class="bn-people-grid">
+            <div class="bn-people-row bn-people-head">
+              <div class="bn-people-cell bn-cell-code"></div>
+              <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+              <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+              <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Sessions</span></div>
+              <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+              <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+            </div>
+            <div class="bn-people-row">
+              <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p9</span></span></span></div>
+              <div class="bn-people-cell"><span class="bn-name-pencil">&#x270E;</span></div>
+              <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+              <div class="bn-people-cell bn-cell-where"><a href="#">#9</a></div>
+              <div class="bn-people-cell bn-cell-num bn-cell-words">3,400</div>
+              <div class="bn-people-cell bn-cell-num">5</div>
+            </div>
+            <div class="bn-people-row">
+              <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p10</span></span></span></div>
+              <div class="bn-people-cell"><span class="bn-person-name">j.okafor@nhs.example</span> <span class="bn-name-pencil">&#x270E;</span></div>
+              <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+              <div class="bn-people-cell bn-cell-where"><a href="#">#10</a></div>
+              <div class="bn-people-cell bn-cell-num bn-cell-words">4,900</div>
+              <div class="bn-people-cell bn-cell-num">8</div>
+            </div>
+            <div class="bn-people-row">
+              <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p11</span></span></span></div>
+              <div class="bn-people-cell"><span class="bn-person-name guess">Danny</span> <span class="bn-name-pencil">&#x270E;</span></div>
+              <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+              <div class="bn-people-cell bn-cell-where"><a href="#">#11</a></div>
+              <div class="bn-people-cell bn-cell-num bn-cell-words">3,100</div>
+              <div class="bn-people-cell bn-cell-num">6</div>
+            </div>
+            <div class="bn-people-row">
+              <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p12</span></span></span></div>
+              <div class="bn-people-cell"><span class="bn-person-name">Hannah Wu</span> <span class="bn-name-pencil">&#x270E;</span></div>
+              <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+              <div class="bn-people-cell bn-cell-where"><a href="#">#12</a></div>
+              <div class="bn-people-cell bn-cell-num bn-cell-words">5,200</div>
+              <div class="bn-people-cell bn-cell-num">10</div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict warn">open — A stutters, B risks reading as broken</span>
+    <p><b>A reuses the shipped placeholder and it stutters.</b> <code>speakerRolePlaceholder()</code>
+      renders the role word — "Participant" — in the name slot, which reads perfectly on the Sessions
+      lens because no role column exists there. Move it into a table that <i>has</i> a Role column
+      and row&nbsp;p9 says "Participant &nbsp;·&nbsp; Participant". A string is only as good as the
+      surface around it; this is a straight import of one lens's solution into another lens's
+      geometry.</p>
+    <p><b>B leaves the cell empty and lets the count line carry it</b> — the house move, and cheaper
+      in every language. But an empty cell is pixel-identical to a failed fetch: the Sessions lens
+      swallows a <code>/people</code> error in an empty <code>catch</code> and renders exactly this.
+      What saves B is the line above the table: it is absent when the count is zero, so its
+      <i>presence</i> is what distinguishes "one person is unnamed" from "the request failed" — and
+      the failure path has to say something of its own for that to hold.</p>
+    <p><b>Only one of the four rows is a plain fact.</b> Hannah Wu was typed by the researcher.
+      "Danny" is the model repeating a first name it heard, set in italic and nothing else — one
+      treatment, no chip, no dot, no extra tab stop, and it survives every rung of the ladder.
+      p9 is silence.</p>
+    <p><b>And p10 is the one to worry about.</b> An email address in the name column has the
+      <i>highest</i> confidence of the four — it is a verbatim record from the Teams file, not a
+      guess — and it is also direct, unambiguous, contactable PII, sitting in a field that ships in
+      exports and reads as machine output rather than as a name. The confidence axis and the
+      sensitivity axis are orthogonal, and the design so far only draws one of them.</p>
+  </div>
+</div>
+
+<!-- 4 · ROLES INVERTED -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>4 · The roles are inverted, and only a person-shaped table shows it</h2>
+    <p class="sub">Oral history — early free software. Ten interviews, one interviewer. Stage 5b
+      tagged the interviewer as a participant and each interviewee as a moderator: exactly the
+      failure the FOSSDA stress test found, now with its downstream cost visible.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> People · project scope <span class="tag proposed">proposed lens, shipped data</span></div>
+    <div class="screen">
+      <div class="section-heading">
+        <h1>People</h1>
+        <div class="section-heading-action">
+          <button class="toolbar-btn">Oral history — early free software
+            <svg class="toolbar-arrow" width="9" height="6" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1.5 4.5 4.5 8 1.5"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="bn-people"><div class="bn-people-grid">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell bn-cell-code"></div>
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Sessions</span></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Zach Kaplan</span> <span class="bn-name-pencil">&#x270E;</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant <svg width="8" height="5" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:.45"><path d="M1 1.5 4.5 4.5 8 1.5"/></svg></div>
+          <div class="bn-people-cell bn-cell-where">all 10</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">8,900</div>
+          <div class="bn-people-cell bn-cell-num">47</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Marta Ellis</span> <span class="bn-name-pencil">&#x270E;</span><span class="bn-person-sub">Debian maintainer, 1994&ndash;2003</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator <svg width="8" height="5" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:.45"><path d="M1 1.5 4.5 4.5 8 1.5"/></svg></div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#1</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">14,200</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name guess">Yusuf</span> <span class="bn-name-pencil">&#x270E;</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator <svg width="8" height="5" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:.45"><path d="M1 1.5 4.5 4.5 8 1.5"/></svg></div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#2</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">11,600</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict bad">every role on this screen is backwards</span>
+    <dl class="st">
+      <dt>The tell</dt><dd>A <b>participant in all ten sessions</b>. Nobody is interviewed ten times in one study; a person who appears in every session is running them.</dd>
+      <dt>The second tell</dt><dd>A moderator who spoke <b>14,200 words</b> in one session against a participant's 8,900 across ten. In oral history the interviewer speaks least — the asymmetry the heuristic now scores is sitting in the Words column, legible.</dd>
+      <dt>The cost</dt><dd><b>47 quotes</b> against the interviewer's name, and none against the interviewees'. Quote extraction skips segments tagged researcher, so it kept every question and discarded every answer. The study's actual content is not in the report.</dd>
+    </dl>
+    <p>Both tells are arithmetic across sessions, so neither is visible on the Sessions lens, where
+      each session is a row and Zach is simply "p1" ten times. This is the second argument for the
+      lens after bench 2, and it is the same argument: <b>some defects are only visible when the
+      person is the row.</b></p>
+    <p>The Role cell is a popup button — the native control for a closed set of three. It is
+      borderless at cell density (text plus a muted chevron), which is what macOS does in a table;
+      the bordered <code>.toolbar-btn</code> form would put thirty boxes on the screen.</p>
+  </div>
+
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> after changing both roles <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <p class="bn-people-sweep"><b>Roles changed for 11 people.</b> Quotes were pulled out using the old roles. <a href="#">Analyse again&hellip;</a></p>
+      <div class="bn-people"><div class="bn-people-grid">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell bn-cell-code"></div>
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Sessions</span></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Zach Kaplan</span> <span class="bn-name-pencil">&#x270E;</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator <svg width="8" height="5" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:.45"><path d="M1 1.5 4.5 4.5 8 1.5"/></svg></div>
+          <div class="bn-people-cell bn-cell-where">all 10</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">8,900</div>
+          <div class="bn-people-cell bn-cell-num">47</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Marta Ellis</span> <span class="bn-name-pencil">&#x270E;</span><span class="bn-person-sub">Debian maintainer, 1994&ndash;2003</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant <svg width="8" height="5" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:.45"><path d="M1 1.5 4.5 4.5 8 1.5"/></svg></div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#1</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">14,200</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict warn">honest, and deliberately unsatisfying</span>
+    <p>The roles are now right and <b>the Quotes column is unchanged</b> — 47 against the
+      interviewer, none against the interviewee. That is the truth and the screen says it. A role
+      is a label on a person; quotes were produced by a stage that read the old label and has
+      already finished.</p>
+    <p>The alternative — silently re-running extraction when a role changes — is worse in three
+      ways: it spends the researcher's money on a cloud call they did not ask for, it discards
+      every edit made to the affected quotes, and it makes a dropdown into a destructive action.
+      So the line offers the existing verb instead. <b>Analyse again</b> is already built, already
+      counts what it will replace in its confirmation sheet, and is already the researcher's
+      decision. The lens surfaces the need; it does not take the decision.</p>
+    <p>Wording, deliberately: "Quotes were pulled out using the old roles", not "quote extraction
+      used stale role assignments". Same fact, no machinery.</p>
+  </div>
+</div>
+
+<!-- 5 · THE OBSERVER -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>5 · The observer, who is on the recording and not on the research team</h2>
+    <p class="sub">Round 2, sessions 3 and 4. The client's product manager sat in. He is a speaker,
+      so he has a code, a name and a row — and a set of privileges nobody chose for him.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> People · project scope <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <div class="bn-people"><div class="bn-people-grid">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell bn-cell-code"></div>
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Sessions</span></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Rachel Okonjo</span> <span class="bn-name-pencil">&#x270E;</span><span class="bn-person-sub">Senior UX researcher</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator <svg width="8" height="5" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:.45"><path d="M1 1.5 4.5 4.5 8 1.5"/></svg></div>
+          <div class="bn-people-cell bn-cell-where">1&ndash;8</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">12,100</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">o1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Tom Blake</span> <span class="bn-name-pencil">&#x270E;</span><span class="bn-person-sub">Product manager, Meridian Health</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Observer <svg width="8" height="5" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:.45"><path d="M1 1.5 4.5 4.5 8 1.5"/></svg></div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#3</a>, <a href="#">#4</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">310</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict warn">correct on screen, wrong in the export</span>
+    <p>The row is right: Tom spoke 310 words across two sessions and contributed no quotes. What
+      the row does not say is that <b>the anonymise switch keeps his name</b>. Anonymising an export
+      blanks participant names and preserves both moderators and observers, on the reasoning that
+      the research team is not the study's subject. That reasoning holds for Rachel. It does not
+      hold for a client-side stakeholder who wandered into a session, whose name and employer then
+      travel in a document the researcher hands to <i>other</i> people at the same client.</p>
+    <p>The checkbox hint the researcher actually reads says only "Moderator names are preserved" —
+      which is not false, and is also not the whole list. Observers are a second category wearing
+      the first one's rationale.</p>
+    <p>Note also that "Observer" is the role and <b>Product manager, Meridian Health</b> is the
+      job title, and they sit two columns apart because they are different things. Four senses of
+      "role" already coexist in the codebase — the stored enum, a translated display label nothing
+      reads, the UI word "Moderator", and this job-title field — and the glossary adjudicates none
+      of them. A lens named after this vocabulary has to settle it before it ships, not after.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">Part 3 — above the project
+  <small>Where the speaker code stops meaning anything and identity has to be asserted.</small></div>
+
+<!-- 6 · FOLDER SCOPE -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>6 · One folder up, and everyone is there twice</h2>
+    <p class="sub">Client scope, NHS Trust. Nothing is linked, so a person who appears in two
+      projects is two rows — because the importer creates a fresh person row for every speaker in
+      every session, and no step has ever joined them.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> People · client scope · nothing linked yet <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <div class="section-heading">
+        <h1>People</h1>
+        <div class="section-heading-action">
+          <button class="toolbar-btn">NHS Trust
+            <svg class="toolbar-arrow" width="9" height="6" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1.5 4.5 4.5 8 1.5"/></svg>
+          </button>
+        </div>
+      </div>
+      <p class="bn-people-sweep"><b>4 people may appear twice.</b> <a href="#">Go through them</a></p>
+      <div class="bn-people"><div class="bn-people-grid scope-folder">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Project</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Sessions</span></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Rachel Okonjo</span><span class="bn-person-sub">Senior UX researcher</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">Ward handover app — round 1</a></div>
+          <div class="bn-people-cell bn-cell-num">8</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">12,400</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Rachel Okonjo</span><span class="bn-person-sub">Senior UX researcher</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">Ward handover app — round 2</a></div>
+          <div class="bn-people-cell bn-cell-num">8</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">12,100</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+        <div class="bn-suggest">
+          Same name in both projects, and both were read from the meeting files.
+          <span class="bn-suggest-acts">
+            <button class="mini-btn primary">Same person</button>
+            <button class="mini-btn">Different people</button>
+          </span>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Sarah Chen</span><span class="bn-person-sub">Ward sister, acute medicine</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">Ward handover app — round 1</a></div>
+          <div class="bn-people-cell bn-cell-num">1</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">4,120</div>
+          <div class="bn-people-cell bn-cell-num">9</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Sarah Chen</span><span class="bn-person-sub">Ward sister, acute medicine</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">Ward handover app — round 2</a></div>
+          <div class="bn-people-cell bn-cell-num">1</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">3,980</div>
+          <div class="bn-people-cell bn-cell-num">7</div>
+        </div>
+        <div class="bn-suggest">
+          Same name in both projects, and both were read from the meeting files.
+          <span class="bn-suggest-acts">
+            <button class="mini-btn primary">Same person</button>
+            <button class="mini-btn">Different people</button>
+          </span>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Priya Raman</span><span class="bn-person-sub">Research contractor</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">Ward handover app — round 2</a></div>
+          <div class="bn-people-cell bn-cell-num">4</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">6,800</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict new">the whole point of the scope, and its whole cost</span>
+    <dl class="st">
+      <dt>Gone</dt><dd>The code column. <code>p1</code> in round 1 and <code>p4</code> in round 2 are the same nurse; showing both codes shows the machinery. This is why the People grid's degradation ladder drops the code first — at this altitude it has already stopped identifying anyone.</dd>
+      <dt>Arrived</dt><dd>The Project column, and a suggestion that sits <i>under</i> the pair it is about rather than beside either row. It is about the relationship, so it belongs to neither.</dd>
+    </dl>
+    <p><b>Two answers, both recorded.</b> "Different people" is not a dismissal — it writes a
+      negative link, so the pair is never proposed again. Without it, every re-run re-offers the
+      same wrong match and the researcher learns to ignore the whole affordance. Same shape as
+      "Keep as one person" in bench 2, one altitude up.</p>
+    <p>Both suggestions here rest on <b>exact name equality plus platform provenance</b> — the
+      sentence says so in the researcher's words rather than showing a score. The design doc allows
+      near-matches (Levenshtein ≤ 2) as well; a fuzzy match should not wear the same sentence as an
+      exact one, because the researcher's answer depends entirely on which it is.</p>
+  </div>
+
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> after "Same person" on both <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <div class="bn-people"><div class="bn-people-grid scope-folder">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Projects</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Sessions</span></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Rachel Okonjo</span><span class="bn-person-sub">Senior UX researcher</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where">Ward handover app — <a href="#">round 1</a>, <a href="#">round 2</a></div>
+          <div class="bn-people-cell bn-cell-num">16</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">24,500</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Sarah Chen</span><span class="bn-person-sub">Ward sister, acute medicine</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where">Ward handover app — <a href="#">round 1</a>, <a href="#">round 2</a></div>
+          <div class="bn-people-cell bn-cell-num">2</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">8,100</div>
+          <div class="bn-people-cell bn-cell-num">16</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Priya Raman</span><span class="bn-person-sub">Research contractor</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">Ward handover app — round 2</a></div>
+          <div class="bn-people-cell bn-cell-num">4</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">6,800</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <p><b>Sarah Chen: 2 sessions, 16 quotes, across two rounds.</b> That row is the reason a
+      researcher would ever visit this scope voluntarily — it is a longitudinal finding, and until
+      the link exists there is no object in the system it could hang on. Everything else in this
+      lens is correction work; this one row is the payoff.</p>
+    <p>Two things the merged row must <b>not</b> do. It must not delete anything — a link changes
+      how rows are presented, and un-linking has to put both back exactly as they were. And it must
+      not leak: <b>an export from round 2 carries round 2 only</b>, link or no link, so the
+      leave-behind Rachel hands the client never gains a second study's sessions because of a
+      bookkeeping decision she made in a different window.</p>
+    <p>The job title shown is round 2's, because that project has more of her. Auto-choosing the
+      fuller record is right; it also silently picks a winner between "Ward sister, acute medicine"
+      and a shorter title from round 1, so the choice has to be visible and reversible in one click.</p>
+  </div>
+</div>
+
+<!-- 7 · SAME NAME, DIFFERENT PEOPLE -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>7 · A suggestion built on two guesses</h2>
+    <p class="sub">Two participants the model named "Danny" from a first name it heard once each.
+      Same folder, so a match is proposed. Neither name was ever a record.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> People · client scope <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <div class="bn-people"><div class="bn-people-grid scope-folder">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Project</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Sessions</span></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name guess">Danny</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">Ward handover app — round 1</a></div>
+          <div class="bn-people-cell bn-cell-num">1</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">2,900</div>
+          <div class="bn-people-cell bn-cell-num">4</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name guess">Danny</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">Ward handover app — round 2</a></div>
+          <div class="bn-people-cell bn-cell-num">1</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">3,100</div>
+          <div class="bn-people-cell bn-cell-num">6</div>
+        </div>
+        <div class="bn-suggest">
+          Same name in both projects &mdash; but <b>both names are suggestions</b>, each from one
+          spoken first name. Open the sessions before answering.
+          <span class="bn-suggest-acts">
+            <button class="mini-btn">Same person</button>
+            <button class="mini-btn">Different people</button>
+          </span>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict bad">the failure mode the whole feature has to survive</span>
+    <p>A link suggestion is a claim about two names. If the app guessed both names, the suggestion
+      is a guess about a guess, and it is offered in a control whose two buttons look exactly like
+      the well-founded case in bench 6. <b>Confidence does not compose</b>, and a design that draws
+      the same row for "two platform records agree" and "the model heard a first name twice" is
+      inviting a wrong merge that then travels — it will pool quotes, and pooled quotes reshape
+      agreement counts in the analysis.</p>
+    <p>Three consequences drawn here. The sentence names the weakness in plain words rather than
+      showing a percentage. <b>Neither button is the default</b> — the primary fill is removed, so
+      returning is as easy as deciding. And the sentence sends the researcher to the evidence
+      ("open the sessions"), because for this class of match the transcript is the only thing that
+      can settle it.</p>
+    <p>The sharper option is to <b>not suggest at all</b> when either side is a guess, and let the
+      pair sit unmerged. Suggestions are cheap to add and expensive to trust; a lens that only
+      proposes matches it can stand behind is the one whose proposals get read.</p>
+  </div>
+</div>
+
+<!-- 8 · EVERYONE -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>8 · Everyone, which is a roster and not a list</h2>
+    <p class="sub">Fifty-eight person rows exist. Fifty-two of them are someone who took part in one
+      session of one study and will never be looked at again. Showing all fifty-eight is showing
+      the database.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> People · everyone <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <div class="section-heading">
+        <h1>People</h1>
+        <div class="section-heading-action">
+          <button class="toolbar-btn">Everyone
+            <svg class="toolbar-arrow" width="9" height="6" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1.5 4.5 4.5 8 1.5"/></svg>
+          </button>
+        </div>
+      </div>
+      <p class="bn-people-sweep">People you have worked with more than once. <a href="#">Show everyone (58)</a></p>
+      <div class="bn-people"><div class="bn-people-grid scope-everyone">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Client</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Projects</span></div>
+          <div class="bn-people-cell"><span class="bn-people-h1">Last worked</span></div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Rachel Okonjo</span><span class="bn-person-sub">Senior UX researcher</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where">NHS Trust</div>
+          <div class="bn-people-cell bn-cell-num">2</div>
+          <div class="bn-people-cell">Jan 2026</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Sarah Chen</span><span class="bn-person-sub">Ward sister, acute medicine</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where">NHS Trust</div>
+          <div class="bn-people-cell bn-cell-num">2</div>
+          <div class="bn-people-cell">Jan 2026</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Priya Raman</span><span class="bn-person-sub">Research contractor</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where">NHS Trust</div>
+          <div class="bn-people-cell bn-cell-num">1</div>
+          <div class="bn-people-cell">Jan 2026</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Priya Raman</span><span class="bn-person-sub">Research contractor</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where">Kestrel Bank</div>
+          <div class="bn-people-cell bn-cell-num">1</div>
+          <div class="bn-people-cell">Mar 2026</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Sarah Chen</span><span class="bn-person-sub">Operations analyst</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where">Kestrel Bank</div>
+          <div class="bn-people-cell bn-cell-num">1</div>
+          <div class="bn-people-cell">Mar 2026</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell"><span class="bn-person-name">Zach Kaplan</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where">&mdash;</div>
+          <div class="bn-people-cell bn-cell-num">1</div>
+          <div class="bn-people-cell">Nov 2025</div>
+        </div>
+      </div></div>
+      <p class="bn-people-sweep" style="margin:1rem 0 0">Discharge letters &mdash; diary study is on
+        <b>Samsung T7</b>, which is not plugged in. Nobody from it is counted here.</p>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict new">two names appear twice, and the app proposes nothing — correctly</span>
+    <dl class="st">
+      <dt>Both Priyas</dt><dd>Are the same contractor. The researcher hired her twice, for two clients.</dd>
+      <dt>Both Sarah Chens</dt><dd>Are two different people who have never met.</dd>
+      <dt>What the app offers</dt><dd>Nothing, for either. It cannot tell them apart and it must not try.</dd>
+    </dl>
+    <p>Matching is <b>folder-scoped by design</b>, and this is the row where that rule earns its
+      keep. Across clients, name equality carries almost no evidence — the two Sarah Chens would be
+      proposed as one person by any algorithm that looked, and a wrong merge here pools quotes from
+      two organisations into one person's record. The rule also gives a clean answer for projects in
+      no folder at all: the oral history study sits at the root, so it receives and offers nothing.
+      Rachel and Priya are one folder each; the folder is not decoration, it is the consent boundary
+      for matching.</p>
+    <p><b>The default view is the roster, not the table.</b> The question at this altitude is "who do
+      I work with", and its answer is the six people who recur — moderators, contractors, and the
+      occasional longitudinal participant. The other fifty-two are one link away and behind a plain
+      count, because a lens that opens on fifty-eight rows of noise is a lens that gets opened once.</p>
+    <p><b>The last line is the one nobody would think to write.</b> Half a freelancer's projects are
+      on drives and shares that come and go, so a total at this scope is always a total <i>of what is
+      currently readable</i>. Saying which drive and naming it is the difference between a count the
+      researcher can trust and a count they cannot audit. Same principle as the greyed-out project
+      cards on the home screen: unavailable is normal, not an error — but it has to be said out loud
+      wherever a number depends on it.</p>
+  </div>
+</div>
+
+<!-- 9 · THE CHAIN -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>9 · Asserting a link the app refused to suggest, and the cascade it starts</h2>
+    <p class="sub">The researcher selects both Priya rows and says they are the same person. Round 1
+      and round 2 are already tied together, so this link is not the only thing that changes.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Same person — sheet <span class="tag proposed">proposed</span></div>
+    <div class="screen" style="background:var(--bn-colour-quote-bg);padding:1.6rem 1.1rem">
+      <div class="sheet" style="max-width:36rem">
+        <h4>Link Priya Raman across two clients?</h4>
+        <p>Bristlenose never suggests a match across clients, because two people can share a name.
+          You are telling it these are one person.</p>
+        <div class="chain">
+          <span class="node">Ward handover&nbsp;&mdash;&nbsp;round&nbsp;1<small>NHS Trust</small></span>
+          <span class="rel">&mdash; same &mdash;</span>
+          <span class="node">Ward handover&nbsp;&mdash;&nbsp;round&nbsp;2<small>NHS Trust</small></span>
+          <span class="rel new">&mdash; new &mdash;</span>
+          <span class="node other-folder">Mobile onboarding<small>Kestrel Bank</small></span>
+        </div>
+        <p>Round 1 is already linked to round 2, so it joins as well &mdash; <b>three projects, two
+          clients</b>.</p>
+        <p>Nothing moves between the projects. An export always carries one project, so a report
+          you send Kestrel Bank cannot gain anything from the NHS work. What changes is that a name
+          or job title you fix in one shows in the other.</p>
+        <div class="sheet-acts">
+          <button class="sheet-btn">Cancel</button>
+          <button class="sheet-btn default">Link across clients</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict warn">the cascade is the whole risk, so it is the whole sheet</span>
+    <p><b>The chain is drawn, not described.</b> Linking A to B when B is already linked to C links
+      A to C, and a researcher who is told that in a sentence will not picture it. Three nodes and
+      two relations fit on one line and make the consequence a thing you look at rather than parse.
+      Un-linking needs the same picture, showing what breaks.</p>
+    <p><b>The cross-client crossing is drawn twice</b> — once as the dashed node, once in the
+      sentence — because it is the only part that is irreversible in the social sense. Bristlenose
+      can un-link at any time; the researcher who realises they have wired two clients' records
+      together cannot un-see it.</p>
+    <p>The third paragraph exists because the researcher's actual fear is not modelled by the data
+      model: <i>"will Kestrel see the NHS material?"</i> The answer is no, structurally — export is
+      project-scoped whatever the links say — and the sheet says so before asking, rather than
+      leaving it to be discovered. Naming the real limit (a shared name and title) buys the
+      credibility for the reassurance.</p>
+    <p>Cancel is not the default and is not destructive-styled; the trailing button is the default.
+      Nothing here is destructive — which is exactly why the sheet must not borrow destructive
+      styling to signal seriousness.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">Part 4 — what the lens must refuse to do
+  <small>The obligations that come with putting people in rows.</small></div>
+
+<!-- 10 · THE LEAVE-BEHIND -->
+<div class="bench">
+  <div class="bench-head">
+    <h2>10 · The lens does not travel, and the export it exposes already does</h2>
+    <p class="sub">Round 2, anonymise ticked, sent to the client. The shipped checkbox and its
+      shipped hint, beside what actually leaves the machine.</p>
+  </div>
+  <div class="stacked">
+    <div>
+      <div class="frame">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Export report <span class="tag shipped">shipped</span></div>
+        <div class="screen">
+          <h4 style="font-size:var(--bn-text-heading);font-weight:490;margin:0 0 .3rem">Export report</h4>
+          <p style="font-size:var(--bn-text-label);color:var(--bn-colour-muted);margin:0 0 1rem;max-width:44ch">Creates a standalone report that anyone can open in a browser. Recipients can view and search but cannot edit.</p>
+          <label style="display:flex;gap:.5rem;align-items:flex-start;font-size:var(--bn-text-label)">
+            <input type="checkbox" checked style="margin-top:.25rem">
+            <span>Remove participant names from labels
+              <span style="display:block;color:var(--bn-colour-muted);font-size:var(--bn-text-badge);margin-top:.2rem;max-width:44ch">Strips names from metadata, filenames, and speaker labels. Keeps participant codes (p1, p2). Moderator names are preserved. Names mentioned within quote text are NOT removed.</span>
+            </span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="frame">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> what is in the file <span class="tag shipped">shipped</span></div>
+        <div class="screen">
+          <div class="bn-people"><div class="bn-people-grid scope-everyone">
+            <div class="bn-people-row bn-people-head">
+              <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+              <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+              <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Job title in the file</span></div>
+              <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">&nbsp;</span></div>
+              <div class="bn-people-cell"><span class="bn-people-h1">&nbsp;</span></div>
+            </div>
+            <div class="bn-people-row">
+              <div class="bn-people-cell"><span class="bn-person-name none">blank</span> <span class="bn-person-sub">p1</span></div>
+              <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+              <div class="bn-people-cell bn-cell-where" style="color:var(--bn-colour-text)">Ward sister, acute medicine</div>
+              <div class="bn-people-cell bn-cell-num"></div>
+              <div class="bn-people-cell"></div>
+            </div>
+            <div class="bn-people-row">
+              <div class="bn-people-cell"><span class="bn-person-name">Rachel Okonjo</span> <span class="bn-person-sub">m1</span></div>
+              <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+              <div class="bn-people-cell bn-cell-where" style="color:var(--bn-colour-text)">Senior UX researcher</div>
+              <div class="bn-people-cell bn-cell-num"></div>
+              <div class="bn-people-cell"></div>
+            </div>
+            <div class="bn-people-row">
+              <div class="bn-people-cell"><span class="bn-person-name">Tom Blake</span> <span class="bn-person-sub">o1</span></div>
+              <div class="bn-people-cell bn-cell-role bn-people-role">Observer</div>
+              <div class="bn-people-cell bn-cell-where" style="color:var(--bn-colour-text)">Product manager, Meridian Health</div>
+              <div class="bn-people-cell bn-cell-num"></div>
+              <div class="bn-people-cell"></div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict bad">the right-hand frame is not a proposal — it is the file today</span>
+    <ul>
+      <li><b>The job title is not stripped.</b> Anonymising blanks the name fields and leaves
+        <code>role</code>, which the model extracted from the same speaker pass. It renders nowhere
+        in the app, so it is invisible in the UI and present in View Source — and job-title-plus-employer
+        is the product's own documented example of indirect identification. Stripping it was decided
+        in the export design doc and never implemented; this lens is the first surface that would
+        show a researcher the field exists.</li>
+      <li><b>Tom Blake ships</b>, under a rationale written for moderators. See bench 5.</li>
+      <li><b>Rachel's name ships attached to twelve sessions she did not all run.</b> The bench 2
+        collision travels into the leave-behind intact, and the recipient has no way to detect it.
+        That is what raises the collision from a tidiness problem to a correctness one: it is the
+        only defect here that leaves the building.</li>
+    </ul>
+    <p><b>And the lens itself does not ship in the export.</b> Not because export mode is read-only —
+      that is a mechanism — but because everything in it is a correction affordance for someone who
+      can correct, and one part of it is actively unsafe to send: telling a recipient that
+      <code>p7</code>'s name was <i>heard in a session</i> tells them a real name exists, that it is
+      in the transcript body they already have, and that the pipeline located it. That converts a
+      latent leak into a targeted one, precisely for the participants whose names were deliberately
+      removed. Every other lens ships; this one is the exception, and the exception needs the
+      one-line reason written next to the code that enforces it.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">What the benches force
+  <small>Commentary throughout. None of this is product.</small></div>
+
+<div class="note" style="margin-top:1rem">
+  <div class="note-label">Commentary — the load-bearing conclusions</div>
+  <dl class="st" style="grid-template-columns:auto 1fr;gap:.55rem .9rem">
+    <dt>1 · Three questions</dt>
+    <dd>The scope control changes what a row is, not which rows are shown. Project scope verifies,
+      client scope links, everyone scope is a roster. The app proposes names and roles at the first,
+      matches at the second, and <b>nothing at the third</b>.</dd>
+
+    <dt>2 · The anchor inverts</dt>
+    <dd>The speaker code identifies a person inside a project and identifies nobody above one. The
+      People grid sheds the code column first; the sessions grid sheds the name first and keeps the
+      badge. Same product, one altitude apart, opposite priority.</dd>
+
+    <dt>3 · Prerequisite</dt>
+    <dd>Benches 2 and 4 are the reason to build the lens, and bench 2 does not work until
+      <code>people.yaml</code> and the pipeline's speaker-info dict are rekeyed by
+      <b>(session, code)</b>. That reshape has a home already — the speaker-editing roadmap, §11c,
+      with its eight-reader list. The lens should extend it, not restate it.</dd>
+
+    <dt>4 · Two answers, always</dt>
+    <dd>Every question the lens asks needs a recorded negative: "Keep as one person", "Different
+      people". A prompt that can only be satisfied or postponed comes back every run and gets
+      ignored, taking the true positives with it.</dd>
+
+    <dt>5 · Confidence does not compose</dt>
+    <dd>A match between two guessed names is a guess about a guess and must not wear the same row as
+      a match between two platform records. The strongest option is to withhold the suggestion
+      entirely.</dd>
+
+    <dt>6 · Zero-geometry states</dt>
+    <dd>A guessed name is italic; an unnamed row is empty; counts live in one absent-when-zero line
+      under the heading. No chips, no dots, no per-row marks — thirty rows of qualifiers is the
+      failure mode, and one line is one translated string instead of five.</dd>
+
+    <dt>7 · Say what it cannot do</dt>
+    <dd>Changing a role does not re-extract quotes; a total at everyone scope excludes unplugged
+      drives; a link never moves data between projects. Each is a sentence on the surface, not a
+      note in a design doc.</dd>
+
+    <dt>8 · The lens does not travel</dt>
+    <dd>It is the one lens absent from the exported report, and the three leaks it exposes — job
+      title, observers, the mis-attributed moderator — are in the file today.</dd>
+  </dl>
+  <p style="margin-top:1rem"><b>Not settled here, deliberately.</b> Whether the placeholder for an
+    unnamed person is the role word or nothing (bench 3). Whether "Everyone" belongs in a report lens
+    at all or in the app's own window, given that every other tab means "in this project". Whether
+    the job title gets the same italic-when-guessed treatment as the name, since it is filled by the
+    same model pass and is just as inventable. And what a person-shaped API owes a participant who
+    withdraws consent after analysis &mdash; the erasure verb does not exist, and this is the design
+    where it would be cheap to allow for.</p>
+</div>
+
+</div><!-- /wrap -->
+<script>
+function setTheme(name, btn) {
+  document.documentElement.setAttribute('data-color-theme', name);
+  document.querySelectorAll('.controls .pbtn').forEach(function (b) { b.classList.remove('on'); });
+  btn.classList.add('on');
+}
+</script>
+</body>
+</html>

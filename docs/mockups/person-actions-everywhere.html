@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Person actions, everywhere · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css).
+
+   REUSED verbatim below: .section-heading / .section-heading-action
+   (atoms/section-heading.css), .toolbar-btn / .toolbar-arrow
+   (atoms/button.css), .bn-person-badge / .bn-speaker-badge--split /
+   .bn-speaker-editable-name / .bn-name-pencil (molecules/person-badge.css).
+
+   NEW and therefore FLAGGED: the .bn-people-* organism, the scope popup's
+   contents, the conflict row, the link affordances. Every frame containing a
+   new element says "proposed" in its chrome.
+
+   Companion mockups: people-lens-scopes.html, people-provenance-paths.html
+   (same fictional study throughout).
+   Reviews: docs/private/reviews/people-lens.md.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+  --bn-colour-keyline:     var(--bn-colour-border);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+  --bn-colour-keyline:     var(--bn-colour-border);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:1120px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:74ch; margin:.4rem 0; }
+.masthead p b { color:var(--bn-colour-text); font-weight:490; }
+.controls { display:flex; gap:.4rem; align-items:center; margin:var(--bn-space-lg) 0 var(--bn-space-xl); flex-wrap:wrap; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* ── zone key ─────────────────────────────────────────────────────────── */
+.key { display:flex; gap:1.5rem; flex-wrap:wrap; padding:.9rem 1.1rem; border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-lg); margin-bottom:var(--bn-space-xl); }
+.key-item { display:flex; gap:.6rem; align-items:flex-start; font-size:var(--bn-text-label); flex:1; min-width:16rem; }
+.key-swatch { width:2.4rem; height:2.4rem; border-radius:var(--bn-radius-md); flex-shrink:0; }
+.key-swatch.artefact { border:1px solid var(--bn-colour-border-hover); background:var(--bn-colour-bg); }
+.key-swatch.commentary { border-left:3px solid var(--bn-colour-muted);
+  background-image:repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--bn-colour-muted) 12%, transparent) 5px 10px); }
+.key-item b { font-weight:490; display:block; }
+.key-item span { color:var(--bn-colour-muted); }
+
+/* ── premise table (commentary furniture, not product) ────────────────── */
+.premise { width:100%; border-collapse:collapse; margin:var(--bn-space-lg) 0 var(--bn-space-xl); font-size:var(--bn-text-label); }
+.premise th, .premise td { text-align:left; vertical-align:top; padding:.55rem .8rem; border-bottom:1px solid var(--bn-colour-border); }
+.premise th { font-weight:490; color:var(--bn-colour-muted); text-transform:uppercase; font-size:var(--bn-text-caption); letter-spacing:.05em; }
+.premise td:first-child { font-weight:490; white-space:nowrap; }
+.premise tr:last-child td { border-bottom:none; }
+
+/* ── bench scaffolding ────────────────────────────────────────────────── */
+.bench { margin:3rem 0; }
+.bench-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.bench-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1.1rem; max-width:78ch; }
+.part { font-size:var(--bn-text-caption); font-weight:490; color:var(--bn-colour-accent); text-transform:uppercase;
+  letter-spacing:.05em; margin:3.5rem 0 .3rem; font-family:var(--bn-font-mono); border-top:1px solid var(--bn-colour-border); padding-top:1.4rem; }
+.part:first-of-type { margin-top:1rem; }
+.part small { display:block; text-transform:none; letter-spacing:0; font-family:var(--bn-font-body);
+  color:var(--bn-colour-muted); font-weight:420; margin-top:.25rem; font-size:var(--bn-text-label); }
+
+/* frame = screenshot chrome. Everything INSIDE .screen is product pixels. */
+.frame { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg); overflow:hidden;
+  box-shadow:0 2px 10px var(--bn-colour-shadow); margin-bottom:.9rem; background:var(--bn-colour-bg); }
+.chrome { display:flex; align-items:center; gap:.5rem; padding:.4rem .7rem; border-bottom:1px solid var(--bn-colour-border);
+  background:var(--bn-colour-quote-bg); font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.06em; }
+.chrome .dots { display:flex; gap:4px; }
+.chrome .dots i { width:8px; height:8px; border-radius:50%; background:var(--bn-off-track); display:block; }
+.chrome .tag { margin-left:auto; }
+.chrome .tag.shipped { color:var(--bn-colour-muted); }
+.chrome .tag.proposed { color:var(--bn-colour-accent); }
+.screen { padding:1rem 1.4rem 1.4rem; }
+
+/* commentary zone — deliberately not-the-product */
+.note { border-left:3px solid var(--bn-colour-muted); border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0;
+  padding:.9rem 1.1rem; margin-bottom:2.2rem;
+  background-image:repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--bn-colour-muted) 9%, transparent) 6px 12px); }
+.note-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.08em;
+  color:var(--bn-colour-muted); margin-bottom:.5rem; }
+.st { display:grid; grid-template-columns:auto 1fr; gap:.3rem .8rem; font-size:var(--bn-text-label); align-items:baseline; }
+.st dt { font-weight:490; color:var(--bn-colour-muted); white-space:nowrap; }
+.st dd { margin:0; }
+.note p { font-size:var(--bn-text-label); margin:.7rem 0 0; max-width:80ch; }
+.note ul { font-size:var(--bn-text-label); margin:.7rem 0 0; padding-left:1.1rem; max-width:80ch; }
+.note li { margin:.25rem 0; }
+.note code { font-family:var(--bn-font-mono); font-size:.95em; background:var(--bn-colour-badge-bg); padding:0 .25rem; border-radius:var(--bn-radius-sm); }
+.verdict { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase;
+  letter-spacing:.06em; padding:.1rem .45rem; border-radius:var(--bn-radius-sm); margin-bottom:.5rem; }
+.verdict.ok { background:color-mix(in srgb, var(--bn-positive) 18%, transparent); color:var(--bn-positive); }
+.verdict.bad { background:color-mix(in srgb, #dc2626 16%, transparent); color:light-dark(#b91c1c,#f87171); }
+.verdict.warn { background:color-mix(in srgb, #d97706 18%, transparent); color:light-dark(#b45309,#fbbf24); }
+.verdict.new { background:color-mix(in srgb, var(--bn-colour-accent) 16%, transparent); color:var(--bn-colour-accent); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   REUSED — atoms/section-heading.css, verbatim
+   ═════════════════════════════════════════════════════════════════════ */
+.section-heading { display:flex; align-items:flex-end; justify-content:space-between;
+  gap:var(--bn-space-lg); max-width:none; margin:0 0 1rem; padding-bottom:.4rem;
+  border-bottom:1px solid var(--bn-colour-keyline); }
+.section-heading > h1 { margin:0; max-width:none; min-width:0; border-bottom:none; padding-bottom:0;
+  font-size:var(--bn-text-display); font-weight:var(--bn-weight-strong); letter-spacing:-.01em; line-height:1.45; }
+.section-heading-action { display:flex; align-items:center; gap:var(--bn-space-sm); flex-shrink:0; }
+
+/* REUSED — atoms/button.css .toolbar-btn (the app's dropdown control) */
+.toolbar-btn { display:inline-flex; align-items:center; gap:var(--bn-space-sm);
+  background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  padding:.4rem .85rem; font-family:var(--bn-font-body); font-size:var(--bn-text-label);
+  color:var(--bn-colour-text); cursor:pointer; }
+.toolbar-btn .toolbar-arrow { color:var(--bn-colour-muted); vertical-align:-.05em; }
+.toolbar-btn .toolbar-icon-svg { color:var(--bn-colour-muted); vertical-align:-.15em; }
+
+/* REUSED — molecules/person-badge.css */
+.bn-person-badge { display:inline-flex; align-items:center; gap:0; white-space:nowrap; }
+.bn-speaker-badge--split { display:inline-flex; align-items:center; gap:0; padding:0;
+  border-radius:var(--bn-radius-sm); overflow:hidden; background:none; vertical-align:baseline; }
+.bn-speaker-badge--split .bn-speaker-badge-code {
+  font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); padding:var(--bn-space-xs) .4rem;
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text);
+  border:1px solid var(--bn-colour-border); border-right:none;
+  border-radius:var(--bn-radius-sm) 0 0 var(--bn-radius-sm); }
+.bn-speaker-badge--split .bn-speaker-badge-code:last-child {
+  border-radius:var(--bn-radius-sm); border-right:1px solid var(--bn-colour-border); }
+.bn-speaker-editable-name { font-family:var(--bn-font-body); font-size:inherit;
+  font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); border-radius:var(--bn-radius-sm);
+  padding:var(--bn-space-xs) .2rem; min-width:2rem; }
+.bn-speaker-editable-name.unnamed { font-weight:var(--bn-weight-normal); font-style:italic; color:var(--bn-colour-muted); }
+.bn-name-pencil { font-size:var(--bn-text-micro); opacity:.4; color:var(--bn-colour-muted); padding:0 .1rem; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   PROPOSED — the People organism. Same CONSTRUCTION as the shipped
+   sessions grid (parent grid + `grid-template-columns: subgrid` rows, so
+   every row shares one column solve), new class family because it is a
+   different object: one row per PERSON, not per session.
+   ═════════════════════════════════════════════════════════════════════ */
+.bn-people { container-type:inline-size; container-name:bn-people; }
+.bn-people-grid { display:grid; font-size:var(--bn-text-label);
+  grid-template-columns:max-content minmax(11rem,1.4fr) max-content minmax(7rem,1fr) max-content max-content; }
+.bn-people-grid.scope-folder { grid-template-columns:minmax(11rem,1.4fr) max-content minmax(9rem,1.2fr) max-content max-content max-content; }
+.bn-people-grid.scope-everyone { grid-template-columns:minmax(11rem,1.4fr) max-content minmax(9rem,1.2fr) max-content max-content; }
+.bn-people-row { display:grid; grid-column:1/-1; grid-template-columns:subgrid; align-items:start;
+  border-bottom:1px solid var(--bn-colour-border); }
+.bn-people-row:last-child { border-bottom:none; }
+.bn-people-cell { padding:.5rem var(--bn-space-md); min-width:0; }
+.bn-people-head { border-bottom-width:2px; }
+.bn-people-head .bn-people-cell { padding-block:.6rem; font-weight:var(--bn-weight-emphasis);
+  display:flex; flex-direction:column; align-items:flex-start; gap:.1rem; }
+.bn-people-h1,.bn-people-h2 { display:block; }
+.bn-people-h2 { font-weight:var(--bn-weight-normal); color:var(--bn-colour-muted); }
+.bn-cell-num { text-align:right; font-variant-numeric:tabular-nums; }
+.bn-cell-where { color:var(--bn-colour-muted); }
+.bn-cell-where a { color:var(--bn-colour-accent); text-decoration:none; }
+.bn-people-role { color:var(--bn-colour-muted); white-space:nowrap; }
+
+/* The name is the identity anchor at this altitude — the inverse of the
+   sessions grid, where the badge is. A guessed name is set in italic and
+   nothing else (no chip, no dot): one treatment, zero geometry, and it
+   survives every width. */
+.bn-person-name { font-weight:var(--bn-weight-emphasis); }
+.bn-person-name.guess { font-style:italic; font-weight:var(--bn-weight-normal); }
+.bn-person-name.none { font-style:italic; font-weight:var(--bn-weight-normal); color:var(--bn-colour-muted); }
+.bn-person-sub { display:block; color:var(--bn-colour-muted); font-size:var(--bn-text-badge); }
+
+/* Absent-when-zero line under the heading. One string, one sweep. */
+.bn-people-sweep { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:0 0 1rem;
+  display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+.bn-people-sweep b { font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); }
+.bn-people-sweep a { color:var(--bn-colour-accent); text-decoration:none; }
+
+/* A row whose identity is contested. Not an error colour — nothing has gone
+   wrong for the researcher yet, they just have to answer a question. */
+.bn-people-row.contested { background:var(--bn-colour-quote-bg); }
+.bn-contest { display:flex; gap:.5rem; align-items:baseline; color:var(--bn-colour-muted);
+  font-size:var(--bn-text-badge); margin-top:.15rem; }
+.bn-contest b { color:var(--bn-colour-text); font-weight:var(--bn-weight-emphasis); }
+.bn-inline-act { font:inherit; font-size:var(--bn-text-badge); background:none; border:none; padding:0;
+  color:var(--bn-colour-accent); cursor:pointer; text-decoration:none; }
+
+/* The suggestion. Sits under the row it is about, indented to it, and offers
+   exactly two answers plus the escape of ignoring it. */
+.bn-suggest { grid-column:1/-1; display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap;
+  padding:.45rem var(--bn-space-md) .55rem 2.2rem; font-size:var(--bn-text-badge);
+  color:var(--bn-colour-muted); border-top:1px dashed var(--bn-colour-border); }
+.bn-suggest b { color:var(--bn-colour-text); font-weight:var(--bn-weight-emphasis); }
+.bn-suggest-acts { display:flex; gap:.4rem; margin-left:auto; }
+.mini-btn { font:inherit; font-size:var(--bn-text-badge); padding:.15rem .55rem;
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; white-space:nowrap; }
+.mini-btn.primary { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* Sheet — the real app uses a native macOS sheet; this is its web stand-in. */
+.sheet { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg);
+  box-shadow:0 6px 24px var(--bn-colour-shadow); background:var(--bn-colour-bg);
+  padding:1.1rem 1.2rem; max-width:32rem; margin:0 auto; }
+.sheet h4 { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); margin:0 0 .35rem; }
+.sheet p { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:.3rem 0; }
+.sheet-acts { display:flex; gap:.5rem; justify-content:flex-end; margin-top:1rem; }
+.sheet-btn { font:inherit; font-size:var(--bn-text-label); padding:.35rem .9rem; border-radius:var(--bn-radius-md);
+  border:1px solid var(--bn-colour-border); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.sheet-btn.default { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* The link chain — drawn, because a cascade the researcher cannot see is a
+   cascade they cannot consent to. */
+.chain { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; margin:.7rem 0 .3rem;
+  font-size:var(--bn-text-label); }
+.chain .node { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  padding:.2rem .5rem; background:var(--bn-colour-quote-bg); white-space:nowrap; }
+.chain .node small { display:block; color:var(--bn-colour-muted); font-size:var(--bn-text-micro); }
+.chain .rel { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  text-transform:uppercase; letter-spacing:.06em; }
+.chain .rel.new { color:var(--bn-colour-accent); }
+.chain .node.other-folder { border-style:dashed; border-color:var(--bn-colour-accent); }
+
+/* Scope popup menu, open state */
+.menu { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-md);
+  box-shadow:0 4px 16px var(--bn-colour-shadow); background:var(--bn-colour-bg); padding:.25rem;
+  width:19rem; font-size:var(--bn-text-label); }
+.menu-item { display:flex; gap:.5rem; align-items:baseline; padding:.3rem .5rem; border-radius:var(--bn-radius-sm); }
+.menu-item .tick { width:1rem; color:var(--bn-colour-accent); }
+.menu-item .m-sub { margin-left:auto; color:var(--bn-colour-muted); font-size:var(--bn-text-badge); }
+.menu-item.on { background:var(--bn-colour-hover); }
+.menu-sep { height:1px; background:var(--bn-colour-border); margin:.25rem .3rem; }
+.menu-group { font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.06em;
+  color:var(--bn-colour-muted); padding:.35rem .5rem .15rem; }
+
+/* Degradation ladder for the People grid — mirrors the sessions-grid rungs.
+   Note which column dies first: the CODE, not the name. */
+@container bn-people (max-width: 900px) { .bn-people-grid .bn-cell-words { display:none; } }
+@container bn-people (max-width: 720px) { .bn-people-grid .bn-cell-code { display:none; } }
+@container bn-people (max-width: 560px) { .bn-people-grid .bn-cell-role { display:none; } }
+
+.width-strip { display:flex; gap:.4rem; align-items:center; font-family:var(--bn-font-mono);
+  font-size:var(--bn-text-micro); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.4rem; }
+.stacked > div + div { margin-top:.4rem; }
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+
+/* ══════════════════════════════════════════════════════════════════════
+   PROPOSED — contextual menu. Drawn to macOS metrics: 13px text, 22px
+   rows, checkmark gutter, submenu arrow, section headers (macOS 14+).
+   Nothing like this exists in the SPA today — grep finds zero
+   onContextMenu handlers, so this is a new mechanism, not a restyle.
+   ═════════════════════════════════════════════════════════════════════ */
+.menu { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-md);
+  box-shadow:0 6px 22px var(--bn-colour-shadow); background:var(--bn-colour-bg); padding:.25rem 0;
+  width:20rem; font-size:var(--bn-text-label); }
+.menu.narrow { width:15rem; }
+.menu.wide { width:23rem; }
+.menu-item { display:flex; gap:.4rem; align-items:baseline; padding:.22rem .6rem .22rem .3rem;
+  border-radius:var(--bn-radius-sm); margin:0 .25rem; white-space:nowrap; }
+.menu-item .tick { width:1.05rem; flex-shrink:0; color:var(--bn-colour-text); text-align:center; }
+.menu-item .m-sub { margin-left:auto; color:var(--bn-colour-muted); font-size:var(--bn-text-badge); padding-left:1rem; }
+.menu-item .m-arrow { margin-left:auto; color:var(--bn-colour-muted); padding-left:1rem; }
+.menu-item.on { background:var(--bn-colour-accent); color:#fff; }
+.menu-item.on .tick, .menu-item.on .m-sub, .menu-item.on .m-arrow { color:#fff; }
+.menu-item.disabled { color:var(--bn-colour-muted); }
+.menu-sep { height:1px; background:var(--bn-colour-border); margin:.28rem .55rem; }
+.menu-group { font-size:var(--bn-text-badge); font-weight:var(--bn-weight-emphasis);
+  color:var(--bn-colour-muted); padding:.35rem .6rem .15rem 1.35rem; }
+/* the two families, tinted only in this mockup's LEGEND — never in the product */
+.fam-a { box-shadow:inset 3px 0 0 color-mix(in srgb, var(--bn-colour-accent) 55%, transparent); }
+.fam-b { box-shadow:inset 3px 0 0 color-mix(in srgb, var(--bn-positive) 55%, transparent); }
+.menu-pair { display:flex; gap:.2rem; align-items:flex-start; }
+.menu-pair .submenu { margin-top:1.6rem; }
+
+/* anchor chips — the thing you right-clicked, shown above each menu */
+.anchor { display:inline-flex; align-items:baseline; gap:.4rem; font-size:var(--bn-text-label);
+  border:1px dashed var(--bn-colour-accent); border-radius:var(--bn-radius-sm);
+  padding:.15rem .35rem; margin-bottom:.6rem; }
+.anchor .a-lbl { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-accent); }
+
+/* matrix */
+.mx { width:100%; border-collapse:collapse; font-size:var(--bn-text-label); margin:1rem 0 var(--bn-space-xl); }
+.mx th, .mx td { text-align:left; vertical-align:top; padding:.45rem .7rem; border-bottom:1px solid var(--bn-colour-border); }
+.mx th { font-weight:490; color:var(--bn-colour-muted); text-transform:uppercase;
+  font-size:var(--bn-text-caption); letter-spacing:.05em; }
+.mx td.fam { white-space:nowrap; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); }
+.mx td code { font-family:var(--bn-font-mono); font-size:.92em; background:var(--bn-colour-badge-bg);
+  padding:0 .25rem; border-radius:var(--bn-radius-sm); white-space:nowrap; }
+.mx tr:last-child td { border-bottom:none; }
+.fam-tag { display:inline-block; width:.55rem; height:.55rem; border-radius:50%; margin-right:.35rem; }
+.fam-tag.a { background:var(--bn-colour-accent); }
+.fam-tag.b { background:var(--bn-positive); }
+
+/* altitude ladder */
+.ladder { display:grid; gap:.35rem; margin:1rem 0 var(--bn-space-xl); }
+.rung { display:grid; grid-template-columns:auto minmax(9rem,1fr) 2fr 2fr; gap:.8rem; align-items:baseline;
+  padding:.55rem .8rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  font-size:var(--bn-text-label); }
+.rung .n { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); }
+.rung .who { font-weight:var(--bn-weight-emphasis); }
+.rung .cap { color:var(--bn-colour-muted); }
+.rung.head { border:none; padding-block:.1rem; }
+.rung.head span { font-size:var(--bn-text-caption); text-transform:uppercase; letter-spacing:.05em;
+  color:var(--bn-colour-muted); font-weight:490; }
+@media (max-width:760px) { .rung { grid-template-columns:auto 1fr; } }
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="masthead">
+  <div class="eyebrow">Bristlenose · mockup</div>
+  <h1>Person actions, everywhere</h1>
+  <p>The atom is <b>"p4 is a human called Jane Smith"</b>. Everything else in this document is a
+     refinement of that sentence, and the refinements are ranked &mdash; not delivered together.</p>
+  <p>A person reference is rendered on <b>six</b> surfaces today (a segment badge, a session's
+     speaker entry, a quote attribution, the moderator line, the sessions sidebar, and the proposed
+     People lens). The same object, the same vocabulary, at five altitudes. <b>Every altitude reads
+     and writes</b> &mdash; the lens is not a read-only roll-up and the badge is not a write-only
+     control. You act where you noticed the problem, which is already the stated principle in
+     <code>design-speaker-editing.md</code>: <i>fix in context, not up front</i>.</p>
+  <p><b>Make the common case trivial and the edge cases possible.</b> It is not Bristlenose&rsquo;s
+     job to work identity out &mdash; it is its job to go with the typical case and make a wrinkle
+     easy to see and cheap to fix. And typical is <b>small</b>: fewer than 20 participants and
+     usually no more than 12, three or four colleagues, <b>one</b> moderator in about 95% of
+     studies, and where there is an extra person in the room they are almost always an
+     <b>observer</b> rather than a second moderator. Every list here fits on screen; nothing
+     scrolls, searches or paginates.</p>
+  <p>Two threads carry the whole document, both in <b>Ward handover app &mdash; round 2</b>.
+     <b>Jane Smith</b>, a client-side product manager who sat in to watch: the pipeline recorded her
+     as participant <code>p4</code> in session 4 when she was actually observing &mdash; the common
+     wrinkle. And <b>Mike Alvarez</b>, a colleague who covered session 9 &mdash; where he was given
+     <code>m1</code>, the same code as Martin, who ran every other session &mdash; the rare one.
+     (The full cast is pinned in <code>docs/design-people.md</code> §H; a handoff sweeps the benches
+     against it, because several early frames still disagree on who holds which code.)</p>
+</div>
+
+<div class="controls">
+  <span class="lbl">Palette</span>
+  <button class="pbtn on" onclick="setTheme('default',this)">Default</button>
+  <button class="pbtn" onclick="setTheme('edo',this)">Edo</button>
+  <span class="lbl" style="margin-left:1rem">Appearance follows your system light/dark</span>
+</div>
+
+<div class="key">
+  <div class="key-item">
+    <span class="key-swatch artefact"></span>
+    <span><b>Artefact</b> Inside a frame is product only &mdash; real tokens, real badge and
+      editable-name rules, menus drawn to macOS metrics. No labels that would not ship.</span>
+  </div>
+  <div class="key-item">
+    <span class="key-swatch commentary"></span>
+    <span><b>Commentary</b> Hatched, ruled, mono-labelled. Never the product. The two coloured
+      rules used in the legend below appear <b>only</b> in commentary &mdash; the shipped menu has
+      no colour coding.</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">Part 1 — two families, and why they must never share a section
+  <small>Fixing who said these words is a different act from fixing who this speaker is.</small></div>
+
+<table class="mx">
+  <thead><tr><th style="width:8rem">&nbsp;</th>
+    <th><span class="fam-tag a"></span>Attribution</th>
+    <th><span class="fam-tag b"></span>Identity</th></tr></thead>
+  <tbody>
+    <tr><td><b>The sentence</b></td>
+      <td>"That was Sarah, not Jane."</td>
+      <td>"p4 is a human called Jane Smith."</td></tr>
+    <tr><td><b>What is wrong</b></td>
+      <td>The words are credited to the wrong speaker. The cast is right.</td>
+      <td>The words are credited correctly. What we think the speaker <i>is</i> is wrong.</td></tr>
+    <tr><td><b>Object</b></td>
+      <td>Transcript segments &rarr; <code>speaker_code</code></td>
+      <td>Speaker &rarr; person, name, role</td></tr>
+    <tr><td><b>The fix moves</b></td>
+      <td><b>Words.</b> Speech leaves one speaker and joins another.</td>
+      <td><b>Nothing.</b> It relabels. Every word stays where it is.</td></tr>
+    <tr><td><b>Where noticed</b></td>
+      <td>Reading a transcript, in the flow of the conversation.</td>
+      <td>Scanning a session, or a list of people.</td></tr>
+    <tr><td><b>Blast radius</b></td>
+      <td>This turn &middot; these N turns &middot; every turn of this code</td>
+      <td>This session &middot; this study &middot; everywhere</td></tr>
+    <tr><td><b>Downstream</b></td>
+      <td>Quotes may now name the wrong person; per-speaker stats go stale.</td>
+      <td>A role change alters who is <i>eligible</i> for quotes &mdash; but only on the next analysis.</td></tr>
+    <tr><td><b>Frequency</b></td>
+      <td>High on raw audio. <b>Near zero on platform transcripts</b>, which arrive already diarised.</td>
+      <td>Every study, every path. The model guesses names on all of them.</td></tr>
+  </tbody>
+</table>
+
+<div class="note" style="margin-bottom:2.6rem">
+  <div class="note-label">Commentary — the lexical rule that keeps them apart</div>
+  <p>These two families want to sit next to each other in one menu, and they must not. "This Turn Is
+    &rsaquo; Jane" and "This Speaker Is &rsaquo; Jane" read almost identically and do wildly different
+    things: the first silently moves one paragraph of speech, the second relabels a person. A
+    researcher who means the second and hits the first has corrupted a transcript and will not find
+    out for weeks.</p>
+  <p><b>So the rule is lexical, not visual:</b> an attribution item always contains the word
+    <b>Turn</b> &mdash; "This Turn Is&hellip;", "These 4 Turns Are&hellip;", "All of p4's Turns
+    Are&hellip;". An identity item never does. <i>If the item says Turn, it moves words. If it
+    doesn't, it doesn't.</i> That is one sentence a researcher can hold, it survives translation
+    better than a colour or an icon would, and it does not spend any of the menu's scarce
+    vertical space.</p>
+  <p>They are also separated by a rule in the menu, and — the part that matters most — <b>they are
+    reached from different anchors</b>. Attribution lives on a segment badge inside the transcript,
+    where you are reading words. Identity lives on a speaker entry or a person row, where you are
+    reading a cast list. The overlap is deliberately small.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">Part 2 — the sequence
+  <small>Ranked by how often a researcher needs it, not by how interesting it is to build.</small></div>
+
+<div class="ladder">
+  <div class="rung head"><span>Step</span><span>The sentence</span><span>How often</span><span>What it costs</span></div>
+
+  <div class="rung">
+    <span class="n">1</span>
+    <span class="who">Say who, and what &mdash; from a bank, not a blank field</span>
+    <span>"m1 is <b>me</b>."<br>"That m1 is <b>Steve</b>" &mdash; picked, not typed.<br>"p4 is a human called <b>Jane Smith</b>."<br>"Jane is an <b>observer</b>, not a participant."</span>
+    <span class="cap"><b>Every session, every path.</b> Ten to thirty times a study. Observer-instead-of-participant is the single most common role error, and it is structural &mdash; see benches 4 and 11.</span>
+    <span class="cap">Small &mdash; plus one real prerequisite: every act here is drawn with an Undo, and the undo bridge is currently dead. The undo contract is a step-1 gate, not a parallel workstream.</span>
+  </div>
+
+  <div class="rung">
+    <span class="n">2</span>
+    <span class="who">Say the guess is right, fix the spelling, separate the two names</span>
+    <span>"Yes, that really is Danny."<br>"Michel Hurlly is <b>Mickael Hurley</b>."<br>"He&rsquo;s formally Michael J., but call him <b>Mike</b>."</span>
+    <span class="cap"><b>Every study with raw audio.</b> Whisper mangles proper nouns; Teams supplies formal names nobody uses aloud.</span>
+    <span class="cap">Medium. A recorded name origin per field, a <i>cleared</i> state the next run will not refill, a narrowed write payload, and an editor for the full name &mdash; which today has none.</span>
+  </div>
+
+  <div class="rung">
+    <span class="n">3</span>
+    <span class="who">This quote is actually that person</span>
+    <span>"They talked over each other &mdash; that one was Sarah, not Jane."</span>
+    <span class="cap">A few times a study &mdash; <b>and a quote is what gets published.</b></span>
+    <span class="cap">Small-to-medium. The speech moves: a whole-turn quote is one segment update; a fragment is a split whose point the quote&rsquo;s own timecodes supply. Plus the lens needs the membership filter it currently lacks. The escape hatch that makes step 5 postponable.</span>
+  </div>
+
+  <div class="rung">
+    <span class="n">4</span>
+    <span class="who">What naming implies</span>
+    <span>"p6 is the same Mary as p3."<br>"o2 in s3 is the same Jane as o1 in s1."<br>"The moderator in s9 is Mike, not Martin" &rarr; Mike becomes <code>m2</code>.</span>
+    <span class="cap">Follows from step 1 &mdash; <b>no separate UX, no blocking decision.</b></span>
+    <span class="cap">Medium. Speaker&rarr;person remap, moderator renumber, stats recompute &mdash; all bookkeeping behind an act the researcher has already performed.</span>
+  </div>
+
+  <div class="rung">
+    <span class="n">5</span>
+    <span class="who">Fix who said this turn</span>
+    <span>"That whole paragraph was Sarah."<br>"Two people are in that one paragraph &mdash; split it."</span>
+    <span class="cap"><b>Concentrated on raw audio.</b> Near zero where the transcript arrives already diarised &mdash; now the recommended path.</span>
+    <span class="cap"><b>Largest.</b> Batch segment endpoints, split/merge, word-timing division, stats recompute, the quote cascade.</span>
+  </div>
+
+  <div class="rung" style="border-style:dashed">
+    <span class="n">&mdash;</span>
+    <span class="who">The same person, in another study</span>
+    <span>"This is the same ward sister from round 1."</span>
+    <span class="cap">Mostly <b>prevented</b> by step 1 rather than solved later &mdash; see bench 12. What remains is reconciling people named before the bank existed.</span>
+    <span class="cap">Shrinks to a back-fill, with no matching algorithm in it at all.</span>
+  </div>
+</div>
+
+<div class="note" style="margin-bottom:2.4rem">
+  <div class="note-label">Commentary — three things this ordering asserts</div>
+  <p><b>Step 1 is most of the value and almost none of the cost.</b> Naming, self-identification and
+    role are the everyday acts: no typing beyond the name itself, no consequence beyond a relabel,
+    no data moved. Shipping only step 1 &mdash; on every surface, with the same menu &mdash; would
+    close the gap researchers actually feel, which is that the report talks about <code>p4</code>
+    and they think about Jane.</p>
+  <p><b>Attribution is deliberately late</b>, and that is the ordering claim most likely to be
+    wrong. It rests on where the transcripts come from: platform exports arrive already diarised,
+    so turn-level errors are a raw-audio problem, and cloud import has just made the diarised path
+    easier. If the cohort turns out to record locally and transcribe with Whisper, step 5 moves up
+    sharply. <b>That is measurable, not arguable</b> &mdash; the source of each session is already
+    recorded on every segment.</p>
+  <p><b>"That's me" is the highest-value identity claim in the system and needs no algorithm.</b>
+    The researcher appears in every study they run, so they are the single most recurrent person in
+    the whole corpus &mdash; and the one identity the app never has to guess, because the person
+    asserting it is the person. Said once, it seeds cross-study moderator identity for free and
+    removes the most common case from the cross-study back-fill before it is built.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">Part 3 — the menu, growing
+  <small>The same menu at step 1, step 2, step 3. Nothing is re-drawn; items arrive.</small></div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>1 · Step 1, the atom &mdash; an unnamed participant</h2>
+    <p class="sub">Right-click on <code>p4</code>'s badge or name, anywhere it is rendered. Session 4
+      of round 2. The pipeline heard nobody introduce themselves, so there is no name and no guess.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> contextual menu · step 1 <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <span class="anchor"><span class="a-lbl">anchor</span>
+        <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span>
+        <span class="bn-speaker-editable-name unnamed">Participant</span></span>
+      <div class="menu narrow">
+        <div class="menu-item"><span class="tick"></span><span>Set Name&hellip;</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item"><span class="tick"></span><span>Role in Session 4</span><span class="m-arrow">&#9656;</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item"><span class="tick"></span><span>Show in Transcript</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict ok">three items, and two of them are one keystroke away from done</span>
+    <p>This is the whole of step 1 for a participant. No submenus except Role, no scope choices, no
+      header. The anchor <i>is</i> the scope: you clicked <code>p4</code> in session 4, so the name
+      you type is <code>p4</code>'s &mdash; and because participant codes are numbered across the
+      whole study, that name is <code>p4</code>'s everywhere. Nothing needs to say so.</p>
+    <p>Deliberately absent: everything from steps 2&ndash;6. No Confirm (there is no guess to
+      confirm), no Same Person As, no Turn items &mdash; a badge in a <i>sessions</i> row is not
+      standing over any particular turn. A menu that shows six disabled items to advertise a roadmap
+      is a menu nobody reads.</p>
+  </div>
+</div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>2 · Still step 1 &mdash; the moderator, and the one identity that needs no guessing</h2>
+    <p class="sub">Right-click <code>m1</code> in sessions 1&ndash;8. The role is already correct.
+      The name is not known, and the Mac knows it.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> contextual menu · step 1 <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <span class="anchor"><span class="a-lbl">anchor</span>
+        <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span>
+        <span class="bn-speaker-editable-name unnamed">Moderator</span></span>
+      <div class="menu">
+        <div class="menu-item"><span class="tick"></span><span>That&rsquo;s Me (Martin Storey)</span></div>
+        <div class="menu-item"><span class="tick"></span><span>Set Name&hellip;</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item"><span class="tick"></span><span>Role in Session 4</span><span class="m-arrow">&#9656;</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item"><span class="tick"></span><span>Show in Transcript</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict ok">one click, no typing, and it is reusable forever</span>
+    <dl class="st">
+      <dt>Where the name comes from</dt><dd><code>NSFullUserName()</code> &mdash; the Mac's own account name. The app <b>offers</b> it and never assumes it, which is the standing rule for profile connection: the researcher may say "I'm m1", the system may not decide it for them.</dd>
+      <dt>Scope</dt><dd>This study. <code>m1</code> in every session where the app currently believes <code>m1</code> is one speaker. The sweep line confirms the count afterwards &mdash; <i>You are m1 in 8 sessions</i> &mdash; because a one-click action with an eight-session reach has to say so somewhere.</dd>
+      <dt>Fallback</dt><dd>Where there is no full name to offer (a browser session, or an account called <code>admin</code>), the item degrades to <b>That&rsquo;s Me&hellip;</b> with an ellipsis, asks once, and never asks again.</dd>
+    </dl>
+    <p>Two reasons this earns first place over any matching algorithm. It is the <b>only</b> identity
+      claim in the product with a perfect source &mdash; the person asserting it is the person. And
+      it is the most reused: a freelancer's own name is in every study they will ever run, so one
+      click here is the last time the question needs asking, in this project or any other.</p>
+    <p>The item sits <i>above</i> Set Name, against the usual instinct to lead with the generic verb,
+      because it is both the more common answer for an <code>m</code> code and the cheaper one. On a
+      <code>p</code> code it does not appear at all.</p>
+  </div>
+</div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>3 · Still step 1 &mdash; the right person, spelled wrong</h2>
+    <p class="sub">Session 7. <code>p7</code> is <b>Michel Hurlly</b>, which is what Whisper heard.
+      His name is <b>Mickael Hurley</b>, and the researcher knows that for certain because she
+      recruited him. Nothing about his identity is in doubt.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> contextual menu · step 1 <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <span class="anchor"><span class="a-lbl">anchor</span>
+        <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p7</span></span></span>
+        <span class="bn-person-name guess">Michel Hurlly</span></span>
+      <div class="menu">
+        <div class="menu-item"><span class="tick"></span><span>Change Name&hellip;</span></div>
+        <div class="menu-item"><span class="tick"></span><span>Confirm &ldquo;Michel Hurlly&rdquo;</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item"><span class="tick"></span><span>Role in Session 4</span><span class="m-arrow">&#9656;</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item"><span class="tick"></span><span>Show in Transcript</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> after committing the new spelling <span class="tag proposed">proposed</span></div>
+    <div class="screen" style="background:var(--bn-colour-quote-bg);padding:1.6rem 1.1rem">
+      <div class="sheet">
+        <h4>Fix the spelling in the transcripts too?</h4>
+        <p><b>Michel Hurlly</b> appears <b>6 times</b> in the words of session 7 &mdash; where he
+          says his own name, and where the moderator says it back.</p>
+        <div class="chain">
+          <span class="node">Michel Hurlly<small>6 places</small></span>
+          <span class="rel new">&mdash; becomes &mdash;</span>
+          <span class="node">Mickael Hurley</span>
+        </div>
+        <p>Quotes already pulled out keep the old spelling until you analyse again.</p>
+        <div class="sheet-acts">
+          <button class="sheet-btn">Just the Label</button>
+          <button class="sheet-btn default">Fix All 6</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict new">the most common name edit there is, and the only one with ground truth</span>
+    <dl class="st">
+      <dt>Why it is its own case</dt><dd>Not unknown, not misidentified &mdash; the right person, mis-transcribed. It is the <b>safest</b> edit in the whole vocabulary: no words move, no identity changes, nothing merges. And it is the most frequent, because a speech model mangles proper nouns on every raw-audio study while a platform transcript, which reads the name off an account, gets it right.</dd>
+      <dt>Why the researcher wins every time</dt><dd>She recruited him. The screener has the spelling. This is the one class where the human is not <i>probably</i> right but <i>definitely</i> right, so the interaction should cost nothing and ask nothing.</dd>
+      <dt>What only a rename can offer</dt><dd>The old string is known-wrong, so it can be found exactly. Setting a name on an empty field has nothing to search for; changing one does. That is the rule: <b>rename offers propagation, naming does not</b>.</dd>
+    </dl>
+    <p>The label and the words are two different places, and today only the label is fixable. The
+      transcript body still says "Michel Hurlly" wherever anyone said it aloud &mdash; so the report
+      shows the corrected name at the top of a quote whose text spells it wrong. Nobody would design
+      that; it is just what happens when a name field and a transcript are edited by different
+      features. The sheet is the cheapest possible bridge, and it is a scoped exact-string replace,
+      not free-form transcript editing.</p>
+    <p><b>Neither button is destructive and neither is Cancel</b> &mdash; "Just the Label" is a real
+      answer, not a retreat, and it is what a researcher picks when the participant genuinely said a
+      different name aloud. Escape takes the same path.</p>
+    <p><b>A name belongs to a code, and a code has one name.</b> Correcting the spelling here
+      corrects it in session 7, in every quote, in the participant table and in the export &mdash;
+      there is no such thing as <code>p7</code> being spelled one way here and another way there,
+      and the sheet does not offer a scope because there is no scope to offer. That invariant is
+      load-bearing well beyond spelling: it is what makes the moderator renumber in bench 9
+      <i>forced</i> rather than chosen.</p>
+    <p><b>The bigger version of this is a recruitment list.</b> The researcher knew the spelling
+      before the session existed &mdash; the names were in a screener days earlier. An imported
+      roster would let the app match what it heard against names it was <i>given</i>, rather than
+      guessing spellings from audio, and would collapse this whole class. Out of scope here, worth
+      noting as the thing steps 1&ndash;2 are a manual stand-in for.</p>
+  </div>
+</div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>4 · Still step 1 &mdash; "Jane is an observer, not a participant"</h2>
+    <p class="sub">Back to session 4. Jane Smith sat in to watch, said about two hundred words, and
+      the pipeline classified her as a participant &mdash; so her side comments were mined for
+      quotes.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> contextual menu · Role submenu <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <span class="anchor"><span class="a-lbl">anchor</span>
+        <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span>
+        <span class="bn-person-name">Jane Smith</span></span>
+      <div class="menu-pair">
+        <div class="menu">
+          <div class="menu-item"><span class="tick"></span><span>Change Name&hellip;</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item on"><span class="tick"></span><span>Role in Session 4</span><span class="m-arrow">&#9656;</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item"><span class="tick"></span><span>Show in Transcript</span></div>
+        </div>
+        <div class="menu narrow submenu">
+          <div class="menu-item"><span class="tick">&#10003;</span><span>Participant</span></div>
+          <div class="menu-item"><span class="tick"></span><span>Moderator</span></div>
+          <div class="menu-item"><span class="tick"></span><span>Observer</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict warn">easy to do, and it does less than it looks</span>
+    <p><b>"in Session 4" is in the item text, not implied.</b> Role is a fact about a person <i>in a
+      session</i>, not about a person &mdash; the database has always modelled it that way, and the
+      edge case is real: the same colleague can observe one session and moderate the next. Naming the
+      scope in the item costs four words and prevents the reasonable assumption that this is a global
+      switch. At a person-level anchor the same item reads <b>Role in All 12 Sessions</b>, and where
+      the roles genuinely differ it says so rather than flattening them.</p>
+    <p><b>What it does not do:</b> retract the six quotes already pulled from Jane's asides. Role
+      governs who is <i>eligible</i> for quote extraction, and extraction has already run. Changing a
+      label cannot un-ask a question that was already answered &mdash; so the surface offers
+      <i>Analyse again</i> and lets the researcher decide, rather than silently spending a cloud call
+      and discarding edits.</p>
+    <p><b>And it changes who is named in an export &mdash; today, by accident.</b> Anonymising blanks
+      names whose code starts with <code>p</code> and keeps <code>m</code> and <code>o</code>. Jane
+      as a participant is blanked; Jane as an observer is <b>named</b>. One three-item submenu
+      quietly moves a colleague across the anonymisation line, in the direction of more disclosure,
+      with nothing on screen saying so. That is Part 5's problem, and it is live in shipped code.</p>
+  </div>
+</div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>5 · Two Marys, and one Mary twice &mdash; none of it a defect</h2>
+    <p class="sub">The ordinary participant cast of a twelve-session study.
+      <code>p3</code> is Mary. <code>p4</code> is Marrian. <code>p5</code> is a <i>different</i>
+      Mary. <code>p6</code> is the first Mary again, back to talk about another part of the
+      journey. All four are fine and reasonable, and only one of them needs the researcher to
+      do anything.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> People &middot; project scope <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <div class="bn-people"><div class="bn-people-grid">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell bn-cell-code"></div>
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Sessions</span></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Mary A.</span><span class="bn-person-sub">Mary Adeyemi &middot; ward sister</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#3</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">4,120</div>
+          <div class="bn-people-cell bn-cell-num">9</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Marrian</span><span class="bn-person-sub">Marrian Boateng &middot; healthcare assistant</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#4</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">3,540</div>
+          <div class="bn-people-cell bn-cell-num">6</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p5</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Mary O.</span><span class="bn-person-sub">Mary Okafor &middot; night charge nurse</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#5</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">5,010</div>
+          <div class="bn-people-cell bn-cell-num">11</div>
+        </div>
+        <div class="bn-people-row contested">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p6</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name guess">Mary</span>
+            <span class="bn-contest">Heard once. <b>Mary A.</b> and <b>Mary O.</b> are both in this study. <button class="bn-inline-act">Which?</button></span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#6</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">2,880</div>
+          <div class="bn-people-cell bn-cell-num">5</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> the same shape in the observer namespace <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <div class="bn-people"><div class="bn-people-grid">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell bn-cell-code"></div>
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Sessions</span></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">o1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Jane Smith</span><span class="bn-person-sub">Product manager, Meridian Health</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Observer</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#1</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">180</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">o2</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Jane Smith</span><span class="bn-person-sub">Product manager, Meridian Health</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Observer</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#3</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">210</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+        <div class="bn-suggest">
+          Same name in both sessions, and both were read from the meeting files.
+          <span class="bn-suggest-acts">
+            <button class="mini-btn primary">Same person</button>
+            <button class="mini-btn">Different people</button>
+          </span>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict ok">three rows need nothing; the fourth needs one pick</span>
+    <dl class="st">
+      <dt>Same name, different people</dt><dd><code>p3</code> and <code>p5</code> are two Marys who have never met. Correct as they stand, and <b>the app proposes nothing</b> &mdash; name equality is not evidence at any altitude, including inside one study. The only work is telling them apart on screen, which the shipped short-name collision handling already does: <b>Mary A.</b> and <b>Mary O.</b></dd>
+      <dt>Same person, two codes</dt><dd><code>p3</code> and <code>p6</code> are one Mary, back for a second session on another part of the journey. <b>Normal, not a defect.</b> Participant codes are numbered across the study so they never collide &mdash; which means one human returning simply holds two of them.</dd>
+      <dt>The only action on this screen</dt><dd>Naming <code>p6</code> by picking the Mary who is already in the study. The codes join as a consequence. One pick.</dd>
+    </dl>
+    <p><b>This is the common participant case, and it should be almost invisible.</b> The temptation
+      is to build matching &mdash; two "Mary"s in one study, surely worth a suggestion? No: the app
+      cannot tell these three apart and would be wrong a third of the time. What it can do is put
+      the ambiguity where the researcher will see it, name both candidates, and let the person who
+      was in the room answer in one click.</p>
+    <p>Note what the contested row does <b>not</b> say. Not a confidence score, not "possible
+      duplicate", not a merge proposal. Just the two names that are already in this study and the
+      word <i>Which?</i> &mdash; because the researcher knows, and the app does not.</p>
+    <p><b>The second frame is the same shape one namespace over.</b> Moderator and observer codes
+      fragment as well as collide, for a dull reason: the number comes from <b>within-session
+      ordering</b>, which has nothing to do with identity. Jane observes session 1 alone and is <code>o1</code>; she observes session 3
+      alongside Tom, who happens to speak first, and she is <code>o2</code>. Same person, two codes,
+      and nothing about her changed.</p>
+    <p>So <b>all three namespaces need the join, and only <code>m</code>/<code>o</code> need the
+      split</b> &mdash; and every one of those repairs is the same gesture: name the person in front
+      of you. Here the app <i>offers</i>, because both names are platform records rather than
+      guesses; a Mary heard once gets the silent <i>Which?</i> treatment instead. Offering is not
+      merging, and the strength of the evidence decides which you get.</p>
+  </div>
+</div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>6 · The common attribution error, and the picker that serves it</h2>
+    <p class="sub">Not "that paragraph" &mdash; <b>all of it</b>. Everything the diariser attributed
+      to <code>p3</code> in this transcript is the moderator talking. One statement, not forty
+      corrections. And the person you are attributing to may be someone the system has never
+      noticed.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> speaker entry &middot; whole-transcript remap <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <span class="anchor"><span class="a-lbl">anchor</span>
+        <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span></span></span>
+        <span class="bn-speaker-editable-name unnamed">Participant</span>
+        <span style="color:var(--bn-colour-muted);font-size:var(--bn-text-badge)">session 3 &middot; 41 turns</span></span>
+      <div class="menu-pair">
+        <div class="menu narrow">
+          <div class="menu-item"><span class="tick"></span><span>Set Name&hellip;</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item on"><span class="tick"></span><span>All of p3&rsquo;s Turns Are</span><span class="m-arrow">&#9656;</span></div>
+          <div class="menu-item"><span class="tick"></span><span>Not a Speaker</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item"><span class="tick"></span><span>Role in Session 4</span><span class="m-arrow">&#9656;</span></div>
+        </div>
+        <div class="menu submenu">
+          <div class="menu-group">Participants</div>
+          <div class="menu-item"><span class="tick"></span><span><span style="font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);color:var(--bn-colour-muted)">p1</span> &nbsp;Sarah Chen</span></div>
+          <div class="menu-item"><span class="tick"></span><span><span style="font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);color:var(--bn-colour-muted)">p5</span> &nbsp;Mary O.</span></div>
+          <div class="menu-group">Moderators</div>
+          <div class="menu-item on"><span class="tick"></span><span><span style="font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);color:#fff">m1</span> &nbsp;Martin Storey (Me)</span></div>
+          <div class="menu-group">Observers</div>
+          <div class="menu-item"><span class="tick"></span><span><span style="font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);color:var(--bn-colour-muted)">o1</span> &nbsp;Jane Smith</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item"><span class="tick"></span><span>New Participant&hellip;</span></div>
+          <div class="menu-item"><span class="tick"></span><span>New Moderator&hellip;</span></div>
+          <div class="menu-item"><span class="tick"></span><span>New Observer&hellip;</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> New Observer &mdash; create and name in one step <span class="tag proposed">proposed</span></div>
+    <div class="screen" style="background:var(--bn-colour-quote-bg);padding:1.6rem 1.1rem">
+      <div class="sheet" style="max-width:26rem">
+        <h4>New observer in session 3</h4>
+        <div style="margin:.8rem 0 .3rem">
+          <input value="" placeholder="Name" style="font:inherit;width:100%;padding:.3rem .45rem;border:1px solid var(--bn-colour-border-hover);border-radius:var(--bn-radius-sm);background:var(--bn-colour-bg);color:var(--bn-colour-text)">
+        </div>
+        <div class="menu" style="width:100%;box-shadow:none;border-color:var(--bn-colour-border)">
+          <div class="menu-group">Your team</div>
+          <div class="menu-item"><span class="tick"></span><span>Steve Nakamura</span></div>
+          <div class="menu-item"><span class="tick"></span><span>Rachel Okonjo</span></div>
+          <div class="menu-item"><span class="tick"></span><span>Jane Smith</span></div>
+        </div>
+        <p>They will be <code>o2</code> in this session.</p>
+        <div class="sheet-acts">
+          <button class="sheet-btn">Cancel</button>
+          <button class="sheet-btn default">Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict new">one statement replaces forty corrections</span>
+    <dl class="st">
+      <dt>The grain that matters</dt><dd>Not a turn. <b>All 41 turns at once</b>, because when the diariser is wrong about a speaker it is usually wrong about all of them. Cheap too: one bulk update inside a session &mdash; no word-timing division, no split, no merge, no quote cascade.</dd>
+      <dt>Why it is an identity item, not a Turn item</dt><dd>It moves words, but what the researcher asserted is <b>who p3 is</b> &mdash; that the diariser invented a speaker who is really the moderator. The families are told apart by what is asserted, not by what the database ends up doing. Same shape as a rename causing a renumber.</dd>
+      <dt>Grouping is the role</dt><dd>Picking inside <b>Observers</b> sets an <code>o</code> code; picking <b>New Moderator&hellip;</b> mints an <code>m</code>. Role and identity are chosen in one gesture rather than two, and the groups run in <code>p</code>/<code>m</code>/<code>o</code> order &mdash; the order codes are read in everywhere else &mdash; rather than by guessed frequency.</dd>
+    </dl>
+    <p><b>The gap this closes: a person the system never noticed.</b> Diarisation merges two people
+      into one code and the second has <i>no code at all</i>, so there is nobody to reattribute to.
+      This is the exact inverse of <code>Not a Speaker</code>, and without a create path the picker
+      simply cannot express the correction. <code>New Participant&hellip;</code> mints the code on the
+      spot.</p>
+    <p><b>Create and name are one action.</b> A nameless <code>p7</code> is a second chore, and the
+      researcher knows the name at precisely the moment they are creating them. For a new moderator
+      or observer the field offers <b>the bank</b>, because a new colleague is usually a known
+      colleague; for a new participant it is blank, because they usually are new. Note this is the
+      one place the two lists meet &mdash; <b>the cast</b> (who could this speech belong to, in this
+      session) and <b>the bank</b> (who is this person, across studies) are otherwise different
+      questions and different lists.</p>
+    <p>The whole cast fits without scrolling because the cast is small: a dozen participants, three
+      or four colleagues. At that scale a grouped list is faster than any search field, and a search
+      field would be a confession that the list is too long.</p>
+  </div>
+</div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>7 · They talk over each other, and the quote is credited to the wrong one</h2>
+    <p class="sub">Session 3, around 18:40. Sarah (<code>p3</code>) and Jane (<code>p4</code>)
+      overlap for eight seconds. The diariser cut the boundary in the wrong place, and one of the
+      study's better quotes now carries the wrong name.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> contextual menu on a quote card <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <span class="anchor"><span class="a-lbl">anchor</span>
+        <span style="font-style:italic">&ldquo;&hellip;by then the list has already moved on, so you&rsquo;re handing over something that isn&rsquo;t true any more.&rdquo;</span>
+        <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span></span>
+      <div class="menu-pair">
+        <div class="menu wide">
+          <div class="menu-item on"><span class="tick"></span><span>This Quote Is</span><span class="m-arrow">&#9656;</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item"><span class="tick"></span><span>Trim Quote&hellip;</span></div>
+          <div class="menu-item"><span class="tick"></span><span>Hide Quote</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item"><span class="tick"></span><span>Show in Transcript</span></div>
+        </div>
+        <div class="menu submenu">
+          <div class="menu-group">Participants</div>
+          <div class="menu-item"><span class="tick"></span><span><span style="font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);color:var(--bn-colour-muted)">p3</span> &nbsp;Sarah Chen</span></div>
+          <div class="menu-item"><span class="tick">&#10003;</span><span><span style="font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);color:var(--bn-colour-muted)">p4</span> &nbsp;Jane Smith</span></div>
+          <div class="menu-item"><span class="tick"></span><span><span style="font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);color:var(--bn-colour-muted)">p5</span> &nbsp;Mary O.</span></div>
+          <div class="menu-group">Not a participant quote &mdash; re-attributes the speech</div>
+          <div class="menu-item"><span class="tick"></span><span><span style="font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);color:var(--bn-colour-muted)">m1</span> &nbsp;Martin Storey (Me)</span></div>
+          <div class="menu-item"><span class="tick"></span><span><span style="font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);color:var(--bn-colour-muted)">o1</span> &nbsp;Jane Smith</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item"><span class="tick"></span><span>New Participant&hellip;</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> after picking m1 &mdash; no dialog <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <p class="bn-people-sweep"><b>Now credited to Martin (m1).</b> This lens only shows
+        participant quotes. <a href="#">Show in transcript</a> &middot; <a href="#">Undo</a></p>
+      <p class="bn-people-sweep" style="margin-top:-.5rem">Martin has <b>5 more quotes</b> in this
+        session. <a href="#">Those too</a></p>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict new">cheap, and the highest-consequence attribution fix there is</span>
+    <dl class="st">
+      <dt>Why it outranks fixing the turn</dt><dd>A quote is <b>published</b>. It goes in the report, the spreadsheet, the Miro board, the deck. A transcript is a working document nobody outside the team reads. A slightly-wrong transcript is tolerable; a quote credited to the wrong participant is a factual error in a deliverable.</dd>
+      <dt>Why it is cheap</dt><dd>One field on one quote. No segment surgery, no word-timing division, no per-speaker stats recompute, and crucially <b>no cascade</b> &mdash; which is the unsolved part of doing it at segment level. The speaker-editing design already reaches this conclusion and calls it "recommendation B, simplest first".</dd>
+      <dt>Why crosstalk may never be fixable upstream</dt><dd>Two voices genuinely occupy the same three seconds. No boundary is correct. So the honest design does not promise a perfect transcript &mdash; it gives the researcher a way to make the <i>output</i> right regardless.</dd>
+    </dl>
+    <p><b>Quotes exist only for participants</b>, so the current value is always a <code>p</code>
+      code and there is no such thing as a moderator&rsquo;s quote. That makes the two halves of this
+      list mean different things. Picking another participant <b>re-credits</b> &mdash; genuine
+      crosstalk, the words are a finding, credited wrongly. Picking a moderator or observer says
+      <b>this is not a participant quote at all</b> &mdash; the speech is re-attributed, and the
+      card leaves the lens because the lens only shows participant quotes. The group header says
+      which is which at the point of action.</p>
+    <p>That second half is the everyday repair from bench 11 arriving on a different surface: an
+      observer mis-filed as a participant had their asides mined as findings, and this is where a
+      researcher meets the consequence &mdash; one odd quote at a time, while reading.</p>
+    <p><b>The card disappearing is a consequence, not the action.</b> A quote is a view onto speech,
+      not a copy of it &mdash; so re-attributing it moves <i>the words</i>, and going to session 3
+      afterwards shows them as the moderator&rsquo;s. Had only the card changed, the two surfaces
+      would disagree: the quote gone from here, the transcript still showing <code>p4</code> saying
+      it. Hence <b>Show in transcript</b> sitting next to Undo &mdash; the quote was not destroyed,
+      it moved to where it belongs, and the researcher should be able to go and see that.</p>
+    <p><b>And nothing is withdrawn.</b> There is no flag, no reason field, no pile it moves to. The
+      Quotes lens shows <i>participant</i> quotes; re-attribute the speech to <code>m1</code> and the
+      card is simply no longer in that set &mdash; reversible for free, because putting the speech
+      back puts the card back.</p>
+    <p><b>Two orthogonal axes, and keeping them apart is the whole point.</b>
+      <b>Membership</b> &mdash; is this a participant quote? &mdash; is a <i>fact</i> about who
+      spoke, derived from speaker identity, with no state of its own.
+      <b>Emphasis</b> &mdash; star promotes, hide demotes &mdash; is a <i>judgement</i> about
+      evidence quality that the researcher makes deliberately and owns. Star and hide are one
+      spectrum: picking and choosing the best evidence. Speaker identity is not on that spectrum at
+      all. Which is why the hidden count stays meaningful &mdash; <b>it counts judgements, not
+      facts</b> &mdash; and why a correction must never be expressed through it.</p>
+    <p>Note the sentence in the frame above avoids the word <i>hidden</i>. Borrowing the curation
+      verb for a membership fact is the exact confusion this whole distinction exists to prevent.</p>
+    <p><b>And then the pattern this design uses everywhere: do the narrow thing, then offer the wide
+      one in a sentence.</b> One quote is re-attributed, because that is what was asked. The app,
+      now holding strong evidence, says so and notes the five quotes still credited to p4 &mdash;
+      inviting review, claiming nothing, and never performing the sweep uninvited. It is how a reading surface can default to
+      the thing under the cursor while the underlying error is usually study-wide.</p>
+    <p><b>Trim and Hide sit in the same menu deliberately.</b> When speech overlaps, the extracted
+      text is often a genuine mash of two voices, and re-crediting all of it to one person swaps one
+      wrong attribution for another. The real repair is to trim to the part one person actually said
+      and then re-credit &mdash; or, when it is unsalvageable, to hide it. Both already ship; the
+      menu just puts the three answers in one place, in the order a researcher tries them.</p>
+    <p>Note the noun. <b>This Quote Is</b> &mdash; a unit of speech, so the fix moves words.
+      <b>Role</b>, <b>Change Name</b>, <b>Same Person As</b> &mdash; units of identity, so they only
+      relabel. The rule generalises from the earlier one: <i>the item names the object it acts on</i>,
+      and speech nouns are the ones that move things.</p>
+  </div>
+</div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>8 · The transcript, where all three grains meet &mdash; and only one is expensive</h2>
+    <p class="sub">Right-click the badge on a turn. Everything attribution can do is reachable from
+      here, at three different reaches, and the item text says which is which.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> transcript &middot; segment badge <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <div class="anchor" style="display:block;max-width:38rem">
+        <span class="a-lbl">anchor</span>
+        <div style="display:flex;gap:.6rem;align-items:baseline;margin-top:.35rem">
+          <span style="font-family:var(--bn-font-mono);font-size:var(--bn-text-badge);color:var(--bn-colour-muted)">18:42</span>
+          <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span>
+          <span style="flex:1">&hellip;and then you&rsquo;d have to go back to the list and start again, which by that point has moved on.</span>
+        </div>
+      </div>
+      <div class="menu wide" style="margin-top:.6rem">
+        <div class="menu-item"><span class="tick"></span><span>This Turn Is</span><span class="m-arrow">&#9656;</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item"><span class="tick"></span><span>All of p4&rsquo;s Turns Are</span><span class="m-arrow">&#9656;</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item"><span class="tick"></span><span>Split Turn Here</span></div>
+        <div class="menu-item"><span class="tick"></span><span>Merge with Turn Above</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item"><span class="tick"></span><span>Set Name&hellip;</span></div>
+        <div class="menu-item"><span class="tick"></span><span>Role in Session 4</span><span class="m-arrow">&#9656;</span></div>
+        <div class="menu-item"><span class="tick"></span><span>Not a Speaker</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item"><span class="tick"></span><span>Show Their Quotes</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict new">the lexical rule, legible in one screenshot</span>
+    <p><b>Two items say <i>Turn</i> and they are the two that move words to a different speaker.</b>
+      One says <code>All of p4&rsquo;s Turns Are</code> &mdash; the whole-speaker sweep, named for
+      the speech it moves and classified attribution, where its effect belongs. (An earlier draft
+      spelled it <code>p4 Is Actually</code> &mdash; identity wording on a 41-turn word-move,
+      distinguishable from the pure relabel <code>m1 Is</code> only by an adverb; the review killed
+      it, so the rule now holds with no exceptions.) The rest relabel and move nothing. A researcher
+      does not have to be taught this; they can read it off the menu.</p>
+    <dl class="st">
+      <dt>Reach, top to bottom</dt><dd><code>This Turn Is</code> &mdash; the thing under the cursor. <code>All of p4&rsquo;s Turns Are</code> &mdash; all 41 turns in this transcript. The wider one is deliberately <b>one group down</b>: this is a reading surface, so the narrow act is the default and the sweep is available with its scope written into its name.</dd>
+      <dt>With a selection</dt><dd>The first item reads <b>These 4 Turns Are</b>. Selection carries the scope, which is the standard text-editor idiom and introduces no new concept &mdash; shift-click a run of misattributed turns, then fix them together.</dd>
+      <dt>Cost, which is not evenly spread</dt><dd><code>This Turn Is</code> and <code>All of p4&rsquo;s Turns Are</code> are bulk updates &mdash; cheap. <b>Only <code>Split</code> and <code>Merge</code> need segment surgery</b>: word-timing division, index management, a quote cascade. They are the rare grain, and they are the reason step 5 of the sequence is the largest item in it.</dd>
+    </dl>
+    <p>One exception worth carrying forward: when a split is needed because a <i>quote</i> sits
+      inside a longer turn, <b>the quote&rsquo;s own timecode range supplies the split point</b>.
+      That case needs no cursor placement and no new interaction, which makes the flavour of turn
+      surgery that arrives from a reading surface markedly cheaper than the general one drawn here.</p>
+  </div>
+</div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>9 · "The moderator in session 9 is Mike, not Martin"</h2>
+    <p class="sub">The tail case &mdash; and the one this document first drew as a three-button
+      sheet. It is not. One moderator runs about 95% of studies, so <code>m1</code> meaning the same
+      person everywhere is <b>usually right</b>; where it is not, the researcher fixes it the same
+      way they fix everything else, by naming the person in front of them.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> session 9 &middot; the same menu as bench 2 <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <span class="anchor"><span class="a-lbl">anchor</span>
+        <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span>
+        <span class="bn-person-name">Martin Storey</span>
+        <span style="color:var(--bn-colour-muted);font-size:var(--bn-text-badge)">session 9</span></span>
+      <div class="menu-pair">
+        <div class="menu narrow">
+          <div class="menu-item on"><span class="tick"></span><span>m1 Is</span><span class="m-arrow">&#9656;</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item"><span class="tick"></span><span>Role in Session 4</span><span class="m-arrow">&#9656;</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item"><span class="tick"></span><span>Show in Transcript</span></div>
+        </div>
+        <div class="menu submenu">
+          <div class="menu-item"><span class="tick">&#10003;</span><span>Martin Storey (Me)</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-group">Your team</div>
+          <div class="menu-item"><span class="tick"></span><span>Steve Nakamura</span></div>
+          <div class="menu-item"><span class="tick"></span><span>Rachel Okonjo</span></div>
+          <div class="menu-item on"><span class="tick"></span><span>Mike Alvarez</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item"><span class="tick"></span><span>Someone New&hellip;</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> immediately after &mdash; no dialog <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <p class="bn-people-sweep"><b>Mike is now m2 in session 9.</b> Martin stays m1 in sessions
+        1&ndash;8. <a href="#">Undo</a></p>
+      <div class="bn-people"><div class="bn-people-grid">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell bn-cell-code"></div>
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Sessions</span></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Martin Storey</span><span class="bn-person-sub">You</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where">1&ndash;8</div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">12,100</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m2</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Mike Alvarez</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Moderator</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#9</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">1,640</div>
+          <div class="bn-people-cell bn-cell-num">&mdash;</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict ok">the dialog was the wrong answer &mdash; this is a rename with a consequence</span>
+    <dl class="st">
+      <dt>Drawn before</dt><dd>A sheet titled "Separate m1 into two people?" with three buttons, a chain diagram and a nested question. It priced a tail case as though it were a feature.</dd>
+      <dt>What the researcher does</dt><dd>Opens session 9, says <b>the moderator here is Mike</b>, carries on. They never think "separate m1" &mdash; they think about the person in front of them.</dd>
+      <dt>What the app does</dt><dd>Notices <code>m1</code> is Martin elsewhere, concludes this is a different person, renumbers Mike to <code>m2</code>, and <b>says so in one sentence with an Undo</b>. No confirmation, because the house rule is that nothing confirms and everything &#8984;Z&rsquo;s.</dd>
+    </dl>
+    <p><b>Renumbering is a consequence of naming, not a verb.</b> That is the whole of decision 1,
+      and it is why the same menu from bench 2 absorbs the tail case without growing an item. Three
+      things that looked structural &mdash; joining two participant codes, separating a collided
+      moderator, linking across studies &mdash; are all bookkeeping behind an act the researcher has
+      already performed, <i>provided naming is built as an identity assertion rather than a string
+      edit</i>.</p>
+    <p>The heavy sheet survives for one path only: noticing at study level, in the People lens, that
+      a code covers two names &mdash; where there is no single session to open and no rename in
+      flight. Secondary door, not the primary one.</p>
+  </div>
+</div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>10 · "Michael J. Hurley-Okonkwo" is fine on the invoice. In the study he is Mike.</h2>
+    <p class="sub">Teams writes the account's formal name onto every turn &mdash; middle initials,
+      double-barrelled surnames, the occasional title. The research team says Mike, and Mike is what
+      belongs beside a quote.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> Change Name — sheet <span class="tag proposed">proposed</span></div>
+    <div class="screen" style="background:var(--bn-colour-quote-bg);padding:1.6rem 1.1rem">
+      <div class="sheet">
+        <h4>p4</h4>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:.55rem .8rem;align-items:baseline;margin:.9rem 0 .3rem;font-size:var(--bn-text-label)">
+          <span style="color:var(--bn-colour-muted);white-space:nowrap">Called</span>
+          <span><input value="Mike" style="font:inherit;width:100%;padding:.25rem .4rem;border:1px solid var(--bn-colour-border-hover);border-radius:var(--bn-radius-sm);background:var(--bn-colour-bg);color:var(--bn-colour-text)">
+            <span style="display:block;color:var(--bn-colour-muted);font-size:var(--bn-text-badge);margin-top:.25rem">Appears beside every quote, and in the report.</span></span>
+          <span style="color:var(--bn-colour-muted);white-space:nowrap">Full name</span>
+          <span><input value="Michael J. Hurley-Okonkwo" style="font:inherit;width:100%;padding:.25rem .4rem;border:1px solid var(--bn-colour-border-hover);border-radius:var(--bn-radius-sm);background:var(--bn-colour-bg);color:var(--bn-colour-text)">
+            <span style="display:block;color:var(--bn-colour-muted);font-size:var(--bn-text-badge);margin-top:.25rem">From the Teams transcript. Kept for your records; not shown with quotes.</span></span>
+        </div>
+        <div class="sheet-acts">
+          <button class="sheet-btn">Cancel</button>
+          <button class="sheet-btn default">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict bad">two fields exist; one has an editor; the other is a tooltip</span>
+    <dl class="st">
+      <dt>The model is already right</dt><dd><code>full_name</code> and <code>short_name</code> have been on <code>PersonEditable</code> from the start, and <code>suggest_short_names()</code> derives the second from the first with real care &mdash; honorific stripping, family-name-first detection, 337 surnames, and collision handling that produces "Sarah J." and "Sarah K." when two participants share a first name.</dd>
+      <dt>The UI is not</dt><dd>The pencil in the Sessions grid edits <b><code>short_name</code></b> and displays <code>short_name || name</code>. <code>full_name</code> appears only as a hover tooltip, and only when it differs. <b>Nothing in the SPA can edit a full name at all.</b></dd>
+      <dt>So the user's case is half-served</dt><dd>You can already type "Mike" &mdash; but you cannot see that you are editing the display name rather than the record, and if Teams supplied a wrong or over-formal full name it is uncorrectable. The field is not inert: it is what the participant table shows, and it is in the export.</dd>
+    </dl>
+    <p>The sheet's job is almost entirely <b>teaching by consequence</b>. Two fields, each with one
+      line saying where it shows up. "Called" first, because it is the one being changed nine times
+      out of ten and the one with visible effect. Derivation still runs &mdash; leave "Called" empty
+      and it fills from the full name &mdash; but it is now visibly a default rather than an
+      invisible one.</p>
+    <p>This is also the quiet answer to the anonymisation question. A study that never records full
+      names and works entirely in short ones has less to strip on the way out. Making the
+      distinction visible lets a researcher choose that, which is a governance decision the product
+      currently makes for them by hiding one of the fields.</p>
+  </div>
+</div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>11 · Observers are systematically mis-filed, and correcting it makes the export worse</h2>
+    <p class="sub">Nobody introduces the observer. They sit quietly for twenty minutes, then say one
+      useful thing &mdash; and when they do, they sound exactly like a participant.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> sweep line, People or Sessions <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <p class="bn-people-sweep"><b>2 people barely spoke and were never asked a question.</b>
+        Were they observing? <a href="#">Take a look</a></p>
+      <div class="bn-people"><div class="bn-people-grid">
+        <div class="bn-people-row bn-people-head">
+          <div class="bn-people-cell bn-cell-code"></div>
+          <div class="bn-people-cell"><span class="bn-people-h1">Name</span></div>
+          <div class="bn-people-cell bn-cell-role"><span class="bn-people-h1">Role</span></div>
+          <div class="bn-people-cell bn-cell-where"><span class="bn-people-h1">Sessions</span></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words"><span class="bn-people-h1">Words</span></div>
+          <div class="bn-people-cell bn-cell-num"><span class="bn-people-h1">Quotes</span></div>
+        </div>
+        <div class="bn-people-row">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p3</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Sarah Chen</span><span class="bn-person-sub">Ward sister, acute medicine</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#3</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">4,120</div>
+          <div class="bn-people-cell bn-cell-num">9</div>
+        </div>
+        <div class="bn-people-row contested">
+          <div class="bn-people-cell bn-cell-code"><span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">p4</span></span></span></div>
+          <div class="bn-people-cell"><span class="bn-person-name">Jane Smith</span>
+            <span class="bn-contest">210 words, first spoke at <b>31:40</b>, never asked a question.</span></div>
+          <div class="bn-people-cell bn-cell-role bn-people-role">Participant</div>
+          <div class="bn-people-cell bn-cell-where"><a href="#">#4</a></div>
+          <div class="bn-people-cell bn-cell-num bn-cell-words">210</div>
+          <div class="bn-people-cell bn-cell-num">6</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict bad">a structural bias, and a perverse incentive on top of it</span>
+    <p><b>Observers cannot be classified by the machinery as built, and they fall through to
+      participant by construction.</b> Role identification samples roughly the first five minutes
+      (<code>seg.start_time &gt; 300</code>), so anyone who first speaks at 31:40 is not in the
+      sample at all. The heuristic that covers the rest scores question ratio and moderator phrases
+      &mdash; an observer fires neither. And the code assignment maps
+      <code>PARTICIPANT</code> <i>and</i> <code>UNKNOWN</code> to a <code>p</code> code, so "could
+      not tell" and "is a participant" produce identical output. The observer is not unlucky; they
+      are the default.</p>
+    <p><b>The signals that would catch them are computable and already stored:</b> very low word
+      count, a late first utterance, and never being the addressee of a moderator question. None
+      needs a model. One absent-when-zero line is enough &mdash; it costs no column width, it is a
+      single translated string, and it targets a bias rather than nagging about every speaker.</p>
+    <p><b>Now the perverse part.</b> Correcting Jane from participant to observer moves her
+      <i>across the anonymisation line, towards disclosure</i>: the export blanks names whose code
+      starts with <code>p</code> and preserves <code>m</code> and <code>o</code>. As a
+      mis-filed participant her name is stripped from the client's leave-behind. Correctly filed as
+      an observer, it is published. <b>The most common role error currently produces the safer
+      export, and fixing it produces the riskier one</b> &mdash; which means the sweep above cannot
+      ship before Part 5's second decision, or it will do net harm while looking like a correctness
+      feature.</p>
+  </div>
+</div>
+
+<div class="bench">
+  <div class="bench-head">
+    <h2>12 · The bank &mdash; "oh yes, that m1 is Steve"</h2>
+    <p class="sub">A team of three or four researchers moderates everything. Their names are typed
+      once, ever. After that, naming a moderator is a pick, not a keystroke.</p>
+  </div>
+  <div class="frame">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span> contextual menu · the bank <span class="tag proposed">proposed</span></div>
+    <div class="screen">
+      <span class="anchor"><span class="a-lbl">anchor</span>
+        <span class="bn-person-badge"><span class="bn-speaker-badge--split"><span class="bn-speaker-badge-code">m1</span></span></span>
+        <span class="bn-speaker-editable-name unnamed">Moderator</span></span>
+      <div class="menu-pair">
+        <div class="menu narrow">
+          <div class="menu-item on"><span class="tick"></span><span>m1 Is</span><span class="m-arrow">&#9656;</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item"><span class="tick"></span><span>Role in Session 4</span><span class="m-arrow">&#9656;</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item"><span class="tick"></span><span>Show in Transcript</span></div>
+        </div>
+        <div class="menu submenu">
+          <div class="menu-item"><span class="tick"></span><span>Martin Storey (Me)</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-group">Your team</div>
+          <div class="menu-item"><span class="tick"></span><span>Steve Nakamura</span><span class="m-sub">14 studies</span></div>
+          <div class="menu-item"><span class="tick"></span><span>Rachel Okonjo</span><span class="m-sub">9 studies</span></div>
+          <div class="menu-item"><span class="tick"></span><span>Priya Raman</span><span class="m-sub">3 studies</span></div>
+          <div class="menu-item"><span class="tick"></span><span>Jane Smith</span><span class="m-sub">1 study</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item"><span class="tick"></span><span>Someone New&hellip;</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <div class="note-label">Commentary</div>
+    <span class="verdict new">the keystone — it turns the hardest step into a by-product of the easiest</span>
+    <dl class="st">
+      <dt>What the bank is</dt><dd>Not a new store. <code>Person</code> rows are already instance-scoped &mdash; no <code>project_id</code>, deliberately, with a docstring saying merging is a future human-driven action. The bank is a <b>query over rows that already exist</b>, ordered by how often each has been used.</dd>
+      <dt>Why moderators and not everyone</dt><dd>The recurrence is wildly lopsided. Three or four researchers appear in every study; a participant appears once and never again. So the bank is short, its hit rate is high, and it earns its place for exactly the population the user described.</dd>
+      <dt>The part that changes the plan</dt><dd><b>Picking a name from the bank is a link, not a copy.</b> Choosing "Steve Nakamura" asserts that this <code>m1</code> is the Steve who already exists &mdash; which is precisely the cross-project identity link that was step&nbsp;6. Obtained here for free, at step&nbsp;1, as a side effect of not retyping.</dd>
+    </dl>
+    <p><b>Prevention beats reconciliation.</b> The linking feature as designed is a reconciliation
+      engine: import everything, generate duplicates, then match names within a folder, propose,
+      confirm, and handle transitive chains. The bank stops the duplicates being created. What is
+      left for a links table is a back-fill for people named before it existed &mdash; a much smaller
+      and much less dangerous feature, and one with no matching algorithm in it at all.</p>
+    <p><b>"Someone New&hellip;" has to be the visible escape, and the safe default.</b> The failure
+      mode is a researcher picking "Rachel Okonjo" for a different Rachel, which silently welds two
+      people together. So the bank never pre-selects, never auto-completes on a keystroke, and the
+      study counts beside each name are there to make "which Rachel" answerable in the menu itself.
+      Cross-client picks still deserve the confirmation from the linking work &mdash; the bank
+      changes how a link is <i>created</i>, not whether crossing a client boundary is worth a
+      sentence.</p>
+    <p>"Me" sits above the separator and outside the team group, because it is not a person you
+      might be confusing with another person. It is also the row that seeds an empty bank: the first
+      time anyone uses this, <code>NSFullUserName()</code> is the only entry there is.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">One menu, four surfaces
+  <small>What "adapts to the context" means, concretely.</small></div>
+
+<table class="mx">
+  <thead><tr><th>Surface</th><th>What you clicked</th><th>Scope it carries</th><th>What it offers</th></tr></thead>
+  <tbody>
+    <tr><td><b>Transcript</b><br><span style="color:var(--bn-colour-muted)">a segment&rsquo;s badge</span></td>
+      <td>one turn, by one speaker</td><td>this turn &middot; this speaker in this transcript</td>
+      <td><code>This Turn Is &#9656;</code> &middot; <code>These N Turns Are &#9656;</code> &middot; <code>All of p3&rsquo;s Turns Are &#9656;</code> &middot; <code>Split Turn Here</code> &middot; <code>Merge with Turn Above</code> &middot; name &middot; role &middot; <code>Not a Speaker</code></td></tr>
+    <tr><td><b>Quote card</b></td><td>one published extract</td><td>this quote</td>
+      <td><code>This Quote Is &#9656;</code> &middot; <code>Trim Quote&hellip;</code> &middot; <code>Hide Quote</code> &middot; <code>Show in Transcript</code></td></tr>
+    <tr><td><b>Sessions grid</b><br><span style="color:var(--bn-colour-muted)">a speaker entry</span></td>
+      <td>this speaker in this session</td><td>this session</td>
+      <td><code>Set Name&hellip;</code> / <code>m1 Is &#9656;</code> / <code>That&rsquo;s Me (Name)</code> &middot; <code>Role in Session 4 &#9656;</code> &middot; <code>All of p3&rsquo;s Turns Are &#9656;</code> &middot; <code>Not a Speaker</code></td></tr>
+    <tr><td><b>People lens</b><br><span style="color:var(--bn-colour-muted)">a row &middot; project scope</span></td>
+      <td>this person in this study</td><td>the whole study</td>
+      <td>name &middot; <code>Role in All 12 Sessions &#9656;</code> &middot; <code>Separate&hellip;</code> <i>(when contested)</i> &middot; <code>Same Person As &#9656;</code> &middot; <code>Part of My Research Team</code></td></tr>
+    <tr><td><b>People lens</b><br><span style="color:var(--bn-colour-muted)">a row &middot; folder or everyone</span></td>
+      <td>this person across studies</td><td>across projects</td>
+      <td>name &middot; <code>Same Person As &#9656;</code> &middot; <code>Not the Same Person</code> &middot; <code>Unlink&hellip;</code> &middot; <code>Part of My Research Team</code></td></tr>
+  </tbody>
+</table>
+
+<div class="note" style="margin-bottom:2.6rem">
+  <div class="note-label">Commentary</div>
+  <p><b>Four rules generate every cell</b>, which is what makes this one menu rather than four that
+    will drift. <b>(1)</b> Offer what is meaningful at that anchor and <i>omit</i> what is not &mdash;
+    a Turn item has no turn in scope on a sessions row, so it is absent, not greyed; a contextual
+    menu shows what applies, a menu bar keeps its shape. <b>(2)</b> One verb at many anchors, with
+    the scope in the label &mdash; <code>Role in Session 4</code> and <code>Role in All 12
+    Sessions</code> are the same verb one altitude apart, and the researcher cannot see the anchor.
+    <b>(3)</b> State picks within a zone: unnamed offers <code>Set Name&hellip;</code>, a guess offers
+    <code>Confirm</code>, a contested code offers <code>Separate&hellip;</code>. <b>(4)</b> Never
+    offer a no-op.</p>
+  <p>Written as a function of <i>(where you clicked, what state it is in)</i>, a new verb lands
+    everywhere it is meaningful at once, and a surface added later inherits the whole vocabulary
+    instead of re-implementing a subset of it.</p>
+  <p><b>And the subtler half: default reach follows the working mode, not only the anchor.</b> The
+    anchor bounds what is <i>possible</i>; the surface says what the researcher is probably
+    <i>doing</i>.</p>
+  <table class="mx" style="margin:.6rem 0 .4rem">
+    <thead><tr><th>Where you are</th><th>What you are doing</th><th>Default reach</th><th>Worked example</th></tr></thead>
+    <tbody>
+      <tr><td>Sessions grid &middot; People lens</td><td><b>sweeping</b> &mdash; housekeeping, row after row, expecting ripple</td><td><b>the widest meaningful scope</b></td><td><i>"o2 in s3 is the same Jane as o1 in s1"</i> &mdash; joins the codes and ripples into every quote in that transcript</td></tr>
+      <tr><td>Transcript &middot; quote card</td><td><b>reading</b> &mdash; analysis, in the flow of a conversation</td><td><b>the thing under the cursor</b></td><td><i>"that one quote is Sarah"</i> &mdash; this quote, nothing else</td></tr>
+    </tbody>
+  </table>
+  <p>The other reach stays reachable and is never the default, and the asymmetry in <i>how</i> is
+    deliberate. <b>Widening from a narrow surface is a menu item</b> &mdash; inside the transcript,
+    <code>All of p4&rsquo;s Turns Are</code> sits one group below <code>This Turn Is</code>. <b>Narrowing from a
+    wide surface is navigation</b> &mdash; you do not fix one quote from the People lens, you go to
+    the quote. A row that stands for twelve sessions has no business offering an action that touches
+    one paragraph.</p>
+</div>
+
+<div class="part">One pattern, five benches
+  <small>How a reading surface defaults narrow while the underlying error is usually study-wide.</small></div>
+
+<table class="mx">
+  <thead><tr><th>Bench</th><th>The narrow thing, done</th><th>The wide thing, offered in a sentence</th></tr></thead>
+  <tbody>
+    <tr><td>3</td><td>The spelling is corrected on the label</td><td>&ldquo;<b>Michel Hurlly</b> appears 6 times in the words of session 7.&rdquo; &mdash; <i>Fix All 6</i></td></tr>
+    <tr><td>4</td><td>Jane&rsquo;s role is changed in session 4</td><td>&ldquo;Quotes were pulled out using the old roles.&rdquo; &mdash; <i>Analyse again</i></td></tr>
+    <tr><td>7</td><td>One quote is re-credited to the moderator</td><td>&ldquo;Martin has <b>5 more quotes</b> in this session.&rdquo; &mdash; <i>Those too</i></td></tr>
+    <tr><td>9</td><td>Session 9&rsquo;s moderator is named Mike</td><td>&ldquo;<b>Mike is now m2.</b> Martin stays m1 in sessions 1&ndash;8.&rdquo; &mdash; <i>Undo</i></td></tr>
+    <tr><td>11</td><td>&mdash;</td><td>&ldquo;<b>2 people barely spoke and were never asked a question.</b> Were they observing?&rdquo;</td></tr>
+  </tbody>
+</table>
+
+<div class="note" style="margin-bottom:2.6rem">
+  <div class="note-label">Commentary</div>
+  <p><b>Do the narrow thing, then offer the wide one in a sentence.</b> It arrived independently in
+    five benches before anyone named it, which is the usual sign that a pattern is real rather than
+    imposed. It is also the thing that resolves the tension between the two defaults above: a
+    reading surface can act on the thing under the cursor, and still get the researcher to the sweep,
+    without ever performing the sweep uninvited.</p>
+  <p>Three properties make it work. The app speaks <b>only after</b> the researcher has acted, so it
+    is never guessing at intent. It quotes <b>a count</b> &mdash; six occurrences, five quotes, eight
+    sessions &mdash; because a number is checkable where an adjective is not. And the offer is
+    <b>one link, declinable by ignoring it</b>: no dialog, no modal, nothing to dismiss. Bench 11 is
+    the degenerate case with no preceding act at all, which is why it has to be absent when its
+    count is zero &mdash; an unprompted sentence has to earn its place every time it appears.</p>
+</div>
+
+<div class="part">Trivial, or merely possible
+  <small>Every bench above, priced by what it costs the researcher.</small></div>
+
+<table class="mx">
+  <thead><tr><th>Bench</th><th>The case</th><th>How common</th><th>What it costs</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Name an unnamed participant</td><td>every session</td><td>type a name</td></tr>
+    <tr><td>2</td><td>"That moderator is me"</td><td>every study</td><td><b>one click, no typing</b></td></tr>
+    <tr><td>3</td><td>Fix a mis-transcribed spelling</td><td>every raw-audio study</td><td>type it, then one choice about the transcript</td></tr>
+    <tr><td>4</td><td>Participant &rarr; observer</td><td><b>the 95% extra person</b></td><td>one submenu pick</td></tr>
+    <tr><td>5</td><td>Two Marys, one Mary twice, and Jane&rsquo;s two observer codes</td><td>ordinary cast of any study</td><td><b>nothing</b> for most rows; one pick for the rest</td></tr>
+    <tr><td>6</td><td>A whole speaker in a transcript is someone else</td><td><b>the common attribution error</b></td><td>one pick from a grouped list</td></tr>
+    <tr><td>7</td><td>Crosstalk &mdash; re-credit one quote, or move it off the evidence</td><td>a few times a study</td><td>one submenu pick</td></tr>
+    <tr><td>8</td><td>One turn, or a split mid-turn</td><td><b>rare &mdash; raw audio only</b></td><td>one pick; a split needs a cursor placed</td></tr>
+    <tr><td>9</td><td>A second moderator</td><td><b>tail &mdash; ~5% of studies</b></td><td>one pick, plus a sentence telling you what changed</td></tr>
+    <tr><td>10</td><td>Formal name vs the name we use</td><td>every platform-transcript study</td><td>two fields, once per person</td></tr>
+    <tr><td>11</td><td>Spotting mis-filed observers</td><td>every study with anyone extra</td><td>read one line, then one pick each</td></tr>
+    <tr><td>12</td><td>Naming a colleague from the bank</td><td>every study, after the first</td><td><b>one pick, and never again</b></td></tr>
+  </tbody>
+</table>
+
+<div class="note" style="margin-bottom:2.6rem">
+  <div class="note-label">Commentary</div>
+  <p><b>Nothing on this page costs more than one action and a sentence</b>, and the two that cost the
+    most &mdash; a second moderator, a mid-turn split &mdash; are the two that happen least. That is
+    the whole test. A design that made the second-moderator case elegant at the price of a dialog in
+    the naming path would be a worse design, however well the dialog read.</p>
+  <p>Several rows cost <i>nothing at all</i>: two Marys who are different people, a returning
+    participant seen for what she is, a moderator who is the same person in every session. Those are
+    the rows the product gets right by <b>going with the typical case</b> rather than by reasoning
+    about it &mdash; and they are the majority of every study.</p>
+</div>
+
+<div class="part">Part 4 — the vocabulary, in one table
+  <small>Every confirmed scenario, its verb, the anchor it is reached from, and the step it lands in.</small></div>
+
+<table class="mx">
+  <thead><tr><th>Family</th><th>The researcher's sentence</th><th>Menu item</th><th>Anchor</th><th>Step</th></tr></thead>
+  <tbody>
+    <tr><td class="fam"><span class="fam-tag b"></span>identity</td><td>"p4 is a human called Jane Smith."</td><td><code>Set Name…</code></td><td>any person reference</td><td>1</td></tr>
+    <tr><td class="fam"><span class="fam-tag b"></span>identity</td><td>"m1 is me."</td><td><code>That's Me — Martin Storey</code></td><td>an m/o code</td><td>1</td></tr>
+    <tr><td class="fam"><span class="fam-tag b"></span>identity</td><td>"That m1 is Steve."</td><td><code>m1 Is ▸</code> (the bank)</td><td>an m/o code</td><td>1</td></tr>
+    <tr><td class="fam"><span class="fam-tag b"></span>identity</td><td>"Jane is an observer, not a participant."</td><td><code>Role in Session 4 ▸</code></td><td>speaker in a session</td><td>1</td></tr>
+    <tr><td class="fam"><span class="fam-tag b"></span>identity</td><td>"Michel Hurlly is Mickael Hurley."</td><td><code>Change Name…</code> + propagate</td><td>any person reference</td><td>2</td></tr>
+    <tr><td class="fam"><span class="fam-tag b"></span>identity</td><td>"He's Michael J. Hurley-Okonkwo, but call him Mike."</td><td><code>Change Name…</code> (two fields)</td><td>any person reference</td><td>2</td></tr>
+    <tr><td class="fam"><span class="fam-tag b"></span>identity</td><td>"Yes, that guess is right."</td><td><code>Confirm "Danny"</code></td><td>a guessed name</td><td>2</td></tr>
+    <tr><td class="fam"><span class="fam-tag b"></span>identity</td><td>"That email address should not be in the name."</td><td><code>Clear Name</code></td><td>any person reference</td><td>2</td></tr>
+    <tr><td class="fam"><span class="fam-tag a"></span>attribution</td><td>"They talked over each other — that quote was Sarah."</td><td><code>This Quote Is ▸</code> → another <code>p</code></td><td>a quote card</td><td>3</td></tr>
+    <tr><td class="fam"><span class="fam-tag a"></span>attribution</td><td>"That quote is the moderator talking — not a participant quote."</td><td><code>This Quote Is ▸</code> → an <code>m</code>/<code>o</code>: <b>moves the words; the card falls out of the lens</b></td><td>a quote card</td><td>3</td></tr>
+    <tr><td class="fam"><span class="fam-tag a"></span>attribution</td><td>"Everything attributed to p3 here is the moderator." / "Speaker A and Speaker C are one nurse."</td><td><code>All of p3's Turns Are ▸</code></td><td>speaker entry · segment badge</td><td>4</td></tr>
+    <tr><td class="fam"><span class="fam-tag b"></span>identity</td><td>"The moderator in session 9 is Mike, not Martin."</td><td><code>m1 Is ▸</code> — <b>renumbers to m2</b></td><td>speaker entry, in that session</td><td>4</td></tr>
+    <tr><td class="fam"><span class="fam-tag b"></span>identity</td><td>"o2 in s3 is the same Jane as o1 in s1." / "p6 is the same Mary as p3."</td><td>name it from the bank — <b>joins the codes</b></td><td>speaker entry · People row</td><td>4</td></tr>
+    <tr><td class="fam"><span class="fam-tag a"></span>attribution</td><td>"That turn was Sarah, not Jane."</td><td><code>This Turn Is ▸</code></td><td>segment badge</td><td>5</td></tr>
+    <tr><td class="fam"><span class="fam-tag a"></span>attribution</td><td>"Those four turns were all Sarah."</td><td><code>These 4 Turns Are ▸</code></td><td>segment selection</td><td>5</td></tr>
+    <tr><td class="fam"><span class="fam-tag b"></span>identity</td><td>"That is not a person — it is the TV."</td><td><code>Not a Speaker</code></td><td>speaker entry · segment badge</td><td>4</td></tr>
+    <tr><td class="fam"><span class="fam-tag a"></span>attribution</td><td>"Two people are in that one paragraph."</td><td><code>Split Turn Here</code> / <code>Merge with Turn Above</code></td><td>segment badge</td><td>5 <span style="color:var(--bn-colour-muted)">(the expensive one)</span></td></tr>
+    <tr><td class="fam"><span class="fam-tag b"></span>identity</td><td>"This is the same ward sister from round 1."</td><td><code>Same Person As ▸</code></td><td>person row, folder scope</td><td>back-fill</td></tr>
+    <tr><td class="fam"><span class="fam-tag b"></span>identity</td><td>"Same name, different people."</td><td><code>Not the Same Person</code></td><td>person row, folder scope</td><td>back-fill</td></tr>
+  </tbody>
+</table>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">Part 5 — one decision settled, one still owed
+  <small>Neither was a coding problem. Both are product calls.</small></div>
+
+<div class="note" style="margin-top:1rem">
+  <div class="note-label">Commentary — decision 1, <b>settled</b>: identity lives above codes</div>
+  <span class="verdict ok">settled &mdash; the question was the wrong one</span>
+  <p><i>Does a code name a person or a slot?</i> Neither. Sessions are <code>s1</code>, speakers are
+    <code>p1</code>/<code>m1</code>/<code>o1</code>, a code is a <b>globally-numbered speaker
+    slot</b>, and <b>identity is a layer above it</b>. Neither namespace needs re-specifying, because
+    each is already right for its own common case &mdash; they just fail in different directions:</p>
+  <ul>
+    <li><b><code>p</code> never collides and over-fragments.</b> The counter runs across the study, so
+      <code>p3</code> and <code>p6</code> are always different codes &mdash; and the same Mary
+      returning for a second session simply holds both. Normal, not a defect.</li>
+    <li><b><code>m</code> and <code>o</code> do both</b>, because the number comes from
+      <i>within-session ordering</i>, which has nothing to do with identity. They over-collide
+      (<code>m1</code> is Martin in eight sessions and Mike in the ninth) <i>and</i> over-fragment
+      (Jane is <code>o1</code> alone in s1 and <code>o2</code> beside Tom in s3).</li>
+  </ul>
+  <p>So <b>all three namespaces need the join and only <code>m</code>/<code>o</code> need the
+    split</b> &mdash; and every one of those repairs is the same gesture: name the person in front of
+    you. Bench 9 renumbers Mike to <code>m2</code>; bench 5 joins Jane&rsquo;s two observer codes and
+    Mary&rsquo;s two participant codes.</p>
+  <p><b>The renumber is not a design choice &mdash; it is the only representable outcome.</b> A name
+    belongs to a code and a code has one name everywhere, so "session 9&rsquo;s moderator is Mike"
+    <i>cannot</i> mean "<code>m1</code> is Mike here and Martin elsewhere". That sentence has nowhere
+    to live. The same reading disposes of the alternative: <b>the <code>m1</code> collision is not a
+    bug in the name model &mdash; it is the name model working correctly on a code that names two
+    people.</b> Re-keying by <code>(session, code)</code> would have fixed the symptom by breaking
+    the invariant, letting one code carry two names and quietly making "what is p4 called?" a
+    question with more than one answer.</p>
+</div>
+
+<div class="note">
+  <div class="note-label">Commentary — decision 2: what actually decides whose name survives an export?</div>
+  <p>Today it is the letter at the front of the code. <code>_anonymise_data</code> blanks
+    <code>p*</code> and preserves <code>m*</code> and <code>o*</code>. Three consequences, all live:</p>
+  <ul>
+    <li><b>Correcting a role changes who is published</b>, silently. Bench 8: Jane mis-filed as a
+      participant is protected; Jane correctly filed as an observer is named. The most common role
+      error currently produces the safer export.</li>
+    <li><b>A client-side observer is treated as research team.</b> The rationale &mdash; "the team is
+      not the study's subject" &mdash; was written for moderators and does not survive contact with
+      a product manager who sat in on two sessions.</li>
+    <li><b>A person with two roles is treated two ways in one file.</b> A colleague who moderated
+      sessions 1&ndash;8 and was interviewed in session 9 is named in eight places and blanked in
+      one, in the same document, because the prefix differs per session.</li>
+  </ul>
+  <p>The fix is to move the decision up an altitude, where it has always belonged. <b>Per-session
+    role governs quote extraction</b> &mdash; correctly, because someone interviewed in session 9
+    <i>should</i> have quotes from session 9. <b>Person-level membership governs naming</b>: one
+    value per human, one answer per export. In the menu that is a single checkmark item at a person
+    anchor &mdash; <code>Part of My Research Team</code> &mdash; and the export reads that instead of
+    the prefix. It is also what populates the bank's "Your team" group, so one flag does two jobs.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="part">Part 6 — what the affordance owes
+  <small>Four obligations that come with putting a menu on a person.</small></div>
+
+<div class="note" style="margin-top:1rem">
+  <div class="note-label">Commentary</div>
+  <dl class="st" style="gap:.55rem .9rem">
+    <dt>Right-click is one door</dt>
+    <dd>The sidebar rename precedent settled this: a gesture ships alongside a menu-bar path, a
+      keyboard path, and a direct-manipulation path, because the gesture is undiscoverable and the
+      others are teachable. Person actions should reach the same four ways — the contextual menu, a
+      menu-bar <b>Edit</b> or <b>Session</b> item, a keystroke on the selected row, and the pencil
+      that already ships. The menu is where the <i>vocabulary</i> lives; it is not the only way in.</dd>
+
+    <dt>Nothing here confirms; everything ⌘Z's</dt>
+    <dd>That is the house principle, and this surface cannot honour it today. <code>NSUndoManager</code>
+      is used nowhere, the <code>undo-state</code> bridge channel is dead on both ends, and
+      <code>bridge.ts</code> hard-codes <code>canUndo: false</code>. Every action in Part 4 is a
+      mutation a researcher will want back — and step 1's actions are the ones they will perform
+      thirty times in an afternoon. An affordance this cheap to fire needs an undo before it needs
+      more verbs.</dd>
+
+    <dt>The SPA has no contextual menus at all</dt>
+    <dd>Not one <code>onContextMenu</code> handler exists in <code>frontend/src</code>. So this is a
+      new mechanism, not a restyle, and inside the WKWebView it means <b>suppressing the system menu
+      and rebuilding what it gave away</b> — keyboard traversal, type-select, Escape, focus return,
+      and the accessibility tree. A half-built HTML menu is worse than the pencil that ships. The
+      alternative worth pricing: let the web view report the anchor over the bridge and have AppKit
+      raise a real <code>NSMenu</code>, which is free, correct, and native — at the cost of the CLI
+      browser path getting nothing.</dd>
+
+    <dt>Say the scope, in the item</dt>
+    <dd><code>Role in Session 4</code>, <code>Role in All 12 Sessions</code>,
+      <code>All of p3's Turns</code>. The anchor determines the scope, and the researcher cannot see
+      the anchor. Four words in the item text is the whole mitigation, and it is cheaper than any
+      confirmation dialog it replaces.</dd>
+  </dl>
+  <p style="margin-top:1rem"><b>The speculative register — cases neither confirmed nor dismissed —
+    lives in the PRD</b>, <code>docs/design-people.md</code> §F, where it can be triaged in writing
+    rather than redrawn here.</p>
+</div>
+
+</div><!-- /wrap -->
+<script>
+function setTheme(name, btn) {
+  document.documentElement.setAttribute('data-color-theme', name);
+  document.querySelectorAll('.controls .pbtn').forEach(function (b) { b.classList.remove('on'); });
+  btn.classList.add('on');
+}
+</script>
+</body>
+</html>

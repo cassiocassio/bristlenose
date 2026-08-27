@@ -221,6 +221,21 @@ The primary persona is a freelance researcher with 3–5 clients, projects scatt
 
 ## 2. Person Identity Model
 
+> **Status note 25 Aug 2026 — sequencing and primacy, not substance.**
+> [`design-people.md`](design-people.md) §B4 changes what leads here, not what this
+> section specifies. The `person_links` table shape, the **UUID requirement**,
+> folder scoping and the transitivity rules all stand and remain canonical in this
+> doc — that doc points at this section for them and deliberately does not restate
+> them. What changes is the order of operations: naming a person is a **pick from
+> the bank** — a query over the instance-scoped `Person` rows that already exist —
+> so choosing an existing name *is* the cross-project link, made at naming time and
+> before a duplicate exists. Prevention beats reconciliation, so
+> §"Suggestion algorithm (future)" below is a **back-fill** for people named before
+> the bank existed rather than the primary mechanism; its folder scoping (§3c,
+> Finding 8) is unaffected. The never-auto-merge-on-name-equality rule is unchanged
+> and now holds **within** a single study too — `p3` Mary and `p5` Mary are
+> routinely two different people (§E decision 1).
+
 This is the hard problem. Key scenarios:
 
 | Scenario | Challenge |

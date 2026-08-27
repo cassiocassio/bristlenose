@@ -25,6 +25,20 @@ that made the gap obvious.
 > explicitly rejected it; (2) §Corollaries bans undo toasts, but the one shipped undo
 > affordance *is* a toast (and three other design docs propose more).
 
+> **Forward pointer (25 Aug 2026).** [`design-people.md`](design-people.md) draws
+> every person action — name, role, "that's me", quote re-attribution, moderator
+> renumber — with an Undo, and prices the bridge accordingly: its §D makes the undo
+> contract a **step-1 gate** rather than parallel work, because the most frequent
+> and cheapest person edits are the ones drawn with it while §D records `canUndo`
+> hard-coded false and `NSUndoManager` used nowhere. Those verbs are report-domain,
+> so they sit outside the register below by the scope note above; they want adding
+> to whichever register survives the merge with
+> [`design-undo-catalog.md`](design-undo-catalog.md), which §H4 of that doc expects
+> a cross-note in. One correction to the scope note itself: of its two
+> contradictions, (2) was **closed 19 Aug 2026** in favour of the ban (see the note
+> under §Corollaries); (1) remains open, and §Mechanism's 2026-07-28 supersession
+> note is the thing to read before quoting `NSUndoManager` as the target.
+
 ## Principle
 
 Destructive and mutating actions should be **immediate + undoable**, not gated behind a

@@ -399,17 +399,29 @@ has it, where naming `ffmpeg-free` would pin them to the lesser one.
 release upgrade would leave an installed package where **every import fails**, at runtime,
 with no warning from dnf.
 
-### One wheelhouse per Python, and what that costs
+### One wheelhouse per Python — and the target is not what was tested
 
-The vendored wheels are `cp313`-tagged, and an SRPM is a single artefact shared by every
-chroot it is built for. A wheelhouse generated on 3.13 **cannot** satisfy a chroot running
-3.14. So this channel is one wheelhouse per Python minor, not per project: enable only
-chroots whose Python matches the SRPM builder's, and regenerate when Fedora moves. F42 is
-3.13; F43 will need its own build. `rpm/make-srpm.sh` prints the tag it built for, so the
-constraint is visible at generation time rather than discovered as a resolution failure
-inside mock.
+The vendored wheels are tagged for one Python minor, and an SRPM is a single artefact
+shared by every chroot it is built for. A cp313 wheelhouse **cannot** satisfy a chroot
+running 3.14: `pip install --no-index` fails on every heavy dependency at once, inside
+mock, where it is least convenient to discover.
 
-This is also the honest counter to §4's arch saving: the channel already carries a
+**And the chroot list makes this immediate, not theoretical.** `copr-cli list-chroots`
+offers `fedora-43`, `fedora-44`, `fedora-45`, `eln` and `rawhide` — **there is no
+`fedora-42-x86_64` chroot**. Everything in §6 was proven on Fedora 42, which Copr will
+not build for. Fedora 43 ships **Python 3.14.7**, so the wheelhouse has to be cp314.
+
+Checked, because "the wheels exist" is exactly the assumption that would fail late: every
+heavy dependency does publish cp314 — `ctranslate2` 4.8.1, `spacy` 3.8.16, `onnxruntime`
+1.29.0, `blis`, `thinc`, `tokenizers`, `numpy`, `pydantic-core`, and `av` via `cp311-abi3`.
+So F43 is buildable. It has **not been built**.
+
+Because of that, the interpreter is now chosen rather than inherited: `make-srpm.sh` takes
+`BN_PYTHON` and refuses to run if it is absent, and `.copr/Makefile` installs `python3.14`
+and names it. Leaving it as "whatever the SRPM builder happens to ship" makes the SRPM's
+correctness an accident of Copr's container image.
+
+This is also the honest counter to the arch saving above: the channel already carries a
 "regenerate per target" cost, so x86_64-only saves a wheelhouse, not the mechanism.
 
 ### Architecture: x86_64 only
@@ -470,6 +482,10 @@ truing the rest would compound the drift rather than document it.
 
 A container is **not** a Copr build. The tiers actually exercised:
 
+> **Read this table with §4's chroot note.** Everything below ran on **Fedora 42**, which
+> Copr no longer offers as a chroot. The design is unchanged and the cp314 wheels exist,
+> but the build that Copr would actually run — Fedora 43, Python 3.14 — has not been run.
+
 | tier | what it proves | how |
 |---|---|---|
 | container (`fedora:42`, `fedora:41`) | codec support; that an offline `pip install --no-index` of this tree resolves at all | Docker. **Not a mock build** — no chroot, no rpm, network available in the same shell |
@@ -527,6 +543,10 @@ like every other channel.
 4. **A fourth Linux channel** to keep green alongside Snap, Homebrew and PyPI, plus a
    release-ordering constraint: the Copr can only build a version PyPI already has, so it
    lands *after* the 23–25 minute PyPI verification, not alongside it.
+4a. **The wheelhouse tracks Fedora's Python, not ours.** Copr dropped fedora-42 while this
+   was being written; F43 is 3.14 and F44/45 will move again. Each move needs a regenerated
+   wheelhouse and a re-proof, and it happens on Fedora's schedule, not on release
+   boundaries — the one recurring cost that is genuinely outside our control.
 5. **815 MB installed**, which §7's own deferred split says is the wrong shape.
 
 **Recommendation: hold.** Keep the machinery — it is written, committed and proven, and

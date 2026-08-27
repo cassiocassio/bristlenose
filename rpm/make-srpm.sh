@@ -14,6 +14,9 @@
 #                         exist on PyPI already, so this is how you prove a
 #                         release candidate packages correctly BEFORE tagging
 #                         it — `python -m build` then point this at dist/.
+#   BN_PYTHON=python3.14  the interpreter to build the wheelhouse WITH. This
+#                         must match the TARGET chroot's python, not the
+#                         builder's — see the note by the wheelhouse below.
 #
 # Design: docs/design-fedora-packaging.md
 set -euo pipefail
@@ -35,8 +38,24 @@ echo "==> bristlenose $VERSION"
 # is a single artefact shared by every chroot it is built for. So a wheelhouse
 # made here on 3.13 cannot satisfy a chroot running 3.14. Enable only chroots
 # whose Python matches this builder's, or regenerate per release.
-PYTAG="$(python3 -c 'import sys; print("cp%d%d" % sys.version_info[:2])')"
-echo "==> wheelhouse for $PYTAG / x86_64 (chroots MUST match this Python)"
+# The wheelhouse is built for ONE python minor and one arch, and an SRPM is a
+# single artefact shared by every chroot it is built for. A cp313 wheelhouse
+# cannot satisfy a chroot running 3.14 — pip fails to resolve every heavy
+# dependency at once, inside mock, where it is least convenient to discover.
+#
+# So the interpreter is chosen deliberately rather than inherited. Fedora 43
+# ships python 3.14 and Copr no longer offers a fedora-42 chroot at all, so
+# BN_PYTHON must name the target's python and .copr/Makefile installs it.
+BN_PYTHON="${BN_PYTHON:-python3}"
+command -v "$BN_PYTHON" >/dev/null 2>&1 || {
+    echo "ERROR: BN_PYTHON=$BN_PYTHON not found." >&2
+    echo "       It must be the TARGET chroot's python (Fedora 43 = python3.14)," >&2
+    echo "       not whatever this builder happens to run." >&2
+    exit 1
+}
+PYTAG="$("$BN_PYTHON" -c 'import sys; print("cp%d%d" % sys.version_info[:2])')"
+echo "==> wheelhouse for $PYTAG / x86_64, built with $BN_PYTHON"
+echo "    ONLY enable chroots whose python matches $PYTAG — fedora-43 is 3.14."
 
 # --- Source0: the PyPI sdist -------------------------------------------------
 # Deliberately the sdist and not a git archive: it carries the built React SPA
@@ -69,7 +88,7 @@ fi
 # --- Source1: the wheelhouse -------------------------------------------------
 echo "==> building wheelhouse (this is the slow part, ~2 min)"
 mkdir -p "$WORK/vendor"
-python3 -m pip wheel --quiet --wheel-dir="$WORK/vendor" --no-cache-dir \
+"$BN_PYTHON" -m pip wheel --quiet --wheel-dir="$WORK/vendor" --no-cache-dir \
     "bristlenose[serve]==$VERSION"
 
 # A local wheel must overwrite the PyPI one pip just resolved for the
@@ -85,7 +104,7 @@ fi
 # bundles it for the same reason.
 SPACY_MODEL="en_core_web_sm-3.8.0"
 echo "==> adding spaCy model $SPACY_MODEL"
-python3 -m pip wheel --quiet --wheel-dir="$WORK/vendor" --no-cache-dir --no-deps \
+"$BN_PYTHON" -m pip wheel --quiet --wheel-dir="$WORK/vendor" --no-cache-dir --no-deps \
     "https://github.com/explosion/spacy-models/releases/download/${SPACY_MODEL}/${SPACY_MODEL}-py3-none-any.whl"
 
 # %install runs `pip install --no-index`, which cannot build an sdist without

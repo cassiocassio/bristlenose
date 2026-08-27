@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Variant E — Platform CTA · bristlenose.app</title>
+<style>
+/* ---- inlined from the website repo's notes/variants/_shared.css ----
+   docs/mockups files are self-contained by convention (see README). ----*/
+/* ============================================================
+   Variant harness — shared token + chrome layer
+   Tokens lifted verbatim from assets/site.css so the variants are
+   honest about how they'd look shipped. Two deliberate departures,
+   both flagged in the write-up:
+
+   1. "Inter" removed from --font. site.css names it first but the
+      site never loads it (only framework-poc-norman.html does), so
+      today the page renders SF for visitors and Inter for anyone
+      with it installed. Committing to the system stack makes the
+      site match the Mac app and removes the split.
+   2. Base size 16px (style.css) rather than 15px (site.css). The
+      homepage currently loads BOTH; style.css wins for body, so the
+      nav is 15px Inter-or-SF and the body 16px SF. Picking one.
+   ============================================================ */
+
+:root{
+  color-scheme:light dark;
+  --ink:light-dark(#1a1a1a,#e6e7e9);
+  --muted:light-dark(#6b7280,#9ca3af);
+  --faint:light-dark(#9aa3ad,#6b7280);
+  --line:light-dark(#e5e7eb,#2a2a2c);
+  --bg:light-dark(#ffffff,#121214);
+  --bg-alt:light-dark(#f8f8f8,#1a1a1d);
+  --accent:light-dark(#2563eb,#6ba2f5);
+  --soft:light-dark(#fcfcfd,#181a1d);
+  --code-bg:light-dark(#f3f4f6,#1c1c20);
+  --badge-bg:light-dark(#f3f4f6,#26262a);
+
+  --font:system-ui,-apple-system,"Segoe UI Variable","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --w-normal:420; --w-emph:490; --w-strong:700;
+  --r:6px;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{color-scheme:light dark}
+body{
+  font-family:var(--font);
+  font-weight:var(--w-normal);
+  color:var(--ink);
+  background:var(--bg);
+  line-height:1.6;
+  font-size:16px;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+a{color:inherit}
+img{max-width:100%}
+
+/* ---- shared chrome: reproduced verbatim from site.js buildChrome() ----
+   The nav is explicitly out of scope for this pass. Do not restyle. */
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:18px;
+        height:54px;padding:0 22px;border-bottom:1px solid var(--line);background:var(--bg)}
+.topbar .brand{font-weight:var(--w-strong);letter-spacing:-.01em;text-decoration:none;font-size:16px}
+.topbar .brand .dot{color:var(--accent)}
+.topbar nav{display:flex;gap:18px;margin-left:6px}
+.topbar nav a{color:var(--muted);text-decoration:none;font-size:14px}
+.topbar nav a:hover,.topbar nav a.active{color:var(--ink)}
+.topbar .spacer{flex:1}
+
+.foot{border-top:1px solid var(--line);margin-top:50px;padding:26px 22px;color:var(--faint);font-size:13px}
+.foot .links{display:flex;flex-wrap:wrap;gap:16px;margin:0 auto 10px;max-width:1180px}
+.foot .links a{color:var(--muted);text-decoration:none}
+.foot .links a:hover{color:var(--ink)}
+.foot .note{max-width:1180px;margin:0 auto;font-size:12px}
+
+/* ---- honest figure placeholders ----
+   Every product shot on the live page is still an unshot dashed box.
+   These read as *reserved space with intent* rather than a to-do list,
+   so the layout can be judged before photography exists. */
+.fig{
+  position:relative;
+  background:var(--bg-alt);
+  border:1px solid var(--line);
+  border-radius:10px;
+  overflow:hidden;
+}
+.fig::after{
+  content:attr(data-label);
+  position:absolute;left:12px;bottom:10px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.02em;
+  color:var(--faint);
+}
+.fig-16x10{aspect-ratio:16/10}
+.fig-16x9{aspect-ratio:16/9}
+.fig-4x3{aspect-ratio:4/3}
+.fig-1x1{aspect-ratio:1/1}
+
+/* Abstract report miniature drawn in CSS — no screenshot required.
+   Shows the shape of the artefact (sidebar + quote cards) on-palette. */
+.mini{position:absolute;inset:0;display:grid;grid-template-columns:22% 1fr;gap:0}
+.mini-side{border-right:1px solid var(--line);padding:9% 6%;display:flex;flex-direction:column;gap:7%}
+.mini-body{padding:7% 6%;display:flex;flex-direction:column;gap:6%}
+.mini-bar{height:5px;border-radius:3px;background:var(--line)}
+.mini-bar.w40{width:40%} .mini-bar.w55{width:55%} .mini-bar.w70{width:70%}
+.mini-bar.w85{width:85%} .mini-bar.accent{background:var(--accent);opacity:.55}
+.mini-card{border:1px solid var(--line);border-radius:5px;padding:5% 5%;
+           display:flex;flex-direction:column;gap:22%;background:var(--bg)}
+
+/* Lucide glyphs, inlined — the icon set the site already ships in site.js.
+   Using them means the variants have real imagery today. */
+[data-icon]{display:inline-flex;align-items:center;justify-content:center;vertical-align:-.125em}
+[data-icon] svg{width:1em;height:1em;display:block}
+
+/* Terminal card — carried over, with the hardcoded #ff0000 replaced by
+   the brand accent. Red is off-palette and was never tokenised. */
+.term{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg-alt)}
+.term-chrome{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:30px;
+             padding:0 10px;border-bottom:1px solid var(--line)}
+.term-dots{display:inline-flex;gap:6px}
+.term-dots i{width:11px;height:11px;border-radius:50%;border:1px solid var(--line);display:block}
+.term-title{grid-column:2;font-family:var(--mono);font-size:11.5px;color:var(--faint);letter-spacing:.02em}
+.term-body{margin:0;padding:16px 18px;font-family:var(--mono);font-size:13px;line-height:1.9;
+           background:transparent;overflow-x:auto}
+.term-body .p{color:var(--faint);margin-right:.5rem;user-select:none}
+.term-body .c{color:var(--accent)}
+.term-body .hash{color:var(--faint)}
+
+/* variant badge — harness only, not part of any design */
+.vtag{position:fixed;right:14px;bottom:14px;z-index:60;font-family:var(--mono);font-size:11px;
+      color:var(--faint);background:var(--bg);border:1px solid var(--line);
+      border-radius:999px;padding:5px 11px}
+</style>
+
+<!-- Flash-free default. Runs in <head>, before the hero paints, so the
+     correct panel is the FIRST thing rendered — no swap, no layout shift.
+     Hash wins over detection so bristlenose.app/#windows is shareable. -->
+<script>
+(function(){
+  var d=document.documentElement;
+  var h=(location.hash||'').replace('#','');
+  var p=({mac:'mac',macos:'mac',windows:'windows',win:'windows',linux:'linux'})[h.toLowerCase()];
+  if(!p){
+    var s=(navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'';
+    var ua=navigator.userAgent||'';
+    if(/android/i.test(ua))          p='mac';        // no mobile build; show the flagship
+    else if(/win/i.test(s))          p='windows';
+    else if(/mac/i.test(s))          p='mac';
+    else if(/linux|x11|cros/i.test(s)) p='linux';
+    else                             p='mac';
+  }
+  d.setAttribute('data-platform',p);
+  d.setAttribute('data-tabs','on');   // CSS only collapses to tabs when JS ran
+
+  /* A deep link lands ON the panel's id, so the browser scrolls the h1
+     off the top before anyone reads it. The panel IS the hero — there is
+     nothing below to scroll to. Stripping the fragment here is NOT enough
+     on its own: the navigation was already committed with it, and Chrome
+     runs its scroll-to-fragment after parsing regardless of a later URL
+     rewrite (measured — the hero was still pushed off screen). So drop
+     the fragment AND flag it, and let the body script pin the scroll
+     across the three moments the jump can land. */
+  if(h){ history.replaceState(null,'',location.pathname+location.search);
+         d.setAttribute('data-hash-consumed','1'); }
+})();
+</script>
+
+<style>
+/* ============================================================
+   VARIANT E — "Platform CTA"
+   Scope: the hero call-to-action only. Everything below the fold
+   is out of scope and reproduced flat for context.
+
+   Thesis: the three platforms do not get the same product. macOS
+   gets a signed app that bundles Python, FFmpeg and the model.
+   Windows and Linux get a command-line tool. A single "Download
+   for Mac" button shown to a Windows visitor is not just a wrong
+   default — it misdescribes what they'd be getting. That is the
+   reason to switch, and it's a reason VS Code and Signal don't
+   have (their builds are the same product everywhere), which is
+   why they can get away with one button and a text link.
+
+   Moves:
+   E1  Detect the OS and default the CTA to it. Detection is a
+       DEFAULT, never a lock — the switcher is always present.
+   E2  Tabs are real anchors to real ids (#mac/#windows/#linux).
+       Deep-linkable: send a colleague bristlenose.app/#windows.
+       Lifted from Ollama, which routes /download → /download/mac.
+   E3  JS-off shows all three panels stacked, each labelled. The
+       tab collapse only happens once the head script sets
+       data-tabs="on". Nothing is hidden by default, so a failed
+       script degrades to a longer page, not a broken one.
+       (VS Code's no-JS fallback renders all four buttons.)
+   E4  Words, not brand marks. Ollama's tabs are an Apple logo, a
+       Tux and a Windows flag with no visible text. Two problems:
+       icon-only tabs need an accessible name bolted on, and the
+       Apple logo and Windows flag are licensed marks the site has
+       no grant for. "macOS / Windows / Linux" is free to use and
+       needs no aria-label.
+   E5  The CTA slot holds whatever that platform's real front door
+       is — a button on Mac, the Snap badge on Linux, a copyable
+       command on Windows. Zed and Tailscale both put a shell
+       one-liner exactly where the download button sits; treating
+       the command as a first-class CTA is established.
+   E6  Remove the GitHub button. It is already in the topbar, and
+       it was competing with the actual download at equal weight.
+   E6b Order is macOS, Linux, Windows — by how many real users sit
+       behind each, not by market share at large. A Windows user
+       who hand-installs Python AND does UX research is close to a
+       population of one; the Linux crowd is small but real. The
+       tab a visitor needs is auto-selected anyway, so the order
+       only decides what the OTHER two look like — put the more
+       plausible one first.
+   E7  Note line is per-platform, and only carries what that
+       platform's visitor needs. On Mac that is one system
+       requirement — the app is the whole story, so Homebrew is
+       not worth hero space. Windows and Linux need more because
+       there IS more: no app, prerequisites, an edge-only channel.
+   ============================================================ */
+
+.wrap{max-width:1120px;margin:0 auto;padding:0 32px}
+
+/* ---- hero ---- */
+.hero{text-align:center;padding:72px 0 0}
+.hero h1{font-size:clamp(2rem,4.4vw,3rem);line-height:1.1;letter-spacing:-.025em;
+         font-weight:var(--w-strong);max-width:15ch;margin:0 auto .9rem}
+.hero-sub{font-size:1.15rem;color:var(--muted);max-width:52ch;margin:0 auto 2rem;line-height:1.5}
+
+/* ---- E1/E2/E4: the switcher ----
+   Deliberately quiet. It sits under the subtitle at 13px in a
+   hairline capsule so it reads as a setting on the button below,
+   not as page navigation competing with the topbar. */
+.picker{display:inline-flex;gap:2px;padding:3px;margin:0 auto 1.15rem;
+        border:1px solid var(--line);border-radius:999px;background:var(--bg-alt)}
+.picker a{display:block;text-decoration:none;font-size:13px;line-height:1;
+          font-weight:var(--w-emph);color:var(--muted);
+          padding:7px 15px;border-radius:999px;white-space:nowrap;
+          transition:color .12s ease,background .12s ease}
+.picker a:hover{color:var(--ink)}
+.picker a[aria-selected="true"]{background:var(--bg);color:var(--ink);
+          box-shadow:0 1px 2px light-dark(rgba(0,0,0,.07),rgba(0,0,0,.4))}
+.picker a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---- panels ---- */
+.panel{min-height:132px}                 /* E1: reserve the tallest panel's
+                                            height so switching never nudges
+                                            the video block below it */
+.panel > h2{                             /* only ever seen in the JS-off state */
+  font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);
+  font-weight:var(--w-emph);margin:34px 0 12px}
+.cta{display:flex;gap:.75rem;justify-content:center;align-items:center;
+     flex-wrap:wrap;margin-bottom:1rem;min-height:46px}
+.note{font-size:.85rem;color:var(--muted);max-width:62ch;margin:0 auto}
+.note a{color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+.note a:hover{color:var(--ink)}
+
+/* JS on → tabs. JS off → this block never applies and all three show. */
+html[data-tabs="on"] .panel{display:none}
+html[data-tabs="on"] .panel > h2{display:none}
+html[data-platform="mac"][data-tabs="on"]     #mac,
+html[data-platform="windows"][data-tabs="on"] #windows,
+html[data-platform="linux"][data-tabs="on"]   #linux{display:block}
+html:not([data-tabs="on"]) .picker{display:none}
+
+/* ---- buttons ---- */
+.btn{display:inline-block;padding:.75rem 1.5rem;border-radius:var(--r);
+     text-decoration:none;font-weight:500;font-size:.95rem;line-height:1.6}
+.btn-primary{background:var(--ink);color:light-dark(#fff,#121214)}
+.btn-secondary{border:1px solid var(--line);color:var(--ink)}
+.snap-badge{display:inline-flex;align-items:center;line-height:0}
+.snap-badge img{display:block;width:auto;height:calc(.95rem * 1.6 + 1.5rem)}
+
+/* ---- E5: the command as a CTA ---- */
+.cmd{display:inline-flex;align-items:center;gap:12px;
+     border:1px solid var(--line);border-radius:var(--r);background:var(--code-bg);
+     padding:0 6px 0 16px;height:calc(.95rem * 1.6 + 1.5rem + 2px)}
+.cmd code{font-family:var(--mono);font-size:.9rem;color:var(--ink);white-space:nowrap}
+.cmd code .p{color:var(--faint);user-select:none;margin-right:.45rem}
+.cmd button{border:0;background:none;cursor:pointer;color:var(--faint);
+            display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:12px;
+            padding:6px 9px;border-radius:4px}
+.cmd button:hover{color:var(--ink);background:var(--badge-bg)}
+
+/* ---- states reference strip (harness only — not part of the design) ---- */
+.ref{border-top:1px solid var(--line);margin-top:80px;padding-top:34px}
+.ref h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);
+        font-weight:var(--w-emph);margin:0 0 6px}
+.ref p.k{font-size:13px;color:var(--muted);max-width:70ch;margin:0 0 26px}
+.states{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));margin-bottom:40px}
+.state{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.state figcaption{font-family:var(--mono);font-size:11px;color:var(--faint);
+                  padding:9px 14px;border-bottom:1px solid var(--line);background:var(--bg-alt)}
+.state .inner{padding:22px 18px;text-align:center}
+.state .inner .cta{margin-bottom:.7rem;min-height:0}
+.state .inner .note{font-size:12px;line-height:1.5}
+.state .inner .btn,.state .inner .cmd{transform:scale(.86);transform-origin:center}
+.state .picker{display:inline-flex;margin-bottom:16px}
+
+table.pa{border-collapse:collapse;width:100%;font-size:13.5px;margin:0 0 14px}
+table.pa th,table.pa td{text-align:left;vertical-align:top;padding:9px 14px 9px 0;
+                        border-bottom:1px solid var(--line)}
+table.pa th{font-weight:var(--w-emph);color:var(--faint);font-size:11.5px;
+            letter-spacing:.05em;text-transform:uppercase}
+table.pa td:first-child{white-space:nowrap;font-weight:var(--w-emph)}
+.flag{border-left:2px solid var(--accent);padding:2px 0 2px 14px;margin:0 0 12px;
+      font-size:13.5px;color:var(--muted);max-width:76ch}
+.flag b{color:var(--ink);font-weight:var(--w-emph)}
+
+/* ---- below-the-fold context (flat, out of scope) ---- */
+.ctx{margin-top:56px;opacity:.5;pointer-events:none}
+.ctx .fig{max-width:820px;margin:0 auto}
+
+@media(max-width:640px){
+  .hero{padding-top:44px}
+  .cta{flex-direction:column}
+  .cmd{width:100%;justify-content:space-between}
+  .picker a{padding:7px 12px}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="https://bristlenose.app/">Bristlenose<span class="dot">.</span></a>
+  <nav>
+    <a href="https://bristlenose.app/support.html">About</a>
+    <a href="https://bristlenose.app/docs/">Docs</a>
+    <a href="https://github.com/cassiocassio/bristlenose">GitHub</a>
+  </nav>
+  <span class="spacer"></span>
+</header>
+
+<div class="wrap">
+
+<!-- ============================================================
+     HERO — the only thing this variant changes
+     ============================================================ -->
+<section class="hero">
+  <h1>Meet Bristlenose, a tool for user-research interview analysis.</h1>
+  <p class="hero-sub">
+    Drop a folder of recordings. Get transcripts and quotes, organised by
+    journey, theme and sentiment. Analyse with your own tags, expert
+    AI&nbsp;codebooks, or connect an agent. Export to Miro or spreadsheet.
+  </p>
+
+  <!-- E2/E4: real anchors, real ids, platform words as the label -->
+  <nav class="picker" role="tablist" aria-label="Choose your platform">
+    <a role="tab" id="tab-mac"     href="#mac"     aria-controls="mac"     aria-selected="true"  tabindex="0">macOS</a>
+    <a role="tab" id="tab-linux"   href="#linux"   aria-controls="linux"   aria-selected="false" tabindex="-1">Linux</a>
+    <a role="tab" id="tab-windows" href="#windows" aria-controls="windows" aria-selected="false" tabindex="-1">Windows</a>
+  </nav>
+
+  <!-- ---------- macOS ---------- -->
+  <section class="panel" id="mac" role="tabpanel" aria-labelledby="tab-mac">
+    <h2>macOS</h2>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://bristlenose.app/dmg/Bristlenose.dmg">Download for Mac</a>
+    </div>
+    <p class="note">
+      Runs on macOS 15 (Sequoia) or later, on Apple Silicon.
+    </p>
+  </section>
+
+  <!-- ---------- Linux ---------- -->
+  <section class="panel" id="linux" role="tabpanel" aria-labelledby="tab-linux">
+    <h2>Linux</h2>
+    <div class="cta">
+      <a href="https://snapcraft.io/bristlenose" class="snap-badge">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgyIiBoZWlnaHQ9IjU2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHJlY3Qgc3Ryb2tlPSIjQ0RDRENEIiBmaWxsPSIjRkZGIiB4PSIuNSIgeT0iLjUiIHdpZHRoPSIxODEiIGhlaWdodD0iNTUiIHJ4PSIyIi8+PGcgZmlsbC1ydWxlPSJub256ZXJvIj48cGF0aCBkPSJNMjYuOTkgMjguOFYxOC4zM2w3LjIyIDMuMjItNy4yMiA3LjI1ek0xMy4yIDQyLjY0bDguODUtMTYuNjcgMy44OCAzLjg4LTEyLjczIDEyLjh6bS01LjA1LTMxLjRsMTguMjIgNi42djExLjU4TDguMTYgMTEuMjN6IiBmaWxsPSIjODJCRUEwIi8+PHBhdGggZmlsbD0iI0ZBNjQ0MSIgZD0iTTM3LjkgMTcuODVIMjcuNGwxMy41IDYuMDJ6Ii8+PC9nPjxwYXRoIGQ9Ik01Ni4xIDEzLjloMS4xN3YzLjlsLS40MS4xYTEyLjY4IDEyLjY4IDAgMDEtMi4yNS4yN2MtLjU5IDAtMS4xMi0uMS0xLjYtLjI5YTMuNCAzLjQgMCAwMS0xLjIzLS44NCAzLjggMy44IDAgMDEtLjgtMS4zNiA1LjU3IDUuNTcgMCAwMS0uMjgtMS44NGMwLS43LjEtMS4zMi4zMS0xLjg2LjIyLS41NC41LTEgLjg2LTEuMzYuMzYtLjM3Ljc4LS42NSAxLjI3LS44NC40OC0uMiAxLS4yOSAxLjU1LS4yOWE2LjIzIDYuMjMgMCAwMTEuNzUuMjQgMy42NyAzLjY3IDAgMDEuNzguMzRsLS4zNy45N2EzLjE0IDMuMTQgMCAwMC0uOTItLjM4Yy0uMzktLjEtLjc4LS4xNS0xLjE4LS4xNS0uNDIgMC0uOC4wOC0xLjE2LjIzLS4zNC4xNS0uNjQuMzctLjg4LjY2LS4yNS4yOS0uNDQuNjQtLjU3IDEuMDVhNC45NSA0Ljk1IDAgMDAtLjAzIDIuNzRjLjExLjQxLjI5Ljc2LjUyIDEuMDUuMjQuMy41My41Mi44OC42OC4zNS4xNi43Ni4yNCAxLjIzLjI0YTUuOCA1LjggMCAwMDEuMzctLjE2di0zLjF6bTIuNTggMWMwLS41Ni4wOC0xLjA0LjI0LTEuNDUuMTYtLjQyLjM3LS43Ni42My0xLjAzLjI3LS4yNy41Ny0uNDguOTEtLjYxLjM1LS4xNC43LS4yIDEuMDYtLjIuODQgMCAxLjQ4LjI2IDEuOTMuNzguNDUuNTIuNjcgMS4zMi42NyAyLjR2LjM5aC00LjI4Yy4wNS42NS4yNCAxLjE0LjU2IDEuNDguMzMuMzMuODQuNSAxLjU0LjVhNC4xIDQuMSAwIDAwMS42LS4zbC4xNS45NGE1LjA4IDUuMDggMCAwMS0xLjg3LjM1Yy0uNTQgMC0xLjAxLS4wOS0xLjQxLS4yNWEyLjYzIDIuNjMgMCAwMS0xLjU1LTEuN2MtLjEyLS40LS4xOC0uODQtLjE4LTEuM3ptNC4yOC0uNjJjMC0uNS0uMTItLjkyLS4zOC0xLjI0YTEuMyAxLjMgMCAwMC0xLjA3LS40OSAxLjQ3IDEuNDcgMCAwMC0xLjE4LjU0IDEuOCAxLjggMCAwMC0uMzIuNTVjLS4wNy4yMS0uMTIuNDItLjE1LjY0aDMuMXptMy44Mi0yLjUyaDIuMzZ2Ljk0aC0yLjM2djIuODhjMCAuMy4wMi41Ny4wNy43Ny4wNS4yLjEyLjM2LjIxLjQ4LjEuMTIuMjIuMi4zNi4yNWEyLjM3IDIuMzcgMCAwMDEuMzEtLjA0bC40My0uMTcuMjIuOTNhNC4xNCA0LjE0IDAgMDEtMS41NS4zM2MtLjQyIDAtLjc3LS4wNS0xLjA1LS4xNi0uMjctLjEtLjUtLjI3LS42Ni0uNDlhMS45NSAxLjk1IDAgMDEtLjM2LS44Yy0uMDctLjMxLS4xLS42OC0uMS0xLjF2LTUuNTZsMS4xMi0uMnYxLjk0ek03NC40NCAxOGgtMS4xMXYtNi4yNGgxLjExVjE4em0tLjU2LTcuMzdhLjcuNyAwIDAxLS43Mi0uNzMuNy43IDAgMDEuNzItLjczLjcuNyAwIDAxLjcyLjczLjcuNyAwIDAxLS43Mi43M3ptMy41MyAxLjEzaDIuMzZ2Ljk0aC0yLjM2djIuODhjMCAuMy4wMi41Ny4wNy43Ny4wNS4yLjEyLjM2LjIyLjQ4cy4yMS4yLjM2LjI1YTIuMzcgMi4zNyAwIDAwMS4zMS0uMDRsLjQzLS4xNy4yMS45M2E0LjE0IDQuMTQgMCAwMS0xLjU1LjMzYy0uNDIgMC0uNzctLjA1LTEuMDUtLjE2LS4yNy0uMS0uNS0uMjctLjY2LS40OWExLjk1IDEuOTUgMCAwMS0uMzYtLjhjLS4wNi0uMzEtLjEtLjY4LS4xLTEuMXYtNS41NmwxLjEyLS4ydjEuOTR6bTguOTktMy4wN2E0LjMgNC4zIDAgMDExLjM0LjJsLS4yLjk2YTIuNzIgMi43MiAwIDAwLTEuMDYtLjJjLS41MiAwLS44OC4xNC0xLjEuNDItLjIuMjktLjMuNjctLjMgMS4xNXYuNTRoMi40di45NGgtMi40VjE4aC0xLjEydi02LjhjMC0uOC4yLTEuNDIuNTktMS44Ni4zOS0uNDMgMS0uNjUgMS44NS0uNjV6bTQuNSAyLjk0YTMuNDcgMy40NyAwIDAxLjcuMDYgMTAuNDYgMTAuNDYgMCAwMS41NC4xMmwtLjE5Ljk3YTMuNzQgMy43NCAwIDAwLTIuMjQtLjAyVjE4aC0xLjEydi01Ljk4YTcuNTkgNy41OSAwIDAxMi4zLS40em03LjgzIDMuMjVjMCAuNS0uMDcuOTQtLjIxIDEuMzQtLjE1LjQtLjM1Ljc1LS42MSAxLjA0LS4yNi4yOC0uNTcuNS0uOTMuNjYtLjM2LjE2LS43NS4yNC0xLjE4LjI0LS40MiAwLS44MS0uMDgtMS4xNy0uMjRhMi42NyAyLjY3IDAgMDEtLjkzLS42NiAzLjA3IDMuMDcgMCAwMS0uNi0xLjA0Yy0uMTUtLjQtLjIyLS44NC0uMjItMS4zNCAwLS40OS4wNy0uOTMuMjEtMS4zNC4xNS0uNC4zNS0uNzUuNi0xLjA0YTIuOTMgMi45MyAwIDAxMi4xLS45Yy40NCAwIC44My4wOCAxLjE5LjI0LjM2LjE1LjY3LjM4LjkzLjY2LjI2LjMuNDYuNjQuNiAxLjA0LjE1LjQuMjIuODUuMjIgMS4zNHptLTEuMTYgMGMwLS43LS4xNi0xLjI2LS40OC0xLjY3YTEuNTQgMS41NCAwIDAwLTEuMjktLjYyYy0uNTQgMC0uOTcuMi0xLjI5LjYyLS4zMS40LS40Ny45Ny0uNDcgMS42N3MuMTYgMS4yNi40NyAxLjY3Yy4zMi40Mi43NS42MiAxLjMuNjIuNTQgMCAuOTctLjIgMS4yOC0uNjIuMzItLjQuNDgtLjk3LjQ4LTEuNjd6bTIuNzMtMi45NGE4LjcxIDguNzEgMCAwMTIuNDctLjMxYy40IDAgLjc0LjA1IDEuMDEuMTYuMjguMS41LjI3LjY5LjQ3YTQuMyA0LjMgMCAwMS43LS4zN2MuMTgtLjA3LjM4LS4xMy42LS4xOC4yMS0uMDYuNDQtLjA4LjY5LS4wOC40OCAwIC44Ny4wNyAxLjE4LjIuMy4xNS41NC4zNS43MS42LjE3LjI2LjI5LjU2LjM1LjkxLjA2LjM2LjA5Ljc0LjA5IDEuMTZWMThoLTEuMTJ2LTMuMjZjMC0uMzctLjAyLS42OS0uMDUtLjk1LS4wNC0uMjctLjEtLjQ5LS4yLS42NmEuOTMuOTMgMCAwMC0uNDEtLjQgMi40NyAyLjQ3IDAgMDAtMS42LjAyYy0uMjQuMTEtLjQxLjItLjUuMjhhNi4xIDYuMSAwIDAxLjIgMS40NlYxOGgtMS4xMnYtMy4yNmMwLS4zNy0uMDItLjY5LS4wNi0uOTVhMS45MSAxLjkxIDAgMDAtLjIxLS42Ni45My45MyAwIDAwLS40MS0uNCAxLjQ5IDEuNDkgMCAwMC0uNjUtLjEyIDUuNzkgNS43OSAwIDAwLTEuMjQuMTJWMThoLTEuMTJ2LTYuMDZ6bTE0LjE1LS4xOGgyLjM3di45NGgtMi4zN3YyLjg4YzAgLjMuMDMuNTcuMDcuNzcuMDUuMi4xMi4zNi4yMi40OHMuMjIuMi4zNi4yNWEyLjM3IDIuMzcgMCAwMDEuMzEtLjA0bC40My0uMTcuMjIuOTNhNC4xNCA0LjE0IDAgMDEtMS41NS4zM2MtLjQzIDAtLjc4LS4wNS0xLjA1LS4xNi0uMjgtLjEtLjUtLjI3LS42Ny0uNDlhMS45NSAxLjk1IDAgMDEtLjM1LS44Yy0uMDctLjMxLS4xLS42OC0uMS0xLjF2LTUuNTZsMS4xMS0uMnYxLjk0em0zLjc4IDYuMjRWOC44OGwxLjEyLS4ydjMuMmEzLjc4IDMuNzggMCAwMTEuMzctLjI1Yy41IDAgLjkuMDcgMS4yMy4yLjMzLjE1LjYuMzQuNzkuNi4yLjI1LjMzLjU1LjQxLjkuMDguMzUuMTIuNzQuMTIgMS4xN1YxOGgtMS4xMXYtMy4yNmMwLS4zOS0uMDMtLjcyLS4wOC0uOTlzLS4xNC0uNDktLjI2LS42NmExLjAyIDEuMDIgMCAwMC0uNDgtLjM2IDIuMSAyLjEgMCAwMC0uNzQtLjEyIDcuOTkgNy45OSAwIDAwLTEuMjUuMlYxOGgtMS4xMnptNi41LTMuMWMwLS41Ni4wOS0xLjA0LjI1LTEuNDUuMTYtLjQyLjM3LS43Ni42My0xLjAzLjI3LS4yNy41Ny0uNDguOTEtLjYxLjM1LS4xNC43LS4yIDEuMDYtLjIuODQgMCAxLjQ4LjI2IDEuOTMuNzguNDUuNTIuNjcgMS4zMi42NyAyLjR2LjM5aC00LjI4Yy4wNS42NS4yNCAxLjE0LjU2IDEuNDguMzMuMzMuODQuNSAxLjU0LjVhNC4xIDQuMSAwIDAwMS42LS4zbC4xNS45NGE1LjA4IDUuMDggMCAwMS0xLjg3LjM1Yy0uNTQgMC0xLjAxLS4wOS0xLjQxLS4yNWEyLjYzIDIuNjMgMCAwMS0xLjU1LTEuN2MtLjEyLS40LS4xOC0uODQtLjE4LTEuM3ptNC4yOS0uNjJjMC0uNS0uMTItLjkyLS4zOC0xLjI0YTEuMyAxLjMgMCAwMC0xLjA3LS40OSAxLjQ3IDEuNDcgMCAwMC0xLjE4LjU0IDEuOCAxLjggMCAwMC0uMzIuNTVjLS4wNy4yMS0uMTIuNDItLjE1LjY0aDMuMXpNNTUuOTMgMzkuMzRjMi40MyAwIDMuNjUtLjgzIDMuNjUtMi41IDAtLjUtLjExLS45NC0uMzMtMS4zLS4yMS0uMzYtLjUtLjY3LS44Ny0uOTQtLjM3LS4yNi0uOC0uNDktMS4yNi0uNjgtLjQ4LS4yLS45OC0uMzgtMS41LS41OC0uNjEtLjItMS4xOS0uNDQtMS43My0uN2E2LjA1IDYuMDUgMCAwMS0xLjQyLS45NGMtLjQtLjM2LS43MS0uNzktLjk1LTEuMjgtLjIzLS41LS4zNC0xLjEtLjM0LTEuOCAwLTEuNDYuNS0yLjYgMS40OC0zLjQxIDEtLjgyIDIuMzYtMS4yMyA0LjEtMS4yMyAxLjAyIDAgMS45My4xMSAyLjc2LjMzLjgyLjIxIDEuNDIuNDUgMS44LjdsLS43NCAxLjlhOC4wNSA4LjA1IDAgMDAtMy44Mi0uOTFjLS40NCAwLS44Ni4wNS0xLjI0LjE0LS4zOC4xLS43Mi4yNC0xIC40NC0uMy4xOS0uNTIuNDMtLjcuNzMtLjE2LjMtLjI0LjY0LS4yNCAxLjA0IDAgLjQ1LjA4LjgzLjI2IDEuMTMuMTguMy40Mi41Ny43NC44LjMyLjI0LjcuNDUgMS4xMi42NC40Mi4yLjkuMzggMS40LjU4LjcyLjI4IDEuMzguNTcgMS45OC44Ni42LjI5IDEuMTIuNjMgMS41NiAxLjAzLjQ0LjQuNzguODggMS4wMiAxLjQzLjI0LjU1LjM2IDEuMjIuMzYgMiAwIDEuNDYtLjUzIDIuNTgtMS42IDMuMzYtMS4wNi43OS0yLjU2IDEuMTgtNC41IDEuMThhMTEuNTQgMTEuNTQgMCAwMS01LjEzLTEuMThsLjctMS45MmE4LjYzIDguNjMgMCAwMDQuNDQgMS4wOHptOC43Ni0xMC40NmMuNTEtLjEzIDEuMTktLjI2IDIuMDQtLjQuODUtLjE1IDEuODItLjIyIDIuOTMtLjIyLjk5IDAgMS44MS4xNCAyLjQ3LjQyLjY1LjI4IDEuMTguNjcgMS41NyAxLjE3LjQuNS42NyAxLjExLjgzIDEuODEuMTYuNy4yNCAxLjQ4LjI0IDIuMzNWNDFoLTIuMjN2LTYuNTNjMC0uNzctLjA2LTEuNDItLjE2LTEuOTctLjEtLjU0LS4yOC0uOTgtLjUyLTEuMzJhMi4wNCAyLjA0IDAgMDAtLjk2LS43M2MtLjQtLjE1LS45LS4yMy0xLjQ4LS4yM2ExMS45MyAxMS45MyAwIDAwLTIuMS4xN2wtLjQuMDdWNDFoLTIuMjNWMjguODh6bTE4IDEwLjUxYy41MyAwIDEtLjAxIDEuNC0uMDMuNDEtLjAzLjc1LS4wNyAxLjAyLS4xNFYzNS41YTIuODYgMi44NiAwIDAwLS43OC0uMiA4LjY4IDguNjggMCAwMC0yLjM3LS4wMSAzLjMgMy4zIDAgMDAtMS4wNC4zYy0uMy4xNS0uNTcuMzYtLjc4LjYyLS4yLjI3LS4zLjYxLS4zIDEuMDUgMCAuOC4yNSAxLjM1Ljc2IDEuNjZhNCA0IDAgMDAyLjA5LjQ3em0tLjItMTEuMThjLjkgMCAxLjY2LjExIDIuMjcuMzUuNjIuMjMgMS4xMi41NiAxLjUuOTguMzcuNDIuNjQuOTMuOCAxLjUxLjE2LjU5LjI0IDEuMjMuMjQgMS45M3Y3LjhsLS44LjE0YTIzLjM3IDIzLjM3IDAgMDEtMi41OC4yOGMtLjUuMDQtMSAuMDYtMS41LjA2LS43IDAtMS4zNS0uMDctMS45NC0uMjEtLjYtLjE1LTEuMS0uMzctMS41NC0uNjlhMy4xMyAzLjEzIDAgMDEtMS0xLjIzIDQuMzMgNC4zMyAwIDAxLS4zNi0xLjg1IDMuMzUgMy4zNSAwIDAxMS41Ni0yLjk4Yy40OC0uMyAxLjA0LS41MiAxLjY4LS42N2E5LjE2IDkuMTYgMCAwMTMuNC0uMDggNDAuODcgNDAuODcgMCAwMS45LjE4di0uNjNjMC0uMzYtLjA1LS43My0uMTMtMS4wOWEyLjUgMi41IDAgMDAtLjQzLS45NmMtLjItLjI4LS41LS41LS44NS0uNjdhMy4zNCAzLjM0IDAgMDAtMS40LS4yNWMtLjc0IDAtMS4zOS4wNS0xLjk0LjE1LS41NS4xLS45Ni4yMi0xLjIzLjMzbC0uMjctMS44NWMuMjktLjEzLjc3LS4yNSAxLjQ0LS4zNy42Ny0uMTIgMS40LS4xOCAyLjE5LS4xOHptMTcuMTcgNi41N2MwLTEuNDUtLjM2LTIuNTctMS4wOC0zLjM2YTMuNzIgMy43MiAwIDAwLTIuODgtMS4xN2MtLjY4IDAtMS4yLjAyLTEuNTguMDctLjM3LjA1LS42Ny4xLS45LjE3djcuODdjLjI4LjIyLjY3LjQ0IDEuMTguNjVhNC40MiA0LjQyIDAgMDAzLjMyLS4wNGMuNDYtLjIzLjgzLS41NSAxLjEyLS45Ni4yOS0uNC41LS44OS42Mi0xLjQ0LjEzLS41NS4yLTEuMTUuMi0xLjc5em0yLjMyIDBhOC44IDguOCAwIDAxLS4zNyAyLjYyYy0uMjUuOC0uNjEgMS40OS0xLjA5IDIuMDZhNC45NiA0Ljk2IDAgMDEtMS43NiAxLjM1Yy0uNy4zMi0xLjUuNDgtMi40LjQ4YTUuOCA1LjggMCAwMS0zLjE0LS44NHY0Ljk5SDkxVjI4LjlsMS45OC0uNDJjLjgtLjE1IDEuNzEtLjIyIDIuNzUtLjIyYTcgNyAwIDAxMi42LjQ1IDUuNTUgNS41NSAwIDAxMy4yMiAzLjM1Yy4zLjguNDQgMS43Mi40NCAyLjcyem0xMi43IDQuNTZjMi40MyAwIDMuNjUtLjgzIDMuNjUtMi41IDAtLjUtLjExLS45NC0uMzMtMS4zLS4yMS0uMzYtLjUtLjY3LS44Ny0uOTQtLjM3LS4yNi0uNzktLjQ5LTEuMjYtLjY4LS40Ny0uMi0uOTctLjM4LTEuNS0uNTgtLjYxLS4yLTEuMTktLjQ0LTEuNzMtLjdhNi4wNSA2LjA1IDAgMDEtMS40Mi0uOTRjLS40LS4zNi0uNzEtLjc5LS45NC0xLjI4LS4yNC0uNS0uMzUtMS4xLS4zNS0xLjggMC0xLjQ2LjUtMi42IDEuNDktMy40MS45OS0uODIgMi4zNi0xLjIzIDQuMS0xLjIzIDEgMCAxLjkyLjExIDIuNzUuMzMuODIuMjEgMS40My40NSAxLjgxLjdsLS43NCAxLjlhOC4wNSA4LjA1IDAgMDAtMy44Mi0uOTFjLS40NSAwLS44Ni4wNS0xLjI1LjE0LS4zOC4xLS43Mi4yNC0xIC40NC0uMy4xOS0uNTIuNDMtLjY5LjczLS4xNy4zLS4yNS42NC0uMjUgMS4wNCAwIC40NS4wOS44My4yNiAxLjEzLjE4LjMuNDMuNTcuNzUuOC4zMi4yNC42OS40NSAxLjExLjY0LjQzLjIuOS4zOCAxLjQuNTguNzMuMjggMS4zOS41NyAxLjk5Ljg2LjYuMjkgMS4xMi42MyAxLjU2IDEuMDMuNDQuNC43OC44OCAxLjAyIDEuNDMuMjQuNTUuMzYgMS4yMi4zNiAyIDAgMS40Ni0uNTQgMi41OC0xLjYgMy4zNi0xLjA2Ljc5LTIuNTYgMS4xOC00LjUgMS4xOGExMS41NCAxMS41NCAwIDAxLTUuMTQtMS4xOGwuNy0xLjkyYTguNjMgOC42MyAwIDAwNC40NCAxLjA4em0xMC44NS0xMC44Mmg0LjczdjEuODdoLTQuNzN2NS43NmMwIC42My4wNSAxLjE0LjE0IDEuNTUuMS40LjI0LjczLjQzLjk2LjIuMjMuNDQuNC43Mi41YTQuNzQgNC43NCAwIDAwMi42My0uMDhsLjg1LS4zNC40NCAxLjg1Yy0uMjMuMTEtLjYyLjI1LTEuMTguNDItLjU2LjE3LTEuMi4yNS0xLjkyLjI1LS44NSAwLTEuNTUtLjEtMi4xLS4zMnMtMS0uNTQtMS4zMy0uOTdhMy45IDMuOSAwIDAxLS43MS0xLjZjLS4xNC0uNjMtLjItMS4zNi0uMi0yLjJWMjUuMDVsMi4yMy0uMzh2My44NnptMTguMjQgNi4yNGMwIDEtLjE1IDEuODktLjQzIDIuNjktLjMuOC0uNyAxLjQ5LTEuMjIgMi4wNmE1LjMzIDUuMzMgMCAwMS0xLjg2IDEuMzNjLS43Mi4zMi0xLjUuNDctMi4zNS40Ny0uODUgMC0xLjYzLS4xNS0yLjM1LS40N2E1LjMzIDUuMzMgMCAwMS0xLjg2LTEuMzMgNi4xNSA2LjE1IDAgMDEtMS4yMS0yLjA2IDcuOSA3LjkgMCAwMS0uNDMtMi42OWMwLS45OC4xNC0xLjg3LjQzLTIuNjguMjktLjguNjktMS41IDEuMjEtMi4wN2E1LjMzIDUuMzMgMCAwMTEuODYtMS4zM2MuNzItLjMyIDEuNS0uNDcgMi4zNS0uNDcuODUgMCAxLjYzLjE1IDIuMzUuNDcuNzIuMyAxLjM0Ljc1IDEuODYgMS4zMy41Mi41Ny45MyAxLjI3IDEuMjIgMi4wNy4yOC44MS40MyAxLjcuNDMgMi42OHptLTIuMzMgMGMwLTEuNC0uMzItMi41Mi0uOTUtMy4zNWEzLjA4IDMuMDggMCAwMC0yLjU4LTEuMjNjLTEuMDkgMC0xLjk1LjQtMi41OCAxLjIzYTUuMzcgNS4zNyAwIDAwLS45NSAzLjM1YzAgMS40LjMyIDIuNTIuOTUgMy4zNS42My44MiAxLjUgMS4yMyAyLjU4IDEuMjMgMS4wOSAwIDEuOTUtLjQgMi41OC0xLjIzLjYzLS44My45NS0xLjk0Ljk1LTMuMzV6bTEwLjA4LTYuNWE2Ljk0IDYuOTQgMCAwMTEuNC4xMyAyMC45MiAyMC45MiAwIDAxMS4xLjIzbC0uMzkgMS45NGE3LjQ4IDcuNDggMCAwMC00LjQ5LS4wNVY0MWgtMi4yM1YyOS4wNWMuNTMtLjIgMS4xOS0uMzcgMS45Ny0uNTQuNzgtLjE3IDEuNjYtLjI1IDIuNjQtLjI1em0zLjk2IDYuNTJjMC0xLjEuMTYtMi4wNi40OC0yLjg5LjMyLS44Mi43NC0xLjUgMS4yNy0yLjA1YTUuMTYgNS4xNiAwIDAxMS44My0xLjIyIDUuNyA1LjcgMCAwMTIuMS0uNDFjMS42OSAwIDIuOTguNTIgMy44NyAxLjU3LjkgMS4wNSAxLjM1IDIuNjQgMS4zNSA0Ljc5di4zN2MwIC4xNS0uMDEuMy0uMDMuNDJoLTguNTRjLjEgMS4zLjQ3IDIuMjggMS4xMyAyLjk1LjY1LjY3IDEuNjggMS4wMSAzLjA3IDEuMDFhOC4xOSA4LjE5IDAgMDAzLjE5LS42bC4zMSAxLjg3Yy0uMjcuMTUtLjc1LjMtMS40My40Ni0uNjguMTYtMS40NS4yNC0yLjMxLjI0YTcuMzUgNy4zNSAwIDAxLTIuODItLjUgNS4yNiA1LjI2IDAgMDEtMy4xLTMuNCA4LjY4IDguNjggMCAwMS0uMzctMi42em04LjU3LTEuMjJjLjAxLTEtLjI0LTEuODQtLjc2LTIuNDhhMi42IDIuNiAwIDAwLTIuMTUtLjk4IDIuOTQgMi45NCAwIDAwLTIuMzUgMS4wOGMtLjI3LjMyLS40OC43LS42MyAxLjEtLjE2LjQyLS4yNi44NS0uMyAxLjI4aDYuMTl6IiBmaWxsPSIjMTExIi8+PC9nPjwvc3ZnPg==">
+          <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgyIiBoZWlnaHQ9IjU2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHJlY3Qgc3Ryb2tlPSIjQ0RDRENEIiBmaWxsPSIjMjUyNTI1IiB3aWR0aD0iMTgyIiBoZWlnaHQ9IjU2IiByeD0iMiIvPjxnIGZpbGwtcnVsZT0ibm9uemVybyI+PHBhdGggZD0iTTI2Ljk5IDI4LjhWMTguMzNsNy4yMiAzLjIyLTcuMjIgNy4yNXpNMTMuMiA0Mi42NGw4Ljg1LTE2LjY3IDMuODggMy44OC0xMi43MyAxMi44em0tNS4wNS0zMS40bDE4LjIyIDYuNnYxMS41OEw4LjE2IDExLjIzeiIgZmlsbD0iIzgyQkVBMCIvPjxwYXRoIGZpbGw9IiNGQTY0NDEiIGQ9Ik0zNy45IDE3Ljg1SDI3LjRsMTMuNSA2LjAyeiIvPjwvZz48cGF0aCBkPSJNNTYuMSAxMy45aDEuMTd2My45bC0uNDEuMWExMi42OCAxMi42OCAwIDAxLTIuMjUuMjdjLS41OSAwLTEuMTItLjEtMS42LS4yOWEzLjQgMy40IDAgMDEtMS4yMy0uODQgMy44IDMuOCAwIDAxLS44LTEuMzYgNS41NyA1LjU3IDAgMDEtLjI4LTEuODRjMC0uNy4xLTEuMzIuMzEtMS44Ni4yMi0uNTQuNS0xIC44Ni0xLjM2LjM2LS4zNy43OC0uNjUgMS4yNy0uODQuNDgtLjIgMS0uMjkgMS41NS0uMjlhNi4yMyA2LjIzIDAgMDExLjc1LjI0IDMuNjcgMy42NyAwIDAxLjc4LjM0bC0uMzcuOTdhMy4xNCAzLjE0IDAgMDAtLjkyLS4zOGMtLjM5LS4xLS43OC0uMTUtMS4xOC0uMTUtLjQyIDAtLjguMDgtMS4xNi4yMy0uMzQuMTUtLjY0LjM3LS44OC42Ni0uMjUuMjktLjQ0LjY0LS41NyAxLjA1YTQuOTUgNC45NSAwIDAwLS4wMyAyLjc0Yy4xMS40MS4yOS43Ni41MiAxLjA1LjI0LjMuNTMuNTIuODguNjguMzUuMTYuNzYuMjQgMS4yMy4yNGE1LjggNS44IDAgMDAxLjM3LS4xNnYtMy4xem0yLjU4IDFjMC0uNTYuMDgtMS4wNC4yNC0xLjQ1LjE2LS40Mi4zNy0uNzYuNjMtMS4wMy4yNy0uMjcuNTctLjQ4LjkxLS42MS4zNS0uMTQuNy0uMiAxLjA2LS4yLjg0IDAgMS40OC4yNiAxLjkzLjc4LjQ1LjUyLjY3IDEuMzIuNjcgMi40di4zOWgtNC4yOGMuMDUuNjUuMjQgMS4xNC41NiAxLjQ4LjMzLjMzLjg0LjUgMS41NC41YTQuMSA0LjEgMCAwMDEuNi0uM2wuMTUuOTRhNS4wOCA1LjA4IDAgMDEtMS44Ny4zNWMtLjU0IDAtMS4wMS0uMDktMS40MS0uMjVhMi42MyAyLjYzIDAgMDEtMS41NS0xLjdjLS4xMi0uNC0uMTgtLjg0LS4xOC0xLjN6bTQuMjgtLjYyYzAtLjUtLjEyLS45Mi0uMzgtMS4yNGExLjMgMS4zIDAgMDAtMS4wNy0uNDkgMS40NyAxLjQ3IDAgMDAtMS4xOC41NCAxLjggMS44IDAgMDAtLjMyLjU1Yy0uMDcuMjEtLjEyLjQyLS4xNS42NGgzLjF6bTMuODItMi41MmgyLjM2di45NGgtMi4zNnYyLjg4YzAgLjMuMDIuNTcuMDcuNzcuMDUuMi4xMi4zNi4yMS40OC4xLjEyLjIyLjIuMzYuMjVhMi4zNyAyLjM3IDAgMDAxLjMxLS4wNGwuNDMtLjE3LjIyLjkzYTQuMTQgNC4xNCAwIDAxLTEuNTUuMzNjLS40MiAwLS43Ny0uMDUtMS4wNS0uMTYtLjI3LS4xLS41LS4yNy0uNjYtLjQ5YTEuOTUgMS45NSAwIDAxLS4zNi0uOGMtLjA3LS4zMS0uMS0uNjgtLjEtMS4xdi01LjU2bDEuMTItLjJ2MS45NHpNNzQuNDQgMThoLTEuMTF2LTYuMjRoMS4xMVYxOHptLS41Ni03LjM3YS43LjcgMCAwMS0uNzItLjczLjcuNyAwIDAxLjcyLS43My43LjcgMCAwMS43Mi43My43LjcgMCAwMS0uNzIuNzN6bTMuNTMgMS4xM2gyLjM2di45NGgtMi4zNnYyLjg4YzAgLjMuMDIuNTcuMDcuNzcuMDUuMi4xMi4zNi4yMi40OHMuMjEuMi4zNi4yNWEyLjM3IDIuMzcgMCAwMDEuMzEtLjA0bC40My0uMTcuMjEuOTNhNC4xNCA0LjE0IDAgMDEtMS41NS4zM2MtLjQyIDAtLjc3LS4wNS0xLjA1LS4xNi0uMjctLjEtLjUtLjI3LS42Ni0uNDlhMS45NSAxLjk1IDAgMDEtLjM2LS44Yy0uMDYtLjMxLS4xLS42OC0uMS0xLjF2LTUuNTZsMS4xMi0uMnYxLjk0em04Ljk5LTMuMDdhNC4zIDQuMyAwIDAxMS4zNC4ybC0uMi45NmEyLjcyIDIuNzIgMCAwMC0xLjA2LS4yYy0uNTIgMC0uODguMTQtMS4xLjQyLS4yLjI5LS4zLjY3LS4zIDEuMTV2LjU0aDIuNHYuOTRoLTIuNFYxOGgtMS4xMnYtNi44YzAtLjguMi0xLjQyLjU5LTEuODYuMzktLjQzIDEtLjY1IDEuODUtLjY1em00LjUgMi45NGEzLjQ3IDMuNDcgMCAwMS43LjA2IDEwLjQ2IDEwLjQ2IDAgMDEuNTQuMTJsLS4xOS45N2EzLjc0IDMuNzQgMCAwMC0yLjI0LS4wMlYxOGgtMS4xMnYtNS45OGE3LjU5IDcuNTkgMCAwMTIuMy0uNHptNy44MyAzLjI1YzAgLjUtLjA3Ljk0LS4yMSAxLjM0LS4xNS40LS4zNS43NS0uNjEgMS4wNC0uMjYuMjgtLjU3LjUtLjkzLjY2LS4zNi4xNi0uNzUuMjQtMS4xOC4yNC0uNDIgMC0uODEtLjA4LTEuMTctLjI0YTIuNjcgMi42NyAwIDAxLS45My0uNjYgMy4wNyAzLjA3IDAgMDEtLjYtMS4wNGMtLjE1LS40LS4yMi0uODQtLjIyLTEuMzQgMC0uNDkuMDctLjkzLjIxLTEuMzQuMTUtLjQuMzUtLjc1LjYtMS4wNGEyLjkzIDIuOTMgMCAwMTIuMS0uOWMuNDQgMCAuODMuMDggMS4xOS4yNC4zNi4xNS42Ny4zOC45My42Ni4yNi4zLjQ2LjY0LjYgMS4wNC4xNS40LjIyLjg1LjIyIDEuMzR6bS0xLjE2IDBjMC0uNy0uMTYtMS4yNi0uNDgtMS42N2ExLjU0IDEuNTQgMCAwMC0xLjI5LS42MmMtLjU0IDAtLjk3LjItMS4yOS42Mi0uMzEuNC0uNDcuOTctLjQ3IDEuNjdzLjE2IDEuMjYuNDcgMS42N2MuMzIuNDIuNzUuNjIgMS4zLjYyLjU0IDAgLjk3LS4yIDEuMjgtLjYyLjMyLS40LjQ4LS45Ny40OC0xLjY3em0yLjczLTIuOTRhOC43MSA4LjcxIDAgMDEyLjQ3LS4zMWMuNCAwIC43NC4wNSAxLjAxLjE2LjI4LjEuNS4yNy42OS40N2E0LjMgNC4zIDAgMDEuNy0uMzdjLjE4LS4wNy4zOC0uMTMuNi0uMTguMjEtLjA2LjQ0LS4wOC42OS0uMDguNDggMCAuODcuMDcgMS4xOC4yLjMuMTUuNTQuMzUuNzEuNi4xNy4yNi4yOS41Ni4zNS45MS4wNi4zNi4wOS43NC4wOSAxLjE2VjE4aC0xLjEydi0zLjI2YzAtLjM3LS4wMi0uNjktLjA1LS45NS0uMDQtLjI3LS4xLS40OS0uMi0uNjZhLjkzLjkzIDAgMDAtLjQxLS40IDIuNDcgMi40NyAwIDAwLTEuNi4wMmMtLjI0LjExLS40MS4yLS41LjI4YTYuMSA2LjEgMCAwMS4yIDEuNDZWMThoLTEuMTJ2LTMuMjZjMC0uMzctLjAyLS42OS0uMDYtLjk1YTEuOTEgMS45MSAwIDAwLS4yMS0uNjYuOTMuOTMgMCAwMC0uNDEtLjQgMS40OSAxLjQ5IDAgMDAtLjY1LS4xMiA1Ljc5IDUuNzkgMCAwMC0xLjI0LjEyVjE4aC0xLjEydi02LjA2em0xNC4xNS0uMThoMi4zN3YuOTRoLTIuMzd2Mi44OGMwIC4zLjAzLjU3LjA3Ljc3LjA1LjIuMTIuMzYuMjIuNDhzLjIyLjIuMzYuMjVhMi4zNyAyLjM3IDAgMDAxLjMxLS4wNGwuNDMtLjE3LjIyLjkzYTQuMTQgNC4xNCAwIDAxLTEuNTUuMzNjLS40MyAwLS43OC0uMDUtMS4wNS0uMTYtLjI4LS4xLS41LS4yNy0uNjctLjQ5YTEuOTUgMS45NSAwIDAxLS4zNS0uOGMtLjA3LS4zMS0uMS0uNjgtLjEtMS4xdi01LjU2bDEuMTEtLjJ2MS45NHptMy43OCA2LjI0VjguODhsMS4xMi0uMnYzLjJhMy43OCAzLjc4IDAgMDExLjM3LS4yNWMuNSAwIC45LjA3IDEuMjMuMi4zMy4xNS42LjM0Ljc5LjYuMi4yNS4zMy41NS40MS45LjA4LjM1LjEyLjc0LjEyIDEuMTdWMThoLTEuMTF2LTMuMjZjMC0uMzktLjAzLS43Mi0uMDgtLjk5cy0uMTQtLjQ5LS4yNi0uNjZhMS4wMiAxLjAyIDAgMDAtLjQ4LS4zNiAyLjEgMi4xIDAgMDAtLjc0LS4xMiA3Ljk5IDcuOTkgMCAwMC0xLjI1LjJWMThoLTEuMTJ6bTYuNS0zLjFjMC0uNTYuMDktMS4wNC4yNS0xLjQ1LjE2LS40Mi4zNy0uNzYuNjMtMS4wMy4yNy0uMjcuNTctLjQ4LjkxLS42MS4zNS0uMTQuNy0uMiAxLjA2LS4yLjg0IDAgMS40OC4yNiAxLjkzLjc4LjQ1LjUyLjY3IDEuMzIuNjcgMi40di4zOWgtNC4yOGMuMDUuNjUuMjQgMS4xNC41NiAxLjQ4LjMzLjMzLjg0LjUgMS41NC41YTQuMSA0LjEgMCAwMDEuNi0uM2wuMTUuOTRhNS4wOCA1LjA4IDAgMDEtMS44Ny4zNWMtLjU0IDAtMS4wMS0uMDktMS40MS0uMjVhMi42MyAyLjYzIDAgMDEtMS41NS0xLjdjLS4xMi0uNC0uMTgtLjg0LS4xOC0xLjN6bTQuMjktLjYyYzAtLjUtLjEyLS45Mi0uMzgtMS4yNGExLjMgMS4zIDAgMDAtMS4wNy0uNDkgMS40NyAxLjQ3IDAgMDAtMS4xOC41NCAxLjggMS44IDAgMDAtLjMyLjU1Yy0uMDcuMjEtLjEyLjQyLS4xNS42NGgzLjF6TTU1LjkzIDM5LjM0YzIuNDMgMCAzLjY1LS44MyAzLjY1LTIuNSAwLS41LS4xMS0uOTQtLjMzLTEuMy0uMjEtLjM2LS41LS42Ny0uODctLjk0LS4zNy0uMjYtLjgtLjQ5LTEuMjYtLjY4LS40OC0uMi0uOTgtLjM4LTEuNS0uNTgtLjYxLS4yLTEuMTktLjQ0LTEuNzMtLjdhNi4wNSA2LjA1IDAgMDEtMS40Mi0uOTRjLS40LS4zNi0uNzEtLjc5LS45NS0xLjI4LS4yMy0uNS0uMzQtMS4xLS4zNC0xLjggMC0xLjQ2LjUtMi42IDEuNDgtMy40MSAxLS44MiAyLjM2LTEuMjMgNC4xLTEuMjMgMS4wMiAwIDEuOTMuMTEgMi43Ni4zMy44Mi4yMSAxLjQyLjQ1IDEuOC43bC0uNzQgMS45YTguMDUgOC4wNSAwIDAwLTMuODItLjkxYy0uNDQgMC0uODYuMDUtMS4yNC4xNC0uMzguMS0uNzIuMjQtMSAuNDQtLjMuMTktLjUyLjQzLS43LjczLS4xNi4zLS4yNC42NC0uMjQgMS4wNCAwIC40NS4wOC44My4yNiAxLjEzLjE4LjMuNDIuNTcuNzQuOC4zMi4yNC43LjQ1IDEuMTIuNjQuNDIuMi45LjM4IDEuNC41OC43Mi4yOCAxLjM4LjU3IDEuOTguODYuNi4yOSAxLjEyLjYzIDEuNTYgMS4wMy40NC40Ljc4Ljg4IDEuMDIgMS40My4yNC41NS4zNiAxLjIyLjM2IDIgMCAxLjQ2LS41MyAyLjU4LTEuNiAzLjM2LTEuMDYuNzktMi41NiAxLjE4LTQuNSAxLjE4YTExLjU0IDExLjU0IDAgMDEtNS4xMy0xLjE4bC43LTEuOTJhOC42MyA4LjYzIDAgMDA0LjQ0IDEuMDh6bTguNzYtMTAuNDZjLjUxLS4xMyAxLjE5LS4yNiAyLjA0LS40Ljg1LS4xNSAxLjgyLS4yMiAyLjkzLS4yMi45OSAwIDEuODEuMTQgMi40Ny40Mi42NS4yOCAxLjE4LjY3IDEuNTcgMS4xNy40LjUuNjcgMS4xMS44MyAxLjgxLjE2LjcuMjQgMS40OC4yNCAyLjMzVjQxaC0yLjIzdi02LjUzYzAtLjc3LS4wNi0xLjQyLS4xNi0xLjk3LS4xLS41NC0uMjgtLjk4LS41Mi0xLjMyYTIuMDQgMi4wNCAwIDAwLS45Ni0uNzNjLS40LS4xNS0uOS0uMjMtMS40OC0uMjNhMTEuOTMgMTEuOTMgMCAwMC0yLjEuMTdsLS40LjA3VjQxaC0yLjIzVjI4Ljg4em0xOCAxMC41MWMuNTMgMCAxLS4wMSAxLjQtLjAzLjQxLS4wMy43NS0uMDcgMS4wMi0uMTRWMzUuNWEyLjg2IDIuODYgMCAwMC0uNzgtLjIgOC42OCA4LjY4IDAgMDAtMi4zNy0uMDEgMy4zIDMuMyAwIDAwLTEuMDQuM2MtLjMuMTUtLjU3LjM2LS43OC42Mi0uMi4yNy0uMy42MS0uMyAxLjA1IDAgLjguMjUgMS4zNS43NiAxLjY2YTQgNCAwIDAwMi4wOS40N3ptLS4yLTExLjE4Yy45IDAgMS42Ni4xMSAyLjI3LjM1LjYyLjIzIDEuMTIuNTYgMS41Ljk4LjM3LjQyLjY0LjkzLjggMS41MS4xNi41OS4yNCAxLjIzLjI0IDEuOTN2Ny44bC0uOC4xNGEyMy4zNyAyMy4zNyAwIDAxLTIuNTguMjhjLS41LjA0LTEgLjA2LTEuNS4wNi0uNyAwLTEuMzUtLjA3LTEuOTQtLjIxLS42LS4xNS0xLjEtLjM3LTEuNTQtLjY5YTMuMTMgMy4xMyAwIDAxLTEtMS4yMyA0LjMzIDQuMzMgMCAwMS0uMzYtMS44NSAzLjM1IDMuMzUgMCAwMTEuNTYtMi45OGMuNDgtLjMgMS4wNC0uNTIgMS42OC0uNjdhOS4xNiA5LjE2IDAgMDEzLjQtLjA4IDQwLjg3IDQwLjg3IDAgMDEuOS4xOHYtLjYzYzAtLjM2LS4wNS0uNzMtLjEzLTEuMDlhMi41IDIuNSAwIDAwLS40My0uOTZjLS4yLS4yOC0uNS0uNS0uODUtLjY3YTMuMzQgMy4zNCAwIDAwLTEuNC0uMjVjLS43NCAwLTEuMzkuMDUtMS45NC4xNS0uNTUuMS0uOTYuMjItMS4yMy4zM2wtLjI3LTEuODVjLjI5LS4xMy43Ny0uMjUgMS40NC0uMzcuNjctLjEyIDEuNC0uMTggMi4xOS0uMTh6bTE3LjE3IDYuNTdjMC0xLjQ1LS4zNi0yLjU3LTEuMDgtMy4zNmEzLjcyIDMuNzIgMCAwMC0yLjg4LTEuMTdjLS42OCAwLTEuMi4wMi0xLjU4LjA3LS4zNy4wNS0uNjcuMS0uOS4xN3Y3Ljg3Yy4yOC4yMi42Ny40NCAxLjE4LjY1YTQuNDIgNC40MiAwIDAwMy4zMi0uMDRjLjQ2LS4yMy44My0uNTUgMS4xMi0uOTYuMjktLjQuNS0uODkuNjItMS40NC4xMy0uNTUuMi0xLjE1LjItMS43OXptMi4zMiAwYTguOCA4LjggMCAwMS0uMzcgMi42MmMtLjI1LjgtLjYxIDEuNDktMS4wOSAyLjA2YTQuOTYgNC45NiAwIDAxLTEuNzYgMS4zNWMtLjcuMzItMS41LjQ4LTIuNC40OGE1LjggNS44IDAgMDEtMy4xNC0uODR2NC45OUg5MVYyOC45bDEuOTgtLjQyYy44LS4xNSAxLjcxLS4yMiAyLjc1LS4yMmE3IDcgMCAwMTIuNi40NSA1LjU1IDUuNTUgMCAwMTMuMjIgMy4zNWMuMy44LjQ0IDEuNzIuNDQgMi43MnptMTIuNyA0LjU2YzIuNDMgMCAzLjY1LS44MyAzLjY1LTIuNSAwLS41LS4xMS0uOTQtLjMzLTEuMy0uMjEtLjM2LS41LS42Ny0uODctLjk0LS4zNy0uMjYtLjc5LS40OS0xLjI2LS42OC0uNDctLjItLjk3LS4zOC0xLjUtLjU4LS42MS0uMi0xLjE5LS40NC0xLjczLS43YTYuMDUgNi4wNSAwIDAxLTEuNDItLjk0Yy0uNC0uMzYtLjcxLS43OS0uOTQtMS4yOC0uMjQtLjUtLjM1LTEuMS0uMzUtMS44IDAtMS40Ni41LTIuNiAxLjQ5LTMuNDEuOTktLjgyIDIuMzYtMS4yMyA0LjEtMS4yMyAxIDAgMS45Mi4xMSAyLjc1LjMzLjgyLjIxIDEuNDMuNDUgMS44MS43bC0uNzQgMS45YTguMDUgOC4wNSAwIDAwLTMuODItLjkxYy0uNDUgMC0uODYuMDUtMS4yNS4xNC0uMzguMS0uNzIuMjQtMSAuNDQtLjMuMTktLjUyLjQzLS42OS43My0uMTcuMy0uMjUuNjQtLjI1IDEuMDQgMCAuNDUuMDkuODMuMjYgMS4xMy4xOC4zLjQzLjU3Ljc1LjguMzIuMjQuNjkuNDUgMS4xMS42NC40My4yLjkuMzggMS40LjU4LjczLjI4IDEuMzkuNTcgMS45OS44Ni42LjI5IDEuMTIuNjMgMS41NiAxLjAzLjQ0LjQuNzguODggMS4wMiAxLjQzLjI0LjU1LjM2IDEuMjIuMzYgMiAwIDEuNDYtLjU0IDIuNTgtMS42IDMuMzYtMS4wNi43OS0yLjU2IDEuMTgtNC41IDEuMThhMTEuNTQgMTEuNTQgMCAwMS01LjE0LTEuMThsLjctMS45MmE4LjYzIDguNjMgMCAwMDQuNDQgMS4wOHptMTAuODUtMTAuODJoNC43M3YxLjg3aC00LjczdjUuNzZjMCAuNjMuMDUgMS4xNC4xNCAxLjU1LjEuNC4yNC43My40My45Ni4yLjIzLjQ0LjQuNzIuNWE0Ljc0IDQuNzQgMCAwMDIuNjMtLjA4bC44NS0uMzQuNDQgMS44NWMtLjIzLjExLS42Mi4yNS0xLjE4LjQyLS41Ni4xNy0xLjIuMjUtMS45Mi4yNS0uODUgMC0xLjU1LS4xLTIuMS0uMzJzLTEtLjU0LTEuMzMtLjk3YTMuOSAzLjkgMCAwMS0uNzEtMS42Yy0uMTQtLjYzLS4yLTEuMzYtLjItMi4yVjI1LjA1bDIuMjMtLjM4djMuODZ6bTE4LjI0IDYuMjRjMCAxLS4xNSAxLjg5LS40MyAyLjY5LS4zLjgtLjcgMS40OS0xLjIyIDIuMDZhNS4zMyA1LjMzIDAgMDEtMS44NiAxLjMzYy0uNzIuMzItMS41LjQ3LTIuMzUuNDctLjg1IDAtMS42My0uMTUtMi4zNS0uNDdhNS4zMyA1LjMzIDAgMDEtMS44Ni0xLjMzIDYuMTUgNi4xNSAwIDAxLTEuMjEtMi4wNiA3LjkgNy45IDAgMDEtLjQzLTIuNjljMC0uOTguMTQtMS44Ny40My0yLjY4LjI5LS44LjY5LTEuNSAxLjIxLTIuMDdhNS4zMyA1LjMzIDAgMDExLjg2LTEuMzNjLjcyLS4zMiAxLjUtLjQ3IDIuMzUtLjQ3Ljg1IDAgMS42My4xNSAyLjM1LjQ3LjcyLjMgMS4zNC43NSAxLjg2IDEuMzMuNTIuNTcuOTMgMS4yNyAxLjIyIDIuMDcuMjguODEuNDMgMS43LjQzIDIuNjh6bS0yLjMzIDBjMC0xLjQtLjMyLTIuNTItLjk1LTMuMzVhMy4wOCAzLjA4IDAgMDAtMi41OC0xLjIzYy0xLjA5IDAtMS45NS40LTIuNTggMS4yM2E1LjM3IDUuMzcgMCAwMC0uOTUgMy4zNWMwIDEuNC4zMiAyLjUyLjk1IDMuMzUuNjMuODIgMS41IDEuMjMgMi41OCAxLjIzIDEuMDkgMCAxLjk1LS40IDIuNTgtMS4yMy42My0uODMuOTUtMS45NC45NS0zLjM1em0xMC4wOC02LjVhNi45NCA2Ljk0IDAgMDExLjQuMTMgMjAuOTIgMjAuOTIgMCAwMTEuMS4yM2wtLjM5IDEuOTRhNy40OCA3LjQ4IDAgMDAtNC40OS0uMDVWNDFoLTIuMjNWMjkuMDVjLjUzLS4yIDEuMTktLjM3IDEuOTctLjU0Ljc4LS4xNyAxLjY2LS4yNSAyLjY0LS4yNXptMy45NiA2LjUyYzAtMS4xLjE2LTIuMDYuNDgtMi44OS4zMi0uODIuNzQtMS41IDEuMjctMi4wNWE1LjE2IDUuMTYgMCAwMTEuODMtMS4yMiA1LjcgNS43IDAgMDEyLjEtLjQxYzEuNjkgMCAyLjk4LjUyIDMuODcgMS41Ny45IDEuMDUgMS4zNSAyLjY0IDEuMzUgNC43OXYuMzdjMCAuMTUtLjAxLjMtLjAzLjQyaC04LjU0Yy4xIDEuMy40NyAyLjI4IDEuMTMgMi45NS42NS42NyAxLjY4IDEuMDEgMy4wNyAxLjAxYTguMTkgOC4xOSAwIDAwMy4xOS0uNmwuMzEgMS44N2MtLjI3LjE1LS43NS4zLTEuNDMuNDYtLjY4LjE2LTEuNDUuMjQtMi4zMS4yNGE3LjM1IDcuMzUgMCAwMS0yLjgyLS41IDUuMjYgNS4yNiAwIDAxLTMuMS0zLjQgOC42OCA4LjY4IDAgMDEtLjM3LTIuNnptOC41Ny0xLjIyYy4wMS0xLS4yNC0xLjg0LS43Ni0yLjQ4YTIuNiAyLjYgMCAwMC0yLjE1LS45OCAyLjk0IDIuOTQgMCAwMC0yLjM1IDEuMDhjLS4yNy4zMi0uNDguNy0uNjMgMS4xLS4xNi40Mi0uMjYuODUtLjMgMS4yOGg2LjE5eiIgZmlsbD0iI0ZGRiIvPjwvZz48L3N2Zz4=" alt="Get it from the Snap Store">
+        </picture>
+      </a>
+      <a class="btn btn-secondary" href="https://bristlenose.app/docs/install.html#pipx">Install with pip</a>
+    </div>
+    <p class="note">
+      Free and open source. The Snap bundles Python and FFmpeg, and runs
+      strictly confined.
+    </p>
+  </section>
+
+  <!-- ---------- Windows ---------- -->
+  <section class="panel" id="windows" role="tabpanel" aria-labelledby="tab-windows">
+    <h2>Windows</h2>
+    <div class="cta">
+      <span class="cmd">
+        <code><span class="p">&gt;</span>pipx install bristlenose</code>
+        <button type="button" data-copy="pipx install bristlenose">
+          <span data-icon="copy"></span> Copy
+        </button>
+      </span>
+      <a class="btn btn-secondary" href="https://bristlenose.app/docs/install.html#windows">Setup guide</a>
+    </div>
+    <p class="note">
+      Free and open source. Bristlenose runs from the command line. You will need
+      <a href="https://bristlenose.app/docs/install.html#windows">Python and FFmpeg</a>.
+    </p>
+  </section>
+</section>
+
+<!-- flat context so the hero can be judged in place -->
+<div class="ctx">
+  <div class="fig fig-16x9" data-label="25-second product video"></div>
+</div>
+
+<!-- ============================================================
+     HARNESS — everything below is the write-up, not the design
+     ============================================================ -->
+<div class="ref">
+
+  <h3>All three states</h3>
+  <p class="k">
+    What each platform sees on arrival. Only one is ever on screen; these are
+    side by side so the set can be judged without clicking.
+  </p>
+
+  <div class="states">
+    <figure class="state">
+      <figcaption>data-platform="mac" — detected on macOS</figcaption>
+      <div class="inner">
+        <span class="picker">
+          <a aria-selected="true">macOS</a><a>Windows</a><a>Linux</a>
+        </span>
+        <div class="cta">
+          <span class="btn btn-primary">Download for Mac</span>
+        </div>
+        <p class="note">Runs on macOS 15 (Sequoia) or later, on Apple Silicon.</p>
+      </div>
+    </figure>
+
+    <figure class="state">
+      <figcaption>data-platform="linux"</figcaption>
+      <div class="inner">
+        <span class="picker">
+          <a>macOS</a><a>Windows</a><a aria-selected="true">Linux</a>
+        </span>
+        <div class="cta">
+          <span class="snap-badge"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgyIiBoZWlnaHQ9IjU2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHJlY3Qgc3Ryb2tlPSIjQ0RDRENEIiBmaWxsPSIjMjUyNTI1IiB3aWR0aD0iMTgyIiBoZWlnaHQ9IjU2IiByeD0iMiIvPjxnIGZpbGwtcnVsZT0ibm9uemVybyI+PHBhdGggZD0iTTI2Ljk5IDI4LjhWMTguMzNsNy4yMiAzLjIyLTcuMjIgNy4yNXpNMTMuMiA0Mi42NGw4Ljg1LTE2LjY3IDMuODggMy44OC0xMi43MyAxMi44em0tNS4wNS0zMS40bDE4LjIyIDYuNnYxMS41OEw4LjE2IDExLjIzeiIgZmlsbD0iIzgyQkVBMCIvPjxwYXRoIGZpbGw9IiNGQTY0NDEiIGQ9Ik0zNy45IDE3Ljg1SDI3LjRsMTMuNSA2LjAyeiIvPjwvZz48cGF0aCBkPSJNNTYuMSAxMy45aDEuMTd2My45bC0uNDEuMWExMi42OCAxMi42OCAwIDAxLTIuMjUuMjdjLS41OSAwLTEuMTItLjEtMS42LS4yOWEzLjQgMy40IDAgMDEtMS4yMy0uODQgMy44IDMuOCAwIDAxLS44LTEuMzYgNS41NyA1LjU3IDAgMDEtLjI4LTEuODRjMC0uNy4xLTEuMzIuMzEtMS44Ni4yMi0uNTQuNS0xIC44Ni0xLjM2LjM2LS4zNy43OC0uNjUgMS4yNy0uODQuNDgtLjIgMS0uMjkgMS41NS0uMjlhNi4yMyA2LjIzIDAgMDExLjc1LjI0IDMuNjcgMy42NyAwIDAxLjc4LjM0bC0uMzcuOTdhMy4xNCAzLjE0IDAgMDAtLjkyLS4zOGMtLjM5LS4xLS43OC0uMTUtMS4xOC0uMTUtLjQyIDAtLjguMDgtMS4xNi4yMy0uMzQuMTUtLjY0LjM3LS44OC42Ni0uMjUuMjktLjQ0LjY0LS41NyAxLjA1YTQuOTUgNC45NSAwIDAwLS4wMyAyLjc0Yy4xMS40MS4yOS43Ni41MiAxLjA1LjI0LjMuNTMuNTIuODguNjguMzUuMTYuNzYuMjQgMS4yMy4yNGE1LjggNS44IDAgMDAxLjM3LS4xNnYtMy4xem0yLjU4IDFjMC0uNTYuMDgtMS4wNC4yNC0xLjQ1LjE2LS40Mi4zNy0uNzYuNjMtMS4wMy4yNy0uMjcuNTctLjQ4LjkxLS42MS4zNS0uMTQuNy0uMiAxLjA2LS4yLjg0IDAgMS40OC4yNiAxLjkzLjc4LjQ1LjUyLjY3IDEuMzIuNjcgMi40di4zOWgtNC4yOGMuMDUuNjUuMjQgMS4xNC41NiAxLjQ4LjMzLjMzLjg0LjUgMS41NC41YTQuMSA0LjEgMCAwMDEuNi0uM2wuMTUuOTRhNS4wOCA1LjA4IDAgMDEtMS44Ny4zNWMtLjU0IDAtMS4wMS0uMDktMS40MS0uMjVhMi42MyAyLjYzIDAgMDEtMS41NS0xLjdjLS4xMi0uNC0uMTgtLjg0LS4xOC0xLjN6bTQuMjgtLjYyYzAtLjUtLjEyLS45Mi0uMzgtMS4yNGExLjMgMS4zIDAgMDAtMS4wNy0uNDkgMS40NyAxLjQ3IDAgMDAtMS4xOC41NCAxLjggMS44IDAgMDAtLjMyLjU1Yy0uMDcuMjEtLjEyLjQyLS4xNS42NGgzLjF6bTMuODItMi41MmgyLjM2di45NGgtMi4zNnYyLjg4YzAgLjMuMDIuNTcuMDcuNzcuMDUuMi4xMi4zNi4yMS40OC4xLjEyLjIyLjIuMzYuMjVhMi4zNyAyLjM3IDAgMDAxLjMxLS4wNGwuNDMtLjE3LjIyLjkzYTQuMTQgNC4xNCAwIDAxLTEuNTUuMzNjLS40MiAwLS43Ny0uMDUtMS4wNS0uMTYtLjI3LS4xLS41LS4yNy0uNjYtLjQ5YTEuOTUgMS45NSAwIDAxLS4zNi0uOGMtLjA3LS4zMS0uMS0uNjgtLjEtMS4xdi01LjU2bDEuMTItLjJ2MS45NHpNNzQuNDQgMThoLTEuMTF2LTYuMjRoMS4xMVYxOHptLS41Ni03LjM3YS43LjcgMCAwMS0uNzItLjczLjcuNyAwIDAxLjcyLS43My43LjcgMCAwMS43Mi43My43LjcgMCAwMS0uNzIuNzN6bTMuNTMgMS4xM2gyLjM2di45NGgtMi4zNnYyLjg4YzAgLjMuMDIuNTcuMDcuNzcuMDUuMi4xMi4zNi4yMi40OHMuMjEuMi4zNi4yNWEyLjM3IDIuMzcgMCAwMDEuMzEtLjA0bC40My0uMTcuMjEuOTNhNC4xNCA0LjE0IDAgMDEtMS41NS4zM2MtLjQyIDAtLjc3LS4wNS0xLjA1LS4xNi0uMjctLjEtLjUtLjI3LS42Ni0uNDlhMS45NSAxLjk1IDAgMDEtLjM2LS44Yy0uMDYtLjMxLS4xLS42OC0uMS0xLjF2LTUuNTZsMS4xMi0uMnYxLjk0em04Ljk5LTMuMDdhNC4zIDQuMyAwIDAxMS4zNC4ybC0uMi45NmEyLjcyIDIuNzIgMCAwMC0xLjA2LS4yYy0uNTIgMC0uODguMTQtMS4xLjQyLS4yLjI5LS4zLjY3LS4zIDEuMTV2LjU0aDIuNHYuOTRoLTIuNFYxOGgtMS4xMnYtNi44YzAtLjguMi0xLjQyLjU5LTEuODYuMzktLjQzIDEtLjY1IDEuODUtLjY1em00LjUgMi45NGEzLjQ3IDMuNDcgMCAwMS43LjA2IDEwLjQ2IDEwLjQ2IDAgMDEuNTQuMTJsLS4xOS45N2EzLjc0IDMuNzQgMCAwMC0yLjI0LS4wMlYxOGgtMS4xMnYtNS45OGE3LjU5IDcuNTkgMCAwMTIuMy0uNHptNy44MyAzLjI1YzAgLjUtLjA3Ljk0LS4yMSAxLjM0LS4xNS40LS4zNS43NS0uNjEgMS4wNC0uMjYuMjgtLjU3LjUtLjkzLjY2LS4zNi4xNi0uNzUuMjQtMS4xOC4yNC0uNDIgMC0uODEtLjA4LTEuMTctLjI0YTIuNjcgMi42NyAwIDAxLS45My0uNjYgMy4wNyAzLjA3IDAgMDEtLjYtMS4wNGMtLjE1LS40LS4yMi0uODQtLjIyLTEuMzQgMC0uNDkuMDctLjkzLjIxLTEuMzQuMTUtLjQuMzUtLjc1LjYtMS4wNGEyLjkzIDIuOTMgMCAwMTIuMS0uOWMuNDQgMCAuODMuMDggMS4xOS4yNC4zNi4xNS42Ny4zOC45My42Ni4yNi4zLjQ2LjY0LjYgMS4wNC4xNS40LjIyLjg1LjIyIDEuMzR6bS0xLjE2IDBjMC0uNy0uMTYtMS4yNi0uNDgtMS42N2ExLjU0IDEuNTQgMCAwMC0xLjI5LS42MmMtLjU0IDAtLjk3LjItMS4yOS42Mi0uMzEuNC0uNDcuOTctLjQ3IDEuNjdzLjE2IDEuMjYuNDcgMS42N2MuMzIuNDIuNzUuNjIgMS4zLjYyLjU0IDAgLjk3LS4yIDEuMjgtLjYyLjMyLS40LjQ4LS45Ny40OC0xLjY3em0yLjczLTIuOTRhOC43MSA4LjcxIDAgMDEyLjQ3LS4zMWMuNCAwIC43NC4wNSAxLjAxLjE2LjI4LjEuNS4yNy42OS40N2E0LjMgNC4zIDAgMDEuNy0uMzdjLjE4LS4wNy4zOC0uMTMuNi0uMTguMjEtLjA2LjQ0LS4wOC42OS0uMDguNDggMCAuODcuMDcgMS4xOC4yLjMuMTUuNTQuMzUuNzEuNi4xNy4yNi4yOS41Ni4zNS45MS4wNi4zNi4wOS43NC4wOSAxLjE2VjE4aC0xLjEydi0zLjI2YzAtLjM3LS4wMi0uNjktLjA1LS45NS0uMDQtLjI3LS4xLS40OS0uMi0uNjZhLjkzLjkzIDAgMDAtLjQxLS40IDIuNDcgMi40NyAwIDAwLTEuNi4wMmMtLjI0LjExLS40MS4yLS41LjI4YTYuMSA2LjEgMCAwMS4yIDEuNDZWMThoLTEuMTJ2LTMuMjZjMC0uMzctLjAyLS42OS0uMDYtLjk1YTEuOTEgMS45MSAwIDAwLS4yMS0uNjYuOTMuOTMgMCAwMC0uNDEtLjQgMS40OSAxLjQ5IDAgMDAtLjY1LS4xMiA1Ljc5IDUuNzkgMCAwMC0xLjI0LjEyVjE4aC0xLjEydi02LjA2em0xNC4xNS0uMThoMi4zN3YuOTRoLTIuMzd2Mi44OGMwIC4zLjAzLjU3LjA3Ljc3LjA1LjIuMTIuMzYuMjIuNDhzLjIyLjIuMzYuMjVhMi4zNyAyLjM3IDAgMDAxLjMxLS4wNGwuNDMtLjE3LjIyLjkzYTQuMTQgNC4xNCAwIDAxLTEuNTUuMzNjLS40MyAwLS43OC0uMDUtMS4wNS0uMTYtLjI4LS4xLS41LS4yNy0uNjctLjQ5YTEuOTUgMS45NSAwIDAxLS4zNS0uOGMtLjA3LS4zMS0uMS0uNjgtLjEtMS4xdi01LjU2bDEuMTEtLjJ2MS45NHptMy43OCA2LjI0VjguODhsMS4xMi0uMnYzLjJhMy43OCAzLjc4IDAgMDExLjM3LS4yNWMuNSAwIC45LjA3IDEuMjMuMi4zMy4xNS42LjM0Ljc5LjYuMi4yNS4zMy41NS40MS45LjA4LjM1LjEyLjc0LjEyIDEuMTdWMThoLTEuMTF2LTMuMjZjMC0uMzktLjAzLS43Mi0uMDgtLjk5cy0uMTQtLjQ5LS4yNi0uNjZhMS4wMiAxLjAyIDAgMDAtLjQ4LS4zNiAyLjEgMi4xIDAgMDAtLjc0LS4xMiA3Ljk5IDcuOTkgMCAwMC0xLjI1LjJWMThoLTEuMTJ6bTYuNS0zLjFjMC0uNTYuMDktMS4wNC4yNS0xLjQ1LjE2LS40Mi4zNy0uNzYuNjMtMS4wMy4yNy0uMjcuNTctLjQ4LjkxLS42MS4zNS0uMTQuNy0uMiAxLjA2LS4yLjg0IDAgMS40OC4yNiAxLjkzLjc4LjQ1LjUyLjY3IDEuMzIuNjcgMi40di4zOWgtNC4yOGMuMDUuNjUuMjQgMS4xNC41NiAxLjQ4LjMzLjMzLjg0LjUgMS41NC41YTQuMSA0LjEgMCAwMDEuNi0uM2wuMTUuOTRhNS4wOCA1LjA4IDAgMDEtMS44Ny4zNWMtLjU0IDAtMS4wMS0uMDktMS40MS0uMjVhMi42MyAyLjYzIDAgMDEtMS41NS0xLjdjLS4xMi0uNC0uMTgtLjg0LS4xOC0xLjN6bTQuMjktLjYyYzAtLjUtLjEyLS45Mi0uMzgtMS4yNGExLjMgMS4zIDAgMDAtMS4wNy0uNDkgMS40NyAxLjQ3IDAgMDAtMS4xOC41NCAxLjggMS44IDAgMDAtLjMyLjU1Yy0uMDcuMjEtLjEyLjQyLS4xNS42NGgzLjF6TTU1LjkzIDM5LjM0YzIuNDMgMCAzLjY1LS44MyAzLjY1LTIuNSAwLS41LS4xMS0uOTQtLjMzLTEuMy0uMjEtLjM2LS41LS42Ny0uODctLjk0LS4zNy0uMjYtLjgtLjQ5LTEuMjYtLjY4LS40OC0uMi0uOTgtLjM4LTEuNS0uNTgtLjYxLS4yLTEuMTktLjQ0LTEuNzMtLjdhNi4wNSA2LjA1IDAgMDEtMS40Mi0uOTRjLS40LS4zNi0uNzEtLjc5LS45NS0xLjI4LS4yMy0uNS0uMzQtMS4xLS4zNC0xLjggMC0xLjQ2LjUtMi42IDEuNDgtMy40MSAxLS44MiAyLjM2LTEuMjMgNC4xLTEuMjMgMS4wMiAwIDEuOTMuMTEgMi43Ni4zMy44Mi4yMSAxLjQyLjQ1IDEuOC43bC0uNzQgMS45YTguMDUgOC4wNSAwIDAwLTMuODItLjkxYy0uNDQgMC0uODYuMDUtMS4yNC4xNC0uMzguMS0uNzIuMjQtMSAuNDQtLjMuMTktLjUyLjQzLS43LjczLS4xNi4zLS4yNC42NC0uMjQgMS4wNCAwIC40NS4wOC44My4yNiAxLjEzLjE4LjMuNDIuNTcuNzQuOC4zMi4yNC43LjQ1IDEuMTIuNjQuNDIuMi45LjM4IDEuNC41OC43Mi4yOCAxLjM4LjU3IDEuOTguODYuNi4yOSAxLjEyLjYzIDEuNTYgMS4wMy40NC40Ljc4Ljg4IDEuMDIgMS40My4yNC41NS4zNiAxLjIyLjM2IDIgMCAxLjQ2LS41MyAyLjU4LTEuNiAzLjM2LTEuMDYuNzktMi41NiAxLjE4LTQuNSAxLjE4YTExLjU0IDExLjU0IDAgMDEtNS4xMy0xLjE4bC43LTEuOTJhOC42MyA4LjYzIDAgMDA0LjQ0IDEuMDh6bTguNzYtMTAuNDZjLjUxLS4xMyAxLjE5LS4yNiAyLjA0LS40Ljg1LS4xNSAxLjgyLS4yMiAyLjkzLS4yMi45OSAwIDEuODEuMTQgMi40Ny40Mi42NS4yOCAxLjE4LjY3IDEuNTcgMS4xNy40LjUuNjcgMS4xMS44MyAxLjgxLjE2LjcuMjQgMS40OC4yNCAyLjMzVjQxaC0yLjIzdi02LjUzYzAtLjc3LS4wNi0xLjQyLS4xNi0xLjk3LS4xLS41NC0uMjgtLjk4LS41Mi0xLjMyYTIuMDQgMi4wNCAwIDAwLS45Ni0uNzNjLS40LS4xNS0uOS0uMjMtMS40OC0uMjNhMTEuOTMgMTEuOTMgMCAwMC0yLjEuMTdsLS40LjA3VjQxaC0yLjIzVjI4Ljg4em0xOCAxMC41MWMuNTMgMCAxLS4wMSAxLjQtLjAzLjQxLS4wMy43NS0uMDcgMS4wMi0uMTRWMzUuNWEyLjg2IDIuODYgMCAwMC0uNzgtLjIgOC42OCA4LjY4IDAgMDAtMi4zNy0uMDEgMy4zIDMuMyAwIDAwLTEuMDQuM2MtLjMuMTUtLjU3LjM2LS43OC42Mi0uMi4yNy0uMy42MS0uMyAxLjA1IDAgLjguMjUgMS4zNS43NiAxLjY2YTQgNCAwIDAwMi4wOS40N3ptLS4yLTExLjE4Yy45IDAgMS42Ni4xMSAyLjI3LjM1LjYyLjIzIDEuMTIuNTYgMS41Ljk4LjM3LjQyLjY0LjkzLjggMS41MS4xNi41OS4yNCAxLjIzLjI0IDEuOTN2Ny44bC0uOC4xNGEyMy4zNyAyMy4zNyAwIDAxLTIuNTguMjhjLS41LjA0LTEgLjA2LTEuNS4wNi0uNyAwLTEuMzUtLjA3LTEuOTQtLjIxLS42LS4xNS0xLjEtLjM3LTEuNTQtLjY5YTMuMTMgMy4xMyAwIDAxLTEtMS4yMyA0LjMzIDQuMzMgMCAwMS0uMzYtMS44NSAzLjM1IDMuMzUgMCAwMTEuNTYtMi45OGMuNDgtLjMgMS4wNC0uNTIgMS42OC0uNjdhOS4xNiA5LjE2IDAgMDEzLjQtLjA4IDQwLjg3IDQwLjg3IDAgMDEuOS4xOHYtLjYzYzAtLjM2LS4wNS0uNzMtLjEzLTEuMDlhMi41IDIuNSAwIDAwLS40My0uOTZjLS4yLS4yOC0uNS0uNS0uODUtLjY3YTMuMzQgMy4zNCAwIDAwLTEuNC0uMjVjLS43NCAwLTEuMzkuMDUtMS45NC4xNS0uNTUuMS0uOTYuMjItMS4yMy4zM2wtLjI3LTEuODVjLjI5LS4xMy43Ny0uMjUgMS40NC0uMzcuNjctLjEyIDEuNC0uMTggMi4xOS0uMTh6bTE3LjE3IDYuNTdjMC0xLjQ1LS4zNi0yLjU3LTEuMDgtMy4zNmEzLjcyIDMuNzIgMCAwMC0yLjg4LTEuMTdjLS42OCAwLTEuMi4wMi0xLjU4LjA3LS4zNy4wNS0uNjcuMS0uOS4xN3Y3Ljg3Yy4yOC4yMi42Ny40NCAxLjE4LjY1YTQuNDIgNC40MiAwIDAwMy4zMi0uMDRjLjQ2LS4yMy44My0uNTUgMS4xMi0uOTYuMjktLjQuNS0uODkuNjItMS40NC4xMy0uNTUuMi0xLjE1LjItMS43OXptMi4zMiAwYTguOCA4LjggMCAwMS0uMzcgMi42MmMtLjI1LjgtLjYxIDEuNDktMS4wOSAyLjA2YTQuOTYgNC45NiAwIDAxLTEuNzYgMS4zNWMtLjcuMzItMS41LjQ4LTIuNC40OGE1LjggNS44IDAgMDEtMy4xNC0uODR2NC45OUg5MVYyOC45bDEuOTgtLjQyYy44LS4xNSAxLjcxLS4yMiAyLjc1LS4yMmE3IDcgMCAwMTIuNi40NSA1LjU1IDUuNTUgMCAwMTMuMjIgMy4zNWMuMy44LjQ0IDEuNzIuNDQgMi43MnptMTIuNyA0LjU2YzIuNDMgMCAzLjY1LS44MyAzLjY1LTIuNSAwLS41LS4xMS0uOTQtLjMzLTEuMy0uMjEtLjM2LS41LS42Ny0uODctLjk0LS4zNy0uMjYtLjc5LS40OS0xLjI2LS42OC0uNDctLjItLjk3LS4zOC0xLjUtLjU4LS42MS0uMi0xLjE5LS40NC0xLjczLS43YTYuMDUgNi4wNSAwIDAxLTEuNDItLjk0Yy0uNC0uMzYtLjcxLS43OS0uOTQtMS4yOC0uMjQtLjUtLjM1LTEuMS0uMzUtMS44IDAtMS40Ni41LTIuNiAxLjQ5LTMuNDEuOTktLjgyIDIuMzYtMS4yMyA0LjEtMS4yMyAxIDAgMS45Mi4xMSAyLjc1LjMzLjgyLjIxIDEuNDMuNDUgMS44MS43bC0uNzQgMS45YTguMDUgOC4wNSAwIDAwLTMuODItLjkxYy0uNDUgMC0uODYuMDUtMS4yNS4xNC0uMzguMS0uNzIuMjQtMSAuNDQtLjMuMTktLjUyLjQzLS42OS43My0uMTcuMy0uMjUuNjQtLjI1IDEuMDQgMCAuNDUuMDkuODMuMjYgMS4xMy4xOC4zLjQzLjU3Ljc1LjguMzIuMjQuNjkuNDUgMS4xMS42NC40My4yLjkuMzggMS40LjU4LjczLjI4IDEuMzkuNTcgMS45OS44Ni42LjI5IDEuMTIuNjMgMS41NiAxLjAzLjQ0LjQuNzguODggMS4wMiAxLjQzLjI0LjU1LjM2IDEuMjIuMzYgMiAwIDEuNDYtLjU0IDIuNTgtMS42IDMuMzYtMS4wNi43OS0yLjU2IDEuMTgtNC41IDEuMThhMTEuNTQgMTEuNTQgMCAwMS01LjE0LTEuMThsLjctMS45MmE4LjYzIDguNjMgMCAwMDQuNDQgMS4wOHptMTAuODUtMTAuODJoNC43M3YxLjg3aC00LjczdjUuNzZjMCAuNjMuMDUgMS4xNC4xNCAxLjU1LjEuNC4yNC43My40My45Ni4yLjIzLjQ0LjQuNzIuNWE0Ljc0IDQuNzQgMCAwMDIuNjMtLjA4bC44NS0uMzQuNDQgMS44NWMtLjIzLjExLS42Mi4yNS0xLjE4LjQyLS41Ni4xNy0xLjIuMjUtMS45Mi4yNS0uODUgMC0xLjU1LS4xLTIuMS0uMzJzLTEtLjU0LTEuMzMtLjk3YTMuOSAzLjkgMCAwMS0uNzEtMS42Yy0uMTQtLjYzLS4yLTEuMzYtLjItMi4yVjI1LjA1bDIuMjMtLjM4djMuODZ6bTE4LjI0IDYuMjRjMCAxLS4xNSAxLjg5LS40MyAyLjY5LS4zLjgtLjcgMS40OS0xLjIyIDIuMDZhNS4zMyA1LjMzIDAgMDEtMS44NiAxLjMzYy0uNzIuMzItMS41LjQ3LTIuMzUuNDctLjg1IDAtMS42My0uMTUtMi4zNS0uNDdhNS4zMyA1LjMzIDAgMDEtMS44Ni0xLjMzIDYuMTUgNi4xNSAwIDAxLTEuMjEtMi4wNiA3LjkgNy45IDAgMDEtLjQzLTIuNjljMC0uOTguMTQtMS44Ny40My0yLjY4LjI5LS44LjY5LTEuNSAxLjIxLTIuMDdhNS4zMyA1LjMzIDAgMDExLjg2LTEuMzNjLjcyLS4zMiAxLjUtLjQ3IDIuMzUtLjQ3Ljg1IDAgMS42My4xNSAyLjM1LjQ3LjcyLjMgMS4zNC43NSAxLjg2IDEuMzMuNTIuNTcuOTMgMS4yNyAxLjIyIDIuMDcuMjguODEuNDMgMS43LjQzIDIuNjh6bS0yLjMzIDBjMC0xLjQtLjMyLTIuNTItLjk1LTMuMzVhMy4wOCAzLjA4IDAgMDAtMi41OC0xLjIzYy0xLjA5IDAtMS45NS40LTIuNTggMS4yM2E1LjM3IDUuMzcgMCAwMC0uOTUgMy4zNWMwIDEuNC4zMiAyLjUyLjk1IDMuMzUuNjMuODIgMS41IDEuMjMgMi41OCAxLjIzIDEuMDkgMCAxLjk1LS40IDIuNTgtMS4yMy42My0uODMuOTUtMS45NC45NS0zLjM1em0xMC4wOC02LjVhNi45NCA2Ljk0IDAgMDExLjQuMTMgMjAuOTIgMjAuOTIgMCAwMTEuMS4yM2wtLjM5IDEuOTRhNy40OCA3LjQ4IDAgMDAtNC40OS0uMDVWNDFoLTIuMjNWMjkuMDVjLjUzLS4yIDEuMTktLjM3IDEuOTctLjU0Ljc4LS4xNyAxLjY2LS4yNSAyLjY0LS4yNXptMy45NiA2LjUyYzAtMS4xLjE2LTIuMDYuNDgtMi44OS4zMi0uODIuNzQtMS41IDEuMjctMi4wNWE1LjE2IDUuMTYgMCAwMTEuODMtMS4yMiA1LjcgNS43IDAgMDEyLjEtLjQxYzEuNjkgMCAyLjk4LjUyIDMuODcgMS41Ny45IDEuMDUgMS4zNSAyLjY0IDEuMzUgNC43OXYuMzdjMCAuMTUtLjAxLjMtLjAzLjQyaC04LjU0Yy4xIDEuMy40NyAyLjI4IDEuMTMgMi45NS42NS42NyAxLjY4IDEuMDEgMy4wNyAxLjAxYTguMTkgOC4xOSAwIDAwMy4xOS0uNmwuMzEgMS44N2MtLjI3LjE1LS43NS4zLTEuNDMuNDYtLjY4LjE2LTEuNDUuMjQtMi4zMS4yNGE3LjM1IDcuMzUgMCAwMS0yLjgyLS41IDUuMjYgNS4yNiAwIDAxLTMuMS0zLjQgOC42OCA4LjY4IDAgMDEtLjM3LTIuNnptOC41Ny0xLjIyYy4wMS0xLS4yNC0xLjg0LS43Ni0yLjQ4YTIuNiAyLjYgMCAwMC0yLjE1LS45OCAyLjk0IDIuOTQgMCAwMC0yLjM1IDEuMDhjLS4yNy4zMi0uNDguNy0uNjMgMS4xLS4xNi40Mi0uMjYuODUtLjMgMS4yOGg2LjE5eiIgZmlsbD0iI0ZGRiIvPjwvZz48L3N2Zz4=" alt="Get it from the Snap Store"></span>
+        </div>
+        <p class="note">The Snap bundles Python and FFmpeg.</p>
+      </div>
+    </figure>
+
+    <figure class="state">
+      <figcaption>data-platform="windows"</figcaption>
+      <div class="inner">
+        <span class="picker">
+          <a>macOS</a><a aria-selected="true">Windows</a><a>Linux</a>
+        </span>
+        <div class="cta">
+          <span class="cmd"><code><span class="p">&gt;</span>pipx install bristlenose</code>
+            <button type="button" data-copy="pipx install bristlenose"><span data-icon="copy"></span> Copy</button></span>
+        </div>
+        <p class="note">Bristlenose runs from the command line.
+          You will need Python and FFmpeg.</p>
+      </div>
+    </figure>
+  </div>
+
+  <h3>Prior art</h3>
+  <p class="k">Rendered, not fetched — the markdown of these pages shows their
+     no-JS fallback, which is a different (and separately useful) thing.</p>
+  <table class="pa">
+    <tr><th>Product</th><th>Detects</th><th>Switcher</th><th>What was taken</th></tr>
+    <tr><td>Ollama</td><td>Yes — <code>/download</code> resolves server-side to <code>/download/mac</code></td>
+        <td>Icon tab row inside a <code>&lt;nav&gt;</code>, selected tab gets a pill</td>
+        <td>The mechanic. Tabs are real links to real URLs, so they survive JS being off and can be sent to someone. Rejected the icon-only labels — see E4.</td></tr>
+    <tr><td>VS&nbsp;Code</td><td>Yes</td><td>None — one button, plus a 12px link reading “Web, Insiders edition, or other platforms”</td>
+        <td>Hero restraint, and the fallback: with JS off the page renders all four platform buttons rather than nothing.</td></tr>
+    <tr><td>Signal</td><td>Yes</td><td>A “Not on Mac?” heading below the button</td>
+        <td>Plain-language escape hatch. Beats “Other platforms” as a phrase, though a hero has no room for the heading.</td></tr>
+    <tr><td>Zed</td><td>No</td><td>All three stacked; the segmented control is Stable/Preview, not OS</td>
+        <td>The shell one-liner sits exactly where the Download button sits on the other two. That is the licence for E5.</td></tr>
+    <tr><td>Tailscale</td><td>—</td><td>Horizontal platform tab row</td>
+        <td>“Install with one command” — same treatment of a command as a primary action.</td></tr>
+    <tr><td>Ghostty</td><td>No</td><td>Section headings per platform</td>
+        <td>What the JS-off state of this variant looks like.</td></tr>
+  </table>
+
+  <h3>Flagged — decide before this ships</h3>
+  <p class="flag"><b>The Snap has no stable channel.</b> The store API returns one
+     entry: <code>latest/edge</code>, 0.27.0, amd64, released 22 Aug 2026. So a
+     bare <code>sudo snap install bristlenose</code> fails — it needs
+     <code>--edge</code>. The page never says otherwise: it prints no command,
+     and the badge points at the store listing, which shows the real state.
+     Naming the channel in the note was tried and cut as inside baseball — which
+     is the right call, and it means <b>nothing on the page now discloses this</b>.
+     The fix is a stable release, not copy.</p>
+  <p class="flag"><b>The install doc does not mention Snap at all.</b>
+     <code>docs-src/install.md</code> § Linux offers only pipx and uv, while the
+     homepage has carried the Snap badge throughout. One of the two is wrong.</p>
+  <p class="flag"><b>Android lands on macOS.</b> Android reports a Linux platform
+     string, so honest detection would send a phone to the Linux tab and offer it
+     a Snap. There is no mobile build at all, so the script sends mobile to the
+     flagship instead. Worth a look if mobile traffic is non-trivial.</p>
+  <p class="flag"><b>arm64 Linux is unserved.</b> The only Snap revision is amd64.
+     A Raspberry Pi or an Ampere box gets a badge that leads to a store page with
+     nothing for it.</p>
+</div>
+
+</div>
+
+<footer class="foot">
+  <div class="links"><a href="https://bristlenose.app/docs/">Docs</a><a href="https://bristlenose.app/privacy.html">Privacy</a><a href="https://bristlenose.app/terms.html">Terms</a></div>
+  <p class="note">&copy; 2026 Martin Storey &middot; AGPL-3.0</p>
+</footer>
+
+<span class="vtag">variant E — platform CTA</span>
+
+<script>
+/* ---- Lucide copy glyph (same source as site.js) ---- */
+const ICONS={
+ 'copy':'<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+ 'check':'<path d="M20 6 9 17l-5-5"/>'};
+function paintIcons(root){(root||document).querySelectorAll('[data-icon]').forEach(el=>{
+  const g=ICONS[el.dataset.icon]; if(!g)return;
+  el.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '+
+               'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+g+'</svg>';});}
+paintIcons();
+
+/* ---- E1/E2: the switcher ----
+   The head script already picked the platform. This only handles
+   interaction: click, arrow keys, and keeping the URL in step. */
+const TABS=[...document.querySelectorAll('.picker[role=tablist] a[role=tab]')];
+const root=document.documentElement;
+
+function select(p,focus){
+  root.setAttribute('data-platform',p);
+  TABS.forEach(t=>{
+    const on = t.getAttribute('href')==='#'+p;
+    t.setAttribute('aria-selected',on?'true':'false');
+    t.tabIndex = on?0:-1;                       // roving tabindex
+    if(on&&focus)t.focus();
+  });
+  /* replaceState, not pushState — a platform switch is a preference,
+     not a place. Back should leave the page, not undo three clicks. */
+  history.replaceState(null,'','#'+p);
+}
+const PLATFORMS=['mac','windows','linux'];
+const fromHash=()=>PLATFORMS.includes((location.hash||'').slice(1))?location.hash.slice(1):null;
+
+select(root.getAttribute('data-platform'),false);
+
+/* Pin the scroll for a deep-link arrival. Three shots because the jump can
+   land before parse ends, on the frame after, or as late as `load`. Only
+   ever runs when the head script consumed one of OUR hashes, so a real
+   in-page anchor elsewhere is untouched. */
+if(root.hasAttribute('data-hash-consumed')){
+  const top=()=>window.scrollTo(0,0);
+  top(); requestAnimationFrame(top); addEventListener('load',top,{once:true});
+}
+
+/* Same-document fragment navigation does not re-run the head script. Without
+   this, following a link to #windows from ON the page changes the URL and
+   nothing else — the panel stays on whatever was already showing. */
+addEventListener('hashchange',()=>{const p=fromHash(); if(p&&p!==root.getAttribute('data-platform'))select(p,false);});
+
+TABS.forEach((t,i)=>{
+  t.addEventListener('click',e=>{e.preventDefault();select(t.getAttribute('href').slice(1),false);});
+  t.addEventListener('keydown',e=>{
+    const d = e.key==='ArrowRight'?1 : e.key==='ArrowLeft'?-1 : 0;
+    if(d){e.preventDefault();select(TABS[(i+d+TABS.length)%TABS.length].getAttribute('href').slice(1),true);}
+    if(e.key==='Home'){e.preventDefault();select(TABS[0].getAttribute('href').slice(1),true);}
+    if(e.key==='End'){e.preventDefault();select(TABS[TABS.length-1].getAttribute('href').slice(1),true);}
+  });
+});
+
+/* ---- copy button (same behaviour as site.js wireCopy) ---- */
+document.querySelectorAll('[data-copy]').forEach(b=>{
+  b.addEventListener('click',()=>{
+    navigator.clipboard&&navigator.clipboard.writeText(b.dataset.copy);
+    b.innerHTML='<span data-icon="check"></span> Copied'; paintIcons(b);
+    setTimeout(()=>{b.innerHTML='<span data-icon="copy"></span> Copy';paintIcons(b);},1400);
+  });
+});
+</script>
+</body>
+</html>

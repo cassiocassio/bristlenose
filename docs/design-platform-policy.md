@@ -85,11 +85,12 @@ Coupled with macOS — bump alongside. The sidecar's Python.framework + Hardened
 
 Things we know we're pinned at, with re-check dates. When a re-check date comes due in a quarterly review, the pin gets re-validated or removed.
 
+**This table is not the only hold list.** Bumps held for an *ecosystem* reason — a coupling cluster that has to move as a wave — live in the **Held register** at the top of [`dependency-premortem-log.md`](dependency-premortem-log.md), each as a `(reason, release-predicate)` pair that `/cassandra --watch` re-evaluates against fresh metadata. This table is for pins we hold for *our own* reasons. Check both before concluding a dependency is free to move.
+
 | Pin | Reason | Re-check |
 |---|---|---|
-| **CI Node 20** | Inertia from initial CI setup; Node 24 lands in runner images. Bumping is selective-major decision. | June 2026 (post-WWDC, alongside any Node news) |
 | **jsdom pinned to 27.x in `frontend/package.json`** | jsdom 29 dropped Web Storage polyfill; was unsafe with Node 25 (see CHANGELOG v0.14.5). Test fix landed in v0.15.3 (#99) clears the assertion blocker; `#89` (jsdom → 29) is open and will land next. | Re-check once `#89` merges |
-| **lighthouse 12.x** | Lighthouse 13 requires Node ≥22.19; CI is on 20. Bump alongside Node. | Same as Node bump |
+| **lighthouse 12.x** | Lighthouse 13 requires Node ≥22.19. **The stated blocker is gone** — CI resolves Node from `.tool-versions` (node 24), not the 20 this row assumed. The pin now has no recorded reason; re-validate or drop it rather than carrying it on a premise that expired. | Next quarterly review — carries no live blocker |
 | **Python 3.14** | macOS `ensurepip` broken for `python -m venv` (CLAUDE.md gotcha). Watch upstream. | October 2026 (post 3.14.1) |
 | **Python 3.10 floor** | EOL October 2026. Decision point. | Quarterly review preceding the EOL |
 | **macOS deployment target 15.0** | Sequoia is n-1; avoids SwiftUI back-compat work. | When Sequoia becomes n-2 (autumn 2026 if macOS 27 ships on time) |

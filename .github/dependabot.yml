@@ -50,6 +50,19 @@ updates:
       # ecosystem with them. Bump in coordinated tooling sprints, not
       # one-off PRs. Leave most pip majors flowing — Python wheel
       # ecosystem is more stable major-to-major than npm.
+      # anthropic 1.0.0 removed `temperature` from messages.create AND the
+      # signature has no **kwargs, so client.py:529 raises a hard TypeError on
+      # every Claude call — the default provider, so the main path. Every
+      # anthropic test mocks messages.create and a mock accepts any kwarg, so
+      # 4246 tests were green against the break; it surfaced only as inventory
+      # drift at release preflight.
+      # LIFTS WHEN: _analyze_anthropic stops passing temperature as a named
+      # kwarg, and the product question is settled — the Mac app has a live
+      # temperature slider (LLMSettingsView.swift:494, 21 locales) that is
+      # inert on Claude if Anthropic is right that current models ignore it.
+      # See docs/dependency-premortem-log.md Entry 6 + the Held register.
+      - dependency-name: "anthropic"
+        update-types: ["version-update:semver-major"]
       - dependency-name: "pydantic"
         update-types: ["version-update:semver-major"]
       - dependency-name: "fastapi"

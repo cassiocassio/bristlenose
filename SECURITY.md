@@ -179,9 +179,9 @@ So an export shared outside the research team carries participant names unless y
 - The Markdown summary includes display names when available
 - `people.yaml` in the output directory stores both display names and full names
 
-**Design intent:** Display names are a working tool for the research team (researchers, moderators, observers who were on the call). When findings are presented to a wider audience — product teams, stakeholders, executives — the speaker codes provide the anonymisation boundary. The HTML export (Export Report) strips display names by default, making this the safe path for external distribution. Anonymisation is controlled by a checkbox in the export dialog.
+**Design intent:** Display names are a working tool for the research team (researchers, moderators, observers who were on the call). When findings are presented to a wider audience — product teams, stakeholders, executives — the speaker codes provide the anonymisation boundary. Anonymisation is controlled by a checkbox in the export dialog — **it is off by default**, so an export carries display names unless the researcher ticks it. (An earlier version of this paragraph said the export strips names by default. It does not, and never did: both the query parameter and the dialog checkbox default off. Corrected 25 Aug 2026.)
 
-Moderator and observer names (m1, m2, o1) are not stripped — they are part of the research team, not research subjects.
+Moderator and observer names (m1, m2, o1) are not stripped. The boundary is **participant / not-participant**, not team membership: the ethics of anonymisation apply to research subjects, not to colleagues and collaborators. A client-side observer is not on the research team and is still named, because they are not a subject — you may see their clarifying questions attributed in an exported transcript and see them in the people list. They never appear in the Quotes lens, because quotes are participant evidence. See `docs/design-people.md` §E decision 2.
 
 ## Serve mode API access control
 

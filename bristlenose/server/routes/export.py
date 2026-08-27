@@ -102,8 +102,15 @@ def _anonymise_data(endpoints: dict[str, Any]) -> None:
     """Strip participant names from all embedded data (shallow anonymisation).
 
     Keeps moderator (m*) and observer (o*) names.  Replaces participant
-    (p*) full_name/short_name with empty strings.  Mutates ``endpoints`` in
-    place; keys are relative API paths (see export_report).
+    (p*) full_name/short_name/role with empty strings.  Mutates ``endpoints``
+    in place; keys are relative API paths (see export_report).
+
+    The boundary is the *participant* line, not team membership: the ethics of
+    anonymisation apply to research subjects, not to colleagues and
+    collaborators, so a client-side observer is named and a participant is not
+    (docs/design-people.md §E decision 2).  ``/sessions``' top-level
+    ``moderator_names``/``observer_names`` are deliberately untouched for the
+    same reason.
     """
     # People map
     people = endpoints.get("/people") or {}
@@ -111,6 +118,12 @@ def _anonymise_data(endpoints: dict[str, Any]) -> None:
         if code.startswith("p"):
             info["full_name"] = ""
             info["short_name"] = ""
+            # role is the LLM-extracted job title.  SECURITY.md names
+            # job-title-plus-employer as the canonical indirect identifier and
+            # design-export-html.md decided it is removed when anonymised; it
+            # renders nowhere in the SPA, so it was invisible in the UI and
+            # present in View Source.
+            info["role"] = ""
 
     # Dashboard sessions — speaker names + featured quotes
     dashboard = endpoints.get("/dashboard") or {}

@@ -53,6 +53,32 @@ class TestPeopleGet:
         assert "short_name" in person
         assert "role" in person
 
+    def test_person_field_set_is_exactly_the_allowlist(
+        self, client: TestClient,
+    ) -> None:
+        """/people is allow-by-default at field level. Pin the field set.
+
+        The export anti-drift gate (tests/test_serve_export_coverage.py) is
+        route-granular: it fails when a new *route* is unclassified, and cannot
+        see a new *field* on an existing one.  So the only thing keeping
+        ``persona`` and ``notes`` — researcher free text about a named person,
+        the field most likely to carry Article 9 material — out of an exported
+        report is that ``get_people`` happens to build a three-key dict by hand.
+
+        This asserts the key set *exactly*, so adding a field to that dict is a
+        deliberate act with a red test attached rather than a silent widening of
+        what ships in a leave-behind.
+        """
+        allowed = {"full_name", "short_name", "role"}
+        data = client.get("/api/projects/1/people").json()
+        assert data, "fixture returned no people; this test asserted nothing"
+        for code, person in data.items():
+            assert set(person) == allowed, (
+                f"{code} carries {sorted(set(person) - allowed)} — a new field on "
+                f"/people ships in every anonymised export. Add it to the "
+                f"allowlist only with a decision about disclosure."
+            )
+
     def test_404_nonexistent_project(self, client: TestClient) -> None:
         resp = client.get("/api/projects/999/people")
         assert resp.status_code == 404

@@ -337,20 +337,74 @@ class TestExportAnonymise:
         data = self._extract_export_data(
             client.get("/api/projects/1/export?anonymise=true").text,
         )
+        checked = 0
         for code, person in data["endpoints"]["/people"].items():
             if code.startswith("p"):
+                checked += 1
                 assert person["full_name"] == ""
                 assert person["short_name"] == ""
+        # Without this the loop body can execute zero times and the test passes
+        # while asserting nothing — the fail-open shape this file had until
+        # 25 Aug 2026.
+        assert checked, "fixture has no p-codes; this test asserted nothing"
 
-    def test_anonymise_keeps_moderator_names(self, client: TestClient) -> None:
+    def test_anonymise_strips_participant_job_titles(
+        self, client: TestClient,
+    ) -> None:
+        """role is the LLM-extracted job title.
+
+        It renders nowhere in the SPA, so it was invisible in the UI and
+        present in View Source of an anonymised export.  SECURITY.md names
+        job-title-plus-employer as the canonical indirect identifier.
+        """
         data = self._extract_export_data(
             client.get("/api/projects/1/export?anonymise=true").text,
         )
-        # Check if moderator names are preserved (m1 should keep its name)
+        checked = 0
         for code, person in data["endpoints"]["/people"].items():
-            if code.startswith("m"):
-                # Moderator names should NOT be empty (if they had a name)
-                pass  # Just verify they weren't blanked
+            if code.startswith("p"):
+                checked += 1
+                assert person["role"] == ""
+        assert checked, "fixture has no p-codes; this test asserted nothing"
+
+    def test_anonymise_keeps_moderator_and_observer_names(self) -> None:
+        """The boundary is the participant line, not team membership.
+
+        Moderators and observers are named because they are not research
+        subjects — a client-side observer is not on the research team and is
+        still named (docs/design-people.md §E decision 2).
+
+        Replaces a test whose body was a bare ``pass``.  Driven directly rather
+        than through the export fixture, which has an ``m1`` but no
+        ``people.yaml`` — so no moderator in it is named, and a fixture-driven
+        version of this test can only ever assert nothing.
+        """
+        from bristlenose.server.routes.export import _anonymise_data
+
+        endpoints = {
+            "/people": {
+                "p1": {"full_name": "Sarah Chen", "short_name": "Sarah",
+                       "role": "Ward sister, acute medicine"},
+                "m1": {"full_name": "Martin Storey", "short_name": "Martin",
+                       "role": "Senior UX researcher"},
+                "o1": {"full_name": "Jane Smith", "short_name": "Jane",
+                       "role": "Product manager, Meridian Health"},
+            },
+        }
+        _anonymise_data(endpoints)
+        people = endpoints["/people"]
+
+        # Participant: name and job title both go.
+        assert people["p1"]["full_name"] == ""
+        assert people["p1"]["short_name"] == ""
+        assert people["p1"]["role"] == ""
+
+        # Moderator and observer: untouched, including the job title.
+        assert people["m1"]["full_name"] == "Martin Storey"
+        assert people["m1"]["short_name"] == "Martin"
+        assert people["o1"]["full_name"] == "Jane Smith"
+        assert people["o1"]["short_name"] == "Jane"
+        assert people["o1"]["role"] == "Product manager, Meridian Health"
 
     def test_non_anonymised_preserves_data(self, client: TestClient) -> None:
         data = self._extract_export_data(

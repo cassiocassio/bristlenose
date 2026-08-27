@@ -151,7 +151,7 @@ onboarding was really confusing.
 | 1:1 | `{code} {name}.txt` | `p01.txt` |
 | 1:many | `{session_nn} {code} {name} {code} {name}.txt` | `01 p01 p02.txt` |
 
-**Anonymised transcript body:** Speaker labels use participant codes instead of names. Moderator names preserved (they're the research team, not subjects). Role titles removed entirely (can be identifying).
+**Anonymised transcript body:** Speaker labels use participant codes instead of names. Moderator *and observer* names preserved — the boundary is participant / not-participant, not team membership (`design-people.md` §E decision 2, settled 25 Aug 2026). Role titles removed entirely (can be identifying).
 
 **Export dialog (Stage 1):**
 
@@ -261,7 +261,7 @@ The export transcript renderer reuses these formatters. New work: human-readable
 2. **Transcripts default ON.** Lightweight, always useful, instant. No reason to exclude.
 3. **Anonymise label renamed.** "Remove participant names from labels" — accurate, not overpromising.
 4. **Moderator names preserved.** They're the research team, not subjects.
-5. **Role titles removed when anonymised.** "The one manager in the study" narrows the person down.
+5. **Role titles removed when anonymised.** "The one manager in the study" narrows the person down. **Implemented 25 Aug 2026** — `_anonymise_data` now blanks `role` alongside the names for `p*` codes, pinned by `test_anonymise_strips_participant_job_titles`. Participant-side only: moderators and observers keep their titles, because the boundary is the participant line and they are named anyway (`design-people.md` §E decision 2).
 6. **ExportDialog project ID.** Current code hardcodes `1` at line 70. All new endpoints must use correct project ID from route params.
 7. **Folder name uses `safe_filename()`** (from `bristlenose/utils/text.py`) — preserves spaces and case: `"Acme Onboarding Research"` not `"acme-onboarding-research"`. `slugify()` would lowercase and hyphenate.
 

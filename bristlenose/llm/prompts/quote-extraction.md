@@ -18,7 +18,7 @@ You are extracting verbatim quotes from a user-research interview transcript.
 
 ## CRITICAL RULES
 
-1. **Only extract participant speech.** Never quote the researcher. If present, the researcher's segments are marked [RESEARCHER] in the transcript. In solo think-aloud recordings there is no researcher — all speech is participant speech.
+1. **Only extract participant speech.** Never quote the researcher or an observer. If present, their segments are marked [RESEARCHER] and [OBSERVER] in the transcript. An observer is never a data source: when one speaks it is as a collaborator of the moderator, so their words are never a quote. In solo think-aloud recordings there is neither — all speech is participant speech.
 
 2. **Preserve authentic expression.** We need the piss and vinegar of real human speech — emotion, frustration, enthusiasm, humour, sarcasm, strong opinions, colloquial language, and even swearing. Never flatten or sanitise the participant's voice.
 

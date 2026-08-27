@@ -360,6 +360,71 @@ for _case in "failure:rerun --failed" "in_progress:watch" "success:view"; do
     esac
 done
 
+head_ "the copr token gate — a credential that expires between releases"
+# Copr API tokens last 180 days and this channel ships a few times a year, so
+# the token is reliably dead when it is next needed. The gate lives in
+# check-release-ready.sh because it matters AT release time; a calendar
+# reminder fires while you are doing something else.
+#
+# Driven as a unit: the block is eval'd with stub ok/warn/bad, so these assert
+# the DECISION rather than the whole preflight run. Same seam as
+# test-verify-channels.sh's lib mode.
+_copr_block=$(sed -n '/^# The Fedora Copr API token/,/^;; esac/p' "$ROOT/scripts/check-release-ready.sh")
+[ -n "$_copr_block" ] && ok "the copr block is locatable in check-release-ready.sh" \
+    || bad "could not extract the copr block — the assertions below prove nothing"
+
+# $1 = HOME to run against, $2 = extra PATH entry (for a copr-cli stub), $3 = owner
+_copr_verdict() {
+    bash -c '
+        set -uo pipefail
+        ok()   { printf "ok|%s|%s\n"   "$1" "${2:-}"; }
+        warn() { printf "warn|%s|%s\n" "$1" "${2:-}"; }
+        bad()  { printf "bad|%s|%s\n"  "$1" "${2:-}"; }
+        CHANNELS="copr"; COPR_OWNER="'"${3:-cassiocassio}"'"; HOME="'"$1"'"
+        [ -n "'"${2:-}"'" ] && PATH="'"${2:-}"':$PATH"
+        eval "$COPR_BLOCK"' 2>&1
+}
+export COPR_BLOCK="$_copr_block"
+_row() { printf '%s\n' "$1" | grep "|$2|" | head -1 | cut -d'|' -f1; }
+
+_W=$(mktemp -d); trap 'rm -rf "$_W"' EXIT INT TERM
+mkdir -p "$_W/none" "$_W/good/.config" "$_W/old/.config" "$_W/soon/.config" \
+         "$_W/noexp/.config" "$_W/stub"
+printf '# expiration date: 2099-01-01\n'                       > "$_W/good/.config/copr"
+printf '# expiration date: 2020-01-01\n'                       > "$_W/old/.config/copr"
+printf "# expiration date: $(date -v+10d +%Y-%m-%d 2>/dev/null || date -d '+10 days' +%Y-%m-%d)\n" \
+                                                                > "$_W/soon/.config/copr"
+printf '[copr-cli]\nlogin = x\n'                               > "$_W/noexp/.config/copr"
+
+eq "no config at all"      bad  "$(_row "$(_copr_verdict "$_W/none")"  "copr token")"
+eq "healthy expiry"        ok   "$(_row "$(_copr_verdict "$_W/good")"  "copr token")"
+eq "EXPIRED"               bad  "$(_row "$(_copr_verdict "$_W/old")"   "copr token")"
+eq "expiring within 30d"   warn "$(_row "$(_copr_verdict "$_W/soon")"  "copr token")"
+eq "no expiry recorded"    warn "$(_row "$(_copr_verdict "$_W/noexp")" "copr token")"
+
+# The read-back. An expiry comment is a CLAIM about the token; a hand-edited
+# file, a revoked token or the wrong username all read fine on expiry alone.
+printf '#!/bin/sh\necho cassiocassio\n' > "$_W/stub/copr-cli"; chmod +x "$_W/stub/copr-cli"
+eq "auth matches the owner" ok \
+    "$(_row "$(_copr_verdict "$_W/good" "$_W/stub" cassiocassio)" "copr auth")"
+eq "auth is a DIFFERENT owner" bad \
+    "$(_row "$(_copr_verdict "$_W/good" "$_W/stub" someone-else)" "copr auth")"
+printf '#!/bin/sh\nexit 1\n' > "$_W/stub/copr-cli"
+eq "token does not authenticate" bad \
+    "$(_row "$(_copr_verdict "$_W/good" "$_W/stub")" "copr auth")"
+eq "no copr-cli — unverified, not passed" warn \
+    "$(_row "$(_copr_verdict "$_W/good")" "copr auth")"
+
+# And the reason it is safe to ship before the channel exists: gated on
+# CHANNELS, so it renders nothing at all while copr is off.
+_off=$(bash -c '
+    set -uo pipefail
+    ok(){ echo ok; }; warn(){ echo warn; }; bad(){ echo bad; }
+    CHANNELS="pypi github"; COPR_OWNER="x"; HOME="'"$_W/none"'"
+    eval "$COPR_BLOCK"' 2>&1)
+[ -z "$_off" ] && ok "silent while copr is not in CHANNELS — no wolf cried" \
+    || bad "the gate fired with copr disabled: $_off"
+
 head_ "meta"
 _before=$FAIL
 _r=$(eq "deliberate" ok malformed 2>&1)

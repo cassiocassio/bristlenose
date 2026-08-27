@@ -676,11 +676,27 @@ work before anyone flips it.
 **Flip it in the same commit that creates the Copr project and lands its first green build.**
 That commit is: `copr` into `CHANNELS`, the `trigger-copr` job above, and the two secrets.
 
-**One recurring hazard worth pricing in:** the Copr API token expires every 180 days (this
-one on 23 Feb 2027), so a channel that ships a few times a year will find it dead exactly
-when it is next needed. A date-based reminder exists, but the durable home is
-`check-release-ready.sh` — the token matters at release time, and a gate that fires when it
-matters cannot be missed the way a calendar entry can.
+**One recurring hazard, now gated.** The Copr API token expires every 180 days (this one on
+23 Feb 2027), so a channel that ships a few times a year finds it dead exactly when it is
+next needed. A date-based reminder exists, but the durable home is `check-release-ready.sh`,
+where it now lives: the token matters *at release time*, and a gate that fires while you are
+releasing cannot be missed the way a calendar entry fired while you were doing something else
+can.
+
+It checks two different things, because they fail differently:
+
+- **Expiry**, read from the `# expiration date:` comment Copr writes into the config. Expired
+  → fail; inside 30 days → warn; no expiry recorded → warn. Never touches the token itself.
+- **Read-back**, when `copr-cli` is available: `whoami` must return `$COPR_OWNER`. The expiry
+  comment is a *claim* about the token — a hand-edited file, a revoked token, or a config for
+  the wrong account all read fine on expiry alone. Same discipline as `CredentialStore.set()`
+  returning cleanly proving nothing. Without `copr-cli` it warns "unverified" rather than
+  passing.
+
+**It is gated on `CHANNELS`, so it renders nothing while `copr` is off** — and activates by
+itself on the day the channel is enabled, with no second thing to remember. Nine cases pinned
+in `test-release-sh.sh`, including that silence, and both the expiry thresholds and the
+read-back fail the suite when broken.
 
 ### What shipped regardless
 

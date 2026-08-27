@@ -637,6 +637,57 @@ else
     esac
 fi
 
+# The Fedora Copr API token.
+#
+# Gated on CHANNELS rather than on the file existing, so it activates on the day
+# `copr` is added to project.conf and there is no second thing to remember. It
+# renders nothing while the channel is off — same shape as the dmg block in
+# verify-channels.sh.
+#
+# Why this belongs in a release gate at all: Copr tokens expire after 180 days,
+# and this channel ships a few times a year. A calendar reminder for something
+# that matters *at release time* is a reminder that fires while you are doing
+# something else; this fires while you are releasing.
+case " $CHANNELS " in *" copr "*)
+    _copr_conf="$HOME/.config/copr"
+    if [ ! -f "$_copr_conf" ]; then
+        bad "copr token" "no ~/.config/copr — the Copr build cannot be triggered"
+    else
+        # Copr writes "# expiration date: YYYY-MM-DD" into the config it hands
+        # you. Read only that line: nothing here should touch the token itself.
+        _copr_exp=$(sed -n 's/^#[[:space:]]*expiration date:[[:space:]]*//p' "$_copr_conf" | head -1)
+        if [ -z "$_copr_exp" ]; then
+            warn "copr token" "present, no expiry recorded — regenerate to get one"
+        else
+            # BSD first (this runs on the Mac), GNU second, so the check is not
+            # silently wrong if it ever runs on a Linux release box.
+            _copr_epoch=$(date -j -f "%Y-%m-%d" "$_copr_exp" "+%s" 2>/dev/null \
+                          || date -d "$_copr_exp" "+%s" 2>/dev/null || echo 0)
+            _copr_days=$(( (_copr_epoch - $(date +%s)) / 86400 ))
+            if   [ "$_copr_epoch" -eq 0 ]; then warn "copr token" "unparseable expiry: $_copr_exp"
+            elif [ "$_copr_days" -lt 0 ];  then bad  "copr token" "EXPIRED ${_copr_days#-} days ago — regenerate at copr.fedorainfracloud.org/api/"
+            elif [ "$_copr_days" -lt 30 ]; then warn "copr token" "expires in $_copr_days days — regenerate before it bites"
+            else                                ok   "copr token" "$_copr_days days left"
+            fi
+        fi
+
+        # An expiry comment is a CLAIM about the token, not evidence about it —
+        # a hand-edited file, a revoked token or a wrong username all read fine
+        # above. Read it back when the client is available. (Same discipline as
+        # CredentialStore.set() returning cleanly not proving anything.)
+        if ! command -v copr-cli >/dev/null 2>&1; then
+            warn "copr auth" "copr-cli not installed — expiry checked, token unverified"
+        else
+            _copr_who=$(copr-cli whoami 2>/dev/null | tr -d "[:space:]")
+            case "$_copr_who" in
+                "")            bad "copr auth" "copr-cli whoami failed — token does not authenticate" ;;
+                "$COPR_OWNER") ok  "copr auth" "authenticates as $COPR_OWNER" ;;
+                *)             bad "copr auth" "authenticates as $_copr_who, but project.conf says $COPR_OWNER" ;;
+            esac
+        fi
+    fi
+;; esac
+
 # Advisory workflows that have been red for a while.
 #
 # release-log 0.27.0 #7: perf.yml had been red for FOUR consecutive runs and

@@ -34,6 +34,18 @@ struct CloudGrantKeychainRegistrationTests {
         #expect(KeychainHelper.serviceNames["cloud-microsoft-teams"] != nil)
     }
 
+    @Test("The Zoom grant key resolves to a service name")
+    func zoomGrantKeyIsRegistered() {
+        // Third platform, and the one where the omission would cost most.
+        // Google's and Microsoft's refresh tokens survive being persisted late;
+        // Zoom's are single-use and rotate on every refresh, so a save that
+        // silently stores nothing does not cost one extra sign-in — it strands
+        // the account behind a consent screen Zoom will not let a public client
+        // skip. Registered while the menu item is still parked, because the
+        // absence is invisible until someone unparks it.
+        #expect(KeychainHelper.serviceNames["cloud-zoom"] != nil)
+    }
+
     @Test("An unregistered key really does fail closed — the trap this pins")
     func unregisteredKeysReadNil() {
         // Proves the mechanism rather than trusting the comment: without this,

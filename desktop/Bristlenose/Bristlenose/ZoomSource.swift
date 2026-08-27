@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 // The live Zoom adapter.
 //
@@ -102,6 +103,11 @@ struct ZoomPreflight: Equatable {
 // MARK: - The adapter
 
 final class ZoomSource: CloudImportSource {
+    /// Never carries a token, a download URL or an account address — §9 of
+    /// `docs/design-cloud-import.md`, and `httpx`-style full-URL logging is
+    /// exactly the leak it forbids.
+    private static let log = Logger(subsystem: "app.bristlenose", category: "cloud-import.zoom")
+
     private let config: ZoomOAuthConfig
     private let sessionOwner: CloudSessionOwner
     private var session: URLSession { sessionOwner.session }
@@ -118,23 +124,220 @@ final class ZoomSource: CloudImportSource {
     /// screenshot. The adapter keeps them; the row hands out nothing.
     private var chosenFiles: [String: ZoomRecordingFile] = [:]
 
-    /// - Parameter restoredTokens: a previously-obtained grant.
-    ///
-    ///   Forward-looking rather than a test hook: §2 requires the refresh token
-    ///   to be restored from the Keychain at launch, so an adapter must be
-    ///   constructible already-authenticated. Nothing persists yet, so today
-    ///   the only caller that passes this is the transport test suite — which
-    ///   is also the only way to drive the listing path over a stub.
+    /// - Parameter restoredTokens: a previously-obtained grant, from the
+    ///   Keychain via `CloudGrantStore.loadZoom`.
     /// - Parameter session: injection seam for the transport tests. Omit it and
     ///   the adapter builds — and owns — an ephemeral, redirect-policed session
     ///   (`CloudNetworking`); an injected one is adopted and never invalidated
     ///   here, because this object did not create it.
+    /// - Parameter restoredIdentity: the signed-in address, restored with the
+    ///   tokens. Without it `CloudImportStore` opens on `.signedOut` — it reads
+    ///   that from `accountEmail` — so a good restored token would sit behind a
+    ///   sign-in button and the restore would look like it had failed.
+    /// - Parameter onGrantChanged: called whenever the grant materially moves —
+    ///   signed in or revoked. **Nil means forget it.** Synchronous and
+    ///   `Void`-returning, exactly like Teams' and Google's.
+    /// - Parameter onRotation: called with a rotated pair, and answers whether
+    ///   it was actually stored.
+    ///
+    ///   **Two seams rather than one, and the reason is ordering.** The single
+    ///   `async -> Bool` sink this replaced was tidier and wrong:
+    ///   `CloudGrantWriter` orders publishes by *enqueue*, and Teams and Google
+    ///   get that for free because they call the sink synchronously, so enqueue
+    ///   order is call order. Awaiting an async sink from a non-async publish
+    ///   means wrapping it in an unstructured `Task`, and two unstructured
+    ///   tasks have no defined order — each inherits its creator's priority, so
+    ///   a `.utility` fetch's refusal can overtake a `.userInitiated` sign-in
+    ///   and write a tombstone over a working grant. That is verbatim the
+    ///   defect `CloudGrantWriter` was built to fix, reintroduced one layer up,
+    ///   and on Zoom it costs a consent round-trip rather than one sign-in.
+    ///
+    ///   `onRotation` earns its separate existence: it is the only publish
+    ///   whose *result* anybody reads, because a rotated single-use token that
+    ///   failed to persist cannot be reported as success.
     init(config: ZoomOAuthConfig,
          session: URLSession? = nil,
-         restoredTokens: ZoomTokens? = nil) {
+         restoredTokens: ZoomTokens? = nil,
+         restoredIdentity: String? = nil,
+         onGrantChanged: (@Sendable (ZoomGrant?) -> Void)? = nil,
+         onRotation: (@Sendable (ZoomGrant) async -> Bool)? = nil) {
         self.config = config
         self.sessionOwner = session.map(CloudSessionOwner.init(adopting:)) ?? CloudSessionOwner()
         self.tokens = restoredTokens
+        self.identity = restoredIdentity
+        self.onGrantChanged = onGrantChanged
+        self.onRotation = onRotation
+    }
+
+    private let onGrantChanged: (@Sendable (ZoomGrant?) -> Void)?
+    private let onRotation: (@Sendable (ZoomGrant) async -> Bool)?
+
+    /// Publish the current grant, or its absence.
+    ///
+    /// **Handed to the sink synchronously — the hop lives in the writer**, as
+    /// it does on Teams and Google. `CloudGrantWriter` enqueues on a serial
+    /// queue, so publishes land in the order they were *made* only if the
+    /// enqueue happens on this thread; putting a `Task` boundary in between
+    /// hands the ordering back to the scheduler and reintroduces the tombstone-
+    /// over-a-working-grant race the writer exists to close. The contract that
+    /// replaces the hop: the sink must not block.
+    ///
+    /// The snapshot is taken here, on the caller's actor, so what gets written
+    /// is what was true at the call rather than whatever the adapter has
+    /// drifted to by the time the write lands.
+    private func publishGrant() {
+        let snapshot = tokens.map { ZoomGrant(tokens: $0, identity: identity) }
+        onGrantChanged?(snapshot)
+    }
+
+    /// Record that Zoom ended the session, **keeping the account**.
+    ///
+    /// Same tombstone as Teams and for the same reason: a revoked grant that is
+    /// deleted vanishes from Settings ▸ Accounts, which is indistinguishable
+    /// from having disconnected it yourself, and the researcher's only evidence
+    /// is that importing quietly stopped working. `revoked` carries no usable
+    /// credential, so the retry loop this guards against cannot form.
+    private func publishRefusal() {
+        // Synchronous, for the ordering reason on `publishGrant` — and this is
+        // the publish that reason was written about. A refusal that overtakes a
+        // successful re-sign-in writes a tombstone over a live grant.
+        onGrantChanged?(ZoomGrant.revoked(identity: identity))
+    }
+
+    /// The persist closure handed to `ZoomOAuthClient`, honouring the contract
+    /// its `refresh(_:)` is written to: commit the rotated token, or fail the
+    /// refresh.
+    ///
+    /// **A nil sink is not a failure.** It means nobody asked for persistence —
+    /// a transport test, or an adapter built without a store behind it — and
+    /// rotating in memory is coherent for the life of the object. A sink that
+    /// was wired and then refused is the opposite: the old token is spent, the
+    /// new one has nowhere to live, and reporting success would be the
+    /// fake-success pattern this codebase keeps removing.
+    private func persistRotation(_ identity: String?) -> @Sendable (ZoomTokens) async throws -> Void {
+        guard let sink = onRotation else { return { _ in } }
+        return { rotated in
+            guard await sink(ZoomGrant(tokens: rotated, identity: identity)) else {
+                // A bare marker: `refresh(_:)` catches anything thrown here and
+                // re-raises it as `.rotationNotPersisted(refreshed)`, attaching
+                // the live tokens. Throwing that case from inside would mean
+                // naming the tokens twice and inviting the two copies to drift.
+                throw GrantNotStored()
+            }
+        }
+    }
+
+    /// Thrown by the persist closure and never escapes `refresh(_:)`.
+    private struct GrantNotStored: Error {}
+
+    /// The refresh currently in flight, if any. `@MainActor`-isolated, so the
+    /// check-and-store below spans no suspension point and cannot interleave.
+    @MainActor private var inFlightRefresh: Task<Bool, Never>?
+
+    /// Renew the token when it has aged out, or report that we cannot.
+    ///
+    /// **Single-flight, and on Zoom that is a correctness requirement rather
+    /// than an optimisation.** `CloudImportStore` runs three fetches at once
+    /// (`maxConcurrentFetches`), and each calls this before reading the token.
+    /// Teams' version has no such guard and does not need one: Microsoft
+    /// tolerates refresh-token reuse, so three simultaneous renewals are merely
+    /// wasteful. Zoom's refresh token is **single-use**, so the same three
+    /// calls would send one token three times — Zoom honours the first and
+    /// answers `400 invalid_grant` to the other two. Those two then read as
+    /// authoritative refusals and tombstone the grant that the first call had
+    /// *just successfully renewed*, and the remaining rows of the batch fail
+    /// "Signed out." An hour into a twelve-session import is precisely when
+    /// this fires, which is to say: the ordinary shape of a real study, not an
+    /// edge case.
+    ///
+    /// So the second and third callers join the first one's task instead of
+    /// racing it. Zoom's own docs put it plainly — *"You should always use the
+    /// latest refresh token for the next refresh request"* — and there is only
+    /// one latest.
+    @MainActor
+    private func renewedTokenIfNeeded() async -> Bool {
+        if let existing = inFlightRefresh { return await existing.value }
+        guard let current = tokens else { return false }
+        guard current.isExpired else { return true }
+        let task = Task { @MainActor [self] in await performRefresh(current) }
+        inFlightRefresh = task
+        let outcome = await task.value
+        inFlightRefresh = nil
+        return outcome
+    }
+
+    /// The refresh itself. Only ever entered through `renewedTokenIfNeeded`,
+    /// which guarantees one at a time.
+    ///
+    /// Diverges from Teams in two more places, both Zoom's own: the refresh
+    /// token is not optional here (a response without one is already
+    /// `.refreshRejected` inside the client), and the rotated pair is persisted
+    /// before this returns.
+    @MainActor
+    private func performRefresh(_ current: ZoomTokens) async -> Bool {
+        let client = ZoomOAuthClient(config: config,
+                                     session: session,
+                                     persist: persistRotation(identity))
+        do {
+            // `refresh` publishes through `persistRotation` before it returns,
+            // so by the time this assignment runs the rotated token is already
+            // stored. Assigning it here as well keeps the in-memory copy in
+            // step; it is not the durable write.
+            tokens = try await client.refresh(current)
+            return true
+        } catch ZoomOAuthError.rotationNotPersisted(let live) {
+            // Zoom rotated and we could not write the replacement down. The
+            // pair in hand is valid and is the only one that is, so the session
+            // continues on it; what has been lost is durability, not access.
+            // **Deliberately not a tombstone** — the account is not revoked,
+            // and destroying it here would turn a Keychain that refused into a
+            // revocation the researcher never made.
+            tokens = live
+            Self.log.notice("zoom token rotated but could not be stored — session continues, restore will not")
+            return true
+        } catch ZoomOAuthError.refreshRejected {
+            // **Only an authoritative refusal writes a tombstone.** Teams
+            // learned this expensively: a `try?` here treated a dropped
+            // connection exactly like a revoked grant, so a moment of bad wifi
+            // stripped the refresh token permanently and told the researcher
+            // their provider had ended the session. This path runs precisely
+            // when a token has aged out, which is the ordinary morning-after
+            // case the restore feature exists for.
+            //
+            // **Matched by case, never by a status range.** Teams tests
+            // `(400...499).contains(status)`, which sweeps up a `429` — and
+            // Zoom's token endpoint is rate-limited, so a burst of renewals is
+            // exactly how you earn one. That would destroy a working grant over
+            // a condition that clears in seconds. `.refreshRejected` is raised
+            // only for a 400 or 401, inside the client, where the
+            // classification belongs; everything else falls through below.
+            tokens = nil
+            publishRefusal()
+            return false
+        } catch {
+            // A `URLError`, a 5xx, a 429. Zoom has not said no, so the grant
+            // stays exactly where it is and the next attempt can succeed.
+            //
+            // **This does re-present the same single-use token later, and that
+            // is the considered choice rather than an oversight.** The
+            // single-flight guard above stops three *simultaneous* callers
+            // spending one token; it does not stop the next batch of fetch
+            // slots trying again, so a twelve-row import can present one token
+            // up to four times. Where the failure was a timeout *after* Zoom
+            // rotated, those retries are token reuse, which some providers
+            // answer by revoking the whole family.
+            //
+            // Refusing to retry would not actually help. If the token really
+            // was spent, both paths end in the same place — a consent screen —
+            // so refusing buys nothing; and if the failure was an ordinary
+            // network blip, refusing costs a re-authorisation that retrying
+            // would have avoided. The asymmetry runs the other way, so retrying
+            // is weakly better. Worth revisiting only with a measurement of
+            // what Zoom actually does on reuse, which no amount of local
+            // testing can reach.
+            Self.log.notice("zoom refresh failed without a verdict — keeping the grant")
+            return false
+        }
     }
 
     var accountEmail: String? { identity }
@@ -158,10 +361,20 @@ final class ZoomSource: CloudImportSource {
 
     @MainActor
     func signIn() async throws {
-        let client = ZoomOAuthClient(config: config, session: session)
+        let client = ZoomOAuthClient(config: config,
+                                     session: session,
+                                     persist: persistRotation(identity))
         tokens = try await client.signIn()
         identity = try? await fetchIdentity()
         preflight = try? await fetchPreflight()
+        // **After the identity, not before it.** The grant is keyed on a hash
+        // of the address, so publishing between the two would store it under
+        // `unidentified` and then rekey a moment later — two Keychain writes
+        // and, on the window that opened before anyone had signed in, a
+        // transient second account row. `identity` is best-effort (`try?`), so
+        // a `/me` that fails still publishes: a sign-in with no address is
+        // still a sign-in worth keeping.
+        publishGrant()
     }
 
     private func fetchIdentity() async throws -> String? {
@@ -177,21 +390,79 @@ final class ZoomSource: CloudImportSource {
     private func fetchPreflight() async throws -> ZoomPreflight {
         let data = try await get("https://api.zoom.us/v2/users/me/settings")
         let settings = try JSONDecoder().decode(ZoomUserSettings.self, from: data)
-        let recording = settings.recording
+        // **An absent `recording` object is not "cloud recording is off".**
+        // Every field on `ZoomUserSettings` is optional, so a 200 carrying
+        // anything else at all decodes cleanly into all-nils — and collapsing
+        // that to `false` produced a *blocking* verdict from a response we
+        // never understood. That was harmless while `preflight` was only ever
+        // filled by `signIn()`; the moment `list()` backfills it, a settings
+        // endpoint that changes shape stops every restored session with "Cloud
+        // recording is turned off for this Zoom account", which is a confident
+        // claim about something we failed to read. Refusing to answer leaves
+        // the gate unapplied — the pre-existing behaviour — and that is the
+        // right direction to fail.
+        guard let recording = settings.recording else {
+            throw ZoomAPIError(outcome: .unexpected(status: 200, code: nil))
+        }
         return ZoomPreflight(
-            cloudRecordingEnabled: recording?.cloud_recording ?? false,
-            audioTranscriptEnabled: recording?.recording_audio_transcript ?? false,
-            autoDeleteEnabled: recording?.auto_delete_cmr ?? false,
-            autoDeleteDays: recording?.auto_delete_cmr_days
+            cloudRecordingEnabled: recording.cloud_recording ?? false,
+            audioTranscriptEnabled: recording.recording_audio_transcript ?? false,
+            autoDeleteEnabled: recording.auto_delete_cmr ?? false,
+            autoDeleteDays: recording.auto_delete_cmr_days
         )
     }
 
     // MARK: Listing
 
     func list(window: DateInterval) async -> MeetingListing {
-        guard tokens != nil else {
-            return empty(window, outcome: .failed(after: 0, outcome: .needsReauthentication(reason: "no token")))
+        // Renew before reading, not after failing. On the restore path an
+        // hour-old token is the ordinary case, so 401-ing into a sign-in nobody
+        // needed would be the common experience rather than the rare one.
+        //
+        // **A failed renewal is not automatically a dead account, and saying so
+        // undoes the 429 handling one layer down.** `renewedTokenIfNeeded`
+        // returns false for a refusal (grant gone, `tokens` nil) *and* for a
+        // 429, a 5xx or a dropped connection — where `performRefresh`
+        // deliberately keeps the grant so the next attempt can succeed.
+        // Reporting the second as `needsReauthentication` would tell a
+        // rate-limited researcher their connection expired and send them
+        // through a consent screen Zoom does not let a public client skip,
+        // which is exactly the outcome the tombstone rule exists to avoid.
+        // `tokens` is the discriminator: nil means Zoom said no.
+        guard await renewedTokenIfNeeded() else {
+            return empty(window, outcome: .failed(
+                after: 0,
+                outcome: tokens == nil
+                    ? .needsReauthentication(reason: "zoom refused the refresh")
+                    : .transient(status: 0)))
         }
+        guard tokens != nil else {
+            return empty(window, outcome: .failed(after: 0,
+                                                  outcome: .needsReauthentication(reason: "no token")))
+        }
+
+        // **Backfill the eligibility gate, because a restored session never ran
+        // `signIn()`.** `preflight` is assigned in exactly one place, and once
+        // the grant survives a relaunch that place stops being on the common
+        // path — so without this the check below is nil-guarded into silence on
+        // every ordinary launch, and an account that cannot cloud-record at all
+        // renders as "no recordings in the last 30 days". That is the "factual
+        // statement about the wrong question" the branch below exists to
+        // prevent, arriving through the door the restore feature opened.
+        // `GoogleMeetSource.list` backfills `identity` for the same reason and
+        // says so; this is the same fix on the same seam.
+        if preflight == nil {
+            do {
+                preflight = try await fetchPreflight()
+            } catch {
+                // Logged rather than swallowed: the consequence is a gate that
+                // silently does not run for the life of the session, and
+                // "why did it not warn me?" is otherwise unanswerable.
+                Self.log.notice("zoom preflight unavailable — eligibility gate not applied")
+            }
+        }
+        if identity == nil { identity = try? await fetchIdentity() }
+
         if let preflight, preflight.blockingReason != nil {
             // Eligible-but-empty and ineligible are different answers, and this
             // is the second. Returning an empty list would render as "no
@@ -320,6 +591,23 @@ final class ZoomSource: CloudImportSource {
             // design refuses. Absent, and said so, rather than an empty line
             // pretending to be a roster.
             roster: .unsupported,
+            // **`.unsupported` is wrong here and is left standing on purpose.**
+            // It means "the platform doesn't offer it at all", which flatly
+            // contradicts `CloudPlatform.servesTranscript` — Zoom does serve a
+            // VTT, on the same call as the video. A missing one usually means
+            // *not yet*: the transcript is produced after the recording, and
+            // Zoom's own guidance is 15–30 minutes, occasionally up to 24 hours
+            // for a long meeting. So a study imported the same afternoon it was
+            // recorded would be told, permanently, that Zoom does not do
+            // transcripts.
+            //
+            // Not fixed because nothing reads this field — `CloudImportRow`
+            // stores `transcript` and no view renders it — so the honest cases
+            // (`ZoomPreflight.audioTranscriptEnabled` says the account makes
+            // none, versus it makes them and this one has not landed) would be
+            // a new `ArtifactAvailability` case feeding a dormant value into a
+            // dormant field on a parked platform. Whoever renders the transcript
+            // column should read this comment first and add the case then.
             transcript: choice.transcript != nil ? .available : .unsupported,
             organiser: nil
         )
@@ -335,7 +623,25 @@ final class ZoomSource: CloudImportSource {
         guard let file = chosenFiles[row.id], let url = file.downloadURL else {
             return .failed(reason: "That recording has no downloadable file.", isRetryable: false)
         }
-        guard let token = tokens?.accessToken else {
+        // Renew before every file, not once per batch. The tail of a long
+        // import is exactly where an unrenewed grant fails — after the
+        // researcher has stopped watching, on the files they waited longest for.
+        //
+        // **It matters more here than on Teams.** Graph's URL carries its own
+        // `tempauth=`, so a stale token there only breaks re-resolving the link;
+        // Zoom's transfer is `.bearer` (see `CloudTransferPolicy.zoom`), so the
+        // token below is what authorises the download itself. An hour into a
+        // twelve-session study, an unrenewed one turns the whole remainder into
+        // an HTML error body wearing a `.mp4` extension.
+        //
+        // The guard takes the renewal's verdict, not merely the token's
+        // presence. A transient failure keeps the grant on purpose, so
+        // `tokens` is non-nil *and stale* — and a download sent with a token
+        // the adapter already knows is dead earns another rate-limited refusal
+        // per row for the rest of the batch. `CloudDownloader` would still
+        // refuse to write the error body, so this costs a wrong label rather
+        // than a corrupt file; matching `list()` costs nothing and is honest.
+        guard await renewedTokenIfNeeded(), let token = tokens?.accessToken else {
             return .failed(reason: "Signed out.", isRetryable: true)
         }
 

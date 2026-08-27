@@ -743,10 +743,18 @@ struct ListingTransportTests {
             restoredTokens: zoomTokens())
         _ = await source.list(window: window)
 
-        #expect(StubURLProtocol.requests.count == 3)
+        // **Filtered to the listing calls, not every request.** A restored
+        // session backfills preflight and identity before it lists, so counting
+        // the whole log measures those too — and this test is about the window
+        // split. Naming the endpoint also stops it silently passing if the
+        // listing stopped happening at all, which is how it first broke.
+        let listings = StubURLProtocol.requests.filter {
+            $0.url?.path.hasSuffix("/users/me/recordings") == true
+        }
+        #expect(listings.count == 3)
         // Each chunk carries its own explicit from/to — omitting them makes
         // Zoom answer for TODAY ONLY, which reads as an empty account.
-        for request in StubURLProtocol.requests {
+        for request in listings {
             let query = request.url?.query ?? ""
             #expect(query.contains("from="))
             #expect(query.contains("to="))
@@ -1025,5 +1033,278 @@ struct AdapterRowDerivationTests {
         // halves — hiding the titles that are the only thing telling them apart.
         #expect(row.meetingID == nil)
     }
+}
+
+// MARK: - Zoom's single-use refresh token
+
+/// The rotation contract, which is Zoom's alone.
+///
+/// Google and Microsoft tolerate a refresh token being reused, so their renewal
+/// paths can be wasteful without being wrong. Zoom's token is **single-use**:
+/// the instant a refresh returns, the token the caller still holds is dead
+/// server-side. Every test here pins a consequence of that, and each one guards
+/// a failure whose symptom is "I have to sign in to Zoom again" days later,
+/// with nothing in between to connect it to a cause.
+@Suite("Zoom token rotation", .serialized)
+@MainActor
+struct ZoomRotationTests {
+
+    private let window = DateInterval(start: Date().addingTimeInterval(-86_400), duration: 86_400)
+
+    private let config = ZoomOAuthConfig(publicClientID: "cid",
+                                         redirectURI: "https://bristlenose.test/auth/zoom")
+
+    private func expired() -> ZoomTokens {
+        ZoomTokens(accessToken: "OLD", refreshToken: "R1",
+                   expiresAt: Date().addingTimeInterval(-3600),
+                   scopes: ZoomScopes.requested)
+    }
+
+    private func source(
+        onGrantChanged: (@Sendable (ZoomGrant?) -> Void)? = nil,
+        onRotation: (@Sendable (ZoomGrant) async -> Bool)? = nil
+    ) -> ZoomSource {
+        ZoomSource(config: config,
+                   session: StubURLProtocol.session(),
+                   restoredTokens: expired(),
+                   onGrantChanged: onGrantChanged,
+                   onRotation: onRotation)
+    }
+
+    private var rotated: StubURLProtocol.Stub {
+        .json(#"{"access_token":"A2","refresh_token":"R2","expires_in":3600}"#)
+    }
+
+    private func tokenRequests() -> Int {
+        StubURLProtocol.requests.filter {
+            $0.url?.host == "zoom.us" && $0.url?.path == "/oauth/token"
+        }.count
+    }
+
+    @Test("Three concurrent fetches refresh the token exactly once")
+    func refreshIsSingleFlight() async throws {
+        // **The grant-destroying race, and it is the ordinary shape of a real
+        // study rather than an edge case.** `CloudImportStore` runs three
+        // fetches at once, and each renews before reading the token. Without a
+        // single-flight guard all three send the same single-use token: Zoom
+        // honours the first and answers `400 invalid_grant` to the other two,
+        // which read as authoritative refusals and tombstone the grant the
+        // first call had just successfully renewed. The remaining rows then
+        // fail "Signed out." An hour into a twelve-session import is exactly
+        // when this fires.
+        //
+        // Only ONE rotation is queued. If the guard fails, the second and third
+        // requests fall through to the stub's empty-200 default — the
+        // assertion is about what was *sent*, not what came back.
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(rotated)
+
+        let adapter = source()
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<3 {
+                group.addTask { [adapter, window] in _ = await adapter.list(window: window) }
+            }
+        }
+
+        #expect(tokenRequests() == 1,
+                "the single-use token was sent \(tokenRequests()) times")
+    }
+
+    @Test("A rotated token is committed before the refresh reports success")
+    func rotationPersistsBeforeReturning() async throws {
+        // The ordering is the whole contract. `refresh` cannot report success
+        // on a path where the replacement was never written, because the token
+        // it replaced is already dead — so "saved" has to be established
+        // before the caller is told anything.
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(rotated)
+
+        let order = Ordering()
+        let client = ZoomOAuthClient(config: config,
+                                     session: StubURLProtocol.session(),
+                                     persist: { order.mark("persisted:\($0.refreshToken)") })
+        let renewed = try await client.refresh(expired())
+        order.mark("returned")
+
+        // **Asserted as a sequence, not as two outcomes.** Checking only that
+        // the token was persisted and that the call returned cannot tell this
+        // implementation apart from `Task { try? await persist(refreshed) };
+        // return refreshed` — which satisfies both and voids the contract, on a
+        // schedule that would pass on a quiet machine and fail under load.
+        #expect(order.marks == ["persisted:R2", "returned"])
+        #expect(renewed.refreshToken == "R2")
+    }
+
+    @Test("A refused save hands back the live token instead of destroying it")
+    func persistFailureCarriesTheLiveTokens() async throws {
+        // Zoom rotated; we could not write the replacement down. The pair in
+        // hand is valid and is the only one that is, so throwing it away would
+        // break the running session **and** leave the stored token dead —
+        // strictly worse than every alternative. It matters most on an
+        // ad-hoc-signed build, where a Keychain refusing every write is the
+        // documented ordinary state.
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(rotated)
+
+        let client = ZoomOAuthClient(config: config,
+                                     session: StubURLProtocol.session(),
+                                     persist: { _ in throw PersistRefused() })
+
+        do {
+            _ = try await client.refresh(expired())
+            Issue.record("the refresh reported success over a save that failed")
+        } catch ZoomOAuthError.rotationNotPersisted(let live) {
+            // The error carries the working pair. Matched on the case rather
+            // than compared whole, because `expiresAt` is computed from
+            // `Date()` inside the client and equality would be a clock race.
+            #expect(live.accessToken == "A2")
+            #expect(live.refreshToken == "R2", "the caller can still carry on with this")
+        }
+    }
+
+    @Test("A rotation that cannot be stored keeps the session and writes no tombstone")
+    func rotationFailureIsNotARevocation() async throws {
+        // **The adapter's half of the rotation contract**, which the two
+        // neighbouring tests approach from either side without meeting: one
+        // injects a throwing `persist` straight into the client, the other
+        // exercises the writer and store on their own. This is the branch
+        // between them — sink returns false → `GrantNotStored` →
+        // `.rotationNotPersisted` → adopt the live pair, publish nothing.
+        //
+        // It is also the branch that runs on every ad-hoc-signed build, where a
+        // Keychain refusing every write is the documented ordinary state. The
+        // mutation it catches is tombstoning here, which would turn a full disk
+        // into a revocation and leaves every other test in the repo green.
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(rotated)
+        StubURLProtocol.enqueue(.json(#"{"recording":{"cloud_recording":true}}"#))
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@example.org"}"#))
+        StubURLProtocol.enqueue(.json(#"{"meetings":[],"total_records":0}"#))
+
+        let published = Published()
+        let adapter = source(onGrantChanged: { published.record($0) },
+                             onRotation: { _ in false })
+        _ = await adapter.list(window: window)
+
+        #expect(published.count == 0,
+                "a save we could not complete is not Zoom revoking the account")
+        let paths = StubURLProtocol.requests.compactMap(\.url?.path)
+        #expect(paths.contains { $0.hasSuffix("/users/me/recordings") },
+                "the session continues on the rotated token it is still holding")
+    }
+
+    @Test("A restored session still runs the eligibility gate")
+    func restoredSessionBackfillsPreflight() async throws {
+        // **The hole persistence opened.** `preflight` is assigned in exactly
+        // one place — `signIn()` — and a restored grant never calls it. Before
+        // the backfill, an account with cloud recording switched off sailed
+        // past the gate and rendered as "no recordings in the last 30 days":
+        // a factual statement about the wrong question, on what persistence
+        // makes the *ordinary* launch path rather than an edge case.
+        //
+        // Asserted on the requests rather than the rows, because an ineligible
+        // account and an empty one produce the same empty list — what tells
+        // them apart is that the ineligible one is never listed at all.
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"recording":{"cloud_recording":false}}"#))
+
+        let live = ZoomTokens(accessToken: "A", refreshToken: "R",
+                              expiresAt: Date().addingTimeInterval(3600),
+                              scopes: ZoomScopes.requested)
+        let adapter = ZoomSource(config: config,
+                                 session: StubURLProtocol.session(),
+                                 restoredTokens: live,
+                                 restoredIdentity: "martin@example.org")
+        _ = await adapter.list(window: window)
+
+        let paths = StubURLProtocol.requests.compactMap(\.url?.path)
+        #expect(paths.contains { $0.hasSuffix("/users/me/settings") },
+                "the gate has to ask before it can answer")
+        #expect(!paths.contains { $0.hasSuffix("/users/me/recordings") },
+                "an account that cannot cloud-record must not be listed as though it could")
+    }
+
+    @Test("Zoom saying no tombstones the account; a rate limit does not")
+    func onlyAnAuthoritativeRefusalTombstones() async throws {
+        // Matched by CASE, never by a status range. Teams tests
+        // `(400...499).contains(status)`, which sweeps up a 429 — and Zoom's
+        // token endpoint is rate-limited, so a burst of renewals is exactly how
+        // you earn one. Destroying a working grant over a condition that clears
+        // in seconds costs the researcher a consent screen.
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"reason":"Invalid Token!"}"#, status: 400))
+        let refusal = Published()
+        _ = await source(onGrantChanged: { refusal.record($0) })
+            .list(window: window)
+        await refusal.waitForRecord()
+        #expect(tokenRequests() == 1, "the 400 branch must actually have attempted a refresh")
+        #expect(refusal.last??.needsSignIn == true, "a 400 is Zoom saying no")
+
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"message":"Too many requests"}"#, status: 429))
+        let limited = Published()
+        let listing = await source(onGrantChanged: { limited.record($0) })
+            .list(window: window)
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        // **The positive control comes first, because the assertion below is an
+        // absence.** Without it this passes whenever the refresh never happened
+        // at all — a non-expired token, a short-circuiting guard, or another
+        // suite draining the queued 429 from `StubURLProtocol`'s process-wide
+        // state. Every one of those failures is silent and green.
+        #expect(tokenRequests() == 1, "the 429 branch must actually have attempted a refresh")
+        #expect(limited.count == 0, "a 429 must leave the grant exactly where it is")
+        // And it must not be *reported* as a dead account either — keeping the
+        // grant while telling the researcher to sign in again would undo the
+        // whole point one layer up.
+        if case .failed(_, let outcome) = listing.arithmetic.outcome,
+           case .needsReauthentication = outcome {
+            Issue.record("a rate limit was reported as needing re-authentication")
+        }
+    }
+
+    // MARK: Spies
+
+    /// Records labelled events in the order they happened, off whatever thread
+    /// the persist contract allows. Ordering is the assertion, so the spy has
+    /// to preserve it rather than just collect values.
+    private final class Ordering: @unchecked Sendable {
+        private let lock = NSLock()
+        private var events: [String] = []
+        func mark(_ event: String) {
+            lock.lock(); defer { lock.unlock() }
+            events.append(event)
+        }
+        var marks: [String] {
+            lock.lock(); defer { lock.unlock() }
+            return events
+        }
+    }
+
+    /// Collects grant publishes. Zoom's publishes are spawned into their own
+    /// task, so a test that asserts immediately races them — `waitForRecord`
+    /// is the bounded wait, and its absence is what the 429 case asserts.
+    private final class Published: @unchecked Sendable {
+        private let lock = NSLock()
+        private var grants: [ZoomGrant?] = []
+        func record(_ grant: ZoomGrant?) {
+            lock.lock(); defer { lock.unlock() }
+            grants.append(grant)
+        }
+        var last: ZoomGrant?? {
+            lock.lock(); defer { lock.unlock() }
+            return grants.last
+        }
+        var count: Int {
+            lock.lock(); defer { lock.unlock() }
+            return grants.count
+        }
+        func waitForRecord() async {
+            for _ in 0..<100 where count == 0 {
+                try? await Task.sleep(nanoseconds: 10_000_000)
+            }
+        }
+    }
+
+    private struct PersistRefused: Error {}
 }
 }

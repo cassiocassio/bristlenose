@@ -254,7 +254,35 @@ final class CloudImportCoordinator: ObservableObject {
             guard let config = ZoomOAuthConfig.resolve() else {
                 store = CloudImportStore(source: UnconfiguredCloudSource(), platform: platform); return
             }
-            store = CloudImportStore(source: ZoomSource(config: config), platform: platform)
+            // Restore the previous sign-in if one survived. One grant, as for
+            // Teams; `.usable` drops one Zoom ended, identity included.
+            let savedZoom = CloudGrantStore.loadZoom(account: key)?.usable
+            store = CloudImportStore(
+                source: ZoomSource(
+                    config: config,
+                    restoredTokens: savedZoom?.tokens,
+                    restoredIdentity: savedZoom?.identity,
+                    // Synchronous, exactly like Teams' and Google's, so the
+                    // writer's serial queue receives these in the order they
+                    // were made. `?? $0` keeps the key where it was when the
+                    // write failed — rekeying to a slot that holds nothing
+                    // loses the account on the next read.
+                    onGrantChanged: { grant in
+                        writer.publish { CloudGrantStore.saveZoom(grant, previousKey: $0) ?? $0 }
+                    },
+                    // **`publishAndWait`, and Zoom is the only arm that uses
+                    // it.** Its refresh tokens are single-use, so a rotation
+                    // that returns before the write lands strands the account on
+                    // the next launch. Awaiting keeps the ordering the serial
+                    // queue already provides *and* hands back whether the write
+                    // stuck, which is what lets `refresh(_:)` refuse to report
+                    // success over a failed save.
+                    onRotation: { grant in
+                        await writer.publishAndWait {
+                            CloudGrantStore.saveZoom(grant, previousKey: $0)
+                        }
+                    }),
+                platform: platform)
 
         case .teams:
             // One value, not two: unlike Zoom, Microsoft derives nothing from

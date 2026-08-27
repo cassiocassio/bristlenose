@@ -130,6 +130,42 @@ struct MicrosoftGrant: Codable, Equatable, Sendable {
     }
 }
 
+/// A Zoom sign-in worth keeping.
+///
+/// `MicrosoftGrant`'s shape, minus the drive tier — see there for why each
+/// field exists and why the two flags are optional. One fact is Zoom's alone
+/// and governs everything downstream: its refresh tokens are **single-use and
+/// rotate on every refresh with no grace window**, so a failed persist here is
+/// not the others' "this session won't survive the window closing". The token
+/// the caller still holds is already dead, and the account is stranded until
+/// the researcher re-authorises through a consent screen Zoom will not let a
+/// public client skip. `ZoomOAuthClient.refresh(_:)` is written to that
+/// contract; this is what it persists into.
+///
+/// **No `driveType` counterpart, deliberately.** Microsoft persists one because
+/// Settings ▸ Accounts makes no network call and could otherwise never say a
+/// personal account holds no recordings. Zoom's equivalent — can this account
+/// cloud-record — is a live account *setting* an admin can change between
+/// sessions, which `ZoomPreflight` reads at listing time. Writing it down would
+/// let the pane state something stale with confidence.
+struct ZoomGrant: Codable, Equatable, Sendable {
+    var tokens: ZoomTokens
+    var identity: String?
+    var needsSignIn: Bool? = nil
+
+    /// This grant if it can still be used, nil if the provider ended it.
+    var usable: ZoomGrant? { needsSignIn == true ? nil : self }
+
+    /// The account, kept without its credential.
+    static func revoked(identity: String?) -> ZoomGrant {
+        ZoomGrant(
+            tokens: ZoomTokens(accessToken: "", refreshToken: "",
+                               expiresAt: .distantPast, scopes: []),
+            identity: identity,
+            needsSignIn: true)
+    }
+}
+
 /// Which Keychain item a given sign-in lives in.
 ///
 /// **One item per account, keyed on a hash of the signed-in address.** The
@@ -207,6 +243,12 @@ enum CloudGrantStore {
     /// keyspace.
     private static let googleAccount = "cloud-google-meet"
     private static let teamsAccount = "cloud-microsoft-teams"
+    /// **Must exist in `KeychainHelper.serviceNames`.** That map is an
+    /// allowlist, not a naming convention: an unregistered provider makes
+    /// `set` return false and `get` return nil, silently, so a store built on
+    /// one looks entirely correct and persists nothing. Pinned by
+    /// `CloudGrantKeychainRegistrationTests.zoomGrantKeyIsRegistered`.
+    private static let zoomAccount = "cloud-zoom"
 
     // MARK: - Google
 
@@ -355,6 +397,73 @@ enum CloudGrantStore {
         store.delete(provider: teamsAccount, account: account)
     }
 
+    // MARK: - Zoom
+
+    static func loadZoom(account: String,
+                         store: any KeychainStore = KeychainHelper.liveStore,
+                         discardingUnreadable: Bool = true) -> ZoomGrant? {
+        guard let raw = store.get(provider: zoomAccount, account: account),
+              let data = raw.data(using: .utf8)
+        else { return nil }
+        guard let grant = try? JSONDecoder().decode(ZoomGrant.self, from: data) else {
+            // Same rule as Google's and Teams' above, and the same reason.
+            guard discardingUnreadable else {
+                log.notice("cloud_grant zoom decode failed — keeping")
+                return nil
+            }
+            log.notice("cloud_grant zoom decode failed — discarding")
+            clearZoom(account: account, store: store)
+            return nil
+        }
+        return grant
+    }
+
+    /// Save, or — on nil — forget. Same one-entry-point and same rekey rule as
+    /// the other two.
+    ///
+    /// **It returns `String?` where its siblings return `String`, and the
+    /// asymmetry is the whole point.** Google's and Microsoft's report a failed
+    /// write by handing back `previousKey`, which is indistinguishable from
+    /// success whenever the key did not change — survivable there, because a
+    /// lost write costs one extra sign-in. It is not survivable here. Zoom
+    /// rotates single-use refresh tokens with no grace window, so a refresh
+    /// whose result fails to persist has already killed the token the caller
+    /// still holds: reporting success on that path strands the account until
+    /// the researcher re-authorises through a consent screen Zoom does not let
+    /// a public client skip. `nil` is how `refresh(_:)`'s persist closure knows
+    /// to throw instead of returning a token nobody can follow up.
+    @discardableResult
+    static func saveZoom(_ grant: ZoomGrant?,
+                         previousKey: String,
+                         store: any KeychainStore = KeychainHelper.liveStore) -> String? {
+        guard let grant else {
+            clearZoom(account: previousKey, store: store)
+            return previousKey
+        }
+        let key = CloudAccountKey.derive(grant.identity)
+        guard let data = try? JSONEncoder().encode(grant),
+              let raw = String(data: data, encoding: .utf8)
+        else {
+            log.error("cloud_grant zoom encode failed")
+            return nil
+        }
+        if !store.set(provider: zoomAccount, account: key, value: raw) {
+            log.error("cloud_grant zoom keychain write refused")
+            return nil
+        }
+        // Only rekey out of the anonymous slot — see `saveGoogle` for why an
+        // unguarded delete here would make one account's sign-in eat another's.
+        if previousKey != key, previousKey == CloudAccountKey.unidentified {
+            clearZoom(account: previousKey, store: store)
+        }
+        return key
+    }
+
+    static func clearZoom(account: String,
+                          store: any KeychainStore = KeychainHelper.liveStore) {
+        store.delete(provider: zoomAccount, account: account)
+    }
+
     // MARK: - The platform-agnostic surface the Accounts pane talks to
 
     /// One connected account.
@@ -421,10 +530,17 @@ enum CloudGrantStore {
                                    driveTier: nil)
                     }
                 case .zoom:
-                    // No store yet — Zoom is parked and cannot sign in, so there
-                    // is never a grant to find. An explicit case rather than a
-                    // `default` so wiring Zoom's store is a compile-time prompt.
-                    return nil
+                    return loadZoom(account: key, store: store,
+                                    discardingUnreadable: false).map {
+                        Connection(platform: platform, accountKey: key,
+                                   address: $0.identity, needsSignIn: $0.needsSignIn == true,
+                                   // Nothing to carry: Zoom's "can this account
+                                   // record" question is a live account setting
+                                   // that `ZoomPreflight` answers at listing
+                                   // time, not a durable property worth writing
+                                   // down. See `ZoomGrant.revoked`.
+                                   driveTier: nil)
+                    }
                 }
             }
         }
@@ -449,7 +565,7 @@ enum CloudGrantStore {
         switch platform {
         case .teams: return store.accounts(provider: teamsAccount)
         case .meet:  return store.accounts(provider: googleAccount)
-        case .zoom:  return []
+        case .zoom:  return store.accounts(provider: zoomAccount)
         }
     }
 
@@ -471,7 +587,7 @@ enum CloudGrantStore {
         switch platform {
         case .teams: clearTeams(account: accountKey, store: store)
         case .meet:  clearGoogle(account: accountKey, store: store)
-        case .zoom:  break
+        case .zoom:  clearZoom(account: accountKey, store: store)
         }
         NotificationCenter.default.post(
             name: .bristlenoseCloudAccountDisconnected,
@@ -499,6 +615,13 @@ enum CloudGrantStore {
         migrate(provider: googleAccount, store: store) { raw in
             (try? JSONDecoder().decode(GoogleGrant.self, from: raw))?.identity
         }
+        // **No Zoom arm, deliberately.** Migration moves items written under
+        // the old fixed key by a build that predates per-account keying. Zoom
+        // has never persisted anything under any key, so there is nothing on
+        // any Mac to find — a `migrate` call here would be a lookup for a state
+        // that cannot exist. Its absence is a fact about Zoom's history, not an
+        // oversight; if this ever needs one, that means Zoom shipped a build
+        // using `CloudAccountKey.legacy`, and it did not.
     }
 
     private static func migrate(provider: String,
@@ -591,6 +714,38 @@ final class CloudGrantWriter: @unchecked Sendable {
             let next = write(key)
             key = next
             snapshotLock.lock(); snapshot = next; snapshotLock.unlock()
+        }
+    }
+
+    /// Enqueue a write, wait for it, and report whether it stuck.
+    ///
+    /// **The rotation contract's half of `publish`, and it exists for exactly
+    /// one provider.** Zoom's refresh tokens are single-use: the instant a
+    /// refresh returns, the token the caller still holds is dead server-side, so
+    /// the replacement has to be committed *before* the refresh reports success.
+    /// Fire-and-forget cannot express that — `publish` returns while the write
+    /// is still queued, and a quit or a crash in that window strands the account
+    /// behind a consent screen. Google's and Microsoft's tokens tolerate the
+    /// gap, which is why they keep the cheaper call.
+    ///
+    /// It is `async`, not blocking. Awaiting is what preserves the ordering
+    /// guarantee; the work still happens on `queue`, so this does not
+    /// reintroduce the main-thread stall the type exists to remove.
+    ///
+    /// `write` returns nil when nothing was stored — `CloudGrantStore.saveZoom`'s
+    /// contract — and the key is then left where it was, because rekeying to a
+    /// slot that holds nothing would lose the account on the next read.
+    func publishAndWait(_ write: @escaping @Sendable (String) -> String?) async -> Bool {
+        await withCheckedContinuation { continuation in
+            queue.async { [self] in
+                guard let next = write(key) else {
+                    continuation.resume(returning: false)
+                    return
+                }
+                key = next
+                snapshotLock.lock(); snapshot = next; snapshotLock.unlock()
+                continuation.resume(returning: true)
+            }
         }
     }
 

@@ -181,6 +181,43 @@ private struct DiagnosticsMenuContent: View {
                         }
                     }
                 }
+
+                Divider()
+
+                // A stored Zoom sign-in, without a Zoom account.
+                //
+                // The fixtures above drive the import *window*; they cannot
+                // reach Settings ▸ Accounts or the restore path, because both
+                // read the Keychain and a fixture session deliberately holds no
+                // credentials. For Teams and Meet that gap is closed by having
+                // a real tenant. Zoom has no account at all — so without this,
+                // the row states, Disconnect, and "does a sign-in survive a
+                // relaunch" are writable but never *seeable*, which is the
+                // argument this whole menu already makes one level up.
+                //
+                // The token is deliberately junk: listing with it fails, which
+                // is itself the refusal path worth watching. The address uses
+                // `.invalid` (RFC 2606) so it can never collide with a real
+                // account, and Forget is offered beside it so the item can
+                // always be undone from here — including with
+                // `BristlenoseCloudImportZoom` off, where Settings ▸ Accounts
+                // shows no Zoom row and would otherwise leave this
+                // unremovable.
+                Button("Store a Test Zoom Sign-In") {
+                    CloudGrantStore.saveZoom(
+                        ZoomGrant(
+                            tokens: ZoomTokens(accessToken: "fixture-access",
+                                               refreshToken: "fixture-refresh",
+                                               expiresAt: Date().addingTimeInterval(3600),
+                                               scopes: ZoomScopes.requested),
+                            identity: "zoom-test@example.invalid"),
+                        previousKey: CloudAccountKey.unidentified)
+                }
+                Button("Forget the Test Zoom Sign-In") {
+                    if let key = CloudGrantStore.firstAccountKey(for: .zoom) {
+                        CloudGrantStore.disconnect(.zoom, accountKey: key)
+                    }
+                }
             }
         }
 

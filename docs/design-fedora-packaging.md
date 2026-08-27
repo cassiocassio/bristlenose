@@ -725,6 +725,18 @@ work before anyone flips it.
 **Flip it in the same commit that creates the Copr project and lands its first green build.**
 That commit is: `copr` into `CHANNELS`, the `trigger-copr` job above, and the two secrets.
 
+**`rpm/flip-copr-channel.sh <X.Y.Z>` does the in-repo half, and refuses until it is true.**
+Five preconditions, each one a reason the docs would otherwise lie: `copr` not already in
+`CHANNELS`; the Copr project returns 200 rather than 404; there is a **succeeded** build of
+*that* version; PyPI has the version (`Source0` comes from there, so a Copr build of a
+version PyPI lacks means someone built from something else); and both repo secrets exist,
+because a `trigger-copr` job without them reddens every release. It edits nothing until all
+five pass, and it commits nothing ever. What it cannot verify — the CI job, the website
+repo, the five stale channel enumerations — it prints for a human instead of pretending.
+
+This exists because prose did not enforce the ordering. §7's rule was written and broken in
+the same commit; the script is the version of that rule which cannot be skipped.
+
 **One recurring hazard, now gated.** The Copr API token expires every 180 days (this one on
 23 Feb 2027), so a channel that ships a few times a year finds it dead exactly when it is
 next needed. A date-based reminder exists, but the durable home is `check-release-ready.sh`,

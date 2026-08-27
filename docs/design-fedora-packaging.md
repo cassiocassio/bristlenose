@@ -138,11 +138,39 @@ theoretical edge rather than a measured one. Note it would cost *thumbnails only
 either way: audio extraction passes `-vn` and never opens the video decoder — proven
 directly, and again by the full transcription run above.
 
-### The one real gap: HEVC
+### Checked against real recordings, not just synthesised ones
 
-`hevc` is disabled with no `libopenh265` equivalent, so **HEVC video cannot be decoded
-on Fedora**. This matters for exactly one thing: an iPhone-recorded `.mov` (Apple's
-default "High Efficiency" capture) gets **no thumbnail**. Measured on such a file:
+The corpus above was **synthesised** to match how Teams, Zoom and Meet encode. That is an
+assumption about those platforms, so it was checked against 253 real recordings on the
+maintainer's machine (codec metadata only — this is participant material). 107 of them are
+video containers:
+
+| video codec | streams |
+|---|---|
+| H.264 Main | 43 |
+| H.264 Constrained Baseline | 30 |
+| H.264 High | 16 |
+| **HEVC Main** | **5** |
+| ProRes / MJPEG / VP9 / VP8 / AV1 / H.263 / MPEG-4 / WMV2 | 1 each |
+
+Audio is `pcm_s16le` (140), `aac LC` (81), bare `aac` (13), then Opus, MP3, FLAC, HE-AAC,
+WMAv2, Vorbis in ones and twos.
+
+So the synthesised fixtures were representative: **89 of 102 identifiable video streams are
+H.264 in exactly the three profiles tested**, and AAC-LC dominates the audio. Every codec in
+that table decodes under `ffmpeg-free` except HEVC.
+
+### The one real gap: HEVC — and it is not hypothetical
+
+`hevc` is disabled with no `libopenh265` equivalent, so **HEVC video cannot be decoded on
+Fedora**. The tempting framing is "an iPhone edge case". The corpus says otherwise: **5 of
+107 real video files are HEVC**, about 5%. Teams, Zoom and Meet are H.264 and always were —
+these come in the other way, when a researcher drops in something recorded on a phone or
+captured with a modern screen recorder.
+
+**What it costs is still only a thumbnail.** All five are `.mov` carrying AAC audio, so all
+five transcribe normally; audio extraction passes `-vn` and never opens the video decoder.
+Measured on such a file:
 
 | Bristlenose call | result |
 |---|---|
@@ -153,8 +181,8 @@ default "High Efficiency" capture) gets **no thumbnail**. Measured on such a fil
 
 Transcription is unaffected. `extract_thumbnail` already degrades gracefully — it logs
 a warning and returns `None` ([bristlenose/utils/video.py:120](../bristlenose/utils/video.py)),
-which is the designed behaviour for a cosmetic failure. So the user-visible symptom is
-a missing thumbnail on iPhone-recorded sessions, and nothing else.
+which is the designed behaviour for a cosmetic failure. So the user-visible symptom is a
+missing thumbnail on roughly one video session in twenty, and nothing else.
 
 **Decision: accept it. Do not send Fedora users to RPM Fusion.** Full FFmpeg means a
 third-party repo, a bigger ask than the Copr itself, and a licensing conversation, all

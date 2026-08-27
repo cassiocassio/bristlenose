@@ -250,6 +250,13 @@
     "copyDiskSpaceTitle": "Espacio en disco insuficiente",
     "copyDiskSpaceMessage": "Esta copia necesita %@ libres, pero solo hay %@ disponibles en el volumen de destino.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "No responde",
+        "unreadable": "No se puede leer",
+        "folderMissing": "Carpeta no encontrada",
+        "damaged": "Archivo de proyecto da\u00f1ado",
+        "scanFailed": "Error de exploraci\u00f3n"
+      },
       "queuedPosition": "En cola \u00b7 posici\u00f3n {{position}}",
       "stopping": "Deteniendo\u2026",
       "analysing": "Analizando\u2026",
@@ -303,6 +310,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "La carpeta no ha respondido: puede ser un disco desconectado o un recurso de red.",
+        "unreadable": "La carpeta existe, pero no se ha podido leer su contenido.",
+        "folderMissing": "La carpeta no est\u00e1 donde este proyecto la espera: puede que se haya movido.",
+        "damaged": "No se ha podido leer el archivo de \u00edndice de este proyecto; volver a analizarlo lo reconstruir\u00e1.",
+        "scanFailed": "La exploraci\u00f3n ha terminado sin resultado; volver a abrir el proyecto lo intentar\u00e1 de nuevo."
+      },
       "pill": {
         "auth": "Problema con la clave",
         "out_of_credit": "Sin cr\u00e9dito",

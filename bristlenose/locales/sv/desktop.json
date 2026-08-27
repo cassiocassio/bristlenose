@@ -250,6 +250,13 @@
     "copyDiskSpaceTitle": "Inte tillräckligt med diskutrymme",
     "copyDiskSpaceMessage": "Den här kopieringen behöver %@ ledigt, men bara %@ är tillgängligt på målvolymen.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "Svarar inte",
+        "unreadable": "Kan inte l\u00e4sas",
+        "folderMissing": "Mappen hittades inte",
+        "damaged": "Projektfilen \u00e4r skadad",
+        "scanFailed": "Genoms\u00f6kningen misslyckades"
+      },
       "queuedPosition": "I kö · plats {{position}}",
       "stopping": "Stoppar…",
       "analysing": "Analyserar…",
@@ -303,6 +310,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "Mappen svarade inte \u2013 det kan vara en fr\u00e5nkopplad disk eller en n\u00e4tverksplats.",
+        "unreadable": "Mappen finns, men inneh\u00e5llet kunde inte l\u00e4sas.",
+        "folderMissing": "Mappen finns inte d\u00e4r projektet f\u00f6rv\u00e4ntar sig den \u2013 den kan ha flyttats.",
+        "damaged": "Projektets indexfil kunde inte l\u00e4sas \u2013 en ny analys bygger om den.",
+        "scanFailed": "Genoms\u00f6kningen avslutades utan resultat \u2013 \u00f6ppna projektet igen f\u00f6r att f\u00f6rs\u00f6ka p\u00e5 nytt."
+      },
       "pill": {
         "auth": "Problem med leverantörsnyckel",
         "out_of_credit": "Inget saldo",

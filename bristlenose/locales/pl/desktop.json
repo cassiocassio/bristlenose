@@ -284,6 +284,13 @@
     "copyDiskSpaceTitle": "Za mało miejsca na dysku",
     "copyDiskSpaceMessage": "To kopiowanie wymaga %@ wolnego miejsca, ale na woluminie docelowym dostępne jest tylko %@.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "Nie odpowiada",
+        "unreadable": "Nie mo\u017cna odczyta\u0107",
+        "folderMissing": "Nie znaleziono folderu",
+        "damaged": "Plik projektu uszkodzony",
+        "scanFailed": "Skanowanie nie powiod\u0142o si\u0119"
+      },
       "queuedPosition": "W kolejce · pozycja {{position}}",
       "stopping": "Zatrzymywanie…",
       "analysing": "Analizowanie…",
@@ -337,6 +344,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "Folder nie odpowiedzia\u0142 \u2014 mo\u017ce to by\u0107 od\u0142\u0105czony dysk lub udzia\u0142 sieciowy.",
+        "unreadable": "Folder istnieje, ale nie uda\u0142o si\u0119 odczyta\u0107 jego zawarto\u015bci.",
+        "folderMissing": "Folder nie znajduje si\u0119 tam, gdzie oczekuje go ten projekt \u2014 m\u00f3g\u0142 zosta\u0107 przeniesiony.",
+        "damaged": "Nie uda\u0142o si\u0119 odczyta\u0107 pliku indeksu tego projektu \u2014 ponowna analiza odtworzy go.",
+        "scanFailed": "Skanowanie zako\u0144czy\u0142o si\u0119 bez wyniku \u2014 ponowne otwarcie projektu spr\u00f3buje jeszcze raz."
+      },
       "pill": {
         "auth": "Problem z kluczem dostawcy",
         "out_of_credit": "Brak \u015brodk\u00f3w",

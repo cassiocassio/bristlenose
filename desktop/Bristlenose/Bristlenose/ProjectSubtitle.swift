@@ -40,9 +40,18 @@ enum SubtitleVariant: Equatable {
     /// A `transcribe-only` (or otherwise partial) run completed cleanly.
     /// `transcribeOnly` picks "Transcribed" vs "Partial run".
     case partial(transcribeOnly: Bool)
-    /// Pipeline reported the project unreachable mid-scan. `reason` is a
-    /// Python-supplied string (not a localisation key) — rendered verbatim.
-    case unreachable(reason: String)
+    /// Pipeline reported the project unreachable mid-scan.
+    ///
+    /// `reason` was a **`String`** until 26 Aug 2026, and the doc-comment here
+    /// described it as "a Python-supplied string … rendered verbatim". Both
+    /// halves were wrong: all five strings were written in Swift, in
+    /// `PipelineRunner`, and rendering them verbatim is what put an
+    /// unlocalised, glyph-less, un-clickable sentence on the row — the one case
+    /// in this enum breaking the "raw data, never a baked string" rule stated at
+    /// the top of the file. It is now `UnreachableReason`, which carries a
+    /// `MessageKind` and a locale key, so the view localises it like everything
+    /// else and the glyph follows from the kind.
+    case unreachable(reason: UnreachableReason)
     /// A drop / Add-Files gesture is landing N interviews in THIS project — the
     /// pre-copy "Adding N interviews…" acknowledgement, held for a ~2 s floor so
     /// it can't flash-and-vanish on a near-instant clonefile copy, then it yields
@@ -87,23 +96,78 @@ enum SubtitleVariant: Equatable {
     case placeholder
 }
 
+/// What the subtitle's leading glyph does when the user clicks it.
+///
+/// A glyph is a signifier, and a signifier that names an action must perform
+/// one — the popover doc's own anti-pattern list puts it plainly: *"the
+/// affordance promises something it doesn't deliver"*. So this and
+/// `SubtitleVariant.glyph` are decided together: a state either has a glyph
+/// AND a door behind it, or neither.
+enum SubtitleGlyphAction: Equatable {
+    /// Opens `ProjectDiagnosticPopover`, anchored to the glyph.
+    case diagnostics
+    /// Opens the files sheet — the folder and the analysis disagree, and the
+    /// sheet is where the disagreement is enumerated.
+    case files
+    /// Runs the Locate flow — the folder isn't where the project expects it.
+    case locate
+    /// No glyph, or nothing behind it.
+    case none
+}
+
 extension SubtitleVariant {
-    /// Whether this is a failure/partial "distress" state whose prefix glyph is a
-    /// clickable diagnostic glyph (opens `ProjectDiagnosticPopover`) — vs a
-    /// cantFind/locate glyph or a non-glyph state. **Exhaustive, no `default`** so a
-    /// new variant forces an explicit diagnostic-or-not decision here rather than
-    /// silently rendering no glyph (review F35/Bach; same convention as
-    /// `ProjectRowActivityIndicator.Kind.from`). Table-tested in `ProjectSubtitleTests`.
-    var isDiagnostic: Bool {
+    /// The glyph's destination. **Exhaustive, no `default`** so a new variant
+    /// forces an explicit decision here rather than silently rendering an inert
+    /// glyph (same convention as `ProjectRowActivityIndicator.Kind.from` and
+    /// `pipelineIsFree`). Table-tested in `ProjectSubtitleTests`.
+    ///
+    /// The verb-led progress states (`running`, `copying`, `queued`, …) are
+    /// `.none` on purpose and are NOT a gap: they are `MessageKind.info` —
+    /// *"it's just happening"* — and the 18 Jun rulings give info no glyph. Their
+    /// affordance is the trailing ring's hover-cancel, which is the act a
+    /// researcher actually wants mid-run.
+    var glyphAction: SubtitleGlyphAction {
         switch self {
-        case .failed, .failedDiagnostic, .completedPartial:
-            return true
-        case .cantFind, .stopping, .running, .queued, .stopped, .partial,
-             .unreachable, .addingInterviews, .copying, .importingBatch,
-             .copyCancelling, .ready, .deltaOnly, .placeholder:
-            return false
+        case .failed, .failedDiagnostic, .completedPartial, .unreachable:
+            return .diagnostics
+        case .cantFind:
+            // The glyph called itself "a Locate affordance" in this file's
+            // comments while rendering as a static `NSImageView` — Locate lived
+            // only in the context menu. Now it is the door it always claimed to
+            // be. (26 Aug 2026.)
+            return .locate
+        case .deltaOnly:
+            // Both deltas lead to the same sheet, because they are two readings
+            // of one condition: `UnanalysedState` describes a single
+            // folder-vs-analysis disagreement, and `NewFilesSheet` already
+            // renders both its `newFiles` and its `missingFiles`.
+            //
+            // `.unanalysed` WAS clickable on the SwiftUI row and lost the click
+            // in the AppKit cutover — `SidebarSubtitleText` composes the delta
+            // into flat subtitle text, so there was no target left. This is that
+            // click restored, and `.missing` joining it.
+            return .files
+        case .ready(_, let delta):
+            // Not emitted under Schema E, but kept honest: a `.ready` carrying a
+            // delta is the same disagreement with a date in front of it.
+            return delta == nil ? .none : .files
+        case .stopping, .running, .queued, .stopped, .partial,
+             .addingInterviews, .copying, .importingBatch,
+             .copyCancelling, .placeholder:
+            return .none
         }
     }
+
+    /// Whether the project can't be reached right now, so the row dims. The
+    /// availability twin of `.cantFind`, which dims via `availability.isReady`.
+    var isUnreachable: Bool {
+        if case .unreachable = self { return true }
+        return false
+    }
+
+    /// Whether the glyph opens the diagnostic popover. Derived from
+    /// `glyphAction` so the two can't disagree.
+    var isDiagnostic: Bool { glyphAction == .diagnostics }
 }
 
 /// The single data-drift segment a row may surface (it shows at most one;

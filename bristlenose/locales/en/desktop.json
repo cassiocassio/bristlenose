@@ -251,6 +251,13 @@
     "copyDiskSpaceTitle": "Not enough disk space",
     "copyDiskSpaceMessage": "This copy needs %@ free, but only %@ is available on the destination volume.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "Not responding",
+        "unreadable": "Can't be read",
+        "folderMissing": "Folder not found",
+        "damaged": "Project file damaged",
+        "scanFailed": "Scan failed"
+      },
       "queuedPosition": "Queued \u00b7 position {{position}}",
       "stopping": "Stopping\u2026",
       "analysing": "Analysing\u2026",
@@ -304,6 +311,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "The folder didn't answer \u2014 it may be a disconnected drive or network share.",
+        "unreadable": "The folder is there, but its contents couldn't be read.",
+        "folderMissing": "The folder isn't where this project expects it \u2014 it may have moved.",
+        "damaged": "This project's index file couldn't be read \u2014 re-analysing will rebuild it.",
+        "scanFailed": "The scan ended without a result \u2014 reopening the project will try again."
+      },
       "pill": {
         "auth": "Provider key issue",
         "out_of_credit": "Out of credit",

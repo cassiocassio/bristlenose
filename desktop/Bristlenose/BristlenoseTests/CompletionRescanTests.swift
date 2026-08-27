@@ -25,7 +25,7 @@ import Testing
         #expect(!CompletionRescan.isAnalysing(.queued(position: 1)))
         #expect(!CompletionRescan.isAnalysing(.ready(Date())))
         #expect(!CompletionRescan.isAnalysing(.failed("x", category: .unknown)))
-        #expect(!CompletionRescan.isAnalysing(.unreachable(reason: "x")))
+        #expect(!CompletionRescan.isAnalysing(.unreachable(reason: .timedOut)))
         #expect(!CompletionRescan.isAnalysing(.partial(kind: "transcribe-only", stagesComplete: [])))
         #expect(!CompletionRescan.isAnalysing(.stopped(stagesComplete: [])))
         #expect(!CompletionRescan.isAnalysing(.completedPartial(summary: PipelineSummary())))

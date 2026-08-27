@@ -283,6 +283,13 @@
     "copyDiskSpaceTitle": "Nedostatek místa na disku",
     "copyDiskSpaceMessage": "Tato kopie potřebuje %@ volného místa, ale na cílovém svazku je k dispozici pouze %@.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "Neodpov\u00edd\u00e1",
+        "unreadable": "Nelze p\u0159e\u010d\u00edst",
+        "folderMissing": "Slo\u017eka nenalezena",
+        "damaged": "Soubor projektu po\u0161kozen",
+        "scanFailed": "Kontrola selhala"
+      },
       "queuedPosition": "Ve frontě · pozice {{position}}",
       "stopping": "Zastavování…",
       "analysing": "Analýza…",
@@ -336,6 +343,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "Slo\u017eka neodpov\u011bd\u011bla \u2013 m\u016f\u017ee j\u00edt o odpojen\u00fd disk nebo s\u00ed\u0165ov\u00e9 \u00falo\u017ei\u0161t\u011b.",
+        "unreadable": "Slo\u017eka existuje, ale jej\u00ed obsah se nepoda\u0159ilo p\u0159e\u010d\u00edst.",
+        "folderMissing": "Slo\u017eka nen\u00ed tam, kde ji tento projekt o\u010dek\u00e1v\u00e1 \u2013 mo\u017en\u00e1 byla p\u0159esunuta.",
+        "damaged": "Indexov\u00fd soubor tohoto projektu se nepoda\u0159ilo p\u0159e\u010d\u00edst \u2013 op\u011btovn\u00e1 anal\u00fdza jej vytvo\u0159\u00ed znovu.",
+        "scanFailed": "Kontrola skon\u010dila bez v\u00fdsledku \u2013 po op\u011btovn\u00e9m otev\u0159en\u00ed projektu prob\u011bhne znovu."
+      },
       "pill": {
         "auth": "Problém s klíčem poskytovatele",
         "out_of_credit": "Bez kreditu",

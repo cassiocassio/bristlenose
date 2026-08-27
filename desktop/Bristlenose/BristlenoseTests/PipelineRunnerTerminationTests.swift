@@ -84,7 +84,7 @@ struct PipelineRunnerTerminationTests {
     @Test func decide_exit0_diskUnreachable_acceptsUnreachable() {
         let decision = PipelineRunner.decideTermination(
             exitStatus: 0, sidecarReportedSuccess: true,
-            derived: .unreachable(reason: "Taking too long to respond.")
+            derived: .unreachable(reason: .timedOut)
         )
         guard case .accept(let state) = decision else {
             Issue.record("expected .accept, got \(decision)"); return

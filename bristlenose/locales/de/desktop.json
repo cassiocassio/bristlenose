@@ -250,6 +250,13 @@
     "copyDiskSpaceTitle": "Nicht genug Speicherplatz",
     "copyDiskSpaceMessage": "Dieser Kopiervorgang ben\u00f6tigt %@ frei, aber nur %@ sind auf dem Zielvolume verf\u00fcgbar.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "Reagiert nicht",
+        "unreadable": "Nicht lesbar",
+        "folderMissing": "Ordner nicht gefunden",
+        "damaged": "Projektdatei besch\u00e4digt",
+        "scanFailed": "Pr\u00fcfung fehlgeschlagen"
+      },
       "queuedPosition": "In Warteschlange \u00b7 Position {{position}}",
       "stopping": "Wird angehalten\u2026",
       "analysing": "Wird analysiert\u2026",
@@ -303,6 +310,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "Der Ordner hat nicht geantwortet \u2013 m\u00f6glicherweise ein getrenntes Laufwerk oder eine Netzwerkfreigabe.",
+        "unreadable": "Der Ordner ist vorhanden, aber sein Inhalt konnte nicht gelesen werden.",
+        "folderMissing": "Der Ordner befindet sich nicht am erwarteten Ort \u2013 m\u00f6glicherweise wurde er verschoben.",
+        "damaged": "Die Indexdatei dieses Projekts konnte nicht gelesen werden \u2013 eine erneute Analyse erstellt sie neu.",
+        "scanFailed": "Die Pr\u00fcfung endete ohne Ergebnis \u2013 beim erneuten \u00d6ffnen des Projekts wird es nochmals versucht."
+      },
       "pill": {
         "auth": "Schlüsselproblem",
         "out_of_credit": "Kein Guthaben",

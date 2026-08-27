@@ -250,6 +250,13 @@
     "copyDiskSpaceTitle": "No hi ha prou espai al disc",
     "copyDiskSpaceMessage": "Aquesta còpia necessita %@ lliures, però al volum de destinació només n'hi ha %@ de disponibles.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "No respon",
+        "unreadable": "No es pot llegir",
+        "folderMissing": "Carpeta no trobada",
+        "damaged": "Fitxer del projecte malm\u00e8s",
+        "scanFailed": "Error d'exploraci\u00f3"
+      },
       "queuedPosition": "En cua · posició {{position}}",
       "stopping": "S'està aturant…",
       "analysing": "S'està analitzant…",
@@ -303,6 +310,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "La carpeta no ha respost: pot ser un disc desconnectat o un recurs de xarxa.",
+        "unreadable": "La carpeta hi \u00e9s, per\u00f2 no se n'ha pogut llegir el contingut.",
+        "folderMissing": "La carpeta no \u00e9s on aquest projecte l'espera: pot ser que s'hagi mogut.",
+        "damaged": "No s'ha pogut llegir el fitxer d'\u00edndex d'aquest projecte; tornar-lo a analitzar el reconstruir\u00e0.",
+        "scanFailed": "L'exploraci\u00f3 ha acabat sense resultat; tornar a obrir el projecte ho tornar\u00e0 a intentar."
+      },
       "pill": {
         "auth": "Problema amb la clau del proveïdor",
         "out_of_credit": "Sense crèdit",

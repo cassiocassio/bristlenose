@@ -250,6 +250,13 @@
     "copyDiskSpaceTitle": "Spazio su disco insufficiente",
     "copyDiskSpaceMessage": "Questa copia richiede %@ liberi, ma sul volume di destinazione sono disponibili solo %@.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "Non risponde",
+        "unreadable": "Impossibile leggere",
+        "folderMissing": "Cartella non trovata",
+        "damaged": "File di progetto danneggiato",
+        "scanFailed": "Scansione non riuscita"
+      },
       "queuedPosition": "In coda · posizione {{position}}",
       "stopping": "Interruzione…",
       "analysing": "Analisi…",
@@ -303,6 +310,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "La cartella non ha risposto: potrebbe essere un disco scollegato o una condivisione di rete.",
+        "unreadable": "La cartella \u00e8 presente, ma non \u00e8 stato possibile leggerne il contenuto.",
+        "folderMissing": "La cartella non si trova dove questo progetto la cerca: potrebbe essere stata spostata.",
+        "damaged": "Non \u00e8 stato possibile leggere il file di indice di questo progetto: una nuova analisi lo ricostruir\u00e0.",
+        "scanFailed": "La scansione \u00e8 terminata senza risultato: riaprire il progetto riprover\u00e0."
+      },
       "pill": {
         "auth": "Problema con la chiave del provider",
         "out_of_credit": "Credito esaurito",

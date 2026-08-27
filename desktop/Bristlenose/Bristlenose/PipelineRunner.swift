@@ -122,7 +122,7 @@ enum PipelineState: Equatable {
     case failed(String, category: PipelineFailureCategory)
     /// Project can't be scanned (volume unmounted, path gone, permission denied).
     /// Distinct from `.failed` — nothing to retry, just unreachable right now.
-    case unreachable(reason: String)
+    case unreachable(reason: UnreachableReason)
     /// A `transcribe-only` run completed cleanly — transcripts present,
     /// no analysis. Phase 1f Slice 4 — surface "Continue (analyse)".
     /// `stagesComplete` derived from the manifest at display time.
@@ -903,15 +903,15 @@ final class PipelineRunner: ObservableObject {
                     throw CancellationError()
                 }
                 guard let first = try await group.next() else {
-                    return .unreachable(reason: "Scan failed")
+                    return .unreachable(reason: .scanFailed)
                 }
                 group.cancelAll()
                 return first
             }
         } catch is CancellationError {
-            return .unreachable(reason: "Taking too long to respond.")
+            return .unreachable(reason: .timedOut)
         } catch {
-            return .unreachable(reason: "Can't read this project.")
+            return .unreachable(reason: .unreadable)
         }
     }
 
@@ -948,7 +948,7 @@ final class PipelineRunner: ObservableObject {
         var isDir: ObjCBool = false
         guard fm.fileExists(atPath: parentDir.path, isDirectory: &isDir),
               isDir.boolValue else {
-            return .unreachable(reason: "Can't find this folder.")
+            return .unreachable(reason: .folderMissing)
         }
 
         let dotBristlenose = url.deletingLastPathComponent()
@@ -991,11 +991,11 @@ final class PipelineRunner: ObservableObject {
             guard let json = try JSONSerialization.jsonObject(with: manifestData)
                     as? [String: Any],
                   let parsedStages = json["stages"] as? [String: Any] else {
-                return .unreachable(reason: "Project file is damaged.")
+                return .unreachable(reason: .damaged)
             }
             stages = parsedStages
         } catch {
-            return .unreachable(reason: "Can't read this project.")
+            return .unreachable(reason: .unreadable)
         }
 
         // Phase 1f Slice 4 — prefer the events log when present. Falls back

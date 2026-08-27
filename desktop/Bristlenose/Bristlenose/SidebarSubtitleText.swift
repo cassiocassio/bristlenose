@@ -29,8 +29,18 @@ enum SidebarSubtitleText {
         case .cantFind:
             // Text + glyph both derive from `availability` (`:234`).
             return availability.subtitle(using: i18n)
-        case .failed(let summary):
-            return summary                                                   // :242-243
+        case .failed:
+            // **Not the summary.** `.failed` used to pass Python's raw sentence
+            // straight through — "All topic segmentation calls failed." is 36
+            // chars against a ~22-char row budget, so it truncated mid-phrase in
+            // English, before any locale swell. Its sibling `.failedDiagnostic`
+            // had already solved this: a short localised header on the row, the
+            // detail in the popover. Which of the two a researcher saw depended
+            // only on whether Python happened to write a `summary` field, so the
+            // row said different things about the same event. Now both say
+            // "Run failed"; the summary is rendered by `degradedBody` in
+            // `ProjectDiagnosticPopover`, which is sized for it. (26 Aug 2026.)
+            return i18n.t("desktop.pipeline.diagnostic.header.failed")
         case .failedDiagnostic:
             return i18n.t("desktop.pipeline.diagnostic.header.failed")       // :250-251
         case .completedPartial:
@@ -85,7 +95,7 @@ enum SidebarSubtitleText {
                 ? "desktop.chrome.pipeline.transcribed"
                 : "desktop.chrome.pipeline.partialRun")
         case .unreachable(let reason):
-            return reason
+            return i18n.t(reason.localeKey)
         case .addingInterviews(let count):
             return i18n.plural("desktop.chrome.addingInterviews", count: count)
         case .copying(let fraction):

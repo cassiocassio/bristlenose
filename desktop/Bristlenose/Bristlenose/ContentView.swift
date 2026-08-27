@@ -2329,6 +2329,11 @@ struct ContentView: View {
                 onLocate: { id in
                     if let p = projectIndex.projects.first(where: { $0.id == id }) { locateProject(p) }
                 },
+                onShowFiles: { id in
+                    if let p = projectIndex.projects.first(where: { $0.id == id }) {
+                        openUnanalysedSheet(for: p)
+                    }
+                },
                 onReAnalyse: { id in
                     // Targets the *clicked* project, not the selection — a
                     // right-click on a row the user hasn't selected must not

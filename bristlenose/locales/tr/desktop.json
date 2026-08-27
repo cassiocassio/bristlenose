@@ -250,6 +250,13 @@
     "copyDiskSpaceTitle": "Yeterli disk alanı yok",
     "copyDiskSpaceMessage": "Bu kopyalama %@ boş alan gerektiriyor, ancak hedef birimde yalnızca %@ kullanılabilir.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "Yan\u0131t vermiyor",
+        "unreadable": "Okunam\u0131yor",
+        "folderMissing": "Klas\u00f6r bulunamad\u0131",
+        "damaged": "Proje dosyas\u0131 hasarl\u0131",
+        "scanFailed": "Tarama ba\u015far\u0131s\u0131z"
+      },
       "queuedPosition": "Kuyrukta · sıra {{position}}",
       "stopping": "Durduruluyor…",
       "analysing": "Analiz ediliyor…",
@@ -303,6 +310,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "Klas\u00f6r yan\u0131t vermedi; ba\u011flant\u0131s\u0131 kesilmi\u015f bir disk veya a\u011f payla\u015f\u0131m\u0131 olabilir.",
+        "unreadable": "Klas\u00f6r var, ancak i\u00e7eri\u011fi okunamad\u0131.",
+        "folderMissing": "Klas\u00f6r bu projenin bekledi\u011fi yerde de\u011fil; ta\u015f\u0131nm\u0131\u015f olabilir.",
+        "damaged": "Bu projenin dizin dosyas\u0131 okunamad\u0131; yeniden \u00e7\u00f6z\u00fcmleme onu yeniden olu\u015fturur.",
+        "scanFailed": "Tarama sonu\u00e7 vermeden bitti; projeyi yeniden a\u00e7mak yeniden dener."
+      },
       "pill": {
         "auth": "Sağlayıcı anahtarı sorunu",
         "out_of_credit": "Kredi yok",

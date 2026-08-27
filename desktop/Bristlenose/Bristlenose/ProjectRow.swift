@@ -248,8 +248,13 @@ struct ProjectRow: View {
             } else {
                 Text(" ").font(.caption).hidden()
             }
-        case .failed(let summary):
-            diagnosticSubtitle(kind: .error, text: summary)
+        case .failed:
+            // Localised short header, not Python's raw summary — see
+            // `SidebarSubtitleText.text` for why (row budget is ~22 chars; the
+            // summary goes to the popover). Kept identical to the shipped
+            // AppKit cell so the retired row can't disagree with it.
+            diagnosticSubtitle(kind: .error,
+                               text: i18n.t("desktop.pipeline.diagnostic.header.failed"))
         case .failedDiagnostic:
             // Sidebar is the attention surface, not the detail surface —
             // budget is ~22 EN chars before DE/ES/FR swell truncates. The
@@ -306,7 +311,7 @@ struct ProjectRow: View {
                 ? "desktop.chrome.pipeline.transcribed"
                 : "desktop.chrome.pipeline.partialRun")
         case .unreachable(let reason):
-            return reason
+            return i18n.t(reason.localeKey)
         case .addingInterviews(let count):
             return i18n.plural("desktop.chrome.addingInterviews", count: count)
         case .importingBatch:

@@ -51,12 +51,18 @@ enum SidebarExternalDrop: Equatable {
     }
 }
 
-/// A clickable failure/partial subtitle glyph that opens the diagnostic popover
-/// anchored to itself. Carries the project id so the controller's action resolves
-/// the project + state. `cantFind` ("missing") glyphs are NOT this — that glyph is a
-/// Locate affordance, rendered as a static image.
-private final class DiagnosticGlyphButton: NSButton {
+/// A clickable subtitle element — the leading glyph, or (for the data-drift
+/// deltas, which have no glyph of their own) the subtitle text itself. Carries
+/// the project id and the destination so the controller's action resolves both.
+///
+/// Was `DiagnosticGlyphButton`, when the popover was the only destination. It
+/// gained the other two on 26 Aug 2026: `cantFind`'s glyph had described itself
+/// as "a Locate affordance, rendered as a static image" — a signifier naming an
+/// act it did not perform — and the unanalysed delta had lost its click entirely
+/// in the AppKit cutover.
+private final class SubtitleActionButton: NSButton {
     var projectID: UUID?
+    var subtitleAction: SubtitleGlyphAction = .none
     // Clickable inline chrome → pointing hand on hover (native idiom, no underline).
     override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
 }
@@ -77,6 +83,10 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// owns the in-`projectIndex` ones — rename / move / icon / cancel — directly).
     /// Mirror the SwiftUI `ProjectRow`/`FolderRow` `.contextMenu` items.
     let onLocate: (UUID) -> Void
+    /// The subtitle's data-drift delta was clicked — open the files sheet
+    /// listing what the folder and the analysis disagree about. Presented by
+    /// `ContentView` (it owns the sheet), like `onLocate`.
+    let onShowFiles: (UUID) -> Void
     /// Right-click ▸ Re-analyse…. Handed to `ContentView` rather than run
     /// here: the act is destructive and its confirmation belongs with the
     /// window that can present one.
@@ -170,6 +180,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.onActivateLens = onActivateLens
         controller.onExternalDrop = onExternalDrop
         controller.onLocate = onLocate
+        controller.onShowFiles = onShowFiles
         controller.onReAnalyse = onReAnalyse
         controller.onShowInFinder = onShowInFinder
         controller.canShowInFinder = canShowInFinder
@@ -249,6 +260,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var onActivateLens: (Tab) -> Void = { _ in }
     var onExternalDrop: (SidebarExternalDrop, [URL]) -> Void = { _, _ in }
     var onLocate: (UUID) -> Void = { _ in }
+    var onShowFiles: (UUID) -> Void = { _ in }
     var onReAnalyse: (UUID) -> Void = { _ in }
     var onShowInFinder: (UUID) -> Void = { _ in }
     /// See the representable's `handshakeProjectPaths`.
@@ -1420,12 +1432,21 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                                          agentProjectID: id)), id: id)
             }
             let prefix = subtitlePrefixGlyph(for: variant, availability: project.availability)
-            let diagnosticsID = variant.isDiagnostic ? id : nil
+            let glyphAction = variant.glyphAction
             return hideIconIfRevealing(
                 withTooltip(tip,
                     projectTwoLineCell(symbol: symbol, name: project.name, count: count,
-                                       subtitle: subtitle, available: project.availability.isReady,
-                                       prefixGlyph: prefix, diagnosticsProjectID: diagnosticsID,
+                                       subtitle: subtitle,
+                                       // `.unreachable` dims too, not just
+                                       // `.cantFind` — both mean "this project
+                                       // can't be opened right now", and
+                                       // `design-pipeline-diagnostic-popover.md:303`
+                                       // specified a greyed row for it all along.
+                                       available: project.availability.isReady
+                                           && !variant.isUnreachable,
+                                       prefixGlyph: prefix,
+                                       subtitleAction: glyphAction,
+                                       subtitleActionProjectID: glyphAction == .none ? nil : id,
                                        agentProjectID: id,
                                        rightSlot: cellRightSlot(for: project),
                                        shimmer: shimmerSubtitle(for: variant))),
@@ -1793,8 +1814,24 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// Subtitle PREFIX glyph (symbol + tint) for a variant, or nil. Mirrors the glyph
     /// choices in `ProjectRow.subtitleContent` (`:229-254`): cantFind → reason-aware
     /// glyph in orange; failed/diagnostic → the `MessageKind.error` glyph; partial →
-    /// `MessageKind.warning`. The failure glyph's clickability (→ diagnostics) is
-    /// Phase 4 — here it renders static.
+    /// `MessageKind.warning`. Clickability is decided separately, by
+    /// `SubtitleVariant.glyphAction`.
+    ///
+    /// **Exhaustive, no `default` — and it was the `default` that caused the bug
+    /// this function was audited for (26 Aug 2026).** Three sibling switches
+    /// classify the same enum and all three carry a written comment forbidding a
+    /// `default` arm — `SubtitleVariant.glyphAction` ("so a new variant forces an
+    /// explicit decision here rather than silently rendering an inert glyph"),
+    /// `ProjectRowActivityIndicator.Kind.from`, and `pipelineIsFree`. This one,
+    /// the only one that decides whether the user sees a glyph at all, had
+    /// `default: return nil`. So `.unreachable` — five English sentences on the
+    /// row — drew no glyph, had nothing to click, and no compiler error ever
+    /// asked. `.deltaOnly(.missing)` fell through the same arm, despite the
+    /// 18 Jun rulings table classifying missing source files as `warning`
+    /// ("beyond neutral — files gone").
+    ///
+    /// Don't reintroduce the `default`. The point of the enumeration is that
+    /// adding a case here is a *decision*, not an omission.
     private func subtitlePrefixGlyph(for variant: SubtitleVariant,
                                      availability: ProjectAvailability) -> (symbol: String, color: NSColor)? {
         switch variant {
@@ -1804,13 +1841,46 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             return (MessageKind.error.symbolName, NSColor(MessageKind.error.tint))
         case .completedPartial:
             return (MessageKind.warning.symbolName, NSColor(MessageKind.warning.tint))
-        default:
+        case .unreachable(let reason):
+            // Kind per `UnreachableReason.kind` — warning for the two that may
+            // resolve themselves (a sleeping drive, a remounted volume), error
+            // for the three that need something to change.
+            return (reason.kind.symbolName, NSColor(reason.kind.tint))
+        case .deltaOnly(.missing), .ready(_, .some(.missing)):
+            // Ruled `warning` on 18 Jun 2026: a researcher whose source
+            // recordings have vanished should not read a row that is
+            // typographically identical to "analysed, all fine".
+            return (MessageKind.warning.symbolName, NSColor(MessageKind.warning.tint))
+        case .deltaOnly(.unanalysed), .ready:
+            // Clickable (→ the files sheet) but glyph-less: "there is work
+            // available" is not distress, and the rulings give `info` no glyph.
+            return nil
+        case .stopping, .running, .queued, .stopped, .partial,
+             .addingInterviews, .copying, .importingBatch,
+             .copyCancelling, .placeholder:
+            // Verb-led progress and resting states — `info`, no glyph.
             return nil
         }
     }
 
+    /// A subtitle element was clicked — route by its declared destination.
+    /// `SubtitleVariant.glyphAction` decided this; the cell only carries it.
+    @objc private func subtitleActionClicked(_ sender: SubtitleActionButton) {
+        guard let id = sender.projectID else { return }
+        switch sender.subtitleAction {
+        case .diagnostics:
+            showDiagnosticsPopover(sender)
+        case .files:
+            onShowFiles(id)
+        case .locate:
+            onLocate(id)
+        case .none:
+            break
+        }
+    }
+
     /// The subtitle failure glyph → diagnostic popover, anchored to the glyph's frame.
-    @objc private func diagnosticGlyphClicked(_ sender: DiagnosticGlyphButton) {
+    private func showDiagnosticsPopover(_ sender: SubtitleActionButton) {
         guard let id = sender.projectID else { return }
         presentDiagnosticPopover(projectID: id, anchorRect: sender.convert(sender.bounds, to: outlineView))
     }
@@ -2382,7 +2452,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     private func projectTwoLineCell(symbol: String, name: String, count: String?,
                                     subtitle: String, available: Bool,
                                     prefixGlyph: (symbol: String, color: NSColor)?,
-                                    diagnosticsProjectID: UUID?,
+                                    subtitleAction: SubtitleGlyphAction,
+                                    subtitleActionProjectID: UUID?,
                                     agentProjectID: UUID?,
                                     rightSlot: RightSlot,
                                     shimmer: Bool) -> NSTableCellView {
@@ -2424,6 +2495,33 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             host.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             host.setContentHuggingPriority(.defaultLow, for: .horizontal)
             subtitleField = host
+        } else if subtitleAction == .files, let subtitleActionProjectID {
+            // The data-drift deltas carry no glyph (`.unanalysed` is `info`), so
+            // the text IS the target — as it was on the SwiftUI row, where this
+            // was a `Button`. Styled to be indistinguishable from the label
+            // beside it: the pointing-hand cursor on hover is the affordance,
+            // per the sidebar's attention-not-affordance rule.
+            let button = SubtitleActionButton(title: subtitle,
+                                              target: self,
+                                              action: #selector(subtitleActionClicked(_:)))
+            button.projectID = subtitleActionProjectID
+            button.subtitleAction = .files
+            button.isBordered = false
+            button.setButtonType(.momentaryChange)
+            button.alignment = .left          // NSButton centres by default.
+            let para = NSMutableParagraphStyle()
+            para.lineBreakMode = .byTruncatingTail
+            para.alignment = .left
+            button.attributedTitle = NSAttributedString(string: subtitle, attributes: [
+                .font: ProjectCellSpec.subtitleFont,
+                .foregroundColor: NSColor.secondaryLabelColor,
+                .paragraphStyle: para,
+            ])
+            button.setAccessibilityLabel(subtitle)
+            button.translatesAutoresizingMaskIntoConstraints = false
+            button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            button.setContentHuggingPriority(.defaultLow, for: .horizontal)
+            subtitleField = button
         } else {
             let field = NSTextField(labelWithString: subtitle)
             field.font = ProjectCellSpec.subtitleFont
@@ -2461,16 +2559,28 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             let glyphImage = NSImage(systemSymbolName: prefixGlyph.symbol, accessibilityDescription: nil)?
                 .withSymbolConfiguration(ProjectCellSpec.subtitleGlyphConfig)
             let glyph: NSView
-            if let diagnosticsProjectID {
-                let button = DiagnosticGlyphButton(image: glyphImage ?? NSImage(),
-                                                   target: self,
-                                                   action: #selector(diagnosticGlyphClicked(_:)))
-                button.projectID = diagnosticsProjectID
+            if subtitleAction != .none, let subtitleActionProjectID {
+                let button = SubtitleActionButton(image: glyphImage ?? NSImage(),
+                                                  target: self,
+                                                  action: #selector(subtitleActionClicked(_:)))
+                button.projectID = subtitleActionProjectID
+                button.subtitleAction = subtitleAction
                 button.isBordered = false
                 button.bezelStyle = .regularSquare
                 button.imagePosition = .imageOnly
                 button.contentTintColor = prefixGlyph.color
-                button.setAccessibilityLabel(i18n?.t("desktop.menu.project.showDiagnostics"))
+                // Reuse the keys the same acts already carry in the context
+                // menu, so the glyph and the menu item read identically to
+                // VoiceOver. `.files` has no menu twin; the subtitle already
+                // says "3 files missing", which is the better label anyway.
+                switch subtitleAction {
+                case .diagnostics:
+                    button.setAccessibilityLabel(i18n?.t("desktop.menu.project.showDiagnostics"))
+                case .locate:
+                    button.setAccessibilityLabel(i18n?.t("desktop.chrome.locate"))
+                case .files, .none:
+                    button.setAccessibilityLabel(subtitle)
+                }
                 glyph = button
             } else {
                 let imageView = NSImageView()

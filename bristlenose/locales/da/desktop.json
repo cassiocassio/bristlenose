@@ -250,6 +250,13 @@
     "copyDiskSpaceTitle": "Ikke nok diskplads",
     "copyDiskSpaceMessage": "Denne kopiering kræver %@ ledig plads, men der er kun %@ tilgængelig på destinationsdisken.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "Svarer ikke",
+        "unreadable": "Kan ikke l\u00e6ses",
+        "folderMissing": "Mappe ikke fundet",
+        "damaged": "Projektarkiv beskadiget",
+        "scanFailed": "Scanning mislykkedes"
+      },
       "queuedPosition": "I kø · position {{position}}",
       "stopping": "Stopper…",
       "analysing": "Analyserer…",
@@ -303,6 +310,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "Mappen svarede ikke \u2013 det kan v\u00e6re en frakoblet disk eller et netv\u00e6rksdrev.",
+        "unreadable": "Mappen findes, men indholdet kunne ikke l\u00e6ses.",
+        "folderMissing": "Mappen er ikke, hvor dette projekt forventer den \u2013 den er m\u00e5ske blevet flyttet.",
+        "damaged": "Projektets indeksarkiv kunne ikke l\u00e6ses \u2013 en ny analyse opbygger det igen.",
+        "scanFailed": "Scanningen sluttede uden resultat \u2013 \u00e5bn projektet igen for at pr\u00f8ve p\u00e5 ny."
+      },
       "pill": {
         "auth": "Problem med udbydernøgle",
         "out_of_credit": "Ingen kredit",

@@ -250,6 +250,13 @@
     "copyDiskSpaceTitle": "Levytila ei riitä",
     "copyDiskSpaceMessage": "Tämä kopiointi tarvitsee %@ vapaata, mutta kohdetaltiolla on käytettävissä vain %@.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "Ei vastaa",
+        "unreadable": "Ei voi lukea",
+        "folderMissing": "Kansiota ei l\u00f6ydy",
+        "damaged": "Projektitiedosto vaurioitunut",
+        "scanFailed": "Tarkistus ep\u00e4onnistui"
+      },
       "queuedPosition": "Jonossa · sija {{position}}",
       "stopping": "Pysäytetään…",
       "analysing": "Analysoidaan…",
@@ -303,6 +310,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "Kansio ei vastannut \u2013 kyseess\u00e4 voi olla irrotettu levy tai verkkojako.",
+        "unreadable": "Kansio on olemassa, mutta sen sis\u00e4lt\u00f6\u00e4 ei voitu lukea.",
+        "folderMissing": "Kansio ei ole siell\u00e4, miss\u00e4 t\u00e4m\u00e4 projekti odottaa sit\u00e4 \u2013 se on ehk\u00e4 siirretty.",
+        "damaged": "T\u00e4m\u00e4n projektin hakemistotiedostoa ei voitu lukea \u2013 uusi analyysi luo sen uudelleen.",
+        "scanFailed": "Tarkistus p\u00e4\u00e4ttyi ilman tulosta \u2013 projektin avaaminen uudelleen yritt\u00e4\u00e4 uudestaan."
+      },
       "pill": {
         "auth": "Avainongelma",
         "out_of_credit": "Saldo lopussa",

@@ -405,7 +405,7 @@ import Foundation
     @Test func unreachableRefuses() {
         // A run against a vanished folder is doomed; availability tops the
         // severity chain (`design-desktop-project-status.md` §5).
-        #expect(!SidebarOutlineController.pipelineIsFree(.unreachable(reason: "unmounted")))
+        #expect(!SidebarOutlineController.pipelineIsFree(.unreachable(reason: .folderMissing)))
     }
 
     // MARK: - The gate is not the only guard

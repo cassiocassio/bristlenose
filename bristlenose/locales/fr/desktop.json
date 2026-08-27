@@ -250,6 +250,13 @@
     "copyDiskSpaceTitle": "Espace disque insuffisant",
     "copyDiskSpaceMessage": "Cette copie n\u00e9cessite %@ libres, mais seuls %@ sont disponibles sur le volume de destination.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "Ne r\u00e9pond pas",
+        "unreadable": "Lecture impossible",
+        "folderMissing": "Dossier introuvable",
+        "damaged": "Fichier de projet endommag\u00e9",
+        "scanFailed": "\u00c9chec de l'exploration"
+      },
       "queuedPosition": "En file d\u2019attente \u00b7 position {{position}}",
       "stopping": "Arr\u00eat\u2026",
       "analysing": "Analyse\u2026",
@@ -303,6 +310,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "Le dossier n'a pas r\u00e9pondu : il peut s'agir d'un disque d\u00e9connect\u00e9 ou d'un partage r\u00e9seau.",
+        "unreadable": "Le dossier est pr\u00e9sent, mais son contenu n'a pas pu \u00eatre lu.",
+        "folderMissing": "Le dossier ne se trouve pas \u00e0 l'emplacement attendu par ce projet : il a peut-\u00eatre \u00e9t\u00e9 d\u00e9plac\u00e9.",
+        "damaged": "Le fichier d'index de ce projet n'a pas pu \u00eatre lu ; une nouvelle analyse le reconstruira.",
+        "scanFailed": "L'exploration s'est termin\u00e9e sans r\u00e9sultat ; rouvrir le projet r\u00e9essaiera."
+      },
       "pill": {
         "auth": "Probl\u00e8me de cl\u00e9",
         "out_of_credit": "Cr\u00e9dit \u00e9puis\u00e9",

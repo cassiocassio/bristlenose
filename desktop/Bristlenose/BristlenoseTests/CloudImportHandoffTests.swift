@@ -119,7 +119,7 @@ struct CloudImportHandoffTests {
     func unreachableDeclines() {
         #expect(CloudImportHandoff.decide(
             landed: 3, shape: .folder,
-            state: .unreachable(reason: "volume gone")) == .nothing(.projectUnreachable))
+            state: .unreachable(reason: .folderMissing)) == .nothing(.projectUnreachable))
     }
 
     // MARK: - File-subset projects

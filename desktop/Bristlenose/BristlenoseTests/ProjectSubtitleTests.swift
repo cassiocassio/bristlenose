@@ -119,8 +119,8 @@ import Testing
     }
 
     @Test func unreachableCarriesReason() {
-        #expect(resolve(pipelineState: .unreachable(reason: "volume gone"))
-            == .unreachable(reason: "volume gone"))
+        #expect(resolve(pipelineState: .unreachable(reason: .folderMissing))
+            == .unreachable(reason: .folderMissing))
     }
 
     // MARK: - Tier 5+ — idle (Schema E: exceptions only, else silence)

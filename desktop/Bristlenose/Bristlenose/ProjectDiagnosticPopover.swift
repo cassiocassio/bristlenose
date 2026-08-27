@@ -114,6 +114,11 @@ struct ProjectDiagnosticPopover: View {
         #endif
     }
 
+    /// **Exhaustive, no `default`.** A state whose sidebar glyph is clickable
+    /// must have something to say here, and a `default` arm is how one comes to
+    /// open a blank popover instead — the popover doc's own anti-pattern
+    /// ("the affordance promises something it doesn't deliver"). `.unreachable`
+    /// became clickable on 26 Aug 2026 and this switch is why it isn't empty.
     private var headlineStatus: String {
         switch state {
         case .failed:
@@ -122,7 +127,10 @@ struct ProjectDiagnosticPopover: View {
             return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")
         case .failedWithDiagnostic:
             return i18n.t("desktop.pipeline.diagnostic.header.failed")
-        default:
+        case .unreachable(let reason):
+            return i18n.t(reason.localeKey)
+        case .scanning, .idle, .queued, .running, .ready, .partial, .stopped:
+            // Never opened for these — no glyph routes here (`glyphAction`).
             return ""
         }
     }
@@ -134,9 +142,39 @@ struct ProjectDiagnosticPopover: View {
             bucketsBody(summary: summary)
         case .failed(let message, let category):
             degradedBody(message: message, category: category)
-        default:
+        case .unreachable(let reason):
+            unreachableBody(reason: reason)
+        case .scanning, .idle, .queued, .running, .ready, .partial, .stopped:
             EmptyView()
         }
+    }
+
+    /// `.unreachable` — one explanatory sentence and the folder it's about.
+    ///
+    /// The path is the payload. A researcher reading "Not responding" already
+    /// knows *what*; the useful thing the row can't fit is *which folder*, and
+    /// seeing `/Volumes/Backup Drive/…` is usually the whole diagnosis. Selectable
+    /// so it can be pasted into a Finder Go-to-Folder or a support note; middle
+    /// truncation because the tail is the informative end of a path.
+    @ViewBuilder
+    private func unreachableBody(reason: UnreachableReason) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(i18n.t(reason.explanationKey))
+                .font(.callout)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if !project.path.isEmpty {
+                Text(project.path)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -268,12 +306,37 @@ struct ProjectDiagnosticPopover: View {
                 cause: message, category: category, projectName: project.name,
                 projectPath: project.path, stdoutTail: Array(tail)
             )
-        default:
+        case .unreachable(let reason):
+            // Localised strings resolved by the caller, so the formatter stays
+            // pure and testable and the paste reads in the language the user
+            // was actually shown.
+            text = Self.formatUnreachablePlaintext(
+                kind: reason.kind,
+                headline: i18n.t(reason.localeKey),
+                explanation: i18n.t(reason.explanationKey),
+                projectName: project.name, projectPath: project.path
+            )
+        case .scanning, .idle, .queued, .running, .ready, .partial, .stopped:
             return
         }
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(text, forType: .string)
+    }
+
+    /// Plaintext for an `.unreachable` diagnostic — the Unicode `MessageKind`
+    /// glyph, so a pasted diagnostic renders like a CLI line (the house rule for
+    /// this family). Pure: every localised string arrives as a parameter.
+    static func formatUnreachablePlaintext(
+        kind: MessageKind, headline: String, explanation: String,
+        projectName: String, projectPath: String
+    ) -> String {
+        var lines = ["Bristlenose — \(projectName)"]
+        if !projectPath.isEmpty { lines.append(projectPath) }
+        lines.append("")
+        lines.append("\(kind.glyph) \(headline)")
+        lines.append(explanation)
+        return lines.joined(separator: "\n")
     }
 
     #if DEBUG

@@ -25,7 +25,7 @@ import Testing
             .failed(summary: "boom"),
             .failedDiagnostic,
             .completedPartial,
-            .unreachable(reason: "offline"),
+            .unreachable(reason: .timedOut),
         ]
         for variant in twoLineCases {
             #expect(ProjectCellSpec.isTwoLine(variant) == true,

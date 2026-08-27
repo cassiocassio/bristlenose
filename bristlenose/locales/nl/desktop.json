@@ -250,6 +250,13 @@
     "copyDiskSpaceTitle": "Onvoldoende schijfruimte",
     "copyDiskSpaceMessage": "Deze kopie heeft %@ vrij nodig, maar er is slechts %@ beschikbaar op het doelvolume.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "Reageert niet",
+        "unreadable": "Kan niet worden gelezen",
+        "folderMissing": "Map niet gevonden",
+        "damaged": "Projectbestand beschadigd",
+        "scanFailed": "Scan mislukt"
+      },
       "queuedPosition": "In wachtrij · positie {{position}}",
       "stopping": "Stoppen…",
       "analysing": "Analyseren…",
@@ -303,6 +310,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "De map reageerde niet \u2014 mogelijk een losgekoppelde schijf of netwerkshare.",
+        "unreadable": "De map bestaat, maar de inhoud kon niet worden gelezen.",
+        "folderMissing": "De map staat niet waar dit project hem verwacht \u2014 mogelijk is hij verplaatst.",
+        "damaged": "Het indexbestand van dit project kon niet worden gelezen \u2014 opnieuw analyseren maakt het opnieuw aan.",
+        "scanFailed": "De scan eindigde zonder resultaat \u2014 het project opnieuw openen probeert het nogmaals."
+      },
       "pill": {
         "auth": "Probleem met providersleutel",
         "out_of_credit": "Geen tegoed",

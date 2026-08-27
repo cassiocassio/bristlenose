@@ -250,6 +250,13 @@
     "copyDiskSpaceTitle": "Ikke nok diskplass",
     "copyDiskSpaceMessage": "Denne kopieringen trenger %@ ledig, men bare %@ er tilgjengelig på målvolumet.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "Svarer ikke",
+        "unreadable": "Kan ikke leses",
+        "folderMissing": "Fant ikke mappen",
+        "damaged": "Prosjektfilen er skadet",
+        "scanFailed": "Skanningen mislyktes"
+      },
       "queuedPosition": "I kø · plass {{position}}",
       "stopping": "Stopper…",
       "analysing": "Analyserer…",
@@ -303,6 +310,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "Mappen svarte ikke \u2013 det kan v\u00e6re en frakoblet disk eller en nettverksplassering.",
+        "unreadable": "Mappen finnes, men innholdet kunne ikke leses.",
+        "folderMissing": "Mappen er ikke der dette prosjektet forventer \u2013 den kan ha blitt flyttet.",
+        "damaged": "Prosjektets indeksfil kunne ikke leses \u2013 en ny analyse bygger den opp igjen.",
+        "scanFailed": "Skanningen ble avsluttet uten resultat \u2013 \u00e5pne prosjektet p\u00e5 nytt for \u00e5 pr\u00f8ve igjen."
+      },
       "pill": {
         "auth": "Problem med leverandørnøkkel",
         "out_of_credit": "Ingen kreditt",

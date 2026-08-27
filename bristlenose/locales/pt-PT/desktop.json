@@ -250,6 +250,13 @@
     "copyDiskSpaceTitle": "Espaço em disco insuficiente",
     "copyDiskSpaceMessage": "Esta cópia precisa de %@ livres, mas só há %@ disponível no volume de destino.",
     "pipeline": {
+      "unreachable": {
+        "timedOut": "N\u00e3o responde",
+        "unreadable": "N\u00e3o \u00e9 poss\u00edvel ler",
+        "folderMissing": "Pasta n\u00e3o encontrada",
+        "damaged": "Ficheiro do projeto danificado",
+        "scanFailed": "Falha na verifica\u00e7\u00e3o"
+      },
       "queuedPosition": "Em fila · posição {{position}}",
       "stopping": "A parar…",
       "analysing": "A analisar…",
@@ -303,6 +310,13 @@
       }
     },
     "diagnostic": {
+      "unreachable": {
+        "timedOut": "A pasta n\u00e3o respondeu \u2014 pode ser um disco desligado ou uma partilha de rede.",
+        "unreadable": "A pasta existe, mas n\u00e3o foi poss\u00edvel ler o seu conte\u00fado.",
+        "folderMissing": "A pasta n\u00e3o est\u00e1 onde este projeto a espera \u2014 pode ter sido movida.",
+        "damaged": "N\u00e3o foi poss\u00edvel ler o ficheiro de \u00edndice deste projeto \u2014 analisar novamente ir\u00e1 recri\u00e1-lo.",
+        "scanFailed": "A verifica\u00e7\u00e3o terminou sem resultado \u2014 reabrir o projeto tentar\u00e1 novamente."
+      },
       "pill": {
         "auth": "Problema com a chave do fornecedor",
         "out_of_credit": "Sem cr\u00e9dito",

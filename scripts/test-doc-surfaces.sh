@@ -13,7 +13,26 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # 2-minute cap on a batch run killed this mid-injection and the tree carried a
 # missing --llm until someone noticed. Restore from git, always, on every exit
 # path. test-preflight-gates.sh already does this; this file did not.
-_restore() { git -C "$ROOT" checkout -- bristlenose/data/bristlenose.1 2>/dev/null || true; }
+#
+# Restore from a snapshot of the PRE-TEST file, not from git. `git checkout --`
+# discards whatever was in the working tree, which during a release is the
+# version bump: bump-version.py writes the new version into this man page and
+# leaves it unstaged, so running this suite mid-release silently reverted it to
+# HEAD. Cost a confusing preflight failure on 27 Aug 2026 — "man page .TH says
+# 0.27.0, expected 0.28.0" against a bump that had demonstrably succeeded.
+# Falls back to git only if the snapshot was never taken (an abort before the
+# cp below), which is the only case where HEAD is the best available answer.
+_MAN_SRC="$ROOT/bristlenose/data/bristlenose.1"
+_MAN_PRISTINE=$(mktemp "${TMPDIR:-/tmp}/bn-man-pristine.XXXXXX")
+cp "$_MAN_SRC" "$_MAN_PRISTINE"
+_restore() {
+    if [ -s "$_MAN_PRISTINE" ]; then
+        cp "$_MAN_PRISTINE" "$_MAN_SRC"
+    else
+        git -C "$ROOT" checkout -- bristlenose/data/bristlenose.1 2>/dev/null || true
+    fi
+    rm -f "$_MAN_PRISTINE"
+}
 trap _restore EXIT INT TERM
 
 . "$(dirname "$0")/test-lib.sh"

@@ -178,25 +178,6 @@ sudo snap connect bristlenose:removable-media
 ### Fedora
 
 ```bash
-sudo dnf copr enable cassiocassio/bristlenose
-sudo dnf install bristlenose
-```
-
-Copr is Fedora's community build service — the equivalent of a PPA. The first command adds
-the repository, the second installs from it, and `sudo dnf upgrade` keeps it current.
-
-The package bundles Python and everything Bristlenose needs, and pulls FFmpeg from Fedora's
-own repositories. It is built for **x86_64 only** — on ARM, use pipx below.
-
-`ffmpeg-free` is Fedora's patent-free FFmpeg build, and it handles everything Bristlenose
-needs — including the H.264 + AAC `.mp4` files that Teams, Zoom and Meet produce. One
-exception: it cannot decode **HEVC**, the format phones and newer screen recorders use. Those
-files still transcribe normally — they just get no thumbnail in the report. You do not need
-RPM Fusion.
-
-#### Fedora without Copr
-
-```bash
 sudo dnf install pipx ffmpeg-free
 pipx ensurepath
 ```
@@ -206,6 +187,12 @@ Close and reopen your terminal, then:
 ```bash
 pipx install bristlenose
 ```
+
+`ffmpeg-free` is Fedora's patent-free FFmpeg build, and it handles everything Bristlenose
+needs — including the H.264 + AAC `.mp4` files that Teams, Zoom and Meet produce. One
+exception: it cannot decode **HEVC**, the format phones and newer screen recorders use. Those
+files still transcribe normally — they just get no thumbnail in the report. You do not need
+RPM Fusion.
 
 ### Arch / Manjaro
 

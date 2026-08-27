@@ -1272,8 +1272,18 @@ def run_bundle_integrity() -> DoctorReport:
     """Run only the bundle-integrity checks.
 
     Used by ``bristlenose doctor --self-test``, which is invoked from
-    desktop/scripts/build-all.sh step 7a to catch BUG-3/4/5-class bugs at
-    build time rather than at first user-facing runtime.
+    desktop/scripts/ensure-sidecar.sh step 3a — **pre-sign, the only window in
+    which it can run** — to catch BUG-3/4/5-class bugs at build time rather
+    than at first user-facing runtime.
+
+    This docstring said "build-all.sh step 7a" until 27 Aug 2026, which is
+    worse than merely wrong: sign-sidecar.sh applies com.apple.security
+    .app-sandbox unconditionally, and a sandbox-signed binary aborts in
+    _libsecinit_appsandbox when exec'd standalone (exit 133). A post-sign
+    invocation cannot succeed. build-all.sh used to attempt exactly that and
+    skip on the entitlement — so the only gate on "PyInstaller dropped a datas
+    entry" was dead on every build from 14 Jul 2026. Following the old
+    docstring reintroduces that.
     """
     return DoctorReport(results=[
         check_bundle_react_spa(),

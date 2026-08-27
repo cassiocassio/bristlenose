@@ -16,15 +16,31 @@ trued-against: HEAD on 2026-08-27
   verdict (a live question that turned out **not** to be a bug), the arch decision
   (x86_64 only), and the honest cost of maintaining the channel. §2a records the defect
   this work actually turned up — the export bundle missing from every published wheel —
-  which is not a Fedora problem and is much larger than one. Recommendation is **hold,
-  don't publish yet** (§7); the machinery is built and proven either way.
+  which is not a Fedora problem and is much larger than one. §7 first recommended
+  **holding**; that was overturned the same day and it now reads *ship it*, with the
+  recurring costs recorded rather than deleted. Later that day the channel was proven
+  on Copr's own builders, and the release machine was wired for it without being
+  switched on.
+- _2026-08-27 (truing pass)_ — this doc contradicted itself in three places and the
+  public install docs had jumped the queue. Fixed: the Status block claimed no Copr
+  build had ever run while §6 recorded one; this changelog still said "hold" while §7
+  said "ship"; §7's "Against, and this is the part that decides it" was pre-decision
+  text left standing under a post-decision heading. Separately, `INSTALL.md` and
+  `README.md` had shipped `dnf copr enable cassiocassio/bristlenose` — a project that
+  returns 404 — which is precisely the ordering mistake §7 names. Reverted to pipx
+  until the channel exists. Two independent reviewers caught the same thing; the
+  lesson is the skill's own: **a section-scoped sweep never reaches the summary, and
+  the summary is what gets believed.**
 
 # Design: Fedora packaging via Copr
 
-Status: **implemented, tested in `mock`, unpublished.** Nothing is published to
-Copr; that is a deliberate gate — see §7. Read §6's tier table before quoting any
-result from this doc: a container run and a `mock` run prove different things, and
-no *Copr* build has ever run.
+Status: **implemented, proven on Copr's own builders, no production project.**
+A Copr build *has* run — an uploaded SRPM built green on `fedora-43-x86_64`, and
+`dnf copr enable` + `dnf install` worked from a clean box (§6) — but into an
+unlisted, auto-deleting **test** project. `cassiocassio/bristlenose` does not
+exist: `api_3/project` returns **404**, verified 27 Aug 2026. Nothing a user can
+install from is published, and the public install docs deliberately say nothing
+about Copr until it is (§7's ordering).
 
 Sibling docs: `docs/design-doctor-and-snap.md` (the Snap channel, and the closest
 prior art for a Linux packaging decision), `docs/design-homebrew-packaging.md` (the
@@ -354,15 +370,15 @@ All from the real build on Fedora 42 / x86_64 (Xeon 8488C, 2 vCPU):
 
 | | measured |
 |---|---|
-| Wheelhouse (`Source1`) | **225 MB**, 107 wheels (106 + the spaCy model) |
+| Wheelhouse (`Source1`) | **225 MB**, 107 wheels (106 + the spaCy model). An earlier run measured 213 MB / 106 before the spaCy model was added — both figures appear in this doc's history; 225 MB is the shipped one |
 | sdist (`Source0`) | 14.3 MB |
 | **SRPM** | **248 MB** |
 | **Binary RPM** | **195 MB** |
-| **Installed** | **815 MB**, 24,510 files |
+| **Installed** | **823 MB**, 24,511 files on Fedora 43 (815 MB / 24,510 on Fedora 42, which Copr no longer builds for) |
 | SRPM generation (network) | ~2 min cold, 23s warm |
 | `mock` build (no network) | ~7 min |
 
-815 MB installed is large — dominated by `ctranslate2`, `onnxruntime`, `spacy`+`blis`,
+823 MB installed is large — dominated by `ctranslate2`, `onnxruntime`, `spacy`+`blis`,
 `av` and `numpy`. It is the honest cost of a self-contained ML CLI and is comparable to
 the Snap. §7 records the subpackage split that would reduce it, and why it is not being
 done yet.
@@ -562,7 +578,8 @@ silently does not; and the per-release cost really is small, because the wheelho
 generated rather than hand-listed and the version is read from `bristlenose/__init__.py`
 like every other channel.
 
-**Against, and this is the part that decides it:**
+**Against — kept because these are the recurring costs, not because the decision is
+still open:**
 
 1. **There is no Fedora user.** The TF cohort was never enrolled; the tester is the
    maintainer. The cost of not shipping is a hypothetical person typing three pipx commands
@@ -581,7 +598,7 @@ like every other channel.
    was being written; F43 is 3.14 and F44/45 will move again. Each move needs a regenerated
    wheelhouse and a re-proof, and it happens on Fedora's schedule, not on release
    boundaries — the one recurring cost that is genuinely outside our control.
-5. **815 MB installed**, which §7's own deferred split says is the wrong shape.
+5. **823 MB installed**, which the deferred split below says is the wrong shape.
 
 ### What publishing obliges
 
@@ -613,11 +630,19 @@ Sequence, and it does not commute:
 3. `copr-cli create bristlenose --chroot fedora-43-x86_64`, then `buildscm --method
    make_srpm`. Confirm the build is **succeeded**, not merely submitted.
 4. *Then* the public docs go live — `INSTALL.md` §Fedora, `README.md`, and the website's
-   `docs-src/install.md` + homepage Linux panel all name the Copr, and each of them is a
-   promise that `dnf copr enable` will work.
+   `docs-src/install.md` + homepage Linux panel. Each is a promise that `dnf copr enable`
+   will work.
 
 Doing 4 before 3 ships instructions that fail. That is the one ordering mistake this
-channel makes easy.
+channel makes easy — **and it was made here, the same day this was written.** All four
+surfaces were updated to name the Copr while `api_3/project` still returned 404, and
+reverted only when a truing pass caught it. Two independent reviewers flagged it; nobody
+noticed while writing the rule down. Writing an ordering constraint into a doc does not
+enforce it, which is the argument for `probe_copr` and the preflight gate below being
+mechanical rather than prose.
+
+The reverted text is not lost — it is in this file's git history at `74b033df`, and the
+flip commit can restore it verbatim.
 
 ### The release train
 
@@ -705,7 +730,7 @@ thing at all, and the doctor `rpm` arm (§5).
 
 **Deferred, deliberately:** splitting into `bristlenose` + `bristlenose-transcribe`
 (faster-whisper/ctranslate2) + `bristlenose-redact` (presidio/spacy). It would cut the base
-install from 815 MB to well under 200 MB, and it maps onto how the project already thinks
+install from 823 MB to well under 200 MB, and it maps onto how the project already thinks
 about extras — a researcher working from Teams/Zoom VTT files needs no Whisper at all.
 `Recommends:` rather than `Requires:` would keep the default `dnf install bristlenose` fat
 (so no new "not installed" state for the default user) while letting

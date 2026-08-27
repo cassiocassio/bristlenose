@@ -307,6 +307,17 @@ def _fix_spacy_model_missing(method: str) -> str:
 
 
 def _fix_presidio_missing(method: str) -> str:
+    if method == "snap":
+        # presidio-analyzer is a CORE dependency (pyproject.toml), so it ships
+        # inside the snap — a missing one is a packaging defect, not something
+        # the user should pipx-inject around. This arm was absent while its four
+        # siblings had one, so a snap user was told to run pipx against a
+        # strictly-confined install.
+        return (
+            "presidio-analyzer not found — this is a bug in the snap package.\n"
+            "  sudo snap refresh bristlenose\n"
+            "If it persists: github.com/cassiocassio/bristlenose/issues"
+        )
     if method == "rpm":
         return (
             "presidio-analyzer not found — this is a bug in the RPM package,\n"

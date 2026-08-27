@@ -27,13 +27,38 @@ If code files were changed:
 
 If anything fails, **stop and fix before documenting**. Don't document a broken state.
 
-**Desktop-bundle freshness (informational, not a gate).** If this session touched `frontend/` or `bristlenose/locales/`, the bundled `.app`'s baked SPA is now stale until the sidecar is rebuilt. This does NOT block the close-out and is NOT a release concern (PyPI/Homebrew/Snap build the frontend on a clean CI checkout). It only matters for the next local `.app` QA. Check and note it in the human summary:
+**Desktop-bundle freshness — usually a non-event, so don't report it as a task.**
+
+If this session touched `frontend/` or `bristlenose/locales/`, the bundled
+`.app`'s baked SPA is stale *on disk right now*. **On the default scheme in
+Debug that fixes itself on the next Cmd+R** — the `Ensure Sidecar Fresh` build
+phase (`alwaysOutOfDate=1`) runs `ensure-sidecar.sh` **before** Copy Sidecar
+Resources embeds anything, rebuilding and signing when stale and skipping in
+~0.3s when fresh. Its own comment says so: *"a plain Cmd+R self-heals the bundle
+that Copy Sidecar Resources is about to embed."* Never a release concern either —
+PyPI / Homebrew / Snap build the frontend on a clean CI checkout, and
+`build-all.sh` owns the Release path (where the Ensure phase deliberately skips).
+
+> **This section told sessions to hand-run `build-sidecar.sh` for two months
+> after that stopped being true.** The phase landed in `578f13a9` — *"so cmd+r
+> self-heals the bundle"* — and `ad474adc` added the manual instruction here **the
+> same day**. Both commits, 29 Jun 2026. Corrected 27 Aug 2026 when a maintainer
+> asked "isn't the sidecar rebuilt by Xcode's stale detector?" — it is, and every
+> close-out summary in between carried a step nobody needed to take.
+
+So **only mention it when the rebuild genuinely won't happen on its own**:
+
+- the user is about to run a **previously-built** `.app` without a Cmd+R;
+- `BRISTLENOSE_SKIP_SIDECAR_ENSURE=1` is set (the fast schemes);
+- they're heading for a Release archive by hand rather than via `build-all.sh`.
+
+The **Dev Sidecar** and **External Server** schemes serve live source and never
+touch the bundle, so freshness is irrelevant there. Running the check is still
+fine as information — just don't turn a routine STALE into a chore:
 
 ```bash
-desktop/scripts/check-sidecar-freshness.sh 2>&1 | tail -1   # "STALE" / "no .source-stamp" → rebuild before next .app QA
+desktop/scripts/check-sidecar-freshness.sh 2>&1 | tail -1   # STALE between builds is expected; Cmd+R clears it
 ```
-
-If it reports stale, mention in the summary: "bundled sidecar is stale vs frontend — `desktop/scripts/build-sidecar.sh` (runs npm build) before next `.app` QA." Don't rebuild it automatically — it's a ~2-min step the user may not need this session.
 
 ## Phase 2: Document
 

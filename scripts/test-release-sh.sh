@@ -117,10 +117,23 @@ bash "$ROOT/scripts/release.sh" run 0.28.O --bump minor </dev/null >/dev/null 2>
 eq "malformed version refuses" 2 "$?"
 bash "$ROOT/scripts/release.sh" run 0.28.0 --bump wat </dev/null >/dev/null 2>&1
 eq "bad bump kind refuses" 2 "$?"
-echo "not-the-version" | bash "$ROOT/scripts/release.sh" run 0.28.0 --bump minor >/dev/null 2>&1
+# Use a version nothing real will ever be, and record whether the directory
+# pre-existed. This assertion used to run against 0.28.0 and the live .release/
+# tree, so a GENUINE release in flight — which legitimately leaves resume state —
+# failed it. Red for the right reason in the wrong scenario is still a gate you
+# learn to ignore. Observed 27 Aug 2026 mid-release.
+_decl="8.8.8"
+_had_dir=0; [ -d "$ROOT/.release/$_decl" ] && _had_dir=1
+echo "not-the-version" | bash "$ROOT/scripts/release.sh" run "$_decl" --bump minor >/dev/null 2>&1
 eq "wrong confirmation aborts" 2 "$?"
-[ -d "$ROOT/.release/0.28.0" ] && bad "a declined run left a directory behind" \
-                               || ok "a declined run leaves nothing"
+if [ "$_had_dir" = 1 ]; then
+    ok "a declined run leaves nothing (skipped — $_decl pre-existed)"
+elif [ -d "$ROOT/.release/$_decl" ]; then
+    bad "a declined run left a directory behind"
+    rm -rf "$ROOT/.release/$_decl"
+else
+    ok "a declined run leaves nothing"
+fi
 
 head_ "run — resume from a synthetic log, with the stranded step first"
 _rd="$ROOT/.release/9.9.9"; mkdir -p "$_rd/logs"

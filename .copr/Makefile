@@ -6,7 +6,12 @@
 #
 #   copr-cli buildscm <project> \
 #       --clone-url https://github.com/cassiocassio/bristlenose.git \
-#       --method make_srpm --spec rpm/bristlenose.spec
+#       --method make_srpm
+#
+# No --spec: that flag is for the rpkg/tito methods, which locate a spec file
+# in the tree. make_srpm hands the whole job to this Makefile and takes
+# whatever .src.rpm lands in $(outdir) — ours is generated from a template,
+# so there is no committed .spec for --spec to point at.
 #
 # python3.14 is installed and named explicitly rather than using whatever
 # python3 this container happens to ship. The wheelhouse is built for ONE

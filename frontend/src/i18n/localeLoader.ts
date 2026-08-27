@@ -2,9 +2,13 @@
  * Locale loader — serve mode.
  *
  * Fetches a non-English locale's namespaces on demand.  Vite compiles the
- * template-literal import below into a glob over `locales/*​/*.json`, which is
- * correct here: code-splitting means each locale becomes its own lazy chunk and
- * only the requested one is ever downloaded.
+ * template-literal import below into a glob over `locales/<lang>/<ns>.json`,
+ * which is correct here: code-splitting means each locale becomes its own lazy
+ * chunk and only the requested one is ever downloaded.
+ *
+ * Placeholders, not the literal glob: spelling it out puts the block-comment
+ * terminator inside this comment. The zero-width space that used to hide it
+ * was invisible in every editor and failed `no-irregular-whitespace` in CI.
  *
  * The HTML export cannot use this. It is a single-file build
  * (`inlineDynamicImports: true`), so every chunk the glob produces is inlined —

@@ -160,19 +160,21 @@ def _should_auto_doctor() -> bool:
 def _install_man_page() -> None:
     """Install man page to ~/.local/share/man/man1/ for pip/pipx users.
 
-    Skipped inside snap and Homebrew — those package managers handle their own
-    man page installation.
+    Skipped for every packaged install — snap, Homebrew and the Fedora RPM all
+    install their own man page, and a second copy in the user's home is worse
+    than none. `man` searches ~/.local/share/man BEFORE /usr/share/man, so the
+    unowned copy wins; and because no package owns it, `dnf remove` (or
+    `snap remove`, or `brew uninstall`) leaves it behind, so `man bristlenose`
+    goes on working after the tool is gone, showing whatever version last
+    wrote it. Observed on a Copr install, 27 Aug 2026.
     """
     import shutil
-    import sys
 
-    # Snap runtime installs man page via snapcraft.yaml.
-    if os.environ.get("SNAP"):
-        return
+    from bristlenose.doctor_fixes import detect_install_method
 
-    # Homebrew installs man page via formula.
-    exe = sys.executable or ""
-    if "/homebrew/" in exe.lower() or "/Cellar/" in exe:
+    # One source of truth rather than a second set of sniffs — and a future
+    # packager that drops the .install-method marker is covered automatically.
+    if detect_install_method() != "pip":
         return
 
     source = Path(__file__).resolve().parent / "data" / "bristlenose.1"

@@ -26,6 +26,7 @@ tombstone; fix it by adding the row.
 | **weasel** (major) | spaCy ecosystem | spaCy 3.8.x pins `weasel<0.5`; weasel 1.0 *requires* `confection>=1.0`, mutually exclusive with thinc 8.3's `confection<1.0` | same spaCy-4 wave as thinc | 2026-06-09 | held |
 | **confection** (major) | spaCy ecosystem | thinc 8.3 pins `confection<1.0` | thinc moves to 9.x (⇒ spaCy 4 wave) | 2026-06-09 | held |
 | **starlette** 1.x | FastAPI / starlette | _(graduated 2026-06-09 — FastAPI 0.136.3 dropped the `starlette<1.0` cap, pair pre-mortemed in the graduated-holds wave)_ | n/a — graduated | 2026-06-09 | **graduated** |
+| **anthropic** 1.x | LLM SDKs · anthropic→httpx2 | `1.0.0` removes `temperature` from `messages.create`, and the signature has **no `**kwargs`** — so `client.py:529` raises a hard `TypeError` on every Claude call. Reproduced against installed 1.1.0 | `_analyze_anthropic` stops passing `temperature` as a named kwarg **and** the determinism question is settled (drop it, accepting the API default, vs `extra_body`, which is unverified against a current model). Then float the ceiling and re-pre-mortem, ideally as a wave with the openai 2→3 and google-genai 1→2 majors that already landed unexamined | 2026-08-27 | held |
 | **tokenizers** 0.23.1 | HF transformer stack | `transformers` 5.7.0 **and** 5.10.2 both pin `tokenizers<=0.23.0` (deps.dev verified 2026-06-05) | a transformers release floats its tokenizers cap to admit 0.23.1 (`GetRequirements` for transformers: cap becomes `<0.24`/`<=0.23.1`); then move tokenizers+transformers together | 2026-06-09 | held |
 | **WTForms** 3.2.2 | sqladmin / serve DB | _(graduated 2026-06-09 — sqladmin 0.27.2 floated `wtforms<3.3`, pair pre-mortemed in the graduated-holds wave)_ | n/a — graduated | 2026-06-09 | **graduated** |
 | **snapcore/action-build** `v1.3.0` (node20) | GitHub Actions runtime | Action declares `runs.using: node20`; **v1.3.0 is the newest tag upstream** (`releases/latest` 404s, tags = `v1.3.0`, `v1`). No node24 release exists to take. Emits the runner's forced-to-node24 annotation. Mitigant: `snap.yml` is `on: workflow_dispatch` only (parked May 2026). | snapcore publishes a release whose `action.yml` has `runs.using: node24` — then bump both snapcore SHAs together with their version comments | 2026-07-29 | held |
@@ -657,3 +658,50 @@ can be marked honestly rather than generously:
 - If the Homebrew tap does **not** receive `update-formula` on the first
   release after the `repository-dispatch` bump, that is a **miss** — and
   the standing hazard (silent Homebrew breakage) will have bitten again.
+
+
+---
+
+## Entry 6 — 2026-08-27 — `anthropic` major, blocking the 0.28.0 tag
+
+- **Grounded against:** `.venv` installed metadata + **live SDK introspection** + `pyproject.toml` + `.github/dependabot.yml` + `THIRD-PARTY-BINARIES.md`
+- **Prior calibration applied:** Entry 1 gave `anthropic 0.77.1→0.105.2` a 🟢 on the rationale *"Messages + tool-use API is stable across the range."* That scored a hit, but the rationale is **range-scoped to 0.x**. Applying the standing LLM-SDK heuristic ("big gaps look scary; breaks live in beta surfaces we don't call") would have produced a green here and been the **first miss**. **Tuning: at a major boundary on an SDK we call directly, the heuristic is void — introspect the installed signature.**
+- **Trigger:** not a proposed bump. `check-release-ready.sh` surfaced it as inventory-vs-installed drift — **the major had already landed in the venv**, and 4246 tests had passed against it.
+
+### Prophecy
+
+| Bump (from→to) | Verdict | Surface | Receipt |
+|----------------|---------|---------|---------|
+| **anthropic** 0.122.0 → **1.1.0** (`temperature` kwarg) | 🔴 **WILL-BREAK** | runtime — silent, deterministic, 100% of Claude calls | `AsyncMessages.create` has no `temperature` and no `**kwargs`. Reproduced twice, independently: `TypeError: AsyncMessages.create() got an unexpected keyword argument 'temperature'`. Break site `bristlenose/llm/client.py:529`. Fires pre-network, so `max_retries=6` never engages |
+| anthropic → `httpx2` transport swap | 🟢 SAFE | — | `httpx2 2.12.0` resolves clean; `import anthropic` OK; `truststore` already in the SBOM |
+| anthropic client construction + exception classes | 🟢 SAFE | — | `AsyncAnthropic(api_key=, max_retries=)` constructs; all four caught exceptions still top-level |
+| anthropic response surface | 🟢 SAFE | — | `content/model/stop_reason/usage` retained; `stop_reason` Literal still has `max_tokens`; both cache usage counters present |
+| **openai** 3.0.0 → 3.5.0 | 🟢 SAFE | — | `chat.completions.create` **keeps** `temperature` — verified by introspection on installed 3.5.0 |
+| **google-genai** 2.18.1 → 2.20.0 | 🟢 SAFE | — | `GenerateContentConfig.model_fields` **keeps** `temperature` — verified on installed |
+| Live-model acceptance of `temperature` via `extra_body` | ❔ UNKNOWN | — | Binds and reaches transport, but the vendor guide scopes it to *"an older model that still does"*. Not verified against a current model; a live call was deliberately not spent |
+
+### Why 4246 green tests proved nothing
+
+Every anthropic test mocks `messages.create` with `AsyncMock`/`MagicMock`. A mock accepts `temperature=` *and* `bogus_kwarg=` without complaint, so the suite cannot see this class of defect at all.
+
+**And the failure shape is the worst available.** `preflight/api_key.py:212-216` validates the key with a `messages.create` that does **not** pass `temperature` — so validation succeeds, `configure` reports the key good, `doctor` goes green, and the run dies at the first pipeline LLM call with a raw `TypeError` that `failure_classifier` has no bucket for. Green preflight, mid-run abandonment, no actionable cause.
+
+### Recommendation (order is load-bearing)
+
+1. `pyproject.toml:33` → `"anthropic>=0.39,<1"`. One line, no code change, restores the combination the tests and months of real runs actually exercised.
+2. **Rebuild the venv so anthropic resolves `<1`.** Easy to miss and the one that matters for the Mac: `build-all.sh` bundles from this venv, so a ceiling without a rebuild leaves PyPI safe while TestFlight ships the break.
+3. Regenerate `THIRD-PARTY-BINARIES.md` **only after** step 2 — regenerating now bakes 1.1.0 into a shipped SBOM that accurately records a broken combination.
+4. Then tag.
+5. Post-tag, do the 1.x migration deliberately, as a wave with the two other unexamined majors.
+
+### New cluster named
+
+**`anthropic → httpx2` (transport-major coupling).** `anthropic 1.x` and `openai 3.x` have both moved to `httpx2`; `google-genai` still pins `httpx<1.0`. The venv now carries both stacks. The next SDK major that moves transports will look isolated and won't be. Proposed for the catalog in `docs/design-dependency-premortem.md`.
+
+### OUTCOME — open
+<!-- filled in by /cassandra --score once the ceiling is applied and 0.28.0 ships -->
+
+### SCORE — pending
+<!-- The 🔴 is already reproduced, so it scores on whether the ceiling landed before the
+     tag. The six 🟢s score only if the bumps are actually exercised; a SAFE never applied
+     is untested, never a free hit. The ❔ is unscoreable until someone spends a live call. -->

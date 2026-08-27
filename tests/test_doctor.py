@@ -1273,6 +1273,29 @@ class TestDetectInstallMethod:
         ):
             assert detect_install_method() == "pip"
 
+    def test_packaged_fixes_never_suggest_pip(self) -> None:
+        """Generalised from the rpm case, because that is why the gap existed.
+
+        The invariant was only ever asserted for `rpm`, so
+        `_fix_presidio_missing` shipped with rpm and brew arms and no snap
+        arm — a snap user with a broken presidio was told to `pipx inject`
+        into a strictly-confined install. presidio is a core dependency, so
+        it is *inside* the snap and a miss is a packaging defect.
+        """
+        for method, manager in (("rpm", "dnf"), ("snap", "snap")):
+            for key in (
+                "ffmpeg_missing",
+                "backend_import_fail",
+                "spacy_model_missing",
+                "presidio_missing",
+                "serve_deps_missing",
+            ):
+                text = get_fix(key, install_method=method)
+                assert text, f"{key} returned no fix text for {method}"
+                assert "pip install" not in text, f"{key}/{method} suggests pip:\n{text}"
+                assert "pipx" not in text, f"{key}/{method} suggests pipx:\n{text}"
+                assert manager in text, f"{key}/{method} offers no {manager} command:\n{text}"
+
     def test_rpm_fixes_never_suggest_pip(self) -> None:
         """The whole point of the arm: no RPM fix may hand out a pip command.
 

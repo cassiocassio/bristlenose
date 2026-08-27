@@ -249,6 +249,11 @@
     "copyCancelling": "Avbryter…",
     "copyDiskSpaceTitle": "Inte tillräckligt med diskutrymme",
     "copyDiskSpaceMessage": "Den här kopieringen behöver %@ ledigt, men bara %@ är tillgängligt på målvolymen.",
+    "filesPopover": {
+      "unanalysedTitle": "Oanalyserade filer",
+      "missingTitle": "Saknade filer",
+      "missingFooter": "Filerna finns inte l\u00e4ngre i projektmappen."
+    },
     "pipeline": {
       "unreachable": {
         "timedOut": "Svarar inte",

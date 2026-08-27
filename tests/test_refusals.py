@@ -422,3 +422,74 @@ class TestReasonReachesTheWire:
             {"category": "unusable_input", "message": "The file couldn't be read."}
         )
         assert cause.reason is None
+
+
+class TestBristlenoseArtefactsAreNeverRefusals:
+    """Our own state files must never appear in a researcher's failure list.
+
+    `discover_files` already declines to descend into `bristlenose-output`, which
+    covers the default layout. This covers the rest: `--output` pointing at some
+    other directory inside the input folder, and artefacts moved by hand.
+
+    Observed 27 Aug 2026 on a real project: `Partial completion — 4 files not
+    analysed`, and all four were ours (`bristlenose.db`, its two WAL companions,
+    `bristlenose.log`). Four of nine files, crowding out the refusals that were
+    genuinely the researcher's.
+
+    Fixtures use `.srt` because **`.txt` is not an accepted format** —
+    `classify_file` takes audio, video, `.srt`, `.vtt` and `.docx`. Worth stating
+    since the obvious fixture is a `.txt` and it silently discovers nothing.
+    """
+
+    def test_state_dir_is_skipped_wherever_it_sits(self, tmp_path):
+        from bristlenose.stages.s01_ingest import discover_files
+
+        # Deliberately NOT under `bristlenose-output/` — that guard already
+        # existed; this is the `--output elsewhere` shape it doesn't cover.
+        state = tmp_path / "analysis" / ".bristlenose"
+        state.mkdir(parents=True)
+        for name in ("bristlenose.db", "bristlenose.db-wal",
+                     "bristlenose.db-shm", "bristlenose.log",
+                     "pipeline-events.jsonl", "run.pid"):
+            (state / name).write_bytes(b"x")
+        (tmp_path / "interview.srt").write_text(
+            "1\n00:00:01,000 --> 00:00:02,000\nhello\n", encoding="utf-8"
+        )
+
+        skipped: list = []
+        files = discover_files(tmp_path, skipped)
+
+        assert [f.path.name for f in files] == ["interview.srt"]
+        assert skipped == [], f"our own artefacts were reported as refusals: {skipped}"
+
+    def test_loose_artefacts_are_skipped_by_name(self, tmp_path):
+        """Copied out of the state dir, they are still ours."""
+        from bristlenose.stages.s01_ingest import discover_files
+
+        for name in ("bristlenose.db", "bristlenose.log", "pii_summary.txt"):
+            (tmp_path / name).write_text("x", encoding="utf-8")
+        (tmp_path / "interview.srt").write_text(
+            "1\n00:00:01,000 --> 00:00:02,000\nhello\n", encoding="utf-8"
+        )
+
+        skipped: list = []
+        files = discover_files(tmp_path, skipped)
+
+        assert [f.path.name for f in files] == ["interview.srt"]
+        assert skipped == []
+
+    def test_a_researchers_own_file_is_still_refused_normally(self, tmp_path):
+        """The filter matches our exact names, not anything that resembles them.
+
+        A researcher's `bristlenose-notes.txt` is not ours, so it takes the
+        ordinary unsupported-format path and IS reported — declining to analyse
+        it is correct, and silently swallowing it would not be.
+        """
+        from bristlenose.stages.s01_ingest import discover_files
+
+        (tmp_path / "bristlenose-notes.txt").write_text("mine", encoding="utf-8")
+        skipped: list = []
+        files = discover_files(tmp_path, skipped)
+
+        assert files == []
+        assert [sf.path.name for sf in skipped] == ["bristlenose-notes.txt"]

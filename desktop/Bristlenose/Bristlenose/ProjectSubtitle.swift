@@ -96,22 +96,35 @@ enum SubtitleVariant: Equatable {
     case placeholder
 }
 
-/// What the subtitle's leading glyph does when the user clicks it.
+/// Where a subtitle glyph leads, when it leads anywhere.
 ///
-/// A glyph is a signifier, and a signifier that names an action must perform
-/// one — the popover doc's own anti-pattern list puts it plainly: *"the
-/// affordance promises something it doesn't deliver"*. So this and
-/// `SubtitleVariant.glyph` are decided together: a state either has a glyph
-/// AND a door behind it, or neither.
+/// **A glyph buys attention, not action** (settled 27 Aug 2026). An earlier
+/// version of this file asserted the opposite — "a signifier that names an
+/// action must perform one" — and used it to make two glyphs clickable that had
+/// deliberately not been. That rule was invented here, and the house rule is
+/// nearly its inverse: `design-pipeline-diagnostic-popover.md` says *"inline
+/// glyphs are typographic markers, not buttons"*, and the sidebar's job is
+/// "attention, not affordance".
+///
+/// So glyph-ness and door-ness are **two decisions, not one**:
+///
+/// - `subtitlePrefixGlyph` answers *is there something the researcher would want
+///   to **know** and might not?* — not *is there something they could do?* That
+///   distinction is what separates `+3 unanalysed` (news: the app noticed files
+///   that arrived outside it) from `Stopped` (not news: they stopped it).
+/// - This answers *and is there detail with no other home?* A context menu shows
+///   verbs and cannot show a list, so a list earns a popover. One fact already
+///   printed in the subtitle does not.
+///
+/// Hence `.cantFind` has a glyph and no door: the volume name is already on the
+/// row, and Locate is a general project verb, so right-click owns it.
 enum SubtitleGlyphAction: Equatable {
-    /// Opens `ProjectDiagnosticPopover`, anchored to the glyph.
+    /// Opens `ProjectDiagnosticPopover` — the per-stage failure breakdown, or
+    /// the unreachable reason plus the folder path.
     case diagnostics
-    /// Opens the files sheet — the folder and the analysis disagree, and the
-    /// sheet is where the disagreement is enumerated.
+    /// Opens `ProjectFilesPopover` — which files are new, which have vanished.
     case files
-    /// Runs the Locate flow — the folder isn't where the project expects it.
-    case locate
-    /// No glyph, or nothing behind it.
+    /// No door. Includes states that carry a glyph purely as a marker.
     case none
 }
 
@@ -131,21 +144,21 @@ extension SubtitleVariant {
         case .failed, .failedDiagnostic, .completedPartial, .unreachable:
             return .diagnostics
         case .cantFind:
-            // The glyph called itself "a Locate affordance" in this file's
-            // comments while rendering as a static `NSImageView` — Locate lived
-            // only in the context menu. Now it is the door it always claimed to
-            // be. (26 Aug 2026.)
-            return .locate
+            // Glyph, no door. The one fact — the volume or host name — is
+            // already in the subtitle, so there is nothing to disclose, and
+            // Locate is a general project verb that belongs in right-click.
+            // Briefly made clickable on 26 Aug on the strength of a comment
+            // describing it as "a Locate affordance"; that was a description of
+            // the situation it marks, not a promise it was failing to keep.
+            return .none
         case .deltaOnly:
-            // Both deltas lead to the same sheet, because they are two readings
+            // Both deltas open the same popover, because they are two readings
             // of one condition: `UnanalysedState` describes a single
-            // folder-vs-analysis disagreement, and `NewFilesSheet` already
-            // renders both its `newFiles` and its `missingFiles`.
+            // folder-vs-analysis disagreement, and the popover renders both its
+            // `newFiles` and its `missingFiles` as labelled sections.
             //
-            // `.unanalysed` WAS clickable on the SwiftUI row and lost the click
-            // in the AppKit cutover — `SidebarSubtitleText` composes the delta
-            // into flat subtitle text, so there was no target left. This is that
-            // click restored, and `.missing` joining it.
+            // A list is the canonical thing that earns a popover — it is exactly
+            // what the context menu cannot express.
             return .files
         case .ready(_, let delta):
             // Not emitted under Schema E, but kept honest: a `.ready` carrying a
@@ -155,6 +168,58 @@ extension SubtitleVariant {
              .addingInterviews, .copying, .importingBatch,
              .copyCancelling, .placeholder:
             return .none
+        }
+    }
+
+    /// **Does this state earn the researcher's glance?** The `MessageKind` whose
+    /// glyph the row shows, or `nil` for "say nothing".
+    ///
+    /// The question is *is there something they would want to **know** and might
+    /// not* — **not** *is there something they could do*. That distinction is the
+    /// whole rule, and it is what separates `+3 unanalysed` (news: the app
+    /// noticed files that arrived outside it) from `Stopped` (not news: they
+    /// stopped it) — even though both have an available act.
+    ///
+    /// The other half of the pair is `glyphAction`, which asks whether there is
+    /// detail worth a door. The two are independent: `.cantFind` has a glyph and
+    /// no door.
+    ///
+    /// `.cantFind` returns the kind for its *colour*; the view still picks the
+    /// reason-specific **symbol** from `ProjectAvailability` (an unmounted volume
+    /// and an unreachable host deserve different pictures).
+    ///
+    /// **Exhaustive, no `default`** — the arm that started all this was a
+    /// `default: return nil` in the view, which silently gave two states no
+    /// glyph for two months.
+    var glyphKind: MessageKind? {
+        switch self {
+        case .failed, .failedDiagnostic:
+            return .error
+        case .completedPartial:
+            return .warning
+        case .unreachable(let reason):
+            return reason.kind
+        case .cantFind:
+            // "This project isn't usable" — warning by the 18 Jun rule, whose
+            // discriminator is usability, not cause.
+            return .warning
+        case .deltaOnly(.missing), .ready(_, .some(.missing)):
+            // "Analysed files missing from disk → warning — beyond neutral,
+            // files gone." The report cites recordings that aren't there.
+            return .warning
+        case .deltaOnly(.unanalysed), .ready(_, .some(.unanalysed)):
+            // Blue ⓘ. Nothing went wrong — there is simply more material than
+            // the report has read, and the researcher put it there. See
+            // `ProjectSidebarOutline.subtitlePrefixGlyph` for why ⓘ is the right
+            // picture and how it amends the `info` ruling.
+            return .info
+        case .stopping, .running, .queued, .stopped, .partial,
+             .addingInterviews, .copying, .importingBatch,
+             .copyCancelling, .ready, .placeholder:
+            // Progress, and states the researcher caused. `.stopped` and
+            // `.partial` have an available act — resume, analyse — and still get
+            // nothing, because the act is not the test. They already know.
+            return nil
         }
     }
 

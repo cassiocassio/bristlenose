@@ -249,6 +249,11 @@
     "copyCancelling": "Annulation\u2026",
     "copyDiskSpaceTitle": "Espace disque insuffisant",
     "copyDiskSpaceMessage": "Cette copie n\u00e9cessite %@ libres, mais seuls %@ sont disponibles sur le volume de destination.",
+    "filesPopover": {
+      "unanalysedTitle": "Fichiers non analys\u00e9s",
+      "missingTitle": "Fichiers manquants",
+      "missingFooter": "Ces fichiers ne sont plus dans le dossier du projet."
+    },
     "pipeline": {
       "unreachable": {
         "timedOut": "Ne r\u00e9pond pas",

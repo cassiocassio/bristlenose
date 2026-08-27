@@ -249,6 +249,11 @@
     "copyCancelling": "Peruutetaan…",
     "copyDiskSpaceTitle": "Levytila ei riitä",
     "copyDiskSpaceMessage": "Tämä kopiointi tarvitsee %@ vapaata, mutta kohdetaltiolla on käytettävissä vain %@.",
+    "filesPopover": {
+      "unanalysedTitle": "Analysoimattomat tiedostot",
+      "missingTitle": "Puuttuvat tiedostot",
+      "missingFooter": "N\u00e4it\u00e4 tiedostoja ei en\u00e4\u00e4 ole projektikansiossa."
+    },
     "pipeline": {
       "unreachable": {
         "timedOut": "Ei vastaa",

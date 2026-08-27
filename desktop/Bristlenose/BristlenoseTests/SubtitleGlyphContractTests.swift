@@ -69,13 +69,21 @@ import Testing
 
     // MARK: - The contract
 
-    @Test("Exactly the distress and drift states have a door")
+    @Test("A door exists only where there is detail with no other home")
     func everyVariantIsClassified() {
-        // Named, not counted: a count is satisfied by the wrong six as easily as
-        // the right six, and says nothing when it changes. This set IS the
-        // contract — gaining or losing a door fails here and names which.
+        // Named, not counted: a count is satisfied by the wrong five as easily
+        // as the right five. This set IS the contract — gaining or losing a door
+        // fails here and names which.
+        //
+        // `.cantFind` is deliberately absent. It carries a glyph (your project
+        // is unreachable — look) but no door: its one fact, the volume or host
+        // name, is already in the subtitle, and Locate is a general project verb
+        // that belongs in right-click. An earlier version of this test asserted
+        // the opposite, on a rule invented in `ProjectSubtitle.swift` rather than
+        // taken from the design — which is how a gate comes to enforce something
+        // nobody agreed to.
         let actionable = Set(Self.exemplars.filter { $0.glyphAction != .none }.map(\.tag))
-        #expect(actionable == [.cantFind, .failed, .failedDiagnostic,
+        #expect(actionable == [.failed, .failedDiagnostic,
                                .completedPartial, .unreachable, .deltaOnly],
                 "actionable set drifted: \(actionable.sorted { "\($0)" < "\($1)" })")
     }
@@ -92,20 +100,24 @@ import Testing
         }
     }
 
-    @Test("cantFind's glyph performs the Locate it names")
-    func cantFindRoutesToLocate() {
-        // It described itself in-source as "a Locate affordance" while rendering
-        // as a static `NSImageView`; Locate lived only in the context menu.
+    @Test("cantFind marks, it does not act")
+    func cantFindIsAMarkerNotADoor() {
+        // The house rule is that inline glyphs are typographic markers
+        // (`design-pipeline-diagnostic-popover.md`), and the sidebar is
+        // "attention, not affordance". A glyph earns the glance; it does not
+        // owe a click.
         for reason in [CantFindReason.moved, .missingBookmark,
                        .unmountedVolume(name: "Backup"), .networkUnreachable(host: "nas")] {
-            #expect(SubtitleVariant.cantFind(reason: reason).glyphAction == .locate)
+            #expect(SubtitleVariant.cantFind(reason: reason).glyphAction == .none)
         }
     }
 
-    @Test("Both data-drift deltas reach the files sheet")
+    @Test("Both data-drift deltas reach the files popover")
     func deltasRouteToFiles() {
-        // `.unanalysed` was a `Button` on the SwiftUI row and lost its click in
-        // the AppKit cutover; `.missing` never had one.
+        // A list is the canonical thing that earns a door: a context menu shows
+        // verbs and cannot show one, so this content has no other home. It went
+        // briefly to `NewFilesSheet` — a modal three separate artefacts had
+        // already recorded as wrong — before landing on the popover.
         #expect(SubtitleVariant.deltaOnly(.unanalysed(count: 2)).glyphAction == .files)
         #expect(SubtitleVariant.deltaOnly(.missing(count: 3)).glyphAction == .files)
         // A `.ready` carrying a delta is the same disagreement with a date in
@@ -127,6 +139,66 @@ import Testing
             #expect(variant.glyphAction == .none,
                     "\(variant) is progress, not distress — its affordance is the ring's hover-cancel")
         }
+    }
+
+    // MARK: - Attention: does this earn the glance?
+
+    @Test("A door implies a glyph — no invisible click targets")
+    func everyDoorHasAGlyph() {
+        // The sound half of the rule this suite originally over-stated. A glyph
+        // need not have a door (`.cantFind` marks and doesn't act), but a door
+        // must have a glyph: a click target the researcher cannot see is worse
+        // than no target. Briefly violated when the unanalysed delta's *text*
+        // was made clickable with no signifier at all.
+        for variant in Self.exemplars where variant.glyphAction != .none {
+            #expect(variant.glyphKind != nil,
+                    "\(variant.tag) opens something with nothing drawn to click")
+        }
+    }
+
+    @Test("Extra files are blue info, missing files are orange warning")
+    func driftKindsFollowSeverity() {
+        // Nothing has gone wrong when files are waiting — there is more material
+        // than the report has read, and the researcher put it there. Orange
+        // would be the app scolding someone for using Finder.
+        #expect(SubtitleVariant.deltaOnly(.unanalysed(count: 3)).glyphKind == .info)
+        // Files that were analysed and have since vanished are a different
+        // condition: the report cites recordings that aren't there.
+        #expect(SubtitleVariant.deltaOnly(.missing(count: 2)).glyphKind == .warning)
+    }
+
+    @Test("The glyph marks news, not the availability of an act")
+    func glyphMarksNewsNotActs() {
+        // The distinction the whole rule turns on. `.stopped` and `.partial`
+        // both have something the researcher *could* do — resume, analyse — and
+        // get no glyph, because they already know: they caused it. `.unanalysed`
+        // has the same shape of act and does get one, because the app noticed
+        // something that happened outside it.
+        #expect(SubtitleVariant.stopped.glyphKind == nil)
+        #expect(SubtitleVariant.partial(transcribeOnly: true).glyphKind == nil)
+        #expect(SubtitleVariant.deltaOnly(.unanalysed(count: 1)).glyphKind != nil)
+    }
+
+    @Test("Progress states say nothing at all")
+    func progressHasNoGlyph() {
+        for variant in [SubtitleVariant.running, .stopping, .queued(position: 1),
+                        .copying(fraction: 0.4), .importingBatch(done: 1, total: 2),
+                        .addingInterviews(count: 2), .copyCancelling, .placeholder] {
+            #expect(variant.glyphKind == nil, "\(variant.tag) is progress, not news")
+        }
+    }
+
+    @Test("cantFind's colour comes from its kind, its symbol from the reason")
+    func cantFindKeepsReasonSpecificSymbol() {
+        // One state, three pictures — an unmounted volume, an unreachable host
+        // and a moved folder are different situations. Only the tint is shared,
+        // which is what stops it drifting from the rest of the vocabulary.
+        #expect(SubtitleVariant.cantFind(reason: .moved).glyphKind == .warning)
+        #expect(ProjectAvailability.cantFind(reason: .unmountedVolume(name: "Backup"))
+            .sfSymbolName == "externaldrive.badge.xmark")
+        #expect(ProjectAvailability.cantFind(reason: .networkUnreachable(host: "nas"))
+            .sfSymbolName == "network.slash")
+        #expect(ProjectAvailability.cantFind(reason: .moved).sfSymbolName == "questionmark.folder")
     }
 
     // MARK: - The payload that used to be a String

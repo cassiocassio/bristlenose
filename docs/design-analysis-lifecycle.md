@@ -646,6 +646,32 @@ act on what it reports may make the extra context-menu entry unnecessary.
 > already asks to be retired; the settled direction (21 Aug) is to retire it rather
 > than port it, since a list of files is a data view and the popover is reserved for
 > failure diagnostics.
+>
+> **Amended 27 Aug 2026 — the popover's scope was wider than this line assumed,
+> and the sheet is now replaced rather than merely unwired.** "Reserved for
+> failure diagnostics" described where the popover had got to, not where it may
+> go. Its defining property was never the *category* of the message but the
+> *purpose*: **attention, plus detail that has no other home.** Errors were
+> simply the first and loudest population of that set.
+>
+> The operative argument is the one this section already implies without stating:
+> **a context menu shows verbs and cannot show a list.** So "which four files are
+> new" has nowhere else to live, and a modal is the wrong price to pay for
+> reading it. That also answers the discipline this doc was protecting — the
+> popover was kept from becoming a control surface *because right-click already
+> does controls*, and a file list does not compete with right-click, because
+> right-click structurally cannot express it.
+>
+> Shipped as `ProjectFilesPopover`, opened by the row's ⓘ / ⚠ glyph, listing both
+> deltas as labelled sections with **Analyse** in the header. `NewFilesSheet`'s
+> watcher mode is unreachable from the shipped sidebar again and its retirement
+> conditions are unchanged; only `.copy` mode still has a live route.
+>
+> **The scope rule, stated so the next person reads it rather than re-derives
+> it:** the popover is the row's non-modal detail surface. It may act on **the
+> thing it is showing** and nothing else — general project verbs stay in
+> right-click. `Show Log` and `Copy details` already obey this; **Analyse**
+> joins them.
 
 ### 6.3 The detail pane says "add files" to a project that has files — **shipped 19 Aug 2026**
 

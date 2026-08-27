@@ -17,7 +17,7 @@ from bristlenose.models import (
 )
 from bristlenose.refusals import MESSAGES, UnusableReason
 from bristlenose.utils.audio import probe_duration
-from bristlenose.utils.fs import is_dataless, is_os_metadata
+from bristlenose.utils.fs import is_bristlenose_artefact, is_dataless, is_os_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -188,6 +188,13 @@ def _scan_dir(
 
     for entry in entries:
         if is_os_metadata(entry):
+            continue
+        # Our own artefacts, wherever they sit. The `OUTPUT_DIR_NAME` guard
+        # below covers the default layout; this covers `--output` pointing
+        # elsewhere inside the input folder, and anything copied about by hand.
+        # Noise the researcher did not create and cannot act on — and it crowds
+        # out the refusals that are genuinely theirs.
+        if is_bristlenose_artefact(entry):
             continue
         try:
             if entry.is_dir():

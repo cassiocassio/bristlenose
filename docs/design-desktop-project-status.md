@@ -95,6 +95,16 @@ Defined empirically, case by case ("I know it when I see it"), not by abstract r
 
 - **info** = it's just *happening* (progress), or it's *weather* — environmental, self-resolving, not
   actionable (offline, network).
+  > **Amended 27 Aug 2026 — `info` also covers "fine, but a bit abnormal; here's
+  > something you should know".** `+N unanalysed` is *actionable* and does *not*
+  > self-resolve, so by the letter above it is neither `info` nor `warning`
+  > (nothing went wrong and the project is perfectly usable). The gap is real:
+  > this table classifies **pipeline message outcomes**, and "there is material
+  > the report hasn't read" is a standing property of the project, not the
+  > outcome of a run. It renders `info` — blue `info.circle` — because nothing
+  > failed and the researcher put the files there themselves; orange would be the
+  > app scolding someone for using Finder. Recorded here rather than left as a
+  > silent stretch of the rule.
 - **warning** = a human needs to look — either *something didn't go right*, or *the project isn't
   usable* (even if the user caused it).
 - **error** = it actually failed (run can't proceed).
@@ -116,6 +126,60 @@ Worked rulings (the precedents):
 | partial completion | warning | something didn't go right |
 | drive unplugged / volume ejected | warning | project not usable |
 | analysed files missing from disk | warning | "beyond neutral" — files gone |
+
+### The glyph rule — attention, not action (settled 27 Aug 2026)
+
+Precedence picks the winner and Schema E decides whether it is drawn; this
+decides whether it earns a **glyph**, and separately whether that glyph has a
+**door**. They are two questions, and conflating them is how the sidebar grows
+controls.
+
+**A row shows a glyph when there is something the researcher would want to
+*know* and might not — not when there is something they *could do*.** That
+distinction does the real work: `Stopped` and `Transcribed` both have an
+available act (resume, analyse) and get **no** glyph, because the researcher
+caused them and already knows. `+3 unanalysed` has the same shape of act and
+**does** get one, because the app noticed something that happened outside it.
+News, not opportunity.
+
+**A glyph buys attention, not action.** `design-pipeline-diagnostic-popover.md`
+is explicit that inline glyphs are typographic markers, and the sidebar's rule is
+"attention, not affordance". So a glyph owes no click. `.cantFind` marks the
+condition and its act — **Locate** — stays in right-click, because the one fact
+worth disclosing (the volume or host name) is already on the row.
+
+**A glyph and its status text are one control.** Wherever there is a door, both
+open it. The glyph is a **10pt** target — small on a trackpad, unkind at any
+accessibility setting — while the text beside it is a comfortable one; and they
+are one message, so splitting the hit region between them is an implementation
+artefact rather than a design. The accepted cost is that the subtitle strip stops
+being row-selection area: clicking "Run failed" opens the popover instead of
+selecting the project. Someone aiming at those words is asking why, and the title
+line — the larger half of the row — remains the row's own target. (Added 27 Aug
+2026 after the two halves were briefly inconsistent: the text became a target
+while the unanalysed delta had no glyph, then it gained a ⓘ and nothing went
+back.)
+
+**A door exists only where there is detail with no other home.** A context menu
+shows verbs and cannot show a list, so a *list* earns a popover; a single fact
+already printed in the subtitle does not. The converse is a hard invariant: **a
+door implies a glyph** — a click target the researcher cannot see is worse than
+no target at all.
+
+| | glyph | door |
+|---|---|---|
+| `failed` · `failedDiagnostic` · `completedPartial` | ✗ / ⚠ | diagnostics — a list of per-session failures |
+| `unreachable` | ⚠ / ✗ by reason | diagnostics — the reason and the folder path, which appear nowhere else |
+| `cantFind` | ⚠, reason-specific symbol | **none** — Locate is a project verb; right-click owns it |
+| `deltaOnly(.missing)` | ⚠ | files — which recordings have vanished |
+| `deltaOnly(.unanalysed)` | ⓘ | files — which files are waiting, plus **Analyse** |
+| everything else | none | none |
+
+Both halves are lifted out of the view and unit-tested —
+`SubtitleVariant.glyphKind` and `.glyphAction`, pinned by
+`SubtitleGlyphContractTests`. They were a private `default: return nil` in
+`ProjectSidebarOutline` until 26 Aug 2026, which is how two states came to draw
+no glyph with nothing asking why.
 
 ### Precedence — starting order (tweak when seen in reality)
 

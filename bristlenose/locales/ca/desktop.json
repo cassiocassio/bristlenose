@@ -249,6 +249,11 @@
     "copyCancelling": "S'està cancel·lant…",
     "copyDiskSpaceTitle": "No hi ha prou espai al disc",
     "copyDiskSpaceMessage": "Aquesta còpia necessita %@ lliures, però al volum de destinació només n'hi ha %@ de disponibles.",
+    "filesPopover": {
+      "unanalysedTitle": "Fitxers sense analitzar",
+      "missingTitle": "Fitxers que falten",
+      "missingFooter": "Aquests fitxers ja no s\u00f3n a la carpeta del projecte."
+    },
     "pipeline": {
       "unreachable": {
         "timedOut": "No respon",

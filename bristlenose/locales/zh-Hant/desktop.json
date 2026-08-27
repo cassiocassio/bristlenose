@@ -232,6 +232,11 @@
     "copyCancelling": "正在取消…",
     "copyDiskSpaceTitle": "磁碟空間不足",
     "copyDiskSpaceMessage": "此拷貝需要 %@ 可用空間，但目標儲存裝置上只有 %@ 可用。",
+    "filesPopover": {
+      "unanalysedTitle": "\u672a\u5206\u6790\u7684\u6a94\u6848",
+      "missingTitle": "\u907a\u5931\u7684\u6a94\u6848",
+      "missingFooter": "\u9019\u4e9b\u6a94\u6848\u5df2\u4e0d\u5728\u5c08\u6848\u6a94\u6848\u593e\u4e2d\u3002"
+    },
     "pipeline": {
       "unreachable": {
         "timedOut": "\u6c92\u6709\u56de\u61c9",

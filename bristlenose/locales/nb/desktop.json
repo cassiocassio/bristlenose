@@ -249,6 +249,11 @@
     "copyCancelling": "Avbryter…",
     "copyDiskSpaceTitle": "Ikke nok diskplass",
     "copyDiskSpaceMessage": "Denne kopieringen trenger %@ ledig, men bare %@ er tilgjengelig på målvolumet.",
+    "filesPopover": {
+      "unanalysedTitle": "Ikke-analyserte filer",
+      "missingTitle": "Manglende filer",
+      "missingFooter": "Disse filene finnes ikke lenger i prosjektmappen."
+    },
     "pipeline": {
       "unreachable": {
         "timedOut": "Svarer ikke",

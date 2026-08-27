@@ -249,6 +249,11 @@
     "copyCancelling": "Cancelando…",
     "copyDiskSpaceTitle": "Espaço em disco insuficiente",
     "copyDiskSpaceMessage": "Esta cópia precisa de %@ livres, mas há apenas %@ disponível no volume de destino.",
+    "filesPopover": {
+      "unanalysedTitle": "Arquivos n\u00e3o analisados",
+      "missingTitle": "Arquivos ausentes",
+      "missingFooter": "Estes arquivos n\u00e3o est\u00e3o mais na pasta do projeto."
+    },
     "pipeline": {
       "unreachable": {
         "timedOut": "N\u00e3o responde",

@@ -282,6 +282,11 @@
     "copyCancelling": "Rušení…",
     "copyDiskSpaceTitle": "Nedostatek místa na disku",
     "copyDiskSpaceMessage": "Tato kopie potřebuje %@ volného místa, ale na cílovém svazku je k dispozici pouze %@.",
+    "filesPopover": {
+      "unanalysedTitle": "Neanalyzovan\u00e9 soubory",
+      "missingTitle": "Chyb\u011bj\u00edc\u00ed soubory",
+      "missingFooter": "Tyto soubory u\u017e ve slo\u017ece projektu nejsou."
+    },
     "pipeline": {
       "unreachable": {
         "timedOut": "Neodpov\u00edd\u00e1",

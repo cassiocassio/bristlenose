@@ -83,10 +83,6 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// owns the in-`projectIndex` ones — rename / move / icon / cancel — directly).
     /// Mirror the SwiftUI `ProjectRow`/`FolderRow` `.contextMenu` items.
     let onLocate: (UUID) -> Void
-    /// The subtitle's data-drift delta was clicked — open the files sheet
-    /// listing what the folder and the analysis disagree about. Presented by
-    /// `ContentView` (it owns the sheet), like `onLocate`.
-    let onShowFiles: (UUID) -> Void
     /// Right-click ▸ Re-analyse…. Handed to `ContentView` rather than run
     /// here: the act is destructive and its confirmation belongs with the
     /// window that can present one.
@@ -180,7 +176,6 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.onActivateLens = onActivateLens
         controller.onExternalDrop = onExternalDrop
         controller.onLocate = onLocate
-        controller.onShowFiles = onShowFiles
         controller.onReAnalyse = onReAnalyse
         controller.onShowInFinder = onShowInFinder
         controller.canShowInFinder = canShowInFinder
@@ -260,7 +255,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var onActivateLens: (Tab) -> Void = { _ in }
     var onExternalDrop: (SidebarExternalDrop, [URL]) -> Void = { _, _ in }
     var onLocate: (UUID) -> Void = { _ in }
-    var onShowFiles: (UUID) -> Void = { _ in }
     var onReAnalyse: (UUID) -> Void = { _ in }
     var onShowInFinder: (UUID) -> Void = { _ in }
     /// See the representable's `handshakeProjectPaths`.
@@ -1834,33 +1828,15 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// adding a case here is a *decision*, not an omission.
     private func subtitlePrefixGlyph(for variant: SubtitleVariant,
                                      availability: ProjectAvailability) -> (symbol: String, color: NSColor)? {
-        switch variant {
-        case .cantFind:
-            return (availability.sfSymbolName ?? "questionmark.folder", NSColor(Color.orange))
-        case .failed, .failedDiagnostic:
-            return (MessageKind.error.symbolName, NSColor(MessageKind.error.tint))
-        case .completedPartial:
-            return (MessageKind.warning.symbolName, NSColor(MessageKind.warning.tint))
-        case .unreachable(let reason):
-            // Kind per `UnreachableReason.kind` — warning for the two that may
-            // resolve themselves (a sleeping drive, a remounted volume), error
-            // for the three that need something to change.
-            return (reason.kind.symbolName, NSColor(reason.kind.tint))
-        case .deltaOnly(.missing), .ready(_, .some(.missing)):
-            // Ruled `warning` on 18 Jun 2026: a researcher whose source
-            // recordings have vanished should not read a row that is
-            // typographically identical to "analysed, all fine".
-            return (MessageKind.warning.symbolName, NSColor(MessageKind.warning.tint))
-        case .deltaOnly(.unanalysed), .ready:
-            // Clickable (→ the files sheet) but glyph-less: "there is work
-            // available" is not distress, and the rulings give `info` no glyph.
-            return nil
-        case .stopping, .running, .queued, .stopped, .partial,
-             .addingInterviews, .copying, .importingBatch,
-             .copyCancelling, .placeholder:
-            // Verb-led progress and resting states — `info`, no glyph.
-            return nil
+        guard let kind = variant.glyphKind else { return nil }
+        // `.cantFind` is the one state whose picture isn't its kind's: an
+        // unmounted volume, an unreachable host and a moved folder are three
+        // different situations and get three different symbols. The *colour*
+        // still comes from the kind, so it can't drift from the rest.
+        if case .cantFind = variant {
+            return (availability.sfSymbolName ?? "questionmark.folder", NSColor(kind.tint))
         }
+        return (kind.symbolName, NSColor(kind.tint))
     }
 
     /// A subtitle element was clicked — route by its declared destination.
@@ -1871,9 +1847,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         case .diagnostics:
             showDiagnosticsPopover(sender)
         case .files:
-            onShowFiles(id)
-        case .locate:
-            onLocate(id)
+            presentFilesPopover(projectID: id,
+                                anchorRect: sender.convert(sender.bounds, to: outlineView))
         case .none:
             break
         }
@@ -1899,6 +1874,42 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // publishes that size rather than inheriting an ambient one.
         // `docs/design-pipeline-popover-sizing.md`.
         let content = ProjectDiagnosticPopover(project: project, state: state, liveData: liveData)
+            .environmentObject(i18n)
+        let host = NSHostingController(rootView: content)
+        host.sizingOptions = .preferredContentSize
+        showRowPopover(host, at: rect)
+    }
+
+    /// Build + show the data-drift popover — which files are new, which have
+    /// vanished, and the one act on them. Sibling of `presentDiagnosticPopover`;
+    /// both go through `showRowPopover`, so anchoring and dismissal can't drift.
+    ///
+    /// **Analyse is resolved here, not passed in from `ContentView`.** The gate
+    /// is `analyseIsOffered` — the same predicate the context menu asks — so the
+    /// popover's button and the menu item cannot disagree about whether a run
+    /// can start. `nil` hides the button rather than dimming it.
+    private func presentFilesPopover(projectID id: UUID, anchorRect rect: NSRect) {
+        guard let project = projectIndex?.projects.first(where: { $0.id == id }),
+              let data = projectIndex?.unanalysed[id],
+              let i18n else { return }
+        // The variant was resolved at render time and this reads the watcher
+        // again at click time; a rescan in between could have cleared the drift.
+        // An empty popover is worse than none.
+        guard !data.newFiles.isEmpty || !data.missingFiles.isEmpty else { return }
+        let offered = Self.analyseIsOffered(
+            isFolderShaped: project.inputFiles == nil,
+            hasPath: !project.path.isEmpty,
+            state: pipelineRunner?.state[id],
+            data: data)
+        let analyse: (() -> Void)? = offered
+            ? { [weak self] in
+                self?.pipelineRunner?.start(project: project)
+                self?.activePopover?.close()
+              }
+            : nil
+        let content = ProjectFilesPopover(newFiles: data.newFiles,
+                                          missingFiles: data.missingFiles,
+                                          onAnalyse: analyse)
             .environmentObject(i18n)
         let host = NSHostingController(rootView: content)
         host.sizingOptions = .preferredContentSize
@@ -2495,17 +2506,37 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             host.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             host.setContentHuggingPriority(.defaultLow, for: .horizontal)
             subtitleField = host
-        } else if subtitleAction == .files, let subtitleActionProjectID {
-            // The data-drift deltas carry no glyph (`.unanalysed` is `info`), so
-            // the text IS the target — as it was on the SwiftUI row, where this
-            // was a `Button`. Styled to be indistinguishable from the label
-            // beside it: the pointing-hand cursor on hover is the affordance,
-            // per the sidebar's attention-not-affordance rule.
+        } else if subtitleAction != .none, let subtitleActionProjectID {
+            // **The glyph and its status text are one control** — wherever there
+            // is a door, both open it.
+            //
+            // Three reasons, and the first is the strongest: the glyph is a
+            // **10pt** target, which is small on a trackpad and unkind at any
+            // accessibility setting, while the text beside it is a comfortable
+            // one. Second, they are one message — splitting the hit region
+            // between them is an implementation artefact, not a design. Third,
+            // ⓘ-style disclosure treats its label as part of the control
+            // everywhere else on the platform.
+            //
+            // Was `subtitleAction == .files` for one day, which is how the row
+            // came to have two targets for `+3 unanalysed` and one for
+            // `Partial completion`. Nothing produced that inconsistency on
+            // purpose: the text became a target while the delta had no glyph,
+            // then it gained a ⓘ and nobody went back.
+            //
+            // Accepted cost: this strip stops being row-selection area, so
+            // clicking "Run failed" opens the popover rather than selecting the
+            // project. Someone aiming at those words is asking why — and the
+            // title line, the larger half of the row, is still the row's target.
+            //
+            // Styled to be indistinguishable from the plain label below: no
+            // underline, no tint. The pointing-hand cursor on hover is the whole
+            // affordance, per "attention, not affordance".
             let button = SubtitleActionButton(title: subtitle,
                                               target: self,
                                               action: #selector(subtitleActionClicked(_:)))
             button.projectID = subtitleActionProjectID
-            button.subtitleAction = .files
+            button.subtitleAction = subtitleAction
             button.isBordered = false
             button.setButtonType(.momentaryChange)
             button.alignment = .left          // NSButton centres by default.
@@ -2569,15 +2600,13 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 button.bezelStyle = .regularSquare
                 button.imagePosition = .imageOnly
                 button.contentTintColor = prefixGlyph.color
-                // Reuse the keys the same acts already carry in the context
-                // menu, so the glyph and the menu item read identically to
-                // VoiceOver. `.files` has no menu twin; the subtitle already
-                // says "3 files missing", which is the better label anyway.
+                // The diagnostic glyph reuses its menu twin's key, so the two
+                // read identically to VoiceOver. `.files` has no menu twin —
+                // the subtitle already says "3 files missing", which is the
+                // better label than anything invented for it.
                 switch subtitleAction {
                 case .diagnostics:
                     button.setAccessibilityLabel(i18n?.t("desktop.menu.project.showDiagnostics"))
-                case .locate:
-                    button.setAccessibilityLabel(i18n?.t("desktop.chrome.locate"))
                 case .files, .none:
                     button.setAccessibilityLabel(subtitle)
                 }

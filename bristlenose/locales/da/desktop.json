@@ -249,6 +249,11 @@
     "copyCancelling": "Annullerer…",
     "copyDiskSpaceTitle": "Ikke nok diskplads",
     "copyDiskSpaceMessage": "Denne kopiering kræver %@ ledig plads, men der er kun %@ tilgængelig på destinationsdisken.",
+    "filesPopover": {
+      "unanalysedTitle": "Ikke-analyserede arkiver",
+      "missingTitle": "Manglende arkiver",
+      "missingFooter": "Disse arkiver findes ikke l\u00e6ngere i projektmappen."
+    },
     "pipeline": {
       "unreachable": {
         "timedOut": "Svarer ikke",

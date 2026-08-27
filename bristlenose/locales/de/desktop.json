@@ -249,6 +249,11 @@
     "copyCancelling": "Abbrechen\u2026",
     "copyDiskSpaceTitle": "Nicht genug Speicherplatz",
     "copyDiskSpaceMessage": "Dieser Kopiervorgang ben\u00f6tigt %@ frei, aber nur %@ sind auf dem Zielvolume verf\u00fcgbar.",
+    "filesPopover": {
+      "unanalysedTitle": "Nicht analysierte Dateien",
+      "missingTitle": "Fehlende Dateien",
+      "missingFooter": "Diese Dateien befinden sich nicht mehr im Projektordner."
+    },
     "pipeline": {
       "unreachable": {
         "timedOut": "Reagiert nicht",

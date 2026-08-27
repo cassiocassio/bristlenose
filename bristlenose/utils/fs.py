@@ -51,6 +51,60 @@ def is_os_metadata(path: Path) -> bool:
     return name.startswith("._") or name == ".DS_Store"
 
 
+#: The per-run state directory, written inside every output dir.
+STATE_DIR_NAME = ".bristlenose"
+
+#: Files Bristlenose writes for itself. Exact names, because these are ours by
+#: construction — a researcher's recording is never called `run.pid`.
+_ARTEFACT_NAMES = frozenset(
+    {
+        "pipeline-events.jsonl",
+        "llm-calls.jsonl",
+        "pii_summary.txt",
+        "run.pid",
+        "bristlenose.log",
+        "bristlenose.db",
+        "manifest.json",
+    }
+)
+
+#: SQLite's WAL companions — `bristlenose.db-wal`, `bristlenose.db-shm`.
+_ARTEFACT_PREFIXES = ("bristlenose.db-",)
+
+
+def is_bristlenose_artefact(path: Path) -> bool:
+    """True for files and directories Bristlenose wrote for its own use.
+
+    Sibling of :func:`is_os_metadata`, and the same argument: a scanner walking a
+    user's folder must not report *our* detritus as *their* problem. `s01_ingest`
+    already declines to descend into ``bristlenose-output``, which covers the
+    default layout; this covers the rest — ``--output`` pointing at some other
+    directory inside the input folder, or artefacts copied about by hand.
+
+    The justification is the plain one and it is enough: this is noise the
+    researcher did not create and cannot act on, and it crowds out the refusals
+    that are genuinely theirs — four of nine files in one observed case.
+
+    (An earlier draft of this docstring claimed ``pii_summary.txt`` would be
+    *ingested as a transcript* because it is a ``.txt``. That is wrong and worth
+    recording so nobody re-derives it: `classify_file` accepts audio, video,
+    ``.srt``, ``.vtt`` and ``.docx`` — **not** ``.txt``. A loose
+    ``pii_summary.txt`` is declined like any other unknown extension. It is
+    still better not to name a re-identification key in a diagnostic the user
+    may paste into a support thread, but that is a mild point, not the alarming
+    one it was written as.)
+
+    Matches by name rather than by location deliberately — the point is that
+    these are ours wherever they turn up.
+    """
+    name = path.name
+    if name == STATE_DIR_NAME:
+        return True
+    if name in _ARTEFACT_NAMES:
+        return True
+    return name.startswith(_ARTEFACT_PREFIXES)
+
+
 def is_dataless(path: Path) -> bool:
     """True if `path` is a cloud placeholder with no bytes on disk.
 

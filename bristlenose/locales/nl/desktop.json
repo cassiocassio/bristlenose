@@ -249,6 +249,11 @@
     "copyCancelling": "Annuleren…",
     "copyDiskSpaceTitle": "Onvoldoende schijfruimte",
     "copyDiskSpaceMessage": "Deze kopie heeft %@ vrij nodig, maar er is slechts %@ beschikbaar op het doelvolume.",
+    "filesPopover": {
+      "unanalysedTitle": "Niet-geanalyseerde bestanden",
+      "missingTitle": "Ontbrekende bestanden",
+      "missingFooter": "Deze bestanden staan niet meer in de projectmap."
+    },
     "pipeline": {
       "unreachable": {
         "timedOut": "Reageert niet",

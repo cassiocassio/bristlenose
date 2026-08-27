@@ -249,6 +249,11 @@
     "copyCancelling": "İptal ediliyor…",
     "copyDiskSpaceTitle": "Yeterli disk alanı yok",
     "copyDiskSpaceMessage": "Bu kopyalama %@ boş alan gerektiriyor, ancak hedef birimde yalnızca %@ kullanılabilir.",
+    "filesPopover": {
+      "unanalysedTitle": "\u00c7\u00f6z\u00fcmlenmemi\u015f dosyalar",
+      "missingTitle": "Eksik dosyalar",
+      "missingFooter": "Bu dosyalar art\u0131k proje klas\u00f6r\u00fcnde de\u011fil."
+    },
     "pipeline": {
       "unreachable": {
         "timedOut": "Yan\u0131t vermiyor",

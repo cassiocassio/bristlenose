@@ -283,6 +283,11 @@
     "copyCancelling": "Anulowanie…",
     "copyDiskSpaceTitle": "Za mało miejsca na dysku",
     "copyDiskSpaceMessage": "To kopiowanie wymaga %@ wolnego miejsca, ale na woluminie docelowym dostępne jest tylko %@.",
+    "filesPopover": {
+      "unanalysedTitle": "Nieprzeanalizowane pliki",
+      "missingTitle": "Brakuj\u0105ce pliki",
+      "missingFooter": "Tych plik\u00f3w nie ma ju\u017c w folderze projektu."
+    },
     "pipeline": {
       "unreachable": {
         "timedOut": "Nie odpowiada",

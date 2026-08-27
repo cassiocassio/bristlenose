@@ -294,12 +294,29 @@ Then push main and the tag — as two commands, never one `--tags`:
   5. git push origin main
      git push origin {tag}
 
-  Both are safe to run back to back: release.yml fires on the tag but its
-  publish job HOLDS on the pypi environment's required-reviewer gate, so
-  nothing reaches PyPI until you approve the run in GitHub. The release
-  lands at that approval — after both CI runs are green and the Mac
-  artefacts are built and uploaded. `check-release-ready.sh` probes that
-  the hold actually exists; heed its 'publish hold' line before pushing.
+  These are NOT interchangeable, and the second one publishes.
+
+  Pushing main is free — it never publishes, and it buys CI signal.
+  Pushing the TAG is the release: the pypi environment's required-reviewer
+  hold was REMOVED on 23 Aug 2026, so nothing waits for a human any more.
+  The tag reaches PyPI on its own, and PyPI is immutable — {new_version}
+  can never be re-used.
+
+  So the tag goes LAST: after a strict CI verdict on main (ci.yml exposes
+  strict-macos on workflow_dispatch, so you can get that verdict without
+  a tag) and after the Mac artefacts are uploaded. On a weekday, the tag
+  push is the step that waits for 9pm London; pushing main does not.
+
+  What replaced the hold is mechanical, not human: publish needs build
+  needs ci, and release.yml invokes ci.yml with strict-macos: true, so
+  PyPI cannot receive a version whose full matrix did not pass on the
+  tagged commit. `check-release-ready.sh` asserts that chain in its
+  'publish gate' row and FAILS if it is ever broken. Its 'publish hold'
+  row now reports ok when there is NO reviewer — the polarity inverted
+  when the hold went, so a warning there means a hold has come BACK and
+  the tag-last ordering is wrong for this repo state.
+
+  `./scripts/release.sh run {new_version}` encodes this order for you.
 
 (`--tags` stays forbidden: bundling branch and tag into one push is how the
 tag-driven release workflow gets debounced into never firing.)""")

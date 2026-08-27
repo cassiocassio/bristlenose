@@ -85,31 +85,34 @@ git push origin main
 git push origin vX.Y.Z
 ```
 
-**Pushing the tag does not publish.** The `pypi` GitHub environment carries a
-**required-reviewer hold** (added 14 Aug 2026): `release.yml` runs the full CI
-suite — with the macOS cells *blocking*, unlike daily pushes — and then its
-`publish` job waits, up to 30 days, for an approval on the run page. PyPI, the
-GitHub Release and the Homebrew notification all sit behind that approval. This
-is what lets the tag go out *early*, alongside `main`, so both CI runs execute
-while the Mac artefacts build — and every irreversible act (TestFlight upload,
-`.dmg` publish, the approval itself) happens *after* every verdict is in.
+**Pushing the tag IS publishing.** The `pypi` environment's required-reviewer
+hold was **removed on 23 Aug 2026**. Nothing waits for a human: the tag push
+starts `release.yml`, and PyPI receives the version on its own. PyPI is
+immutable, so that version number is spent the moment it lands.
 
-**The hold lives in repo Settings ▸ Environments ▸ pypi, not in any file.** A
-fresh fork, a recreated environment, or an accidental deletion silently reverts
-to publish-on-tag-push. `check-release-ready.sh` probes it on every run (the
-`publish hold` line); if that line warns, restore the reviewer before pushing
-any tag:
+Until 23 Aug this section said the opposite, and said it for a good reason — the
+hold was what let the tag go out *early*, alongside `main`, because a human
+still stood between the run and PyPI. **That is no longer true, and the ordering
+inverted with it: the tag now goes LAST.**
+
+**What replaced the hold is mechanical, and stronger.** `publish` needs `build`
+needs `ci`, and `release.yml` invokes `ci.yml` with `strict-macos: true`. PyPI
+cannot receive a version whose full matrix, e2e and strict macOS suite did not
+pass on the tagged commit. `check-release-ready.sh` asserts that chain in its
+**`publish gate`** row and *fails* if it is ever broken — where the old hold was
+a click that re-verified nothing.
+
+**The `publish hold` row still exists, with its polarity inverted.** It reports
+`ok` on **zero** reviewers, and **warns when one exists** — because a restored
+hold would break the tag-last ordering `scripts/release.sh run` encodes. If you
+ever see that warning, someone re-armed the environment; either remove it again
+or stop using `release.sh run` until you have.
 
 ```sh
 gh api repos/cassiocassio/bristlenose/environments/pypi \
   --jq '[.protection_rules[]? | select(.type=="required_reviewers")] | length'
-# 0 = no hold — restore via Settings ▸ Environments ▸ pypi ▸ Required reviewers
+# 0 = expected. A non-zero means a hold came BACK — do NOT restore one.
 ```
-
-**There is nothing to approve since 23 Aug 2026.** A `0` above is the expected
-state: the hold was removed and the tag push is what publishes. If it reports a
-reviewer, someone restored it, and the tag-last ordering in `scripts/release.sh`
-is wrong for that state.
 
 To abandon: **don't push the tag.** Everything before it — bump, commit, `main`,
 both builds, even the TestFlight and `.dmg` uploads — is reversible or merely
@@ -121,10 +124,11 @@ its CI is still running, deleting it (`git push --delete origin vX.Y.Z && git ta
 ### Two mandatory gates — do not skip
 
 - **Evening timing (weekdays):** the act that *lands* the release is the
-  **publish approval** — that is what waits for **21:00 London** on weekdays
-  (avoids version churn during client hours). Pushing `main`+tag and building
-  publish nothing, so the run can start any time; a morning approval after an
-  overnight run is a sanctioned override. Weekends: any time.
+  **tag push** — that is what waits for **21:00 London** on weekdays (avoids
+  version churn during client hours). Pushing `main` publishes nothing and can
+  happen any time; it buys CI signal, which is the point of doing it early.
+  Weekends: any time. This used to say "publish approval"; the approval is gone
+  and the wait moved to the tag.
 - **Post-APPROVAL PyPI verification (mandatory):** an approved publish job is
   **not** a release reaching PyPI — the pipeline has silently stalled before
   (v0.15.5→.9, ~6 days, unnoticed). The clock starts at the **approval**, not
@@ -161,9 +165,12 @@ bristlenose repo (release.yml) — triggered by v* tag
 ├─ ci           → full suite via workflow_call to ci.yml, WITH strict-macos: true
 │                 (macOS test cells BLOCK here; informational on daily pushes)
 ├─ build        → sdist + wheel (python -m build), SBOMs, attestation
-├─ publish      → ⏸ PARKS on the pypi environment's required-reviewer hold
-│                 (up to 30 days) — PyPI publishes only after you Approve.
-│                 OIDC trusted publishing, no token.
+├─ publish      → PUBLISHES to PyPI. No hold, no approval, nothing waits
+│                 for a human (the required-reviewer hold went 23 Aug 2026).
+│                 OIDC trusted publishing, no token. Immutable once it lands.
+│
+│   the three below are PARALLEL siblings, all `needs: publish` —
+│   none of them gates another:
 ├─ github-release → creates GitHub Release with auto-generated notes
 ├─ verify-pypi  → server-side poll; a stalled publish goes RED, not silent
 └─ notify-homebrew → sends repository_dispatch to tap repo

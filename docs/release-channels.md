@@ -33,7 +33,9 @@ but the sidecar.
 
 ## One tag push does six things
 
-Pushing tag `v*` fires `release.yml`, which runs **six jobs in order** — and
+Pushing tag `v*` fires `release.yml`, which runs six jobs — `ci → build →
+publish`, then `github-release`, `verify-pypi` and `notify-homebrew` as
+**parallel siblings** off `publish`, none gating another — and
 runs to completion: CI with strict macOS, then publish. The required-reviewer
 hold that used to park it was removed 23 Aug 2026 — `check-release-ready.sh`'s
 `publish gate` row now asserts the `publish → build → ci(strict)` chain instead,
@@ -156,9 +158,10 @@ byte-identical — force-move the existing tag rather than forking the version l
 Counter-rule: if the version ever *published*, PyPI immutability means you must
 bump.
 
-**Releases land after 9pm London on weekdays — and the landing act is the
-publish approval.** Pushing `main` and the tag publishes nothing (the hold), so
-push any time; only the approval waits for the window. Weekends are
+**Releases land after 9pm London on weekdays — and the landing act is the tag
+push.** Pushing `main` publishes nothing and can happen any time; it buys CI
+signal. The **tag** is what waits for the window, because since 23 Aug 2026 it
+publishes directly — there is no approval left to wait on. Weekends are
 unrestricted. (The old `main:wip` preview workaround is retired — main can
 simply be pushed, and wip never triggered CI anyway.)
 

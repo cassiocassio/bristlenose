@@ -1,7 +1,7 @@
 """Install-method-aware fix messages for doctor checks.
 
 Each fix_key maps to a function that returns a string with the fix instruction,
-tailored to the detected install method (snap, brew, pip).
+tailored to the detected install method (snap, rpm, brew, pip).
 """
 
 from __future__ import annotations
@@ -9,16 +9,42 @@ from __future__ import annotations
 import os
 import platform
 import sys
+from pathlib import Path
+
+#: Written into the private prefix by a packaging recipe that wants to be
+#: recognised without a sniff. The RPM (rpm/bristlenose.spec.in) drops it; any
+#: future packager can do the same rather than adding another heuristic here.
+INSTALL_MARKER = ".install-method"
+
+#: Values a marker file is allowed to carry. An unrecognised one is ignored
+#: rather than trusted — a typo in a spec must not invent an install method
+#: that no fix message handles.
+_MARKER_METHODS = frozenset({"rpm"})
 
 
 def detect_install_method() -> str:
     """Detect how bristlenose was installed.
 
-    Returns one of: "snap", "brew", "pip", "unknown".
+    Returns one of: "snap", "rpm", "brew", "pip".
     """
     # Snap: $SNAP env var is set
     if os.environ.get("SNAP"):
         return "snap"
+
+    # A packaged install can just say so. Checked before the sniffs because it
+    # is the exact answer rather than an inference: the RPM lives at
+    # /usr/lib64/bristlenose, which no path heuristic distinguishes from any
+    # other venv, and guessing "pip" there tells a Fedora user to run pip —
+    # which on Fedora installs a SECOND bristlenose into ~/.local/bin that
+    # then shadows the packaged one on PATH.
+    try:
+        marker = Path(sys.prefix) / INSTALL_MARKER
+        if marker.is_file():
+            value = marker.read_text(encoding="utf-8").strip()
+            if value in _MARKER_METHODS:
+                return value
+    except OSError:
+        pass
 
     # Homebrew: Python executable under Homebrew prefixes
     exe = sys.executable
@@ -83,6 +109,13 @@ def get_fix(fix_key: str, install_method: str | None = None) -> str:
 
 
 def _fix_ffmpeg_missing(method: str) -> str:
+    if method == "rpm":
+        return (
+            "FFmpeg not found — this is a bug in the RPM package, which\n"
+            "requires /usr/bin/ffmpeg.\n"
+            "  sudo dnf reinstall bristlenose\n"
+            "If it persists: github.com/cassiocassio/bristlenose/issues"
+        )
     if method == "snap":
         return (
             "FFmpeg not found — this is a bug in the snap package.\n"
@@ -108,6 +141,12 @@ def _fix_ffmpeg_missing(method: str) -> str:
 
 
 def _fix_backend_import_fail(method: str) -> str:
+    if method == "rpm":
+        return (
+            "Transcription backend failed to load — this is a bug in the RPM package.\n"
+            "  sudo dnf reinstall bristlenose\n"
+            "If it persists: github.com/cassiocassio/bristlenose/issues"
+        )
     if method == "snap":
         return (
             "Transcription backend failed to load — this is a bug in the snap package.\n"
@@ -240,6 +279,13 @@ def _fix_network_unreachable(_method: str) -> str:
 
 
 def _fix_spacy_model_missing(method: str) -> str:
+    if method == "rpm":
+        return (
+            "spaCy model not found — this is a bug in the RPM package, which\n"
+            "bundles en_core_web_sm.\n"
+            "  sudo dnf reinstall bristlenose\n"
+            "If it persists: github.com/cassiocassio/bristlenose/issues"
+        )
     if method == "snap":
         return (
             "spaCy model not found — this is a bug in the snap package.\n"
@@ -261,6 +307,13 @@ def _fix_spacy_model_missing(method: str) -> str:
 
 
 def _fix_presidio_missing(method: str) -> str:
+    if method == "rpm":
+        return (
+            "presidio-analyzer not found — this is a bug in the RPM package,\n"
+            "which bundles it.\n"
+            "  sudo dnf reinstall bristlenose\n"
+            "If it persists: github.com/cassiocassio/bristlenose/issues"
+        )
     if method == "brew":
         return (
             "PII redaction requires presidio-analyzer.\n\n"
@@ -397,6 +450,17 @@ def _fix_serve_deps_missing(method: str) -> str:
     # Single quotes around the package spec so zsh doesn't interpret the
     # brackets as a glob character class — without them, pip gets a mangled
     # argument and the user sees "no matches found".
+    if method == "rpm":
+        # NOT the pip fallback below. On Fedora that either refuses with
+        # EXTERNALLY-MANAGED or installs a second bristlenose into
+        # ~/.local/bin, which shadows /usr/bin/bristlenose on PATH — leaving
+        # the user running a different copy than the one they packaged.
+        return (
+            "`bristlenose serve` deps missing — this is a bug in the RPM package,\n"
+            "which installs the serve extras.\n"
+            "  sudo dnf reinstall bristlenose\n"
+            "If it persists: github.com/cassiocassio/bristlenose/issues"
+        )
     if method == "snap":
         return (
             "`bristlenose serve` deps missing — this is a bug in the snap package.\n"

@@ -40,6 +40,7 @@ from bristlenose.doctor import (
     run_preflight,
 )
 from bristlenose.doctor_fixes import (
+    INSTALL_MARKER,
     detect_install_method,
     get_fix,
     get_mlx_install_command,
@@ -1222,6 +1223,76 @@ class TestDetectInstallMethod:
             patch("bristlenose.doctor_fixes.sys.executable", "/opt/homebrew/bin/python3"),
         ):
             assert detect_install_method() == "snap"
+
+    # -- RPM (Fedora / Copr) --
+    #
+    # The RPM's venv lives at /usr/lib64/bristlenose, which no path heuristic
+    # tells apart from any other venv — so the spec drops a marker file and
+    # detection reads it. Guessing "pip" here is actively harmful: the pip fix
+    # messages tell a Fedora user to `pip install`, which lands a second
+    # bristlenose in ~/.local/bin that shadows the packaged one on PATH.
+
+    def test_rpm_marker_in_prefix(self, tmp_path: Path) -> None:
+        (tmp_path / INSTALL_MARKER).write_text("rpm\n", encoding="utf-8")
+        with (
+            patch.dict(os.environ, _no_snap_env(), clear=True),
+            patch("bristlenose.doctor_fixes.sys.prefix", str(tmp_path)),
+        ):
+            assert detect_install_method() == "rpm"
+
+    def test_snap_takes_priority_over_rpm_marker(self, tmp_path: Path) -> None:
+        """A marker cannot override $SNAP — the env var is the stronger signal."""
+        (tmp_path / INSTALL_MARKER).write_text("rpm\n", encoding="utf-8")
+        with (
+            patch.dict(os.environ, {"SNAP": "/snap/bristlenose/42"}),
+            patch("bristlenose.doctor_fixes.sys.prefix", str(tmp_path)),
+        ):
+            assert detect_install_method() == "snap"
+
+    def test_unrecognised_marker_value_is_ignored(self, tmp_path: Path) -> None:
+        """A typo in some future spec must not invent an unhandled method.
+
+        Every fix function branches on known strings and falls through to the
+        pip text otherwise, so an unknown value would silently behave as pip
+        anyway — but returning it would leak a bogus method into the doctor
+        table and into anything that reports the install method.
+        """
+        (tmp_path / INSTALL_MARKER).write_text("dpkg", encoding="utf-8")
+        with (
+            patch.dict(os.environ, _no_snap_env(), clear=True),
+            patch("bristlenose.doctor_fixes.sys.prefix", str(tmp_path)),
+        ):
+            assert detect_install_method() == "pip"
+
+    def test_no_marker_still_reads_as_pip(self, tmp_path: Path) -> None:
+        """The marker is additive — an ordinary venv is unaffected."""
+        with (
+            patch.dict(os.environ, _no_snap_env(), clear=True),
+            patch("bristlenose.doctor_fixes.sys.prefix", str(tmp_path)),
+            patch("bristlenose.doctor_fixes.sys.executable", str(tmp_path / "bin/python")),
+        ):
+            assert detect_install_method() == "pip"
+
+    def test_rpm_fixes_never_suggest_pip(self) -> None:
+        """The whole point of the arm: no RPM fix may hand out a pip command.
+
+        `pip install` on Fedora either refuses with EXTERNALLY-MANAGED or
+        installs a shadowing copy — so every method-branching fix has to have
+        an rpm answer, not fall through to the pip text.
+        """
+        method_aware = [
+            "ffmpeg_missing",
+            "backend_import_fail",
+            "spacy_model_missing",
+            "presidio_missing",
+            "serve_deps_missing",
+        ]
+        for key in method_aware:
+            text = get_fix(key, install_method="rpm")
+            assert text, f"{key} returned no fix text for rpm"
+            assert "pip install" not in text, f"{key} tells an RPM user to run pip:\n{text}"
+            assert "pipx" not in text, f"{key} tells an RPM user to run pipx:\n{text}"
+            assert "dnf" in text, f"{key} gives an RPM user no dnf command:\n{text}"
 
     # -- Homebrew --
 

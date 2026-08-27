@@ -487,6 +487,7 @@ fully-qualified path, never by first match on the name.**
 - `docs/design-pipeline-resilience.md` — manifest, event sourcing, resume, provenance
 - `docs/design-pipeline-diagnostic-popover.md` — **read before adding any new error / status / message that surfaces in the popover, the pill, the sidebar glyph, or any toast.** Five-kind `MessageKind` taxonomy (`bristlenose/ui_kinds.py`), length budgets, anti-patterns, flowchart for fitting new messages into the existing vocabulary instead of inventing new glyphs/colours
 - `docs/design-platform-transcripts.md`, `docs/design-transcript-coverage.md`
+- `docs/design-people.md` — **problem-first spec for person identity: jobs to be done, then UX, then data.** Read before touching names, speaker roles, or anything that renders a person. Owns the ranked sequence, the settled decision 1 (codes are globally-numbered slots, identity a layer above; renumbering falls out of renaming — supersedes §11c's (session,code)-rekey direction), the one still-open product call (decision 2: whose name survives an export), and §H's sequenced work packages
 - `docs/design-speaker-splitting.md`, `docs/design-speaker-role-detection.md`
 - `docs/design-speaker-editing.md`, `docs/design-transcript-editing.md`, `docs/design-transcript-speaker-editing-roadmap.md`
 - `docs/design-multi-project.md` — scope rules (instance vs project tables)

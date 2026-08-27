@@ -81,7 +81,7 @@ dev = [
     # still needs `pre-commit install` once per clone.
     "pre-commit>=4.0",
     "httpx>=0.27",
-    "mcp>=2.0",
+    "mcp>=2.0,<2.1",
     "mlx>=0.16; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "mlx-whisper>=0.4; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
@@ -110,8 +110,20 @@ serve = [
 # deliberately; the Connect Agent sheet is the surface).
 # Floor 2.0 (MCPServer API; spec-2026-07-28 sessionless direction) —
 # fallback to 1.29 + rename if 2.0.0 shows a transport showstopper.
+#
+# Ceiling <2.1 added 28 Aug 2026, and it is OUR bug that it defers, not
+# theirs. mcp 2.1 masks a tool exception's message behind a generic
+# "Error executing tool <name>" — sound hardening: internal exception text
+# should not reach the model. But mcp_server.py signals a legitimate
+# refusal by RAISING ToolInputError (our own ValueError subclass, :66),
+# so under 2.1 an out-of-scope project stops saying why it refused and
+# says "Error executing tool get_project_overview" instead. Floor-only,
+# a fresh install already resolved 2.1.1 and shipped that regression.
+# Lifting the ceiling means RETURNING refusals as tool results rather
+# than raising them — a change across three call sites plus tests, not a
+# version bump. Held register: docs/dependency-premortem-log.md.
 mcp = [
-    "mcp>=2.0",
+    "mcp>=2.0,<2.1",
 ]
 
 # Release-time tooling. Run on the release machine when cutting a

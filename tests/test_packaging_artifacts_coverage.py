@@ -31,7 +31,15 @@ from fnmatch import fnmatch
 from pathlib import Path
 
 import pytest
-import tomllib
+
+# tomllib is stdlib only from 3.11, and requires-python is ">=3.10". A bare
+# `import tomllib` makes the whole module fail to COLLECT on 3.10 — which is
+# not one red test but an "Interrupted: 1 error during collection" that
+# aborts the entire run, as it did on every 3.10 cell on 27 Aug 2026.
+# Skipping leaves the gate running on the other four cells and locally.
+tomllib = pytest.importorskip(
+    "tomllib", reason="tomllib is stdlib only from Python 3.11"
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 

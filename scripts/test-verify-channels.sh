@@ -47,6 +47,13 @@ eq "multiline body"             ok          "$(verdict_contains 'a
 0.28.0
 b' '0.28.0')"
 
+head_ "verdict_testflight_probe — unverified must not read as failed"
+eq "0 delivered = ok"            ok      "$(verdict_testflight_probe 0)"
+eq "1 absent = bad (real gap)"   bad     "$(verdict_testflight_probe 1)"
+eq "3 could-not-look = skipped"  skipped "$(verdict_testflight_probe 3)"
+eq "unexpected exit = skipped"   skipped "$(verdict_testflight_probe 7)"
+eq "empty = skipped"             skipped "$(verdict_testflight_probe '')"
+
 head_ "verdict_contains — the substring trap (a longer version must not satisfy a shorter one)"
 eq "0.28.1 vs page naming only 0.28.10"  bad "$(verdict_contains 'released 0.28.10 today' '0.28.1')"
 eq "0.2 must not match 0.28.0"           bad "$(verdict_contains 'released 0.28.0' '0.2')"

@@ -144,6 +144,20 @@ rollup() {
     echo 0
 }
 
+# verdict_testflight_probe <probe-exit> — pure mapper for the --probe contract
+# (0 delivered · 1 absent · 3 could-not-look). Absent is BAD: a released
+# version with no TestFlight build is a real gap. Could-not-look stays the
+# informational skip — most machines legitimately lack the ASC key, and an
+# UNVERIFIED row must not read as a FAILED one. Any unexpected exit maps to
+# the skip for the same reason 1 and 3 must never conflate in probe_done.
+verdict_testflight_probe() {
+    case "${1:-}" in
+        0) echo ok ;;
+        1) echo bad ;;
+        *) echo skipped ;;
+    esac
+}
+
 [ "${VERIFY_CHANNELS_LIB:-0}" = "1" ] && return 0 2>/dev/null
 
 # ---------------------------------------------------------------------------
@@ -240,7 +254,18 @@ probe_homebrew() {
 }
 
 probe_testflight() {
-    printf 'skipped|no probe without an ASC key — upload-testflight.sh --probe <version>'
+    local _rc
+    if [ -x "$ROOT/desktop/scripts/upload-testflight.sh" ]; then
+        "$ROOT/desktop/scripts/upload-testflight.sh" --probe "$VERSION" >/dev/null 2>&1
+        _rc=$?
+    else
+        _rc=3
+    fi
+    case "$(verdict_testflight_probe "$_rc")" in
+        ok)  printf 'ok|ASC holds a build of %s' "$VERSION" ;;
+        bad) printf 'bad|no build of %s on App Store Connect' "$VERSION" ;;
+        *)   printf 'skipped|could not look (ASC key, config, or network) — upload-testflight.sh --probe %s' "$VERSION" ;;
+    esac
 }
 
 probe_dmg() {

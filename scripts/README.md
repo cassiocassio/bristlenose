@@ -23,17 +23,29 @@ Every script resolves its own paths (via `$0`), so invoke it from anywhere.
 ## Ship a release
 
 ```bash
-./scripts/release.sh plan 0.28.0        # what would happen, in order, with estimates
-./scripts/release.sh run  0.28.0 --bump minor
-./scripts/release.sh verify 0.28.0      # is it actually live on every channel?
-./scripts/release.sh status             # fold the event log for the current run
+./scripts/release.sh plan     # what would happen — bare = the next minor, narrated
+./scripts/release.sh run      # do it — bare = the next minor; typing the version is the consent
+./scripts/release.sh verify   # is it actually live on every channel? bare = the tree's version
+./scripts/release.sh status   # fold the event log for the current run
 ```
+
+The version and the bump kind are one fact spelled two ways, so either alone
+suffices — `run 0.29.0` infers the minor, `run --bump patch` infers the version,
+both from the **last tag**, never the tree (which is mid-bump exactly when it
+matters). Given both, they cross-check: one clean step of the wrong kind is
+refused as a typo. A resume needs neither — the run dir's first ledger line
+remembers its own bump, and a contradicting flag is refused. Every inference is
+narrated, and for a **fully inferred** version the confirmation prompt is
+mandatory: `--yes` cannot skip typing a version that was never given (headless,
+the read hits EOF and dies having done nothing). `retry <step>`, `abandon` and
+`recover` likewise find the sole run under `.release/` when no version is
+given.
 
 | | |
 |---|---|
-| [`release.sh`](release.sh) | The conductor's page, executable. `plan · run · verify · status · abandon · retry · recover`. **The tag is the release** — `run` puts it last, after the soft uploads, and takes its strict verdict from a `workflow_dispatch` of CI on `main`. |
+| [`release.sh`](release.sh) | The conductor's page, executable. `plan · run · verify · status · abandon · retry · recover`, all with inferred defaults (above). **The tag is the release** — `run` puts it last, after the soft uploads, takes its strict verdict from a `workflow_dispatch` of CI on `main`, and refuses to tag any HEAD the recorded verdict does not name. |
 | [`check-release-ready.sh`](check-release-ready.sh) | Preflight. The mechanical half of the release skill: a precondition inside a script is structurally unskippable, one in a skill is an instruction a model can misread. `run` calls it as step 1; run it alone any time. |
-| [`verify-channels.sh`](verify-channels.sh) | Is version X.Y.Z live on all seven channels? Iterates `CHANNELS` from `project.conf`, one tri-state probe each. |
+| [`verify-channels.sh`](verify-channels.sh) | Is a version live on all seven channels? No version = the tree's. Iterates `CHANNELS` from `project.conf`, one tri-state probe each — including TestFlight, asked directly via `upload-testflight.sh --probe` when the ASC key is present. |
 | [`project.conf`](project.conf) | Every project-specific literal — name, repo, tap, site, version file, derived URLs, workflow names, and the channel set. Sourced by the three above. Change identity here, never in a script. |
 | [`bump-version.py`](bump-version.py) | Writes and **stages** the version files. Deliberately does not commit and does not tag — the tag belongs on a commit that does not exist yet. |
 

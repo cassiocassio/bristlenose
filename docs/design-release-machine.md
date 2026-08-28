@@ -963,6 +963,45 @@ change the tool had seen. One of the two failures was the *test* asserting
 `patch` for two identical strings; corrected rather than papered over.
 
 
+### The CLI learned its defaults from being used (28 Aug 2026)
+
+The 0.28.0 run was the first driven end to end, and the interface tax showed
+immediately: `verify` demanded a version whose answer sat in the tree beside
+it, and `run` demanded the version *and* the bump kind — one fact spelled two
+ways, both times. Relaxed the day after the release, in `a81c5db7` and
+`82e67268`:
+
+- **Either spelling suffices.** `run 0.29.0` infers the kind, `run --bump
+  patch` infers the version — always from the **last tag**, never the tree,
+  which is mid-bump exactly when it matters (the double-bump incident's root).
+  Given both, they cross-check: one clean step of the wrong kind dies as a
+  typo; a multi-step leap warns and proceeds, both halves being explicit.
+- **A resume needs neither.** The run dir's first ledger line records
+  `bump=<kind>`; a resume reads it back and refuses a contradicting flag.
+- **Bare `run` proposes the next minor** (the house bias — the 0.15.x line is
+  what a patch habit looks like) and moves the consent from the flag to the
+  prompt: for a **fully inferred** version the typed confirmation is
+  mandatory, `--yes` cannot skip typing a version that was never given, and
+  headless the read hits EOF and dies having created nothing. With a version
+  or `--bump` given, `--yes` keeps its meaning — automation and resumes are
+  untouched.
+- **Bare `verify` probes the tree's version**, marked `· the tree's version`
+  in the header. `retry <step>`, `abandon` and `recover` find the sole run
+  under `.release/`, narrated.
+
+Every inference prints what it chose — a silent default is a trap, a narrated
+one is a colleague. The pure pair `next_version` / `bump_kind` carries the
+translation and is unit-pinned both ways.
+
+The change found one bug, in its own tests: the old assertion drove bare
+`run` expecting an instant usage-refusal; under the new contract it prompts,
+and with stdin left open that `read` blocked and hung the suite. The
+rewritten pin runs in the sandbox with stdin closed and asserts the declined
+run leaves nothing — the harness lesson being that any test invoking an
+interactive path must close stdin or it is a hang waiting for its contract to
+change.
+
+
 ## 20 · If this ever leaves this repo — notes for a future adopter
 
 Written 24 Aug 2026, deliberately as notes rather than work. Nothing here is

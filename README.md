@@ -84,6 +84,10 @@ brew trust --formula cassiocassio/bristlenose/bristlenose
 # Ubuntu / Debian and most other distros (Snap) -- bundles Python + FFmpeg
 sudo snap install bristlenose --edge
 
+# Fedora (Copr) -- bundles Python, pulls FFmpeg from Fedora's own repos
+sudo dnf copr enable cassiocassio/bristlenose
+sudo dnf install bristlenose
+
 # Linux / macOS / Windows (pipx or uv)
 pipx install bristlenose
 uv tool install bristlenose    # alternative
@@ -91,7 +95,7 @@ uv tool install bristlenose    # alternative
 
 The `brew trust` line is a one-off. Homebrew 6.0 and later skip third-party taps during `brew upgrade` unless trusted, so without it Bristlenose installs fine but silently stops receiving updates.
 
-The Snap is **amd64 only** — on ARM Linux, use pipx.
+The Snap and the Fedora package are both **amd64/x86_64 only** — on ARM Linux, use pipx.
 
 If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu, `sudo dnf install ffmpeg-free` on Fedora, `winget install FFmpeg` on Windows).
 
@@ -319,7 +323,7 @@ Priorities may shift. If something is missing that matters to you, [open an issu
 - **Gemini** -- the least-exercised of the cloud providers
 - **Azure OpenAI** -- enterprise deployments
 - **Windows** -- the pipeline works but hasn't been widely tested
-- **Linux** -- pipx works today; the Snap ships on the edge channel (`snap install bristlenose --edge`)
+- **Linux** -- pipx works today; the Snap ships on the edge channel (`snap install bristlenose --edge`), and Fedora has a Copr (`dnf copr enable cassiocassio/bristlenose`)
 
 ---
 
@@ -387,6 +391,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 - **A project Bristlenose can't reach now says why — in your language, and where you'll see it.** A volume that has gone, a project it can't read, a folder taking too long: five states that rendered as bare English sentences on the row, with no glyph and nothing to click, in every language. They now carry a glyph, a popover with the full explanation, and translations in 21 languages.
 - **`man bristlenose` no longer outlives the package.** Snap and Homebrew installs ship their own man page, but Bristlenose was also dropping a copy into your home directory. `man` reads that first, so it shadowed the packaged one — and because no package owned it, uninstalling left `man bristlenose` still working, showing whatever version last wrote it.
 - **Snap users with a broken PII component are no longer told to run `pipx`.** The suggested fix was `pipx inject` into a strictly-confined install, which cannot work. presidio ships inside the snap, so the answer is `snap refresh`.
+- **Fedora: two commands, and `dnf upgrade` keeps you current.** `sudo dnf copr enable cassiocassio/bristlenose`, then `sudo dnf install bristlenose`. The package bundles Python and every dependency; FFmpeg comes from Fedora's own repositories, whose free build handles everything Teams, Zoom and Meet produce. x86_64, Fedora 43. The install was proven on a clean box before these instructions went live.
 - **Agent access keeps explaining itself.** A fresh install this week would have picked up a newer MCP library that swallows Bristlenose's refusal messages — an agent asking about a closed study would see `Error executing tool` instead of being told the project is out of scope and to reopen it. Pinned until refusals survive the newer library.
 
 **0.27.0** — _22 Aug 2026_

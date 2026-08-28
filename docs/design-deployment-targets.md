@@ -33,10 +33,12 @@ Where Bristlenose is expected to run, and what each target implies for deps, pac
 - Ubuntu runners (see `.github/workflows/`)
 - GNU userland — no BSD gotchas
 - No LLM API keys, no Ollama — all environment-dependent tests must mock
-- Release pipeline: PyPI, Snap, Homebrew tap — and a Fedora Copr, **built and
-  proven but not published** (`docs/design-fedora-packaging.md` §7). Every other
-  enumeration of the channel set in this repo still says three, correctly; they
-  all become wrong on the day the Copr publishes.
+- Release pipeline: PyPI, Snap, Homebrew tap — and a Fedora Copr, **live since
+  28 Aug 2026** (`cassiocassio/bristlenose`, fedora-43-x86_64, serving 0.28.0;
+  `docs/design-fedora-packaging.md` §7). The `trigger-copr` job fires on
+  `needs: verify-pypi`, never `publish` — Source0 is fetched from PyPI during
+  the Copr build and would race the CDN. The channel enumerations across the
+  repo were updated in the flip commit.
 
 ### 3. Claude Code Cloud VM (verified Apr 2026)
 
@@ -147,7 +149,7 @@ cd frontend && npm ci && npm run build 2>&1 | tail -10
 | `bristlenose run` on *real* interviews | ❌ | Participant recordings must not be copied onto an ephemeral VM we do not control — a governance obligation, not a local-first promise. Use a synthetic fixture if you need to exercise the pipeline |
 | Browser QA of `bristlenose serve` | ⚠️ unknown | Port-forwarding from Claude Cloud VM to iPad browser not confirmed. `preview_*` in-assistant tools are banned (CLAUDE.md). Worth testing once |
 | `/deploy-website` | ❌ | Needs user's SSH agent |
-| Snap/Homebrew/Copr release | ❌ | Needs signing keys and tags on user's machine; the Copr additionally needs an API token there, which expires every 180 days |
+| Snap/Homebrew/Copr release | ❌ | Needs signing keys and tags on user's machine. (The Copr *rebuild itself* is automatic — `trigger-copr` in release.yml holds the token as a repo secret — but the token still expires every 180 days and renewal is a human browser round-trip) |
 | Desktop SwiftUI work | ❌ | macOS-only (Xcode) |
 
 ### Notes on "what I wish I'd known on the iPad trip"

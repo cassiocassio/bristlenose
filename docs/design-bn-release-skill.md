@@ -17,7 +17,7 @@ trued-against: the shipped skill after two live releases and the publish-hold re
 
 
 _Plans a skill that runs a release across some or all of PyPI · GitHub Release ·
-Homebrew · Snap · TestFlight · `.dmg`, having first proven the tree, the
+Homebrew · Snap · Copr · TestFlight · `.dmg`, having first proven the tree, the
 changelog and the docs are actually ready._
 
 **Status (14 Aug 2026) — built, and run twice live:**
@@ -74,7 +74,7 @@ each a superset of the audience below it:
 | Tier | | Cadence | Channels | Version moves | Prose |
 |---|---|---|---|---|---|
 | **0** | **Due diligence** | every push | CI builds, publishes nothing | none | none |
-| **1** | **Cohort** | daily → fortnightly | TestFlight · `.dmg` · PyPI · GH Release · Homebrew · Snap **edge** | patch or minor — **you decide** | CHANGELOG + website |
+| **1** | **Cohort** | daily → fortnightly | TestFlight · `.dmg` · PyPI · GH Release · Homebrew · Snap **edge** · Copr | patch or minor — **you decide** | CHANGELOG + website |
 | **2** | **Public** | monthly-ish | Snap **stable** · **App Store** | *nothing new* — promotes | + App Store listing |
 
 ### Why Mac and CLI are one tier, not two

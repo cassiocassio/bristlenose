@@ -28,7 +28,7 @@ that the SwiftUI shell spawns and talks to over local HTTP.
 So there are really three things layered on top of that shared core:
 
 - **The CLI** — Typer commands (`run`, `serve`, `analyze`, `status`, `doctor`, …),
-  shipped on PyPI, Homebrew, and Snap.
+  shipped on PyPI, Homebrew, Snap, and a Fedora Copr.
 - **The web SPA** — a React app served by `bristlenose serve`. This *is* the product UI.
 - **The macOS app** — a SwiftUI shell that wraps the SPA in a WKWebView and spawns the
   Python core as a bundled sidecar. Distributed via TestFlight / the Mac App Store.
@@ -160,13 +160,13 @@ maintainer-only handoff kept outside the public repo.
 
 There are two release paths, because there are two kinds of artefact.
 
-### CLI release (PyPI / Homebrew / Snap)
+### CLI release (PyPI / Homebrew / Snap / Copr)
 
 Ordinary day-to-day: commit to `main`, and when you want to ship, bump the version and
 tag. Version lives in exactly one place — `bristlenose/__init__.py`
 (`__version__`) — and `./scripts/bump-version.py` updates it plus the man page and creates
 the tag. GitHub Actions then does the rest: CI → PyPI publish → GitHub Release → Homebrew
-tap dispatch; the Snap workflow builds edge on push and stable on a `v*` tag.
+tap dispatch → Copr build (after PyPI is verified fetchable — Source0 comes from there); the Snap workflow builds edge on push and stable on a `v*` tag.
 
 The full pipeline, secrets, cross-repo topology, and the mandatory **post-push PyPI
 verification** step live in [release.md](release.md) and the "Releasing" section of

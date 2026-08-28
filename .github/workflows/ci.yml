@@ -119,19 +119,34 @@ jobs:
       fail-fast: false
       matrix:
         # Multi-version test matrix. Lower bound must match
-        # pyproject.toml `requires-python` (currently ">=3.10").
-        # Primary dev version lives in .tool-versions; this matrix is
-        # intentionally independent and bumped manually on a yearly cadence.
+        # pyproject.toml `requires-python` (currently ">=3.10"). Primary dev
+        # version lives in .tool-versions; this matrix is intentionally
+        # independent of it.
         #
-        # The UPPER bound is not cosmetic, and 3.14 is here because we already
-        # ship it. `requires-python` has no ceiling, so pip installs on whatever
-        # the user has; the Fedora Copr bundles 3.14 outright; and every pipx
-        # user already on 3.14 — many more people than Fedora users — was
-        # running a version this matrix stopped short of. Fedora only made the
-        # gap visible. Verified green before adding (4244 passed on 3.14,
-        # identical to 3.12), so this does not redden the release train, and it
-        # is affordable now that -n auto put a cell at ~5 minutes rather than 32.
-        # Rule: when a channel starts shipping a Python, it belongs here.
+        # TWO KINDS OF CELL, and the difference matters when they ever get
+        # expensive again — do not read every entry as tracking a channel.
+        #
+        #   SHIPPED — some channel puts this interpreter in front of users:
+        #     3.10  the `requires-python` floor
+        #     3.12  Homebrew (python@3.12), Snap (core24), the macOS sidecar
+        #     3.14  the Fedora Copr, which bundles it outright
+        #   ANTICIPATED — nothing ships these, and they are here because
+        #   `requires-python` has NO ceiling, so pipx/uv install onto whatever
+        #   the user happens to have, and 3.11 and 3.13 are both ordinary
+        #   things to have:
+        #     3.11, 3.13
+        #
+        # 3.14 was added 28 Aug 2026 as a SHIPPED cell. The matrix had stopped
+        # at 3.13 out of habit while the Copr shipped 3.14 and every pipx user
+        # already on 3.14 — a larger group than Fedora users — ran untested.
+        # Verified green before adding (4244 passed, identical to 3.12) so it
+        # could not redden the release train, and affordable because -n auto had
+        # just taken a cell from ~32 minutes to ~5.
+        #
+        # Rule: a channel adopting a Python version puts it in the SHIPPED set,
+        # and that is a trigger, not a calendar. If cells ever have to be cut,
+        # cut from ANTICIPATED first — those are a hedge; the shipped ones are
+        # code somebody is running today.
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         os: [ubuntu-latest, macos-latest]
 

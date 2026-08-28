@@ -119,6 +119,16 @@ not redden the release train, and it is affordable because `-n auto` had just
 taken a cell from ~32 minutes to ~5. The next occasion is 3.15, and the trigger
 is a channel adopting it — not a calendar.
 
+**But not every matrix cell tracks a channel, and the table above should not be
+read as implying otherwise.** 3.11 and 3.13 ship nowhere — no channel bundles
+them and no formula depends on them. They are in the matrix because
+`requires-python` has no ceiling, so `pipx`/`uv` install onto whatever the user
+happens to have, and both are ordinary things to have. So the matrix holds two
+kinds of cell: **shipped** (3.10 the floor, 3.12 for three channels, 3.14 for
+the Copr) and **anticipated** (3.11, 3.13). Both earn their place while a cell
+costs ~5 minutes. If that ever stops being true, cut from *anticipated* first —
+those are a hedge, whereas a shipped cell is code somebody is running today.
+
 ### Deferred: Windows x86_64 (CLI only, via Scoop)
 
 Parked in the long grass. CLI port via Scoop is costed at ~1.5–2 weeks for a contributor familiar with Python packaging on Windows. No bundled Python, no codesigning, no SKU split — Scoop dep on `python` + `ffmpeg`, install-time GPU probe for CPU vs CUDA torch wheel, one universal manifest. See [design-windows-port.md](design-windows-port.md). Open invitation in [CONTRIBUTING.md](../CONTRIBUTING.md#windows-port). Windows-native GUI app is out of scope.

@@ -85,6 +85,88 @@ EOF
         exit 2 ;;
 esac
 
+# ---------------------------------------------------------------------------
+# --probe <version>: does App Store Connect hold a build of <version>? Exists
+# for release.sh's probe_done, which must answer "is this irreversible step
+# already done in the world?" without a human. altool cannot answer it — its
+# --build-status needs the delivery id, which is ephemeral to the upload — so
+# this asks the ASC API for builds filtered by marketing version. Read-only.
+#
+# Exit contract (release.sh probe_done's tri-state, NOT this script's usual):
+#   0  a build of <version> exists on ASC
+#   1  probed successfully; no such build
+#   3  could not look (missing config/key/tooling, auth or network failure).
+#      NEVER conflate with 1: "I could not look" and "I looked and it is not
+#      there" lead to opposite actions on a step that cannot be un-performed.
+# No expired filter, deliberately: the question is "was a build of V ever
+# delivered", and an expired build still proves the upload happened.
+# ---------------------------------------------------------------------------
+if [ "${1:-}" = "--probe" ]; then
+    PROBE_V="${2:-}"
+    [ -n "$PROBE_V" ] || { echo "usage: upload-testflight.sh --probe <X.Y.Z>" >&2; exit 3; }
+    CONF="$SCRIPT_DIR/.ship-local.conf"
+    # shellcheck source=/dev/null
+    [ -f "$CONF" ] && . "$CONF"
+    for _v in BRISTLENOSE_ASC_KEY_ID BRISTLENOSE_ASC_ISSUER_ID BRISTLENOSE_ASC_APPLE_ID; do
+        [ -n "${!_v:-}" ] || { echo "probe: $_v not configured — cannot look" >&2; exit 3; }
+    done
+    _KEYFILE="$HOME/.private_keys/AuthKey_${BRISTLENOSE_ASC_KEY_ID}.p8"
+    [ -f "$_KEYFILE" ] || { echo "probe: no key at $_KEYFILE — cannot look" >&2; exit 3; }
+    _PY="$ROOT/.venv/bin/python"; [ -x "$_PY" ] || _PY="python3"
+    KEYFILE="$_KEYFILE" KEY_ID="$BRISTLENOSE_ASC_KEY_ID" ISSUER="$BRISTLENOSE_ASC_ISSUER_ID" \
+    APPLE_ID="$BRISTLENOSE_ASC_APPLE_ID" PROBE_V="$PROBE_V" exec "$_PY" - <<'PYEOF'
+import base64, json, os, sys, time, urllib.request, urllib.parse
+
+def b64u(b): return base64.urlsafe_b64encode(b).rstrip(b"=")
+
+try:
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec, utils
+except Exception:
+    print("probe: python lacks cryptography — cannot look", file=sys.stderr); sys.exit(3)
+
+try:
+    key = serialization.load_pem_private_key(
+        open(os.environ["KEYFILE"], "rb").read(), password=None)
+    now = int(time.time())
+    header = b64u(json.dumps({"alg": "ES256", "kid": os.environ["KEY_ID"],
+                              "typ": "JWT"}).encode())
+    payload = b64u(json.dumps({"iss": os.environ["ISSUER"], "iat": now,
+                               "exp": now + 600,
+                               "aud": "appstoreconnect-v1"}).encode())
+    signing_input = header + b"." + payload
+    der = key.sign(signing_input, ec.ECDSA(hashes.SHA256()))
+    r, s_ = utils.decode_dss_signature(der)          # JWT wants raw r||s, not DER
+    sig = b64u(r.to_bytes(32, "big") + s_.to_bytes(32, "big"))
+    jwt = (signing_input + b"." + sig).decode()
+except Exception as e:
+    print("probe: could not build the token (%s) — cannot look" % e, file=sys.stderr)
+    sys.exit(3)
+
+q = urllib.parse.urlencode({
+    "filter[app]": os.environ["APPLE_ID"],
+    "filter[preReleaseVersion.version]": os.environ["PROBE_V"],
+    "limit": "1",
+})
+req = urllib.request.Request(
+    "https://api.appstoreconnect.apple.com/v1/builds?" + q,
+    headers={"Authorization": "Bearer " + jwt})
+try:
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.load(resp).get("data", [])
+except Exception as e:
+    print("probe: ASC unreachable or refused (%s) — cannot look" % e, file=sys.stderr)
+    sys.exit(3)
+
+if data:
+    print("probe: ASC holds build %s of %s" % (
+        data[0].get("attributes", {}).get("version", "?"), os.environ["PROBE_V"]))
+    sys.exit(0)
+print("probe: no build of %s on ASC" % os.environ["PROBE_V"])
+sys.exit(1)
+PYEOF
+fi
+
 PKG="${1:-$DEFAULT_PKG}"
 [ -f "$PKG" ] || {
     echo "not a file: $PKG" >&2

@@ -240,7 +240,7 @@ probe_homebrew() {
 }
 
 probe_testflight() {
-    printf 'skipped|no probe without an ASC key — upload-testflight.sh --build-status'
+    printf 'skipped|no probe without an ASC key — upload-testflight.sh --probe <version>'
 }
 
 probe_dmg() {

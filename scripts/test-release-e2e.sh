@@ -480,5 +480,37 @@ case "$_seen" in *slow*) ok "heartbeat named the running step" ;;
     && bad "heartbeat file survived a clean stop — status would cry stranded forever" \
     || ok "clean stop removed the heartbeat"
 
+head_ "26 · a recorded-ok testflight is probed, not asked about"
+# The step that stopped the 0.28.0 resume: recorded ok, irreversible, and no
+# probe — so the machine asked a human a question it held credentials to
+# answer. The arm shells to upload-testflight.sh --probe; each stub below is
+# one of its three answers.
+fresh
+steps <<'EOF'
+testflight|upload to TestFlight|soft|1m||SOFT: spends a build number|true
+after|next step|plain|1m|||true
+EOF
+rc=$(drive 9.3.0)
+eq "first run completes" 75 "$rc"
+mkdir -p "$WORK/repo/desktop/scripts"
+printf '#!/bin/sh\nexit 0\n' > "$WORK/repo/desktop/scripts/upload-testflight.sh"
+chmod +x "$WORK/repo/desktop/scripts/upload-testflight.sh"
+rc=$(drive 9.3.0)
+eq "probe says done-in-world -> resume completes" 75 "$rc"
+grep -q 'already done in the world' "$WORK/out" \
+    && ok "skipped via the probe, no human question" || bad "probe skip not taken"
+
+printf '#!/bin/sh\nexit 1\n' > "$WORK/repo/desktop/scripts/upload-testflight.sh"
+rc=$(drive 9.3.0)
+eq "probe says absent -> re-runs and completes" 75 "$rc"
+grep -q 'log says done, the world disagrees' "$WORK/out" \
+    && ok "world-disagrees branch taken" || bad "world-disagrees branch not taken"
+
+printf '#!/bin/sh\nexit 3\n' > "$WORK/repo/desktop/scripts/upload-testflight.sh"
+rc=$(drive 9.3.0)
+eq "probe cannot look -> stop and ask" 3 "$rc"
+grep -q 'could not' "$WORK/out" \
+    && ok "explains it could not look" || bad "no cannot-look explanation"
+
 meta_check
 finish

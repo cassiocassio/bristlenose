@@ -233,6 +233,18 @@ PYEOF
 probe_done() {
     local _out _rc
     case "$1" in
+        testflight)
+            # upload-testflight.sh --probe asks App Store Connect, via the API
+            # key, whether a build of $V exists: 0 delivered · 1 absent · 3
+            # could not look. Wired 28 Aug 2026, after a resume stopped to ask
+            # a human a question the machine had credentials to answer. A
+            # missing script or unexpected exit maps to 3, never 1 — "could
+            # not look" and "looked and it is not there" lead to opposite
+            # actions on a step that spends a build number forever.
+            [ -x desktop/scripts/upload-testflight.sh ] || return 3
+            desktop/scripts/upload-testflight.sh --probe "$V" >/dev/null 2>&1
+            case $? in 0) return 0 ;; 1) return 1 ;; *) return 3 ;; esac
+            ;;
         tag)
             # Capture, THEN test. `git ls-remote | grep -q .` cannot tell an
             # absent tag (exit 0, no output) from an unreachable remote (exit

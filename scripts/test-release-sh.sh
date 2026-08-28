@@ -249,10 +249,22 @@ rm -rf "$_rd"
 head_ "probe_done — the world beats the log for irreversible steps"
 V=0.27.0; probe_done tag && ok "finds a tag that is on origin" || bad "missed a real tag"
 V=9.9.9;  probe_done tag && bad "claimed a nonexistent tag exists" || ok "does not invent a tag"
-V=0.28.0; probe_done testflight; _r=$?
-eq "TestFlight reports NO PROBE (2), not absent (1)" 2 "$_r"
-# The distinction is load-bearing: 1 would silently re-run the upload on resume
-# and spend a second build number; 2 stops and asks.
+# TestFlight's arm shells to desktop/scripts/upload-testflight.sh --probe,
+# resolved RELATIVE to cwd — so these run from a temp cwd with a stub at that
+# path, never the real script (which would call live ASC from a unit test).
+# The 0/1/3 mapping is load-bearing: 1 re-runs the upload on resume and
+# spends a build number; 3 stops and asks. An unexpected stub exit is 3.
+_PDT=$(mktemp -d); mkdir -p "$_PDT/desktop/scripts"
+_pdt_stub() { printf '#!/bin/sh\nexit %s\n' "$1" > "$_PDT/desktop/scripts/upload-testflight.sh"
+              chmod +x "$_PDT/desktop/scripts/upload-testflight.sh"; }
+_pdt_run()  { ( cd "$_PDT" && V=0.28.0 probe_done testflight ); echo $?; }
+rm -f "$_PDT/desktop/scripts/upload-testflight.sh"
+eq "no script on disk = could not look (3)"   3 "$(_pdt_run)"
+_pdt_stub 0; eq "ASC holds the build = done (0)"          0 "$(_pdt_run)"
+_pdt_stub 1; eq "ASC lacks the build = absent (1)"        1 "$(_pdt_run)"
+_pdt_stub 3; eq "probe could not look = unprobeable (3)"  3 "$(_pdt_run)"
+_pdt_stub 7; eq "an unexpected exit is 3, never absent"   3 "$(_pdt_run)"
+rm -rf "$_PDT"
 V=9.9.9; probe_done tag; eq "a missing tag is absent (1), not unprobeable" 1 "$?"
 
 head_ "the run table — the tag is last, and it is the hard line"

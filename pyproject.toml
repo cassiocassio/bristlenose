@@ -71,6 +71,10 @@ apple = [
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
+    # -n auto in CI. Declared rather than hand-installed: an undeclared
+    # package in .venv is the silent drift that cost the 4 Aug 2026
+    # presidio incident. docs/design-test-performance.md.
+    "pytest-xdist>=3.8",
     "pytest-asyncio>=0.24",
     "ruff>=0.8",
     "mypy>=1.13",

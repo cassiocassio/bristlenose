@@ -140,7 +140,20 @@ jobs:
           pip install -e ".[dev,serve]"
 
       - name: Run tests
-        run: pytest --tb=short -q -m "not slow" --cov --cov-report=term-missing --cov-report=xml:coverage.xml
+        # Coverage was paid by all 8 cells and read from 1 — the upload step
+        # below has always been conditional; the cost never was. Scoped to the
+        # same cell, with COVERAGE_CORE=sysmon (PEP 669) where it runs, and
+        # -n auto everywhere. ~32 min → ~5-6, measured in
+        # docs/design-test-performance.md. Coverage has no fail_under, so it is
+        # informational; if it ever becomes a gate, diff xdist against serial
+        # first (that parity is explicitly unverified).
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ] && [ "${{ matrix.python-version }}" = "3.12" ]; then
+            COVERAGE_CORE=sysmon pytest --tb=short -q -m "not slow" -n auto \
+              --cov --cov-report=term-missing --cov-report=xml:coverage.xml
+          else
+            pytest --tb=short -q -m "not slow" -n auto
+          fi
 
       - name: Upload coverage report
         if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
@@ -149,6 +162,48 @@ jobs:
           name: coverage-report
           path: coverage.xml
           retention-days: 90
+
+  release-suites:
+    # 385 assertions across eight suites had never run anywhere but one Mac —
+    # one shell, one userland, one git config — while two of the scripts they
+    # cover already execute on Linux in CI with nothing behind them. They need
+    # no network, no keys and no release: they drive the real drivers against
+    # fake step tables and stubbed binaries, and finish in seconds.
+    #
+    # The venv is not ceremony. check-doc-surfaces.sh resolves the CLI it
+    # enumerates flags from at $ROOT/.venv/bin/bristlenose, and two of
+    # test-doc-surfaces.sh's assertions call it unstubbed — without a venv they
+    # fail as "gate is blind", which is a true statement about a missing venv
+    # and a false one about the gate.
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version-file: '.tool-versions'
+
+      - name: Install the CLI into the venv the gates expect
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --quiet --upgrade pip
+          .venv/bin/pip install --quiet -e .
+
+      - name: Run the release-chain suites
+        # </dev/null on every suite: release.sh's bare `run` now prompts for a
+        # typed confirmation, and a suite that inherits an open stdin blocks
+        # forever instead of failing. That hung a local run on 28 Aug 2026.
+        run: |
+          rc=0
+          for s in test-release-sh test-release-e2e test-verify-channels \
+                   test-preflight-gates test-preflight-substance test-doc-surfaces; do
+            echo "::group::$s"
+            bash "scripts/$s.sh" </dev/null || { echo "::error::$s failed"; rc=1; }
+            echo "::endgroup::"
+          done
+          exit $rc
 
   frontend-lint-type-test:
     runs-on: ubuntu-latest

@@ -457,5 +457,28 @@ python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
     "$WORK/repo/.release/9.1.0/context.json" 2>/dev/null \
     && ok "context.json exists and parses" || bad "context.json missing or invalid"
 
+head_ "25 · a long step leaves a heartbeat while running, and none after a clean stop"
+fresh
+steps <<'EOF'
+slow|takes a while|plain|1m|||sleep 3
+EOF
+( cd "$WORK/repo" && PATH="$WORK/bin:$PATH" RELEASE_STEPS_FILE="$WORK/steps.tbl" \
+    BN_HEARTBEAT_SECS=1 bash scripts/release.sh run 9.2.0 --bump patch --yes \
+  ) >"$WORK/out" 2>&1 &
+_drv=$!
+_seen=""
+for _i in $(seq 1 60); do
+    [ -f "$WORK/repo/.release/9.2.0/heartbeat" ] \
+        && { _seen=$(cat "$WORK/repo/.release/9.2.0/heartbeat" 2>/dev/null); [ -n "$_seen" ] && break; }
+    sleep 0.2
+done
+wait "$_drv"; _rc=$?
+eq "the run completes" 75 "$_rc"
+case "$_seen" in *slow*) ok "heartbeat named the running step" ;;
+                 *) bad "no heartbeat while the step ran (got: ${_seen:-nothing})" ;; esac
+[ -f "$WORK/repo/.release/9.2.0/heartbeat" ] \
+    && bad "heartbeat file survived a clean stop — status would cry stranded forever" \
+    || ok "clean stop removed the heartbeat"
+
 meta_check
 finish

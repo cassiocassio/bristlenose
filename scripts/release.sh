@@ -457,6 +457,20 @@ cmd_status() {
             esac
         fi
     fi
+    _hb=".release/${CUR:-}/heartbeat"
+    if [ -n "${CUR:-}" ] && [ -f "$_hb" ]; then
+        IFS=$'\t' read -r _hep _hid _hel _hmsg < "$_hb" 2>/dev/null || true
+        if [ -n "${_hep:-}" ]; then
+            _age=$(( $(date +%s) - _hep ))
+            if [ "$_age" -lt $(( ${BN_HEARTBEAT_SECS:-300} * 3 )) ]; then
+                printf '  %b◦%b live step      %b%s · %sm in · %s%b\n' \
+                    "$D" "$N" "$D" "${_hid:-?}" "$(( ${_hel:-0} / 60 ))" "${_hmsg:-}" "$N"
+            else
+                printf '  %b⚠%b live step      %b%s wrote no heartbeat for %sm — driver stranded?%b\n' \
+                    "$Y" "$N" "$Y" "${_hid:-?}" "$(( _age / 60 ))" "$N"
+            fi
+        fi
+    fi
     printf '\n  %sChannel truth needs a probe:  ./scripts/release.sh verify %s%s\n\n' "$D" "${CUR:-<X.Y.Z>}" "$N"
     # Called once. An earlier draft called it twice — the first invocation's
     # stdout leaked a bare "0" into the report, which is precisely the kind of
@@ -641,9 +655,42 @@ cmd_run() {
     # wrapper orphans a 30-minute build with nothing watching it. pkill -P walks
     # one generation, which covers the shape every step here has.
     _stop_step() {
+        _stop_heartbeat
         [ -n "${STEP_PID:-}" ] || return 0
         pkill -TERM -P "$STEP_PID" 2>/dev/null || true
         kill -TERM "$STEP_PID" 2>/dev/null || true
+    }
+    # Liveness, deliberately NOT in events.jsonl: fold_status folds any status
+    # outside its fixed set to `corrupt`, which takes the stranded path — a
+    # heartbeat status in the ledger would make every long step unresumable.
+    # The ledger is history; liveness is present tense, so it is one
+    # overwritten line whose STALENESS is the signal. A clean stop removes the
+    # file; a SIGKILLed driver cannot, so a surviving file that stopped
+    # updating IS the stranded case, which the events file alone cannot
+    # distinguish from a slow step. The ticker exits by itself within one
+    # interval of the driver dying (the kill -0 guard), and reads nothing
+    # from stdin — the step table lives there.
+    #   format: epoch<TAB>step<TAB>elapsed-seconds<TAB>last non-blank log line
+    HB_PID=""
+    _start_heartbeat() { # _start_heartbeat <step> <logfile>
+        local _id="$1" _log="$2" _t0 _drv=$$
+        _t0=$(date +%s)
+        ( while :; do
+              sleep "${BN_HEARTBEAT_SECS:-300}"
+              kill -0 "$_drv" 2>/dev/null || exit 0
+              printf '%s\t%s\t%s\t%s\n' "$(date +%s)" "$_id" \
+                  "$(( $(date +%s) - _t0 ))" \
+                  "$(tr '\r' '\n' < "$_log" 2>/dev/null | grep -vE '^[[:space:]]*$' \
+                       | tail -1 | tr -d '\000-\037' | cut -c1-100)" \
+                  > "$RUNDIR/heartbeat"
+          done ) < /dev/null 2>/dev/null &
+        HB_PID=$!
+    }
+    _stop_heartbeat() {
+        [ -n "${HB_PID:-}" ] || return 0
+        kill "$HB_PID" 2>/dev/null || true
+        HB_PID=""
+        rm -f "$RUNDIR/heartbeat"
     }
     trap '_stop_step; exit 130' INT TERM
 
@@ -818,8 +865,10 @@ cmd_run() {
         # the only interactive read (the confirmation) happens before the loop.
         eval "$cmd" > "$LOG" 2>&1 < /dev/null &
         STEP_PID=$!
+        _start_heartbeat "$id" "$LOG"
         wait "$STEP_PID"
         rc=$?
+        _stop_heartbeat
         STEP_PID=""
         el=$(( SECONDS - t0 ))
 

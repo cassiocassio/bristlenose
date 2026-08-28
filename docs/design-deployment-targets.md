@@ -83,6 +83,42 @@ run on Fedora or on Python 3.14. `requires-python` allows 3.10+, and the
 vendored wheels resolve for cp314, but that is an install-time fact, not a
 test-suite one.
 
+### The axis that actually varies: the interpreter, not the distro (28 Aug 2026)
+
+Targets are the wrong unit for reasoning about test coverage here. Every
+channel either **bundles** an interpreter or **borrows** the user's, and that —
+not the distro — is what decides whether our suite has ever executed the code
+a given user runs.
+
+| Channel | Interpreter | Bundled? | In the CI matrix |
+|---|---|---|---|
+| PyPI (pip / pipx / uv) | the user's own, anything `>=3.10` | no — **unbounded** | partially, by definition |
+| Homebrew | `python@3.12` | no (formula dep) | ✅ |
+| Snap | `core24` · 3.12 | yes | ✅ |
+| macOS app sidecar | 3.12, PyInstaller | yes | ✅ |
+| Fedora Copr | **3.14** | yes | ✅ since 28 Aug 2026 |
+
+Two consequences worth keeping.
+
+**Distro identity barely matters for the bundled channels.** The RPM ships its
+own interpreter and every dependency; the host contributes glibc and FFmpeg and
+little else, and Ubuntu and Fedora take the same manylinux wheels. Fedora also
+gets continuous coverage nobody has to maintain: Copr builds on real Fedora and
+the spec's `%check` runs thirteen heavyweight imports there on every build. So
+"all our Linux CI is Ubuntu" is not the exposure it looks like.
+
+**The interpreter version does matter, and Fedora exposed it rather than caused
+it.** Fedora is the first channel to ship 3.14, but `requires-python` has no
+ceiling, so every pipx user already on 3.14 was in the same gap — a larger group
+than Fedora users, and one nobody had counted. The matrix stopped at 3.13 out of
+habit rather than decision.
+
+**Rule: when a channel starts shipping a Python version, it joins the matrix.**
+3.14 was verified before being added (4244 passed, identical to 3.12) so it could
+not redden the release train, and it is affordable because `-n auto` had just
+taken a cell from ~32 minutes to ~5. The next occasion is 3.15, and the trigger
+is a channel adopting it — not a calendar.
+
 ### Deferred: Windows x86_64 (CLI only, via Scoop)
 
 Parked in the long grass. CLI port via Scoop is costed at ~1.5–2 weeks for a contributor familiar with Python packaging on Windows. No bundled Python, no codesigning, no SKU split — Scoop dep on `python` + `ffmpeg`, install-time GPU probe for CPU vs CUDA torch wheel, one universal manifest. See [design-windows-port.md](design-windows-port.md). Open invitation in [CONTRIBUTING.md](../CONTRIBUTING.md#windows-port). Windows-native GUI app is out of scope.

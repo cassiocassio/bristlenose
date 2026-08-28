@@ -122,7 +122,17 @@ jobs:
         # pyproject.toml `requires-python` (currently ">=3.10").
         # Primary dev version lives in .tool-versions; this matrix is
         # intentionally independent and bumped manually on a yearly cadence.
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        #
+        # The UPPER bound is not cosmetic, and 3.14 is here because we already
+        # ship it. `requires-python` has no ceiling, so pip installs on whatever
+        # the user has; the Fedora Copr bundles 3.14 outright; and every pipx
+        # user already on 3.14 — many more people than Fedora users — was
+        # running a version this matrix stopped short of. Fedora only made the
+        # gap visible. Verified green before adding (4244 passed on 3.14,
+        # identical to 3.12), so this does not redden the release train, and it
+        # is affordable now that -n auto put a cell at ~5 minutes rather than 32.
+        # Rule: when a channel starts shipping a Python, it belongs here.
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         os: [ubuntu-latest, macos-latest]
 
     steps:

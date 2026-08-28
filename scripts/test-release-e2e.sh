@@ -408,5 +408,43 @@ eq "complete run still writes run-completed" 75 "$rc"
 grep -q '"step":"run","status":"completed"' "$WORK/repo/.release/5.0.0/events.jsonl" \
     && ok "run completed present" || bad "run completed missing"
 
+head_ "21 · the tag refuses a HEAD the strict verdict does not name"
+fresh
+steps <<'EOF'
+tag|tag + push|hard|1m||HARD: publishes|__TAG__
+EOF
+mkdir -p "$WORK/repo/.release/6.0.0"
+echo 0000000000000000000000000000000000000000 > "$WORK/repo/.release/6.0.0/ci-sha"
+rc=$(drive 6.0.0)
+eq "the run fails"            1 "$rc"
+eq "tag never landed"         "" "$(cd "$WORK/repo" && git tag --list v6.0.0)"
+grep -q 'refusing (moved)' "$WORK/repo/.release/6.0.0/logs/tag.1.log" \
+    && ok "says WHY: moved" || bad "no moved explanation in the step log"
+
+head_ "22 · the tag lands when HEAD is exactly the validated commit"
+fresh
+( cd "$WORK" && git init -q --bare origin.git ) 2>/dev/null
+( cd "$WORK/repo" && git remote add origin "$WORK/origin.git" && git push -q origin HEAD ) 2>/dev/null
+steps <<'EOF'
+tag|tag + push|hard|1m||HARD: publishes|__TAG__
+EOF
+mkdir -p "$WORK/repo/.release/7.0.0"
+( cd "$WORK/repo" && git rev-parse HEAD > .release/7.0.0/ci-sha )
+rc=$(drive 7.0.0)
+eq "the run completes"        75 "$rc"
+eq "tag step ok"              ok "$(status_of 7.0.0 tag)"
+( cd "$WORK/repo" && git ls-remote --tags origin v7.0.0 | grep -q . ) \
+    && ok "tag reached the origin" || bad "tag never pushed"
+
+head_ "23 · no recorded ci-sha refuses — an unverified HEAD must not publish"
+fresh
+steps <<'EOF'
+tag|tag + push|hard|1m||HARD: publishes|__TAG__
+EOF
+rc=$(drive 8.0.0)
+eq "the run fails"            1 "$rc"
+grep -q 'refusing (no-sha)' "$WORK/repo/.release/8.0.0/logs/tag.1.log" \
+    && ok "says WHY: no-sha" || bad "no no-sha explanation"
+
 meta_check
 finish

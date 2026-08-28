@@ -54,6 +54,19 @@ eq "a stranded running counts missing" "three" "$(printf '%s\n' "$_TBL" | verdic
 eq "tier-2 rows are never demanded"    ""    "$(printf 'tiertwo|c|plain|1m|2||true\n' | verdict_complete)"
 rm -rf "$_CT"; unset EVENTS
 
+head_ "verdict_tag_provenance — the verdict and the tag must name the same commit"
+_TP=$(mktemp -d)
+( cd "$_TP" && git init -q . && echo a > f && git add -A && git commit -qm one ) 2>/dev/null
+CI_SHA_FILE="$_TP/ci-sha"
+eq "no recorded sha"        no-sha "$(cd "$_TP" && CI_SHA_FILE="$_TP/ci-sha" verdict_tag_provenance)"
+( cd "$_TP" && git rev-parse HEAD > ci-sha )
+eq "HEAD matches, clean"    ok     "$(cd "$_TP" && CI_SHA_FILE="$_TP/ci-sha" verdict_tag_provenance)"
+( cd "$_TP" && echo b >> f )
+eq "HEAD matches, dirty"    dirty  "$(cd "$_TP" && CI_SHA_FILE="$_TP/ci-sha" verdict_tag_provenance)"
+( cd "$_TP" && git add -A && git commit -qm two )
+eq "HEAD moved past verdict" moved "$(cd "$_TP" && CI_SHA_FILE="$_TP/ci-sha" verdict_tag_provenance)"
+rm -rf "$_TP"; unset CI_SHA_FILE
+
 head_ "the step table — structural invariants"
 TBL=$(sed -n "/^cat <<'RUNTBL'$/,/^RUNTBL$/p" "$ROOT/scripts/release.sh" | sed '1d;$d')
 

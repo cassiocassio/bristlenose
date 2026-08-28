@@ -140,6 +140,27 @@ verdict_complete() {
     done
 }
 
+# verdict_tag_provenance — may the tag land on THIS HEAD? Needs $CI_SHA_FILE.
+#   ok      HEAD is the commit the strict verdict names, and the tree is clean
+#   moved   HEAD is not the recorded ci-sha
+#   dirty   uncommitted changes
+#   no-sha  nothing recorded — strict CI was never dispatched from this run
+#
+#   The gap this closes was live on 28 Aug 2026: fixes landed mid-run after
+#   ci-green failed, and only a hand re-dispatch + hand-updated ci-sha kept
+#   the verdict and the tag on the same commit. The verdict is ABOUT a sha;
+#   the tag is the publishing act; nothing mechanical demanded they agree —
+#   and this repo's history includes concurrent sessions moving HEAD.
+verdict_tag_provenance() {
+    local want have
+    want="$(cat "$CI_SHA_FILE" 2>/dev/null)"
+    [ -n "$want" ] || { echo no-sha; return; }
+    have="$(git rev-parse HEAD 2>/dev/null)"
+    [ "$have" = "$want" ] || { echo moved; return; }
+    git diff-index --quiet HEAD -- 2>/dev/null || { echo dirty; return; }
+    echo ok
+}
+
 # probe_done <step> — is this irreversible step ALREADY done in the world?
 #   0 = done · 1 = probed, absent · 2 = no probe exists here · 3 = probe FAILED.
 #   3 is not 1. "I could not look" and "I looked and it is not there" lead to
@@ -600,7 +621,12 @@ cmd_run() {
     # The reconciliation this line exists to perform has therefore never once
     # been performed.
     BUMP_CMD="$BUMP_CMD && [ \"\$(sed -n '$VERSION_REGEX' '$VERSION_FILE')\" = \"$V\" ]"
-    TAG_CMD="git tag v$V && git push origin v$V"
+    # Assigned BEFORE the command strings below: TAG_CMD interpolates it at
+    # build time, DISPATCH_CMD and CI_CMD at run time. It only needs RUNDIR.
+    CI_SHA_FILE="$RUNDIR/ci-sha"
+    # The verdict names a sha; the tag is the act. They must agree at the
+    # MOMENT of tagging — resumes and concurrent sessions both move HEAD.
+    TAG_CMD="_v=\$(verdict_tag_provenance); [ \"\$_v\" = ok ] || { echo \"refusing (\$_v): the tag must land on the exact commit strict CI validated — see $CI_SHA_FILE. If the new HEAD should ship: release.sh retry $V strict-ci\"; exit 1; }; git tag v$V && git push origin v$V"
     # --event workflow_dispatch is LOAD-BEARING.
     #
     # push-main (the step before) creates a ci.yml run on main from a `push`
@@ -627,7 +653,6 @@ cmd_run() {
     # READS it. That also survives what a lazy $(git rev-parse HEAD) at watch
     # time would not — a resume in a new shell, and a concurrent session
     # committing during the 41 minutes.
-    CI_SHA_FILE="$RUNDIR/ci-sha"
     DISPATCH_CMD="git rev-parse HEAD > '$CI_SHA_FILE' && gh workflow run $WF_CI --ref main -f $WF_STRICT_INPUT=true"
     # env.SHA rather than interpolating into the jq program: one less quoting
     # level, and the sha never passes through a string the shell re-parses.

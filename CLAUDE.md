@@ -215,6 +215,17 @@ Two of `build-dmg.sh` stage 10's four final gates were written this way and were
 
 **Rule: an assertion uses `|| die`, never `&& ok`.** If you want the success line too, `cmd || die "…"; ok "…"`. Applies equally to `cmd && a || b` chains — the `||` arm swallows a genuine failure of `a` as well. Audit any `check-*.sh` or build script for `&& ok`, `&& echo`, `&& printf` where the left side is a real check.
 
+**And it is not only a script problem — it bites hardest in a throwaway verification
+command.** `git status --porcelain && echo "(clean)"` prints `(clean)` on a **dirty** tree,
+because `git status` succeeds at reporting the dirt. Same for `pytest -q && echo PASSED`,
+`grep -c pattern f && echo FOUND`, and every `cmd && echo "✓ …"` typed to confirm a step
+during a session. These are worse than the scripted kind: nobody reviews them, they scroll
+past inside a larger tool call, and the reassuring string is the part that gets read and then
+reported to the user as fact. Bit on 28 Aug 2026 — a close-out reported a clean working tree
+while ten files were modified by a concurrent session. **When the point of a command is to
+confirm something, print the evidence and read it — `git status --porcelain` alone, then
+judge — rather than appending a verdict the shell cannot withhold.**
+
 ### A one-line fix landing on the wrong arm of a ternary is invisible to every gate
 
 `.foregroundStyle(a ? .tertiary : .primary)` needed `.tertiary` → `.secondary`.
@@ -528,7 +539,7 @@ fully-qualified path, never by first match on the name.**
 - `docs/release.md`, `docs/file-map.md`, `CONTRIBUTING.md`, `INSTALL.md`, `SECURITY.md`
 - **`docs/testing/README.md` — the testing & acceptance hub (start here for anything test/QA/acceptance).** Three-tier model (CI · Playwright · acceptance matrix · human walk), `docs/testing/coverage-inventory.md` (the single source of surfaces: 27 formats · 5 exports · 5 lenses · 5 providers), `docs/testing/acceptance-matrix.md` (mechanical tier, Phase-1 plan), `docs/testing/test-data-generation.md` (fixture recipe). Built already: `tests/test_no_fake_success_acceptance.py` (skips without fixtures) + `e2e/`. The by-hand walk lives in the private QA doc.
 - `docs/design-ci.md`, `docs/archive/design-test-strategy.md`, `docs/design-playwright-testing.md`, `docs/design-test-philosophy.md`
-- `docs/design-doctor-and-snap.md`, `docs/design-homebrew-packaging.md`, `docs/design-fedora-packaging.md` (Copr — built and proven in `mock`, **not published**; also holds the measured `ffmpeg-free` codec verdict)
+- `docs/design-doctor-and-snap.md`, `docs/design-homebrew-packaging.md`, `docs/design-fedora-packaging.md` (Copr — **live since 28 Aug 2026**, see the status section; §7 holds the standing obligations, and the measured `ffmpeg-free` codec verdict)
 - `docs/design-cli-improvements.md`, `docs/design-llm-call-telemetry.md`, `docs/design-performance.md`
 - **The release chain is executable, and it is documented in three places, not one.** [`scripts/README.md`](scripts/README.md) is the index (what to type: `release.sh plan|run|verify`, the gates, the suites that prove the gates). [`desktop/scripts/REPORT-STYLE.md`](desktop/scripts/REPORT-STYLE.md) Part 2 is the *rules* a script follows — where constants live (`scripts/project.conf`), why probes are tri-state, what each exit code means (`75` = acts done, verification pending), the testability seams, and the shell traps this codebase has already paid for. `docs/design-release-machine.md` is the architecture and `docs/release-premortem.md` replays six months of release incidents against the current scripts.
 - `docs/design-decisions.md` (why)

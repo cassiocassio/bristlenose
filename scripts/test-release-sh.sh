@@ -67,6 +67,24 @@ eq "HEAD matches, dirty"    dirty  "$(cd "$_TP" && CI_SHA_FILE="$_TP/ci-sha" ver
 eq "HEAD moved past verdict" moved "$(cd "$_TP" && CI_SHA_FILE="$_TP/ci-sha" verdict_tag_provenance)"
 rm -rf "$_TP"; unset CI_SHA_FILE
 
+head_ "ev_append — every detail must survive as valid JSON"
+_EA=$(mktemp -d); EVENTS="$_EA/events.jsonl"; V=9.9.9
+ev_append q ok 'id="Dev ID" path=C:\Users and a
+newline'
+ev_append b ok "$(printf 'x%.0s' $(seq 1 159))✓boundary-multibyte"
+ev_append u ok '✓ archivé → café'
+_bad=$(python3 -c '
+import json,sys
+bad=0
+for l in open(sys.argv[1],encoding="utf-8"):
+    try: json.loads(l)
+    except Exception: bad+=1
+print(bad)' "$EVENTS")
+eq "0 unparseable lines (quotes, backslash, newline, split multibyte)" 0 "$_bad"
+grep -q 'Dev ID' "$EVENTS" && ok "quotes escaped, not stripped" \
+                           || bad "quote content was mutilated away"
+rm -rf "$_EA"; unset EVENTS
+
 head_ "the step table — structural invariants"
 TBL=$(sed -n "/^cat <<'RUNTBL'$/,/^RUNTBL$/p" "$ROOT/scripts/release.sh" | sed '1d;$d')
 

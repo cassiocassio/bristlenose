@@ -90,9 +90,21 @@ rollup_exit() {
 # ---------------------------------------------------------------------------
 
 ev_append() { # ev_append <step> <status> [detail]
+    # Escape, never mutilate. The old `tr -d '"'` stripped quotes but left
+    # backslashes bare, so a detail carrying `C:\Users` was ALREADY invalid
+    # JSON — unnoticed only because details were short ASCII. Order matters
+    # twice. (1) Truncate BEFORE escaping: the other order can slice a \" at
+    # char 160 and leave a trailing backslash. (2) iconv is not decoration:
+    # BSD `cut -c` counts BYTES even under a UTF-8 locale (measured 27 Aug
+    # 2026), so the cut can split a multibyte character; `iconv -c` drops the
+    # incomplete tail. Its stderr warning is the expected case, and its exit
+    # code is discarded by the substitution. Control bytes (ANSI colour, CR)
+    # are stripped, not escaped — invalid in JSON strings, never information.
     printf '{"ts":"%s","run":"%s","step":"%s","status":"%s","detail":"%s"}\n' \
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$V" "$1" "$2" \
-        "$(printf '%s' "${3-}" | tr -d '"' | tr '\n' ' ' | cut -c1-160)" >> "$EVENTS"
+        "$(printf '%s' "${3-}" | tr '\n' ' ' | tr -d '\000-\037' | cut -c1-160 \
+             | iconv -c -f UTF-8 -t UTF-8 2>/dev/null \
+             | sed 's/\\/\\\\/g; s/"/\\"/g')" >> "$EVENTS"
 }
 
 # fold_status <step> — ok | fail | running | pending

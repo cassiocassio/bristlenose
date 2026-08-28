@@ -85,6 +85,20 @@ grep -q 'Dev ID' "$EVENTS" && ok "quotes escaped, not stripped" \
                            || bad "quote content was mutilated away"
 rm -rf "$_EA"; unset EVENTS
 
+head_ "write_context — an allowlist, and it must stay one"
+_WC=$(mktemp -d)
+write_context "$_WC" >/dev/null
+_ck=$(python3 -c '
+import json,sys
+d=json.load(open(sys.argv[1]))
+want={"SIGN_IDENTITY","SIGN_IDENTITY_APPSTORE","SIGN_IDENTITY_DEVELOPER_ID",
+      "TEAM_ID","NOTARY_PROFILE","NOTARY_ZIP"}
+got=set(d["env"])
+print("ok" if got==want else "drift:%s" % sorted(got.symmetric_difference(want)))
+' "$_WC/context.json" 2>&1)
+eq "context.json parses and env is EXACTLY the allowlist" ok "$_ck"
+rm -rf "$_WC"
+
 head_ "the step table — structural invariants"
 TBL=$(sed -n "/^cat <<'RUNTBL'$/,/^RUNTBL$/p" "$ROOT/scripts/release.sh" | sed '1d;$d')
 

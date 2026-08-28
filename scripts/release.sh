@@ -173,6 +173,56 @@ verdict_tag_provenance() {
     echo ok
 }
 
+# write_context <rundir> — what this run was CONFIGURED with, to context.json.
+#
+#   events.jsonl records that a step ran; it has never recorded what the step
+#   was configured with. On 27 Aug 2026 an inherited SIGN_IDENTITY selected
+#   the App Store certificate for the .dmg: 19 minutes and a notarisation
+#   round-trip later the image was unshippable, and the ledger could not say
+#   why, because nothing had written the environment down.
+#
+#   The env capture is an ALLOWLIST and must stay one — this file is what a
+#   person pastes into a bug report. Every name below is an identifier (a
+#   certificate name, a keychain profile name, a team id), never a secret.
+#   Non-fatal, never silent: a release must not fail because its telemetry
+#   did, but a missing context.json must say so rather than just not exist.
+write_context() {
+    command -v python3 >/dev/null 2>&1 || {
+        printf '  %b·%b context.json skipped — no python3\n' "${Y-}" "${N-}"; return 0; }
+    python3 - "$1/context.json" <<'PYEOF' || \
+        printf '  %b·%b context.json failed to write\n' "${Y-}" "${N-}"
+import json, os, platform, shutil, subprocess, sys
+
+def sh(*a):
+    try:
+        return subprocess.run(a, capture_output=True, text=True, timeout=15).stdout.strip()
+    except Exception:
+        return ""
+
+WATCHED = ("SIGN_IDENTITY", "SIGN_IDENTITY_APPSTORE", "SIGN_IDENTITY_DEVELOPER_ID",
+           "TEAM_ID", "NOTARY_PROFILE", "NOTARY_ZIP")
+
+free = shutil.disk_usage(".").free // (1024 ** 3)
+ctx = {
+    "host": platform.node(),
+    "os": "%s %s" % (platform.system(), platform.mac_ver()[0] or platform.release()),
+    "arch": platform.machine(),
+    "xcode": " ".join(sh("xcodebuild", "-version").split()),
+    "python": platform.python_version(),
+    "disk_free_gb": free,
+    "git": {"sha": sh("git", "rev-parse", "--short", "HEAD"),
+            "branch": sh("git", "rev-parse", "--abbrev-ref", "HEAD"),
+            "dirty": bool(sh("git", "status", "--porcelain"))},
+    "env": {k: os.environ.get(k, "<unset>") for k in WATCHED},
+}
+with open(sys.argv[1], "w") as fh:
+    json.dump(ctx, fh, indent=2, sort_keys=True)
+    fh.write("\n")
+print("  context %s %s \u00b7 %s \u00b7 %d GB free" % (
+    ctx["git"]["sha"], "dirty" if ctx["git"]["dirty"] else "clean", ctx["arch"], free))
+PYEOF
+}
+
 # probe_done <step> — is this irreversible step ALREADY done in the world?
 #   0 = done · 1 = probed, absent · 2 = no probe exists here · 3 = probe FAILED.
 #   3 is not 1. "I could not look" and "I looked and it is not there" lead to
@@ -671,6 +721,7 @@ cmd_run() {
     CI_CMD="SHA=\$(cat '$CI_SHA_FILE' 2>/dev/null); [ -n \"\$SHA\" ] || { echo 'strict-ci recorded no dispatched sha — release.sh retry $V strict-ci'; exit 1; }; export SHA; _id=\$(gh run list --workflow=$WF_CI --event workflow_dispatch --branch main --limit 10 --json databaseId,headSha --jq '[.[]|select(.headSha==env.SHA)]|.[0].databaseId'); [ -n \"\$_id\" ] && [ \"\$_id\" != null ] && gh run watch \"\$_id\" --exit-status"
 
     ev_append run started "bump=$BUMP"
+    write_context "$RUNDIR"
     while IFS='|' read -r id label kind est steptier cons cmd; do
         [ -z "$id" ] && continue
         # run is Tier 1; a Tier 2 promotion is a different act, not a longer run.

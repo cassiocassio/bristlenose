@@ -446,5 +446,16 @@ eq "the run fails"            1 "$rc"
 grep -q 'refusing (no-sha)' "$WORK/repo/.release/8.0.0/logs/tag.1.log" \
     && ok "says WHY: no-sha" || bad "no no-sha explanation"
 
+head_ "24 · every run writes its configuration down"
+fresh
+steps <<'EOF'
+one|first|plain|1m|||true
+EOF
+rc=$(drive 9.1.0)
+eq "the run completes" 75 "$rc"
+python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
+    "$WORK/repo/.release/9.1.0/context.json" 2>/dev/null \
+    && ok "context.json exists and parses" || bad "context.json missing or invalid"
+
 meta_check
 finish

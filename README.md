@@ -387,6 +387,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 - **A project Bristlenose can't reach now says why — in your language, and where you'll see it.** A volume that has gone, a project it can't read, a folder taking too long: five states that rendered as bare English sentences on the row, with no glyph and nothing to click, in every language. They now carry a glyph, a popover with the full explanation, and translations in 21 languages.
 - **`man bristlenose` no longer outlives the package.** Snap and Homebrew installs ship their own man page, but Bristlenose was also dropping a copy into your home directory. `man` reads that first, so it shadowed the packaged one — and because no package owned it, uninstalling left `man bristlenose` still working, showing whatever version last wrote it.
 - **Snap users with a broken PII component are no longer told to run `pipx`.** The suggested fix was `pipx inject` into a strictly-confined install, which cannot work. presidio ships inside the snap, so the answer is `snap refresh`.
+- **Agent access keeps explaining itself.** A fresh install this week would have picked up a newer MCP library that swallows Bristlenose's refusal messages — an agent asking about a closed study would see `Error executing tool` instead of being told the project is out of scope and to reopen it. Pinned until refusals survive the newer library.
 
 **0.27.0** — _22 Aug 2026_
 

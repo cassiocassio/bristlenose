@@ -830,6 +830,40 @@ decisions that propagate rather than on 1,247 strings, which is what would inver
 bottleneck — *if* the ratification pass happens before they are asked to proofread. Reviewer availability is a legitimate override of the two-axis model;
 the chart ranks *candidates we would have to go and find someone for*.
 
+**Mechanical pass, 28 Aug 2026 — and it is not the native pass.** The seed had drifted:
+eight commits added `ca` strings after 14 Aug (the diagnostic popover's 21 languages, the
+sidebar's unreachable rows, the re-analyse sheet), none of them written against the
+glossary. Audited against the settled rules and **the seed held up** — commands imperative
+(`Fes clic`, `Connecta`, `Obre`, `Desfés`), titles nominal, **zero castellanismes** across
+1,464 keys.
+
+Two findings. **One defect: a register split.** 60 strings used `tu`, three used `vós`, and
+the pair that made it plain was `common.export.savePanelMessage` "Tria on vols desar
+l'informe" against `settings.general.chooseMessage` "Trieu on s'han de crear els projectes
+nous" — the same construction in two registers, one screen apart. Normalised to `tu`
+(now 62/0). **This does not pre-empt the reviewer's `tu`-vs-`vós` decision**, which is still
+open and still theirs; it removes an internal inconsistency so that decision is made once,
+globally, instead of being discovered as noise.
+
+**One false alarm worth recording, because the fix would have been wrong.** `arxiu` appears
+once, in `desktop.cloudImport.restoredEmptyBody` ("Tria Arxiu ▸ Importa"), against 42 uses
+of `fitxer` — which reads as a term inconsistency. It is not. Apple's own
+`MenuCommands.loctable` maps `File` → **`Arxiu`** in `ca` (three entries, unanimous), so the
+File *menu* is `Arxiu` and a *file* is `fitxer`; the seed had both right, and "correcting"
+it would have pointed the user at a menu that does not exist. Same lesson as the CJK
+punctuation sweep: **measure the platform, do not reason from the style guide.** The menu
+title itself is absent from our locale by design — `CommandMenu` titles cannot take runtime
+strings, so macOS supplies it.
+
+**Still owed, and only a human can close it:** the ratification above. `tu` vs `vós`, the
+five unsourced chrome terms (Accept / Apply / Reset / Done / Remove), the seven domain
+terms, `Quotes` (`Cites` vs a `Verbatim` loan), `Codebook`, `Signals`, `Tags` → `Etiquetes`,
+and `Focus Mode` → provisionally `Mode immersió` because Apple `ca` has already taken
+*Modes de concentració* for system Focus. Brief the reviewers to flag **castellanismes**
+explicitly — Spanish calques are the dominant Catalan MT failure and Balearic readers are
+the best available catch. A mechanical pass can find a register split; it cannot ratify a
+term table, and writing as though it had is the error already made once here (20 Aug 2026).
+
 **The real reason, recorded so it is not re-litigated on the wrong axis (14 Aug 2026).** The
 paragraph above is the *mechanical* justification and it is true, but it is not why this is being
 built. Catalan is a relationship and a cultural gesture, not a return-on-investment play. In the

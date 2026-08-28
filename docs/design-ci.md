@@ -30,7 +30,7 @@ CI is not a quality gate for perfection. Steps that enforce correctness (ruff, p
 
 ## Philosophy
 
-**Fail fast.** Static checks (lint, types, man page) run in a single `lint` job before any test matrix work begins. If ruff finds an error, 8 test jobs are skipped instantly instead of each burning 3 minutes to discover the same failure.
+**Fail fast.** Static checks (lint, types, man page) run in a single `lint` job before any test matrix work begins. If ruff finds an error, 10 test jobs are skipped instantly instead of each burning 3 minutes to discover the same failure.
 
 **Bound every job; a hang must fail, not wait.** A job with no `timeout-minutes` inherits GitHub's 6-hour default ceiling. A single stalled network call can therefore burn six hours and — because a cancelled job cancels its workflow — silently take sibling workflows down with it. Every job sets an explicit `timeout-minutes`, and any step that talks to an external CDN/registry is additionally bounded per-attempt and retried (see [Timeouts and external-download resilience](#timeouts-and-external-download-resilience)). Fast failure with a clear error beats slow death with none.
 
@@ -39,6 +39,8 @@ CI is not a quality gate for perfection. Steps that enforce correctness (ruff, p
 **Canonical cell.** One combination — ubuntu-latest + Python 3.12 — is the "real" CI. It produces the coverage report, runs the dependency audit, generates the SBOM. Other matrix cells exist to catch compatibility issues, not to duplicate bookkeeping.
 
 **macOS as signal on pushes, gate on releases.** macOS runners cost 10× Linux and surface platform-specific issues that rarely block a pure-Python change. On daily pushes the macOS test cells run `continue-on-error` — a failure shows yellow, not red; investigate, don't hold a merge. **On release runs they block**: `ci.yml` takes a `strict-macos` input (workflow_call + workflow_dispatch) and `release.yml` passes `true`, because a release gate that certifies only Linux is certifying the wrong platform for a Mac-first product — the macOS cells are the sole automated coverage the Homebrew/pip-on-Mac audience has, and the Mac artefacts themselves never pass through CI at all. (Changed 14 Aug 2026; the unconditional informational rule below this point in older text is the pre-change world.)
+
+**The matrix is 5 Python × 2 OS since 28 Aug 2026**, when 3.14 was added — the Fedora Copr bundles it and `requires-python` has no ceiling, so pipx users were already there. Not every cell tracks a channel: 3.10 (the floor), 3.12 (Homebrew, Snap, the sidecar) and 3.14 (the Copr) are *shipped*; 3.11 and 3.13 are a *hedge* for whatever a pipx user happens to have. `docs/design-deployment-targets.md` has the interpreter-per-channel map.
 
 **`fail-fast: false` on the test matrix.** A Python 3.10 failure doesn't predict a 3.13 failure. Let all cells finish so you see the full picture in one push, not across three retry cycles.
 
@@ -75,7 +77,7 @@ The patterns here are standard CI practice, not local invention:
 ```
 lint ──────────────┐
                    ├──► e2e
-test (8 cells) ────┘
+test (10 cells) ───┘
                    │
 frontend ──────────┘
 
@@ -83,14 +85,15 @@ package ───────────────  (wheel + sdist, publishes
 mac-build.yml ─────────  (separate workflow: Swift compile check, macos-15)
 ```
 
-Five jobs in `ci.yml`, plus the shipped Mac workflow:
+Six jobs in `ci.yml`, plus the shipped Mac workflow:
 
 | Job | Runs on | Depends on | Blocking? |
 |-----|---------|------------|-----------|
 | `lint` | ubuntu, Python 3.12 | — | Yes |
-| `test` | 4 Python × 2 OS (8 cells) | `lint` | Ubuntu yes; macOS informational on pushes, **blocking on release runs** (`strict-macos`) |
+| `test` | 5 Python × 2 OS (10 cells) | `lint` | Ubuntu yes; macOS informational on pushes, **blocking on release runs** (`strict-macos`) |
 | `frontend-lint-type-test` | ubuntu, Node from `.tool-versions` (24) | — | Yes |
 | `e2e` | ubuntu, Python 3.12 + Node 24 | `test` + `frontend` | Yes |
+| `release-suites` | ubuntu | — | Yes — the release chain's own ~390 assertions (`release.sh`, `verify-channels.sh`, the preflight and doc gates). No network, no keys, no release; seconds. Added 28 Aug 2026, and its first run found two defects invisible on macOS |
 | `package` | ubuntu | — | Yes — wheel + sdist + `twine check` + an assertion the React SPA is inside the wheel |
 | `mac-build.yml` *(separate workflow)* | macos-15 | — | path-filtered to `desktop/**`; compile-only, no signing, no Swift tests |
 

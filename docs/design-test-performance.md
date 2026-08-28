@@ -1,6 +1,8 @@
 # Test performance — the CI critical path is 5× longer than it needs to be
 
-**Status:** measured, **not yet applied**. The one prerequisite fix has landed; the three CI changes have not.
+**Status:** **applied 28 Aug 2026** (`1c8fd3ee`), and the projection held. Measured on the
+identical selection before and after: **454.77s → 67.16s, 6.8×**, with exact parity —
+4244 passed, 5 skipped, 22 xfailed both ways, so the speedup costs no coverage.
 **Measured:** 2026-08-26, local M-series (12 core) + CI run `32602750413` (last green before the measurement).
 
 Sibling to [`design-ci.md`](design-ci.md) (workflow structure) and [`design-test-philosophy.md`](design-test-philosophy.md) (what to test, not how fast).
@@ -86,7 +88,12 @@ Fixed by wrapping each in `sorted()` — the pattern the same file already used 
 
 **General rule:** parametrising over a `set` is never right. Sort it at the parametrise site.
 
-## The three changes, not yet applied
+## The three changes, applied 28 Aug 2026
+
+> **Applied in `1c8fd3ee`.** All three landed together; the numbers above are the
+> measured before/after, not the projection. The one caveat below that survives is
+> coverage-number parity between xdist and serial, still unverified and still only
+> mattering if coverage ever becomes a gate — it has no `fail_under` today.
 
 1. **Scope coverage to one cell.** Make `--cov …` conditional on `matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'` — matching the upload gate directly below it, which is the condition that already exists and is already correct.
 2. **`COVERAGE_CORE=sysmon`** in the env of that cell.

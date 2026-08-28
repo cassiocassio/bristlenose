@@ -1077,12 +1077,48 @@ cloned inside the container:
 
 ### The one thing that would most change the odds
 
-**Run the suites in CI, on ubuntu.** As of this note, 325 assertions across
-eight suites execute on exactly one machine, one OS, one shell and one git
-configuration. Two release scripts already run on Linux in CI with no suite
-behind them. The suites need no network, no keys and no release; the marginal
-cost is seconds, and every portability finding above took one `docker run` to
-surface and would never have surfaced otherwise.
+**Run the suites in CI, on ubuntu.** — **done 28 Aug 2026 (`1c8fd3ee`), and it
+paid on the first run.** The note below is preserved as written; what follows is
+what happened.
+
+> As of this note, 325 assertions across eight suites execute on exactly one
+> machine, one OS, one shell and one git configuration. Two release scripts
+> already run on Linux in CI with no suite behind them. The suites need no
+> network, no keys and no release; the marginal cost is seconds, and every
+> portability finding above took one `docker run` to surface and would never
+> have surfaced otherwise.
+
+The first Linux run was **red, with 33 failures, and both causes were real
+defects in our own scripts** — neither observable on macOS:
+
+- **Git identity (31 of 33).** Git guesses an identity from the hostname when
+  none is configured; on a GitHub runner that guess yields `fatal: empty ident
+  name`, so every manufactured sandbox's commit failed. The cascade is the
+  instructive part: with no commit, `git rev-parse HEAD` on an unborn branch
+  prints the literal `HEAD`, which then equalled the `HEAD` a test had written
+  into `ci-sha`, so `verdict_tag_provenance` compared two sentinels, found them
+  equal, and returned `dirty` — a verdict about nothing. Fixed in the *suites*,
+  which manufacture the repos and must therefore configure them; that makes them
+  portable to anyone's clean machine, not only to a runner we remembered to set up.
+- **ANSI (the other 2).** Actions sets `FORCE_COLOR`, so Rich colours
+  `bristlenose --help` off a tty. Each command row arrives as
+  `ESC[2m│ESC[0m ESC[1;36mrun`, and stripping the box character leaves the
+  *escape* at line start, so `check-doc-surfaces.sh`'s `^ +` anchor matched
+  nothing. `NO_COLOR` does not help — `FORCE_COLOR` wins in Rich's precedence.
+
+Worth recording that the second was red rather than silently green **only**
+because of the gate's own "enumerated only N subcommands — refusing" guard,
+written after an earlier draft reported 2 flags on a CLI with thirty. It fired
+correctly on a platform nobody had run it on.
+
+The prerequisite this section named — the suites' dependence on ambient git
+identity — was **also real, and I mis-cleared it before starting.** Running
+locally with `HOME` scrubbed and both git configs nulled passed all 385
+assertions, which I read as the blocker being gone. macOS supplies a valid full
+name from the passwd record, so the guess succeeds locally and fails on a
+runner: the simulation could not reproduce it, and the note's estimate of *four*
+failing assertions was itself low by a factor of eight. **A local simulation of
+a foreign environment is evidence about the simulation.**
 
 ### Known gaps
 

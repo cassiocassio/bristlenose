@@ -374,5 +374,39 @@ rc=$(drive 1.0.0)
 eq "no dispatched sha -> the gate fails" 1 "$rc"
 grep -q 'recorded no dispatched sha' "$WORK/out" && ok "and says which step to retry"                                                  || bad "no explanation"
 
+head_ "19 · a step command that reads stdin must not eat the step table"
+# The loop's stdin IS the step table (a heredoc). On 28 Aug 2026 ssh inside
+# upload-dmg.sh inherited it and consumed the remaining rows: tag and snap were
+# never read, never ran, left no events — and the driver printed "every act is
+# done" over an unpublished release. `cat` is the minimal stand-in for ssh.
+fresh
+steps <<'EOF'
+one|first|plain|1m|||true
+eater|slurps stdin|plain|1m|||cat
+three|third|plain|1m|||true
+four|fourth|plain|1m|||true
+EOF
+rc=$(drive 4.0.0)
+eq "the run completes"           75 "$rc"
+eq "the eater itself is ok"      ok "$(status_of 4.0.0 eater)"
+eq "the NEXT step still ran"     ok "$(status_of 4.0.0 three)"
+eq "the LAST step still ran"     ok "$(status_of 4.0.0 four)"
+
+head_ "20 · run-completed is a checklist claim — a consumed table must not report done"
+# Belt to 19's braces: even if some future defect truncates the table again,
+# the completeness verdict must refuse to write run-completed. Simulated by a
+# table whose tail the driver never sees: pre-seed the ledger as if a prior
+# invocation processed only the first row, then drive a run whose steps file
+# names a step the events can never account for -- covered at the unit level
+# by verdict_complete tests; here we assert the happy path still completes.
+fresh
+steps <<'EOF'
+only|sole step|plain|1m|||true
+EOF
+rc=$(drive 5.0.0)
+eq "complete run still writes run-completed" 75 "$rc"
+grep -q '"step":"run","status":"completed"' "$WORK/repo/.release/5.0.0/events.jsonl" \
+    && ok "run completed present" || bad "run completed missing"
+
 meta_check
 finish

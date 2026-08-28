@@ -115,6 +115,31 @@ fold_status() {
     }' "$EVENTS"
 }
 
+# verdict_complete — names every Tier-1 step the ledger cannot account for.
+#   stdin: the step table (run_steps output) · needs $EVENTS set.
+#   Prints missing step ids one per line; prints nothing when complete.
+#
+#   Exists because the loop ENDING is not the table FINISHING. On 28 Aug 2026 a
+#   step command consumed the loop's heredoc stdin, so the remaining rows were
+#   never read: the steps never ran, wrote no events, and the driver fell off
+#   the end and declared the run complete. A step that is never read is never
+#   recorded — no ledger read can see it. Only re-deriving the table and
+#   demanding a terminal status per step can. Same class as the pipeline's
+#   attempted==succeeded+failed tautology (CLAUDE.md): a rollup that is green
+#   because the missing thing was never counted. "Done" is a claim about a
+#   checklist, never about an input stream ending.
+verdict_complete() {
+    local id label kind est steptier cons cmd
+    while IFS='|' read -r id label kind est steptier cons cmd; do
+        [ -z "$id" ] && continue
+        [ -n "$steptier" ] && continue
+        case "$(fold_status "$id")" in
+            ok|skipped) : ;;
+            *) printf '%s\n' "$id" ;;
+        esac
+    done
+}
+
 # probe_done <step> — is this irreversible step ALREADY done in the world?
 #   0 = done · 1 = probed, absent · 2 = no probe exists here · 3 = probe FAILED.
 #   3 is not 1. "I could not look" and "I looked and it is not there" lead to
@@ -696,7 +721,14 @@ cmd_run() {
         # current foreground command returns, so Ctrl-C during a 30-minute build
         # was queued for 30 minutes — the driver looked hung and the lock
         # outlived the signal. `wait` is interruptible; the handler kills $STEP_PID.
-        eval "$cmd" > "$LOG" 2>&1 &
+        #
+        # < /dev/null is LOAD-BEARING: the loop's stdin IS the step table (the
+        # heredoc feeding this while-read). A step command that reads stdin
+        # therefore eats the remaining rows — ssh inside upload-dmg.sh did
+        # exactly that on 28 Aug 2026, and tag + snap were silently never run
+        # while the driver printed "every act is done". No step may read stdin;
+        # the only interactive read (the confirmation) happens before the loop.
+        eval "$cmd" > "$LOG" 2>&1 < /dev/null &
         STEP_PID=$!
         wait "$STEP_PID"
         rc=$?
@@ -722,6 +754,17 @@ cmd_run() {
     done <<EOF
 $(run_steps)
 EOF
+
+    # A consumed table must not report done — see verdict_complete.
+    _missing="$(run_steps | verdict_complete)"
+    if [ -n "$_missing" ]; then
+        printf '\n  %b✗ the step loop ended with steps never reached:%b %s\n' \
+            "$R" "$N" "$(printf '%s' "$_missing" | tr '\n' ' ')"
+        printf '    No event exists for them — the table was consumed, not completed.\n'
+        printf '    This is a driver defect, not a step failure; the acts above DID happen.\n'
+        printf '    Resume: %brelease.sh run %s --bump %s%s%b\n\n' "$B" "$V" "$BUMP" "$SKIP_FLAGS" "$N"
+        exit 1
+    fi
 
     ev_append run completed ""
     # 75 = EX_TEMPFAIL: the acts are done, verification is pending. NOT 0.

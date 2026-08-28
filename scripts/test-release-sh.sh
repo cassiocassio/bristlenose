@@ -36,6 +36,24 @@ eq "not ready"             1  "$(rollup_exit 1 0)"
 eq "held beats ready"      75 "$(rollup_exit 0 1)"
 eq "held beats not-ready"  75 "$(rollup_exit 1 1)"
 
+head_ "verdict_complete — the loop ending is not the table finishing"
+_CT=$(mktemp -d); EVENTS="$_CT/events.jsonl"
+_TBL='one|a|plain|1m|||true
+two|b|plain|1m|||true
+tiertwo|c|plain|1m|2||true
+three|d|soft|1m||spends|true'
+printf '%s\n' \
+  '{"ts":"t","run":"v","step":"one","status":"running","detail":""}' \
+  '{"ts":"t","run":"v","step":"one","status":"ok","detail":""}' \
+  '{"ts":"t","run":"v","step":"three","status":"skipped","detail":""}' > "$EVENTS"
+eq "names the never-reached step"      "two" "$(printf '%s\n' "$_TBL" | verdict_complete)"
+printf '%s\n' '{"ts":"t","run":"v","step":"two","status":"ok","detail":""}' >> "$EVENTS"
+eq "silent when every step accounts"   ""    "$(printf '%s\n' "$_TBL" | verdict_complete)"
+printf '%s\n' '{"ts":"t","run":"v","step":"three","status":"running","detail":""}' >> "$EVENTS"
+eq "a stranded running counts missing" "three" "$(printf '%s\n' "$_TBL" | verdict_complete)"
+eq "tier-2 rows are never demanded"    ""    "$(printf 'tiertwo|c|plain|1m|2||true\n' | verdict_complete)"
+rm -rf "$_CT"; unset EVENTS
+
 head_ "the step table — structural invariants"
 TBL=$(sed -n "/^cat <<'RUNTBL'$/,/^RUNTBL$/p" "$ROOT/scripts/release.sh" | sed '1d;$d')
 
@@ -73,9 +91,28 @@ dupes=$(printf '%s
 [ -z "$dupes" ] && ok "step ids are unique (the fold keys on them)" \
                 || bad "duplicate step ids: $dupes"
 
+# plan's OUTPUT is asserted below, so plan must actually render its table — but
+# on the real repo, right after a release, HEAD is at (or docs-only past) the
+# tag, and plan legitimately short-circuits with NOTHING SHIPPABLE: exit 1, no
+# table, and five assertions here go red. That happened the morning v0.28.0
+# shipped — a suite that is red after every successful release is a gate that
+# cries wolf. So plan runs in a sandbox whose git state is ALWAYS shippable
+# (same isolation pattern as test-release-e2e.sh's fresh()); the real repo is
+# still used below for everything with no shippability dependence.
+_PLANREPO=$(mktemp -d)
+trap 'rm -rf "$_PLANREPO"' EXIT
+mkdir -p "$_PLANREPO/scripts" "$_PLANREPO/bristlenose"
+cp "$ROOT/scripts/release.sh" "$_PLANREPO/scripts/"
+cp "$ROOT/scripts/project.conf" "$_PLANREPO/scripts/"
+( cd "$_PLANREPO" && git init -q . \
+  && echo a > bristlenose/x && git add -A && git commit -qm base \
+  && git tag v0.0.1 \
+  && echo b > bristlenose/y && git add -A && git commit -qm ship ) 2>/dev/null
+plan_sandboxed() { bash "$_PLANREPO/scripts/release.sh" plan "$@"; }
+
 head_ "tier filtering — a Tier 2 step must not inflate a Tier 1 estimate"
-t1=$(bash "$ROOT/scripts/release.sh" plan 0.28.0 2>&1 | sed 's/\x1b\[[0-9;]*m//g')
-t2=$(bash "$ROOT/scripts/release.sh" plan 0.28.0 --tier 2 2>&1 | sed 's/\x1b\[[0-9;]*m//g')
+t1=$(plan_sandboxed 0.28.0 2>&1 | sed 's/\x1b\[[0-9;]*m//g')
+t2=$(plan_sandboxed 0.28.0 --tier 2 2>&1 | sed 's/\x1b\[[0-9;]*m//g')
 case "$t1" in *"--ref v0.28.0"*) bad "Tier 1 plan shows the Tier 2 stable push" ;;
               *) ok "Tier 1 omits the Tier 2 stable push" ;; esac
 case "$t2" in *"--ref v0.28.0"*) ok "Tier 2 includes the stable push" ;;
@@ -94,7 +131,7 @@ bash "$ROOT/scripts/release.sh" plan 0.28.O >/dev/null 2>&1
 eq "malformed version exit 2" 2 "$?"
 bash "$ROOT/scripts/release.sh" bogus >/dev/null 2>&1
 eq "unknown command exit 2" 2 "$?"
-bash "$ROOT/scripts/release.sh" plan 0.28.0 >/dev/null 2>&1
+plan_sandboxed 0.28.0 >/dev/null 2>&1
 eq "plan on a shippable tree exit 0" 0 "$?"
 out=$(bash "$ROOT/scripts/release.sh" status 2>&1)
 case "$out" in
@@ -103,7 +140,7 @@ case "$out" in
 esac
 
 head_ "width — REPORT-STYLE.md budget"
-overlong=$(bash "$ROOT/scripts/release.sh" plan 0.28.0 2>&1 \
+overlong=$(plan_sandboxed 0.28.0 2>&1 \
     | sed 's/\x1b\[[0-9;]*m//g' | awk 'length($0)>92' | grep -c . || true)
 eq "no line exceeds 92 cols" 0 "$overlong"
 
@@ -190,7 +227,7 @@ _tfpos=$(printf '%s\n' "$RT" | awk -F'|' '$1=="testflight"{print NR}')
 
 
 # (consequence naming is asserted once, above, against the same table)
-_p=$(bash "$ROOT/scripts/release.sh" plan 0.28.0 2>&1 | sed 's/\x1b\[[0-9;]*m//g')
+_p=$(plan_sandboxed 0.28.0 2>&1 | sed 's/\x1b\[[0-9;]*m//g')
 case "$_p" in *"git tag v0.28.0"*) ok "plan renders the tag step" ;;
               *) bad "plan lost the tag step" ;; esac
 _tagline=$(printf '%s' "$_p" | grep -n 'git tag' | cut -d: -f1)

@@ -512,5 +512,60 @@ eq "probe cannot look -> stop and ask" 3 "$rc"
 grep -q 'could not' "$WORK/out" \
     && ok "explains it could not look" || bad "no cannot-look explanation"
 
+head_ "27 · a less needy run — either spelling of the one fact suffices"
+# --bump alone infers the version from the last tag.
+fresh
+( cd "$WORK/repo" && git tag v4.0.0 )
+steps <<'EOF'
+one|first|plain|1m|||true
+EOF
+rc=$( ( cd "$WORK/repo" && PATH="$WORK/bin:$PATH" RELEASE_STEPS_FILE="$WORK/steps.tbl" \
+        bash scripts/release.sh run --bump patch --yes ) >"$WORK/out" 2>&1; echo $? )
+eq "run with only --bump completes"    75 "$rc"
+[ -d "$WORK/repo/.release/4.0.1" ] && ok "inferred 4.0.1 from v4.0.0 + patch" \
+                                   || bad "did not land on 4.0.1"
+grep -q 'next patch after v4.0.0' "$WORK/out" && ok "narrated the inference" \
+                                              || bad "silent inference"
+# The version alone infers the bump kind.
+rc=$( ( cd "$WORK/repo" && PATH="$WORK/bin:$PATH" RELEASE_STEPS_FILE="$WORK/steps.tbl" \
+        bash scripts/release.sh run 4.1.0 --yes ) >"$WORK/out" 2>&1; echo $? )
+eq "run with only a version completes" 75 "$rc"
+grep -q 'a minor after v4.0.0' "$WORK/out" && ok "inferred minor and said so" \
+                                           || bad "bump inference not narrated"
+# A typo between the two spellings is refused — one clean step (a major)
+# claimed as another kind. (Two-steps-away like 4.2.0 is IRREGULAR, which
+# warns and proceeds when both halves are explicit — that path is distinct.)
+rc=$( ( cd "$WORK/repo" && PATH="$WORK/bin:$PATH" RELEASE_STEPS_FILE="$WORK/steps.tbl" \
+        bash scripts/release.sh run 5.0.0 --bump patch --yes ) >"$WORK/out" 2>&1; echo $? )
+eq "version/bump disagreement refuses" 2 "$rc"
+grep -q 'is a major, not a patch' "$WORK/out" && ok "names the disagreement" \
+                                              || bad "no typo explanation"
+# A resume needs neither flag: the run dir remembers its bump.
+rc=$( ( cd "$WORK/repo" && PATH="$WORK/bin:$PATH" RELEASE_STEPS_FILE="$WORK/steps.tbl" \
+        bash scripts/release.sh run 4.1.0 --yes ) >"$WORK/out" 2>&1; echo $? )
+eq "bare resume completes"             75 "$rc"
+grep -q 'from its own ledger' "$WORK/out" && ok "bump came from the ledger" \
+                                          || bad "resume did not read its ledger"
+# ...and refuses a CONTRADICTING flag on resume.
+rc=$( ( cd "$WORK/repo" && PATH="$WORK/bin:$PATH" RELEASE_STEPS_FILE="$WORK/steps.tbl" \
+        bash scripts/release.sh run 4.1.0 --bump patch --yes ) >"$WORK/out" 2>&1; echo $? )
+eq "contradicting resume flag refuses" 2 "$rc"
+
+head_ "28 · retry <step> finds the sole run"
+fresh
+( cd "$WORK/repo" && git tag v5.0.0 )
+steps <<'EOF'
+one|first|plain|1m|||true
+EOF
+( cd "$WORK/repo" && PATH="$WORK/bin:$PATH" RELEASE_STEPS_FILE="$WORK/steps.tbl" \
+    bash scripts/release.sh run 5.0.1 --yes ) >/dev/null 2>&1
+rc=$( ( cd "$WORK/repo" && RELEASE_STEPS_FILE="$WORK/steps.tbl" \
+        bash scripts/release.sh retry one ) >"$WORK/out" 2>&1; echo $? )
+eq "retry without a version works"     0 "$rc"
+grep -q 'only run under .release/' "$WORK/out" && ok "narrated which run it chose" \
+                                               || bad "silent rundir inference"
+grep -q '"step":"one","status":"pending"' "$WORK/repo/.release/5.0.1/events.jsonl" \
+    && ok "the reset landed in the right ledger" || bad "reset missed"
+
 meta_check
 finish

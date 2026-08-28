@@ -17,14 +17,21 @@
 # with strict-macos: true. check-release-ready.sh's `publish gate` row asserts
 # that chain and fails if it breaks.
 #
-# Usage:
-#   release.sh plan <X.Y.Z> [--tier 1|2]
-#   release.sh run <X.Y.Z> --bump minor|patch|major [--yes]
-#   release.sh verify <X.Y.Z> [--abandoned <X.Y.Z>]
+# Usage (defaults, 28 Aug 2026: the version and the bump kind are one fact
+# spelled two ways — either alone suffices, both cross-check, and every
+# inference is narrated):
+#   release.sh plan [<X.Y.Z>] [--bump minor|patch|major] [--tier 1|2]
+#                                     bare = next minor after the last tag
+#   release.sh run [<X.Y.Z>] [--bump minor|patch|major] [--yes]
+#                                     version alone infers the bump; --bump
+#                                     alone infers the version; a resume needs
+#                                     neither (the run dir remembers its bump)
+#   release.sh verify [<X.Y.Z>] [--abandoned <X.Y.Z>]
+#                                     bare = the tree's version
 #   release.sh status
-#   release.sh abandon <X.Y.Z>
-#   release.sh retry <X.Y.Z> <step>
-#   release.sh recover <X.Y.Z>        after a failed or missing release run
+#   release.sh abandon [<X.Y.Z>]      bare = the sole run under .release/
+#   release.sh retry [<X.Y.Z>] <step> likewise
+#   release.sh recover [<X.Y.Z>]      after a failed or missing release run
 #
 # Exit codes:
 #   0   ready / verified / complete
@@ -125,6 +132,38 @@ fold_status() {
         if (out !~ /^(ok|fail|running|pending|skipped)$/) out = "corrupt"
         print out
     }' "$EVENTS"
+}
+
+# next_version <X.Y.Z> <patch|minor|major> — the successor, or fail.
+#   Strictly three numeric parts: a 4-part build-only version has no single
+#   successor, and inferring one would guess.
+next_version() {
+    printf '%s' "$1" | awk -F. -v k="$2" '
+        NF==3 && $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ && $3 ~ /^[0-9]+$/ {
+            if      (k=="patch") { print $1"."$2"."$3+1; ok=1 }
+            else if (k=="minor") { print $1"."$2+1".0";  ok=1 }
+            else if (k=="major") { print $1+1".0.0";     ok=1 }
+        } END { exit !ok }'
+}
+
+# bump_kind <base> <target> — patch|minor|major|same|irregular.
+#   The version and the bump kind are one fact spelled two ways; this is the
+#   translation, so the CLI can accept either spelling and cross-check both.
+bump_kind() {
+    local _k
+    [ "$1" = "$2" ] && { echo same; return; }
+    for _k in patch minor major; do
+        [ "$(next_version "$1" "$_k" 2>/dev/null)" = "$2" ] && { echo "$_k"; return; }
+    done
+    echo irregular
+}
+
+# infer_rundir — the sole run under .release/, or fail (1 none, 2 ambiguous).
+infer_rundir() {
+    set -- .release/*/
+    [ -d "${1:-}" ] || return 1
+    [ $# -eq 1 ] || return 2
+    basename "$1"
 }
 
 # verdict_complete — names every Tier-1 step the ledger cannot account for.
@@ -368,14 +407,28 @@ RUNTBL
 }
 
 cmd_plan() {
-    V="${1-}"; shift || true
-    TIER=1
+    V=""
+    case "${1-}" in ""|-*) : ;; *) V="$1"; shift ;; esac
+    TIER=1; PLAN_BUMP=""
     while [ $# -gt 0 ]; do
         case "$1" in
             --tier) [ $# -ge 2 ] || die "--tier needs a tier"; TIER="$2"; shift 2 ;;
+            --bump) [ $# -ge 2 ] || die "--bump needs a value"; PLAN_BUMP="$2"; shift 2 ;;
             *) die "unknown argument: $1" ;;
         esac
     done
+    if [ -z "$V" ]; then
+        # plan is read-only, so a narrated guess is safe. The house bias is
+        # minor ("does this add a capability?" is usually yes); --bump picks
+        # otherwise, and the printed assumption is the correction affordance.
+        _tagbase="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')"
+        [ -n "$_tagbase" ] || die "usage: release.sh plan <X.Y.Z> — no tag to infer from"
+        case "${PLAN_BUMP:-minor}" in minor|patch|major) : ;; *) die "--bump minor|patch|major (got '$PLAN_BUMP')" ;; esac
+        V="$(next_version "$_tagbase" "${PLAN_BUMP:-minor}")" \
+            || die "cannot compute the next ${PLAN_BUMP:-minor} from v$_tagbase — pass a version"
+        printf '  %bplanning %s%b %b— next %s after v%s; pass a version or --bump to change%b\n' \
+            "$B" "$V" "$N" "$D" "${PLAN_BUMP:-minor}" "$_tagbase" "$N"
+    fi
     case "$(verdict_version "$V")" in
         empty)     die "usage: release.sh plan <X.Y.Z>" ;;
         malformed) die "refusing: unexpected version shape '$V'" ;;
@@ -492,6 +545,10 @@ cmd_status() {
 
 cmd_abandon() {
     V="${1-}"
+    if [ -z "$V" ]; then
+        V="$(infer_rundir)" || die "usage: release.sh abandon <X.Y.Z> — no sole run to infer"
+        printf '  %b%s%b %b— the only run under .release/%b\n' "$B" "$V" "$N" "$D" "$N"
+    fi
     case "$(verdict_version "$V")" in
         ok) : ;;
         *)  die "usage: release.sh abandon <X.Y.Z>" ;;
@@ -538,6 +595,10 @@ cmd_abandon() {
 
 cmd_recover() {
     V="${1-}"
+    if [ -z "$V" ]; then
+        V="$(infer_rundir)" || die "usage: release.sh recover <X.Y.Z> — no sole run to infer"
+        printf '  %b%s%b %b— the only run under .release/%b\n' "$B" "$V" "$N" "$D" "$N"
+    fi
     [ "$(verdict_version "$V")" = ok ] || die "usage: release.sh recover <X.Y.Z>"
 
     printf '\n%bRecovering %s%b\n\n' "$B" "$V" "$N"
@@ -619,7 +680,8 @@ cmd_recover() {
 }
 
 cmd_run() {
-    V="${1-}"; shift || true
+    V=""
+    case "${1-}" in ""|-*) : ;; *) V="$1"; shift ;; esac
     BUMP=""; ASSUME_YES=0; SKIP=""
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -629,8 +691,59 @@ cmd_run() {
             *) die "unknown argument: $1" ;;
         esac
     done
-    [ "$(verdict_version "$V")" = ok ] || die "usage: release.sh run <X.Y.Z> --bump minor|patch"
-    case "$BUMP" in minor|patch|major) : ;; *) die "--bump minor|patch|major is required" ;; esac
+
+    # ── Less-needy defaults (28 Aug 2026). The version and the bump kind are
+    # one fact spelled two ways, so demanding both was ceremony: either alone
+    # now suffices, both together cross-check, and a resume reads its bump
+    # from its own first ledger line. Every inference is NARRATED — a silent
+    # default is a trap; a narrated one is a colleague — and the confirmation
+    # prompt still makes the human type the version, inferred or not. The
+    # inference base is the LAST TAG (the released truth), never the tree,
+    # which is mid-bump exactly when it matters.
+    _tagbase="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')"
+    if [ -n "$V" ] && [ -f ".release/$V/events.jsonl" ]; then
+        _led="$(sed -n 's/.*"step":"run","status":"started","detail":"bump=\([a-z]*\)".*/\1/p' \
+                    ".release/$V/events.jsonl" | head -1)"
+        if [ -n "$_led" ]; then
+            [ -n "$BUMP" ] && [ "$BUMP" != "$_led" ] \
+                && die "this run was started with --bump $_led; refusing --bump $BUMP on a resume"
+            [ -z "$BUMP" ] && printf '  %bresuming %s%b %b(bump=%s, from its own ledger)%b\n' \
+                "$B" "$V" "$N" "$D" "$_led" "$N"
+            BUMP="$_led"
+        fi
+    fi
+    if [ -z "$V" ] && [ -n "$BUMP" ]; then
+        case "$BUMP" in minor|patch|major) : ;; *) die "--bump minor|patch|major (got '$BUMP')" ;; esac
+        [ -n "$_tagbase" ] || die "no tag to infer the version from — pass it explicitly"
+        V="$(next_version "$_tagbase" "$BUMP")" \
+            || die "cannot compute the next $BUMP from v$_tagbase — pass the version explicitly"
+        printf '  %brelease %s%b %b— next %s after v%s%b\n' "$B" "$V" "$N" "$D" "$BUMP" "$_tagbase" "$N"
+    elif [ -n "$V" ] && [ -z "$BUMP" ]; then
+        [ -n "$_tagbase" ] || die "no tag to infer the bump kind from — pass --bump minor|patch|major"
+        BUMP="$(bump_kind "$_tagbase" "$V")"
+        case "$BUMP" in
+            minor|patch|major)
+                printf '  %brelease %s%b %b— a %s after v%s%b\n' "$B" "$V" "$N" "$D" "$BUMP" "$_tagbase" "$N" ;;
+            same) die "$V is already tagged and has no run dir to resume — release.sh recover $V" ;;
+            *)    die "v$_tagbase → $V is no single step of patch/minor/major — pass --bump explicitly" ;;
+        esac
+    elif [ -n "$V" ] && [ -n "$BUMP" ]; then
+        case "$BUMP" in minor|patch|major) : ;; *) die "--bump minor|patch|major (got '$BUMP')" ;; esac
+        if [ -n "$_tagbase" ]; then
+            _k="$(bump_kind "$_tagbase" "$V")"
+            case "$_k" in
+                "$BUMP"|same) : ;;  # same = a resume of a tagged version; live resumes were handled above
+                irregular) printf '  %b⚠ %s is not one step after v%s — proceeding, both were explicit%b\n' \
+                               "$Y" "$V" "$_tagbase" "$N" ;;
+                *) die "v$_tagbase → $V is a $_k, not a $BUMP — one of the two is a typo" ;;
+            esac
+        fi
+    else
+        _hint=""
+        [ -n "$_tagbase" ] && _hint=" — next: $(next_version "$_tagbase" patch 2>/dev/null || echo '?') (patch) · $(next_version "$_tagbase" minor 2>/dev/null || echo '?') (minor)"
+        die "usage: release.sh run [<X.Y.Z>] [--bump minor|patch|major] — either alone will do$_hint"
+    fi
+    [ "$(verdict_version "$V")" = ok ] || die "refusing: unexpected version shape '$V'"
 
     # Validate the skips against the table. `--skip flibbertigibbet` used to be
     # accepted in silence — the same class cmd_retry already refuses, and here it
@@ -933,9 +1046,18 @@ EOF
 }
 
 cmd_retry() {
-    V="${1-}"; STEP="${2-}"
-    [ "$(verdict_version "$V")" = ok ] || die "usage: release.sh retry <X.Y.Z> <step>"
-    [ -n "$STEP" ] || die "usage: release.sh retry <X.Y.Z> <step>"
+    # Both spellings work: `retry <X.Y.Z> <step>` and, when only one run
+    # exists under .release/, just `retry <step>` — narrated, never guessed
+    # between candidates.
+    if [ "$(verdict_version "${1-}")" = ok ]; then
+        V="$1"; STEP="${2-}"
+    else
+        STEP="${1-}"
+        V="$(infer_rundir)" || die "which release? $(ls -d .release/*/ 2>/dev/null | tr '\n' ' ' || echo 'no runs')— release.sh retry <X.Y.Z> <step>"
+        printf '  %b%s%b %b— the only run under .release/%b\n' "$B" "$V" "$N" "$D" "$N"
+    fi
+    [ "$(verdict_version "$V")" = ok ] || die "usage: release.sh retry [<X.Y.Z>] <step>"
+    [ -n "$STEP" ] || die "usage: release.sh retry [<X.Y.Z>] <step>"
     # `retry <V> flibbertigibbet` used to print "reset to pending" and exit 0.
     run_steps | awk -F'|' -v s="$STEP" '$1==s{f=1} END{exit !f}' \
         || die "no such step '$STEP' (try: $(run_steps | awk -F'|' 'NF>1{printf "%s ", $1}'))"

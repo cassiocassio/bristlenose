@@ -54,6 +54,20 @@ eq "a stranded running counts missing" "three" "$(printf '%s\n' "$_TBL" | verdic
 eq "tier-2 rows are never demanded"    ""    "$(printf 'tiertwo|c|plain|1m|2||true\n' | verdict_complete)"
 rm -rf "$_CT"; unset EVENTS
 
+head_ "next_version / bump_kind — one fact, two spellings, translated both ways"
+eq "patch"                 0.28.1 "$(next_version 0.28.0 patch)"
+eq "minor"                 0.29.0 "$(next_version 0.28.0 minor)"
+eq "major"                 1.0.0  "$(next_version 0.28.0 major)"
+eq "minor resets patch"    0.29.0 "$(next_version 0.28.7 minor)"
+next_version 0.28.0.1 patch >/dev/null 2>&1; eq "4-part has no successor" 1 "$?"
+next_version 0.28.O  patch >/dev/null 2>&1;  eq "letter O fails"          1 "$?"
+eq "recognises patch"      patch     "$(bump_kind 0.28.0 0.28.1)"
+eq "recognises minor"      minor     "$(bump_kind 0.28.0 0.29.0)"
+eq "recognises major"      major     "$(bump_kind 0.28.0 1.0.0)"
+eq "same version"          same      "$(bump_kind 0.28.0 0.28.0)"
+eq "a leap is irregular"   irregular "$(bump_kind 0.28.0 0.30.0)"
+eq "backwards is irregular" irregular "$(bump_kind 0.28.0 0.27.9)"
+
 head_ "verdict_tag_provenance — the verdict and the tag must name the same commit"
 _TP=$(mktemp -d)
 ( cd "$_TP" && git init -q . && echo a > f && git add -A && git commit -qm one ) 2>/dev/null

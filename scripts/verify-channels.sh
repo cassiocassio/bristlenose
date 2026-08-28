@@ -180,7 +180,16 @@ while [ $# -gt 0 ]; do
         *) echo "unknown argument: $1" >&2; exit 2 ;;
     esac
 done
-[ -n "$VERSION" ] || { echo "usage: verify-channels.sh <X.Y.Z> [--abandoned <X.Y.Z>]" >&2; exit 2; }
+# No version = the tree's version. "What is the state of the latest release?"
+# is the question this script answers, and the tree names the latest — after a
+# release they agree, and mid-release the tree carries the version in flight,
+# which is exactly the one worth probing. Narrated in the header below.
+VERSION_SOURCE=""
+if [ -z "$VERSION" ]; then
+    VERSION="$(sed -n 's/^__version__ *= *"\(.*\)"/\1/p' bristlenose/__init__.py 2>/dev/null)"
+    [ -n "$VERSION" ] || { echo "usage: verify-channels.sh <X.Y.Z> [--abandoned <X.Y.Z>] — and no tree version to default to" >&2; exit 2; }
+    VERSION_SOURCE=" · the tree's version"
+fi
 # NEGATED CLASS FIRST. `[0-9]*.[0-9]*.[0-9]*` reads as "a digit, ANYTHING, a
 # dot, a digit, ANYTHING, a dot, a digit, anything" — it accepts
 # 0';id;'.0.0 and 1x.2y.3"; system("x"). Measured. The strict form is
@@ -346,7 +355,7 @@ case " $CHANNELS " in *" website "*) _need_site=1 ;; esac
 [ -n "$ABANDONED" ] && _need_site=1
 [ "$_need_site" = 1 ] && SITE_BODY=$(fetch "$CHANGELOG_URL")
 
-printf '\n\033[1mChannels · %s\033[0m\n\n' "$VERSION"
+printf '\n\033[1mChannels · %s\033[0m\033[2m%s\033[0m\n\n' "$VERSION" "$VERSION_SOURCE"
 
 for _ch in $CHANNELS; do
     # CHANNELS_UNPROBEABLE is the allow-list for "no probe exists here", and it

@@ -200,7 +200,12 @@ row() { # row <name> <verdict> <evidence>
 # reported `bad: not a sha256 line` for a file that simply does not exist yet,
 # which is the "unreachable is not absent" rule this file opens with, broken by
 # its own fetch helper.
-fetch() { curl -sf --max-time 20 "$1" 2>/dev/null || true; }
+# -L is load-bearing: the .dmg permalink 302s to the versioned file, and
+# without it fetch returned the redirect's 223-byte HTML page as the BODY —
+# on 28 Aug 2026 the sha256 probe measured that page and reported "digest
+# is not 64 characters" against a good, byte-identical artefact. Every
+# fetch call site is a content read; all of them want the final body.
+fetch() { curl -sfL --max-time 20 "$1" 2>/dev/null || true; }
 code_of() { curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$1" 2>/dev/null || echo 000; }
 
 # ---------------------------------------------------------------------------

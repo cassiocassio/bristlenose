@@ -39,7 +39,7 @@ dependencies = [
     # against the break. Lift this only with the 1.x migration: drop the kwarg,
     # settle whether analysis determinism moves from 0.1 to the API default, and
     # re-pre-mortem. docs/dependency-premortem-log.md Entry 6 + Held register.
-    "anthropic>=0.39,<1",
+    "anthropic>=0.39,<2",
     "openai>=1.50",
     "google-genai>=1.0",
     "rich>=13.0",

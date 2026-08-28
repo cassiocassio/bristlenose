@@ -567,5 +567,27 @@ grep -q 'only run under .release/' "$WORK/out" && ok "narrated which run it chos
 grep -q '"step":"one","status":"pending"' "$WORK/repo/.release/5.0.1/events.jsonl" \
     && ok "the reset landed in the right ledger" || bad "reset missed"
 
+head_ "29 · bare run infers the next minor — and the prompt cannot be skipped"
+fresh
+( cd "$WORK/repo" && git tag v6.0.0 )
+steps <<'EOF'
+one|first|plain|1m|||true
+EOF
+# --yes with a fully inferred version: the read hits EOF and dies. Fail closed.
+rc=$( ( cd "$WORK/repo" && RELEASE_STEPS_FILE="$WORK/steps.tbl" \
+        bash scripts/release.sh run --yes < /dev/null ) >"$WORK/out" 2>&1; echo $? )
+eq "--yes alone still demands the typed version" 2 "$rc"
+grep -q 'confirmation did not match' "$WORK/out" \
+    && ok "died at the prompt, not past it" || bad "went past the prompt"
+[ -d "$WORK/repo/.release/6.1.0" ] && bad "a run dir exists — something ran" \
+                                   || ok "nothing ran"
+# Typing the inferred version is the whole ceremony.
+rc=$( ( cd "$WORK/repo" && RELEASE_STEPS_FILE="$WORK/steps.tbl" \
+        bash scripts/release.sh run <<< "6.1.0" ) >"$WORK/out" 2>&1; echo $? )
+eq "bare run + typed version completes"          75 "$rc"
+grep -q 'next minor after v6.0.0' "$WORK/out" \
+    && ok "narrated the inference" || bad "silent inference"
+eq "landed on 6.1.0" ok "$(status_of 6.1.0 one)"
+
 meta_check
 finish

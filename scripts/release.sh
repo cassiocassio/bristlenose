@@ -24,8 +24,11 @@
 #                                     bare = next minor after the last tag
 #   release.sh run [<X.Y.Z>] [--bump minor|patch|major] [--yes]
 #                                     version alone infers the bump; --bump
-#                                     alone infers the version; a resume needs
-#                                     neither (the run dir remembers its bump)
+#                                     alone infers the version; bare = next
+#                                     minor, and the confirm prompt is then
+#                                     mandatory (--yes cannot skip typing a
+#                                     version that was never given); a resume
+#                                     needs neither (the run dir remembers)
 #   release.sh verify [<X.Y.Z>] [--abandoned <X.Y.Z>]
 #                                     bare = the tree's version
 #   release.sh status
@@ -682,7 +685,7 @@ cmd_recover() {
 cmd_run() {
     V=""
     case "${1-}" in ""|-*) : ;; *) V="$1"; shift ;; esac
-    BUMP=""; ASSUME_YES=0; SKIP=""
+    BUMP=""; ASSUME_YES=0; SKIP=""; V_FULLY_INFERRED=0
     while [ $# -gt 0 ]; do
         case "$1" in
             --bump) [ $# -ge 2 ] || die "--bump needs a value"; BUMP="$2"; shift 2 ;;
@@ -739,9 +742,19 @@ cmd_run() {
             esac
         fi
     else
-        _hint=""
-        [ -n "$_tagbase" ] && _hint=" — next: $(next_version "$_tagbase" patch 2>/dev/null || echo '?') (patch) · $(next_version "$_tagbase" minor 2>/dev/null || echo '?') (minor)"
-        die "usage: release.sh run [<X.Y.Z>] [--bump minor|patch|major] — either alone will do$_hint"
+        # Bare `run` infers the next MINOR — the house bias ("does this add a
+        # capability?" is usually yes, and the 0.15.x line is what a patch
+        # habit looks like). The safety is not the flag, it is the
+        # confirmation prompt: the inferred version must pass through the
+        # human's fingers before anything runs. --yes does not skip typing a
+        # version that was never given.
+        [ -n "$_tagbase" ] || die "usage: release.sh run [<X.Y.Z>] [--bump minor|patch|major] — no tag to infer from"
+        BUMP=minor
+        V_FULLY_INFERRED=1
+        V="$(next_version "$_tagbase" "$BUMP")" \
+            || die "cannot compute the next minor from v$_tagbase — pass the version explicitly"
+        printf '  %brelease %s%b %b— next minor after v%s; --bump patch or a version to change%b\n' \
+            "$B" "$V" "$N" "$D" "$_tagbase" "$N"
     fi
     [ "$(verdict_version "$V")" = ok ] || die "refusing: unexpected version shape '$V'"
 
@@ -822,7 +835,12 @@ cmd_run() {
     printf '\n%bRelease %s%b  bump=%s\n' "$B" "$V" "$N" "$BUMP"
     printf '%b  the tag push publishes. Everything before it is abandonable.%b\n\n' "$D" "$N"
 
-    if [ "$ASSUME_YES" != "1" ]; then
+    # A fully inferred version must pass through the human's fingers: --yes
+    # cannot skip typing a version that was never given. (Headless, that read
+    # hits EOF, matches nothing, and dies — fail closed.) With a version or
+    # --bump on the command line the human already named the release, so
+    # --yes keeps its meaning there.
+    if [ "$ASSUME_YES" != "1" ] || [ "$V_FULLY_INFERRED" = 1 ]; then
         printf '  Type the version to confirm: '
         read -r typed
         [ "$typed" = "$V" ] || die "confirmation did not match, nothing done"

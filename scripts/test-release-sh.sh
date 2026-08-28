@@ -184,8 +184,15 @@ else bad "tier estimates identical ($e1 / $e2) — the filter is not applied to 
 case "$e1" in *m*) bad "estimate double-labels minutes ($e1)" ;; *) ok "estimate formatted as XhYY" ;; esac
 
 head_ "end to end"
-bash "$ROOT/scripts/release.sh" run >/dev/null 2>&1
-eq "run refuses with exit 2" 2 "$?"
+# Bare run now INFERS the next minor and prompts — the confirmation is
+# mandatory for a fully inferred version, so with stdin closed it must die
+# at the prompt having done nothing. Run in the sandbox (version-stable:
+# v0.0.1 → 0.1.0), and NEVER without </dev/null: with stdin open this read
+# blocks forever, which is how this very test hung the suite on 28 Aug 2026.
+( cd "$_PLANREPO" && bash scripts/release.sh run </dev/null >/dev/null 2>&1 )
+eq "bare run dies at the mandatory prompt" 2 "$?"
+[ -d "$_PLANREPO/.release/0.1.0" ] && bad "a declined bare run left a run dir" \
+                                   || ok "declined bare run left nothing"
 bash "$ROOT/scripts/release.sh" plan 0.28.O >/dev/null 2>&1
 eq "malformed version exit 2" 2 "$?"
 bash "$ROOT/scripts/release.sh" bogus >/dev/null 2>&1

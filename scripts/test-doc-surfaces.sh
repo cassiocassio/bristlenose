@@ -59,6 +59,22 @@ eq "in man only"                partial "$(verdict_flag --x 0 1 absent)"
 eq "in readme only"             partial "$(verdict_flag --x 1 0 absent)"
 eq "missing from website only"  partial "$(verdict_flag --x 1 1 0)"
 
+head_ "ANSI — a coloured CLI must still enumerate (the CI-only failure)"
+# GitHub Actions sets FORCE_COLOR, so Rich colours --help even off a tty, and
+# the escape lands BEFORE the leading spaces the enumeration anchors on. This
+# returned 0 subcommands on the first Linux run while passing locally, where
+# Rich renders plain. Asserted through the real gate, both ways round.
+_plain=$(BN_BIN="" bash -c '. "$0" 2>/dev/null' "$ROOT/scripts/check-doc-surfaces.sh" 2>/dev/null; \
+         "$ROOT/.venv/bin/bristlenose" --help 2>/dev/null | wc -l | tr -d ' ')
+_n_colour=$(FORCE_COLOR=1 "$ROOT/.venv/bin/bristlenose" --help 2>/dev/null \
+    | sed -e "s/$(printf '\033')\[[0-9;]*m//g" -e 's/[│┃┆┇┊┋|]/ /g' -e 's/[╭╮╰╯─━]//g' \
+    | sed -n '/Commands/,$p' | grep -oE '^ +[a-z][a-z-]+' | tr -d ' ' | sort -u | wc -l | tr -d ' ')
+[ "${_n_colour:-0}" -ge 5 ] \
+    && ok "coloured help still enumerates ($_n_colour subcommands)" \
+    || bad "coloured help enumerates only ${_n_colour:-0} — ANSI stripping regressed"
+FORCE_COLOR=1 bash "$ROOT/scripts/check-doc-surfaces.sh" >/dev/null 2>&1
+eq "the gate passes under FORCE_COLOR" 0 "$?"
+
 head_ "end-to-end — inject each real failure and assert it is caught"
 
 # Baseline must be clean, or the injections prove nothing.

@@ -75,7 +75,17 @@ BN="${BN_BIN:-$ROOT/.venv/bin/bristlenose}"
 # nothing, enumerated zero subcommands, and cheerfully reported "2 flags
 # checked" on a CLI with thirty — a gate that passes by seeing almost nothing.
 # Strip the box characters first, then anchor.
-strip_box() { sed -e 's/[│┃┆┇┊┋|]/ /g' -e 's/[╭╮╰╯─━]//g'; }
+# ...and strip ANSI first. Rich emits colour whenever FORCE_COLOR is set, which
+# GitHub Actions does, even though stdout is not a tty — so on CI every command
+# row arrives as "ESC[2m|ESC[0m ESC[1;36mrun". Replacing the box character then
+# leaves the ESCAPE, not a space, at the start of the line: the '^ +' anchor
+# below matches nothing and the enumeration returns EMPTY. The guard caught it
+# (0 subcommands, refuse) rather than passing on nothing, which is the only
+# reason this was a red job and not a silent green. NO_COLOR does not help —
+# FORCE_COLOR wins in Rich's precedence. printf builds the ESC because BSD sed
+# has no \x1b escape. Found on the first Linux run of these suites, 28 Aug 2026.
+_ESC=$(printf '\033')
+strip_box() { sed -e "s/${_ESC}\[[0-9;]*m//g" -e 's/[│┃┆┇┊┋|]/ /g' -e 's/[╭╮╰╯─━]//g'; }
 
 COMMANDS=$("$BN" --help 2>/dev/null | strip_box \
     | sed -n '/Commands/,$p' | grep -oE '^ +[a-z][a-z-]+' | tr -d ' ' | sort -u)

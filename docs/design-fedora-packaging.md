@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-08-27
-trued-against: HEAD on 2026-08-27
+last-trued: 2026-08-28
+trued-against: HEAD on 2026-08-28
 ---
 
 > **Truing status:** Current. Written alongside the implementation, from measurements
@@ -11,6 +11,16 @@ trued-against: HEAD on 2026-08-27
 
 ## Changelog
 
+- _2026-08-28_ — **the channel shipped**, and this doc's status block said the
+  opposite for a day. `cassiocassio/bristlenose` exists, build 10915225 succeeded
+  (`0.28.0-1`, `fedora-43-x86_64`) from the `v0.28.0` tag, `dnf copr enable` +
+  `dnf install` were proven on a clean F43 box *before* any public doc named the
+  Copr, and the flip landed in `bf3c8b48`. Trued: the status block, §7's "waits
+  on the next release", the held-out-of-`CHANNELS` block and the flip-script
+  paragraph — all four written in the future or negative tense about something
+  now done. The **arguments** behind them are preserved rather than deleted: the
+  recurring costs are still recurring, and the ordering constraint is still the
+  thing that makes this channel easy to get wrong.
 - _2026-08-27_ — created, then trued against the build it describes. Covers the Copr
   channel: the offline-build problem and the chosen answer, the `ffmpeg-free` codec
   verdict (a live question that turned out **not** to be a bug), the arch decision
@@ -34,13 +44,21 @@ trued-against: HEAD on 2026-08-27
 
 # Design: Fedora packaging via Copr
 
-Status: **implemented, proven on Copr's own builders, no production project.**
-A Copr build *has* run — an uploaded SRPM built green on `fedora-43-x86_64`, and
-`dnf copr enable` + `dnf install` worked from a clean box (§6) — but into an
-unlisted, auto-deleting **test** project. `cassiocassio/bristlenose` does not
-exist: `api_3/project` returns **404**, verified 27 Aug 2026. Nothing a user can
-install from is published, and the public install docs deliberately say nothing
-about Copr until it is (§7's ordering).
+Status: **LIVE since 28 Aug 2026.** `cassiocassio/bristlenose` serves
+`0.28.0-1` on `fedora-43-x86_64`, built from the `v0.28.0` tag with `Source0`
+from PyPI (build 10915225, succeeded in 11 minutes). §7's ordering was followed:
+the project was created, the build went green, and `dnf copr enable` +
+`dnf install` were proven on a clean Fedora 43 / Python 3.14.7 box — install
+marker reading `rpm`, `man -w` resolving to the **rpm-owned** page with no home
+copy, `ffmpeg-free-7.1.5` serving, both SPA halves present — and *only then* did
+INSTALL.md, README.md and the website name the Copr. Rebuilds are automatic:
+`trigger-copr` in `release.yml`, `needs: verify-pypi`. The throwaway test project
+used for the 27 Aug proving run was deleted the same day.
+
+The paragraph this replaced said the project did not exist and nothing was
+published. That was true when written and false a day later — kept in the
+changelog above rather than silently overwritten, because the gap between those
+two states is exactly what §7's ordering exists to manage.
 
 Sibling docs: `docs/design-doctor-and-snap.md` (the Snap channel, and the closest
 prior art for a Linux packaging decision), `docs/design-homebrew-packaging.md` (the
@@ -642,9 +660,11 @@ are the ones to hold onto:
 ### The ordering constraint — read before publishing
 
 The Copr builds `Source0` from **PyPI**, so it can only build a version PyPI already has.
-`%check` asserts both halves of the SPA, which means **it will refuse every release up to
+`%check` asserts both halves of the SPA, which means **it refused every release up to
 and including 0.27.0** — those have no export bundle (§2a). The first publishable build
-therefore waits on the next release.
+was therefore 0.28.0, and that is what shipped: build 10915225, 28 Aug 2026. The
+constraint is still live for every future release — the Copr can only ever build a
+version PyPI already has.
 
 Sequence, and it does not commute:
 
@@ -712,20 +732,26 @@ of which exists, and a job that warns on every release is noise rather than a ga
 **The probe *is* written**: `probe_copr` in `verify-channels.sh`, reading Copr's own
 unauthenticated API, with three cases pinned in `test-verify-channels.sh` — the correct
 version, a stale one, and a *failed* build (which must not read as shipped). It reports
-`unreachable` for a project that does not exist yet, which is honestly different from
+`unreachable` for a project that does not exist, which is honestly different from
 "built the wrong version".
 
-**But `copr` is deliberately held out of `CHANNELS`.** `rollup()` counts `unreachable` as
+**`copr` joined `CHANNELS` on 28 Aug 2026, in the flip commit (`bf3c8b48`); the row
+was green on its first appearance (`✓ 9 of 9`).** It was held out until then, and the
+reason is worth keeping because it governs the *next* channel too: `rollup()` counts `unreachable` as
 not-ok — unverified is not verified — so listing the channel before its first build fails
 every release verification in between, for a reason that is not a defect. `CLAUDE.md`:
 *a gate that cries wolf gets switched off, which is worse than no gate.* The tests enable
 `copr` in their own sandbox instead, so the probe is exercised and the switch is proven to
 work before anyone flips it.
 
-**Flip it in the same commit that creates the Copr project and lands its first green build.**
-That commit is: `copr` into `CHANNELS`, the `trigger-copr` job above, and the two secrets.
+**It was flipped in the same commit that recorded the project and its first green build**,
+as specified: `copr` into `CHANNELS`, the `trigger-copr` job above, and the two repo
+secrets (`COPR_LOGIN`, `COPR_TOKEN`), plus the five channel enumerations that had said
+three.
 
-**`rpm/flip-copr-channel.sh <X.Y.Z>` does the in-repo half, and refuses until it is true.**
+**`rpm/flip-copr-channel.sh <X.Y.Z>` did the in-repo half, and refused until it was true.**
+It ran clean on 28 Aug with all five preconditions green; before the project existed it
+stopped at precondition 2, which is the behaviour it was written for.
 Five preconditions, each one a reason the docs would otherwise lie: `copr` not already in
 `CHANNELS`; the Copr project returns 200 rather than 404; there is a **succeeded** build of
 *that* version; PyPI has the version (`Source0` comes from there, so a Copr build of a

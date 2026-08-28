@@ -61,7 +61,10 @@ fresh() {
     # release.sh sources project.conf; the sandbox needs it too, or every run
     # dies before the loop and 28 assertions fail for one missing file.
     cp "$ROOT/scripts/project.conf" "$WORK/repo/scripts/project.conf"
-    ( cd "$WORK/repo" && git init -q . && git commit -q --allow-empty -m init ) 2>/dev/null
+    ( cd "$WORK/repo" && git init -q . \
+      && git config user.email "suite@bristlenose.test" \
+      && git config user.name  "Release Suite" \
+      && git commit -q --allow-empty -m init ) 2>/dev/null
 }
 
 # ---------------------------------------------------------------------------

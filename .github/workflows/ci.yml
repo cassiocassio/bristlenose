@@ -186,10 +186,18 @@ jobs:
           python-version-file: '.tool-versions'
 
       - name: Install the CLI into the venv the gates expect
+        # [dev,serve] rather than bare `-e .`: the suites were written against
+        # the local venv, which has both. The smoke line is not decoration — it
+        # is the diagnostic for the one failure a base install produced on the
+        # first Linux run, where check-doc-surfaces.sh enumerated zero
+        # subcommands from `--help` and correctly refused rather than passing
+        # on an empty set.
         run: |
           python -m venv .venv
           .venv/bin/pip install --quiet --upgrade pip
-          .venv/bin/pip install --quiet -e .
+          .venv/bin/pip install --quiet -e ".[dev,serve]"
+          echo "--- bristlenose --help, as the doc gate sees it ---"
+          .venv/bin/bristlenose --help 2>&1 | sed -n '/Commands/,$p' | head -25
 
       - name: Run the release-chain suites
         # </dev/null on every suite: release.sh's bare `run` now prompts for a

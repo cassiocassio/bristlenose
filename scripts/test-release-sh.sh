@@ -12,6 +12,16 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 RELEASE_LIB=1 . "$ROOT/scripts/release.sh"
 
+# A manufactured repo configures its own identity. Git guesses one from the
+# hostname when none is set, and on a GitHub runner that guess yields
+# `fatal: empty ident name (for <runner@runnervm...>)` — every commit below
+# fails, and the failures cascade absurdly: `git rev-parse HEAD` on an unborn
+# branch prints the literal "HEAD", which then equals itself, so
+# verdict_tag_provenance reported `dirty` rather than anything true. 31 of 33
+# assertions in the first Linux run traced to this. macOS guesses a valid name
+# from the passwd record, which is why nulling the git config locally did not
+# reproduce it — the suites must not depend on ambient identity at all.
+
 head_ "verdict_version — a typo must not select a different release silently"
 eq "normal"                ok        "$(verdict_version 0.28.0)"
 eq "four-part"             ok        "$(verdict_version 0.28.0.1)"
@@ -70,7 +80,9 @@ eq "backwards is irregular" irregular "$(bump_kind 0.28.0 0.27.9)"
 
 head_ "verdict_tag_provenance — the verdict and the tag must name the same commit"
 _TP=$(mktemp -d)
-( cd "$_TP" && git init -q . && echo a > f && git add -A && git commit -qm one ) 2>/dev/null
+( cd "$_TP" && git init -q . \
+  && git config user.email "suite@bristlenose.test" && git config user.name "Release Suite" \
+  && echo a > f && git add -A && git commit -qm one ) 2>/dev/null
 CI_SHA_FILE="$_TP/ci-sha"
 eq "no recorded sha"        no-sha "$(cd "$_TP" && CI_SHA_FILE="$_TP/ci-sha" verdict_tag_provenance)"
 ( cd "$_TP" && git rev-parse HEAD > ci-sha )
@@ -164,6 +176,7 @@ mkdir -p "$_PLANREPO/scripts" "$_PLANREPO/bristlenose"
 cp "$ROOT/scripts/release.sh" "$_PLANREPO/scripts/"
 cp "$ROOT/scripts/project.conf" "$_PLANREPO/scripts/"
 ( cd "$_PLANREPO" && git init -q . \
+  && git config user.email "suite@bristlenose.test" && git config user.name "Release Suite" \
   && echo a > bristlenose/x && git add -A && git commit -qm base \
   && git tag v0.0.1 \
   && echo b > bristlenose/y && git add -A && git commit -qm ship ) 2>/dev/null
@@ -458,7 +471,9 @@ head_ "recover names the run it DIAGNOSED, not the newest one (F42)"
 _W=$(mktemp -d); trap 'rm -rf "$_W"' EXIT INT TERM
 mkdir -p "$_W/repo/scripts" "$_W/bin"
 cp "$ROOT/scripts/release.sh" "$ROOT/scripts/project.conf" "$_W/repo/scripts/"
-( cd "$_W/repo" && git init -q . && git commit -q --allow-empty -m init && git tag v1.0.0 ) 2>/dev/null
+( cd "$_W/repo" && git init -q . \
+  && git config user.email "suite@bristlenose.test" && git config user.name "Release Suite" \
+  && git commit -q --allow-empty -m init && git tag v1.0.0 ) 2>/dev/null
 # 111 is v1.0.0's run; 999 is a newer, unrelated one — what recency would pick.
 cat > "$_W/bin/gh" <<'GHSTUB'
 #!/bin/sh

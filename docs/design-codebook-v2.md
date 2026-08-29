@@ -1951,8 +1951,17 @@ precisely the state *On by default* would misdescribe.
 
 **Where it renders, and why that slot.** A framework's provenance is a person, so
 D19 gave the author its own line under the title. A built-in has no author, and
-that line sat empty. It is the right home for this: same slot, same treatment,
-one question answered — *where did this come from?*
+that line sat empty. It is the right home for this: same slot, one question
+answered — *where did this come from?*
+
+**Same slot, different treatment.** D19's weight was chosen for a **name**:
+Jakob Nielsen is better known than his heuristics, and the typography was
+supposed to say so — emphasis weight, full text colour. *On by default* is a
+system fact, and it must not borrow the celebrity treatment; dressing a
+configuration state as a cultural figure is a category error the eye catches
+immediately. The system answers revert to the pre-B rendering — **normal weight,
+muted colour** — so the slot reads as one question with two kinds of answer,
+which is what it is.
 
 This also closes a hole opened on 29 Aug. **Built in** was dropped from cards and
 pages on the reasoning that the rail's **Default** heading already says it — true

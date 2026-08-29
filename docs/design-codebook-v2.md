@@ -1952,9 +1952,9 @@ and no Review door.
 Still owed as drawings: **a codebook page whose counts are zero** (tags defined,
 but the run failed or has not finished — D24 settles that this is a *zero* state
 and not an error, and D26 distinguishes it from a tagless codebook, but neither
-says what it looks like); the knocked-back appearance of a
-disabled codebook's card; and the uninstall confirmation at Tier 2 rather
-than as a stub.
+says what it looks like), and the uninstall confirmation at Tier 2 rather than as
+a stub. ~~The knocked-back disabled card~~ — **settled by D27**: identical to
+the page, with the uninstall control exempt on both.
 
 **Long-content overflow on titles, author names and group subtitles is
 explicitly good enough for v2** (user, 30 Aug) — deferred by decision, not by
@@ -2123,3 +2123,37 @@ first gets this sentence.
 
 Verified by rendering: with a framework's groups emptied, the page emits the
 line and omits `#coveragebtn`.
+
+### D27 — one disabled treatment, two surfaces, and the uninstall stays reachable
+
+Settled 30 Aug. **The disabled card knocks back exactly as the disabled full page
+does, and it is still uninstallable.**
+
+Straightforward as a decision; the interesting part is what it found. The two
+treatments were **three** separate declarations that did not agree:
+
+| | text | knock-back |
+|---|---|---|
+| `.pageoff` (page) | muted | `opacity:.55; saturate(.4)` |
+| `.picker-card.off2` (card) | muted | `opacity:.45; saturate(.35)` |
+| `.picker-card.off` | muted | `opacity:.45; saturate(.35)` — **dead** |
+
+The page and card differed by a tenth in both values — visible when you put them
+on one screen, invisible when you look at either alone. And `.picker-card.off`
+was unreachable: the markup only ever emits `off2`. Editing it would have
+changed nothing while looking exactly like a fix.
+
+Now **one rule lists both surfaces**, on the page's numbers, because the page is
+the full treatment the card is meant to match. Two surfaces that must agree
+should not be able to disagree, which means one declaration and not two tidy
+ones.
+
+**The uninstall control is exempt on both.** The page already exempted
+`.pg-actions`; the card exempted nothing, so its toggle greyed with everything
+else. That contradicted the 29 Aug call that uninstall stays normal and active
+on a disabled codebook — the one control that must stay reachable is precisely
+the one a blanket knock-back takes away. Both surfaces now hold it at full
+opacity with its live hover.
+
+This is the same shape as the `.add-btn` and missing-`.bn-btn` findings earlier
+today: **the defect was never in the rule anyone was reading.**

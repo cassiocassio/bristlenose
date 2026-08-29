@@ -1849,3 +1849,62 @@ token, and `.add-btn.bn-btn-primary` restates the shipped primary's three
 declarations verbatim rather than inventing a fill. **This is a genuine gap in
 the atom, not a local workaround** — if v2 ships, the size axis belongs in
 `modal.css`, not in the mockup.
+## Fidelity map — what the prototype is, part by part
+
+Asked for on 30 Aug, and it is the thing a prototype most needs and least often
+has. Without it the artefact reads as a spec in every part, including the parts
+that are one afternoon old. Tiers are the house ones (sketch / system-true /
+native-true).
+
+### Definitive — Tier 2, build production code from this
+
+These are real markup, real tokens, and settled by a decision above. A build
+that disagrees with one of them is wrong, not different.
+
+| Part | Settled by | Note |
+|---|---|---|
+| Rail IA — three sections, installed-only | **D17** | Mirrors the shipped panel's IA, filtered |
+| The enable switch — platform control, our fallback, trailing, 26×15 | **D15, D16** | **Measured**, not designed. Receipts in `codebook-v2-parity.html` and `-rail.html` |
+| Zone-title row and the datum | *lifted* | `.section-heading` verbatim; the first-child `margin-top:0` rule is the cross-lens datum |
+| Codebook-page two-column geometry | user direction, 29 Aug | Description's right edge aligns to the graphic's; Install trails |
+| The graphic as a fixed-width gutter | **D13** | Definitive that the space is reserved and fixed-width. **Contents deliberately deferred** |
+| Author treatment | **D19** | Specimen B of six, chosen |
+| Browse-card structure | **D12** | |
+| Three shapes — floor / sentiment / framework | **D20** | Including: sentiment has no install control anywhere |
+| Lifted shipped components | CSS sweep, 29 Aug | `.tag-micro-bar`, `.badge`, group backgrounds, the floor's authoring apparatus. **Definitive as pointers to shipped code, not as re-specifications** — read the component, not the mockup |
+
+### Indicative — a direction, not a drawing to match
+
+| Part | Why it is only indicative |
+|---|---|
+| Button treatments | Changed **twice on 30 Aug**. The *hierarchy* is the direction — destination quiet and larger, page action primary, card action neutral. The classes are a proposal |
+| `.bn-btn-sm` / `.bn-btn-lg` | A **declared gap** in the atom, not an accepted addition. Per the fidelity contract a missing atom is a finding; this one is filed, not granted |
+| The Review door's split — verb button, counts on its baseline | Minutes old at the time of writing |
+| Navigation between codebooks when the rail is closed | Sketched; still open |
+| *Always on* on the sentiment card | Placeholder copy. Nobody has settled the string |
+| All interaction wiring | Tier 1 stubs — install flow, confirm dialog, drag gestures |
+| Fixture data | Throwaway, though shaped like the real payload |
+| The native chrome stand-in | A **labelled** static placeholder. Deliberately not a proposal |
+
+### Rejected — do not build from this at all
+
+**The threshold review page.** The user's call, 30 Aug: it stays a **modal, as it
+currently is**, and its detailed UX is not being reinvented. The prototype's
+version is a parody and is now banner-marked in the artefact and comment-marked
+in the source, rather than deleted, so the route still shows where the door goes.
+
+What survives from it is narrow and worth stating exactly: **that the door
+exists, where it sits, and that what it opens is read-only** (D18). The
+destination is the shipped `ThresholdReviewModal`.
+
+This also **qualifies D6** — "no modals in the codebook browsing surfaces". The
+threshold review is not a browsing surface; it is a focused task on one
+codebook's results, which is the case modals are for. D6 governs the rail, the
+browse page and the codebook page. It does not reach this.
+
+### Not drawn at all — coverage holes, named so they are not mistaken for decisions
+
+Empty states (no codebooks installed; a framework with zero tags); the
+knocked-back appearance of a disabled codebook's card; error and failed-job
+states; the uninstall confirmation at Tier 2 rather than as a stub; long-content
+overflow on titles, author names and group subtitles.

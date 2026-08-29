@@ -143,17 +143,12 @@ body {
 /* Add / Remove sit TOP-right in the tile corner and share ONE footprint
    (min-width + centred text) so the control column never shifts between states.
    Both neutral — Remove is reversible (re-add is free), so no red. */
-.add-btn { flex-shrink:0; align-self:flex-start; min-width:5.25rem; text-align:center; font:inherit; font-size:var(--bn-text-label); font-weight:490;
-  padding:.35rem .9rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
-  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
-.add-btn:hover { background:var(--bn-colour-hover); border-color:var(--bn-colour-accent); color:var(--bn-colour-accent); }
+/* .add-btn was an INVENTION, not a lift — it is defined nowhere in the shipped
+   tree. Removed 30 Aug; its three call sites now use the real shipped classes
+   .picker-card-toggle / .picker-card-toggle-uninstall / .framework-remove-btn. */
 /* Install on the codebook page is the page's main call to action, so it takes
    the shipped primary fill verbatim (theme/atoms/modal.css .bn-btn-primary).
    Normal size — the size does the work on Browse Library, the fill here. */
-.add-btn.bn-btn-primary { background:var(--bn-colour-accent); color:#fff; border-color:var(--bn-colour-accent); }
-.add-btn.bn-btn-primary:hover { opacity:.85; background:var(--bn-colour-accent); color:#fff; border-color:var(--bn-colour-accent); }
-.add-btn.removeable { color:var(--bn-colour-muted); }
-.add-btn.removeable:hover { color:var(--bn-colour-text); border-color:var(--bn-colour-border-hover); background:var(--bn-colour-hover); }
 .coming { flex-shrink:0; align-self:flex-start; font-size:var(--bn-text-badge); color:var(--bn-colour-muted); font-style:italic; }
 .tile-create { border:1px dashed var(--bn-colour-border); display:flex; align-items:center; justify-content:center; gap:.5rem;
   color:var(--bn-colour-muted); font-size:var(--bn-text-label); padding:1rem; cursor:pointer; }
@@ -441,6 +436,27 @@ input.enable[switch] { width:26px; height:15px; margin-top:.15em; }
    that rule and does not change the row height, because a 33.65px button fits
    inside the h1's 40.6px line box either way. So the keyline still lands at the
    same y as on every other lens, which is the invariant the atom protects. */
+/* ── Button atom — lifted VERBATIM from bristlenose/theme/atoms/modal.css ──
+   This base was missing until 30 Aug and six call sites rendered with UA-default
+   chrome: system font instead of Inter, square corners, an outset grey border.
+   The variants had been lifted without the atom they modify. */
+.bn-btn {
+    font-family: inherit;
+    font-size: var(--bn-text-label);
+    padding: 0.4rem 1rem;
+    border-radius: var(--bn-radius-md);
+    border: 1px solid var(--bn-colour-border);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
+}
+.bn-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Shipped, from theme/organisms/codebook-panel.css — the browse card's toggle and
+   the codebook page's uninstall. These replace the invented .add-btn. */
+.picker-card-toggle { min-width: 96px; justify-content: center; text-align: center; font-size: var(--bn-text-caption); }
+.picker-card-toggle-uninstall:hover { color: var(--bn-colour-negative); border-color: var(--bn-colour-negative); }
+.framework-remove-btn { font-size: var(--bn-text-caption); color: var(--bn-colour-muted);
+    border-color: var(--bn-colour-border); background: var(--bn-colour-bg); flex-shrink: 0; }
+.framework-remove-btn:hover { color: var(--bn-colour-negative); border-color: var(--bn-colour-negative); }
 .bn-btn-primary { background:var(--bn-colour-accent); color:#fff; border-color:var(--bn-colour-accent); }
 .bn-btn-primary:hover { opacity: 0.85; }
 .section-heading-action { align-self:flex-start; }
@@ -469,8 +485,10 @@ input.enable[switch] { width:26px; height:15px; margin-top:.15em; }
    dialog action: it wants presence without contrast, so it goes up a size and
    stays neutral. Purely dimensional — no new colour is introduced. */
 .bn-btn-lg { font-size:var(--bn-text-body); padding:.5rem 1.15rem; }
-.pg-review { margin-top:var(--bn-space-md); font-size:var(--bn-text-label); }
-.pg-review .undec { color:var(--bn-colour-muted); font-weight:var(--bn-weight-normal); }
+.bn-btn-sm { font-size:var(--bn-text-caption); padding:.25rem .7rem; }
+.pg-review-row { margin-top:var(--bn-space-md); display:flex; align-items:baseline; gap:.55rem; flex-wrap:wrap; }
+.pg-review-meta { font-size:var(--bn-text-label); color:var(--bn-colour-text); }
+.pg-review-meta .undec { color:var(--bn-colour-muted); font-weight:var(--bn-weight-normal); }
 
 /* ── Threshold review — READ-ONLY sliders ──────────────────────────────
    You are looking at the negative, not re-developing it. The histogram is the
@@ -848,8 +866,8 @@ function renderPage(){
   const stat = b.installed ? `${b.tags} tags on ${b.quotes} quotes` : `${b.tags} tags &middot; not installed`;
   const actions = !canInstall(b) ? ''
     : b.installed
-      ? '<button class="bn-btn add-btn removeable" id="uninstallbtn">Uninstall</button>'
-      : '<button class="bn-btn add-btn bn-btn-primary" id="installbtn">Install</button>';
+      ? '<button class="bn-btn framework-remove-btn" id="uninstallbtn">Uninstall</button>'
+      : '<button class="bn-btn bn-btn-primary" id="installbtn">Install</button>';
   $('#content').innerHTML = `<div class="contentinner">
    <section>
     <div class="section-heading"><h1>Codebook</h1><div class="section-heading-action"><button class="bn-btn bn-btn-secondary bn-btn-lg" id="browsedoor">Browse Library</button></div></div>
@@ -860,8 +878,8 @@ function renderPage(){
         <div class="pg-title">${esc(b.pageTitle||b.title)}${b.ver?` <span class="pg-author" style="font-size:var(--bn-text-badge)">v${b.ver}</span>`:''}</div>
         ${b.author?`<div class="pg-author">${esc(b.author)}</div>`:''}
         ${(b.installed && hasJob(b))
-          ? `<button class="bn-btn bn-btn-secondary pg-review" id="coveragebtn">Review ${b.tags} tags on ${b.quotes} quotes${
-              b.pending?` <span class="undec">&middot; ${b.pending} undecided</span>`:''}</button>`
+          ? `<div class="pg-review-row"><button class="bn-btn bn-btn-sm" id="coveragebtn">Review</button><span class="pg-review-meta">${b.tags} tags on ${b.quotes} quotes${
+              b.pending?` <span class="undec">&middot; ${b.pending} undecided</span>`:''}</span></div>`
           : `<div class="pg-stat">${b.installed?`${b.tags} tags on ${b.quotes} quotes`:stat}</div>`}
       </div>
       <div class="pg-gutter">${gutter(b,72)}</div>
@@ -907,6 +925,18 @@ function mergeTag(e,gi,ti){ e.preventDefault(); e.stopPropagation();
     b.groups[dragFrom.gi][1].splice(dragFrom.ti,1); }
   dragFrom=null; render(); }
 
+// ══ REJECTED 30 Aug — DO NOT BUILD FROM THIS ═══════════════════════════════
+// The user's call: "I am prepared for the histogram review to remain a modal as
+// it currently is — that feels right. We already have highly detailed UX for
+// this; we are not going to reinvent any of that. The prototype version you have
+// here is an unacceptable parody."
+//
+// What this prototype IS definitive about: that a Review door exists, that it
+// sits on the codebook page as a small button beside its counts, and that what
+// it opens is READ-ONLY (D18 — you are looking at the negative, not
+// re-developing it). What it opens is the EXISTING ThresholdReviewModal, not a
+// route and not this drawing. Kept, marked, rather than deleted, because the
+// route wiring still shows where the door leads.
 function renderReview(){
   const b=bk(sel), bins=histogram(b), lo=0.30, hi=0.70;
   const tot=bins.reduce((a,c)=>a+c,0);
@@ -920,6 +950,11 @@ function renderReview(){
    <section>
     <div class="section-heading"><h1>Review</h1>
       <div class="section-heading-action"><button class="bn-btn" id="revback">Back to ${esc(b.pageTitle||b.title)}</button></div></div>
+      <div style="border:2px dashed var(--bn-colour-negative); border-radius:var(--bn-radius-md); padding:.75rem 1rem; margin-bottom:1.25rem;
+                  font-size:var(--bn-text-label); color:var(--bn-colour-negative); background:var(--bn-colour-bg);">
+        <strong>Rejected \u2014 not a spec.</strong> The threshold review stays the <em>existing modal</em>, whose detailed UX we are not reinventing.
+        This page is a placeholder standing in for that modal so the Review door has somewhere to lead. Read the shipped
+        <code>ThresholdReviewModal</code>, never this.</div>
     <div class="pg-author" style="margin-bottom:var(--bn-space-lg)">${esc(b.title)} &middot; ${b.tags} tags on ${b.quotes} quotes${b.pending?` &middot; ${b.pending} undecided`:''}</div>
     <div class="hist">${bars}
       <div class="tmark" style="left:${lo*100}%"><span>lower ${lo.toFixed(2)}</span></div>
@@ -949,7 +984,7 @@ function renderBrowse(){
       ${b.author?`<div class="picker-card-author">${esc(b.author)}</div>`:''}</div></div>
     <div class="picker-card-desc">${esc(b.desc)}</div>
     <div class="footrow"><span class="statline">${b.installed?`${b.tags} tags on ${b.quotes} quotes`:'&nbsp;'}</span>
-      ${canInstall(b)?`<button class="bn-btn add-btn ${b.installed?'removeable':''} picker-card-toggle" data-act="${b.id}">${b.installed?'Uninstall':'Install'}</button>`:`<span class="statline">Always on</span>`}</div>
+      ${canInstall(b)?`<button class="bn-btn picker-card-toggle ${b.installed?'picker-card-toggle-uninstall':''}" data-act="${b.id}">${b.installed?'Uninstall':'Install'}</button>`:`<span class="statline">Always on</span>`}</div>
   </div>`;
   $('#content').innerHTML = `<div class="contentinner">
    <section>

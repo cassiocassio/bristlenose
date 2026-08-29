@@ -15,6 +15,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.engine import Engine
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
@@ -291,7 +292,7 @@ def create_app(
     if project_dir is not None:
         _import_on_startup(session_factory, project_dir)
         _reconcile_orphaned_autocode_jobs(session_factory)
-        _install_event_watcher(app, session_factory, project_dir)
+        _install_event_watcher(app, session_factory, project_dir, engine=engine)
 
     # Serve the React islands bundle (built by Vite).
     # In HMR mode the Vite dev server handles these.
@@ -900,6 +901,7 @@ def _make_run_completed_handler(
     app: FastAPI,
     session_factory: object,
     project_dir: Path,
+    engine: Engine | None = None,
 ):
     """Build the watcher callback: re-import THEN publish ``last_run``.
 
@@ -908,11 +910,27 @@ def _make_run_completed_handler(
     server lifecycle. SPA polling is keyed off ``run_id``; flipping the
     key before the DB is fresh would race the refetch and show stale or
     empty data.
+
+    ``engine`` (when given) lets the re-import heal a database whose file
+    the run deleted — see ``ensure_schema``.
     """
     from bristlenose.events import RunCompletedEvent
+    from bristlenose.server.db import ensure_schema
     from bristlenose.server.importer import import_project
 
     def _reimport_sync() -> None:
+        # `run --clean` rmtrees the output dir — database included — under
+        # the live serve, leaving the pool pinned to a deleted inode and the
+        # on-disk path holding a fresh, schema-less file. Heal before
+        # importing, or the import (and every request after it) dies on
+        # "no such table" until the server restarts.
+        if engine is not None:
+            try:
+                ensure_schema(engine)
+            except Exception:
+                logger.exception(
+                    "Schema heal before re-import failed for %s", project_dir,
+                )
         db = session_factory()  # type: ignore[operator]
         try:
             import_project(db, project_dir)
@@ -952,6 +970,7 @@ def _install_event_watcher(
     app: FastAPI,
     session_factory: object,
     project_dir: Path,
+    engine: Engine | None = None,
 ) -> None:
     """Tail ``pipeline-events.jsonl`` and re-import on ``run_completed``.
 
@@ -1004,7 +1023,7 @@ def _install_event_watcher(
                 break
 
     _on_run_completed = _make_run_completed_handler(
-        app, session_factory, project_dir,
+        app, session_factory, project_dir, engine=engine,
     )
 
     @asynccontextmanager

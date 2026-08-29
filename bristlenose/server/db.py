@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Generator
 from pathlib import Path
 
@@ -9,6 +10,8 @@ from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
+
+logger = logging.getLogger(__name__)
 
 _CONFIG_DIR = Path("~/.config/bristlenose").expanduser()
 
@@ -151,6 +154,32 @@ def init_db(engine: Engine) -> None:
 
     Base.metadata.create_all(bind=engine)
     run_migrations(engine)
+
+
+def ensure_schema(engine: Engine) -> None:
+    """Reattach the engine to the file on disk and re-create a lost schema.
+
+    ``run --clean`` deletes the whole output directory — the database
+    included — while a serve may hold pooled connections to it. Those
+    connections pin the deleted inode, and every NEW connection opens the
+    fresh, empty file the next writer creates: no tables, so every request
+    500s with "no such table" until the server restarts (project-ikea,
+    29 Aug 2026). Disposing the pool reattaches the engine to whatever is on
+    disk now; if that file has no schema, create it. When the file was never
+    replaced this is a no-op beyond one pool recycle.
+
+    In-memory engines are left untouched: there is no file to replace, and
+    disposing a ``StaticPool`` connection would erase the database itself.
+    """
+    if engine.url.database in (None, "", ":memory:"):
+        return
+    engine.dispose()
+    if not inspect(engine).get_table_names():
+        logger.warning(
+            "Database file was replaced under the running server — "
+            "re-creating schema at %s", engine.url.database,
+        )
+        init_db(engine)
 
 
 def get_db(engine: Engine) -> Generator[Session, None, None]:

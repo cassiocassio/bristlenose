@@ -12,10 +12,12 @@ from __future__ import annotations
 import asyncio
 import threading
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import inspect
 
 from bristlenose.events import (
     KindEnum,
@@ -27,6 +29,13 @@ from bristlenose.events import (
     new_run_id,
 )
 from bristlenose.server.app import _make_run_completed_handler, create_app
+from bristlenose.server.db import (
+    create_session_factory,
+    ensure_schema,
+    get_engine,
+    init_db,
+)
+from bristlenose.server.models import Project
 from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
@@ -290,5 +299,114 @@ async def test_watcher_populates_last_run_on_new_run_completed(
     # And the endpoint mirrors it.
     resp = AuthTestClient(app).get("/api/projects/1/last-run")
     assert resp.json()["run_id"] == rid
+
+
+# ---------------------------------------------------------------------------
+# Schema heal: `run --clean` deletes the DB file under the live serve
+# ---------------------------------------------------------------------------
+
+
+class TestSchemaHealAfterClean:
+    """``run --clean`` rmtrees the output dir — the SQLite DB included — while
+    the serve holds pooled connections to it. The pool pins the deleted inode;
+    every NEW connection opens the fresh, schema-less file the next writer
+    creates, and every request 500s with "no such table" until restart
+    (project-ikea, 29 Aug 2026). ``ensure_schema`` is the heal; the
+    run_completed handler applies it before re-importing.
+    """
+
+    def _file_engine(self, tmp_path: Path):
+        db_path = tmp_path / "out" / ".bristlenose" / "bristlenose.db"
+        db_path.parent.mkdir(parents=True)
+        engine = get_engine(f"sqlite:///{db_path}")
+        init_db(engine)
+        return engine, db_path
+
+    @staticmethod
+    def _add_project(factory: Any) -> None:
+        db = factory()
+        try:
+            db.add(Project(name="x", input_dir="/tmp/in", output_dir="/tmp/out"))
+            db.commit()
+        finally:
+            db.close()
+
+    def test_recreates_schema_when_db_file_replaced(self, tmp_path: Path) -> None:
+        engine, db_path = self._file_engine(tmp_path)
+        held = engine.connect()  # the serve's pooled connection, pinning the inode
+        try:
+            for p in db_path.parent.glob("bristlenose.db*"):
+                p.unlink()
+            ensure_schema(engine)
+            assert "projects" in inspect(engine).get_table_names(), (
+                "fresh connections still see a schema-less replacement file"
+            )
+        finally:
+            held.close()
+
+    def test_noop_preserves_data_when_file_untouched(self, tmp_path: Path) -> None:
+        engine, _ = self._file_engine(tmp_path)
+        factory = create_session_factory(engine)
+        self._add_project(factory)
+
+        ensure_schema(engine)
+
+        db = factory()
+        try:
+            assert db.query(Project).count() == 1
+        finally:
+            db.close()
+
+    def test_inmemory_engine_left_untouched(self) -> None:
+        """Disposing a StaticPool ``sqlite://`` erases the whole DB — the
+        in-memory guard exists so test apps survive the heal."""
+        engine = get_engine("sqlite://")
+        init_db(engine)
+        factory = create_session_factory(engine)
+        self._add_project(factory)
+
+        ensure_schema(engine)
+
+        db = factory()
+        try:
+            assert db.query(Project).count() == 1
+        finally:
+            db.close()
+
+    @pytest.mark.asyncio
+    async def test_handler_heals_replaced_db_before_reimport(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """End to end through the handler: delete the DB file mid-serve, fire
+        run_completed, and the re-import lands in a re-created schema instead
+        of dying on "no such table"."""
+        project_dir = _seed_project(tmp_path)
+        engine, db_path = self._file_engine(tmp_path)
+        factory = create_session_factory(engine)
+
+        async def fake_reapply(_factory: Any, _pid: int, _settings: Any) -> dict:
+            return {}
+
+        monkeypatch.setattr(
+            "bristlenose.server.autocode.reapply_active_frameworks", fake_reapply,
+        )
+
+        app = SimpleNamespace(
+            state=SimpleNamespace(last_run={}, settings=object(), db_factory=factory),
+        )
+        handler = _make_run_completed_handler(
+            app, factory, project_dir, engine=engine,  # type: ignore[arg-type]
+        )
+
+        held = engine.connect()  # the pooled connection pinning the old inode
+        try:
+            for p in db_path.parent.glob("bristlenose.db*"):
+                p.unlink()
+            await handler(_completed(new_run_id()))
+        finally:
+            held.close()
+
+        assert "projects" in inspect(engine).get_table_names()
+        assert app.state.last_run[1]["outcome"] == "completed"
 
 

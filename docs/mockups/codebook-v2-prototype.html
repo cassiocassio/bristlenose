@@ -834,7 +834,14 @@ function renderRail(){
       ${b.pending?`<span class="pcount">${b.pending}</span>`:''}
       ${enableControl(b)}
     </div>`;
-  const sect = (label, arr) => arr.length ? `<div class="sb-h">${label}</div>${arr.map(row).join('')}` : '';
+  // The heading stays when the section is empty. A researcher with no frameworks
+  // installed still needs to learn that frameworks are a thing and that this is
+  // where they will appear — a section that vanishes teaches nothing, and reads
+  // as though the category does not exist. Only Frameworks can actually be empty
+  // (the floor is always one row, and Default always holds sentiment, which D20
+  // makes uninstallable), but all three are unconditional so the rule has no
+  // exceptions to remember.
+  const sect = (label, arr) => `<div class="sb-h">${label}</div>${arr.map(row).join('')}`;
   $('#rail').innerHTML =
     sect('Manual tags', floor) + sect('Default', builtIn) + sect('Frameworks', frameworks)
     ;

@@ -1941,10 +1941,15 @@ browse page and the codebook page. It does not reach this.
 
 ### Not drawn at all — coverage holes, named so they are not mistaken for decisions
 
-Empty states (no codebooks installed; a framework with zero tags); the
-knocked-back appearance of a disabled codebook's card; error and failed-job
-states; the uninstall confirmation at Tier 2 rather than as a stub; long-content
-overflow on titles, author names and group subtitles.
+~~Empty states (no codebooks installed)~~ — **settled by D25**: the heading
+stays, the list is empty. ~~Error and failed-job states~~ — **settled by D24**:
+they are not on this surface at all.
+
+Still owed as drawings: **a codebook page whose counts are zero** (installed but
+the run failed or has not finished — D24 settles that this is a *zero* state and
+not an error, but not what it looks like); the knocked-back appearance of a
+disabled codebook's card; the uninstall confirmation at Tier 2 rather than as a
+stub; and long-content overflow on titles, author names and group subtitles.
 
 
 ### D23 — the author slot carries provenance, and built-ins have provenance too
@@ -2029,3 +2034,35 @@ is durable; the event stream stays where event streams live.
 not an inconsistency — it is the house rule that a shared taxonomy renders native
 per surface. The desktop's chrome vocabulary rules out transient toasts; the web
 surface has no sidebar row to write to.
+
+### D25 — an empty section keeps its heading
+
+Settled 30 Aug. With no frameworks installed the rail still shows the
+**Frameworks** heading, with nothing under it.
+
+The prototype had the opposite — `sect()` returned `''` for an empty array, so
+the section vanished. That teaches the researcher nothing: a heading that is
+absent does not read as *empty*, it reads as *this category does not exist*. The
+heading is the thing that says frameworks are a concept and this is where yours
+will appear. Same reason Mail keeps a mailbox in the sidebar when it has no
+messages.
+
+Only **Frameworks** can actually be empty — the floor is always exactly one row,
+and Default always holds sentiment, which D20 made uninstallable. All three
+headings are nonetheless unconditional, so the rule has no exception to remember
+and no special case to get wrong later.
+
+**It pairs with D22 rather than needing anything added.** The empty heading says
+*frameworks go here*; Browse Library, which D22 made the unconditional route to
+the catalogue, says *and here is where you get one*. The first-run rail is
+therefore self-explaining without a single line of instructional copy.
+
+**On the name.** Raised as a question — *Library? FRAMEWORKS?* — and the answer
+is **Frameworks**, per D17. The rail lists what you **have**; the Library is
+where you **get** things, and it is already the name of the browse page
+(*Codebook Library*). Calling the rail section Library would make an empty one
+look like a broken catalogue rather than an empty shelf, and would leave the
+browse page needing a different name.
+
+Verified by rendering: with every framework uninstalled the rail emits
+`["Manual tags", "Default", "Frameworks"]` and three rows.

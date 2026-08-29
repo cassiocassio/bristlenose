@@ -984,7 +984,7 @@ function renderBrowse(){
       ${b.author?`<div class="picker-card-author">${esc(b.author)}</div>`:''}</div></div>
     <div class="picker-card-desc">${esc(b.desc)}</div>
     <div class="footrow"><span class="statline">${b.installed?`${b.tags} tags on ${b.quotes} quotes`:'&nbsp;'}</span>
-      ${canInstall(b)?`<button class="bn-btn picker-card-toggle ${b.installed?'picker-card-toggle-uninstall':''}" data-act="${b.id}">${b.installed?'Uninstall':'Install'}</button>`:`<span class="statline">Always on</span>`}</div>
+      ${canInstall(b)?`<button class="bn-btn picker-card-toggle ${b.installed?'picker-card-toggle-uninstall':''}" data-act="${b.id}">${b.installed?'Uninstall':'Install'}</button>`:`<span class="statline">On by default</span>`}</div>
   </div>`;
   $('#content').innerHTML = `<div class="contentinner">
    <section>

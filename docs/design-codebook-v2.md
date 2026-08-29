@@ -1895,6 +1895,7 @@ that disagrees with one of them is wrong, not different.
 | Browse-card structure | **D12** | |
 | Three shapes — floor / sentiment / framework | **D20** | Including: sentiment has no install control anywhere |
 | Navigation between codebooks | **D22** | Rail row, or Browse Library. No arrows, no traversal — Browse Library carries it when the rail is closed |
+| *On by default* on the sentiment card | **D23** | Settled 30 Aug. *Always on* was not merely placeholder copy — it was **false**: it denies the enable toggle sitting in the rail beside it. *On by default* states the two true things at once — it arrives on, and it can be turned off |
 | Lifted shipped components | CSS sweep, 29 Aug | `.tag-micro-bar`, `.badge`, group backgrounds, the floor's authoring apparatus. **Definitive as pointers to shipped code, not as re-specifications** — read the component, not the mockup |
 
 ### Indicative — a direction, not a drawing to match
@@ -1904,7 +1905,6 @@ that disagrees with one of them is wrong, not different.
 | Button treatments | Changed **twice on 30 Aug**. The *hierarchy* is the direction — destination quiet and larger, page action primary, card action neutral. The classes are a proposal |
 | `.bn-btn-sm` / `.bn-btn-lg` | A **declared gap** in the atom, not an accepted addition. Per the fidelity contract a missing atom is a finding; this one is filed, not granted |
 | The Review door's split — verb button, counts on its baseline | Minutes old at the time of writing |
-| *Always on* on the sentiment card | Placeholder copy. Nobody has settled the string |
 | All interaction wiring | Tier 1 stubs — install flow, confirm dialog, drag gestures |
 | Fixture data | Throwaway, though shaped like the real payload |
 | The native chrome stand-in | A **labelled** static placeholder. Deliberately not a proposal |

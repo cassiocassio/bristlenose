@@ -778,6 +778,15 @@ const groupBg = set => `var(--bn-group-${set||'ux'})`;
 // control anywhere — the defect closes by removing the affordance, not by
 // patching the endpoint.
 const canInstall = b => !b.floor && b.id !== 'sentiment';
+// Provenance line. A framework's provenance is a person (D19); a built-in has no
+// author, so the slot sat empty. It carries the fact the rail's "Default" heading
+// carries — which the browse grid, being flat, cannot (the reason "Built in" was
+// dropped from cards on 29 Aug left this hole). Two built-in kinds, two truths:
+// sentiment arrives applied and cannot be installed; the others ship with the
+// product but are yours to install and enable.
+const provenance = b => b.author ? esc(b.author)
+  : !b.builtin || b.floor ? ''
+  : b.id === 'sentiment' ? 'On by default' : 'Available by default';
 const hasJob = b => !b.floor && b.id !== 'sentiment';
 
 let view='page', sel='nielsen', railShut=false, pendingAction=null;
@@ -876,7 +885,7 @@ function renderPage(){
      <div class="pg-headmain">
       <div class="pg-meta">
         <div class="pg-title">${esc(b.pageTitle||b.title)}${b.ver?` <span class="pg-author" style="font-size:var(--bn-text-badge)">v${b.ver}</span>`:''}</div>
-        ${b.author?`<div class="pg-author">${esc(b.author)}</div>`:''}
+        ${provenance(b)?`<div class="pg-author">${provenance(b)}</div>`:''}
         ${(b.installed && hasJob(b))
           ? `<div class="pg-review-row"><button class="bn-btn bn-btn-sm" id="coveragebtn">Review</button><span class="pg-review-meta">${b.tags} tags on ${b.quotes} quotes${
               b.pending?` <span class="undec">&middot; ${b.pending} undecided</span>`:''}</span></div>`
@@ -981,10 +990,10 @@ function renderBrowse(){
   const card = b=>`<div class="picker-card ${b.installed&&!b.on?'off2':''}" data-open="${b.id}">
     <div class="cardhead">${gutter(b,44)}<div class="picker-card-body">
       <div class="picker-card-title">${esc(b.title)}${b.ver?` <span class="statline">v${b.ver}</span>`:''}</div>
-      ${b.author?`<div class="picker-card-author">${esc(b.author)}</div>`:''}</div></div>
+      ${provenance(b)?`<div class="picker-card-author">${provenance(b)}</div>`:''}</div></div>
     <div class="picker-card-desc">${esc(b.desc)}</div>
     <div class="footrow"><span class="statline">${b.installed?`${b.tags} tags on ${b.quotes} quotes`:'&nbsp;'}</span>
-      ${canInstall(b)?`<button class="bn-btn picker-card-toggle ${b.installed?'picker-card-toggle-uninstall':''}" data-act="${b.id}">${b.installed?'Uninstall':'Install'}</button>`:`<span class="statline">On by default</span>`}</div>
+      ${canInstall(b)?`<button class="bn-btn picker-card-toggle ${b.installed?'picker-card-toggle-uninstall':''}" data-act="${b.id}">${b.installed?'Uninstall':'Install'}</button>`:`<span class="statline">&nbsp;</span>`}</div>
   </div>`;
   $('#content').innerHTML = `<div class="contentinner">
    <section>

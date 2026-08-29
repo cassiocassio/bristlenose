@@ -1895,7 +1895,7 @@ that disagrees with one of them is wrong, not different.
 | Browse-card structure | **D12** | |
 | Three shapes — floor / sentiment / framework | **D20** | Including: sentiment has no install control anywhere |
 | Navigation between codebooks | **D22** | Rail row, or Browse Library. No arrows, no traversal — Browse Library carries it when the rail is closed |
-| *On by default* on the sentiment card | **D23** | Settled 30 Aug. *Always on* was not merely placeholder copy — it was **false**: it denies the enable toggle sitting in the rail beside it. *On by default* states the two true things at once — it arrives on, and it can be turned off |
+| The provenance line | **D23** | Settled 30 Aug. The author slot carries provenance: a person for a framework, and for a built-in the fact that it shipped with us. *On by default* for sentiment, *Available by default* for the rest. See below |
 | Lifted shipped components | CSS sweep, 29 Aug | `.tag-micro-bar`, `.badge`, group backgrounds, the floor's authoring apparatus. **Definitive as pointers to shipped code, not as re-specifications** — read the component, not the mockup |
 
 ### Indicative — a direction, not a drawing to match
@@ -1931,3 +1931,31 @@ Empty states (no codebooks installed; a framework with zero tags); the
 knocked-back appearance of a disabled codebook's card; error and failed-job
 states; the uninstall confirmation at Tier 2 rather than as a stub; long-content
 overflow on titles, author names and group subtitles.
+
+
+### D23 — the author slot carries provenance, and built-ins have provenance too
+
+Settled 30 Aug, in two passes, and the second corrected an error in the first.
+
+**The string on sentiment was wrong, not merely provisional.** *Always on* denies
+the enable toggle sitting in the rail beside it — it would have told a researcher
+that a codebook they can switch off cannot be switched off. **On by default**
+states both true things at once: it arrives on, and it can be turned off.
+
+**And it does not generalise to the other built-ins.** The Bristlenose UXR
+Codebook and Command-Line UX ship with the product but are **not** applied on
+arrival — the user installs and enables them like any framework. Their truth is
+**Available by default**: you did not have to go and find it, and it is still
+yours to turn on. In the fixture, UXR is installed and *disabled*, which is
+precisely the state *On by default* would misdescribe.
+
+**Where it renders, and why that slot.** A framework's provenance is a person, so
+D19 gave the author its own line under the title. A built-in has no author, and
+that line sat empty. It is the right home for this: same slot, same treatment,
+one question answered — *where did this come from?*
+
+This also closes a hole opened on 29 Aug. **Built in** was dropped from cards and
+pages on the reasoning that the rail's **Default** heading already says it — true
+in the rail, and false on the browse page, **which is a flat grid with no
+headings at all**. A built-in's card had no way to say what it was. The
+provenance line restores that without bringing back a badge.

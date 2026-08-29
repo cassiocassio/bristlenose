@@ -1,0 +1,526 @@
+<title>Codebook Messages</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  /* group tints (tokens.css) — shared across palettes */
+/* Full codebook palette — every slot of every set, plus the GROUP background
+   family, lifted verbatim from tokens.css. Earlier drafts of this file inlined
+   only slot 1 of each set and no group backgrounds at all. */
+  --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+  --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+  --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+  --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+  --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+  --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+  --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+  --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+  --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+  --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+  --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+  --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+  --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+  --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+  --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+  --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+  --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+  --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+  --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+  --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+  --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+  --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+  --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+  --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+  --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+  --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+  --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+  --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+  --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+  --bn-group-ux: light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+  --bn-group-emo: light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+  --bn-group-task: light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+  --bn-group-trust: light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+  --bn-group-opp: light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+  --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+
+/* Verbatim from bristlenose/theme/colors/palette-default.css + tokens.css —
+   the token block above came from the prototype and does not carry these two. */
+:root { --bn-colour-negative: light-dark(#dc2626, #ef4444);
+        --bn-colour-keyline: var(--bn-colour-border); }
+body { font-family:var(--bn-font-body); background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  margin:0; padding:2.5rem 2rem 6rem; font-size:var(--bn-text-body); }
+.wrap { max-width:1180px; margin:0 auto; }
+h1 { font-size:var(--bn-text-display); font-weight:var(--bn-weight-strong); letter-spacing:-.01em; margin:0 0 .35rem; }
+.sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin-bottom:2rem; max-width:60ch; line-height:1.5; }
+h2 { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-strong); margin:2.75rem 0 .3rem;
+  padding-bottom:.4rem; border-bottom:1px solid var(--bn-colour-keyline); }
+.h2sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:.5rem 0 1.25rem; max-width:70ch; line-height:1.5; }
+.key { display:flex; gap:1.5rem; flex-wrap:wrap; padding:.75rem 1rem; border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-md); margin-bottom:2rem; font-size:var(--bn-text-caption); }
+.key b { font-weight:var(--bn-weight-emphasis); }
+.msg { display:grid; grid-template-columns:2.5rem 15rem 1fr 1fr; gap:1.25rem; align-items:start;
+  padding:1.1rem 0; border-top:1px solid var(--bn-colour-keyline); }
+.msg-id { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); padding-top:1.35rem; }
+.cond { font-size:var(--bn-text-label); line-height:1.45; }
+.kindtag { display:inline-block; margin-top:.4rem; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  padding:.1rem .4rem; border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg); color:var(--bn-colour-muted); }
+.mini-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  text-transform:uppercase; letter-spacing:.04em; margin-bottom:.45rem; }
+.count { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); margin-top:.4rem; }
+.count.over { color:var(--bn-colour-negative); font-weight:var(--bn-weight-emphasis); }
+.msg-note { grid-column:2 / -1; font-size:var(--bn-text-caption); color:var(--bn-colour-muted);
+  line-height:1.5; padding-left:0; margin-top:-.35rem; }
+/* ── SPA toast: the SHIPPED .autocode-toast, verbatim ────────────────── */
+.autocode-toast { position:static; background:var(--bn-colour-text); color:var(--bn-colour-bg);
+  padding:0.6rem 1rem; border-radius:var(--bn-radius-lg); font-size:var(--bn-text-label);
+  display:flex; align-items:center; gap:0.5rem; box-shadow:0 4px 20px rgba(0,0,0,.25); font-family:var(--bn-font-body); }
+.toast-content { display:flex; flex-direction:column; gap:0.3rem; flex:1; min-width:0; }
+.toast-progress-track { width:100%; height:3px; background:rgba(255,255,255,.15); border-radius:2px; overflow:hidden; }
+.toast-progress-fill { height:100%; background:#60a5fa; border-radius:2px; }
+.toast-link { color:#60a5fa; text-decoration:none; font-weight:var(--bn-weight-emphasis); margin-left:.3rem; cursor:pointer; }
+.toast-close { color:rgba(255,255,255,.4); margin-left:.3rem; }
+.toast-spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.2); border-top-color:#60a5fa;
+  border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.tglyph { font-weight:var(--bn-weight-strong); flex-shrink:0; }
+/* THE SEMANTIC COLOURS ARE A PALETTE GAP — see the findings block.
+   --bn-colour-danger is a misspelling of --bn-colour-negative, which exists;
+   --bn-colour-success and --bn-colour-warning have no counterpart at all. The
+   literals below are the ones already pasted as fallbacks elsewhere in the
+   shipped theme, borrowed rather than invented, and marked so nobody promotes
+   them to tokens without deciding the palette question first. */
+:root { --gap-success:#22c55e; --gap-warning:#f59e0b; }
+.t-success { color:var(--gap-success); }
+.t-error   { color:var(--bn-colour-negative); }
+/* the three it does not — same five-kind vocabulary, no new colours */
+.t-warning { color:var(--gap-warning); }
+.t-info    { color:#60a5fa; }
+.t-skipped { color:rgba(255,255,255,.45); }
+/* ── macOS project sidebar row ───────────────────────────────────────── */
+.mac-row { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  padding:.5rem .7rem; background:var(--bn-colour-bg); }
+.mac-name { font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); }
+.mac-status { display:flex; align-items:baseline; gap:.4rem; margin-top:.15rem;
+  font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.mac-none { font-style:italic; opacity:.7; }
+.mglyph { font-weight:var(--bn-weight-strong); font-size:var(--bn-text-caption); }
+.m-success { color:var(--gap-success); } .m-error { color:var(--bn-colour-negative); }
+.m-warning { color:var(--gap-warning); } .m-info { color:var(--bn-colour-accent); }
+.m-skipped { color:var(--bn-colour-muted); }
+.mspin { width:9px; height:9px; border:2px solid var(--bn-colour-border); border-top-color:var(--bn-colour-accent);
+  border-radius:50%; animation:spin .8s linear infinite; display:inline-block; }
+.pop-row { display:flex; align-items:baseline; gap:.5rem; margin-top:.5rem; padding:.4rem .6rem;
+  border:1px solid var(--bn-colour-keyline); border-radius:var(--bn-radius-sm); font-size:var(--bn-text-caption); }
+.pop-label { font-weight:var(--bn-weight-emphasis); }
+.pop-cause { color:var(--bn-colour-muted); }
+.pop-none { margin-top:.5rem; font-size:var(--bn-text-micro); color:var(--bn-colour-muted); font-style:italic; }
+/* ── Commentary: deliberately not-the-product ────────────────────────── */
+.commentary { margin-top:1.5rem; padding:1.1rem 1.25rem; border-left:3px solid var(--bn-colour-muted);
+  background:repeating-linear-gradient(45deg, transparent, transparent 6px,
+    color-mix(in srgb, var(--bn-colour-muted) 5%, transparent) 6px,
+    color-mix(in srgb, var(--bn-colour-muted) 5%, transparent) 12px);
+  font-size:var(--bn-text-label); line-height:1.55; }
+.commentary .clabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase;
+  letter-spacing:.06em; color:var(--bn-colour-muted); display:block; margin-bottom:.5rem; }
+.commentary p { margin:0 0 .7rem; } .commentary p:last-child { margin-bottom:0; }
+code { font-family:var(--bn-font-mono); font-size:.9em; background:var(--bn-colour-badge-bg); padding:.05em .3em; border-radius:3px; }
+</style>
+<div class="wrap">
+<h1>Codebook messages</h1>
+<div class="sub">Every message the install-and-autotag path can produce, in the two renderings that carry it:
+the SPA toast and the macOS project-sidebar row. No new glyphs, no new colours, no new surfaces &mdash;
+the five kinds from <code>bristlenose/ui_kinds.py</code>, the shipped <code>.autocode-toast</code>, and the
+existing sidebar status line and popover.</div>
+
+<div class="key">
+  <span><b>Artefact</b> &mdash; the toast and sidebar renderings are real pixels.</span>
+  <span><b>Commentary</b> &mdash; hatched blocks. Not the product.</span>
+  <span><b>Budgets</b> &mdash; toast 60 chars, cause label 40, pill 28.</span>
+</div>
+
+<h2>Pre-flight &mdash; the install is refused, nothing is spent</h2>
+<div class="h2sub">These fire on the click, before a job exists. Under D4 the researcher performed one act
+&mdash; <em>get and do</em> &mdash; so a refusal must explain which half could not happen. Three of the seven
+have no job to attach to on the Mac, which is a finding rather than a design: see the commentary below.</div>
+<div class="msg">
+  <div class="msg-id">P1</div>
+  <div class="msg-cond"><div class="cond">503 — no API key for the current provider</div><div class="kindtag k-error">✗ error</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-error">✗</span><div class="toast-content"><span>Add an API key in Settings to autotag.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">38 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-error">✗</span><span>Needs an API key</span></div></div>
+    <div class="pop-row"><span class="mglyph m-error">✗</span><span class="pop-label">AutoCode</span><span class="pop-cause">Missing API key</span></div>
+  </div>
+  <div class="msg-note">Pre-flight. No job is created, nothing is spent.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">P2</div>
+  <div class="msg-cond"><div class="cond">503 — provider is a local model (Ollama)</div><div class="kindtag k-error">✗ error</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-error">✗</span><div class="toast-content"><span>Autotagging needs a cloud provider.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">35 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-error">✗</span><span>Needs a cloud provider</span></div></div>
+    <div class="pop-row"><span class="mglyph m-error">✗</span><span class="pop-label">AutoCode</span><span class="pop-cause">Local model</span></div>
+  </div>
+  <div class="msg-note">States the requirement, not the refusal.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">P3</div>
+  <div class="msg-cond"><div class="cond">409 — several providers, none selected</div><div class="kindtag k-error">✗ error</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-error">✗</span><div class="toast-content"><span>Choose an AI provider in Settings.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">34 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-error">✗</span><span>Choose a provider</span></div></div>
+    <div class="pop-row"><span class="mglyph m-error">✗</span><span class="pop-label">AutoCode</span><span class="pop-cause">No provider selected</span></div>
+  </div>
+  <div class="msg-note">The CLI detail names a shell command; the app must not.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">P4</div>
+  <div class="msg-cond"><div class="cond">400 — project has no quotes</div><div class="kindtag k-warning">⚠ warning</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-warning">⚠</span><div class="toast-content"><span>No quotes yet — analyse your sessions first.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">44 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-warning">⚠</span><span>No quotes to tag</span></div></div>
+    <div class="pop-row"><span class="mglyph m-warning">⚠</span><span class="pop-label">AutoCode</span><span class="pop-cause">Nothing to tag</span></div>
+  </div>
+  <div class="msg-note">Warning, not error: correct behaviour, wrong order.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">P5</div>
+  <div class="msg-cond"><div class="cond">409 — a job is already running</div><div class="kindtag k-info">ℹ info</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-info">ℹ</span><div class="toast-content"><span>Already tagging with this codebook.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">35 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status mac-none">no status line — a clean row shows none</div></div>
+    <div class="pop-none">no popover row</div>
+  </div>
+  <div class="msg-note">Info. The running toast is already on screen.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">P6</div>
+  <div class="msg-cond"><div class="cond">409 — already applied</div><div class="kindtag k-info">ℹ info</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-info">ℹ</span><div class="toast-content"><span>Already applied.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">16 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status mac-none">no status line — a clean row shows none</div></div>
+    <div class="pop-none">no popover row</div>
+  </div>
+  <div class="msg-note">Info. The page already shows the result.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">P7</div>
+  <div class="msg-cond"><div class="cond">400 — template not found</div><div class="kindtag k-error">✗ error</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-error">✗</span><div class="toast-content"><span>That codebook is no longer available.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">37 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-error">✗</span><span>Codebook unavailable</span></div></div>
+    <div class="pop-row"><span class="mglyph m-error">✗</span><span class="pop-label">AutoCode</span><span class="pop-cause">Template missing</span></div>
+  </div>
+  <div class="msg-note">Shipping bug, not user error. Still needs a sentence.</div>
+</div>
+<div class="commentary"><span class="clabel">Commentary</span>
+<p><b>Nothing here reaches the Mac today, and three of them never can as written.</b> A pre-flight refusal
+creates no <code>AutoCodeJob</code>, so there is no job for a status line to describe. P5 and P6 are fine
+&mdash; they are answers to a click and the toast is the whole message. But P1, P2, P3 and P7 are
+<em>configuration</em> problems that outlive the click, and a toast that vanishes in four seconds is the wrong
+home for a state that will still be true tomorrow. Those belong in the same place a missing API key already
+belongs, not invented here.</p>
+<p><b>The HTTP details are developer copy and must not be shown.</b> Today <code>CodebookPanel</code> renders
+<code>err.detail</code> straight into the toast. Those strings name framework ids in quotes and, in one case,
+tell the researcher to run <code>bristlenose use &lt;provider&gt;</code> &mdash; a shell command, inside a Mac
+app. Every sentence above replaces one of them.</p></div>
+
+<h2>Lifecycle &mdash; the job exists</h2>
+<div class="h2sub">Running is a <em>status</em>, not a kind: <code>ui_kinds.py</code> says so in its own docstring,
+and the toast already renders it with a spinner and a progress track rather than a glyph.</div>
+<div class="msg">
+  <div class="msg-id">L1</div>
+  <div class="msg-cond"><div class="cond">Job running</div><div class="kindtag k-run">status</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="toast-spinner"></span><div class="toast-content"><span>Tagging with Nielsen…</span><div class="toast-progress-track"><div class="toast-progress-fill" style="width:62%"></div></div></div><span class="toast-close">&times;</span></div>
+    <div class="count">21 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mspin"></span><span>Tagging with Nielsen…</span></div></div>
+    <div class="pop-none">no popover row</div>
+  </div>
+  <div class="msg-note">Status, not a kind — ui_kinds.py says so explicitly.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">L2</div>
+  <div class="msg-cond"><div class="cond">Job completed</div><div class="kindtag k-success">✓ success</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-success">✓</span><div class="toast-content"><span>Nielsen: 36 tags on 72 quotes.</span></div><a class="toast-link">View Report</a><span class="toast-close">&times;</span></div>
+    <div class="count">30 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-success">✓</span><span>36 tags on 72 quotes</span></div></div>
+    <div class="pop-none">no popover row</div>
+  </div>
+  <div class="msg-note">Carries View Report, which opens the same modal as the Review door.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">L3</div>
+  <div class="msg-cond"><div class="cond">Completed, no matches</div><div class="kindtag k-info">ℹ info</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-info">ℹ</span><div class="toast-content"><span>Nielsen found nothing to tag.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">29 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-info">ℹ</span><span>Nothing matched</span></div></div>
+    <div class="pop-none">no popover row</div>
+  </div>
+  <div class="msg-note">Not a failure. The codebook ran and disagreed with the corpus.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">L4</div>
+  <div class="msg-cond"><div class="cond">Completed, some batches failed</div><div class="kindtag k-warning">⚠ warning</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-warning">⚠</span><div class="toast-content"><span>Nielsen tagged 58 of 72 quotes.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">31 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-warning">⚠</span><span>58 of 72 quotes tagged</span></div></div>
+    <div class="pop-row"><span class="mglyph m-warning">⚠</span><span class="pop-label">AutoCode</span><span class="pop-cause">Partial run</span></div>
+  </div>
+  <div class="msg-note">The state autocode.py:425 already produces and nothing currently reports.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">L5</div>
+  <div class="msg-cond"><div class="cond">Cancelled by the researcher</div><div class="kindtag k-skipped">— skipped</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-skipped">—</span><div class="toast-content"><span>Tagging cancelled.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">18 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-skipped">—</span><span>Cancelled</span></div></div>
+    <div class="pop-none">no popover row</div>
+  </div>
+  <div class="msg-note">SKIPPED, not ERROR — they chose it.</div>
+</div>
+<div class="commentary"><span class="clabel">Commentary</span>
+<p><b>L4 is a state the code already produces and nothing reports.</b> <code>autocode.py:425</code> logs
+<code>"Batch failed: %s"</code> and carries on, so a job can complete having tagged a subset. Today that
+finishes as an unqualified success and the researcher is told a number that is quietly short. It is the
+clearest case in this table for <code>WARNING</code>: complete, usable, and not what was asked for.</p>
+<p><b>L3 is not a failure and must not look like one.</b> A codebook that finds nothing has run correctly and
+disagreed with the corpus &mdash; which is a finding about the corpus. <code>INFO</code>.</p></div>
+
+<h2>Runtime failure &mdash; the job died</h2>
+<div class="h2sub">Mapped onto the existing classifier: <code>LLMFailureKind</code> in
+<code>bristlenose/llm/failure_classifier.py</code> already distinguishes all seven, and
+<code>CauseCategoryEnum</code> already has a case for each. No new category is proposed here.</div>
+<div class="msg">
+  <div class="msg-id">F1</div>
+  <div class="msg-cond"><div class="cond">out_of_credit</div><div class="kindtag k-error">✗ error</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-error">✗</span><div class="toast-content"><span>Your Claude account is out of credit.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">37 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-error">✗</span><span>Out of credit</span></div></div>
+    <div class="pop-row"><span class="mglyph m-error">✗</span><span class="pop-label">AutoCode</span><span class="pop-cause">Out of credit</span></div>
+  </div>
+  <div class="msg-note">MUST NOT read "rate limited" — the doc names that exact bug.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">F2</div>
+  <div class="msg-cond"><div class="cond">rate_limited → quota</div><div class="kindtag k-warning">⚠ warning</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-warning">⚠</span><div class="toast-content"><span>Rate limited — tagging stopped. Try again soon.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">47 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-warning">⚠</span><span>Rate limited</span></div></div>
+    <div class="pop-row"><span class="mglyph m-warning">⚠</span><span class="pop-label">AutoCode</span><span class="pop-cause">Rate limited</span></div>
+  </div>
+  <div class="msg-note">Transient. Warning because retrying is the fix.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">F3</div>
+  <div class="msg-cond"><div class="cond">invalid_key → auth</div><div class="kindtag k-error">✗ error</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-error">✗</span><div class="toast-content"><span>Your Claude API key was rejected.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">33 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-error">✗</span><span>Key rejected</span></div></div>
+    <div class="pop-row"><span class="mglyph m-error">✗</span><span class="pop-label">AutoCode</span><span class="pop-cause">Key rejected</span></div>
+  </div>
+  <div class="msg-note">Terminal until the key changes.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">F4</div>
+  <div class="msg-cond"><div class="cond">server_error → api_server</div><div class="kindtag k-warning">⚠ warning</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-warning">⚠</span><div class="toast-content"><span>Claude is unavailable. Try again shortly.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">41 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-warning">⚠</span><span>Provider unavailable</span></div></div>
+    <div class="pop-row"><span class="mglyph m-warning">⚠</span><span class="pop-label">AutoCode</span><span class="pop-cause">Provider unavailable</span></div>
+  </div>
+  <div class="msg-note">Their fault, transient.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">F5</div>
+  <div class="msg-cond"><div class="cond">bad_request → api_request</div><div class="kindtag k-error">✗ error</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-error">✗</span><div class="toast-content"><span>Claude rejected the request.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">28 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-error">✗</span><span>Request rejected</span></div></div>
+    <div class="pop-row"><span class="mglyph m-error">✗</span><span class="pop-label">AutoCode</span><span class="pop-cause">Request rejected</span></div>
+  </div>
+  <div class="msg-note">Often a retired model id. Detail carries the raw message.</div>
+</div>
+<div class="msg">
+  <div class="msg-id">F6</div>
+  <div class="msg-cond"><div class="cond">network → network</div><div class="kindtag k-warning">⚠ warning</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-warning">⚠</span><div class="toast-content"><span>Couldn’t reach Claude. Check your connection.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">45 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-warning">⚠</span><span>No connection</span></div></div>
+    <div class="pop-row"><span class="mglyph m-warning">⚠</span><span class="pop-label">AutoCode</span><span class="pop-cause">No connection</span></div>
+  </div>
+  <div class="msg-note"></div>
+</div>
+<div class="msg">
+  <div class="msg-id">F7</div>
+  <div class="msg-cond"><div class="cond">unknown</div><div class="kindtag k-error">✗ error</div></div>
+  <div class="msg-render">
+    <div class="mini-label">SPA toast</div>
+    <div class="autocode-toast"><span class="tglyph t-error">✗</span><div class="toast-content"><span>Tagging failed.</span></div><span class="toast-close">&times;</span></div>
+    <div class="count">15 chars / 60</div>
+  </div>
+  <div class="msg-render">
+    <div class="mini-label">macOS sidebar row</div>
+    <div class="mac-row"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-error">✗</span><span>Tagging failed</span></div></div>
+    <div class="pop-row"><span class="mglyph m-error">✗</span><span class="pop-label">AutoCode</span><span class="pop-cause">Unknown error</span></div>
+  </div>
+  <div class="msg-note">Deliberately short. The detail is in the popover, not the sentence.</div>
+</div>
+<div class="commentary"><span class="clabel">Commentary</span>
+<p><b>F1 against F2 is the one that has bitten before.</b> The popover doc records a bankrupt account being
+told to wait, because out-of-credit was rendered as rate-limited. Anthropic returns <code>400</code> for
+exhausted billing rather than <code>402</code>, which is exactly why the classifier exists. These two must
+never share a string.</p>
+<p><b>The kinds split on whether waiting fixes it.</b> F2, F4 and F6 are <code>WARNING</code> &mdash; transient,
+retry is the remedy. F1, F3, F5 and F7 are <code>ERROR</code> &mdash; terminal until the researcher changes
+something. That is the whole rule, and it is why F2 is not an error despite stopping the run.</p>
+<p><b>Today none of this survives the trip.</b> <code>autocode.py:458</code> catches bare
+<code>Exception</code> and stores <code>str(exc)</code>, so the job's <code>error_message</code> is raw
+exception text &mdash; unclassified, unbounded, and occasionally a stack-adjacent string. The classifier is
+imported nowhere in the autocode path. Wiring it is the prerequisite for every row in this table.</p></div>
+
+<h2>What this needs that does not exist</h2>
+<div class="commentary"><span class="clabel">Commentary &mdash; findings, not designs</span>
+<p><b>0. The palette can colour one of the five kinds.</b> Measured across
+<code>bristlenose/theme</code> and <code>frontend/src</code>: <code>--bn-colour-success</code>,
+<code>--bn-colour-danger</code> and <code>--bn-colour-warning</code> are used <b>sixteen times</b> and
+<b>defined nowhere</b>. Eleven uses carry a hard-coded fallback and work; <b>five do not</b>, and two of
+those five are the surfaces on this page &mdash; <code>.toast-check</code> and <code>.toast-error</code>
+(<code>autocode-toast.css:32,37</code>), plus both activity-chip states and the autocode report. An
+undefined custom property makes <code>color</code> invalid at computed-value time, so it inherits: <b>the
+tick and the cross on the shipped autocode toast have no colour at all.</b></p>
+<p><code>--bn-colour-danger</code> is simply a <b>misspelling of <code>--bn-colour-negative</code></b>, which
+does exist &mdash; <code>light-dark(#dc2626, #ef4444)</code>. Worse, the eleven fallbacks pin its
+<em>light-mode</em> hex, so every one of them is wrong in dark mode. <code>--bn-colour-success</code> and
+<code>--bn-colour-warning</code> have no counterpart token at all, and the loose greens disagree with each
+other (<code>#22c55e</code> against <code>#16a34a</code>). A five-kind taxonomy needs three semantic colours
+and the palette defines one.</p>
+<p><b>1. The SPA toast has two kinds, not five.</b> <code>autocode-toast.css</code> ships
+<code>.toast-check</code> and <code>.toast-error</code>. Warning, info and skipped have no treatment, and
+<code>toast()</code> itself takes <code>(message, duration)</code> with no kind at all. Completing that is
+finishing an existing pattern with the existing vocabulary &mdash; not new UX.</p>
+<p><b>2. The autocode path never classifies.</b> Bare <code>except Exception</code> &rarr; <code>str(exc)</code>.
+<code>classify_exception()</code> already exists and is not called.</p>
+<p><b>3. Nothing under <code>bristlenose/server/</code> writes to the events log</b> (Q17), which is what feeds
+the Mac glyph and popover. Every macOS rendering above is therefore a drawing of a surface that exists, fed
+by a channel that does not.</p>
+<p><b>4. Pre-flight configuration refusals want a durable home</b>, not a four-second toast. Named, not
+solved.</p></div>
+</div>

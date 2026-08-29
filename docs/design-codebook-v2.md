@@ -2193,3 +2193,69 @@ house-standard by applying it twice.
 **Filed for the real design system, out of scope here:** the seven sites want to
 converge on one token. That is a theme-wide change with its own blast radius,
 and naming it is the deliverable — not doing it inside a codebook mockup.
+
+## The message inventory — `docs/mockups/codebook-v2-messages.html`
+
+Built 30 Aug. Every message the install-and-autotag path can produce, drawn in
+both renderings that carry it: the SPA toast and the macOS project-sidebar row
+with its popover. **Nineteen messages, no new UX** — the five kinds from
+`bristlenose/ui_kinds.py`, the shipped `.autocode-toast`, the existing sidebar
+status line, and the seven failure kinds the classifier already distinguishes.
+
+Three groups, because they fail differently:
+
+- **Pre-flight (7)** — the install is refused and nothing is spent. All seven are
+  real HTTP paths in `routes/autocode.py`.
+- **Lifecycle (5)** — running, completed, completed-with-nothing,
+  completed-partial, cancelled. Running is rendered as a **status, not a kind**,
+  which is what `ui_kinds.py`'s own docstring instructs.
+- **Runtime failure (7)** — one per `LLMFailureKind`, each already mapped to an
+  existing `CauseCategoryEnum` case. **No new category is proposed.**
+
+Every toast string is inside the 60-character budget, checked mechanically rather
+than by eye. The kinds split on one rule: **`WARNING` when waiting fixes it,
+`ERROR` when the researcher must change something** — which is why rate-limited
+is a warning despite stopping the run.
+
+### What building it found
+
+**0. The palette can colour one of the five kinds.** `--bn-colour-success`,
+`--bn-colour-danger` and `--bn-colour-warning` are used **sixteen times across
+`bristlenose/theme` and `frontend/src` and defined nowhere**. Eleven uses carry a
+hard-coded fallback and work. **Five do not** — and two of the five are the very
+surfaces this page draws: `.toast-check` and `.toast-error`
+(`autocode-toast.css:32,37`), plus both activity-chip states and the autocode
+report. An undefined custom property makes `color` invalid at computed-value
+time, so it inherits: **the tick and the cross on the shipped autocode toast have
+no colour at all.**
+
+`--bn-colour-danger` is a **misspelling of `--bn-colour-negative`**, which exists
+as `light-dark(#dc2626, #ef4444)` — and the eleven fallbacks pin its *light* hex,
+so all eleven are wrong in dark mode. Success and warning have no counterpart
+token whatsoever, and the loose greens disagree with each other (`#22c55e`
+against `#16a34a`).
+
+**1. The SPA toast has two kinds, not five.** `.toast-check` and `.toast-error`
+exist; warning, info and skipped have no treatment, and `toast()` itself takes
+`(message, duration)` with **no kind parameter**. Completing that finishes an
+existing pattern rather than inventing one.
+
+**2. The autocode path never classifies.** `autocode.py:458` catches bare
+`Exception` and stores `str(exc)`, so `error_message` is raw exception text.
+`classify_exception()` exists and is called from nowhere in that path. Wiring it
+is the prerequisite for all seven runtime rows.
+
+**3. `L4` is a state the code already produces and nothing reports.**
+`autocode.py:425` logs `"Batch failed: %s"` and continues, so a job can complete
+having tagged a subset — and today reports that as unqualified success with a
+number that is quietly short.
+
+**4. The HTTP details are developer copy and are being shown to researchers.**
+`CodebookPanel` renders `err.detail` straight into the toast. Those strings quote
+internal framework ids, and one tells the researcher to run
+`bristlenose use <provider>` — a shell command, inside a Mac app. All nineteen
+sentences here replace one.
+
+**5. Pre-flight configuration refusals want a durable home.** A missing API key
+is still true tomorrow; a four-second toast is the wrong container for it. Named,
+not solved — and deliberately not invented here.

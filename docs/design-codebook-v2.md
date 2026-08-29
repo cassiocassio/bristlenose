@@ -890,8 +890,21 @@ blocker is named and specific — `TagSidebar`'s pending-tag fold must learn abo
 
 ## Open questions — consolidated
 
-As of 29 Aug, after 21 decisions. Flags scattered through this doc, gathered and
-de-duplicated; items resolved by a later decision have been dropped.
+As of 30 Aug, after 23 decisions.
+
+**Closed since this list was written:** **Q1** by D20's prelude (sentiment is
+floor-like on install, framework-like on enable) &middot; **Q2** by **D20** (A now,
+D later) &middot; **Q5** by **D21** (neutral and larger, not primary) &middot;
+**Q15** by the user's call on 30 Aug — **the threshold review stays a modal**,
+which *reverses* what the prototype had answered by construction, and qualifies
+D6 to the browsing surfaces only &middot; the rail-closed navigation question by
+**D22** (Browse Library carries it; no arrows).
+
+**What remains, and its weight.** One item is a genuine product hole — **Q3**.
+Everything else is either deliberately deferred (**Q4**), small mechanical
+plumbing (**Q6&ndash;Q11**, **Q16**), or a question a build can start without
+settling (**Q12**, **Q13**). **Q14** is small but must not be forgotten: it is a
+shipping surface.
 
 ### Product calls — yours, and nothing proceeds without them
 

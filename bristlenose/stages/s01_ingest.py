@@ -17,7 +17,7 @@ from bristlenose.models import (
 )
 from bristlenose.refusals import MESSAGES, UnusableReason
 from bristlenose.utils.audio import probe_duration
-from bristlenose.utils.fs import is_bristlenose_artefact, is_dataless, is_os_metadata
+from bristlenose.utils.fs import is_bristlenose_artefact, is_dataless
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +187,17 @@ def _scan_dir(
         return
 
     for entry in entries:
-        if is_os_metadata(entry):
+        # Hidden entries — dot-files and dot-directories alike — are tool
+        # state (`.claude/`, `.git/`, AppleDouble `._*`, `.DS_Store`), not
+        # study material: Finder doesn't show them, so the researcher didn't
+        # put them here in any meaningful sense. Skip silently rather than
+        # refuse — a refusal names a file the researcher can't see, and one
+        # `.claude/settings.local.json` demoted every otherwise-clean run to
+        # "Partial completion" that way (29 Aug 2026). Matches
+        # `ProjectFolderWatcher`'s `.skipsHiddenFiles`, so the two scanners
+        # agree on what a folder holds; subsumes `is_os_metadata` at this
+        # site (both its patterns are dot-prefixed).
+        if entry.name.startswith("."):
             continue
         # Our own artefacts, wherever they sit. The `OUTPUT_DIR_NAME` guard
         # below covers the default layout; this covers `--output` pointing

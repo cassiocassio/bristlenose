@@ -106,6 +106,56 @@ class TestRefusal:
         assert not called, "refused input was scanned anyway"
 
 
+class TestHiddenEntries:
+    """Hidden entries are tool state, not study material.
+
+    The failure mode is not a wrong file in the report — a `.json` would be
+    refused anyway — it is the refusal itself: one `.claude/settings.local.json`
+    in the drop folder demoted every otherwise-clean run to "Partial
+    completion" over a file Finder doesn't even show (29 Aug 2026). The skip
+    also keeps discovery in agreement with `ProjectFolderWatcher`'s
+    `.skipsHiddenFiles`.
+    """
+
+    def test_hidden_directories_are_not_walked(self, tmp_path: Path) -> None:
+        _touch(tmp_path / "interview.mp4")
+        (tmp_path / ".claude").mkdir()
+        (tmp_path / ".claude" / "settings.local.json").write_text("{}")
+
+        skipped: list[SkippedFile] = []
+        found = discover_files(tmp_path, skipped)
+
+        assert [f.path.name for f in found] == ["interview.mp4"]
+        assert skipped == [], "a hidden file must never surface as a refusal"
+
+    def test_hidden_files_are_skipped_even_with_accepted_extensions(
+        self, tmp_path: Path,
+    ) -> None:
+        _touch(tmp_path / "interview.mp4")
+        _touch(tmp_path / ".hidden.mp4")
+
+        skipped: list[SkippedFile] = []
+        found = discover_files(tmp_path, skipped)
+
+        assert [f.path.name for f in found] == ["interview.mp4"]
+        assert skipped == []
+
+    def test_visible_unsupported_files_are_still_refused(
+        self, tmp_path: Path,
+    ) -> None:
+        """The hidden skip must not widen: a file the researcher CAN see
+        still gets its stated row."""
+        _touch(tmp_path / "interview.mp4")
+        (tmp_path / "notes.json").write_text("{}")
+
+        skipped: list[SkippedFile] = []
+        found = discover_files(tmp_path, skipped)
+
+        assert [f.path.name for f in found] == ["interview.mp4"]
+        assert [s.path.name for s in skipped] == ["notes.json"]
+        assert skipped[0].reason is UnusableReason.UNSUPPORTED_FORMAT
+
+
 class TestResilience:
     def test_one_unreadable_directory_does_not_end_the_walk(self, tmp_path: Path) -> None:
         """`~/.Trash` is the everyday case: it used to raise out of iterdir and

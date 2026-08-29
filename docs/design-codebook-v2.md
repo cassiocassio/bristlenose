@@ -927,6 +927,7 @@ shipping surface.
 | **Q9** | **B7** — the author's **fourth home**, `.codebook-author` in the Quotes tag sidebar. Any author treatment must reach it | one rule |
 | **Q10** | **G3** — the **Codebook lab** button is homeless. It lived in the `<project> tags` header action, which v2 does not have. It ships to the cohort behind a default-on flag | one placement |
 | **Q11** | **G7** — `showHideCodeGroup` sits in the desktop **Codes** menu while D7 puts hide on the **Quotes** lens | move it, or except it |
+| **Q17** | **A failed autocode job cannot reach the Mac.** `routes/autocode.py` returns `error_message` over HTTP — enough for the SPA toast — but nothing under `bristlenose/server/` writes to the events log, which is what feeds the sidebar glyph and popover. **Not one field:** the events log is per pipeline *run* and autocode is a job, so whether it appends there or needs a second channel is a design call | design + plumbing |
 
 ### Navigation — sketched, not settled
 
@@ -1952,8 +1953,12 @@ Still owed as drawings: **a codebook page whose counts are zero** (tags defined,
 but the run failed or has not finished — D24 settles that this is a *zero* state
 and not an error, and D26 distinguishes it from a tagless codebook, but neither
 says what it looks like); the knocked-back appearance of a
-disabled codebook's card; the uninstall confirmation at Tier 2 rather than as a
-stub; and long-content overflow on titles, author names and group subtitles.
+disabled codebook's card; and the uninstall confirmation at Tier 2 rather
+than as a stub.
+
+**Long-content overflow on titles, author names and group subtitles is
+explicitly good enough for v2** (user, 30 Aug) — deferred by decision, not by
+oversight.
 
 
 ### D23 — the author slot carries provenance, and built-ins have provenance too
@@ -2007,9 +2012,15 @@ there the whole time, because what you installed is still installed.
 Autotagging is not instant, it needs progress, and it can fail — all of which is
 already true today and already has a home. It keeps that home:
 
-- **macOS** — the **status line on the project sidebar row**
-  (`ProjectRow.swift`, `ProjectRowActivityIndicator.swift`, and the Schema E
-  rule that a clean row shows no status line at all).
+- **macOS** — the **glyph, the status line, and the popover for detail**, all of
+  which already exist on the project sidebar row (`ProjectRow.swift`,
+  `ProjectRowActivityIndicator.swift`, and the Schema E rule that a clean row
+  shows no status line at all). A failed autocode job is a **message in the
+  existing five-kind taxonomy** — `MessageKind.ERROR` from
+  `bristlenose/ui_kinds.py` — not a new glyph, a new colour, or a new surface.
+  `docs/design-pipeline-diagnostic-popover.md` holds the flowchart for fitting a
+  new message into that vocabulary, and it is required reading before adding
+  one.
 - **CLI SPA** — the **activity chip stack** in `AppLayout`, plus a floating
   toast. Both already exist: `CodebookPanel` registers a running job in the
   activity store, and the failure paths already toast a real reason rather than
@@ -2033,6 +2044,21 @@ is durable; the event stream stays where event streams live.
    `ThresholdReviewModal` — the same destination as the codebook page's Review
    door. Today's call that the review stays a modal is not a constraint on this;
    the two doors already converge on it, and keeping the modal is what lets them.
+
+**The Mac half is not wired, and this is the one build-blocking finding in
+D24.** Measured 30 Aug: `routes/autocode.py` records `error_message` on the job
+and returns it over HTTP (`:122`), which is how the SPA toasts a real reason
+today. But **no path under `bristlenose/server/` calls `append_event` at all**,
+and the Mac's sidebar glyph and popover read the events log
+(`PipelineRunner.swift`, `EventLogReader.swift`). So a failed autocode job
+reaches the SPA and **cannot currently reach the Mac's glyph or popover** — the
+surface the requirement names exists, and autocode is not connected to the
+channel that feeds it. Recorded as **Q17**.
+
+Note this is not merely a missing wire: the events log is written **per pipeline
+run**, and autocode is a server-side job rather than a run. Appending to it may
+be right, or may be a category error that wants a second channel. That is a
+design question and it is open — see Q17.
 
 **Platform fork, deliberate.** A status line on the Mac and a toast in the SPA is
 not an inconsistency — it is the house rule that a shared taxonomy renders native

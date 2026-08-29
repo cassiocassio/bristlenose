@@ -1945,9 +1945,13 @@ browse page and the codebook page. It does not reach this.
 stays, the list is empty. ~~Error and failed-job states~~ — **settled by D24**:
 they are not on this surface at all.
 
-Still owed as drawings: **a codebook page whose counts are zero** (installed but
-the run failed or has not finished — D24 settles that this is a *zero* state and
-not an error, but not what it looks like); the knocked-back appearance of a
+~~A codebook with no tags~~ — **settled by D26**: a bleak one-line statement,
+and no Review door.
+
+Still owed as drawings: **a codebook page whose counts are zero** (tags defined,
+but the run failed or has not finished — D24 settles that this is a *zero* state
+and not an error, and D26 distinguishes it from a tagless codebook, but neither
+says what it looks like); the knocked-back appearance of a
 disabled codebook's card; the uninstall confirmation at Tier 2 rather than as a
 stub; and long-content overflow on titles, author names and group subtitles.
 
@@ -2066,3 +2070,30 @@ browse page needing a different name.
 
 Verified by rendering: with every framework uninstalled the rail emits
 `["Manual tags", "Default", "Frameworks"]` and three rows.
+
+### D26 — a codebook with no tags says so, bleakly
+
+Settled 30 Aug. **"This codebook has no tags."** Muted label text where the
+groups would be, and nothing else: no illustration, no call to action, no
+cheerful reframing of the absence as an opportunity. The fact is the whole
+message.
+
+That is the house position on empty states rather than a one-off — an absence is
+information, and dressing it up costs the researcher a beat to decode something
+they already understood from the void. It is also the same instinct as D25's
+empty heading one level up: state the truth, add no chrome.
+
+**One consequence, forced rather than chosen: the Review door is suppressed.**
+`hasJob()` is true for every framework, so without a gate a tagless codebook
+would render *Review 0 tags on 0 quotes* — a door onto nothing, which is worse
+than no door. It now requires a non-zero tag count.
+
+**Not to be confused with the other zero, which D24 governs.** A codebook that
+*defines* no tags is empty in itself, and that is this message. A codebook that
+defines tags but whose run produced nothing is **installed with a zero result**,
+and its explanation belongs in the sidebar status line or the SPA toast, never
+restated on the page. The two look similar and mean different things; only the
+first gets this sentence.
+
+Verified by rendering: with a framework's groups emptied, the page emits the
+line and omits `#coveragebtn`.

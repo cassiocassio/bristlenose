@@ -346,6 +346,7 @@ body {
 .pg-meta { flex:1; min-width:0; }
 .pg-title { font-size:var(--bn-text-title); font-weight:var(--bn-weight-emphasis); line-height:1.2; }
 .pg-author { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.15rem; }
+.pg-empty { font-size:var(--bn-text-label); color:var(--bn-colour-muted); padding:1.5rem 0; }
 .pg-stat { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); margin-top:.5rem; }
 .pg-actions { display:flex; align-items:center; gap:.6rem; flex-shrink:0; }
 
@@ -896,6 +897,10 @@ function renderPage(){
       <div class="preview-author-links">${(b.links||[]).map(l=>`<a href="#" onclick="return false">${esc(l)} &#8599;</a>`).join('')}</div>
     </div></div>` : '';
   const stat = statLine(b);
+  // A codebook that defines no tags says so, plainly. No illustration, no call to
+  // action, no cheerful framing — the fact is the whole message. It also
+  // suppresses the Review door: a door onto nothing is worse than no door.
+  const empty = tagCount(b) === 0;
   const actions = !canInstall(b) ? ''
     : b.installed
       ? '<button class="bn-btn framework-remove-btn" id="uninstallbtn">Uninstall</button>'
@@ -909,7 +914,7 @@ function renderPage(){
       <div class="pg-meta">
         <div class="pg-title">${esc(b.pageTitle||b.title)}${b.ver?` <span class="pg-author" style="font-size:var(--bn-text-badge)">v${b.ver}</span>`:''}</div>
         ${provenance(b)?`<div class="pg-author${b.author?'':' prov-system'}">${provenance(b)}</div>`:''}
-        ${(b.installed && hasJob(b))
+        ${(b.installed && hasJob(b) && !empty)
           ? `<div class="pg-review-row"><button class="bn-btn bn-btn-sm" id="coveragebtn">Review</button><span class="pg-review-meta">${b.tags} tags on ${b.quotes} quotes${
               b.pending?` <span class="undec">&middot; ${b.pending} undecided</span>`:''}</span></div>`
           : `<div class="pg-stat">${stat}</div>`}
@@ -922,7 +927,7 @@ function renderPage(){
       <div class="preview-desc">${esc(b.full||b.desc)}</div>
       ${b.floor?`<div class="codebook-description">Drag tags between groups to reorganise. Click a tag or title to rename it. Drop a tag on another to merge.</div>`:''}
       <div class="preview-section-label">Tag groups</div>
-      <div class="preview-groups">${groups}</div>
+      <div class="preview-groups">${empty ? `<div class="pg-empty">This codebook has no tags.</div>` : groups}</div>
     </div>${side}</div>
     </div>
    </section>

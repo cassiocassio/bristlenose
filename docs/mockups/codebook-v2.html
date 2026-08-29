@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codebook v2 — working mockup</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css). Palette swap via
+   data-color-theme; dark via light-dark() + color-scheme. See
+   docs/design-codebook-library.md for the plan this mock reviews.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  /* group tints (tokens.css) — shared across palettes */
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:920px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-xl); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:66ch; margin:.4rem 0; }
+.controls { display:flex; gap:.4rem; align-items:center; margin-bottom:var(--bn-space-xl); }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.bench { margin:2.5rem 0; }
+.bench-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.bench-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1.1rem; max-width:70ch; }
+.stage-label { font-size:var(--bn-text-caption); font-weight:490; color:var(--bn-colour-accent); text-transform:uppercase; letter-spacing:.05em; margin:1.3rem 0 .5rem; font-family:var(--bn-font-mono); }
+
+/* ── shared atoms ─────────────────────────────────────────────────────── */
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
+
+/* ── Codebook Library modal ───────────────────────────────────────────── */
+.modal { background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  box-shadow:0 20px 60px var(--bn-colour-shadow); overflow:hidden; max-width:600px; }
+.modal-h { padding:1.1rem 1.35rem; border-bottom:1px solid var(--bn-colour-border); display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; }
+.modal-title { font-size:var(--bn-text-heading); font-weight:490; }
+.modal-sub { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.2rem; }
+.modal-x { color:var(--bn-colour-muted); cursor:pointer; font-size:var(--bn-text-heading); line-height:1; }
+.modal-b { padding:1.35rem; }
+.sect-h { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); font-weight:490; margin:0 0 .8rem; }
+.sect-h:not(:first-child) { margin-top:1.6rem; }
+.lib-tiles { display:flex; flex-direction:column; gap:.75rem; }
+.tile { display:flex; gap:1.1rem; align-items:flex-start; background:var(--bn-colour-bg);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:1rem 1.1rem; }
+.tile.disabled { opacity:.5; }
+.tile-body { flex:1; min-width:0; }
+.tile-title { font-size:var(--bn-text-label); font-weight:490; }
+.tile-author { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.05rem; }
+.tile-desc { font-size:var(--bn-text-label); color:var(--bn-colour-muted); line-height:1.5; margin-top:.3rem; }
+.tile-tags { display:flex; flex-wrap:wrap; gap:4px; width:150px; flex-shrink:0; justify-content:flex-end; }
+/* Add / Remove sit TOP-right in the tile corner and share ONE footprint
+   (min-width + centred text) so the control column never shifts between states.
+   Both neutral — Remove is reversible (re-add is free), so no red. */
+.add-btn { flex-shrink:0; align-self:flex-start; min-width:5.25rem; text-align:center; font:inherit; font-size:var(--bn-text-label); font-weight:490;
+  padding:.35rem .9rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.add-btn:hover { background:var(--bn-colour-hover); border-color:var(--bn-colour-accent); color:var(--bn-colour-accent); }
+.add-btn.removeable { color:var(--bn-colour-muted); }
+.add-btn.removeable:hover { color:var(--bn-colour-text); border-color:var(--bn-colour-border-hover); background:var(--bn-colour-hover); }
+.coming { flex-shrink:0; align-self:flex-start; font-size:var(--bn-text-badge); color:var(--bn-colour-muted); font-style:italic; }
+.tile-create { border:1px dashed var(--bn-colour-border); display:flex; align-items:center; justify-content:center; gap:.5rem;
+  color:var(--bn-colour-muted); font-size:var(--bn-text-label); padding:1rem; cursor:pointer; }
+
+/* ── Codebook-page framework section ──────────────────────────────────── */
+.page { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.4rem 1.25rem; background:var(--bn-colour-bg); }
+.sec { border-top:1px solid var(--bn-colour-border); padding:1rem 0; }
+.sec:first-child { border-top:none; }
+.sec-hdr { display:flex; align-items:center; gap:1rem; }
+.sec-title-wrap { flex:1; min-width:0; }
+.sec-title { font-size:var(--bn-text-body); font-weight:490; }
+.sec-meta { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.15rem; height:1.2em; position:relative; }
+.sec-meta .on-m, .sec-meta .off-m { position:absolute; left:0; top:0; transition:opacity .28s ease; }
+.sec-meta .off-m { opacity:0; }
+.sec.off .sec-meta .on-m { opacity:0; }
+.sec.off .sec-meta .off-m { opacity:1; }
+.apply-btn { flex-shrink:0; font:inherit; font-size:var(--bn-text-label); font-weight:490; color:#fff;
+  background:var(--bn-colour-accent); border:none; border-radius:var(--bn-radius-md); padding:.45rem .95rem; cursor:pointer; white-space:nowrap; }
+/* macOS-matched switch (metrics/colour; spring is the accepted gap) */
+.sw { flex-shrink:0; position:relative; width:38px; height:22px; border-radius:11px; cursor:pointer;
+  background:var(--bn-colour-accent); transition:background .28s ease; }
+.sec.off .sw { background:var(--bn-off-track); }
+.sw::after { content:""; position:absolute; top:2px; left:18px; width:18px; height:18px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.28); transition:left .28s cubic-bezier(.4,0,.2,1); }
+.sec.off .sw::after { left:2px; }
+/* fold */
+.fold { display:grid; grid-template-rows:1fr; transition:grid-template-rows .32s cubic-bezier(.4,0,.2,1); }
+.sec.off .fold { grid-template-rows:0fr; }
+.fold-in { overflow:hidden; }
+.groups { margin-top:.9rem; display:flex; flex-wrap:wrap; gap:1.25rem;
+  transition:opacity .22s ease, transform .3s cubic-bezier(.4,0,.2,1); }
+.sec.off .groups { opacity:0; transform:translateY(-8px); }
+.grp-h { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); font-weight:490; margin-bottom:.4rem; }
+.chips { display:flex; flex-wrap:wrap; gap:4px; max-width:240px; }
+@media (prefers-reduced-motion:reduce) { .fold,.groups,.sw::after,.sw,.sec-meta .on-m,.sec-meta .off-m { transition:none; } }
+
+/* ── Checkbox — lifted verbatim from atoms/checkbox.css (ghost pattern) ── */
+.bn-checkbox { -webkit-appearance:none; appearance:none; width:14px; height:14px;
+  border:1px solid var(--bn-colour-border); border-radius:2px; background:transparent;
+  margin:0; flex-shrink:0; cursor:pointer; position:relative; }
+.bn-checkbox:checked { border-color:var(--bn-colour-border-hover); background:var(--bn-colour-quote-bg); }
+.bn-checkbox:checked::after { content:""; position:absolute; left:3px; top:.5px; width:5px; height:9px;
+  border:solid var(--bn-colour-muted); border-width:0 1.5px 1.5px 0; transform:rotate(45deg); }
+/* master-list row: control leads, label follows, selected row is filled */
+.sb-row.sel { background:var(--bn-colour-hover); }
+/* Mini toggle — the promoted dot. A SIZE MODIFIER on the shipped .sw, not a new
+   control: 26x15 preserves the 38x22 track ratio (1.73), knob scaled to match. */
+.sw.mini { width:26px; height:15px; border-radius:7.5px; margin-top:.18em; flex-shrink:0; }
+.sw.mini::after { width:11px; height:11px; left:13px; top:2px; }
+.sb-row.rowoff .sw.mini::after { left:2px; }
+/* two-line row: title then author, toggle aligned to the FIRST line like a bullet */
+.sb-row .lbl2 { min-width:0; }
+.sb-row .r-title { display:block; line-height:1.3; }
+.sb-row .r-author { display:block; font-size:var(--bn-text-badge); color:var(--bn-colour-muted); line-height:1.3; }
+.sb.wide { width:320px; }
+.sb-row.rowoff .sw { background:var(--bn-off-track); }
+.sb-row.rowoff .sw::after { left:2px; }
+.sb-row.rowoff { color:var(--bn-colour-muted); }
+
+/* ── Sidebar ──────────────────────────────────────────────────────────── */
+.sb { width:var(--bn-sidebar-width); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.6rem; background:var(--bn-colour-quote-bg); }
+.sb-h { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); font-weight:490; padding:.3rem .5rem .5rem; }
+/* lone dot, aligned to the FIRST line like a bullet (not centred on the wrapped block) */
+.sb-row { display:flex; align-items:flex-start; gap:.55rem; padding:.4rem .5rem; border-radius:var(--bn-radius-md); font-size:var(--bn-text-label); line-height:1.35; }
+.sb-row .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:.42em; }
+.sb-row.active { color:var(--bn-colour-text); } .sb-row.active .dot { background:var(--bn-colour-accent); }
+.sb-row.off { color:var(--bn-colour-muted); } .sb-row.off .dot { background:var(--bn-off-track); }
+.sb-row.avail { color:var(--bn-colour-muted); } .sb-row.avail .dot { background:transparent; }
+.sb-mini { font-size:var(--bn-text-label); color:var(--bn-colour-accent); padding:.5rem .5rem 0; cursor:pointer; }
+
+.note { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); line-height:1.55; margin-top:.6rem; max-width:70ch; }
+.note b { color:var(--bn-colour-text); font-weight:490; }
+.hint { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-bottom:.4rem; }
+.two-col { display:flex; gap:2rem; align-items:flex-start; flex-wrap:wrap; }
+/* ── Catalogue cards — lifted verbatim from organisms/codebook-panel.css ──── */
+.picker-card { background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-lg); padding:var(--bn-space-lg); cursor:pointer; position:relative;
+  transition:border-color var(--bn-transition-fast), background-color var(--bn-transition-fast); }
+.picker-card:hover { border-color:var(--bn-colour-accent); background-color:var(--bn-colour-hover); }
+.picker-card-title { font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); margin-bottom:.15rem; }
+.picker-card-author { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-bottom:.5rem; }
+.picker-card-desc { font-size:var(--bn-text-label); color:var(--bn-colour-muted); line-height:1.5; }
+.picker-card-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:var(--bn-space-md); }
+.picker-card-actions { margin-top:var(--bn-space-md); display:flex; justify-content:flex-end; align-items:center; gap:.6rem; }
+.picker-card-toggle { min-width:96px; justify-content:center; text-align:center; font-size:var(--bn-text-caption); }
+/* v2: the browse page is a GRID of cards, not a vertical column */
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:var(--bn-space-md); }
+.picker-card.installed { border-color:var(--bn-colour-border-hover); }
+.meta-line { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); margin-bottom:.5rem; }
+.cost { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); }
+.vocab { display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start; }
+.vocab > div { min-width:150px; }
+.vocab .v-h { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.06em;
+  text-transform:uppercase; color:var(--bn-colour-muted); margin-bottom:.4rem; }
+
+/* ── Size ladder ─────────────────────────────────────────────────────────── */
+.ladder { display:flex; flex-direction:column; gap:var(--bn-space-lg); }
+.rung { display:flex; gap:var(--bn-space-lg); align-items:flex-start; flex-wrap:wrap; }
+.rung-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.06em;
+  text-transform:uppercase; color:var(--bn-colour-muted); margin-bottom:.4rem; }
+.rung-label b { color:var(--bn-colour-text); font-weight:490; }
+/* jacket stand-in — NOT artwork; real jackets exist in Assets.xcassets */
+.jacket { flex-shrink:0; border-radius:var(--bn-radius-sm); border:1px solid var(--bn-colour-border);
+  background:linear-gradient(150deg, var(--bn-ux-1-bg), var(--bn-trust-1-bg));
+  display:flex; align-items:flex-end; justify-content:center; font-family:var(--bn-font-mono);
+  font-size:var(--bn-text-micro); color:var(--bn-colour-muted); padding-bottom:2px; }
+.with-vis { display:flex; gap:var(--bn-space-md); align-items:flex-start; }
+.with-vis .picker-card-body { min-width:0; flex:1; }
+
+/* ── Reserved slot — the space is the decision; the fill is deferred ─────── */
+.slotbox { flex-shrink:0; border-radius:var(--bn-radius-sm); overflow:hidden;
+  background:var(--bn-colour-badge-bg); border:1px solid var(--bn-colour-border);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--bn-font-body); font-weight:var(--bn-weight-emphasis);
+  color:var(--bn-colour-muted); }
+.slotbox.circle { border-radius:50%; }
+.slotbox.jk { background:linear-gradient(150deg, var(--bn-ux-1-bg), var(--bn-trust-1-bg)); }
+.slotbox.face { background:radial-gradient(circle at 50% 38%, var(--bn-colour-border-hover) 0 26%, var(--bn-colour-badge-bg) 27%); }
+.opt { text-align:center; }
+.opt .cap2 { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); margin-top:.4rem; }
+.with-vis { display:flex; gap:var(--bn-space-md); align-items:flex-start; }
+.with-vis .picker-card-body { min-width:0; flex:1; }
+
+/* ── Edge chevrons — ported from the Welcome slot rotator (WelcomeHomeView:707).
+   Kept: frosted disk, hairline, hover-reveal, and INERT-UNTIL-REVEALED, the trap
+   that file already paid for (allowsHitTesting there, pointer-events here).
+   Dropped: page dots and cross-fade. SF Symbols do not cross to CSS, so Lucide. */
+.stage { position:relative; }
+.chev { position:absolute; top:50%; transform:translateY(-50%); width:30px; height:30px;
+  border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:color-mix(in srgb, var(--bn-colour-bg) 72%, transparent);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border:1px solid color-mix(in srgb, var(--bn-colour-text) 8%, transparent);
+  box-shadow:0 1px 3px var(--bn-colour-shadow); color:var(--bn-colour-text);
+  opacity:0; pointer-events:none; transition:opacity var(--bn-transition-fast); cursor:pointer; }
+.chev.l { left:8px; } .chev.r { right:8px; }
+.stage:hover .chev, .chev:focus-visible { opacity:1; pointer-events:auto; }
+.stage.always .chev { opacity:1; pointer-events:auto; }
+.chev svg { width:14px; height:14px; }
+@media (prefers-reduced-transparency:reduce) { .chev { backdrop-filter:none; background:var(--bn-colour-bg); } }
+@media (prefers-reduced-motion:reduce) { .chev { transition:none; } }
+
+/* ── Proposal count — lifted from .proposed-count, with the dark-mode fix ──
+   The shipped rule hardcodes rgba(37,99,235,.08) — light-mode accent. In dark
+   mode the accent is #0a84ff and in palette-edo it is #0f5c9e, so the tint is
+   wrong on two of the four theme combinations. color-mix() against the token
+   fixes it, exactly as island-doc decision 6 did for .merge-target. */
+.pcount { font-size:var(--bn-text-badge); font-weight:var(--bn-weight-emphasis);
+  color:var(--bn-colour-accent); background:color-mix(in srgb, var(--bn-colour-accent) 8%, transparent);
+  padding:.15rem .5rem; border-radius:var(--bn-radius-pill); white-space:nowrap; }
+.sb-row .pcount { margin-left:auto; align-self:flex-start; margin-top:.1em; }
+.review-btn { flex-shrink:0; font:inherit; font-size:var(--bn-text-label); font-weight:490;
+  color:#fff; background:var(--bn-colour-accent); border:none; border-radius:var(--bn-radius-md);
+  padding:.45rem .8rem; cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:.45rem; }
+.review-btn .n { background:rgba(255,255,255,.22); border-radius:var(--bn-radius-pill); padding:0 .4rem; }
+
+/* ── Card states — installed shows STATE, not a control ─────────────────
+   Safari's detail pane carries no enable checkbox (it lives in the list only);
+   Claude's directory shows a green check on an added connector, not a plus.
+   Each control therefore appears exactly once across the three surfaces. */
+.tick { width:26px; height:26px; border-radius:var(--bn-radius-sm); flex-shrink:0;
+  background:color-mix(in srgb, var(--bn-positive) 16%, transparent);
+  color:var(--bn-positive); display:flex; align-items:center; justify-content:center; }
+.tick svg { width:14px; height:14px; }
+.picker-card.off .picker-card-title,
+.picker-card.off .picker-card-author,
+.picker-card.off .picker-card-desc { color:var(--bn-colour-muted); }
+.picker-card.off .slotbox { opacity:.45; filter:saturate(.35); }
+.picker-card.off .tick { background:color-mix(in srgb, var(--bn-colour-muted) 12%, transparent); color:var(--bn-colour-muted); }
+.state-word { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); }
+
+/* ── Card, to spec — whole card navigates; only the button does not ───── */
+.picker-card.spec { display:flex; flex-direction:column; gap:.55rem; }
+.picker-card .cardhead { display:flex; gap:var(--bn-space-md); align-items:flex-start; }
+.picker-card .ver { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); font-weight:var(--bn-weight-normal); }
+.picker-card .statline { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); }
+.picker-card .footrow { display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-top:auto; padding-top:.2rem; }
+.picker-card.spec:hover { border-color:var(--bn-colour-accent); }
+.picker-card-toggle { position:relative; z-index:1; }
+
+/* ── Graphic gutter — FIXED WIDTH, free height, top-aligned ────────────────
+   The reservation is a column, not a box. Width is constant so the text's left
+   edge never moves; height is whatever the fill is. Nothing / circle (1:1) /
+   jacket (2:3) all leave the text starting at the same x. */
+.gut { width:44px; flex-shrink:0; }
+.gut > * { width:44px; display:block; }
+.gut .disc { height:44px; border-radius:50%; background:var(--bn-colour-badge-bg);
+  border:1px solid var(--bn-colour-border); display:flex; align-items:center;
+  justify-content:center; color:var(--bn-colour-muted); font-weight:var(--bn-weight-emphasis); }
+.gut .jkt { height:66px; border-radius:var(--bn-radius-sm); border:1px solid var(--bn-colour-border);
+  background:linear-gradient(150deg, var(--bn-ux-1-bg), var(--bn-trust-1-bg)); }
+.gut .nil { height:0; }
+/* commentary device: the shared text left-edge, made visible */
+.guide { position:relative; }
+.guide::before { content:""; position:absolute; left:calc(var(--bn-space-lg) + 44px + var(--bn-space-md));
+  top:6px; bottom:6px; width:1px; background:var(--bn-colour-accent); opacity:.45; }
+
+/* ── Full details page — .preview-* lifted verbatim from codebook-panel.css ── */
+.preview-body { display:flex; gap:var(--bn-space-xl); align-items:flex-start; }
+.preview-body-main { flex:1; min-width:0; }
+.preview-body-sidebar { width:260px; flex-shrink:0; }
+.preview-desc { font-size:var(--bn-text-label); color:var(--bn-colour-muted); line-height:1.6; margin-bottom:var(--bn-space-lg); }
+.preview-section-label { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em;
+  color:var(--bn-colour-muted); font-weight:var(--bn-weight-emphasis); margin-bottom:var(--bn-space-md); }
+.preview-groups { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:var(--bn-space-lg); align-items:start; }
+.preview-author { background:var(--bn-colour-quote-bg); border-radius:var(--bn-radius-lg); padding:var(--bn-space-lg); }
+.preview-author-name { font-weight:var(--bn-weight-emphasis); font-size:var(--bn-text-label); margin-bottom:.25rem; }
+.preview-author-bio { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-bottom:var(--bn-space-md); line-height:1.5; }
+.preview-author-links { display:flex; flex-direction:column; gap:.4rem; font-size:var(--bn-text-caption); }
+.preview-author-links a { color:var(--bn-colour-accent); text-decoration:none; }
+/* page header — gutter at page scale */
+.pg-head { display:flex; gap:var(--bn-space-lg); align-items:flex-start; padding-bottom:var(--bn-space-lg);
+  border-bottom:1px solid var(--bn-colour-border); margin-bottom:var(--bn-space-lg); }
+.pg-gut { width:72px; flex-shrink:0; }
+.pg-gut .jkt { width:72px; height:108px; border-radius:var(--bn-radius-sm);
+  border:1px solid var(--bn-colour-border); background:linear-gradient(150deg, var(--bn-ux-1-bg), var(--bn-trust-1-bg)); }
+.pg-meta { flex:1; min-width:0; }
+.pg-title { font-size:var(--bn-text-title); font-weight:var(--bn-weight-emphasis); line-height:1.2; }
+.pg-author { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.15rem; }
+.pg-stat { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); margin-top:.5rem; }
+.pg-actions { display:flex; align-items:center; gap:.6rem; flex-shrink:0; }
+
+</style>
+<style>
+/* ============================================================================
+   MOCKUP CHROME — the apparatus, deliberately not-the-product.
+   Everything above this block is shipped design-system CSS, inlined verbatim.
+   Everything in this block is scaffolding for reviewing, and ships nowhere.
+   ========================================================================= */
+.key { display:flex; flex-wrap:wrap; gap:1.25rem; padding:.75rem 1rem; margin-bottom:2rem;
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  background:var(--bn-colour-quote-bg); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.key span { display:inline-flex; align-items:center; gap:.45rem; }
+.key i { width:14px; height:14px; border-radius:3px; flex-shrink:0; display:inline-block; }
+
+/* Artefact zone — real pixels in screenshot chrome. No prose lives in here. */
+.frame { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  overflow:hidden; background:var(--bn-colour-bg); box-shadow:0 2px 10px var(--bn-colour-shadow); }
+.frame-bar { display:flex; align-items:center; gap:.45rem; padding:.5rem .7rem;
+  border-bottom:1px solid var(--bn-colour-border); background:var(--bn-colour-quote-bg); }
+.frame-bar .lights { display:flex; gap:5px; }
+.frame-bar .lights i { width:9px; height:9px; border-radius:50%; background:var(--bn-off-track); display:block; }
+.frame-bar .cap { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.06em;
+  text-transform:uppercase; color:var(--bn-colour-muted); margin-left:.4rem; }
+.frame-in { padding:1.25rem; }
+
+/* Commentary zone — visually not-the-product: hatched, ruled, mono-labelled. */
+.commentary { margin-top:.9rem; border-left:3px solid var(--bn-colour-accent);
+  background:repeating-linear-gradient(135deg, transparent, transparent 6px,
+    var(--bn-colour-quote-bg) 6px, var(--bn-colour-quote-bg) 12px);
+  padding:.85rem 1rem; border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; }
+.commentary .clabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.08em;
+  text-transform:uppercase; color:var(--bn-colour-accent); display:block; margin-bottom:.35rem; }
+.commentary p { margin:.3rem 0; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); line-height:1.6; max-width:74ch; }
+.commentary p b { color:var(--bn-colour-text); font-weight:490; }
+
+/* Inheritance marking — the session's rule, made visible.
+   Anything genuinely NEW carries .is-new and outlines itself, so invention
+   cannot happen quietly. If the mockup fills up with dashes, we over-invented. */
+.is-new { outline:1.5px dashed var(--bn-colour-accent); outline-offset:3px; border-radius:var(--bn-radius-sm); }
+.is-new::after { content:"new"; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-accent); margin-left:.4rem; vertical-align:super; }
+
+/* Empty iteration slot — a v2 frame waiting to be filled. */
+.slot .frame-in { min-height:120px; display:flex; align-items:center; justify-content:center; }
+.slot .placeholder { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption);
+  color:var(--bn-colour-muted); text-align:center; line-height:1.7; }
+.scope { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  padding:1rem 1.15rem; margin-bottom:2rem; background:var(--bn-colour-quote-bg); }
+.scope h3 { margin:0 0 .5rem; font-size:var(--bn-text-label); font-weight:490; }
+.scope ul { margin:0; padding-left:1.1rem; }
+.scope li { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); line-height:1.7; }
+.scope li b { color:var(--bn-colour-text); font-weight:490; }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div class="eyebrow">Bristlenose &middot; codebook v2 &middot; working mockup</div>
+    <h1>Codebook v2</h1>
+    <p>The working surface. We iterate here and the doc records what this settles &mdash;
+       <code>docs/design-codebook-v2.md</code> is the record, not the driver.</p>
+    <p>Baselines below are the shipped lens rendered faithfully, so each v2 slot has something to be
+       measured against. Nothing here is a proposal yet.</p>
+  </div>
+
+  <div class="controls">
+    <span class="lbl">Palette</span>
+    <button class="pbtn on" data-pal="default">Default (web)</button>
+    <button class="pbtn" data-pal="edo">Edo (desktop)</button>
+    <span class="lbl" style="margin-left:1rem">Light / dark follows your OS</span>
+  </div>
+
+  <div class="key">
+    <span><i style="background:var(--bn-colour-bg);border:1px solid var(--bn-colour-border)"></i>Artefact &mdash; real pixels, what ships</span>
+    <span><i style="background:repeating-linear-gradient(135deg,transparent,transparent 3px,var(--bn-colour-muted) 3px,var(--bn-colour-muted) 6px)"></i>Commentary &mdash; why, never the product</span>
+    <span><i style="outline:1.5px dashed var(--bn-colour-accent);outline-offset:-2px"></i><code>.is-new</code> &mdash; invented, not inherited</span>
+  </div>
+
+  <div class="scope">
+    <h3>Scope of v2, as agreed</h3>
+    <ul>
+      <li><b>Presentation, layout and flow.</b> Not the data model, not the two axes, not the state machines &mdash; those shipped and hold.</li>
+      <li><b>Inherit as much as possible.</b> Existing atoms, molecules and organisms first. Anything genuinely new wears <code>.is-new</code> so invention stays visible and countable.</li>
+      <li><b>Migration is deferred</b> and is deliberately not being designed yet. Presentation-only scope should keep it cheap &mdash; no schema change, no data move.</li>
+    </ul>
+  </div>
+
+  <!-- ================= BASELINE ================= -->
+  <div class="bench">
+    <div class="bench-head">
+      <h2>Baseline &mdash; what ships today</h2>
+      <p class="sub">Rendered from the shipped tokens and component recipes, not redrawn. This is the thing v2 iterates against.</p>
+    </div>
+
+    <div class="stage-label">B1 &middot; framework section header</div>
+    <div class="frame">
+      <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">shipped &middot; framework installed, applied, enabled</span></div>
+      <div class="frame-in">
+        <div class="page">
+          <div class="sec">
+            <div class="sec-hdr">
+              <div class="sec-title-wrap">
+                <div class="sec-title">The Elements of User Experience</div>
+                <div class="sec-meta"><span class="on-m">Jesse James Garrett</span><span class="off-m">5 tags &middot; 142 coded</span></div>
+              </div>
+              <button class="apply-btn">Apply</button>
+              <button class="add-btn removeable">Uninstall</button>
+            </div>
+            <div class="fold"><div class="fold-in"><div class="groups">
+              <div>
+                <div class="grp-h">Strategy</div>
+                <div class="chips">
+                  <span class="badge" style="background:var(--bn-ux-1-bg)">user needs</span>
+                  <span class="badge" style="background:var(--bn-ux-1-bg)">site objectives</span>
+                </div>
+              </div>
+              <div>
+                <div class="grp-h">Structure</div>
+                <div class="chips">
+                  <span class="badge" style="background:var(--bn-trust-1-bg)">interaction design</span>
+                  <span class="badge" style="background:var(--bn-trust-1-bg)">information architecture</span>
+                </div>
+              </div>
+            </div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary</span>
+      <p><b>Three controls, permanently present.</b> Apply, Uninstall and the switch share one row. The
+         Library spec had Apply <i>morph into</i> the switch once spent &mdash; a one-way handoff &mdash; and had the
+         Uninstall button leave the lens entirely for the Library tile. Neither happened, so the row
+         carries all three lifecycles at once: run, install, enable.</p>
+      <p><b>Apply carries no number.</b> The spec string was <code>Apply to {{count}} quotes</code>. Shipped is bare
+         <code>Apply</code> &mdash; the one control that spends money does not say what it will cost.</p>
+    </div>
+
+    <div class="stage-label">B2 &middot; sidebar rows &mdash; status only, never a control</div>
+    <div class="two-col">
+      <div class="frame" style="width:auto">
+        <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">shipped</span></div>
+        <div class="frame-in">
+          <div class="sb">
+            <div class="sb-h">Manual tags</div>
+            <div class="sb-row active"><span class="dot"></span><span>project-ikea tags</span></div>
+            <div class="sb-h">Default</div>
+            <div class="sb-row active"><span class="dot"></span><span>Emotional and cognitive signals</span></div>
+            <div class="sb-row off"><span class="dot"></span><span>Bristlenose UXR</span></div>
+            <div class="sb-h">Library</div>
+            <div class="sb-row active"><span class="dot"></span><span>The Elements of User Experience</span></div>
+            <div class="sb-row avail"><span class="dot"></span><span>The Design of Everyday Things</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="commentary" style="flex:1;min-width:280px;margin-top:0">
+        <span class="clabel">Commentary</span>
+        <p><b>Three encodings, one column.</b> Blue dot on, grey dot off, transparent slot available &mdash; and
+           the section heading is the only thing separating &ldquo;installed&rdquo; from &ldquo;installable&rdquo;.</p>
+        <p>The floor gets a bare slot so labels stay left-aligned. Rows are navigation for installed
+           codebooks and a Library door for the rest &mdash; the same affordance doing two jobs.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= V2 SLOTS ================= -->
+  <div class="bench">
+    <div class="bench-head">
+      <h2>v2 &mdash; iterations</h2>
+      <p class="sub">Empty until the issues and fixes land. Each iteration gets its own frame here, captioned
+         in the chrome bar, with its reasoning in a commentary block below it.</p>
+    </div>
+
+    <div class="stage-label">V1 &middot; the detail pane, after D1 &middot; D3 &middot; D4</div>
+    <div class="frame">
+      <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">v2 &middot; detail pane &middot; D1 + D3 + D4</span></div>
+      <div class="frame-in">
+        <div class="page">
+          <div class="sec">
+            <div class="sec-hdr">
+              <div class="sec-title-wrap">
+                <div class="sec-title">The Elements of User Experience</div>
+                <div class="sec-meta"><span class="on-m">Jesse James Garrett</span><span class="off-m">5 tags &middot; 142 coded</span></div>
+              </div>
+              <button class="add-btn removeable">Uninstall</button>
+            </div>
+            <div class="fold"><div class="fold-in"><div class="groups">
+              <div>
+                <div class="grp-h">Strategy</div>
+                <div class="chips">
+                  <span class="badge" style="background:var(--bn-ux-1-bg)">user needs</span>
+                  <span class="badge" style="background:var(--bn-ux-1-bg)">site objectives</span>
+                </div>
+              </div>
+              <div>
+                <div class="grp-h">Structure</div>
+                <div class="chips">
+                  <span class="badge" style="background:var(--bn-trust-1-bg)">interaction design</span>
+                  <span class="badge" style="background:var(--bn-trust-1-bg)">information architecture</span>
+                </div>
+              </div>
+            </div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary &middot; what changed</span>
+      <p><b>The header emptied itself.</b> Three decisions, each removing one control, none adding
+         any: <b>D1</b> said Apply and Uninstall must not be twin buttons; <b>D3</b> moved the enable
+         toggle into the sidebar row; <b>D4</b> deleted Apply outright, because installing now
+         <i>is</i> applying. What is left is identity, and one irreversible button a level deeper —
+         which is Safari's shape exactly.</p>
+      <p><b>Nothing here wears <code>.is-new</code>.</b> Four decisions in and the count is still zero:
+         every step has been subtraction or relocation of something already shipped.</p>
+      <p><b>The space this frees is the point.</b> An emptied header is room for the description —
+         and <code>author_bio</code> and <code>author_links</code>, which today exist only in the pre-install
+         preview and vanish the moment you adopt a codebook (I4), now have somewhere to live that
+         does not disappear.</p>
+      <p><b>Not shown, deliberately:</b> where the install cost is stated. D4 moves register B1's
+         missing <code>{{count}}</code> onto the install control, which is now the spending one. That
+         control lives on the browse surface, which is still undecided.</p>
+    </div>
+
+    <div class="stage-label">V2 &middot; the master list &mdash; the dot, promoted</div>
+    <div class="two-col">
+      <div class="frame" style="width:auto">
+        <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">v2 &middot; 320px &middot; installed only &middot; author shown</span></div>
+        <div class="frame-in">
+          <div class="sb wide">
+            <div class="sb-h">Your codebook</div>
+            <div class="sb-row sel"><span class="sw mini is-new"></span><span class="lbl2"><span class="r-title">project-ikea tags</span></span></div>
+            <div class="sb-h">Installed</div>
+            <div class="sb-row "><span class="sw mini is-new"></span><span class="lbl2"><span class="r-title">Emotional and cognitive signals</span></span></div>
+            <div class="sb-row rowoff"><span class="sw mini is-new"></span><span class="lbl2"><span class="r-title">Bristlenose UXR</span></span></div>
+            <div class="sb-row "><span class="sw mini is-new"></span><span class="lbl2"><span class="r-title">The Elements of User Experience</span><span class="r-author">Jesse James Garrett</span></span></div>
+            <div class="sb-row "><span class="sw mini is-new"></span><span class="lbl2"><span class="r-title">The Design of Everyday Things</span><span class="r-author">Don Norman</span></span></div>
+            <div class="sb-mini">Browse codebooks &hellip;</div>
+          </div>
+        </div>
+      </div>
+      <div class="frame" style="width:auto">
+        <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">shipped &middot; 280px &middot; dots, no author</span></div>
+        <div class="frame-in">
+          <div class="sb">
+            <div class="sb-h">Manual tags</div>
+            <div class="sb-row active"><span class="dot"></span><span>project-ikea tags</span></div>
+            <div class="sb-h">Default</div>
+            <div class="sb-row active"><span class="dot"></span><span>Emotional and cognitive signals</span></div>
+            <div class="sb-row off"><span class="dot"></span><span>Bristlenose UXR</span></div>
+            <div class="sb-h">Library</div>
+            <div class="sb-row active"><span class="dot"></span><span>The Elements of User Experience</span></div>
+            <div class="sb-row avail"><span class="dot"></span><span>The Design of Everyday Things</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary &middot; the dot becomes the control, and the row gains a byline</span>
+      <p><b>Same place, same size, now live.</b> The dot was already first-line aligned in the right
+         column &mdash; it just was not operable. Promoting it beats deleting it and adding a control
+         beside it: one element, one meaning, and the row does not grow horizontally.</p>
+      <p><b>The mini toggle is the first thing to wear <code>.is-new</code></b>, deliberately &mdash; and it is
+         the mildest kind, a <i>size modifier</i> on the shipped <code>.sw</code>. 26&times;15 preserves the
+         38&times;22 track ratio exactly (1.73). Marking it keeps the counter honest; excusing it would
+         make the counter useless.</p>
+      <p><b>The width was already 280px.</b> This mockup previously drew 230 and was flattering the
+         problem &mdash; the right frame is now the shipped <code>--bn-sidebar-width</code>. The v2 rail is
+         320, +40, which is what the byline and the toggle need before titles start wrapping.</p>
+      <p><b>The author earns its place twice.</b> It is how a researcher recognises a framework &mdash;
+         "Norman" lands faster than "The Design of Everyday Things" &mdash; and it puts provenance in
+         the list rather than only on the page, which is the same information loss I4 describes, one
+         surface up. The toggle stays aligned to the <i>title</i> line, not centred on the block: the
+         bullet rule the shipped dot already follows.</p>
+    </div>
+
+    <div class="stage-label">V3 &middot; the same control, full size, on the codebook page</div>
+    <div class="frame">
+      <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">v2 &middot; codebook page &middot; selected in the rail</span></div>
+      <div class="frame-in">
+        <div class="page">
+          <div class="sec">
+            <div class="sec-hdr">
+              <div class="sec-title-wrap">
+                <div class="sec-title">The Elements of User Experience</div>
+                <div class="sec-meta"><span class="on-m">Jesse James Garrett &middot; 5 tags &middot; 142 coded</span></div>
+              </div>
+              <button class="add-btn removeable">Uninstall</button>
+            </div>
+            <div class="fold"><div class="fold-in"><div class="groups">
+              <div>
+                <div class="grp-h">Strategy</div>
+                <div class="chips">
+                  <span class="badge" style="background:var(--bn-ux-1-bg)">user needs</span>
+                  <span class="badge" style="background:var(--bn-ux-1-bg)">site objectives</span>
+                </div>
+              </div>
+              <div>
+                <div class="grp-h">Structure</div>
+                <div class="chips">
+                  <span class="badge" style="background:var(--bn-trust-1-bg)">interaction design</span>
+                  <span class="badge" style="background:var(--bn-trust-1-bg)">information architecture</span>
+                </div>
+              </div>
+            </div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary &middot; one control, two scales</span>
+      <p><b>Full-size <code>.sw</code>, unmodified.</b> The page gets the shipped 38&times;22 macOS-matched
+         switch; only the rail needed a smaller variant. The new thing is the mini; the canonical
+         control stays untouched.</p>
+      <p><b>Two entry points, one state.</b> Both read and write the same <code>disabledFrameworks</code>
+         value, so they cannot disagree. Chrome does exactly this &mdash; toggle on the card and on the
+         details page; Safari does not repeat it. Repeating is right here, because the page is where
+         <i>"am I working with this?"</i> gets decided, and returning to the rail to act on the answer
+         would be a wasted trip.</p>
+      <p><b>Toggle before button, in that order.</b> The header reads reversible-then-irreversible
+         left to right, matching the cost gradient in D5.</p>
+    </div>
+
+    <div class="stage-label">V3b &middot; version, rendered only when present</div>
+    <div class="two-col">
+      <div class="frame" style="width:auto">
+        <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">cli-ux &middot; has version</span></div>
+        <div class="frame-in"><div class="page"><div class="sec"><div class="sec-hdr">
+          <div class="sec-title-wrap">
+            <div class="sec-title">Command-line usability</div>
+            <div class="sec-meta"><span class="on-m">Built in &middot; <span class="is-new">v1.0</span> &middot; 6 tags &middot; 88 coded</span></div>
+          </div>
+          <button class="add-btn removeable">Uninstall</button>
+        </div></div></div></div>
+      </div>
+      <div class="frame" style="width:auto">
+        <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">garrett &middot; no version &middot; shows nothing</span></div>
+        <div class="frame-in"><div class="page"><div class="sec"><div class="sec-hdr">
+          <div class="sec-title-wrap">
+            <div class="sec-title">The Elements of User Experience</div>
+            <div class="sec-meta"><span class="on-m">Jesse James Garrett &middot; 5 tags &middot; 142 coded</span></div>
+          </div>
+          <button class="add-btn removeable">Uninstall</button>
+        </div></div></div></div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary &middot; version is optional, and absence is silent</span>
+      <p><b>Render if present, omit if not</b> &mdash; no "unversioned" label, no placeholder, no dash. Two
+         of the nine YAMLs carry <code>version: "1.0"</code> (<code>cli-ux</code>, <code>sentiment</code>);
+         the other seven have none and show none.</p>
+      <p><b>It needs one field, not a schema change.</b> The YAML already parses it &mdash;
+         <code>TemplateOut</code> simply does not declare it, so it is dropped at the model boundary.
+         Adding <code>version: str | None</code> surfaces what already exists. That is the smallest
+         possible step outside presentation-only, and worth taking.</p>
+    </div>
+
+    <div class="stage-label">V4 &middot; the browse page &mdash; card density ladder</div>
+    <div class="frame">
+      <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">v2 &middot; browse &middot; four densities, same card</span></div>
+      <div class="frame-in">
+        <div class="card-grid">
+
+          <div class="picker-card">
+            <div class="picker-card-title">The Elements of User Experience</div>
+            <div class="picker-card-actions"><button class="bn-btn add-btn picker-card-toggle">Install</button></div>
+          </div>
+
+          <div class="picker-card">
+            <div class="picker-card-title">The Design of Everyday Things</div>
+            <div class="picker-card-author">Don Norman</div>
+            <div class="picker-card-desc">Affordances, signifiers, feedback and the gulfs of execution and evaluation.</div>
+            <div class="picker-card-actions"><button class="bn-btn add-btn picker-card-toggle">Install</button></div>
+          </div>
+
+          <div class="picker-card">
+            <div class="picker-card-title">10 Usability Heuristics</div>
+            <div class="picker-card-author">Jakob Nielsen</div>
+            <div class="picker-card-desc">Ten general principles for interaction design &mdash; visibility of system status,
+              match to the real world, user control and freedom, consistency, error prevention, recognition over recall.</div>
+            <div class="picker-card-tags">
+              <span class="badge" style="background:var(--bn-ux-1-bg)">system status</span>
+              <span class="badge" style="background:var(--bn-ux-1-bg)">user control</span>
+              <span class="badge" style="background:var(--bn-trust-1-bg)">error prevention</span>
+            </div>
+            <div class="picker-card-actions">
+              <span class="cost">142 quotes</span>
+              <button class="bn-btn add-btn picker-card-toggle">Install</button>
+            </div>
+          </div>
+
+          <div class="picker-card">
+            <div class="picker-card-title">The UX Honeycomb</div>
+            <div class="meta-line is-new">Peter Morville &middot; Semantic Studios &middot; v1.2</div>
+            <div class="picker-card-desc">Useful, usable, desirable, findable, accessible, credible, valuable &mdash;
+              seven facets for judging an experience beyond usability alone.</div>
+            <div class="picker-card-actions">
+              <span class="cost">142 quotes</span>
+              <button class="bn-btn add-btn picker-card-toggle">Install</button>
+            </div>
+          </div>
+
+          <div class="picker-card installed">
+            <div class="picker-card-title">Bristlenose UXR</div>
+            <div class="picker-card-author">Built in</div>
+            <div class="picker-card-desc">The recommended pour &mdash; general-purpose research codes that work on any study.</div>
+            <div class="picker-card-actions">
+              <span class="sw mini is-new"></span>
+              <button class="bn-btn add-btn removeable picker-card-toggle">Uninstall</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary &middot; the verb, and what the card carries</span>
+      <p><b>Install, not Get &mdash; and this is settled, not preference.</b> <code>glossary.csv</code> registers
+         <i>Install</i> across 20 locales, noted as <i>"Apple's imperative, measured"</i>, replacing
+         <i>Import codebook</i> on 26 Jul 2026. Choosing <i>Get</i> would reopen a measured 20-locale
+         decision.</p>
+      <p><b>And there is a reason beyond inertia.</b> The stores say <i>Get</i> <i>because getting is
+         free</i> &mdash; the Mac App Store uses it for free apps and shows a price otherwise; Edge Add-ons
+         uses it; Chrome says <i>Add to Chrome</i>; Claude's directory uses a bare <code>+</code>.
+         Under <b>D4 installing spends tokens</b>, so borrowing <i>Get</i> would import an idiom that
+         specifically signals <i>this costs nothing</i>. Claude's bare <code>+</code> is the most
+         cost-silent of the four and is the worst fit for the same reason.</p>
+      <p><b>So the card states the cost.</b> That is register <b>B1</b> &mdash; the missing
+         <code>{{count}}</code> &mdash; landing where D4 moved it. Shown here as a quiet figure beside the
+         button rather than inside the label, so the button stays one word in 21 languages.</p>
+      <p><b>Version and publisher are drawn but marked <code>.is-new</code>, because they do not exist.</b>
+         <code>version</code> is present in exactly two of the nine YAMLs (<code>cli-ux</code>,
+         <code>sentiment</code>, both <code>"1.0"</code>) and <b><code>TemplateOut</code> has no version
+         field at all</b> &mdash; it is dropped at the model boundary and rendered nowhere. Publisher does
+         not exist in any form. Both are forward slots for the far-future community library, and
+         wiring either is a schema change, which is outside this scope.</p>
+      <p><b>The installed card carries the toggle, not just the button.</b> Same mini control as the
+         rail, so enable is reachable from the catalogue without a trip to the codebook page &mdash; and
+         the card shows both axes exactly as D8 assigns them: toggle for enable, button for install.</p>
+    </div>
+
+    <div class="stage-label">V5 &middot; size ladder &mdash; trim to fit</div>
+    <div class="frame">
+      <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">v2 &middot; true pixel widths &middot; left: no visual &middot; right: with</span></div>
+      <div class="frame-in">
+        <div class="ladder">
+      <div>
+        <div class="rung-label"><b>minimum</b> &middot; 200px &middot; the tightest grid that ships — codebook-panel.css:908</div>
+        <div class="rung">
+        <div class="picker-card" style="width:200px"><div class="picker-card-title">10 Usability Heuristics</div><div class="picker-card-actions"><span class="cost">142</span><button class="bn-btn add-btn picker-card-toggle">Install</button></div></div>
+        <div class="picker-card" style="width:200px"><div class="with-vis"><div class="jacket" style="width:34px;height:51px"></div><div class="picker-card-body"><div class="picker-card-title">10 Usability Heuristics</div></div></div><div class="picker-card-actions"><span class="cost">142</span><button class="bn-btn add-btn picker-card-toggle">Install</button></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="rung-label"><b>minimal</b> &middot; 240px &middot; the codebook grid min — codebook-panel.css:9</div>
+        <div class="rung">
+        <div class="picker-card" style="width:240px"><div class="picker-card-title">10 Usability Heuristics</div><div class="picker-card-author">Jakob Nielsen</div><div class="picker-card-actions"><span class="cost">142</span><button class="bn-btn add-btn picker-card-toggle">Install</button></div></div>
+        <div class="picker-card" style="width:240px"><div class="with-vis"><div class="jacket" style="width:34px;height:51px"></div><div class="picker-card-body"><div class="picker-card-title">10 Usability Heuristics</div><div class="picker-card-author">Jakob Nielsen</div></div></div><div class="picker-card-actions"><span class="cost">142</span><button class="bn-btn add-btn picker-card-toggle">Install</button></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="rung-label"><b>slightly larger</b> &middot; 300px &middot; the v2 browse grid min drawn earlier</div>
+        <div class="rung">
+        <div class="picker-card" style="width:300px"><div class="picker-card-title">10 Usability Heuristics</div><div class="picker-card-author">Jakob Nielsen &middot; <span class="is-new">v1.0</span></div><div class="picker-card-desc">Ten general principles for interaction design.</div><div class="picker-card-actions"><span class="cost">142</span><button class="bn-btn add-btn picker-card-toggle">Install</button></div></div>
+        <div class="picker-card" style="width:300px"><div class="with-vis"><div class="jacket" style="width:44px;height:66px"></div><div class="picker-card-body"><div class="picker-card-title">10 Usability Heuristics</div><div class="picker-card-author">Jakob Nielsen</div><div class="picker-card-desc">Ten general principles for interaction design.</div></div></div><div class="picker-card-actions"><span class="cost">142</span><button class="bn-btn add-btn picker-card-toggle">Install</button></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="rung-label"><b>quote-card sized</b> &middot; 416px &middot; 26rem — the analysis card min, analysis.css:9</div>
+        <div class="rung">
+        <div class="picker-card" style="width:416px"><div class="picker-card-title">10 Usability Heuristics</div><div class="picker-card-author">Jakob Nielsen &middot; <span class="is-new">v1.0</span></div><div class="picker-card-desc">Ten general principles for interaction design.</div><div class="picker-card-actions"><span class="cost">142</span><button class="bn-btn add-btn picker-card-toggle">Install</button></div></div>
+        <div class="picker-card" style="width:416px"><div class="with-vis"><div class="jacket" style="width:56px;height:84px"></div><div class="picker-card-body"><div class="picker-card-title">10 Usability Heuristics</div><div class="picker-card-author">Jakob Nielsen</div><div class="picker-card-desc">Ten general principles for interaction design.</div></div></div><div class="picker-card-actions"><span class="cost">142</span><button class="bn-btn add-btn picker-card-toggle">Install</button></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="rung-label"><b>full content width</b> &middot; 832px &middot; --bn-max-width 52rem; the cap binds before a 14in screen does</div>
+        <div class="rung">
+        <div class="picker-card" style="width:832px"><div class="picker-card-title">10 Usability Heuristics</div><div class="picker-card-author">Jakob Nielsen &middot; <span class="is-new">v1.0</span></div><div class="picker-card-desc">Ten general principles for interaction design.</div><div class="picker-card-actions"><span class="cost">142</span><button class="bn-btn add-btn picker-card-toggle">Install</button></div></div>
+        <div class="picker-card" style="width:832px"><div class="with-vis"><div class="jacket" style="width:72px;height:108px"></div><div class="picker-card-body"><div class="picker-card-title">10 Usability Heuristics</div><div class="picker-card-author">Jakob Nielsen</div><div class="picker-card-desc">Ten general principles for interaction design.</div></div></div><div class="picker-card-actions"><span class="cost">142</span><button class="bn-btn add-btn picker-card-toggle">Install</button></div></div>
+        </div>
+      </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary &middot; where content drops out</span>
+      <p><b>Every width is a shipped one.</b> Not invented for this drawing: 200px and 240px are the two
+         <code>auto-fill</code> minimums already in <code>codebook-panel.css</code>, 416px is the analysis
+         card's <code>26rem</code>, and 832px is <code>--bn-max-width</code> (52rem).</p>
+      <p><b>832px is "full width" on a 14-inch Mac.</b> 1512pt of screen, less the ~280pt project
+         sidebar and the 320pt codebook rail, leaves ~912 &mdash; so the content cap binds before the
+         display does. Drawing anything wider would be drawing a case that cannot occur.</p>
+      <p><b>What drops as it narrows.</b> Description goes below 300; author goes below 240; at 200 only
+         the title and the control survive. That is the trim order, and it says the <i>minimum viable
+         card is title + Install</i> &mdash; which is what you proposed, now with a width attached to it.</p>
+      <p><b>On the visual.</b> Book jackets are not hypothetical &mdash; <code>Assets.xcassets</code> already
+         ships <code>welcome-book-nielsen</code>, <code>welcome-book-norman</code>,
+         <code>welcome-book-braun-clarke</code> and <code>welcome-book-lazarus</code> for the Welcome
+         screen. So a jacket for the frameworks with a book behind them is inherited, not commissioned.
+         The blocks here are <b>stand-ins, not artwork</b>.</p>
+      <p><b>Corrected 29 Aug &mdash; where the jackets actually live.</b> They are on the <b>Welcome
+         shelf</b> (<code>WelcomeIllustrations.swift</code>), not on the codebook details page, which
+         renders no image of any kind. The shelf is richer than a jacket: each book carries a
+         <code>spine</code> colour as well as artwork &mdash; Norman <code>#334155</code>, Nielsen
+         <code>#0f5c9e</code>, Braun &amp; Clarke <code>#7c3aed</code>, Lazarus <code>#b45309</code>.</p>
+      <p><b>The overlap with our codebooks is two, not four.</b> Norman and Nielsen are shipped
+         codebooks; Braun &amp; Clarke (thematic analysis) and Lazarus (appraisal theory) are method
+         credits, not codebooks. So of nine codebooks, <b>two</b> have a jacket and seven do not &mdash;
+         and a grid where two cards have artwork and seven have a gap reads as broken, not varied.</p>
+      <p><b>The spine colour is the way out.</b> It is a per-book brand token that exists independently
+         of the artwork, so it can dress a card that has no jacket &mdash; a coloured spine edge or a
+         tinted initial for the seven, the real jacket for the two, on the full page where there is
+         room to earn it. That inherits an existing decision rather than commissioning seven covers.
+         <b>Still needs a call</b>; the ladder shows both so the gap is visible at each width.</p>
+    </div>
+
+    <div class="stage-label">V6 &middot; the reserved slot &mdash; space decided, fill deferred</div>
+    <div class="frame">
+      <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">v2 &middot; one slot, several possible fills</span></div>
+      <div class="frame-in">
+        <div class="rung-label"><b>candidate fills</b> &middot; none chosen &middot; a codebook may have a book, a site, a face, or none</div>
+        <div class="rung" style="align-items:flex-start">
+          <div class="opt"><div class="slotbox jk" style="width:48px;height:72px"></div><div class="cap2">book jacket 2:3</div></div>
+          <div class="opt"><div class="slotbox circle" style="width:56px;height:56px"><span style="font-size:1.2rem">JN</span></div><div class="cap2">initials 1:1</div></div>
+          <div class="opt"><div class="slotbox circle face" style="width:56px;height:56px"></div><div class="cap2">headshot 1:1</div></div>
+          <div class="opt"><div class="slotbox " style="width:48px;height:72px"><span style="font-size:1.2rem">G</span></div><div class="cap2">neutral 2:3</div></div>
+        </div>
+
+        <div class="rung-label" style="margin-top:1.4rem"><b>the aspect problem</b> &middot; the two shapes cannot share one box</div>
+        <div class="rung" style="align-items:flex-start">
+          <div class="opt">
+            <div style="display:flex;align-items:center;justify-content:center;width:60px;height:80px;border:1px dashed var(--bn-colour-accent);border-radius:var(--bn-radius-sm)">
+              <div class="slotbox circle" style="width:52px;height:52px"><span style="font-size:1.1rem">JN</span></div>
+            </div>
+            <div class="cap2">2:3 slot, circle fill<br>dead space above and below</div>
+          </div>
+          <div class="opt">
+            <div style="display:flex;align-items:center;justify-content:center;width:72px;height:72px;border:1px dashed var(--bn-colour-accent);border-radius:var(--bn-radius-sm)">
+              <div class="slotbox jk" style="width:44px;height:66px"></div>
+            </div>
+            <div class="cap2">1:1 slot, jacket fill<br>jacket shrinks to fit</div>
+          </div>
+        </div>
+
+        <div class="rung-label" style="margin-top:1.4rem"><b>in place</b> &middot; card and page, slot reserved and neutral</div>
+        <div class="rung" style="align-items:flex-start">
+          <div class="picker-card" style="width:300px">
+            <div class="with-vis">
+              <div class="slotbox" style="width:48px;height:72px"><span style="font-size:1.2rem">G</span></div>
+              <div class="picker-card-body">
+                <div class="picker-card-title">The Elements of User Experience</div>
+                <div class="picker-card-author">Jesse James Garrett</div>
+              </div>
+            </div>
+            <div class="picker-card-actions"><span class="cost">142</span><button class="bn-btn add-btn picker-card-toggle">Install</button></div>
+          </div>
+          <div class="page" style="width:420px">
+            <div class="sec">
+              <div class="sec-hdr">
+                <div class="slotbox" style="width:64px;height:96px;margin-right:var(--bn-space-md)"><span style="font-size:1.6rem">G</span></div>
+                <div class="sec-title-wrap">
+                  <div class="sec-title">The Elements of User Experience</div>
+                  <div class="sec-meta"><span class="on-m">Jesse James Garrett &middot; 5 tags &middot; 142 coded</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary &middot; reserve the space, defer the fill</span>
+      <p><b>The slot is the durable decision; the fill is not.</b> The earlier pass committed to an
+         assigned colour per codebook &mdash; a whole generated palette &mdash; which was a commitment to
+         one answer when what the grid actually needs is a <i>consistent footprint</i>. Reserving the
+         space fixes the rhythm; what goes in it can change later without redrawing anything.</p>
+      <p><b>Every fill stays open.</b> A codebook may have a book, a website, an author with a face, or
+         none of those. Jacket, initials, headshot, neutral monogram &mdash; all fit the same reservation,
+         and which one applies can be per-codebook rather than systematic.</p>
+      <p><b>One thing cannot be deferred: the aspect.</b> A jacket is 2:3 portrait, a headshot or an
+         initials disc is 1:1 &mdash; they do not share a box. A 2:3 slot leaves a circle floating in dead
+         space; a 1:1 slot shrinks the jacket, and jackets are the richest asset we have. Picking the
+         <i>ratio</i> now costs nothing and keeps every fill viable; discovering it later means
+         redrawing both surfaces.</p>
+      <p><b>The safe default needs no decision.</b> Neutral surface, monogram in
+         <code>--bn-colour-badge-bg</code> &mdash; existing tokens, no new colour, no artwork. It ships as-is
+         and gets replaced fill by fill as assets arrive.</p>
+    </div>
+
+    <div class="stage-label">V7 &middot; rail closed &mdash; next / previous</div>
+    <div class="frame">
+      <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">v2 &middot; hover-revealed &middot; move the pointer over the page</span></div>
+      <div class="frame-in">
+        <div class="stage">
+          <div class="page" style="padding:1.1rem 2.6rem">
+            <div class="sec">
+              <div class="sec-hdr">
+                <div class="slotbox" style="width:48px;height:72px;margin-right:var(--bn-space-md)"><span style="font-size:1.2rem">N</span></div>
+                <div class="sec-title-wrap">
+                  <div class="sec-title">10 Usability Heuristics</div>
+                  <div class="sec-meta"><span class="on-m">Jakob Nielsen &middot; 10 groups &middot; 36 tags &middot; 214 coded</span></div>
+                </div>
+                <button class="add-btn removeable">Uninstall</button>
+              </div>
+              <div class="fold"><div class="fold-in"><div class="groups">
+                <div><div class="grp-h">Visibility of system status</div><div class="chips">
+                  <span class="badge" style="background:var(--bn-ux-1-bg)">progress shown</span>
+                  <span class="badge" style="background:var(--bn-ux-1-bg)">silent failure</span></div></div>
+                <div><div class="grp-h">User control and freedom</div><div class="chips">
+                  <span class="badge" style="background:var(--bn-trust-1-bg)">no undo</span>
+                  <span class="badge" style="background:var(--bn-trust-1-bg)">trapped</span></div></div>
+              </div></div></div>
+            </div>
+          </div>
+          <div class="chev l" role="button" tabindex="0" aria-label="Previous codebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+          <div class="chev r" role="button" tabindex="0" aria-label="Next codebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+        </div>
+      </div>
+    </div>
+    <div class="frame" style="margin-top:1rem">
+      <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">v2 &middot; always present &middot; for comparison</span></div>
+      <div class="frame-in">
+        <div class="stage always">
+          <div class="page" style="padding:1.1rem 2.6rem">
+            <div class="sec">
+              <div class="sec-hdr">
+                <div class="slotbox" style="width:48px;height:72px;margin-right:var(--bn-space-md)"><span style="font-size:1.2rem">N</span></div>
+                <div class="sec-title-wrap">
+                  <div class="sec-title">10 Usability Heuristics</div>
+                  <div class="sec-meta"><span class="on-m">Jakob Nielsen &middot; 10 groups &middot; 36 tags &middot; 214 coded</span></div>
+                </div>
+                <button class="add-btn removeable">Uninstall</button>
+              </div>
+              <div class="fold"><div class="fold-in"><div class="groups">
+                <div><div class="grp-h">Visibility of system status</div><div class="chips">
+                  <span class="badge" style="background:var(--bn-ux-1-bg)">progress shown</span>
+                  <span class="badge" style="background:var(--bn-ux-1-bg)">silent failure</span></div></div>
+                <div><div class="grp-h">User control and freedom</div><div class="chips">
+                  <span class="badge" style="background:var(--bn-trust-1-bg)">no undo</span>
+                  <span class="badge" style="background:var(--bn-trust-1-bg)">trapped</span></div></div>
+              </div></div></div>
+            </div>
+          </div>
+          <div class="chev l" role="button" tabindex="0" aria-label="Previous codebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+          <div class="chev r" role="button" tabindex="0" aria-label="Next codebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary &middot; what was taken, and what was left</span>
+      <p><b>Taken from the Welcome slot rotator</b> (<code>WelcomeHomeView.swift:707</code>): the frosted
+         disk, hairline, soft shadow, hover-reveal &mdash; and critically <b>inert-until-revealed</b>.
+         That file uses <code>allowsHitTesting(revealed)</code> so an invisible edge column never
+         shadows the content beneath; here it is <code>pointer-events:none</code> while hidden.
+         Forgetting it would reintroduce a bug already designed out once.</p>
+      <p><b>Left behind: the page dots and the cross-fade.</b> Dots say "small unordered set", and
+         next/prev only exists <i>when the rail is closed</i> &mdash; so dots would re-implement the rail,
+         badly, in the one situation the rail is absent. The title is the better position cue. The
+         in-place cross-fade suits a slot and not a whole codebook page, where it would read as a
+         slideshow rather than navigation.</p>
+      <p><b>Two things did not survive the port.</b> <code>.regularMaterial</code> has no true CSS
+         equivalent &mdash; <code>backdrop-filter: blur()</code> approximates it without vibrancy, guarded
+         here by <code>prefers-reduced-transparency</code>. And <b>SF Symbols are unavailable to CSS</b>,
+         so the glyph is a Lucide chevron. Acceptable: the rule is <i>don't fake a symbol at the
+         seam</i>, and this lens is fully web content.</p>
+      <p><b>The open choice, drawn both ways.</b> Hover-revealed is quieter and matches the house
+         precedent exactly; always-present never leaves a keyboard or touch user hunting for an
+         affordance that only appears on hover. Both are reachable by <code>:focus-visible</code>.</p>
+    </div>
+
+    <div class="stage-label">V8 &middot; G1 &mdash; the review badge finds a home</div>
+    <div class="two-col">
+      <div class="frame" style="width:auto">
+        <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">rail &middot; awareness</span></div>
+        <div class="frame-in">
+          <div class="sb wide">
+            <div class="sb-h">Your codebook</div>
+            <div class="sb-row"><span class="sw mini"></span><span class="lbl2"><span class="r-title">project-ikea tags</span></span></div>
+            <div class="sb-h">Installed</div>
+            <div class="sb-row sel"><span class="sw mini"></span><span class="lbl2"><span class="r-title">10 Usability Heuristics</span><span class="r-author">Jakob Nielsen</span></span><span class="pcount">12</span></div>
+            <div class="sb-row"><span class="sw mini"></span><span class="lbl2"><span class="r-title">The Elements of User Experience</span><span class="r-author">Jesse James Garrett</span></span></div>
+            <div class="sb-row rowoff"><span class="sw mini"></span><span class="lbl2"><span class="r-title">Bristlenose UXR</span></span><span class="pcount">3</span></div>
+            <div class="sb-mini">Browse codebooks &hellip;</div>
+          </div>
+        </div>
+      </div>
+      <div class="frame" style="flex:1;min-width:340px">
+        <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">page &middot; the door</span></div>
+        <div class="frame-in">
+          <div class="page">
+            <div class="sec"><div class="sec-hdr">
+              <div class="slotbox" style="width:48px;height:72px;margin-right:var(--bn-space-md)"><span style="font-size:1.2rem">N</span></div>
+              <div class="sec-title-wrap">
+                <div class="sec-title">10 Usability Heuristics</div>
+                <div class="sec-meta"><span class="on-m">Jakob Nielsen &middot; 10 groups &middot; 36 tags &middot; 214 coded</span></div>
+              </div>
+              <button class="review-btn">Review <span class="n">12</span></button>
+              <button class="add-btn removeable">Uninstall</button>
+            </div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary &middot; a chip is progress; a badge is a door</span>
+      <p><b>The regression, precisely.</b> D4 fires the job on install and hands progress to the
+         activity chip &mdash; but a chip is transient. Dismiss it, come back tomorrow, and v1's
+         persistent <i>"View Report &middot; 12"</i> is gone with nothing in its place. Pending proposals
+         become unreachable. That is function lost, not chrome lost.</p>
+      <p><b>Two homes, because they answer different questions.</b> The <b>rail badge</b> answers
+         <i>"where is there work?"</i> &mdash; scannable across every installed codebook at once, without
+         navigating. The <b>page button</b> answers <i>"take me to it."</i> Mail's split exactly:
+         unread counts in the sidebar, the door in the content pane.</p>
+      <p><b>It does not reintroduce D1's problem.</b> D1 objected to a <i>routine</i> and a
+         <i>destructive</i> control being the same shape, weight and colour. Review is accent-filled,
+         Uninstall is neutral &mdash; the shipped <code>.apply-btn</code> / <code>.add-btn</code> pair.
+         Primary beside secondary reads correctly; twin neutrals did not.</p>
+      <p><b>Nothing invented.</b> The pill is <code>.proposed-count</code>, already shipped. <b>But it
+         carries a defect worth fixing in the same pass:</b> the real rule hardcodes
+         <code>rgba(37,99,235,.08)</code> &mdash; light-mode accent. Dark mode uses <code>#0a84ff</code> and
+         palette-edo uses <code>#0f5c9e</code>, so the tint is wrong on two of the four theme
+         combinations. <code>color-mix()</code> against the token fixes it, exactly as island-doc
+         decision 6 did for <code>.merge-target</code>.</p>
+      <p><b>Deliberately not decided here:</b> whether Review opens a modal or a route. The door works
+         either way, and the last-modal-standing question stays open.</p>
+    </div>
+
+    <div class="stage-label">V9 &middot; each control appears exactly once</div>
+    <div class="frame">
+      <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">v2 &middot; browse cards &middot; not installed / installed / installed but off</span></div>
+      <div class="frame-in">
+        <div class="card-grid">
+          <div class="picker-card">
+            <div class="with-vis">
+              <div class="slotbox" style="width:44px;height:66px"><span style="font-size:1.1rem">N</span></div>
+              <div class="picker-card-body">
+                <div class="picker-card-title">The Design of Everyday Things</div>
+                <div class="picker-card-author">Don Norman</div>
+              </div>
+            </div>
+            <div class="picker-card-actions"><span class="cost">142 quotes</span><button class="bn-btn add-btn picker-card-toggle">Install</button></div>
+          </div>
+          <div class="picker-card">
+            <div class="with-vis">
+              <div class="slotbox" style="width:44px;height:66px"><span style="font-size:1.1rem">U</span></div>
+              <div class="picker-card-body">
+                <div class="picker-card-title">10 Usability Heuristics</div>
+                <div class="picker-card-author">Jakob Nielsen</div>
+              </div>
+            </div>
+            <div class="picker-card-actions"><span class="state-word">Installed</span><button class="bn-btn add-btn removeable picker-card-toggle">Uninstall</button></div>
+          </div>
+          <div class="picker-card off">
+            <div class="with-vis">
+              <div class="slotbox" style="width:44px;height:66px"><span style="font-size:1.1rem">B</span></div>
+              <div class="picker-card-body">
+                <div class="picker-card-title">Bristlenose UXR</div>
+                <div class="picker-card-author">Built in</div>
+              </div>
+            </div>
+            <div class="picker-card-actions"><span class="state-word">Installed &middot; off</span><button class="bn-btn add-btn removeable picker-card-toggle">Uninstall</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary &middot; corrected &mdash; state is not enough</span>
+      <p><b>The first version of this frame was wrong.</b> It showed installed cards with a green
+         check and no control, reading Claude's directory too literally. Claude can do that because
+         its directory has <i>no</i> uninstall anywhere on the card &mdash; removal lives on a different
+         surface entirely. Ours has to be reachable, so <b>an installed card shows Uninstall</b>.</p>
+      <p><b>What survives from that pass, and it was the actual complaint:</b> no <i>enable toggle</i> on
+         the card or the page. The toggle lives in the rail, once. That is untouched.</p>
+      <p><b>So the card carries one button that swaps verb</b> &mdash; Install out, Uninstall in, on the
+         shipped <code>.picker-card-toggle</code> with its <code>min-width</code> so the control column
+         never shifts. That is the "one footprint" rule the Library doc already settled, and V10 had
+         it right while this frame did not.</p>
+      <p><b>Future enhancement, noted not built:</b> a transition on the button as Install becomes
+         Uninstall &mdash; the moment the card changes state is the one moment worth animating here,
+         because it is the only feedback that the (paid) install actually took. Deferred.</p>
+      <p><b>Open, and it needs a call:</b> if the card carries Uninstall, does the <i>page</i> still?
+         Having it in both places undercuts D1's gradient (irreversible act a level deeper). The
+         cleaner split is <b>card owns lifecycle, page owns content</b> &mdash; which would leave Review as
+         the page's only button. Not decided here.</p>
+    </div>
+
+    <div class="stage-label">V10 &middot; the card, to spec</div>
+    <div class="frame">
+      <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">v2 &middot; not installed / installed &amp; on / installed &amp; off</span></div>
+      <div class="frame-in">
+        <div class="card-grid">
+          <div class="picker-card spec">
+            <div class="cardhead">
+              <div class="slotbox" style="width:44px;height:66px"><span style="font-size:1.1rem">T</span></div>
+              <div class="picker-card-body">
+                <div class="picker-card-title">The Elements of User Experience</div>
+                <div class="picker-card-author">Jesse James Garrett</div>
+              </div>
+            </div>
+            <div class="picker-card-desc">Five mutually exclusive planes from abstract strategy to concrete surface design.</div>
+            <div class="footrow"><span class="statline">&nbsp;</span><button class="bn-btn add-btn picker-card-toggle">Install</button></div>
+          </div>
+          <div class="picker-card spec">
+            <div class="cardhead">
+              <div class="slotbox" style="width:44px;height:66px"><span style="font-size:1.1rem">1</span></div>
+              <div class="picker-card-body">
+                <div class="picker-card-title">10 Usability Heuristics</div>
+                <div class="picker-card-author">Jakob Nielsen</div>
+              </div>
+            </div>
+            <div class="picker-card-desc">Ten broad rules of thumb for interaction design, refined from a factor analysis of 249 usability problems.</div>
+            <div class="footrow"><span class="statline">14 tags on 34 quotes</span><button class="bn-btn add-btn removeable picker-card-toggle">Uninstall</button></div>
+          </div>
+          <div class="picker-card spec off">
+            <div class="cardhead">
+              <div class="slotbox" style="width:44px;height:66px"><span style="font-size:1.1rem">C</span></div>
+              <div class="picker-card-body">
+                <div class="picker-card-title">Command-line usability <span class="ver">v1.0</span></div>
+                <div class="picker-card-author">Built in</div>
+              </div>
+            </div>
+            <div class="picker-card-desc">Tags for research on command-line tools, developer tools and sysadmin workflows.</div>
+            <div class="footrow"><span class="statline">9 tags on 12 quotes</span><button class="bn-btn add-btn removeable picker-card-toggle">Uninstall</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary &middot; built to spec, and two things the spec needs that do not exist</span>
+      <p><b>To spec:</b> title, author, version (rendered only where present &mdash; Garrett and Nielsen
+         have none), a 9&ndash;18 word description, a status line for installed codebooks, no enable
+         toggle, no "New" badge, and grey/low-contrast when disabled. The whole card navigates to the
+         full page; <b>only the Install/Uninstall button does not</b> &mdash; it sits at
+         <code>z-index:1</code> above the card's own click target, which is how the shipped tile
+         already keeps its <code>stopPropagation</code> honest.</p>
+      <p><b>One button that swaps verb, one footprint.</b> Install when out, Uninstall when in &mdash;
+         the shipped <code>.picker-card-toggle</code> with its <code>min-width</code>, so the control
+         column never shifts between states. That also satisfies the Claude precedent: an installed
+         codebook never shows an <i>add</i> affordance.</p>
+      <p><b>Gap 1 &mdash; the descriptions do not fit, and truncation will not save them.</b> All nine
+         shipped descriptions run <b>44&ndash;75 words</b> (Yablonski 75, Plato 72, Nielsen 61) against a
+         9&ndash;18 word budget. First-sentence-only lands in budget for just <b>5 of 9</b>: sentiment
+         (7w) and uxr (8w) fall short, cli-ux (19w) and Plato (25w) overrun. So the card needs a
+         <b>dedicated short field</b> &mdash; nine hand-written lines. First sentences make a decent
+         starting draft for five of them, not a rule.</p>
+      <p><b>Gap 2 &mdash; "on 34 quotes" cannot be computed today.</b> <code>total_quotes</code> is
+         <code>len(seen_quotes)</code> &mdash; distinct <i>within a group</i>. But
+         <code>summariseFramework</code> <b>sums</b> those across groups, so a quote carrying tags from
+         two groups of the same framework is counted twice. The framework-level distinct count the
+         card needs is not exposed by the API. <b>The shipped <code>foldedSummary</code> ("N tags &middot;
+         M coded") has the same flaw</b>, so this is an existing overstatement, not a new one.</p>
+    </div>
+
+    <div class="stage-label">V11 &middot; the graphic gutter &mdash; fixed width, free height</div>
+    <div class="frame">
+      <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">v2 &middot; nothing / circle 1:1 / jacket 2:3 &middot; blue rule = shared text edge</span></div>
+      <div class="frame-in">
+        <div class="card-grid">
+          <div class="picker-card spec guide">
+            <div class="cardhead">
+              <div class="gut"><span class="nil"></span></div>
+              <div class="picker-card-body">
+                <div class="picker-card-title">Bristlenose UXR</div>
+                <div class="picker-card-author">Built in</div>
+              </div>
+            </div>
+            <div class="picker-card-desc">A practitioner-oriented codebook for any user research study.</div>
+            <div class="footrow"><span class="statline">14 tags on 34 quotes</span><button class="bn-btn add-btn removeable picker-card-toggle">Uninstall</button></div>
+          </div>
+          <div class="picker-card spec guide">
+            <div class="cardhead">
+              <div class="gut"><span class="disc">G</span></div>
+              <div class="picker-card-body">
+                <div class="picker-card-title">The Elements of User Experience</div>
+                <div class="picker-card-author">Jesse James Garrett</div>
+              </div>
+            </div>
+            <div class="picker-card-desc">Five mutually exclusive planes from abstract strategy to concrete surface design.</div>
+            <div class="footrow"><span class="statline">14 tags on 34 quotes</span><button class="bn-btn add-btn removeable picker-card-toggle">Uninstall</button></div>
+          </div>
+          <div class="picker-card spec guide">
+            <div class="cardhead">
+              <div class="gut"><span class="jkt"></span></div>
+              <div class="picker-card-body">
+                <div class="picker-card-title">10 Usability Heuristics</div>
+                <div class="picker-card-author">Jakob Nielsen</div>
+              </div>
+            </div>
+            <div class="picker-card-desc">Ten broad rules of thumb for interaction design, refined from a factor analysis of 249 problems.</div>
+            <div class="footrow"><span class="statline">14 tags on 34 quotes</span><button class="bn-btn add-btn removeable picker-card-toggle">Uninstall</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary &middot; the invariant is the text edge, not the silhouette</span>
+      <p><b>This dissolves a problem I raised wrongly.</b> I argued the aspect ratio could not be
+         deferred &mdash; that a 2:3 slot would leave a circle floating in dead space, and a 1:1 slot
+         would shrink the jacket. Both follow from assuming a fixed <i>box</i>. <b>Fix the width and
+         let the height be free</b>, and the conflict disappears: a circle is 44&times;44, a jacket is
+         44&times;66, nothing is 44&times;0, and the text starts at the same x in all three.</p>
+      <p><b>The blue rule is the point.</b> It marks the shared left edge of the text column, held
+         across all three fills. That alignment is what makes a grid read as coherent &mdash; not
+         whether every card's graphic is the same shape. A commentary device, not product chrome.</p>
+      <p><b>Top-aligned, so nothing reflows.</b> The graphic hangs from the top of the row; the title
+         sits on the same baseline whether there is a jacket, a disc, or nothing beside it.</p>
+      <p><b>And "nothing" is a real option, not a fallback.</b> Reserving the width even when there is
+         no graphic is what keeps a bookless codebook from looking broken next to one with a jacket.
+         No colour has to be invented, and no artwork commissioned, for the grid to hold together
+         &mdash; which is what the earlier assigned-palette attempt was reaching for and overshot.</p>
+    </div>
+
+    <div class="stage-label">V12 &middot; the full details page</div>
+    <div class="frame">
+      <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">v2 &middot; codebook page &middot; installed, enabled &middot; real content</span></div>
+      <div class="frame-in">
+        <div class="page" style="padding:1.5rem">
+
+          <div class="pg-head">
+            <div class="pg-gut"><span class="jkt"></span></div>
+            <div class="pg-meta">
+              <div class="pg-title">10 Usability Heuristics</div>
+              <div class="pg-author">Jakob Nielsen</div>
+              <div class="pg-stat">14 tags on 34 quotes</div>
+            </div>
+            <div class="pg-actions">
+              <button class="review-btn">Review <span class="n">12</span></button>
+              <button class="bn-btn add-btn removeable">Uninstall</button>
+            </div>
+          </div>
+
+          <div class="preview-body">
+            <div class="preview-body-main">
+              <div class="preview-desc">Ten broad rules of thumb for interaction design, refined from a factor
+                analysis of 249 usability problems. Originally published as an expert evaluation framework,
+                adapted here for participant quote-coding. The heuristics cover system communication, user
+                control, error handling, cognitive load, and design discipline.</div>
+              <div class="preview-section-label">Tag groups</div>
+              <div class="preview-groups">
+                <div><div class="grp-h">Status visibility</div><div class="chips"><span class="badge" style="background:var(--bn-ux-1-bg)">progress shown</span><span class="badge" style="background:var(--bn-ux-1-bg)">silent failure</span><span class="badge" style="background:var(--bn-ux-1-bg)">stale state</span></div></div>
+                <div><div class="grp-h">Real-world matching</div><div class="chips"><span class="badge" style="background:var(--bn-task-1-bg)">jargon</span><span class="badge" style="background:var(--bn-task-1-bg)">familiar metaphor</span></div></div>
+                <div><div class="grp-h">Control and freedom</div><div class="chips"><span class="badge" style="background:var(--bn-trust-1-bg)">no undo</span><span class="badge" style="background:var(--bn-trust-1-bg)">trapped</span><span class="badge" style="background:var(--bn-trust-1-bg)">escape hatch</span></div></div>
+                <div><div class="grp-h">Consistency and standards</div><div class="chips"><span class="badge" style="background:var(--bn-opp-1-bg)">breaks convention</span><span class="badge" style="background:var(--bn-opp-1-bg)">internal mismatch</span></div></div>
+                <div><div class="grp-h">Error prevention</div><div class="chips"><span class="badge" style="background:var(--bn-emo-1-bg)">easy mistake</span><span class="badge" style="background:var(--bn-emo-1-bg)">destructive default</span></div></div>
+                <div><div class="grp-h">Recognition over recall</div><div class="chips"><span class="badge" style="background:var(--bn-ux-1-bg)">hidden option</span><span class="badge" style="background:var(--bn-ux-1-bg)">memory burden</span></div></div>
+              </div>
+            </div>
+            <div class="preview-body-sidebar">
+              <div class="preview-author">
+                <div class="preview-author-name">Jakob Nielsen</div>
+                <div class="preview-author-bio">Co-founder of Nielsen Norman Group and one of the most cited
+                  researchers in human&ndash;computer interaction. Coined "discount usability" and developed the
+                  heuristic evaluation method that became standard practice in UX. PhD from the Technical
+                  University of Denmark (1988).</div>
+                <div class="preview-author-links">
+                  <a href="#">nngroup.com &mdash; 10 Usability Heuristics &#x2197;</a>
+                  <a href="#">Original 1994 CHI paper (DOI) &#x2197;</a>
+                  <a href="#">Amazon US &mdash; Usability Engineering &#x2197;</a>
+                  <a href="#">Amazon UK &mdash; Usability Engineering &#x2197;</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <div class="commentary">
+      <span class="clabel">Commentary &middot; the page I4 was asking for</span>
+      <p><b>Everything here is real.</b> The description, the bio, and all four links are the shipped
+         <code>nielsen.yaml</code> &mdash; including the two Amazon links, which is the "purchase links"
+         half of the rich page. The group names and layout are the shipped
+         <code>.preview-*</code> classes, lifted verbatim: two columns, tag groups left, author card
+         right.</p>
+      <p><b>And it no longer disappears on install.</b> That is I4 closing in one frame: today this
+         layout exists <i>only</i> in the pre-install preview, so <code>author_bio</code> and
+         <code>author_links</code> vanish the moment you adopt a codebook. One page, reached from the
+         rail or from a browse card, differing only in state and controls.</p>
+      <p><b>Uninstall on the page as well as the card &mdash; confirmed.</b> Chrome and Edge both do
+         this (Remove on the card and on the details page). It costs D1's strict "irreversible act one
+         level deeper" gradient, but that gradient was always about <i>not putting Uninstall beside a
+         routine button in the always-visible rail</i> &mdash; and it is not in the rail. Review is
+         accent, Uninstall is neutral; primary beside secondary still reads correctly.</p>
+      <p><b>No enable toggle, per D11</b> &mdash; the rail owns it. The page shows enabled state by not
+         being greyed.</p>
+      <p><b>The gutter scales, the rule holds.</b> 72px wide here against 44px on the card; the jacket
+         is 108px tall because 2:3 is what a jacket is, and the text still starts at a fixed x. Same
+         D13 rule at a different size, no second decision needed.</p>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  document.querySelectorAll('.pbtn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.pbtn').forEach(function (o) { o.classList.remove('on'); });
+      b.classList.add('on');
+      document.documentElement.setAttribute('data-color-theme', b.getAttribute('data-pal'));
+    });
+  });
+</script>
+</body>
+</html>

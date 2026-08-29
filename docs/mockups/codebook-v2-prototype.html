@@ -119,9 +119,7 @@ body {
 .stage-label { font-size:var(--bn-text-caption); font-weight:490; color:var(--bn-colour-accent); text-transform:uppercase; letter-spacing:.05em; margin:1.3rem 0 .5rem; font-family:var(--bn-font-mono); }
 
 /* ── shared atoms ─────────────────────────────────────────────────────── */
-.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
-  padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm);
-  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
+.badge { display: inline-block; font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); padding: var(--bn-space-xs) 0.45rem; border-radius: var(--bn-radius-sm); background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
 
 /* ── Codebook Library modal ───────────────────────────────────────────── */
 .modal { background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
@@ -149,6 +147,11 @@ body {
   padding:.35rem .9rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
   background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
 .add-btn:hover { background:var(--bn-colour-hover); border-color:var(--bn-colour-accent); color:var(--bn-colour-accent); }
+/* Install on the codebook page is the page's main call to action, so it takes
+   the shipped primary fill verbatim (theme/atoms/modal.css .bn-btn-primary).
+   Normal size — the size does the work on Browse Library, the fill here. */
+.add-btn.bn-btn-primary { background:var(--bn-colour-accent); color:#fff; border-color:var(--bn-colour-accent); }
+.add-btn.bn-btn-primary:hover { opacity:.85; background:var(--bn-colour-accent); color:#fff; border-color:var(--bn-colour-accent); }
 .add-btn.removeable { color:var(--bn-colour-muted); }
 .add-btn.removeable:hover { color:var(--bn-colour-text); border-color:var(--bn-colour-border-hover); background:var(--bn-colour-hover); }
 .coming { flex-shrink:0; align-self:flex-start; font-size:var(--bn-text-badge); color:var(--bn-colour-muted); font-style:italic; }
@@ -188,12 +191,9 @@ body {
 @media (prefers-reduced-motion:reduce) { .fold,.groups,.sw::after,.sw,.sec-meta .on-m,.sec-meta .off-m { transition:none; } }
 
 /* ── Checkbox — lifted verbatim from atoms/checkbox.css (ghost pattern) ── */
-.bn-checkbox { -webkit-appearance:none; appearance:none; width:14px; height:14px;
-  border:1px solid var(--bn-colour-border); border-radius:2px; background:transparent;
-  margin:0; flex-shrink:0; cursor:pointer; position:relative; }
+.bn-checkbox { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border: 1px solid var(--bn-colour-border); border-radius: 2px; background: transparent; margin: 0; flex-shrink: 0; cursor: pointer; position: relative; transition: border-color var(--bn-transition-fast), background var(--bn-transition-fast); }
 .bn-checkbox:checked { border-color:var(--bn-colour-border-hover); background:var(--bn-colour-quote-bg); }
-.bn-checkbox:checked::after { content:""; position:absolute; left:3px; top:.5px; width:5px; height:9px;
-  border:solid var(--bn-colour-muted); border-width:0 1.5px 1.5px 0; transform:rotate(45deg); }
+.bn-checkbox:checked::after { content: ""; position: absolute; left: 3px; top: 0.5px; width: 5px; height: 9px; border: solid var(--bn-colour-muted); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
 /* master-list row: control leads, label follows, selected row is filled */
 .sb-row.sel { background:var(--bn-colour-hover); }
 /* Mini toggle — the promoted dot. A SIZE MODIFIER on the shipped .sw, not a new
@@ -230,9 +230,9 @@ body {
   border-radius:var(--bn-radius-lg); padding:var(--bn-space-lg); cursor:pointer; position:relative;
   transition:border-color var(--bn-transition-fast), background-color var(--bn-transition-fast); }
 .picker-card:hover { border-color:var(--bn-colour-accent); background-color:var(--bn-colour-hover); }
-.picker-card-title { font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); margin-bottom:.15rem; }
-.picker-card-author { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-bottom:.5rem; }
-.picker-card-desc { font-size:var(--bn-text-label); color:var(--bn-colour-muted); line-height:1.5; }
+.picker-card-title { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); margin-bottom: 0.15rem; }
+.picker-card-author { font-size: var(--bn-text-label); color: var(--bn-colour-muted); margin-bottom: 0.5rem; }
+.picker-card-desc { font-size: var(--bn-text-label); color: var(--bn-colour-muted); line-height: 1.5; max-width: 75ch; }
 .picker-card-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:var(--bn-space-md); }
 .picker-card-actions { margin-top:var(--bn-space-md); display:flex; justify-content:flex-end; align-items:center; gap:.6rem; }
 .picker-card-toggle { min-width:96px; justify-content:center; text-align:center; font-size:var(--bn-text-caption); }
@@ -335,13 +335,12 @@ body {
 .preview-body-main { flex:1; min-width:0; }
 .preview-body-sidebar { width:260px; flex-shrink:0; }
 .preview-desc { font-size:var(--bn-text-label); color:var(--bn-colour-muted); line-height:1.6; margin-bottom:var(--bn-space-lg); }
-.preview-section-label { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em;
-  color:var(--bn-colour-muted); font-weight:var(--bn-weight-emphasis); margin-bottom:var(--bn-space-md); }
-.preview-groups { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:var(--bn-space-lg); align-items:start; }
+.preview-section-label { font-size: var(--bn-text-badge); text-transform: uppercase; letter-spacing: 0.04em; color: var(--bn-colour-muted); font-weight: var(--bn-weight-emphasis); margin-bottom: var(--bn-space-md); }
+.preview-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--bn-space-lg); align-items: start; }
 .preview-author { background:var(--bn-colour-quote-bg); border-radius:var(--bn-radius-lg); padding:var(--bn-space-lg); }
-.preview-author-name { font-weight:var(--bn-weight-emphasis); font-size:var(--bn-text-label); margin-bottom:.25rem; }
+.preview-author-name { font-weight: var(--bn-weight-emphasis); font-size: var(--bn-text-label); margin-bottom: 0.25rem; }
 .preview-author-bio { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-bottom:var(--bn-space-md); line-height:1.5; }
-.preview-author-links { display:flex; flex-direction:column; gap:.4rem; font-size:var(--bn-text-caption); }
+.preview-author-links { display: flex; flex-wrap: wrap; gap: var(--bn-space-lg); font-size: var(--bn-text-caption); }
 .preview-author-links a { color:var(--bn-colour-accent); text-decoration:none; }
 /* page header — gutter at page scale */
 .pg-head { display:flex; gap:var(--bn-space-lg); align-items:flex-start; padding-bottom:var(--bn-space-lg);
@@ -359,16 +358,14 @@ body {
 /* ── Group card — lifted verbatim from organisms/codebook-panel.css ───────
    The background is NOT a tag colour: it is --bn-group-<set>, a separate and
    much lighter token family (oklch 97% 0.015 vs the tags' 94% 0.03). */
-.codebook-group { border-radius:var(--bn-radius-lg); padding:var(--bn-space-md); min-height:120px;
-  position:relative; border:1px solid transparent; }
+.codebook-group { border-radius: var(--bn-radius-lg); padding: var(--bn-space-md); min-height: 120px; position: relative; border: 1px solid transparent; transition: border-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast); }
 .codebook-group .group-title { font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis);
   color:var(--bn-colour-text); margin-bottom:var(--bn-space-sm); }
-.codebook-group .tag-list { display:flex; flex-wrap:wrap; gap:4px; }
+.codebook-group .tag-list { display:flex; flex-direction:column; gap:2px; }
 .codebook-group .group-total-row { display:flex; justify-content:space-between; align-items:center;
   padding:var(--bn-space-sm) 2px 0; margin-top:var(--bn-space-sm); }
-.group-total-label { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.04em; }
-.group-total-count { font-size:var(--bn-text-caption); font-weight:var(--bn-weight-emphasis);
-  color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; }
+.group-total-label { font-size: var(--bn-text-badge); color: var(--bn-colour-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.group-total-count { font-size: var(--bn-text-caption); font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); font-variant-numeric: tabular-nums; min-width: 16px; text-align: right; }
 
 /* ── Zone title — the .section-heading ATOM, lifted verbatim from
    atoms/section-heading.css, plus the datum rule from templates/report.css.
@@ -376,12 +373,11 @@ body {
    the h1 and an optional action as SIBLINGS. align-items:flex-end is load-
    bearing — it keeps a row WITH an action exactly as tall as one without, so
    the keyline lands at the same y on every lens. Do not use baseline. */
-.section-heading { display:flex; align-items:flex-end; justify-content:space-between;
-  gap:var(--bn-space-lg); max-width:none; margin:2.5rem 0 1rem; padding-bottom:.4rem;
-  border-bottom:1px solid var(--bn-colour-border); }
+.section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--bn-space-lg); max-width: none; margin: 2.5rem 0 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--bn-colour-keyline); }
 .section-heading > h1 { margin:0; max-width:none; min-width:0; border-bottom:none; padding-bottom:0;
   font-size:var(--bn-text-display); font-weight:var(--bn-weight-strong); letter-spacing:-.01em; line-height:1.2; }
 .section-heading-action { display:flex; align-items:center; gap:var(--bn-space-sm); flex-shrink:0; }
+.contentinner > section:first-of-type > .section-heading { margin-bottom:1.75rem; }
 /* the datum: the first zone title on a lens flushes to the content top */
 .contentinner > section:first-of-type > .section-heading { margin-top:0; }
 
@@ -408,6 +404,143 @@ input.enable[switch] { width:26px; height:15px; margin-top:.15em; }
 .sb-row { align-items:flex-start; }
 .sb-row .lbl2 { flex:1; min-width:0; }
 .sb-row input.enable, .sb-row .sw.mini { margin-left:.15rem; }
+
+/* ── Tag rows — the INSTALLED shape, lifted from codebook-panel.css ───
+   The preview (not installed) renders tags as bare badges. An INSTALLED
+   codebook renders .tag-row: name left, micro-bar + count right, with the bar
+   split when there are tentative proposals. The prototype had badges in both
+   states, which silently dropped every count and the tentative band (audit G2). */
+/* Tag row + micro-bar — lifted VERBATIM from organisms/codebook-panel.css.
+   The earlier version here was invented and got the alignment model wrong: it
+   used a fixed 52px bar slot with absolutely-positioned fills. The shipped model
+   is a flex-end bar area with a 50px floor, a PERCENTAGE-width bar, and
+   tabular-nums on the count — so the counts form a true column and the bars hang
+   off that anchor. That is the alignment work already done; do not redo it. */
+.tag-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--bn-space-sm); padding: 3px 4px; border-radius: var(--bn-radius-sm); cursor: grab; transition: background var(--bn-transition-fast), box-shadow var(--bn-transition-fast), opacity var(--bn-transition-fast); position: relative; }
+.tag-name-area { display:flex; align-items:center; gap:0; min-width:0; position:relative; }
+.tag-bar-area { display:flex; align-items:center; gap:var(--bn-space-xs); min-width:50px; justify-content:flex-end; }
+.tag-micro-bar { height: 0.6rem; border-radius: var(--bn-radius-sm); min-width: 2px; transition: width 0.2s ease; }
+.tag-micro-bar-stack { display: flex; align-items: center; height: 0.6rem; min-width: 2px; transition: width 0.2s ease; }
+.tag-micro-bar-accepted { height: 100%; transition: width 0.2s ease; }
+.tag-micro-bar-tentative { height: 100%; opacity: 0.28; transition: width 0.2s ease; }
+.tag-count { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); min-width:16px;
+  text-align:right; font-variant-numeric:tabular-nums; }
+.group-subtitle { font-size: var(--bn-text-caption); color: var(--bn-colour-muted); margin-top: 1px; cursor: text; padding: 1px 3px; margin-left: -3px; border-radius: var(--bn-radius-sm); min-height: 1.2em; line-height: var(--bn-text-caption-lh); }
+
+/* ── Header order: title LEADS, graphic TRAILS ──────────────────────
+   One left edge for the h1, the codebook title, the description and the tag
+   groups; one right edge for the graphic and the text block beneath it. */
+.pg-head > .pg-meta   { order:0; flex:1; min-width:0; }
+.pg-head > .pg-actions{ order:1; }
+.pg-head > .pg-gutter { order:2; flex-shrink:0; }
+
+/* ── Zone-title action: the browse door ─────────────────────────────────
+   .bn-btn-primary lifted verbatim from atoms/modal.css. The atom's row uses
+   align-items:flex-end deliberately — the action's bottom edge lands on the
+   title text's baseline. Top-aligning ONE child with align-self does not touch
+   that rule and does not change the row height, because a 33.65px button fits
+   inside the h1's 40.6px line box either way. So the keyline still lands at the
+   same y as on every other lens, which is the invariant the atom protects. */
+.bn-btn-primary { background:var(--bn-colour-accent); color:#fff; border-color:var(--bn-colour-accent); }
+.bn-btn-primary:hover { opacity: 0.85; }
+.section-heading-action { align-self:flex-start; }
+
+/* ── Header mirrors the body's two columns ────────────────────────────
+   The description lives in .preview-body-main, which stops short of the page
+   edge by the author sidebar's width. So the header splits the same way, with
+   the same gap: the graphic caps the MAIN column (its right edge lands exactly
+   where the description's does, at any width), and the actions sit in the SIDE
+   column, above the author card. Two columns above, two below, one grid. */
+.pg-head { display:flex; gap:var(--bn-space-xl); align-items:flex-start; }
+.pg-headmain { flex:1; min-width:0; display:flex; gap:var(--bn-space-lg); align-items:flex-start; }
+.pg-headmain .pg-meta { flex:1; min-width:0; }
+.pg-headmain .pg-gutter { flex-shrink:0; }
+.pg-side { width:240px; flex-shrink:0; display:flex; justify-content:flex-end; }
+.pg-side .pg-actions { display:flex; align-items:flex-start; gap:.6rem; }
+
+/* ── Coverage as a door, not a dead number ─────────────────────────────
+   .bn-btn-secondary lifted verbatim from atoms/modal.css. Medium: the default
+   .bn-btn size, secondary fill — heavier than the muted status line it replaces,
+   lighter than the accent primary beside it. */
+.bn-btn-secondary { background:var(--bn-colour-bg); color:var(--bn-colour-text); }
+.bn-btn-secondary:hover { background:var(--bn-colour-quote-bg); }
+/* INNOVATION — size axis. The shipped atom (theme/atoms/modal.css) has four
+   colour variants and no size variant. Browse Library is a destination, not a
+   dialog action: it wants presence without contrast, so it goes up a size and
+   stays neutral. Purely dimensional — no new colour is introduced. */
+.bn-btn-lg { font-size:var(--bn-text-body); padding:.5rem 1.15rem; }
+.pg-review { margin-top:var(--bn-space-md); font-size:var(--bn-text-label); }
+.pg-review .undec { color:var(--bn-colour-muted); font-weight:var(--bn-weight-normal); }
+
+/* ── Threshold review — READ-ONLY sliders ──────────────────────────────
+   You are looking at the negative, not re-developing it. The histogram is the
+   confidence distribution as issued and never changes; the sliders are restored
+   to where they were left and cannot be moved, because ProposedTag.status cannot
+   distinguish a threshold-derived decision from a hand-made one (100days, 9.Could).
+   Moving them would silently overwrite the researcher's own corrections. */
+.rev { max-width:var(--bn-max-width); margin:0 auto; padding:var(--bn-space-lg); }
+.hist { display:flex; align-items:flex-end; gap:2px; height:120px; padding:var(--bn-space-md) 0;
+  border-bottom:1px solid var(--bn-colour-border); position:relative; }
+.hist i { flex:1; border-radius:2px 2px 0 0; display:block; }
+.hist .lo { background:var(--bn-colour-border-hover); }
+.hist .mid{ background:color-mix(in srgb, var(--bn-colour-accent) 35%, transparent); }
+.hist .hi { background:var(--bn-colour-accent); }
+.tmark { position:absolute; top:0; bottom:0; width:1px; background:var(--bn-colour-text); opacity:.45; }
+.tmark span { position:absolute; top:-2px; left:4px; font-family:var(--bn-font-mono);
+  font-size:var(--bn-text-micro); color:var(--bn-colour-muted); white-space:nowrap; }
+.zones { display:flex; gap:var(--bn-space-lg); margin-top:var(--bn-space-md); font-size:var(--bn-text-label); }
+.zone { flex:1; }
+.zone .zh { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase;
+  letter-spacing:.06em; color:var(--bn-colour-muted); margin-bottom:.3rem; }
+.zone .zn { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-emphasis); }
+.zone .zs { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.rolock { margin-top:var(--bn-space-lg); border:1px solid var(--bn-colour-border);
+  border-left:3px solid var(--bn-colour-accent); border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0;
+  padding:.8rem 1rem; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); line-height:1.6; }
+.rolock b { color:var(--bn-colour-text); font-weight:490; }
+.ovr { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--bn-colour-accent); margin-left:.35rem; }
+
+/* ── Floor authoring apparatus — lifted from codebook-panel.css ─────────
+   The floor is the RICHEST shape, not the simplest: it is the only codebook you
+   can edit. Framework and built-in groups are read-only; these affordances
+   render for framework_id == null only. */
+.codebook-description { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-bottom:var(--bn-space-lg); }
+.new-group-icon { font-size:var(--bn-text-heading); color:var(--bn-colour-muted); line-height:1; }
+.new-group-label { font-size:var(--bn-text-label); color:var(--bn-colour-muted); }
+.new-group-placeholder { border:1px dashed var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  min-height:120px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:var(--bn-space-sm); cursor:pointer; background:transparent; }
+.new-group-placeholder:hover { border-color:var(--bn-colour-accent); }
+.tag-add-row { display: inline-flex; align-items: center; gap: 0; padding: 3px 4px; margin-top: 4px; cursor: pointer; color: var(--bn-colour-muted); transition: color var(--bn-transition-fast); }
+.tag-add-badge { display: inline-block; font-family: var(--bn-font-mono); font-size: var(--bn-text-label); padding: 0.2rem 0.5rem; border-radius: var(--bn-radius-sm); border: 1px dashed var(--bn-colour-border); background: transparent; color: var(--bn-colour-muted); transition: border-color var(--bn-transition-fast), color var(--bn-transition-fast); user-select: none; }
+.tag-add-row:hover .tag-add-badge { border-color:var(--bn-colour-accent); color:var(--bn-colour-accent); }
+.group-close { background: none; border: none; font-size: 1rem; line-height: 1; color: var(--bn-colour-muted); cursor: pointer; padding: 0.15rem 0.3rem; border-radius: var(--bn-radius-sm); opacity: 0; transition: opacity var(--bn-transition-fast), color var(--bn-transition-fast), background var(--bn-transition-fast); flex-shrink: 0; margin-top: -2px; margin-right: -4px; }
+.codebook-group:hover .group-close { opacity: 0.5; }
+.group-close:hover { opacity: 1 !important; color: var(--bn-colour-text); background: var(--bn-colour-quote-bg); }
+.codebook-group.drag-over { border-color: var(--bn-colour-accent); box-shadow: var(--bn-focus-ring); }
+.tag-row.merge-target { box-shadow:0 0 0 2px var(--bn-colour-accent);
+  background:color-mix(in srgb, var(--bn-colour-accent) 6%, transparent); }
+.grp-head { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--bn-space-xs); }
+[contenteditable]:focus { outline:none; background:var(--bn-colour-hover); border-radius:var(--bn-radius-sm); }
+.tag-del { cursor:pointer; color:var(--bn-colour-muted); opacity:0; padding:0 .2rem; }
+.tag-row:hover .tag-del { opacity:1; }
+
+/* ── Author treatment B — DELIBERATE divergence from the shipped rule ──
+   The author is a person, and the house already renders a person at
+   --bn-weight-emphasis in full text colour: .preview-author-name (the author
+   card on this very page), .bn-speaker-editable-name, .rewatch-participant.
+   Only the codebook byline was muted, so the SAME NAME rendered two ways on one
+   screen. This adopts the existing person treatment rather than inventing one.
+
+   NOTE FOR THE NEXT SWEEP: these three rules now differ from
+   organisms/codebook-panel.css on purpose. Do not "restore" them. The muted
+   version is the outlier being corrected, not the standard being broken. */
+.picker-card-author { font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); }
+.pg-author         { font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); }
+.sb-row .r-author  { font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-text); }
+/* the off/disabled states still demote it, so "kept, not active" still reads */
+.pageoff .pg-author, .picker-card.off2 .picker-card-author,
+.sb-row.rowoff .r-author { color:var(--bn-colour-muted); }
 
 </style>
 <style>
@@ -596,51 +729,7 @@ body { overflow:hidden; }
 </div>
 
 <script>
-const BOOKS = [
- {id:'project', title:'project-ikea tags', author:'Your own', floor:true, installed:true, on:true, tags:23, quotes:61, pending:0,
-  desc:'Your hand-made codes. Drag tags between groups to reorganise; click a tag or title to rename it.',
-  groups:[['Navigation',['cant find it','wrong label','back button']],['Trust',['price surprise','no reviews']],['Delivery',['slot unclear','too slow']]]},
- {id:'sentiment', title:'Emotional and cognitive signals', author:'Built in', installed:true, on:true, tags:7, quotes:214, pending:0, ver:'1.0',
-  desc:'Seven sentiment categories designed for UX research, with negative sentiment more granular than positive.',
-  bio:null, groups:[['Sentiment',['delighted','satisfied','neutral','confused','frustrated','anxious','angry']]]},
- {id:'uxr', title:'Bristlenose UXR', author:'Built in', installed:true, on:false, tags:31, quotes:88, pending:3,
-  desc:'A practitioner-oriented codebook for any user research study, covering behaviour and pain points.',
-  groups:[['Behaviour',['workaround','habit','shortcut']],['Pain points',['blocker','friction','confusion']],['Context',['device','setting']]]},
- {id:'nielsen', title:'10 Usability Heuristics', author:'Jakob Nielsen', installed:true, on:true, tags:14, quotes:34, pending:12, jacket:true,
-  desc:'Ten broad rules of thumb for interaction design, refined from a factor analysis of 249 usability problems.',
-  full:'Ten broad rules of thumb for interaction design, refined from a factor analysis of 249 usability problems. Originally published as an expert evaluation framework, adapted here for participant quote-coding. The heuristics cover system communication, user control, error handling, cognitive load, and design discipline.',
-  bio:'Co-founder of Nielsen Norman Group and one of the most cited researchers in human\u2013computer interaction. Coined "discount usability" and developed the heuristic evaluation method that became standard practice in UX.',
-  links:['nngroup.com \u2014 10 Usability Heuristics','Original 1994 CHI paper (DOI)','Amazon US \u2014 Usability Engineering','Amazon UK \u2014 Usability Engineering'],
-  groups:[['Status visibility',['progress shown','silent failure']],['Real-world matching',['jargon','familiar metaphor']],['Control and freedom',['no undo','trapped']],['Consistency',['breaks convention']],['Error prevention',['easy mistake']],['Recognition over recall',['hidden option']]]},
- {id:'garrett', title:'The Elements of User Experience', author:'Jesse James Garrett', installed:false, on:true, tags:20, quotes:0, pending:0,
-  desc:'Five mutually exclusive planes from abstract strategy to concrete surface design.',
-  bio:'Co-founder of Adaptive Path and author of The Elements of User Experience (2002), the book that gave the field its vocabulary for the layers of a design.',
-  links:['jjg.net','Amazon US \u2014 The Elements of User Experience'],
-  groups:[['Strategy',['user needs','site objectives']],['Scope',['feature','content requirement']],['Structure',['information architecture']],['Skeleton',['interface layout']],['Surface',['visual design']]]},
- {id:'norman', title:'The Design of Everyday Things', author:'Don Norman', installed:false, on:true, tags:28, quotes:0, pending:0, jacket:true,
-  desc:'Seven fundamental principles of interaction design that explain why products are easy or hard to use.',
-  bio:'Co-founder of the Nielsen Norman Group and author of The Design of Everyday Things, the book that made human-centred design a discipline.',
-  links:['jnd.org','Amazon US \u2014 The Design of Everyday Things'],
-  groups:[['Affordances',['what can I do']],['Signifiers',['where do I click']],['Feedback',['did it work']],['Mapping',['control matches effect']]]},
- {id:'morville', title:'The UX Honeycomb', author:'Peter Morville', installed:false, on:true, tags:28, quotes:0, pending:0,
-  desc:'Seven facets of user experience arranged as a honeycomb \u2014 useful, usable, desirable, findable and more.',
-  bio:'Author of Information Architecture for the World Wide Web and originator of the UX honeycomb.',
-  links:['semanticstudios.com','Original honeycomb article'],
-  groups:[['Useful',['solves it']],['Usable',['easy']],['Desirable',['wants it']],['Findable',['can locate']]]},
- {id:'yablonski', title:'Laws of UX', author:'Jon Yablonski', installed:false, on:true, tags:23, quotes:0, pending:0,
-  desc:'Psychological principles that underpin user experience, drawn from cognitive psychology and perception.',
-  bio:'Designer and author of Laws of UX, collecting the psychological heuristics designers lean on.',
-  links:['lawsofux.com'],
-  groups:[['Cognition',['choice overload','memory load']],['Perception',['grouping','contrast']]]},
- {id:'plato', title:'Plato', author:'Composite \u2014 Vlastos, Fine', installed:false, on:true, tags:26, quotes:0, pending:0,
-  desc:'A scholarly codebook for analysing Plato\u2019s dialogues through the lens of his ontology and ethics.',
-  bio:'A composite codebook drawn from the standard scholarly literature rather than a single author.',
-  links:['SEP \u2014 Plato','SEP \u2014 Plato\u2019s Ethics'],
-  groups:[['Forms',['participation','the good']],['Ethics',['virtue','justice']]]},
- {id:'cliux', title:'Command-line usability', author:'Built in', installed:false, on:true, tags:35, quotes:0, pending:0, ver:'1.0',
-  desc:'Tags for research on command-line tools, developer tools and sysadmin workflows.',
-  groups:[['Discoverability',['no help','unclear flag']],['Recovery',['destructive default']]]}
-];
+const BOOKS = [{"id": "project", "title": "project-ikea tags", "author": null, "floor": true, "installed": true, "on": true, "pending": 0, "ver": null, "desc": "Your hand-made codes. Drag tags between groups to reorganise; click a tag or title to rename it.", "bio": null, "links": [], "groups": [["Navigation", ["cant find it", "wrong label", "back button"], "Can they find their way to what they came for?"], ["Trust", ["price surprise", "no reviews"], "Do they believe what the product tells them?"], ["Delivery", ["slot unclear", "too slow"], "Does getting it to them work?"]], "pageTitle": "Your tags"}, {"id": "cliux", "title": "Command-Line UX", "author": null, "ver": "1.0", "desc": "Tags for research on command-line tools, developer tools, and sysadmin workflows — anywhere the primary interface is a terminal. Generic UX codebooks tell you \"the user was frustrated\"; this one tells you whether the friction was flag ergonomics, error-message illegibility, exit-code confusion, or a piping mental-model breakdown. Different design problems, different fixes.", "bio": "Drawn from observed friction in real CLI-tool research — sysadmins fighting with package managers, developers wrestling with build tools, operators trying to recover from a misfired command. The vocabulary is meant to be immediately useful to anyone writing or evaluating a terminal-first product.", "links": [], "groups": [["Discoverability", ["starting-point-unclear", "--help-reliance", "man-page-friction", "readme-as-first-resort", "search-engine-fallback", "tab-completion-reliance", "subcommand-hierarchy-confusion"], "First-touch friction — where do I even start?"], ["Mental model", ["verb-noun-mismatch", "flag-short-vs-long", "positional-vs-flag-confusion", "implicit-default-surprise", "composition-friction", "subcommand-vs-flag-boundary"], "How the participant reasons about the command surface"], ["Errors and recovery", ["error-message-illegible", "exit-code-unaware", "stderr-stdout-confusion", "did-it-work-ambiguity", "destructive-action-protection", "undo-expectation", "dry-run-usage"], "What happens when things go wrong"], ["Workflow", ["copy-paste-from-docs", "history-reuse", "alias-and-function-writing", "multi-terminal-context-switching", "one-shot-vs-repl-preference", "script-vs-interactive"], "Daily-driver mechanics"], ["Learning and docs", ["--help-discoverability", "example-driven-learning", "reference-vs-tutorial", "llm-as-docs", "peer-asking"], "How the participant acquires knowledge about the tool"], ["Trust and risk", ["sudo-hesitation", "prod-vs-sandbox-confusion", "secret-handling-friction", "script-from-internet-risk"], "Sandbox, secrets, and \"should I really run this?\""]], "installed": false, "on": true, "pending": 0, "jacket": false, "tags": 35, "quotes": 0, "builtin": true}, {"id": "garrett", "title": "The Elements of User Experience", "author": "Jesse James Garrett", "ver": null, "desc": "Five mutually exclusive planes from abstract strategy to concrete surface design. A top-down framework for placing findings in the UX decision hierarchy. Each plane describes a different layer of product decisions — from why we build it (Strategy) to what it looks like (Surface).", "bio": "Co-founder of Adaptive Path. Coined the term \"Ajax\" and created the five-plane model that became foundational to UX practice. Author of \"The Elements of User Experience: User-Centered Design for the Web and Beyond\" (2002, 2nd edition 2010).", "links": ["jjg.net", "Amazon US", "Amazon UK"], "groups": [["Strategy", ["user need", "business objective", "success metric", "value proposition"], "Is the product solving the right problem for the right users?"], ["Scope", ["feature requirement", "content requirement", "priority", "scope creep"], "What features and content are included or excluded?"], ["Structure", ["interaction design", "information architecture", "navigation pattern", "task flow"], "How is information organised conceptually?"], ["Skeleton", ["interface layout", "wireframe issue", "convention", "component placement"], "How are interface elements arranged?"], ["Surface", ["visual design", "sensory experience", "brand alignment", "aesthetic reaction"], "What is the visual treatment?"]], "installed": false, "on": true, "pending": 0, "jacket": false, "tags": 20, "quotes": 0}, {"id": "morville", "title": "The User Experience Honeycomb", "author": "Peter Morville", "ver": null, "desc": "Seven facets of user experience arranged as a honeycomb — useful, usable, desirable, findable, accessible, credible, valuable. A broader evaluation framework than Garrett or Norman, designed to ask whether a product delivers on every quality dimension, not just ease of use. Particularly strong at surfacing credibility and findability findings that other frameworks miss.", "bio": "Pioneer of information architecture and user experience. Co-author of \"Information Architecture: For the Web and Beyond\" (the Polar Bear book, 4th edition 2015 with Rosenfeld and Arango), author of \"Ambient Findability\" (2005), \"Search Patterns\" (2010), and \"Intertwingled\" (2014). Co-founded the Information Architecture Institute in 2002. Graduate of the University of Michigan School of Information. Founded Semantic Studios in 2001, advising clients including AT&T, Cisco, Harvard, IBM, the Library of Congress, and Vodafone.", "links": ["semanticstudios.com", "Original honeycomb article", "Amazon US — Information Architecture (4th ed)", "Amazon UK — Information Architecture (4th ed)", "Amazon US — Ambient Findability", "Amazon UK — Ambient Findability"], "groups": [["Useful", ["relevance", "problem-solution fit", "utility", "feature gap"], "Does the product actually solve a real problem for its users?"], ["Usable", ["ease of use", "learnability", "efficiency", "error tolerance"], "Can people use it effectively without unnecessary difficulty?"], ["Desirable", ["emotional appeal", "aesthetic quality", "brand perception", "engagement"], "Does the design create a positive emotional connection?"], ["Findable", ["navigation clarity", "search effectiveness", "content discoverability", "labelling"], "Can users find the content, features, and information they need?"], ["Accessible", ["inclusive design", "assistive compatibility", "cognitive accessibility", "situational access"], "Can people with diverse abilities and contexts use it effectively?"], ["Credible", ["trustworthiness", "content accuracy", "transparency", "social proof"], "Do users trust and believe what the product tells them?"], ["Valuable", ["worth it", "competitive value", "time well spent", "return intent"], "Does the product deliver enough value to justify the exchange?"]], "installed": false, "on": true, "pending": 0, "jacket": false, "tags": 28, "quotes": 0}, {"id": "nielsen", "title": "10 Usability Heuristics for User Interface Design", "author": "Jakob Nielsen", "ver": null, "desc": "Ten broad rules of thumb for interaction design, refined from a factor analysis of 249 usability problems. Originally published as an expert evaluation framework, adapted here for participant quote-coding. The heuristics cover system communication, user control, error handling, cognitive load, and design discipline. Particularly strong at surfacing status confusion, control anxiety, and error-message quality that other frameworks subsume into broader categories.", "bio": "Co-founder of Nielsen Norman Group and one of the most cited researchers in human-computer interaction. Coined the term \"discount usability\" and developed the heuristic evaluation method that became standard practice in UX. PhD in human-computer interaction from the Technical University of Denmark (1988). Author of \"Usability Engineering\" (1993), \"Designing Web Usability\" (1999), and hundreds of articles at nngroup.com. The 10 usability heuristics were first published with Rolf Molich in 1990 and refined in the 1994 CHI paper.", "links": ["nngroup.com — 10 Usability Heuristics", "Original 1994 CHI paper (DOI)", "Amazon US — Usability Engineering", "Amazon UK — Usability Engineering"], "groups": [["Status visibility", ["clear status", "opaque status", "progress indication", "mode confusion"], "Does the user know what's happening right now?"], ["Real-world matching", ["natural language", "jargon barrier", "metaphor fit", "logical ordering"], "Does the system speak the user's language?"], ["Control and freedom", ["emergency exit", "trapped", "undo available", "destructive action"], "Can the user escape, undo, and recover?"], ["Consistency and standards", ["internal inconsistency", "platform convention", "terminology inconsistency"], "Does the system follow its own rules and platform conventions?"], ["Error prevention", ["hesitation", "near miss", "guardrail", "risky default"], "Does the design prevent mistakes before they happen?"], ["Recognition over recall", ["visible options", "memory burden", "helpful default", "context loss"], "Does the interface minimise memory load?"], ["Flexibility and efficiency", ["shortcut desire", "repetitive task", "customisation"], "Does the interface support both novice and expert workflows?"], ["Aesthetics and minimalism", ["information overload", "focused design", "competing elements"], "Does every element earn its place on screen?"], ["Errors and recovery", ["clear error message", "cryptic error", "blame language", "recovery guidance"], "When things go wrong, does the system explain clearly and help fix it?"], ["Help and documentation", ["self-service help", "help absent", "contextual guidance"], "Can users find answers when they need them?"]], "installed": true, "on": true, "pending": 12, "jacket": true, "tags": 36, "quotes": 72}, {"id": "norman", "title": "The Design of Everyday Things", "author": "Don Norman", "ver": null, "desc": "Seven fundamental principles of interaction design that explain why products are easy or hard to use. A bottom-up framework for diagnosing why interactions succeed or fail — from whether users can discover what's possible (Discoverability) to whether the system communicates what happened (Feedback) to whether errors are slips or mistakes.", "bio": "Director of the Design Lab at UC San Diego. Former VP of Apple's Advanced Technology Group. Coined the term \"user experience\" in the 1990s. Author of \"The Design of Everyday Things\" (originally published as \"The Psychology of Everyday Things\", 1988; revised and expanded edition 2013).", "links": ["jnd.org", "Amazon US", "Amazon UK"], "groups": [["Discoverability", ["visible action", "hidden feature", "exploration", "first-time use"], "Can the user figure out what actions are possible?"], ["Feedback", ["system response", "delayed feedback", "ambiguous feedback", "confirmation"], "Does the system communicate results clearly?"], ["Conceptual model", ["user mental model", "system model", "model mismatch", "learned behaviour"], "Does user understanding match reality?"], ["Signifiers", ["affordance", "perceived affordance", "false signifier", "missing signifier"], "Do visual cues correctly indicate how to interact?"], ["Mapping", ["natural mapping", "arbitrary mapping", "spatial correspondence", "logical layout"], "Does the relationship between controls and outcomes feel natural?\n"], ["Constraints", ["physical constraint", "cultural constraint", "semantic constraint", "logical constraint"], "Do designed limitations guide users toward correct actions?"], ["Slips vs Mistakes", ["action slip", "memory lapse", "rule-based mistake", "knowledge-based mistake"], "Was the error execution-based or goal-based?"]], "installed": false, "on": true, "pending": 0, "jacket": true, "tags": 28, "quotes": 0}, {"id": "plato", "title": "Platonic Ontology & Epistemology", "author": "Composite — Vlastos, Fine, Kraut, Sedley", "ver": null, "desc": "A scholarly codebook for analysing Plato's dialogues through the lens of his ontology (Theory of Forms, cosmology, soul) and epistemology (knowledge vs opinion, dialectic, recollection). Tags are grounded in the major themes identified by leading Plato scholars: Gregory Vlastos, Gail Fine, Richard Kraut, David Sedley, and Terence Irwin. Designed for tagging philosophical arguments, not product interfaces — expect passages about justice, beauty, and the nature of reality rather than buttons and navigation.", "bio": "Composite framework drawing on Gregory Vlastos (Socratic elenchus, irony), Gail Fine (epistemology, Forms), Richard Kraut (ethics, Republic), David Sedley (cosmology, Theaetetus), and Terence Irwin (Plato's ethics and moral psychology). These scholars represent the dominant Anglo-American tradition of Plato interpretation from the late 20th century onward.", "links": ["SEP — Plato", "SEP — Plato's Ethics"], "groups": [["Theory of Forms", ["participation", "separation", "self-predication", "third man argument", "form of the good"], "How does Plato's ontology of abstract, perfect entities work?"], ["Knowledge & Opinion", ["episteme vs doxa", "justified true belief", "recollection", "objects of knowledge", "philosopher's knowledge"], "What can be known, how, and what falls short of knowledge?"], ["Dialectic Method", ["elenchus", "hypothesis method", "collection and division", "myth and analogy"], "What philosophical methods does Socrates employ?"], ["Soul & Psychology", ["immortality of soul", "tripartite soul", "psychic harmony", "transmigration"], "What is the soul, what are its parts, and what is its fate?"], ["Ethics & Virtue", ["unity of virtue", "virtue as knowledge", "the examined life", "piety and justice"], "What is virtue, how is it acquired, and how should one live?"], ["Argumentation & Irony", ["socratic irony", "reductio ad absurdum", "aporia", "interlocutor concession"], "What rhetorical and argumentative moves does Socrates make?"]], "installed": false, "on": true, "pending": 0, "jacket": false, "tags": 26, "quotes": 0}, {"id": "sentiment", "title": "Emotional & Cognitive Signals", "author": null, "ver": "1.0", "desc": "Seven sentiment categories designed for UX research. Negative sentiments are more granular than positive ones because frustration, confusion, and doubt each point to different design problems (performance, information architecture, and credibility respectively). Surprise is neutral — it flags expectation mismatches for the researcher to investigate. Auto-applied by the pipeline during quote extraction.", "bio": "Built into Bristlenose's pipeline. These tags are auto-applied during quote extraction based on emotional and cognitive signals in participant speech. The taxonomy draws on Russell's core affect model, Scherer's appraisal theory, Hassenzahl's pragmatic/hedonic UX distinction, and Fogg's web credibility research.", "links": [], "groups": [["Sentiment", ["frustration", "confusion", "doubt", "surprise", "satisfaction", "delight", "confidence"], "AI-detected emotional responses"]], "installed": true, "on": true, "pending": 0, "jacket": false, "tags": 7, "quotes": 14, "builtin": true}, {"id": "uxr", "title": "Bristlenose UXR Codebook", "author": null, "ver": "2.0", "desc": "A practitioner-oriented codebook for any user research study. Eight theme groups covering behaviour, pain points, needs, mental models, motivation, emotion, context, and learning. Domain-agnostic — works equally well for fishkeeping, fintech, healthcare, or rock climbing. These are universal patterns of human experience that emerge in qualitative research across any domain.", "bio": "This is the default codebook — it provides a general-purpose qualitative coding framework that applies to any domain. Unlike the Research Leaders codebooks (Garrett, Norman), which focus on designed artefacts and specific interaction-design theories, these tags reflect the practical vocabulary used by working UX researchers on sticky notes, in Dovetail, and in affinity diagrams.", "links": [], "groups": [["Behaviour", ["workaround", "habit", "avoidance", "say-do gap", "error recovery"], "What people actually do"], ["Pain points", ["friction", "dead end", "abandonment"], "Where things break down"], ["Needs and desires", ["unmet need", "feature request", "desire path", "expectation mismatch"], "What people want"], ["Mental models", ["mental model", "assumption", "prior experience", "misconception"], "How people think it works"], ["Motivation", ["goal", "trigger", "barrier", "job-to-be-done"], "Why people bother"], ["Emotion and trust", ["anxiety", "trust", "distrust"], "How people feel"], ["Context", ["interruption", "time pressure", "social influence", "device/channel"], "The world around the task"], ["Learning", ["aha moment", "learning curve", "self-taught", "expertise"], "How people figure things out"]], "installed": true, "on": false, "pending": 3, "jacket": false, "tags": 31, "quotes": 62, "builtin": true}, {"id": "yablonski", "title": "Laws of UX", "author": "Jon Yablonski", "ver": null, "desc": "A collection of psychological principles that underpin user experience, drawn from cognitive psychology, perception science, and behavioural economics. Each law names a specific mechanism — Hick's Law (choice paralysis), the Peak-End Rule (memory distortion), Fitts's Law (motor difficulty) — that explains why a participant reacts the way they do. Particularly strong at surfacing decision friction, expectation transfer from other products, and the cognitive weight of complexity that other frameworks describe only as generic \"usability\" issues.", "bio": "Senior product designer based in Detroit, currently at Google. Created lawsofux.com in 2017 as a curated collection of UX principles backed by named psychological research. The site became one of the most-shared UX resources worldwide and was expanded into \"Laws of UX: Using Psychology to Design Better Products & Services\" (O'Reilly, 1st ed 2020, 2nd ed 2024). Yablonski did not invent the underlying laws — each originates from a named researcher (Hick, Fitts, Miller, Kahneman, Zeigarnik, etc.) — but his contribution is the curation, design-context translation, and accessible presentation that made them standard vocabulary for a generation of practitioners.", "links": ["lawsofux.com — all laws with explanations", "Amazon US — Laws of UX (2nd edition, 2024)", "Amazon UK — Laws of UX (2nd edition, 2024)", "O'Reilly — Laws of UX"], "groups": [["Choice and decision", ["Hick: choice paralysis", "Hick: decision simplicity", "Von Restorff: option salience", "Thaler: default acceptance"], "Can the user choose without freezing?"], ["Expectation and convention", ["Jakob: convention expectation", "Jakob: transfer confusion", "Postel: input intolerance", "Postel: input forgiveness"], "Does it work the way other products taught them?"], ["Memory and experience", ["Kahneman: peak moment", "Kahneman: ending effect", "Zeigarnik: unfinished pull", "Hull: completion momentum", "Miller: memory overload"], "What moments stick, and what pulls them back?"], ["Perception and aesthetics", ["Kurosu: beauty trust", "Kurosu: aesthetic forgiveness", "Gestalt: grouping confusion", "Gestalt: grouping clarity"], "Does it look trustworthy and read clearly?"], ["Effort and complexity", ["Tesler: complexity burden", "Tesler: complexity absorbed", "Fitts: target difficulty", "Sweller: cognitive overload"], "Who does the hard work — the user or the system?"], ["Speed and responsiveness", ["Doherty: instant response", "Doherty: waiting frustration"], "Is the system fast enough to stay out of the way?"]], "installed": false, "on": true, "pending": 0, "jacket": false, "tags": 23, "quotes": 0}];
 
 
 
@@ -659,6 +748,20 @@ const SLOTS = {ux:5, emo:6, task:5, trust:5, opp:5, sentiment:7};
 const tagBg = (set,i) => `var(--bn-${set}-${(i % (SLOTS[set]||5)) + 1}-bg)`;
 const groupBg = set => `var(--bn-group-${set||'ux'})`;
 
+// A Review door exists only where there is an AutoCodeJob to review — i.e. where
+// proposals and a confidence distribution exist. The floor is hand-coded
+// (source "human", no proposals) and sentiment is pipeline-applied (source
+// "pipeline", bypasses ProposedTag entirely). Both have real counts and no
+// histogram, so both show the figure as text. Not a disabled button: there is
+// nothing being withheld, so absence is the honest rendering.
+// Sentiment is permanent on the install axis and toggleable on the enable axis.
+// It arrives with the pipeline: nothing to install, and uninstalling only
+// destroys tags that nothing can restore (register A4). So no install/uninstall
+// control anywhere — the defect closes by removing the affordance, not by
+// patching the endpoint.
+const canInstall = b => !b.floor && b.id !== 'sentiment';
+const hasJob = b => !b.floor && b.id !== 'sentiment';
+
 let view='page', sel='nielsen', railShut=false, pendingAction=null;
 const $ = s=>document.querySelector(s);
 const bk = id=>BOOKS.find(b=>b.id===id);
@@ -674,56 +777,100 @@ function gutter(b, w){
 }
 
 function renderRail(){
-  const inst = BOOKS.filter(b=>b.installed);
-  const floor = inst.filter(b=>b.floor), rest = inst.filter(b=>!b.floor);
+  // Shipped IA: three sections, split on author === "" (CodebookSidebar.tsx:100).
+  // v2 filters each to INSTALLED. 'Library' is repointed to 'Frameworks' because
+  // v2 gives the word Library to the browse page; 'Manual tags' and 'Default' are
+  // the shipped strings, unchanged.
+  const inst   = BOOKS.filter(b=>b.installed);
+  const floor  = inst.filter(b=>b.floor);
+  const builtIn= inst.filter(b=>!b.floor && b.builtin);
+  const frameworks = inst.filter(b=>!b.floor && !b.builtin);
   const row = b=>`<div class="sb-row ${b.on?'':'off2'} ${sel===b.id?'sel':''}" data-sel="${b.id}">
-      <span class="lbl2"><span class="r-title">${esc(b.title)}</span>${b.author&&!b.floor?`<span class="r-author">${esc(b.author)}</span>`:''}</span>
+      <span class="lbl2"><span class="r-title">${esc(b.title)}</span>${
+        (b.author && !b.floor)?`<span class="r-author">${esc(b.author)}</span>`:''}</span>
       ${b.pending?`<span class="pcount">${b.pending}</span>`:''}
       ${enableControl(b)}
     </div>`;
+  const sect = (label, arr) => arr.length ? `<div class="sb-h">${label}</div>${arr.map(row).join('')}` : '';
   $('#rail').innerHTML =
-    `<div class="sb-h">Your codebook</div>${floor.map(row).join('')}
-     <div class="sb-h">Installed</div>${rest.map(row).join('')}
-     <div class="sb-mini" id="browsedoor" style="cursor:pointer">Browse codebooks &hellip;</div>`;
+    sect('Manual tags', floor) + sect('Default', builtIn) + sect('Frameworks', frameworks)
+    ;
 }
 
 function renderPage(){
   const b=bk(sel);
   const sets = SETSFOR[b.id] || [];
   const groups=(b.groups||[]).map((g,i)=>{
-    const set = sets[i] || 'ux';
-    const tags = g[1].map((t,j)=>`<span class="badge" style="background:${tagBg(set,j)}">${esc(t)}</span>`).join('');
-    const total = b.installed ? Math.max(1, Math.round(b.quotes / (b.groups.length||1))) : 0;
-    return `<div class="codebook-group" style="background:${groupBg(set)}">
-      <div class="group-title">${esc(g[0])}</div>
+    const set = sets[i] || 'ux', sub = g[2] || '';
+    const counts = g[1].map((t,j)=> b.installed ? Math.max(0, (b.quotes||0)%7 + (j*3)%9) : 0);
+    const tent   = g[1].map((t,j)=> (b.installed && b.pending && j===1) ? 3 : 0);
+    const maxC   = Math.max(1, ...counts.map((c,j)=>c+tent[j]));
+    const tags = g[1].map((t,j)=>{
+      const badge = `<span class="badge" style="background:${tagBg(set,j)}">${esc(t)}</span>`;
+      if (!b.installed) return `<div class="tag-row"><div class="tag-name-area">${badge}</div><div class="tag-bar-area"></div></div>`;
+      // MicroBar's own arithmetic: outer width is (accepted+tentative)/max as a
+      // percentage; the inner split is accepted's share OF THAT, not of the max.
+      const col = `var(--bn-bar-${set}, var(--bn-colour-muted))`;
+      const acc = counts[j]/maxC, ten = tent[j]/maxC, tot = Math.min(1, acc+ten);
+      const accShare = tot>0 ? Math.round((acc/tot)*100) : 0;
+      const bar = tot===0 ? '' : (tent[j]
+        ? `<span class="tag-micro-bar-stack" style="width:${Math.round(tot*100)}%" role="img" aria-label="${tent[j]} tentative + ${counts[j]} accepted" title="${tent[j]} tentative + ${counts[j]} accepted"><span class="tag-micro-bar-tentative" style="width:${100-accShare}%;background:${col}"></span><span class="tag-micro-bar-accepted" style="width:${accShare}%;background:${col}"></span></span>`
+        : `<span class="tag-micro-bar" style="width:${Math.round(acc*100)}%;background:${col}"></span>`);
+      const ed2 = b.floor;
+      return `<div class="tag-row"${ed2?` draggable="true" ondragstart="dragTag(event,${i},${j})"
+                 ondragover="event.preventDefault();this.classList.add('merge-target')"
+                 ondragleave="this.classList.remove('merge-target')" ondrop="mergeTag(event,${i},${j})"`:''}>
+        <div class="tag-name-area">${badge}${ed2?`<span class="tag-del" data-deltag="${i}.${j}">&times;</span>`:''}</div>
+        <div class="tag-bar-area">${bar}<span class="tag-count">${counts[j]}</span></div></div>`;
+    }).join('');
+    const total = b.installed ? counts.reduce((x,y)=>x+y,0) : 0;
+    const ed = b.floor;
+    return `<div class="codebook-group" style="background:${groupBg(set)}" data-gi="${i}"
+                 ${ed?'ondragover="event.preventDefault();this.classList.add(\'drag-over\')" ondragleave="this.classList.remove(\'drag-over\')" ondrop="dropTag(event,'+i+')"':''}>
+      <div class="grp-head">
+        <div style="min-width:0">
+          <div class="group-title"${ed?' contenteditable spellcheck="false"':''}>${esc(g[0])}</div>
+          ${(sub||ed)?`<div class="group-subtitle"${ed?' contenteditable spellcheck="false"':''}>${esc(sub||'Add subtitle…')}</div>`:''}
+        </div>
+        ${ed?`<button class="group-close" data-delgrp="${i}" aria-label="Delete group">&times;</button>`:''}
+      </div>
       <div class="tag-list">${tags}</div>
+      ${ed?`<div class="tag-add-row" data-addtag="${i}"><span class="tag-add-badge">+ tag</span></div>`:''}
       ${total?`<div class="group-total-row"><span class="group-total-label">Total</span><span class="group-total-count">${total}</span></div>`:''}
-    </div>`;}).join('');
+    </div>`;}).join('') + (b.floor?`<div class="new-group-placeholder" id="newgrp"
+        ondragover="event.preventDefault()" ondrop="dropTag(event,-1)">
+        <span class="new-group-icon">+</span><span class="new-group-label">New group</span></div>`:'');
   const side = b.bio ? `<div class="preview-body-sidebar"><div class="preview-author">
       <div class="preview-author-name">${esc(b.author)}</div>
       <div class="preview-author-bio">${esc(b.bio)}</div>
       <div class="preview-author-links">${(b.links||[]).map(l=>`<a href="#" onclick="return false">${esc(l)} &#8599;</a>`).join('')}</div>
     </div></div>` : '';
   const stat = b.installed ? `${b.tags} tags on ${b.quotes} quotes` : `${b.tags} tags &middot; not installed`;
-  const actions = b.installed
-    ? `${b.pending?`<button class="review-btn" id="reviewbtn">Review <span class="n">${b.pending}</span></button>`:''}
-       ${b.floor?'':'<button class="bn-btn add-btn removeable" id="uninstallbtn">Uninstall</button>'}`
-    : `<button class="bn-btn add-btn" id="installbtn">Install</button>`;
+  const actions = !canInstall(b) ? ''
+    : b.installed
+      ? '<button class="bn-btn add-btn removeable" id="uninstallbtn">Uninstall</button>'
+      : '<button class="bn-btn add-btn bn-btn-primary" id="installbtn">Install</button>';
   $('#content').innerHTML = `<div class="contentinner">
    <section>
-    <div class="section-heading"><h1>Codebooks</h1></div>
+    <div class="section-heading"><h1>Codebook</h1><div class="section-heading-action"><button class="bn-btn bn-btn-secondary bn-btn-lg" id="browsedoor">Browse Library</button></div></div>
     <div class="${b.on?'':'pageoff'}">
     <div class="pg-head">
-      ${gutter(b,72)}
-      <div class="pg-meta" style="flex:1;min-width:0">
-        <div class="pg-title">${esc(b.title)}${b.ver?` <span class="pg-author" style="font-size:var(--bn-text-badge)">v${b.ver}</span>`:''}</div>
-        <div class="pg-author">${esc(b.author)}</div>
-        <div class="pg-stat">${stat}${b.on?'':' &middot; off'}</div>
+     <div class="pg-headmain">
+      <div class="pg-meta">
+        <div class="pg-title">${esc(b.pageTitle||b.title)}${b.ver?` <span class="pg-author" style="font-size:var(--bn-text-badge)">v${b.ver}</span>`:''}</div>
+        ${b.author?`<div class="pg-author">${esc(b.author)}</div>`:''}
+        ${(b.installed && hasJob(b))
+          ? `<button class="bn-btn bn-btn-secondary pg-review" id="coveragebtn">Review ${b.tags} tags on ${b.quotes} quotes${
+              b.pending?` <span class="undec">&middot; ${b.pending} undecided</span>`:''}</button>`
+          : `<div class="pg-stat">${b.installed?`${b.tags} tags on ${b.quotes} quotes`:stat}</div>`}
       </div>
-      <div class="pg-actions">${actions}</div>
+      <div class="pg-gutter">${gutter(b,72)}</div>
+     </div>
+     <div class="pg-side"><div class="pg-actions">${actions}</div></div>
     </div>
     <div class="preview-body"><div class="preview-body-main">
       <div class="preview-desc">${esc(b.full||b.desc)}</div>
+      ${b.floor?`<div class="codebook-description">Drag tags between groups to reorganise. Click a tag or title to rename it. Drop a tag on another to merge.</div>`:''}
       <div class="preview-section-label">Tag groups</div>
       <div class="preview-groups">${groups}</div>
     </div>${side}</div>
@@ -732,14 +879,77 @@ function renderPage(){
   </div>`;
 }
 
+// The distribution as issued — immutable. Deterministic per codebook so it does
+// not reshuffle between renders (Math.random is avoided for the same reason the
+// workflow runtime forbids it: it would break resume/compare).
+function histogram(b){
+  const bins=[]; let seed=b.id.length*7+b.tags;
+  for(let i=0;i<20;i++){ seed=(seed*1103515245+12345)&0x7fffffff;
+    const x=i/19, bell=Math.exp(-Math.pow((x-0.62)/0.26,2));
+    bins.push(Math.max(1, Math.round(bell*40 + (seed%7)))); }
+  return bins;
+}
+// ── Floor authoring. Drag state in a module var, not React state — the shipped
+// implementation uses a ref for exactly this reason (island doc, decision 9).
+let dragFrom=null;
+function dragTag(e,gi,ti){ dragFrom={gi,ti}; e.dataTransfer.effectAllowed='move'; }
+function dropTag(e,gi){ e.preventDefault();
+  document.querySelectorAll('.drag-over').forEach(n=>n.classList.remove('drag-over'));
+  if(!dragFrom) return; const b=bk(sel);
+  const [name]=b.groups[dragFrom.gi][1].splice(dragFrom.ti,1);
+  if(gi===-1){ b.groups.push(['New group',[name],'']); } else { b.groups[gi][1].push(name); }
+  dragFrom=null; render(); }
+function mergeTag(e,gi,ti){ e.preventDefault(); e.stopPropagation();
+  document.querySelectorAll('.merge-target').forEach(n=>n.classList.remove('merge-target'));
+  if(!dragFrom || (dragFrom.gi===gi && dragFrom.ti===ti)) return;
+  const b=bk(sel), src=b.groups[dragFrom.gi][1][dragFrom.ti], tgt=b.groups[gi][1][ti];
+  if(confirm('Merge “'+src+'” into “'+tgt+'”?\n\nAll quotes tagged '+src+' will be retagged '+tgt+'. This cannot be undone.')){
+    b.groups[dragFrom.gi][1].splice(dragFrom.ti,1); }
+  dragFrom=null; render(); }
+
+function renderReview(){
+  const b=bk(sel), bins=histogram(b), lo=0.30, hi=0.70;
+  const tot=bins.reduce((a,c)=>a+c,0);
+  const nLo=bins.slice(0,Math.round(lo*20)).reduce((a,c)=>a+c,0);
+  const nHi=bins.slice(Math.round(hi*20)).reduce((a,c)=>a+c,0);
+  const nMid=tot-nLo-nHi;
+  const bars=bins.map((v,i)=>{ const x=i/19;
+    const cls = x<lo?'lo':(x>=hi?'hi':'mid');
+    return `<i class="${cls}" style="height:${Math.round(v/Math.max(...bins)*100)}%"></i>`;}).join('');
+  $('#content').innerHTML = `<div class="rev">
+   <section>
+    <div class="section-heading"><h1>Review</h1>
+      <div class="section-heading-action"><button class="bn-btn" id="revback">Back to ${esc(b.pageTitle||b.title)}</button></div></div>
+    <div class="pg-author" style="margin-bottom:var(--bn-space-lg)">${esc(b.title)} &middot; ${b.tags} tags on ${b.quotes} quotes${b.pending?` &middot; ${b.pending} undecided`:''}</div>
+    <div class="hist">${bars}
+      <div class="tmark" style="left:${lo*100}%"><span>lower ${lo.toFixed(2)}</span></div>
+      <div class="tmark" style="left:${hi*100}%"><span>upper ${hi.toFixed(2)}</span></div>
+    </div>
+    <div class="zones">
+      <div class="zone"><div class="zh">Excluded</div><div class="zn">${nLo}</div>
+        <div class="zs">below ${lo.toFixed(2)} &middot; kept, not shown</div></div>
+      <div class="zone"><div class="zh">Undecided</div><div class="zn">${nMid}</div>
+        <div class="zs">between the thresholds</div></div>
+      <div class="zone"><div class="zh">Applied</div><div class="zn">${nHi}<span class="ovr" title="includes hand decisions"></span></div>
+        <div class="zs">above ${hi.toFixed(2)}, plus overrides</div></div>
+    </div>
+    <div class="rolock"><b>The sliders are read-only.</b> This is the run as it was issued &mdash; the
+      distribution never changes, and the thresholds are restored to where you left them. Moving them
+      would re-derive every decision, including the ones you made by hand, because a threshold-derived
+      verdict and a hand-made one are stored in the same field. Non-destructive re-cast is filed as
+      v2-future work. <b>You are looking at the negative, not re-developing it.</b></div>
+   </section>
+  </div>`;
+}
+
 function renderBrowse(){
   const card = b=>`<div class="picker-card ${b.installed&&!b.on?'off2':''}" data-open="${b.id}">
     <div class="cardhead">${gutter(b,44)}<div class="picker-card-body">
       <div class="picker-card-title">${esc(b.title)}${b.ver?` <span class="statline">v${b.ver}</span>`:''}</div>
-      <div class="picker-card-author">${esc(b.author)}</div></div></div>
+      ${b.author?`<div class="picker-card-author">${esc(b.author)}</div>`:''}</div></div>
     <div class="picker-card-desc">${esc(b.desc)}</div>
     <div class="footrow"><span class="statline">${b.installed?`${b.tags} tags on ${b.quotes} quotes`:'&nbsp;'}</span>
-      <button class="bn-btn add-btn ${b.installed?'removeable':''} picker-card-toggle" data-act="${b.id}">${b.installed?'Uninstall':'Install'}</button></div>
+      ${canInstall(b)?`<button class="bn-btn add-btn ${b.installed?'removeable':''} picker-card-toggle" data-act="${b.id}">${b.installed?'Uninstall':'Install'}</button>`:`<span class="statline">Always on</span>`}</div>
   </div>`;
   $('#content').innerHTML = `<div class="contentinner">
    <section>
@@ -752,7 +962,7 @@ function renderBrowse(){
 function render(){
   $('#rail').classList.toggle('shut', railShut);
   renderRail();
-  view==='browse' ? renderBrowse() : renderPage();
+  view==='browse' ? renderBrowse() : view==='review' ? renderReview() : renderPage();
   $('#railbtn').textContent = railShut ? 'Show codebooks' : 'Hide codebooks';
 }
 
@@ -762,7 +972,7 @@ function step(d){
 }
 
 document.addEventListener('click', e=>{
-  const t=e.target.closest('[data-sel],[data-tog],[data-act],[data-open],#browsedoor,#railbtn,#installbtn,#uninstallbtn,#reviewbtn');
+  const t=e.target.closest('[data-sel],[data-tog],[data-act],[data-open],#browsedoor,#railbtn,#installbtn,#uninstallbtn,#coveragebtn,#revback,#newgrp,[data-addtag],[data-delgrp],[data-deltag]');
   if(!t) return;
   if(t.dataset.tog){ const b=bk(t.dataset.tog); b.on=!b.on; render(); e.stopPropagation(); return; }
   if(t.dataset.act){ const b=bk(t.dataset.act);
@@ -779,7 +989,15 @@ document.addEventListener('click', e=>{
   if(t.id==='uninstallbtn'){ const b=bk(sel); pendingAction=b; $('#cfTitle').textContent='Uninstall \u201c'+b.title+'\u201d?';
     $('#cfBody').textContent=`Tags will be removed from ${b.quotes} quotes. Reinstalling runs the codebook again.`;
     $('#scrim').classList.add('on'); return; }
-  if(t.id==='reviewbtn'){ const b=bk(sel); alert('Review '+b.pending+' proposals \u2014 surface undecided: modal or route (open question).'); return; }
+  if(t.dataset.addtag!==undefined){ const b=bk(sel); b.groups[+t.dataset.addtag][1].push('new code'); render(); return; }
+  if(t.dataset.delgrp!==undefined){ const b=bk(sel), g=b.groups[+t.dataset.delgrp];
+    if(!g[1].length || confirm('Delete “'+g[0]+'”?\n\n'+g[1].length+' tags will move to Uncategorised.')){
+      b.groups.splice(+t.dataset.delgrp,1); } render(); return; }
+  if(t.dataset.deltag!==undefined){ const [gi,ti]=t.dataset.deltag.split('.').map(Number);
+    bk(sel).groups[gi][1].splice(ti,1); render(); return; }
+  if(t.id==='newgrp'){ bk(sel).groups.push(['New group',[],'']); render(); return; }
+  if(t.id==='coveragebtn'){ view='review'; render(); return; }
+  if(t.id==='revback'){ view='page'; render(); return; }
 });
 $('#cfCancel').onclick=()=>$('#scrim').classList.remove('on');
 $('#cfOk').onclick=()=>{ const b=pendingAction; b.installed=false; b.quotes=0; b.pending=0;

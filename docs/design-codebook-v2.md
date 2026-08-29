@@ -721,10 +721,16 @@ frameworks have two, giving the lens **three shapes**, not two:
 | **sentiment** | *meaningless* | ✓ | ✓ |
 | **framework** | ✓ | ✓ | ✓ |
 
-Options, none chosen: treat sentiment as floor-like (permanent, enable-only,
-off the browse page); keep it a framework and accept the odd install; or drop it
-from the codebook surface entirely and make sentiment a report-wide display
-setting. **Needs a call**, and A4 should be fixed either way.
+**Settled 29 Aug — sentiment is floor-like on install, framework-like on enable.**
+No install or uninstall control anywhere: not on the codebook page, not on the
+browse card, which reads *Always on* where the button would sit. The rail toggle
+stays.
+
+This **closes A4 by deletion rather than by repair** — a control that does not
+exist cannot destroy tags nothing can restore. Note the limit of that: it removes
+the affordance, not the endpoint. `remove_framework` would still accept the call
+if anything else made it, so A4 stays on the register as a server-side fix, at
+much lower priority now that nothing in the UI can reach it.
 
 ### D9 — the rail is open by default, closable, and traversable when closed
 
@@ -805,6 +811,128 @@ and the codebook lens is fully web content, not a seam.
 Always-present is simpler to build and to explain; only-when-closed is less
 chrome but means an affordance that appears and disappears, which is its own
 cost. Worth drawing both.
+
+## Q2 — D4 against the restore path
+
+Discussed 29 Aug. Three options; one is disqualified by a finding on the Quotes
+lens, and the other two are a now/later pair rather than alternatives.
+
+### The collision, restated
+
+`remove_framework` deletes `QuoteTag` rows but **preserves** groups, tag
+definitions, jobs and proposals — stated reason, `codebook.py:887`: *"enables
+instant restore on re-import without re-running the LLM."* `import_template`
+then has a restore branch that relinks the orphaned groups and resets `accepted`
+proposals to `pending`.
+
+Under **D4**, installing fires a job. So a reinstall takes the restore branch
+*and* runs: resurrected proposals plus fresh ones, both `pending`, for the same
+(quote, tag). `UniqueConstraint(job_id, quote_id)` permits it — different job.
+The reviewer sees every quote twice.
+
+### Option A — delete the restore path
+
+Uninstall stops preserving; reinstall is a fresh import and a fresh run. One
+code path, collision impossible, and **both endpoints get markedly simpler**.
+
+The preservation existed *only* to make restore instant, and **D4 already killed
+instant restore** — reinstall re-spends either way. So it now buys nothing. The
+one thing lost is the denial history, and nothing reads it today: the accept
+guard is blind to denials (state-model **Q-C**).
+
+### Option B — reinstall does not fire a job
+
+Keeps preservation by making install-is-apply conditional. Rejected: it
+reintroduces exactly the "sometimes it spends, sometimes it doesn't"
+ambiguity D4 removed, and the restored proposals may be stale against a changed
+`prompt_version` or a corpus that has grown since.
+
+### Option D — non-destructive uninstall
+
+The most attractive on paper. Uninstall drops only the link; nothing is deleted;
+reinstall relinks and everything returns genuinely instantly. It would **restore
+the intended contract** — the state model says *"Remove = done, no preservation
+promise"* and the Library doc's deferred Forget says *"uninstall keeps results by
+default; opt-in to purge"* — so the shipped delete contradicts both. It would
+also **fix A1**, since a delete that does not happen cannot cross projects.
+
+**Disqualified today by the Quotes lens.** `TagSidebar` folds *"tag names that
+live on quotes but not yet in the fetched codebook"* into **the floor's default
+group** — an optimistic fallback for the fire-and-forget `PUT /tags`. So an
+uninstalled framework's retained tags would surface in **Uncategorised, as the
+researcher's own work**. Machine-authored tags masquerading as hand-coding is
+precisely the confusion the four-value `QuoteTag.source` exists to prevent.
+
+Option D needs that fold to become **source-aware** first. That is real work on
+another lens.
+
+### D20 — A now, D later. Settled 29 Aug.
+
+**A** is small, safe, and net-deletes code. Take it with D4.
+
+**D** is the better end state: it is what both design docs intended, and it fixes
+A1. But it is gated on the pending-tag fold learning about `source`, and that is
+a Quotes-lens change with its own blast radius.
+
+Sequenced, A is not thrown away — it removes a restore path that never worked,
+and D later reintroduces restore on a foundation where it can.
+
+**The v1 contract, in the user's words: click uninstall and you say byebye; if
+you are not sure, you disable.** That is a clean thing to explain and a clean
+thing to confirm against — and it is the honest reading of what the code will do
+once A lands. The disable path is the one that preserves, and it already does.
+
+**D goes to the 100-day inventory**, not because it is optional but because the
+prize is real: restoring is computationally and financially free if we get it
+right, which makes a permanent uninstall a worse deal than it needs to be. The
+blocker is named and specific — `TagSidebar`'s pending-tag fold must learn about
+`QuoteTag.source` before retained tags can sit in the database unlinked.
+
+## Open questions — consolidated
+
+As of 29 Aug, after 21 decisions. Flags scattered through this doc, gathered and
+de-duplicated; items resolved by a later decision have been dropped.
+
+### Product calls — yours, and nothing proceeds without them
+
+| | Question | Why it blocks |
+|---|---|---|
+| **Q1** | **The sentiment shape.** Install is meaningless (the pipeline applies it), uninstall is purely destructive (**A4**), and it has one axis where frameworks have two. Floor-like? Framework with an odd install? Or off the codebook surface entirely as a report-wide display setting? | It is the only codebook that does not fit the model. Every surface has to special-case it until this is answered |
+| **Q2** | **D4 × the restore path — must be decided together.** If install-is-apply ships while `import_template`'s restore branch stays, a reinstall resurrects old proposals *and* fires a new job: two proposals per quote, and `UniqueConstraint(job_id, quote_id)` does not stop it | Shipping one without the other is a data defect, not a rough edge |
+| **Q3** | **Failed install.** D4 merges two failures into one act — *install succeeded, the run failed*. Today each has an obvious retry; coupled, the retry has to be invented | The only exposure D4 leaves owed |
+| **Q4** | **The graphic fill.** D13 reserved the slot and deferred the fill. Jacket for the two that have one, initials, headshot, or nothing — per codebook, no systematic obligation | Deferred deliberately; the slot ships without it |
+| **Q5** | **Browse Library: primary or neutral?** The shipped button is plain `.bn-btn`; the prototype promotes it to `.bn-btn-primary`. It is now the only accent-filled control on a page about a codebook you already have | Small, but it is an unmarked divergence either way |
+
+### Plumbing owed — decided in principle, needs a field or a string
+
+| | Owed | Size |
+|---|---|---|
+| **Q6** | `version` on `TemplateOut` — the YAML already parses it for three codebooks | one field |
+| **Q7** | A **short description** field. All nine descriptions run 44&ndash;75 words against a 9&ndash;18 budget; first-sentence-only fits just 5 of 9 | one field + nine hand-written lines |
+| **Q8** | **B6** — a framework-level *distinct* quote count. `summariseFramework` sums per-group distinct counts, so a quote tagged in two groups counts twice. D12's status line puts that number in front of the researcher | one query |
+| **Q9** | **B7** — the author's **fourth home**, `.codebook-author` in the Quotes tag sidebar. Any author treatment must reach it | one rule |
+| **Q10** | **G3** — the **Codebook lab** button is homeless. It lived in the `<project> tags` header action, which v2 does not have. It ships to the cohort behind a default-on flag | one placement |
+| **Q11** | **G7** — `showHideCodeGroup` sits in the desktop **Codes** menu while D7 puts hide on the **Quotes** lens | move it, or except it |
+
+### Navigation — sketched, not settled
+
+| | Question |
+|---|---|
+| **Q12** | **Breadcrumb or not.** With the rail as the hierarchy, only browse&rarr;page lacks a return. A single "Back to browse" that appears only when you arrived from there may be enough |
+| **Q13** | **One page, two provenances.** Reached from the rail (installed) and from a card (not installed). History-aware chrome is the usual answer and the usual source of bugs |
+| **Q14** | **Export mode's fourth state** — read-only, installed, offline. Browse must be stripped; the same `isExportMode()` gate already hides the Library button and the lab |
+
+### Answered in the prototype but never explicitly decided
+
+| | |
+|---|---|
+| **Q15** | **Does D6's no-modals rule reach the AutoCode Review?** The prototype builds it as a **route**, which answers the question by construction. Worth ratifying or reversing rather than leaving as an accident of implementation |
+| **Q16** | `.picker-card-actions` gains `align-items` and `gap` for the card footrow. That should be a **new class**, not an override on a shipped rule |
+
+### Closed since the coverage audit
+
+**G1** the review badge (D10, D18) &middot; **G2** tentative counts (the micro-bar stack now renders them) &middot;
+**G4** the instructional copy (floor page) &middot; **G5** cross-codebook drag (dissolved &mdash; one codebook at a time).
 
 ## Status rollup — where each issue stands
 
@@ -1232,6 +1360,284 @@ whose author line is already muted.
 costs nothing: its label simply runs the full width. Under a leading layout it
 needed a 26px spacer to keep the text aligned. One less thing.
 
+### D18 — one Review door, and what the number on it may honestly say
+
+Settled 29 Aug: **the primary "Review N proposals" button is dropped.** The
+coverage line becomes the single door and opens the **threshold histogram** —
+the run as it was, with the sliders where the researcher left them.
+
+**Three different kinds of thing were being averaged into one number.** Keeping
+them apart is what makes the restatement possible:
+
+| | What it is | Does it change? |
+|---|---|---|
+| **The histogram** | the confidence distribution the model produced | **never** — it is history |
+| **The thresholds** | `applied_lower_threshold` / `applied_upper_threshold`, stored on the job | only when the researcher moves them |
+| **Individual accept/deny** | per-`ProposedTag` overrides made afterwards | continuously |
+
+The histogram is a *record*, the thresholds are a *setting*, the overrides are a
+*delta*. One number cannot describe all three, and trying to is what made
+"12 pending" and "142 proposed" both feel wrong.
+
+**So the button states the outcome, not the pipeline.**
+
+- **Applied** — the `QuoteTag` rows that exist. *"36 tags on 72 quotes."* This is
+  the truth of the report right now, and it is the primary figure.
+- **Undecided** — `ProposedTag(status='pending')`, appended as a quiet modifier
+  only when non-zero: *"· 12 undecided."* It is **work outstanding**, not a state
+  anyone chose.
+- **Denied** — retained, never surfaced on the page. It belongs inside the review
+  surface, where it is a filter, not a headline.
+
+One primary number, one honest caveat, nothing about proposals-as-issued.
+
+**Why the threshold cannot be restated as a rule.** Once a researcher has hand-
+denied something at 0.9 confidence, *"accepted above 0.70"* is false. The slider
+position is still worth restoring — it is where they left the instrument — but it
+must be presented as **the slider's position**, not as a description of the
+outcome. The counts describe the outcome; the histogram and sliders describe how
+it was arrived at.
+
+**The pitfall, and it is already a known open item.** Re-entering this surface
+and moving a threshold could **clobber manual decisions** — re-applying at a
+lower cutoff would resurrect a hand-denied tag, because the accept guard is blind
+to the denial ledger. That is `design-codebook-state-model.md`'s open **Q-C**,
+arriving here as a UX consequence rather than a theoretical one. **A surface that
+re-opens the sliders after hand-editing needs that question answered first.**
+
+**Sentiment has no door at all.** It is pipeline-applied: no `AutoCodeJob`, no
+proposals, no confidence distribution, so no histogram to open. Its coverage
+figure is real but its Review button would lead nowhere. Another instance of the
+sentiment-shape problem — it wants a different answer, not a disabled button.
+
+### The RAW analogy, and the one column that is missing
+
+Raised 29 Aug: *"all the original tag proposals are there and you should be able
+to go back and recover the shadows — but if you have added manual layers over the
+top, you should be able to change the levels and retain them."* **The analogy is
+more exact than it was offered as.** Three of the four pieces already exist.
+
+| Photography | Bristlenose | Status |
+|---|---|---|
+| the RAW negative | `ProposedTag` rows + `confidence` — every proposal the model made, **denied ones retained** | ✅ already stored |
+| develop settings | `applied_lower_threshold` / `applied_upper_threshold` on the job | ✅ stored *separately*, non-destructive |
+| adjustment layers | individual accept / deny | ⚠️ **stored destructively** |
+| the exported JPEG | `QuoteTag` rows — what the report renders | ✅ re-derivable |
+
+**The break is in one column.** `ProposedTag.status` carries two different
+provenances with no way to tell them apart:
+
+- `denied` because it fell below the threshold — a **derived** value
+- `denied` because the researcher looked at it and said no — an **override**
+
+That is the moment the adjustment gets baked into the pixels. Move the slider and
+you must recompute the derived ones — but you cannot, because you cannot see
+which they are, so you either clobber the overrides or refuse to move.
+
+**`reviewed_at` does not rescue it.** All four write sites set it identically —
+single accept (`autocode.py:484`), single deny (`:519`), accept-all (`:597`),
+deny-all (`:664`). It records *when* a decision was made, never *by what*.
+Timestamps could be inferred against the job's `completed_at`, but two hand
+decisions in the same second are indistinguishable from a batch, and a re-apply
+rewrites them. Inference, not fact.
+
+**The fix is one column, and the schema already has the pattern.** `QuoteTag`
+records `source` with four values — `human`, `autocode`, `pipeline`,
+`codebook-builder`. **The system knows how a *tag* was applied but not how a
+*decision* was made.** A `decided_by` on `ProposedTag` closes it: moving the
+slider recomputes only `threshold` rows, `human` rows survive untouched, and the
+histogram can *mark* the overrides — which is the "see the layers over the levels"
+half of the analogy.
+
+**Where the analogy breaks, and it breaks in our favour.** In Lightroom the
+layers are ordered and re-composited. Here an override does not sit *over* the
+threshold's verdict, it *replaces* it for that one item — closer to a per-item
+mask than a layer stack. No compositing order, no blend modes. **Simpler than
+RAW, not harder.**
+
+**What today's surface can honestly do without that column.** Show the histogram
+(immutable), restore the sliders where they were left (stored), show the current
+decisions — but treat the sliders as **read-only on re-entry**. You are looking
+at the negative, not re-developing it. That ships the Review door now with no
+clobber risk, and leaves the non-destructive re-cast as the v2-future work it was
+called.
+
+### D19 — the author gets the person treatment the house already uses
+
+Settled 29 Aug. The byline moves from `--bn-colour-muted` at normal weight to
+**`--bn-weight-emphasis` in full text colour**, in all three places it appears:
+rail row, browse card, page header.
+
+**This is not a new treatment — it is the one already in the codebase.** Three
+shipped rules render a person exactly this way:
+
+| Rule | Where |
+|---|---|
+| `.preview-author-name` | **the author card on this very page** |
+| `.bn-speaker-editable-name` | speaker names, `person-badge.css` |
+| `.rewatch-participant` | `blockquote.css` |
+
+Only the codebook *byline* was muted — `.picker-card-author`,
+`.framework-section-author`, `.codebook-author` — so **the same name rendered two
+ways on one screen**: strong in the author card, greyed beside the title. The
+muted version is the outlier, not the standard.
+
+**Why it matters beyond consistency.** These are the best-known names in the
+field, and *"Jakob Nielsen"* is more recognisable than *"10 Usability Heuristics
+for User Interface Design"*. Rendering the person in the same treatment as a
+timestamp or a file path is a claim about what matters on that row, and it is
+the wrong one.
+
+**Rejected, with reasons.** *Accent colour* (the App Store developer, the Music
+artist) is the stronger signal but carries an obligation — blue means navigable,
+so it must be taken together with browse-by-author, never for looks.
+*Inversion* (Mail's sender-first: author leads, title follows) is the most
+faithful reading of the observation, but the three authorless built-ins would
+then lead with a title while the rest lead with a name, making the rail a mixed
+list. *Uppercase byline* reads as a **credit**, which is closer to the apologetic
+register being escaped.
+
+**Marked as a deliberate divergence.** These three rules now differ from
+`organisms/codebook-panel.css` on purpose, and the prototype says so at the rule:
+*do not "restore" them*. The CSS sweep that restored 27 rules to their shipped
+form would otherwise revert this on its next pass — the correction and the drift
+look identical to a diff.
+
+Specimen: [`mockups/codebook-v2-author.html`](mockups/codebook-v2-author.html).
+
+**Correction, 29 Aug — I overstated the evidence for this decision.**
+
+My first census said "nine person-name rules in three treatments, no settled
+rule". That conflated three genuinely different objects:
+
+| Object | What it is | Example |
+|---|---|---|
+| **Codebook author** | a public figure, externally credited | Nielsen, Norman |
+| **Participant / speaker** | the researcher's own subject, pseudonymised | `.session-entry-name`, `.report-speaker` |
+| **Editable speaker name** | an editing affordance over a participant | `.bn-speaker-editable-name` |
+
+A participant is **research data under a consent gradient**; an author is a
+**credit**. They should not share a treatment, and Sessions rendering names at
+`--bn-weight-light` in a dense list is a reasonable answer to a different
+question. Counting them together made the system look inconsistent when it was
+mostly answering separate questions separately.
+
+**The real picture, narrowed to the codebook author — four sites:**
+
+| Rule | Surface | Treatment |
+|---|---|---|
+| `.codebook-author` | **Tag sidebar, Quotes lens** (`TagSidebar.tsx:619`) | badge, muted |
+| `.picker-card-author` | Library tile | label, muted |
+| `.framework-section-author` | codebook section header | label, muted |
+| `.preview-author-name` | preview author **card** | label, **emphasis** |
+
+**Three of four agree.** And the fourth is arguably not a byline at all — it is
+the *heading of a bio card*, a title for the block beneath it, which is a
+different typographic job. So calling it "the house person treatment I am merely
+adopting" was a stretch.
+
+**D19 stands, but as a design change rather than a consistency fix.** The
+argument that carries it is the original observation — *Jakob Nielsen is better
+known than "10 Usability Heuristics for User Interface Design"*, and rendering
+him like a timestamp makes a claim about what matters on that row. That is
+enough on its own. The "it is already in the codebase" framing was evidence that
+flattered the conclusion, and it does not hold.
+
+**The genuinely useful finding is the fourth surface.** `.codebook-author`
+renders on the **Quotes lens**, outside the codebook lens entirely — the one site
+any change to the author treatment will forget. Registered as **B7** for that
+reason, not as a defect in the treatment itself.
+
+**Until then the divergence is marked, not silent** — which is the actual answer
+to the question. An unmarked difference between a mockup and the system is drift;
+a marked one with its reasoning attached is a proposal waiting to be taken or
+rejected.
+
+### D17 — the rail keeps the shipped three-section IA, filtered to installed
+
+Corrected 29 Aug. The prototype had collapsed the rail to two sections — *Your
+codebook* / *Installed* — which is an **IA regression**: the shipped
+`CodebookSidebar` has **three**, split on `author === ""`
+(`CodebookSidebar.tsx:100`).
+
+| Section | Shipped string | Contains | v2 |
+|---|---|---|---|
+| floor | `yourTags` — **"Manual tags"** | the project's own | kept |
+| built-in | `builtIn` — **"Default"** | `sentiment`, `uxr`, `cli-ux` | kept |
+| authored | `frameworks` — ~~"Library"~~ | garrett, morville, nielsen, norman, plato, yablonski | **"Frameworks"** |
+
+**Only one string changes, and for a reason v2 created.** "Library" meant
+*available to install* in v1, where the rail listed both installed and
+not-installed codebooks. v2 gives that word to the browse page and makes the rail
+installed-only, so "Library" as a heading over *installed* frameworks would name
+the wrong thing. **"Frameworks"** is not invented either — `frameworksHeader`
+("Codebook frameworks") is already the browse page's own word for the same set.
+
+**Empty sections are omitted**, not shown empty. A researcher who has installed
+no frameworks sees two headings, not three with a gap.
+
+**The author line is suppressed under "Default".** All three built-ins have the
+author `""`, rendered as "Built in" — under a heading that already says *Default*,
+repeating it on every row is noise. Framework rows keep their author, which is
+where the byline does work: *Norman* lands faster than *The Design of Everyday
+Things*.
+
+### The one page, and what each state shows
+
+v1 had **two pages**: a *storefront* (the modal preview, for something you had
+not taken) and an *installed view* (the lens section, for something you had).
+That split is I4, and it is why `author_bio` and `author_links` vanished the
+moment you adopted a codebook — they only ever lived in the storefront.
+
+**v2 has one page and three states.** Nothing is a different page; only the
+state differs.
+
+| | not installed | installed &amp; enabled | installed &amp; disabled |
+|---|---|---|---|
+| Title, author, version | ✓ | ✓ | ✓ muted |
+| **Description** | ✓ | ✓ | ✓ muted |
+| **Author bio + links** | ✓ | ✓ | ✓ muted |
+| Group titles + **subtitles** | ✓ | ✓ | ✓ muted |
+| Tags | badges | **rows** | **rows**, muted |
+| **Bar charts + counts** | — | **✓** | **✓**, muted |
+| Group totals | — | ✓ | ✓ muted |
+| Action | Install | Uninstall &middot; Review | Uninstall &middot; Review, **not muted** |
+
+**Counts follow *installed*, not *enabled*.** Under D4 installing is applying, so
+an installed codebook has results by definition. Disabling does not remove them
+(D5) — it stops them being live. Hiding the counts when a codebook is switched
+off would contradict the retention promise the switch is supposed to make
+legible; knocking them back says *kept, not active*, which is the truth.
+
+**Description and bio show in every state.** They are what the codebook *is*, not
+what it is currently doing.
+
+### Data completeness — what the full page must carry
+
+Measured 29 Aug from the nine YAMLs, after the prototype was found to be
+rendering less than the shipped preview already does.
+
+| Field | Present in |
+|---|---|
+| `title`, `author`, `description` | 9 / 9 |
+| **group `subtitle`** | **59 groups, 9 / 9 codebooks — every single one** |
+| `author_bio` | **9 / 9** — including all three built-ins |
+| `author_links` | 6 / 9 (morville 6, nielsen 4, yablonski 4, garrett 3, norman 3, plato 2) |
+| `version` | 3 / 9 — `cli-ux` 1.0, `sentiment` 1.0, `uxr` 2.0 |
+| `preamble` | in the YAML, **absent from `TemplateOut`** — surfaced nowhere |
+
+**Two corrections to earlier claims in this doc.** Versions are on **three**
+codebooks, not two — `uxr` is at 2.0. And the built-ins are **not** bio-less: I
+had assumed sentiment, uxr and cli-ux carried no author material because they
+have no byline. They all have bios.
+
+**And the tag row is not a badge.** The shipped *preview* renders tags as bare
+badges; an **installed** codebook renders `.tag-row` — name left, micro-bar and
+count right, the bar split when tentative proposals exist. Rendering badges in
+both states silently drops every count and the whole tentative band, which is
+audit gap **G2** arriving as a rendering choice rather than a missing feature.
+One page, two states: badges before install, rows with counts after.
+
 ## Coverage audit — every control and every datum, v1 against v2
 
 Asked 29 Aug: traverse the shipped surface exhaustively and find anything the
@@ -1410,3 +1816,36 @@ expensive half of a migration — schema, stored state, the `ProjectFrameworkSta
 and `hidden_tag_groups` rows — should not move at all. What will need thought is
 anything that changes a *route* people have learned, and the export, which bakes
 a per-project CSS copy and so lags a theme change by one render.
+
+
+### D21 — the button hierarchy: size carries the destination, fill carries the action
+
+Settled 29 Aug, and it adds the one innovation this pass could not avoid.
+
+**Browse Library is a destination, not an action.** It wants presence — clear
+space at the top of the zone-title row, and enough size to be found without
+hunting — but not contrast, because it competes with nothing and commits to
+nothing. So it goes **up a size and stays neutral**: `.bn-btn .bn-btn-secondary
+.bn-btn-lg`. It had been `.bn-btn-primary`, which was the promotion Q5 flagged as
+unmarked; this replaces it rather than justifying it.
+
+**Install is the main call to action on the codebook page**, so on that page it
+takes the shipped primary fill at **normal size** — `.add-btn .bn-btn-primary`.
+Size does the work on the destination, fill does the work on the action, and
+neither borrows the other's device.
+
+**The browse card's Install stays neutral and normal.** On a grid of cards no
+single install is *the* action; a wall of accent-filled buttons would make the
+grid shout and would misrepresent a catalogue as a decision. Primary belongs to
+the page, where there is exactly one codebook and exactly one thing to do with it.
+
+**The innovation, declared.** `.bn-btn-lg` is new. The shipped atom
+(`theme/atoms/modal.css`) carries four *colour* variants — `-primary`,
+`-secondary`, `-cancel`, `-danger` — and **no size axis at all**, because every
+existing call site is a dialog action row where one size is correct. A zone-title
+destination is the first call site that wants a second size. The new class is
+purely dimensional (`font-size`, `padding`); it introduces no colour and no new
+token, and `.add-btn.bn-btn-primary` restates the shipped primary's three
+declarations verbatim rather than inventing a fill. **This is a genuine gap in
+the atom, not a local workaround** — if v2 ships, the size axis belongs in
+`modal.css`, not in the mockup.

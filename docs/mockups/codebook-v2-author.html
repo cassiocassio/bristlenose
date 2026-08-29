@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Author treatments</title><style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css). Palette swap via
+   data-color-theme; dark via light-dark() + color-scheme. See
+   docs/design-codebook-library.md for the plan this mock reviews.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  /* group tints (tokens.css) — shared across palettes */
+  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
+  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:920px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-xl); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:66ch; margin:.4rem 0; }
+.controls { display:flex; gap:.4rem; align-items:center; margin-bottom:var(--bn-space-xl); }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.bench { margin:2.5rem 0; }
+.bench-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.bench-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 1.1rem; max-width:70ch; }
+.stage-label { font-size:var(--bn-text-caption); font-weight:490; color:var(--bn-colour-accent); text-transform:uppercase; letter-spacing:.05em; margin:1.3rem 0 .5rem; font-family:var(--bn-font-mono); }
+
+/* ── shared atoms ─────────────────────────────────────────────────────── */
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
+
+/* ── Codebook Library modal ───────────────────────────────────────────── */
+.modal { background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  box-shadow:0 20px 60px var(--bn-colour-shadow); overflow:hidden; max-width:600px; }
+.modal-h { padding:1.1rem 1.35rem; border-bottom:1px solid var(--bn-colour-border); display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; }
+.modal-title { font-size:var(--bn-text-heading); font-weight:490; }
+.modal-sub { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.2rem; }
+.modal-x { color:var(--bn-colour-muted); cursor:pointer; font-size:var(--bn-text-heading); line-height:1; }
+.modal-b { padding:1.35rem; }
+.sect-h { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); font-weight:490; margin:0 0 .8rem; }
+.sect-h:not(:first-child) { margin-top:1.6rem; }
+.lib-tiles { display:flex; flex-direction:column; gap:.75rem; }
+.tile { display:flex; gap:1.1rem; align-items:flex-start; background:var(--bn-colour-bg);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:1rem 1.1rem; }
+.tile.disabled { opacity:.5; }
+.tile-body { flex:1; min-width:0; }
+.tile-title { font-size:var(--bn-text-label); font-weight:490; }
+.tile-author { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.05rem; }
+.tile-desc { font-size:var(--bn-text-label); color:var(--bn-colour-muted); line-height:1.5; margin-top:.3rem; }
+.tile-tags { display:flex; flex-wrap:wrap; gap:4px; width:150px; flex-shrink:0; justify-content:flex-end; }
+/* Add / Remove sit TOP-right in the tile corner and share ONE footprint
+   (min-width + centred text) so the control column never shifts between states.
+   Both neutral — Remove is reversible (re-add is free), so no red. */
+.add-btn { flex-shrink:0; align-self:flex-start; min-width:5.25rem; text-align:center; font:inherit; font-size:var(--bn-text-label); font-weight:490;
+  padding:.35rem .9rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.add-btn:hover { background:var(--bn-colour-hover); border-color:var(--bn-colour-accent); color:var(--bn-colour-accent); }
+.add-btn.removeable { color:var(--bn-colour-muted); }
+.add-btn.removeable:hover { color:var(--bn-colour-text); border-color:var(--bn-colour-border-hover); background:var(--bn-colour-hover); }
+.coming { flex-shrink:0; align-self:flex-start; font-size:var(--bn-text-badge); color:var(--bn-colour-muted); font-style:italic; }
+.tile-create { border:1px dashed var(--bn-colour-border); display:flex; align-items:center; justify-content:center; gap:.5rem;
+  color:var(--bn-colour-muted); font-size:var(--bn-text-label); padding:1rem; cursor:pointer; }
+
+/* ── Codebook-page framework section ──────────────────────────────────── */
+.page { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.4rem 1.25rem; background:var(--bn-colour-bg); }
+.sec { border-top:1px solid var(--bn-colour-border); padding:1rem 0; }
+.sec:first-child { border-top:none; }
+.sec-hdr { display:flex; align-items:center; gap:1rem; }
+.sec-title-wrap { flex:1; min-width:0; }
+.sec-title { font-size:var(--bn-text-body); font-weight:490; }
+.sec-meta { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.15rem; height:1.2em; position:relative; }
+.sec-meta .on-m, .sec-meta .off-m { position:absolute; left:0; top:0; transition:opacity .28s ease; }
+.sec-meta .off-m { opacity:0; }
+.sec.off .sec-meta .on-m { opacity:0; }
+.sec.off .sec-meta .off-m { opacity:1; }
+.apply-btn { flex-shrink:0; font:inherit; font-size:var(--bn-text-label); font-weight:490; color:#fff;
+  background:var(--bn-colour-accent); border:none; border-radius:var(--bn-radius-md); padding:.45rem .95rem; cursor:pointer; white-space:nowrap; }
+/* macOS-matched switch (metrics/colour; spring is the accepted gap) */
+.sw { flex-shrink:0; position:relative; width:38px; height:22px; border-radius:11px; cursor:pointer;
+  background:var(--bn-colour-accent); transition:background .28s ease; }
+.sec.off .sw { background:var(--bn-off-track); }
+.sw::after { content:""; position:absolute; top:2px; left:18px; width:18px; height:18px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.28); transition:left .28s cubic-bezier(.4,0,.2,1); }
+.sec.off .sw::after { left:2px; }
+/* fold */
+.fold { display:grid; grid-template-rows:1fr; transition:grid-template-rows .32s cubic-bezier(.4,0,.2,1); }
+.sec.off .fold { grid-template-rows:0fr; }
+.fold-in { overflow:hidden; }
+.groups { margin-top:.9rem; display:flex; flex-wrap:wrap; gap:1.25rem;
+  transition:opacity .22s ease, transform .3s cubic-bezier(.4,0,.2,1); }
+.sec.off .groups { opacity:0; transform:translateY(-8px); }
+.grp-h { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); font-weight:490; margin-bottom:.4rem; }
+.chips { display:flex; flex-wrap:wrap; gap:4px; max-width:240px; }
+@media (prefers-reduced-motion:reduce) { .fold,.groups,.sw::after,.sw,.sec-meta .on-m,.sec-meta .off-m { transition:none; } }
+
+/* ── Checkbox — lifted verbatim from atoms/checkbox.css (ghost pattern) ── */
+.bn-checkbox { -webkit-appearance:none; appearance:none; width:14px; height:14px;
+  border:1px solid var(--bn-colour-border); border-radius:2px; background:transparent;
+  margin:0; flex-shrink:0; cursor:pointer; position:relative; }
+.bn-checkbox:checked { border-color:var(--bn-colour-border-hover); background:var(--bn-colour-quote-bg); }
+.bn-checkbox:checked::after { content:""; position:absolute; left:3px; top:.5px; width:5px; height:9px;
+  border:solid var(--bn-colour-muted); border-width:0 1.5px 1.5px 0; transform:rotate(45deg); }
+/* master-list row: control leads, label follows, selected row is filled */
+.sb-row.sel { background:var(--bn-colour-hover); }
+/* Mini toggle — the promoted dot. A SIZE MODIFIER on the shipped .sw, not a new
+   control: 26x15 preserves the 38x22 track ratio (1.73), knob scaled to match. */
+.sw.mini { width:26px; height:15px; border-radius:7.5px; margin-top:.18em; flex-shrink:0; }
+.sw.mini::after { width:11px; height:11px; left:13px; top:2px; }
+.sb-row.rowoff .sw.mini::after { left:2px; }
+/* two-line row: title then author, toggle aligned to the FIRST line like a bullet */
+.sb-row .lbl2 { min-width:0; }
+.sb-row .r-title { display:block; line-height:1.3; }
+.sb-row .r-author { display:block; font-size:var(--bn-text-badge); color:var(--bn-colour-muted); line-height:1.3; }
+.sb.wide { width:320px; }
+.sb-row.rowoff .sw { background:var(--bn-off-track); }
+.sb-row.rowoff .sw::after { left:2px; }
+.sb-row.rowoff { color:var(--bn-colour-muted); }
+
+/* ── Sidebar ──────────────────────────────────────────────────────────── */
+.sb { width:var(--bn-sidebar-width); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); padding:.6rem; background:var(--bn-colour-quote-bg); }
+.sb-h { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted); font-weight:490; padding:.3rem .5rem .5rem; }
+/* lone dot, aligned to the FIRST line like a bullet (not centred on the wrapped block) */
+.sb-row { display:flex; align-items:flex-start; gap:.55rem; padding:.4rem .5rem; border-radius:var(--bn-radius-md); font-size:var(--bn-text-label); line-height:1.35; }
+.sb-row .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:.42em; }
+.sb-row.active { color:var(--bn-colour-text); } .sb-row.active .dot { background:var(--bn-colour-accent); }
+.sb-row.off { color:var(--bn-colour-muted); } .sb-row.off .dot { background:var(--bn-off-track); }
+.sb-row.avail { color:var(--bn-colour-muted); } .sb-row.avail .dot { background:transparent; }
+.sb-mini { font-size:var(--bn-text-label); color:var(--bn-colour-accent); padding:.5rem .5rem 0; cursor:pointer; }
+
+.note { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); line-height:1.55; margin-top:.6rem; max-width:70ch; }
+.note b { color:var(--bn-colour-text); font-weight:490; }
+.hint { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-bottom:.4rem; }
+.two-col { display:flex; gap:2rem; align-items:flex-start; flex-wrap:wrap; }
+/* ── Catalogue cards — lifted verbatim from organisms/codebook-panel.css ──── */
+.picker-card { background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-lg); padding:var(--bn-space-lg); cursor:pointer; position:relative;
+  transition:border-color var(--bn-transition-fast), background-color var(--bn-transition-fast); }
+.picker-card:hover { border-color:var(--bn-colour-accent); background-color:var(--bn-colour-hover); }
+.picker-card-title { font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); margin-bottom:.15rem; }
+.picker-card-author { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-bottom:.5rem; }
+.picker-card-desc { font-size:var(--bn-text-label); color:var(--bn-colour-muted); line-height:1.5; }
+.picker-card-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:var(--bn-space-md); }
+.picker-card-actions { margin-top:var(--bn-space-md); display:flex; justify-content:flex-end; align-items:center; gap:.6rem; }
+.picker-card-toggle { min-width:96px; justify-content:center; text-align:center; font-size:var(--bn-text-caption); }
+/* v2: the browse page is a GRID of cards, not a vertical column */
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:var(--bn-space-md); }
+.picker-card.installed { border-color:var(--bn-colour-border-hover); }
+.meta-line { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); margin-bottom:.5rem; }
+.cost { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); }
+.vocab { display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start; }
+.vocab > div { min-width:150px; }
+.vocab .v-h { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.06em;
+  text-transform:uppercase; color:var(--bn-colour-muted); margin-bottom:.4rem; }
+
+/* ── Size ladder ─────────────────────────────────────────────────────────── */
+.ladder { display:flex; flex-direction:column; gap:var(--bn-space-lg); }
+.rung { display:flex; gap:var(--bn-space-lg); align-items:flex-start; flex-wrap:wrap; }
+.rung-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); letter-spacing:.06em;
+  text-transform:uppercase; color:var(--bn-colour-muted); margin-bottom:.4rem; }
+.rung-label b { color:var(--bn-colour-text); font-weight:490; }
+/* jacket stand-in — NOT artwork; real jackets exist in Assets.xcassets */
+.jacket { flex-shrink:0; border-radius:var(--bn-radius-sm); border:1px solid var(--bn-colour-border);
+  background:linear-gradient(150deg, var(--bn-ux-1-bg), var(--bn-trust-1-bg));
+  display:flex; align-items:flex-end; justify-content:center; font-family:var(--bn-font-mono);
+  font-size:var(--bn-text-micro); color:var(--bn-colour-muted); padding-bottom:2px; }
+.with-vis { display:flex; gap:var(--bn-space-md); align-items:flex-start; }
+.with-vis .picker-card-body { min-width:0; flex:1; }
+
+/* ── Reserved slot — the space is the decision; the fill is deferred ─────── */
+.slotbox { flex-shrink:0; border-radius:var(--bn-radius-sm); overflow:hidden;
+  background:var(--bn-colour-badge-bg); border:1px solid var(--bn-colour-border);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--bn-font-body); font-weight:var(--bn-weight-emphasis);
+  color:var(--bn-colour-muted); }
+.slotbox.circle { border-radius:50%; }
+.slotbox.jk { background:linear-gradient(150deg, var(--bn-ux-1-bg), var(--bn-trust-1-bg)); }
+.slotbox.face { background:radial-gradient(circle at 50% 38%, var(--bn-colour-border-hover) 0 26%, var(--bn-colour-badge-bg) 27%); }
+.opt { text-align:center; }
+.opt .cap2 { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); margin-top:.4rem; }
+.with-vis { display:flex; gap:var(--bn-space-md); align-items:flex-start; }
+.with-vis .picker-card-body { min-width:0; flex:1; }
+
+/* ── Edge chevrons — ported from the Welcome slot rotator (WelcomeHomeView:707).
+   Kept: frosted disk, hairline, hover-reveal, and INERT-UNTIL-REVEALED, the trap
+   that file already paid for (allowsHitTesting there, pointer-events here).
+   Dropped: page dots and cross-fade. SF Symbols do not cross to CSS, so Lucide. */
+.stage { position:relative; }
+.chev { position:absolute; top:50%; transform:translateY(-50%); width:30px; height:30px;
+  border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:color-mix(in srgb, var(--bn-colour-bg) 72%, transparent);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border:1px solid color-mix(in srgb, var(--bn-colour-text) 8%, transparent);
+  box-shadow:0 1px 3px var(--bn-colour-shadow); color:var(--bn-colour-text);
+  opacity:0; pointer-events:none; transition:opacity var(--bn-transition-fast); cursor:pointer; }
+.chev.l { left:8px; } .chev.r { right:8px; }
+.stage:hover .chev, .chev:focus-visible { opacity:1; pointer-events:auto; }
+.stage.always .chev { opacity:1; pointer-events:auto; }
+.chev svg { width:14px; height:14px; }
+@media (prefers-reduced-transparency:reduce) { .chev { backdrop-filter:none; background:var(--bn-colour-bg); } }
+@media (prefers-reduced-motion:reduce) { .chev { transition:none; } }
+
+/* ── Proposal count — lifted from .proposed-count, with the dark-mode fix ──
+   The shipped rule hardcodes rgba(37,99,235,.08) — light-mode accent. In dark
+   mode the accent is #0a84ff and in palette-edo it is #0f5c9e, so the tint is
+   wrong on two of the four theme combinations. color-mix() against the token
+   fixes it, exactly as island-doc decision 6 did for .merge-target. */
+.pcount { font-size:var(--bn-text-badge); font-weight:var(--bn-weight-emphasis);
+  color:var(--bn-colour-accent); background:color-mix(in srgb, var(--bn-colour-accent) 8%, transparent);
+  padding:.15rem .5rem; border-radius:var(--bn-radius-pill); white-space:nowrap; }
+.sb-row .pcount { margin-left:auto; align-self:flex-start; margin-top:.1em; }
+.review-btn { flex-shrink:0; font:inherit; font-size:var(--bn-text-label); font-weight:490;
+  color:#fff; background:var(--bn-colour-accent); border:none; border-radius:var(--bn-radius-md);
+  padding:.45rem .8rem; cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:.45rem; }
+.review-btn .n { background:rgba(255,255,255,.22); border-radius:var(--bn-radius-pill); padding:0 .4rem; }
+
+/* ── Card states — installed shows STATE, not a control ─────────────────
+   Safari's detail pane carries no enable checkbox (it lives in the list only);
+   Claude's directory shows a green check on an added connector, not a plus.
+   Each control therefore appears exactly once across the three surfaces. */
+.tick { width:26px; height:26px; border-radius:var(--bn-radius-sm); flex-shrink:0;
+  background:color-mix(in srgb, var(--bn-positive) 16%, transparent);
+  color:var(--bn-positive); display:flex; align-items:center; justify-content:center; }
+.tick svg { width:14px; height:14px; }
+.picker-card.off .picker-card-title,
+.picker-card.off .picker-card-author,
+.picker-card.off .picker-card-desc { color:var(--bn-colour-muted); }
+.picker-card.off .slotbox { opacity:.45; filter:saturate(.35); }
+.picker-card.off .tick { background:color-mix(in srgb, var(--bn-colour-muted) 12%, transparent); color:var(--bn-colour-muted); }
+.state-word { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); }
+
+/* ── Card, to spec — whole card navigates; only the button does not ───── */
+.picker-card.spec { display:flex; flex-direction:column; gap:.55rem; }
+.picker-card .cardhead { display:flex; gap:var(--bn-space-md); align-items:flex-start; }
+.picker-card .ver { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); font-weight:var(--bn-weight-normal); }
+.picker-card .statline { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); }
+.picker-card .footrow { display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-top:auto; padding-top:.2rem; }
+.picker-card.spec:hover { border-color:var(--bn-colour-accent); }
+.picker-card-toggle { position:relative; z-index:1; }
+
+/* ── Graphic gutter — FIXED WIDTH, free height, top-aligned ────────────────
+   The reservation is a column, not a box. Width is constant so the text's left
+   edge never moves; height is whatever the fill is. Nothing / circle (1:1) /
+   jacket (2:3) all leave the text starting at the same x. */
+.gut { width:44px; flex-shrink:0; }
+.gut > * { width:44px; display:block; }
+.gut .disc { height:44px; border-radius:50%; background:var(--bn-colour-badge-bg);
+  border:1px solid var(--bn-colour-border); display:flex; align-items:center;
+  justify-content:center; color:var(--bn-colour-muted); font-weight:var(--bn-weight-emphasis); }
+.gut .jkt { height:66px; border-radius:var(--bn-radius-sm); border:1px solid var(--bn-colour-border);
+  background:linear-gradient(150deg, var(--bn-ux-1-bg), var(--bn-trust-1-bg)); }
+.gut .nil { height:0; }
+/* commentary device: the shared text left-edge, made visible */
+.guide { position:relative; }
+.guide::before { content:""; position:absolute; left:calc(var(--bn-space-lg) + 44px + var(--bn-space-md));
+  top:6px; bottom:6px; width:1px; background:var(--bn-colour-accent); opacity:.45; }
+
+/* ── Full details page — .preview-* lifted verbatim from codebook-panel.css ── */
+.preview-body { display:flex; gap:var(--bn-space-xl); align-items:flex-start; }
+.preview-body-main { flex:1; min-width:0; }
+.preview-body-sidebar { width:260px; flex-shrink:0; }
+.preview-desc { font-size:var(--bn-text-label); color:var(--bn-colour-muted); line-height:1.6; margin-bottom:var(--bn-space-lg); }
+.preview-section-label { font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.04em;
+  color:var(--bn-colour-muted); font-weight:var(--bn-weight-emphasis); margin-bottom:var(--bn-space-md); }
+.preview-groups { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:var(--bn-space-lg); align-items:start; }
+.preview-author { background:var(--bn-colour-quote-bg); border-radius:var(--bn-radius-lg); padding:var(--bn-space-lg); }
+.preview-author-name { font-weight:var(--bn-weight-emphasis); font-size:var(--bn-text-label); margin-bottom:.25rem; }
+.preview-author-bio { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-bottom:var(--bn-space-md); line-height:1.5; }
+.preview-author-links { display:flex; flex-direction:column; gap:.4rem; font-size:var(--bn-text-caption); }
+.preview-author-links a { color:var(--bn-colour-accent); text-decoration:none; }
+/* page header — gutter at page scale */
+.pg-head { display:flex; gap:var(--bn-space-lg); align-items:flex-start; padding-bottom:var(--bn-space-lg);
+  border-bottom:1px solid var(--bn-colour-border); margin-bottom:var(--bn-space-lg); }
+.pg-gut { width:72px; flex-shrink:0; }
+.pg-gut .jkt { width:72px; height:108px; border-radius:var(--bn-radius-sm);
+  border:1px solid var(--bn-colour-border); background:linear-gradient(150deg, var(--bn-ux-1-bg), var(--bn-trust-1-bg)); }
+.pg-meta { flex:1; min-width:0; }
+.pg-title { font-size:var(--bn-text-title); font-weight:var(--bn-weight-emphasis); line-height:1.2; }
+.pg-author { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.15rem; }
+.pg-stat { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); margin-top:.5rem; }
+.pg-actions { display:flex; align-items:center; gap:.6rem; flex-shrink:0; }
+
+</style>
+<style>
+
+body{padding:2rem}
+.wrap2{max-width:1000px;margin:0 auto}
+h1{font-size:var(--bn-text-display);font-weight:var(--bn-weight-strong);margin:0 0 .3rem}
+.sub{color:var(--bn-colour-muted);font-size:var(--bn-text-label);margin:0 0 1.2rem;max-width:76ch;line-height:1.6}
+.sub b{color:var(--bn-colour-text);font-weight:490}
+.opt{border:1px solid var(--bn-colour-border);border-radius:var(--bn-radius-lg);margin-bottom:1.1rem;overflow:hidden}
+.opt-h{padding:.6rem .9rem;background:var(--bn-colour-quote-bg);border-bottom:1px solid var(--bn-colour-border);
+  display:flex;justify-content:space-between;align-items:baseline;gap:1rem;font-size:var(--bn-text-label);font-weight:490}
+.opt-h em{font-style:normal;font-family:var(--bn-font-mono);font-size:var(--bn-text-micro);
+  text-transform:uppercase;letter-spacing:.06em;color:var(--bn-colour-muted)}
+.trio{display:grid;grid-template-columns:250px 1fr 1fr;align-items:start}
+.tcell{padding:1rem}
+.tcell+.tcell{border-left:1px solid var(--bn-colour-border)}
+.tcell .lab{font-family:var(--bn-font-mono);font-size:var(--bn-text-micro);text-transform:uppercase;
+  letter-spacing:.06em;color:var(--bn-colour-muted);margin-bottom:.6rem}
+.note{font-size:var(--bn-text-caption);color:var(--bn-colour-muted);line-height:1.6;padding:.7rem .9rem;
+  border-top:1px solid var(--bn-colour-border);background:var(--bn-colour-quote-bg)}
+.note b{color:var(--bn-colour-text);font-weight:490}
+/* rail row + card + page header, minimal */
+.rw{display:flex;align-items:flex-start;gap:.55rem;padding:.4rem .5rem;border-radius:var(--bn-radius-md);font-size:var(--bn-text-label);line-height:1.35}
+.rw .lb{flex:1;min-width:0}
+.tt{display:block}
+.cd{border:1px solid var(--bn-colour-border);border-radius:var(--bn-radius-lg);padding:var(--bn-space-md);max-width:300px}
+.cd .ct{font-size:var(--bn-text-label);font-weight:var(--bn-weight-emphasis);margin-bottom:.15rem}
+.ph .pt{font-size:var(--bn-text-title);font-weight:var(--bn-weight-emphasis);line-height:1.2}
+/* the treatments */
+.a-cur{font-size:var(--bn-text-label);color:var(--bn-colour-muted)}
+.a-house{font-size:var(--bn-text-label);font-weight:var(--bn-weight-emphasis);color:var(--bn-colour-text)}
+.a-half{font-size:var(--bn-text-label);font-weight:var(--bn-weight-emphasis);color:var(--bn-colour-muted)}
+.a-acc{font-size:var(--bn-text-label);font-weight:var(--bn-weight-emphasis);color:var(--bn-colour-accent);cursor:pointer}
+.a-acc:hover{text-decoration:underline}
+.a-byline{font-size:var(--bn-text-micro);text-transform:uppercase;letter-spacing:.09em;color:var(--bn-colour-muted);font-weight:var(--bn-weight-emphasis)}
+.lead-name{font-size:var(--bn-text-label);font-weight:var(--bn-weight-emphasis);color:var(--bn-colour-text)}
+.lead-title{font-size:var(--bn-text-label);font-weight:var(--bn-weight-normal);color:var(--bn-colour-muted)}
+.ph .lead-pt{font-size:var(--bn-text-title);font-weight:var(--bn-weight-emphasis);line-height:1.2}
+.ph .lead-ps{font-size:var(--bn-text-label);color:var(--bn-colour-muted);margin-top:.15rem}
+</style></head><body><div class="wrap2">
+<h1>Author treatments</h1>
+<p class="sub">Six treatments for the codebook author, shown in all three places it appears. Every weight and colour is an existing token &mdash; the scale is <code>light 370 / normal 420 / emphasis 490 / starred 520 / strong 700</code>.</p>
+<p class="sub"><b>The finding that matters:</b> the house already renders a person at <code>--bn-weight-emphasis</code> in full text colour, in three separate places &mdash; including <code>.preview-author-name</code>, which is the author card <i>on this very page</i>. The muted byline is the outlier.</p>
+<div class="zoomrow" style="display:flex;gap:.4rem;align-items:center;margin-bottom:1.4rem"><span style="font-size:var(--bn-text-caption);color:var(--bn-colour-muted);margin-right:.3rem">Palette</span><button class="pbtn on" data-pal="default">Default</button><button class="pbtn" data-pal="edo">Edo</button></div>
+<div class="opt">
+  <div class="opt-h"><span>A &middot; Current — muted label</span><em>baseline</em></div>
+  <div class="trio">
+    <div class="tcell"><div class="lab">navigation</div><div class="rw"><span class="lb"><span class="tt">10 Usability Heuristics for User Interface Design</span><span class="a-cur">Jakob Nielsen</span></span></div></div>
+    <div class="tcell"><div class="lab">card</div><div class="cd"><div class="ct">10 Usability Heuristics for User Interface Design</div><div class="a-cur">Jakob Nielsen</div></div></div>
+    <div class="tcell"><div class="lab">page header</div><div class="ph"><div class="pt">10 Usability Heuristics for User Interface Design</div><div class="a-cur">Jakob Nielsen</div></div></div>
+  </div>
+  <div class="note"><b>The apologetic one.</b> <code>--bn-text-label</code> + <code>--bn-colour-muted</code>. Identical treatment to a timestamp or a file path.</div>
+</div>
+<div class="opt">
+  <div class="opt-h"><span>B &middot; House person treatment &mdash; <b style="color:var(--bn-colour-accent)">CHOSEN</b></span><em>zero invention</em></div>
+  <div class="trio">
+    <div class="tcell"><div class="lab">navigation</div><div class="rw"><span class="lb"><span class="tt">10 Usability Heuristics for User Interface Design</span><span class="a-house">Jakob Nielsen</span></span></div></div>
+    <div class="tcell"><div class="lab">card</div><div class="cd"><div class="ct">10 Usability Heuristics for User Interface Design</div><div class="a-house">Jakob Nielsen</div></div></div>
+    <div class="tcell"><div class="lab">page header</div><div class="ph"><div class="pt">10 Usability Heuristics for User Interface Design</div><div class="a-house">Jakob Nielsen</div></div></div>
+  </div>
+  <div class="note"><b>This is already in the codebase.</b> <code>.preview-author-name</code> renders the author at <code>--bn-weight-emphasis</code> in full text colour &mdash; and so do <code>.bn-speaker-editable-name</code> and <code>.rewatch-participant</code>. So <b>the same name is rendered two ways on the same page today</b>: strong in the author card, muted in the byline beside the title. The muted one is the outlier, not the norm.</div>
+</div>
+<div class="opt">
+  <div class="opt-h"><span>C &middot; Weight only, still muted</span><em>half step</em></div>
+  <div class="trio">
+    <div class="tcell"><div class="lab">navigation</div><div class="rw"><span class="lb"><span class="tt">10 Usability Heuristics for User Interface Design</span><span class="a-half">Jakob Nielsen</span></span></div></div>
+    <div class="tcell"><div class="lab">card</div><div class="cd"><div class="ct">10 Usability Heuristics for User Interface Design</div><div class="a-half">Jakob Nielsen</div></div></div>
+    <div class="tcell"><div class="lab">page header</div><div class="ph"><div class="pt">10 Usability Heuristics for User Interface Design</div><div class="a-half">Jakob Nielsen</div></div></div>
+  </div>
+  <div class="note">490 without promoting the colour. Gains presence in the type without changing the hierarchy of attention. The Finder/Music pattern: same size, demotion by colour alone.</div>
+</div>
+<div class="opt">
+  <div class="opt-h"><span>D &middot; Accent — a navigable entity</span><em>App Store / Music</em></div>
+  <div class="trio">
+    <div class="tcell"><div class="lab">navigation</div><div class="rw"><span class="lb"><span class="tt">10 Usability Heuristics for User Interface Design</span><span class="a-acc">Jakob Nielsen</span></span></div></div>
+    <div class="tcell"><div class="lab">card</div><div class="cd"><div class="ct">10 Usability Heuristics for User Interface Design</div><div class="a-acc">Jakob Nielsen</div></div></div>
+    <div class="tcell"><div class="lab">page header</div><div class="ph"><div class="pt">10 Usability Heuristics for User Interface Design</div><div class="a-acc">Jakob Nielsen</div></div></div>
+  </div>
+  <div class="note">How the App Store renders a developer and Music an artist: accent-coloured, because the person is <i>somewhere you can go</i>. <b>Carries an obligation</b> &mdash; if it is blue it must do something, which means browse-by-author. Do not take this one for looks.</div>
+</div>
+<div class="opt">
+  <div class="opt-h"><span>E &middot; Inversion — the person leads</span><em>Mail's sender</em></div>
+  <div class="trio">
+    <div class="tcell"><div class="lab">navigation</div><div class="rw"><span class="lb"><span class="lead-name">Jakob Nielsen</span><span class="lead-title">10 Usability Heuristics for User Interface Design</span></span></div></div>
+    <div class="tcell"><div class="lab">card</div><div class="cd"><div class="ct">Jakob Nielsen</div><div class="lead-title">10 Usability Heuristics for User Interface Design</div></div></div>
+    <div class="tcell"><div class="lab">page header</div><div class="ph"><div class="lead-pt">Jakob Nielsen</div><div class="lead-ps">10 Usability Heuristics for User Interface Design</div></div></div>
+  </div>
+  <div class="note"><b>The most direct answer to the observation.</b> Mail puts the sender in semibold above the subject, because you scan for who. If Nielsen is better known than the title, then the title is the subtitle. <b>Breaks down where there is no person</b> &mdash; sentiment, uxr and cli-ux have no author, so those rows would lead with the title while the rest lead with a name. A mixed list is the cost.</div>
+</div>
+<div class="opt">
+  <div class="opt-h"><span>F &middot; Byline register</span><em>editorial</em></div>
+  <div class="trio">
+    <div class="tcell"><div class="lab">navigation</div><div class="rw"><span class="lb"><span class="tt">10 Usability Heuristics for User Interface Design</span><span class="a-byline">Jakob Nielsen</span></span></div></div>
+    <div class="tcell"><div class="lab">card</div><div class="cd"><div class="ct">10 Usability Heuristics for User Interface Design</div><div class="a-byline">Jakob Nielsen</div></div></div>
+    <div class="tcell"><div class="lab">page header</div><div class="ph"><div class="pt">10 Usability Heuristics for User Interface Design</div><div class="a-byline">Jakob Nielsen</div></div></div>
+  </div>
+  <div class="note">Uppercase micro with tracking. Subtle and quiet, but it reads as a <i>credit</i> rather than a person &mdash; which is arguably the opposite of what is wanted here.</div>
+</div>
+<p class="sub" style="margin-top:1.4rem"><b>Chosen 29 Aug: B.</b> It, and it is not a new idea &mdash; it is the treatment already applied to the same name eight centimetres away in the author card. It costs nothing, invents nothing, and removes an inconsistency rather than adding a flourish. <b>D</b> is the stronger statement but should only be taken alongside browse-by-author. <b>E</b> is the boldest and the most faithful to "Nielsen is better known than the title", but it makes the three authorless built-ins read as a different kind of row.</p>
+</div><script>document.querySelectorAll("[data-pal]").forEach(function(b){b.onclick=function(){document.querySelectorAll("[data-pal]").forEach(function(o){o.classList.remove("on")});b.classList.add("on");document.documentElement.setAttribute("data-color-theme",b.dataset.pal);};});</script></body></html>

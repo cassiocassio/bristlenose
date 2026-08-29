@@ -511,6 +511,8 @@ outlived — but it is a reversal and the state-model doc will need truing.
 **The status dot goes.** It existed to *echo* the switch. With the switch in the
 row, the echo is duplication. Pure deletion — nothing invented.
 
+**Superseded again by D15** — the enable control is now the platform switch where one exists; the mini toggle is deleted, and the switch-or-checkbox question is moot.
+
 **Superseded in part by D11** — the page no longer carries a copy of this toggle; the rail owns it alone.
 
 **Open: switch or checkbox.** Both satisfy D1. `.sw` is 38&times;22 and already
@@ -749,9 +751,17 @@ arrows. Nobody experiences that as two competing designs.
 1. **Open by default** — opinionated, and it is what makes this a master&ndash;detail
    lens rather than a page with a table of contents beside it.
 2. **Closable** — &#x2318;&#x2325;L and Focus Mode keep working, unchanged.
-3. **Next / previous when closed** — the escape hatch, and the only genuinely new
-   control in the set. Nothing to inherit: there is no next/prev anywhere in
-   `frontend/src` today.
+3. ~~**Next / previous when closed**~~ — **dropped 29 Aug.** The chevrons were a
+   complexity that did not earn its keep. They existed for one case, the rail
+   being closed, and that case is **Focus Mode — a *reading* mode, not a
+   navigating one**. Wanting a different codebook while in it is rare, and
+   reopening the rail is one keystroke *and* shows you where you are going, which
+   a blind next/prev never does. **Arrow-key traversal stays**, because it costs
+   no chrome and no discovery burden.
+
+   Consequence: D9 reduces to two clauses — open by default, closable — and the
+   set gains no new control at all. The Welcome-rotator port is recorded below as
+   history; the frames are marked rejected in the mockup.
 
 **A precision worth fixing now.** Next/prev traverses **installed** codebooks —
 the rail's contents — not the catalogue. Moving through everything available is
@@ -1121,6 +1131,106 @@ window on navigation feels possessed, and here it would be rearranging it to gai
 space that the content column cannot use.
 
 Frame: **V12** in [`mockups/codebook-v2.html`](mockups/codebook-v2.html).
+
+### D15 — the enable control is the platform switch, with ours as the fallback
+
+Settled 29 Aug, and it **deletes an innovation rather than justifying one.**
+
+`design-codebook-library.md` chose the custom switch on an explicit premise:
+*"the exact `NSSwitch` spring curve and focus ring are not reproducible in
+CSS/WKWebView — that ~5% is the accepted gap."* **That premise expired.** Safari
+17.4 added `<input type="checkbox" switch>`, which renders the platform switch
+with its real spring, its real focus ring, and correct behaviour under Increase
+Contrast and Reduce Motion — none of which our CSS gets.
+
+| Host | Control |
+|---|---|
+| Desktop app (WKWebView) &middot; Safari | **the platform switch** |
+| Chrome &middot; Firefox — the CLI-served SPA's likely hosts | **ours** (`.sw`), unchanged |
+
+**Detection is by capability, not channel** — `'switch' in document.createElement('input')`.
+Stated as *"ours for the CLI-driven SPA"*, but the intent reads as *"ours where
+the platform has nothing to offer"*: someone running `bristlenose serve` in
+Safari should get the native control too, and a UA or `isEmbedded()` check would
+deny it to them for no reason. Capability detection also ages correctly — if
+Chrome ships the attribute, we inherit it without touching this code.
+
+**Consequences.**
+
+- **The mini toggle is deleted.** D3's open question ("switch or checkbox at rail
+  size?") is answered by not needing an answer. Innovations drop from 8 to 7.
+- **The fallback is not a downgrade** — `.sw` is the shipped, measured,
+  macOS-matched control. It stays exactly as it is.
+- **This is the house pattern**, one layer down from where it usually operates:
+  shared taxonomy, rendered native per surface. `dt()` and `ct()` already fork
+  *text* by platform; this forks a *control* by capability.
+
+**Measured 29 Aug in Safari, and it settles the sizing question too.**
+
+| Lever | Rendered |
+|---|---|
+| default, no CSS | **38.0 × 22.0** |
+| `font-size` 1rem / .85 / .7 | 38.0 × 22.0 — **ignored entirely** |
+| `width/height: 38×22` | 38.0 × 22.0 |
+| `width/height: 30×18` | 30.0 × 18.0 |
+| `width/height: 26×15` | 26.0 × 15.0 |
+| `transform: scale(.7)` | 26.6 × 15.4 |
+
+Three things fall out of that.
+
+1. **The platform default is *exactly* 38×22** — the same numbers
+   `design-codebook-library.md` recorded from measuring a real `NSSwitch`. The
+   original metric work was right to the pixel; what has changed is only that we
+   no longer have to reproduce it by hand.
+2. **`font-size` is ignored**, so there is no implicit control-size hook. Only
+   `width`/`height` moves it.
+3. **`width`/`height` is honoured and re-lays the control cleanly** — so
+   **rail size is available from the platform control itself**. My earlier "not
+   resized" caution was wrong: I assumed scaling would distort it, and it does
+   not.
+
+**So the rail uses the platform switch at 26×15** — the exact metric our dropped
+mini used. We keep the native spring, focus ring, Increase Contrast and Reduce
+Motion behaviour *and* the density, with no custom CSS at all.
+
+**One caveat that stays open and needs an eye, not a measurement.** AppKit's
+`controlSize: .mini` is a *redrawn* control — different corner-radius ratio,
+different knob inset — whereas CSS `width`/`height` re-lays the *regular*
+drawing. The probe proves the geometry is clean; whether it reads as a proper
+small switch or as a shrunk large one is a judgement to make at 1× on a real
+display, which is exactly what the parity doc means by squinting at arm's length.
+
+The prototype has a **Platform / Ours** toggle so both can be judged in place, and
+it disables the platform option with a note when the host cannot render it.
+
+### D16 — the enable switch is trailing, at 26×15
+
+Settled 29 Aug, **against my recommendation, and the ordering dissolves my
+objection.**
+
+I argued for a *leading* control on the grounds that the pending-proposal count
+(D10) already owns the trailing edge, so putting the switch there would mean two
+competing things on one edge and *"a switch whose x-position moves depending on
+whether a row has proposals."*
+
+**That is only true if the switch is not last.** With the order
+**label → count → switch**, the switch is flush right on every row, so its column
+is perfectly aligned and still scannable — and the **count** becomes the thing
+that shifts. Which is fine, because the count is *information, not a control*: a
+ragged column costs it nothing, while a ragged control column costs a lot.
+
+So the trailing layout wins on its own merits once ordered correctly, and it
+brings back what our own doc argued for in the first place: *"title flush left,
+control on the right"* — no indent, nothing between the reader and the codebook's
+name. The 57px indent the leading layout imposed on every title is gone.
+
+**At 26×15**, the platform switch resized — see D15's measurements. Full size in
+a two-line rail row is taller than the title line and starts to dominate a row
+whose author line is already muted.
+
+**The floor row carries no switch at all**, and under a trailing layout that
+costs nothing: its label simply runs the full width. Under a leading layout it
+needed a 26px spacer to keep the text aligned. One less thing.
 
 ## Coverage audit — every control and every datum, v1 against v2
 

@@ -24,11 +24,48 @@
   --bn-space-lg:1.5rem; --bn-space-xl:2rem;
   --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
   /* group tints (tokens.css) — shared across palettes */
-  --bn-emo-1-bg:   light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
-  --bn-task-1-bg:  light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
-  --bn-ux-1-bg:    light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
-  --bn-trust-1-bg: light-dark(oklch(94% 0.03 300), oklch(50% 0.12 300));
-  --bn-opp-1-bg:   light-dark(oklch(94% 0.03 75),  oklch(50% 0.10 75));
+/* Full codebook palette — every slot of every set, plus the GROUP background
+   family, lifted verbatim from tokens.css. Earlier drafts of this file inlined
+   only slot 1 of each set and no group backgrounds at all. */
+  --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+  --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+  --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+  --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+  --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+  --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+  --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+  --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+  --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+  --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+  --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+  --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+  --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+  --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+  --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+  --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+  --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+  --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+  --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+  --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+  --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+  --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+  --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+  --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+  --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+  --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+  --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+  --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+  --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+  --bn-group-ux: light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+  --bn-group-emo: light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+  --bn-group-task: light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+  --bn-group-trust: light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+  --bn-group-opp: light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+  --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
 }
 :root, [data-color-theme="default"] {
   --bn-colour-bg:          light-dark(#ffffff, #111111);
@@ -335,6 +372,10 @@ body {
 .pg-author { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.15rem; }
 .pg-stat { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); margin-top:.5rem; }
 .pg-actions { display:flex; align-items:center; gap:.6rem; flex-shrink:0; }
+
+
+/* group card — the background is --bn-group-<set>, NOT a tag colour */
+.codebook-group { border-radius:var(--bn-radius-lg); padding:var(--bn-space-md); border:1px solid transparent; }
 
 </style>
 <style>
@@ -926,7 +967,7 @@ body {
          and gets replaced fill by fill as assets arrive.</p>
     </div>
 
-    <div class="stage-label">V7 &middot; rail closed &mdash; next / previous</div>
+    <div class="stage-label" style="color:var(--bn-colour-muted);text-decoration:line-through">V7 &middot; rail closed &mdash; next / previous &middot; REJECTED</div>
     <div class="frame">
       <div class="frame-bar"><span class="lights"><i></i><i></i><i></i></span><span class="cap">v2 &middot; hover-revealed &middot; move the pointer over the page</span></div>
       <div class="frame-in">
@@ -942,12 +983,12 @@ body {
                 <button class="add-btn removeable">Uninstall</button>
               </div>
               <div class="fold"><div class="fold-in"><div class="groups">
-                <div><div class="grp-h">Visibility of system status</div><div class="chips">
+                <div class="codebook-group" style="background:var(--bn-group-ux)"><div class="grp-h">Visibility of system status</div><div class="chips">
                   <span class="badge" style="background:var(--bn-ux-1-bg)">progress shown</span>
-                  <span class="badge" style="background:var(--bn-ux-1-bg)">silent failure</span></div></div>
-                <div><div class="grp-h">User control and freedom</div><div class="chips">
-                  <span class="badge" style="background:var(--bn-trust-1-bg)">no undo</span>
-                  <span class="badge" style="background:var(--bn-trust-1-bg)">trapped</span></div></div>
+                  <span class="badge" style="background:var(--bn-ux-2-bg)">silent failure</span></div></div>
+                <div class="codebook-group" style="background:var(--bn-group-ux)"><div class="grp-h">User control and freedom</div><div class="chips">
+                  <span class="badge" style="background:var(--bn-ux-1-bg)">no undo</span>
+                  <span class="badge" style="background:var(--bn-ux-2-bg)">trapped</span></div></div>
               </div></div></div>
             </div>
           </div>
@@ -971,12 +1012,12 @@ body {
                 <button class="add-btn removeable">Uninstall</button>
               </div>
               <div class="fold"><div class="fold-in"><div class="groups">
-                <div><div class="grp-h">Visibility of system status</div><div class="chips">
-                  <span class="badge" style="background:var(--bn-ux-1-bg)">progress shown</span>
-                  <span class="badge" style="background:var(--bn-ux-1-bg)">silent failure</span></div></div>
-                <div><div class="grp-h">User control and freedom</div><div class="chips">
+                <div class="codebook-group" style="background:var(--bn-group-task)"><div class="grp-h">Visibility of system status</div><div class="chips">
+                  <span class="badge" style="background:var(--bn-task-1-bg)">progress shown</span>
+                  <span class="badge" style="background:var(--bn-task-2-bg)">silent failure</span></div></div>
+                <div class="codebook-group" style="background:var(--bn-group-trust)"><div class="grp-h">User control and freedom</div><div class="chips">
                   <span class="badge" style="background:var(--bn-trust-1-bg)">no undo</span>
-                  <span class="badge" style="background:var(--bn-trust-1-bg)">trapped</span></div></div>
+                  <span class="badge" style="background:var(--bn-trust-2-bg)">trapped</span></div></div>
               </div></div></div>
             </div>
           </div>
@@ -986,7 +1027,12 @@ body {
       </div>
     </div>
     <div class="commentary">
-      <span class="clabel">Commentary &middot; what was taken, and what was left</span>
+      <span class="clabel">Commentary &middot; REJECTED 29 Aug &mdash; kept as the record</span>
+      <p><b>Dropped: the chevrons are a complexity that is not earning its keep.</b> They existed
+         only for the rail-closed case, which is Focus Mode &mdash; a <i>reading</i> mode, not a
+         navigating one. If you want to move to another codebook, reopening the rail is one
+         keystroke and shows you where you are going. Arrow-key traversal stays, because it
+         costs no chrome. The frames below are kept as the record of what was considered.</p>
       <p><b>Taken from the Welcome slot rotator</b> (<code>WelcomeHomeView.swift:707</code>): the frosted
          disk, hairline, soft shadow, hover-reveal &mdash; and critically <b>inert-until-revealed</b>.
          That file uses <code>allowsHitTesting(revealed)</code> so an invisible edge column never
@@ -1276,12 +1322,12 @@ body {
                 control, error handling, cognitive load, and design discipline.</div>
               <div class="preview-section-label">Tag groups</div>
               <div class="preview-groups">
-                <div><div class="grp-h">Status visibility</div><div class="chips"><span class="badge" style="background:var(--bn-ux-1-bg)">progress shown</span><span class="badge" style="background:var(--bn-ux-1-bg)">silent failure</span><span class="badge" style="background:var(--bn-ux-1-bg)">stale state</span></div></div>
-                <div><div class="grp-h">Real-world matching</div><div class="chips"><span class="badge" style="background:var(--bn-task-1-bg)">jargon</span><span class="badge" style="background:var(--bn-task-1-bg)">familiar metaphor</span></div></div>
-                <div><div class="grp-h">Control and freedom</div><div class="chips"><span class="badge" style="background:var(--bn-trust-1-bg)">no undo</span><span class="badge" style="background:var(--bn-trust-1-bg)">trapped</span><span class="badge" style="background:var(--bn-trust-1-bg)">escape hatch</span></div></div>
-                <div><div class="grp-h">Consistency and standards</div><div class="chips"><span class="badge" style="background:var(--bn-opp-1-bg)">breaks convention</span><span class="badge" style="background:var(--bn-opp-1-bg)">internal mismatch</span></div></div>
-                <div><div class="grp-h">Error prevention</div><div class="chips"><span class="badge" style="background:var(--bn-emo-1-bg)">easy mistake</span><span class="badge" style="background:var(--bn-emo-1-bg)">destructive default</span></div></div>
-                <div><div class="grp-h">Recognition over recall</div><div class="chips"><span class="badge" style="background:var(--bn-ux-1-bg)">hidden option</span><span class="badge" style="background:var(--bn-ux-1-bg)">memory burden</span></div></div>
+                <div class="codebook-group" style="background:var(--bn-group-task)"><div class="grp-h">Status visibility</div><div class="chips"><span class="badge" style="background:var(--bn-task-1-bg)">progress shown</span><span class="badge" style="background:var(--bn-task-2-bg)">silent failure</span><span class="badge" style="background:var(--bn-task-3-bg)">stale state</span></div></div>
+                <div class="codebook-group" style="background:var(--bn-group-ux)"><div class="grp-h">Real-world matching</div><div class="chips"><span class="badge" style="background:var(--bn-ux-1-bg)">jargon</span><span class="badge" style="background:var(--bn-ux-2-bg)">familiar metaphor</span></div></div>
+                <div class="codebook-group" style="background:var(--bn-group-ux)"><div class="grp-h">Control and freedom</div><div class="chips"><span class="badge" style="background:var(--bn-ux-1-bg)">no undo</span><span class="badge" style="background:var(--bn-ux-2-bg)">trapped</span><span class="badge" style="background:var(--bn-ux-3-bg)">escape hatch</span></div></div>
+                <div class="codebook-group" style="background:var(--bn-group-ux)"><div class="grp-h">Consistency and standards</div><div class="chips"><span class="badge" style="background:var(--bn-ux-1-bg)">breaks convention</span><span class="badge" style="background:var(--bn-ux-2-bg)">internal mismatch</span></div></div>
+                <div class="codebook-group" style="background:var(--bn-group-task)"><div class="grp-h">Error prevention</div><div class="chips"><span class="badge" style="background:var(--bn-task-1-bg)">easy mistake</span><span class="badge" style="background:var(--bn-task-2-bg)">destructive default</span></div></div>
+                <div class="codebook-group" style="background:var(--bn-group-trust)"><div class="grp-h">Recognition over recall</div><div class="chips"><span class="badge" style="background:var(--bn-trust-1-bg)">hidden option</span><span class="badge" style="background:var(--bn-trust-2-bg)">memory burden</span></div></div>
               </div>
             </div>
             <div class="preview-body-sidebar">

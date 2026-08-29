@@ -789,6 +789,14 @@ const canInstall = b => !b.floor && b.id !== 'sentiment';
 // dropped from cards on 29 Aug left this hole). Two built-in kinds, two truths:
 // sentiment arrives applied and cannot be installed; the others ship with the
 // product but are yours to install and enable.
+// The floor carries no tags/quotes fields and no job, so it can state a count but
+// must not claim a quote figure it has never measured. One definition, shared by
+// every view — an inline second copy is how "undefined tags on undefined quotes"
+// reached the page.
+const tagCount = b => b.tags != null ? b.tags : (b.groups||[]).reduce((n,g)=>n+g[1].length,0);
+const statLine = b => !b.installed ? `${tagCount(b)} tags &middot; not installed`
+  : b.quotes != null ? `${tagCount(b)} tags on ${b.quotes} quotes`
+  : `${tagCount(b)} tags`;
 const provenance = b => b.author ? esc(b.author)
   : !b.builtin || b.floor ? ''
   : b.id === 'sentiment' ? 'On by default' : 'Available by default';
@@ -797,7 +805,10 @@ const hasJob = b => !b.floor && b.id !== 'sentiment';
 let view='page', sel='nielsen', railShut=false, pendingAction=null;
 const $ = s=>document.querySelector(s);
 const bk = id=>BOOKS.find(b=>b.id===id);
-const esc = t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+// t==null guard first: String(null) is "null", and an unguarded interpolation
+// then prints that word on the page. Belt as well as braces — call sites are
+// guarded too, but this makes the whole class of leak a no-op.
+const esc = t => t==null ? '' : String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
 function gutter(b, w){
   const h = b.jacket ? Math.round(w*1.5) : w;
@@ -873,11 +884,11 @@ function renderPage(){
         ondragover="event.preventDefault()" ondrop="dropTag(event,-1)">
         <span class="new-group-icon">+</span><span class="new-group-label">New group</span></div>`:'');
   const side = b.bio ? `<div class="preview-body-sidebar"><div class="preview-author">
-      <div class="preview-author-name">${esc(b.author)}</div>
+      ${b.author?`<div class="preview-author-name">${esc(b.author)}</div>`:''}
       <div class="preview-author-bio">${esc(b.bio)}</div>
       <div class="preview-author-links">${(b.links||[]).map(l=>`<a href="#" onclick="return false">${esc(l)} &#8599;</a>`).join('')}</div>
     </div></div>` : '';
-  const stat = b.installed ? `${b.tags} tags on ${b.quotes} quotes` : `${b.tags} tags &middot; not installed`;
+  const stat = statLine(b);
   const actions = !canInstall(b) ? ''
     : b.installed
       ? '<button class="bn-btn framework-remove-btn" id="uninstallbtn">Uninstall</button>'
@@ -894,7 +905,7 @@ function renderPage(){
         ${(b.installed && hasJob(b))
           ? `<div class="pg-review-row"><button class="bn-btn bn-btn-sm" id="coveragebtn">Review</button><span class="pg-review-meta">${b.tags} tags on ${b.quotes} quotes${
               b.pending?` <span class="undec">&middot; ${b.pending} undecided</span>`:''}</span></div>`
-          : `<div class="pg-stat">${b.installed?`${b.tags} tags on ${b.quotes} quotes`:stat}</div>`}
+          : `<div class="pg-stat">${stat}</div>`}
       </div>
       <div class="pg-gutter">${gutter(b,72)}</div>
      </div>
@@ -969,7 +980,7 @@ function renderReview(){
         <strong>Rejected \u2014 not a spec.</strong> The threshold review stays the <em>existing modal</em>, whose detailed UX we are not reinventing.
         This page is a placeholder standing in for that modal so the Review door has somewhere to lead. Read the shipped
         <code>ThresholdReviewModal</code>, never this.</div>
-    <div class="pg-author" style="margin-bottom:var(--bn-space-lg)">${esc(b.title)} &middot; ${b.tags} tags on ${b.quotes} quotes${b.pending?` &middot; ${b.pending} undecided`:''}</div>
+    <div class="pg-author prov-system" style="margin-bottom:var(--bn-space-lg)">${esc(b.title)} &middot; ${statLine(b)}</div>
     <div class="hist">${bars}
       <div class="tmark" style="left:${lo*100}%"><span>lower ${lo.toFixed(2)}</span></div>
       <div class="tmark" style="left:${hi*100}%"><span>upper ${hi.toFixed(2)}</span></div>

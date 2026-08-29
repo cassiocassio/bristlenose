@@ -2157,3 +2157,39 @@ opacity with its live hover.
 
 This is the same shape as the `.add-btn` and missing-`.bn-btn` findings earlier
 today: **the defect was never in the rule anyone was reading.**
+
+#### D27a — and unifying two inventions is not the same as removing them
+
+Corrected within the hour, on the right question: *does the design system already
+have a disabled treatment, and is it tokenised?* Measured — **it does not, and it
+is not.**
+
+| opacity | sites |
+|---|---|
+| **0.5** | `.bn-btn:disabled`, `.toolbar-btn:disabled`, `.autocode-btn:disabled` |
+| 0.45 | `.picker-card.disabled` |
+| 0.4 | `.feedback-btn-send:disabled` |
+| 0.3 | `.expand-arrow:disabled` |
+
+**Seven declarations, five values, no token.** So picking `.55` over `.45` was
+choosing between two local guesses while a third question went unasked. The
+knock-back is now `--bn-opacity-off`, set to **0.5** — the plurality *and* the
+base atom's own value, so the token adopts the de-facto system value rather than
+adding a sixth.
+
+**Named `-off`, not `-disabled`, deliberately.** A disabled control cannot be
+used — `.picker-card.disabled` even sets `pointer-events: none`. A switched-off
+codebook is fully interactive: you open it, you read it, you uninstall it. Same
+visual weight, different state, and borrowing the shipped class would have
+silently killed the interaction D27 exists to preserve.
+
+**And `filter: saturate()` is gone.** It appeared on both surfaces here and
+**nowhere in `bristlenose/theme`** — grep returns prose about colour and not one
+declaration. It was invented, on both, and D27 unified the two inventions
+without noticing that neither belonged. That is the subtler failure of the two:
+a consistency fix reads as diligence, and it made an invented device look
+house-standard by applying it twice.
+
+**Filed for the real design system, out of scope here:** the seven sites want to
+converge on one token. That is a theme-wide change with its own blast radius,
+and naming it is the deliverable — not doing it inside a codebook mockup.

@@ -659,11 +659,23 @@ body { overflow:hidden; }
    "you cannot use this"; a switched-off codebook means "I am not using this".
    Rendering the second in the first's visual language is a category error — and
    Uninstall is the action most likely to be wanted on a codebook you set aside. */
+/* Knocked-back opacity. NOT a new value: the shipped theme has seven disabled
+   declarations carrying five different opacities (0.3, 0.4, 0.45, 0.5 x3) and no
+   token at all. 0.5 is the plurality AND the base atom's — .bn-btn:disabled — so
+   it is the de-facto system value, and this token adopts it rather than adding a
+   sixth. Named -off, not -disabled, deliberately: a disabled control cannot be
+   used (.picker-card.disabled even sets pointer-events:none), whereas a switched
+   -off codebook stays fully interactive. Different state, different name.
+
+   filter:saturate() is gone. It appeared on both surfaces here and NOWHERE in
+   bristlenose/theme — it was invented, and unifying the two inventions on 30 Aug
+   was not the same as removing them. */
+:root { --bn-opacity-off: 0.5; }
+
 /* ── Disabled: ONE treatment, two surfaces ───────────────────────────────
-   The card and the full page knock back identically. They were separate rules
-   with different numbers (.55/.4 against .45/.35) plus a dead third set, which
-   is how two surfaces that must agree stop agreeing. The page's values won —
-   it is the full treatment the card is meant to match.
+   The card and the full page knock back identically, on one token. They were
+   separate rules with different numbers (.55/.4 against .45/.35) plus a dead
+   third set — which is how two surfaces that must agree stop agreeing.
 
    The uninstall control is exempt on BOTH. A disabled codebook is still
    uninstallable, and the one control that must stay reachable is the one that
@@ -674,7 +686,7 @@ body { overflow:hidden; }
 .picker-card.off2 .picker-card-desc, .picker-card.off2 .statline { color:var(--bn-colour-muted); }
 
 .pageoff .gut > *, .pageoff .codebook-group,
-.picker-card.off2 .gut > * { opacity:.55; filter:saturate(.4); }
+.picker-card.off2 .gut > * { opacity:var(--bn-opacity-off); }
 
 .pageoff .pg-actions, .pageoff .framework-remove-btn,
 .picker-card.off2 .picker-card-toggle { opacity:1; filter:none; color:var(--bn-colour-muted); }

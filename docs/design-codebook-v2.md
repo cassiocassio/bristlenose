@@ -1025,7 +1025,30 @@ and exactly what it already does to the Codebook Library button, which is
 suppressed in-pane on desktop because the native toolbar carries it. Same
 mechanism, same reasoning, no new pattern.
 
-### What is genuinely still open
+### D22 — Browse Library *is* the navigation. Settled 30 Aug.
+
+**When the rail is closed, the user gets to another codebook by clicking Browse
+Library.** There is no next/previous, no arrow pair, no traversal affordance of
+any kind. Two routes to a codebook, and only two: a rail row when the rail is
+open, a card when it is not.
+
+This kills the arrow idea raised on 29 Aug — reusing the Welcome screen's
+left/right arrows, which are SwiftUI and would have had to be re-implemented in
+CSS for the embedded surface. **An innovation avoided rather than justified**,
+and the second one this pass has removed rather than added.
+
+It also settles, retroactively, why Browse Library had to be *obvious and in
+clear space at the top*: it is not merely a catalogue door. With the rail closed
+it is the **only** way to reach another codebook, so its prominence is
+load-bearing rather than decorative. The requirement that it be findable without
+hunting was the right instinct before the reason for it existed.
+
+One consequence worth stating so it is not rediscovered: Browse Library sits on
+the codebook page's zone-title row, which renders in every rail state. Nothing
+needs to be added for the closed case — the affordance is already unconditional.
+The build must simply not gate it on the rail.
+
+### What was still open before D22
 
 1. **Does a breadcrumb earn its place at all?** With S1's permanent sidebar, the
    rail *is* the hierarchy for installed codebooks &mdash; you can always see where
@@ -1871,6 +1894,7 @@ that disagrees with one of them is wrong, not different.
 | Author treatment | **D19** | Specimen B of six, chosen |
 | Browse-card structure | **D12** | |
 | Three shapes — floor / sentiment / framework | **D20** | Including: sentiment has no install control anywhere |
+| Navigation between codebooks | **D22** | Rail row, or Browse Library. No arrows, no traversal — Browse Library carries it when the rail is closed |
 | Lifted shipped components | CSS sweep, 29 Aug | `.tag-micro-bar`, `.badge`, group backgrounds, the floor's authoring apparatus. **Definitive as pointers to shipped code, not as re-specifications** — read the component, not the mockup |
 
 ### Indicative — a direction, not a drawing to match
@@ -1880,7 +1904,6 @@ that disagrees with one of them is wrong, not different.
 | Button treatments | Changed **twice on 30 Aug**. The *hierarchy* is the direction — destination quiet and larger, page action primary, card action neutral. The classes are a proposal |
 | `.bn-btn-sm` / `.bn-btn-lg` | A **declared gap** in the atom, not an accepted addition. Per the fidelity contract a missing atom is a finding; this one is filed, not granted |
 | The Review door's split — verb button, counts on its baseline | Minutes old at the time of writing |
-| Navigation between codebooks when the rail is closed | Sketched; still open |
 | *Always on* on the sentiment card | Placeholder copy. Nobody has settled the string |
 | All interaction wiring | Tier 1 stubs — install flow, confirm dialog, drag gestures |
 | Fixture data | Throwaway, though shaped like the real payload |

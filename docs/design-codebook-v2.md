@@ -900,7 +900,8 @@ which *reverses* what the prototype had answered by construction, and qualifies
 D6 to the browsing surfaces only &middot; the rail-closed navigation question by
 **D22** (Browse Library carries it; no arrows).
 
-**What remains, and its weight.** One item is a genuine product hole — **Q3**.
+**Q3 closed 30 Aug by D24** — the run never belonged on the codebook surface;
+it reports where runs already report. **What remains is no longer a product hole.**
 Everything else is either deliberately deferred (**Q4**), small mechanical
 plumbing (**Q6&ndash;Q11**, **Q16**), or a question a build can start without
 settling (**Q12**, **Q13**). **Q14** is small but must not be forgotten: it is a
@@ -1981,3 +1982,50 @@ pages on the reasoning that the rail's **Default** heading already says it — t
 in the rail, and false on the browse page, **which is a flat grid with no
 headings at all**. A built-in's card had no way to say what it was. The
 provenance line restores that without bringing back a badge.
+
+### D24 — installed is the state; the run reports where runs already report
+
+Settled 30 Aug, and it closes **Q3**, the one hole the fidelity review called a
+genuine product gap rather than a missing drawing.
+
+**The framing that dissolves it.** Under the hood install and run are different
+things, and D4 never claimed otherwise. What D4 merged was the *researcher's*
+act: **install means "get and do"**. So the durable state the codebook surface
+owns is **Installed** — it survives a failed run, and the Uninstall button is
+there the whole time, because what you installed is still installed.
+
+**The run is not that state, and it does not belong on this surface.**
+Autotagging is not instant, it needs progress, and it can fail — all of which is
+already true today and already has a home. It keeps that home:
+
+- **macOS** — the **status line on the project sidebar row**
+  (`ProjectRow.swift`, `ProjectRowActivityIndicator.swift`, and the Schema E
+  rule that a clean row shows no status line at all).
+- **CLI SPA** — the **activity chip stack** in `AppLayout`, plus a floating
+  toast. Both already exist: `CodebookPanel` registers a running job in the
+  activity store, and the failure paths already toast a real reason rather than
+  swallowing it — 409 already-running, 503 no API key.
+
+**Nothing needs inventing, which is the point.** The retry the fidelity review
+said "has to be invented" does not, because the run's progress and failure never
+moved onto the codebook page in the first place. Q3 read as a hole because the
+codebook surface was assumed to own the whole merged act. It owns the half that
+is durable; the event stream stays where event streams live.
+
+**Two things fall out, both worth stating so the build does not rediscover them.**
+
+1. **An installed codebook with a failed or pending run renders a zero state**,
+   not an error. It is installed, its counts are zero, and the *reason* is in the
+   status line or the toast — not restated on the page. That zero rendering is
+   still owed as a drawing; what is settled is that it is a **zero state, not an
+   error state**.
+2. **The completion toast already opens the review modal.** `CodebookPanel`
+   dispatches `bn:autocode-report` from the toast's *View Report*, which opens
+   `ThresholdReviewModal` — the same destination as the codebook page's Review
+   door. Today's call that the review stays a modal is not a constraint on this;
+   the two doors already converge on it, and keeping the modal is what lets them.
+
+**Platform fork, deliberate.** A status line on the Mac and a toast in the SPA is
+not an inconsistency — it is the house rule that a shared taxonomy renders native
+per surface. The desktop's chrome vocabulary rules out transient toasts; the web
+surface has no sidebar row to write to.

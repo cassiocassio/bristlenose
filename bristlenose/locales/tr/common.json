@@ -450,7 +450,7 @@
     "signals": "Sinyaller",
     "sentiment": "Duygu durumu",
     "sentimentSubtitle": "YZ tarafından algılanan duygusal tepkiler",
-    "codebookTags": "Kod defteri etiketleri",
+    "codebookTags": "Kod defterleri",
     "sentimentSignals": "Duygu durumu sinyalleri",
     "sentimentDesc": "Sinyal gücüne göre sıralanan örüntüler — duygu durumlarının çalışma ortalamasına kıyasla beklenenden daha çok yoğunlaştığı yerler.",
     "tagSignals": "Etiket sinyalleri",

@@ -450,7 +450,7 @@
     "signals": "Senyals",
     "sentiment": "Sentiment",
     "sentimentSubtitle": "Respostes emocionals detectades per IA",
-    "codebookTags": "Etiquetes del llibre de codis",
+    "codebookTags": "Llibres de codis",
     "sentimentSignals": "Senyals de sentiment",
     "sentimentDesc": "Patrons ordenats per força del senyal: on els sentiments es concentren més del que s'esperaria segons la mitjana de l'estudi.",
     "tagSignals": "Senyals d'etiquetes",

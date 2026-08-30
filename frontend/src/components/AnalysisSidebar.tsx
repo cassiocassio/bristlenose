@@ -2,7 +2,7 @@
  * AnalysisSidebar — signal-entry navigation for the Analysis tab left sidebar.
  *
  * Lists rendered signal cards grouped by type (Sentiment → Section/Theme,
- * Codebook tags → Section/Theme). Clicking an entry focuses the signal card
+ * Codebooks → Section/Theme). Clicking an entry focuses the signal card
  * and syncs the inspector panel.
  *
  * @module AnalysisSidebar

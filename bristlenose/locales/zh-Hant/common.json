@@ -431,7 +431,7 @@
     "signals": "訊號",
     "sentiment": "情緒",
     "sentimentSubtitle": "AI 偵測的情緒反應",
-    "codebookTags": "編碼簿標籤",
+    "codebookTags": "\u7de8\u78bc\u7c3f",
     "sentimentSignals": "情緒訊號",
     "sentimentDesc": "依訊號強度排序的模式——情緒集中度高於研究平均值的預期之處。",
     "tagSignals": "標籤訊號",

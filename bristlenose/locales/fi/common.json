@@ -450,7 +450,7 @@
     "signals": "Signaalit",
     "sentiment": "Tunnesävy",
     "sentimentSubtitle": "Tekoälyn havaitsemat tunnereaktiot",
-    "codebookTags": "Koodikirjatunnisteet",
+    "codebookTags": "Koodikirjat",
     "sentimentSignals": "Tunnesävysignaalit",
     "sentimentDesc": "Kuviot järjestettynä signaalin vahvuuden mukaan — missä tunnesävyt keskittyvät odotettua enemmän tutkimuksen keskiarvoon nähden.",
     "tagSignals": "Tunnistesignaalit",

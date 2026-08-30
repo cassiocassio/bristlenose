@@ -450,7 +450,7 @@
     "signals": "Signals",
     "sentiment": "Sentiment",
     "sentimentSubtitle": "AI-detected emotional responses",
-    "codebookTags": "Codebook tags",
+    "codebookTags": "Codebooks",
     "sentimentSignals": "Sentiment signals",
     "sentimentDesc": "Patterns ranked by signal strength — where sentiments concentrate more than expected given the study average.",
     "tagSignals": "Tag signals",

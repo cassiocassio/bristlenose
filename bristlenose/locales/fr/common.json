@@ -450,7 +450,7 @@
     "signals": "Signaux",
     "sentiment": "Sentiment",
     "sentimentSubtitle": "Réponses émotionnelles détectées par IA",
-    "codebookTags": "Étiquettes de la grille de codage",
+    "codebookTags": "Grilles de codage",
     "sentimentSignals": "Signaux de sentiment",
     "sentimentDesc": "Motifs classés par intensité du signal — là où les sentiments se concentrent plus que prévu par rapport à la moyenne de l'étude.",
     "tagSignals": "Signaux d'étiquettes",

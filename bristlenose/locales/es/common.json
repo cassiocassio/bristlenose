@@ -450,7 +450,7 @@
     "signals": "Señales",
     "sentiment": "Sentimiento",
     "sentimentSubtitle": "Respuestas emocionales detectadas por IA",
-    "codebookTags": "Etiquetas del libro de códigos",
+    "codebookTags": "Libros de c\u00f3digos",
     "sentimentSignals": "Señales de sentimiento",
     "sentimentDesc": "Patrones ordenados por intensidad de señal — donde los sentimientos se concentran más de lo esperado según el promedio del estudio.",
     "tagSignals": "Señales de etiquetas",

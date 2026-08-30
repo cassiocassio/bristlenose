@@ -445,7 +445,7 @@
     "signals": "シグナル",
     "sentiment": "感情",
     "sentimentSubtitle": "AI が検出した感情的な反応",
-    "codebookTags": "コードブックタグ",
+    "codebookTags": "\u30b3\u30fc\u30c9\u30d6\u30c3\u30af",
     "sentimentSignals": "感情シグナル",
     "sentimentDesc": "シグナルの強さでランク付けされたパターン — 研究全体の平均と比べて、感情が想定以上に集中している箇所。",
     "tagSignals": "タグシグナル",

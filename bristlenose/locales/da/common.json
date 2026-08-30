@@ -450,7 +450,7 @@
     "signals": "Signaler",
     "sentiment": "Stemning",
     "sentimentSubtitle": "AI-detekterede følelsesmæssige reaktioner",
-    "codebookTags": "Kodebogstags",
+    "codebookTags": "Kodeb\u00f8ger",
     "sentimentSignals": "Stemningssignaler",
     "sentimentDesc": "Mønstre rangeret efter signalstyrke — hvor stemninger koncentrerer sig mere end forventet i forhold til undersøgelsens gennemsnit.",
     "tagSignals": "Tag-signaler",

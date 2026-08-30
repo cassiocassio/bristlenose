@@ -83,7 +83,7 @@ describe("AnalysisSidebar", () => {
     );
     render(<AnalysisSidebar />);
 
-    expect(screen.getByText("Codebook tags")).toBeInTheDocument();
+    expect(screen.getByText("Codebooks")).toBeInTheDocument();
     expect(screen.getByText("Onboarding")).toBeInTheDocument();
     expect(screen.getByText("Trust")).toBeInTheDocument();
   });
@@ -158,6 +158,6 @@ describe("AnalysisSidebar", () => {
     render(<AnalysisSidebar />);
 
     expect(screen.getByText("Sentiment")).toBeInTheDocument();
-    expect(screen.getByText("Codebook tags")).toBeInTheDocument();
+    expect(screen.getByText("Codebooks")).toBeInTheDocument();
   });
 });

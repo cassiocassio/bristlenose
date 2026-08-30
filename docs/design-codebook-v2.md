@@ -2637,3 +2637,47 @@ separate field the schema does not enumerate (the Q17c rule). One value, once.
 **Unchanged and still blocking, from Q17:** nothing under
 `bristlenose/server/` writes to the events log at all. Every word above
 presumes a writer that does not exist yet, and autocode runs in the server.
+
+### Q17e — "out of the schema" was the wrong phrase
+
+Q17c said *"an extension names itself in the data, never in the schema"*, and
+Q17d compressed that to *"which extension stays out of the schema"*. That reads
+as though the researcher would not be told which extension failed, which would
+be useless. The opposite is intended, and the distinction is **field name against
+field value**.
+
+- **Out of the schema:** a field *called* `codebooks`, or `plato`, or
+  `corporate_lens_c`. The structure never enumerates extensions, because then
+  every new one is a migration in two languages.
+- **Very much in the data:** *which* extension and *which* instance, as values
+  in generic fields. This is what every surface reads and renders.
+
+So `"Plato autocode succeeded"` is `extension="autocode"`, `instance="plato"`,
+`outcome=completed`. Same shape as `kind="analyze"` today: the *field* is
+`kind`, and `analyze` is a value in it, not a column.
+
+**The three worked examples, against the existing vocabulary:**
+
+| what the researcher reads | outcome | cause | shape |
+|---|---|---|---|
+| *Plato autocode succeeded* | `completed` | — | `failed[]` empty |
+| *Corporate lens C failed authentication* | `failed` | `category=auth` | existing category, no new one |
+| *CLI analysis tool incomplete* | `completed` | — | `failed[]` **non-empty** |
+
+The third is the interesting one and it needs no new outcome: **`PipelineSummary`
+already states that "a non-empty `failed` here does NOT mean the run failed."**
+Incomplete is `completed` with losses, which is exactly the L4 partial the
+AutoCode toast now renders in the SPA.
+
+**And the sentence templates already parameterise the subject.**
+`PipelineRunner.swift:1828` is `let subject = provider?.displayName ?? "LLM
+provider"`, feeding *"Your \(subject) key isn't working."* An extension that
+authenticates against something other than the LLM provider — the corporate lens
+— supplies its own subject and the existing string renders correctly. That is
+the payoff of an extension naming itself in the data: the *rendering* needs no
+extension-specific code either, only a value.
+
+**What this does add, and it is the one real addition:** the row and popover need
+the extension and instance in the sentence — *"Plato"*, not *"a codebook"* —
+which is the naming gap Q17c identified. It is one or two values on the event,
+not a slot per extension.

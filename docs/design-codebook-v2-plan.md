@@ -96,9 +96,16 @@ delete v1.
 
 ## Session report — 30 Aug
 
-Phases **0** (seam) and **2** (rail) built; phase 1 collapsed into the B6 fix
-because the data audit had already answered what it was going to discover.
-Suites green throughout: **4286 pytest, 1617 vitest, ruff and tsc clean**.
+Phases **0** (seam), **2** (rail) and **3** (codebook page) built; phase 1
+collapsed into the B6 fix because the data audit had already answered what it
+was going to discover. Suites green throughout: **4286 pytest, 1630 vitest,
+ruff and tsc clean**.
+
+**Phase 3 is the read surface.** The floor's authoring apparatus — add and
+delete a group, add, rename and delete a tag, drag between groups — is lifted
+from the shipped panel in a later step, deliberately: it is ~400 lines of
+drag-and-drop whose entire value is that it already works, and re-deriving it at
+the end of a long session is how it acquires new bugs.
 
 ### What worked
 
@@ -119,9 +126,16 @@ across all nine codebooks and already on the wire — rather than restating
 knowledge the server has. The provenance line keyed on the same fact, so the two
 now agree by construction instead of by coincidence.
 
-**Scoping.** Every v2 rule sits under `.v2-rail`; a script confirms none of its
-seven classes collides with anything the shipped panel owns. The two lenses
-cannot fight.
+**Scoping, and reuse over reimplementation.** A script confirms **zero** v2
+selectors clash with `codebook-panel.css`, and the page emits **17 shipped
+classes against 19 of its own** — `Badge`, `MicroBar` and the colour helpers are
+the shipped components, so the histogram alignment this repo has already paid
+for is inherited rather than approximated.
+
+**The orphan check earned its keep immediately.** It found `bn-btn-sm` emitted
+and styled nowhere — the Review button would have rendered at the default size,
+corrupting the exact comparison it exists for — and `contentinner`, a
+prototype-only wrapper (`AppLayout` provides `.bn-main`).
 
 ### Doubts — things that work and that I am not sure about
 
@@ -136,9 +150,16 @@ cannot fight.
    so the switch corrects itself — but the researcher sees a switch move and
    move back with no explanation. That is the "fake success feedback" class in
    reverse and it wants a message.
-4. **The rail navigates nowhere.** Phase 3 does not exist, so selecting a row
-   changes only the highlight. Correct for the phase; deeply unsatisfying to
-   click.
+4. **The Review door leads nowhere yet.** Q15 says it opens the *existing*
+   modal, and phase 5 wires it. Opening a half-built one would be worse than not
+   opening it, and rebuilding it is explicitly ruled out — so the handler is
+   empty and says why.
+5. **Install and Uninstall are inert.** Phase 5 owns them, because that is the
+   phase where a bug loses work: install-is-apply spends money, and D20's
+   uninstall stops preserving. Wiring them early, cheaply, is the worst option.
+6. **The size axis is scoped to v2, not promoted.** `.bn-btn-sm` / `-lg` live in
+   `codebook-v2.css` so the QA comparison renders truthfully without a
+   design-system decision being taken by accident. If v2 ships, they move up.
 5. **No i18n on any v2 string.** "Manual tags", "Default", "Frameworks", "Your
    tags" are English literals. Deliberate while dev-gated — Specimen sets that
    precedent — but it is *exactly* the hole `CLAUDE.md` warns about: a new

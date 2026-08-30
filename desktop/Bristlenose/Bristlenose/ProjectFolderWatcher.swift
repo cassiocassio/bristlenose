@@ -266,10 +266,8 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         let ingested = snapshot.ingestedBasenames
 
         var newFiles: [URL] = []
-        var presentBasenames: Set<String> = []
         for url in topLevelEligible {
             let base = url.lastPathComponent
-            presentBasenames.insert(base)
             if !ingested.contains(base) && !knownBasenames.contains(base) {
                 newFiles.append(url)
             }
@@ -277,20 +275,18 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         // Sort for stable Equatable comparison and stable display order.
         newFiles.sort { $0.lastPathComponent < $1.lastPathComponent }
 
-        var missingFiles: [URL] = []
-        // The iCloud-evicted rescue here is load-bearing. `enumerateTopLevelEligible`
-        // filters by `isRegularFileKey == true`, and evicted placeholders fail
-        // that test → they never land in `presentBasenames` → they fall into
-        // this loop as "missing." The `isCloudEvicted` skip is what stops them
-        // being mis-flagged as truly gone. If a future refactor shortcuts the
-        // enumeration path (e.g. includes placeholders), this branch needs to
-        // be revisited so eviction handling doesn't double-count.
-        for base in ingested where !presentBasenames.contains(base) {
-            let candidate = projectURL.appendingPathComponent(base)
-            if Self.isCloudEvicted(candidate) { continue }
-            missingFiles.append(candidate)
+        // An unreadable snapshot must not retract a correct warning. `nil` here
+        // is SQLITE_BUSY or corruption — publishing `[]` for it would clear a
+        // standing "these files are gone" alarm AND record the empty state as
+        // the new baseline, and nothing schedules a rescan for a DB-only change.
+        let missingFiles: [URL]
+        if let paths = snapshot.ingestedPaths {
+            missingFiles = Self.missingIngestedFiles(
+                ingestedPaths: paths, projectRoot: projectURL
+            )
+        } else {
+            missingFiles = lastPublished?.missingFiles ?? []
         }
-        missingFiles.sort { $0.lastPathComponent < $1.lastPathComponent }
 
         // Computed from the raw enumeration, before any drift logic — see the
         // field's doc comment for why it must not come from `newFiles`.
@@ -377,6 +373,96 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
             return values?.isRegularFile == true
         }
     }
+
+    /// Which ingested files are genuinely gone.
+    ///
+    /// ASK THE RECORDED PATH, NOT THE TOP-LEVEL SCAN. This used to diff
+    /// ingested *basenames* against the basenames of `enumerateTopLevelEligible`
+    /// — a top-level-only walk. Python's `discover_files` descends up to
+    /// `_MAX_SCAN_DEPTH = 3`, so any project whose recordings sit in a subfolder
+    /// matched nothing and had EVERY ingested file reported missing. Seen
+    /// 30 Aug 2026 on a project with all three recordings present in
+    /// `interviews/`, told they were "no longer in the project folder" — which
+    /// they were not.
+    ///
+    /// The pipeline already records the full path it ingested, so checking that
+    /// path directly is both correct and cheaper than deepening the enumeration
+    /// to match. It also removes any need for the two scanners to agree on depth.
+    ///
+    /// The eviction skip stays load-bearing: an evicted placeholder fails
+    /// `exists` exactly as it failed the old `isRegularFileKey` test, so without
+    /// it a file that is merely not-downloaded reads as deleted.
+    ///
+    /// AND THE RECORDED PATH IS NOT THE WHOLE ANSWER EITHER. `source_files.path`
+    /// is written once, absolute, at import (`importer.py`), and nothing ever
+    /// corrects it — `_import_source_files` skips sessions that already have
+    /// rows. Meanwhile `ProjectIndex.refreshAvailability` and `relocateProject`
+    /// rewrite `project.path` whenever the folder moves or is re-Located, and
+    /// neither touches the database. So renaming or moving a study folder makes
+    /// EVERY recorded path stale at once.
+    ///
+    /// That is the failure mode the old basename diff was accidentally immune
+    /// to, and researchers rename and move project folders far more often than
+    /// they nest recordings. Checking only the recorded path would have traded
+    /// one false alarm for a louder one. So: a file is present if its recorded
+    /// path resolves, OR if a file of that name can be found under the LIVE
+    /// project root. The walk is bounded to the same depth Python's
+    /// `discover_files` uses, and is only ever paid on a miss — which on a
+    /// healthy project is never.
+    ///
+    /// `exists`, `evicted` and `locatable` are injected so this is unit-testable
+    /// without a filesystem — the same shape as `LensItem.all` and
+    /// `ProjectSubtitle.resolve`.
+    static func missingIngestedFiles(
+        ingestedPaths: Set<String>,
+        projectRoot: URL,
+        exists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) },
+        evicted: (URL) -> Bool = { ProjectFolderWatcher.isCloudEvicted($0) },
+        locatable: (String, URL) -> Bool = {
+            ProjectFolderWatcher.basenameResolves($0, under: $1)
+        }
+    ) -> [URL] {
+        var missing: [URL] = []
+        for path in ingestedPaths {
+            if exists(path) { continue }
+            let candidate = URL(fileURLWithPath: path)
+            if evicted(candidate) { continue }
+            // The folder moved, or the file did. Either way it is here.
+            if locatable(candidate.lastPathComponent, projectRoot) { continue }
+            missing.append(candidate)
+        }
+        // Sort for stable Equatable comparison and stable display order.
+        missing.sort { $0.lastPathComponent < $1.lastPathComponent }
+        return missing
+    }
+
+    /// Is a file of this name anywhere under `root`, within the same depth
+    /// Python's `discover_files` scans (`_MAX_SCAN_DEPTH = 3`)?
+    ///
+    /// Deliberately matches on NAME, not content: this answers "did the path we
+    /// recorded go stale", not "is this the same bytes". A researcher who moved
+    /// a folder has the same file; one who replaced a recording with a different
+    /// one of the same name has bigger problems than this glyph.
+    static func basenameResolves(_ basename: String, under root: URL) -> Bool {
+        guard let walker = FileManager.default.enumerator(
+            at: root,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles, .skipsPackageDescendants]
+        ) else { return false }
+        for case let url as URL in walker {
+            if walker.level > maxScanDepth {
+                walker.skipDescendants()
+                continue
+            }
+            if url.lastPathComponent == basename { return true }
+        }
+        return false
+    }
+
+    /// Mirrors `_MAX_SCAN_DEPTH` in `bristlenose/stages/s01_ingest.py`. The two
+    /// scanners disagreeing about depth is what produced the false "3 missing"
+    /// this function was rewritten to fix.
+    static let maxScanDepth = 3
 
     /// True when a missing file is actually iCloud-evicted (still "logically
     /// present"). Such files are not treated as truly missing.

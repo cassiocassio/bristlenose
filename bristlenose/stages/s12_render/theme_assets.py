@@ -82,6 +82,9 @@ _THEME_FILES: list[str] = [
     "organisms/toc.css",
     "organisms/global-nav.css",
     "organisms/codebook-panel.css",
+    # Codebook v2 runs beside the shipped panel (D29), so it must load AFTER
+    # it — every rule is scoped under .v2-rail and redefines nothing it owns.
+    "organisms/codebook-v2.css",
     "organisms/sidebar.css",
     "organisms/minimap.css",
     "organisms/sidebar-tags.css",

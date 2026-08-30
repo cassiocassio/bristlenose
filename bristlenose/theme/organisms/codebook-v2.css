@@ -1,0 +1,139 @@
+/* ── Codebook v2 — the rail ────────────────────────────────────────────────
+   Phase 2 of docs/design-codebook-v2-plan.md. Runs beside the shipped
+   codebook-panel.css rather than replacing it (D29), so nothing here may
+   redefine a class that file owns.
+
+   Everything is tokens. The one value that is not a token is the switch's
+   26x15, which is measured rather than chosen — see docs/mockups/
+   codebook-v2-rail.html and -parity.html for the measurements. */
+
+.v2-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+/* Section heading. Unconditional, per D25 — an absent heading reads as "this
+   category does not exist", not "empty". */
+.v2-rail .sb-h {
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-emphasis);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bn-colour-muted);
+    padding: var(--bn-space-md) var(--bn-space-sm) var(--bn-space-xs);
+}
+
+.v2-rail .sb-row {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 0.35rem var(--bn-space-sm);
+    border-radius: var(--bn-radius-sm);
+    cursor: pointer;
+    min-width: 0;
+}
+
+.v2-rail .sb-row:hover { background: var(--bn-colour-hover); }
+.v2-rail .sb-row.sel { background: var(--bn-colour-active-bg); }
+.v2-rail .sb-row:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
+.v2-rail .lbl2 {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+}
+
+.v2-rail .r-title {
+    font-size: var(--bn-text-label);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Provenance. A person keeps D19's weight because the name is the point —
+   Jakob Nielsen is better known than his heuristics. A system fact ("On by
+   default") must not borrow it: dressing a configuration state as a cultural
+   figure is a category error the eye catches immediately. D23. */
+.v2-rail .r-author {
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.v2-rail .r-author.prov-system {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+/* Switched off. One knock-back value, shared with the codebook page and the
+   browse card — they were three declarations with three different opacities
+   before D27a. Named -off, not -disabled: a disabled control cannot be used,
+   whereas a switched-off codebook stays fully interactive. */
+.v2-rail .sb-row.off2 .r-title,
+.v2-rail .sb-row.off2 .r-author { color: var(--bn-colour-muted); }
+
+/* Undecided-proposal count (D10). Inboard of the switch so the switch keeps the
+   trailing edge (D16) and the badge never displaces it. */
+.v2-rail .pcount {
+    flex-shrink: 0;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-micro);
+    color: var(--bn-colour-badge-text);
+    background: var(--bn-colour-badge-bg);
+    border-radius: var(--bn-radius-pill);
+    padding: 0.05rem 0.35rem;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The fallback switch. The platform control (Safari 17.4+
+   `<input type="checkbox" switch>`) is preferred and needs none of this — it
+   brings its own spring, focus ring, Increase Contrast and Reduce Motion.
+   D15. */
+.v2-rail .sw.mini {
+    flex-shrink: 0;
+    position: relative;
+    width: 26px;
+    height: 15px;
+    border-radius: 7.5px;
+    background: var(--bn-colour-accent);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+}
+
+.v2-rail .sw.mini::after {
+    content: "";
+    position: absolute;
+    top: 1.5px;
+    left: 12.5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    transition: left var(--bn-transition-fast);
+}
+
+/* The shipped .framework-toggle uses --bn-colour-border-hover for its off
+   track. Reused rather than invented: --bn-off-track does not exist, whatever
+   the mockup skill says about it. */
+.v2-rail .sw.mini.offstate { background: var(--bn-colour-border-hover); }
+.v2-rail .sw.mini.offstate::after { left: 1.5px; }
+
+.v2-rail .sw.mini:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .v2-rail .sw.mini,
+    .v2-rail .sw.mini::after { transition: none; }
+}

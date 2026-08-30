@@ -2564,3 +2564,76 @@ point is being modular.
    *did any extension fail?* — and the answer can only ever produce `.partial`,
    never `.failed`, because every extension is downstream of a working project.
    N extensions do not make the precedence N-way; the asymmetry collapses it.
+
+### Q17d — consequences, played back
+
+What the Q17 thread commits to, separated into what a researcher sees and what
+the schema has to become. Nothing here is built; the SPA half shipped on 30 Aug
+and reaches the browser only.
+
+#### UX and flow
+
+**The sidebar row gains a third outcome, and it is the important one.** Today a
+project row is broadly working / working-on-it / broken. An extension makes
+**"finished, with one part missing"** a first-class state — and the dependency
+guarantees it can never be mistaken for the second:
+
+| run | extension | row | what the researcher reads |
+|---|---|---|---|
+| failed | *cannot have run* | `.failed` | the run's own cause — "Claude is out of credit" |
+| succeeded | failed | **`.partial`** | the project is fine; a codebook did not apply |
+| succeeded | succeeded | `.ready` | nothing — Schema E shows no status line on a clean row |
+
+**A failed codebook must never present as a failed project.** The report exists,
+the quotes are there, one optional enhancement did not apply. That is the whole
+UX consequence of the burger/fries framing, and it is why `.partial` — which
+already exists for `transcribe-only` — is the right home rather than a new state.
+
+**The popover has to name which codebook.** "A codebook failed" is not
+actionable when three are installed. This is the one place the extension model
+demands new information rather than reusing existing shape.
+
+**The flow the researcher experiences is unchanged.** They install; it runs; the
+row shows progress; it finishes or it doesn't. What changes is that the row stops
+lying in the one case where the run succeeded and the extension did not —
+today that case is invisible on the Mac entirely.
+
+**Cancelled stays distinct from failed**, per the run's own vocabulary: an
+extension the researcher stopped reads "stopped", not "failed". The five
+lifecycle verbs carry over whole; that is the point of reusing them.
+
+#### Schema
+
+**Settled by the thread:**
+
+- **No new event *type*.** The five verbs are lifecycle positions and cover an
+  extension unchanged.
+- **No per-extension slot on `PipelineSummary`.** Each extension sequence carries
+  its own summary, so the schema never enumerates extensions.
+- **`tail_run_state` derives state per lifecycle, not from the tail.** An
+  extension terminus is legitimately the most recent lifecycle event and would
+  otherwise mask the run's. Currently a trap; becomes a signature change.
+- **Extension progress inherits the counts-and-timings-only rule.** No ids, no
+  filenames, no tag names — the file is a named re-identification surface.
+
+**My synthesis of the two constraints, not stated outright above and worth
+ratifying or rejecting:** `KindEnum` gains exactly **one** value — `extension` —
+permanently, however many extensions ever exist. `kind` then answers "entry point
+or extension?", which is a real category distinction, rather than listing a
+successor beside three alternatives (the Q17b objection). *Which* extension is a
+separate field the schema does not enumerate (the Q17c rule). One value, once.
+
+**Genuinely open:**
+
+- **Does one extension sequence cover one codebook or several?** Under D4,
+  install-is-apply is per codebook, so one job = one codebook = one sequence,
+  and the sequence names it — no change to `StageFailure` needed. But
+  `reapply_active_frameworks` codes **every active framework** for newly-added
+  sessions, which is one act over N codebooks. If that emits one sequence,
+  `StageFailure` needs to name a codebook after all — the gap Q17c identified,
+  and the same shape as `source_file`.
+- **Whether the extension identifier is one field or two** (type, and instance).
+
+**Unchanged and still blocking, from Q17:** nothing under
+`bristlenose/server/` writes to the events log at all. Every word above
+presumes a writer that does not exist yet, and autocode runs in the server.

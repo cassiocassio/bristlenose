@@ -26,8 +26,21 @@ interface Props {
   projectName?: string;
 }
 
-/** Built-ins live under "Default"; everything else under "Frameworks" (D17). */
-const BUILTIN_IDS = new Set(["sentiment", "uxr", "cliux"]);
+/**
+ * Built-ins live under "Default"; everything else under "Frameworks" (D17).
+ *
+ * Derived from the **absence of an author**, not a hardcoded id list. Measured
+ * across the nine shipped codebooks: the three built-ins (sentiment, uxr,
+ * cli-ux) have no author and all six frameworks have one, so the signal is
+ * exact and it is already on the wire. A hardcoded list would have filed the
+ * fourth built-in under Frameworks, silently, and nothing would have failed.
+ *
+ * The limit, stated: a community submission with no author would land under
+ * Default. That is wrong but not dangerous, and it becomes real only when the
+ * public library accepts submissions — at which point `TemplateOut` should
+ * carry the fact rather than have it inferred.
+ */
+const isBuiltIn = (author: string) => !author.trim();
 
 /**
  * Where a codebook came from (**D23**). A framework's provenance is a person; a
@@ -43,8 +56,10 @@ function provenanceFor(
   id: string,
   author: string,
 ): { text: string; isPerson: boolean } {
-  if (author) return { text: author, isPerson: true };
-  if (!BUILTIN_IDS.has(id)) return { text: "", isPerson: false };
+  if (!isBuiltIn(author)) return { text: author, isPerson: true };
+  // Sentiment arrives applied; the other built-ins ship with the product but
+  // are yours to install and enable. UXR is commonly installed *and disabled*,
+  // which "On by default" would misdescribe.
   return id === "sentiment"
     ? { text: "On by default", isPerson: false }
     : { text: "Available by default", isPerson: false };
@@ -72,8 +87,11 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     };
   }, [projectId, refreshKey]);
 
-  const books = useMemo((): RailBook[] => {
-    if (!codebook) return [];
+  const { rows: books, builtins } = useMemo((): {
+    rows: RailBook[];
+    builtins: Set<string>;
+  } => {
+    if (!codebook) return { rows: [], builtins: new Set() };
     // The floor is always present and always first — it is the researcher's own
     // tags, not a codebook they installed (D20).
     const rows: RailBook[] = [
@@ -99,9 +117,12 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     const titles = new Map(
       (templates?.templates ?? []).map((t) => [t.id, t]),
     );
+    const builtins = new Set<string>();
     for (const [fid, acc] of byFramework) {
       const tpl = titles.get(fid);
-      const prov = provenanceFor(fid, tpl?.author ?? "");
+      const author = tpl?.author ?? "";
+      if (isBuiltIn(author)) builtins.add(fid);
+      const prov = provenanceFor(fid, author);
       rows.push({
         id: fid,
         title: tpl?.title ?? fid,
@@ -114,7 +135,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         pending: acc.pending,
       });
     }
-    return rows;
+    return { rows, builtins };
   }, [codebook, templates, states, projectName]);
 
   const onToggle = useCallback((id: string, enabled: boolean) => {
@@ -138,7 +159,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
           selectedId={selected}
           onSelect={setSelected}
           onToggle={onToggle}
-          builtinIds={BUILTIN_IDS}
+          builtinIds={builtins}
         />
       </section>
     </div>

@@ -1,0 +1,84 @@
+import { describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { CodebookV2 } from "./CodebookV2";
+
+const codebook = {
+  groups: [
+    { id: 1, name: "Sentiment", subtitle: "", colour_set: "sentiment", order: 0,
+      tags: [{ id: 1, name: "delight", count: 3, tentative_count: 0, colour_index: 0 }],
+      total_quotes: 3, is_default: false, framework_id: "sentiment" },
+    { id: 2, name: "Behaviour", subtitle: "", colour_set: "ux", order: 1,
+      tags: [{ id: 2, name: "workaround", count: 5, tentative_count: 2, colour_index: 0 }],
+      total_quotes: 5, is_default: false, framework_id: "uxr" },
+    { id: 3, name: "Status visibility", subtitle: "", colour_set: "ux", order: 2,
+      tags: [{ id: 3, name: "clear status", count: 4, tentative_count: 7, colour_index: 0 }],
+      total_quotes: 4, is_default: false, framework_id: "nielsen" },
+  ],
+  ungrouped: [], all_tag_names: [], framework_quote_totals: {},
+};
+const templates = { templates: [
+  { id: "sentiment", title: "Sentiment", author: "", description: "", author_bio: "",
+    author_links: [], groups: [], enabled: true, imported: true, restorable: false },
+  { id: "uxr", title: "Bristlenose UXR", author: "", description: "", author_bio: "",
+    author_links: [], groups: [], enabled: true, imported: true, restorable: false },
+  { id: "nielsen", title: "10 Usability Heuristics", author: "Jakob Nielsen",
+    description: "", author_bio: "", author_links: [], groups: [], enabled: true,
+    imported: true, restorable: false },
+]};
+
+vi.mock("../utils/api", () => ({
+  getCodebook: vi.fn(() => Promise.resolve(codebook)),
+  getCodebookTemplates: vi.fn(() => Promise.resolve(templates)),
+  getFrameworkStates: vi.fn(() => Promise.resolve({ uxr: false })),
+  putFrameworkStates: vi.fn(() => Promise.resolve({ status: "ok", catchUp: [] })),
+}));
+
+describe("CodebookV2 — built-in is derived, not hardcoded", () => {
+  it("files authorless codebooks under Default and authored ones under Frameworks", async () => {
+    // The signal is the ABSENCE OF AN AUTHOR, measured exact across the nine
+    // shipped codebooks. A hardcoded id list would have filed the fourth
+    // built-in under Frameworks silently, and nothing would have failed.
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail-row-nielsen"));
+
+    const rail = screen.getByTestId("bn-v2-rail");
+    const order = Array.from(rail.children).map((c) => c.textContent ?? "");
+    const iDefault = order.findIndex((t) => t === "Default");
+    const iFrameworks = order.findIndex((t) => t === "Frameworks");
+    const iSentiment = order.findIndex((t) => t.includes("Sentiment"));
+    const iNielsen = order.findIndex((t) => t.includes("Usability"));
+
+    expect(iDefault).toBeGreaterThan(-1);
+    expect(iSentiment).toBeGreaterThan(iDefault);
+    expect(iSentiment).toBeLessThan(iFrameworks);
+    expect(iNielsen).toBeGreaterThan(iFrameworks);
+  });
+
+  it("gives each built-in the provenance its state actually warrants", async () => {
+    // Not cosmetic: UXR here is installed AND disabled, which "On by default"
+    // would misdescribe.
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByText("On by default"));
+    expect(screen.getByText("Available by default")).toBeInTheDocument();
+    expect(screen.getByText("Jakob Nielsen")).toBeInTheDocument();
+  });
+
+  it("sums tentative counts into the rail badge", async () => {
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByText("7"));
+    expect(screen.getByText("2")).toBeInTheDocument();
+  });
+
+  it("treats an absent framework-state entry as enabled", async () => {
+    // "off means off" is what gets stored; on is the absence of an off.
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail-row-uxr"));
+    expect(screen.getByTestId("bn-v2-rail-row-uxr").className).toContain("off2");
+    expect(screen.getByTestId("bn-v2-rail-row-nielsen").className).not.toContain("off2");
+  });
+
+  it("names the floor after the project", async () => {
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByText("Ikea tags"));
+  });
+});

@@ -23,12 +23,18 @@ export interface FrameworkSummary {
 /** Aggregate a framework's groups into the folded-summary figures. */
 export function summariseFramework(
   groups: CodebookGroupResponse[],
+  distinctQuotes?: number,
 ): FrameworkSummary {
   let tagCount = 0;
-  let codedQuotes = 0;
+  let summedQuotes = 0;
   for (const g of groups) {
     tagCount += g.tags.length;
-    codedQuotes += g.total_quotes;
+    summedQuotes += g.total_quotes;
   }
-  return { tagCount, codedQuotes };
+  // `total_quotes` is distinct WITHIN a group, so summing it across a
+  // framework's groups counts a quote once per group it appears in — which
+  // showed the researcher a figure larger than their quote count. The server
+  // sends the distinct total (`framework_quote_totals`); the sum survives only
+  // as the fallback for a response that predates it. Register B6.
+  return { tagCount, codedQuotes: distinctQuotes ?? summedQuotes };
 }

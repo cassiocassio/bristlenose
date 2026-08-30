@@ -73,7 +73,12 @@ class TestGetCodebook:
 
     def test_baseline_codebook_has_expected_shape(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/codebook").json()
-        assert set(data.keys()) == {"groups", "ungrouped", "all_tag_names"}
+        assert set(data.keys()) == {
+            "groups",
+            "ungrouped",
+            "all_tag_names",
+            "framework_quote_totals",
+        }
         # Sentiment group auto-imported + Uncategorised default group
         assert len(data["groups"]) == 2
         group_names = {g["name"] for g in data["groups"]}
@@ -1131,3 +1136,76 @@ class TestRemoveFrameworkImpact:
         resp = tc.get("/api/projects/1/codebook/remove-framework/garrett/impact")
         data = resp.json()
         assert data["has_autocode"] is True
+
+
+class TestFrameworkQuoteTotals:
+    """Register B6 — a quote tagged in two groups of one framework counts once.
+
+    Its own class with its own client, deliberately. The first attempt used the
+    shared ``client`` fixture and its two inserted tags turned up in a *later*
+    test's ``all_tag_names`` assertion (9 != 7) — so whatever isolates those
+    tests, it is not "one in-memory DB per test". Cheaper to not share than to
+    find out why.
+    """
+
+    def test_a_quote_in_two_groups_counts_once(self) -> None:
+        from bristlenose.server.models import (
+            CodebookGroup,
+            ProjectCodebookGroup,
+            Quote,
+            QuoteTag,
+            TagDefinition,
+        )
+
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        client = AuthTestClient(app)
+
+        db = app.state.db_factory()
+        try:
+            quote = db.query(Quote).filter_by(project_id=1).first()
+            assert quote is not None, "fixture has no quotes"
+            tag_ids = []
+            for name in ("Alpha", "Beta"):
+                grp = CodebookGroup(
+                    name=f"{name} group", subtitle="", colour_set="ux",
+                    sort_order=90, framework_id="twogroup",
+                )
+                db.add(grp)
+                db.flush()
+                db.add(ProjectCodebookGroup(project_id=1, codebook_group_id=grp.id))
+                td = TagDefinition(name=f"{name}-tag", codebook_group_id=grp.id)
+                db.add(td)
+                db.flush()
+                tag_ids.append(td.id)
+            # ONE quote, tagged in BOTH groups of the same framework.
+            for tid in tag_ids:
+                db.add(
+                    QuoteTag(quote_id=quote.id, tag_definition_id=tid, source="human")
+                )
+            db.commit()
+        finally:
+            db.close()
+
+        data = client.get("/api/projects/1/codebook").json()
+        assert data["framework_quote_totals"]["twogroup"] == 1, (
+            "one quote in two groups of a framework must count once; got "
+            f"{data['framework_quote_totals']['twogroup']}"
+        )
+        # The per-group figure was never the bug and must not move.
+        twogroup = [g for g in data["groups"] if g["framework_id"] == "twogroup"]
+        assert len(twogroup) == 2
+        assert all(g["total_quotes"] == 1 for g in twogroup)
+
+    def test_summing_group_totals_would_have_been_wrong(self) -> None:
+        """Pins the defect itself, so a refactor cannot quietly reintroduce it."""
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        client = AuthTestClient(app)
+        data = client.get("/api/projects/1/codebook").json()
+
+        for fid, distinct in data["framework_quote_totals"].items():
+            summed = sum(
+                g["total_quotes"] for g in data["groups"] if g["framework_id"] == fid
+            )
+            assert distinct <= summed, (
+                f"{fid}: distinct ({distinct}) can never exceed the sum ({summed})"
+            )

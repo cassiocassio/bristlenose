@@ -1196,7 +1196,12 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
           const isDisabled = disabledFrameworks.has(fid);
           // When switched off, the groups fold away; a one-line summary takes
           // their place so the researcher still sees what they've tucked away.
-          const summary = summariseFramework(fwGroups);
+          // Distinct across the framework, not the sum of its groups — a quote
+          // tagged in two groups is one quote. Register B6.
+          const summary = summariseFramework(
+            fwGroups,
+            data.framework_quote_totals?.[fid],
+          );
           return (
             <Fragment key={fid}>
               <div className="framework-section-header" id={`codebook-fw-${fid}`}>

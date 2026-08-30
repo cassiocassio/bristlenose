@@ -212,6 +212,9 @@ export interface CodebookResponse {
   groups: CodebookGroupResponse[];
   ungrouped: CodebookTagResponse[];
   all_tag_names: string[];
+  /** framework_id -> DISTINCT quotes carrying any of its tags. Register B6:
+   *  summing per-group totals double-counts a quote tagged in two groups. */
+  framework_quote_totals?: Record<string, number>;
 }
 
 export interface TemplateTagOut {

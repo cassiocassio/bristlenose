@@ -42,3 +42,23 @@ describe("summariseFramework", () => {
     });
   });
 });
+
+describe("B6 — a quote in two groups counts once", () => {
+  it("prefers the server's distinct total over the sum", () => {
+    // Two groups, 3 quotes each, but the SAME 3 quotes: 3, not 6.
+    const groups = [group(2, 3), group(2, 3)];
+    expect(summariseFramework(groups, 3).codedQuotes).toBe(3);
+  });
+
+  it("falls back to the sum when the server did not send one", () => {
+    // A response predating framework_quote_totals. Wrong, but it is the old
+    // behaviour rather than a crash or a zero.
+    const groups = [group(2, 3), group(2, 3)];
+    expect(summariseFramework(groups).codedQuotes).toBe(6);
+  });
+
+  it("counts tags by summing, which was never the bug", () => {
+    const groups = [group(2, 3), group(4, 3)];
+    expect(summariseFramework(groups, 3).tagCount).toBe(6);
+  });
+});

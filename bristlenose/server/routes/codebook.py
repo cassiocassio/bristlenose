@@ -54,6 +54,14 @@ class CodebookResponse(BaseModel):
     groups: list[CodebookGroupOut]
     ungrouped: list[CodebookTagOut]  # deprecated — kept for back-compat, always []
     all_tag_names: list[str]
+    #: framework_id -> DISTINCT quotes carrying any tag from that framework.
+    #:
+    #: ``CodebookGroupOut.total_quotes`` is distinct *within a group*, so summing
+    #: it across a framework's groups double-counts every quote tagged in two of
+    #: them -- which the client did, putting a number in front of the researcher
+    #: larger than the number of quotes they have. The client cannot fix it: it
+    #: holds counts, not quote ids. Register B6.
+    framework_quote_totals: dict[str, int] = {}
 
 
 class CreateGroupRequest(BaseModel):
@@ -218,6 +226,9 @@ def get_codebook(project_id: int, request: Request) -> CodebookResponse:
         # with is_default=True, rendered last.
         group_list: list[CodebookGroupOut] = []
         all_tag_names: list[str] = []
+        # Accumulated as groups are built, so no extra query: the per-tag quote
+        # ids are already read to compute each group's own total.
+        framework_quotes: dict[str, set[int]] = {}
 
         def _build_group(
             g: CodebookGroup, order: int, *, is_default: bool = False,
@@ -238,6 +249,8 @@ def get_codebook(project_id: int, request: Request) -> CodebookResponse:
                     .all()
                 )
                 seen_quotes.update(r[0] for r in qt_rows)
+            if g.framework_id:
+                framework_quotes.setdefault(g.framework_id, set()).update(seen_quotes)
             return CodebookGroupOut(
                 id=g.id,
                 name=g.name,
@@ -263,6 +276,9 @@ def get_codebook(project_id: int, request: Request) -> CodebookResponse:
         )
 
         return CodebookResponse(
+            framework_quote_totals={
+                fid: len(qs) for fid, qs in framework_quotes.items()
+            },
             groups=group_list,
             ungrouped=[],  # deprecated — kept for back-compat
             all_tag_names=sorted(set(all_tag_names)),

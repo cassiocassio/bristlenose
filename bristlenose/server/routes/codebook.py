@@ -606,7 +606,6 @@ class TemplateOut(BaseModel):
     groups: list[TemplateGroupOut]
     enabled: bool
     imported: bool
-    restorable: bool = False
 
 
 class TemplateListResponse(BaseModel):
@@ -618,7 +617,7 @@ class ImportTemplateRequest(BaseModel):
 
 
 def _template_to_out(
-    tmpl: object, *, imported: bool, restorable: bool = False,
+    tmpl: object, *, imported: bool,
 ) -> TemplateOut:
     """Convert a CodebookTemplate dataclass to a TemplateOut response."""
     from bristlenose.server.codebook import CodebookTemplate
@@ -643,7 +642,6 @@ def _template_to_out(
         groups=groups_out,
         enabled=t.enabled,
         imported=imported,
-        restorable=restorable,
     )
 
 
@@ -651,7 +649,7 @@ def _template_to_out(
 def list_templates(
     project_id: int, request: Request,
 ) -> TemplateListResponse:
-    """Return available codebook templates with imported/restorable status."""
+    """Return available codebook templates with their imported status."""
     db = _get_db(request)
     try:
         _check_project(db, project_id)
@@ -676,22 +674,15 @@ def list_templates(
             )
             imported_ids = {r[0] for r in fw_rows}
 
-        # Detect restorable frameworks: groups exist in DB but have no PCG link
-        # (previously imported then removed — data preserved for instant restore)
-        all_fw_rows = (
-            db.query(CodebookGroup.framework_id)
-            .filter(CodebookGroup.framework_id.isnot(None))
-            .distinct()
-            .all()
-        )
-        all_fw_ids = {r[0] for r in all_fw_rows}
-        restorable_ids = all_fw_ids - imported_ids
+        # `restorable` is gone (D20 option A — uninstall keeps nothing), and with
+        # it register A3: the flag was computed instance-wide with no project
+        # filter, so a framework installed in ANY project showed as restorable
+        # in EVERY project. It could only ever have been misleading.
 
         templates_out = [
             _template_to_out(
                 t,
                 imported=t.id in imported_ids,
-                restorable=t.id in restorable_ids,
             )
             for t in CODEBOOK_TEMPLATES
         ]
@@ -743,16 +734,26 @@ def import_template(
                     detail="Template already imported",
                 )
 
-        # Check for orphaned groups (previously removed — restorable)
-        orphaned_groups = (
+        # Groups for this framework that exist but are not linked HERE.
+        #
+        # This used to be the "restore path" — uninstall preserved everything and
+        # re-import brought it back. D20 option A ended that, so after an
+        # uninstall there is nothing of ours left to find.
+        #
+        # The branch still matters, for a different reason: `CodebookGroup` is
+        # **instance-scoped**. If another project still has this framework, its
+        # groups survive our uninstall (guarded in `remove_framework`), and
+        # reinstalling here must RELINK them rather than create a second set —
+        # which would give the instance two Nielsens and split every count.
+        unlinked_groups = (
             db.query(CodebookGroup)
             .filter(CodebookGroup.framework_id == body.template_id)
             .all()
         )
-        orphaned = [g for g in orphaned_groups if g.id not in group_ids]
+        orphaned = [g for g in unlinked_groups if g.id not in group_ids]
 
         if orphaned:
-            # ── Restore path ────────────────────────────────────────
+            # ── Relink path — the rows belong to another project ─────
             max_order = (
                 db.query(func.max(ProjectCodebookGroup.sort_order))
                 .filter_by(project_id=project_id)
@@ -766,23 +767,14 @@ def import_template(
                     sort_order=max_order + 1 + i,
                 ))
 
-            # Reset accepted proposals to pending — QuoteTags were deleted on
-            # remove, so "accepted" would be misleading (tag not on quote).
-            orphaned_ids = [g.id for g in orphaned]
-            tag_def_ids = [
-                td.id
-                for td in db.query(TagDefinition)
-                .filter(TagDefinition.codebook_group_id.in_(orphaned_ids))
-                .all()
-            ]
-            if tag_def_ids:
-                db.query(ProposedTag).filter(
-                    ProposedTag.tag_definition_id.in_(tag_def_ids),
-                    ProposedTag.status == "accepted",
-                ).update(
-                    {"status": "pending", "reviewed_at": None},
-                    synchronize_session=False,
-                )
+            # The accepted-proposal reset that used to live here is GONE, and
+            # removing it fixes a latent cross-project bug rather than merely
+            # tidying up. It filtered on `tag_definition_id` alone — and those
+            # are instance-scoped — so re-importing here rewrote ANOTHER
+            # project's accepted proposals back to pending. Since D20 option A
+            # our own proposals are deleted at uninstall, there is nothing of
+            # ours to reset, and the only rows it could still reach belong to
+            # someone else. Same shape as A1, one table over.
 
             db.commit()
             return get_codebook(project_id, request)

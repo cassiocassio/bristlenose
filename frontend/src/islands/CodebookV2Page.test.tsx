@@ -131,7 +131,7 @@ describe("author links are gated", () => {
       book({
         template: {
           id: "nielsen", title: "T", author: "Jakob Nielsen", description: "",
-          author_bio: "Bio.", enabled: true, imported: true, restorable: false,
+          author_bio: "Bio.", enabled: true, imported: true,
           groups: [],
           author_links: [
             { label: "real", url: "https://nngroup.com/" },

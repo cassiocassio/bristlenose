@@ -1377,7 +1377,6 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                             "picker-card",
                             tmpl.imported ? "imported" : null,
                             !tmpl.enabled ? "disabled" : null,
-                            tmpl.restorable && !tmpl.imported ? "restorable" : null,
                           ].filter(Boolean).join(" ");
                           return (
                             // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
@@ -1407,9 +1406,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                               {!tmpl.enabled && (
                                 <div className="picker-card-coming">{t("codebook.comingSoon")}</div>
                               )}
-                              {tmpl.restorable && !tmpl.imported && (
-                                <div className="picker-card-restore">{t("codebook.previouslyImported")}</div>
-                              )}
+
                               {/* Per-tile Install ↔ Uninstall toggle. Coming-soon
                                   (disabled) codebooks get no action. stopPropagation
                                   keeps the card-body preview click from also firing. */}
@@ -1481,13 +1478,11 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                       disabled={importing}
                     >
                       {importing
-                        ? (selectedTemplate.restorable ? t("codebook.restoringCodebook") : t("codebook.importingCodebook"))
-                        : (selectedTemplate.restorable ? t("codebook.restoreCodebook") : t("codebook.importCodebook"))}
+                        ? t("codebook.importingCodebook")
+                        : t("codebook.importCodebook")}
                     </button>
                     <div className="preview-cta-help">
-                      {selectedTemplate.restorable
-                        ? t("codebook.restoreHelp")
-                        : t("codebook.importHelp")}
+                      {t("codebook.importHelp")}
                     </div>
                   </div>
                   <button

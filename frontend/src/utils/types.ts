@@ -240,7 +240,6 @@ export interface TemplateOut {
   groups: TemplateGroupOut[];
   enabled: boolean;
   imported: boolean;
-  restorable: boolean;
 }
 
 export interface TemplateListResponse {

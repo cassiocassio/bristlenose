@@ -60,7 +60,6 @@ const TEMPLATES_RESPONSE = {
       groups: [],
       enabled: true,
       imported: true,
-      restorable: false,
     },
     {
       id: "uxr",
@@ -72,7 +71,6 @@ const TEMPLATES_RESPONSE = {
       groups: [],
       enabled: true,
       imported: false,
-      restorable: false,
     },
     {
       id: "morville",
@@ -84,7 +82,6 @@ const TEMPLATES_RESPONSE = {
       groups: [],
       enabled: true,
       imported: true,
-      restorable: false,
     },
     {
       id: "garrett",
@@ -96,7 +93,6 @@ const TEMPLATES_RESPONSE = {
       groups: [],
       enabled: true,
       imported: false,
-      restorable: false,
     },
   ],
 };

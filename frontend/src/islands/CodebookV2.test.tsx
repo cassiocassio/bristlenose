@@ -18,12 +18,12 @@ const codebook = {
 };
 const templates = { templates: [
   { id: "sentiment", title: "Sentiment", author: "", description: "", author_bio: "",
-    author_links: [], groups: [], enabled: true, imported: true, restorable: false },
+    author_links: [], groups: [], enabled: true, imported: true },
   { id: "uxr", title: "Bristlenose UXR", author: "", description: "", author_bio: "",
-    author_links: [], groups: [], enabled: true, imported: true, restorable: false },
+    author_links: [], groups: [], enabled: true, imported: true },
   { id: "nielsen", title: "10 Usability Heuristics", author: "Jakob Nielsen",
     description: "", author_bio: "", author_links: [], groups: [], enabled: true,
-    imported: true, restorable: false },
+    imported: true },
 ]};
 
 vi.mock("../utils/api", () => ({

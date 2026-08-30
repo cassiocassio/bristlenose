@@ -437,7 +437,6 @@ const MOCK_TEMPLATES = {
       groups: [],
       enabled: true,
       imported: true,
-      restorable: false,
     },
     {
       id: "uxr",
@@ -449,7 +448,6 @@ const MOCK_TEMPLATES = {
       groups: [],
       enabled: true,
       imported: true,
-      restorable: false,
     },
   ],
 };
@@ -730,8 +728,8 @@ describe("CodebookPanel — per-framework sections", () => {
     // opposite toggle: Uninstall on the installed one, Install on the available.
     const MIXED_TEMPLATES = {
       templates: [
-        { id: "garrett", title: "The Elements of User Experience", author: "Jesse James Garrett", description: "d", author_bio: "", author_links: [], groups: [], enabled: true, imported: true, restorable: false },
-        { id: "norman", title: "The Design of Everyday Things", author: "Don Norman", description: "d", author_bio: "", author_links: [], groups: [], enabled: true, imported: false, restorable: false },
+        { id: "garrett", title: "The Elements of User Experience", author: "Jesse James Garrett", description: "d", author_bio: "", author_links: [], groups: [], enabled: true, imported: true },
+        { id: "norman", title: "The Design of Everyday Things", author: "Don Norman", description: "d", author_bio: "", author_links: [], groups: [], enabled: true, imported: false },
       ],
     };
     let importPosted = false;

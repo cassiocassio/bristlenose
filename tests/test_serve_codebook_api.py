@@ -875,7 +875,14 @@ class TestUninstallDoesNotPreserve:
         )
         tc.delete("/api/projects/1/codebook/remove-framework/garrett")
 
-    def test_nothing_is_restorable_after_an_uninstall(self) -> None:
+    def test_restorable_is_gone_from_the_wire(self) -> None:
+        """The flag is retired, not merely always-False.
+
+        It could only ever have been misleading: `restorable_ids` was computed
+        instance-wide with no project filter (register A3), so a framework
+        installed in ANY project showed as restorable in EVERY project. With
+        D20 option A there is nothing to restore either, so the field goes.
+        """
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
         tc = AuthTestClient(app)
         self._import_and_remove(tc)
@@ -883,10 +890,7 @@ class TestUninstallDoesNotPreserve:
         templates = tc.get("/api/projects/1/codebook/templates").json()["templates"]
         garrett = next(t for t in templates if t["id"] == "garrett")
         assert garrett["imported"] is False
-        assert garrett["restorable"] is False, (
-            "restorable survived an uninstall that keeps nothing — the flag can "
-            "now only ever be False and should be retired from the wire"
-        )
+        assert "restorable" not in garrett
 
     def test_reinstalling_starts_clean(self) -> None:
         """No resurrected proposals, so no duplicates when a fresh job runs."""

@@ -7,7 +7,7 @@ function tpl(over: Record<string, unknown> = {}) {
     id: "nielsen", title: "10 Usability Heuristics", author: "Jakob Nielsen",
     description: "Ten broad rules of thumb. Refined from a factor analysis of 249 problems.",
     author_bio: "", author_links: [], groups: [{ name: "G", tags: [{ name: "a" }, { name: "b" }] }],
-    enabled: true, imported: true, restorable: false, ...over,
+    enabled: true, imported: true, ...over,
   } as unknown as BrowseBook["template"];
 }
 

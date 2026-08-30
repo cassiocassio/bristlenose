@@ -250,6 +250,15 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .sig--v9 { flex-direction:column; align-items:flex-start; gap:.14rem; padding-bottom:.35rem; }
 .sig--v9 .sig-name { flex:none; width:100%; }
 .sig--v9 .sig-badges { gap:3px; }
+/* Overflow indicator. NOT a new control: the string is the shipped
+   `analysis.more` ("+{{count}} more", translated in all 21 locales) and the
+   treatment is `.cell-tooltip-footer` from theme/organisms/analysis.css:510 —
+   mono / micro / muted — where it already means "there are N more than shown",
+   in this same lens. Only the PLACEMENT is a judgement: the shipped use is a
+   footer line beneath a list, and here it rides inline at the end of the pill
+   flow, because a footer line per row costs a line per row in a sidebar.
+   If this ships, that treatment wants promoting to a shared atom rather than
+   copied a third time — `.cell-tooltip-footer` is named for its one use site. */
 .sig-more { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
   color:var(--bn-colour-muted); align-self:center; padding-left:2px; white-space:nowrap; }
 
@@ -347,7 +356,7 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
     </div>
 
     <div class="ctl">
-      <span class="lbl">Tag cap <span style="text-transform:none;letter-spacing:0">(V9)</span></span>
+      <span class="lbl">Tags per row <span style="text-transform:none;letter-spacing:0">(V9)</span></span>
       <div class="row" id="caps">
         <button class="pbtn" data-cap="2">2</button>
         <button class="pbtn on" data-cap="3">3</button>
@@ -398,6 +407,46 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
       but it would not settle the layout: theme labels are user-editable, so the row
       has to survive whatever someone types regardless.</p>
 
+    <h2>The list is bounded and ranked — which makes depth cheap</h2>
+    <p>Two facts about the shipped list change the arithmetic of everything above,
+      and neither is visible from the sidebar itself.</p>
+    <p><strong>It is capped at six per section.</strong>
+      <code>MAX_SIGNALS = 6</code> in <code>AnalysisPage.tsx</code>, applied as
+      <code>slice(0, MAX_SIGNALS)</code> to the sentiment and tag lists — and the
+      sidebar reads those same capped arrays, because <code>setAnalysisSignals</code>
+      is handed the capped ones. So the panel is <strong>never more than twelve
+      rows</strong>. Depth is not an unbounded scroll here; it is a bounded, computable
+      worst case, which is a much weaker argument against wrapping than it first looks.</p>
+    <p><strong>It is sorted strongest first.</strong> Both analysis modules sort
+      <code>composite_signal</code> descending, and the client sorts again. Signal
+      weakens top to bottom. The card shows its rank explicitly
+      (<code>.signal-rank</code>, “#2”); the sidebar shows no number, so
+      <em>position is the only rank cue it has</em>.</p>
+    <p><strong>That is a real strike against the regrouping variants, and it lands
+      hardest on the ones I liked most.</strong> V4 buckets rows by badge value and V6/V7
+      pair them by location — both reorder a list whose order <em>is</em> its ranking.
+      Pairing puts a location at the rank of its strongest signal and silently drags
+      the weaker one up with it; grouping abandons rank entirely. On the ikea sentiment
+      set the four rows happen to pair adjacently so nothing moves, which is exactly the
+      kind of luck that hides the problem. V9 inherits it, since it pairs the sentiment
+      half. Any of these needs an answer to “what happened to the ranking?” before it
+      ships — showing the rank number, or accepting that the sidebar is a directory
+      rather than a ranked list.</p>
+
+    <p><strong>And there are two caps, both of them the same kind.</strong> The
+      meaningful one — “don't surface a card if the signal is too weak” — does not
+      exist. <code>MIN_QUOTES_PER_CELL = 2</code> is a volume floor, not a strength
+      one, and <code>confidence</code> (strong / moderate / emerging) computes exactly
+      that judgement, is passed to the client, and gates nothing. Measured across the
+      real projects, of the sentiment cards the sidebar surfaces: <strong>0% strong,
+      4% moderate, 96% emerging</strong> — “emerging” meaning it failed both bars. In
+      seven of eight projects the navigation cap never even binds, because fewer than
+      six signals exist to cut. (Ranking here is proxied by concentration rather than
+      the full composite, and only the section axis is counted; the corpus is also
+      demo-sized, so this understates what a real study would produce. It still means
+      the quality bound has never been exercised, because nothing has ever been
+      strong.)</p>
+
     <h2>Stress testing that is calibrated, not invented</h2>
     <p>Two sets push <em>both</em> axes at once, at measured percentiles rather than
       at made-up extremes:</p>
@@ -423,14 +472,25 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
     <p>Uncapped, the largest real group puts eleven pills under one name. Measured at
       stress · max, 240px:</p>
     <p style="font-family:var(--bn-font-mono);font-size:var(--bn-text-caption);line-height:1.9">
-      cap 2 &nbsp;&nbsp;571px&nbsp;&nbsp;<span style="color:var(--bn-colour-muted)">6 of 28 codes shown</span><br>
-      cap 3 &nbsp;&nbsp;637px&nbsp;&nbsp;<span style="color:var(--bn-colour-muted)">9 of 28</span><br>
-      cap 5 &nbsp;&nbsp;770px&nbsp;&nbsp;<span style="color:var(--bn-colour-muted)">15 of 28</span><br>
-      all &nbsp;&nbsp;&nbsp;1036px&nbsp;&nbsp;<span style="color:var(--bn-colour-muted)">28 of 28</span>
+      2 &nbsp;&nbsp;&nbsp;&nbsp;588px&nbsp;&nbsp;<span style="color:var(--bn-colour-muted)">6 of 28 codes shown</span><br>
+      3 &nbsp;&nbsp;&nbsp;&nbsp;655px&nbsp;&nbsp;<span style="color:var(--bn-colour-muted)">9 of 28</span><br>
+      5 &nbsp;&nbsp;&nbsp;&nbsp;770px&nbsp;&nbsp;<span style="color:var(--bn-colour-muted)">15 of 28</span><br>
+      all &nbsp;&nbsp;1036px&nbsp;&nbsp;<span style="color:var(--bn-colour-muted)">28 of 28</span>
     </p>
-    <p>Uncapped nearly doubles the panel. Cap 3 costs 66px over cap 2 and shows half
+    <p>Uncapped nearly doubles the panel. Three per row costs 67px over two and shows half
       again as many codes, which is where I would start — but this is a call to make by
       looking, which is what the control is for.</p>
+    <p><strong>The overflow indicator is not a new control.</strong> The string is the
+      shipped <code>analysis.more</code> (“+{{count}} more”, already translated in all
+      21 locales) and the treatment is <code>.cell-tooltip-footer</code> from
+      <code>analysis.css</code>, where it already means “there are N more than shown”
+      — in this same lens, on the heatmap cell tooltip. The only invention here is
+      <em>placement</em>: the shipped use is a footer line beneath a list, and a footer
+      line per row is a line per row in a sidebar, so it rides inline at the end of the
+      pill flow instead. If V9 ships, that treatment should be promoted to a shared
+      atom rather than copied a third time — <code>.cell-tooltip-footer</code> is named
+      for its only use site. The 2 / 3 / 5 / all buttons are a playground instrument,
+      not a proposed affordance; the product would carry one cap, not a picker.</p>
     <p><strong>The pill is the shipped quote-card tag pill, and that is an argument
       rather than a style choice.</strong> The sentiment badges above are a
       <em>partition</em>: <code>Quote.sentiment</code> is “a single dominant sentiment,
@@ -566,7 +626,6 @@ const SETS = {
         ["Checkout Clarity Gap", "Sentiment", "tension", "sentiment", ["doubt","confusion"]],
         ["Product Exploration Tension", "Sentiment", "tension", "sentiment", ["surprise","delight"]],
         ["Bedding Navigation Confusion", "Sentiment", "tension", "sentiment", ["confusion","frustration"]],
-        ["Sort & Search Satisfaction", "Sentiment", "success", "sentiment", ["satisfaction","delight"]],
       ],
       Theme: [["Homepage Orientation Gap", "Sentiment", "gap", "sentiment", ["doubt","confusion"]]],
     },
@@ -586,7 +645,6 @@ const SETS = {
         ["Navigation Confidence Tension", "Sentiment", "tension"],
         ["Milestone-driven motivation", "Sentiment", "success"],
         ["Language-Metaphor Tension", "Sentiment", "tension"],
-        ["Assembly as achievement", "Sentiment", "recovery"],
       ],
       Theme: [["Mixed Brand Sentiment", "Sentiment", "tension"]],
     },
@@ -781,7 +839,8 @@ function tagRowHTML(name, tags, colourSet){
       ? ` style="background:${TINT[colourSet]}"` : "";
     return `<span class="${cls}"${tint}>${esc(t)}</span>`;
   }).join("");
-  const more = rest > 0 ? `<span class="sig-more">+${rest}</span>` : "";
+  // Shipped string form: analysis.more === "+{{count}} more".
+  const more = rest > 0 ? `<span class="sig-more">+${rest} more</span>` : "";
   return `<a class="sig sig--v9"><span class="sig-name">${esc(name)}</span>`
        + `<span class="sig-badges">${pills}${more}</span></a>`;
 }

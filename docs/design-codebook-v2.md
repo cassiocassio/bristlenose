@@ -2505,3 +2505,62 @@ turns it from "a thing to remember" into "the function takes a kind".
 today. Whether the slot is `codebooks` or a general `extensions` map is worth
 deferring until a second extension exists — a fixed named slot is clearer, and
 generalising for one case is how a schema acquires a dictionary nobody needs.
+
+### Q17c — the schema must not learn the names of extensions
+
+The previous section deferred "one `codebooks` slot or a general map?" on the
+grounds that generalising for a single case is how a schema acquires a dictionary
+nobody needs. That deferral was wrong, because there are **two** plurals and only
+one of them is hypothetical.
+
+**Plural instances — real today.** Nine codebooks in the Library. Install three
+and there are three autocode jobs, three lifecycles, three ways to fail. Even
+with one extension *type*, the state is already a set.
+
+**Plural types — speculative but named.** A researcher's own, or a corporate,
+processing of tags, adding a lens, with its own flow and its own states.
+
+The two want different answers, and conflating them is what a single `codebooks`
+slot would do.
+
+**The instance plural already fits.** `StageOutcome` is `{attempted, succeeded,
+failed[], duration_ms}` — three codebooks attempted, two succeeded, one failed is
+exactly that shape, unchanged. **One gap:** `StageFailure` can carry
+`session_id` or `source_file`, and an autocode failure is neither
+session-scoped nor file-scoped. Nothing in it can say *"Nielsen"*.
+
+That is precisely the gap `source_file` was added to close for files, and its
+docstring records the reasoning: it exists "because `session_id` alone cannot
+identify the file for failures that happen *before* a session exists… every
+downstream surface was left unable to name it." An extension failure is the same
+problem one level out.
+
+**The type plural argues against named slots — and the mini-lifecycle removes the
+need for them.** If each extension is its own event sequence with its own
+`run_id` and its own terminus, then **each extension carries its own summary**.
+There is no single rollup that has to enumerate extensions, so `PipelineSummary`
+never grows a `codebooks` field, never grows a `corporate_tagger` field, and
+never grows a map. The plurality is carried by *multiple sequences*, not by
+multiple slots.
+
+**Which gives the design rule: an extension names itself in the data, never in
+the schema.** A second extension type is then a new *value*, not a new *field* —
+no migration, no Swift mirror, no fixture bump, no five-site change. Compare the
+cost of the alternative: under named slots, every extension anyone ever writes
+taxes `events.py`, `PipelineSummary.swift`, the contract fixture and
+`EventLogReader` — which is an odd toll to charge a thing whose whole selling
+point is being modular.
+
+**Two constraints that ride along, so they are not rediscovered:**
+
+1. **The re-identification rule is inherited, not re-litigated.**
+   `RunProgressEvent` carries counts and timings *only* — never an id, filename,
+   speaker label or transcript-derived string. An extension's progress is bound
+   by the same rule: a corporate tag processor may report *how many*, never
+   *which tags*. The file is a named re-identification surface and an extension
+   does not get an exemption for being new.
+2. **The rollup stays trivial because of the dependency.** However many
+   extensions and instances exist, the sidebar row needs one question answered —
+   *did any extension fail?* — and the answer can only ever produce `.partial`,
+   never `.failed`, because every extension is downstream of a working project.
+   N extensions do not make the precedence N-way; the asymmetry collapses it.

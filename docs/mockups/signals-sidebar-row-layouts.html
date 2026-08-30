@@ -234,6 +234,25 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 .sig--v7 { flex-direction:column; align-items:flex-start; gap:.12rem; padding-bottom:.3rem; }
 .sig--v7 .sig-name { flex:none; width:100%; }
 
+/* ── V9 — V7's geometry, tag-level badges. The Codebooks badge stops showing
+   the codebook GROUP (one distinct value in 11 of 11 real projects) and shows
+   the codes actually present. Those are open-vocabulary user text — measured
+   median 14 chars, p90 23, max 32, up to 11 per group — so they need a line of
+   their own, which is exactly what V7 already provides.
+
+   The pill is the SHIPPED tag pill: .badge + a group tint, the same treatment
+   a tag gets on a quote card. That is deliberate rather than decorative. On a
+   quote card badges have always been a COVER — codes present on this thing,
+   freely overlapping — whereas the sentiment badges above are a PARTITION,
+   because quote→sentiment is a function and quote→tags is a relation. Reusing
+   the quote card's grammar makes the two sections claim different things
+   without inventing a new element to say so. */
+.sig--v9 { flex-direction:column; align-items:flex-start; gap:.14rem; padding-bottom:.35rem; }
+.sig--v9 .sig-name { flex:none; width:100%; }
+.sig--v9 .sig-badges { gap:3px; }
+.sig-more { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-muted); align-self:center; padding-left:2px; white-space:nowrap; }
+
 /* wrapping policy — toggled, because "what do we do with an unbreakable
    token" is a real decision the shipped CSS currently doesn't make. */
 .brk .sig-name { overflow-wrap:anywhere; }
@@ -268,7 +287,7 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
 
   <header class="masthead">
     <div class="eyebrow">Bristlenose · mockup · signals sidebar</div>
-    <h1>Signal rows: nine layouts, one width slider</h1>
+    <h1>Signal rows: ten layouts, one width slider</h1>
     <p>The Signals list is the narrowest content in the app — a name plus a right-aligned
        badge, in a panel that must stay thin because Bristlenose competes for the screen
        with the product under test, the report and the client mail. Width alone can't fix
@@ -310,6 +329,8 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
         <button class="pbtn" data-set="elab">ikea · elaborated</button>
         <button class="pbtn" data-set="uxf">uxfriends · elaborated</button>
         <button class="pbtn" data-set="themes">theme labels · the tail</button>
+        <button class="pbtn" data-set="stress90">stress · p90</button>
+        <button class="pbtn" data-set="stressmax">stress · max</button>
         <button class="pbtn" data-set="torture">torture</button>
       </div>
     </div>
@@ -322,6 +343,16 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
         <button class="pbtn" id="dark">dark</button>
         <button class="pbtn" id="trunc">mark truncation</button>
         <button class="pbtn" id="brk">break long words</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Tag cap <span style="text-transform:none;letter-spacing:0">(V9)</span></span>
+      <div class="row" id="caps">
+        <button class="pbtn" data-cap="2">2</button>
+        <button class="pbtn on" data-cap="3">3</button>
+        <button class="pbtn" data-cap="5">5</button>
+        <button class="pbtn" data-cap="99">all</button>
       </div>
     </div>
 
@@ -366,6 +397,50 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
       the field with an adjective does not. Bounding it is a one-line prompt change,
       but it would not settle the layout: theme labels are user-editable, so the row
       has to survive whatever someone types regardless.</p>
+
+    <h2>Stress testing that is calibrated, not invented</h2>
+    <p>Two sets push <em>both</em> axes at once, at measured percentiles rather than
+      at made-up extremes:</p>
+    <ul>
+      <li><strong>stress · p90</strong> — 41-character row labels (theme-label p90)
+        with 4 tags per row (the median group size) at ~23 characters (tag p90).</li>
+      <li><strong>stress · max</strong> — 51-character labels (theme-label max) with
+        up to 11 tags per row (the largest real group) at up to 32 characters.</li>
+    </ul>
+    <p>The tag names are real, lifted from the corpus:
+      <code>subcommand-hierarchy-confusion</code>, <code>multi-terminal-context-switching</code>,
+      <code>Jakob: convention expectation</code>, <code>destructive-action-protection</code>.
+      Measured over 620 tag names: median 14 characters, p90 23, max 32, and up to 11
+      per group. That is roughly double a sentiment word, in an open vocabulary, where
+      sentiment is a closed set of seven running 5–12.</p>
+    <p>At <strong>stress · max, 240px</strong>: V0 and V8 clip 6 rows, V6 clips 5, and
+      every variant that gives the name its own line clips nothing. V9 clips nothing
+      and carries <strong>9 distinct badges</strong> against V0's 3 — and note these
+      sets deliberately model a project with three codebook groups, the case where the
+      group name is at its <em>most</em> informative. It still loses three to one.</p>
+
+    <h2>The cap is the whole design decision in V9</h2>
+    <p>Uncapped, the largest real group puts eleven pills under one name. Measured at
+      stress · max, 240px:</p>
+    <p style="font-family:var(--bn-font-mono);font-size:var(--bn-text-caption);line-height:1.9">
+      cap 2 &nbsp;&nbsp;571px&nbsp;&nbsp;<span style="color:var(--bn-colour-muted)">6 of 28 codes shown</span><br>
+      cap 3 &nbsp;&nbsp;637px&nbsp;&nbsp;<span style="color:var(--bn-colour-muted)">9 of 28</span><br>
+      cap 5 &nbsp;&nbsp;770px&nbsp;&nbsp;<span style="color:var(--bn-colour-muted)">15 of 28</span><br>
+      all &nbsp;&nbsp;&nbsp;1036px&nbsp;&nbsp;<span style="color:var(--bn-colour-muted)">28 of 28</span>
+    </p>
+    <p>Uncapped nearly doubles the panel. Cap 3 costs 66px over cap 2 and shows half
+      again as many codes, which is where I would start — but this is a call to make by
+      looking, which is what the control is for.</p>
+    <p><strong>The pill is the shipped quote-card tag pill, and that is an argument
+      rather than a style choice.</strong> The sentiment badges above are a
+      <em>partition</em>: <code>Quote.sentiment</code> is “a single dominant sentiment,
+      or None”, so those badges genuinely decompose the location and their counts sum.
+      Codebook tags are a <em>relation</em> — <code>quote_tags</code> is many-to-many,
+      and <code>analysis.py</code>'s own trade-off note says quotes tagged from several
+      groups “count in each group column”. So the codebook badges are a cover, not a
+      decomposition. Borrowing the quote card's pill — where badges have always meant
+      “codes present on this thing” — lets the two sections claim different things
+      without inventing an element to say so.</p>
 
     <h2>V8 is a different axis from the rest</h2>
     <p>V0–V7 argue about <em>where the badge sits</em>. V8 asks what it
@@ -467,11 +542,13 @@ const SETS = {
     },
     tags: {
       Section: [
-        ["Beds Category", "Sentiment"], ["Top Navigation", "Sentiment"],
-        ["Checkout & Delivery", "Sentiment"], ["Product Detail", "Sentiment"],
-        ["Duvets & Bedding", "Sentiment"],
+        ["Beds Category", "Sentiment", null, "sentiment", ["frustration","confusion","doubt"]],
+        ["Top Navigation", "Sentiment", null, "sentiment", ["confidence","frustration"]],
+        ["Checkout & Delivery", "Sentiment", null, "sentiment", ["satisfaction","doubt"]],
+        ["Product Detail", "Sentiment", null, "sentiment", ["surprise","delight","confidence"]],
+        ["Duvets & Bedding", "Sentiment", null, "sentiment", ["confusion","frustration"]],
       ],
-      Theme: [["Uncategorised", "Sentiment"]],
+      Theme: [["Uncategorised", "Sentiment", null, "sentiment", ["delight"]]],
     },
   },
   elab: {
@@ -484,14 +561,14 @@ const SETS = {
     },
     tags: {
       Section: [
-        ["Performance Confusion Spike", "Sentiment", "tension"],
-        ["Navigation Confidence Disrupted", "Sentiment", "tension"],
-        ["Checkout Clarity Gap", "Sentiment", "tension"],
-        ["Product Exploration Tension", "Sentiment", "tension"],
-        ["Bedding Navigation Confusion", "Sentiment", "tension"],
-        ["Sort & Search Satisfaction", "Sentiment", "success"],
+        ["Performance Confusion Spike", "Sentiment", "tension", "sentiment", ["confusion","frustration","doubt"]],
+        ["Navigation Confidence Disrupted", "Sentiment", "tension", "sentiment", ["confidence","frustration"]],
+        ["Checkout Clarity Gap", "Sentiment", "tension", "sentiment", ["doubt","confusion"]],
+        ["Product Exploration Tension", "Sentiment", "tension", "sentiment", ["surprise","delight"]],
+        ["Bedding Navigation Confusion", "Sentiment", "tension", "sentiment", ["confusion","frustration"]],
+        ["Sort & Search Satisfaction", "Sentiment", "success", "sentiment", ["satisfaction","delight"]],
       ],
-      Theme: [["Homepage Orientation Gap", "Sentiment", "gap"]],
+      Theme: [["Homepage Orientation Gap", "Sentiment", "gap", "sentiment", ["doubt","confusion"]]],
     },
   },
   uxf: {
@@ -530,6 +607,57 @@ const SETS = {
         ["Payment Clarity Gap", "Sentiment", "gap"],
         ["Recall Over Recognition", "Sentiment", "tension"],
         ["Search Entry Success", "Sentiment", "success"],
+      ],
+    },
+  },
+  stress90: {
+    note: "p90 on BOTH axes — 41-char labels, 4 tags per row at ~23 chars (median group size)",
+    sentiment: {
+      Theme: [
+        ["Recovery depends on remembering the flag", "frustration"],
+        ["Recovery depends on remembering the flag", "confidence"],
+        ["Defaults are accepted without inspection", "satisfaction"],
+      ],
+    },
+    tags: {
+      Section: [
+        ["Discoverability at the first subcommand", "Discoverability", "tension", "ux",
+          ["tab-completion-reliance", "starting-point-unclear", "readme-as-first-resort", "man-page-friction"]],
+        ["Error text read but not understood", "Errors and recovery", "gap", "emo",
+          ["error-message-illegible", "stderr-stdout-confusion", "did-it-work-ambiguity", "exit-code-unaware"]],
+        ["Choosing between two plausible verbs", "Choice and decision", "tension", "opp",
+          ["Von Restorff: option salience", "Thaler: default acceptance", "Hick: decision simplicity", "Hick: choice paralysis"]],
+      ],
+      Theme: [
+        ["Convention transfer from other tools", "Expectation and convention", "success", "trust",
+          ["Jakob: convention expectation", "Postel: input forgiveness", "Jakob: transfer confusion", "Postel: input intolerance"]],
+      ],
+    },
+  },
+  stressmax: {
+    note: "corpus max on BOTH axes — 51-char labels, 11 tags per row (largest real group) at up to 32 chars",
+    sentiment: {
+      Theme: [
+        ["Parking meter UI as a shared frustration flashpoint", "frustration"],
+        ["Parking meter UI as a shared frustration flashpoint", "confusion"],
+        ["Participants recover only by abandoning the attempt", "doubt"],
+      ],
+    },
+    tags: {
+      Section: [
+        ["Getting started without reading the manual first", "Discoverability", "tension", "ux",
+          ["subcommand-hierarchy-confusion", "tab-completion-reliance", "starting-point-unclear", "readme-as-first-resort",
+           "search-engine-fallback", "man-page-friction", "--help-reliance", "first-time use",
+           "example-driven-learning", "flag-guessing", "docs-scanning"]],
+        ["Recovering from a command that did the wrong thing", "Errors and recovery", "gap", "emo",
+          ["destructive-action-protection", "error-message-illegible", "stderr-stdout-confusion", "did-it-work-ambiguity",
+           "clear error message", "recovery guidance", "exit-code-unaware", "undo-expectation",
+           "retry-behaviour", "partial-failure", "silent-success"]],
+      ],
+      Theme: [
+        ["Switching between terminal, editor and browser", "Workflow", "tension", "task",
+          ["multi-terminal-context-switching", "one-shot-vs-repl-preference", "alias-and-function-writing",
+           "script-vs-interactive", "copy-paste-from-docs", "history-reuse"]],
       ],
     },
   },
@@ -582,6 +710,10 @@ function corpusCoverage(nameEl){
   return { chars: fits, pct: Math.round(100 * n / CORPUS.length) };
 }
 
+/* Group tints, as the shipped tag pill uses them (theme/tokens.css). */
+const TINT = { ux:"var(--bn-ux-1-bg)", emo:"var(--bn-emo-1-bg)", task:"var(--bn-task-1-bg)",
+               trust:"var(--bn-trust-1-bg)", opp:"var(--bn-opp-1-bg)" };
+
 const SENTIMENTS = ["frustration","confusion","doubt","surprise","satisfaction","delight","confidence"];
 const RAIL = {
   frustration:"var(--bn-sentiment-frustration)", confusion:"var(--bn-sentiment-confusion)",
@@ -600,9 +732,10 @@ const VARIANTS = [
   ["v6","V6 · paired","One entry per location carrying every sentiment it has. Name and badges share the line. Four sentiment rows become two — but two badges eat more width than one."],
   ["v7","V7 · paired + stacked","Same pairing, badges beneath the name. The location gets the full width at every panel width, and there is still only one entry per location."],
   ["v8","V8 · pattern","V0's geometry, a badge that means something. Sentiment rows keep their sentiment; codebook rows swap the constant group name for the pattern — and show nothing before elaboration."],
+  ["v9","V9 · tag badges","V7's geometry with the codes actually present, capped. Sentiment rows still pair; codebook rows drop the constant group name for open-vocabulary tags on their own line."],
 ];
 
-const state = { w:240, set:"plain", variantMark:false, brk:false };
+const state = { w:240, set:"plain", variantMark:false, brk:false, cap:3 };
 const bench = document.getElementById("bench");
 
 function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
@@ -632,6 +765,25 @@ function pairByLocation(rows){
     out.get(name).badges.push({ label, index: i });
   });
   return out;
+}
+
+/**
+ * V9's Codebooks row: the name owns a line, the codes present sit beneath it.
+ * Capped, because the largest real group holds 11 tags at up to 32 chars —
+ * uncapped that is four wrapped lines under one name.
+ */
+function tagRowHTML(name, tags, colourSet){
+  const shown = (tags || []).slice(0, state.cap);
+  const rest = (tags || []).length - shown.length;
+  const pills = shown.map(t => {
+    const cls = badgeClass(t);                       // sentiment names keep their hue
+    const tint = cls === "badge" && TINT[colourSet]
+      ? ` style="background:${TINT[colourSet]}"` : "";
+    return `<span class="${cls}"${tint}>${esc(t)}</span>`;
+  }).join("");
+  const more = rest > 0 ? `<span class="sig-more">+${rest}</span>` : "";
+  return `<a class="sig sig--v9"><span class="sig-name">${esc(name)}</span>`
+       + `<span class="sig-badges">${pills}${more}</span></a>`;
 }
 
 /** A paired row: sibling links, never nested — name first, then each badge. */
@@ -672,9 +824,11 @@ function sectionHTML(v, heading, groups, kind){
   let out = `<div class="toc-heading">${heading}</div>`;
   for (const [sourceType, rows] of Object.entries(groups)){
     out += `<div class="toc-sub-heading">${sourceType}</div>`;
-    out += (v === "v4")               ? groupHTML(v, rows)
-         : (v === "v6" || v === "v7") ? pairedGroupHTML(v, rows)
-         :                              rows.map(([n,l,pat]) => rowHTML(v,n,l,pat,kind)).join("");
+    out += (v === "v4")                                ? groupHTML(v, rows)
+         : (v === "v6" || v === "v7")                  ? pairedGroupHTML(v, rows)
+         : (v === "v9" && kind === "sentiment")        ? pairedGroupHTML("v7", rows)
+         : (v === "v9")                                ? rows.map(([n,,,cs,tags]) => tagRowHTML(n, tags, cs)).join("")
+         :                                               rows.map(([n,l,pat]) => rowHTML(v,n,l,pat,kind)).join("");
   }
   return out;
 }
@@ -799,6 +953,11 @@ document.getElementById("brk").addEventListener("click", e => {
   state.brk = e.target.classList.toggle("on");
   render();
 });
+document.querySelectorAll("[data-cap]").forEach(b => b.addEventListener("click", () => {
+  state.cap = +b.dataset.cap;
+  document.querySelectorAll("[data-cap]").forEach(x => x.classList.toggle("on", x === b));
+  render();
+}));
 
 // Two destinations from one entry: the name goes to the location's first
 // signal, a badge goes to that exact one. Delegated so it survives re-render.

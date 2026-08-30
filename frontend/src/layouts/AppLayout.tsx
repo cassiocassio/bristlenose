@@ -615,6 +615,13 @@ function AppShell() {
           // has no native sidebar row, so the menu navigates the SPA directly.
           navigate("/report/specimen");
           break;
+        case "openCodebookV2":
+          // Codebook v2 (Diagnostics menu). Same reason as the specimen: the
+          // NavBar is hidden in embedded mode — the lens rail is the native
+          // sidebar — so a web nav link cannot reach it. The route is
+          // registered unconditionally, so navigating is enough.
+          navigate("/report/codebook-v2");
+          break;
       }
     };
     window.addEventListener("bn:menu-action", handler);

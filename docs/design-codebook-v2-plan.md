@@ -96,7 +96,8 @@ delete v1.
 
 ## Session report — 30 Aug
 
-Phases **0** (seam), **2** (rail) and **3** (codebook page) built; phase 1
+Phases **0** (seam), **2** (rail), **3** (codebook page) and **4** (browse
+grid) built; phase 1
 collapsed into the B6 fix because the data audit had already answered what it
 was going to discover. Suites green throughout: **4286 pytest, 1630 vitest,
 ruff and tsc clean**.
@@ -246,3 +247,30 @@ fixture data in a mockup, which is what D29 exists to stop.
 deliberate; it must stop being true before the flag defaults on. Nothing
 mechanical will ask — `check-locales.py` is blind to a surface English never
 enrolled — so it belongs on a human's list.
+
+
+### Phase 4 — what it found
+
+**Two defects the tests caught, both mine and both invisible to reading.** The
+sentiment card said *"On by default"* **twice** — once as provenance, once where
+the button would be — and `bn-v2-browse` was a testid on both the Browse Library
+button and the grid it opens. The first is the more interesting: that slot is now
+empty on purpose, because the provenance line is where *what is this* belongs,
+and a second copy in the button's place is **the absence of a control pretending
+to be one**.
+
+**And `tsc` caught what Vitest could not.** The test's handler overrides were
+typed `Record<string, Mock>`, which the suite accepted and `tsc -b` refused —
+exactly the split `sharedFormatContract.test.ts` warns about in its own comment.
+Vitest passing is not the gate.
+
+**D12 needed one qualification against a later decision.** It says the card's
+author line reads *"Built in"* for the three with none; **D23 supersedes that**
+with *On by default* / *Available by default*, which distinguishes sentiment
+(arrives applied) from UXR (ships with the product, commonly installed **and
+disabled**). The later, more precise decision wins.
+
+**Still inert, and deliberately.** Install and uninstall on both the card and the
+page call empty handlers. Phase 5 owns them because that is the phase where a bug
+loses work: install-is-apply spends money, and D20's option A makes uninstall
+stop preserving. A cheap early wiring is the worst available option.

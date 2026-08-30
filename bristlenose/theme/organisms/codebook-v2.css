@@ -286,3 +286,75 @@
 
 .v2-layout .bn-btn-lg,
 .section-heading .bn-btn-lg { font-size: var(--bn-text-body); padding: 0.5rem 1.15rem; }
+
+/* ── Codebook v2 — the browse grid ────────────────────────────────────────
+   Phase 4. The cards are the SHIPPED .picker-card* classes; only the grid, the
+   footrow and the version chip are new, because the shipped picker laid its
+   cards out differently. */
+
+.v2-browse-head { margin-bottom: var(--bn-space-md); }
+
+.v2-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--bn-space-md);
+}
+
+.v2-card-grid .picker-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.v2-card-grid .picker-card:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
+/* Version renders only when present (D12) — no dash, no placeholder — so this
+   never styles an empty span. */
+.picker-card-version {
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+/* A system fact does not borrow the author's weight (D23). */
+.picker-card-author.prov-system {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+/* Status and the one action, on one row. `margin-top: auto` pins it to the
+   bottom so a short description does not float the button up the card and
+   leave the grid ragged. */
+.picker-card-footrow {
+    margin-top: auto;
+    padding-top: var(--bn-space-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--bn-space-sm);
+}
+
+.picker-card-status {
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Switched off — the SAME knock-back as the rail and the page, on one token.
+   Deliberately NOT the shipped `.picker-card.disabled`, which also sets
+   pointer-events:none: a switched-off codebook stays fully interactive. */
+.v2-card-grid .picker-card.off2 .picker-card-title,
+.v2-card-grid .picker-card.off2 .picker-card-author,
+.v2-card-grid .picker-card.off2 .picker-card-desc,
+.v2-card-grid .picker-card.off2 .picker-card-status { color: var(--bn-colour-muted); }
+
+.v2-card-grid .picker-card.off2 { opacity: var(--bn-opacity-off); }
+
+/* The uninstall control is EXEMPT, on the card exactly as on the page: a
+   blanket knock-back removes precisely the one control that must stay
+   reachable on a disabled codebook (D27). */
+.v2-card-grid .picker-card.off2 .picker-card-toggle { opacity: 1; }

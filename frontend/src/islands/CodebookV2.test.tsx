@@ -85,3 +85,54 @@ describe("CodebookV2 — built-in is derived, not hardcoded", () => {
     expect(screen.getByTestId("bn-v2-rail-row-floor")).toHaveTextContent("Ikea tags");
   });
 });
+
+describe("D22 — Browse Library is the navigation", () => {
+  it("goes to the catalogue and back", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
+    expect(screen.getByTestId("bn-v2-card-nielsen")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("bn-v2-back"));
+    await waitFor(() => screen.getByTestId("bn-v2-page"));
+  });
+
+  it("a card opens that codebook's page", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    fireEvent.click(screen.getByTestId("bn-v2-card-nielsen"));
+    await waitFor(() => screen.getByTestId("bn-v2-page"));
+    expect(screen.getByTestId("bn-v2-rail-row-nielsen").className).toContain("sel");
+  });
+
+  it("a rail row leaves the catalogue", async () => {
+    // Otherwise selecting in the rail silently does nothing while the grid
+    // stays on screen — the rail is the OTHER route to a codebook (D22).
+    const { fireEvent } = await import("@testing-library/react");
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    expect(screen.getByTestId("bn-v2-card-nielsen")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("bn-v2-rail-row-uxr"));
+    await waitFor(() => screen.getByTestId("bn-v2-page"));
+    expect(screen.queryByTestId("bn-v2-browse-grid")).not.toBeInTheDocument();
+  });
+
+  it("the catalogue lists uninstalled codebooks the rail does not", async () => {
+    // The asymmetry is the point: the rail is what you have, the Library is
+    // what there is (D17 installed-only vs the catalogue).
+    const { fireEvent } = await import("@testing-library/react");
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    expect(screen.getByTestId("bn-v2-card-sentiment")).toBeInTheDocument();
+    expect(screen.getByTestId("bn-v2-card-uxr")).toBeInTheDocument();
+  });
+});

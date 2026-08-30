@@ -20,6 +20,7 @@ import {
 import type { CodebookResponse, TemplateListResponse } from "../utils/types";
 import { CodebookV2Rail, type RailBook } from "./CodebookV2Rail";
 import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
+import { CodebookV2Browse, type BrowseBook } from "./CodebookV2Browse";
 
 interface Props {
   projectId: string;
@@ -71,6 +72,11 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   const [templates, setTemplates] = useState<TemplateListResponse | null>(null);
   const [states, setStates] = useState<Record<string, boolean>>({});
   const [selected, setSelected] = useState("");
+  // Two views, no third. D22: a codebook is reached by a rail row or by a card,
+  // and Browse Library is the only route to the catalogue — no next/previous,
+  // no traversal. With the rail closed it is the ONLY way to another codebook,
+  // which is why its prominence is load-bearing rather than decorative.
+  const [view, setView] = useState<"page" | "browse">("page");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -157,6 +163,27 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     [codebook, current],
   );
 
+  // The catalogue is every template, installed or not — unlike the rail, which
+  // is installed-only (D17). That asymmetry is the point: the rail is what you
+  // have, the Library is what there is.
+  const browseBooks = useMemo((): BrowseBook[] => {
+    const installedIds = new Set(books.filter((b) => !b.floor).map((b) => b.id));
+    return (templates?.templates ?? []).map((t) => {
+      const prov = provenanceFor(t.id, t.author);
+      return {
+        id: t.id,
+        title: t.title,
+        provenance: prov.text,
+        provenanceIsPerson: prov.isPerson,
+        installed: installedIds.has(t.id),
+        enabled: states[t.id] !== false,
+        quotes: codebook?.framework_quote_totals?.[t.id] ?? 0,
+        tags: t.groups.reduce((n, g) => n + g.tags.length, 0),
+        template: t,
+      };
+    });
+  }, [templates, books, states, codebook]);
+
   const page: PageBook | null = current
     ? {
         ...current,
@@ -179,7 +206,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
             <button
               className="bn-btn bn-btn-secondary bn-btn-lg"
               data-testid="bn-v2-browse"
-              onClick={() => setSelected(selected)}
+              onClick={() => setView("browse")}
             >
               Browse Library
             </button>
@@ -189,12 +216,34 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         <div className="v2-layout">
           <CodebookV2Rail
             books={books}
-            selectedId={current?.id ?? ""}
-            onSelect={setSelected}
+            selectedId={view === "page" ? (current?.id ?? "") : ""}
+            onSelect={(id) => {
+              // A rail row is the other route to a codebook, and it leaves the
+              // catalogue — otherwise selecting in the rail would silently do
+              // nothing while the grid stayed on screen.
+              setSelected(id);
+              setView("page");
+            }}
             onToggle={onToggle}
             builtinIds={builtins}
           />
-          {page && (
+          {view === "browse" ? (
+            <div className="v2-main">
+              <CodebookV2Browse
+                books={browseBooks}
+                onOpen={(id) => {
+                  setSelected(id);
+                  setView("page");
+                }}
+                onBack={() => setView("page")}
+                // Phase 5 owns these: install-is-apply spends money and D20's
+                // uninstall stops preserving, so that is the phase where a bug
+                // loses work. Wiring them early and cheaply is the worst option.
+                onInstall={() => {}}
+                onUninstall={() => {}}
+              />
+            </div>
+          ) : page ? (
             <div className="v2-main">
               <CodebookV2Page
                 book={page}
@@ -208,7 +257,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
                 onUninstall={() => {}}
               />
             </div>
-          )}
+          ) : null}
         </div>
       </section>
     </div>

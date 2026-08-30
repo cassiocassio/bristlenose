@@ -93,3 +93,66 @@ delete v1.
 - **Q17c's extension model.** A wire change, not a database one, and not on this
   path.
 - **The label-vs-host link vector.** Presentational, open, needs drawing.
+
+## Session report — 30 Aug
+
+Phases **0** (seam) and **2** (rail) built; phase 1 collapsed into the B6 fix
+because the data audit had already answered what it was going to discover.
+Suites green throughout: **4286 pytest, 1617 vitest, ruff and tsc clean**.
+
+### What worked
+
+**The mechanical gates caught my own defects, within minutes, twice.**
+`test_theme_token_resolution.py` — written this morning for someone else's bug —
+failed on `--bn-off-track` in a CSS file I had *just* written, because the
+mockup skill documents a token that does not exist. And the self-review script
+found `BUILTIN_IDS` hardcoding three ids in the frontend. Reading found neither.
+That is now four defects this session caught by scripts and none by inspection.
+
+**Seam before components.** Phase 0 has no design content on purpose, and its
+most valuable test asserts that `/report/codebook` still resolves. Without that,
+"parallel surface" quietly becomes "rewrite in place" and nobody notices until
+the lens is broken.
+
+**Deriving over declaring.** `isBuiltIn` reads the absence of an author — exact
+across all nine codebooks and already on the wire — rather than restating
+knowledge the server has. The provenance line keyed on the same fact, so the two
+now agree by construction instead of by coincidence.
+
+**Scoping.** Every v2 rule sits under `.v2-rail`; a script confirms none of its
+seven classes collides with anything the shipped panel owns. The two lenses
+cannot fight.
+
+### Doubts — things that work and that I am not sure about
+
+1. **The `@ts-expect-error` on the platform switch.** `switch` is a real
+   attribute in Safari 17.4+ and absent from React's DOM typings, so rendering
+   the platform control needs an escape hatch. It will **break loudly when the
+   typings catch up**, which is the good failure — but it is still a suppression.
+2. **`isBuiltIn = !author` is exact today and wrong later.** A community
+   submission with no author lands under Default. Stated in the code, and the
+   real fix is a field on `TemplateOut`.
+3. **The optimistic toggle is silent on failure.** It re-reads the server state,
+   so the switch corrects itself — but the researcher sees a switch move and
+   move back with no explanation. That is the "fake success feedback" class in
+   reverse and it wants a message.
+4. **The rail navigates nowhere.** Phase 3 does not exist, so selecting a row
+   changes only the highlight. Correct for the phase; deeply unsatisfying to
+   click.
+5. **No i18n on any v2 string.** "Manual tags", "Default", "Frameworks", "Your
+   tags" are English literals. Deliberate while dev-gated — Specimen sets that
+   precedent — but it is *exactly* the hole `CLAUDE.md` warns about: a new
+   surface with zero `t()` call sites, invisible to `check-locales.py` because
+   English never had the keys either. **Phase 6 must not be the first time
+   anyone asks.**
+
+### Judgement calls owed
+
+| | what | why it is not mine |
+|---|---|---|
+| **1** | The four Indicative items — buttons, the `-sm`/`-lg` size axis, the Review split | Now judgeable side-by-side on real data, which is what D29 was for |
+| **2** | **Q17's channel** — and note my recommendation *moved* from the activity endpoint to the events log after the extension framing dissolved two of its three objections | A reversal after arguing the other way is not one to act on quietly |
+| **3** | The label-vs-host link vector | The fix is presentational and the shipped labels are editorial |
+| **4** | Whether `TemplateOut` carries `builtin` explicitly | A wire change to remove an inference |
+| **5** | **Q7** — nine short descriptions | Content, not plumbing |
+| **6** | **Q10** — where the Codebook lab button lives | A placement, which is a design choice |

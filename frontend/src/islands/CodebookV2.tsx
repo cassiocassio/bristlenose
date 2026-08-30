@@ -286,9 +286,20 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   const current = books.find((b) => b.id === selected) ?? books[0];
   const currentGroups = useMemo(
     () =>
-      (codebook?.groups ?? []).filter((g) =>
-        current?.floor ? !g.framework_id : g.framework_id === current?.id,
-      ),
+      (codebook?.groups ?? [])
+        .filter((g) =>
+          current?.floor ? !g.framework_id : g.framework_id === current?.id,
+        )
+        // The shipped lens's comparator, verbatim (CodebookPanel: `sortedGroups`).
+        // Uncategorised leads because it is where an untagged quote lands, and a
+        // researcher needs to see it without hunting. v2 did no sorting at all,
+        // so it rendered in API order and put Uncategorised LAST — visible the
+        // moment the two lenses were opened side by side on the same project,
+        // which is what D29 is for. Not new UX to decide; parity we had lost.
+        .sort((a, b) => {
+          if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
+          return a.order - b.order;
+        }),
     [codebook, current],
   );
 

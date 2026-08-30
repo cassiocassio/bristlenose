@@ -317,3 +317,32 @@ describe("CodebookV2 — the Review door (Q15)", () => {
     expect(args.some((a) => a === "nielsen")).toBe(true);
   });
 });
+
+describe("group order matches the shipped lens", () => {
+  it("puts Uncategorised first, then by order", async () => {
+    // Found by opening both lenses on the same project: v1 hoists the default
+    // group, v2 did no sorting and rendered in API order, so Uncategorised
+    // came LAST. Two lenses disagreeing about where the untagged bucket lives
+    // is exactly the drift D29's side-by-side exists to catch.
+    const api = await import("../utils/api");
+    vi.mocked(api.getCodebook).mockResolvedValueOnce({
+      ...codebook,
+      groups: [
+        { id: 9, name: "Zebra", subtitle: "", colour_set: "ux", order: 2, tags: [],
+          total_quotes: 0, is_default: false, framework_id: null },
+        { id: 8, name: "Uncategorised", subtitle: "", colour_set: "ux", order: 9,
+          tags: [], total_quotes: 0, is_default: true, framework_id: null },
+        { id: 7, name: "Apple", subtitle: "", colour_set: "ux", order: 1, tags: [],
+          total_quotes: 0, is_default: false, framework_id: null },
+      ],
+    } as never);
+
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-page"));
+
+    const titles = Array.from(
+      document.querySelectorAll(".v2-groups .group-title"),
+    ).map((n) => n.textContent);
+    expect(titles).toEqual(["Uncategorised", "Apple", "Zebra"]);
+  });
+});

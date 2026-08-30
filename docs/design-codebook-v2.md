@@ -2681,3 +2681,80 @@ extension-specific code either, only a value.
 the extension and instance in the sentence — *"Plato"*, not *"a codebook"* —
 which is the naming gap Q17c identified. It is one or two values on the event,
 not a slot per extension.
+
+### Q17f — one sequence or several: the UX consequences
+
+The question only arises because **two different acts produce autocode work**,
+and they are not alike.
+
+| | **Install** | **Reapply** |
+|---|---|---|
+| trigger | researcher clicks | automatic, on `run_completed` |
+| scope | one codebook | every applied ∩ linked ∩ enabled framework |
+| review | proposals to review | **none** — accepts at the job's stored cutoff |
+| cost | knowingly spent | spent without being asked |
+| today | toast + chip in the SPA | **completely silent** |
+
+In the burger framing: install is ordering fries. Reapply is the refill that
+arrives with the meal — you did not order it, and it exists to keep what you
+already have true.
+
+**The real UX problem is not granularity, it is that reapply is invisible.**
+`app.py:963` guards it — *"a re-apply failure never breaks the import/publish
+contract"* — so a failure is logged and nothing else. And a silent reapply
+failure is **worse than a failed install**, because a failed install is
+self-evident (the codebook has no tags at all) whereas a failed reapply leaves a
+codebook **partially applied across sessions**: sessions 1–12 coded, sessions
+13–18 not, nothing on screen distinguishing them. The researcher reads a
+codebook as complete when it has a hole in it. That is a data-integrity problem
+wearing the clothes of a background chore, and it is the thing worth fixing
+whatever the sequence shape.
+
+#### Option A — one sequence per codebook
+
+Three frameworks reapplied = three lifecycles.
+
+- **Against:** the researcher performed *one* act — they added sessions — and
+  would watch three things happen that they never asked for. Progress becomes
+  three streams the single row has to roll up anyway.
+- **For:** failure and retry are natively per codebook, which is where the money
+  is.
+
+#### Option B — one sequence covering the reapply
+
+One act, one lifecycle: *"keeping 3 codebooks current on 12 new sessions."*
+
+- **For:** matches what the researcher did. Per-codebook detail lives in
+  `failed[]`, exactly as a run's summary carries per-session failures.
+- **Cost:** `StageFailure` must name the codebook — the gap Q17c found.
+
+#### The money settles it, and it closes the gap as *required*
+
+If three reapply and one fails on a rate limit, retrying the sequence re-spends
+on the two that worked. **So per-codebook identity is mandatory either way** —
+which turns the `StageFailure` naming gap from an open question into a
+requirement, and removes A's only advantage. **B, with the codebook named in
+`failed[]`.**
+
+That is also the shape the run already uses: one sequence, a summary naming
+per-session failures, and recovery aimed at the named entries rather than at the
+whole.
+
+#### And one option the trigger rules out
+
+Reapply cannot be folded into the run's own sequence. It fires **from**
+`_on_run_completed`, after the terminus is written, and the log is append-only.
+Deferring the terminus until reapply finished would be worse than the problem:
+**the SPA mounts on `run_completed`**, so the researcher's report would be held
+hostage to a maintenance pass they did not ask for.
+
+#### The UX that falls out
+
+- **Install failure** — as now: toast in the SPA, and (when the Mac half lands)
+  the row goes `.partial` with the codebook named.
+- **Reapply failure** — the same `.partial`, but the sentence has to carry what
+  is actually wrong: not *"tagging failed"* but *"Nielsen is missing from 6
+  sessions."* The consequence is a hole in a codebook, and naming the codebook
+  without naming the hole would still leave the researcher unable to trust it.
+- **Reapply success stays silent.** Maintenance that worked is not news, and
+  Schema E's clean row already says so by showing nothing.

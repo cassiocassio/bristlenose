@@ -231,3 +231,51 @@ describe("the stat line can count", () => {
     expect(screen.getByText(/1 tag on 1 quote/)).toBeInTheDocument();
   });
 });
+
+describe("Q14 — export mode hides the doors it cannot honour", () => {
+  // v2's other controls escape by accident of the extraction: Uninstall carries
+  // `.framework-remove-btn` and the authoring carries `.tag-add-row`, both of
+  // which theme/templates/export.css already hides. The Review door has no such
+  // class, so nothing was hiding it — and its modal reads a SERVER_ONLY
+  // endpoint and offers a write, neither of which exists in a leave-behind.
+
+  const renderReadOnly = (b = book()) =>
+    render(
+      <CodebookV2Page
+        book={b} groups={[group(3)]}
+        onReview={noop} onInstall={noop} onUninstall={noop}
+        authoring={inertAuthoring} allTagNames={[]} readOnly
+      />,
+    );
+
+  it("hides the Review door", () => {
+    renderReadOnly();
+    expect(screen.queryByTestId("bn-v2-review")).not.toBeInTheDocument();
+  });
+
+  it("hides Install and Uninstall", () => {
+    renderReadOnly();
+    expect(screen.queryByTestId("bn-v2-install")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bn-v2-uninstall")).not.toBeInTheDocument();
+  });
+
+  it("still shows the counts — read-only is not blank", () => {
+    // Hiding the control must not hide the information. A client reading the
+    // export should still see what the codebook found.
+    renderReadOnly();
+    expect(screen.getByText(/3 tags on 72 quotes/)).toBeInTheDocument();
+  });
+
+  it("keeps the door when NOT read-only", () => {
+    // The gate must not be a mute button — without this the first three tests
+    // would pass on a component that never renders a Review door at all.
+    render(
+      <CodebookV2Page
+        book={book()} groups={[group(3)]}
+        onReview={noop} onInstall={noop} onUninstall={noop}
+        authoring={inertAuthoring} allTagNames={[]}
+      />,
+    );
+    expect(screen.getAllByTestId("bn-v2-review").length).toBeGreaterThan(0);
+  });
+});

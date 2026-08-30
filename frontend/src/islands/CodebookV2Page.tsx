@@ -94,7 +94,18 @@ const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 const canInstall = (b: PageBook) => !b.floor && b.id !== "sentiment";
 
 /** A door onto nothing is worse than no door (**D26**). */
-const hasReviewDoor = (b: PageBook, tagCount: number) =>
+/** Q14 — the door is hidden in an export, not disabled.
+ *
+ * The threshold modal reads `/autocode/proposals`, which is SERVER_ONLY and so
+ * absent from a leave-behind, and its primary act is a write. Left visible, a
+ * client opening the exported report offline would find a control that opens a
+ * dialog which cannot load and cannot apply. v2's other controls escape this by
+ * accident of the extraction — Uninstall carries `.framework-remove-btn` and
+ * the authoring carries `.tag-add-row`, both of which `theme/templates/export.css`
+ * already hides — but the Review door has no such class, so it needs the gate.
+ */
+const hasReviewDoor = (b: PageBook, tagCount: number, readOnly: boolean) =>
+  !readOnly &&
   !b.floor && b.id !== "sentiment" && b.installed && tagCount > 0;
 
 export function CodebookV2Page({
@@ -128,7 +139,7 @@ export function CodebookV2Page({
             )}
           </div>
 
-          {hasReviewDoor(book, tagCount) ? (
+          {hasReviewDoor(book, tagCount, readOnly) ? (
             // The verb is the button; the counts are text on its baseline. A
             // sentence wearing a border is not a control, and it read as more
             // prominent than Install, which it must not be.

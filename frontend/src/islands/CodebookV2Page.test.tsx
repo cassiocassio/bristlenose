@@ -1,7 +1,28 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
+import type { CodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import type { CodebookGroupResponse } from "../utils/types";
+
+/** Inert authoring — these tests are about D20/D26/D27, not about editing. */
+const inertAuthoring: CodebookAuthoring = {
+  groupProps: {
+    onUpdateGroup: vi.fn(),
+    onDeleteGroup: vi.fn(),
+    onCreateTag: vi.fn(),
+    onDeleteTag: vi.fn(),
+    onRenameTag: vi.fn(),
+    onDragStart: vi.fn(),
+    onDragEnd: vi.fn(),
+    onDropTag: vi.fn(),
+    onMergeDrop: vi.fn(),
+  },
+  onCreateGroup: vi.fn(),
+  onDropNewGroup: vi.fn(),
+  pendingMerge: null,
+  onConfirmMerge: vi.fn(),
+  onCancelMerge: vi.fn(),
+};
 
 function book(over: Partial<PageBook> = {}): PageBook {
   return {
@@ -35,6 +56,7 @@ const renderPage = (b: PageBook, groups: CodebookGroupResponse[] = [group(3)]) =
     <CodebookV2Page
       book={b} groups={groups}
       onReview={noop} onInstall={noop} onUninstall={noop}
+      authoring={inertAuthoring} allTagNames={[]}
     />,
   );
 
@@ -122,6 +144,46 @@ describe("nothing re-implements a tag row", () => {
     expect(container.querySelector(".codebook-group")).toBeInTheDocument();
     expect(container.querySelectorAll(".tag-row")).toHaveLength(3);
     expect(container.querySelector(".tag-bar-area")).toBeInTheDocument();
+  });
+});
+
+describe("only the floor grows groups", () => {
+  const floorGroup = (): CodebookGroupResponse => ({
+    ...group(1, "Your tags"),
+    framework_id: null,
+    is_default: true,
+  });
+
+  it("offers the new-group card on the floor", () => {
+    const { container } = renderPage(
+      book({ id: "", floor: true, title: "Your tags", provenance: "" }),
+      [floorGroup()],
+    );
+    expect(container.querySelector(".new-group-placeholder")).toBeInTheDocument();
+  });
+
+  it("does not offer it on a framework — that structure is its author's", () => {
+    const { container } = renderPage(book());
+    expect(container.querySelector(".new-group-placeholder")).toBeNull();
+  });
+
+  it("keeps the floor authorable when it has no tags", () => {
+    // D26's bleak sentence governs "a codebook with no tags"; the floor is not
+    // a codebook you installed, it is the surface you author. Replacing its
+    // controls with a sentence would leave a researcher no way to begin —
+    // a state the shipped lens never puts them in.
+    const { container } = renderPage(
+      book({ id: "", floor: true, title: "Your tags", provenance: "" }),
+      [{ ...floorGroup(), tags: [] }],
+    );
+    expect(screen.queryByTestId("bn-v2-empty")).not.toBeInTheDocument();
+    expect(container.querySelector(".new-group-placeholder")).toBeInTheDocument();
+    expect(container.querySelector(".tag-add-row")).toBeInTheDocument();
+  });
+
+  it("still says so, bleakly, for a framework with no tags", () => {
+    renderPage(book(), []);
+    expect(screen.getByTestId("bn-v2-empty")).toBeInTheDocument();
   });
 });
 

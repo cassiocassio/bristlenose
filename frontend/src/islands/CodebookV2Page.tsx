@@ -8,22 +8,32 @@
  * shapes (**D20**), provenance (**D23**), the bleak empty state (**D26**), and
  * the Review door leading to the existing modal rather than a route (**Q15**).
  *
- * **Nothing here re-implements a tag row.** `Badge`, `MicroBar` and the colour
- * helpers are the shipped components, and the group markup emits the shipped
- * unscoped classes (`.codebook-group`, `.tag-row`, `.tag-bar-area`) so the
- * histogram alignment this repo has already paid for is inherited rather than
- * approximated. The one thing v2 adds CSS for is the page head, which has no
- * shipped equivalent.
+ * **Nothing here re-implements a tag row, or a group.** The cards are
+ * `CodebookGroupColumn` from `components/CodebookAuthoring.tsx` — the shipped
+ * lens's own component, not a copy of it — so the histogram alignment, the
+ * inline rename, the drag-to-merge and every confirmation this repo has already
+ * paid for are inherited rather than approximated. The one thing v2 adds CSS
+ * for is the page head, which has no shipped equivalent.
  *
- * Scope: the **read** surface. The floor's authoring apparatus — add and delete
- * a group, add, rename and delete a tag, drag between groups — is lifted from
- * the shipped panel in a later step, deliberately: it is ~400 lines of
- * drag-and-drop whose value is that it already works.
+ * The page had its own read-only `Group`/`TagRow` while the authoring apparatus
+ * was still inside the shipped island; both were deleted on 30 Aug 2026 when it
+ * came out. Two renderers for one card is the drift this lens exists to avoid.
+ *
+ * **Authoring follows the group, not the page.** `CodebookGroupColumn` reads
+ * `is_default` / `framework_id` / export mode and decides for itself what is
+ * editable, so a framework's groups are read-only here for exactly the reason
+ * they are read-only in the shipped lens — one rule, in one place, rather than
+ * each lens remembering.
  */
 
-import { Badge } from "../components/Badge";
-import { MicroBar } from "../components/MicroBar";
-import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
+// By path, not through the `components` barrel: the barrel is in the chunk the
+// landing route loads, and this apparatus is reachable only from the two lazy
+// codebook islands.
+import {
+  CodebookGroupColumn,
+  NewGroupPlaceholder,
+} from "../components/CodebookAuthoring";
+import type { CodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import { safeUrlOrNull } from "../utils/safeUrl";
 import type { CodebookGroupResponse, TemplateOut } from "../utils/types";
 
@@ -50,6 +60,14 @@ interface Props {
   onReview: (frameworkId: string) => void;
   onInstall: (frameworkId: string) => void;
   onUninstall: (frameworkId: string) => void;
+  /**
+   * The shared authoring apparatus. Passed for every codebook, not just the
+   * floor: the group column knows which of its own controls apply, and a lens
+   * that decided instead would be a second place for that rule to be wrong.
+   */
+  authoring: CodebookAuthoring;
+  /** Every tag name in the codebook — the add-tag field excludes duplicates. */
+  allTagNames: string[];
   /** Export mode — the artefact is read-only, so write controls are hidden. */
   readOnly?: boolean;
 }
@@ -66,76 +84,14 @@ const canInstall = (b: PageBook) => !b.floor && b.id !== "sentiment";
 const hasReviewDoor = (b: PageBook, tagCount: number) =>
   !b.floor && b.id !== "sentiment" && b.installed && tagCount > 0;
 
-function TagRow({
-  name,
-  count,
-  tentative,
-  max,
-  colourSet,
-  index,
-}: {
-  name: string;
-  count: number;
-  tentative: number;
-  max: number;
-  colourSet: string;
-  index: number;
-}) {
-  return (
-    <div className="tag-row">
-      <div className="tag-name-area">
-        <Badge text={name} variant="readonly" colour={getTagBg(colourSet, index)} />
-      </div>
-      <div className="tag-bar-area">
-        <MicroBar
-          value={max > 0 ? count / max : 0}
-          tentativeValue={max > 0 ? tentative / max : 0}
-          colour={getBarColour(colourSet)}
-          title={`${count} quotes${tentative ? `, ${tentative} undecided` : ""}`}
-        />
-        <span className="group-total-count">{count}</span>
-      </div>
-    </div>
-  );
-}
-
-function Group({ group }: { group: CodebookGroupResponse }) {
-  // The bar scale is the group's own busiest tag, matching the shipped panel:
-  // a framework-wide scale would flatten a group whose counts are all small,
-  // which is the comparison a researcher is actually making inside one card.
-  const max = Math.max(
-    1,
-    ...group.tags.map((t) => t.count + (t.tentative_count ?? 0)),
-  );
-  return (
-    <div className="codebook-group" style={{ background: getGroupBg(group.colour_set) }}>
-      <div className="group-title-area">
-        <div className="group-title">
-          <span className="group-title-text">{group.name}</span>
-        </div>
-        {group.subtitle && <div className="group-subtitle">{group.subtitle}</div>}
-      </div>
-      {group.tags.map((t, i) => (
-        <TagRow
-          key={t.id}
-          name={t.name}
-          count={t.count}
-          tentative={t.tentative_count ?? 0}
-          max={max}
-          colourSet={group.colour_set}
-          index={t.colour_index ?? i}
-        />
-      ))}
-    </div>
-  );
-}
-
 export function CodebookV2Page({
   book,
   groups,
   onReview,
   onInstall,
   onUninstall,
+  authoring,
+  allTagNames,
   readOnly = false,
 }: Props) {
   const tagCount = groups.reduce((n, g) => n + g.tags.length, 0);
@@ -245,17 +201,36 @@ export function CodebookV2Page({
         </div>
       )}
 
-      {tagCount === 0 ? (
+      {tagCount === 0 && !book.floor ? (
         // Bleak on purpose (D26): no illustration, no call to action, no
         // reframing of the absence as an opportunity. The fact is the message.
+        //
+        // The floor is exempt, and not as a softening. D26 governs "a codebook
+        // with no tags", and the floor is not a codebook you installed — it is
+        // the surface you author. Replacing its controls with a sentence would
+        // leave a researcher with no way to begin, which is precisely the state
+        // the shipped lens never puts them in.
         <div className="pg-empty" data-testid="bn-v2-empty">
           This codebook has no tags.
         </div>
       ) : (
         <div className="v2-groups">
           {groups.map((g) => (
-            <Group key={g.id} group={g} />
+            <CodebookGroupColumn
+              key={g.id}
+              group={g}
+              allTagNames={allTagNames}
+              {...authoring.groupProps}
+            />
           ))}
+          {/* Only the floor grows groups. A framework's structure is its
+              author's; the card would be an offer we must not make. */}
+          {book.floor && (
+            <NewGroupPlaceholder
+              onCreateGroup={authoring.onCreateGroup}
+              onDropNewGroup={authoring.onDropNewGroup}
+            />
+          )}
         </div>
       )}
     </div>

@@ -8,17 +8,20 @@ import { autocodeRefusal } from "../utils/autocodeRefusal";
 import type { ApiError } from "../utils/api";
 import { isExportMode } from "../utils/exportData";
 import { ct } from "../utils/platformTranslation";
+import { ConfirmDialog, SectionHeading, ThresholdReviewModal } from "../components";
+// The floor's authoring apparatus is shared with the v2 lens. It lives in its
+// own module, not here, so that there is one implementation of
+// add/rename/delete/drag/merge rather than two.
+//
+// Imported by path rather than through the `components` barrel *deliberately*:
+// the barrel rides in the always-loaded chunk, and this apparatus is reachable
+// only from two lazy codebook islands. Through the barrel it cost the landing
+// route ~7 kB gzipped for markup no first paint renders.
 import {
   CodebookGroupColumn,
-  ConfirmDialog,
   MergeConfirm,
   NewGroupPlaceholder,
-  SectionHeading,
-  ThresholdReviewModal,
-} from "../components";
-// The floor's authoring apparatus is shared with the v2 lens — see
-// components/CodebookAuthoring.tsx. It lives there, not here, so that there is
-// one implementation of add/rename/delete/drag/merge rather than two.
+} from "../components/CodebookAuthoring";
 import { useCodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import { addJob } from "../contexts/ActivityStore";
 import {

@@ -4,14 +4,6 @@ export { Annotation } from "./Annotation";
 export { AutoCodeReportModal } from "./AutoCodeReportModal";
 export { AutoCodeToast } from "./AutoCodeToast";
 export { Badge } from "./Badge";
-export {
-  CodebookGroupColumn,
-  GroupSubtitle,
-  MergeConfirm,
-  NewGroupPlaceholder,
-  TagRow,
-} from "./CodebookAuthoring";
-export type { CodebookGroupHandlers } from "./CodebookAuthoring";
 export { ConfidenceHistogram } from "./ConfidenceHistogram";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { ContextSegment } from "./ContextSegment";

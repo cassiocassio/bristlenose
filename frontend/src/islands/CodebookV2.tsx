@@ -31,6 +31,9 @@ import { CodebookV2Rail, type RailBook } from "./CodebookV2Rail";
 import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
 import { CodebookV2Browse, type BrowseBook } from "./CodebookV2Browse";
 import { CodebookV2UninstallSheet } from "../components/CodebookV2UninstallSheet";
+// By path, not through the `components` barrel — see CodebookPanel.tsx.
+import { MergeConfirm } from "../components/CodebookAuthoring";
+import { useCodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import { isExportMode } from "../utils/exportData";
 
 interface Props {
@@ -238,6 +241,16 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
       .catch((e: Error) => setError(e.message));
   }, [pendingUninstall, reload]);
 
+  // The floor's authoring apparatus — the same hook the shipped lens drives, so
+  // add/rename/delete/drag/merge are one implementation rather than two that
+  // agree today. Every group in the codebook, framework ones included: a new
+  // group's colour set is chosen by what is unused, and asking only the groups
+  // on screen would hand out one a framework already holds.
+  const authoring = useCodebookAuthoring({
+    groups: codebook?.groups,
+    onChanged: reload,
+  });
+
   const onToggle = useCallback((id: string, enabled: boolean) => {
     // Optimistic: the switch is the researcher's statement, not a request for
     // permission. A failure re-reads rather than silently reverting.
@@ -355,6 +368,8 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
               <CodebookV2Page
                 book={page}
                 groups={currentGroups}
+                authoring={authoring}
+                allTagNames={codebook?.all_tag_names ?? []}
                 onReview={() => {
                   // Q15: the threshold review stays the EXISTING modal. Phase 5
                   // wires it; opening a half-built one would be worse than not
@@ -368,6 +383,14 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
           ) : null}
         </div>
       </section>
+      {/* Merge confirmation — centred over the lens, not inside a card, because
+          it names two tags that may sit in different groups. Same component the
+          shipped lens renders. */}
+      <MergeConfirm
+        pending={authoring.pendingMerge}
+        onConfirm={authoring.onConfirmMerge}
+        onCancel={authoring.onCancelMerge}
+      />
       {pendingUninstall && (
         <CodebookV2UninstallSheet
           title={pendingUninstall.title}

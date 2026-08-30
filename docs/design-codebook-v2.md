@@ -2793,3 +2793,46 @@ Same for any other breaking change to codebook state: free until GA.
 
 **What stays owed at GA**, and is now explicitly out of scope here: a real V1 →
 V2 path for projects someone else owns.
+
+### D29 — v2 lands as a parallel surface behind a flag, not a rewrite in place
+
+Settled 30 Aug. `CodebookPanel.tsx` is **1,545 lines** and ten files reference it
+(`QuoteThemes`, `QuoteSections`, `TagSidebar`, `SidebarStore`, `main.tsx`,
+`codebookDot`, `colours`, and three test files). Rewriting that in place means
+the lens is broken for the whole of the build.
+
+**The mounting pattern already exists, twice.** `codebook-lab` and the chat lens
+are each *"one route plus one lab page"* behind a **settings flag rather than
+`--dev`** — `app.py:254` and `:261` — deliberately, *"so it ships in the bundled
+desktop sidecar and plain `serve`"*. The cohort can reach a flagged surface; a
+`--dev` one they cannot.
+
+**But v2 is not a lab, and should not borrow that framing.** The chat-lens module
+says its page is *"deliberately ugly (codebook-lab precedent)"* because what a lab
+tests is a hypothesis. v2 is the **replacement**, built to production fidelity.
+Same mounting, opposite fidelity expectation — worth saying out loud so nobody
+reads "flagged surface" as "rough".
+
+**Why parallel beats a branch.** A branch gives isolation; it does not give
+**comparison**, and comparison is the thing actually needed. The house default is
+trunk anyway — *"a branch is free; a worktree costs an env"* — and the two worst
+recorded incidents in this repo came from the multi-worktree pattern.
+
+**Side-by-side is not a convenience, it is the mechanism that enforces the
+no-invention rule.** Every prototype defect this session came from not looking at
+the original: `.add-btn` invented and described as a lift; `.bn-btn`'s base rule
+never carried across; `filter: saturate()` used on two surfaces and present in
+none; a "consistency fix" that unified two inventions. All four are *failures to
+look*, and all four are prevented by the shipped lens being one click away on the
+same project with the same data.
+
+**And it makes the four Indicative items decidable.** A button treatment cannot
+be ratified from a static mockup on fixture data. It can be ratified from the
+real control beside the shipped one.
+
+**The risk, and its mitigation.** A parallel implementation becomes permanent —
+the repo already carries that scar, and the rule *"actively remove static render,
+don't find clever uses"* exists because of it. So **name the deletion trigger
+now**: v1 is deleted when v2 reaches parity on the coverage audit's inventory and
+the flag defaults on. Not "when we're happy" — a condition already written down
+and checkable.

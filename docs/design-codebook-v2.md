@@ -2303,3 +2303,83 @@ Fifteen strings across all 21 full locales; `check-locales.py` clean.
 `bristlenose/server/` writes to the events log, so none of this reaches the
 sidebar glyph or popover), and a durable home for configuration refusals, which
 a four-second toast is not.
+
+## Q17 in detail — which channel carries a job's state to the Mac
+
+Measured 30 Aug. I had said the events log "isn't a missing wire, it's a
+decision". That is right, but I understated the log: **three of its four readers
+tolerate a new event type by construction**, so option A is more viable than I
+implied. The objections to it are elsewhere.
+
+### Option A — append a job event to `pipeline-events.jsonl`
+
+**Safer than expected.** Every reader that derives run *state* is type-filtered,
+not tail-based:
+
+- `app.py:1022` scans backwards **for a terminus type** and skips anything else.
+- `event_watcher.py` dispatches only on `RUN_COMPLETED`.
+- Swift `EventLogReader`'s `default:` arm logs and returns `nil`, annotated
+  *"Unknown event type — likely forward-compat"*.
+- `read_events` "skips malformed", so even an unparseable line is inert.
+
+**One real trap.** `tail_run_state` (`events.py:708`) walks the tail for the most
+recent *lifecycle* event, skipping only `RunProgressEvent`. A new type would
+become `last_event` and **mask the real terminus** — which is precisely the bug
+its own comment records as *"Finding 1"*. Adding to that skip list is one line;
+noticing it is the whole problem, and this would be the second recurrence.
+
+**Two objections that are not mechanical.**
+
+1. **The schema would have to lie.** Every event carries a `run_id`. AutoCode has
+   no run. Either mint a synthetic one — a lie every reader inherits, including
+   `PipelineRunner.swift:621`, which reads `tailEvent(at:)?.runId` — or make it
+   nullable, weakening it for all five existing event types to serve a sixth.
+2. **Governance.** `pipeline-events.jsonl` is a **named re-identification
+   surface**, in `.bristlenose/` beside `pii_summary.txt`, with retention
+   obligations and a 64 KB Swift read window. Job telemetry is new content in a
+   file whose contents are deliberately constrained.
+
+**Cost:** a new event type is the popover doc's **five-site change**, plus the
+Swift mirror, plus a `pipeline-summary-contract.json` bump, plus the skip-list
+fix.
+
+### Option B — the Mac polls the per-framework status route
+
+`failure_kind` already ships on `/autocode/{framework_id}/status`, so the server
+work is **done**. But the Mac would have to know *which* frameworks to poll, at N
+requests per project, and then synthesise a project-level rollup the server
+already holds. Discovery and lifecycle are exactly what the events log gives for
+free, and this option gives neither.
+
+### Option C — a project-level activity endpoint — RECOMMENDED
+
+One authed `GET /api/projects/{id}/activity`: the jobs currently running or
+recently failed, each with its `failure_kind`. The Mac polls **one URL per
+project** and renders; the server owns the rollup.
+
+**Precedented, not invented.** `ServeManager.swift:1119` already polls
+`http://127.0.0.1:<port>/api/agent-activity` behind the bearer and drives the
+sidebar antenna from it — same transport, same authentication, same surface,
+same "server computes, host renders" split. `health.py:146` even records *why*
+that route sits behind the bearer rather than on auth-exempt `/api/health`,
+which is the same reasoning a job-activity route needs.
+
+No new event type, no weakened schema, nothing added to a re-identification
+surface. And it generalises: clip export and Miro are jobs too.
+
+### The question that actually decides it
+
+**Is a failed AutoCode job a *record* or a *status*?**
+
+The events log is a record — append-only, reconstructible from disk, survives a
+restart, and is what a support bundle would carry. If a researcher needs to know
+next week that a job failed, it belongs there and option A is right despite the
+cost.
+
+If it is live status — something they need *now*, on screen, while it is true —
+then the job row in SQLite already persists it and the log adds nothing but
+obligations. **That is the reading I would take**, which is why C is the
+recommendation.
+
+The two are not exclusive. C can ship now against work already done; A remains
+open if the record turns out to matter.

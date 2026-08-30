@@ -599,6 +599,7 @@
       "deny": "Weiger"
     },
     "toast": {
+      "donePartial": "{{processed}} van {{total}} citaten getagd \u2014 sommige batches zijn mislukt.",
       "progress": "✦ {{processed}}/{{total}} citaten coderen…",
       "done": "✦ {{total}} citaten gecodeerd in {{duration}}.",
       "report": "Rapport",

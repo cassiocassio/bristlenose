@@ -599,6 +599,7 @@
       "deny": "Reddet"
     },
     "toast": {
+      "donePartial": "{{total}} al\u0131nt\u0131dan {{processed}} tanesi etiketlendi \u2014 baz\u0131 gruplar ba\u015far\u0131s\u0131z oldu.",
       "progress": "✦ {{total}} alıntıdan {{processed}} tanesi AutoCode ile kodlanıyor…",
       "done": "✦ {{total}} alıntı {{duration}} içinde AutoCode ile kodlandı.",
       "report": "Rapor",

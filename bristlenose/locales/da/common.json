@@ -599,6 +599,7 @@
       "deny": "Afvis"
     },
     "toast": {
+      "donePartial": "{{processed}} af {{total}} citater tagget \u2013 nogle batches mislykkedes.",
       "progress": "✦ AutoCoder {{processed}}/{{total}} citater…",
       "done": "✦ AutoCodede {{total}} citater på {{duration}}.",
       "report": "Rapport",

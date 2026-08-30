@@ -573,6 +573,7 @@
       "deny": "거부"
     },
     "toast": {
+      "donePartial": "\uc778\uc6a9\ubb38 {{total}}\uac1c \uc911 {{processed}}\uac1c\uc5d0 \ud0dc\uadf8\ub97c \uc9c0\uc815\ud588\uc2b5\ub2c8\ub2e4. \uc77c\ubd80 \ubc30\uce58\uac00 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.",
       "progress": "✦ AutoCode {{processed}}/{{total}} 인용문 처리 중…",
       "done": "✦ {{duration}}에 {{total}}개 인용문 AutoCode 완료.",
       "report": "보고서",

@@ -599,6 +599,7 @@
       "deny": "Hylkää"
     },
     "toast": {
+      "donePartial": "{{processed}}/{{total}} sitaattia merkitty \u2013 osa erist\u00e4 ep\u00e4onnistui.",
       "progress": "✦ AutoCode-merkitään {{processed}}/{{total}} sitaattia…",
       "done": "✦ AutoCode-merkitty {{total}} sitaattia ajassa {{duration}}.",
       "report": "Raportti",

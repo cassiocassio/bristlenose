@@ -599,6 +599,7 @@
       "deny": "Avvisa"
     },
     "toast": {
+      "donePartial": "{{processed}} av {{total}} citat taggade \u2013 vissa satser misslyckades.",
       "progress": "✦ AutoCodar {{processed}}/{{total}} citat…",
       "done": "✦ AutoCodade {{total}} citat på {{duration}}.",
       "report": "Rapport",

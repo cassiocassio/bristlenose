@@ -87,6 +87,55 @@ describe("AutoCodeToast", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
+  it("a completed job that tagged a subset says so", async () => {
+    // autocode.py gathers batches with return_exceptions=True and carries on
+    // past a failure, so a job can COMPLETE having tagged fewer quotes than it
+    // set out to. processed_quotes only increments after a batch succeeds.
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "completed",
+        total_quotes: 72,
+        processed_quotes: 58,
+      }),
+    );
+
+    render(
+      <AutoCodeToast
+        frameworkId="garrett"
+        onComplete={vi.fn()}
+        onOpenReport={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    await act(async () => {});
+
+    expect(screen.getByText(/58 of 72/)).toBeInTheDocument();
+  });
+
+  it("a fully-processed job does not claim a partial", async () => {
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "completed",
+        total_quotes: 72,
+        processed_quotes: 72,
+      }),
+    );
+
+    render(
+      <AutoCodeToast
+        frameworkId="garrett"
+        onComplete={vi.fn()}
+        onOpenReport={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    await act(async () => {});
+
+    expect(screen.queryByText(/of 72 quotes —/)).not.toBeInTheDocument();
+  });
+
   it("says why the job failed, from failure_kind", async () => {
     mockGetStatus.mockResolvedValue(
       makeStatus({

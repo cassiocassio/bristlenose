@@ -599,6 +599,7 @@
       "deny": "Deny"
     },
     "toast": {
+      "donePartial": "Tagged {{processed}} of {{total}} quotes \u2014 some batches failed.",
       "progress": "✦ AutoCoding {{processed}}/{{total}} quotes…",
       "done": "✦ AutoCoded {{total}} quotes in {{duration}}.",
       "report": "Report",

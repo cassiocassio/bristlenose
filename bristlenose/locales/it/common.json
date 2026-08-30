@@ -599,6 +599,7 @@
       "deny": "Rifiuta"
     },
     "toast": {
+      "donePartial": "Etichettate {{processed}} citazioni su {{total}}: alcuni lotti non sono riusciti.",
       "progress": "✦ AutoCode di {{processed}}/{{total}} citazioni…",
       "done": "✦ AutoCode di {{total}} citazioni in {{duration}}.",
       "report": "Report",

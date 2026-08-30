@@ -599,6 +599,7 @@
       "deny": "Recusar"
     },
     "toast": {
+      "donePartial": "{{processed}} de {{total}} cita\u00e7\u00f5es etiquetadas \u2014 alguns lotes falharam.",
       "progress": "✦ AutoCode em andamento {{processed}}/{{total}} citações…",
       "done": "✦ AutoCode aplicado a {{total}} citações em {{duration}}.",
       "report": "Relatório",

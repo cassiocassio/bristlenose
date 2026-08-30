@@ -130,3 +130,12 @@
         }
     }
 }
+
+/* A job that completed having tagged a subset — autocode.py gathers batches
+   with return_exceptions=True and carries on past a failure, so processed
+   quotes can fall short of total. Complete, usable, and not what was asked
+   for: WARNING, per the kind rule in design-pipeline-diagnostic-popover.md. */
+.toast-warning {
+    color: var(--bn-colour-warning);
+    font-weight: var(--bn-weight-strong);
+}

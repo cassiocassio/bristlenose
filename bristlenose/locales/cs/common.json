@@ -646,6 +646,7 @@
       "deny": "Odmítnout"
     },
     "toast": {
+      "donePartial": "Ozna\u010deno {{processed}} z {{total}} citac\u00ed \u2013 n\u011bkter\u00e9 d\u00e1vky selhaly.",
       "progress": "✦ Automatické kódování {{processed}}/{{total}} citátů…",
       "done": "✦ Automaticky okódováno {{total}} citátů za {{duration}}.",
       "report": "Zpráva",

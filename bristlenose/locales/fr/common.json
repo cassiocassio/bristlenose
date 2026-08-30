@@ -599,6 +599,7 @@
       "deny": "Refuser"
     },
     "toast": {
+      "donePartial": "{{processed}} citations sur {{total}} \u00e9tiquet\u00e9es \u2014 certains lots ont \u00e9chou\u00e9.",
       "progress": "✦ AutoCodage {{processed}}/{{total}} verbatim…",
       "done": "✦ AutoCodés {{total}} verbatim en {{duration}}.",
       "report": "Rapport",

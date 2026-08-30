@@ -599,6 +599,7 @@
       "deny": "Avvis"
     },
     "toast": {
+      "donePartial": "{{processed}} av {{total}} sitater merket \u2013 noen partier mislyktes.",
       "progress": "✦ AutoCoder {{processed}}/{{total}} sitater …",
       "done": "✦ AutoCodet {{total}} sitater på {{duration}}.",
       "report": "Rapport",

@@ -594,6 +594,7 @@
       "deny": "却下"
     },
     "toast": {
+      "donePartial": "{{total}} \u4ef6\u4e2d {{processed}} \u4ef6\u306e\u5f15\u7528\u306b\u30bf\u30b0\u3092\u4ed8\u3051\u307e\u3057\u305f\u3002\u4e00\u90e8\u306e\u30d0\u30c3\u30c1\u304c\u5931\u6557\u3057\u307e\u3057\u305f\u3002",
       "progress": "✦ {{processed}}/{{total}} 件の発言をオートコード中…",
       "done": "✦ {{total}} 件の発言を {{duration}} でオートコードしました。",
       "report": "レポート",

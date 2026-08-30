@@ -599,6 +599,7 @@
       "deny": "Ablehnen"
     },
     "toast": {
+      "donePartial": "{{processed}} von {{total}} Zitaten verschlagwortet \u2013 einige Stapel sind fehlgeschlagen.",
       "progress": "✦ AutoCodierung {{processed}}/{{total}} Zitate…",
       "done": "✦ AutoCodiert {{total}} Zitate in {{duration}}.",
       "report": "Bericht",

@@ -599,6 +599,7 @@
       "deny": "Rechazar"
     },
     "toast": {
+      "donePartial": "Se han etiquetado {{processed}} de {{total}} citas; algunos lotes han fallado.",
       "progress": "✦ AutoCodificando {{processed}}/{{total}} citas…",
       "done": "✦ AutoCodificadas {{total}} citas en {{duration}}.",
       "report": "Informe",

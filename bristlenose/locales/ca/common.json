@@ -599,6 +599,7 @@
       "deny": "Denega"
     },
     "toast": {
+      "donePartial": "S'han etiquetat {{processed}} de {{total}} cites; alguns lots han fallat.",
       "progress": "✦ S'estan autocodificant {{processed}}/{{total}} cites…",
       "done": "✦ S'han autocodificat {{total}} cites en {{duration}}.",
       "report": "Informe",

@@ -126,14 +126,34 @@ export function AutoCodeToast({
       )}
       {job?.status === "completed" && (
         <>
-          <span className="toast-check">&#x2713;</span>
+          {/* A job can COMPLETE having tagged a subset: autocode.py gathers its
+              batches with return_exceptions=True, logs "Batch failed" and
+              carries on. processed_quotes only increments after a batch
+              succeeds, so processed < total is exactly that partial — and it
+              used to report as an unqualified success with a number that was
+              quietly short. WARNING: complete, usable, not what was asked. */}
+          <span
+            className={
+              job.processed_quotes < job.total_quotes
+                ? "toast-warning"
+                : "toast-check"
+            }
+          >
+            {job.processed_quotes < job.total_quotes ? "\u26A0" : "\u2713"}
+          </span>
           <span>
-            {t("autocode.toast.done", {
-              total: job.total_quotes,
-              duration: job.completed_at && job.started_at
-                ? formatDuration(job.started_at, job.completed_at)
-                : "",
-            })}
+            {job.processed_quotes < job.total_quotes
+              ? t("autocode.toast.donePartial", {
+                  processed: job.processed_quotes,
+                  total: job.total_quotes,
+                })
+              : t("autocode.toast.done", {
+                  total: job.total_quotes,
+                  duration:
+                    job.completed_at && job.started_at
+                      ? formatDuration(job.started_at, job.completed_at)
+                      : "",
+                })}
           </span>
           {/* Link-styled action; keyboard-accessible via role/tabIndex/onKeyDown. */}
           {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}

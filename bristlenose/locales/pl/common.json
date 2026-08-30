@@ -657,6 +657,7 @@
       "deny": "Odrzuć"
     },
     "toast": {
+      "donePartial": "Otagowano {{processed}} z {{total}} cytat\u00f3w \u2014 cz\u0119\u015b\u0107 partii nie powiod\u0142a si\u0119.",
       "progress": "✦ AutoCode {{processed}}/{{total}} cytatów…",
       "done": "✦ AutoCode {{total}} cytatów w {{duration}}.",
       "report": "Raport",

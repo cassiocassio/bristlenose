@@ -29,6 +29,7 @@ import { CodebookV2Rail, type RailBook } from "./CodebookV2Rail";
 import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
 import { CodebookV2Browse, type BrowseBook } from "./CodebookV2Browse";
 import { CodebookV2UninstallSheet } from "../components/CodebookV2UninstallSheet";
+import { isExportMode } from "../utils/exportData";
 
 interface Props {
   projectId: string;
@@ -77,6 +78,8 @@ function provenanceFor(
 
 export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
+  // Null offline: the catalogue is server-only, and the lens degrades to the
+  // codebook it can read rather than failing.
   const [templates, setTemplates] = useState<TemplateListResponse | null>(null);
   const [states, setStates] = useState<Record<string, boolean>>({});
   const [selected, setSelected] = useState("");
@@ -88,6 +91,9 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   // Uninstall is confirmed, never immediate. D20 option A made it destroy the
   // AutoCode run as well as the tags, so the sheet has more to say than the
   // shipped one — and a terse modal measures rather than warning.
+  // Read-only is a property of the artefact, not a preference: an exported
+  // report is a file someone was handed.
+  const readOnly = isExportMode();
   const [pendingUninstall, setPendingUninstall] = useState<{
     id: string;
     title: string;
@@ -97,7 +103,17 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
 
   useEffect(() => {
     let live = true;
-    Promise.all([getCodebook(), getCodebookTemplates(), getFrameworkStates()])
+    // `/codebook` and `/framework-states` are EMBEDDED in an export;
+    // `/codebook/templates` is SERVER_ONLY (routes/export.py), so offline it
+    // throws. A bare Promise.all rejects on that one and blanks the whole lens
+    // — the reader of a leave-behind would get an error where their codebook
+    // should be. Tolerated separately: the catalogue is unavailable offline,
+    // the codebook itself is not.
+    Promise.all([
+      getCodebook(),
+      getCodebookTemplates().catch(() => null),
+      getFrameworkStates(),
+    ])
       .then(([cb, tpl, st]) => {
         if (!live) return;
         setCodebook(cb);
@@ -261,15 +277,22 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
             must not come and go with the selection. */}
         <div className="section-heading">
           <h1>Codebook</h1>
-          <div className="section-heading-action">
-            <button
-              className="bn-btn bn-btn-secondary bn-btn-lg"
-              data-testid="bn-v2-browse"
-              onClick={() => setView("browse")}
-            >
-              Browse Library
-            </button>
-          </div>
+          {/* Q14 — export mode's fourth state: read-only, installed, offline.
+              No Browse Library, because there is no catalogue to browse (the
+              templates route is server-only) and installing is a write. The
+              store-layer gate hides the control rather than disabling it, which
+              is the house pattern for export mode. */}
+          {!readOnly && (
+            <div className="section-heading-action">
+              <button
+                className="bn-btn bn-btn-secondary bn-btn-lg"
+                data-testid="bn-v2-browse"
+                onClick={() => setView("browse")}
+              >
+                Browse Library
+              </button>
+            </div>
+          )}
         </div>
         {error && <p className="pg-stat">Could not load the codebook: {error}</p>}
         <div className="v2-layout">
@@ -316,6 +339,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
                 }}
                 onInstall={onInstall}
                 onUninstall={(id) => onAskUninstall(id, page.title)}
+                readOnly={readOnly}
               />
             </div>
           ) : null}

@@ -50,6 +50,8 @@ interface Props {
   onReview: (frameworkId: string) => void;
   onInstall: (frameworkId: string) => void;
   onUninstall: (frameworkId: string) => void;
+  /** Export mode — the artefact is read-only, so write controls are hidden. */
+  readOnly?: boolean;
 }
 
 /**
@@ -134,6 +136,7 @@ export function CodebookV2Page({
   onReview,
   onInstall,
   onUninstall,
+  readOnly = false,
 }: Props) {
   const tagCount = groups.reduce((n, g) => n + g.tags.length, 0);
   const tpl = book.template;
@@ -191,7 +194,7 @@ export function CodebookV2Page({
             the reserved space is what the layout depends on. */}
         <div className="pg-side">
           <div className="pg-graphic" aria-hidden="true" />
-          {canInstall(book) && (
+          {canInstall(book) && !readOnly && (
             <div className="pg-actions">
               {book.installed ? (
                 <button

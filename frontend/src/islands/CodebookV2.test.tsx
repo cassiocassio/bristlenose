@@ -197,3 +197,45 @@ describe("phase 5 — the destructive edge", () => {
     expect(screen.queryByTestId("bn-v2-uninstall-sheet")).not.toBeInTheDocument();
   });
 });
+
+describe("Q14 — export mode's fourth state", () => {
+  it("survives the templates route being server-only", async () => {
+    // /codebook and /framework-states are embedded in an export;
+    // /codebook/templates is not. A bare Promise.all rejects on that one and
+    // blanks the whole lens — the reader of a leave-behind would get an error
+    // where their codebook should be.
+    const api = await import("../utils/api");
+    vi.mocked(api.getCodebookTemplates).mockRejectedValueOnce(
+      new Error("GET /codebook/templates: not embedded"),
+    );
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    expect(screen.queryByText(/Could not load the codebook/)).not.toBeInTheDocument();
+    // The codebook still renders — the rail is built from /codebook, not from
+    // the catalogue.
+    expect(screen.getByTestId("bn-v2-rail-row-nielsen")).toBeInTheDocument();
+  });
+
+  it("hides Browse Library in an exported report", async () => {
+    const exportData = await import("../utils/exportData");
+    vi.spyOn(exportData, "isExportMode").mockReturnValue(true);
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    // Hidden, not disabled — the house pattern for export mode. There is no
+    // catalogue to browse and installing is a write.
+    expect(screen.queryByTestId("bn-v2-browse")).not.toBeInTheDocument();
+    vi.mocked(exportData.isExportMode).mockRestore();
+  });
+
+  it("hides the install controls in an exported report", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    const exportData = await import("../utils/exportData");
+    vi.spyOn(exportData, "isExportMode").mockReturnValue(true);
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    fireEvent.click(screen.getByTestId("bn-v2-rail-row-nielsen"));
+    await waitFor(() => screen.getByTestId("bn-v2-page"));
+    expect(screen.queryByTestId("bn-v2-uninstall")).not.toBeInTheDocument();
+    vi.mocked(exportData.isExportMode).mockRestore();
+  });
+});

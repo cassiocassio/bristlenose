@@ -15,6 +15,7 @@ import { SessionsTab } from "./pages/SessionsTab";
 import { TranscriptTab } from "./pages/TranscriptTab";
 import { QuotesTab } from "./pages/QuotesTab";
 import { CodebookTab } from "./pages/CodebookTab";
+import { CodebookV2Tab } from "./pages/CodebookV2Tab";
 import { AnalysisTab } from "./pages/AnalysisTab";
 import { SpecimenTab } from "./pages/SpecimenTab";
 import { isExportMode } from "./utils/exportData";
@@ -37,6 +38,11 @@ export const routes = [
       { path: "sessions/:sessionId", element: <TranscriptTab /> },
       { path: "quotes", element: <QuotesTab /> },
       { path: "codebook", element: <CodebookTab /> },
+      // Codebook v2 — the replacement, running alongside the shipped lens
+      // (D29). Registered unconditionally like `specimen`: the route costs
+      // nothing until visited, and a conditional route is a second thing to
+      // get wrong. Only the NavBar link is gated.
+      { path: "codebook-v2", element: <CodebookV2Tab /> },
       { path: "analysis", element: <AnalysisTab /> },
       // Debug lens — test content on a visible grid (dev-gated NavBar link;
       // desktop entry via Diagnostics menu). Route always registered: the

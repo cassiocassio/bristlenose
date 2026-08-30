@@ -68,13 +68,15 @@ describe("NavBar", () => {
 
   it("nav links are <a> elements (not role=tab)", () => {
     renderNavBar();
-    // 5 text nav links (Settings and Help are buttons). The Specimen debug
-    // lens is `IS_DEV`-gated — invisible in a shipped report, but present
-    // here because vitest runs with DEV=true, so exclude it by name rather
-    // than counting it and pinning a number users never see.
+    // 5 text nav links (Settings and Help are buttons). Dev-gated lenses are
+    // invisible in a shipped report but present here, because vitest runs with
+    // DEV=true — so exclude them as a *class* rather than by name. Naming one
+    // meant the second dev lens (Codebook v2) broke a test about how nav links
+    // are marked up, which is not what it is asserting.
+    const DEV_ONLY = ["Specimen", "Codebook v2"];
     const links = screen
       .getAllByRole("link")
-      .filter((a) => a.textContent !== "Specimen");
+      .filter((a) => !DEV_ONLY.includes(a.textContent ?? ""));
     expect(links).toHaveLength(5);
   });
 

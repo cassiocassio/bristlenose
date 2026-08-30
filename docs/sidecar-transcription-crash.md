@@ -1,149 +1,166 @@
-# The bundled sidecar crashes at transcription — SIGILL in llvmlite
+# The bundled sidecar crashed at transcription — SIGILL from a corrupt dylib
 
-**Status: OPEN.** Measured 30 Aug 2026. Reproduced twice, minutes apart, on two
-different projects. Root cause **not** established; this note exists so the next
-session starts from the evidence rather than from my first guess, which was
-wrong and is recorded below as ruled out.
+**Status: SOLVED, 30 Aug 2026.** Root cause found, fixed, and gated. The
+investigation ran across two sessions; the first established the evidence and
+ruled out a wrong lead, the second found the cause. Both halves are kept, because
+the wrong lead is instructive and the way it misled is a trap anyone here can
+fall into again.
 
-## What the researcher sees
+## The answer, in one paragraph
 
-A run started from the macOS app dies seconds in. The sidebar row shows **Run
-failed**, and the diagnostic popover says *"Something went wrong during
-analysis. Category: Failed"* — which names nothing, because the classifier had
-nothing to classify.
+PyInstaller shells out to `strip` for every collected binary and **never checks
+its exit status**. On 30 Aug 2026 `strip` died of SIGBUS inside `writeout_to_mem`
+partway through rewriting `llvmlite/binding/libllvmlite.dylib` (128 MB), having
+already created its output file. PyInstaller collected the result: a dylib of
+exactly the right size, correctly signed afterwards, with **16,384 bytes of zeros
+at offset 0x02b20000 — inside `__TEXT,__text`**. On arm64 an all-zero word decodes
+as `udf #0`, permanently undefined. The first numba JIT compilation to execute
+into that page raised `EXC_BAD_INSTRUCTION`. Nothing in the build was red.
+
+## What the researcher saw
+
+A run started from the macOS app died seconds in. The sidebar row showed **Run
+failed**, and the diagnostic popover said *"Something went wrong during analysis.
+Category: Failed"* — which named nothing, because the classifier had nothing to
+classify.
 
 Then two knock-on symptoms that look like separate bugs and are not:
 
-- **Every lens in that project is dead.** The run wrote no terminus event, so
-  `detect_status` intercepts and the SPA never mounts. Clicking any lens —
-  Quotes, Codebook, Codebook v2 — appears to do nothing. This is what sent me
-  looking at the v2 lens for half an hour; it is not a v2 problem.
+- **Every lens in that project was dead.** The run wrote no terminus event, so
+  `detect_status` intercepts and the SPA never mounts. Clicking any lens — Quotes,
+  Codebook, Codebook v2 — appeared to do nothing. This cost the first session half
+  an hour of reading the v2 lens; it was never a v2 problem.
 - **`GET /dashboard 500`** on a project that had data before. The run printed
-  `Cleaned <output_dir>` *before* it crashed, so the previous good output is
-  gone and the endpoint is looking at a 4 KB empty database.
-
-## Reproduction
-
-Any run that reaches transcription, from the Debug `.app`. Both observed runs
-died at the same point: preflight green, ingest and audio-extract complete,
-then dead as `s05_transcribe` initialises MLX.
-
-```
-17:56:27  folder-of-horrors  run_started → run_progress → (no terminus)
-17:57:38  project-ikea       run_started → run_progress → (no terminus)
-```
-
-Build under test: `v0.28.0 · faee6de8 · Debug · sandbox=on HR=off ·
-sidecar=bundled`, sidecar built 15:30 the same day.
+  `Cleaned <output_dir>` *before* it crashed, so the previous good output was gone
+  and the endpoint was looking at a 4 KB empty database.
 
 ## The evidence
 
-**It is a hard crash, not an error path.** `last-run-failure.log` records
-`category=unknown status=4`. That **4 is a signal number, not an exit code** —
-`PipelineRunner.captureFailureLog` logs `Process.terminationStatus` without
-consulting `terminationReason`, so a signalled death is written as if it were a
-clean exit. Signal 4 is SIGILL.
+**It was a hard crash, not an error path.** `last-run-failure.log` recorded
+`category=unknown status=4`. That **4 was a signal number, not an exit code** —
+`PipelineRunner.captureFailureLog` logged `Process.terminationStatus` without
+consulting `terminationReason`, so a signalled death was written as if it were a
+clean exit. Signal 4 is SIGILL. **Fixed** — see "What was changed" below.
 
-**The crash reports name the frame**, two of them, one per run:
+**The crash reports named the frame**, identically in every occurrence:
+`EXC_BAD_INSTRUCTION (SIGILL)`, faulting in `llvm::InstCombinerImpl::visitOr`
+inside `libllvmlite.dylib`, reached through `LLVMPY_RunNewFunctionPassManager` →
+libffi → `_ctypes` → Python. That is numba JIT-compiling, which `mlx-whisper`
+pulls in for word-level timestamps — specifically `dtw_cpu` in
+`mlx_whisper/timing.py`, which is `@numba.jit(nopython=True, parallel=True)`. The
+`parallel=True` matters: it runs the far heavier ParallelAccelerator pipeline, and
+`InstCombine` is in it. A plain `@njit` probe compiles fine and proves nothing.
 
-```
-~/Library/Logs/DiagnosticReports/bristlenose-sidecar-2026-08-30-175634.ips
-~/Library/Logs/DiagnosticReports/bristlenose-sidecar-2026-08-30-175742.ips
-```
+## How it was found — the reproduction that settled it
 
-Both identical: `EXC_BAD_INSTRUCTION (SIGILL)`, faulting frame
-`llvm::InstCombinerImpl::visitOr` inside `libllvmlite.dylib`, reached through
-`LLVMPY_RunNewFunctionPassManager` → libffi → `_ctypes` → Python. That is numba
-JIT-compiling, which is what `mlx-whisper` pulls in for word-level timestamps.
-
-**The same library JIT-compiles fine outside the bundle.** In the repo venv —
-numba 0.66.0, llvmlite 0.48.0, numpy 2.4.6 — an `@njit` function compiles and
-returns. So the difference is the environment the sidecar runs in, not the
-library.
-
-**The crashing process was ad-hoc signed.** Both reports show `csTeam` empty and
-an auto-derived `csID`.
-
-## Ruled OUT — do not re-derive this
-
-**The dylib is not damaged, stripped, or truncated.** I spent a cycle on this
-and it was wrong, so it is written down: the bundled `libllvmlite.dylib` looks
-734 KB smaller than the venv's, and `strip` has its own crash report from the
-minute the sidecar was built (`strip-2026-08-30-153045.ips`), which together
-read like a smoking gun. They are not. **That size delta is signature, not
-content.** With signatures removed from both:
-
-| | unsigned content |
-|---|---|
-| venv | 128,476,032 |
-| bundled | 128,476,128 |
-
-96 bytes apart, and the difference is load commands — PyInstaller drops an
-`LC_RPATH /usr/lib`. `otool -L` and the install name are identical. Replacing
-the bundled dylib with the venv's changes nothing that matters; I tried it, and
-have since restored the bundle to its as-built content.
-
-**The general lesson:** comparing two signed Mach-Os by file size compares their
-signatures as much as their code. Strip signatures before drawing a conclusion
-from a byte count.
-
-## Leading hypothesis, and why it is not yet a conclusion
-
-`desktop/bristlenose-sidecar.entitlements` documents this exact area in its own
-header — 7 Jun 2026, numba/llvmlite JIT-compiling under Hardened Runtime,
-surfacing as *"Run failed (no terminus event) / unknown"*, crash reports at the
-same path. The fix then was `cs.allow-jit` +
-`cs.allow-unsigned-executable-memory`, and the shipped sidecar binary **does**
-still carry both (verified by dumping entitlements off the binary in the app).
-
-The open question is whether those exceptions are *honoured* here. Restricted
-`com.apple.security.cs.*` entitlements are treated differently on an ad-hoc
-signature than on an Apple-issued one, and this sidecar is ad-hoc: `SIGN_IDENTITY`
-is exported only by `build-dmg.sh`, never by the Xcode build phase. If that is
-the mechanism, it is the June failure wearing a different signal.
-
-**What weakens it:** Debug sidecars have *always* been ad-hoc, so if
-transcription has ever worked from a Debug build, ad-hoc alone is not
-sufficient. Something else changed too — a macOS update tightening ad-hoc JIT is
-the obvious candidate and is unverified. Worth establishing early: **has anyone
-transcribed successfully from a Debug `.app` recently?** That one answer splits
-the hypothesis space in half.
-
-## The next experiment
-
-Re-sign the sidecar tree under a real identity and re-run one project:
+The first session believed the sandbox or the entitlements were implicated, and
+noted that running the bundled sidecar from a terminal is not a clean control
+because it declares `com.apple.security.inherit`. That is true of **the copy
+inside the `.app`**. It is not true of a copy you sign yourself:
 
 ```bash
-SIGN_IDENTITY="Apple Development: Martin Storey (9Y4JDA9M3K)" desktop/scripts/sign-sidecar.sh
+cp -Rc "<App>/Contents/Resources/bristlenose-sidecar" /tmp/sc-nosandbox
+codesign --force --sign - /tmp/sc-nosandbox/bristlenose-sidecar   # adhoc, no runtime, NO entitlements
+_BRISTLENOSE_HOSTED_BY_DESKTOP=1 /tmp/sc-nosandbox/bristlenose-sidecar run /tmp/tiny-audio-folder
 ```
 
-If transcription then completes, the entitlements-on-ad-hoc reading is right and
-the fix belongs in the Xcode build phase, not in a script anyone has to remember
-to run.
+`run` is a passthrough command in `desktop/sidecar_entry.py`, gated on that env
+var, so the frozen binary drives a real pipeline from a terminal. It exited
+**132** — 128 + 4, SIGILL — with **no sandbox, no hardened runtime and no
+entitlements at all**. That killed the signing hypothesis outright and moved the
+search to the file itself.
 
-The tempting alternative — running the bundled sidecar straight from a terminal
-to compare sandboxed against not — **is not a clean control**: the sidecar
-declares `com.apple.security.inherit`, and a nested helper with `inherit` and no
-sandboxed parent can abort for reasons of its own. A negative result there would
-prove nothing.
+Replacing the one dylib and re-running the same probe completed the whole
+pipeline in 18.7s. That is the proof.
 
-## Three defects worth fixing whatever the root cause turns out to be
+## Ruled OUT — do not re-derive these
 
-1. **A signalled run is reported as an exit code.** `status=4` reads as "exited
-   4" and sends you looking for an exit-code table that does not exist. It was
-   SIGILL. `captureFailureLog` should consult `terminationReason` and say
-   `signal=SIGILL`, which would also give the classifier something better than
-   `unknown` — and the popover something better than *"Something went wrong."*
-   A crash report existed at a known path the whole time and nothing pointed at
-   it.
-2. **Clean-then-crash destroys the previous good output.** Both runs wiped the
-   output directory and then died, leaving projects with neither their old
-   report nor a new one. The clean should not be irreversible before the run has
-   demonstrated it can get past its first real stage.
-3. **`/dashboard` 500s on an empty project** instead of rendering an empty
-   state, and the SPA surfaces the raw `GET /dashboard 500` in error red — the
-   same class the 20 Aug corpus pass was written to catch.
+**Signing, entitlements, the sandbox, and the ad-hoc signature.** Reproduced with
+all of them absent (above). Two independent facts agreed: transcription had
+succeeded from the desktop app on **27 Aug** (`hosted_by_desktop=True`, five
+sessions, 89.35s of real MLX work, in `IKEA with uxfriends`) and Debug sidecars
+have *always* been ad-hoc; and macOS had not been updated since **6 Apr 2026**
+(`SystemVersion.plist` mtime; 26.4.1 / 25E253), so no OS tightening happened in
+the window.
 
-Defect 1 is the one that cost the most time here: the popover, the failure log
-and the classifier all said "unknown" while the operating system had already
-written down the exact faulting frame.
+**The numba/llvmlite version bump.** The 29 Aug `.venv-sidecar` recreate did move
+numba 0.66.0 → 0.67.0 and llvmlite 0.48.0 → 0.49.0, and that is a real and
+suspicious coincidence — but both versions compile `dtw_cpu` correctly outside the
+bundle, and the repaired bundle runs 0.49.0 fine. **No pin is needed**, and adding
+one would have been cargo cult.
+
+**The dylib being "stripped or truncated".** The first session's conclusion here
+was right for the wrong reason, and the reason is the trap:
+
+> **`THE SIDECAR IS NOT BUILT FROM `.venv`.** It is built from a dedicated
+> **`.venv-sidecar`** (`build-sidecar.sh:45`), carrying only
+> `.[serve,apple,desktop,mcp]`. The two have different contents — on 30 Aug,
+> different numba, llvmlite and mlx versions.
+
+Comparing the bundle against `.venv` therefore compares two *different libraries*
+and the result means nothing. It produced a 96-byte delta attributed to an
+`LC_RPATH` difference, and the conclusion "the dylib is fine". Against the correct
+source the sizes are **identical** and the **hashes differ** — 14,893 bytes across
+1,326 runs, and the big cluster is a solid 16 KB of zeros in executable code.
+
+**The general lesson stands and is worth keeping:** comparing two signed Mach-Os
+by file size compares their signatures as much as their code. Strip signatures
+before drawing any conclusion from a byte count. **And compare against the source
+the artefact was actually built from.**
+
+## What was changed
+
+1. **`strip=False`** in `desktop/bristlenose-sidecar.spec` (both `EXE` and
+   `COLLECT`), with the incident recorded inline. The trade it was making,
+   measured on the same bundle: across a 14-binary sample `strip` saved **48 KB of
+   a 479 MB bundle**, because wheels already ship stripped binaries — and it saved
+   **exactly zero bytes** on `libllvmlite`, the one file it destroyed. Turning it
+   off cost ~1 MB (479M → 480M).
+
+2. **`desktop/scripts/check-bundle-integrity.py`** — a gate that walks every
+   Mach-O in the bundle and fails if `__TEXT,__text` contains a zero run of ≥4096
+   bytes. Validated both ways: it flags the corrupt dylib at exactly
+   0x02b20000, and clears **1 of 224** files on the damaged bundle with no false
+   positives. ~4s. Wired into `build-sidecar.sh` on every real invocation — not
+   only when layer P rebuilds, because a bundle that was already corrupt when
+   cached would otherwise be skipped forever.
+
+3. **`ProcessOutcome`** (`desktop/Bristlenose/Bristlenose/ProcessOutcome.swift`)
+   — `Process.terminationStatus` cannot tell an exit code from a signal number;
+   only `terminationReason` can. Logs and `last-run-failure.log` now read
+   `signal=SIGILL(4)` rather than `status=4`, and a signalled death additionally
+   emits the path where the OS wrote the crash report. Pinned by
+   `ProcessOutcomeTests`, whose first test is the exact regression.
+
+## Still open — two defects this incident exposed, neither yet fixed
+
+1. **Clean-then-crash destroys the previous good output.** `cli.py:1200`
+   `shutil.rmtree(output_dir)` runs after preflight and before the pipeline, so
+   both crashed runs wiped their project and left nothing. project-ikea's data is
+   still gone; restoring it needs a real run with LLM spend.
+
+   The obvious fix — rename to a dot-prefixed sibling instead of deleting, and
+   remove it on success — is safe from re-ingestion (`s01_ingest.py:200` skips all
+   dot-prefixed entries) but is **not crash-safe on its own**: a SIGILL runs no
+   cleanup, so the restore has to happen at the *next* start, alongside the
+   existing stranded-run reconciliation. That placement is a design decision, not
+   a patch.
+
+2. **`/dashboard` 500s on an empty project** instead of rendering an empty state,
+   and the SPA surfaces the raw `GET /dashboard 500` in error red — the same class
+   the 20 Aug corpus pass was written to catch. The obvious suspect is not it: the
+   percentage division at `routes/dashboard.py:344` is already guarded by
+   `if total_words > 0`. This one needs a reproduction, not a reading.
+
+## The meta-lesson
+
+Every gate in the build was green on a bundle whose executable code had a hole in
+it. `codesign -v --strict` passes, because the damage happened *before* signing.
+The size looks right. `otool -L` and the install name are unchanged. The tests all
+pass, because they run against `pip install -e .`, not the bundle.
+
+The only evidence was a crash report, and the one surface that could have pointed
+at it rendered the signal as an exit code. **A build that produces an artefact
+should assert something about the artefact**, which is what
+`check-bundle-integrity.py` now does — in four seconds, against the class of
+failure rather than this instance of it.

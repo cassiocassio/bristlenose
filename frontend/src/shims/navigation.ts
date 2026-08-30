@@ -22,6 +22,11 @@ const TAB_ROUTES: Record<string, string> = {
   sessions: "/report/sessions/",
   quotes: "/report/quotes/",
   codebook: "/report/codebook/",
+  // Keys are `Tab.rawValue` on the Swift side, so this is camelCase where the
+  // route is kebab. Pinned by tests/test_tab_route_parity.py — the contract
+  // was stated in Tab.swift's doc comment for months with nothing enforcing
+  // it, and the day it was broken the lens just went quietly to /report/.
+  codebookV2: "/report/codebook-v2/",
   analysis: "/report/analysis/",
   settings: "/report/settings/",
   about: "/report/about/",
@@ -48,7 +53,21 @@ export function installNavigationShims(
   (window as unknown as Record<string, unknown>).switchToTab = (
     tab: string,
   ) => {
-    const route = TAB_ROUTES[tab] ?? "/report/";
+    const route = TAB_ROUTES[tab];
+    if (route === undefined) {
+      // Falling back to the Project tab is right for a shipped build — a
+      // researcher gets a working screen, not a blank one. But in dev it is
+      // how a missing key hides: the control looks dead, nothing errors, and
+      // the tab you were on is the tab you stay on. Say so.
+      if (import.meta.env.DEV) {
+        console.warn(
+          `switchToTab: unknown tab "${tab}" — no TAB_ROUTES entry, ` +
+            `falling back to /report/. Add it to shims/navigation.ts.`,
+        );
+      }
+      navigateRef("/report/");
+      return;
+    }
     navigateRef(route);
   };
 

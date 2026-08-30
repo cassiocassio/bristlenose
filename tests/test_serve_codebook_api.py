@@ -794,251 +794,159 @@ class TestRemoveFramework:
         uxr_groups = [g for g in data["groups"] if g["framework_id"] == "uxr"]
         assert len(uxr_groups) > 0
 
-    def test_remove_framework_preserves_autocode_data(self) -> None:
-        """Removing a framework should preserve AutoCode jobs and proposals."""
+    def test_remove_framework_keeps_nothing(self) -> None:
+        """D20 option A — uninstall does not preserve. Nothing survives it.
+
+        This test previously asserted the opposite, and the promise it pinned
+        had already stopped being true: the restore branch reset accepted
+        proposals to `pending`, and under D4 a reinstall fires a fresh job and
+        re-spends anyway. The two together produced duplicate proposals for the
+        same quote, which UniqueConstraint(job_id, quote_id) permits because
+        they are different jobs.
+
+        The contract now: click uninstall and you say byebye; if you are not
+        sure, you disable — and disable is the verb that preserves.
+        """
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
         tc = AuthTestClient(app)
         tc.post(
             "/api/projects/1/codebook/import-template",
             json={"template_id": "garrett"},
         )
-        # Manually create an AutoCodeJob and ProposedTag for the framework
         db = app.state.db_factory()
         try:
-            garrett_groups = (
-                db.query(CodebookGroup)
-                .filter_by(framework_id="garrett")
-                .all()
-            )
+            groups = db.query(CodebookGroup).filter_by(framework_id="garrett").all()
             tag_defs = (
                 db.query(TagDefinition)
-                .filter(
-                    TagDefinition.codebook_group_id.in_([g.id for g in garrett_groups]),
-                )
+                .filter(TagDefinition.codebook_group_id.in_([g.id for g in groups]))
                 .all()
             )
-            assert len(tag_defs) > 0
-            quotes = db.query(Quote).filter_by(project_id=1).all()
-            assert len(quotes) > 0
-
             job = AutoCodeJob(
-                project_id=1,
-                framework_id="garrett",
-                status="completed",
-                total_quotes=len(quotes),
-                processed_quotes=len(quotes),
-                proposed_count=1,
+                project_id=1, framework_id="garrett", status="completed",
+                total_quotes=1, processed_quotes=1, proposed_count=1,
             )
             db.add(job)
             db.flush()
-            db.add(ProposedTag(
-                job_id=job.id,
-                quote_id=quotes[0].id,
-                tag_definition_id=tag_defs[0].id,
-                confidence=0.85,
-                rationale="test",
-                status="pending",
-            ))
-            db.commit()
-            assert db.query(ProposedTag).count() == 1
-            assert db.query(AutoCodeJob).count() == 1
-        finally:
-            db.close()
-
-        # Remove framework — should succeed
-        resp = tc.delete("/api/projects/1/codebook/remove-framework/garrett")
-        assert resp.status_code == 200
-
-        # AutoCode data should be preserved (soft-delete)
-        db = app.state.db_factory()
-        try:
-            assert db.query(ProposedTag).count() == 1
-            assert db.query(AutoCodeJob).filter_by(framework_id="garrett").count() == 1
-            # Groups and tag definitions should also survive
-            assert db.query(CodebookGroup).filter_by(framework_id="garrett").count() > 0
-            assert db.query(TagDefinition).count() > 0
-        finally:
-            db.close()
-
-
-# ---------------------------------------------------------------------------
-# Restore (soft-delete round-trip)
-# ---------------------------------------------------------------------------
-
-
-class TestRestoreFramework:
-    def test_restorable_flag_after_remove(self, client: TestClient) -> None:
-        """After removing a framework, it should show as restorable in templates."""
-        client.post(
-            "/api/projects/1/codebook/import-template",
-            json={"template_id": "garrett"},
-        )
-        client.delete("/api/projects/1/codebook/remove-framework/garrett")
-        templates = client.get("/api/projects/1/codebook/templates").json()
-        garrett = next(t for t in templates["templates"] if t["id"] == "garrett")
-        assert garrett["imported"] is False
-        assert garrett["restorable"] is True
-
-    def test_restorable_false_for_never_imported(self, client: TestClient) -> None:
-        """Templates that were never imported should not be restorable."""
-        templates = client.get("/api/projects/1/codebook/templates").json()
-        garrett = next(t for t in templates["templates"] if t["id"] == "garrett")
-        assert garrett["restorable"] is False
-        assert garrett["imported"] is False
-
-    def test_reimport_restores_hidden_framework(self, client: TestClient) -> None:
-        """Re-importing a removed framework should restore it instantly."""
-        client.post(
-            "/api/projects/1/codebook/import-template",
-            json={"template_id": "garrett"},
-        )
-        client.delete("/api/projects/1/codebook/remove-framework/garrett")
-
-        # Re-import should succeed (restore path)
-        resp = client.post(
-            "/api/projects/1/codebook/import-template",
-            json={"template_id": "garrett"},
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        garrett_groups = [g for g in data["groups"] if g["framework_id"] == "garrett"]
-        assert len(garrett_groups) == 5
-
-        # Template should show as imported again, no longer restorable
-        templates = client.get("/api/projects/1/codebook/templates").json()
-        garrett = next(t for t in templates["templates"] if t["id"] == "garrett")
-        assert garrett["imported"] is True
-        assert garrett["restorable"] is False
-
-    def test_reimport_preserves_autocode_job(self) -> None:
-        """AutoCode job and proposed_count should survive remove→reimport cycle."""
-        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
-        tc = AuthTestClient(app)
-        tc.post(
-            "/api/projects/1/codebook/import-template",
-            json={"template_id": "garrett"},
-        )
-        # Create AutoCode job with a proposal
-        db = app.state.db_factory()
-        try:
-            garrett_groups = (
-                db.query(CodebookGroup)
-                .filter_by(framework_id="garrett")
-                .all()
-            )
-            tag_defs = (
-                db.query(TagDefinition)
-                .filter(
-                    TagDefinition.codebook_group_id.in_([g.id for g in garrett_groups]),
+            quote = db.query(Quote).filter_by(project_id=1).first()
+            assert quote is not None
+            db.add(
+                ProposedTag(
+                    job_id=job.id, quote_id=quote.id,
+                    tag_definition_id=tag_defs[0].id, confidence=0.9,
+                    status="pending",
                 )
-                .all()
             )
-            quotes = db.query(Quote).filter_by(project_id=1).all()
-            job = AutoCodeJob(
-                project_id=1,
-                framework_id="garrett",
-                status="completed",
-                total_quotes=len(quotes),
-                processed_quotes=len(quotes),
-                proposed_count=1,
-            )
-            db.add(job)
-            db.flush()
-            db.add(ProposedTag(
-                job_id=job.id,
-                quote_id=quotes[0].id,
-                tag_definition_id=tag_defs[0].id,
-                confidence=0.85,
-                rationale="test",
-                status="pending",
-            ))
             db.commit()
+            job_id = job.id
         finally:
             db.close()
 
-        # Remove → reimport
         tc.delete("/api/projects/1/codebook/remove-framework/garrett")
-        resp = tc.post(
-            "/api/projects/1/codebook/import-template",
-            json={"template_id": "garrett"},
-        )
-        assert resp.status_code == 200
 
-        # AutoCode job should still exist with its proposal
         db = app.state.db_factory()
         try:
-            assert db.query(AutoCodeJob).filter_by(framework_id="garrett").count() == 1
-            assert db.query(ProposedTag).count() == 1
+            assert db.query(AutoCodeJob).filter_by(id=job_id).count() == 0
+            assert db.query(ProposedTag).filter_by(job_id=job_id).count() == 0
+            # The shared rows go too, because nothing else linked them.
+            assert (
+                db.query(CodebookGroup).filter_by(framework_id="garrett").count() == 0
+            )
         finally:
             db.close()
 
-    def test_reimport_resets_accepted_proposals(self) -> None:
-        """Accepted proposals should be reset to pending on restore."""
+
+class TestUninstallDoesNotPreserve:
+    """D20 option A — what the restore tests used to pin, inverted.
+
+    They asserted a `restorable` flag after removal, a preserved AutoCode job,
+    and accepted proposals reset to `pending` on re-import. All three are gone
+    deliberately, and it is worth being precise about why rather than just
+    deleting the coverage: the promise had already stopped being true. Resetting
+    accepted proposals to pending is not a restore, and under D4 a reinstall
+    fires a fresh job and re-spends regardless — so the two together produced
+    duplicate proposals for the same quote, which
+    UniqueConstraint(job_id, quote_id) permits because they are different jobs.
+    """
+
+    def _import_and_remove(self, tc) -> None:
+        tc.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        tc.delete("/api/projects/1/codebook/remove-framework/garrett")
+
+    def test_nothing_is_restorable_after_an_uninstall(self) -> None:
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        tc = AuthTestClient(app)
+        self._import_and_remove(tc)
+
+        templates = tc.get("/api/projects/1/codebook/templates").json()["templates"]
+        garrett = next(t for t in templates if t["id"] == "garrett")
+        assert garrett["imported"] is False
+        assert garrett["restorable"] is False, (
+            "restorable survived an uninstall that keeps nothing — the flag can "
+            "now only ever be False and should be retired from the wire"
+        )
+
+    def test_reinstalling_starts_clean(self) -> None:
+        """No resurrected proposals, so no duplicates when a fresh job runs."""
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        tc = AuthTestClient(app)
+        self._import_and_remove(tc)
+        tc.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": "garrett"},
+        )
+        db = app.state.db_factory()
+        try:
+            assert db.query(AutoCodeJob).filter_by(framework_id="garrett").count() == 0
+            assert db.query(ProposedTag).count() == 0
+        finally:
+            db.close()
+
+    def test_a_shared_group_survives_another_project_uninstalling(self) -> None:
+        """The instance-scoping guard — the same sharing that made A1 possible.
+
+        CodebookGroup and TagDefinition serve every project that installed the
+        framework. Deleting them because *this* project let go would strip it
+        from every other study that still has it: A1 one level up, and a worse
+        bug than the one it replaced.
+        """
+        from bristlenose.server.models import Project
+
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
         tc = AuthTestClient(app)
         tc.post(
             "/api/projects/1/codebook/import-template",
             json={"template_id": "garrett"},
         )
-        # Create AutoCode job with an accepted proposal
+
         db = app.state.db_factory()
         try:
-            garrett_groups = (
-                db.query(CodebookGroup)
-                .filter_by(framework_id="garrett")
-                .all()
+            other = Project(
+                name="Other", input_dir="/tmp/o", output_dir="/tmp/o/out",
             )
-            tag_defs = (
-                db.query(TagDefinition)
-                .filter(
-                    TagDefinition.codebook_group_id.in_([g.id for g in garrett_groups]),
-                )
-                .all()
-            )
-            quotes = db.query(Quote).filter_by(project_id=1).all()
-            job = AutoCodeJob(
-                project_id=1,
-                framework_id="garrett",
-                status="completed",
-                total_quotes=len(quotes),
-                processed_quotes=len(quotes),
-                proposed_count=1,
-            )
-            db.add(job)
+            db.add(other)
             db.flush()
-            db.add(ProposedTag(
-                job_id=job.id,
-                quote_id=quotes[0].id,
-                tag_definition_id=tag_defs[0].id,
-                confidence=0.85,
-                rationale="test",
-                status="accepted",  # Previously accepted
-            ))
+            other_id = other.id
+            for g in db.query(CodebookGroup).filter_by(framework_id="garrett").all():
+                db.add(
+                    ProjectCodebookGroup(project_id=other_id, codebook_group_id=g.id)
+                )
             db.commit()
         finally:
             db.close()
 
-        # Remove → reimport
         tc.delete("/api/projects/1/codebook/remove-framework/garrett")
-        tc.post(
-            "/api/projects/1/codebook/import-template",
-            json={"template_id": "garrett"},
-        )
 
-        # Proposal should be reset to pending
         db = app.state.db_factory()
         try:
-            proposal = db.query(ProposedTag).first()
-            assert proposal is not None
-            assert proposal.status == "pending"
-            assert proposal.reviewed_at is None
+            assert (
+                db.query(CodebookGroup).filter_by(framework_id="garrett").count() > 0
+            ), "the other project's groups were deleted — the guard is not working"
         finally:
             db.close()
 
-
-# ---------------------------------------------------------------------------
-# GET /codebook/remove-framework/{framework_id}/impact
-# ---------------------------------------------------------------------------
 
 
 class TestRemoveFrameworkImpact:

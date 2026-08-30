@@ -836,12 +836,18 @@ class RemoveFrameworkInfo(BaseModel):
 def remove_framework(
     project_id: int, framework_id: str, request: Request,
 ) -> CodebookResponse:
-    """Hide a framework from the project, preserving AutoCode data for restore.
+    """Uninstall a framework from this project. Nothing is kept for a restore.
 
-    Deletes quote-tag associations (tags visually removed from quotes) and
-    project links (framework hidden from codebook).  Groups, tag definitions,
-    AutoCode jobs, and proposed tags are preserved so the framework can be
-    restored instantly via re-import without re-running the LLM.
+    Deletes this project's quote-tag associations, its project links, its
+    enable/disable opinion, and its AutoCode job with the proposals under it.
+    The shared ``CodebookGroup`` / ``TagDefinition`` rows go too, but **only
+    when no other project still links them** — they are instance-scoped, and
+    deleting them because this project let go would strip the framework from
+    every other study that still has it.
+
+    **Nothing is preserved.** See D20 in ``docs/design-codebook-v2.md``: the
+    "instant restore" the old branch promised had already stopped being true,
+    and disable — which does preserve — is the reversible verb.
     """
     db = _get_db(request)
     try:
@@ -909,8 +915,55 @@ def remove_framework(
             project_id=project_id, framework_id=framework_id,
         ).delete(synchronize_session=False)
 
-        # PRESERVED: CodebookGroup, TagDefinition, AutoCodeJob, ProposedTag
-        # — enables instant restore on re-import without re-running LLM.
+        # D20 option A — uninstall stops preserving.
+        #
+        # This block used to keep CodebookGroup, TagDefinition, AutoCodeJob and
+        # ProposedTag "for instant restore on re-import without re-running the
+        # LLM". That promise had already stopped being true: the restore branch
+        # reset accepted proposals to `pending`, and under D4 (install *is*
+        # apply) a reinstall fires a fresh job and re-spends anyway. Worse, the
+        # two together produced duplicate proposals — resurrected rows and new
+        # ones for the same quote, which `UniqueConstraint(job_id, quote_id)`
+        # permits because they are different jobs.
+        #
+        # So the honest contract, in the user's words: "click uninstall and you
+        # say byebye; if you are not sure, you disable." Disable is the
+        # reversible one, and it already preserves everything.
+        #
+        # The project-scoped rows go unconditionally.
+        job_ids = [
+            r[0]
+            for r in db.query(AutoCodeJob.id)
+            .filter_by(project_id=project_id, framework_id=framework_id)
+            .all()
+        ]
+        if job_ids:
+            db.query(ProposedTag).filter(
+                ProposedTag.job_id.in_(job_ids)
+            ).delete(synchronize_session=False)
+            db.query(AutoCodeJob).filter(
+                AutoCodeJob.id.in_(job_ids)
+            ).delete(synchronize_session=False)
+
+        # The INSTANCE-scoped rows only when nothing else references them.
+        # CodebookGroup and TagDefinition are shared across projects — the same
+        # sharing that made A1 possible — so deleting them because *this*
+        # project let go would strip the framework from every other study that
+        # still has it. Check for a surviving link first.
+        still_linked = {
+            r[0]
+            for r in db.query(ProjectCodebookGroup.codebook_group_id)
+            .filter(ProjectCodebookGroup.codebook_group_id.in_(fw_group_ids))
+            .all()
+        }
+        orphaned = [gid for gid in fw_group_ids if gid not in still_linked]
+        if orphaned:
+            db.query(TagDefinition).filter(
+                TagDefinition.codebook_group_id.in_(orphaned)
+            ).delete(synchronize_session=False)
+            db.query(CodebookGroup).filter(
+                CodebookGroup.id.in_(orphaned)
+            ).delete(synchronize_session=False)
 
         db.commit()
         return get_codebook(project_id, request)

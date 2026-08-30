@@ -151,7 +151,8 @@ prototype-only wrapper (`AppLayout` provides `.bn-main`).
    so the switch corrects itself — but the researcher sees a switch move and
    move back with no explanation. That is the "fake success feedback" class in
    reverse and it wants a message.
-4. **The Review door leads nowhere yet.** Q15 says it opens the *existing*
+4. **The Review door leads nowhere yet.** _(Closed 30 Aug 2026 — see Phase 6b.
+   It opens the shipped modal now.)_ Q15 says it opens the *existing*
    modal, and phase 5 wires it. Opening a half-built one would be worse than not
    opening it, and rebuilding it is explicitly ruled out — so the handler is
    empty and says why.
@@ -480,3 +481,100 @@ English literals v2's own `Group` emitted. The page **head** — "Review",
 "Install", "Uninstall", "This codebook has no tags." — is still untranslated,
 and the check the plan asks for (grep the v2 files for `t(` and expect zero)
 must now be read as *the v2-specific chrome*, not the whole lens.
+
+## Phase 6b — what opening it found
+
+**30 Aug 2026.** The lens was built, tested and green, and had never been
+opened. Six defects, every one of them invisible to the suites, and the ones
+that mattered most were invisible *because* they were silent rather than wrong.
+
+### It was reachable by neither click nor keyboard
+
+`TAB_ROUTES` in `frontend/src/shims/navigation.ts` had no `codebookV2` key, and
+the lookup ended `?? "/report/"`. Selecting the lens — from the rail or its
+⌘-number — went to the Project tab, which if you were already there is
+indistinguishable from a dead control.
+
+Every suite was green: Swift was right, the router had the route, and the server
+served `/report/codebook-v2/` with a 200. The defect lived entirely in the gap
+between two files. `Tab.swift:5` had stated the contract in prose for months.
+`tests/test_tab_route_parity.py` now reads both files and asserts it.
+
+### The Review door was an empty arrow
+
+The handler was `() => {}` with a comment saying phase 5 would wire it. It now
+opens the shipped `ThresholdReviewModal` per **Q15**, asked about the codebook
+whose door was clicked — the second half being the failure a smoke test misses,
+since the modal renders either way.
+
+### The uninstall sheet was not a modal, and reassured us about what it had not measured
+
+Two separate faults in one component.
+
+Its backdrop was `.bn-modal-overlay`, **a class defined nowhere** — the house
+pair is `.bn-overlay` + `.bn-modal`. A class that does not exist does not error;
+it contributes no styling. So the backdrop had no `position: fixed`, no z-index,
+no dimming and no centring, and a destructive confirmation rendered **inline at
+the bottom of the document**: clicking Uninstall scrolled 1,500px to a card in
+the page flow and the viewport showed white. The inner card looked correct
+throughout, because `.bn-modal` is real and only the overlay was invented.
+
+And `impact === null` is two facts wearing one shape — the counts arrive after
+the sheet opens, so it means "still counting" *or* "the count failed" — and both
+rendered as *"Nothing has been coded with it yet, so nothing is lost."*
+`onAskUninstall` swallowed the fetch error, so a failed count landed there every
+time. A researcher could be told nothing would be lost and then discard a fully
+coded framework, from the one screen whose whole job is to let them weigh that.
+Three states now, and the reassurance survives only where a measurement earned it.
+
+### Uncategorised was in the wrong place
+
+Found by doing what **D29** exists for. `CodebookPanel` hoists the default group
+(`is_default` first, then `order`); v2 sorted nothing and rendered in API order,
+putting the untagged bucket last. Not a design choice anyone made — drift. The
+comparator is now the shipped one verbatim.
+
+### The Review door showed in an export
+
+**Q14** covered Browse Library and install/uninstall. v2's other controls escape
+by accident of the extraction — Uninstall carries `.framework-remove-btn` and
+the authoring carries `.tag-add-row`, both already hidden by
+`theme/templates/export.css`, so v2 inherited the shipped lens's export gating
+for free. The Review door is v2's own markup with no such class, so a client
+opening the leave-behind offline would find a button whose modal reads a
+`SERVER_ONLY` endpoint and offers a write. Hidden, not disabled; the counts stay,
+because read-only is not blank.
+
+### Neither surface could count
+
+"1 tags on 1 quotes" on the page, and again on the Library card after the page
+was fixed. The helper is local and marked for deletion — this chrome is enrolled
+in i18n wholesale at phase 6 and i18next does CLDR plurals via `t(key, {count})`,
+so there is nothing to carry forward. But English is the language it ships in now.
+
+### The gate this earned
+
+`tests/test_codebook_v2_css_classes.py` asserts every class the lens names
+resolves to real CSS, matched on **whole tokens** — `-` is a class character, so
+a substring search finds `.bn-modal` inside `.bn-modal-overlay` and passes the
+exact bug. Sibling of `tests/test_export_css_selectors.py`. It cannot check that
+an existing class is the *right* one; it catches names that resolve to nothing,
+which is the failure mode with no other signal.
+
+### What is still owed
+
+The six judgement calls above stand. Two more for the same list, both found by
+looking and neither a defect:
+
+- **The floor page has a ~190px void.** D13's reserved gutter is deliberate and a
+  framework page's description balances it; the floor has nothing on either side.
+- **The loss list reads oddly** — `31 tags` / `tags on 1 quote` / `the AutoCode
+  run…`. The second bullet repeats "tags" and reads as a fragment. Pre-existing
+  copy, lifted from the re-analyse sheet.
+
+### One operational note
+
+`serve` reads `index.html` **once at startup**. After a frontend rebuild the
+running process keeps serving the old chunk graph, and reloading the browser
+does not help — it looks exactly like a fix that did not apply. Restart `serve`.
+Cost two rounds here.

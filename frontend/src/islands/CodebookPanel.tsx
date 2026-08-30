@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
@@ -8,7 +8,18 @@ import { autocodeRefusal } from "../utils/autocodeRefusal";
 import type { ApiError } from "../utils/api";
 import { isExportMode } from "../utils/exportData";
 import { ct } from "../utils/platformTranslation";
-import { Badge, ConfirmDialog, EditableText, MicroBar, SectionHeading, TagInput, ThresholdReviewModal } from "../components";
+import {
+  CodebookGroupColumn,
+  ConfirmDialog,
+  MergeConfirm,
+  NewGroupPlaceholder,
+  SectionHeading,
+  ThresholdReviewModal,
+} from "../components";
+// The floor's authoring apparatus is shared with the v2 lens — see
+// components/CodebookAuthoring.tsx. It lives there, not here, so that there is
+// one implementation of add/rename/delete/drag/merge rather than two.
+import { useCodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import { addJob } from "../contexts/ActivityStore";
 import {
   dropFrameworkDisabled,
@@ -17,26 +28,18 @@ import {
   useSidebarStore,
 } from "../contexts/SidebarStore";
 import {
-  createCodebookGroup,
-  createCodebookTag,
-  deleteCodebookGroup,
-  deleteCodebookTag,
   getAutoCodeStatus,
   getCodebook,
   getCodebookTemplates,
   getRemoveFrameworkImpact,
   importCodebookTemplate,
-  mergeCodebookTags,
   removeCodebookFramework,
   startAutoCode,
-  updateCodebookGroup,
-  updateCodebookTag,
 } from "../utils/api";
 import type {
   AutoCodeJobStatus,
   CodebookGroupResponse,
   CodebookResponse,
-  CodebookTagResponse,
   RemoveFrameworkInfo,
   TemplateOut,
 } from "../utils/types";
@@ -45,480 +48,8 @@ import type {
 // Colour helpers — shared module (see utils/colours.ts)
 // ---------------------------------------------------------------------------
 
-import { getGroupBg, getBarColour, getTagBg } from "../utils/colours";
+import { getGroupBg, getTagBg } from "../utils/colours";
 import { summariseFramework } from "../utils/codebookSummary";
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-interface TagRowProps {
-  tag: CodebookTagResponse;
-  maxCount: number;
-  colourSet: string;
-  groupId: number;
-  onRequestDelete: (tag: CodebookTagResponse) => void;
-  onRenameTag: (tag: CodebookTagResponse, newName: string) => void;
-  onDragStart: (tag: CodebookTagResponse, groupId: number) => void;
-  onDragEnd: () => void;
-  onMergeDrop: (targetTag: CodebookTagResponse) => void;
-}
-
-function TagRow({
-  tag,
-  maxCount,
-  colourSet,
-  groupId,
-  onRequestDelete,
-  onRenameTag,
-  onDragStart,
-  onDragEnd,
-  onMergeDrop,
-}: TagRowProps) {
-  const [isMergeTarget, setIsMergeTarget] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const dragOverCount = useRef(0);
-
-  const handleDragStart = useCallback(
-    (e: React.DragEvent) => {
-      e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", String(tag.id));
-      // Create a custom drag ghost from the badge only (not the whole row)
-      const badge = (e.currentTarget as HTMLElement).querySelector(".badge");
-      if (badge) {
-        const ghost = badge.cloneNode(true) as HTMLElement;
-        ghost.classList.add("drag-ghost");
-        ghost.style.position = "fixed";
-        ghost.style.top = "-1000px";
-        document.body.appendChild(ghost);
-        e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
-        // Clean up the clone after a frame
-        requestAnimationFrame(() => document.body.removeChild(ghost));
-      }
-      onDragStart(tag, groupId);
-    },
-    [tag, groupId, onDragStart],
-  );
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    dragOverCount.current++;
-    setIsMergeTarget(true);
-  }, []);
-
-  const handleDragLeave = useCallback(() => {
-    dragOverCount.current--;
-    if (dragOverCount.current <= 0) {
-      dragOverCount.current = 0;
-      setIsMergeTarget(false);
-    }
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      dragOverCount.current = 0;
-      setIsMergeTarget(false);
-      onMergeDrop(tag);
-    },
-    [tag, onMergeDrop],
-  );
-
-  const hasTentative = (tag.tentative_count ?? 0) > 0;
-  const barColour = getBarColour(colourSet);
-
-  const classes = [
-    "tag-row",
-    isMergeTarget ? "merge-target" : null,
-  ].filter(Boolean).join(" ");
-
-  return (
-    <div
-      className={classes}
-      draggable={!isEditing}
-      onDragStart={handleDragStart}
-      onDragEnd={onDragEnd}
-      onDragOver={handleDragOver}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      <div className="tag-name-area">
-        {isEditing ? (
-          <EditableText
-            as="span"
-            value={tag.name}
-            isEditing={true}
-            trigger="external"
-            className="badge tag-edit-inline"
-            onCommit={(newName) => {
-              setIsEditing(false);
-              if (newName && newName !== tag.name) onRenameTag(tag, newName);
-            }}
-            onCancel={() => setIsEditing(false)}
-          />
-        ) : (
-          <Badge
-            text={tag.name}
-            variant="deletable"
-            colour={getTagBg(colourSet, tag.colour_index)}
-            onClick={() => setIsEditing(true)}
-            onDelete={() => onRequestDelete(tag)}
-          />
-        )}
-      </div>
-      <div className="tag-bar-area">
-        {hasTentative ? (
-          <MicroBar
-            value={maxCount > 0 ? tag.count / maxCount : 0}
-            tentativeValue={maxCount > 0 ? (tag.tentative_count ?? 0) / maxCount : 0}
-            colour={barColour}
-            title={`${tag.tentative_count ?? 0} tentative + ${tag.count} accepted`}
-          />
-        ) : tag.count > 0 ? (
-          <MicroBar value={maxCount > 0 ? tag.count / maxCount : 0} colour={barColour} />
-        ) : null}
-        <span className="tag-count">{tag.count}</span>
-      </div>
-    </div>
-  );
-}
-
-interface CodebookGroupColumnProps {
-  group: CodebookGroupResponse;
-  allTagNames: string[];
-  onUpdateGroup: (groupId: number, fields: { name?: string; subtitle?: string }) => void;
-  onDeleteGroup: (group: CodebookGroupResponse) => void;
-  onCreateTag: (name: string, groupId: number) => void;
-  onDeleteTag: (tag: CodebookTagResponse) => void;
-  onRenameTag: (tag: CodebookTagResponse, newName: string) => void;
-  onDragStart: (tag: CodebookTagResponse, groupId: number) => void;
-  onDragEnd: () => void;
-  onDropTag: (groupId: number) => void;
-  onMergeDrop: (targetTag: CodebookTagResponse) => void;
-}
-
-// Placeholder key — resolved at render time via t().
-
-/**
- * Group subtitle with placeholder support.
- *
- * When the subtitle is empty, shows italic placeholder text.
- * On click-to-edit, immediately switches to normal text style
- * (removes placeholder class) and shows an empty field instead
- * of the placeholder hint. Uses external editing control so
- * we can track the editing state and adjust styling/value.
- */
-function GroupSubtitle({
-  subtitle,
-  onCommit,
-}: {
-  subtitle: string;
-  onCommit: (text: string) => void;
-}) {
-  const { t } = useTranslation();
-  const isEmpty = !subtitle;
-  const [isEditing, setIsEditing] = useState(false);
-
-  // When empty and not editing: show placeholder text with placeholder style.
-  // When editing: show the actual subtitle (empty string if none) with normal style.
-  const displayValue = isEmpty && !isEditing ? t("codebook.addSubtitle") : subtitle;
-  const className = `group-subtitle${isEmpty && !isEditing ? " placeholder" : ""}`;
-
-  return (
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-    <div onClick={() => { if (!isEditing) setIsEditing(true); }}>
-      <EditableText
-        as="p"
-        value={displayValue}
-        isEditing={isEditing}
-        trigger="external"
-        className={className}
-        onCommit={(text) => {
-          setIsEditing(false);
-          onCommit(text);
-        }}
-        onCancel={() => setIsEditing(false)}
-      />
-    </div>
-  );
-}
-
-function CodebookGroupColumn({
-  group,
-  allTagNames,
-  onUpdateGroup,
-  onDeleteGroup,
-  onCreateTag,
-  onDeleteTag,
-  onRenameTag,
-  onDragStart,
-  onDragEnd,
-  onDropTag,
-  onMergeDrop,
-}: CodebookGroupColumnProps) {
-  const { t } = useTranslation();
-  const te = useTranslation("enums").t;
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [confirmingTag, setConfirmingTag] = useState<CodebookTagResponse | null>(null);
-  const [isAddingTag, setIsAddingTag] = useState(false);
-  const tagInputKey = useRef(0);
-  const dragOverCount = useRef(0);
-
-  // Translate built-in group labels (sentiment + uncategorised)
-  const isSentiment = group.colour_set === "sentiment";
-  const isUncategorised = group.name === "Uncategorised";
-  const displayGroupName = isSentiment ? t("analysis.sentiment")
-    : isUncategorised ? t("codebook.uncategorised")
-    : group.name;
-  const displayGroupSubtitle = isSentiment ? t("analysis.sentimentSubtitle")
-    : isUncategorised ? t("codebook.uncategorisedSubtitle")
-    : group.subtitle;
-
-  const maxCount = Math.max(1, ...group.tags.map((tg) => tg.count + (tg.tentative_count ?? 0)));
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    dragOverCount.current++;
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback(() => {
-    dragOverCount.current--;
-    if (dragOverCount.current <= 0) {
-      dragOverCount.current = 0;
-      setIsDragOver(false);
-    }
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      dragOverCount.current = 0;
-      setIsDragOver(false);
-      onDropTag(group.id);
-    },
-    [group.id, onDropTag],
-  );
-
-  const handleTagCommit = useCallback(
-    (name: string) => {
-      setIsAddingTag(false);
-      if (name.trim()) onCreateTag(name.trim(), group.id);
-    },
-    [group.id, onCreateTag],
-  );
-
-  const handleTagCommitAndReopen = useCallback(
-    (name: string) => {
-      if (name.trim()) onCreateTag(name.trim(), group.id);
-      // Increment key to force TagInput remount (fresh empty input)
-      tagInputKey.current++;
-      setIsAddingTag(true);
-    },
-    [group.id, onCreateTag],
-  );
-
-  const handleRequestDeleteTag = useCallback((tag: CodebookTagResponse) => {
-    if (tag.count === 0) {
-      // No quotes affected — skip confirmation
-      onDeleteTag(tag);
-    } else {
-      setConfirmingTag(tag);
-    }
-  }, [onDeleteTag]);
-
-  const classes = [
-    "codebook-group",
-    isDragOver ? "drag-over" : null,
-  ].filter(Boolean).join(" ");
-
-  const isDefault = group.is_default;
-  const isFramework = group.framework_id != null;
-  // An exported report is a read-only reference ("the taxonomy we coded
-  // against") — no server to persist codebook edits, so gate every authoring
-  // affordance (rename/delete/add-tag/drag) the same way built-in groups are.
-  const isReadOnly = isDefault || isFramework || isExportMode();
-
-  return (
-    <div
-      className={classes}
-      style={{ backgroundColor: getGroupBg(group.colour_set) }}
-      onDragOver={handleDragOver}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      <div className="group-header">
-        <div className="group-title-area">
-          <div className="group-title">
-            {isReadOnly || isSentiment ? (
-              <span className="group-title-text">{displayGroupName}</span>
-            ) : (
-              <EditableText
-                as="span"
-                value={group.name}
-                trigger="click"
-                className="group-title-text"
-                onCommit={(text) => onUpdateGroup(group.id, { name: text })}
-                onCancel={() => {}}
-              />
-            )}
-          </div>
-          {isReadOnly || isSentiment ? (
-            <p className="group-subtitle">{displayGroupSubtitle}</p>
-          ) : (
-            <GroupSubtitle
-              subtitle={group.subtitle}
-              onCommit={(text) => onUpdateGroup(group.id, { subtitle: text })}
-            />
-          )}
-        </div>
-        {!isReadOnly && (
-          <button
-            className="group-close"
-            onClick={() => setShowDeleteConfirm(true)}
-            aria-label={t("codebook.deleteGroupAriaLabel", { name: group.name })}
-          >
-            &times;
-          </button>
-        )}
-      </div>
-
-      <div className="tag-list">
-        {group.tags.map((tag) => {
-          const tagDisplayName = isSentiment
-            ? te(`sentiment.${tag.name}`, { defaultValue: tag.name })
-            : tag.name;
-          return isFramework ? (
-            <div key={tag.id} className="tag-row">
-              <div className="tag-name-area">
-                <Badge
-                  text={tagDisplayName}
-                  variant="readonly"
-                  colour={getTagBg(group.colour_set, tag.colour_index)}
-                />
-              </div>
-              <div className="tag-bar-area">
-                {(tag.tentative_count ?? 0) > 0 ? (
-                  <MicroBar
-                    value={maxCount > 0 ? tag.count / maxCount : 0}
-                    tentativeValue={maxCount > 0 ? (tag.tentative_count ?? 0) / maxCount : 0}
-                    colour={getBarColour(group.colour_set)}
-                    title={`${tag.tentative_count ?? 0} tentative + ${tag.count} accepted`}
-                  />
-                ) : tag.count > 0 ? (
-                  <MicroBar value={maxCount > 0 ? tag.count / maxCount : 0} colour={getBarColour(group.colour_set)} />
-                ) : null}
-                <span className="tag-count">{tag.count}</span>
-              </div>
-            </div>
-          ) : (
-            <TagRow
-              key={tag.id}
-              tag={tag}
-              maxCount={maxCount}
-              colourSet={group.colour_set}
-              groupId={group.id}
-              onRequestDelete={handleRequestDeleteTag}
-              onRenameTag={onRenameTag}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-              onMergeDrop={onMergeDrop}
-            />
-          );
-        })}
-      </div>
-
-      {group.total_quotes > 0 && (
-        <div className="group-total-row">
-          <span className="group-total-label">{t("codebook.total")}</span>
-          <span className="group-total-count">{group.total_quotes}</span>
-        </div>
-      )}
-
-      {!isFramework && (isAddingTag ? (
-        <div className="tag-add-row">
-          <TagInput
-            key={tagInputKey.current}
-            vocabulary={[]}
-            exclude={allTagNames}
-            onCommit={handleTagCommit}
-            onCommitAndReopen={handleTagCommitAndReopen}
-            onCancel={() => setIsAddingTag(false)}
-          />
-        </div>
-      ) : (
-        <div
-          className="tag-add-row"
-          role="button"
-          tabIndex={0}
-          onClick={() => setIsAddingTag(true)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setIsAddingTag(true);
-            }
-          }}
-        >
-          <span className="tag-add-badge">{t("codebook.addTag")}</span>
-        </div>
-      ))}
-
-      {/* Tag-delete confirmation — rendered at group level for correct positioning */}
-      {confirmingTag && (
-        <ConfirmDialog
-          title={t("codebook.deleteTagTitle", { name: confirmingTag.name })}
-          body={
-            confirmingTag.count > 0
-              ? <span>{t("codebook.tagOnQuotes", { count: confirmingTag.count })}</span>
-              : undefined
-          }
-          confirmLabel={t("buttons.delete")}
-          variant="danger"
-          accentColour={getBarColour(group.colour_set)}
-          onConfirm={() => {
-            const tag = confirmingTag;
-            setConfirmingTag(null);
-            onDeleteTag(tag);
-          }}
-          onCancel={() => setConfirmingTag(null)}
-        />
-      )}
-
-      {/* Group-delete confirmation */}
-      {showDeleteConfirm && !isReadOnly && (
-        <ConfirmDialog
-          title={t("codebook.deleteGroupTitle", { name: group.name })}
-          body={
-            group.tags.length > 0
-              ? <span>{t("codebook.tagsWillMove", { count: group.tags.length })}</span>
-              : undefined
-          }
-          confirmLabel={t("codebook.deleteGroup")}
-          variant="danger"
-          accentColour={getBarColour(group.colour_set)}
-          onConfirm={() => {
-            setShowDeleteConfirm(false);
-            onDeleteGroup(group);
-          }}
-          onCancel={() => setShowDeleteConfirm(false)}
-        />
-      )}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Main island
@@ -538,11 +69,6 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
   const { t } = useTranslation();
   const [data, setData] = useState<CodebookResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const dragTagRef = useRef<{ tag: CodebookTagResponse; fromGroupId: number } | null>(null);
-  const [mergeConfirm, setMergeConfirm] = useState<{
-    source: CodebookTagResponse;
-    target: CodebookTagResponse;
-  } | null>(null);
   const [modalView, setModalView] = useState<"closed" | "picker" | "preview">("closed");
   const [templates, setTemplates] = useState<TemplateOut[] | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateOut | null>(null);
@@ -695,127 +221,12 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
     }
   }, [data, templates]);
 
-  // --- Group mutations ---
+  // --- Authoring: add/rename/delete a tag, add/delete a group, drag, merge ---
 
-  const handleUpdateGroup = useCallback(
-    (groupId: number, fields: { name?: string; subtitle?: string }) => {
-      updateCodebookGroup(groupId, fields)
-        .then(fetchData)
-        .catch((err) => console.error("Update group failed:", err));
-    },
-    [fetchData],
-  );
-
-  const handleDeleteGroup = useCallback(
-    (group: CodebookGroupResponse) => {
-      deleteCodebookGroup(group.id)
-        .then(fetchData)
-        .catch((err) => console.error("Delete group failed:", err));
-    },
-    [fetchData],
-  );
-
-  const handleCreateGroup = useCallback(() => {
-    const COLOUR_SET_ORDER = ["ux", "emo", "task", "trust", "opp"];
-    const usedSets = new Set(data?.groups.map((g) => g.colour_set) ?? []);
-    const nextSet = COLOUR_SET_ORDER.find((s) => !usedSets.has(s)) ?? "ux";
-    createCodebookGroup(i18n.t("codebook.newGroup"), nextSet)
-      .then(fetchData)
-      .catch((err) => console.error("Create group failed:", err));
-  }, [data, fetchData]);
-
-  // --- Tag mutations ---
-
-  const handleCreateTag = useCallback(
-    (name: string, groupId: number) => {
-      createCodebookTag(name, groupId)
-        .then(fetchData)
-        .catch((err) => console.error("Create tag failed:", err));
-    },
-    [fetchData],
-  );
-
-  const handleDeleteTag = useCallback(
-    (tag: CodebookTagResponse) => {
-      deleteCodebookTag(tag.id)
-        .then(fetchData)
-        .catch((err) => console.error("Delete tag failed:", err));
-    },
-    [fetchData],
-  );
-
-  const handleRenameTag = useCallback(
-    (tag: CodebookTagResponse, newName: string) => {
-      updateCodebookTag(tag.id, { name: newName })
-        .then(fetchData)
-        .catch((err) => console.error("Rename tag failed:", err));
-    },
-    [fetchData],
-  );
-
-  // --- Drag and drop ---
-
-  const handleDragStart = useCallback(
-    (tag: CodebookTagResponse, fromGroupId: number) => {
-      dragTagRef.current = { tag, fromGroupId };
-    },
-    [],
-  );
-
-  const handleDragEnd = useCallback(() => {
-    dragTagRef.current = null;
-  }, []);
-
-  const handleDropTag = useCallback(
-    (targetGroupId: number) => {
-      const dragInfo = dragTagRef.current;
-      if (!dragInfo) return;
-      if (dragInfo.fromGroupId === targetGroupId) return;
-      dragTagRef.current = null;
-      updateCodebookTag(dragInfo.tag.id, { group_id: targetGroupId })
-        .then(fetchData)
-        .catch((err) => console.error("Move tag failed:", err));
-    },
-    [fetchData],
-  );
-
-  const handleMergeDrop = useCallback(
-    (targetTag: CodebookTagResponse) => {
-      const dragInfo = dragTagRef.current;
-      if (!dragInfo) return;
-      if (dragInfo.tag.id === targetTag.id) return;
-      dragTagRef.current = null;
-      setMergeConfirm({ source: dragInfo.tag, target: targetTag });
-    },
-    [],
-  );
-
-  const handleMergeConfirm = useCallback(() => {
-    if (!mergeConfirm) return;
-    mergeCodebookTags(mergeConfirm.source.id, mergeConfirm.target.id)
-      .then(fetchData)
-      .catch((err) => console.error("Merge tags failed:", err));
-    setMergeConfirm(null);
-  }, [mergeConfirm, fetchData]);
-
-  const handleDropNewGroup = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      const dragInfo = dragTagRef.current;
-      if (!dragInfo) return;
-      dragTagRef.current = null;
-      const COLOUR_SET_ORDER = ["ux", "emo", "task", "trust", "opp"];
-      const usedSets = new Set(data?.groups.map((g) => g.colour_set) ?? []);
-      const nextSet = COLOUR_SET_ORDER.find((s) => !usedSets.has(s)) ?? "ux";
-      createCodebookGroup(i18n.t("codebook.newGroup"), nextSet)
-        .then((newGroup) => {
-          return updateCodebookTag(dragInfo.tag.id, { group_id: newGroup.id });
-        })
-        .then(fetchData)
-        .catch((err) => console.error("Create group from drag failed:", err));
-    },
-    [data, fetchData],
-  );
+  // One implementation, shared with the v2 lens (hooks/useCodebookAuthoring).
+  // `data?.groups` rather than the researcher groups on screen: a new group's
+  // colour set is chosen by what is unused, and a framework's sets count too.
+  const authoring = useCodebookAuthoring({ groups: data?.groups, onChanged: fetchData });
 
   // --- Browse / import handlers ---
 
@@ -1016,10 +427,10 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
 
   // Listen for menu-bar "create group" requests (dispatched by AppLayout).
   useEffect(() => {
-    const handler = () => handleCreateGroup();
+    const handler = () => authoring.onCreateGroup();
     window.addEventListener("bn:codebook-create-group", handler);
     return () => window.removeEventListener("bn:codebook-create-group", handler);
-  }, [handleCreateGroup]);
+  }, [authoring]);
 
   // Listen for menu-bar "create code" requests (dispatched by AppLayout).
   // Adds a new tag to the first researcher (non-framework) group.
@@ -1030,12 +441,12 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
         .filter((g) => g.framework_id == null)
         .sort((a, b) => (a.is_default === b.is_default ? a.order - b.order : a.is_default ? -1 : 1))[0];
       if (researcherGroup) {
-        handleCreateTag(i18n.t("codebook.newCode"), researcherGroup.id);
+        authoring.groupProps.onCreateTag(i18n.t("codebook.newCode"), researcherGroup.id);
       }
     };
     window.addEventListener("bn:codebook-create-code", handler);
     return () => window.removeEventListener("bn:codebook-create-code", handler);
-  }, [data, handleCreateTag]);
+  }, [data, authoring]);
 
   // --- Render ---
 
@@ -1145,38 +556,16 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
             key={group.id}
             group={group}
             allTagNames={data.all_tag_names}
-            onUpdateGroup={handleUpdateGroup}
-            onDeleteGroup={handleDeleteGroup}
-            onCreateTag={handleCreateTag}
-            onDeleteTag={handleDeleteTag}
-            onRenameTag={handleRenameTag}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDropTag={handleDropTag}
-            onMergeDrop={handleMergeDrop}
+            {...authoring.groupProps}
           />
         ))}
 
-        {/* New group placeholder — creating a group needs a server (hidden offline). */}
-        {!isExportMode() && (
-        <div
-          className="codebook-group new-group-placeholder"
-          role="button"
-          tabIndex={0}
-          onClick={handleCreateGroup}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              handleCreateGroup();
-            }
-          }}
-          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
-          onDrop={handleDropNewGroup}
-        >
-          <span className="new-group-icon">+</span>
-          <span className="new-group-label">{t("codebook.newGroup")}</span>
-        </div>
-        )}
+        {/* New group placeholder — creating a group needs a server, so the
+            component hides itself offline. */}
+        <NewGroupPlaceholder
+          onCreateGroup={authoring.onCreateGroup}
+          onDropNewGroup={authoring.onDropNewGroup}
+        />
 
         {/* Per-framework sections — each imported framework gets its own header + remove button */}
         {Array.from(frameworkById.entries()).map(([fid, fwGroups]) => {
@@ -1264,15 +653,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                   key={group.id}
                   group={group}
                   allTagNames={data.all_tag_names}
-                  onUpdateGroup={handleUpdateGroup}
-                  onDeleteGroup={handleDeleteGroup}
-                  onCreateTag={handleCreateTag}
-                  onDeleteTag={handleDeleteTag}
-                  onRenameTag={handleRenameTag}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  onDropTag={handleDropTag}
-                  onMergeDrop={handleMergeDrop}
+                  {...authoring.groupProps}
                 />
               ))}
             </Fragment>
@@ -1281,24 +662,11 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
       </div>
 
       {/* Merge confirmation — centred overlay */}
-      {mergeConfirm && (
-        <div className="merge-overlay">
-          <ConfirmDialog
-            title={t("codebook.mergeTitle", { source: mergeConfirm.source.name, target: mergeConfirm.target.name })}
-            body={
-              <span
-                dangerouslySetInnerHTML={{
-                  __html: t("codebook.mergeBody", { source: mergeConfirm.source.name, target: mergeConfirm.target.name }),
-                }}
-              />
-            }
-            confirmLabel={t("codebook.merge")}
-            variant="primary"
-            onConfirm={handleMergeConfirm}
-            onCancel={() => setMergeConfirm(null)}
-          />
-        </div>
-      )}
+      <MergeConfirm
+        pending={authoring.pendingMerge}
+        onConfirm={authoring.onConfirmMerge}
+        onCancel={authoring.onCancelMerge}
+      />
 
       {/* Remove framework confirmation */}
       {removeConfirm && (

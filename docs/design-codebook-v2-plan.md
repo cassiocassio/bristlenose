@@ -327,3 +327,156 @@ lens under test rather than the tail of a long one.
 
 Phase 6's other gates are unchanged: the four Indicative items still want your
 eye on the parallel surface, and the flag defaults on only after that.
+
+### Phase 6a — the authoring extraction
+
+**Done 30 Aug 2026.** The floor's authoring apparatus is now one implementation
+that both lenses render, which was phase 6's blocker. The instruction was that
+v2 take it *directly* from the shipped implementation; the faithful reading is
+extraction, not reimplementation, because two implementations of one behaviour
+drift from the day they ship.
+
+#### What moved
+
+| From | To | What |
+|---|---|---|
+| `islands/CodebookPanel.tsx` L55–521 | `components/CodebookAuthoring.tsx` | `TagRow`, `GroupSubtitle`, `CodebookGroupColumn` — **verbatim**, three `export` keywords and the props split aside |
+| same file, the 12-handler cluster | `hooks/useCodebookAuthoring.ts` | seven API calls, the drag ref, the pending merge |
+| the container's render | `NewGroupPlaceholder`, `MergeConfirm` | the new-group card and the centred merge dialog, each now a component both lenses call |
+
+The move is provable rather than asserted: `git show 901d0586:…/CodebookPanel.tsx
+| sed -n '55,521p'` diffs against the new file in **24 lines**, all of them the
+three exports and the interface split. Nothing else was touched, and the CSS
+was not touched at all — `git diff bristlenose/theme/` is empty.
+
+v2's page had its own read-only `Group`/`TagRow`. Both are deleted. There is no
+second renderer left.
+
+#### The props contract
+
+```ts
+interface CodebookGroupHandlers {          // components/CodebookAuthoring.tsx
+  onUpdateGroup, onDeleteGroup,
+  onCreateTag, onDeleteTag, onRenameTag,
+  onDragStart, onDragEnd, onDropTag, onMergeDrop
+}
+
+interface CodebookAuthoring {              // hooks/useCodebookAuthoring.ts
+  groupProps: CodebookGroupHandlers        // spread onto CodebookGroupColumn
+  onCreateGroup, onDropNewGroup            // the new-group card
+  pendingMerge, onConfirmMerge, onCancelMerge   // feed to MergeConfirm
+}
+
+useCodebookAuthoring({ groups, onChanged })
+```
+
+**The bundle is the load-bearing part.** Ten separately-named props listed at
+three call sites is precisely how the two implementations this extraction
+removes would grow back, one prop at a time. `groupProps` is typed as the exact
+shape the hook returns, so a lens cannot wire nine of ten and still compile.
+
+`groups` is **every** group including the frameworks', not the ones on screen: a
+new group's colour set is chosen by what is unused, and asking only the visible
+groups would hand out one a framework already holds. `onChanged` is each lens's
+own refetch — v1's `fetchData`, v2's `reload`.
+
+**Read-only is decided by the group, not by the lens.** `CodebookGroupColumn`
+reads `is_default` / `framework_id` / `isExportMode()` and gates itself, so both
+lenses inherit one rule instead of each remembering it. That is why v2 passes
+the handlers on a framework page too and gets a read-only card anyway. The one
+thing the *page* decides is the new-group card, gated on `book.floor` — only the
+floor grows groups.
+
+#### The one behaviour that changed, and why
+
+**D26 now exempts the floor.** The bleak "This codebook has no tags." governs *a
+codebook you installed*; the floor is not one — it is the surface you author.
+Answering an empty floor with a sentence instead of controls would leave a
+researcher with no way to begin, which the shipped lens never does. A framework
+with no tags still gets the sentence, pinned by a test either way.
+
+#### What the extraction could not preserve — and did not try to
+
+Four of these are **defects it found in the shipped lens**. None is fixed here:
+this was a refactor, and a fix smuggled into a move is invisible to review.
+
+1. **`.tag-row.dragging` never fires in either lens.** The reduced-opacity drag
+   state is applied only by `theme/js/codebook.js` — the frozen vanilla
+   renderer. React's `TagRow` composes `["tag-row", isMergeTarget && "merge-target"]`
+   and has done since the migration. So the CSS rule is live and unreachable in
+   the SPA. Preserved exactly; the parity tests assert `.merge-target`, which
+   React does own, and deliberately assert nothing about `.dragging`.
+2. **`.codebook-panel .tag-row:hover` is likewise dead.** Nothing in the React
+   tree carries `.codebook-panel` — it is a vanilla-renderer ancestor. The row
+   hover background does not exist in the SPA, in either lens.
+3. **The group title and subtitle have no keyboard route.** `EditableText` with
+   `trigger="click"` renders no `tabIndex`, no `role`, and no key handler until
+   it is already editing. Not brought to parity: `EditableText` is used across
+   the app, so an a11y change there is a different piece of work with a
+   different blast radius. **The badge, however, already had parity** — `Badge`
+   emits `role="button"` + `tabIndex={0}` + Enter/Space whenever `onClick` is
+   present, so inline rename has been keyboard-reachable all along. Half the
+   gap named in the brief was already closed.
+4. **A researcher's tag can be dropped onto a *framework's* group card and it
+   moves there.** The `.codebook-group` drop handler is not gated by
+   `isFramework`, so the card is read-only for every control except this one.
+   Shipped behaviour, preserved verbatim. In v2 it is unreachable — the floor
+   and a framework are different pages — which means the deletion step of D29
+   would close it as a side effect.
+5. **Failures `console.error` and stop.** No toast, no revert, no retry: a
+   rename that fails leaves the old name on screen with nothing said. Carried
+   over unchanged, and it is the same class as the optimistic toggle already
+   listed under Doubts.
+
+Two cosmetic consequences in v2, both intended: its group cards gain the header,
+the close button and the total row they never had, and the per-tag number is
+`.tag-count` rather than `.group-total-count`. Its old `TagRow` also drew a bar
+at count 0, where the shipped one draws none. v2 now looks like v1 because it
+*is* v1.
+
+#### Do they genuinely share one implementation?
+
+Yes, and it is asserted rather than believed.
+`islands/CodebookAuthoringParity.test.tsx` runs **thirteen** assertions against
+both lenses from one `describe.each` — 26 tests — mounting `CodebookPanel` and
+`CodebookV2` against the same fixture. It covers the details a reasonable test
+would not think to ask for, because those are the ones a move loses: the
+confirmation that is **skipped** for a zero-count tag, the delete button that is
+**absent** on the floor group, and the delete dialog's **position** inside the
+card rather than over the lens. A behaviour holding in only one lens fails the
+table.
+
+What that table cannot reach is visual: jsdom loads none of
+`bristlenose/theme/`, so `cursor: grab → grabbing` and the `.merge-target` ring
+are asserted as classes, never as computed style. Those want the Tier-1
+two-lens comparison, which is now genuinely two-lens.
+
+One harness note worth keeping: `TagRow`'s drag-start clones the badge into
+`document.body` as `.drag-ghost` and removes it on the next animation frame.
+Testing-library's cleanup unmounts its own container, not a node the component
+appended beside it, so a ghost outlives the assertion after a drag and
+`getByText` finds two. The fix is to filter ghosts when querying — **not** to
+sweep them in `afterEach`, which makes the component's own `removeChild` throw
+`NotFoundError` out of a callback nothing awaits.
+
+#### Two things phase 6 inherits from this
+
+- **Chunking.** Exported through the `components` barrel, the apparatus landed
+  in the always-loaded chunk and charged the landing route ~9.7 kB for markup no
+  first paint renders. Both lenses now import it by path, and it sits in a lazy
+  chunk they share. Confirmed against `index.html`'s modulepreload list, which
+  names `components-*.js` and not `useCodebookAuthoring-*.js`.
+- **The size glob excludes `CodebookPanel-*.js` by name and does not exclude
+  `CodebookV2-*.js`,** so the budget already counts the whole v2 lens while
+  discounting v1's. Harmless today (204.61 kB against 220) and worth tidying at
+  the deletion step, when one of those two filenames stops existing.
+
+#### And one hole this closed by accident
+
+Phase 6's owed i18n item is smaller than it was. v2's group cards now render
+through the shipped component, so `+ tag`, `Total`, `New group`, `Add subtitle…`
+and the delete-confirm strings are `t()` calls in all 21 locales rather than the
+English literals v2's own `Group` emitted. The page **head** — "Review",
+"Install", "Uninstall", "This codebook has no tags." — is still untranslated,
+and the check the plan asks for (grep the v2 files for `t(` and expect zero)
+must now be read as *the v2-specific chrome*, not the whole lens.

@@ -38,7 +38,9 @@ vi.mock("../utils/api", () => ({
   ),
   removeCodebookFramework: vi.fn(() => Promise.resolve(codebook)),
   importCodebookTemplate: vi.fn(() => Promise.resolve(codebook)),
+  startAutoCode: vi.fn(() => Promise.resolve({ status: "pending" })),
 }));
+vi.mock("../contexts/ActivityStore", () => ({ addJob: vi.fn() }));
 
 describe("CodebookV2 — built-in is derived, not hardcoded", () => {
   it("files authorless codebooks under Default and authored ones under Frameworks", async () => {
@@ -181,6 +183,25 @@ describe("phase 5 — the destructive edge", () => {
     await waitFor(() => screen.getByTestId("bn-v2-uninstall-sheet"));
     fireEvent.click(screen.getByTestId("bn-v2-uninstall-confirm"));
     await waitFor(() => expect(api.removeCodebookFramework).toHaveBeenCalled());
+  });
+
+  it("install APPLIES — importing alone would code nothing (D4)", async () => {
+    // Two calls, not one. The template import puts the tags in the codebook;
+    // the job is what codes the quotes. Importing alone leaves the separate
+    // Apply step v2 exists to remove, half-implemented and invisible.
+    const { fireEvent } = await import("@testing-library/react");
+    const api = await import("../utils/api");
+    const store = await import("../contexts/ActivityStore");
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    fireEvent.click(screen.getByTestId("bn-v2-card-action-cliux"));
+
+    await waitFor(() => expect(api.startAutoCode).toHaveBeenCalledWith("cliux"));
+    expect(api.importCodebookTemplate).toHaveBeenCalledWith("cliux");
+    // And it registers with the chip stack: autotagging is not instant, so
+    // without this the researcher clicks Install and nothing appears to happen.
+    await waitFor(() => expect(store.addJob).toHaveBeenCalled());
   });
 
   it("installs without a confirmation", async () => {

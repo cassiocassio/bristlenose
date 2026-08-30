@@ -19,7 +19,9 @@ import {
   importCodebookTemplate,
   putFrameworkStates,
   removeCodebookFramework,
+  startAutoCode,
 } from "../utils/api";
+import { addJob } from "../contexts/ActivityStore";
 import type {
   CodebookResponse,
   RemoveFrameworkInfo,
@@ -188,12 +190,28 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   }, []);
 
   const onInstall = useCallback(
-    (id: string) => {
-      // Install IS apply (D4) — it spends. No confirmation, deliberately: the
-      // researcher asked for it by clicking, and a dialog on an additive act
-      // teaches them to dismiss dialogs.
+    (id: string, title: string) => {
+      // **Install IS apply** (D4), and that is two calls, not one. Importing the
+      // template alone would put the tags in the codebook and code nothing —
+      // which is precisely the separate-Apply-step v2 exists to remove, left
+      // half-implemented and therefore invisible.
+      //
+      // No confirmation, deliberately: it spends, but the researcher asked by
+      // clicking, and a dialog on an additive act teaches them to dismiss
+      // dialogs — which is what makes the destructive one stop working.
       importCodebookTemplate(id)
-        .then(reload)
+        .then(() => startAutoCode(id))
+        .then(() => {
+          // Register with the activity store so the chip stack shows progress.
+          // Autotagging is not instant; without this the researcher clicks
+          // Install and nothing appears to happen for minutes.
+          addJob(`autocode:${id}`, {
+            type: "autocode",
+            frameworkId: id,
+            frameworkTitle: title,
+          });
+          reload();
+        })
         .catch((e: Error) => setError(e.message));
     },
     [reload],
@@ -318,7 +336,12 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
                   setView("page");
                 }}
                 onBack={() => setView("page")}
-                onInstall={onInstall}
+                onInstall={(id) =>
+                  onInstall(
+                    id,
+                    browseBooks.find((b) => b.id === id)?.title ?? id,
+                  )
+                }
                 onUninstall={(id) =>
                   onAskUninstall(
                     id,
@@ -337,7 +360,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
                   // wires it; opening a half-built one would be worse than not
                   // opening it, and rebuilding it is explicitly ruled out.
                 }}
-                onInstall={onInstall}
+                onInstall={(id) => onInstall(id, page.title)}
                 onUninstall={(id) => onAskUninstall(id, page.title)}
                 readOnly={readOnly}
               />

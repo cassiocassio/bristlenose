@@ -23,7 +23,7 @@
 
 import { Badge } from "../components/Badge";
 import { MicroBar } from "../components/MicroBar";
-import { getBarColour, getTagBg } from "../utils/colours";
+import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { safeUrlOrNull } from "../utils/safeUrl";
 import type { CodebookGroupResponse, TemplateOut } from "../utils/types";
 
@@ -108,7 +108,7 @@ function Group({ group }: { group: CodebookGroupResponse }) {
     ...group.tags.map((t) => t.count + (t.tentative_count ?? 0)),
   );
   return (
-    <div className="codebook-group" style={{ background: `var(--bn-group-${group.colour_set}, var(--bn-group-none))` }}>
+    <div className="codebook-group" style={{ background: getGroupBg(group.colour_set) }}>
       <div className="group-title-area">
         <div className="group-title">
           <span className="group-title-text">{group.name}</span>

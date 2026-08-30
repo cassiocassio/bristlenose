@@ -156,3 +156,72 @@ cannot fight.
 | **4** | Whether `TemplateOut` carries `builtin` explicitly | A wire change to remove an inference |
 | **5** | **Q7** — nine short descriptions | Content, not plumbing |
 | **6** | **Q10** — where the Codebook lab button lives | A placement, which is a design choice |
+
+## QA plan
+
+**The principle, and it is this repo's own scar tissue.** On 20 Aug a corpus was
+run through the acceptance harness repeatedly and reported clean; one screenshot
+of the same corpus in the `.app` produced three defects, none visible to 4,037
+passing tests, *"because a test asserts what someone thought to ask, and nobody
+had thought to ask what the pane said."* Everything below is therefore **looking
+at rendered surfaces**, not running more assertions.
+
+### What is already mechanical — do not re-check by hand
+
+Token resolution (`test_theme_token_resolution.py`), the export-CSS selectors,
+the URL-safety contract in both languages, the prototype render sweep
+(`scripts/check-prototype-render.py`), the message-kind mirror, locale parity
+(`check-locales.py`), and 10 rail tests each named for the decision it pins.
+
+### Tier 1 — the two-lens comparison (the point of D29)
+
+```bash
+.venv/bin/bristlenose serve --dev trial-runs/project-ikea
+```
+
+Open `http://localhost:8150/report/`, then **Codebook** and **Codebook v2** in
+two tabs on the same project. The four Indicative items are decidable here and
+nowhere else:
+
+1. **Button hierarchy** — Browse Library quiet and larger against Install
+   primary. Does the destination read as findable without shouting?
+2. **`.bn-btn-sm` / `-lg`** — does the size axis look like it belongs in the
+   atom, or like a mockup?
+3. **The Review door** — verb button plus counts on its baseline. Subordinate to
+   Install, as intended?
+4. **Provenance weight** — *Jakob Nielsen* against *Available by default* in the
+   same rail. Does the system fact recede enough?
+
+### Tier 2 — the states a test cannot judge
+
+- **Toggle a codebook off in the rail.** The row knocks back; watch whether the
+  switch reads as *off* rather than *broken*, and that the row is still clearly
+  clickable.
+- **Both switch renderings.** Safari gives the platform control, Chrome the
+  fallback. **Compare them side by side** — the fallback is 26×15 by
+  measurement, and the test cannot tell you it looks wrong.
+- **The empty Frameworks heading.** Uninstall every framework. Does the bare
+  heading plus Browse Library explain itself, or read as a bug? This is D25's
+  whole claim.
+- **Dark mode and the edo palette.** `--bn-colour-border-hover` as the off track
+  was chosen from the shipped switch; it has never been seen at rail scale.
+
+### Tier 3 — the app, once, with your eyes
+
+The corpus lesson again: run it in the `.app`, not the browser. The rail is
+chrome-adjacent, the WKWebView is not Chrome, and *"a feature whose whole point
+is the native context"* wants the real one.
+
+### What QA cannot yet reach, and why
+
+**Phase 3 does not exist**, so selecting a rail row changes only the highlight.
+Nothing beyond the rail is testable by hand, and the temptation to judge the
+button treatments from the *prototype* instead should be resisted — that is
+fixture data in a mockup, which is what D29 exists to stop.
+
+### The check I would add before phase 6
+
+**Grep the v2 files for `t(` and expect zero.** That is true today and
+deliberate; it must stop being true before the flag defaults on. Nothing
+mechanical will ask — `check-locales.py` is blind to a surface English never
+enrolled — so it belongs on a human's list.

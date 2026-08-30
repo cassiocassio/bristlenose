@@ -527,9 +527,9 @@ describe("resetSidebarStore", () => {
     act(() => resetSidebarStore());
     expect(result.current.tocMode).toBe("closed");
     expect(result.current.tagsOpen).toBe(false);
-    // The two sidebars have separate defaults: the left nav opens at its
-    // 200px minimum, the tag sidebar keeps 280.
-    expect(result.current.tocWidth).toBe(200);
+    // Both panels open at 280 — above the 200px drag minimum, so a reset
+    // leaves room to narrow as well as widen.
+    expect(result.current.tocWidth).toBe(280);
     expect(result.current.tagsWidth).toBe(280);
   });
 

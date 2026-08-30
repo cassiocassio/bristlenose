@@ -3155,3 +3155,49 @@ pairs are a per-locale question, not a link-handling one.
    form**, which satisfies the glossary and pre-empts the mismatch case.
 4. **When D23 lands, revisit the export.** It is the change that first puts these
    links in a file that leaves the researcher's machine.
+
+### D30 — URLs from config are distrusted at parse time, https only
+
+Settled 30 Aug, after a parallel research session converged on the same problem
+from the other end. Its findings corrected two things here and are worth keeping.
+
+**The gate is at parse time, not at each render site.** `_parse_template`
+(`server/codebook/__init__.py`) drops any `author_links` entry whose URL fails
+the check, and logs which label it dropped. One gate serves the React render,
+the HTML export, the MCP surface and anything added later; a per-renderer gate
+is one grep away from being incomplete. The render site keeps its filter as
+defence in depth, where it is now a no-op.
+
+**Two scheme sets, because there are two questions.** `ALLOWED_SCHEMES`
+(http/https/mailto) answers *"may this be an href at all"* — the right question
+for a URL the researcher reached, and it matches Swift's `openExternal`.
+**`CONFIG_SCHEMES` is https-only** and answers *"may a stranger put this in our
+corpus"*. All 22 shipped author links are already https; plain http from a
+submitted codebook is a downgrade buying nothing. Inheriting one policy for the
+other would have been the lazy read.
+
+**No dependency.** `bleach` was deprecated in 2023; DOMPurify sanitises *HTML*
+at ~20 KB for a check that is one function. The rule is borrowed — allowlist,
+never denylist, per OWASP — and the parsing is the platform's (`urlparse`,
+`new URL()`), which is the half that gets `JaVaScRiPt:` and a tab-split scheme
+right. Only the policy is ours. Pinned across languages by
+`tests/fixtures/safe-url-contract.json`, 18 adversarial cases, asserted from
+both pytest and vitest.
+
+**Two corrections from the other session, both recorded rather than argued:**
+
+1. **Export mode does not render these links today** — `/codebook/templates` is
+   `SERVER_ONLY`, so the fetch throws offline and both call sites swallow it.
+   The third frame of `codebook-v2-external-links.html` is therefore drawn for a
+   case that does not yet exist. **But v2 creates it:** the links live in the
+   browse *preview* today, and v2 puts the bio on the **codebook page**, which
+   does ship offline. **v2 moves `author_links` into an exported file for the
+   first time** — a new exposure created by a layout decision, which is exactly
+   the kind of consequence a layout decision does not announce.
+2. **The unmitigated vector is presentational, not schematic.** A well-formed
+   `https` URL whose *label* names a different host — `nngroup.com` pointing at
+   somewhere else — passes every allowlist there is. No scheme check touches it.
+   The fix is to render the host rather than trust the label, and it is **open**:
+   the shipped labels are editorial (*"Original 1994 CHI paper (DOI)"*), so
+   replacing them with bare hosts costs something real. Worth drawing before
+   deciding.

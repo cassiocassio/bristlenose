@@ -19,12 +19,17 @@ Public API::
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+from bristlenose.utils.safe_url import CONFIG_SCHEMES, safe_url_or_none
+
+logger = logging.getLogger(__name__)
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent
 
@@ -126,11 +131,26 @@ def _parse_template(raw: dict[str, Any], filename: str) -> CodebookTemplate:
     enabled = bool(raw.get("enabled", True))
     sort_order = int(raw.get("sort_order", 50))
 
+    # Gate the links HERE, not at each render site. A codebook YAML is config
+    # the maintainer curates today and the community may submit once the public
+    # library exists, and its urls reach an <a href>. One parse-time gate serves
+    # the React render, the HTML export, the MCP surface and anything added
+    # later; a per-renderer gate is one grep away from being incomplete.
+    #
+    # CONFIG_SCHEMES is https-only, narrower than the general href allowlist:
+    # every shipped author link is already https, and plain http from a stranger
+    # is a downgrade buying nothing. An unsafe link is DROPPED, not blanked --
+    # rendering a dead label is worse than rendering nothing.
     raw_links = raw.get("author_links", []) or []
     author_links: list[tuple[str, str]] = []
     for link in raw_links:
         label = _str(link.get("label"))
-        url = _str(link.get("url"))
+        url = safe_url_or_none(_str(link.get("url")), CONFIG_SCHEMES)
+        if url is None:
+            logger.warning(
+                "%s: dropping author_link %r - not an https URL", filename, label
+            )
+            continue
         author_links.append((label, url))
 
     raw_groups = _require(raw, "groups", filename)

@@ -23,12 +23,19 @@ import type { TagFilterState } from "../utils/filter";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
-// The left nav opens at its minimum: start skinny but available, and let the
-// user widen if their content wants it — better than a wide default that most
-// people narrow. Framework titles are the case that wants more room; if they
-// prove to need it we'd rather edge this up than have the panel change size
-// per lens. The tag sidebar keeps 280 — different content, different default.
-const DEFAULT_TOC_WIDTH = 200;
+// Both panels open at 280. The left nav deliberately keeps ONE width across
+// every lens — switching lens shouldn't resize the furniture — accepting that
+// the best width for Signals isn't the best width for Quotes.
+//
+// Creep this up, never jump it. A 16" screen invites generosity, but
+// Bristlenose is usually one window among several — the product under test,
+// the report, the mail to the client — and `.center` is `min-width: 0` with no
+// viewport-driven collapse, so every px here comes straight out of content.
+// The nav trialled its own 200px minimum from 14 Aug 2026; Signals answered
+// the question that trial shipped with, its rows being a name plus a
+// right-aligned badge that ellipsed on arrival ("Top Navig…", "Beds Cat…").
+// 280 is the smallest width that fixes that, not the roomiest that fits.
+const DEFAULT_TOC_WIDTH = 280;
 const DEFAULT_TAGS_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;

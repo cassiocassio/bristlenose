@@ -28,6 +28,7 @@ from bristlenose.miro_board import (
 )
 from bristlenose.miro_render_svg import render_html
 from bristlenose.server.export_core import extract_quotes_for_export
+from bristlenose.utils.safe_url import is_safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -53,12 +54,9 @@ def _clip_url(base: str, q) -> str | None:
     `javascript:`/`data:` scheme, and this URL egresses into a shareable Miro
     board's `<a href>`. ASSUMPTION (A5): filename convention mirrors export-clips.
     """
-    if not base:
-        return None
-    parsed = urlparse(base)
-    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+    if not is_safe_url(base) or urlparse(base).scheme == "mailto":
         # Don't echo the user-supplied value into the log (log-injection guard).
-        logger.warning("Ignoring clips_base for Miro links: scheme is not http(s)")
+        logger.warning("Ignoring clips_base for Miro links: not an http(s) URL")
         return None
     fname = f"{q.session}-{q.participant_code}-{int(_parse_timecode(q.timecode))}.mp4"
     return f"{base.rstrip('/')}/{fname}"

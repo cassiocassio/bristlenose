@@ -22,5 +22,5 @@
       "@locales/*": ["../bristlenose/locales/*"]
     }
   },
-  "include": ["src", "../bristlenose/locales", "../tests/fixtures/shared-format-contract.json"]
+  "include": ["src", "../bristlenose/locales", "../tests/fixtures/shared-format-contract.json", "../tests/fixtures/safe-url-contract.json"]
 }

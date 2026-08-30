@@ -1,8 +1,9 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { toast } from "../utils/toast";
+import { safeUrlOrNull } from "../utils/safeUrl";
 import { autocodeRefusal } from "../utils/autocodeRefusal";
 import type { ApiError } from "../utils/api";
 import { isExportMode } from "../utils/exportData";
@@ -545,6 +546,19 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
   const [modalView, setModalView] = useState<"closed" | "picker" | "preview">("closed");
   const [templates, setTemplates] = useState<TemplateOut[] | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateOut | null>(null);
+
+  // Author links, with anything we would not put in an href dropped. The value
+  // is config data: curated YAML today, community-submitted once the public
+  // library exists. See utils/safeUrl.ts for the rule and why it is not a
+  // dependency. Normalised, not merely checked — a URL that was only safe
+  // because the parser stripped a tab out of it must render stripped.
+  const safeAuthorLinks = useMemo(
+    () =>
+      (selectedTemplate?.author_links ?? [])
+        .map((link) => ({ label: link.label, href: safeUrlOrNull(link.url) }))
+        .filter((link): link is { label: string; href: string } => link.href !== null),
+    [selectedTemplate],
+  );
   const [importing, setImporting] = useState(false);
   // Per-tile Install/Uninstall busy id, so only the acting tile's button
   // disables while its request is in flight.
@@ -1520,10 +1534,18 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                         <div className="preview-author">
                           <div className="preview-author-name">{selectedTemplate.author}</div>
                           <div className="preview-author-bio">{selectedTemplate.author_bio}</div>
-                          {selectedTemplate.author_links.length > 0 && (
+                          {safeAuthorLinks.length > 0 && (
                             <div className="preview-author-links">
-                              {selectedTemplate.author_links.map((link) => (
-                                <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer">
+                              {/* href comes from codebook YAML, which the
+                                  maintainer curates today and the community may
+                                  submit tomorrow (the public-library item).
+                                  html-escaping does not neutralise
+                                  `javascript:`, so the scheme is allowlisted —
+                                  see utils/safeUrl.ts. An unsafe link is
+                                  dropped, not rendered inert: a link that does
+                                  nothing is worse than no link. */}
+                              {safeAuthorLinks.map((link) => (
+                                <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer">
                                   {link.label} &#x2197;
                                 </a>
                               ))}

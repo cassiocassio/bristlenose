@@ -1,0 +1,97 @@
+{
+  "_doc": "Cross-language SAFETY contract: which URLs may be rendered as an href. Three implementations must agree - bristlenose/utils/safe_url.py, frontend/src/utils/safeUrl.ts, and Swift's WebView.swift::openExternal, which guards NSWorkspace against file:// app-launches. Sibling of shared-format-contract.json, which does this for RENDERED formats; a mismatch there is a visible inconsistency, a mismatch here is a hole.",
+  "_how_to_use": "Asserted by tests/test_safe_url_contract.py and frontend/src/utils/safeUrl.test.ts. Both read this file; a language that disagrees fails its own suite with the case named. Adding a case here is how you report a bypass - write the case first, watch it fail, then fix both sides.",
+  "_scope": "This pins the POLICY (which schemes, and whether a host is required), not the parsing. Parsing is urlparse and new URL() respectively - the WHATWG normalisation is the hard half and is deliberately not ours.",
+  "cases": [
+    {
+      "url": "https://nngroup.com",
+      "safe": true,
+      "why": "ordinary https"
+    },
+    {
+      "url": "http://example.org/a/b?c=d#e",
+      "safe": true,
+      "why": "http with path, query, fragment"
+    },
+    {
+      "url": "mailto:jakob@nngroup.com",
+      "safe": true,
+      "why": "mailto - allowed, to match Swift's openExternal"
+    },
+    {
+      "url": "javascript:alert(1)",
+      "safe": false,
+      "why": "the whole point: html-escaping does not touch this"
+    },
+    {
+      "url": "JaVaScRiPt:alert(1)",
+      "safe": false,
+      "why": "scheme comparison must be case-folded"
+    },
+    {
+      "url": "java\tscript:alert(1)",
+      "safe": false,
+      "why": "tab inside the scheme - browsers strip it, so must we"
+    },
+    {
+      "url": "java\nscript:alert(1)",
+      "safe": false,
+      "why": "newline inside the scheme"
+    },
+    {
+      "url": "  javascript:alert(1)",
+      "safe": false,
+      "why": "leading whitespace"
+    },
+    {
+      "url": "\u0000javascript:alert(1)",
+      "safe": false,
+      "why": "leading NUL"
+    },
+    {
+      "url": "data:text/html,<script>alert(1)</script>",
+      "safe": false,
+      "why": "data: renders attacker HTML in the browser"
+    },
+    {
+      "url": "vbscript:msgbox(1)",
+      "safe": false,
+      "why": "legacy but still worth refusing"
+    },
+    {
+      "url": "file:///etc/passwd",
+      "safe": false,
+      "why": "NSWorkspace would launch a local app for this"
+    },
+    {
+      "url": "//evil.example",
+      "safe": false,
+      "why": "protocol-relative - no scheme at all"
+    },
+    {
+      "url": "/relative/path",
+      "safe": false,
+      "why": "not an external link"
+    },
+    {
+      "url": "https://",
+      "safe": false,
+      "why": "scheme with no host is not a destination"
+    },
+    {
+      "url": "mailto:",
+      "safe": false,
+      "why": "mailto with no address"
+    },
+    {
+      "url": "",
+      "safe": false,
+      "why": "empty"
+    },
+    {
+      "url": "https://user:pass@example.org/",
+      "safe": true,
+      "why": "credentials are ugly, not unsafe - the browser handles them"
+    }
+  ]
+}

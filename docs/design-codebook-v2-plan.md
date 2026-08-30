@@ -96,8 +96,8 @@ delete v1.
 
 ## Session report — 30 Aug
 
-Phases **0** (seam), **2** (rail), **3** (codebook page) and **4** (browse
-grid) built; phase 1
+Phases **0** (seam), **2** (rail), **3** (codebook page), **4** (browse grid)
+and **5** (destructive edges) built; phase 1
 collapsed into the B6 fix because the data audit had already answered what it
 was going to discover. Suites green throughout: **4286 pytest, 1630 vitest,
 ruff and tsc clean**.
@@ -274,3 +274,56 @@ disabled**). The later, more precise decision wins.
 page call empty handlers. Phase 5 owns them because that is the phase where a bug
 loses work: install-is-apply spends money, and D20's option A makes uninstall
 stop preserving. A cheap early wiring is the worst available option.
+
+
+### Phase 5 — the destructive edges, and three bugs found on the way
+
+**D20 option A is implemented.** Uninstall keeps nothing: this project's
+QuoteTags, links, enable opinion, AutoCode job and proposals all go. The
+instance-scoped `CodebookGroup` / `TagDefinition` rows go **only when no other
+project still links them** — without that guard this would be A1 one level up,
+and a worse bug than the one it replaced.
+
+**Three real defects surfaced, none of them the thing I set out to change.**
+
+1. **A1** — `remove_framework` deleted `QuoteTag` by `tag_definition_id` with no
+   project filter, and those are instance-scoped. Uninstalling from one study
+   stripped the framework from every other study in the instance. The impact
+   endpoint had the same hole in its *counting*, which is worse in a quiet way:
+   it overstated the loss, and that number is the one the researcher decides on.
+2. **The import branch's proposal reset** filtered on `tag_definition_id` too,
+   so re-importing here rewrote **another project's** accepted proposals back to
+   pending. Same shape as A1, one table over. Removed — since option A there is
+   nothing of ours to reset, so the only rows it could reach belong to someone
+   else.
+3. **`restorable` was computed instance-wide** (register **A3**), so a framework
+   installed in any project read as restorable in every project. Retired with
+   the thing it described.
+
+**And the parity check found the one that would have shipped silently:**
+`onInstall` called `importCodebookTemplate` and nothing else, so installing put
+the tags in the codebook and **coded nothing** — the separate Apply step v2
+exists to remove, left half-implemented and invisible. Install is now import +
+job + activity-chip registration.
+
+**Q14 closed.** `/codebook/templates` is `SERVER_ONLY` while `/codebook` is
+embedded, so a bare `Promise.all` would have blanked the whole lens in an
+exported report. Tolerated separately; Browse Library and the install controls
+are hidden offline, not disabled.
+
+### What phase 6 is waiting on
+
+**The floor's authoring apparatus is the single remaining functional gap** — add
+and delete a group, add, rename and delete a tag, drag between groups, drop to
+merge. Seven API calls, **15 drag handlers** and the inline-edit machinery,
+inside a 1,545-line component.
+
+The user's instruction was *"all of that we take **directly** from the existing
+implementation"*, and the faithful reading is **extraction into a component both
+lenses use** — not a rewrite in v2, which would be two implementations of one
+behaviour. That is a refactor of the **shipped** lens, so it carries real risk to
+the thing D29 exists to protect, and it wants its own session with the shipped
+lens under test rather than the tail of a long one.
+
+Phase 6's other gates are unchanged: the four Indicative items still want your
+eye on the parallel surface, and the flag defaults on only after that.

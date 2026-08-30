@@ -2894,3 +2894,59 @@ The events log is NDJSON on disk, versioned by `schema_version`, and
 Swift mirror + a `pipeline-summary-contract.json` bump — no Alembic, no
 `ALTER TABLE`, and old lines stay readable. Different discipline, much cheaper,
 and easy to conflate with the DB work because both are called "schema".
+
+## Gap analysis + prototype QA — 30 Aug, measured
+
+Two questions: **is v2 about to remove something we ship?** and **does any
+control in the prototype lead somewhere undesigned?** Both answered
+mechanically against `CodebookPanel.tsx` (1,545 lines) and the prototype, not by
+reading.
+
+### A. Shipped behaviour v2 drops
+
+| | shipped today | v2 | verdict |
+|---|---|---|---|
+| **1** | **`restorable`** — the card's verb becomes **"Restore codebook"**, a **"Previously imported"** note appears, and the page promises *"AutoCode results are preserved — reinstall any time from the Codebook Library."* | all three gone | **D20 option A. Deliberate — but it retires a promise, not just a label. Worth confirming explicitly** |
+| **2** | **`imported`** — an **"Installed"** badge in the card's top-right (`.picker-card.imported::after`) | the button reads Uninstall instead | D11 says state is *shown*, not re-offered. The badge was the showing; the button is the control. **Confirm the button alone carries it** |
+| **3** | The separate **Apply** button (`autocode-btn`) | gone | **D4** — deliberate |
+| **4** | Near-fullscreen **modal** + close (`codebook-modal*`) | full-page routes | **D6** — deliberate |
+| **5** | **"Coming soon"** on `!enabled` templates | not rendered | **Dead today: 0 of 9 templates ship `enabled: false`.** Dropping an unreachable affordance, not a regression — but v2 loses the *capability* to mark one |
+| **6** | **Keyboard access** on `tag-add-row` (`role="button"` + `tabIndex`) and `new-group-placeholder` (`role="button"` + `onKeyDown` + `tabIndex`) | neither in the prototype | **REGRESSION. Not a decision — an omission** |
+
+### B. What v2 shows that has no data yet
+
+- **`ver`** — the version chip. **Q6**, one field on `TemplateOut`; the YAML
+  already parses it.
+- **`jacket`** — the graphic. **Q4**, deferred by decision.
+- **The provenance line** — **D23**, new; `author_bio` / `author_links` already
+  ship (`CodebookPanel.tsx:1518`), so only the built-in case is new.
+
+### C. QA — every control, and where it leads
+
+**No dead controls.** Every interactive element resolves to a handler: seven ids
+and seven `data-*` hooks in the delegated listener, plus separate handlers for
+the palette switch, the switch-fallback toggle and the confirm dialog. The
+"Create new codebook" class of defect — a live control that no-ops — does not
+recur.
+
+**One control whose real destination is undesigned.** The author's external links
+render as `<a href="#" onclick="return false">`. Inert is right for a prototype,
+but the shipped behaviour is unspecified: **opening an external URL from an
+embedded WKWebView needs a decision** (hand to the default browser, almost
+certainly — never navigate the app's own web view away from the report).
+
+**Six clickable non-buttons with no keyboard path** — `sb-row`, `tag-del`,
+`tag-add-row`, `new-group-placeholder`, `picker-card`, and one more. Only the
+switch carries a `role`. Two of these are the **A6 regression** above; the rest
+are new surfaces that never had it. One `keydown` listener exists in the whole
+prototype.
+
+### The one thing to confirm before building
+
+**A1 — retiring "Restore".** Everything else is either deliberate and recorded,
+dead already, or an omission to fix. The restore promise is the only place v2
+takes away something a researcher can currently rely on: today, uninstalling is
+reversible and the UI says so in three places. After D20 option A it is not, and
+saying so is D20's *"click uninstall and you say byebye"*. That is the intended
+change — this is the note that it has a visible surface today, not just a code
+path.

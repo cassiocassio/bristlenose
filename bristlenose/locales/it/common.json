@@ -488,6 +488,16 @@
     "pendingWeighted": "(tag in sospeso ponderati in base alla confidenza dell'IA)"
   },
   "codebook": {
+    "autocodeRefusal": {
+      "noApiKey": "Aggiungi prima una chiave API in Impostazioni.",
+      "providerLocal": "Serve un fornitore di IA nel cloud, non un modello locale.",
+      "providerAmbiguous": "Scegli un fornitore di IA in Impostazioni.",
+      "noQuotes": "Nessuna citazione: analizza prima le sessioni.",
+      "alreadyRunning": "Etichettatura gi\u00e0 in corso con questo codebook.",
+      "alreadyApplied": "Gi\u00e0 applicato.",
+      "templateMissing": "Questo codebook non \u00e8 pi\u00f9 disponibile."
+    },
+    "autoCodeStartFailed": "Impossibile avviare l'etichettatura.",
     "heading": "Libri dei codici",
     "description": "Trascina i tag tra i gruppi per riorganizzarli. Fai clic su un tag o su un titolo per rinominarlo. Rilascia un tag su un altro per unirli.",
     "errorLoading": "Errore nel caricamento del libro dei codici: {{error}}",

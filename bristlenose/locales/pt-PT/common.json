@@ -488,6 +488,16 @@
     "pendingWeighted": "(etiquetas pendentes ponderadas pela confiança da IA)"
   },
   "codebook": {
+    "autocodeRefusal": {
+      "noApiKey": "Adicione primeiro uma chave de API nas Defini\u00e7\u00f5es.",
+      "providerLocal": "Isto exige um fornecedor de IA na nuvem, n\u00e3o um modelo local.",
+      "providerAmbiguous": "Escolha um fornecedor de IA nas Defini\u00e7\u00f5es.",
+      "noQuotes": "Ainda n\u00e3o h\u00e1 cita\u00e7\u00f5es \u2014 analise primeiro as suas sess\u00f5es.",
+      "alreadyRunning": "J\u00e1 est\u00e1 a etiquetar com este livro de c\u00f3digos.",
+      "alreadyApplied": "J\u00e1 aplicado.",
+      "templateMissing": "Esse livro de c\u00f3digos j\u00e1 n\u00e3o est\u00e1 dispon\u00edvel."
+    },
+    "autoCodeStartFailed": "N\u00e3o foi poss\u00edvel iniciar a etiquetagem.",
     "heading": "Livros de códigos",
     "description": "Arraste etiquetas entre grupos para reorganizar. Clique numa etiqueta ou título para renomear. Largue uma etiqueta sobre outra para fundir.",
     "errorLoading": "Erro ao carregar o livro de códigos: {{error}}",

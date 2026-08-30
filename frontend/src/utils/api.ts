@@ -48,6 +48,16 @@ export function authHeaders(extra?: Record<string, string>): Record<string, stri
 // Generic request helpers
 // ---------------------------------------------------------------------------
 
+/** An Error from a failed request, annotated with what the server said. */
+export interface ApiError extends Error {
+  /** FastAPI's `detail` — English prose. Do not display it to a researcher. */
+  detail?: string;
+  /** HTTP status code. */
+  status?: number;
+  /** Stable refusal code, when the route raised a `RefusalError`. Localise from this. */
+  reason?: string;
+}
+
 /**
  * Build an Error from a non-ok response, surfacing the server's `detail` field
  * (FastAPI's HTTPException body) when present and attaching it as `.detail` so
@@ -57,14 +67,22 @@ export function authHeaders(extra?: Record<string, string>): Record<string, stri
  */
 async function httpError(method: string, path: string, resp: Response): Promise<Error> {
   let detail = "";
+  let reason = "";
   try {
-    const body = (await resp.json()) as { detail?: unknown };
+    const body = (await resp.json()) as { detail?: unknown; reason?: unknown };
     if (typeof body?.detail === "string") detail = body.detail;
+    // A refusal names itself (bristlenose/server/refusal.py). `detail` is English
+    // prose written for a log; `reason` is the stable code a caller localises
+    // from. Optional — routes that raise a plain HTTPException send no reason.
+    if (typeof body?.reason === "string") reason = body.reason;
   } catch {
     /* non-JSON error body — fall back to the status-only message */
   }
   const err = new Error(`${method} ${path} ${resp.status}${detail ? `: ${detail}` : ""}`);
-  (err as Error & { detail?: string }).detail = detail;
+  const annotated = err as ApiError;
+  annotated.detail = detail;
+  annotated.status = resp.status;
+  if (reason) annotated.reason = reason;
   return err;
 }
 

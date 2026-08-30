@@ -488,6 +488,16 @@
     "pendingWeighted": "(väntande taggar viktade efter AI-konfidens)"
   },
   "codebook": {
+    "autocodeRefusal": {
+      "noApiKey": "L\u00e4gg f\u00f6rst till en API-nyckel i Inst\u00e4llningar.",
+      "providerLocal": "Detta kr\u00e4ver en moln-AI-leverant\u00f6r, inte en lokal modell.",
+      "providerAmbiguous": "V\u00e4lj en AI-leverant\u00f6r i Inst\u00e4llningar.",
+      "noQuotes": "Inga citat \u00e4nnu \u2013 analysera dina sessioner f\u00f6rst.",
+      "alreadyRunning": "Taggar redan med den h\u00e4r kodboken.",
+      "alreadyApplied": "Redan till\u00e4mpad.",
+      "templateMissing": "Den kodboken \u00e4r inte l\u00e4ngre tillg\u00e4nglig."
+    },
+    "autoCodeStartFailed": "Det gick inte att starta taggningen.",
     "heading": "Kodböcker",
     "description": "Dra taggar mellan grupper för att omorganisera. Klicka på en tagg eller titel för att byta namn. Släpp en tagg på en annan för att slå samman.",
     "errorLoading": "Fel vid inläsning av kodbok: {{error}}",

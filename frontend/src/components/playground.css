@@ -499,7 +499,7 @@ body.bn-show-baseline {
     height: 32px;
     border-radius: 50%;
     border: 1px solid var(--bn-colour-border);
-    background: var(--bn-colour-surface);
+    background: var(--bn-colour-bg);
     color: var(--bn-colour-muted);
     font-size: 14px;
     cursor: pointer;

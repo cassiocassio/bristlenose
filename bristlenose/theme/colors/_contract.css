@@ -39,6 +39,8 @@ Required tokens:
 --bn-colour-highlight           Anchor link flash / search highlight
 
 --bn-colour-negative            Destructive action (delete, deny)
+--bn-colour-positive            Success / accepted (the sibling of negative)
+--bn-colour-warning             Caution — recoverable, partial, soft-degrade
 
 --bn-glow-colour                Playback sync glow (subtle)
 --bn-glow-colour-strong         Playback sync glow (strong)

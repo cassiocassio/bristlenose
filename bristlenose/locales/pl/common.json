@@ -534,6 +534,16 @@
     "pendingWeighted": "(oczekujące tagi ważone pewnością AI)"
   },
   "codebook": {
+    "autocodeRefusal": {
+      "noApiKey": "Najpierw dodaj klucz API w Ustawieniach.",
+      "providerLocal": "To wymaga dostawcy AI w chmurze, nie modelu lokalnego.",
+      "providerAmbiguous": "Wybierz dostawc\u0119 AI w Ustawieniach.",
+      "noQuotes": "Brak cytat\u00f3w \u2013 najpierw przeanalizuj sesje.",
+      "alreadyRunning": "Ju\u017c trwa tagowanie tym kodeksem.",
+      "alreadyApplied": "Ju\u017c zastosowano.",
+      "templateMissing": "Ten kodeks nie jest ju\u017c dost\u0119pny."
+    },
+    "autoCodeStartFailed": "Nie uda\u0142o si\u0119 rozpocz\u0105\u0107 tagowania.",
     "heading": "Księgi kodów",
     "description": "Przeciągaj tagi między grupami, aby je przeorganizować. Kliknij tag lub tytuł, aby zmienić nazwę. Upuść tag na inny, aby je scalić.",
     "errorLoading": "Błąd wczytywania księgi kodów: {{error}}",

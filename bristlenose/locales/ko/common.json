@@ -468,6 +468,16 @@
     "pendingWeighted": "(보류 태그는 AI 신뢰도로 가중)"
   },
   "codebook": {
+    "autocodeRefusal": {
+      "noApiKey": "\uba3c\uc800 \uc124\uc815\uc5d0\uc11c API \ud0a4\ub97c \ucd94\uac00\ud558\uc138\uc694.",
+      "providerLocal": "\ub85c\uceec \ubaa8\ub378\uc774 \uc544\ub2cc \ud074\ub77c\uc6b0\ub4dc AI \uc81c\uacf5\uc790\uac00 \ud544\uc694\ud569\ub2c8\ub2e4.",
+      "providerAmbiguous": "\uc124\uc815\uc5d0\uc11c AI \uc81c\uacf5\uc790\ub97c \uc120\ud0dd\ud558\uc138\uc694.",
+      "noQuotes": "\uc544\uc9c1 \uc778\uc6a9\ubb38\uc774 \uc5c6\uc2b5\ub2c8\ub2e4. \uba3c\uc800 \uc138\uc158\uc744 \ubd84\uc11d\ud558\uc138\uc694.",
+      "alreadyRunning": "\uc774 \ucf54\ub4dc\ubd81\uc73c\ub85c \uc774\ubbf8 \ud0dc\uadf8\ud558\uace0 \uc788\uc2b5\ub2c8\ub2e4.",
+      "alreadyApplied": "\uc774\ubbf8 \uc801\uc6a9\ub418\uc5c8\uc2b5\ub2c8\ub2e4.",
+      "templateMissing": "\ud574\ub2f9 \ucf54\ub4dc\ubd81\uc744 \ub354 \uc774\uc0c1 \uc0ac\uc6a9\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4."
+    },
+    "autoCodeStartFailed": "\ud0dc\uadf8\ub97c \uc2dc\uc791\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.",
     "heading": "코드북",
     "description": "태그를 그룹 간에 드래그하여 재구성하세요. 태그나 제목을 클릭하여 이름을 변경하세요. 태그를 다른 태그 위에 놓아 병합하세요.",
     "errorLoading": "코드북 로드 오류: {{error}}",

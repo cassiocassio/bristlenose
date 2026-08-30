@@ -488,6 +488,16 @@
     "pendingWeighted": "(pending tags weighted by AI confidence)"
   },
   "codebook": {
+    "autocodeRefusal": {
+      "noApiKey": "Add an API key in Settings first.",
+      "providerLocal": "This needs a cloud AI provider, not a local model.",
+      "providerAmbiguous": "Choose an AI provider in Settings.",
+      "noQuotes": "No quotes yet \u2014 analyse your sessions first.",
+      "alreadyRunning": "Already tagging with this codebook.",
+      "alreadyApplied": "Already applied.",
+      "templateMissing": "That codebook is no longer available."
+    },
+    "autoCodeStartFailed": "Couldn't start tagging.",
     "heading": "Codebooks",
     "description": "Drag tags between groups to reorganise. Click a tag or title to rename it. Drop a tag on another to merge.",
     "errorLoading": "Error loading codebook: {{error}}",

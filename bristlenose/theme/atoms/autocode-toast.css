@@ -29,12 +29,12 @@
 @keyframes autocode-spin { to { transform: rotate(360deg); } }
 
 .toast-check {
-    color: var(--bn-colour-success);
+    color: var(--bn-colour-positive);
     font-weight: var(--bn-weight-strong);
 }
 
 .toast-error {
-    color: var(--bn-colour-danger);
+    color: var(--bn-colour-negative);
     font-weight: var(--bn-weight-strong);
 }
 

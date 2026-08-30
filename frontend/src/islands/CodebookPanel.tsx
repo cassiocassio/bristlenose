@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { toast } from "../utils/toast";
+import { autocodeRefusal } from "../utils/autocodeRefusal";
+import type { ApiError } from "../utils/api";
 import { isExportMode } from "../utils/exportData";
 import { ct } from "../utils/platformTranslation";
 import { Badge, ConfirmDialog, EditableText, MicroBar, SectionHeading, TagInput, ThresholdReviewModal } from "../components";
@@ -887,16 +889,22 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
           setAutoCodeStatus((prev) => ({ ...prev, [frameworkId]: status }));
           addJob(`autocode:${frameworkId}`, { type: "autocode", frameworkId, frameworkTitle });
         })
-        .catch((err: Error & { detail?: string }) => {
+        .catch((err: ApiError) => {
           // Don't swallow — a failed start (409 already-running, 503 no API key,
           // 400 no quotes) otherwise leaves the button looking like it did nothing.
           console.error("Start AutoCode failed:", err);
+          // Localise from the server's stable `reason`, never from `detail`:
+          // that string is written for a log and one case tells the reader to
+          // run a shell command. Unrecognised reason falls back to the generic
+          // sentence rather than leaking developer prose.
+          const refusal = autocodeRefusal(err.reason);
           toast(
-            err.detail ||
+            refusal?.message ??
               i18n.t("codebook.autoCodeStartFailed", {
                 defaultValue: "Couldn't start AutoCode.",
               }),
             4000,
+            refusal?.kind ?? "error",
           );
         });
     },

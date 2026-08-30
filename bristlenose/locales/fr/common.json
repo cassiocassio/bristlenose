@@ -488,6 +488,16 @@
     "pendingWeighted": "(étiquettes en attente pondérées par la confiance IA)"
   },
   "codebook": {
+    "autocodeRefusal": {
+      "noApiKey": "Ajoutez d'abord une cl\u00e9 d'API dans R\u00e9glages.",
+      "providerLocal": "Ceci n\u00e9cessite un fournisseur d'IA en ligne, pas un mod\u00e8le local.",
+      "providerAmbiguous": "Choisissez un fournisseur d'IA dans R\u00e9glages.",
+      "noQuotes": "Pas encore de citations : analysez d'abord vos sessions.",
+      "alreadyRunning": "\u00c9tiquetage d\u00e9j\u00e0 en cours avec ce livre de codes.",
+      "alreadyApplied": "D\u00e9j\u00e0 appliqu\u00e9.",
+      "templateMissing": "Ce livre de codes n'est plus disponible."
+    },
+    "autoCodeStartFailed": "Impossible de lancer l'\u00e9tiquetage.",
     "heading": "Grilles de codage",
     "description": "Glissez les étiquettes entre les groupes pour réorganiser. Cliquez sur une étiquette ou un titre pour renommer. Déposez une étiquette sur une autre pour fusionner.",
     "errorLoading": "Erreur de chargement de la grille de codage : {{error}}",

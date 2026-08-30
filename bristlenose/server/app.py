@@ -23,6 +23,7 @@ from starlette.responses import PlainTextResponse, Response
 
 from bristlenose.server.db import create_session_factory, db_url_for_project, get_engine, init_db
 from bristlenose.server.middleware import AUTH_COOKIE_NAME, BearerTokenMiddleware
+from bristlenose.server.refusal import RefusalError, refusal_handler
 from bristlenose.server.routes.analysis import router as analysis_router
 from bristlenose.server.routes.autocode import router as autocode_router
 from bristlenose.server.routes.clips_export import router as clips_export_router
@@ -101,6 +102,11 @@ def create_app(
             setup_logging(output_dir=_output_dir, verbose=verbose)
 
     app = FastAPI(title="Bristlenose", docs_url="/api/docs", redoc_url=None)
+
+    # A refusal names itself on the wire: `detail` stays the English string every
+    # existing reader expects, and `reason` rides alongside it so the UI can
+    # localise without grepping prose. See bristlenose/server/refusal.py.
+    app.add_exception_handler(RefusalError, refusal_handler)
 
     # Surface tracebacks for unhandled exceptions — FastAPI's default 500
     # handler swallows them.  Always logs to bristlenose.log; returns the

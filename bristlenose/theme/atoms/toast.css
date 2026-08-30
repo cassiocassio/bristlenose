@@ -20,3 +20,31 @@
     opacity: 1;
     transform: translateY(0);
 }
+
+/* ── Kinded toast ─────────────────────────────────────────────────────────
+   The five-kind glyph vocabulary (bristlenose/ui_kinds.py, mirrored in
+   frontend/src/utils/messageKind.ts). Optional: a bare confirmation like
+   "Copied" carries no state and gets no glyph.
+
+   Colours are the semantic palette tokens, not literals. Before 30 Aug 2026
+   the sibling .autocode-toast reached for --bn-colour-success and
+   --bn-colour-danger, which were defined nowhere — so its tick and cross
+   rendered in the toast's ordinary text colour. See tests/test_theme_token_
+   resolution.py, which now fails on any no-fallback use of an undefined token. */
+.clipboard-toast.has-kind {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+}
+
+.toast-glyph {
+    font-weight: var(--bn-weight-strong);
+    flex-shrink: 0;
+}
+
+.toast-glyph--success { color: var(--bn-colour-positive); }
+.toast-glyph--error   { color: var(--bn-colour-negative); }
+.toast-glyph--warning { color: var(--bn-colour-warning); }
+.toast-glyph--info    { color: var(--bn-colour-accent); }
+/* SKIPPED demotes rather than colours — matches CLI_COLOUR's "dim". */
+.toast-glyph--skipped { color: var(--bn-colour-muted); }

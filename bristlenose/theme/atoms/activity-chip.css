@@ -45,12 +45,12 @@
 }
 
 .chip-check {
-    color: var(--bn-colour-success);
+    color: var(--bn-colour-positive);
     font-weight: var(--bn-weight-strong);
 }
 
 .chip-error {
-    color: var(--bn-colour-danger);
+    color: var(--bn-colour-negative);
     font-weight: var(--bn-weight-strong);
 }
 

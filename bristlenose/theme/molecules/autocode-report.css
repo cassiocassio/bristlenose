@@ -75,7 +75,7 @@
 }
 
 .report-deny-btn:hover {
-    color: var(--bn-colour-danger);
+    color: var(--bn-colour-negative);
     background: rgba(220, 38, 38, 0.06);
 }
 

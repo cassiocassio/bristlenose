@@ -22,6 +22,7 @@ from bristlenose.server.models import (
     QuoteTag,
     TagDefinition,
 )
+from bristlenose.server.refusal import RefusalError, RefusalReason
 
 logger = logging.getLogger(__name__)
 
@@ -172,9 +173,10 @@ async def start_autocode_job(
         # Check template exists
         template = get_template(framework_id)
         if not template:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Framework template '{framework_id}' not found",
+            raise RefusalError(
+                400,
+                RefusalReason.TEMPLATE_MISSING,
+                f"Framework template '{framework_id}' not found",
             )
 
         # Check for an existing job. A *cancelled* or *failed* job produced no
@@ -190,21 +192,23 @@ async def start_autocode_job(
             .first()
         )
         if existing and existing.status in ("pending", "running"):
-            raise HTTPException(
-                status_code=409,
-                detail=f"AutoCode is already running for framework '{framework_id}'",
+            raise RefusalError(
+                409,
+                RefusalReason.ALREADY_RUNNING,
+                f"AutoCode is already running for framework '{framework_id}'",
             )
         if existing and existing.status == "completed":
-            raise HTTPException(
-                status_code=409,
-                detail=f"AutoCode already run for framework '{framework_id}'",
+            raise RefusalError(
+                409,
+                RefusalReason.ALREADY_APPLIED,
+                f"AutoCode already run for framework '{framework_id}'",
             )
 
         # Check project has quotes
         quote_count = db.query(Quote).filter_by(project_id=project_id).count()
         if quote_count == 0:
-            raise HTTPException(
-                status_code=400, detail="Project has no quotes to tag"
+            raise RefusalError(
+                400, RefusalReason.NO_QUOTES, "Project has no quotes to tag"
             )
 
         # Load settings and check provider
@@ -218,33 +222,30 @@ async def start_autocode_job(
 
         resolution = provider_resolution_for(settings)
         if resolution.status == "ambiguous":
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    "Multiple AI providers are configured and none is "
-                    "selected. Pick one: bristlenose use <provider> (or set "
-                    "BRISTLENOSE_LLM_PROVIDER), then retry."
-                ),
+            raise RefusalError(
+                409,
+                RefusalReason.PROVIDER_AMBIGUOUS,
+                "Multiple AI providers are configured and none is "
+                "selected. Pick one: bristlenose use <provider> (or set "
+                "BRISTLENOSE_LLM_PROVIDER), then retry.",
             )
 
         if settings.llm_provider == "local":
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "AutoCode requires a cloud LLM provider. "
-                    "Local models (Ollama) cannot fit the full codebook "
-                    "taxonomy in their context window."
-                ),
+            raise RefusalError(
+                503,
+                RefusalReason.PROVIDER_LOCAL,
+                "AutoCode requires a cloud LLM provider. "
+                "Local models (Ollama) cannot fit the full codebook "
+                "taxonomy in their context window.",
             )
 
         if not _has_api_key(settings):
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "No API key configured for the current LLM provider "
-                    f"({settings.llm_provider}). Set the appropriate key "
-                    "in your .env file."
-                ),
+            raise RefusalError(
+                503,
+                RefusalReason.NO_API_KEY,
+                "No API key configured for the current LLM provider "
+                f"({settings.llm_provider}). Set the appropriate key "
+                "in your .env file.",
             )
 
         # A cancelled/failed job (the only survivors of the guards above) is

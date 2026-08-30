@@ -156,7 +156,7 @@ h3 {
 }
 
 .bn-about-citation a {
-    color: var(--bn-colour-link);
+    color: var(--bn-colour-accent);
     text-decoration: none;
 }
 

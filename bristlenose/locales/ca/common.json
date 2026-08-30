@@ -488,6 +488,16 @@
     "pendingWeighted": "(les etiquetes pendents es ponderen per la confiança de la IA)"
   },
   "codebook": {
+    "autocodeRefusal": {
+      "noApiKey": "Afegeix una clau d'API a Configuraci\u00f3 primer.",
+      "providerLocal": "Aix\u00f2 necessita un prove\u00efdor d'IA al n\u00favol, no un model local.",
+      "providerAmbiguous": "Tria un prove\u00efdor d'IA a Configuraci\u00f3.",
+      "noQuotes": "Encara no hi ha cites: analitza primer les sessions.",
+      "alreadyRunning": "Ja s'est\u00e0 etiquetant amb aquest manual de codis.",
+      "alreadyApplied": "Ja aplicat.",
+      "templateMissing": "Aquest manual de codis ja no est\u00e0 disponible."
+    },
+    "autoCodeStartFailed": "No s'ha pogut iniciar l'etiquetatge.",
     "heading": "Llibres de codis",
     "description": "Arrossega les etiquetes entre grups per reorganitzar-les. Fes clic en una etiqueta o en un títol per canviar-ne el nom. Deixa anar una etiqueta sobre una altra per fusionar-les.",
     "errorLoading": "Error en carregar el llibre de codis: {{error}}",

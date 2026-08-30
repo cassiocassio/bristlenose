@@ -488,6 +488,16 @@
     "pendingWeighted": "(ausstehende Tags gewichtet nach KI-Konfidenz)"
   },
   "codebook": {
+    "autocodeRefusal": {
+      "noApiKey": "F\u00fcgen Sie zuerst einen API-Schl\u00fcssel in den Einstellungen hinzu.",
+      "providerLocal": "Daf\u00fcr wird ein Cloud-KI-Anbieter ben\u00f6tigt, kein lokales Modell.",
+      "providerAmbiguous": "W\u00e4hlen Sie einen KI-Anbieter in den Einstellungen.",
+      "noQuotes": "Noch keine Zitate \u2013 analysieren Sie zuerst Ihre Sitzungen.",
+      "alreadyRunning": "Wird bereits mit diesem Codebuch verschlagwortet.",
+      "alreadyApplied": "Bereits angewendet.",
+      "templateMissing": "Dieses Codebuch ist nicht mehr verf\u00fcgbar."
+    },
+    "autoCodeStartFailed": "Verschlagwortung konnte nicht gestartet werden.",
     "heading": "Codebücher",
     "description": "Ziehen Sie Tags zwischen Gruppen, um sie neu zu ordnen. Klicken Sie auf ein Tag oder einen Titel, um es umzubenennen. Legen Sie ein Tag auf ein anderes, um sie zusammenzuführen.",
     "errorLoading": "Fehler beim Laden des Codebuchs: {{error}}",

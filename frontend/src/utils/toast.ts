@@ -10,6 +10,7 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { createElement } from "react";
 import { Toast } from "../components/Toast";
+import type { MessageKind } from "./messageKind";
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
@@ -39,7 +40,17 @@ function dismiss(): void {
  *
  * @param message  Text to display
  * @param duration Auto-dismiss delay in ms (default 2000)
+ * @param kind     One of the five in `messageKind.ts`. Renders the matching
+ *                 glyph. Omit for a plain toast — a bare confirmation ("Copied")
+ *                 does not need a tick, and adding one to every toast would
+ *                 spend the vocabulary on messages that carry no state.
  */
-export function toast(message: string, duration = 2000): void {
-  getRoot().render(createElement(Toast, { message, duration, onDismiss: dismiss }));
+export function toast(
+  message: string,
+  duration = 2000,
+  kind?: MessageKind,
+): void {
+  getRoot().render(
+    createElement(Toast, { message, duration, kind, onDismiss: dismiss }),
+  );
 }

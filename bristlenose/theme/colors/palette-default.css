@@ -33,6 +33,10 @@
     /* Destructive action */
     --bn-colour-negative: #dc2626;
 
+    /* Success and caution — the other two semantic kinds */
+    --bn-colour-positive: #16a34a;
+    --bn-colour-warning: #f59e0b;
+
     /* Playback-sync glow */
     --bn-glow-colour: rgba(0, 122, 255, 0.06);
     --bn-glow-colour-strong: rgba(0, 122, 255, 0.11);
@@ -138,6 +142,10 @@
 
         /* Destructive action */
         --bn-colour-negative:         light-dark(#dc2626, #ef4444);
+
+        /* Success and caution */
+        --bn-colour-positive:         light-dark(#16a34a, #22c55e);
+        --bn-colour-warning:          light-dark(#f59e0b, #fbbf24);
 
         /* Interactive elements */
         --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);

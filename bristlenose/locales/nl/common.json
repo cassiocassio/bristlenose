@@ -488,6 +488,16 @@
     "pendingWeighted": "(tags in behandeling gewogen op AI-betrouwbaarheid)"
   },
   "codebook": {
+    "autocodeRefusal": {
+      "noApiKey": "Voeg eerst een API-sleutel toe in Instellingen.",
+      "providerLocal": "Hiervoor is een cloud-AI-provider nodig, geen lokaal model.",
+      "providerAmbiguous": "Kies een AI-provider in Instellingen.",
+      "noQuotes": "Nog geen citaten \u2014 analyseer eerst je sessies.",
+      "alreadyRunning": "Er wordt al getagd met dit codeboek.",
+      "alreadyApplied": "Al toegepast.",
+      "templateMissing": "Dat codeboek is niet meer beschikbaar."
+    },
+    "autoCodeStartFailed": "Kan het taggen niet starten.",
     "heading": "Codeboeken",
     "description": "Sleep tags tussen groepen om te herordenen. Klik op een tag of titel om die te hernoemen. Zet een tag op een andere om ze samen te voegen.",
     "errorLoading": "Fout bij laden van codeboek: {{error}}",

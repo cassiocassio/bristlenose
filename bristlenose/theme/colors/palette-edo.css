@@ -49,6 +49,11 @@
     /* Destructive action — vermillion */
     --bn-colour-negative: #b5432a;
 
+    /* Success — Pine Green (matsuba-iro), the hue active-bg already tints toward.
+       Caution — Gold Ochre, deepened for legibility on paper. */
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #a8842c;
+
     /* Playback-sync glow — Prussian Blue based */
     --bn-glow-colour: rgba(15, 92, 158, 0.08);
     --bn-glow-colour-strong: rgba(15, 92, 158, 0.15);
@@ -150,6 +155,10 @@
 
         /* Destructive action — vermillion */
         --bn-colour-negative:         light-dark(#b5432a, #e06a4a);
+
+        /* Success — Pine Green; caution — Gold Ochre */
+        --bn-colour-positive:         light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:          light-dark(#a8842c, #c4a96a);
 
         /* Interactive elements */
         --bn-colour-border-hover:     light-dark(#b8ad91, #4a4030);

@@ -488,6 +488,16 @@
     "pendingWeighted": "(vireillä olevat tunnisteet painotettu tekoälyn luottamuksen mukaan)"
   },
   "codebook": {
+    "autocodeRefusal": {
+      "noApiKey": "Lis\u00e4\u00e4 ensin API-avain Asetuksissa.",
+      "providerLocal": "T\u00e4h\u00e4n tarvitaan pilvipohjainen teko\u00e4lypalvelu, ei paikallista mallia.",
+      "providerAmbiguous": "Valitse teko\u00e4lypalvelu Asetuksissa.",
+      "noQuotes": "Ei viel\u00e4 sitaatteja \u2013 analysoi ensin istuntosi.",
+      "alreadyRunning": "Merkitsee jo t\u00e4ll\u00e4 koodikirjalla.",
+      "alreadyApplied": "Jo k\u00e4yt\u00f6ss\u00e4.",
+      "templateMissing": "T\u00e4t\u00e4 koodikirjaa ei en\u00e4\u00e4 ole saatavilla."
+    },
+    "autoCodeStartFailed": "Merkitsemist\u00e4 ei voitu aloittaa.",
     "heading": "Koodikirjat",
     "description": "Vedä tunnisteita ryhmien välillä järjestelläksesi ne uudelleen. Napsauta tunnistetta tai otsikkoa nimetäksesi sen uudelleen. Pudota tunniste toisen päälle yhdistääksesi.",
     "errorLoading": "Virhe koodikirjaa ladattaessa: {{error}}",

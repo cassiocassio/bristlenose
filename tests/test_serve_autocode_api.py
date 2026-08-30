@@ -245,6 +245,52 @@ class TestStartAutoCodeJob:
         assert resp.status_code == 503
         assert "api key" in resp.json()["detail"].lower()
 
+    def test_refusals_name_themselves_on_the_wire(
+        self, client_with_garrett: TestClient
+    ) -> None:
+        """Every pre-flight refusal carries a stable ``reason`` beside ``detail``.
+
+        ``detail`` is English prose written for a log; the SPA localises from
+        ``reason``.  Without this the client has to grep the sentence, which
+        breaks the first time someone improves the wording -- and the wording
+        here currently tells a Mac user to run ``bristlenose use <provider>``.
+        """
+        with patch(
+            "bristlenose.server.routes.autocode.load_settings"
+        ) as mock_ls:
+            settings = MagicMock()
+            settings.llm_provider = "local"
+            mock_ls.return_value = settings
+            resp = client_with_garrett.post("/api/projects/1/autocode/garrett")
+
+        body = resp.json()
+        assert resp.status_code == 503
+        assert body["reason"] == "provider_local"
+        # detail stays the string every existing reader expects
+        assert isinstance(body["detail"], str)
+        assert "local" in body["detail"].lower()
+
+    def test_unknown_framework_refusal_names_itself(
+        self, client_with_garrett: TestClient
+    ) -> None:
+        resp = client_with_garrett.post("/api/projects/1/autocode/nope")
+        assert resp.status_code == 400
+        assert resp.json()["reason"] == "template_missing"
+
+    def test_every_refusal_reason_is_reachable(self) -> None:
+        """No orphan reasons: each value is raised somewhere in the route."""
+        from pathlib import Path
+
+        from bristlenose.server.refusal import RefusalReason
+
+        src = Path("bristlenose/server/routes/autocode.py").read_text(
+            encoding="utf-8"
+        )
+        unused = [
+            r.name for r in RefusalReason if f"RefusalReason.{r.name}" not in src
+        ]
+        assert not unused, f"declared but never raised: {unused}"
+
     def test_starts_job_successfully(
         self, client_with_garrett: TestClient
     ) -> None:

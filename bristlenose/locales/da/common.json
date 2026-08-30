@@ -488,6 +488,16 @@
     "pendingWeighted": "(afventende tags vægtet efter AI-tillid)"
   },
   "codebook": {
+    "autocodeRefusal": {
+      "noApiKey": "Tilf\u00f8j f\u00f8rst en API-n\u00f8gle i Indstillinger.",
+      "providerLocal": "Dette kr\u00e6ver en sky-AI-udbyder, ikke en lokal model.",
+      "providerAmbiguous": "V\u00e6lg en AI-udbyder i Indstillinger.",
+      "noQuotes": "Ingen citater endnu \u2013 analys\u00e9r f\u00f8rst dine sessioner.",
+      "alreadyRunning": "Der tagges allerede med denne kodebog.",
+      "alreadyApplied": "Allerede anvendt.",
+      "templateMissing": "Den kodebog er ikke l\u00e6ngere tilg\u00e6ngelig."
+    },
+    "autoCodeStartFailed": "Kunne ikke starte tagging.",
     "heading": "Kodebøger",
     "description": "Træk tags mellem grupper for at omorganisere. Klik på et tag eller en titel for at omdøbe det. Slip et tag på et andet for at flette dem.",
     "errorLoading": "Fejl ved indlæsning af kodebog: {{error}}",

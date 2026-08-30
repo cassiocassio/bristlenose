@@ -488,6 +488,16 @@
     "pendingWeighted": "(ventende tagger vektet etter AI-tillit)"
   },
   "codebook": {
+    "autocodeRefusal": {
+      "noApiKey": "Legg f\u00f8rst til en API-n\u00f8kkel i Innstillinger.",
+      "providerLocal": "Dette krever en sky-KI-leverand\u00f8r, ikke en lokal modell.",
+      "providerAmbiguous": "Velg en KI-leverand\u00f8r i Innstillinger.",
+      "noQuotes": "Ingen sitater enn\u00e5 \u2013 analyser \u00f8ktene dine f\u00f8rst.",
+      "alreadyRunning": "Merker allerede med denne kodeboken.",
+      "alreadyApplied": "Allerede brukt.",
+      "templateMissing": "Den kodeboken er ikke lenger tilgjengelig."
+    },
+    "autoCodeStartFailed": "Kunne ikke starte merking.",
     "heading": "Kodebøker",
     "description": "Dra tagger mellom grupper for å omorganisere. Klikk på en tagg eller tittel for å gi den nytt navn. Slipp en tagg på en annen for å slå dem sammen.",
     "errorLoading": "Feil ved innlasting av kodebok: {{error}}",

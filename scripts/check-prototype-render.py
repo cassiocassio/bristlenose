@@ -11,8 +11,12 @@ carries no tags/quotes fields, so both the page and the review header rendered
 Usage: python3 scripts/check-prototype-render.py && node /tmp/h.js
 """
 
-s=open('/Users/cassio/Code/bristlenose/docs/mockups/codebook-v2-prototype.html',encoding='utf-8').read()
-i=s.rindex('<script>')+8; j=s.rindex('</script>')
+import pathlib
+
+_HERE = pathlib.Path(__file__).resolve().parent.parent
+s = (_HERE / 'docs' / 'mockups' / 'codebook-v2-prototype.html').read_text(encoding='utf-8')
+i = s.rindex('<script>') + 8
+j = s.rindex('</script>')
 stub = """
 const _out=[];
 const mkEl=()=>new Proxy({_h:'',classList:{add(){},remove(){},toggle(){},contains(){return false}},style:{},dataset:{},children:[],
@@ -36,4 +40,4 @@ for (const h of _out) for (const w of ['null','undefined','NaN','[object Object]
   if (String(h).includes(w)) bad.push(w+' :: ...'+String(h).split(w)[0].slice(-95).replace(/\\s+/g,' ')+' >>'+w+'<<');
 console.log(bad.length? [...new Set(bad)].join('\\n') : 'CLEAN - no null/undefined/NaN/throw in any book x view');
 """
-open('/tmp/h.js','w').write(stub+s[i:j]+tail)
+pathlib.Path('/tmp/h.js').write_text(stub + s[i:j] + tail, encoding='utf-8')

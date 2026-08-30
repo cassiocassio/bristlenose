@@ -18,6 +18,7 @@ from bristlenose.server.models import (
     ProjectCodebookGroup,
     ProjectFrameworkState,
     ProposedTag,
+    Quote,
     QuoteTag,
     TagDefinition,
 )
@@ -877,10 +878,19 @@ def remove_framework(
         )
         tag_def_ids = [td.id for td in tag_defs]
 
-        # Delete quote-tag associations (tags removed from quotes as expected)
+        # Delete quote-tag associations (tags removed from quotes as expected).
+        #
+        # SCOPED TO THIS PROJECT'S QUOTES. `TagDefinition` is instance-scoped —
+        # one row serves every project that installed the framework — so
+        # filtering on `tag_definition_id` alone deleted another project's tags
+        # too. Register A1: uninstalling Nielsen from one study silently
+        # stripped it from every other study in the same instance, with nothing
+        # on screen to say so.
         if tag_def_ids:
+            project_quote_ids = db.query(Quote.id).filter_by(project_id=project_id)
             db.query(QuoteTag).filter(
                 QuoteTag.tag_definition_id.in_(tag_def_ids),
+                QuoteTag.quote_id.in_(project_quote_ids),
             ).delete(synchronize_session=False)
 
         # Remove project links (hides framework from codebook view)
@@ -950,9 +960,17 @@ def remove_framework_impact(
 
         quote_count = 0
         if tag_def_ids:
+            # Same project scope as the delete it describes. Unscoped, this
+            # counted quotes in OTHER projects, so the confirmation overstated
+            # the loss — and a confirmation whose number is wrong is worse than
+            # none, because it is the number the researcher decides on.
+            project_quote_ids = db.query(Quote.id).filter_by(project_id=project_id)
             quote_count = (
                 db.query(func.count(func.distinct(QuoteTag.quote_id)))
-                .filter(QuoteTag.tag_definition_id.in_(tag_def_ids))
+                .filter(
+                    QuoteTag.tag_definition_id.in_(tag_def_ids),
+                    QuoteTag.quote_id.in_(project_quote_ids),
+                )
                 .scalar()
             ) or 0
 

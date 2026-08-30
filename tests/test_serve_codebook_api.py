@@ -1209,3 +1209,111 @@ class TestFrameworkQuoteTotals:
             assert distinct <= summed, (
                 f"{fid}: distinct ({distinct}) can never exceed the sum ({summed})"
             )
+
+
+class TestFrameworkRemovalIsProjectScoped:
+    """Register A1 — uninstalling from one project must not touch another.
+
+    `TagDefinition` is instance-scoped: one row serves every project that
+    installed the framework. So a delete filtered on `tag_definition_id` alone
+    reached across projects, and the impact count that describes it did the
+    same -- overstating a loss the researcher then decided on.
+
+    Its own class with its own client, per the isolation note above.
+    """
+
+    def _install_framework_in_two_projects(self, app) -> tuple[int, int]:
+        """Return (tag_definition_id, other_project_quote_id)."""
+        from bristlenose.server.models import (
+            CodebookGroup,
+            Project,
+            ProjectCodebookGroup,
+            Quote,
+            QuoteTag,
+            TagDefinition,
+        )
+
+        db = app.state.db_factory()
+        try:
+            other = Project(
+                name="Other study", input_dir="/tmp/other",
+                output_dir="/tmp/other/out",
+            )
+            db.add(other)
+            db.flush()
+            other_quote = Quote(
+                project_id=other.id, text="Elsewhere.", session_id="s1",
+                participant_id="P1", start_timecode=0.0, end_timecode=1.0,
+                quote_type="general_context",
+            )
+            db.add(other_quote)
+            db.flush()
+
+            # ONE group + tag definition, linked into BOTH projects — which is
+            # what "instance-scoped" means and why the bug was possible.
+            grp = CodebookGroup(
+                name="Shared", subtitle="", colour_set="ux",
+                sort_order=91, framework_id="shared",
+            )
+            db.add(grp)
+            db.flush()
+            db.add(ProjectCodebookGroup(project_id=1, codebook_group_id=grp.id))
+            db.add(ProjectCodebookGroup(project_id=other.id, codebook_group_id=grp.id))
+            td = TagDefinition(name="shared-tag", codebook_group_id=grp.id)
+            db.add(td)
+            db.flush()
+
+            mine = db.query(Quote).filter_by(project_id=1).first()
+            assert mine is not None
+            db.add(QuoteTag(quote_id=mine.id, tag_definition_id=td.id, source="human"))
+            db.add(
+                QuoteTag(
+                    quote_id=other_quote.id, tag_definition_id=td.id, source="human"
+                )
+            )
+            db.commit()
+            return td.id, other_quote.id
+        finally:
+            db.close()
+
+    def test_removing_from_one_project_leaves_the_other_tagged(self) -> None:
+        from bristlenose.server.models import QuoteTag
+
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        client = AuthTestClient(app)
+        td_id, other_quote_id = self._install_framework_in_two_projects(app)
+
+        resp = client.delete("/api/projects/1/codebook/remove-framework/shared")
+        assert resp.status_code == 200
+
+        db = app.state.db_factory()
+        try:
+            survivors = (
+                db.query(QuoteTag)
+                .filter_by(tag_definition_id=td_id, quote_id=other_quote_id)
+                .count()
+            )
+            assert survivors == 1, (
+                "the other project's tag was deleted — the delete is not "
+                "project-scoped"
+            )
+            mine = (
+                db.query(QuoteTag).filter_by(tag_definition_id=td_id).count()
+            )
+            assert mine == 1, "only the other project's tag should remain"
+        finally:
+            db.close()
+
+    def test_impact_counts_only_this_project(self) -> None:
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        client = AuthTestClient(app)
+        self._install_framework_in_two_projects(app)
+
+        resp = client.get(
+            "/api/projects/1/codebook/remove-framework/shared/impact"
+        )
+        assert resp.status_code == 200
+        # Two quotes carry the tag; one of them belongs to another project.
+        # A confirmation whose number is wrong is worse than none, because it is
+        # the number the researcher decides on.
+        assert resp.json()["quote_count"] == 1

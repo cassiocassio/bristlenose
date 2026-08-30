@@ -31,6 +31,11 @@ import { CodebookV2Rail, type RailBook } from "./CodebookV2Rail";
 import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
 import { CodebookV2Browse, type BrowseBook } from "./CodebookV2Browse";
 import { CodebookV2UninstallSheet } from "../components/CodebookV2UninstallSheet";
+// Q15: the threshold review is the EXISTING modal, not a v2 rebuild. Imported
+// by path rather than through the `components` barrel for the same reason as
+// CodebookAuthoring below — the barrel rides in the always-loaded chunk and
+// this lens is lazy.
+import { ThresholdReviewModal } from "../components/ThresholdReviewModal";
 // By path, not through the `components` barrel — see CodebookPanel.tsx.
 import { MergeConfirm } from "../components/CodebookAuthoring";
 import { useCodebookAuthoring } from "../hooks/useCodebookAuthoring";
@@ -99,12 +104,23 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   // Read-only is a property of the artefact, not a preference: an exported
   // report is a file someone was handed.
   const readOnly = isExportMode();
+  // `impactFailed` is a THIRD state, not a nicety: `impact === null` alone
+  // cannot distinguish "still counting" from "the count failed", and the sheet
+  // rendered both as "nothing is lost" — a reassurance on a destructive path
+  // that we had not measured.
   const [pendingUninstall, setPendingUninstall] = useState<{
     id: string;
     title: string;
     impact: RemoveFrameworkInfo | null;
+    impactFailed?: boolean;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Same shape the shipped lens uses (`CodebookPanel`'s `reportModal`), because
+  // it feeds the same component.
+  const [reportModal, setReportModal] = useState<{
+    frameworkId: string;
+    frameworkTitle: string;
+  } | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -229,7 +245,14 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
       .then((impact) =>
         setPendingUninstall((p) => (p && p.id === id ? { ...p, impact } : p)),
       )
-      .catch(() => {});
+      .catch(() =>
+        // NOT a silent catch. The sheet has to say it does not know, because
+        // the alternative is telling the researcher nothing will be lost when
+        // we never found out.
+        setPendingUninstall((p) =>
+          p && p.id === id ? { ...p, impactFailed: true } : p,
+        ),
+      );
   }, []);
 
   const onConfirmUninstall = useCallback(() => {
@@ -370,11 +393,12 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
                 groups={currentGroups}
                 authoring={authoring}
                 allTagNames={codebook?.all_tag_names ?? []}
-                onReview={() => {
-                  // Q15: the threshold review stays the EXISTING modal. Phase 5
-                  // wires it; opening a half-built one would be worse than not
-                  // opening it, and rebuilding it is explicitly ruled out.
-                }}
+                onReview={() =>
+                  setReportModal({
+                    frameworkId: page.id,
+                    frameworkTitle: page.title,
+                  })
+                }
                 onInstall={(id) => onInstall(id, page.title)}
                 onUninstall={(id) => onAskUninstall(id, page.title)}
                 readOnly={readOnly}
@@ -391,10 +415,26 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         onConfirm={authoring.onConfirmMerge}
         onCancel={authoring.onCancelMerge}
       />
+      {/* Q15 — the shipped threshold review, unchanged. `onApply` mirrors
+          `CodebookPanel.handleReportApply`: close, refetch, and tell the other
+          islands that tags moved, since a bulk apply changes what QuoteSections
+          renders. */}
+      <ThresholdReviewModal
+        open={reportModal !== null}
+        frameworkId={reportModal?.frameworkId ?? ""}
+        frameworkTitle={reportModal?.frameworkTitle ?? ""}
+        onClose={() => setReportModal(null)}
+        onApply={() => {
+          setReportModal(null);
+          reload();
+          document.dispatchEvent(new CustomEvent("bn:tags-changed"));
+        }}
+      />
       {pendingUninstall && (
         <CodebookV2UninstallSheet
           title={pendingUninstall.title}
           impact={pendingUninstall.impact}
+          impactFailed={pendingUninstall.impactFailed ?? false}
           onCancel={() => setPendingUninstall(null)}
           onConfirm={onConfirmUninstall}
         />

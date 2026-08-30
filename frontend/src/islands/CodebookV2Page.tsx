@@ -78,6 +78,19 @@ interface Props {
  * uninstalling only destroys tags nothing can restore. The floor is not a
  * codebook you installed at all.
  */
+/** English-only plural, because this lens's chrome is not enrolled in i18n yet.
+ *
+ * Deliberately NOT a new i18n key: phase 6 enrols this whole surface at once
+ * (`docs/design-codebook-v2-plan.md`), and a key added now would be copy the
+ * plan still wants reviewed, machine-translated into 21 locales ahead of that
+ * review. But "1 tags" is wrong in the one language this currently ships in,
+ * and a stat line that cannot count is not a stat line.
+ *
+ * Delete this with the literals when `t()` arrives — i18next does CLDR plurals
+ * via `t(key, { count })`, so there is nothing here to carry forward.
+ */
+const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+
 const canInstall = (b: PageBook) => !b.floor && b.id !== "sentiment";
 
 /** A door onto nothing is worse than no door (**D26**). */
@@ -128,7 +141,8 @@ export function CodebookV2Page({
                 Review
               </button>
               <span className="pg-review-meta">
-                {tagCount} tags on {book.quotes} quotes
+                {tagCount} {plural(tagCount, "tag", "tags")} on {book.quotes}{" "}
+                {plural(book.quotes, "quote", "quotes")}
                 {book.pending > 0 && (
                   <span className="undec"> &middot; {book.pending} undecided</span>
                 )}
@@ -137,8 +151,12 @@ export function CodebookV2Page({
           ) : (
             <div className="pg-stat">
               {book.installed
-                ? `${tagCount} tags${book.quotes ? ` on ${book.quotes} quotes` : ""}`
-                : `${tagCount} tags · not installed`}
+                ? `${tagCount} ${plural(tagCount, "tag", "tags")}${
+                    book.quotes
+                      ? ` on ${book.quotes} ${plural(book.quotes, "quote", "quotes")}`
+                      : ""
+                  }`
+                : `${tagCount} ${plural(tagCount, "tag", "tags")} · not installed`}
             </div>
           )}
 

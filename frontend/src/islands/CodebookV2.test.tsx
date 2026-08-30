@@ -39,6 +39,14 @@ vi.mock("../utils/api", () => ({
   removeCodebookFramework: vi.fn(() => Promise.resolve(codebook)),
   importCodebookTemplate: vi.fn(() => Promise.resolve(codebook)),
   startAutoCode: vi.fn(() => Promise.resolve({ status: "pending" })),
+  // Q15's modal is the SHIPPED ThresholdReviewModal, which fetches on open.
+  // A wholesale module mock hands it `undefined` for anything not listed here,
+  // so the Review-door test would fail on the mock rather than on the door.
+  getAutoCodeProposals: vi.fn(() => Promise.resolve({ proposals: [] })),
+  acceptAllProposals: vi.fn(() => Promise.resolve({ accepted: 0 })),
+  acceptProposal: vi.fn(() => Promise.resolve({ status: "ok" })),
+  denyAllProposals: vi.fn(() => Promise.resolve({ denied: 0 })),
+  denyProposal: vi.fn(() => Promise.resolve({ status: "ok" })),
 }));
 vi.mock("../contexts/ActivityStore", () => ({ addJob: vi.fn() }));
 
@@ -258,5 +266,54 @@ describe("Q14 — export mode's fourth state", () => {
     await waitFor(() => screen.getByTestId("bn-v2-page"));
     expect(screen.queryByTestId("bn-v2-uninstall")).not.toBeInTheDocument();
     vi.mocked(exportData.isExportMode).mockRestore();
+  });
+});
+
+describe("CodebookV2 — the Review door (Q15)", () => {
+  it("opens the SHIPPED threshold modal, not a v2 rebuild", async () => {
+    // The door was inert for three phases: the handler was an empty arrow with
+    // a comment saying phase 5 would wire it. A control that looks live and
+    // does nothing is worse than one that isn't there, and it is invisible to
+    // every test that only asserts the button renders.
+    const { fireEvent } = await import("@testing-library/react");
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail-row-nielsen"));
+
+    fireEvent.click(screen.getByTestId("bn-v2-rail-row-nielsen"));
+    await waitFor(() => screen.getByTestId("bn-v2-review"));
+
+    // The shipped modal is always MOUNTED and gates on `open` — it portals to
+    // document.body with `aria-hidden={!open}`. So "closed" is an attribute,
+    // not an absent node; asserting absence passes for the wrong reason and
+    // would keep passing if the door were re-broken.
+    const overlay = () =>
+      screen.getByTestId("bn-threshold-subtitle").closest(".codebook-modal-overlay");
+    expect(overlay()?.getAttribute("aria-hidden")).toBe("true");
+
+    fireEvent.click(screen.getByTestId("bn-v2-review"));
+
+    // Presence of the shipped modal's own element is also the proof it is that
+    // component and not a v2 lookalike, which Q15 rules out.
+    await waitFor(() => expect(overlay()?.getAttribute("aria-hidden")).toBe("false"));
+    expect(overlay()?.className).toContain("visible");
+  });
+
+  it("asks the modal about the codebook whose door was clicked", async () => {
+    // A door that opens the modal for the wrong framework is the failure mode
+    // a smoke test misses — the modal renders either way.
+    const { fireEvent } = await import("@testing-library/react");
+    const api = await import("../utils/api");
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail-row-nielsen"));
+
+    fireEvent.click(screen.getByTestId("bn-v2-rail-row-nielsen"));
+    await waitFor(() => screen.getByTestId("bn-v2-review"));
+    fireEvent.click(screen.getByTestId("bn-v2-review"));
+
+    await waitFor(() =>
+      expect(vi.mocked(api.getAutoCodeProposals)).toHaveBeenCalled(),
+    );
+    const args = vi.mocked(api.getAutoCodeProposals).mock.calls[0];
+    expect(args.some((a) => a === "nielsen")).toBe(true);
   });
 });

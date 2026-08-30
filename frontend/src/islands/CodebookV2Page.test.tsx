@@ -206,3 +206,28 @@ describe("author links are gated", () => {
     expect(screen.queryByText(/^nngroup\.com/)).not.toBeInTheDocument();
   });
 });
+
+describe("the stat line can count", () => {
+  // "1 tags on 3 quotes" is wrong in the one language this lens ships in, and
+  // a stat line that cannot count is not a stat line.
+
+  it("says 'tag' and 'quote' for one of each", () => {
+    renderPage(book({ quotes: 1, pending: 0 }), [group(1)]);
+    const meta = screen.getByText(/on 1 quote/);
+    expect(meta.textContent).toContain("1 tag on 1 quote");
+    expect(meta.textContent).not.toContain("1 tags");
+    expect(meta.textContent).not.toContain("1 quotes");
+  });
+
+  it("still says 'tags' and 'quotes' for more than one", () => {
+    renderPage(book({ quotes: 4, pending: 0 }), [group(3)]);
+    expect(screen.getByText(/on 4 quotes/).textContent).toContain("3 tags on 4 quotes");
+  });
+
+  it("counts in the no-review-door stat line too", () => {
+    // A codebook with no review door renders a different line, and the bug
+    // was in both.
+    renderPage(book({ id: "sentiment", provenance: "On by default", quotes: 1 }), [group(1)]);
+    expect(screen.getByText(/1 tag on 1 quote/)).toBeInTheDocument();
+  });
+});

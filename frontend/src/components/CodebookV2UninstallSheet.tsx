@@ -16,13 +16,27 @@
  * into doing: Cancel leads and is *not* the default, the confirm sits trailing
  * and carries the default, and `.destructive` styling is reserved for an action
  * the researcher did not deliberately choose — which this is not.
+ *
+ * **`impact` has THREE states, not two, and conflating them is a lie on a
+ * destructive path.** The counts arrive after the sheet opens, so `null` means
+ * either "still counting" or "the count failed" — and this sheet used to render
+ * both as *"Nothing has been coded with it yet, so nothing is lost."* That
+ * sentence is a measurement, and it must only appear when a measurement came
+ * back saying so. A researcher told nothing is lost, who then discards a fully
+ * coded framework, has been misinformed by the one screen whose entire job was
+ * to inform them.
  */
 
 import type { RemoveFrameworkInfo } from "../utils/types";
 
 interface Props {
   title: string;
+  /** The measured losses. `null` while counting, or if counting failed. */
   impact: RemoveFrameworkInfo | null;
+  /** True once the impact fetch has failed. Distinguishes "unknown" from
+   *  "still arriving" — both are `impact === null`, and only one of them is
+   *  going to resolve. */
+  impactFailed?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -30,6 +44,7 @@ interface Props {
 export function CodebookV2UninstallSheet({
   title,
   impact,
+  impactFailed = false,
   onCancel,
   onConfirm,
 }: Props) {
@@ -69,8 +84,20 @@ export function CodebookV2UninstallSheet({
               ))}
             </ul>
           </>
+        ) : impactFailed ? (
+          // Say we do not know. The alternative — reassurance we have not
+          // earned — is the one outcome worse than an unhelpful sheet.
+          <p className="v2-uninstall-lead" data-testid="bn-v2-uninstall-unknown">
+            Couldn&rsquo;t check what this would discard. If it has been used
+            for coding, that work goes with it.
+          </p>
+        ) : impact === null ? (
+          <p className="v2-uninstall-lead" data-testid="bn-v2-uninstall-counting">
+            Checking what this would discard&hellip;
+          </p>
         ) : (
-          <p className="v2-uninstall-lead">
+          // Reached only with a measurement in hand that says zero.
+          <p className="v2-uninstall-lead" data-testid="bn-v2-uninstall-nothing">
             Nothing has been coded with it yet, so nothing is lost.
           </p>
         )}

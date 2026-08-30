@@ -437,15 +437,28 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
       meaningful one — “don't surface a card if the signal is too weak” — does not
       exist. <code>MIN_QUOTES_PER_CELL = 2</code> is a volume floor, not a strength
       one, and <code>confidence</code> (strong / moderate / emerging) computes exactly
-      that judgement, is passed to the client, and gates nothing. Measured across the
-      real projects, of the sentiment cards the sidebar surfaces: <strong>0% strong,
-      4% moderate, 96% emerging</strong> — “emerging” meaning it failed both bars. In
-      seven of eight projects the navigation cap never even binds, because fewer than
-      six signals exist to cut. (Ranking here is proxied by concentration rather than
-      the full composite, and only the section axis is counted; the corpus is also
-      demo-sized, so this understates what a real study would produce. It still means
-      the quality bound has never been exercised, because nothing has ever been
-      strong.)</p>
+      that judgement, is passed to the client, and gates nothing. Measured across both
+      axes of every real project, ranked by <code>composite_signal</code>, of the cards
+      the sidebar surfaces: <strong>2% strong, 5% moderate, 93% emerging</strong> —
+      “emerging” meaning it failed both bars. In ten of eleven projects the navigation
+      cap never binds at all, because fewer than six signals exist to cut.</p>
+    <p><strong>And the binding constraint is participants, not quotes.</strong> Taking
+      the one analysed project with real interview-length transcripts (20 sessions,
+      136k words, 9 participants, 484 quotes): 334 quotes carry a sentiment, landing in
+      58 populated cells at a median of 4 quotes each. <strong>38 cells clear the
+      “moderate” quote bar of ≥4. Only 10 clear its ≥3-participant bar, and exactly 1
+      clears “strong”'s ≥5.</strong> Quotes are not scarce; breadth of agreement is —
+      which is what <code>simpsons_neff</code> exists to measure, and it is the right
+      thing to be scarce.</p>
+    <p>That reprices the whole exercise. Scaled to a five-interview study, the same
+      funnel yields something like <strong>two to four signals worth surfacing</strong>
+      — not twenty, not even six. So a panel built to rank twelve is, on realistic data,
+      showing three rows. Which makes depth very cheap and truncation very expensive:
+      each row is a large share of everything the researcher gets. (Caveats: that
+      project is oral history rather than usability, its quotes are overwhelmingly
+      themed rather than sectioned, and one project is not a corpus. Also: an earlier
+      version of this paragraph counted the section axis only and read 96% / 4% / 0%.
+      The method was wrong; the conclusion was not.)</p>
 
     <h2>Stress testing that is calibrated, not invented</h2>
     <p>Two sets push <em>both</em> axes at once, at measured percentiles rather than

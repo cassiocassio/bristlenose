@@ -277,6 +277,41 @@ class TestStartAutoCodeJob:
         assert resp.status_code == 400
         assert resp.json()["reason"] == "template_missing"
 
+    def test_a_failed_job_names_why_it_died(
+        self, client_with_garrett: TestClient
+    ) -> None:
+        """``failure_kind`` distinguishes what ``error_message`` cannot.
+
+        Anthropic returns 400 for an exhausted account *and* for a malformed
+        request, so ``str(exc)`` alone cannot tell a bankrupt researcher from a
+        rate-limited one -- and telling the first to "try again shortly" is the
+        specific bug ``failure_classifier.py`` exists to prevent.
+        """
+        from bristlenose.llm.failure_classifier import LLMFailureKind
+
+        db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            db.add(
+                AutoCodeJob(
+                    project_id=1,
+                    framework_id="garrett",
+                    status="failed",
+                    error_message="Error code: 400 - credit balance is too low",
+                    failure_kind=LLMFailureKind.OUT_OF_CREDIT.value,
+                )
+            )
+            db.commit()
+        finally:
+            db.close()
+
+        resp = client_with_garrett.get("/api/projects/1/autocode/garrett/status")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["status"] == "failed"
+        assert body["failure_kind"] == "out_of_credit"
+        # explicitly NOT rate_limited — the whole point of classifying
+        assert body["failure_kind"] != "rate_limited"
+
     def test_every_refusal_reason_is_reachable(self) -> None:
         """No orphan reasons: each value is raised somewhere in the route."""
         from pathlib import Path

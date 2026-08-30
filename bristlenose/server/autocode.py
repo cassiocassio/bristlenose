@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from bristlenose.llm.failure_classifier import classify_exception
 from bristlenose.server.codebook import CodebookTemplate, TemplateGroup, TemplateTag
 
 if TYPE_CHECKING:
@@ -467,6 +468,13 @@ async def run_autocode_job(
             if job and job.status != "cancelled":
                 job.status = "failed"
                 job.error_message = str(exc)
+                # Name the failure. str(exc) cannot tell an exhausted account
+                # from a rate limit — Anthropic returns 400 for both — and
+                # telling a bankrupt researcher to "try again shortly" is the
+                # specific bug the classifier was written for.
+                job.failure_kind = classify_exception(
+                    job.llm_provider or None, exc
+                ).value
                 db.commit()
         except Exception:
             logger.exception("Failed to mark job as failed")

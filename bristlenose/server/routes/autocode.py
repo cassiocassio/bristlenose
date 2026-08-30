@@ -48,6 +48,10 @@ class AutoCodeJobOut(BaseModel):
     processed_quotes: int
     proposed_count: int
     error_message: str
+    #: ``LLMFailureKind`` value, or "" when the job did not fail or the
+    #: classifier declined to name it. The UI localises from this; it must never
+    #: display ``error_message``, which is raw exception text written for a log.
+    failure_kind: str = ""
     llm_provider: str
     llm_model: str
     input_tokens: int
@@ -121,6 +125,7 @@ def _job_to_out(job: AutoCodeJob) -> AutoCodeJobOut:
         processed_quotes=job.processed_quotes,
         proposed_count=job.proposed_count,
         error_message=job.error_message,
+        failure_kind=job.failure_kind,
         llm_provider=job.llm_provider,
         llm_model=job.llm_model,
         input_tokens=job.input_tokens,

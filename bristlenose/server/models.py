@@ -703,6 +703,11 @@ class AutoCodeJob(Base):
     processed_quotes: Mapped[int] = mapped_column(default=0)
     proposed_count: Mapped[int] = mapped_column(default=0)
     error_message: Mapped[str] = mapped_column(Text, default="")
+    # Why it died, as an ``LLMFailureKind`` value. ``error_message`` is the raw
+    # exception text and is written for a log; this is what a surface reads to
+    # decide whether to say "out of credit" or "rate limited" — two answers a
+    # stringified exception cannot distinguish. "" = not classified.
+    failure_kind: Mapped[str] = mapped_column(String(30), default="")
     llm_provider: Mapped[str] = mapped_column(String(50), default="")
     llm_model: Mapped[str] = mapped_column(String(100), default="")
     # Apply parameters — captured so a later re-apply to newly-added quotes can

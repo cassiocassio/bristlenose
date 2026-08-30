@@ -2383,3 +2383,60 @@ recommendation.
 
 The two are not exclusive. C can ship now against work already done; A remains
 open if the record turns out to matter.
+
+### Q17a — there is no sixth event *type*. There is a sixth `kind`.
+
+The question "what are the semantics of a sixth event type for the user?"
+has an answer the schema already gives, and it is the one thing my Q17 write-up
+missed.
+
+**The five types are lifecycle positions, not subjects.** `run_started`,
+`run_progress`, `run_completed`, `run_cancelled`, `run_failed` say *where in its
+life* a piece of work is. They say nothing about which work.
+
+**Which work is a separate axis that already exists.** Every event carries
+`kind`, and `KindEnum` is already **three** values — `run`, `analyze`,
+`transcribe-only`. So the log is not, and never was, about one thing. A full
+pipeline run and an `analyze` are different acts with different durations, costs
+and failure modes, and they share the same five verbs.
+
+So the semantics of the five, stated plainly: **"a unit of work the researcher
+asked for, and what became of it."** The type is the lifecycle position; the
+kind is the work.
+
+**Autocode is therefore a sixth `kind`, not a sixth type** — and it passes the
+admission test the design doc already wrote, in the place it turned one down:
+
+> **Should `kind: render` exist?** → **No.** Render is a read-only re-emission,
+> doesn't change project state, and the static-render path is being actively
+> phased out. — `docs/design-pipeline-resilience.md` §Open decisions
+
+Render failed on *doesn't change project state*. Autocode **creates
+`ProposedTag` rows and, on accept, `QuoteTag` rows** — it changes project state,
+it costs money, and under **D4** the researcher explicitly asked for it by
+installing. It is the same shape as `analyze`: a smaller, separately-invoked act
+on the project.
+
+**What this fixes in the Q17 analysis above.** Two of the three objections to
+Option A dissolve:
+
+- **The schema no longer has to lie.** An autocode job is a unit of work and
+  gets its own `run_id` honestly. Nothing goes nullable.
+- **No five-site new-type change.** `KindEnum` gains a value — the doc's own
+  note says *"New kinds require code change + migration"*, which is smaller than
+  minting a type, and no reader's type-filter is touched.
+
+**What survives.** The `tail_run_state` trap is unchanged and arguably worse: it
+walks the tail for the most recent lifecycle event, and an autocode terminus
+would now legitimately *be* one — masking the run's. And the governance point
+stands: the file remains a named re-identification surface, so an autocode
+`run_progress` inherits the counts-and-timings-only rule.
+
+**And the question this exposes is the real one, independent of channel.**
+A project can hold a **completed run and a failed job at once**. The sidebar row
+renders one glyph. A failed codebook does not mean the analysis is broken — the
+report exists, the quotes are there, one optional enhancement did not apply — so
+rendering it as `.failed` would tell the researcher their project died. The row
+already has the vocabulary for this: **`.partial(kind:stagesComplete:)`**, which
+is what `transcribe-only` resolves to. That is where a failed job belongs, and
+it needs deciding whichever channel carries it.

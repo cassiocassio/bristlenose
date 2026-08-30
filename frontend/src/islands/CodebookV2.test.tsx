@@ -24,6 +24,8 @@ const templates = { templates: [
   { id: "nielsen", title: "10 Usability Heuristics", author: "Jakob Nielsen",
     description: "", author_bio: "", author_links: [], groups: [], enabled: true,
     imported: true },
+  { id: "cliux", title: "Command-Line UX", author: "", description: "",
+    author_bio: "", author_links: [], groups: [], enabled: true, imported: false },
 ]};
 
 vi.mock("../utils/api", () => ({
@@ -31,6 +33,11 @@ vi.mock("../utils/api", () => ({
   getCodebookTemplates: vi.fn(() => Promise.resolve(templates)),
   getFrameworkStates: vi.fn(() => Promise.resolve({ uxr: false })),
   putFrameworkStates: vi.fn(() => Promise.resolve({ status: "ok", catchUp: [] })),
+  getRemoveFrameworkImpact: vi.fn(() =>
+    Promise.resolve({ tag_count: 4, quote_count: 9, has_autocode: true }),
+  ),
+  removeCodebookFramework: vi.fn(() => Promise.resolve(codebook)),
+  importCodebookTemplate: vi.fn(() => Promise.resolve(codebook)),
 }));
 
 describe("CodebookV2 — built-in is derived, not hardcoded", () => {
@@ -134,5 +141,59 @@ describe("D22 — Browse Library is the navigation", () => {
     fireEvent.click(screen.getByTestId("bn-v2-browse"));
     expect(screen.getByTestId("bn-v2-card-sentiment")).toBeInTheDocument();
     expect(screen.getByTestId("bn-v2-card-uxr")).toBeInTheDocument();
+  });
+});
+
+describe("phase 5 — the destructive edge", () => {
+  it("confirms before uninstalling, and cancelling does nothing", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    const api = await import("../utils/api");
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    // The floor is selected by default and correctly has no install controls
+    // (D20), so pick a framework first.
+    fireEvent.click(screen.getByTestId("bn-v2-rail-row-nielsen"));
+    await waitFor(() => screen.getByTestId("bn-v2-uninstall"));
+
+    fireEvent.click(screen.getByTestId("bn-v2-uninstall"));
+    await waitFor(() => screen.getByTestId("bn-v2-uninstall-sheet"));
+    // Nothing has happened yet — the sheet is a decision, not a receipt.
+    expect(api.removeCodebookFramework).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId("bn-v2-uninstall-cancel"));
+    await waitFor(() =>
+      expect(screen.queryByTestId("bn-v2-uninstall-sheet")).not.toBeInTheDocument(),
+    );
+    expect(api.removeCodebookFramework).not.toHaveBeenCalled();
+  });
+
+  it("uninstalls only after the confirm", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    const api = await import("../utils/api");
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    // The floor is selected by default and correctly has no install controls
+    // (D20), so pick a framework first.
+    fireEvent.click(screen.getByTestId("bn-v2-rail-row-nielsen"));
+    await waitFor(() => screen.getByTestId("bn-v2-uninstall"));
+
+    fireEvent.click(screen.getByTestId("bn-v2-uninstall"));
+    await waitFor(() => screen.getByTestId("bn-v2-uninstall-sheet"));
+    fireEvent.click(screen.getByTestId("bn-v2-uninstall-confirm"));
+    await waitFor(() => expect(api.removeCodebookFramework).toHaveBeenCalled());
+  });
+
+  it("installs without a confirmation", async () => {
+    // Install IS apply (D4) and it spends — but the researcher asked by
+    // clicking, and a dialog on an additive act teaches them to dismiss
+    // dialogs, which is what makes the destructive one stop working.
+    const { fireEvent } = await import("@testing-library/react");
+    const api = await import("../utils/api");
+    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    fireEvent.click(screen.getByTestId("bn-v2-card-action-cliux"));
+    await waitFor(() => expect(api.importCodebookTemplate).toHaveBeenCalledWith("cliux"));
+    expect(screen.queryByTestId("bn-v2-uninstall-sheet")).not.toBeInTheDocument();
   });
 });

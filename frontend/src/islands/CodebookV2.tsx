@@ -15,12 +15,20 @@ import {
   getCodebook,
   getCodebookTemplates,
   getFrameworkStates,
+  getRemoveFrameworkImpact,
+  importCodebookTemplate,
   putFrameworkStates,
+  removeCodebookFramework,
 } from "../utils/api";
-import type { CodebookResponse, TemplateListResponse } from "../utils/types";
+import type {
+  CodebookResponse,
+  RemoveFrameworkInfo,
+  TemplateListResponse,
+} from "../utils/types";
 import { CodebookV2Rail, type RailBook } from "./CodebookV2Rail";
 import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
 import { CodebookV2Browse, type BrowseBook } from "./CodebookV2Browse";
+import { CodebookV2UninstallSheet } from "../components/CodebookV2UninstallSheet";
 
 interface Props {
   projectId: string;
@@ -77,6 +85,14 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   // no traversal. With the rail closed it is the ONLY way to another codebook,
   // which is why its prominence is load-bearing rather than decorative.
   const [view, setView] = useState<"page" | "browse">("page");
+  // Uninstall is confirmed, never immediate. D20 option A made it destroy the
+  // AutoCode run as well as the tags, so the sheet has more to say than the
+  // shipped one — and a terse modal measures rather than warning.
+  const [pendingUninstall, setPendingUninstall] = useState<{
+    id: string;
+    title: string;
+    impact: RemoveFrameworkInfo | null;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -144,6 +160,49 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     }
     return { rows, builtins };
   }, [codebook, templates, states, projectName]);
+
+  const reload = useCallback(() => {
+    Promise.all([getCodebook(), getCodebookTemplates(), getFrameworkStates()])
+      .then(([cb, tpl, st]) => {
+        setCodebook(cb);
+        setTemplates(tpl);
+        setStates(st);
+      })
+      .catch((e: Error) => setError(e.message));
+  }, []);
+
+  const onInstall = useCallback(
+    (id: string) => {
+      // Install IS apply (D4) — it spends. No confirmation, deliberately: the
+      // researcher asked for it by clicking, and a dialog on an additive act
+      // teaches them to dismiss dialogs.
+      importCodebookTemplate(id)
+        .then(reload)
+        .catch((e: Error) => setError(e.message));
+    },
+    [reload],
+  );
+
+  const onAskUninstall = useCallback((id: string, title: string) => {
+    setPendingUninstall({ id, title, impact: null });
+    // The counts arrive after the sheet, so it opens instantly and fills in.
+    // Blocking on the fetch would make a destructive confirmation feel laggy,
+    // which is the wrong thing to teach about it.
+    getRemoveFrameworkImpact(id)
+      .then((impact) =>
+        setPendingUninstall((p) => (p && p.id === id ? { ...p, impact } : p)),
+      )
+      .catch(() => {});
+  }, []);
+
+  const onConfirmUninstall = useCallback(() => {
+    const target = pendingUninstall;
+    if (!target) return;
+    setPendingUninstall(null);
+    removeCodebookFramework(target.id)
+      .then(reload)
+      .catch((e: Error) => setError(e.message));
+  }, [pendingUninstall, reload]);
 
   const onToggle = useCallback((id: string, enabled: boolean) => {
     // Optimistic: the switch is the researcher's statement, not a request for
@@ -236,11 +295,13 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
                   setView("page");
                 }}
                 onBack={() => setView("page")}
-                // Phase 5 owns these: install-is-apply spends money and D20's
-                // uninstall stops preserving, so that is the phase where a bug
-                // loses work. Wiring them early and cheaply is the worst option.
-                onInstall={() => {}}
-                onUninstall={() => {}}
+                onInstall={onInstall}
+                onUninstall={(id) =>
+                  onAskUninstall(
+                    id,
+                    browseBooks.find((b) => b.id === id)?.title ?? id,
+                  )
+                }
               />
             </div>
           ) : page ? (
@@ -253,13 +314,21 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
                   // wires it; opening a half-built one would be worse than not
                   // opening it, and rebuilding it is explicitly ruled out.
                 }}
-                onInstall={() => {}}
-                onUninstall={() => {}}
+                onInstall={onInstall}
+                onUninstall={(id) => onAskUninstall(id, page.title)}
               />
             </div>
           ) : null}
         </div>
       </section>
+      {pendingUninstall && (
+        <CodebookV2UninstallSheet
+          title={pendingUninstall.title}
+          impact={pendingUninstall.impact}
+          onCancel={() => setPendingUninstall(null)}
+          onConfirm={onConfirmUninstall}
+        />
+      )}
     </div>
   );
 }

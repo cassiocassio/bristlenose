@@ -358,3 +358,32 @@
    blanket knock-back removes precisely the one control that must stay
    reachable on a disabled codebook (D27). */
 .v2-card-grid .picker-card.off2 .picker-card-toggle { opacity: 1; }
+
+/* ── Codebook v2 — the uninstall confirmation ─────────────────────────────
+   Phase 5. Reuses the shipped .bn-modal-overlay / .bn-modal shell; only the
+   body needs rules, because the sheet's whole job is a short measured list. */
+
+.v2-uninstall-sheet { max-width: 28rem; }
+
+.v2-uninstall-title {
+    font-size: var(--bn-text-heading);
+    font-weight: var(--bn-weight-strong);
+    margin: 0 0 var(--bn-space-md);
+}
+
+.v2-uninstall-lead {
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-muted);
+    margin: 0 0 var(--bn-space-sm);
+}
+
+/* Counted losses, one per line. A researcher weighs a list; they cannot weigh
+   "this cannot be undone". */
+.v2-uninstall-losses {
+    margin: 0 0 var(--bn-space-md);
+    padding-left: 1.1rem;
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-text);
+}
+
+.v2-uninstall-losses li { margin-bottom: 0.15rem; }

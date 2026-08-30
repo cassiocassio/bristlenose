@@ -2830,12 +2830,20 @@ same project with the same data.
 be ratified from a static mockup on fixture data. It can be ratified from the
 real control beside the shipped one.
 
-**The risk, and its mitigation.** A parallel implementation becomes permanent —
-the repo already carries that scar, and the rule *"actively remove static render,
-don't find clever uses"* exists because of it. So **name the deletion trigger
-now**: v1 is deleted when v2 reaches parity on the coverage audit's inventory and
-the flag defaults on. Not "when we're happy" — a condition already written down
-and checkable.
+**The risk, and why the flag disarms it.** A parallel implementation becomes
+permanent — the repo carries that scar, and the rule *"actively remove static
+render, don't find clever uses"* exists because of it.
+
+**But the flag is not only the shipping vehicle; it is the deletion
+instrument.** Turn it off, work exclusively on v2, and nothing breaking *is* the
+evidence that v1 is dead weight. That is a moment you can schedule and observe,
+and it is exactly what static render never had — no flag, so there was never a
+day on which switching it off proved anything, which is how it survived long
+enough to need a rule.
+
+So the sequence is: flag on and both live → flag defaults on → **flag visibly
+off while v2 carries real work** → delete. The deletion trigger is that third
+step passing quietly, not a judgement that we are happy.
 
 ### D28a — what "guarded additive migration" means here, measured
 

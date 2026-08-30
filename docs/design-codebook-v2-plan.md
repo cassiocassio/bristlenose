@@ -578,3 +578,100 @@ looking and neither a defect:
 running process keeps serving the old chunk graph, and reloading the browser
 does not help — it looks exactly like a fix that did not apply. Restart `serve`.
 Cost two rounds here.
+
+## Phase 6c — the navigator was never in the sidebar
+
+**31 Aug 2026.** v2 shipped its codebook navigation as a `<nav class="v2-rail">`
+inside the lens's own content column. It looked plausible in isolation and was
+wrong in every way that mattered, because content navigation in this app is a
+component — `SidebarLayout`'s left panel — and building a lookalike beside it
+means rebuilding, badly, everything that component already does.
+
+Absent because the rail was outside the panel:
+
+- the toolbar toggle on macOS, and `[` in the SPA
+- drag-to-resize, with min/max clamping and keyboard arrows
+- rail hover-to-peek, and overlay mode
+- the `panel-state` bridge post — how the native View menu knows whether to
+  say Show or Hide
+- the 6-column grid, so **the lens's content never narrowed**; the rail simply
+  took 240px of it
+
+None of that is reimplementable per-lens, and none of it should be.
+`components/CodebookV2Sidebar.tsx` is now the `leftPanel` AppLayout mounts for
+`/report/codebook-v2`, and every one of those behaviours arrives with it.
+
+### The typography was a dialect
+
+`.toc-heading` for sections, `.toc-link` + `.codebook-toc-link` for rows —
+exactly what `CodebookSidebar` uses, so headings, row metrics, hover underline
+and the selected treatment are inherited rather than restated. Measured against
+v1 in the browser rather than assumed: 13px/490 headings with the rule,
+13px/370 rows, 3.2 / 5.6px padding, 6px radius. Identical.
+
+**And the selected row was green.** The rail used `--bn-colour-active-bg` —
+`#f0fdf4`, the palette's *success* background. `.toc-link.active` is
+`--bn-nav-selection-bg`, a neutral `#efefef`, with the accent colour and
+emphasis weight. Selection is not success.
+
+### What deliberately did NOT change
+
+The IA — Manual tags / Default / Frameworks, installed-only (D17), one row per
+codebook, provenance under the title with D19's weight for a person and not for
+a system fact (D23), the pending badge inboard of the switch (D10, D16).
+
+And the **switch**, at the size settled during the prototype: the platform
+`<input type="checkbox" switch>` where the browser has it, a 26×15 `.sw.mini`
+where it does not. This is a deliberate departure from `CodebookSidebar`'s
+status *dot*: v2's rail is where a codebook is turned on and off, and a dot only
+reports. The floor keeps no switch (D20).
+
+### Selection had to leave the component
+
+The panel is a **sibling** of the lens, not a child, so `useState` could not
+carry the selection. `contexts/CodebookV2Store.ts` is the house shape
+(`useSyncExternalStore`, no provider), deliberately not persisted — a returning
+researcher should land on their own tags, not on whichever framework they last
+inspected. Three consequences handled rather than discovered later: selecting
+leaves the catalogue (the rail did both in one handler), the lens reloads on
+`codebook-changed` so the page's knock-back follows the switch, and the
+selection resets on unmount so module state does not outlive the visit.
+
+### Two found on the way
+
+**The AutoCode chip took you to the other lens.** Its View Report action
+dispatched in place only `if (isCodebook)` and otherwise navigated to
+`/report/codebook`. Install from v2, click through, and you land in v1 — a
+different lens from the one you were working in, with nothing saying so.
+Reported by the user. Jobs now carry `originRoute`, and both lenses answer
+`bn:autocode-report` in place.
+
+**`Tab.hasLeftPanel`.** The same fact was enumerated four times: the toolbar
+button's gate, its label, its tooltip, and the View menu's Show/Hide item.
+Adding `codebookV2` reached three and missed the gate — so the lens had a panel,
+a menu item that toggled it and a working ⌘⌥L, and no toolbar button. On the Mac
+that button is the *only* affordance, because embedded mode removes the SPA's
+own rails. One predicate now, exhaustive with no `default:`, so a new case fails
+to compile rather than silently inheriting "no panel".
+
+### The gate this earned
+
+A stray `}` left by the CSS edit **silently discarded every rule after it**. CSS
+has no error channel: the parser resynchronises and drops the rest. The symptom
+was a two-column page head rendering as one and a 240px gutter measuring 892px
+— which reads as a component layout bug, not as a stylesheet that stopped being
+parsed two hundred lines earlier. The tell was that `getComputedStyle` said
+`block` while the file said `flex`, and **no rule matched the selector at all**.
+
+`tests/test_theme_token_resolution.py` now checks brace balance across every
+theme stylesheet, and separately where the running depth goes negative — since
+a file can balance overall while its middle is orphaned. Both fail on the real
+bug and pass without it.
+
+### One operational note, again
+
+The per-project baked CSS (`<output_dir>/assets/bristlenose-theme.css`) is
+preferred over the bundled source, so a theme change does not appear until it is
+regenerated or a fresh project is used. Together with `serve` reading
+`index.html` once at startup, that is two independent staleness traps between an
+edit and the screen — both of which present as "the fix did not apply".

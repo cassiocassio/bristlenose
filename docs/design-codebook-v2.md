@@ -2440,3 +2440,68 @@ rendering it as `.failed` would tell the researcher their project died. The row
 already has the vocabulary for this: **`.partial(kind:stagesComplete:)`**, which
 is what `transcribe-only` resolves to. That is where a failed job belongs, and
 it needs deciding whichever channel carries it.
+
+### Q17b — an extension is downstream-only, and that decides the precedence
+
+Settled framing, 30 Aug (user): **autocode is an optional modular extension to
+the run — "you've already got your burger, do you want fries with that?"**
+Sentiment is *part of* the run; a Library codebook is not. And an extension has
+its own full mini-lifecycle: started, progress, completed, cancelled, failed.
+
+**The asymmetry is the load-bearing part.** A run can succeed and its extension
+fail. **The reverse is impossible** — no extended analysis can run without a
+working vanilla project underneath it.
+
+That is not a detail; it **decides the precedence question** the previous section
+called channel-independent and open:
+
+| run | extension | row |
+|---|---|---|
+| failed | *cannot have run* | `.failed` — the run's own cause |
+| succeeded | failed | **`.partial`, never `.failed`** |
+| succeeded | succeeded | `.ready` |
+
+There is no ambiguous cell, because the dependency forbids it. A failed
+codebook can never mean "you have no project", so it can never outrank a run
+failure and can never present as one.
+
+**And it corrects `kind`.** `run`, `analyze` and `transcribe-only` are three
+*alternative* entry points — you pick one. Autocode is not a fourth alternative;
+it is a **successor**. Listing it beside them would put a dependent act in a menu
+of mutually exclusive ones.
+
+**The synthesis of the two options the user named.** An extension emits its own
+mini-lifecycle *and* reuses the stage-rollup machinery rather than inventing a
+parallel one: a terminus whose `PipelineSummary` carries a **`codebooks` slot**
+and nothing else, exactly as `transcripts` is `None` for `analyze` and
+`quotes`/`themes` are `None` for `transcribe-only`. The summary is already
+shaped for "this kind of work populates these slots".
+
+Two things make that fit rather than force:
+
+1. **`PipelineSummary` already states the semantics we need.** From its own
+   comment: *"A non-empty `failed` here does NOT mean the run failed."* That is
+   precisely the extension contract.
+2. **Adding a slot has direct precedent, for this exact reason.** The `ingest`
+   slot "did not exist until Aug 2026, which is why refusals reached no surface
+   at all: `StageFailure.source_file` had been added in Jul 2026 for exactly this
+   case, and three consumers already keyed on it, but there was nowhere in the
+   summary to put one." A slot was added to give an existing failure somewhere to
+   live. This is the same move.
+
+**Why it cannot simply be a stage of the main run.** `PipelineSummary` attaches
+to a **terminus**, and the log is append-only. Autocode is invoked later, from
+the UI, after that line is written — there is nothing to amend. Hence the
+mini-lifecycle: the extension is its own event sequence, whose *internal*
+structure borrows the stage vocabulary.
+
+**What this leaves as real work, now well-specified rather than vague:**
+`tail_run_state` must derive state **per lifecycle**, not from the tail — an
+extension terminus is legitimately the most recent lifecycle event and would
+otherwise mask the run's. That is the trap named twice above, and this framing
+turns it from "a thing to remember" into "the function takes a kind".
+
+**One open shape.** Sentiment is in the run, so autocode is the only extension
+today. Whether the slot is `codebooks` or a general `extensions` map is worth
+deferring until a second extension exists — a fixed named slot is clearer, and
+generalising for one case is how a schema acquires a dictionary nobody needs.

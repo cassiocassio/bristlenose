@@ -2836,3 +2836,53 @@ don't find clever uses"* exists because of it. So **name the deletion trigger
 now**: v1 is deleted when v2 reaches parity on the coverage audit's inventory and
 the flag defaults on. Not "when we're happy" — a condition already written down
 and checkable.
+
+### D28a — what "guarded additive migration" means here, measured
+
+Across the nine migrations in `bristlenose/server/alembic/versions/`:
+
+| | |
+|---|---|
+| upgrades that are **purely additive** | **7 of 9** — `add_column` / `create_table` / `create_index` |
+| upgrades that **drop** anything | **none.** The single `drop_column` (008) is in `downgrade()` |
+| `downgrade()` raising `NotImplementedError` | **8 of 9** — forward-only by house rule |
+| migrations carrying a **backfill** | 3 (003, 004, 005) — in the *same* migration, not a later release |
+| structural changes | 1 (004), via `batch_alter_table` |
+
+So: **add, then move to it — and you do not get to move back.** The safety comes
+from additive-first, not from reversibility.
+
+**"Guarded" has a specific cause, not general caution.** `init_db` runs
+`create_all()` **then** `run_migrations`, which stamps 001 and upgrades to head —
+so `upgrade()` *does* run on a brand-new database where the model has already
+made the column. `_has_column` makes it inert there. Every migration carries that
+helper because of the boot order, not out of defensiveness.
+
+**004 is the template for anything harder than a new column**, and its two moves
+are the ones worth copying:
+
+- **`batch_alter_table`**, because SQLite cannot drop a constraint in place —
+  Alembic rebuilds the table. Still conditional (`if "uq_…" in
+  _unique_constraint_names(...)`), guarded exactly like the additive ones.
+- **It decides in advance what it will lose.** `heading_edits` has
+  `UNIQUE(project_id, heading_key)`, so a colliding re-key would raise
+  `IntegrityError` and abort the *whole* migration. It builds a `live_keys` set,
+  skips the collisions, and leaves those rows un-rekeyed — *"a one-time loss,
+  documented in the plan"*. **A migration that can partially fail must choose its
+  loss up front and write it down**, or it takes the whole upgrade with it.
+
+**And the distinction that matters most for the extension work:** almost none of
+it is a database change at all.
+
+| change | discipline |
+|---|---|
+| `autocode_jobs.failure_kind` | **DB** — migration 009, guarded, additive. Shipped |
+| naming the codebook in `StageFailure` | **wire** — a Pydantic model in `events.py` |
+| `KindEnum` gaining `extension` | **wire** |
+| an extension's own summary | **wire** |
+
+The events log is NDJSON on disk, versioned by `schema_version`, and
+`read_events` *"skips malformed"* lines. So a wire change is `events.py` + the
+Swift mirror + a `pipeline-summary-contract.json` bump — no Alembic, no
+`ALTER TABLE`, and old lines stay readable. Different discipline, much cheaper,
+and easy to conflate with the DB work because both are called "schema".

@@ -19,6 +19,7 @@ import {
 } from "../utils/api";
 import type { CodebookResponse, TemplateListResponse } from "../utils/types";
 import { CodebookV2Rail, type RailBook } from "./CodebookV2Rail";
+import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
 
 interface Props {
   projectId: string;
@@ -147,20 +148,68 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     });
   }, []);
 
+  const current = books.find((b) => b.id === selected) ?? books[0];
+  const currentGroups = useMemo(
+    () =>
+      (codebook?.groups ?? []).filter((g) =>
+        current?.floor ? !g.framework_id : g.framework_id === current?.id,
+      ),
+    [codebook, current],
+  );
+
+  const page: PageBook | null = current
+    ? {
+        ...current,
+        installed: true,
+        quotes: codebook?.framework_quote_totals?.[current.id] ?? 0,
+        template: templates?.templates.find((t) => t.id === current.id),
+      }
+    : null;
+
   return (
-    <div className="contentinner" data-testid="bn-codebook-v2">
+    <div data-testid="bn-codebook-v2">
       <section>
+        {/* The zone title and its datum. Browse Library lives HERE, not on the
+            page: D22 makes it the unconditional route to the catalogue — with
+            the rail closed it is the only way to reach another codebook — so it
+            must not come and go with the selection. */}
         <div className="section-heading">
           <h1>Codebook</h1>
+          <div className="section-heading-action">
+            <button
+              className="bn-btn bn-btn-secondary bn-btn-lg"
+              data-testid="bn-v2-browse"
+              onClick={() => setSelected(selected)}
+            >
+              Browse Library
+            </button>
+          </div>
         </div>
         {error && <p className="pg-stat">Could not load the codebook: {error}</p>}
-        <CodebookV2Rail
-          books={books}
-          selectedId={selected}
-          onSelect={setSelected}
-          onToggle={onToggle}
-          builtinIds={builtins}
-        />
+        <div className="v2-layout">
+          <CodebookV2Rail
+            books={books}
+            selectedId={current?.id ?? ""}
+            onSelect={setSelected}
+            onToggle={onToggle}
+            builtinIds={builtins}
+          />
+          {page && (
+            <div className="v2-main">
+              <CodebookV2Page
+                book={page}
+                groups={currentGroups}
+                onReview={() => {
+                  // Q15: the threshold review stays the EXISTING modal. Phase 5
+                  // wires it; opening a half-built one would be worse than not
+                  // opening it, and rebuilding it is explicitly ruled out.
+                }}
+                onInstall={() => {}}
+                onUninstall={() => {}}
+              />
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

@@ -78,7 +78,10 @@ describe("CodebookV2 — built-in is derived, not hardcoded", () => {
   });
 
   it("names the floor after the project", async () => {
+    // Appears twice by design once the page renders — the rail row and the page
+    // title — so scope to the rail rather than loosening the query.
     render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByText("Ikea tags"));
+    await waitFor(() => screen.getByTestId("bn-v2-rail-row-floor"));
+    expect(screen.getByTestId("bn-v2-rail-row-floor")).toHaveTextContent("Ikea tags");
   });
 });

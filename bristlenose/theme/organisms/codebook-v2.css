@@ -7,6 +7,12 @@
    26x15, which is measured rather than chosen — see docs/mockups/
    codebook-v2-rail.html and -parity.html for the measurements. */
 
+/* One knock-back opacity, shared by the rail, the page and the browse card.
+   NOT a new value: the theme has seven disabled declarations carrying five
+   different opacities and no token, and 0.5 is the plurality AND the base
+   atom's (.bn-btn:disabled). D27a. */
+:root { --bn-opacity-off: 0.5; }
+
 .v2-rail {
     display: flex;
     flex-direction: column;
@@ -137,3 +143,146 @@
     .v2-rail .sw.mini,
     .v2-rail .sw.mini::after { transition: none; }
 }
+
+/* ── Codebook v2 — the page ────────────────────────────────────────────────
+   Phase 3. The group and tag rendering emits the SHIPPED unscoped classes
+   (.codebook-group, .tag-row, .tag-bar-area, .badge) and adds nothing here, so
+   the histogram alignment this repo has already paid for is inherited. What
+   follows is only the page head, which has no shipped equivalent. */
+
+.pg-head {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--bn-space-lg);
+    margin-bottom: var(--bn-space-lg);
+}
+
+/* Two columns. The description's right edge meets the graphic's left, and the
+   action trails below the graphic — the alignment the layout is built on. */
+.pg-headmain { flex: 1; min-width: 0; }
+
+.pg-side {
+    /* A fixed-width GUTTER, not a fixed box (D13). The width is the contract;
+       what fills it is deferred per codebook. */
+    flex: 0 0 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--bn-space-md);
+}
+
+.pg-graphic {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    border-radius: var(--bn-radius-md);
+    background: var(--bn-colour-quote-bg);
+}
+
+.pg-actions { display: flex; gap: var(--bn-space-sm); }
+
+.pg-title {
+    font-size: var(--bn-text-title);
+    font-weight: var(--bn-weight-strong);
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+}
+
+/* Provenance. A person keeps D19's weight; a system fact does not borrow it. */
+.pg-author {
+    font-size: var(--bn-text-label);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    margin-top: 0.15rem;
+}
+
+.pg-author.prov-system {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+.pg-desc {
+    font-size: var(--bn-text-body);
+    color: var(--bn-colour-text);
+    margin: var(--bn-space-md) 0 0;
+    max-width: 62ch;
+}
+
+.pg-stat { font-size: var(--bn-text-label); color: var(--bn-colour-muted); margin-top: var(--bn-space-md); }
+
+/* The Review door: the verb is the button, the counts sit on its baseline. */
+.pg-review-row {
+    margin-top: var(--bn-space-md);
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.pg-review-meta { font-size: var(--bn-text-label); color: var(--bn-colour-text); }
+.pg-review-meta .undec { color: var(--bn-colour-muted); }
+
+/* D26 — a codebook that defines no tags says so, plainly. */
+.pg-empty {
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-muted);
+    padding: 1.5rem 0;
+}
+
+.v2-groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--bn-space-md);
+}
+
+/* Switched off. ONE knock-back value shared with the rail — before D27a these
+   were three declarations with three different opacities plus a dead fourth.
+   Named -off, not -disabled: a disabled control cannot be used, whereas a
+   switched-off codebook stays fully interactive. */
+.pageoff .pg-title,
+.pageoff .pg-author,
+.pageoff .pg-stat,
+.pageoff .pg-desc,
+.pageoff .group-title { color: var(--bn-colour-muted); }
+
+.pageoff .v2-groups,
+.pageoff .pg-graphic { opacity: var(--bn-opacity-off); }
+
+/* The uninstall control is EXEMPT. A disabled codebook is still uninstallable,
+   and a blanket knock-back removes precisely the one control that must stay
+   reachable. */
+.pageoff .pg-actions { opacity: 1; }
+
+/* The lens: rail beside content. The rail is permanent (S1) — one codebook
+   always has focus, and the long scrolling page of every codebook is gone. */
+.v2-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: var(--bn-space-xl, 1.5rem);
+    align-items: start;
+}
+
+.v2-main { min-width: 0; }
+
+@container (max-width: 720px) {
+    .v2-layout { grid-template-columns: 1fr; }
+}
+
+/* ── The size axis — PROVISIONAL, and deliberately not in the atom ─────────
+   `.bn-btn` (theme/atoms/modal.css) carries four COLOUR variants and no size
+   variant, because every existing call site is a dialog action row where one
+   size is correct. Codebook v2 is the first surface wanting two: a zone-title
+   destination that should be findable without shouting, and a Review verb that
+   must stay subordinate to Install.
+
+   These live HERE rather than in modal.css on purpose. The size axis is listed
+   as *Indicative* in the fidelity map — it is a declared gap, filed rather than
+   granted — and promoting it to the shipped atom is a design-system decision
+   nobody has taken. Scoped to v2, the QA comparison renders truthfully without
+   that decision being made by accident.
+
+   Purely dimensional: no colour, no new token. If v2 ships, these move up. */
+.v2-layout .bn-btn-sm,
+.section-heading .bn-btn-sm { font-size: var(--bn-text-caption); padding: 0.25rem 0.7rem; }
+
+.v2-layout .bn-btn-lg,
+.section-heading .bn-btn-lg { font-size: var(--bn-text-body); padding: 0.5rem 1.15rem; }

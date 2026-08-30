@@ -23,8 +23,8 @@ import type { TagFilterState } from "../utils/filter";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
-// Both panels open at 280. The left nav deliberately keeps ONE width across
-// every lens — switching lens shouldn't resize the furniture — accepting that
+// Left nav 240, tag sidebar 280. The left nav deliberately keeps ONE width
+// across every lens — switching lens shouldn't resize the furniture — accepting that
 // the best width for Signals isn't the best width for Quotes.
 //
 // Creep this up, never jump it. A 16" screen invites generosity, but
@@ -34,8 +34,10 @@ import type { TagFilterState } from "../utils/filter";
 // The nav trialled its own 200px minimum from 14 Aug 2026; Signals answered
 // the question that trial shipped with, its rows being a name plus a
 // right-aligned badge that ellipsed on arrival ("Top Navig…", "Beds Cat…").
-// 280 is the smallest width that fixes that, not the roomiest that fits.
-const DEFAULT_TOC_WIDTH = 280;
+// 240 is the smaller of the two steps considered — it clears Sessions'
+// duration and day-of-week tiers and un-ellipses the shorter Signals rows,
+// and leaves the longer titles to a better row layout rather than to width.
+const DEFAULT_TOC_WIDTH = 240;
 const DEFAULT_TAGS_WIDTH = 280;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;

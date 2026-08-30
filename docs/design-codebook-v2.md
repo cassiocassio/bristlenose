@@ -2950,3 +2950,33 @@ reversible and the UI says so in three places. After D20 option A it is not, and
 saying so is D20's *"click uninstall and you say byebye"*. That is the intended
 change — this is the note that it has a visible surface today, not just a code
 path.
+
+### A1 confirmed — retire "Restore", and put it back later with less verbiage
+
+Confirmed 30 Aug (user): *"new UX is better, less fiddly — functionality we're
+losing is mostly confusing… put back later with more care and less verbiage."*
+
+So **D20 option A stands**, and the three shipped surfaces go with it: the
+*"Restore codebook"* verb, the *"Previously imported"* card note, and the
+*"AutoCode results are preserved — reinstall any time from the Codebook
+Library"* line.
+
+**That last string is the argument for removing it.** Twenty-two words to
+explain a state the researcher has to hold in their head — that an uninstalled
+codebook is secretly still there — and the state it described **did not work**:
+the restore branch reset accepted proposals to pending, and under D4 a reinstall
+re-spends anyway. It was verbiage explaining a promise the code did not keep.
+
+**The 100-day item inherits a constraint, not just a task.** When
+non-destructive uninstall returns it must be *shown, not explained* — no
+sentence telling the researcher what is preserved. If the state needs a
+paragraph, it is the wrong state.
+
+### A6 fixed — keyboard parity restored, and extended
+
+The regression is closed and the new surfaces got the same treatment: `sb-row`,
+`tag-del`, `tag-add-row`, `new-group-placeholder`, `picker-card` and the
+fallback switch now all carry `role` + `tabindex`, with one delegated `keydown`
+listener handling Enter and Space (preventDefault'd, or Space scrolls the page
+under the control). The platform `<input type="checkbox" switch>` was already
+focusable. Verified: **no element carries a `role` without a tab stop.**

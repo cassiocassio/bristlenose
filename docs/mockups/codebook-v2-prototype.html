@@ -788,7 +788,7 @@ function enableControl(b){
   if (b.floor) return '';
   return useNative()
     ? `<input class="enable" type="checkbox" switch ${b.on?'checked':''} data-tog="${b.id}" aria-label="Enable ${esc(b.title)}">`
-    : `<span class="sw mini ${b.on?'':'offstate'}" data-tog="${b.id}" role="switch" aria-checked="${b.on}"></span>`;
+    : `<span class="sw mini ${b.on?'':'offstate'}" data-tog="${b.id}" role="switch" tabindex="0" aria-checked="${b.on}"></span>`;
 }
 
 const SETSFOR = {"project": ["ux", "emo", "task"], "sentiment": ["sentiment"], "uxr": ["ux", "emo", "emo", "task", "task", "trust", "trust", "opp"], "nielsen": ["ux", "ux", "task", "trust", "task", "ux", "opp", "emo", "task", "opp"], "garrett": ["ux", "emo", "task", "trust", "opp"], "norman": ["ux", "emo", "task", "trust", "opp", "ux", "emo"], "morville": ["ux", "emo", "opp", "task", "trust", "emo", "opp"], "yablonski": ["ux", "trust", "emo", "emo", "task", "opp"], "plato": ["ux", "trust", "task", "emo", "opp", "task"], "cliux": ["ux", "ux", "trust", "task", "trust", "trust"]};
@@ -853,7 +853,7 @@ function renderRail(){
   const floor  = inst.filter(b=>b.floor);
   const builtIn= inst.filter(b=>!b.floor && b.builtin);
   const frameworks = inst.filter(b=>!b.floor && !b.builtin);
-  const row = b=>`<div class="sb-row ${b.on?'':'off2'} ${sel===b.id?'sel':''}" data-sel="${b.id}">
+  const row = b=>`<div class="sb-row ${b.on?'':'off2'} ${sel===b.id?'sel':''}" data-sel="${b.id}" role="button" tabindex="0">
       <span class="lbl2"><span class="r-title">${esc(b.title)}</span>${
         (b.author && !b.floor)?`<span class="r-author">${esc(b.author)}</span>`:''}</span>
       ${b.pending?`<span class="pcount">${b.pending}</span>`:''}
@@ -895,7 +895,7 @@ function renderPage(){
       return `<div class="tag-row"${ed2?` draggable="true" ondragstart="dragTag(event,${i},${j})"
                  ondragover="event.preventDefault();this.classList.add('merge-target')"
                  ondragleave="this.classList.remove('merge-target')" ondrop="mergeTag(event,${i},${j})"`:''}>
-        <div class="tag-name-area">${badge}${ed2?`<span class="tag-del" data-deltag="${i}.${j}">&times;</span>`:''}</div>
+        <div class="tag-name-area">${badge}${ed2?`<span class="tag-del" data-deltag="${i}.${j}" role="button" tabindex="0" aria-label="Delete tag">&times;</span>`:''}</div>
         <div class="tag-bar-area">${bar}<span class="tag-count">${counts[j]}</span></div></div>`;
     }).join('');
     const total = b.installed ? counts.reduce((x,y)=>x+y,0) : 0;
@@ -910,9 +910,9 @@ function renderPage(){
         ${ed?`<button class="group-close" data-delgrp="${i}" aria-label="Delete group">&times;</button>`:''}
       </div>
       <div class="tag-list">${tags}</div>
-      ${ed?`<div class="tag-add-row" data-addtag="${i}"><span class="tag-add-badge">+ tag</span></div>`:''}
+      ${ed?`<div class="tag-add-row" data-addtag="${i}" role="button" tabindex="0"><span class="tag-add-badge">+ tag</span></div>`:''}
       ${total?`<div class="group-total-row"><span class="group-total-label">Total</span><span class="group-total-count">${total}</span></div>`:''}
-    </div>`;}).join('') + (b.floor?`<div class="new-group-placeholder" id="newgrp"
+    </div>`;}).join('') + (b.floor?`<div class="new-group-placeholder" id="newgrp" role="button" tabindex="0"
         ondragover="event.preventDefault()" ondrop="dropTag(event,-1)">
         <span class="new-group-icon">+</span><span class="new-group-label">New group</span></div>`:'');
   const side = b.bio ? `<div class="preview-body-sidebar"><div class="preview-author">
@@ -1039,7 +1039,7 @@ function renderReview(){
 }
 
 function renderBrowse(){
-  const card = b=>`<div class="picker-card ${b.installed&&!b.on?'off2':''}" data-open="${b.id}">
+  const card = b=>`<div class="picker-card ${b.installed&&!b.on?'off2':''}" data-open="${b.id}" role="button" tabindex="0">
     <div class="cardhead">${gutter(b,44)}<div class="picker-card-body">
       <div class="picker-card-title">${esc(b.title)}${b.ver?` <span class="statline">v${b.ver}</span>`:''}</div>
       ${provenance(b)?`<div class="picker-card-author${b.author?'':' prov-system'}">${provenance(b)}</div>`:''}</div></div>
@@ -1066,6 +1066,21 @@ function step(d){
   const inst=BOOKS.filter(b=>b.installed); const i=inst.findIndex(b=>b.id===sel);
   sel = inst[(i+d+inst.length)%inst.length].id; view='page'; render();
 }
+
+// Keyboard parity for every clickable non-<button>. The shipped panel already
+// gives .tag-add-row and .new-group-placeholder role=button + tabIndex (and the
+// placeholder an onKeyDown), so omitting it here would have shipped a
+// regression; the rail rows and browse cards are new surfaces that never had it.
+// Space is preventDefault'd or it scrolls the page under the control.
+document.addEventListener('keydown', e=>{
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const t = e.target;
+  if (!t || !t.getAttribute) return;
+  const r = t.getAttribute('role');
+  if (r !== 'button' && r !== 'switch') return;
+  e.preventDefault();
+  t.click();
+});
 
 document.addEventListener('click', e=>{
   const t=e.target.closest('[data-sel],[data-tog],[data-act],[data-open],#browsedoor,#railbtn,#installbtn,#uninstallbtn,#coveragebtn,#revback,#newgrp,[data-addtag],[data-delgrp],[data-deltag]');

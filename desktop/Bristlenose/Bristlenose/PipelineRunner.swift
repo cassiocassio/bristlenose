@@ -1320,10 +1320,15 @@ var args = ["run", project.path, "--no-serve"]
         }
 
         proc.terminationHandler = { [weak self] p in
-            let status = p.terminationStatus
+            // BOTH fields, always. terminationStatus carries the SIGNAL NUMBER
+            // when the process was killed, and only terminationReason says
+            // which of the two numbers this is. See ProcessOutcome.
+            let outcome = ProcessOutcome(
+                status: p.terminationStatus, reason: p.terminationReason
+            )
             Task { @MainActor in
                 await self?.handleTermination(
-                    projectID: projectID, status: status, generation: gen
+                    projectID: projectID, outcome: outcome, generation: gen
                 )
             }
         }
@@ -1375,9 +1380,12 @@ var args = ["run", project.path, "--no-serve"]
     }
 
     private func handleTermination(
-        projectID: UUID, status: Int32, generation gen: Int
+        projectID: UUID, outcome: ProcessOutcome, generation gen: Int
     ) async {
         guard gen == generation else { return }
+        // Everything downstream has always keyed off this number; ProcessOutcome
+        // adds the meaning the number was missing, it does not redefine it.
+        let status = outcome.rawStatus
 
         let project = projectIndex?.projects.first(where: { $0.id == projectID })
         if let project {
@@ -1448,7 +1456,7 @@ var args = ["run", project.path, "--no-serve"]
         case .treatAsFailure:
             state[projectID] = deriveFailureState(
                 projectID: projectID, project: project,
-                status: status, lines: lines
+                outcome: outcome, lines: lines
             )
         }
 
@@ -1528,8 +1536,11 @@ var args = ["run", project.path, "--no-serve"]
     /// original "log-tail also looks bad" path can share this logic.
     private func deriveFailureState(
         projectID: UUID, project: Project?,
-        status: Int32, lines: [String]
+        outcome: ProcessOutcome, lines: [String]
     ) -> PipelineState {
+        // Same number every branch here has always used; `outcome` carries the
+        // extra fact of whether it is an exit code or a signal, for the logs.
+        let status = outcome.rawStatus
         // Prefer the structured cause emitted by the Python abandon path
         // (`pipeline-events.jsonl` → `run_failed` → `cause.{category,message}`)
         // — but only when that terminus belongs to THIS attempt. The file is
@@ -1565,7 +1576,9 @@ var args = ["run", project.path, "--no-serve"]
         Self.logger.warning(
             """
             run failed project=\(projectID.uuidString, privacy: .public) \
-            status=\(status) category=\(category.rawValue, privacy: .public)
+            \(outcome.logDescription, privacy: .public) \
+            category=\(category.rawValue, privacy: .public)\
+            \(outcome.diagnosticHint.map { " " + $0 } ?? "", privacy: .public)
             """
         )
         // Persist the (already key-redacted) stderr tail so a mislabelled
@@ -1574,7 +1587,7 @@ var args = ["run", project.path, "--no-serve"]
         // `<output>/.bristlenose/last-run-failure.log`.
         if let project, !lines.isEmpty {
             Self.captureFailureLog(
-                project: project, status: status, category: category, lines: lines
+                project: project, outcome: outcome, category: category, lines: lines
             )
         }
         // Light the app-global out-of-credit pill immediately on a real run
@@ -1592,14 +1605,14 @@ var args = ["run", project.path, "--no-serve"]
     /// `bristlenose-output/.bristlenose/last-run-failure.log` and emit the tail
     /// to the unified log. Best-effort — never throws into the failure path.
     private static func captureFailureLog(
-        project: Project, status: Int32,
+        project: Project, outcome: ProcessOutcome,
         category: PipelineFailureCategory, lines: [String]
     ) {
         let tail = lines.suffix(50).joined(separator: "\n")
         Self.logger.error(
             """
             failure stderr tail category=\(category.rawValue, privacy: .public) \
-            status=\(status):
+            \(outcome.logDescription, privacy: .public):
             \(tail, privacy: .private)
             """
         )
@@ -1610,7 +1623,13 @@ var args = ["run", project.path, "--no-serve"]
         let dir = URL(fileURLWithPath: project.path)
             .appendingPathComponent("bristlenose-output")
             .appendingPathComponent(".bristlenose")
-        let header = "category=\(category.rawValue) status=\(status)\n"
+        // `status=4` for a signalled death sent a reader to an exit-code table
+        // that does not exist. Name the signal, and say where the OS put the
+        // stack trace.
+        var header = "category=\(category.rawValue) \(outcome.logDescription)\n"
+        if let hint = outcome.diagnosticHint {
+            header += "\(hint)\n"
+        }
         do {
             try FileManager.default.createDirectory(
                 at: dir, withIntermediateDirectories: true

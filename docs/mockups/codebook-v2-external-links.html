@@ -1,0 +1,244 @@
+<title>External Link Handoff</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  /* group tints (tokens.css) — shared across palettes */
+/* Full codebook palette — every slot of every set, plus the GROUP background
+   family, lifted verbatim from tokens.css. Earlier drafts of this file inlined
+   only slot 1 of each set and no group backgrounds at all. */
+  --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+  --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+  --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+  --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+  --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+  --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+  --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+  --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+  --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+  --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+  --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+  --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+  --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+  --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+  --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+  --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+  --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+  --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+  --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+  --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+  --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+  --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+  --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+  --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+  --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+  --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+  --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+  --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+  --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+  --bn-group-ux: light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+  --bn-group-emo: light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+  --bn-group-task: light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+  --bn-group-trust: light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+  --bn-group-opp: light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+  --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+:root { --bn-colour-negative: light-dark(#dc2626, #ef4444);
+        --bn-colour-keyline: var(--bn-colour-border);
+        --gap-warning:#f59e0b; --gap-success:#22c55e; }
+body { font-family:var(--bn-font-body); background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  margin:0; padding:2.5rem 2rem 6rem; font-size:var(--bn-text-body); line-height:1.5; }
+.wrap { max-width:1120px; margin:0 auto; }
+h1 { font-size:var(--bn-text-display); font-weight:var(--bn-weight-strong); letter-spacing:-.01em; margin:0 0 .35rem; }
+.sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin-bottom:2rem; max-width:64ch; }
+h2 { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-strong); margin:2.75rem 0 .3rem;
+  padding-bottom:.4rem; border-bottom:1px solid var(--bn-colour-keyline); }
+.key { display:flex; gap:1.5rem; flex-wrap:wrap; padding:.75rem 1rem; border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-md); margin-bottom:2rem; font-size:var(--bn-text-caption); }
+.key b { font-weight:var(--bn-weight-emphasis); }
+/* ── Artefact: three frames ─────────────────────────────────────────── */
+.ctxs { display:grid; grid-template-columns:repeat(3,1fr); gap:1.25rem; margin-top:1.5rem; }
+.ctx { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden;
+  background:var(--bn-colour-bg); display:flex; flex-direction:column; }
+.chrome { display:flex; align-items:center; gap:.4rem; padding:.5rem .7rem;
+  background:color-mix(in srgb, var(--bn-colour-muted) 8%, transparent);
+  border-bottom:1px solid var(--bn-colour-keyline); font-size:var(--bn-text-micro);
+  font-family:var(--bn-font-mono); color:var(--bn-colour-muted); }
+.dot { width:8px; height:8px; border-radius:50%; background:var(--bn-colour-border); flex-shrink:0; }
+.frame { padding:1rem; flex:1; }
+/* the real bio-sidebar markup */
+.preview-author-name { font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); }
+.preview-author-bio { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:.35rem 0 .6rem; }
+.preview-author-links { display:flex; flex-direction:column; gap:.25rem; }
+.preview-author-links a { font-size:var(--bn-text-caption); color:var(--bn-colour-accent); text-decoration:none; }
+.preview-author-links a:hover { text-decoration:underline; }
+.outcome { margin-top:.9rem; padding-top:.7rem; border-top:1px dashed var(--bn-colour-keyline);
+  font-size:var(--bn-text-micro); font-family:var(--bn-font-mono); color:var(--bn-colour-muted); line-height:1.6; }
+.outcome b { color:var(--bn-colour-text); font-weight:var(--bn-weight-emphasis); }
+.verdict { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  padding:.1rem .4rem; border-radius:var(--bn-radius-sm); margin-top:.6rem; }
+.v-ok   { background:color-mix(in srgb, var(--gap-success) 18%, transparent); color:var(--bn-colour-text); }
+.v-trap { background:color-mix(in srgb, var(--gap-warning) 22%, transparent); color:var(--bn-colour-text); }
+/* ── Commentary ─────────────────────────────────────────────────────── */
+.commentary { margin-top:1.5rem; padding:1.1rem 1.25rem; border-left:3px solid var(--bn-colour-muted);
+  background:repeating-linear-gradient(45deg, transparent, transparent 6px,
+    color-mix(in srgb, var(--bn-colour-muted) 5%, transparent) 6px,
+    color-mix(in srgb, var(--bn-colour-muted) 5%, transparent) 12px);
+  font-size:var(--bn-text-label); }
+.clabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase;
+  letter-spacing:.06em; color:var(--bn-colour-muted); display:block; margin-bottom:.5rem; }
+.commentary p { margin:0 0 .7rem; } .commentary p:last-child { margin-bottom:0; }
+code { font-family:var(--bn-font-mono); font-size:.9em; background:var(--bn-colour-badge-bg);
+  padding:.05em .3em; border-radius:3px; }
+table { border-collapse:collapse; width:100%; margin-top:1rem; font-size:var(--bn-text-label); }
+th,td { text-align:left; padding:.5rem .6rem; border-bottom:1px solid var(--bn-colour-keyline); vertical-align:top; }
+th { font-weight:var(--bn-weight-emphasis); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+</style>
+<div class="wrap">
+<h1>Where an author link goes</h1>
+<div class="sub">One outcome, three mechanisms. A researcher clicks <em>nngroup.com</em> on the Nielsen
+codebook page &mdash; in the Mac app, in a browser, and in an exported report handed to a client.
+The experience must be identical: the link opens somewhere else, and <b>the report stays where it was</b>.</div>
+
+<div class="key">
+  <span><b>Artefact</b> &mdash; the frames are the shipped <code>.preview-author-links</code> markup.</span>
+  <span><b>Commentary</b> &mdash; hatched. Not the product.</span>
+</div>
+
+<h2>The three contexts</h2>
+<div class="ctxs">
+
+  <div class="ctx">
+    <div class="chrome"><span class="dot"></span>macOS app &mdash; WKWebView</div>
+    <div class="frame">
+      <div class="preview-author-name">Jakob Nielsen</div>
+      <div class="preview-author-bio">Co-founder of Nielsen Norman Group&hellip;</div>
+      <div class="preview-author-links">
+        <a href="#" onclick="return false">nngroup.com &#x2197;</a>
+        <a href="#" onclick="return false">Original 1994 CHI paper (DOI) &#x2197;</a>
+      </div>
+      <div class="outcome">
+        <b>click &rarr;</b> WebKit asks for a new window<br>
+        <b>&rarr;</b> <code>createWebViewWith</code> (WebView.swift:598)<br>
+        <b>&rarr;</b> not the serve origin &rarr; <code>openExternal</code><br>
+        <b>&rarr;</b> scheme is https &rarr; <code>NSWorkspace.open</code><br>
+        <b>&rarr;</b> default browser. Returns <code>nil</code>: no new web view.
+      </div>
+      <span class="verdict v-ok">already works</span>
+    </div>
+  </div>
+
+  <div class="ctx">
+    <div class="chrome"><span class="dot"></span>bristlenose serve &mdash; browser</div>
+    <div class="frame">
+      <div class="preview-author-name">Jakob Nielsen</div>
+      <div class="preview-author-bio">Co-founder of Nielsen Norman Group&hellip;</div>
+      <div class="preview-author-links">
+        <a href="#" onclick="return false">nngroup.com &#x2197;</a>
+        <a href="#" onclick="return false">Original 1994 CHI paper (DOI) &#x2197;</a>
+      </div>
+      <div class="outcome">
+        <b>click &rarr;</b> <code>target="_blank"</code><br>
+        <b>&rarr;</b> new tab; the report keeps its scroll,<br>
+        &nbsp;&nbsp;&nbsp;its filters and its selection<br>
+        <b>&rarr;</b> <code>rel="noopener noreferrer"</code> denies<br>
+        &nbsp;&nbsp;&nbsp;the opened page a handle on ours
+      </div>
+      <span class="verdict v-ok">already works</span>
+    </div>
+  </div>
+
+  <div class="ctx">
+    <div class="chrome"><span class="dot"></span>exported report &mdash; file://</div>
+    <div class="frame">
+      <div class="preview-author-name">Jakob Nielsen</div>
+      <div class="preview-author-bio">Co-founder of Nielsen Norman Group&hellip;</div>
+      <div class="preview-author-links">
+        <a href="#" onclick="return false">nngroup.com &#x2197;</a>
+        <a href="#" onclick="return false">Original 1994 CHI paper (DOI) &#x2197;</a>
+      </div>
+      <div class="outcome">
+        <b>click &rarr;</b> same as the browser<br>
+        <b>&rarr;</b> but the page is a <b>file</b>, opened by<br>
+        &nbsp;&nbsp;&nbsp;someone else, possibly years later<br>
+        <b>&rarr;</b> the link may be dead and<br>
+        &nbsp;&nbsp;&nbsp;<b>nobody can fix it</b>
+      </div>
+      <span class="verdict v-trap">works &mdash; but rots</span>
+    </div>
+  </div>
+</div>
+
+<div class="commentary"><span class="clabel">Commentary &mdash; what the drawing found</span>
+<p><b>All three already work, and the prototype's inert stub is the only thing that differs from
+shipped behaviour.</b> <code>CodebookPanel.tsx:1525</code> emits
+<code>&lt;a href target="_blank" rel="noopener noreferrer"&gt;</code> with the &#x2197; glyph. There is no
+handoff to design; there is a stub to replace with the markup that already ships.</p>
+<p><b>The Mac is the <em>safest</em> context, which inverts the intuition.</b> Its
+<code>decidePolicyFor</code> allows exactly one origin &mdash; <code>http://127.0.0.1:&lt;assignedPort&gt;</code>
+&mdash; and sends everything else to <code>openExternal</code>, which passes only <code>http</code>,
+<code>https</code> and <code>mailto</code>. Its own comment records why: <code>NSWorkspace</code> will
+happily open <code>file://</code> (launching a local app), <code>data:</code> and <code>javascript:</code>.
+So a hostile URL in a codebook is <b>already blocked on the Mac</b> and <b>not blocked in a browser</b>.</p>
+<p><b>The <code>_blank</code> trap is real and we avoid it by luck, not intent.</b> WKWebView has
+<em>no</em> default new-window behaviour: without <code>createWebViewWith</code>, a
+<code>target="_blank"</code> click does <b>nothing at all</b> &mdash; silently, with no error and no
+navigation. Ours is implemented for the <b>popout video player</b>, and external links fall out of its
+<code>else</code> branch. Correct today; worth knowing that the author links depend on a delegate written
+for another feature.</p>
+<p><b>The export is the one that needs a thought, and it is not a mechanism.</b> A leave-behind is opened
+by a client, offline, possibly long after the study. Its links rot, and unlike the app there is nobody to
+repair them. That is not an argument for removing them &mdash; a dead link to a book is still a citation
+&mdash; but it is an argument against ever making one <em>load-bearing</em>: nothing in the report may
+require following a link to be understood.</p>
+</div>
+
+<h2>The invariant, stated once</h2>
+<table>
+  <tr><th>context</th><th>mechanism</th><th>who owns it</th><th>status</th></tr>
+  <tr><td>macOS app</td><td><code>createWebViewWith</code> &rarr; <code>openExternal</code> &rarr; <code>NSWorkspace</code></td><td>WebView.swift</td><td>ships, hardened</td></tr>
+  <tr><td>serve, browser</td><td><code>target="_blank" rel="noopener noreferrer"</code></td><td>CodebookPanel.tsx</td><td>ships</td></tr>
+  <tr><td>exported, <code>file://</code></td><td>same as browser</td><td>the export bundle</td><td>ships; links rot</td></tr>
+</table>
+
+<div class="commentary"><span class="clabel">Commentary &mdash; the sandbox question, since it comes up</span>
+<p><b>Opening an external URL costs no entitlement.</b> <code>NSWorkspace.shared.open</code> is a request to
+LaunchServices to hand the URL to whichever app registered for that scheme. The sandbox mediates it and the
+calling app never touches the target &mdash; which is precisely why the handoff is the sandbox-friendly way
+to leave an app. What <em>would</em> need an entitlement is fetching the URL ourselves
+(<code>network.client</code>, which the app has for the sidecar) or reading a <code>file://</code> outside
+the container.</p>
+<p><b>So the sandbox risk is not the opening; it is which URL you hand over</b> &mdash; and that is already
+gated by scheme. The entitlements files are <code>skip-worktree</code>
+(<code>git ls-files -v | grep '^S'</code> lists both), so <code>git status</code> cannot see changes to
+them and committing one obliges regenerating the Mac App Store profile. Read them; do not commit them.</p>
+</div>
+</div>

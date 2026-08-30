@@ -50,7 +50,7 @@ enum LensAnchor {
     static func action(lens: Tab?, anchor: String?) -> Action {
         guard let lens, let anchor, !anchor.isEmpty else { return .top }
         switch lens {
-        case .quotes, .codebook: return .scroll(anchor)
+        case .quotes, .codebook, .codebookV2: return .scroll(anchor)
         case .sessions:          return .session(anchor)
         // Decided 16 Aug 2026: these restore to the top. Neither has a stable
         // structural position worth remembering, and inventing one would be a
@@ -63,7 +63,7 @@ enum LensAnchor {
     /// so an anchor reported by one lens can't be written against another.
     static func remembersPosition(_ lens: Tab?) -> Bool {
         switch lens {
-        case .quotes, .codebook, .sessions: return true
+        case .quotes, .codebook, .codebookV2, .sessions: return true
         case .analysis, .project, nil:      return false
         }
     }

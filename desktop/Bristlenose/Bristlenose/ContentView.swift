@@ -2078,7 +2078,11 @@ struct ContentView: View {
     private var leftPanelToolbarLabel: String {
         switch bridgeHandler.activeTab {
         case .quotes:   return i18n.t("desktop.toolbar.contents")
-        case .codebook: return i18n.t("desktop.toolbar.codes")
+        // v2 is the same lens; without this it falls to `default` and the
+        // toggle reads "Contents". A `default:` arm sealing a new case into
+        // the wrong string is how the sidebar acquired five unlocalised
+        // labels once already.
+        case .codebook, .codebookV2: return i18n.t("desktop.toolbar.codes")
         case .analysis: return i18n.t("desktop.toolbar.signals")
         default:        return i18n.t("desktop.toolbar.contents")
         }
@@ -2088,7 +2092,7 @@ struct ContentView: View {
     private var leftPanelToolbarHelp: String {
         switch bridgeHandler.activeTab {
         case .quotes:   return i18n.t("desktop.toolbar.showContents")
-        case .codebook: return i18n.t("desktop.toolbar.showCodes")
+        case .codebook, .codebookV2: return i18n.t("desktop.toolbar.showCodes")
         case .analysis: return i18n.t("desktop.toolbar.showSignals")
         default:        return i18n.t("desktop.toolbar.showContents")
         }

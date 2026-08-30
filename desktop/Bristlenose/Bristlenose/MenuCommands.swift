@@ -737,7 +737,7 @@ private struct ViewMenuContent: View {
     private var leftPanelKey: String? {
         switch bridgeHandler.activeTab {
         case .quotes:   return "Contents"
-        case .codebook: return "Codes"
+        case .codebook, .codebookV2: return "Codes"
         case .analysis: return "Signals"
         default:        return nil
         }
@@ -776,8 +776,14 @@ private struct ViewMenuContent: View {
     var body: some View {
         // Tab shortcuts Cmd+1 through Cmd+5. `activateLens`, not `switchToTab`:
         // the Sessions lens restores the view the user left (route memory).
-        ForEach(Array(Tab.allCases.enumerated()), id: \.element.id) { index, tab in
-            Button(tab.localizedLabel(i18n), systemImage: LensItem.systemImage(for: tab)) {
+        // Iterates the RAIL, not Tab.allCases. The comment above LensItem.all
+        // says the rail and these shortcuts "can't drift apart"; reading the
+        // same array is what makes that structural rather than a promise. It
+        // also means the DEBUG-only v2 lens gets its number automatically and
+        // Release keeps five.
+        ForEach(Array(LensItem.all.enumerated()), id: \.element.id) { index, lens in
+            let tab = lens.tab
+            Button(tab.localizedLabel(i18n), systemImage: lens.systemImage) {
                 bridgeHandler.activateLens(tab)
             }
             .keyboardShortcut(

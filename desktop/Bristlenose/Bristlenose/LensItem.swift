@@ -23,14 +23,28 @@ struct LensItem: Identifiable {
         tab.fullLocalizedLabel(i18n)
     }
 
-    /// The five lenses, in sidebar order. Icons per spec §5 (settled).
-    static let all: [LensItem] = [
-        LensItem(tab: .project,  systemImage: "target"),
-        LensItem(tab: .sessions, systemImage: "person.2"),
-        LensItem(tab: .quotes,   systemImage: "text.quote"),
-        LensItem(tab: .codebook, systemImage: "tag"),
-        LensItem(tab: .analysis, systemImage: "square.grid.3x3"),
-    ]
+    /// The lenses, in sidebar order. Icons per spec §5 (settled).
+    ///
+    /// **Codebook v2 rides here in DEBUG only** — the replacement lens runs
+    /// beside the shipped one while it is built (`docs/design-codebook-v2.md`
+    /// D29), and comparing them is the whole point of that decision, so it
+    /// belongs in the rail rather than behind a Diagnostics menu item. It is
+    /// *not* in a Release build: a second Codebook row would be nonsense to a
+    /// researcher until the flag defaults on at phase 6, which is also when it
+    /// earns a locale key rather than the English fallback.
+    static let all: [LensItem] = {
+        var lenses: [LensItem] = [
+            LensItem(tab: .project,  systemImage: "target"),
+            LensItem(tab: .sessions, systemImage: "person.2"),
+            LensItem(tab: .quotes,   systemImage: "text.quote"),
+            LensItem(tab: .codebook, systemImage: "tag"),
+        ]
+        #if DEBUG
+        lenses.append(LensItem(tab: .codebookV2, systemImage: "tag.square"))
+        #endif
+        lenses.append(LensItem(tab: .analysis, systemImage: "square.grid.3x3"))
+        return lenses
+    }()
 
     /// Icon for `tab`, resolved from `all` so every surface that shows a lens
     /// glyph reads the *same* settled set — the sidebar rail and the View menu's

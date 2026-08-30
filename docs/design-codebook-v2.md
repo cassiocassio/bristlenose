@@ -2259,3 +2259,47 @@ sentences here replace one.
 **5. Pre-flight configuration refusals want a durable home.** A missing API key
 is still true tomorrow; a four-second toast is the wrong container for it. Named,
 not solved — and deliberately not invented here.
+
+## Build log — what landed on 30 Aug
+
+The message inventory turned out to rest on three things that did not work, so
+the build started there rather than at the UI.
+
+**The semantic palette (finding 0).** `--bn-colour-positive` and
+`--bn-colour-warning` join the colour contract in both palettes — edo taking
+Pine Green and Gold Ochre — and all eighteen uses of the three undefined names
+now read a real token. `--bn-colour-danger` was a misspelling of
+`--bn-colour-negative`. **`tests/test_theme_token_resolution.py`** fails on any
+no-fallback use of an undefined custom property, and found two more the moment
+it existed: About-tab citation links rendering as plain text, and a playground
+button with no background.
+
+**The five kinds on the web.** `frontend/src/utils/messageKind.ts` is the third
+mirror of the glyph table, pinned to Python by
+`tests/test_message_kind_mirrors.py` — asserted from pytest, because a Vitest
+test would need `readFileSync`, which type-checks under Vitest and then fails
+`tsc -b`. `toast()` and `Toast` take an optional kind.
+
+**Refusals name themselves.** AutoCode's seven pre-flight refusals raise
+`RefusalError`, serialised as `{detail, reason}` — `detail` unchanged for every
+existing reader, `reason` the stable code the UI localises from. The seven
+sentences from the inventory replace the HTTP details, which quoted framework
+ids and told Mac users to run a shell command.
+
+**A failed job says why it died.** `autocode_jobs.failure_kind` (migration 009)
+carries the `LLMFailureKind`, populated by `classify_exception()` — which
+already existed and was called from nowhere in that path. Both the toast and the
+activity chip stopped interpolating `str(exc)`, which had been reaching
+researchers as stringified JSON bodies.
+
+**A partial run stops claiming success.** No column needed:
+`processed_quotes` only increments after a batch succeeds, so `processed <
+total` on a *completed* job is exactly the partial that `return_exceptions=True`
+produces. Rendered as WARNING with both numbers.
+
+Fifteen strings across all 21 full locales; `check-locales.py` clean.
+
+**Still owed on this path:** the Mac half (**Q17** — nothing under
+`bristlenose/server/` writes to the events log, so none of this reaches the
+sidebar glyph or popover), and a durable home for configuration refusals, which
+a four-second toast is not.

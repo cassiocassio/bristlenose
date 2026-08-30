@@ -143,3 +143,29 @@ describe("the short description is an interim", () => {
     );
   });
 });
+
+describe("the card can count", () => {
+  // Found by looking at it: the page's stat line was fixed and the card's was
+  // not, so a codebook with one coded quote read "31 tags on 1 quotes" in the
+  // Library while reading correctly one screen away.
+
+  it("says 'quote' for one", () => {
+    renderGrid([book({ tags: 31, quotes: 1 })]);
+    expect(screen.getByText(/31 tags on 1 quote$/)).toBeInTheDocument();
+  });
+
+  it("says 'tag' for one", () => {
+    renderGrid([book({ tags: 1, quotes: 5 })]);
+    expect(screen.getByText(/^1 tag on 5 quotes$/)).toBeInTheDocument();
+  });
+
+  it("still pluralises more than one", () => {
+    renderGrid([book({ tags: 36, quotes: 72 })]);
+    expect(screen.getByText(/36 tags on 72 quotes/)).toBeInTheDocument();
+  });
+
+  it("counts in the not-installed line too", () => {
+    renderGrid([book({ installed: false, tags: 1, quotes: 0 })]);
+    expect(screen.getByText(/^1 tag$/)).toBeInTheDocument();
+  });
+});

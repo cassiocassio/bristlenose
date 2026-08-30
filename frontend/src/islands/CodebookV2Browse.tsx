@@ -61,6 +61,10 @@ function shortDescription(text: string): string {
   return stop === -1 ? text : text.slice(0, stop + 1);
 }
 
+/** English-only plural — see the twin in CodebookV2Page. Both go at phase 6,
+ *  when this lens's chrome is enrolled in i18n and t(key, {count}) does CLDR. */
+const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+
 function Card({
   book,
   onOpen,
@@ -114,8 +118,8 @@ function Card({
       <div className="picker-card-footrow">
         <span className="picker-card-status">
           {book.installed
-            ? `${book.tags} tags on ${book.quotes} quotes`
-            : `${book.tags} tags`}
+            ? `${book.tags} ${plural(book.tags, "tag", "tags")} on ${book.quotes} ${plural(book.quotes, "quote", "quotes")}`
+            : `${book.tags} ${plural(book.tags, "tag", "tags")}`}
         </span>
         {/* Sentiment gets NO action and no substitute text. The first draft put
             "On by default" here, and the card then said it twice — the

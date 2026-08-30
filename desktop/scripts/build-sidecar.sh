@@ -289,6 +289,26 @@ if [ "$DRY_RUN" = 0 ] && [ ! -x "$BUNDLE/bristlenose-sidecar" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Integrity gate (real runs only) — is the executable code we are about to ship
+# actually intact? Present exists; intact is a different question, and on
+# 30 Aug 2026 the difference was a shipped sidecar that SIGILL'd seconds into
+# every transcription. PyInstaller does not check `strip`'s exit status; strip
+# died of SIGBUS mid-writeout and left libllvmlite.dylib the right size with a
+# 16 KB hole of zeros inside __TEXT,__text. codesign passed, the size looked
+# right, otool -L was unchanged, and nothing in the build was red.
+#
+# Runs on EVERY real invocation, not just when layer P rebuilt: a bundle that
+# was already corrupt when cached would otherwise be skipped forever.
+# ~4s over ~224 Mach-Os. Full reasoning in check-bundle-integrity.py.
+# ---------------------------------------------------------------------------
+if [ "$DRY_RUN" = 0 ]; then
+    if ! "$PYTHON" "$DESKTOP_DIR/scripts/check-bundle-integrity.py" "$BUNDLE"; then
+        echo "error: bundle integrity gate failed — see above. The bundle is NOT shippable." >&2
+        exit 1
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 # Race gate (real runs only) — did the tree move UNDER the build?
 #
 # SOURCE_HASH is snapshotted at entry and stamped into the bundle at the end, but

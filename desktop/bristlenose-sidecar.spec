@@ -376,6 +376,28 @@ _strip_app_store_noncompliant_strings(a)
 
 pyz = PYZ(a.pure)
 
+# STRIP IS OFF, DELIBERATELY — it corrupted a shipped bundle on 30 Aug 2026.
+#
+# PyInstaller shells out to `strip` for every collected binary and NEVER CHECKS
+# ITS EXIT STATUS. On 30 Aug 2026 strip died of SIGBUS inside `writeout_to_mem`
+# while rewriting `llvmlite/binding/libllvmlite.dylib` (128 MB). It had already
+# created the output file, so PyInstaller collected a dylib of exactly the right
+# size with a 16,384-byte run of ZEROS at offset 0x02b20000 — inside __TEXT,__text.
+# On arm64 an all-zero word decodes as `udf #0`, so the first JIT compile that
+# reached that page died with EXC_BAD_INSTRUCTION in
+# `llvm::InstCombinerImpl::visitOr`. Every run from the .app failed seconds into
+# transcription, with no terminus event, and therefore no lens would open either.
+# Nothing in the build was red. The crash report was the only evidence, and the
+# failure log reported the signal as if it were an exit code (`status=4`).
+#
+# The trade it was making, measured on that same bundle: across a 14-binary
+# sample strip saved 48 KB of a 479 MB bundle, because wheels already ship
+# stripped binaries — and it saved exactly ZERO bytes on libllvmlite, the one
+# file it destroyed. Near-zero upside against silent corruption of executable
+# code is not a trade worth keeping.
+#
+# If it is ever turned back on, `desktop/scripts/check-bundle-integrity.py` must
+# still pass — it is what would have caught this in seconds.
 exe = EXE(
     pyz,
     a.scripts,
@@ -384,7 +406,7 @@ exe = EXE(
     name="bristlenose-sidecar",
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,
+    strip=False,  # see "STRIP IS OFF, DELIBERATELY" above
     upx=False,
     console=True,
     target_arch="arm64",
@@ -394,7 +416,7 @@ coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
-    strip=True,
+    strip=False,  # see "STRIP IS OFF, DELIBERATELY" above
     upx=False,
     name="bristlenose-sidecar",
 )

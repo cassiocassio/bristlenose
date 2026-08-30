@@ -1083,6 +1083,25 @@ def run(
     if output_dir is None:
         output_dir = input_dir / "bristlenose-output"
 
+    # A hard crash runs no handler, so the previous run's report may still be
+    # sitting in a stashed backup with nothing pointing at it. Recover it BEFORE
+    # anything inspects the output directory — `output_exists` and the resume
+    # branch below both read the disk, and both would read the wrong thing if a
+    # restore happened after them. See utils/output_backup.py.
+    from bristlenose.utils import output_backup
+
+    _reclaim = output_backup.reclaim_stale(output_dir)
+    if _reclaim is output_backup.RestoreOutcome.FAILED:
+        # The only surviving copy of a previous report is stranded, and the
+        # stash below would sweep it. Refuse rather than destroy it.
+        _say(
+            MessageKind.ERROR,
+            f"A previous report is stranded at "
+            f"{output_backup.backup_path_for(output_dir)} and could not be "
+            f"recovered. Move it somewhere safe, then re-run.",
+        )
+        raise typer.Exit(1)
+
     # Fail early if output exists and --clean not given — but allow resume
     # when a pipeline manifest exists (Phase 1c/1d crash recovery).
     output_exists = output_dir.exists() and any(output_dir.iterdir())
@@ -1197,12 +1216,30 @@ def run(
         _say(MessageKind.ERROR, str(exc))
         raise typer.Exit(2) from exc
 
-    # Clean after checks so user sees setup context first
+    # Clean after checks so user sees setup context first.
+    #
+    # "Clean" MOVES the previous report aside; it does not destroy it. The old
+    # `shutil.rmtree` here ran before the pipeline had demonstrated it could do
+    # anything, so a crash seconds later left the project with neither its old
+    # report nor a new one — which is exactly what happened twice on 30 Aug 2026
+    # (docs/sidecar-transcription-crash.md). The backup is discarded once the run
+    # succeeds, and restored if it doesn't. See utils/output_backup.py.
+    output_stash: Path | None = None
     if output_exists and clean:
-        import shutil
-
-        shutil.rmtree(output_dir)
-        console.print(f"\n[dim]Cleaned {output_dir}[/dim]")
+        output_stash = output_backup.stash(
+            output_dir, previous_backup_is_spent=_reclaim.report_is_back
+        )
+        if output_stash is not None:
+            console.print(f"\n[dim]Cleaned {output_dir}[/dim]")
+        else:
+            # `stash` returns None when the move failed (cross-device,
+            # permissions) and deliberately does NOT fall back to deleting. The
+            # run then writes over the previous output, so saying "Cleaned"
+            # would be the opposite of what happened.
+            console.print(
+                f"\n[dim]Could not set {output_dir} aside — "
+                f"this run will write over it[/dim]"
+            )
 
     from bristlenose.pipeline import Pipeline
 
@@ -1211,6 +1248,11 @@ def run(
         settings, verbose=verbose, on_event=on_event,
         estimator=estimator,
     )
+    # The stash is settled in `finally`, not in the handlers: the failure paths
+    # below each raise `typer.Exit`, and every one of them — plus KeyboardInterrupt,
+    # which is the single most likely way a run ends early — has to reach the same
+    # decision. One place to get right rather than four.
+    run_produced_a_report = False
     try:
         with run_lifecycle(output_dir, KindEnum.RUN) as _run_handle:
             pipeline.set_progress_sink(_run_handle.progress)
@@ -1221,7 +1263,20 @@ def run(
                 result.llm_output_tokens,
             ))
             _run_handle.set_summary(result.summary)
+        # ASSERT THE THING, NOT A PROXY. "No exception" is not "a report
+        # exists": fifteen lines below is the documented path where the
+        # pipeline runs cleanly and produces zero quotes (silent audio, an
+        # unsupported codec, a transcription backend that produced nothing).
+        # Keyed on the absence of an exception, that path discarded the
+        # previous report and then told the researcher nothing was found —
+        # the original incident, living inside its own fix.
+        run_produced_a_report = getattr(result, "total_quotes", 0) > 0
     except ConcurrentRunError as exc:
+        # NOT a restore case, and the only one: another process owns this output
+        # directory and is writing to it right now. Putting our stash back would
+        # trample a live run. Drop the reference so `finally` leaves it alone —
+        # `reclaim_stale` on the next run is the recovery path instead.
+        output_stash = None
         _say(MessageKind.ERROR, str(exc))
         raise typer.Exit(1) from exc
     except PreflightAbortedError as exc:
@@ -1230,6 +1285,42 @@ def run(
     except PipelineAbandonedError as exc:
         _print_pipeline_failure(exc.cause, input_dir, settings)
         raise typer.Exit(1) from exc
+    finally:
+        if run_produced_a_report:
+            # Only now is the old report spent.
+            output_backup.discard(output_stash)
+        else:
+            outcome = output_backup.restore(output_stash, output_dir)
+            if outcome is not output_backup.RestoreOutcome.NOTHING_TO_DO:
+                # The root file handler still points at the tree `restore` just
+                # renamed away, so every line logged from here — including the
+                # one a post-mortem would look for — would land in the wrong
+                # file. Re-attach before saying anything.
+                setup_logging(output_dir=output_dir, verbose=verbose)
+            if outcome is output_backup.RestoreOutcome.RESTORED:
+                _say(
+                    MessageKind.INFO,
+                    "Your previous report is still here — this run changed nothing.",
+                    indent="  ",
+                )
+            elif outcome is output_backup.RestoreOutcome.RESTORED_WITHOUT_HISTORY:
+                # The events tail is the OLD run_completed, so the project will
+                # read as having succeeded. Say so rather than let the UI lie.
+                _say(
+                    MessageKind.WARNING,
+                    "Your previous report is back, but this run's history could "
+                    "not be preserved — the project may still show as completed.",
+                    indent="  ",
+                )
+            elif outcome is output_backup.RestoreOutcome.FAILED:
+                _say(
+                    MessageKind.ERROR,
+                    f"Could not put your previous report back. It is safe at "
+                    f"{output_backup.backup_path_for(output_dir)} — the next "
+                    f"run will recover it.",
+                    indent="  ",
+                )
+        output_stash = None
 
     # Legacy path: pipeline ran cleanly but produced zero usable quotes
     # (silent audio, no spoken content). Not an abandon — just empty input.
@@ -1927,6 +2018,27 @@ def status(
         raise typer.Exit(1)
 
     _print_project_status(project_status, output_dir=output_dir, verbose=verbose)
+    _report_stashed_output(output_dir)
+
+
+def _report_stashed_output(output_dir: Path) -> None:
+    """Name any stashed or kept-failed tree sitting beside the output.
+
+    Both are dot-prefixed so Bristlenose cannot re-ingest a stashed report as
+    interview material — which also means Finder never shows them. They hold a
+    full copy of the output directory, `pii_summary.txt` included, so a
+    researcher deleting a project needs to be told they are there. `SECURITY.md`
+    says `status` reports them; this is that.
+    """
+    from bristlenose.utils import output_backup
+
+    for path, note in (
+        (output_backup.backup_path_for(output_dir), "your previous report, kept while a run is in flight"),
+        (output_backup.failed_path_for(output_dir), "a failed run's work, kept so a retry can resume"),
+    ):
+        if path.exists():
+            _say(MessageKind.INFO, f"{path.name} — {note}")
+            console.print(f"    Delete with: [bold]rm -rf {path}[/bold]")
 
 
 def _resolve_output_dir(project_dir: Path) -> Path | None:

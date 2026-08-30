@@ -60,7 +60,17 @@ Per-user state lives outside your project directories and persists across runs:
 - **Whisper model cache** — `~/.cache/huggingface/hub/` (CLI) or `~/Library/Application Support/Bristlenose/models/` (desktop). Several GB depending on chosen model.
 - **Validation state** — `~/Library/Application Support/Bristlenose/state.json` on macOS, `$XDG_DATA_HOME/Bristlenose/state.json` (default `~/.local/share/Bristlenose/state.json`) on Linux. Contains last-validated timestamps per provider — no keys, no transcript data. Mode `0o600`.
 
-Project artefacts (transcripts, reports, intermediates) live exclusively under your input folder's `bristlenose-output/` and never leave it. `rm -rf bristlenose-output` deletes every per-project byte Bristlenose wrote.
+Project artefacts (transcripts, reports, intermediates) live exclusively under your input folder's `bristlenose-output/` and never leave it.
+
+**One exception, and it is short-lived.** `bristlenose run --clean` no longer deletes the previous report before starting — a run that crashed used to leave you with neither the old report nor a new one. It now *moves* it to a hidden sibling, `.bristlenose-output-previous/`, and deletes that only once the run has produced a replacement. If the run fails, the report is put back and the failed attempt is kept at `.bristlenose-output-failed/` so a retry can resume from it. Both are removed by the next successful run.
+
+While either exists it holds a full copy of the output directory, **including `pii_summary.txt` and `llm-calls.jsonl`** — so during that window `rm -rf bristlenose-output` alone does not remove every byte. To be certain, and this is the form to use in a deletion procedure:
+
+```sh
+rm -rf bristlenose-output .bristlenose-output-previous .bristlenose-output-failed
+```
+
+`bristlenose status` reports either directory when it finds one. They are dot-prefixed so Bristlenose can never re-ingest a stashed report as interview material — which also means Finder will not show them to you.
 
 #### Event log (`pipeline-events.jsonl`)
 

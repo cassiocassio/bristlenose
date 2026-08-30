@@ -2980,3 +2980,178 @@ fallback switch now all carry `role` + `tabindex`, with one delegated `keydown`
 listener handling Enter and Space (preventDefault'd, or Space scrolls the page
 under the control). The platform `<input type="checkbox" switch>` was already
 focusable. Verified: **no element carries a `role` without a tab stop.**
+
+## External links — author websites and book links
+
+Raised by the 30 Aug QA pass as the one control in the prototype whose real
+destination is undesigned. Drawn in parallel as
+[`docs/mockups/codebook-v2-external-links.html`](mockups/codebook-v2-external-links.html),
+which reaches the same verdict from the frames; this is the record. Answered
+here mechanically, against `WebView.swift`, `CodebookPanel.tsx`,
+`routes/export.py` and the nine YAML files — not by reading the prototype.
+
+**The headline is that there is no bug to fix.** The prototype's links are inert
+stubs (`<a href="#" onclick="return false">`), but the *shipped* renderer is not:
+`CodebookPanel.tsx:1526` already emits a real anchor, and every context already
+resolves it correctly. The work this section identifies is a **parse-time scheme
+allowlist** that costs nothing today and is the difference between safe and
+unsafe the moment the codebook corpus stops being maintainer-curated.
+
+### What a click does today, per context
+
+| Context | Path | Verdict |
+|---|---|---|
+| **Desktop** (WKWebView) | `target="_blank"` → `createWebViewWith` (`WebView.swift:601`) → `isAllowedServeURL` fails → `openExternal(url)` → `NSWorkspace.shared.open` | **Already correct.** Opens the default browser; returns `nil`, so no popout window is created |
+| **Browser** (`serve`) | new tab, `rel="noopener noreferrer"` | Standard, matches 12 sibling sites |
+| **Export** (`file://`) | **the links never render** — see below | No decision to make today; one to make for D23 |
+
+**The desktop answer needed no design, because SECURITY #8 already made it.** The
+concern in the QA note — that an unhandled `_blank` silently does nothing in
+WKWebView unless `WKUIDelegate.createWebViewWith` is implemented — does not apply:
+it *is* implemented (`WebView.swift:599-614`), and it hands non-serve URLs to
+`openExternal`. The app is safe two ways, because a same-frame click without
+`target="_blank"` would hit `decidePolicyFor` (`WebView.swift:251`), fall past
+`isAllowedServeURL`, and take the same `openExternal` + `.cancel` pair. The web
+view cannot be navigated away from the report by an author link, with or without
+the `_blank`.
+
+`openExternal` (`WebView.swift:317`) is itself scheme-gated to `http` / `https` /
+`mailto`, and logs a warning otherwise. That gate was added because the
+pre-existing fallthrough called `NSWorkspace.shared.open` on anything — which
+happily launches `file://` and renders `data:`.
+
+**Export mode does not render `author_links` at all.**
+`/projects/{project_id}/codebook/templates` sits in `SERVER_ONLY_PATH_TEMPLATES`
+(`routes/export.py:79`), so `apiGet` throws for it offline (`utils/api.ts:92-97`).
+Both fetch sites swallow the throw — `.catch(() => {})` at `CodebookPanel.tsx:654`
+and a `console.error` at `:812` — so `templates` stays `null`, `selectedTemplate`
+stays `null`, and the author sidebar is behind `selectedTemplate &&` at `:1451`.
+Belt as well as braces: `.codebook-picker-btn` is hidden by `export.css:64`, so
+the door is shut too.
+
+**That is the one thing to carry forward.** It holds only because the links live
+in the *browse preview*, which is server-only. **D23 puts the provenance line on
+the codebook page**, which does ship offline — so D23 moves `author_links` into
+the export for the first time. When it lands, the links become live anchors in a
+file a researcher hands to a client, and the export's read-only story has to
+cover them. Nothing about that is hard; it is only invisible.
+
+### Precedent — the pattern ships, do not invent one
+
+Fourteen `target="_blank"` anchor sites in `frontend/src`. Twelve carry
+`rel="noopener noreferrer"`; `author_links` is one of the twelve. Two carry a
+bare `rel="noreferrer"` (`ProposalZoneList.tsx:127`, `AutoCodeReportModal.tsx:227`)
+— equivalent in modern browsers, since `noreferrer` implies `noopener`, but
+inconsistent. Two `window.open` calls pass no `noopener`
+(`Dashboard.tsx:389`, same-origin; `AppLayout.tsx:560`, the first-party blog);
+neither destination is data-driven.
+
+The About tab's citation links (`.bn-about-citation a`, `report.css:158`) use the
+same anchor form with no glyph. **`author_links` already conforms to the house
+majority. No new pattern is needed, and none should be added.**
+
+### App Sandbox — nothing required
+
+`NSWorkspace.open` on an `http`/`https` URL is a LaunchServices-delegated action;
+the sandbox permits it with no entitlement, and it does not need
+`com.apple.security.network.client` — the browser makes the connection, not us.
+The host entitlements file carries only `keychain-access-groups`; sandbox and
+Hardened Runtime come from build settings, not from it. Both entitlements files
+are `skip-worktree` (`git ls-files -v` → `S`), and the working copy matches HEAD
+today — nothing is riding. **No entitlement change, and no new row for
+`design-desktop-security-audit.md`:** row 6 (SECURITY #8) already closed this
+class.
+
+### Security — three gates today, one of them not ours
+
+The shipped corpus is 22 links across all nine YAML files, every one `https`,
+loaded with `yaml.safe_load` (`codebook/__init__.py:161`). The live risk is nil.
+The question is what happens when the corpus stops being curated — the public
+codebook library with community submission, parked in the maintainer's private
+planning notes, kept outside the public tree.
+
+| Vector | Mitigated by | Whose gate |
+|---|---|---|
+| `javascript:` | React 19's `sanitizeURL` rewrites the href to a throwing stub; the regex tolerates leading control characters and `\r\n\t` interleaved through the scheme | **React's** |
+| `javascript:` reaching navigation | `openExternal`'s scheme gate | ours (desktop only) |
+| `data:text/html` | browsers block top-level `data:` navigation; `openExternal` blocks it on the Mac | browsers' + ours |
+| **label names one host, href points at another** | **nothing** | — |
+
+**Two of the three gates are not ours, and the strongest one is a framework
+behaviour we do not control.** React's sanitiser protects this render site and
+nothing else: it evaporates if the links are ever rendered through
+`dangerouslySetInnerHTML`, through a vanilla template, through the frozen
+modules in `theme/js/`, or natively in SwiftUI. The MCP endpoint reads the same
+templates and is not React at all.
+
+**Recommendation: allowlist the scheme at parse time, in the YAML loader.**
+`_parse_template` (`codebook/__init__.py:129-134`) currently appends every
+`(label, url)` pair unvalidated. Reject anything that is not `https` there, the
+way `_parse_group` already refuses an unknown `colour_set` at `:107` — raising
+with the filename, at load, before any surface sees it. Three reasons to put it
+there rather than at render:
+
+1. **One gate serves every surface** — React, the export embed, the MCP
+   endpoint, and any future native renderer. A render-time gate has to be
+   re-implemented per surface, and this codebase has already paid for what
+   happens to per-surface and CSS-only gates: they stop matching silently.
+2. **It fails loudly and early**, with a filename, which is the whole contract
+   for a submitted file.
+3. **It is a no-op on today's corpus.** All 22 URLs are already `https`. Adding
+   a constraint while it costs nothing is the cheap moment; adding it once
+   submissions exist means rejecting other people's files.
+
+Two smaller things in the same function, worth fixing in the same pass: `_str()`
+coerces *any* YAML value to a string, so a nested dict arrives as
+`"{'a': 1}"`; and a missing `url` becomes `""`, which renders `<a href="">` — a
+page reload.
+
+**The label/href mismatch has no validation answer**, and it is the one an
+attacker would actually use. `label: nngroup.com` with
+`url: https://evil.example` is well-formed `https` and passes any allowlist. It
+needs a presentation answer, below.
+
+### Presentation
+
+**The ↗ glyph is not a house pattern.** It ships in exactly one place —
+`CodebookPanel.tsx:1527` — and the prototype mirrors it. Nothing in
+`docs/glossary.md` or `bristlenose/theme/` establishes it. **Keep it anyway:** it
+is the product's only external-link marker, the prototype and the shipped
+renderer already agree, and removing it would make these links read as internal.
+A sample of one that two surfaces already share is not drift.
+
+**The raw-domain labels are a data problem, not a renderer problem.** The
+glossary's rule is *"No 'click here' link text — describe the destination."* A
+bare `nngroup.com` names a host, not a destination. The corpus is already
+inconsistent about this without anyone deciding it should be:
+
+- `nielsen.yaml` — `nngroup.com — 10 Usability Heuristics` (host **and**
+  destination)
+- `garrett.yaml` — `jjg.net` (host only)
+- `plato.yaml` — `plato.stanford.edu` entries, host only
+
+The nielsen form is the one that satisfies the glossary. Truing the other eight
+files to it is a YAML pass, no code.
+
+**And that same change is the mitigation for the mismatch attack.** Rather than
+revealing the destination on hover — `title` is not keyboard-reachable and is
+read inconsistently by screen readers — render the **host** as part of the link,
+always. Curated links then read as they do now, and a submitted link claiming to
+be Nielsen's site while pointing elsewhere shows its real host in the label by
+construction, with nothing to hover and nothing to notice. It replaces a
+security question with a typographic one.
+
+Out of scope here, flagged because readers will ask: the `Amazon US` / `Amazon UK`
+pairs are a per-locale question, not a link-handling one.
+
+### Recommendation, in order
+
+1. **Ship nothing for the desktop or browser cases.** Both are already correct,
+   and the desktop case was settled by SECURITY #8 before this question was asked.
+2. **Add the `https`-only allowlist to `_parse_template`**, with a test that a
+   `javascript:` URL in a template file fails the load. No-op on the current
+   corpus; the whole point is to add it while it is free.
+3. **True the eight non-nielsen YAML files to the `host — destination` label
+   form**, which satisfies the glossary and pre-empts the mismatch case.
+4. **When D23 lands, revisit the export.** It is the change that first puts these
+   links in a file that leaves the researcher's machine.

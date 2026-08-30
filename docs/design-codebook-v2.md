@@ -1849,6 +1849,10 @@ Already measured, so v2 does not re-derive it:
 
 Deferred by agreement. Not designed here yet.
 
+**Superseded by D28 — there is no migration before GA; trial projects get
+reprocessed.** Kept for the reasoning, which still holds if a path is ever
+needed.
+
 One note so it is not a surprise later: because the scope is presentation, the
 expensive half of a migration — schema, stored state, the `ProjectFrameworkState`
 and `hidden_tag_groups` rows — should not move at all. What will need thought is
@@ -2758,3 +2762,34 @@ hostage to a maintenance pass they did not ask for.
   without naming the hole would still leave the researcher unable to trust it.
 - **Reapply success stays silent.** Maintenance that worked is not news, and
   Schema E's clean row already says so by showing nothing.
+
+### D28 — no migration for v2. Reprocess the trial projects.
+
+Settled 30 Aug. **Legacy trial projects get reprocessed; migration machinery is
+for V1 → V2 when we leave beta.** So nothing in this design is constrained by
+having to carry existing project data forward, and no migration path is owed
+before v2 ships.
+
+The blast radius is genuinely small: the TestFlight cohort was never enrolled,
+so the projects in question are the maintainer's own trial runs.
+
+**What that unblocks.** **D20's option A** — uninstall stops preserving groups,
+definitions, jobs and proposals — stops being a live-data change needing a
+backfill. It becomes a behaviour change on projects that will be rebuilt anyway.
+Same for any other breaking change to codebook state: free until GA.
+
+**Two caveats, so "just reprocess" is not heard as more than it is.**
+
+1. **Reprocessing regenerates the analysis, not the database.** The SQLite file
+   is per project at `<output_dir>/.bristlenose/bristlenose.db`, and nothing in
+   the re-run path unlinks or drops it — so **Alembic still has to migrate a
+   real user's DB**, and a guarded additive migration (like 009) is still the
+   only safe shape. Only deleting the output directory gives a fresh schema, and
+   that is a separate manual act.
+2. **Re-analyse is still destructive.** Reprocessing a trial project discards
+   hand-curation on it — accepted and denied proposals, manual tags, edited
+   names. For the maintainer's own trial runs that is a fine trade; it is worth
+   naming once so it is a choice rather than a surprise.
+
+**What stays owed at GA**, and is now explicitly out of scope here: a real V1 →
+V2 path for projects someone else owns.

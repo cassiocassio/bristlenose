@@ -15,6 +15,15 @@ export interface ActivityJobEntry {
   type: "autocode" | "clips" | "catchup";
   frameworkId: string;
   frameworkTitle: string;
+  /** Which codebook lens started this job — the route its "View Report" action
+   *  should return to.
+   *
+   *  Two lenses run side by side (D29), and the chip used to send every
+   *  reader to `/report/codebook` regardless. A researcher who installed a
+   *  codebook from v2 and clicked View Report landed in v1 — a different lens
+   *  than the one they were working in, with no indication anything had moved.
+   *  Absent means the shipped lens, which is the pre-v2 behaviour. */
+  originRoute?: string;
   /** Total items (clips count) — used by clips jobs. */
   total?: number;
 }

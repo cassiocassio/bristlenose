@@ -100,3 +100,39 @@ struct TabTests {
         #expect(Tab.analysis.rawValue == "analysis")
     }
 }
+
+// MARK: - Which lenses have a content navigator
+
+/// `hasLeftPanel` exists because the same fact was enumerated in four places:
+/// the toolbar button's gate, its label, its tooltip, and the View menu's
+/// Show/Hide item. Adding `codebookV2` reached three and missed the gate — so
+/// the lens had a panel, a menu item that toggled it and a working ⌘⌥L, and no
+/// toolbar button. On the Mac that button is the ONLY affordance: embedded mode
+/// removes the SPA's own rails, so a missing gate means an unreachable panel.
+@Suite struct TabLeftPanelTests {
+
+    @Test func theFourLensesWithANavigatorHaveOne() {
+        #expect(Tab.quotes.hasLeftPanel)
+        #expect(Tab.codebook.hasLeftPanel)
+        #expect(Tab.codebookV2.hasLeftPanel)
+        #expect(Tab.analysis.hasLeftPanel)
+    }
+
+    @Test func theTwoWithoutOneDoNot() {
+        // Project has no panel. Sessions' was removed in embedded mode in
+        // favour of the native switcher popover, and the browser one is
+        // mounted by AppLayout rather than gated here.
+        #expect(!Tab.project.hasLeftPanel)
+        #expect(!Tab.sessions.hasLeftPanel)
+    }
+
+    @Test func everyCaseIsDecided() {
+        // The switch is exhaustive with no `default:`, so a new Tab case fails
+        // to compile rather than silently inheriting "no panel" — which is how
+        // a lens ships with an unreachable navigator.
+        for tab in Tab.allCases {
+            _ = tab.hasLeftPanel
+        }
+        #expect(Tab.allCases.count == 6)
+    }
+}

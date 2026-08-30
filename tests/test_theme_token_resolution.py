@@ -54,3 +54,63 @@ def test_every_no_fallback_token_use_resolves() -> None:
         "these render as if the declaration were absent:\n"
         + "\n".join(f"  {t}  <- {', '.join(w)}" for t, w in sorted(missing.items()))
     )
+
+
+# ── Brace balance ──────────────────────────────────────────────────────────
+
+
+def _strip_comments(css: str) -> str:
+    return re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+
+
+def test_every_theme_stylesheet_has_balanced_braces() -> None:
+    """An unbalanced brace silently discards every rule after it.
+
+    CSS has no error channel. One extra `}` closes a block early, the parser
+    resynchronises, and every subsequent rule in that file is dropped — no
+    warning in the build, no console error, nothing in the network tab. The
+    page just renders as though those rules were never written.
+
+    Found on 30 Aug 2026: a block replacement in `codebook-v2.css` left the old
+    rule's closing brace behind, and everything below it stopped applying. The
+    visible symptom was a page whose two-column head had become one column and
+    a 240px gutter rendering 892px wide — which reads as a layout bug in the
+    component, not as a stylesheet that stopped being parsed two hundred lines
+    earlier. `getComputedStyle` said `display: block` while the file plainly
+    said `flex`, and the tell was that NO rule matched the selector at all.
+
+    Counted after stripping comments, since prose legitimately contains braces.
+    """
+    offenders: dict[str, tuple[int, int]] = {}
+    for path in sorted(_THEME.rglob("*.css")):
+        css = _strip_comments(path.read_text(encoding="utf-8", errors="replace"))
+        opened, closed = css.count("{"), css.count("}")
+        if opened != closed:
+            offenders[str(path.relative_to(_THEME))] = (opened, closed)
+
+    assert not offenders, (
+        "unbalanced braces — every rule after the imbalance is silently "
+        "discarded by the CSS parser:\n"
+        + "\n".join(f"  {f}: {o} open, {c} close" for f, (o, c) in offenders.items())
+    )
+
+
+def test_no_stylesheet_closes_more_than_it_opens_partway() -> None:
+    """Balanced overall is not enough — where it goes negative is the damage.
+
+    A file can be balanced and still broken: an extra `}` early and a missing
+    one late cancel out in the totals while the middle of the file is orphaned.
+    Track the running depth and fail on the first line that closes a block
+    nothing opened.
+    """
+    for path in sorted(_THEME.rglob("*.css")):
+        depth = 0
+        for lineno, line in enumerate(
+            _strip_comments(path.read_text(encoding="utf-8", errors="replace")).splitlines(),
+            start=1,
+        ):
+            depth += line.count("{") - line.count("}")
+            assert depth >= 0, (
+                f"{path.relative_to(_THEME)}:{lineno} closes a block nothing "
+                f"opened — every rule below this line is discarded"
+            )

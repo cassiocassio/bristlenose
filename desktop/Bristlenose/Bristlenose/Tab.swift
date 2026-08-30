@@ -55,6 +55,22 @@ enum Tab: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Does this lens have a web left panel — the content navigator?
+    ///
+    /// One list, because there were four: the toolbar button's gate, its label,
+    /// its tooltip, and the View menu's Show/Hide item. Adding `codebookV2`
+    /// reached three of them and missed the gate, so the lens had a panel, a
+    /// menu item that toggled it and a ⌘⌥L that worked — and no toolbar button,
+    /// which on the Mac is the only affordance embedded mode leaves (the SPA's
+    /// own rails are gone there). A four-way enumeration of the same fact is a
+    /// three-way disagreement waiting to happen.
+    var hasLeftPanel: Bool {
+        switch self {
+        case .quotes, .codebook, .codebookV2, .analysis: true
+        case .project, .sessions: false
+        }
+    }
+
     /// Derive the active tab from a React Router pathname.
     ///
     /// Uses longest-prefix-first ordering so `/report/sessions/abc123`

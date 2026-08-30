@@ -2131,9 +2131,8 @@ struct ContentView: View {
         // (sections/themes on Quotes, codebooks on Codebook, signals on
         // Analysis). Gestalt proximity: each toggle is near the thing it
         // controls.
-        if bridgeHandler.activeTab == .quotes ||
-           bridgeHandler.activeTab == .codebook ||
-           bridgeHandler.activeTab == .analysis {
+        // No tab yet means no lens, which means no panel to toggle.
+        if bridgeHandler.activeTab?.hasLeftPanel == true {
             ToolbarItem(placement: .navigation) {
                 Button {
                     bridgeHandler.menuAction("toggleLeftPanel")

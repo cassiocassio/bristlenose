@@ -744,7 +744,12 @@ private struct ViewMenuContent: View {
     }
 
     private var hasLeftPanel: Bool {
-        leftPanelKey != nil
+        // `Tab.hasLeftPanel` is the one list; `leftPanelKey` only names the
+        // panel. Deriving membership from a label's nil-ness meant a new lens
+        // needed both edited, and the toolbar's own gate was a third copy.
+        // `activeTab` is optional here (it is not in ContentView): no tab yet
+        // means no lens, which means no panel.
+        bridgeHandler.activeTab?.hasLeftPanel ?? false
     }
 
     /// Whether Hide/Show All Sidebars should read "Hide". The projects column is

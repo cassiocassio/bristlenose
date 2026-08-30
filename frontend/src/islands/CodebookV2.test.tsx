@@ -1,6 +1,22 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { CodebookV2 } from "./CodebookV2";
+import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
+import { resetCodebookV2Selection } from "../contexts/CodebookV2Store";
+
+/** What AppLayout mounts: the navigator in the left sidebar, the lens beside
+ *  it. Selection travels between them through CodebookV2Store, so a test that
+ *  rendered only the lens would be testing a screen no researcher sees. */
+function Lens(props: { projectId: string; projectName?: string }) {
+  return (
+    <>
+      <CodebookV2Sidebar />
+      <CodebookV2 {...props} />
+    </>
+  );
+}
+
+beforeEach(() => resetCodebookV2Selection());
 
 const codebook = {
   groups: [
@@ -29,6 +45,8 @@ const templates = { templates: [
 ]};
 
 vi.mock("../utils/api", () => ({
+  // The navigator titles the floor row with the project name, from /info.
+  apiGet: vi.fn(() => Promise.resolve({ project_name: "Ikea" })),
   getCodebook: vi.fn(() => Promise.resolve(codebook)),
   getCodebookTemplates: vi.fn(() => Promise.resolve(templates)),
   getFrameworkStates: vi.fn(() => Promise.resolve({ uxr: false })),
@@ -55,10 +73,10 @@ describe("CodebookV2 — built-in is derived, not hardcoded", () => {
     // The signal is the ABSENCE OF AN AUTHOR, measured exact across the nine
     // shipped codebooks. A hardcoded id list would have filed the fourth
     // built-in under Frameworks silently, and nothing would have failed.
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail-row-nielsen"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav-row-nielsen"));
 
-    const rail = screen.getByTestId("bn-v2-rail");
+    const rail = screen.getByTestId("bn-v2-nav");
     const order = Array.from(rail.children).map((c) => c.textContent ?? "");
     const iDefault = order.findIndex((t) => t === "Default");
     const iFrameworks = order.findIndex((t) => t === "Frameworks");
@@ -74,40 +92,40 @@ describe("CodebookV2 — built-in is derived, not hardcoded", () => {
   it("gives each built-in the provenance its state actually warrants", async () => {
     // Not cosmetic: UXR here is installed AND disabled, which "On by default"
     // would misdescribe.
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    render(<Lens projectId="1" projectName="Ikea" />);
     await waitFor(() => screen.getByText("On by default"));
     expect(screen.getByText("Available by default")).toBeInTheDocument();
     expect(screen.getByText("Jakob Nielsen")).toBeInTheDocument();
   });
 
   it("sums tentative counts into the rail badge", async () => {
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    render(<Lens projectId="1" projectName="Ikea" />);
     await waitFor(() => screen.getByText("7"));
     expect(screen.getByText("2")).toBeInTheDocument();
   });
 
   it("treats an absent framework-state entry as enabled", async () => {
     // "off means off" is what gets stored; on is the absence of an off.
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail-row-uxr"));
-    expect(screen.getByTestId("bn-v2-rail-row-uxr").className).toContain("off2");
-    expect(screen.getByTestId("bn-v2-rail-row-nielsen").className).not.toContain("off2");
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav-row-uxr"));
+    expect(screen.getByTestId("bn-v2-nav-row-uxr").className).toContain("codebook-disabled");
+    expect(screen.getByTestId("bn-v2-nav-row-nielsen").className).not.toContain("codebook-disabled");
   });
 
   it("names the floor after the project", async () => {
     // Appears twice by design once the page renders — the rail row and the page
     // title — so scope to the rail rather than loosening the query.
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail-row-floor"));
-    expect(screen.getByTestId("bn-v2-rail-row-floor")).toHaveTextContent("Ikea tags");
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav-row-floor"));
+    expect(screen.getByTestId("bn-v2-nav-row-floor")).toHaveTextContent("Ikea tags");
   });
 });
 
 describe("D22 — Browse Library is the navigation", () => {
   it("goes to the catalogue and back", async () => {
     const { fireEvent } = await import("@testing-library/react");
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
 
     fireEvent.click(screen.getByTestId("bn-v2-browse"));
     await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
@@ -119,25 +137,25 @@ describe("D22 — Browse Library is the navigation", () => {
 
   it("a card opens that codebook's page", async () => {
     const { fireEvent } = await import("@testing-library/react");
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
 
     fireEvent.click(screen.getByTestId("bn-v2-browse"));
     fireEvent.click(screen.getByTestId("bn-v2-card-nielsen"));
     await waitFor(() => screen.getByTestId("bn-v2-page"));
-    expect(screen.getByTestId("bn-v2-rail-row-nielsen").className).toContain("sel");
+    expect(screen.getByTestId("bn-v2-nav-row-nielsen").className).toContain("active");
   });
 
   it("a rail row leaves the catalogue", async () => {
     // Otherwise selecting in the rail silently does nothing while the grid
     // stays on screen — the rail is the OTHER route to a codebook (D22).
     const { fireEvent } = await import("@testing-library/react");
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
 
     fireEvent.click(screen.getByTestId("bn-v2-browse"));
     expect(screen.getByTestId("bn-v2-card-nielsen")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("bn-v2-rail-row-uxr"));
+    fireEvent.click(screen.getByTestId("bn-v2-nav-row-uxr"));
     await waitFor(() => screen.getByTestId("bn-v2-page"));
     expect(screen.queryByTestId("bn-v2-browse-grid")).not.toBeInTheDocument();
   });
@@ -146,8 +164,8 @@ describe("D22 — Browse Library is the navigation", () => {
     // The asymmetry is the point: the rail is what you have, the Library is
     // what there is (D17 installed-only vs the catalogue).
     const { fireEvent } = await import("@testing-library/react");
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
     fireEvent.click(screen.getByTestId("bn-v2-browse"));
     expect(screen.getByTestId("bn-v2-card-sentiment")).toBeInTheDocument();
     expect(screen.getByTestId("bn-v2-card-uxr")).toBeInTheDocument();
@@ -158,11 +176,11 @@ describe("phase 5 — the destructive edge", () => {
   it("confirms before uninstalling, and cancelling does nothing", async () => {
     const { fireEvent } = await import("@testing-library/react");
     const api = await import("../utils/api");
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
     // The floor is selected by default and correctly has no install controls
     // (D20), so pick a framework first.
-    fireEvent.click(screen.getByTestId("bn-v2-rail-row-nielsen"));
+    fireEvent.click(screen.getByTestId("bn-v2-nav-row-nielsen"));
     await waitFor(() => screen.getByTestId("bn-v2-uninstall"));
 
     fireEvent.click(screen.getByTestId("bn-v2-uninstall"));
@@ -180,11 +198,11 @@ describe("phase 5 — the destructive edge", () => {
   it("uninstalls only after the confirm", async () => {
     const { fireEvent } = await import("@testing-library/react");
     const api = await import("../utils/api");
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
     // The floor is selected by default and correctly has no install controls
     // (D20), so pick a framework first.
-    fireEvent.click(screen.getByTestId("bn-v2-rail-row-nielsen"));
+    fireEvent.click(screen.getByTestId("bn-v2-nav-row-nielsen"));
     await waitFor(() => screen.getByTestId("bn-v2-uninstall"));
 
     fireEvent.click(screen.getByTestId("bn-v2-uninstall"));
@@ -200,8 +218,8 @@ describe("phase 5 — the destructive edge", () => {
     const { fireEvent } = await import("@testing-library/react");
     const api = await import("../utils/api");
     const store = await import("../contexts/ActivityStore");
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
     fireEvent.click(screen.getByTestId("bn-v2-browse"));
     fireEvent.click(screen.getByTestId("bn-v2-card-action-cliux"));
 
@@ -218,8 +236,8 @@ describe("phase 5 — the destructive edge", () => {
     // dialogs, which is what makes the destructive one stop working.
     const { fireEvent } = await import("@testing-library/react");
     const api = await import("../utils/api");
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
     fireEvent.click(screen.getByTestId("bn-v2-browse"));
     fireEvent.click(screen.getByTestId("bn-v2-card-action-cliux"));
     await waitFor(() => expect(api.importCodebookTemplate).toHaveBeenCalledWith("cliux"));
@@ -237,19 +255,19 @@ describe("Q14 — export mode's fourth state", () => {
     vi.mocked(api.getCodebookTemplates).mockRejectedValueOnce(
       new Error("GET /codebook/templates: not embedded"),
     );
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
     expect(screen.queryByText(/Could not load the codebook/)).not.toBeInTheDocument();
     // The codebook still renders — the rail is built from /codebook, not from
     // the catalogue.
-    expect(screen.getByTestId("bn-v2-rail-row-nielsen")).toBeInTheDocument();
+    expect(screen.getByTestId("bn-v2-nav-row-nielsen")).toBeInTheDocument();
   });
 
   it("hides Browse Library in an exported report", async () => {
     const exportData = await import("../utils/exportData");
     vi.spyOn(exportData, "isExportMode").mockReturnValue(true);
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
     // Hidden, not disabled — the house pattern for export mode. There is no
     // catalogue to browse and installing is a write.
     expect(screen.queryByTestId("bn-v2-browse")).not.toBeInTheDocument();
@@ -260,9 +278,9 @@ describe("Q14 — export mode's fourth state", () => {
     const { fireEvent } = await import("@testing-library/react");
     const exportData = await import("../utils/exportData");
     vi.spyOn(exportData, "isExportMode").mockReturnValue(true);
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail"));
-    fireEvent.click(screen.getByTestId("bn-v2-rail-row-nielsen"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    fireEvent.click(screen.getByTestId("bn-v2-nav-row-nielsen"));
     await waitFor(() => screen.getByTestId("bn-v2-page"));
     expect(screen.queryByTestId("bn-v2-uninstall")).not.toBeInTheDocument();
     vi.mocked(exportData.isExportMode).mockRestore();
@@ -276,10 +294,10 @@ describe("CodebookV2 — the Review door (Q15)", () => {
     // does nothing is worse than one that isn't there, and it is invisible to
     // every test that only asserts the button renders.
     const { fireEvent } = await import("@testing-library/react");
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail-row-nielsen"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav-row-nielsen"));
 
-    fireEvent.click(screen.getByTestId("bn-v2-rail-row-nielsen"));
+    fireEvent.click(screen.getByTestId("bn-v2-nav-row-nielsen"));
     await waitFor(() => screen.getByTestId("bn-v2-review"));
 
     // The shipped modal is always MOUNTED and gates on `open` — it portals to
@@ -303,10 +321,10 @@ describe("CodebookV2 — the Review door (Q15)", () => {
     // a smoke test misses — the modal renders either way.
     const { fireEvent } = await import("@testing-library/react");
     const api = await import("../utils/api");
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-rail-row-nielsen"));
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav-row-nielsen"));
 
-    fireEvent.click(screen.getByTestId("bn-v2-rail-row-nielsen"));
+    fireEvent.click(screen.getByTestId("bn-v2-nav-row-nielsen"));
     await waitFor(() => screen.getByTestId("bn-v2-review"));
     fireEvent.click(screen.getByTestId("bn-v2-review"));
 
@@ -325,7 +343,7 @@ describe("group order matches the shipped lens", () => {
     // came LAST. Two lenses disagreeing about where the untagged bucket lives
     // is exactly the drift D29's side-by-side exists to catch.
     const api = await import("../utils/api");
-    vi.mocked(api.getCodebook).mockResolvedValueOnce({
+    vi.mocked(api.getCodebook).mockResolvedValue({
       ...codebook,
       groups: [
         { id: 9, name: "Zebra", subtitle: "", colour_set: "ux", order: 2, tags: [],
@@ -337,7 +355,7 @@ describe("group order matches the shipped lens", () => {
       ],
     } as never);
 
-    render(<CodebookV2 projectId="1" projectName="Ikea" />);
+    render(<Lens projectId="1" projectName="Ikea" />);
     await waitFor(() => screen.getByTestId("bn-v2-page"));
 
     const titles = Array.from(

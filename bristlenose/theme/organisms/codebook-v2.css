@@ -13,61 +13,46 @@
    atom's (.bn-btn:disabled). D27a. */
 :root { --bn-opacity-off: 0.5; }
 
-.v2-rail {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    min-width: 0;
-}
+/* ── The codebook navigator, in the standard left sidebar ─────────────────
+   v2's navigation was a `<nav class="v2-rail">` inside the lens's own content
+   column, restating padding, radius, hover and selection from scratch. It now
+   uses `.toc-heading` and `.toc-link` from sidebar.css, exactly as the shipped
+   CodebookSidebar does, so section headings, row metrics, hover underline and
+   the selected treatment are inherited rather than re-declared.
 
-/* Section heading. Unconditional, per D25 — an absent heading reads as "this
-   category does not exist", not "empty". */
-.v2-rail .sb-h {
-    font-size: var(--bn-text-micro);
-    font-weight: var(--bn-weight-emphasis);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--bn-colour-muted);
-    padding: var(--bn-space-md) var(--bn-space-sm) var(--bn-space-xs);
-}
+   THE SELECTED ROW. The rail used `--bn-colour-active-bg` — `#f0fdf4`, the
+   palette's *success* background — which rendered the current codebook mint
+   green. `.toc-link.active` uses `--bn-nav-selection-bg`, a neutral grey, with
+   the accent colour and emphasis weight. Selection is not success.
 
-.v2-rail .sb-row {
+   What remains here is only what a two-line row with a trailing control needs
+   and the base `.toc-link` does not provide. */
+
+.v2-nav-row {
     display: flex;
     align-items: center;
     gap: var(--bn-space-sm);
-    padding: 0.35rem var(--bn-space-sm);
-    border-radius: var(--bn-radius-sm);
-    cursor: pointer;
     min-width: 0;
 }
 
-.v2-rail .sb-row:hover { background: var(--bn-colour-hover); }
-.v2-rail .sb-row.sel { background: var(--bn-colour-active-bg); }
-.v2-rail .sb-row:focus-visible {
-    outline: 2px solid var(--bn-colour-accent);
-    outline-offset: -2px;
-}
-
-.v2-rail .lbl2 {
-    flex: 1;
-    min-width: 0;
+/* The title/provenance stack. `.toc-link` is `display: block` with a single
+   line; this row carries two, so the text column owns its own flow and the
+   switch stays vertically centred against the pair. */
+.v2-nav-text {
     display: flex;
     flex-direction: column;
-    gap: 0.05rem;
+    min-width: 0;
+    flex: 1;
 }
 
-.v2-rail .r-title {
-    font-size: var(--bn-text-label);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+/* `.codebook-toc-label` (from sidebar.css) supplies the title's size and
+   truncation — the same span the shipped navigator uses. */
 
 /* Provenance. A person keeps D19's weight because the name is the point —
    Jakob Nielsen is better known than his heuristics. A system fact ("On by
    default") must not borrow it: dressing a configuration state as a cultural
    figure is a category error the eye catches immediately. D23. */
-.v2-rail .r-author {
+.v2-nav-provenance {
     font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
@@ -76,21 +61,21 @@
     text-overflow: ellipsis;
 }
 
-.v2-rail .r-author.prov-system {
+.v2-nav-provenance.prov-system {
     font-weight: var(--bn-weight-normal);
     color: var(--bn-colour-muted);
 }
 
 /* Switched off. One knock-back value, shared with the codebook page and the
    browse card — they were three declarations with three different opacities
-   before D27a. Named -off, not -disabled: a disabled control cannot be used,
-   whereas a switched-off codebook stays fully interactive. */
-.v2-rail .sb-row.off2 .r-title,
-.v2-rail .sb-row.off2 .r-author { color: var(--bn-colour-muted); }
+   before D27a. `.codebook-disabled` is the shipped navigator's own modifier,
+   so the muted treatment matches v1 row for row. */
+.v2-nav-row.codebook-disabled .codebook-toc-label,
+.v2-nav-row.codebook-disabled .v2-nav-provenance { color: var(--bn-colour-muted); }
 
 /* Undecided-proposal count (D10). Inboard of the switch so the switch keeps the
    trailing edge (D16) and the badge never displaces it. */
-.v2-rail .pcount {
+.v2-nav-pending {
     flex-shrink: 0;
     font-family: var(--bn-font-mono);
     font-size: var(--bn-text-micro);
@@ -101,13 +86,15 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* The fallback switch. The platform control (Safari 17.4+
-   `<input type="checkbox" switch>`) is preferred and needs none of this — it
-   brings its own spring, focus ring, Increase Contrast and Reduce Motion.
-   D15. */
-.v2-rail .sw.mini {
-    flex-shrink: 0;
+/* The fallback switch, at the size settled during the prototype. The platform
+   control (Safari 17.4+ `<input type="checkbox" switch>`) is preferred and
+   needs none of this — it brings its own spring, focus ring, Increase Contrast
+   and Reduce Motion. D15. */
+.v2-nav-row .enable { flex-shrink: 0; }
+
+.v2-nav-row .sw.mini {
     position: relative;
+    flex-shrink: 0;
     width: 26px;
     height: 15px;
     border-radius: 7.5px;
@@ -116,7 +103,7 @@
     transition: background var(--bn-transition-fast);
 }
 
-.v2-rail .sw.mini::after {
+.v2-nav-row .sw.mini::after {
     content: "";
     position: absolute;
     top: 1.5px;
@@ -128,20 +115,17 @@
     transition: left var(--bn-transition-fast);
 }
 
-/* The shipped .framework-toggle uses --bn-colour-border-hover for its off
-   track. Reused rather than invented: --bn-off-track does not exist, whatever
-   the mockup skill says about it. */
-.v2-rail .sw.mini.offstate { background: var(--bn-colour-border-hover); }
-.v2-rail .sw.mini.offstate::after { left: 1.5px; }
+.v2-nav-row .sw.mini.offstate { background: var(--bn-colour-border-hover); }
+.v2-nav-row .sw.mini.offstate::after { left: 1.5px; }
 
-.v2-rail .sw.mini:focus-visible {
+.v2-nav-row .sw.mini:focus-visible {
     outline: 2px solid var(--bn-colour-accent);
     outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .v2-rail .sw.mini,
-    .v2-rail .sw.mini::after { transition: none; }
+    .v2-nav-row .sw.mini,
+    .v2-nav-row .sw.mini::after { transition: none; }
 }
 
 /* ── Codebook v2 — the page ────────────────────────────────────────────────
@@ -254,18 +238,13 @@
 
 /* The lens: rail beside content. The rail is permanent (S1) — one codebook
    always has focus, and the long scrolling page of every codebook is gone. */
-.v2-layout {
-    display: grid;
-    grid-template-columns: 240px 1fr;
-    gap: var(--bn-space-xl, 1.5rem);
-    align-items: start;
-}
+/* One column. This was `240px 1fr` — the 240px being the in-lens rail's
+   track. Navigation now lives in the standard left sidebar, which is a column
+   of SidebarLayout's own 6-column grid, so the lens gets the full content
+   width and narrows when the panel opens, as every other lens does. */
+.v2-layout { min-width: 0; }
 
 .v2-main { min-width: 0; }
-
-@container (max-width: 720px) {
-    .v2-layout { grid-template-columns: 1fr; }
-}
 
 /* ── The size axis — PROVISIONAL, and deliberately not in the atom ─────────
    `.bn-btn` (theme/atoms/modal.css) carries four COLOUR variants and no size

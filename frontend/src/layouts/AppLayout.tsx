@@ -18,6 +18,9 @@ import { SettingsModal } from "../components/SettingsModal";
 import { SidebarLayout, sidebarAnimations } from "../components/SidebarLayout";
 import { SessionsSidebar } from "../components/SessionsSidebar";
 import { CodebookSidebar } from "../components/CodebookSidebar";
+// By path, not through the `components` barrel — the barrel rides in the
+// always-loaded chunk, and this is only reachable from one route.
+import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
 import { AnalysisSidebar } from "../components/AnalysisSidebar";
 import { ExportDialog } from "../components/ExportDialog";
 import { MiroExportPanel } from "../components/MiroExportPanel";
@@ -215,11 +218,16 @@ function AppShell() {
   const isTranscript = useMatch("/report/sessions/:sessionId");
   const _isCodebook = useMatch("/report/codebook");
   const _isCodebookSlash = useMatch("/report/codebook/");
+  // `useMatch` is exact, so these do NOT also match `/report/codebook` — the
+  // prefix trap that bit `Tab.from(path:)` on the Swift side does not arise.
+  const _isCodebookV2 = useMatch("/report/codebook-v2");
+  const _isCodebookV2Slash = useMatch("/report/codebook-v2/");
   const _isAnalysis = useMatch("/report/analysis");
   const _isAnalysisSlash = useMatch("/report/analysis/");
   const isQuotes = _isQuotes || _isQuotesSlash;
   const isSessions = _isSessions || _isSessionsSlash;
   const isCodebook = _isCodebook || _isCodebookSlash;
+  const isCodebookV2 = _isCodebookV2 || _isCodebookV2Slash;
   const isAnalysis = _isAnalysis || _isAnalysisSlash;
   const isSessionsRoute = !!(isSessions || isTranscript);
   // Embedded (macOS) removes the Sessions lens's left panel — the native
@@ -230,7 +238,7 @@ function AppShell() {
   // undefined would render the *Quotes* contents panel on the Sessions lens.
   const embeddedSessionsPanelRemoved = isEmbedded() && isSessionsRoute;
   const showSidebar = !!(
-    (isQuotes || isSessionsRoute || isCodebook || isAnalysis) &&
+    (isQuotes || isSessionsRoute || isCodebook || isCodebookV2 || isAnalysis) &&
     !embeddedSessionsPanelRemoved
   );
   const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
@@ -705,17 +713,23 @@ function AppShell() {
           },
           onAction: () => {
             const detail = { frameworkId: j.frameworkId, frameworkTitle: j.frameworkTitle };
-            if (isCodebook) {
+            // Two codebook lenses run side by side (D29). Dispatch in place if
+            // we are already on EITHER — both listen for `bn:autocode-report`.
+            // Otherwise return to the lens this job was started from, not to
+            // whichever one is hardcoded: a researcher who installed from v2
+            // and clicked View Report used to land in v1, a different lens from
+            // the one they were working in, with nothing saying so.
+            if (isCodebook || isCodebookV2) {
               window.dispatchEvent(new CustomEvent("bn:autocode-report", { detail }));
             } else {
-              navigate("/report/codebook");
+              navigate(j.originRoute ?? "/report/codebook");
               setTimeout(() => {
                 window.dispatchEvent(new CustomEvent("bn:autocode-report", { detail }));
               }, 100);
             }
           },
           actionLabel: i18n.t("codebook.viewReport"),
-          actionHref: "/report/codebook",
+          actionHref: j.originRoute ?? "/report/codebook",
           onCancel: () => {
             cancelAutoCode(j.frameworkId).catch((err) =>
               console.error("Cancel AutoCode failed:", err),
@@ -723,7 +737,7 @@ function AppShell() {
           },
         };
       }),
-    [activityJobs, isCodebook, navigate],
+    [activityJobs, isCodebook, isCodebookV2, navigate],
   );
 
   return (
@@ -733,7 +747,7 @@ function AppShell() {
         // The embedded gate repeats here (belt to showSidebar's braces) so
         // SessionsSidebar never MOUNTS on the embedded Sessions lens — its
         // useEffect fetch would otherwise still fire behind an inactive layout.
-        isSessionsRoute && !embeddedSessionsPanelRemoved ? <SessionsSidebar /> : isCodebook ? <CodebookSidebar /> : isAnalysis ? <AnalysisSidebar /> : undefined
+        isSessionsRoute && !embeddedSessionsPanelRemoved ? <SessionsSidebar /> : isCodebook ? <CodebookSidebar /> : isCodebookV2 ? <CodebookV2Sidebar /> : isAnalysis ? <AnalysisSidebar /> : undefined
       }
       leftPanelTitle={
         // Codebooks dropped its title 14 Aug 2026, alongside Quotes' "Contents"

@@ -25,6 +25,9 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { CodebookPanel } from "./CodebookPanel";
 import { CodebookV2 } from "./CodebookV2";
+// The navigator moved to the left sidebar, so reaching a framework's page
+// means rendering the pair AppLayout mounts.
+import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
 import { resetSidebarStore } from "../contexts/SidebarStore";
 import { resetActivityStore } from "../contexts/ActivityStore";
 import type { CodebookResponse } from "../utils/types";
@@ -158,13 +161,13 @@ const LENSES: Lens[] = [
   {
     name: "v2 (CodebookV2)",
     floor: async () => {
-      render(<CodebookV2 projectId="1" />);
+      render(<><CodebookV2Sidebar /><CodebookV2 projectId="1" /></>);
       await screen.findByText("Friction");
     },
     framework: async () => {
-      render(<CodebookV2 projectId="1" />);
-      await screen.findByTestId("bn-v2-rail-row-nielsen");
-      await userEvent.click(screen.getByTestId("bn-v2-rail-row-nielsen"));
+      render(<><CodebookV2Sidebar /><CodebookV2 projectId="1" /></>);
+      await screen.findByTestId("bn-v2-nav-row-nielsen");
+      await userEvent.click(screen.getByTestId("bn-v2-nav-row-nielsen"));
       await screen.findByText("Status visibility");
     },
   },

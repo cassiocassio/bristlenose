@@ -17,7 +17,6 @@ import {
   getFrameworkStates,
   getRemoveFrameworkImpact,
   importCodebookTemplate,
-  putFrameworkStates,
   removeCodebookFramework,
   startAutoCode,
 } from "../utils/api";
@@ -27,7 +26,14 @@ import type {
   RemoveFrameworkInfo,
   TemplateListResponse,
 } from "../utils/types";
-import { CodebookV2Rail, type RailBook } from "./CodebookV2Rail";
+// The navigator moved OUT of this lens and into the standard left sidebar
+// (`components/CodebookV2Sidebar`), which `AppLayout` renders as a sibling —
+// so the selection can no longer be component state. Both sides read the store.
+import {
+  resetCodebookV2Selection,
+  selectCodebookV2,
+  useCodebookV2Store,
+} from "../contexts/CodebookV2Store";
 import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
 import { CodebookV2Browse, type BrowseBook } from "./CodebookV2Browse";
 import { CodebookV2UninstallSheet } from "../components/CodebookV2UninstallSheet";
@@ -40,6 +46,20 @@ import { ThresholdReviewModal } from "../components/ThresholdReviewModal";
 import { MergeConfirm } from "../components/CodebookAuthoring";
 import { useCodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import { isExportMode } from "../utils/exportData";
+
+/** What the page needs to know about one codebook. Was `RailBook`, which
+ *  belonged to the in-lens rail; the navigator now lives in the sidebar and
+ *  derives its own rows from the wire. */
+interface LensBook {
+  /** `framework_id`, or `""` for the floor. */
+  id: string;
+  title: string;
+  provenance: string;
+  provenanceIsPerson: boolean;
+  floor: boolean;
+  enabled: boolean;
+  pending: number;
+}
 
 interface Props {
   projectId: string;
@@ -92,12 +112,26 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   // codebook it can read rather than failing.
   const [templates, setTemplates] = useState<TemplateListResponse | null>(null);
   const [states, setStates] = useState<Record<string, boolean>>({});
-  const [selected, setSelected] = useState("");
+  const { selectedId: selected } = useCodebookV2Store();
+  const setSelected = selectCodebookV2;
   // Two views, no third. D22: a codebook is reached by a rail row or by a card,
   // and Browse Library is the only route to the catalogue — no next/previous,
   // no traversal. With the rail closed it is the ONLY way to another codebook,
   // which is why its prominence is load-bearing rather than decorative.
   const [view, setView] = useState<"page" | "browse">("page");
+  // Module-level state outlives the component; reset it so a later visit starts
+  // on the floor rather than on whichever framework was last inspected.
+  useEffect(() => resetCodebookV2Selection, []);
+
+  // Selecting in the navigator leaves the catalogue. The rail used to do this
+  // itself, in the same handler as the selection; with the two split across a
+  // store, choosing a codebook while the Library was open would otherwise
+  // change the selection behind a grid that stayed on screen — a click that
+  // appears to do nothing.
+  useEffect(() => {
+    setView("page");
+  }, [selected]);
+
   // Uninstall is confirmed, never immediate. D20 option A made it destroy the
   // AutoCode run as well as the tags, so the sheet has more to say than the
   // shipped one — and a terse modal measures rather than warning.
@@ -147,14 +181,11 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     };
   }, [projectId, refreshKey]);
 
-  const { rows: books, builtins } = useMemo((): {
-    rows: RailBook[];
-    builtins: Set<string>;
-  } => {
-    if (!codebook) return { rows: [], builtins: new Set() };
+  const { rows: books } = useMemo((): { rows: LensBook[] } => {
+    if (!codebook) return { rows: [] };
     // The floor is always present and always first — it is the researcher's own
     // tags, not a codebook they installed (D20).
-    const rows: RailBook[] = [
+    const rows: LensBook[] = [
       {
         id: "",
         title: projectName ? `${projectName} tags` : "Your tags",
@@ -177,11 +208,9 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     const titles = new Map(
       (templates?.templates ?? []).map((t) => [t.id, t]),
     );
-    const builtins = new Set<string>();
     for (const [fid, acc] of byFramework) {
       const tpl = titles.get(fid);
       const author = tpl?.author ?? "";
-      if (isBuiltIn(author)) builtins.add(fid);
       const prov = provenanceFor(fid, author);
       rows.push({
         id: fid,
@@ -195,7 +224,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         pending: acc.pending,
       });
     }
-    return { rows, builtins };
+    return { rows };
   }, [codebook, templates, states, projectName]);
 
   const reload = useCallback(() => {
@@ -206,6 +235,34 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         setStates(st);
       })
       .catch((e: Error) => setError(e.message));
+  }, []);
+
+  // The switch lives in the sidebar now, and the page's knocked-back treatment
+  // follows it. The sidebar fires `codebook-changed` after a successful write —
+  // the event the shipped lens already uses — so the page refreshes rather than
+  // showing an enabled framework as off, or the reverse.
+  useEffect(() => {
+    const handler = () => reload();
+    window.addEventListener("codebook-changed", handler);
+    return () => window.removeEventListener("codebook-changed", handler);
+  }, [reload]);
+
+  // The activity chip dispatches this when the researcher clicks View Report,
+  // and it dispatches IN PLACE when they are already on a codebook lens — so
+  // v2 has to answer it, exactly as CodebookPanel does, or the chip's action
+  // would silently do nothing here.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.frameworkId && detail?.frameworkTitle) {
+        setReportModal({
+          frameworkId: detail.frameworkId,
+          frameworkTitle: detail.frameworkTitle,
+        });
+      }
+    };
+    window.addEventListener("bn:autocode-report", handler);
+    return () => window.removeEventListener("bn:autocode-report", handler);
   }, []);
 
   const onInstall = useCallback(
@@ -228,6 +285,9 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
             type: "autocode",
             frameworkId: id,
             frameworkTitle: title,
+            // Two lenses run side by side, and the chip's "View Report" used to
+            // send everyone to the shipped one. Say where this started.
+            originRoute: "/report/codebook-v2/",
           });
           reload();
         })
@@ -274,14 +334,6 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     onChanged: reload,
   });
 
-  const onToggle = useCallback((id: string, enabled: boolean) => {
-    // Optimistic: the switch is the researcher's statement, not a request for
-    // permission. A failure re-reads rather than silently reverting.
-    setStates((prev) => ({ ...prev, [id]: enabled }));
-    putFrameworkStates({ [id]: enabled }).catch(() => {
-      getFrameworkStates().then(setStates).catch(() => {});
-    });
-  }, []);
 
   const current = books.find((b) => b.id === selected) ?? books[0];
   const currentGroups = useMemo(
@@ -360,20 +412,12 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
           )}
         </div>
         {error && <p className="pg-stat">Could not load the codebook: {error}</p>}
+        {/* No rail here. Codebook navigation is the standard left sidebar
+            (`CodebookV2Sidebar`, mounted by AppLayout), which brings the
+            toolbar toggle, the `[` key, drag-to-resize, hover-peek and the
+            `panel-state` bridge post with it — none of which an in-lens rail
+            could have. */}
         <div className="v2-layout">
-          <CodebookV2Rail
-            books={books}
-            selectedId={view === "page" ? (current?.id ?? "") : ""}
-            onSelect={(id) => {
-              // A rail row is the other route to a codebook, and it leaves the
-              // catalogue — otherwise selecting in the rail would silently do
-              // nothing while the grid stayed on screen.
-              setSelected(id);
-              setView("page");
-            }}
-            onToggle={onToggle}
-            builtinIds={builtins}
-          />
           {view === "browse" ? (
             <div className="v2-main">
               <CodebookV2Browse

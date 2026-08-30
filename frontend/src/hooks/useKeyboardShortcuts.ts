@@ -480,6 +480,9 @@ export function useKeyboardShortcuts({
         if (
           pathMatches(loc, "/report/quotes") ||
           pathMatches(loc, "/report/codebook") ||
+          // `pathMatches` is exact-or-trailing-slash, so codebook-v2 needs its
+          // own arm — the v2 lens has the same left panel and the same key.
+          pathMatches(loc, "/report/codebook-v2") ||
           pathMatches(loc, "/report/analysis") ||
           (onSessions && !isEmbedded())
         ) {

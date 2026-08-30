@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Signals sidebar — row layouts at width · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css). The signal-row rules
+   under "V0 — shipped" are copied verbatim from
+   bristlenose/theme/organisms/sidebar.css so V0 is the real pixels, not an
+   approximation; every other variant is a proposal measured against it.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-label-lh:1.45; --bn-text-body:.9375rem;
+  --bn-text-heading:1.125rem; --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-starred:520; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  /* sentiment scale (tokens.css) — shared across palettes */
+  --bn-sentiment-frustration:#ea580c;  --bn-sentiment-frustration-bg:light-dark(#fff7ed,#3a1f0c);
+  --bn-sentiment-confusion:#dc2626;    --bn-sentiment-confusion-bg:light-dark(#fef2f2,#3a1414);
+  --bn-sentiment-doubt:#7c3aed;        --bn-sentiment-doubt-bg:light-dark(#f5f3ff,#241a3a);
+  --bn-sentiment-surprise:#d97706;     --bn-sentiment-surprise-bg:light-dark(#fffbeb,#3a2c0c);
+  --bn-sentiment-satisfaction:#16a34a; --bn-sentiment-satisfaction-bg:light-dark(#f0fdf4,#0c2a17);
+  --bn-sentiment-delight:#059669;      --bn-sentiment-delight-bg:light-dark(#ecfdf5,#082a1f);
+  --bn-sentiment-confidence:#2563eb;   --bn-sentiment-confidence-bg:light-dark(#eff6ff,#12213f);
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:            light-dark(#ffffff,#111111);
+  --bn-colour-text:          light-dark(#1a1a1a,#e5e7eb);
+  --bn-colour-muted:         light-dark(#6b7280,#9ca3af);
+  --bn-colour-border:        light-dark(#e5e7eb,#2d2d2d);
+  --bn-colour-accent:        light-dark(#007aff,#0a84ff);
+  --bn-colour-hover:         light-dark(#e8f0fe,#1e293b);
+  --bn-colour-badge-bg:      light-dark(#f3f4f6,#252525);
+  --bn-colour-badge-text:    light-dark(#374151,#d1d5db);
+  --bn-colour-inspector-bg:  light-dark(#f9f9fa,#1c1c1e);
+  --bn-colour-border-hover:  light-dark(#d1d5db,#3a3a3a);
+  --bn-colour-shadow:        light-dark(rgba(0,0,0,.1),rgba(0,0,0,.4));
+  --bn-nav-selection-bg:     light-dark(#e8f0fe,#1e293b);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:            light-dark(#fdfbf7,#1a1816);
+  --bn-colour-text:          light-dark(#1b2230,#e8e3d6);
+  --bn-colour-muted:         light-dark(#4a698a,#7ba8a0);
+  --bn-colour-border:        light-dark(#d4c9a8,#2d2820);
+  --bn-colour-accent:        light-dark(#0f5c9e,#4d9fe0);
+  --bn-colour-hover:         light-dark(#ede5d1,#252118);
+  --bn-colour-badge-bg:      light-dark(#e8dfc9,#2d2820);
+  --bn-colour-badge-text:    light-dark(#2d3654,#c4b898);
+  --bn-colour-inspector-bg:  light-dark(#f4efe2,#201d17);
+  --bn-colour-border-hover:  light-dark(#b8ad91,#4a4030);
+  --bn-colour-shadow:        light-dark(rgba(30,20,10,.12),rgba(0,0,0,.4));
+  --bn-nav-selection-bg:     light-dark(#ede5d1,#252118);
+}
+
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { padding:clamp(1.25rem,3vw,2.5rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:74ch; margin:.4rem 0; }
+
+/* ── zone key ─────────────────────────────────────────────────────────── */
+.key { display:flex; gap:1.4rem; flex-wrap:wrap; align-items:center; font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:.9rem 0 0; }
+.key b { font-weight:490; color:var(--bn-colour-text); }
+.key .swatch { display:inline-block; width:34px; height:16px; border-radius:3px; vertical-align:-3px; margin-right:.4rem; border:1px solid var(--bn-colour-border); }
+.key .sw-art { background:var(--bn-colour-inspector-bg); }
+.key .sw-com { background:repeating-linear-gradient(45deg,transparent,transparent 4px,var(--bn-colour-border) 4px,var(--bn-colour-border) 5px); }
+
+/* ── controls ─────────────────────────────────────────────────────────── */
+.controls { position:sticky; top:0; z-index:20; background:var(--bn-colour-bg);
+  border-bottom:1px solid var(--bn-colour-border); padding:.85rem 0 .9rem; margin-bottom:1.6rem;
+  display:flex; gap:1.6rem; flex-wrap:wrap; align-items:flex-end; }
+.ctl { display:flex; flex-direction:column; gap:.35rem; }
+.ctl .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:490; }
+.ctl .row { display:flex; gap:.35rem; align-items:center; flex-wrap:wrap; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.26rem .66rem;
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; white-space:nowrap; }
+.pbtn:hover { border-color:var(--bn-colour-border-hover); }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+input[type=range] { width:230px; accent-color:var(--bn-colour-accent); }
+.wval { font-family:var(--bn-font-mono); font-size:var(--bn-text-label); min-width:4.4rem; }
+.wval b { font-weight:490; }
+.wnote { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); font-family:var(--bn-font-mono); }
+
+/* ── bench: panels side by side ───────────────────────────────────────── */
+.bench { display:flex; gap:1.6rem; flex-wrap:wrap; align-items:flex-start; }
+.cell { display:flex; flex-direction:column; }
+
+/* Artefact frame — chrome bar names the variant; nothing inside the panel
+   carries a label that wouldn't appear in the product. */
+.frame { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  overflow:hidden; box-shadow:0 2px 10px var(--bn-colour-shadow); background:var(--bn-colour-inspector-bg); }
+.chrome { display:flex; align-items:center; gap:.45rem; padding:.4rem .6rem;
+  background:light-dark(#ececed,#232325); border-bottom:1px solid var(--bn-colour-border); }
+.chrome .dots { display:flex; gap:4px; }
+.chrome .dots i { width:8px; height:8px; border-radius:50%; background:var(--bn-colour-border-hover); display:block; }
+.chrome .cname { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  text-transform:uppercase; letter-spacing:.06em; }
+
+/* The panel itself — .toc-sidebar / .toc-sidebar-body, real values */
+.panel { background:var(--bn-colour-inspector-bg); border-right:1px solid var(--bn-colour-border);
+  overflow:hidden; }
+.panel-body { padding:0.85rem 0.85rem 1rem; }
+
+/* ── real sidebar atoms (verbatim from sidebar.css) ───────────────────── */
+.toc-heading { font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis);
+  margin:1rem 0 var(--bn-space-sm); padding-bottom:.25rem; border-bottom:1px solid var(--bn-colour-border); }
+.toc-heading:first-child { margin-top:0; }
+.toc-sub-heading { font-size:var(--bn-text-caption); line-height:1.35; font-weight:var(--bn-weight-emphasis);
+  text-transform:uppercase; letter-spacing:.04em; color:var(--bn-colour-muted);
+  padding:0 var(--bn-space-sm); margin-top:var(--bn-space-sm); }
+.badge { display:inline-block; font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+  padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm);
+  background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text); white-space:nowrap; }
+.badge-frustration { background:var(--bn-sentiment-frustration-bg); color:var(--bn-sentiment-frustration); }
+.badge-confusion   { background:var(--bn-sentiment-confusion-bg);   color:var(--bn-sentiment-confusion); }
+.badge-doubt       { background:var(--bn-sentiment-doubt-bg);       color:var(--bn-sentiment-doubt); }
+.badge-surprise    { background:var(--bn-sentiment-surprise-bg);    color:var(--bn-sentiment-surprise); }
+.badge-satisfaction{ background:var(--bn-sentiment-satisfaction-bg);color:var(--bn-sentiment-satisfaction); }
+.badge-delight     { background:var(--bn-sentiment-delight-bg);     color:var(--bn-sentiment-delight); }
+.badge-confidence  { background:var(--bn-sentiment-confidence-bg);  color:var(--bn-sentiment-confidence); }
+
+/* Pattern badge — copied verbatim from theme/organisms/analysis.css, where it
+   already ships on the signal CARD. V8's whole proposal is that this label,
+   not the group name, belongs on the row too. */
+.pattern-label { display:inline-block; font-family:var(--bn-font-mono);
+  font-size:var(--bn-text-badge); font-weight:var(--bn-weight-starred);
+  text-transform:uppercase; letter-spacing:.06em;
+  padding:var(--bn-space-xs) .45rem; border-radius:var(--bn-radius-sm); opacity:.9; }
+.pattern-success  { background:light-dark(#dcfce7,#14532d); color:light-dark(#166534,#86efac); }
+.pattern-tension  { background:light-dark(#fef3c7,#451a03); color:light-dark(#92400e,#fcd34d); }
+.pattern-gap      { background:light-dark(#fee2e2,#450a0a); color:light-dark(#991b1b,#fca5a5); }
+.pattern-recovery { background:light-dark(#e0f2fe,#0c4a6e); color:light-dark(#075985,#7dd3fc); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   THE SUB-COMPONENT. One row, six layouts. Every variant shares the same
+   markup contract so a winner lifts straight into SignalEntry:
+     <a class="sig sig--VARIANT"><span class="sig-name">…</span>
+                                 <span class="badge …">…</span></a>
+   ══════════════════════════════════════════════════════════════════════ */
+.sig { display:flex; gap:var(--bn-space-xs); padding:.2rem var(--bn-space-sm);
+  border-radius:var(--bn-radius-md); cursor:pointer; text-decoration:none;
+  color:var(--bn-colour-text); transition:background var(--bn-transition-fast); }
+.sig:hover { background:var(--bn-colour-hover); }
+.sig.active { background:var(--bn-nav-selection-bg); }
+.sig.active .sig-name { font-weight:var(--bn-weight-emphasis); color:var(--bn-colour-accent); }
+.sig-name { font-size:var(--bn-text-label); line-height:var(--bn-text-label-lh);
+  font-weight:var(--bn-weight-normal); flex:1; min-width:0; }
+.sig .badge { flex-shrink:0; font-size:var(--bn-text-micro); }
+
+/* V0 — SHIPPED. One line, name ellipses, badge pinned right. */
+.sig--v0 { align-items:baseline; }
+.sig--v0 .sig-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* V1 — WRAP. Same row, name allowed to wrap; badge holds the top line. */
+.sig--v1 { align-items:flex-start; }
+.sig--v1 .badge { margin-top:.12rem; }
+
+/* V2 — STACK. Name takes the full width; badge drops to its own line. */
+.sig--v2 { flex-direction:column; align-items:flex-start; gap:.05rem; padding-bottom:.3rem; }
+.sig--v2 .sig-name { flex:none; width:100%; }
+
+/* V3 — RAIL. Sentiment becomes a coloured edge; the pill goes away entirely
+   and the name owns every pixel. Colour is the only carrier, so this one
+   needs a legend somewhere and fails an accessibility read on its own. */
+.sig--v3 { align-items:flex-start; border-left:3px solid var(--rail,transparent);
+  border-radius:0 var(--bn-radius-md) var(--bn-radius-md) 0; padding-left:.5rem; }
+.sig--v3 .badge { display:none; }
+
+/* V4 — GROUPED. The badge is promoted to a sub-heading and stops repeating;
+   rows beneath carry the name alone at full width. */
+.sig--v4 { align-items:flex-start; }
+.sig--v4 .badge { display:none; }
+.sig-group-head { display:flex; align-items:center; gap:.4rem; margin:.55rem 0 .1rem; padding:0 var(--bn-space-sm); }
+.sig-group-head:first-child { margin-top:0; }
+.sig-group-head .rule { flex:1; height:1px; background:var(--bn-colour-border); }
+
+/* V8 — PATTERN. The row keeps V0's geometry and changes only what the badge
+   SAYS. Sentiment rows keep their sentiment, which was always a value. Codebook
+   rows drop the group name — constant in 11 of 11 real projects — for the
+   pattern, which is 4 values across the corpus and varies inside one project.
+   No pattern yet (before elaboration) means no badge, and the name takes the
+   whole width exactly when the name is a short location. */
+.sig--v8 { align-items:baseline; }
+.sig--v8 .sig-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sig--v8 .pattern-label { flex-shrink:0; font-size:var(--bn-text-micro); }
+
+/* V5 — TAIL. Name wraps; badge flows inline after the last word, like a
+   citation, so it costs no column and no extra line when it fits. */
+.sig--v5 { display:block; }
+.sig--v5 .sig-name { display:inline; }
+.sig--v5 .badge { margin-left:.3rem; vertical-align:1px; }
+
+/* ── V6 / V7 — PAIRED. One entry per location, carrying every sentiment it
+   has. The row stops being a single link: an <a> cannot nest inside an <a>,
+   so the container is a plain element and the name and each badge are
+   sibling links. Name → the location's first signal; badge → that exact one.
+   Tab order becomes name, badge, badge, next row — which on the ikea
+   sentiment set is FEWER stops than today, because four rows become two. */
+.sig--paired { display:flex; padding:.2rem var(--bn-space-sm); border-radius:var(--bn-radius-md); }
+.sig--paired .sig-name { flex:1 1 auto; min-width:0; }
+.sig-hit { text-decoration:none; color:inherit; border-radius:var(--bn-radius-sm);
+  cursor:pointer; transition:background var(--bn-transition-fast); }
+.sig-hit:hover { background:var(--bn-colour-hover); }
+.sig-hit:focus-visible { outline:2px solid var(--bn-colour-accent); outline-offset:1px; }
+a.sig-hit.name-hit { display:block; margin:-.1rem -.2rem; padding:.1rem .2rem; }
+a.sig-hit.badge-hit { display:inline-block; }
+a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
+.sig-badges { display:flex; flex-wrap:wrap; gap:3px; flex-shrink:0; }
+
+/* V6 — inline: name and every badge share the line, as sketched. */
+.sig--v6 { align-items:baseline; gap:var(--bn-space-xs); }
+.sig--v6 .sig-name,
+.sig--v6 .name-hit { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* V7 — stacked: the name takes the whole width, badges sit beneath it. */
+.sig--v7 { flex-direction:column; align-items:flex-start; gap:.12rem; padding-bottom:.3rem; }
+.sig--v7 .sig-name { flex:none; width:100%; }
+
+/* wrapping policy — toggled, because "what do we do with an unbreakable
+   token" is a real decision the shipped CSS currently doesn't make. */
+.brk .sig-name { overflow-wrap:anywhere; }
+
+/* overflow marker — dev aid, toggled on */
+.mark-trunc .sig-name.is-trunc { background:light-dark(rgba(220,38,38,.10),rgba(220,38,38,.22));
+  box-shadow:inset -2px 0 0 var(--bn-sentiment-confusion); }
+
+/* ── commentary zone — deliberately not-the-product ───────────────────── */
+.commentary { border-left:3px solid var(--bn-colour-border);
+  background:repeating-linear-gradient(45deg,transparent,transparent 5px,light-dark(rgba(0,0,0,.028),rgba(255,255,255,.03)) 5px,light-dark(rgba(0,0,0,.028),rgba(255,255,255,.03)) 6px);
+  padding:.7rem .85rem; margin-top:.6rem; }
+.commentary .clabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-muted); display:block; margin-bottom:.35rem; }
+.metrics { display:flex; gap:.9rem; flex-wrap:wrap; font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); }
+.metrics span b { font-weight:490; }
+.metrics .bad { color:var(--bn-sentiment-confusion); }
+.metrics .good { color:var(--bn-sentiment-satisfaction); }
+.verdict { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.4rem; line-height:1.45; max-width:34ch; }
+
+.essay { max-width:74ch; margin-top:3rem; }
+.essay h2 { font-size:var(--bn-text-heading); font-weight:490; margin:1.8rem 0 .5rem; }
+.essay p { font-size:var(--bn-text-label); line-height:1.65; color:var(--bn-colour-muted); margin:.6rem 0; }
+.essay strong { color:var(--bn-colour-text); font-weight:490; }
+.essay code { font-family:var(--bn-font-mono); font-size:.95em; background:var(--bn-colour-badge-bg); padding:.05rem .3rem; border-radius:3px; }
+.essay ul { font-size:var(--bn-text-label); line-height:1.65; color:var(--bn-colour-muted); padding-left:1.1rem; }
+@media (prefers-reduced-motion: reduce) { .sig { transition:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Bristlenose · mockup · signals sidebar</div>
+    <h1>Signal rows: nine layouts, one width slider</h1>
+    <p>The Signals list is the narrowest content in the app — a name plus a right-aligned
+       badge, in a panel that must stay thin because Bristlenose competes for the screen
+       with the product under test, the report and the client mail. Width alone can't fix
+       it: the row label spans a wide range. Measured across the
+       corpus: a section name runs 12 characters at the median, an elaborated signal
+       name 23, and a theme label 21 at the median but <strong>51 at its longest</strong>.
+       The ikea, uxfriends and theme-label sets are real, read from the projects’ own
+       databases; only "torture" is synthetic.</p>
+    <p>We have more depth than width. These variants spend the depth differently.
+       Every panel is the real design system — the V0 rules are copied verbatim from
+       <code style="font-family:var(--bn-font-mono)">sidebar.css</code>.</p>
+    <div class="key">
+      <span><span class="swatch sw-art"></span><b>Artefact</b> — real pixels, product only</span>
+      <span><span class="swatch sw-com"></span><b>Commentary</b> — measurements and argument, never ships</span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="ctl">
+      <span class="lbl">Panel width</span>
+      <div class="row">
+        <input type="range" id="w" min="200" max="480" step="4" value="240">
+        <span class="wval"><b id="wv">240</b>px</span>
+      </div>
+      <div class="row">
+        <button class="pbtn" data-w="200">200 min</button>
+        <button class="pbtn on" data-w="240">240 now</button>
+        <button class="pbtn" data-w="280">280 was</button>
+        <button class="pbtn" data-w="320">320</button>
+        <button class="pbtn" data-w="480">480 max</button>
+      </div>
+      <span class="wnote" id="wnote"></span>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Content</span>
+      <div class="row" id="sets">
+        <button class="pbtn on" data-set="plain">ikea · plain</button>
+        <button class="pbtn" data-set="elab">ikea · elaborated</button>
+        <button class="pbtn" data-set="uxf">uxfriends · elaborated</button>
+        <button class="pbtn" data-set="themes">theme labels · the tail</button>
+        <button class="pbtn" data-set="torture">torture</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Appearance</span>
+      <div class="row">
+        <button class="pbtn on" data-theme="default">default</button>
+        <button class="pbtn" data-theme="edo">edo</button>
+        <button class="pbtn" id="dark">dark</button>
+        <button class="pbtn" id="trunc">mark truncation</button>
+        <button class="pbtn" id="brk">break long words</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="lbl">Click target <span style="text-transform:none;letter-spacing:0">(V6 / V7)</span></span>
+      <div class="row">
+        <span id="target" class="wnote">click a name or a badge in V6 / V7</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bench" id="bench"></div>
+
+  <div class="essay">
+    <h2>Width cannot fix the single-line row</h2>
+    <p>Each V0 panel prints how many characters fit on one line at the current width,
+      and what share of the <strong>347 real labels</strong> in the local corpus that
+      covers — 27 project databases, section names, theme labels and elaborated signal
+      names together. Drag the slider and watch it:</p>
+    <table style="font-family:var(--bn-font-mono);font-size:var(--bn-text-caption);border-collapse:collapse;margin:.8rem 0 1rem">
+      <tr><th style="text-align:left;padding:.2rem 1.4rem .2rem 0;font-weight:490">width</th>
+          <th style="text-align:left;padding:.2rem 1.4rem .2rem 0;font-weight:490">fits</th>
+          <th style="text-align:left;padding:.2rem 0;font-weight:490">corpus covered</th></tr>
+      <tr><td style="padding:.15rem 1.4rem .15rem 0">200px <span style="color:var(--bn-colour-muted)">min</span></td><td>12 chars</td><td style="color:var(--bn-sentiment-confusion)">23%</td></tr>
+      <tr><td style="padding:.15rem 1.4rem .15rem 0">240px <span style="color:var(--bn-colour-muted)">now</span></td><td>18 chars</td><td style="color:var(--bn-sentiment-confusion)">51%</td></tr>
+      <tr><td style="padding:.15rem 1.4rem .15rem 0">280px</td><td>24 chars</td><td style="color:var(--bn-sentiment-frustration)">75%</td></tr>
+      <tr><td style="padding:.15rem 1.4rem .15rem 0">320px</td><td>30 chars</td><td style="color:var(--bn-sentiment-frustration)">86%</td></tr>
+      <tr><td style="padding:.15rem 1.4rem .15rem 0">360px</td><td>36 chars</td><td style="color:var(--bn-sentiment-surprise)">93%</td></tr>
+      <tr><td style="padding:.15rem 1.4rem .15rem 0">480px <span style="color:var(--bn-colour-muted)">max</span></td><td>54 chars</td><td style="color:var(--bn-sentiment-satisfaction)">100%</td></tr>
+    </table>
+    <p><strong>Covering the corpus on one line costs the entire drag range.</strong>
+      Not the default — the maximum, 480px, the widest a user can make the panel at all,
+      on every lens, permanently. 360px still drops 7%. That is the whole argument for
+      spending depth instead: there is no width worth paying that is also a width that
+      works.</p>
+    <p>The tail has a specific cause, and it is not the LLM signal names. Those are
+      capped — <code>signal-elaboration.md</code> says “Signal name MUST be 2–4 words”
+      and the schema repeats it, and the corpus obeys: median 23, max 31. Theme labels
+      have no number, only the adjective “concise” in
+      <code>thematic-grouping.md</code> and <code>ThemeGroupItem</code> — and they run
+      median 21, p90 41, <strong>max 51</strong>. The field with a number keeps to it;
+      the field with an adjective does not. Bounding it is a one-line prompt change,
+      but it would not settle the layout: theme labels are user-editable, so the row
+      has to survive whatever someone types regardless.</p>
+
+    <h2>V8 is a different axis from the rest</h2>
+    <p>V0–V7 argue about <em>where the badge sits</em>. V8 asks what it
+      <em>says</em>, and keeps V0's geometry exactly. The commentary strip counts
+      distinct badge values in the Codebooks section — the measure of whether that
+      column carries information or merely repeats the heading above it:</p>
+    <p style="font-family:var(--bn-font-mono);font-size:var(--bn-text-caption);line-height:1.9">
+      V0 … V7 &nbsp;<span style="color:var(--bn-sentiment-confusion)">1 distinct badge</span><br>
+      V8 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--bn-sentiment-satisfaction)">3 distinct badges</span>
+    </p>
+    <p>One is not a column, it is a caption printed once per row. The codebook
+      badge shows <code>group_name</code> — and measured across every real project
+      in the corpus, <strong>11 of 11 have exactly one substantive codebook group</strong>
+      once <code>Uncategorised</code> is excluded. So that badge prints the same word
+      on every row of every real project. <code>pattern</code> does not: 30 tension,
+      12 gap, 12 success, 8 recovery across 62 elaborated signals, and it varies
+      <em>inside</em> a single project (project-ikea alone runs 5 tension, 1 gap,
+      1 success, 1 recovery).</p>
+    <p><strong>V8 is strictly better than V0 on identical geometry</strong> — same
+      height, one fewer truncation on the elaborated set, because “GAP” and “SUCCESS”
+      are shorter than the group name they replace. And on the un-elaborated set it
+      is <em>shorter</em> than V0 (−12px) with <strong>zero</strong> badges: no
+      pattern exists yet, so nothing is drawn and the name takes the full width
+      exactly when the name is a short location. Absence carries the information.</p>
+    <p><strong>So V8 composes with the others rather than competing.</strong> The
+      honest recommendation is V8's badge inside V1's wrapping — the badge stops
+      lying, and the name stops being clipped. Nothing here measures that pair yet;
+      it is the next panel to draw.</p>
+
+    <h2>What the first run measured</h2>
+    <p>Numbers below are from <em>ikea · elaborated</em> at 240px — the real content
+      that ships once elaboration has run, at the width the panel now opens to. They
+      are reproduced live in each panel's commentary strip, so a change to the CSS
+      re-measures rather than re-asserting.</p>
+    <p><strong>V0 is the only variant that loses words</strong> — 7 of 11 rows clipped
+      at 240px, 11 of 11 at the 200px drag minimum. Its height never changes, because
+      that is exactly what it is buying. Every other variant trades depth for the words
+      back, and the question is only what the depth costs.</p>
+    <p><strong>Just letting it wrap is the cheapest fix, and it surprised me.</strong>
+      V1 costs +138px and clips nothing. I expected V4's regrouping to win, and it does
+      not: at +159px it is <em>taller</em> than simply wrapping. The reason is visible
+      in the panel — the Codebook-tags group has only one distinct badge value
+      (“Sentiment”), so promoting it to a sub-heading removes six identical pills and
+      adds a heading row, netting nothing. Grouping only pays where the column actually
+      varies, which here is the Sentiment group and not the tag group. That is an
+      argument for applying it per-group, not for the list as a whole.</p>
+    <p><strong>V3 is nearly free on depth</strong> — −3px, because dropping the pill
+      buys back most of what wrapping costs. It also reads best. It should not ship
+      alone: colour as the sole carrier of sentiment fails a colour-vision read and
+      needs a legend. It is here because <em>rail + grouped sentiment</em> is a real
+      combination, where the sub-heading spells out what the rail merely echoes.</p>
+    <p><strong>V2 and V5 both cost more than V1 for no additional words.</strong>
+      V2 (+235px) is the most legible two-line row and the most expensive. V5's inline
+      tail (+176px) forces a wrap wherever the badge doesn't fit after the last word,
+      which on this content is most rows — it flatters short names and punishes long
+      ones, which is the wrong way round for the set that has the problem.</p>
+    <p>Set the content picker to <em>ikea · plain</em> to see the other half of the
+      bind: at 240px nothing truncates in any variant, so every one of these layouts is
+      pure cost. The row is bimodal, and any layout chosen here is being chosen for the
+      elaborated case while the plain case pays for it.</p>
+
+    <h2>Lifting a winner into the app</h2>
+    <p>Each variant shares one markup contract, so the shipped component only has to grow
+      a class:</p>
+    <ul>
+      <li><code>SignalEntry</code> already exists as a discrete component in
+        <code>AnalysisSidebar.tsx</code> — extract it to its own file and give it a
+        <code>variant</code> prop.</li>
+      <li>V1, V2, V5 are pure CSS on the existing markup.</li>
+      <li>V3 needs a <code>--rail</code> custom property from the sentiment name, which
+        <code>getGroupBg()</code> already does for the tag colour sets.</li>
+      <li>V4 needs the grouping moved up: <code>signalsBySourceType()</code> gains a
+        sibling that buckets by <code>columnLabel</code>, and the badge stops rendering
+        per row — worth doing only for groups where that value varies.</li>
+    </ul>
+    <p><strong>Whatever wins, turn “break long words” on and check the torture set.</strong>
+      The shipped <code>.signal-entry-name</code> sets no <code>overflow-wrap</code>, which
+      costs nothing while the name is ellipsed on one line and starts mattering the moment
+      it is allowed to wrap. An unbreakable token — a compound identifier, a URL, a German
+      noun — overflows the panel silently in every wrapping variant until that property is
+      set.</p>
+    <p>The width slider stays useful after a variant wins — it's the check that the
+      chosen layout still holds at the 200px drag minimum, which is where a user who
+      wants their content back will put it.</p>
+  </div>
+</div>
+
+<script>
+// ── real content, pulled from trial-runs/*/bristlenose-output/.bristlenose/bristlenose.db
+//    (screen_clusters.screen_label, theme_groups.theme_label, elaboration_caches.signal_name)
+const SETS = {
+  plain: {
+    note: "project-ikea before elaboration — locations only",
+    sentiment: {
+      Section: [
+        ["Top Navigation", "confidence"], ["Top Navigation", "frustration"],
+        ["Beds Category", "frustration"], ["Beds Category", "confusion"],
+      ],
+    },
+    tags: {
+      Section: [
+        ["Beds Category", "Sentiment"], ["Top Navigation", "Sentiment"],
+        ["Checkout & Delivery", "Sentiment"], ["Product Detail", "Sentiment"],
+        ["Duvets & Bedding", "Sentiment"],
+      ],
+      Theme: [["Uncategorised", "Sentiment"]],
+    },
+  },
+  elab: {
+    note: "project-ikea after elaboration — LLM signal names",
+    sentiment: {
+      Section: [
+        ["Top Navigation", "confidence"], ["Top Navigation", "frustration"],
+        ["Beds Category", "frustration"], ["Beds Category", "confusion"],
+      ],
+    },
+    tags: {
+      Section: [
+        ["Performance Confusion Spike", "Sentiment", "tension"],
+        ["Navigation Confidence Disrupted", "Sentiment", "tension"],
+        ["Checkout Clarity Gap", "Sentiment", "tension"],
+        ["Product Exploration Tension", "Sentiment", "tension"],
+        ["Bedding Navigation Confusion", "Sentiment", "tension"],
+        ["Sort & Search Satisfaction", "Sentiment", "success"],
+      ],
+      Theme: [["Homepage Orientation Gap", "Sentiment", "gap"]],
+    },
+  },
+  uxf: {
+    note: "IKEA with uxfriends — the longest real names in the corpus",
+    sentiment: {
+      Section: [
+        ["Assembly & Instructions", "satisfaction"], ["Assembly & Instructions", "frustration"],
+        ["Showroom Wayfinding", "confusion"], ["Showroom Wayfinding", "delight"],
+      ],
+    },
+    tags: {
+      Section: [
+        ["Orientation-Visibility Tension", "Sentiment", "tension"],
+        ["Identity through craft objects", "Sentiment", "success"],
+        ["Navigation Confidence Tension", "Sentiment", "tension"],
+        ["Milestone-driven motivation", "Sentiment", "success"],
+        ["Language-Metaphor Tension", "Sentiment", "tension"],
+        ["Assembly as achievement", "Sentiment", "recovery"],
+      ],
+      Theme: [["Mixed Brand Sentiment", "Sentiment", "tension"]],
+    },
+  },
+  themes: {
+    note: "theme labels — the corpus tail (p90 41 chars, max 51). Nothing bounds this field.",
+    sentiment: {
+      Theme: [
+        ["Parking meter UI as a shared frustration flashpoint", "frustration"],
+        ["Payment step abandoned at the confirmation screen", "confusion"],
+        ["Repeat visitors rely on memory, not the interface", "confidence"],
+        ["Task entry via Google search", "satisfaction"],
+      ],
+    },
+    tags: {
+      Theme: [
+        ["Meter Frustration Uniformity", "Sentiment", "gap"],
+        ["Payment Clarity Gap", "Sentiment", "gap"],
+        ["Recall Over Recognition", "Sentiment", "tension"],
+        ["Search Entry Success", "Sentiment", "success"],
+      ],
+    },
+  },
+  torture: {
+    note: "synthetic — shapes that break wrapping rather than merely stress it",
+    sentiment: {
+      Section: [
+        ["Onboarding", "doubt"],
+        ["Account Creation & Verification Flow", "frustration"],
+        ["\u8a2d\u5b9a\u3068\u30d7\u30e9\u30a4\u30d0\u30b7\u30fc", "confusion"],
+        ["Unbreakablecompoundidentifier", "surprise"],
+      ],
+    },
+    tags: {
+      Section: [
+        ["Participants abandon the flow when the confirmation copy contradicts the button", "Sentiment"],
+        ["Wayfinding", "Sentiment"],
+        ["https://example.test/checkout/confirm?step=2&variant=control", "Sentiment"],
+        ["\u5e33\u7968\u306e\u30ec\u30a4\u30a2\u30a6\u30c8\u306b\u95a2\u3059\u308b\u6df7\u4e71", "Sentiment"],
+      ],
+      Theme: [["Uncategorised", "Sentiment"]],
+    },
+  },
+};
+
+/* Character lengths of all 347 row labels in the local corpus — 27 project
+   databases, screen_clusters.screen_label + theme_groups.theme_label +
+   elaboration_caches.signal_name. LENGTHS ONLY: no label text is embedded here,
+   because this file is tracked and the corpus is not.
+     screen_label  n=156  median 12  p90 19  max 29   (bounded in practice)
+     signal_name   n=62   median 23  p90 28  max 31   (prompt says "MUST be 2-4 words")
+     theme_label   n=129  median 21  p90 41  max 51   (prompt says only "concise")   */
+const CORPUS = [4,5,6,6,6,6,6,6,6,6,6,6,6,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,9,9,9,9,9,9,9,9,9,9,9,9,9,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,12,12,12,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,14,14,14,14,14,14,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,17,17,17,17,17,17,18,18,18,18,18,18,18,19,19,19,19,19,19,19,19,19,19,19,19,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,22,22,22,22,22,22,22,23,23,23,23,23,23,23,24,24,24,24,24,24,25,25,25,25,26,26,26,26,26,26,26,26,26,26,26,26,26,27,27,27,27,27,27,27,27,27,28,28,28,28,28,29,29,29,30,30,30,31,32,32,33,33,33,33,33,33,34,34,34,34,34,34,35,35,35,36,36,36,36,36,36,36,37,37,37,39,39,39,40,40,40,40,41,41,41,41,42,43,43,43,44,44,44,49,51,51,51];
+
+/**
+ * What fraction of real labels survive one line at this width?
+ * Approximate by design: measures the mean advance of a representative string
+ * in the row's own computed font, then counts corpus lengths that fit.
+ */
+function corpusCoverage(nameEl){
+  const probe = document.createElement("span");
+  probe.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;font:" +
+    getComputedStyle(nameEl).font;
+  probe.textContent = "Navigation Confidence Disrupted Checkout Delivery Beds";
+  document.body.appendChild(probe);
+  const per = probe.offsetWidth / probe.textContent.length;
+  document.body.removeChild(probe);
+  const fits = Math.floor(nameEl.clientWidth / per);
+  const n = CORPUS.filter(L => L <= fits).length;
+  return { chars: fits, pct: Math.round(100 * n / CORPUS.length) };
+}
+
+const SENTIMENTS = ["frustration","confusion","doubt","surprise","satisfaction","delight","confidence"];
+const RAIL = {
+  frustration:"var(--bn-sentiment-frustration)", confusion:"var(--bn-sentiment-confusion)",
+  doubt:"var(--bn-sentiment-doubt)", surprise:"var(--bn-sentiment-surprise)",
+  satisfaction:"var(--bn-sentiment-satisfaction)", delight:"var(--bn-sentiment-delight)",
+  confidence:"var(--bn-sentiment-confidence)",
+};
+
+const VARIANTS = [
+  ["v0","V0 · shipped","One line, name ellipses, badge pinned right. The baseline — and the only variant that discards words."],
+  ["v1","V1 · wrap","Same row, the name is allowed to wrap; badge holds the first line. Smallest change, and measured cheapest of the variants that keep every word."],
+  ["v2","V2 · stack","Name owns the full width; badge drops beneath it. Reads as a two-line entry, like a Mail message row."],
+  ["v3","V3 · rail","Sentiment becomes a coloured edge, pill removed. Widest name of all — but colour is the only carrier."],
+  ["v4","V4 · grouped","Badge promoted to a sub-heading and stops repeating. Only pays where that value varies — the tag group has one, so it adds a heading and buys nothing."],
+  ["v5","V5 · tail","Badge flows inline after the last word. Costs no column — but forces a wrap wherever it does not fit, which on long names is most rows."],
+  ["v6","V6 · paired","One entry per location carrying every sentiment it has. Name and badges share the line. Four sentiment rows become two — but two badges eat more width than one."],
+  ["v7","V7 · paired + stacked","Same pairing, badges beneath the name. The location gets the full width at every panel width, and there is still only one entry per location."],
+  ["v8","V8 · pattern","V0's geometry, a badge that means something. Sentiment rows keep their sentiment; codebook rows swap the constant group name for the pattern — and show nothing before elaboration."],
+];
+
+const state = { w:240, set:"plain", variantMark:false, brk:false };
+const bench = document.getElementById("bench");
+
+function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function badgeClass(label){ return SENTIMENTS.includes(label) ? "badge badge-"+label : "badge"; }
+
+function rowHTML(v, name, label, pattern, kind){
+  const rail = (v === "v3" && RAIL[label]) ? ` style="--rail:${RAIL[label]}"` : "";
+  // V8 changes only what the badge SAYS, never where it sits. Sentiment rows
+  // keep their sentiment — that was always a value. Codebook rows show the
+  // pattern, or nothing at all when elaboration has not run.
+  let badge = `<span class="${badgeClass(label)}">${esc(label)}</span>`;
+  if (v === "v8" && kind === "tags"){
+    badge = pattern ? `<span class="pattern-label pattern-${pattern}">${esc(pattern)}</span>` : "";
+  }
+  return `<a class="sig sig--${v}"${rail}><span class="sig-name">${esc(name)}</span>${badge}</a>`;
+}
+
+/**
+ * V6/V7 pair by LOCATION: one entry per name, carrying every badge that name
+ * has. Insertion order is preserved, so the name's target is genuinely "the
+ * first signal for this location", not an arbitrary member of the group.
+ */
+function pairByLocation(rows){
+  const out = new Map();
+  rows.forEach(([name, label], i) => {
+    if (!out.has(name)) out.set(name, { badges: [], first: i });
+    out.get(name).badges.push({ label, index: i });
+  });
+  return out;
+}
+
+/** A paired row: sibling links, never nested — name first, then each badge. */
+function pairedHTML(v, name, entry){
+  const badges = entry.badges.map(b =>
+    `<a class="sig-hit badge-hit" href="#" data-target="${esc(name)} · ${esc(b.label)}"`
+  + ` data-signal="${b.index + 1}" aria-label="${esc(name)}, ${esc(b.label)}">`
+  + `<span class="${badgeClass(b.label)}">${esc(b.label)}</span></a>`).join("");
+  return `<div class="sig sig--paired sig--${v}">`
+       + `<span class="sig-name"><a class="sig-hit name-hit" href="#"`
+       + ` data-target="${esc(name)}" data-signal="${entry.first + 1}"`
+       + ` aria-label="${esc(name)}, first signal">${esc(name)}</a></span>`
+       + `<span class="sig-badges">${badges}</span></div>`;
+}
+
+function pairedGroupHTML(v, rows){
+  let out = "";
+  for (const [name, entry] of pairByLocation(rows)) out += pairedHTML(v, name, entry);
+  return out;
+}
+
+/** V4 regroups: within each sourceType, bucket rows by their badge value. */
+function groupHTML(v, rows){
+  const buckets = new Map();
+  for (const [name,label] of rows){
+    if (!buckets.has(label)) buckets.set(label, []);
+    buckets.get(label).push(name);
+  }
+  let out = "";
+  for (const [label, names] of buckets){
+    out += `<div class="sig-group-head"><span class="${badgeClass(label)}">${esc(label)}</span><span class="rule"></span></div>`;
+    out += names.map(n => rowHTML(v, n, label)).join("");
+  }
+  return out;
+}
+
+function sectionHTML(v, heading, groups, kind){
+  let out = `<div class="toc-heading">${heading}</div>`;
+  for (const [sourceType, rows] of Object.entries(groups)){
+    out += `<div class="toc-sub-heading">${sourceType}</div>`;
+    out += (v === "v4")               ? groupHTML(v, rows)
+         : (v === "v6" || v === "v7") ? pairedGroupHTML(v, rows)
+         :                              rows.map(([n,l,pat]) => rowHTML(v,n,l,pat,kind)).join("");
+  }
+  return out;
+}
+
+function render(){
+  const data = SETS[state.set];
+  bench.innerHTML = VARIANTS.map(([v,title,verdict]) => `
+    <div class="cell" data-v="${v}">
+      <div class="frame" style="width:${state.w}px">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cname">${title}</span></div>
+        <div class="panel"><div class="panel-body${state.variantMark ? " mark-trunc" : ""}${state.brk ? " brk" : ""}">
+          ${sectionHTML(v, "Sentiment", data.sentiment, "sentiment")}
+          ${sectionHTML(v, "Codebooks", data.tags, "tags")}
+        </div></div>
+      </div>
+      <div class="commentary" style="width:${state.w}px">
+        <span class="clabel">Commentary · measured</span>
+        <div class="metrics" data-metrics></div>
+        <p class="verdict">${verdict}</p>
+      </div>
+    </div>`).join("");
+  measure();
+}
+
+/**
+ * Is this name losing characters?
+ *
+ * An INLINE box (V5) reports scrollWidth === clientWidth === 0, so the obvious
+ * check silently returns "never truncated" for that variant — it read 0 for
+ * every content set including torture, which is how a measuring instrument
+ * lies. Measure its line fragments against the row's content box instead.
+ */
+function isClipped(nameEl, rowEl){
+  // Paired rows wrap the text in a link, and the clipping happens THERE —
+  // measuring the outer span would report 0 for every row (see V5, above).
+  const hit = rowEl.querySelector(".name-hit");
+  if (hit) nameEl = hit;
+  if (getComputedStyle(nameEl).display === "inline"){
+    const cs = getComputedStyle(rowEl);
+    const avail = rowEl.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    return [...nameEl.getClientRects()].some(r => r.width > avail + 1);
+  }
+  return nameEl.scrollWidth > nameEl.clientWidth + 1;
+}
+
+/** Measure each panel after layout: truncated names, and the height it costs. */
+function measure(){
+  const heights = [];
+  document.querySelectorAll(".cell").forEach(cell => {
+    let trunc = 0;
+    cell.querySelectorAll(".sig").forEach(row => {
+      const n = row.querySelector(".sig-name");
+      const cut = isClipped(n, row);
+      n.classList.toggle("is-trunc", cut);
+      if (cut) trunc++;
+    });
+    const h = Math.round(cell.querySelector(".panel-body").getBoundingClientRect().height);
+    heights.push(h);
+    cell.dataset.h = h;
+    cell.dataset.trunc = trunc;
+  });
+  const base = heights[0] || 0;
+  document.querySelectorAll(".cell").forEach(cell => {
+    const t = +cell.dataset.trunc, h = +cell.dataset.h, d = h - base;
+    const cls = t === 0 ? "good" : "bad";
+    const delta = d === 0 ? "baseline" : (d > 0 ? "+"+d+"px" : d+"px");
+    // Distinct badge values in the Codebooks section — the measure of whether
+    // that column carries information or just repeats a column header.
+    const codebookBadges = new Set();
+    let seenSecond = false;
+    cell.querySelectorAll(".toc-heading, .sig, .sig-group-head").forEach(el => {
+      if (el.classList.contains("toc-heading")) { seenSecond = el.textContent === "Codebooks"; return; }
+      if (!seenSecond) return;
+      el.querySelectorAll(".badge, .pattern-label").forEach(b => codebookBadges.add(b.textContent.trim()));
+    });
+    const dCls = codebookBadges.size > 1 ? "good" : "bad";
+    let extra = `<span class="${dCls}" title="distinct badge values in the Codebooks section">`
+              + `<b>${codebookBadges.size}</b> distinct badge${codebookBadges.size === 1 ? "" : "s"}</span>`;
+    if (cell.dataset.v === "v0"){
+      const n = cell.querySelector(".sig--v0 .sig-name");
+      if (n){
+        const c = corpusCoverage(n);
+        extra += `<span title="of ${CORPUS.length} real labels across 27 projects">`
+               + `fits <b>${c.chars}</b> chars \u2192 <b>${c.pct}%</b> of corpus</span>`;
+      }
+    }
+    cell.querySelector("[data-metrics]").innerHTML =
+      `<span class="${cls}"><b>${t}</b> truncated</span>`
+    + `<span><b>${h}</b>px tall</span>`
+    + `<span>${delta}</span>` + extra;
+  });
+  document.getElementById("wnote").textContent = SETS[state.set].note;
+}
+
+// ── controls ────────────────────────────────────────────────────────────
+const wIn = document.getElementById("w"), wv = document.getElementById("wv");
+function setW(v){
+  state.w = v; wIn.value = v; wv.textContent = v;
+  document.querySelectorAll("[data-w]").forEach(b => b.classList.toggle("on", +b.dataset.w === v));
+  render();
+}
+wIn.addEventListener("input", e => setW(+e.target.value));
+document.querySelectorAll("[data-w]").forEach(b => b.addEventListener("click", () => setW(+b.dataset.w)));
+document.querySelectorAll("[data-set]").forEach(b => b.addEventListener("click", () => {
+  state.set = b.dataset.set;
+  document.querySelectorAll("[data-set]").forEach(x => x.classList.toggle("on", x === b));
+  render();
+}));
+document.querySelectorAll("[data-theme]").forEach(b => b.addEventListener("click", () => {
+  document.documentElement.dataset.colorTheme = b.dataset.theme;
+  document.querySelectorAll("[data-theme]").forEach(x => x.classList.toggle("on", x === b));
+}));
+document.getElementById("dark").addEventListener("click", e => {
+  const on = e.target.classList.toggle("on");
+  document.documentElement.style.colorScheme = on ? "dark" : "light dark";
+});
+document.getElementById("trunc").addEventListener("click", e => {
+  state.variantMark = e.target.classList.toggle("on");
+  render();
+});
+document.getElementById("brk").addEventListener("click", e => {
+  state.brk = e.target.classList.toggle("on");
+  render();
+});
+
+// Two destinations from one entry: the name goes to the location's first
+// signal, a badge goes to that exact one. Delegated so it survives re-render.
+document.getElementById("bench").addEventListener("click", e => {
+  const hit = e.target.closest(".sig-hit");
+  if (!hit) return;
+  e.preventDefault();
+  const kind = hit.classList.contains("name-hit") ? "name → first signal" : "badge → that signal";
+  document.getElementById("target").textContent =
+    `${kind}: ${hit.dataset.target} (signal #${hit.dataset.signal})`;
+  document.querySelectorAll(".sig--paired").forEach(r => r.classList.remove("active"));
+  hit.closest(".sig--paired").classList.add("active");
+});
+render();
+</script>
+</body>
+</html>

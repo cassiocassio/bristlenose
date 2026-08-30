@@ -488,6 +488,15 @@
     "pendingWeighted": "(tags in behandeling gewogen op AI-betrouwbaarheid)"
   },
   "codebook": {
+    "autocodeFailure": {
+      "outOfCredit": "Het tegoed van je AI-provideraccount is op.",
+      "rateLimited": "Snelheidslimiet bereikt \u2014 taggen gestopt. Probeer het straks opnieuw.",
+      "invalidKey": "Je API-sleutel is geweigerd.",
+      "serverError": "De AI-provider is niet beschikbaar. Probeer het straks opnieuw.",
+      "badRequest": "De AI-provider heeft het verzoek geweigerd.",
+      "network": "Kan de AI-provider niet bereiken. Controleer je verbinding.",
+      "unknown": "Taggen mislukt."
+    },
     "autocodeRefusal": {
       "noApiKey": "Voeg eerst een API-sleutel toe in Instellingen.",
       "providerLocal": "Hiervoor is een cloud-AI-provider nodig, geen lokaal model.",

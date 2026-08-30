@@ -488,6 +488,15 @@
     "pendingWeighted": "(vireillä olevat tunnisteet painotettu tekoälyn luottamuksen mukaan)"
   },
   "codebook": {
+    "autocodeFailure": {
+      "outOfCredit": "Teko\u00e4lypalvelun tilisi krediitit ovat loppuneet.",
+      "rateLimited": "Pyynt\u00f6raja saavutettu \u2013 merkint\u00e4 pys\u00e4ytetty. Yrit\u00e4 pian uudelleen.",
+      "invalidKey": "API-avaimesi hyl\u00e4ttiin.",
+      "serverError": "Teko\u00e4lypalvelu ei ole k\u00e4ytett\u00e4viss\u00e4. Yrit\u00e4 pian uudelleen.",
+      "badRequest": "Teko\u00e4lypalvelu hylk\u00e4si pyynn\u00f6n.",
+      "network": "Teko\u00e4lypalveluun ei saatu yhteytt\u00e4. Tarkista verkkoyhteys.",
+      "unknown": "Merkint\u00e4 ep\u00e4onnistui."
+    },
     "autocodeRefusal": {
       "noApiKey": "Lis\u00e4\u00e4 ensin API-avain Asetuksissa.",
       "providerLocal": "T\u00e4h\u00e4n tarvitaan pilvipohjainen teko\u00e4lypalvelu, ei paikallista mallia.",

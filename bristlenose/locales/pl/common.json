@@ -534,6 +534,15 @@
     "pendingWeighted": "(oczekujące tagi ważone pewnością AI)"
   },
   "codebook": {
+    "autocodeFailure": {
+      "outOfCredit": "Na koncie dostawcy AI sko\u0144czy\u0142y si\u0119 \u015brodki.",
+      "rateLimited": "Osi\u0105gni\u0119to limit zapyta\u0144 \u2013 tagowanie zatrzymane. Spr\u00f3buj wkr\u00f3tce.",
+      "invalidKey": "Tw\u00f3j klucz API zosta\u0142 odrzucony.",
+      "serverError": "Dostawca AI jest niedost\u0119pny. Spr\u00f3buj za chwil\u0119.",
+      "badRequest": "Dostawca AI odrzuci\u0142 \u017c\u0105danie.",
+      "network": "Nie mo\u017cna po\u0142\u0105czy\u0107 si\u0119 z dostawc\u0105 AI. Sprawd\u017a po\u0142\u0105czenie.",
+      "unknown": "Tagowanie nie powiod\u0142o si\u0119."
+    },
     "autocodeRefusal": {
       "noApiKey": "Najpierw dodaj klucz API w Ustawieniach.",
       "providerLocal": "To wymaga dostawcy AI w chmurze, nie modelu lokalnego.",

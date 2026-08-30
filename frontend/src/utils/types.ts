@@ -316,6 +316,13 @@ export interface AutoCodeJobStatus {
   processed_quotes: number;
   proposed_count: number;
   error_message: string;
+  /**
+   * `LLMFailureKind` value naming *why* the job died, or "" when it did not
+   * fail / the classifier declined to name it. Display via
+   * `autocodeFailure()` — never render `error_message`, which is raw
+   * exception text written for a log.
+   */
+  failure_kind: string;
   llm_provider: string;
   llm_model: string;
   input_tokens: number;

@@ -488,6 +488,15 @@
     "pendingWeighted": "(etiquetas pendentes ponderadas pela confiança da IA)"
   },
   "codebook": {
+    "autocodeFailure": {
+      "outOfCredit": "Sua conta no provedor de IA est\u00e1 sem cr\u00e9ditos.",
+      "rateLimited": "Limite de requisi\u00e7\u00f5es atingido \u2014 etiquetagem interrompida. Tente em breve.",
+      "invalidKey": "Sua chave de API foi rejeitada.",
+      "serverError": "O provedor de IA est\u00e1 indispon\u00edvel. Tente novamente em breve.",
+      "badRequest": "O provedor de IA rejeitou a solicita\u00e7\u00e3o.",
+      "network": "N\u00e3o foi poss\u00edvel contatar o provedor de IA. Verifique sua conex\u00e3o.",
+      "unknown": "Falha na etiquetagem."
+    },
     "autocodeRefusal": {
       "noApiKey": "Adicione uma chave de API em Configura\u00e7\u00f5es primeiro.",
       "providerLocal": "Isto exige um provedor de IA na nuvem, n\u00e3o um modelo local.",

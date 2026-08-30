@@ -488,6 +488,15 @@
     "pendingWeighted": "(étiquettes en attente pondérées par la confiance IA)"
   },
   "codebook": {
+    "autocodeFailure": {
+      "outOfCredit": "Le cr\u00e9dit de votre compte fournisseur d'IA est \u00e9puis\u00e9.",
+      "rateLimited": "Limite de d\u00e9bit atteinte : \u00e9tiquetage arr\u00eat\u00e9. R\u00e9essayez bient\u00f4t.",
+      "invalidKey": "Votre cl\u00e9 d'API a \u00e9t\u00e9 refus\u00e9e.",
+      "serverError": "Le fournisseur d'IA est indisponible. R\u00e9essayez sous peu.",
+      "badRequest": "Le fournisseur d'IA a refus\u00e9 la requ\u00eate.",
+      "network": "Impossible de joindre le fournisseur d'IA. V\u00e9rifiez votre connexion.",
+      "unknown": "\u00c9chec de l'\u00e9tiquetage."
+    },
     "autocodeRefusal": {
       "noApiKey": "Ajoutez d'abord une cl\u00e9 d'API dans R\u00e9glages.",
       "providerLocal": "Ceci n\u00e9cessite un fournisseur d'IA en ligne, pas un mod\u00e8le local.",

@@ -488,6 +488,15 @@
     "pendingWeighted": "(etiquetas pendientes ponderadas por confianza IA)"
   },
   "codebook": {
+    "autocodeFailure": {
+      "outOfCredit": "Tu cuenta del proveedor de IA se ha quedado sin cr\u00e9dito.",
+      "rateLimited": "L\u00edmite de peticiones alcanzado: etiquetado detenido. Int\u00e9ntalo pronto.",
+      "invalidKey": "Tu clave de API ha sido rechazada.",
+      "serverError": "El proveedor de IA no est\u00e1 disponible. Int\u00e9ntalo en breve.",
+      "badRequest": "El proveedor de IA ha rechazado la petici\u00f3n.",
+      "network": "No se ha podido contactar con el proveedor de IA. Comprueba tu conexi\u00f3n.",
+      "unknown": "Ha fallado el etiquetado."
+    },
     "autocodeRefusal": {
       "noApiKey": "A\u00f1ade una clave de API en Ajustes primero.",
       "providerLocal": "Esto necesita un proveedor de IA en la nube, no un modelo local.",

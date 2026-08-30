@@ -20,6 +20,7 @@ function makeStatus(overrides: Partial<AutoCodeJobStatus> = {}): AutoCodeJobStat
     processed_quotes: 3,
     proposed_count: 0,
     error_message: "",
+    failure_kind: "",
     llm_provider: "anthropic",
     llm_model: "claude-sonnet-4-5-20250929",
     input_tokens: 0,
@@ -86,9 +87,16 @@ describe("AutoCodeToast", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
-  it("shows error message on failure", async () => {
+  it("says why the job failed, from failure_kind", async () => {
     mockGetStatus.mockResolvedValue(
-      makeStatus({ status: "failed", error_message: "No API key" }),
+      makeStatus({
+        status: "failed",
+        failure_kind: "invalid_key",
+        // Raw SDK text, as `str(exc)` from a bare `except` actually produces.
+        error_message:
+          "Error code: 401 - {'type': 'error', 'error': {'type': " +
+          "'authentication_error', 'message': 'invalid x-api-key'}}",
+      }),
     );
 
     render(
@@ -102,7 +110,58 @@ describe("AutoCodeToast", () => {
 
     await act(async () => {});
 
-    expect(screen.getByText(/AutoCode failed: No API key/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Your API key was rejected/),
+    ).toBeInTheDocument();
+  });
+
+  it("never shows the raw exception text", async () => {
+    // The whole point: `error_message` is written for a log. It used to be
+    // interpolated straight into the sentence, so a 401 reached the researcher
+    // as a stringified JSON body.
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "failed",
+        failure_kind: "rate_limited",
+        error_message: "Error code: 429 - {'type': 'rate_limit_error'}",
+      }),
+    );
+
+    render(
+      <AutoCodeToast
+        frameworkId="garrett"
+        onComplete={vi.fn()}
+        onOpenReport={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    await act(async () => {});
+
+    expect(screen.queryByText(/rate_limit_error/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/429/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Rate limited/)).toBeInTheDocument();
+  });
+
+  it("falls back to the generic sentence when unclassified", async () => {
+    // Every job that failed before `failure_kind` existed.
+    mockGetStatus.mockResolvedValue(
+      makeStatus({ status: "failed", failure_kind: "", error_message: "boom" }),
+    );
+
+    render(
+      <AutoCodeToast
+        frameworkId="garrett"
+        onComplete={vi.fn()}
+        onOpenReport={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    await act(async () => {});
+
+    expect(screen.getByText(/Tagging failed/)).toBeInTheDocument();
+    expect(screen.queryByText(/boom/)).not.toBeInTheDocument();
   });
 
   it("dismiss button fires onDismiss", async () => {

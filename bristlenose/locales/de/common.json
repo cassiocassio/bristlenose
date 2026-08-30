@@ -488,6 +488,15 @@
     "pendingWeighted": "(ausstehende Tags gewichtet nach KI-Konfidenz)"
   },
   "codebook": {
+    "autocodeFailure": {
+      "outOfCredit": "Das Guthaben Ihres KI-Anbieter-Kontos ist aufgebraucht.",
+      "rateLimited": "Ratenlimit erreicht \u2013 Verschlagwortung gestoppt. Versuchen Sie es bald erneut.",
+      "invalidKey": "Ihr API-Schl\u00fcssel wurde abgelehnt.",
+      "serverError": "Der KI-Anbieter ist nicht erreichbar. Versuchen Sie es in K\u00fcrze erneut.",
+      "badRequest": "Der KI-Anbieter hat die Anfrage abgelehnt.",
+      "network": "KI-Anbieter nicht erreichbar. Pr\u00fcfen Sie Ihre Verbindung.",
+      "unknown": "Verschlagwortung fehlgeschlagen."
+    },
     "autocodeRefusal": {
       "noApiKey": "F\u00fcgen Sie zuerst einen API-Schl\u00fcssel in den Einstellungen hinzu.",
       "providerLocal": "Daf\u00fcr wird ein Cloud-KI-Anbieter ben\u00f6tigt, kein lokales Modell.",

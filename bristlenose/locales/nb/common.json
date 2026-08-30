@@ -488,6 +488,15 @@
     "pendingWeighted": "(ventende tagger vektet etter AI-tillit)"
   },
   "codebook": {
+    "autocodeFailure": {
+      "outOfCredit": "Kontoen din hos KI-leverand\u00f8ren er tom for kreditt.",
+      "rateLimited": "Hastighetsgrense n\u00e5dd \u2013 merking stoppet. Pr\u00f8v igjen snart.",
+      "invalidKey": "API-n\u00f8kkelen din ble avvist.",
+      "serverError": "KI-leverand\u00f8ren er utilgjengelig. Pr\u00f8v igjen snart.",
+      "badRequest": "KI-leverand\u00f8ren avviste foresp\u00f8rselen.",
+      "network": "Kunne ikke n\u00e5 KI-leverand\u00f8ren. Sjekk tilkoblingen din.",
+      "unknown": "Merking mislyktes."
+    },
     "autocodeRefusal": {
       "noApiKey": "Legg f\u00f8rst til en API-n\u00f8kkel i Innstillinger.",
       "providerLocal": "Dette krever en sky-KI-leverand\u00f8r, ikke en lokal modell.",

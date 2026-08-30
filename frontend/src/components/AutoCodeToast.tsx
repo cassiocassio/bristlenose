@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { autocodeFailure } from "../utils/autocodeFailure";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { getAutoCodeStatus } from "../utils/api";
@@ -157,8 +158,10 @@ export function AutoCodeToast({
         <>
           <span className="toast-error">&#x2717;</span>
           <span>
-            {job.error_message
-              ? t("autocode.toast.failedWithError", { error: job.error_message })
+            {job.status === "failed"
+              ? t("autocode.toast.failedWithError", {
+                  error: autocodeFailure(job.failure_kind).message,
+                })
               : t("autocode.toast.failed")}
           </span>
         </>

@@ -488,6 +488,15 @@
     "pendingWeighted": "(afventende tags vægtet efter AI-tillid)"
   },
   "codebook": {
+    "autocodeFailure": {
+      "outOfCredit": "Din konto hos AI-udbyderen er l\u00f8bet t\u00f8r for kredit.",
+      "rateLimited": "Hastighedsgr\u00e6nse n\u00e5et \u2013 tagging stoppet. Pr\u00f8v igen snart.",
+      "invalidKey": "Din API-n\u00f8gle blev afvist.",
+      "serverError": "AI-udbyderen er utilg\u00e6ngelig. Pr\u00f8v igen om lidt.",
+      "badRequest": "AI-udbyderen afviste foresp\u00f8rgslen.",
+      "network": "Kunne ikke n\u00e5 AI-udbyderen. Tjek din forbindelse.",
+      "unknown": "Tagging mislykkedes."
+    },
     "autocodeRefusal": {
       "noApiKey": "Tilf\u00f8j f\u00f8rst en API-n\u00f8gle i Indstillinger.",
       "providerLocal": "Dette kr\u00e6ver en sky-AI-udbyder, ikke en lokal model.",

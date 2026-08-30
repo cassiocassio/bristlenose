@@ -488,6 +488,15 @@
     "pendingWeighted": "(tag in sospeso ponderati in base alla confidenza dell'IA)"
   },
   "codebook": {
+    "autocodeFailure": {
+      "outOfCredit": "Il credito del tuo account del fornitore di IA \u00e8 esaurito.",
+      "rateLimited": "Limite di richieste raggiunto: etichettatura interrotta. Riprova a breve.",
+      "invalidKey": "La tua chiave API \u00e8 stata rifiutata.",
+      "serverError": "Il fornitore di IA non \u00e8 disponibile. Riprova a breve.",
+      "badRequest": "Il fornitore di IA ha rifiutato la richiesta.",
+      "network": "Impossibile raggiungere il fornitore di IA. Controlla la connessione.",
+      "unknown": "Etichettatura non riuscita."
+    },
     "autocodeRefusal": {
       "noApiKey": "Aggiungi prima una chiave API in Impostazioni.",
       "providerLocal": "Serve un fornitore di IA nel cloud, non un modello locale.",

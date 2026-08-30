@@ -523,6 +523,15 @@
     "pendingWeighted": "(čekající štítky vážené spolehlivostí AI)"
   },
   "codebook": {
+    "autocodeFailure": {
+      "outOfCredit": "Na \u00fa\u010dtu poskytovatele AI do\u0161el kredit.",
+      "rateLimited": "Dosa\u017een limit po\u017eadavk\u016f \u2013 ozna\u010dov\u00e1n\u00ed zastaveno. Zkuste to brzy znovu.",
+      "invalidKey": "V\u00e1\u0161 kl\u00ed\u010d API byl odm\u00edtnut.",
+      "serverError": "Poskytovatel AI je nedostupn\u00fd. Zkuste to za chv\u00edli.",
+      "badRequest": "Poskytovatel AI odm\u00edtl po\u017eadavek.",
+      "network": "Nepoda\u0159ilo se spojit s poskytovatelem AI. Zkontrolujte p\u0159ipojen\u00ed.",
+      "unknown": "Ozna\u010dov\u00e1n\u00ed selhalo."
+    },
     "autocodeRefusal": {
       "noApiKey": "Nejprve p\u0159idejte kl\u00ed\u010d API v Nastaven\u00ed.",
       "providerLocal": "Toto vy\u017eaduje cloudov\u00e9ho poskytovatele AI, ne lok\u00e1ln\u00ed model.",

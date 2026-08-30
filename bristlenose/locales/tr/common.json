@@ -488,6 +488,15 @@
     "pendingWeighted": "(bekleyen etiketler YZ güvenine göre ağırlıklandırıldı)"
   },
   "codebook": {
+    "autocodeFailure": {
+      "outOfCredit": "Yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 hesab\u0131n\u0131zda kredi kalmad\u0131.",
+      "rateLimited": "H\u0131z s\u0131n\u0131r\u0131na ula\u015f\u0131ld\u0131 \u2014 etiketleme durdu. Birazdan tekrar deneyin.",
+      "invalidKey": "API anahtar\u0131n\u0131z reddedildi.",
+      "serverError": "Yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 kullan\u0131lam\u0131yor. Birazdan tekrar deneyin.",
+      "badRequest": "Yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 iste\u011fi reddetti.",
+      "network": "Yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131na ula\u015f\u0131lamad\u0131. Ba\u011flant\u0131n\u0131z\u0131 kontrol edin.",
+      "unknown": "Etiketleme ba\u015far\u0131s\u0131z oldu."
+    },
     "autocodeRefusal": {
       "noApiKey": "\u00d6nce Ayarlar'da bir API anahtar\u0131 ekleyin.",
       "providerLocal": "Bunun i\u00e7in yerel model de\u011fil, bulut yapay zek\u00e2 sa\u011flay\u0131c\u0131s\u0131 gerekir.",

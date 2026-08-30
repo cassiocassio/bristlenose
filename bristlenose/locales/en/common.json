@@ -488,6 +488,15 @@
     "pendingWeighted": "(pending tags weighted by AI confidence)"
   },
   "codebook": {
+    "autocodeFailure": {
+      "outOfCredit": "Your AI provider account is out of credit.",
+      "rateLimited": "Rate limited \u2014 tagging stopped. Try again soon.",
+      "invalidKey": "Your API key was rejected.",
+      "serverError": "The AI provider is unavailable. Try again shortly.",
+      "badRequest": "The AI provider rejected the request.",
+      "network": "Couldn't reach the AI provider. Check your connection.",
+      "unknown": "Tagging failed."
+    },
     "autocodeRefusal": {
       "noApiKey": "Add an API key in Settings first.",
       "providerLocal": "This needs a cloud AI provider, not a local model.",

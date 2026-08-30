@@ -21,6 +21,7 @@ function makeStatus(overrides: Partial<AutoCodeJobStatus> = {}): AutoCodeJobStat
     processed_quotes: 3,
     proposed_count: 0,
     error_message: "",
+    failure_kind: "",
     llm_provider: "anthropic",
     llm_model: "claude-sonnet-4-5-20250929",
     input_tokens: 0,

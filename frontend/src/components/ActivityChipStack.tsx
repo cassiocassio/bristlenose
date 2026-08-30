@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { getAutoCodeStatus } from "../utils/api";
 import type { AutoCodeJobStatus } from "../utils/types";
+import { autocodeFailure } from "../utils/autocodeFailure";
 import { ActivityChip } from "./ActivityChip";
 import type { ActivityChipJob } from "./ActivityChip";
 
@@ -84,7 +85,13 @@ function normaliseAutoCode(status: AutoCodeJobStatus): NormalisedJobStatus {
     status: effectiveStatus,
     progressLabel,
     durationLabel,
-    errorMessage: status.error_message || null,
+    // Resolve at the API/UI boundary, not at the render site: error_message is
+    // str(exc) from a bare except, so interpolating it made a rate limit read as
+    // "Tagging failed: Error code: 429 - {'type': 'error', ...}".
+    errorMessage:
+      effectiveStatus === "failed"
+        ? autocodeFailure(status.failure_kind).message
+        : null,
   };
 }
 

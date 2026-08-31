@@ -284,7 +284,14 @@ probe_done() {
             # not look" and "looked and it is not there" lead to opposite
             # actions on a step that spends a build number forever.
             [ -x desktop/scripts/upload-testflight.sh ] || return 3
-            desktop/scripts/upload-testflight.sh --probe "$V" >/dev/null 2>&1
+            # BN_PROBE_WINDOW_S: keep re-reading before answering "absent".
+            # ASC's build index is eventually consistent and this probe gates a
+            # step that cannot be un-performed, so a single negative read
+            # inside the propagation window is not evidence. Only the caller
+            # that already has a recorded success sets this (see the `prev=ok`
+            # arm below); a cold probe stays instant.
+            BN_PROBE_WINDOW_S="${BN_PROBE_WINDOW_S:-0}" \
+                desktop/scripts/upload-testflight.sh --probe "$V" >/dev/null 2>&1
             case $? in 0) return 0 ;; 1) return 1 ;; *) return 3 ;; esac
             ;;
         tag)
@@ -930,12 +937,50 @@ cmd_run() {
         if [ "$prev" = "ok" ]; then
             case "$kind" in
                 soft|hard)
-                    probe_done "$id"; _pd=$?
+                    # A recorded success plus an absent probe is most often
+                    # propagation lag, so give the probe a window HERE and only
+                    # here — a cold probe (no recorded success) has nothing to
+                    # wait for and stays instant.
+                    BN_PROBE_WINDOW_S=180 probe_done "$id"; _pd=$?
                     case "$_pd" in
                         0) printf '  %b—%b %-26s %balready done in the world%b\n' "$D" "$N" "$label" "$D" "$N"
                            continue ;;
-                        1) printf '  %b⚠%b %-26s %blog says done, the world disagrees, re-running%b\n' \
-                               "$Y" "$N" "$label" "$D" "$N" ;;
+                        1) # THE LOG AND THE PROBE DISAGREE — STOP, DO NOT RE-RUN.
+                           #
+                           # This used to print "re-running" and do it. On
+                           # 31 Aug 2026 that offered to re-upload a TestFlight
+                           # build seconds after the upload had recorded
+                           # "state VALID · confirmed present in App Store
+                           # Connect" with a delivery id — a positive ASC read —
+                           # because a later ASC read inside the propagation
+                           # window came back empty. Apple refused the duplicate
+                           # (ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE); the
+                           # build number survived because the downstream system
+                           # declined, not because this was right.
+                           #
+                           # Two readings of the same eventually-consistent
+                           # system disagreed, and the newer one won. Recency is
+                           # the wrong tie-break — provenance is. A confirmed
+                           # delivery cannot be un-happened by a later empty
+                           # read, and an empty read has a known benign cause.
+                           #
+                           # And the costs are asymmetric: believing the false
+                           # negative spends a build number forever; believing
+                           # the stale positive costs a re-check. On a soft or
+                           # hard step the tie breaks toward the reversible
+                           # option, which is to stop and let a human look.
+                           #
+                           # The probe above already re-read for the window
+                           # before saying this, so reaching here means it
+                           # stayed absent throughout — which is worth a human
+                           # either way.
+                           printf '\n  %b✗%b %s is recorded done, but the probe still cannot find it.\n' "$R" "$N" "$label"
+                           printf '    Two readings disagree and one of them is a recorded success.\n'
+                           printf '    Check the step log before re-running — a re-run here is not free:\n'
+                           printf '      %s\n' "$RUNDIR/logs/$id.1.log"
+                           printf '    If it really did not happen:  release.sh retry %s %s\n' "$V" "$id"
+                           printf '    If it did and the world is slow:  release.sh run %s   (re-probes)\n\n' "$V"
+                           exit 3 ;;
                         *) # 2 = no probe exists · 3 = the probe could not run.
                            # Both are "I do not know", and the only safe answer
                            # on an irreversible step is to stop and ask.

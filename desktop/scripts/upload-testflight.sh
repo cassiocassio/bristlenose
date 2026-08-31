@@ -151,18 +151,52 @@ q = urllib.parse.urlencode({
 req = urllib.request.Request(
     "https://api.appstoreconnect.apple.com/v1/builds?" + q,
     headers={"Authorization": "Bearer " + jwt})
-try:
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        data = json.load(resp).get("data", [])
-except Exception as e:
-    print("probe: ASC unreachable or refused (%s) — cannot look" % e, file=sys.stderr)
-    sys.exit(3)
 
-if data:
-    print("probe: ASC holds build %s of %s" % (
-        data[0].get("attributes", {}).get("version", "?"), os.environ["PROBE_V"]))
-    sys.exit(0)
-print("probe: no build of %s on ASC" % os.environ["PROBE_V"])
+
+def _look():
+    """One read. Returns the build list, or raises."""
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.load(resp).get("data", [])
+
+
+# ONE READ IS NOT EVIDENCE OF ABSENCE. ASC's build index is eventually
+# consistent: a delivery confirmed VALID at upload time does not appear here
+# for several minutes, and this probe gates a step that CANNOT be un-performed.
+# On 31 Aug 2026 a single negative read inside that window told release.sh the
+# 0.29.0 TestFlight upload had not happened, seconds after the upload had
+# written "state VALID · confirmed present in App Store Connect" with a
+# delivery id. It offered to re-run — spending a build number forever — and
+# only Apple's own ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE refused the second
+# upload. The build number survived because the downstream system declined,
+# not because this gate was right.
+#
+# So: when the answer would be "absent", keep looking for BN_PROBE_WINDOW_S
+# before saying so. Default 0 — a bare probe stays instant, which is what
+# `verify` wants — and release.sh raises it for exactly the case where lag is
+# the likely explanation (its own log already records the step as done).
+window = int(os.environ.get("BN_PROBE_WINDOW_S", "0") or 0)
+deadline = time.monotonic() + window
+attempt = 0
+while True:
+    attempt += 1
+    try:
+        data = _look()
+    except Exception as e:
+        print("probe: ASC unreachable or refused (%s) — cannot look" % e, file=sys.stderr)
+        sys.exit(3)
+    if data:
+        print("probe: ASC holds build %s of %s%s" % (
+            data[0].get("attributes", {}).get("version", "?"), os.environ["PROBE_V"],
+            "" if attempt == 1 else " (after %d reads)" % attempt))
+        sys.exit(0)
+    if time.monotonic() >= deadline:
+        break
+    print("probe: not yet — re-reading in 20s (%ds of %ds window used)" % (
+        int(window - max(0, deadline - time.monotonic())), window), file=sys.stderr)
+    time.sleep(20)
+print("probe: no build of %s on ASC%s" % (
+    os.environ["PROBE_V"],
+    "" if window == 0 else " after %ds of re-reads" % window))
 sys.exit(1)
 PYEOF
 fi

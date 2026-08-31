@@ -7,6 +7,8 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   variant?: "danger" | "primary";
   accentColour?: string;
+  /** An acknowledgement, not a choice: one OK button, no Cancel. Escape still dismisses via `onCancel`. */
+  hideCancel?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
   "data-testid"?: string;
@@ -18,6 +20,7 @@ export function ConfirmDialog({
   confirmLabel,
   variant = "danger",
   accentColour,
+  hideCancel = false,
   onConfirm,
   onCancel,
   "data-testid": testId,
@@ -72,9 +75,11 @@ export function ConfirmDialog({
       <p className="confirm-dialog-title">{title}</p>
       {body && <div className="confirm-dialog-body">{body}</div>}
       <div className="confirm-dialog-actions">
-        <button className="confirm-dialog-btn confirm-dialog-btn--cancel" onClick={onCancel}>
-          {t("buttons.cancel")}
-        </button>
+        {!hideCancel && (
+          <button className="confirm-dialog-btn confirm-dialog-btn--cancel" onClick={onCancel}>
+            {t("buttons.cancel")}
+          </button>
+        )}
         <button ref={btnRef} className={btnClass} onClick={onConfirm}>
           {confirmLabel ?? t("buttons.delete")}
         </button>

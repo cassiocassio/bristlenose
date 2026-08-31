@@ -14,6 +14,7 @@
     "help": "Aiuto"
   },
   "buttons": {
+    "ok": "OK",
     "save": "Salva",
     "cancel": "Annulla",
     "retry": "Riprova",
@@ -521,6 +522,7 @@
     "tagOnQuotes_one": "Questo tag è presente in {{count}} citazione.",
     "tagOnQuotes_other": "Questo tag è presente in {{count}} citazioni.",
     "newGroup": "Nuovo gruppo",
+    "nameTaken": "Il nome \"{{name}}\" \u00e8 gi\u00e0 in uso. Scegli un altro nome.",
     "newCode": "Nuovo codice",
     "browseCodebooks": "Libreria dei libri dei codici",
     "browseCodebooksButton": "Sfoglia i libri dei codici",

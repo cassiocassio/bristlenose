@@ -14,6 +14,7 @@
     "help": "Hjelp"
   },
   "buttons": {
+    "ok": "OK",
     "save": "Lagre",
     "cancel": "Avbryt",
     "retry": "Prøv igjen",
@@ -521,6 +522,7 @@
     "tagOnQuotes_one": "Denne taggen er på {{count}} sitat.",
     "tagOnQuotes_other": "Denne taggen er på {{count}} sitater.",
     "newGroup": "Ny gruppe",
+    "nameTaken": "Navnet \u00ab{{name}}\u00bb er allerede i bruk. Velg et annet navn.",
     "newCode": "Ny kode",
     "browseCodebooks": "Kodebokbibliotek",
     "browseCodebooksButton": "Bla i kodeb\u00f8ker",

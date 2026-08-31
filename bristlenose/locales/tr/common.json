@@ -14,6 +14,7 @@
     "help": "Yardım"
   },
   "buttons": {
+    "ok": "Tamam",
     "save": "Kaydet",
     "cancel": "İptal",
     "retry": "Yeniden Dene",
@@ -521,6 +522,7 @@
     "tagOnQuotes_one": "Bu etiket {{count}} alıntıda bulunuyor.",
     "tagOnQuotes_other": "Bu etiket {{count}} alıntıda bulunuyor.",
     "newGroup": "Yeni grup",
+    "nameTaken": "\"{{name}}\" ad\u0131 zaten kullan\u0131l\u0131yor. L\u00fctfen ba\u015fka bir ad se\u00e7in.",
     "newCode": "Yeni kod",
     "browseCodebooks": "Kod defteri kitaplığı",
     "browseCodebooksButton": "Kod Kitaplar\u0131na G\u00f6z At",

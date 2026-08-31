@@ -51,7 +51,7 @@ import { CodebookV2UninstallSheet } from "../components/CodebookV2UninstallSheet
 // this lens is lazy.
 import { ThresholdReviewModal } from "../components/ThresholdReviewModal";
 // By path, not through the `components` barrel — see the note above.
-import { MergeConfirm } from "../components/CodebookAuthoring";
+import { MergeConfirm, NameClashDialog } from "../components/CodebookAuthoring";
 import { useCodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import { isExportMode } from "../utils/exportData";
 import i18n from "../i18n";
@@ -643,6 +643,11 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         pending={authoring.pendingMerge}
         onConfirm={authoring.onConfirmMerge}
         onCancel={authoring.onCancelMerge}
+      />
+      {/* Refused rename — a group name another group already holds. */}
+      <NameClashDialog
+        name={authoring.nameClash}
+        onDismiss={authoring.onDismissNameClash}
       />
       {/* Q15 — the shipped threshold review, unchanged. `onApply` mirrors
           `CodebookPanel.handleReportApply`: close, refetch, and tell the other

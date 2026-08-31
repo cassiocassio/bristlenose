@@ -14,6 +14,7 @@
     "help": "Help"
   },
   "buttons": {
+    "ok": "OK",
     "save": "Bewaar",
     "cancel": "Annuleer",
     "retry": "Probeer opnieuw",
@@ -521,6 +522,7 @@
     "tagOnQuotes_one": "Deze tag staat op {{count}} citaat.",
     "tagOnQuotes_other": "Deze tag staat op {{count}} citaten.",
     "newGroup": "Nieuwe groep",
+    "nameTaken": "De naam \"{{name}}\" is al in gebruik. Kies een andere naam.",
     "newCode": "Nieuwe code",
     "browseCodebooks": "Codeboekbibliotheek",
     "browseCodebooksButton": "Blader door codeboeken",

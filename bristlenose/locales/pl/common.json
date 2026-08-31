@@ -14,6 +14,7 @@
     "help": "Pomoc"
   },
   "buttons": {
+    "ok": "OK",
     "save": "Zapisz",
     "cancel": "Anuluj",
     "retry": "Spróbuj ponownie",
@@ -571,6 +572,7 @@
     "tagOnQuotes_many": "Ten tag jest na {{count}} cytatach.",
     "tagOnQuotes_other": "Ten tag jest na {{count}} cytatach.",
     "newGroup": "Nowa grupa",
+    "nameTaken": "Nazwa \u201e{{name}}\u201d jest ju\u017c zaj\u0119ta. Wybierz inn\u0105 nazw\u0119.",
     "newCode": "Nowy kod",
     "browseCodebooks": "Biblioteka ksiąg kodów",
     "browseCodebooksButton": "Przegl\u0105daj ksi\u0119gi kod\u00f3w",

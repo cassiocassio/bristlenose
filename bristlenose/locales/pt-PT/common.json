@@ -14,6 +14,7 @@
     "help": "Ajuda"
   },
   "buttons": {
+    "ok": "OK",
     "save": "Guardar",
     "cancel": "Cancelar",
     "retry": "Tentar novamente",
@@ -521,6 +522,7 @@
     "tagOnQuotes_one": "Esta etiqueta está em {{count}} citação.",
     "tagOnQuotes_other": "Esta etiqueta está em {{count}} citações.",
     "newGroup": "Novo grupo",
+    "nameTaken": "O nome \"{{name}}\" j\u00e1 est\u00e1 em uso. Escolha outro nome.",
     "newCode": "Novo código",
     "browseCodebooks": "Biblioteca de livros de códigos",
     "browseCodebooksButton": "Navegar Livros de C\u00f3digos",

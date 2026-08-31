@@ -14,6 +14,7 @@
     "help": "Nápověda"
   },
   "buttons": {
+    "ok": "OK",
     "save": "Uložit",
     "cancel": "Zrušit",
     "retry": "Zkusit znovu",
@@ -560,6 +561,7 @@
     "tagOnQuotes_many": "Tento štítek je na {{count}} citátu.",
     "tagOnQuotes_other": "Tento štítek je na {{count}} citátech.",
     "newGroup": "Nová skupina",
+    "nameTaken": "N\u00e1zev \u201e{{name}}\u201c se ji\u017e pou\u017e\u00edv\u00e1. Zvolte pros\u00edm jin\u00fd n\u00e1zev.",
     "newCode": "Nový kód",
     "browseCodebooks": "Knihovna knih kódů",
     "browseCodebooksButton": "Proch\u00e1zet knihy k\u00f3d\u016f",

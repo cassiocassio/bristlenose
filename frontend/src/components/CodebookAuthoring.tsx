@@ -599,3 +599,33 @@ export function MergeConfirm({
     </div>
   );
 }
+
+/**
+ * The refused-rename notice — Finder's model: the name is already taken, OK,
+ * and the title has already snapped back (the write never happened, so the
+ * display never left the stored name). An acknowledgement rather than a
+ * choice, hence one button. Renders nothing when there is no clash, so the
+ * lens carries a single line, same as `MergeConfirm`.
+ */
+export function NameClashDialog({
+  name,
+  onDismiss,
+}: {
+  name: string | null;
+  onDismiss: () => void;
+}) {
+  const { t } = useTranslation();
+  if (name === null) return null;
+  return (
+    <div className="merge-overlay">
+      <ConfirmDialog
+        title={t("codebook.nameTaken", { name })}
+        confirmLabel={t("buttons.ok")}
+        variant="primary"
+        hideCancel
+        onConfirm={onDismiss}
+        onCancel={onDismiss}
+      />
+    </div>
+  );
+}

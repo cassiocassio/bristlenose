@@ -14,6 +14,7 @@
     "help": "輔助說明"
   },
   "buttons": {
+    "ok": "\u597d",
     "save": "儲存",
     "cancel": "取消",
     "retry": "重試",
@@ -499,6 +500,7 @@
     "deleteTagTitle": "刪除「{{name}}」？",
     "tagOnQuotes_other": "此標籤位於 {{count}} 則引述上。",
     "newGroup": "新群組",
+    "nameTaken": "\u540d\u7a31\u300c{{name}}\u300d\u5df2\u88ab\u4f7f\u7528\u3002\u8acb\u9078\u64c7\u5176\u4ed6\u540d\u7a31\u3002",
     "newCode": "新編碼",
     "browseCodebooks": "編碼簿庫",
     "browseCodebooksButton": "\u700f\u89bd\u7de8\u78bc\u7c3f",

@@ -321,7 +321,83 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     const calls = mockFetch();
     await lens.floor();
     await userEvent.click(screen.getByText("New group"));
-    await waitFor(() => expect(sent(calls, "/codebook/groups", "POST")).toBeTruthy());
+    await waitFor(() => {
+      const post = sent(calls, "/codebook/groups", "POST");
+      expect(post).toBeTruthy();
+      // No group is named "New group" yet, so the plain name is free — the
+      // numbering below only exists for clashes.
+      expect(JSON.parse(post!.body!).name).toBe("New group");
+    });
+  });
+
+  it("numbers a new group when 'New group' is already taken", async () => {
+    // A second unrenamed group would clash with the first, so it becomes
+    // "New group 2" (then 3, and so on). Renaming the first frees the plain
+    // name again — the check reads current names, not a counter.
+    const calls = mockFetch({
+      ...CODEBOOK,
+      groups: [
+        ...CODEBOOK.groups,
+        {
+          id: 4,
+          name: "New group",
+          subtitle: "",
+          colour_set: "trust",
+          order: 3,
+          tags: [],
+          total_quotes: 0,
+          is_default: false,
+          framework_id: null,
+        },
+      ],
+    });
+    await lens.floor();
+    // Two "New group" texts are on screen now — the existing card's title and
+    // the placeholder card. Click the placeholder.
+    const label = screen
+      .getAllByText("New group")
+      .find((el) => el.closest(".new-group-placeholder"))!;
+    await userEvent.click(label);
+    await waitFor(() => {
+      const post = sent(calls, "/codebook/groups", "POST");
+      expect(post).toBeTruthy();
+      expect(JSON.parse(post!.body!).name).toBe("New group 2");
+    });
+  });
+
+  it("refuses a group rename that clashes, with a dialog, and keeps the old name", async () => {
+    // Finder's model: the write never happens, a single-OK dialog names the
+    // clash, and the title snaps back because the display renders the stored
+    // name. Cancel would be a second way to say the only thing OK says.
+    const calls = mockFetch();
+    await lens.floor();
+    await userEvent.click(screen.getByText("Delight"));
+    const editing = document.querySelector('.group-title-text[contenteditable="true"]') as HTMLElement;
+    expect(editing).not.toBeNull();
+    editing.textContent = "Friction";
+    editing.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(
+      await screen.findByText('The name "Friction" is already taken. Please choose another name.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+    expect(sent(calls, "/codebook/groups/2", "PATCH")).toBeFalsy();
+    await userEvent.click(screen.getByRole("button", { name: "OK" }));
+    expect(screen.queryByText(/already taken/)).not.toBeInTheDocument();
+    expect(live("Delight")).toBeInTheDocument();
+  });
+
+  it("renames a group to a free name through PATCH", async () => {
+    const calls = mockFetch();
+    await lens.floor();
+    await userEvent.click(screen.getByText("Delight"));
+    const editing = document.querySelector('.group-title-text[contenteditable="true"]') as HTMLElement;
+    editing.textContent = "Joy signals";
+    editing.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await waitFor(() => {
+      const patch = sent(calls, "/codebook/groups/2", "PATCH");
+      expect(patch).toBeTruthy();
+      expect(JSON.parse(patch!.body!).name).toBe("Joy signals");
+    });
   });
 
   it("moves a tag by dropping it on another group", async () => {

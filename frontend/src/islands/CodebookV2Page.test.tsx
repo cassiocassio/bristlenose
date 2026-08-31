@@ -22,6 +22,8 @@ const inertAuthoring: CodebookAuthoring = {
   pendingMerge: null,
   onConfirmMerge: vi.fn(),
   onCancelMerge: vi.fn(),
+  nameClash: null,
+  onDismissNameClash: vi.fn(),
 };
 
 function book(over: Partial<PageBook> = {}): PageBook {

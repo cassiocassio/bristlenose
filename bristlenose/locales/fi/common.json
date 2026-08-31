@@ -14,6 +14,7 @@
     "help": "Ohje"
   },
   "buttons": {
+    "ok": "OK",
     "save": "Tallenna",
     "cancel": "Peruuta",
     "retry": "Yritä uudelleen",
@@ -521,6 +522,7 @@
     "tagOnQuotes_one": "Tämä tunniste on {{count}} sitaatissa.",
     "tagOnQuotes_other": "Tämä tunniste on {{count}} sitaatissa.",
     "newGroup": "Uusi ryhmä",
+    "nameTaken": "Nimi \u201d{{name}}\u201d on jo k\u00e4yt\u00f6ss\u00e4. Valitse toinen nimi.",
     "newCode": "Uusi koodi",
     "browseCodebooks": "Koodikirjojen kirjasto",
     "browseCodebooksButton": "Selaa koodikirjoja",

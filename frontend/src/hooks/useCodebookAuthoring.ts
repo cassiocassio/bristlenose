@@ -50,6 +50,9 @@ export interface CodebookAuthoring {
   pendingMerge: PendingMerge | null;
   onConfirmMerge: () => void;
   onCancelMerge: () => void;
+  /** A rename that was refused because another group holds the name. Feed to `NameClashDialog`. */
+  nameClash: string | null;
+  onDismissNameClash: () => void;
 }
 
 interface Options {
@@ -66,21 +69,48 @@ interface Options {
 export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAuthoring {
   const dragTagRef = useRef<{ tag: CodebookTagResponse; fromGroupId: number } | null>(null);
   const [pendingMerge, setPendingMerge] = useState<PendingMerge | null>(null);
+  const [nameClash, setNameClash] = useState<string | null>(null);
 
   const nextColourSet = useCallback(() => {
     const usedSets = new Set(groups?.map((g) => g.colour_set) ?? []);
     return COLOUR_SET_ORDER.find((s) => !usedSets.has(s)) ?? "ux";
   }, [groups]);
 
+  /**
+   * The first name no other group holds: the base itself, then "base 2",
+   * "base 3", … Checked against every group, frameworks included — and against
+   * the *current* names, so once the first "New group" is renamed the plain
+   * name is free again.
+   */
+  const nextGroupName = useCallback(() => {
+    const taken = new Set(groups?.map((g) => g.name) ?? []);
+    const base = i18n.t("codebook.newGroup");
+    if (!taken.has(base)) return base;
+    let n = 2;
+    while (taken.has(`${base} ${n}`)) n += 1;
+    return `${base} ${n}`;
+  }, [groups]);
+
   // --- Group mutations ---
 
   const onUpdateGroup = useCallback(
     (groupId: number, fields: { name?: string; subtitle?: string }) => {
+      // A rename to a name another group already holds is refused, Finder-style:
+      // no write, a dialog naming the clash, and the title snaps back to what it
+      // was (the display always renders the stored name). "Uncategorised" is a
+      // real clash too — the server looks the floor group up *by that name*.
+      if (
+        fields.name !== undefined &&
+        groups?.some((g) => g.id !== groupId && g.name === fields.name)
+      ) {
+        setNameClash(fields.name);
+        return;
+      }
       updateCodebookGroup(groupId, fields)
         .then(onChanged)
         .catch((err) => console.error("Update group failed:", err));
     },
-    [onChanged],
+    [groups, onChanged],
   );
 
   const onDeleteGroup = useCallback(
@@ -93,10 +123,10 @@ export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAu
   );
 
   const onCreateGroup = useCallback(() => {
-    createCodebookGroup(i18n.t("codebook.newGroup"), nextColourSet())
+    createCodebookGroup(nextGroupName(), nextColourSet())
       .then(onChanged)
       .catch((err) => console.error("Create group failed:", err));
-  }, [nextColourSet, onChanged]);
+  }, [nextGroupName, nextColourSet, onChanged]);
 
   // --- Tag mutations ---
 
@@ -168,18 +198,20 @@ export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAu
 
   const onCancelMerge = useCallback(() => setPendingMerge(null), []);
 
+  const onDismissNameClash = useCallback(() => setNameClash(null), []);
+
   const onDropNewGroup = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       const dragInfo = dragTagRef.current;
       if (!dragInfo) return;
       dragTagRef.current = null;
-      createCodebookGroup(i18n.t("codebook.newGroup"), nextColourSet())
+      createCodebookGroup(nextGroupName(), nextColourSet())
         .then((newGroup) => updateCodebookTag(dragInfo.tag.id, { group_id: newGroup.id }))
         .then(onChanged)
         .catch((err) => console.error("Create group from drag failed:", err));
     },
-    [nextColourSet, onChanged],
+    [nextGroupName, nextColourSet, onChanged],
   );
 
   // Memoised so the bundle has the same reference stability the ten separate
@@ -217,5 +249,7 @@ export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAu
     pendingMerge,
     onConfirmMerge,
     onCancelMerge,
+    nameClash,
+    onDismissNameClash,
   };
 }

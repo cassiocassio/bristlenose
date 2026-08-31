@@ -14,6 +14,7 @@
     "help": "Ajuda"
   },
   "buttons": {
+    "ok": "D'acord",
     "save": "Desa",
     "cancel": "Cancel·la",
     "retry": "Torna-ho a provar",
@@ -523,6 +524,7 @@
     "foldedSummary_one": "{{count}} etiqueta · {{coded}} codificades",
     "foldedSummary_other": "{{count}} etiquetes · {{coded}} codificades",
     "newGroup": "Grup nou",
+    "nameTaken": "El nom \u00ab{{name}}\u00bb ja est\u00e0 en \u00fas. Tria un altre nom.",
     "newCode": "Codi nou",
     "browseCodebooks": "Biblioteca de llibres de codis",
     "browseCodebooksButton": "Explora els llibres de codis",

@@ -14,6 +14,7 @@
     "help": "Hjälp"
   },
   "buttons": {
+    "ok": "OK",
     "save": "Spara",
     "cancel": "Avbryt",
     "retry": "Försök igen",
@@ -521,6 +522,7 @@
     "tagOnQuotes_one": "Den här taggen finns på {{count}} citat.",
     "tagOnQuotes_other": "Den här taggen finns på {{count}} citat.",
     "newGroup": "Ny grupp",
+    "nameTaken": "Namnet \u201d{{name}}\u201d anv\u00e4nds redan. V\u00e4lj ett annat namn.",
     "newCode": "Ny kod",
     "browseCodebooks": "Kodboksbibliotek",
     "browseCodebooksButton": "Bl\u00e4ddra bland kodb\u00f6cker",

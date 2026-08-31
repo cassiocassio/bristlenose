@@ -14,6 +14,7 @@
     "help": "Help"
   },
   "buttons": {
+    "ok": "OK",
     "save": "Save",
     "cancel": "Cancel",
     "retry": "Retry",
@@ -523,6 +524,7 @@
     "foldedSummary_one": "{{count}} tag · {{coded}} coded",
     "foldedSummary_other": "{{count}} tags · {{coded}} coded",
     "newGroup": "New group",
+    "nameTaken": "The name \"{{name}}\" is already taken. Please choose another name.",
     "newCode": "New code",
     "browseCodebooks": "Codebook Library",
     "browseCodebooksButton": "Browse Codebooks",

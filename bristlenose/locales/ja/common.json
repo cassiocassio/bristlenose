@@ -14,6 +14,7 @@
     "help": "ヘルプ"
   },
   "buttons": {
+    "ok": "OK",
     "save": "保存",
     "cancel": "キャンセル",
     "retry": "\u518d\u8a66\u884c",
@@ -516,6 +517,7 @@
     "tagOnQuotes_one": "このタグは {{count}} 件の発言に付いています。",
     "tagOnQuotes_other": "このタグは {{count}} 件の発言に付いています。",
     "newGroup": "新規グループ",
+    "nameTaken": "\u300c{{name}}\u300d\u3068\u3044\u3046\u540d\u524d\u306f\u3059\u3067\u306b\u4f7f\u308f\u308c\u3066\u3044\u307e\u3059\u3002\u5225\u306e\u540d\u524d\u3092\u9078\u3093\u3067\u304f\u3060\u3055\u3044\u3002",
     "newCode": "新規コード",
     "browseCodebooks": "コードブックライブラリ",
     "browseCodebooksButton": "\u30b3\u30fc\u30c9\u30d6\u30c3\u30af\u3092\u53c2\u7167",

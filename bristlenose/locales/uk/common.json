@@ -14,6 +14,7 @@
     "help": "Довідка"
   },
   "buttons": {
+    "ok": "OK",
     "save": "Зберегти",
     "cancel": "Скасувати",
     "retry": "Повторити",
@@ -571,6 +572,7 @@
     "tagOnQuotes_many": "Цей тег є на {{count}} цитатах.",
     "tagOnQuotes_other": "Цей тег є на {{count}} цитатах.",
     "newGroup": "Нова група",
+    "nameTaken": "\u0406\u043c'\u044f \u00ab{{name}}\u00bb \u0432\u0436\u0435 \u0437\u0430\u0439\u043d\u044f\u0442\u0435. \u0412\u0438\u0431\u0435\u0440\u0456\u0442\u044c \u0456\u043d\u0448\u0435 \u0456\u043c'\u044f.",
     "newCode": "Новий код",
     "browseCodebooks": "Бібліотека кодових книг",
     "browseCodebooksButton": "\u041f\u0435\u0440\u0435\u0433\u043b\u044f\u043d\u0443\u0442\u0438 \u043a\u043e\u0434\u043e\u0432\u0456 \u043a\u043d\u0438\u0433\u0438",

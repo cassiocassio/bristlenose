@@ -14,6 +14,7 @@
     "help": "Hilfe"
   },
   "buttons": {
+    "ok": "OK",
     "save": "Sichern",
     "cancel": "Abbrechen",
     "retry": "Erneut versuchen",
@@ -521,6 +522,7 @@
     "tagOnQuotes_one": "Dieses Tag ist an {{count}} Zitat.",
     "tagOnQuotes_other": "Dieses Tag ist an {{count}} Zitaten.",
     "newGroup": "Neue Gruppe",
+    "nameTaken": "Der Name \"{{name}}\" wird bereits verwendet. W\u00e4hle einen anderen Namen.",
     "newCode": "Neuer Code",
     "browseCodebooks": "Codebuch-Bibliothek",
     "browseCodebooksButton": "Codeb\u00fccher durchsuchen",

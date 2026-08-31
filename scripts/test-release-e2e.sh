@@ -221,7 +221,7 @@ rc=$(drive 1.0.0 --skip flibbertigibbet)
 eq "refuses an unknown step id" 2 "$rc"
 grep -q "no such step" "$WORK/out" && ok "names the valid ids" || bad "silent"
 
-head_ "9 · a probe that says DONE skips; one that says ABSENT re-runs"
+head_ "9 · a probe that says DONE skips; one that says ABSENT stops"
 fresh
 steps <<'EOF'
 tag|tag + push|hard|1m||THIS PUBLISHES|sh -c 'echo RERAN >> ran.txt'
@@ -235,8 +235,15 @@ rc=$(drive 1.0.0)
                             || ok "probe says done -> skipped"
 stub git 'case "$*" in *ls-remote*) exit 0 ;; *) exit 0 ;; esac'   # empty output = absent
 rc=$(drive 1.0.0)
-[ -f "$WORK/repo/ran.txt" ] && ok "probe says absent -> re-ran" \
-                            || bad "did not re-run when the world says absent"
+# CONTRACT CHANGED 31 Aug 2026 — this used to assert a re-run, and that is the
+# behaviour that offered to re-upload TestFlight build 3067 seconds after the
+# upload had recorded a confirmed delivery. The step log and the probe are two
+# readings of one eventually-consistent system; when they disagree and one of
+# them is a recorded success, the driver stops and shows both rather than
+# picking the newer. Do not "restore" the re-run — it is the defect.
+[ -f "$WORK/repo/ran.txt" ] && bad "re-ran a recorded success on a single absent probe" \
+                            || ok "probe says absent -> stopped, did not re-run"
+eq "recorded success + absent probe -> stop" 3 "$rc"
 
 head_ "9a · an UNREACHABLE probe must not read as absent (F41)"
 # `git ls-remote | grep -q .` gave 1 for both "no such tag" and "no network".
@@ -505,9 +512,12 @@ grep -q 'already done in the world' "$WORK/out" \
 
 printf '#!/bin/sh\nexit 1\n' > "$WORK/repo/desktop/scripts/upload-testflight.sh"
 rc=$(drive 9.3.0)
-eq "probe says absent -> re-runs and completes" 75 "$rc"
-grep -q 'log says done, the world disagrees' "$WORK/out" \
-    && ok "world-disagrees branch taken" || bad "world-disagrees branch not taken"
+# Same contract change as case 9: a recorded success the probe cannot confirm
+# is a question for a human, not a licence to repeat an irreversible act.
+eq "probe says absent on a recorded success -> stops" 3 "$rc"
+grep -q 'is recorded done, but the probe still cannot find it' "$WORK/out" \
+    && ok "the disagreement is surfaced, not resolved by re-running" \
+    || bad "disagreement branch not taken"
 
 printf '#!/bin/sh\nexit 3\n' > "$WORK/repo/desktop/scripts/upload-testflight.sh"
 rc=$(drive 9.3.0)

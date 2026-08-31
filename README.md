@@ -16,7 +16,7 @@ You can tag and star quotes to organise them. It auto-tags with sentiment analys
 
 Filter your quotes, and export via CSV to your boards in Miro, Figjam, Mural or Lucidspark, or spreadsheet - for further analysis.   
 
-Bristlenose transcribes locally, and can do the thematic analysis on a (built in) local LLM — but for speedy results you'll want an API key from Claude, ChatGPT, Gemini, or Azure OpenAI. For commercial work, check your org's policies on public LLM use.
+Bristlenose transcribes on your machine and sends the transcripts to a frontier model for the thematic analysis — Claude, ChatGPT, Gemini, or Azure OpenAI. That is the everyday path, and you'll want an API key for it. Running the analysis on a local model instead is supported through Ollama (a separate install), but it is slower and wants a capable machine. For commercial work, check your org's policies on public LLM use.
 
 Expect about $0.40 per hour of interview audio with Claude — provider costs vary.
 
@@ -89,13 +89,15 @@ sudo dnf copr enable cassiocassio/bristlenose
 sudo dnf install bristlenose
 
 # Linux / macOS / Windows (pipx or uv)
-pipx install bristlenose
-uv tool install bristlenose    # alternative
+pipx install 'bristlenose[serve]'
+uv tool install 'bristlenose[serve]'    # alternative
 ```
 
 The `brew trust` line is a one-off. Homebrew 6.0 and later skip third-party taps during `brew upgrade` unless trusted, so without it Bristlenose installs fine but silently stops receiving updates.
 
 The Snap and the Fedora package are both **amd64/x86_64 only** — on ARM Linux, use pipx.
+
+The `[serve]` extra is not optional in practice: `run`, `analyze` and `serve` all require it, and without it they stop before doing any work. Homebrew, Snap and the Fedora package install it for you; with pipx or uv you ask for it. (Quote the spec — `zsh` reads bare brackets as a glob.)
 
 If using pipx or uv, you'll also need FFmpeg (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu, `sudo dnf install ffmpeg-free` on Fedora, `winget install FFmpeg` on Windows).
 
@@ -349,7 +351,7 @@ On Linux, install `python3.12` and `ffmpeg` via your package manager. On Windows
 ### Verify everything works
 
 ```bash
-.venv/bin/python -m pytest tests/    # ~3100 Python tests; frontend has ~1400 Vitest tests (`npm test` in frontend/)
+.venv/bin/python -m pytest tests/    # ~4300 Python tests; frontend has ~1700 Vitest tests (`npm test` in frontend/)
 .venv/bin/ruff check .               # lint
 .venv/bin/mypy bristlenose/          # type check (some third-party SDK errors are expected)
 ```

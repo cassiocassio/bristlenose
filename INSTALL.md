@@ -56,7 +56,7 @@ If you prefer not to use Homebrew:
 3. **Install bristlenose:**
 
    ```bash
-   pipx install bristlenose
+   pipx install 'bristlenose[serve]'
    ```
 
 4. **Install FFmpeg** (needed for audio/video processing):
@@ -67,7 +67,7 @@ If you prefer not to use Homebrew:
 
    If you don't have Homebrew, download FFmpeg from [ffmpeg.org/download.html](https://ffmpeg.org/download.html).
 
-> If you use [uv](https://docs.astral.sh/uv/): `uv tool install bristlenose`
+> If you use [uv](https://docs.astral.sh/uv/): `uv tool install 'bristlenose[serve]'`
 
 ---
 
@@ -130,7 +130,7 @@ ffmpeg -version
 ### Step 4: Install bristlenose
 
 ```
-pipx install bristlenose
+pipx install 'bristlenose[serve]'
 ```
 
 ### Step 5: Verify
@@ -156,7 +156,7 @@ pipx ensurepath
 Close and reopen your terminal, then:
 
 ```bash
-pipx install bristlenose
+pipx install 'bristlenose[serve]'
 ```
 
 ### Snap
@@ -198,7 +198,7 @@ pipx ensurepath
 Close and reopen your terminal, then:
 
 ```bash
-pipx install bristlenose
+pipx install 'bristlenose[serve]'
 ```
 
 `ffmpeg-free` is Fedora's patent-free FFmpeg build, and it handles everything Bristlenose
@@ -217,7 +217,7 @@ pipx ensurepath
 Close and reopen your terminal, then:
 
 ```bash
-pipx install bristlenose
+pipx install 'bristlenose[serve]'
 ```
 
 ### Linux Mint
@@ -229,10 +229,10 @@ Linux Mint is Debian-based — follow the [Ubuntu / Debian](#ubuntu--debian) ins
 Install Python 3.10+, pipx, and FFmpeg using your distribution's package manager, then:
 
 ```bash
-pipx install bristlenose
+pipx install 'bristlenose[serve]'
 ```
 
-> If you use [uv](https://docs.astral.sh/uv/): `uv tool install bristlenose`
+> If you use [uv](https://docs.astral.sh/uv/): `uv tool install 'bristlenose[serve]'`
 
 ---
 

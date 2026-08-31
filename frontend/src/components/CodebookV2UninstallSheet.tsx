@@ -27,6 +27,7 @@
  * to inform them.
  */
 
+import { useEffect, useRef } from "react";
 import type { RemoveFrameworkInfo } from "../utils/types";
 import { useTranslation } from "react-i18next";
 
@@ -49,6 +50,20 @@ export function CodebookV2UninstallSheet({
   onCancel,
   onConfirm,
 }: Props) {
+  // FOCUS THE CONFIRM BUTTON, the way `ConfirmDialog` already does — a ref and
+  // an effect, not the `autoFocus` prop. Three reasons it is not a lint
+  // workaround: focus must move INTO a modal for it to be usable by keyboard
+  // and screen reader at all; `jsx-a11y/no-autofocus` is aimed at page-load
+  // autofocus, which this is not; and the house pattern is one mechanism, not
+  // two. The behaviour is deliberate and matches the destructive-confirm rule
+  // — Cancel leads, the action trails and takes the default, because the person
+  // chose Uninstall by clicking it and Return-to-confirm is then the greater
+  // convenience (Apple's own Empty Trash precedent).
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    confirmRef.current?.focus();
+  }, []);
+
   const { t } = useTranslation();
   // One line per kind, zero-count kinds omitted — a "0 tags" line is noise in a
   // list whose whole job is to be read at a glance. Lifted from the re-analyse
@@ -127,7 +142,7 @@ export function CodebookV2UninstallSheet({
             className="bn-btn bn-btn-primary"
             onClick={onConfirm}
             data-testid="bn-v2-uninstall-confirm"
-            autoFocus
+            ref={confirmRef}
           >
             Uninstall
           </button>

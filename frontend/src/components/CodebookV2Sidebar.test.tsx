@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { CodebookV2Sidebar, buildBooks, type V2NavBook } from "./CodebookV2Sidebar";
 import {
   resetCodebookV2Selection,
@@ -40,6 +41,22 @@ vi.mock("../utils/api", () => ({
 
 beforeEach(() => resetCodebookV2Selection());
 
+// The navigator reads and writes the `?view=library` search param (Browse
+// Library), so it needs router context. `initialEntries` matches the route
+// AppLayout actually mounts it on.
+function LocationProbe() {
+  const loc = useLocation();
+  return <span data-testid="loc-search">{loc.search}</span>;
+}
+
+const renderSidebar = (entry = "/report/codebook-v2") =>
+  render(
+    <MemoryRouter initialEntries={[entry]}>
+      <CodebookV2Sidebar />
+      <LocationProbe />
+    </MemoryRouter>,
+  );
+
 // ── The house typography, not a v2 dialect ─────────────────────────────────
 
 describe("it is the standard content navigator", () => {
@@ -50,7 +67,7 @@ describe("it is the standard content navigator", () => {
   // reimplementable per-lens.
 
   it("uses the shipped row and heading classes", async () => {
-    render(<CodebookV2Sidebar />);
+    renderSidebar();
     await screen.findByTestId("bn-v2-nav-row-floor");
 
     // `.toc-link` carries the metrics; `.codebook-toc-link` the codebook
@@ -68,7 +85,7 @@ describe("it is the standard content navigator", () => {
     // palette's *success* background — so the current codebook rendered mint
     // green. `.toc-link.active` is `--bn-nav-selection-bg`, a neutral grey.
     // Selection is not success.
-    render(<CodebookV2Sidebar />);
+    renderSidebar();
     await screen.findByTestId("bn-v2-nav-row-nielsen");
 
     act(() => selectCodebookV2("nielsen"));
@@ -80,7 +97,7 @@ describe("it is the standard content navigator", () => {
   });
 
   it("uses the shipped disabled modifier for a switched-off codebook", async () => {
-    render(<CodebookV2Sidebar />);
+    renderSidebar();
     await screen.findByTestId("bn-v2-nav-row-nielsen");
     // getFrameworkStates says nielsen is off.
     expect(screen.getByTestId("bn-v2-nav-row-nielsen").className).toContain(
@@ -92,7 +109,7 @@ describe("it is the standard content navigator", () => {
   });
 
   it("announces itself and its current row to assistive tech", async () => {
-    render(<CodebookV2Sidebar />);
+    renderSidebar();
     await screen.findByTestId("bn-v2-nav-row-floor");
     expect(screen.getByRole("navigation", { name: "Codebooks" })).toBeInTheDocument();
 
@@ -118,13 +135,13 @@ describe("the second line is a person, or nothing", () => {
   // from a third party's and IS decision-relevant.
 
   it("renders an author under a framework", async () => {
-    render(<CodebookV2Sidebar />);
+    renderSidebar();
     const row = await screen.findByTestId("bn-v2-nav-row-nielsen");
     expect(row).toHaveTextContent("Jakob Nielsen");
   });
 
   it("renders nothing under a built-in, collapsing the row to one line", async () => {
-    render(<CodebookV2Sidebar />);
+    renderSidebar();
     const row = await screen.findByTestId("bn-v2-nav-row-sentiment");
     expect(row).not.toHaveTextContent("On by default");
     expect(row.querySelector(".v2-nav-provenance")).toBeNull();
@@ -133,7 +150,7 @@ describe("the second line is a person, or nothing", () => {
   });
 
   it("leaves the floor with no second line either", async () => {
-    render(<CodebookV2Sidebar />);
+    renderSidebar();
     const row = await screen.findByTestId("bn-v2-nav-row-floor");
     expect(row.querySelector(".v2-nav-provenance")).toBeNull();
   });
@@ -144,7 +161,7 @@ describe("the enable switch rides on the row", () => {
     // The floor is not a codebook you can switch off — it is your own tags
     // (D20). Everything else gets one, because this rail is where a codebook
     // is turned on and off; the shipped navigator's status dot only reports.
-    render(<CodebookV2Sidebar />);
+    renderSidebar();
     await screen.findByTestId("bn-v2-nav-row-floor");
 
     const floor = screen.getByTestId("bn-v2-nav-row-floor");
@@ -159,7 +176,7 @@ describe("the enable switch rides on the row", () => {
   it("toggling does not also select the row", async () => {
     // The switch is a control ON a navigation row; a click that both enabled a
     // codebook and navigated to it would make one gesture do two things.
-    render(<CodebookV2Sidebar />);
+    renderSidebar();
     await screen.findByTestId("bn-v2-nav-row-sentiment");
 
     const sw = screen
@@ -177,13 +194,77 @@ describe("the enable switch rides on the row", () => {
     // Read-only and offline: `/framework-states` is a write.
     const exportData = await import("../utils/exportData");
     vi.spyOn(exportData, "isExportMode").mockReturnValue(true);
-    render(<CodebookV2Sidebar />);
+    renderSidebar();
     await screen.findByTestId("bn-v2-nav-row-nielsen");
     expect(
       screen
         .getByTestId("bn-v2-nav-row-nielsen")
         .querySelector('[role="switch"], input[type="checkbox"]'),
     ).toBeNull();
+    vi.mocked(exportData.isExportMode).mockRestore();
+  });
+});
+
+describe("Browse Library closes the rail's one gap", () => {
+  // The rail is installed-only (D17), so a codebook the researcher has not
+  // taken appears nowhere in it. v1 listed those as greyed rows, each its own
+  // door to the catalogue; v2 removed the rows, which removed the doors with
+  // them. This button is the replacement.
+
+  it("sits after the last framework row", async () => {
+    renderSidebar();
+    await screen.findByTestId("bn-v2-nav-row-nielsen");
+    const nav = screen.getByTestId("bn-v2-nav");
+    const kids = Array.from(nav.children);
+    expect(kids.indexOf(screen.getByTestId("bn-v2-nav-browse"))).toBe(kids.length - 1);
+    expect(screen.getByTestId("bn-v2-nav-browse")).toHaveTextContent("Browse Library");
+  });
+
+  it("is the house small secondary, not a sidebar dialect of one", async () => {
+    // The same classes as the codebook page's Review button. This shipped
+    // first as `.sidebar-mini-btn` — v1's atom with its padding retuned to
+    // fit — which is a bespoke control wearing a house class.
+    renderSidebar();
+    const btn = await screen.findByTestId("bn-v2-nav-browse");
+    expect(btn.className).toBe("bn-btn bn-btn-secondary bn-btn-sm");
+  });
+
+  it("sits inside `.v2-nav`, which is what puts `bn-btn-sm` in scope", async () => {
+    // `.bn-btn-sm` is scoped to `.v2-layout` / `.section-heading` on purpose —
+    // the size axis is a declared gap, not a promoted atom. The navigator is
+    // in the left panel, inside neither, so without this class the button
+    // silently falls back to full `.bn-btn` metrics: no error, just the wrong
+    // size. Deleting the class would leave every test above still green.
+    const { container } = renderSidebar();
+    const btn = await screen.findByTestId("bn-v2-nav-browse");
+    expect(container.querySelector("nav.v2-nav")).not.toBeNull();
+    expect(btn.closest(".v2-nav")).not.toBeNull();
+  });
+
+  it("goes where the lens's own Browse Library goes — `?view=library`", async () => {
+    // Same destination, same mechanism. If this ever diverges from
+    // `CodebookV2`'s `setView("browse")`, one of the two buttons is lying —
+    // and the lens reads the param, so a wrong value is a button that does
+    // nothing rather than one that errors.
+    renderSidebar("/report/codebook-v2?keep=1");
+    fireEvent.click(await screen.findByTestId("bn-v2-nav-browse"));
+    await waitFor(() => {
+      const q = new URLSearchParams(screen.getByTestId("loc-search").textContent ?? "");
+      expect(q.get("view")).toBe("library");
+      // Other params survive: the handler edits a copy of `prev` rather than
+      // replacing the query wholesale.
+      expect(q.get("keep")).toBe("1");
+    });
+  });
+
+  it("is absent from an exported report (Q14)", async () => {
+    // The templates route is SERVER_ONLY and installing is a write, so there is
+    // no catalogue to browse — the same reason the lens hides its own button.
+    const exportData = await import("../utils/exportData");
+    vi.spyOn(exportData, "isExportMode").mockReturnValue(true);
+    renderSidebar();
+    await screen.findByTestId("bn-v2-nav-row-nielsen");
+    expect(screen.queryByTestId("bn-v2-nav-browse")).toBeNull();
     vi.mocked(exportData.isExportMode).mockRestore();
   });
 });

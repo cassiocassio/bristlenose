@@ -48,6 +48,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   apiGet,
   getCodebook,
@@ -202,6 +203,7 @@ export function CodebookV2Sidebar() {
   const { selectedId } = useCodebookV2Store();
   const [books, setBooks] = useState<V2NavBook[] | null>(null);
   const readOnly = isExportMode();
+  const [, setSearchParams] = useSearchParams();
 
   const load = useCallback(() => {
     // One pass. `/codebook/templates` is SERVER_ONLY, so it is absent from an
@@ -248,6 +250,24 @@ export function CodebookV2Sidebar() {
       .catch(() => load());
   }, []);
 
+  // The catalogue is a URL, not component state (D22), so this goes to exactly
+  // where the lens's own Browse Library button goes — `?view=library` on this
+  // route, which `CodebookV2` reads back. Deep-linkable, survives a reload, and
+  // Back returns to the codebook rather than leaving the lens. A custom event
+  // would have been the v1 idiom and would have lost all three.
+  const openLibrary = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        const p = new URLSearchParams(prev);
+        p.set("view", "library");
+        return p;
+      },
+      // Not `replace`: opening the catalogue is a navigation the researcher
+      // chose, so Back should close it again.
+      { replace: false },
+    );
+  }, [setSearchParams]);
+
   if (books === null) return null;
 
   const floor = books.filter((b) => b.floor);
@@ -274,10 +294,41 @@ export function CodebookV2Sidebar() {
   );
 
   return (
-    <nav aria-label="Codebooks" data-testid="bn-v2-nav">
+    <nav className="v2-nav" aria-label="Codebooks" data-testid="bn-v2-nav">
       {section("Manual tags", floor)}
       {section("Default", builtIn)}
       {section("Frameworks", frameworks)}
+      {/* The rail is installed-only (D17), so the codebooks a researcher has
+          NOT taken are reachable from here by no other route — v1's rail listed
+          them as greyed rows and each one was its own door to the catalogue.
+          This is that door, once, at the end of the list, rather than nine
+          times inside it.
+
+          It is the SAME small secondary as the codebook page's Review button
+          (`bn-btn bn-btn-secondary bn-btn-sm`), not a sidebar dialect of one.
+          This first shipped as `.sidebar-mini-btn` — v1's atom, retuned to fit
+          — which is a bespoke control wearing a house class. v2 already has a
+          size axis; being in the left panel rather than the lens is not a
+          reason to leave it.
+
+          `.bn-btn-sm` is scoped (`.v2-layout`, `.section-heading`) because the
+          size axis is a declared gap, filed rather than granted — so the nav
+          carries `v2-nav` and is named in that same rule, deliberately not
+          promoted to the shipped atom.
+
+          Q14 — hidden in export mode, on the same reasoning as the lens's own:
+          the templates route is server-only and installing is a write, so there
+          is no catalogue to browse in an exported report. */}
+      {!readOnly && (
+        <button
+          type="button"
+          className="bn-btn bn-btn-secondary bn-btn-sm"
+          data-testid="bn-v2-nav-browse"
+          onClick={openLibrary}
+        >
+          Browse Library
+        </button>
+      )}
     </nav>
   );
 }

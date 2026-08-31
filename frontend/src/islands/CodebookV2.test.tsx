@@ -71,6 +71,21 @@ const templates = { templates: [
     ] },
 ]};
 
+/** Captures what the lens hands `useCodebookAuthoring`, without replacing it —
+ *  the real hook still runs, so every other test is unaffected. */
+let authoringOnChanged: (() => void) | null = null;
+vi.mock("../hooks/useCodebookAuthoring", async (importActual) => {
+  const actual =
+    await importActual<typeof import("../hooks/useCodebookAuthoring")>();
+  return {
+    ...actual,
+    useCodebookAuthoring: (opts: Parameters<typeof actual.useCodebookAuthoring>[0]) => {
+      authoringOnChanged = opts.onChanged;
+      return actual.useCodebookAuthoring(opts);
+    },
+  };
+});
+
 vi.mock("../utils/api", () => ({
   // The navigator titles the floor row with the project name, from /info.
   apiGet: vi.fn(() => Promise.resolve({ project_name: "Ikea" })),
@@ -199,6 +214,38 @@ describe("D22 — Browse Library is the navigation", () => {
     await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
   });
 
+  it("the zone title takes the plural on the catalogue", async () => {
+    // The h1 names what the zone SHOWS, not the lens. The page is one
+    // codebook; the library is every one of them, and a grid of nine cards
+    // under a singular title is the heading disagreeing with the content
+    // beneath it.
+    const { fireEvent } = await import("@testing-library/react");
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      /^Codebook$/,
+    );
+
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      /^Codebooks$/,
+    );
+  });
+
+  it("keeps ONE zone title across both views", async () => {
+    // Not cosmetic: the shared datum rule matches
+    // `section:first-of-type > .section-heading`, so a second heading
+    // construction for the catalogue would be a second thing to keep flush —
+    // the precise defect this lens shipped with on 30 Aug.
+    const { fireEvent } = await import("@testing-library/react");
+    const { container } = render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
+    expect(container.querySelectorAll(".section-heading")).toHaveLength(1);
+  });
+
   it("ships no back button of its own", async () => {
     const { fireEvent } = await import("@testing-library/react");
     render(<Lens projectId="1" />);
@@ -282,6 +329,108 @@ describe("phase 5 — the destructive edge", () => {
     await waitFor(() => screen.getByTestId("bn-v2-uninstall-sheet"));
     fireEvent.click(screen.getByTestId("bn-v2-uninstall-confirm"));
     await waitFor(() => expect(api.removeCodebookFramework).toHaveBeenCalled());
+  });
+
+  it("ANNOUNCES the uninstall, so the navigator drops the row", async () => {
+    // The bug this pins: the lens called its own `reload()` and dispatched
+    // nothing. Five components learn about a codebook change from
+    // `codebook-changed` — the navigator, the window subtitle, the shipped
+    // lens and its sidebar — and none of them was told. Install LOOKED fine
+    // because its AutoCode job fires the event when coding finishes; uninstall
+    // starts no job, so the row sat in the navigator until something unrelated
+    // reloaded it.
+    //
+    // Asserting the event rather than the row's absence: the event is the
+    // contract, and it is what reaches the four listeners this test does not
+    // render.
+    const { fireEvent } = await import("@testing-library/react");
+    const seen: Event[] = [];
+    const spy = (e: Event) => seen.push(e);
+    window.addEventListener("codebook-changed", spy);
+    try {
+      render(<Lens projectId="1" projectName="Ikea" />);
+      await waitFor(() => screen.getByTestId("bn-v2-nav"));
+      fireEvent.click(screen.getByTestId("bn-v2-nav-row-nielsen"));
+      await waitFor(() => screen.getByTestId("bn-v2-uninstall"));
+
+      fireEvent.click(screen.getByTestId("bn-v2-uninstall"));
+      await waitFor(() => screen.getByTestId("bn-v2-uninstall-sheet"));
+      const before = seen.length;
+      fireEvent.click(screen.getByTestId("bn-v2-uninstall-confirm"));
+      await waitFor(() => expect(seen.length).toBeGreaterThan(before));
+    } finally {
+      window.removeEventListener("codebook-changed", spy);
+    }
+  });
+
+  it("ANNOUNCES a threshold apply, so the pending badge is not stale", async () => {
+    // Accepting/denying moves `tentative_count`, which is exactly what the
+    // navigator's pending badge counts (D10). This handler called the lens's
+    // private `reload()` and told nobody, so the badge beside the codebook you
+    // had just reviewed went on reporting the old number.
+    //
+    // Driven through the REAL modal rather than by calling the prop: the
+    // default mock returns no proposals, which disables Apply — so a test that
+    // did not override it would click a dead button and pass regardless.
+    const { fireEvent } = await import("@testing-library/react");
+    const api = await import("../utils/api");
+    vi.mocked(api.getAutoCodeProposals).mockResolvedValueOnce({
+      total: 1,
+      proposals: [
+        {
+          id: 1, quote_id: 1, dom_id: "q1", session_id: "s1",
+          speaker_code: "P1", start_timecode: 0, quote_text: "…",
+          tag_definition_id: 1, tag_name: "friction", group_name: "Pain",
+          colour_set: "ux", colour_index: 0, confidence: 0.9,
+          rationale: "…", status: "pending",
+        },
+      ],
+    } as never);
+
+    const seen: Event[] = [];
+    const spy = (e: Event) => seen.push(e);
+    window.addEventListener("codebook-changed", spy);
+    try {
+      render(<Lens projectId="1" projectName="Ikea" />);
+      await waitFor(() => screen.getByTestId("bn-v2-nav"));
+      fireEvent.click(screen.getByTestId("bn-v2-nav-row-nielsen"));
+      fireEvent.click(await screen.findByTestId("bn-v2-review"));
+
+      const apply = await screen.findByTestId("bn-threshold-apply");
+      await waitFor(() => expect(apply).not.toBeDisabled());
+      const before = seen.length;
+      fireEvent.click(apply);
+      await waitFor(() => expect(seen.length).toBeGreaterThan(before));
+    } finally {
+      window.removeEventListener("codebook-changed", spy);
+    }
+  });
+
+  it("hands the authoring hook the ANNOUNCER, not a private reload", async () => {
+    // Floor authoring — add, rename, delete, merge a manual tag — changes the
+    // tag count `lensSubtitle.ts` renders in the window subtitle, which counts
+    // floor tags as well as framework ones. With `onChanged: reload` the lens
+    // refreshed itself and the subtitle kept the old number.
+    //
+    // Tested at the SEAM rather than by clicking: `CodebookAuthoring` carries
+    // no testids, so a DOM drive would query by role through markup this test
+    // has no stake in. What regressed here is the wiring — which function the
+    // lens hands over — so that is what this asserts.
+    authoringOnChanged = null;
+    const seen: Event[] = [];
+    const spy = (e: Event) => seen.push(e);
+    window.addEventListener("codebook-changed", spy);
+    try {
+      render(<Lens projectId="1" projectName="Ikea" />);
+      await waitFor(() => screen.getByTestId("bn-v2-nav"));
+      expect(authoringOnChanged).not.toBeNull();
+
+      const before = seen.length;
+      authoringOnChanged!();
+      expect(seen.length).toBeGreaterThan(before);
+    } finally {
+      window.removeEventListener("codebook-changed", spy);
+    }
   });
 
   it("install APPLIES — importing alone would code nothing (D4)", async () => {

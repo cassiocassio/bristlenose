@@ -285,6 +285,30 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
       .catch((e: Error) => setError(e.message));
   }, []);
 
+  /**
+   * Tell everyone the codebook moved.
+   *
+   * `reload()` refreshes THIS component. Five others learn about a codebook
+   * change from `codebook-changed` — the navigator, the window subtitle, the
+   * shipped lens and its sidebar — and until 31 Aug 2026 this lens dispatched
+   * it NOWHERE. Every write called its own private `reload()` and told nobody.
+   *
+   * Only uninstall showed it plainly, because it starts no follow-on job:
+   * the row sat in the navigator until something unrelated happened to reload.
+   * Install was the same bug wearing a disguise — its AutoCode job fires this
+   * event on completion, so the navigator did catch up, a job-length wait after
+   * the write. Threshold apply moved `tentative_count` and left the pending
+   * badge (D10) reporting the old number. Floor authoring changes the tag count
+   * the window subtitle renders.
+   *
+   * Announce INSTEAD of reloading: this component listens too, so the event
+   * does its own refresh as well as everyone else's. Doing both fetches twice.
+   */
+  const announce = useCallback(
+    () => window.dispatchEvent(new Event("codebook-changed")),
+    [],
+  );
+
   // The switch lives in the sidebar now, and the page's knocked-back treatment
   // follows it. The sidebar fires `codebook-changed` after a successful write —
   // the event the shipped lens already uses — so the page refreshes rather than
@@ -337,11 +361,11 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
             // send everyone to the shipped one. Say where this started.
             originRoute: "/report/codebook-v2/",
           });
-          reload();
+          announce();
         })
         .catch((e: Error) => setError(e.message));
     },
-    [reload],
+    [announce],
   );
 
   const onAskUninstall = useCallback((id: string, title: string) => {
@@ -368,9 +392,9 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     if (!target) return;
     setPendingUninstall(null);
     removeCodebookFramework(target.id)
-      .then(reload)
+      .then(announce)
       .catch((e: Error) => setError(e.message));
-  }, [pendingUninstall, reload]);
+  }, [pendingUninstall, announce]);
 
   // The floor's authoring apparatus — the same hook the shipped lens drives, so
   // add/rename/delete/drag/merge are one implementation rather than two that
@@ -379,7 +403,10 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   // on screen would hand out one a framework already holds.
   const authoring = useCodebookAuthoring({
     groups: codebook?.groups,
-    onChanged: reload,
+    // Announce, not reload — a manual tag add or delete moves the tag count the
+    // window subtitle renders (`lensSubtitle.ts` counts floor tags too), whose
+    // own comment already assumes codebook edits dispatch this.
+    onChanged: announce,
   });
 
 
@@ -534,7 +561,14 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
             ) : null
           }
         >
-          Codebook
+          {/* The zone title names what the zone SHOWS, not the lens (the h1
+              scheme in docs/design-lens-template.md). The page is one codebook;
+              the library is all of them, so the title takes the plural there.
+              One `SectionHeading` either way — the datum rule matches
+              `section:first-of-type > .section-heading`, so a per-view heading
+              would be a second construction to keep flush, which is the exact
+              defect Codebook v2 shipped with on 30 Aug. */}
+          {view === "browse" ? "Codebooks" : "Codebook"}
         </SectionHeading>
         {error && <p className="pg-stat">Could not load the codebook: {error}</p>}
         {/* No rail here. Codebook navigation is the standard left sidebar
@@ -607,7 +641,11 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         onClose={() => setReportModal(null)}
         onApply={() => {
           setReportModal(null);
-          reload();
+          // The v1 lens carried the identical shape here
+          // (`handleReportApply` → `fetchData()`) and showed no symptom,
+          // because its sidebar rendered a status DOT per codebook rather than
+          // a count. The badge is v2's.
+          announce();
           document.dispatchEvent(new CustomEvent("bn:tags-changed"));
         }}
       />

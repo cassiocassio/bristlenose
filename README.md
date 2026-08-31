@@ -388,10 +388,14 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 **0.29.1** — _31 Aug 2026_
 
-Switching one codebook off switched the others back on.
+Switching one codebook off switched the others back on — and three more surfaces reported more than they had actually done.
 
 - **Only one codebook could be off at a time.** Switching a second one off silently switched the first back on, and its tags reappeared across the report without anything saying so. Every switch now records the state of every codebook rather than just the one you touched. If a codebook came back on without you asking, switch it off again — it will stay off this time.
 - **Switching a codebook off could start AutoCode on a different one.** A codebook coming back on is treated as a deliberate re-enable, so it catches up on any sessions imported while it was off. Because the switch was turning others back on by accident, that catch-up could run on a codebook you had deliberately switched off — spending on codes you never asked for. Worth a look at your review queue if you were toggling codebooks on 0.29.0.
+- **An AutoCode run that coded only some of your quotes said it had finished.** When a batch fails the run carries on with the rest, which is right — but the activity chip had no way to say so, so a run that tagged 58 of 72 arrived as an unqualified success with the shortfall dropped. It now says the run was partial, and keeps the link through to review what it did produce. The correct behaviour had been written and tested some time ago; it had landed in a component nothing renders.
+- **Reopening a review drew the confidence thresholds in the wrong place.** The thresholds you set when applying a codebook are stored with the run, but the review panel reset to its own defaults every time it opened — so a report reopened after an apply showed lines at 0.30 and 0.70 whatever you had actually chosen, a picture of a run that never happened. It now opens where you left it.
+- **On macOS 26 the toolbar pills sat inside a second capsule.** The system now wraps every toolbar item in its own glass capsule, and the status pills already drew one, so they arrived nested inside a brighter chrome that was never designed. All three now keep their own capsule and opt out of the system's.
+- **"Switch provider" opened whichever settings pane you last used.** It asked for the settings window without naming a destination. It now opens the AI provider pane — the one that answers the question.
 
 **0.29.0** — _31 Aug 2026_
 

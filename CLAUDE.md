@@ -758,7 +758,17 @@ it, so it is built locally first, where being pure Python makes it
 `py3-none-any` and correct for every arch — and asserts afterwards that no
 foreign-arch wheel reached the wheelhouse (`musllinux` named explicitly, being
 x86_64 with the wrong libc). The fix is proven, not merely green: the rebuild
-landed on aarch64 again and produced x86_64 wheels.
+landed on aarch64 again and produced x86_64 wheels. **And verifying a Copr publish has
+two ways to read as "the build produced nothing", both false.** The result
+directory lists **no `.rpm` at all** — Copr stopped putting them there, and the
+known-good previous build is the control that proves it is normal, not a defect;
+the authoritative records are `<build-dir>/results.json` and the repo metadata
+under `repodata/`, which is what a `dnf` client actually reads. And the listing
+is served behind a redirect, so a `curl` without **`-L`** greps an empty
+redirect body and reports no files, with no error. Confirm a publish by reading
+`repomd.xml` → `primary.xml.gz` for the `<location href=...>` and then a `HEAD`
+on the RPM itself — a build's own `succeeded` flag is not evidence the artefact
+is fetchable.
 
 **Still owed from 0.27.0:** the Catalan native pass (owned, a few weeks out — no release waits on it, since nine other locales ship machine-seeded pending review). The Welcome AI cell's hardcoded `Setup →` was **closed in `7f8f2645` + `89b11f5a`** and this line went on claiming it for days: the call site reads `i18n.t("desktop.welcome.aiSetup") + " →"`, the key is in all 21 full locales carrying Apple's own per-locale verb, and `zh-Hant-HK` is correctly absent because it inherits `zh-Hant`. Left as a worked example of the trap in Gotchas: **an owed item is a claim about the tree, exactly as a resolved one is** — verify by reading the line it names (`git log -S` on the string) before spending a cycle re-deriving finished work. **`v0.26.0` was tagged and abandoned** — it pointed 34 commits behind real work; it reached no channel and is in no changelog. Treat it as a version that never existed.
 

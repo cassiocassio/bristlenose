@@ -14,11 +14,28 @@ Last updated: 31 Aug 2026. _This file is a capture inbox + session context, not 
 
 **The v2 swap landed the same day.** `/report/codebook` now serves what was built as v2; v1 (`CodebookPanel`, `CodebookSidebar`, `CodebookTab`) is deleted, the `Tab.codebookV2` case is gone from the enum, and the lens took `tag` back from the temporary `tag.square`. The i18n graduated with it: `yourTags`, `builtIn`, `importCodebook`, `removeFromCodebook` and `projectTagsHeading` are v1's keys, already translated in 21 locales; **Browse Codebooks** took the native menu item's existing translations rather than being seeded; five new keys and two CLDR plural sets were seeded across 20 locales, machine-translated and **pending native review**, same status as the ca/pl/ru/uk/da/sv/nb/tr/nl/fi bulk.
 
+**0.29.0 is out on all nine channels** — PyPI, GitHub, Homebrew, Snap,
+TestFlight (3067), the notarised `.dmg`, the website changelog, and Fedora Copr,
+which arrived hours after the rest. Two release-machine defects surfaced during
+the run and are fixed on `main`; both are the same shape, which is why they are
+worth carrying: **a single negative read was treated as proof of absence.** The
+TestFlight probe asked App Store Connect seconds after a successful upload, got
+an empty list because the index had not propagated, and offered to re-upload a
+build number that is spent forever — Apple's own `DUPLICATE` refusal is the only
+thing that stopped it. And Copr's SRPM stage ran on **aarch64** against an
+x86_64 chroot, so `pip wheel` vendored the wrong architecture; the failure
+surfaced inside mock as a resolution error naming `pyyaml` and nothing about
+architecture at all. Both now have gates rather than luck: `BN_PROBE_WINDOW_S`
+re-reads across the propagation window, and `make-srpm.sh` pins the platform and
+asserts no foreign-arch wheel reached the wheelhouse. The Copr fix is proven,
+not merely green — the rebuild landed on aarch64 again and produced x86_64
+wheels.
+
 **Owed, and specific:**
 - **Native review of the codebook-lens seeds** — `frameworksSection`, `reviewProposals`, `onByDefault`, `availableByDefault`, `uninstallDiscards`, and the `tagCount` / `appliedToQuotes` plural sets. The Slavic four-form plurals (cs/pl/ru/uk) and the Finnish partitive are the least-trusted.
 - **30 orphaned `codebook.*` locale keys** left by v1's deletion — recorded as `codebook-defects.md` D4, deliberately not swept: a file-wide regex over 21 locale files is how `menu.edit.undo` was deleted from all of them on 19 Aug. Delete by fully-qualified path, diff one locale first.
 - **The v2 files are still named `CodebookV2*`** — functionally irrelevant, genuinely confusing now they are simply the codebook lens.
-- **The v2 swap itself** — rename to Codebook, decommission v1, restore the rightful sidebar icon. The website is already written for the post-swap world (it says "Codebook", never "v2"), so it needs no second pass when this lands.
+- ~~**The v2 swap itself** — rename to Codebook, decommission v1, restore the rightful sidebar icon.~~ ✅ shipped 31 Aug 2026 (`baa1aa0e`) — verified at HEAD: `CodebookPanel.tsx` gone, `Tab.swift` enum is `project, sessions, quotes, codebook, analysis`, `LensItem.swift:37` carries `.codebook, systemImage: "tag"`. The website needed no second pass, as predicted.
 - **The website deploy gap is now larger, not smaller.** Item (5) in § Next session focus said six commits' worth was unpublished since the ~16 Aug rsync; three more landed today (codebook docs, the `[serve]` install fix, the privacy corrections) and the repo holds **21 unpushed commits** in total, most predating this session. One of them is titled *"track the two pages that were written, deployed, and never committed"* — so pushed-vs-serving is not reliably zero in either direction. Worth reconciling before the next `./deploy.sh`, which ships the working tree rather than a commit.
 - **The website's own `NOTES-product-discrepancies.md` is about half stale** (dated 25 Jun). It still reports `render` and `--static` in the man page, both long gone. Three items are live: the man page's max-tokens default says `8192` against a real `64000`; `classify_flag`'s docstring advertises a `Pattern` flag that never returns, reaching users via `CHANGELOG.md:421` which the site renders live; and spaCy loads `en_core_web_sm` where the docs say `lg`.
 - **`cli.py:1469`** — `analyze --output`'s help string describes the inverse of what the function does. The man page is the correct one; fix the CLI, not the doc.

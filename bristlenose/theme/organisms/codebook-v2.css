@@ -84,11 +84,6 @@
     text-overflow: ellipsis;
 }
 
-.v2-nav-provenance.prov-system {
-    font-weight: var(--bn-weight-normal);
-    color: var(--bn-colour-muted);
-}
-
 /* Switched off. One knock-back value, shared with the codebook page and the
    browse card — they were three declarations with three different opacities
    before D27a. `.codebook-disabled` is the shipped navigator's own modifier,
@@ -339,7 +334,6 @@
    footrow and the version chip are new, because the shipped picker laid its
    cards out differently. */
 
-.v2-browse-head { margin-bottom: var(--bn-space-md); }
 
 .v2-card-grid {
     display: grid;

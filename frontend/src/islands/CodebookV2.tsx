@@ -10,7 +10,8 @@
  * it already, so it is plumbing rather than a question.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   getCodebook,
   getCodebookTemplates,
@@ -120,7 +121,36 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   // and Browse Library is the only route to the catalogue — no next/previous,
   // no traversal. With the rail closed it is the ONLY way to another codebook,
   // which is why its prominence is load-bearing rather than decorative.
-  const [view, setView] = useState<"page" | "browse">("page");
+  // THE LIBRARY IS A URL, NOT COMPONENT STATE. It was `useState`, which made
+  // the Browse Library transition invisible to history — so the app's toolbar
+  // back chevron (`BridgeHandler.goBack()` → `webView.goBack()`) and the
+  // browser's back button both left the LENS instead of returning to the
+  // codebook page. That is the opposite of what a back gesture means here, and
+  // it was masked by an in-page "‹ Back" button doing the job the platform
+  // affordances were expected to do. The button is gone; this is what makes
+  // its absence correct rather than merely tidier.
+  //
+  // A search param rather than a nested route: the library is a state OF this
+  // lens, not a sibling of it, and `?view=library` needs no router change while
+  // giving identical history behaviour. It also makes the catalogue
+  // deep-linkable and survives a reload, neither of which local state did.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view: "page" | "browse" =
+    searchParams.get("view") === "library" ? "browse" : "page";
+  const setView = useCallback(
+    (next: "page" | "browse", opts: { replace?: boolean } = {}) => {
+      setSearchParams(
+        (prev) => {
+          const p = new URLSearchParams(prev);
+          if (next === "browse") p.set("view", "library");
+          else p.delete("view");
+          return p;
+        },
+        { replace: opts.replace ?? false },
+      );
+    },
+    [setSearchParams],
+  );
   // Module-level state outlives the component; reset it so a later visit starts
   // on the floor rather than on whichever framework was last inspected.
   useEffect(() => resetCodebookV2Selection, []);
@@ -130,8 +160,24 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   // store, choosing a codebook while the Library was open would otherwise
   // change the selection behind a grid that stayed on screen — a click that
   // appears to do nothing.
+  // MOUNT MUST NOT COUNT. This effect exists so that choosing a codebook in the
+  // navigator closes the catalogue behind it. Run on mount, it also erases a
+  // `?view=library` the page ARRIVED with — which silently breaks both the
+  // deep link and the forward half of history, since going forward re-enters
+  // the URL this would immediately clear. Harmless while the view was
+  // component state (there was no incoming state to erase); a real bug the
+  // moment it became a URL.
+  const selectionSettled = useRef(false);
   useEffect(() => {
-    setView("page");
+    if (!selectionSettled.current) {
+      selectionSettled.current = true;
+      return;
+    }
+    // `replace`: the user navigated by picking a codebook, not by closing the
+    // library. Pushing here would make Back reopen a catalogue they did not
+    // choose to return to.
+    setView("page", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
 
   // Uninstall is confirmed, never immediate. D20 option A made it destroy the
@@ -447,7 +493,6 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
                   setSelected(id);
                   setView("page");
                 }}
-                onBack={() => setView("page")}
                 onInstall={(id) =>
                   onInstall(
                     id,

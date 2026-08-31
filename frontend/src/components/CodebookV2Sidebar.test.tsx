@@ -108,6 +108,37 @@ describe("it is the standard content navigator", () => {
 
 // ── The switch, at the size we settled on ─────────────────────────────────
 
+describe("the second line is a person, or nothing", () => {
+  // The slot held "On by default" / "Available by default" too. In a LIST the
+  // eye reads the second line as one slot with one meaning, and two rows apart
+  // it said "who made this" and "how this is configured" — a false parallel
+  // however lightly it was set. It also cannot help choose: everything in this
+  // rail is already installed, so "Available by default" is not actionable
+  // here. The catalogue keeps it, where it distinguishes a Bristlenose codebook
+  // from a third party's and IS decision-relevant.
+
+  it("renders an author under a framework", async () => {
+    render(<CodebookV2Sidebar />);
+    const row = await screen.findByTestId("bn-v2-nav-row-nielsen");
+    expect(row).toHaveTextContent("Jakob Nielsen");
+  });
+
+  it("renders nothing under a built-in, collapsing the row to one line", async () => {
+    render(<CodebookV2Sidebar />);
+    const row = await screen.findByTestId("bn-v2-nav-row-sentiment");
+    expect(row).not.toHaveTextContent("On by default");
+    expect(row.querySelector(".v2-nav-provenance")).toBeNull();
+    // The title survives — this drops the second line, not the row.
+    expect(row).toHaveTextContent("Emotional & Cognitive Signals");
+  });
+
+  it("leaves the floor with no second line either", async () => {
+    render(<CodebookV2Sidebar />);
+    const row = await screen.findByTestId("bn-v2-nav-row-floor");
+    expect(row.querySelector(".v2-nav-provenance")).toBeNull();
+  });
+});
+
 describe("the enable switch rides on the row", () => {
   it("gives every codebook a switch except the floor", async () => {
     // The floor is not a codebook you can switch off — it is your own tags
@@ -183,7 +214,7 @@ describe("buildBooks", () => {
     expect(byId(build(), "nielsen").builtIn).toBe(false);
   });
 
-  it("gives a person the name and a system fact its own weight (D23)", () => {
+  it("carries the system fact in the DATA, for the page to render (D23)", () => {
     expect(byId(build(), "nielsen").provenance).toBe("Jakob Nielsen");
     expect(byId(build(), "nielsen").provenanceIsPerson).toBe(true);
     expect(byId(build(), "sentiment").provenance).toBe("On by default");

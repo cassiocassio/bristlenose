@@ -173,13 +173,21 @@ function Row({
     >
       <span className="v2-nav-text">
         <span className="codebook-toc-label">{book.title}</span>
-        {book.provenance && (
-          // A person keeps D19's weight; a system fact does not borrow it.
-          <span
-            className={`v2-nav-provenance${book.provenanceIsPerson ? "" : " prov-system"}`}
-          >
-            {book.provenance}
-          </span>
+        {/* A PERSON ONLY. The slot held a system fact too ("On by default",
+            "Available by default"), styled down so it would not borrow D19's
+            weight — but styling was answering the wrong question. In a LIST the
+            eye reads the second line as one slot with one meaning, and two rows
+            apart it said "who made this" and "how this is configured". That
+            reads as a false parallel however lightly it is set, and neither
+            fact helps choose a codebook, which is all this rail is for.
+
+            The page keeps it (`.pg-author`), and correctly: there is one
+            codebook on screen, so no comparison is invited and the
+            configuration state is useful context. Same datum, different job —
+            the list compares, the page explains. Revises D23, which assumed the
+            two could share a slot if they differed in weight. */}
+        {book.provenanceIsPerson && book.provenance && (
+          <span className="v2-nav-provenance">{book.provenance}</span>
         )}
       </span>
       {book.pending > 0 && <span className="v2-nav-pending">{book.pending}</span>}

@@ -36,7 +36,6 @@ interface Props {
   onOpen: (id: string) => void;
   onInstall: (id: string) => void;
   onUninstall: (id: string) => void;
-  onBack: () => void;
 }
 
 /** Sentiment cannot be installed or uninstalled (D20). */
@@ -151,15 +150,9 @@ export function CodebookV2Browse({
   onOpen,
   onInstall,
   onUninstall,
-  onBack,
 }: Props) {
   return (
     <div data-testid="bn-v2-browse-grid">
-      <div className="v2-browse-head">
-        <button className="bn-btn bn-btn-sm" onClick={onBack} data-testid="bn-v2-back">
-          &#8249; Back
-        </button>
-      </div>
       <div className="v2-card-grid">
         {books.map((b) => (
           <Card

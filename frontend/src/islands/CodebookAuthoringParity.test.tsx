@@ -21,7 +21,20 @@
  * by the frozen vanilla renderer (`theme/js/codebook.js`), never by React.
  */
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+
+// CodebookV2 reads `?view=library` via useSearchParams, so a bare render throws
+// "useSearchParams() may be used only in the context of a <Router>". Alias once
+// rather than wrapping every call site (frontend/CLAUDE.md).
+const render = (ui: React.ReactElement) =>
+  rtlRender(ui, { wrapper: MemoryRouter });
 import userEvent from "@testing-library/user-event";
 import { CodebookPanel } from "./CodebookPanel";
 import { CodebookV2 } from "./CodebookV2";

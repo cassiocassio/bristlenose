@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+
+// The island now reads `?view=library` via useSearchParams, so a bare render
+// throws "useSearchParams() may be used only in the context of a <Router>".
+// Alias once rather than wrapping every call site (frontend/CLAUDE.md).
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
 import { CodebookV2Browse, type BrowseBook, _shortDescription } from "./CodebookV2Browse";
 
 function tpl(over: Record<string, unknown> = {}) {
@@ -26,7 +32,6 @@ type Handlers = {
   onOpen?: (id: string) => void;
   onInstall?: (id: string) => void;
   onUninstall?: (id: string) => void;
-  onBack?: () => void;
 };
 
 const noop = () => {};
@@ -37,7 +42,6 @@ const renderGrid = (books: BrowseBook[], on: Handlers = {}) =>
       onOpen={on.onOpen ?? noop}
       onInstall={on.onInstall ?? noop}
       onUninstall={on.onUninstall ?? noop}
-      onBack={on.onBack ?? noop}
     />,
   );
 

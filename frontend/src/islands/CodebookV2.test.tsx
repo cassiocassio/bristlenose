@@ -1,8 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render as rtlRender, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { CodebookV2 } from "./CodebookV2";
 import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
 import { resetCodebookV2Selection } from "../contexts/CodebookV2Store";
+
+// The island reads `?view=library` via useSearchParams, so a bare render throws
+// "useSearchParams() may be used only in the context of a <Router>". Alias once
+// rather than wrapping every call site (frontend/CLAUDE.md).
+const render = (ui: React.ReactElement, at = "/report/codebook-v2") =>
+  rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <MemoryRouter initialEntries={[at]}>{children}</MemoryRouter>
+    ),
+  });
+
+/** Renders the router's current search string so a test can assert the URL
+ *  moved. Rendered rather than assigned to a module variable: writing to one
+ *  during render is a side effect, and the query is what we want to read. */
+function LocationProbe() {
+  return <span data-testid="bn-test-search">{useLocation().search}</span>;
+}
+const search = () => screen.getByTestId("bn-test-search").textContent ?? "";
 
 /** What AppLayout mounts: the navigator in the left sidebar, the lens beside
  *  it. Selection travels between them through CodebookV2Store, so a test that
@@ -91,11 +110,29 @@ describe("CodebookV2 — built-in is derived, not hardcoded", () => {
 
   it("gives each built-in the provenance its state actually warrants", async () => {
     // Not cosmetic: UXR here is installed AND disabled, which "On by default"
-    // would misdescribe.
+    // would misdescribe. Asserted on the PAGE, which is the only surface that
+    // renders a system fact — the rail dropped it 31 Aug 2026 because one slot
+    // reading "who made this" in one row and "how this is configured" in the
+    // next is a false parallel, and neither helps choose. The page shows one
+    // codebook, invites no comparison, and the state is useful context there.
+    const { fireEvent } = await import("@testing-library/react");
     render(<Lens projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByText("On by default"));
-    expect(screen.getByText("Available by default")).toBeInTheDocument();
-    expect(screen.getByText("Jakob Nielsen")).toBeInTheDocument();
+    await waitFor(() => screen.getByTestId("bn-v2-nav-row-uxr"));
+
+    fireEvent.click(screen.getByTestId("bn-v2-nav-row-uxr"));
+    await waitFor(() => expect(screen.getByText("Available by default")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId("bn-v2-nav-row-sentiment"));
+    await waitFor(() => expect(screen.getByText("On by default")).toBeInTheDocument());
+  });
+
+  it("keeps a person's name in the rail, and the system fact off it", async () => {
+    render(<Lens projectId="1" projectName="Ikea" />);
+    const nielsen = await screen.findByTestId("bn-v2-nav-row-nielsen");
+    expect(nielsen).toHaveTextContent("Jakob Nielsen");
+    expect(screen.getByTestId("bn-v2-nav-row-sentiment")).not.toHaveTextContent(
+      "by default",
+    );
   });
 
   it("sums tentative counts into the rail badge", async () => {
@@ -122,17 +159,45 @@ describe("CodebookV2 — built-in is derived, not hardcoded", () => {
 });
 
 describe("D22 — Browse Library is the navigation", () => {
-  it("goes to the catalogue and back", async () => {
+  // The in-page "‹ Back" was removed 31 Aug 2026: the app toolbar's chevron
+  // (BridgeHandler.goBack → webView.goBack) and the browser's own button are
+  // the back affordances, and a third one inside the page was chrome competing
+  // with muscle memory. That removal is only CORRECT if opening the library is
+  // a history entry — as component state it wasn't, and back left the lens
+  // entirely. These two tests pin the mechanism from both ends. Asserting that
+  // Back itself works would be asserting React Router.
+
+  it("opening the catalogue moves the URL, so history can return from it", async () => {
     const { fireEvent } = await import("@testing-library/react");
-    render(<Lens projectId="1" projectName="Ikea" />);
+    render(
+      <>
+        <Lens projectId="1" projectName="Ikea" />
+        <LocationProbe />
+      </>,
+    );
     await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    expect(search()).not.toContain("view=library");
 
     fireEvent.click(screen.getByTestId("bn-v2-browse"));
     await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
     expect(screen.getByTestId("bn-v2-card-nielsen")).toBeInTheDocument();
+    expect(search()).toContain("view=library");
+  });
 
-    fireEvent.click(screen.getByTestId("bn-v2-back"));
-    await waitFor(() => screen.getByTestId("bn-v2-page"));
+  it("renders the catalogue when the URL says so, and the page when it does not", async () => {
+    // The reverse of the first test, and what a Back actually lands on. Also
+    // makes the catalogue deep-linkable, which component state never was.
+    render(<Lens projectId="1" />, "/report/codebook-v2?view=library");
+    await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
+  });
+
+  it("ships no back button of its own", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(<Lens projectId="1" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
+    expect(screen.queryByTestId("bn-v2-back")).toBeNull();
   });
 
   it("a card opens that codebook's page", async () => {

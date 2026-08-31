@@ -1,3 +1,20 @@
+---
+status: partial
+last-trued: 2026-08-31
+trued-against: HEAD@main 8fee4ead on 2026-08-31
+---
+
+> **Front-matter added 31 Aug 2026** — this was the only doc in the codebook set
+> without it, so no sweep had ever classified it. Read the two halves separately:
+> the **phase list below (Phases 0–6) is the forward plan as written on 30 Aug**
+> and was never reconciled with what landed, while the **session reports further
+> down are current**. Five phases have commits the plan's own head does not know
+> about, Phase 0's flag premise was self-corrected only in a report, and the
+> Tier-1 QA procedure — open the two lenses side by side in two tabs — is
+> structurally unrunnable, because `/report/codebook-v2` retired with no alias
+> when v1 was deleted (`baa1aa0e`). Reconciling the head into a landed-phase
+> table is owed.
+
 # Codebook v2 — delivery plan
 
 Companion to `docs/design-codebook-v2.md`, which holds the decisions. This holds

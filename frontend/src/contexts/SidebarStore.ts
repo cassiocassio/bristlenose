@@ -140,6 +140,12 @@ const listeners = new Set<() => void>();
  * Framework-state hydration is fetched once per session and guarded — so a
  * later remount (e.g. switching to the Quotes tab after toggling on the Codebook
  * tab) can't refetch stale state. Reset by resetSidebarStore for test isolation.
+ *
+ * That example only holds while every writer mirrors into this store. A writer
+ * that persists to the server WITHOUT mirroring inverts the guard: the remount
+ * declines to re-fetch and keeps serving the state from page load, so the toggle
+ * appears to do nothing outside the lens it was made in. That is what the
+ * navigator did between `baa1aa0e` and `adoptFrameworkDisabled` below.
  */
 let frameworkStatesHydrated = false;
 
@@ -411,6 +417,32 @@ export function dropFrameworkDisabled(frameworkId: string): void {
   const next = new Set(state.disabledFrameworks);
   next.delete(frameworkId);
   setState((prev) => ({ ...prev, disabledFrameworks: next }));
+}
+
+/**
+ * Adopt an authoritative disabled set computed elsewhere — the codebook
+ * navigator, which has owned the switch since v1's deletion (`baa1aa0e`).
+ *
+ * `setFrameworkDisabled` cannot serve that caller. It derives its payload from
+ * `state.disabledFrameworks`, which stays empty until `hydrateFrameworkStates`
+ * runs — and hydration is called from `TagSidebar`'s mount alone. Opening the
+ * codebook lens by deep link therefore reaches the switch with an empty set, and
+ * a derive-then-PUT would send an incomplete map to a replacement endpoint: the
+ * same wipe as the A5 defect, by a different route. So the navigator owns the
+ * write and this owns the mirror.
+ *
+ * Without it the once-per-session hydration guard means the opposite of what its
+ * comment claims: switching to Quotes after toggling on the Codebook lens shows
+ * the state from page load, so badges, the tag sidebar and autocomplete keep
+ * offering a codebook that is off. Bumping the edit generation matters too — a
+ * hydrate GET already in flight then discards its own result instead of
+ * clobbering the choice just made.
+ */
+export function adoptFrameworkDisabled(disabled: Set<string>): void {
+  frameworkEditGeneration += 1;
+  // The set is authoritative, so a later first mount need not re-fetch.
+  frameworkStatesHydrated = true;
+  setState((prev) => ({ ...prev, disabledFrameworks: new Set(disabled) }));
 }
 
 // ── Solo / focus mode ────────────────────────────────────────────────────

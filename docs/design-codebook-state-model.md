@@ -1,16 +1,29 @@
 ---
 status: partial
-last-trued: 2026-08-21
-trued-against: HEAD@main 19797094 on 2026-08-21
+last-trued: 2026-08-31
+trued-against: HEAD@main 8fee4ead on 2026-08-31
 ---
 
-> **Truing status:** Partial — the state model (§1–6, §8) is current (trued
-> 2026-07-26). §7's "described (target)" deltas and §4a's deferred-fallback note
-> are retained as the design record but have partly shipped since capture; see
-> the dated notes inline and the changelog below.
+> **Truing status:** Partial — §1–4 and §6 are current. **§5 and §8 drifted with
+> the v1 deletion on 31 Aug 2026** (`baa1aa0e`) and are corrected inline; the
+> previous banner asserted §8 was current, which is the section the switch moved
+> out from under. §7's "described (target)" deltas and §4a's deferred-fallback
+> note are retained as the design record but have partly shipped since capture;
+> see the dated notes inline and the changelog below.
 
 ## Changelog
 
+- _2026-08-31_ — trued against the v1 deletion (`baa1aa0e`) and the A5 defect.
+  **New §4b** records that `PUT /framework-states` is a full replacement, that
+  absence means enabled, and that the two together make a partial body both a
+  silent wipe and an unrequested spend — the omission the defect rode through.
+  **§8's switch bullet inverted:** the control moved onto the navigator's rows and
+  the status dot is gone, so the "sidebar is never a control" rule it stated is
+  superseded; the v1 text is preserved as a blockquote because its reasoning is
+  what a future move of that control should be weighed against. §4a's
+  `source="human"` clause corrected — the guard is a bare pair-existence check with
+  no source predicate. The header's "nothing here is built yet" and the truing
+  banner's "§8 is current" were both false and are replaced. Register: A5.
 - _2026-08-21_ — trued up: §2's **Tag provenance** glossary row named two
   `QuoteTag.source` values (`human` | `autocode`); it ships **four**. Added
   `pipeline` and `codebook-builder`, and a note under §3a that both arrive by
@@ -38,8 +51,13 @@ trued-against: HEAD@main 19797094 on 2026-08-21
 **Status:** design capture, 26 Jul 2026. The "measure" before we cut. Consolidates a
 long working session that untangled three controls that had been conflated. Companion
 to [design-codebook-library.md](design-codebook-library.md) (the Library UI redesign)
-and [design-autocode.md](design-autocode.md). **Nothing here is built yet beyond what
-§7 marks as "current";** this is the spec to validate, then implement.
+and [design-autocode.md](design-autocode.md).
+
+**Status, 31 Aug 2026:** this was written as a spec to validate before building,
+and said so — *"nothing here is built yet beyond what §7 marks as current."* That
+has been false since 26 Jul: §3b, §4 and §5 shipped, and the code now cites this
+document as the authority (`bristlenose/server/autocode.py`, `reapply_active_frameworks`,
+names §8). Read it as the behavioural spec of a shipped system.
 
 Sections: 1 language · 2 tiers · 3 state machines · 4 data model + lifecycles ·
 5 UX states & visibilities · 6 retention/cost gradient · 7 the three-way delta ·
@@ -168,6 +186,35 @@ The floor codebook has **no** version of this machine — only the hide/show ove
 | Hide group | insert `hidden_tag_groups` |
 | Remove | drop `ProjectCodebookGroup` links; **no promise** to keep `QuoteTag`/`ProposedTag` |
 
+### 4b. Endpoint semantics — the switch is written by REPLACEMENT
+
+Added 31 Aug 2026, after a defect shipped through the gap where this belonged.
+
+`PUT /projects/{id}/framework-states` **replaces the entire stored map.**
+`put_framework_states` deletes every `ProjectFrameworkState` row for the project
+and re-inserts only what the request body carried. Three consequences, and they
+compound:
+
+1. **A partial body is a valid request and a silent wipe.** Sending only the
+   framework whose switch moved deletes every other framework's row.
+2. **Absence means enabled.** So the wiped rows do not read as missing — they
+   read as *on*. There is no state that means "I did not mention this one."
+3. **Absence is therefore indistinguishable from a deliberate re-enable**, and
+   §4a's catch-up fires on it. A partial body does not merely lose state; it
+   spends money, because each wiped row is handed to `_start_catch_ups`.
+
+**So every client must send the whole disabled set on every write.** v1 did
+(`setFrameworkDisabled`). The v2 navigator did not, and (2) and (3) together
+turned a one-line payload bug into "only one codebook can be off at a time"
+plus unrequested AutoCode runs — register row A5, shipped in 0.29.0, fixed in
+0.29.1.
+
+**A client cannot derive that set from `SidebarStore.disabledFrameworks`**,
+which is hydrated once per session from `TagSidebar`'s mount alone and is empty
+on a deep link straight to the codebook lens. The surface that owns the switch
+owns the authoritative set, and mirrors it into the store rather than reading
+its payload out of it.
+
 ### 4a. How re-enable knows what to code (no explicit "coded" flag)
 
 There is **no per-session "this session was coded by codebook X" marker.** Re-apply
@@ -178,9 +225,15 @@ codebook's last `completed_at`. **These do two separate jobs — don't conflate 
   the codebook last finished → probably uncoded → go look." Their only job is to avoid
   re-spending the LLM on sessions we're confident are done.
 - **Correctness lives in the per-quote guard that already ships.** Before applying a
-  tag the delta skips any `(quote, tag)` that already has a `QuoteTag`, and never
-  touches `source="human"`. So the timestamp erring **too broad** costs a little wasted
-  work (re-examine, skip) — it can **never** double-code or clobber a decision.
+  tag the delta skips any `(quote, tag)` that already has a `QuoteTag`. So the
+  timestamp erring **too broad** costs a little wasted work (re-examine, skip) — it
+  can **never** double-code or clobber a decision. _Corrected 31 Aug 2026: this
+  read "and never touches `source="human"`", which describes the effect as though
+  it were the mechanism. The guard has no source predicate — it is a bare
+  pair-existence check. A human tag survives because it **occupies the pair**, not
+  because it is recognised. The outcome is the same today; it would stop being the
+  same the moment any path removes and re-applies a tag, or applies the same tag
+  under a second `tag_definition_id`._
 
 The only way the timestamp could *miss* (skip genuinely-uncoded quotes) is a codebook
 that stamped `completed_at` while its run was actually incomplete. In the normal
@@ -280,10 +333,29 @@ autocomplete) and should be reverted.
 - **Disable** = off means off (drop from sidebar + autocomplete; badges hidden; section
   folds). Gate re-apply on **enabled**.
 - **Remove** = done, no preservation promise.
-- **Where enable/disable lives (v1):** the **big toggle in the codebook lens** is the
-  control (`.framework-toggle`, already built). The **codebook-lens sidebar** is
-  **state + navigation only** — a blue/grey status dot echoing the switch, never a
-  control. The floor gets no toggle. (Moving the control elsewhere is a later version.)
+- **Where enable/disable lives.** _Superseded 31 Aug 2026 — the "later version" the
+  original bullet anticipated arrived, so both halves inverted._ The switch now rides
+  on **each row of the navigator sidebar** (`EnableControl`,
+  `frontend/src/components/CodebookV2Sidebar.tsx`), and the dot is gone —
+  `codebookDot.ts` has no non-test caller and `.codebook-dot` no JSX consumer. The
+  floor still gets no switch. The v1 statement is kept below because its *reasoning*
+  is the thing to weigh before moving a control onto a navigation row, and that
+  reasoning was overridden deliberately, not forgotten:
+  > **(v1, superseded)** the **big toggle in the codebook lens** is the control
+  > (`.framework-toggle`, already built). The **codebook-lens sidebar** is **state +
+  > navigation only** — a blue/grey status dot echoing the switch, never a control.
+  > The floor gets no toggle. (Moving the control elsewhere is a later version.)
+
+  `.framework-toggle` survives only in the sealed static-render CSS
+  (`theme/organisms/codebook-panel.css`); the shipped control is the platform
+  `<input type="checkbox" switch>` with `.sw` as the capability-detected fallback.
+
+- **What the switch must write** (added 31 Aug 2026): the whole disabled set, every
+  time — see §4b. A control on a navigation row is also further from the store the
+  other lenses read, which is the second half of the same defect: the navigator
+  persisted without mirroring, so badges, the Quotes tag sidebar and autocomplete
+  went on showing a switched-off codebook until reload. "Off means off" is a claim
+  about every surface, not the one holding the switch.
 - Provenance/disposition already modelled.
 - **Disabled + new sessions (Q-B resolved): don't code while off; catch up on
   re-enable.** Rationale: you might never re-enable, so never spend on a switched-off

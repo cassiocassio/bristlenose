@@ -59,6 +59,7 @@ import {
 } from "../utils/api";
 import type { CodebookResponse, TemplateListResponse } from "../utils/types";
 import { selectCodebookV2, useCodebookV2Store } from "../contexts/CodebookV2Store";
+import { adoptFrameworkDisabled } from "../contexts/SidebarStore";
 import { isExportMode } from "../utils/exportData";
 import i18n from "../i18n";
 
@@ -199,6 +200,30 @@ function Row({
   );
 }
 
+/** Every codebook currently switched off — the whole set, always.
+ *
+ * The endpoint is a REPLACEMENT, not a patch: `put_framework_states` deletes
+ * every row for the project and re-inserts only what the body carried ("PUT
+ * replaces the entire stored map. Absence means enabled."). So a write that
+ * names only the switch that moved deletes every OTHER codebook's `false` row,
+ * and they all come back on — one codebook off at a time. Written in 3cdf085e,
+ * reachable from the moment v1 was deleted and this navigator became the only
+ * door to the switch, and shipped in 0.29.0.
+ *
+ * Worse than the switch: absence reads as an OFF→ON transition, so the wiped
+ * rows are handed to `_start_catch_ups` and any of them with a completed job and
+ * newer sessions begins a catch-up delta — AutoCode runs, and the LLM spend
+ * with them, from flipping an unrelated switch.
+ *
+ * Hence: every write carries the whole set, which is the shape v1's
+ * `setFrameworkDisabled` used — and the same set mirrors into SidebarStore, so
+ * the lenses that read the switch from there agree with this one before a
+ * reload. The floor has no switch and no `framework_id`, so it never appears.
+ */
+function disabledIds(books: V2NavBook[]): string[] {
+  return books.filter((b) => b.id && !b.enabled).map((b) => b.id);
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function CodebookV2Sidebar() {
@@ -248,16 +273,28 @@ export function CodebookV2Sidebar() {
     return () => window.removeEventListener("codebook-changed", handler);
   }, [load]);
 
-  const onToggle = useCallback((id: string, enabled: boolean) => {
-    // Optimistic: the switch is the researcher's statement, not a request for
-    // permission. A failure re-reads rather than silently reverting.
-    setBooks((prev) =>
-      prev ? prev.map((b) => (b.id === id ? { ...b, enabled } : b)) : prev,
-    );
-    putFrameworkStates({ [id]: enabled })
-      .then(() => window.dispatchEvent(new CustomEvent("codebook-changed")))
-      .catch(() => load());
-  }, []);
+  const onToggle = useCallback(
+    (id: string, enabled: boolean) => {
+      if (!books) return;
+      // Computed here rather than inside the setter: the same array is both the
+      // optimistic state and the payload, so the write can never disagree with
+      // what the researcher is looking at.
+      const next = books.map((b) => (b.id === id ? { ...b, enabled } : b));
+      // Optimistic: the switch is the researcher's statement, not a request for
+      // permission. A failure re-reads rather than silently reverting.
+      setBooks(next);
+      const off = disabledIds(next);
+      // The other lenses read the switch from SidebarStore, not from here, and
+      // hydration is once-per-session — so without this the badges, the Quotes
+      // tag sidebar and autocomplete keep showing a switched-off codebook until
+      // a reload. v1 got this for free: its one writer did both.
+      adoptFrameworkDisabled(new Set(off));
+      putFrameworkStates(Object.fromEntries(off.map((id) => [id, false])))
+        .then(() => window.dispatchEvent(new CustomEvent("codebook-changed")))
+        .catch(() => load());
+    },
+    [books, load],
+  );
 
   // The catalogue is a URL, not component state (D22), so this goes to exactly
   // where the lens's own Browse Library button goes — `?view=library` on this

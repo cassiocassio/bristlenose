@@ -7,6 +7,11 @@ import {
   selectCodebookV2,
 } from "../contexts/CodebookV2Store";
 import type { CodebookResponse, TemplateListResponse } from "../utils/types";
+import { putFrameworkStates } from "../utils/api";
+import {
+  resetSidebarStore,
+  useSidebarStore,
+} from "../contexts/SidebarStore";
 
 const group = (over: Record<string, unknown> = {}) =>
   ({
@@ -202,6 +207,104 @@ describe("the enable switch rides on the row", () => {
         .querySelector('[role="switch"], input[type="checkbox"]'),
     ).toBeNull();
     vi.mocked(exportData.isExportMode).mockRestore();
+  });
+});
+
+describe("a write carries the whole disabled set, not the switch that moved", () => {
+  // `/framework-states` is a REPLACEMENT, not a patch: the handler deletes every
+  // row for the project and re-inserts only what the body carried. A write that
+  // names one framework therefore switches every other disabled codebook back
+  // ON — and, since absence reads as an OFF→ON transition, starts a catch-up
+  // AutoCode run on each. Shipped that way from 3cdf085e until this test.
+  //
+  // The fixture has `nielsen` already off, which is what gives these teeth: the
+  // buggy payload and the correct one differ only by the framework the
+  // researcher did NOT touch.
+
+  it("keeps an untouched codebook off when another is switched off", async () => {
+    vi.mocked(putFrameworkStates).mockClear();
+    renderSidebar();
+    await screen.findByTestId("bn-v2-nav-row-sentiment");
+
+    fireEvent.click(
+      screen
+        .getByTestId("bn-v2-nav-row-sentiment")
+        .querySelector('[role="switch"], input[type="checkbox"]')!,
+    );
+
+    await waitFor(() => expect(putFrameworkStates).toHaveBeenCalledTimes(1));
+    // Not `{ sentiment: false }` — that is the wipe.
+    expect(putFrameworkStates).toHaveBeenCalledWith({
+      sentiment: false,
+      nielsen: false,
+    });
+  });
+
+  it("sends the shrunk set when a codebook is switched back on", async () => {
+    // Re-enabling is expressed by ABSENCE, and the empty map is a legitimate
+    // payload — nothing is off. It is also the one write that SHOULD produce a
+    // catch-up, so it must stay distinguishable from the wipe.
+    vi.mocked(putFrameworkStates).mockClear();
+    renderSidebar();
+    await screen.findByTestId("bn-v2-nav-row-nielsen");
+
+    fireEvent.click(
+      screen
+        .getByTestId("bn-v2-nav-row-nielsen")
+        .querySelector('[role="switch"], input[type="checkbox"]')!,
+    );
+
+    await waitFor(() => expect(putFrameworkStates).toHaveBeenCalledTimes(1));
+    expect(putFrameworkStates).toHaveBeenCalledWith({});
+  });
+});
+
+describe("the switch reaches the lenses that read it from the store", () => {
+  // The navigator is not the only surface that obeys the switch. Quote badges
+  // (QuoteGroup), the Quotes tag sidebar and autocomplete all read
+  // `SidebarStore.disabledFrameworks`, which is hydrated ONCE per session and
+  // only from TagSidebar's mount. v1 kept them in step because CodebookPanel
+  // wrote through `setFrameworkDisabled`, which set the store and persisted in
+  // one call. v2's navigator persists directly, so without an explicit mirror
+  // "off means off" is true in this rail and false everywhere else until reload.
+
+  function DisabledProbe() {
+    const { disabledFrameworks } = useSidebarStore();
+    return (
+      <span data-testid="disabled-ids">
+        {[...disabledFrameworks].sort().join(",")}
+      </span>
+    );
+  }
+
+  it("mirrors the whole disabled set into the store, not just the switch that moved", async () => {
+    resetSidebarStore();
+    render(
+      <MemoryRouter initialEntries={["/report/codebook-v2"]}>
+        <CodebookV2Sidebar />
+        <DisabledProbe />
+      </MemoryRouter>,
+    );
+    await screen.findByTestId("bn-v2-nav-row-sentiment");
+
+    // Nothing has mounted TagSidebar, so the store has never been hydrated —
+    // which is exactly the deep-link case that makes deriving the payload from
+    // the store unsafe, and why the navigator owns the write.
+    expect(screen.getByTestId("disabled-ids").textContent).toBe("");
+
+    fireEvent.click(
+      screen
+        .getByTestId("bn-v2-nav-row-sentiment")
+        .querySelector('[role="switch"], input[type="checkbox"]')!,
+    );
+
+    // `nielsen` was already off server-side and the store never knew. The set
+    // the navigator hands over is authoritative, so it arrives too.
+    await waitFor(() =>
+      expect(screen.getByTestId("disabled-ids").textContent).toBe(
+        "nielsen,sentiment",
+      ),
+    );
   });
 });
 

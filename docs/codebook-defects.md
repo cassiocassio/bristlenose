@@ -1,7 +1,7 @@
 ---
 status: active
-last-trued: 2026-08-27
-trued-against: HEAD@main 0b1f1857 on 2026-08-22
+last-trued: 2026-08-31
+trued-against: HEAD@main 8fee4ead on 2026-08-31
 ---
 
 # Codebook defects — the running register
@@ -26,6 +26,12 @@ moment you notice, even mid-unrelated-work.
 
 ## Changelog
 
+- _2026-08-31_ — **A5 opened and struck the same day** (the framework-states
+  full-replacement defect, found while the switch was being fixed). Read against
+  the v1 deletion: seven rows struck across the phase-5 pass and the cutover, and
+  five more dissolved rather than fixed — C1, C3, C4, C5 and E2 all described
+  surfaces that `baa1aa0e` deleted. Marked in place; a dissolved row is not a
+  fixed one and the distinction is the point.
 - _2026-08-27_ — register opened. Rows A1–A3 and the "Your codebooks" strike
   come from the 22 Aug read; the flow decomposition below is the substrate the
   wireframe reversal is being built on.
@@ -40,16 +46,29 @@ act on them filter by tag id alone, with no project predicate. `QuoteTag` has no
 `project_id` — only `Quote` does. This was harmless while an instance meant one
 study. **0.26.0 ships N studies at once.**
 
+**A5 is a different mechanism** — not a missing predicate but a client sending a
+partial body to a replacement endpoint. It belongs here because section A is
+about losing what the researcher decided, whichever route the loss takes; A5
+also spends money doing it.
+
 | # | Defect | Anchor | Effect |
 |---|---|---|---|
 | ~~**A1**~~ ✅ **fixed** — the delete is project-scoped (`QuoteTag.quote_id.in_(project_quote_ids)`) and the impact count matches. Landed in the phase-5 pass; struck 31 Aug 2026. | `remove_framework` deletes `QuoteTag` rows by `tag_definition_id` with no project filter | `server/routes/codebook.py:867` | Uninstalling a framework in one project deletes that framework's applied tags in **every** project on the instance |
 | ~~**A2**~~ ✅ **fixed** — the accepted-proposal reset is gone; the code now says so in place. Struck 31 Aug 2026. | `import_template`'s restore path resets `accepted` proposals to `pending` by `tag_definition_id` alone | `server/routes/codebook.py:764` | Installing a codebook in one project un-decides another project's completed review |
 | **A4** | Sentiment can be uninstalled, and nothing can restore it | `routes/codebook.py:867` + `importer.py:1397` | Uninstalling sentiment deletes every sentiment `QuoteTag`. Sentiment tags are `source="pipeline"` and **bypass `ProposedTag` entirely**, so the restore path — which relinks groups and resets *accepted proposals* to `pending` — has nothing to restore. Reinstalling returns the groups with every count at **zero**, and only a full pipeline re-run repopulates them. Reachable two ways: the Library tile's Uninstall, and the section header's **v2 status (29 Aug):** the *affordance* is gone — sentiment has no install or uninstall control on either the page or the browse card (`design-codebook-v2.md` D20). The **endpoint is unchanged**, so A4 stays open as a server-side fix at much lower priority: nothing in the UI can now reach it. |
 | ~~**A3**~~ ✅ **retired** — `restorable` is gone with D20 option A. Struck 31 Aug 2026. | `restorable_ids = all_fw_ids - imported_ids` is computed across the whole database | `server/routes/codebook.py:671` | A project that never had a codebook offers *"Previously installed — reinstall instantly"* |
+| ~~**A5**~~ ✅ **fixed** — the navigator computes the whole disabled set from the same array that feeds the optimistic render, so the write cannot disagree with what is on screen, and mirrors that set into `SidebarStore` so the lenses reading the switch from there agree too. Three regression tests, each watched failing on the pre-fix code. Struck 31 Aug 2026, commit *"a switch that could only turn one codebook off, and a store that never heard about it"*. | The navigator sent a single-key patch to a **full-replacement** endpoint | `frontend/src/components/CodebookV2Sidebar.tsx` `onToggle` + `server/routes/data.py` `put_framework_states` | `put_framework_states` deletes every `ProjectFrameworkState` row for the project and re-inserts only what the body carried — its own docstring says *"PUT replaces the entire stored map. Absence means enabled."* The navigator wrote `{ [id]: enabled }`, so switching a second codebook off wiped the first one's `false` row and switched it back **on**: one codebook off at a time, with nothing on screen to say so. **The money half:** absence reads as an OFF→ON transition, so each wiped row went to `_start_catch_ups`, and any with a completed job and newer sessions began a catch-up AutoCode delta — LLM spend from flipping an unrelated switch. **The second half, found by the doc audit that followed:** `onToggle` persisted without mirroring into `SidebarStore`, whose hydration is once-per-session from `TagSidebar`'s mount alone, so quote badges, the Quotes tag sidebar and autocomplete kept showing a switched-off codebook until a reload. Written in `3cdf085e`, unreachable until v1's deletion made this navigator the only door to the switch (`baa1aa0e`), shipped in **0.29.0**, fixed in **0.29.1** |
 
-**Not reproduced.** All three are read from source. The first move is a
-two-project repro, not a patch — if the scoping turns out to be intentional
-somewhere upstream, the fix changes shape.
+**On reproduction.** A1–A4 were read from source and the note here used to say
+the first move was a two-project repro, not a patch. A1 and A2 were then patched
+without one. That was the right call for those two — the scoping was
+unambiguous — but the note is left standing for A4, which is still unreproduced
+and where an upstream intention would change the shape of the fix.
+
+**A5 is the exception that earned its place:** it was reproduced before it was
+fixed, in the app and then in a test that was watched failing on the pre-fix
+code. Section A is otherwise a source-read register, and the difference in
+confidence between the two kinds of row is worth keeping visible.
 
 ---
 
@@ -87,6 +106,7 @@ somewhere upstream, the fix changes shape.
 | **D2** | All nine templates ship `enabled: true` | So `codebook.comingSoon`, `.picker-card.disabled` and the `isClickable` guard have never rendered for a user, and have never been visually checked |
 | **D3** | Denied proposals are terminal in the UI | The review modal filters to `status === "pending"`, so a denied proposal never appears in any surface again — though it is deliberately retained as telemetry. No route back. This is the state model's open **Q-C** |
 | ~~D4~~ | ~~"Your codebooks" section header + "+ Create new codebook" tile whose only handler closed the modal~~ | **Landed `0b1f1857`, 22 Aug 2026.** Header, tile, `.picker-card-create` CSS and two dead strings across 21 locales removed. The feature stays specced (Library doc Q2) and a comment at the site says to restore header and tile together |
+| **D5** | ~~Five~~ **30** orphaned locale strings with no call site | `bristlenose/locales/en/common.json:527, 538–542, 545–547, 551`, ×21 locales. **Anchor corrected 31 Aug 2026** — this row previously cited `:532,535-537,549`, which are `availableByDefault`, `tagCount_*` and `appliedToQuotes_*`: all **live** keys the navigator renders. Verified by grepping each key against `frontend/src` minus tests. Also renumbered from D4, which collided with the struck D4 above, and moved out of section E, where it had been sitting as a four-cell row in a three-column table. `codebook.restoreCodebook`, `restoringCodebook`, `restoreHelp`, `previouslyImported` died with D20 option A; `autoCodePreserved` died 31 Aug 2026 when the false promise was removed. Left in place rather than swept — a file-wide regex over 21 locale files is the documented way to delete a same-named key in another namespace by accident. Remove deliberately, per-namespace. **Updated 31 Aug 2026:** v1 has now gone, and the orphan count went 5 → 30 with it — the whole `browseTitle` / `foldedSummary` / `errorLoading` family belonged to `CodebookPanel`. Still not swept, for the same reason: a file-wide regex over 21 locale files is how a same-named key in another namespace gets deleted by accident (it took `menu.edit.undo` out of all 21 on 19 Aug 2026, and `check-locales.py` stayed green because English lost it too). Enumerate the keys, delete by fully-qualified path, and diff one locale before repeating |
 
 ---
 
@@ -94,10 +114,7 @@ somewhere upstream, the fix changes shape.
 
 | # | Stale claim | Reality |
 |---|---|---|
-| **E1** | Library doc, Outstanding call 1: *"the exported HTML embeds neither `framework-states` nor `hidden-tag-groups`"* | Both are embedded — `server/routes/export.py`, the `"/framework-states"` and
-`"/hidden-tag-groups"` entries in the embed map (no line number: that file is
-under concurrent edit, so grep it). The *design* question (should a view toggle sanitise a deliverable?) is still real; the mechanism it rested on has changed |
-| **D4** | ~~Five~~ **30** orphaned locale strings with no call site | `locales/en/common.json:532,535-537,549` ×21 | `codebook.restoreCodebook`, `restoringCodebook`, `restoreHelp`, `previouslyImported` died with D20 option A; `autoCodePreserved` died 31 Aug 2026 when the false promise was removed. Left in place rather than swept — a file-wide regex over 21 locale files is the documented way to delete a same-named key in another namespace by accident. Remove deliberately, per-namespace. **Updated 31 Aug 2026:** v1 has now gone, and the orphan count went 5 → 30 with it — the whole `browseTitle` / `foldedSummary` / `errorLoading` family belonged to `CodebookPanel`. Still not swept, for the same reason: a file-wide regex over 21 locale files is how a same-named key in another namespace gets deleted by accident (it took `menu.edit.undo` out of all 21 on 19 Aug 2026, and `check-locales.py` stayed green because English lost it too). Enumerate the keys, delete by fully-qualified path, and diff one locale before repeating |
+| **E1** | Library doc, Outstanding call 1: *"the exported HTML embeds neither `framework-states` nor `hidden-tag-groups`"* | Both are embedded — declared in `EMBED_PATH_TEMPLATES` at `server/routes/export.py:59-60` and written at `:480-481`. **Anchors added 31 Aug 2026:** this row previously refused a line number because the file was under concurrent edit, and the row was also broken across three physical lines, so it rendered as a two-cell row in a three-column table and no reader ever saw the Reality column. The *design* question (should a view toggle sanitise a deliverable?) is still real; the mechanism it rested on has changed |
 | **E2** | `CodebookSidebar.tsx` header comment: *'Three sections: "Your tags", "Built-in", "Frameworks"'* | Renders "Manual tags", "Default", "Library". The comment is the only place the old names survive |
 | ~~**E3**~~ ✅ **fixed** — the docstring now reads *"Uninstall a framework from this project. Nothing is kept for a restore."* Struck 31 Aug 2026. | `remove_framework` docstring: *"Hide a framework from the project"* | It uninstalls, and it deletes. "Hide" was the retired third metaphor the 26 Jul rename existed to kill — it survives in the docstring of the function doing the deleting |
 

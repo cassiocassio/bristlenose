@@ -255,6 +255,38 @@ JSX. **And it generalises past code: a finding marked "resolved" is a claim
 about intent, not evidence about the tree.** Verify a resolution by reading the
 line it names.
 
+### Deleting a UI surface can orphan the test that was pinning a WIRE CONTRACT
+
+`PUT /framework-states` is a **full replacement** — `put_framework_states`
+(`server/routes/data.py`) deletes every row for the project and re-inserts only
+what the body carried, and its own docstring says so. Two clients existed over
+time. v1's `setFrameworkDisabled` sent the whole disabled set, and
+`SidebarStore.test.ts` pinned that with an exact-payload assertion. The v2
+navigator, written months later, sent `{[id]: enabled}` — a patch, to an
+endpoint that has no patch. Switching one codebook off deleted every other
+codebook's `false` row, so **only one could be off at a time**, and 0.29.0
+shipped that to nine channels.
+
+Nothing was red at any point. The server did exactly what it documents. The v2
+tests asserted that the switch *renders*, never what it *sends*. And when
+`baa1aa0e` deleted v1, the one test pinning the contract went on passing against
+a function nothing called any more — a green assertion about dead code, guarding
+a live call site it had never touched.
+
+The second-order cost is the part to remember: absence means enabled, so every
+wiped row read as an OFF→ON transition and was handed to `_start_catch_ups` —
+switching one codebook off could start AutoCode runs, and LLM spend, on others.
+A payload bug reached into the researcher's review queue.
+
+**Rule: deleting a component is also deleting whatever its tests were the only
+witness to.** Before removing one, list the store/helper functions it was the
+last production caller of, and move any wire-contract assertion onto the
+replacement's call site in the same commit. **Tell:** a `grep -rn '<helper>'
+src/ | grep -v test` that returns nothing — an exported function whose only
+remaining callers are tests is usually a contract that has quietly lost its
+guard. Generalises to any replacement endpoint (PUT-as-replace, `set`-shaped
+config writes) where a partial body is silently valid.
+
 ### Verifying only through a pipe hides the entire TTY code path
 
 `foo | tail`, `foo | grep`, `foo > file` all make stdout a non-tty, and any well-behaved CLI *changes behaviour* accordingly: Rich/`clig.dev`-style renderers skip animation, spinners and live regions don't start, colour drops. So a bug that only exists in the animated path is **invisible to every piped run** and instantly visible to the human who runs it bare.
@@ -718,6 +750,14 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 ## Current status
 
 **Internal TestFlight since 14 Jul 2026** — shipping build **0.29.0 (3067)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+
+**0.29.1 is prepared and held for the evening rule.** A patch, and a regression
+in 0.29.0's own headline feature: only one codebook could be switched off at a
+time, because the new navigator sent a single-key patch to a replacement
+endpoint. Every write deleted every other codebook's state row. The navigator
+now sends the whole disabled set, as v1 did. Two tests pin the payload — the
+thing nothing had ever asserted. See Gotchas, "Deleting a UI surface can orphan
+the test that was pinning a wire contract".
 
 **0.29.0 shipped 31 Aug 2026** on all nine channels — PyPI, GitHub Release,
 Homebrew, Snap, TestFlight (build 3067), the notarised `.dmg`, the website

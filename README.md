@@ -386,6 +386,13 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.29.1** — _31 Aug 2026_
+
+Switching one codebook off switched the others back on.
+
+- **Only one codebook could be off at a time.** Switching a second one off silently switched the first back on, and its tags reappeared across the report without anything saying so. Every switch now records the state of every codebook rather than just the one you touched. If a codebook came back on without you asking, switch it off again — it will stay off this time.
+- **Switching a codebook off could start AutoCode on a different one.** A codebook coming back on is treated as a deliberate re-enable, so it catches up on any sessions imported while it was off. Because the switch was turning others back on by accident, that catch-up could run on a codebook you had deliberately switched off — spending on codes you never asked for. Worth a look at your review queue if you were toggling codebooks on 0.29.0.
+
 **0.29.0** — _31 Aug 2026_
 
 The codebook is a lens you navigate rather than a page you scroll — and three things the app was telling you were not true.

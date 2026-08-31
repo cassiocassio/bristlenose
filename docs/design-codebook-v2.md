@@ -1,7 +1,7 @@
 ---
 status: partial
 last-trued: 2026-08-31
-trued-against: HEAD@main 994d822c on 2026-08-31
+trued-against: HEAD@main 8fee4ead on 2026-08-31
 ---
 
 > **Trued 31 Aug 2026.** The previous header read `last-trued: 2026-08-29`
@@ -11,6 +11,17 @@ trued-against: HEAD@main 994d822c on 2026-08-31
 > passed this doc. Five decisions below were **revised in code** between 30 and
 > 31 Aug and each revision is annotated inline; where a decision now differs per
 > surface, the doc says so rather than restating the superseded form.
+>
+> **Amended later the same day.** That truing ran against `994d822c` (12:09).
+> `baa1aa0e` (13:46) then deleted v1 and made this lens the only one — and it
+> edited *this file* without moving the header, so the pointer was behind the
+> doc's own last edit. Two consequences a cold reader needs before going further:
+> the mockup is no longer the spec (this is shipped production code, and the
+> mockup is the superseded artefact); and every section that audits "v1 has X, v2
+> has Y" — the Coverage audit, the Gap analysis, D29's body — is now a comparison
+> against deleted files. Those are kept as the pre-cutover baseline, which is the
+> delta a reader wants, but none of them is a live comparison. The inline sweep
+> for the rest is owed; the register (`codebook-defects.md`) is ahead of this doc.
 
 # Codebook v2 — presentation, layout, flow
 

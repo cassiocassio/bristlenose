@@ -1,6 +1,25 @@
+---
+status: current
+last-trued: 2026-08-31
+trued-against: HEAD@main on 2026-08-31
+---
+
+## Changelog
+
+- _2026-08-31_ — added § Leading: the chrome / prose / glyph / special-case
+  roles, the two ladders side by side, the register of the fifteen ratios still
+  hardcoded, and why a literal cannot fork. Two special cases fenced with
+  comments at their sites. Anchors:
+  `bristlenose/theme/tokens-desktop.css:36-65`,
+  `bristlenose/theme/templates/transcript.css`,
+  `bristlenose/theme/organisms/global-nav.css`, commits
+  "leading: the codebook description and the author bio take the prose token",
+  "leading: write down the state of it, and fence the two special cases in place".
+- _2026-06_ — initial consolidation (see Status below).
+
 # Native Typography & Grid — Consolidated Design
 
-**Status:** Active design (Jun 2026). Consolidates and supersedes the typography/grid
+**Status:** Active design (Jun 2026; § Leading added Aug 2026). Consolidates and supersedes the typography/grid
 decisions previously scattered across `docs/design-theme-divergence.md` (Layer I),
 `docs/design-fonts.md`, and `docs/design-type-colour-parity.md`. Those docs remain
 the deep references for icons/chrome (theme-divergence), the two-typeface vision

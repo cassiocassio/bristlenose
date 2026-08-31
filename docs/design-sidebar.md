@@ -1,10 +1,34 @@
+---
+status: current
+last-trued: 2026-08-31
+trued-against: HEAD@main on 2026-08-31
+---
+
+## Changelog
+
+- _2026-08-31_ — trued up: the two sidebars no longer share a default width
+  (left nav 240, tag sidebar 280), so every "280px (default)" claim now
+  distinguishes them; corrected the Overview's "Quotes tab only" scope, which
+  the body already contradicted at § Desktop embedded mode; corrected the
+  drag clamp from [200, 320] to [200, 480]; and noted that
+  `--bn-sidebar-width` is a fallback rather than the operative default.
+  Anchors: `frontend/src/contexts/SidebarStore.ts:40-43`,
+  `frontend/src/layouts/AppLayout.tsx:241`, `bristlenose/theme/tokens.css:150`,
+  commit "install leads, uninstall recedes".
+- _<undated>_ — initial draft.
+
 # Dual-Sidebar Layout — Design Document
 
 ## Overview
 
 The Quotes tab gets a dual-sidebar layout: a **table-of-contents sidebar** on the left and a **tag-filter sidebar** on the right. Both sidebars are optional — researchers open whichever they need.
 
-**Scope:** Quotes tab only (`/report/quotes`). Other tabs render normally with no grid, no rails.
+**Scope:** five lenses carry the left panel — Quotes, Sessions, Codebook,
+Codebook v2 and Analysis (`showSidebar` in `AppLayout.tsx`). The **right** tag
+sidebar is Quotes-only. Lenses outside that set render with no grid and no
+rails. _(This said "Quotes tab only" until 31 Aug 2026; the panel grew to the
+other lenses without the Overview following — § Desktop embedded mode had
+already been trued and named four of them.)_
 
 **Reference mockup:** `docs/mockups/mockup-sidebar-tags.html`
 
@@ -18,11 +42,15 @@ When the Quotes tab is active, a CSS grid provides the structural skeleton:
 
 ```
 [toc-rail | toc-sidebar | center | tag-sidebar | tag-rail]
-   36px       0/280px       1fr      0/280px       36px
+   36px       0/240px       1fr      0/280px       36px
 ```
 
 - **Rails** (columns 1 and 5): 36px icon strips. Visible when their sidebar is closed. Hidden when open.
-- **Sidebars** (columns 2 and 4): 0px when closed, 280px (default) when open. Resizable 200–480px.
+- **Sidebars** (columns 2 and 4): 0px when closed. **The two open defaults
+  differ**: the left nav opens at **240px**, the tag sidebar at **280px**
+  (`DEFAULT_TOC_WIDTH` / `DEFAULT_TAGS_WIDTH`). Both resizable 200–480px, and
+  both persist per side. The left nav is deliberately the thinner of the two —
+  it is shared across every lens, so its width is a cost paid on all of them.
 - **Center** (column 3): `1fr` — absorbs remaining space. Contains header, nav, toolbar, and quotes.
 
 ### Key Constraint: Left-Edge Vertical Alignment
@@ -38,9 +66,9 @@ CSS classes on `.layout` control the grid template:
 | State | Classes | Grid columns |
 |-------|---------|-------------|
 | Both closed | `.layout` | `36px 0 1fr 0 36px` |
-| TOC open | `.layout.toc-open` | `0 280px 1fr 0 36px` |
+| TOC open | `.layout.toc-open` | `0 240px 1fr 0 36px` |
 | Tags open | `.layout.tags-open` | `36px 0 1fr 280px 0` |
-| Both open | `.layout.toc-open.tags-open` | `0 280px 1fr 280px 0` |
+| Both open | `.layout.toc-open.tags-open` | `0 240px 1fr 280px 0` |
 
 Sidebar widths use CSS custom properties (`--toc-width`, `--tags-width`) with `var(--bn-sidebar-width)` as fallback.
 
@@ -54,7 +82,7 @@ Adding `.animating` to `.layout` enables `transition: grid-template-columns 0.25
 
 | Token | Value | Purpose |
 |-------|-------|---------|
-| `--bn-sidebar-width` | `280px` | Default sidebar panel width |
+| `--bn-sidebar-width` | `280px` | **Fallback only.** `SidebarLayout` sets `--toc-width` / `--tags-width` from the store whenever a panel is open, so this is reached only while the panel is closed and its width is 0. The operative defaults are `DEFAULT_TOC_WIDTH` (240) and `DEFAULT_TAGS_WIDTH` (280) in `SidebarStore.ts` |
 | `--bn-sidebar-min` | `200px` | Minimum drag-resize bound |
 | `--bn-sidebar-max` | `480px` | Maximum drag-resize bound |
 | `--bn-rail-width` | `36px` | Collapsed icon rail width |
@@ -182,7 +210,7 @@ CSS `columns` packs group cards tightly (no row-based whitespace gaps). `break-i
 ### Behaviour
 
 - `mousedown` → record start X/width, add `body.dragging` (disables text selection, sets `col-resize` cursor)
-- `mousemove` → compute delta, clamp width to [200, 320] (320 is temporary cap for single-column layout; raise to 480+ when 2-column masonry ships)
+- `mousemove` → compute delta, clamp width to [200, 480] (`MIN_WIDTH` / `MAX_WIDTH` in `useDragResize.ts`; the earlier temporary 320 cap for single-column layout has been lifted)
 - **Snap-close**: if dragged below 80px → snaps closed (sets width to 0, removes open class)
 - **Drag-to-open from rail**: drag >20px threshold triggers open, then continues as resize
 - `mouseup` → cleanup, persist width to `localStorage`
@@ -225,7 +253,7 @@ Guarded by `!editing && !helpModalOpen`. Added to the existing `useKeyboardShort
 - `bn-toc-width` — number (clamped to [200, 480] on read)
 - `bn-tags-width` — number (clamped to [200, 480] on read)
 
-Default: both closed, width 280.
+Default: both closed. On first open, left nav 240 and tag sidebar 280.
 
 ---
 

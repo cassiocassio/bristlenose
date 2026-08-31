@@ -675,3 +675,52 @@ preferred over the bundled source, so a theme change does not appear until it is
 regenerated or a fresh project is used. Together with `serve` reading
 `index.html` once at startup, that is two independent staleness traps between an
 edit and the screen — both of which present as "the fix did not apply".
+
+## Phase 7 — the swap. v1 is gone, and this lens took its name
+
+Landed 31 Aug 2026. The parallel period D29 opened is closed: what was built as
+"v2" is now simply the codebook lens, and `CodebookPanel` / `CodebookSidebar` /
+`CodebookTab` are deleted.
+
+**What moved.** `/report/codebook` serves this lens; `/report/codebook-v2` is
+gone and deliberately has **no alias** — it was dev-gated for its whole life, so
+nothing in the wild holds that URL and an alias would be a second door to
+maintain for no reader. The `IS_DEV` NavBar link went with it, as did the
+Diagnostics ▸ Codebook v2 menu item and its `openCodebookV2` bridge action: both
+existed only because the lens had no sidebar row, and it has one now.
+
+**Swift.** `Tab.codebookV2` is out of the enum, which collapsed five switches
+and removed the `#if DEBUG` second rail row. The lens takes **`tag`** back from
+the temporary `tag.square` that distinguished the two. `Tab.from(path:)` keeps
+its longest-prefix comment without the arm — the rule outlives the case, and the
+next sibling route sharing a prefix will need it.
+
+**One route bug the swap would otherwise have shipped:** the AutoCode activity
+chip's `originRoute` still pointed at `/report/codebook-v2/`, so "View Report"
+would have 404'd after the route retired. The same class caught `tabFromPath`'s
+subtitle arm, which mapped a dead route to a `Tab` case Swift no longer has.
+
+**Phase 0's `Done when` was never satisfied, and it is now moot.** That phase
+specified *"a settings flag, not `--dev`, so it ships in the bundled sidecar
+where the cohort can reach it"*; what shipped was `IS_DEV`, and D29's argument
+for cohort reach was therefore never met. The lens went straight from dev-gated
+to default-on without passing through a settings flag. Recorded rather than
+quietly dropped: the reasoning was sound, the intermediate step just stopped
+being needed once the swap date arrived.
+
+**i18n graduated with the lens** — the obligation this plan named at Phase 6.
+Most of it was inheritance: `yourTags`, `builtIn`, `importCodebook`,
+`removeFromCodebook` and `projectTagsHeading` are v1's keys, already translated
+in 21 locales. **Browse Library became Browse Codebooks** specifically so the
+button could take `menu.codes.browseCodebooks`'s existing translations instead of
+seeding new ones — and it now matches the native menu item word for word. Five
+new keys and two CLDR plural sets (`tagCount`, `appliedToQuotes`) were seeded
+across 20 locales, machine-translated and **pending native review**, the same
+status as the ca/pl/ru/uk/da/sv/nb/tr/nl/fi bulk. The hand-rolled English
+ternary in `codebookReach.ts` is gone.
+
+**Still owed.** The files are still named `CodebookV2*` and the CSS still uses
+`.v2-*` — a rename with no behaviour in it, deferred rather than bundled into a
+swap that already touched 58 files. And v1's deletion left **30 orphaned
+`codebook.*` locale keys**, recorded as `codebook-defects.md` D4 and deliberately
+not swept by regex.

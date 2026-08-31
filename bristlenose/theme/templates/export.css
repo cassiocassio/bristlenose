@@ -58,11 +58,13 @@
 }
 
 /* --- Codebook mutation controls ---
-   .codebook-picker-btn is the "Browse codebooks" header button; the picker it
-   opens fetches from a server that isn't there offline. */
+   `.codebook-picker-btn` (the browse-header button) and `.autocode-btn` were
+   removed on 31 Aug 2026 with the v1 codebook lens. Their replacements are
+   gated in JSX by `isExportMode()` rather than hidden by CSS — which is the
+   mechanism this file's own failure message prefers, since a JSX gate cannot
+   go stale the way a selector can. The two remaining rules still match live
+   controls in the shipped lens. */
 .bn-export-mode .new-group-placeholder,
-.bn-export-mode .codebook-picker-btn,
-.bn-export-mode .autocode-btn,
 .bn-export-mode .framework-remove-btn {
   display: none !important;
 }

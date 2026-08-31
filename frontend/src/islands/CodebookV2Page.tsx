@@ -38,6 +38,7 @@ import { safeUrlOrNull } from "../utils/safeUrl";
 import type { CodebookGroupResponse, TemplateOut } from "../utils/types";
 import { renderLead } from "../utils/leadSentence";
 import { reachPhrase, vocabularyPhrase } from "../utils/codebookReach";
+import { useTranslation } from "react-i18next";
 
 export interface PageBook {
   id: string;
@@ -122,6 +123,7 @@ export function CodebookV2Page({
   allTagNames,
   readOnly = false,
 }: Props) {
+  const { t } = useTranslation();
   const tagCount = groups.reduce((n, g) => n + g.tags.length, 0);
   const tpl = book.template;
   const links = (tpl?.author_links ?? [])
@@ -211,7 +213,7 @@ export function CodebookV2Page({
                 onClick={() => onReview(book.id)}
                 data-testid="bn-v2-review"
               >
-                Review
+                {t("codebook.reviewProposals")}
               </button>
             </div>
           ) : (

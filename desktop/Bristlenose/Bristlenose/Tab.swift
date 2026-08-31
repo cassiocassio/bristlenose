@@ -5,7 +5,7 @@ import Foundation
 /// Raw values match the keys expected by `window.switchToTab(tab)` in
 /// `frontend/src/shims/navigation.ts`.
 enum Tab: String, CaseIterable, Identifiable {
-    case project, sessions, quotes, codebook, codebookV2, analysis
+    case project, sessions, quotes, codebook, analysis
 
     var id: String { rawValue }
 
@@ -16,7 +16,6 @@ enum Tab: String, CaseIterable, Identifiable {
         case .sessions:  "Sessions"
         case .quotes:    "Quotes"
         case .codebook:  "Codebooks"
-        case .codebookV2: "Codebook v2"
         case .analysis:  "Analysis"
         }
     }
@@ -50,7 +49,6 @@ enum Tab: String, CaseIterable, Identifiable {
         case .sessions:  "/report/sessions/"
         case .quotes:    "/report/quotes/"
         case .codebook:  "/report/codebook/"
-        case .codebookV2: "/report/codebook-v2/"
         case .analysis:  "/report/analysis/"
         }
     }
@@ -58,15 +56,15 @@ enum Tab: String, CaseIterable, Identifiable {
     /// Does this lens have a web left panel — the content navigator?
     ///
     /// One list, because there were four: the toolbar button's gate, its label,
-    /// its tooltip, and the View menu's Show/Hide item. Adding `codebookV2`
-    /// reached three of them and missed the gate, so the lens had a panel, a
-    /// menu item that toggled it and a ⌘⌥L that worked — and no toolbar button,
+    /// its tooltip, and the View menu's Show/Hide item. Adding a lens once
+    /// reached three of them and missed the gate, so it had a panel, a menu
+    /// item that toggled it and a ⌘⌥L that worked — and no toolbar button,
     /// which on the Mac is the only affordance embedded mode leaves (the SPA's
     /// own rails are gone there). A four-way enumeration of the same fact is a
     /// three-way disagreement waiting to happen.
     var hasLeftPanel: Bool {
         switch self {
-        case .quotes, .codebook, .codebookV2, .analysis: true
+        case .quotes, .codebook, .analysis: true
         case .project, .sessions: false
         }
     }
@@ -78,12 +76,12 @@ enum Tab: String, CaseIterable, Identifiable {
     /// to avoid swallowing all `/report/...` paths.
     static func from(path: String) -> Tab? {
         if path.hasPrefix("/report/analysis") { return .analysis }
-        // BEFORE the plain codebook test, not after: "/report/codebook-v2"
-        // has "/report/codebook" as a prefix, so the shorter match would
-        // swallow it and every v2 route would report as the shipped lens.
-        // This is the "longest-prefix-first" rule the doc comment names, and
-        // the first case where getting the order wrong is silent.
-        if path.hasPrefix("/report/codebook-v2") { return .codebookV2 }
+        // The v2 route is gone (v2 became the only Codebook lens, 31 Aug 2026),
+        // and with it the longest-prefix hazard this arm guarded:
+        // "/report/codebook-v2" had "/report/codebook" as a prefix, so the
+        // shorter test would have swallowed it silently. Kept as a note because
+        // the rule outlives the case — any future sibling route sharing a
+        // prefix must be tested BEFORE the shorter one.
         if path.hasPrefix("/report/codebook") { return .codebook }
         if path.hasPrefix("/report/quotes")   { return .quotes }
         if path.hasPrefix("/report/sessions") { return .sessions }

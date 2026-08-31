@@ -49,6 +49,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   apiGet,
   getCodebook,
@@ -59,6 +60,7 @@ import {
 import type { CodebookResponse, TemplateListResponse } from "../utils/types";
 import { selectCodebookV2, useCodebookV2Store } from "../contexts/CodebookV2Store";
 import { isExportMode } from "../utils/exportData";
+import i18n from "../i18n";
 
 // ── The platform switch ────────────────────────────────────────────────────
 
@@ -200,6 +202,13 @@ function Row({
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function CodebookV2Sidebar() {
+  // GRADUATION. This lens was English-only by design while it was dev-gated
+  // (D29); it became the only Codebook lens on 31 Aug 2026, so its chrome
+  // needs the locale keys the shipped lens already had. Most are REUSED rather
+  // than seeded: `yourTags`, `builtIn`, `importCodebook`, `removeFromCodebook`
+  // and `projectTagsHeading` are v1's, already translated in 21 locales, and
+  // v2 inherits them along with the name and the icon.
+  const { t } = useTranslation();
   const { selectedId } = useCodebookV2Store();
   const [books, setBooks] = useState<V2NavBook[] | null>(null);
   const readOnly = isExportMode();
@@ -295,9 +304,9 @@ export function CodebookV2Sidebar() {
 
   return (
     <nav className="v2-nav" aria-label="Codebooks" data-testid="bn-v2-nav">
-      {section("Manual tags", floor)}
-      {section("Default", builtIn)}
-      {section("Frameworks", frameworks)}
+      {section(t("codebook.yourTags"), floor)}
+      {section(t("codebook.builtIn"), builtIn)}
+      {section(t("codebook.frameworksSection"), frameworks)}
       {/* The rail is installed-only (D17), so the codebooks a researcher has
           NOT taken are reachable from here by no other route — v1's rail listed
           them as greyed rows and each one was its own door to the catalogue.
@@ -326,7 +335,7 @@ export function CodebookV2Sidebar() {
           data-testid="bn-v2-nav-browse"
           onClick={openLibrary}
         >
-          Browse Library
+          {t("codebook.browseCodebooksButton")}
         </button>
       )}
     </nav>
@@ -391,7 +400,8 @@ export function buildBooks(
       id: fid,
       title: tpl?.title ?? fid,
       provenance:
-        author || (fid === "sentiment" ? "On by default" : "Available by default"),
+        author ||
+        i18n.t(fid === "sentiment" ? "codebook.onByDefault" : "codebook.availableByDefault"),
       provenanceIsPerson: !!author,
       floor: false,
       enabled: states[fid] !== false,

@@ -46,7 +46,6 @@ if (!appRoot) {
     import("./islands/QuoteSections"),
     import("./islands/QuoteThemes"),
     import("./islands/AnalysisPage"),
-    import("./islands/CodebookPanel"),
     import("./islands/TranscriptPage"),
     import("./islands/SettingsPanel"),
     import("./islands/AboutPanel"),
@@ -58,7 +57,6 @@ if (!appRoot) {
     { QuoteSections },
     { QuoteThemes },
     { AnalysisPage },
-    { CodebookPanel },
     { TranscriptPage },
     { SettingsPanel },
     { AboutPanel },
@@ -101,12 +99,6 @@ if (!appRoot) {
     if (analysisRoot) {
       const projectId = analysisRoot.getAttribute("data-project-id") || "1";
       createRoot(analysisRoot).render(<AnalysisPage projectId={projectId} />);
-    }
-
-    const codebookRoot = document.getElementById("bn-codebook-root");
-    if (codebookRoot) {
-      const projectId = codebookRoot.getAttribute("data-project-id") || "1";
-      createRoot(codebookRoot).render(<CodebookPanel projectId={projectId} />);
     }
 
     const transcriptRoot = document.getElementById("bn-transcript-page-root");

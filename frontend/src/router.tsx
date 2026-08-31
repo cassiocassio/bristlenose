@@ -14,7 +14,6 @@ import { ProjectTab } from "./pages/ProjectTab";
 import { SessionsTab } from "./pages/SessionsTab";
 import { TranscriptTab } from "./pages/TranscriptTab";
 import { QuotesTab } from "./pages/QuotesTab";
-import { CodebookTab } from "./pages/CodebookTab";
 import { CodebookV2Tab } from "./pages/CodebookV2Tab";
 import { AnalysisTab } from "./pages/AnalysisTab";
 import { SpecimenTab } from "./pages/SpecimenTab";
@@ -37,12 +36,12 @@ export const routes = [
       { path: "sessions", element: <SessionsTab /> },
       { path: "sessions/:sessionId", element: <TranscriptTab /> },
       { path: "quotes", element: <QuotesTab /> },
-      { path: "codebook", element: <CodebookTab /> },
-      // Codebook v2 — the replacement, running alongside the shipped lens
-      // (D29). Registered unconditionally like `specimen`: the route costs
-      // nothing until visited, and a conditional route is a second thing to
-      // get wrong. Only the NavBar link is gated.
-      { path: "codebook-v2", element: <CodebookV2Tab /> },
+      // The codebook lens is what was built as "v2"; it replaced the original
+      // on 31 Aug 2026 and took its route, its label and its translations.
+      // `/report/codebook-v2` is deliberately NOT kept as an alias: it was
+      // dev-gated and never reachable by a researcher, so nothing in the wild
+      // holds that URL.
+      { path: "codebook", element: <CodebookV2Tab /> },
       { path: "analysis", element: <AnalysisTab /> },
       // Debug lens — test content on a visible grid (dev-gated NavBar link;
       // desktop entry via Diagnostics menu). Route always registered: the

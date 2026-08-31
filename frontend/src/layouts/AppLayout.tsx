@@ -17,7 +17,6 @@ import { FeedbackModal } from "../components/FeedbackModal";
 import { SettingsModal } from "../components/SettingsModal";
 import { SidebarLayout, sidebarAnimations } from "../components/SidebarLayout";
 import { SessionsSidebar } from "../components/SessionsSidebar";
-import { CodebookSidebar } from "../components/CodebookSidebar";
 // By path, not through the `components` barrel — the barrel rides in the
 // always-loaded chunk, and this is only reachable from one route.
 import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
@@ -220,14 +219,11 @@ function AppShell() {
   const _isCodebookSlash = useMatch("/report/codebook/");
   // `useMatch` is exact, so these do NOT also match `/report/codebook` — the
   // prefix trap that bit `Tab.from(path:)` on the Swift side does not arise.
-  const _isCodebookV2 = useMatch("/report/codebook-v2");
-  const _isCodebookV2Slash = useMatch("/report/codebook-v2/");
   const _isAnalysis = useMatch("/report/analysis");
   const _isAnalysisSlash = useMatch("/report/analysis/");
   const isQuotes = _isQuotes || _isQuotesSlash;
   const isSessions = _isSessions || _isSessionsSlash;
   const isCodebook = _isCodebook || _isCodebookSlash;
-  const isCodebookV2 = _isCodebookV2 || _isCodebookV2Slash;
   const isAnalysis = _isAnalysis || _isAnalysisSlash;
   const isSessionsRoute = !!(isSessions || isTranscript);
   // Embedded (macOS) removes the Sessions lens's left panel — the native
@@ -238,7 +234,7 @@ function AppShell() {
   // undefined would render the *Quotes* contents panel on the Sessions lens.
   const embeddedSessionsPanelRemoved = isEmbedded() && isSessionsRoute;
   const showSidebar = !!(
-    (isQuotes || isSessionsRoute || isCodebook || isCodebookV2 || isAnalysis) &&
+    (isQuotes || isSessionsRoute || isCodebook || isAnalysis) &&
     !embeddedSessionsPanelRemoved
   );
   const toggleExport = useCallback(() => setExportOpen((prev) => !prev), []);
@@ -361,8 +357,6 @@ function AppShell() {
         const path = locationBridgeRef.current.pathname;
         if (path.startsWith("/report/quotes")) return "quotes";
         if (path.startsWith("/report/sessions")) return "sessions";
-        // Longest prefix first (see Tab.from(path:) — same rule, same trap).
-        if (path.startsWith("/report/codebook-v2")) return "codebookV2";
         if (path.startsWith("/report/codebook")) return "codebook";
         if (path.startsWith("/report/analysis")) return "analysis";
         return "project";
@@ -629,13 +623,6 @@ function AppShell() {
           // has no native sidebar row, so the menu navigates the SPA directly.
           navigate("/report/specimen");
           break;
-        case "openCodebookV2":
-          // Codebook v2 (Diagnostics menu). Same reason as the specimen: the
-          // NavBar is hidden in embedded mode — the lens rail is the native
-          // sidebar — so a web nav link cannot reach it. The route is
-          // registered unconditionally, so navigating is enough.
-          navigate("/report/codebook-v2");
-          break;
       }
     };
     window.addEventListener("bn:menu-action", handler);
@@ -725,7 +712,7 @@ function AppShell() {
             // whichever one is hardcoded: a researcher who installed from v2
             // and clicked View Report used to land in v1, a different lens from
             // the one they were working in, with nothing saying so.
-            if (isCodebook || isCodebookV2) {
+            if (isCodebook) {
               window.dispatchEvent(new CustomEvent("bn:autocode-report", { detail }));
             } else {
               navigate(j.originRoute ?? "/report/codebook");
@@ -743,7 +730,7 @@ function AppShell() {
           },
         };
       }),
-    [activityJobs, isCodebook, isCodebookV2, navigate],
+    [activityJobs, isCodebook, navigate],
   );
 
   return (
@@ -753,7 +740,7 @@ function AppShell() {
         // The embedded gate repeats here (belt to showSidebar's braces) so
         // SessionsSidebar never MOUNTS on the embedded Sessions lens — its
         // useEffect fetch would otherwise still fire behind an inactive layout.
-        isSessionsRoute && !embeddedSessionsPanelRemoved ? <SessionsSidebar /> : isCodebook ? <CodebookSidebar /> : isCodebookV2 ? <CodebookV2Sidebar /> : isAnalysis ? <AnalysisSidebar /> : undefined
+        isSessionsRoute && !embeddedSessionsPanelRemoved ? <SessionsSidebar /> : isCodebook ? <CodebookV2Sidebar /> : isAnalysis ? <AnalysisSidebar /> : undefined
       }
       leftPanelTitle={
         // Codebooks dropped its title 14 Aug 2026, alongside Quotes' "Contents"

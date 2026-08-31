@@ -31,9 +31,13 @@ describe("reachPhrase — two facts, not a ratio", () => {
     expect(reachPhrase(31, 0, "Ikea")).toBe("31 tags");
   });
 
-  it("degrades to the unscoped phrase when there is no project name", () => {
-    // "…in " with nothing after it is worse than the sentence it replaced.
-    expect(reachPhrase(28, 2, "")).toBe("28 tags · applied to 2 quotes");
-    expect(reachPhrase(28, 2, "   ")).toBe("28 tags · applied to 2 quotes");
+  it("drops the reach clause when there is no project to name", () => {
+    // The clause exists to say *where* the count applies. With no name it
+    // renders "…in " with nothing after it — worse than the sentence it
+    // replaced. Was an unscoped variant before the CLDR conversion; a second
+    // plural key across 21 locales is not worth a branch the lens never
+    // reaches (the name arrives from `/info` on mount).
+    expect(reachPhrase(28, 2, "")).toBe("28 tags");
+    expect(reachPhrase(28, 2, "   ")).toBe("28 tags");
   });
 });

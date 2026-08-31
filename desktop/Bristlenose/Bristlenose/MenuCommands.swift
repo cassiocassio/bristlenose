@@ -277,14 +277,6 @@ private struct DebugMenuContent: View {
         Button("Grid Specimen") { bridgeHandler.menuAction("openSpecimen") }
             .disabled(serveManager.runningPort == nil)
 
-        // Codebook v2 — the replacement lens, running beside the shipped one
-        // while it is built (docs/design-codebook-v2.md D29). Here for the same
-        // reason as Grid Specimen: the web NavBar is hidden in embedded mode
-        // (the lens rail is this app's own sidebar), so there is no web link to
-        // click. It gets a real sidebar row when the flag defaults on.
-        Button("Codebook v2") { bridgeHandler.menuAction("openCodebookV2") }
-            .disabled(serveManager.runningPort == nil)
-
         // (Reveal / Open Log / Copy Provenance moved to Section 1 — they ship
         // to every channel now. See DiagnosticsActions.)
 
@@ -737,7 +729,7 @@ private struct ViewMenuContent: View {
     private var leftPanelKey: String? {
         switch bridgeHandler.activeTab {
         case .quotes:   return "Contents"
-        case .codebook, .codebookV2: return "Codes"
+        case .codebook: return "Codes"
         case .analysis: return "Signals"
         default:        return nil
         }

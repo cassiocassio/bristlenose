@@ -13,10 +13,12 @@ import { tabFromPath } from "./LensSubtitleSync";
  * shorter test matched first, and a codebook lens reported "3 Sessions · 9m".
  */
 describe("tabFromPath — longest prefix first", () => {
-  it("resolves the v2 route to its own tab, not the shipped lens", () => {
-    expect(tabFromPath("/report/codebook-v2")).toBe("codebookV2");
-    expect(tabFromPath("/report/codebook-v2/")).toBe("codebookV2");
-    expect(tabFromPath("/report/codebook-v2?view=library")).toBe("codebookV2");
+  it("resolves the codebook lens, library view included", () => {
+    // Was "resolves the v2 route to its own tab". That route retired on
+    // 31 Aug 2026 when the lens took `/report/codebook`; the library is now a
+    // query param on it, which must not change the tag.
+    expect(tabFromPath("/report/codebook")).toBe("codebook");
+    expect(tabFromPath("/report/codebook?view=library")).toBe("codebook");
   });
 
   it("still resolves the shipped codebook lens", () => {
@@ -24,11 +26,10 @@ describe("tabFromPath — longest prefix first", () => {
     expect(tabFromPath("/report/codebook/")).toBe("codebook");
   });
 
-  it("returns the Swift rawValue spelling, not the route slug", () => {
-    // `case codebookV2` in Tab.swift has rawValue "codebookV2". Posting the
-    // route's "codebook-v2" would fail the guard exactly as the prefix bug did
-    // — same silent fallback, different cause.
-    expect(tabFromPath("/report/codebook-v2")).not.toBe("codebook-v2");
+  it("returns the Swift rawValue spelling, not a route slug", () => {
+    // The tag is matched against `Tab.rawValue`; a slug would fail the guard
+    // silently and the window would fall back to the session count.
+    expect(tabFromPath("/report/codebook")).toBe("codebook");
   });
 
   it("resolves the other lenses unchanged", () => {

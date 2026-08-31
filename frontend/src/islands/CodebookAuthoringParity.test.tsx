@@ -36,7 +36,6 @@ import { MemoryRouter } from "react-router-dom";
 const render = (ui: React.ReactElement) =>
   rtlRender(ui, { wrapper: MemoryRouter });
 import userEvent from "@testing-library/user-event";
-import { CodebookPanel } from "./CodebookPanel";
 import { CodebookV2 } from "./CodebookV2";
 // The navigator moved to the left sidebar, so reaching a framework's page
 // means rendering the pair AppLayout mounts.
@@ -157,20 +156,17 @@ interface Lens {
   framework: () => Promise<void>;
 }
 
+// ONE LENS NOW, AND THE HARNESS IS KEPT ON PURPOSE.
+//
+// This was a parity table: the authoring apparatus was extracted out of the
+// shipped island so v2 could render it too, and the risk that created was the
+// two lenses drifting. v1 was decommissioned on 31 Aug 2026, so there is no
+// second row to compare against — but the assertions below are the *behaviour
+// of the apparatus*, not a comparison, and they are the only place that
+// behaviour is pinned. Collapsing the table to a plain describe would have
+// meant rewriting every case to prove the same things; leaving the shape
+// intact costs one array and keeps the next lens a one-row addition.
 const LENSES: Lens[] = [
-  {
-    name: "v1 (CodebookPanel)",
-    floor: async () => {
-      render(<CodebookPanel projectId="1" />);
-      await screen.findByText("Friction");
-    },
-    framework: async () => {
-      // v1 renders every codebook on one page, so the framework is already
-      // there — that long scrolling page is the thing v2's rail replaces.
-      render(<CodebookPanel projectId="1" />);
-      await screen.findByText("Status visibility");
-    },
-  },
   {
     name: "v2 (CodebookV2)",
     floor: async () => {

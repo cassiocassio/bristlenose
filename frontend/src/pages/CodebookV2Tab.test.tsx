@@ -1,6 +1,13 @@
 /**
- * Phase 0 — the seam. Pins that v2 is reachable and that it is *parallel*,
- * which is the whole point of D29: v1 must keep working throughout the build.
+ * The codebook lens, at the route it took over.
+ *
+ * This file began as "phase 0 — the seam", pinning that v2 was reachable at its
+ * own route AND that it had not replaced v1, which was the whole point of D29:
+ * the shipped lens had to keep working throughout the build. That parallel
+ * period ended on 31 Aug 2026 — v2 became the only codebook lens, took
+ * `/report/codebook`, and v1 was deleted. The assertions are inverted rather
+ * than removed: what used to prove separation now proves the swap, and a
+ * resurrected `codebook-v2` route would fail here.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -50,33 +57,33 @@ function renderAt(path: string) {
   );
 }
 
-describe("codebook v2 seam", () => {
-  it("is reachable at its own route", async () => {
-    renderAt("/report/codebook-v2");
+const childPaths = () =>
+  routes
+    .flatMap((r) => ("children" in r && r.children ? r.children : []))
+    .map((c) => (c as { path?: string }).path)
+    .filter(Boolean);
+
+describe("the codebook lens", () => {
+  it("serves /report/codebook", async () => {
+    renderAt("/report/codebook");
     await waitFor(() =>
       expect(screen.getByTestId("bn-codebook-v2")).toBeInTheDocument(),
     );
   });
 
-  it("does not replace v1 — both routes exist", () => {
-    // The failure this guards against is a rewrite in place by accident. If
-    // /report/codebook ever stops resolving while v2 is incomplete, the lens is
-    // broken for the whole build, which is exactly what D29 rules out.
-    const paths = routes
-      .flatMap((r) => ("children" in r && r.children ? r.children : []))
-      .map((c) => (c as { path?: string }).path)
-      .filter(Boolean);
+  it("replaced v1 — there is exactly one codebook route", () => {
+    // Inverted from "both routes exist". `/report/codebook-v2` is deliberately
+    // NOT kept as an alias: it was dev-gated for its whole life, so nothing in
+    // the wild holds that URL, and an alias would be a second door to maintain
+    // for no reader.
+    const paths = childPaths();
     expect(paths).toContain("codebook");
-    expect(paths).toContain("codebook-v2");
+    expect(paths).not.toContain("codebook-v2");
   });
 
-  it("registers the route unconditionally, like specimen", () => {
+  it("is registered unconditionally, like specimen", () => {
     // A conditional route is a second thing to get wrong; the route costs
-    // nothing until visited because the island is lazy. Only the link is gated.
-    const children = routes.flatMap((r) =>
-      "children" in r && r.children ? r.children : [],
-    );
-    const v2 = children.find((c) => (c as { path?: string }).path === "codebook-v2");
-    expect(v2).toBeDefined();
+    // nothing until visited because the island is lazy.
+    expect(childPaths().filter((p) => p === "codebook")).toHaveLength(1);
   });
 });

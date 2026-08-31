@@ -431,7 +431,7 @@ struct ContentView: View {
     ///
     /// Sessions/Project show the session count + total time from the local
     /// analysis DB — stable, and painted instantly before the report loads. The
-    /// report-derived lenses (Quotes/Codebook/Codebook v2/Analysis) carry *live*
+    /// report-derived lenses (Quotes/Codebook/Analysis) carry *live*
     /// counts only
     /// the SPA can compute (Signals don't exist in the DB; visible-quote/tag
     /// counts shift as the researcher edits), so they arrive over the bridge as
@@ -442,7 +442,7 @@ struct ContentView: View {
     /// `unanalysed`.
     private var countSubtitle: String {
         switch bridgeHandler.activeTab {
-        case .quotes?, .codebook?, .codebookV2?, .analysis?:
+        case .quotes?, .codebook?, .analysis?:
             // Honour the bridged subtitle only when it's for the lens we're on,
             // so a tab switch never momentarily shows the previous lens's count.
             guard bridgeHandler.lensSubtitleTab == bridgeHandler.activeTab?.rawValue else {
@@ -2083,7 +2083,7 @@ struct ContentView: View {
         // toggle reads "Contents". A `default:` arm sealing a new case into
         // the wrong string is how the sidebar acquired five unlocalised
         // labels once already.
-        case .codebook, .codebookV2: return i18n.t("desktop.toolbar.codes")
+        case .codebook: return i18n.t("desktop.toolbar.codes")
         case .analysis: return i18n.t("desktop.toolbar.signals")
         default:        return i18n.t("desktop.toolbar.contents")
         }
@@ -2093,7 +2093,7 @@ struct ContentView: View {
     private var leftPanelToolbarHelp: String {
         switch bridgeHandler.activeTab {
         case .quotes:   return i18n.t("desktop.toolbar.showContents")
-        case .codebook, .codebookV2: return i18n.t("desktop.toolbar.showCodes")
+        case .codebook: return i18n.t("desktop.toolbar.showCodes")
         case .analysis: return i18n.t("desktop.toolbar.showSignals")
         default:        return i18n.t("desktop.toolbar.showContents")
         }

@@ -78,7 +78,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
     fetchQuotes();
   }, [fetchQuotes]);
 
-  // Re-fetch when another island (CodebookPanel) applies bulk autocode tags.
+  // Re-fetch when the codebook lens applies bulk autocode tags.
   useEffect(() => {
     const handler = () => fetchQuotes(true);
     document.addEventListener("bn:tags-changed", handler);

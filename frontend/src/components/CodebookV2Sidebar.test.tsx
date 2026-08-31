@@ -217,7 +217,11 @@ describe("Browse Library closes the rail's one gap", () => {
     const nav = screen.getByTestId("bn-v2-nav");
     const kids = Array.from(nav.children);
     expect(kids.indexOf(screen.getByTestId("bn-v2-nav-browse"))).toBe(kids.length - 1);
-    expect(screen.getByTestId("bn-v2-nav-browse")).toHaveTextContent("Browse Library");
+    // "Browse Codebooks", not "Browse Library": the label changed when the lens
+    // graduated on 31 Aug 2026, so the button could take `menu.codes.browseCodebooks`'s
+    // existing translations in 21 locales instead of seeding new ones — and it
+    // now matches the native menu item word for word.
+    expect(screen.getByTestId("bn-v2-nav-browse")).toHaveTextContent("Browse Codebooks");
   });
 
   it("is the house small secondary, not a sidebar dialect of one", async () => {

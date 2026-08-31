@@ -2839,6 +2839,15 @@ V2 path for projects someone else owns.
 
 ### D29 — v2 lands as a parallel surface behind a flag, not a rewrite in place
 
+> **Closed 31 Aug 2026.** The parallel period ran its course: v2 became the only
+> codebook lens, took `/report/codebook`, and v1 was deleted. See
+> `design-codebook-v2-plan.md` § Phase 7 for what moved. One part of this
+> decision was **never satisfied** and is worth naming rather than quietly
+> dropping — D29 argued for a *settings* flag rather than `--dev` so the cohort
+> could reach the lens, and what shipped was `IS_DEV`. The lens went straight
+> from dev-gated to default-on; the intermediate step stopped being needed once
+> the swap arrived, but no cohort member ever saw v2 behind a flag.
+
 Settled 30 Aug. `CodebookPanel.tsx` is **1,545 lines** and ten files reference it
 (`QuoteThemes`, `QuoteSections`, `TagSidebar`, `SidebarStore`, `main.tsx`,
 `codebookDot`, `colours`, and three test files). Rewriting that in place means
@@ -3244,3 +3253,35 @@ both pytest and vitest.
    the shipped labels are editorial (*"Original 1994 CHI paper (DOI)"*), so
    replacing them with bare hosts costs something real. Worth drawing before
    deciding.
+
+### D31 — the catalogue's title is one `SectionHeading` switched on content, not a second one
+
+Recorded 31 Aug 2026, from a parallel session's durable-artefact audit. It was
+deferred there rather than written, because this doc was being edited at the
+time — the decision lived only in a commit body, which is exactly the burial the
+audit exists to catch.
+
+The catalogue view needs a different title from the codebook page, and the
+obvious shape is a second `SectionHeading` rendered in the browse branch. That
+is wrong here, and the reason is the shared datum rather than taste.
+
+`report.css` flushes the first zone title to the content datum with
+
+    .center > main > section:first-of-type > .section-heading
+
+so the rule reaches the heading of the **first** `<section>` in `<main>`, and
+only that one. Two `SectionHeading`s in two branches means the browse view's
+title is a *different element* from the page view's — and whether it is enrolled
+in the datum then depends on which branch rendered, which is a geometry bug that
+only appears on one of two routes and looks like a rendering glitch rather than
+a selector miss. One heading whose *text* switches on `view` keeps a single
+element in a single position, so the datum rule matches unconditionally.
+
+The general form is worth keeping: **when a lens has two views, vary the
+content of one heading rather than rendering one heading per view.** The
+page-geometry rules in `design-lens-template.md` are positional, and a
+conditionally-rendered element cannot satisfy a positional rule reliably.
+
+Related: the same lens's Library is `?view=library` URL state rather than
+component state, which is what makes "two views, one route" coherent in the
+first place — see the Back-button note in `design-codebook-v2-plan.md`.

@@ -51,15 +51,6 @@ export function NavBar({ onExportReport, onSendToMiro, onSettings, onHelp }: Nav
         </NavLink>
       ))}
       {IS_DEV && (
-        // Codebook v2 — the replacement lens, running beside the shipped one
-        // (D29). Dev-gated and English-only while it is incomplete, exactly as
-        // Specimen is; it graduates to a default-on flag at phase 6, which is
-        // also when its label needs locale keys.
-        <NavLink to="/report/codebook-v2" className={tabClassName}>
-          Codebook v2
-        </NavLink>
-      )}
-      {IS_DEV && (
         // Debug lens — dev only, English only (dev tool; no locale keys, same
         // precedent as the responsive playground).
         <NavLink to="/report/specimen" className={tabClassName}>

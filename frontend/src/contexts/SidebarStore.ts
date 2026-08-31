@@ -349,7 +349,7 @@ export function setTagGroupsHidden(groupNames: string[], hidden: boolean): void 
  * Fetch the persisted per-framework disable state once per session and apply it.
  * Guarded so a remount (Codebook tab ↔ Quotes tab) doesn't refetch and clobber
  * a just-made local toggle whose fire-and-forget PUT hasn't landed yet. Safe to
- * call from any consumer mount (CodebookPanel for the fold, TagSidebar for the
+ * call from any consumer mount (the codebook lens for the fold, TagSidebar for the
  * report-wide badge hide) — the first caller wins.
  */
 export function hydrateFrameworkStates(): void {

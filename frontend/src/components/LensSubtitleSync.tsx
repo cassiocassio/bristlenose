@@ -17,17 +17,15 @@ import type { CodebookResponse } from "../utils/types";
 
 export function tabFromPath(pathname: string): string {
   if (pathname.startsWith("/report/quotes")) return "quotes";
-  // LONGEST PREFIX FIRST. "/report/codebook-v2" has "/report/codebook" as a
-  // prefix, so the shorter test swallows it and v2 posts its subtitle tagged
-  // as the shipped lens. Swift then discards it — `countSubtitle` guards on
-  // `lensSubtitleTab == activeTab.rawValue`, and Tab.from(path:) correctly
-  // resolves v2 to `.codebookV2` — so the window fell back to the SESSION
-  // count on a codebook lens. `Tab.swift` carries the same ordering and the
-  // same comment; this is the second half of that rule.
+  // The v2 arm retired with its route on 31 Aug 2026, and so did the
+  // longest-prefix hazard it guarded: "/report/codebook-v2" had
+  // "/report/codebook" as a prefix, so the shorter test swallowed it and the
+  // subtitle was posted under the wrong tag — Swift then discarded it
+  // (`countSubtitle` guards on `lensSubtitleTab == activeTab.rawValue`) and the
+  // window fell back to the SESSION count on a codebook lens. Recorded because
+  // the RULE outlives the case: the tag here must be the Swift `Tab` rawValue,
+  // and any future sibling route sharing a prefix must be tested first.
   //
-  // The tag must be the Swift `Tab` rawValue, which for `case codebookV2` is
-  // "codebookV2" — not the route slug "codebook-v2".
-  if (pathname.startsWith("/report/codebook-v2")) return "codebookV2";
   if (pathname.startsWith("/report/codebook")) return "codebook";
   if (pathname.startsWith("/report/analysis")) return "analysis";
   if (pathname.startsWith("/report/sessions")) return "sessions";

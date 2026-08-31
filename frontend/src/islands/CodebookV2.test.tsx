@@ -8,7 +8,7 @@ import { resetCodebookV2Selection } from "../contexts/CodebookV2Store";
 // The island reads `?view=library` via useSearchParams, so a bare render throws
 // "useSearchParams() may be used only in the context of a <Router>". Alias once
 // rather than wrapping every call site (frontend/CLAUDE.md).
-const render = (ui: React.ReactElement, at = "/report/codebook-v2") =>
+const render = (ui: React.ReactElement, at = "/report/codebook") =>
   rtlRender(ui, {
     wrapper: ({ children }) => (
       <MemoryRouter initialEntries={[at]}>{children}</MemoryRouter>
@@ -210,7 +210,7 @@ describe("D22 — Browse Library is the navigation", () => {
   it("renders the catalogue when the URL says so, and the page when it does not", async () => {
     // The reverse of the first test, and what a Back actually lands on. Also
     // makes the catalogue deep-linkable, which component state never was.
-    render(<Lens projectId="1" />, "/report/codebook-v2?view=library");
+    render(<Lens projectId="1" />, "/report/codebook?view=library");
     await waitFor(() => screen.getByTestId("bn-v2-browse-grid"));
   });
 
@@ -597,7 +597,7 @@ describe("a not-yet-installed codebook opens its details page", () => {
   // could not see it, because they end at the callback.
   it("shows the codebook you clicked, not the first installed one", async () => {
     const { fireEvent } = await import("@testing-library/react");
-    render(<Lens projectId="1" projectName="Ikea" />, "/report/codebook-v2?view=library");
+    render(<Lens projectId="1" projectName="Ikea" />, "/report/codebook?view=library");
     await waitFor(() => screen.getByTestId("bn-v2-card-cliux"));
 
     fireEvent.click(screen.getByTestId("bn-v2-card-cliux"));
@@ -608,7 +608,7 @@ describe("a not-yet-installed codebook opens its details page", () => {
 
   it("renders that codebook's own groups and tags", async () => {
     const { fireEvent } = await import("@testing-library/react");
-    render(<Lens projectId="1" projectName="Ikea" />, "/report/codebook-v2?view=library");
+    render(<Lens projectId="1" projectName="Ikea" />, "/report/codebook?view=library");
     await waitFor(() => screen.getByTestId("bn-v2-card-cliux"));
 
     fireEvent.click(screen.getByTestId("bn-v2-card-cliux"));

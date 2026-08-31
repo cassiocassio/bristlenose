@@ -54,29 +54,29 @@ struct TabTests {
 
     // MARK: - Tab properties
 
-    /// Five lenses ship; the enum carries six.
+    /// Five lenses ship and the enum carries five — `.codebookV2` retired on
+    /// 31 Aug 2026 when v2 became the only Codebook lens.
     ///
-    /// `.codebookV2` is the replacement Codebook lens, built beside the shipped
-    /// one (`docs/design-codebook-v2.md` D29). The *enum* holds it
-    /// unconditionally so every switch over `Tab` stays simple; only its rail
-    /// row is `#if DEBUG`, which is what keeps it out of a researcher's
-    /// sidebar. `LensItemTests` pins that side.
-    ///
-    /// Counting `allCases` is therefore no longer a statement about what ships.
-    /// Asserting the roster is: a case added or dropped fails here and names
-    /// itself, which the count could not do.
+    /// Asserting the roster rather than counting it: a case added or dropped
+    /// fails here and names itself, which a count could not do. That mattered
+    /// while the enum and the rail disagreed on purpose, and it still earns its
+    /// keep now they agree.
     @Test func allCases_areTheKnownRoster() {
         #expect(Tab.allCases == [
-            .project, .sessions, .quotes, .codebook, .codebookV2, .analysis,
+            .project, .sessions, .quotes, .codebook, .analysis,
         ])
     }
 
-    /// A route that is a prefix of another must not swallow it — and this pair
-    /// is the first in the enum where that is possible.
-    @Test func codebookRoutes_doNotCollide() {
-        #expect(Tab.codebookV2.route != Tab.codebook.route)
-        #expect(Tab.from(path: Tab.codebookV2.route) == .codebookV2)
-        #expect(Tab.from(path: Tab.codebook.route) == .codebook)
+    /// Every route round-trips through `Tab.from(path:)`.
+    ///
+    /// Was `codebookRoutes_doNotCollide`, guarding the one prefix pair the enum
+    /// held (`/report/codebook` vs `/report/codebook-v2`). That pair retired
+    /// with the v2 lens; generalised rather than deleted, so the next route
+    /// that fails to round-trip is caught by name.
+    @Test func everyRouteRoundTrips() {
+        for tab in Tab.allCases {
+            #expect(Tab.from(path: tab.route) == tab)
+        }
     }
 
     @Test func routes_startWithReport() {
@@ -105,16 +105,15 @@ struct TabTests {
 
 /// `hasLeftPanel` exists because the same fact was enumerated in four places:
 /// the toolbar button's gate, its label, its tooltip, and the View menu's
-/// Show/Hide item. Adding `codebookV2` reached three and missed the gate — so
+/// Show/Hide item. Adding a lens once reached three and missed the gate — so
 /// the lens had a panel, a menu item that toggled it and a working ⌘⌥L, and no
 /// toolbar button. On the Mac that button is the ONLY affordance: embedded mode
 /// removes the SPA's own rails, so a missing gate means an unreachable panel.
 @Suite struct TabLeftPanelTests {
 
-    @Test func theFourLensesWithANavigatorHaveOne() {
+    @Test func theThreeLensesWithANavigatorHaveOne() {
         #expect(Tab.quotes.hasLeftPanel)
         #expect(Tab.codebook.hasLeftPanel)
-        #expect(Tab.codebookV2.hasLeftPanel)
         #expect(Tab.analysis.hasLeftPanel)
     }
 

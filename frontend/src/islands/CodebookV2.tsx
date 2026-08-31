@@ -1,9 +1,12 @@
 /**
- * Codebook v2 — the lens. Phases 0 (seam) and 2 (rail).
+ * The codebook lens.
  *
- * Runs beside the shipped `CodebookPanel` rather than replacing it (**D29**);
- * see `docs/design-codebook-v2-plan.md` for the phase order and why the seam
- * came before any component.
+ * Built as "v2" beside the shipped `CodebookPanel` rather than replacing it in
+ * place (**D29**) — that parallel period ended on 31 Aug 2026, when this became
+ * the only codebook lens, took `/report/codebook`, and inherited the original's
+ * label, sidebar icon and translations. `CodebookPanel` is deleted. The file is
+ * still named `CodebookV2` and that is now only a name; see
+ * `docs/design-codebook-v2-plan.md` for the phase order.
  *
  * Data, not chrome, first: everything the rail renders is real. The one field
  * the design wants and the wire lacks is `version` (**Q6**) — the YAML parses
@@ -12,6 +15,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   getCodebook,
   getCodebookTemplates,
@@ -36,7 +40,8 @@ import {
   useCodebookV2Store,
 } from "../contexts/CodebookV2Store";
 import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
-// By path, not the barrel — see the note in CodebookPanel.tsx.
+// By path, not the barrel — the barrel rides in the always-loaded chunk, so
+// a feature only lazy routes reach must be imported directly (frontend/CLAUDE.md).
 import { SectionHeading } from "../components/SectionHeading";
 import { CodebookV2Browse, type BrowseBook } from "./CodebookV2Browse";
 import { CodebookV2UninstallSheet } from "../components/CodebookV2UninstallSheet";
@@ -45,10 +50,11 @@ import { CodebookV2UninstallSheet } from "../components/CodebookV2UninstallSheet
 // CodebookAuthoring below — the barrel rides in the always-loaded chunk and
 // this lens is lazy.
 import { ThresholdReviewModal } from "../components/ThresholdReviewModal";
-// By path, not through the `components` barrel — see CodebookPanel.tsx.
+// By path, not through the `components` barrel — see the note above.
 import { MergeConfirm } from "../components/CodebookAuthoring";
 import { useCodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import { isExportMode } from "../utils/exportData";
+import i18n from "../i18n";
 
 /** What the page needs to know about one codebook. Was `RailBook`, which
  *  belonged to the in-lens rail; the navigator now lives in the sidebar and
@@ -104,12 +110,16 @@ function provenanceFor(
   // Sentiment arrives applied; the other built-ins ship with the product but
   // are yours to install and enable. UXR is commonly installed *and disabled*,
   // which "On by default" would misdescribe.
+  // `i18n.t`, not `useTranslation`: this is a plain function, not a component
+  // (frontend/CLAUDE.md — the hook is for components, the direct import for
+  // stores and helpers).
   return id === "sentiment"
-    ? { text: "On by default", isPerson: false }
-    : { text: "Available by default", isPerson: false };
+    ? { text: i18n.t("codebook.onByDefault"), isPerson: false }
+    : { text: i18n.t("codebook.availableByDefault"), isPerson: false };
 }
 
 export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
+  const { t } = useTranslation();
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
   // Null offline: the catalogue is server-only, and the lens degrades to the
   // codebook it can read rather than failing.
@@ -197,7 +207,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     impactFailed?: boolean;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Same shape the shipped lens uses (`CodebookPanel`'s `reportModal`), because
+  // Same shape the original lens used (`CodebookPanel`'s `reportModal`), because
   // it feeds the same component.
   const [reportModal, setReportModal] = useState<{
     frameworkId: string;
@@ -357,9 +367,13 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
             type: "autocode",
             frameworkId: id,
             frameworkTitle: title,
-            // Two lenses run side by side, and the chip's "View Report" used to
-            // send everyone to the shipped one. Say where this started.
-            originRoute: "/report/codebook-v2/",
+            // Was "/report/codebook-v2/", which stopped resolving when this
+            // lens took the codebook route on 31 Aug 2026 — the activity
+            // chip's "View Report" would have 404'd. The field itself was
+            // added while two lenses ran side by side and the chip sent
+            // everyone to the shipped one; with one lens it is redundant but
+            // harmless, and explicit beats an implicit default.
+            originRoute: "/report/codebook/",
           });
           announce();
         })
@@ -556,7 +570,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
                 data-testid="bn-v2-browse"
                 onClick={() => setView("browse")}
               >
-                Browse Library
+                {t("codebook.browseCodebooksButton")}
               </button>
             ) : null
           }

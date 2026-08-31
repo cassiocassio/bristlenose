@@ -28,6 +28,7 @@
  */
 
 import type { RemoveFrameworkInfo } from "../utils/types";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   title: string;
@@ -48,6 +49,7 @@ export function CodebookV2UninstallSheet({
   onCancel,
   onConfirm,
 }: Props) {
+  const { t } = useTranslation();
   // One line per kind, zero-count kinds omitted — a "0 tags" line is noise in a
   // list whose whole job is to be read at a glance. Lifted from the re-analyse
   // sheet's `lossLines`, including the reasoning.
@@ -89,7 +91,7 @@ export function CodebookV2UninstallSheet({
         <h2 className="v2-uninstall-title">Uninstall &ldquo;{title}&rdquo;?</h2>
         {losses.length > 0 ? (
           <>
-            <p className="v2-uninstall-lead">This will be discarded:</p>
+            <p className="v2-uninstall-lead">{t("codebook.uninstallDiscards")}</p>
             <ul className="v2-uninstall-losses">
               {losses.map((l) => (
                 <li key={l}>{l}</li>

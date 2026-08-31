@@ -16,6 +16,7 @@
  */
 
 import type { TemplateOut } from "../utils/types";
+import { useTranslation } from "react-i18next";
 import { reachPhrase, vocabularyPhrase } from "../utils/codebookReach";
 
 export interface BrowseBook {
@@ -77,6 +78,7 @@ function Card({
   onInstall: Props["onInstall"];
   onUninstall: Props["onUninstall"];
 }) {
+  const { t } = useTranslation();
   const tpl = book.template;
   const version = (tpl as { version?: string } | undefined)?.version;
   const open = () => onOpen(book.id);
@@ -150,7 +152,7 @@ function Card({
             }}
             data-testid={`bn-v2-card-action-${book.id}`}
           >
-            {book.installed ? "Uninstall" : "Install"}
+            {t(book.installed ? "codebook.removeFromCodebook" : "codebook.importCodebook")}
           </button>
         ) : null}
       </div>

@@ -772,13 +772,27 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 **Internal TestFlight since 14 Jul 2026** — shipping build **0.29.0 (3067)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
 
-**0.29.1 is prepared and held for the evening rule.** A patch, and a regression
-in 0.29.0's own headline feature: only one codebook could be switched off at a
-time, because the new navigator sent a single-key patch to a replacement
-endpoint. Every write deleted every other codebook's state row. The navigator
-now sends the whole disabled set, as v1 did. Two tests pin the payload — the
-thing nothing had ever asserted. See Gotchas, "Deleting a UI surface can orphan
-the test that was pinning a wire contract".
+**0.29.1 shipped 31 Aug 2026, evening — verified 9 of 9 channels.** A patch,
+and a regression in 0.29.0's own headline feature: only one codebook could be
+switched off at a time, because the new navigator sent a single-key patch to a
+replacement endpoint — every write deleted every other codebook's state row,
+and each wiped row could start an unrequested catch-up AutoCode run. The
+navigator now sends the whole disabled set and mirrors it into SidebarStore
+(the second half: other lenses read the switch from there, hydrated once per
+session). Three tests pin the payload — the thing nothing had ever asserted;
+see Gotchas, "Deleting a UI surface can orphan the test that was pinning a
+wire contract". The release ran the day the evening rule learned about **bank
+holidays** (working day, not weekday — check gov.uk/bank-holidays.json, don't
+derive), and surfaced two release-machine defects, both fixed the same night:
+the bump step's `git diff --quiet` guard could not see a STAGED bump (it
+announced a commit it never made — an un-bumped push, saved only by an
+unrelated failure), and `run` could discover a missing credential four steps
+in — credentials are now resolved, probed and displayed above the one typed
+confirmation (fingerprint pins, per-type keychain policy, announced dialogs,
+caffeinate; the five-agent audit is in `docs/design-release-machine.md`).
+Copr hit the Source0 CDN race even with `needs: verify-pypi` — the fetch now
+re-asks a 404 for ten minutes, and the wheelhouse arch pin from the morning
+held on an aarch64 builder.
 
 **0.29.0 shipped 31 Aug 2026** on all nine channels — PyPI, GitHub Release,
 Homebrew, Snap, TestFlight (build 3067), the notarised `.dmg`, the website

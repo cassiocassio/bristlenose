@@ -428,6 +428,18 @@ convention to *finish*: one indicator, on the row the bytes land in.
 > they can't both be live for one active provider), and alpha-expiry can co-occur with either. No
 > ordering rule is written down yet.
 
+> **Updated 2026-08-31 — the shelf opts out of macOS 26's shared toolbar background.**
+> Tahoe wraps *every* toolbar item in its own glass capsule, and all three pills already
+> draw one (`StatusPill`'s 0.08 fill / 0.25 stroke / 10×4 padding — `OllamaDownloadPill`
+> still hand-rolls the identical values rather than adopting the envelope, so the chrome
+> matches even though the type doesn't). The result was a capsule nested inside a brighter
+> capsule. Each `ToolbarItem(placement: .status)` now carries `withoutSharedBackground()`
+> (in `StatusPill.swift`), which is `sharedBackgroundVisibility(.hidden)` behind an
+> `#available(macOS 26.0, *)` gate — the app deploys to **15.0**, and the `26.1` in the
+> pbxproj belongs to the *test* target. The pill keeps its own capsule; that was never the
+> problem (user, 31 Aug 2026). Applied to all three siblings, not only the one that was
+> visible, because they share the envelope and would otherwise drift.
+
 Also deliberately *off* the row, different-surface: export (toolbar chip), AI-consent (global gate).
 
 ### The availability split that matters

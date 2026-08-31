@@ -132,6 +132,9 @@ struct TabTests {
         for tab in Tab.allCases {
             _ = tab.hasLeftPanel
         }
-        #expect(Tab.allCases.count == 6)
+        // Five since `codebookV2` was folded into `codebook` (baa1aa0e). The
+        // number is the tripwire, so move it deliberately — it went stale there
+        // and the suite was red on main until 31 Aug 2026.
+        #expect(Tab.allCases.count == 5)
     }
 }

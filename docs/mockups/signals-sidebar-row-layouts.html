@@ -337,7 +337,9 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
         <button class="pbtn on" data-set="plain">ikea · plain</button>
         <button class="pbtn" data-set="elab">ikea · elaborated</button>
         <button class="pbtn" data-set="uxf">uxfriends · elaborated</button>
-        <button class="pbtn" data-set="themes">theme labels · the tail</button>
+        <button class="pbtn" data-set="rock">rockclimbing · shipped</button>
+        <button class="pbtn" data-set="rocktail">rockclimbing · long tail</button>
+        <button class="pbtn" data-set="themes">ikea · theme labels</button>
         <button class="pbtn" data-set="stress90">stress · p90</button>
         <button class="pbtn" data-set="stressmax">stress · max</button>
         <button class="pbtn" data-set="torture">torture</button>
@@ -460,6 +462,27 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
       version of this paragraph counted the section axis only and read 96% / 4% / 0%.
       The method was wrong; the conclusion was not.)</p>
 
+    <h2>The shipped layout on a real project</h2>
+    <p><strong>rockclimbing · shipped</strong> is not a stress test. It is a screenshot:
+      the twelve signals that project actually renders, 8 participants, 6 per section,
+      with its real theme labels and its real elaborated signal names. At the 240px the
+      panel now opens to, <strong>V0 ellipses 11 of those 12 rows</strong>. At 320px —
+      well up the drag range — it still ellipses 11. V6 and V8 do the same, because they
+      keep the badge on the name's line.</p>
+    <p><strong>rockclimbing · long tail</strong> is the same project's longest real theme
+      labels, the ones ranking happened not to surface: “Inclusion, Representation, and
+      Gym Infrastructure” (49), “Training Structures and Progression Strategies” (46),
+      “Footwork, Technique, and Movement Fundamentals” (46). Nothing invented, nothing
+      padded. V0 ellipses 12 of 12. Its codebook rows carry that project's real groups
+      and codes — <code>Control and freedom</code> with <code>undo available</code>,
+      <code>emergency exit</code>, <code>destructive action</code> — so V9 is showing
+      real open-vocabulary tags rather than sentiment words wearing a different hat.</p>
+    <p>These labels also carry punctuation the synthetic sets did not: an en dash in
+      “The Physical–Mental Duality of Climbing”, a slash in “Unrelated / Out-of-Scope
+      Content”, hyphenated compounds in “Long-Term” and “Out-of-Scope”. Each is a
+      different break opportunity, and they are the reason a wrapping variant behaves
+      better on this set than the character counts alone would predict.</p>
+
     <h2>Stress testing that is calibrated, not invented</h2>
     <p>Two sets push <em>both</em> axes at once, at measured percentiles rather than
       at made-up extremes:</p>
@@ -552,9 +575,15 @@ a.sig-hit.badge-hit:hover .badge { box-shadow:inset 0 0 0 1px currentColor; }
       at 240px, 11 of 11 at the 200px drag minimum. Its height never changes, because
       that is exactly what it is buying. Every other variant trades depth for the words
       back, and the question is only what the depth costs.</p>
-    <p><strong>Just letting it wrap is the cheapest fix, and it surprised me.</strong>
-      V1 costs +138px and clips nothing. I expected V4's regrouping to win, and it does
-      not: at +159px it is <em>taller</em> than simply wrapping. The reason is visible
+    <p><strong>On the ikea set, just letting it wrap looks like the cheapest fix —
+      and the Rockclimbing set says it is not enough.</strong> V1 costs +138px there and
+      clips nothing, but on real Rockclimbing labels it clips 3 rows at 240px and 8 at
+      200px: the badge holds the first line, so the name gets roughly half the width for
+      as long as it is sharing that line. Only the variants that give the name a line of
+      its <em>own</em> — V2, V7, V9 — hold at zero across every set. That is a reversal
+      of what this file said an hour earlier, and the real data is what reversed it.
+      I also expected V4's regrouping to win, and it does not: at +159px it is
+      <em>taller</em> than simply wrapping. The reason is visible
       in the panel — the Codebook-tags group has only one distinct badge value
       (“Sentiment”), so promoting it to a sub-heading removes six identical pills and
       adds a heading row, netting nothing. Grouping only pays where the column actually
@@ -662,8 +691,60 @@ const SETS = {
       Theme: [["Mixed Brand Sentiment", "Sentiment", "tension"]],
     },
   },
+  rock: {
+    note: "Rockclimbing, exactly as the app shows it — 8 participants, 12 signals, 6 per section",
+    sentiment: {
+      Theme: [
+        ["Entry Points into Climbing", "delight"],
+        ["Community, Belonging, and Social Bonds", "delight"],
+        ["Discipline Identity and Seasonal Rhythms", "satisfaction"],
+        ["Fear, Mental Blocks, and Psychological Growth", "confidence"],
+        ["Dream Destinations and Travel Aspirations", "delight"],
+        ["Safety, Risk Management, and Close Calls", "confidence"],
+      ],
+    },
+    tags: {
+      Theme: [
+        ["Fear-Confidence Tension", "Sentiment", "tension", "sentiment", ["confidence","doubt"]],
+        ["Beginner Confidence Building", "Sentiment", "success", "sentiment", ["confidence","satisfaction"]],
+        ["Gear Mastery Confidence", "Sentiment", "tension", "sentiment", ["confidence","surprise"]],
+        ["Risk Confidence Tension", "Sentiment", "tension", "sentiment", ["confidence","doubt"]],
+        ["Destination Delight", "Sentiment", "success", "sentiment", ["delight"]],
+        ["Achievement Emotional Range", "Sentiment", "success", "sentiment", ["delight","satisfaction","surprise"]],
+      ],
+    },
+  },
+  rocktail: {
+    note: "Rockclimbing's longest REAL theme labels (49 max) with its real codebook groups and tags",
+    sentiment: {
+      Theme: [
+        ["Inclusion, Representation, and Gym Infrastructure", "frustration"],
+        ["Training Structures and Progression Strategies", "satisfaction"],
+        ["Footwork, Technique, and Movement Fundamentals", "confidence"],
+        ["Fear, Mental Blocks, and Psychological Growth", "doubt"],
+        ["The Physical\u2013Mental Duality of Climbing", "surprise"],
+        ["Unrelated / Out-of-Scope Content", "confusion"],
+      ],
+    },
+    tags: {
+      Theme: [
+        ["Milestone Achievements and Long-Term Goals", "Control and freedom", "success", "task",
+          ["undo available", "emergency exit", "destructive action", "trapped"]],
+        ["Habit Formation and Lifestyle Integration", "Conceptual model", "tension", "task",
+          ["user mental model", "learned behaviour", "model mismatch", "system model"]],
+        ["Coaching, Teaching, and Knowledge Sharing", "Consistency and standards", "gap", "trust",
+          ["terminology inconsistency", "internal inconsistency", "platform convention"]],
+        ["Indoor vs Outdoor Climbing Experience", "Aesthetics and minimalism", "tension", "emo",
+          ["information overload", "competing elements", "focused design"]],
+        ["Climbing\u2019s Broader Life Impact", "Constraints", "success", "ux",
+          ["semantic constraint", "cultural constraint", "physical constraint", "logical constraint"]],
+        ["Tracking, Logging, and Digital Tools", "Discoverability", "gap", "ux",
+          ["first-time use", "exploration"]],
+      ],
+    },
+  },
   themes: {
-    note: "theme labels — the corpus tail (p90 41 chars, max 51). Nothing bounds this field.",
+    note: "theme labels — the ikea tail. The first is real (from a shipped card); the rest are calibrated.",
     sentiment: {
       Theme: [
         ["Parking meter UI as a shared frustration flashpoint", "frustration"],

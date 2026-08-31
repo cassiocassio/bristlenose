@@ -104,6 +104,24 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* The hover underline belongs to the TITLE, not to the whole row. `.toc-link:hover`
+   (sidebar.css) decorates the anchor, and an ancestor's text-decoration is *painted
+   through* its descendants: `text-decoration: none` on the count removes nothing, and
+   neither does making it an atomic inline, because a flex item is blockified rather
+   than inline. Both were measured before this rule was written — the count kept its
+   underline in each. The only fix is to stop decorating the anchor and decorate the
+   label instead, which spares the count and the provenance line alike.
+   Scoped to `.v2-nav-row` so the Quotes TOC and the v1 codebook sidebar are untouched.
+   `text-underline-offset` still inherits from the anchor, so the offset is unchanged. */
+.toc-link.v2-nav-row:hover {
+    text-decoration: none;
+}
+
+.toc-link.v2-nav-row:hover .codebook-toc-label {
+    text-decoration: underline;
+    text-decoration-color: var(--bn-colour-accent);
+}
+
 /* The fallback switch, at the size settled during the prototype. The platform
    control (Safari 17.4+ `<input type="checkbox" switch>`) is preferred and
    needs none of this — it brings its own spring, focus ring, Increase Contrast

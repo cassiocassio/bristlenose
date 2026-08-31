@@ -46,7 +46,19 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DESKTOP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ROOT="$(cd "$DESKTOP_DIR/.." && pwd)"
 
-TEAM_ID="Z56GZVA2QB"
+# Shared non-secret constants — same conf, same env-wins shape as build-all.sh
+# (the generic SIGN_IDENTITY is pinned across the source so the conf can never
+# feed it; see the 27 Aug 2026 note below).
+_env_di="${SIGN_IDENTITY_DEVELOPER_ID:-}"; _env_np="${NOTARY_PROFILE:-}"
+_env_tm="${TEAM_ID:-}"; _env_generic="${SIGN_IDENTITY:-}"
+_SHIP_CONF="${BRISTLENOSE_SHIP_CONF:-$SCRIPT_DIR/.ship-local.conf}"
+# shellcheck disable=SC1090
+[ -f "$_SHIP_CONF" ] && . "$_SHIP_CONF"
+[ -n "$_env_di" ] && SIGN_IDENTITY_DEVELOPER_ID="$_env_di"
+[ -n "$_env_np" ] && NOTARY_PROFILE="$_env_np"
+[ -n "$_env_tm" ] && TEAM_ID="$_env_tm"
+SIGN_IDENTITY="$_env_generic"
+TEAM_ID="${TEAM_ID:-Z56GZVA2QB}"
 # Deliberately does NOT fall back to an ambient $SIGN_IDENTITY. That variable is
 # also read by build-all.sh, which signs an App Store archive with a completely
 # different certificate — and exporting it for that script silently overrode the
@@ -54,13 +66,38 @@ TEAM_ID="Z56GZVA2QB"
 # that, and only after a 30-minute build and a notarisation round-trip (27 Aug
 # 2026). The default is right for this script; an ambient value from elsewhere
 # is not evidence that anyone meant it to apply here.
-SIGN_IDENTITY="${SIGN_IDENTITY_DEVELOPER_ID:-Developer ID Application: Martin Storey ($TEAM_ID)}"
+# No guessed default any more (retired 31 Aug 2026): the old fallback
+# interpolated a personal name from TEAM_ID — a guess that was never checked
+# against the keychain until minute 30, and the last personal-name hardcode in
+# a tracked script. Unset now fails LOUD, mirroring build-all.sh: the release
+# driver exports the resolved fingerprint, and a standalone run gets it from
+# .ship-local.conf or says so explicitly.
+if [ -z "${SIGN_IDENTITY_DEVELOPER_ID:-}" ]; then
+    printf '\033[31merror:\033[0m SIGN_IDENTITY_DEVELOPER_ID is not set.\n' >&2
+    printf '  A notarised .dmg wants the Developer ID Application identity:\n' >&2
+    printf '    set SIGN_IDENTITY_DEVELOPER_ID in %s\n' "$_SHIP_CONF" >&2
+    printf '    (name or SHA-1 fingerprint, from: security find-identity -v -p codesigning)\n' >&2
+    exit 1
+fi
+SIGN_IDENTITY="$SIGN_IDENTITY_DEVELOPER_ID"
+
+# Fingerprint → common name for the type gate (the driver hands over hashes;
+# renewal twins share a name). Signing keeps the form that arrived.
+SIGN_CN="$SIGN_IDENTITY"
+if printf '%s' "$SIGN_IDENTITY" | grep -qiE '^[0-9a-f]{40}$'; then
+    SIGN_CN=$(security find-identity -v -p codesigning 2>/dev/null \
+        | grep -iF " $SIGN_IDENTITY " | head -1 | sed 's/^[^"]*"//; s/".*$//')
+    [ -n "$SIGN_CN" ] || {
+        printf '\033[31merror:\033[0m signing fingerprint %s is not in the keychain.\n' "$SIGN_IDENTITY" >&2
+        exit 1
+    }
+fi
 
 # Refuse the other script's certificate rather than discovering it at the
 # Gatekeeper assertion 30 minutes from now. Uses printf/exit rather than die(),
 # which is not defined until line ~96 — an earlier draft called it here and got
 # "die: command not found", turning a clear refusal into a confusing one.
-case "$SIGN_IDENTITY" in
+case "$SIGN_CN" in
     *"Developer ID Application"*) : ;;
     *"Apple Distribution"*)
         printf '\033[31merror:\033[0m that is an Apple Distribution certificate, which belongs to build-all.sh.\n' >&2
@@ -129,7 +166,10 @@ notarize_and_staple() {
     # captures the ID while the upload is still in flight. A crash then leaves
     # a resumable ID rather than a mystery.
     set +e
-    xcrun notarytool submit "$submit_target" \
+    # --timeout: an unbounded --wait on Apple's queue is the release chain's
+    # only in-step infinite hang (audited 31 Aug 2026); two hours is far past
+    # any observed notarisation and still fails while the log is warm.
+    xcrun notarytool submit "$submit_target" --timeout 2h \
         --keychain-profile "$NOTARY_PROFILE" --wait 2>&1 | tee "$submit_log"
     submit_rc=${PIPESTATUS[0]}
     set -e

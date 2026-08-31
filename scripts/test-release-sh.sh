@@ -40,6 +40,40 @@ eq "wheel + desktop"       release "$(verdict_act ' 5 files' ' 2 files')"
 eq "desktop only"          rebuild "$(verdict_act '' ' 8 files')"
 eq "nothing moved"         nothing "$(verdict_act '' '')"
 
+head_ "verdict_signing_identity — fingerprints split what names cannot"
+# The renewal-twin case is THE case: Apple cert renewal leaves two VALID
+# identities with the identical common name, so exactly-one-by-name refuses
+# during every renewal window and only a fingerprint pin can split the pair.
+# (No expired-cert case on purpose: find-identity -v filters expiry before
+# this function ever sees the list — an expired twin is untestable input.)
+_ONE='  1) AAAA000000000000000000000000000000000000 "Apple Distribution: M (Z)"
+  2) FFFF000000000000000000000000000000000000 "Developer ID Application: M (Z)"'
+_TWINS='  1) AAAA000000000000000000000000000000000000 "Apple Distribution: M (Z)"
+  2) BBBB000000000000000000000000000000000000 "Apple Distribution: M (Z)"'
+_INST='  1) EEEE000000000000000000000000000000000000 "3rd Party Mac Developer Installer: M (Z)"'
+eq "one match"        "ok AAAA000000000000000000000000000000000000 Apple Distribution: M (Z)" \
+    "$(printf '%s\n' "$_ONE" | verdict_signing_identity "Apple Distribution")"
+eq "absent type"      absent \
+    "$(printf '%s\n' "$_ONE" | verdict_signing_identity "Mac Installer Distribution")"
+eq "renewal twins"    "ambiguous 2" \
+    "$(printf '%s\n' "$_TWINS" | verdict_signing_identity "Apple Distribution")"
+eq "hash pin splits twins" "ok BBBB000000000000000000000000000000000000 Apple Distribution: M (Z)" \
+    "$(printf '%s\n' "$_TWINS" | verdict_signing_identity "Apple Distribution" BBBB000000000000000000000000000000000000)"
+eq "hash pin is case-insensitive" "ok BBBB000000000000000000000000000000000000 Apple Distribution: M (Z)" \
+    "$(printf '%s\n' "$_TWINS" | verdict_signing_identity "Apple Distribution" bbbb000000000000000000000000000000000000)"
+eq "stale pin"        pin-not-found \
+    "$(printf '%s\n' "$_TWINS" | verdict_signing_identity "Apple Distribution" CCCC000000000000000000000000000000000000)"
+eq "pin of the wrong type" pin-wrong-type \
+    "$(printf '%s\n' "$_ONE" | verdict_signing_identity "Apple Distribution" FFFF000000000000000000000000000000000000)"
+eq "name pin, unique" "ok AAAA000000000000000000000000000000000000 Apple Distribution: M (Z)" \
+    "$(printf '%s\n' "$_ONE" | verdict_signing_identity "Apple Distribution" "Apple Distribution: M (Z)")"
+eq "name pin cannot split twins" "ambiguous 2" \
+    "$(printf '%s\n' "$_TWINS" | verdict_signing_identity "Apple Distribution" "Apple Distribution: M (Z)")"
+eq "installer parses under basic-policy text" \
+    "ok EEEE000000000000000000000000000000000000 3rd Party Mac Developer Installer: M (Z)" \
+    "$(printf '%s\n' "$_INST" | verdict_signing_identity "3rd Party Mac Developer Installer")"
+eq "empty keychain"   absent "$(printf '' | verdict_signing_identity "Apple Distribution")"
+
 head_ "rollup_exit — held is not ready, and not an error"
 eq "ready"                 0  "$(rollup_exit 0 0)"
 eq "not ready"             1  "$(rollup_exit 1 0)"

@@ -49,7 +49,11 @@ _fetch_one() {
 
     if [ ! -f "$zip_path" ]; then
         echo "==> Downloading $name ($FFMPEG_VERSION)..."
-        curl -fL --retry 3 -o "$zip_path.tmp" "$url"
+        # --retry covers failed connections; a connection that stalls while
+        # OPEN retries nothing and hangs forever. Stall detection is separate
+        # flags (audited 31 Aug 2026): abort under 1 KB/s for 60s.
+        curl -fL --retry 3 --connect-timeout 30 --speed-time 60 --speed-limit 1024 \
+            -o "$zip_path.tmp" "$url"
         mv "$zip_path.tmp" "$zip_path"
     else
         echo "==> Cached: $zip_path"

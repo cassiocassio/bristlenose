@@ -297,10 +297,25 @@ security find-identity -v 2>/dev/null | grep -q 'Developer ID Application' \
 # SIGN_IDENTITY_DEVELOPER_ID. This row exists so a stale exported SIGN_IDENTITY
 # is a preflight warning at second zero rather than a build failure at minute
 # thirty.
+# Escalation (31 Aug 2026): when .ship-local.conf provides both per-purpose
+# identities, an ambient generic SIGN_IDENTITY has no legitimate reader left —
+# and release.sh run now REFUSES it at the confirmation. Preflight matches:
+# warn becomes bad the moment the conf makes the generic name pure hazard.
+_SIG_CONF="$ROOT/desktop/scripts/.ship-local.conf"
+_conf_has_both=0
+if [ -f "$_SIG_CONF" ] \
+    && grep -q '^SIGN_IDENTITY_APPSTORE=' "$_SIG_CONF" 2>/dev/null \
+    && grep -q '^SIGN_IDENTITY_DEVELOPER_ID=' "$_SIG_CONF" 2>/dev/null; then
+    _conf_has_both=1
+fi
 if [ -n "${SIGN_IDENTITY:-}" ]; then
     case "$SIGN_IDENTITY" in
         *"Apple Distribution"*)
-            warn "SIGN_IDENTITY exported" "Apple Distribution — build-all reads it, build-dmg ignores it. Prefer SIGN_IDENTITY_APPSTORE and unset this" ;;
+            if [ "$_conf_has_both" = 1 ]; then
+                bad "SIGN_IDENTITY exported" "generic name with per-purpose conf entries present — release.sh run refuses this (27 Aug vector). unset it"
+            else
+                warn "SIGN_IDENTITY exported" "Apple Distribution — build-all reads it, build-dmg ignores it. Prefer SIGN_IDENTITY_APPSTORE and unset this"
+            fi ;;
         *"Developer ID"*)
             bad  "SIGN_IDENTITY exported" "Developer ID — build-all.sh will REFUSE this. unset it, or use SIGN_IDENTITY_APPSTORE" ;;
         -)  warn "SIGN_IDENTITY exported" "ad-hoc (-) — build-all will skip the identity, profile and notarytool checks" ;;
@@ -343,6 +358,31 @@ if [ -f "$CONF" ]; then
                       || bad "ASC config" "missing:$MISSING"
     [ -n "${BRISTLENOSE_DMG_REMOTE:-}" ] && ok "dmg remote" "configured" \
                                          || warn "dmg remote" "BRISTLENOSE_DMG_REMOTE unset — .dmg publish unavailable"
+    # Identity resolution (31 Aug 2026) — the row that was missing the night
+    # SIGN_IDENTITY_APPSTORE halted a release four steps in: presence of a
+    # cert TYPE in the keychain says nothing about whether the value the build
+    # will use RESOLVES. Names and SHA-1 fingerprints both accepted; the
+    # installer type needs the basic policy (-p codesigning hides it).
+    _resolve_row() { # _resolve_row <label> <value> <type> <policy-flags...>
+        local _lab="$1" _val="$2" _type="$3"; shift 3
+        local _list; _list=$(security find-identity -v "$@" 2>/dev/null)
+        if [ -z "$_val" ]; then
+            warn "$_lab" "unset — release.sh run will refuse; pin it in .ship-local.conf"
+        elif printf '%s' "$_val" | grep -qiE '^[0-9a-f]{40}$'; then
+            printf '%s' "$_list" | grep -iF " $_val " | grep -qF "\"$_type" \
+                && ok "$_lab" "fingerprint resolves: $(printf '%s' "$_list" | grep -iF " $_val " | sed 's/^[^\"]*\"//; s/\".*$//')" \
+                || bad "$_lab" "fingerprint $_val does not resolve to a valid $_type identity"
+        else
+            case $(printf '%s' "$_list" | grep -cF "\"$_val\"") in
+                1) ok "$_lab" "name resolves uniquely" ;;
+                0) bad "$_lab" "'$_val' is not in the keychain" ;;
+                *) bad "$_lab" "'$_val' matches MULTIPLE identities (renewal twins?) — pin the fingerprint instead" ;;
+            esac
+        fi
+    }
+    _resolve_row "identity: App Store" "${SIGN_IDENTITY_APPSTORE:-}" "Apple Distribution" -p codesigning
+    _resolve_row "identity: Developer ID" "${SIGN_IDENTITY_DEVELOPER_ID:-}" "Developer ID Application" -p codesigning
+
     KEYFILE="$HOME/.private_keys/AuthKey_${BRISTLENOSE_ASC_KEY_ID:-none}.p8"
     if [ -f "$KEYFILE" ]; then
         MODE=$(stat -f%Lp "$KEYFILE")

@@ -63,6 +63,20 @@ ROOT="$(cd "$DESKTOP_DIR/.." && pwd)"
 # So each entry point now reads its OWN variable and validates the certificate
 # TYPE, which turns that 30-minute failure into an immediate one. Children still
 # receive `SIGN_IDENTITY` — that contract is fine and unchanged.
+# Non-secret publishing constants (cert names/fingerprints, team id, notary
+# profile NAME) share one home: .ship-local.conf, which the other Mac-channel
+# scripts already source. Env wins — the release driver exports RESOLVED
+# values; a standalone run reads the conf itself. The conf must never feed the
+# generic SIGN_IDENTITY (that is the 27 Aug 2026 vector), so its pre-source
+# value is pinned and restored. 31 Aug 2026: this script was the only consumer
+# NOT sourcing the conf, and a release died here on an unset variable.
+_env_as="${SIGN_IDENTITY_APPSTORE:-}"; _env_generic="${SIGN_IDENTITY:-}"
+_SHIP_CONF="${BRISTLENOSE_SHIP_CONF:-$SCRIPT_DIR/.ship-local.conf}"
+# shellcheck disable=SC1090
+[ -f "$_SHIP_CONF" ] && . "$_SHIP_CONF"
+[ -n "$_env_as" ] && SIGN_IDENTITY_APPSTORE="$_env_as"
+SIGN_IDENTITY="$_env_generic"
+
 SIGN_IDENTITY="${SIGN_IDENTITY_APPSTORE:-${SIGN_IDENTITY:-}}"
 if [ -z "${SIGN_IDENTITY_APPSTORE:-}" ] && [ -n "${SIGN_IDENTITY:-}" ]; then
     echo "warning: using legacy SIGN_IDENTITY. Prefer SIGN_IDENTITY_APPSTORE —" >&2
@@ -87,9 +101,23 @@ if [ -z "${SIGN_IDENTITY:-}" ]; then
     exit 2
 fi
 
+# The release driver hands identities over BY FINGERPRINT — renewal twins
+# share a common name, and only the hash is deterministic. The type gate below
+# needs the NAME, so map hash → CN first; signing keeps whatever form arrived
+# (codesign accepts both).
+SIGN_CN="$SIGN_IDENTITY"
+if printf '%s' "$SIGN_IDENTITY" | grep -qiE '^[0-9a-f]{40}$'; then
+    SIGN_CN=$(security find-identity -v -p codesigning 2>/dev/null \
+        | grep -iF " $SIGN_IDENTITY " | head -1 | sed 's/^[^"]*"//; s/".*$//')
+    [ -n "$SIGN_CN" ] || {
+        echo "error: signing fingerprint $SIGN_IDENTITY is not in the keychain." >&2
+        exit 2
+    }
+fi
+
 # Refuse the OTHER script's certificate outright. This is the assertion that
 # would have caught 27 Aug at second zero instead of minute thirty.
-case "$SIGN_IDENTITY" in
+case "$SIGN_CN" in
     -) : ;;
     *"Apple Distribution"*) : ;;
     *"Developer ID"*)
@@ -106,7 +134,7 @@ case "$SIGN_IDENTITY" in
         exit 2 ;;
 esac
 NOTARY_PROFILE="${NOTARY_PROFILE:-bristlenose-notary}"
-TEAM_ID="Z56GZVA2QB"
+TEAM_ID="${TEAM_ID:-Z56GZVA2QB}"
 PROFILE_NAME="Bristlenose Mac App Store"
 PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles/Bristlenose_Mac_App_Store.provisionprofile"
 

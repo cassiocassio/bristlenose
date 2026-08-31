@@ -302,10 +302,21 @@ safe to hand a stranger”, so there's no second implementation to drift.
 
 The two channels want different certificates:
 
-| variable | script | certificate | default |
+| variable | script | certificate | source |
 |---|---|---|---|
-| `SIGN_IDENTITY_APPSTORE` | `build-all.sh` | `Apple Distribution: …` | **none** — hard stop |
-| `SIGN_IDENTITY_DEVELOPER_ID` | `build-dmg.sh` | `Developer ID Application: …` | its own, correct |
+| `SIGN_IDENTITY_APPSTORE` | `build-all.sh` | `Apple Distribution: …` | env → `.ship-local.conf` → **hard stop** |
+| `SIGN_IDENTITY_DEVELOPER_ID` | `build-dmg.sh` | `Developer ID Application: …` | env → `.ship-local.conf` → **hard stop** |
+
+Since 31 Aug 2026 both scripts source `.ship-local.conf` (env wins — the
+release driver exports values it has already resolved and probed), and the
+value may be a **SHA-1 fingerprint** rather than a name: Apple cert renewal
+leaves two valid certs with the identical common name, and only the hash
+splits the pair. Each script maps hash → common name for its type gate and
+signs with the form it was given. `build-dmg.sh`'s old silent name-guess
+default (interpolating `$TEAM_ID` into a personal name, unchecked until
+minute 30) is retired — unset now fails loudly, mirroring `build-all.sh`.
+The conf never feeds the bare `SIGN_IDENTITY` — that stays a per-invocation
+parent-to-child handoff, and `release.sh run` refuses an ambient one outright.
 
 Each entry point asserts the **type** of what it is given, so handing one the
 other's certificate fails immediately rather than at the last Gatekeeper

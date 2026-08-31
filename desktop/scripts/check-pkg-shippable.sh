@@ -63,7 +63,7 @@ PKG="$1"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-TEAM_ID="Z56GZVA2QB"
+TEAM_ID="${TEAM_ID:-Z56GZVA2QB}"  # env (release driver) > literal fallback
 BUNDLE_ID="app.bristlenose"
 INSTALLER_CERT="3rd Party Mac Developer Installer"
 

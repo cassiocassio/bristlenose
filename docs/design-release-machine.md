@@ -343,6 +343,32 @@ human assert a position the log doesn't support, which is exactly the
 re-entering as a flag. **One namespace** — the log's `step` identifier
 everywhere, in `--skip`, in `retry`, and on every screen.
 
+**Credentials are gathered at the confirmation, not discovered by steps
+(31 Aug 2026).** The 0.29.1 run died at `build-all` on an unset
+`SIGN_IDENTITY_APPSTORE` — four steps in, after an outward-facing push — and
+the audit that followed found the whole class: the run's design intent is *one
+authorisation, then bed*, so anything a step can ask for must be resolved,
+probed and displayed **above the typed confirmation**, while a human is
+provably present. `cmd_run` now: refuses an ambient generic `SIGN_IDENTITY`
+(the 27 Aug vector, made active rather than warned); sources
+`.ship-local.conf` (env wins); resolves both signing identities **by
+certificate type with per-type keychain policy** (the installer cert is
+invisible under `-p codesigning` — measured) via the pure, suite-driven
+`verdict_signing_identity` (fingerprint pins, because renewal twins share a
+name); then runs an announced probe battery — a throwaway `codesign` per
+identity, `notarytool history`, the ASC `.p8` (file + mode 600, Apple's
+documented layout — a settled decision, not an omission), `git push
+--dry-run`, `gh auth status`, ssh BatchMode to the dmg host, the Finder TCC
+dialog `create-dmg` will need, bundled ffmpeg presence, and a `pmset` sleep
+warning. Every probe is timeout-wrapped with exit 124 reported as
+**blocked-on-a-dialog** (a distinct state: on an unattended resume a GUI
+dialog *hangs* a probe rather than failing it). After the confirmation the
+run is armed: identities exported **by fingerprint**, `GIT_TERMINAL_PROMPT=0`
++ askpass/ssh-askpass forced off so anything missed fails loud instead of
+prompting, and the step loop held awake by `caffeinate -i -w $$` — idle sleep
+was the overnight run's quietest failure mode, and no env var converts
+machine sleep into an error.
+
 Credentials stay in `desktop/scripts/.ship-local.conf`. Note the file holds two
 sensitivity classes, which the first draft collapsed into one row: three ASC
 identifiers that `upload-testflight.sh:53-54` correctly calls non-secret, and

@@ -324,6 +324,66 @@ probe_done() {
     esac
 }
 
+# verdict_signing_identity <type> [<pin>] — resolve ONE signing identity from
+# `security find-identity` text on STDIN. Pure text→verdict; the suite drives
+# it with synthetic keychains.
+#   stdout: ok <sha1> <common name> · absent · ambiguous <n> · pin-not-found ·
+#           pin-wrong-type        (non-ok also returns 1)
+#
+# WHY FINGERPRINTS, NOT NAMES (31 Aug 2026): Apple certificate renewal leaves
+# two VALID identities carrying the IDENTICAL common name for days. A name can
+# never split that pair; the SHA-1 can, so a pin is a fingerprint (a full CN is
+# accepted for standalone convenience but cannot disambiguate twins), and the
+# resolved identity is returned hash-first — codesign accepts the hash and
+# signs deterministically. find-identity -v filters EXPIRED identities before
+# we ever see the list, so expiry is not a case here; the renewal twin is.
+verdict_signing_identity() {
+    local _type="$1" _pin="${2:-}" _all _rows _sel _n
+    _all=$(cat)
+    _rows=$(printf '%s\n' "$_all" | grep -E '^[[:space:]]*[0-9]+\)' \
+                | grep -F "\"$_type:" || true)
+    if [ -n "$_pin" ]; then
+        if printf '%s' "$_pin" | grep -qiE '^[0-9a-f]{40}$'; then
+            _sel=$(printf '%s\n' "$_rows" | grep -iF " $_pin " || true)
+            if [ -z "$_sel" ]; then
+                printf '%s\n' "$_all" | grep -qiF " $_pin " \
+                    && { echo pin-wrong-type; return 1; }
+                echo pin-not-found; return 1
+            fi
+        else
+            _sel=$(printf '%s\n' "$_rows" | grep -F "\"$_pin\"" || true)
+            if [ -z "$_sel" ]; then
+                printf '%s\n' "$_all" | grep -qF "\"$_pin\"" \
+                    && { echo pin-wrong-type; return 1; }
+                echo pin-not-found; return 1
+            fi
+        fi
+        _rows=$_sel
+    fi
+    _n=$(printf '%s\n' "$_rows" | grep -c .)
+    case "$_n" in
+        0) echo absent; return 1 ;;
+        1) : ;;
+        *) echo "ambiguous $_n"; return 1 ;;
+    esac
+    printf 'ok %s %s\n' \
+        "$(printf '%s\n' "$_rows" | awk '{print $2}')" \
+        "$(printf '%s\n' "$_rows" | sed 's/^[^\"]*\"//; s/\".*$//')"
+}
+
+# resolve_identity <type> [<pin>] — live wrapper with the per-type POLICY the
+# keychain demands. Measured 31 Aug 2026: the installer certificate is
+# INVISIBLE under `-p codesigning` and appears only under the basic policy —
+# one flag for all types refuses a certificate that is present.
+resolve_identity() {
+    local _type="$1"
+    case "$_type" in
+        "3rd Party Mac Developer Installer")
+            security find-identity -v 2>/dev/null ;;
+        *)  security find-identity -v -p codesigning 2>/dev/null ;;
+    esac | verdict_signing_identity "$_type" "${2:-}"
+}
+
 # verdict_recover <published> <run_state> <tag_sha> <head_sha>
 #   The rerun-vs-retag decision, which release-log v0.15.13 got wrong at cost.
 #
@@ -842,6 +902,102 @@ cmd_run() {
     printf '\n%bRelease %s%b  bump=%s\n' "$B" "$V" "$N" "$BUMP"
     printf '%b  the tag push publishes. Everything before it is abandonable.%b\n\n' "$D" "$N"
 
+    # ── Credentials: gathered HERE, before the one confirmation — never
+    # discovered by a step. 31 Aug 2026: SIGN_IDENTITY_APPSTORE was unset and
+    # build-all found out four steps in, after an outward-facing push. The
+    # design intent of `run` is ONE authorisation, then bed: everything the
+    # steps will need is resolved, probed and DISPLAYED while a human is
+    # provably present, and nothing below the confirmation may prompt, hang,
+    # or discover a missing credential. Failures here are die → exit 2, with
+    # nothing performed and nothing written outside the lock.
+    #
+    # An ambient generic SIGN_IDENTITY is the 27 Aug 2026 vector (it selected
+    # the App Store certificate for the .dmg, caught only after a notarisation
+    # round-trip). Under the driver it is refused outright, not warned.
+    [ -z "${SIGN_IDENTITY:-}" ] \
+        || die "SIGN_IDENTITY is exported — the generic name is the 27 Aug 2026 mis-sign vector. unset it; the driver resolves per-purpose identities itself"
+
+    # Non-secret publishing constants share ONE home with the scripts that
+    # already source it (env wins; BRISTLENOSE_SHIP_CONF is the test seam,
+    # upload-dmg.sh's convention). Values are cert names/fingerprints, a team
+    # id, a keychain profile NAME — identifiers, never secrets.
+    _env_as="${SIGN_IDENTITY_APPSTORE:-}"; _env_di="${SIGN_IDENTITY_DEVELOPER_ID:-}"
+    _env_np="${NOTARY_PROFILE:-}";         _env_tm="${TEAM_ID:-}"
+    SHIP_CONF="${BRISTLENOSE_SHIP_CONF:-$ROOT/desktop/scripts/.ship-local.conf}"
+    # shellcheck disable=SC1090
+    [ -f "$SHIP_CONF" ] && . "$SHIP_CONF"
+    [ -n "$_env_as" ] && SIGN_IDENTITY_APPSTORE="$_env_as"
+    [ -n "$_env_di" ] && SIGN_IDENTITY_DEVELOPER_ID="$_env_di"
+    [ -n "$_env_np" ] && NOTARY_PROFILE="$_env_np"
+    [ -n "$_env_tm" ] && TEAM_ID="$_env_tm"
+    NOTARY_PROFILE="${NOTARY_PROFILE:-bristlenose-notary}"
+
+    _out=$(resolve_identity "Apple Distribution" "${SIGN_IDENTITY_APPSTORE:-}")
+    case "$_out" in ok\ *) : ;; *) die "Apple Distribution identity: $_out — pin the fingerprint as SIGN_IDENTITY_APPSTORE in $SHIP_CONF (from: security find-identity -v -p codesigning)" ;; esac
+    ID_AS_HASH=$(printf '%s' "$_out" | awk '{print $2}')
+    ID_AS_CN=$(printf '%s' "$_out" | cut -d' ' -f3-)
+    _out=$(resolve_identity "Developer ID Application" "${SIGN_IDENTITY_DEVELOPER_ID:-}")
+    case "$_out" in ok\ *) : ;; *) die "Developer ID identity: $_out — pin the fingerprint as SIGN_IDENTITY_DEVELOPER_ID in $SHIP_CONF" ;; esac
+    ID_DI_HASH=$(printf '%s' "$_out" | awk '{print $2}')
+    ID_DI_CN=$(printf '%s' "$_out" | cut -d' ' -f3-)
+    _out=$(resolve_identity "3rd Party Mac Developer Installer" "${SIGN_IDENTITY_INSTALLER:-}")
+    case "$_out" in ok\ *) : ;; *) die "installer certificate: $_out — the .pkg cannot be signed (basic policy: security find-identity -v)" ;; esac
+    ID_IN_CN=$(printf '%s' "$_out" | cut -d' ' -f3-)
+
+    # The probe battery. Tri-state in spirit: a timeout is reported as
+    # BLOCKED-ON-A-DIALOG, a distinct state from failed — because on an
+    # unattended resume a keychain/TCC dialog HANGS a probe rather than
+    # failing it, and < /dev/null cannot save you from a GUI dialog.
+    # Dialog-capable probes are ANNOUNCED first (house rule: never auto-fire
+    # a trust dialog): the confirmation is the one right time to fire them.
+    _TIMEOUT=$(command -v timeout || command -v gtimeout || true)
+    _probe() { # _probe <seconds> <label> <cmd...>
+        local _t="$1" _lab="$2" _rc; shift 2
+        ${_TIMEOUT:+"$_TIMEOUT" "$_t"} "$@" >/dev/null 2>&1 < /dev/null
+        _rc=$?
+        if [ "$_rc" -eq 0 ]; then
+            printf '    %b✓%b %s\n' "$G" "$N" "$_lab"
+        elif [ "$_rc" -eq 124 ]; then
+            die "$_lab: blocked waiting on a dialog (${_t}s) — run once interactively, answer it (Allow, never Always Allow), then re-run"
+        else
+            die "$_lab failed (exit $_rc) — nothing has been done; fix and re-run"
+        fi
+    }
+    printf '  %bprobing every credential the steps will use%b — dialogs, if any, fire NOW:\n' "$B" "$N"
+    printf '    %b·%b a keychain dialog may appear per signing key — answer Allow, never Always Allow\n' "$D" "$N"
+    cp /bin/ls "$LOCK/probe.bin"
+    _probe 45 "sign as Apple Distribution" codesign -f -s "$ID_AS_HASH" "$LOCK/probe.bin"
+    cp /bin/ls "$LOCK/probe.bin"
+    _probe 45 "sign as Developer ID"       codesign -f -s "$ID_DI_HASH" "$LOCK/probe.bin"
+    rm -f "$LOCK/probe.bin"
+    _probe 60 "notary profile '$NOTARY_PROFILE'" xcrun notarytool history --keychain-profile "$NOTARY_PROFILE"
+    [ -n "${BRISTLENOSE_ASC_KEY_ID:-}" ] \
+        || die "BRISTLENOSE_ASC_KEY_ID is not set ($SHIP_CONF) — the TestFlight upload would fail at minute 50"
+    _keyfile="$HOME/.private_keys/AuthKey_${BRISTLENOSE_ASC_KEY_ID}.p8"
+    [ -f "$_keyfile" ] || die "ASC API key absent: $_keyfile (Apple's documented layout; altool reads keys from the filesystem only)"
+    [ "$(stat -f '%Lp' "$_keyfile" 2>/dev/null)" = "600" ] \
+        || die "ASC API key $_keyfile is not mode 600"
+    printf '    %b✓%b ASC API key AuthKey_%s.p8 (mode 600)\n' "$G" "$N" "$BRISTLENOSE_ASC_KEY_ID"
+    _probe 30 "git credentials (push --dry-run)" env GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/usr/bin/false git push --dry-run origin main
+    _probe 30 "gh auth" gh auth status
+    [ -n "${BRISTLENOSE_DMG_REMOTE:-}" ] \
+        || die "BRISTLENOSE_DMG_REMOTE is not set ($SHIP_CONF) — the dmg publish step needs it"
+    _probe 30 "dmg remote ssh (BatchMode)" ssh -o BatchMode=yes -o ConnectTimeout=15 "${BRISTLENOSE_DMG_REMOTE%%:*}" true
+    printf '    %b·%b Finder automation (create-dmg drives it) — a permission dialog may appear once\n' "$D" "$N"
+    _probe 20 "Finder automation (TCC)" osascript -e 'tell application "Finder" to count windows'
+    [ -x "$ROOT/desktop/Bristlenose/Resources/ffmpeg" ] && [ -x "$ROOT/desktop/Bristlenose/Resources/ffprobe" ] \
+        || die "bundled ffmpeg/ffprobe missing — run desktop/scripts/fetch-ffmpeg.sh first; a release run must never reach for the network here"
+    printf '    %b✓%b bundled ffmpeg + ffprobe present\n' "$G" "$N"
+    _slp=$(pmset -g 2>/dev/null | awk '$1=="sleep"{print $2; exit}')
+    [ -n "$_slp" ] && [ "$_slp" != "0" ] \
+        && printf '    %b⚠ system sleep is %s min — the run holds caffeinate -i (idle), but a CLOSED LID still sleeps%b\n' "$Y" "$_slp" "$N"
+
+    printf '\n  will sign and publish as:\n'
+    printf '    %-22s %s  %b%.8s…%b\n' "Apple Distribution" "$ID_AS_CN" "$D" "$ID_AS_HASH" "$N"
+    printf '    %-22s %s  %b%.8s…%b\n' "Developer ID" "$ID_DI_CN" "$D" "$ID_DI_HASH" "$N"
+    printf '    %-22s %s\n' "installer (.pkg)" "$ID_IN_CN"
+    printf '    %-22s %s · ASC key %s\n\n' "notary profile" "$NOTARY_PROFILE" "$BRISTLENOSE_ASC_KEY_ID"
+
     # A fully inferred version must pass through the human's fingers: --yes
     # cannot skip typing a version that was never given. (Headless, that read
     # hits EOF, matches nothing, and dies — fail closed.) With a version or
@@ -853,6 +1009,19 @@ cmd_run() {
         [ "$typed" = "$V" ] || die "confirmation did not match, nothing done"
         echo
     fi
+    # One confirmation covered the version AND the credential set. Arm the run:
+    # identities exported BY FINGERPRINT (deterministic under renewal twins —
+    # the build scripts map hash → CN for their type gates and sign by hash),
+    # and every interactive fallback converted to a loud failure. Nothing
+    # below may prompt; if something tries anyway, it now fails instead.
+    export SIGN_IDENTITY_APPSTORE="$ID_AS_HASH"
+    export SIGN_IDENTITY_DEVELOPER_ID="$ID_DI_HASH"
+    export NOTARY_PROFILE
+    [ -n "${TEAM_ID:-}" ] && export TEAM_ID
+    export GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/usr/bin/false
+    export SSH_ASKPASS_REQUIRE=never SSH_ASKPASS=/usr/bin/false
+    export GH_PROMPT_DISABLED=1 GH_NO_UPDATE_NOTIFIER=1
+
     # After the confirmation, not before: a declined run should leave nothing.
     mkdir -p "$LOGDIR"
 
@@ -933,6 +1102,12 @@ cmd_run() {
 
     ev_append run started "bump=$BUMP"
     write_context "$RUNDIR"
+    # Idle sleep parks xcodebuild/notarytool/altool with no error — the
+    # overnight run's quietest failure mode, and no env var converts machine
+    # sleep into a loud failure. -i holds IDLE sleep only (a closed lid still
+    # sleeps — warned at the probes); -w $$ ties the assertion to this driver,
+    # so it dies with us and a killed run holds nothing open.
+    command -v caffeinate >/dev/null 2>&1 && { caffeinate -i -w $$ & }
     while IFS='|' read -r id label kind est steptier cons cmd; do
         [ -z "$id" ] && continue
         # run is Tier 1; a Tier 2 promotion is a different act, not a longer run.

@@ -59,8 +59,16 @@ const templates = { templates: [
   { id: "nielsen", title: "10 Usability Heuristics", author: "Jakob Nielsen",
     description: "", author_bio: "", author_links: [], groups: [], enabled: true,
     imported: true },
+  // The only NOT-installed template in the fixture: absent from codebook.groups,
+  // so `books` never contains it. Carries real groups so a test can prove the
+  // details page renders its structure, not just its title.
   { id: "cliux", title: "Command-Line UX", author: "", description: "",
-    author_bio: "", author_links: [], groups: [], enabled: true, imported: false },
+    author_bio: "", author_links: [], enabled: true, imported: false,
+    groups: [
+      { name: "Discoverability", subtitle: "", colour_set: "ux",
+        tags: [{ name: "first-time use", colour_index: 0 },
+               { name: "exploration", colour_index: 1 }] },
+    ] },
 ]};
 
 vi.mock("../utils/api", () => ({
@@ -427,5 +435,40 @@ describe("group order matches the shipped lens", () => {
       document.querySelectorAll(".v2-groups .group-title"),
     ).map((n) => n.textContent);
     expect(titles).toEqual(["Uncategorised", "Apple", "Zebra"]);
+  });
+});
+
+
+describe("a not-yet-installed codebook opens its details page", () => {
+  // The card fires onOpen for every codebook, installed or not — CodebookV2Browse
+  // says so in its own header ("The whole card navigates") and its tests pin it.
+  // The consumer was the half that broke the contract: `books` is installed-only,
+  // so `current` fell through to `books[0]` and the lens rendered a DIFFERENT
+  // codebook's page, or none at all when nothing was installed. The card's tests
+  // could not see it, because they end at the callback.
+  it("shows the codebook you clicked, not the first installed one", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(<Lens projectId="1" projectName="Ikea" />, "/report/codebook-v2?view=library");
+    await waitFor(() => screen.getByTestId("bn-v2-card-cliux"));
+
+    fireEvent.click(screen.getByTestId("bn-v2-card-cliux"));
+
+    await waitFor(() => screen.getByTestId("bn-v2-page"));
+    expect(screen.getByTestId("bn-v2-page").textContent).toContain("Command-Line UX");
+  });
+
+  it("renders that codebook's own groups and tags", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(<Lens projectId="1" projectName="Ikea" />, "/report/codebook-v2?view=library");
+    await waitFor(() => screen.getByTestId("bn-v2-card-cliux"));
+
+    fireEvent.click(screen.getByTestId("bn-v2-card-cliux"));
+
+    await waitFor(() => screen.getByTestId("bn-v2-page"));
+    const page = screen.getByTestId("bn-v2-page").textContent ?? "";
+    expect(page).toContain("Discoverability");
+    expect(page).toContain("first-time use");
+    // It is not installed, so the page must say so rather than claim reach.
+    expect(page).toContain("not installed");
   });
 });

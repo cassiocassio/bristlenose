@@ -383,10 +383,51 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   });
 
 
-  const current = books.find((b) => b.id === selected) ?? books[0];
+  // A selected id that is NOT installed is a catalogue entry, not a mistake: the
+  // Library's cards navigate whether or not you have the codebook (CodebookV2Browse
+  // says so in its own header, and its tests pin it), and this page already renders
+  // the uninstalled state — "… · not installed", Install rather than Uninstall, and
+  // `hasReviewDoor` gated on `installed`. Only the wiring was missing.
+  //
+  // `books` is installed-only, so the old `?? books[0]` resolved an uninstalled id
+  // to the FIRST INSTALLED codebook and rendered its page under the clicked one's
+  // name — silently, and with no test able to see it, because the card's own tests
+  // end at the callback.
+  const installedCurrent = books.find((b) => b.id === selected);
+  const previewTemplate =
+    !installedCurrent && selected
+      ? (templates?.templates.find((t) => t.id === selected) ?? null)
+      : null;
+  const current = installedCurrent ?? (previewTemplate ? undefined : books[0]);
+  const previewProv = previewTemplate
+    ? provenanceFor(previewTemplate.id, previewTemplate.author)
+    : null;
+
   const currentGroups = useMemo(
     () =>
-      (codebook?.groups ?? [])
+      previewTemplate
+        ? // The template's own structure, adapted to the page's group shape.
+          // Ids are synthetic negatives: these rows have no database identity
+          // yet, and nothing writes through them — a framework's groups are
+          // read-only here, and the Review door needs `installed`.
+          previewTemplate.groups.map((g, gi) => ({
+            id: -(gi + 1),
+            name: g.name,
+            subtitle: g.subtitle,
+            colour_set: g.colour_set,
+            order: gi,
+            tags: g.tags.map((t, ti) => ({
+              id: -(gi * 1000 + ti + 1),
+              name: t.name,
+              count: 0,
+              tentative_count: 0,
+              colour_index: t.colour_index,
+            })),
+            total_quotes: 0,
+            is_default: false,
+            framework_id: previewTemplate.id,
+          }))
+        : (codebook?.groups ?? [])
         .filter((g) =>
           current?.floor ? !g.framework_id : g.framework_id === current?.id,
         )
@@ -400,7 +441,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
           if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
           return a.order - b.order;
         }),
-    [codebook, current],
+    [codebook, current, previewTemplate],
   );
 
   // The catalogue is every template, installed or not — unlike the rail, which
@@ -431,7 +472,24 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         quotes: codebook?.framework_quote_totals?.[current.id] ?? 0,
         template: templates?.templates.find((t) => t.id === current.id),
       }
-    : null;
+    : previewTemplate
+      ? {
+          id: previewTemplate.id,
+          title: previewTemplate.title,
+          provenance: previewProv?.text ?? "",
+          provenanceIsPerson: previewProv?.isPerson ?? false,
+          floor: false,
+          installed: false,
+          // Deliberately true, not `states[id] !== false`. `enabled` drives the
+          // page's `pageoff` wash with no `installed` guard, and a codebook you
+          // have not installed is not a switched-off one — it has no state to be
+          // off. Greying it would say the wrong thing about a live catalogue entry.
+          enabled: true,
+          pending: 0,
+          quotes: 0,
+          template: previewTemplate,
+        }
+      : null;
 
   return (
     // A FRAGMENT, not a wrapper div. `report.css` flushes the first zone title

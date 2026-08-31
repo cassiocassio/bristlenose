@@ -6,6 +6,14 @@ trued-against: HEAD@main on 2026-08-31
 
 ## Changelog
 
+- _2026-08-31_ — the Overview's lens count corrected a second time, **five →
+  four**. The entry below fixed the stale "Quotes tab only" but listed Codebook
+  and Codebook v2 as two lenses; `baa1aa0e` had already deleted v1 earlier the
+  same day, taking `codebookV2` out of the desktop `Tab` enum
+  (`desktop/Bristlenose/Bristlenose/Tab.swift`) and handing
+  `/report/codebook` to the navigator. `showSidebar` gates on four
+  (`frontend/src/layouts/AppLayout.tsx:236-237`) and one codebook route survives
+  (`:218-219`). No other passage in the body named v2.
 - _2026-08-31_ — trued up: the two sidebars no longer share a default width
   (left nav 240, tag sidebar 280), so every "280px (default)" claim now
   distinguishes them; corrected the Overview's "Quotes tab only" scope, which
@@ -23,12 +31,11 @@ trued-against: HEAD@main on 2026-08-31
 
 The Quotes tab gets a dual-sidebar layout: a **table-of-contents sidebar** on the left and a **tag-filter sidebar** on the right. Both sidebars are optional — researchers open whichever they need.
 
-**Scope:** five lenses carry the left panel — Quotes, Sessions, Codebook,
-Codebook v2 and Analysis (`showSidebar` in `AppLayout.tsx`). The **right** tag
-sidebar is Quotes-only. Lenses outside that set render with no grid and no
-rails. _(This said "Quotes tab only" until 31 Aug 2026; the panel grew to the
-other lenses without the Overview following — § Desktop embedded mode had
-already been trued and named four of them.)_
+**Scope:** four lenses carry the left panel — Quotes, Sessions, Codebook and
+Analysis (`showSidebar` in `AppLayout.tsx`; Sessions covers the transcript route
+too). The **right** tag sidebar is Quotes-only. Lenses outside that set render
+with no grid and no rails. _(Said "Quotes tab only" until 31 Aug 2026, then
+"five lenses" for the rest of that day — see the changelog.)_
 
 **Reference mockup:** `docs/mockups/mockup-sidebar-tags.html`
 

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoCode Progress</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  /* group tints (tokens.css) — shared across palettes */
+/* Full codebook palette — every slot of every set, plus the GROUP background
+   family, lifted verbatim from tokens.css. Earlier drafts of this file inlined
+   only slot 1 of each set and no group backgrounds at all. */
+  --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+  --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+  --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+  --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+  --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+  --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+  --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+  --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+  --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+  --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+  --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+  --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+  --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+  --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+  --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+  --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+  --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+  --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+  --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+  --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+  --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+  --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+  --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+  --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+  --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+  --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+  --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+  --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+  --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+  --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+  --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+  --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+  --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+  --bn-group-ux: light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+  --bn-group-emo: light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+  --bn-group-task: light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+  --bn-group-trust: light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+  --bn-group-opp: light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+  --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+
+/* Verbatim from bristlenose/theme/colors/palette-default.css + tokens.css —
+   the token block above came from the prototype and does not carry these two. */
+:root { --bn-colour-negative: light-dark(#dc2626, #ef4444);
+        --bn-colour-keyline: var(--bn-colour-border); }
+
+/* ── page furniture (shared with codebook-v2-messages.html) ─────────── */
+body { font-family:var(--bn-font-body); background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  margin:0; padding:2.5rem 2rem 6rem; font-size:var(--bn-text-body); }
+.wrap { max-width:1180px; margin:0 auto; }
+h1 { font-size:var(--bn-text-display); font-weight:var(--bn-weight-strong); letter-spacing:-.01em; margin:0 0 .35rem; }
+.sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin-bottom:2rem; max-width:64ch; line-height:1.5; }
+h2 { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-strong); margin:2.75rem 0 .3rem;
+  padding-bottom:.4rem; border-bottom:1px solid var(--bn-colour-keyline); }
+.h2sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:.5rem 0 1.25rem; max-width:72ch; line-height:1.5; }
+.key { display:flex; gap:1.5rem; flex-wrap:wrap; padding:.75rem 1rem; border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-md); margin-bottom:2rem; font-size:var(--bn-text-caption); }
+.key b { font-weight:var(--bn-weight-emphasis); }
+.mini-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  text-transform:uppercase; letter-spacing:.04em; margin-bottom:.45rem; }
+.count { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); margin-top:.4rem; }
+.count.over { color:var(--bn-colour-negative); font-weight:var(--bn-weight-emphasis); }
+code { font-family:var(--bn-font-mono); font-size:.9em; background:var(--bn-colour-badge-bg); padding:.05em .3em; border-radius:3px; }
+
+/* ── storyboard: time down, surface across ─────────────────────────── */
+.board { display:grid; grid-template-columns:7.5rem 1fr 1fr; gap:1.25rem; align-items:start; }
+.board-head { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  text-transform:uppercase; letter-spacing:.05em; padding-bottom:.5rem; border-bottom:1px solid var(--bn-colour-keyline); }
+.tick { display:contents; }
+.tick > * { padding:1.1rem 0; border-top:1px solid var(--bn-colour-keyline); }
+.t-when { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); line-height:1.5; }
+.t-when b { display:block; color:var(--bn-colour-text); font-weight:var(--bn-weight-emphasis); margin-bottom:.2rem; }
+
+/* ── SPA toast: the SHIPPED .autocode-toast, verbatim ──────────────── */
+.autocode-toast { position:static; background:var(--bn-colour-text); color:var(--bn-colour-bg);
+  padding:0.6rem 1rem; border-radius:var(--bn-radius-lg); font-size:var(--bn-text-label);
+  display:flex; align-items:center; gap:0.5rem; box-shadow:0 4px 20px rgba(0,0,0,.25); font-family:var(--bn-font-body); }
+.toast-content { display:flex; flex-direction:column; gap:0.3rem; flex:1; min-width:0; }
+.toast-progress-track { width:100%; height:3px; background:rgba(255,255,255,.15); border-radius:2px; overflow:hidden; }
+.toast-progress-fill { height:100%; background:#60a5fa; border-radius:2px; }
+.toast-link { color:#60a5fa; text-decoration:none; font-weight:var(--bn-weight-emphasis); margin-left:.3rem; cursor:pointer; }
+.toast-close { color:rgba(255,255,255,.4); margin-left:.3rem; }
+.toast-elapsed { color:rgba(255,255,255,.45); margin-left:.4rem; font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); }
+.toast-spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.2); border-top-color:#60a5fa;
+  border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.tglyph { font-weight:var(--bn-weight-strong); flex-shrink:0; }
+/* --bn-colour-success / --bn-colour-danger are the two the toast CSS names and
+   the palette does not define (see codebook-v2-messages.html, finding 0).
+   Borrowed literals, marked so nobody promotes them without deciding first. */
+:root { --gap-success:#22c55e; }
+.t-success { color:var(--gap-success); }
+.t-warning { color:var(--bn-colour-warning); }
+.t-error   { color:var(--bn-colour-negative); }
+
+/* ── macOS project sidebar row ─────────────────────────────────────── */
+.mac-row { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md);
+  padding:.5rem .7rem; background:var(--bn-colour-bg); display:flex; align-items:flex-start; gap:.6rem; }
+.mac-text { flex:1; min-width:0; }
+.mac-name { font-size:var(--bn-text-label); font-weight:var(--bn-weight-emphasis); }
+.mac-status { display:flex; align-items:baseline; gap:.4rem; margin-top:.15rem;
+  font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.mac-none { font-style:italic; opacity:.7; }
+.mglyph { font-weight:var(--bn-weight-strong); font-size:var(--bn-text-caption); }
+.m-success { color:var(--gap-success); } .m-error { color:var(--bn-colour-negative); }
+.m-warning { color:var(--bn-colour-warning); }
+/* subtitle-RIGHT slot: the shipped 16pt determinate ring (SidebarActivityRing) */
+.ring { width:16px; height:16px; flex-shrink:0; margin-top:.9rem; }
+.ring circle { fill:none; stroke-width:2; }
+.ring .trk { stroke:var(--bn-colour-border); }
+.ring .arc { stroke:var(--bn-colour-accent); stroke-linecap:butt;
+  transform:rotate(-90deg); transform-origin:50% 50%; }
+.mspin { width:16px; height:16px; border:2px solid var(--bn-colour-border); border-top-color:var(--bn-colour-accent);
+  border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; margin-top:.9rem; }
+.pop-row { display:flex; align-items:baseline; gap:.5rem; margin-top:.5rem; padding:.4rem .6rem;
+  border:1px solid var(--bn-colour-keyline); border-radius:var(--bn-radius-sm); font-size:var(--bn-text-caption); }
+.pop-label { font-weight:var(--bn-weight-emphasis); }
+.pop-cause { color:var(--bn-colour-muted); }
+.pop-none { margin-top:.5rem; font-size:var(--bn-text-micro); color:var(--bn-colour-muted); font-style:italic; }
+
+/* ── the review modal: shipped .threshold-* classes ────────────────── */
+.modal { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  background:var(--bn-colour-bg); box-shadow:0 8px 40px var(--bn-colour-shadow); max-width:44rem; }
+.codebook-modal-header { padding:1.1rem 1.25rem .9rem; border-bottom:1px solid var(--bn-colour-keyline); }
+.codebook-modal-title { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-strong); }
+.codebook-modal-subtitle { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin-top:.2rem; }
+.threshold-instruction { font-size:var(--bn-text-caption); color:var(--bn-colour-muted);
+  margin:.55rem 0 0; max-width:52ch; line-height:1.5; }
+.codebook-modal-body { padding:1.25rem; }
+.threshold-histogram { display:flex; align-items:flex-end; gap:2px; height:76px; }
+.threshold-histogram-bin { flex:1; display:flex; align-items:flex-end; }
+.threshold-histogram-bar { width:100%; border-radius:2px 2px 0 0; }
+.threshold-histogram-bar--green { background-color:var(--bn-colour-positive); }
+.threshold-histogram-bar--amber { background-color:var(--bn-colour-warning); }
+.threshold-histogram-bar--grey  { background-color:var(--bn-colour-muted); opacity:.5; }
+.threshold-slider { position:relative; margin:.85rem 0 .3rem; }
+.threshold-slider-track { display:flex; height:6px; border-radius:3px; overflow:hidden; }
+.threshold-slider-segment { height:100%; }
+.threshold-slider-segment--grey  { background-color:var(--bn-colour-muted); opacity:.3; }
+.threshold-slider-segment--amber { background-color:var(--bn-colour-warning); opacity:.5; }
+.threshold-slider-segment--green { background-color:var(--bn-colour-positive); opacity:.5; }
+.threshold-slider-thumb { position:absolute; top:-5px; width:16px; height:16px; border-radius:50%;
+  background:var(--bn-colour-bg); border:2px solid var(--bn-colour-accent); transform:translateX(-50%); cursor:grab; }
+.threshold-slider-label { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+  color:var(--bn-colour-muted); position:absolute; top:14px; transform:translateX(-50%); }
+.threshold-zone-counters { display:flex; gap:.5rem; justify-content:center; padding:1.4rem 0 .25rem; }
+.threshold-zone-counter { display:inline-flex; align-items:center; gap:.3rem; font-size:var(--bn-text-caption);
+  padding:.25rem .6rem; border-radius:var(--bn-radius-sm); border:1px solid var(--bn-colour-border);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); }
+.threshold-zone-counter--exclude { border-color:var(--bn-colour-muted); color:var(--bn-colour-muted); }
+.threshold-zone-counter--tentative { border:1px dashed currentColor; color:var(--bn-colour-warning); }
+.threshold-zone-counter--accept { border-color:var(--bn-colour-positive); color:var(--bn-colour-positive); }
+.threshold-zone-counter-count { font-family:var(--bn-font-mono); font-weight:var(--bn-weight-emphasis); }
+.apply-btn { color:#fff; background:var(--bn-colour-accent); border:none; border-radius:var(--bn-radius-md);
+  padding:.45rem 1rem; font-size:var(--bn-text-label); font-family:var(--bn-font-body); cursor:pointer; }
+.modal-foot { display:flex; justify-content:flex-end; gap:.6rem; padding:0 1.25rem 1.25rem; }
+
+/* ── A/B frames ────────────────────────────────────────────────────── */
+.ab { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+.frame { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); overflow:hidden; }
+.frame-chrome { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  text-transform:uppercase; letter-spacing:.05em; padding:.4rem .7rem;
+  border-bottom:1px solid var(--bn-colour-keyline); background:var(--bn-colour-hover); }
+.frame-body { padding:1rem; }
+
+/* ── commentary: deliberately not-the-product ──────────────────────── */
+.commentary { margin-top:1.5rem; padding:1.1rem 1.25rem; border-left:3px solid var(--bn-colour-muted);
+  background:repeating-linear-gradient(45deg, transparent, transparent 6px,
+    color-mix(in srgb, var(--bn-colour-muted) 5%, transparent) 6px,
+    color-mix(in srgb, var(--bn-colour-muted) 5%, transparent) 12px);
+  font-size:var(--bn-text-label); line-height:1.55; }
+.commentary .clabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase;
+  letter-spacing:.06em; color:var(--bn-colour-muted); display:block; margin-bottom:.5rem; }
+.commentary p { margin:0 0 .7rem; } .commentary p:last-child { margin-bottom:0; }
+@media (prefers-reduced-motion: reduce) { .toast-spinner, .mspin { animation:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>AutoCode progress</h1>
+<div class="sub">Where a tagging run reports itself, in the two channels that render it. The SPA toast is
+shipped and unchanged. The macOS project sidebar row is the proposal: progress is a state that outlives the
+click, and the Mac already owns a surface for exactly that. Failure strings are not re-drawn here &mdash;
+they are inventoried in <code>codebook-v2-messages.html</code>, which this page extends rather than repeats.</div>
+
+<div class="key">
+  <span><b>Artefact</b> &mdash; toast, row and modal are real pixels on shipped classes.</span>
+  <span><b>Commentary</b> &mdash; hatched blocks. Not the product.</span>
+  <span><b>Budgets</b> &mdash; toast 60 chars, sidebar status line ~22.</span>
+</div>
+
+<h2>1 &mdash; The run, in both channels</h2>
+<div class="h2sub">Same job, same second, two renderings. The toast column is what
+<code>AutoCodeToast.tsx</code> paints today. The sidebar column uses the vocabulary already shipped for a
+pipeline run: verb-led text, <code>&nbsp;·&nbsp;</code> separator, a bare <em>n of m</em> count, and the 16pt
+determinate ring in the subtitle-right slot with its hover-&times; cancel.</div>
+
+<div class="board">
+  <div class="board-head">when</div>
+  <div class="board-head">SPA toast &mdash; ships today, unchanged</div>
+  <div class="board-head">macOS sidebar row &mdash; proposed</div>
+
+  <div class="tick">
+    <div class="t-when"><b>T+0s</b>Job accepted, no counts yet</div>
+    <div>
+      <div class="autocode-toast"><span class="toast-spinner"></span><div class="toast-content"><span>&#10022; AutoCoding …/… quotes…</span></div><span class="toast-close">&times;</span></div>
+      <div class="count">no progress track until total_quotes &gt; 0</div>
+    </div>
+    <div>
+      <div class="mac-row"><div class="mac-text"><span class="mac-name">project-ikea</span><div class="mac-status"><span>Tagging…</span></div></div><span class="mspin"></span></div>
+      <div class="count">8 chars / 22 &nbsp;·&nbsp; indeterminate, like an uncalibrated run</div>
+    </div>
+  </div>
+
+  <div class="tick">
+    <div class="t-when"><b>T+1m 12s</b>Batches landing, 2s poll</div>
+    <div>
+      <div class="autocode-toast"><span class="toast-spinner"></span><div class="toast-content"><span>&#10022; AutoCoding 48/72 quotes…<span class="toast-elapsed">1:12</span></span><div class="toast-progress-track"><div class="toast-progress-fill" style="width:67%"></div></div></div><span class="toast-close">&times;</span></div>
+      <div class="count">28 chars / 60</div>
+    </div>
+    <div>
+      <div class="mac-row"><div class="mac-text"><span class="mac-name">project-ikea</span><div class="mac-status"><span>Tagging · 48 of 72</span></div></div>
+        <svg class="ring" viewBox="0 0 16 16"><circle class="trk" cx="8" cy="8" r="7"/><circle class="arc" cx="8" cy="8" r="7" stroke-dasharray="29.5 44"/></svg></div>
+      <div class="count">18 chars / 22 &nbsp;·&nbsp; no elapsed, no ETA &mdash; the count is the sentence</div>
+    </div>
+  </div>
+
+  <div class="tick">
+    <div class="t-when"><b>T+1m 48s</b>Complete, 36 proposals waiting</div>
+    <div>
+      <div class="autocode-toast"><span class="tglyph t-success">&#10003;</span><span>&#10022; AutoCoded 72 quotes in 1:48.</span><a class="toast-link">Report</a></div>
+      <div class="count">30 chars / 60 &nbsp;·&nbsp; <b>sticky</b> &mdash; no close button once completed</div>
+    </div>
+    <div>
+      <div class="mac-row"><div class="mac-text"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-success">&#10003;</span><span>36 tags to review</span></div></div></div>
+      <div class="count">17 chars / 22 &nbsp;·&nbsp; ring gone &mdash; motion is for in-flight only</div>
+    </div>
+  </div>
+
+  <div class="tick">
+    <div class="t-when"><b>T+1m 48s</b>Complete, but batches failed</div>
+    <div>
+      <div class="autocode-toast"><span class="tglyph t-warning">&#9888;</span><span>Tagged 58 of 72 quotes — some batches failed.</span><a class="toast-link">Report</a></div>
+      <div class="count">45 chars / 60</div>
+    </div>
+    <div>
+      <div class="mac-row"><div class="mac-text"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-warning">&#9888;</span><span>58 of 72 quotes tagged</span></div>
+        <div class="pop-row"><span class="mglyph m-warning">&#9888;</span><span class="pop-label">AutoCode</span><span class="pop-cause">Partial run</span></div></div></div>
+      <div class="count">22 chars / 22 &nbsp;·&nbsp; at budget in English, over it in German</div>
+    </div>
+  </div>
+
+  <div class="tick">
+    <div class="t-when"><b>any</b>Run died</div>
+    <div>
+      <div class="autocode-toast"><span class="tglyph t-error">&#10007;</span><span>Your Claude account is out of credit.</span><span class="toast-close">&times;</span></div>
+      <div class="count">auto-dismisses after 30s</div>
+    </div>
+    <div>
+      <div class="mac-row"><div class="mac-text"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-error">&#10007;</span><span>Out of credit</span></div>
+        <div class="pop-row"><span class="mglyph m-error">&#10007;</span><span class="pop-label">AutoCode</span><span class="pop-cause">Out of credit</span></div></div></div>
+      <div class="count">the seven failure kinds are inventoried in the sibling page</div>
+    </div>
+  </div>
+</div>
+
+<div class="commentary"><span class="clabel">Commentary</span>
+<p><b>The sidebar row needs no new vocabulary, and that is the argument for it.</b> Every element above
+already ships for a pipeline run: <code>chrome.pipeline.sessionsCount</code> is literally
+<code>"{{complete}} of {{total}}"</code>, the <code>&nbsp;·&nbsp;</code> separator is
+<code>SidebarSubtitleText.activityText</code>'s, and the ring is <code>SidebarActivityRing</code> at its
+shipped 16pt with the hover-&times; cancel. A tagging run is a long job against a project; the row already
+knows how to say that.</p>
+<p><b>The Mac drops the elapsed timer and the percentage on purpose.</b> The toast can afford
+<code>1:12</code> because it is a transient thing you are looking at. The row is glanced at from across a
+window that is otherwise about something else, and <code>cloud-import-sidebar-progress.html</code> already
+settled the question for the import phase: <em>a count is the question a closed window leaves &mdash; not how
+fast, not which batch, but how many are still to wait for.</em> Same argument, same answer.</p>
+<p><b>22 characters is a real ceiling, not a guess.</b> <code>SidebarSubtitleText.swift:34-44</code> records
+the run-failed string being cut back to <code>"Run failed"</code> because a 36-character sentence truncated
+mid-phrase in English before any locale swell. <em>58 of 72 quotes tagged</em> is exactly 22 and therefore
+already at the line in the shortest language we ship. It wants shortening before it is translated, not
+after.</p></div>
+
+<h2>2 &mdash; The door to the review</h2>
+<div class="h2sub">The toast carries two jobs fused into one control: it reports progress, <em>and</em> it is
+the way into the review. Moving progress to the sidebar splits them, and the split has to be deliberate
+&mdash; a status line is attention, not affordance.</div>
+
+<div class="ab">
+  <div class="frame">
+    <div class="frame-chrome">A &mdash; row states the count (consistent with the sibling page)</div>
+    <div class="frame-body">
+      <div class="mac-row"><div class="mac-text"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-success">&#10003;</span><span>36 tags on 72 quotes</span></div></div></div>
+      <div class="count">20 chars / 22 &nbsp;·&nbsp; reports what happened</div>
+    </div>
+  </div>
+  <div class="frame">
+    <div class="frame-chrome">B &mdash; row states the pending decision</div>
+    <div class="frame-body">
+      <div class="mac-row"><div class="mac-text"><span class="mac-name">project-ikea</span><div class="mac-status"><span class="mglyph m-success">&#10003;</span><span>36 tags to review</span></div></div></div>
+      <div class="count">17 chars / 22 &nbsp;·&nbsp; reports what is owed</div>
+    </div>
+  </div>
+</div>
+
+<div class="commentary"><span class="clabel">Commentary &mdash; the open call</span>
+<p><b>A is what the sibling page already drew; B is what this flow argues for.</b> The run is not finished
+when the job completes &mdash; nothing has been applied to a single quote yet. Thirty-six proposals sit in
+<code>ProposedTag</code> with <code>status="pending"</code> until someone opens the review and moves the
+thresholds. A row that says <em>36 tags on 72 quotes</em> describes a completed act; the researcher's actual
+state is <em>a decision is waiting</em>. B says that, and is shorter.</p>
+<p><b>Neither row is a button, and neither should become one.</b> The sidebar is attention, not affordance
+&mdash; the standing rule for this surface. So on the Mac the door to the review lives where the codebook
+lives: the framework card in the codebook lens, in the WKWebView, which is the same React surface the browser
+shows. The toast's <em>Report</em> link is the browser's door because the browser has no sidebar; it is not a
+second door on the Mac, it is the only door on the other channel.</p></div>
+
+<h2>3 &mdash; The review is one surface on both channels</h2>
+<div class="h2sub">Whatever opens it, <code>ThresholdReviewModal</code> is React inside the same web view, so
+there is nothing to fork. Drawn once, on the shipped <code>threshold-*</code> classes.</div>
+
+<div class="modal">
+  <div class="codebook-modal-header">
+    <div class="codebook-modal-title">&#10022; AutoCode Review &mdash; Nielsen</div>
+    <div class="codebook-modal-subtitle">36 of 36 proposals remaining</div>
+    <p class="threshold-instruction">Drag the thresholds to control how many auto-tags are applied as tentative or accepted.</p>
+  </div>
+  <div class="codebook-modal-body">
+    <div class="threshold-histogram">
+      <div class="threshold-histogram-bin"><div class="threshold-histogram-bar threshold-histogram-bar--grey" style="height:14%"></div></div>
+      <div class="threshold-histogram-bin"><div class="threshold-histogram-bar threshold-histogram-bar--grey" style="height:26%"></div></div>
+      <div class="threshold-histogram-bin"><div class="threshold-histogram-bar threshold-histogram-bar--grey" style="height:20%"></div></div>
+      <div class="threshold-histogram-bin"><div class="threshold-histogram-bar threshold-histogram-bar--amber" style="height:38%"></div></div>
+      <div class="threshold-histogram-bin"><div class="threshold-histogram-bar threshold-histogram-bar--amber" style="height:55%"></div></div>
+      <div class="threshold-histogram-bin"><div class="threshold-histogram-bar threshold-histogram-bar--amber" style="height:44%"></div></div>
+      <div class="threshold-histogram-bin"><div class="threshold-histogram-bar threshold-histogram-bar--amber" style="height:62%"></div></div>
+      <div class="threshold-histogram-bin"><div class="threshold-histogram-bar threshold-histogram-bar--green" style="height:78%"></div></div>
+      <div class="threshold-histogram-bin"><div class="threshold-histogram-bar threshold-histogram-bar--green" style="height:100%"></div></div>
+      <div class="threshold-histogram-bin"><div class="threshold-histogram-bar threshold-histogram-bar--green" style="height:71%"></div></div>
+    </div>
+    <div class="threshold-slider">
+      <div class="threshold-slider-track">
+        <div class="threshold-slider-segment threshold-slider-segment--grey" style="width:30%"></div>
+        <div class="threshold-slider-segment threshold-slider-segment--amber" style="width:40%"></div>
+        <div class="threshold-slider-segment threshold-slider-segment--green" style="width:30%"></div>
+      </div>
+      <div class="threshold-slider-thumb" style="left:30%"></div>
+      <div class="threshold-slider-thumb" style="left:70%"></div>
+      <div class="threshold-slider-label" style="left:30%">0.30</div>
+      <div class="threshold-slider-label" style="left:70%">0.70</div>
+    </div>
+    <div class="threshold-zone-counters">
+      <span class="threshold-zone-counter threshold-zone-counter--exclude">Exclude <span class="threshold-zone-counter-count">7</span></span>
+      <span class="threshold-zone-counter threshold-zone-counter--tentative">Tentative <span class="threshold-zone-counter-count">14</span></span>
+      <span class="threshold-zone-counter threshold-zone-counter--accept">Accept <span class="threshold-zone-counter-count">15</span></span>
+    </div>
+  </div>
+  <div class="modal-foot"><button class="apply-btn">Apply thresholds</button></div>
+</div>
+
+<div class="commentary"><span class="clabel">Commentary</span>
+<p><b>The three zones are where the researcher's judgement actually goes, and only one of them is a
+decision.</b> Above the upper threshold is accepted, below the lower is denied, and the band between is
+<em>left pending</em> &mdash; <code>handleApply</code> calls <code>acceptAllProposals(upper)</code> then
+<code>denyAllProposals(lower)</code> and touches nothing in the middle. Tentative is not a third verdict, it
+is the absence of one, which is why its counter is the dashed border rather than a filled state.</p>
+<p><b>Apply is the only irreversible act in the whole flow</b>, and it is two sequential network calls with no
+transaction around them. If the second fails, the accepts have already landed and the denials have not;
+<code>autocode.review.applyFailed</code> says <em>"your per-row decisions are saved"</em>, which is true and
+does not describe that particular half-applied state.</p>
+<p><b>The tokens here are correct, unlike the toast's.</b> <code>threshold-review.css</code> names
+<code>--bn-colour-positive</code> and <code>--bn-colour-warning</code>, both of which the palette defines in
+default <em>and</em> Edo. It is <code>autocode-toast.css</code> that reaches for
+<code>--bn-colour-success</code> and <code>--bn-colour-danger</code>, which the palette does not define at
+all. So the review renders correctly today and the toast's tick does not &mdash; and if progress moves to the
+sidebar, that bug stays behind in the browser channel rather than being fixed by the move.</p></div>
+
+<h2>4 &mdash; What this needs that does not exist</h2>
+<div class="commentary"><span class="clabel">Commentary &mdash; findings, not designs</span>
+<p><b>1. There is no <code>SubtitleVariant</code> case for tagging.</b> The enum
+(<code>ProjectSubtitle.swift</code>) carries <code>running</code>, <code>queued</code>, <code>copying</code>,
+<code>importingBatch</code>, <code>addingInterviews</code> and nine more &mdash; every long job the app knows
+about. AutoCode is not among them, so the row above cannot be produced by the shipping code. Adding a case is
+the smallest change that makes any of this drawable, and it is genuinely new &mdash; flagged here rather than
+slipped in.</p>
+<p><b>2. The ring is driven from <code>PipelineState</code>, and AutoCode is not one.</b>
+<code>ProjectRowActivityIndicator.Kind.from</code> switches exhaustively over <code>PipelineState</code> with
+no <code>default:</code> &mdash; deliberately, so a new state forces a decision at compile time. AutoCode
+runs in serve mode and has its own <code>AutoCodeJob</code> table; it never becomes a
+<code>PipelineState</code>, so it cannot reach that switch at all. Either the indicator grows a second input
+or autocode jobs get projected into the state the sidebar already reads.</p>
+<p><b>3. Nothing under <code>bristlenose/server/</code> writes to the events log.</b> That log is the channel
+the Mac glyph, subtitle and popover are fed from, and the sibling page recorded the same gap for the failure
+strings. AutoCode is <em>entirely</em> a serve-mode feature &mdash; <code>server/autocode.py</code>,
+<code>server/routes/autocode.py</code>, polled over HTTP by the SPA every 2s. Every sidebar row on this page
+is therefore a drawing of a surface that exists, fed by a wire that does not. This is the one blocking
+dependency; items 1 and 2 are small in front of it.</p>
+<p><b>4. The completed toast never dismisses itself, and that is load-bearing.</b>
+<code>AutoCodeToast.tsx</code> renders the close button only when the job is <em>not</em> completed, and
+auto-dismisses on failure alone. So today the toast is the persistence layer for "a decision is waiting" —
+badly, since it dies with the tab. If the Mac takes that state into the row, the browser still needs somewhere
+durable for it, and the framework card in the lens is the obvious candidate on both channels.</p></div>
+</div>
+</body>
+</html>

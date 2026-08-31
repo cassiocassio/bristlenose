@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoCode Button Lifecycle</title>
+<style>
+:root {
+  color-scheme: light dark;
+
+  /* Lifted verbatim from bristlenose/theme — not approximations. */
+  --bn-colour-bg:            light-dark(#ffffff, #111111);
+  --bn-colour-text:          light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:         light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:        light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-border-hover:  light-dark(#d1d5db, #4b5563);
+  --bn-colour-accent:        light-dark(#007aff, #0a84ff);
+
+  /* Section 5 needs these and the inlined block carried neither — options B
+     and C rendered plain black while their labels claimed "red". Lifted
+     verbatim from colors/palette-default.css. */
+  --bn-colour-negative:      light-dark(#dc2626, #ef4444);
+  --bn-colour-hover:         light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:      light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:      light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:    light-dark(#374151, #d1d5db);
+  --bn-nav-selection-bg:     light-dark(#efefef, #2b2b2b);
+  --bn-sentiment-frustration: light-dark(#ea580c, #fb923c);
+
+  --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --bn-text-micro:   0.6875rem;
+  --bn-text-caption: 0.75rem;
+  --bn-text-label:   0.8125rem;
+  --bn-text-body:    0.9375rem;
+  --bn-weight-light: 370;
+  --bn-weight-normal: 420;
+  --bn-weight-emphasis: 490;
+  --bn-weight-strong: 700;
+
+  --bn-space-xs: 0.15rem; --bn-space-sm: 0.35rem; --bn-space-md: 0.75rem;
+  --bn-space-lg: 1.5rem;  --bn-space-xl: 2rem;
+  --bn-radius-sm: 3px; --bn-radius-md: 6px; --bn-radius-lg: 8px; --bn-radius-pill: 999px;
+  --bn-transition-fast: 0.15s ease;
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:        light-dark(#fdfbf7, #1c1a17);
+  --bn-colour-text:      light-dark(#2b2722, #e8e2d8);
+  --bn-colour-muted:     light-dark(#7a7266, #a39a8c);
+  --bn-colour-border:    light-dark(#e6ddc9, #3a352d);
+  --bn-colour-accent:    light-dark(#8c4a3f, #c97b6a);
+
+  --bn-colour-negative:  light-dark(#b5432a, #e06a4a);   /* edo — palette-edo.css */
+  --bn-colour-quote-bg:  light-dark(#f5f0e6, #252119);
+  --bn-nav-selection-bg: light-dark(#e6ddc9, #2d2922);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: var(--bn-space-xl);
+  font-family: var(--bn-font-body);
+  font-size: var(--bn-text-label);
+  color: var(--bn-colour-text);
+  background: var(--bn-colour-bg);
+  line-height: 1.5;
+}
+h1 { font-size: 1.5rem; font-weight: var(--bn-weight-strong); margin: 0 0 var(--bn-space-sm); }
+h2 {
+  font-size: var(--bn-text-body); font-weight: var(--bn-weight-emphasis);
+  margin: var(--bn-space-xl) 0 var(--bn-space-md);
+  padding-bottom: var(--bn-space-sm);
+  border-bottom: 1px solid var(--bn-colour-border);
+}
+.lede { color: var(--bn-colour-muted); max-width: 62ch; margin: 0 0 var(--bn-space-lg); }
+
+/* ── THE ATOM, verbatim from theme/atoms/modal.css ───────────────────── */
+.bn-btn {
+  font-family: inherit;
+  font-size: var(--bn-text-label);
+  padding: 0.4rem 1rem;
+  border-radius: var(--bn-radius-md);
+  border: 1px solid var(--bn-colour-border);
+  /* Added to the real atom 31 Aug 2026 — see the note above section 4. */
+  background: var(--bn-colour-bg);
+  color: var(--bn-colour-text);
+  cursor: pointer;
+  transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
+}
+.bn-btn-cancel    { background: var(--bn-colour-bg); color: var(--bn-colour-text); }
+.bn-btn-cancel:hover { background: var(--bn-colour-quote-bg); }
+.bn-btn-danger    { background: var(--bn-sentiment-frustration); color: #fff; border-color: var(--bn-sentiment-frustration); }
+.bn-btn-danger:hover  { opacity: 0.85; }
+.bn-btn-primary   { background: var(--bn-colour-accent); color: #fff; border-color: var(--bn-colour-accent); }
+.bn-btn-primary:hover { opacity: 0.85; }
+.bn-btn-secondary { background: var(--bn-colour-bg); color: var(--bn-colour-text); }
+.bn-btn-secondary:hover { background: var(--bn-colour-quote-bg); }
+.bn-btn:disabled  { opacity: 0.5; cursor: not-allowed; }
+
+/* The size axis — v2-provisional, scoped in the real CSS to .v2-layout /
+   .section-heading. Unscoped here so the specimens render. */
+.bn-btn-sm { font-size: var(--bn-text-caption); padding: 0.25rem 0.7rem; }
+.bn-btn-lg { font-size: var(--bn-text-body);    padding: 0.5rem 1.15rem; }
+
+/* ── PROPOSED, not in the theme. Clearly marked everywhere it appears. ── */
+.p-quiet {
+  background: transparent; color: var(--bn-colour-accent); border-color: transparent;
+}
+.p-quiet:hover { background: var(--bn-colour-hover); }
+.p-tinted {
+  background: var(--bn-colour-hover); color: var(--bn-colour-accent);
+  border-color: transparent;
+}
+.p-tinted:hover { background: var(--bn-colour-hover); filter: brightness(0.96); }
+.p-outline {
+  background: transparent; color: var(--bn-colour-accent);
+  border-color: var(--bn-colour-accent);
+}
+.p-outline:hover { background: var(--bn-colour-hover); }
+
+/* ── Catalogue chrome ────────────────────────────────────────────────── */
+table { border-collapse: collapse; width: 100%; max-width: 900px; }
+th, td { text-align: left; padding: var(--bn-space-md) var(--bn-space-md) var(--bn-space-md) 0; vertical-align: middle; border-bottom: 1px solid var(--bn-colour-border); }
+th { font-weight: var(--bn-weight-emphasis); font-size: var(--bn-text-caption); color: var(--bn-colour-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+code { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); padding: 0.1em 0.4em; border-radius: var(--bn-radius-sm); }
+.note { color: var(--bn-colour-muted); font-size: var(--bn-text-caption); }
+.new { color: var(--bn-sentiment-frustration); font-weight: var(--bn-weight-emphasis); }
+
+/* Artefact frame — real pixels live inside, never commentary. */
+.frame { border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-lg); background: var(--bn-colour-bg); overflow: hidden; max-width: 900px; }
+.frame-bar { background: var(--bn-colour-quote-bg); border-bottom: 1px solid var(--bn-colour-border); padding: var(--bn-space-sm) var(--bn-space-md); font-size: var(--bn-text-micro); color: var(--bn-colour-muted); font-family: var(--bn-font-mono); }
+.frame-body { padding: var(--bn-space-lg); }
+
+/* Commentary — deliberately not-the-product. */
+.commentary {
+  max-width: 900px; margin: var(--bn-space-md) 0 var(--bn-space-xl);
+  border-left: 3px solid var(--bn-colour-border-hover);
+  background: repeating-linear-gradient(45deg, transparent, transparent 6px, color-mix(in srgb, var(--bn-colour-border) 30%, transparent) 6px, color-mix(in srgb, var(--bn-colour-border) 30%, transparent) 7px);
+  padding: var(--bn-space-md) var(--bn-space-lg);
+}
+.commentary::before { content: "COMMENTARY"; display: block; font-family: var(--bn-font-mono); font-size: var(--bn-text-micro); color: var(--bn-colour-muted); letter-spacing: 0.08em; margin-bottom: var(--bn-space-sm); }
+.commentary p { margin: 0 0 var(--bn-space-sm); }
+.commentary p:last-child { margin-bottom: 0; }
+
+/* The real review row, lifted from theme/organisms/codebook-v2.css */
+.pg-review-row { margin-top: var(--bn-space-md); display: flex; align-items: baseline; gap: 0.55rem; flex-wrap: wrap; }
+.pg-review-meta { font-size: var(--bn-text-label); color: var(--bn-colour-text); }
+.pg-review-meta .undec { color: var(--bn-colour-muted); }
+
+.controls { display: flex; gap: var(--bn-space-md); align-items: center; margin-bottom: var(--bn-space-lg); }
+.controls button { font: inherit; padding: 0.3rem 0.8rem; border-radius: var(--bn-radius-md); border: 1px solid var(--bn-colour-border); background: var(--bn-colour-bg); color: var(--bn-colour-text); cursor: pointer; }
+
+/* Section 5 — Install/Uninstall options. Real card-toggle metrics. */
+.pct { min-width: 96px; justify-content: center; text-align: center;
+       font-size: var(--bn-text-caption); }
+.pct-un:hover, .pct-un:focus-visible { color: var(--bn-colour-negative);
+       border-color: var(--bn-colour-negative); }
+.pct-b { color: var(--bn-colour-negative); }
+.pct-b:hover { color: var(--bn-colour-negative); border-color: var(--bn-colour-negative); }
+.pct-c { color: var(--bn-colour-negative); border-color: var(--bn-colour-negative); }
+.pct-d { color: var(--bn-colour-muted); }
+.pct-d:hover { color: var(--bn-colour-negative); border-color: var(--bn-colour-negative); }
+
+/* The pre-fix appearance, reproduced deliberately. `buttonface` is the UA's own
+   button colour — the very fallback the atom used to take. Without this class
+   the "today (unstyled)" specimens would render FIXED, and the catalogue would
+   quietly stop showing the problem it was written to show. */
+.was-unstyled { background: buttonface; color: buttontext; }
+.was-unstyled:hover { background: buttonface; }
+
+/* ── atoms/shimmer.css, verbatim ─────────────────────────────────── */
+/* Atom: shimmer — the "thinking / work in progress" travelling-sheen for text.
+
+   Single shared cross-surface spec (docs/design-motion.md §4.7.1); this is the
+   web (CSS) rendering. Apply `.bn-thinking-shimmer` to a text element to signal
+   indeterminate work with no ETA. It REPLACES the spinner — never run it
+   alongside a determinate progress bar on the same element (design-motion §4.7).
+
+   Two gates, BOTH must pass to animate (degrade to static plain text otherwise):
+     1. @media (prefers-reduced-motion: no-preference)   — accessibility
+     2. :root:not([data-analysis-animation="off"])       — the app's "Show
+        animation while analysing" toggle, bridged from native chrome.
+
+   The consuming surface MUST set --bn-shimmer-base (its resting text colour) and
+   SHOULD set --bn-shimmer-peak (the pole the band moves toward). The clip-to-text
+   technique forces color:transparent, which would also turn `currentColor`
+   transparent — hence base must be an explicit colour, not currentColor.
+
+     - Dark text (headroom up):  peak = white  → band brightens (the default).
+     - Light text (headroom down): peak = the surface background → band dims.
+
+   Either way the perceptual magnitude is the tuned --bn-shimmer-contrast (5%),
+   so the *character* matches across surfaces even where polarity flips. */
+
+.bn-thinking-shimmer {
+    --_shimmer-base: var(--bn-shimmer-base, currentColor);
+    --_shimmer-peak: color-mix(
+        in srgb,
+        var(--_shimmer-base),
+        var(--bn-shimmer-peak, #fff) var(--bn-shimmer-contrast)
+    );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    :root:not([data-analysis-animation="off"]) .bn-thinking-shimmer {
+        /* Band half-width is `--bn-shimmer-band` (a fraction of the TEXT) ÷ 6:
+           ÷3 converts text-fraction → gradient-fraction (the gradient image is
+           300% of the text width, below), then ÷2 for the half. So the peak
+           spans ~34% of the text. */
+        background-image: linear-gradient(
+            var(--bn-shimmer-angle),
+            var(--_shimmer-base) 0%,
+            var(--_shimmer-base) calc(50% - var(--bn-shimmer-band) / 6),
+            var(--_shimmer-peak) 50%,
+            var(--_shimmer-base) calc(50% + var(--bn-shimmer-band) / 6),
+            var(--_shimmer-base) 100%
+        );
+        background-size: 300% 100%;
+        background-repeat: no-repeat;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        animation: bn-thinking-shimmer var(--bn-shimmer-period) var(--bn-shimmer-easing) infinite;
+    }
+}
+
+@keyframes bn-thinking-shimmer {
+    /* Positions stay within [0%, 100%] so the 300%-wide no-repeat gradient ALWAYS
+       covers the text — outside that range the image slides off and the clipped
+       glyphs render transparent (they vanish). Over the sweep window (1800/2700 =
+       66.67%) the sampling window travels across the middle of the gradient: the
+       peak band enters from the left, crosses, and exits right. It then parks at
+       0% — where the band sits off-window and only the base colour shows — for the
+       0.9 s gap. Band is off-window at the hold, so the loop restart never pops. */
+    0%     { background-position: 100% 50%; }
+    66.67% { background-position: 0% 50%; }
+    100%   { background-position: 0% 50%; }
+}
+
+/* ── shimmer tokens (tokens.css §Thinking-shimmer) ─────────────────────── */
+:root {
+  --bn-shimmer-contrast: 5%;
+  --bn-shimmer-period: 2.7s;
+  --bn-shimmer-easing: ease-in-out;
+  --bn-shimmer-band: 34%;
+  --bn-shimmer-angle: 100deg;
+}
+/* A FILLED button carries light text, so the band must move toward the fill
+   (headroom is downward) — the polarity rule in shimmer.css's header. On the
+   accent fill that is base #fff, peak = the accent itself. */
+.bn-btn-primary .lbl, .bn-btn-primary.lbl {
+  --bn-shimmer-base: #fff;
+  --bn-shimmer-peak: var(--bn-colour-accent);
+  --bn-shimmer-contrast: 20%;   /* a filled pill needs more travel to read, as the chip found */
+}
+
+/* ── page furniture ────────────────────────────────────────────────────── */
+body { font-family:var(--bn-font-body); background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  margin:0; padding:2.5rem 2rem 6rem; font-size:var(--bn-text-body); }
+.wrap { max-width:1100px; margin:0 auto; }
+h1 { font-size:var(--bn-text-display); font-weight:var(--bn-weight-strong); letter-spacing:-.01em; margin:0 0 .35rem; }
+.sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin-bottom:2rem; max-width:64ch; line-height:1.5; }
+h2 { font-size:var(--bn-text-heading); font-weight:var(--bn-weight-strong); margin:2.75rem 0 .3rem;
+  padding-bottom:.4rem; border-bottom:1px solid var(--bn-colour-border); }
+.h2sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:.5rem 0 1.25rem; max-width:72ch; line-height:1.5; }
+.key { display:flex; gap:1.5rem; flex-wrap:wrap; padding:.75rem 1rem; border:1px solid var(--bn-colour-border);
+  border-radius:var(--bn-radius-md); margin-bottom:2rem; font-size:var(--bn-text-caption); }
+.key b { font-weight:var(--bn-weight-emphasis); }
+.new { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.05em;
+  color:var(--bn-colour-bg); background:var(--bn-colour-muted); padding:.1rem .35rem; border-radius:var(--bn-radius-sm);
+  vertical-align:.15em; }
+code { font-family:var(--bn-font-mono); font-size:.9em; background:var(--bn-colour-badge-bg); padding:.05em .3em; border-radius:3px; }
+
+/* ── the lifecycle strip ───────────────────────────────────────────────── */
+.life { display:grid; grid-template-columns:repeat(4, 1fr); gap:0; align-items:start; margin:1.5rem 0 0; }
+.ph { padding:0 1rem; border-left:1px solid var(--bn-colour-border); }
+.ph:first-child { border-left:none; padding-left:0; }
+.ph-when { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase;
+  letter-spacing:.05em; color:var(--bn-colour-muted); margin-bottom:.6rem; }
+.ph-btn { margin-bottom:.6rem; }
+.ph-note { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); line-height:1.5; }
+.arrow { font-family:var(--bn-font-mono); color:var(--bn-colour-muted); text-align:center; padding-top:1.6rem; }
+
+/* ── the real review row (organisms/codebook-v2.css) ───────────────────── */
+.pg-review-row { display:flex; align-items:center; gap:.75rem; padding:.6rem 0; }
+.pg-review-meta { font-size:var(--bn-text-label); color:var(--bn-colour-text); }
+.pg-review-meta .undec { color:var(--bn-colour-muted); }
+
+/* ── card frame (a screenshot chrome, not product) ─────────────────────── */
+.frame { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); overflow:hidden; margin-bottom:1rem; }
+.frame-chrome { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted);
+  text-transform:uppercase; letter-spacing:.05em; padding:.4rem .7rem;
+  border-bottom:1px solid var(--bn-colour-border); background:var(--bn-colour-hover); }
+.frame-body { padding:1.1rem 1.25rem; }
+.card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:2rem; }
+.card-title { font-size:var(--bn-text-title); font-weight:var(--bn-weight-strong); letter-spacing:-.01em; }
+.card-author { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin-top:.1rem; }
+.gutter { display:flex; gap:.5rem; flex-shrink:0; }
+
+/* determinate progress inside the pill — the App Store middle state */
+.btn-prog { position:relative; overflow:hidden; }
+.btn-prog::before { content:""; position:absolute; inset:0; width:var(--pct,62%);
+  background:rgba(255,255,255,.22); pointer-events:none; }
+.btn-prog > span { position:relative; }
+.ring { width:15px; height:15px; vertical-align:-.2em; }
+.ring circle { fill:none; stroke-width:2.5; }
+.ring .trk { stroke:var(--bn-colour-border); }
+.ring .arc { stroke:var(--bn-colour-accent); transform:rotate(-90deg); transform-origin:50% 50%; }
+
+/* ── commentary: deliberately not-the-product ──────────────────────────── */
+/* The lifted block carries `.commentary::before { content:"COMMENTARY" }`.
+   These blocks use a `.clabel` span instead, which can say what the commentary
+   is about — so suppress the inherited generic label rather than print both. */
+.commentary::before { content: none; }
+.commentary { margin-top:1.5rem; padding:1.1rem 1.25rem; border-left:3px solid var(--bn-colour-muted);
+  background:repeating-linear-gradient(45deg, transparent, transparent 6px,
+    color-mix(in srgb, var(--bn-colour-muted) 5%, transparent) 6px,
+    color-mix(in srgb, var(--bn-colour-muted) 5%, transparent) 12px);
+  font-size:var(--bn-text-label); line-height:1.55; }
+.commentary .clabel { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase;
+  letter-spacing:.06em; color:var(--bn-colour-muted); display:block; margin-bottom:.5rem; }
+.commentary p { margin:0 0 .7rem; } .commentary p:last-child { margin-bottom:0; }
+.opt { display:grid; grid-template-columns:2rem 1fr; gap:.75rem 1rem; align-items:start; margin:.6rem 0 1.2rem; }
+.opt-id { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption); color:var(--bn-colour-muted); padding-top:.5rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>AutoCode button lifecycle</h1>
+<div class="sub">The App&nbsp;Store <em>GET → progress → OPEN</em> pattern applied to the codebook card:
+one control that carries the whole arc rather than three verbs sharing a screen. Buttons are the real
+<code>.bn-btn</code> family from <code>atoms/modal.css</code> (including the 31&nbsp;Aug base-background fix)
+and the shimmer is <code>atoms/shimmer.css</code> verbatim. What is <em>new</em> is the transitioning, and it
+is marked.</div>
+
+<div class="key">
+  <span><b>Artefact</b> &mdash; real classes, real tokens, real shimmer.</span>
+  <span><b>Commentary</b> &mdash; hatched. Not the product.</span>
+  <span><span class="new">new</span> &mdash; does not exist today.</span>
+</div>
+
+<h2>1 &mdash; The arc <span class="new">new</span></h2>
+<div class="h2sub">Four phases of one control. Phase 1 and the <em>appearance</em> of every pill are shipped;
+the transition between them is the proposal.</div>
+
+<div class="life">
+  <div class="ph">
+    <div class="ph-when">not installed</div>
+    <div class="ph-btn"><button class="bn-btn bn-btn-primary bn-btn-sm">Install</button></div>
+    <div class="ph-note">Shipped, and settled 31&nbsp;Aug (option&nbsp;D): primary for Install, ranked by what
+      you came to do.</div>
+  </div>
+  <div class="ph">
+    <div class="ph-when">tagging</div>
+    <div class="ph-btn"><button class="bn-btn bn-btn-primary bn-btn-sm"><span class="lbl bn-thinking-shimmer">AutoCoding…</span></button></div>
+    <div class="ph-note">The label shimmers. No count, no bar &mdash; see the constraint below.</div>
+  </div>
+  <div class="ph">
+    <div class="ph-when">done, undecided</div>
+    <div class="ph-btn"><button class="bn-btn bn-btn-primary bn-btn-sm">View Report</button></div>
+    <div class="ph-note">The door, in the slot the eye is already on. Nothing has reached a quote yet.</div>
+  </div>
+  <div class="ph">
+    <div class="ph-when">applied</div>
+    <div class="ph-btn"><button class="bn-btn bn-btn-secondary bn-btn-sm">View Report</button></div>
+    <div class="ph-note">Demoted, not removed: the histogram is the only legible record of the delta, and it
+      outlives the decision.</div>
+  </div>
+</div>
+
+<div class="commentary"><span class="clabel">Commentary &mdash; the constraint that shapes phase 2</span>
+<p><b>The shimmer and a determinate bar are mutually exclusive on one element</b>, and that is a written rule
+rather than a preference: <code>atoms/shimmer.css</code>'s own header says the sweep <em>"REPLACES the
+spinner — never run it alongside a determinate progress bar on the same element (design-motion §4.7)"</em>.
+So the tagging phase has to choose, and the two candidates are genuinely different products.</p>
+<div class="opt">
+  <div class="opt-id">2a</div>
+  <div>
+    <div class="ph-btn"><button class="bn-btn bn-btn-primary bn-btn-sm"><span class="lbl bn-thinking-shimmer">AutoCoding…</span></button></div>
+    <b>Shimmer, no number.</b> Says <em>working, no ETA</em>. It is the vocabulary the activity chip and the
+    native sidebar already speak, so it costs nothing and reads as one family with them. It throws away a
+    count the API is already returning.
+  </div>
+  <div class="opt-id">2b</div>
+  <div>
+    <div class="ph-btn"><button class="bn-btn bn-btn-primary bn-btn-sm btn-prog" style="--pct:62%"><span>48 of 72</span></button></div>
+    <b>Determinate fill, no shimmer.</b> Closer to App&nbsp;Store, which shows a real ring rather than a
+    word. Honest about how long is left, and <code>processed/total</code> is on every poll. But a filled
+    progress pill is a new component, and it must <em>not</em> shimmer.
+  </div>
+</div>
+<p><b>Note that App Store's middle state is not a labelled button at all</b> — it is a circular determinate
+ring with a stop square, and the word disappears for the duration. If the analogy is being taken seriously,
+2b is the faithful reading and 2a is the house one. They are both defensible; they are not combinable.</p>
+</div>
+
+<h2>2 &mdash; In the real card</h2>
+<div class="h2sub">The card as it ships today (top), and the same card with the arc (below). The difference
+is not the pill &mdash; it is <em>where the review door lives</em>.</div>
+
+<div class="frame">
+  <div class="frame-chrome">today</div>
+  <div class="frame-body">
+    <div class="card-head">
+      <div>
+        <div class="card-title">The Elements of User Experience</div>
+        <div class="card-author">Jesse James Garrett</div>
+      </div>
+      <div class="gutter"><button class="bn-btn bn-btn-secondary bn-btn-sm">Uninstall</button></div>
+    </div>
+    <div class="pg-review-row">
+      <span class="pg-review-meta">20 tags<span class="undec"> &middot; 36 undecided</span></span>
+      <button class="bn-btn bn-btn-sm">Review</button>
+    </div>
+  </div>
+</div>
+
+<div class="frame">
+  <div class="frame-chrome">with the arc <span class="new">new</span></div>
+  <div class="frame-body">
+    <div class="card-head">
+      <div>
+        <div class="card-title">The Elements of User Experience</div>
+        <div class="card-author">Jesse James Garrett</div>
+      </div>
+      <div class="gutter">
+        <button class="bn-btn bn-btn-secondary bn-btn-sm">Uninstall</button>
+        <button class="bn-btn bn-btn-primary bn-btn-sm">View Report</button>
+      </div>
+    </div>
+    <div class="pg-review-row">
+      <span class="pg-review-meta">20 tags<span class="undec"> &middot; 36 undecided</span></span>
+    </div>
+  </div>
+</div>
+
+<div class="commentary"><span class="clabel">Commentary &mdash; what moved, and the cost</span>
+<p><b>Review climbs out of its row and into the gutter.</b> That is the whole structural consequence, and it
+is what makes the idea work: the gutter is where the eye already went to click Install, so the reward appears
+where the action was. The review row keeps the counts and loses its button, which is a better division —
+<em>the row states the finding, the gutter carries the verb</em>.</p>
+<p><b>It also resolves an open question by construction.</b> The catalogue's §4 asks what rank Review should
+hold among three verbs on one screen (Browse Library, Install/Uninstall, Review) and offers three new styles
+to settle it. If Review <em>is</em> Install in a later phase, there is no third verb and no new style: it
+inherits primary because it is the same control. <code>.bn-btn-quiet</code>, <code>-tinted</code> and
+<code>-outline</code> stop being needed for this case.</p>
+<p><b>The cost is that Install and Uninstall stop being a toggle.</b> Today the gutter holds one button whose
+label flips. Under the arc, an installed-and-coded card holds <em>two</em> — Uninstall, plus the phase pill —
+and the App&nbsp;Store precedent gives no guidance, because the App&nbsp;Store never shows Delete next to
+Open. Three ways out are drawn below.</p>
+</div>
+
+<h2>3 &mdash; Where Uninstall goes</h2>
+<div class="h2sub">Not settled here. The pills are real; the arrangement is the question.</div>
+
+<div class="opt">
+  <div class="opt-id">A</div>
+  <div>
+    <div class="gutter" style="margin-bottom:.4rem">
+      <button class="bn-btn bn-btn-secondary bn-btn-sm">Uninstall</button>
+      <button class="bn-btn bn-btn-primary bn-btn-sm">View Report</button>
+    </div>
+    <b>Both, side by side.</b> Honest and needs no new component. Two buttons in a gutter that has held one
+    is more chrome on every installed card, including the ones that were never autocoded.
+  </div>
+  <div class="opt-id">B</div>
+  <div>
+    <div class="gutter" style="margin-bottom:.4rem">
+      <button class="bn-btn bn-btn-primary bn-btn-sm">View Report</button>
+      <button class="bn-btn bn-btn-secondary bn-btn-sm" style="padding-left:.55rem;padding-right:.55rem">&#8943;</button>
+    </div>
+    <b>Phase pill leads, Uninstall to an overflow.</b> Matches the App&nbsp;Store most closely (destructive
+    verbs live behind a secondary gesture). Costs a menu the lens does not have, and hides a verb that is
+    currently one click.
+  </div>
+  <div class="opt-id">C</div>
+  <div>
+    <div class="gutter" style="margin-bottom:.4rem">
+      <button class="bn-btn bn-btn-secondary bn-btn-sm">Uninstall</button>
+    </div>
+    <div class="pg-review-row" style="padding-top:0">
+      <span class="pg-review-meta">20 tags<span class="undec"> &middot; 36 undecided</span></span>
+      <button class="bn-btn bn-btn-primary bn-btn-sm">View Report</button>
+    </div>
+    <b>The arc ends in the review row.</b> The pill transitions in place through Install → AutoCoding, then
+    the door <em>hands off</em> to the row it belongs to and the gutter returns to Uninstall. Keeps today's
+    layout; loses the "reward where the action was" property that is the point of the idea.
+  </div>
+</div>
+
+<div class="commentary"><span class="clabel">Commentary &mdash; what this settles, and what it does not</span>
+<p><b>It settles the multi-codebook problem, which nothing else did.</b> Six codebooks can be installed on one
+project and each can carry its own job. A single sidebar status line cannot say six things, and an aggregate
+("2 codebooks to review") needs a popover to disambiguate. A per-card button needs none of that: six cards,
+six pills, each in its own phase, no aggregation and no arbitration. This is the strongest argument for the
+idea and it is not the App&nbsp;Store one.</p>
+<p><b>It does not settle attention.</b> The pill is only visible on the codebook lens for the project you are
+looking at. Navigate away, or close the sidebar while on another project, and the arc is off-screen — which
+is the case the chip covers today and the native status line would cover next. The button is the right UX for
+<em>this</em> surface, and it is a surface the researcher has to already be on.</p>
+<p><b>Two things to check before building.</b> The shimmer has never been applied to a button: it is declared
+for text elements, needs the consuming surface to set <code>--bn-shimmer-base</code> explicitly (the
+clip-to-text technique forces <code>color:transparent</code>, so <code>currentColor</code> would vanish), and
+on a filled pill the polarity inverts — base <code>#fff</code>, peak the accent, at the chip's 20% contrast
+rather than the sidebar's 5%. That is what this page does; it wants looking at in both palettes. Second, a
+button whose label changes identity across phases needs its accessible name to change with it, and a live
+region for the transition — a control that silently becomes a different verb is a screen-reader trap.</p>
+</div>
+</div>
+</body>
+</html>

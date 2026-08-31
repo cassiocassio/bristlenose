@@ -129,8 +129,19 @@ function Card({
             button's place is the absence of a control pretending to be one. */}
         {canInstall(book) ? (
           <button
-            className={`bn-btn picker-card-toggle${
-              book.installed ? " picker-card-toggle-uninstall" : ""
+            // INSTALL LEADS. The two were byte-identical at rest — the
+            // uninstall modifier styles only `:hover` — so on a nine-card grid
+            // the eye could not sort them without reading every label. Ranked
+            // by what you came to do rather than by danger: this is a
+            // catalogue, installing is the frequent intent, and Uninstall is
+            // already gated by a sheet that measures what it costs. Painting it
+            // red here would warn about something this click cannot do, and the
+            // house rule keeps `.destructive` for what was NOT chosen, in the
+            // confirm. Chosen from `docs/mockups/button-catalogue.html` §5 (D).
+            className={`bn-btn ${
+              book.installed
+                ? "bn-btn-secondary picker-card-toggle picker-card-toggle-uninstall"
+                : "bn-btn-primary picker-card-toggle"
             }`}
             // The one region of the card that does not navigate (D12).
             onClick={(e) => {

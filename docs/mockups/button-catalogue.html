@@ -348,6 +348,14 @@ code { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); back
 
 <h2>5 · Install &amp; Uninstall — should they differ at rest?</h2>
 
+<p class="sub" style="border-left:3px solid var(--bn-colour-accent);padding-left:.9rem">
+<strong>Settled 31 Aug 2026 — D.</strong> <code>bn-btn-primary</code> for Install,
+<code>bn-btn-secondary</code> for Uninstall, in <em>both</em> codebook lenses. Ranked by
+what you came to do rather than by danger: this is a catalogue, installing is the frequent
+intent, and Uninstall is already gated by a sheet that measures what it costs. The
+destructive reading still arrives on hover via
+<code>.picker-card-toggle-uninstall</code>.</p>
+
 <div class="commentary" style="margin-bottom:1.2rem">
   <p><strong>The question.</strong> Today they are byte-identical at rest;
   <code>.picker-card-toggle-uninstall</code> styles only <code>:hover</code> and
@@ -380,10 +388,10 @@ code { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); back
       <button class="bn-btn bn-btn-sm pct pct-c">Uninstall</button>
       <span class="note">&nbsp;&nbsp;red label + red border <span class="new">NEW</span></span></div>
 
-    <div class="pg-review-row"><span class="pg-review-meta" style="min-width:15rem">D · install leads, uninstall recedes</span>
+    <div class="pg-review-row"><span class="pg-review-meta" style="min-width:15rem"><strong>D · install leads, uninstall recedes — SHIPPED</strong></span>
       <button class="bn-btn bn-btn-primary bn-btn-sm pct">Install</button>
-      <button class="bn-btn bn-btn-sm pct pct-d">Uninstall</button>
-      <span class="note">&nbsp;&nbsp;weight by frequency, not danger <span class="new">NEW</span></span></div>
+      <button class="bn-btn bn-btn-secondary bn-btn-sm pct pct-un">Uninstall</button>
+      <span class="note">&nbsp;&nbsp;weight by frequency, not danger</span></div>
 
     <div class="pg-review-row"><span class="pg-review-meta" style="min-width:15rem">E · uninstall is a filled danger</span>
       <button class="bn-btn bn-btn-sm pct">Install</button>

@@ -786,7 +786,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                                   {tmpl.imported ? (
                                     <button
                                       type="button"
-                                      className="bn-btn picker-card-toggle picker-card-toggle-uninstall"
+                                      className="bn-btn bn-btn-secondary picker-card-toggle picker-card-toggle-uninstall"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleUninstallFromLibrary(tmpl);
@@ -798,7 +798,7 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                                   ) : (
                                     <button
                                       type="button"
-                                      className="bn-btn picker-card-toggle"
+                                      className="bn-btn bn-btn-primary picker-card-toggle"
                                       // Serialise installs: disable every Install
                                       // button while one is in flight, so an
                                       // enabled-looking button can't eat a click.

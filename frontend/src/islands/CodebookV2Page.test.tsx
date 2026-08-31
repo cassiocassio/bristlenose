@@ -80,6 +80,32 @@ describe("D20 — three shapes", () => {
     expect(screen.getByTestId("bn-v2-uninstall")).toBeInTheDocument();
   });
 
+  it("rides on the title row, not below the author card", () => {
+    // It lived in `.pg-side` under `.preview-author` — the one control that
+    // decides whether this codebook is in the project at all, placed after the
+    // author's biography and below the fold on a short window. A control that
+    // acts on the whole page belongs to the page's heading, which is the rule
+    // `SectionHeading` already follows for Browse Library a level up.
+    //
+    // Asserted by ANCESTRY rather than by presence: the old placement passed
+    // every "is the button there?" test, which is exactly why moving it needed
+    // a test that could tell the difference.
+    const { container } = renderPage(book());
+    const btn = screen.getByTestId("bn-v2-uninstall");
+    expect(btn.closest(".pg-titlerow")).not.toBeNull();
+    expect(btn.closest(".pg-side")).toBeNull();
+
+    // And it is the LAST thing in that row, so the title reads first.
+    const row = container.querySelector(".pg-titlerow")!;
+    expect(row.lastElementChild!.contains(btn)).toBe(true);
+  });
+
+  it("Install takes the same slot as Uninstall", () => {
+    // One slot, two verbs — not two placements that happen to agree today.
+    renderPage(book({ installed: false }));
+    expect(screen.getByTestId("bn-v2-install").closest(".pg-titlerow")).not.toBeNull();
+  });
+
   it("offers Install when not installed", () => {
     renderPage(book({ installed: false }));
     expect(screen.getByTestId("bn-v2-install")).toBeInTheDocument();

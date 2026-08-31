@@ -132,13 +132,48 @@ export function CodebookV2Page({
     <div className={book.enabled ? undefined : "pageoff"} data-testid="bn-v2-page">
       <div className="pg-head">
         <div className="pg-headmain">
-          <div>
-            <div className="pg-title">{book.title}</div>
-            {book.provenance && (
-              <div
-                className={`pg-author${book.provenanceIsPerson ? "" : " prov-system"}`}
-              >
-                {book.provenance}
+          {/* INSTALL/UNINSTALL BELONGS TO THE TITLE. It was the last thing in
+              the right-hand gutter, below the author card — so the one control
+              that decides whether this codebook is in the project at all sat
+              after the author's biography, further from the title than
+              anything else on the page and below the fold on a short window.
+              A control that acts on the whole page is the page heading's
+              action, which is the same rule `SectionHeading` follows for
+              Browse Library one level up. */}
+          <div className="pg-titlerow">
+            <div className="pg-titletext">
+              <div className="pg-title">{book.title}</div>
+              {book.provenance && (
+                <div
+                  className={`pg-author${book.provenanceIsPerson ? "" : " prov-system"}`}
+                >
+                  {book.provenance}
+                </div>
+              )}
+            </div>
+            {canInstall(book) && !readOnly && (
+              // Same pair as the browse card: Install leads (primary), Uninstall
+              // recedes (secondary + the red hover `framework-remove-btn`
+              // brings). Ranked by intent, not by danger — the confirmation
+              // sheet is where the cost is stated.
+              <div className="pg-titleaction">
+                {book.installed ? (
+                  <button
+                    className="bn-btn bn-btn-secondary framework-remove-btn"
+                    onClick={() => onUninstall(book.id)}
+                    data-testid="bn-v2-uninstall"
+                  >
+                    Uninstall
+                  </button>
+                ) : (
+                  <button
+                    className="bn-btn bn-btn-primary"
+                    onClick={() => onInstall(book.id)}
+                    data-testid="bn-v2-install"
+                  >
+                    Install
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -241,27 +276,6 @@ export function CodebookV2Page({
                     </a>
                   ))}
                 </div>
-              )}
-            </div>
-          )}
-          {canInstall(book) && !readOnly && (
-            <div className="pg-actions">
-              {book.installed ? (
-                <button
-                  className="bn-btn framework-remove-btn"
-                  onClick={() => onUninstall(book.id)}
-                  data-testid="bn-v2-uninstall"
-                >
-                  Uninstall
-                </button>
-              ) : (
-                <button
-                  className="bn-btn bn-btn-primary"
-                  onClick={() => onInstall(book.id)}
-                  data-testid="bn-v2-install"
-                >
-                  Install
-                </button>
               )}
             </div>
           )}

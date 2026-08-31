@@ -2,6 +2,17 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.29.0** — _31 Aug 2026_
+
+The codebook is a lens you navigate rather than a page you scroll — and three things the app was telling you were not true.
+
+- **Codebooks got a navigator.** Every codebook in the project is a row in the left panel, grouped into your own tags, what ships by default, and the frameworks you installed — each with its author under the title. Click a row to open it; switch one off and its tags stay on your quotes but stop appearing anywhere until you switch it back. The old single page, with every codebook stacked on it, is gone.
+- **The library is somewhere you can go back from.** **Browse Codebooks** opens a catalogue of what's available, and it is now a real place — the back button in the app toolbar and in your browser both return you to the codebook you came from, and the page can be linked to and reloaded. Each card says how big the codebook is, and for one you have installed, how far it has actually reached: **28 tags · applied to 2 quotes in Ikea**.
+- **Uninstalling told you the opposite of what it does.** The confirmation said "AutoCode results are preserved — reinstall any time". They are not: uninstalling deletes the AutoCode run and every proposal under it, including ones you had already reviewed. It said so in 21 languages, on the one screen you read before losing the work. The dialog now says what is true, and the new lens measures the cost before you confirm.
+- **`pipx install bristlenose` produced a tool that could not run.** `run`, `analyze` and `serve` all need the `serve` extra and the instructions did not ask for it, so following the README gave you a Bristlenose that could only transcribe. Homebrew, Snap and Fedora were unaffected; pipx and uv are the routes we recommend first, and the only ones on ARM Linux. Now `pipx install 'bristlenose[serve]'`.
+- **The privacy page said there is no Bristlenose server.** There is one: the feedback form posts a rating and your message to it. Nothing else — no project, no transcript, nothing identifying you or your machine — and only when you submit the form. But the page listing where data goes had left it out, and denied it above the list. Corrected, along with two other claims that were wrong: exports do **not** anonymise by default, and speaker identification sends a sample of the transcript to your AI provider *before* PII redaction runs.
+- **A long description now reads at two levels.** The first sentence carries the claim in full-strength text; the rest continues in a lighter tone, so you can take the point at a glance without anything being hidden or truncated. Applied to codebook descriptions and to the finding on every signal card.
+
 **0.28.0** — _27 Aug 2026_
 
 Exported reports work outside the Mac app again — and are less than half the size. A project Bristlenose can't reach now tells you why, in your language.

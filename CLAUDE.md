@@ -719,6 +719,15 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 **Internal TestFlight since 14 Jul 2026** — shipping build **0.28.0 (2914)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
 
+**0.29.0 is prepared and unreleased at time of writing** — bumped, changelog
+written, preflight green, tag held for the evening rule. It is the codebook
+release: the lens rebuilt as a navigator with a browsable library, and three
+false claims corrected (the uninstall dialog promising preserved AutoCode
+results, `pipx install bristlenose` yielding a CLI whose `run` exits 1, and the
+privacy page denying a server that exists). It also retires the v1 codebook
+lens — `CodebookPanel` and its sidebar are deleted, `Tab.codebookV2` is out of
+the enum, and the lens took `tag` back from the temporary `tag.square`.
+
 **0.28.0 shipped 28 Aug 2026** on every Tier-1 channel — PyPI, GitHub Release, Homebrew, Snap edge, TestFlight (build 2914), `.dmg` (notarised, live on the permalink, sha256 verified against the built image). It was the first release driven end-to-end by `release.sh run`, and the run itself surfaced two machine defects now fixed on main: a step command inheriting the driver's heredoc stdin (ssh in `upload-dmg.sh` ate the `tag`+`snap` table rows — the run printed "every act is done" over an unpublished release), and floor-only pins letting CI resolve untested majors (anthropic 1.x, mcp 2.1 — both now ceilinged with release-predicates in `docs/dependency-premortem-log.md`).
 
 What it carries, in user terms: **Export HTML worked in the Mac app and nowhere else** — the single-file export build is gitignored and was never declared in `pyproject.toml` `artifacts`, so it shipped in no wheel or sdist ever published and the button returned a 500 on every pip/pipx/Homebrew/Snap install; **exported reports halved** (3.38 → 1.55 MB) by embedding one language plus its fallback chain instead of all 22; and **a project the app can't reach now says why**, with a glyph, a popover and 21 languages where five bare English sentences used to sit. Plus two packaging fixes — a man page that outlived its package, and snap users told to `pipx inject` into a confined install. Full entries in `CHANGELOG.md`.

@@ -244,7 +244,23 @@
     background: var(--bn-colour-quote-bg);
 }
 
-.pg-actions { display: flex; gap: var(--bn-space-sm); }
+/* The title and its action share a row: text left, control hard right, both
+   aligned to the TOP so a two-line title does not drag the button down with
+   it. The action was in `.pg-side` below the author card — the one control
+   that decides whether this codebook is in the project sitting after the
+   author's biography. */
+.pg-titlerow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--bn-space-md);
+}
+
+.pg-titletext { min-width: 0; }
+
+/* `flex-shrink: 0` because the label is the affordance — "Uninstall" wrapping
+   to two lines, or ellipsing, is worse than a narrower title. */
+.pg-titleaction { flex-shrink: 0; }
 
 .pg-title {
     font-size: var(--bn-text-title);
@@ -268,6 +284,15 @@
 
 .pg-desc {
     font-size: var(--bn-text-body);
+    /* Raise the LEADING with the size. Without this the rule takes body's size
+       and keeps `body`'s ratio, which is the chrome one — and the leading tokens
+       are unitless, so what inherits is the ratio, not the pixel value. In the
+       Mac app that meant 15px prose at 1.231 (Apple's 13/16 chrome metric): the
+       only body-size prose in the app not on 21px, and 12% tighter per line than
+       the quote body it sits beside. On web the gap is smaller (1.45 vs 1.5) but
+       the same mistake. A token rather than a number so it forks per platform —
+       1.5 on web, 1.4 on the SF Pro ladder. */
+    line-height: var(--bn-text-body-lh);
     margin: var(--bn-space-md) 0 0;
     max-width: 62ch;
 }

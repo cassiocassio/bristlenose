@@ -924,7 +924,14 @@
     font-size: var(--bn-text-caption);
     color: var(--bn-colour-muted);
     margin-bottom: var(--bn-space-md);
-    line-height: 1.5;
+    /* PROSE at a chrome size — a 90-word bio, not a footnote — so it takes the
+       prose ratio rather than caption's. It was the literal 1.5, and a literal
+       cannot fork: on the Mac's SF Pro ladder that left it 20% looser than the
+       chrome around it (1.5 against a 1.25 caption baseline), which is why the
+       bio column reads airy and overlong there. The token keeps web identical
+       at 1.5 and brings the app to 1.4, in line with every other prose block.
+       Shared with the v1 browse modal, deliberately — same text, same job. */
+    line-height: var(--bn-text-body-lh);
 }
 .preview-author-links {
     display: flex;

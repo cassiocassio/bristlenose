@@ -87,6 +87,16 @@ NEVER_SHIPPED = {
     "pytest-cov",
     "pytest-asyncio",
     "pytest-mock",
+    # pytest-xdist and its transitive execnet arrived with the release suites
+    # moving to Linux ("run the release suites on linux, and stop paying for
+    # coverage 8 times"). Neither reaches the sidecar; without them here the
+    # generator wanted to write a test-parallelisation library into a document
+    # whose header says it lists what ships in `Bristlenose.app/Contents/
+    # Resources/` and names procurement reviewers and CVE responders as its
+    # readers. `build-all.sh` step 2b hard-fails on the resulting drift, so this
+    # omission was a release blocker that would have surfaced mid-build.
+    "pytest-xdist",
+    "execnet",
     "pluggy",
     "iniconfig",
     "coverage",

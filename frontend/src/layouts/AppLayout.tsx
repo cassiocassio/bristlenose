@@ -361,6 +361,8 @@ function AppShell() {
         const path = locationBridgeRef.current.pathname;
         if (path.startsWith("/report/quotes")) return "quotes";
         if (path.startsWith("/report/sessions")) return "sessions";
+        // Longest prefix first (see Tab.from(path:) — same rule, same trap).
+        if (path.startsWith("/report/codebook-v2")) return "codebookV2";
         if (path.startsWith("/report/codebook")) return "codebook";
         if (path.startsWith("/report/analysis")) return "analysis";
         return "project";
@@ -398,6 +400,10 @@ function AppShell() {
     if (path.startsWith("/report/quotes")) key = "nav.quotes";
     else if (path.startsWith("/report/sessions/s")) key = "announce.transcript";
     else if (path.startsWith("/report/sessions")) key = "nav.sessions";
+    // v2 deliberately shares `nav.codebook`: it IS the codebook lens, so the
+    // announcement is accurate, and a dedicated key would oblige a translation
+    // in all 21 locales for a screen-reader string on an experimental surface.
+    // Revisit if v2 replaces v1 under its own name.
     else if (path.startsWith("/report/codebook")) key = "nav.codebook";
     else if (path.startsWith("/report/analysis")) key = "nav.analysis";
     announce(i18n.t("announce.navigatedTo", { label: i18n.t(key) }));

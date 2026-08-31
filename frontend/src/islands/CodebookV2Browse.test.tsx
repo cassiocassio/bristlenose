@@ -38,6 +38,7 @@ const noop = () => {};
 const renderGrid = (books: BrowseBook[], on: Handlers = {}) =>
   render(
     <CodebookV2Browse
+      projectName="Ikea"
       books={books}
       onOpen={on.onOpen ?? noop}
       onInstall={on.onInstall ?? noop}
@@ -155,17 +156,17 @@ describe("the card can count", () => {
 
   it("says 'quote' for one", () => {
     renderGrid([book({ tags: 31, quotes: 1 })]);
-    expect(screen.getByText(/31 tags on 1 quote$/)).toBeInTheDocument();
+    expect(screen.getByText(/^31 tags · applied to 1 quote in Ikea$/)).toBeInTheDocument();
   });
 
   it("says 'tag' for one", () => {
     renderGrid([book({ tags: 1, quotes: 5 })]);
-    expect(screen.getByText(/^1 tag on 5 quotes$/)).toBeInTheDocument();
+    expect(screen.getByText(/^1 tag · applied to 5 quotes in Ikea$/)).toBeInTheDocument();
   });
 
   it("still pluralises more than one", () => {
     renderGrid([book({ tags: 36, quotes: 72 })]);
-    expect(screen.getByText(/36 tags on 72 quotes/)).toBeInTheDocument();
+    expect(screen.getByText(/^36 tags · applied to 72 quotes in Ikea$/)).toBeInTheDocument();
   });
 
   it("counts in the not-installed line too", () => {

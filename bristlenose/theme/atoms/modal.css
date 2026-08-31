@@ -96,15 +96,40 @@
     margin-top: var(--bn-space-lg);
 }
 
+/* THE BASE CARRIES A BACKGROUND. It did not, and every variant did — so a bare
+   `.bn-btn` fell through to the user agent's own `buttonface`, painting a grey
+   that is the BROWSER's and not ours. It reads as drab and slightly dead
+   because it is unstyled, not because it is understated, and it drifts with
+   whatever WebKit does next. Seven call sites were shipping it: both modals'
+   default action, the codebook picker button, and the Install/Uninstall toggle
+   on every card in both codebook lenses — where a destructive action and a
+   constructive one were equally unstyled.
+
+   The neutral bordered button is the right default for an element that already
+   declares a border: it is what `.bn-btn-secondary` and `.bn-btn-cancel` both
+   describe, so the base now simply IS that, and those two restate it rather
+   than adding to it. Left in place — collapsing three names into one is a
+   separate call, and a redundant class is harmless where an unstyled base was
+   not.
+
+   A variant still wins on source order, so `primary` and `danger` are
+   unaffected. */
 .bn-btn {
     font-family: inherit;
     font-size: var(--bn-text-label);
     padding: 0.4rem 1rem;
     border-radius: var(--bn-radius-md);
     border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-text);
     cursor: pointer;
     transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
 }
+
+.bn-btn:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
 
 .bn-btn-cancel {
     background: var(--bn-colour-bg);
@@ -123,6 +148,10 @@
 
 .bn-btn-danger:hover {
     opacity: 0.85;
+    /* Restated: the base `.bn-btn:hover` is (0,2,0) and beats
+       `.bn-btn-danger` (0,1,0), so without this the fill washes out to
+       the neutral tint on hover. */
+    background: var(--bn-sentiment-frustration);
 }
 
 .bn-btn-primary {
@@ -133,6 +162,10 @@
 
 .bn-btn-primary:hover {
     opacity: 0.85;
+    /* Restated: the base `.bn-btn:hover` is (0,2,0) and beats
+       `.bn-btn-primary` (0,1,0), so without this the fill washes out to
+       the neutral tint on hover. */
+    background: var(--bn-colour-accent);
 }
 
 .bn-btn-secondary {

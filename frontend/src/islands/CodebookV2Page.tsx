@@ -37,6 +37,7 @@ import type { CodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import { safeUrlOrNull } from "../utils/safeUrl";
 import type { CodebookGroupResponse, TemplateOut } from "../utils/types";
 import { renderLead } from "../utils/leadSentence";
+import { reachPhrase, vocabularyPhrase } from "../utils/codebookCounts";
 
 export interface PageBook {
   id: string;
@@ -54,6 +55,8 @@ export interface PageBook {
 
 interface Props {
   book: PageBook;
+  /** Scopes the reach count — "…applied to 2 quotes in Ikea". */
+  projectName: string;
   groups: CodebookGroupResponse[];
   // Browse Library is NOT here: it lives on the zone-title row, which belongs
   // to the lens rather than to any one codebook. D22 makes it the unconditional
@@ -90,7 +93,6 @@ interface Props {
  * Delete this with the literals when `t()` arrives — i18next does CLDR plurals
  * via `t(key, { count })`, so there is nothing here to carry forward.
  */
-const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
 const canInstall = (b: PageBook) => !b.floor && b.id !== "sentiment";
 
@@ -111,6 +113,7 @@ const hasReviewDoor = (b: PageBook, tagCount: number, readOnly: boolean) =>
 
 export function CodebookV2Page({
   book,
+  projectName,
   groups,
   onReview,
   onInstall,
@@ -149,8 +152,9 @@ export function CodebookV2Page({
                   subject of the row when it came first; the sentence is the
                   finding and Review is what you do about it. */}
               <span className="pg-review-meta">
-                {tagCount} {plural(tagCount, "tag", "tags")} on {book.quotes}{" "}
-                {plural(book.quotes, "quote", "quotes")}
+                {/* Same sentence as the browse card, from the same formatter —
+                    the two surfaces state one fact and must state it once. */}
+                {reachPhrase(tagCount, book.quotes, projectName)}
                 {book.pending > 0 && (
                   <span className="undec"> &middot; {book.pending} undecided</span>
                 )}
@@ -178,12 +182,8 @@ export function CodebookV2Page({
           ) : (
             <div className="pg-stat">
               {book.installed
-                ? `${tagCount} ${plural(tagCount, "tag", "tags")}${
-                    book.quotes
-                      ? ` on ${book.quotes} ${plural(book.quotes, "quote", "quotes")}`
-                      : ""
-                  }`
-                : `${tagCount} ${plural(tagCount, "tag", "tags")} · not installed`}
+                ? reachPhrase(tagCount, book.quotes, projectName)
+                : `${vocabularyPhrase(tagCount)} \u00b7 not installed`}
             </div>
           )}
 

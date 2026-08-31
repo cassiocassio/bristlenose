@@ -16,6 +16,7 @@
  */
 
 import type { TemplateOut } from "../utils/types";
+import { reachPhrase, vocabularyPhrase } from "../utils/codebookCounts";
 
 export interface BrowseBook {
   id: string;
@@ -33,6 +34,8 @@ export interface BrowseBook {
 
 interface Props {
   books: BrowseBook[];
+  /** Scopes the reach count — "…applied to 2 quotes in Ikea". */
+  projectName: string;
   onOpen: (id: string) => void;
   onInstall: (id: string) => void;
   onUninstall: (id: string) => void;
@@ -60,17 +63,16 @@ function shortDescription(text: string): string {
   return stop === -1 ? text : text.slice(0, stop + 1);
 }
 
-/** English-only plural — see the twin in CodebookV2Page. Both go at phase 6,
- *  when this lens's chrome is enrolled in i18n and t(key, {count}) does CLDR. */
-const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
 function Card({
   book,
+  projectName,
   onOpen,
   onInstall,
   onUninstall,
 }: {
   book: BrowseBook;
+  projectName: string;
   onOpen: Props["onOpen"];
   onInstall: Props["onInstall"];
   onUninstall: Props["onUninstall"];
@@ -117,8 +119,8 @@ function Card({
       <div className="picker-card-footrow">
         <span className="picker-card-status">
           {book.installed
-            ? `${book.tags} ${plural(book.tags, "tag", "tags")} on ${book.quotes} ${plural(book.quotes, "quote", "quotes")}`
-            : `${book.tags} ${plural(book.tags, "tag", "tags")}`}
+            ? reachPhrase(book.tags, book.quotes, projectName)
+            : vocabularyPhrase(book.tags)}
         </span>
         {/* Sentiment gets NO action and no substitute text. The first draft put
             "On by default" here, and the card then said it twice — the
@@ -147,6 +149,7 @@ function Card({
 
 export function CodebookV2Browse({
   books,
+  projectName,
   onOpen,
   onInstall,
   onUninstall,
@@ -158,6 +161,7 @@ export function CodebookV2Browse({
           <Card
             key={b.id}
             book={b}
+            projectName={projectName}
             onOpen={onOpen}
             onInstall={onInstall}
             onUninstall={onUninstall}

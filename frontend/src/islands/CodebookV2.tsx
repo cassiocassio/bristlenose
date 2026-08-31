@@ -488,6 +488,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
           {view === "browse" ? (
             <div className="v2-main">
               <CodebookV2Browse
+                projectName={projectName ?? ""}
                 books={browseBooks}
                 onOpen={(id) => {
                   setSelected(id);
@@ -510,6 +511,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
           ) : page ? (
             <div className="v2-main">
               <CodebookV2Page
+              projectName={projectName ?? ""}
                 book={page}
                 groups={currentGroups}
                 authoring={authoring}

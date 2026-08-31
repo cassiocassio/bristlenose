@@ -54,6 +54,7 @@ const noop = vi.fn();
 const renderPage = (b: PageBook, groups: CodebookGroupResponse[] = [group(3)]) =>
   render(
     <CodebookV2Page
+      projectName="Ikea"
       book={b} groups={groups}
       onReview={noop} onInstall={noop} onUninstall={noop}
       authoring={inertAuthoring} allTagNames={[]}
@@ -89,7 +90,7 @@ describe("the Review door", () => {
   it("is the verb, with the counts beside it", () => {
     renderPage(book());
     expect(screen.getByTestId("bn-v2-review")).toHaveTextContent("Review");
-    expect(screen.getByText(/3 tags on 72 quotes/)).toBeInTheDocument();
+    expect(screen.getByText(/3 tags · applied to 72 quotes in Ikea/)).toBeInTheDocument();
     expect(screen.getByText(/12 undecided/)).toBeInTheDocument();
   });
 
@@ -213,22 +214,24 @@ describe("the stat line can count", () => {
 
   it("says 'tag' and 'quote' for one of each", () => {
     renderPage(book({ quotes: 1, pending: 0 }), [group(1)]);
-    const meta = screen.getByText(/on 1 quote/);
-    expect(meta.textContent).toContain("1 tag on 1 quote");
+    const meta = screen.getByText(/applied to 1 quote/);
+    expect(meta.textContent).toContain("1 tag · applied to 1 quote in Ikea");
     expect(meta.textContent).not.toContain("1 tags");
     expect(meta.textContent).not.toContain("1 quotes");
   });
 
   it("still says 'tags' and 'quotes' for more than one", () => {
     renderPage(book({ quotes: 4, pending: 0 }), [group(3)]);
-    expect(screen.getByText(/on 4 quotes/).textContent).toContain("3 tags on 4 quotes");
+    expect(screen.getByText(/applied to 4 quotes/).textContent).toContain(
+      "3 tags · applied to 4 quotes in Ikea",
+    );
   });
 
   it("counts in the no-review-door stat line too", () => {
     // A codebook with no review door renders a different line, and the bug
     // was in both.
     renderPage(book({ id: "sentiment", provenance: "On by default", quotes: 1 }), [group(1)]);
-    expect(screen.getByText(/1 tag on 1 quote/)).toBeInTheDocument();
+    expect(screen.getByText(/1 tag · applied to 1 quote in Ikea/)).toBeInTheDocument();
   });
 });
 
@@ -242,6 +245,7 @@ describe("Q14 — export mode hides the doors it cannot honour", () => {
   const renderReadOnly = (b = book()) =>
     render(
       <CodebookV2Page
+      projectName="Ikea"
         book={b} groups={[group(3)]}
         onReview={noop} onInstall={noop} onUninstall={noop}
         authoring={inertAuthoring} allTagNames={[]} readOnly
@@ -263,7 +267,7 @@ describe("Q14 — export mode hides the doors it cannot honour", () => {
     // Hiding the control must not hide the information. A client reading the
     // export should still see what the codebook found.
     renderReadOnly();
-    expect(screen.getByText(/3 tags on 72 quotes/)).toBeInTheDocument();
+    expect(screen.getByText(/3 tags · applied to 72 quotes in Ikea/)).toBeInTheDocument();
   });
 
   it("keeps the door when NOT read-only", () => {
@@ -271,6 +275,7 @@ describe("Q14 — export mode hides the doors it cannot honour", () => {
     // would pass on a component that never renders a Review door at all.
     render(
       <CodebookV2Page
+      projectName="Ikea"
         book={book()} groups={[group(3)]}
         onReview={noop} onInstall={noop} onUninstall={noop}
         authoring={inertAuthoring} allTagNames={[]}

@@ -14,6 +14,11 @@
   --bn-colour-border:        light-dark(#e5e7eb, #2d2d2d);
   --bn-colour-border-hover:  light-dark(#d1d5db, #4b5563);
   --bn-colour-accent:        light-dark(#007aff, #0a84ff);
+
+  /* Section 5 needs these and the inlined block carried neither — options B
+     and C rendered plain black while their labels claimed "red". Lifted
+     verbatim from colors/palette-default.css. */
+  --bn-colour-negative:      light-dark(#dc2626, #ef4444);
   --bn-colour-hover:         light-dark(#e8f0fe, #1e293b);
   --bn-colour-quote-bg:      light-dark(#f9fafb, #1a1a1a);
   --bn-colour-badge-bg:      light-dark(#f3f4f6, #252525);
@@ -43,6 +48,8 @@
   --bn-colour-muted:     light-dark(#7a7266, #a39a8c);
   --bn-colour-border:    light-dark(#e6ddc9, #3a352d);
   --bn-colour-accent:    light-dark(#8c4a3f, #c97b6a);
+
+  --bn-colour-negative:  light-dark(#b5432a, #e06a4a);   /* edo — palette-edo.css */
   --bn-colour-quote-bg:  light-dark(#f5f0e6, #252119);
   --bn-nav-selection-bg: light-dark(#e6ddc9, #2d2922);
 }
@@ -72,6 +79,9 @@ h2 {
   padding: 0.4rem 1rem;
   border-radius: var(--bn-radius-md);
   border: 1px solid var(--bn-colour-border);
+  /* Added to the real atom 31 Aug 2026 — see the note above section 4. */
+  background: var(--bn-colour-bg);
+  color: var(--bn-colour-text);
   cursor: pointer;
   transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
 }
@@ -137,6 +147,24 @@ code { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); back
 
 .controls { display: flex; gap: var(--bn-space-md); align-items: center; margin-bottom: var(--bn-space-lg); }
 .controls button { font: inherit; padding: 0.3rem 0.8rem; border-radius: var(--bn-radius-md); border: 1px solid var(--bn-colour-border); background: var(--bn-colour-bg); color: var(--bn-colour-text); cursor: pointer; }
+
+/* Section 5 — Install/Uninstall options. Real card-toggle metrics. */
+.pct { min-width: 96px; justify-content: center; text-align: center;
+       font-size: var(--bn-text-caption); }
+.pct-un:hover, .pct-un:focus-visible { color: var(--bn-colour-negative);
+       border-color: var(--bn-colour-negative); }
+.pct-b { color: var(--bn-colour-negative); }
+.pct-b:hover { color: var(--bn-colour-negative); border-color: var(--bn-colour-negative); }
+.pct-c { color: var(--bn-colour-negative); border-color: var(--bn-colour-negative); }
+.pct-d { color: var(--bn-colour-muted); }
+.pct-d:hover { color: var(--bn-colour-negative); border-color: var(--bn-colour-negative); }
+
+/* The pre-fix appearance, reproduced deliberately. `buttonface` is the UA's own
+   button colour — the very fallback the atom used to take. Without this class
+   the "today (unstyled)" specimens would render FIXED, and the catalogue would
+   quietly stop showing the problem it was written to show. */
+.was-unstyled { background: buttonface; color: buttontext; }
+.was-unstyled:hover { background: buttonface; }
 </style>
 </head>
 <body>
@@ -160,7 +188,7 @@ code { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); back
   <div class="frame-body">
     <div class="pg-review-row">
       <span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span>
-      <button class="bn-btn bn-btn-sm">Review</button>
+      <button class="bn-btn bn-btn-sm was-unstyled">Review</button>
     </div>
   </div>
 </div>
@@ -273,12 +301,27 @@ code { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); back
   </tr>
 </table>
 
+<div class="commentary" style="border-left-color:#2563eb">
+  <p><strong>Updated 31 Aug 2026 — the base now carries a background.</strong>
+  <code>.bn-btn</code> declared <em>no</em> <code>background</code>, so every bare
+  <code>.bn-btn</code> fell through to the user agent's <code>buttonface</code>: the grey
+  in section 1 was the browser's, not ours. Seven call sites were shipping it, including
+  the Install / Uninstall toggle on every codebook card. The base is now the neutral
+  bordered button — which is what <code>secondary</code> and <code>cancel</code> already
+  described, so those two now restate the default rather than adding to it.</p>
+  <p>One trap came with the fix and is pinned by <code>tests/test_button_atom.py</code>:
+  giving the base a <code>:hover</code> makes <code>.bn-btn:hover</code> (0,2,0) outrank
+  <code>.bn-btn-primary</code> (0,1,0), so a filled variant washes out to the neutral tint
+  under the pointer unless it restates its fill. Visible only while hovering, which is
+  exactly when nobody is reading the CSS.</p>
+</div>
+
 <h2>4 · Side by side, in the real row</h2>
 
 <div class="frame">
   <div class="frame-bar">the same row, one option each — scan for which one you stop on</div>
   <div class="frame-body">
-    <div class="pg-review-row"><span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span><button class="bn-btn bn-btn-sm">Review</button><span class="note">&nbsp;&nbsp;today (unstyled)</span></div>
+    <div class="pg-review-row"><span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span><button class="bn-btn bn-btn-sm was-unstyled">Review</button><span class="note">&nbsp;&nbsp;today (unstyled — reproduced)</span></div>
     <div class="pg-review-row"><span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span><button class="bn-btn bn-btn-secondary bn-btn-sm">Review</button><span class="note">&nbsp;&nbsp;secondary</span></div>
     <div class="pg-review-row"><span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span><button class="bn-btn bn-btn-sm p-quiet">Review</button><span class="note">&nbsp;&nbsp;quiet <span class="new">NEW</span></span></div>
     <div class="pg-review-row"><span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span><button class="bn-btn bn-btn-sm p-tinted">Review</button><span class="note">&nbsp;&nbsp;tinted <span class="new">NEW</span></span></div>
@@ -301,6 +344,64 @@ code { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); back
   12px). The desktop app substitutes an Apple scale in
   <code>tokens-desktop-v1.css</code> — caption is 11px there — so every specimen renders a
   shade smaller in the <code>.app</code>. Relative weights are unchanged.</p>
+</div>
+
+<h2>5 · Install &amp; Uninstall — should they differ at rest?</h2>
+
+<div class="commentary" style="margin-bottom:1.2rem">
+  <p><strong>The question.</strong> Today they are byte-identical at rest;
+  <code>.picker-card-toggle-uninstall</code> styles only <code>:hover</code> and
+  <code>:focus-visible</code> (red text, red border). So on a nine-card grid the
+  destructive/constructive distinction arrives at the moment of <em>commitment</em>, not
+  the moment of <em>scanning</em>. One of these adds a codebook; the other destroys 28
+  tags across 4 quotes.</p>
+  <p><strong>The counter-argument, which is real.</strong> Uninstall is already gated by a
+  confirmation sheet that measures what will be lost. Painting the card button red warns
+  about a thing that cannot happen from this click — and the house rule is that
+  <code>.destructive</code> marks what was <em>not</em> chosen, in the confirm, rather than
+  decorating every route toward it. Option A may simply be right.</p>
+</div>
+
+<div class="frame">
+  <div class="frame-bar">hover each pair — the rest state is the thing to judge</div>
+  <div class="frame-body">
+    <div class="pg-review-row"><span class="pg-review-meta" style="min-width:15rem">A · identical (today, now styled)</span>
+      <button class="bn-btn bn-btn-sm pct">Install</button>
+      <button class="bn-btn bn-btn-sm pct pct-un">Uninstall</button>
+      <span class="note">&nbsp;&nbsp;distinction on hover only</span></div>
+
+    <div class="pg-review-row"><span class="pg-review-meta" style="min-width:15rem">B · destructive text at rest</span>
+      <button class="bn-btn bn-btn-sm pct">Install</button>
+      <button class="bn-btn bn-btn-sm pct pct-b">Uninstall</button>
+      <span class="note">&nbsp;&nbsp;red label, neutral border <span class="new">NEW</span></span></div>
+
+    <div class="pg-review-row"><span class="pg-review-meta" style="min-width:15rem">C · destructive outline at rest</span>
+      <button class="bn-btn bn-btn-sm pct">Install</button>
+      <button class="bn-btn bn-btn-sm pct pct-c">Uninstall</button>
+      <span class="note">&nbsp;&nbsp;red label + red border <span class="new">NEW</span></span></div>
+
+    <div class="pg-review-row"><span class="pg-review-meta" style="min-width:15rem">D · install leads, uninstall recedes</span>
+      <button class="bn-btn bn-btn-primary bn-btn-sm pct">Install</button>
+      <button class="bn-btn bn-btn-sm pct pct-d">Uninstall</button>
+      <span class="note">&nbsp;&nbsp;weight by frequency, not danger <span class="new">NEW</span></span></div>
+
+    <div class="pg-review-row"><span class="pg-review-meta" style="min-width:15rem">E · uninstall is a filled danger</span>
+      <button class="bn-btn bn-btn-sm pct">Install</button>
+      <button class="bn-btn bn-btn-danger bn-btn-sm pct">Uninstall</button>
+      <span class="note">&nbsp;&nbsp;almost certainly too loud for a card</span></div>
+  </div>
+</div>
+
+<div class="commentary">
+  <p><strong>What to weigh.</strong> <em>A</em> trusts the confirm sheet and keeps the grid
+  calm — nine cards, no red. <em>B</em> is the smallest change that makes the two scannable
+  and reads as a label, not an alarm. <em>C</em> puts a red rectangle on the grid for every
+  installed codebook, which is a lot of warning for a gated action. <em>D</em> is the
+  interesting one: it ranks by <em>what you came to do</em> rather than by danger, and
+  makes the catalogue read as a place you install from. <em>E</em> is here to be rejected.</p>
+  <p class="note">All five use existing tokens — <code>--bn-colour-negative</code>,
+  <code>--bn-colour-accent</code>, <code>--bn-colour-muted</code>. Nothing here needs a new
+  value.</p>
 </div>
 
 </body>

@@ -23,7 +23,7 @@ import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
 import { AnalysisSidebar } from "../components/AnalysisSidebar";
 import { ExportDialog } from "../components/ExportDialog";
 import { MiroExportPanel } from "../components/MiroExportPanel";
-import { ActivityChipStack } from "../components/ActivityChipStack";
+import { ActivityChipStack, normaliseAutoCode } from "../components/ActivityChipStack";
 import type { ActivityJob } from "../components/ActivityChipStack";
 import { AnnounceRegion } from "../components/AnnounceRegion";
 import { LensSubtitleSync } from "../components/LensSubtitleSync";
@@ -660,6 +660,9 @@ function AppShell() {
                 progressLabel: status === "running" ? `${s.progress}/${s.total}` : null,
                 durationLabel: null,
                 errorMessage: status === "failed" ? i18n.t("export.clips.failed") : null,
+                // Clip extraction has no partial outcome — a clip is produced
+                // or it is not.
+                partialMessage: null,
               };
             },
           };
@@ -684,14 +687,11 @@ function AppShell() {
               document.dispatchEvent(new CustomEvent("bn:tags-changed"));
             },
             pollFn: async (): Promise<NormalisedJobStatus> => {
-              const s = await getAutoCodeStatus(j.frameworkId);
-              const status = s.status === "pending" ? "running" : s.status;
-              return {
-                status: status as "running" | "completed" | "failed" | "cancelled",
-                progressLabel: null,
-                durationLabel: null,
-                errorMessage: status === "failed" ? s.error_message || null : null,
-              };
+              // The shared normaliser, not a third local copy: this one still
+              // interpolated raw `error_message` (the leak e2cb193d fixed in the
+              // other two call sites) and would have needed its own partial
+              // branch to avoid reintroducing the shortfall bug one file over.
+              return normaliseAutoCode(await getAutoCodeStatus(j.frameworkId));
             },
           };
         }

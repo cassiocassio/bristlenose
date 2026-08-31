@@ -102,6 +102,12 @@ vi.mock("../utils/api", () => ({
   // Q15's modal is the SHIPPED ThresholdReviewModal, which fetches on open.
   // A wholesale module mock hands it `undefined` for anything not listed here,
   // so the Review-door test would fail on the mock rather than on the door.
+  // The modal also asks for the job, to seed its sliders from the cutoffs
+  // actually applied. Nothing has been applied here, so it falls back to the
+  // modal's own defaults.
+  getAutoCodeStatus: vi.fn(() =>
+    Promise.resolve({ applied_lower_threshold: null, applied_upper_threshold: null }),
+  ),
   getAutoCodeProposals: vi.fn(() => Promise.resolve({ proposals: [] })),
   acceptAllProposals: vi.fn(() => Promise.resolve({ accepted: 0 })),
   acceptProposal: vi.fn(() => Promise.resolve({ status: "ok" })),

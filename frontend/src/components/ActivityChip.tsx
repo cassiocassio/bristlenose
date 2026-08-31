@@ -13,10 +13,12 @@ export interface ActivityChipJob {
   label: string;
   /** Label shown in completed state (falls back to label if not set). */
   completedLabel?: string;
-  status: "running" | "completed" | "failed" | "cancelled";
+  status: "running" | "completed" | "partial" | "failed" | "cancelled";
   progressLabel: string | null;
   durationLabel: string | null;
   errorMessage: string | null;
+  /** Sentence for `"partial"` — a job that completed without doing all of it. */
+  partialMessage?: string | null;
 }
 
 interface ActivityChipProps {
@@ -37,9 +39,30 @@ export function ActivityChip({ job, onAction, actionLabel, actionHref, onDismiss
   const { t } = useTranslation();
   const isRunning = job.status === "running";
   const isCompleted = job.status === "completed";
+  // WARNING, not error: the run finished and its proposals are worth reviewing.
+  // It is simply not all of what was asked for, and saying so is the whole point.
+  const isPartial = job.status === "partial";
   const isFailed = job.status === "failed";
   const isCancelled = job.status === "cancelled";
-  const isDone = isCompleted || isFailed || isCancelled;
+  const isDone = isCompleted || isPartial || isFailed || isCancelled;
+
+  // Shared by the completed and partial branches — a partial run still has
+  // proposals behind the door, so it keeps the action link.
+  const actionLink =
+    onAction && actionLabel ? (
+      <a
+        className="chip-link"
+        href={actionHref ?? "#"}
+        onClick={(e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+          e.preventDefault();
+          onAction();
+        }}
+        data-testid="bn-activity-chip-action"
+      >
+        {actionLabel}
+      </a>
+    ) : null;
 
   return (
     <div className="activity-chip" data-testid="bn-activity-chip" data-status={job.status}>
@@ -73,20 +96,14 @@ export function ActivityChip({ job, onAction, actionLabel, actionHref, onDismiss
             {job.durationLabel ? ` ${t("activity.durationIn", { duration: job.durationLabel })}` : ""}
             .
           </span>
-          {onAction && actionLabel && (
-            <a
-              className="chip-link"
-              href={actionHref ?? "#"}
-              onClick={(e) => {
-                if (e.metaKey || e.ctrlKey || e.shiftKey) return;
-                e.preventDefault();
-                onAction();
-              }}
-              data-testid="bn-activity-chip-action"
-            >
-              {actionLabel}
-            </a>
-          )}
+          {actionLink}
+        </>
+      )}
+      {isPartial && (
+        <>
+          <span className="chip-warning">&#x26A0;</span>
+          <span>{job.partialMessage ?? job.completedLabel ?? job.label}</span>
+          {actionLink}
         </>
       )}
       {isFailed && (

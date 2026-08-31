@@ -9,6 +9,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
+import i18n from "../i18n";
 import { getAutoCodeStatus } from "../utils/api";
 import type { AutoCodeJobStatus } from "../utils/types";
 import { autocodeFailure } from "../utils/autocodeFailure";
@@ -17,10 +18,25 @@ import type { ActivityChipJob } from "./ActivityChip";
 
 /** Normalised status shape used internally by the chip stack. */
 export interface NormalisedJobStatus {
-  status: "running" | "completed" | "failed" | "cancelled";
+  /**
+   * `"partial"` is a *completed* job that did not do all of the work — the
+   * engine gathers its batches with `return_exceptions=True`, logs the ones
+   * that threw and carries on, so `processed < total` is a real outcome the
+   * API reports as `"completed"`. It is a distinct status rather than a flag
+   * on `"completed"` because a flag is what the render site forgets: this
+   * shortfall was already fixed once, in `AutoCodeToast`, which is not mounted.
+   */
+  status: "running" | "completed" | "partial" | "failed" | "cancelled";
   progressLabel: string | null;
   durationLabel: string | null;
   errorMessage: string | null;
+  /** Resolved sentence for `"partial"`; null for every other status. */
+  partialMessage: string | null;
+}
+
+/** Terminal statuses — no further polling, and `onComplete` has fired. */
+function isTerminal(s: NormalisedJobStatus["status"] | undefined): boolean {
+  return s === "completed" || s === "partial" || s === "failed" || s === "cancelled";
 }
 
 export interface ActivityJob {
@@ -66,10 +82,17 @@ function formatDuration(startedAt: string, completedAt: string): string {
 }
 
 /** Convert an AutoCode API status to the normalised shape. */
-function normaliseAutoCode(status: AutoCodeJobStatus): NormalisedJobStatus {
+export function normaliseAutoCode(status: AutoCodeJobStatus): NormalisedJobStatus {
   const s = status.status;
-  const effectiveStatus: "running" | "completed" | "failed" | "cancelled" =
+  const reported: "running" | "completed" | "failed" | "cancelled" =
     s === "pending" ? "running" : (s as "running" | "completed" | "failed" | "cancelled");
+
+  // A job can COMPLETE having tagged a subset (see `NormalisedJobStatus`).
+  // `processed_quotes` only advances on a batch that succeeded, so the
+  // shortfall is exactly the work that failed.
+  const short =
+    reported === "completed" && status.processed_quotes < status.total_quotes;
+  const effectiveStatus: NormalisedJobStatus["status"] = short ? "partial" : reported;
 
   let progressLabel: string | null = null;
   if (effectiveStatus === "running") {
@@ -85,6 +108,16 @@ function normaliseAutoCode(status: AutoCodeJobStatus): NormalisedJobStatus {
     status: effectiveStatus,
     progressLabel,
     durationLabel,
+    // Resolved here, not at the render site — same boundary rule as
+    // `errorMessage` below. Reuses the string the (unmounted) toast already
+    // had translated into all 21 locales rather than minting a new key.
+    partialMessage: short
+      ? i18n.t("autocode.toast.donePartial", {
+          processed: status.processed_quotes,
+          total: status.total_quotes,
+          defaultValue: "Tagged {{processed}} of {{total}} quotes — some batches failed.",
+        })
+      : null,
     // Resolve at the API/UI boundary, not at the render site: error_message is
     // str(exc) from a bare except, so interpolating it made a rate limit read as
     // "Tagging failed: Error code: 429 - {'type': 'error', ...}".
@@ -104,6 +137,7 @@ function toChipJob(job: ActivityJob, norm: NormalisedJobStatus | null): Activity
     progressLabel: norm?.progressLabel ?? null,
     durationLabel: norm?.durationLabel ?? null,
     errorMessage: norm?.errorMessage ?? null,
+    partialMessage: norm?.partialMessage ?? null,
   };
 }
 
@@ -145,8 +179,7 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
     const id = setInterval(() => {
       for (const job of jobs) {
         // Don't poll terminal jobs.
-        const s = statusesRef.current[job.id]?.status;
-        if (s === "completed" || s === "failed" || s === "cancelled") continue;
+        if (isTerminal(statusesRef.current[job.id]?.status)) continue;
         pollJob(job);
       }
     }, POLL_INTERVAL);
@@ -157,8 +190,7 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
   // Fire onComplete once per job.
   useEffect(() => {
     for (const job of jobs) {
-      const s = statuses[job.id]?.status;
-      if ((s === "completed" || s === "failed" || s === "cancelled") && !completeFired.current.has(job.id)) {
+      if (isTerminal(statuses[job.id]?.status) && !completeFired.current.has(job.id)) {
         completeFired.current.add(job.id);
         job.onComplete?.();
       }
@@ -206,17 +238,24 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
         </div>
       )}
       {(!showSummary || expanded) &&
-        chipJobs.map(({ job, chip }) => (
+        chipJobs.map(({ job, chip }) => {
+          // A partial run has proposals behind the door exactly as a whole one
+          // does — fewer of them. It keeps the report link (which doubles as
+          // the dismissal, hence no close button when it is present).
+          const reportable =
+            (chip.status === "completed" || chip.status === "partial") && job.onAction;
+          return (
           <ActivityChip
             key={job.id}
             job={chip}
-            onAction={chip.status === "completed" && job.onAction ? () => { job.onAction!(); onDismiss(job.id); } : undefined}
+            onAction={reportable ? () => { job.onAction!(); onDismiss(job.id); } : undefined}
             actionLabel={job.actionLabel}
             actionHref={job.actionHref}
-            onDismiss={chip.status === "completed" && job.onAction ? undefined : () => onDismiss(job.id)}
+            onDismiss={reportable ? undefined : () => onDismiss(job.id)}
             onCancel={chip.status === "running" ? job.onCancel : undefined}
           />
-        ))}
+          );
+        })}
       {showSummary && expanded && (
         <button
           className="activity-chip activity-chip-collapse"

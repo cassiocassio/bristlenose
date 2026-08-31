@@ -327,6 +327,13 @@ export interface AutoCodeJobStatus {
   failure_kind: string;
   llm_provider: string;
   llm_model: string;
+  /**
+   * The cutoffs the researcher applied, or null before any apply. The review
+   * modal seeds its sliders from these so a reopened report shows the
+   * thresholds that were used, not the defaults.
+   */
+  applied_lower_threshold: number | null;
+  applied_upper_threshold: number | null;
   input_tokens: number;
   output_tokens: number;
   started_at: string;

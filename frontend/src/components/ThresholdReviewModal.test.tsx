@@ -4,6 +4,7 @@ import type { ProposedTagResponse } from "../utils/types";
 
 // Mock the API module.
 vi.mock("../utils/api", () => ({
+  getAutoCodeStatus: vi.fn(),
   getAutoCodeProposals: vi.fn(),
   acceptAllProposals: vi.fn(),
   acceptProposal: vi.fn(),
@@ -12,6 +13,7 @@ vi.mock("../utils/api", () => ({
 }));
 
 import {
+  getAutoCodeStatus,
   getAutoCodeProposals,
   acceptAllProposals,
   acceptProposal,
@@ -19,6 +21,7 @@ import {
   denyProposal,
 } from "../utils/api";
 
+const mockGetStatus = vi.mocked(getAutoCodeStatus);
 const mockGetProposals = vi.mocked(getAutoCodeProposals);
 const mockAcceptAll = vi.mocked(acceptAllProposals);
 const mockAcceptProposal = vi.mocked(acceptProposal);
@@ -48,6 +51,13 @@ function makeProposal(overrides: Partial<ProposedTagResponse> = {}): ProposedTag
 
 describe("ThresholdReviewModal", () => {
   beforeEach(() => {
+    mockGetStatus.mockReset();
+    // No apply has happened in most tests — the modal falls back to its own
+    // DEFAULT_LOWER / DEFAULT_UPPER.
+    mockGetStatus.mockResolvedValue({
+      applied_lower_threshold: null,
+      applied_upper_threshold: null,
+    } as never);
     mockGetProposals.mockReset();
     mockAcceptAll.mockReset();
     mockAcceptProposal.mockReset();
@@ -301,5 +311,59 @@ describe("ThresholdReviewModal", () => {
     expect(upperThumb).toBeInTheDocument();
     expect(lowerThumb).toHaveTextContent("0.30");
     expect(upperThumb).toHaveTextContent("0.70");
+  });
+
+  // ── Applied thresholds ───────────────────────────────────────────────────
+  // `AutoCodeJob` has stored the applied cutoffs since it was written, but the
+  // modal reset to its defaults on every open — so a report reopened after an
+  // apply drew threshold lines where they had never been, over a histogram of
+  // what had actually happened.
+
+  it("seeds the sliders from the thresholds actually applied", async () => {
+    mockGetStatus.mockResolvedValue({
+      applied_lower_threshold: 0.15,
+      applied_upper_threshold: 0.85,
+    } as never);
+    mockGetProposals.mockResolvedValue({
+      proposals: [makeProposal()],
+      total: 1,
+    } as never);
+
+    render(
+      <ThresholdReviewModal
+        open
+        frameworkId="garrett"
+        frameworkTitle="Garrett"
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+    await act(async () => {});
+
+    const sliders = screen.getAllByRole("slider");
+    expect(sliders[0]).toHaveAttribute("aria-valuenow", "0.15");
+    expect(sliders[1]).toHaveAttribute("aria-valuenow", "0.85");
+  });
+
+  it("falls back to the defaults when nothing has been applied yet", async () => {
+    mockGetProposals.mockResolvedValue({
+      proposals: [makeProposal()],
+      total: 1,
+    } as never);
+
+    render(
+      <ThresholdReviewModal
+        open
+        frameworkId="garrett"
+        frameworkTitle="Garrett"
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+    await act(async () => {});
+
+    const sliders = screen.getAllByRole("slider");
+    expect(sliders[0]).toHaveAttribute("aria-valuenow", "0.3");
+    expect(sliders[1]).toHaveAttribute("aria-valuenow", "0.7");
   });
 });

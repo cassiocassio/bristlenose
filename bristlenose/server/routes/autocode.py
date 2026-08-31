@@ -54,6 +54,12 @@ class AutoCodeJobOut(BaseModel):
     failure_kind: str = ""
     llm_provider: str
     llm_model: str
+    #: The cutoffs the researcher actually applied, or None before any apply.
+    #: Stored on the job since it was written; exposed so the review modal can
+    #: draw the thresholds that were used rather than resetting to its own
+    #: defaults and describing a run that never happened.
+    applied_lower_threshold: float | None = None
+    applied_upper_threshold: float | None = None
     input_tokens: int
     output_tokens: int
     started_at: str
@@ -128,6 +134,8 @@ def _job_to_out(job: AutoCodeJob) -> AutoCodeJobOut:
         failure_kind=job.failure_kind,
         llm_provider=job.llm_provider,
         llm_model=job.llm_model,
+        applied_lower_threshold=job.applied_lower_threshold,
+        applied_upper_threshold=job.applied_upper_threshold,
         input_tokens=job.input_tokens,
         output_tokens=job.output_tokens,
         started_at=job.started_at.isoformat() if job.started_at else "",

@@ -54,6 +54,15 @@
     font-weight: var(--bn-weight-strong);
 }
 
+/* Partial completion. --bn-colour-warning is defined in both palettes
+   (palette-default.css:38, palette-edo.css:55), unlike the --bn-colour-success
+   / --bn-colour-danger the autocode toast reaches for, which are defined
+   nowhere. Don't copy those two here. */
+.chip-warning {
+    color: var(--bn-colour-warning);
+    font-weight: var(--bn-weight-strong);
+}
+
 .chip-link {
     color: #60a5fa;
     text-decoration: none;

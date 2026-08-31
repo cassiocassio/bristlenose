@@ -24,6 +24,8 @@ function makeStatus(overrides: Partial<AutoCodeJobStatus> = {}): AutoCodeJobStat
     failure_kind: "",
     llm_provider: "anthropic",
     llm_model: "claude-sonnet-4-5-20250929",
+    applied_lower_threshold: null,
+    applied_upper_threshold: null,
     input_tokens: 0,
     output_tokens: 0,
     started_at: "2026-02-20T10:00:00Z",
@@ -150,7 +152,11 @@ describe("ActivityChipStack", () => {
 
   it("stops polling completed jobs", async () => {
     mockGetStatus.mockResolvedValue(
-      makeStatus({ status: "completed", completed_at: "2026-02-20T10:01:30Z" }),
+      makeStatus({
+        status: "completed",
+        processed_quotes: 10,
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
     );
 
     render(
@@ -174,7 +180,11 @@ describe("ActivityChipStack", () => {
   it("fires onComplete once per job", async () => {
     const onComplete = vi.fn();
     mockGetStatus.mockResolvedValue(
-      makeStatus({ status: "completed", completed_at: "2026-02-20T10:01:30Z" }),
+      makeStatus({
+        status: "completed",
+        processed_quotes: 10,
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
     );
 
     render(
@@ -197,7 +207,11 @@ describe("ActivityChipStack", () => {
   it("fires onDismiss when close button clicked on completed chip", async () => {
     const onDismiss = vi.fn();
     mockGetStatus.mockResolvedValue(
-      makeStatus({ status: "completed", completed_at: "2026-02-20T10:01:30Z" }),
+      makeStatus({
+        status: "completed",
+        processed_quotes: 10,
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
     );
 
     render(
@@ -231,7 +245,11 @@ describe("ActivityChipStack", () => {
   it("shows action link on completed chip", async () => {
     const onAction = vi.fn();
     mockGetStatus.mockResolvedValue(
-      makeStatus({ status: "completed", completed_at: "2026-02-20T10:01:30Z" }),
+      makeStatus({
+        status: "completed",
+        processed_quotes: 10,
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
     );
 
     render(
@@ -302,5 +320,91 @@ describe("ActivityChipStack", () => {
 
     await act(async () => {});
     expect(screen.getByTestId("bn-activity-chip-close")).toBeInTheDocument();
+  });
+
+  // ── Partial completion ───────────────────────────────────────────────────
+  // The engine gathers batches with `return_exceptions=True` and carries on, so
+  // a job can report "completed" having tagged a subset. That shortfall used to
+  // be dropped: `progressLabel` is only set while running, so the chip claimed
+  // an unqualified success. The correct behaviour existed in `AutoCodeToast` —
+  // which is not mounted — and therefore reached no researcher.
+
+  it("warns instead of claiming success when a job tagged only a subset", async () => {
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "completed",
+        processed_quotes: 7,
+        total_quotes: 10,
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
+    );
+
+    render(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+    await act(async () => {});
+
+    expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "partial");
+    expect(screen.getByText(/Tagged 7 of 10 quotes/)).toBeInTheDocument();
+  });
+
+  it("keeps the action link on a partial chip — the proposals still need review", async () => {
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "completed",
+        processed_quotes: 7,
+        total_quotes: 10,
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
+    );
+
+    render(
+      <ActivityChipStack
+        jobs={[makeJob({ onAction: vi.fn(), actionLabel: "Report" })]}
+        onDismiss={vi.fn()}
+      />,
+    );
+    await act(async () => {});
+
+    expect(screen.getByTestId("bn-activity-chip-action")).toBeInTheDocument();
+    // No close button when the report link is present — the link dismisses.
+    expect(screen.queryByTestId("bn-activity-chip-close")).not.toBeInTheDocument();
+  });
+
+  it("stops polling partial jobs", async () => {
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "completed",
+        processed_quotes: 7,
+        total_quotes: 10,
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
+    );
+
+    render(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+    await act(async () => {});
+    expect(mockGetStatus).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(mockGetStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it("fires onComplete for partial jobs", async () => {
+    const onComplete = vi.fn();
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "completed",
+        processed_quotes: 7,
+        total_quotes: 10,
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
+    );
+
+    render(
+      <ActivityChipStack jobs={[makeJob({ onComplete })]} onDismiss={vi.fn()} />,
+    );
+    await act(async () => {});
+
+    expect(onComplete).toHaveBeenCalledTimes(1);
   });
 });

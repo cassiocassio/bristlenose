@@ -23,6 +23,8 @@ function makeStatus(overrides: Partial<AutoCodeJobStatus> = {}): AutoCodeJobStat
     failure_kind: "",
     llm_provider: "anthropic",
     llm_model: "claude-sonnet-4-5-20250929",
+    applied_lower_threshold: null,
+    applied_upper_threshold: null,
     input_tokens: 0,
     output_tokens: 0,
     started_at: "2026-02-20T10:00:00Z",

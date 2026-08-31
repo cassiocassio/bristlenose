@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import {
+  getAutoCodeStatus,
   getAutoCodeProposals,
   acceptAllProposals,
   acceptProposal,
@@ -89,6 +90,18 @@ export function ThresholdReviewModal({
         setError(t("autocode.review.loadFailed"));
         setLoading(false);
       });
+
+    // Seed the sliders from the cutoffs actually applied, when there are any.
+    // Without this the modal reopens on DEFAULT_LOWER/UPPER and draws threshold
+    // lines where they weren't — a report of a run that never happened. Failing
+    // quietly is deliberate: the defaults set above are already a usable state,
+    // and this is fidelity, not a precondition for reviewing.
+    getAutoCodeStatus(frameworkId)
+      .then((job) => {
+        if (job.applied_lower_threshold != null) setLower(job.applied_lower_threshold);
+        if (job.applied_upper_threshold != null) setUpper(job.applied_upper_threshold);
+      })
+      .catch(() => {});
   }, [open, frameworkId]);
 
   // Escape key closes modal.

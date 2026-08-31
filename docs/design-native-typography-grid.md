@@ -250,6 +250,93 @@ are settled.
    introduce `--bn-font-ui` / `--bn-font-verbatim`, apply serif to verbatim content.
 7. **(Later) Curated terminal-inspired palettes** as additional `palette-*.css` files.
 
+## Leading — the state of it, and how to pick one (31 Aug 2026)
+
+Leading is the axis where the platform fork bites hardest and is easiest to get
+wrong, because a hardcoded ratio **cannot fork**. This section is the working
+reference: two questions, then the register of what is still outside the system.
+
+### Ask two questions, in this order
+
+**1. Is this chrome, prose, or a special case?**
+
+| role | what it is | what to use |
+|---|---|---|
+| **chrome** | one- or two-line UI text — buttons, tabs, list rows, badges, headings, labels | the per-size token, `var(--bn-text-<step>-lh)`, or nothing at all (inheriting is correct here) |
+| **prose** | anything that runs to a paragraph, *at any size* | `var(--bn-text-body-lh)` — even when the font-size is a chrome step |
+| **glyph** | an icon button whose box should hug its glyph | `line-height: 1` (26 rules do this; all deliberate) |
+| **special case** | a value doing a job the roles do not describe | a literal **plus a comment saying what job** |
+
+The one that catches people is **prose at a chrome size**. A 90-word author bio
+set at `--bn-text-caption` is prose, not a caption. Take the prose ratio and
+leave the size alone.
+
+**2. Is this the Mac app or the CLI/browser SPA?**
+
+You do not choose — **the token does**, which is the whole reason to use one.
+`data-platform="desktop"` (set unconditionally by the app; see the three axes
+above) swaps the ladder underneath:
+
+| | CLI / browser | Mac app |
+|---|---|---|
+| chrome baseline (13px) | 1.45 | **1.231** (Apple's 16-on-13) |
+| prose (15px) | 1.5 | **1.4** |
+| caption (12px) | 1.4 | 1.250 |
+
+So "1.5 is prose" is a *web* statement. The role name travels; the number does
+not. **A literal ratio is by construction a web value that ships to the Mac
+unforked** — that is a correctness property, not a style preference.
+
+Note the leading tokens are **unitless**, so an inheriting rule takes the
+*ratio*, not the parent's pixel value. A rule that changes `font-size` and says
+nothing about leading is therefore usually fine at chrome sizes (a 12px child
+of a 1.231 parent lands within a fifth of a pixel of the scale) and wrong at
+body size, where the intended 1.4 and the inherited 1.231 genuinely diverge.
+
+### Where it stands
+
+Aligned and correct: the chrome scale, and the prose surfaces —
+`blockquote .quote-body`, `.transcript-segment .segment-body`, `.pg-desc` and
+`.preview-author-bio` (the last two were fixed 31 Aug 2026; both were prose
+reading the wrong ratio, in opposite directions, and both were worst in the app).
+
+**Fifteen typographic literals remain**, none of which fork. Three are
+understood and probably right; the rest are unreviewed:
+
+| ratio | rule | reading |
+|---|---|---|
+| 1.7 | `.transcript-segment` | **structural, do not touch** — holds the timecode column's baseline alignment; `.segment-body` inside resets to prose |
+| 1.55 | `.bn-featured-quote .quote-text` | the dashboard hero. A deliberate hand-tune: 13px in a narrow card, led looser than anything around it because the reader is meant to stop. Rhetorical, not metric — which is why it cannot be derived |
+| 1.6 | `.bn-coverage-segment` | list rhythm rather than prose — a dense timecoded list. Probably right, wrongly named |
+| 1.6 | `.coverage-segment` | the same content on the deprecated Jinja path. **No live emitter** — the SPA and the HTML export never render it |
+| 1.6 / 1.5 | `.preview-desc` / `.picker-card-desc` | **the one genuine inconsistency**: same kind of text, same stylesheet, two ratios. One of them is wrong |
+| 1.5 | `.bn-transcript-roles` | prose at a chrome size; a candidate for the prose token |
+| 1.4, 1.3, 1.2, 1.1 ×7 | tooltips, kbd, pills, bar labels, `.pg-title` | small chrome, mostly near their scale value by luck |
+
+### Future work — roles as tokens
+
+The four roles above exist as a *practice*, not as tokens. Making them tokens
+(`--bn-lh-glyph`, `--bn-lh-prose`, `--bn-lh-hero`, chrome staying the per-size
+scale) would convert the remaining literals into one decision each and make the
+platform fork automatic for all of them. That is a system-wide pass, not a
+per-rule fix, and it is tracked in the maintainer's planning notes kept outside
+the public tree.
+
+Two pieces of groundwork belong to it: naming the glyph `1` so a future audit
+does not rediscover that 26 literals are deliberate, and bringing
+`PlaygroundStore`'s `lineHeight` default (1.6) onto the shipped prose value —
+it is a fossil of a moment when 1.6 was in the air, and anyone tuning from it
+starts one notch loose.
+
+### Verifying a leading change
+
+**Nothing in the test suite can see a painted line-height**, and computed style
+reports the declared value, not the rendered one. Measure it: assemble the
+stylesheet (`load_default_css()`), load it in a browser with
+`data-platform="desktop"` on `<html>`, and read `getComputedStyle`. Regenerate
+the assembled sheet after editing a source file — a stale snapshot will report
+your change as a no-op, which is the same baked-CSS trap serve mode has.
+
 ## Maintenance notes
 
 - **Archive sprawl.** `tokens-desktop-v1.css`, `tokens-typography-v1.css`,

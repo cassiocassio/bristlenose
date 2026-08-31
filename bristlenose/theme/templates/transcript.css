@@ -193,6 +193,16 @@
     }
 }
 
+/* SPECIAL CASE — do NOT normalise this to a leading token.
+   The 1.7 here is STRUCTURAL, not typographic. This row is a baseline-aligned
+   grid (`align-items: baseline`), and the 1.7 sets the rhythm the timecode and
+   speaker-badge columns align to; `.segment-body` inside deliberately resets to
+   the prose token for the text itself. Pull this onto --bn-text-*-lh and the
+   timecode stops sitting on the first line of its segment.
+   It is also the largest leading in the theme, which makes it the most obvious
+   target for a normalising sweep — hence this comment. Any change here wants
+   the transcript page open beside it.
+   See docs/design-native-typography-grid.md § Leading. */
 .transcript-segment {
     display: grid;
     grid-template-columns: subgrid;

@@ -268,6 +268,14 @@
     background-color: var(--bn-colour-hover);
 }
 
+/* SPECIAL CASE — do NOT normalise this to a leading token.
+   The dashboard's featured quotes are the front door of the report, and the
+   1.55 is a deliberate hand-tune: chrome-sized text (13px) in a narrow card,
+   led looser than anything around it because the reader is meant to stop here.
+   It is rhetorical rather than metric — it cannot be derived from size or
+   measure, which is exactly why it resists a token. In the Mac app it sits
+   ~26% above the 1.231 chrome baseline; that gap is the point, not drift.
+   See docs/design-native-typography-grid.md § Leading. */
 .bn-featured-quote .quote-text {
     font-size: var(--bn-text-label);
     line-height: 1.55;

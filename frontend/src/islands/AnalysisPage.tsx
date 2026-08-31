@@ -32,6 +32,7 @@ import { reportHref } from "../utils/reportHref";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
 import { detectSequences, type SequenceMeta } from "../utils/sequences";
+import { renderLead } from "../utils/leadSentence";
 import type {
   AnalysisMatrix,
   CodebookAnalysisListResponse,
@@ -325,19 +326,6 @@ function SparkBars({
   );
 }
 
-/** Split elaboration on `||` — bold assertion, regular evidence. */
-function renderElaboration(text: string): React.ReactNode {
-  const idx = text.indexOf("||");
-  if (idx === -1) return <strong>{text}</strong>;
-  const before = text.slice(0, idx).trimEnd();
-  const after = text.slice(idx + 2).trimStart();
-  return (
-    <>
-      <strong>{before}</strong> {after}
-    </>
-  );
-}
-
 function SignalCard({
   signal,
   allPids,
@@ -427,9 +415,15 @@ function SignalCard({
             <>
               <span className="signal-card-source">{signal.location}</span>
               <div className="signal-card-location">{signal.signalName}</div>
+              {/* `bn-lead-para` carries the treatment; `renderLead` only decides
+                  where the break falls. No `autoSplit` — the model writes the
+                  `||`, and an author's marker beats any heuristic. */}
               {signal.elaboration && (
-                <div className="signal-elaboration" data-testid="signal-elaboration">
-                  {renderElaboration(signal.elaboration)}
+                <div
+                  className="signal-elaboration bn-lead-para"
+                  data-testid="signal-elaboration"
+                >
+                  {renderLead(signal.elaboration)}
                 </div>
               )}
             </>

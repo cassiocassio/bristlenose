@@ -605,19 +605,19 @@ button.signal-card-toggle {
     min-height: 2px;
 }
 
-/* Signal elaboration — one-sentence finding below the signal name.
-   <strong> wraps the core assertion (first clause), ending at the
-   first natural break. Regular weight for evidence/nuance after. */
+/* Signal elaboration — the finding below the signal name.
+   Ranked by `atoms/lead-paragraph.css`: the core assertion in normal ink, the
+   evidence and nuance after it in a tint. This card originated the idea and
+   originated it the other way — same colour throughout, heavier lead via
+   `--bn-weight-starred` — and was converted on 31 Aug 2026 so it and the
+   codebook description cannot say the same thing differently. The atom owns
+   colour and weight; do not restore either here, because an organism rule
+   wins the tie on source order and would silently defeat it. Alternatives are
+   live in `docs/mockups/lead-sentence-playground.html`. */
 .signal-elaboration {
     font-size: var(--bn-text-label);
-    color: var(--bn-colour-text);
     line-height: var(--bn-text-label-lh);
     margin-bottom: var(--bn-space-sm);
-    font-weight: var(--bn-weight-normal);
-}
-
-.signal-elaboration strong {
-    font-weight: var(--bn-weight-starred);
 }
 
 /* ── Responsive: narrow viewport — stack card top vertically ── */

@@ -255,7 +255,6 @@
 
 .pg-desc {
     font-size: var(--bn-text-body);
-    color: var(--bn-colour-text);
     margin: var(--bn-space-md) 0 0;
     max-width: 62ch;
 }

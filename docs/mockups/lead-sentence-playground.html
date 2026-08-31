@@ -182,6 +182,12 @@ td.spec { font-size: var(--bn-text-body); }
   background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text);
   padding: 1px 5px; border-radius: var(--bn-radius-sm); }
 .ok  { color: light-dark(#15803d,#4ade80); } .no { color: light-dark(#b91c1c,#f87171); }
+
+/* The two decisions, marked. A playground you come back to has to say what was
+   already chosen, or the next visit re-litigates a settled question. */
+.frame.shipped { border-color: var(--bn-colour-accent); }
+.frame.shipped > .chrome { background: color-mix(in srgb, var(--bn-colour-accent) 8%, transparent);
+                           color: var(--bn-colour-accent); }
 </style>
 </head>
 <body>
@@ -240,6 +246,7 @@ td.spec { font-size: var(--bn-text-body); }
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
+<p class="sub" style="border-left:3px solid var(--bn-colour-accent);padding-left:var(--bn-space-md)"><strong>Settled 31 Aug 2026 — A for the paragraph, 6 for the navigator.</strong> Shipped as <code>atoms/lead-paragraph.css</code> (<code>.bn-lead-para</code>, consumed by <code>.pg-desc</code> and <code>.signal-elaboration</code>) and <code>.v2-nav-provenance</code>. Both link back here. Change a value there, but decide it here.</p>
 <h2>1 · Description paragraph — lead sentence vs the rest</h2>
 <p class="sub">Same text in every cell — the Norman description that reads "good but too long". The question is which treatment gives it a rank without shortening it.</p>
 
@@ -316,7 +323,7 @@ function navHTML(cls) {
 }
 
 const PARAS = [
-  ["A · pure tint  — Apple", "lead normal 420 · rest muted", "l-normal r-muted w-normal"],
+  ["A · pure tint — SHIPPED", "lead normal 420 · rest muted", "l-normal r-muted w-normal"],
   ["B · pure weight — signal card today", "lead starred 520 · rest text", "l-starred r-text w-normal"],
   ["C · tint + starred", "lead starred 520 · rest muted", "l-starred r-muted w-normal"],
   ["D · tint + emphasis", "lead emphasis 490 · rest muted", "l-emphasis r-muted w-normal"],
@@ -331,11 +338,12 @@ const NAVS = [
   ["3 · system size, person weight", "caption 12 · emphasis · text · gap 1px", "s-caption pw-emphasis pc-text g-1"],
   ["4 · system size, weight + tint", "caption 12 · emphasis · muted · gap 1px", "s-caption pw-emphasis pc-muted g-1"],
   ["5 · badge stop", "badge 11.5 · normal · muted · gap 1px", "s-badge pw-normal pc-muted g-1"],
-  ["6 · badge stop, person weight", "badge 11.5 · emphasis · text · gap 2px", "s-badge pw-emphasis pc-text g-2"]
+  ["6 · badge stop, person weight — SHIPPED", "badge 11.5 · emphasis · text · gap 1px", "s-badge pw-emphasis pc-text g-1"]
 ];
 
 function card(title, meta, inner) {
-  return '<div class="frame"><div class="chrome"><span>' + title + '</span><span>' + meta +
+  var cls = title.indexOf("SHIPPED") !== -1 ? "frame shipped" : "frame";
+  return '<div class="' + cls + '"><div class="chrome"><span>' + title + '</span><span>' + meta +
          '</span></div><div class="body">' + inner + '</div></div>';
 }
 document.getElementById("paraGrid").innerHTML =

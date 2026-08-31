@@ -1,0 +1,78 @@
+/* Atom: lead paragraph — a description whose first sentence carries the claim.
+   ==========================================================================
+
+   One paragraph, two ranks: a leading sentence in normal ink, the sentences
+   after it in a tint. Nothing is truncated — the whole text stays for anyone
+   who reads it, and a skimmer gets the claim without having to decide to skip
+   anything. It is the answer to a description being "good but too long": the
+   length was never the problem, the missing rank was.
+
+   THE TREATMENT IS COLOUR, NOT WEIGHT — variant A, chosen 31 Aug 2026 from
+   `docs/mockups/lead-sentence-playground.html`, which renders eight
+   combinations of weight and tint against this exact text and pairs them with
+   the navigator's second line. Go back there before changing any value here;
+   it is the cheapest way to see a proposal beside the seven alternatives, in
+   both palettes and both appearances, without touching the app.
+
+   Two reasons colour won. First, weight is already spent: `emphasis` marks
+   headings and labels, `starred` marks starred quotes, `strong` marks
+   destructive verbs and page titles — a fourth weight-based meaning inside a
+   paragraph competes with all three. Second, and the reason it is visible at a
+   glance rather than on inspection: a bolded run inside body prose reads as
+   emphasis-in-a-sentence ("this word matters"), where a tint reads as rank
+   ("this part is subordinate"). The playground's variant B is the weight
+   version and shows the difference plainly.
+
+   The weight tokens below therefore resolve to the SAME value. They exist so
+   the decision stays reversible in one place, not because the two are expected
+   to differ.
+
+   THE TINT HAS EXACTLY ONE CANDIDATE. `--bn-colour-muted` is the only
+   non-primary text colour clearing 4.5:1 in both schemes (4.83:1 light,
+   7.44:1 dark). `--bn-colour-icon-idle` is 1.6:1 and `--bn-colour-starred` is
+   2.8:1 — both unusable for prose. So "a tint" can only mean muted, and a
+   lighter step would need a new token in every palette's colour contract.
+
+   Consumers: `.pg-desc` (codebook v2 framework description) and
+   `.signal-elaboration` (analysis signal cards). The signal cards reached this
+   idea first and reached it the other way — same colour, heavier lead via
+   `--bn-weight-starred` — and were converted here so the two cannot say the
+   same thing differently.
+
+   Splitter: `frontend/src/utils/leadSentence.tsx`. `||` where the author
+   marked the break, first sentence boundary where they did not. */
+
+:root {
+    /* The claim. Normal ink, normal weight: it is not shouting, the rest is
+       receding. */
+    --bn-lead-colour: var(--bn-colour-text);
+    --bn-lead-weight: var(--bn-weight-normal);
+
+    /* Everything after it. The tint is the entire mechanism. */
+    --bn-lead-rest-colour: var(--bn-colour-muted);
+    --bn-lead-rest-weight: var(--bn-weight-normal);
+}
+
+/* The paragraph sets the RECEDED treatment and the lead overrides it. That
+   order matters: the remainder is a bare text node — the splitter emits
+   `<strong>lead</strong> rest` so the rest inherits — and cannot carry a class
+   of its own without wrapping every description in another element.
+
+   Consequence for consumers: a rule setting `color` on the paragraph itself
+   defeats this atom. Atoms are concatenated BEFORE organisms, so an organism's
+   `.pg-desc { color: … }` wins the tie on source order and the tint silently
+   never appears. Both consumers had exactly that declaration; both had it
+   removed. */
+.bn-lead-para {
+    color: var(--bn-lead-rest-colour);
+    font-weight: var(--bn-lead-rest-weight);
+}
+
+/* `<strong>` because the split is semantic as well as visual — the lead IS the
+   claim, and a screen reader announcing it as strong is correct. The visual
+   weight is then explicitly reset to the token, so what the element MEANS and
+   what it LOOKS LIKE stay separate knobs. */
+.bn-lead-para strong {
+    color: var(--bn-lead-colour);
+    font-weight: var(--bn-lead-weight);
+}

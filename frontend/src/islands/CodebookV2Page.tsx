@@ -36,6 +36,7 @@ import {
 import type { CodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import { safeUrlOrNull } from "../utils/safeUrl";
 import type { CodebookGroupResponse, TemplateOut } from "../utils/types";
+import { renderLead } from "../utils/leadSentence";
 
 export interface PageBook {
   id: string;
@@ -186,7 +187,14 @@ export function CodebookV2Page({
             </div>
           )}
 
-          {tpl?.description && <p className="pg-desc">{tpl.description}</p>}
+          {tpl?.description && (
+            // `autoSplit`: codebook descriptions are hand-written YAML and carry
+            // no `||`. Waiting for all nine to be re-authored would mean shipping
+            // no treatment at all in the meantime.
+            <p className="pg-desc bn-lead-para">
+              {renderLead(tpl.description, { autoSplit: true })}
+            </p>
+          )}
         </div>
 
         {/* A fixed-width gutter, not a fixed box (D13). What fills it — a

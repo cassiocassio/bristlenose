@@ -35,6 +35,8 @@ import {
   useCodebookV2Store,
 } from "../contexts/CodebookV2Store";
 import { CodebookV2Page, type PageBook } from "./CodebookV2Page";
+// By path, not the barrel — see the note in CodebookPanel.tsx.
+import { SectionHeading } from "../components/SectionHeading";
 import { CodebookV2Browse, type BrowseBook } from "./CodebookV2Browse";
 import { CodebookV2UninstallSheet } from "../components/CodebookV2UninstallSheet";
 // Q15: the threshold review is the EXISTING modal, not a v2 rebuild. Imported
@@ -386,21 +388,38 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     : null;
 
   return (
-    <div data-testid="bn-codebook-v2">
-      <section>
-        {/* The zone title and its datum. Browse Library lives HERE, not on the
-            page: D22 makes it the unconditional route to the catalogue — with
-            the rail closed it is the only way to reach another codebook — so it
-            must not come and go with the selection. */}
-        <div className="section-heading">
-          <h1>Codebook</h1>
-          {/* Q14 — export mode's fourth state: read-only, installed, offline.
-              No Browse Library, because there is no catalogue to browse (the
-              templates route is server-only) and installing is a write. The
-              store-layer gate hides the control rather than disabling it, which
-              is the house pattern for export mode. */}
-          {!readOnly && (
-            <div className="section-heading-action">
+    // A FRAGMENT, not a wrapper div. `report.css` flushes the first zone title
+    // to the shared datum with
+    // `.center > main > section:first-of-type > .section-heading` — so the
+    // <section> has to be a DIRECT child of <main>. v2 wrapped everything in a
+    // `<div data-testid>`, which made the section a grandchild, so the selector
+    // never matched, `margin-top: 0` never applied, and this lens sat lower
+    // than every other one. A fragment renders no node, so the path holds and
+    // the testid moves onto the section itself.
+    <>
+      <section data-testid="bn-codebook-v2">
+        {/* The zone title and its datum. Rendered through `SectionHeading`, not
+            a hand-typed `.section-heading` div: that component exists because
+            "a class you have to remember to type will eventually be forgotten"
+            — written after Codebook's own h1 shipped with no class in three
+            render states. v2 typed the class and got the shape right by copy;
+            going through the component makes it structural, so a change to the
+            zone-title treatment lands here without anyone editing this file.
+
+            Browse Library is the title's `action`, which the component
+            right-aligns and bottom-aligns to the keyline. It lives HERE, not on
+            the page: D22 makes it the unconditional route to the catalogue —
+            with the rail closed it is the only way to reach another codebook —
+            so it must not come and go with the selection.
+
+            Q14 — export mode's fourth state: read-only, installed, offline. No
+            Browse Library, because there is no catalogue to browse (the
+            templates route is server-only) and installing is a write. Passing
+            no action is the house pattern; the row's height and the keyline's
+            position are identical either way. */}
+        <SectionHeading
+          action={
+            !readOnly ? (
               <button
                 className="bn-btn bn-btn-secondary bn-btn-lg"
                 data-testid="bn-v2-browse"
@@ -408,9 +427,11 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
               >
                 Browse Library
               </button>
-            </div>
-          )}
-        </div>
+            ) : null
+          }
+        >
+          Codebook
+        </SectionHeading>
         {error && <p className="pg-stat">Could not load the codebook: {error}</p>}
         {/* No rail here. Codebook navigation is the standard left sidebar
             (`CodebookV2Sidebar`, mounted by AppLayout), which brings the
@@ -494,6 +515,6 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
           onConfirm={onConfirmUninstall}
         />
       )}
-    </div>
+    </>
   );
 }

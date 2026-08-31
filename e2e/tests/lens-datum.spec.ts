@@ -35,11 +35,20 @@ import { test, expect, Page } from '@playwright/test';
 
 test.describe.configure({ mode: 'serial' });
 
-/** The four lenses that carry a zone title. Project is a dashboard — no h1 by design. */
+/** Every lens that carries a zone title. Project is a dashboard — no h1 by design.
+ *
+ * `codebook-v2` joined 31 Aug 2026, and joining is the point: it had shipped
+ * with its content in a wrapper `<div>`, which made its `<section>` a
+ * GRANDCHILD of `<main>` and so unreachable by the datum selector. The heading
+ * kept its default top margin and the lens sat visibly lower than the other
+ * four — caught by eye, in a screenshot, because nothing enumerated it here.
+ * A gate that lists its subjects by hand only covers the ones somebody
+ * remembered; adding a lens means adding a row. */
 const TITLED_LENSES = [
   { name: 'sessions', route: '/report/sessions/' },
   { name: 'quotes', route: '/report/quotes/' },
   { name: 'codebook', route: '/report/codebook/' },
+  { name: 'codebook-v2', route: '/report/codebook-v2/' },
   { name: 'analysis', route: '/report/analysis/' },
 ];
 

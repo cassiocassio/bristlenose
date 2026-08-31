@@ -65,10 +65,32 @@ if [ -n "${BN_LOCAL_DIST:-}" ]; then
     echo "==> using local dist: $BN_LOCAL_DIST (NOT PyPI)"
     cp "$BN_LOCAL_DIST/bristlenose-$VERSION.tar.gz" "$WORK/"
 else
+    # `--retry` covers TRANSIENT errors (timeouts, 5xx) and deliberately not
+    # 404 — but here a 404 usually IS transient: PyPI's CDN edges take minutes
+    # to learn a fresh release, and Copr's builder asks a different edge than
+    # the one verify-pypi just confirmed. Measured 31 Aug 2026 (build
+    # 10925833, 0.29.1): verify-pypi green at 18:58, this fetch 404'd at
+    # 19:00, and the same URL served 200 an hour later. So: bounded re-asks,
+    # one a minute for ten minutes, and only a 404 earns another lap — any
+    # other failure is real and exits on the spot.
     echo "==> fetching sdist"
-    curl -fsSL --retry 3 \
-      "https://pypi.io/packages/source/b/bristlenose/bristlenose-$VERSION.tar.gz" \
-      -o "$WORK/bristlenose-$VERSION.tar.gz"
+    _sdist_url="https://pypi.io/packages/source/b/bristlenose/bristlenose-$VERSION.tar.gz"
+    _fetched=0
+    for _try in 1 2 3 4 5 6 7 8 9 10; do
+        _code=$(curl -sSL --retry 3 -w '%{http_code}' \
+          "$_sdist_url" -o "$WORK/bristlenose-$VERSION.tar.gz") && :
+        if [ "$_code" = "200" ]; then _fetched=1; break; fi
+        if [ "$_code" != "404" ]; then
+            echo "error: sdist fetch failed (HTTP $_code) on attempt $_try" >&2
+            exit 22
+        fi
+        echo "    404 on attempt $_try/10 — CDN edge not caught up yet; retrying in 60s"
+        sleep 60
+    done
+    if [ "$_fetched" != "1" ]; then
+        echo "error: sdist still 404 after 10 minutes — is $VERSION actually on PyPI?" >&2
+        exit 22
+    fi
 fi
 
 # Fail loud if the sdist we just pulled is missing the bundle — a Copr build

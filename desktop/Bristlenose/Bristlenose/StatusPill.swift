@@ -47,3 +47,24 @@ struct StatusPill<Label: View, Detail: View>: View {
         }
     }
 }
+
+extension ToolbarContent {
+    /// Opt a toolbar item out of macOS 26's shared glass background.
+    ///
+    /// The `.status` pills draw their own capsule (above) — deliberately flat
+    /// and quiet. macOS 26 wraps every toolbar item in a brighter glass capsule
+    /// of its own, so the pill arrives nested inside a second, louder chrome.
+    /// One pill, one chrome.
+    ///
+    /// No-op below macOS 26, which has no shared background to hide. The
+    /// deployment target is 15.0 (the *test* target's 26.1 is a different
+    /// number), so the availability check is real, not ceremony.
+    @ToolbarContentBuilder
+    func withoutSharedBackground() -> some ToolbarContent {
+        if #available(macOS 26.0, *) {
+            self.sharedBackgroundVisibility(.hidden)
+        } else {
+            self
+        }
+    }
+}

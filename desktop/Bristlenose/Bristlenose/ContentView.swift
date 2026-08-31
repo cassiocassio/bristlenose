@@ -2288,20 +2288,29 @@ struct ContentView: View {
         // sharing the `StatusPill` envelope: Ollama model-download, provider
         // out-of-credit, and the alpha-expiry notice. (Per-project vs app-global
         // is the placement axis: `docs/design-desktop-project-status.md` §4.)
+        //
+        // All three opt out of macOS 26's shared toolbar-item background
+        // (`withoutSharedBackground()`, in StatusPill.swift). The pills draw
+        // their own capsule — deliberately flat and quiet — so the glass bubble
+        // the system wraps every toolbar item in nests a second, brighter
+        // capsule around the first. One pill, one chrome.
         ToolbarItem(placement: .status) {
             OllamaDownloadPill(model: ollamaDownload)
         }
+        .withoutSharedBackground()
         // Sibling app-global pill: the active cloud provider is out of credit.
         // Cloud-only, so it never co-occurs with the Ollama (local) pill above.
         ToolbarItem(placement: .status) {
             OutOfCreditPill(model: outOfCredit)
         }
+        .withoutSharedBackground()
         // Sibling app-global pill: an expiring `.dmg` alpha build in its final
         // week. Self-gates (nil off the .developerID channel / outside the last
         // 7 days), so it renders nothing on App Store / TestFlight / CLI builds.
         ToolbarItem(placement: .status) {
             AlphaExpiryPill()
         }
+        .withoutSharedBackground()
     }
 
     // MARK: - Sidebar

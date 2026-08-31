@@ -48,7 +48,11 @@ struct OutOfCreditPill: View {
                 // the default/confirm button rightmost.
                 Button(i18n.t("desktop.outOfCredit.switchProvider")) {
                     showingDetail = false
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    // Deep-link to the pane that answers the question, not the
+                    // window's last-used pane — same idiom as the welcome AI
+                    // cell's "Setup →" (WelcomeHomeView) and Connect an Agent…
+                    // (MenuCommands → .mcpAgents).
+                    SettingsWindow.shared.show(pane: .llm)
                 }
                 Button(i18n.t("desktop.outOfCredit.addFunds")) {
                     showingDetail = false

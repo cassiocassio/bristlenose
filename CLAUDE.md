@@ -638,8 +638,10 @@ See `docs/BRANCHES.md` for any active worktrees and the parked set.
 
 ### Release timing (evening releases)
 
-Weekday releases land after 9pm London; **the act that lands a release is the
-tag push.** The `pypi` environment's required-reviewer hold was **removed on
+Releases land after 9pm London on a **working day**; **the act that lands a
+release is the tag push.** Weekends and **UK bank holidays: any time** — the
+rule exists to keep release notifications out of client working hours, and on a
+day when clients are not working there is nothing to keep them out of. The `pypi` environment's required-reviewer hold was **removed on
 23 Aug 2026** — it had been the reason the tag could go out early, because a
 tagged run then waited for a human before publishing.
 
@@ -664,14 +666,33 @@ Consequences:
    verdict is obtainable without a tag — which is what preserves the 0.25.2
    lesson (every verdict before every irreversible act) now that the tag is the
    publishing act. `./scripts/release.sh run` encodes this order.
-3. **The tag push is what waits for 9pm on weekdays.** Weekends: any time.
-   Still two back-to-back commands, never one `--tags` — the bundled push is how
-   the tag-driven workflow gets debounced into never firing.
+3. **The tag push is what waits for 9pm — on working days only.** Weekends and
+   UK bank holidays: any time. Still two back-to-back commands, never one
+   `--tags` — the bundled push is how the tag-driven workflow gets debounced
+   into never firing.
+
+   **Check the holiday, don't derive it.** The UK government publishes the
+   official list, so this is one command and never a calculation:
+
+   ```bash
+   curl -s https://www.gov.uk/bank-holidays.json | jq -r --arg d "$(date +%F)" '."england-and-wales".events[] | select(.date==$d) | .title'
+   ```
+
+   Non-empty output is the answer — today is that holiday, so the window is
+   open now. Added 31 Aug 2026, when a release was scheduled to wait until 9pm
+   on the **Summer bank holiday**: "is it a weekday" was answered by `date +%u`,
+   which returns 1 for a Monday whether or not anyone is working. Reasoning it
+   out from "last Monday in August" is the same mistake one step later — the
+   division is *working day*, and England-and-Wales, Scotland and Northern
+   Ireland do not share a calendar, which is exactly why the feed is keyed by
+   nation.
 
 **Override:** push when something is urgent. This is a guideline, not a gate.
 
 **Why:** avoids release notifications during client working hours; batches
-releases into a predictable window.
+releases into a predictable window. Both halves of that purpose are about *when
+other people are at work*, which is the test to apply when a new edge case turns
+up — not the shape of the calendar.
 
 ### Post-push PyPI verification (mandatory)
 

@@ -398,7 +398,9 @@ the skill is one nobody is reading.
   the answer is to fix the artefact, never to work around the check.
 - **A partial release is a normal outcome**, not an error. PyPI can succeed while
   Homebrew's poll times out. Report per-channel truth, not one verdict.
-- **Weekday releases land after 9pm London; the landing act is the TAG PUSH.**
+- **Releases land after 9pm London on a working day; the landing act is the TAG PUSH.**
+  Weekends and UK bank holidays: any time (check `gov.uk/bank-holidays.json`,
+  don't derive the date).
   Since 23 Aug 2026 there is no approval to wait on — the `pypi` required-reviewer
   hold was removed, and `publish → build → ci(strict-macos)` is what now stands
   between a tag and PyPI. Pushing `main` and building still publish nothing, so

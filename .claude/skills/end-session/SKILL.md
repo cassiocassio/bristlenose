@@ -402,7 +402,7 @@ If this session did **not** identify follow-up branches, skip this step.
 
 16. **Branch cleanup** — check for merged feature branches that can be deleted. Ask before deleting.
 
-17. **Push decision** — don't push by default. Remind about the evening release rule (after 9pm London on weekdays; weekends any time). If they want to see work remotely before release: `git push origin main:wip`. Push only if the user says to.
+17. **Push decision** — don't push by default. Remind about the evening release rule (after 9pm London on working days; weekends and UK bank holidays any time). If they want to see work remotely before release: `git push origin main:wip`. Push only if the user says to.
 
 18. **CI verification** — only if pushed. Check the latest push passes CI.
 

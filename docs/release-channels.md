@@ -84,7 +84,7 @@ would be off in every run — configuration for the configurable.
 
 ## The commands
 
-**CLI (PyPI + GitHub Release + Homebrew), after 9pm on weekdays:**
+**CLI (PyPI + GitHub Release + Homebrew), after 9pm on working days:**
 
 ```bash
 ./scripts/bump-version.py minor    # or patch — minor = feature, patch = fix
@@ -158,8 +158,10 @@ byte-identical — force-move the existing tag rather than forking the version l
 Counter-rule: if the version ever *published*, PyPI immutability means you must
 bump.
 
-**Releases land after 9pm London on weekdays — and the landing act is the tag
-push.** Pushing `main` publishes nothing and can happen any time; it buys CI
+**Releases land after 9pm London on working days — and the landing act is the
+tag push.** Weekends and UK bank holidays are outside the window entirely: the
+rule protects client working hours, so it has nothing to protect on a day when
+clients are not working. Pushing `main` publishes nothing and can happen any time; it buys CI
 signal. The **tag** is what waits for the window, because since 23 Aug 2026 it
 publishes directly — there is no approval left to wait on. Weekends are
 unrestricted. (The old `main:wip` preview workaround is retired — main can

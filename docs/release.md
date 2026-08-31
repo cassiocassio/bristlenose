@@ -123,9 +123,10 @@ its CI is still running, deleting it (`git push --delete origin vX.Y.Z && git ta
 
 ### Two mandatory gates — do not skip
 
-- **Evening timing (weekdays):** the act that *lands* the release is the
-  **tag push** — that is what waits for **21:00 London** on weekdays (avoids
-  version churn during client hours). Pushing `main` publishes nothing and can
+- **Evening timing (working days):** the act that *lands* the release is the
+  **tag push** — that is what waits for **21:00 London** on working days (avoids
+  version churn during client hours). Weekends and **UK bank holidays: any
+  time**; check the official feed rather than deriving the date. Pushing `main` publishes nothing and can
   happen any time; it buys CI signal, which is the point of doing it early.
   Weekends: any time. This used to say "publish approval"; the approval is gone
   and the wait moved to the tag.

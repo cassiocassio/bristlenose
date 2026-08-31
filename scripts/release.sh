@@ -867,8 +867,22 @@ cmd_run() {
     # on top of it, and committed the result under the message "bump to 0.28.0".
     # Skip the bump when the file already reads $V, and only commit if something
     # actually changed.
+    #
+    # `git diff --quiet HEAD --`, NOT `git diff --quiet --`. bump-version.py
+    # STAGES what it touches (its own docstring says so), and plain `git diff`
+    # compares the working tree to the INDEX — so against a staged bump it finds
+    # no difference, takes the && arm, prints "version files already committed"
+    # and commits nothing. The assertion on the next line then reads the
+    # WORKING-TREE file, sees $V, and passes. Step green, bump uncommitted.
+    #
+    # Measured 31 Aug 2026 on 0.29.1: __init__.py read 0.29.1 while HEAD read
+    # 0.29.0, and `git push origin main` shipped the un-bumped commit. Only a
+    # later step failing for an unrelated reason stopped the tag landing on a
+    # commit whose version was already immutable on PyPI. Same family as the
+    # `cmd && ok "passed"` gate in CLAUDE.md: the success arm asserted a
+    # conclusion the command never established.
     BUMP_CMD="{ [ \"\$(sed -n '$VERSION_REGEX' '$VERSION_FILE')\" = \"$V\" ] || ./scripts/bump-version.py $BUMP; }"
-    BUMP_CMD="$BUMP_CMD && { git diff --quiet -- bristlenose/__init__.py bristlenose/data/bristlenose.1 desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj CHANGELOG.md README.md && echo 'version files already committed' || git commit -m \"bump to $V\" -- bristlenose/__init__.py bristlenose/data/bristlenose.1 desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj CHANGELOG.md README.md; }"
+    BUMP_CMD="$BUMP_CMD && { git diff --quiet HEAD -- bristlenose/__init__.py bristlenose/data/bristlenose.1 desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj CHANGELOG.md README.md && echo 'version files already committed' || git commit -m \"bump to $V\" -- bristlenose/__init__.py bristlenose/data/bristlenose.1 desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj CHANGELOG.md README.md; }"
     # $V and --bump are two sources for one number. `run 0.29.0 --bump minor`
     # from 0.27.0 writes 0.28.0, commits "bump to 0.29.0", tags v0.29.0 — and
     # the mismatch surfaces at release.yml's PyPI poll, i.e. AFTER twine has

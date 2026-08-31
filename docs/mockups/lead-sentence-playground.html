@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lead sentence &amp; second line — token playground</title>
+<style>
+/* ── Shipped tokens, lifted verbatim ─────────────────────────────────────── */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter","Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;
+  --bn-font-mono: ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+
+  --bn-weight-light: 370;
+  --bn-weight-normal: 420;
+  --bn-weight-emphasis: 490;
+  --bn-weight-starred: 520;
+  --bn-weight-strong: 700;
+
+  --bn-text-micro: 0.6rem;      --bn-text-micro-lh: 1.3;
+  --bn-text-badge: 0.71875rem;  --bn-text-badge-lh: 1.35;
+  --bn-text-caption: 0.75rem;   --bn-text-caption-lh: 1.4;
+  --bn-text-label: 0.8125rem;   --bn-text-label-lh: 1.45;
+  --bn-text-body: 0.9375rem;    --bn-text-body-lh: 1.5;
+  --bn-text-heading: 1.125rem;  --bn-text-heading-lh: 1.3;
+  --bn-text-title: 1.375rem;    --bn-text-title-lh: 1.25;
+
+  --bn-space-xs: 0.15rem; --bn-space-sm: 0.35rem; --bn-space-md: 0.75rem;
+  --bn-space-lg: 1.5rem;  --bn-space-xl: 2rem;
+  --bn-radius-sm: 3px; --bn-radius-md: 6px; --bn-radius-lg: 8px; --bn-radius-pill: 999px;
+
+  --bn-colour-bg: light-dark(#ffffff, #111111);
+  --bn-colour-text: light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted: light-dark(#6b7280, #9ca3af);
+  --bn-colour-border: light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent: light-dark(#007aff, #0a84ff);
+  --bn-colour-quote-bg: light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg: light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text: light-dark(#374151, #d1d5db);
+  --bn-colour-inspector-bg: light-dark(#f9f9fa, #1c1c1e);
+  --bn-colour-border-hover: light-dark(#d1d5db, #4b5563);
+  --bn-nav-selection-bg: light-dark(#efefef, #2a2a2c);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg: light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text: light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted: light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border: light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent: light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-quote-bg: light-dark(#f7f2e6, #221f1b);
+  --bn-colour-inspector-bg: light-dark(#f7f2e6, #221f1b);
+}
+[data-force="light"] { color-scheme: light; }
+[data-force="dark"]  { color-scheme: dark; }
+
+/* ── Page chrome (NOT the product) ───────────────────────────────────────── */
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: var(--bn-space-xl);
+  font-family: var(--bn-font-body);
+  background: var(--bn-colour-bg); color: var(--bn-colour-text);
+  font-size: var(--bn-text-body); line-height: var(--bn-text-body-lh);
+  font-weight: var(--bn-weight-normal);
+}
+.wrap { max-width: 1180px; margin: 0 auto; }
+h1 { font-size: var(--bn-text-title); line-height: var(--bn-text-title-lh);
+     font-weight: var(--bn-weight-strong); margin: 0 0 var(--bn-space-sm); }
+h2 { font-size: var(--bn-text-heading); line-height: var(--bn-text-heading-lh);
+     font-weight: var(--bn-weight-emphasis); margin: var(--bn-space-xl) 0 var(--bn-space-md);
+     padding-bottom: var(--bn-space-sm); border-bottom: 1px solid var(--bn-colour-border); }
+.sub { color: var(--bn-colour-muted); font-size: var(--bn-text-label);
+       line-height: var(--bn-text-label-lh); max-width: 74ch; margin: 0 0 var(--bn-space-lg); }
+.bar { display: flex; gap: var(--bn-space-lg); align-items: center; flex-wrap: wrap;
+       padding: var(--bn-space-md); border: 1px solid var(--bn-colour-border);
+       border-radius: var(--bn-radius-md); margin-bottom: var(--bn-space-lg);
+       font-size: var(--bn-text-label); position: sticky; top: 0; z-index: 5;
+       background: var(--bn-colour-bg); }
+.bar label { display: flex; gap: var(--bn-space-sm); align-items: center; }
+select { font: inherit; font-size: var(--bn-text-caption); padding: 2px 4px;
+         border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-sm);
+         background: var(--bn-colour-bg); color: var(--bn-colour-text); }
+
+/* key */
+.key { display: flex; gap: var(--bn-space-lg); font-size: var(--bn-text-caption);
+       color: var(--bn-colour-muted); margin-bottom: var(--bn-space-lg); flex-wrap: wrap; }
+.key i { font-style: normal; display: inline-flex; align-items: center; gap: 6px; }
+.sw-art, .sw-com { width: 22px; height: 12px; border-radius: 2px;
+                   border: 1px solid var(--bn-colour-border); }
+.sw-art { background: var(--bn-colour-bg); }
+.sw-com { background: repeating-linear-gradient(45deg,
+            transparent 0 3px, var(--bn-colour-border) 3px 4px); }
+
+/* commentary zone — deliberately not-the-product */
+.commentary { margin-top: var(--bn-space-md); padding: var(--bn-space-md);
+  border-left: 3px solid var(--bn-colour-border);
+  background: repeating-linear-gradient(45deg,
+    transparent 0 6px, color-mix(in srgb, var(--bn-colour-border) 40%, transparent) 6px 7px);
+  font-size: var(--bn-text-caption); line-height: var(--bn-text-caption-lh);
+  color: var(--bn-colour-muted); }
+.commentary::before { content: "COMMENTARY"; display: block; font-family: var(--bn-font-mono);
+  font-size: var(--bn-text-micro); letter-spacing: .08em; margin-bottom: var(--bn-space-sm); }
+.commentary p { margin: 0 0 var(--bn-space-sm); } .commentary p:last-child { margin-bottom: 0; }
+code { font-family: var(--bn-font-mono); font-size: 0.92em;
+       background: var(--bn-colour-badge-bg); padding: 1px 4px; border-radius: var(--bn-radius-sm); }
+
+/* specimen frame — the artefact */
+.frame { border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md);
+         background: var(--bn-colour-bg); overflow: hidden; }
+.frame > .chrome { font-family: var(--bn-font-mono); font-size: var(--bn-text-micro);
+  letter-spacing: .06em; color: var(--bn-colour-muted); padding: 5px var(--bn-space-md);
+  border-bottom: 1px solid var(--bn-colour-border); background: var(--bn-colour-quote-bg);
+  display: flex; justify-content: space-between; gap: var(--bn-space-md); }
+.frame > .body { padding: var(--bn-space-lg); overflow-x: auto; }
+table { min-width: 520px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(390px, 1fr));
+         gap: var(--bn-space-lg); }
+
+/* ── THE CONSTRUCT under test ────────────────────────────────────────────── */
+/* Paragraph: `.lead` wraps the first sentence, remainder is a bare text node. */
+.desc { font-size: var(--bn-text-body); line-height: var(--bn-text-body-lh);
+        max-width: 62ch; margin: 0; }
+
+/* rest (the paragraph itself) */
+.r-text   { color: var(--bn-colour-text);  }
+.r-muted  { color: var(--bn-colour-muted); }
+.w-light  { font-weight: var(--bn-weight-light); }
+.w-normal { font-weight: var(--bn-weight-normal); }
+
+/* lead */
+.desc .lead { font-weight: var(--bn-weight-normal); color: var(--bn-colour-text); }
+.l-normal   .lead { font-weight: var(--bn-weight-normal); }
+.l-emphasis .lead { font-weight: var(--bn-weight-emphasis); }
+.l-starred  .lead { font-weight: var(--bn-weight-starred); }
+.l-strong   .lead { font-weight: var(--bn-weight-strong); }
+
+/* ── Nav row (real .toc-link metrics) ────────────────────────────────────── */
+.navframe { width: 268px; background: var(--bn-colour-inspector-bg);
+            border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-md);
+            padding: var(--bn-space-md); }
+.toc-heading { font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh);
+  font-weight: var(--bn-weight-emphasis); margin: 1rem 0 var(--bn-space-sm);
+  padding-bottom: 0.25rem; border-bottom: 1px solid var(--bn-colour-border); }
+.toc-heading:first-child { margin-top: 0; }
+.toc-link { display: flex; align-items: center; gap: var(--bn-space-sm);
+  padding: 0.2rem var(--bn-space-sm); font-size: var(--bn-text-label);
+  line-height: var(--bn-text-label-lh); font-weight: var(--bn-weight-light);
+  color: var(--bn-colour-text); text-decoration: none; border-radius: var(--bn-radius-md);
+  cursor: pointer; min-width: 0; }
+.toc-link.active { background: var(--bn-nav-selection-bg); color: var(--bn-colour-accent);
+  font-weight: var(--bn-weight-emphasis); }
+.navtext { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.g-0 .navtext { gap: 0; } .g-1 .navtext { gap: 1px; } .g-2 .navtext { gap: 2px; }
+.g-xs .navtext { gap: var(--bn-space-xs); }
+.prov { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-micro   .prov { font-size: var(--bn-text-micro);   line-height: var(--bn-text-micro-lh); }
+.s-badge   .prov { font-size: var(--bn-text-badge);   line-height: var(--bn-text-badge-lh); }
+.s-caption .prov { font-size: var(--bn-text-caption); line-height: var(--bn-text-caption-lh); }
+.s-label   .prov { font-size: var(--bn-text-label);   line-height: var(--bn-text-label-lh); }
+.pw-light    .prov { font-weight: var(--bn-weight-light); }
+.pw-normal   .prov { font-weight: var(--bn-weight-normal); }
+.pw-emphasis .prov { font-weight: var(--bn-weight-emphasis); }
+.pc-text  .prov { color: var(--bn-colour-text); }
+/* D23: a system fact never borrows the person treatment, whatever the variant. */
+.prov.prov-system { font-weight: var(--bn-weight-normal) !important;
+                    color: var(--bn-colour-muted) !important; }
+.pc-muted .prov { color: var(--bn-colour-muted); }
+.pending { flex-shrink: 0; font-family: var(--bn-font-mono); font-size: var(--bn-text-micro);
+  color: var(--bn-colour-badge-text); background: var(--bn-colour-badge-bg);
+  border-radius: var(--bn-radius-pill); padding: .05rem .35rem; }
+.sw { position: relative; flex-shrink: 0; width: 26px; height: 15px; border-radius: 7.5px;
+  background: var(--bn-colour-accent); }
+.sw::after { content:""; position:absolute; top:1.5px; left:12.5px; width:12px; height:12px;
+  border-radius:50%; background:#fff; }
+
+/* ladder table */
+table { border-collapse: collapse; width: 100%; font-size: var(--bn-text-caption); }
+th, td { text-align: left; padding: 5px 10px; border-bottom: 1px solid var(--bn-colour-border); }
+th { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted);
+     font-size: var(--bn-text-micro); letter-spacing: .05em; text-transform: uppercase; }
+td.spec { font-size: var(--bn-text-body); }
+.tag { display:inline-block; font-family: var(--bn-font-mono); font-size: var(--bn-text-micro);
+  background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text);
+  padding: 1px 5px; border-radius: var(--bn-radius-sm); }
+.ok  { color: light-dark(#15803d,#4ade80); } .no { color: light-dark(#b91c1c,#f87171); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Lead sentence &amp; second line</h1>
+<p class="sub">Two surfaces, one question: how does a primary line separate from what follows it — by <strong>weight</strong>, by <strong>tint</strong>, or both? Every variant below is built from tokens that already exist. Nothing here invents a value.</p>
+
+<div class="key">
+  <i><span class="sw-art"></span> artefact — real pixels, real tokens</i>
+  <i><span class="sw-com"></span> commentary — not the product</i>
+</div>
+
+<div class="bar">
+  <label>palette
+    <select id="pal"><option value="default">default</option><option value="edo">edo</option></select>
+  </label>
+  <label>appearance
+    <select id="sch"><option value="">system</option><option value="light">light</option><option value="dark">dark</option></select>
+  </label>
+  <span style="color:var(--bn-colour-muted);font-size:var(--bn-text-caption)">Every specimen re-renders live.</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<h2>0 · What we have to work with</h2>
+<p class="sub">The whole budget. There is exactly <strong>one</strong> tint that is safe for prose — every other colour token fails contrast as body text.</p>
+
+<div class="frame"><div class="chrome"><span>THE LADDER</span><span>tokens-typography.css · palette-default.css</span></div><div class="body">
+<table>
+<tr><th>token</th><th>web</th><th>desktop</th><th>specimen</th><th>used in the navigator for</th></tr>
+<tr><td><span class="tag">--bn-text-micro</span></td><td>9.6px</td><td>10px</td><td style="font-size:var(--bn-text-micro)">Don Norman</td><td>thumb glyph, badge — <em>never prose</em></td></tr>
+<tr><td><span class="tag">--bn-text-badge</span></td><td>11.5px</td><td>11px</td><td style="font-size:var(--bn-text-badge)">Don Norman</td><td>panel subtitle</td></tr>
+<tr><td><span class="tag">--bn-text-caption</span></td><td>12px</td><td>12px</td><td style="font-size:var(--bn-text-caption)">Don Norman</td><td><strong>row second line</strong></td></tr>
+<tr><td><span class="tag">--bn-text-label</span></td><td>13px</td><td>13px</td><td style="font-size:var(--bn-text-label)">Don Norman</td><td>row title, section heading</td></tr>
+<tr><td><span class="tag">--bn-text-body</span></td><td>15px</td><td>15px</td><td style="font-size:var(--bn-text-body)">Don Norman</td><td>—</td></tr>
+</table>
+<table style="margin-top:var(--bn-space-lg)">
+<tr><th>weight</th><th>value</th><th>specimen</th><th>currently means</th></tr>
+<tr><td><span class="tag">--bn-weight-light</span></td><td>370</td><td class="spec" style="font-weight:370">The Design of Everyday Things</td><td>nav row titles</td></tr>
+<tr><td><span class="tag">--bn-weight-normal</span></td><td>420</td><td class="spec" style="font-weight:420">The Design of Everyday Things</td><td>body, descriptions</td></tr>
+<tr><td><span class="tag">--bn-weight-emphasis</span></td><td>490</td><td class="spec" style="font-weight:490">The Design of Everyday Things</td><td>headings, labels</td></tr>
+<tr><td><span class="tag">--bn-weight-starred</span></td><td>520</td><td class="spec" style="font-weight:520">The Design of Everyday Things</td><td>starred quotes <em>(+ signal elaboration, borrowed)</em></td></tr>
+<tr><td><span class="tag">--bn-weight-strong</span></td><td>700</td><td class="spec" style="font-weight:700">The Design of Everyday Things</td><td>page title, destructive glyphs</td></tr>
+</table>
+<table style="margin-top:var(--bn-space-lg)">
+<tr><th>colour</th><th>light</th><th>dark</th><th>contrast on bg</th><th>usable as prose?</th></tr>
+<tr><td><span class="tag">--bn-colour-text</span></td><td>#1a1a1a</td><td>#e5e7eb</td><td>17.4 : 1 &nbsp;/&nbsp; 15.3 : 1</td><td class="ok">yes — the primary</td></tr>
+<tr><td><span class="tag">--bn-colour-muted</span></td><td>#6b7280</td><td>#9ca3af</td><td>4.83 : 1 &nbsp;/&nbsp; 7.44 : 1</td><td class="ok">yes — passes AA</td></tr>
+<tr><td><span class="tag">--bn-colour-icon-idle</span></td><td>#c9ccd1</td><td>#595959</td><td>1.6 : 1</td><td class="no">no — fails badly</td></tr>
+<tr><td><span class="tag">--bn-colour-starred</span></td><td>#999</td><td>#ccc</td><td>2.8 : 1</td><td class="no">no — fails AA</td></tr>
+</table>
+</div></div>
+<div class="commentary">
+<p><strong>The tint axis is binary.</strong> <code>--bn-colour-muted</code> is the only non-primary text colour that clears 4.5:1 in both schemes, so "a tint" can only ever mean muted. There is no lighter-still option to reach for, and inventing one would need a new contract token in every palette.</p>
+<p><strong>The weight axis has three usable stops</strong> between light and strong — but <code>emphasis</code> and <code>starred</code> are both already spoken for (headings/labels, and starred quotes). Anything you pick here is a <em>fourth</em> meaning riding on an existing value.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<h2>1 · Description paragraph — lead sentence vs the rest</h2>
+<p class="sub">Same text in every cell — the Norman description that reads "good but too long". The question is which treatment gives it a rank without shortening it.</p>
+
+<div class="grid2" id="paraGrid"></div>
+
+<div class="commentary">
+<p><strong>A · pure tint</strong> is Apple's own treatment on apple.com/os/macos. <strong>B · pure weight</strong> is what our signal cards ship today (<code>.signal-elaboration strong</code> → <code>--bn-weight-starred</code>, same colour throughout).</p>
+<p>Watch what happens at a glance rather than up close: with pure weight the two ranks read as <em>one paragraph containing an emphasised phrase</em>; with tint they read as <em>a claim and its supporting detail</em>. Weight says "this word matters"; colour says "this part is subordinate".</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<h2>2 · Navigator second line — "Don Norman"</h2>
+<p class="sub">The same construct one level down. The row title is the claim; the author is what follows it.</p>
+
+<div class="grid2" id="navGrid"></div>
+
+<div class="commentary">
+<p><strong>The system already answered this once.</strong> The Sessions navigator has the identical two-line row — <code>.session-entry-name</code> over <code>.session-entry-date</code> — and sets the second line at <code>--bn-text-caption</code> (12px), <code>--bn-colour-muted</code>, with no weight change and a <code>1px</code> stack gap. That is variant <strong>2</strong>.</p>
+<p><strong>Codebook v2 currently ships variant 1:</strong> <code>--bn-text-micro</code> (9.6px), <code>--bn-weight-emphasis</code>, full-strength ink, gap <code>0</code>. That is two stops below the system's second-line size, at a stop the navigator otherwise uses only for a thumbnail glyph and a badge — never for words. The heavier weight was deliberate (a person's name is the point), but it is doing the work at a size that fights it.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<h2>3 · Pick one, see both together</h2>
+<p class="sub">Drive the paragraph and the nav row from the same controls, so a decision can be judged on both surfaces at once.</p>
+
+<div class="bar" style="position:static">
+  <label>lead weight <select id="cLW">
+    <option value="l-normal">normal 420</option><option value="l-emphasis">emphasis 490</option>
+    <option value="l-starred" selected>starred 520</option><option value="l-strong">strong 700</option></select></label>
+  <label>rest colour <select id="cRC">
+    <option value="r-muted" selected>muted</option><option value="r-text">text</option></select></label>
+  <label>rest weight <select id="cRW">
+    <option value="w-normal" selected>normal 420</option><option value="w-light">light 370</option></select></label>
+  <label>2nd-line size <select id="cPS">
+    <option value="s-micro">micro 9.6</option><option value="s-badge">badge 11.5</option>
+    <option value="s-caption" selected>caption 12</option><option value="s-label">label 13</option></select></label>
+  <label>2nd-line weight <select id="cPW">
+    <option value="pw-light">light 370</option><option value="pw-normal" selected>normal 420</option>
+    <option value="pw-emphasis">emphasis 490</option></select></label>
+  <label>2nd-line colour <select id="cPC">
+    <option value="pc-muted" selected>muted</option><option value="pc-text">text</option></select></label>
+  <label>stack gap <select id="cG">
+    <option value="g-0">0</option><option value="g-1" selected>1px</option>
+    <option value="g-2">2px</option><option value="g-xs">space-xs 2.4px</option></select></label>
+</div>
+
+<div style="display:flex;gap:var(--bn-space-lg);align-items:flex-start;flex-wrap:wrap">
+  <div class="frame" style="flex:1;min-width:420px"><div class="chrome"><span>LIVE — PARAGRAPH</span><span id="pOut"></span></div>
+    <div class="body"><p class="desc" id="live"></p></div></div>
+  <div class="frame"><div class="chrome"><span>LIVE — NAVIGATOR</span><span id="nOut"></span></div>
+    <div class="body" style="padding:var(--bn-space-md)"><div class="navframe" id="liveNav"></div></div></div>
+</div>
+
+</div>
+
+<script>
+const TEXT_LEAD = "Seven fundamental principles of interaction design that explain why products are easy or hard to use.";
+const TEXT_REST = "A bottom-up framework for diagnosing why interactions succeed or fail — from whether users can discover what's possible (Discoverability) to whether the system communicates what happened (Feedback) to whether errors are slips or mistakes.";
+
+function para(cls) {
+  return '<p class="desc ' + cls + '"><span class="lead">' + TEXT_LEAD + '</span> ' + TEXT_REST + '</p>';
+}
+function navHTML(cls) {
+  return '<div class="' + cls + '">' +
+    '<div class="toc-heading">Default</div>' +
+    '<a class="toc-link"><span class="navtext"><span>Emotional &amp; Cognitive Signals</span>' +
+      '<span class="prov prov-system">On by default</span></span><span class="sw"></span></a>' +
+    '<div class="toc-heading">Frameworks</div>' +
+    '<a class="toc-link active"><span class="navtext"><span>The Design of Everyday Things</span>' +
+      '<span class="prov">Don Norman</span></span><span class="pending">4</span><span class="sw"></span></a>' +
+    '<a class="toc-link"><span class="navtext"><span>10 Usability Heuristics</span>' +
+      '<span class="prov">Jakob Nielsen</span></span><span class="sw"></span></a>' +
+  '</div>';
+}
+
+const PARAS = [
+  ["A · pure tint  — Apple", "lead normal 420 · rest muted", "l-normal r-muted w-normal"],
+  ["B · pure weight — signal card today", "lead starred 520 · rest text", "l-starred r-text w-normal"],
+  ["C · tint + starred", "lead starred 520 · rest muted", "l-starred r-muted w-normal"],
+  ["D · tint + emphasis", "lead emphasis 490 · rest muted", "l-emphasis r-muted w-normal"],
+  ["E · tint + light rest", "lead normal 420 · rest muted light 370", "l-normal r-muted w-light"],
+  ["F · weight only, emphasis", "lead emphasis 490 · rest text", "l-emphasis r-text w-normal"],
+  ["G · everything", "lead starred 520 · rest muted light 370", "l-starred r-muted w-light"],
+  ["H · control — no treatment", "one rank", "l-normal r-text w-normal"]
+];
+const NAVS = [
+  ["1 · codebook v2 today", "micro 9.6 · emphasis · text · gap 0", "s-micro pw-emphasis pc-text g-0"],
+  ["2 · the system (Sessions)", "caption 12 · normal · muted · gap 1px", "s-caption pw-normal pc-muted g-1"],
+  ["3 · system size, person weight", "caption 12 · emphasis · text · gap 1px", "s-caption pw-emphasis pc-text g-1"],
+  ["4 · system size, weight + tint", "caption 12 · emphasis · muted · gap 1px", "s-caption pw-emphasis pc-muted g-1"],
+  ["5 · badge stop", "badge 11.5 · normal · muted · gap 1px", "s-badge pw-normal pc-muted g-1"],
+  ["6 · badge stop, person weight", "badge 11.5 · emphasis · text · gap 2px", "s-badge pw-emphasis pc-text g-2"]
+];
+
+function card(title, meta, inner) {
+  return '<div class="frame"><div class="chrome"><span>' + title + '</span><span>' + meta +
+         '</span></div><div class="body">' + inner + '</div></div>';
+}
+document.getElementById("paraGrid").innerHTML =
+  PARAS.map(function (p) { return card(p[0], p[1], para(p[2])); }).join("");
+document.getElementById("navGrid").innerHTML =
+  NAVS.map(function (n) {
+    return card(n[0], n[1], '<div class="navframe">' + navHTML(n[2]) + "</div>");
+  }).join("");
+
+const ids = ["cLW","cRC","cRW","cPS","cPW","cPC","cG"];
+function sync() {
+  const v = {}; ids.forEach(function (i) { v[i] = document.getElementById(i).value; });
+  const live = document.getElementById("live");
+  live.className = "desc " + v.cLW + " " + v.cRC + " " + v.cRW;
+  live.innerHTML = '<span class="lead">' + TEXT_LEAD + "</span> " + TEXT_REST;
+  document.getElementById("pOut").textContent = [v.cLW, v.cRC, v.cRW].join(" · ").replace(/[lrw]-/g, "");
+  document.getElementById("liveNav").innerHTML = navHTML(v.cPS + " " + v.cPW + " " + v.cPC + " " + v.cG);
+  document.getElementById("nOut").textContent =
+    [v.cPS, v.cPW, v.cPC, v.cG].join(" · ").replace(/(s|pw|pc|g)-/g, "");
+}
+ids.forEach(function (i) { document.getElementById(i).addEventListener("change", sync); });
+sync();
+
+document.getElementById("pal").addEventListener("change", function (e) {
+  document.documentElement.setAttribute("data-color-theme", e.target.value);
+});
+document.getElementById("sch").addEventListener("change", function (e) {
+  if (e.target.value) document.documentElement.setAttribute("data-force", e.target.value);
+  else document.documentElement.removeAttribute("data-force");
+});
+</script>
+</body>
+</html>

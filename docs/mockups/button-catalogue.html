@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<title>Button catalogue — what we actually have</title>
+<style>
+:root {
+  color-scheme: light dark;
+
+  /* Lifted verbatim from bristlenose/theme — not approximations. */
+  --bn-colour-bg:            light-dark(#ffffff, #111111);
+  --bn-colour-text:          light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:         light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:        light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-border-hover:  light-dark(#d1d5db, #4b5563);
+  --bn-colour-accent:        light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:         light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:      light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:      light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:    light-dark(#374151, #d1d5db);
+  --bn-nav-selection-bg:     light-dark(#efefef, #2b2b2b);
+  --bn-sentiment-frustration: light-dark(#ea580c, #fb923c);
+
+  --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --bn-text-micro:   0.6875rem;
+  --bn-text-caption: 0.75rem;
+  --bn-text-label:   0.8125rem;
+  --bn-text-body:    0.9375rem;
+  --bn-weight-light: 370;
+  --bn-weight-normal: 420;
+  --bn-weight-emphasis: 490;
+  --bn-weight-strong: 700;
+
+  --bn-space-xs: 0.15rem; --bn-space-sm: 0.35rem; --bn-space-md: 0.75rem;
+  --bn-space-lg: 1.5rem;  --bn-space-xl: 2rem;
+  --bn-radius-sm: 3px; --bn-radius-md: 6px; --bn-radius-lg: 8px; --bn-radius-pill: 999px;
+  --bn-transition-fast: 0.15s ease;
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:        light-dark(#fdfbf7, #1c1a17);
+  --bn-colour-text:      light-dark(#2b2722, #e8e2d8);
+  --bn-colour-muted:     light-dark(#7a7266, #a39a8c);
+  --bn-colour-border:    light-dark(#e6ddc9, #3a352d);
+  --bn-colour-accent:    light-dark(#8c4a3f, #c97b6a);
+  --bn-colour-quote-bg:  light-dark(#f5f0e6, #252119);
+  --bn-nav-selection-bg: light-dark(#e6ddc9, #2d2922);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: var(--bn-space-xl);
+  font-family: var(--bn-font-body);
+  font-size: var(--bn-text-label);
+  color: var(--bn-colour-text);
+  background: var(--bn-colour-bg);
+  line-height: 1.5;
+}
+h1 { font-size: 1.5rem; font-weight: var(--bn-weight-strong); margin: 0 0 var(--bn-space-sm); }
+h2 {
+  font-size: var(--bn-text-body); font-weight: var(--bn-weight-emphasis);
+  margin: var(--bn-space-xl) 0 var(--bn-space-md);
+  padding-bottom: var(--bn-space-sm);
+  border-bottom: 1px solid var(--bn-colour-border);
+}
+.lede { color: var(--bn-colour-muted); max-width: 62ch; margin: 0 0 var(--bn-space-lg); }
+
+/* ── THE ATOM, verbatim from theme/atoms/modal.css ───────────────────── */
+.bn-btn {
+  font-family: inherit;
+  font-size: var(--bn-text-label);
+  padding: 0.4rem 1rem;
+  border-radius: var(--bn-radius-md);
+  border: 1px solid var(--bn-colour-border);
+  cursor: pointer;
+  transition: background var(--bn-transition-fast), color var(--bn-transition-fast);
+}
+.bn-btn-cancel    { background: var(--bn-colour-bg); color: var(--bn-colour-text); }
+.bn-btn-cancel:hover { background: var(--bn-colour-quote-bg); }
+.bn-btn-danger    { background: var(--bn-sentiment-frustration); color: #fff; border-color: var(--bn-sentiment-frustration); }
+.bn-btn-danger:hover  { opacity: 0.85; }
+.bn-btn-primary   { background: var(--bn-colour-accent); color: #fff; border-color: var(--bn-colour-accent); }
+.bn-btn-primary:hover { opacity: 0.85; }
+.bn-btn-secondary { background: var(--bn-colour-bg); color: var(--bn-colour-text); }
+.bn-btn-secondary:hover { background: var(--bn-colour-quote-bg); }
+.bn-btn:disabled  { opacity: 0.5; cursor: not-allowed; }
+
+/* The size axis — v2-provisional, scoped in the real CSS to .v2-layout /
+   .section-heading. Unscoped here so the specimens render. */
+.bn-btn-sm { font-size: var(--bn-text-caption); padding: 0.25rem 0.7rem; }
+.bn-btn-lg { font-size: var(--bn-text-body);    padding: 0.5rem 1.15rem; }
+
+/* ── PROPOSED, not in the theme. Clearly marked everywhere it appears. ── */
+.p-quiet {
+  background: transparent; color: var(--bn-colour-accent); border-color: transparent;
+}
+.p-quiet:hover { background: var(--bn-colour-hover); }
+.p-tinted {
+  background: var(--bn-colour-hover); color: var(--bn-colour-accent);
+  border-color: transparent;
+}
+.p-tinted:hover { background: var(--bn-colour-hover); filter: brightness(0.96); }
+.p-outline {
+  background: transparent; color: var(--bn-colour-accent);
+  border-color: var(--bn-colour-accent);
+}
+.p-outline:hover { background: var(--bn-colour-hover); }
+
+/* ── Catalogue chrome ────────────────────────────────────────────────── */
+table { border-collapse: collapse; width: 100%; max-width: 900px; }
+th, td { text-align: left; padding: var(--bn-space-md) var(--bn-space-md) var(--bn-space-md) 0; vertical-align: middle; border-bottom: 1px solid var(--bn-colour-border); }
+th { font-weight: var(--bn-weight-emphasis); font-size: var(--bn-text-caption); color: var(--bn-colour-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+code { font-family: var(--bn-font-mono); font-size: var(--bn-text-caption); background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); padding: 0.1em 0.4em; border-radius: var(--bn-radius-sm); }
+.note { color: var(--bn-colour-muted); font-size: var(--bn-text-caption); }
+.new { color: var(--bn-sentiment-frustration); font-weight: var(--bn-weight-emphasis); }
+
+/* Artefact frame — real pixels live inside, never commentary. */
+.frame { border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-lg); background: var(--bn-colour-bg); overflow: hidden; max-width: 900px; }
+.frame-bar { background: var(--bn-colour-quote-bg); border-bottom: 1px solid var(--bn-colour-border); padding: var(--bn-space-sm) var(--bn-space-md); font-size: var(--bn-text-micro); color: var(--bn-colour-muted); font-family: var(--bn-font-mono); }
+.frame-body { padding: var(--bn-space-lg); }
+
+/* Commentary — deliberately not-the-product. */
+.commentary {
+  max-width: 900px; margin: var(--bn-space-md) 0 var(--bn-space-xl);
+  border-left: 3px solid var(--bn-colour-border-hover);
+  background: repeating-linear-gradient(45deg, transparent, transparent 6px, color-mix(in srgb, var(--bn-colour-border) 30%, transparent) 6px, color-mix(in srgb, var(--bn-colour-border) 30%, transparent) 7px);
+  padding: var(--bn-space-md) var(--bn-space-lg);
+}
+.commentary::before { content: "COMMENTARY"; display: block; font-family: var(--bn-font-mono); font-size: var(--bn-text-micro); color: var(--bn-colour-muted); letter-spacing: 0.08em; margin-bottom: var(--bn-space-sm); }
+.commentary p { margin: 0 0 var(--bn-space-sm); }
+.commentary p:last-child { margin-bottom: 0; }
+
+/* The real review row, lifted from theme/organisms/codebook-v2.css */
+.pg-review-row { margin-top: var(--bn-space-md); display: flex; align-items: baseline; gap: 0.55rem; flex-wrap: wrap; }
+.pg-review-meta { font-size: var(--bn-text-label); color: var(--bn-colour-text); }
+.pg-review-meta .undec { color: var(--bn-colour-muted); }
+
+.controls { display: flex; gap: var(--bn-space-md); align-items: center; margin-bottom: var(--bn-space-lg); }
+.controls button { font: inherit; padding: 0.3rem 0.8rem; border-radius: var(--bn-radius-md); border: 1px solid var(--bn-colour-border); background: var(--bn-colour-bg); color: var(--bn-colour-text); cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>Button catalogue</h1>
+<p class="lede">
+  Every button style that exists in <code>bristlenose/theme/atoms/modal.css</code>, at
+  every size the codebook lens uses, plus three proposals marked
+  <span class="new">NEW</span>. Rendered with the real classes and the real tokens.
+</p>
+
+<div class="controls">
+  <button onclick="document.documentElement.dataset.colorTheme = document.documentElement.dataset.colorTheme === 'edo' ? 'default' : 'edo'">Toggle palette</button>
+  <span class="note">Dark follows your system setting.</span>
+</div>
+
+<h2>1 · The Review button today</h2>
+
+<div class="frame">
+  <div class="frame-bar">codebook v2 — framework page, review row (actual)</div>
+  <div class="frame-body">
+    <div class="pg-review-row">
+      <span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span>
+      <button class="bn-btn bn-btn-sm">Review</button>
+    </div>
+  </div>
+</div>
+
+<div class="commentary">
+  <p><strong>It is not styled.</strong> The markup is <code>class="bn-btn bn-btn-sm"</code> —
+  no colour variant. The base <code>.bn-btn</code> sets font, padding, radius and border but
+  <em>declares no background</em>, so the button falls through to the browser's own
+  <code>buttonface</code>: measured <code>rgb(239,239,239)</code> with
+  <code>color: rgb(0,0,0)</code> — pure black, not <code>--bn-colour-text</code>.</p>
+  <p>So "drab and grey, a bit dead" is the accurate reading of an unstyled control. It also
+  explains "low contrast yet too noticeable": the fill is a UA grey that belongs to no
+  palette, and it survives a palette switch unchanged — the one thing on the page that does.</p>
+</div>
+
+<h2>2 · What exists</h2>
+
+<table>
+  <tr><th>Class</th><th>sm</th><th>default</th><th>lg</th><th>Notes</th></tr>
+  <tr>
+    <td><code>.bn-btn</code><br><span class="note">bare</span></td>
+    <td><button class="bn-btn bn-btn-sm">Review</button></td>
+    <td><button class="bn-btn">Review</button></td>
+    <td><button class="bn-btn bn-btn-lg">Review</button></td>
+    <td class="note">Today's Review. No background declared → UA grey.</td>
+  </tr>
+  <tr>
+    <td><code>.bn-btn-secondary</code></td>
+    <td><button class="bn-btn bn-btn-secondary bn-btn-sm">Review</button></td>
+    <td><button class="bn-btn bn-btn-secondary">Review</button></td>
+    <td><button class="bn-btn bn-btn-secondary bn-btn-lg">Review</button></td>
+    <td class="note">Page background + text + hairline. Browse Library uses this at <code>lg</code>.</td>
+  </tr>
+  <tr>
+    <td><code>.bn-btn-cancel</code></td>
+    <td><button class="bn-btn bn-btn-cancel bn-btn-sm">Review</button></td>
+    <td><button class="bn-btn bn-btn-cancel">Review</button></td>
+    <td><button class="bn-btn bn-btn-cancel bn-btn-lg">Review</button></td>
+    <td class="note"><strong>Byte-identical to secondary.</strong> Two names, one appearance.</td>
+  </tr>
+  <tr>
+    <td><code>.bn-btn-primary</code></td>
+    <td><button class="bn-btn bn-btn-primary bn-btn-sm">Review</button></td>
+    <td><button class="bn-btn bn-btn-primary">Review</button></td>
+    <td><button class="bn-btn bn-btn-primary bn-btn-lg">Review</button></td>
+    <td class="note">Accent fill. The page already spends this on Install.</td>
+  </tr>
+  <tr>
+    <td><code>.bn-btn-danger</code></td>
+    <td><button class="bn-btn bn-btn-danger bn-btn-sm">Review</button></td>
+    <td><button class="bn-btn bn-btn-danger">Review</button></td>
+    <td><button class="bn-btn bn-btn-danger bn-btn-lg">Review</button></td>
+    <td class="note">Frustration orange. Not this — nothing is being destroyed.</td>
+  </tr>
+  <tr>
+    <td><code>:disabled</code></td>
+    <td><button class="bn-btn bn-btn-secondary bn-btn-sm" disabled>Review</button></td>
+    <td><button class="bn-btn bn-btn-primary" disabled>Review</button></td>
+    <td><button class="bn-btn bn-btn-secondary bn-btn-lg" disabled>Review</button></td>
+    <td class="note">0.5 opacity on any variant.</td>
+  </tr>
+</table>
+
+<div class="commentary">
+  <p><strong>Five names, four appearances.</strong> <code>cancel</code> and
+  <code>secondary</code> declare the same two properties — worth collapsing, or worth one of
+  them becoming the quiet style below.</p>
+  <p><strong>The size axis is provisional and scoped.</strong> <code>.bn-btn-sm</code> /
+  <code>-lg</code> live in <code>codebook-v2.css</code> under <code>.v2-layout</code> and
+  <code>.section-heading</code>, not in the atom — so they work on this lens and nowhere
+  else. Promoting them to the atom is a separate decision.</p>
+</div>
+
+<h2>3 · Proposals <span class="new">NEW — none of these exist yet</span></h2>
+
+<table>
+  <tr><th>Proposed</th><th>sm</th><th>In situ</th><th>Argument</th></tr>
+  <tr>
+    <td><code>.bn-btn-quiet</code></td>
+    <td><button class="bn-btn bn-btn-sm p-quiet">Review</button></td>
+    <td>
+      <div class="pg-review-row">
+        <span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span>
+        <button class="bn-btn bn-btn-sm p-quiet">Review</button>
+      </div>
+    </td>
+    <td class="note">Accent text, no fill, no border until hover. The macOS <em>plain</em> button — what Finder and Mail use for a verb that is available but not urged. Lightest possible.</td>
+  </tr>
+  <tr>
+    <td><code>.bn-btn-tinted</code></td>
+    <td><button class="bn-btn bn-btn-sm p-tinted">Review</button></td>
+    <td>
+      <div class="pg-review-row">
+        <span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span>
+        <button class="bn-btn bn-btn-sm p-tinted">Review</button>
+      </div>
+    </td>
+    <td class="note">Accent text on the accent's own pale wash (<code>--bn-colour-hover</code>). Reads as a control without competing with Install. Closest to macOS 26's tinted style.</td>
+  </tr>
+  <tr>
+    <td><code>.bn-btn-outline</code></td>
+    <td><button class="bn-btn bn-btn-sm p-outline">Review</button></td>
+    <td>
+      <div class="pg-review-row">
+        <span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span>
+        <button class="bn-btn bn-btn-sm p-outline">Review</button>
+      </div>
+    </td>
+    <td class="note">Accent border and text. More present than tinted; risks reading as a second primary next to Install.</td>
+  </tr>
+</table>
+
+<h2>4 · Side by side, in the real row</h2>
+
+<div class="frame">
+  <div class="frame-bar">the same row, one option each — scan for which one you stop on</div>
+  <div class="frame-body">
+    <div class="pg-review-row"><span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span><button class="bn-btn bn-btn-sm">Review</button><span class="note">&nbsp;&nbsp;today (unstyled)</span></div>
+    <div class="pg-review-row"><span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span><button class="bn-btn bn-btn-secondary bn-btn-sm">Review</button><span class="note">&nbsp;&nbsp;secondary</span></div>
+    <div class="pg-review-row"><span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span><button class="bn-btn bn-btn-sm p-quiet">Review</button><span class="note">&nbsp;&nbsp;quiet <span class="new">NEW</span></span></div>
+    <div class="pg-review-row"><span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span><button class="bn-btn bn-btn-sm p-tinted">Review</button><span class="note">&nbsp;&nbsp;tinted <span class="new">NEW</span></span></div>
+    <div class="pg-review-row"><span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span><button class="bn-btn bn-btn-sm p-outline">Review</button><span class="note">&nbsp;&nbsp;outline <span class="new">NEW</span></span></div>
+    <div class="pg-review-row"><span class="pg-review-meta">28 tags on 2 quotes<span class="undec"> · 4 undecided</span></span><button class="bn-btn bn-btn-primary bn-btn-sm">Review</button><span class="note">&nbsp;&nbsp;primary</span></div>
+  </div>
+</div>
+
+<div class="commentary">
+  <p><strong>The competition to judge against:</strong> this page already has
+  <code>Browse Library</code> (secondary, <code>lg</code>) in the zone title and
+  <code>Install</code> / <code>Uninstall</code> in the gutter. Review is a third verb on the
+  same screen, and the question is what rank it should hold among them — not whether it
+  looks nice alone.</p>
+  <p><strong>Two things this catalogue does not settle.</strong> Whether the size axis is
+  promoted out of <code>codebook-v2.css</code> into the atom, and whether
+  <code>cancel</code>/<code>secondary</code> collapse into one name. Both are cheap once
+  the appearance is chosen.</p>
+  <p class="note">Scale note: these are the <em>web</em> type tokens (label 13px, caption
+  12px). The desktop app substitutes an Apple scale in
+  <code>tokens-desktop-v1.css</code> — caption is 11px there — so every specimen renders a
+  shade smaller in the <code>.app</code>. Relative weights are unchanged.</p>
+</div>
+
+</body>
+</html>

@@ -144,13 +144,9 @@ export function CodebookV2Page({
             // sentence wearing a border is not a control, and it read as more
             // prominent than Install, which it must not be.
             <div className="pg-review-row">
-              <button
-                className="bn-btn bn-btn-sm"
-                onClick={() => onReview(book.id)}
-                data-testid="bn-v2-review"
-              >
-                Review
-              </button>
+              {/* The counts lead, the verb follows. The button read as the
+                  subject of the row when it came first; the sentence is the
+                  finding and Review is what you do about it. */}
               <span className="pg-review-meta">
                 {tagCount} {plural(tagCount, "tag", "tags")} on {book.quotes}{" "}
                 {plural(book.quotes, "quote", "quotes")}
@@ -158,6 +154,25 @@ export function CodebookV2Page({
                   <span className="undec"> &middot; {book.pending} undecided</span>
                 )}
               </span>
+              {/* `bn-btn-secondary`, not a bare `bn-btn`. The base atom sets
+                  font, padding, radius and border but declares NO background,
+                  so a bare `.bn-btn` falls through to the browser's own
+                  `buttonface` — measured rgb(239,239,239) on black, a grey
+                  belonging to no palette and the one thing on the page that
+                  survived a palette switch unchanged. That is what read as
+                  "low contrast and yet too noticeable, and a bit dead": an
+                  unstyled control, not a styling choice.
+
+                  `secondary` over `cancel`: the two declare identical
+                  properties, so the pixels are the same, but `cancel` is a
+                  dismissal verb and this button reviews. */}
+              <button
+                className="bn-btn bn-btn-secondary bn-btn-sm"
+                onClick={() => onReview(book.id)}
+                data-testid="bn-v2-review"
+              >
+                Review
+              </button>
             </div>
           ) : (
             <div className="pg-stat">
@@ -176,9 +191,51 @@ export function CodebookV2Page({
 
         {/* A fixed-width gutter, not a fixed box (D13). What fills it — a
             jacket, initials, a headshot, nothing — is deferred per codebook;
-            the reserved space is what the layout depends on. */}
+            the reserved space is what the layout depends on.
+
+            The author card fills it for now. It was rendering below the page,
+            bottom-left, which put the one piece of provenance a researcher
+            might actually weigh — who wrote this framework, and what they are
+            known for — furthest from the title that raises the question.
+
+            PARKED, not deleted: the graphic placeholder. It reserved the
+            gutter for a jacket / initials / headshot that has not been
+            designed, and while it is undesigned it is a large grey rectangle
+            competing with the thing now occupying the same space. D13's
+            contract is the WIDTH, which the gutter still holds, so restoring
+            it is uncommenting one line.
+            <div className="pg-graphic" aria-hidden="true" /> */}
         <div className="pg-side">
-          <div className="pg-graphic" aria-hidden="true" />
+          {/* `.preview-author` and its children are the shipped card from the
+              codebook picker — same treatment, same type, same link styling.
+              Its wrapper there (`.preview-body-sidebar`, a fixed 260px column)
+              is deliberately NOT reused: `.pg-side` already is the column, and
+              two elements declaring a width is how a gutter stops being one
+              number. */}
+          {(tpl?.author_bio || links.length > 0) && (
+            <div className="preview-author" data-testid="bn-v2-author">
+              {book.provenanceIsPerson && (
+                <div className="preview-author-name">{book.provenance}</div>
+              )}
+              {tpl?.author_bio && (
+                <div className="preview-author-bio">{tpl.author_bio}</div>
+              )}
+              {links.length > 0 && (
+                <div className="preview-author-links">
+                  {links.map((l) => (
+                    <a
+                      key={l.href}
+                      href={l.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {l.label} &#x2197;
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {canInstall(book) && !readOnly && (
             <div className="pg-actions">
               {book.installed ? (
@@ -202,33 +259,6 @@ export function CodebookV2Page({
           )}
         </div>
       </div>
-
-      {(tpl?.author_bio || links.length > 0) && (
-        <div className="preview-body-sidebar">
-          <div className="preview-author">
-            {book.provenanceIsPerson && (
-              <div className="preview-author-name">{book.provenance}</div>
-            )}
-            {tpl?.author_bio && (
-              <div className="preview-author-bio">{tpl.author_bio}</div>
-            )}
-            {links.length > 0 && (
-              <div className="preview-author-links">
-                {links.map((l) => (
-                  <a
-                    key={l.href}
-                    href={l.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {l.label} &#x2197;
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {tagCount === 0 && !book.floor ? (
         // Bleak on purpose (D26): no illustration, no call to action, no

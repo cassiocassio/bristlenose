@@ -41,6 +41,10 @@
 .v2-nav-text {
     display: flex;
     flex-direction: column;
+    /* 1px, matching `.session-entry-speakers` — the shipped two-line row. The
+       stack had no gap at all, so line-height was doing the entire job of
+       separating a title from its subtitle. */
+    gap: 1px;
     min-width: 0;
     flex: 1;
 }
@@ -53,7 +57,26 @@
    default") must not borrow it: dressing a configuration state as a cultural
    figure is a category error the eye catches immediately. D23. */
 .v2-nav-provenance {
-    font-size: var(--bn-text-micro);
+    /* THE SUBTITLE STOP, not the glyph stop. This was `--bn-text-micro`
+       (9.6px web / 10px desktop) — two stops below the row title, and a size
+       the navigator otherwise uses for exactly two things, neither of them
+       words: a thumbnail placeholder glyph and a badge. An author's name is
+       prose and needs a prose size.
+
+       `--bn-text-badge` (11.5 / 11) is where the sidebar already puts a
+       subtitle: `.tag-sidebar-subtitle` sits at this stop directly beneath a
+       `.tag-sidebar-header .sidebar-title` at `--bn-text-label` — the same
+       title-over-subtitle relationship this row has. Sessions' second line
+       (`.session-entry-date`) is a stop higher at `--bn-text-caption`, and
+       deliberately so: a date and a duration are *metadata*, machine facts
+       about the row. An attribution is a subtitle, which is prose about the
+       thing above it. Different jobs, different stops.
+
+       On desktop this lands on macOS body over subheadline (13 / 11), which
+       is a real Apple pairing — and the 2px step separates the two ranks more
+       legibly than caption's 1px would. */
+    font-size: var(--bn-text-badge);
+    line-height: var(--bn-text-badge-lh);
     font-weight: var(--bn-weight-emphasis);
     color: var(--bn-colour-text);
     white-space: nowrap;
@@ -90,7 +113,29 @@
    control (Safari 17.4+ `<input type="checkbox" switch>`) is preferred and
    needs none of this — it brings its own spring, focus ring, Increase Contrast
    and Reduce Motion. D15. */
-.v2-nav-row .enable { flex-shrink: 0; }
+/* THE PLATFORM SWITCH IS SIZED HERE, NOT LEFT TO ITS INTRINSIC DEFAULT.
+   `<input type="checkbox" switch>` brings its own geometry, and WebKit's
+   default is a full-size control — roughly the 38x22 NSSwitch, on a row whose
+   whole point is that the switch rides *beside* two lines of text without
+   dominating them. So the two code paths shipped at different sizes: the
+   fallback carried the settled 26x15 and the native one carried nothing but
+   `flex-shrink`, which meant the surface a Mac user actually sees (embedded
+   WebKit takes this branch; only the CLI SPA falls back) was the one that had
+   never been sized. It read as too big because it was.
+
+   26x15 is the size settled in `docs/mockups/codebook-v2-parity.html`, which
+   paired both controls at it side by side and measured that the platform
+   switch scales cleanly by CSS width/height. The ratio is the full-size
+   track's, kept exactly: 38/22 = 1.727, 26/15 = 1.733.
+
+   Nothing else is declared. The platform owns the knob, the spring curve, the
+   focus ring, Increase Contrast and Reduce Motion — that is the entire reason
+   for preferring this control, and restyling any of it would forfeit it. */
+.v2-nav-row .enable {
+    flex-shrink: 0;
+    width: 26px;
+    height: 15px;
+}
 
 .v2-nav-row .sw.mini {
     position: relative;
@@ -106,17 +151,17 @@
 .v2-nav-row .sw.mini::after {
     content: "";
     position: absolute;
-    top: 1.5px;
-    left: 12.5px;
-    width: 12px;
-    height: 12px;
+    top: 2px;
+    left: 13px;
+    width: 11px;
+    height: 11px;
     border-radius: 50%;
     background: #fff;
     transition: left var(--bn-transition-fast);
 }
 
 .v2-nav-row .sw.mini.offstate { background: var(--bn-colour-border-hover); }
-.v2-nav-row .sw.mini.offstate::after { left: 1.5px; }
+.v2-nav-row .sw.mini.offstate::after { left: 2px; }
 
 .v2-nav-row .sw.mini:focus-visible {
     outline: 2px solid var(--bn-colour-accent);
@@ -155,6 +200,30 @@
     gap: var(--bn-space-md);
 }
 
+/* The author card fills the gutter's full width. `.pg-side` is
+   `align-items: flex-end`, which is right for the Uninstall button (a control
+   hugging the trailing edge) and wrong for a card, which would otherwise
+   shrink to its text. The card brings its own background, radius and padding
+   from `.preview-author` — the shipped treatment from the codebook picker —
+   and takes only its width from here. */
+.pg-side .preview-author { align-self: stretch; }
+
+/* The author's links STACK in the gutter. `.preview-author-links` is
+   `flex-wrap: wrap` with a `--bn-space-lg` gap, which is right in the browse
+   modal — that card is wide enough to hold three links on one row. At 240px
+   only two fit, so the third wraps and the group reads as accidentally
+   arranged rather than deliberately laid out: the eye sees a ragged two-then-
+   one shape and looks for a meaning that isn't there. A column is
+   deterministic at any count. The gap comes down with it — 1.5rem is
+   inter-column air, and far too much between stacked lines. */
+.pg-side .preview-author-links {
+    flex-direction: column;
+    gap: var(--bn-space-sm);
+}
+
+/* PARKED with its element (see CodebookV2Page): the placeholder reserved the
+   gutter for a jacket / initials / headshot that has not been designed. Kept
+   so restoring it stays the one-line uncomment the call site promises. */
 .pg-graphic {
     width: 100%;
     aspect-ratio: 3 / 4;

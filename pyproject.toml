@@ -85,7 +85,7 @@ dev = [
     # still needs `pre-commit install` once per clone.
     "pre-commit>=4.0",
     "httpx>=0.27",
-    "mcp>=2.0,<2.1",
+    "mcp>=2.0,<2.2",
     "mlx>=0.16; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "mlx-whisper>=0.4; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
@@ -127,7 +127,7 @@ serve = [
 # than raising them — a change across three call sites plus tests, not a
 # version bump. Held register: docs/dependency-premortem-log.md.
 mcp = [
-    "mcp>=2.0,<2.1",
+    "mcp>=2.0,<2.2",
 ]
 
 # Release-time tooling. Run on the release machine when cutting a

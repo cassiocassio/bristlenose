@@ -57,6 +57,33 @@ not a new invention, which is most of why it is cheap.
 
 ## 2. The register
 
+> **31 Aug 2026 — one new format, deliberately NOT registered, and one rule
+> gap it exposed.**
+>
+> `frontend/src/utils/codebookReach.ts` renders *"28 tags · applied to 2 quotes
+> in Ikea"* for the codebook browse card and its detail page. It is **TypeScript
+> only** — no Python or Swift twin exists, verified — so by this register's own
+> rule (a CLI-only format enrols *"if any of them ever gains a second
+> implementation"*) it stays out. Recorded here so the absence reads as
+> *checked* rather than *overlooked*, which is the whole value of a register.
+>
+> It also uses a **hand-rolled English ternary** for plurals, not i18next CLDR —
+> a fourth mechanism beside the three the `plural_category` row names. That is
+> intentional and time-boxed: codebook v2 is dev-gated and English-only until it
+> graduates, which is also when its chrome needs locale keys. It is debt, and
+> this is where a future contributor would grep for it.
+>
+> **The rule gap:** §5's one-stem rule governs *cross-language* families. This
+> module was first written as `codebookCounts.ts` while `codebookCounts()`
+> already existed in `lensSubtitle.ts`, returning something else entirely — two
+> unrelated things under one stem, in the same language, which a grep for the
+> family would have conflated. Renamed the same day. **The stem rule needs a
+> same-language clause: a name must not collide with an existing helper in its
+> own language either.** Note the two are also two renderings of the same datum
+> — `lensSubtitle.ts` says "47 Tags" (localised, capitalised) for the window
+> subtitle while this says "28 tags" (hand-pluralised, lowercase) in the page
+> body. That is the `duration_human` story starting again inside one language.
+
 | Format | Datum | Python | TypeScript | Swift | Status |
 |---|---|---|---|---|---|
 | `duration_human` | elapsed span | `_format_duration_human` | `formatDurationHuman` | `DurationFormat.human` | **aligned**, pinned |

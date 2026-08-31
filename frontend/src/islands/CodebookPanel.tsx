@@ -684,9 +684,22 @@ export function CodebookPanel({ projectId, refreshKey = 0, projectName }: Codebo
                     : t("codebook.noQuotesTagged"))
                   : t("codebook.loadingImpact")}
                 {" "}
-                {removeConfirm.impact?.has_autocode
-                  ? t("codebook.autoCodePreserved")
-                  : t("codebook.restoreAnytime")}
+                {/* `codebook.autoCodePreserved` USED TO BE THE has_autocode
+                    arm, and it said "AutoCode results are preserved — reinstall
+                    any time". `remove_framework` deletes the AutoCode job and
+                    every proposal under it; its own docstring says "Nothing is
+                    preserved." So a destructive confirmation carried a false
+                    reassurance, in 21 locales, on the one screen a researcher
+                    reads before losing reviewed work.
+
+                    Both arms now take `restoreAnytime`, which is true of both:
+                    reinstalling is possible, it just starts empty. That is
+                    incomplete rather than wrong, and it needs no new
+                    translation — the v2 sheet is where the full cost is
+                    measured, and v2 replaces this lens. `autoCodePreserved` is
+                    left in the locale files as an orphan rather than swept from
+                    21 of them by regex; see codebook-defects.md. */}
+                {t("codebook.restoreAnytime")}
               </span>
             }
             confirmLabel={t("codebook.hide")}

@@ -16,7 +16,7 @@
  */
 
 import type { TemplateOut } from "../utils/types";
-import { reachPhrase, vocabularyPhrase } from "../utils/codebookCounts";
+import { reachPhrase, vocabularyPhrase } from "../utils/codebookReach";
 
 export interface BrowseBook {
   id: string;

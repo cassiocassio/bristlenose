@@ -709,7 +709,15 @@ describe("CodebookPanel — per-framework sections", () => {
     });
   });
 
-  it("hide dialog mentions preserved AutoCode results when has_autocode is true", async () => {
+  it("never promises the AutoCode run survives an uninstall", async () => {
+    // THIS TEST USED TO ASSERT THE OPPOSITE. It required the dialog to say
+    // "AutoCode results are preserved" — which `remove_framework` has never
+    // done: it deletes the AutoCode job and every proposal under it, and its
+    // own docstring says "Nothing is preserved." So the suite was defending a
+    // false reassurance on a destructive confirmation, in 21 locales, on the
+    // one screen a researcher reads before losing reviewed work. A test that
+    // pins a lie is worse than no test, because it makes correcting the lie
+    // look like a regression.
     const impactResp = { tag_count: 5, quote_count: 3, has_autocode: true };
     mockFetchSequence(MOCK_WITH_FRAMEWORKS, impactResp);
     render(<CodebookPanel projectId="1" />);
@@ -719,8 +727,9 @@ describe("CodebookPanel — per-framework sections", () => {
     const removeButtons = screen.getAllByText("Uninstall");
     await userEvent.click(removeButtons[0]);
     await waitFor(() => {
-      expect(screen.getByText(/AutoCode results are preserved/)).toBeInTheDocument();
+      expect(screen.getByText(/Tags will be removed from 3 quotes/)).toBeInTheDocument();
     });
+    expect(screen.queryByText(/preserved/i)).toBeNull();
   });
 
   it("Library tiles carry an Install / Uninstall toggle by import state", async () => {

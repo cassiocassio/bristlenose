@@ -301,6 +301,29 @@ shrinks to match in the same pass.)
 
 ## Enforcement — drift is CI-red
 
+> **Trued 31 Aug 2026 — this section overstates what exists, and has since it
+> was written.** Read it as the design, not the state. What actually ships:
+>
+> - **`window.__bnLayoutAudit()` does not exist.** The identifier appears only
+>   in two comments inside `frontend/src/islands/GridSpecimen.tsx`. The visible
+>   HUD half shipped; the callable probe never did — so the "one implementation,
+>   two surfaces" claim below is unrealised, and the WKWebView cannot be measured
+>   by the same ruler as Playwright.
+> - **The alignment spec asserts one of its three claims.**
+>   `e2e/tests/lens-datum.spec.ts` (106 lines, 5 lenses) checks `first-ink ==
+>   datum` and nothing else. There is no horizontal (content-left == token)
+>   assertion and no radius-tier assertion anywhere in `e2e/`.
+> - **The Specimen lens is real**, as described.
+>
+> The doc's own §"Gate" ~150 lines below says all of this — but a cold reader
+> meets *this* heading first, and a section titled "drift is CI-red" reading
+> present-tense is exactly the false pass the truing ritual exists to catch.
+> **Codebook v2 is a sixth titled lens** and is absent from the variants and
+> h1-scheme tables below; it shipped 30 Aug with the precise datum defect this
+> doc governs (fixed in *"codebook v2: the lens sat below the shared datum…"*)
+> and was enrolled in the datum spec on 31 Aug.
+
+
 - **`window.__bnLayoutAudit()`** — a small dev-gated probe in the SPA
   returning the audit numbers (inset received, first-ink top, content edges,
   per-class radii). One implementation, two surfaces: the Playwright gate

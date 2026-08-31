@@ -94,6 +94,38 @@ Examples from real data:
 
 ### Step 5 — Elaboration
 
+> **Trued 31 Aug 2026 — two corrections, and the second is the one that would
+> stop an implementation working.**
+>
+> **1. The treatment is COLOUR, not weight.** This section teaches "two
+> typographic weights — bold opening, regular continuation". That shipped, and
+> was replaced on 31 Aug by the shared `.bn-lead-para` atom
+> (`bristlenose/theme/atoms/lead-paragraph.css`): the lead in normal ink, the
+> remainder in `--bn-colour-muted`, **both at `--bn-weight-normal`**. Weight was
+> already spent on headings, starred quotes and destructive verbs; a bolded run
+> inside body prose reads as emphasis-in-a-sentence, where a tint reads as rank.
+> Chosen from `docs/mockups/lead-sentence-playground.html`, variant A.
+>
+> **2. The `||` delimiter is the contract, and it is not written down here.**
+> The model writes a literal `||` into the elaboration
+> (`bristlenose/llm/prompts/signal-elaboration.md`) and the renderer splits on
+> it — `frontend/src/utils/leadSentence.tsx`, consumed by
+> `AnalysisPage.tsx`. Signal cards pass **no `autoSplit`**, deliberately: an
+> author's marker beats any heuristic, and an unmarked elaboration stays one
+> rank rather than acquiring a break nobody authored. (The codebook-description
+> surface shares the splitter and *does* pass `autoSplit`, because its prose is
+> hand-written YAML carrying no marker.) A contributor implementing this section
+> as written produces an elaboration with no `||`, which renders unranked.
+>
+> The four worked splits below are **unchanged and still correct** — they are
+> about *where* the break falls, which is the part that did not move.
+>
+> Note the prompt still calls the halves "the bold assertion" and "the regular
+> continuation". Doc and prompt currently agree with each other and disagree
+> with the code, which is the worst of the three configurations; the prompt
+> wording is deliberately left for a separate pass, since editing it changes
+> model output and prompt versions are archived on change.
+
 One sentence with two typographic weights. Structure:
 
 **Bold opening** (the assertion): a self-contained clause stating what was found. This is the core finding — it should make sense on its own. End the bold portion at the first natural punctuation break: an em dash, a comma before a dependent clause, or an opening parenthetical. Aim for roughly the first third of the sentence by length.

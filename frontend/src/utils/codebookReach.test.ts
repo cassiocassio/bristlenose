@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { reachPhrase, vocabularyPhrase } from "./codebookCounts";
+import { reachPhrase, vocabularyPhrase } from "./codebookReach";
 
 describe("vocabularyPhrase — a property of the codebook", () => {
   it("names the size of the vocabulary", () => {

@@ -37,7 +37,7 @@ import type { CodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import { safeUrlOrNull } from "../utils/safeUrl";
 import type { CodebookGroupResponse, TemplateOut } from "../utils/types";
 import { renderLead } from "../utils/leadSentence";
-import { reachPhrase, vocabularyPhrase } from "../utils/codebookCounts";
+import { reachPhrase, vocabularyPhrase } from "../utils/codebookReach";
 
 export interface PageBook {
   id: string;

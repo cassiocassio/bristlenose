@@ -2388,9 +2388,18 @@ def configure(
 
     console.print()
     if canonical == "miro":
+        # The panel shipped; this line said it had not, for long enough to be
+        # logged twice as a known discrepancy and fixed neither time. It told a
+        # researcher who had just saved a token that the thing they saved it
+        # for did not exist — the one moment they are certain to read it.
+        #
+        # Scoped to the browser deliberately: `AppLayout` renders the NavBar
+        # (and so Send to Miro) only when NOT embedded, so the Mac app has no
+        # route to this panel and naming one would repeat the defect inverted.
         console.print(
-            "Miro access token saved. [dim]Miro board export is a parked feature "
-            "(future idea) — not yet available.[/dim]"
+            "Miro access token saved. Open a report with "
+            "[bold]bristlenose serve[/bold] and choose [bold]Send to Miro[/bold] "
+            "in the report toolbar."
         )
     else:
         _set_current_provider(canonical)

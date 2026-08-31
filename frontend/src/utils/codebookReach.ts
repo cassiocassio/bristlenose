@@ -13,7 +13,13 @@
  * marks the exact point where the scope changes from "this codebook, anywhere"
  * to "your corpus, here".
  *
- * @module codebookCounts
+ * NAMED `codebookReach`, NOT `codebookCounts`: `codebookCounts()` is already an
+ * unrelated function in `lensSubtitle.ts` returning `{codebooks, tags}` for the
+ * window subtitle. Two different things under one stem is the collision
+ * `docs/design-shared-formats.md` §5 exists to prevent — a grep for the family
+ * would have returned both. Renamed 31 Aug 2026, the same day it was added.
+ *
+ * @module codebookReach
  */
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);

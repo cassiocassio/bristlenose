@@ -67,7 +67,17 @@ behaviour was *already* a reversible, retained toggle. Only the words lied.
 
 ## Principles
 
-1. **Cost-safe play.** Getting a codebook onto your workbench is free. **Apply**
+1. **Cost-safe play.** ~~Getting a codebook onto your workbench is free.~~
+   **Reversed in codebook v2, 31 Aug 2026 — installing IS the spend.**
+   `importCodebookTemplate(id).then(() => startAutoCode(id))`
+   (`frontend/src/islands/CodebookV2.tsx`): Install fires AutoCode immediately,
+   with no separate confirmation, deliberately — *"it spends, but the researcher
+   asked by clicking, and a dialog on an additive act teaches them to dismiss
+   dialogs, which is what makes the destructive one stop working."* The
+   reversal was recorded as owed in `design-codebook-v2.md` (D4) and never
+   discharged here until now; a contributor reading this principle would have
+   built a free-install path the shipped lens does not have. The original text
+   is kept below so the change is legible. **Apply**
    (AutoCode) is the *one* deliberate spend. Disabling never re-spends and always
    keeps its results. _(Trued 2026-07-26: re-enabling is **no longer** free-if-
    unchanged in all cases — if sessions were imported while the codebook was off,

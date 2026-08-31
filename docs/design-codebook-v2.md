@@ -1,8 +1,16 @@
 ---
-status: draft
-last-trued: 2026-08-29
-trued-against: HEAD@main 3802f2af on 2026-08-29
+status: partial
+last-trued: 2026-08-31
+trued-against: HEAD@main 994d822c on 2026-08-31
 ---
+
+> **Trued 31 Aug 2026.** The previous header read `last-trued: 2026-08-29`
+> against `3802f2af` — *"true the copr reference line…"*, a **28 Aug** commit
+> about Fedora packaging that predates every commit which built this lens. The
+> header read fresh and the body predated the entire build, so a pointer sweep
+> passed this doc. Five decisions below were **revised in code** between 30 and
+> 31 Aug and each revision is annotated inline; where a decision now differs per
+> surface, the doc says so rather than restating the superseded form.
 
 # Codebook v2 — presentation, layout, flow
 
@@ -1876,6 +1884,18 @@ takes the shipped primary fill at **normal size** — `.add-btn .bn-btn-primary`
 Size does the work on the destination, fill does the work on the action, and
 neither borrows the other's device.
 
+> **Revised 31 Aug 2026 — the card pair is now Install `bn-btn-primary`,
+> Uninstall `bn-btn-secondary`** (`frontend/src/islands/CodebookV2Browse.tsx`,
+> commit *"install leads, uninstall recedes — the card pair is ranked by intent,
+> not by danger"*). The paragraph below argued the opposite and is preserved so
+> the reversal is legible. What changed the answer: until the button atom gained
+> a background (commit *"the button atom had no background…"*), a "neutral"
+> `.bn-btn` was not neutral — it fell through to the user agent's `buttonface`,
+> so this paragraph was comparing a chosen restraint against an unstyled
+> control. With a real resting state to compare against, ranking by *what you
+> came to do* beat ranking by danger; the confirmation sheet is where cost is
+> stated. Chosen from `docs/mockups/button-catalogue.html` §5, option D.
+
 **The browse card's Install stays neutral and normal.** On a grid of cards no
 single install is *the* action; a wall of accent-filled buttons would make the
 grid shout and would misrepresent a catalogue as a decision. Primary belongs to
@@ -1966,6 +1986,29 @@ oversight.
 
 
 ### D23 — the author slot carries provenance, and built-ins have provenance too
+
+> **Revised 31 Aug 2026 — D23 is now PER SURFACE.** The navigator shows a
+> **person or nothing**; the system fact ("On by default", "Available by
+> default") was dropped from it entirely
+> (`frontend/src/components/CodebookV2Sidebar.tsx`, commit *"…the rail's second
+> line is a person or nothing"*). **The page and the browse card keep it.**
+>
+> Why the split, since the decision below assumed one slot could carry both if
+> they differed in weight: in a **list** the eye reads the second line as one
+> slot with one meaning, and two rows apart it said "who made this" and "how
+> this is configured" — a false parallel however lightly the second is set.
+> Weight was answering the wrong question. It also cannot help *choose*, which
+> is all the rail is for: everything listed there is already installed, so
+> "Available by default" is not actionable. In the **catalogue** the same string
+> is decision-relevant — it separates a codebook that ships with Bristlenose
+> from a third party's framework — and the **page** shows one codebook, so no
+> comparison is invited. The list compares, the page explains, the catalogue
+> distinguishes.
+>
+> Also revised in the same pass: provenance moved `--bn-text-micro` →
+> `--bn-text-badge` (the sidebar's own subtitle stop, matching
+> `.tag-sidebar-subtitle` under a `.tag-sidebar-header .sidebar-title`), and the
+> two-line stack gained `gap: 1px` to match `.session-entry-speakers`.
 
 Settled 30 Aug, in two passes, and the second corrected an error in the first.
 

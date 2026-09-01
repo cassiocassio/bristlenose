@@ -7,6 +7,7 @@
 #
 # Chain (bailing on any non-zero exit):
 #   1. Pre-flight — identities, profiles, notarytool credentials.
+#   1c. test-swift.sh — BristlenoseTests (skipped on ad-hoc).
 #   2. Parallel:   fetch-ffmpeg.sh  &&  build-sidecar.sh
 #   3. sign-ffmpeg.sh (bundled static FFmpeg + ffprobe)
 #   4. sign-sidecar.sh (PyInstaller bundle; parallel inner loop)
@@ -28,6 +29,9 @@
 #                  Ad-hoc must be asked for: SIGN_IDENTITY_APPSTORE=-.
 #                  Legacy SIGN_IDENTITY is still accepted, with a warning.
 #   SIGN_JOBS      parallelism for sign-sidecar.sh; default hw.ncpu.
+#   SKIP_SWIFT_TESTS
+#                  set to 1 to skip step 1c on a signed build. Default off;
+#                  ad-hoc runs skip it automatically.
 #   ALLOW_RESIGN   pass-through for sign-sidecar.sh re-sign override.
 #   NOTARY_PROFILE notarytool --keychain-profile; default "bristlenose-notary"
 #                  (used by commit 4 onwards).
@@ -243,6 +247,42 @@ if [ "$SIGN_IDENTITY" != "-" ]; then
 fi
 
 bn_step_ok 1 elapsed=$((SECONDS-_bn_t1))
+
+# ------------------------------------------------------------
+# 1c. Swift unit suite (BristlenoseTests)
+# ------------------------------------------------------------
+# The only AUTOMATIC gate on the Swift target. CI does not build it at all
+# (desktop/CLAUDE.md), pytest and ruff cannot see it, and /end-session's step 4
+# is a ritual a session can skip — so without this a red suite reaches an
+# archive. It already sat red on main for 10 commits under a close-out sentinel
+# reading "tests": "passed" (31 Aug 2026, a stale Tab.allCases.count).
+#
+# Placed BEFORE the sidecar build, not after: a release run passes --force, so
+# step 2 is ~10 minutes every time, and a compile break should not cost that
+# first. ~3 min itself.
+#
+# Skipped on ad-hoc so dev iteration pays nothing — that loop is covered by
+# /end-session, and a build that cannot archive cannot ship. SKIP_SWIFT_TESTS=1
+# forces the skip on a signed build; it is deliberate and the report says so.
+if [ "$SIGN_IDENTITY" = "-" ]; then
+    bn_step_skip 1c phase=Verify name="Swift unit suite" \
+        detail="ad-hoc build — the dev loop is covered by /end-session step 4"
+elif [ "${SKIP_SWIFT_TESTS:-0}" = "1" ]; then
+    bn_step_skip 1c phase=Verify name="Swift unit suite" \
+        detail="SKIP_SWIFT_TESTS=1 — gate deliberately bypassed"
+else
+    bn_step_start 1c Verify "Swift unit suite" \
+        narrative="BristlenoseTests. The only automatic gate on the Swift target — CI never builds it."
+    _bn_t1c=$SECONDS
+    if ! "$SCRIPT_DIR/test-swift.sh" --quiet; then
+        bn_step_fail 1c detail="Swift suite red, or the test bundle failed to build"
+        bn_done fail
+        echo "error: Swift suite did not pass — see the failing test names above." >&2
+        echo "       reproduce: desktop/scripts/test-swift.sh" >&2
+        exit 1
+    fi
+    bn_step_ok 1c elapsed=$((SECONDS-_bn_t1c)) detail="BristlenoseTests green"
+fi
 
 # ------------------------------------------------------------
 # 2. Ensure the sidecar is fresh + signed (fetch ffmpeg + build + sign)

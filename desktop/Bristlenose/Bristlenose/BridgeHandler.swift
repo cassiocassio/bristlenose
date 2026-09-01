@@ -265,17 +265,23 @@ final class BridgeHandler: ObservableObject {
         guard let webView else { return }
         Task {
             do {
-                try await webView.callAsyncJavaScript(
+                // The `contentWorld:` label is load-bearing: `in: nil, in:
+                // .page` silently resolves to the completion-handler overload,
+                // whose try/await are no-ops and whose catch is dead — the
+                // documented BridgeHandler wrinkle, fixed here (P3) so a JS
+                // failure (`switchToTab` missing on a shim-less document)
+                // logs instead of vanishing.
+                _ = try await webView.callAsyncJavaScript(
                     "window.switchToTab(tab)",
                     arguments: ["tab": tab.rawValue],
                     in: nil,
-                    in: .page
+                    contentWorld: .page
                 )
                 // Ensure WKWebView has focus so bare-key shortcuts (s, h, [, ], m)
                 // work immediately after Cmd+1-5 tab switch.
                 webView.window?.makeFirstResponder(webView)
             } catch {
-                print("[BridgeHandler] switchToTab(\(tab)) FAILED: \(error)")
+                Self.log.error("switchToTab(\(tab.rawValue, privacy: .public)) failed: \(String(describing: error), privacy: .public)")
             }
         }
     }
@@ -292,20 +298,49 @@ final class BridgeHandler: ObservableObject {
         sessionsRouteMemory.clear()
     }
 
+    /// One pending lens intent — a lens the user activated while the rail was
+    /// lit on the prior but the document was still loading (D1-C + P3).
+    /// Replayed once when the SPA posts `ready`; discarded when the document
+    /// turns out to be the status page (honouring "go to Quotes" against a
+    /// failure page would be meaningless); cleared on project switch. One
+    /// slot, last click wins — internal `private(set)` so tests can observe
+    /// the lifecycle.
+    private(set) var pendingLensIntent: Tab?
+
+    /// Whether the pending intent was replayed for the current document —
+    /// read by `ContentView`'s lens-memory restore, which yields to it: a
+    /// lens the user explicitly clicked during boot outranks the remembered
+    /// one. Cleared with the rest of the per-project state in `reset()`.
+    private(set) var lensIntentReplayed = false
+
     /// Activate a lens the way the lens-activation affordances do — the
     /// sidebar lens rows, `LensRail`, and View ▸ ⌘1–5 all route here.
     ///
-    /// For every lens but Sessions this IS `switchToTab`. Sessions restores
-    /// the view the user left (design doc §Route memory): the remembered
-    /// transcript when there is one, the grid otherwise. `switchToTab` itself
-    /// stays pure — "go to the tab root" — which is what lets the popover's
-    /// All Sessions row reach the grid without the memory bouncing it back.
+    /// The policy lives in `LensActivation.decide` (table-tested): dispatch
+    /// on a live SPA (Sessions through its route memory), queue while the
+    /// document is loading and the rail is lit, return to the lens root when
+    /// re-activating the current lens (D3, Finder model — deliberately
+    /// bypassing the route memory, which is for returning, not re-clicking).
+    /// `switchToTab` itself stays pure — "go to the tab root" — which is what
+    /// lets the popover's All Sessions row reach the grid without the memory
+    /// bouncing it back.
     func activateLens(_ tab: Tab) {
-        if tab == .sessions, let sid = sessionsRouteMemory.restoreSessionID {
-            navigateToSession(sid)
-            return
+        switch LensActivation.decide(
+            tab: tab,
+            activeTab: activeTab,
+            documentState: documentState,
+            lensesAvailable: lensesAvailable,
+            restoreSessionID: sessionsRouteMemory.restoreSessionID
+        ) {
+        case .root(let target):
+            switchToTab(target)
+        case .restore(let sessionID):
+            navigateToSession(sessionID)
+        case .queue(let target):
+            pendingLensIntent = target
+        case .ignore:
+            break
         }
-        switchToTab(tab)
     }
 
     /// Navigate the SPA to a session's transcript via the
@@ -527,9 +562,13 @@ final class BridgeHandler: ObservableObject {
         }
         Task {
             do {
-                try await webView.callAsyncJavaScript(js, arguments: args, in: nil, in: .page)
+                // `contentWorld:` — the real async overload, live catch; see
+                // the wrinkle note in `switchToTab`.
+                _ = try await webView.callAsyncJavaScript(
+                    js, arguments: args, in: nil, contentWorld: .page
+                )
             } catch {
-                print("[BridgeHandler] menuAction(\(action)) FAILED: \(error)")
+                Self.log.error("menuAction(\(action, privacy: .public)) failed: \(String(describing: error), privacy: .public)")
             }
         }
     }
@@ -547,6 +586,18 @@ final class BridgeHandler: ObservableObject {
         case "ready":
             isReady = true
             documentState = .spa
+            // Replay the lens the user clicked during boot, if any — the
+            // queue is what makes a lit-on-the-prior rail a promise rather
+            // than a lie (P3). Routed back through `activateLens` so the
+            // sessions route memory applies exactly as a live click would.
+            // Safe ordering: the SPA installs its navigation shims in the
+            // same effect flush that posts `ready`, and that flush completes
+            // before this message crosses the process boundary.
+            if let pending = pendingLensIntent {
+                pendingLensIntent = nil
+                lensIntentReplayed = true
+                activateLens(pending)
+            }
             syncAnalysisAnimation()
             syncLocale()
             syncToolbarInset()
@@ -556,10 +607,11 @@ final class BridgeHandler: ObservableObject {
             // The server-rendered status page announcing itself (the SPA's
             // `ready` twin — `_IDENTITY_SCRIPT` in status_page.py). Lens
             // availability follows this: there is no SPA behind the page, so
-            // nothing an activation could reach.
+            // nothing an activation could reach — including a queued one.
             documentState = .statusPage(
                 StatusPageOutcome(bridgeValue: body["outcome"] as? String)
             )
+            pendingLensIntent = nil
 
         case "route-change":
             if let url = body["url"] as? String {
@@ -671,6 +723,8 @@ final class BridgeHandler: ObservableObject {
     func reset() {
         isReady = false
         documentState = .loading
+        pendingLensIntent = nil
+        lensIntentReplayed = false
         currentPath = ""
         currentAnchor = nil
         currentAnchorLens = nil

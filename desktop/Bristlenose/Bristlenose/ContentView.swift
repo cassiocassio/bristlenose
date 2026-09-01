@@ -805,6 +805,12 @@ struct ContentView: View {
         .onChange(of: bridgeHandler.isReady) { _, ready in
             guard ready, let id = selectedProjectID, lensRestoredFor != id else { return }
             lensRestoredFor = id
+            // A lens the user clicked during boot outranks the remembered
+            // one — the bridge replayed that intent on `ready` (P3), and
+            // restoring on top of it would navigate away from the user's
+            // explicit choice. The restore slot is still consumed above, so
+            // a later `isReady` flip can't restore either.
+            guard !bridgeHandler.lensIntentReplayed else { return }
             guard let project = projectIndex.projects.first(where: { $0.id == id }) else { return }
             // The seed's lens wins over the study's remembered one: it is a
             // deliberate "open THIS lens over there", and it is what makes the

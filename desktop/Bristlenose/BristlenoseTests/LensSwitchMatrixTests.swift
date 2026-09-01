@@ -105,6 +105,24 @@ struct LensSwitchMatrixTests {
         #expect(availability(bridge, prior: false) == .available)
     }
 
+    /// The boot-gap promise, end to end (P3): a lit rail during boot takes
+    /// the click as a queued intent and lands it when the SPA arrives — the
+    /// Mail model. Clicking a mailbox while it loads is not a dropped click.
+    @Test func clickDuringBootIsQueuedAndLandsOnArrival() {
+        let bridge = BridgeHandler()
+        bridge.reset()
+        bridge.lensesAvailable = true  // ContentView's mirror of the lit prior
+        #expect(availability(bridge, serve: .starting, prior: true) == .available)
+
+        bridge.activateLens(.quotes)
+        #expect(bridge.pendingLensIntent == .quotes)
+
+        bridge.handleMessage(["type": "ready"])
+        #expect(bridge.pendingLensIntent == nil)
+        #expect(bridge.lensIntentReplayed)
+        #expect(availability(bridge, prior: true) == .available)
+    }
+
     /// Mid-session document turnover without a project switch (serve restart,
     /// renderer-crash recovery): `didStartProvisionalNavigation` returns the
     /// document to `.loading` — the prior answers again until the new

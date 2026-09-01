@@ -525,6 +525,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// expansion (groups always; folders per `collapsed`), and reflects selection.
     func update(roots: [OutlineNode], selection: Set<SidebarSelection>, activeTab: Tab?,
                 lensesEnabled: Bool) {
+        // Captured BEFORE the store: the click gate reads the stored value
+        // live, but the rows' dimming is baked at cell build — so a flip that
+        // lands during a guarded window below must still repaint the lens
+        // rows, or look and act diverge (the paint-vs-gate TOCTOU, P4).
+        let lensAvailabilityChanged = self.lensesEnabled != lensesEnabled
+
         self.roots = roots
         self.activeTab = activeTab
         self.lensesEnabled = lensesEnabled
@@ -534,13 +540,40 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // its field editor and drops the in-flight keystrokes. Freeze the table
         // (model is already stored above) until the edit commits — the commit path
         // republishes and re-enters `update()` with `editingNodeID == nil`.
-        guard editingNodeID == nil else { return }
+        // The lens rows are exempt from the freeze: they are never the row
+        // being edited, and a targeted reload of other rows leaves the field
+        // editor (a subview of the edited cell) untouched.
+        guard editingNodeID == nil else {
+            if lensAvailabilityChanged { reloadLensRows() }
+            return
+        }
         // Same shape, different owner: a drop animation is mid-slide and the view's row
         // order is ahead of the tree. The release work item reloads against whatever
-        // tree landed while suppressed.
-        guard !reloadSuppressed else { return }
+        // tree landed while suppressed. Lens rows sit above the animating
+        // region and their indexes are read from the live view at call time,
+        // so the targeted repaint is order-safe here too.
+        guard !reloadSuppressed else {
+            if lensAvailabilityChanged { reloadLensRows() }
+            return
+        }
 
         reloadAndRestore()
+    }
+
+    /// Repaint just the five lens rows — used when `lensesEnabled` changes
+    /// while a guard above is skipping the full reload. `viewFor` reads the
+    /// freshly-stored flag, so the dimming the user sees and the click gate
+    /// the proposal handler enforces read one value again. Deliberately does
+    /// NOT touch selection: the capsule follows `applySelection`, which the
+    /// post-guard full reload re-runs.
+    private func reloadLensRows() {
+        var lensRows = IndexSet()
+        for row in 0..<outlineView.numberOfRows
+        where (outlineView.item(atRow: row) as? OutlineNode)?.isLens == true {
+            lensRows.insert(row)
+        }
+        guard !lensRows.isEmpty else { return }
+        outlineView.reloadData(forRowIndexes: lensRows, columnIndexes: IndexSet(integer: 0))
     }
 
     /// Reload the table and put back everything a `reloadData` drops: expansion,
@@ -746,6 +779,24 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         guard !changedSelection, editingNodeID == nil else { return }
         let row = outlineView.clickedRow
         guard row >= 0 else { return }   // empty space
+
+        // D3 (Finder model): clicking the ACTIVE lens re-activates it —
+        // `activateLens` routes a same-lens activation to the lens root, so a
+        // transcript's Sessions click returns to the grid. This click action
+        // is the reliable delegate for that case: the active lens row is
+        // already part of the genuine selection, so a click on it may not
+        // re-propose a selection change and `selectionIndexesForProposed-
+        // Selection` (which handles every OTHER lens click) never fires.
+        // Disjoint by construction — the proposal path is gated
+        // `tab != activeTab`, this one `tab == activeTab` — so no click can
+        // fire both. Lens rows never arm rename either way.
+        if let lensNode = outlineView.item(atRow: row) as? OutlineNode,
+           case .lens(let tab) = lensNode.kind {
+            if lensesEnabled, tab == activeTab {
+                DispatchQueue.main.async { [weak self] in self?.onActivateLens(tab) }
+            }
+            return
+        }
 
         // Sole-selection among the renamable rows. `selectedRowIndexes` can also
         // carry the active lens (composed capsule), so filter to selectable rows
@@ -1051,8 +1102,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             // re-runs applySelection many times/sec and would snap an optimistic capsule
             // back to the stale activeTab's lens before the route lands, a flicker.
             // Defer the activation off this call stack so switchToTab's state write can't
-            // re-enter applySelection mid-proposal (gruber's re-entrancy guard); guard
-            // tab != activeTab so re-clicking the active lens is a no-op.
+            // re-enter applySelection mid-proposal (gruber's re-entrancy guard). The
+            // `tab != activeTab` gate is DEDUPE plumbing, not policy: re-clicking the
+            // active lens is handled by `outlineViewClicked` (the click action), because
+            // a click on the already-selected active row may never re-propose and so
+            // never reaches this delegate. Same-lens semantics (return to lens root, D3)
+            // live in `BridgeHandler.activateLens` for every caller.
             projectRows = selectableRows(in: outlineView.selectedRowIndexes)
             if case .lens(let tab)? = (outlineView.item(atRow: lensRow) as? OutlineNode)?.kind,
                lensesEnabled, tab != activeTab {

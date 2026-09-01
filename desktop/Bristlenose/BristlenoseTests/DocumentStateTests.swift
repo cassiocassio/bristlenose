@@ -79,3 +79,76 @@ struct BridgeHandlerDocumentStateTests {
         #expect(bridge.documentState == .spa)
     }
 }
+
+/// The pending-intent lifecycle (P3): queued on a lit-but-loading rail,
+/// replayed exactly once on `ready`, discarded by a status page, cleared by
+/// a project switch. Dispatch itself is unobservable here (no WKWebView), so
+/// these assert the slot and the replayed flag — the seams `ContentView`'s
+/// memory restore yields to.
+@MainActor
+struct BridgeHandlerLensIntentTests {
+
+    private func litLoadingBridge() -> BridgeHandler {
+        let bridge = BridgeHandler()
+        bridge.lensesAvailable = true  // what ContentView mirrors when the prior lights the rail
+        return bridge
+    }
+
+    @Test func clickWhileLoadingQueues() {
+        let bridge = litLoadingBridge()
+        bridge.activateLens(.quotes)
+        #expect(bridge.pendingLensIntent == .quotes)
+        #expect(!bridge.lensIntentReplayed)
+    }
+
+    @Test func lastClickWins() {
+        let bridge = litLoadingBridge()
+        bridge.activateLens(.quotes)
+        bridge.activateLens(.analysis)
+        #expect(bridge.pendingLensIntent == .analysis)
+    }
+
+    @Test func dimRailDoesNotQueue() {
+        let bridge = BridgeHandler()  // lensesAvailable stays false
+        bridge.activateLens(.quotes)
+        #expect(bridge.pendingLensIntent == nil)
+    }
+
+    @Test func readyConsumesTheIntentOnce() {
+        let bridge = litLoadingBridge()
+        bridge.activateLens(.quotes)
+        bridge.handleMessage(["type": "ready"])
+        #expect(bridge.pendingLensIntent == nil)
+        #expect(bridge.lensIntentReplayed)
+        #expect(bridge.documentState == .spa)
+    }
+
+    @Test func readyWithNoIntentDoesNotClaimAReplay() {
+        // The flag gates ContentView's lens-memory restore — a plain ready
+        // with nothing queued must leave the restore free to run.
+        let bridge = litLoadingBridge()
+        bridge.handleMessage(["type": "ready"])
+        #expect(!bridge.lensIntentReplayed)
+    }
+
+    @Test func statusPageDiscardsTheIntent() {
+        // Honouring "go to Quotes" against a failure page would be
+        // meaningless — the queued intent dies with the lit state that
+        // took it (the expensive walk-back, in full).
+        let bridge = litLoadingBridge()
+        bridge.activateLens(.quotes)
+        bridge.handleMessage(["type": "status-page", "outcome": "failed"])
+        #expect(bridge.pendingLensIntent == nil)
+        #expect(!bridge.lensIntentReplayed)
+    }
+
+    @Test func projectSwitchClearsIntentAndReplayFlag() {
+        let bridge = litLoadingBridge()
+        bridge.activateLens(.quotes)
+        bridge.handleMessage(["type": "ready"])
+        #expect(bridge.lensIntentReplayed)
+        bridge.reset()
+        #expect(bridge.pendingLensIntent == nil)
+        #expect(!bridge.lensIntentReplayed)
+    }
+}

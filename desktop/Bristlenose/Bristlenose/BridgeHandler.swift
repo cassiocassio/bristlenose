@@ -21,6 +21,24 @@ final class BridgeHandler: ObservableObject {
     /// paint complete. Used to dismiss the loading overlay.
     @Published var isReady = false
 
+    /// Which document the detail WKWebView is hosting — see `DocumentState`.
+    /// Written by the two identity messages (`ready` / `status-page`) and
+    /// reset to `.loading` on project switch (`reset()`) and on every
+    /// main-frame navigation start (`WebView.Coordinator.
+    /// didStartProvisionalNavigation`), so it always describes the document
+    /// actually in the view, not the one before it. Unlike `isReady`, this is
+    /// never fabricated on a timeout — an unidentified document stays
+    /// `.loading`, deliberately (D2).
+    @Published var documentState: DocumentState = .loading
+
+    /// Whether the lens affordances can act — `ContentView` mirrors its
+    /// `LensAvailability` here, because the derivation reads objects the menu
+    /// bar can't see (project index, pipeline runner, serve fleet). Read by
+    /// the View menu's ⌘1–⌘5 rows, which dim on it — the same selection-mirror
+    /// pattern as `hasSelectedProject` below. `.unattached` leaves it false,
+    /// so the menu dims when no window is frontmost.
+    @Published var lensesAvailable = false
+
     /// Where the reader is within the current lens — a heading id, or nil for
     /// the top. Posted by `useAnchorReporter` on scroll-settle; persisted per
     /// project by `ContentView` so reopening lands there. Interpretation is
@@ -528,10 +546,20 @@ final class BridgeHandler: ObservableObject {
         switch type {
         case "ready":
             isReady = true
+            documentState = .spa
             syncAnalysisAnimation()
             syncLocale()
             syncToolbarInset()
             webView?.window?.makeFirstResponder(webView)
+
+        case "status-page":
+            // The server-rendered status page announcing itself (the SPA's
+            // `ready` twin — `_IDENTITY_SCRIPT` in status_page.py). Lens
+            // availability follows this: there is no SPA behind the page, so
+            // nothing an activation could reach.
+            documentState = .statusPage(
+                StatusPageOutcome(bridgeValue: body["outcome"] as? String)
+            )
 
         case "route-change":
             if let url = body["url"] as? String {
@@ -642,6 +670,7 @@ final class BridgeHandler: ObservableObject {
     /// post a fresh `ready` message once the React SPA mounts.
     func reset() {
         isReady = false
+        documentState = .loading
         currentPath = ""
         currentAnchor = nil
         currentAnchorLens = nil

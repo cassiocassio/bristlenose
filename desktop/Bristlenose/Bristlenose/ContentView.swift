@@ -784,6 +784,14 @@ struct ContentView: View {
         // The state half of the same seam: the menu bar reads *this* window's
         // lens, undo stack and selection mirror when it is frontmost.
         .focusedSceneValue(\.bridge, bridgeHandler)
+        // Mirror the lens availability onto the bridge so the View menu's
+        // ⌘1–⌘5 rows can dim on it — the derivation reads objects the menu
+        // bar can't see (project index, pipeline runner, serve fleet). Same
+        // selection-mirror pattern as `hasSelectedProject`; `initial: true`
+        // seeds it on window attach.
+        .onChange(of: lensAvailability, initial: true) { _, availability in
+            bridgeHandler.lensesAvailable = availability.isAvailable
+        }
         // Take a place in the roster whenever what this window shows changes —
         // a different study, or a different lens of the same one. `initial`
         // covers the window opening already showing something.
@@ -1540,22 +1548,9 @@ struct ContentView: View {
         )
     }
 
-    /// Whether a pipeline state means the project has analysis data the
-    /// user should be able to view. `.ready` and `.partial` both qualify;
-    /// everything else (idle/scanning/queued/running/failed/etc.) doesn't.
-    /// Used by the detail-pane gating for file-subset projects — they
-    /// can't *run* analysis but can *show* it if it exists.
-    private static func pipelineHasViewableData(_ state: PipelineState?) -> Bool {
-        switch state {
-        case .ready, .partial, .completedPartial:
-            // `.completedPartial` ran to terminus and wrote a (degraded) report;
-            // file-subset projects must be able to view it. `.failedWithDiagnostic`
-            // deliberately stays false — abandon path leaves no report on disk.
-            return true
-        default:
-            return false
-        }
-    }
+    // `pipelineHasViewableData` moved to `DetailPaneKind.hasViewableData` —
+    // the pane resolution owns it now, and the lens-availability derivation
+    // reads the same copy.
 
     /// Handle files/folders dropped from Finder onto the sidebar free space.
     /// - Folder: create project pointing to that directory (scan all files)
@@ -2175,34 +2170,49 @@ struct ContentView: View {
 
     // MARK: - Toolbar trailing (contextual — menus dim, toolbars morph)
 
-    /// Whether the detail pane is showing an actual report (vs an empty /
-    /// unavailable / unsupported state). Mirrors `detail`'s report branch, so the
-    /// report-only toolbar actions (Export, Search, the per-tab panel toggles) hide
-    /// when there's nothing to act on — e.g. a new project with no interviews that
-    /// has never run. (They used to show unconditionally — a Search field + Export
-    /// button over a "Drag Interviews Here" empty state.)
-    private var selectedProjectShowsReport: Bool {
-        guard let project = selectedProject else { return false }
-        if !project.isAvailable { return false }
-        if project.path.isEmpty { return false }
-        if project.inputFiles != nil
-            && !Self.pipelineHasViewableData(pipelineRunner.state[project.id]) {
-            return false
-        }
-        // Never-run folder project — `detail` shows the drag-interviews pane, not
-        // the webview. (It used to show the serve's no-run status page *with* a
-        // Search field and Export button hanging over it.)
-        if case .idle = pipelineRunner.state[project.id] ?? .scanning { return false }
-        return true
+    /// The pane the detail column shows — one resolution shared by `detail`'s
+    /// view switch and by `lensAvailability`, so the pane and the affordances
+    /// gated on it cannot disagree. The conditions (and their rationale) live
+    /// in `DetailPaneKind.resolve`, a pure, table-tested helper.
+    private var detailPaneKind: DetailPaneKind {
+        DetailPaneKind.resolve(
+            hasProject: windowProject != nil,
+            isAvailable: windowProject?.isAvailable ?? false,
+            showShoal: windowProject.map(shouldShowShoal) ?? false,
+            pathIsEmpty: windowProject?.path.isEmpty ?? true,
+            isFileSubset: windowProject?.inputFiles != nil,
+            pipelineState: windowProject.flatMap { pipelineRunner.state[$0.id] }
+        )
+    }
+
+    /// One availability truth for every lens affordance — the sidebar lens
+    /// rows, the flag-off `LensRail`, the View menu's ⌘1–⌘5 (mirrored onto
+    /// the bridge), and the report-only toolbar items. Replaces
+    /// `selectedProjectShowsReport`, which *predicted* the serve's decision
+    /// from pipeline state and drifted from it — five lit lens rows over a
+    /// status page that could answer none of them. Document identity wins;
+    /// while the document is loading, the prior answers (D1-C). See
+    /// `LensAvailability`.
+    private var lensAvailability: LensAvailability {
+        LensAvailability.derive(
+            pane: detailPaneKind,
+            serveState: windowProject.map { serveFleet.manager(for: $0.id).state } ?? .idle,
+            documentState: bridgeHandler.documentState,
+            priorPredictsViewableDocument: ArtifactPrior.predictsViewableDocument(
+                pipelineState: windowProject.flatMap { pipelineRunner.state[$0.id] },
+                sessionCount: windowProject.flatMap { projectIndex.unanalysed[$0.id]?.sessionCount }
+            )
+        )
     }
 
     @ToolbarContentBuilder
     private var toolbarTrailing: some ToolbarContent {
-        // Report-only actions — hidden when the detail pane has no report to act
-        // on (new / never-run / unavailable / unsupported-subset project), so a
-        // never-run project no longer shows a Search field + Export button with
-        // nothing behind them. Mirrors `detail`'s report branch.
-        if selectedProjectShowsReport {
+        // Report-only actions — hidden when the lens surface can't act, on the
+        // same availability truth as the lens rows. Covers the old cases (a
+        // never-run project no longer shows a Search field + Export button
+        // with nothing behind them) plus the one the old predicate missed:
+        // Export/Search can no longer float over a failed run's status page.
+        if lensAvailability.isAvailable {
             // Universal — Export menu (contents morph per tab)
             ToolbarItem(placement: .primaryAction) {
                 ExportMenuButton(bridgeHandler: bridgeHandler, i18n: i18n,
@@ -2327,7 +2337,7 @@ struct ContentView: View {
                 selection: $selection,
                 lenses: LensItem.all,
                 activeTab: bridgeHandler.activeTab,
-                lensesEnabled: selectedProjectShowsReport,
+                lensesEnabled: lensAvailability.isAvailable,
                 onActivateLens: { bridgeHandler.activateLens($0) },
                 onExternalDrop: { target, urls in
                     // Route to the same substrate-independent handlers the SwiftUI
@@ -2413,10 +2423,13 @@ struct ContentView: View {
         LensRail(
             bridgeHandler: bridgeHandler,
             i18n: i18n,
-            // `windowProject`, not `selectedProject`: a child has no selection,
-            // so reading the selection here would dim the lens rail — the one
-            // control a child exists for — in every child window.
-            isEnabled: windowProject != nil && bridgeHandler.isReady
+            // Same availability truth as the AppKit lens rows and ⌘1–⌘5 —
+            // this rail used to run its own formula (`windowProject != nil &&
+            // isReady`), and `isReady` is force-set 2s after ANY load, status
+            // page included, so the two sidebars could disagree about the
+            // same project. (`lensAvailability` derives from `windowProject`,
+            // preserving the child-window semantics the old formula had.)
+            isEnabled: lensAvailability.isAvailable
         )
         .padding(.horizontal, 8)
         .padding(.top, 6)
@@ -2900,54 +2913,31 @@ struct ContentView: View {
     @ViewBuilder
     private var detail: some View {
         if let project = windowProject {
-            if !project.isAvailable {
-                // Project directory is not accessible — volume ejected or folder moved.
+            // One switch over the shared pane resolution. The branch
+            // conditions — and the rationale that used to live on them (the
+            // idle-vs-scanning distinction, the file-subset trust-UX rule) —
+            // moved to `DetailPaneKind.resolve`, which `lensAvailability`
+            // reads too, so the pane and the affordances gated on it cannot
+            // disagree.
+            switch detailPaneKind {
+            case .noProject:
+                // Unreachable: `windowProject` is non-nil on this branch.
+                EmptyView()
+            case .unavailable:
                 unavailableProjectView(project)
-            } else if shouldShowShoal(project) {
-                // Analysing with nothing to show yet — the typographic shoal
-                // takes the pane in place of the boot / "drop interviews"
-                // screens. Decorative; the real progress signal is the sidebar
-                // row's ring + subtitle. Reduce Motion / the preference fall
-                // back to those same screens (see shouldShowShoal).
+            case .shoal:
+                // Decorative; the real progress signal is the sidebar row's
+                // ring + subtitle.
                 ShoalRunView(
                     projectID: project.id,
                     liveData: pipelineRunner.liveData,
                     feedURL: ShoalFeed.feedURL(projectPath: project.path)
                 )
-            } else if project.path.isEmpty {
-                // New project with no files yet — prompt user to add interviews.
+            case .dragInterviews:
                 dragInterviewsPane(project)
-            } else if project.inputFiles != nil
-                        && !Self.pipelineHasViewableData(pipelineRunner.state[project.id]) {
-                // File-subset project with no prior analysis — CLI can't
-                // analyse this shape yet. Show files + Show-in-Finder;
-                // pipeline never starts.
-                //
-                // BUT: if the project somehow already has analysis data
-                // (state == .ready or .partial — e.g. analysed when it was
-                // folder-shaped, then had files added afterwards), don't
-                // gate viewing the report. Same principle as pipeline
-                // failure trust-UX: the run state shouldn't block the
-                // user from seeing what's already there.
+            case .unsupportedSubset:
                 UnsupportedSubsetView(project: project)
-            } else if case .idle = pipelineRunner.state[project.id] ?? .scanning {
-                // Folder-shaped project that has never produced a report. The
-                // webview's own no-run status page (`status_page.detect_status`,
-                // `entry is None`) used to own this pane, which meant two
-                // different-looking empty states for the same user-perceived
-                // condition — and its "drop a folder of interviews here" copy was
-                // a promise the WebView couldn't keep (no drop target). Same pane
-                // as the empty-path case above: one look, and a drop that lands
-                // (folder-drop is the explicit signal to analyse — see
-                // `handleDropOnProject`).
-                //
-                // Deliberately `.idle` only. `.scanning` still falls through to
-                // the serve gate so an already-analysed project shows BootView
-                // rather than flashing an empty pane before the manifest read
-                // resolves; failed / cancelled / partial states keep the status
-                // page, which carries the cause and log tail.
-                dragInterviewsPane(project)
-            } else {
+            case .report:
                 ZStack {
                     // This pane renders ONE project, so it reads that
                     // project's serve — not `serveManager`, which is derived

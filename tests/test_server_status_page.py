@@ -7,6 +7,10 @@ in a state the SPA can render.
 
 from __future__ import annotations
 
+import json
+import re
+import shutil
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
@@ -96,6 +100,7 @@ class TestDetectStatus:
         assert info.long is not None
         assert info.long.startswith("$ bristlenose run")
         assert info.long_is_mono
+        assert info.outcome == "no-run"
 
     def test_no_run_yet_desktop(self, tmp_path: Path) -> None:
         info = detect_status(tmp_path, {}, platform="desktop")
@@ -104,6 +109,7 @@ class TestDetectStatus:
         assert "No interviews" in info.short
         assert info.long is not None
         assert "Drop a folder" in info.long
+        assert info.outcome == "no-run"
 
     def test_completed_lets_spa_render(self, tmp_path: Path) -> None:
         last_run = {1: {"run_id": "X", "outcome": "completed", "completed_at": "t"}}
@@ -122,6 +128,7 @@ class TestDetectStatus:
         assert info.details is not None
         assert "category: api_server" in info.details
         assert "code: 503" in info.details
+        assert info.outcome == "failed"
 
     def test_cancelled_surfaces_warning(self, tmp_path: Path) -> None:
         out = tmp_path / "bristlenose-output"
@@ -132,6 +139,7 @@ class TestDetectStatus:
         assert info is not None
         assert info.kind == MessageKind.WARNING
         assert "cancelled" in info.short.lower()
+        assert info.outcome == "cancelled"
 
     def test_failed_with_no_events_file_still_intercepts(self, tmp_path: Path) -> None:
         """``last_run`` says failed but events file missing: still intercept, details empty."""
@@ -169,6 +177,7 @@ class TestRenderPage:
                 short="Nothing to see here, yet.",
                 long="$ bristlenose run interviews/",
                 details=None,
+                outcome="no-run",
                 long_is_mono=True,
             ),
         )
@@ -185,6 +194,7 @@ class TestRenderPage:
                 short="<script>evil()</script>",
                 long="payload & more",
                 details=None,
+                outcome="failed",
             ),
         )
         assert "<script>evil()</script>" not in html
@@ -198,6 +208,7 @@ class TestRenderPage:
                 short="Last run failed.",
                 long=None,
                 details="category: api_server\ncode: 503",
+                outcome="failed",
             ),
         )
         assert "<details" in html
@@ -211,13 +222,48 @@ class TestRenderPage:
                 short="Nothing to see here, yet.",
                 long=None,
                 details=None,
+                outcome="no-run",
             ),
         )
         assert "<details" not in html
 
+    def test_identity_script_posts_outcome(self) -> None:
+        """The page announces itself to the desktop bridge — document identity.
+
+        The shell's lens availability follows this message (`DocumentState` in
+        the Swift layer); without it, five lit lens rows sat over a page that
+        could answer none of them. The script must carry the message type and
+        the outcome, and must post via the same `navigation` handler the SPA's
+        `ready` message uses.
+        """
+        html = render_page(
+            StatusInfo(
+                kind=MessageKind.ERROR, short="Last run failed.", long=None,
+                details=None, outcome="failed",
+            ),
+        )
+        assert "'status-page'" in html
+        assert 'outcome: "failed"' in html
+        assert "messageHandlers.navigation" in html
+
+    def test_identity_script_outcome_is_json_escaped(self) -> None:
+        """A hostile outcome value cannot close the script element.
+
+        The vocabulary is fixed today, but the escaping discipline is the same
+        one every other json-into-<script> site in this codebase carries
+        (`ensure_ascii` alone does NOT escape `<` — see the export-JSON gotcha).
+        """
+        html = render_page(
+            StatusInfo(
+                kind=MessageKind.ERROR, short="x", long=None,
+                details=None, outcome="</script><script>evil()",
+            ),
+        )
+        assert "</script><script>evil()" not in html
+
     def test_footer_uses_supplied_urls(self) -> None:
         html = render_page(
-            StatusInfo(kind=MessageKind.INFO, short="x", long=None, details=None),
+            StatusInfo(kind=MessageKind.INFO, short="x", long=None, details=None, outcome="no-run"),
             feedback_url="https://example.com/feedback",
             help_url="https://example.com/help",
         )
@@ -226,7 +272,10 @@ class TestRenderPage:
 
     def test_feedback_block_present_when_enabled(self) -> None:
         html = render_page(
-            StatusInfo(kind=MessageKind.ERROR, short="Last run failed.", long=None, details=None),
+            StatusInfo(
+                kind=MessageKind.ERROR, short="Last run failed.", long=None,
+                details=None, outcome="failed",
+            ),
             feedback_url="https://example.com/feedback",
             feedback_enabled=True,
             version="9.9.9",
@@ -245,7 +294,10 @@ class TestRenderPage:
 
     def test_feedback_absent_when_disabled(self) -> None:
         html = render_page(
-            StatusInfo(kind=MessageKind.ERROR, short="Last run failed.", long=None, details=None),
+            StatusInfo(
+                kind=MessageKind.ERROR, short="Last run failed.", long=None,
+                details=None, outcome="failed",
+            ),
             feedback_enabled=False,
         )
         # Absence is information — no trigger, no overlay, no script at all.
@@ -257,13 +309,13 @@ class TestRenderPage:
 
     def test_help_defaults_to_docs(self) -> None:
         html = render_page(
-            StatusInfo(kind=MessageKind.INFO, short="x", long=None, details=None),
+            StatusInfo(kind=MessageKind.INFO, short="x", long=None, details=None, outcome="no-run"),
         )
         assert "https://bristlenose.app/docs/" in html
 
     def test_html_root_attrs_injected(self) -> None:
         html = render_page(
-            StatusInfo(kind=MessageKind.INFO, short="x", long=None, details=None),
+            StatusInfo(kind=MessageKind.INFO, short="x", long=None, details=None, outcome="no-run"),
             html_root_attrs='data-platform="desktop"',
         )
         assert 'data-platform="desktop"' in html
@@ -306,6 +358,75 @@ class TestRenderPage:
         # ...but the canonical BRISTLENOSE_PALETTE wins when both are set.
         monkeypatch.setenv("BRISTLENOSE_PALETTE", "edo")
         assert 'data-color-theme="edo"' in _html_root_attrs()
+
+
+# ---------------------------------------------------------------------------
+# Synthetic: the shipped identity script EXECUTES and posts what Swift decodes
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+class TestIdentityScriptExecutes:
+    """Run the real rendered `<script>` under Node with a stubbed WebKit bridge.
+
+    The text-parsing tests above pin the *vocabulary*; this pins the
+    *behaviour* — a JS syntax error, a misplaced brace, or a wrong message
+    shape would pass every substring assertion and still post nothing.
+    (Same discipline as the `node --check` verify for the Welcome
+    illustrations' embedded scripts.)
+    """
+
+    @staticmethod
+    def _posted_messages(outcome: str) -> list[dict[str, str]]:
+        html = render_page(
+            StatusInfo(
+                kind=MessageKind.ERROR, short="x", long=None,
+                details=None, outcome=outcome,
+            ),
+        )
+        scripts = re.findall(r"<script>(.*?)</script>", html, re.S)
+        identity = [s for s in scripts if "status-page" in s]
+        assert len(identity) == 1, "expected exactly one identity script"
+        harness = (
+            "const posted = [];\n"
+            "global.window = { webkit: { messageHandlers: { navigation: {"
+            " postMessage: (m) => posted.push(m) } } } };\n"
+            + identity[0]
+            + "\nconsole.log(JSON.stringify(posted));\n"
+        )
+        result = subprocess.run(
+            ["node", "-"], input=harness, capture_output=True, text=True,
+            timeout=30, check=True,
+        )
+        messages: list[dict[str, str]] = json.loads(result.stdout.strip())
+        return messages
+
+    def test_posts_exactly_one_status_page_message(self) -> None:
+        messages = self._posted_messages("failed")
+        assert messages == [{"type": "status-page", "outcome": "failed"}]
+
+    def test_hyphenated_outcome_survives_the_wire(self) -> None:
+        messages = self._posted_messages("no-run")
+        assert messages == [{"type": "status-page", "outcome": "no-run"}]
+
+    def test_no_bridge_no_crash(self) -> None:
+        """In a plain browser (no window.webkit) the script must be inert."""
+        html = render_page(
+            StatusInfo(
+                kind=MessageKind.ERROR, short="x", long=None,
+                details=None, outcome="failed",
+            ),
+        )
+        scripts = re.findall(r"<script>(.*?)</script>", html, re.S)
+        identity = [s for s in scripts if "status-page" in s][0]
+        harness = (
+            "global.window = {};\n" + identity + "\nconsole.log('SURVIVED');\n"
+        )
+        result = subprocess.run(
+            ["node", "-"], input=harness, capture_output=True, text=True,
+            timeout=30, check=True,
+        )
+        assert result.stdout.strip() == "SURVIVED"
 
 
 # ---------------------------------------------------------------------------
@@ -362,6 +483,9 @@ class TestProdIntercept:
         assert "Last run failed" in resp.text
         assert "Provider 503 mid-stage" in resp.text
         assert 'id="bn-app-root"' not in resp.text
+        # Document identity rides the intercept end to end.
+        assert "'status-page'" in resp.text
+        assert 'outcome: "failed"' in resp.text
 
     def test_cancelled_run_intercepts(self, prod_app_factory, tmp_path: Path) -> None:
         out = tmp_path / "bristlenose-output"
@@ -385,6 +509,9 @@ class TestProdIntercept:
         assert 'id="bn-app-root"' in resp.text
         # Status-page footer link must NOT be there
         assert "Send feedback" not in resp.text or "bn-status" not in resp.text
+        # And no status-page identity — this document's identity is the SPA's
+        # own `ready` message.
+        assert "'status-page'" not in resp.text
 
     def test_intercept_applies_to_nested_routes(self, prod_app_factory) -> None:
         client, _ = prod_app_factory()

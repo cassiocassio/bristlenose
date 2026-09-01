@@ -783,6 +783,12 @@ private struct ViewMenuContent: View {
             Button(tab.localizedLabel(i18n), systemImage: lens.systemImage) {
                 bridgeHandler.activateLens(tab)
             }
+            // Menus dim (HIG): these rows follow the same availability truth
+            // as the sidebar lens rows — mirrored onto the bridge by
+            // ContentView, since the derivation reads objects the menu bar
+            // can't see. Before this, ⌘1–⌘5 fired unconditionally and the
+            // activation died silently wherever the sidebar was dimmed.
+            .disabled(!bridgeHandler.lensesAvailable)
             .keyboardShortcut(
                 KeyEquivalent(Character("\(index + 1)")),
                 modifiers: .command

@@ -323,10 +323,35 @@ struct WebView: NSViewRepresentable {
             }
         }
 
+        /// A new main-frame document is on its way — whatever identity the
+        /// previous document posted no longer describes what the view is about
+        /// to show, so `documentState` returns to `.loading` until the new
+        /// document identifies itself (`ready` / `status-page`). The SPA's
+        /// client-side route changes never pass through here (no full loads),
+        /// so this fires only on real document turnover: initial load,
+        /// reload-on-completion, renderer-crash recovery, serve restart.
+        ///
+        /// Identity-guarded to the report webView: popout child WKWebViews
+        /// (the video player) share this Coordinator, and a popout load must
+        /// not un-identify the report behind it.
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            Task { @MainActor [weak self] in
+                guard let self, webView === self.webView else { return }
+                self.bridgeHandler.documentState = .loading
+            }
+        }
+
         /// Page finished loading — if the bridge `ready` message hasn't arrived
         /// within 2 seconds, show the content anyway. This handles the case where
         /// the served build doesn't include the bridge code (e.g. main branch build
         /// loaded from a feature branch's app).
+        ///
+        /// `isReady` is fabricated here on purpose (legacy-bundle compat);
+        /// `documentState` deliberately is NOT (design decision D2) — an
+        /// unidentified document stays `.loading` and the lens affordances
+        /// stay pessimistic, which is the loud dev-time tell for a page that
+        /// forgot its identity script. Log it so the cause is one `log stream`
+        /// away rather than a mystery.
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(2))
@@ -334,6 +359,9 @@ struct WebView: NSViewRepresentable {
                 if !self.bridgeHandler.isReady {
                     print("[WebView] ready message not received — showing content anyway")
                     self.bridgeHandler.isReady = true
+                }
+                if webView === self.webView, self.bridgeHandler.documentState == .loading {
+                    log.warning("document never identified itself (no ready/status-page message) — lens controls stay pessimistic")
                 }
             }
         }

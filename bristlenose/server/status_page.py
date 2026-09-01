@@ -46,6 +46,13 @@ class StatusInfo:
     short: str
     long: str | None
     details: str | None  # cause + log tail (pre-formatted plain text)
+    # Document identity for the desktop shell — the fixed vocabulary posted by
+    # ``_IDENTITY_SCRIPT`` ("no-run" / "failed" / "cancelled"). Deliberately
+    # required, no default: a new status-page variant must declare what it is,
+    # because the shell's lens availability follows this field. Mirrored by
+    # ``StatusPageOutcome`` in desktop DocumentState.swift; pinned by
+    # tests/test_status_page_identity_parity.py.
+    outcome: str
     long_is_mono: bool = False
 
 
@@ -136,12 +143,14 @@ def detect_status(
                 short=t("server.statusPage.noRunDesktopShort"),
                 long=t("server.statusPage.noRunDesktopLong"),
                 details=None,
+                outcome="no-run",
             )
         return StatusInfo(
             kind=MessageKind.INFO,
             short=t("server.statusPage.noRunCliShort"),
             long="$ bristlenose run interviews/",  # literal command, not localised
             details=None,
+            outcome="no-run",
             long_is_mono=True,
         )
 
@@ -163,6 +172,7 @@ def detect_status(
             short=t("server.statusPage.cancelledShort"),
             long=t("server.statusPage.cancelledLong"),
             details=details,
+            outcome="cancelled",
         )
 
     if outcome == OutcomeEnum.FAILED.value:
@@ -172,6 +182,7 @@ def detect_status(
             short=t("server.statusPage.failedShort"),
             long=long_msg,
             details=details,
+            outcome="failed",
         )
 
     logger.warning("Unknown last-run outcome %r — not intercepting", outcome)
@@ -187,6 +198,7 @@ _PAGE_TEMPLATE = """<!doctype html>
 <link rel="stylesheet" href="/report/assets/bristlenose-theme.css">
 </head>
 <body class="bn-status-page">
+  {identity_script}
   <main class="bn-status" data-status-kind="{kind}">
     <div class="bn-status-glyph kind-{kind}" aria-hidden="true">{glyph}</div>
     <h1 class="bn-status-short">{short}</h1>
@@ -201,6 +213,30 @@ _PAGE_TEMPLATE = """<!doctype html>
 </body>
 </html>
 """
+
+
+# Document identity for the desktop shell. The WKWebView derives lens
+# availability from *what document is actually showing*: the React SPA posts
+# `{type: "ready"}` when it mounts, so this page posts its own identity the
+# same way, at parse time, before anything else runs. Without it the shell
+# could only predict from run state — and the prediction drifting from
+# `detect_status` is exactly how five lit lens rows ended up sitting over a
+# page that could answer none of them. Interpolation-free except the outcome
+# (a fixed vocabulary, JSON-encoded, substituted via token — no str.format,
+# so the JS braces stay untouched). Swift mirror: `StatusPageOutcome` in
+# desktop/Bristlenose/Bristlenose/DocumentState.swift; parity pinned by
+# tests/test_status_page_identity_parity.py.
+_IDENTITY_SCRIPT = """<script>
+(function () {
+  if (window.webkit && window.webkit.messageHandlers &&
+      window.webkit.messageHandlers.navigation) {
+    try {
+      window.webkit.messageHandlers.navigation.postMessage(
+        { type: 'status-page', outcome: __BN_OUTCOME__ });
+    } catch (e) { /* bridge torn down mid-navigation — nothing to tell */ }
+  }
+})();
+</script>"""
 
 
 # value → (emoji, common.feedback.* key). Mirrors the React modal + feedback.js.
@@ -411,9 +447,14 @@ def render_page(
     feedback_trigger, feedback_overlay = _build_feedback_html(
         feedback_url, feedback_enabled, version
     )
+    # json.dumps for quoting; `</`-escaped so a future outcome value can never
+    # close the script element (same discipline as the feedback config above).
+    outcome_json = json.dumps(status.outcome, ensure_ascii=True).replace("</", "<\\/")
+    identity_script = _IDENTITY_SCRIPT.replace("__BN_OUTCOME__", outcome_json)
     html_attrs = f" {html_root_attrs}" if html_root_attrs else ""
     return _PAGE_TEMPLATE.format(
         html_attrs=html_attrs,
+        identity_script=identity_script,
         title=html.escape(status.short),
         short=html.escape(status.short),
         long_block=long_block,

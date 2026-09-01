@@ -187,6 +187,24 @@ struct WebView: NSViewRepresentable {
         context.coordinator.lastLoadedURL = url
     }
 
+    /// The view is going away — hand the outbound channel back, but ONLY if
+    /// it is still ours.
+    ///
+    /// This is the other half of `makeNSView`'s registration, and together
+    /// they are the channel's whole lifecycle: the view that mounts owns the
+    /// reference, the view that unmounts releases it. The identity guard is
+    /// the load-bearing part — SwiftUI may build a replacement before tearing
+    /// down its predecessor, and an unguarded clear here would wipe the newer
+    /// registration exactly as `BridgeHandler.reset()` used to (see the note
+    /// there). A dismantle that isn't the current registrant has nothing to
+    /// say.
+    static func dismantleNSView(_ nsView: WKWebView, coordinator: Coordinator) {
+        MainActor.assumeIsolated {
+            guard coordinator.bridgeHandler.webView === nsView else { return }
+            coordinator.bridgeHandler.webView = nil
+        }
+    }
+
     // MARK: - Coordinator
 
     /// Handles WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate, and WKDownloadDelegate.

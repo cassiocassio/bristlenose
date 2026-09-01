@@ -272,7 +272,13 @@ final class BridgeHandler: ObservableObject {
     /// no string interpolation into JavaScript). Content world is `.page`
     /// because `window.switchToTab` is installed by page-level JS.
     func switchToTab(_ tab: Tab) {
-        guard let webView else { return }
+        guard let webView else {
+            // Never silent: a missing outbound channel is the failure mode
+            // that presents as "the control does nothing", and it hid a real
+            // ownership bug for as long as it said nothing (1 Sep 2026).
+            Self.log.error("switchToTab(\(tab.rawValue, privacy: .public)) dropped — no webView registered")
+            return
+        }
         Task {
             do {
                 // The `contentWorld:` label is load-bearing: `in: nil, in:
@@ -287,17 +293,10 @@ final class BridgeHandler: ObservableObject {
                     in: nil,
                     contentWorld: .page
                 )
-                // Diagnostic read-back (dead-lens hunt, 1 Sep 2026): the URL
-                // updates synchronously on a successful React Router navigate,
-                // so the pathname names whether the dispatch had any effect —
-                // and the webview identity names WHICH document it happened
-                // in. Distinguishes "navigated in a webview that isn't on
-                // screen" from "shim ran but navigateRef is dead".
-                let path = try await webView.callAsyncJavaScript(
-                    "return window.location.pathname",
-                    arguments: [:], in: nil, contentWorld: .page
-                )
-                Self.log.notice("switchToTab(\(tab.rawValue, privacy: .public)) → pathname=\(String(describing: path ?? "nil"), privacy: .public) [wv=\(String(describing: ObjectIdentifier(webView)), privacy: .public) inWindow=\(webView.window != nil, privacy: .public)]")
+                // Names the document the dispatch actually reached — cheap
+                // (no extra IPC), and the one fact that distinguishes "the
+                // SPA ignored it" from "it went somewhere else".
+                Self.log.notice("switchToTab(\(tab.rawValue, privacy: .public)) dispatched [wv=\(String(describing: ObjectIdentifier(webView)), privacy: .public) inWindow=\(webView.window != nil, privacy: .public)]")
                 // Ensure WKWebView has focus so bare-key shortcuts (s, h, [, ], m)
                 // work immediately after Cmd+1-5 tab switch.
                 webView.window?.makeFirstResponder(webView)
@@ -375,7 +374,10 @@ final class BridgeHandler: ObservableObject {
     /// (the documented BridgeHandler wrinkle — six inert warnings elsewhere in
     /// this file; don't add a seventh).
     func navigateToSession(_ sessionID: String) {
-        guard let webView else { return }
+        guard let webView else {
+            Self.log.error("navigateToSession dropped — no webView registered")
+            return
+        }
         webView.callAsyncJavaScript(
             "window.navigateToSession(sid)",
             arguments: ["sid": sessionID],
@@ -571,7 +573,7 @@ final class BridgeHandler: ObservableObject {
     /// Uses `callAsyncJavaScript` with structured arguments (security rule 3).
     func menuAction(_ action: String, payload: [String: Any]? = nil) {
         guard let webView else {
-            print("[BridgeHandler] menuAction(\(action)) — webView is nil")
+            Self.log.error("menuAction(\(action, privacy: .public)) dropped — no webView registered")
             return
         }
         let js: String
@@ -782,7 +784,23 @@ final class BridgeHandler: ObservableObject {
         selectedProjectIsRunning = false
         selectedProjectIsAnalysed = false
         hasSelectedProject = false
-        webView = nil
+        // `webView` is deliberately NOT cleared here. It is the outbound
+        // channel, and its lifetime belongs to the VIEW (`makeNSView`
+        // registers, `dismantleNSView` deregisters identity-guarded), not to
+        // the selection. Clearing it here gave one field two owners with no
+        // defined order between them, and the order genuinely varies: when
+        // the incoming project's sidecar is already warm, SwiftUI builds the
+        // detail WebView in the same update pass as the selection change, so
+        // `makeNSView` registers the new view and this line then wiped it —
+        // permanently, since nothing re-registers. Every native lens
+        // affordance died on the guard in `switchToTab` while inbound
+        // messages kept arriving (they reach the Coordinator directly), which
+        // is precisely the "looks alive, is dead" shape (1 Sep 2026).
+        //
+        // Stale-dispatch, the risk the clear was standing in for, is now the
+        // state machine's job: `reset()` puts `documentState` back to
+        // `.loading`, and `LensActivation.decide` queues rather than
+        // dispatches until the new document identifies itself.
     }
 
     // MARK: - Private

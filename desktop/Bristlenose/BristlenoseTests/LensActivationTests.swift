@@ -10,14 +10,12 @@ struct LensActivationTests {
         tab: Tab,
         activeTab: Tab? = nil,
         documentState: DocumentState = .spa,
-        lensesAvailable: Bool = true,
         restoreSessionID: String? = nil
     ) -> LensActivation {
         LensActivation.decide(
             tab: tab,
             activeTab: activeTab,
             documentState: documentState,
-            lensesAvailable: lensesAvailable,
             restoreSessionID: restoreSessionID
         )
     }
@@ -49,15 +47,14 @@ struct LensActivationTests {
 
     // MARK: - Loading document (D1-C's lit-on-prior window)
 
-    @Test func loadingWithALitRailQueues() {
+    @Test func loadingQueues() {
+        // Unconditionally: reachability is the affordance gates' job (rows,
+        // rail, menu all dim on LensAvailability). A second gate here could
+        // only produce false negatives — a stale mirror silently eating
+        // clicks — so the queue takes whatever reaches it; a race's intent
+        // is discarded on status-page/switch and can only replay on the
+        // `ready` a truly dim rail never gets.
         #expect(decide(tab: .quotes, documentState: .loading) == .queue(.quotes))
-    }
-
-    @Test func loadingWithADimRailIgnores() {
-        // Only a lit rail queues — a dim rail's controls are unreachable
-        // anyway; anything arriving here is a race, not an intent.
-        #expect(decide(tab: .quotes, documentState: .loading, lensesAvailable: false)
-                == .ignore)
     }
 
     @Test func sameLensWhileLoadingIgnores() {

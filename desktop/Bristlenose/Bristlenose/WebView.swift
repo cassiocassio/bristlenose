@@ -337,6 +337,7 @@ struct WebView: NSViewRepresentable {
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             Task { @MainActor [weak self] in
                 guard let self, webView === self.webView else { return }
+                log.notice("main-frame navigation started (url: \(webView.url?.path ?? "nil", privacy: .public)) → documentState .loading")
                 self.bridgeHandler.documentState = .loading
             }
         }

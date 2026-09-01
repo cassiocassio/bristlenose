@@ -89,9 +89,7 @@ struct BridgeHandlerDocumentStateTests {
 struct BridgeHandlerLensIntentTests {
 
     private func litLoadingBridge() -> BridgeHandler {
-        let bridge = BridgeHandler()
-        bridge.lensesAvailable = true  // what ContentView mirrors when the prior lights the rail
-        return bridge
+        BridgeHandler()  // fresh bridge: documentState .loading
     }
 
     @Test func clickWhileLoadingQueues() {
@@ -108,10 +106,15 @@ struct BridgeHandlerLensIntentTests {
         #expect(bridge.pendingLensIntent == .analysis)
     }
 
-    @Test func dimRailDoesNotQueue() {
-        let bridge = BridgeHandler()  // lensesAvailable stays false
+    @Test func queueDoesNotConsultTheMirror() {
+        // `lensesAvailable` dims the menu; it must NOT gate the queue — the
+        // mirror can lag the lit rows by a render, and a stale-false mirror
+        // was silently eating boot-window clicks (1 Sep 2026). Reachability
+        // belongs to the affordance gates alone.
+        let bridge = BridgeHandler()
+        bridge.lensesAvailable = false
         bridge.activateLens(.quotes)
-        #expect(bridge.pendingLensIntent == nil)
+        #expect(bridge.pendingLensIntent == .quotes)
     }
 
     @Test func readyConsumesTheIntentOnce() {

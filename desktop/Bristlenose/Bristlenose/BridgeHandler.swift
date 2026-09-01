@@ -29,7 +29,17 @@ final class BridgeHandler: ObservableObject {
     /// actually in the view, not the one before it. Unlike `isReady`, this is
     /// never fabricated on a timeout — an unidentified document stays
     /// `.loading`, deliberately (D2).
-    @Published var documentState: DocumentState = .loading
+    ///
+    /// Every transition logs at `.notice` (persisted, visible in a default
+    /// `log stream`): this enum is the hinge of lens availability, and a
+    /// wedge here is otherwise invisible — the whole failure mode is that
+    /// nothing happens.
+    @Published var documentState: DocumentState = .loading {
+        didSet {
+            guard oldValue != documentState else { return }
+            Self.log.notice("documentState: \(String(describing: oldValue), privacy: .public) → \(String(describing: self.documentState), privacy: .public)")
+        }
+    }
 
     /// Whether the lens affordances can act — `ContentView` mirrors its
     /// `LensAvailability` here, because the derivation reads objects the menu
@@ -325,13 +335,14 @@ final class BridgeHandler: ObservableObject {
     /// lets the popover's All Sessions row reach the grid without the memory
     /// bouncing it back.
     func activateLens(_ tab: Tab) {
-        switch LensActivation.decide(
+        let decision = LensActivation.decide(
             tab: tab,
             activeTab: activeTab,
             documentState: documentState,
-            lensesAvailable: lensesAvailable,
             restoreSessionID: sessionsRouteMemory.restoreSessionID
-        ) {
+        )
+        Self.log.notice("activateLens(\(tab.rawValue, privacy: .public)) → \(String(describing: decision), privacy: .public) [doc: \(String(describing: self.documentState), privacy: .public)]")
+        switch decision {
         case .root(let target):
             switchToTab(target)
         case .restore(let sessionID):
@@ -721,6 +732,7 @@ final class BridgeHandler: ObservableObject {
     /// Reset bridge state when switching projects. The new WKWebView will
     /// post a fresh `ready` message once the React SPA mounts.
     func reset() {
+        Self.log.notice("bridge reset (selection change)")
         isReady = false
         documentState = .loading
         pendingLensIntent = nil

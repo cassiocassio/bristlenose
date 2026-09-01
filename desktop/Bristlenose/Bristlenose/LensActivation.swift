@@ -15,9 +15,13 @@ import Foundation
 ///   its route memory, everything else to the lens root.
 /// - **A different lens while the document is loading queues** — one slot,
 ///   replayed by `BridgeHandler` when the SPA posts `ready`, discarded if
-///   the document turns out to be the status page. Only a lit rail can
-///   queue (`lensesAvailable`): D1-C lights the rail from the prior, and
-///   the queue is what makes that lit state a promise rather than a lie.
+///   the document turns out to be the status page. Reachability is the
+///   affordance gates' job (the sidebar rows, rail, and menu all dim on
+///   `LensAvailability`) — deliberately NOT re-checked here: the mirror the
+///   bridge holds can lag the lit rows by a render, and a second gate that
+///   can only produce false negatives silently ate clicks (1 Sep 2026).
+///   A queued intent from a race is harmless — discarded on status-page or
+///   switch, and replay requires the `ready` a truly dim rail never gets.
 /// - **A status page ignores** — the controls are dimmed everywhere by
 ///   `LensAvailability`; anything that still reaches here has nothing to
 ///   act on.
@@ -35,7 +39,6 @@ enum LensActivation: Equatable {
         tab: Tab,
         activeTab: Tab?,
         documentState: DocumentState,
-        lensesAvailable: Bool,
         restoreSessionID: String?
     ) -> LensActivation {
         if tab == activeTab {
@@ -51,7 +54,7 @@ enum LensActivation: Equatable {
             }
             return .root(tab)
         case .loading:
-            return lensesAvailable ? .queue(tab) : .ignore
+            return .queue(tab)
         case .statusPage:
             return .ignore
         }

@@ -24,8 +24,24 @@ If code files were changed:
 1. **Run tests** — `.venv/bin/python -m pytest tests/`
 2. **Run linter** — `.venv/bin/ruff check .` (whole repo, not just `bristlenose/`)
 3. If frontend files changed: `cd frontend && npm run build` (tsc catches type errors Vitest doesn't)
+4. If `desktop/` files changed: `desktop/scripts/test-swift.sh` (~3 min; exits 0 green, 1 red, 3 compile break)
 
 If anything fails, **stop and fix before documenting**. Don't document a broken state.
+
+**Step 4 is not optional-if-you're-in-a-hurry — it is the only thing that looks at
+Swift at all.** Steps 1–2 are Python, and CI does not build the Swift target (see
+`desktop/CLAUDE.md`), so without it a Swift regression sits red on `main` while
+every close-out truthfully records `tests: passed`. That is not hypothetical: a
+stale `Tab.allCases.count` assertion was red for 10 commits under a sentinel that
+said tests passed (31 Aug 2026). Run the script rather than the two `xcodebuild`
+commands by hand — it owns the two ways this verdict lies (a piped or
+backgrounded run reports the *last* stage's exit code, not xcodebuild's; and
+`grep "Test case.*failed"` matches test *names* like `failedDeclines()`, so a
+clean suite reports six failures). Its header carries the reasoning.
+
+If another worktree is mid-`xcodebuild`, the script warns and continues —
+concurrent runs on this scheme can wedge in teardown. If it hangs, that's the
+cause; say so in the summary rather than recording a failure.
 
 **Desktop-bundle freshness — usually a non-event, so don't report it as a task.**
 
@@ -412,7 +428,8 @@ After completing, print a brief summary:
 
 ```
 End of session:
-- Tests: passed (N tests) / skipped (docs only)
+- Tests: passed (N pytest, M Swift) / skipped (docs only) — name which suites ran; a
+  Python-only green says nothing about `desktop/`
 - Lint: clean / skipped (docs only)
 - Updated: TODO.md, CLAUDE.md (list what was touched)
 - 100days: struck through 2 items in S1 (or "no sprint items completed")

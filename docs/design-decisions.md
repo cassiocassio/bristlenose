@@ -383,3 +383,31 @@ choice. It was found by rendering the sheet and looking at it.
 
 _See also: `docs/design-analysis-lifecycle.md` §7,
 `docs/mockups/reanalyse-sheet-pixels.html` (before/after)_
+
+## Codebook group names are unique — numbered on create, refused on rename
+
+**Decided 31 Aug 2026** (`824b78ab`), after the manual codebook let every
+unrenamed group land as another "New group". Two different behaviours for the
+two ways a clash can happen, both the user's explicit call:
+
+1. **Creation auto-numbers.** A new group takes the first free name — "New
+   group", then "New group 2", "New group 3" — read from the *current* names,
+   so renaming the first frees the plain name again. No dialog: the user didn't
+   type anything, so there is nothing to hand back.
+2. **Rename is refused, Finder-style.** Committing a name another group already
+   holds writes nothing, shows a single-OK dialog ("The name "X" is already
+   taken. Please choose another name."), and the title snaps back — the display
+   always renders the stored name, so the revert is free. Not auto-suffixed:
+   silently changing a name the user deliberately typed is worse than telling
+   them. OK-only because there is no choice to make — Cancel would be a second
+   way to say the one thing OK says (`ConfirmDialog` grew `hideCancel` for
+   this).
+
+"Uncategorised" counts as a clash on purpose: the server looks the floor group
+up *by that name* (`_get_or_create_uncategorised` in `routes/codebook.py`), so
+a group renamed to it would be adopted as the floor. The check lives in
+`useCodebookAuthoring` — the single write path — and the parity tests pin the
+POST/PATCH payloads, not just that a call happened.
+
+_See also: `frontend/src/hooks/useCodebookAuthoring.ts`,
+`frontend/src/islands/CodebookAuthoringParity.test.tsx`_

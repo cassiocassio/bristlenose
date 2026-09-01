@@ -133,6 +133,9 @@ struct WebView: NSViewRepresentable {
         webView.uiDelegate = context.coordinator
         webView.bridgeHandler = bridgeHandler  // ⌘A → select-all-quotes interception
         context.coordinator.webView = webView
+        // Diagnostic (dead-lens hunt): name every webview at birth, so the
+        // dispatch/message identity tags above resolve to creation events.
+        log.notice("makeNSView: wv=\(String(describing: ObjectIdentifier(webView)), privacy: .public) url=\(url?.absoluteString ?? "nil", privacy: .public)")
 
         // Translucent chrome (spike): let the window's vibrancy show through the
         // WKWebView so the unified toolbar / titlebar frost samples real report
@@ -230,6 +233,17 @@ struct WebView: NSViewRepresentable {
 
             guard let body = message.body as? [String: Any] else {
                 return
+            }
+
+            // Diagnostic (dead-lens hunt, 1 Sep 2026): tag the identity
+            // messages and route changes with the SOURCE webview, so the log
+            // shows when the document the user sees and the document the
+            // bridge dispatches into are not the same one.
+            if let type = body["type"] as? String,
+               type == "ready" || type == "status-page" || type == "route-change" {
+                let src = message.webView.map { String(describing: ObjectIdentifier($0)) } ?? "nil"
+                let inWindow = message.webView?.window != nil
+                log.notice("message \(type, privacy: .public) from wv=\(src, privacy: .public) inWindow=\(inWindow, privacy: .public) url=\((body["url"] as? String) ?? "", privacy: .public)")
             }
 
             Task { @MainActor in

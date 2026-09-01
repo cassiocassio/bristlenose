@@ -287,6 +287,17 @@ final class BridgeHandler: ObservableObject {
                     in: nil,
                     contentWorld: .page
                 )
+                // Diagnostic read-back (dead-lens hunt, 1 Sep 2026): the URL
+                // updates synchronously on a successful React Router navigate,
+                // so the pathname names whether the dispatch had any effect —
+                // and the webview identity names WHICH document it happened
+                // in. Distinguishes "navigated in a webview that isn't on
+                // screen" from "shim ran but navigateRef is dead".
+                let path = try await webView.callAsyncJavaScript(
+                    "return window.location.pathname",
+                    arguments: [:], in: nil, contentWorld: .page
+                )
+                Self.log.notice("switchToTab(\(tab.rawValue, privacy: .public)) → pathname=\(String(describing: path ?? "nil"), privacy: .public) [wv=\(String(describing: ObjectIdentifier(webView)), privacy: .public) inWindow=\(webView.window != nil, privacy: .public)]")
                 // Ensure WKWebView has focus so bare-key shortcuts (s, h, [, ], m)
                 // work immediately after Cmd+1-5 tab switch.
                 webView.window?.makeFirstResponder(webView)

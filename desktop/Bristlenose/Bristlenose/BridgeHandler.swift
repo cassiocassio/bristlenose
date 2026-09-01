@@ -19,6 +19,17 @@ final class BridgeHandler: ObservableObject {
 
     /// True once the web layer posts `{ type: "ready" }` — first meaningful
     /// paint complete. Used to dismiss the loading overlay.
+    ///
+    /// **Not the same question as `documentState`, and deliberately not
+    /// derived from it.** This one asks *"may I stop covering the pane?"*, so
+    /// it is force-set true 2s after any load finishes (`WebView.didFinish`)
+    /// — a served bundle predating the bridge code must not leave the user
+    /// staring at a boot screen for ever. `documentState` asks *"what IS this
+    /// document?"* and is never fabricated: an unidentified document stays
+    /// `.loading` and the lens affordances stay pessimistic (D2). So `isReady`
+    /// goes true on the status page and on a legacy bundle, where
+    /// `documentState` does not — which is exactly why availability moved off
+    /// it. Gate *chrome* on `isReady`; gate *capability* on `documentState`.
     @Published var isReady = false
 
     /// Which document the detail WKWebView is hosting — see `DocumentState`.
@@ -28,7 +39,8 @@ final class BridgeHandler: ObservableObject {
     /// didStartProvisionalNavigation`), so it always describes the document
     /// actually in the view, not the one before it. Unlike `isReady`, this is
     /// never fabricated on a timeout — an unidentified document stays
-    /// `.loading`, deliberately (D2).
+    /// `.loading`, deliberately (D2). See `isReady` for why the two readiness
+    /// notions coexist rather than one deriving from the other.
     ///
     /// Every transition logs at `.notice` (persisted, visible in a default
     /// `log stream`): this enum is the hinge of lens availability, and a

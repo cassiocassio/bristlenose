@@ -17,6 +17,12 @@ enum LensAvailability: Equatable {
     case available
     case unavailable(Reason)
 
+    /// Why the lenses can't act. **Nothing in the UI reads this yet** — every
+    /// consumer calls `isAvailable` — and it is kept anyway because it is
+    /// what lets the truth-table tests assert dim *for the right reason*: a
+    /// bare Bool would let a mis-routed branch in `derive` pass unnoticed, and
+    /// mis-routing is the whole failure mode this type exists to prevent. If
+    /// a "why are these dim?" affordance is ever wanted, it reads these.
     enum Reason: Equatable {
         /// No sole project selected (Welcome, multi-select). The rows stay
         /// visible but dim — they teach the layout before any study exists.

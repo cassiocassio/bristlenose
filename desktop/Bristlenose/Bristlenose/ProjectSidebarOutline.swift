@@ -525,12 +525,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// expansion (groups always; folders per `collapsed`), and reflects selection.
     func update(roots: [OutlineNode], selection: Set<SidebarSelection>, activeTab: Tab?,
                 lensesEnabled: Bool) {
-        // Captured BEFORE the store: the click gate reads the stored value
-        // live, but the rows' dimming is baked at cell build — so a flip that
-        // lands during a guarded window below must still repaint the lens
-        // rows, or look and act diverge (the paint-vs-gate TOCTOU, P4).
-        let lensAvailabilityChanged = self.lensesEnabled != lensesEnabled
-
         self.roots = roots
         self.activeTab = activeTab
         self.lensesEnabled = lensesEnabled
@@ -540,40 +534,13 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // its field editor and drops the in-flight keystrokes. Freeze the table
         // (model is already stored above) until the edit commits — the commit path
         // republishes and re-enters `update()` with `editingNodeID == nil`.
-        // The lens rows are exempt from the freeze: they are never the row
-        // being edited, and a targeted reload of other rows leaves the field
-        // editor (a subview of the edited cell) untouched.
-        guard editingNodeID == nil else {
-            if lensAvailabilityChanged { reloadLensRows() }
-            return
-        }
+        guard editingNodeID == nil else { return }
         // Same shape, different owner: a drop animation is mid-slide and the view's row
         // order is ahead of the tree. The release work item reloads against whatever
-        // tree landed while suppressed. Lens rows sit above the animating
-        // region and their indexes are read from the live view at call time,
-        // so the targeted repaint is order-safe here too.
-        guard !reloadSuppressed else {
-            if lensAvailabilityChanged { reloadLensRows() }
-            return
-        }
+        // tree landed while suppressed.
+        guard !reloadSuppressed else { return }
 
         reloadAndRestore()
-    }
-
-    /// Repaint just the five lens rows — used when `lensesEnabled` changes
-    /// while a guard above is skipping the full reload. `viewFor` reads the
-    /// freshly-stored flag, so the dimming the user sees and the click gate
-    /// the proposal handler enforces read one value again. Deliberately does
-    /// NOT touch selection: the capsule follows `applySelection`, which the
-    /// post-guard full reload re-runs.
-    private func reloadLensRows() {
-        var lensRows = IndexSet()
-        for row in 0..<outlineView.numberOfRows
-        where (outlineView.item(atRow: row) as? OutlineNode)?.isLens == true {
-            lensRows.insert(row)
-        }
-        guard !lensRows.isEmpty else { return }
-        outlineView.reloadData(forRowIndexes: lensRows, columnIndexes: IndexSet(integer: 0))
     }
 
     /// Reload the table and put back everything a `reloadData` drops: expansion,

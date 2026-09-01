@@ -253,15 +253,16 @@ struct WebView: NSViewRepresentable {
                 return
             }
 
-            // Diagnostic (dead-lens hunt, 1 Sep 2026): tag the identity
-            // messages and route changes with the SOURCE webview, so the log
-            // shows when the document the user sees and the document the
-            // bridge dispatches into are not the same one.
-            if let type = body["type"] as? String,
-               type == "ready" || type == "status-page" || type == "route-change" {
+            // Tag the two identity messages with the webview that sent them:
+            // "which document said this" is the question a silent-dispatch
+            // incident always ends up asking, and it is what named the
+            // dead-lens cause on 1 Sep 2026. Route changes are deliberately
+            // NOT tagged — they fire on every in-page navigation, and carry
+            // no identity these two haven't already established.
+            if let type = body["type"] as? String, type == "ready" || type == "status-page" {
                 let src = message.webView.map { String(describing: ObjectIdentifier($0)) } ?? "nil"
                 let inWindow = message.webView?.window != nil
-                log.notice("message \(type, privacy: .public) from wv=\(src, privacy: .public) inWindow=\(inWindow, privacy: .public) url=\((body["url"] as? String) ?? "", privacy: .public)")
+                log.notice("message \(type, privacy: .public) from wv=\(src, privacy: .public) inWindow=\(inWindow, privacy: .public)")
             }
 
             Task { @MainActor in

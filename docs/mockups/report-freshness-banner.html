@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Report freshness banner — P5 / D4-B</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css). Palette swap via
+   data-color-theme; dark via light-dark() + color-scheme.
+
+   Reviews: serving the last good report behind a failed re-run (design
+   decision D4-B, 1 Sep 2026), and the banner that discloses it.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-max-width:52rem;
+  /* sentiment hues — the status page's kind colours come from these */
+  --bn-sentiment-frustration:    light-dark(#ea580c, #fb923c);
+  --bn-sentiment-frustration-bg: light-dark(#fff7ed, #2d1d0e);
+  --bn-sentiment-surprise:       light-dark(#d97706, #fbbf24);
+  --bn-sentiment-surprise-bg:    light-dark(#fffbeb, #2d2305);
+  --bn-colour-error-text:        light-dark(#c2410c, #fb923c);
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+  --bn-positive:           light-dark(#16a34a, #4ade80);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+  --bn-positive:           light-dark(#0f7a4a, #6bd39a);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:980px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:70ch; margin:.4rem 0; }
+.controls { display:flex; gap:.4rem; align-items:center; margin-bottom:var(--bn-space-lg); flex-wrap:wrap; }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.controls button {
+  font:inherit; font-size:var(--bn-text-caption); padding:.3rem .7rem; cursor:pointer;
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text);
+}
+.controls button[aria-pressed="true"] { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+
+/* ---- key: the two zones ------------------------------------------------ */
+.key { display:flex; gap:var(--bn-space-lg); flex-wrap:wrap; margin-bottom:var(--bn-space-xl);
+       font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.key div { display:flex; align-items:center; gap:.5rem; }
+.key .swatch { width:26px; height:16px; border-radius:var(--bn-radius-sm); border:1px solid var(--bn-colour-border); }
+.key .swatch.artefact { background:var(--bn-colour-bg); }
+.key .swatch.commentary {
+  border-left:3px solid var(--bn-colour-muted);
+  background:repeating-linear-gradient(45deg, transparent, transparent 3px,
+             light-dark(rgba(0,0,0,.06), rgba(255,255,255,.06)) 3px,
+             light-dark(rgba(0,0,0,.06), rgba(255,255,255,.06)) 6px);
+}
+
+/* ---- artefact frame: product pixels only ------------------------------- */
+.frame { border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+         overflow:hidden; margin:var(--bn-space-md) 0 var(--bn-space-lg);
+         box-shadow:0 1px 3px var(--bn-colour-shadow); background:var(--bn-colour-bg); }
+.frame-chrome { display:flex; align-items:center; gap:.5rem;
+                padding:.45rem var(--bn-space-md);
+                border-bottom:1px solid var(--bn-colour-border);
+                background:var(--bn-colour-quote-bg); }
+.frame-chrome .dots { display:flex; gap:5px; }
+.frame-chrome .dots i { width:9px; height:9px; border-radius:50%; background:var(--bn-off-track); display:block; }
+.frame-chrome .cap { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+                     letter-spacing:.06em; text-transform:uppercase; color:var(--bn-colour-muted); }
+.stage { padding:var(--bn-space-lg); }
+
+/* ---- commentary: deliberately not-the-product -------------------------- */
+.note { border-left:3px solid var(--bn-colour-muted);
+        background:repeating-linear-gradient(45deg, transparent, transparent 5px,
+                   light-dark(rgba(0,0,0,.035), rgba(255,255,255,.035)) 5px,
+                   light-dark(rgba(0,0,0,.035), rgba(255,255,255,.035)) 10px);
+        padding:var(--bn-space-md) var(--bn-space-lg);
+        margin:0 0 var(--bn-space-xl); }
+.note .tag { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+             letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); display:block; margin-bottom:.4rem; }
+.note p { margin:.45rem 0; font-size:var(--bn-text-label); max-width:78ch; }
+.note ul { margin:.45rem 0; padding-left:1.1rem; font-size:var(--bn-text-label); max-width:78ch; }
+.note li { margin:.3rem 0; }
+.note code { font-family:var(--bn-font-mono); font-size:var(--bn-text-caption);
+             background:var(--bn-colour-badge-bg); padding:.05rem .3rem; border-radius:var(--bn-radius-sm); }
+.q { border-left:3px solid var(--bn-colour-accent); padding-left:.75rem; margin:.5rem 0;
+     font-size:var(--bn-text-label); }
+h2.sec-h { font-size:var(--bn-text-heading); font-weight:490; margin:var(--bn-space-xl) 0 .2rem; }
+h2.sec-h + .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0 0 var(--bn-space-sm); max-width:74ch; }
+
+/* ============================================================================
+   THE PROPOSED COMPONENT — report freshness notice.
+
+   Built only from tokens that already exist. Its glyph colours and its
+   <details> disclosure are lifted from templates/status-page.css so the
+   banner reads as that page folded to one line, not as a new dialect.
+   ========================================================================= */
+.bn-report-notice {
+  display:flex; align-items:flex-start; gap:var(--bn-space-md);
+  padding:var(--bn-space-md) var(--bn-space-md);
+  border-radius:var(--bn-radius-md);
+  border:1px solid var(--bn-colour-border);
+  border-left-width:3px;
+  margin-bottom:var(--bn-space-lg);
+  font-size:var(--bn-text-label);
+  line-height:1.45;
+}
+.bn-report-notice.kind-warning {
+  background:var(--bn-sentiment-surprise-bg);
+  border-left-color:var(--bn-sentiment-surprise);
+}
+.bn-report-notice.kind-info {
+  background:var(--bn-colour-quote-bg);
+  border-left-color:var(--bn-colour-muted);
+}
+.bn-report-notice-glyph { flex:none; line-height:1.45; }
+.kind-warning > .bn-report-notice-glyph { color:var(--bn-sentiment-surprise); }
+.kind-info    > .bn-report-notice-glyph { color:var(--bn-colour-muted); }
+.bn-report-notice-body { min-width:0; }
+.bn-report-notice-text { margin:0; color:var(--bn-colour-text); }
+.bn-report-notice-text strong { font-weight:var(--bn-weight-emphasis); }
+/* disclosure — same recipe as .bn-status-details */
+.bn-report-notice details { margin-top:var(--bn-space-sm); font-size:var(--bn-text-caption);
+                            line-height:1.5; color:var(--bn-colour-muted); }
+.bn-report-notice summary { cursor:pointer; user-select:none; font-weight:var(--bn-weight-emphasis); }
+.bn-report-notice pre {
+  background:var(--bn-colour-hover); border:1px solid var(--bn-colour-border);
+  padding:var(--bn-space-md); border-radius:var(--bn-radius-md); overflow-x:auto;
+  font-family:var(--bn-font-mono); font-size:var(--bn-text-caption);
+  white-space:pre-wrap; word-break:break-word; margin-top:var(--bn-space-sm);
+  color:var(--bn-colour-text);
+}
+
+/* ---- report stage furniture (context so the banner sits believably) ---- */
+.rpt-h1 { font-size:var(--bn-text-title); font-weight:var(--bn-weight-emphasis); margin:0 0 var(--bn-space-md); }
+.rpt-quote { background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border);
+             border-radius:var(--bn-radius-md); padding:var(--bn-space-md); margin-bottom:var(--bn-space-sm); }
+.rpt-quote p { margin:0 0 var(--bn-space-sm); font-size:var(--bn-text-body); }
+.rpt-meta { display:flex; gap:var(--bn-space-sm); align-items:center; }
+.badge { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge);
+         background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text);
+         padding:.1rem .4rem; border-radius:var(--bn-radius-sm); }
+
+/* ---- the status page, for the before/boundary frames ------------------- */
+.sp { text-align:center; padding:var(--bn-space-xl) var(--bn-space-lg); }
+.sp-glyph { font-size:var(--bn-text-display); margin-bottom:var(--bn-space-md); }
+.sp-glyph.kind-error { color:var(--bn-sentiment-frustration); }
+.sp-glyph.kind-info  { color:var(--bn-colour-muted); }
+.sp-short { font-size:var(--bn-text-title); font-weight:var(--bn-weight-emphasis); margin:0 0 var(--bn-space-md); }
+.sp-long { font-size:var(--bn-text-body); color:var(--bn-colour-muted); margin:0 0 var(--bn-space-md); }
+.sp-foot { margin-top:var(--bn-space-xl); padding-top:var(--bn-space-md);
+           border-top:1px solid var(--bn-colour-border); display:flex; gap:var(--bn-space-lg);
+           justify-content:center; font-size:var(--bn-text-label); }
+.sp-foot a { color:var(--bn-colour-accent); text-decoration:none; }
+
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Mockup · P5 / decision D4-B</div>
+    <h1>Report freshness banner</h1>
+    <p>Today a failed re-run hides the report the researcher already had: <code>detect_status</code>
+       intercepts <code>/report/*</code> whenever the last terminus isn’t <em>completed</em>, so a
+       provider outage takes away finished work. D4-B serves the last good report instead and
+       discloses the failure. This is the surface that does the disclosing.</p>
+  </header>
+
+  <div class="controls">
+    <span class="lbl">Palette</span>
+    <button id="pal-default" aria-pressed="true">default</button>
+    <button id="pal-edo" aria-pressed="false">edo</button>
+    <span class="lbl" style="margin-left:1rem">Appearance</span>
+    <button id="sch-light" aria-pressed="false">light</button>
+    <button id="sch-dark" aria-pressed="false">dark</button>
+    <button id="sch-auto" aria-pressed="true">auto</button>
+  </div>
+
+  <div class="key">
+    <div><span class="swatch artefact"></span> Artefact — real pixels, product only</div>
+    <div><span class="swatch commentary"></span> Commentary — not the product</div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <h2 class="sec-h">1 · What a failed re-run does today</h2>
+  <p class="sub">The report exists on disk and is perfectly readable. The researcher cannot reach it.</p>
+
+  <div class="frame">
+    <div class="frame-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cap">before</span></div>
+    <div class="stage">
+      <div class="sp">
+        <div class="sp-glyph kind-error">✗</div>
+        <p class="sp-short">Last run failed.</p>
+        <p class="sp-long">Provider returned 503 — the service is temporarily unavailable.</p>
+        <div class="sp-foot"><a href="#">Send feedback</a><a href="#">Help</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <h2 class="sec-h">2 · What it would do instead</h2>
+  <p class="sub">The last good report, with the two facts the researcher is owed: what they are
+     reading, and that the run they started since then failed.</p>
+
+  <div class="frame">
+    <div class="frame-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cap">after</span></div>
+    <div class="stage">
+      <div class="bn-report-notice kind-warning" role="status">
+        <span class="bn-report-notice-glyph" aria-hidden="true">⚠</span>
+        <div class="bn-report-notice-body">
+          <p class="bn-report-notice-text">Showing the report from <strong>28 August</strong>. The latest run failed.</p>
+          <details>
+            <summary>Show details</summary>
+            <pre>category: api_server
+code: 503
+stage: s10_quote_extraction
+provider: anthropic
+
+Provider returned 503 — the service is temporarily unavailable.</pre>
+          </details>
+        </div>
+      </div>
+
+      <h3 class="rpt-h1">Findings</h3>
+      <div class="rpt-quote">
+        <p>“I couldn’t tell whether it had saved, so I just pressed it again.”</p>
+        <div class="rpt-meta"><span class="badge">p2</span><span class="badge">confusion</span></div>
+      </div>
+      <div class="rpt-quote">
+        <p>“The price at the top and the price in the bag were different.”</p>
+        <div class="rpt-meta"><span class="badge">p3</span><span class="badge">trust</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="tag">Commentary — why this shape</span>
+    <p><strong>Kind: <code>WARNING</code>, not <code>ERROR</code>.</strong> The five-kind taxonomy
+       (<code>bristlenose/ui_kinds.py</code>) is explicit that a sixth is not to be invented, so the
+       banner picks from what exists. <code>ERROR</code> means “did not complete; action needed” —
+       right for the status page, where there is nothing to show. Here a complete artefact <em>is</em>
+       on screen and only its currency is in question, which is what <code>WARNING</code>
+       (“recoverable / partial / soft-degrade”) names. Reaching for <code>ERROR</code> would teach the
+       researcher to distrust a report that is fine.</p>
+    <p><strong>It is the status page folded to one line.</strong> Same glyph, same kind colour
+       (<code>--bn-sentiment-surprise</code>), same <code>&lt;details&gt;</code> + <code>&lt;pre&gt;</code>
+       disclosure carrying the same cause block. Nothing new is being said, so nothing new is being
+       drawn — the two surfaces are one message at two sizes.</p>
+    <p><strong>Genuinely new element, flagged.</strong> No banner/notice component exists in
+       <code>frontend/src/components/</code> or in <code>theme/{atoms,molecules,organisms}</code> —
+       I checked before drawing. Every <em>value</em> above is an existing token; the <em>component</em>
+       is new and needs your nod. Home would be <code>theme/molecules/report-notice.css</code> plus a
+       small React component, not inline styles.</p>
+  </div>
+
+  <!-- ==================================================================== -->
+  <h2 class="sec-h">3 · The boundary — when the banner does not apply</h2>
+  <p class="sub">A failed <em>first</em> run, or a destructive re-analysis that consumed the artefact,
+     leaves nothing coherent to serve. The status page keeps that case, unchanged.</p>
+
+  <div class="frame">
+    <div class="frame-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cap">after · no prior report</span></div>
+    <div class="stage">
+      <div class="sp">
+        <div class="sp-glyph kind-error">✗</div>
+        <p class="sp-short">Last run failed.</p>
+        <p class="sp-long">Provider returned 503 — the service is temporarily unavailable.</p>
+        <div class="sp-foot"><a href="#">Send feedback</a><a href="#">Help</a></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="tag">Commentary — the integrity gate underneath</span>
+    <p>Which of the two you get is decided by evidence, never by how bad the failure looked:
+       <em>is there a coherent last-good artefact?</em> That keeps us out of the business of
+       maintaining a severity taxonomy of failures.</p>
+    <p>It also needs a real fix underneath, and this is the part worth scrutinising. The pipeline
+       rewrites intermediate JSON stage by stage, so a failed run can leave stages 1–9 new and 10–12
+       old. A running serve only re-imports on a <em>completed</em> terminus, so today’s common case
+       (provider outage, network, crash) never touches the DB — yesterday’s report is intact. The hole
+       is a serve <em>restart</em>, whose startup import would happily ingest that mixed state. So the
+       rule is one line with two consumers: <strong>the DB advances only on a completed
+       terminus</strong> — the importer skips, and the page gate reads the same fact.</p>
+  </div>
+
+  <!-- ==================================================================== -->
+  <h2 class="sec-h">4 · The variants to settle</h2>
+  <p class="sub">All three are one component in different states. Copy is deliberately unsettled —
+     English first, then 21 locales.</p>
+
+  <div class="frame">
+    <div class="frame-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="cap">states</span></div>
+    <div class="stage">
+      <div class="bn-report-notice kind-warning" role="status">
+        <span class="bn-report-notice-glyph" aria-hidden="true">⚠</span>
+        <div class="bn-report-notice-body">
+          <p class="bn-report-notice-text">Showing the report from <strong>28 August</strong>. The latest run failed.</p>
+          <details><summary>Show details</summary>
+            <pre>category: api_server
+code: 503
+stage: s10_quote_extraction
+provider: anthropic</pre></details>
+        </div>
+      </div>
+
+      <div class="bn-report-notice kind-warning" role="status">
+        <span class="bn-report-notice-glyph" aria-hidden="true">⚠</span>
+        <div class="bn-report-notice-body">
+          <p class="bn-report-notice-text">Showing the report from <strong>28 August</strong>. The latest run failed.</p>
+          <details open><summary>Show details</summary>
+            <pre>category: api_server
+code: 503
+stage: s10_quote_extraction
+provider: anthropic
+
+Provider returned 503 — the service is temporarily unavailable.
+
+— recent log —
+2026-09-02 19:04:11 INFO  s09_topic_segmentation complete (51 sessions)
+2026-09-02 19:04:12 INFO  s10_quote_extraction start
+2026-09-02 19:04:44 ERROR provider says: 503 upstream unavailable</pre></details>
+        </div>
+      </div>
+
+      <div class="bn-report-notice kind-info" role="status">
+        <span class="bn-report-notice-glyph" aria-hidden="true">ℹ</span>
+        <div class="bn-report-notice-body">
+          <p class="bn-report-notice-text">Showing the report from <strong>28 August</strong>. The latest run was cancelled.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="tag">Commentary — four open questions, yours to settle</span>
+    <ul>
+      <li><strong>Does a cancelled run earn a banner at all?</strong> Drawn above as
+        <code>INFO</code> with no disclosure, because there is no cause to show and the researcher
+        did it on purpose. But the sidebar’s own glyph rule already decided the sibling case —
+        <em>“a run they stopped is not news”</em> — and the consistent reading of that is
+        <strong>no banner for a cancelled run</strong>, only for a failed one. I lean to dropping it;
+        the counter-argument is that “this isn’t the run you started” outlives the memory of
+        cancelling.</li>
+      <li><strong>Dismissible?</strong> Drawn as not. It states a condition that persists until a
+        successful run, and the fix is to re-run, so a dismiss button would mostly serve to let a
+        researcher hide the fact and then present stale findings. The cost is a band on every lens
+        until the condition clears.</li>
+      <li><strong>Sticky, or does it scroll away?</strong> Drawn scrolling. It re-appears on every
+        lens switch, which is probably enough; sticky is heavier and steals vertical space from the
+        content the researcher came for.</li>
+      <li><strong>The date.</strong> Drawn as “28 August”. It must come from the existing shared date
+        rendering, not a new format — <code>docs/design-shared-formats.md</code> is explicit that a
+        format with no shared stem is a format that drifts, and this one has a Python, a TypeScript
+        and a Swift renderer to agree with.</li>
+    </ul>
+    <p><strong>Copy, unsettled on purpose</strong> (English gets hand-tuned before it is seeded to 21
+       locales). Three candidates for the leading sentence:</p>
+    <ul>
+      <li>“Showing the report from <strong>28 August</strong>. The latest run failed.” — drawn above;
+          says what you are looking at first, which is the fact the researcher needs.</li>
+      <li>“This report is from <strong>28 August</strong>. A more recent run failed.” — same order,
+          softer, slightly longer.</li>
+      <li>“Last analysed <strong>28 August</strong> · latest run failed” — most compact, reads as
+          chrome rather than prose; pairs best with the not-sticky choice.</li>
+    </ul>
+  </div>
+
+  <div class="note">
+    <span class="tag">Commentary — what this does NOT change</span>
+    <p>The desktop sidebar row keeps its own failure glyph and diagnostic popover. That is a different
+       fact in a different place — the row says <em>this study’s run failed</em>, the banner says
+       <em>this report predates it</em> — and per the house rule status lives where its subject lives.
+       Browser and CLI have no row at all, so the banner is their only signal either way.</p>
+    <p>One consequence to accept knowingly: with D4-B in, a failed-but-previously-analysed project
+       serves the SPA, so its lenses are <em>live</em> and correctly lit. That is the same one-line
+       flip in <code>ArtifactPrior</code> the lens work left waiting, and it lands in the same commit
+       as the serve rule — the prior must always mirror the serve that is actually running.</p>
+  </div>
+
+</div>
+
+<script>
+  const root = document.documentElement;
+  const set = (id, on) => document.getElementById(id).setAttribute('aria-pressed', String(on));
+  document.getElementById('pal-default').onclick = () => {
+    root.setAttribute('data-color-theme','default'); set('pal-default',true); set('pal-edo',false);
+  };
+  document.getElementById('pal-edo').onclick = () => {
+    root.setAttribute('data-color-theme','edo'); set('pal-edo',true); set('pal-default',false);
+  };
+  const scheme = (v) => {
+    root.style.colorScheme = v === 'auto' ? 'light dark' : v;
+    set('sch-light', v==='light'); set('sch-dark', v==='dark'); set('sch-auto', v==='auto');
+  };
+  document.getElementById('sch-light').onclick = () => scheme('light');
+  document.getElementById('sch-dark').onclick  = () => scheme('dark');
+  document.getElementById('sch-auto').onclick  = () => scheme('auto');
+</script>
+</body>
+</html>

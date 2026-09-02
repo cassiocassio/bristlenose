@@ -309,12 +309,31 @@ Audit of what the project uses vs what CI actually tests (Apr 2026).
 
 ### Desktop build job — implementation plan
 
-> **Superseded by the shipped `mac-build.yml` (before 14 Aug 2026).** What
-> shipped differs on every axis below: a separate workflow rather than a job in
-> `ci.yml`; path-filtered to `desktop/**`; `macos-15`; compile-only with
-> `CODE_SIGNING_ALLOWED=NO` (that reasoning survives); **no** Swift tests; a
-> log artifact on failure; blocking rather than informational. Plan preserved
-> for the rationale.
+> **Superseded by the shipped `mac-build.yml` (before 14 Aug 2026), then closed
+> 3 Sep 2026.** What shipped differed on every axis: a separate workflow rather
+> than a job in `ci.yml`; path-filtered to `desktop/**`; `macos-15`; compile-only
+> with `CODE_SIGNING_ALLOWED=NO` (that reasoning survives); **no** Swift tests; a
+> log artifact on failure; blocking rather than informational.
+>
+> **Two of those have since been corrected, and the delay is the lesson.** The
+> Swift tests landed 3 Sep 2026 — the workflow now calls
+> `desktop/scripts/test-swift.sh`, the same entry point as `/end-session` and
+> both build scripts. And `macos-15` moved to `macos-26`, because Xcode 16.4's
+> macOS 15 SDK cannot compile `sharedBackgroundVisibility` or
+> `backgroundExtensionEffect`; `#available` gates runtime, not the SDK.
+>
+> **"Blocking rather than informational" was true in intent and false in
+> effect.** The step had no `continue-on-error`, but it piped `xcodebuild` to
+> `tee` under GitHub's default `bash -e` — no `pipefail` — so it exited with
+> `tee`'s status and could not fail. It reported success on every run from 20 May
+> to 2 Sep 2026, including ones carrying 16 compile errors, and `v0.29.0` shipped
+> on all nine channels with `TabLeftPanelTests` red.
+>
+> **This banner recorded the gap correctly and nothing acted on it for three
+> months.** That is the point worth keeping: the gap was not invisible: it was
+> written down, accurate, and inert. A recorded gap with no owner and no expiry
+> behaves exactly like an unrecorded one. See
+> [testing/gaps.md](testing/gaps.md) for the other five of that shape.
 
 **Goal:** catch Swift compilation errors, missing imports, and deployment target issues on every push. Does not run the app or test it — just verifies it builds.
 
@@ -359,10 +378,10 @@ desktop-build:
 - **`xcpretty`** — formats xcodebuild output into readable lines. The `|| true` prevents xcpretty exit code from masking xcodebuild failures (xcpretty returns 0 even on build failure; the step fails on xcodebuild's exit code before the pipe)
 - **No dependency on `lint` or `test`** — runs in parallel. Swift builds are independent of Python/Node
 - **Debug configuration** — faster than Release (no optimisation), sufficient for compilation verification
-- **Includes Swift tests** — the BristlenoseTests target already has 5 test files (Tab, I18n, LLMProvider, KeychainHelper, ProjectIndex). Running them in CI catches regressions immediately. Tests use `InMemoryKeychain` and temp file URLs, so no real credentials or filesystem side effects
+- **Includes Swift tests** — the BristlenoseTests target already has 5 test files (Tab, I18n, LLMProvider, KeychainHelper, ProjectIndex) _[as of the original plan; 106 files / 1382 declared tests as of 3 Sep 2026 — see [testing/inventory.md](testing/inventory.md), which is generated]_. Running them in CI catches regressions immediately. Tests use `InMemoryKeychain` and temp file URLs, so no real credentials or filesystem side effects
 - **Single macOS job** — no matrix needed. One Xcode version, one deployment target, one architecture (arm64 on GitHub's M1 runners)
 
-**Cost:** ~2-3 min on a macOS runner = ~$0.20/push at 10× rate. Acceptable.
+**Cost:** ~2-3 min on a macOS runner. _Corrected 3 Sep 2026: the "~$0.20/push at 10× rate" this line used to carry is the **private-repo** rate. `cassiocassio/bristlenose` is public, and GitHub-hosted standard runners — `macos-26` included — are free for public repos with unlimited minutes. The 10× multiplier applies only to private repos against the 2,000-minute allowance. Only the `-xlarge` variants are billed here. So this line hung a price on work that had none, which is a way of making something feel deferrable._
 
 **Sprint:** not in S1. Add to S2 alongside "Desktop app build pipeline" and "Code signing" items, which share the same macOS runner infrastructure.
 

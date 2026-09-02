@@ -6,7 +6,7 @@ _Canonical index for how Bristlenose is tested. Start here. Consolidated 7 Jul 2
 
 | Tier | Fidelity | Cost | Catches | Status |
 |---|---|---|---|---|
-| **CI** (`tests/`, pytest) | mocked, hermetic | seconds, free | logic regressions | ✅ built |
+| **CI** (`tests/` pytest · `frontend` vitest · `BristlenoseTests` Swift) | mocked, hermetic | seconds, free | logic regressions | ✅ built — Swift joined 3 Sep 2026, having run nowhere automatic until then |
 | **Playwright** (`e2e/`) | real `serve`, fixture data, no LLM | ~1 min, free | SPA/DOM/render/link/network | ✅ built |
 | **Acceptance matrix** ([acceptance-matrix.md](acceptance-matrix.md)) | real binaries, real providers, real reports | mins–hrs, ¢ | cross-seam, packaging, provider, GUI-integration | ⬜ Phase 1 not built |
 | **Human walk** (private QA doc) | a person operating the `.app` | hours | feel, native chrome, "nothing surprised you" | ongoing |
@@ -18,10 +18,10 @@ The **defining split** (the whole reason this set exists): the top two tiers are
 **Here in `docs/testing/`:**
 - **[gaps.md](gaps.md)** — what is *not* covered, ranked by what reaches a user, each with
   the command that measured it. The judgement layer over the generated inventory below.
-- **[inventory.md](inventory.md)** — **generated**, never hand-written: every suite, every workflow and its triggers, every gate and whether a failure actually fails the job, the `build-all.sh` step list, and the local hooks. Produced by `scripts/gen-test-inventory.py`; `--check` exits 1 when the structure drifts from the tree. Read this before trusting any count or claim in the prose docs below — on 2 Sep 2026 four of them were measurably wrong, including this file's own "16 ingest formats" against coverage-inventory.md's 27.
+- **[inventory.md](inventory.md)** — **generated**, never hand-written: every suite, every workflow and its triggers, every gate and whether a failure actually fails the job, the step lists of **both** shipping entry points (`build-all.sh` for the App Store archive, `build-dmg.sh` for the notarised download — two certificates, two channels, neither covering the other), and the local hooks. Produced by `scripts/gen-test-inventory.py`; `--check` exits 1 when the structure drifts from the tree. Read this before trusting any count or claim in the prose docs below — on 2 Sep 2026 four of them were measurably wrong, including this file's own "16 ingest formats" against coverage-inventory.md's 27.
 - **[bn-release-acceptance.md](bn-release-acceptance.md)** — acceptance criteria for the `/bn-release` skill. Scores *behaviour under instruction* rather than code, so a pass is one observation and not a proof. Three tiers: dry run (free, repeatable), fault injection, live release. Written before the skill's first run, on purpose.
 - **[acceptance-matrix.md](acceptance-matrix.md)** — the mechanical tier. Three-tier model, shape-not-content invariants, drive mechanisms ranked by ROI, phased plan, overnight-run gates. Plan of record.
-- **[coverage-inventory.md](coverage-inventory.md)** — the single source of *what surfaces exist to cover* (16 ingest formats · 5 exports · 5 lenses + every clicking surface · 5 providers · non-English). Both tiers consume it. Add new surfaces here first.
+- **[coverage-inventory.md](coverage-inventory.md)** — the single source of *what surfaces exist to cover*: ingest formats, exports, lenses and every clicking surface, providers, non-English. Both tiers consume it. Add new surfaces here first. **The counts live there and are deliberately not repeated here** — this line used to say "16 ingest formats" while the file it calls the single source said 27, which is what restating a number in two places buys you.
 - **[test-data-generation.md](test-data-generation.md)** — repeatable recipe for synthetic fixtures (any topic/language/scale).
 - **[real-data-testing.md](real-data-testing.md)** — using real interview data under governance.
 
@@ -36,7 +36,7 @@ The **defining split** (the whole reason this set exists): the top two tiers are
 - **Private human tier** — the walks-fix-walks QA doc (cohort/TF-gated, under the gitignored private docs tree): the by-hand end-to-end walk, upload-day steps, and the concrete fixture-folder mapping. Kept private because it carries TF timing + cohort detail.
 
 **Code artifacts:**
-- `tests/test_no_fake_success_acceptance.py` — ✅ built. Executable fake-success audit: full pipeline on real data × providers × formats, asserts every success signal has a real artifact. `@pytest.mark.slow`, each leg **skips if its input is absent** — currently waiting on the format-parity fixtures.
+- `tests/test_no_fake_success_acceptance.py` — ⚠️ **written, never run.** Measured 3 Sep 2026: 8 tests, **8 skipped**, exit 0 — and a skip is indistinguishable from a pass in a summary line, a badge, or a close-out report, so the fake-success auditor currently produces a fake success ([gaps.md](gaps.md) G2). Executable fake-success audit: full pipeline on real data × providers × formats, asserts every success signal has a real artifact. `@pytest.mark.slow`, each leg **skips if its input is absent** — currently waiting on the format-parity fixtures.
 - `e2e/` — Playwright tier 2 (Chromium + WebKit; layers 1–3: console, links, network). `e2e/ALLOWLIST.md` governs suppressions.
 - `tests/fixtures/smoke-test/` — the committed synthetic single-session fixture both CI and Playwright trust.
 
@@ -46,7 +46,7 @@ The mechanical/human split is settled; the build order is Phase 1 of the accepta
 
 1. **Close the fixture gap** — produce the format-parity `.docx` (Teams + Meet) + the 10 missing media/subtitle containers, so the *already-written* `test_no_fake_success_acceptance.py` stops skipping. Recipe in test-data-generation.md; gap tracked in coverage-inventory.md §1.
 2. **Phase-1 CLI provider matrix** — `scripts/acceptance/` : text-fixture `analyze × 5 providers` + one media `run` cell, shape-invariant assertions, one summary file. Local cell is free; provider column ≈ pennies. This is the backbone that catches the motivating bug class.
-3. **Extend the Playwright pass** — "every lens loads clean" (visit all 5 lenses, assert mount + zero console errors) + export structural checks (HTML self-contained, XLS valid, clips ffprobe-valid, anonymised = zero PII).
+3. ~~**Extend the Playwright pass** — "every lens loads clean"~~ ✅ the lens half shipped **7 Jul 2026**, in the very commit that wrote this list (`e2e/tests/lenses-load-clean.spec.ts`, "add acceptance-testing tier: format coverage, invariant harness, lens smoke"). It sat here as future work for two months. Still open: the export structural checks — + export structural checks (HTML self-contained, XLS valid, clips ffprobe-valid, anonymised = zero PII).
 4. **Wire the human doc to this set** — tag each atom in the private walk `[matrix]` / `[e2e]` / `[human]` so the by-hand load visibly shrinks to judgment-only.
 
 Phases 2–3 (desktop GUI smoke via XCUITest, `launchd` nightly, one HTML dashboard) are specified in acceptance-matrix.md and stay post-Phase-1.

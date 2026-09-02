@@ -1,0 +1,523 @@
+{
+  "measurements": {
+    "suites": [
+      {
+        "basis": "collected (expands parametrize \u2014 authoritative)",
+        "files": null,
+        "kind": "python unit/integration",
+        "runner": "pytest",
+        "source": "tests/",
+        "suite": "pytest",
+        "tests": 4453
+      },
+      {
+        "basis": "test files",
+        "files": 114,
+        "kind": "frontend unit",
+        "runner": "vitest",
+        "source": "frontend/src/**/*.test.*",
+        "suite": "vitest",
+        "tests": null
+      },
+      {
+        "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
+        "files": 106,
+        "kind": "swift unit",
+        "runner": "xcodebuild",
+        "source": "desktop/Bristlenose/BristlenoseTests/",
+        "suite": "BristlenoseTests",
+        "tests": 1382
+      },
+      {
+        "basis": "spec files",
+        "files": 8,
+        "kind": "browser e2e",
+        "runner": "playwright",
+        "source": "e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts)",
+        "suite": "playwright",
+        "tests": null
+      }
+    ]
+  },
+  "structure": {
+    "build_gates": [
+      {
+        "can_skip": false,
+        "id": "1c",
+        "name": "Swift unit suite",
+        "phase": "Verify"
+      },
+      {
+        "can_skip": false,
+        "id": "2",
+        "name": "Sidecar \u2014 fetch \u00b7 build \u00b7 sign",
+        "phase": "Build"
+      },
+      {
+        "can_skip": false,
+        "id": "2a",
+        "name": "Bundle self-test",
+        "phase": "Verify"
+      },
+      {
+        "can_skip": false,
+        "id": "2b",
+        "name": "Supply-chain inventory",
+        "phase": "Build"
+      },
+      {
+        "can_skip": false,
+        "id": "2c",
+        "name": "App Store string scan",
+        "phase": "Verify"
+      },
+      {
+        "can_skip": false,
+        "id": "2d",
+        "name": "Agent extension (.mcpb)",
+        "phase": "Build"
+      },
+      {
+        "can_skip": false,
+        "id": "5",
+        "name": "Xcode archive",
+        "phase": "Build"
+      },
+      {
+        "can_skip": false,
+        "id": "6",
+        "name": "Export \u2192 .pkg",
+        "phase": "Package"
+      },
+      {
+        "can_skip": false,
+        "id": "7",
+        "name": "Release-binary scan",
+        "phase": "Verify"
+      },
+      {
+        "can_skip": false,
+        "id": "8",
+        "name": "Provisioning profile",
+        "phase": "Verify"
+      },
+      {
+        "can_skip": false,
+        "id": "9",
+        "name": "Notarisation",
+        "phase": "Verify"
+      }
+    ],
+    "local_hooks": {
+      "agent_hooks": [
+        "PreToolUse:Bash -> block-checkout.sh",
+        "PreToolUse:Bash -> block-private-add.sh",
+        "PreToolUse:Edit|Write|MultiEdit -> block-env-edits.sh",
+        "PreToolUse:Edit|Write|MultiEdit -> swift-native-first.sh",
+        "PostToolUse:Edit|Write -> jq",
+        "PostToolUse:Edit|Write|MultiEdit -> frontend-stale-reminder.sh"
+      ],
+      "pre_commit": [
+        "gitleaks",
+        "no tracked files match .gitignore"
+      ]
+    },
+    "suites": [
+      {
+        "basis": "collected (expands parametrize \u2014 authoritative)",
+        "kind": "python unit/integration",
+        "runner": "pytest",
+        "source": "tests/",
+        "suite": "pytest"
+      },
+      {
+        "basis": "test files",
+        "kind": "frontend unit",
+        "runner": "vitest",
+        "source": "frontend/src/**/*.test.*",
+        "suite": "vitest"
+      },
+      {
+        "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
+        "kind": "swift unit",
+        "runner": "xcodebuild",
+        "source": "desktop/Bristlenose/BristlenoseTests/",
+        "suite": "BristlenoseTests"
+      },
+      {
+        "basis": "spec files",
+        "kind": "browser e2e",
+        "runner": "playwright",
+        "source": "e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts)",
+        "suite": "playwright"
+      }
+    ],
+    "workflows": [
+      {
+        "default_shell": null,
+        "file": "ci.yml",
+        "jobs": [
+          {
+            "calls": null,
+            "id": "lint",
+            "job_colour": "hard",
+            "notable_steps": [
+              {
+                "colour": "soft",
+                "name": "Type check with mypy",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "soft",
+                "name": "Audit dependencies for known vulnerabilities",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "soft",
+                "name": "Generate Python SBOM",
+                "piped": false,
+                "runs_tests": false
+              }
+            ],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "test",
+            "job_colour": "conditional: ${{ matrix.os == 'macos-latest' && inputs.strict-macos != true }}",
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "name": "Run tests",
+                "piped": false,
+                "runs_tests": true
+              }
+            ],
+            "runs_on": "${{ matrix.os }}"
+          },
+          {
+            "calls": null,
+            "id": "release-suites",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "frontend-lint-type-test",
+            "job_colour": "hard",
+            "notable_steps": [
+              {
+                "colour": "soft",
+                "name": "Audit frontend dependencies for known vulnerabilities",
+                "piped": true,
+                "runs_tests": false
+              },
+              {
+                "colour": "soft",
+                "name": "Generate frontend SBOM",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "hard",
+                "name": "Frontend tests (Vitest)",
+                "piped": false,
+                "runs_tests": true
+              }
+            ],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "e2e",
+            "job_colour": "hard",
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "name": "Run E2E tests",
+                "piped": false,
+                "runs_tests": true
+              }
+            ],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "package",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          }
+        ],
+        "name": "CI",
+        "piped_steps": [
+          "Assert the wheel carries the built frontend",
+          "Install the CLI into the venv the gates expect"
+        ],
+        "triggers": [
+          "push [main]",
+          "pull_request [main]",
+          "workflow_call",
+          "workflow_dispatch"
+        ]
+      },
+      {
+        "default_shell": null,
+        "file": "codeql.yml",
+        "jobs": [
+          {
+            "calls": null,
+            "id": "analyze",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          }
+        ],
+        "name": "CodeQL",
+        "piped_steps": [],
+        "triggers": [
+          "push [main]",
+          "pull_request [main]",
+          "schedule (17 6 * * 1)"
+        ]
+      },
+      {
+        "default_shell": null,
+        "file": "i18n-check.yml",
+        "jobs": [
+          {
+            "calls": null,
+            "id": "validate-locales",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          }
+        ],
+        "name": "i18n check",
+        "piped_steps": [],
+        "triggers": [
+          "push [main] paths=bristlenose/locales/**",
+          "pull_request [main] paths=bristlenose/locales/**"
+        ]
+      },
+      {
+        "default_shell": null,
+        "file": "install-test.yml",
+        "jobs": [
+          {
+            "calls": null,
+            "id": "linux-pip",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "linux-pipx",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "macos-pip",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "macos-latest"
+          },
+          {
+            "calls": null,
+            "id": "macos-brew",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "macos-latest"
+          },
+          {
+            "calls": null,
+            "id": "full-run",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          }
+        ],
+        "name": "Install & Smoke Test",
+        "piped_steps": [],
+        "triggers": [
+          "schedule (0 6 * * 1)",
+          "workflow_dispatch",
+          "push [main] paths=INSTALL.md,README.md,.github/workflows/install-test.yml,tests/fixtures/smoke-test/**",
+          "pull_request [main] paths=INSTALL.md,README.md,.github/workflows/install-test.yml,tests/fixtures/smoke-test/**"
+        ]
+      },
+      {
+        "default_shell": "bash",
+        "file": "mac-build.yml",
+        "jobs": [
+          {
+            "calls": null,
+            "id": "build",
+            "job_colour": "hard",
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "name": "Build and test",
+                "piped": false,
+                "runs_tests": true
+              }
+            ],
+            "runs_on": "macos-26"
+          }
+        ],
+        "name": "Mac Build",
+        "piped_steps": [],
+        "triggers": [
+          "push [main] paths=desktop/**,.github/workflows/mac-build.yml",
+          "pull_request [main] paths=desktop/**,.github/workflows/mac-build.yml"
+        ]
+      },
+      {
+        "default_shell": null,
+        "file": "perf.yml",
+        "jobs": [
+          {
+            "calls": null,
+            "id": "perf-gate",
+            "job_colour": "hard",
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "name": "Run perf-gate",
+                "piped": false,
+                "runs_tests": true
+              }
+            ],
+            "runs_on": "ubuntu-latest"
+          }
+        ],
+        "name": "Perf",
+        "piped_steps": [],
+        "triggers": [
+          "push [main]"
+        ]
+      },
+      {
+        "default_shell": null,
+        "file": "release.yml",
+        "jobs": [
+          {
+            "calls": "./.github/workflows/ci.yml",
+            "id": "ci",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": ""
+          },
+          {
+            "calls": null,
+            "id": "build",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "publish",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "github-release",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "verify-pypi",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "notify-homebrew",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "trigger-copr",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          }
+        ],
+        "name": "Release to PyPI",
+        "piped_steps": [],
+        "triggers": [
+          "push [v*]"
+        ]
+      },
+      {
+        "default_shell": null,
+        "file": "secret-scan.yml",
+        "jobs": [
+          {
+            "calls": null,
+            "id": "scan",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          }
+        ],
+        "name": "Secret & privacy scan",
+        "piped_steps": [],
+        "triggers": [
+          "push [main]",
+          "pull_request [main]"
+        ]
+      },
+      {
+        "default_shell": null,
+        "file": "snap.yml",
+        "jobs": [
+          {
+            "calls": null,
+            "id": "build",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "publish-edge",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "publish-stable",
+            "job_colour": "hard",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          }
+        ],
+        "name": "Snap Build & Publish",
+        "piped_steps": [
+          "Resolve snap path"
+        ],
+        "triggers": [
+          "push [main]",
+          "pull_request [main]",
+          "workflow_dispatch"
+        ]
+      }
+    ]
+  }
+}

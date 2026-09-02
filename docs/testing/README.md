@@ -16,6 +16,7 @@ The **defining split** (the whole reason this set exists): the top two tiers are
 ## The documents (one set)
 
 **Here in `docs/testing/`:**
+- **[inventory.md](inventory.md)** — **generated**, never hand-written: every suite, every workflow and its triggers, every gate and whether a failure actually fails the job, the `build-all.sh` step list, and the local hooks. Produced by `scripts/gen-test-inventory.py`; `--check` exits 1 when the structure drifts from the tree. Read this before trusting any count or claim in the prose docs below — on 2 Sep 2026 four of them were measurably wrong, including this file's own "16 ingest formats" against coverage-inventory.md's 27.
 - **[bn-release-acceptance.md](bn-release-acceptance.md)** — acceptance criteria for the `/bn-release` skill. Scores *behaviour under instruction* rather than code, so a pass is one observation and not a proof. Three tiers: dry run (free, repeatable), fault injection, live release. Written before the skill's first run, on purpose.
 - **[acceptance-matrix.md](acceptance-matrix.md)** — the mechanical tier. Three-tier model, shape-not-content invariants, drive mechanisms ranked by ROI, phased plan, overnight-run gates. Plan of record.
 - **[coverage-inventory.md](coverage-inventory.md)** — the single source of *what surfaces exist to cover* (16 ingest formats · 5 exports · 5 lenses + every clicking surface · 5 providers · non-English). Both tiers consume it. Add new surfaces here first.

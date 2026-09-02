@@ -20,9 +20,26 @@ on:
 permissions:
   contents: read
 
+# EVERY `run` step gets pipefail. GitHub's default shell is `bash -e {0}` —
+# WITHOUT pipefail — so `xcodebuild ... | tee log` exits with *tee's* status,
+# which is always 0. This workflow was structurally incapable of failing from
+# 20 May to 2 Sep 2026: its last "success" carried 16 compile errors. Setting
+# the shell here rather than on the one step means a pipe added later cannot
+# reintroduce it. Same bug class as the `&& ok` gates and the piped pytest
+# already documented in CLAUDE.md.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
-    runs-on: macos-15  # ships current Xcode 16 + macOS 15 SDK (deployment target = 15.0)
+    # macos-26 (arm64, standard => free on a public repo; NOT the -xlarge variants,
+    # which are billed even here). macos-15 ships Xcode 16.4 / macOS 15 SDK, which
+    # cannot compile the macOS 26 APIs the codebase now uses — StatusPill's
+    # `sharedBackgroundVisibility` and SeamLabView's `backgroundExtensionEffect`.
+    # `#available(macOS 26.0, *)` gates RUNTIME availability; the symbol still has
+    # to exist in the SDK at compile time. Deployment target stays 15.0.
+    runs-on: macos-26
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
@@ -43,8 +60,32 @@ jobs:
           touch desktop/Bristlenose/Resources/bristlenose-sidecar/bristlenose-sidecar
           chmod +x desktop/Bristlenose/Resources/bristlenose-sidecar/bristlenose-sidecar
 
+      - name: Generate build-info source
+        # `GeneratedBuildInfo.swift` is gitignored and normally written by a
+        # pre-compile Run Script phase. But PBXFileSystemSynchronizedRootGroup
+        # snapshots the Compile Sources list BEFORE that phase runs, so on a tree
+        # that has never been built the file is invisible to the very build that
+        # creates it — `cannot find 'GeneratedBuildInfo' in scope`. Locally you
+        # re-run and it passes; CI checks out fresh every time, so every run hit
+        # it, and the masked exit code above meant every run still said success.
+        # The script falls back to a repo-relative path when SRCROOT is unset.
+        run: desktop/scripts/generate-build-info.sh
+
       - name: Compile (Debug, no codesigning)
         working-directory: desktop/Bristlenose
+        # The sidecar is stubbed above (a 0-byte file), so the "Ensure Sidecar
+        # Fresh" build phase correctly calls it stale and tries to rebuild it —
+        # which wants frontend/node_modules, a venv and PyInstaller, none of
+        # which exist here and none of which a compile-only job needs. Bypass
+        # it, exactly as build-all.sh does for the release archive.
+        #
+        # Both vars are passed TWICE — as step env AND as xcodebuild settings —
+        # because the build phase's own shell does not see plain env
+        # (desktop/CLAUDE.md). This only surfaced once pipefail was fixed: the
+        # phase was failing before too, silently.
+        env:
+          BRISTLENOSE_SKIP_SIDECAR_ENSURE: "1"
+          BRISTLENOSE_ALLOW_STALE_SIDECAR: "1"
         run: |
           xcodebuild build \
             -scheme Bristlenose \
@@ -52,6 +93,8 @@ jobs:
             -destination "generic/platform=macOS" \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
+            BRISTLENOSE_SKIP_SIDECAR_ENSURE=1 \
+            BRISTLENOSE_ALLOW_STALE_SIDECAR=1 \
             | tee xcodebuild.log
 
       - name: Upload xcodebuild log on failure

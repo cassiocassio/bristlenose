@@ -1,8 +1,18 @@
 name: Mac Build
 
-# Compile-only macOS build. Catches Swift breakage between dev Mac and a
-# clean checkout pre-TestFlight. Does NOT sign, bundle, test, or run —
-# see docs/private/handoffs/ci-reshape.md item 6.
+# Compiles the macOS app AND runs BristlenoseTests against a clean checkout.
+# Does NOT sign, bundle, or launch the app.
+#
+# The test half is a cheque written in docs/design-ci.md and left uncashed for
+# three months. That doc specified a "Run Swift tests" step with its rationale;
+# what shipped on 20 May 2026 (ci-reshape.md item 6, half-day timebox, scoped to
+# compile drift) was the build half alone, and nothing reconciled the plan to
+# what landed. The consequence: `TabLeftPanelTests` was red for 10 commits and
+# v0.29.0 shipped on all nine channels with it red, every signal green.
+#
+# It calls desktop/scripts/test-swift.sh — the same entry point as /end-session
+# Phase 1 step 4 and build-all.sh step 1c — so all three read the verdict the
+# one correct way. See that script's header for the two ways it lies.
 #
 # Path-filtered: skipped on Python-only PRs. Don't add as a required
 # status check — non-desktop PRs would block forever.
@@ -40,7 +50,7 @@ jobs:
     # `#available(macOS 26.0, *)` gates RUNTIME availability; the symbol still has
     # to exist in the SDK at compile time. Deployment target stays 15.0.
     runs-on: macos-26
-    timeout-minutes: 20
+    timeout-minutes: 30  # compile ~4 min + 1400-test suite
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
 
@@ -71,36 +81,29 @@ jobs:
         # The script falls back to a repo-relative path when SRCROOT is unset.
         run: desktop/scripts/generate-build-info.sh
 
-      - name: Compile (Debug, no codesigning)
-        working-directory: desktop/Bristlenose
-        # The sidecar is stubbed above (a 0-byte file), so the "Ensure Sidecar
-        # Fresh" build phase correctly calls it stale and tries to rebuild it —
-        # which wants frontend/node_modules, a venv and PyInstaller, none of
-        # which exist here and none of which a compile-only job needs. Bypass
-        # it, exactly as build-all.sh does for the release archive.
-        #
-        # Both vars are passed TWICE — as step env AND as xcodebuild settings —
-        # because the build phase's own shell does not see plain env
-        # (desktop/CLAUDE.md). This only surfaced once pipefail was fixed: the
+      - name: Build and test
+        # The sidecar is stubbed above (a 0-byte file), so "Ensure Sidecar Fresh"
+        # correctly calls it stale and tries to rebuild it — which wants
+        # frontend/node_modules, a venv and PyInstaller, none of which exist here
+        # and none of which compiling needs. The script bypasses it, exactly as
+        # build-all.sh does for the release archive, passing both vars TWICE
+        # (env AND xcodebuild setting) because the build phase's own shell does
+        # not see plain env. That only surfaced once pipefail was fixed — the
         # phase was failing before too, silently.
+        #
+        # Blocking, not informational. design-ci.md proposed "informational
+        # initially — promote to blocking once stable" and the promotion never
+        # happened; a soft gate with no expiry is how this hole opened. The suite
+        # is green and this workflow is deliberately not a required status check,
+        # so a red run is loud without wedging unrelated PRs.
         env:
-          BRISTLENOSE_SKIP_SIDECAR_ENSURE: "1"
-          BRISTLENOSE_ALLOW_STALE_SIDECAR: "1"
-        run: |
-          xcodebuild build \
-            -scheme Bristlenose \
-            -configuration Debug \
-            -destination "generic/platform=macOS" \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
-            BRISTLENOSE_SKIP_SIDECAR_ENSURE=1 \
-            BRISTLENOSE_ALLOW_STALE_SIDECAR=1 \
-            | tee xcodebuild.log
+          BN_LOG_DIR: ${{ github.workspace }}/desktop/build/swift-test-logs
+        run: desktop/scripts/test-swift.sh
 
-      - name: Upload xcodebuild log on failure
+      - name: Upload build + test logs on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
-          name: xcodebuild-log
-          path: desktop/Bristlenose/xcodebuild.log
+          name: swift-build-test-logs
+          path: desktop/build/swift-test-logs/
           retention-days: 30

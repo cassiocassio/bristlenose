@@ -67,10 +67,17 @@ if pgrep -x xcodebuild >/dev/null 2>&1; then
   echo "warning: another xcodebuild is running — concurrent runs on this scheme can hang in teardown" >&2
 fi
 
-LOG_DIR="$(mktemp -d)"
-# Keep the logs when something went wrong — the failure branches print the
-# actionable lines, but a crash-before-report needs the whole file.
-trap 'rc=$?; if [ "$rc" -eq 0 ]; then rm -rf "$LOG_DIR"; else echo "logs kept: $LOG_DIR" >&2; fi' EXIT
+# BN_LOG_DIR lets a caller (CI) put the logs somewhere it can upload from.
+# Unset, we use a temp dir and bin it on success.
+if [ -n "${BN_LOG_DIR:-}" ]; then
+  LOG_DIR="$BN_LOG_DIR"; mkdir -p "$LOG_DIR"
+  trap 'rc=$?; [ "$rc" -eq 0 ] || echo "logs kept: $LOG_DIR" >&2' EXIT
+else
+  LOG_DIR="$(mktemp -d)"
+  # Keep the logs when something went wrong — the failure branches print the
+  # actionable lines, but a crash-before-report needs the whole file.
+  trap 'rc=$?; if [ "$rc" -eq 0 ]; then rm -rf "$LOG_DIR"; else echo "logs kept: $LOG_DIR" >&2; fi' EXIT
+fi
 BUILD_LOG="$LOG_DIR/build.log"
 TEST_LOG="$LOG_DIR/test.log"
 
@@ -78,11 +85,18 @@ DEST='platform=macOS,arch=arm64'
 BYPASS_A=BRISTLENOSE_SKIP_SIDECAR_ENSURE=1
 BYPASS_B=BRISTLENOSE_ALLOW_STALE_SIDECAR=1
 
+# A GitHub runner has no signing identity. Scoped to CI deliberately rather than
+# applied always: locally the app is dev-signed, and the data-protection
+# Keychain reads that some future test may want are entitlement-gated.
+SIGNING=()
+[ -n "${CI:-}" ] && SIGNING=(CODE_SIGNING_ALLOWED=NO)
+
 [ "$QUIET" -eq 1 ] || echo "==> building test bundle"
 build_rc=0
 env "$BYPASS_A" "$BYPASS_B" xcodebuild build-for-testing \
     -scheme Bristlenose -configuration Debug -destination "$DEST" \
     -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
+    "${SIGNING[@]}" \
     "$BYPASS_A" "$BYPASS_B" > "$BUILD_LOG" 2>&1 || build_rc=$?
 if [ "$build_rc" -ne 0 ]; then
   echo "BUILD FAILED (xcodebuild exit $build_rc)" >&2
@@ -95,7 +109,7 @@ test_rc=0
 env "$BYPASS_A" xcodebuild test-without-building \
     -scheme Bristlenose -destination "$DEST" \
     -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
-    -only-testing:BristlenoseTests > "$TEST_LOG" 2>&1 || test_rc=$?
+    -only-testing:BristlenoseTests "${SIGNING[@]}" > "$TEST_LOG" 2>&1 || test_rc=$?
 
 # `grep` exits 1 when it matches nothing, so under `set -e` + `pipefail` a suite
 # with ZERO failures kills the script — exit 1, no output, indistinguishable from

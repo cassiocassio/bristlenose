@@ -59,6 +59,22 @@ jobs:
       - name: Lint with ruff
         run: ruff check .
 
+      - name: Check the generated test inventory is current
+        # docs/testing/inventory.{json,md} are generated from the tree. This
+        # fails when the committed STRUCTURE — what runs, when, where, and what
+        # happens when it fails — no longer matches the workflows, build gates
+        # and hooks it was generated from. Suite sizes are deliberately NOT
+        # compared: they move on every commit, and a gate that cries wolf is one
+        # somebody switches off.
+        #
+        # A hard gate on purpose. Every wrong claim the 2 Sep 2026 audit found
+        # had been true once, and nothing was ever obliged to revisit it — which
+        # is the same shape as design-ci.md's "informational initially — promote
+        # to blocking once stable", whose promotion never came.
+        #
+        # If this fails: run scripts/gen-test-inventory.py and commit the result.
+        run: python scripts/gen-test-inventory.py --check
+
       - name: Type check with mypy
         # Informational for now — 9 pre-existing errors from third-party
         # SDK type mismatches (anthropic, presidio, faster-whisper).

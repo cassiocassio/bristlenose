@@ -204,14 +204,14 @@ def scan_local_hooks() -> dict:
     return out
 
 
-def scan_suites() -> list[dict]:
-    py = re.search(r"(\d+) tests collected", sh(".venv/bin/python", "-m", "pytest", "tests/", "--collect-only", "-q"))
+def scan_suites(sizes: bool = True) -> list[dict]:
+    py = None if not sizes else re.search(r"(\d+) tests collected", sh(".venv/bin/python", "-m", "pytest", "tests/", "--collect-only", "-q"))
     swift_files = list((ROOT / "desktop/Bristlenose/BristlenoseTests").glob("*.swift"))
     # DECLARED, not executed. A parameterised `@Test(arguments:)` expands into
     # one case per argument at runtime, so this is a floor: 1382 declared ran as
     # 1406 on 3 Sep 2026. Reporting it as "tests" would be a number that looks
     # authoritative and is short — the exact defect this file exists to prevent.
-    swift_src = [f.read_text(errors="ignore") for f in swift_files]
+    swift_src = [f.read_text(errors="ignore") for f in swift_files] if sizes else []
     swift_n = sum(len(re.findall(r"@Test\b", t)) for t in swift_src) + sum(
         len(re.findall(r"func test[A-Za-z0-9_]*\(", t)) for t in swift_src
     )
@@ -235,7 +235,21 @@ def scan_suites() -> list[dict]:
     ]
 
 
-def build() -> dict:
+def build(structure_only: bool = False) -> dict:
+    # --check compares `structure`, so skip `measurements` there: it costs a
+    # pytest collect against a .venv that CI has no reason to create.
+    if structure_only:
+        return {
+            "structure": {
+                "workflows": scan_workflows(),
+                "build_gates": scan_build_gates(),
+                "local_hooks": scan_local_hooks(),
+                "suites": [
+                    {k: v for k, v in s.items() if k not in ("tests", "files")}
+                    for s in scan_suites(sizes=False)
+                ],
+            }
+        }
     return {
         "structure": {
             "workflows": scan_workflows(),
@@ -312,20 +326,19 @@ def render(data: dict) -> str:
 
 
 def main() -> int:
-    data = build()
-    md = render(data)
-    if "--stdout" in sys.argv:
-        print(md)
-        return 0
     if "--check" in sys.argv:
         if not OUT_JSON.exists():
             print("inventory.json missing — run scripts/gen-test-inventory.py", file=sys.stderr)
             return 1
-        old = json.loads(OUT_JSON.read_text()).get("structure")
-        if old != data["structure"]:
+        if json.loads(OUT_JSON.read_text()).get("structure") != build(structure_only=True)["structure"]:
             print("STRUCTURE DRIFT — regenerate: scripts/gen-test-inventory.py", file=sys.stderr)
             return 1
         print("inventory structure current")
+        return 0
+    data = build()
+    md = render(data)
+    if "--stdout" in sys.argv:
+        print(md)
         return 0
     OUT_JSON.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
     OUT_MD.write_text(md)

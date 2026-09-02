@@ -169,20 +169,56 @@ def scan_workflows() -> list[dict]:
 
 
 def scan_build_gates() -> list[dict]:
-    """build-all.sh's numbered steps, in order, with their skip conditions."""
-    src = (ROOT / "desktop/scripts/build-all.sh").read_text()
+    """The numbered steps of BOTH shipping entry points.
+
+    Two scripts, two certificates, two channels — build-all.sh signs the App
+    Store archive under Apple Distribution, build-dmg.sh signs the notarised
+    direct download under Developer ID. They are not interchangeable and neither
+    covers the other, which is how the .dmg went without a Swift gate until
+    3 Sep 2026. A map that showed only one of them would hide that class again.
+    """
     gates = []
+
+    src = (ROOT / "desktop/scripts/build-all.sh").read_text()
+    seen: dict[str, dict] = {}
+    # Two call shapes, and missing the second is not cosmetic: bn_step_skip is
+    # written `bn_step_skip 1c phase=Verify name="..."`, which the positional
+    # pattern cannot match — so every skippable gate reported as unskippable.
+    # Caught by this file's own output on 3 Sep 2026, which is the point of it.
     for m in re.finditer(
-        r'bn_step_(start|skip)\s+(\S+)\s+(\w+)\s+"([^"]+)"', src
+        r'bn_step_(start|skip)\s+(\S+)\s+(?:(\w+)\s+"([^"]+)"'
+        r'|phase=(\w+)\s+name="([^"]+)")',
+        src,
     ):
-        kind, sid, phase, name = m.groups()
-        gates.append({"id": sid, "phase": phase, "name": name, "can_skip": kind == "skip"})
-    merged: dict[str, dict] = {}
-    for g in gates:
-        merged.setdefault(g["id"], g)
-        if g["can_skip"]:
-            merged[g["id"]]["can_skip"] = True
-    return sorted(merged.values(), key=lambda g: g["id"])
+        kind, sid = m.group(1), m.group(2)
+        phase = m.group(3) or m.group(5) or ""
+        name = m.group(4) or m.group(6) or ""
+        g = seen.setdefault(
+            sid,
+            {"script": "build-all.sh", "id": sid, "phase": phase, "name": name, "can_skip": False},
+        )
+        if kind == "skip":
+            g["can_skip"] = True
+        if not g["phase"]:
+            g["phase"], g["name"] = phase, name
+    gates += sorted(seen.values(), key=lambda g: g["id"])
+
+    # build-dmg.sh predates report.sh and announces stages with `say "..."`,
+    # numbered by the `# N.` banner above each.
+    dmg = (ROOT / "desktop/scripts/build-dmg.sh").read_text()
+    for m in re.finditer(r'^# (\d+[a-z]?)\. ([^\n]+)\n(?:#[^\n]*\n)*?.*?^say "([^"]+)"',
+                         dmg, re.M | re.S):
+        sid, banner, name = m.groups()
+        gates.append(
+            {
+                "script": "build-dmg.sh",
+                "id": sid,
+                "phase": banner.split("—")[0].strip(),
+                "name": name,
+                "can_skip": "SKIP_SWIFT_TESTS" in dmg.split(f'say "{name}"')[1][:400],
+            }
+        )
+    return gates
 
 
 def scan_local_hooks() -> dict:
@@ -313,10 +349,12 @@ def render(data: dict) -> str:
                 lines.append(f"    - {s['name']} — {tag}, **{s['colour']}**")
         lines.append("")
 
-    lines += ["## Build gates (`build-all.sh`, in order)", "",
-          "| step | phase | gate | skippable |", "|---|---|---|---|"]
+    lines += ["## Build gates — both shipping entry points, in order", "",
+          "Two scripts, two certificates, two channels. Neither covers the other.", "",
+          "| script | step | phase | gate | skippable |", "|---|---|---|---|---|"]
     for g in st["build_gates"]:
-        lines.append(f"| {g['id']} | {g['phase']} | {g['name']} | {'yes' if g['can_skip'] else 'no'} |")
+        lines.append(f"| `{g['script']}` | {g['id']} | {g['phase']} | {g['name']} "
+                     f"| {'yes' if g['can_skip'] else 'no'} |")
 
     lines += ["", "## Local gates", "",
           "**pre-commit:** " + ", ".join(st["local_hooks"]["pre_commit"] or ["—"]), ""]

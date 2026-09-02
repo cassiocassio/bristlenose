@@ -31,4 +31,9 @@ jobs:
           python-version-file: '.tool-versions'
 
       - name: Validate locale files
-        run: python scripts/check-locales.py
+        # --strict since 3 Sep 2026. Without it, genuine missing keys are
+        # WARNINGS and the job exits 0, so a gap ships unless a human reads
+        # the output. The tree has been warning-free since 21 Aug 2026, which
+        # made this free to take — and every day it stayed soft was a day it
+        # could get more expensive. `docs/i18n-defects.md` Decision 2.
+        run: python scripts/check-locales.py --strict

@@ -100,21 +100,33 @@
   - `publish-edge` · on `ubuntu-latest`
   - `publish-stable` · on `ubuntu-latest`
 
-## Build gates (`build-all.sh`, in order)
+## Build gates — both shipping entry points, in order
 
-| step | phase | gate | skippable |
-|---|---|---|---|
-| 1c | Verify | Swift unit suite | no |
-| 2 | Build | Sidecar — fetch · build · sign | no |
-| 2a | Verify | Bundle self-test | no |
-| 2b | Build | Supply-chain inventory | no |
-| 2c | Verify | App Store string scan | no |
-| 2d | Build | Agent extension (.mcpb) | no |
-| 5 | Build | Xcode archive | no |
-| 6 | Package | Export → .pkg | no |
-| 7 | Verify | Release-binary scan | no |
-| 8 | Verify | Provisioning profile | no |
-| 9 | Verify | Notarisation | no |
+Two scripts, two certificates, two channels. Neither covers the other.
+
+| script | step | phase | gate | skippable |
+|---|---|---|---|---|
+| `build-all.sh` | 1c | Verify | Swift unit suite | yes |
+| `build-all.sh` | 2 | Build | Sidecar — fetch · build · sign | no |
+| `build-all.sh` | 2a | Verify | Bundle self-test | no |
+| `build-all.sh` | 2b | Build | Supply-chain inventory | yes |
+| `build-all.sh` | 2c | Verify | App Store string scan | no |
+| `build-all.sh` | 2d | Build | Agent extension (.mcpb) | no |
+| `build-all.sh` | 5 | Build | Xcode archive | no |
+| `build-all.sh` | 6 | Package | Export → .pkg | no |
+| `build-all.sh` | 7 | Verify | Release-binary scan | no |
+| `build-all.sh` | 8 | Verify | Provisioning profile | no |
+| `build-all.sh` | 9 | Verify | Notarisation | yes |
+| `build-dmg.sh` | 1 | Pre-flight | Pre-flight | no |
+| `build-dmg.sh` | 1b | Swift unit suite | Swift unit suite | yes |
+| `build-dmg.sh` | 2 | Sidecar | Sidecar — fetch · build · sign (Developer ID) | no |
+| `build-dmg.sh` | 3 | Archive | Xcode archive (development signing; Developer ID applied at export) | no |
+| `build-dmg.sh` | 4 | Export → standalone .app | Export → Developer ID .app | no |
+| `build-dmg.sh` | 5 | Verify the exported .app BEFORE the expensive notarise round-trip | Verify exported .app | no |
+| `build-dmg.sh` | 6 | (retired 14 Aug 2026) Notarise + staple the .app | Build .dmg | no |
+| `build-dmg.sh` | 8 | Sign + notarise + staple the .dmg | Sign + notarise .dmg | no |
+| `build-dmg.sh` | 9 | Build manifest / provenance | Manifest | no |
+| `build-dmg.sh` | 10 | Final gates | Final verification | no |
 
 ## Local gates
 

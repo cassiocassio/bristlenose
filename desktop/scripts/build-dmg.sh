@@ -16,6 +16,7 @@
 #
 # Chain (bails on any non-zero exit):
 #   1. Pre-flight  — Developer ID cert, create-dmg, notarytool creds.
+#   1b. Swift tests — test-swift.sh (SKIP_SWIFT_TESTS=1 to bypass).
 #   2. Sidecar     — ensure-sidecar.sh --force, signed under the Developer ID cert.
 #   3. Archive     — xcodebuild archive, Developer-ID signing overrides.
 #   4. Export      — xcodebuild -exportArchive → standalone .app.
@@ -248,6 +249,27 @@ xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1 \
 ok "notarytool profile: $NOTARY_PROFILE"
 
 ok "target: $DMG_NAME  ·  team $TEAM_ID"
+
+# ------------------------------------------------------------
+# 1b. Swift unit suite
+# ------------------------------------------------------------
+# The .dmg was the one shipping channel with no Swift gate. mac-build.yml covers
+# a push and build-all.sh step 1c covers the App Store archive; a notarised
+# direct download could still carry a red suite, and on 31 Aug 2026 v0.29.0
+# shipped on all nine channels with TabLeftPanelTests failing.
+#
+# Before the sidecar for the same reason build-all.sh runs it there: step 2 is
+# ensure-sidecar.sh --force, ~10 minutes every time, and a compile break should
+# not buy that first. No ad-hoc branch is needed here — this script refuses
+# ad-hoc signing outright, so every run of it is a real one.
+say "Swift unit suite"
+if [ "${SKIP_SWIFT_TESTS:-0}" = "1" ]; then
+    ok "SKIPPED — SKIP_SWIFT_TESTS=1, gate deliberately bypassed"
+else
+    "$SCRIPT_DIR/test-swift.sh" --quiet || die "Swift suite did not pass.
+     reproduce: desktop/scripts/test-swift.sh"
+    ok "BristlenoseTests green"
+fi
 
 # ------------------------------------------------------------
 # 2. Sidecar — build + sign under the Developer ID cert

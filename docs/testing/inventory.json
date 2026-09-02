@@ -42,70 +42,151 @@
   "structure": {
     "build_gates": [
       {
-        "can_skip": false,
+        "can_skip": true,
         "id": "1c",
         "name": "Swift unit suite",
-        "phase": "Verify"
+        "phase": "Verify",
+        "script": "build-all.sh"
       },
       {
         "can_skip": false,
         "id": "2",
         "name": "Sidecar \u2014 fetch \u00b7 build \u00b7 sign",
-        "phase": "Build"
+        "phase": "Build",
+        "script": "build-all.sh"
       },
       {
         "can_skip": false,
         "id": "2a",
         "name": "Bundle self-test",
-        "phase": "Verify"
+        "phase": "Verify",
+        "script": "build-all.sh"
       },
       {
-        "can_skip": false,
+        "can_skip": true,
         "id": "2b",
         "name": "Supply-chain inventory",
-        "phase": "Build"
+        "phase": "Build",
+        "script": "build-all.sh"
       },
       {
         "can_skip": false,
         "id": "2c",
         "name": "App Store string scan",
-        "phase": "Verify"
+        "phase": "Verify",
+        "script": "build-all.sh"
       },
       {
         "can_skip": false,
         "id": "2d",
         "name": "Agent extension (.mcpb)",
-        "phase": "Build"
+        "phase": "Build",
+        "script": "build-all.sh"
       },
       {
         "can_skip": false,
         "id": "5",
         "name": "Xcode archive",
-        "phase": "Build"
+        "phase": "Build",
+        "script": "build-all.sh"
       },
       {
         "can_skip": false,
         "id": "6",
         "name": "Export \u2192 .pkg",
-        "phase": "Package"
+        "phase": "Package",
+        "script": "build-all.sh"
       },
       {
         "can_skip": false,
         "id": "7",
         "name": "Release-binary scan",
-        "phase": "Verify"
+        "phase": "Verify",
+        "script": "build-all.sh"
       },
       {
         "can_skip": false,
         "id": "8",
         "name": "Provisioning profile",
-        "phase": "Verify"
+        "phase": "Verify",
+        "script": "build-all.sh"
+      },
+      {
+        "can_skip": true,
+        "id": "9",
+        "name": "Notarisation",
+        "phase": "Verify",
+        "script": "build-all.sh"
+      },
+      {
+        "can_skip": false,
+        "id": "1",
+        "name": "Pre-flight",
+        "phase": "Pre-flight",
+        "script": "build-dmg.sh"
+      },
+      {
+        "can_skip": true,
+        "id": "1b",
+        "name": "Swift unit suite",
+        "phase": "Swift unit suite",
+        "script": "build-dmg.sh"
+      },
+      {
+        "can_skip": false,
+        "id": "2",
+        "name": "Sidecar \u2014 fetch \u00b7 build \u00b7 sign (Developer ID)",
+        "phase": "Sidecar",
+        "script": "build-dmg.sh"
+      },
+      {
+        "can_skip": false,
+        "id": "3",
+        "name": "Xcode archive (development signing; Developer ID applied at export)",
+        "phase": "Archive",
+        "script": "build-dmg.sh"
+      },
+      {
+        "can_skip": false,
+        "id": "4",
+        "name": "Export \u2192 Developer ID .app",
+        "phase": "Export \u2192 standalone .app",
+        "script": "build-dmg.sh"
+      },
+      {
+        "can_skip": false,
+        "id": "5",
+        "name": "Verify exported .app",
+        "phase": "Verify the exported .app BEFORE the expensive notarise round-trip",
+        "script": "build-dmg.sh"
+      },
+      {
+        "can_skip": false,
+        "id": "6",
+        "name": "Build .dmg",
+        "phase": "(retired 14 Aug 2026) Notarise + staple the .app",
+        "script": "build-dmg.sh"
+      },
+      {
+        "can_skip": false,
+        "id": "8",
+        "name": "Sign + notarise .dmg",
+        "phase": "Sign + notarise + staple the .dmg",
+        "script": "build-dmg.sh"
       },
       {
         "can_skip": false,
         "id": "9",
-        "name": "Notarisation",
-        "phase": "Verify"
+        "name": "Manifest",
+        "phase": "Build manifest / provenance",
+        "script": "build-dmg.sh"
+      },
+      {
+        "can_skip": false,
+        "id": "10",
+        "name": "Final verification",
+        "phase": "Final gates",
+        "script": "build-dmg.sh"
       }
     ],
     "local_hooks": {

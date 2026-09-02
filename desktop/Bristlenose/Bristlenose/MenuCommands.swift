@@ -271,6 +271,12 @@ private struct DebugMenuContent: View {
         // of clause shapes, meaning traps and head-final scripts.
         Button("Degradation Lab") { openWindow(id: "degradation-lab") }
 
+        // Where the AppKit sidebar meets the WKWebView. Cycles the candidate
+        // background treatments against the real report and reports the live
+        // seam geometry — Tahoe draws an inset plateau, macOS 27 reverts to
+        // edge-anchored, so the numbers are measured rather than assumed.
+        Button("Seam Lab") { openWindow(id: "seam-lab") }
+
         // Debug lens — test content on a visible grid, inside the report
         // webview itself (measures the production CSS in situ). Routes the
         // SPA to /report/specimen; needs a served project.

@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Left-sidebar seam — window edge &amp; titlebar · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + tokens-typography.css + colors/palette-*.css).
+   Palette swap via data-color-theme; light/dark via light-dark() + color-scheme.
+
+   Studies: how the Codebook navigator panel's background meets (i) the window's
+   left edge and (ii) the titlebar. See docs/design-sidebar.md,
+   docs/design-native-colour-alignment.md.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-light:370; --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-transition-fast:.15s ease; --bn-transition-slow:.3s ease;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-sidebar-width:280px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:           light-dark(#ffffff, #111111);
+  --bn-colour-text:         light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:        light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:       light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:       light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:        light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:     light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:     light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:   light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover: light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:       light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-colour-inspector-bg: light-dark(#f9f9fa, #1c1c1e);
+  --bn-nav-selection-bg:    light-dark(#efefef, #2b2b2b);
+  --bn-off-track:           light-dark(#c7ccd1, #3a3f45);
+  --bn-ux-1-bg:             light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:           light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:         light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:        light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:       light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:       light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:        light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:     light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:     light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:   light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover: light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:       light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-colour-inspector-bg: light-dark(#f7f2e6, #211e18);
+  --bn-nav-selection-bg:    light-dark(#ede5d1, #2b2620);
+  --bn-off-track:           light-dark(#c9bd9c, #4a4030);
+  --bn-ux-1-bg:             light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+}
+
+/* ── MOCKUP-ONLY values ──────────────────────────────────────────────────────
+   These are NOT tokens. macOS materials are dynamic composites with no
+   canonical hex (design-native-colour-alignment.md §Principles). These are
+   Digital-Color-Meter-order approximations, here only so the seam is legible
+   on a web page. Do not port them anywhere.                                  */
+:root {
+  --mock-sidebar-material: light-dark(#f0f0f0, #2a2a2a);  /* NSVisualEffectView .sidebar */
+  --mock-window-bg:        light-dark(#ececec, #1e1e1e);  /* windowBackgroundColor */
+  --mock-divider:          light-dark(#dcdcdc, #000000);  /* NSSplitView divider */
+  --mock-frost:            light-dark(rgba(246,246,246,.72), rgba(38,38,38,.72));
+}
+/* The open empirical question: is the surface behind the DETAIL pane the same
+   material as the sidebar column, or plain window background? Toggle it. */
+[data-behind="material"] { --mock-behind-detail: var(--mock-sidebar-material); }
+[data-behind="window"]   { --mock-behind-detail: var(--mock-window-bg); }
+
+/* ── Page chrome (not the product) ───────────────────────────────────────── */
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: var(--bn-space-xl) var(--bn-space-lg) 5rem;
+  font-family: var(--bn-font-body);
+  font-size: var(--bn-text-body);
+  color: var(--bn-colour-text);
+  background: var(--bn-colour-bg);
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1180px; margin: 0 auto; }
+h1.page { font-size: var(--bn-text-display); font-weight: var(--bn-weight-strong); margin: 0 0 .3rem; letter-spacing: -.01em; }
+p.standfirst { margin: 0 0 var(--bn-space-lg); color: var(--bn-colour-muted); max-width: 60ch; font-size: var(--bn-text-label); }
+h2.sec { font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); margin: 2.6rem 0 .2rem; }
+h2.sec .tag { font-family: var(--bn-font-mono); font-size: var(--bn-text-badge); color: var(--bn-colour-muted); font-weight: var(--bn-weight-normal); }
+p.lede { margin: 0 0 var(--bn-space-md); color: var(--bn-colour-muted); font-size: var(--bn-text-label); max-width: 72ch; }
+
+/* Controls */
+.controls { display: flex; flex-wrap: wrap; gap: var(--bn-space-md); align-items: center;
+  padding: var(--bn-space-md); margin-bottom: var(--bn-space-lg);
+  border: 1px solid var(--bn-colour-border); border-radius: var(--bn-radius-lg);
+  background: var(--bn-colour-quote-bg); }
+.ctl { display: flex; gap: .3rem; align-items: center; }
+.ctl > span { font-size: var(--bn-text-badge); color: var(--bn-colour-muted); font-family: var(--bn-font-mono); }
+.ctl button {
+  font: inherit; font-size: var(--bn-text-badge); font-family: var(--bn-font-mono);
+  padding: .22rem .5rem; border-radius: var(--bn-radius-md); cursor: pointer;
+  border: 1px solid var(--bn-colour-border); background: var(--bn-colour-bg); color: var(--bn-colour-text);
+}
+.ctl button[aria-pressed="true"] { background: var(--bn-colour-accent); color: #fff; border-color: transparent; }
+
+/* Zone key */
+.key { display: flex; gap: var(--bn-space-lg); flex-wrap: wrap; margin-bottom: var(--bn-space-lg);
+  font-size: var(--bn-text-badge); font-family: var(--bn-font-mono); color: var(--bn-colour-muted); }
+.key i { font-style: normal; display: inline-block; width: 34px; height: 14px; border-radius: 3px;
+  vertical-align: -3px; margin-right: .4rem; }
+.key .k-art { border: 1px solid var(--bn-colour-border-hover); background: var(--bn-colour-bg); }
+.key .k-com { border: 1px solid var(--bn-colour-border); background:
+  repeating-linear-gradient(45deg, transparent 0 4px, var(--bn-colour-badge-bg) 4px 8px); }
+
+/* ── ARTEFACT ZONE — the real pixels, clean frame, no prose inside ───────── */
+.frames { display: grid; gap: var(--bn-space-lg); }
+@media (min-width: 900px) { .frames.two { grid-template-columns: 1fr 1fr; } }
+.frame { min-width: 0; }
+.frame > figcaption {
+  font-family: var(--bn-font-mono); font-size: var(--bn-text-badge);
+  color: var(--bn-colour-muted); padding-bottom: .35rem;
+}
+
+/* The window. Its own background is the OS surface behind the whole thing. */
+.win {
+  border-radius: 10px; overflow: hidden; position: relative;
+  box-shadow: 0 12px 34px var(--bn-colour-shadow), 0 0 0 1px light-dark(rgba(0,0,0,.10), rgba(255,255,255,.09));
+  background: var(--mock-window-bg);
+  display: grid; grid-template-rows: 46px 1fr; height: 372px;
+}
+/* Titlebar + unified toolbar. Frosted: a real backdrop-filter, so whatever
+   sits beneath it genuinely shows through — that is the point of the study. */
+.chrome {
+  grid-row: 1; grid-column: 1 / -1; z-index: 3;
+  display: flex; align-items: center; gap: .55rem; padding: 0 .7rem;
+  background: var(--mock-frost);
+  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+  border-bottom: 1px solid light-dark(rgba(0,0,0,.10), rgba(255,255,255,.09));
+}
+/* Opaque-titlebar variants stop the panel dead at the seam. */
+.win.opaque-chrome .chrome { background: var(--mock-sidebar-material); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.lights { display: flex; gap: 6px; padding-right: .3rem; }
+.lights i { width: 11px; height: 11px; border-radius: 50%; display: block; }
+.lights i:nth-child(1) { background: #ff5f57; } .lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
+.tb-pill { height: 25px; min-width: 25px; padding: 0 .45rem; border-radius: var(--bn-radius-md);
+  background: light-dark(rgba(255,255,255,.75), rgba(255,255,255,.10));
+  box-shadow: 0 0 0 .5px light-dark(rgba(0,0,0,.12), rgba(0,0,0,.5));
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--bn-text-badge); color: var(--bn-colour-muted); }
+.tb-title { display: flex; flex-direction: column; line-height: 1.15; margin-left: .2rem; }
+.tb-title b { font-size: var(--bn-text-badge); font-weight: var(--bn-weight-emphasis); }
+.tb-title span { font-size: var(--bn-text-micro); color: var(--bn-colour-muted); }
+.tb-spacer { flex: 1; }
+
+/* Window body: [native sidebar] [webview]. Row 2 by default; variants that
+   bleed under the chrome move the webview up into row 1 and span both. */
+.body { grid-row: 2; grid-column: 1 / -1; display: grid; grid-template-columns: 168px 1fr; min-height: 0; }
+.win.sb-closed .body { grid-template-columns: 0 1fr; }
+.native {
+  background: var(--mock-sidebar-material);
+  border-right: 1px solid var(--mock-divider);
+  overflow: hidden; padding: .55rem .4rem;
+}
+.win.sb-closed .native { display: none; }
+.native .nrow { display: flex; align-items: center; gap: .45rem; padding: .22rem .4rem;
+  font-size: var(--bn-text-label); color: var(--bn-colour-text); border-radius: var(--bn-radius-md); }
+.native .nrow.on { background: var(--bn-nav-selection-bg); color: var(--bn-colour-accent); }
+.native .nglyph { width: 13px; height: 13px; border-radius: 3px; background: currentColor; opacity: .55; flex: none; }
+.native .ngroup { font-size: var(--bn-text-micro); text-transform: uppercase; letter-spacing: .04em;
+  color: var(--bn-colour-muted); padding: .5rem .4rem .15rem; }
+
+/* The WKWebView. Paints transparent (drawsBackground=false) — so the window
+   surface shows wherever the SPA paints nothing. That is load-bearing here. */
+.webview { background: var(--mock-behind-detail); min-width: 0; display: grid; }
+/* Bleed variants: the webview extends up behind the chrome. */
+.win.bleed .webview { grid-row: 1 / -1; grid-column: 2; }
+.win.bleed.sb-closed .webview { grid-column: 1 / -1; }
+
+/* body { padding: var(--bn-space-xl) var(--bn-space-lg) } — report.css:21.
+   In embedded only padding-top is overridden, so the 24px horizontal survives. */
+.doc { display: grid; grid-template-columns: var(--bn-sidebar-width) 1fr; min-width: 0;
+       padding: 0 var(--bn-space-lg); }
+.win.fullbleed .doc { padding: 0; }
+.win.bleed .doc { padding-top: 46px; }          /* the chrome's own height */
+.win.bleed.panel-bleeds .doc { padding-top: 0; }
+
+/* ── The navigator panel — the surface under study ───────────────────────── */
+.panel { min-width: 0; overflow: hidden; padding: var(--bn-space-xl) 0 0; position: relative; }
+.win.bleed.panel-bleeds .panel { padding-top: calc(46px + var(--bn-space-xl)); }
+.panel.tint    { background: var(--bn-colour-inspector-bg); border-right: 1px solid var(--bn-colour-border); }
+.panel.clear   { background: transparent; }
+.panel.content { background: var(--bn-colour-bg); border-right: 1px solid var(--bn-colour-border); }
+
+.p-in { padding: 0 .85rem; }
+.toc-heading { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis);
+  margin: 1rem 0 var(--bn-space-sm); padding-bottom: .25rem; border-bottom: 1px solid var(--bn-colour-border); }
+.toc-heading:first-child { margin-top: 0; }
+.toc-link { display: block; padding: .2rem var(--bn-space-sm); font-size: var(--bn-text-label);
+  font-weight: var(--bn-weight-light); color: var(--bn-colour-text); border-radius: var(--bn-radius-md);
+  text-decoration: none; }
+.toc-link.active { background: var(--bn-nav-selection-bg); color: var(--bn-colour-accent); }
+.v2-nav-row { display: flex; align-items: center; gap: var(--bn-space-sm); min-width: 0; }
+.v2-nav-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.codebook-toc-label { overflow: hidden; text-overflow: ellipsis; }
+.v2-nav-provenance { font-size: var(--bn-text-badge); color: var(--bn-colour-muted); }
+.v2-nav-pending { flex-shrink: 0; font-family: var(--bn-font-mono); font-size: var(--bn-text-micro);
+  color: var(--bn-colour-badge-text); background: var(--bn-colour-badge-bg);
+  border-radius: var(--bn-radius-pill); padding: .05rem .35rem; font-variant-numeric: tabular-nums; }
+/* 26×15 — the settled size (codebook-v2.css, D15/D16). */
+.v2-nav-row .sw.mini { position: relative; flex-shrink: 0; width: 26px; height: 15px;
+  border-radius: 7.5px; background: var(--bn-colour-accent); }
+.v2-nav-row .sw.mini::after { content: ""; position: absolute; top: 2px; left: 13px;
+  width: 11px; height: 11px; border-radius: 50%; background: #fff; }
+.v2-nav-row .sw.mini.offstate { background: var(--bn-colour-border-hover); }
+.v2-nav-row .sw.mini.offstate::after { left: 2px; }
+.browse-btn { margin: var(--bn-space-md) .85rem 0; display: inline-block;
+  font-size: var(--bn-text-label); padding: .25rem .6rem; border-radius: var(--bn-radius-md);
+  border: 1px solid var(--bn-colour-border-hover); background: var(--bn-colour-bg); color: var(--bn-colour-text); }
+
+/* ── Content column (kept minimal — the study is the left edge) ──────────── */
+.center { min-width: 0; padding: var(--bn-space-xl) 0 0 var(--bn-space-xl); background: var(--bn-colour-bg); overflow: hidden; }
+.win.bleed.panel-bleeds .center { padding-top: calc(46px + var(--bn-space-xl)); }
+.center h1 { font-size: var(--bn-text-title); font-weight: var(--bn-weight-strong); margin: 0 0 .5rem; letter-spacing: -.01em; }
+.center .rule { height: 1px; background: var(--bn-colour-border); margin: 0 var(--bn-space-lg) var(--bn-space-md) 0; }
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; padding-right: var(--bn-space-lg); }
+.card { background: var(--bn-ux-1-bg); border-radius: var(--bn-radius-lg); padding: .6rem .7rem; min-height: 62px; }
+.card b { display: block; font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); }
+.card span { font-size: var(--bn-text-badge); color: var(--bn-colour-muted); }
+
+/* ── COMMENTARY ZONE — deliberately not-the-product ──────────────────────── */
+.commentary {
+  margin-top: var(--bn-space-md);
+  border-left: 3px solid var(--bn-colour-border-hover);
+  background: repeating-linear-gradient(45deg, transparent 0 5px, light-dark(rgba(0,0,0,.022), rgba(255,255,255,.03)) 5px 10px);
+  padding: var(--bn-space-md) var(--bn-space-md) var(--bn-space-md) var(--bn-space-lg);
+  border-radius: 0 var(--bn-radius-md) var(--bn-radius-md) 0;
+}
+.commentary::before { content: "Commentary"; display: block; font-family: var(--bn-font-mono);
+  font-size: var(--bn-text-micro); text-transform: uppercase; letter-spacing: .08em;
+  color: var(--bn-colour-muted); margin-bottom: .4rem; }
+.commentary p { margin: 0 0 .5rem; font-size: var(--bn-text-label); line-height: 1.5; max-width: 78ch; }
+.commentary p:last-child { margin-bottom: 0; }
+.commentary code, code.inline { font-family: var(--bn-font-mono); font-size: .95em;
+  background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text);
+  padding: .05rem .25rem; border-radius: var(--bn-radius-sm); }
+.verdict { display: inline-block; font-family: var(--bn-font-mono); font-size: var(--bn-text-micro);
+  text-transform: uppercase; letter-spacing: .06em; padding: .1rem .4rem; border-radius: var(--bn-radius-sm);
+  margin-right: .4rem; }
+.v-good { background: light-dark(#dcf5e5, #14361f); color: light-dark(#0f6b35, #6bd39a); }
+.v-risk { background: light-dark(#fdecd2, #3a2c12); color: light-dark(#8a5a10, #e6b35c); }
+.v-bad  { background: light-dark(#fadcdc, #3a1717); color: light-dark(#8f1f1f, #f08b8b); }
+
+/* ── Seam magnifier (commentary device — 8× wide strips) ─────────────────── */
+.mag { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--bn-space-md); margin-top: var(--bn-space-md); }
+.mag figure { margin: 0; }
+.mag figcaption { font-family: var(--bn-font-mono); font-size: var(--bn-text-micro);
+  color: var(--bn-colour-muted); padding-bottom: .3rem; }
+.strip { height: 108px; border-radius: var(--bn-radius-md); overflow: hidden;
+  border: 1px solid var(--bn-colour-border); display: flex; }
+.strip > * { height: 100%; }
+.lay-material { background: var(--mock-sidebar-material); }
+.lay-divider  { background: var(--mock-divider); width: 8px; }
+.lay-window   { background: var(--mock-behind-detail); }
+.lay-tint     { background: var(--bn-colour-inspector-bg); }
+.lay-content  { background: var(--bn-colour-bg); }
+.lay-border   { background: var(--bn-colour-border); width: 8px; }
+.legend { font-size: var(--bn-text-micro); font-family: var(--bn-font-mono); color: var(--bn-colour-muted);
+  margin-top: .3rem; line-height: 1.5; }
+
+/* Hierarchy pairs (commentary device) */
+.hier { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--bn-space-md); margin-top: var(--bn-space-md); }
+.hier figure { margin: 0; }
+.hier figcaption { font-family: var(--bn-font-mono); font-size: var(--bn-text-micro);
+  color: var(--bn-colour-muted); padding-bottom: .3rem; }
+.pairbar { display: flex; height: 62px; border-radius: var(--bn-radius-md); overflow: hidden;
+  border: 1px solid var(--bn-colour-border); }
+.pairbar span { flex: 1; display: block; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1 class="page">Left-sidebar seam — window edge &amp; titlebar</h1>
+<p class="standfirst">Three ways the Codebook navigator's background could meet the window's left edge and the
+titlebar. Studies option <b>A</b> (transparent), <b>B</b> (opaque tint bleeding up through a transparent titlebar),
+and <b>D</b> (stop joining). Real tokens; the macOS materials are labelled approximations.</p>
+
+<div class="controls">
+  <div class="ctl"><span>appearance</span>
+    <button data-scheme="light" aria-pressed="true">light</button>
+    <button data-scheme="dark" aria-pressed="false">dark</button>
+  </div>
+  <div class="ctl"><span>palette</span>
+    <button data-palette="default" aria-pressed="true">default</button>
+    <button data-palette="edo" aria-pressed="false">edo</button>
+  </div>
+  <div class="ctl"><span>native&nbsp;sidebar</span>
+    <button data-sb="open" aria-pressed="true">open</button>
+    <button data-sb="closed" aria-pressed="false">closed</button>
+  </div>
+  <div class="ctl"><span>behind&nbsp;detail&nbsp;pane</span>
+    <button data-behind="material" aria-pressed="true">sidebar material</button>
+    <button data-behind="window" aria-pressed="false">window background</button>
+  </div>
+</div>
+
+<div class="key">
+  <span><i class="k-art"></i>Artefact — the pixels as they would ship</span>
+  <span><i class="k-com"></i>Commentary — reasoning, never the product</span>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ TODAY ══ -->
+<h2 class="sec">Today <span class="tag">as shipped, 0.29.1</span></h2>
+<p class="lede">Opaque panel tint, 24px of transparent body padding on each flank, opaque titlebar.</p>
+
+<div class="frames">
+  <figure class="frame">
+    <figcaption>today</figcaption>
+    <div class="win opaque-chrome" data-sbtarget>
+      <div class="chrome">
+        <div class="lights"><i></i><i></i><i></i></div>
+        <div class="tb-pill">▣</div><div class="tb-pill">☰</div>
+        <div class="tb-title"><b>project-ikea</b><span>7 Codebooks · 147 Tags</span></div>
+        <div class="tb-spacer"></div>
+        <div class="tb-pill">↥</div><div class="tb-pill">▥</div><div class="tb-pill">⌕</div>
+      </div>
+      <div class="body">
+        <div class="native">
+          <div class="nrow"><span class="nglyph"></span>Project</div>
+          <div class="nrow"><span class="nglyph"></span>Sessions</div>
+          <div class="nrow"><span class="nglyph"></span>Quotes</div>
+          <div class="nrow on"><span class="nglyph"></span>Codebooks</div>
+          <div class="nrow"><span class="nglyph"></span>Analysis</div>
+          <div class="ngroup">Projects</div>
+          <div class="nrow"><span class="nglyph"></span>project-ikea</div>
+        </div>
+        <div class="webview">
+          <div class="doc">
+            <div class="panel tint">
+              <div class="p-in">
+                <div class="toc-heading">Manual tags</div>
+                <a class="toc-link active">project-ikea tags</a>
+                <div class="toc-heading">Default</div>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">Emotional &amp; Cognitive Signals</span></span><span class="sw mini"></span></span></a>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">Bristlenose UXR Codebook</span></span><span class="v2-nav-pending">33</span><span class="sw mini"></span></span></a>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">Command-Line UX</span></span><span class="sw mini"></span></span></a>
+                <div class="toc-heading">Frameworks</div>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">The Elements of User Experience</span><span class="v2-nav-provenance">Jesse James Garrett</span></span><span class="v2-nav-pending">20</span><span class="sw mini"></span></span></a>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">The Design of Everyday Things</span><span class="v2-nav-provenance">Don Norman</span></span><span class="v2-nav-pending">26</span><span class="sw mini"></span></span></a>
+              </div>
+              <span class="browse-btn">Browse Codebooks</span>
+            </div>
+            <div class="center">
+              <h1>Codebook</h1><div class="rule"></div>
+              <div class="cards">
+                <div class="card"><b>Uncategorised</b><span>Tags not yet assigned</span></div>
+                <div class="card"><b>New group</b><span>Asdfasdf</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </figure>
+</div>
+
+<div class="commentary">
+  <p><span class="verdict v-bad">the gap</span><code>body { padding: var(--bn-space-xl) var(--bn-space-lg) }</code>
+  — <code>report.css:21</code>. The embedded override at <code>report.css:36</code> replaces
+  <em>only</em> <code>padding-top</code>, so <b>24px</b> of horizontal padding survives in the app. The
+  embedded body is <code>background: transparent</code>, so that 24px shows the window surface through it —
+  a third light grey between the native material and the panel tint. Same cause on both flanks, and the
+  same cause whether the native sidebar is open or closed.</p>
+  <p><span class="verdict v-bad">the top</span>The panel is opaque by contract
+  (<code>_contract.css:27</code>: “opaque so it reads over the vibrant body in desktop frosted mode”) and stops
+  dead at the toolbar seam. Meanwhile <code>report.css:24</code> says the body was <em>made</em> transparent so the
+  frost has real content to sample. The build does both at once, so the frost samples flat colour.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ A ══ -->
+<h2 class="sec">A — transparent panel <span class="tag">the window's own surface shows through</span></h2>
+<p class="lede">Drop the panel's opaque tint. Nothing to extend: it is already continuous to the window edge
+and up under the titlebar, because it <em>is</em> the window's surface.</p>
+
+<div class="frames">
+  <figure class="frame">
+    <figcaption>A · transparent</figcaption>
+    <div class="win bleed panel-bleeds" data-sbtarget>
+      <div class="chrome">
+        <div class="lights"><i></i><i></i><i></i></div>
+        <div class="tb-pill">▣</div><div class="tb-pill">☰</div>
+        <div class="tb-title"><b>project-ikea</b><span>7 Codebooks · 147 Tags</span></div>
+        <div class="tb-spacer"></div>
+        <div class="tb-pill">↥</div><div class="tb-pill">▥</div><div class="tb-pill">⌕</div>
+      </div>
+      <div class="body">
+        <div class="native">
+          <div class="nrow"><span class="nglyph"></span>Project</div>
+          <div class="nrow"><span class="nglyph"></span>Sessions</div>
+          <div class="nrow"><span class="nglyph"></span>Quotes</div>
+          <div class="nrow on"><span class="nglyph"></span>Codebooks</div>
+          <div class="nrow"><span class="nglyph"></span>Analysis</div>
+          <div class="ngroup">Projects</div>
+          <div class="nrow"><span class="nglyph"></span>project-ikea</div>
+        </div>
+        <div class="webview">
+          <div class="doc">
+            <div class="panel clear">
+              <div class="p-in">
+                <div class="toc-heading">Manual tags</div>
+                <a class="toc-link active">project-ikea tags</a>
+                <div class="toc-heading">Default</div>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">Emotional &amp; Cognitive Signals</span></span><span class="sw mini"></span></span></a>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">Bristlenose UXR Codebook</span></span><span class="v2-nav-pending">33</span><span class="sw mini"></span></span></a>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">Command-Line UX</span></span><span class="sw mini"></span></span></a>
+                <div class="toc-heading">Frameworks</div>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">The Elements of User Experience</span><span class="v2-nav-provenance">Jesse James Garrett</span></span><span class="v2-nav-pending">20</span><span class="sw mini"></span></span></a>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">The Design of Everyday Things</span><span class="v2-nav-provenance">Don Norman</span></span><span class="v2-nav-pending">26</span><span class="sw mini"></span></span></a>
+              </div>
+              <span class="browse-btn">Browse Codebooks</span>
+            </div>
+            <div class="center">
+              <h1>Codebook</h1><div class="rule"></div>
+              <div class="cards">
+                <div class="card"><b>Uncategorised</b><span>Tags not yet assigned</span></div>
+                <div class="card"><b>New group</b><span>Asdfasdf</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </figure>
+</div>
+
+<div class="commentary">
+  <p><span class="verdict v-good">bitrot-proof</span>Nothing is matched, so nothing can drift. This is
+  <code>design-native-colour-alignment.md</code> §Principles' “Best” tier by construction: the OS owns the
+  colour and we never sample it. macOS 27 costs nothing.</p>
+  <p><span class="verdict v-risk">the open question</span><b>Flip the “behind detail pane” toggle above.</b>
+  With <em>sidebar material</em> it is seamless. With <em>window background</em> you get a different mismatch —
+  the panel now disagrees with the native sidebar instead of agreeing with it. Which one it really is decides
+  whether A works, and no amount of source reading settles it. One screenshot does.</p>
+  <p><span class="verdict v-risk">contrast</span>Row text now sits on a vibrant material rather than a
+  known hex. <code>--bn-colour-text</code> over live vibrancy is not the case any of the sampled ratios in the
+  colour doc were measured against; Increase Contrast and Reduce Transparency both need a look.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ B ══ -->
+<h2 class="sec">B — opaque tint, bleeding up through the titlebar <span class="tag">the Xcode navigator idiom</span></h2>
+<p class="lede">Keep the tint; zero the 24px; bleed the panel background to the window top behind a
+transparent titlebar. Rows stay on the datum — only the background moves.</p>
+
+<div class="frames">
+  <figure class="frame">
+    <figcaption>B · bleed to titlebar</figcaption>
+    <div class="win fullbleed bleed panel-bleeds" data-sbtarget>
+      <div class="chrome">
+        <div class="lights"><i></i><i></i><i></i></div>
+        <div class="tb-pill">▣</div><div class="tb-pill">☰</div>
+        <div class="tb-title"><b>project-ikea</b><span>7 Codebooks · 147 Tags</span></div>
+        <div class="tb-spacer"></div>
+        <div class="tb-pill">↥</div><div class="tb-pill">▥</div><div class="tb-pill">⌕</div>
+      </div>
+      <div class="body">
+        <div class="native">
+          <div class="nrow"><span class="nglyph"></span>Project</div>
+          <div class="nrow"><span class="nglyph"></span>Sessions</div>
+          <div class="nrow"><span class="nglyph"></span>Quotes</div>
+          <div class="nrow on"><span class="nglyph"></span>Codebooks</div>
+          <div class="nrow"><span class="nglyph"></span>Analysis</div>
+          <div class="ngroup">Projects</div>
+          <div class="nrow"><span class="nglyph"></span>project-ikea</div>
+        </div>
+        <div class="webview">
+          <div class="doc">
+            <div class="panel tint">
+              <div class="p-in">
+                <div class="toc-heading">Manual tags</div>
+                <a class="toc-link active">project-ikea tags</a>
+                <div class="toc-heading">Default</div>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">Emotional &amp; Cognitive Signals</span></span><span class="sw mini"></span></span></a>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">Bristlenose UXR Codebook</span></span><span class="v2-nav-pending">33</span><span class="sw mini"></span></span></a>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">Command-Line UX</span></span><span class="sw mini"></span></span></a>
+                <div class="toc-heading">Frameworks</div>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">The Elements of User Experience</span><span class="v2-nav-provenance">Jesse James Garrett</span></span><span class="v2-nav-pending">20</span><span class="sw mini"></span></span></a>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">The Design of Everyday Things</span><span class="v2-nav-provenance">Don Norman</span></span><span class="v2-nav-pending">26</span><span class="sw mini"></span></span></a>
+              </div>
+              <span class="browse-btn">Browse Codebooks</span>
+            </div>
+            <div class="center">
+              <h1>Codebook</h1><div class="rule"></div>
+              <div class="cards">
+                <div class="card"><b>Uncategorised</b><span>Tags not yet assigned</span></div>
+                <div class="card"><b>New group</b><span>Asdfasdf</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </figure>
+</div>
+
+<div class="commentary">
+  <p><span class="verdict v-good">the number exists</span><code>BridgeHandler.syncToolbarInset()</code> already
+  computes <code>let nativeInset = webView.safeAreaInsets.top</code> at line 550 — exactly how far up the panel
+  must bleed — and then <b>discards it</b>, posting only the <code>residual</code> (0 today). Post
+  <code>nativeInset</code> as a second variable and the existing <code>margin-top</code> bleed pattern does the rest.
+  It rides a channel already re-fired on <code>ready</code>, fullscreen enter/exit and every resize
+  (<code>ContentView.swift:643-657</code>), so no new staleness.</p>
+  <p><span class="verdict v-risk">the frost goes asymmetric</span><b>Look at the toolbar above, left half vs right.</b>
+  Once the tint runs up behind it, the frost samples flat panel tint on the left and content white on the right.
+  That step under the toolbar can read worse than the hard edge it replaces — and it is the part no amount of
+  bridged geometry fixes.</p>
+  <p><span class="verdict v-risk">OS exposure</span>Parts 1–2 (bridge the number, bleed by it) are OS-agnostic.
+  Part 3 — the transparent titlebar itself — is the only piece macOS 27 can move, and it re-opens the spike
+  <code>BRANCHES.md:282</code> closed as “not proposed for ship in current form”.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ D ══ -->
+<h2 class="sec">D — stop joining <span class="tag">the divider is the point</span></h2>
+<p class="lede">The navigator takes the <em>content</em> background and the split divider reads as an intended
+boundary. Two honest surfaces instead of one failed weld.</p>
+
+<div class="frames">
+  <figure class="frame">
+    <figcaption>D · intentional boundary</figcaption>
+    <div class="win fullbleed opaque-chrome" data-sbtarget>
+      <div class="chrome">
+        <div class="lights"><i></i><i></i><i></i></div>
+        <div class="tb-pill">▣</div><div class="tb-pill">☰</div>
+        <div class="tb-title"><b>project-ikea</b><span>7 Codebooks · 147 Tags</span></div>
+        <div class="tb-spacer"></div>
+        <div class="tb-pill">↥</div><div class="tb-pill">▥</div><div class="tb-pill">⌕</div>
+      </div>
+      <div class="body">
+        <div class="native">
+          <div class="nrow"><span class="nglyph"></span>Project</div>
+          <div class="nrow"><span class="nglyph"></span>Sessions</div>
+          <div class="nrow"><span class="nglyph"></span>Quotes</div>
+          <div class="nrow on"><span class="nglyph"></span>Codebooks</div>
+          <div class="nrow"><span class="nglyph"></span>Analysis</div>
+          <div class="ngroup">Projects</div>
+          <div class="nrow"><span class="nglyph"></span>project-ikea</div>
+        </div>
+        <div class="webview">
+          <div class="doc">
+            <div class="panel content">
+              <div class="p-in">
+                <div class="toc-heading">Manual tags</div>
+                <a class="toc-link active">project-ikea tags</a>
+                <div class="toc-heading">Default</div>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">Emotional &amp; Cognitive Signals</span></span><span class="sw mini"></span></span></a>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">Bristlenose UXR Codebook</span></span><span class="v2-nav-pending">33</span><span class="sw mini"></span></span></a>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">Command-Line UX</span></span><span class="sw mini"></span></span></a>
+                <div class="toc-heading">Frameworks</div>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">The Elements of User Experience</span><span class="v2-nav-provenance">Jesse James Garrett</span></span><span class="v2-nav-pending">20</span><span class="sw mini"></span></span></a>
+                <a class="toc-link"><span class="v2-nav-row"><span class="v2-nav-text"><span class="codebook-toc-label">The Design of Everyday Things</span><span class="v2-nav-provenance">Don Norman</span></span><span class="v2-nav-pending">26</span><span class="sw mini"></span></span></a>
+              </div>
+              <span class="browse-btn">Browse Codebooks</span>
+            </div>
+            <div class="center">
+              <h1>Codebook</h1><div class="rule"></div>
+              <div class="cards">
+                <div class="card"><b>Uncategorised</b><span>Tags not yet assigned</span></div>
+                <div class="card"><b>New group</b><span>Asdfasdf</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </figure>
+</div>
+
+<div class="commentary">
+  <p><span class="verdict v-good">free</span>One CSS change plus the 24px fix. Zero OS exposure, zero Swift,
+  zero new bridge values. macOS 27 cannot touch it.</p>
+  <p><span class="verdict v-good">arguably truer IA</span>The navigator is content-level navigation
+  (which codebook am I reading?), not window chrome. Giving it the inspector tint claims it as a second
+  sidebar, which is what makes the mismatch with the real one legible in the first place.
+  <code>design-sidebar-ia.md</code>'s split — left is structure, right is context — supports this reading.</p>
+  <p><span class="verdict v-bad">it flattens the hierarchy</span>The tint exists so the <em>content</em> holds the
+  highest contrast and the chrome recedes. D gives the panel <code>--bn-colour-bg</code> — the content
+  background — so panel and content become <b>literally identical</b> (ratio 1.000). Of the three, D is the only
+  one that actually commits the failure this study is trying to avoid. Cheapness does not rescue it.</p>
+  <p><span class="verdict v-risk">it answers a different question</span>You asked how to extend the background.
+  D declines to. Worth naming plainly rather than letting it win on cost alone.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SEAM MAGNIFIER ══ -->
+<h2 class="sec">Seam magnifier <span class="tag">commentary device — not the product</span></h2>
+
+<div class="commentary">
+  <p>The left-edge layer stack, ~8× horizontally, native sidebar open. Left to right: sidebar material,
+  <code>NSSplitView</code> divider, then whatever the webview puts down.</p>
+  <div class="mag">
+    <figure>
+      <figcaption>today</figcaption>
+      <div class="strip">
+        <div class="lay-material" style="flex:3"></div>
+        <div class="lay-divider"></div>
+        <div class="lay-window" style="flex:1.4"></div>
+        <div class="lay-tint" style="flex:3"></div>
+        <div class="lay-border"></div>
+        <div class="lay-content" style="flex:2"></div>
+      </div>
+      <div class="legend">material · divider · <b>24px show-through</b> · tint · border · content<br>four edges in ~30px</div>
+    </figure>
+    <figure>
+      <figcaption>A · transparent</figcaption>
+      <div class="strip">
+        <div class="lay-material" style="flex:3"></div>
+        <div class="lay-divider"></div>
+        <div class="lay-window" style="flex:4.4"></div>
+        <div class="lay-border"></div>
+        <div class="lay-content" style="flex:2"></div>
+      </div>
+      <div class="legend">material · divider · window surface · border · content<br>one edge, if the two surfaces match</div>
+    </figure>
+    <figure>
+      <figcaption>B · opaque, full-bleed</figcaption>
+      <div class="strip">
+        <div class="lay-material" style="flex:3"></div>
+        <div class="lay-divider"></div>
+        <div class="lay-tint" style="flex:4.4"></div>
+        <div class="lay-border"></div>
+        <div class="lay-content" style="flex:2"></div>
+      </div>
+      <div class="legend">material · divider · tint · border · content<br>two greys, one divider — the match still has to hold</div>
+    </figure>
+    <figure>
+      <figcaption>D · stop joining</figcaption>
+      <div class="strip">
+        <div class="lay-material" style="flex:3"></div>
+        <div class="lay-divider"></div>
+        <div class="lay-content" style="flex:4.4"></div>
+        <div class="lay-border"></div>
+        <div class="lay-content" style="flex:2"></div>
+      </div>
+      <div class="legend">material · divider · content · border · content<br>one deliberate boundary, nothing to match</div>
+    </figure>
+  </div>
+  <p style="margin-top:.7rem">Today's strip is the diagnosis: <b>four edges inside ~30px</b>, three of them
+  unintended. A and D each remove two. B removes one and keeps the matching obligation — which is the one
+  that gets re-paid at every OS bump.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ HIERARCHY ══ -->
+<h2 class="sec">Hierarchy check <span class="tag">measured, not eyeballed</span></h2>
+
+<div class="commentary">
+  <p>The reason the flanking panels are tinted at all: the <b>main content area should hold the highest
+  contrast</b>, and the chrome either side of it should recede. Left nav and the Quotes tag sidebar share that
+  job. So the question for each option is not only “is the seam clean” but “does the panel still sit
+  <em>below</em> the content”.</p>
+
+  <div class="hier">
+    <figure>
+      <figcaption>today · tint</figcaption>
+      <div class="pairbar"><span style="background:#f9f9fa"></span><span style="background:#ffffff"></span></div>
+      <div class="legend">#f9f9fa → #ffffff<br><b>1.052</b> · ΔL 5.2%</div>
+    </figure>
+    <figure>
+      <figcaption>A · material</figcaption>
+      <div class="pairbar"><span style="background:#f0f0f0"></span><span style="background:#ffffff"></span></div>
+      <div class="legend">~#f0f0f0 → #ffffff<br><b>1.140</b> · ΔL 12.9%</div>
+    </figure>
+    <figure>
+      <figcaption>A · window bg</figcaption>
+      <div class="pairbar"><span style="background:#ececec"></span><span style="background:#ffffff"></span></div>
+      <div class="legend">~#ececec → #ffffff<br><b>1.181</b> · ΔL 16.1%</div>
+    </figure>
+    <figure>
+      <figcaption>D · content bg</figcaption>
+      <div class="pairbar"><span style="background:#ffffff"></span><span style="background:#ffffff"></span></div>
+      <div class="legend">#ffffff → #ffffff<br><b>1.000</b> · no separation</div>
+    </figure>
+  </div>
+
+  <p style="margin-top:.7rem"><b>Transparent is not the same as white.</b> The embedded body is
+  <code>background: transparent</code> over a <code>drawsBackground=false</code> webview, so a transparent panel
+  shows the <em>window</em> surface — which is darker than content, not equal to it. On the numbers, A
+  roughly <b>triples</b> the panel/content separation rather than removing it. It is the option that serves
+  this hierarchy best, not worst.</p>
+
+  <p><b>And the tint is barely doing the job today.</b> <code>#f9f9fa</code> against <code>#ffffff</code> is
+  <b>1.052</b> — the palette comment calls it “~2% off white”, and <code>theme/CLAUDE.md</code> already records
+  that when the TOC panel sat on <code>--bn-colour-bg</code> the difference was “invisible in light mode (2%
+  delta)”. The hierarchy being defended here is mostly notional in light; the tint earns its keep in
+  <em>dark</em>, where it lifts the panel off a near-black editor (1.110, and 1.316 against material).</p>
+
+  <p><b>Which suggests a fourth reading.</b> If the content-first hierarchy is the goal, the honest move is
+  not “tint or no tint” but <em>make the tint actually separate</em> — deepen it toward the material's
+  ~13% and bleed it full-width and up (B with a real value). That keeps the intent, fixes the seam, and stops
+  defending a 5% delta as though it were doing structural work.</p>
+</div>
+
+<div class="commentary" style="margin-top:var(--bn-space-lg)">
+  <p><b>What this mockup cannot settle.</b> The <em>behind detail pane</em> toggle is a real unknown, not a
+  presentation choice. If the surface behind the detail column is the sidebar material, A is seamless and
+  free. If it is <code>windowBackgroundColor</code>, A trades one mismatch for another and B or D wins. That
+  is a screenshot, not an argument.</p>
+  <p><b>Separately, and not a seam problem.</b> <code>.toc-sidebar</code> is missing
+  <code>display: flex; flex-direction: column</code>, which its twin <code>.tag-sidebar</code> has
+  (<code>sidebar.css:190</code> vs <code>:530</code>). Its <code>.toc-sidebar-body { flex: 1 }</code> is
+  therefore inert, so the outer panel scrolls instead of the body — taking the header and the datum with it.
+  That is the vertical-alignment slip, it is present in every option above, and none of them fix it.</p>
+</div>
+
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  root.setAttribute('data-behind', 'material');
+  function press(group, val, attr, target) {
+    document.querySelectorAll('[data-' + group + ']').forEach(function (b) {
+      if (b.tagName !== 'BUTTON') return;
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-' + group) === val));
+    });
+    if (attr) (target || root).setAttribute(attr, val);
+  }
+  document.querySelectorAll('[data-scheme]').forEach(function (b) {
+    if (b.tagName !== 'BUTTON') return;
+    b.addEventListener('click', function () {
+      var v = b.getAttribute('data-scheme');
+      root.style.colorScheme = 'only ' + v;
+      press('scheme', v);
+    });
+  });
+  document.querySelectorAll('[data-palette]').forEach(function (b) {
+    if (b.tagName !== 'BUTTON') return;
+    b.addEventListener('click', function () {
+      press('palette', b.getAttribute('data-palette'), 'data-color-theme');
+    });
+  });
+  document.querySelectorAll('[data-behind]').forEach(function (b) {
+    if (b.tagName !== 'BUTTON') return;
+    b.addEventListener('click', function () {
+      press('behind', b.getAttribute('data-behind'), 'data-behind');
+    });
+  });
+  document.querySelectorAll('[data-sb]').forEach(function (b) {
+    if (b.tagName !== 'BUTTON') return;
+    b.addEventListener('click', function () {
+      var v = b.getAttribute('data-sb');
+      document.querySelectorAll('[data-sbtarget]').forEach(function (w) {
+        w.classList.toggle('sb-closed', v === 'closed');
+      });
+      press('sb', v);
+    });
+  });
+  root.style.colorScheme = 'only light';
+})();
+</script>
+</body>
+</html>

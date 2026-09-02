@@ -394,6 +394,22 @@ struct BristlenoseApp: App {
         .defaultSize(width: 1240, height: 900)
         .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
 
+        // DEBUG-only seam laboratory — the join between the AppKit sidebar and
+        // the WKWebView. Borrows the fronted project's sidecar so the surface
+        // under test is the real one, cycles the candidate CSS treatments as an
+        // additive overlay, and reports the live geometry (safe-area inset,
+        // visual-effect frames + corner radii) rather than assuming it. Needs
+        // the fleet for the serve URL/token and i18n because WebView requires
+        // it. Diagnostics ▸ Seam Lab.
+        Window("Seam Lab", id: "seam-lab") {
+            SeamLabView()
+                .environmentObject(serveFleet)
+                .environmentObject(i18n)
+                .tint(paletteAccent)
+        }
+        .defaultSize(width: 1100, height: 760)
+        .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
+
         #endif
     }
 }

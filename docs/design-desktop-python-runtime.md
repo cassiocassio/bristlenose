@@ -484,7 +484,7 @@ The sidecar never touches the macOS Keychain. Instead:
 
 **Why env-var injection instead of `pyobjc-framework-Security`:**
 - Adding `pyobjc-framework-Security` to `pyproject.toml` would either (a) break CLI install on Linux/Windows, or (b) sit in a `[macos]` extra that CLI users must remember to add — both violate the no-fork principle from `design-modularity.md`.
-- Env var injection is symmetric with the existing `ServeManager.overlayPreferences` pattern (LLM provider, model, Azure endpoint etc. are already passed this way).
+- Env var injection is symmetric with the existing `BristlenoseShared.overlayPreferences` pattern (LLM provider, model, Azure endpoint etc. are already passed this way).
 - Keys live in-process only; no disk write.
 
 **Residual risks (documented, not fixed in alpha):**

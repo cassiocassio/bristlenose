@@ -85,9 +85,15 @@
   .bn-btn-quiet{background:transparent;color:var(--blue);border-color:transparent;padding-left:0;padding-right:0;}
   .bn-btn[disabled]{opacity:0.4;cursor:default;}
 
-  .inline-warn{display:flex;gap:6px;align-items:baseline;font-size:11px;color:var(--orange);
-               margin-top:9px;line-height:1.45;}
-  .inline-warn svg{flex:0 0 auto;transform:translateY(1px);}
+  /* ---- tier-2 sequence ---- */
+  .seq{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-top:12px;}
+  .seqstep{flex:1 1 260px;min-width:240px;background:rgba(255,255,255,0.07);
+           border:1px solid rgba(255,255,255,0.16);border-radius:12px;padding:14px;}
+  .seqlabel{font-size:11px;font-weight:600;letter-spacing:0.03em;text-transform:uppercase;
+            color:rgba(255,255,255,0.62);margin:0 0 10px;}
+  .seqnote{font-size:10.5px;color:rgba(255,255,255,0.5);line-height:1.5;margin-top:10px;
+           padding-top:9px;border-top:1px solid rgba(255,255,255,0.13);}
+  .seqarrow{align-self:center;color:rgba(255,255,255,0.4);font-size:17px;padding-top:14px;}
 
   /* ---- the shipped pill, reproduced (NOT redesigned) — metrics from
          out-of-credit-ux.html, strings + button order from OutOfCreditPill.swift ---- */
@@ -179,7 +185,9 @@
     The distinction that matters is <b>when the answer is knowable</b> and
     <b>how long it stays true</b>. Configuration is a local fact and never stale.
     Credit is a fact about someone else&rsquo;s server, and is stale the instant it is
-    read. What actually happened is only knowable after spending.
+    read. What actually happened is only knowable after spending — which is why the
+    middle row spends nothing on the controls: a belief that decays has no business
+    interrupting the act that would settle it.
   </p>
 
   <table class="tiers">
@@ -205,11 +213,12 @@
         <span style="color:rgba(255,255,255,0.55)">last verdict said dry</span></td>
       <td>Only by spending<br>(cached ≤24h)</td>
       <td><b>No</b> — a top-up happens in a browser tab we cannot see</td>
-      <td><b>Advisory. Let the click through.</b> A pill that says so, and a run that
-          proves it either way.</td>
-      <td>Not a block. <code>OutOfCreditModel</code> already documents that its cache
-          lingers after a top-up — blocking on that means blocking a researcher who
-          has already paid.</td>
+      <td><b>Nothing on the control.</b> The pill carries it, once. The click is the
+          probe; the toast is the report.</td>
+      <td>Not a block, and <b>not a warning either</b>. <code>OutOfCreditModel</code>
+          documents that its cache lingers after a top-up, so both would fire at a
+          researcher who has already paid — one stopping them, one talking them out
+          of it.</td>
     </tr>
     <tr>
       <td><span class="tierdot t3"></span><b>Refused now</b><br>
@@ -224,12 +233,14 @@
   </table>
 
   <!-- ================================================================== -->
-  <h2>2 &nbsp;The same control, three ways</h2>
+  <h2>2 &nbsp;The same control, two ways</h2>
   <p class="sub">
-    One codebook card from Browse Library, rendered in each tier. Note what does
-    <i>not</i> change: the card, the title, the tag count, the reading order. Only the
-    action and one line beneath it move — so a researcher who has seen the card once
-    can still find everything.
+    Two, not three — <b>tier 2 gets no treatment on the control at all</b>. Install
+    stays exactly as it is, the researcher clicks, and either it works or the regular
+    failure toast tells them why. That is the whole of it. A per-card warning would be
+    a cached guess restated at the moment the researcher can least act on it, and
+    wrong for anyone who has just topped up; the click is the cheapest and most
+    accurate probe available, and the plumbing to report its outcome now exists.
   </p>
 
   <div class="specimens">
@@ -267,8 +278,8 @@
     </div>
 
     <div class="spec">
-      <p class="cap"><b>Tier 2 — believed out of credit</b>Install stays live and
-        stays primary. The warning is a sentence, not a gate.</p>
+      <p class="cap"><b>Tier 2 — believed out of credit</b>Identical to baseline. Not
+        an oversight — the answer.</p>
       <div class="bookcard">
         <div class="title">Laws of UX</div>
         <div class="meta">Jon Yablonski</div>
@@ -276,19 +287,56 @@
           <span class="count">28 tags</span>
           <button class="bn-btn bn-btn-primary">Install</button>
         </div>
-        <div class="inline-warn">
-          <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">
-            <path d="M6 0.8 11.4 10.6H0.6z" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
-            <path d="M6 4.2v2.9M6 8.6v0.01" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-          </svg>
-          <span>Claude was out of credit at 14:02. This may not run.</span>
-        </div>
       </div>
-      <p class="note">Carries a <b>time</b>, deliberately — that is what makes it a
-        report rather than a claim, and lets the researcher judge whether their top-up
-        came after it.</p>
+      <p class="note">The pill already says it, once, where a standing condition
+        belongs. Repeating it per card would say it three more times on a page of
+        three codebooks — and say it wrong the moment the researcher pays.</p>
     </div>
 
+  </div>
+
+  <h3>What tier 2 does instead</h3>
+  <p class="sub">
+    The sequence, end to end. Nothing is pre-empted and nothing is blocked: the
+    install proceeds, and if the account really is dry the failure arrives named — the
+    same toast tier 3 produces, because it <i>is</i> tier 3. Tier 2 is a belief; only
+    the run is a fact.
+  </p>
+
+  <div class="seq">
+    <div class="seqstep">
+      <div class="seqlabel">1 &nbsp;Click, unimpeded</div>
+      <div class="bookcard">
+        <div class="title">Laws of UX</div>
+        <div class="meta">Jon Yablonski</div>
+        <div class="row">
+          <span class="count">28 tags</span>
+          <button class="bn-btn bn-btn-primary">Install</button>
+        </div>
+      </div>
+    </div>
+    <div class="seqarrow">&rarr;</div>
+    <div class="seqstep">
+      <div class="seqlabel">2 &nbsp;It runs</div>
+      <div class="chip">
+        <span style="color:rgba(255,255,255,0.55);">&#9711;</span>
+        <span>Tagging 12 of 33 quotes&hellip;</span>
+      </div>
+      <div class="seqnote">Because the belief might be stale — a top-up in a browser
+        tab is invisible to us, and this is the branch that a pre-emptive warning
+        would have talked the researcher out of.</div>
+    </div>
+    <div class="seqarrow">&rarr;</div>
+    <div class="seqstep">
+      <div class="seqlabel">3 &nbsp;Or it does not</div>
+      <div class="chip">
+        <span class="x">&#10007;</span>
+        <span>Tagging failed: your AI provider account is out of credit.</span>
+        <span class="link" style="color:rgba(255,255,255,0.45);margin-left:auto;">&times;</span>
+      </div>
+      <div class="seqnote">The regular toast, unchanged — and the verdict it carries
+        is what lights the pill for next time.<span class="done">plumbed</span></div>
+    </div>
   </div>
 
   <!-- ================================================================== -->
@@ -451,12 +499,13 @@
       back; or accept it and say so. This is a product call, not a bug fix, which is
       why the plumbing pass left it alone.</li>
 
-    <li><b>Should tier 2 be per-control at all?</b> The inline warning above is drawn
-      per card. The alternative is that the pill is the <i>only</i> ambient signal and
-      cards say nothing — quieter, consistent with &ldquo;chrome only for what the
-      appliance cannot cope with&rdquo;, and it costs a researcher one wasted click.
-      The sketch shows the louder option so the quieter one can be chosen
-      deliberately.</li>
+    <li><b>Settled — tier 2 is not per-control.</b> An earlier draft of this page
+      drew a per-card warning (&ldquo;Claude was out of credit at 14:02. This may not
+      run.&rdquo;). Rejected: install should succeed, and the regular toast should be
+      what speaks. A wasted click costs a researcher seconds; a warning built on a
+      cache that outlives the condition costs them trust in every warning after it,
+      and would be at its most confident exactly when it is wrong — right after they
+      topped up. Left here as the reasoning, not as an option.</li>
 
     <li><b>Does tier 1 differ on web and Mac?</b> &ldquo;Set up AI&hellip;&rdquo; opens
       a native pane on the Mac and a modal on the web. Same verb, different

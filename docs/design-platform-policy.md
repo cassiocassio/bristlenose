@@ -82,10 +82,27 @@ The Tahoe-specific issues already encountered:
   | Variable | Direction |
   |---|---|
   | Adoption / OS release cadence | permits moving, as n-1 slides forward |
-  | Apple Intelligence maturity | **would force** moving — Foundation Models is macOS 26+. Prospective only: no such code exists in the app today |
+  | Apple Intelligence maturity | **weaker than it looks — see below** |
   | SwiftUI-on-Mac fixes landing in 26+ | raises the *cost of staying*: fixes we forgo |
   | Sidebar fragility + rework cost | resists moving |
   | Runway to public beta | resists moving — decisive in Q3 2026 |
+
+  **On Apple Intelligence as a forcing function — probably not one.** The
+  direction is real and designed: `docs/design-pluggable-llm-routing.md` §2
+  sequences an `apple-fm` provider behind a feature flag at roughly a week of
+  work, Swift-side with the Python sidecar calling a host endpoint. But that doc
+  specifies the provider is **availability-gated** ("macOS 26 + Apple
+  Intelligence + compatible Mac; CLI distributions never see this provider") and
+  never asks for a deployment-target bump. A runtime `if #available(macOS 26)`
+  is precisely the mechanism for using a newer API from a lower floor — so
+  adopting Apple's models would likely *not* require moving from 15.0 at all.
+
+  **Untested caveat:** whether the FoundationModels framework and its
+  `@Generable` macro back-deploy cleanly under weak linking is unverified —
+  Swift macros and framework linkage sometimes complicate this. Settle it with a
+  spike before treating either answer as known. Until then, treat the floor as
+  having **no** identified forcing function, which strengthens the hold rather
+  than weakening it.
 
   The last two carried this decision. Expect Apple Intelligence to carry the
   next one, since it is the only variable that can make the move mandatory

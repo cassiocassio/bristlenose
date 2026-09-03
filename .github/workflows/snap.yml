@@ -46,10 +46,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          # Tags, so the stamp below can tell a release build from a drifted
+          # one. The default shallow checkout fetches none.
+          fetch-depth: 0
+
+      - name: Stamp the version suffix
+        # Empty when HEAD is exactly a release tag; "+git.<sha>" when it is not.
+        # snapcraft reads this from the part source, because environment does not
+        # cross into the LXD build — the answer has to travel as a file.
+        run: |
+          if git describe --exact-match --tags HEAD >/dev/null 2>&1; then
+            : > .snap-version-suffix
+            echo "HEAD is $(git describe --exact-match --tags HEAD) — clean version"
+          else
+            printf '+git.%s' "$(git rev-parse --short=7 HEAD)" > .snap-version-suffix
+            echo "HEAD is not a release tag — version gets $(cat .snap-version-suffix)"
+          fi
 
       # SHA-pinned (supply-chain) — immutable commit, version tracked in comment.
       - uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79  # v1.3.0
         id: snapcraft
+
+      - name: Assert the snap says what the tree is
+        # The suffix reaches snapcraft as a file in the part source. If that copy
+        # ever stops happening the version comes out CLEAN — the exact wrong
+        # answer, silently, and indistinguishable from a real release build. So
+        # assert the outcome rather than trust the mechanism. Snapcraft names the
+        # file bristlenose_<version>_<arch>.snap, so the name is the claim.
+        run: |
+          v=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' bristlenose/__init__.py)
+          want="$v$(cat .snap-version-suffix)"
+          got=$(basename "${{ steps.snapcraft.outputs.snap }}" | sed -E 's/^bristlenose_(.+)_[^_]+\.snap$/\1/')
+          echo "want $want / got $got"
+          [ "$want" = "$got" ] || { echo "::error::snap version is '$got', expected '$want' — the suffix did not reach snapcraft"; exit 1; }
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:

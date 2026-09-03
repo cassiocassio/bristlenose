@@ -85,7 +85,24 @@ parts:
       craftctl default
       # Read version from the package and set snap metadata.
       VERSION=$($CRAFT_PART_INSTALL/bin/python3 -c "import bristlenose; print(bristlenose.__version__)")
-      craftctl set version="$VERSION"
+      # The edge channel builds `--ref main`, and __init__.py already carries the
+      # released number by then — so an edge snap built after the tag but before
+      # the dispatch announced X.Y.Z while containing X.Y.Z plus whatever landed
+      # in between. `snap info` showed a release version for a tree that was not
+      # the release (design-release-system-audit.md §4, confirmed 3 Sep 2026).
+      #
+      # The ref is not the defect: edge SHOULD mean latest main. The version
+      # claim was. So the workflow writes .snap-version-suffix next to the
+      # source — empty when HEAD is exactly a release tag, "+git.<sha>" when it
+      # is not — and the answer follows the tree rather than the channel. A
+      # stable build from the tag is unaffected; an edge build that happens to
+      # sit on the tag is also unaffected, because then it really is the release.
+      #
+      # $CRAFT_PART_SRC is the pristine source: `craftctl default` above
+      # reorganises the build dir, so a relative path no longer resolves here.
+      # Absent file means a local build, which publishes nothing, so no suffix.
+      SUFFIX=$(cat "$CRAFT_PART_SRC/.snap-version-suffix" 2>/dev/null || true)
+      craftctl set version="${VERSION}${SUFFIX}"
       # Download spaCy model into the snap's Python environment so
       # --redact-pii works out of the box without user action.
       $CRAFT_PART_INSTALL/bin/python3 -m spacy download en_core_web_sm

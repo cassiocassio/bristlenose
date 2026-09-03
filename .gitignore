@@ -178,3 +178,6 @@ desktop/scripts/.ship-local.conf
 # adding a `!` line, the thing you want belongs somewhere else.
 .release/
 experiments/antenna-blink/antenna-blink
+
+# Written by the snap workflow to stamp a drifted edge build (see snapcraft.yaml)
+.snap-version-suffix

@@ -165,6 +165,33 @@ count matches `ls desktop/Bristlenose/Bristlenose/*.swift | wc -l`. Confirm with
 `grep -c PBXFileSystemSynchronizedRootGroup project.pbxproj` — non-zero means
 filenames were never going to be in there.
 
+**Nor can it answer "what is the deployment target?" — and that one fails
+*plausibly*.** The file holds several `XCBuildConfiguration` blocks; which one a
+scheme resolves to is decided by the build system, not by reading order, and the
+project deliberately carries **two** floors — production at `MACOSX_DEPLOYMENT_TARGET
+= 15.0` under the n-1 rule, and the Apple-Intelligence schemes at 26.1 because
+Foundation Models is macOS 26+ (`docs/design-platform-policy.md` §"Pillar 3").
+Hand-parsing therefore returns a real number that is nonetheless the wrong one for
+the scheme you meant, with nothing to signal the error.
+
+On 3 Sep 2026 three successive parses of that file gave three different answers —
+first 15.0, then "26.1 everywhere", then a contradiction — and **two of them reached
+a committed doc** before `xcodebuild` settled it. The same pass also reported
+`SWIFT_APPROACHABLE_CONCURRENCY = YES` when the resolved value is `NO`.
+
+**Ask the build system, and name the scheme:**
+
+```
+xcodebuild -showBuildSettings -project desktop/Bristlenose/Bristlenose.xcodeproj \
+  -target Bristlenose -configuration Release | grep -E 'SWIFT_|DEPLOYMENT'
+```
+
+Tell that you are in this trap: two different values for the same setting, and a
+story forming about which is "stale". Both are probably live. Policy already
+flags the underlying hazard as unfixed — Pillar 3 carries an open action to add a
+comment block to the pbxproj naming which scheme uses which target, precisely
+because it is "easy to bump one without the other".
+
 ### macOS BSD userland — use GNU coreutils
 
 macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat`, `readlink`, `tar`, and others. These differ from the GNU versions in subtle, bug-inducing ways:

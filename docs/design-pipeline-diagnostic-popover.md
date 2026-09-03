@@ -948,3 +948,95 @@ default.
 
 Established 7 May 2026 alongside branches `pipeline-summary-events`
 (Python emitter) and `pipeline-diagnostic-pill` (Swift consumer).
+
+## Proposed — the three-part body for a survivable failure (P5 / D4-B)
+
+> **Status: PROPOSED, 3 Sep 2026. Nothing in this section ships yet.**
+> Mockup: `docs/mockups/analysis-failure-states.html` (16 states, real SF
+> Symbols, measured against `ProjectCellSpec` and this popover's own 360×320).
+> Depends on D4-B — serving the last good analysis behind a failed run — which
+> is what makes a "still showing" line true in the first place.
+
+### Why the body grows a third part
+
+The popover today answers **what went wrong**. Under D4-B the researcher's
+project survives a failed analysis intact, which raises two questions it does
+*not* answer: *what am I looking at?* and *what is under my control?* So the
+body becomes three parts, in this order:
+
+1. **State** — "Still showing your previous analysis — **5 of 7 interviews**,
+   from 3 minutes ago."
+2. **Cause** — the existing per-file breakdown (`bucketsBody`) or the global
+   cause sentence.
+3. **Action** — one line naming what the researcher can do.
+
+### The content model: a shortfall from an attempted reality
+
+A failed incremental run is not "an error", it is a **gap between what you have
+and what you asked for**. Both numbers already exist and are already read by the
+sidebar (`SourceFilesReader.readSnapshot` → `ingested=7, sessions=5`); the popover
+states the gap and the cause explains it. This is why the state line carries a
+count and not just a date.
+
+**The verb carries the distinction the count cannot.** A `run_failed` and a
+`run_completed_partial` produce near-identical popovers and mean opposite things:
+
+| | DB moved? | state line | row |
+|---|---|---|---|
+| `run_failed` | no — serve re-imports only on `run_completed` | "**Still showing** your previous analysis — 5 of 7 interviews" | `Analysis failed · 5 of 7` |
+| `completedPartial` | yes | "Your analysis **now has** 6 of 7 interviews" | `Analysed · 6 of 7` |
+
+Get this wrong and the researcher cannot tell whether their curation survived.
+
+### The category → action mapping
+
+The cause column largely exists as `pipeline.diagnostic.pill.*` labels, but those
+are **nouns sized for a row**; the popover has room for a sentence that names the
+actor. The action column is new — ten strings, 21 locales, and separable from the
+gates that let the report through at all.
+
+| category | cause line | action line |
+|---|---|---|
+| `out_of_credit` | Your Claude account is out of credit. | Add credit to your Claude account, then analyse again. |
+| `auth` | Claude wouldn't accept the API key. | Check the key in Settings ▸ LLM Provider, then analyse again. |
+| `quota` | Claude is rate-limiting requests. | Nothing needs fixing — try again in a few minutes. |
+| `api_server` | Claude had a problem at their end. | Nothing to fix here — try again shortly. |
+| `network` | Couldn't reach Claude. | Check your connection, then analyse again. |
+| `disk` | The disk ran out of space while transcribing. | Free up space on _\<volume\>_, then analyse again. |
+| `unusable_input` | _per-file reasons — no global cause line_ | Replace or remove _\<these N\>_, then analyse again. |
+| `missing_binary` | A tool Bristlenose needs is missing. | Check Diagnostics ▸ Check Health. |
+| `whisper` | The transcription model didn't load. | Check Diagnostics ▸ Check Health. |
+| `unknown` | Detailed cause not captured. | Open Show Log for what the analysis was doing when it stopped. |
+
+**`quota` and `api_server` are load-bearing**: they are the only rows whose action
+is *do nothing*, and the only ones a naive mapping gets wrong by inventing a chore
+— sending the researcher to check a key that was never wrong. If the column ever
+grows a default it must be "try again shortly", never "check your settings".
+
+### Vocabulary: analysis, not run
+
+"Run" is computer science; **analysis** is what the researcher believes is
+happening. The shipped corpus already contradicts itself —
+`pipeline.diagnostic.header.failed` says `Run failed` while
+`pipeline.diagnostic.tooltip.completed_partial` says
+`Analysis finished with failures`. This settles it in the direction the tooltip
+already chose. Affected: that header, `pipeline.status.headline.failed`,
+`pipeline.diagnostic.pill.unknown` ("Run had failures").
+
+### Two states that are decisions, not drawings
+
+- **All new files refused** collapses today to `unknown` → the row reads "Run had
+  failures", which is false severity for a run in which nothing malfunctioned.
+  Proposed header: **"Nothing new to analyse"**. This needs the missing
+  `unusable_input` entries in `PipelineSummary.pillPrecedence` and the pill
+  strings — the defect this doc's own truing banner already logs.
+- **First-ever analysis failed** drops the state line entirely: with no previous
+  analysis there is nothing to still be showing, and that is precisely the
+  boundary where the status page keeps the whole surface.
+
+### Relative time
+
+The state line reuses `chrome.pipeline.analysedRelative` ("Analysed 3 minutes
+ago"), which already renders in this very row — not a new date format. Shared
+formats have three renderers to agree with (`docs/design-shared-formats.md`);
+a fourth is not wanted.

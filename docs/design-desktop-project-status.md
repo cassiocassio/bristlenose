@@ -557,3 +557,50 @@ two fidelities. As of 19 Jun the subtitle's arbitration is no longer trapped in 
 - **Memory:** `feedback_exception_precedence_chain`, the multi-project phase roadmap.
 - **Related:** `design-sidebar-activity-indicators.md` (the 0a/0b progress work),
   `design-pipeline-diagnostic-popover.md` (the failure-popover MessageKind vocabulary).
+
+## 10. Proposed — the shortfall count (P5 / D4-B)
+
+> **Status: PROPOSED, 3 Sep 2026. Nothing here ships yet.** Mockup:
+> `docs/mockups/analysis-failure-states.html`. Popover half:
+> `docs/design-pipeline-diagnostic-popover.md` § "Proposed — the three-part body".
+
+Under D4-B a failed analysis leaves the project intact — the researcher keeps the
+5 interviews they curated, because the serve re-imports only on `run_completed`.
+The row's job in that world is to say **what you have against what you asked
+for**, because a failed incremental analysis is a shortfall from an attempted
+reality, not merely an error.
+
+Both numbers are already read here: `SourceFilesReader.readSnapshot` returns
+`ingested` (files on disk, 7) alongside `sessions` (analysed, 5). Today they
+diverge silently after a failed incremental run and the row shows only the one.
+
+**Proposed status lines** (measured against the shipped 272pt row — none of these
+truncate at `.caption1`/10pt):
+
+| state | status line | glyph |
+|---|---|---|
+| `failedWithDiagnostic` / `failed` | `Analysis failed · 5 of 7` | `xmark.circle.fill`, red |
+| `completedPartial` | `Analysed · 6 of 7` | `exclamationmark.triangle.fill`, orange |
+| all new files refused | `Nothing to analyse · 5 of 7` | `xmark.circle.fill`, red |
+| `stopped` | `Stopped · 5 of 7` | **none** — see below |
+| first-ever analysis failed | `Analysis failed` (no count) | `xmark.circle.fill`, red |
+
+**"Run" becomes "analysis" throughout** — a run is what the computer does, an
+analysis is what the researcher thinks is happening.
+
+### The stopped row keeps the count but not the glyph
+
+§"The glyph rule" says a run the researcher stopped is not news, and that holds:
+no glyph, no popover. But the *shortfall* is news — that they stopped before the
+2 new interviews were added is exactly the thing they may have forgotten. So the
+count stays where the glyph does not. If that reads as inconsistent, the
+alternative is that a stopped row says only `Stopped`, and the researcher
+rediscovers the gap by counting.
+
+### Where the count must not appear
+
+Not during a run. `chrome.pipeline.sessionsCount` already renders `{{complete}}
+of {{total}}` as *progress* in the live ladder, and the same shape meaning
+"shortfall" beside an error glyph is only unambiguous because the run has ended.
+A count on a running row is progress; a count on a failed row is a gap. Never
+both at once.

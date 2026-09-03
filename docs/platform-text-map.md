@@ -41,7 +41,7 @@ Text in `common.json`, `settings.json`, `enums.json`, and `server.json` that ren
 
 Keys in `desktop.json` that only render inside the macOS app shell. CLI serve mode never loads the `desktop` namespace.
 
-All 22 sections, measured 21 Aug 2026. **638 keys.**
+All 22 sections, measured 21 Aug 2026. **635 keys.**
 
 | Section | Key count | Content |
 |---|---|---|
@@ -49,7 +49,7 @@ All 22 sections, measured 21 Aug 2026. **638 keys.**
 | `cloudImport.*` | 122 | Teams / Google Meet / Zoom import window: sources, filters, plan refusals, batch outcomes, the restored-empty state |
 | `chrome.*` | 103 | Server status ("Starting server…"), project panels, drag-and-drop prompts, re-analyse confirmations, name placeholders |
 | `ollamaSetup.*` | 43 | Local-model download and setup flow |
-| `llmSettings.*` | 36 | Provider pane: keys, models, Azure fields |
+| `llmSettings.*` | 33 | Provider pane: keys, models, Azure fields |
 | `pipeline.*` | 35 | Run status pills, diagnostic popover categories, tooltips, overflow plurals |
 | `mcpAgents.*` | 31 | Settings ▸ MCP Agents: the projects register, exposure states, extension install |
 | `toolbar.*` | 23 | Native toolbar labels with keyboard shortcut hints |

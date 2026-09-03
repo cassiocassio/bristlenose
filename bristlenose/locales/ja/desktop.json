@@ -451,8 +451,6 @@
     "modelSection": "モデル",
     "customModelOption": "カスタム…",
     "customModelPlaceholder": "カスタムモデル名",
-    "temperatureLabel": "Temperature",
-    "temperatureHint": "低い＝正確、高い＝創造的",
     "concurrencyLabel": "並列度",
     "concurrencyHint": "並列LLMリクエスト数",
     "azureSection": "Azure設定",

@@ -457,7 +457,7 @@ enum LLMValidator {
     /// True if the cache has a definitive verdict for this exact key
     /// AND that verdict is younger than `ttl` seconds. Used to skip
     /// background revalidation when the user is opening Settings rapidly
-    /// (e.g. tweaking temperature in another tab).
+    /// (e.g. tweaking concurrency in another tab).
     static func cacheIsFresh(
         provider: LLMProvider, key: String, ttl: TimeInterval
     ) -> Bool {

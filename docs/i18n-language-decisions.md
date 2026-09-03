@@ -81,9 +81,11 @@ when a language isn't handled explicitly — correct for it/es/de, and ja/ko/zh 
   precisely because there's no glossary row to anchor them. **Bringing every locale's
   glossary up to ja-level coverage is the highest-leverage way to prevent future drift.**
 - **`_comment_` markers = deliberate English.** A `_comment_<key>` sibling holding
-  "…keep English pending native review" (present in ja/ko/zh-Hant, e.g. the LLM
-  `temperatureLabel`) means the adjacent English value is *intentional*, not a leak. Use
-  the same convention if you defer a translation.
+  "…keep English pending native review" means the adjacent English value is *intentional*,
+  not a leak. Use the same convention if you defer a translation. The mechanism is live —
+  `check-locales.py`'s `flatten()` drops `_comment_*` so a note lives in `en` alone — but
+  there are currently **no instances in the tree**: the last one, `_comment_temperatureLabel`,
+  went with the temperature slider it annotated.
 - **`preflight.json` is English-only in alpha.** The Python CLI preflight surface
   (`bristlenose/locales/preflight.json`) has no CLDR-plural support yet and is English-only
   for alpha; every locale's `preflight.json` is a byte-identical mirror of `en`. **Decision

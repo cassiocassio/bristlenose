@@ -504,8 +504,6 @@
     "modelSection": "Model",
     "customModelOption": "Vlastní…",
     "customModelPlaceholder": "Název vlastního modelu",
-    "temperatureLabel": "Teplota",
-    "temperatureHint": "Nízká = zaměřená, vysoká = kreativní",
     "concurrencyLabel": "Souběžnost",
     "concurrencyHint": "Souběžná volání LLM",
     "azureSection": "Nastavení Azure",

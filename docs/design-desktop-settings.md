@@ -74,7 +74,7 @@ Left sidebar list of 5 pre-populated providers (Claude, ChatGPT, Gemini, Azure, 
 - **Radio/checkmark** — which provider is active (user choice, `@AppStorage("activeProvider")`)
 - **Status dot** — whether the provider is configured (green "Online" / grey "Not set up" / red "Invalid" / orange "Unavailable")
 
-Right detail pane shows the selected provider's settings: API key (`SecureField` → Keychain via `KeychainHelper`), model picker (per-provider known models + "Custom…"), temperature slider, concurrency slider. Azure adds endpoint/deployment/version fields. Ollama shows a **read-only** static display of the URL (`localhost:11434`) — the field is hardwired in the desktop GUI as a trust-boundary closure (commit `dbd54ec`, 30 Apr 2026): a social-engineered user pasting an attacker URL would silently exfiltrate transcripts over plain HTTP, contradicting the "transcripts stay on your Mac" claim. Status derives from an HTTP probe to `<hardwired-url>/api/tags`, parsing the models list to distinguish "not running" from "running but no models pulled"; see `LLMValidator.probeOllama`. CLI users and CI keep the override path via the `BRISTLENOSE_LOCAL_URL` env var (parent-process only — see §Preferences below).
+Right detail pane shows the selected provider's settings: API key (`SecureField` → Keychain via `KeychainHelper`), model picker (per-provider known models + "Custom…"), concurrency slider. Azure adds endpoint/deployment/version fields. Ollama shows a **read-only** static display of the URL (`localhost:11434`) — the field is hardwired in the desktop GUI as a trust-boundary closure (commit `dbd54ec`, 30 Apr 2026): a social-engineered user pasting an attacker URL would silently exfiltrate transcripts over plain HTTP, contradicting the "transcripts stay on your Mac" claim. Status derives from an HTTP probe to `<hardwired-url>/api/tags`, parsing the models list to distinguish "not running" from "running but no models pulled"; see `LLMValidator.probeOllama`. CLI users and CI keep the override path via the `BRISTLENOSE_LOCAL_URL` env var (parent-process only — see §Preferences below).
 
 **Activation guard**: a provider can be activated (radio or toggle) when its status `canActivate` — a key is present and not known-bad (`.online`, `.outOfCredit`, or `.unavailable` all qualify), **not** a live `.online`. An out-of-credit or momentarily-unreachable provider is a legitimate choice; only `.notSetUp` (no key), `.invalid` (confirmed-bad credentials), and `.checking` block. Single home for the contract: `LLMSettingsView.swift:677` (`guard statusFor(provider).canActivate`), backed by `LLMProvider.canActivate` (`:279`). One provider must always be active.
 
@@ -155,7 +155,7 @@ is here and its per-platform sign-in flows are in `docs/design-cloud-import.md` 
 
 ## Preferences → serve process
 
-`ServeManager.overlayPreferences()` reads `UserDefaults` and injects values as environment variables into the `Process.environment` dictionary before launching `bristlenose serve`. **Don't-override-default guard**: `overlayPreferences` only emits an env var when the user has explicitly set the value (e.g. `BRISTLENOSE_WHISPER_LANGUAGE` only set when `lang != "en"`; temperature and concurrency only set when the user has touched the slider). This lets Python-side defaults stay authoritative when the user hasn't expressed a preference. See `ServeManager.swift:307-355`.
+`BristlenoseShared.overlayPreferences()` reads `UserDefaults` and injects values as environment variables into the `Process.environment` dictionary before launching `bristlenose serve`. **Don't-override-default guard**: `overlayPreferences` only emits an env var when the user has explicitly set the value (e.g. `BRISTLENOSE_WHISPER_LANGUAGE` only set when `lang != "en"`; concurrency only set when the user has touched the slider). This lets Python-side defaults stay authoritative when the user hasn't expressed a preference. See `BristlenoseShared.swift:221-287`.
 
 API keys are injected via `ServeManager.overlayAPIKeys()` (C3, Apr 2026) — Swift reads Keychain via `Security.framework` (through the `KeychainStore` protocol; tests use `InMemoryKeychain`) and sets `BRISTLENOSE_<PROVIDER>_API_KEY` on the same env dict. Python never touches Keychain in this deployment; pydantic-settings reads the env vars directly. **Threat-model rationale** (from `ServeManager.swift:366-371` comment): env vars are visible to same-UID attackers via `ps -E`, but a same-UID attacker can already call `SecItemCopyMatching` directly; the net delta is small. Sandbox protects against *other* UIDs, not same-UID code execution. Documenting the residual risk honestly beats security theatre (keychain-access-groups wouldn't raise the bar against the real threat model). Full credential-flow discussion in `design-keychain.md` §Desktop (sandboxed) credential path.
 
@@ -165,7 +165,6 @@ API keys are injected via `ServeManager.overlayAPIKeys()` (C3, Apr 2026) — Swi
 |---------|-----------------|---------|
 | Active provider | `activeProvider` | `BRISTLENOSE_LLM_PROVIDER` |
 | Model | `llmModel` | `BRISTLENOSE_LLM_MODEL` |
-| Temperature | `llmTemperature` | `BRISTLENOSE_LLM_TEMPERATURE` |
 | Concurrency | `llmConcurrency` | `BRISTLENOSE_LLM_CONCURRENCY` |
 | Whisper backend | `whisperBackend` | `BRISTLENOSE_WHISPER_BACKEND` |
 | Whisper model | `whisperModel` | `BRISTLENOSE_WHISPER_MODEL` |
@@ -229,7 +228,7 @@ network round-trip. Net guarantee: the dot reflects last-known-truth, not
 
 **TTL gating.** `LLMSettingsView.cacheTTL = 60s`. `revalidateAll()` skips
 `kickOffValidation` for cloud providers whose cache entry is younger
-than the TTL — opening Settings 20×/day to tweak temperature doesn't
+than the TTL — opening Settings 20×/day to tweak concurrency doesn't
 hammer four LLM APIs. Ollama is exempt (localhost is cheap, always
 probed).
 

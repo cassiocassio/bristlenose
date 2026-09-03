@@ -469,8 +469,6 @@
     "modelSection": "Malli",
     "customModelOption": "Mukautettu…",
     "customModelPlaceholder": "Mukautetun mallin nimi",
-    "temperatureLabel": "Lämpötila",
-    "temperatureHint": "Matala = keskittynyt, korkea = luova",
     "concurrencyLabel": "Rinnakkaisuus",
     "concurrencyHint": "Rinnakkaiset LLM-kutsut",
     "azureSection": "Azure-asetukset",

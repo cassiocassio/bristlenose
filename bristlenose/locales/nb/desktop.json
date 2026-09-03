@@ -469,8 +469,6 @@
     "modelSection": "Modell",
     "customModelOption": "Egendefinert…",
     "customModelPlaceholder": "Egendefinert modellnavn",
-    "temperatureLabel": "Temperatur",
-    "temperatureHint": "Lav = fokusert, høy = kreativ",
     "concurrencyLabel": "Samtidighet",
     "concurrencyHint": "Parallelle LLM-kall",
     "azureSection": "Azure-innstillinger",

@@ -469,8 +469,6 @@
     "modelSection": "Model",
     "customModelOption": "Personalitzat…",
     "customModelPlaceholder": "Nom del model personalitzat",
-    "temperatureLabel": "Temperatura",
-    "temperatureHint": "Baixa = precisa, alta = creativa",
     "concurrencyLabel": "Concurrència",
     "concurrencyHint": "Crides simultànies a l'LLM",
     "azureSection": "Configuració d'Azure",

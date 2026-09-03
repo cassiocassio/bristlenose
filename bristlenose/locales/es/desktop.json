@@ -469,8 +469,6 @@
     "modelSection": "Modelo",
     "customModelOption": "Personalizado…",
     "customModelPlaceholder": "Nombre de modelo personalizado",
-    "temperatureLabel": "Temperatura",
-    "temperatureHint": "Bajo = preciso, alto = creativo",
     "concurrencyLabel": "Concurrencia",
     "concurrencyHint": "Llamadas LLM en paralelo",
     "azureSection": "Configuración de Azure",

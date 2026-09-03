@@ -469,8 +469,6 @@
     "modelSection": "Modell",
     "customModelOption": "Benutzerdefiniert…",
     "customModelPlaceholder": "Name des benutzerdefinierten Modells",
-    "temperatureLabel": "Temperatur",
-    "temperatureHint": "Niedrig = präzise, hoch = kreativ",
     "concurrencyLabel": "Parallelität",
     "concurrencyHint": "Parallele LLM-Aufrufe",
     "azureSection": "Azure-Einstellungen",

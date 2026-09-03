@@ -469,8 +469,6 @@
     "modelSection": "Model",
     "customModelOption": "Aangepast…",
     "customModelPlaceholder": "Aangepaste modelnaam",
-    "temperatureLabel": "Temperatuur",
-    "temperatureHint": "Laag = gericht, hoog = creatief",
     "concurrencyLabel": "Gelijktijdigheid",
     "concurrencyHint": "Parallelle LLM-aanroepen",
     "azureSection": "Azure-instellingen",

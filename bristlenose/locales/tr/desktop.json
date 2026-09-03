@@ -469,8 +469,6 @@
     "modelSection": "Model",
     "customModelOption": "Özel…",
     "customModelPlaceholder": "Özel model adı",
-    "temperatureLabel": "Sıcaklık",
-    "temperatureHint": "Düşük = odaklı, yüksek = yaratıcı",
     "concurrencyLabel": "Eşzamanlılık",
     "concurrencyHint": "Paralel LLM çağrıları",
     "azureSection": "Azure Ayarları",

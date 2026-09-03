@@ -505,8 +505,6 @@
     "modelSection": "Model",
     "customModelOption": "Niestandardowy…",
     "customModelPlaceholder": "Nazwa niestandardowego modelu",
-    "temperatureLabel": "Temperatura",
-    "temperatureHint": "Niska = skupiona, wysoka = kreatywna",
     "concurrencyLabel": "Współbieżność",
     "concurrencyHint": "Równoległe wywołania LLM",
     "azureSection": "Ustawienia Azure",

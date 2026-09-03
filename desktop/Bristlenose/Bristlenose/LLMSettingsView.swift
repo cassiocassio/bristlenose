@@ -221,7 +221,6 @@ struct LLMSettingsView: View {
             modelSection
 
             Section {
-                temperatureSlider
                 concurrencySlider
             }
 
@@ -477,29 +476,9 @@ struct LLMSettingsView: View {
         )
     }
 
-    // MARK: - Temperature & concurrency
+    // MARK: - Concurrency
 
-    @AppStorage("llmTemperature") private var temperature: Double = 0.1
     @AppStorage("llmConcurrency") private var concurrency: Double = 3
-
-    private var temperatureSlider: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(i18n.t("desktop.llmSettings.temperatureLabel"))
-                Spacer()
-                Text(temperature.formatted(.number.precision(.fractionLength(1))))
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-            }
-            Slider(value: $temperature, in: 0...1, step: 0.1)
-            Text(i18n.t("desktop.llmSettings.temperatureHint"))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .onChange(of: temperature) { _, _ in
-            NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
-        }
-    }
 
     private var concurrencySlider: some View {
         VStack(alignment: .leading, spacing: 4) {

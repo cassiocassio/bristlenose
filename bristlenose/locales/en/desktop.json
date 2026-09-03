@@ -471,8 +471,6 @@
     "modelSection": "Model",
     "customModelOption": "Custom…",
     "customModelPlaceholder": "Custom model name",
-    "temperatureLabel": "Temperature",
-    "temperatureHint": "Low = focused, high = creative",
     "concurrencyLabel": "Concurrency",
     "concurrencyHint": "Parallel LLM calls",
     "azureSection": "Azure Settings",
@@ -482,7 +480,6 @@
     "pricingLink": "Pricing",
     "lastVerified": "Last verified %@",
     "revalidating": "Last validation was rejected — re-checking…",
-    "_comment_temperatureLabel": "ja/ko keep English pending native-UX-friend review — see TODO.md",
     "activate": {
       "generic": "Use this provider",
       "ollama": "Use the local Ollama model"

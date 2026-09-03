@@ -505,8 +505,6 @@
     "modelSection": "Модель",
     "customModelOption": "Власна…",
     "customModelPlaceholder": "Назва власної моделі",
-    "temperatureLabel": "Температура",
-    "temperatureHint": "Низька = зосереджено, висока = креативно",
     "concurrencyLabel": "Паралельність",
     "concurrencyHint": "Паралельні виклики LLM",
     "azureSection": "Параметри Azure",

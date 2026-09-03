@@ -451,8 +451,6 @@
     "modelSection": "모델",
     "customModelOption": "사용자 정의…",
     "customModelPlaceholder": "사용자 정의 모델 이름",
-    "temperatureLabel": "Temperature",
-    "temperatureHint": "낮음 = 정확함, 높음 = 창의적",
     "concurrencyLabel": "동시성",
     "concurrencyHint": "병렬 LLM 호출 수",
     "azureSection": "Azure 설정",

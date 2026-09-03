@@ -175,7 +175,7 @@ struct AIConsentView: View {
         HStack(alignment: .firstTextBaseline) {
             // Stay local: apply the RAM-aware default model, activate Ollama,
             // and pull the model ambiently (toolbar pill) — no blocking
-            // picker. Micro-prefs (model choice, temperature) live in Settings.
+            // picker. Micro-prefs (model choice, concurrency) live in Settings.
             // The size hint under the button discloses the multi-GB first-run
             // pull before the click (replacing the line the removed
             // OllamaSetupSheet used to show).

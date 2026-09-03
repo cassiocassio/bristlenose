@@ -451,8 +451,6 @@
     "modelSection": "模型",
     "customModelOption": "自訂…",
     "customModelPlaceholder": "自訂模型名稱",
-    "temperatureLabel": "Temperature",
-    "temperatureHint": "低 = 聚焦，高 = 有創意",
     "concurrencyLabel": "並行數",
     "concurrencyHint": "並行的 LLM 呼叫數",
     "azureSection": "Azure 設定",

@@ -239,9 +239,6 @@ enum BristlenoseShared {
                 env["BRISTLENOSE_LLM_MODEL"] = model
             }
         }
-        if defaults.object(forKey: "llmTemperature") != nil {
-            env["BRISTLENOSE_LLM_TEMPERATURE"] = String(defaults.double(forKey: "llmTemperature"))
-        }
         if defaults.object(forKey: "llmConcurrency") != nil {
             env["BRISTLENOSE_LLM_CONCURRENCY"] = String(Int(defaults.double(forKey: "llmConcurrency")))
         }

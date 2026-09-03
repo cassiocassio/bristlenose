@@ -505,8 +505,6 @@
     "modelSection": "Модель",
     "customModelOption": "Другая…",
     "customModelPlaceholder": "Название пользовательской модели",
-    "temperatureLabel": "Температура",
-    "temperatureHint": "Низкая = сфокусированно, высокая = креативно",
     "concurrencyLabel": "Параллелизм",
     "concurrencyHint": "Параллельные вызовы LLM",
     "azureSection": "Настройки Azure",

@@ -69,11 +69,15 @@ actually ships, and today it names one nothing does.
 ### The paired action — the Snap is edge-only
 
 "Ubuntu 22.04 users can use the Snap instead" is the natural mitigation and it
-is **not currently true**: the Snap is published to *edge*, and `snap.yml` is
-`workflow_dispatch` only (auto-triggers parked May 2026). Narrowing the pip floor
-without a stable Snap channel leaves 22.04 users with no first-class path.
-**Promoting the Snap off edge belongs in the same change as the floor bump**, or
-the floor bump should wait for it.
+is **not currently true today**: the Snap is published to *edge*, and `snap.yml`
+is `workflow_dispatch` only (auto-triggers parked May 2026).
+
+**Less tangled than it first looks, though.** Snap promotion to stable is already
+decided and is **marketing-driven** — it rides the autumn "try the beta" push,
+not an App Store milestone. Both land in the same autumn window, so they are
+compatible by default rather than in tension. The rule is simply: **don't ship
+the floor bump into a world where `snap install bristlenose --edge` is still the
+only Linux answer.** Not a gate on the floor, a sequencing note.
 
 ### For the Held register (`docs/dependency-premortem-log.md`)
 
@@ -84,11 +88,18 @@ the floor bump should wait for it.
 It belongs in the Held register rather than the pinning register because the
 reason is an ecosystem date, not one of our own.
 
-## The more urgent problem is the ceiling, not the floor
+## The ceiling — a separate, deferred watch (do not couple it to the floor)
 
-**Python 3.15 releases on 1 October 2026** (PEP 790) — 28 days away, and four
-weeks *before* 3.10's EOL. On it, `pip install bristlenose` does not degrade; it
-**fails outright**:
+**Decided 3 Sep 2026: this is kept apart from the floor decision, and keeping
+them apart is the decision.** The floor move is cheap, daily-beneficial and hurts
+almost nobody; bolting a speculative upstream problem onto it is how a clean
+decision stalls. **Re-examine ≈ March 2027** — or sooner if a user reports a 3.15
+install failure. An earlier draft of this doc called the ceiling "more urgent
+than the floor" and told the reader to watch it harder; that framing is
+superseded.
+
+**Python 3.15 releases on 1 October 2026** (PEP 790) — four weeks *before* 3.10's
+EOL. On it, `pip install bristlenose` does not degrade; it **fails outright**:
 
 ```
 ERROR: Ignored the following versions that require a different python version:
@@ -123,11 +134,17 @@ lands the pin fails loudly by design, and the obvious fix — bumping it to
 `from versions: none` shape `docs/design-fedora-packaging.md` already documents
 for the architecture mismatch.
 
+**And note what presidio actually is here: the binding constraint on this
+project from four directions at once** — `cryptography<49.0.0` (three open
+advisories, and it ships in the Mac bundle), `numpy<2.5.0`, `requires-python
+<3.15`, and being a core dep with no route around it. When dependency health
+looks stuck, presidio is the first place to look, not Python.
+
 Nothing to do today but record it. Suggested Held-register row:
 
 | Held bump | Cluster | Reason (blocks now) | Release-predicate (lifts it) | Last watched | Status |
 |---|---|---|---|---|---|
-| **Python 3.15 support** | PII / presidio | `presidio-analyzer` + `presidio-anonymizer` 2.2.364 declare `requires-python = ">=3.10,<3.15"`. Both are core deps, so on 3.15 the whole install fails at resolve — not a degraded path, no install at all. 3.15 lands **1 Oct 2026**; presidio historically admits a new Python ~8.7 months late | presidio ships a release whose `requires-python` upper bound admits 3.15 (`<3.16`). Then add a 3.15 CI cell and re-pre-mortem. Watch **Fedora F45** as the first channel to force the question — `.copr/Makefile` pins `python3.14` and will need bumping when that chroot lands | 2026-09-03 | held |
+| **Python 3.15 support** *(deferred watch — re-examine ≈ Mar 2027, not coupled to the floor)* | PII / presidio | `presidio-analyzer` + `presidio-anonymizer` 2.2.364 declare `requires-python = ">=3.10,<3.15"`. Both are core deps, so on 3.15 the whole install fails at resolve — not a degraded path, no install at all. 3.15 lands **1 Oct 2026**; presidio historically admits a new Python ~8.7 months late | presidio ships a release whose `requires-python` upper bound admits 3.15 (`<3.16`). Then add a 3.15 CI cell and re-pre-mortem. Watch **Fedora F45** as the first channel to force the question — `.copr/Makefile` pins `python3.14` and will need bumping when that chroot lands | 2026-09-03 | held |
 
 ## The finding that changes the question
 

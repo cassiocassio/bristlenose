@@ -117,6 +117,33 @@ def _clamp_max_tokens(model: str, requested: int) -> int:
     return min(requested, cap) if cap else requested
 
 
+# Claude models that still accept sampling parameters. Anthropic removed
+# `temperature` / `top_p` / `top_k` from Opus 4.7 and Sonnet 5 onward: a
+# non-default value is a hard 400, NOT a silently-ignored field. We always send
+# 0.1, which is never the API default, so an ungated call to a post-4.6 model
+# fails every time — and it surfaces as the generic "The AI provider rejected
+# the request.", which names nothing the researcher can act on.
+#
+# This set is a SUNSET LIST: it only ever shrinks. Every future Claude model
+# belongs outside it, so unknown models deliberately fail CLOSED (parameter
+# omitted, call succeeds at the API default) rather than open (400). When it
+# empties, delete it and the kwarg with it.
+#
+# Deliberately not a version comparison — model ids don't sort, and a clever
+# parse would be wrong in a way nothing catches. Exact strings only.
+_ANTHROPIC_ACCEPTS_SAMPLING: frozenset[str] = frozenset(
+    {
+        "claude-sonnet-4-6",
+        "claude-opus-4-6",
+        "claude-haiku-4-5",
+        "claude-haiku-4-5-20251001",
+        "claude-sonnet-4-5-20250929",
+        "claude-sonnet-4-20250514",
+        "claude-haiku-3-5-20241022",
+    }
+)
+
+
 # Cloud-provider client retry budget. The Anthropic / OpenAI / Azure SDKs all
 # retry 429 / 408 / 409 / 5xx / connection errors with exponential backoff,
 # honouring the server's `Retry-After` (and `retry-after-ms`) header — we don't
@@ -522,11 +549,24 @@ class LLMClient:
         logger.info("Calling Anthropic API: model=%s", self.settings.llm_model)
 
         request_model = self.settings.llm_model
+
+        # Sampling params only for models that accept them — see
+        # _ANTHROPIC_ACCEPTS_SAMPLING. Sending one to a post-4.6 model is a 400.
+        sampling: dict[str, float] = {}
+        if request_model in _ANTHROPIC_ACCEPTS_SAMPLING:
+            sampling["temperature"] = self.settings.llm_temperature
+        else:
+            logger.info(
+                "llm_sampling_omitted | model=%s | temperature=%s not sent "
+                "(model does not accept sampling parameters)",
+                request_model,
+                self.settings.llm_temperature,
+            )
+
         try:
             response = await client.messages.create(
                 model=request_model,
                 max_tokens=max_tokens,
-                temperature=self.settings.llm_temperature,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}],
                 tools=[tool],
@@ -534,6 +574,7 @@ class LLMClient:
                 # Explicit timeout bypasses the SDK's heuristic that rejects
                 # non-streaming requests when max_tokens is high (>~21K).
                 timeout=600.0,
+                **sampling,
             )
         except asyncio.CancelledError:
             raise

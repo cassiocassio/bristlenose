@@ -180,14 +180,16 @@
   </div>
 
   <!-- ================================================================== -->
-  <h2>1 &nbsp;Three tiers, not one switch</h2>
+  <h2>1 &nbsp;Three states, one control</h2>
   <p class="sub">
     The distinction that matters is <b>when the answer is knowable</b> and
     <b>how long it stays true</b>. Configuration is a local fact and never stale.
     Credit is a fact about someone else&rsquo;s server, and is stale the instant it is
-    read. What actually happened is only knowable after spending — which is why the
-    middle row spends nothing on the controls: a belief that decays has no business
-    interrupting the act that would settle it.
+    read. What actually happened is only knowable after spending.
+    <b>None of the three earns a change to the control</b>, and the table&rsquo;s last
+    column is why: each argument for one turns out to restate a global condition
+    locally, on every card on screen, to save a click that is either free (the
+    pre-flight refuses without spending) or is itself the only accurate test.
   </p>
 
   <table class="tiers">
@@ -203,10 +205,12 @@
         <span style="color:rgba(255,255,255,0.55)">no key &middot; local-only &middot; ambiguous</span></td>
       <td>Before the click, free</td>
       <td>Yes — local config</td>
-      <td><b>Replace the control with the fix.</b> Install becomes Set&nbsp;up&nbsp;AI.</td>
-      <td>Not a <i>disabled</i> Install with a tooltip. A dead control makes the
-          researcher hunt for the reason; the control that <i>is</i> the reason
-          costs the same pixels and answers it.</td>
+      <td><b>Nothing on the control.</b> The refusal costs no tokens and names the
+          fix in the toast.</td>
+      <td>Not a replaced control (&ldquo;Set&nbsp;up&nbsp;AI&hellip;&rdquo;) and not
+          a disabled one. Both restate a global condition on every card that happens
+          to be on screen, to buy back a click that costs nothing — the pre-flight
+          refuses before spending.</td>
     </tr>
     <tr>
       <td><span class="tierdot t2"></span><b>Out of credit</b><br>
@@ -233,21 +237,27 @@
   </table>
 
   <!-- ================================================================== -->
-  <h2>2 &nbsp;The same control, two ways</h2>
+  <h2>2 &nbsp;The control never changes</h2>
   <p class="sub">
-    Two, not three — <b>tier 2 gets no treatment on the control at all</b>. Install
-    stays exactly as it is, the researcher clicks, and either it works or the regular
-    failure toast tells them why. That is the whole of it. A per-card warning would be
-    a cached guess restated at the moment the researcher can least act on it, and
-    wrong for anyone who has just topped up; the click is the cheapest and most
-    accurate probe available, and the plumbing to report its outcome now exists.
+    Not two ways and not three — <b>one</b>. Install stays Install in every state.
+    It is not replaced by &ldquo;Set&nbsp;up&nbsp;AI&hellip;&rdquo;, it is not
+    disabled, and it grows no warning. The researcher clicks, and the toast says what
+    happened. Everything below is the same card and the same button; only the outcome
+    differs.
+  </p>
+  <p class="sub">
+    The reasoning is one line: <b>this is a global condition, and a codebook card is a
+    local surface.</b> A screen of twenty cards would say the same sentence twenty
+    times, in the place least able to act on it, built on a cached verdict that is
+    wrong the moment the researcher pays. It is already stated once in the titlebar,
+    where a standing condition belongs, and it will be stated again — accurately, and
+    within seconds — by the toast.
   </p>
 
   <div class="specimens">
 
     <div class="spec">
-      <p class="cap"><b>Baseline — provider configured</b>What ships today, and what
-        every other tier is measured against.</p>
+      <p class="cap"><b>The control</b>One card. Unchanged in every state below.</p>
       <div class="bookcard">
         <div class="title">Laws of UX</div>
         <div class="meta">Jon Yablonski</div>
@@ -261,90 +271,62 @@
     </div>
 
     <div class="spec">
-      <p class="cap"><b>Tier 1 — no provider</b>The server already refuses this with
-        <code>no_api_key</code>. Today the click is allowed and the refusal arrives as
-        a banner.</p>
-      <div class="bookcard">
-        <div class="title">Laws of UX</div>
-        <div class="meta">Jon Yablonski</div>
-        <div class="row">
-          <span class="count">28 tags</span>
-          <button class="bn-btn bn-btn-secondary">Set up AI&hellip;</button>
-        </div>
+      <p class="cap"><b>Outcome A — it works</b>The overwhelmingly common case, and
+        the one the other two must not tax.</p>
+      <div class="chip">
+        <span style="color:var(--green);">&#10003;</span>
+        <span>AutoCoded Laws of UX in 41s</span>
+        <span class="link">View Report</span>
       </div>
-      <p class="note">Reads as a step, not a wall. Opens Settings&nbsp;&#9656;&nbsp;AI
-        on the Mac, the Settings modal on the web. <b>No tooltip</b> — nothing to
-        explain, because nothing is disabled.</p>
+      <p class="note">Any pre-emptive check would have to run, and be paid for or be
+        stale, on every one of these.</p>
     </div>
 
     <div class="spec">
-      <p class="cap"><b>Tier 2 — believed out of credit</b>Identical to baseline. Not
-        an oversight — the answer.</p>
-      <div class="bookcard">
-        <div class="title">Laws of UX</div>
-        <div class="meta">Jon Yablonski</div>
-        <div class="row">
-          <span class="count">28 tags</span>
-          <button class="bn-btn bn-btn-primary">Install</button>
-        </div>
-      </div>
-      <p class="note">The pill already says it, once, where a standing condition
-        belongs. Repeating it per card would say it three more times on a page of
-        three codebooks — and say it wrong the moment the researcher pays.</p>
-    </div>
-
-  </div>
-
-  <h3>What tier 2 does instead</h3>
-  <p class="sub">
-    The sequence, end to end. Nothing is pre-empted and nothing is blocked: the
-    install proceeds, and if the account really is dry the failure arrives named — the
-    same toast tier 3 produces, because it <i>is</i> tier 3. Tier 2 is a belief; only
-    the run is a fact.
-  </p>
-
-  <div class="seq">
-    <div class="seqstep">
-      <div class="seqlabel">1 &nbsp;Click, unimpeded</div>
-      <div class="bookcard">
-        <div class="title">Laws of UX</div>
-        <div class="meta">Jon Yablonski</div>
-        <div class="row">
-          <span class="count">28 tags</span>
-          <button class="bn-btn bn-btn-primary">Install</button>
-        </div>
-      </div>
-    </div>
-    <div class="seqarrow">&rarr;</div>
-    <div class="seqstep">
-      <div class="seqlabel">2 &nbsp;It runs</div>
+      <p class="cap"><b>Outcome B — no provider</b>The server refuses before spending
+        anything; the refusal names itself on the wire.</p>
       <div class="chip">
-        <span style="color:rgba(255,255,255,0.55);">&#9711;</span>
-        <span>Tagging 12 of 33 quotes&hellip;</span>
+        <span class="x">&#10007;</span>
+        <span>Add an API key in Settings first.</span>
+        <span class="link" style="color:rgba(255,255,255,0.45);margin-left:auto;">&times;</span>
       </div>
-      <div class="seqnote">Because the belief might be stale — a top-up in a browser
-        tab is invisible to us, and this is the branch that a pre-emptive warning
-        would have talked the researcher out of.</div>
+      <p class="note">Verbatim from the <code>en</code> locale, chosen by
+        <code>autocodeRefusal()</code> from the stable <code>no_api_key</code> reason
+        — not the wire <code>detail</code>, which told a Mac-app user to edit a
+        <code>.env</code> file.<span class="done">plumbed</span></p>
     </div>
-    <div class="seqarrow">&rarr;</div>
-    <div class="seqstep">
-      <div class="seqlabel">3 &nbsp;Or it does not</div>
+
+    <div class="spec">
+      <p class="cap"><b>Outcome C — out of credit</b>Found out by trying, which is the
+        only way it can be found out.</p>
       <div class="chip">
         <span class="x">&#10007;</span>
         <span>Tagging failed: your AI provider account is out of credit.</span>
         <span class="link" style="color:rgba(255,255,255,0.45);margin-left:auto;">&times;</span>
       </div>
-      <div class="seqnote">The regular toast, unchanged — and the verdict it carries
-        is what lights the pill for next time.<span class="done">plumbed</span></div>
+      <p class="note">And this verdict is what lights the titlebar pill, so the
+        standing condition gets stated once, in one place, from the only event that
+        actually established it.<span class="done">plumbed</span></p>
     </div>
+
   </div>
 
-  <!-- ================================================================== -->
-  <h2>3 &nbsp;Tier 3, as it now behaves</h2>
+  <h3>What this leaves behind</h3>
+  <p class="sub">
+    Outcomes B and C both end with the codebook <b>installed and uncoded</b>:
+    <code>importCodebookTemplate</code> runs before <code>startAutoCode</code>, so the
+    groups are linked whatever the job then does. That state is not new — it is the
+    consequence of never gating, accepted deliberately — but it is currently
+    <b>invisible and unrecoverable</b>, and that is the real work. Section&nbsp;5.
+  </p>
+
+  <h2>3 &nbsp;The failure report, before and after</h2>
   <p class="sub">
     Before and after the plumbing. The left chip is the 3&nbsp;Sep screenshot; the
     right is what the same failure produces now. Nothing here needs designing — it is
-    shown so tiers 1 and 2 can be judged against the thing they are meant to prevent.
+    shown because it is the load-bearing surface: once the control never changes, the
+    toast is the <i>only</i> thing that tells a researcher what happened, so it has to
+    be right.
   </p>
 
   <div class="specimens">
@@ -424,12 +406,13 @@
   </div>
 
   <!-- ================================================================== -->
-  <h2>4 &nbsp;Which surfaces need which tier</h2>
+  <h2>4 &nbsp;Which surfaces can name a failure</h2>
   <p class="sub">
-    Every server route that spends tokens, and what it does today. The gap is not
-    that a systemwide model is missing — <code>pipeline_view/eligibility.py</code> is
-    one, exposed at <code>GET /api/pipeline</code> — it is that its only consumer is a
-    table in Settings.
+    Every server route that spends tokens, and what it does today. With the control
+    never changing, each of these needs exactly two things and no more: a pre-flight
+    that refuses <i>before</i> spending where it cheaply can, and a failure that
+    arrives named. No per-surface availability state, nothing to keep fresh. Three of
+    the five have neither.
   </p>
 
   <table class="matrix">
@@ -489,41 +472,131 @@
   </p>
 
   <!-- ================================================================== -->
-  <h2>5 &nbsp;Open questions</h2>
+  <h2>5 &nbsp;The live question: getting back out of it</h2>
+  <p class="sub">
+    Never gating means outcomes B and C leave a codebook <b>installed and uncoded</b>.
+    That is accepted. What is not yet decided is how the researcher gets out of it once
+    they fix the provider — by switching to one that works, or by topping up the one
+    that is stuck. The expectation to design against: <b>autotagging should come back
+    to life on its own.</b>
+  </p>
+
+  <h3>What the code already does</h3>
+  <table class="matrix">
+    <tr><th style="width:34%">Piece</th><th style="width:16%">State</th><th>Detail</th></tr>
+    <tr>
+      <td>Retry is <i>possible</i></td>
+      <td><span class="yes">works</span></td>
+      <td><code>start_autocode_job</code> 409s <code>already_applied</code> on a
+        completed job but <b>discards a failed one</b> and re-runs. Calling the
+        all-failed case <code>completed</code> was what walled the framework off for
+        good.<span class="done">fixed</span></td>
+    </tr>
+    <tr>
+      <td>A retry codes <i>everything</i></td>
+      <td><span class="yes">works</span></td>
+      <td><code>completed_at</code> is the applied watermark, not a stop time. A job
+        that coded nothing no longer stamps one, so it stays out of
+        <code>reapply_active_frameworks</code>&rsquo; maintained set and a retry sees
+        the whole corpus rather than the delta since the
+        failure.<span class="done">fixed</span></td>
+    </tr>
+    <tr>
+      <td>The state is <i>visible</i></td>
+      <td><span class="no">no</span></td>
+      <td><code>installed</code> means &ldquo;has groups in this project&rdquo;, and
+        the template is imported <i>before</i> the job runs — so the card reads
+        <b>Uninstall</b> and the navigator draws an uncoded codebook exactly like a
+        coded one. Recovery today is Uninstall&nbsp;&rarr;&nbsp;Install, undiscoverable.</td>
+    </tr>
+    <tr>
+      <td>Something <i>triggers</i> the retry</td>
+      <td><span class="no">no</span></td>
+      <td>Nothing re-runs a failed job. This is the design question.</td>
+    </tr>
+  </table>
+
+  <h3>The signals that exist</h3>
+  <table class="matrix">
+    <tr><th style="width:34%">Event</th><th style="width:26%">What we get</th><th>Use</th></tr>
+    <tr>
+      <td>Switch provider, or paste a new key</td>
+      <td><code>.bristlenosePrefsChanged</code> &rarr;
+          <code>ServeManager.restartIfRunning()</code></td>
+      <td><b>Strong</b> — the sidecar restarts, so there is a clean moment to act.</td>
+    </tr>
+    <tr>
+      <td>A validation records <code>.online</code> after <code>.outOfCredit</code></td>
+      <td>verdict-cache transition</td>
+      <td><b>The truest trigger</b> — it fires on the change itself. But only when
+        something actually revalidates.</td>
+    </tr>
+    <tr>
+      <td><b>Adding credit</b></td>
+      <td><span class="no">nothing, ever</span></td>
+      <td>It happens in a browser tab. <code>OutOfCreditModel</code>&rsquo;s own
+        comment records that refocus re-reads the cache <i>without</i> revalidating —
+        which is also why the pill lingers after a top-up.</td>
+    </tr>
+  </table>
+
+  <h3>Proposed</h3>
   <ol class="q">
-    <li><b>A refused install leaves the codebook installed.</b>
-      <code>onInstall</code> is <code>importCodebookTemplate()</code> then
-      <code>startAutoCode()</code>. If the second refuses, the tags are in the codebook
-      and nothing is coded — a half-install, which is exactly the separate-Apply state
-      v2 exists to remove. Three answers: pre-flight before the import; roll the import
-      back; or accept it and say so. This is a product call, not a bug fix, which is
-      why the plumbing pass left it alone.</li>
+    <li><b>Revalidate on return from &ldquo;Add funds&hellip;&rdquo;, and retry on the
+      transition.</b> The popover button opens the billing console; when the app comes
+      back, revalidate <i>that</i> provider. On
+      <code>.outOfCredit&nbsp;&rarr;&nbsp;.online</code>, re-run whatever failed —
+      sequentially, as <code>reapply_active_frameworks</code> already does &ldquo;so
+      spend stays legible&rdquo;, with the ordinary progress chips. This is the
+      jump-back-into-life, driven by the real event rather than a timer, and it fixes
+      the pill&rsquo;s lingering as a side effect.</li>
 
-    <li><b>Settled — tier 2 is not per-control.</b> An earlier draft of this page
-      drew a per-card warning (&ldquo;Claude was out of credit at 14:02. This may not
-      run.&rdquo;). Rejected: install should succeed, and the regular toast should be
-      what speaks. A wasted click costs a researcher seconds; a warning built on a
-      cache that outlives the condition costs them trust in every warning after it,
-      and would be at its most confident exactly when it is wrong — right after they
-      topped up. Left here as the reasoning, not as an option.</li>
+    <li><b>Put the state on the row.</b> Not chrome for a global condition —
+      <i>this</i> one is per-framework, and the navigator currently asserts the
+      opposite of the truth. It is also the only recovery for the case we can never
+      detect.</li>
 
-    <li><b>Does tier 1 differ on web and Mac?</b> &ldquo;Set up AI&hellip;&rdquo; opens
-      a native pane on the Mac and a modal on the web. Same verb, different
-      destination — or does the web, where there is no Settings&nbsp;&#9656;&nbsp;AI,
-      need different words?</li>
+    <li><b>Not on serve restart.</b> Tempting, since a provider switch is a restart —
+      but serve restarts for many reasons, and spending at process start, unattended,
+      is a different act from spending because someone clicked.</li>
+  </ol>
 
-    <li><b>What about Azure and Gemini?</b> Per the classifier&rsquo;s own honesty
-      note, out-of-credit is only isolable on Anthropic and OpenAI; Azure has no
-      per-account credit and Gemini folds credit, quota and free-tier cap into one
-      signal. So tier 2 <i>cannot exist</i> for half the cloud providers. Silence is
-      the right default there — but the tier-1 and tier-3 treatments must not look
-      broken in its absence.</li>
+  <h3>Still to decide</h3>
+  <ol class="q">
+    <li><b>Retry silently, or offer?</b> Install already spends without confirmation
+      because the researcher asked by clicking — and that ask is still standing and
+      unfulfilled, so re-running fulfils it rather than making a new one. Against: if
+      five codebooks failed, five jobs start at once. They are visible and cancellable
+      in the chip stack, but nobody clicked five times.</li>
 
-    <li><b>Not proposed: a credit probe in serve mode.</b>
-      <code>preflight/api_key.py</code> already spends ~$0.0001 to answer this for
-      <code>run</code>/<code>analyze</code>. Extending it to serve would charge the
-      researcher for a question they did not ask, on a surface they may only be
-      reading, and it still cannot answer for two providers. The run is the probe.</li>
+    <li><b>Rate limits are the same shape and need no provider event.</b> The work was
+      asked for and never done, and the condition clears itself. There is currently
+      <b>no retry or backoff anywhere in the batch loop</b>, so a single 429 kills a
+      batch outright — a cheaper, independent win that does not wait on any of the
+      above.</li>
+
+    <li><b>Azure and Gemini have no out-of-credit at all.</b> Per the
+      classifier&rsquo;s own honesty note it is only isolable on Anthropic and OpenAI;
+      Azure has no per-account credit and Gemini folds credit, quota and free-tier cap
+      into one signal. So the transition trigger cannot fire for half the cloud
+      providers, and the visible-state recovery has to carry them alone.</li>
+  </ol>
+
+  <h3>Settled, kept as reasoning</h3>
+  <ol class="q">
+    <li><b>The control never changes.</b> Two treatments were drawn and rejected:
+      Install becoming &ldquo;Set&nbsp;up&nbsp;AI&hellip;&rdquo; when no provider is
+      configured, and a per-card amber warning when the account is believed empty.
+      Both restate a global condition on every card on screen — twenty codebooks,
+      twenty copies — to save a click that is either free (the pre-flight refuses
+      before spending) or is itself the only accurate test. The titlebar says it once;
+      the toast says it accurately, within seconds.</li>
+
+    <li><b>No credit probe in serve mode.</b> <code>preflight/api_key.py</code> already
+      spends ~$0.0001 to answer this for <code>run</code>/<code>analyze</code>. Its
+      only use here was the pre-emptive warning, which is rejected — so it would charge
+      the researcher for a question nobody asks, on a surface they may only be reading,
+      and still not answer for two providers. The run is the probe.</li>
   </ol>
 
 </div>

@@ -61,8 +61,15 @@ updates:
       # temperature slider (LLMSettingsView.swift:494, 21 locales) that is
       # inert on Claude if Anthropic is right that current models ignore it.
       # See docs/dependency-premortem-log.md Entry 6 + the Held register.
+      # `versions:`, NOT `update-types:` — measured 3 Sep 2026. A ceiling in
+      # pyproject.toml produces an "Update <dep> requirement" PR that widens the
+      # constraint, and `update-types: [version-update:semver-major]` does not
+      # suppress that shape. The anthropic rule below carried update-types from
+      # 27 Aug and never once stopped the PR: #134 stood for a week under it, and
+      # #139 was raised while it was still in force. `versions:` is the form that
+      # works (it is what the retired tokenizers rule used).
       - dependency-name: "anthropic"
-        update-types: ["version-update:semver-major"]
+        versions: [">=1"]
       - dependency-name: "pydantic"
         update-types: ["version-update:semver-major"]
       - dependency-name: "fastapi"
@@ -84,10 +91,12 @@ updates:
       #   change rather than a call-site refactor — verify against 2.1.1 with a
       #   test before assuming either. Then float the ceiling and re-pre-mortem.
       #   See docs/dependency-premortem-log.md § Held register.
+      # Same shape as anthropic: the ceiling lives in pyproject.toml, so this
+      # must be `versions:` to suppress the requirement-widening PR.
       - dependency-name: "mcp"
-        update-types: ["version-update:semver-minor"]
+        versions: [">=2.1"]
       - dependency-name: "mcp-types"
-        update-types: ["version-update:semver-minor"]
+        versions: [">=2.1"]
       # spaCy ecosystem cluster — HELD, not dead-pinned. spaCy 3.8.x pins
       # thinc<8.4 + weasel<0.5; thinc pins confection<1.0; weasel 1.0
       # *requires* confection>=1.0 (mutually exclusive with thinc 8.3). The

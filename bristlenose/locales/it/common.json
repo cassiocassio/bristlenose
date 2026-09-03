@@ -537,6 +537,8 @@
     "tagCount_other": "{{count}} tag",
     "appliedToQuotes_one": "applicati a {{count}} citazione in {{project}}",
     "appliedToQuotes_other": "applicati a {{count}} citazioni in {{project}}",
+    "tentativeCount_one": "{{count}} Provvisori",
+    "tentativeCount_other": "{{count}} Provvisori",
     "browseTitle": "Libreria dei libri dei codici",
     "browseSubtitle": "Installa libri dei codici nel tuo progetto, oppure creane di tuoi",
     "frameworksHeader": "Framework dei libri dei codici",

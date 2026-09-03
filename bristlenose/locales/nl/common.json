@@ -537,6 +537,8 @@
     "tagCount_other": "{{count}} tags",
     "appliedToQuotes_one": "toegepast op {{count}} citaat in {{project}}",
     "appliedToQuotes_other": "toegepast op {{count}} citaten in {{project}}",
+    "tentativeCount_one": "{{count}} Voorlopig",
+    "tentativeCount_other": "{{count}} Voorlopig",
     "browseTitle": "Codeboekbibliotheek",
     "browseSubtitle": "Installeer codeboeken in je project, of maak je eigen",
     "frameworksHeader": "Codeboekraamwerken",

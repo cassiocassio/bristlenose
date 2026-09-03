@@ -119,7 +119,7 @@ describe("the Review door", () => {
     renderPage(book());
     expect(screen.getByTestId("bn-v2-review")).toHaveTextContent("Review");
     expect(screen.getByText(/3 tags · applied to 72 quotes in Ikea/)).toBeInTheDocument();
-    expect(screen.getByText(/12 undecided/)).toBeInTheDocument();
+    expect(screen.getByText(/12 tentative/)).toBeInTheDocument();
   });
 
   it("is suppressed for a codebook with no tags", () => {

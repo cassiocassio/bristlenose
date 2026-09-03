@@ -537,6 +537,8 @@
     "tagCount_other": "{{count}} etiket",
     "appliedToQuotes_one": "{{project}} projesinde {{count}} al\u0131nt\u0131ya uyguland\u0131",
     "appliedToQuotes_other": "{{project}} projesinde {{count}} al\u0131nt\u0131ya uyguland\u0131",
+    "tentativeCount_one": "{{count}} Ge\u00e7ici",
+    "tentativeCount_other": "{{count}} Ge\u00e7ici",
     "browseTitle": "Kod defteri kitaplığı",
     "browseSubtitle": "Kod defterlerini projenize yükleyin ya da kendinizinkini oluşturun",
     "frameworksHeader": "Kod defteri çerçeveleri",

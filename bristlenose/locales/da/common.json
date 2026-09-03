@@ -537,6 +537,8 @@
     "tagCount_other": "{{count}} tags",
     "appliedToQuotes_one": "anvendt p\u00e5 {{count}} citat i {{project}}",
     "appliedToQuotes_other": "anvendt p\u00e5 {{count}} citater i {{project}}",
+    "tentativeCount_one": "{{count}} Forel\u00f8big",
+    "tentativeCount_other": "{{count}} Forel\u00f8big",
     "browseTitle": "Kodebogsbibliotek",
     "browseSubtitle": "Installer kodebøger i dit projekt, eller opret dine egne",
     "frameworksHeader": "Kodebogsframeworks",

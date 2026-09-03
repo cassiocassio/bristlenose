@@ -539,6 +539,8 @@
     "tagCount_other": "{{count}} tags",
     "appliedToQuotes_one": "applied to {{count}} quote in {{project}}",
     "appliedToQuotes_other": "applied to {{count}} quotes in {{project}}",
+    "tentativeCount_one": "{{count}} tentative",
+    "tentativeCount_other": "{{count}} tentative",
     "browseTitle": "Codebook Library",
     "browseSubtitle": "Install codebooks into your project, or create your own",
     "frameworksHeader": "Codebook frameworks",

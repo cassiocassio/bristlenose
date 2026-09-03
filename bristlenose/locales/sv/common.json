@@ -537,6 +537,8 @@
     "tagCount_other": "{{count}} taggar",
     "appliedToQuotes_one": "anv\u00e4nda p\u00e5 {{count}} citat i {{project}}",
     "appliedToQuotes_other": "anv\u00e4nda p\u00e5 {{count}} citat i {{project}}",
+    "tentativeCount_one": "{{count}} Prelimin\u00e4r",
+    "tentativeCount_other": "{{count}} Prelimin\u00e4r",
     "browseTitle": "Kodboksbibliotek",
     "browseSubtitle": "Installera kodböcker i projektet, eller skapa egna",
     "frameworksHeader": "Kodboksramverk",

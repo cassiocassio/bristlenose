@@ -537,6 +537,8 @@
     "tagCount_other": "{{count}} Tags",
     "appliedToQuotes_one": "auf {{count}} Zitat in {{project}} angewendet",
     "appliedToQuotes_other": "auf {{count}} Zitate in {{project}} angewendet",
+    "tentativeCount_one": "{{count}} Vorl\u00e4ufig",
+    "tentativeCount_other": "{{count}} Vorl\u00e4ufig",
     "browseTitle": "Codebuch-Bibliothek",
     "browseSubtitle": "Installieren Sie Codebücher in Ihr Projekt oder erstellen Sie eigene",
     "frameworksHeader": "Codebuch-Frameworks",

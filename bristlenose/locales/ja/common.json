@@ -530,6 +530,7 @@
     "uninstallDiscards": "\u6b21\u306e\u9805\u76ee\u304c\u7834\u68c4\u3055\u308c\u307e\u3059\uff1a",
     "tagCount_other": "{{count}} \u500b\u306e\u30bf\u30b0",
     "appliedToQuotes_other": "{{project}} \u306e {{count}} \u4ef6\u306e\u5f15\u7528\u306b\u9069\u7528",
+    "tentativeCount_other": "{{count}} \u66ab\u5b9a",
     "browseTitle": "コードブックライブラリ",
     "browseSubtitle": "コードブックをプロジェクトにインストールするか、独自に作成します",
     "frameworksHeader": "コードブックフレームワーク",

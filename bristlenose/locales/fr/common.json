@@ -537,6 +537,8 @@
     "tagCount_other": "{{count}} \u00e9tiquettes",
     "appliedToQuotes_one": "appliqu\u00e9es \u00e0 {{count}} citation dans {{project}}",
     "appliedToQuotes_other": "appliqu\u00e9es \u00e0 {{count}} citations dans {{project}}",
+    "tentativeCount_one": "{{count}} Tentative",
+    "tentativeCount_other": "{{count}} Tentative",
     "browseTitle": "Bibliothèque de grilles de codage",
     "browseSubtitle": "Installez des grilles de codage dans votre projet, ou créez les vôtres",
     "frameworksHeader": "Grilles de codage de framework",

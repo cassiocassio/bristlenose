@@ -539,6 +539,8 @@
     "tagCount_other": "{{count}} etiquetes",
     "appliedToQuotes_one": "aplicades a {{count}} cita a {{project}}",
     "appliedToQuotes_other": "aplicades a {{count}} cites a {{project}}",
+    "tentativeCount_one": "{{count}} Provisional",
+    "tentativeCount_other": "{{count}} Provisional",
     "browseTitle": "Biblioteca de llibres de codis",
     "browseSubtitle": "Instal·la llibres de codis al teu projecte o crea'n de propis",
     "frameworksHeader": "Marcs de llibres de codis",

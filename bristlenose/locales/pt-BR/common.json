@@ -537,6 +537,8 @@
     "tagCount_other": "{{count}} etiquetas",
     "appliedToQuotes_one": "aplicadas a {{count}} cita\u00e7\u00e3o em {{project}}",
     "appliedToQuotes_other": "aplicadas a {{count}} cita\u00e7\u00f5es em {{project}}",
+    "tentativeCount_one": "{{count}} Tentativa",
+    "tentativeCount_other": "{{count}} Tentativa",
     "browseTitle": "Biblioteca de livros de códigos",
     "browseSubtitle": "Instale livros de códigos no seu projeto, ou crie os seus",
     "frameworksHeader": "Frameworks de livro de códigos",

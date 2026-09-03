@@ -193,7 +193,22 @@ export function CodebookV2Page({
                     the two surfaces state one fact and must state it once. */}
                 {reachPhrase(tagCount, book.quotes, projectName)}
                 {book.pending > 0 && (
-                  <span className="undec"> &middot; {book.pending} undecided</span>
+                  // "tentative", not "undecided": it is the middle band of the
+                  // threshold histogram the Review button opens, which labels
+                  // itself `autocode.review.zoneTentative` — and the column
+                  // behind it is `tentative_count`. The card was the only place
+                  // in the product calling it something else, so a researcher
+                  // reading "14 undecided" here and "Tentative" one click away
+                  // had to work out those were the same fourteen.
+                  //
+                  // It was also a hardcoded English literal, so it rendered in
+                  // English in all 21 locales — the i18n hole with no gate,
+                  // since `check-locales.py` cannot report a key missing from
+                  // the other 20 when `en` never had it either.
+                  <span className="undec">
+                    {" \u00b7 "}
+                    {t("codebook.tentativeCount", { count: book.pending })}
+                  </span>
                 )}
               </span>
               {/* `bn-btn-secondary`, not a bare `bn-btn`. The base atom sets

@@ -84,15 +84,16 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "confection"
         update-types: ["version-update:semver-major"]
-      # HELD (resolver-gated), not dead-pinned. transformers 5.7.x AND
-      # 5.10.x both pin `tokenizers<=0.23.0` (deps.dev verified 2026-06-05);
-      # tokenizers 0.23.1 violates it, so a lone or grouped bump goes
-      # resolver-red. Block 0.23.1+ until a transformers release floats the
-      # cap, then move tokenizers+transformers together. Re-checked by
-      # `/cassandra --watch`.
-      #   See docs/dependency-premortem-log.md § Held register.
-      - dependency-name: "tokenizers"
-        versions: [">=0.23.1"]
+      # tokenizers hold RETIRED 2026-09-03 -- it had become a tombstone twice
+      # over. (1) The predicate was met: transformers 5.16.1 now requires
+      # `tokenizers<0.24.0,>=0.23.1`, so 0.23.1 is its FLOOR, not a violation.
+      # (2) The coupling has no referent here anyway: transformers is not
+      # installed in either venv, is absent from pyproject.toml and from
+      # bristlenose-sidecar.spec, and nothing under bristlenose/ imports it.
+      # The real dependent is faster-whisper, whose cap is `tokenizers<1,>=0.13`
+      # -- wide open. Meanwhile 0.23.1 was already installed, so the rule was
+      # blocking a version we ship while forbidding its successor.
+      # See docs/dependency-premortem-log.md § Held register.
       # WTForms hold GRADUATED 2026-06-09: sqladmin 0.27.2 (2026-06-08)
       # floated its cap to `wtforms>=3.1,<3.3`. Pair (sqladmin 0.27.2 +
       # WTForms 3.2.2) taken; ignore dropped. See
@@ -127,6 +128,20 @@ updates:
       - dependency-name: "eslint-plugin-react-hooks"
         update-types: ["version-update:semver-major"]
       - dependency-name: "typescript-eslint"
+        update-types: ["version-update:semver-major"]
+      # Added 2026-09-03: the eslint hold was being enforced on one member of a
+      # three-package PEER chain, so the other two could walk it past the pin.
+      # `@eslint/js@10` declares `peerDependencies: {eslint: "^10.0.0"}` while
+      # eslint is major-ignored at 9.x, and `eslint-plugin-jsx-a11y@6.10.2`
+      # (latest) peer-caps eslint at ^9 with no eslint-10 release available --
+      # so taking @eslint/js 10 alone is an ERESOLVE at `npm ci`, not a warning.
+      # This repo already paid for it once: landed 2 Jul 2026 (7cc28c44),
+      # reverted 3 Jul (e449aad3); see frontend/CLAUDE.md:23.
+      #   Release-condition: jsx-a11y ships eslint-10 support, then bump
+      #   eslint + @eslint/js + eslint-plugin-jsx-a11y in ONE commit.
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-plugin-jsx-a11y"
         update-types: ["version-update:semver-major"]
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]

@@ -67,6 +67,27 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "fastapi"
         update-types: ["version-update:semver-major"]
+      # mcp — HELD, not dead-pinned, and the ceiling pins a PAIR: mcp 2.0.x
+      # requires mcp-types==2.0.x exactly, so both move together or neither.
+      # 2.1 masks a tool exception's message behind a generic
+      # "Error executing tool <name>" — sound hardening upstream, and it breaks
+      # our design: server/mcp_server.py signals a legitimate refusal by RAISING
+      # ToolInputError (our own ValueError subclass, :66) at seven sites, so an
+      # out-of-scope project stopped saying why it refused. Caught by strict CI
+      # on the 0.28.0 tag, not locally — the pin was floor-only, so a fresh
+      # resolve took 2.1.1 while the venv sat on 2.0.0.
+      # Minor, not major: the break is 2.0 -> 2.1.
+      #   Release-condition (lifts this ignore): refusals are RETURNED as tool
+      #   results rather than raised. Upstream's own ToolError docstring says
+      #   raising the SDK's ToolError already produces that outcome
+      #   (is_error=True, message in content), so this may be a base-class
+      #   change rather than a call-site refactor — verify against 2.1.1 with a
+      #   test before assuming either. Then float the ceiling and re-pre-mortem.
+      #   See docs/dependency-premortem-log.md § Held register.
+      - dependency-name: "mcp"
+        update-types: ["version-update:semver-minor"]
+      - dependency-name: "mcp-types"
+        update-types: ["version-update:semver-minor"]
       # spaCy ecosystem cluster — HELD, not dead-pinned. spaCy 3.8.x pins
       # thinc<8.4 + weasel<0.5; thinc pins confection<1.0; weasel 1.0
       # *requires* confection>=1.0 (mutually exclusive with thinc 8.3). The

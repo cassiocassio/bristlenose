@@ -39,16 +39,40 @@ struct LLMSettingsView: View {
     @State private var lastVerifiedTick: Date = .now  // forces relative-time refresh
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// Shrink the window only when the saving is worth about two grouped-Form
+    /// rows. Measured 3 Sep 2026 (`SettingsRefitTests`): the four non-Azure
+    /// providers span 17pt — ChatGPT 484, Claude 499, Gemini 499, Ollama 501 —
+    /// so browsing between them never moves the window, while Azure at 681
+    /// always does. Growth is never deadbanded; see `SettingsWindow.refitTarget`.
+    static let shrinkThreshold: CGFloat = 60
+
+    /// True only under `init(measuring:)`.
+    private let measuring: Bool
+
+    init() { measuring = false }
+
+    /// Measurement seam — pins the pane to one provider so its natural height
+    /// can be read.
+    ///
+    /// `selectedProvider` is otherwise reachable only through the sidebar
+    /// `List`, and the on-appear pass reads the real Keychain and can fire a
+    /// billed validation round-trip — neither belongs in a test. Production
+    /// always uses `init()`.
+    init(measuring provider: LLMProvider) {
+        _selectedProvider = State(initialValue: provider)
+        measuring = true
+    }
+
     var body: some View {
         // Mac Settings convention: fixed width per tab, height animates
         // between tabs to fit each tab's content. Not user-resizable
         // (matches Mail / System Settings). HStack rather than HSplitView
         // — there's no splitter to drag.
         //
-        // minHeight ensures the tallest provider config (Azure, with the
-        // extra endpoint/deployment/version section) opens without a
-        // scrollbar. Smaller configs get the same minimum height; cost
-        // is negligible vs the alternative of an unexpected scrollbar.
+        // The height follows the selected provider — see `heightSignature`.
+        // Deliberately no minHeight: the 660pt floor this replaced was set to
+        // keep Azure scrollbar-free and never did (Azure wants 681), while
+        // charging the other four ~160pt of dead space each.
         HStack(spacing: 0) {
             providerList
                 .frame(width: 260)
@@ -56,8 +80,8 @@ struct LLMSettingsView: View {
             providerDetail
         }
         .frame(width: 660)
-        .frame(minHeight: 660)
         .onAppear {
+            if measuring { return }
             if let active = LLMProvider(rawValue: activeProvider) {
                 selectedProvider = active
             }
@@ -73,6 +97,11 @@ struct LLMSettingsView: View {
             // on a team-signed build (Apple TN3137; cf. steipete/CodexBar #585).
             refreshAllStatuses()
             revalidateAllStale()
+            // The package sizes the pane at tab activation, which can run
+            // before this closure moves `selectedProvider` off its `.claude`
+            // default — so opening Settings straight onto Azure would otherwise
+            // measure Claude's shape. A no-op when it already agrees.
+            refit()
         }
         // Lazy load: when the user clicks a different provider in the
         // sidebar, that's the moment we touch Keychain for it. This is the
@@ -82,13 +111,40 @@ struct LLMSettingsView: View {
             applyPresenceAndCache(provider: selectedProvider)
             revalidateSelectedIfNeeded()
         }
+        // One hook rather than four, so it can say what it means: when the
+        // content changes shape, the window follows. Covers the provider switch
+        // AND a validation landing — an error paragraph with its `ollama pull`
+        // copy-rows is a bigger shape change than most switches.
+        .onChange(of: heightSignature) { _, _ in refit() }
         // Refresh "Last verified" relative-time labels every 30s so they
         // don't go stale (e.g. "1 minute ago" forever).
         .task {
+            if measuring { return }
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(30))
                 lastVerifiedTick = .now
             }
+        }
+    }
+
+    // MARK: - Height
+
+    /// Everything the pane's height depends on, as one watched value.
+    private var heightSignature: String {
+        [selectedProvider.rawValue,
+         String(describing: statusFor(selectedProvider)),
+         statusErrors[selectedProvider] ?? "",
+         useCustomModel ? "custom" : "listed"].joined(separator: "|")
+    }
+
+    /// Ask the window to take the height this provider now needs.
+    ///
+    /// After the change, not during it: SwiftUI has not laid the new content out
+    /// when `onChange` fires, so measuring here would measure the old height.
+    /// One turn of the main queue — same shape as MCP Agents' `refit()`.
+    private func refit() {
+        DispatchQueue.main.async {
+            SettingsWindow.shared.refitToContent(shrinkThreshold: Self.shrinkThreshold)
         }
     }
 

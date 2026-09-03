@@ -521,6 +521,8 @@
     "deleteTagTitle": "Slet „{{name}}“?",
     "tagOnQuotes_one": "Dette tag er på {{count}} citat.",
     "tagOnQuotes_other": "Dette tag er på {{count}} citater.",
+    "tagProposalsDiscarded_one": "{{count}} AutoCode-forslag kasseres.",
+    "tagProposalsDiscarded_other": "{{count}} AutoCode-forslag kasseres.",
     "newGroup": "Ny gruppe",
     "nameTaken": "Navnet \u201e{{name}}\u201c er allerede i brug. V\u00e6lg et andet navn.",
     "newCode": "Ny kode",

@@ -521,6 +521,8 @@
     "deleteTagTitle": "\"{{name}}\" silinsin mi?",
     "tagOnQuotes_one": "Bu etiket {{count}} alıntıda bulunuyor.",
     "tagOnQuotes_other": "Bu etiket {{count}} alıntıda bulunuyor.",
+    "tagProposalsDiscarded_one": "{{count}} AutoCode \u00f6nerisi silinecek.",
+    "tagProposalsDiscarded_other": "{{count}} AutoCode \u00f6nerisi silinecek.",
     "newGroup": "Yeni grup",
     "nameTaken": "\"{{name}}\" ad\u0131 zaten kullan\u0131l\u0131yor. L\u00fctfen ba\u015fka bir ad se\u00e7in.",
     "newCode": "Yeni kod",

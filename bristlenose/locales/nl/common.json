@@ -521,6 +521,8 @@
     "deleteTagTitle": "\"{{name}}\" verwijderen?",
     "tagOnQuotes_one": "Deze tag staat op {{count}} citaat.",
     "tagOnQuotes_other": "Deze tag staat op {{count}} citaten.",
+    "tagProposalsDiscarded_one": "{{count}} AutoCode-voorstel wordt verwijderd.",
+    "tagProposalsDiscarded_other": "{{count}} AutoCode-voorstellen worden verwijderd.",
     "newGroup": "Nieuwe groep",
     "nameTaken": "De naam \"{{name}}\" is al in gebruik. Kies een andere naam.",
     "newCode": "Nieuwe code",

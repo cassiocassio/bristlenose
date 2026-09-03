@@ -521,6 +521,8 @@
     "deleteTagTitle": "Vols eliminar «{{name}}»?",
     "tagOnQuotes_one": "Aquesta etiqueta és en {{count}} cita.",
     "tagOnQuotes_other": "Aquesta etiqueta és en {{count}} cites.",
+    "tagProposalsDiscarded_one": "Es descartar\u00e0 {{count}} proposta d'AutoCode.",
+    "tagProposalsDiscarded_other": "Es descartaran {{count}} propostes d'AutoCode.",
     "foldedSummary_one": "{{count}} etiqueta · {{coded}} codificades",
     "foldedSummary_other": "{{count}} etiquetes · {{coded}} codificades",
     "newGroup": "Grup nou",

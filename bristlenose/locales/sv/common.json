@@ -521,6 +521,8 @@
     "deleteTagTitle": "Radera ”{{name}}”?",
     "tagOnQuotes_one": "Den här taggen finns på {{count}} citat.",
     "tagOnQuotes_other": "Den här taggen finns på {{count}} citat.",
+    "tagProposalsDiscarded_one": "{{count}} AutoCode-f\u00f6rslag kasseras.",
+    "tagProposalsDiscarded_other": "{{count}} AutoCode-f\u00f6rslag kasseras.",
     "newGroup": "Ny grupp",
     "nameTaken": "Namnet \u201d{{name}}\u201d anv\u00e4nds redan. V\u00e4lj ett annat namn.",
     "newCode": "Ny kod",

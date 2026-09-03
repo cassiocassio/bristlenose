@@ -56,8 +56,11 @@ const CODEBOOK: CodebookResponse = {
       colour_set: "emo",
       order: 0,
       tags: [
-        { id: 10, name: "confusion", count: 5, colour_index: 0 },
+        { id: 10, name: "confusion", count: 5, tentative_count: 4, colour_index: 0 },
         { id: 11, name: "unused", count: 0, colour_index: 1 },
+        // Accepted by nobody, proposed for twelve quotes — "count === 0" and
+        // "affects nothing" are not the same question.
+        { id: 12, name: "pending", count: 0, tentative_count: 12, colour_index: 2 },
       ],
       total_quotes: 5,
       is_default: false,
@@ -98,7 +101,7 @@ const CODEBOOK: CodebookResponse = {
     },
   ],
   ungrouped: [],
-  all_tag_names: ["confusion", "unused", "joy", "misc", "feedback"],
+  all_tag_names: ["confusion", "unused", "pending", "joy", "misc", "feedback"],
 };
 
 /** The same codebook plus a group holding nothing — the delete that skips. */
@@ -280,6 +283,27 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     await userEvent.click(screen.getByLabelText("Delete confusion"));
     expect(screen.getByText(/Delete "confusion"/)).toBeInTheDocument();
     expect(screen.getByText(/This tag is on 5 quotes/)).toBeInTheDocument();
+    // Mid-review is the normal state, so both numbers get their own sentence
+    // rather than one standing in for the other.
+    expect(screen.getByText(/4 AutoCode proposals will be discarded/)).toBeInTheDocument();
+  });
+
+  it("confirms before deleting a tag whose only quotes are proposed", async () => {
+    // The gate reads accepted quotes, so an unreviewed proposal used to count
+    // as nothing and twelve of them went without a word.
+    const calls = mockFetch();
+    await lens.floor();
+    await userEvent.click(screen.getByLabelText("Delete pending"));
+    expect(screen.getByText(/Delete "pending"/)).toBeInTheDocument();
+    expect(sent(calls, "/codebook/tags/12", "DELETE")).toBeFalsy();
+  });
+
+  it("names the proposals at risk, and the accepted quotes separately", async () => {
+    // Either number can be zero, so neither sentence may carry the other's.
+    await lens.floor();
+    await userEvent.click(screen.getByLabelText("Delete pending"));
+    expect(screen.getByText(/12 AutoCode proposals will be discarded/)).toBeInTheDocument();
+    expect(screen.queryByText(/This tag is on/)).not.toBeInTheDocument();
   });
 
   it("puts the delete confirmation inside the card, not over the lens", async () => {
@@ -308,7 +332,7 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     await lens.floor();
     await userEvent.click(screen.getByLabelText("Delete group Friction"));
     expect(screen.getByText(/Delete "Friction"/)).toBeInTheDocument();
-    expect(screen.getByText(/2 tags will move to Uncategorised/)).toBeInTheDocument();
+    expect(screen.getByText(/3 tags will move to Uncategorised/)).toBeInTheDocument();
     expect(sent(calls, "/codebook/groups/1", "DELETE")).toBeFalsy();
   });
 

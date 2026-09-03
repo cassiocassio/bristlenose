@@ -521,6 +521,8 @@
     "deleteTagTitle": "¿Eliminar \"{{name}}\"?",
     "tagOnQuotes_one": "Esta etiqueta está en {{count}} cita.",
     "tagOnQuotes_other": "Esta etiqueta está en {{count}} citas.",
+    "tagProposalsDiscarded_one": "Se descartar\u00e1 {{count}} propuesta de AutoCode.",
+    "tagProposalsDiscarded_other": "Se descartar\u00e1n {{count}} propuestas de AutoCode.",
     "newGroup": "Nuevo grupo",
     "nameTaken": "El nombre \"{{name}}\" ya est\u00e1 en uso. Elige otro nombre.",
     "newCode": "Nuevo código",

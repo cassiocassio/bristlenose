@@ -84,6 +84,34 @@ Read the floor with `xcodebuild -showBuildSettings -target … -configuration �
 and name the scheme. Hand-parsing the pbxproj gives the wrong answer, because
 it cannot tell you which of the two floors a given scheme resolves to.
 
+## New platform features are offered, not required
+
+**Two moves look the same in a diff and are opposites.** Distinguish them before
+writing the code, because only one of them costs users.
+
+| | What it does | Cost |
+|---|---|---|
+| **Progressive enhancement** — adopt the new API behind `if #available`, keep the old path working | adds capability | none |
+| **Floor bump** — raise `MACOSX_DEPLOYMENT_TARGET` so the new API can be called unconditionally | adds capability *and* removes everyone below the new floor | users |
+
+The tempting argument runs: *"SwiftUI has caught up with AppKit here, so let's
+rebuild this surface in SwiftUI and raise the minimum."* That is the second row.
+It trades a population of users for an implementation convenience, and the
+convenience is usually the smaller number.
+
+**What we actually want: offer the latest and greatest native features to
+everyone whose machine can run them, and still open fine on the oldest OS we
+support.** That is the first row — feature detection and graceful degradation,
+not a minimum-version gate. It is also what makes the planned model tiering
+work: Apple and local models appear on machines modern enough to have them,
+alongside bring-your-own-key for everyone else, and the app has to run well in
+both cases (`docs/design-platform-policy.md` §"Pillar 3 — macOS").
+
+So "this new API would be nice" is **never on its own an argument for moving the
+floor.** It is an argument for an availability check. Moving the floor needs its
+own justification, weighed against who it cuts off — and that decision lives in
+Pillar 3, not in the diff where the temptation arises.
+
 ## Native primitives first — Swift isn't a blank web canvas
 
 **The out-of-the-box system primitive with default settings is the starting

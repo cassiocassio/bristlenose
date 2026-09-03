@@ -89,7 +89,7 @@ jobs:
       # SBOM rides in the release assets but isn't separately attested — it's
       # already inside the attested wheel (bristlenose/server/static).
       - name: Attest SBOM against built artifacts
-        uses: actions/attest-sbom@bd218ad0dbcb3e146bd073d1d9c6d78e08aa8a0b  # v2.4.0
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e  # v4.1.0
         with:
           subject-path: 'dist/*'
           sbom-path: 'sbom/sbom-python.json'

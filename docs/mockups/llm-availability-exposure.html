@@ -89,15 +89,36 @@
                margin-top:9px;line-height:1.45;}
   .inline-warn svg{flex:0 0 auto;transform:translateY(1px);}
 
-  /* the mac pill */
-  .macbar{background:var(--sb-bg);border:1px solid var(--card-hair);border-radius:10px;
-          padding:9px 11px;display:flex;align-items:center;gap:9px;color:var(--label);}
-  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;
-        padding:3px 9px;border-radius:99px;background:rgba(255,159,10,0.16);color:#9a5b00;}
-  body.dark .pill{background:rgba(255,159,10,0.20);color:#ffbf5f;}
-  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--orange);}
-  .macbar .grow{flex:1;}
-  .macbar .link{font-size:11.5px;color:var(--blue);}
+  /* ---- the shipped pill, reproduced (NOT redesigned) — metrics from
+         out-of-credit-ux.html, strings + button order from OutOfCreditPill.swift ---- */
+  .titlebar{display:flex;align-items:center;gap:9px;padding:7px 10px;font-size:11.5px;
+            border:1px solid var(--card-hair);border-radius:9px 9px 0 0;
+            background:var(--sb-bg);color:var(--label);}
+  .lights{display:flex;gap:5px;}
+  .lights i{width:9px;height:9px;border-radius:50%;display:block;}
+  .lights i:nth-child(1){background:#ff5f57;}
+  .lights i:nth-child(2){background:#febc2e;}
+  .lights i:nth-child(3){background:#28c840;}
+  .tbtabs{display:flex;gap:2px;margin-left:4px;}
+  .tbtabs span{padding:2px 8px;border-radius:5px;color:var(--secondary);}
+  .tbtabs span.on{background:var(--card-bg);color:var(--label);border:1px solid var(--card-hair);}
+  .statuszone{margin-left:auto;}
+  .statuschip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;
+              color:var(--label);background:var(--card-bg);border-radius:20px;padding:3px 10px;
+              border:1px solid rgba(255,159,10,0.55);}
+  .amberdot{width:8px;height:8px;border-radius:50%;background:var(--orange);flex:none;}
+  .popwrap{display:flex;justify-content:flex-end;padding:10px 10px 0;
+           border:1px solid var(--card-hair);border-top:0;border-radius:0 0 9px 9px;
+           background:var(--sb-bg);padding-bottom:14px;}
+  .macpop{width:280px;background:var(--pop-bg);border:1px solid var(--pop-border);
+          border-radius:10px;padding:16px;color:var(--label);
+          box-shadow:0 8px 24px rgba(0,0,0,0.18);}
+  .macpop .pt{font-size:12.5px;font-weight:600;}
+  .macpop .pb{font-size:12.5px;color:var(--secondary);margin-top:8px;line-height:1.4;}
+  .pbtns{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+  .mbtn{font-size:11.5px;font-weight:500;border-radius:6px;padding:4px 11px;
+        border:1px solid var(--card-hair);background:var(--card-bg);color:var(--label);}
+  .mbtn.def{background:var(--blue);border-color:var(--blue);color:#fff;}
 
   /* chip */
   .chip{background:#1c1c1e;border-radius:9px;padding:9px 13px;display:flex;align-items:center;
@@ -308,22 +329,49 @@
 
   <h3>And the app hears about it</h3>
   <p class="sub">
-    <code>OutOfCreditModel</code> is app-global and already drives a pill; it was fed
-    from the pipeline runner alone, so a sidecar AutoCode job lit nothing. It now
-    hears via the bridge. <b>The pill is the whole of tier 2&rsquo;s ambient
-    presence</b> — one place, not a badge on every button.
+    <b>The pill is settled and is not redrawn here</b> — it shipped from
+    <a href="out-of-credit-ux.html" style="color:#9ecbff;">out-of-credit-ux.html</a>,
+    which is the design of record. Reproduced below only so tier 2 has a referent.
+    What changed is upstream of it: <code>OutOfCreditModel</code> was fed from
+    <code>PipelineRunner.deriveFailureState</code> alone, so a sidecar AutoCode job
+    that emptied the account lit nothing. It now hears via the bridge.
+    <b>The pill is the whole of tier 2&rsquo;s ambient presence</b> — one place, and
+    its popover is the only resolve surface.
   </p>
+
   <div class="specimens">
-    <div class="spec" style="grid-column:1 / -1;max-width:520px;">
-      <p class="cap"><b>Mac status zone</b>Where a tier-2 verdict lives once recorded.</p>
-      <div class="macbar">
-        <span class="pill"><span class="dot"></span>Claude out of credit</span>
-        <span class="grow"></span>
-        <span class="link">Add funds&hellip;</span>
+    <div class="spec" style="grid-column:1 / -1;max-width:640px;">
+      <p class="cap"><b>Shipped, unchanged</b>Toolbar <code>.status</code> zone,
+        alongside the Ollama pill in the same <code>StatusPill</code> envelope. Amber
+        dot, never red — red is reserved for a genuinely failed run.</p>
+
+      <div class="titlebar">
+        <div class="lights"><i></i><i></i><i></i></div>
+        <div class="tbtabs"><span>Project</span><span class="on">Codebook</span></div>
+        <div class="statuszone">
+          <span class="statuschip"><span class="amberdot"></span>Claude &middot; no credit</span>
+        </div>
       </div>
-      <p class="note">Clears when a fresh validation records <code>.online</code>.
-        Known limitation, unchanged: refocus re-reads the cache without revalidating,
-        so it lingers after a browser top-up until Settings next checks.</p>
+
+      <div class="popwrap">
+        <div class="macpop">
+          <div class="pt">Claude is out of credit</div>
+          <div class="pb">Add credit to run new analysis or coding.</div>
+          <div class="pbtns">
+            <span class="mbtn">Switch provider&hellip;</span>
+            <span class="mbtn def">Add funds&hellip;</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="note">Nothing goes in the content area. <b>Add funds&hellip;</b> opens
+        the provider&rsquo;s billing console; <b>Switch provider&hellip;</b> deep-links
+        Settings&nbsp;&#9656;&nbsp;AI. Secondary leads, default trails — macOS puts the
+        default rightmost, which is why the button order here is the reverse of the
+        original mockup&rsquo;s.<br><br>
+        Clears when a fresh validation records <code>.online</code>. Known limitation,
+        unchanged: refocus re-reads the cache without revalidating, so it lingers
+        after a browser top-up until Settings next checks.</p>
     </div>
   </div>
 

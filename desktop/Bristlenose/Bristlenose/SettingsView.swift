@@ -173,21 +173,59 @@ final class SettingsWindow {
     /// reimplementation of layout — `fittingSize` is still the package's
     /// answer, and if the package ever gains a public re-fit this becomes a
     /// one-line forward.
-    func refitToContent(animated: Bool = true) {
+    func refitToContent(animated: Bool = true, shrinkThreshold: CGFloat = 0) {
         guard let window = controller.window,
               let content = window.contentViewController?.view else { return }
         content.layoutSubtreeIfNeeded()
         let fitting = content.fittingSize
         guard fitting.height > 0 else { return }
-        let target = window.frameRect(
-            forContentRect: CGRect(origin: .zero, size: fitting)).size
-        // A sub-point difference is layout noise, and setting the frame to it
-        // would animate the window on every render pass.
-        guard abs(target.height - window.frame.height) > 0.5 else { return }
+        let wanted = window.frameRect(
+            forContentRect: CGRect(origin: .zero, size: fitting)).size.height
+        guard let target = Self.refitTarget(
+            current: window.frame.height,
+            fitting: wanted,
+            shrinkThreshold: shrinkThreshold) else { return }
         var frame = window.frame
-        frame.origin.y += frame.height - target.height
-        frame.size.height = target.height
-        (animated ? window.animator() : window).setFrame(frame, display: false)
+        frame.origin.y += frame.height - target
+        frame.size.height = target
+        // Reduce Motion is honoured HERE, not at the call sites, so a pane
+        // cannot forget it. Both call sites had.
+        let shouldAnimate = animated
+            && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        (shouldAnimate ? window.animator() : window).setFrame(frame, display: false)
+    }
+
+    /// A sub-point difference is layout noise, and setting the frame to it
+    /// would animate the window on every render pass.
+    static let refitNoise: CGFloat = 0.5
+
+    /// The height the window should take next, or `nil` to stay put.
+    ///
+    /// **Asymmetric, and the asymmetry is load-bearing.** Growth is never
+    /// deadbanded: a pane wanting more room than the window has does not get a
+    /// scrollbar, it gets compressed by the required constraints that pin it
+    /// (`Utilities.constrainToSuperviewBounds`), silently. That was the shipped
+    /// Azure defect — 681pt of content in a window pinned at 660 whenever Azure
+    /// was reached by *switching* rather than by opening Settings on it, so the
+    /// same pane rendered differently depending on how you arrived.
+    ///
+    /// Shrinking is deadbanded because the saving has to be worth the motion.
+    /// Switching tabs is navigation and a resize reads as arrival; picking a row
+    /// in a master-detail list is browsing, and a window that resizes by a row's
+    /// worth on every click makes the comparison feel unstable. A caller passing
+    /// `0` (the default, and what MCP Agents wants) gets exact fit in both
+    /// directions.
+    ///
+    /// Both arms return `fitting`, so a mis-edit here is invisible to the type
+    /// checker — pinned by `SettingsRefitTests`.
+    static func refitTarget(
+        current: CGFloat, fitting: CGFloat, shrinkThreshold: CGFloat
+    ) -> CGFloat? {
+        if fitting > current + refitNoise { return fitting }       // grow: always
+        if current - fitting > max(shrinkThreshold, refitNoise) {  // shrink: earned
+            return fitting
+        }
+        return nil
     }
 
     /// The window itself, for panes that need to know when the visit ends.

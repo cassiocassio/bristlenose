@@ -516,6 +516,8 @@
     "deleteTagTitle": "「{{name}}」を削除しますか?",
     "tagOnQuotes_one": "このタグは {{count}} 件の発言に付いています。",
     "tagOnQuotes_other": "このタグは {{count}} 件の発言に付いています。",
+    "tagProposalsDiscarded_one": "\u30aa\u30fc\u30c8\u30b3\u30fc\u30c9\u306e\u63d0\u6848 {{count}} \u4ef6\u304c\u7834\u68c4\u3055\u308c\u307e\u3059\u3002",
+    "tagProposalsDiscarded_other": "\u30aa\u30fc\u30c8\u30b3\u30fc\u30c9\u306e\u63d0\u6848 {{count}} \u4ef6\u304c\u7834\u68c4\u3055\u308c\u307e\u3059\u3002",
     "newGroup": "新規グループ",
     "nameTaken": "\u300c{{name}}\u300d\u3068\u3044\u3046\u540d\u524d\u306f\u3059\u3067\u306b\u4f7f\u308f\u308c\u3066\u3044\u307e\u3059\u3002\u5225\u306e\u540d\u524d\u3092\u9078\u3093\u3067\u304f\u3060\u3055\u3044\u3002",
     "newCode": "新規コード",

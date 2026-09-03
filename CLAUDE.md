@@ -193,6 +193,30 @@ flags the underlying hazard as unfixed — Pillar 3 carries an open action to ad
 comment block to the pbxproj naming which scheme uses which target, precisely
 because it is "easy to bump one without the other".
 
+**Nor can the `.entitlements` file answer "is this build sandboxed?" — and it
+answers *no* when the truth is yes.** `BristlenoseDebug.entitlements` contains
+exactly one key, `keychain-access-groups`. There is no `com.apple.security.app-sandbox`
+in it, and `grep -l app-sandbox desktop/**/*.entitlements` matches nothing — so
+reading the file, or grepping for the entitlement, concludes the Debug build runs
+unsandboxed. It does not: the sandbox comes from **`ENABLE_APP_SANDBOX = YES` as a
+build setting**, which Xcode 15+ merges into the synthesised entitlements at sign
+time. The file is a *supplement*, not the manifest.
+
+Cost two silent write failures on 3 Sep 2026 while measuring Settings pane
+heights: a test writing to `~/Documents` and then to `/private/tmp/...` produced
+no file and no error either time (`try?` swallowing a sandbox denial that the
+tree said could not happen), and the payload only landed once it was pointed at
+`NSTemporaryDirectory()` — i.e. `~/Library/Containers/app.bristlenose/Data/tmp/`.
+**Same fix as the paragraph above:** ask the build system, name the scheme.
+
+```
+xcodebuild -showBuildSettings -project desktop/Bristlenose/Bristlenose.xcodeproj \
+  -target Bristlenose -configuration Debug | grep -E 'ENABLE_APP_SANDBOX|ENABLE_HARDENED'
+```
+
+Tell that you are in this trap: a file write that neither succeeds nor raises, on
+a path the entitlements file says nothing forbids.
+
 ### macOS BSD userland — use GNU coreutils
 
 macOS ships BSD versions of `sed`, `grep`, `awk`, `find`, `xargs`, `date`, `stat`, `readlink`, `tar`, and others. These differ from the GNU versions in subtle, bug-inducing ways:

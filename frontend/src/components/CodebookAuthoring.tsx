@@ -12,8 +12,11 @@
  * every absence of one is what the shipped lens already did — including the
  * details a test would not think to ask for:
  *
- * - Deleting a zero-count tag skips the confirmation. A tag nobody used is not
- *   a loss worth a dialog.
+ * - Deleting a tag nothing points at skips the confirmation — a tag nobody
+ *   used is not a loss worth a dialog. "Nothing" is both accepted quotes and
+ *   pending AutoCode proposals; the second half was missing until 3 Sep 2026,
+ *   so a tag with unreviewed proposals deleted them silently.
+ * - Deleting an empty group skips it for the same reason: nothing to move.
  * - The floor group (`is_default`) has no delete button; a framework's groups
  *   have none either. Read-only is one predicate here (`isReadOnly`), so both
  *   lenses inherit the same rule instead of each deciding.
@@ -38,6 +41,7 @@ import { MicroBar } from "./MicroBar";
 import { TagInput } from "./TagInput";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { isExportMode } from "../utils/exportData";
+import type { TFunction } from "i18next";
 import type { CodebookGroupResponse, CodebookTagResponse } from "../utils/types";
 
 interface TagRowProps {
@@ -249,6 +253,22 @@ export function GroupSubtitle({
   );
 }
 
+/**
+ * What a tag delete is about to cost, as one line or two.
+ *
+ * Accepted quotes and pending proposals are counted separately and either can
+ * be zero, so neither sentence can carry the other's number — a tag with 12
+ * unreviewed proposals and no accepted quotes has plenty to lose and would
+ * otherwise render a dialog that names nothing.
+ */
+function deleteTagBody(t: TFunction, tag: CodebookTagResponse): string {
+  const tentative = tag.tentative_count ?? 0;
+  return [
+    tag.count > 0 ? t("codebook.tagOnQuotes", { count: tag.count }) : null,
+    tentative > 0 ? t("codebook.tagProposalsDiscarded", { count: tentative }) : null,
+  ].filter(Boolean).join(" ");
+}
+
 export function CodebookGroupColumn({
   group,
   allTagNames,
@@ -331,8 +351,10 @@ export function CodebookGroupColumn({
   );
 
   const handleRequestDeleteTag = useCallback((tag: CodebookTagResponse) => {
-    if (tag.count === 0) {
-      // No quotes affected — skip confirmation
+    // `count` is accepted quotes only, so it is not the whole of "affects
+    // nothing" — a tag with pending AutoCode proposals is on quotes the
+    // researcher has not ruled on yet, and deleting it discards them.
+    if (tag.count === 0 && (tag.tentative_count ?? 0) === 0) {
       onDeleteTag(tag);
     } else {
       setConfirmingTag(tag);
@@ -489,11 +511,7 @@ export function CodebookGroupColumn({
       {confirmingTag && (
         <ConfirmDialog
           title={t("codebook.deleteTagTitle", { name: confirmingTag.name })}
-          body={
-            confirmingTag.count > 0
-              ? <span>{t("codebook.tagOnQuotes", { count: confirmingTag.count })}</span>
-              : undefined
-          }
+          body={<span>{deleteTagBody(t, confirmingTag)}</span>}
           confirmLabel={t("buttons.delete")}
           variant="danger"
           accentColour={getBarColour(group.colour_set)}

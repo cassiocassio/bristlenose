@@ -1,8 +1,18 @@
+---
+status: current
+last-trued: 2026-09-03
+trued-against: release.sh's seven verbs incl. run/retry/recover; the RELEASE_STEPS_FILE credential seam; the pypi hold removed 23 Aug
+---
+
 # The release machine — architecture
 
-**Status:** proposed, 23 Aug 2026. **Rewritten after review** — the first draft's
-central structural choice was wrong and its scope was too large. Both are
-recorded in §14 rather than quietly dropped.
+**Status: SHIPPED.** _Corrected 3 Sep 2026 — this line read "proposed, 23 Aug
+2026" while §18 and §19 below described what shipped that same day, and the doc
+carried no front-matter at all, so nothing mechanical contradicted it either. A
+pointer sweep reading only the header got the wrong answer in the reassuring
+direction._ **Rewritten after review** — the first draft's central structural
+choice was wrong and its scope was too large. Both are recorded in §14 rather
+than quietly dropped.
 
 **Refines D1** of `docs/design-bn-release-skill.md` and implements part of the
 "what to build first" list that doc left open. **Corroborated by**
@@ -349,7 +359,25 @@ everywhere, in `--skip`, in `retry`, and on every screen.
 the audit that followed found the whole class: the run's design intent is *one
 authorisation, then bed*, so anything a step can ask for must be resolved,
 probed and displayed **above the typed confirmation**, while a human is
-provably present. `cmd_run` now: refuses an ambient generic `SIGN_IDENTITY`
+provably present.
+
+> **Amended 3 Sep 2026 — the block is skipped under the test seam.** A sandbox
+> has no certificates, so gathering them above the confirmation killed
+> `test-release-e2e.sh` outright: the driver died at exit 2 before the step loop
+> the suite exists to exercise, 82 assertions all reporting one cause. The whole
+> block is now guarded on `RELEASE_STEPS_FILE`, and the identity exports are
+> conditional. A synthetic step table means there is no release to gather
+> credentials for.
+>
+> **Why not a new bypass flag, which is the obvious fix:** it would be settable
+> in production, and could therefore reinstate the exact 31 Aug bug this block
+> exists to prevent. `RELEASE_STEPS_FILE` is already documented in
+> `release.sh` as *"a testability seam, not a feature … Unset in every real
+> invocation"*, so reusing it costs no new surface. Stubbing was also considered
+> and does not work: `stat -f '%Lp'` is BSD and the suite runs on ubuntu, so the
+> harness would have to impersonate a Mac. `verdict_signing_identity` keeps its
+> coverage from `test-release-sh.sh`, which drives it directly as a pure
+> text→verdict function. `cmd_run` now: refuses an ambient generic `SIGN_IDENTITY`
 (the 27 Aug vector, made active rather than warned); sources
 `.ship-local.conf` (env wins); resolves both signing identities **by
 certificate type with per-type keychain policy** (the installer cert is
@@ -379,8 +407,9 @@ committed. The `.p8` lives outside the repo entirely.
 
 Tier A changes nothing a human types except adding `verify-channels.sh`.
 
-Tier B's subcommands are `plan · run · status · verify · retry` — **five, and
-each earns its place.** `verify` is not `status --channels` because they are
+Tier B's subcommands are `plan · run · retry · recover · status · verify ·
+abandon` — **seven, and each earns its place** (`recover` and `abandon` landed
+after this was written as five). `verify` is not `status --channels` because they are
 different cost classes: one folds a local file instantly, the other makes seven
 network probes.
 
@@ -929,10 +958,17 @@ that it does not. Now: skip on an ad-hoc build, **fail on a real identity**.
 
 ## 19 · Tier B, read-only — shipped 23 Aug 2026
 
-`scripts/release.sh` — `plan` · `verify` · `status` · `abandon`. **No `run`,**
-and that is the decision rather than an omission: §12 gates the driver on
-evidence that has not arrived, so the order still lives with a human and the
-skill. `run` refuses, explains why, and points at `/bn-release`.
+`scripts/release.sh` — **seven verbs**: `plan` · `run` · `retry` · `recover` ·
+`status` · `verify` · `abandon`.
+
+> **Corrected 3 Sep 2026.** This paragraph said *"**No `run`,** and that is the
+> decision rather than an omission"*, and that `run` refuses and points at
+> `/bn-release`. It ships: `cmd_run` is ~570 lines and drives the whole chain.
+> The claim was contradicted by this doc's own §9 and by §19's later subsection,
+> so the file argued with itself — and the read-only framing is the one a cold
+> reader meets first. The original sentence is preserved here because the
+> *reasoning* (gate the driver on evidence that has not arrived) is what §12
+> still turns on; only the verdict moved.
 
 **What it does own is the step table**, which until now was prose in
 `SKILL.md` Phase 5 — retyped by a model every release, with estimates nobody had

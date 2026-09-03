@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-08-14
-trued-against: the §1+§3.5 release-ordering change — pypi environment hold live, publish lands at approval, bump-version no longer tags
+last-trued: 2026-09-03
+trued-against: project.conf's eight CHANNELS incl. Copr; release.yml's seven jobs with trigger-copr needs verify-pypi; snap.yml building on every push and stamping a version suffix
 ---
 
 # Release channels — the one-page map
@@ -16,7 +16,7 @@ trued-against: the §1+§3.5 release-ordering change — pypi environment hold l
 > timing and `scripts/release.sh`.
 
 
-Five channels. **Nothing takes a `--destination` flag.** You choose a channel by
+Eight channels. **Nothing takes a `--destination` flag.** You choose a channel by
 choosing a *script* or a *trigger*, and the two Mac channels share almost nothing
 but the sidecar.
 
@@ -25,7 +25,9 @@ but the sidecar.
 | **PyPI** | **push the tag** | tag `v*` | sdist + wheel | permanent |
 | **GitHub Release** | *(nothing)* | same tag push | auto notes + assets | permanent |
 | **Homebrew** | *(nothing)* | same tag push, after PyPI | tap formula bump | permanent |
-| **Snap** | run the workflow by hand | `workflow_dispatch` | `.snap` → edge | permanent |
+| **Snap** | run the workflow by hand | `workflow_dispatch`; **the ref is the channel** — `--ref main` → edge, `--ref vX.Y.Z` → stable | `.snap` → edge/stable | permanent |
+| **Fedora Copr** | *(nothing)* | same tag push, **after `verify-pypi`** | RPM, `fedora-43-x86_64` | permanent |
+| **Website** | maintainer rsync | you, locally | changelog + docs | — |
 | **TestFlight** | `build-all.sh` → `upload-testflight.sh` | you, locally | `.pkg` → ASC | **90 days** |
 | **Developer-ID `.dmg`** | `build-dmg.sh` → `upload-dmg.sh` | you, locally | `.dmg` → bristlenose.app | **30 days from the *build*** |
 
@@ -35,7 +37,7 @@ but the sidecar.
 
 Pushing tag `v*` fires `release.yml`, which runs six jobs — `ci → build →
 publish`, then `github-release`, `verify-pypi` and `notify-homebrew` as
-**parallel siblings** off `publish`, none gating another — and
+**parallel siblings** off `publish`, one of which gates another — `trigger-copr` is `needs: verify-pypi`, never `publish`, because Source0 is fetched from PyPI during the Copr build and would otherwise race the CDN — and
 runs to completion: CI with strict macOS, then publish. The required-reviewer
 hold that used to park it was removed 23 Aug 2026 — `check-release-ready.sh`'s
 `publish gate` row now asserts the `publish → build → ci(strict)` chain instead,
@@ -53,9 +55,20 @@ is downstream of PyPI: the tap workflow polls `pypi.org` for the new version
 before bumping the formula, so it can only succeed once PyPI has actually
 accepted the upload.
 
-**Snap is the exception — it never fires automatically.** Its `push`/`pull_request`
-triggers are deliberately parked; publishing to edge is a manual
-`workflow_dispatch` run.
+**Snap is the exception — but the exception is PUBLISHING, not building.** Its
+`push`/`pull_request` triggers were restored on 8 Aug 2026: `build` runs on every
+push to main and every PR. What stays manual is `publish-edge`, which is
+`workflow_dispatch`-only. The distinction is the one `snap.yml`'s own header was
+written to preserve, and this paragraph had collapsed it — a stale claim that
+made the channel look dormant when only its publish half is.
+
+**What an edge snap claims (3 Sep 2026).** Edge builds `--ref main`, and
+`__init__.py` already carries the released number by the time snap runs, so an
+edge build after the tag used to announce a released `X.Y.Z` while containing
+main-plus-drift. It now carries `+git.<sha>` unless HEAD is exactly a release
+tag, and the build asserts its own filename matches. The ref was never the
+defect — edge *should* mean latest main; the version claim was. Reasoning:
+[design-doctor-and-snap.md](design-doctor-and-snap.md).
 
 ---
 
@@ -170,6 +183,10 @@ simply be pushed, and wip never triggered CI anyway.)
 ---
 
 ## See also
+
+- [design-fedora-packaging.md](design-fedora-packaging.md) — the Copr channel, live since 28 Aug 2026
+- [design-release-machine.md](design-release-machine.md) — the driver behind the tag push
+- [scripts/README.md](../scripts/README.md) — what to type
 
 - [release.md](release.md) — the CLI release process in full (version bumping, CHANGELOG conventions, the verification loop)
 - [design-dmg-build.md](design-dmg-build.md) — the `.dmg` channel end to end

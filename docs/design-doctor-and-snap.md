@@ -665,8 +665,12 @@ a snap bug (not a user action item).
 **Primary: GitHub Actions** with `snapcore/action-build` + `snapcore/action-publish`.
 
 - Builds amd64 snaps on ubuntu-latest runners
-- Auto-publishes to `edge` channel from main branch
-- Publishes to `stable` on tagged releases
+- ~~Auto-publishes to `edge` channel from main branch~~ — **false since 8 Aug
+  2026.** `build` runs on every push to main and every PR, but `publish-edge` is
+  `workflow_dispatch`-only. Building and publishing are separate.
+- ~~Publishes to `stable` on tagged releases~~ — **`snap.yml` has no `tags:`
+  trigger.** `publish-stable` is reachable only by dispatching `--ref vX.Y.Z`;
+  **the ref is the channel selector**.
 - Private (unlike `snapcraft remote-build` which uploads source to Launchpad publicly)
 
 **Secondary: `snapcraft remote-build`** for quick local iteration on
@@ -695,11 +699,12 @@ arm64 builds locally. For amd64 testing, use a cloud VM or rely on CI.
 ### Channel strategy
 
 ```
-edge      <- every push to main (CI auto-publishes)
+edge      <- dispatch with --ref main  (NOT automatic — see Build strategy)
 beta      <- manual promotion when feature-complete
 candidate <- release candidates
-stable    <- tagged releases (what `snap install bristlenose` gets — EMPTY as of
-             2026-08-27: only latest/edge has ever been published)
+stable    <- dispatch with --ref vX.Y.Z (what `snap install bristlenose` gets —
+             EMPTY as of 3 Sep 2026: only latest/edge has ever been published,
+             now serving 0.29.1)
 ```
 
 Testers install from edge:
@@ -820,7 +825,43 @@ which hatch then includes in the wheel via the `artifacts` glob in
 **Version via adopt-info.** The sketch hardcoded `version: '0.6.0'`. The final
 version uses `adopt-info: bristlenose` + `craftctl set version=...` in
 `override-build` to read the version from `bristlenose/__init__.py` at build
-time. This keeps the single-source-of-version convention intact.
+time. This keeps the single-source-of-version convention intact — **except on a
+drifted edge build, deliberately. See §Version stamping below (3 Sep 2026).**
+
+### Version stamping — what an edge snap claims
+
+**Added 3 Sep 2026.** `__init__.py` alone was the wrong source for edge, and the
+failure was a lie rather than a crash.
+
+Edge dispatches `--ref main`. Snap runs last in the release chain, *after* the
+tag — so `__init__.py` already carries the released number, and any commit
+landing in that window produced an edge snap **announcing `X.Y.Z` while
+containing `X.Y.Z` plus drift**. `snap info` showed a release version for a tree
+that was not the release. Confirmed from `design-release-system-audit.md` §4,
+where it had sat unverified since the 0.25.2 morning.
+
+**The ref was never the defect.** Edge *should* mean latest main; pinning it to
+the tag would make edge mean "last release", which is what stable is for. The
+version claim was the defect, so that is what changed.
+
+Three moving parts:
+
+1. `snap.yml` writes `.snap-version-suffix` beside the source — **empty when
+   `git describe --exact-match --tags HEAD` succeeds, `+git.<sha>` when it does
+   not.** The answer follows the *tree*, not the channel, so a stable build from
+   the tag is untouched and an edge build that happens to sit on the tag stays
+   clean, because then it really is the release.
+2. `snapcraft.yaml`'s `override-build` reads it from `$CRAFT_PART_SRC` and
+   appends: `craftctl set version="${VERSION}${SUFFIX}"`. It travels as a **file**
+   because environment does not cross into the LXD build.
+3. The build **asserts its own output**. If that copy ever stops happening the
+   version comes out clean — the exact wrong answer, silently, and
+   indistinguishable from a real release build. Snapcraft names the file
+   `bristlenose_<version>_<arch>.snap`, so the name is the claim, and the step
+   fails when it disagrees with the tree.
+
+The checkout also gains `fetch-depth: 0`: the default shallow one fetches no
+tags, so every build would have looked drifted.
 
 **Stage-packages for Python stdlib.** The sketch only had `ffmpeg` and
 `libsndfile1` as stage-packages. The build also needs `python3-minimal`,

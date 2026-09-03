@@ -1,0 +1,37 @@
+{
+  "_policy": "Every continue-on-error in a workflow carries a disposition: ratchet (a number that may not rise), expires (a date by which someone must decide again), or conditional (soft here, hard somewhere that matters). Enforced by scripts/check-gate-policy.py. Reasoning: docs/testing/gaps.md G3/G4.",
+  "gates": {
+    "ci.yml::lint::Type check with mypy": {
+      "disposition": "ratchet",
+      "ratchet": "mypy_errors",
+      "why": "238 errors is a project, not a commit, so hard is a lie. The count is held instead."
+    },
+    "ci.yml::lint::Audit dependencies for known vulnerabilities": {
+      "disposition": "expires",
+      "expires": "2026-11-30",
+      "why": "Upstream CVEs are not ours to fix on demand, so a failure here is news rather than a defect. The date is the next quarterly dep review — the decision to make then is whether anything found has sat unaddressed.",
+      "review_with": "TODO.md quarterly dep review"
+    },
+    "ci.yml::lint::Generate Python SBOM": {
+      "disposition": "expires",
+      "expires": "2027-03-01",
+      "why": "Artifact generation, not a correctness check: a failure means no SBOM was published, which matters for the verifiable-security-claim track and nothing else. Revisit when that track needs the SBOM to be reliable."
+    },
+    "ci.yml::frontend-lint-type-test::Audit frontend dependencies for known vulnerabilities": {
+      "disposition": "expires",
+      "expires": "2026-11-30",
+      "why": "Same as the Python audit, and additionally noisy because the full audit includes dev deps like Vite that never ship.",
+      "review_with": "TODO.md quarterly dep review"
+    },
+    "ci.yml::frontend-lint-type-test::Generate frontend SBOM": {
+      "disposition": "expires",
+      "expires": "2027-03-01",
+      "why": "As the Python SBOM."
+    },
+    "ci.yml::test": {
+      "disposition": "conditional",
+      "hard_when": "release.yml calls ci.yml with strict-macos: true",
+      "why": "The best pattern in the tree and the model for the rest: the same suite is informational on a push and blocking on a tag, so cost is paid where it buys something. Needs no expiry — it is already hard where it counts."
+    }
+  }
+}

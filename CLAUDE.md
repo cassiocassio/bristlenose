@@ -718,6 +718,31 @@ curl -s -o /dev/null -w '%{http_code}\n' https://pypi.org/pypi/bristlenose/<X.Y.
 
 A cache-busted index (`?cb=$RANDOM` + `Cache-Control: no-cache`) is the second check; `releases["<X.Y.Z>"]` should hold 2 files (sdist + wheel). Check `gh run view <id> --json conclusion` too — a `success` conclusion plus a 200 on the version URL means published, whatever the cached index says.
 
+## Gate policy — no gate goes soft by default
+
+`continue-on-error` is how a check stops being a check. Sometimes right; never
+open-ended. **Every soft gate declares a disposition** in
+`docs/testing/soft-gates.json`, enforced by `scripts/check-gate-policy.py` in CI:
+
+- **ratchet** — a number that may not rise (`docs/testing/ratchet.json`,
+  `scripts/check-ratchet.py`). For debt too large to fix now and too easy to grow.
+  mypy's 238 errors is the case it was built for.
+- **expires** — a date by which somebody decides again. For things outside our
+  control, where "fix it" is not the available action (upstream CVE feeds).
+- **conditional** — soft here, hard where it matters. The macOS matrix is the
+  model: informational on a push, blocking on a release tag.
+
+**Why it is mechanical and not a convention:** `docs/design-ci.md` wrote
+*"informational initially — promote to blocking once stable"*, the promotion
+never came, and the Swift suite went unrun for three months while `v0.29.0`
+shipped on nine channels with it red. A rule nobody is obliged to check is
+indistinguishable from no rule. Reasoning and the other seven gaps:
+`docs/testing/gaps.md`. The generated map of what runs where:
+`docs/testing/inventory.md` (never hand-edit it).
+
+**Adding a ratcheted number?** `scripts/check-ratchet.py --tighten` only lowers
+a ceiling. Raising one is a deliberate edit in a commit that says why.
+
 ## Before committing
 
 1. `.venv/bin/python -m pytest tests/` — all pass

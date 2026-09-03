@@ -82,6 +82,20 @@ jobs:
         continue-on-error: true
         run: mypy bristlenose/ --ignore-missing-imports
 
+      - name: Gate policy — no gate goes soft by default
+        # Every continue-on-error carries a disposition in
+        # docs/testing/soft-gates.json: ratchet, expires, or conditional.
+        # This fails on an undeclared soft gate, an expired review date, a
+        # ratchet naming a metric that does not exist, or a registry entry for a
+        # gate that no longer does.
+        #
+        # It exists because design-ci.md wrote "informational initially —
+        # promote to blocking once stable" and no promotion ever came: nothing
+        # was obliged to ask. Now something is. It only sees continue-on-error,
+        # not a gate softened by `|| true` or a swallowed exit code — both of
+        # which have been real here. gaps.md G7.
+        run: python scripts/check-gate-policy.py
+
       - name: Ratchet — numbers that may not rise
         # A fourth gate colour. hard/soft/informational cannot express "allowed
         # to be non-zero, not allowed to rise", and that is the only shape that

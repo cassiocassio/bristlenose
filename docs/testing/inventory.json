@@ -277,6 +277,13 @@
               {
                 "colour": "hard",
                 "is_gate": true,
+                "name": "Gate policy \u2014 no gate goes soft by default",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "hard",
+                "is_gate": true,
                 "name": "Ratchet \u2014 numbers that may not rise",
                 "piped": false,
                 "runs_tests": false

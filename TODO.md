@@ -1,6 +1,6 @@
 # Bristlenose — Where I Left Off
 
-Last updated: 31 Aug 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
+Last updated: 3 Sep 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
 
 **31 Aug 2026 — codebook v2 got its affordances right, and the user-facing docs turned out to be telling people three untrue things.** The lens work is ordinary and in `git log`. What is worth carrying forward is the shape of what the day's audits found, because all three were invisible to every gate we own.
 
@@ -331,6 +331,17 @@ In parallel, the **Background Assets branch** (whisper essential-tier delivery) 
 **Raised, not scheduled: the pane makes the coordinated-reads work non-deferrable.** A configured default turns an occasional cloud-folder *choice* into the default at every project-creation door — and the drag-import door holds `FileManager.copyItem`, which blocks **indefinitely and uncancellably** on an iCloud/Dropbox dataless source (reproduced 29 Jul 2026; `docs/design-project-storage.md` §3). The pane does not cause that bug, it multiplies the rate at which it is reached.
 
 ---
+
+**3 Sep 2026 — the `anthropic` pin is now code-ready, and the temperature slider is gone.** Two commits. `bb9e201d` fixed a **live** defect that had nothing to do with the SDK bump: sampling parameters are rejected with a 400 on every Claude model after 4.6, we sent `temperature=0.1` unconditionally, and `claude-opus-4-8` has been in the macOS picker — so picking it failed every analysis call, surfacing as the unactionable "The AI provider rejected the request." `fe145d32` then removed the slider itself (43 locale entries; the env var survives for CLI/CI). Reasoning promoted to `docs/design-decisions.md` §"Temperature is not a control we ship" — read that before proposing an `effort` slider, which is **not** a relabel of temperature.
+
+What that leaves owed, in rough order:
+
+1. **Re-pre-mortem the SDK-major wave and float the ceiling.** `anthropic` 1.x + `openai` 2→3 + `google-genai` 1→2 share the `httpx2` transport coupling, per Entry 6's "new cluster named". The Held register row is now `held — code-ready, wave-blocked`: no product decision is outstanding, only the wave. Nothing in `pyproject.toml` was touched.
+2. **Two gates specified but not built** (spike §"How this gets caught"): (a) **preflight parity** — `preflight/api_key.py::_validate_anthropic` already makes a real one-token call with the real model but doesn't send the pipeline's optional params, which is exactly why preflight went green while the run died; ~3 lines to close. (b) **one autospec'd contract test** — `grep -rn autospec tests/` returns *nothing*, so no mock in the repo can see a signature change.
+3. **`output_config.effort` at a tuned default, unexposed.** Reachable on the pinned `anthropic 0.125.0` already (`output_config` is in the signature) — no pin lift needed to start. Wants a measured pass against the stability corpus before a stop is picked; do **not** ship it as a control.
+4. **`docs/platform-text-map.md` totals are drifted** — the header claims 22 sections / 638 keys; the table has 21 rows summing to 635. Pre-existing; I moved the total by my delta only rather than inventing a re-measurement. Wants one honest recount.
+5. **Aug 2026 quarterly dep review is overdue** (§Dependency maintenance below, unchecked). Natural to fold into item 1 — the wave *is* most of that review.
+
 
 ## Ideas (captured, not triaged)
 

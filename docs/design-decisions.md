@@ -422,3 +422,55 @@ POST/PATCH payloads, not just that a call happened.
 
 _See also: `frontend/src/hooks/useCodebookAuthoring.ts`,
 `frontend/src/islands/CodebookAuthoringParity.test.tsx`_
+
+## Temperature is not a control we ship
+
+**Decided 3 Sep 2026.** The Settings ▸ AI temperature slider is removed
+(`fe145d32`). The parameter survives as a tuned default of 0.1, still sent to
+ChatGPT, Azure OpenAI, Gemini and Ollama, and to Claude on the models that
+accept it. Only the dial goes; nobody's analysis changes.
+
+Four things had to be true at once, and were:
+
+1. **The label was unexplained jargon**, in 21 languages — "Low = focused, high
+   = creative" against a glossary rule that says no jargon without inline
+   explanation. ja and ko never translated the word at all.
+2. **It bought no determinism.** The Jul 2026 quote-stability validation ran
+   *at* 0.1 and still measured a ~9% genuinely-fragile quote tail and theme
+   membership ARI of 0.43 (`design-incremental-analysis.md` §Validation). The
+   stability that exists comes from the position-overlap matcher and the union
+   merge rule, not the sampler. Anthropic says the same thing from the other
+   side: `temperature = 0` "never guaranteed identical outputs on prior
+   models."
+3. **The vendor path is removal.** Sampling parameters are rejected with a 400
+   on every Claude model after 4.6. One of the three the picker offers
+   (`claude-opus-4-8`) failed on every call until `bb9e201d`.
+4. **The house rule.** Tune defaults, don't expose threshold UIs — make the
+   screen good rather than making the user tune it.
+
+**`output_config.effort` is not the successor, and must not be relabelled into
+the slider's slot.** It is a reasoning-depth and token-spend control (five
+stops, default `high`), not a sampling control. "Low = focused" is wrong about
+it in both directions: `low` is shallower and cheaper, not more precise, and
+Anthropic's own advice to callers who used temperature for determinism is
+`effort: "low"` — the stop that caption would sell as the careless end. A
+five-stop control wearing this label would be a subtler lie than the one being
+removed. If effort is adopted, adopt it at a tuned default, unexposed, after a
+measured pass against the stability corpus. Considered and rejected alongside:
+a disabled-with-explanation slider on Claude (spends i18n budget explaining a
+control nobody asked for) and a single abstract dial mapped per provider (the
+two quantities are orthogonal, so one position would mean two different things).
+
+**Sampling capability is per-model, not per-provider.** `client.py`'s
+`_ANTHROPIC_ACCEPTS_SAMPLING` is a *sunset list* — it only ever shrinks, so
+unknown models fail closed (parameter dropped, call succeeds at the API
+default) rather than open. When it empties, delete it and the kwarg.
+
+**The env var survives deliberately.** `BRISTLENOSE_LLM_TEMPERATURE` still
+resolves through pydantic-settings, so CLI and CI keep the escape hatch and its
+config-reference row stays accurate — the same shape as `BRISTLENOSE_LOCAL_URL`,
+whose GUI field was hardwired while the override remained. Deleting
+documentation for a still-working env var makes it undocumented, not removed.
+
+_See also: `bristlenose/llm/client.py` (`_ANTHROPIC_ACCEPTS_SAMPLING`),
+`tests/test_llm_sampling_params.py`, `docs/dependency-premortem-log.md` Entry 6._

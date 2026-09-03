@@ -97,6 +97,16 @@ The Tahoe-specific issues already encountered:
   is precisely the mechanism for using a newer API from a lower floor — so
   adopting Apple's models would likely *not* require moving from 15.0 at all.
 
+  **And the product frame argues the same way, harder.** The intent is to offer
+  Apple/local models *alongside* "bring your Claude key" as tiers of a
+  just-works plan, appearing on machines modern enough to have them. That is
+  additive by construction: the app must keep running well on machines without
+  Apple Intelligence, because those users are exactly who the cloud path is for.
+  Raising the floor to reach Apple's models would cut off the population the
+  tiering exists to serve. **So the Apple-models direction is an argument for
+  the widest viable floor, not for moving it** — the reverse of what this doc
+  said before 3 Sep 2026.
+
   **Untested caveat:** whether the FoundationModels framework and its
   `@Generable` macro back-deploy cleanly under weak linking is unverified —
   Swift macros and framework linkage sometimes complicate this. Settle it with a

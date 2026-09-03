@@ -4,40 +4,47 @@ Standalone HTML mockups for features in progress. Open in a browser to see the d
 
 Each file is self-contained (inline CSS/JS) so it works without a build step.
 
-## Status banners
 
-A mockup is a snapshot of intent at a date. Some are still the design of record;
-some describe a flow that has since been replaced. Without a marker there is no
-way to tell them apart except by reading the code, which defeats the point of
-having them.
+## Lifecycle
 
-So a mockup whose standing is not obvious carries a banner at the top, in one of
-three states:
+A mockup is a snapshot of intent at a date. Some are the design of record; some
+show a flow that was replaced; some show an idea that was drawn, argued about,
+and deliberately not built. Without a marker there is no way to tell them apart
+except by reading the code — which defeats having them, and means the same
+rejected idea gets proposed again a year later by someone who found the picture.
 
-| Banner | Means |
+So a mockup carries a **dated timeline**, not a single state. The states:
+
+| State | Means |
 |---|---|
-| *(none)* | Current. Trust it, or it has never been checked — the absence is not a claim. |
-| **IMPLEMENTED** | Its recommendations shipped. Keep for the reasoning; read any "outstanding work" section as a diagnosis of a fixed problem. Commit refs in the banner. |
-| **SUPERSEDED** | Describes a flow, vocabulary or decision that no longer exists. Keep as history; the banner names what replaced it. |
+| `PROPOSED` | Drawn as an idea. Not built. |
+| `IMPLEMENTED` | Built and shipped. |
+| `SUPERSEDED by X` | A later design of the same thing replaced it. |
+| `ABANDONED` | Decided against. **After `IMPLEMENTED` it means built, shipped, then removed** — the strongest do-not-relitigate signal there is, because someone already paid to find out. |
 
-Nothing is deleted. A superseded mockup is the record of why the current thing
-looks the way it does, and that argument is usually the expensive part.
+A file whose last entry is `IMPLEMENTED` with nothing after it **is the current
+truth** — that is the one to point at, and the one to copy from.
 
-Banners are self-styled inline so they cannot clash with each file's own CSS.
+Timelines read left to right and each entry carries its date:
 
-### Reviewed 3 Sep 2026
+```
+PROPOSED 19 Feb 2026 · IMPLEMENTED 4 Mar 2026 · SUPERSEDED 31 Aug 2026 by codebook-v2-autocode-button.html
+PROPOSED 9 Jul 2026 · ABANDONED 25 Jul 2026 — three widgets tested worse than the list
+```
 
-- `provider-status-glyph-vocabulary.html` — **SUPERSEDED**. Explored three
-  treatments for the provider dot; a fourth shipped (colour + an always-visible
-  localised label). Six `ProviderStatus` cases ship, this names five. The a11y
-  reasoning stands.
-- `mockup-autocode-lifecycle.html` — **SUPERSEDED**. Nine-step storyboard of the
-  v1 flow, where importing a codebook and coding with it were separate acts.
-  0.29.0 made Install *be* apply.
-- `codebook-v2-messages.html` — **IMPLEMENTED**. Its message taxonomy is live and
-  its findings drove `ae050e56`, `1d1eb3a0`, `96de7724`.
-- `out-of-credit-ux.html` — current, and the **design of record** for the
-  out-of-credit pill and popover. Its §3 settled that reaching for AutoCode while
-  out of credit gets "nothing new — the pill is enough".
-- `codebook-llm-state-matrix.html` — current. The codebook × LLM state audit and
-  the decisions taken against it.
+An `ABANDONED` or `SUPERSEDED` entry **must say why in a clause**. That clause is
+the whole value of keeping the file: the picture shows what was tried, the
+clause stops it being tried again.
+
+**Nothing is deleted.** A superseded mockup is the record of why the current
+thing looks the way it does, and that argument is usually the expensive part.
+
+### Where the timeline lives
+
+- **[STATUS.md](STATUS.md)** is the register — every mockup, its date, its
+  timeline. Look here first for "what is the current design for X".
+- A **banner** goes at the top of any file whose last entry is not
+  `IMPLEMENTED`, so opening it warns you before you read it. Self-styled inline
+  so it cannot clash with the file's own CSS.
+- No banner and no register entry means **unreviewed** — nobody has checked.
+  That is the absence of a claim, not a claim of currency.

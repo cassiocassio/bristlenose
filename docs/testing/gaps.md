@@ -127,12 +127,38 @@ A soft gate that is currently green is a free promotion — the exact inverse of
 G3. Root `CLAUDE.md` already says so and points at `docs/i18n-defects.md`
 Decision 2. It has been decidable since 21 Aug 2026 and undecided since.
 
-### G6. Five unverified findings in the release-system audit
+### G6. Unverified findings in the release-system audit — ✅ **triaged 3 Sep 2026**
 
-`design-release-system-audit.md` carries **14 confirmed and 5 unverified**
-findings, untriaged since the morning after the 0.25.2 incident. Release
-machinery rather than testing, but the same shape: findings with no owner and no
-expiry.
+`design-release-system-audit.md` carried findings marked unverified, untriaged
+since the morning after the 0.25.2 incident. Release machinery rather than
+testing, but the same shape: findings with no owner and no expiry.
+
+**First correction: there were three, not five.** The earlier count counted
+occurrences of the word, including the legend that defines it. The doc's own
+tier-2 line says *six*, disagreeing with its table. Three numbers, all written by
+people reading the same file.
+
+**Outcome of checking all three against the tree:**
+
+- **3.6** (`upload-testflight` printing "confirmed present in ASC" unconfirmed) —
+  real, and **already fixed**. It now `die`s on an unparsed delivery UUID, sets
+  `CONFIRMED=1` only inside the successful `--build-status` branch, and exits 1 on
+  "Delivered, but UNCONFIRMED".
+- **3.8** (snap publish jobs green-no-op without store credentials) — real, and
+  **already fixed**. Both publish jobs now `exit 1`, carrying the finding's own
+  reasoning in the error text.
+- **`--ref main` drift** (§4) — **confirmed and still open**, but narrowed. Edge
+  only: `snap-stable` is correctly pinned to the tag. And the defect is the
+  *version claim*, not the ref — `--ref main` is arguably right for a channel whose
+  meaning is *latest main*; what misleads is an edge snap built from `main + drift`
+  announcing a released `X.Y.Z`, because `craftctl set version` stamps from source.
+  Left as a product decision rather than silently patched.
+
+**Both fixes landed in `c6bbf7d9` on 14 Aug 2026 — the same day the doc was last
+touched.** The work was done and the status column was not moved, so two closed
+findings read as open for three weeks. Same shape as `design-ci.md`'s banner, which
+recorded a gap accurately and inertly for three months: **the cost here is not
+undone work, it is a register that stopped describing the tree.**
 
 ---
 

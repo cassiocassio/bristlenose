@@ -20,6 +20,15 @@ between components are unowned, several authority signals do not mean what they
 appear to mean, and release knowledge lives as prose in four places that drift.**
 The unpredictability is a specification problem wearing a complexity costume.
 
+> **Triaged 3 Sep 2026 (gaps.md G6).** The three findings still marked unverified were
+> checked against the tree. **3.6 and 3.8 were real and had already been fixed** on
+> 14 Aug by `c6bbf7d9` — the same day this doc was last touched, so the fixes landed
+> and the status column never moved. The `--ref main` note in §4 is **confirmed and
+> still open**, now narrowed to a version-claim decision rather than a bug.
+>
+> Note the tier-2 line at the foot says *"six unverified findings"* while the table
+> marks three. Both numbers were written by people reading this file.
+
 Every finding below carries its verification status. `CONFIRMED` means a skeptic
 established the behaviour independently; `unverified` means plausible but untested —
 treat accordingly.
@@ -109,9 +118,9 @@ check could not run.**
 | 3.3 | **The bundle self-test is dead code on every build.** [build-all.sh:183](../desktop/scripts/build-all.sh) skips on app-sandbox entitlements, which `sign-sidecar.sh` applies *unconditionally* since 14 Jul (`4c549c36`). The "covered by 1b + ASC" message is a false equivalence: 1b covers source→spec only, ASC has no idea whether PyInstaller dropped a `datas` entry. **The BUG-3/4/5 class is now mechanically unguarded** | `CONFIRMED` — worse than reported |
 | 3.4 | **Identity check fails open on parse failure.** [check-pkg-shippable.sh:143](../desktop/scripts/check-pkg-shippable.sh): empty `sed` extraction → `ok "version … agrees with tree"` for a comparison that never ran — in the only defence against the cross-channel stale-artefact class its own header warns about | `CONFIRMED`, empirically |
 | 3.5 | **`continue-on-error` on macOS test cells.** [ci.yml:87](../.github/workflows/ci.yml) — deliberate and commented, but it means **"CI green" certifies Linux for a Mac-first product** whose Mac artefacts additionally never pass through CI. The flake that saved 0.25.2 happened to be on Linux; had the race only manifested on macOS, the release would have published | self-verified true |
-| 3.6 | **`upload-testflight`'s fallback prints "confirmed present in ASC" unconfirmed.** [upload-testflight.sh:251](../desktop/scripts/upload-testflight.sh) — the script's whole reason to exist is not trusting altool's exit 0, and its else-branch soft-warns then prints the confirmed banner anyway | unverified (cap) |
+| 3.6 | **`upload-testflight`'s fallback prints "confirmed present in ASC" unconfirmed.** [upload-testflight.sh:251](../desktop/scripts/upload-testflight.sh) — the script's whole reason to exist is not trusting altool's exit 0, and its else-branch soft-warns then prints the confirmed banner anyway | **CONFIRMED and FIXED** — `c6bbf7d9`, 14 Aug 2026 |
 | 3.7 | **`bump-version.py` prints `Updated <file>` whether or not `re.sub` matched.** A pbxproj format change silently no-ops while claiming success | found by 2 lenses |
-| 3.8 | **Snap publish jobs green-no-op on missing store credentials** — on the *deliberate-publish* paths only, where a silent skip is worst | unverified |
+| 3.8 | **Snap publish jobs green-no-op on missing store credentials** — on the *deliberate-publish* paths only, where a silent skip is worst | **CONFIRMED and FIXED** — `c6bbf7d9`, 14 Aug 2026 |
 
 One house rule covers the cluster: **a check that could not run reports that it could
 not run.**
@@ -134,10 +143,29 @@ So the design doc's *"the ref is the channel selector"* is not quite true: it se
 doc does not match the workflow, and any future `channel` input must gate **both** job
 conditions.
 
-Separately (`unverified`): `--ref main` builds whatever main is at dispatch time, and
-snap runs last in Phase 5, giving the longest window for a post-release commit to land.
-`adopt-info` stamps the version from `__init__.py`, so a drifted edge snap still
-reports X.Y.Z to every probe.
+Separately — **CONFIRMED 3 Sep 2026, and still open.** `--ref main` builds whatever
+main is at dispatch time, and snap runs last in Phase 5, giving the longest window for
+a post-release commit to land. `adopt-info: bristlenose` +
+`craftctl set version="$VERSION"` stamps from source at build time, so a drifted edge
+snap still reports X.Y.Z to every probe.
+
+Now characterised precisely, which narrows it:
+
+- **Edge only.** `snap-stable` dispatches `--ref v__V__` and is correctly pinned
+  ([release.sh:475](../scripts/release.sh)). Only the `snap edge` row at `:474` uses
+  `--ref main`.
+- **The guard pattern already exists one row up.** The `tag` step refuses unless
+  `verdict_tag_provenance` matches `$CI_SHA_FILE` — *"the tag must land on the exact
+  commit strict CI validated"*. Nothing extends that to the snap dispatch.
+- **But `--ref main` is arguably right for edge**, whose whole meaning is *latest main*.
+  The defect is not the ref; it is the **version claim**. An edge snap built from
+  `main + drift` announcing a released `X.Y.Z` is what misleads a probe.
+
+**So this is a product decision, not a mechanical fix, and is deliberately left open
+rather than silently patched:** either stamp edge builds with a dev suffix so the
+version tells the truth, or pin the edge dispatch to the tag and accept that edge means
+*last release* rather than *latest main*. Whoever takes it should read
+`docs/design-doctor-and-snap.md` first.
 
 ## 5. Relaxations — the mirror review
 

@@ -71,12 +71,12 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
 | `dashboard-10-ideas.html` | 9 Jul 2026 | PROPOSED 9 Jul 2026 — salvaged from a **discarded** native-experiment branch (`03a260d3` postmortem); an idea catalogue, never a plan |
-| `dashboard-assembled.html` | 25 Jul 2026 | *unreviewed* |
+| `dashboard-assembled.html` | 25 Jul 2026 | SANDPIT — “the assembly at real viewport width, no stage: **resize the browser**”. An instrument for the parked signal-grid work, not a design in its own right |
 | `dashboard-autolayout.html` | 14 Jul 2026 | PROPOSED 14 Jul 2026 · **PARKED** — “Vision (parked, **do NOT build now**)”; the dashboard responsive redesign is post-TestFlight |
 | `dashboard-coverage-box.html` | 22 Feb 2026 | PROPOSED 22 Feb 2026 · IMPLEMENTED — coverage renders on the Dashboard |
-| `dashboard-heatmap-encoding-collision.html` | 17 Jul 2026 | *unreviewed* |
-| `dashboard-signal-grid-sizing.html` | 19 Jul 2026 | *unreviewed* |
-| `dashboard-signal-grid.html` | 17 Jul 2026 | *unreviewed* |
+| `dashboard-heatmap-encoding-collision.html` | 17 Jul 2026 | SANDPIT — the demonstration behind a ruling: “**full evidence in** `dashboard-heatmap-encoding-collision.html`”. It shows an encoding failing, so it stays useful whether or not the grid is ever built |
+| `dashboard-signal-grid-sizing.html` | 19 Jul 2026 | SANDPIT — called a “**size sandbox**” by its own design doc; the sizing instrument behind the parked signal grid |
+| `dashboard-signal-grid.html` | 17 Jul 2026 | PROPOSED 17 Jul 2026 · **PARKED** — “**the widget**” of the signal-grid design. Not shipped: no signal grid in `frontend/src`, none on the Dashboard, and its design doc records the effort as parked alongside `dashboard-autolayout.html` |
 | `dashboard-theme-list-stress-test.html` | 17 Jul 2026 | SANDPIT — a stress test, not a design |
 | `dashboard-widget-gallery.html` | 25 Jul 2026 | PROPOSED 25 Jul 2026 · **PARKED** — the widget half of the parked dashboard vision |
 
@@ -114,8 +114,8 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `move-to-picker-mock.html` | 8 Jul 2026 | *unreviewed* |
-| `move-to-spec.html` | 8 Jul 2026 | *unreviewed* |
+| `move-to-picker-mock.html` | 8 Jul 2026 | SANDPIT — an “interactive send-to picker … **with live toggles** for the three open UX decisions”, drawn as one data point for the browser family. An instrument for choosing, not the thing chosen: a native submenu shipped, not a picker |
+| `move-to-spec.html` | 8 Jul 2026 | PROPOSED 8 Jul 2026 · IMPLEMENTED — “the full interaction spec: 2 apps × 2 phases … tagged built/new/risk”. **Move to** ships as a native submenu in both the menu bar and the sidebar context menu (`desktop.menu.project.moveTo`) |
 
 ## other
 

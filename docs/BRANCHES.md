@@ -754,3 +754,60 @@ If you need to signal something to a future Claude session:
 1. Add a note to this file under your branch
 2. Or create a `docs/notes-{branch-name}.md` for longer notes
 3. Reference it in `CLAUDE.md` under "Reference docs"
+
+---
+
+## Branch sweep — 3 Sep 2026
+
+Local branch count **49 → 17**. Thirty-three deleted; nothing unique was lost.
+Rows above that name a deleted branch are kept as history, per this file's
+existing convention of annotating rather than removing.
+
+**Method, in two passes — the second is the one worth reusing:**
+
+1. **`git branch -d`** on everything reachable from `main` — 26 branches
+   (the `checkpoint-*` / `pre-*-checkpoint` family, spent `claude/*` sessions,
+   `serve`, `wip`, `gemini-provider`, `warm-sidecar-pool`, `pipeline-view-v1-5`).
+   The safe form refuses anything unmerged *or* checked out in a worktree, so it
+   cannot lose work. It correctly refused `drag-push` on both counts.
+
+2. **`git cherry main <branch>`** on the rest. **Commit count is the wrong
+   instrument** — it counts commits, not content, and a rebased or cherry-picked
+   branch reads as full of unique work when it holds none. Patch-id matching is
+   what actually answers the question, and it moved four more branches into the
+   safe pile:
+
+   | branch | looked like | actually |
+   |---|---|---|
+   | `pre-leak-rewrite` | 11 commits ahead | **11 applied, 0 unique** |
+   | `stale/claude-fervent-wing-rescued-2026-04-29` | 6 ahead | 6 applied, 0 unique |
+   | `stale/claude-sweet-feynman-rescued-2026-04-29` | 5 ahead | 5 applied, 0 unique |
+   | `claude/eloquent-allen-1543bf` | 1 ahead | 1 applied, 0 unique |
+
+   `pre-leak-rewrite` is the instructive one: it reads as the pre-history-rewrite
+   safety net and is entirely redundant. Nobody would delete that on a commit
+   count, and nobody needed to keep it.
+
+   Also dropped: the three `dependabot/*` local copies (regenerable by
+   construction; two had no remote left, so their PRs were already closed).
+
+**What survives, and why** — 16 branches, every one holding content that is
+genuinely not on `main` (verified by patch-id, not by commit count):
+
+- **Parked, in the register above:** `drag-push` (0 unique — held only by its
+  worktree), `living-fish`, `symbology`, `tower-of-hanoi`,
+  `stale/claude-objective-banzai-rescued-2026-04-29`.
+- **Unreviewed `claude/*` sessions (7):** `daily-code-lesson-j3z7l7`,
+  `opus-4-8-transcript-eval-7QpEY`, `quirky-ellis-2b307a`,
+  `restore-translation-project-30AZ9`, `review-dependabot-updates-CF7in` (6
+  unique — the largest), `shell-portability-macos-audit-dxwjD`,
+  `youthful-bell-c43868`. Each wants the CLAUDE.md cloud-branch treatment —
+  cherry-pick the doc, drop the staging dir — not a blind delete.
+- **Small unfinished work (4):** `audit/billing-hints-2026-07`,
+  `rescue-hide-sessions` (a stash promoted to a branch),
+  `security-txt`, `txt-notes-ingest` (parked `.txt` ingest WIP).
+
+**Remotes were not touched.** Nine of the sixteen still have an `origin/`
+counterpart; deleting those is a separate, outward-facing act.
+
+Everything deleted is recoverable from `git reflog` for 90 days.

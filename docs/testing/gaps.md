@@ -109,6 +109,13 @@ ratchet** — a number allowed to be non-zero but not allowed to rise. It is the
 only colour that fits G3, and the only one that would have made the others
 visible while they grew.
 
+**A ratcheted number must be a property of the code, not of the toolchain.** `mypy_errors`
+was not, and its first real CI run failed because of it: identical source measured 238 on
+the dev Mac and 239 in CI, because `pyproject` pins `mypy>=1.13` — a floor — so a fresh
+install resolves whatever is newest. Such metrics now carry `authority: ci`: enforced
+there, advisory locally, and `--tighten` refuses to lower one from a local run. Pinning
+mypy exactly would be the better fix, but that is a dependency-policy decision.
+
 `scripts/check-ratchet.py` now holds all four in CI, ceilings in
 `docs/testing/ratchet.json`. `--tighten` only ever lowers them; raising one is a
 deliberate human edit in a commit that has to say why, because a ratchet the

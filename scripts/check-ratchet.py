@@ -35,6 +35,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -100,6 +101,18 @@ METRICS: dict[str, dict] = {
         "measure": measure_mypy,
         "basis": "mypy bristlenose/ --ignore-missing-imports, 'Found N errors'",
         "why": "gaps.md G3 — soft since it was added, which is how it reached 238",
+        # ENVIRONMENT-DEPENDENT, so CI is the authority. pyproject pins `mypy>=1.13`
+        # — a floor, not a version — so a fresh CI install resolves whatever is
+        # newest while this Mac sits on 2.3.0. Identical source measured 238 here
+        # and 239 there on 3 Sep 2026, which made the ceiling I set from a local
+        # run fail its first real CI run. A count that moves with the toolchain is
+        # not a property of the code.
+        #
+        # Enforced in CI; advisory locally, and --tighten will not lower it from a
+        # local run. The better fix is pinning mypy exactly, but that is a
+        # dependency-policy change (docs/design-platform-policy.md) and not this
+        # script's to make.
+        "authority": "ci",
     },
     "pytest_skip_sites": {
         # `@pytest.mark.skip` matches inside `skipif`, so count skipif separately
@@ -136,11 +149,16 @@ def main() -> int:
         print(json.dumps({"measured": measured, "ceilings": ceilings}, indent=2, sort_keys=True))
         return 0
 
+    in_ci = bool(os.environ.get("CI"))
+
     if "--tighten" in sys.argv:
         out = dict(ceilings)
         moved = []
         for k, now in measured.items():
             if now is None:
+                continue
+            if METRICS[k].get("authority") == "ci" and not in_ci:
+                print(f"skipping {k}: CI is the authority for it; a local number would re-break the gate")
                 continue
             was = ceilings.get(k, {}).get("ceiling")
             if was is None or now < was:
@@ -160,7 +178,12 @@ def main() -> int:
         elif ceil is None:
             slack.append(f"  {k}: {now} (no ceiling set)")
         elif now > ceil:
-            rose.append(f"  {k}: {now} > ceiling {ceil}  — {METRICS[k]['why']}")
+            if METRICS[k].get("authority") == "ci" and not in_ci:
+                slack.append(f"  {k}: {now} > ceiling {ceil} — ADVISORY here; CI is the authority")
+            else:
+                rose.append(f"  {k}: {now} > ceiling {ceil}  — {METRICS[k]['why']}")
+        elif METRICS[k].get("authority") == "ci" and not in_ci:
+            print(f"  {k}: {now} (advisory locally — CI is the authority for this metric)")
         elif now < ceil:
             slack.append(f"  {k}: {now} < ceiling {ceil} — tighten it: scripts/check-ratchet.py --tighten")
         else:

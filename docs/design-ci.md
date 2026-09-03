@@ -1,12 +1,29 @@
 ---
 status: current
-last-trued: 2026-08-14
-trued-against: ci.yml with strict-macos + package job; release.yml with the pypi hold; snap.yml build-on-push/publish-on-dispatch; mac-build.yml shipped
+last-trued: 2026-09-03
+trued-against: ci.yml after the gates-matrix split; mac-build.yml on macos-26 running the Swift suite; the ratchet / gate-policy / gate-proofs gates
 ---
 
 # CI architecture
 
 ## Changelog
+
+- _2026-09-03_ — **the `lint` job described here no longer exists.** It was
+  seven sequential steps, and a failing step SKIPPED the rest — which is how the
+  inventory gate's first CI appearance returned "skipped" and proved nothing
+  while looking like a pass. Split into a `gates` matrix (`fail-fast: false`,
+  one cell per gate) plus a `supply-chain` job; `test` no longer `needs:` them,
+  because gating the suite on the linters is the same masking one level up.
+  §Job structure, §What each job does and §Informational steps rewritten to
+  match. Four new gates exist that this doc had never heard of (inventory
+  drift, gate policy, gate proofs, ratchet). mypy's "9 pre-existing third-party
+  SDK errors" was wrong by two orders of magnitude — it is **239**, now held by
+  a ratchet rather than awaiting promotion, which retires the promotion path
+  this doc proposed. `mac-build.yml` moved to `macos-26` and **runs the Swift
+  suite**; the row here said compile-only. Anchors: `.github/workflows/ci.yml`,
+  `mac-build.yml`, `docs/testing/gaps.md`, `docs/testing/soft-gates.json`,
+  commits "one gate per cell, so no gate can hide another", "cash the
+  swift-test cheque design-ci.md wrote in may", "no gate goes soft by default".
 
 - _2026-08-14_ — trued up (first pass; doc had no front-matter): macOS
   continue-on-error is now conditional (`strict-macos` input — blocking on
@@ -85,33 +102,48 @@ package ───────────────  (wheel + sdist, publishes
 mac-build.yml ─────────  (separate workflow: Swift compile check, macos-15)
 ```
 
-Six jobs in `ci.yml`, plus the shipped Mac workflow:
+Jobs in `ci.yml`, plus the shipped Mac workflow:
 
 | Job | Runs on | Depends on | Blocking? |
 |-----|---------|------------|-----------|
-| `lint` | ubuntu, Python 3.12 | — | Yes |
-| `test` | 5 Python × 2 OS (10 cells) | `lint` | Ubuntu yes; macOS informational on pushes, **blocking on release runs** (`strict-macos`) |
+| `gates` | ubuntu, Python 3.12 — **one matrix cell per gate**, `fail-fast: false` | — | Yes, per cell (mypy soft) |
+| `supply-chain` | ubuntu, Python 3.12 | — | No — audit + SBOM, both informational |
+| `test` | 5 Python × 2 OS (10 cells) | — | Ubuntu yes; macOS informational on pushes, **blocking on release runs** (`strict-macos`) |
 | `frontend-lint-type-test` | ubuntu, Node from `.tool-versions` (24) | — | Yes |
 | `e2e` | ubuntu, Python 3.12 + Node 24 | `test` + `frontend` | Yes |
 | `release-suites` | ubuntu | — | Yes — the release chain's own ~390 assertions (`release.sh`, `verify-channels.sh`, the preflight and doc gates). No network, no keys, no release; seconds. Added 28 Aug 2026, and its first run found two defects invisible on macOS |
 | `package` | ubuntu | — | Yes — wheel + sdist + `twine check` + an assertion the React SPA is inside the wheel |
-| `mac-build.yml` *(separate workflow)* | macos-15 | — | path-filtered to `desktop/**`; compile-only, no signing, no Swift tests |
+| `mac-build.yml` *(separate workflow)* | macos-26 | — | path-filtered to `desktop/**`; compiles **and runs the Swift suite** (`test-swift.sh`), no signing. `macos-15`'s Xcode 16.4 cannot compile the macOS 26 APIs now in use |
 
-`lint` and `frontend` run in parallel (no dependency between them). `test` waits for `lint`. `e2e` waits for both `test` and `frontend`.
+Every gate cell, `supply-chain`, `test` and `frontend` run in parallel. `e2e`
+waits for `test` and `frontend`. **`test` deliberately does not wait for the
+gates** — gating the suite on the linters means a trivial ruff error hides every
+test result, which is the masking the matrix split exists to remove, moved up a
+level. `release.yml` gates on the *workflow's* conclusion, so every job must
+still be green before a tag can publish.
 
 ## What each job does
 
-### lint
+### gates
 
-Runs once on ubuntu/3.12. Catches universal problems before the matrix runs.
+One matrix cell per gate, `fail-fast: false`, so a failing gate cannot hide a
+sibling. Each cell is its own status check.
 
-| Step | Blocking? | Why |
+| Cell | Blocking? | Why |
 |------|-----------|-----|
-| ruff check | Yes | Style and import errors |
-| mypy | No | 9 pre-existing third-party SDK errors; shows regressions |
-| Man page version check | Yes | `man/bristlenose.1` must match `__version__` |
-| pip-audit | No | Transitive dep CVEs often unfixable; review each run |
-| SBOM generation + upload | No | Compliance artifact (US EO 14028, EU CRA) |
+| `ruff` | Yes | Style and import errors |
+| `inventory` | Yes | `docs/testing/inventory.md` is generated; fails when the committed structure drifts from the workflows, build gates and hooks it was generated from |
+| `gate-policy` | Yes | Every `continue-on-error` must declare a disposition in `docs/testing/soft-gates.json` — ratchet, expires, or conditional |
+| `gate-proofs` | Yes | A manual proof that a gate *can* fail ages; flags any older than 180 days |
+| `ratchet` | Yes | Numbers that may not rise (`docs/testing/ratchet.json`) |
+| `manpage` | Yes | `man/bristlenose.1` must match `__version__` |
+| `mypy` | **No** | 239 errors — a project, not a commit. Held at a ceiling by the ratchet instead of awaiting promotion |
+
+### supply-chain
+
+Separate job, both steps informational: `pip-audit` (transitive CVEs often
+unfixable) and SBOM generation + upload (compliance artifact — US EO 14028,
+EU CRA).
 
 ### test
 
@@ -129,9 +161,9 @@ Single ubuntu job, Node from `.tool-versions` (24). Runs the full frontend quali
 |------|-----------|-----|
 | ESLint | **Yes** | Blocking gate — the 84 pre-existing problems were cleared to zero 30 Jun 2026 |
 | TypeScript typecheck | Yes | Type errors are bugs |
-| npm audit | No | Production deps will become blocking; full audit stays informational |
+| npm audit | No — **expires 2026-11-30** | Dev-dep CVEs (Vite ecosystem) rarely actionable. "Production deps will become blocking" stood here undated until 3 Sep 2026; it now carries a review date in [testing/soft-gates.json](testing/soft-gates.json) instead of an intention |
 | SBOM generation + upload | No | Compliance artifact |
-| Vitest | Yes | ~1265 unit/integration tests |
+| Vitest | Yes | Unit/integration tests — count lives in [testing/inventory.md](testing/inventory.md), which is generated. It said ~1265 here and was 1720 by 3 Sep 2026; a suite size restated in prose is a number that rots |
 | Vite build | Yes | Build errors are shipping errors |
 | size-limit | Yes | Bundle size gate (220 kB gzip — `frontend/package.json`) |
 
@@ -246,15 +278,28 @@ Mechanics worth knowing: a job-level `permissions:` block *fully replaces* the t
 
 These run with `continue-on-error: true`. They appear as yellow warnings, not red failures.
 
-| Step | Job | Why informational |
-|------|-----|-------------------|
-| mypy | lint | 9 pre-existing third-party SDK type errors (anthropic, presidio, faster-whisper) that can't be fixed upstream |
-| pip-audit | lint | Transitive deps (torch, protobuf) frequently have unfixed advisories |
-| npm audit | frontend | Dev dep CVEs (Vite ecosystem) rarely actionable |
-| SBOM generation | lint, frontend | Compliance artifact; generation tool failures shouldn't block |
-| macOS test cells | test | Platform signal, not a gate (see Philosophy) |
+| Step | Job | Disposition | Why informational |
+|------|-----|-------------|-------------------|
+| mypy | `gates` | **ratchet** | 239 errors. Too large to fix now, too easy to grow — the count is held instead |
+| pip-audit | `supply-chain` | **expires** 2026-11-30 | Transitive deps (torch, protobuf) frequently have unfixed advisories; the date is the next quarterly dep review |
+| npm audit | `frontend` | **expires** 2026-11-30 | Dev dep CVEs (Vite ecosystem) rarely actionable |
+| SBOM generation | `supply-chain`, `frontend` | **expires** 2027-03-01 | Compliance artifact; generation failures shouldn't block |
+| macOS test cells | `test` | **conditional** | Informational on a push, blocking on a release tag (`strict-macos`) — the model the other four are measured against |
 
-**Promotion path:** when pre-existing errors are resolved, promote to blocking by removing `continue-on-error: true`. ESLint was promoted 30 Jun 2026 (zero problems, blocking since). Remaining targets: mypy first, pip-audit and npm audit when transitive dep noise is manageable.
+**Promotion path — superseded 3 Sep 2026 by a disposition, and this is why.**
+This section used to say "promote to blocking once pre-existing errors are
+resolved". No promotion ever came: the same sentence in §Desktop build job
+left the Swift suite unrun for three months while `v0.29.0` shipped on nine
+channels with it red. A soft gate with no expiry and no ceiling is
+indistinguishable from an ungated one.
+
+Every `continue-on-error` now declares a disposition in
+`docs/testing/soft-gates.json`, enforced by `scripts/check-gate-policy.py`:
+**ratchet** (a number that may not rise), **expires** (a date by which somebody
+decides again), or **conditional** (soft here, hard where it matters). ESLint's
+30 Jun 2026 promotion at zero problems remains the model for a gate that
+genuinely can go hard. Reasoning and the seven other gaps:
+[testing/gaps.md](testing/gaps.md).
 
 ## Release workflow
 

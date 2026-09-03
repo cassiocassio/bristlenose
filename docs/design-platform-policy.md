@@ -69,16 +69,27 @@ The Tahoe-specific issues already encountered:
 **Policy:**
 
 - Deployment target stays at LTS-1 (currently Sequoia/15.0). Bump when the current LTS becomes n-2.
-- **DECIDED 3 Sep 2026 — the floor does not move this quarter, and the adoption
-  maths is not the input.** macOS 27 ships this autumn, so Sequoia becomes n-2
-  and the trigger below fires on schedule. It is being held anyway, for reasons
-  that no percentage changes: the Sequoia sidebar work is **done, working and
-  fragile**, and re-opening it is a distraction from reaching public beta.
-  Don't re-raise this with better numbers — the numbers were never the blocker.
-- **The forcing function will be Apple Intelligence, not adoption.** Foundation
-  Models is macOS 26+, so when those features graduate from an AI-only scheme
-  into the shipping product, the floor moves with them. Expect that to arrive
-  before any n-2 argument does.
+- **DECIDED 3 Sep 2026 — the floor does not move this quarter.** macOS 27 ships
+  this autumn, so Sequoia becomes n-2 and the trigger below fires on schedule.
+  Held anyway: the Sequoia sidebar work is **done, working and fragile**, and
+  re-opening it is a distraction from reaching public beta.
+- **Adoption was the founding input, and is now one of several.** The ~90%
+  coverage figure is why the floor was set at n-1 in the first place, and that
+  reasoning stands. What changed is that it is no longer the only variable, so
+  a fresh percentage on its own does not reopen the decision. The live set,
+  with the direction each pushes:
+
+  | Variable | Direction |
+  |---|---|
+  | Adoption / OS release cadence | permits moving, as n-1 slides forward |
+  | Apple Intelligence maturity | **forces** moving — Foundation Models is macOS 26+ |
+  | SwiftUI-on-Mac fixes landing in 26+ | raises the *cost of staying*: fixes we forgo |
+  | Sidebar fragility + rework cost | resists moving |
+  | Runway to public beta | resists moving — decisive in Q3 2026 |
+
+  The last two carried this decision. Expect Apple Intelligence to carry the
+  next one, since it is the only variable that can make the move mandatory
+  rather than merely attractive.
 - The dual-target setup (15.0 for prod, 26.1 for Apple-Intelligence-only schemes) is intentional. **Add a comment block in `pbxproj`** explaining which scheme uses which target. Currently easy to bump one without the other; that's a bug waiting to happen.
 - WWDC week (June): install macOS developer beta on a non-primary machine. Build the desktop app. File any breakage as a tracked issue.
 - Public beta (July): ship a TestFlight build on the new SDK to at least one beta tester running the public beta.

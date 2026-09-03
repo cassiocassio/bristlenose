@@ -38,7 +38,8 @@ concurrency checking". **The desktop app does not.** Measured from
 |---|---|---|
 | `SWIFT_VERSION` | **5.0** | both targets |
 | `SWIFT_DEFAULT_ACTOR_ISOLATION` | **`nonisolated`** | project-level, inherited by both targets |
-| `SWIFT_APPROACHABLE_CONCURRENCY` | **YES** | both targets (overriding project-level `NO`) |
+| `SWIFT_APPROACHABLE_CONCURRENCY` | **NO** | resolved |
+| `MACOSX_DEPLOYMENT_TARGET` | **15.0** | resolved — decides which fixes are reachable |
 
 Consequences:
 
@@ -52,9 +53,28 @@ Consequences:
   or calling `MainActor.run()` redundant. The answer is recorded here so nobody
   re-derives it: annotations *are* needed, and `MainActor.run()` is *not*
   automatically redundant.
-- The project-level `NO` vs target-level `YES` on approachable concurrency is
-  ordinary Xcode layering, not drift. Debug and Release agree within each
-  target — there is no debug-vs-release concurrency split.
+- **Read these from `xcodebuild -showBuildSettings`, and say which scheme.**
+  The dual floor is *deliberate policy*, not drift: production ships **15.0**
+  (Sequoia, the n-1 rule) while the Apple-Intelligence schemes require **26.1**
+  because Foundation Models is macOS 26+. See `docs/design-platform-policy.md`
+  §"Pillar 3 — macOS". An earlier revision of this file reported a single floor
+  of 26.1 and approachable concurrency as `YES`; both came from hand-parsing
+  the pbxproj, which cannot tell you which config a scheme resolves to. One
+  command can:
+
+  ```
+  xcodebuild -showBuildSettings -project desktop/Bristlenose/Bristlenose.xcodeproj \
+    -target Bristlenose -configuration Release | grep -E 'SWIFT_|DEPLOYMENT'
+  ```
+
+- **The deployment floor is the setting that decides whether a "this is fixed
+  now" claim applies to us.** At **macOS 15.0**, most of the SwiftUI-on-Mac
+  improvements people cite — `List` performance, `TextEditor` rich text, native
+  `WebView`, `\.appearsActive` / `\.backgroundProminence` — landed in macOS 26
+  and are **not reachable** without a runtime gate. The retreat-to-AppKit
+  material is therefore *correct* for this codebase, not over-correction. The
+  three `if #available(macOS 26.0, *)` checks in the Swift source are load-
+  bearing, not dead code.
 
 **Tests are Swift Testing, not XCTest** (105 files vs 1), so `references/testing.md`
 — the largest reference — applies directly. Note the Swift suite is **ungated by

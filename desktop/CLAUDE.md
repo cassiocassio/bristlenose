@@ -61,10 +61,27 @@ while the iOS section of the same file says the opposite. Same author, same day,
 opposite advice per platform: that asymmetry is the two axes.
 
 A dated register of what SwiftUI still cannot do on macOS — each entry with a
-radar number, plus a separate list of complaints Apple has since *fixed*, so
-stale criticism doesn't get repeated — is kept in the maintainer's private
-notes (`/artifacts` → **Swift Corpus Register**). Ask before assuming a
-SwiftUI-on-Mac limitation is still current; several well-known ones are not.
+radar number, plus a separate list of complaints Apple has since *fixed* — is
+kept in the maintainer's private notes (`/artifacts` → **Swift Corpus
+Register**).
+
+**But check the fix against our deployment floor before acting on it.**
+Production ships `MACOSX_DEPLOYMENT_TARGET = 15.0` (Sequoia — the n-1 rule in
+`docs/design-platform-policy.md` §"Pillar 3"), while the Apple-Intelligence
+schemes sit at 26.1 because Foundation Models needs macOS 26+. That dual floor
+is deliberate; don't "fix" it.
+
+Most of the celebrated SwiftUI-on-Mac improvements landed in **macOS 26** —
+`List` performance, `TextEditor` rich text, native `WebView`,
+`\.appearsActive` / `\.backgroundProminence`. At a 15.0 production floor those
+are unreachable without an `if #available` gate, so "SwiftUI can do that now"
+is usually true of the *platform* and false of *this app's shipping scheme*.
+The AppKit fallback stays correct here for longer than the general commentary
+suggests.
+
+Read the floor with `xcodebuild -showBuildSettings -target … -configuration …`
+and name the scheme. Hand-parsing the pbxproj gives the wrong answer, because
+it cannot tell you which of the two floors a given scheme resolves to.
 
 ## Native primitives first — Swift isn't a blank web canvas
 

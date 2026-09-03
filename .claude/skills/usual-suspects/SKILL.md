@@ -99,8 +99,34 @@ Check which areas are touched (file extensions, directory prefixes, content):
 | Test files touched, new public API without tests, or any `.swift` change | `what-would-james-bach-say` (see three-way selector below) |
 | try/except or catch blocks, fallback logic, subprocess/shellouts, JSON serialization, or E2E/Playwright specs touched | `silent-failure-hunter` |
 | `.github/workflows/**` or other CI/release config touched | `security-review` + `silent-failure-hunter` (**CI workflow lens** — see below) |
+| New file, core data path, or >150 changed lines — and on `--fresh-eyes` | **fresh-eyes lane** (see below) |
 
 **`code-review` always runs.** The others run only if their area is touched.
+
+### The fresh-eyes lane — deliberately context-free
+
+Not a named agent. Spawn a `general-purpose` agent and **instruct it to read
+nothing but the code under review** — no `CLAUDE.md`, no `MEMORY.md`, no design
+docs, no `.claude/` skills. Ask for the same finding schema as everyone else.
+
+This looks like the obvious lane to cut and it is not. The project-context
+agents know the codebase's conventions, and knowing a convention is what stops
+you questioning it. A reviewer with no context has nothing to defer to, so it
+asks whether a call is safe at all rather than whether it matches house style —
+which is how it reaches platform-level hazards the informed lanes read straight
+past.
+
+Its cost profile is the worst of the three (most tokens per unique finding), so
+gate it on substantial changes rather than running it always. But when it runs,
+**protect its uniques in adjudication** — a finding no other lane produced is
+not a weaker finding, and 4.6c's precondition constraint exists partly for it.
+
+**The three lanes are a partition, not a vote.** Repo-context lanes
+(`code-review` and friends) own contracts, policies, conventions and
+sibling-file consistency. Specialist lanes (`what-would-gruber-say`,
+`perf-review`, with the vendored skills) own craft depth. The fresh-eyes lane
+owns platform reality. They find different *classes* of defect; expect the
+overlap between them to be well under half.
 
 ### James Bach three-way selector
 
@@ -232,7 +258,26 @@ For generic SwiftUI craft (deprecated API, view composition, data flow,
 navigation, performance, hygiene), read the relevant reference files under
 .claude/skills/swiftui-pro/references/*.md before flagging. It is iOS-first:
 project hard rules (MEMORY.md / CLAUDE.md) and macOS idiom win on any conflict.
+
+For concurrency specifically (actors, task groups, cancellation, Sendable,
+bridging, async tests), read .claude/skills/swift-concurrency-pro/references/*.md
+instead — the specialist source, platform-neutral. Start at hotspots.md.
 ```
+
+**Mac taste has its own source.** `mac-arsed-mac-app` (vendored, MIT, Bart
+Reardon) is the judgement layer for Mac craft — menus, keyboard, windows,
+selection, drag and drop. `what-would-gruber-say` reads it directly. Its
+`reference/swiftui-appkit.md` is the first stop for any selection/focus/sidebar
+finding. It does **not** satisfy the HIG citation rule — the corpus at
+`~/.local/share/hig-corpus/` remains the citable authority for what Apple says.
+
+**Two skills, one rule.** `swift-concurrency-pro` (also vendored, also Paul
+Hudson) is the concurrency specialist and **outranks swiftui-pro on concurrency
+questions**. They genuinely disagree in one place: swiftui-pro says *never* use
+GCD; swift-concurrency-pro allows it in low-level, interop, and perf-critical
+synchronous code and says not to flag it. There are ~16 GCD call sites in the
+shipping Swift source — an agent applying swiftui-pro alone would flag them all.
+Take the specialist's line.
 
 `swiftui-pro` is a **knowledge source, not a reviewer persona** — it does not
 fan out as its own agent and does not appear in the agent-selection table. It
@@ -255,9 +300,19 @@ swiftui-pro-backed finding that is real but over-engineered still gets William's
 Once all agents return, produce a **single consolidated report**. This is the
 hard part — don't just concatenate. Do this:
 
+**Consolidation stays in the main loop, deliberately** — the accumulated
+context (the diff, the greps, the coverage gaps, prior log entries) is the whole
+reason it works. A subagent handed N findings has none of it and will produce a
+tidy merged list with the interactions still buried in it.
+
 1. **Deduplicate** — if two agents flag the same issue (e.g. code-review and
    ux-critique both notice a missing keyboard handler), merge into one finding
-   and note which agents flagged it.
+   and note which agents flagged it. **Record the agent count, and never use it
+   as a filter.** Agreement is weak evidence a finding is real; disagreement is
+   no evidence it isn't. Expect most findings to come from exactly one agent —
+   that is the lanes working as designed, not noise. Dropping single-agent
+   findings, or ranking by how many agents concurred, discards the tail, and
+   the tail is where the cross-file and platform defects live.
 
 2. **Resolve contradictions** — if agents disagree (e.g. security-review wants
    stricter validation, code-review questions whether it's needed), present
@@ -311,43 +366,107 @@ yourself — those are the user's call, applied in Step 5.
 
 If the file does not yet exist, create it with the header from the schema below.
 
-## Step 4.6: William's parsimony pass
+## Step 4.6: Adjudication pipeline
 
-Before showing the report to the user, run the consolidated finding list
-through the **what-would-william-of-ockham-say** agent in adjudicator mode
-(Mode A). Spawn it via `Agent` with `subagent_type:
-"what-would-william-of-ockham-say"` and pass the consolidated report as
-input.
+Three stages, in this order, before the report reaches the user. **The order is
+load-bearing.** William prunes; running him first compounds a bias that was
+measured rather than theorised — see "Why this order" at the end.
 
-William's job at this stage is to:
+### 4.6a — Reachability pass (main loop, no agent)
 
-1. **Filter every finding** as `real` / `edge` / `speculative` —
-   shrinking the user's triage list from "everything every agent
-   raised" to "the things actually worth deciding on."
-2. **Pick the parsimonious fix** when multiple fixes have been
-   proposed for the same problem, citing the heuristic (Rule of Three,
-   simple-vs-easy, Hoare's test, Metz's wrong abstraction, etc.).
-3. **Cluster duplicates** — agreement across agents is signal worth
-   surfacing.
-4. **Flag bikeshed crowding** — if the report devotes disproportionate
-   weight to trivial findings while a hard one is under-discussed,
-   William names *Parkinson's Law of Triviality* and points at what's
-   been crowded out.
+For every finding, establish three things and write them into the finding:
 
-William returns an **annotated version** of the consolidated list
-(per-finding annotation + a short summary). Show the annotated version
-to the user in Step 5, not the raw consolidated list — one report, not
-two.
+- **Live or latent?** Is the failing path reachable from a real call site
+  *today*, or does it need a change nobody has made? Name the call site. A
+  defect that becomes live the day someone edits a caller is real and
+  non-urgent — say both.
+- **Blast radius.** What does the *fix* touch? `grep` the symbols it would
+  change. A one-line fix that alters a contract six files observe is not a
+  one-line fix.
+- **Guarded or not?** Does a test assert the behaviour the fix changes? A
+  finding whose contract nothing pins is **riskier** to act on, not safer.
 
-**Skip William** when: only one agent ran (nothing to adjudicate), the
-consolidated list has fewer than 3 findings (no signal worth filtering),
-or the user explicitly invoked `--no-william`. Note the skip in the
-report header so future passes know whether William's absence was
-deliberate.
+Re-rate severity here, and say so explicitly when you do — "raised from medium:
+reachable from ContentView:1946, and no test pins the contract."
 
-William is a signal, not a gate. The user still decides what to act on,
-park, or ignore — William's annotations are pre-triage advice, not
-verdicts.
+**Why this stage exists.** Reviewers systematically under-rate findings that
+require cross-file knowledge: the finding that needs you to read a second file
+to see the bug arrives with the lowest confidence and the smallest severity,
+because from inside one file it looks conditional. Reachability is the only
+stage that can push a severity **up**. Without it, every remaining stage pushes
+down and the pipeline compounds in one direction.
+
+### 4.6b — Compose-check (one agent, adversarial)
+
+Spawn **one** agent over the *patch set*, not the finding list. Its only
+question: **if all of these were applied, do they interact?**
+
+It must return:
+- **Ordering constraints** — "apply N before M, or M deletes data."
+- **Pairs that must land together** — both rewrite the same construct.
+- **Individually safe, jointly destructive pairs** — the whole reason for this
+  stage.
+
+This is not William's job and it is not optional. Two individually-correct
+findings can combine into data loss, and that is invisible to every reviewer
+that reviewed the *file*, because none of them reviewed the *diff*. If a
+finding's fix relies on an invariant that another finding proves is broken,
+this stage is the only place that gets caught.
+
+Skip only when fewer than 3 findings propose code changes.
+
+### 4.6c — William's parsimony pass
+
+Run the annotated list through **what-would-william-of-ockham-say** in
+adjudicator mode (Mode A). Spawn via `Agent` with `subagent_type:
+"what-would-william-of-ockham-say"`, passing the consolidated report *plus*
+the 4.6a reachability annotations.
+
+William's job here:
+
+1. **Pick the parsimonious fix** when several have been proposed for one
+   problem, citing the heuristic (Rule of Three, simple-vs-easy, Hoare's test,
+   Metz's wrong abstraction).
+2. **Flag over-engineering** — real problem, fix three times bigger than it
+   needs to be. This is his strongest output.
+3. **Cluster duplicates** — agreement across agents is signal worth surfacing.
+4. **Flag bikeshed crowding** — disproportionate weight on trivia while a hard
+   finding goes under-discussed. He names *Parkinson's Law of Triviality* and
+   points at what got crowded out.
+5. **Filter** `real` / `edge` / `speculative` — **under one constraint below.**
+
+**The constraint: to downgrade a finding, William must name the specific
+precondition he believes will not occur.** "Speculative" as a bare verdict is
+unfalsifiable and is not accepted. "This needs a non-APFS volume, which no
+researcher will have" is a claim the user can check and reject. A finding
+carrying a concrete failure scenario and a named call site from 4.6a cannot be
+downgraded without engaging that scenario.
+
+This constraint exists because the most valuable findings share a profile —
+single-arm, cross-file, conditional — which is *also* what over-engineering
+looks like from the outside. A conjunction of preconditions is exactly what a
+razor cuts, and twice now the best finding in a review has had that shape.
+
+**Scope limit.** William adjudicates *fix size and proportion*, not *finding
+validity* for anything with a concrete reproduction. He does not adjudicate
+SwiftUI or concurrency correctness — vendored-skill-backed findings are
+evidence, not votes (see the adjudication note in Step 3).
+
+**Skip William** when only one agent ran, the list has fewer than 3 findings,
+or the user passed `--no-william`. Note the skip in the report header.
+
+William is a signal, not a gate.
+
+### Why this order
+
+Consolidation and reachability stay in the **main loop** because accumulated
+context is the point — the file, the ground truth, the blast-radius greps and
+the coverage gaps all in one place. The two agent stages are agents precisely
+because **independence** is the point: the compose-check wants fresh adversarial
+eyes on the diff, and William is useful exactly because he is not invested in
+the findings.
+
+Show the user the final annotated list — one report, not four.
 
 ## Step 5: Triage and update log
 

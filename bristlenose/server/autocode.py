@@ -473,12 +473,31 @@ async def run_autocode_job(
                 job.llm_provider or None, first_error
             ).value
             job.error_message = str(first_error)
-        job.status = "failed" if processed_count == 0 and batch_errors else "completed"
+        nothing_landed = processed_count == 0 and bool(batch_errors)
+        job.status = "failed" if nothing_landed else "completed"
         job.processed_quotes = processed_count
         job.proposed_count = proposed_count
         job.input_tokens = llm_client.tracker.input_tokens
         job.output_tokens = llm_client.tracker.output_tokens
-        job.completed_at = datetime.now(timezone.utc)
+        # `completed_at` is NOT a timestamp of "the job stopped" — it is the
+        # applied watermark, and three things read it that way. It gates
+        # `reapply_active_frameworks`' ever-applied set; it is the cutoff
+        # `reapply_to_new_quotes` codes the delta *after*; and its presence is
+        # how `reconcile_orphaned_jobs` tells an initial-apply orphan from an
+        # interrupted catch-up.
+        #
+        # So stamping it on a job that coded nothing is worse than cosmetic: the
+        # framework joins the maintained set having applied nothing, and every
+        # future catch-up codes only sessions imported *since the failure* — the
+        # quotes it was installed for sit before the watermark and are never
+        # revisited. Left NULL, the job is exactly the shape the rest of the
+        # system already calls an initial-apply orphan, and a retry codes the
+        # whole corpus as it should.
+        #
+        # A genuine partial keeps its stamp: some quotes really were coded, so
+        # the delta is the right unit of work from here.
+        if not nothing_landed:
+            job.completed_at = datetime.now(timezone.utc)
         db.commit()
 
     except Exception as exc:

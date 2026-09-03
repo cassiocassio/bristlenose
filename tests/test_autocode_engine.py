@@ -376,6 +376,101 @@ class TestRunAutoCodeJob:
         assert job.failure_kind == LLMFailureKind.OUT_OF_CREDIT.value
         db.close()
 
+    def test_a_job_that_coded_nothing_leaves_the_watermark_unset(
+        self, project_with_garrett
+    ) -> None:
+        """``completed_at`` is the APPLIED watermark, not a stop time.
+
+        Three readers treat it that way: ``reapply_active_frameworks`` gates its
+        ever-applied set on it, ``reapply_to_new_quotes`` codes only sessions
+        imported after it, and ``reconcile_orphaned_jobs`` uses its presence to
+        tell an initial-apply orphan from an interrupted catch-up. Stamping it
+        on a job that coded nothing would enrol the framework in maintenance
+        having applied nothing — and every later catch-up would then skip the
+        very quotes it was installed for, because they predate the failure.
+        """
+        project_id, framework_id, db_factory = project_with_garrett
+
+        with _patch_llm(AsyncMock(side_effect=RuntimeError("LLM API error"))):
+            asyncio.run(
+                run_autocode_job(db_factory, project_id, framework_id, _mock_settings())
+            )
+
+        db = db_factory()
+        job = db.query(AutoCodeJob).filter_by(
+            project_id=project_id, framework_id=framework_id
+        ).first()
+        assert job is not None
+        assert job.completed_at is None
+        db.close()
+
+    def test_a_framework_that_coded_nothing_is_not_in_the_maintained_set(
+        self, project_with_garrett
+    ) -> None:
+        """The consequence of the watermark, where it is actually read.
+
+        ``reapply_active_frameworks`` gates on ``completed_at IS NOT NULL``.
+        A totally-failed job that stamped one would join the maintained set
+        having applied nothing — and ``reapply_to_new_quotes`` codes only
+        sessions imported *after* the watermark, so the quotes the framework was
+        installed for would sit before it and never be revisited. Silently: no
+        error, just a framework that is permanently, invisibly uncoded.
+        """
+        project_id, framework_id, db_factory = project_with_garrett
+
+        with _patch_llm(AsyncMock(side_effect=RuntimeError("no credit"))):
+            asyncio.run(
+                run_autocode_job(db_factory, project_id, framework_id, _mock_settings())
+            )
+
+        # No LLM patch: being in the set at all would mean an LLM call, and a
+        # MagicMock client would make that obvious rather than quietly passing.
+        results = asyncio.run(
+            reapply_active_frameworks(db_factory, project_id, _mock_settings())
+        )
+        assert results == {}, "a framework that coded nothing must not be maintained"
+
+    def test_a_retry_after_total_failure_codes_the_whole_corpus(
+        self, project_with_garrett
+    ) -> None:
+        """Second run over the same row: everything coded, watermark set.
+
+        Not the route guard — that is ``test_dead_job_can_be_rerun`` in
+        tests/test_serve_autocode_api.py, which pins that ``start_autocode_job``
+        409s a *completed* job and discards a *failed* one. This is the other
+        half of the recovery story: a fresh run over the same row produces
+        proposals for the whole corpus and stamps the watermark, so maintenance
+        picks the framework up from here.
+        """
+        project_id, framework_id, db_factory = project_with_garrett
+
+        with _patch_llm(AsyncMock(side_effect=RuntimeError("no credit"))):
+            asyncio.run(
+                run_autocode_job(db_factory, project_id, framework_id, _mock_settings())
+            )
+
+        # Now it works — the same framework, run again.
+        async def ok(system_prompt, user_prompt, response_model, **kwargs):
+            import re
+            n = len(re.findall(r"^\d+\. \[", user_prompt, re.MULTILINE))
+            return _make_batch_result(n, "user need", 0.9)
+
+        with _patch_llm(AsyncMock(side_effect=ok)):
+            asyncio.run(
+                run_autocode_job(db_factory, project_id, framework_id, _mock_settings())
+            )
+
+        db = db_factory()
+        job = db.query(AutoCodeJob).filter_by(
+            project_id=project_id, framework_id=framework_id
+        ).first()
+        assert job is not None
+        assert job.status == "completed"
+        assert job.proposed_count > 0
+        # And the watermark is set now, so maintenance picks it up from here.
+        assert job.completed_at is not None
+        db.close()
+
     def test_unrecognized_tag_name_skipped(self, project_with_garrett) -> None:
         """Unknown tag from LLM is skipped — no ProposedTag created."""
         project_id, framework_id, db_factory = project_with_garrett

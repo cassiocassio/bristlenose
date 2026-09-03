@@ -582,6 +582,7 @@
     "appliedToQuotes_few": "pou\u017eito na {{count}} citace v projektu {{project}}",
     "appliedToQuotes_many": "pou\u017eito na {{count}} citace v projektu {{project}}",
     "appliedToQuotes_other": "pou\u017eito na {{count}} citac\u00ed v projektu {{project}}",
+    "noneApplied": "nepou\u017eito v projektu {{project}}",
     "tentativeCount_few": "{{count}} P\u0159edb\u011b\u017en\u00e9",
     "tentativeCount_many": "{{count}} P\u0159edb\u011b\u017en\u00e9",
     "tentativeCount_one": "{{count}} P\u0159edb\u011b\u017en\u00e9",

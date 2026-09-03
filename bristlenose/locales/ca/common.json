@@ -539,6 +539,7 @@
     "tagCount_other": "{{count}} etiquetes",
     "appliedToQuotes_one": "aplicades a {{count}} cita a {{project}}",
     "appliedToQuotes_other": "aplicades a {{count}} cites a {{project}}",
+    "noneApplied": "cap aplicada a {{project}}",
     "tentativeCount_one": "{{count}} Provisional",
     "tentativeCount_other": "{{count}} Provisional",
     "browseTitle": "Biblioteca de llibres de codis",

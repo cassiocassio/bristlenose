@@ -512,6 +512,7 @@
     "uninstallDiscards": "\u4ee5\u4e0b\u9805\u76ee\u5c07\u88ab\u6368\u68c4\uff1a",
     "tagCount_other": "{{count}} \u500b\u6a19\u7c64",
     "appliedToQuotes_other": "\u5df2\u5957\u7528\u65bc {{project}} \u7684 {{count}} \u5247\u5f15\u8ff0",
+    "noneApplied": "\u672a\u5957\u7528\u65bc {{project}}",
     "tentativeCount_other": "{{count}} \u66ab\u5b9a",
     "browseTitle": "編碼簿庫",
     "browseSubtitle": "將編碼簿安裝到專案中，或自行建立",

@@ -537,6 +537,7 @@
     "tagCount_other": "{{count}} etiquetas",
     "appliedToQuotes_one": "aplicadas a {{count}} cita en {{project}}",
     "appliedToQuotes_other": "aplicadas a {{count}} citas en {{project}}",
+    "noneApplied": "ninguna aplicada en {{project}}",
     "tentativeCount_one": "{{count}} Tentativa",
     "tentativeCount_other": "{{count}} Tentativa",
     "browseTitle": "Biblioteca de libros de códigos",

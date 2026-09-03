@@ -593,6 +593,7 @@
     "appliedToQuotes_few": "zastosowano do {{count}} cytat\u00f3w w {{project}}",
     "appliedToQuotes_many": "zastosowano do {{count}} cytat\u00f3w w {{project}}",
     "appliedToQuotes_other": "zastosowano do {{count}} cytatu w {{project}}",
+    "noneApplied": "nie zastosowano w {{project}}",
     "tentativeCount_few": "{{count}} Wst\u0119pne",
     "tentativeCount_many": "{{count}} Wst\u0119pne",
     "tentativeCount_one": "{{count}} Wst\u0119pne",

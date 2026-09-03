@@ -537,6 +537,7 @@
     "tagCount_other": "{{count}} tagger",
     "appliedToQuotes_one": "brukt p\u00e5 {{count}} sitat i {{project}}",
     "appliedToQuotes_other": "brukt p\u00e5 {{count}} sitater i {{project}}",
+    "noneApplied": "ikke brukt i {{project}}",
     "tentativeCount_one": "{{count}} Forel\u00f8pig",
     "tentativeCount_other": "{{count}} Forel\u00f8pig",
     "browseTitle": "Kodebokbibliotek",

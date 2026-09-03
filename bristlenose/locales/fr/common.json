@@ -537,6 +537,7 @@
     "tagCount_other": "{{count}} \u00e9tiquettes",
     "appliedToQuotes_one": "appliqu\u00e9es \u00e0 {{count}} citation dans {{project}}",
     "appliedToQuotes_other": "appliqu\u00e9es \u00e0 {{count}} citations dans {{project}}",
+    "noneApplied": "aucune appliqu\u00e9e dans {{project}}",
     "tentativeCount_one": "{{count}} Tentative",
     "tentativeCount_other": "{{count}} Tentative",
     "browseTitle": "Bibliothèque de grilles de codage",

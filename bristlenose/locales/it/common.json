@@ -537,6 +537,7 @@
     "tagCount_other": "{{count}} tag",
     "appliedToQuotes_one": "applicati a {{count}} citazione in {{project}}",
     "appliedToQuotes_other": "applicati a {{count}} citazioni in {{project}}",
+    "noneApplied": "nessuno applicato in {{project}}",
     "tentativeCount_one": "{{count}} Provvisori",
     "tentativeCount_other": "{{count}} Provvisori",
     "browseTitle": "Libreria dei libri dei codici",

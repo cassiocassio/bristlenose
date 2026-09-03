@@ -512,6 +512,7 @@
     "uninstallDiscards": "\ub2e4\uc74c \ud56d\ubaa9\uc774 \uc0ad\uc81c\ub429\ub2c8\ub2e4:",
     "tagCount_other": "\ud0dc\uadf8 {{count}}\uac1c",
     "appliedToQuotes_other": "{{project}}\uc758 \uc778\uc6a9 {{count}}\uac1c\uc5d0 \uc801\uc6a9\ub428",
+    "noneApplied": "{{project}}\uc5d0 \uc801\uc6a9\ub418\uc9c0 \uc54a\uc74c",
     "tentativeCount_other": "{{count}} \uc7a0\uc815",
     "browseTitle": "코드북 라이브러리",
     "browseSubtitle": "코드북을 프로젝트에 설치하거나 직접 만드십시오",

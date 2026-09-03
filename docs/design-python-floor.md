@@ -22,8 +22,20 @@ minimal — go to the lowest non-EOL version, which also happens to capture ever
 measurable gain but one.
 
 **3.12 buys exactly one thing over 3.11** — `scipy` 1.17.1 → 1.18.1, macOS only,
-as a transitive of `mlx-whisper` — and costs every Debian bookworm box. Not a
-trade worth making today.
+as a transitive of `mlx-whisper`. The cost side is near-empty too, and an earlier
+draft of this doc inflated it: 3.12 would additionally exclude Debian bookworm
+(`python3` 3.11.2), but bookworm's **regular security support ended 11 June
+2026** (Debian's own LTS wiki; it is now community-LTS to 30 June 2028), and the
+user it would exclude is someone who refuses snaps, refuses `uv`/`pyenv`/a venv
+on a newer interpreter, stays on oldstable-LTS, and analyses research interviews
+for a living. That intersection is approximately nobody. *"It costs bookworm"* is
+not the reason to prefer 3.11.
+
+The reason is the house principle, applied to the macOS deployment floor on
+3 September 2026 and applying identically here: **keep the floor as wide as
+viable unless something forces it up.** Nothing forces this one up at all — so
+move it the minimum distance that stops us claiming an EOL interpreter, and no
+further.
 
 ### For the Held register (`docs/dependency-premortem-log.md`)
 
@@ -33,6 +45,51 @@ trade worth making today.
 
 It belongs in the Held register rather than the pinning register because the
 reason is an ecosystem date, not one of our own.
+
+## The more urgent problem is the ceiling, not the floor
+
+**Python 3.15 releases on 1 October 2026** (PEP 790) — 28 days away, and four
+weeks *before* 3.10's EOL. On it, `pip install bristlenose` does not degrade; it
+**fails outright**:
+
+```
+ERROR: Ignored the following versions that require a different python version:
+  2.2.363 Requires-Python >=3.10,<3.15; 2.2.364 Requires-Python >=3.10,<3.15
+ERROR: No matching distribution found for presidio-analyzer>=2.2.362
+```
+
+`presidio-analyzer` and `presidio-anonymizer` are **core** dependencies (stage 7
+PII removal), and both 2.2.364 declare `requires-python = ">=3.10,<3.15"`. No
+version satisfying our `>=2.2.362` floor admits 3.15, so the resolver has
+nothing to pick and the whole install dies. Reproduced above with
+`pip --dry-run --python-version 3.15`.
+
+**presidio lags a Python release by roughly eight months.** 3.14 shipped
+7 Oct 2025; presidio capped `<3.14` in 2.2.360 (9 Sep 2025) and only floated to
+`<3.15` in 2.2.363 on 28 June 2026 — 8.7 months later. The same lag applied to
+3.15 puts presidio's admission around mid-2027.
+
+So from 1 October the supported band is squeezed at both ends at once, and the
+end we do not control is the one that bites:
+
+| | low end | high end |
+|---|---|---|
+| today | 3.10, EOL 31 Oct 2026 | 3.14 |
+| from 1 Oct 2026 | 3.10 EOL — ours to fix, three config lines | 3.15 exists and cannot install — presidio's to fix, ~mid-2027 |
+
+**The channel that breaks first is Fedora Copr** — already the channel running
+ahead of the floor. `.copr/Makefile` pins `python3.14`, and Fedora's Python 3.15
+system-wide change is proposed for **F45** (F44 stays on 3.14). When that chroot
+lands the pin fails loudly by design, and the obvious fix — bumping it to
+`python3.15` — then fails on presidio inside mock, with the same
+`from versions: none` shape `docs/design-fedora-packaging.md` already documents
+for the architecture mismatch.
+
+Nothing to do today but record it. Suggested Held-register row:
+
+| Held bump | Cluster | Reason (blocks now) | Release-predicate (lifts it) | Last watched | Status |
+|---|---|---|---|---|---|
+| **Python 3.15 support** | PII / presidio | `presidio-analyzer` + `presidio-anonymizer` 2.2.364 declare `requires-python = ">=3.10,<3.15"`. Both are core deps, so on 3.15 the whole install fails at resolve — not a degraded path, no install at all. 3.15 lands **1 Oct 2026**; presidio historically admits a new Python ~8.7 months late | presidio ships a release whose `requires-python` upper bound admits 3.15 (`<3.16`). Then add a 3.15 CI cell and re-pre-mortem. Watch **Fedora F45** as the first channel to force the question — `.copr/Makefile` pins `python3.14` and will need bumping when that chroot lands | 2026-09-03 | held |
 
 ## The finding that changes the question
 
@@ -171,12 +228,20 @@ The matrix is `["3.10","3.11","3.12","3.13","3.14"] × [ubuntu-latest,
 macos-latest]` — **ten cells, not the eight the policy doc says**. From run
 `33735809497`, the last full green matrix:
 
-- Ten cells total **61 minutes** of runner time.
-- The two 3.10 cells are 7 min (Ubuntu) and 10 min — **17 minutes, 28% of matrix
-  time from 20% of the cells**. 3.10 is consistently the slowest row; the
-  3.12–3.14 Ubuntu cells run in 4 minutes.
-- The repository is public, so Actions minutes are free — the cost is wall-clock
-  and queue depth on every push, not billing.
+The two available figures differ by 5×, so it matters which one is meant — and
+an earlier draft of this doc quoted the larger one while naming the smaller one
+as the cost, which invites reading a 3-minute saving as a 17-minute one:
+
+- **Runner-minutes: 18 of 68 (26%).** The repository is public, so Actions
+  minutes are free. This number costs nothing.
+- **Wall-clock on the critical path: 3m05s of 44m (7%).** The cells run
+  concurrently. `3.10 macos` is the last cell to finish (09:56:34); drop both
+  3.10 cells and the matrix completes at 09:53:29 when `3.13 macos` lands.
+
+So dropping 3.10 saves about three minutes per push, not seventeen. The matrix
+is dominated by macOS runner queueing — a 17-minute gap between the last Ubuntu
+cell finishing (09:22:51) and the last macOS cell starting (09:47:30) — which
+dropping 3.10 does not touch. **This is not a reason to move the floor early.**
 
 `tests/test_packaging_artifacts_coverage.py` guards its `tomllib` import with
 `pytest.importorskip` (stdlib only from 3.11), so that module **skips entirely
@@ -252,7 +317,8 @@ logs for the 3.10 cells — every package matched**.
    3.10–3.13"* and calls 3.13 the ceiling; the matrix has run 3.10–3.14 since
    28 August. The Triage-boundary section says *"8-cell Python matrix"*; it is
    ten.
-5. **presidio's `<3.15` ceiling is recorded nowhere.** `presidio-analyzer` and
+5. **presidio's `<3.15` ceiling is recorded nowhere** — see *The more urgent
+   problem is the ceiling* above; this is the finding to act on.** `presidio-analyzer` and
    `presidio-anonymizer` 2.2.364 both declare `requires-python = ">=3.10,<3.15"`
    — the **nearest real ceiling on the entire project**, in neither register.
    Not hypothetical: 2.2.360–2.2.362 were capped `<3.14`, and only 2.2.363 on

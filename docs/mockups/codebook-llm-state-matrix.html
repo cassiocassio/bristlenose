@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Codebook × LLM — the state engine</title>
 <style>
-  /* An AUDIT, not a design. Every state and every rendering below was read out
-     of the code at HEAD (3 Sep 2026) and carries a file:line receipt. The last
-     section is the gap list; nothing here proposes a treatment. */
+  /* Audit (§1-5) plus the decisions taken against it (§6-8). Current behaviour
+     carries a file:line receipt; decided renderings do not, because nothing is
+     built. Read §7 before building — item 1 gates every other rendering. */
   :root{
     --sf:-apple-system,"SF Pro Text",system-ui,sans-serif;
     --mono:ui-monospace,"SF Mono",Menlo,monospace;
@@ -75,6 +75,8 @@
   ol.gaps b{color:#fff;}
 
   /* rendered specimens */
+  .specimens{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+             gap:12px;margin-top:12px;}
   .rowspec{background:var(--card-bg);border:1px solid var(--card-hair);border-radius:8px;
            padding:9px 11px;color:var(--label);font-size:12px;margin-top:6px;}
   .rowspec .t{font-weight:600;font-size:12.5px;}
@@ -86,10 +88,11 @@
 
   <h1>Codebook &times; LLM — the state engine</h1>
   <p class="sub">
-    An <b>audit</b>, read out of the code at HEAD on 3&nbsp;Sep&nbsp;2026, not a design.
-    It enumerates the two state axes, shows which combinations a researcher can reach,
-    says what each one actually renders, and ends with the gaps. Every claim carries a
-    <code>file:line</code>. Nothing here proposes a treatment — that is the next step.
+    Two state axes, the combinations a researcher can reach, what each one renders,
+    and — from &sect;6 — <b>what was decided</b> about them. Every claim about current
+    behaviour was read out of the code at HEAD on 3&nbsp;Sep&nbsp;2026 and carries a
+    <code>file:line</code>; the decisions carry no receipt because nothing is built
+    yet. &sect;7 is what building them costs, and &sect;8 is what is still open.
   </p>
   <hr class="rule">
   <div class="chrome"><button id="lightBtn" class="on">Light</button><button id="darkBtn">Dark</button></div>
@@ -147,28 +150,49 @@
   <!-- ============================================================ -->
   <h2>2 &nbsp;Axis B — codebook state (per framework)</h2>
   <p class="sub">
-    Two independent sub-axes that the UI conflates. <b>Installed</b> means only
-    &ldquo;has groups linked in this project&rdquo; — and
-    <code>importCodebookTemplate</code> runs <i>before</i> the job, so a codebook is
-    installed whatever the coding then does. <b>Job state</b> is the second sub-axis,
-    and the lens reads none of it.
+    <b>Decided:</b> a codebook is <i>installed or not installed</i>, and that is very
+    nearly all of it. A run is a <b>per-project activity</b>, not a property of the
+    codebook — so it belongs where per-project activity already lives, and the
+    codebook card carries at most an acknowledgement that the click landed.
+  </p>
+  <p class="sub">
+    The codebase already states this rule, in the <code>copying</code> case of
+    <code>ProjectSubtitle</code>: the toolbar copy pill was <b>removed</b> because
+    &ldquo;copy is a per-project op, so it lives on the row; the title-bar pill is
+    reserved for app-global ops&hellip; Mac direct manipulation: feedback appears on
+    the row you dropped onto.&rdquo; AutoCode is the same shape. Out-of-credit, being
+    genuinely app-global, is the pill&rsquo;s business and nobody else&rsquo;s.
   </p>
   <table>
-    <tr><th style="width:22%">Sub-axis</th><th style="width:30%">Values</th><th>Read by the codebook lens?</th></tr>
+    <tr><th style="width:22%">Sub-axis</th><th style="width:28%">Values</th><th>Where it belongs</th></tr>
     <tr><td><b>Installed</b></td><td>no / yes</td>
-        <td><span class="ok">yes</span> — drives Install vs Uninstall<span class="ref">CodebookV2.tsx:266</span></td></tr>
+        <td><span class="ok">the card</span> — Install vs Uninstall<span class="ref">CodebookV2.tsx:266</span></td></tr>
     <tr><td><b>Enabled</b></td><td>on / off</td>
-        <td><span class="ok">yes</span> — switch + <code>pageoff</code> wash<span class="ref">CodebookV2Sidebar.tsx:127</span></td></tr>
+        <td><span class="ok">the card</span> — switch + <code>pageoff</code> wash<span class="ref">CodebookV2Sidebar.tsx:127</span></td></tr>
     <tr><td><b>Undecided proposals</b></td><td>0 / n</td>
-        <td><span class="ok">yes</span> — &ldquo;· n undecided&rdquo; + Review door<span class="ref">CodebookV2Page.tsx:195</span></td></tr>
-    <tr class="dead"><td><b>Job state</b></td>
-        <td><code>pending · running · completed&nbsp;(full) · completed&nbsp;(partial) · failed · cancelled</code></td>
-        <td><span class="bad">NO — zero call sites.</span> <code>getAutoCodeStatus</code>
-            is never called from the lens, its navigator, or its page. The whole
-            sub-axis is invisible.<span class="tag t-gap">gap 1</span></td></tr>
+        <td><span class="ok">the card</span> — &ldquo;· n undecided&rdquo; + Review door<span class="ref">CodebookV2Page.tsx:195</span></td></tr>
+    <tr><td><b>Run in flight</b></td><td><code>pending · running</code></td>
+        <td>Project row + the chip. The card echoes it as
+            <code>✦ Autocoding…</code> and <b>no more</b> — the acknowledgement that
+            the click landed, on the thing that was clicked.</td></tr>
+    <tr><td><b>Run outcome</b></td><td><code>failed · cancelled</code></td>
+        <td>The project status popover — its stated job is
+            &ldquo;telling an alpha tester what failed&rdquo;.</td></tr>
+    <tr><td><b>Coverage shortfall</b></td><td><code>completed, processed &lt; total</code></td>
+        <td><b>The card</b>, and only because it is a fact about this codebook in this
+            project that outlives the run. See §7.</td></tr>
   </table>
 
-  <!-- ============================================================ -->
+  <h3>The one thing the split does not cover</h3>
+  <p class="sub">
+    It handles <b>activity</b> cleanly and leaves <b>residue</b> homeless. A run in
+    flight has the row and the chip; a run that failed has the toast — and then the
+    toast goes away. What remains is a codebook that is installed and has coded
+    nothing, and under the pure model nothing anywhere says so. That residue is the
+    subject of §7, and it is the only reason the card carries anything beyond
+    Install/Uninstall at all.
+  </p>
+
   <h2>3 &nbsp;The engine</h2>
   <p class="sub">
     One click, four terminal states. The LLM condition decides which. Red outlines are
@@ -274,52 +298,89 @@
   </div>
 
   <!-- ============================================================ -->
-  <h2>4 &nbsp;What the researcher actually sees</h2>
+  <h2>4 &nbsp;What the researcher sees — today, and decided</h2>
   <p class="sub">
-    The same four terminal states, rendered. This is the whole vocabulary the lens
-    has: a tag count, an optional reach clause, an optional undecided count, and a
-    verb. <b>Three distinct outcomes collapse onto one rendering.</b>
+    The lens has one sentence to work with: tag count, an optional reach clause, an
+    optional undecided count. <b>Today three outcomes collapse onto one rendering.</b>
+    The decision is to keep that sentence and let it take <b>one more segment</b> —
+    not to grow new chrome.
   </p>
   <table>
-    <tr><th style="width:20%">State</th><th style="width:32%">Row / page renders</th>
-        <th style="width:14%">Button</th><th>Can the researcher tell?</th></tr>
+    <tr><th style="width:17%">State</th><th style="width:30%">Renders today</th>
+        <th style="width:37%">Decided</th><th>Home</th></tr>
     <tr>
       <td><b>Not installed</b></td>
-      <td><code>28 tags · not installed</code><span class="ref">CodebookV2Page.tsx:223</span></td>
-      <td>Install</td>
-      <td><span class="ok">yes</span></td>
+      <td><code>28 tags · not installed</code></td>
+      <td>unchanged</td><td>card</td>
+    </tr>
+    <tr>
+      <td><b>Running</b></td>
+      <td>nothing on the card</td>
+      <td><code>28 tags · ✦ Autocoding…</code> &mdash; the acknowledgement that the
+        click landed, and no more. Progress, elapsed and Cancel stay on the chip.</td>
+      <td>card + chip + project row</td>
     </tr>
     <tr>
       <td><b>Coded</b> (full)</td>
       <td><code>28 tags · applied to 33 quotes in Ikea</code></td>
-      <td>Uninstall</td>
-      <td><span class="ok">yes</span></td>
+      <td>unchanged</td><td>card</td>
     </tr>
-    <tr class="dead">
-      <td><b>Partial</b> (58 of 72)</td>
-      <td class="same"><code>28 tags · applied to 58 quotes in Ikea</code></td>
-      <td>Uninstall</td>
-      <td><span class="bad">no</span> — indistinguishable from a full run that
-        happened to reach 58 quotes.<span class="tag t-gap">gap 2</span></td>
+    <tr>
+      <td><b>Partial</b> (58 of 72 read)</td>
+      <td class="same"><code>28 tags · applied to 30 quotes in Ikea</code><br>
+        <span style="color:rgba(255,255,255,.55)">— indistinguishable from a full
+        run</span></td>
+      <td><code>28 tags · applied to 30 quotes in Ikea · ⚠ Partial 58 of 72</code>
+        <span class="ref">⚠ is MessageKind.WARNING — ui_kinds.py:37</span></td>
+      <td>card</td>
     </tr>
-    <tr class="dead">
-      <td><b>Uncoded</b> (job failed)</td>
-      <td class="same"><code>28 tags</code> &mdash; the reach clause is simply absent
-        <span class="ref">codebookReach.ts:57 — quotes===0 returns the bare phrase</span></td>
-      <td>Uninstall</td>
-      <td><span class="bad">no</span> — and worse, an absent clause is
-        <i>ambiguous with a legitimate outcome</i>: a codebook that ran fine and
-        matched nothing looks exactly the same.<span class="tag t-gap">gap 3</span></td>
+    <tr>
+      <td><b>Failed</b> (0 coded)</td>
+      <td class="same"><code>28 tags</code> — reach clause simply absent
+        <span class="ref">codebookReach.ts:57</span></td>
+      <td><b>Open.</b> Not <code>Partial 0 of 72</code> — nothing partial happened.
+        Needs its own segment; the failure <i>reason</i> goes to the project
+        popover.<span class="tag t-gap">open 1</span></td>
+      <td>card + popover</td>
     </tr>
-    <tr class="dead">
-      <td><b>Uncoded</b> (refused, no job)</td>
+    <tr>
+      <td><b>Refused</b> (no job)</td>
       <td class="same"><code>28 tags</code></td>
-      <td>Uninstall</td>
-      <td><span class="bad">no</span> — same rendering again.</td>
+      <td>Same segment as Failed — from the researcher&rsquo;s side these are one
+        state (&ldquo;it didn&rsquo;t code&rdquo;); only the popover distinguishes
+        them.</td>
+      <td>card</td>
     </tr>
   </table>
 
-  <!-- ============================================================ -->
+  <h3>The line, rendered</h3>
+  <div class="specimens">
+    <div class="rowspec">
+      <div class="t">Laws of UX</div>
+      <div class="s">28 tags &middot; applied to 33 quotes in Ikea</div>
+    </div>
+    <div class="rowspec">
+      <div class="t">Laws of UX</div>
+      <div class="s">28 tags &middot; <span style="color:var(--purple)">&#10022;</span>
+        Autocoding&hellip;</div>
+    </div>
+    <div class="rowspec">
+      <div class="t">Laws of UX</div>
+      <div class="s">28 tags &middot; applied to 30 quotes in Ikea &middot;
+        <span style="color:var(--orange);font-weight:600">&#9888; Partial 58 of 72</span></div>
+    </div>
+  </div>
+  <p class="sub" style="margin-top:12px">
+    <b>The two numbers measure different things, deliberately.</b> &ldquo;Applied to
+    30&rdquo; counts quotes carrying an <i>accepted</i> tag
+    (<code>framework_quote_totals</code> reads <code>QuoteTag</code> rows,
+    <code>codebook.py:247</code>); &ldquo;58 of 72&rdquo; counts quotes the job
+    <i>read</i>. A run reads 58, proposes on some, the researcher accepts fewer still
+    — so the numbers differ in practice, which is what stops the pair being
+    confusing. &ldquo;58 of 72&rdquo; also matches the toast&rsquo;s existing
+    <code>Tagged 58 of 72 quotes</code>, so it is one idiom, not two.
+  </p>
+
   <h2>5 &nbsp;Mockup coverage</h2>
   <p class="sub">
     Which existing mockups are trued to the code, and what they cover. The pattern is
@@ -368,41 +429,83 @@
   </table>
 
   <!-- ============================================================ -->
-  <h2>6 &nbsp;The gaps</h2>
-  <p class="sub">Ranked by what a researcher loses. No treatments proposed.</p>
+  <h2>6 &nbsp;Decided</h2>
   <ol class="gaps">
-    <li><b>A partial run is a permanent hole, and it is the one the rate limits
-      produce.</b> 58 of 72 quotes coded, job <code>completed</code> — so
-      <code>start_autocode_job</code> refuses a re-run with
-      <code>409 already_applied</code>, and <code>reapply_to_new_quotes</code> only
-      ever codes sessions imported <i>after</i> the watermark. The 14 quotes nobody
-      looked at are unreachable by every path that exists. <b>This is the state a
-      rate-limited run lands in</b>, which makes it the real rate-limit defect —
-      the backoff people reach for is already there, six SDK retries deep, honouring
-      <code>Retry-After</code>.</li>
+    <li><b>A codebook is installed or not installed.</b> A run is a per-project
+      activity, not a codebook property — same rule the codebase already applies to
+      copy, where the toolbar pill was removed in favour of the row.</li>
 
-    <li><b>Three outcomes share one rendering.</b> Coded-nothing, refused-before-
-      starting, and coded-nothing-because-nothing-matched are the same pixels. The
-      third is a legitimate result, so the researcher cannot treat a bare
-      <code>28 tags</code> as a problem — which means the signal is not merely weak,
-      it is <i>uninterpretable</i>.</li>
+    <li><b>Running shows on the card as <code>✦ Autocoding…</code> and no more.</b>
+      Direct manipulation: feedback appears on the thing that was clicked. Progress,
+      elapsed and Cancel stay on the chip, which is the cross-navigation surface.
+      The sparkle is already the AutoCode mark (<code>autocode.chip.coding</code>),
+      so this is existing vocabulary.</li>
 
-    <li><b>Recovery exists and cannot be reached.</b> A <code>failed</code> job is
-      discarded and re-run by the start guard — pinned by
-      <code>test_dead_job_can_be_rerun</code> — but the card reads <b>Uninstall</b>,
-      because the template was imported before the job ran. The only route back is
-      Uninstall&nbsp;→&nbsp;Install, which nobody would guess and which throws away
-      the researcher&rsquo;s own edits to those tags.</li>
+    <li><b>Partial gets a third segment:</b>
+      <code>· ⚠ Partial 58 of 72</code>, appended to the sentence that is already
+      there. No new chrome, no status word standing alone, and the ⚠ is the settled
+      WARNING glyph — &ldquo;complete, usable, not what was asked&rdquo;, which is
+      exactly what a partial is.</li>
 
-    <li><b>Nothing re-runs after the condition lifts.</b> A provider switch or a new
-      key posts <code>.bristlenosePrefsChanged</code> and restarts the sidecar — a
-      strong signal, unused. A top-up emits nothing at all, and
-      <code>OutOfCreditModel</code>&rsquo;s own comment records that refocus re-reads
-      the cache without revalidating, so even the pill lingers.</li>
+    <li><b>Failure reasons go to the project status popover</b>, whose stated job is
+      telling an alpha tester what failed. Not to the card, which says only that
+      coding did not happen.</li>
 
-    <li><b>The lens reads no job state at all</b>, so none of the above can be
-      rendered without first giving it the data. That is the prerequisite for every
-      treatment, and it is a wiring job, not a design one.</li>
+    <li><b>Uninstall during a run cancels, then removes</b> — it does not become a
+      disabled button with a tooltip. The intent is legitimate, Cancel already exists
+      on the chip, and <code>design-pipeline-diagnostic-popover.md</code> records
+      that <code>.help(...)</code> tooltips were <i>dropped</i> from this surface
+      family. The uninstall sheet already states destructive impact and is the place
+      for one more sentence.</li>
+  </ol>
+
+  <h2>7 &nbsp;What that decision costs to build</h2>
+  <p class="sub">
+    Ordered. The first item gates the rest — none of §4&rsquo;s renderings can exist
+    until the lens can see a job.
+  </p>
+  <ol class="gaps">
+    <li><b>The lens must fetch coverage.</b> <code>getAutoCodeStatus</code> has zero
+      call sites in the island, its navigator or its page, and
+      <code>CodebookResponse</code> carries no job data — only
+      <code>framework_quote_totals</code>, which counts accepted tags and cannot
+      answer &ldquo;how much did it read&rdquo;. A per-framework
+      <code>{status, processed, total}</code> alongside it is the smallest thing that
+      serves every rendering above.<span class="tag t-gap">prerequisite</span></li>
+
+    <li><b>The sidebar has no <code>case coding</code>.</b> 23 <code>ProjectSubtitle</code>
+      cases — <code>running</code>, <code>queued</code>, <code>copying</code>,
+      <code>importingBatch</code>, <code>completedPartial</code> — and not one about
+      coding or tagging. &ldquo;The project row shows the run&rdquo; is the right
+      model and not yet the behaviour.</li>
+
+    <li><b>A partial is still a permanent hole, whatever the card says.</b>
+      <code>409 already_applied</code> blocks a re-run and
+      <code>reapply_to_new_quotes</code> only codes sessions imported after the
+      watermark, so the 14 unread quotes are unreachable by every existing path.
+      <b>The card would be honestly reporting a state with no exit.</b> The quotes are
+      known at failure time — they are the batches that raised — so finishing the job
+      is available and would make the segment self-clearing.</li>
+
+    <li><b>AutoCode has no cause to put in the popover.</b> The popover eats
+      <code>PipelineState</code> from the pipeline events log — stages, per-session
+      causes, a terminus. An AutoCode job has none of those. Routing its failures
+      there means giving it a cause in that vocabulary, not giving the popover a
+      second data path.</li>
+  </ol>
+
+  <h2>8 &nbsp;Still open</h2>
+  <ol class="gaps">
+    <li><b>What the card says when nothing was coded at all.</b>
+      <code>Partial 0 of 72</code> is wrong — nothing partial happened. It also has to
+      cover the refused case, where no job exists to have a denominator. And it must
+      stay distinguishable from the legitimate &ldquo;ran fine, matched nothing&rdquo;,
+      which today renders identically.</li>
+
+    <li><b>Whether partial should be a resting state at all.</b> If §7.3 is done and
+      the job finishes itself, the ⚠ segment is transient — a thing seen briefly and
+      then gone. If it is not done, the segment is permanent and names a dead end.
+      Same pixels, very different promise.</li>
   </ol>
 
 </div>

@@ -115,6 +115,7 @@ vi.mock("../utils/api", () => ({
   denyProposal: vi.fn(() => Promise.resolve({ status: "ok" })),
 }));
 vi.mock("../contexts/ActivityStore", () => ({ addJob: vi.fn() }));
+vi.mock("../utils/toast", () => ({ toast: vi.fn() }));
 
 describe("CodebookV2 — built-in is derived, not hardcoded", () => {
   it("files authorless codebooks under Default and authored ones under Frameworks", async () => {
@@ -470,6 +471,62 @@ describe("phase 5 — the destructive edge", () => {
     fireEvent.click(screen.getByTestId("bn-v2-card-action-cliux"));
     await waitFor(() => expect(api.importCodebookTemplate).toHaveBeenCalledWith("cliux"));
     expect(screen.queryByTestId("bn-v2-uninstall-sheet")).not.toBeInTheDocument();
+  });
+
+  it("a refused install says something a researcher can act on", async () => {
+    // `autocodeRefusal` had no production caller: it was written for
+    // CodebookPanel, the v1 lens, and 0.29.0 deleted it. So a missing key
+    // rendered its raw wire `detail` under "Could not load the codebook" —
+    // nothing failed to load, and the sentence told a Mac-app user to edit a
+    // `.env` file.
+    const { fireEvent } = await import("@testing-library/react");
+    const api = await import("../utils/api");
+    const { toast } = await import("../utils/toast");
+
+    const refusal = Object.assign(
+      new Error(
+        "POST /autocode/cliux 503: No API key configured for the current LLM " +
+          "provider (anthropic). Set the appropriate key in your .env file.",
+      ),
+      { reason: "no_api_key", status: 503 },
+    );
+    vi.mocked(api.startAutoCode).mockRejectedValueOnce(refusal);
+
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    fireEvent.click(screen.getByTestId("bn-v2-card-action-cliux"));
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        "Add an API key in Settings first.",
+        expect.any(Number),
+        "error",
+      ),
+    );
+    // And NOT as a load failure across the top of the lens.
+    expect(screen.queryByText(/Could not load the codebook/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\.env/)).not.toBeInTheDocument();
+  });
+
+  it("an unnamed failure still reaches the researcher, not a swallow", async () => {
+    // The refusal mapper returns null for anything it does not recognise —
+    // a 500, a dropped connection. That must fall through to the banner
+    // rather than disappearing because the toast path did not match.
+    const { fireEvent } = await import("@testing-library/react");
+    const api = await import("../utils/api");
+    vi.mocked(api.startAutoCode).mockRejectedValueOnce(
+      new Error("POST /autocode/cliux 500"),
+    );
+
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    fireEvent.click(screen.getByTestId("bn-v2-card-action-cliux"));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Could not load the codebook/)).toBeInTheDocument(),
+    );
   });
 });
 

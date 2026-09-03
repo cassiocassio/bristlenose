@@ -902,6 +902,25 @@ cmd_run() {
     printf '\n%bRelease %s%b  bump=%s\n' "$B" "$V" "$N" "$BUMP"
     printf '%b  the tag push publishes. Everything before it is abandonable.%b\n\n' "$D" "$N"
 
+    # A synthetic step table means there is no release to gather credentials
+    # for. RELEASE_STEPS_FILE is the seam this file already documents as
+    # "a testability seam, not a feature … Unset in every real invocation", so
+    # reusing it costs no new bypass — and a NEW flag would be the wrong answer
+    # twice over: settable in production, and therefore able to reinstate the
+    # exact 31 Aug 2026 bug the block below exists to prevent.
+    #
+    # Without this the e2e suite could not run at all. It died at exit 2 before
+    # the step loop it exists to exercise, and had done since 2 Sep: 82
+    # assertions all reporting `expected '75', got '2'`, one cause. It cannot be
+    # fixed by stubbing either, because `stat -f '%Lp'` is BSD and this suite
+    # runs on ubuntu — the harness would have to impersonate a Mac.
+    #
+    # What the block does below is still covered, just not from here:
+    # verdict_signing_identity is a pure text→verdict function and
+    # test-release-sh.sh drives it directly, which is where its logic lives.
+    if [ -n "${RELEASE_STEPS_FILE:-}" ]; then
+        printf '  %bsynthetic step table — credential gathering skipped%b\n\n' "$D" "$N"
+    else
     # ── Credentials: gathered HERE, before the one confirmation — never
     # discovered by a step. 31 Aug 2026: SIGN_IDENTITY_APPSTORE was unset and
     # build-all found out four steps in, after an outward-facing push. The
@@ -998,6 +1017,8 @@ cmd_run() {
     printf '    %-22s %s\n' "installer (.pkg)" "$ID_IN_CN"
     printf '    %-22s %s · ASC key %s\n\n' "notary profile" "$NOTARY_PROFILE" "$BRISTLENOSE_ASC_KEY_ID"
 
+    fi
+
     # A fully inferred version must pass through the human's fingers: --yes
     # cannot skip typing a version that was never given. (Headless, that read
     # hits EOF, matches nothing, and dies — fail closed.) With a version or
@@ -1014,8 +1035,8 @@ cmd_run() {
     # the build scripts map hash → CN for their type gates and sign by hash),
     # and every interactive fallback converted to a loud failure. Nothing
     # below may prompt; if something tries anyway, it now fails instead.
-    export SIGN_IDENTITY_APPSTORE="$ID_AS_HASH"
-    export SIGN_IDENTITY_DEVELOPER_ID="$ID_DI_HASH"
+    [ -n "${ID_AS_HASH:-}" ] && export SIGN_IDENTITY_APPSTORE="$ID_AS_HASH"
+    [ -n "${ID_DI_HASH:-}" ] && export SIGN_IDENTITY_DEVELOPER_ID="$ID_DI_HASH"
     export NOTARY_PROFILE
     [ -n "${TEAM_ID:-}" ] && export TEAM_ID
     export GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/usr/bin/false

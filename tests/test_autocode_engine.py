@@ -16,6 +16,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session as SASession
 from sqlalchemy.orm import sessionmaker
 
+from bristlenose.llm.failure_classifier import LLMFailureKind
 from bristlenose.llm.structured import AutoCodeBatchResult, AutoCodeTagAssignment
 from bristlenose.server.autocode import (
     BATCH_SIZE,
@@ -310,8 +311,19 @@ class TestRunAutoCodeJob:
         assert proposals[1].confidence == 0.18
         db.close()
 
-    def test_handles_llm_failure(self, project_with_garrett) -> None:
-        """Per-batch LLM errors are handled gracefully — no proposals stored."""
+    def test_every_batch_failing_is_a_failed_job_not_a_completed_one(
+        self, project_with_garrett
+    ) -> None:
+        """All batches dead ⇒ ``failed``, and the exception gets classified.
+
+        This test used to assert ``completed``, on the reasoning that batch
+        failures are per-batch and the job survives them. True of *a* batch;
+        false of all of them. ``gather(return_exceptions=True)`` means nothing
+        reaches the outer handler, so the job recorded a success with
+        ``processed_quotes=0`` and no ``failure_kind`` — and the surfaces read
+        that as a partial, offering "Tagged 0 of 33 quotes … View Report"
+        against an empty report.
+        """
         project_id, framework_id, db_factory = project_with_garrett
 
         with _patch_llm(AsyncMock(side_effect=RuntimeError("LLM API error"))):
@@ -324,10 +336,44 @@ class TestRunAutoCodeJob:
             project_id=project_id, framework_id=framework_id
         ).first()
         assert job is not None
-        # Batch failures are per-batch — job still completes
-        assert job.status == "completed"
+        assert job.status == "failed"
+        assert job.processed_quotes == 0
+        # Unrecognisable to the classifier, but named rather than left blank —
+        # "" is what the UI reads as "never classified".
+        assert job.failure_kind == "unknown"
         proposals = db.query(ProposedTag).all()
-        assert len(proposals) == 0  # No proposals from a failed batch
+        assert len(proposals) == 0
+        db.close()
+
+    def test_out_of_credit_batches_are_classified_not_left_blank(
+        self, project_with_garrett
+    ) -> None:
+        """The screenshot case: an exhausted account, named as one.
+
+        Anthropic serves out-of-credit as a **400**, so nothing short of the
+        classifier can tell it from an ordinary bad request — and the sentence
+        the researcher needs ("your account is out of credit", an ERROR) is
+        chosen from ``failure_kind`` alone.
+        """
+        project_id, framework_id, db_factory = project_with_garrett
+
+        boom = RuntimeError(
+            "Error code: 400 - {'type': 'error', 'error': {'type': "
+            "'invalid_request_error', 'message': 'Your credit balance is too "
+            "low to access the Anthropic API.'}}"
+        )
+        with _patch_llm(AsyncMock(side_effect=boom)):
+            asyncio.run(
+                run_autocode_job(db_factory, project_id, framework_id, _mock_settings())
+            )
+
+        db = db_factory()
+        job = db.query(AutoCodeJob).filter_by(
+            project_id=project_id, framework_id=framework_id
+        ).first()
+        assert job is not None
+        assert job.status == "failed"
+        assert job.failure_kind == LLMFailureKind.OUT_OF_CREDIT.value
         db.close()
 
     def test_unrecognized_tag_name_skipped(self, project_with_garrett) -> None:
@@ -672,6 +718,74 @@ class TestBatching:
 
         assert len(call_sizes) == 4  # 100 / 25 = 4 batches
         assert all(s == BATCH_SIZE for s in call_sizes)
+
+    def test_a_genuine_partial_stays_completed_but_carries_the_reason(
+        self, db_session: SASession
+    ) -> None:
+        """Some batches landed ⇒ still ``completed``; it has usable proposals.
+
+        The distinction from the all-failed case is the whole point: a partial
+        has something behind the report link, so it keeps it. What it lacked
+        was any record of *why* the rest are missing — ``failure_kind`` is now
+        set on a completed job too, so a surface can say "rate limited" instead
+        of leaving the shortfall to be guessed at.
+        """
+        db = db_session
+        project = Project(name="Half", slug="half", input_dir="/tmp", output_dir="/tmp")
+        db.add(project)
+        db.flush()
+
+        template = get_template("garrett")
+        assert template is not None
+        for group_tmpl in template.groups:
+            group = CodebookGroup(
+                name=group_tmpl.name, subtitle=group_tmpl.subtitle,
+                colour_set=group_tmpl.colour_set, framework_id="garrett",
+            )
+            db.add(group)
+            db.flush()
+            for tag_tmpl in group_tmpl.tags:
+                db.add(TagDefinition(name=tag_tmpl.name, codebook_group_id=group.id))
+
+        # Two batches: 25 + 5.
+        for i in range(30):
+            db.add(Quote(
+                project_id=project.id, session_id="s1", participant_id="p1",
+                start_timecode=float(i * 10), end_timecode=float(i * 10 + 5),
+                text=f"Quote {i}", quote_type="screen_specific",
+            ))
+
+        db.add(AutoCodeJob(project_id=project.id, framework_id="garrett", status="pending"))
+        db.commit()
+        session_cls = sessionmaker(bind=db.get_bind())
+
+        # First call succeeds, every later one is rate-limited.
+        calls = {"n": 0}
+
+        async def flaky(system_prompt, user_prompt, response_model, **kwargs):
+            import re
+            n_quotes = len(re.findall(r"^\d+\. \[", user_prompt, re.MULTILINE))
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return _make_batch_result(n_quotes, "user need", 0.8)
+            raise RuntimeError(
+                "Error code: 429 - {'type': 'error', 'error': {'type': "
+                "'rate_limit_error', 'message': 'rate limit exceeded'}}"
+            )
+
+        with _patch_llm(AsyncMock(side_effect=flaky)):
+            asyncio.run(
+                run_autocode_job(session_cls, project.id, "garrett", _mock_settings())
+            )
+
+        job = db.query(AutoCodeJob).filter_by(
+            project_id=project.id, framework_id="garrett"
+        ).first()
+        assert job is not None
+        assert job.status == "completed"
+        assert 0 < job.processed_quotes < 30
+        assert job.proposed_count > 0
+        assert job.failure_kind == LLMFailureKind.RATE_LIMITED.value
 
     def test_partial_last_batch(self, db_session: SASession) -> None:
         """27 quotes produce 2 LLM calls (25 + 2)."""

@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM availability — how to expose it</title>
+<style>
+  /* Exposure sketch only. Nothing here is implemented, and nothing here is a
+     committed design — the point is to argue the *shape* (three tiers, not one
+     switch) before any pixels are spent. Native metrics approximate the app the
+     way analysis-failure-states.html does; the web controls borrow the real
+     .bn-btn envelope so the comparison is fair. */
+  :root {
+    --sf: -apple-system, "SF Pro Text", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --orange:#FF9F0A; --red:#FF3B30; --green:#34C759; --blue:#0A84FF;
+    --card-bg:#ffffff; --card-hair:rgba(0,0,0,0.10);
+    --label:rgba(0,0,0,0.85); --secondary:rgba(0,0,0,0.52); --tertiary:rgba(0,0,0,0.30);
+    --sb-bg:#f2f2f4; --sb-sel:rgba(0,0,0,0.07);
+    --pop-bg:rgba(246,246,246,0.94); --pop-border:rgba(0,0,0,0.12);
+  }
+  body.dark {
+    --card-bg:#232325; --card-hair:rgba(255,255,255,0.12);
+    --label:rgba(255,255,255,0.92); --secondary:rgba(255,255,255,0.55); --tertiary:rgba(255,255,255,0.32);
+    --sb-bg:#1c1c1e; --sb-sel:rgba(255,255,255,0.10);
+    --pop-bg:rgba(40,40,42,0.92); --pop-border:rgba(255,255,255,0.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:var(--sf); color:#fff;
+    background:radial-gradient(120% 120% at 20% 0%, #6a86b8, #3a4a6b 60%, #232a3d);
+    -webkit-font-smoothing:antialiased; padding:28px 24px 90px;
+  }
+  body.dark{background:radial-gradient(120% 120% at 20% 0%, #2b3340, #1a1d24 60%, #0e1014);}
+
+  h1{font-size:19px;font-weight:600;margin:0 0 4px;}
+  h2{font-size:15px;font-weight:600;margin:44px 0 4px;}
+  h3{font-size:12.5px;font-weight:600;margin:22px 0 8px;color:rgba(255,255,255,0.9);
+     text-transform:uppercase;letter-spacing:0.04em;}
+  .sub{font-size:12.5px;line-height:1.6;color:rgba(255,255,255,0.74);max-width:82ch;margin:0 0 10px;}
+  .sub b{color:#fff;font-weight:600;}
+  .sub code{font-family:var(--mono);font-size:11.5px;background:rgba(255,255,255,0.13);
+            padding:1px 4px;border-radius:4px;}
+  hr.rule{border:0;border-top:1px solid rgba(255,255,255,0.16);margin:10px 0 0;}
+  .wrap{max-width:1120px;margin:0 auto;}
+
+  .chrome{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0 4px;}
+  .chrome button{font:12px/1 var(--sf);padding:6px 11px;border-radius:7px;cursor:pointer;
+    border:0.5px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.14);color:#fff;}
+  .chrome button.on{background:#fff;color:#1d1d1f;border-color:#fff;}
+
+  /* ---- tier table ---- */
+  table.tiers{border-collapse:collapse;width:100%;font-size:12.5px;margin:12px 0 0;}
+  table.tiers th,table.tiers td{text-align:left;vertical-align:top;padding:10px 12px;
+    border-bottom:1px solid rgba(255,255,255,0.14);}
+  table.tiers th{font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;
+    color:rgba(255,255,255,0.62);border-bottom-color:rgba(255,255,255,0.3);}
+  table.tiers td{color:rgba(255,255,255,0.82);line-height:1.5;}
+  table.tiers td b{color:#fff;}
+  .tierdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:0px;}
+  .t1{background:var(--blue);} .t2{background:var(--orange);} .t3{background:var(--red);}
+
+  /* ---- specimen surface ---- */
+  .specimens{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:16px;margin-top:12px;}
+  .spec{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.16);
+        border-radius:12px;padding:14px;}
+  .spec .cap{font-size:11px;color:rgba(255,255,255,0.6);margin:0 0 10px;line-height:1.45;}
+  .spec .cap b{color:#fff;font-weight:600;display:block;margin-bottom:2px;font-size:11.5px;}
+  .spec .note{font-size:10.5px;color:rgba(255,255,255,0.5);line-height:1.5;margin:10px 0 0;
+              padding-top:9px;border-top:1px solid rgba(255,255,255,0.13);}
+
+  /* the web card, approximating the shipped codebook browse card */
+  .bookcard{background:var(--card-bg);border:1px solid var(--card-hair);border-radius:10px;
+            padding:13px 14px;color:var(--label);}
+  .bookcard .title{font-size:13.5px;font-weight:600;line-height:1.3;}
+  .bookcard .meta{font-size:11.5px;color:var(--secondary);margin-top:2px;}
+  .bookcard .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;}
+  .bookcard .count{font-size:11.5px;color:var(--secondary);}
+
+  .bn-btn{font:12.5px/1 var(--sf);font-weight:500;padding:6px 14px;border-radius:6px;
+          border:1px solid transparent;cursor:pointer;white-space:nowrap;}
+  .bn-btn-primary{background:#1f4e9c;color:#fff;}
+  .bn-btn-secondary{background:transparent;color:var(--label);border-color:var(--card-hair);}
+  .bn-btn-quiet{background:transparent;color:var(--blue);border-color:transparent;padding-left:0;padding-right:0;}
+  .bn-btn[disabled]{opacity:0.4;cursor:default;}
+
+  .inline-warn{display:flex;gap:6px;align-items:baseline;font-size:11px;color:var(--orange);
+               margin-top:9px;line-height:1.45;}
+  .inline-warn svg{flex:0 0 auto;transform:translateY(1px);}
+
+  /* the mac pill */
+  .macbar{background:var(--sb-bg);border:1px solid var(--card-hair);border-radius:10px;
+          padding:9px 11px;display:flex;align-items:center;gap:9px;color:var(--label);}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;
+        padding:3px 9px;border-radius:99px;background:rgba(255,159,10,0.16);color:#9a5b00;}
+  body.dark .pill{background:rgba(255,159,10,0.20);color:#ffbf5f;}
+  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--orange);}
+  .macbar .grow{flex:1;}
+  .macbar .link{font-size:11.5px;color:var(--blue);}
+
+  /* chip */
+  .chip{background:#1c1c1e;border-radius:9px;padding:9px 13px;display:flex;align-items:center;
+        gap:9px;color:rgba(255,255,255,0.92);font-size:12.5px;}
+  .chip .x{color:var(--red);font-weight:600;}
+  .chip .w{color:var(--orange);}
+  .chip .link{color:#5aa9ff;margin-left:auto;}
+
+  /* ---- matrix ---- */
+  table.matrix{border-collapse:collapse;width:100%;font-size:12px;margin-top:12px;}
+  table.matrix th,table.matrix td{padding:9px 10px;text-align:left;
+    border-bottom:1px solid rgba(255,255,255,0.13);vertical-align:top;}
+  table.matrix th{font-size:10.5px;text-transform:uppercase;letter-spacing:0.04em;font-weight:600;
+    color:rgba(255,255,255,0.6);border-bottom-color:rgba(255,255,255,0.3);}
+  table.matrix td{color:rgba(255,255,255,0.8);line-height:1.5;}
+  table.matrix code{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,0.12);
+                    padding:1px 4px;border-radius:4px;}
+  .yes{color:var(--green);font-weight:600;} .no{color:var(--red);font-weight:600;}
+  .part{color:var(--orange);font-weight:600;}
+  .done{display:inline-block;font-size:10px;font-weight:600;letter-spacing:0.03em;
+        background:rgba(52,199,89,0.22);color:#8ff0ad;padding:2px 7px;border-radius:5px;
+        margin-left:6px;vertical-align:1px;}
+  .todo{display:inline-block;font-size:10px;font-weight:600;letter-spacing:0.03em;
+        background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.75);padding:2px 7px;
+        border-radius:5px;margin-left:6px;vertical-align:1px;}
+
+  ol.q{font-size:12.5px;line-height:1.65;color:rgba(255,255,255,0.82);max-width:84ch;
+       padding-left:20px;margin:10px 0 0;}
+  ol.q li{margin-bottom:12px;}
+  ol.q b{color:#fff;}
+  .stack{display:flex;flex-direction:column;gap:11px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>LLM availability — how to expose it</h1>
+  <p class="sub">
+    An exposure sketch, not a design. The plumbing landed first (an all-batches-failed
+    job is now <code>failed</code> and classified; the refusal mapper is wired back up;
+    the Mac out-of-credit pill hears about sidecar jobs). What is still open is
+    <b>where availability should show, and how hard it should push</b>. The argument
+    below is that the honest answer is three tiers, because the three states are known
+    at three different moments and with three different confidences — one global
+    &ldquo;LLM unavailable&rdquo; switch would have to pick one and be wrong about the
+    other two.
+  </p>
+  <hr class="rule">
+
+  <div class="chrome">
+    <button id="lightBtn" class="on">Light</button>
+    <button id="darkBtn">Dark</button>
+  </div>
+
+  <!-- ================================================================== -->
+  <h2>1 &nbsp;Three tiers, not one switch</h2>
+  <p class="sub">
+    The distinction that matters is <b>when the answer is knowable</b> and
+    <b>how long it stays true</b>. Configuration is a local fact and never stale.
+    Credit is a fact about someone else&rsquo;s server, and is stale the instant it is
+    read. What actually happened is only knowable after spending.
+  </p>
+
+  <table class="tiers">
+    <tr>
+      <th style="width:23%">State</th>
+      <th style="width:15%">Known when</th>
+      <th style="width:14%">Stays true?</th>
+      <th style="width:22%">Treatment</th>
+      <th>Why not the obvious thing</th>
+    </tr>
+    <tr>
+      <td><span class="tierdot t1"></span><b>No provider</b><br>
+        <span style="color:rgba(255,255,255,0.55)">no key &middot; local-only &middot; ambiguous</span></td>
+      <td>Before the click, free</td>
+      <td>Yes — local config</td>
+      <td><b>Replace the control with the fix.</b> Install becomes Set&nbsp;up&nbsp;AI.</td>
+      <td>Not a <i>disabled</i> Install with a tooltip. A dead control makes the
+          researcher hunt for the reason; the control that <i>is</i> the reason
+          costs the same pixels and answers it.</td>
+    </tr>
+    <tr>
+      <td><span class="tierdot t2"></span><b>Out of credit</b><br>
+        <span style="color:rgba(255,255,255,0.55)">last verdict said dry</span></td>
+      <td>Only by spending<br>(cached ≤24h)</td>
+      <td><b>No</b> — a top-up happens in a browser tab we cannot see</td>
+      <td><b>Advisory. Let the click through.</b> A pill that says so, and a run that
+          proves it either way.</td>
+      <td>Not a block. <code>OutOfCreditModel</code> already documents that its cache
+          lingers after a top-up — blocking on that means blocking a researcher who
+          has already paid.</td>
+    </tr>
+    <tr>
+      <td><span class="tierdot t3"></span><b>Refused now</b><br>
+        <span style="color:rgba(255,255,255,0.55)">the call actually failed</span></td>
+      <td>After spending</td>
+      <td>It is the ground truth</td>
+      <td><b>Fail loudly, name it, record it.</b></td>
+      <td>Not &ldquo;partial success&rdquo;. This is the tier that produced the
+          <span style="color:var(--orange)">Tagged&nbsp;0&nbsp;of&nbsp;33</span>
+          screenshot.<span class="done">plumbed</span></td>
+    </tr>
+  </table>
+
+  <!-- ================================================================== -->
+  <h2>2 &nbsp;The same control, three ways</h2>
+  <p class="sub">
+    One codebook card from Browse Library, rendered in each tier. Note what does
+    <i>not</i> change: the card, the title, the tag count, the reading order. Only the
+    action and one line beneath it move — so a researcher who has seen the card once
+    can still find everything.
+  </p>
+
+  <div class="specimens">
+
+    <div class="spec">
+      <p class="cap"><b>Baseline — provider configured</b>What ships today, and what
+        every other tier is measured against.</p>
+      <div class="bookcard">
+        <div class="title">Laws of UX</div>
+        <div class="meta">Jon Yablonski</div>
+        <div class="row">
+          <span class="count">28 tags</span>
+          <button class="bn-btn bn-btn-primary">Install</button>
+        </div>
+      </div>
+      <p class="note">Install is apply (D4). It spends, with no confirmation, because
+        the researcher asked by clicking.</p>
+    </div>
+
+    <div class="spec">
+      <p class="cap"><b>Tier 1 — no provider</b>The server already refuses this with
+        <code>no_api_key</code>. Today the click is allowed and the refusal arrives as
+        a banner.</p>
+      <div class="bookcard">
+        <div class="title">Laws of UX</div>
+        <div class="meta">Jon Yablonski</div>
+        <div class="row">
+          <span class="count">28 tags</span>
+          <button class="bn-btn bn-btn-secondary">Set up AI&hellip;</button>
+        </div>
+      </div>
+      <p class="note">Reads as a step, not a wall. Opens Settings&nbsp;&#9656;&nbsp;AI
+        on the Mac, the Settings modal on the web. <b>No tooltip</b> — nothing to
+        explain, because nothing is disabled.</p>
+    </div>
+
+    <div class="spec">
+      <p class="cap"><b>Tier 2 — believed out of credit</b>Install stays live and
+        stays primary. The warning is a sentence, not a gate.</p>
+      <div class="bookcard">
+        <div class="title">Laws of UX</div>
+        <div class="meta">Jon Yablonski</div>
+        <div class="row">
+          <span class="count">28 tags</span>
+          <button class="bn-btn bn-btn-primary">Install</button>
+        </div>
+        <div class="inline-warn">
+          <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M6 0.8 11.4 10.6H0.6z" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+            <path d="M6 4.2v2.9M6 8.6v0.01" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <span>Claude was out of credit at 14:02. This may not run.</span>
+        </div>
+      </div>
+      <p class="note">Carries a <b>time</b>, deliberately — that is what makes it a
+        report rather than a claim, and lets the researcher judge whether their top-up
+        came after it.</p>
+    </div>
+
+  </div>
+
+  <!-- ================================================================== -->
+  <h2>3 &nbsp;Tier 3, as it now behaves</h2>
+  <p class="sub">
+    Before and after the plumbing. The left chip is the 3&nbsp;Sep screenshot; the
+    right is what the same failure produces now. Nothing here needs designing — it is
+    shown so tiers 1 and 2 can be judged against the thing they are meant to prevent.
+  </p>
+
+  <div class="specimens">
+    <div class="spec">
+      <p class="cap"><b>Before</b>All 33 quotes refused, reported as a partial success,
+        offering a report that was empty — and the link doubled as the dismissal, so
+        the chip could not be closed.</p>
+      <div class="chip">
+        <span class="w">&#9888;</span>
+        <span>Tagged 0 of 33 quotes &mdash; some batches failed.</span>
+        <span class="link">View Report</span>
+      </div>
+      <p class="note">Cause: <code>gather(return_exceptions=True)</code> swallowed every
+        batch error, so the classifier — which knows out-of-credit from rate-limited —
+        was never reached.</p>
+    </div>
+
+    <div class="spec">
+      <p class="cap"><b>After</b>Named, dismissable, and no door to an empty room.</p>
+      <div class="chip">
+        <span class="x">&#10007;</span>
+        <span>Tagging failed: your AI provider account is out of credit.</span>
+        <span class="link" style="color:rgba(255,255,255,0.45);margin-left:auto;">&times;</span>
+      </div>
+      <p class="note">The sentence comes from <code>autocodeFailure()</code>, which
+        already had it. The only thing that changed is that <code>failure_kind</code>
+        now reaches it.<span class="done">plumbed</span></p>
+    </div>
+  </div>
+
+  <h3>And the app hears about it</h3>
+  <p class="sub">
+    <code>OutOfCreditModel</code> is app-global and already drives a pill; it was fed
+    from the pipeline runner alone, so a sidecar AutoCode job lit nothing. It now
+    hears via the bridge. <b>The pill is the whole of tier 2&rsquo;s ambient
+    presence</b> — one place, not a badge on every button.
+  </p>
+  <div class="specimens">
+    <div class="spec" style="grid-column:1 / -1;max-width:520px;">
+      <p class="cap"><b>Mac status zone</b>Where a tier-2 verdict lives once recorded.</p>
+      <div class="macbar">
+        <span class="pill"><span class="dot"></span>Claude out of credit</span>
+        <span class="grow"></span>
+        <span class="link">Add funds&hellip;</span>
+      </div>
+      <p class="note">Clears when a fresh validation records <code>.online</code>.
+        Known limitation, unchanged: refocus re-reads the cache without revalidating,
+        so it lingers after a browser top-up until Settings next checks.</p>
+    </div>
+  </div>
+
+  <!-- ================================================================== -->
+  <h2>4 &nbsp;Which surfaces need which tier</h2>
+  <p class="sub">
+    Every server route that spends tokens, and what it does today. The gap is not
+    that a systemwide model is missing — <code>pipeline_view/eligibility.py</code> is
+    one, exposed at <code>GET /api/pipeline</code> — it is that its only consumer is a
+    table in Settings.
+  </p>
+
+  <table class="matrix">
+    <tr>
+      <th style="width:22%">Surface</th>
+      <th style="width:26%">Route</th>
+      <th style="width:12%">Tier 1 gate</th>
+      <th style="width:14%">Tier 3 message</th>
+      <th>Note</th>
+    </tr>
+    <tr>
+      <td><b>Install / AutoCode</b></td>
+      <td><code>routes/autocode.py</code></td>
+      <td><span class="yes">yes</span> — 3 refusals</td>
+      <td><span class="yes">named</span><span class="done">fixed</span></td>
+      <td>Refusal mapper had no caller since the v1 lens was deleted; now wired.</td>
+    </tr>
+    <tr>
+      <td><b>Chat lens</b></td>
+      <td><code>routes/chat_lens.py</code></td>
+      <td><span class="no">none</span></td>
+      <td><span class="no">raw</span></td>
+      <td>502 carries <code>f"{type(exc).__name__}: {exc}"</code> — the raw SDK text.</td>
+    </tr>
+    <tr>
+      <td><b>Codebook builder</b></td>
+      <td><code>routes/codebook_builder.py</code></td>
+      <td><span class="no">none</span></td>
+      <td><span class="no">unhandled</span></td>
+      <td>Calls the LLM directly from the route.</td>
+    </tr>
+    <tr>
+      <td><b>Signal elaboration</b></td>
+      <td><code>server/elaboration.py</code></td>
+      <td><span class="part">silent skip</span></td>
+      <td><span class="no">silent</span></td>
+      <td>Logs a warning, returns cached only. The researcher sees fewer
+          elaborations and is told nothing.</td>
+    </tr>
+    <tr>
+      <td><b>Analyse / re-analyse</b></td>
+      <td><code>routes/analysis.py</code></td>
+      <td><span class="no">none in serve</span></td>
+      <td><span class="yes">events</span></td>
+      <td>The CLI path has <code>preflight_api_key</code>; serve does not.</td>
+    </tr>
+  </table>
+
+  <h3>The shared helper the table implies</h3>
+  <p class="sub">
+    Two hand-rolled copies of <code>_has_api_key</code> exist
+    (<code>routes/autocode.py</code>, <code>elaboration.py</code>), neither reading the
+    provider registry — a third provider-name switch to forget when a provider is
+    added. One <code>llm_availability(settings) &rarr; (ok, RefusalReason)</code>
+    collapses both and gives the four ungated surfaces the same vocabulary AutoCode
+    already speaks.<span class="todo">not done</span>
+  </p>
+
+  <!-- ================================================================== -->
+  <h2>5 &nbsp;Open questions</h2>
+  <ol class="q">
+    <li><b>A refused install leaves the codebook installed.</b>
+      <code>onInstall</code> is <code>importCodebookTemplate()</code> then
+      <code>startAutoCode()</code>. If the second refuses, the tags are in the codebook
+      and nothing is coded — a half-install, which is exactly the separate-Apply state
+      v2 exists to remove. Three answers: pre-flight before the import; roll the import
+      back; or accept it and say so. This is a product call, not a bug fix, which is
+      why the plumbing pass left it alone.</li>
+
+    <li><b>Should tier 2 be per-control at all?</b> The inline warning above is drawn
+      per card. The alternative is that the pill is the <i>only</i> ambient signal and
+      cards say nothing — quieter, consistent with &ldquo;chrome only for what the
+      appliance cannot cope with&rdquo;, and it costs a researcher one wasted click.
+      The sketch shows the louder option so the quieter one can be chosen
+      deliberately.</li>
+
+    <li><b>Does tier 1 differ on web and Mac?</b> &ldquo;Set up AI&hellip;&rdquo; opens
+      a native pane on the Mac and a modal on the web. Same verb, different
+      destination — or does the web, where there is no Settings&nbsp;&#9656;&nbsp;AI,
+      need different words?</li>
+
+    <li><b>What about Azure and Gemini?</b> Per the classifier&rsquo;s own honesty
+      note, out-of-credit is only isolable on Anthropic and OpenAI; Azure has no
+      per-account credit and Gemini folds credit, quota and free-tier cap into one
+      signal. So tier 2 <i>cannot exist</i> for half the cloud providers. Silence is
+      the right default there — but the tier-1 and tier-3 treatments must not look
+      broken in its absence.</li>
+
+    <li><b>Not proposed: a credit probe in serve mode.</b>
+      <code>preflight/api_key.py</code> already spends ~$0.0001 to answer this for
+      <code>run</code>/<code>analyze</code>. Extending it to serve would charge the
+      researcher for a question they did not ask, on a surface they may only be
+      reading, and it still cannot answer for two providers. The run is the probe.</li>
+  </ol>
+
+</div>
+
+<script>
+  const b = document.body;
+  document.getElementById("darkBtn").onclick = () => {
+    b.classList.add("dark");
+    darkBtn.classList.add("on"); lightBtn.classList.remove("on");
+  };
+  document.getElementById("lightBtn").onclick = () => {
+    b.classList.remove("dark");
+    lightBtn.classList.add("on"); darkBtn.classList.remove("on");
+  };
+</script>
+</body>
+</html>

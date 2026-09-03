@@ -419,12 +419,22 @@ async def run_autocode_job(
             return_exceptions=True,
         )
 
-        # Store results, handling per-batch errors gracefully
+        # Store results, handling per-batch errors gracefully.
+        #
+        # ``return_exceptions=True`` means a batch failure never reaches the
+        # outer ``except``, so nothing below it runs — including the classifier.
+        # Keeping the first exception is what lets a swallowed failure still be
+        # named. Without it, 33 quotes' worth of "credit balance is too low"
+        # wrote status="completed", failure_kind=NULL, and the toast reported a
+        # partial success whose partial was zero.
         batch_errors = 0
+        first_error: BaseException | None = None
         for batch_result in batch_results:
             if isinstance(batch_result, BaseException):
                 logger.error("Batch failed: %s", batch_result)
                 batch_errors += 1
+                if first_error is None:
+                    first_error = batch_result
                 continue
             for proposal in batch_result:
                 db.add(proposal)
@@ -448,7 +458,22 @@ async def run_autocode_job(
             db.commit()
             return
 
-        job.status = "completed"
+        # Every batch died ⇒ the job FAILED. "completed" with processed=0 is a
+        # total failure wearing a partial-success costume: the toast rendered
+        # "Tagged 0 of 33 quotes — some batches failed" (a warning) and offered
+        # View Report, which opened an empty modal. Name it instead — the
+        # classifier already knows out-of-credit from rate-limited, and
+        # autocodeFailure.ts already has the sentence for each.
+        #
+        # A genuine partial (some batches landed) stays "completed" — it has
+        # usable proposals — but carries failure_kind so the surface can say
+        # *why* the rest are missing rather than leaving it to be guessed.
+        if batch_errors and first_error is not None:
+            job.failure_kind = classify_exception(
+                job.llm_provider or None, first_error
+            ).value
+            job.error_message = str(first_error)
+        job.status = "failed" if processed_count == 0 and batch_errors else "completed"
         job.processed_quotes = processed_count
         job.proposed_count = proposed_count
         job.input_tokens = llm_client.tracker.input_tokens

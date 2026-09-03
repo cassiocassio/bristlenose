@@ -30,12 +30,12 @@ const REFUSALS: Record<string, Refusal> = {
   no_api_key: {
     kind: "error",
     key: "codebook.autocodeRefusal.noApiKey",
-    fallback: "Add an API key in Settings to autotag.",
+    fallback: "Add an API key in Settings first.",
   },
   provider_local: {
     kind: "error",
     key: "codebook.autocodeRefusal.providerLocal",
-    fallback: "Autotagging needs a cloud provider.",
+    fallback: "This needs a cloud AI provider, not a local model.",
   },
   provider_ambiguous: {
     kind: "error",

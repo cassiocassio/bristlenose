@@ -749,6 +749,32 @@ final class BridgeHandler: ObservableObject {
                 KeychainHelper.set(provider: "miro", value: token)
             }
 
+        case "llm-failure":
+            // An LLM call inside the sidecar died. `OutOfCreditModel` was fed
+            // from `PipelineRunner.deriveFailureState` alone — the pipeline
+            // path — so an AutoCode job that emptied the account lit nothing:
+            // no pill, and Settings still showing the provider green until it
+            // next revalidated. The report chip said so and the app did not.
+            //
+            // Only billing is acted on, deliberately. A rate limit is
+            // transient and clears itself, and `LLMValidator`'s verdict cache
+            // is sticky — recording one would leave a durable amber for a
+            // condition that resolved in seconds.
+            //
+            // `"out_of_credit"` is `LLMFailureKind.OUT_OF_CREDIT` in
+            // `bristlenose/llm/failure_classifier.py`, a *different* Python
+            // enum from the `CauseCategoryEnum` `CauseCategory` mirrors —
+            // they agree on this one string by convention, not by contract,
+            // so this compares the literal rather than borrowing that type.
+            if body["kind"] as? String == "out_of_credit",
+               let raw = body["provider"] as? String,
+               let provider = LLMProvider(rawValue: raw) {
+                Self.log.notice(
+                    "llm-failure out_of_credit provider=\(raw, privacy: .public) — recording verdict"
+                )
+                OutOfCreditModel.recordActiveProviderOutOfCredit(provider: provider)
+            }
+
         default:
             break
         }

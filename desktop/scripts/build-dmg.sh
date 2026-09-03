@@ -251,7 +251,7 @@ ok "notarytool profile: $NOTARY_PROFILE"
 ok "target: $DMG_NAME  ·  team $TEAM_ID"
 
 # ------------------------------------------------------------
-# 1b. Swift unit suite
+# 1b. Swift unit suite — the .dmg channel's gate
 # ------------------------------------------------------------
 # The .dmg was the one shipping channel with no Swift gate. mac-build.yml covers
 # a push and build-all.sh step 1c covers the App Store archive; a notarised
@@ -262,7 +262,7 @@ ok "target: $DMG_NAME  ·  team $TEAM_ID"
 # ensure-sidecar.sh --force, ~10 minutes every time, and a compile break should
 # not buy that first. No ad-hoc branch is needed here — this script refuses
 # ad-hoc signing outright, so every run of it is a real one.
-say "Swift unit suite"
+say "Swift unit suite (BristlenoseTests)"
 if [ "${SKIP_SWIFT_TESTS:-0}" = "1" ]; then
     ok "SKIPPED — SKIP_SWIFT_TESTS=1, gate deliberately bypassed"
 else

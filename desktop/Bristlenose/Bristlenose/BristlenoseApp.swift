@@ -56,11 +56,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Responder-chain entry point for opening Settings. The web bridge
-    /// (`BridgeHandler` "open-settings") and the out-of-credit pill call
+    /// (`BridgeHandler` "open-settings") calls
     /// `NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, ...)`,
     /// which the SwiftUI `Settings {}` scene used to answer. Now that Settings
     /// is an AppKit `SettingsWindowController`, the app delegate answers it —
-    /// so those call sites need no change.
+    /// so that call site needs no change.
+    ///
+    /// It is the only one left. Everything with a pane in mind deep-links
+    /// instead, via `SettingsWindow.shared.show(pane:)` — the out-of-credit
+    /// pill and the welcome "Setup →" to `.llm`, Connect an Agent… to
+    /// `.mcpAgents` — because this entry point cannot name a pane.
     @MainActor
     @objc func showSettingsWindow(_ sender: Any?) {
         SettingsWindow.shared.show()

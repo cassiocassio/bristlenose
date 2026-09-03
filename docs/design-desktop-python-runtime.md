@@ -496,7 +496,7 @@ The sidecar never touches the macOS Keychain. Instead:
 
 **Post-alpha knobs (not scheduled):**
 - Biometric gate on Keychain access (`kSecAttrAccessControl` + `.biometryCurrentSet`) — post-alpha Settings toggle.
-- Key rotation / revocation flow — manual today (re-enter in Settings → `bristlenosePrefsChanged` notification → `ServeManager.restartIfRunning()` → fresh env dict on next spawn).
+- Key rotation / revocation flow — manual today (re-enter in Settings → `bristlenosePrefsChanged` notification → `ServeFleet.applyEnvChange()` → fresh env dict on next spawn).
 
 ## Validation gates
 

@@ -18,11 +18,12 @@ import Testing
             current: current, fitting: fitting, shrinkThreshold: threshold)
     }
 
-    @Test func growthIsNeverDeadbanded() {
+    @Test func growthIsNeverDeadbandedBeyondNoise() {
         // The shipped Azure defect in miniature: content 17pt taller than the
         // window does not get a scrollbar, it gets compressed by the required
-        // constraints that pin the pane. So any growth must move the window,
-        // however small — even growth far below the shrink threshold.
+        // constraints that pin the pane. So growth must move the window however
+        // small, far below the shrink threshold — but NOT below `refitNoise`,
+        // which `layoutNoiseNeverMovesTheWindow` pins from the other side.
         #expect(target(from: 484, to: 501) == 501)
         #expect(target(from: 660, to: 681) == 681)
     }

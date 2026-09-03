@@ -43,7 +43,8 @@ struct LLMSettingsView: View {
     /// rows. Measured 3 Sep 2026 (`SettingsRefitTests`): the four non-Azure
     /// providers span 17pt — ChatGPT 484, Claude 499, Gemini 499, Ollama 501 —
     /// so browsing between them never moves the window, while Azure at 681
-    /// always does. Growth is never deadbanded; see `SettingsWindow.refitTarget`.
+    /// always does. Growth is deadbanded only by layout noise — never by this;
+    /// see `SettingsWindow.refitTarget`.
     static let shrinkThreshold: CGFloat = 60
 
     /// True only under `init(measuring:)`.

@@ -164,10 +164,12 @@ struct MCPAgentsSettingsView: View {
         }
         // 660, matching Appearance / LLM Provider / Transcription exactly —
         // the Settings package animates HEIGHT per pane, but width jumps
-        // read as a bug. Depth is whatever this content needs (fittingSize);
-        // the fixed verticals are payloadPane's (so switching CLIENT tabs
-        // never reflows) and the register's ceiling (so the window cannot
-        // grow with the project count).
+        // read as a bug. Depth is whatever this content needs (fittingSize).
+        // The only fixed vertical left is the register's ceiling, so the
+        // window cannot grow with the project count; `payloadPane`'s 170pt
+        // pin went in 028d539b and switching client tabs DOES reflow now —
+        // see the note above `payloadPane` for why that is the fix and not
+        // a regression.
         .frame(width: 660)
         .onChange(of: client) {
             copiedResetTask?.cancel()

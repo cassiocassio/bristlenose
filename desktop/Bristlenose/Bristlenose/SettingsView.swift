@@ -201,9 +201,10 @@ final class SettingsWindow {
 
     /// The height the window should take next, or `nil` to stay put.
     ///
-    /// **Asymmetric, and the asymmetry is load-bearing.** Growth is never
-    /// deadbanded: a pane wanting more room than the window has does not get a
-    /// scrollbar, it gets compressed by the required constraints that pin it
+    /// **Asymmetric, and the asymmetry is load-bearing.** Growth is deadbanded
+    /// only by `refitNoise` — never by `shrinkThreshold`: a pane wanting more
+    /// room than the window has does not get a scrollbar, it gets compressed
+    /// by the required constraints that pin it
     /// (`Utilities.constrainToSuperviewBounds`), silently. That was the shipped
     /// Azure defect — 681pt of content in a window pinned at 660 whenever Azure
     /// was reached by *switching* rather than by opening Settings on it, so the
@@ -221,7 +222,7 @@ final class SettingsWindow {
     static func refitTarget(
         current: CGFloat, fitting: CGFloat, shrinkThreshold: CGFloat
     ) -> CGFloat? {
-        if fitting > current + refitNoise { return fitting }       // grow: always
+        if fitting > current + refitNoise { return fitting }       // grow: past noise
         if current - fitting > max(shrinkThreshold, refitNoise) {  // shrink: earned
             return fitting
         }

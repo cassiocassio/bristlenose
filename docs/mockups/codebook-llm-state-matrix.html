@@ -386,20 +386,29 @@
     </tr>
     <tr>
       <td><code>provider-status-glyph-vocabulary.html</code></td><td>7 Jun</td>
-      <td><span class="warn">check</span></td>
-      <td>Axis A glyphs. Predates the classifier&rsquo;s current kinds.</td>
+      <td><span class="warn">superseded</span></td>
+      <td>Explored three treatments for the provider dot; a <b>fourth</b> shipped —
+        colour plus an always-visible localised label. Six <code>ProviderStatus</code>
+        cases ship, this names five. The a11y reasoning
+        stands.<span class="tag t-ok">banded</span></td>
     </tr>
     <tr class="dead">
       <td><code>mockup-autocode-lifecycle.html</code></td><td>19 Feb</td>
       <td><span class="bad">stale</span></td>
-      <td>Names <b>only</b> <code>running</code> — no terminal state at all, six months
-        before <code>failure_kind</code> existed. It is the file whose name promises
-        this map and does not contain it.<span class="tag t-gap">gap 4</span></td>
+      <td>Not a state map at all — my earlier reading of it here was wrong. It is a
+        <b>nine-step storyboard of the v1 flow</b> (&ldquo;Codebook tab — before
+        import&rdquo;, then &ldquo;after import, AutoCode available&rdquo;), where
+        importing a codebook and coding with it were separate acts. 0.29.0 made
+        Install <i>be</i> apply. Banded SUPERSEDED.<span class="tag t-ok">banded</span></td>
     </tr>
     <tr>
       <td><code>codebook-v2-messages.html</code></td><td>30 Aug</td>
-      <td><span class="warn">check</span></td>
-      <td>Still references <code>CodebookPanel</code>, the v1 lens deleted in 0.29.0.</td>
+      <td><span class="ok">implemented</span></td>
+      <td>Its message taxonomy is the live one, and its &ldquo;what this needs that
+        does not exist&rdquo; section drove <code>ae050e56</code>. Read that as a
+        diagnosis of a fixed problem; the <code>CodebookPanel</code> reference
+        describes the v1 lens it was written to
+        replace.<span class="tag t-ok">banded</span></td>
     </tr>
   </table>
 

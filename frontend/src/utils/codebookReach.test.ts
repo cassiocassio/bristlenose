@@ -24,11 +24,15 @@ describe("reachPhrase — two facts, not a ratio", () => {
     expect(reachPhrase(28, 1, "Ikea")).toBe("28 tags · applied to 1 quote in Ikea");
   });
 
-  it("drops the whole clause at zero rather than claiming an application", () => {
-    // "31 tags on 0 quotes" asserted an application that never happened. The
-    // codebook is installed and nothing is coded with it yet — "31 tags" is
-    // true and complete.
-    expect(reachPhrase(31, 0, "Ikea")).toBe("31 tags");
+  it("names the zero rather than going quiet", () => {
+    // Reversed 3 Sep 2026. Dropping the clause was right to refuse "applied to
+    // 0 quotes" — which asserts an application that never happened — and wrong
+    // about the alternative: a bare "31 tags" is what a NOT-INSTALLED card says
+    // minus three words, and what a failed run says, and what a run that never
+    // happened says. Four states, one rendering. "none applied" denies the
+    // application instead of asserting it at zero, and separates the legitimate
+    // outcome (it ran, nothing matched) from the rest.
+    expect(reachPhrase(31, 0, "Ikea")).toBe("31 tags · none applied to Ikea");
   });
 
   it("drops the reach clause when there is no project to name", () => {

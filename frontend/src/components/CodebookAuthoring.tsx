@@ -339,6 +339,15 @@ export function CodebookGroupColumn({
     }
   }, [onDeleteTag]);
 
+  const handleRequestDeleteGroup = useCallback(() => {
+    if (group.tags.length === 0) {
+      // No tags to move — skip confirmation
+      onDeleteGroup(group);
+    } else {
+      setShowDeleteConfirm(true);
+    }
+  }, [group, onDeleteGroup]);
+
   const classes = [
     "codebook-group",
     isDragOver ? "drag-over" : null,
@@ -388,7 +397,7 @@ export function CodebookGroupColumn({
         {!isReadOnly && (
           <button
             className="group-close"
-            onClick={() => setShowDeleteConfirm(true)}
+            onClick={handleRequestDeleteGroup}
             aria-label={t("codebook.deleteGroupAriaLabel", { name: group.name })}
           >
             &times;

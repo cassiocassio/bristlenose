@@ -101,6 +101,25 @@ const CODEBOOK: CodebookResponse = {
   all_tag_names: ["confusion", "unused", "joy", "misc", "feedback"],
 };
 
+/** The same codebook plus a group holding nothing — the delete that skips. */
+const WITH_EMPTY_GROUP: CodebookResponse = {
+  ...CODEBOOK,
+  groups: [
+    ...CODEBOOK.groups,
+    {
+      id: 4,
+      name: "Scratch",
+      subtitle: "",
+      colour_set: "trust",
+      order: 3,
+      tags: [],
+      total_quotes: 0,
+      is_default: false,
+      framework_id: null,
+    },
+  ],
+};
+
 const TEMPLATES = {
   templates: [
     {
@@ -271,6 +290,26 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     const card = groupCard("Friction");
     expect(within(card).getByText(/Delete "confusion"/)).toBeInTheDocument();
     expect(document.querySelector(".merge-overlay")).toBeNull();
+  });
+
+  it("deletes an empty group with no confirmation at all", async () => {
+    // The same absence as the zero-count tag, one level up: a group holding
+    // nothing has nothing to move, so the dialog asks about a loss that
+    // cannot happen.
+    const calls = mockFetch(WITH_EMPTY_GROUP);
+    await lens.floor();
+    await userEvent.click(screen.getByLabelText("Delete group Scratch"));
+    expect(screen.queryByText(/Delete "Scratch"/)).not.toBeInTheDocument();
+    await waitFor(() => expect(sent(calls, "/codebook/groups/4", "DELETE")).toBeTruthy());
+  });
+
+  it("still confirms before deleting a group that holds tags", async () => {
+    const calls = mockFetch();
+    await lens.floor();
+    await userEvent.click(screen.getByLabelText("Delete group Friction"));
+    expect(screen.getByText(/Delete "Friction"/)).toBeInTheDocument();
+    expect(screen.getByText(/2 tags will move to Uncategorised/)).toBeInTheDocument();
+    expect(sent(calls, "/codebook/groups/1", "DELETE")).toBeFalsy();
   });
 
   it("gives the floor group no delete button", async () => {

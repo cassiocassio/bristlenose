@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codebook × LLM — the state engine</title>
+<style>
+  /* An AUDIT, not a design. Every state and every rendering below was read out
+     of the code at HEAD (3 Sep 2026) and carries a file:line receipt. The last
+     section is the gap list; nothing here proposes a treatment. */
+  :root{
+    --sf:-apple-system,"SF Pro Text",system-ui,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+    --orange:#FF9F0A;--red:#FF3B30;--green:#34C759;--blue:#0A84FF;--purple:#BF5AF2;
+    --card-bg:#ffffff;--card-hair:rgba(0,0,0,0.10);
+    --label:rgba(0,0,0,0.85);--secondary:rgba(0,0,0,0.52);
+  }
+  body.dark{
+    --card-bg:#232325;--card-hair:rgba(255,255,255,0.12);
+    --label:rgba(255,255,255,0.92);--secondary:rgba(255,255,255,0.55);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{font-family:var(--sf);color:#fff;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(120% 120% at 20% 0%,#6a86b8,#3a4a6b 60%,#232a3d);
+    padding:28px 24px 90px;}
+  body.dark{background:radial-gradient(120% 120% at 20% 0%,#2b3340,#1a1d24 60%,#0e1014);}
+  .wrap{max-width:1180px;margin:0 auto;}
+  h1{font-size:19px;font-weight:600;margin:0 0 4px;}
+  h2{font-size:15px;font-weight:600;margin:46px 0 4px;}
+  h3{font-size:12px;font-weight:600;margin:24px 0 8px;letter-spacing:.04em;
+     text-transform:uppercase;color:rgba(255,255,255,.88);}
+  .sub{font-size:12.5px;line-height:1.6;color:rgba(255,255,255,.74);max-width:84ch;margin:0 0 10px;}
+  .sub b{color:#fff;font-weight:600;}
+  code{font-family:var(--mono);font-size:11.5px;background:rgba(255,255,255,.13);
+       padding:1px 4px;border-radius:4px;}
+  hr.rule{border:0;border-top:1px solid rgba(255,255,255,.16);margin:10px 0 0;}
+  .chrome{display:flex;gap:8px;margin:16px 0 4px;}
+  .chrome button{font:12px/1 var(--sf);padding:6px 11px;border-radius:7px;cursor:pointer;
+    border:.5px solid rgba(255,255,255,.35);background:rgba(255,255,255,.14);color:#fff;}
+  .chrome button.on{background:#fff;color:#1d1d1f;border-color:#fff;}
+
+  table{border-collapse:collapse;width:100%;font-size:12px;margin-top:12px;}
+  th,td{padding:9px 10px;text-align:left;vertical-align:top;line-height:1.5;
+        border-bottom:1px solid rgba(255,255,255,.13);}
+  th{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:600;
+     color:rgba(255,255,255,.6);border-bottom-color:rgba(255,255,255,.3);}
+  td{color:rgba(255,255,255,.82);}
+  td b{color:#fff;}
+  .ref{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.42);display:block;margin-top:3px;}
+  .ok{color:var(--green);font-weight:600;}
+  .bad{color:var(--red);font-weight:600;}
+  .warn{color:var(--orange);font-weight:600;}
+  .same{background:rgba(255,59,48,.13);}
+  tr.dead td{background:rgba(255,59,48,.10);}
+
+  .tag{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.03em;
+       padding:2px 7px;border-radius:5px;vertical-align:1px;margin-left:6px;}
+  .t-gap{background:rgba(255,59,48,.25);color:#ff9a92;}
+  .t-fixed{background:rgba(52,199,89,.22);color:#8ff0ad;}
+  .t-ok{background:rgba(255,255,255,.14);color:rgba(255,255,255,.8);}
+
+  .diagram{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);
+           border-radius:12px;padding:16px;margin-top:12px;overflow-x:auto;}
+  .diagram svg{display:block;min-width:880px;}
+
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;
+          color:rgba(255,255,255,.7);margin:12px 0 0;}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;
+            margin-right:6px;vertical-align:-1px;}
+
+  ol.gaps{font-size:12.5px;line-height:1.65;color:rgba(255,255,255,.82);
+          max-width:86ch;padding-left:20px;margin:10px 0 0;}
+  ol.gaps li{margin-bottom:14px;}
+  ol.gaps b{color:#fff;}
+
+  /* rendered specimens */
+  .rowspec{background:var(--card-bg);border:1px solid var(--card-hair);border-radius:8px;
+           padding:9px 11px;color:var(--label);font-size:12px;margin-top:6px;}
+  .rowspec .t{font-weight:600;font-size:12.5px;}
+  .rowspec .s{color:var(--secondary);font-size:11.5px;margin-top:1px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Codebook &times; LLM — the state engine</h1>
+  <p class="sub">
+    An <b>audit</b>, read out of the code at HEAD on 3&nbsp;Sep&nbsp;2026, not a design.
+    It enumerates the two state axes, shows which combinations a researcher can reach,
+    says what each one actually renders, and ends with the gaps. Every claim carries a
+    <code>file:line</code>. Nothing here proposes a treatment — that is the next step.
+  </p>
+  <hr class="rule">
+  <div class="chrome"><button id="lightBtn" class="on">Light</button><button id="darkBtn">Dark</button></div>
+
+  <!-- ============================================================ -->
+  <h2>1 &nbsp;Axis A — LLM availability (global)</h2>
+  <p class="sub">
+    Four are configuration and never stale; one is a cached verdict about someone
+    else&rsquo;s server. The transient conditions at the bottom are <b>not states</b> —
+    nothing persists them, and the SDK rides most of them out before anyone sees one.
+  </p>
+  <table>
+    <tr><th style="width:20%">State</th><th style="width:26%">Established by</th>
+        <th style="width:26%">Surfaced as</th><th>Note</th></tr>
+    <tr>
+      <td><b>Ready</b></td>
+      <td>Key present for the current provider<span class="ref">routes/autocode.py:146 _has_api_key</span></td>
+      <td>&mdash; (nothing to say)</td>
+      <td>The overwhelmingly common case.</td>
+    </tr>
+    <tr>
+      <td><b>No key</b></td>
+      <td>No key for the resolved provider</td>
+      <td><span class="ok">Refusal toast</span><span class="ref">refusal.py NO_API_KEY → autocodeRefusal.ts</span></td>
+      <td>Pre-flight, so it costs nothing to discover.<span class="tag t-fixed">wired</span></td>
+    </tr>
+    <tr>
+      <td><b>Ambiguous</b></td>
+      <td>2+ keys, none chosen<span class="ref">config.py:305 provider_resolution_for</span></td>
+      <td><span class="ok">Refusal toast</span></td>
+      <td>A server cannot prompt, so it refuses rather than picking a vendor.</td>
+    </tr>
+    <tr>
+      <td><b>Local only</b></td>
+      <td><code>llm_provider == "local"</code></td>
+      <td><span class="ok">Refusal toast</span></td>
+      <td>Ollama cannot hold the taxonomy in context.</td>
+    </tr>
+    <tr>
+      <td><b>Out of credit</b></td>
+      <td>Sticky verdict from a real call<span class="ref">LLMValidator / OutOfCreditModel</span></td>
+      <td><span class="ok">Titlebar pill + popover</span><span class="ref">out-of-credit-ux.html §2</span></td>
+      <td>Only isolable on Anthropic + OpenAI. Azure has no per-account credit;
+          Gemini folds it into one exhausted signal.</td>
+    </tr>
+    <tr style="opacity:.72">
+      <td><i>rate-limited<br>server error<br>network</i></td>
+      <td>Transient; SDK retries 6&times; honouring <code>Retry-After</code><span class="ref">llm/client.py:155 _CLOUD_MAX_RETRIES</span></td>
+      <td>Only as a job failure, if retries are exhausted</td>
+      <td><b>Not states.</b> Nothing persists them, and there is deliberately no
+          hand-rolled backoff — the SDK&rsquo;s is better and sees the header.</td>
+    </tr>
+  </table>
+
+  <!-- ============================================================ -->
+  <h2>2 &nbsp;Axis B — codebook state (per framework)</h2>
+  <p class="sub">
+    Two independent sub-axes that the UI conflates. <b>Installed</b> means only
+    &ldquo;has groups linked in this project&rdquo; — and
+    <code>importCodebookTemplate</code> runs <i>before</i> the job, so a codebook is
+    installed whatever the coding then does. <b>Job state</b> is the second sub-axis,
+    and the lens reads none of it.
+  </p>
+  <table>
+    <tr><th style="width:22%">Sub-axis</th><th style="width:30%">Values</th><th>Read by the codebook lens?</th></tr>
+    <tr><td><b>Installed</b></td><td>no / yes</td>
+        <td><span class="ok">yes</span> — drives Install vs Uninstall<span class="ref">CodebookV2.tsx:266</span></td></tr>
+    <tr><td><b>Enabled</b></td><td>on / off</td>
+        <td><span class="ok">yes</span> — switch + <code>pageoff</code> wash<span class="ref">CodebookV2Sidebar.tsx:127</span></td></tr>
+    <tr><td><b>Undecided proposals</b></td><td>0 / n</td>
+        <td><span class="ok">yes</span> — &ldquo;· n undecided&rdquo; + Review door<span class="ref">CodebookV2Page.tsx:195</span></td></tr>
+    <tr class="dead"><td><b>Job state</b></td>
+        <td><code>pending · running · completed&nbsp;(full) · completed&nbsp;(partial) · failed · cancelled</code></td>
+        <td><span class="bad">NO — zero call sites.</span> <code>getAutoCodeStatus</code>
+            is never called from the lens, its navigator, or its page. The whole
+            sub-axis is invisible.<span class="tag t-gap">gap 1</span></td></tr>
+  </table>
+
+  <!-- ============================================================ -->
+  <h2>3 &nbsp;The engine</h2>
+  <p class="sub">
+    One click, four terminal states. The LLM condition decides which. Red outlines are
+    <b>dead ends</b> — states with no path back out.
+  </p>
+
+  <div class="diagram">
+  <svg viewBox="0 0 940 380" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-label="Codebook state machine: not installed, through install, to four terminal states.">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="rgba(255,255,255,.5)"/>
+      </marker>
+      <marker id="arR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#FF3B30"/>
+      </marker>
+      <marker id="arG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#34C759"/>
+      </marker>
+    </defs>
+    <style>
+      .n{fill:rgba(255,255,255,.10);stroke:rgba(255,255,255,.45);stroke-width:1;rx:9;}
+      .nd{fill:rgba(255,59,48,.16);stroke:#FF3B30;stroke-width:1.4;rx:9;}
+      .ng{fill:rgba(52,199,89,.15);stroke:#34C759;stroke-width:1.2;rx:9;}
+      .lbl{fill:#fff;font:600 12px var(--sf);}
+      .sm{fill:rgba(255,255,255,.62);font:10.5px var(--mono);}
+      .e{stroke:rgba(255,255,255,.5);stroke-width:1.2;fill:none;marker-end:url(#ar);}
+      .eR{stroke:#FF3B30;stroke-width:1.4;fill:none;marker-end:url(#arR);}
+      .eG{stroke:#34C759;stroke-width:1.4;fill:none;marker-end:url(#arG);stroke-dasharray:4 3;}
+      .et{fill:rgba(255,255,255,.72);font:10.5px var(--sf);}
+      .etR{fill:#ff9a92;font:10.5px var(--sf);}
+      .etG{fill:#8ff0ad;font:10.5px var(--sf);}
+    </style>
+
+    <!-- start -->
+    <rect class="n" x="10" y="150" width="128" height="52"/>
+    <text class="lbl" x="26" y="172">Not installed</text>
+    <text class="sm" x="26" y="188">button: Install</text>
+
+    <!-- click -->
+    <path class="e" d="M138 176 H196"/>
+    <text class="et" x="142" y="168">click</text>
+
+    <rect class="n" x="198" y="150" width="128" height="52"/>
+    <text class="lbl" x="214" y="172">Running</text>
+    <text class="sm" x="214" y="188">chip + progress</text>
+
+    <!-- four outcomes -->
+    <path class="e" d="M326 168 C 370 168, 370 52, 420 52"/>
+    <text class="et" x="336" y="88">ready</text>
+    <rect class="ng" x="422" y="26" width="180" height="52"/>
+    <text class="lbl" x="438" y="48">Coded</text>
+    <text class="sm" x="438" y="64">completed, full</text>
+
+    <path class="eR" d="M326 176 C 370 176, 370 124, 420 124"/>
+    <text class="etR" x="336" y="140">some batches died</text>
+    <rect class="nd" x="422" y="98" width="180" height="52"/>
+    <text class="lbl" x="438" y="120">Partial</text>
+    <text class="sm" x="438" y="136">completed, short</text>
+
+    <path class="eR" d="M326 184 C 370 184, 370 206, 420 206"/>
+    <text class="etR" x="336" y="222">no credit / all died</text>
+    <rect class="nd" x="422" y="180" width="180" height="52"/>
+    <text class="lbl" x="438" y="202">Uncoded</text>
+    <text class="sm" x="438" y="218">failed</text>
+
+    <path class="e" d="M326 192 C 370 192, 370 288, 420 288"/>
+    <text class="et" x="336" y="300">no key / local / ambiguous</text>
+    <rect class="n" x="422" y="262" width="180" height="52"/>
+    <text class="lbl" x="438" y="284">Uncoded</text>
+    <text class="sm" x="438" y="300">no job — refused</text>
+
+    <!-- exits -->
+    <path class="eG" d="M602 52 H 700"/>
+    <text class="etG" x="608" y="44">Review →</text>
+    <rect class="ng" x="702" y="26" width="212" height="52"/>
+    <text class="lbl" x="718" y="48">Reviewed / applied</text>
+    <text class="sm" x="718" y="64">the intended end</text>
+
+    <path class="eR" d="M602 124 C 660 124, 660 124, 700 124"/>
+    <rect class="nd" x="702" y="98" width="212" height="52"/>
+    <text class="lbl" x="718" y="120">no way out</text>
+    <text class="sm" x="718" y="136">409 already_applied</text>
+
+    <path class="e" d="M602 206 C 660 206, 660 206, 700 206"/>
+    <rect class="n" x="702" y="180" width="212" height="52"/>
+    <text class="lbl" x="718" y="202">retryable&hellip; in theory</text>
+    <text class="sm" x="718" y="218">card says Uninstall</text>
+
+    <path class="e" d="M602 288 C 660 288, 660 288, 700 288"/>
+    <rect class="n" x="702" y="262" width="212" height="52"/>
+    <text class="lbl" x="718" y="284">retryable</text>
+    <text class="sm" x="718" y="300">card says Uninstall</text>
+
+    <text class="sm" x="10" y="352">All three lower-right boxes render IDENTICALLY in the navigator and on the page.</text>
+  </svg>
+  </div>
+
+  <div class="legend">
+    <span><i style="background:rgba(52,199,89,.6)"></i>works, has a way forward</span>
+    <span><i style="background:rgba(255,59,48,.6)"></i>dead end</span>
+    <span><i style="background:rgba(255,255,255,.35)"></i>recoverable in principle, unreachable in the UI</span>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2>4 &nbsp;What the researcher actually sees</h2>
+  <p class="sub">
+    The same four terminal states, rendered. This is the whole vocabulary the lens
+    has: a tag count, an optional reach clause, an optional undecided count, and a
+    verb. <b>Three distinct outcomes collapse onto one rendering.</b>
+  </p>
+  <table>
+    <tr><th style="width:20%">State</th><th style="width:32%">Row / page renders</th>
+        <th style="width:14%">Button</th><th>Can the researcher tell?</th></tr>
+    <tr>
+      <td><b>Not installed</b></td>
+      <td><code>28 tags · not installed</code><span class="ref">CodebookV2Page.tsx:223</span></td>
+      <td>Install</td>
+      <td><span class="ok">yes</span></td>
+    </tr>
+    <tr>
+      <td><b>Coded</b> (full)</td>
+      <td><code>28 tags · applied to 33 quotes in Ikea</code></td>
+      <td>Uninstall</td>
+      <td><span class="ok">yes</span></td>
+    </tr>
+    <tr class="dead">
+      <td><b>Partial</b> (58 of 72)</td>
+      <td class="same"><code>28 tags · applied to 58 quotes in Ikea</code></td>
+      <td>Uninstall</td>
+      <td><span class="bad">no</span> — indistinguishable from a full run that
+        happened to reach 58 quotes.<span class="tag t-gap">gap 2</span></td>
+    </tr>
+    <tr class="dead">
+      <td><b>Uncoded</b> (job failed)</td>
+      <td class="same"><code>28 tags</code> &mdash; the reach clause is simply absent
+        <span class="ref">codebookReach.ts:57 — quotes===0 returns the bare phrase</span></td>
+      <td>Uninstall</td>
+      <td><span class="bad">no</span> — and worse, an absent clause is
+        <i>ambiguous with a legitimate outcome</i>: a codebook that ran fine and
+        matched nothing looks exactly the same.<span class="tag t-gap">gap 3</span></td>
+    </tr>
+    <tr class="dead">
+      <td><b>Uncoded</b> (refused, no job)</td>
+      <td class="same"><code>28 tags</code></td>
+      <td>Uninstall</td>
+      <td><span class="bad">no</span> — same rendering again.</td>
+    </tr>
+  </table>
+
+  <!-- ============================================================ -->
+  <h2>5 &nbsp;Mockup coverage</h2>
+  <p class="sub">
+    Which existing mockups are trued to the code, and what they cover. The pattern is
+    stark: <b>every mockup covers the happy path or the global condition; none covers
+    a codebook whose coding did not happen.</b>
+  </p>
+  <table>
+    <tr><th style="width:30%">Mockup</th><th style="width:12%">Last edit</th>
+        <th style="width:12%">Trued?</th><th>Covers</th></tr>
+    <tr>
+      <td><code>out-of-credit-ux.html</code></td><td>14 Jul</td>
+      <td><span class="ok">yes</span></td>
+      <td>Axis A only. §2 the pill + popover (matches <code>OutOfCreditPill.swift</code>
+        exactly). <b>§3 already settled that reaching for AutoCode while out of credit
+        gets &ldquo;nothing new — the pill is enough&rdquo;</b>, which is the decision
+        this whole thread re-derived.<span class="tag t-ok">authority</span></td>
+    </tr>
+    <tr>
+      <td><code>codebook-v2-autocode-button.html</code></td><td>31 Aug</td>
+      <td><span class="ok">yes</span></td>
+      <td>Install → Uninstall → Review arc. Happy path only — no failure state
+        appears anywhere in it.</td>
+    </tr>
+    <tr>
+      <td><code>codebook-library-states.html</code></td><td>1 Aug</td>
+      <td><span class="ok">yes</span></td>
+      <td>enabled / disabled only.</td>
+    </tr>
+    <tr>
+      <td><code>provider-status-glyph-vocabulary.html</code></td><td>7 Jun</td>
+      <td><span class="warn">check</span></td>
+      <td>Axis A glyphs. Predates the classifier&rsquo;s current kinds.</td>
+    </tr>
+    <tr class="dead">
+      <td><code>mockup-autocode-lifecycle.html</code></td><td>19 Feb</td>
+      <td><span class="bad">stale</span></td>
+      <td>Names <b>only</b> <code>running</code> — no terminal state at all, six months
+        before <code>failure_kind</code> existed. It is the file whose name promises
+        this map and does not contain it.<span class="tag t-gap">gap 4</span></td>
+    </tr>
+    <tr>
+      <td><code>codebook-v2-messages.html</code></td><td>30 Aug</td>
+      <td><span class="warn">check</span></td>
+      <td>Still references <code>CodebookPanel</code>, the v1 lens deleted in 0.29.0.</td>
+    </tr>
+  </table>
+
+  <!-- ============================================================ -->
+  <h2>6 &nbsp;The gaps</h2>
+  <p class="sub">Ranked by what a researcher loses. No treatments proposed.</p>
+  <ol class="gaps">
+    <li><b>A partial run is a permanent hole, and it is the one the rate limits
+      produce.</b> 58 of 72 quotes coded, job <code>completed</code> — so
+      <code>start_autocode_job</code> refuses a re-run with
+      <code>409 already_applied</code>, and <code>reapply_to_new_quotes</code> only
+      ever codes sessions imported <i>after</i> the watermark. The 14 quotes nobody
+      looked at are unreachable by every path that exists. <b>This is the state a
+      rate-limited run lands in</b>, which makes it the real rate-limit defect —
+      the backoff people reach for is already there, six SDK retries deep, honouring
+      <code>Retry-After</code>.</li>
+
+    <li><b>Three outcomes share one rendering.</b> Coded-nothing, refused-before-
+      starting, and coded-nothing-because-nothing-matched are the same pixels. The
+      third is a legitimate result, so the researcher cannot treat a bare
+      <code>28 tags</code> as a problem — which means the signal is not merely weak,
+      it is <i>uninterpretable</i>.</li>
+
+    <li><b>Recovery exists and cannot be reached.</b> A <code>failed</code> job is
+      discarded and re-run by the start guard — pinned by
+      <code>test_dead_job_can_be_rerun</code> — but the card reads <b>Uninstall</b>,
+      because the template was imported before the job ran. The only route back is
+      Uninstall&nbsp;→&nbsp;Install, which nobody would guess and which throws away
+      the researcher&rsquo;s own edits to those tags.</li>
+
+    <li><b>Nothing re-runs after the condition lifts.</b> A provider switch or a new
+      key posts <code>.bristlenosePrefsChanged</code> and restarts the sidecar — a
+      strong signal, unused. A top-up emits nothing at all, and
+      <code>OutOfCreditModel</code>&rsquo;s own comment records that refocus re-reads
+      the cache without revalidating, so even the pill lingers.</li>
+
+    <li><b>The lens reads no job state at all</b>, so none of the above can be
+      rendered without first giving it the data. That is the prerequisite for every
+      treatment, and it is a wiring job, not a design one.</li>
+  </ol>
+
+</div>
+<script>
+  const b=document.body;
+  darkBtn.onclick=()=>{b.classList.add("dark");darkBtn.classList.add("on");lightBtn.classList.remove("on");};
+  lightBtn.onclick=()=>{b.classList.remove("dark");lightBtn.classList.add("on");darkBtn.classList.remove("on");};
+</script>
+</body>
+</html>

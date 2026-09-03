@@ -97,10 +97,11 @@ cp mac-arsed-mac-app/LICENSE.txt "$DST/LICENSE.txt"
 
 ## Why this one — already evaluated, do not re-research
 
-Chosen from a surveyed field, not picked at random. The full register, with
-what was declined and why, is at:
-
-  https://claude.ai/code/artifact/7165ebdc-e1a4-43a2-b96c-9626d54e2405   (maintainer's record; private)
+Chosen from a surveyed field, not picked at random. The full register — every
+candidate, with dates, licences and the reason for each verdict — is in the
+maintainer's private notes; in an interactive session, `/artifacts` lists it
+under **Swift Corpus Register**. The decisions that matter are summarised below
+so this file stands alone without it.
 
 **Alternatives already surveyed** (~40 repos, 3 Sep 2026): `CharlesWiltgen/Axiom`
 is 15% macOS repo-wide and worth only two files; `openai/plugins`,

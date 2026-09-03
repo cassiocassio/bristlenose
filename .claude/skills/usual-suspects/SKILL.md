@@ -471,9 +471,10 @@ Show the user the final annotated list — one report, not four.
 ### Provenance — where these numbers came from
 
 This pipeline's shape is not a hunch. It comes from a blind three-arm trial on
-one 288-line Swift file, 3 Sep 2026, recorded at:
-
-  https://claude.ai/code/artifact/cb6c0529-c4e2-4049-8b50-6d4fbcfebc5b   (maintainer's record; private)
+one 288-line Swift file, 3 Sep 2026. The full matrix and method are in the
+maintainer's private notes — in an interactive session, `/artifacts` lists them
+under **CopyMachinery Review Trial**. The load-bearing numbers are reproduced
+here so this file stands alone without it.
 
 Measured there: **20 distinct defects, 7 unanimous (35%), 11 found by exactly
 one arm (55%), zero false positives across 36 findings.** Cost per unique

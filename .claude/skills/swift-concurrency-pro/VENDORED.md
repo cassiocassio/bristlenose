@@ -105,10 +105,11 @@ Remaining siblings if wanted later: SwiftData Pro, Swift Testing Pro.
 
 ## Why this one — already evaluated, do not re-research
 
-Chosen from a surveyed field, not picked at random. The full register, with
-what was declined and why, is at:
-
-  https://claude.ai/code/artifact/7165ebdc-e1a4-43a2-b96c-9626d54e2405   (maintainer's record; private)
+Chosen from a surveyed field, not picked at random. The full register — every
+candidate, with dates, licences and the reason for each verdict — is in the
+maintainer's private notes; in an interactive session, `/artifacts` lists it
+under **Swift Corpus Register**. The decisions that matter are summarised below
+so this file stands alone without it.
 
 **Known open alternative:** `AvdLee/Swift-Concurrency-Agent-Skill` (MIT, v2.3.0,
 1,638★) is reported as materially larger (~250 KB vs ~55 KB) with a diagnostic

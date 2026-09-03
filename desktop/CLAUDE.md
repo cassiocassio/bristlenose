@@ -60,9 +60,11 @@ UI is essentially pure AppKit. Brent Simmons committed a *new* technote on 6 Jun
 while the iOS section of the same file says the opposite. Same author, same day,
 opposite advice per platform: that asymmetry is the two axes.
 
-The dated register of what SwiftUI still cannot do on macOS — each entry with a
-radar number, and a separate list of complaints Apple has since *fixed* so they
-don't get repeated — is the maintainer's record at https://claude.ai/code/artifact/7165ebdc-e1a4-43a2-b96c-9626d54e2405
+A dated register of what SwiftUI still cannot do on macOS — each entry with a
+radar number, plus a separate list of complaints Apple has since *fixed*, so
+stale criticism doesn't get repeated — is kept in the maintainer's private
+notes (`/artifacts` → **Swift Corpus Register**). Ask before assuming a
+SwiftUI-on-Mac limitation is still current; several well-known ones are not.
 
 ## Native primitives first — Swift isn't a blank web canvas
 

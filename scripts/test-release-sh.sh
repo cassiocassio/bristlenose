@@ -274,7 +274,28 @@ eq "bad bump kind refuses" 2 "$?"
 # learn to ignore. Observed 27 Aug 2026 mid-release.
 _decl="8.8.8"
 _had_dir=0; [ -d "$ROOT/.release/$_decl" ] && _had_dir=1
-echo "not-the-version" | bash "$ROOT/scripts/release.sh" run "$_decl" --bump minor >/dev/null 2>&1
+# Both `run` cases below drive the real driver with a SYNTHETIC step table.
+# Without it they reach the credential block, which resolves Apple identities and
+# probes codesign/notarytool/gh/ssh — so on this Mac they passed using the
+# maintainer's real certificates (and fired real keychain probes on every run),
+# and on CI's ubuntu they died at exit 2 with no certificates at all.
+#
+# That made "wrong confirmation aborts" pass on Linux for the WRONG REASON: it
+# expects 2 from the confirmation mismatch and got 2 from the missing
+# credentials. And it made the stranded-step case below fail outright, expecting
+# 3 and getting the same 2. Neither is testing credentials; both are testing the
+# resume machinery above them.
+_SYNTH_TBL="$ROOT/.release/.synthetic-steps.tbl"
+mkdir -p "$ROOT/.release"
+cat > "$_SYNTH_TBL" <<'SYNTH'
+preflight|preflight|plain|1m|||true
+bump|bump + commit|plain|1m|||true
+push-main|push main|plain|1m|||true
+strict-ci|dispatch strict CI|plain|1m|||true
+build-all|build the app|plain|1m|||true
+SYNTH
+
+echo "not-the-version" | RELEASE_STEPS_FILE="$_SYNTH_TBL" bash "$ROOT/scripts/release.sh" run "$_decl" --bump minor >/dev/null 2>&1
 eq "wrong confirmation aborts" 2 "$?"
 if [ "$_had_dir" = 1 ]; then
     ok "a declined run leaves nothing (skipped — $_decl pre-existed)"
@@ -294,7 +315,9 @@ cat > "$_rd/events.jsonl" <<'LOG'
 {"ts":"2026-08-23T10:04:00Z","run":"9.9.9","step":"strict-ci","status":"ok","detail":"2s"}
 {"ts":"2026-08-23T10:05:00Z","run":"9.9.9","step":"build-all","status":"running","detail":"attempt 1"}
 LOG
-_out=$(echo "9.9.9" | bash "$ROOT/scripts/release.sh" run 9.9.9 --bump patch 2>&1)
+# Step ids match the synthetic events written above, so "skipped (done)" and the
+# stranded report are about the same steps the log names.
+_out=$(echo "9.9.9" | RELEASE_STEPS_FILE="$_SYNTH_TBL" bash "$ROOT/scripts/release.sh" run 9.9.9 --bump patch 2>&1)
 _rc=$?
 eq "a stranded step exits 3, never auto-advances" 3 "$_rc"
 case "$_out" in *"skipped (done)"*) ok "steps already ok are skipped" ;;

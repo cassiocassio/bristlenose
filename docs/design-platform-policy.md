@@ -69,6 +69,16 @@ The Tahoe-specific issues already encountered:
 **Policy:**
 
 - Deployment target stays at LTS-1 (currently Sequoia/15.0). Bump when the current LTS becomes n-2.
+- **DECIDED 3 Sep 2026 — the floor does not move this quarter, and the adoption
+  maths is not the input.** macOS 27 ships this autumn, so Sequoia becomes n-2
+  and the trigger below fires on schedule. It is being held anyway, for reasons
+  that no percentage changes: the Sequoia sidebar work is **done, working and
+  fragile**, and re-opening it is a distraction from reaching public beta.
+  Don't re-raise this with better numbers — the numbers were never the blocker.
+- **The forcing function will be Apple Intelligence, not adoption.** Foundation
+  Models is macOS 26+, so when those features graduate from an AI-only scheme
+  into the shipping product, the floor moves with them. Expect that to arrive
+  before any n-2 argument does.
 - The dual-target setup (15.0 for prod, 26.1 for Apple-Intelligence-only schemes) is intentional. **Add a comment block in `pbxproj`** explaining which scheme uses which target. Currently easy to bump one without the other; that's a bug waiting to happen.
 - WWDC week (June): install macOS developer beta on a non-primary machine. Build the desktop app. File any breakage as a tracked issue.
 - Public beta (July): ship a TestFlight build on the new SDK to at least one beta tester running the public beta.
@@ -93,7 +103,7 @@ Things we know we're pinned at, with re-check dates. When a re-check date comes 
 | **lighthouse 12.x** | Lighthouse 13 requires Node ≥22.19. **The stated blocker is gone** — CI resolves Node from `.tool-versions` (node 24), not the 20 this row assumed. The pin now has no recorded reason; re-validate or drop it rather than carrying it on a premise that expired. | Next quarterly review — carries no live blocker |
 | **Python 3.14** | macOS `ensurepip` broken for `python -m venv` (CLAUDE.md gotcha). Watch upstream. | October 2026 (post 3.14.1) |
 | **Python 3.10 floor** | EOL October 2026. Decision point. | Quarterly review preceding the EOL |
-| **macOS deployment target 15.0** | Sequoia is n-1; avoids SwiftUI back-compat work. | When Sequoia becomes n-2 (autumn 2026 if macOS 27 ships on time) |
+| **macOS deployment target 15.0** | Sequoia is n-1; the sidebar work on it is done and fragile. **Held 3 Sep 2026 regardless of n-2 status** — see Pillar 3. | When Apple-Intelligence features move into the shipping scheme (not on an n-2 trigger) |
 | **macOS deployment target 26.1 (Apple Intelligence schemes)** | Foundation Models requires macOS 26+. | When/if the gate moves |
 | **Sidecar CPython 3.12** | Bundled in `Python.framework`; bumping is a signing/entitlement event. | Coordinated with macOS major bump |
 
@@ -128,7 +138,10 @@ The review answers, in order:
 
 1. **Are we on the current Node LTS?** If not — what's the date by which we will be?
 2. **Are we on a Python version not yet at "release candidate"?** Are any supported Python versions reaching EOL within two quarters? (3.10 EOL Oct 2026 is the live one.)
-3. **macOS deployment target review.** Should the floor move? Is the dual-target setup (prod 15.0 + AI-features-only 26.1) still right?
+3. **macOS deployment target review.** Is the dual-target setup (prod 15.0 +
+   AI-features-only 26.1) still right? *Whether the floor should move was
+   decided on 3 Sep 2026 and is held until Apple-Intelligence features ship —
+   don't re-open it on adoption figures alone.*
 4. **Beta-window check** — was the most recent beta window honoured? (Q3 has WWDC + developer beta install; Q4 has GA + Xcode bump.)
 5. **Pinning register sweep** — any pin past its re-check date? Re-validate or remove.
 6. **Tooling-sprint trigger** — have enough deferred majors piled up to justify a 1–2 day batch release? (Three is usually the trigger; one or two is below the per-PR cost.) If triggered, **run `/cassandra` on the batch before applying it** — pre-mortem first, apply second.

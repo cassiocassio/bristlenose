@@ -62,7 +62,18 @@ This shapes: [CLI output style](#cli-output-style), [Doctor command](#doctor-com
 
 **macOS native shell wrapping the CLI as a PyInstaller sidecar, targeting macOS 15 + Apple Silicon (M1+).** The desktop app exists to remove the terminal barrier. Researchers see "open your terminal" in a README and bounce. The app is a folder picker, one button, and a report in their browser — no Python, no Homebrew, no API key signup (bundled capped key as fallback).
 
-The compatibility target covers ~90% of professional Mac users. Intel is ~5-10% of the installed base and falling; Sequoia (macOS 15) will be n-1 by launch. Targeting it avoids SwiftUI contortion for older APIs. The chip floor will bump to M2+ when local inference features arrive (Neural Engine improvements, unified memory bandwidth).
+The compatibility target covers ~90% of professional Mac users. Intel is ~5-10% of the installed base and falling; Sequoia (macOS 15) will be n-1 by launch.
+
+**Audience note, corrected 3 Sep 2026.** Earlier framing described managed
+fleets in agencies upgrading over months. That is the wrong model for the
+actual buyer: the freelance researcher who owns their machine, pays for
+software on their own card, and upgrades on day one. That argues the floor
+*could* move sooner than a fleet model implies — which is precisely why the
+decision to hold it is recorded on cost and focus grounds, not adoption
+grounds. See `docs/design-platform-policy.md` §"Pillar 3 — macOS".
+
+These percentages are estimates carried forward without a cited measurement.
+If the floor decision ever does turn on them, measure first. Targeting it avoids SwiftUI contortion for older APIs. The chip floor will bump to M2+ when local inference features arrive (Neural Engine improvements, unified memory bandwidth).
 
 _See also: `docs/archive/design-desktop-app.md`_
 

@@ -189,6 +189,16 @@
         "script": "build-dmg.sh"
       }
     ],
+    "ingest_formats": {
+      "by_group": {
+        "audio": 10,
+        "docx": 1,
+        "subtitle_srt": 1,
+        "subtitle_vtt": 1,
+        "video": 14
+      },
+      "total": 27
+    },
     "local_hooks": {
       "agent_hooks": [
         "PreToolUse:Bash -> block-checkout.sh",

@@ -40,12 +40,17 @@ The **defining split** (the whole reason this set exists): the top two tiers are
 - `e2e/` — Playwright tier 2 (Chromium + WebKit; layers 1–3: console, links, network). `e2e/ALLOWLIST.md` governs suppressions.
 - `tests/fixtures/smoke-test/` — the committed synthetic single-session fixture both CI and Playwright trust.
 
-## What's next (iterated plan, 7 Jul 2026)
+## What's next (iterated plan, 7 Jul 2026 — **audited 3 Sep 2026**)
+
+> Two of the four items below had already shipped when this was audited, one of
+> them in the very commit that wrote the list. A plan nobody is obliged to
+> reconcile reads as a backlog when it is partly a changelog. Items 1 and 4
+> remain genuinely open.
 
 The mechanical/human split is settled; the build order is Phase 1 of the acceptance matrix, highest-ROI first (all free or ¢, none needs the `.app`):
 
 1. **Close the fixture gap** — produce the format-parity `.docx` (Teams + Meet) + the 10 missing media/subtitle containers, so the *already-written* `test_no_fake_success_acceptance.py` stops skipping. Recipe in test-data-generation.md; gap tracked in coverage-inventory.md §1.
-2. **Phase-1 CLI provider matrix** — `scripts/acceptance/` : text-fixture `analyze × 5 providers` + one media `run` cell, shape-invariant assertions, one summary file. Local cell is free; provider column ≈ pennies. This is the backbone that catches the motivating bug class.
+2. ~~**Phase-1 CLI provider matrix** — `scripts/acceptance/`~~ ✅ **shipped 22 Aug 2026** (`scripts/acceptance/run_matrix.py` + `invariants.py`; two free cells and five gated ones). [acceptance-matrix.md](acceptance-matrix.md) tracked this correctly and this list did not — the second of two items here that stayed "next" after landing. Text-fixture `analyze × 5 providers` + one media `run` cell, shape-invariant assertions, one summary file.
 3. ~~**Extend the Playwright pass** — "every lens loads clean"~~ ✅ the lens half shipped **7 Jul 2026**, in the very commit that wrote this list (`e2e/tests/lenses-load-clean.spec.ts`, "add acceptance-testing tier: format coverage, invariant harness, lens smoke"). It sat here as future work for two months. Still open: the export structural checks — + export structural checks (HTML self-contained, XLS valid, clips ffprobe-valid, anonymised = zero PII).
 4. **Wire the human doc to this set** — tag each atom in the private walk `[matrix]` / `[e2e]` / `[human]` so the by-hand load visibly shrinks to judgment-only.
 

@@ -1,6 +1,32 @@
 # Playwright E2E Testing Strategy
 
-_Layers 1–3 implemented (3 Mar 2026). Layers 4–5 not yet implemented._
+_Layers 1–3 implemented (3 Mar 2026)._
+
+> **Trued 3 Sep 2026 — this doc described 3 of the 8 specs that exist, and called
+> shipped work unimplemented.** The strategy below is sound and is kept; the
+> status was six months stale.
+>
+> **Layer 4 shipped 7 Jul 2026** as `e2e/tests/lenses-load-clean.spec.ts`, which
+> does what §4 specifies — visits all five lenses and asserts each mounts. It
+> also closes three false-greens §4's sketch would have inherited: a stale server
+> on :8150 serving the wrong project (an identity guard aborts the file unless
+> `project_name` is "Smoke Test"), "clean" asserted over a page that never
+> mounted (`#bn-app-root` must have children first), and an in-browser `fetch`
+> that silently 401s. Read that file before extending this one — its header
+> carries the reasoning.
+>
+> **Five specs exist that this doc does not mention at all:**
+>
+> | spec | what it is |
+> |---|---|
+> | `lenses-load-clean.spec.ts` | layer 4, above |
+> | `lens-datum.spec.ts` | every lens enrolled in the flush-to-datum system |
+> | `export-file-url.spec.ts` | the self-contained HTML export opened from `file://` |
+> | `perf-gate.spec.ts` | performance regression gate — runs post-merge in its own workflow, not here |
+> | `perf-stress.spec.ts` | synthetic stress measurement, no thresholds |
+>
+> The live list is generated into [testing/inventory.md](testing/inventory.md);
+> prefer it over any list written by hand here, including this one.
 
 ## Problem
 
@@ -88,7 +114,11 @@ Monitor all API requests during a full navigation flow. Assert zero failures.
 
 **Catches:** API regressions, broken endpoints, auth failures, missing data.
 
-### 4. Structural smoke tests (not yet implemented)
+### 4. Structural smoke tests — ✅ shipped 7 Jul 2026 as `lenses-load-clean.spec.ts`
+
+_The sketch below is the original design, kept for its reasoning. The shipped
+spec is stricter: see the banner at the top of this file for the three
+false-greens it had to close that this sketch does not account for._
 
 Assert expected DOM structure exists — not pixel-perfect, just "is the content there".
 

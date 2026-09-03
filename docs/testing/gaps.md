@@ -111,6 +111,66 @@ expiry.
 
 ---
 
+## Tier 4 — blind spots in the mechanism built to close the others
+
+Added 3 Sep 2026, the day the mechanism shipped. Both were found by using it, not
+by reasoning about it.
+
+### G7. The inventory gate catches drift in what it models, never gaps in the model
+
+`gen-test-inventory.py --check` compares the committed structure against one it
+*extracts*. It is therefore exactly as complete as its extractor, and nothing in
+the system knows about a fact the extractor does not look at.
+
+**Demonstrated on itself, minutes after it shipped.** A real edit to
+`build-dmg.sh` — retitling step 1b's banner — left `--check` **green**, because
+the parser derives `phase` from `banner.split("—")[0]` and the descriptive tail
+is stripped before comparison. The gate was right; the change was not structural
+*in its model*. A second, equally real edit to the stage name did drift, and did
+go red in CI. Nothing distinguishes those two edits from the outside.
+
+**A live instance, in the map right now:** `can_skip` for `build-dmg.sh` stages
+is inferred by searching a **400-character window** after the stage line for
+`SKIP_SWIFT_TESTS`. That is a heuristic; it will be wrong the moment someone
+moves the check; and it is currently rendered as a fact in a table. Same shape as
+`bn_step_skip`'s two call forms, where a positional-only pattern reported every
+skippable gate as unskippable until the rendered table was read by eye.
+
+**State the claim precisely and do not let it inflate:** this replaces *"docs
+drift silently"* with *"docs drift only where the extractor is not looking."* A
+real improvement; not a solved problem.
+
+Mitigations: keep the modelled set **small and reviewable** — the generated
+output is committed, so a change to the extractor lands as a diff someone can
+read — and prefer deriving a fact from the thing that *enforces* it over parsing
+prose about it.
+
+The residual is unmechanisable by construction. It needs someone reading the tree
+and asking *what is not in here?* — which is how every finding of 2–3 Sep 2026
+was made, this one included.
+
+### G8. `--check`'s failure path has been observed once, by hand
+
+Until 3 Sep the gate's red had only been produced against **hand-edited JSON**,
+which tests the comparison and not the wiring. Its first CI appearance returned
+`skipped`, because `ruff` failed above it — so it proved nothing while looking
+like it had.
+
+It has since been watched going red in CI on a real un-regenerated drift
+(`4dd87b9c`), with `ruff` passing above it, and green again after regeneration
+(`ff488734`). One deliberate exercise, prompted by a human asking for it.
+
+**A gate whose red has never been seen is the exact shape `mac-build.yml` had for
+three months** — nominally blocking, structurally incapable of failing, green on
+every run including those carrying 16 compile errors. Nothing schedules a repeat
+of this exercise, for this gate or any other.
+
+The general form is worth more than the instance: **for every gate, when was its
+failure path last observed?** Nothing in the tree records that, and it is a
+different question from *is it passing*.
+
+---
+
 ## Explicitly NOT gaps
 
 Recorded so they are not re-derived as problems by the next reader.
@@ -136,5 +196,7 @@ Recorded so they are not re-derived as problems by the next reader.
 2. **Adopt the ratchet as a fourth gate colour**, and give G3 a ceiling.
 3. **Take G5**, since it costs nothing today and gets more expensive the longer
    the tree is allowed to drift.
-4. **Give every soft gate an expiry or a ratchet.** Not a new rule so much as the
+4. **Record when each gate's failure path was last observed** (G8), and treat a gate
+   whose red nobody has seen as unproven rather than passing.
+5. **Give every soft gate an expiry or a ratchet.** Not a new rule so much as the
    one that was already written in `design-ci.md` and never enforced.

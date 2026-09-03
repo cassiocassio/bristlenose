@@ -221,6 +221,27 @@ def scan_build_gates() -> list[dict]:
     return gates
 
 
+def scan_ingest_formats() -> dict:
+    """The ingest-format count, from the code that defines it.
+
+    This number was wrong in the docs in two directions at once on 2 Sep 2026:
+    docs/testing/README.md said 16 while naming coverage-inventory.md as its
+    single source, which said 27. coverage-inventory.md was right. Deriving it
+    from `ALL_EXTENSIONS` means neither file has to be, and a new format cannot
+    be added without the inventory noticing.
+    """
+    try:
+        from bristlenose import models  # noqa: PLC0415
+    except Exception:
+        return {"total": None, "note": "bristlenose not importable here"}
+    groups = {
+        n.replace("_EXTENSIONS", "").lower(): len(getattr(models, n))
+        for n in dir(models)
+        if n.endswith("_EXTENSIONS") and n != "ALL_EXTENSIONS"
+    }
+    return {"total": len(models.ALL_EXTENSIONS), "by_group": groups}
+
+
 def scan_local_hooks() -> dict:
     out: dict[str, list[str]] = {"pre_commit": [], "agent_hooks": []}
     pc = ROOT / ".pre-commit-config.yaml"
@@ -280,6 +301,7 @@ def build(structure_only: bool = False) -> dict:
                 "workflows": scan_workflows(),
                 "build_gates": scan_build_gates(),
                 "local_hooks": scan_local_hooks(),
+                "ingest_formats": scan_ingest_formats(),
                 "suites": [
                     {k: v for k, v in s.items() if k not in ("tests", "files")}
                     for s in scan_suites(sizes=False)
@@ -291,6 +313,7 @@ def build(structure_only: bool = False) -> dict:
             "workflows": scan_workflows(),
             "build_gates": scan_build_gates(),
             "local_hooks": scan_local_hooks(),
+            "ingest_formats": scan_ingest_formats(),
             "suites": [{k: v for k, v in s.items() if k not in ("tests", "files")} for s in scan_suites()],
         },
         "measurements": {"suites": scan_suites()},
@@ -317,6 +340,13 @@ def render(data: dict) -> str:
         if s["files"]:
             size = f"{size + ' in ' if size else ''}{s['files']} files"
         lines.append(f"| `{s['suite']}` | {s['kind']} | {size or '—'} | {s.get('basis','—')} | `{s['source']}` |")
+
+    fmt = st.get("ingest_formats") or {}
+    if fmt.get("total"):
+        groups = ", ".join(f"{k} {v}" for k, v in sorted(fmt["by_group"].items()))
+        lines += ["", f"**Ingest formats: {fmt['total']}** ({groups}) — from `models.ALL_EXTENSIONS`. "
+                  "Do not restate this number in prose; link here. It was simultaneously 16 and 27 "
+                  "in two docs on 2 Sep 2026, one of which named the other as its single source."]
 
     lines += ["", "## When they run — and what happens when they fail", ""]
     for wf in st["workflows"]:

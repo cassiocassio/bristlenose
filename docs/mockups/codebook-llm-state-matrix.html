@@ -179,18 +179,21 @@
         <td>The project status popover — its stated job is
             &ldquo;telling an alpha tester what failed&rdquo;.</td></tr>
     <tr><td><b>Coverage shortfall</b></td><td><code>completed, processed &lt; total</code></td>
-        <td><b>The card</b>, and only because it is a fact about this codebook in this
-            project that outlives the run. See §7.</td></tr>
+        <td>Project row + its diagnostic popover. <b>Not the card, not the details
+            page.</b> An incomplete run is an event that belongs to the project, and
+            the popover already exists to help diagnose one.</td></tr>
   </table>
 
-  <h3>The one thing the split does not cover</h3>
+  <h3>Where the split holds</h3>
   <p class="sub">
-    It handles <b>activity</b> cleanly and leaves <b>residue</b> homeless. A run in
-    flight has the row and the chip; a run that failed has the toast — and then the
-    toast goes away. What remains is a codebook that is installed and has coded
-    nothing, and under the pure model nothing anywhere says so. That residue is the
-    subject of §7, and it is the only reason the card carries anything beyond
-    Install/Uninstall at all.
+    All the way. A run in flight has the project row and the chip, and the card
+    echoes only that it started. A run that failed has the toast, then the project
+    row&rsquo;s failure glyph, then the diagnostic popover — three surfaces that
+    already exist for exactly this, none of them the codebook&rsquo;s.
+    <b>The card&rsquo;s job is to say which codebooks are installed and help the
+    researcher decide which are interesting</b>, and it already carries enough
+    to do that: tag count, reach, tentative count, and the two-tone bars on the
+    details page.
   </p>
 
   <h2>3 &nbsp;The engine</h2>
@@ -298,59 +301,35 @@
   </div>
 
   <!-- ============================================================ -->
-  <h2>4 &nbsp;What the researcher sees — today, and decided</h2>
+  <h2>4 &nbsp;What the card says</h2>
   <p class="sub">
-    The lens has one sentence to work with: tag count, an optional reach clause, an
-    optional undecided count. <b>Today three outcomes collapse onto one rendering.</b>
-    The decision is to keep that sentence and let it take <b>one more segment</b> —
-    not to grow new chrome.
+    <b>Settled: the card does not report run outcomes.</b> Its job is to say which
+    codebooks are installed and help the researcher decide which are interesting, and
+    it already carries enough for that. An incomplete or failed run is an event
+    belonging to the project — sidebar status line, failure glyph, diagnostic popover
+    — all of which exist.
   </p>
   <table>
-    <tr><th style="width:17%">State</th><th style="width:30%">Renders today</th>
-        <th style="width:37%">Decided</th><th>Home</th></tr>
-    <tr>
-      <td><b>Not installed</b></td>
-      <td><code>28 tags · not installed</code></td>
-      <td>unchanged</td><td>card</td>
-    </tr>
-    <tr>
-      <td><b>Running</b></td>
-      <td>nothing on the card</td>
-      <td><code>28 tags · ✦ Autocoding…</code> &mdash; the acknowledgement that the
-        click landed, and no more. Progress, elapsed and Cancel stay on the chip.</td>
-      <td>card + chip + project row</td>
-    </tr>
-    <tr>
-      <td><b>Coded</b> (full)</td>
-      <td><code>28 tags · applied to 33 quotes in Ikea</code></td>
-      <td>unchanged</td><td>card</td>
-    </tr>
-    <tr>
-      <td><b>Partial</b> (58 of 72 read)</td>
-      <td class="same"><code>28 tags · applied to 30 quotes in Ikea</code><br>
-        <span style="color:rgba(255,255,255,.55)">— indistinguishable from a full
-        run</span></td>
-      <td><code>28 tags · applied to 30 quotes in Ikea · ⚠ Partial 58 of 72</code>
-        <span class="ref">⚠ is MessageKind.WARNING — ui_kinds.py:37</span></td>
-      <td>card</td>
-    </tr>
-    <tr>
-      <td><b>Failed</b> (0 coded)</td>
-      <td class="same"><code>28 tags</code> — reach clause simply absent
-        <span class="ref">codebookReach.ts:57</span></td>
-      <td><b>Open.</b> Not <code>Partial 0 of 72</code> — nothing partial happened.
-        Needs its own segment; the failure <i>reason</i> goes to the project
-        popover.<span class="tag t-gap">open 1</span></td>
-      <td>card + popover</td>
-    </tr>
-    <tr>
-      <td><b>Refused</b> (no job)</td>
-      <td class="same"><code>28 tags</code></td>
-      <td>Same segment as Failed — from the researcher&rsquo;s side these are one
-        state (&ldquo;it didn&rsquo;t code&rdquo;); only the popover distinguishes
-        them.</td>
-      <td>card</td>
-    </tr>
+    <tr><th style="width:22%">State</th><th style="width:40%">Card</th><th>Run outcome lives</th></tr>
+    <tr><td><b>Not installed</b></td>
+        <td><code>28 tags · not installed</code></td><td>—</td></tr>
+    <tr><td><b>Running</b></td>
+        <td><code>28 tags · ✦ Autocoding…</code> — that the click landed, no more.
+          Progress, elapsed and Cancel stay on the chip.</td>
+        <td>project row + chip</td></tr>
+    <tr><td><b>Coded</b></td>
+        <td><code>28 tags · applied to 30 quotes in Ikea · 14 tentative</code>
+          <span class="ref">tentative also renders as the pale segment of the
+          two-tone MicroBar on the details page, with "N tentative + M accepted"
+          on hover</span></td>
+        <td>—</td></tr>
+    <tr><td><b>Partial</b></td>
+        <td>unchanged from Coded — the shortfall is not the codebook&rsquo;s
+          business</td>
+        <td>project row + popover</td></tr>
+    <tr><td><b>Failed / refused</b></td>
+        <td>unchanged — <code>28 tags</code></td>
+        <td>toast, then project row + popover</td></tr>
   </table>
 
   <h3>The line, rendered</h3>
@@ -366,19 +345,15 @@
     </div>
     <div class="rowspec">
       <div class="t">Laws of UX</div>
-      <div class="s">28 tags &middot; applied to 30 quotes in Ikea &middot;
-        <span style="color:var(--orange);font-weight:600">&#9888; Partial 58 of 72</span></div>
+      <div class="s">28 tags &middot; applied to 30 quotes in Ikea &middot; 14 tentative</div>
     </div>
   </div>
   <p class="sub" style="margin-top:12px">
-    <b>The two numbers measure different things, deliberately.</b> &ldquo;Applied to
-    30&rdquo; counts quotes carrying an <i>accepted</i> tag
-    (<code>framework_quote_totals</code> reads <code>QuoteTag</code> rows,
-    <code>codebook.py:247</code>); &ldquo;58 of 72&rdquo; counts quotes the job
-    <i>read</i>. A run reads 58, proposes on some, the researcher accepts fewer still
-    — so the numbers differ in practice, which is what stops the pair being
-    confusing. &ldquo;58 of 72&rdquo; also matches the toast&rsquo;s existing
-    <code>Tagged 58 of 72 quotes</code>, so it is one idiom, not two.
+    <b>&ldquo;tentative&rdquo;, not &ldquo;undecided&rdquo;</b> — the word the
+    threshold histogram already uses for its middle band
+    (<code>autocode.review.zoneTentative</code>), and the name of the column behind
+    it. The card was the only place in the product calling it something else, and the
+    literal was hardcoded English in all 21 locales.<span class="tag t-fixed">fixed</span>
   </p>
 
   <h2>5 &nbsp;Mockup coverage</h2>
@@ -432,80 +407,63 @@
   <h2>6 &nbsp;Decided</h2>
   <ol class="gaps">
     <li><b>A codebook is installed or not installed.</b> A run is a per-project
-      activity, not a codebook property — same rule the codebase already applies to
+      activity, not a codebook property — the rule the codebase already applies to
       copy, where the toolbar pill was removed in favour of the row.</li>
 
-    <li><b>Running shows on the card as <code>✦ Autocoding…</code> and no more.</b>
-      Direct manipulation: feedback appears on the thing that was clicked. Progress,
-      elapsed and Cancel stay on the chip, which is the cross-navigation surface.
-      The sparkle is already the AutoCode mark (<code>autocode.chip.coding</code>),
-      so this is existing vocabulary.</li>
+    <li><b>The card does not report run outcomes.</b> Not partial, not failed, not a
+      coverage count. Its job is to say which codebooks are installed and help the
+      researcher decide which are interesting; it already carries enough for that.
+      An incomplete run is the <b>project&rsquo;s</b> status, and the sidebar row,
+      its failure glyph and the diagnostic popover already exist for it — the popover
+      specifically to help diagnose a failed run.</li>
 
-    <li><b>Partial gets a third segment:</b>
-      <code>· ⚠ Partial 58 of 72</code>, appended to the sentence that is already
-      there. No new chrome, no status word standing alone, and the ⚠ is the settled
-      WARNING glyph — &ldquo;complete, usable, not what was asked&rdquo;, which is
-      exactly what a partial is.</li>
+    <li><b>Running shows on the card as <code>✦ Autocoding…</code> and no more</b> —
+      direct manipulation, feedback on the thing that was clicked. Progress, elapsed
+      and Cancel stay on the chip. Existing vocabulary
+      (<code>autocode.chip.coding</code>).</li>
 
-    <li><b>Failure reasons go to the project status popover</b>, whose stated job is
-      telling an alpha tester what failed. Not to the card, which says only that
-      coding did not happen.</li>
+    <li><b>The card says &ldquo;tentative&rdquo;</b>, matching the histogram band and
+      the <code>tentative_count</code> column. Previously &ldquo;undecided&rdquo;, and
+      hardcoded English in all 21 locales.<span class="tag t-fixed">shipped</span></li>
 
-    <li><b>Uninstall during a run cancels, then removes</b> — it does not become a
-      disabled button with a tooltip. The intent is legitimate, Cancel already exists
-      on the chip, and <code>design-pipeline-diagnostic-popover.md</code> records
-      that <code>.help(...)</code> tooltips were <i>dropped</i> from this surface
-      family. The uninstall sheet already states destructive impact and is the place
-      for one more sentence.</li>
+    <li><b>Uninstall during a run cancels, then removes</b> — not a disabled button
+      with a tooltip. Cancel already exists on the chip, and
+      <code>design-pipeline-diagnostic-popover.md</code> records that
+      <code>.help(...)</code> tooltips were dropped from this surface family.</li>
   </ol>
 
-  <h2>7 &nbsp;What that decision costs to build</h2>
+  <h2>7 &nbsp;What is left to build</h2>
   <p class="sub">
-    Ordered. The first item gates the rest — none of §4&rsquo;s renderings can exist
-    until the lens can see a job.
+    Smaller than it looked, because §6.2 removes the coverage rendering that was
+    driving most of it. The card needs a <b>boolean</b> — is a job running for this
+    framework — not the job&rsquo;s numbers.
   </p>
   <ol class="gaps">
-    <li><b>The lens must fetch coverage.</b> <code>getAutoCodeStatus</code> has zero
-      call sites in the island, its navigator or its page, and
-      <code>CodebookResponse</code> carries no job data — only
-      <code>framework_quote_totals</code>, which counts accepted tags and cannot
-      answer &ldquo;how much did it read&rdquo;. A per-framework
-      <code>{status, processed, total}</code> alongside it is the smallest thing that
-      serves every rendering above.<span class="tag t-gap">prerequisite</span></li>
+    <li><b>The lens needs to know a job is running.</b> <code>getAutoCodeStatus</code>
+      has zero call sites in the island, its navigator or its page, so
+      <code>✦ Autocoding…</code> has nothing to render from.</li>
 
-    <li><b>The sidebar has no <code>case coding</code>.</b> 23 <code>ProjectSubtitle</code>
-      cases — <code>running</code>, <code>queued</code>, <code>copying</code>,
-      <code>importingBatch</code>, <code>completedPartial</code> — and not one about
-      coding or tagging. &ldquo;The project row shows the run&rdquo; is the right
-      model and not yet the behaviour.</li>
-
-    <li><b>A partial is still a permanent hole, whatever the card says.</b>
-      <code>409 already_applied</code> blocks a re-run and
-      <code>reapply_to_new_quotes</code> only codes sessions imported after the
-      watermark, so the 14 unread quotes are unreachable by every existing path.
-      <b>The card would be honestly reporting a state with no exit.</b> The quotes are
-      known at failure time — they are the batches that raised — so finishing the job
-      is available and would make the segment self-clearing.</li>
+    <li><b>The sidebar has no <code>case coding</code>.</b> 23
+      <code>ProjectSubtitle</code> cases — <code>running</code>, <code>queued</code>,
+      <code>copying</code>, <code>importingBatch</code>,
+      <code>completedPartial</code> — and not one about coding. &ldquo;The project row
+      shows the run&rdquo; is the right model and not yet the behaviour, and it is
+      where §6.2 sends everything.</li>
 
     <li><b>AutoCode has no cause to put in the popover.</b> The popover eats
       <code>PipelineState</code> from the pipeline events log — stages, per-session
-      causes, a terminus. An AutoCode job has none of those. Routing its failures
+      causes, a terminus — and an AutoCode job has none of those. Routing its failures
       there means giving it a cause in that vocabulary, not giving the popover a
       second data path.</li>
-  </ol>
 
-  <h2>8 &nbsp;Still open</h2>
-  <ol class="gaps">
-    <li><b>What the card says when nothing was coded at all.</b>
-      <code>Partial 0 of 72</code> is wrong — nothing partial happened. It also has to
-      cover the refused case, where no job exists to have a denominator. And it must
-      stay distinguishable from the legitimate &ldquo;ran fine, matched nothing&rdquo;,
-      which today renders identically.</li>
-
-    <li><b>Whether partial should be a resting state at all.</b> If §7.3 is done and
-      the job finishes itself, the ⚠ segment is transient — a thing seen briefly and
-      then gone. If it is not done, the segment is permanent and names a dead end.
-      Same pixels, very different promise.</li>
+    <li><b>A failed or partial job still cannot be re-run.</b>
+      <code>409 already_applied</code> on a completed job, and
+      <code>reapply_to_new_quotes</code> only codes sessions imported after the
+      watermark. Measured cost of simply re-running: <b>£0.042 per batch</b> (median
+      7,701 in / 1,999 out over 51 real batches), so £0.17 for a 78-quote project —
+      cheap enough that relaxing the guard beats building resume machinery. Note
+      partial has <b>never occurred</b> in 25 logged runs; all 5 failures were
+      total.</li>
   </ol>
 
 </div>

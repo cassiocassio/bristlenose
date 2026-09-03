@@ -29,7 +29,14 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    # 15, not the default 5. The workflows reference 13 distinct third-party
+    # actions, so 5 truncates a full sweep -- and truncation is not merely
+    # slow, it is unsafe for a CHAIN. github/codeql-action's init, autobuild
+    # and analyze enforce version consistency on each other; on 3 Sep 2026 the
+    # cap let Dependabot raise init (#129) and autobuild (#132) while silently
+    # withholding analyze, so merging either alone would have stranded analyze
+    # on v3 and reddened CodeQL. See docs/dependency-premortem-log.md Entry 7.
+    open-pull-requests-limit: 15
     commit-message:
       prefix: "ci"
 

@@ -4,6 +4,11 @@
     "ceiling": 4,
     "why": "governed suppressions, but the register set 10 as the tooling threshold"
   },
+  "gates_without_proof": {
+    "basis": "scripts/check-gate-proofs.py --json, length of `unproven`",
+    "ceiling": 16,
+    "why": "gaps.md G8 \u2014 'is it passing' and 'can it fail' are different questions, and mac-build.yml answered the first correctly for three months while being incapable of the second"
+  },
   "mypy_errors": {
     "basis": "mypy bristlenose/ --ignore-missing-imports, 'Found N errors'",
     "ceiling": 238,

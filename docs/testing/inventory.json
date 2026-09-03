@@ -284,6 +284,13 @@
               {
                 "colour": "hard",
                 "is_gate": true,
+                "name": "Gate proofs \u2014 has anyone seen these go red?",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "hard",
+                "is_gate": true,
                 "name": "Ratchet \u2014 numbers that may not rise",
                 "piped": false,
                 "runs_tests": false

@@ -1,0 +1,31 @@
+{
+  "_policy": "A gate whose red nobody has seen is unproven, not passing. Automated proofs are derived from the test-<name> naming convention; this file records the ones that convention cannot see. Enforced by scripts/check-gate-proofs.py; the unproven COUNT is held by the ratchet metric `gates_without_proof`.",
+  "declared": {
+    "check-gate-policy": {
+      "evidence": "exit codes checked under bash, not zsh; clean 0, expired 1, restored 0",
+      "how": "manual: all four paths \u2014 undeclared, expired, stale, bad disposition",
+      "observed": "2026-09-03"
+    },
+    "check-gate-proofs": {
+      "evidence": "exit 1 naming check-ratchet as stale; exit 0 after restore",
+      "how": "manual: back-dated a declared proof and ran --stale 180",
+      "observed": "2026-09-03"
+    },
+    "check-ratchet": {
+      "evidence": "pytest_slow_marked: 8 > ceiling 7; clean restore verified",
+      "how": "manual: added a real @pytest.mark.slow, saw it named and refused",
+      "observed": "2026-09-03"
+    },
+    "gen-test-inventory": {
+      "evidence": "run on 4dd87b9c \u2014 'STRUCTURE DRIFT'; green again on ff488734",
+      "how": "CI: un-regenerated real drift went red, ruff green above it",
+      "observed": "2026-09-03"
+    }
+  },
+  "extra_gates": {
+    "gen-test-inventory": {
+      "note": "Not named check-*, but --check is a hard CI gate.",
+      "path": "scripts/gen-test-inventory.py"
+    }
+  }
+}

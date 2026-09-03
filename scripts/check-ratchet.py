@@ -70,7 +70,32 @@ def measure_mypy() -> int | None:
     return 0 if "Success" in out else None
 
 
+def measure_unproven_gates() -> int | None:
+    """Gates whose red nobody has ever watched — scripts/check-gate-proofs.py.
+
+    Held rather than demanded to zero: 17 of 21 were unproven when this landed,
+    and a gate nobody can satisfy is one somebody switches off. Freezing the
+    count means existing debt stays put while a NEW gate has to arrive with a
+    proof or push this up and fail.
+    """
+    try:
+        out = subprocess.run(
+            [sys.executable, str(ROOT / "scripts/check-gate-proofs.py"), "--json"],
+            cwd=ROOT, capture_output=True, text=True, timeout=120,
+        )
+        return len(json.loads(out.stdout)["unproven"])
+    except Exception:
+        return None
+
+
 METRICS: dict[str, dict] = {
+    "gates_without_proof": {
+        "measure": measure_unproven_gates,
+        "basis": "scripts/check-gate-proofs.py --json, length of `unproven`",
+        "why": "gaps.md G8 — 'is it passing' and 'can it fail' are different questions, "
+               "and mac-build.yml answered the first correctly for three months while "
+               "being incapable of the second",
+    },
     "mypy_errors": {
         "measure": measure_mypy,
         "basis": "mypy bristlenose/ --ignore-missing-imports, 'Found N errors'",

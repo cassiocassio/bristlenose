@@ -174,7 +174,7 @@ The residual is unmechanisable by construction. It needs someone reading the tre
 and asking *what is not in here?* — which is how every finding of 2–3 Sep 2026
 was made, this one included.
 
-### G8. `--check`'s failure path has been observed once, by hand
+### G8. `--check`'s failure path has been observed once, by hand — ⚙️ **generalised 3 Sep 2026**
 
 Until 3 Sep the gate's red had only been produced against **hand-edited JSON**,
 which tests the comparison and not the wiring. Its first CI appearance returned
@@ -191,8 +191,24 @@ every run including those carrying 16 compile errors. Nothing schedules a repeat
 of this exercise, for this gate or any other.
 
 The general form is worth more than the instance: **for every gate, when was its
-failure path last observed?** Nothing in the tree records that, and it is a
+failure path last observed?** Nothing in the tree recorded that, and it is a
 different question from *is it passing*.
+
+**Now recorded.** `scripts/check-gate-proofs.py` sorts every gate into *automated*
+(a paired `test-<name>` re-proves the red on every run), *declared* (proven some
+other way, with a date that ages), or *unproven*. First run: **3 automated, 4
+declared, 16 unproven of 21**.
+
+It does not demand zero, and that is deliberate — 16 is unmeetable today and an
+unmeetable gate is one somebody switches off. The count is held by the ratchet
+metric `gates_without_proof` instead, so existing debt is frozen while a **new**
+gate must arrive with a proof or push the number up and fail. Proven by adding a
+dummy `check-*` script: `17 > ceiling 16`, exit 1. The ageing half runs as
+`--stale 180`, matching the gate policy's `expires` disposition.
+
+**Its own limits, per G7:** the automated bucket is a naming convention, so a gate
+proven another way reads as unproven until declared; and nothing verifies that a
+paired `test-*` actually exercises the failure path rather than merely existing.
 
 ---
 

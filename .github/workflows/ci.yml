@@ -96,6 +96,18 @@ jobs:
         # which have been real here. gaps.md G7.
         run: python scripts/check-gate-policy.py
 
+      - name: Gate proofs — has anyone seen these go red?
+        # "Is it passing" and "can it fail" are different questions, and only the
+        # first is ever asked. mac-build.yml answered it correctly every day from
+        # 20 May to 2 Sep 2026 while being structurally incapable of failing.
+        #
+        # The unproven COUNT is held by the ratchet step below, not demanded to
+        # zero — 16 of 21 gates are unproven and an unmeetable gate gets switched
+        # off. This step handles the other half: a manual proof AGES. 180 days
+        # matches the `expires` disposition in the gate policy, because a proof
+        # from six months ago is a claim about a script that has since changed.
+        run: python scripts/check-gate-proofs.py --stale 180
+
       - name: Ratchet — numbers that may not rise
         # A fourth gate colour. hard/soft/informational cannot express "allowed
         # to be non-zero, not allowed to rise", and that is the only shape that

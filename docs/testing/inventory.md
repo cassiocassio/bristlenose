@@ -29,6 +29,7 @@
     - Check the generated test inventory is current — gate, **hard**
     - Type check with mypy — gate, **soft**
     - Gate policy — no gate goes soft by default — gate, **hard**
+    - Gate proofs — has anyone seen these go red? — gate, **hard**
     - Ratchet — numbers that may not rise — gate, **hard**
     - Audit dependencies for known vulnerabilities — step, **soft**
     - Generate Python SBOM — step, **soft**

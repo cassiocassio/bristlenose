@@ -521,6 +521,8 @@
     "deleteTagTitle": "Delete \"{{name}}\"?",
     "tagOnQuotes_one": "This tag is on {{count}} quote.",
     "tagOnQuotes_other": "This tag is on {{count}} quotes.",
+    "tagProposalsDiscarded_one": "{{count}} AutoCode proposal will be discarded.",
+    "tagProposalsDiscarded_other": "{{count}} AutoCode proposals will be discarded.",
     "foldedSummary_one": "{{count}} tag · {{coded}} coded",
     "foldedSummary_other": "{{count}} tags · {{coded}} coded",
     "newGroup": "New group",

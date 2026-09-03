@@ -521,6 +521,8 @@
     "deleteTagTitle": "\"{{name}}\" löschen?",
     "tagOnQuotes_one": "Dieses Tag ist an {{count}} Zitat.",
     "tagOnQuotes_other": "Dieses Tag ist an {{count}} Zitaten.",
+    "tagProposalsDiscarded_one": "{{count}} AutoCode-Vorschlag wird verworfen.",
+    "tagProposalsDiscarded_other": "{{count}} AutoCode-Vorschl\u00e4ge werden verworfen.",
     "newGroup": "Neue Gruppe",
     "nameTaken": "Der Name \"{{name}}\" wird bereits verwendet. W\u00e4hle einen anderen Namen.",
     "newCode": "Neuer Code",

@@ -20,6 +20,7 @@ So a mockup carries a **dated timeline**, not a single state. The states:
 | `PROPOSED` | Drawn as an idea. Not built. |
 | `IMPLEMENTED` | Built and shipped. |
 | `SUPERSEDED by X` | A later design of the same thing replaced it. |
+| `PARKED` | Built, tested, and deliberately withheld behind a feature flag. The code is live; the researcher cannot see it. Neither delete it nor re-propose it — check the flag's own doc for the revisit conditions. |
 | `ABANDONED` | Decided against. **After `IMPLEMENTED` it means built, shipped, then removed** — the strongest do-not-relitigate signal there is, because someone already paid to find out. |
 
 A file whose last entry is `IMPLEMENTED` with nothing after it **is the current
@@ -29,7 +30,8 @@ Timelines read left to right and each entry carries its date:
 
 ```
 PROPOSED 19 Feb 2026 · IMPLEMENTED 4 Mar 2026 · SUPERSEDED 31 Aug 2026 by codebook-v2-autocode-button.html
-PROPOSED 9 Jul 2026 · ABANDONED 25 Jul 2026 — three widgets tested worse than the list
+PROPOSED 7 Feb 2026 · IMPLEMENTED 4 Mar 2026 · ABANDONED 29 Aug 2026 — the v1 lens, deleted in baa1aa0e
+PROPOSED 23 Feb 2026 · IMPLEMENTED 5 Aug 2026 · PARKED 5 Aug 2026 — not intuitive enough; flag moderatorQuestionPill
 ```
 
 An `ABANDONED` or `SUPERSEDED` entry **must say why in a clause**. That clause is
@@ -48,3 +50,23 @@ thing looks the way it does, and that argument is usually the expensive part.
   so it cannot clash with the file's own CSS.
 - No banner and no register entry means **unreviewed** — nobody has checked.
   That is the absence of a claim, not a claim of currency.
+
+## A mockup that links live theme CSS will rot silently
+
+Twelve mockups `<link>` the real theme instead of inlining it, which sounds like
+the honest thing to do — the picture then shows the *actual* design system. It is
+a trap. The theme gets restructured; the link still resolves, the classes still
+exist, and the **tokens move out from under it**. An undefined custom property is
+invalid at computed-value time, so `background: var(--bn-colour-bg)` silently
+falls back to nothing and the page renders bare.
+
+Found 3 Sep 2026: `tokens.css` held colour and type tokens in March; they now live
+in `colors/palette-default.css` and `tokens-typography.css`. Four mockups linked
+only the old file and had **37 undefined variables** each, including
+`--bn-colour-bg`, `--bn-colour-text` and `--bn-font-body`. They rendered as
+unstyled HTML. Repaired by linking what `index.css` names, in its order.
+
+If you link the theme, link the four token files first —
+`tokens.css`, `tokens-typography.css`, `tokens-desktop.css`,
+`colors/palette-default.css` — and expect to re-check after any theme
+reorganisation. Inlining is safer for anything meant to survive as a record.

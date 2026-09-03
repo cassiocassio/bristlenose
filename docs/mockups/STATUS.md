@@ -50,7 +50,7 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `codebook-audit.html` | 17 Feb 2026 | *unreviewed* |
+| `codebook-audit.html` | 17 Feb 2026 | PROPOSED 17 Feb 2026 · IMPLEMENTED — the vanilla-JS→React migration audit; that migration is complete, so this is a historical record, not a plan |
 | `codebook-disable-old-vs-new.html` | 26 Jul 2026 | *unreviewed* |
 | `codebook-header-library-button.html` | 21 Aug 2026 | *unreviewed* |
 | `codebook-library-states.html` | 1 Aug 2026 | *unreviewed* |
@@ -73,7 +73,7 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `dashboard-10-ideas.html` | 9 Jul 2026 | *unreviewed* |
 | `dashboard-assembled.html` | 25 Jul 2026 | *unreviewed* |
 | `dashboard-autolayout.html` | 14 Jul 2026 | *unreviewed* |
-| `dashboard-coverage-box.html` | 22 Feb 2026 | *unreviewed* |
+| `dashboard-coverage-box.html` | 22 Feb 2026 | PROPOSED 22 Feb 2026 · IMPLEMENTED — coverage renders on the Dashboard |
 | `dashboard-heatmap-encoding-collision.html` | 17 Jul 2026 | *unreviewed* |
 | `dashboard-signal-grid-sizing.html` | 19 Jul 2026 | *unreviewed* |
 | `dashboard-signal-grid.html` | 17 Jul 2026 | *unreviewed* |
@@ -136,21 +136,21 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `icloud-sync-architecture.html` | 13 Jul 2026 | *unreviewed* |
 | `incremental-analysis-flows.html` | 7 Jul 2026 | *unreviewed* |
 | `ingest-refusal-surfaces.html` | 19 Aug 2026 | *unreviewed* |
-| `journey-chain-stress-test.html` | 23 Feb 2026 | *unreviewed* |
+| `journey-chain-stress-test.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED — journeys ship. *Linked theme CSS was repaired 3 Sep 2026 (see README); it rendered unstyled before that* |
 | `keycap-gallery.html` | 19 Jul 2026 | *unreviewed* |
 | `lead-sentence-playground.html` | 31 Aug 2026 | *unreviewed* |
 | `llm-availability-exposure.html` | 3 Sep 2026 | *unreviewed* |
 | `measure-aware-leading.html` | 15 Mar 2026 | *unreviewed* |
 | `mini-heatmaps-dashboard.html` | 19 Mar 2026 | *unreviewed* |
-| `mockup-analysis.html` | 10 Feb 2026 | *unreviewed* |
+| `mockup-analysis.html` | 10 Feb 2026 | PROPOSED 10 Feb 2026 · IMPLEMENTED — the Analysis lens ships |
 | `mockup-autocode-lifecycle.html` | 3 Sep 2026 | PROPOSED 19 Feb 2026 · SUPERSEDED 29 Aug 2026 by `codebook-v2-autocode-button.html` — a nine-step storyboard of the v1 flow, where importing a codebook and coding with it were separate acts; 0.29.0 made Install *be* apply |
 | `mockup-checkbox-options.html` | 28 Feb 2026 | *unreviewed* |
-| `mockup-codebook-badges.html` | 7 Feb 2026 | *unreviewed* |
-| `mockup-codebook-default-uxr.html` | 19 Feb 2026 | *unreviewed* |
-| `mockup-codebook-garrett.html` | 19 Feb 2026 | *unreviewed* |
-| `mockup-codebook-norman.html` | 19 Feb 2026 | *unreviewed* |
-| `mockup-codebook-panel.html` | 7 Feb 2026 | *unreviewed* |
-| `mockup-delete-button.html` | 9 Feb 2026 | *unreviewed* |
+| `mockup-codebook-badges.html` | 7 Feb 2026 | PROPOSED 7 Feb 2026 · IMPLEMENTED — v5 “final decisions”; `Badge.tsx` ships |
+| `mockup-codebook-default-uxr.html` | 19 Feb 2026 | PROPOSED 19 Feb 2026 · SUPERSEDED 29 Aug 2026 by `codebook-v2-prototype.html` — the v1 codebook *picker*, replaced by Browse Library |
+| `mockup-codebook-garrett.html` | 19 Feb 2026 | PROPOSED 19 Feb 2026 · SUPERSEDED 29 Aug 2026 by `codebook-v2-prototype.html` — as above |
+| `mockup-codebook-norman.html` | 19 Feb 2026 | PROPOSED 19 Feb 2026 · SUPERSEDED 29 Aug 2026 by `codebook-v2-prototype.html` — as above |
+| `mockup-codebook-panel.html` | 7 Feb 2026 | PROPOSED 7 Feb 2026 · IMPLEMENTED · **ABANDONED 29 Aug 2026** — this is `CodebookPanel`, the v1 codebook lens, deleted in `baa1aa0e` when v2 became the lens. Built, shipped for months, then removed |
+| `mockup-delete-button.html` | 9 Feb 2026 | PROPOSED 9 Feb 2026 · IMPLEMENTED — `Badge` `variant="deletable"` ships |
 | `mockup-desktop-rail-removal.html` | 27 Jun 2026 | *unreviewed* |
 | `mockup-discussion-evidence-strength.html` | 26 Jul 2026 | *unreviewed* |
 | `mockup-discussion-guide-distillation.html` | 26 Jul 2026 | *unreviewed* |
@@ -162,13 +162,13 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `mockup-native-feedback-window.html` | 10 Jul 2026 | *unreviewed* |
 | `mockup-pii-wiring-spec.html` | 26 Jul 2026 | *unreviewed* |
 | `mockup-privacy-settings.html` | 26 Jul 2026 | *unreviewed* |
-| `mockup-proposed-badge-actions.html` | 22 Feb 2026 | *unreviewed* |
+| `mockup-proposed-badge-actions.html` | 22 Feb 2026 | PROPOSED 22 Feb 2026 · IMPLEMENTED — the badge action pill ships; see `docs/design-badge-action-pill.md` |
 | `mockup-signal-cards.html` | 26 Jul 2026 | *unreviewed* |
 | `mockup-tag-count-zero-suppression.html` | 2 Jul 2026 | *unreviewed* |
 | `mockup-tag-placement.html` | 7 Feb 2026 | *unreviewed* |
-| `mockup-toolbar.html` | 7 Feb 2026 | *unreviewed* |
+| `mockup-toolbar.html` | 7 Feb 2026 | PROPOSED 7 Feb 2026 · IMPLEMENTED — the Toolbar island ships |
 | `mockup-transcript-annotations.html` | 26 Jul 2026 | *unreviewed* |
-| `moderator-question-pill.html` | 23 Feb 2026 | *unreviewed* |
+| `moderator-question-pill.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED · **PARKED 5 Aug 2026** — built and tested, then withheld as not intuitive enough. Flag `moderatorQuestionPill: false`; revisit conditions in `docs/design-moderator-question-pill.md`. Do not delete the code and do not re-propose the idea |
 | `native-colour-alignment.html` | 2 Jul 2026 | *unreviewed* |
 | `nightfall-focus.html` | 9 Jul 2026 | *unreviewed* |
 | `ollama-setup-popovers.html` | 3 Jun 2026 | *unreviewed* |
@@ -180,10 +180,10 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `responsive-quote-grid.html` | 19 Feb 2026 | *unreviewed* |
 | `settings-accounts-generalised.html` | 18 Aug 2026 | *unreviewed* |
 | `shimmer-tuner.html` | 19 Jul 2026 | *unreviewed* |
-| `sparkline-explore.html` | 12 Feb 2026 | *unreviewed* |
+| `sparkline-explore.html` | 12 Feb 2026 | PROPOSED 12 Feb 2026 · IMPLEMENTED — sentiment sparklines ship |
 | `tentative-bars.html` | 19 Mar 2026 | *unreviewed* |
 | `tooltip-gallery.html` | 22 Feb 2026 | *unreviewed* |
-| `typography-comparison.html` | 15 Feb 2026 | *unreviewed* |
+| `typography-comparison.html` | 15 Feb 2026 | PROPOSED 15 Feb 2026 · IMPLEMENTED · SUPERSEDED — as above |
 
 ## out-of-credit
 
@@ -226,7 +226,7 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `sidebar-all-tabs-v1.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 18 Mar 2026 by `sidebar-all-tabs-v2.html` — first iteration |
 | `sidebar-all-tabs-v2.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 18 Mar 2026 by `sidebar-all-tabs-v3.html` — second iteration |
 | `sidebar-all-tabs-v3.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 19 Mar 2026 by `sidebar-all-tabs-v4.html` — third iteration |
-| `sidebar-all-tabs-v4.html` | 19 Mar 2026 | *unreviewed* |
+| `sidebar-all-tabs-v4.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · IMPLEMENTED — last of four iterations. *Linked theme CSS repaired 3 Sep 2026* |
 | `sidebar-seam-window-edge.html` | 2 Sep 2026 | *unreviewed* |
 | `sidebar-status-vocabulary.html` | 27 Aug 2026 | *unreviewed* |
 | `sidebar-tidyup-before-after.html` | 14 Aug 2026 | *unreviewed* |
@@ -235,15 +235,15 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `signal-card-expanded.html` | 23 Feb 2026 | *unreviewed* |
-| `signal-elaboration.html` | 23 Feb 2026 | *unreviewed* |
+| `signal-card-expanded.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED — signal cards ship on the Analysis lens |
+| `signal-elaboration.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED — `server/elaboration.py` ships |
 | `signals-sidebar-row-layouts.html` | 31 Aug 2026 | *unreviewed* |
 
 ## type
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `type-scale-audit.html` | 13 Feb 2026 | *unreviewed* |
+| `type-scale-audit.html` | 13 Feb 2026 | PROPOSED 13 Feb 2026 · IMPLEMENTED · SUPERSEDED — drove the v1 type scale; `tokens-typography-v2.css` is the live one |
 | `type-scale-comparison.html` | 27 Mar 2026 | *unreviewed* |
 
 ## website

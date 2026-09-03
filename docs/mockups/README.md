@@ -21,6 +21,7 @@ So a mockup carries a **dated timeline**, not a single state. The states:
 | `IMPLEMENTED` | Built and shipped. |
 | `SUPERSEDED by X` | A later design of the same thing replaced it. |
 | `PARKED` | Built, tested, and deliberately withheld behind a feature flag. The code is live; the researcher cannot see it. Neither delete it nor re-propose it — check the flag's own doc for the revisit conditions. |
+| `SANDPIT` | Not a design at all — an instrument. A tuner, playground, gallery, catalogue or stress test you open to *adjust* something or to see a range at once. It has no lifecycle: it is useful or it is not, and it goes stale only when the thing it tunes disappears. The design docs already use this word (&ldquo;Sandpit: `focus-mode-lab.html`&rdquo;). |
 | `ABANDONED` | Decided against. **After `IMPLEMENTED` it means built, shipped, then removed** — the strongest do-not-relitigate signal there is, because someone already paid to find out. |
 
 A file whose last entry is `IMPLEMENTED` with nothing after it **is the current

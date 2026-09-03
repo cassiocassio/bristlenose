@@ -8,9 +8,15 @@ vi.mock("../utils/api", () => ({
   getAutoCodeStatus: vi.fn(),
 }));
 
+vi.mock("../shims/bridge", () => ({
+  postLLMFailure: vi.fn(),
+}));
+
 import { getAutoCodeStatus } from "../utils/api";
+import { postLLMFailure } from "../shims/bridge";
 
 const mockGetStatus = vi.mocked(getAutoCodeStatus);
+const mockPostLLMFailure = vi.mocked(postLLMFailure);
 
 function makeStatus(overrides: Partial<AutoCodeJobStatus> = {}): AutoCodeJobStatus {
   return {
@@ -48,6 +54,7 @@ describe("ActivityChipStack", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     mockGetStatus.mockReset();
+    mockPostLLMFailure.mockClear();
   });
 
   afterEach(() => {
@@ -248,6 +255,7 @@ describe("ActivityChipStack", () => {
       makeStatus({
         status: "completed",
         processed_quotes: 10,
+        proposed_count: 14,
         completed_at: "2026-02-20T10:01:30Z",
       }),
     );
@@ -352,6 +360,7 @@ describe("ActivityChipStack", () => {
         status: "completed",
         processed_quotes: 7,
         total_quotes: 10,
+        proposed_count: 9,
         completed_at: "2026-02-20T10:01:30Z",
       }),
     );
@@ -367,6 +376,85 @@ describe("ActivityChipStack", () => {
     expect(screen.getByTestId("bn-activity-chip-action")).toBeInTheDocument();
     // No close button when the report link is present — the link dismisses.
     expect(screen.queryByTestId("bn-activity-chip-close")).not.toBeInTheDocument();
+  });
+
+  it("drops the action link when a finished job produced no proposals", async () => {
+    // This is the chip from the 3 Sep report: "Tagged 0 of 33 quotes — some
+    // batches failed. View Report", where the report was empty. The engine now
+    // calls an all-batches-failed job `failed`, but a genuine partial can also
+    // land zero proposals, so the gate is on the count and not on the status.
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "completed",
+        processed_quotes: 7,
+        total_quotes: 10,
+        proposed_count: 0,
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
+    );
+
+    render(
+      <ActivityChipStack
+        jobs={[makeJob({ onAction: vi.fn(), actionLabel: "Report" })]}
+        onDismiss={vi.fn()}
+      />,
+    );
+    await act(async () => {});
+
+    expect(screen.queryByTestId("bn-activity-chip-action")).not.toBeInTheDocument();
+    // …and the close button returns, so the chip can still be got rid of.
+    expect(screen.getByTestId("bn-activity-chip-close")).toBeInTheDocument();
+  });
+
+  it("tells the native shell when a job dies of an exhausted account", async () => {
+    // The Mac app has a global out-of-credit pill fed only by the pipeline
+    // runner, so a sidecar AutoCode job that emptied the account lit nothing.
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "failed",
+        failure_kind: "out_of_credit",
+        llm_provider: "anthropic",
+      }),
+    );
+
+    render(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+    await act(async () => {});
+
+    expect(mockPostLLMFailure).toHaveBeenCalledWith("out_of_credit", "anthropic");
+  });
+
+  it("posts the verdict once, not on every 2s poll", async () => {
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "failed",
+        failure_kind: "out_of_credit",
+        llm_provider: "anthropic",
+      }),
+    );
+
+    render(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+    await act(async () => {});
+    // A terminal job stays terminal. Reposting would hand the shell the same
+    // verdict for as long as the chip is on screen.
+    await act(async () => {});
+
+    expect(mockPostLLMFailure).toHaveBeenCalledOnce();
+  });
+
+  it("says nothing to the shell about a job that succeeded", async () => {
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "completed",
+        processed_quotes: 10,
+        proposed_count: 14,
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
+    );
+
+    render(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+    await act(async () => {});
+
+    expect(mockPostLLMFailure).not.toHaveBeenCalled();
   });
 
   it("stops polling partial jobs", async () => {

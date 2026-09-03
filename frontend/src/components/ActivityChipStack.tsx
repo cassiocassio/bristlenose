@@ -13,6 +13,7 @@ import i18n from "../i18n";
 import { getAutoCodeStatus } from "../utils/api";
 import type { AutoCodeJobStatus } from "../utils/types";
 import { autocodeFailure } from "../utils/autocodeFailure";
+import { postLLMFailure } from "../shims/bridge";
 import { ActivityChip } from "./ActivityChip";
 import type { ActivityChipJob } from "./ActivityChip";
 
@@ -32,6 +33,29 @@ export interface NormalisedJobStatus {
   errorMessage: string | null;
   /** Resolved sentence for `"partial"`; null for every other status. */
   partialMessage: string | null;
+  /**
+   * Whether there is anything behind the report link. A finished job can hold
+   * zero proposals — every batch refused, or nothing the model returned mapped
+   * to a tag — and the link then opens "0 of 0 proposals remaining. No
+   * proposals to review."
+   *
+   * Optional, and absence means "not a proposals report, don't gate": a job
+   * polled through a custom `pollFn` (clip extraction) has an action link that
+   * is not a report, so only `false` suppresses one. Written that way rather
+   * than defaulting to `true` so a *new* AutoCode-shaped caller that forgets
+   * the field fails open (a link that works) rather than closed (a chip that
+   * cannot be dismissed).
+   */
+  hasProposals?: boolean;
+  /**
+   * The raw `LLMFailureKind` and the provider that produced it, carried
+   * unresolved alongside the localised `errorMessage` so the native shell can
+   * be told what happened (`postLLMFailure`). A sentence is for a researcher;
+   * a kind is for a state machine, and the shell has one. Absent for a job
+   * that did not fail, and for custom `pollFn` jobs that are not LLM work.
+   */
+  failureKind?: string;
+  provider?: string;
 }
 
 /** Terminal statuses — no further polling, and `onComplete` has fired. */
@@ -125,6 +149,9 @@ export function normaliseAutoCode(status: AutoCodeJobStatus): NormalisedJobStatu
       effectiveStatus === "failed"
         ? autocodeFailure(status.failure_kind).message
         : null,
+    hasProposals: status.proposed_count > 0,
+    failureKind: effectiveStatus === "failed" ? status.failure_kind : undefined,
+    provider: status.llm_provider || undefined,
   };
 }
 
@@ -190,8 +217,15 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
   // Fire onComplete once per job.
   useEffect(() => {
     for (const job of jobs) {
-      if (isTerminal(statuses[job.id]?.status) && !completeFired.current.has(job.id)) {
+      const norm = statuses[job.id];
+      if (isTerminal(norm?.status) && !completeFired.current.has(job.id)) {
         completeFired.current.add(job.id);
+        // Tell the shell before the callback, and inside the same
+        // fired-once guard: polling is every 2s and a terminal job stays
+        // terminal, so anywhere else would repost the same verdict forever.
+        if (norm?.failureKind && norm.provider) {
+          postLLMFailure(norm.failureKind, norm.provider);
+        }
         job.onComplete?.();
       }
     }
@@ -201,6 +235,7 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
 
   const chipJobs = jobs.map((job) => ({
     job,
+    norm: statuses[job.id] ?? null,
     chip: toChipJob(job, statuses[job.id] ?? null),
   }));
 
@@ -238,12 +273,20 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
         </div>
       )}
       {(!showSummary || expanded) &&
-        chipJobs.map(({ job, chip }) => {
+        chipJobs.map(({ job, norm, chip }) => {
           // A partial run has proposals behind the door exactly as a whole one
           // does — fewer of them. It keeps the report link (which doubles as
           // the dismissal, hence no close button when it is present).
+          //
+          // …unless there are none. `hasProposals` is the second half of that
+          // sentence, and it was missing: a job that finished having tagged
+          // nothing offered View Report into an empty modal, and — because the
+          // link doubles as the dismissal — no way to dismiss the chip either.
+          // A status with no `norm` yet is not yet reportable.
           const reportable =
-            (chip.status === "completed" || chip.status === "partial") && job.onAction;
+            (chip.status === "completed" || chip.status === "partial") &&
+            norm?.hasProposals !== false &&
+            job.onAction;
           return (
           <ActivityChip
             key={job.id}

@@ -52,7 +52,8 @@ export type BridgeMessage =
       rightOpen: boolean;
       inspectorOpen: boolean;
     }
-  | { type: "store-miro-token"; token: string };
+  | { type: "store-miro-token"; token: string }
+  | { type: "llm-failure"; kind: string; provider: string };
 
 // ---------------------------------------------------------------------------
 // Native message posting
@@ -107,6 +108,28 @@ export function postProjectAction(action: string, data?: object): void {
 /** Write text to the macOS shared find pasteboard (Cmd+E cross-app support). */
 export function postFindPasteboardWrite(text: string): void {
   postNativeMessage({ type: "find-pasteboard-write", text });
+}
+
+/**
+ * Tell the shell an LLM call died, and how.
+ *
+ * The app already has an out-of-credit pill and an app-global model behind it
+ * (`OutOfCreditModel`), but it was fed from one place only —
+ * `PipelineRunner.deriveFailureState`, the *pipeline* path. An AutoCode job
+ * runs inside the sidecar and terminates in the SPA, so a researcher whose
+ * account emptied mid-autotagging saw a chip say so and the app itself show
+ * nothing: the pill stayed dark, and Settings went on reporting the provider
+ * green until it next revalidated.
+ *
+ * `kind` is an `LLMFailureKind` value straight off the wire — the shell
+ * decides which kinds it cares about, so a new one needs no change here.
+ * `provider` is the *job's* provider rather than the current one, for the
+ * reason `recordActiveProviderOutOfCredit` documents: the researcher may have
+ * switched providers while the job ran, and the verdict belongs to the account
+ * that actually refused.
+ */
+export function postLLMFailure(kind: string, provider: string): void {
+  postNativeMessage({ type: "llm-failure", kind, provider });
 }
 
 /** Notify native shell of player open/close and play/pause state changes. */

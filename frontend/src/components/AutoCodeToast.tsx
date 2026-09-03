@@ -99,6 +99,14 @@ export function AutoCodeToast({
       ? Math.round((job.processed_quotes / job.total_quotes) * 100)
       : 0;
 
+  // The toast keeps itself open only while it holds an action the researcher
+  // has to take. That used to be "completed", on the assumption every
+  // completed job has a report — false for a job whose batches all refused,
+  // which would leave a toast with no link and no close button on screen
+  // until reload. The report link and the close button are now exact
+  // complements: whichever is absent, the other is there.
+  const hasReport = job?.status === "completed" && job.proposed_count > 0;
+
   const toast = (
     <div className="autocode-toast" data-testid="bn-autocode-toast">
       {(!job || job.status === "pending" || job.status === "running") && (
@@ -155,23 +163,30 @@ export function AutoCodeToast({
                       : "",
                 })}
           </span>
-          {/* Link-styled action; keyboard-accessible via role/tabIndex/onKeyDown. */}
-          {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-          <a
-            className="toast-link"
-            role="button"
-            tabIndex={0}
-            onClick={onOpenReport}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onOpenReport();
-              }
-            }}
-            data-testid="bn-autocode-toast-report"
-          >
-            {t("autocode.toast.report")}
-          </a>
+          {/* Gated on proposals, NOT on status. A completed job can carry zero
+              proposals — every batch refused, or the model returned nothing
+              mappable — and the link then opened a modal reading "0 of 0
+              proposals remaining. No proposals to review." Offering a report
+              that does not exist is worse than offering nothing. */}
+          {hasReport && (
+            /* Link-styled action; keyboard-accessible via role/tabIndex/onKeyDown. */
+            /* eslint-disable-next-line jsx-a11y/anchor-is-valid */
+            <a
+              className="toast-link"
+              role="button"
+              tabIndex={0}
+              onClick={onOpenReport}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onOpenReport();
+                }
+              }}
+              data-testid="bn-autocode-toast-report"
+            >
+              {t("autocode.toast.report")}
+            </a>
+          )}
         </>
       )}
       {job?.status === "failed" && (
@@ -186,7 +201,7 @@ export function AutoCodeToast({
           </span>
         </>
       )}
-      {job?.status !== "completed" && (
+      {!hasReport && (
         <button
           className="toast-close"
           onClick={onDismiss}

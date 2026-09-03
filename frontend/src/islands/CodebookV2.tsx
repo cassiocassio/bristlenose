@@ -25,6 +25,14 @@ import {
   removeCodebookFramework,
   startAutoCode,
 } from "../utils/api";
+import type { ApiError } from "../utils/api";
+// A refused install names itself on the wire (`server/refusal.py`), and this
+// maps the name to a researcher sentence. It had no production caller: it was
+// written for `CodebookPanel`, the v1 lens, which 0.29.0 deleted — so every
+// refusal since has rendered its raw English `detail`, which for a missing key
+// tells a Mac-app user to edit a `.env` file.
+import { autocodeRefusal } from "../utils/autocodeRefusal";
+import { toast } from "../utils/toast";
 import { addJob } from "../contexts/ActivityStore";
 import type {
   CodebookResponse,
@@ -347,6 +355,33 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     return () => window.removeEventListener("bn:autocode-report", handler);
   }, []);
 
+  /**
+   * Report a failed *action* — install, uninstall — as opposed to a failed
+   * page load.
+   *
+   * Two different things used to land in the same `setError`, which renders
+   * "Could not load the codebook: {message}" at the top of the lens. For a
+   * refusal that is wrong twice over: nothing failed to load, and `e.message`
+   * is the raw wire string, so a missing key read as
+   *
+   *   Could not load the codebook: POST /autocode/laws-of-ux 503: No API key
+   *   configured for the current LLM provider (anthropic). Set the appropriate
+   *   key in your .env file.
+   *
+   * — a shell-shaped instruction, inside a Mac app, under a heading that
+   * misdescribes what happened. A refusal is transient and about the click, so
+   * it goes to a toast carrying its own message kind; anything unrecognised
+   * still falls through to the banner rather than being swallowed.
+   */
+  const reportActionError = useCallback((e: Error) => {
+    const refusal = autocodeRefusal((e as ApiError).reason);
+    if (refusal) {
+      toast(refusal.message, 4000, refusal.kind);
+      return;
+    }
+    setError(e.message);
+  }, []);
+
   const onInstall = useCallback(
     (id: string, title: string) => {
       // **Install IS apply** (D4), and that is two calls, not one. Importing the
@@ -377,9 +412,9 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
           });
           announce();
         })
-        .catch((e: Error) => setError(e.message));
+        .catch(reportActionError);
     },
-    [announce],
+    [announce, reportActionError],
   );
 
   const onAskUninstall = useCallback((id: string, title: string) => {
@@ -407,8 +442,8 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     setPendingUninstall(null);
     removeCodebookFramework(target.id)
       .then(announce)
-      .catch((e: Error) => setError(e.message));
-  }, [pendingUninstall, announce]);
+      .catch(reportActionError);
+  }, [pendingUninstall, announce, reportActionError]);
 
   // The floor's authoring apparatus — the same hook the shipped lens drives, so
   // add/rename/delete/drag/merge are one implementation rather than two that

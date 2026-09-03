@@ -69,6 +69,7 @@ describe("AutoCodeToast", () => {
         status: "completed",
         total_quotes: 10,
         processed_quotes: 10,
+        proposed_count: 14,
         completed_at: "2026-02-20T10:01:30Z",
       }),
     );
@@ -98,6 +99,7 @@ describe("AutoCodeToast", () => {
         status: "completed",
         total_quotes: 72,
         processed_quotes: 58,
+        proposed_count: 61,
       }),
     );
 
@@ -121,6 +123,7 @@ describe("AutoCodeToast", () => {
         status: "completed",
         total_quotes: 72,
         processed_quotes: 72,
+        proposed_count: 90,
       }),
     );
 
@@ -239,6 +242,7 @@ describe("AutoCodeToast", () => {
     mockGetStatus.mockResolvedValue(
       makeStatus({
         status: "completed",
+        proposed_count: 14,
         completed_at: "2026-02-20T10:01:30Z",
       }),
     );
@@ -335,6 +339,7 @@ describe("AutoCodeToast", () => {
     mockGetStatus.mockResolvedValue(
       makeStatus({
         status: "completed",
+        proposed_count: 14,
         completed_at: "2026-02-20T10:01:30Z",
       }),
     );
@@ -352,6 +357,36 @@ describe("AutoCodeToast", () => {
 
     expect(screen.queryByTestId("bn-autocode-toast-close")).not.toBeInTheDocument();
     expect(screen.getByTestId("bn-autocode-toast-report")).toBeInTheDocument();
+  });
+
+  it("offers no report when a completed job produced no proposals", async () => {
+    // The report modal reads "0 of 0 proposals remaining. No proposals to
+    // review." — so the link led somewhere empty, and because the link doubles
+    // as the dismissal there was then no way to close the toast either.
+    mockGetStatus.mockResolvedValue(
+      makeStatus({
+        status: "completed",
+        total_quotes: 33,
+        processed_quotes: 33,
+        proposed_count: 0,
+        completed_at: "2026-02-20T10:01:30Z",
+      }),
+    );
+
+    render(
+      <AutoCodeToast
+        frameworkId="garrett"
+        onComplete={vi.fn()}
+        onOpenReport={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    await act(async () => {});
+
+    expect(screen.queryByTestId("bn-autocode-toast-report")).not.toBeInTheDocument();
+    // The complement: no link means the close button has to be there.
+    expect(screen.getByTestId("bn-autocode-toast-close")).toBeInTheDocument();
   });
 
   it("does not auto-dismiss after completion", async () => {

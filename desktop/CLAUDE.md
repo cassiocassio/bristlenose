@@ -17,6 +17,41 @@ this file) win, then macOS idiom (`what-would-gruber-say` / `app-store-police`),
 then swiftui-pro. It beats an agent's untrained SwiftUI hunch; it never overrides
 a documented Mac decision. Details in the skill's `VENDORED.md`.
 
+## Two axes: the language moves fast, the frameworks need judgement
+
+**Don't collapse these into one "use the latest" rule — they behave oppositely.**
+
+**Axis 1 — the language** (Swift 5.5 → 6 → 6.2: async/await, actors, strict
+concurrency, approachable concurrency). Here latest genuinely is better and the
+direction is one-way. `swift-concurrency-pro` is the source; take its advice.
+Caveat that the app still builds in **Swift 5 language mode** with default actor
+isolation `nonisolated`, so a lot of Swift 6 advice is aspirational here — see
+that skill's `VENDORED.md`.
+
+**Axis 2 — the frameworks** (SwiftUI, especially on macOS; anything new in a
+current macOS release). Here **latest is a hypothesis, not a default.** The
+realistic pattern is: try the SwiftUI affordance, hit a wall, retreat to AppKit.
+That is not failure, it's the normal cost of SwiftUI's Mac coverage still being
+behind AppKit's.
+
+**The worked example is our own sidebar.** It was built on SwiftUI `List` and is
+migrating to AppKit `NSOutlineView` — `List` could not do source-list selection
+semantics, type-to-select, keyboard navigation, or native drop insertion lines,
+and the drag-and-drop failures were structural. Apple keeps Notes, Photos and
+Finder sidebars in `NSOutlineView` for the same reasons. See
+`docs/design-desktop-sidebar-appkit.md`.
+
+**This directly contradicts vendored swiftui-pro**, whose Core Instructions say
+the user will want to avoid UIKit unless requested — reasonable on iOS, wrong
+here. Read that as axis-1 reasoning applied to an axis-2 problem: **on Mac, name
+the AppKit primitive that already does the job before reaching for the SwiftUI
+one**, and treat "SwiftUI can do this now" as a claim to verify on the actual
+control, not a default to adopt.
+
+None of this is a native-pivot commitment — the web SPA remains the durable
+primary surface, and one AppKit surface is not evidence of a whole-app
+direction.
+
 ## Native primitives first — Swift isn't a blank web canvas
 
 **The out-of-the-box system primitive with default settings is the starting

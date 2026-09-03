@@ -121,7 +121,13 @@ the files changed.
   keeps the sidecar busy after the user navigates away. Flag tasks with no
   `cancel()` handle and no `Task.checkCancellation()`, and `Task.detached` used
   where a structured child task (auto-cancelled with its parent) would do.
-  For deeper Swift-concurrency craft see `.claude/skills/swiftui-pro/references/swift.md`.
+  For deeper Swift-concurrency craft read the vendored **swift-concurrency-pro**
+  references — `.claude/skills/swift-concurrency-pro/references/` — starting with
+  `hotspots.md` (a grep-target list built for exactly this pass), then
+  `cancellation.md` and `unstructured.md`. Prefer it over swiftui-pro's
+  `swift.md` on any concurrency question: it is the specialist source, and it
+  is deliberately softer on GCD (acceptable in low-level, interop, and
+  perf-critical synchronous code — don't flag those as errors).
 
 ### Static export
 

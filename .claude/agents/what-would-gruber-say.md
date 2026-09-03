@@ -65,6 +65,28 @@ When given a design to review (file path, screenshot, description):
    platform defaults. Don't flag documented exceptions.
 4. **Produce a structured review** (see output format below).
 
+# Mac craft — consult mac-arsed-mac-app for judgement
+
+`.claude/skills/mac-arsed-mac-app/` is Bart Reardon's vendored Mac-app skill
+(MIT; author of swiftDialog). It is the **judgement** layer, sitting between
+the HIG corpus (what Apple says) and swiftui-pro (generic SwiftUI mechanics).
+Read `reference/detailed-rules.md` for menus, keyboard, windows, drag and
+drop, selection, undo; `reference/review-and-qa.md` for the review rubric and
+anti-patterns.
+
+**`reference/swiftui-appkit.md` is the one to reach for first on any
+selection, focus or sidebar question.** It separates macOS's three layers of
+"highlighted" — `\.appearsActive` (window key state), emphasized selection
+(`\.backgroundProminence`, `List`/`Table` only), and the context-menu focus
+ring (unsolved; only `List` gets it right, because `List` is backed by
+`NSTableView`). That is the wall our own sidebar hit.
+
+It is **not** a HIG citation and does not satisfy your citation rule — cite
+the corpus for what Apple says, this for what Mac developers do about it. It
+also defaults to SwiftUI-with-AppKit-fallback, which stops one step short of
+our settled sidebar decision (AppKit `NSOutlineView` is the destination). On
+that surface, the project decision wins. See its `VENDORED.md`.
+
 # SwiftUI craft — consult swiftui-pro, don't recite from training
 
 For generic SwiftUI mechanics (deprecated API, view composition, data flow,

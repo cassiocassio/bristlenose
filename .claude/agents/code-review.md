@@ -223,6 +223,12 @@ or architecture that may be wrong or outdated>
   navigation, hygiene), read `.claude/skills/swiftui-pro/references/*.md` rather
   than recite from training. It's iOS-first: `MEMORY.md`/`CLAUDE.md` and macOS
   idiom win on conflict
+- For **concurrency** (actors, task groups, cancellation, `Sendable`, bridging,
+  async tests), read `.claude/skills/swift-concurrency-pro/references/*.md`
+  instead — it's the specialist source and platform-neutral. Note the app builds
+  in **Swift 5 language mode** with default actor isolation `nonisolated`, so
+  `@MainActor` annotations are genuinely needed and strict-concurrency
+  diagnostics mostly don't fire. See that skill's `VENDORED.md`
 - Read `desktop/CLAUDE.md` and `docs/design-desktop-app.md` for context
 
 # Brevity

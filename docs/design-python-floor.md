@@ -13,35 +13,73 @@ EOL"*. This is that review.
 
 ## Decision
 
-**Hold at 3.10 through October. Move to `>=3.11` on 1 November 2026 — not 3.12.**
+**Hold at 3.10 through October. Move to `>=3.12` on 1 November 2026.**
 
-The floor is neither buying nor costing anything of substance today, so this is
-a **hygiene move, not a capability move**: we should stop claiming support for
-an interpreter upstream has stopped patching. Treated that way it should be
-minimal — go to the lowest non-EOL version, which also happens to capture every
-measurable gain but one.
+Revised from an earlier `>=3.11` recommendation, which rested on protecting
+Debian bookworm — a population that does not survive contact with the dates.
 
-**3.12 buys exactly one thing over 3.11** — `scipy` 1.17.1 → 1.18.1, macOS only,
-as a transitive of `mlx-whisper`. The cost side is near-empty too, and an earlier
-draft of this doc inflated it: 3.12 would additionally exclude Debian bookworm
-(`python3` 3.11.2), but bookworm's **regular security support ended 11 June
-2026** (Debian's own LTS wiki; it is now community-LTS to 30 June 2028), and the
-user it would exclude is someone who refuses snaps, refuses `uv`/`pyenv`/a venv
-on a newer interpreter, stays on oldstable-LTS, and analyses research interviews
-for a living. That intersection is approximately nobody. *"It costs bookworm"* is
-not the reason to prefer 3.11.
+### Why 3.12 and not 3.11
 
-The reason is the house principle, applied to the macOS deployment floor on
-3 September 2026 and applying identically here: **keep the floor as wide as
-viable unless something forces it up.** Nothing forces this one up at all — so
-move it the minimum distance that stops us claiming an EOL interpreter, and no
-further.
+Nothing plausible sits on 3.11. Worked through:
+
+| where a Bristlenose user's `python3` comes from | version | affected by a 3.12 floor? |
+|---|---|---|
+| Ubuntu 22.04 LTS | 3.10.6 | yes — but a 3.11 floor cuts it too |
+| Ubuntu 24.04 LTS (current LTS, to May 2029) | 3.12.3 | no |
+| Ubuntu 26.04 LTS | 3.14.3 | no |
+| Debian 12 bookworm | 3.11.2 | **regular security support ended 11 June 2026** |
+| Debian 13 trixie (stable) | 3.13.5 | no |
+| RHEL 9 / Rocky / Alma | **3.9** default | already below the *current* floor; 3.11 and 3.12 are both opt-in module installs |
+| Amazon Linux 2023 | **3.9** default | same |
+| Apple `/usr/bin/python3` | **3.9.6** (measured) | already below the current floor |
+| Windows (python.org installer) | whatever is current | no |
+
+**3.11 appears in no Ubuntu LTS, is the default on no enterprise distro, and on
+Debian has been out of regular security support since June.** A floor of 3.11
+would protect a population that cannot be named.
+
+Meanwhile 3.12 is what Bristlenose *already ships on*, everywhere:
+
+- Homebrew formula — `depends_on "python@3.12"`
+- Snap — `base: core24`, staging `python3.12-minimal`
+- macOS sidecar — `Python.framework` 3.12, `build-sidecar.sh` hard-fails without it
+- `.tool-versions` — `python 3.12`
+- `[tool.mypy] python_version = "3.12"`… currently `"3.10"`, and `[tool.ruff]
+  target-version = "py310"` — both of which would move with the floor
+
+And `ci.yml`'s own matrix comment already classifies 3.11 as **ANTICIPATED**
+("nothing ships these"), against 3.12 as **SHIPPED**. Setting the floor at an
+anticipated version, when a shipped one sits one step up and costs nobody, is
+the odd choice.
+
+Two facts land on the same number: **3.12 is the current Ubuntu LTS, and 3.12 is
+what every Bristlenose channel already ships.**
+
+### What this is not
+
+It is **not** a CI-speed decision. Dropping to 3.12 removes four of ten matrix
+cells and 46% of runner-minutes — but the repo is public so those are free, and
+the **wall-clock saving is 3m05s either way**, because the critical path is
+bound by `3.13 macos` plus macOS runner queueing, which neither move touches.
+See *CI cost* below. Three minutes per push is not a reason to exclude anybody.
+
+It is a **coherence** decision: `requires-python` should name a version something
+actually ships, and today it names one nothing does.
+
+### The paired action — the Snap is edge-only
+
+"Ubuntu 22.04 users can use the Snap instead" is the natural mitigation and it
+is **not currently true**: the Snap is published to *edge*, and `snap.yml` is
+`workflow_dispatch` only (auto-triggers parked May 2026). Narrowing the pip floor
+without a stable Snap channel leaves 22.04 users with no first-class path.
+**Promoting the Snap off edge belongs in the same change as the floor bump**, or
+the floor bump should wait for it.
 
 ### For the Held register (`docs/dependency-premortem-log.md`)
 
 | Held bump | Cluster | Reason (blocks now) | Release-predicate (lifts it) | Last watched | Status |
 |---|---|---|---|---|---|
-| **Python floor** `>=3.10` → `>=3.11` | platform | Ubuntu 22.04 LTS ships `python3` = 3.10.6 and is in standard security maintenance until **May 2027**; raising the floor refuses `pip install bristlenose` on it. The floor costs nothing measurable meanwhile — six transitive packages sit 1–2 minors back, no OSV advisory differs between the 3.10 and 3.12 closures, and no declared direct dependency has dropped 3.10 | **CPython 3.10 reaches EOL 31 Oct 2026.** On 1 Nov set `requires-python = ">=3.11"`, `[tool.ruff] target-version = "py311"`, `[tool.mypy] python_version = "3.11"`, drop the two 3.10 CI cells. No upstream event required — the predicate is a calendar date fixed by python.org, so this hold cannot rot | 2026-09-03 | held |
+| **Python floor** `>=3.10` → `>=3.12` | platform | Ubuntu 22.04 LTS ships `python3` = 3.10.6 and is in standard security maintenance until **May 2027**; raising the floor refuses `pip install bristlenose` there, and the Snap that would catch those users is still edge-only. The floor meanwhile costs nothing measurable — six transitive packages sit 1–2 minors back, no OSV advisory differs between the 3.10 and 3.12 closures, and no declared direct dependency has dropped 3.10 | **CPython 3.10 reaches EOL 31 Oct 2026.** On 1 Nov set `requires-python = ">=3.12"`, `[tool.ruff] target-version = "py312"`, `[tool.mypy] python_version = "3.12"`, drop the 3.10 and 3.11 CI cells (10 → 6), and promote the Snap off edge in the same change. No upstream event required — the predicate is a calendar date fixed by python.org, so this hold cannot rot | 2026-09-03 | held |
 
 It belongs in the Held register rather than the pinning register because the
 reason is an ecosystem date, not one of our own.
@@ -232,16 +270,17 @@ The two available figures differ by 5×, so it matters which one is meant — an
 an earlier draft of this doc quoted the larger one while naming the smaller one
 as the cost, which invites reading a 3-minute saving as a 17-minute one:
 
-- **Runner-minutes: 18 of 68 (26%).** The repository is public, so Actions
-  minutes are free. This number costs nothing.
-- **Wall-clock on the critical path: 3m05s of 44m (7%).** The cells run
-  concurrently. `3.10 macos` is the last cell to finish (09:56:34); drop both
-  3.10 cells and the matrix completes at 09:53:29 when `3.13 macos` lands.
+- **Runner-minutes: 18 of 68 (27%)** dropping 3.10 alone; **31 of 68 (46%)**
+  dropping 3.10 and 3.11 together. The repository is public, so Actions minutes
+  are free. Neither number costs anything.
+- **Wall-clock on the critical path: 3m05s of 44m (7%) — the same for both.**
+  The cells run concurrently, and once 3.10 goes the binding cell is
+  `3.13 macos` at 09:53:29. Dropping 3.11 as well changes nothing further.
 
 So dropping 3.10 saves about three minutes per push, not seventeen. The matrix
 is dominated by macOS runner queueing — a 17-minute gap between the last Ubuntu
 cell finishing (09:22:51) and the last macOS cell starting (09:47:30) — which
-dropping 3.10 does not touch. **This is not a reason to move the floor early.**
+dropping 3.10 does not touch. **This is not a reason to move the floor early, and not a reason to pick 3.12 over 3.11 either** — the wall-clock is identical.
 
 `tests/test_packaging_artifacts_coverage.py` guards its `tomllib` import with
 `pytest.importorskip` (stdlib only from 3.11), so that module **skips entirely

@@ -22,16 +22,20 @@ tombstone; fix it by adding the row.
 
 | Held bump | Cluster | Reason (blocks now) | Release-predicate (lifts it) | Last watched | Status |
 |-----------|---------|---------------------|------------------------------|--------------|--------|
-| **thinc** (major) | spaCy ecosystem | spaCy 3.8.x pins `thinc<8.4`; thinc 9.x is spaCy-4 era | spaCy 4 reaches GA **and** the cluster (spacy+thinc+weasel+confection+en_core_web_lg) co-resolves; take atomically | 2026-06-09 | held |
-| **weasel** (major) | spaCy ecosystem | spaCy 3.8.x pins `weasel<0.5`; weasel 1.0 *requires* `confection>=1.0`, mutually exclusive with thinc 8.3's `confection<1.0` | same spaCy-4 wave as thinc | 2026-06-09 | held |
-| **confection** (major) | spaCy ecosystem | thinc 8.3 pins `confection<1.0` | thinc moves to 9.x (⇒ spaCy 4 wave) | 2026-06-09 | held |
+| **thinc** (major) | spaCy ecosystem (now spacy+thinc only) | `spacy 3.8.16` pins `thinc<8.4.0,>=8.3.12` (installed metadata). thinc 9.1.1 is spaCy-4 era and inverts the old story — it is *thinc 9* that pins `confection<1.0.0`, against spaCy 3.8.16's `confection<2.0.0,>=1.3.2` | **Re-specified 2026-09-03.** Was *"spaCy 4 reaches GA"* — a predicate that could not fire: latest stable is **3.8.16 (2026-08-24)**, actively maintained, while the 4.0 line is three dev releases, the newest **2 years 4 months old** (`4.0.0.dev3`, 2024-04-22) and the two before it **yanked**. Now the machine-checkable form: **`spacy` floats its `thinc<8.4.0` cap** — one deps.dev `GetRequirements` field. Take spacy+thinc together | 2026-09-03 | held |
+| **weasel** (major) | spaCy ecosystem | _(graduated 2026-09-03 — the recorded reason was false. `spacy 3.8.16` now **requires** `weasel<2.0.0,>=1.0.0`, not the recorded `weasel<0.5`; **weasel 1.0.0 is installed in both venvs and `pip check` is clean**. It moved alone, without a pre-mortem, which is why nobody noticed. The major-ignore stays — it blocks 2.x, which spaCy does cap — but for this reason, not the recorded one)_ | n/a — graduated. Falsifies the "one atomic spaCy-4 wave" framing: spaCy 3.8.x floats its own caps without a major | 2026-09-03 | **graduated** |
+| **confection** (major) | spaCy ecosystem | _(graduated 2026-09-03 — recorded reason false. `spacy 3.8.16` requires `confection<2.0.0,>=1.3.2` and `thinc 8.3.13` requires `confection<2.0.0,>=1.1.0`, not the recorded `confection<1.0`; **1.3.3 is installed**. Major-ignore stays, blocking 2.x)_ | n/a — graduated | 2026-09-03 | **graduated** |
 | **starlette** 1.x | FastAPI / starlette | _(graduated 2026-06-09 — FastAPI 0.136.3 dropped the `starlette<1.0` cap, pair pre-mortemed in the graduated-holds wave)_ | n/a — graduated | 2026-06-09 | **graduated** |
 | **anthropic** 1.x | LLM SDKs · anthropic→httpx2 | **Narrowed on 3 Sep 2026, not cleared.** anthropic 1.x's `messages.create` is keyword-only with no `temperature` and no `**kwargs`, so the kwarg is a hard `TypeError` before any HTTP call. `bb9e201d` made sampling per-**model** (`_ANTHROPIC_ACCEPTS_SAMPLING`), which fixed a real and *different* bug — Anthropic 400s the parameter on every model after 4.6, and `claude-opus-4-8`, already in the macOS picker, was failing every call. **But the default model is still in that set**, so the default path still sends it: `providers.py` → `default_model="claude-sonnet-4-6"`, which `client.py:557` puts into `sampling` and `:577` splats. Executed at HEAD, not read: `d in _ANTHROPIC_ACCEPTS_SAMPLING` → `True`, sampling → `{'temperature': 0.1}`. Invisible to the suite — every anthropic test mocks `messages.create`, and a mock accepts any kwarg. An earlier revision of this row read *"the code-side blocker is gone"*; that conflated the API-400 fix with the SDK-signature break and would have green-lit lifting the ceiling onto the main path | **The product half is DONE** — the slider is removed (`fe145d32`), and `output_config.effort` was examined and rejected as a relabel (`docs/design-decisions.md` §"Temperature is not a control we ship"). What remains is one small, now-unblocked change: stop sending `temperature` for the sunset-list models too. With no user-facing control, a fixed 0.1 that reaches only seven legacy models is hard to justify — dropping it empties `_ANTHROPIC_ACCEPTS_SAMPLING` and the kwarg together, which is what that comment block already anticipates ("when it empties, delete it and the kwarg with it"). Then re-pre-mortem the wave — `anthropic` 1.x + `openai` 2→3 + `google-genai` 1→2 share the `httpx2` coupling — and float the ceiling | 2026-09-03 | held — product settled, **code half outstanding** |
 | **mcp** 2.1+ | assistant surface · mcp→mcp-types (pinned `==`) | 2.1 masks a tool exception's message behind a generic `Error executing tool <name>` — sound hardening, and it breaks *our* design: `server/mcp_server.py:_run` signals a legitimate refusal by **raising** `ToolInputError` (our own `ValueError` subclass, :66), so an out-of-scope project stopped saying why it refused. Caught by strict CI on the 0.28.0 tag, not locally: the pin was floor-only, so a fresh resolve took 2.1.1 while the venv sat on 2.0.0 | Refusals must be **returned as tool results** rather than raised — three call sites (`:245`, `:252`, the out-of-scope guard) plus `test_mcp_server.py`'s two classes. Not a version bump; a change to how the surface signals. Then float the ceiling and re-pre-mortem. Note `mcp 2.0.0` requires `mcp-types==2.0.0` exactly, so the ceiling pins the pair | 2026-08-28 | held |
-| **tokenizers** 0.23.1 | HF transformer stack | `transformers` 5.7.0 **and** 5.10.2 both pin `tokenizers<=0.23.0` (deps.dev verified 2026-06-05) | a transformers release floats its tokenizers cap to admit 0.23.1 (`GetRequirements` for transformers: cap becomes `<0.24`/`<=0.23.1`); then move tokenizers+transformers together | 2026-06-09 | held |
+| **tokenizers** 0.23.1 | ~~HF transformer stack~~ — **wrong cluster; it is the faster-whisper transcription path** | _(RETIRED 2026-09-03, ignore dropped in `a6f8cc66` — a tombstone twice over. (1) Predicate met: `transformers 5.16.1` requires `tokenizers<0.24.0,`**`>=0.23.1`** — the cap floated and 0.23.1 became its *floor*. (2) The coupling has no referent here: `transformers` is installed in **neither** venv, is absent from `pyproject.toml` and `bristlenose-sidecar.spec`, and nothing under `bristlenose/` imports it; the real dependent is `faster-whisper 1.2.1` → `tokenizers<1,>=0.13`, which forbids nothing. A Dependabot ignore never constrains pip's resolver, only its PRs — which is why 0.23.1 installed itself anyway and the rule ended up blocking a version we ship)_ | n/a — retired | 2026-09-03 | **retired** |
 | **WTForms** 3.2.2 | sqladmin / serve DB | _(graduated 2026-06-09 — sqladmin 0.27.2 floated `wtforms<3.3`, pair pre-mortemed in the graduated-holds wave)_ | n/a — graduated | 2026-06-09 | **graduated** |
-| **snapcore/action-build** `v1.3.0` (node20) | GitHub Actions runtime | Action declares `runs.using: node20`; **v1.3.0 is the newest tag upstream** (`releases/latest` 404s, tags = `v1.3.0`, `v1`). No node24 release exists to take. Emits the runner's forced-to-node24 annotation. Mitigant: `snap.yml` is `on: workflow_dispatch` only (parked May 2026). | snapcore publishes a release whose `action.yml` has `runs.using: node24` — then bump both snapcore SHAs together with their version comments | 2026-07-29 | held |
-| **snapcore/action-publish** `v1.2.0` (node20) | GitHub Actions runtime | Same: `runs.using: node20`; v1.2.0 is the newest upstream tag. | Same predicate as action-build; move the pair | 2026-07-29 | held |
+| **cryptography** 49/50 | **presidio ceiling** (new cluster) · presidio→cryptography | `presidio-anonymizer 2.2.364` — **the latest release** — pins `cryptography>=48.0.1,<49.0.0`, so we sit exactly on the floor with nowhere to go. Three open advisories on 48.0.1 (CVE-2026-69247/69248/69249; the PYSEC and GHSA ids are aliases of the same three, so it is three, not six), fixed in 49.0.0 and 50.0.0. **It ships**: `_internal/cryptography-48.0.1.dist-info` is in the built sidecar. Exposure assessed, not assumed — all three are X.509 path-validation or PKCS#7 surfaces we never call; `s07_pii_removal.py:468` uses presidio's `replace` operator only, so we never enter its crypto path, and cryptography otherwise arrives via `pyjwt[crypto]` and `google-auth` for signature verification | `presidio-anonymizer` floats to `cryptography<50` or `<51`; then move presidio-anonymizer + cryptography **atomically**, as the 2026-06-09 security wave did with 44→48 | 2026-09-03 | held |
+| **numpy** 2.5+ | **presidio ceiling** — *not* the numpy-ABI cluster any more | **The binding cap moved and it is no longer numba.** `numba 0.67.0` floats to `numpy<2.6`; `presidio-analyzer 2.2.364` (latest) pins `numpy>=1.19.0,<2.5.0`. A real resolve lands on 2.4.6 at 3.11, 3.12, 3.13 and 3.14 alike, so this reads as a floor problem and is not one | presidio-analyzer floats its numpy cap **and** the Python floor question is settled (numpy 2.5.2 declares `requires_python>=3.12`). Move as the quartet numpy+numba+llvmlite+presidio-analyzer | 2026-09-03 | held |
+| **websockets** 17+ | google-genai → websockets | `google-genai 2.22.0` (latest) pins `websockets<17.0`. Sole reverse-dep (`pip show websockets` → `Required-by: google-genai`; uvicorn[standard]'s is floor-only), and **zero `import websockets` in `bristlenose/`**. The resolver returns 16.1.1 on every interpreter 3.10–3.14, so the floor standing behind this cap is shadowed and buys nothing | genai floats to `websockets<18` **and** the Python floor is ≥3.11 (websockets 17.0 requires it). ⚠️ Do not hand-force: taking 17.0 under `requires-python = ">=3.10"` silently breaks the declared floor | 2026-09-03 | held |
+| **@eslint/js 10 / eslint 10** | **npm peer-cap chain** (new cluster) · `@eslint/js → eslint → eslint-plugin-jsx-a11y` | The hold was being enforced on **one of three** members, so the others could walk it past the pin. `@eslint/js@10.0.1` declares `peerDependencies: {eslint: "^10.0.0"}` while eslint is major-ignored at 9.39.4, and `eslint-plugin-jsx-a11y@6.10.2` (latest) peer-caps eslint at `^9` with no eslint-10 release in existence. Unlike a pip cap this fails as **ERESOLVE at `npm ci`**, not a warning. Paid for once already: landed 2 Jul 2026 (`7cc28c44`), reverted 3 Jul (`e449aad3`), recorded at `frontend/CLAUDE.md:23`. Both missing members added to the ignore list in `a6f8cc66` | `eslint-plugin-jsx-a11y` ships eslint-10 support; then bump `eslint` + `@eslint/js` + `eslint-plugin-jsx-a11y` in **one commit** | 2026-09-03 | held |
+| **snapcore/action-build** `v1.3.0` (node20) | GitHub Actions runtime | Action declares `runs.using: node20`; **v1.3.0 is the newest tag upstream** (`releases/latest` 404s, tags = `v1.3.0`, `v1`). No node24 release exists to take. Emits the runner's forced-to-node24 annotation. ~~Mitigant: `snap.yml` is `workflow_dispatch` only~~ — **expired 8 Aug 2026**: `snap.yml:28-33` was restored to `push`/`pull_request` on main, so the forced-to-node24 annotation now surfaces on every push and PR. Verdict unchanged (there is still nothing to bump to); the noise cost is higher. | snapcore publishes a release whose `action.yml` has `runs.using: node24` — then bump both snapcore SHAs together with their version comments | 2026-09-03 | held |
+| **snapcore/action-publish** `v1.2.0` (node20) | GitHub Actions runtime | Same: `runs.using: node20`; v1.2.0 is the newest upstream tag. Same expired mitigant as above. | Same predicate as action-build; move the pair | 2026-09-03 | held |
 
 <!-- Watch grounding: deps.dev GetRequirements for the upstream caps
      (spacy→thinc, fastapi→starlette), GetVersion for publishedAt/scorecard,
@@ -706,3 +710,173 @@ Every anthropic test mocks `messages.create` with `AsyncMock`/`MagicMock`. A moc
 <!-- The 🔴 is already reproduced, so it scores on whether the ceiling landed before the
      tag. The six 🟢s score only if the bumps are actually exercised; a SAFE never applied
      is untested, never a free hit. The ❔ is unscoreable until someone spends a live call. -->
+
+---
+
+## Entry 7 — 2026-09-03 — the Aug 2026 quarterly review (9 open PRs + latent pip wave + un-ignored npm majors)
+
+- **Grounded against:** `.venv` **and** `.venv-sidecar` installed metadata; the
+  built bundle at `desktop/Bristlenose/Resources/bristlenose-sidecar/_internal/`;
+  `desktop/bristlenose-sidecar.spec` excludes; `pyproject.toml`; the pinning
+  register; `.github/dependabot.yml`; OSV + deps.dev + PyPI release metadata;
+  `action.yml` read at each candidate tag; and the **live CI check results on
+  every open PR**, which turned out to matter more than usual (below).
+- **Prior calibration applied:** 4 scored, 4 hits, 0 misses, 0 false-alarms.
+  Entry 6's tuning — *at a major boundary on an SDK we call directly, the
+  heuristic is void; introspect the signature* — was applied to `anthropic`
+  1.3.0, and then applied a **second time the same day** against a corrected
+  register row claiming the break was gone. Entry 5's *"a 0-false-alarm record
+  is earned permission to say green loudly"* is why the Actions set below is a
+  field of greens with one merge-order red rather than five ambers.
+- **Trigger:** the Aug 2026 quarterly dep review, past due (`TODO.md` — May was
+  the last, executed 2026-06-09).
+
+### Prophecy
+
+| Bump (from→to) | Verdict | Surface | Blast radius & receipt |
+|---|---|---|---|
+| **#129+#132 codeql init+autobuild 3.37.8→4.37.9, merged without `analyze`** | 🔴 WILL-BREAK | runtime (CI red) | `codeql.yml:44,55,58` carry **one SHA across three actions**, and codeql-action throws if `analyze` loads a config from a different `init`. No `analyze` PR existed — `open-pull-requests-limit: 5` was exactly full. **CI confirmed it independently:** #129 and #132 are the only two of the five Actions PRs failing `Analyze (python)` and `Analyze (javascript)`. |
+| **#134 anthropic `<1`→`<2`** | 🔴 WILL-BREAK | runtime — silent, deterministic, default path | `messages.create@v1.3.0` is keyword-only, no `temperature`, no `**kwargs`. Narrowed by `bb9e201d` but not cleared: `providers.py` `default_model="claude-sonnet-4-6"` **is in** `_ANTHROPIC_ACCEPTS_SAMPLING`, so `client.py:557` populates `sampling` and `:577` splats it. Executed, not read. |
+| **#135 mcp `<2.1`→`<2.2`** | 🔴 WILL-BREAK | runtime — silent (refusals lose their reason) | mcp 2.1 masks a tool exception behind a generic `Error executing tool <name>`; `mcp_server.py` raises `ToolInputError` (a `ValueError`, `:66`) at **seven** sites. **CI confirmed:** #135 fails the entire 10-cell Python matrix, while every other dependency PR fails only `lint`/`release-suites`, red on main for unrelated reasons. |
+| **`@eslint/js` 9.39.4→10.0.1** *(was in no ignore list)* | 🔴 WILL-BREAK | resolver (npm ERESOLVE) | `@eslint/js@10.0.1` peer-requires `eslint ^10`; eslint is major-ignored at 9.x and `eslint-plugin-jsx-a11y@6.10.2` peer-caps `^9`, with no eslint-10 release. Precedent in-repo: landed 2 Jul (`7cc28c44`), reverted 3 Jul (`e449aad3`). |
+| **cryptography 48.0.1→50.0.1** | 🔴 WILL-BREAK | resolver | `presidio-anonymizer 2.2.364`, **the latest release**, pins `cryptography<49.0.0`. Three open CVEs, and it ships in the bundle. See the Held register. |
+| **numpy 2.4.6→2.5.2** | 🔴 WILL-BREAK | resolver | Cap moved owner: numba 0.67 floats to `<2.6`, but `presidio-analyzer 2.2.364` pins `numpy<2.5.0`. ⚠️ numpy 2.5.2 also declares `requires_python>=3.12`. |
+| **thinc 8.3.13→9.1.1** | 🔴 WILL-BREAK | resolver | `spacy 3.8.16` pins `thinc<8.4.0,>=8.3.12`. |
+| **websockets 16.1.1→17.1** | 🟡 NON-EVENT ⚠️LATENT | resolver-gated | `google-genai 2.22.0` pins `websockets<17.0`; sole reverse-dep; zero direct imports. ⚠️ 17.0 needs Python ≥3.11 against a declared `>=3.10`. |
+| **size-limit + @size-limit/file 12.1.0→13.0.3 *as separate merges*** | 🟡 NON-EVENT | resolver | `@size-limit/file` peer-pins `size-limit` exactly. **As a pair → 🟢**: 13.0's only break is dropping Node 20; CI is 24. |
+| **#136 frontend group (13 updates)** | 🟢 SAFE *(and it wasn't)* | — | Every member within-caret, no Node gate crossed, react-router's only 7.x break is the `unstable_*` rename and `grep -rn 'unstable_' frontend/src/` is empty. **The green was right about compatibility and wrong about consequence** — see *the miss that wasn't a version problem* below. |
+| **#118 @playwright/test 1.60.0→1.62.1** | 🟢 SAFE | — | Minor within 1.x. Merged. Entry 1 scored a hit on this exact shape. |
+| **#133 setup-node v7 · #130 download-artifact v8.0.1 · #131 repository-dispatch v4.0.1 · codeql triple as a *triple*** | 🟢 SAFE | — | All `runs.using: node24`, `action.yml` read at each tag. Changed inputs are surfaces this repo doesn't use (`packageManager` auto-cache can't fire — no such field anywhere; `artifact-ids`/`skip-decompress` unused; `add-snippets` never passed). Applied in `4daad56b`. |
+| **starlette 1.3.1→1.6.0** | 🟢 SAFE | — | Introspected against the installed 1.6.0 in `.venv-sidecar`: all ten import sites resolve, middleware signatures byte-identical, `GZipMiddleware` gained a kwarg (additive). `fastapi 0.141.1` requires `starlette>=0.46.0`, **no cap**. |
+| **tokenizers 0.23.1→0.23.2 · numba+llvmlite pair · openai 3.7 · google-genai 2.22 · mcp 2.0.1 · sqladmin · uvicorn · SQLAlchemy · pydantic 2.13.5 · scipy · ctranslate2 · mlx pair · typer · rich · protobuf · lxml · the utility tail** | 🟢 SAFE | — | Patch/minor within major, or dev-only with no bundle presence. **Nineteen were already resolved and running in `.venv-sidecar`.** `torch 2.13→2.14` is free: `"torch"` is in the spec `excludes` and `_internal/torch` is absent — zero bundle bytes. |
+
+### The miss that wasn't a version problem — #136 and the bundle budget
+
+Every compatibility claim about #136 held. It was still unmergeable, and the
+pre-mortem did not see why: **thirteen bumps together push the gzipped SPA past
+its 220 kB `size-limit` budget**, a hard gate (not in `soft-gates.json`). Main
+was already at **206.61 kB** — inside 6% of the ceiling — so any group bump
+trips it.
+
+**Tuning for the next pass: a bump's blast radius includes the budgets it is
+measured against, not only the APIs it calls.** Ask what hard gates the change
+is weighed by — bundle size, install size, cold-start — and whether the current
+headroom absorbs it. That is a cheap question and it was never asked.
+
+Resolved by splitting rather than by raising the budget. `react-router` was the
+only member with a security reason to move and cost **1.11 kB** of the 13.4 kB
+available (206.61 → 207.72), clearing all seven High advisories —
+`npm audit --omit=dev` went 7 → **0**. `package.json` already said `^7.14.2`, so
+it was lockfile-only: exactly two entries moved, 7.14.2 → 7.18.3 (`6e627839`).
+The other twelve stay unmerged pending a bundle pass or a **deliberate** budget
+decision.
+
+On the advisories, assessed rather than assumed: **none of the seven was
+reachable.** Six need framework/SSR/RSC mode and `router.tsx:58` is a
+client-side data router; the seventh needs an attacker-controlled navigation
+target, and all seven call sites build paths from internal ids behind a literal
+`/report/` prefix. Clean audit, not a closed incident.
+
+### Refuted while grounding — the two-venv "testing gap"
+
+This pass asserted that `.venv` and `.venv-sidecar` diverging on 26 packages
+meant *"the suite has never run against the versions that ship."* **Measurement
+refuted it, and it is recorded here so it is not re-derived.** There is no
+lockfile, no constraints file and no `--constraint` in `ci.yml`, so CI's
+`pip install -e ".[dev,serve]"` is a **fresh resolve** — the same strategy
+`build-sidecar.sh` uses. The only packages in the sidecar and not in CI's
+install are `altgraph`, `macholib`, `pyinstaller`, `pyinstaller-hooks-contrib`,
+all build tooling. The `dev` extra deliberately carries `mcp` and
+`mlx`/`mlx-whisper` so the matrix covers those surfaces. And Entry 6 is the
+direct receipt: mcp 2.1.1 was caught by CI *while the local venv sat on 2.0.0* —
+CI resolving **ahead**, the opposite of the claim. `.venv` was simply a month
+stale.
+
+The one real defect in that area is separate and unfixed:
+`scripts/generate-third-party-binaries.py:161` resolves from `.venv`, so
+`THIRD-PARTY-BINARIES.md` — the file whose own header calls it the canonical
+inventory of what ships — records dev versions (`starlette 1.3.1` against the
+sidecar's 1.6.0) and lists `tokenizers`, which is not in the bundle at all.
+
+### Applied on the day
+
+- **Merged:** #118; `react-router` alone (`6e627839`).
+- **Superseded and closed:** #129–#133, by the one-commit Actions sweep
+  (`4daad56b`) — codeql triple on a single SHA, plus the other three.
+- **Held and closed:** #134, #135, and #139 (which is #134 raised again).
+- **`dependabot.yml`:** `tokenizers` ignore retired; `@eslint/js` +
+  `eslint-plugin-jsx-a11y` added (`a6f8cc66`); the three ceiling-holds moved to
+  the `versions:` form (`a97bedda`); `open-pull-requests-limit` 5 → **15**.
+
+### The ignore form was wrong for a ceiling
+
+`anthropic` carried `update-types: ["version-update:semver-major"]` from 27 Aug
+and **never once suppressed the PR** — #134 stood a week under it, and #139 was
+raised while it was still in force. A ceiling in `pyproject.toml` produces an
+*"Update `<dep>` requirement"* PR that widens the constraint, and `update-types`
+does not filter that shape; **`versions:` does**, which is why the retired
+`tokenizers` rule worked for three months. Fixed for `anthropic`, `mcp` and
+`mcp-types`. The other five keep `update-types` deliberately: `pydantic` and
+`fastapi` are floor-only pins and the spaCy trio are transitive with no
+constraint of ours, so they emit ordinary version-update PRs.
+
+### The unknowns
+
+- ❔ **Which `starlette` shipped in 0.29.1's artefact.** The `.app` was built
+  31 Aug 18:57; every dist-info in `.venv-sidecar` is stamped 22:09, i.e. the
+  venv was recreated *after* the build. starlette is pure-Python so it leaves no
+  dist-info in `_internal/` to read. The 🟢 above rests on introspecting the
+  installed 1.6.0 plus the changelogs, **not** on "1.6.0 has shipped". Cheap
+  next step: `copy_metadata("starlette")` in the spec, so the bundle records it.
+- ❔ **Whether `presidio-anonymizer` intends to float `cryptography<49`.**
+  2.2.364 is latest and no upstream signal was found either way — which is why
+  it is a predicate rather than a verdict.
+
+### Stale-register drift found while grounding
+
+1. **`weasel` and `confection` rows were factually false** — both holds had
+   silently graduated. `spacy 3.8.16` requires `weasel<2.0.0,>=1.0.0` and
+   `confection<2.0.0,>=1.3.2`; both are installed and clean. The rows said
+   `weasel<0.5` and `confection<1.0`. **The "one atomic spaCy-4 wave" framing is
+   falsified by observation:** spaCy 3.8.x floats its own caps without a major.
+2. **`thinc`'s predicate could never fire.** *"spaCy 4 reaches GA"* — the 4.0
+   line is three dev releases, newest 2 years 4 months old, two of them yanked.
+   Re-specified to a cap float.
+3. **`tokenizers` was a live tombstone**, retired above.
+4. **The `mcp` row undercounted the migration** — "three call sites" against
+   seven `raise ToolInputError`, and it named a harder fix than upstream
+   requires (`ToolError`'s own docstring says raising the SDK's `ToolError`
+   already yields `is_error=True` with the message in `content`).
+5. **The `anthropic` row was corrected mid-review and then over-corrected** —
+   updated to *"code-ready, wave-blocked"* on the strength of `bb9e201d`, which
+   fixed the API-400 on post-4.6 models but not the SDK-signature break on the
+   default model. Restored in `6e24f8d6`. *A finding marked resolved is a claim
+   about intent, not evidence about the tree.*
+6. **The snapcore mitigant expired 8 Aug 2026** — `snap.yml` was restored to
+   `push`/`pull_request`, so the node20 annotation surfaces on every push.
+7. **Eleven `dependabot.yml` ignores had no register row.** Four now do; the
+   npm set (`jsdom`, `vite`, `vitest`, `eslint` family, `typescript`,
+   `lighthouse`, `@playwright/test`) still shares one stated reason — *"tied to
+   Node major"* — against `.tool-versions: node 24`, unre-read since it was
+   written.
+8. **`lighthouse 12.x` — fourth consecutive flag.** Entry 5 proposed the
+   structural fix (*a register row may not restate a value that lives in a
+   tracked config file; it may only name the file*). Still unapplied.
+
+### New clusters — named, not smuggled in
+
+Recommend adding to the catalog in `docs/design-dependency-premortem.md`:
+
+- **Presidio ceiling cluster** — `presidio-analyzer/anonymizer →
+  {cryptography, numpy, spacy, phonenumbers, pydantic}`, plus a
+  `requires-python <3.15` ceiling. Entry 2 modelled presidio as a floor-*raiser*;
+  at 2.2.364 it is the tightest **ceiling** in the graph and owns two caps the
+  existing map attributes elsewhere (numba for numpy; nothing for cryptography).
+  It is a core dependency, so it constrains every channel.
+- **codeql-action as a chain-within-a-fan** — a refinement of Entry 5's "fan,
+  not a chain": `init`/`autobuild`/`analyze` enforce version consistency on each
+  other while Dependabot emits them as separate PRs subject to
+  `open-pull-requests-limit`.
+- **npm peer-cap chain** — `@eslint/js → eslint → eslint-plugin-jsx-a11y`.
+  Unlike pip caps these are *peer* declarations, so the failure is `ERESOLVE` at
+  `npm ci`, and an ignore list must cover the whole chain or it covers nothing.

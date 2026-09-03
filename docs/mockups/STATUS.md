@@ -91,8 +91,8 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `export-menu-comparison.html` | 22 Jun 2026 | *unreviewed* |
-| `export-popover-lenses.html` | 22 Jun 2026 | *unreviewed* |
+| `export-menu-comparison.html` | 22 Jun 2026 | PROPOSED 22 Jun 2026 · IMPLEMENTED — export reached macOS parity; the “parked” note inside refers to Miro push and PowerPoint slides, not to this mockup |
+| `export-popover-lenses.html` | 22 Jun 2026 | PROPOSED 22 Jun 2026 · IMPLEMENTED — the per-lens export surface ships |
 
 ## mcp
 
@@ -106,9 +106,9 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `miro-flow.html` | 23 Jun 2026 | *unreviewed* |
-| `miro-native-flow.html` | 28 Jun 2026 | *unreviewed* |
-| `miro-setup-help.html` | 23 Jun 2026 | *unreviewed* |
+| `miro-flow.html` | 23 Jun 2026 | PROPOSED 23 Jun 2026 · IMPLEMENTED — **design of record** for the Miro flow; cited by `design-miro-bridge.md` and `design-board-integrations.md` |
+| `miro-native-flow.html` | 28 Jun 2026 | PROPOSED 28 Jun 2026 · IMPLEMENTED — the macOS-native half; `MiroConnectionStore.swift` ships |
+| `miro-setup-help.html` | 23 Jun 2026 | PROPOSED 23 Jun 2026 · IMPLEMENTED — the setup help page; cited by `design-miro-bridge.md` |
 
 ## move
 
@@ -122,17 +122,17 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
 | `agent-scope-v1.html` | 20 Aug 2026 | *unreviewed* |
-| `background-runs-view-switch-storyboard.html` | 16 Jun 2026 | *unreviewed* |
+| `background-runs-view-switch-storyboard.html` | 16 Jun 2026 | PROPOSED 16 Jun 2026 · IMPLEMENTED — the storyboard that forced out the view-switch race; `ServeManager.swift` carries the guard (`drainParked`, `restartIfRunning`) |
 | `bracket-colour-explore.html` | 24 Feb 2026 | *unreviewed* |
 | `button-catalogue.html` | 31 Aug 2026 | *unreviewed* |
 | `control-surface-parity.html` | 2 Jul 2026 | *unreviewed* |
 | `debug-inspector-mockup.html` | 1 Aug 2026 | *unreviewed* |
 | `desktop-nav-toolbar-rearrangement.html` | 21 Jun 2026 | *unreviewed* |
-| `docs-site-mockup.html` | 26 Jun 2026 | *unreviewed* |
+| `docs-site-mockup.html` | 26 Jun 2026 | PROPOSED 26 Jun 2026 · IMPLEMENTED — self-declared throwaway, but the docs site was built: per-topic Markdown in the website repo’s `docs-src/`, published at bristlenose.app/docs/ |
 | `editable-themes-prototype.html` | 1 Aug 2026 | *unreviewed* |
 | `focus-mode-lab.html` | 4 Aug 2026 | *unreviewed* |
 | `font-weight-tuner.html` | 22 Feb 2026 | *unreviewed* |
-| `grid-lanes-quotes.html` | 17 Jun 2026 | *unreviewed* |
+| `grid-lanes-quotes.html` | 17 Jun 2026 | PROPOSED 17 Jun 2026 · IMPLEMENTED — the masonry bake-off. **It calls itself a throwaway and that is now wrong**: `display: grid-lanes` ships as progressive enhancement in `theme/organisms/responsive-grid.css`. *Its one linked stylesheet is a dead path (`/report/assets/…`), so it renders bare* |
 | `icloud-sync-architecture.html` | 13 Jul 2026 | *unreviewed* |
 | `incremental-analysis-flows.html` | 7 Jul 2026 | *unreviewed* |
 | `ingest-refusal-surfaces.html` | 19 Aug 2026 | *unreviewed* |
@@ -141,7 +141,7 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `lead-sentence-playground.html` | 31 Aug 2026 | *unreviewed* |
 | `llm-availability-exposure.html` | 3 Sep 2026 | *unreviewed* |
 | `measure-aware-leading.html` | 15 Mar 2026 | *unreviewed* |
-| `mini-heatmaps-dashboard.html` | 19 Mar 2026 | *unreviewed* |
+| `mini-heatmaps-dashboard.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 — **not built on the Dashboard**. Heatmaps ship on the Analysis lens instead; no decision recorded either way, so this is an idea that went elsewhere rather than one that was refused |
 | `mockup-analysis.html` | 10 Feb 2026 | PROPOSED 10 Feb 2026 · IMPLEMENTED — the Analysis lens ships |
 | `mockup-autocode-lifecycle.html` | 3 Sep 2026 | PROPOSED 19 Feb 2026 · SUPERSEDED 29 Aug 2026 by `codebook-v2-autocode-button.html` — a nine-step storyboard of the v1 flow, where importing a codebook and coding with it were separate acts; 0.29.0 made Install *be* apply |
 | `mockup-checkbox-options.html` | 28 Feb 2026 | *unreviewed* |
@@ -151,14 +151,14 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `mockup-codebook-norman.html` | 19 Feb 2026 | PROPOSED 19 Feb 2026 · SUPERSEDED 29 Aug 2026 by `codebook-v2-prototype.html` — as above |
 | `mockup-codebook-panel.html` | 7 Feb 2026 | PROPOSED 7 Feb 2026 · IMPLEMENTED · **ABANDONED 29 Aug 2026** — this is `CodebookPanel`, the v1 codebook lens, deleted in `baa1aa0e` when v2 became the lens. Built, shipped for months, then removed |
 | `mockup-delete-button.html` | 9 Feb 2026 | PROPOSED 9 Feb 2026 · IMPLEMENTED — `Badge` `variant="deletable"` ships |
-| `mockup-desktop-rail-removal.html` | 27 Jun 2026 | *unreviewed* |
+| `mockup-desktop-rail-removal.html` | 27 Jun 2026 | PROPOSED 27 Jun 2026 · IMPLEMENTED — cited by `frontend/CLAUDE.md` for “Desktop embedded: rails removed” |
 | `mockup-discussion-evidence-strength.html` | 26 Jul 2026 | *unreviewed* |
 | `mockup-discussion-guide-distillation.html` | 26 Jul 2026 | *unreviewed* |
 | `mockup-discussion-heading-options.html` | 26 Jul 2026 | *unreviewed* |
 | `mockup-discussion-lens.html` | 26 Jul 2026 | *unreviewed* |
 | `mockup-header-redesign.html` | 28 Feb 2026 | *unreviewed* |
 | `mockup-minimap-columns.html` | 26 Jul 2026 | *unreviewed* |
-| `mockup-minimap.html` | 10 Mar 2026 | *unreviewed* |
+| `mockup-minimap.html` | 10 Mar 2026 | PROPOSED 10 Mar 2026 · IMPLEMENTED — the minimap ships as column 4 of the sidebar grid |
 | `mockup-native-feedback-window.html` | 10 Jul 2026 | *unreviewed* |
 | `mockup-pii-wiring-spec.html` | 26 Jul 2026 | *unreviewed* |
 | `mockup-privacy-settings.html` | 26 Jul 2026 | *unreviewed* |
@@ -171,7 +171,7 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `moderator-question-pill.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED · **PARKED 5 Aug 2026** — built and tested, then withheld as not intuitive enough. Flag `moderatorQuestionPill: false`; revisit conditions in `docs/design-moderator-question-pill.md`. Do not delete the code and do not re-propose the idea |
 | `native-colour-alignment.html` | 2 Jul 2026 | *unreviewed* |
 | `nightfall-focus.html` | 9 Jul 2026 | *unreviewed* |
-| `ollama-setup-popovers.html` | 3 Jun 2026 | *unreviewed* |
+| `ollama-setup-popovers.html` | 3 Jun 2026 | PROPOSED 3 Jun 2026 · IMPLEMENTED — cited three times across the design docs; `OllamaDownloadPill.swift` ships |
 | `person-actions-everywhere.html` | 27 Aug 2026 | *unreviewed* |
 | `quotes-spatial-arrow-nav.html` | 4 Aug 2026 | *unreviewed* |
 | `reanalyse-sheet-pixels.html` | 22 Aug 2026 | *unreviewed* |
@@ -181,7 +181,7 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `settings-accounts-generalised.html` | 18 Aug 2026 | *unreviewed* |
 | `shimmer-tuner.html` | 19 Jul 2026 | *unreviewed* |
 | `sparkline-explore.html` | 12 Feb 2026 | PROPOSED 12 Feb 2026 · IMPLEMENTED — sentiment sparklines ship |
-| `tentative-bars.html` | 19 Mar 2026 | *unreviewed* |
+| `tentative-bars.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · IMPLEMENTED — the two-tone `MicroBar` ships (`tag-micro-bar-tentative`), pale tentative + solid accepted, with “N tentative + M accepted” on hover |
 | `tooltip-gallery.html` | 22 Feb 2026 | *unreviewed* |
 | `typography-comparison.html` | 15 Feb 2026 | PROPOSED 15 Feb 2026 · IMPLEMENTED · SUPERSEDED — as above |
 
@@ -222,7 +222,7 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `sidebar-activity-indicators.html` | 14 Jun 2026 | *unreviewed* |
+| `sidebar-activity-indicators.html` | 14 Jun 2026 | PROPOSED 14 Jun 2026 · IMPLEMENTED — `ProjectRowActivityIndicator.swift` ships |
 | `sidebar-all-tabs-v1.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 18 Mar 2026 by `sidebar-all-tabs-v2.html` — first iteration |
 | `sidebar-all-tabs-v2.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 18 Mar 2026 by `sidebar-all-tabs-v3.html` — second iteration |
 | `sidebar-all-tabs-v3.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 19 Mar 2026 by `sidebar-all-tabs-v4.html` — third iteration |
@@ -244,7 +244,7 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
 | `type-scale-audit.html` | 13 Feb 2026 | PROPOSED 13 Feb 2026 · IMPLEMENTED · SUPERSEDED — drove the v1 type scale; `tokens-typography-v2.css` is the live one |
-| `type-scale-comparison.html` | 27 Mar 2026 | *unreviewed* |
+| `type-scale-comparison.html` | 27 Mar 2026 | PROPOSED 27 Mar 2026 · IMPLEMENTED · SUPERSEDED — drove the v1 type scale; `tokens-typography-v2.css` is the live one |
 
 ## website
 

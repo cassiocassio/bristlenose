@@ -54,10 +54,12 @@ Consequences:
   re-derives it: annotations *are* needed, and `MainActor.run()` is *not*
   automatically redundant.
 - **Read these from `xcodebuild -showBuildSettings`, and say which scheme.**
-  The dual floor is *deliberate policy*, not drift: production ships **15.0**
-  (Sequoia, the n-1 rule) while the Apple-Intelligence schemes require **26.1**
-  because Foundation Models is macOS 26+. See `docs/design-platform-policy.md`
-  §"Pillar 3 — macOS". An earlier revision of this file reported a single floor
+  The app ships **15.0** (Sequoia, the n-1 rule) on all four schemes; the only
+  **26.1** is on `BristlenoseTests` and is incidental, not an Apple-Intelligence
+  gate — an earlier revision of this file said otherwise, repeating an error in
+  the policy doc that was corrected 3 Sep 2026. See
+  `docs/design-platform-policy.md` §"Pillar 3 — macOS". That revision also
+  reported a single floor
   of 26.1 and approachable concurrency as `YES`; both came from hand-parsing
   the pbxproj, which cannot tell you which config a scheme resolves to. One
   command can:

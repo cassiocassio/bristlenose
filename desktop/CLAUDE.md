@@ -66,10 +66,11 @@ kept in the maintainer's private notes (`/artifacts` → **Swift Corpus
 Register**).
 
 **But check the fix against our deployment floor before acting on it.**
-Production ships `MACOSX_DEPLOYMENT_TARGET = 15.0` (Sequoia — the n-1 rule in
-`docs/design-platform-policy.md` §"Pillar 3"), while the Apple-Intelligence
-schemes sit at 26.1 because Foundation Models needs macOS 26+. That dual floor
-is deliberate; don't "fix" it.
+The app ships `MACOSX_DEPLOYMENT_TARGET = 15.0` (Sequoia — the n-1 rule in
+`docs/design-platform-policy.md` §"Pillar 3") on **all four schemes**, both
+configurations. The only 26.1 in the project is on `BristlenoseTests`, and it is
+incidental rather than deliberate — see that doc. Pinned by
+`desktop/scripts/check-deployment-floors.sh`.
 
 Most of the celebrated SwiftUI-on-Mac improvements landed in **macOS 26** —
 `List` performance, `TextEditor` rich text, native `WebView`,

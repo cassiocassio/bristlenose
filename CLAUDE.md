@@ -169,8 +169,9 @@ filenames were never going to be in there.
 *plausibly*.** The file holds several `XCBuildConfiguration` blocks; which one a
 scheme resolves to is decided by the build system, not by reading order, and the
 project deliberately carries **two** floors — production at `MACOSX_DEPLOYMENT_TARGET
-= 15.0` under the n-1 rule, and the Apple-Intelligence schemes at 26.1 because
-Foundation Models is macOS 26+ (`docs/design-platform-policy.md` §"Pillar 3").
+= 15.0` on all four app schemes, and `BristlenoseTests` at 26.1
+(`docs/design-platform-policy.md` §"Pillar 3"; pinned by
+`desktop/scripts/check-deployment-floors.sh`).
 Hand-parsing therefore returns a real number that is nonetheless the wrong one for
 the scheme you meant, with nothing to signal the error.
 

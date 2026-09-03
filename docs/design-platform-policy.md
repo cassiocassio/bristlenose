@@ -58,7 +58,7 @@ Most of the thinking is already in [`docs/design-ci.md`](design-ci.md):
 
 ### Pillar 3 — macOS
 
-Current deployment target: dual — **macOS 15.0 (Sequoia)** for the production scheme, **macOS 26.1 (Tahoe)** for some debug/feature schemes (`desktop/Bristlenose/Bristlenose.xcodeproj/project.pbxproj`). Rationale for the Sequoia floor: [`docs/design-decisions.md`](design-decisions.md) — Sequoia is n-1 by launch, avoids SwiftUI contortion for older APIs.
+Current deployment target — **measured 3 Sep 2026 via `xcodebuild`, correcting a long-standing error in this line.** The app ships **15.0 (Sequoia)** on *all four* schemes (Bristlenose, Dev Sidecar, External Server, default), both configurations. The **26.1 belongs to `BristlenoseTests`**, not to "debug/feature schemes" and not to Apple Intelligence: it arrived incidentally in `cce34d2a` when the test target was created and Xcode defaulted it to the then-current SDK, and **no test uses a macOS 26 API**. There is no Foundation Models code in the app at all. Pinned by `desktop/scripts/check-deployment-floors.sh`. Rationale for the Sequoia floor: [`docs/design-decisions.md`](design-decisions.md) — Sequoia is n-1 by launch, avoids SwiftUI contortion for older APIs.
 
 The Tahoe-specific issues already encountered:
 
@@ -82,7 +82,7 @@ The Tahoe-specific issues already encountered:
   | Variable | Direction |
   |---|---|
   | Adoption / OS release cadence | permits moving, as n-1 slides forward |
-  | Apple Intelligence maturity | **forces** moving — Foundation Models is macOS 26+ |
+  | Apple Intelligence maturity | **would force** moving — Foundation Models is macOS 26+. Prospective only: no such code exists in the app today |
   | SwiftUI-on-Mac fixes landing in 26+ | raises the *cost of staying*: fixes we forgo |
   | Sidebar fragility + rework cost | resists moving |
   | Runway to public beta | resists moving — decisive in Q3 2026 |
@@ -90,7 +90,8 @@ The Tahoe-specific issues already encountered:
   The last two carried this decision. Expect Apple Intelligence to carry the
   next one, since it is the only variable that can make the move mandatory
   rather than merely attractive.
-- The dual-target setup (15.0 for prod, 26.1 for Apple-Intelligence-only schemes) is intentional. **Add a comment block in `pbxproj`** explaining which scheme uses which target. Currently easy to bump one without the other; that's a bug waiting to happen.
+- ~~Add a comment block in `pbxproj` explaining which scheme uses which target.~~ **Retired 3 Sep 2026 — the mechanism cannot work.** Xcode regenerates `project.pbxproj` from its in-memory model and writes only its own object markers; the file carries zero hand-written comments, and one added by hand would be dropped silently at the next save. Replaced by **`desktop/scripts/check-deployment-floors.sh`**, which reads the resolved floors from `xcodebuild` and fails on drift (proven to fail, not just to pass).
+- **Known gap, pinned rather than fixed:** the test target's floor (26.1) sits *above* the app's (15.0), so the Swift suite cannot run on the minimum OS the product ships to. Lowering it is a real change with real risk; the gate pins today's reality and does not assert the gap is acceptable.
 - WWDC week (June): install macOS developer beta on a non-primary machine. Build the desktop app. File any breakage as a tracked issue.
 - Public beta (July): ship a TestFlight build on the new SDK to at least one beta tester running the public beta.
 - GA (September): bump Xcode + deployment target if needed, sign, push within 30 days.
@@ -115,7 +116,7 @@ Things we know we're pinned at, with re-check dates. When a re-check date comes 
 | **Python 3.14** | macOS `ensurepip` broken for `python -m venv` (CLAUDE.md gotcha). Watch upstream. | October 2026 (post 3.14.1) |
 | **Python 3.10 floor** | EOL October 2026. Decision point. | Quarterly review preceding the EOL |
 | **macOS deployment target 15.0** | Sequoia is n-1; the sidebar work on it is done and fragile. **Held 3 Sep 2026 regardless of n-2 status** — see Pillar 3. | When Apple-Intelligence features move into the shipping scheme (not on an n-2 trigger) |
-| **macOS deployment target 26.1 (Apple Intelligence schemes)** | Foundation Models requires macOS 26+. | When/if the gate moves |
+| **`BristlenoseTests` deployment target 26.1** | Incidental — Xcode's default when the test target was created (`cce34d2a`); no test needs macOS 26. Above the app's floor, so tests never exercise the shipping minimum. | When someone decides whether to lower it to 15.0 |
 | **Sidecar CPython 3.12** | Bundled in `Python.framework`; bumping is a signing/entitlement event. | Coordinated with macOS major bump |
 
 ## Triage boundary
@@ -149,10 +150,10 @@ The review answers, in order:
 
 1. **Are we on the current Node LTS?** If not — what's the date by which we will be?
 2. **Are we on a Python version not yet at "release candidate"?** Are any supported Python versions reaching EOL within two quarters? (3.10 EOL Oct 2026 is the live one.)
-3. **macOS deployment target review.** Is the dual-target setup (prod 15.0 +
-   AI-features-only 26.1) still right? *Whether the floor should move was
-   decided on 3 Sep 2026 and is held until Apple-Intelligence features ship —
-   don't re-open it on adoption figures alone.*
+3. **macOS deployment target review.** Should the **test** floor (26.1) come
+   down to match the app's (15.0), so the suite exercises the shipping minimum?
+   *Whether the APP floor should move was decided on 3 Sep 2026 and is held —
+   don't re-open that on adoption figures alone.*
 4. **Beta-window check** — was the most recent beta window honoured? (Q3 has WWDC + developer beta install; Q4 has GA + Xcode bump.)
 5. **Pinning register sweep** — any pin past its re-check date? Re-validate or remove.
 6. **Tooling-sprint trigger** — have enough deferred majors piled up to justify a 1–2 day batch release? (Three is usually the trigger; one or two is below the per-PR cost.) If triggered, **run `/cassandra` on the batch before applying it** — pre-mortem first, apply second.

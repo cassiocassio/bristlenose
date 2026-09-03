@@ -118,7 +118,7 @@ Two scripts, two certificates, two channels. Neither covers the other.
 | `build-all.sh` | 8 | Verify | Provisioning profile | no |
 | `build-all.sh` | 9 | Verify | Notarisation | yes |
 | `build-dmg.sh` | 1 | Pre-flight | Pre-flight | no |
-| `build-dmg.sh` | 1b | Swift unit suite | Swift unit suite | yes |
+| `build-dmg.sh` | 1b | Swift unit suite | Swift unit suite (BristlenoseTests) | yes |
 | `build-dmg.sh` | 2 | Sidecar | Sidecar — fetch · build · sign (Developer ID) | no |
 | `build-dmg.sh` | 3 | Archive | Xcode archive (development signing; Developer ID applied at export) | no |
 | `build-dmg.sh` | 4 | Export → standalone .app | Export → Developer ID .app | no |

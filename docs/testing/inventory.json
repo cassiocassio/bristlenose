@@ -128,7 +128,7 @@
       {
         "can_skip": true,
         "id": "1b",
-        "name": "Swift unit suite",
+        "name": "Swift unit suite (BristlenoseTests)",
         "phase": "Swift unit suite",
         "script": "build-dmg.sh"
       },

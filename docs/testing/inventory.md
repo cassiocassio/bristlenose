@@ -9,7 +9,7 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 4453 | collected (expands parametrize — authoritative) | `tests/` |
+| `pytest` | python unit/integration | 4460 | collected (expands parametrize — authoritative) | `tests/` |
 | `vitest` | frontend unit | 114 files | test files | `frontend/src/**/*.test.*` |
 | `BristlenoseTests` | swift unit | 1382 in 106 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
 | `playwright` | browser e2e | 8 files | spec files | `e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts)` |
@@ -24,13 +24,8 @@
 - **Default shell:** GitHub default (`bash -e`, **no pipefail**). Piped steps below report the LAST stage's exit status, not the command's — check each is not load-bearing. (This is what hid 16 compile errors behind a green Mac Build, 20 May – 2 Sep 2026.)
   - piped: _Assert the wheel carries the built frontend_
   - piped: _Install the CLI into the venv the gates expect_
-  - `lint` · on `ubuntu-latest`
-    - Lint with ruff — gate, **hard**
-    - Check the generated test inventory is current — gate, **hard**
-    - Type check with mypy — gate, **soft**
-    - Gate policy — no gate goes soft by default — gate, **hard**
-    - Gate proofs — has anyone seen these go red? — gate, **hard**
-    - Ratchet — numbers that may not rise — gate, **hard**
+  - `gates` · on `ubuntu-latest` · **conditional: ${{ matrix.soft == true }}**
+  - `supply-chain` · on `ubuntu-latest`
     - Audit dependencies for known vulnerabilities — step, **soft**
     - Generate Python SBOM — step, **soft**
   - `test` · on `${{ matrix.os }}` · **conditional: ${{ matrix.os == 'macos-latest' && inputs.strict-macos != true }}**

@@ -8,7 +8,7 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 4453
+        "tests": 4460
       },
       {
         "basis": "test files",
@@ -250,51 +250,16 @@
         "jobs": [
           {
             "calls": null,
-            "id": "lint",
+            "id": "gates",
+            "job_colour": "conditional: ${{ matrix.soft == true }}",
+            "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "supply-chain",
             "job_colour": "hard",
             "notable_steps": [
-              {
-                "colour": "hard",
-                "is_gate": true,
-                "name": "Lint with ruff",
-                "piped": false,
-                "runs_tests": false
-              },
-              {
-                "colour": "hard",
-                "is_gate": true,
-                "name": "Check the generated test inventory is current",
-                "piped": false,
-                "runs_tests": false
-              },
-              {
-                "colour": "soft",
-                "is_gate": true,
-                "name": "Type check with mypy",
-                "piped": false,
-                "runs_tests": false
-              },
-              {
-                "colour": "hard",
-                "is_gate": true,
-                "name": "Gate policy \u2014 no gate goes soft by default",
-                "piped": false,
-                "runs_tests": false
-              },
-              {
-                "colour": "hard",
-                "is_gate": true,
-                "name": "Gate proofs \u2014 has anyone seen these go red?",
-                "piped": false,
-                "runs_tests": false
-              },
-              {
-                "colour": "hard",
-                "is_gate": true,
-                "name": "Ratchet \u2014 numbers that may not rise",
-                "piped": false,
-                "runs_tests": false
-              },
               {
                 "colour": "soft",
                 "is_gate": false,

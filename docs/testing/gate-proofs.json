@@ -22,6 +22,12 @@
       "observed": "2026-09-03"
     }
   },
+  "excluded": {
+    "check-python-band": {
+      "added": "2026-09-03",
+      "why": "Not a gate. A measurement run by hand at the quarterly tooling review to answer 'are we inside the CPython band?' \u2014 it reports a number, it does not pass or fail, so there is no red to observe."
+    }
+  },
   "extra_gates": {
     "gen-test-inventory": {
       "note": "Not named check-*, but --check is a hard CI gate.",

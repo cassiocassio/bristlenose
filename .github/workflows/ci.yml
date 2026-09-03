@@ -40,116 +40,78 @@ permissions:
   contents: read
 
 jobs:
-  lint:
+  # Every gate is its own matrix cell, so one failing gate cannot hide another.
+  # Before 3 Sep 2026 these were sequential steps in a single `lint` job, and a
+  # failing step SKIPPED the rest — which is how the inventory gate's first CI
+  # appearance came back "skipped" and proved nothing about itself while looking
+  # like it had passed. fail-fast: false is the whole point; do not remove it.
+  #
+  # Each cell pays its own install. On a public repo standard runners are free
+  # and the cells run in parallel, so this costs runner-minutes rather than
+  # wall-clock, and buys one status check per gate.
+  gates:
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - gate: ruff
+            run: ruff check .
+          - gate: inventory
+            run: python scripts/gen-test-inventory.py --check
+          - gate: gate-policy
+            run: python scripts/check-gate-policy.py
+          - gate: gate-proofs
+            run: python scripts/check-gate-proofs.py --stale 180
+          - gate: ratchet
+            run: python scripts/check-ratchet.py
+          - gate: manpage
+            run: |
+              VERSION=$(python3 -c "import bristlenose; print(bristlenose.__version__)")
+              grep -q "$VERSION" man/bristlenose.1 || {
+                echo "man page does not mention $VERSION"; exit 1; }
+          - gate: mypy
+            run: mypy bristlenose/ --ignore-missing-imports
+            soft: true
+    name: ${{ matrix.gate }}
+    continue-on-error: ${{ matrix.soft == true }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
-
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
-          python-version-file: '.tool-versions'
-
+          python-version-file: .tool-versions
+          cache: pip
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev,serve]"
+      - name: ${{ matrix.gate }}
+        run: ${{ matrix.run }}
 
-      - name: Lint with ruff
-        run: ruff check .
-
-      - name: Check the generated test inventory is current
-        # docs/testing/inventory.{json,md} are generated from the tree. This
-        # fails when the committed STRUCTURE — what runs, when, where, and what
-        # happens when it fails — no longer matches the workflows, build gates
-        # and hooks it was generated from. Suite sizes are deliberately NOT
-        # compared: they move on every commit, and a gate that cries wolf is one
-        # somebody switches off.
-        #
-        # A hard gate on purpose. Every wrong claim the 2 Sep 2026 audit found
-        # had been true once, and nothing was ever obliged to revisit it — which
-        # is the same shape as design-ci.md's "informational initially — promote
-        # to blocking once stable", whose promotion never came.
-        #
-        # If this fails: run scripts/gen-test-inventory.py and commit the result.
-        run: python scripts/gen-test-inventory.py --check
-
-      - name: Type check with mypy
-        # Informational for now — 9 pre-existing errors from third-party
-        # SDK type mismatches (anthropic, presidio, faster-whisper).
-        # Runs so regressions show in the log; does not block the build.
-        continue-on-error: true
-        run: mypy bristlenose/ --ignore-missing-imports
-
-      - name: Gate policy — no gate goes soft by default
-        # Every continue-on-error carries a disposition in
-        # docs/testing/soft-gates.json: ratchet, expires, or conditional.
-        # This fails on an undeclared soft gate, an expired review date, a
-        # ratchet naming a metric that does not exist, or a registry entry for a
-        # gate that no longer does.
-        #
-        # It exists because design-ci.md wrote "informational initially —
-        # promote to blocking once stable" and no promotion ever came: nothing
-        # was obliged to ask. Now something is. It only sees continue-on-error,
-        # not a gate softened by `|| true` or a swallowed exit code — both of
-        # which have been real here. gaps.md G7.
-        run: python scripts/check-gate-policy.py
-
-      - name: Gate proofs — has anyone seen these go red?
-        # "Is it passing" and "can it fail" are different questions, and only the
-        # first is ever asked. mac-build.yml answered it correctly every day from
-        # 20 May to 2 Sep 2026 while being structurally incapable of failing.
-        #
-        # The unproven COUNT is held by the ratchet step below, not demanded to
-        # zero — 16 of 21 gates are unproven and an unmeetable gate gets switched
-        # off. This step handles the other half: a manual proof AGES. 180 days
-        # matches the `expires` disposition in the gate policy, because a proof
-        # from six months ago is a claim about a script that has since changed.
-        run: python scripts/check-gate-proofs.py --stale 180
-
-      - name: Ratchet — numbers that may not rise
-        # A fourth gate colour. hard/soft/informational cannot express "allowed
-        # to be non-zero, not allowed to rise", and that is the only shape that
-        # fits mypy: hard is a lie at 238 errors, and soft-with-no-ceiling is
-        # what produced 238 in the first place.
-        #
-        # This deliberately runs mypy a second time. The step above prints the
-        # errors for a human and stays soft; this one gates the count. Merging
-        # them would either make the listing blocking or make the ceiling
-        # advisory, and neither is wanted.
-        #
-        # Ceilings live in docs/testing/ratchet.json. `--tighten` only ever
-        # lowers them; raising one is a deliberate human edit in a commit that
-        # says why. Reasoning: docs/testing/gaps.md G3/G4, and G7 for the limits.
-        run: python scripts/check-ratchet.py
-
-      - name: Check man page version matches __version__
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version-file: .tool-versions
+          cache: pip
+      - name: Install dependencies
         run: |
-          VERSION=$(python3 -c "import bristlenose; print(bristlenose.__version__)")
-          grep -q "bristlenose $VERSION" man/bristlenose.1 || {
-            echo "::error::Man page version doesn't match __version__ ($VERSION)"
-            echo "Update the .TH line in man/bristlenose.1"
-            exit 1
-          }
-
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,serve]"
       - name: Audit dependencies for known vulnerabilities
-        # Informational — flags known CVEs in the log but doesn't block
-        # the build. Transitive deps (torch, protobuf) often have unfixed
-        # advisories that we can't act on. Review on each run.
         continue-on-error: true
         run: |
           pip install pip-audit
           pip-audit
-
       - name: Generate Python SBOM
-        # CycloneDX Software Bill of Materials — uploaded as CI artifact
-        # for compliance (US EO 14028, EU Cyber Resilience Act).
         continue-on-error: true
         run: |
           pip install cyclonedx-bom
           cyclonedx-py environment -o sbom-python.json
-
       - name: Upload Python SBOM
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
@@ -158,7 +120,11 @@ jobs:
           retention-days: 90
 
   test:
-    needs: lint
+    # Deliberately NOT `needs:` the gates. Gating the suite on the linters means
+    # a trivial ruff error hides every test result — the same masking this split
+    # exists to remove, moved up a level. Runner minutes are free on a public
+    # repo, and release.yml gates on the WORKFLOW's conclusion, so every job
+    # still has to be green before a tag can publish.
     runs-on: ${{ matrix.os }}
     # macOS is informational on daily pushes (catches platform bugs without
     # blocking merges) but BLOCKING when strict-macos is passed — release.yml

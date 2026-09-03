@@ -83,8 +83,17 @@ def classify() -> dict:
     for extra, meta in (reg.get("extra_gates") or {}).items():
         gates.setdefault(extra, meta.get("path", "?"))
 
-    out = {"automated": {}, "declared": {}, "unproven": []}
+    excluded = reg.get("excluded", {})
+    out = {"automated": {}, "declared": {}, "unproven": [], "excluded": {}}
     for stem, path in sorted(gates.items()):
+        if stem in excluded:
+            # Not every `check-*` is a gate. check-python-band.py is a
+            # measurement run at the quarterly tooling review; it has no red to
+            # observe. Excluding it is honest; excluding a real gate to get the
+            # count down is not, which is why exclusions carry a reason and are
+            # printed in the report rather than hidden.
+            out["excluded"][stem] = {"path": path, **excluded[stem]}
+            continue
         t = paired_test(stem, tests)
         if t:
             out["automated"][stem] = {"path": path, "proof": t}
@@ -124,6 +133,11 @@ def main() -> int:
             except ValueError:
                 age = "unparseable date"
         print(f"    {k:36} {v.get('how','?')[:44]}  {age}")
+
+    if res["excluded"]:
+        print(f"\nexcluded ({len(res['excluded'])}) — check-* but not a gate; no red to observe")
+        for k, v in res["excluded"].items():
+            print(f"    {k:36} {v.get('why','?')[:60]}")
 
     print(f"\nunproven ({len(res['unproven'])}) — nobody has watched these fail")
     for k in res["unproven"]:

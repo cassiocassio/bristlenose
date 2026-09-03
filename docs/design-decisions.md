@@ -395,6 +395,40 @@ choice. It was found by rendering the sheet and looking at it.
 _See also: `docs/design-analysis-lifecycle.md` §7,
 `docs/mockups/reanalyse-sheet-pixels.html` (before/after)_
 
+## A confirmation is for a real loss — and "nothing to lose" must be complete
+
+**Decided 3 Sep 2026** (`477050c2`, `23ab6a36`), from a user instruction given
+twice in one session: *"no confirm needed if deleting a group with no tags"*,
+then *"same for deleting a tag with no quotes"*. Sibling to the section above —
+that one is *how* a confirmation is built, this is *whether* it is shown at all.
+
+**The rule.** A destructive confirmation fires only when the action destroys
+something. Deleting an empty codebook group, or a tag nothing points at, goes
+straight through: a dialog taxes every delete to catch the rare misfire, and one
+that names no loss is pure friction. Same principle as the sidebar's
+absence-is-information — chrome for the exception, nothing for the norm.
+
+**The corollary, which is where it actually goes wrong.** The predicate deciding
+"nothing to lose" must enumerate *every* kind of loss. The tag gate read
+`tag.count`, which counts **accepted** quotes only; a tag with no accepted quotes
+and twelve pending AutoCode proposals was on twelve quotes the researcher had not
+ruled on, and deleted them silently. The field is called `count`, the rule is
+about "quotes", and the two are not the same set — nothing in the name says so.
+
+**Why nothing was red.** The suite pinned the rule *as written* — a test named
+"deletes a zero-count tag with no confirmation at all" passes whether or not
+zero-count means zero-loss — so the incomplete predicate was green from the day it
+shipped. The inverse failure is the expensive one: an unearned dialog is
+friction, a skipped one destroys work with no warning and no undo.
+
+**And the dialog grows with the gate.** Where two independent counts can each be
+zero, each gets its own sentence; neither may stand in for the other, or a
+pending-only delete renders a confirmation naming no reason.
+
+_Implemented in `frontend/src/components/CodebookAuthoring.tsx`
+(`handleRequestDeleteGroup`, `handleRequestDeleteTag`, `deleteTagBody`); pinned by
+`frontend/src/islands/CodebookAuthoringParity.test.tsx`_
+
 ## Codebook group names are unique — numbered on create, refused on rename
 
 **Decided 31 Aug 2026** (`824b78ab`), after the manual codebook let every

@@ -102,3 +102,20 @@ Upstream also ships plugin-marketplace scaffolding (`.claude-plugin/`,
 a plain project skill, matching swiftui-pro.
 
 Remaining siblings if wanted later: SwiftData Pro, Swift Testing Pro.
+
+## Why this one — already evaluated, do not re-research
+
+Chosen from a surveyed field, not picked at random. The full register, with
+what was declined and why, is at:
+
+  https://claude.ai/code/artifact/7165ebdc-e1a4-43a2-b96c-9626d54e2405   (maintainer's record; private)
+
+**Known open alternative:** `AvdLee/Swift-Concurrency-Agent-Skill` (MIT, v2.3.0,
+1,638★) is reported as materially larger (~250 KB vs ~55 KB) with a diagnostic
+routing table that reads your actual build settings before advising. Not
+independently verified, no name collision, and its author publishes on
+concurrency weekly. Taking it *alongside* this one is the open action — not a
+question to re-research.
+
+A future research round should start from that register. Re-proposing something
+it declined needs a reason the decline did not already consider.

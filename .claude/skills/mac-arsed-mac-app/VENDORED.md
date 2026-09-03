@@ -94,3 +94,22 @@ rm -rf "$DST/reference" && cp -R mac-arsed-mac-app/reference "$DST/reference"
 cp mac-arsed-mac-app/LICENSE.txt "$DST/LICENSE.txt"
 # then bump the "Vendored" date above
 ```
+
+## Why this one — already evaluated, do not re-research
+
+Chosen from a surveyed field, not picked at random. The full register, with
+what was declined and why, is at:
+
+  https://claude.ai/code/artifact/7165ebdc-e1a4-43a2-b96c-9626d54e2405   (maintainer's record; private)
+
+**Alternatives already surveyed** (~40 repos, 3 Sep 2026): `CharlesWiltgen/Axiom`
+is 15% macOS repo-wide and worth only two files; `openai/plugins`,
+`fayazara/macos-app-skills`, `petekp/agent-skills` and
+`LaughingJackalope/macos-skills` all carry **no licence** and cannot be vendored
+however good they are; HIG mirrors like `markmals/mac-dev-skills` bundle Apple's
+copyrighted docs, which an MIT wrapper does not license. **Open:**
+`yigitkonur/plugin-swiftui`'s two decision references (~10 KB) are the only other
+artefact found that encodes 'SwiftUI isn't ready for this Mac control'.
+
+A future research round should start from that register. Re-proposing something
+it declined needs a reason the decline did not already consider.

@@ -52,6 +52,18 @@ None of this is a native-pivot commitment — the web SPA remains the durable
 primary surface, and one AppKit surface is not evidence of a whole-app
 direction.
 
+**Independent corroboration**, so this reads as evidence rather than taste:
+NetNewsWire builds at `SWIFT_VERSION = 6.2` with `NonisolatedNonsendingByDefault`
+and `InferIsolatedConformances` — genuinely ahead on the language — while its Mac
+UI is essentially pure AppKit. Brent Simmons committed a *new* technote on 6 Jun
+2026 whose macOS section says to use AppKit and .xib files and avoid SwiftUI,
+while the iOS section of the same file says the opposite. Same author, same day,
+opposite advice per platform: that asymmetry is the two axes.
+
+The dated register of what SwiftUI still cannot do on macOS — each entry with a
+radar number, and a separate list of complaints Apple has since *fixed* so they
+don't get repeated — is the maintainer's record at https://claude.ai/code/artifact/7165ebdc-e1a4-43a2-b96c-9626d54e2405
+
 ## Native primitives first — Swift isn't a blank web canvas
 
 **The out-of-the-box system primitive with default settings is the starting

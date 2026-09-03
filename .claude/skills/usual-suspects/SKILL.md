@@ -468,6 +468,33 @@ the findings.
 
 Show the user the final annotated list — one report, not four.
 
+### Provenance — where these numbers came from
+
+This pipeline's shape is not a hunch. It comes from a blind three-arm trial on
+one 288-line Swift file, 3 Sep 2026, recorded at:
+
+  https://claude.ai/code/artifact/cb6c0529-c4e2-4049-8b50-6d4fbcfebc5b   (maintainer's record; private)
+
+Measured there: **20 distinct defects, 7 unanimous (35%), 11 found by exactly
+one arm (55%), zero false positives across 36 findings.** Cost per unique
+finding ranged 33k–69k tokens, cheapest being the arm that read the repo.
+
+Three findings drive the design above, and a future round should build on them
+rather than re-measure from scratch:
+
+1. **Agreement is not a filter.** Ranking by concurrence would have discarded
+   both of the best defects — each seen by one arm only.
+2. **A razor alone compounds a measured bias.** Every arm under-rated findings
+   needing cross-file knowledge, and the roster's other adjudicators also push
+   down. Hence 4.6a, and hence 4.6c's precondition constraint.
+3. **Nobody reviewed the diff.** Two individually-correct findings combined
+   into a data-loss bug invisible to all three arms. Hence 4.6b.
+
+**Caveat that matters: n=1.** The 35% and the zero-FP rate are the two figures
+to re-check on a second run, and a diff-shaped review may distribute
+differently. If a later trial contradicts them, change this pipeline and say so
+here — do not quietly keep both stories.
+
 ## Step 5: Triage and update log
 
 After showing the report, the user triages by finding number ("act on 1, 3,

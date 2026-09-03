@@ -25,7 +25,8 @@ anywhere. Do one ~5-min call and export it natively from each platform into
 ``trial-runs/format-acceptance/`` — same conversation, three formats, one
 apples-to-apples format-parity proof:
 
-  * ``zoom_vtt``   — Zoom native export ``zoom-transcript.vtt``    → ``s03`` subtitles
+  * ``zoom_vtt``   — PARKED until Zoom import ships (flagged off). Kept in INPUTS
+                   so re-enabling is one word: Zoom exports ``.vtt``, not ``.docx``.
   * ``teams_docx`` — Teams native export ``teams-transcript.docx`` → ``s04`` docx
   * ``meet_docx``  — Google Meet (Doc → ``.docx``) ``meet-transcript.docx`` → ``s04`` docx
   * ``video``      — a clean unprocessed interview video (FOSSDA)  → transcription
@@ -182,14 +183,18 @@ def _assert_no_fake_success(result, out: OutputPaths) -> None:
 
 @pytest.mark.slow
 @pytest.mark.parametrize("provider", ["anthropic", "openai"])
-@pytest.mark.parametrize("input_key", ["zoom_vtt", "teams_docx", "meet_docx", "video"])
+# zoom_vtt is PARKED: Zoom import is flagged off and unshipped, so a leg for it
+# would assert a path no user can reach yet. INPUTS keeps the entry, so
+# re-enabling is one word here on the day it ships — and the fixture, if one
+# ever lands in format-acceptance/, is not wasted.
+@pytest.mark.parametrize("input_key", ["teams_docx", "meet_docx", "video"])
 def test_pipeline_never_fakes_success(
     provider: str, input_key: str, tmp_path: Path
 ) -> None:
     """Full pipeline on a real input + real provider must not fake success.
 
-    2 providers × 4 input formats (Zoom .vtt, Teams .docx, Google Meet .docx,
-    raw video) = 8 cases. Each self-skips when its API key, input file, or
+    2 providers × 3 input formats (Teams .docx, Google Meet .docx, raw video)
+    = 6 cases (Zoom .vtt parked — unshipped, see the parametrize). Each self-skips when its API key, input file, or
     (video only) Whisper backend is unavailable — so this never fails in CI,
     only reports real regressions when run locally with the world present.
     """

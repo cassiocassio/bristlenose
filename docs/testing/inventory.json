@@ -254,19 +254,43 @@
             "job_colour": "hard",
             "notable_steps": [
               {
-                "colour": "soft",
-                "name": "Type check with mypy",
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Lint with ruff",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Check the generated test inventory is current",
                 "piped": false,
                 "runs_tests": false
               },
               {
                 "colour": "soft",
+                "is_gate": true,
+                "name": "Type check with mypy",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Ratchet \u2014 numbers that may not rise",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "soft",
+                "is_gate": false,
                 "name": "Audit dependencies for known vulnerabilities",
                 "piped": false,
                 "runs_tests": false
               },
               {
                 "colour": "soft",
+                "is_gate": false,
                 "name": "Generate Python SBOM",
                 "piped": false,
                 "runs_tests": false
@@ -281,6 +305,7 @@
             "notable_steps": [
               {
                 "colour": "hard",
+                "is_gate": false,
                 "name": "Run tests",
                 "piped": false,
                 "runs_tests": true
@@ -302,21 +327,31 @@
             "notable_steps": [
               {
                 "colour": "soft",
+                "is_gate": false,
                 "name": "Audit frontend dependencies for known vulnerabilities",
                 "piped": true,
                 "runs_tests": false
               },
               {
                 "colour": "soft",
+                "is_gate": false,
                 "name": "Generate frontend SBOM",
                 "piped": false,
                 "runs_tests": false
               },
               {
                 "colour": "hard",
+                "is_gate": false,
                 "name": "Frontend tests (Vitest)",
                 "piped": false,
                 "runs_tests": true
+              },
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Check bundle size",
+                "piped": false,
+                "runs_tests": false
               }
             ],
             "runs_on": "ubuntu-latest"
@@ -328,6 +363,7 @@
             "notable_steps": [
               {
                 "colour": "hard",
+                "is_gate": false,
                 "name": "Run E2E tests",
                 "piped": false,
                 "runs_tests": true
@@ -383,7 +419,15 @@
             "calls": null,
             "id": "validate-locales",
             "job_colour": "hard",
-            "notable_steps": [],
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Validate locale files",
+                "piped": false,
+                "runs_tests": false
+              }
+            ],
             "runs_on": "ubuntu-latest"
           }
         ],
@@ -454,6 +498,7 @@
             "notable_steps": [
               {
                 "colour": "hard",
+                "is_gate": false,
                 "name": "Build and test",
                 "piped": false,
                 "runs_tests": true
@@ -480,6 +525,7 @@
             "notable_steps": [
               {
                 "colour": "hard",
+                "is_gate": false,
                 "name": "Run perf-gate",
                 "piped": false,
                 "runs_tests": true
@@ -562,7 +608,15 @@
             "calls": null,
             "id": "scan",
             "job_colour": "hard",
-            "notable_steps": [],
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "No tracked files match .gitignore (structural privacy guard)",
+                "piped": false,
+                "runs_tests": false
+              }
+            ],
             "runs_on": "ubuntu-latest"
           }
         ],

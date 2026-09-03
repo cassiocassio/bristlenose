@@ -25,16 +25,20 @@
   - piped: _Assert the wheel carries the built frontend_
   - piped: _Install the CLI into the venv the gates expect_
   - `lint` · on `ubuntu-latest`
+    - Lint with ruff — gate, **hard**
+    - Check the generated test inventory is current — gate, **hard**
     - Type check with mypy — gate, **soft**
-    - Audit dependencies for known vulnerabilities — gate, **soft**
-    - Generate Python SBOM — gate, **soft**
+    - Ratchet — numbers that may not rise — gate, **hard**
+    - Audit dependencies for known vulnerabilities — step, **soft**
+    - Generate Python SBOM — step, **soft**
   - `test` · on `${{ matrix.os }}` · **conditional: ${{ matrix.os == 'macos-latest' && inputs.strict-macos != true }}**
     - Run tests — runs tests, **hard**
   - `release-suites` · on `ubuntu-latest`
   - `frontend-lint-type-test` · on `ubuntu-latest`
-    - Audit frontend dependencies for known vulnerabilities — gate, **soft**
-    - Generate frontend SBOM — gate, **soft**
+    - Audit frontend dependencies for known vulnerabilities — step, **soft**
+    - Generate frontend SBOM — step, **soft**
     - Frontend tests (Vitest) — runs tests, **hard**
+    - Check bundle size — gate, **hard**
   - `e2e` · on `ubuntu-latest`
     - Run E2E tests — runs tests, **hard**
   - `package` · on `ubuntu-latest`
@@ -50,6 +54,7 @@
 - **Triggers:** push [main] paths=bristlenose/locales/**; pull_request [main] paths=bristlenose/locales/**
 - **Default shell:** GitHub default (`bash -e`, no pipefail) — no piped steps
   - `validate-locales` · on `ubuntu-latest`
+    - Validate locale files — gate, **hard**
 
 ### Install & Smoke Test (`install-test.yml`)
 
@@ -92,6 +97,7 @@
 - **Triggers:** push [main]; pull_request [main]
 - **Default shell:** GitHub default (`bash -e`, no pipefail) — no piped steps
   - `scan` · on `ubuntu-latest`
+    - No tracked files match .gitignore (structural privacy guard) — gate, **hard**
 
 ### Snap Build & Publish (`snap.yml`)
 

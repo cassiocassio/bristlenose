@@ -54,9 +54,23 @@ to catch success-without-substance is itself reporting success without substance
 
 **Evidence:** `pytest tests/test_no_fake_success_acceptance.py -q` → `8 skipped in 0.97s`.
 
-**Blocker:** the format-parity fixtures each leg skips on. Recipe already exists in
-[test-data-generation.md](test-data-generation.md); the gap is tracked in
-[coverage-inventory.md](coverage-inventory.md) §1.
+**Blocker, measured 3 Sep 2026 — and it is not a fixture-generation problem.** The
+eight legs are 2 providers × 4 inputs, and they skip on three conditions: no
+provider API key, absent input, no Whisper backend. the gitignored local fixture slot
+contains **a README and nothing else**, so the test has never run *anywhere* —
+not in CI, where `@pytest.mark.slow` correctly excludes it, and not locally, where
+there is nothing to run against.
+
+That README specifies the work exactly: **one ~5-minute call exported natively from
+each of Zoom (`.vtt`), Microsoft Teams (`.docx`) and Google Meet (`.docx`)**. It is
+~30 minutes of human time on three accounts, and it cannot be synthesised —
+[coverage-inventory.md](coverage-inventory.md) §1 already argues a synthetic docx
+parses by construction against the Teams-shaped parser and proves nothing. Running
+it then fires paid LLM calls against real interview data, which is why it is a
+local, keyed, human-initiated tier by design.
+
+So *"8 skipped in CI"* is correct behaviour. The defect is the claim: root
+`CLAUDE.md` lists it under "Built already" without any of the above.
 
 **Cheap interim:** make the skip *loud*. A suite that reports "8 skipped" where
 someone expects "8 passed" is only safe if somebody reads the word.
@@ -65,7 +79,7 @@ someone expects "8 passed" is only safe if somebody reads the word.
 
 ## Tier 2 — the gap hides its own growth
 
-### G3. `mypy` is soft, and has accumulated 238 errors
+### G3. `mypy` is soft, and has accumulated 238 errors — ⚙️ **ceiling set 3 Sep 2026**
 
 **Evidence:** `mypy bristlenose/ --ignore-missing-imports` → `Found 238 errors in 43 files (checked 156 source files)`.
 
@@ -74,7 +88,12 @@ cheaply — 238 errors is a project, not a commit. But nothing stops it growing,
 and the number is the proof that it grew. Soft-with-no-ceiling is not a policy;
 it is the absence of one.
 
-### G4. Nothing in the tree says "this number must not increase"
+**Closed as a growth risk, not as debt.** `scripts/check-ratchet.py` holds it at
+238 in CI. The listing step stays soft so a human still sees the errors; the
+ratchet gates the count. Nothing here schedules the work of reaching zero, and
+the script says so — a ceiling is not a plan.
+
+### G4. Nothing in the tree says "this number must not increase" — ⚙️ **shipped 3 Sep 2026**
 
 Measured candidates, all currently ungated in this direction:
 
@@ -85,10 +104,16 @@ Measured candidates, all currently ungated in this direction:
 | `@pytest.mark.slow` | 7 | excluded from CI by `-m "not slow"` |
 | e2e allowlist entries | 4 | governed, but uncapped |
 
-The colour vocabulary today is hard / soft / informational. **The missing fourth
-is the ratchet** — a number allowed to be non-zero but not allowed to rise. It is
-the only colour that fits G3, and the only one that would have made the others
+The colour vocabulary was hard / soft / informational. **The missing fourth is the
+ratchet** — a number allowed to be non-zero but not allowed to rise. It is the
+only colour that fits G3, and the only one that would have made the others
 visible while they grew.
+
+`scripts/check-ratchet.py` now holds all four in CI, ceilings in
+`docs/testing/ratchet.json`. `--tighten` only ever lowers them; raising one is a
+deliberate human edit in a commit that has to say why, because a ratchet the
+tooling can loosen is not a ratchet. Its own red was proven against a **real**
+added `@pytest.mark.slow`, per G8, not against an edited ceiling.
 
 ---
 

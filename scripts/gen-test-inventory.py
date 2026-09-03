@@ -54,6 +54,17 @@ TEST_CMD = re.compile(
     re.I,
 )
 
+# ...and a gate if it asserts something without running a suite. Modelling only
+# test steps meant a map OF GATES could not see a gate: the ratchet was added to
+# ci.yml on 3 Sep 2026 and --check stayed green, because the step neither ran a
+# suite nor carried continue-on-error. Second instance of gaps.md G7 that day,
+# in this file, caught by eye rather than by anything mechanical.
+GATE_CMD = re.compile(
+    r"check-[a-z-]+\.(?:py|sh)|--check\b|--strict\b|ratchet|\bruff\b|\bmypy\b"
+    r"|size-limit|check_|assert",
+    re.I,
+)
+
 
 def sh(*args: str) -> str:
     try:
@@ -121,13 +132,18 @@ def scan_workflows() -> list[dict]:
                 if not isinstance(st, dict):
                     continue
                 run = st.get("run") or ""
-                if not (TEST_CMD.search(run) or st.get("continue-on-error") is not None):
+                if not (
+                    TEST_CMD.search(run)
+                    or GATE_CMD.search(run)
+                    or st.get("continue-on-error") is not None
+                ):
                     continue
                 piped = bool(re.search(r"\|\s*\w", run)) and "pipefail" not in run
                 steps.append(
                     {
                         "name": st.get("name") or (st.get("uses") or "")[:40],
                         "runs_tests": bool(TEST_CMD.search(run)),
+                        "is_gate": bool(GATE_CMD.search(run)) and not TEST_CMD.search(run),
                         "colour": colour(st),
                         "piped": piped,
                     }
@@ -375,7 +391,7 @@ def render(data: dict) -> str:
                 bits.append(f"**{j['job_colour']}**")
             lines.append(f"  - {' · '.join(bits)}")
             for s in j["notable_steps"]:
-                tag = "runs tests" if s["runs_tests"] else "gate"
+                tag = "runs tests" if s["runs_tests"] else ("gate" if s.get("is_gate") else "step")
                 lines.append(f"    - {s['name']} — {tag}, **{s['colour']}**")
         lines.append("")
 

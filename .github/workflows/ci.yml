@@ -82,6 +82,22 @@ jobs:
         continue-on-error: true
         run: mypy bristlenose/ --ignore-missing-imports
 
+      - name: Ratchet — numbers that may not rise
+        # A fourth gate colour. hard/soft/informational cannot express "allowed
+        # to be non-zero, not allowed to rise", and that is the only shape that
+        # fits mypy: hard is a lie at 238 errors, and soft-with-no-ceiling is
+        # what produced 238 in the first place.
+        #
+        # This deliberately runs mypy a second time. The step above prints the
+        # errors for a human and stays soft; this one gates the count. Merging
+        # them would either make the listing blocking or make the ceiling
+        # advisory, and neither is wanted.
+        #
+        # Ceilings live in docs/testing/ratchet.json. `--tighten` only ever
+        # lowers them; raising one is a deliberate human edit in a commit that
+        # says why. Reasoning: docs/testing/gaps.md G3/G4, and G7 for the limits.
+        run: python scripts/check-ratchet.py
+
       - name: Check man page version matches __version__
         run: |
           VERSION=$(python3 -c "import bristlenose; print(bristlenose.__version__)")

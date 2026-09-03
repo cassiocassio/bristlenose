@@ -1,0 +1,22 @@
+{
+  "e2e_allowlist_entries": {
+    "basis": "table rows in e2e/ALLOWLIST.md (prose mentions of CI-A* do not count)",
+    "ceiling": 4,
+    "why": "governed suppressions, but the register set 10 as the tooling threshold"
+  },
+  "mypy_errors": {
+    "basis": "mypy bristlenose/ --ignore-missing-imports, 'Found N errors'",
+    "ceiling": 238,
+    "why": "gaps.md G3 \u2014 soft since it was added, which is how it reached 238"
+  },
+  "pytest_skip_sites": {
+    "basis": "skipif + bare skip + runtime pytest.skip() across tests/",
+    "ceiling": 22,
+    "why": "a skip reads as a pass in every summary line \u2014 gaps.md G2"
+  },
+  "pytest_slow_marked": {
+    "basis": "@pytest.mark.slow across tests/",
+    "ceiling": 7,
+    "why": "excluded from CI by -m 'not slow', so each one is CI coverage given up"
+  }
+}

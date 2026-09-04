@@ -994,7 +994,9 @@ The paragraph above stays as the record of what the afternoon saw.
    written.
 8. **`lighthouse 12.x` — fourth consecutive flag.** Entry 5 proposed the
    structural fix (*a register row may not restate a value that lives in a
-   tracked config file; it may only name the file*). Still unapplied.
+   tracked config file; it may only name the file*). **Applied 5 Sep 2026**:
+   the rule is in `docs/design-dependency-premortem.md` § lifecycle, and the
+   `dependabot.yml` lighthouse comment names `.tool-versions` without a number.
 
 ### New clusters — named, not smuggled in
 

@@ -131,6 +131,22 @@ So Cassandra models a held bump not as a tombstone but as a
 - **cluster** — what it must move with, so the eventual upgrade is atomic
   ("the wave," not four uncoordinated PRs that each half-break).
 
+Two rules for writing a row, each paid for once (Entries 5 and 7):
+
+- **A row may not restate a value that lives in a tracked config file; it
+  may only name the file.** A register that said "CI is on Node 20" was wrong
+  for two months after `.tool-versions` moved, and a "corrected" row saying
+  24 would rot at the next LTS. Mechanically checkable: any literal version
+  in a row that also appears in a tracked config file is drift by definition.
+- **A predicate that waits on a maintainer needs an abandonment check, not
+  just a release check.** Four predicates in one week could never fire:
+  "once jsdom #89 merges" (closed), "spaCy 4 reaches GA" (newest artefact a
+  two-year-old dev release, two of three yanked), "transformers floats its
+  cap" (cap already floated, and transformers is not a dependency), and
+  "snapcore publishes node24" (snapcore is an abandoned fork; the publisher
+  is canonical). `--watch` must ask whether the upstream it names is alive
+  and is the upstream, before asking whether it has released.
+
 These live in the **Held register** at the top of the ledger, and
 `/cassandra --watch` (Mode C) re-evaluates each predicate against *fresh*
 ecosystem metadata — deps.dev `GetRequirements` (has the upstream cap

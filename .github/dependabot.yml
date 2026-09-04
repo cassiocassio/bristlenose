@@ -71,16 +71,17 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "fastapi"
         update-types: ["version-update:semver-major"]
-      # spaCy ecosystem cluster — HELD, not dead-pinned. spaCy 3.8.x pins
-      # thinc<8.4 + weasel<0.5; thinc pins confection<1.0; weasel 1.0
-      # *requires* confection>=1.0 (mutually exclusive with thinc 8.3). The
-      # 1.x/9.x generation is spaCy-4 era. A lone bump of any of the three is
-      # a guaranteed resolver-red while spaCy is 3.8, and it would take the
-      # Presidio PII path down with it.
-      #   Release-condition (lifts this ignore): spaCy 4 reaches GA and we
-      #   take the spaCy-4 wave (spacy + thinc + weasel + confection +
-      #   srsly/preshed/cymem/murmurhash/blis + en_core_web_lg re-pin) as one
-      #   atomic move. Re-checked by `/cassandra --watch`, not by hand.
+      # spaCy ecosystem cluster — HELD, not dead-pinned. Re-measured 3 Sep
+      # 2026: spaCy 3.8.x pins thinc<8.4; thinc 9 is the spaCy-4 line and is
+      # the resolver-red. weasel and confection GRADUATED the same day — spaCy
+      # 3.8.16 already requires weasel<2 and confection<2, and 1.x of both is
+      # installed and clean — so their major-ignores below block only the 2.x
+      # generation. A lone thinc major would take the Presidio PII path down.
+      #   Release-condition (lifts the thinc ignore): spacy floats its
+      #   thinc<8.4 cap (one deps.dev GetRequirements field), then take
+      #   spacy + thinc together. NOT "spaCy 4 reaches GA": that predicate
+      #   could never fire — the 4.0 line is three dev releases, the newest
+      #   2 years old, two of them yanked. Re-checked by `/cassandra --watch`.
       #   See docs/dependency-premortem-log.md § Held register.
       - dependency-name: "thinc"
         update-types: ["version-update:semver-major"]
@@ -167,8 +168,10 @@ updates:
       minor-and-patch:
         update-types: ["minor", "patch"]
     ignore:
-      # Lighthouse 13 requires Node ≥22.19, which CI satisfies (Node 24
-      # per .tool-versions). Major still ignored pending a deliberate audit
+      # Lighthouse 13 requires Node ≥22.19; CI's Node is whatever
+      # .tool-versions says (the SSOT — this comment deliberately does not
+      # restate it, which is how it rotted once already: it said "CI is on
+      # 20" for two months after the pin moved). Major still ignored pending a deliberate audit
       # of the bundled-Chromium channel and any audit-ID drift; no e2e spec
       # asserts on Lighthouse audit IDs today (grep clean), so the cost of
       # taking it is mostly a perf-baseline re-pin. Drop this ignore when

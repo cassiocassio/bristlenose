@@ -228,37 +228,65 @@ The trial's "CopyError redesign" was one item. It is three, of very different
 weight, and only the first is a bug fix. The other two are design decisions the
 toast cull explicitly deferred, and they should be taken as such.
 
-### Tier 0 — the bug fix: one shared mapping (small; do this)
+### Tier 0 — the bug fix: put the text on the type (small; do this)
 
-Extract a single function both sites call —
+Conform `CopyError` to `LocalizedError`, and carry the original `Error` in
+`.underlying` rather than a `String`:
 
+```swift
+enum CopyError: LocalizedError {
+    case underlying(Error)
+    // …
+    var errorDescription: String? {
+        switch self {
+        case .underlying(let error): return error.localizedDescription  // Foundation's sentence
+        // …
+        }
+    }
+}
 ```
-CopyError → (presentation: alert | toast | silent, text: String)
-```
 
-— and make the two catch blocks one line each. This is the **durable** shape,
-not the one-line patch (adding an `.underlying` arm at site 1) that fixes the
-symptom and leaves the two sites free to diverge again the next time one is
-edited. A pure function is also what the probes can target: the
-`withKnownIssue` tests in `CopyErrorSurfacingTests` currently pin the enum's
-`localizedDescription`, because view code is not unit-testable; rewrite them
-against the mapping and they become real assertions instead of tripwires.
+That is the whole fix for §1. `localizedDescription` on a Swift error resolves
+through `errorDescription` once the type conforms (SE-0112 — the same bridging
+that renders an *un*-conformed enum as "The operation couldn't be completed.
+(CopyError error 1.)"), so site 1 stops showing the enum index **without its
+catch block changing**. Site 2's `.underlying(let msg)` arm becomes redundant
+and can go, or destructure the error when it wants the domain (Tier 2).
+`CancellationError` is not a `CopyError` and stays silent at both sites — as
+`presentError` itself does with `NSUserCancelledError`, and as CotEditor does
+with `CancellationError`.
 
-Touches: `ContentView.swift` (two catch blocks), one new pure function, the
-test file. No enum change, no locale change, no toast change. Behaviour at site
-2 is unchanged; site 1 becomes identical to it.
+**Why this, and not a shared mapping function.** The first draft of this tier
+proposed one function both sites call, returning `(alert | toast | silent,
+text)`. That is a view-model, and the second research pass (§8) found no
+Apple API and no shipping Mac app that builds one. Apple's shape has three
+separated parts: text on the error; a central hook that maps an error to
+*another error* — `willPresentError` / `application(_:willPresentError:)`,
+keyed on domain and code, the documented place to customise (overriding
+`presentError` is "not recommended"); and delivery — `presentError`,
+`NSAlert(error:)`, `.alert(isPresented:error:)` (macOS 12+, inside the 15.0
+floor). NetNewsWire and CotEditor each have a shared function, and it is thin
+and at the *delivery* seam (`ErrorHandler.present`, `presentErrorAsSheet`);
+the text lives on the type, and for file operations both show Foundation's
+sentence verbatim. The tuple would have moved the text off the type and fixed
+the divergence by adding a third place for it to live.
 
-**Proof:** the rewritten tests assert both sites produce Foundation's sentence
-for the permission case, and the silent/alert cases route correctly. The
-"known issue did not occur" signal from the current tests is the confirmation
-that the enum path is no longer reached.
+Touches: the enum (conformance, one payload type), site 2's one arm, and the
+tests. No locale change, no toast change, no delivery change — which surface
+shows the sentence is Tier 2's question and is not pre-empted here. The
+`LocalizedError` item and the `.underlying(Error)` item moved up from Tiers 1
+and 2 because the idiom makes them the fix rather than hygiene around it; four
+sibling enums already conform (`CloudDownloadError`, `SidecarResolveError`,
+`ZoomOAuthError`, `MicrosoftOAuthError`), so this one was the outlier.
+
+**Proof:** the `withKnownIssue` probes in `CopyErrorSurfacingTests` flip to
+"known issue did not occur" the moment the conformance lands — that is the
+confirmation the enum path is gone. Then rewrite them as positive assertions
+on `errorDescription` per case; the type is unit-testable where the view code
+was not.
 
 ### Tier 1 — hygiene (small, separable)
 
-- Conform `CopyError` to `LocalizedError` with an `errorDescription` per case,
-  so any *future* caller that forgets the mapping still gets a sentence. Four
-  sibling enums already conform (`CloudDownloadError`, `SidecarResolveError`,
-  `ZoomOAuthError`, `MicrosoftOAuthError`); this one is the outlier.
 - Route `"Another copy is already in flight."` through a locale key — one key,
   21 full locales (not `zh-Hant-HK`). It is the only user-facing string in the
   file with no key.
@@ -267,16 +295,24 @@ that the enum path is no longer reached.
 
 ### Tier 2 — the deferred design (real work; a decision first)
 
-- Carry the original `Error` in `.underlying`, not a `String`, so a call site
-  can recognise `NSFileWriteOutOfSpaceError` mid-copy and raise the existing
-  disk-space alert. Touches the enum shape and both call sites.
+- With `.underlying(Error)` landed in Tier 0, *use* it: recognise
+  `NSFileWriteOutOfSpaceError` mid-copy and raise the existing disk-space
+  alert, and the File Provider `-2001` case from §8 — by domain and code,
+  never by matching the description (Apple's rule for `willPresentError`).
 - **Whether a copy failure should be a toast at all.** The cull's rationale —
   toasts aren't HIG; state already on screen shouldn't be re-announced —
   applies less cleanly here: a failed copy leaves *no* state on screen (the
   files are simply absent and the pill has gone). But the anti-pattern says
   "don't reach for a toast," and the honest answer is that this case was never
   drawn. Per that doc's own rule, the review happens on the mockup: draw the
-  failure state before deciding the surface.
+  failure state before deciding the surface. The second pass (§8) found
+  evidence on one side and none on the other: the HIG says an error is an
+  alert, not a notification; NetNewsWire and CotEditor both present file
+  errors as an alert or a document sheet; no source examined argues for an
+  error toast. NetNewsWire's suppression rule — alert on a manual refresh,
+  log on an automatic one — is the nearest precedent for a failure the user
+  did not directly ask for. None of that draws the state; it narrows what
+  the drawing is choosing between.
 - If a toast survives that decision, `ToastStore.show(_, kind:)` has to be
   built — the flowchart cites it, the code lacks it.
 
@@ -340,3 +376,43 @@ copy path must detect-then-bounded-materialise before `copyItem`, mirroring
 File Provider error mid-session because the sandbox extension vanished —
 which no catch site can distinguish today because `.underlying` flattens the
 domain.
+
+### Second pass, same day — presentation idiom and cloud-wait practice
+
+Asked what Apple's documentation, headers and sample code say about a shared
+error → presentation mapping, and what indie Mac developers who ship against
+iCloud actually do. First-hand where marked: Apple's archived guide and live
+DocC read directly; seven Apple sample zips fetched and grepped; NetNewsWire
+and CotEditor cloned; vendor docs and release notes read on the vendors' own
+sites. The pass ran 142 tool calls and left its clones, zips and stripped
+guide chapters in the session scratchpad under `research/`.
+
+| Claim | Status | Source |
+|---|---|---|
+| Apple's customisation hook is `willPresentError` / `application(_:willPresentError:)`, and it returns a *new error*; overriding `presentError` is "not recommended"; discriminate by domain and code, never by the description | documented | Error Handling Programming Guide (archived, rev. Jan 2011); live `NSResponder` DocC |
+| `NSAlert(error:)` maps description / recovery suggestion / recovery options → message / informative text / buttons; `presentError` silently drops `NSUserCancelledError` | documented | `NSAlert.init(error:)` DocC; the guide |
+| `.alert(_:isPresented:error:actions:)` and `.alert(error:actions:)` are macOS 12+; Apple nowhere positions them as *the* way; no Apple sample uses them | documented; sample zips | SwiftUI DocC; WWDC21 10018 transcript |
+| Across seven Apple samples (Landmarks, document-based app, Great Mac App, Backyard Birds, Food Truck, Destination Video, multiple windows): 0 `presentError`, 0 `NSAlert`, 0 `.alert(error:)`, one `LocalizedError` reaching a screen; the Great-Mac-App sample's file write sits in an **empty `catch`** | first-hand, source grepped | sample zips in scratchpad |
+| NetNewsWire: 22 `presentError` sites; Foundation errors pass through unmodified; `ErrorHandler.present` is the one thin seam; `RecoverableError` used for *domain* errors ("Open System Settings"); connection errors suppressed on automatic refresh, shown on manual | first-hand, clone | `Mac/ErrorHandler.swift` (Jul 2026); issue #729 (2019) |
+| CotEditor: `presentErrorAsSheet` on `NSDocument` / `NSViewController`; every file-browser operation shows the raw `FileManager` error in a sheet; `CancellationError` dropped; the SwiftUI side wraps any `Error` for `.alert(isPresented:error:)` | first-hand, clone | `FileBrowserViewController.swift` (Aug 2026); `View+Alert.swift` |
+| HIG: an error is an alert, not a notification; the Mail-style passive indicator is for *informational* status; no source examined argues for error toasts | documented | HIG Alerts (rev. Feb 2024), Notifications, Feedback |
+| **No shipping Mac app shows a "fetching from iCloud…" state or a per-file cancel for a dataless read.** CCC and Arq materialise silently and log; Hazel makes it a per-folder policy; Finder alone shows progress (the pie) | first-hand | Bombich KB (Apr 2024) + notes 6.1.7–7.1.6; Arq docs + notes 7.21–7.44.1; Noodlesoft forum (Oct 2025) |
+| Finder's own failure wording: "The item couldn't be downloaded. Please check your internet connection, then try again." | user report | Apple Community, May 2022 |
+| TN3150 carries no UI guidance for a dataless wait; two developer questions on monitoring download progress have no Apple answer | documented; first-hand | TN3150; Forums 690124; Clement via mjtsai, May 2023 |
+| Foundation's sentence can be wrong — a copy reported the *source* "doesn't exist" when the *destination* directory was missing | first-hand | Lapcat, Nov 2023 |
+
+**What this pass could not verify:** Quinn's forum thread on dataless
+detection (808635) returned 403 from the research environment and has no
+archive copy — unread; Hazel's exact option labels for cloud-only files
+surfaced only in a search index, not on any Noodlesoft page.
+
+**Bearing on the fix.** Three things. (1) Tier 0 is reshaped above: text on
+the type, the mapping tuple withdrawn — that is what the idiom and both
+shipping apps do. (2) Delivery is an alert or a sheet on every precedent and
+the HIG says so; Tier 2's toast question now has evidence on one side and
+none on the other, and still goes to the mockup. (3) The cloud-wait finding
+bears on the open question recorded in
+`design-sidebar-activity-indicators.md` and on `design-project-storage.md`:
+shipping practice is *no label* — hydrate, bound it, log — which is the
+posture set on 4 Sep 2026. It does not settle whether Bristlenose says
+anything; it establishes that nobody else does.

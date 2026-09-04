@@ -63,11 +63,37 @@ LIVE_CODEBOOK_ID = "codebook"
 DOCS_URL = "https://bristlenose.app/docs/connect-an-agent.html"
 
 
-class ToolInputError(ValueError):
+try:  # `mcp` is an optional extra — this module must import without it.
+    from mcp.server.mcpserver.exceptions import ToolError as _ToolError
+except ImportError:  # pragma: no cover - exercised only without the extra
+
+    class _ToolError(Exception):  # type: ignore[no-redef]
+        """Stand-in base when the optional ``mcp`` extra is not installed.
+
+        Nothing raises ``ToolInputError`` unless the server is mounted, which
+        requires the extra — so this only has to keep the module importable.
+        """
+
+
+class ToolInputError(_ToolError, ValueError):
     """A tool-argument problem whose message is safe to show the model.
 
     The message should teach: name the bad value AND list the valid ones,
     so the model can self-correct on the next call.
+
+    It inherits the SDK's ``ToolError`` because that is what makes the message
+    reach the model at all. From mcp 2.1 the server treats any exception that
+    is not a ``ToolError`` / ``MCPError`` as a crash and replaces its text with
+    a bare ``Error executing tool <name>`` — so a legitimate refusal stopped
+    saying why it refused, and an out-of-scope project just failed opaquely.
+    ``ValueError`` is kept so anything relying on the older contract is
+    undisturbed.
+
+    Deliberately a base-class change rather than converting the seven raise
+    sites into returned results, which is what the Held register assumed was
+    needed: upstream's own ``ToolError`` docstring says raising it already
+    yields ``is_error=True`` with the message in ``content``. That is the
+    outcome we want, so the raise sites stay as they read best.
     """
 
 
@@ -901,8 +927,16 @@ def create_mcp_server(
             raise
         except Exception:
             # Never let str(exc) reach the model — SQL errors carry paths.
+            #
+            # `_ToolError`, not `RuntimeError`: this message is one we wrote
+            # deliberately for the model, and from mcp 2.1 only a `ToolError`
+            # keeps its text — anything else is replaced by a bare
+            # "Error executing tool <name>", which would swallow the pointer to
+            # the log along with the leak it is there to prevent. The
+            # sanitising is ours either way; this only decides whether the safe
+            # replacement survives the transport.
             logger.exception("mcp_tool_failed | tool=%s", tool)
-            raise RuntimeError(
+            raise _ToolError(
                 f"{tool} failed inside the server; details are in "
                 "bristlenose.log"
             ) from None

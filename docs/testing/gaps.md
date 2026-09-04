@@ -96,10 +96,16 @@ cheaply — 238 errors is a project, not a commit. But nothing stops it growing,
 and the number is the proof that it grew. Soft-with-no-ceiling is not a policy;
 it is the absence of one.
 
-**Closed as a growth risk, not as debt.** `scripts/check-ratchet.py` holds it at
-238 in CI. The listing step stays soft so a human still sees the errors; the
-ratchet gates the count. Nothing here schedules the work of reaching zero, and
-the script says so — a ceiling is not a plan.
+**Closed as a growth risk, not as debt.** `scripts/check-ratchet.py` holds it in
+CI — **149 as of 4 Sep 2026**, down from 239 after `7aaa7f37` cleared the two
+mechanical classes. The listing step stays soft so a human still sees the errors;
+the ratchet gates the count. Nothing here schedules the work of reaching zero,
+and the script says so — a ceiling is not a plan.
+
+**The ceiling did not follow that fall on its own, and for a day it held 239
+against a tree measuring 148** — 91 errors of headroom, which is a gate that
+passes whatever happens. Why nothing noticed, and the three changes that close
+it, are in G4.
 
 ### G4. Nothing in the tree says "this number must not increase" — ⚙️ **shipped 3 Sep 2026**
 
@@ -138,9 +144,13 @@ new errors without a word. Nothing was obliged to notice: `authority: ci` means
 measurement alone for such a metric, so a ceiling 91 above it read exactly like a
 ceiling at it. Three changes close it, none of which is "remember to look":
 
-* the report always names the ceiling and the slack, whoever owns the metric;
+* the report always names **both numbers**, whoever owns the metric — off CI it
+  stops there and does not call the gap slack, because on this side it cannot
+  tell slack from toolchain, and a permanent "1 of slack, go tighten it" is how
+  a line stops being read;
 * a CI run with headroom emits a `::notice` annotation on the run page, naming
-  the command that fixes it;
+  the command that fixes it — there the measurement *is* the authority, so
+  headroom there really is slack;
 * `.github/workflows/ratchet-tighten.yml` measures on a fresh CI install, using
   the gates job's exact recipe, and uploads the result; `--adopt` installs it
   here, taking only the ceiling and its provenance stamp so prose edited since
@@ -157,6 +167,22 @@ rebuilt from `METRICS`, so every key living only in the JSON went with it — th
 prose arguing why a number is what it is, which is the whole reason a ratchet is
 better than a suppression. `scripts/test-check-ratchet.py` pins that and the
 reporting, and was watched red against the pre-fix script.
+
+**Closed 4 Sep 2026 — and the round trip immediately justified `authority: ci`.**
+Run `33881394121` measured **149**, not the 148 this Mac reports, because it
+resolved mypy **2.3.1** against the local **2.3.0**. A ceiling hand-edited to 148
+would have failed its first CI run, which is the 3 Sep incident repeating one
+minor version later. The stamp now records which run produced the number, so the
+first question after a failure has an answer in the file.
+
+Two things the first real run taught, both worth more than the fix. The
+self-test's one environment-dependent case — `run()` inherited the process
+environment, so *"a CI-authority metric is skipped outside CI"* ran with
+`CI=true` — failed on a runner having passed on a laptop, which is the trap
+`CLAUDE.md` already names and which no amount of local green would have found.
+And it failed *usefully*: the self-test runs before anything is measured, so it
+blocked the tighten, the artifact and the summary. Nothing published a number
+whose write path nobody had checked.
 
 ---
 

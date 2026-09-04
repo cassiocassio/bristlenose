@@ -12,8 +12,13 @@
   "mypy_errors": {
     "authority": "ci",
     "basis": "mypy bristlenose/ --ignore-missing-imports, 'Found N errors'",
-    "ceiling": 239,
-    "note": "Set from CI, not from a dev machine: pyproject pins mypy>=1.13 (a floor), so the count moves with whatever a fresh install resolves. 238 locally / 239 in CI on 3 Sep 2026 for identical source.",
+    "ceiling": 149,
+    "measured": {
+      "by": "ci",
+      "on": "2026-09-04",
+      "run": "https://github.com/cassiocassio/bristlenose/actions/runs/33881394121"
+    },
+    "note": "Set from CI, never from a dev machine: pyproject pins mypy>=1.13 (a floor), so the count moves with whatever a fresh install resolves. Measured twice now \u2014 238 local / 239 CI on 3 Sep 2026, and 148 local / 149 CI on 4 Sep, the second time because CI resolved mypy 2.3.1 against this Mac's 2.3.0. Move it with `gh workflow run ratchet-tighten.yml` and `--adopt`; the local run reports but cannot lower it.",
     "why": "gaps.md G3 \u2014 soft since it was added, which is how it reached 238"
   },
   "pytest_skip_sites": {

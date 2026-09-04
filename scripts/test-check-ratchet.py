@@ -158,15 +158,19 @@ check("skipping leaves the entry byte-identical", lambda: after["mypy_errors"] =
 
 print("\nthe check path names the slack instead of swallowing it")
 code, out, _ = run([], BASE, metrics(148, 7), CI=None, GITHUB_ACTIONS=None)
-check("slack is reported locally for a CI-authority metric",
-      lambda: "91 of slack" in out, out.strip())
-check("and points at the route that actually works",
+check("the local line names BOTH numbers, so a stale ceiling is visible",
+      lambda: "148 here, ceiling 239" in out, out.strip())
+check("and does not call the gap slack, which off CI it cannot know",
+      lambda: "of slack" not in out, out.strip())
+check("and still points at the route that moves it",
       lambda: "gh workflow run ratchet-tighten.yml" in out)
 check("slack alone does not fail the gate", lambda: code == 0)
 
 code, out, _ = run([], BASE, metrics(148, 7), CI="1", GITHUB_ACTIONS="true")
 check("CI emits an annotation so it is visible on the run page",
       lambda: "::notice file=docs/testing/ratchet.json::" in out, out.strip())
+check("and DOES call it slack there, where the measurement is the authority",
+      lambda: "91 of slack" in out, out.strip())
 
 code, out, _ = run([], BASE, metrics(148, 8), CI="1")
 check("a risen metric still fails in CI", lambda: code == 1, out.strip())

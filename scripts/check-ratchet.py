@@ -182,11 +182,14 @@ def _provenance() -> dict[str, str]:
     return p
 
 
-def _tighten_hint(k: str) -> str:
-    """The instruction that actually works for this metric, not a generic one."""
+def _tighten_cmd(k: str) -> str:
+    """The command that actually works for this metric, not a generic one.
+
+    Bare, no leading verb — callers supply one that fits the sentence.
+    """
     if METRICS[k].get("authority") == "ci":
-        return "measure it in CI: gh workflow run ratchet-tighten.yml, then --adopt"
-    return "tighten it: scripts/check-ratchet.py --tighten"
+        return "gh workflow run ratchet-tighten.yml, then --adopt"
+    return "scripts/check-ratchet.py --tighten"
 
 
 def adopt(ceilings: dict, src: Path) -> int:
@@ -286,15 +289,33 @@ def main() -> int:
             else:
                 rose.append(f"  {k}: {now} > ceiling {ceil}  — {METRICS[k]['why']}")
         elif now < ceil:
-            # Slack is reported the same whether or not CI owns the metric. The
-            # advisory line below used to swallow this case for an authority:ci
-            # metric and print the measurement alone, so a ceiling 91 above it
-            # read exactly like a ceiling at it — which is how mypy_errors went
-            # from 238 to 148 on 4 Sep 2026 and left the gate not gating, with
-            # every local run looking fine.
-            slack.append(f"  {k}: {now} < ceiling {ceil} — {ceil - now} of slack, {_tighten_hint(k)}")
-            if in_ci and METRICS[k].get("authority") == "ci":
-                loose.append((k, now, ceil))
+            # Both numbers, always. This branch used to be unreachable for an
+            # authority:ci metric — the advisory line below swallowed it and
+            # printed the measurement alone, so a ceiling 91 above it read
+            # exactly like a ceiling at it. That is how mypy_errors went 238 ->
+            # 148 on 4 Sep 2026 and left the gate not gating with every local
+            # run looking fine.
+            #
+            # But off-CI the gap is NOT necessarily slack, and saying so would
+            # cry wolf forever: run 33881394121 measured 149 where this Mac
+            # measures 148, because CI resolved mypy 2.3.1 and this box is on
+            # 2.3.0. A permanent "1 of slack, go tighten it" is how a line stops
+            # being read. So name the gap, and only call it slack where the
+            # measurement is the authoritative one.
+            owner_elsewhere = METRICS[k].get("authority") == "ci" and not in_ci
+            if owner_elsewhere:
+                stamp = (ceilings.get(k) or {}).get("measured") or {}
+                when = f" set in CI {stamp['on']}" if stamp.get("on") else ""
+                slack.append(
+                    f"  {k}: {now} here, ceiling {ceil}{when} — CI owns this number; "
+                    f"a gap this side may be toolchain. Move it: {_tighten_cmd(k)}"
+                )
+            else:
+                slack.append(
+                    f"  {k}: {now} < ceiling {ceil} — {ceil - now} of slack; tighten: {_tighten_cmd(k)}"
+                )
+                if in_ci and METRICS[k].get("authority") == "ci":
+                    loose.append((k, now, ceil))
         elif METRICS[k].get("authority") == "ci" and not in_ci:
             print(f"  {k}: {now} (at ceiling {ceil}; advisory locally — CI is the authority)")
         else:

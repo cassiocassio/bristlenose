@@ -21,6 +21,11 @@
       "how": "manual: back-dated a declared proof and ran --stale 180",
       "observed": "2026-09-03"
     },
+    "check-mockup-register": {
+      "evidence": "exit 1 in both directions, exit 0 at baseline and after restore. Added by the concurrent session in b087ce94 without a proof; the ratchet caught it at 14 > 13 during close-out, and this is the fix that weakens nothing.",
+      "how": "manual, both directions: a mockup on disk with no STATUS.md row; a STATUS.md row naming a file not on disk; register restored byte-identical",
+      "observed": "2026-09-04"
+    },
     "check-ratchet": {
       "evidence": "pytest_slow_marked: 8 > ceiling 7; clean restore verified",
       "how": "manual: added a real @pytest.mark.slow, saw it named and refused",

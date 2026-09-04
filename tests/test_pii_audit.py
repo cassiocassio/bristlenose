@@ -6,7 +6,7 @@ Two test layers:
    that the two unimplemented config fields refuse to run rather than
    redacting more weakly than asked.
 
-2. **Detection tests** (``@pytest.mark.slow``, skipped in CI): Run the horror-
+2. **Detection tests** (``@pytest.mark.slow``, deselected by default): Run the horror-
    show transcript through Presidio and check what gets caught vs missed.
    Requires ``presidio-analyzer``, ``presidio-anonymizer``, and the spaCy
    ``en_core_web_lg`` model.  Run manually with ``pytest -m slow``.

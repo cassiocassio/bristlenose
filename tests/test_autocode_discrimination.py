@@ -7,9 +7,10 @@ Two test layers:
    fields mention confusable siblings, that all groups are present, and
    that the preamble's mutual-exclusivity instruction appears.
 
-2. **Live LLM tests** (``@pytest.mark.slow``, skipped in CI): Actually
-   send golden quotes to Claude and check accuracy.  Costs ~$0.01 per
-   run.  Run manually with ``pytest -m slow``.
+2. **Live LLM tests** (``@pytest.mark.slow``): Actually send golden
+   quotes to Claude and check accuracy.  Costs ~$0.01 per run.  **Not
+   collected by default** — ``addopts = -m "not slow"`` in ``pyproject.toml``
+   keeps the everyday ``pytest tests/`` free.  Opt in with ``pytest -m slow``.
 
 Golden dataset
 --------------
@@ -25,6 +26,7 @@ from dataclasses import dataclass
 
 import pytest
 
+from bristlenose.llm.failure_classifier import LLMFailureKind, classify_exception
 from bristlenose.server.autocode import QuoteBatchItem, build_quote_batch, build_tag_taxonomy
 from bristlenose.server.codebook import TemplateTag, get_template
 
@@ -359,8 +361,22 @@ class TestPromptStructure:
 
 
 # ---------------------------------------------------------------------------
-# Live LLM tests (@pytest.mark.slow — skipped in CI)
+# Live LLM tests (@pytest.mark.slow — deselected by default; opt in with -m slow)
 # ---------------------------------------------------------------------------
+
+
+# Failure kinds that mean "the environment could not run the test", as opposed to
+# "the model answered badly". Kept as a module constant so the reasoning is reviewable
+# in one place rather than inline in an except block.
+_ENVIRONMENTAL_FAILURES = frozenset(
+    {
+        LLMFailureKind.OUT_OF_CREDIT,  # billing exhausted — terminal until top-up
+        LLMFailureKind.INVALID_KEY,  # key missing/revoked
+        LLMFailureKind.NETWORK,  # provider unreachable
+        LLMFailureKind.RATE_LIMITED,  # transient; retry later
+        LLMFailureKind.SERVER_ERROR,  # provider 5xx
+    }
+)
 
 
 def _run_llm_discrimination() -> list[tuple[GoldenQuote, str, float]]:
@@ -406,7 +422,26 @@ def _run_llm_discrimination() -> list[tuple[GoldenQuote, str, float]]:
             response_model=AutoCodeBatchResult,
         )
 
-    result = asyncio.run(_call())
+    try:
+        result = asyncio.run(_call())
+    except Exception as exc:
+        # An unfunded, revoked or unreachable account is an ENVIRONMENT condition,
+        # not a discrimination-quality failure — it must not report as an error on
+        # a deliberate `pytest -m slow`. Which kinds are environmental is decided by
+        # the shared classifier, never by matching on the message here: Anthropic
+        # serves out-of-credit as a 400, so a status-code test would call it a bug
+        # in our prompt (see bristlenose/llm/failure_classifier.py).
+        #
+        # BAD_REQUEST and UNKNOWN deliberately stay fatal: a malformed prompt or an
+        # unparseable schema is exactly the defect this harness exists to catch.
+        kind = classify_exception(settings.llm_provider, exc)
+        if kind in _ENVIRONMENTAL_FAILURES:
+            pytest.skip(
+                f"SKIPPED, NOT PASSED — {settings.llm_provider} returned "
+                f"{kind.value}: this harness never ran. Fix the account/key/network "
+                f"and re-run `pytest -m slow`. Raw error: {exc}"
+            )
+        raise
 
     results: list[tuple[GoldenQuote, str, float]] = []
     assignment_map = {a.quote_index: a for a in result.assignments}
@@ -424,9 +459,14 @@ def _run_llm_discrimination() -> list[tuple[GoldenQuote, str, float]]:
 class TestLiveLLMDiscrimination:
     """Send golden quotes to Claude and check discrimination accuracy.
 
-    These tests actually call the LLM and cost ~$0.01 per run.
+    These tests actually call the LLM and cost ~$0.01 per run, so they are
+    **opt-in**: ``addopts`` in ``pyproject.toml`` deselects the ``slow`` marker,
+    and a ``-m`` typed on the command line overrides it.
+
     Run with: ``pytest -m slow tests/test_autocode_discrimination.py``
-    Skip with: ``pytest -m "not slow"``
+
+    If the account has no credit these SKIP rather than error — a provider
+    billing wall is an environment condition, not a discrimination failure.
     """
 
     _cache: list[tuple[GoldenQuote, str, float]] | None = None

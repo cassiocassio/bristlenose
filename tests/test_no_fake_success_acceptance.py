@@ -10,7 +10,7 @@ audit: run the FULL pipeline on real inputs, across both cloud providers, over
 each input format we advertise — and assert every success signal corresponds
 to a real, non-empty artifact.
 
-Why it's ``@pytest.mark.slow`` (skipped in CI): it calls real Claude / OpenAI
+Why it's ``@pytest.mark.slow`` (deselected by default, in CI and locally): it calls real Claude / OpenAI
 and, for the video leg, real Whisper transcription. CI has no API keys and no
 model, so every case below **skips** there — it never fails CI. Run it locally,
 deliberately, with keys set and the ``trial-runs/`` data present::

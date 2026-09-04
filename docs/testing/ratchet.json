@@ -18,7 +18,8 @@
   },
   "pytest_skip_sites": {
     "basis": "skipif + bare skip + runtime pytest.skip() across tests/",
-    "ceiling": 22,
+    "ceiling": 23,
+    "note": "22 -> 23 on 3 Sep 2026, deliberately. The live-LLM AutoCode harness used to ERROR when the Anthropic account ran out of credit, so every local close-out reported 3 errors that were not regressions - noise that trains people to ignore a red summary line, which is the same defect as a skip reading as a pass, only louder. It now skips with a message that leads 'SKIPPED, NOT PASSED', per G2's 'make the skip loud'. This brings it into line with the other two slow files, which already guarded (test_pii_audit skipif, test_no_fake_success_acceptance runtime skip) - it is the third of three, not new debt. A genuine BAD_REQUEST/UNKNOWN still fails.",
     "why": "a skip reads as a pass in every summary line \u2014 gaps.md G2"
   },
   "pytest_slow_marked": {

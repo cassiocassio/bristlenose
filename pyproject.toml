@@ -185,8 +185,14 @@ strict = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+# Slow tests make REAL, PAID LLM calls, so they are opt-in rather than opt-out:
+# the bare `pytest tests/` documented in CLAUDE.md must never bill the account.
+# This only makes the config agree with what every docstring, `docs/design-autocode.md`
+# and check-ratchet.py's `pytest_slow_marked` basis already said. A `-m` typed on the
+# command line overrides this (last-wins), so `pytest -m slow` still selects them.
+addopts = '-m "not slow"'
 markers = [
-    "slow: marks tests that call real LLMs (deselect with '-m \"not slow\"')",
+    "slow: real, paid LLM calls — deselected by default; select with '-m slow'",
 ]
 
 [tool.coverage.run]

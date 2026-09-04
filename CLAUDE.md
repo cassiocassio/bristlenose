@@ -135,8 +135,11 @@ still answers) keep it, **by decision** — the private history-scrub runbook
 stays unexecuted, and the reasons and measurements are under its Step 1. The
 question reopens at the desktop-repo split.
 
-The fix is `scripts/git-hooks/pre-push`, a **native** git hook, symlinked per
-clone (`ln -sf ../../scripts/git-hooks/pre-push .git/hooks/pre-push`). It reads
+The fix is `scripts/git-hooks/pre-push`, a **native** git hook, symlinked once per
+clone, from any directory inside it:
+`ln -sf ../../scripts/git-hooks/pre-push "$(git rev-parse --git-common-dir)/hooks/pre-push"`
+— `--git-common-dir` is what makes it cwd-independent, and it names the main
+repo's `.git` from a worktree too, so worktrees need nothing. It reads
 **every** ref git hands it and refuses the whole push if any ref's tree carries
 a path the current `.gitignore` marks private. It is deliberately not a
 pre-commit stage: `pre_commit/commands/hook_impl.py::_pre_push_ns` **returns

@@ -14,8 +14,12 @@
 # pushable ref, so a `git push --tags` or any multi-ref push is checked one
 # ref deep and the rest waved through. This hook reads every line git sends.
 #
-# Install, once per clone (pre-commit does not manage this file):
-#     ln -sf ../../scripts/git-hooks/pre-push .git/hooks/pre-push
+# Install, once per clone (pre-commit does not manage this file), from ANY
+# directory inside it -- the link path comes from git, and the relative target
+# is resolved against the link's own directory, never your cwd:
+#     ln -sf ../../scripts/git-hooks/pre-push "$(git rev-parse --git-common-dir)/hooks/pre-push"
+# Worktrees share the main repo's hooks (that is what --git-common-dir names),
+# so this is per clone, not per worktree.
 # Do NOT run `pre-commit install --hook-type pre-push` -- it would replace the
 # symlink with the one-ref-deep version and the gate would go quiet.
 #

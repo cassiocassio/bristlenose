@@ -9,9 +9,9 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 4460 | collected (expands parametrize — authoritative) | `tests/` |
+| `pytest` | python unit/integration | 4463 | collected (expands parametrize — authoritative) | `tests/` |
 | `vitest` | frontend unit | 114 files | test files | `frontend/src/**/*.test.*` |
-| `BristlenoseTests` | swift unit | 1382 in 106 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
+| `BristlenoseTests` | swift unit | 1394 in 109 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
 | `playwright` | browser e2e | 8 files | spec files | `e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts)` |
 
 **Ingest formats: 27** (audio 10, docx 1, subtitle_srt 1, subtitle_vtt 1, video 14) — from `models.ALL_EXTENSIONS`. Do not restate this number in prose; link here. It was simultaneously 16 and 27 in two docs on 2 Sep 2026, one of which named the other as its single source.
@@ -69,6 +69,13 @@
 - **Default shell:** `bash` (pipefail on)
   - `build` · on `macos-26`
     - Build and test — runs tests, **hard**
+
+### mockup register (`mockup-register.yml`)
+
+- **Triggers:** push [main] paths=docs/mockups/**,scripts/check-mockup-register.py; pull_request [main] paths=docs/mockups/**,scripts/check-mockup-register.py
+- **Default shell:** GitHub default (`bash -e`, no pipefail) — no piped steps
+  - `validate-register` · on `ubuntu-latest`
+    - Every mockup carries a lifecycle entry — gate, **hard**
 
 ### Perf (`perf.yml`)
 

@@ -1,0 +1,53 @@
+name: mockup register
+
+# A mockup is a snapshot of intent at a date. Without a marker there is no way
+# to tell a design of record from one describing a flow that was replaced,
+# except by reading the code — which is how a rejected idea gets proposed again
+# a year later by whoever found the picture.
+#
+# The whole corpus was classified 3–4 Sep 2026. This job exists so that stays
+# true: a mockup added tomorrow is otherwise the start of the next backlog, and
+# nothing else in the repo would notice.
+#
+# Paths-filtered to docs/mockups/**, so it costs nothing on a normal commit.
+# Note the filter must include STATUS.md itself — a rename that updates the
+# register but not the file, or vice versa, has to trip it.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/mockups/**"
+      - "scripts/check-mockup-register.py"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/mockups/**"
+      - "scripts/check-mockup-register.py"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+# Least-privilege: this job only reads and validates Markdown + filenames.
+permissions:
+  contents: read
+
+jobs:
+  validate-register:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version-file: '.tool-versions'
+
+      - name: Every mockup carries a lifecycle entry
+        # Hard, deliberately. Deterministic, sub-second, and the fix is one line
+        # in a Markdown table — nothing to ratchet or defer, so no entry in
+        # docs/testing/soft-gates.json. The gate enforces that somebody was
+        # ASKED the question, not that they answered it well; whether a state is
+        # correct is a judgement against the code that no script can make.
+        run: python scripts/check-mockup-register.py

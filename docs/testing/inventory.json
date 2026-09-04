@@ -8,7 +8,7 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 4460
+        "tests": 4463
       },
       {
         "basis": "test files",
@@ -21,12 +21,12 @@
       },
       {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 106,
+        "files": 109,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 1382
+        "tests": 1394
       },
       {
         "basis": "spec files",
@@ -491,6 +491,33 @@
         "triggers": [
           "push [main] paths=desktop/**,.github/workflows/mac-build.yml",
           "pull_request [main] paths=desktop/**,.github/workflows/mac-build.yml"
+        ]
+      },
+      {
+        "default_shell": null,
+        "file": "mockup-register.yml",
+        "jobs": [
+          {
+            "calls": null,
+            "id": "validate-register",
+            "job_colour": "hard",
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Every mockup carries a lifecycle entry",
+                "piped": false,
+                "runs_tests": false
+              }
+            ],
+            "runs_on": "ubuntu-latest"
+          }
+        ],
+        "name": "mockup register",
+        "piped_steps": [],
+        "triggers": [
+          "push [main] paths=docs/mockups/**,scripts/check-mockup-register.py",
+          "pull_request [main] paths=docs/mockups/**,scripts/check-mockup-register.py"
         ]
       },
       {

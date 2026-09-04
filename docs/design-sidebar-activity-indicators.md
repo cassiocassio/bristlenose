@@ -286,6 +286,10 @@ indicator.** The activity-indicator work must not touch the cloud/availability p
 > This was re-proposed from scratch on 4 Sep 2026 by a session that had read the
 > storage doc and not this one. Whichever way it is resolved, resolve it in **both**
 > docs in the same commit, and say which superseded which.
+>
+> **Constraint on any resolution (maintainer, 4 Sep 2026):** custom materialisation
+> messaging, if any, is for **iCloud Drive, Google Drive and OneDrive only** — no other
+> provider, and nothing clever. Reading any File Provider correctly stays unconditional.
 
 ## Folders
 

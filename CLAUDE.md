@@ -139,7 +139,12 @@ The fix is `scripts/git-hooks/pre-push`, a **native** git hook, symlinked once p
 clone, from any directory inside it:
 `ln -sf ../../scripts/git-hooks/pre-push "$(git rev-parse --git-common-dir)/hooks/pre-push"`
 — `--git-common-dir` is what makes it cwd-independent, and it names the main
-repo's `.git` from a worktree too, so worktrees need nothing. It reads
+repo's `.git` from a worktree too, so worktrees need nothing. A `SessionStart` hook
+(`.claude/hooks/install-git-guards.sh`) runs that same install for every Claude
+Code session — cloud included, where the clone is fresh each time — and installs
+pre-commit's hook too when the binary is present (it is not, in a fresh cloud
+clone, until deps land; it catches up on the next session). The one-liner is for
+a clone no session ever opens. It reads
 **every** ref git hands it and refuses the whole push if any ref's tree carries
 a path the current `.gitignore` marks private. It is deliberately not a
 pre-commit stage: `pre_commit/commands/hook_impl.py::_pre_push_ns` **returns

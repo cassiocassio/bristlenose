@@ -27,7 +27,7 @@
       "observed": "2026-09-04"
     },
     "check-ratchet": {
-      "evidence": "pytest_slow_marked: 8 > ceiling 7; clean restore verified",
+      "evidence": "SUPERSEDED 4 Sep 2026 by scripts/test-check-ratchet.py, which reclassifies this gate as automated \u2014 check-gate-proofs.py no longer reads this entry. Kept because the automated proof drives stub metrics, and this one drove the real tree: pytest_slow_marked: 8 > ceiling 7; clean restore verified",
       "how": "manual: added a real @pytest.mark.slow, saw it named and refused",
       "observed": "2026-09-03"
     },

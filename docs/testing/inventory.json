@@ -548,6 +548,67 @@
       },
       {
         "default_shell": null,
+        "file": "ratchet-tighten.yml",
+        "jobs": [
+          {
+            "calls": null,
+            "id": "tighten",
+            "job_colour": "hard",
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Prove the write path before using it",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Record the toolchain that produced the number",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Tighten",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Show what changed",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Post-condition \u2014 the written ceilings hold",
+                "piped": false,
+                "runs_tests": false
+              },
+              {
+                "colour": "hard",
+                "is_gate": true,
+                "name": "Commit and push",
+                "piped": false,
+                "runs_tests": false
+              }
+            ],
+            "runs_on": "ubuntu-latest"
+          }
+        ],
+        "name": "ratchet tighten",
+        "piped_steps": [],
+        "triggers": [
+          "workflow_dispatch"
+        ]
+      },
+      {
+        "default_shell": null,
         "file": "release.yml",
         "jobs": [
           {

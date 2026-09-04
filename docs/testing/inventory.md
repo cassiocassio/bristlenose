@@ -84,6 +84,18 @@
   - `perf-gate` · on `ubuntu-latest`
     - Run perf-gate — runs tests, **hard**
 
+### ratchet tighten (`ratchet-tighten.yml`)
+
+- **Triggers:** workflow_dispatch
+- **Default shell:** GitHub default (`bash -e`, no pipefail) — no piped steps
+  - `tighten` · on `ubuntu-latest`
+    - Prove the write path before using it — gate, **hard**
+    - Record the toolchain that produced the number — gate, **hard**
+    - Tighten — gate, **hard**
+    - Show what changed — gate, **hard**
+    - Post-condition — the written ceilings hold — gate, **hard**
+    - Commit and push — gate, **hard**
+
 ### Release to PyPI (`release.yml`)
 
 - **Triggers:** push [v*]

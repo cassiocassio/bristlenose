@@ -27,6 +27,16 @@ and refuses to raise any of them: a ratchet that can be loosened by the tool
 that reads it is not a ratchet. Raising a ceiling is a deliberate edit to the
 JSON, made by a person, in a commit that has to say why.
 
+A metric marked `authority: ci` cannot be tightened from here at all, so its
+route is the `ratchet tighten` workflow — `gh workflow run ratchet-tighten.yml`
+— which measures on a fresh CI install and commits the lowered ceiling. That is
+not ceremony: the number moves with whatever mypy a fresh install resolves, and
+a ceiling set from the dev Mac failed its first CI run for exactly that reason.
+
+Tightening PRESERVES anything in the JSON that the code does not own — `note`
+above all, which is where the argument for a number lives. Rebuilding the entry
+from METRICS deleted it silently, and two of the five entries carry one.
+
 Usage:
   scripts/check-ratchet.py             measure and compare; exit 1 if any rose
   scripts/check-ratchet.py --tighten   lower ceilings to current values
@@ -34,6 +44,7 @@ Usage:
 """
 from __future__ import annotations
 
+import datetime as _dt
 import json
 import os
 import re
@@ -141,6 +152,31 @@ METRICS: dict[str, dict] = {
 }
 
 
+def _provenance() -> dict[str, str]:
+    """Where a ceiling's number came from — the first question asked when it fails.
+
+    A ceiling with no provenance is why 238/239 cost a CI run to diagnose: the
+    file recorded the number and nothing about the machine that produced it.
+    """
+    p = {
+        "on": _dt.date.today().isoformat(),
+        "by": "ci" if os.environ.get("CI") else "local",
+    }
+    server = os.environ.get("GITHUB_SERVER_URL")
+    repo = os.environ.get("GITHUB_REPOSITORY")
+    run_id = os.environ.get("GITHUB_RUN_ID")
+    if server and repo and run_id:
+        p["run"] = f"{server}/{repo}/actions/runs/{run_id}"
+    return p
+
+
+def _tighten_hint(k: str) -> str:
+    """The instruction that actually works for this metric, not a generic one."""
+    if METRICS[k].get("authority") == "ci":
+        return "tighten it in CI: gh workflow run ratchet-tighten.yml"
+    return "tighten it: scripts/check-ratchet.py --tighten"
+
+
 def main() -> int:
     ceilings = json.loads(CEILINGS.read_text()) if CEILINGS.exists() else {}
     measured = {k: v["measure"]() for k, v in METRICS.items()}
@@ -162,15 +198,23 @@ def main() -> int:
                 continue
             was = ceilings.get(k, {}).get("ceiling")
             if was is None or now < was:
-                out[k] = {**METRICS[k], "ceiling": now, "basis": METRICS[k]["basis"],
-                          "why": METRICS[k]["why"]}
-                out[k].pop("measure", None)
+                # Start from what is ON DISK, not from METRICS. `note` exists
+                # only in the JSON, so rebuilding the entry from the code
+                # deleted it — no error, no diff anyone was going to read.
+                # Measured 4 Sep 2026: tightening mypy_errors dropped the note
+                # recording that its ceiling was set in CI and why, which is the
+                # one fact the next person to see it fail will want.
+                entry = dict(ceilings.get(k) or {})
+                entry.update({j: v for j, v in METRICS[k].items() if j != "measure"})
+                entry["ceiling"] = now
+                entry["measured"] = _provenance()
+                out[k] = entry
                 moved.append(f"{k}: {was} -> {now}")
         CEILINGS.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
         print("\n".join(f"tightened {m}" for m in moved) or "nothing to tighten")
         return 0
 
-    rose, slack, blind = [], [], []
+    rose, slack, blind, loose = [], [], [], []
     for k, now in measured.items():
         ceil = (ceilings.get(k) or {}).get("ceiling")
         if now is None:
@@ -182,10 +226,18 @@ def main() -> int:
                 slack.append(f"  {k}: {now} > ceiling {ceil} — ADVISORY here; CI is the authority")
             else:
                 rose.append(f"  {k}: {now} > ceiling {ceil}  — {METRICS[k]['why']}")
-        elif METRICS[k].get("authority") == "ci" and not in_ci:
-            print(f"  {k}: {now} (advisory locally — CI is the authority for this metric)")
         elif now < ceil:
-            slack.append(f"  {k}: {now} < ceiling {ceil} — tighten it: scripts/check-ratchet.py --tighten")
+            # Slack is reported the same whether or not CI owns the metric. The
+            # advisory line below used to swallow this case for an authority:ci
+            # metric and print the measurement alone, so a ceiling 91 above it
+            # read exactly like a ceiling at it — which is how mypy_errors went
+            # from 238 to 148 on 4 Sep 2026 and left the gate not gating, with
+            # every local run looking fine.
+            slack.append(f"  {k}: {now} < ceiling {ceil} — {ceil - now} of slack, {_tighten_hint(k)}")
+            if in_ci and METRICS[k].get("authority") == "ci":
+                loose.append((k, now, ceil))
+        elif METRICS[k].get("authority") == "ci" and not in_ci:
+            print(f"  {k}: {now} (at ceiling {ceil}; advisory locally — CI is the authority)")
         else:
             print(f"  {k}: {now} (at ceiling)")
 
@@ -194,6 +246,16 @@ def main() -> int:
         print(f"  {b}: NOT MEASURED — tool missing; this metric is unguarded in this run")
     for s in slack:
         print(s)
+    for k, now, ceil in loose:
+        # A GitHub annotation, because the log line above is the one nobody
+        # reads. This is the only notice this mechanism gets to give: the
+        # ceiling cannot lower itself, and a stale one is a gate that passes
+        # whatever happens.
+        print(
+            f"::notice file=docs/testing/ratchet.json::{k} is {now}, ceiling {ceil} — "
+            f"{ceil - now} of headroom the ratchet is not holding. "
+            f"Tighten from CI: gh workflow run ratchet-tighten.yml"
+        )
     if rose:
         print("\nRATCHET EXCEEDED — these may not rise:", file=sys.stderr)
         print("\n".join(rose), file=sys.stderr)

@@ -130,6 +130,29 @@ deliberate human edit in a commit that has to say why, because a ratchet the
 tooling can loosen is not a ratchet. Its own red was proven against a **real**
 added `@pytest.mark.slow`, per G8, not against an edited ceiling.
 
+**A ceiling that stops following its number down is a gate that stops gating, and
+that took one day.** `7aaa7f37` cleared two mechanical classes on 4 Sep 2026 —
+238 → 148 — and the ceiling stayed at 239, so the ratchet would have accepted 91
+new errors without a word. Nothing was obliged to notice: `authority: ci` means
+`--tighten` refuses from a dev machine, and the local report printed the
+measurement alone for such a metric, so a ceiling 91 above it read exactly like a
+ceiling at it. Three changes close it, none of which is "remember to look":
+
+* the report always names the ceiling and the slack, whoever owns the metric;
+* a CI run with headroom emits a `::notice` annotation on the run page, naming
+  the command that fixes it;
+* `.github/workflows/ratchet-tighten.yml` measures on a fresh CI install and
+  commits the lowered ceiling — dispatched, not automatic, because tightening on
+  every green push would lock in a dip that a laxer mypy release caused and fail
+  the next run on unchanged source. That is the 238/239 incident with the human
+  taken out.
+
+Tightening also **preserves** `note`, which it used to delete: the entry was
+rebuilt from `METRICS`, so every key living only in the JSON went with it — the
+prose arguing why a number is what it is, which is the whole reason a ratchet is
+better than a suppression. `scripts/test-check-ratchet.py` pins that and the
+reporting, and was watched red against the pre-fix script.
+
 ---
 
 ## Tier 3 — decisions already teed up, unmade

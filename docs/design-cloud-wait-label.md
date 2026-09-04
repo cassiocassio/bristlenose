@@ -10,13 +10,13 @@ would build. Candidate for the maintainer's private planning board.
 
 ## 1. What it is
 
-One line of text in the project row's subtitle slot, while a drag-in copy is
-blocked on a cloud provider materialising a file:
+One line of text in the project row's subtitle slot, while a read is blocked
+on a cloud provider materialising a file:
 
 > Waiting for iCloud…  ·  Waiting for Google Drive…  ·  Waiting for OneDrive…
 
-It replaces "Copying 3 of 12…" for as long as the read is blocked and gives
-the slot back when the read returns. Nothing else: no pie, no per-file list,
+It replaces the row's live text — "Copying 3 of 12…", "Transcribing 3 of 8…" —
+for as long as the read is blocked and gives the slot back when it returns. Nothing else: no pie, no per-file list,
 no button on the label (the existing copy cancel stays where it is), no
 setting. It is the "Resuming…" pattern applied to a different quiet moment —
 narrate the suspicious silence, don't manage it.
@@ -24,6 +24,22 @@ narrate the suspicious silence, don't manage it.
 Tiny, and still meaningful: today the row says "Copying…" while nothing
 copies, for as long as the provider takes, with no way to tell a slow disk
 from a slow network from a hang.
+
+Two reads can block, and they land on two rows:
+
+- **A drag-in copy** — the source file sits on a store and is dataless;
+  `CopyMachinery` reads it blind (`copyItem`, no dataless awareness at all —
+  the 19 Jun 2026 gotcha in `desktop/CLAUDE.md`). Row: the copy subtitle.
+  Nothing built.
+- **An in-place read of project media** — the project folder itself lives on
+  a store and the provider evicted a file; transcription, a thumbnail or a
+  clip export touches it. The sidecar's `ensure_materialised` (`fs.py`) already
+  detects it, bounds the read on a thread, names the store, and raises a
+  sentence naming it on timeout — at five sites (`audio.py` ×3, `video.py`,
+  `clip_backend.py`) — and takes an `on_wait(path, provider)` callback that
+  **nothing passes**. Row: the run subtitle. Half built: the hook is dangling.
+
+Same words, same scope, same policy on both.
 
 ## 2. Scope — decided 4 Sep 2026
 
@@ -62,10 +78,11 @@ public API and no shipping app using one.
 
 | Capability | iCloud Drive | Google Drive / OneDrive | Basis |
 |---|---|---|---|
-| **Is this file dataless?** | `ubiquitousItemDownloadingStatus == .notDownloaded`; also the `SF_DATALESS` flag | the `SF_DATALESS` flag (`getattrlist` / `st_flags`) — `fileExists` says yes and lies | measured (storage doc); TN3150 |
+| **Is this file dataless?** | `ubiquitousItemDownloadingStatus == .notDownloaded`; also the `SF_DATALESS` flag | the `SF_DATALESS` flag (`getattrlist` / `st_flags`) — `fileExists` says yes and lies | measured (storage doc); TN3150; shipped Python-side as `fs.is_dataless` + `fs.cloud_provider_for` |
 | **Ask for it** | `startDownloadingUbiquitousItem` — returns in 1–3 ms, file lands later | any read *is* the request: under this app's policy (ON, measured) the syscall blocks in `msleep` with no timeout until the provider delivers | measured, pass 1 |
 | **Is it downloading right now?** | `ubiquitousItemIsDownloading` — a Bool, per URL | **not found** | documented |
 | **How far along?** | `NSMetadataUbiquitousItemPercentDownloadedKey` via `NSMetadataQuery`, external-documents scope for a file outside our container — **unmeasured on 26.x FP-backed iCloud, from a sandboxed app** | **not found** | documented; Forums 690124 and Clement (2023) unanswered |
+| **Bytes landing on disk?** | `st_blocks` reads 0 until it reads 100% — the provider stages the download and swaps the file in atomically, for every store | same | measured, `fs.py` docstring (29 Jul 2026) |
 | **Finder's pie** | the provider extension returns a `Progress` from `fetchContents` that the system tracks and cancels; how Finder renders it is not public | same | documented, extension side only (DocC read 4 Sep 2026); no consumer API found |
 | **Cancel mid-file** | `Task.cancel()` cannot break a blocking copy inside a file; only the bounded read's own timeout returns control | same | `desktop/CLAUDE.md`, 19 Jun 2026 |
 | **Failure wording** | Finder: "The item couldn't be downloaded. Please check your internet connection, then try again." | provider-specific, unpublished | user report, May 2022 |
@@ -113,24 +130,57 @@ way, not as parity.
 
 ## 7. What a pick-up would build
 
-Small. About a day, probe and locale seeding included.
+Two paths, one label. A day or two together, probe and locale seeding
+included; the second path is mostly wired already.
 
-- **Detect** — in `CopyMachinery`, per file, before `copyItem`: dataless? If
-  so, which store — by path root (`~/Library/Mobile Documents/com~apple~CloudDocs`,
-  `~/Library/CloudStorage/GoogleDrive-…`, `~/Library/CloudStorage/OneDrive-…`;
-  the storage doc has the table). Set `InFlight.waitingOn: CloudStore?` for
-  the three; leave it `nil` for anything else.
-- **Bound** — the read gets the timeout `fs.py` uses; on expiry, throw
-  `CopyError.underlying(error)` and let Tier 0 render it.
-- **Render** — one new `ProjectSubtitle` variant, composed the way
-  `RunProgressSubtitle` composes: while `waitingOn != nil` the slot reads
-  "Waiting for {{provider}}…"; when it clears, "Copying n of m…" resumes.
-- **Localise** — one key, `chrome.copy.waitingFor` with `{{provider}}`, in
-  the 21 full locales (not `zh-Hant-HK`). Store names are proper nouns and are
-  not translated; check `glossary.csv` for the three before seeding.
-- **Pin** — one test on the compose function (which variant wins, and that
-  the store outside the three composes to the generic text); the probe from
-  §5 stays as a canary if it found anything.
+**Path (b) — the in-place read. Half a day; the plumbing exists.**
+
+- `ensure_materialised` already takes `on_wait(path, provider)`; none of its
+  five callers passes it. Pass it from the pipeline's sites and emit a
+  `run_progress` event carrying **the store family only** —
+  `waiting_on_store: str | None`, values as `cloud_provider_for` returns them
+  ("iCloud Drive", "Google Drive", "OneDrive", …). Never the filename: the
+  event's own docstring forbids any id, filename or transcript-derived string
+  (it is a re-identification surface), and the callback hands you the path,
+  so the emitter drops it. A store family is a category, not an identifier.
+- That is an events-contract change, and a three-file one: `events.py`, the
+  Swift side that decodes `stage_fraction` for the ring today, and
+  `tests/fixtures/pipeline-summary-contract.json` with a scenario that *uses*
+  the field. The parity test compares only the intersection of the two sides,
+  so the Python-only version passes every test and reaches no Mac (root
+  `CLAUDE.md`, the third blind gate).
+- `RunProgressSubtitle.compose` gains `waitingOn: String?` beside `resuming:`
+  and leads with "Waiting for {{provider}}…" while it is non-nil — the same
+  swap "Resuming…" makes in the indeterminate gap.
+- Clip and thumbnail sites: the wait is on-demand and short; a label there is
+  optional, and clip export has its own progress.
+
+**Path (a) — the drag-in copy. A day; nothing exists.**
+
+- `CopyMachinery` has no dataless awareness. Give it the Swift twin of the
+  three `fs.py` functions — same stems, house casing: `isDataless`
+  (`SF_DATALESS` off `stat`), `cloudProvider(for:)` (the same path structure:
+  `Mobile Documents` → iCloud Drive, `CloudStorage/<Provider>-…`), and a
+  bounded read on a thread before `copyItem` — rather than a second design
+  under a different name (`design-shared-formats.md`'s one-stem rule, in
+  spirit).
+- On timeout, throw `CopyError.underlying(error)` and let Tier 0 render it.
+  Set `InFlight.waitingOn`; one new `ProjectSubtitle` variant for the copy
+  row, composed the way `RunProgressSubtitle` composes.
+
+**Both paths**
+
+- **Gate the label, not the detection.** `is_dataless` / `cloud_provider_for`
+  and their Swift twins run for every store; only the three named stores
+  compose to "Waiting for {{provider}}…", anything else keeps the row's
+  generic text. The rendered name is what `cloud_provider_for` returns —
+  "iCloud Drive", not "iCloud".
+- **Localise** — one key, `chrome.cloudWait` with `{{provider}}`, in the 21
+  full locales (not `zh-Hant-HK`). Store names are proper nouns and are not
+  translated; check `glossary.csv` for the three before seeding.
+- **Pin** — one test per compose function (which variant wins; a store outside
+  the three composes to the generic text); the §5 probe stays as a canary if
+  it found anything.
 - **Draw first.** The row states below are the spec to scrutinise; an HTML
   mockup in `docs/mockups/` (with its register entry — CI requires one) is
   the first step of the pick-up, per the mockup-is-the-spec rule, not
@@ -142,6 +192,8 @@ Small. About a day, probe and locale seeding included.
 | Copying, local disk | Copying 3 of 12… | copy ring |
 | Copying, blocked on a scoped store | **Waiting for OneDrive…** | copy ring (unchanged) |
 | Copying, blocked on any other store | Copying 3 of 12… | copy ring |
+| Analysing, blocked on a scoped store | **Waiting for iCloud Drive…** | run ring (unchanged) |
+| Analysing, blocked on any other store | Transcribing 3 of 8… | run ring |
 | Read timed out | *(row returns to idle; the failure is a sheet or alert with Foundation's sentence — Tier 0)* | — |
 
 ## 8. Where the earlier arguments live

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any, cast
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -510,3 +511,78 @@ class ChatLensSupportResult(BaseModel):
         if isinstance(v, str):
             return json.loads(v)
         return v
+
+
+def openai_strict_schema(model: type[BaseModel]) -> dict[str, Any]:
+    """A Pydantic JSON schema rewritten for OpenAI Structured Outputs.
+
+    Structured Outputs constrains the model at decode time, so the response is
+    *guaranteed* to match the schema. JSON mode — what this path used before —
+    only guarantees valid JSON, and matches the schema roughly 80% of the time.
+    The remaining 20% arrived here as a ``ValidationError`` that failed the run,
+    because there is no repair step: ``model_validate`` is the first and only
+    check.
+
+    Strict mode imposes two rules Pydantic's output does not satisfy:
+
+    1. **Every object needs ``additionalProperties: false``.**
+    2. **Every property must appear in ``required``.** Pydantic omits any field
+       that has a default, which is 17 fields across our models.
+
+    Rule 2 has a wrinkle: forcing a defaulted field to be required means the
+    model must emit *something*, and the honest something is ``null``. So those
+    fields are also made nullable here, and :func:`drop_nulls` removes them
+    again before validation, letting Pydantic apply the default it already has.
+    That round trip is why the two functions belong together.
+
+    Safe because a Pydantic field is absent from ``required`` **iff** it has a
+    default — so a dropped null always resolves to that default, never to a
+    missing value.
+    """
+    schema = model.model_json_schema()
+
+    def rewrite(node: Any) -> Any:
+        if isinstance(node, list):
+            return [rewrite(v) for v in node]
+        if not isinstance(node, dict):
+            return node
+        # `default` is not in the keyword subset Structured Outputs accepts, and
+        # it is meaningless in a response schema anyway — the model is being
+        # asked to emit a value, and defaults are applied here afterwards.
+        out = {k: rewrite(v) for k, v in node.items() if k != "default"}
+        if "properties" in out:
+            props = out["properties"]
+            was_required = set(out.get("required", []))
+            for name, prop in props.items():
+                if name in was_required:
+                    continue
+                # Defaulted field: strict mode wants it required, so give the
+                # model a way to say "nothing here".
+                if "anyOf" in prop:
+                    if {"type": "null"} not in prop["anyOf"]:
+                        prop["anyOf"] = [*prop["anyOf"], {"type": "null"}]
+                elif "type" in prop:
+                    prop["anyOf"] = [{"type": prop.pop("type")}, {"type": "null"}]
+                    for key in ("items", "enum"):
+                        if key in prop:
+                            prop["anyOf"][0][key] = prop.pop(key)
+            out["required"] = list(props)
+            out["additionalProperties"] = False
+        return out
+
+    # `rewrite` is recursive over arbitrary JSON, so it is typed Any; the
+    # top level of a Pydantic schema is always an object.
+    return cast("dict[str, Any]", rewrite(schema))
+
+
+def drop_nulls(data: Any) -> Any:
+    """Strip ``null`` values so Pydantic applies its own defaults.
+
+    Companion to :func:`openai_strict_schema` — see its docstring for why the
+    nulls are there in the first place.
+    """
+    if isinstance(data, list):
+        return [drop_nulls(v) for v in data]
+    if isinstance(data, dict):
+        return {k: drop_nulls(v) for k, v in data.items() if v is not None}
+    return data

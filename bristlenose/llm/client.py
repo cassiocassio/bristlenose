@@ -21,6 +21,7 @@ from bristlenose.config import BristlenoseSettings
 from bristlenose.llm import telemetry
 from bristlenose.llm.pricing import PRICE_TABLE_VERSION
 from bristlenose.llm.prompts import PromptTemplate
+from bristlenose.llm.structured import drop_nulls, openai_strict_schema
 
 logger = logging.getLogger(__name__)
 
@@ -706,7 +707,26 @@ class LLMClient:
                 model=request_model,
                 max_tokens=max_tokens,
                 temperature=self.settings.llm_temperature,
-                response_format={"type": "json_object"},
+                # Structured Outputs, not JSON mode. JSON mode guarantees only
+                # that the text parses; the schema matches ~80% of the time, and
+                # the other 20% surfaced here as a ValidationError that failed
+                # the run — there is no repair step below, model_validate is the
+                # first and only check. strict=True constrains decoding, so the
+                # shape is guaranteed. See openai_strict_schema for the rewrites
+                # Pydantic's schema needs before strict mode will accept it.
+                #
+                # Deliberately NOT applied to _analyze_local: Ollama serves an
+                # OpenAI-compatible surface but is a different implementation
+                # with its own schema support, so it stays on json_object until
+                # someone tests it against real local models.
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": response_model.__name__,
+                        "schema": openai_strict_schema(response_model),
+                        "strict": True,
+                    },
+                },
                 messages=[
                     {"role": "system", "content": system_prompt + schema_instruction},
                     {"role": "user", "content": user_prompt},
@@ -774,7 +794,10 @@ class LLMClient:
         if content is None:
             raise RuntimeError("Empty response from OpenAI")
 
-        data = json.loads(content)
+        # Nulls are how a defaulted field says "nothing here" under strict
+        # mode, which requires every property. Dropping them lets Pydantic
+        # apply the default it already has.
+        data = drop_nulls(json.loads(content))
         logger.debug(
             "LLM response fields: %s",
             {k: type(v).__name__ for k, v in data.items()}
@@ -813,7 +836,26 @@ class LLMClient:
                 model=request_model,
                 max_tokens=max_tokens,
                 temperature=self.settings.llm_temperature,
-                response_format={"type": "json_object"},
+                # Structured Outputs, not JSON mode. JSON mode guarantees only
+                # that the text parses; the schema matches ~80% of the time, and
+                # the other 20% surfaced here as a ValidationError that failed
+                # the run — there is no repair step below, model_validate is the
+                # first and only check. strict=True constrains decoding, so the
+                # shape is guaranteed. See openai_strict_schema for the rewrites
+                # Pydantic's schema needs before strict mode will accept it.
+                #
+                # Deliberately NOT applied to _analyze_local: Ollama serves an
+                # OpenAI-compatible surface but is a different implementation
+                # with its own schema support, so it stays on json_object until
+                # someone tests it against real local models.
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": response_model.__name__,
+                        "schema": openai_strict_schema(response_model),
+                        "strict": True,
+                    },
+                },
                 messages=[
                     {"role": "system", "content": system_prompt + schema_instruction},
                     {"role": "user", "content": user_prompt},
@@ -880,7 +922,10 @@ class LLMClient:
         if content is None:
             raise RuntimeError("Empty response from Azure OpenAI")
 
-        data = json.loads(content)
+        # Nulls are how a defaulted field says "nothing here" under strict
+        # mode, which requires every property. Dropping them lets Pydantic
+        # apply the default it already has.
+        data = drop_nulls(json.loads(content))
         logger.debug(
             "LLM response fields: %s",
             {k: type(v).__name__ for k, v in data.items()}

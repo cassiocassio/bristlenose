@@ -288,6 +288,19 @@ The Bash tool runs under zsh. When a glob matches nothing, zsh prints `zsh: no m
 
 **Same family, one line up the stack: an unquoted glob in a *flag argument* kills the whole call.** `grep -rn "x" dir --include=*.swift` fails with `zsh: no matches found: --include=*.swift` — zsh tries to expand `*.swift` against the *current directory* before grep ever sees it, so the flag only survives when a matching file happens to sit in `cwd`. It works from the repo root and fails from anywhere else, which reads as "grep is broken here". Bash passes the same string through untouched, so the idiom is muscle memory from everywhere else. **Quote it: `--include='*.swift'`.** Applies equally to `--exclude=`, `rsync --filter=`, `find -name`, and any tool taking a pattern as a flag value.
 
+### `log show` never reaches the unified log — `log` is a zsh BUILTIN, so use `/usr/bin/log`
+
+zsh ships a builtin named `log` (it lists watched users), so `log show --predicate …`
+in the Bash tool never runs macOS's log CLI: zsh answers `(eval):log:1: too many
+arguments`, and behind a `2>/dev/null` that is invisible — the query "returns
+nothing", which reads as "launchd logged nothing". Cost four empty queries on 4 Sep
+2026 while a launchd spawn failure sat in the log the whole time; `/usr/bin/log show`
+with the identical predicate found it at once (`Unable to get updated LWCR …`).
+**Always spell it `/usr/bin/log`**, bound the window with `--start/--end` rather
+than `--last 4d` (a whole-store scan takes minutes), and predicate on `process` or
+`subsystem`. Same family as the zsh word-splitting and nomatch gotchas above: a shell
+default that fails quietly.
+
 ### `rg -rn` is NOT "recursive + line numbers" — `-r` is `--replace` and silently rewrites every match
 
 Muscle memory from `grep -rn` is wrong for ripgrep: **rg is recursive by default**, and `-r/--replace` **takes an argument**. So `rg -rn "pattern" path/` parses as `-r n` — replace every match with the literal string `n` — and prints doctored lines with no error, no warning, and exit 0.

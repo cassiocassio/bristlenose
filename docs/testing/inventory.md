@@ -94,7 +94,7 @@
     - Tighten — gate, **hard**
     - Show what changed — gate, **hard**
     - Post-condition — the written ceilings hold — gate, **hard**
-    - Commit and push — gate, **hard**
+    - Say how to adopt it — gate, **hard**
 
 ### Release to PyPI (`release.yml`)
 

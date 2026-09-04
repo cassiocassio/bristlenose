@@ -141,11 +141,16 @@ ceiling at it. Three changes close it, none of which is "remember to look":
 * the report always names the ceiling and the slack, whoever owns the metric;
 * a CI run with headroom emits a `::notice` annotation on the run page, naming
   the command that fixes it;
-* `.github/workflows/ratchet-tighten.yml` measures on a fresh CI install and
-  commits the lowered ceiling — dispatched, not automatic, because tightening on
-  every green push would lock in a dip that a laxer mypy release caused and fail
-  the next run on unchanged source. That is the 238/239 incident with the human
-  taken out.
+* `.github/workflows/ratchet-tighten.yml` measures on a fresh CI install, using
+  the gates job's exact recipe, and uploads the result; `--adopt` installs it
+  here, taking only the ceiling and its provenance stamp so prose edited since
+  the run survives, and refusing a CI-owned number the stamp does not say CI
+  measured. Dispatched, not automatic: tightening on every green push would lock
+  in a dip a laxer mypy release caused and fail the next run on unchanged
+  source — the 238/239 incident with the human taken out.
+
+That last step uploads rather than commits because **CI cannot commit to `main`**
+— see G9, found while building it.
 
 Tightening also **preserves** `note`, which it used to delete: the entry was
 rebuilt from `METRICS`, so every key living only in the JSON went with it — the
@@ -286,6 +291,43 @@ proven another way reads as unproven until declared; and nothing verifies that a
 paired `test-*` actually exercises the failure path rather than merely existing.
 
 ---
+
+### G9. `main` requires a status check that no job can emit — ⚠️ **found 4 Sep 2026**
+
+**Evidence:** `gh api repos/cassiocassio/bristlenose/branches/main/protection`
+requires `ci / test (3.10–3.13, ubuntu-latest)`, `ci / frontend-lint-type-test`
+and **`ci / lint`**. `ci.yml`'s jobs are `e2e, frontend-lint-type-test, gates,
+package, release-suites, supply-chain, test`. There has been no `lint` job since
+`5058bec0` split it into the fail-fast matrix on 3 Sep 2026, so that check can
+never report again.
+
+Two consequences, opposite in sign, and the second is the one that bites:
+
+* **Nobody could tell.** `enforce_admins` is false and this is a solo trunk repo,
+  so the maintainer pushes straight through a rule that has been unsatisfiable
+  for a day. A protection that only ever applies to actors who do not exist reads
+  as protection.
+* **It is impassable for anything that is not the maintainer.** The first thing
+  to try was `ratchet-tighten.yml` committing its own measurement; that job would
+  have been red every time it worked correctly. It uploads an artifact instead,
+  which wants no write token and is the better split anyway — but the next
+  automation to want a commit will hit the same wall, and will not necessarily
+  read it as a wall.
+
+**And the gates matrix is not required at all.** `ci / gates (ruff)`,
+`(ratchet)`, `(inventory)`, `(gate-policy)`, `(gate-proofs)`, `(manpage)` are
+absent from the list, so every mechanism in this document is outside the rule
+that is supposed to hold the branch. That is not urgent while one admin bypasses
+everything, and it is exactly the shape of G3 and G8: a rule nobody is obliged to
+check.
+
+**Not fixed here.** It is a repository setting, not a file, and picking the
+contexts is a decision about how much ceremony a solo trunk repo wants — see
+`CLAUDE.md` § Branch workflow, which argues for very little. The honest options
+are to name the six `gates` cells and drop `ci / lint`, or to drop required
+status checks and let the local gates and `/end-session` carry it. Either is
+defensible; the present state is the one that is not, because it claims a
+guarantee it cannot deliver.
 
 ## Explicitly NOT gaps
 

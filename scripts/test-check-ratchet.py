@@ -81,11 +81,18 @@ def env(**kv):
                 os.environ[k] = v
 
 
-def run(argv, ceilings, metrics, **envkv):
-    """Drive main() against a temp ceilings file and stub metrics."""
+def run(argv, ceilings, metrics, incoming=None, **envkv):
+    """Drive main() against a temp ceilings file and stub metrics.
+
+    `incoming` is written beside it and appended to argv, for --adopt.
+    """
     with tempfile.TemporaryDirectory() as d:
         path = pathlib.Path(d) / "ratchet.json"
         path.write_text(json.dumps(ceilings, indent=2, sort_keys=True) + "\n")
+        if incoming is not None:
+            src = pathlib.Path(d) / "incoming.json"
+            src.write_text(json.dumps(incoming, indent=2, sort_keys=True) + "\n")
+            argv = [*argv, str(src)]
         old_c, old_m, old_argv = cr.CEILINGS, cr.METRICS, sys.argv
         cr.CEILINGS, cr.METRICS, sys.argv = path, metrics, ["check-ratchet.py", *argv]
         buf = io.StringIO()
@@ -155,6 +162,42 @@ check("CI emits an annotation so it is visible on the run page",
 
 code, out, _ = run([], BASE, metrics(148, 8), CI="1")
 check("a risen metric still fails in CI", lambda: code == 1, out.strip())
+
+print("\n--adopt installs a CI-measured ceiling and nothing else")
+CI_STAMP = {"by": "ci", "on": "2026-09-04", "run": "https://example/runs/1"}
+measured = {
+    "mypy_errors": {"ceiling": 148, "measured": CI_STAMP, "note": "prose from the RUN",
+                    "basis": "b", "why": "w", "authority": "ci"},
+    "pytest_slow_marked": {"ceiling": 5, "measured": CI_STAMP, "basis": "b", "why": "w"},
+}
+code, out, after = run(["--adopt"], BASE, metrics(0, 0), incoming=measured)
+check("a CI-stamped ceiling is adopted", lambda: after["mypy_errors"]["ceiling"] == 148)
+check("the stamp comes with it", lambda: after["mypy_errors"]["measured"] == CI_STAMP)
+check("local prose is NOT overwritten by the run's copy",
+      lambda: after["mypy_errors"]["note"] == NOTE, str(after["mypy_errors"].get("note")))
+check("adopt succeeds", lambda: code == 0, out.strip())
+
+print("\n--adopt applies the same two refusals as --tighten")
+unstamped = {"mypy_errors": {"ceiling": 148, "measured": {"by": "local", "on": "2026-09-04"}}}
+code, out, after = run(["--adopt"], BASE, metrics(0, 0), incoming=unstamped)
+check("a locally-measured number is refused for a CI-authority metric",
+      lambda: code == 1 and after["mypy_errors"]["ceiling"] == 239, out.strip())
+check("and says why", lambda: "REFUSED" in out and "CI is the authority" in out, out.strip())
+
+nostamp = {"pytest_slow_marked": {"ceiling": 5}}
+code, _, after = run(["--adopt"], BASE, metrics(0, 0), incoming=nostamp)
+check("a metric CI does not own needs no stamp",
+      lambda: code == 0 and after["pytest_slow_marked"]["ceiling"] == 5)
+
+higher = {"mypy_errors": {"ceiling": 300, "measured": CI_STAMP},
+          "pytest_slow_marked": {"ceiling": 99, "measured": CI_STAMP}}
+code, _, after = run(["--adopt"], BASE, metrics(0, 0), incoming=higher)
+check("adopt never raises a ceiling, whoever measured it",
+      lambda: after["mypy_errors"]["ceiling"] == 239 and after["pytest_slow_marked"]["ceiling"] == 7)
+
+code, out, after = run(["--adopt"], BASE, metrics(0, 0), incoming={})
+check("an empty file adopts nothing and says so",
+      lambda: code == 0 and "nothing to adopt" in out and after == BASE, out.strip())
 
 print()
 sys.stdout.flush()  # else the stderr summary lands above the lines it summarises

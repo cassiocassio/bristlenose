@@ -28,10 +28,21 @@ that reads it is not a ratchet. Raising a ceiling is a deliberate edit to the
 JSON, made by a person, in a commit that has to say why.
 
 A metric marked `authority: ci` cannot be tightened from here at all, so its
-route is the `ratchet tighten` workflow — `gh workflow run ratchet-tighten.yml`
-— which measures on a fresh CI install and commits the lowered ceiling. That is
-not ceremony: the number moves with whatever mypy a fresh install resolves, and
-a ceiling set from the dev Mac failed its first CI run for exactly that reason.
+route is two steps: `gh workflow run ratchet-tighten.yml` measures on a fresh CI
+install and uploads the result, then `--adopt` installs it here. That is not
+ceremony: the number moves with whatever mypy a fresh install resolves, and a
+ceiling set from the dev Mac failed its first CI run for exactly that reason.
+
+`--adopt` is what it is because CI **cannot** commit this file. `main` requires
+the status check `ci / lint`, which no job has emitted since the lint job became
+the gates matrix in `5058bec0`; `enforce_admins` is false, so the maintainer
+pushes straight through it and `github-actions[bot]` never could. A workflow that
+pushed would be red every time it worked correctly. So CI produces the number and
+a person installs it — which is the right split anyway, and needs no write token.
+
+`--adopt` takes only `ceiling` and `measured` from the incoming file, so prose
+edited here since the run is not reverted; it refuses to raise anything, and
+refuses an `authority: ci` metric whose stamp does not say CI measured it.
 
 Tightening PRESERVES anything in the JSON that the code does not own — `note`
 above all, which is where the argument for a number lives. Rebuilding the entry
@@ -40,6 +51,7 @@ from METRICS deleted it silently, and two of the five entries carry one.
 Usage:
   scripts/check-ratchet.py             measure and compare; exit 1 if any rose
   scripts/check-ratchet.py --tighten   lower ceilings to current values
+  scripts/check-ratchet.py --adopt F   install CI-measured ceilings from F
   scripts/check-ratchet.py --json      machine-readable, no verdict
 """
 from __future__ import annotations
@@ -173,8 +185,52 @@ def _provenance() -> dict[str, str]:
 def _tighten_hint(k: str) -> str:
     """The instruction that actually works for this metric, not a generic one."""
     if METRICS[k].get("authority") == "ci":
-        return "tighten it in CI: gh workflow run ratchet-tighten.yml"
+        return "measure it in CI: gh workflow run ratchet-tighten.yml, then --adopt"
     return "tighten it: scripts/check-ratchet.py --tighten"
+
+
+def adopt(ceilings: dict, src: Path) -> int:
+    """Install ceilings measured elsewhere — the only way a CI-owned one moves.
+
+    Deliberately narrow: it copies `ceiling` and `measured` and nothing else, so
+    a note edited here since the run survives, and it applies the same two
+    refusals the local path does — never raise, and never take a CI-authority
+    number that was not measured in CI. The stamp is the whole check; without it
+    this would just be hand-transcription with extra steps.
+    """
+    if not src.exists():
+        print(f"no such file: {src}", file=sys.stderr)
+        return 1
+    incoming = json.loads(src.read_text())
+    out, moved, refused = dict(ceilings), [], []
+    for k in METRICS:
+        inc = incoming.get(k) or {}
+        new = inc.get("ceiling")
+        if new is None:
+            continue
+        was = (ceilings.get(k) or {}).get("ceiling")
+        if was is not None and new >= was:
+            continue
+        stamp = inc.get("measured") or {}
+        if METRICS[k].get("authority") == "ci" and stamp.get("by") != "ci":
+            refused.append(
+                f"{k}: {was} -> {new} REFUSED — stamped {stamp.get('by') or 'nowhere'}, "
+                "and CI is the authority for it"
+            )
+            continue
+        entry = dict(ceilings.get(k) or {j: v for j, v in METRICS[k].items() if j != "measure"})
+        entry["ceiling"] = new
+        entry["measured"] = stamp
+        out[k] = entry
+        moved.append(f"{k}: {was} -> {new}")
+    if refused:
+        print("REFUSED:", file=sys.stderr)
+        for r in refused:
+            print(f"  {r}", file=sys.stderr)
+        return 1
+    CEILINGS.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+    print("\n".join(f"adopted {m}" for m in moved) or "nothing to adopt")
+    return 0
 
 
 def main() -> int:
@@ -186,6 +242,9 @@ def main() -> int:
         return 0
 
     in_ci = bool(os.environ.get("CI"))
+
+    if "--adopt" in sys.argv:
+        return adopt(ceilings, Path(sys.argv[sys.argv.index("--adopt") + 1]))
 
     if "--tighten" in sys.argv:
         out = dict(ceilings)

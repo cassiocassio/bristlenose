@@ -93,7 +93,7 @@ done
 | [`test-verify-channels.sh`](test-verify-channels.sh) | Every probe verdict and rollup, including the ones that must not read as pass. |
 | [`test-preflight-substance.sh`](test-preflight-substance.sh) · [`test-preflight-gates.sh`](test-preflight-gates.sh) | The preflight's substance verdicts; and a replay of the 0.27.0 build failure where a rename made a gate's assertion unsatisfiable. |
 | [`test-doc-surfaces.sh`](test-doc-surfaces.sh) · [`test-dep-drift.py`](test-dep-drift.py) · [`test-tap-provenance.py`](test-tap-provenance.py) | Their namesake gates, same pattern. |
-| [`test-check-ratchet.py`](test-check-ratchet.py) | The ratchet's **write** path, which `ratchet-tighten.yml` now runs unattended. Points `CEILINGS`/`METRICS` at temp objects rather than mutating a tracked file, so it needs no restore and never runs mypy. Proven red against the pre-fix script. |
+| [`test-check-ratchet.py`](test-check-ratchet.py) | The ratchet's **write** path — `--tighten`, which `ratchet-tighten.yml` runs unattended, and `--adopt`, which installs a CI measurement here. Points `CEILINGS`/`METRICS` at temp objects rather than mutating a tracked file, so it needs no restore and never runs mypy. Proven red against the pre-fix script. |
 
 ## Performance
 

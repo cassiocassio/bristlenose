@@ -593,7 +593,7 @@
               {
                 "colour": "hard",
                 "is_gate": true,
-                "name": "Commit and push",
+                "name": "Say how to adopt it",
                 "piped": false,
                 "runs_tests": false
               }

@@ -1,6 +1,6 @@
 name: ratchet tighten
 
-# Lower a ratchet ceiling to what CI actually measures, from CI.
+# Measure the ratchet's CI-owned numbers here, so a ceiling can follow them down.
 #
 # WHY THIS IS A WORKFLOW AND NOT A COMMAND
 #
@@ -12,49 +12,39 @@ name: ratchet tighten
 # `--tighten` refuses to lower such a metric locally, and the only honest way to
 # move it is to measure here.
 #
+# WHY IT UPLOADS INSTEAD OF COMMITTING
+#
+# It cannot commit. `main` requires the status check `ci / lint`, and no job has
+# emitted that since the lint job became the gates matrix in 5058bec0;
+# `enforce_admins` is false, so the maintainer pushes straight through and
+# github-actions[bot] never could. A job that pushed would be red every time it
+# worked. It also wants no write token, which is the better shape regardless:
+# CI owns the number, a person owns the commit.
+#
 # WHY IT IS DISPATCHED AND NOT AUTOMATIC
 #
 # Tightening on every green push would track the floor perfectly and would also
 # lock in a dip that nothing caused — a laxer mypy release under-reports, the
 # ceiling follows it down, and the next release fails the gate on unchanged
-# source. That is the 238/239 incident with the human removed. So the mechanical
-# half is automated (measure, compute, write, commit) and the judgement stays a
-# person's: is this number real, and is now the time to spend the slack?
+# source. That is the 238/239 incident with the human removed. The mechanical
+# half is automated; the judgement stays a person's.
 #
 # The ordinary `ratchet` cell in ci.yml annotates any run whose ceiling has
 # headroom, naming this workflow, so nobody has to remember it exists.
-#
-# WHAT IT DOES NOT PROVE
-#
-# A push by GITHUB_TOKEN does not trigger workflows, so the commit this makes
-# gets no CI run of its own; the post-condition below re-checks in-process
-# instead. That closes the write path, not the toolchain drift — a later run
-# resolving a different mypy can still exceed a ceiling this one set. Pinning
-# mypy exactly is the real fix and is a dependency-policy decision
-# (docs/design-platform-policy.md), not this file's to make.
 
 on:
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Measure and show the diff, but commit nothing'
-        type: boolean
-        required: false
-        default: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
-# Least-privilege by default, as everywhere else in this tree; the one job that
-# needs to write says so itself.
+# Reads and measures. Nothing here writes to the repository.
 permissions:
   contents: read
 
 jobs:
   tighten:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
@@ -73,18 +63,16 @@ jobs:
           pip install -e ".[dev,serve]"
 
       - name: Prove the write path before using it
-        # This job is the first caller of --tighten that no human reads before
-        # it lands, and --tighten had a silent data-loss bug at exactly that
-        # moment: it rebuilt each entry from code, deleting the `note` that
-        # argues why a number is what it is. Runs in seconds, stubs every
-        # metric, touches nothing tracked. If it fails, nothing is written.
+        # --tighten had a silent data-loss bug: it rebuilt each entry from code,
+        # deleting the `note` that argues why a number is what it is. Seconds,
+        # stubbed metrics, nothing tracked touched. If it fails, nothing is
+        # measured and no artifact misleads anyone.
         run: python scripts/test-check-ratchet.py
 
       - name: Record the toolchain that produced the number
-        # The fact wanted first when a later run disagrees with this ceiling.
         # Not `mypy --version | tee`: the default shell is `bash -e` with no
         # pipefail, so that reports tee's status and a failed mypy would leave
-        # the commit message's toolchain line blank while the step went green.
+        # this blank while the step went green.
         run: |
           set -euo pipefail
           MYPY_VERSION=$(mypy --version)
@@ -102,51 +90,40 @@ jobs:
       - name: Post-condition — the written ceilings hold
         # Same measurement in the same process, so this cannot catch toolchain
         # drift. It catches the write path putting a ceiling BELOW what was
-        # measured, which is the failure that would otherwise reach main and
+        # measured, which is the failure that would otherwise be adopted and
         # redden the next push for reasons nobody could see here.
         run: python scripts/check-ratchet.py
 
-      - name: Commit and push
-        if: ${{ inputs.dry_run == false }}
+      - name: Publish the measured ceilings
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: ratchet-ceilings
+          path: docs/testing/ratchet.json
+          retention-days: 30
+
+      - name: Say how to adopt it
+        # The run page is where somebody will be standing, so the incantation
+        # goes there with the run id already in it. `--adopt` re-checks the
+        # provenance stamp, so a hand-edited file cannot be passed off as this
+        # one; it copies only the ceiling and the stamp, so prose edited since
+        # this run survives.
         run: |
           set -euo pipefail
-          # `git diff --quiet` alone compares the worktree to the INDEX, which is
-          # the one question that cannot answer "is there anything to commit" —
-          # it announced a commit it never made during the 0.29.1 release. Name
-          # HEAD explicitly.
-          if git diff --quiet HEAD -- docs/testing/ratchet.json; then
-            echo "no ceiling moved; nothing to commit"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          # `paste -sd'; '` would be the obvious join and is wrong on both
-          # userlands: -d takes a LIST of delimiters used cyclically, so three
-          # metrics join as "a;b c". awk, and no second platform to remember.
-          # [^:] and not [a-z_]: `e2e_allowlist_entries` has a digit in it, and
-          # a class that cannot match it drops that metric from the subject with
-          # no error — a commit message that under-reports what it changed.
-          # Measured against a three-metric log before this shipped.
-          SUBJECT=$(sed -n 's/^tightened \([^:]*\): /\1 /p' tighten.log \
-            | awk '{printf "%s%s", sep, $0; sep="; "} END {print ""}')
-          if [ -z "$SUBJECT" ]; then
-            echo "::error::ratchet.json changed but --tighten named no move; refusing to commit"
-            exit 1
-          fi
-          git add docs/testing/ratchet.json
-          git commit -F - <<MSG
-          ratchet: ${SUBJECT}
-
-          Measured on a fresh CI install, which is the authority for the metrics
-          marked so in scripts/check-ratchet.py — the count moves with whatever
-          mypy a fresh resolve picks, so a ceiling set from a dev machine breaks
-          its own gate.
-
-            ${MYPY_VERSION}
-            run   ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
-            from  ${GITHUB_SHA}
-          MSG
-          # No --force, ever. If main moved under us the push is refused, which
-          # is the correct outcome: the number was measured against a tree that
-          # is no longer the tip, and the fix is to dispatch again.
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          {
+            echo "## Ratchet"
+            echo
+            if [ -s tighten.log ] && grep -q '^tightened ' tighten.log; then
+              echo '```'
+              cat tighten.log
+              echo '```'
+              echo
+              echo "Measured with \`${MYPY_VERSION}\`. Adopt it:"
+              echo
+              echo '```bash'
+              echo "gh run download ${GITHUB_RUN_ID} -n ratchet-ceilings -D /tmp/ratchet-${GITHUB_RUN_ID}"
+              echo "scripts/check-ratchet.py --adopt /tmp/ratchet-${GITHUB_RUN_ID}/ratchet.json"
+              echo '```'
+            else
+              echo "Nothing to tighten — every ceiling already sits at its measured value."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

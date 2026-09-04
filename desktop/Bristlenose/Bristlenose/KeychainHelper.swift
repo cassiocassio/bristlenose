@@ -112,11 +112,43 @@ enum KeychainHelper {
     /// A `KeychainStore` backed by the real macOS Keychain.
     static let liveStore: any KeychainStore = LiveKeychain()
 
+    /// **Under a test host, the live statics never reach the real keychain.**
+    /// The test bundle runs inside the real app, so a test that renders a view
+    /// reaches this type's statics — the convention "tests use `InMemoryKeychain`"
+    /// cannot reach a static a view calls. On 4 Sep 2026 `SettingsRefitTests`
+    /// rendered `LLMSettingsView` to measure it, the pane read CLI-created login
+    /// items with interaction allowed (three dialogs, answered by hand, one
+    /// eleven minutes later), and its focus handler wrote the Gemini key back
+    /// into the developer's keychain. Detected by the XCTest harness the host is
+    /// launched under; production never carries those. Both raw keychains and the
+    /// reconciler's ledger swap to volatile stand-ins, and `accounts` enumerates
+    /// nothing. `KeychainHelperTests` pins this by type, without a single write.
+    static let isUnderTestHost: Bool = {
+        let env = ProcessInfo.processInfo.environment
+        return env["XCTestConfigurationFilePath"] != nil
+            || env["XCTestBundlePath"] != nil
+            || env["XCTestSessionIdentifier"] != nil
+            || NSClassFromString("XCTestCase") != nil
+    }()
+
     /// The app's own store: the data-protection keychain, iCloud-synced.
-    static let syncedKeychain: any RawKeychain = DataProtectionKeychain()
+    static let syncedKeychain: any RawKeychain =
+        isUnderTestHost ? InMemoryRawKeychain() : DataProtectionKeychain()
 
     /// The file-based login keychain — the one `/usr/bin/security` reads.
-    static let loginKeychain: any RawKeychain = LoginKeychain()
+    static let loginKeychain: any RawKeychain =
+        isUnderTestHost ? InMemoryRawKeychain() : LoginKeychain()
+
+    /// Where `SharedKeychainItem` keeps its ledger. A throwaway suite under a
+    /// test host, so a test cannot leave the real app a ledger about keychains
+    /// that only existed in memory.
+    static let ledgerDefaults: UserDefaults = {
+        guard isUnderTestHost else { return .standard }
+        let name = "app.bristlenose.test-ledger"
+        let suite = UserDefaults(suiteName: name)!
+        suite.removePersistentDomain(forName: name)
+        return suite
+    }()
 
     private static func isSharedWithCLI(provider: String, account: String) -> Bool {
         account == KeychainHelper.account && sharedWithCLI.contains(provider)
@@ -141,7 +173,7 @@ enum KeychainHelper {
         if isSharedWithCLI(provider: provider, account: account) {
             return SharedKeychainItem.read(service: service, account: account,
                                            synced: syncedKeychain, login: loginKeychain,
-                                           interaction: interaction)
+                                           interaction: interaction, defaults: ledgerDefaults)
         }
         return syncedKeychain.read(service: service, account: account, interaction: interaction).value
     }
@@ -160,7 +192,7 @@ enum KeychainHelper {
         if isSharedWithCLI(provider: provider, account: account) {
             return SharedKeychainItem.write(service: service, account: account, value: value,
                                             synced: syncedKeychain, login: loginKeychain,
-                                            interaction: interaction)
+                                            interaction: interaction, defaults: ledgerDefaults)
         }
         guard syncedKeychain.write(service: service, account: account, value: value,
                                    interaction: interaction) else {
@@ -179,7 +211,7 @@ enum KeychainHelper {
         if isSharedWithCLI(provider: provider, account: account) {
             SharedKeychainItem.remove(service: service, account: account,
                                       synced: syncedKeychain, login: loginKeychain,
-                                      interaction: interaction)
+                                      interaction: interaction, defaults: ledgerDefaults)
             return
         }
         syncedKeychain.delete(service: service, account: account, interaction: interaction)
@@ -190,7 +222,7 @@ enum KeychainHelper {
     /// Synced keychain only: the per-account classes are Swift-only, and the
     /// login copies of the shared keys all sit at the one fixed account.
     static func accounts(provider: String) -> [String] {
-        guard let service = serviceNames[provider] else { return [] }
+        guard let service = serviceNames[provider], !isUnderTestHost else { return [] }
         return DataProtectionKeychain().accounts(service: service)
     }
 
@@ -494,12 +526,17 @@ struct LoginKeychain: RawKeychain {
         }
     }
 
-    /// Replace the item, never update it in place. `SecItemUpdate` on an item
-    /// another tool created needs that item's ACL — the prompt this path exists
-    /// to avoid — while a delete consults none. The re-added item is this app's,
-    /// and its ACL trusts `/usr/bin/security` as well, so `bristlenose run` can
-    /// read it: the legacy `SecAccess` API is deprecated but is also the only
-    /// way to say so (it is how `security add-generic-password -T` works).
+    /// Replace the item where the app may, update it where it may not.
+    ///
+    /// For the app's own item, delete-then-add re-applies the ACL that trusts
+    /// `/usr/bin/security`, so `bristlenose run` can read the copy: the legacy
+    /// `SecAccess` API is deprecated but is also the only way to say so (it is
+    /// how `security add-generic-password -T` works). For an item another tool
+    /// created the delete is **refused** — `-25244 errSecInvalidOwnerEdit`,
+    /// measured 4 Sep 2026; an earlier version of this comment said a delete
+    /// consults no ACL, and it does — so the write falls through to
+    /// `SecItemUpdate`, which asks the user when asking is allowed and fails
+    /// quietly when it is not. Either way the item stays that tool's.
     @discardableResult
     func write(service: String, account: String, value: String,
                interaction: KeychainInteraction) -> Bool {
@@ -507,7 +544,8 @@ struct LoginKeychain: RawKeychain {
         let q = query(service: service, account: account)
         return Self.perform(interaction) {
             let deleteStatus = SecItemDelete(q as CFDictionary)
-            if deleteStatus != errSecSuccess && deleteStatus != errSecItemNotFound {
+            if deleteStatus != errSecSuccess && deleteStatus != errSecItemNotFound
+                && deleteStatus != errSecInvalidOwnerEdit {
                 KeychainHelper.logKeychainError("SecItemDelete (login, before add)", status: deleteStatus)
             }
 
@@ -522,7 +560,8 @@ struct LoginKeychain: RawKeychain {
             }
             var status = SecItemAdd(add as CFDictionary, nil)
             if status == errSecDuplicateItem {
-                // The delete was refused. Update in place and accept what that costs.
+                // Another tool's item: the delete was refused (-25244). Update in
+                // place — a dialog when allowed, `-25293` when quiet.
                 status = SecItemUpdate(q as CFDictionary, [kSecValueData as String: data] as CFDictionary)
             }
             if status != errSecSuccess {
@@ -616,7 +655,10 @@ private let loginKeychainAccess: any LoginKeychainAccessMaking = LoginKeychainAc
 /// login copy, so adopt it into the synced one; the synced copy moved (this app,
 /// or another Mac), so rewrite the login copy. Both moved, or never reconciled:
 /// the newer wins, a tie to the app's own copy. Only one copy exists: the other is
-/// made from it. A write goes to both and reads both back.
+/// made from it. A write goes to both and reads both back. Rewriting a login
+/// copy `bristlenose configure` created is an update in place, not a replace —
+/// deleting another tool's item is refused (`-25244`) — so it costs a dialog when
+/// asking is allowed and is skipped, ledger untouched, when it is not.
 ///
 /// **The prompt budget.** The synced copy never prompts. Decrypting a login item
 /// another tool created — one `bristlenose configure` wrote — raises the system's
@@ -637,6 +679,14 @@ private let loginKeychainAccess: any LoginKeychainAccessMaking = LoginKeychainAc
 enum SharedKeychainItem {
 
     private static let log = Logger(subsystem: "app.bristlenose", category: "keychain")
+
+    /// One reconciliation at a time. The ledger is read-compare-write, and the
+    /// two copies are read then written; two callers interleaving on one item
+    /// — a spawn path and the Settings pane, or three measuring views in a
+    /// parallel test run, which is how the Gemini key came to be written and
+    /// read back mismatched three times in one second on 4 Sep 2026 — would
+    /// each decide from a state the other was changing.
+    private static let lock = NSLock()
 
     /// What the two copies looked like when they last agreed. `nil` = absent.
     struct Ledger: Equatable {
@@ -680,6 +730,16 @@ enum SharedKeychainItem {
                      synced: any RawKeychain, login: any RawKeychain,
                      interaction: KeychainInteraction = .quiet,
                      defaults: UserDefaults = .standard) -> String? {
+        lock.withLock {
+            reconcile(service: service, account: account, synced: synced, login: login,
+                      interaction: interaction, defaults: defaults)
+        }
+    }
+
+    private static func reconcile(service: String, account: String,
+                                  synced: any RawKeychain, login: any RawKeychain,
+                                  interaction: KeychainInteraction,
+                                  defaults: UserDefaults) -> String? {
         let seen = Ledger.load(defaults, service: service, account: account)
         var now = Ledger(synced: stamp(synced, service: service, account: account),
                          login: stamp(login, service: service, account: account),
@@ -812,6 +872,16 @@ enum SharedKeychainItem {
                       synced: any RawKeychain, login: any RawKeychain,
                       interaction: KeychainInteraction = .allowed,
                       defaults: UserDefaults = .standard) -> Bool {
+        lock.withLock {
+            store(service: service, account: account, value: value, synced: synced, login: login,
+                  interaction: interaction, defaults: defaults)
+        }
+    }
+
+    private static func store(service: String, account: String, value: String,
+                              synced: any RawKeychain, login: any RawKeychain,
+                              interaction: KeychainInteraction,
+                              defaults: UserDefaults) -> Bool {
         let syncedWrote = synced.write(service: service, account: account, value: value,
                                        interaction: interaction)
         let loginWrote = login.write(service: service, account: account, value: value,
@@ -838,9 +908,11 @@ enum SharedKeychainItem {
                        synced: any RawKeychain, login: any RawKeychain,
                        interaction: KeychainInteraction = .allowed,
                        defaults: UserDefaults = .standard) {
-        synced.delete(service: service, account: account, interaction: interaction)
-        login.delete(service: service, account: account, interaction: interaction)
-        defaults.removeObject(forKey: Ledger.key(service: service, account: account))
+        lock.withLock {
+            synced.delete(service: service, account: account, interaction: interaction)
+            login.delete(service: service, account: account, interaction: interaction)
+            defaults.removeObject(forKey: Ledger.key(service: service, account: account))
+        }
     }
 }
 

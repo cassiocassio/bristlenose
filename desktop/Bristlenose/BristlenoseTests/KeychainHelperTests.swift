@@ -1,4 +1,5 @@
 import Testing
+import Foundation
 @testable import Bristlenose
 
 /// Tests for KeychainStore protocol using InMemoryKeychain.
@@ -121,5 +122,20 @@ struct KeychainHelperTests {
     /// items never leave the entitlement-scoped keychain.
     @Test func cloudSignIns_areNotSharedWithTheCLI() {
         #expect(KeychainHelper.sharedWithCLI.isDisjoint(with: Self.swiftOnly))
+    }
+
+    // MARK: - The live statics under a test host
+
+    /// The test bundle runs inside the real app, so a test that renders a view
+    /// reaches `KeychainHelper`'s statics. Under a test host they must resolve
+    /// to in-memory stores: on 4 Sep 2026 a pane-measuring test read the
+    /// developer's CLI-created keys with interaction allowed (three dialogs)
+    /// and wrote one back. Pinned by *type*, deliberately — a round-trip through
+    /// the statics would be the very write this guards against if it failed.
+    @Test func underTheTestHost_theLiveStaticsAreInMemory() {
+        #expect(KeychainHelper.isUnderTestHost)
+        #expect(KeychainHelper.syncedKeychain is InMemoryRawKeychain)
+        #expect(KeychainHelper.loginKeychain is InMemoryRawKeychain)
+        #expect(KeychainHelper.ledgerDefaults !== UserDefaults.standard)
     }
 }

@@ -103,9 +103,13 @@ class MacOSCredentialStore(CredentialStore):
 
         If an entry already exists, it is deleted first then re-added.
         The -U flag on add-generic-password should handle updates, but
-        delete-then-add is more reliable across macOS versions — and it is
-        what lets this replace the Mac app's login-keychain copy without the
-        app's ACL: a delete consults none, an in-place update would.
+        delete-then-add is more reliable across macOS versions. Whether it
+        can replace the Mac app's login-keychain copy is not yet measured:
+        the app's items name ``/usr/bin/security`` in their ACL, but deleting
+        an item another tool created was refused when the *app* tried it
+        (``-25244 errSecInvalidOwnerEdit``, 4 Sep 2026), so expect the
+        ``delete`` to fail silently and ``-U`` to update in place — which may
+        ask once, in the terminal's GUI session.
 
         No-op if subprocess-exec is blocked (sandbox, SIP, MDM) — and a clean
         return is therefore **not** evidence anything was stored. Callers use

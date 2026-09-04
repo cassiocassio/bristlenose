@@ -373,14 +373,26 @@ struct LLMSettingsView: View {
         )
     }
 
+    /// The one read in this pane that may raise the keychain dialog. It is the
+    /// row the person is looking at, so a key `bristlenose configure` wrote is
+    /// adopted here — one dialog, for this provider — and never by the eager
+    /// board, which paints every row quietly from the app's own copies (the
+    /// per-row "open the account" moment: Mail Accounts pattern). A measuring
+    /// render asks nothing.
     private func loadAPIKey() {
         guard let keychainKey = selectedProvider.keychainProvider else { return }
-        let existing = KeychainHelper.get(provider: keychainKey, interaction: .allowed) ?? ""
+        let existing = KeychainHelper.get(provider: keychainKey,
+                                          interaction: measuring ? .quiet : .allowed) ?? ""
         apiKeyInputs[selectedProvider] = existing
+        // An adoption just changed what the app holds; repaint this row from it.
+        applyPresenceAndCache(provider: selectedProvider)
     }
 
     private func saveAPIKey() {
-        guard let keychainKey = selectedProvider.keychainProvider else { return }
+        // A measurement must not write. The focus handler below fires during a
+        // headless render, and on 4 Sep 2026 that wrote a key back into the
+        // developer's keychain from inside the test suite.
+        guard !measuring, let keychainKey = selectedProvider.keychainProvider else { return }
         let value = apiKeyInputs[selectedProvider, default: ""]
         if value.isEmpty {
             KeychainHelper.delete(provider: keychainKey)
@@ -599,7 +611,7 @@ struct LLMSettingsView: View {
     /// No-op if no key in Keychain.
     private func revalidateAzure() {
         guard let azureKey = LLMProvider.azure.keychainProvider,
-              let stored = KeychainHelper.get(provider: azureKey, interaction: .allowed),
+              let stored = KeychainHelper.get(provider: azureKey),
               !stored.isEmpty
         else {
             statuses[.azure] = .notSetUp
@@ -644,7 +656,7 @@ struct LLMSettingsView: View {
     private func lastVerifiedText(for provider: LLMProvider) -> String? {
         if provider == .ollama { return nil }
         guard let kc = provider.keychainProvider,
-              let stored = KeychainHelper.get(provider: kc, interaction: .allowed),
+              let stored = KeychainHelper.get(provider: kc),
               !stored.isEmpty,
               let entry = LLMValidator.cachedEntry(provider: provider, key: stored)
         else { return nil }
@@ -749,7 +761,7 @@ struct LLMSettingsView: View {
                 continue
             }
             guard let kc = provider.keychainProvider,
-                  let stored = KeychainHelper.get(provider: kc, interaction: .allowed),
+                  let stored = KeychainHelper.get(provider: kc),
                   !stored.isEmpty
             else { continue }
             if LLMValidator.cacheIsFresh(
@@ -792,7 +804,7 @@ struct LLMSettingsView: View {
             return
         }
         guard let keychainKey = provider.keychainProvider,
-              let stored = KeychainHelper.get(provider: keychainKey, interaction: .allowed),
+              let stored = KeychainHelper.get(provider: keychainKey),
               !stored.isEmpty
         else {
             statuses[provider] = .notSetUp
@@ -843,7 +855,7 @@ struct LLMSettingsView: View {
             return
         }
         guard let keychainKey = provider.keychainProvider,
-              let stored = KeychainHelper.get(provider: keychainKey, interaction: .allowed),
+              let stored = KeychainHelper.get(provider: keychainKey),
               !stored.isEmpty
         else { return }
         if LLMValidator.cacheIsFresh(

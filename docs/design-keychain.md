@@ -283,6 +283,7 @@ Read-only probes, attributes only, no dialogs (4 Sep 2026, macOS 26.4):
 | same | `kSecAttrSynchronizable: true`, legacy | `-25300` not found |
 | same | `kSecUseDataProtectionKeychain` + `kSecAttrSynchronizableAny` | `-25300` not found — *allowed to ask*, cannot see the app's access group |
 | same, decrypting the CLI-created login item under `SecKeychainSetUserInteractionAllowed(false)` | `kSecReturnData`, with and without `kSecUseAuthenticationUIFail` | `-25293` auth failed, **no dialog** — the process-wide toggle silences the legacy ACL prompt; the per-query key alone does not reach legacy items (SecItem.h says so in terms) |
+| the team-signed app, interaction allowed | `SecItemDelete` of a login item `bristlenose configure` created | `-25244` errSecInvalidOwnerEdit — **deletion is ACL-gated too**; the write fell through to `SecItemUpdate`, which asked (securityd log, 22:28:13; the item's creation date is unchanged, its modification date is that second) |
 
 So the tempting option — the CLI reads or writes the app's synced item — is
 closed from both ends: `security` cannot address it, a Security.framework
@@ -316,14 +317,19 @@ The rule, in full on `SharedKeychainItem`'s doc comment:
   reconciled → newer wins, tie to the app's own. Only one copy exists → the
   other is made from it. Dates compare at whole seconds because login `mdat`
   carries nothing finer.
-- **The login copy is replaced, never updated in place.** `SecItemUpdate` on an
-  item another tool created needs that item's ACL; a delete consults none. The
-  re-added item's ACL trusts the app *and* `/usr/bin/security`
-  (`SecAccessCreate` + `SecTrustedApplicationCreateFromPath` — deprecated since
-  10.10, still the only way to say it, and how `security add-generic-password
-  -T` itself works; the deprecation is carried by a protocol witness so the
-  build stays clean). Python's `set()` already deletes-then-adds, which is what
-  lets it replace an app-owned login item without the app's ACL.
+- **The app's own login copy is replaced; another tool's is updated in place.**
+  Delete-then-add re-applies the ACL that trusts the app *and*
+  `/usr/bin/security` (`SecAccessCreate` + `SecTrustedApplicationCreateFromPath`
+  — deprecated since 10.10, still the only way to say it, and how `security
+  add-generic-password -T` itself works; the deprecation is carried by a protocol
+  witness so the build stays clean). For an item `bristlenose configure` created
+  the delete is **refused** — `-25244`, measured — so the write updates in place,
+  which asks when asking is allowed and is skipped, ledger untouched, when it is
+  not. _An earlier version of this bullet said a delete consults no ACL; the
+  securityd log of the first live run said otherwise._ Whether Python's
+  delete-then-add can replace an *app*-owned copy (whose ACL names `security`)
+  is the one write direction not yet measured; if refused, `-U` updates in place
+  and may ask once in the terminal's GUI session.
 - **The prompt budget, and who may spend it.** The synced copy never prompts.
   Decrypting a login item another tool created raises macOS's *"Bristlenose
   wants to use your confidential information stored in … in your keychain"*
@@ -332,9 +338,12 @@ The rule, in full on `SharedKeychainItem`'s doc comment:
   login-keychain call runs on one serial queue under
   `SecKeychainSetUserInteractionAllowed(false)`, a foreign item reads as
   `wouldPrompt`, the app's own copy serves, and nothing is recorded — so a spawn
-  path, a launch-time model, `hasAnyAPIKey` and the **test host** never block on
-  a dialog. Only Settings ▸ LLM Provider reads with `.allowed`, and that is
-  where a CLI-written key is adopted. That decrypt happens only when the login
+  path, a launch-time model and `hasAnyAPIKey` never block on a dialog. In
+  Settings ▸ LLM Provider only **the selected row's key field** reads with
+  `.allowed` (`loadAPIKey`, plus the read-back after a save); the eager status
+  board paints every row quietly from the app's own copies. So a CLI-written key
+  is adopted for the provider you click, one dialog per provider, never as a
+  cascade on opening the pane. That decrypt happens only when the login
   copy has moved since the ledger last saw it, and a declined dialog is recorded
   so it is not re-asked until the copy moves again. Steady state: two attribute
   reads and one silent decrypt of the app's own copy. Why this is a rule and not
@@ -342,7 +351,14 @@ The rule, in full on `SharedKeychainItem`'s doc comment:
   the mode existed, read the CLI-written Gemini key at app launch, securityd
   displayed the prompt to the test host at 20:38:15, and xcodebuild reported
   *"The test runner hung before establishing connection"* six minutes later —
-  the dialog was answered (Always Allow) at 22:07. In the other direction,
+  the dialog was answered (Always Allow) at 22:07. **The second run found the
+  other hole:** `SettingsRefitTests` renders the real `LLMSettingsView` to
+  measure it, so the pane's allowed reads ran inside the suite — three more
+  dialogs (OpenAI 22:16:40, Gemini 22:27:53 and 22:28:13), and the key field's
+  focus handler *wrote* the Gemini key back. The test host now never reaches
+  the real keychain at all: `KeychainHelper.isUnderTestHost` resolves both raw
+  keychains to `InMemoryRawKeychain` and the ledger to a throwaway suite,
+  pinned by type in `KeychainHelperTests`. In the other direction,
   whether `security -w` on an app-created item prompts is the one thing the
   probes above could not measure (it needs a team-signed writer and a dialog) —
   the ACL trust is there to prevent it; if macOS's partition list overrides it,
@@ -371,7 +387,9 @@ and `tests/test_provider_resolution.py`.
 item reads `wouldPrompt` quietly and costs one `prompts` when asked — so
 `quietReads_neverRaiseADialog` is the launch-safety assertion the hung runner
 was missing, and `KeychainHelperTests` pins `sharedWithCLI` against the
-Python-mirrored set. No test touches SecItem.
+Python-mirrored set and pins, by type, that the live statics are in-memory under
+a test host. No test touches SecItem — and since the evening of 4 Sep, no test
+*can*.
 
 ### Where each provider and credential detail lives
 
@@ -404,10 +422,11 @@ most once per item; click **Always Allow**.
 
 1. Build and launch the app. **Launch is silent** — no keychain dialog, whatever
    the CLI wrote; that is the quiet default doing its job. Open Settings ▸ LLM
-   Provider: for each provider that has a CLI-written login item newer than the
-   app's copy, macOS asks once — the app is adopting it. Providers then show the
-   key the CLI last configured. (Gemini was already Always-Allowed for the
-   Debug-signed app on 4 Sep 2026, so it may not ask at all.)
+   Provider: the board paints silently; the row you land on may ask once if its
+   login copy is one the CLI created and newer than the app's — that is the
+   adoption. Click each other provider to adopt its key the same way. (On the
+   maintainer's Mac every provider item was Always-Allowed for the Debug-signed
+   app during the 4 Sep runs, so nothing may ask at all there.)
 2. **App → CLI.** Save a key in the app. In a terminal:
    ```bash
    security find-generic-password -s "Bristlenose Google Gemini API Key" -w
@@ -428,8 +447,20 @@ written login item (`configure` deletes-then-adds by service + account, so the
 stale placeholder is already gone *if* it was at account `bristlenose`), and
 older login items for Anthropic (12 May), OpenAI (9 Jun) and Miro (28 Jun) that
 predate or postdate the app's iCloud copies. Nothing needs deleting for the
-new build to work — on first read it adopts the newer copy either way. To tidy
-by hand, in **Keychain Access** (never a script — house rule):
+new build to work — on first read it adopts the newer copy either way.
+
+**What the two test-host runs that evening actually did to that keychain**
+(read back from `security find-generic-password` attributes and securityd's
+log the next morning): the Anthropic login item was re-created at 22:16:40
+with the app's key (created and modified that second — the app's copy was
+newer than the 12 May item, whose ACL already trusted the Debug build); the
+OpenAI item was updated in place at 22:28:13 with the app's key (created 9 Jun,
+delete refused, one dialog answered Allow, one Always Allow); the Gemini item
+was untouched (created 20:04 by `configure`, still the CLI's key, adopted into
+the app's copy); Miro untouched. Keychain Access showed one row per name in
+login the next morning, which is the tidy end state — no placeholder survived.
+To tidy by hand if it ever does, in **Keychain Access** (never a script — house
+rule):
 
 1. Sidebar ▸ **login**. Search `Bristlenose`. Sort by Name. Two rows with the
    *same* name in login means the placeholder survived under a different

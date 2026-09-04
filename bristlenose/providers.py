@@ -197,3 +197,57 @@ def get_provider_aliases() -> dict[str, str]:
         for alias in spec.aliases:
             aliases[alias] = provider_name
     return aliases
+
+
+# ---------------------------------------------------------------------------
+# Credentials — the five secrets the CLI stores, and the names they go by
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CredentialSpec:
+    """One stored secret, and its name in every place that holds it.
+
+    ``key`` is the store key everywhere: ``CredentialStore.get(key)``,
+    ``MacOSCredentialStore.SERVICE_NAMES[key]``, and the Mac app's
+    ``KeychainHelper.serviceNames[key]`` / ``sharedWithCLI``.
+
+    ``env_var`` is the bare SDK-native variable (``ANTHROPIC_API_KEY``); the
+    ``BRISTLENOSE_``-prefixed form is the pydantic alias in ``config.py``, the
+    ``ConfigField.env_var`` above, and what ``FileCredentialStore`` writes.
+
+    ``keychain_service`` is the human-readable name of the stored item — the
+    macOS Keychain service *and* label, the Linux Secret Service label — and
+    the string ``bristlenose configure`` prints, so what it says it stored is
+    what Keychain Access shows.
+    """
+
+    key: str
+    env_var: str
+    keychain_service: str
+
+
+# **Single source of truth for credential names on the Python side.** The
+# stores derive their tables from this, so a change here reaches the macOS
+# service names, the Linux labels, the env-var fallback and the `configure`
+# output at once. The Swift host cannot import it: `KeychainHelper.swift`
+# carries a hand-written mirror of `key → keychain_service`, and
+# `tests/test_swift_python_contract.py` fails when the two disagree — so a
+# change here is a two-file change, and CI says so rather than a user.
+CREDENTIALS: dict[str, CredentialSpec] = {
+    "anthropic": CredentialSpec("anthropic", "ANTHROPIC_API_KEY", "Bristlenose Anthropic API Key"),
+    "openai": CredentialSpec("openai", "OPENAI_API_KEY", "Bristlenose OpenAI API Key"),
+    "azure": CredentialSpec("azure", "AZURE_API_KEY", "Bristlenose Azure API Key"),
+    "google": CredentialSpec("google", "GOOGLE_API_KEY", "Bristlenose Google Gemini API Key"),
+    "miro": CredentialSpec("miro", "MIRO_ACCESS_TOKEN", "Bristlenose Miro Access Token"),
+}
+
+
+def credential_service_name(key: str) -> str:
+    """The human-readable keychain name for ``key``.
+
+    Unregistered keys (``miro_refresh``, a test's throwaway) get the same
+    derived shape the stores have always used, so they still round-trip.
+    """
+    spec = CREDENTIALS.get(key)
+    return spec.keychain_service if spec else f"Bristlenose {key.title()} API Key"

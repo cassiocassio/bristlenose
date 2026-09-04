@@ -11,6 +11,7 @@ import shutil
 import subprocess
 
 from bristlenose.credentials import CredentialStore, FileCredentialStore
+from bristlenose.providers import credential_service_name
 
 
 class LinuxCredentialStore(CredentialStore):
@@ -47,7 +48,8 @@ class LinuxCredentialStore(CredentialStore):
 
         The secret is passed via stdin to avoid it appearing in process listings.
         """
-        label = f"Bristlenose {key.title()} API Key"
+        # Same name Keychain Access would show on a Mac — one table, `CREDENTIALS`.
+        label = credential_service_name(key)
         subprocess.run(
             [
                 "secret-tool",

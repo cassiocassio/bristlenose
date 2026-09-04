@@ -8,6 +8,17 @@ trued-against: HEAD@main on 2026-08-18 (61498cd9)
 
 ## Changelog
 
+- _2026-09-04_ — **the CLI and the Mac app could not see each other's keys, and
+  now can.** Measured with two items of the same name in Keychain Access — the
+  app's in iCloud (data-protection keychain), the CLI's in login — and neither
+  side reading the other's. New §"One keyspace, two keychains" records what
+  `security` and an unentitled Security.framework caller can actually address
+  (nothing of the app's), the option chosen (the app keeps a login-keychain copy
+  of every key the CLI reads and reconciles the two on read), the prompt budget
+  that costs, the walk that verifies it on a real Mac, and the Keychain Access
+  clean-up for a machine that already carries the split. The keyspace table's
+  "Read by" column is corrected for the two shared classes. `set_verified` is
+  named as the house read-back helper on the Python side.
 - _2026-08-18_ — trued against per-account credential storage (`8901845f`,
   `d054b3d6`). **Two claims were factually inverted, not merely stale**, and both
   are load-bearing: §5's lookup priority said *Keychain first, then env* when the
@@ -74,8 +85,8 @@ below rather than as errors._
 
 | Class | Service name | Account | Synced? | Read by |
 |---|---|---|---|---|
-| LLM provider keys | `Bristlenose {Anthropic,OpenAI,Azure,Google Gemini} API Key` | **fixed** `bristlenose` | yes | Swift host → env; CLI Python directly |
-| Miro token | `Bristlenose Miro Access Token` | **fixed** `bristlenose` | yes | Swift host (`overlayMiroToken`, unconditional); server env-first |
+| LLM provider keys | `Bristlenose {Anthropic,OpenAI,Azure,Google Gemini} API Key` | **fixed** `bristlenose` | yes — **and a login-keychain copy** (§"One keyspace, two keychains") | Swift host → env; CLI Python directly, from the login copy |
+| Miro token | `Bristlenose Miro Access Token` | **fixed** `bristlenose` | yes — **and a login-keychain copy** | Swift host (`overlayMiroToken`, unconditional); server env-first, then the login copy |
 | Cloud sign-ins | `Bristlenose {Microsoft Teams,Google Meet} Sign-In` | **derived** — SHA-256 of the lowercased address | yes | Swift only |
 | MCP bearer | `Bristlenose MCP Token` | **derived** — SHA-256 of the project path | **no** | Swift host → sidecar env |
 
@@ -242,6 +253,193 @@ See the comment block at `desktop/Bristlenose/Bristlenose/BristlenoseShared.swif
 ### Testability
 
 `ServeManager` takes `any KeychainStore` as a protocol, with `InMemoryKeychain` as a test shim. Swift-side tests exercise the env-var injection path without touching the real keychain. See `desktop/Bristlenose/BristlenoseTests/` and `desktop/CLAUDE.md` §Testability refactors.
+
+## One keyspace, two keychains
+
+_Added 2026-09-04, from live provider testing._
+
+**The defect.** `bristlenose configure gemini` and the app's Settings ▸ LLM
+Provider both write service `Bristlenose Google Gemini API Key`, account
+`bristlenose`. Keychain Access showed **two items of that name**: the app's in
+**iCloud** — the data-protection keychain, `kSecAttrSynchronizable`, access
+group `$(AppIdentifierPrefix)app.bristlenose` — and the CLI's in **login**. The
+CLI found a stale placeholder in login while the app was Online on its own
+copy; `configure` then wrote a real key to login that the app never read. Set
+up in one place, invisible in the other. The requirement is the obvious one:
+set up in either, and both see it.
+
+### What was measured
+
+Read-only probes, attributes only, no dialogs (4 Sep 2026, macOS 26.4):
+
+| Caller | Query | Result |
+|---|---|---|
+| `/usr/bin/security find-generic-password` | default search list | the **login** item only. The tool has no synchronizable or data-protection flag at all (`add-generic-password -h`) |
+| unentitled process — an ad-hoc `swiftc` binary, which is the CLI's situation | `SecItemCopyMatching`, legacy, no flags | the login item, **with `kSecAttrModificationDate`, without decrypting** |
+| same | `kSecAttrSynchronizable: true`, legacy | `-25300` not found |
+| same | `kSecUseDataProtectionKeychain` + `kSecAttrSynchronizableAny` | `-25300` not found — *allowed to ask*, cannot see the app's access group |
+| same, decrypting the CLI-created login item under `SecKeychainSetUserInteractionAllowed(false)` | `kSecReturnData`, with and without `kSecUseAuthenticationUIFail` | `-25293` auth failed, **no dialog** — the process-wide toggle silences the legacy ACL prompt; the per-query key alone does not reach legacy items (SecItem.h says so in terms) |
+
+So the tempting option — the CLI reads or writes the app's synced item — is
+closed from both ends: `security` cannot address it, a Security.framework
+client without the entitlement cannot see it, and PyPI/Homebrew Python carries
+no signing identity that could hold one. The iCloud copy stays: it is the
+18 Aug 2026 device-loss decision and nothing here reopens it.
+
+### What was chosen
+
+**The login keychain is the one place a sandboxed app and a shell tool can both
+address, so every key the CLI reads is kept there too, and the app is the
+reconciler.** `KeychainHelper.sharedWithCLI` names the five keys (exactly
+`MacOSCredentialStore.SERVICE_NAMES`; `tests/test_swift_python_contract.py`
+fails if the two sets drift). For those, `KeychainHelper.get/set/delete` route
+through `SharedKeychainItem`, which holds two `RawKeychain`s — the
+`DataProtectionKeychain` the app always had and a `LoginKeychain` addressed with
+neither `kSecUseDataProtectionKeychain` nor `kSecAttrSynchronizable`, which is
+what routes a query to the file-based keychains `security` searches. Cloud
+sign-ins and the MCP bearer are untouched: Swift-only, synced keychain alone.
+
+The rule, in full on `SharedKeychainItem`'s doc comment:
+
+- **A write goes to both copies and reads both back.** `set` returns `true`
+  only if the app's own copy round-tripped; a refused login copy is logged as
+  the CLI's loss, not shown as a key that did not save.
+- **A read compares both copies' modification dates with a ledger** (in
+  UserDefaults) of what they were when they last agreed. Unchanged → read the
+  app's copy, touch nothing else. The copy that moved wins: the CLI rewrote the
+  login copy → adopt it into the synced one; the synced copy moved (this app,
+  or another Mac via iCloud) → rewrite the login copy. Both moved, or never
+  reconciled → newer wins, tie to the app's own. Only one copy exists → the
+  other is made from it. Dates compare at whole seconds because login `mdat`
+  carries nothing finer.
+- **The login copy is replaced, never updated in place.** `SecItemUpdate` on an
+  item another tool created needs that item's ACL; a delete consults none. The
+  re-added item's ACL trusts the app *and* `/usr/bin/security`
+  (`SecAccessCreate` + `SecTrustedApplicationCreateFromPath` — deprecated since
+  10.10, still the only way to say it, and how `security add-generic-password
+  -T` itself works; the deprecation is carried by a protocol witness so the
+  build stays clean). Python's `set()` already deletes-then-adds, which is what
+  lets it replace an app-owned login item without the app's ACL.
+- **The prompt budget, and who may spend it.** The synced copy never prompts.
+  Decrypting a login item another tool created raises macOS's *"Bristlenose
+  wants to use your confidential information stored in … in your keychain"*
+  dialog, once per such item — Always Allow (it asks for the login password)
+  makes it silent. **A read is `quiet` by default and may not raise it**: every
+  login-keychain call runs on one serial queue under
+  `SecKeychainSetUserInteractionAllowed(false)`, a foreign item reads as
+  `wouldPrompt`, the app's own copy serves, and nothing is recorded — so a spawn
+  path, a launch-time model, `hasAnyAPIKey` and the **test host** never block on
+  a dialog. Only Settings ▸ LLM Provider reads with `.allowed`, and that is
+  where a CLI-written key is adopted. That decrypt happens only when the login
+  copy has moved since the ledger last saw it, and a declined dialog is recorded
+  so it is not re-asked until the copy moves again. Steady state: two attribute
+  reads and one silent decrypt of the app's own copy. Why this is a rule and not
+  a preference: the first run of the Swift suite against the reconciler, before
+  the mode existed, read the CLI-written Gemini key at app launch, securityd
+  displayed the prompt to the test host at 20:38:15, and xcodebuild reported
+  *"The test runner hung before establishing connection"* six minutes later —
+  the dialog was answered (Always Allow) at 22:07. In the other direction,
+  whether `security -w` on an app-created item prompts is the one thing the
+  probes above could not measure (it needs a team-signed writer and a dialog) —
+  the ACL trust is there to prevent it; if macOS's partition list overrides it,
+  the same dialog appears once in the terminal's GUI session and Always Allow
+  ends it.
+- **What it cannot do.** A key deleted from one keychain while the other still
+  holds it comes back — absence is indistinguishable from a copy not yet made,
+  and reading absence as deletion would let a locked login keychain delete a
+  synced key. Delete through the app, which removes both. Over SSH with no GUI
+  session, a first `security -w` on an app-created item fails instead of
+  prompting; the CLI then reports no key, as it always did with a locked
+  keychain.
+
+**Python side.** `credentials_macos.py` is unchanged in mechanism — it reads
+and writes the login keychain through `security`, which is now the shared
+copy. `credentials.set_verified(store, key, value)` is the house read-back
+helper (the Miro route's `_store_token_verified` delegates to it), and
+`bristlenose configure` refuses to print *Stored in Keychain* for a key it
+could not read back: exit 1, and the provider is not made current. Pinned by
+`tests/test_credentials.py` (a stateful fake of `security`, so the round-trip
+runs through the store's real argv without touching a developer's keychain)
+and `tests/test_provider_resolution.py`.
+
+**Swift side.** `SharedKeychainItemTests` drives the rule with two
+`InMemoryRawKeychain`s that count decrypts *and dialogs* — a planted foreign
+item reads `wouldPrompt` quietly and costs one `prompts` when asked — so
+`quietReads_neverRaiseADialog` is the launch-safety assertion the hung runner
+was missing, and `KeychainHelperTests` pins `sharedWithCLI` against the
+Python-mirrored set. No test touches SecItem.
+
+### Where each provider and credential detail lives
+
+_Added 2026-09-04, answering "is there a single source of truth, so a change
+cascades?" — the answer was no, and one copy had already drifted:
+`bristlenose configure claude` printed *Stored in Keychain as "Bristlenose
+Claude API Key"* for an item called "Bristlenose Anthropic API Key", since the
+product-naming change._
+
+| Detail | Source of truth | Derived from it | Hand-written mirror | What catches drift |
+|---|---|---|---|---|
+| Credential key (`anthropic` … `miro`), bare env var, keychain service name | `bristlenose/providers.py` **`CREDENTIALS`** | `EnvCredentialStore.ENV_VAR_MAP`, `MacOSCredentialStore.SERVICE_NAMES`, the Linux Secret Service label, the name `configure` prints | `KeychainHelper.serviceNames` and `hasAnyAPIKey`'s `nativeEnvNames` (Swift) | `tests/test_credentials.py::TestCredentialRegistry` (derivation); `tests/test_swift_python_contract.py::TestCredentialNamesContract` (the Swift strings, read from source in CI) |
+| Which credentials are shared with the CLI | `CREDENTIALS`' keys | — | `KeychainHelper.sharedWithCLI` | `TestSharedKeychainContract`; `KeychainHelperTests` pins it against the Python-mirrored set |
+| LLM provider display name, CLI aliases, prefixed env var, default model | `bristlenose/providers.py` **`PROVIDERS`** | `configure`'s alias map and display name; `config.py` resolution | `LLMProvider.swift` (`defaultModel`, raw values); the settings-reference tables in `frontend/src/islands/SettingsPanel.tsx` / `SettingsModal.tsx` | `TestProviderDefaultContract` (the default provider only); default models per provider are **not** pinned across the seam — a known gap |
+| Pydantic env aliases (`BRISTLENOSE_X_API_KEY` / `X_API_KEY`) | `config.py` field `AliasChoices` | — | — | `TestCredentialRegistry::test_provider_env_vars_agree_with_the_credential_table` pins `PROVIDERS` ↔ `CREDENTIALS`; `config.py`'s aliases are pinned by `tests/test_credentials.py::TestUnprefixedEnvAliases` behaviourally |
+
+**The rule this table encodes.** Change a credential's name in `CREDENTIALS`
+and every Python surface follows without a second edit. Swift cannot import
+Python, so its mirror is a second edit by construction — and the contract test
+turns forgetting it into a red CI run rather than a user with two differently
+named items. Do not add a sixth copy: a new surface that needs a credential name
+reads `CREDENTIALS` (Python) or `KeychainHelper.serviceNames` (Swift), and a new
+credential is a `CREDENTIALS` entry plus its Swift mirror line, nothing else.
+
+### Verifying on a real Mac
+
+Not automated, and not automatable without raising the dialogs above from a
+harness (which the house rule on trust dialogs forbids). Expect each dialog at
+most once per item; click **Always Allow**.
+
+1. Build and launch the app. **Launch is silent** — no keychain dialog, whatever
+   the CLI wrote; that is the quiet default doing its job. Open Settings ▸ LLM
+   Provider: for each provider that has a CLI-written login item newer than the
+   app's copy, macOS asks once — the app is adopting it. Providers then show the
+   key the CLI last configured. (Gemini was already Always-Allowed for the
+   Debug-signed app on 4 Sep 2026, so it may not ask at all.)
+2. **App → CLI.** Save a key in the app. In a terminal:
+   ```bash
+   security find-generic-password -s "Bristlenose Google Gemini API Key" -w
+   ```
+   prints the key. If a dialog appears, it is the partition-list case above:
+   Always Allow, and the next `bristlenose run` is silent.
+3. **CLI → app.** `bristlenose configure gemini --key …` with a different key.
+   Relaunch the app: still silent, and a run started now uses the app's *old*
+   copy — by design, the spawn path may not ask. Open Settings ▸ LLM Provider:
+   one dialog, the row shows the new key, and `security … -w` still prints it.
+4. **Both stay agreeing.** Repeat 2 then 3; the app never shows a key the CLI
+   does not, and vice versa. `bristlenose doctor` reports `(Keychain)`.
+
+### Cleaning up a machine that already carries the split
+
+The maintainer's Mac on 4 Sep 2026 held: an app-written iCloud item, a CLI-
+written login item (`configure` deletes-then-adds by service + account, so the
+stale placeholder is already gone *if* it was at account `bristlenose`), and
+older login items for Anthropic (12 May), OpenAI (9 Jun) and Miro (28 Jun) that
+predate or postdate the app's iCloud copies. Nothing needs deleting for the
+new build to work — on first read it adopts the newer copy either way. To tidy
+by hand, in **Keychain Access** (never a script — house rule):
+
+1. Sidebar ▸ **login**. Search `Bristlenose`. Sort by Name. Two rows with the
+   *same* name in login means the placeholder survived under a different
+   account string: open each (double-click ▸ Attributes), keep the one whose
+   **Account** is `bristlenose` and whose **Modified** is the `configure` run,
+   delete the other.
+2. Sidebar ▸ **iCloud**. The app's items live here. Leave them: the app
+   reconciles. If you would rather start from the CLI's copy, deleting the
+   iCloud item makes the app adopt the login one on next launch (one dialog).
+3. Confirm from the terminal without decrypting anything:
+   ```bash
+   security find-generic-password -s "Bristlenose Google Gemini API Key" | grep -E '^keychain|mdat'
+   ```
+   One login item, modified when you last ran `configure`.
 
 ## Secret-leak defences
 

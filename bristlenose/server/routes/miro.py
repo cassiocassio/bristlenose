@@ -18,6 +18,7 @@ from bristlenose.credentials import (
     get_credential,
     get_credential_source,
     get_credential_store,
+    set_verified,
 )
 from bristlenose.miro_client import validate_miro_token
 from bristlenose.server import miro_export
@@ -87,38 +88,18 @@ def _check_project(db: Session, project_id: int) -> Project:
 
 
 def _store_token_verified(store: CredentialStore, key: str, value: str) -> bool:
-    """Store a credential and read it back. True only if it round-tripped.
+    """Store a credential and read it back — ``credentials.set_verified``.
 
-    ``CredentialStore.set`` is not a promise. ``MacOSCredentialStore.set``
-    swallows every subprocess failure *by design* — under App Sandbox
-    ``/usr/bin/security`` is not reachable, so the write is a silent no-op and
-    a clean return says only that nothing raised, never that anything was
-    written. The Swift side has the same shape one layer over:
-    ``KeychainHelper.serviceNames`` is an allowlist, and an unregistered key
-    writes false and reads nil, which is how ``CloudGrantStore`` shipped
-    persisting nothing at all with no error anywhere. Verify, don't assume.
-
-    A read-back returning a *different* value counts as failure too: an
-    environment variable shadows both the file and keychain reads, so the token
-    just stored is then not the token that will be used.
+    The one thing this route adds: a store that cannot write at all (a bare
+    ``EnvCredentialStore``) is reported as not persisted rather than raised,
+    because the route has an in-session fallback either way and the page says
+    which of the two happened.
     """
     try:
-        store.set(key, value)
+        return set_verified(store, key, value)
     except NotImplementedError:
-        # EnvCredentialStore — read-only, and honest about it.
         logger.warning("No writable credential store — %s not persisted", key)
         return False
-    try:
-        stored = store.get(key)
-    except Exception:  # a store that cannot answer cannot prove anything
-        stored = None
-    if stored != value:
-        logger.warning(
-            "%s did not round-trip the credential store (%s) — not persisted",
-            key, type(store).__name__,
-        )
-        return False
-    return True
 
 
 # ---------------------------------------------------------------------------

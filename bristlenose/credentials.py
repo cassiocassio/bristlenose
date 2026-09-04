@@ -13,10 +13,15 @@ Priority order:
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
+
+from bristlenose.providers import CREDENTIALS
+
+logger = logging.getLogger(__name__)
 
 
 def user_config_dir() -> Path:
@@ -63,6 +68,40 @@ class CredentialStore(ABC):
         return self.get(key) is not None
 
 
+def set_verified(store: CredentialStore, key: str, value: str) -> bool:
+    """Store a credential and read it back. True only if it round-tripped.
+
+    ``CredentialStore.set`` is not a promise. ``MacOSCredentialStore.set``
+    swallows every subprocess failure *by design* — under App Sandbox
+    ``/usr/bin/security`` is not reachable, so the write is a silent no-op and
+    a clean return says only that nothing raised, never that anything was
+    written. The Swift side has the same shape one layer over:
+    ``KeychainHelper.serviceNames`` is an allowlist, and an unregistered key
+    writes false and reads nil, which is how ``CloudGrantStore`` shipped
+    persisting nothing at all with no error anywhere. Verify, don't assume.
+
+    A read-back returning a *different* value counts as failure too: an
+    environment variable shadows both the file and keychain reads, so the value
+    just stored is then not the value that will be used.
+
+    ``NotImplementedError`` from a store that cannot write at all (a bare
+    :class:`EnvCredentialStore`) propagates: that is a different condition from
+    a write that did not land, and callers say different things about it.
+    """
+    store.set(key, value)
+    try:
+        stored = store.get(key)
+    except Exception:  # a store that cannot answer cannot prove anything
+        stored = None
+    if stored != value:
+        logger.warning(
+            "%s did not round-trip the credential store (%s) — not persisted",
+            key, type(store).__name__,
+        )
+        return False
+    return True
+
+
 class EnvCredentialStore(CredentialStore):
     """Fallback that reads from environment variables only.
 
@@ -70,13 +109,9 @@ class EnvCredentialStore(CredentialStore):
     but cannot persist new ones.
     """
 
-    ENV_VAR_MAP = {
-        "anthropic": "ANTHROPIC_API_KEY",
-        "openai": "OPENAI_API_KEY",
-        "azure": "AZURE_API_KEY",
-        "google": "GOOGLE_API_KEY",
-        "miro": "MIRO_ACCESS_TOKEN",
-    }
+    # Derived, never listed here: `bristlenose/providers.py` `CREDENTIALS` is
+    # the one table of credential names.
+    ENV_VAR_MAP = {key: spec.env_var for key, spec in CREDENTIALS.items()}
 
     def get(self, key: str) -> str | None:
         """Get credential from environment variable."""

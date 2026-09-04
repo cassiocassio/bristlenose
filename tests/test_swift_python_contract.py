@@ -78,3 +78,92 @@ class TestProviderDefaultContract:
             f"desktop/Bristlenose/Bristlenose/BristlenoseShared.swift "
             f"(pythonDefaultProvider) to {python_default!r}."
         )
+
+
+# ---------------------------------------------------------------------------
+# Keys kept in both keychains
+# ---------------------------------------------------------------------------
+
+_KEYCHAIN_HELPER_SWIFT = (
+    _REPO_ROOT / "desktop" / "Bristlenose" / "Bristlenose" / "KeychainHelper.swift"
+)
+
+# Mirrors `static let sharedWithCLI: Set<String> = [ ... ]`.
+_SHARED_WITH_CLI_RE = re.compile(
+    r"static\s+let\s+sharedWithCLI\s*:\s*Set<String>\s*=\s*\[([^\]]*)\]", re.S
+)
+
+
+class TestSharedKeychainContract:
+    """`KeychainHelper.sharedWithCLI` must equal the keys Python reads.
+
+    The Mac app keeps a login-keychain copy of every key in that set so
+    `bristlenose run` can read a key saved in the app (`docs/design-keychain.md`
+    § "One keyspace, two keychains"). A key in Python's `SERVICE_NAMES` that the
+    Swift set omits is written to the synced keychain alone — invisible to the
+    CLI from the moment it is entered, with nothing red on either side. The
+    Swift suite pins the same set from its side; this is the one that runs in CI.
+    """
+
+    def test_swift_shares_exactly_the_keys_python_reads(self) -> None:
+        from bristlenose.credentials_macos import MacOSCredentialStore
+
+        text = _KEYCHAIN_HELPER_SWIFT.read_text(encoding="utf-8")
+        match = _SHARED_WITH_CLI_RE.search(text)
+        assert match is not None, (
+            "KeychainHelper.swift no longer declares "
+            "`static let sharedWithCLI: Set<String> = [...]`; if the constant "
+            "was renamed, update this regex AND confirm the set still matches "
+            "MacOSCredentialStore.SERVICE_NAMES."
+        )
+        swift_keys = set(re.findall(r'"([^"]+)"', match.group(1)))
+        assert swift_keys == set(MacOSCredentialStore.SERVICE_NAMES), (
+            f"Swift shares {sorted(swift_keys)} with the CLI; Python reads "
+            f"{sorted(MacOSCredentialStore.SERVICE_NAMES)}. A key on one side "
+            "only is a key one tool cannot see."
+        )
+
+
+# Mirrors the `"key": "Service Name",` entries of `static let serviceNames`.
+_SWIFT_SERVICE_NAMES_RE = re.compile(
+    r"static\s+let\s+serviceNames\s*:\s*\[String:\s*String\]\s*=\s*\[(.*?)\n\s*\]", re.S
+)
+_SWIFT_NATIVE_ENV_RE = re.compile(r"let\s+nativeEnvNames\s*=\s*\[(.*?)\n\s*\]", re.S)
+_SWIFT_PAIR_RE = re.compile(r'"([^"]+)"\s*:\s*"([^"]+)"')
+
+
+def _swift_pairs(pattern: re.Pattern[str], what: str) -> dict[str, str]:
+    text = _KEYCHAIN_HELPER_SWIFT.read_text(encoding="utf-8")
+    match = pattern.search(text)
+    assert match is not None, f"KeychainHelper.swift no longer declares {what}"
+    return dict(_SWIFT_PAIR_RE.findall(match.group(1)))
+
+
+class TestCredentialNamesContract:
+    """`CREDENTIALS` is the one table of credential names, and Swift mirrors it.
+
+    Swift cannot import Python, so `KeychainHelper.serviceNames` and
+    `hasAnyAPIKey`'s `nativeEnvNames` are hand-written copies. These fail when
+    a name changes on one side only — which turns "remember to update the
+    mirror" into a red CI run.
+    """
+
+    def test_swift_service_names_match_the_registry(self) -> None:
+        from bristlenose.providers import CREDENTIALS
+
+        swift = _swift_pairs(_SWIFT_SERVICE_NAMES_RE, "`static let serviceNames`")
+        for key, spec in CREDENTIALS.items():
+            assert swift.get(key) == spec.keychain_service, (
+                f"KeychainHelper.serviceNames[{key!r}] is {swift.get(key)!r}; "
+                f"CREDENTIALS says {spec.keychain_service!r}"
+            )
+
+    def test_swift_native_env_names_match_the_registry(self) -> None:
+        from bristlenose.providers import CREDENTIALS
+
+        swift = _swift_pairs(_SWIFT_NATIVE_ENV_RE, "`nativeEnvNames` in hasAnyAPIKey")
+        for key, env_var in swift.items():
+            assert CREDENTIALS[key].env_var == env_var, (
+                f"nativeEnvNames[{key!r}] is {env_var!r}; CREDENTIALS says "
+                f"{CREDENTIALS[key].env_var!r}"
+            )

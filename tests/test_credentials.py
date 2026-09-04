@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -554,3 +555,195 @@ class TestUnprefixedEnvAliases:
         assert s.azure_api_key == "az-key"
         assert s.azure_endpoint == "https://x.openai.azure.com/"
         assert s.azure_deployment == "dep"
+
+
+# ---------------------------------------------------------------------------
+# Read-back verification — a clean `set()` is not evidence anything was stored
+# ---------------------------------------------------------------------------
+
+
+class _FakeSecurityCLI:
+    """A stateful stand-in for ``/usr/bin/security``, keyed on (account, service).
+
+    Emulates the three verbs ``MacOSCredentialStore`` uses with the exit codes
+    the real tool returns (44 = not found), so a set-then-get through the
+    store's actual argv is a round-trip through *this* rather than through the
+    developer's login keychain. ``refuse_add`` is the sandboxed shape: the add
+    fails, the store swallows it, and nothing raises.
+    """
+
+    def __init__(self, *, refuse_add: bool = False) -> None:
+        self.items: dict[tuple[str, str], str] = {}
+        self.calls: list[list[str]] = []
+        self.refuse_add = refuse_add
+
+    @staticmethod
+    def _opt(args: list[str], flag: str) -> str | None:
+        return args[args.index(flag) + 1] if flag in args else None
+
+    def __call__(self, args: list[str], **kwargs):  # noqa: ANN001 — subprocess.run shape
+        self.calls.append(list(args))
+        verb = args[1]
+        key = (self._opt(args, "-a") or "", self._opt(args, "-s") or "")
+        if verb == "find-generic-password":
+            if key in self.items:
+                out = self.items[key] + "\n" if "-w" in args else ""
+                return subprocess.CompletedProcess(args, 0, stdout=out, stderr="")
+            if kwargs.get("check"):
+                raise subprocess.CalledProcessError(44, args)
+            return subprocess.CompletedProcess(args, 44, stdout="", stderr="not found")
+        if verb == "add-generic-password":
+            if self.refuse_add:
+                if kwargs.get("check"):
+                    raise subprocess.CalledProcessError(1, args)
+                return subprocess.CompletedProcess(args, 1, stdout="", stderr="refused")
+            self.items[key] = self._opt(args, "-w") or ""
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        if verb == "delete-generic-password":
+            self.items.pop(key, None)
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        raise AssertionError(f"unexpected security verb: {verb}")
+
+
+_PATCH_MACOS_RUN = "bristlenose.credentials_macos.subprocess.run"
+
+
+class TestMacOSStoreRoundTrip:
+    """The macOS store's set→get, through its real argv, against a faked tool."""
+
+    def test_set_then_get_round_trips(self) -> None:
+        from bristlenose.credentials import set_verified
+        from bristlenose.credentials_macos import MacOSCredentialStore
+
+        fake = _FakeSecurityCLI()
+        store = MacOSCredentialStore()
+        with patch(_PATCH_MACOS_RUN, new=fake):
+            store.set("google", "g-key")
+            assert store.get("google") == "g-key"
+            assert set_verified(store, "google", "g-key") is True
+        # The login copy the Mac app reads is at exactly this service + account.
+        assert ("bristlenose", "Bristlenose Google Gemini API Key") in fake.items
+
+    def test_refused_write_is_caught_by_read_back(self, caplog) -> None:
+        """The sandboxed shape: `set` returns cleanly, the key is nowhere."""
+        from bristlenose.credentials import set_verified
+        from bristlenose.credentials_macos import MacOSCredentialStore
+
+        fake = _FakeSecurityCLI(refuse_add=True)
+        store = MacOSCredentialStore()
+        with patch(_PATCH_MACOS_RUN, new=fake), caplog.at_level("WARNING"):
+            store.set("google", "g-key")  # swallows — by design
+            assert set_verified(store, "google", "g-key") is False
+        assert "did not round-trip" in caplog.text
+
+    def test_missing_security_tool_is_caught_by_read_back(self) -> None:
+        from bristlenose.credentials import set_verified
+        from bristlenose.credentials_macos import MacOSCredentialStore
+
+        store = MacOSCredentialStore()
+        with patch(_PATCH_MACOS_RUN, side_effect=FileNotFoundError("security")):
+            assert set_verified(store, "google", "g-key") is False
+
+
+class _NoOpStore:
+    """Accepts and discards; nothing raises. The invisible failure."""
+
+    def get(self, key: str) -> str | None:
+        return None
+
+    def set(self, key: str, value: str) -> None:
+        pass
+
+    def delete(self, key: str) -> None:
+        pass
+
+
+class TestSetVerified:
+    def test_working_store_is_true(self, tmp_path: Path) -> None:
+        from bristlenose.credentials import FileCredentialStore, set_verified
+
+        store = FileCredentialStore(tmp_path / ".env")
+        assert set_verified(store, "anthropic", "sk-1") is True
+
+    def test_no_op_store_is_false(self, caplog) -> None:
+        from bristlenose.credentials import set_verified
+
+        with caplog.at_level("WARNING"):
+            assert set_verified(_NoOpStore(), "anthropic", "sk-1") is False  # type: ignore[arg-type]
+        assert "did not round-trip" in caplog.text
+
+    def test_read_only_store_raises_rather_than_lies(self) -> None:
+        from bristlenose.credentials import set_verified
+
+        with pytest.raises(NotImplementedError):
+            set_verified(EnvCredentialStore(), "anthropic", "sk-1")
+
+    def test_env_var_shadowing_the_file_is_false(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """The write lands, and is not the value that will be used."""
+        from bristlenose.credentials import FileCredentialStore, set_verified
+
+        monkeypatch.setenv("BRISTLENOSE_ANTHROPIC_API_KEY", "shadow")
+        store = FileCredentialStore(tmp_path / ".env")
+        assert set_verified(store, "anthropic", "real") is False
+        assert "BRISTLENOSE_ANTHROPIC_API_KEY=real" in (tmp_path / ".env").read_text()
+
+
+# ---------------------------------------------------------------------------
+# One table of credential names — `bristlenose/providers.py` `CREDENTIALS`
+# ---------------------------------------------------------------------------
+
+
+class TestCredentialRegistry:
+    """The stores derive their names from the registry, never list them.
+
+    A name changed in `CREDENTIALS` must reach the macOS service map, the
+    env-var fallback and the Linux label without a second edit; these pin
+    that, and pin the set of keys so a change to it is a deliberate one.
+    """
+
+    def test_registry_keys_are_the_five_the_cli_stores(self) -> None:
+        from bristlenose.providers import CREDENTIALS
+
+        assert set(CREDENTIALS) == {"anthropic", "openai", "azure", "google", "miro"}
+
+    def test_macos_service_names_derive_from_the_registry(self) -> None:
+        from bristlenose.credentials_macos import MacOSCredentialStore
+        from bristlenose.providers import CREDENTIALS
+
+        assert MacOSCredentialStore.SERVICE_NAMES == {
+            key: spec.keychain_service for key, spec in CREDENTIALS.items()
+        }
+        assert MacOSCredentialStore()._service_name("google") == "Bristlenose Google Gemini API Key"
+
+    def test_env_var_map_derives_from_the_registry(self) -> None:
+        from bristlenose.providers import CREDENTIALS
+
+        assert EnvCredentialStore.ENV_VAR_MAP == {
+            key: spec.env_var for key, spec in CREDENTIALS.items()
+        }
+
+    def test_linux_label_is_the_same_name_as_macos(self) -> None:
+        """A key stored on Linux is called what Keychain Access would call it."""
+        from bristlenose.credentials_linux import LinuxCredentialStore
+
+        with patch("bristlenose.credentials_linux.subprocess.run") as mock_run:
+            LinuxCredentialStore().set("google", "g-key")
+        args = mock_run.call_args[0][0]
+        assert args[args.index("--label") + 1] == "Bristlenose Google Gemini API Key"
+
+    def test_unregistered_key_keeps_the_derived_shape(self) -> None:
+        from bristlenose.providers import credential_service_name
+
+        assert credential_service_name("miro_refresh") == "Bristlenose Miro_Refresh API Key"
+
+    def test_provider_env_vars_agree_with_the_credential_table(self) -> None:
+        """`PROVIDERS` names the prefixed variable; `CREDENTIALS` the bare one."""
+        from bristlenose.providers import CREDENTIALS, PROVIDERS
+
+        for name, spec in PROVIDERS.items():
+            key_fields = [f for f in spec.config_fields if f.name == "api_key"]
+            if not key_fields:
+                continue
+            assert key_fields[0].env_var == f"BRISTLENOSE_{CREDENTIALS[name].env_var}", name

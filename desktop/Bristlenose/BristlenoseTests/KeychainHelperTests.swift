@@ -104,4 +104,22 @@ struct KeychainHelperTests {
                     "\(key) is unregistered — its store is a silent no-op")
         }
     }
+
+    // MARK: - Keys the CLI reads
+
+    /// Every key Python reads is kept in the login keychain too, so a key saved
+    /// in the app is one `bristlenose run` can find. A key in the Python map
+    /// but not here would be saved to the synced keychain alone — invisible to
+    /// the CLI from the moment it was entered, with nothing red anywhere.
+    /// `tests/test_swift_python_contract.py` pins the same set from the Python
+    /// side, by reading this file.
+    @Test func sharedWithCLI_isExactlyTheSetPythonReads() {
+        #expect(KeychainHelper.sharedWithCLI == Self.mirroredToPython)
+    }
+
+    /// Cloud sign-ins are Swift-only: no login copy, so the account-derived
+    /// items never leave the entitlement-scoped keychain.
+    @Test func cloudSignIns_areNotSharedWithTheCLI() {
+        #expect(KeychainHelper.sharedWithCLI.isDisjoint(with: Self.swiftOnly))
+    }
 }

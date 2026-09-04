@@ -375,7 +375,7 @@ struct LLMSettingsView: View {
 
     private func loadAPIKey() {
         guard let keychainKey = selectedProvider.keychainProvider else { return }
-        let existing = KeychainHelper.get(provider: keychainKey) ?? ""
+        let existing = KeychainHelper.get(provider: keychainKey, interaction: .allowed) ?? ""
         apiKeyInputs[selectedProvider] = existing
     }
 
@@ -395,7 +395,7 @@ struct LLMSettingsView: View {
             // the read-back mismatches and we reflect real Keychain state instead
             // of flashing green for a key that isn't stored.
             let saved = KeychainHelper.set(provider: keychainKey, value: value)
-            if saved, KeychainHelper.get(provider: keychainKey) == value {
+            if saved, KeychainHelper.get(provider: keychainKey, interaction: .allowed) == value {
                 applyPresenceAndCache(provider: selectedProvider)
                 kickOffValidation(provider: selectedProvider, key: value)
             } else {
@@ -599,7 +599,7 @@ struct LLMSettingsView: View {
     /// No-op if no key in Keychain.
     private func revalidateAzure() {
         guard let azureKey = LLMProvider.azure.keychainProvider,
-              let stored = KeychainHelper.get(provider: azureKey),
+              let stored = KeychainHelper.get(provider: azureKey, interaction: .allowed),
               !stored.isEmpty
         else {
             statuses[.azure] = .notSetUp
@@ -644,7 +644,7 @@ struct LLMSettingsView: View {
     private func lastVerifiedText(for provider: LLMProvider) -> String? {
         if provider == .ollama { return nil }
         guard let kc = provider.keychainProvider,
-              let stored = KeychainHelper.get(provider: kc),
+              let stored = KeychainHelper.get(provider: kc, interaction: .allowed),
               !stored.isEmpty,
               let entry = LLMValidator.cachedEntry(provider: provider, key: stored)
         else { return nil }
@@ -749,7 +749,7 @@ struct LLMSettingsView: View {
                 continue
             }
             guard let kc = provider.keychainProvider,
-                  let stored = KeychainHelper.get(provider: kc),
+                  let stored = KeychainHelper.get(provider: kc, interaction: .allowed),
                   !stored.isEmpty
             else { continue }
             if LLMValidator.cacheIsFresh(
@@ -792,7 +792,7 @@ struct LLMSettingsView: View {
             return
         }
         guard let keychainKey = provider.keychainProvider,
-              let stored = KeychainHelper.get(provider: keychainKey),
+              let stored = KeychainHelper.get(provider: keychainKey, interaction: .allowed),
               !stored.isEmpty
         else {
             statuses[provider] = .notSetUp
@@ -843,7 +843,7 @@ struct LLMSettingsView: View {
             return
         }
         guard let keychainKey = provider.keychainProvider,
-              let stored = KeychainHelper.get(provider: keychainKey),
+              let stored = KeychainHelper.get(provider: keychainKey, interaction: .allowed),
               !stored.isEmpty
         else { return }
         if LLMValidator.cacheIsFresh(

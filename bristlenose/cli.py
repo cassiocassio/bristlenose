@@ -2243,28 +2243,23 @@ def configure(
         EnvCredentialStore,
         FileCredentialStore,
         get_credential_store,
+        get_credential_store_label,
+        set_verified,
     )
     from bristlenose.doctor import (
         _validate_anthropic_key,
         _validate_openai_key,
     )
+    from bristlenose.providers import CREDENTIALS, PROVIDERS, credential_service_name
 
     provider = provider.lower()
 
-    # Normalise aliases
-    provider_map = {
-        "anthropic": "anthropic",
-        "claude": "anthropic",
-        "openai": "openai",
-        "chatgpt": "openai",
-        "azure": "azure",
-        "azure-openai": "azure",
-        "google": "google",
-        "gemini": "google",
-        "local": "local",
-        "ollama": "local",
-        "miro": "miro",
-    }
+    # Normalise aliases — the registry's, plus Miro, which is a credential
+    # `configure` stores but not an LLM provider.
+    provider_map = {"miro": "miro"}
+    for spec in PROVIDERS.values():
+        for alias in (spec.name, *spec.aliases):
+            provider_map[alias] = spec.name
     canonical = provider_map.get(provider)
     if canonical is None:
         _say(MessageKind.ERROR, f"Unknown provider: {provider}")
@@ -2280,14 +2275,7 @@ def configure(
         console.print("Run it with:  [bold]bristlenose run <folder>[/bold]")
         return
 
-    display_names = {
-        "anthropic": "Claude",
-        "openai": "ChatGPT",
-        "azure": "Azure OpenAI",
-        "google": "Gemini",
-        "miro": "Miro",
-    }
-    display_name = display_names.get(canonical, canonical.title())
+    display_name = PROVIDERS[canonical].display_name if canonical in PROVIDERS else "Miro"
 
     # Get key from option or prompt
     if key is None:
@@ -2332,10 +2320,14 @@ def configure(
     else:
         _say(MessageKind.SUCCESS, "Valid")
 
-    # Store it — keyring if available, else the persisting config file.
+    # Store it — keyring if available, else the persisting config file — and
+    # read it back. A clean `set()` is not evidence: the macOS store swallows a
+    # refused `security` write by design, and a file write is shadowed by an
+    # environment variable, so only the read-back says this key will be used.
+    env_var = CREDENTIALS[canonical].env_var
     store = get_credential_store()
     try:
-        store.set(canonical, key)
+        persisted = set_verified(store, canonical, key)
     except NotImplementedError:
         # No writable store at all (a bare read-only EnvCredentialStore). This
         # should not happen now the fallback persists to a file, but keep a
@@ -2344,24 +2336,28 @@ def configure(
         _say(MessageKind.WARNING, "No writable credential store available.")
         console.print("Add this to your .env file or shell profile:")
         console.print()
-        env_vars = {
-            "anthropic": "ANTHROPIC_API_KEY",
-            "openai": "OPENAI_API_KEY",
-            "azure": "AZURE_API_KEY",
-            "google": "GOOGLE_API_KEY",
-            "miro": "MIRO_ACCESS_TOKEN",
-        }
-        env_var = env_vars.get(canonical, f"{canonical.upper()}_API_KEY")
         console.print(f"  export BRISTLENOSE_{env_var}={key}", markup=False)
         console.print()
         console.print("[dim](The key is not stored anywhere — save it yourself)[/dim]")
         raise typer.Exit(0)
 
-    service_name = (
-        f"Bristlenose {display_name} Access Token"
-        if canonical == "miro"
-        else f"Bristlenose {display_name} API Key"
-    )
+    if not persisted:
+        _say(
+            MessageKind.ERROR,
+            f"Not saved — the key did not read back from {get_credential_store_label()}.",
+        )
+        console.print(
+            "Either the write was refused, or an environment variable "
+            f"(BRISTLENOSE_{env_var} or {env_var}) is shadowing the stored key.",
+            markup=False,
+        )
+        raise typer.Exit(1)
+
+    # The name Keychain Access (or Seahorse) shows — from the same table the
+    # store wrote it under, not re-derived from the product name. This line
+    # said "Bristlenose Claude API Key" for an item called "Bristlenose
+    # Anthropic API Key" from the product-naming change until 4 Sep 2026.
+    service_name = credential_service_name(canonical)
     if isinstance(store, FileCredentialStore):
         # Persisted to the config .env — name the file so it's not a black box.
         from rich.markup import escape
@@ -2372,8 +2368,6 @@ def configure(
             loc = str(store.path)
         _say(MessageKind.SUCCESS, f"Saved to {escape(loc)}")
     elif not isinstance(store, EnvCredentialStore):
-        from bristlenose.credentials import get_credential_store_label
-
         store_label = get_credential_store_label()
         _say(MessageKind.SUCCESS, f'Stored in {store_label} as "{service_name}"')
 

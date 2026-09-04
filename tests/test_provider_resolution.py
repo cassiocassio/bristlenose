@@ -281,6 +281,47 @@ class TestConfigureSetsCurrent:
         assert "Gemini is now your provider for analysis" in result.output
         assert "BRISTLENOSE_LLM_PROVIDER=google" in configure_env.read_text()
 
+    def test_configure_names_the_item_keychain_access_shows(
+        self, configure_env: Path
+    ) -> None:
+        """The printed name is the stored item's, not one re-derived from the
+        product name — it said "Bristlenose Gemini API Key" for an item called
+        "Bristlenose Google Gemini API Key" until 4 Sep 2026."""
+        from bristlenose.cli import app
+
+        result = CliRunner().invoke(app, ["configure", "gemini", "--key", "g-key"])
+        assert result.exit_code == 0
+        assert "Bristlenose Google Gemini API Key" in result.output
+        assert "Bristlenose Gemini API Key" not in result.output
+
+    def test_configure_refuses_a_key_it_cannot_read_back(
+        self, configure_env: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A store that accepts and discards must not produce "Stored in …".
+
+        The macOS store returns cleanly from a refused `security` write by
+        design; before the read-back, `configure` printed the keychain line
+        and made the provider current on the strength of nothing.
+        """
+        from bristlenose.cli import app
+
+        class _NoOpStore(TestConfigureSetsCurrent._FakeStore):
+            def set(self, key: str, value: str) -> None:
+                pass
+
+        monkeypatch.setattr(
+            "bristlenose.credentials.get_credential_store", lambda: _NoOpStore()
+        )
+        result = CliRunner().invoke(app, ["configure", "gemini", "--key", "g-key"])
+        assert result.exit_code == 1
+        assert "Not saved" in result.output
+        assert "Stored in" not in result.output
+        assert "now your provider" not in result.output
+        assert (
+            not configure_env.exists()
+            or "BRISTLENOSE_LLM_PROVIDER=google" not in configure_env.read_text()
+        )
+
     def test_configure_second_provider_switches_and_names_the_previous(
         self, configure_env: Path
     ) -> None:

@@ -4,6 +4,20 @@ Uses the `security` command-line tool that ships with macOS to store and
 retrieve credentials from the system Keychain. Entries appear in Keychain
 Access.app with human-readable names.
 
+**Two keychains, one key.** ``security`` searches the file-based **login**
+keychain only. The Mac app stores its keys in the data-protection keychain
+(iCloud-synced, scoped to its ``keychain-access-groups`` entitlement), which
+neither ``security`` nor any Security.framework caller without that entitlement
+can see — measured 4 Sep 2026, ``docs/design-keychain.md`` § "One keyspace, two
+keychains". So the app keeps a second copy of every key this module reads in the
+login keychain, at exactly the service and account below, and adopts whatever
+``bristlenose configure`` writes there the next time its Settings ▸ LLM Provider
+pane is opened (a launch-time read never asks). Set up in either place; both see
+it. The one visible seam is macOS's own: the first time ``security`` decrypts an
+item the *app* created (or the app one the CLI created) the system asks once —
+"wants to use your confidential information", Always Allow — and is silent
+after.
+
 **Sandbox note:** this module is the happy path for CLI Mac users (Homebrew,
 pip). Inside the sandboxed desktop sidecar it is never reached in practice —
 the Swift host fetches keys from Keychain at launch and injects them as
@@ -20,6 +34,7 @@ import logging
 import subprocess
 
 from bristlenose.credentials import CredentialStore
+from bristlenose.providers import CREDENTIALS, credential_service_name
 
 logger = logging.getLogger(__name__)
 
@@ -35,18 +50,15 @@ class MacOSCredentialStore(CredentialStore):
 
     ACCOUNT = "bristlenose"
 
-    # Map internal key names to human-readable Keychain service names
-    SERVICE_NAMES = {
-        "anthropic": "Bristlenose Anthropic API Key",
-        "openai": "Bristlenose OpenAI API Key",
-        "azure": "Bristlenose Azure API Key",
-        "google": "Bristlenose Google Gemini API Key",
-        "miro": "Bristlenose Miro Access Token",
-    }
+    # Internal key → human-readable Keychain service name. Derived from
+    # `bristlenose/providers.py` `CREDENTIALS`, the one table of credential
+    # names; the Mac app's `KeychainHelper.serviceNames` mirrors it by hand and
+    # `tests/test_swift_python_contract.py` fails when the two disagree.
+    SERVICE_NAMES = {key: spec.keychain_service for key, spec in CREDENTIALS.items()}
 
     def _service_name(self, key: str) -> str:
         """Get the Keychain service name for a key."""
-        return self.SERVICE_NAMES.get(key, f"Bristlenose {key.title()} API Key")
+        return credential_service_name(key)
 
     def get(self, key: str) -> str | None:
         """Retrieve a credential from Keychain.
@@ -91,9 +103,13 @@ class MacOSCredentialStore(CredentialStore):
 
         If an entry already exists, it is deleted first then re-added.
         The -U flag on add-generic-password should handle updates, but
-        delete-then-add is more reliable across macOS versions.
+        delete-then-add is more reliable across macOS versions — and it is
+        what lets this replace the Mac app's login-keychain copy without the
+        app's ACL: a delete consults none, an in-place update would.
 
-        No-op if subprocess-exec is blocked (sandbox, SIP, MDM).
+        No-op if subprocess-exec is blocked (sandbox, SIP, MDM) — and a clean
+        return is therefore **not** evidence anything was stored. Callers use
+        ``credentials.set_verified`` and read the key back.
         """
         service = self._service_name(key)
 

@@ -20,6 +20,11 @@
       "evidence": "run on 4dd87b9c \u2014 'STRUCTURE DRIFT'; green again on ff488734",
       "how": "CI: un-regenerated real drift went red, ruff green above it",
       "observed": "2026-09-03"
+    },
+    "test-swift": {
+      "evidence": "run=failure, step 'Build and test'=failure, log carried 'SWIFT SUITE RED \u2014 1 failed, 1415 passed' and named TabLeftPanelTests/everyCaseIsDecided(). Local proof had existed since 3 Sep; this is the first time the CI step itself was watched fail.",
+      "how": "CI: a deliberately wrong assertion pushed on b59c6460; mac-build run 33858069777",
+      "observed": "2026-09-04"
     }
   },
   "excluded": {
@@ -32,6 +37,10 @@
     "gen-test-inventory": {
       "note": "Not named check-*, but --check is a hard CI gate.",
       "path": "scripts/gen-test-inventory.py"
+    },
+    "test-swift": {
+      "note": "Not named check-*, but it is the Swift suite's only entry point, called from mac-build.yml, build-all.sh 1c, build-dmg.sh 1b and /end-session.",
+      "path": "desktop/scripts/test-swift.sh"
     }
   }
 }

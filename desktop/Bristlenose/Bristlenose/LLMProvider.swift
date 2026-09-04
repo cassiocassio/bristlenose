@@ -63,6 +63,15 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         case .claude: "claude-sonnet-5"
         case .chatGPT: "gpt-4o"
         case .gemini: "gemini-2.5-flash"
+        // Azure addresses a DEPLOYMENT, not a model — `client.py` resolves
+        // `azure_deployment or ""` and never reads llm_model, and Python's
+        // registry says "" for that reason. This stays non-empty anyway,
+        // because two tests here require every provider to have a non-empty
+        // default that appears in its own availableModels. Making it "" to
+        // match Python breaks both. The real fix is that Azure should not
+        // present a model picker at all, only the deployment field it already
+        // has — until then this value is inert (Azure ignores it) and the
+        // divergence is recorded in tests/test_llm_sampling_params.py.
         case .azure: "gpt-4o"
         case .ollama: OllamaCatalog.recommendedTag()
         }

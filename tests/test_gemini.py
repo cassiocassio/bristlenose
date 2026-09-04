@@ -200,9 +200,19 @@ class TestGeminiPricing:
         assert "gemini-2.5-pro" in PRICING
 
     def test_gemini_flash_cost_estimate(self) -> None:
+        """Asserts the ARITHMETIC, not the rates.
+
+        This previously pinned ``0.15 + 3.50`` — a price that was wrong in
+        both directions (Google charges $0.30 in / $2.50 out). So the suite was
+        actively defending an incorrect figure, and the only way to correct the
+        table was to "break" a passing test. Rates belong to the vendor and
+        change without notice; what we can honestly test is that a million
+        tokens each way costs input-rate plus output-rate.
+        """
+        rate_in, rate_out = PRICING["gemini-2.5-flash"]
         cost = estimate_cost("gemini-2.5-flash", 1_000_000, 1_000_000)
         assert cost is not None
-        assert cost == 0.15 + 3.50
+        assert cost == rate_in + rate_out
 
     def test_google_in_pricing_urls(self) -> None:
         assert "google" in PRICING_URLS

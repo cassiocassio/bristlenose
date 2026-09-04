@@ -27,6 +27,7 @@ from anthropic.resources.messages import AsyncMessages
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.llm.client import _ANTHROPIC_ACCEPTS_SAMPLING, LLMClient
+from bristlenose.llm.pricing import PRICING
 from bristlenose.llm.structured import QuoteExtractionResult
 from bristlenose.providers import PROVIDERS
 
@@ -183,6 +184,72 @@ class TestPickerClientCoherence:
                     f"_ANTHROPIC_ACCEPTS_SAMPLING, yet a sampling parameter was sent. "
                     f"Post-4.6 Claude models reject it with a 400."
                 )
+
+    def test_every_offered_model_can_produce_a_cost_estimate(self) -> None:
+        """The estimate exists to prevent bill-shock, so its failure mode is
+        ABSENCE, not inaccuracy.
+
+        ``estimate_cost`` returns ``None`` for any model missing from
+        ``PRICING`` and the CLI then prints no figure at all — so a user on an
+        unpriced model gets no warning before spending, with nothing on screen
+        to say the protection is off. That is what happened: the picker offered
+        ``claude-opus-4-8`` and ``claude-haiku-4-5-20251001`` with no rows.
+
+        Deliberately not asserting the rates. Vendors change them without
+        notice and run spot discounts we cannot see, and a ballpark within an
+        order of magnitude does the job — pinning figures here is how a wrong
+        price got defended by a passing test (see test_gemini.py).
+        """
+        src = _SWIFT_PROVIDER.read_text(encoding="utf-8")
+        block = re.search(r"var availableModels: \[String\] \{(.*?)\n    \}", src, re.S)
+        assert block, f"could not find availableModels in {_SWIFT_PROVIDER}"
+
+        # Ollama is local and free; Azure addresses deployments, not models.
+        priced = ("claude", "chatGPT", "gemini")
+        found = False
+        for case, body in re.findall(r'case \.(\w+): \[([^\]]*)\]', block.group(1)):
+            if case not in priced:
+                continue
+            for model in re.findall(r'"([^"]+)"', body):
+                found = True
+                assert model in PRICING, (
+                    f"{case} offers {model!r} with no PRICING row, so its users "
+                    f"see no cost estimate at all before a run"
+                )
+        assert found, "parsed zero priced models — the shape changed"
+
+    def test_swift_and_python_agree_on_every_provider_default(self) -> None:
+        """Not just Claude. Azure drifted precisely here — Swift shipped
+        ``gpt-4o`` while Python said ``""``, and since ``client.py`` resolves
+        Azure through ``azure_deployment`` and never reads ``llm_model``, the
+        Swift value was inert but still travelled to Python as a model name.
+
+        Ollama is skipped by construction: its Swift default is a RAM-aware
+        call, not a literal, so the regex finds nothing and there is nothing to
+        compare. That divergence is deliberate.
+        """
+        src = _SWIFT_PROVIDER.read_text(encoding="utf-8")
+        block = re.search(r"var defaultModel: String \{(.*?)\n    \}", src, re.S)
+        assert block, f"could not find defaultModel in {_SWIFT_PROVIDER}"
+        swift = dict(re.findall(r'case \.(\w+): "([^"]*)"', block.group(1)))
+        assert swift, "parsed zero literal defaults — the shape changed"
+
+        # Azure is deliberately excluded. Python says "" because `client.py`
+        # resolves Azure through `azure_deployment` and never reads llm_model;
+        # Swift says "gpt-4o" because two of its own tests require every
+        # provider to have a non-empty default that is in its availableModels.
+        # Both are locally right and the disagreement is inert. It resolves
+        # properly only when Azure stops presenting a model picker at all.
+        swift_to_python = {
+            "claude": "anthropic", "chatGPT": "openai", "gemini": "google",
+        }
+        for swift_case, py_name in swift_to_python.items():
+            if swift_case not in swift:
+                continue  # non-literal default (e.g. computed) — nothing to pin
+            assert swift[swift_case] == PROVIDERS[py_name].default_model, (
+                f"{swift_case}: Swift={swift[swift_case]!r} "
+                f"Python={PROVIDERS[py_name].default_model!r}"
+            )
 
     def test_swift_and_python_agree_on_the_default_model(self) -> None:
         """The default is declared twice — once per language — which is

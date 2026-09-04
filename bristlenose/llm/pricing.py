@@ -46,9 +46,21 @@ PRICING: dict[str, tuple[float, float]] = {
     # OpenAI (ChatGPT)
     "gpt-4o": (2.50, 10.0),
     "gpt-4o-mini": (0.15, 0.60),
-    # Google (Gemini)
-    "gemini-2.5-flash": (0.15, 3.50),
+    # Google (Gemini). Verified against ai.google.dev/gemini-api/docs/pricing
+    # on 2026-09-04 — the 2.5-flash row was wrong in BOTH directions ($0.15/
+    # $3.50 recorded against an actual $0.30/$2.50), so every Gemini cost
+    # estimate has been understating input and overstating output.
+    #
+    # NOTE the 3.x rows are PROMOTIONAL through 2026-12-31 and roughly double
+    # on 2027-01-01 (3.8-flash goes to $1.50/$7.50). Re-check at the turn of
+    # the year rather than trusting these.
+    "gemini-2.5-flash": (0.30, 2.50),
     "gemini-2.5-pro": (1.25, 10.0),
+    "gemini-3.8-flash": (0.75, 3.75),
+    "gemini-3.7-flash": (0.75, 3.75),
+    "gemini-3.6-flash": (0.75, 3.75),
+    "gemini-3.5-flash": (1.50, 9.00),
+    "gemini-3.5-flash-lite": (0.30, 2.50),
 }
 
 # Mirrors PRICING — provider lookup for cohort key resolution.
@@ -64,6 +76,11 @@ _MODEL_PROVIDER: dict[str, str] = {
     "gpt-4o-mini": "openai",
     "gemini-2.5-flash": "google",
     "gemini-2.5-pro": "google",
+    "gemini-3.8-flash": "google",
+    "gemini-3.7-flash": "google",
+    "gemini-3.6-flash": "google",
+    "gemini-3.5-flash": "google",
+    "gemini-3.5-flash-lite": "google",
 }
 
 PRICING_URLS: dict[str, str] = {

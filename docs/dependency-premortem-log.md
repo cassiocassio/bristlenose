@@ -908,10 +908,24 @@ the rule; the current Sonnet cannot be honoured today, and the receipt sits in
 whether the stringifying is tied to the schema's `verbatim_excerpt`
 "copy-paste" instruction.
 
+**Gemini, once the key was reachable: both picker models are retired for new
+users.** `bristlenose configure google` wrote a login-keychain item the CLI
+reads, and the first call returned `404 — no longer available to new users`
+for **both** `gemini-2.5-flash` and `gemini-2.5-pro`, each naming its
+replacement (`gemini-3.6-flash`; `gemini-3.1-pro-preview`). Google's
+deprecations page showed no shutdown date for either the day before — soft
+retirement is a separate status it does not carry, so "no retirement date" was
+true and useless. This overturns the hold-on-cost: the working full-Flash
+models (3.6/3.7/3.8) are one price, so nothing cheaper existed to prefer.
+Default → `gemini-3.8-flash`, picker → flash + `3.5-flash-lite`, Pro dropped
+rather than ship a preview. **Tuning: a vendor "no retirement date" is not
+evidence a model is *obtainable*; only a call from a fresh account is.**
+
 **Gemini is blocked by a keychain split, not a key.** `credentials_macos.py:43`
-and `KeychainHelper.swift:74` use the identical item name, but the sandboxed
-app writes to the data-protection keychain while the CLI's `/usr/bin/security`
-reads the login keychain — same name, two databases. The login one holds a
+and `KeychainHelper.swift:74` use the identical item name, but the app writes
+its items to the **iCloud** keychain (synchronizable) while the CLI's
+`/usr/bin/security` reads and writes the **login** keychain — same name, two
+keychains, confirmed in Keychain Access showing both side by side. The login one holds a
 22-char placeholder; the app's holds the real key and shows Online. On any Mac
 with the app installed the CLI and the app cannot share credentials. Not this
 review's to fix; the most consequential thing the afternoon found.

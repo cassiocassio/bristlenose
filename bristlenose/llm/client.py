@@ -552,6 +552,19 @@ class LLMClient:
 
         # Sampling params only for models that accept them — see
         # _ANTHROPIC_ACCEPTS_SAMPLING. Sending one to a post-4.6 model is a 400.
+        #
+        # Carried in `extra_body`, not as a named kwarg. anthropic 1.0 removed
+        # `temperature` from `messages.create` and the signature has no
+        # `**kwargs`, so a named kwarg is a hard TypeError on 1.x — before any
+        # HTTP call, on the default model, invisible to a mocked test. The API
+        # still accepts the field for the models in the sunset list; only the
+        # SDK stopped surfacing it. `extra_body` merges into the same top-level
+        # request JSON, so the wire request is unchanged, which is what keeps
+        # the promise in docs/design-decisions.md § "Temperature is not a
+        # control we ship" — *"nobody's analysis changes"*.
+        #
+        # `extra_body` exists on 0.x and 1.x alike, so this is version-agnostic
+        # and lifts the `anthropic<1` ceiling without a second code change.
         sampling: dict[str, float] = {}
         if request_model in _ANTHROPIC_ACCEPTS_SAMPLING:
             sampling["temperature"] = self.settings.llm_temperature
@@ -574,7 +587,7 @@ class LLMClient:
                 # Explicit timeout bypasses the SDK's heuristic that rejects
                 # non-streaming requests when max_tokens is high (>~21K).
                 timeout=600.0,
-                **sampling,
+                extra_body=sampling or None,
             )
         except asyncio.CancelledError:
             raise

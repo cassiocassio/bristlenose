@@ -15,12 +15,15 @@ model to one without teaching the other fails here instead of in a run.
 
 from __future__ import annotations
 
+import inspect
 import re
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import anthropic
 import pytest
+from anthropic.resources.messages import AsyncMessages
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.llm.client import _ANTHROPIC_ACCEPTS_SAMPLING, LLMClient
@@ -79,6 +82,7 @@ class TestSamplingParamsByModel:
     async def test_rejecting_model_gets_no_temperature(self) -> None:
         """claude-opus-4-8 rejects sampling params with a 400 — don't send one."""
         kwargs = await _capture_create_kwargs("claude-opus-4-8")
+        assert not kwargs["extra_body"]
         assert "temperature" not in kwargs
         assert "top_p" not in kwargs
         assert "top_k" not in kwargs
@@ -88,6 +92,7 @@ class TestSamplingParamsByModel:
         """Unknown models fail closed. Every future Claude model rejects sampling,
         so an omitted parameter (a working call at the API default) beats a 400."""
         kwargs = await _capture_create_kwargs("claude-sonnet-5")
+        assert not kwargs["extra_body"]
         assert "temperature" not in kwargs
 
     @pytest.mark.asyncio
@@ -96,12 +101,12 @@ class TestSamplingParamsByModel:
         there would move it to the API default of 1.0 and silently retune every
         analysis, invalidating the Jul 2026 quote-stability baseline."""
         kwargs = await _capture_create_kwargs("claude-sonnet-4-6")
-        assert kwargs["temperature"] == 0.1
+        assert kwargs["extra_body"] == {"temperature": 0.1}
 
     @pytest.mark.asyncio
     async def test_accepting_model_honours_a_custom_value(self) -> None:
         kwargs = await _capture_create_kwargs("claude-sonnet-4-6", temperature=0.7)
-        assert kwargs["temperature"] == 0.7
+        assert kwargs["extra_body"] == {"temperature": 0.7}
 
     @pytest.mark.asyncio
     async def test_request_is_otherwise_unchanged(self) -> None:
@@ -112,6 +117,40 @@ class TestSamplingParamsByModel:
         assert kwargs["tool_choice"] == {"type": "tool", "name": "structured_output"}
         assert kwargs["timeout"] == 600.0
         assert kwargs["system"] == "sys"
+
+
+class TestRequestMatchesInstalledSDK:
+    """The gap Entry 6 was lost in: every other test here mocks
+    ``messages.create``, and **a mock accepts any keyword argument**. 4246 tests
+    passed against an ``anthropic`` major that had removed ``temperature`` and
+    declared no ``**kwargs``, so every Claude call raised ``TypeError`` before
+    reaching the network and nothing was red. This class asks the one question a
+    mock cannot: does the *installed* SDK actually accept what we send?
+    """
+
+    @pytest.mark.asyncio
+    async def test_every_kwarg_we_send_exists_on_the_installed_sdk(self) -> None:
+        sig = inspect.signature(AsyncMessages.create)
+        accepts_var_kwargs = any(
+            param.kind is inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
+        )
+        # A signature with **kwargs would swallow anything and make this test
+        # vacuous — the whole point is that anthropic's does not have one.
+        assert not accepts_var_kwargs, "messages.create grew **kwargs; this test is now vacuous"
+
+        for model in ("claude-sonnet-4-6", "claude-opus-4-8"):
+            kwargs = await _capture_create_kwargs(model)
+            unknown = set(kwargs) - set(sig.parameters)
+            assert not unknown, f"{model}: SDK {anthropic.__version__} rejects {sorted(unknown)}"
+
+    @pytest.mark.asyncio
+    async def test_temperature_is_never_a_named_kwarg(self) -> None:
+        """It rides in ``extra_body`` instead. The API still takes the field for
+        sunset-list models; only the SDK stopped surfacing it, and anthropic 1.x
+        has no ``temperature`` parameter at all."""
+        for model in ("claude-sonnet-4-6", "claude-opus-4-8", "claude-sonnet-5"):
+            kwargs = await _capture_create_kwargs(model)
+            assert "temperature" not in kwargs, model
 
 
 class TestPickerClientCoherence:
@@ -134,9 +173,11 @@ class TestPickerClientCoherence:
         for model in _picker_claude_models():
             kwargs = await _capture_create_kwargs(model)
             if model in _ANTHROPIC_ACCEPTS_SAMPLING:
-                assert kwargs["temperature"] == 0.1, f"{model} should carry temperature"
+                assert kwargs["extra_body"] == {"temperature": 0.1}, (
+                    f"{model} should carry temperature"
+                )
             else:
-                assert "temperature" not in kwargs, (
+                assert not kwargs["extra_body"], (
                     f"{model} is offered in the macOS picker but is not in "
                     f"_ANTHROPIC_ACCEPTS_SAMPLING, yet a sampling parameter was sent. "
                     f"Post-4.6 Claude models reject it with a 400."

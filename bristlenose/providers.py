@@ -120,7 +120,15 @@ PROVIDERS: dict[str, ProviderSpec] = {
                 "Gemini API key",
             ),
         ],
-        default_model="gemini-2.5-flash",
+        # Moved 4 Sep 2026 because 2.5-flash is *gone for new users*: a live
+        # call on a fresh account returns 404 "no longer available to new
+        # users. Please update your code to use models/gemini-3.6-flash".
+        # Google's deprecations page still shows no shutdown date, which is
+        # true and useless — soft retirement is a separate status. 3.6/3.7/
+        # 3.8-flash are one price ($0.75/$3.75, doubling 2027-01-01); 3.8 is
+        # Google's own recommended default and the "current version" the
+        # rule asks for. All three passed live on 4 Sep.
+        default_model="gemini-3.8-flash",
         sdk_module="google.genai",
         pricing_url="https://ai.google.dev/gemini-api/docs/pricing",
     ),

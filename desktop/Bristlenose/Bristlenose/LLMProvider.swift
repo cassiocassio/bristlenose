@@ -62,7 +62,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         switch self {
         case .claude: "claude-sonnet-4-6"
         case .chatGPT: "gpt-5.6-terra"
-        case .gemini: "gemini-2.5-flash"
+        case .gemini: "gemini-3.8-flash"
         // Azure addresses a DEPLOYMENT, not a model — `client.py` resolves
         // `azure_deployment or ""` and never reads llm_model, and Python's
         // registry says "" for that reason. This stays non-empty anyway,
@@ -83,7 +83,7 @@ enum LLMProvider: String, CaseIterable, Identifiable {
         switch self {
         case .claude: ["claude-sonnet-4-6", "claude-haiku-4-5-20251001", "claude-opus-5"]
         case .chatGPT: ["gpt-5.6-terra", "gpt-5.6-luna"]
-        case .gemini: ["gemini-2.5-flash", "gemini-2.5-pro"]
+        case .gemini: ["gemini-3.8-flash", "gemini-3.5-flash-lite"]
         case .azure: ["gpt-4o", "gpt-4o-mini"]
         case .ollama: OllamaCatalog.curated.map(\.tag)
         }

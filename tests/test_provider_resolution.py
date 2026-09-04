@@ -22,6 +22,7 @@ from typer.testing import CliRunner
 
 from bristlenose import config
 from bristlenose.config import BristlenoseSettings
+from bristlenose.providers import PROVIDERS
 
 # Explicit empty keys for every cloud provider — beats env vars, .env files,
 # and (with the keychain patched out) leaves each test in full control.
@@ -58,7 +59,7 @@ class TestDeriveLadder:
         assert s.llm_provider == "google"
         # And the model snaps to the derived provider's default (composition
         # with _fill_provider_default_model — the reorder under test).
-        assert s.llm_model == "gemini-2.5-flash"
+        assert s.llm_model == PROVIDERS["google"].default_model
         res = config.get_provider_resolution()
         assert res is not None
         assert res.status == "derived"

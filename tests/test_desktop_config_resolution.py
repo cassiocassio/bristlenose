@@ -213,7 +213,7 @@ class TestProviderDefaultModelFill:
         monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
         s = config.load_settings(llm_provider="gemini")  # alias → google
         assert s.llm_provider == "google"
-        assert s.llm_model == "gemini-2.5-flash"
+        assert s.llm_model == PROVIDERS["google"].default_model
 
     def test_claude_keeps_code_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)

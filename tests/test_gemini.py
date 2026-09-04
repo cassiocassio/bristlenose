@@ -169,7 +169,10 @@ class TestGoogleProviderSpec:
         assert spec.name == "google"
         assert spec.display_name == "Gemini"
         assert "gemini" in spec.aliases
-        assert spec.default_model == "gemini-2.5-flash"
+        # Not the literal — Gemini retires models for new users without a
+        # shutdown date, so pinning a version here defended a 404. A default
+        # must exist; which one is providers.py's to say.
+        assert spec.default_model
         assert spec.sdk_module == "google.genai"
         assert len(spec.config_fields) == 1
 

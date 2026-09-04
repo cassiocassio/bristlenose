@@ -203,6 +203,17 @@ output is committed, so a change to the extractor lands as a diff someone can
 read — and prefer deriving a fact from the thing that *enforces* it over parsing
 prose about it.
 
+**A concrete instance, found while proving the sidecar gates (4 Sep 2026):**
+`check-bundle-integrity.py` scans `__TEXT,__text` for a zero-run of at least one
+page, because the incident it was built for left 16 KB of zeros in a 128 MB dylib.
+**42 of the bundle's 224 Mach-Os have a `__text` smaller than one page**, so at the
+default threshold they are unscannable by construction — a hole there cannot be a
+page long. The first probe picked one of those and stayed green, which looked like
+a mute gate and was in fact a gate looking somewhere else. Page granularity is
+still the right default for the failure mode that happened; the limit is recorded
+here rather than "fixed" with a lower threshold that would fire on legitimate
+padding.
+
 The residual is unmechanisable by construction. It needs someone reading the tree
 and asking *what is not in here?* — which is how every finding of 2–3 Sep 2026
 was made, this one included.

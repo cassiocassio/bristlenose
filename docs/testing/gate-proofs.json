@@ -1,6 +1,16 @@
 {
   "_policy": "A gate whose red nobody has seen is unproven, not passing. Automated proofs are derived from the test-<name> naming convention; this file records the ones that convention cannot see. Enforced by scripts/check-gate-proofs.py; the unproven COUNT is held by the ratchet metric `gates_without_proof`.",
   "declared": {
+    "check-bundle-integrity": {
+      "evidence": "exit 1, '1 of 1 Mach-O files have a hole', names the file and offset; the unmodified copy exits 0. Real bundle never touched. LIMIT FOUND: 42 of the bundle's Mach-Os have a __text smaller than one page, so at --min-run 4096 they are unscannable by construction \u2014 the first probe (a 1,972-byte __text) stayed green for that reason, not because the checker was broken.",
+      "how": "manual: copied a bundle .so to a temp dir, zeroed 4096 bytes inside __TEXT,__text using the checker's own section parser, ran at the default threshold",
+      "observed": "2026-09-04"
+    },
+    "check-bundle-manifest": {
+      "evidence": "exit 1, '1 uncovered runtime-data file(s) found'; exit 0 after removal; tree clean",
+      "how": "manual: dropped bristlenose/zz_gate_proof/probe.yaml, an uncovered runtime-data dir, then removed it",
+      "observed": "2026-09-04"
+    },
     "check-gate-policy": {
       "evidence": "exit codes checked under bash, not zsh; clean 0, expired 1, restored 0",
       "how": "manual: all four paths \u2014 undeclared, expired, stale, bad disposition",
@@ -15,6 +25,11 @@
       "evidence": "pytest_slow_marked: 8 > ceiling 7; clean restore verified",
       "how": "manual: added a real @pytest.mark.slow, saw it named and refused",
       "observed": "2026-09-03"
+    },
+    "check-sidecar-freshness": {
+      "evidence": "exit 1 STALE (bundle 3efb0d7d vs source b82fb204); exit 0 '\u2713 matches source' with the faked stamp; exit 1 again after restore. Bypass env unset throughout.",
+      "how": "manual: the real stamp (bundle predates today's edits) vs a stamp rewritten to the current sidecar_source_hash, then restored byte-identical",
+      "observed": "2026-09-04"
     },
     "gen-test-inventory": {
       "evidence": "run on 4dd87b9c \u2014 'STRUCTURE DRIFT'; green again on ff488734",

@@ -7,14 +7,18 @@ defined in [README.md](README.md#lifecycle).
 to point at. `SUPERSEDED` and `ABANDONED` entries say *why* in a clause; that clause
 is what stops the same idea being proposed again.
 
-*Unreviewed* means nobody has checked it. That is the absence of a claim, not a claim
-of currency. Dates come from `git log`; regenerate rather than hand-edit them.
+**All 150 are classified** as of 4 Sep 2026 — 85 IMPLEMENTED · 29 SANDPIT ·
+18 SUPERSEDED · 12 PROPOSED · 5 PARKED · 1 ABANDONED. A new mockup should be added
+here when it lands, or it becomes the next backlog.
+
+Dates come from `git log`; regenerate rather than hand-edit them. Where a timeline
+carries no date the evidence gave none — the state is still evidenced, the day is not.
 
 ## analysis
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `analysis-failure-states.html` | 3 Sep 2026 | *unreviewed* |
+| `analysis-failure-states.html` | 3 Sep 2026 | IMPLEMENTED — the popover half of the sidebar failure states; cited as the mockup (“16 states, real SF Symbols”) by `design-pipeline-diagnostic-popover.md`, and `ProjectDiagnosticPopover.swift` ships |
 | `analysis-inspector-panel-v2.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · SUPERSEDED 19 Mar 2026 by `analysis-inspector-panel-v3.html` — second iteration |
 | `analysis-inspector-panel-v3.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · IMPLEMENTED — `InspectorPanel.tsx` ships |
 | `analysis-inspector-panel.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · SUPERSEDED 19 Mar 2026 by `analysis-inspector-panel-v2.html` — first iteration |
@@ -55,7 +59,7 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `codebook-header-library-button.html` | 21 Aug 2026 | IMPLEMENTED — the Browse Library button ships in the header |
 | `codebook-library-states.html` | 1 Aug 2026 | IMPLEMENTED — enabled/disabled library states ship |
 | `codebook-llm-state-matrix.html` | 3 Sep 2026 | PROPOSED 3 Sep 2026 — the codebook × LLM state audit and the decisions taken against it |
-| `codebook-section-headers.html` | 19 Feb 2026 | *unreviewed* |
+| `codebook-section-headers.html` | 19 Feb 2026 | SANDPIT — a section-header style audit |
 | `codebook-v2-author.html` | 29 Aug 2026 | IMPLEMENTED — author attribution ships on codebook cards |
 | `codebook-v2-autocode-button.html` | 31 Aug 2026 | PROPOSED 31 Aug 2026 · IMPLEMENTED 31 Aug 2026 — the Install → Uninstall → Review arc |
 | `codebook-v2-autocode-progress.html` | 31 Aug 2026 | IMPLEMENTED — the AutoCode progress chip ships |
@@ -123,28 +127,28 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 |---|---|---|
 | `agent-scope-v1.html` | 20 Aug 2026 | IMPLEMENTED — “**The mockup is the spec:** six states”, per `design-mcp-*` |
 | `background-runs-view-switch-storyboard.html` | 16 Jun 2026 | PROPOSED 16 Jun 2026 · IMPLEMENTED — the storyboard that forced out the view-switch race; `ServeManager.swift` carries the guard (`drainParked`, `restartIfRunning`) |
-| `bracket-colour-explore.html` | 24 Feb 2026 | *unreviewed* |
+| `bracket-colour-explore.html` | 24 Feb 2026 | SANDPIT — the colour exploration behind the live-edit signal; “colour explored in …”, per `CSS-REFERENCE.md` |
 | `button-catalogue.html` | 31 Aug 2026 | SANDPIT — the button range at a glance; `atoms/button.css` ships |
 | `control-surface-parity.html` | 2 Jul 2026 | IMPLEMENTED — **approved Jul 2026**; the canonical cross-surface × cross-locale terms |
 | `debug-inspector-mockup.html` | 1 Aug 2026 | SANDPIT — debug instrument |
-| `desktop-nav-toolbar-rearrangement.html` | 21 Jun 2026 | *unreviewed* |
+| `desktop-nav-toolbar-rearrangement.html` | 21 Jun 2026 | IMPLEMENTED — “the interactive mockup” accompanying `design-desktop-nav-toolbar-rearrangement.md`; the menu/toolbar arrangement ships |
 | `docs-site-mockup.html` | 26 Jun 2026 | PROPOSED 26 Jun 2026 · IMPLEMENTED — self-declared throwaway, but the docs site was built: per-topic Markdown in the website repo’s `docs-src/`, published at bristlenose.app/docs/ |
 | `editable-themes-prototype.html` | 1 Aug 2026 | SANDPIT — theme-editing prototype |
 | `focus-mode-lab.html` | 4 Aug 2026 | SANDPIT — “Sandpit: real quote-card markup”; Focus Mode itself shipped in 0.24.0 |
-| `font-weight-tuner.html` | 22 Feb 2026 | *unreviewed* |
+| `font-weight-tuner.html` | 22 Feb 2026 | SANDPIT — quote-pop vs UI-chrome weight tuner |
 | `grid-lanes-quotes.html` | 17 Jun 2026 | PROPOSED 17 Jun 2026 · IMPLEMENTED — the masonry bake-off. **It calls itself a throwaway and that is now wrong**: `display: grid-lanes` ships as progressive enhancement in `theme/organisms/responsive-grid.css`. *Its one linked stylesheet is a dead path (`/report/assets/…`), so it renders bare* |
-| `icloud-sync-architecture.html` | 13 Jul 2026 | *unreviewed* |
+| `icloud-sync-architecture.html` | 13 Jul 2026 | PROPOSED 2026 · **PARKED** — its design doc opens “**Status: FUTURE MADNESS — parked, not planned**”. The iCloud references in Swift are iCloud *Keychain* (credential sync, settled 18 Aug 2026), a different thing |
 | `incremental-analysis-flows.html` | 7 Jul 2026 | IMPLEMENTED — “**Not the spec — the mockup is.**” Incremental analysis shipped in 0.20.0. (Its §7 “modal rejected as friction” rejects one *option inside* the file, not the file) |
 | `ingest-refusal-surfaces.html` | 19 Aug 2026 | IMPLEMENTED — ingest refusals surface as named reasons |
 | `journey-chain-stress-test.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED — journeys ship. *Linked theme CSS was repaired 3 Sep 2026 (see README); it rendered unstyled before that* |
 | `keycap-gallery.html` | 19 Jul 2026 | SANDPIT — keycap rendering gallery |
 | `lead-sentence-playground.html` | 31 Aug 2026 | SANDPIT — lead-sentence instrument |
-| `llm-availability-exposure.html` | 3 Sep 2026 | *unreviewed* |
-| `measure-aware-leading.html` | 15 Mar 2026 | *unreviewed* |
+| `llm-availability-exposure.html` | 3 Sep 2026 | PROPOSED 3 Sep 2026 — the tier argument for exposing LLM availability. Superseded in substance by `codebook-llm-state-matrix.html` §6, which settles that the control never changes; kept for the reasoning and the surface inventory |
+| `measure-aware-leading.html` | 15 Mar 2026 | PROPOSED 15 Mar 2026 — line-height varying with column width (Bringhurst §2.1.2). **Not built**: the `--bn-text-*-lh` tokens are still fixed per size |
 | `mini-heatmaps-dashboard.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 — **not built on the Dashboard**. Heatmaps ship on the Analysis lens instead; no decision recorded either way, so this is an idea that went elsewhere rather than one that was refused |
 | `mockup-analysis.html` | 10 Feb 2026 | PROPOSED 10 Feb 2026 · IMPLEMENTED — the Analysis lens ships |
 | `mockup-autocode-lifecycle.html` | 3 Sep 2026 | PROPOSED 19 Feb 2026 · SUPERSEDED 29 Aug 2026 by `codebook-v2-autocode-button.html` — a nine-step storyboard of the v1 flow, where importing a codebook and coding with it were separate acts; 0.29.0 made Install *be* apply |
-| `mockup-checkbox-options.html` | 28 Feb 2026 | *unreviewed* |
+| `mockup-checkbox-options.html` | 28 Feb 2026 | SANDPIT — checkbox style options, side by side |
 | `mockup-codebook-badges.html` | 7 Feb 2026 | PROPOSED 7 Feb 2026 · IMPLEMENTED — v5 “final decisions”; `Badge.tsx` ships |
 | `mockup-codebook-default-uxr.html` | 19 Feb 2026 | PROPOSED 19 Feb 2026 · SUPERSEDED 29 Aug 2026 by `codebook-v2-prototype.html` — the v1 codebook *picker*, replaced by Browse Library |
 | `mockup-codebook-garrett.html` | 19 Feb 2026 | PROPOSED 19 Feb 2026 · SUPERSEDED 29 Aug 2026 by `codebook-v2-prototype.html` — as above |
@@ -152,22 +156,22 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `mockup-codebook-panel.html` | 7 Feb 2026 | PROPOSED 7 Feb 2026 · IMPLEMENTED · **ABANDONED 29 Aug 2026** — this is `CodebookPanel`, the v1 codebook lens, deleted in `baa1aa0e` when v2 became the lens. Built, shipped for months, then removed |
 | `mockup-delete-button.html` | 9 Feb 2026 | PROPOSED 9 Feb 2026 · IMPLEMENTED — `Badge` `variant="deletable"` ships |
 | `mockup-desktop-rail-removal.html` | 27 Jun 2026 | PROPOSED 27 Jun 2026 · IMPLEMENTED — cited by `frontend/CLAUDE.md` for “Desktop embedded: rails removed” |
-| `mockup-discussion-evidence-strength.html` | 26 Jul 2026 | *unreviewed* |
-| `mockup-discussion-guide-distillation.html` | 26 Jul 2026 | *unreviewed* |
-| `mockup-discussion-heading-options.html` | 26 Jul 2026 | *unreviewed* |
-| `mockup-discussion-lens.html` | 26 Jul 2026 | *unreviewed* |
-| `mockup-header-redesign.html` | 28 Feb 2026 | *unreviewed* |
-| `mockup-minimap-columns.html` | 26 Jul 2026 | *unreviewed* |
+| `mockup-discussion-evidence-strength.html` | 26 Jul 2026 | PROPOSED 26 Jul 2026 — evidence-strength treatment for the unbuilt discussion lens |
+| `mockup-discussion-guide-distillation.html` | 26 Jul 2026 | PROPOSED 26 Jul 2026 — guide distillation for the unbuilt discussion lens; two US-federal examples |
+| `mockup-discussion-heading-options.html` | 26 Jul 2026 | PROPOSED 26 Jul 2026 — heading options for the unbuilt discussion lens (see `mockup-discussion-lens.html`) |
+| `mockup-discussion-lens.html` | 26 Jul 2026 | PROPOSED 26 Jul 2026 — “UX is mockup-proven”, but `design-discussion-lens.md` is `status: pending` and says in terms there is “no shipped reality to reconcile against”. There is no discussion lens in the code |
+| `mockup-header-redesign.html` | 28 Feb 2026 | PROPOSED 28 Feb 2026 — the mockup for `design-breathing-logotype.md`. **Not built**: nothing in the theme, frontend or desktop implements a breathing logotype |
+| `mockup-minimap-columns.html` | 26 Jul 2026 | SANDPIT — “multi-column **prototype** — detection + N-column redraw + single/multi A/B”; the minimap itself ships |
 | `mockup-minimap.html` | 10 Mar 2026 | PROPOSED 10 Mar 2026 · IMPLEMENTED — the minimap ships as column 4 of the sidebar grid |
-| `mockup-native-feedback-window.html` | 10 Jul 2026 | *unreviewed* |
-| `mockup-pii-wiring-spec.html` | 26 Jul 2026 | *unreviewed* |
-| `mockup-privacy-settings.html` | 26 Jul 2026 | *unreviewed* |
+| `mockup-native-feedback-window.html` | 10 Jul 2026 | IMPLEMENTED — `FeedbackSheet.swift` + `FeedbackSubmission.swift` ship |
+| `mockup-pii-wiring-spec.html` | 26 Jul 2026 | IMPLEMENTED — the Privacy tab + failure surface wiring; PII removal is stage 7 and the Settings pane ships. (Two *config* keys named in `config.py` remain unimplemented — `pii_llm_pass`, `pii_custom_names` — and now fail loudly rather than warn) |
+| `mockup-privacy-settings.html` | 26 Jul 2026 | IMPLEMENTED — the privacy Settings pane ships |
 | `mockup-proposed-badge-actions.html` | 22 Feb 2026 | PROPOSED 22 Feb 2026 · IMPLEMENTED — the badge action pill ships; see `docs/design-badge-action-pill.md` |
-| `mockup-signal-cards.html` | 26 Jul 2026 | *unreviewed* |
-| `mockup-tag-count-zero-suppression.html` | 2 Jul 2026 | *unreviewed* |
-| `mockup-tag-placement.html` | 7 Feb 2026 | *unreviewed* |
+| `mockup-signal-cards.html` | 26 Jul 2026 | SANDPIT — signal card variants; signal cards ship on the Analysis lens |
+| `mockup-tag-count-zero-suppression.html` | 2 Jul 2026 | SANDPIT — “**sandbox to reproduce the decisions**”, real theme CSS over real project data; the CSS trap it documents is in CLAUDE.md |
+| `mockup-tag-placement.html` | 7 Feb 2026 | SANDPIT — tag placement comparison |
 | `mockup-toolbar.html` | 7 Feb 2026 | PROPOSED 7 Feb 2026 · IMPLEMENTED — the Toolbar island ships |
-| `mockup-transcript-annotations.html` | 26 Jul 2026 | *unreviewed* |
+| `mockup-transcript-annotations.html` | 26 Jul 2026 | IMPLEMENTED — `theme/js/transcript-annotations.js` ships (in the frozen vanilla renderer, now a sealed byproduct) |
 | `moderator-question-pill.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED · **PARKED 5 Aug 2026** — built and tested, then withheld as not intuitive enough. Flag `moderatorQuestionPill: false`; revisit conditions in `docs/design-moderator-question-pill.md`. Do not delete the code and do not re-propose the idea |
 | `native-colour-alignment.html` | 2 Jul 2026 | IMPLEMENTED — the Apple-blue seam alignment shipped |
 | `nightfall-focus.html` | 9 Jul 2026 | PROPOSED 2026 · **SUPERSEDED** — named a “superseded mockup” in its own design doc; hand-rolled rather than on the theme |
@@ -175,14 +179,14 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `person-actions-everywhere.html` | 27 Aug 2026 | IMPLEMENTED — person actions ship across surfaces |
 | `quotes-spatial-arrow-nav.html` | 4 Aug 2026 | IMPLEMENTED — `utils/spatialNav.ts` ships (0.25.0) |
 | `reanalyse-sheet-pixels.html` | 22 Aug 2026 | IMPLEMENTED — the re-analyse sheet ships on the Mac |
-| `release-machine-paths.html` | 23 Aug 2026 | *unreviewed* |
-| `report-freshness-banner.html` | 3 Sep 2026 | *unreviewed* |
-| `responsive-quote-grid.html` | 19 Feb 2026 | *unreviewed* |
+| `release-machine-paths.html` | 23 Aug 2026 | IMPLEMENTED — “companion mockup” to `design-release-machine.md`; `scripts/release.sh` ships |
+| `report-freshness-banner.html` | 3 Sep 2026 | PROPOSED 2026 — **not built**. (The “freshness” in `ServeManager`/`AgentActivity` is the MCP tool-call window, an unrelated thing) |
+| `responsive-quote-grid.html` | 19 Feb 2026 | IMPLEMENTED — “the **original grid**”, against which `grid-lanes-quotes.html` was the masonry bake-off. Interactive, with a slider and HUD, so it doubles as an instrument |
 | `settings-accounts-generalised.html` | 18 Aug 2026 | IMPLEMENTED — Settings ▸ Accounts ships |
 | `shimmer-tuner.html` | 19 Jul 2026 | SANDPIT — shimmer-animation tuner |
 | `sparkline-explore.html` | 12 Feb 2026 | PROPOSED 12 Feb 2026 · IMPLEMENTED — sentiment sparklines ship |
 | `tentative-bars.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · IMPLEMENTED — the two-tone `MicroBar` ships (`tag-micro-bar-tentative`), pale tentative + solid accepted, with “N tentative + M accepted” on hover |
-| `tooltip-gallery.html` | 22 Feb 2026 | *unreviewed* |
+| `tooltip-gallery.html` | 22 Feb 2026 | SANDPIT — “6 variants (A–F) with interactive comparison and dark mode toggle”; **variant D was chosen**, per CLAUDE.md |
 | `typography-comparison.html` | 15 Feb 2026 | PROPOSED 15 Feb 2026 · IMPLEMENTED · SUPERSEDED — as above |
 
 ## out-of-credit
@@ -196,13 +200,13 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
 | `people-lens-scopes.html` | 27 Aug 2026 | IMPLEMENTED — the people lens ships |
-| `people-provenance-paths.html` | 19 Aug 2026 | *unreviewed* |
+| `people-provenance-paths.html` | 19 Aug 2026 | SANDPIT — provenance-path diagrams for the people lens |
 
 ## pipeline
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `pipeline-popover-rolling-log.html` | 22 Aug 2026 | *unreviewed* |
+| `pipeline-popover-rolling-log.html` | 22 Aug 2026 | PROPOSED 22 Aug 2026 — the deferred “Future direction” appendix of the popover doc: rolling logs / collapsing phase itinerary. Not built |
 | `pipeline-popover-sizing.html` | 22 Aug 2026 | IMPLEMENTED — `ProjectDiagnosticPopover` owns its own size, per this |
 
 ## provider
@@ -227,9 +231,9 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `sidebar-all-tabs-v2.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 18 Mar 2026 by `sidebar-all-tabs-v3.html` — second iteration |
 | `sidebar-all-tabs-v3.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 19 Mar 2026 by `sidebar-all-tabs-v4.html` — third iteration |
 | `sidebar-all-tabs-v4.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · IMPLEMENTED — last of four iterations. *Linked theme CSS repaired 3 Sep 2026* |
-| `sidebar-seam-window-edge.html` | 2 Sep 2026 | *unreviewed* |
+| `sidebar-seam-window-edge.html` | 2 Sep 2026 | IMPLEMENTED — cited from `SeamLabView.swift`’s own source comment; the seam lab ships |
 | `sidebar-status-vocabulary.html` | 27 Aug 2026 | IMPLEMENTED — `ProjectCellSpec` / `ProjectSubtitle` carry this vocabulary |
-| `sidebar-tidyup-before-after.html` | 14 Aug 2026 | *unreviewed* |
+| `sidebar-tidyup-before-after.html` | 14 Aug 2026 | SANDPIT — a before/after comparison of the sidebar tidy-up |
 
 ## signal
 
@@ -237,7 +241,7 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 |---|---|---|
 | `signal-card-expanded.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED — signal cards ship on the Analysis lens |
 | `signal-elaboration.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED — `server/elaboration.py` ships |
-| `signals-sidebar-row-layouts.html` | 31 Aug 2026 | *unreviewed* |
+| `signals-sidebar-row-layouts.html` | 31 Aug 2026 | SANDPIT — row-layout options for signals in the sidebar |
 
 ## type
 
@@ -264,8 +268,8 @@ of currency. Dates come from `git log`; regenerate rather than hand-edit them.
 | `welcome-fibonacci-variants.html` | 15 Jul 2026 | PROPOSED 15 Jul 2026 · SUPERSEDED by `welcome-fibonacci-rotating.html` (canonical) |
 | `welcome-gradient-playground.html` | 19 Aug 2026 | SANDPIT — gradient tuner for the welcome surface |
 | `welcome-layout-experiments.html` | 15 Jul 2026 | PROPOSED 15 Jul 2026 · SUPERSEDED by `welcome-fibonacci-rotating.html` (canonical) |
-| `welcome-science-animations.html` | 25 Jul 2026 | *unreviewed* |
-| `welcome-science-disclosure.html` | 19 Jul 2026 | *unreviewed* |
+| `welcome-science-animations.html` | 25 Jul 2026 | IMPLEMENTED — “**reference spec**” for `WelcomeIllustrations.swift`, and the website welcome cells were ported from it |
+| `welcome-science-disclosure.html` | 19 Jul 2026 | SANDPIT — disclosure variants for the science welcome cell; the cell itself ships (`welcome-science-animations.html`) |
 | `welcome-studytools-animations.html` | 20 Aug 2026 | IMPLEMENTED — cited from `WelcomeHomeView.swift`’s own doc comment |
 
 ## window

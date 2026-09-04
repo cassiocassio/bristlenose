@@ -4,7 +4,9 @@
 derive-only proposal; revised at implementation to the **current-provider**
 model after review (the .app already works this way: the provider stays
 whatever you last set, and nothing asks mid-run). This doc describes what
-shipped and why.
+shipped and why. _Trued 4 Sep 2026: the §4 transcripts show the real Keychain
+item names, the read-back failure branch is recorded, and §6 gains the
+two-keychain sharing._
 
 Desktop selection is unchanged (the Swift host injects provider+model
 explicitly); see §6 for the toes this deliberately does not tread on.
@@ -121,7 +123,7 @@ First key — configure = choose; bare runs work forever after:
 $ bristlenose configure chatgpt
 Enter your ChatGPT API key: ················
 ✓ Valid
-✓ Stored in Keychain as "Bristlenose ChatGPT API Key"
+✓ Stored in Keychain as "Bristlenose OpenAI API Key"
 ChatGPT is now your provider for analysis.
 You can now run: bristlenose run interviews
 ```
@@ -131,10 +133,26 @@ Second key — switches loudly, names the way back:
 ```
 $ bristlenose configure claude
 ✓ Valid
-✓ Stored in Keychain as "Bristlenose Claude API Key"
+✓ Stored in Keychain as "Bristlenose Anthropic API Key"
 Claude is now your provider for analysis (was ChatGPT).
 Switch back any time:  bristlenose use chatgpt
 You can now run: bristlenose run interviews
+```
+
+_The two transcripts above printed "Bristlenose ChatGPT API Key" and "Bristlenose
+Claude API Key" until 4 Sep 2026 — faithful transcripts of a CLI line that named the
+item after the product rather than the stored service. The names shown now are what
+Keychain Access lists (`providers.py` `CREDENTIALS`)._
+
+When the key does not read back — a refused write, or an environment variable
+shadowing the stored key — `configure` refuses to claim it, exits 1, and the
+provider is **not** made current (`credentials.set_verified`, 4 Sep 2026):
+
+```
+$ bristlenose configure claude
+✓ Valid
+✗ Not saved — the key did not read back from Keychain.
+Either the write was refused, or an environment variable (BRISTLENOSE_ANTHROPIC_API_KEY or ANTHROPIC_API_KEY) is shadowing the stored key.
 ```
 
 Switching without re-pasting a key:
@@ -199,6 +217,14 @@ execution (see `docs/design-stage-backends.md`).
    Remaining desktop-side language ("Claude is the recommended default" in
    `WelcomeHomeView.swift`; the Settings picker preselecting Claude before
    first activation) is queued for the desktop UX pass.
+5. **The keys themselves are shared, not just the semantics (4 Sep 2026).**
+   The app keeps a login-keychain copy of every CLI-read key
+   (`KeychainHelper.sharedWithCLI`, pinned by
+   `tests/test_swift_python_contract.py`) and adopts what `configure` writes
+   when Settings ▸ LLM Provider is opened, so a key set up in either place is
+   seen by both — `docs/design-keychain.md` §"One keyspace, two keychains".
+   The *current-provider* choice stays per channel: item 2 keeps the CLI's
+   `BRISTLENOSE_LLM_PROVIDER` invisible to the app.
 
 ## 7. Testing
 

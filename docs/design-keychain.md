@@ -1,10 +1,11 @@
 ---
 status: partial
-last-trued: 2026-08-18
-trued-against: HEAD@main on 2026-08-18 (61498cd9)
+last-trued: 2026-09-04
+previous-trued: 2026-08-18
+trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 ---
 
-> **Truing status:** Partial — the original design (§Design Decisions, §Module Structure, §CLI Commands) shipped and remains the canonical CLI/serve-mode credential path, with provider-list expansion (2→5). The Track C sandboxed-desktop deployment ships a different credential path (Swift reads Keychain, injects env vars; Python never touches Keychain) — documented in the new §"Desktop (sandboxed) credential path" section. Inline Python source (§Module Structure) is the pre-ship plan; see `bristlenose/credentials.py` + `credentials_macos.py` for current.
+> **Truing status:** Partial — the original design (§Design Decisions, §CLI Commands) shipped and remains the canonical CLI/serve-mode credential path, with provider-list expansion (2→5). The Track C sandboxed-desktop deployment ships a different credential path — Swift reads Keychain, injects env vars; the *sidecar* never touches Keychain — in §"Desktop (sandboxed) credential path". **Since 4 Sep 2026 the two paths share one keyspace:** the app keeps a login-keychain copy of every CLI-read key and reconciles it, so a key set up in the CLI or the app is seen by both — §"One keyspace, two keychains" is the section to read first, and it supersedes any sentence elsewhere in this doc that assumes a single keychain. Inline Python source (§Module Structure) is the pre-ship plan; see `bristlenose/credentials.py` + `credentials_macos.py` + `providers.py` (`CREDENTIALS`) for current.
 
 ## Changelog
 
@@ -54,7 +55,7 @@ Secure credential storage for API keys using native system keychains.
 Store API keys in the macOS Keychain (and Linux Secret Service where available) instead of `.env` files. This is:
 
 1. **More secure** — encrypted at rest, not plain text on disk
-2. **More convenient** — one keychain entry works across all projects
+2. **More convenient** — one credential works across all projects (on a Mac that is two keychain entries since 4 Sep 2026: the app's synced one and the login copy the CLI reads — §"One keyspace, two keychains")
 3. **Expected by users** — Mac users expect credentials in Keychain Access
 
 ---
@@ -86,14 +87,15 @@ below rather than as errors._
 | Class | Service name | Account | Synced? | Read by |
 |---|---|---|---|---|
 | LLM provider keys | `Bristlenose {Anthropic,OpenAI,Azure,Google Gemini} API Key` | **fixed** `bristlenose` | yes — **and a login-keychain copy** (§"One keyspace, two keychains") | Swift host → env; CLI Python directly, from the login copy |
-| Miro token | `Bristlenose Miro Access Token` | **fixed** `bristlenose` | yes — **and a login-keychain copy** | Swift host (`overlayMiroToken`, unconditional); server env-first, then the login copy |
+| Miro token | `Bristlenose Miro Access Token` | **fixed** `bristlenose` | yes — **and a login-keychain copy** | Swift host (`overlayMiroToken`, unconditional); the serve route via `get_credential()`, which is **store first, then env** — the opposite order from the settings pipeline in §5 |
+| Miro refresh token | `Bristlenose Miro_Refresh API Key` — the *fallback* name for an unregistered key | **fixed** `bristlenose` | **login only**, and only on a CLI Mac | The serve OAuth route alone (`routes/miro.py`). **Known gap (4 Sep 2026):** not in `CREDENTIALS`, not in `KeychainHelper.serviceNames`, so the app cannot read it and the contract test cannot see it. Registering it renames the item and the `.env` key for existing users, so it is recorded here rather than changed |
 | Cloud sign-ins | `Bristlenose {Microsoft Teams,Google Meet} Sign-In` | **derived** — SHA-256 of the lowercased address | yes | Swift only |
 | MCP bearer | `Bristlenose MCP Token` | **derived** — SHA-256 of the project path | **no** | Swift host → sidecar env |
 
 Three things about that table are load-bearing:
 
 - **The fixed account string cannot move for the first two rows.** Python reads
-  them at exactly `bristlenose` (`credentials_macos.py:39-45`), so the
+  them at exactly `bristlenose` (`credentials_macos.py` `ACCOUNT`; the service names beside it derive from `providers.py` `CREDENTIALS`), so the
   account-bearing methods added in `8901845f` default to it and only cloud
   sign-ins pass a derived key.
 - **Derived accounts are hashed, never the raw identifier.** `kSecAttrAccount` is
@@ -102,17 +104,19 @@ Three things about that table are load-bearing:
   mechanics (enumeration, the `unidentified` slot, the one-shot legacy migration)
   are canonical in [design-cloud-import.md](design-cloud-import.md) §7 and are
   deliberately **not** retold here.
-- **The MCP bearer is the one non-synchronizable store**
-  (`MCPTokenStore.swift:157`), and it is the exception to every blanket sync
-  claim in this doc. The reason does not generalise: that token names a server on
+- **The MCP bearer is the one store that is non-synchronizable by decision**
+  (`MCPTokenStore.swift:157`). The reason does not generalise: that token names a server on
   *this* machine and is meaningless on another Mac. Cloud grants sync by an
-  explicit 18 Aug decision; provider keys always have.
+  explicit 18 Aug decision; provider keys always have. Since 4 Sep 2026 there is
+  a second, structural exception: every **login-keychain copy** is
+  non-synchronizable by construction — the file-based keychain has no sync —
+  so "synced" in the table describes the app's own copy, never the CLI's.
 
 **`serviceNames` is an allowlist, not a naming convention.** `get` and `set` both
 `guard let service = serviceNames[provider]` and bail, so an unregistered key
 reads nil and writes false — **silently**. A store built on one looks entirely
 correct and persists nothing; that shipped once and cost weeks of "why am I
-signing in again?" (`KeychainHelper.swift:76-83`, pinned by
+signing in again?" (`KeychainHelper.swift`, `serviceNames`; pinned by
 `CloudGrantKeychainRegistrationTests`).
 
 **Caution when reading `hasAnyAPIKey()`:** it iterates *every* entry in that map,
@@ -138,7 +142,7 @@ bristlenose configure chatgpt
 # Also: azure, gemini, miro
 ```
 
-**Shipped note:** command takes **product names** (`claude`, `chatgpt`, `gemini`) in user-facing flags, not internal names (`anthropic`, `openai`, `google`). See `bristlenose/cli.py:1613-1727`. Internal storage still keys on internal names.
+**Shipped note:** command takes **product names** (`claude`, `chatgpt`, `gemini`) in user-facing flags, not internal names (`anthropic`, `openai`, `google`). See `bristlenose/cli.py` (`configure`). Internal storage still keys on internal names, and the name `configure` prints is the stored item's, from `providers.py` `CREDENTIALS` — it printed the product-name form ("Bristlenose Claude API Key") for an item called "Bristlenose Anthropic API Key" until 4 Sep 2026.
 
 **Not** a wizard that configures everything at once — that's rare and over-engineered.
 
@@ -157,7 +161,7 @@ bristlenose configure chatgpt
 > **Superseded as of 2026-08-18 — this was stated backwards, and the inversion
 > is load-bearing.** Original decision preserved below the corrected box.
 
-**Shipped behaviour:** env var first, then `.env`, then Keychain.
+**Shipped behaviour (settings pipeline):** env var first, then `.env`, then Keychain. **`get_credential()` in `credentials.py` — used by the Miro route — is the other way round: store first, then env.** Two readers, opposite precedence, both shipped; a caller picks by importing one or the other, so name which you mean.
 
 ```
 1. Environment variable  (pydantic-settings)
@@ -194,17 +198,17 @@ lookup order never implemented it._
 
 **Rationale:** Snap runs in a sandbox and may not have Keychain access. We'll figure out the right fallback (encrypted file in `$SNAP_USER_COMMON`?) when we get there. Don't let it block the macOS implementation.
 
-> **Post-script (2026-04-21):** Snap shipped with env-var fallback. `bristlenose configure` detects snap context and prints an `export ANTHROPIC_API_KEY=...` message for the user to add to their shell profile. Encrypted-file approach was not needed — env vars are sufficient for snap users who are already comfortable with shell. See `docs/design-doctor-and-snap.md:872-877` for shipped behaviour.
+> **Post-script (2026-04-21):** Snap shipped with env-var fallback. `bristlenose configure` detects snap context and prints an `export ANTHROPIC_API_KEY=...` message for the user to add to their shell profile. Encrypted-file approach was not needed — env vars are sufficient for snap users who are already comfortable with shell. See `docs/design-doctor-and-snap.md` (the credential paragraph) for shipped behaviour.
 
 ---
 
 ## Desktop (sandboxed) credential path
 
-**Shipped in Track C (Apr 2026).** This is a distinct deployment from the CLI/serve-mode path above. When Bristlenose runs embedded in the macOS desktop app (sandboxed, signed, TestFlight/App Store bound), the credential flow inverts: **Swift reads Keychain via Security.framework; Python never touches Keychain.**
+**Shipped in Track C (Apr 2026).** This is a distinct deployment from the CLI/serve-mode path above. When Bristlenose runs embedded in the macOS desktop app (sandboxed, signed, TestFlight/App Store bound), the credential flow inverts: **Swift reads Keychain via Security.framework; the sidecar never touches Keychain.** (The *CLI* on the same Mac does — it reads the login-keychain copy the app keeps of every CLI-shared key, §"One keyspace, two keychains".)
 
 > **Beat 3 addition (2026-04-29).** A new component, `LLMValidator.swift`, reads the Keychain key inside Swift Settings to do round-trip authentication against the provider's API. It does NOT change the flow below — the env-var injection on sidecar launch is unchanged. See `design-desktop-settings.md` §"Validation flow (Beat 3)" for the validator details (verdict cache, TTL, offline survival).
 
-> **Data-protection keychain migration (2026-06-02, commit `8b2ef51`).** The desktop store moved off the file-based login keychain onto the **data-protection keychain**: `kSecUseDataProtectionKeychain` on every get/set/delete, a team-scoped `keychain-access-groups` entitlement (`$(AppIdentifierPrefix)app.bristlenose`), `kSecAttrSynchronizable: true` (iCloud Keychain sync — *deliberate*: a revocable credential that also survives a damaged login keychain), `kSecAttrAccessibleAfterFirstUnlock`, and **no** biometric `SecAccessControl`. The DP keychain validates access by **Team ID, not the binary's code-directory hash** — so the host reads its own keys without a prompt across rebuilds, and the old "3× prompt cascade" (which had justified a since-removed lazy status-load) was a *legacy-keychain* artifact, not a sandbox limit (refs: Apple TN3137; steipete/CodexBar #585). Read/delete match queries use `kSecAttrSynchronizableAny` or synced items are invisible. Diagnose `errSecMissingEntitlement` (-34018) as an entitlement/keychain-world problem, not a damaged keychain. Canonical: `desktop/CLAUDE.md` §Key conventions + the `KeychainHelper.swift` header.
+> **Data-protection keychain migration (2026-06-02, commit `8b2ef51`).** The desktop store moved its *own* copy off the file-based login keychain onto the **data-protection keychain** (since 4 Sep 2026 the five CLI-shared keys keep a login-keychain copy as well — §"One keyspace, two keychains"): `kSecUseDataProtectionKeychain` on every get/set/delete, a team-scoped `keychain-access-groups` entitlement (`$(AppIdentifierPrefix)app.bristlenose`), `kSecAttrSynchronizable: true` (iCloud Keychain sync — *deliberate*: a revocable credential that also survives a damaged login keychain), `kSecAttrAccessibleAfterFirstUnlock`, and **no** biometric `SecAccessControl`. The DP keychain validates access by **Team ID, not the binary's code-directory hash** — so the host reads its own keys without a prompt across rebuilds, and the old "3× prompt cascade" (which had justified a since-removed lazy status-load) was a *legacy-keychain* artifact, not a sandbox limit (refs: Apple TN3137; steipete/CodexBar #585). Read/delete match queries on the data-protection keychain use `kSecAttrSynchronizableAny` or synced items are invisible (the login copy's queries deliberately carry neither flag — that is what routes them to the file-based keychain). Diagnose `errSecMissingEntitlement` (-34018) as an entitlement/keychain-world problem, not a damaged keychain. Canonical: `desktop/CLAUDE.md` §Key conventions + the `KeychainHelper.swift` header.
 
 ### The flow
 
@@ -229,7 +233,7 @@ lookup order never implemented it._
 - `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift` — `overlayAPIKeys(into:)` reads the **active** provider's keychain entry and injects its env var (moved here from `ServeManager`; callers reach it via `childEnvironment`). Distinct from the Settings tab's eager all-providers status read.
 - `desktop/Bristlenose/Bristlenose/KeychainHelper.swift` — Security.framework-based store (no shell-out to `security` CLI)
 - `desktop/Bristlenose/Bristlenose/LLMSettingsView.swift` — SwiftUI Settings UI that calls KeychainHelper
-- `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift:132-180 (`childEnvironment`, called from ServeManager.swift:312)` — subprocess boot that applies the overlay
+- `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift` `childEnvironment` (called from `ServeManager.start`) — subprocess boot that applies the overlay
 - Commit: "inject keychain api keys as env vars" (a8dc3cb)
 
 ### Why this split
@@ -244,11 +248,11 @@ The sandboxed desktop context adds constraints that change the optimal design:
 
 Env-var-over-keychain-access-groups has a small but non-zero residual risk: env vars are visible to anyone with the same UID via `ps -E`. The trade-off:
 
-- An attacker with same-UID code execution on the machine can already call `SecItemCopyMatching` directly against the same keychain entries the app uses. Net delta from env-var exposure is small.
+- An attacker with same-UID code execution on the machine can already read the **login-keychain copy** with `SecItemCopyMatching` — past macOS's ACL dialog — and the app's own data-protection copy only with the app's entitlement (an unentitled caller gets `-25300`, measured in §"One keyspace, two keychains"). Net delta from env-var exposure is small either way: same-UID code execution is not the boundary this design defends.
 - The sandbox protects against *other* UIDs and untrusted cross-app actors. Both `security` CLI and Security.framework rely on the same sandbox boundary.
 - Clear documentation ("same-UID threat not mitigated") is honest; hiding the env vars in Keychain access groups would be security theatre against the actual threat model.
 
-See the comment block at `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift:313-317` for the in-code rationale.
+See the comment block above `overlayAPIKeys` in `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift` for the in-code rationale.
 
 ### Testability
 
@@ -449,7 +453,7 @@ Shipped alongside the desktop credential path in Track C (Apr 2026). Two layers,
 
 Every line of sidecar stdout passes through a regex-based redactor before forwarding to unified logging. Recognises the shape of known provider API keys and replaces with `<REDACTED>`.
 
-- Anchors: `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift:444-461 (`keyRedactionRegex` + `redactKeys`)` (redactor implementation), `desktop/Bristlenose/BristlenoseTests/HandleLineRedactorTests.swift` (tests)
+- Anchors: `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift` (`keyRedactionRegex` + `redactKeys`) (redactor implementation), `desktop/Bristlenose/BristlenoseTests/HandleLineRedactorTests.swift` (tests)
 - Commits: "runtime log redactor for api key shapes" (8a41f60), "tests for env injection, redactor" (5dc971f)
 
 Why runtime and not just source-time? Python logging is out of our control — third-party libraries, error messages, subprocess output. A runtime filter catches leaks the source-time gate can't.
@@ -470,7 +474,7 @@ Why both layers? Source-time catches the easy mistake before it ships. Runtime c
 
 ---
 
-> **Historical:** the sections below (Module Structure through Implementation Order) describe the pre-ship plan. The approach shipped with expansion (5 providers instead of 2, Swift-side store for desktop context) but the Python-side structure is substantively as planned. Inlined source is the plan-version; see `bristlenose/credentials.py`, `credentials_macos.py`, `credentials_linux.py` for current.
+> **Historical:** the sections below (Module Structure through Implementation Order) describe the pre-ship plan. §Edge Cases inside that range was live design reasoning rather than plan, and carries its own dated post-scripts where it has been overtaken. The approach shipped with expansion (5 providers instead of 2, Swift-side store for desktop context) but the Python-side structure is substantively as planned. Inlined source is the plan-version; see `bristlenose/credentials.py`, `credentials_macos.py`, `credentials_linux.py` for current.
 
 ---
 
@@ -838,6 +842,8 @@ def configure(
     console.print("You can now run: [bold]bristlenose run ./interviews[/bold]")
 ```
 
+> _4 Sep 2026:_ the `service_name = f"Bristlenose {display_name} API Key"` line in that plan is the origin of a bug that shipped — the real item is named from `credential_service_name(canonical)` (`providers.py` `CREDENTIALS`), and `configure` printed the display-name form ("Bristlenose Claude API Key" for "Bristlenose Anthropic API Key") until that day. The sample output above the plan had it right.
+
 ---
 
 ## Integration Points
@@ -1001,6 +1007,8 @@ If running headless (SSH session without GUI), the command fails and we fall bac
 
 macOS users may have multiple keychains. `security` uses the default keychain by default, which is correct for our use case.
 
+> **Superseded 4 Sep 2026.** Correct for the *CLI's* copy only. The Mac app's own copy lives in the data-protection keychain, which `security` cannot address at all — the split this assumption hid, and what the app does about it, is §"One keyspace, two keychains".
+
 ### 3. Key rotation
 
 Users can run `bristlenose configure anthropic` again to replace an existing key. The implementation deletes-then-adds, so this works.
@@ -1008,6 +1016,8 @@ Users can run `bristlenose configure anthropic` again to replace an existing key
 ### 4. Keychain sync (iCloud)
 
 If the user's default keychain syncs via iCloud, the API key will sync across their Macs. This is probably fine — same user, same credentials. Document it as a "feature" (use across all your Macs).
+
+> **Superseded 4 Sep 2026.** The login copy `security` writes never syncs — the file-based keychain has no sync. "Same key on all your Macs" is delivered by the *app's* data-protection copy (2 Jun / 18 Aug decisions), which the app re-materialises into each Mac's login keychain on first read.
 
 ---
 

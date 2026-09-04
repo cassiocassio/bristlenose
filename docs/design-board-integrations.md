@@ -1,4 +1,12 @@
+---
+status: pending
+last-trued: 2026-09-04
+trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
+---
+
 # Board Integrations — Multi-Board Design
+
+> **Still aspirational as of 4 Sep 2026** — no Mural, Lucid or FigJam code exists; B0 palette is the only shipped piece. Two rows in the tables below were corrected the same day because they are instructions a future builder follows: a board's credential is one `CREDENTIALS` entry plus its Swift mirror in **both** `serviceNames` and `sharedWithCLI` (the Miro model is now two keychain items), and the contract test that pins them. Everything else is unchanged plan.
 
 One-way export from Bristlenose to a team whiteboard, behind the **board-agnostic
 layout IR** already shipped for Miro. This doc assesses three additional render
@@ -189,7 +197,7 @@ The reuse point is large; the per-board delta is small and shaped like Miro's.
 | **Container** | areas + `parentId` (or absolute box) | container box, membership by bbox overlap | n/a |
 | **Auth** | OAuth (15-min access + rotating refresh) — paste-token only demo-grade | **API key** paste-token first; OAuth later | n/a |
 | **Routes** | `routes/mural.py` | `routes/lucid.py` | n/a |
-| **Keychain + env** | `mural` service name + `BRISTLENOSE_MURAL_ACCESS_TOKEN` | `lucid` + `BRISTLENOSE_LUCID_API_KEY` | n/a |
+| **Keychain + env** | `mural` — one `CREDENTIALS` entry (`providers.py`) + a Swift mirror line in `KeychainHelper.serviceNames` **and** `sharedWithCLI` + `BRISTLENOSE_MURAL_ACCESS_TOKEN`; `tests/test_swift_python_contract.py` fails until all three agree | `lucid` + `BRISTLENOSE_LUCID_API_KEY`, registered the same three places | n/a |
 | **Sub-processor note** | `SECURITY.md` | `SECURITY.md` | n/a |
 
 ### The renderer abstraction (accommodating both delivery shapes)
@@ -391,7 +399,7 @@ set up twice) is unchanged.
 | Per-target renderer | `bristlenose/miro_client.py` | `+ mural_client.py`, `+ lucid_client.py` (+ `lucid_package.py`) behind a `BoardRenderer` protocol |
 | Export orchestration | `bristlenose/server/miro_export.py` | `bristlenose/server/board_export.py` (build_board agnostic; `push` pluggable) |
 | Routes | `bristlenose/server/routes/miro.py` | `+ routes/mural.py`, `+ routes/lucid.py` (same shape) |
-| Token storage | `credentials*.py` + Swift `KeychainHelper.serviceNames` + `overlayMiroToken` + `EnvCredentialStore.ENV_VAR_MAP` | one keychain entry + env var **per board**, same pattern (no Python-writes-Keychain path; Swift host stores, injects via env under App Sandbox) |
+| Token storage | `providers.py` `CREDENTIALS` (key, env var, keychain name — the one table `credentials*.py` derive from) + Swift `KeychainHelper.serviceNames` / `sharedWithCLI` + `overlayMiroToken` | one `CREDENTIALS` entry + its Swift mirror line in `serviceNames` **and** `sharedWithCLI`, **per board**. The Miro model as of 4 Sep 2026 is **two** keychain items — the app's synced one and a login-keychain copy the CLI reads — plus the env var, all derived from that one entry. A board registered in `serviceNames` but not `sharedWithCLI` is invisible to the CLI, silently: the exact split `design-keychain.md` §"One keyspace, two keychains" documents. (Swift host stores and injects via env under App Sandbox; the sandboxed sidecar never writes Keychain.) |
 | Egress governance | `SECURITY.md` Miro sub-processor note (singular, Miro-named); anonymisation tests | **Generalise the headline** — `SECURITY.md:43` currently says "…makes Miro Inc. a sub-processor" (singular); rewrite to name whichever board the researcher connects (Miro Inc. / Mural Inc. / Lucid Software Inc.). Per board: a note with vendor + egress shape (quote text, speaker codes, sentiment, opt-in clip links; never names; hidden excluded) **+ a DPA/residency pointer URL** (procurement asks). One serialized-payload anonymisation test per board. |
 | Native entry | `ContentView.swift` / `MenuCommands.swift` → bridge `sendToMiro` | a generalised `sendToBoard` (or keep per-board dispatch); web panel owns the picker |
 

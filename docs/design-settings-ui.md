@@ -1,8 +1,11 @@
 ---
 status: partial
-last-trued: 2026-06-07
-trued-against: HEAD@desktop-provider-resolution on 2026-06-07
+last-trued: 2026-09-04
+previous-trued: 2026-06-07
+trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 ---
+
+> **Trued 4 Sep 2026 (--topic keychain).** The credential table below said Python and Swift share the same Keychain entries; they did not — the app's items live in the data-protection keychain, invisible to `security` — and now share only through the login-keychain copy the app keeps. Linux is `secret-tool`, not `secretstorage`. The API-keys banner's anchor moved to `BristlenoseShared`. Body otherwise untouched: the web-UI list design still applies to serve mode.
 
 > **Truing status:** Partial — Phase 1 (web gear-icon modal, `SettingsModal.tsx`, `ModalNav.tsx`, `⌘,` shortcut) **shipped**; Phases 2/3/4 remain pending as described. The "API Keys" section is architecturally superseded for the desktop-embedded deployment — see banner there. The serve-mode CLI path still applies when running `bristlenose serve` outside the sandboxed desktop app.
 
@@ -115,11 +118,11 @@ These describe the *study*, not the user.
 |-------|------|------|
 | Abstract store | `credentials.py` | `get`, `set`, `delete`, `exists` |
 | macOS Keychain | `credentials_macos.py` | Full CRUD via `security` CLI |
-| Linux Secret Service | `credentials_linux.py` | Full CRUD via `secretstorage` |
+| Linux Secret Service | `credentials_linux.py` | Full CRUD via the `secret-tool` CLI; a 0600 config `.env` when there is no Secret Service |
 | Env fallback | `credentials.py` | Read-only |
-| Desktop (Swift) | `KeychainHelper.swift` | Full CRUD, same service names |
+| Desktop (Swift) | `KeychainHelper.swift` | Full CRUD, same service names — in the **data-protection** keychain, plus a **login-keychain copy** of the five CLI-shared keys |
 
-Python and Swift share the same Keychain entries. A key saved via CLI is visible to the desktop app and vice versa.
+Python and Swift did **not** share entries until 4 Sep 2026: the app's items live in the data-protection keychain, which `security` cannot see, so this paragraph was false for the whole life of the sandboxed app. They share now, for the five CLI-read keys only, through a login-keychain copy the app keeps and reconciles — a key `bristlenose configure` wrote is adopted when Settings ▸ LLM Provider is opened, and a key saved in the app is readable by `bristlenose run` at once. `design-keychain.md` §"One keyspace, two keychains".
 
 ### CLI credential command (complete)
 
@@ -217,7 +220,7 @@ Room for more personal settings over time (e.g. organisation name, default codeb
 
 ### API Keys section
 
-> **Architecturally superseded for the desktop-embedded case as of 2026-04-21.** In the sandboxed macOS alpha, Swift owns Keychain CRUD — SwiftUI Settings → LLM tab writes entries; `ServeManager.overlayAPIKeys` injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars into the Python sidecar; Python never touches Keychain. The list UI below is the correct design for **serve-mode CLI use** (running `bristlenose serve` outside the sandbox). For the embedded path see `design-desktop-settings.md` §Tab 2 LLM and `design-keychain.md` §Desktop (sandboxed) credential path. Body retained — the web-UI list design still applies when not embedded.
+> **Architecturally superseded for the desktop-embedded case as of 2026-04-21.** In the sandboxed macOS alpha, Swift owns Keychain CRUD — SwiftUI Settings → LLM tab writes entries; `BristlenoseShared.overlayAPIKeys` injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars into the Python sidecar; the sidecar never touches Keychain (the CLI on the same Mac reads the login-keychain copy the app keeps — `design-keychain.md` §"One keyspace, two keychains"). The list UI below is the correct design for **serve-mode CLI use** (running `bristlenose serve` outside the sandbox). For the embedded path see `design-desktop-settings.md` §Tab 2 LLM and `design-keychain.md` §Desktop (sandboxed) credential path. Body retained — the web-UI list design still applies when not embedded.
 
 A list of all configured keys. Click a row to make it the active key. Actions on hover or via kebab menu.
 

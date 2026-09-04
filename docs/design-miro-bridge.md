@@ -1,4 +1,12 @@
+---
+status: current
+last-trued: 2026-09-04
+trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
+---
+
 # Miro Bridge — Design Document
+
+> **Trued 4 Sep 2026 (--topic keychain).** Shipped: web panel, native sheet, Settings ▸ Accounts row, Keychain persistence. The Keychain half now means **two** items — the app's data-protection one and a login-keychain copy `bristlenose configure miro` and a terminal `run` read — written and read back by `KeychainHelper.set`; the Python store call is read back too (`credentials.set_verified`). The June status line below is kept as history. This doc had no front-matter until today.
 
 One-way export from Bristlenose to a Miro board: a first-draft research wall of
 sticky notes, grouped by section and theme, that a team rearranges to do
@@ -589,12 +597,17 @@ egress/anonymisation boundary all stay server-side):
 
 **Keychain persistence — IMPLEMENTED + VERIFIED (28 Jun 2026).** Python's `store.set("miro")`
 shells out to `/usr/bin/security`, which App Sandbox blocks (the reason LLM keys moved
-to Swift-store + `childEnvironment` injection in C3). The fix mirrors that C3 pattern,
+to Swift-store + `childEnvironment` injection in C3). Since 18 Aug 2026 that call is
+`_store_token_verified` → `credentials.set_verified` (`bristlenose/server/routes/miro.py`):
+the token is read back, and a store that no-ops is reported as *not saved* rather than
+"Connected". The fix mirrors that C3 pattern,
 keeping the paste in the panel (chosen over a native Settings pane — it's where the
 future OAuth button lives, and the Keychain+env layer below is reused by OAuth):
 - **Store** — on a successful paste-connect the native sheet writes the validated token
   directly: `MiroSheetModel.connect()` → `KeychainHelper.set("miro", …)`
-  (Security.framework; works under sandbox), checking the return and warning
+  (Security.framework; works under sandbox — and since 4 Sep 2026 writes **both** the
+  data-protection item and the login-keychain copy the CLI reads, reading both back —
+  `design-keychain.md` §"One keyspace, two keychains"), checking the return and warning
   (`connectPersistWarning`, non-blocking) if the write fails. `KeychainHelper.serviceNames["miro"]`
   matches Python's `MacOSCredentialStore` (pinned by
   `KeychainHelperTests/serviceNames_matchPythonMapping`). _(The older bridge
@@ -617,9 +630,9 @@ OAuth (the real solution) reuses this same Keychain+env layer for its access/ref
 tokens — only the *acquisition* (ASWebAuthenticationSession) and the token-handoff
 trigger change. The native sheet's **Disconnect** (`MiroSheetModel.disconnect()`) clears
 nothing of its own any more: since 18 Aug 2026 it calls `MiroConnectionStore.disconnect`, the
-single sequence Settings ▸ Accounts also calls, which takes all four copies — the in-session
-cache + Python store (`MiroAPI.disconnect`, best-effort, logged on failure), the Swift Keychain
-copy, the cached identity line, and the env-injected one, drained by the
+single sequence Settings ▸ Accounts also calls, which takes all five copies — the in-session
+cache + Python store (`MiroAPI.disconnect`, best-effort, logged on failure), the two Swift Keychain
+items (synced + login copy; `KeychainHelper.delete` removes both), the cached identity line, and the env-injected one, drained by the
 `.bristlenosePrefsChanged` serve restart. Before that the sheet took three and left the fourth,
 so a sidecar that had already baked `BRISTLENOSE_MIRO_ACCESS_TOKEN` went on exporting after a
 disconnect the researcher had been shown as complete. `design-desktop-settings.md` Tab 4 has why
@@ -665,7 +678,7 @@ disambiguator — reused across accounts, SSO).
 |---|---|---|---|
 | Browser / `bristlenose serve` (web Export menu) | ✅ | ✅ paste-token | ✅ (non-sandboxed keychain write) |
 | CLI `bristlenose configure miro` | n/a (stores token) | ✅ stores | ✅ (⚠️ prints "parked" — fix message) |
-| macOS app (native sheet) | ✅ | ✅ tested (board created) | ✅ VERIFIED 28 Jun — fresh paste wrote an **iCloud** (synchronizable) Keychain item, read back via env, board built; syncs across Macs |
+| macOS app (native sheet) | ✅ | ✅ tested (board created) | ✅ VERIFIED 28 Jun — fresh paste wrote an **iCloud** (synchronizable) Keychain item, read back via env, board built; syncs across Macs — and, since 4 Sep 2026, a login-keychain copy too, so `bristlenose configure miro` and a terminal `run` see the same token without env injection |
 
 **Open-in-Miro handoff (minor, parked):** with the Miro **desktop app** installed, "Open in
 Miro" also opens Miro.app (macOS universal-link routing of the board URL via `NSWorkspace`),

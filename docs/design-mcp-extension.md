@@ -1,10 +1,13 @@
 ---
 status: shipped
-last-trued: 2026-08-21
-trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
+last-trued: 2026-09-04
+previous-trued: 2026-08-21
+trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 ---
 
 # The Bristlenose extension — connecting Claude Desktop without a config file
+
+> **Trued 4 Sep 2026 (--topic keychain), three token-store edits.** The Generic-MCP caveat said an ad-hoc build's token "falls back to the rotating one" — the unscoped `/api/*` token §3.1 exists to keep out of the handshake; it mints an ephemeral scoped token instead. §3.1 now says the token is the one credential in the app that does not sync, and why. The address/token table names the keychain. Nothing else changed.
 
 _Scoped 31 Jul 2026, the night the hand-paste path failed three times in a row.
 Built and shipped in **0.23.0, 1 Aug 2026**. This doc covers the `.mcpb` route
@@ -307,6 +310,12 @@ answer with my instance id" is stronger than liveness by pid (which is
 reuse-vulnerable) and portable to a JS proxy with no libproc binding. It also
 makes "handshake names A while the server serves B" detectable rather than
 silent.
+
+**The token is the one credential in the app that does not sync.** `MCPTokenStore`
+writes to the data-protection keychain with `kSecAttrSynchronizable: false` — it names a
+server on *this* machine and is meaningless on another Mac — and, unlike the provider
+keys, has no login-keychain copy (`design-keychain.md` §The keyspace). _Recorded here on
+4 Sep 2026; until then it lived only in the Swift source and in `design-cloud-import.md`._
 
 **No `project` field.** `MCPTokenStore.accountKey` already SHA-256s the project
 path precisely so a client's folder name (`~/Clients/Acme/…`) never becomes
@@ -1037,16 +1046,18 @@ start. So:
 
 | | Address | Token |
 |---|---|---|
-| Desktop app | changes every launch | stable (Keychain, per project) |
+| Desktop app | changes every launch | stable (data-protection Keychain, non-synchronizable, account = SHA-256 of the project path — `MCPTokenStore`) |
 | CLI `serve` | stable (8150) | changes every restart |
 
 The Generic MCP tab lives in the desktop sheet, so desktop semantics apply and
 "the port changes, the token doesn't" is the accurate line. The website's
 connect page already forks this correctly per channel — keep them in step if
 either changes. (Caveat for QA builds: on ad-hoc signing the Keychain write
-fails with -34018 and the token falls back to the rotating one, so a *local*
-build behaves like the CLI. That is a build artefact, not the shipped
-behaviour.)
+fails with -34018 and `MCPTokenStore.mintEphemeral` issues a **process-lifetime
+scoped** token instead — never the rotating unscoped `/api/*` token, which §3.1
+forbids publishing — so a *local* build's token changes per launch like the CLI's
+but stays scoped. That is a build artefact, not the shipped behaviour. _This
+sentence said the token "falls back to the rotating one" until 4 Sep 2026._)
 
 Saying the token is stable is also honest disclosure rather than mere
 convenience: it tells the researcher that what they handed over persists until

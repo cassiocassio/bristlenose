@@ -1,7 +1,8 @@
 ---
 status: current
-last-trued: 2026-06-21
-trued-against: HEAD@main on 2026-06-21
+last-trued: 2026-09-04
+previous-trued: 2026-06-21
+trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 ---
 
 # Desktop Python Runtime — sidecar mechanics
@@ -12,6 +13,7 @@ _Written 18 Apr 2026 as Track C C0 spike output; updated through C3 (21 Apr 2026
 
 ## Changelog
 
+- _2026-09-04_ — trued for the two-keychain change (`--topic keychain`): §Credential flow step 2 writes **both** the data-protection keychain and a login-keychain copy the CLI reads, both read back; the resource-resolution bullet says so; the sidecar still needs no keychain entitlement but is no longer the only consumer. Two "deferred" claims about credential-bearing scripts were false: the Developer ID `.dmg` has been a live channel since August (`build-dmg.sh`, notarised, stapled) and TestFlight uploads authenticate with the App Store Connect API key, not an app-specific password — both marked with dated post-scripts, bodies kept. `fetch-ffmpeg.sh` downloads from `ffmpeg.martin-riedl.de`, not evermeet.cx. Two commits on 3 Sep had edited the body without a changelog line; recorded here.
 - _2026-06-21_ — trued against `main` (warm-sidecar-pool merge `78b2d40`): added a "Warm-sidecar pool (Phase A2)" lifecycle addendum to the SidecarMode contract (park-on-switch + synchronous re-point; spawn / port / credential mechanics unchanged and still accurate). Cross-refs `design-desktop-switch-performance.md` rather than duplicating the perf model. Anchors: `ServeManager.swift`, `ParkedSidecar.swift`.
 - _2026-04-28_ — see the "Trued 28 Apr 2026" banner above (Track C C0–C3 spike + App-Store distribution flow; entitlement-table empirical result).
 
@@ -243,7 +245,7 @@ Four-script chain, orchestrated by `desktop/scripts/build-all.sh`:
 
 - `build-sidecar.sh` — PyInstaller `--onedir` only.
 - `sign-sidecar.sh` — parallel inner-Mach-O sign, sequential outer sign, strict + deep verify, SHA256 manifest. Inner loop is a bash `wait -n` job pool, **not `xargs -P`**: BSD `xargs` on macOS drops child exit codes under concurrent jobs, so a single failed codesign would be masked in interleaved stderr (the script would "succeed" while shipping an unsigned dylib). Requires bash 4.3+ for `wait -n`; Apple's default `/bin/bash` is 3.2, so the shebang is `#!/usr/bin/env bash` + a Homebrew bash in `$PATH`.
-- `fetch-ffmpeg.sh` — SHA256-pinned FFmpeg 8.1 download (arm64 static builds from evermeet.cx). Cache under `desktop/build/ffmpeg-cache/`. Mismatched SHA256 fails closed — supply-chain-attack defence.
+- `fetch-ffmpeg.sh` — SHA256-pinned FFmpeg 8.1 download (arm64 static builds from `ffmpeg.martin-riedl.de` — this line said evermeet.cx until 4 Sep 2026; the pinned SHA256s are recorded in `THIRD-PARTY-BINARIES.md`). Cache under `desktop/build/ffmpeg-cache/`. Mismatched SHA256 fails closed — supply-chain-attack defence.
 - `sign-ffmpeg.sh` — signs the two FFmpeg siblings with the same identity and Hardened Runtime. Notarisation rejects the outer bundle otherwise.
 
 ### `codesign --force` entitlement trap
@@ -351,6 +353,8 @@ xcrun altool --upload-app -f "desktop/build/export/Bristlenose.pkg" --type macos
 > **Section status: deferred to future commercial scale.** Distribution decision (28 Apr 2026): the App Store flow above is Bristlenose's only distribution channel for alpha + beta + early commercial. Developer ID (direct download with notarisation + stapling + Sparkle updates) is **not** a parallel path being maintained alongside — it's deferred until ~10k paying users when the App Store cut becomes material relative to the engineering+ops cost of running a parallel direct-distribution channel. Trigger conditions, cost model, and a quick how-to for adding the cert when we revisit live in the user's `project_developer_id_revisit.md` memory note.
 >
 > **The Notarisation + stapling subsection below is preserved verbatim** as the design baseline for the eventual revisit. None of these scripts run today; `build-all.sh` skips them when `method=app-store` (the only method we use). Reading guide: treat the subsection as **specification of a future flow**, not a description of current behaviour.
+>
+> **Post-script, 4 Sep 2026 (truing):** superseded in August 2026 — the Developer ID `.dmg` is a live channel (`desktop/scripts/build-dmg.sh`: Developer ID Application identity, notarised via the `bristlenose-notary` keychain profile, stapled, `spctl`-validated; `docs/design-dmg-build.md`, `docs/release-channels.md`). "None of these scripts run today" and "the only method we use" are no longer true; the ~10k-users trigger was overtaken by the alpha `.dmg` decision. The subsection stays as the baseline the `.dmg` build grew from.
 
 ### Notarisation + stapling
 
@@ -372,7 +376,7 @@ xcrun notarytool store-credentials "bristlenose-notary" \
 
 App-specific password generated at [appleid.apple.com](https://appleid.apple.com) — revocable and regeneratable; no need to save outside the keychain.
 
-**Deferred.** App Store Connect API key (`.p8` + key ID + issuer ID) is more scopeable and audit-friendly than Apple-ID + app-specific password. Parked in qa-backlog for post-alpha — the ASP path is simpler for alpha-1.
+**Shipped (Aug 2026).** The App Store Connect API key (`.p8` + key ID + issuer ID — `BRISTLENOSE_ASC_KEY_ID` / `_ISSUER_ID` / `_APPLE_ID`, `~/.private_keys/AuthKey_<id>.p8`) is what `desktop/scripts/upload-testflight.sh` authenticates with; the app-specific password now serves only the `bristlenose-notary` profile above. _This line said the key was deferred to post-alpha until 4 Sep 2026._
 
 ### Final verification battery (`build-all.sh` step 10)
 
@@ -464,7 +468,7 @@ Per `design-modularity.md`, single-source lookup functions live in the Python co
 
 - **FFmpeg + ffprobe** — Swift's `BristlenoseShared.bundledBinaryEnvironment(for:)` reads `Contents/Resources/{ffmpeg,ffprobe}` (siblings of the sidecar dir, not under a `/bin/` subdir) and passes them via `BRISTLENOSE_FFMPEG` / `BRISTLENOSE_FFPROBE` env vars at sidecar spawn time. Python's `bristlenose.utils.bundled_binary.bundled_binary_path(name)` resolves in three branches: env var → bundle-relative path under `_BRISTLENOSE_HOSTED_BY_DESKTOP=1` → `shutil.which`. CLI users skip the env vars and fall through to `which`. Shipped `bundled-binary-helper` merge `670a002`.
 - **Whisper models** — env var `BRISTLENOSE_WHISPER_MODEL_DIR` → `~/Library/Application Support/Bristlenose/models/` → HuggingFace cache. Background Assets writes to Application Support in public beta; alpha bundles the `small.en` model directly.
-- **Credentials (implemented, C3)** — `BristlenoseShared.overlayAPIKeys()` (moved here from `ServeManager`) reads the **active** provider's Keychain entry via Security.framework (`SecItemCopyMatching`) at sidecar launch and injects its `BRISTLENOSE_<PROVIDER>_API_KEY` env var. (Active-provider-scoped at spawn time; the LLM Settings *status board* reads all providers eagerly — a separate path. Host store is the data-protection keychain — see `design-keychain.md`.) Python reads them via pydantic-settings before `_populate_keys_from_keychain` runs. **The sidecar does not call `SecItemCopyMatching`, does not exec `/usr/bin/security`, and does not need any keychain-access-groups or Security.framework entitlement.** It reads plain env vars. See the "Credential flow" section below for details, residual risks, and rationale vs. `pyobjc-framework-Security`.
+- **Credentials (implemented, C3)** — `BristlenoseShared.overlayAPIKeys()` (moved here from `ServeManager`) reads the **active** provider's Keychain entry via Security.framework (`SecItemCopyMatching`) at sidecar launch and injects its `BRISTLENOSE_<PROVIDER>_API_KEY` env var. (Active-provider-scoped at spawn time; the LLM Settings *status board* reads all providers eagerly — a separate path. Host store is the data-protection keychain, plus — since 4 Sep 2026 — a login-keychain copy of each CLI-shared key so a terminal `bristlenose run` sees the same key; `design-keychain.md` §"One keyspace, two keychains".) Python reads them via pydantic-settings before `_populate_keys_from_keychain` runs. **The sidecar does not call `SecItemCopyMatching`, does not exec `/usr/bin/security`, and does not need any keychain-access-groups or Security.framework entitlement.** It reads plain env vars. See the "Credential flow" section below for details, residual risks, and rationale vs. `pyobjc-framework-Security`.
 - **Auth token** — server prints once at startup; Swift greps the token out of the sidecar's stdout. C1 may add structured-stdout (JSON line for handshake) if scraping proves fragile.
 
 All four patterns are "Swift resolves via platform API, passes via env var, Python reads env." That's the no-fork principle from `design-modularity.md`.
@@ -474,13 +478,13 @@ All four patterns are "Swift resolves via platform API, passes via env var, Pyth
 The sidecar never touches the macOS Keychain. Instead:
 
 1. User enters an LLM API key via the app's Settings (Cmd+,) → LLM pane.
-2. `LLMSettingsView` writes the key via `KeychainHelper.set()` to the **data-protection keychain** (Security.framework, `SecItemAdd`/`SecItemUpdate`; `kSecUseDataProtectionKeychain`, team-scoped access group, iCloud-synced — see `design-keychain.md`). Service names: "Bristlenose Anthropic API Key", "Bristlenose OpenAI API Key", etc. — kept in sync with `MacOSCredentialStore.SERVICE_NAMES` in `bristlenose/credentials_macos.py`.
+2. `LLMSettingsView` writes the key via `KeychainHelper.set()` to **both** the **data-protection keychain** (Security.framework, `SecItemAdd`/`SecItemUpdate`; `kSecUseDataProtectionKeychain`, team-scoped access group, iCloud-synced) **and** the login keychain — the copy `/usr/bin/security` can read — and reads both back (`design-keychain.md` §"One keyspace, two keychains"). Service names: "Bristlenose Anthropic API Key", "Bristlenose OpenAI API Key", etc. — one table, `bristlenose/providers.py` `CREDENTIALS`, mirrored by `KeychainHelper.serviceNames` and pinned by `tests/test_swift_python_contract.py`.
 3. On project open, `ServeManager.start(projectPath:)` builds a minimal env dict (`PATH`, `HOME`, locale, preferences overlay) and calls `overlayAPIKeys(into:using:)`.
 4. `overlayAPIKeys` reads the **active** provider's key (`KeychainStore.get`); when non-empty it sets `BRISTLENOSE_<PROVIDER>_API_KEY` on the env dict and logs presence only, never the value. When no provider is active it falls back to the Python default provider's key (`BristlenoseShared.pythonDefaultProvider`), so Python's default + the injected key stay coherent. (Eager all-four reads were reverted from this spawn path — that breadth lives only in the Settings status board.)
 5. The env dict is attached to a `Process`, which spawns the sidecar. Foundation copies the strings into `posix_spawn` argv.
 6. Python's pydantic-settings reads each `BRISTLENOSE_*_API_KEY` into the corresponding `BristlenoseSettings.*_api_key` field before `_populate_keys_from_keychain` runs. The keychain-fallback path in `credentials_macos.py` never triggers in the sandboxed sidecar because the field is already populated.
 
-**The sidecar requires no `keychain-access-groups` entitlement, no Security.framework linkage, and no temporary-exception entitlements.** It is a consumer of env vars. Under App Sandbox this path just works.
+**The sidecar requires no `keychain-access-groups` entitlement, no Security.framework linkage, and no temporary-exception entitlements.** It is a consumer of env vars. Under App Sandbox this path just works. The *unsandboxed CLI* on the same Mac is the other consumer: it reads the login-keychain copy the app maintains, so a key entered in Settings works in a terminal too.
 
 **Why env-var injection instead of `pyobjc-framework-Security`:**
 - Adding `pyobjc-framework-Security` to `pyproject.toml` would either (a) break CLI install on Linux/Windows, or (b) sit in a `[macos]` extra that CLI users must remember to add — both violate the no-fork principle from `design-modularity.md`.

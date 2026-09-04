@@ -1,8 +1,8 @@
 ---
 status: current
-last-trued: 2026-09-03 (--doc: the prefs observer has been ServeFleet since 19 Aug; the consent sequence was printed backwards through four passes; body line anchors converted to symbols)
-previous-trued: 2026-08-21 (the package re-fits on tab activation only — recorded with the two consequences for pane authors)
-trued-against: HEAD@main on 2026-09-03 (5820a721)
+last-trued: 2026-09-04 (--topic keychain: the API-key row said Python reads Keychain directly; the pane now writes both keychains and is the one reader that may raise the login-keychain dialog)
+previous-trued: 2026-09-03 (--doc: the prefs observer has been ServeFleet since 19 Aug; the consent sequence was printed backwards through four passes; body line anchors converted to symbols) (the package re-fits on tab activation only — recorded with the two consequences for pane authors)
+trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 ---
 
 ## Changelog
@@ -80,7 +80,7 @@ Left sidebar list of 5 pre-populated providers (Claude, ChatGPT, Gemini, Azure, 
 - **Radio/checkmark** — which provider is active (user choice, `@AppStorage("activeProvider")`)
 - **Status dot** — whether the provider is configured (green "Online" / grey "Not set up" / red "Invalid" / orange "Unavailable")
 
-Right detail pane shows the selected provider's settings: API key (`SecureField` → Keychain via `KeychainHelper`), model picker (per-provider known models + "Custom…"), concurrency slider. Azure adds endpoint/deployment/version fields. Ollama shows a **read-only** static display of the URL (`localhost:11434`) — the field is hardwired in the desktop GUI as a trust-boundary closure (commit `dbd54ec`, 30 Apr 2026): a social-engineered user pasting an attacker URL would silently exfiltrate transcripts over plain HTTP, contradicting the "transcripts stay on your Mac" claim. Status derives from an HTTP probe to `<hardwired-url>/api/tags`, parsing the models list to distinguish "not running" from "running but no models pulled"; see `LLMValidator.probeOllama`. CLI users and CI keep the override path via the `BRISTLENOSE_LOCAL_URL` env var (parent-process only — see §Preferences below).
+Right detail pane shows the selected provider's settings: API key (`SecureField` → `KeychainHelper.set`, which writes the app's data-protection item **and** the login-keychain copy the CLI reads, and reads both back; this pane is also the only reader that may raise the keychain dialog — `interaction: .allowed` — so a key `bristlenose configure` wrote is adopted here and nowhere else, `design-keychain.md` §"One keyspace, two keychains"), model picker (per-provider known models + "Custom…"), concurrency slider. Azure adds endpoint/deployment/version fields. Ollama shows a **read-only** static display of the URL (`localhost:11434`) — the field is hardwired in the desktop GUI as a trust-boundary closure (commit `dbd54ec`, 30 Apr 2026): a social-engineered user pasting an attacker URL would silently exfiltrate transcripts over plain HTTP, contradicting the "transcripts stay on your Mac" claim. Status derives from an HTTP probe to `<hardwired-url>/api/tags`, parsing the models list to distinguish "not running" from "running but no models pulled"; see `LLMValidator.probeOllama`. CLI users and CI keep the override path via the `BRISTLENOSE_LOCAL_URL` env var (parent-process only — see §Preferences below).
 
 **Activation guard**: a provider can be activated (radio or toggle) when its status `canActivate` — a key is present and not known-bad (`.online`, `.outOfCredit`, or `.unavailable` all qualify), **not** a live `.online`. An out-of-credit or momentarily-unreachable provider is a legitimate choice; only `.notSetUp` (no key), `.invalid` (confirmed-bad credentials), and `.checking` block. Single home for the contract: the `canActivate` guard in `LLMSettingsView.swift` (both the row radio and the pane toggle read it), backed by `LLMProvider.canActivate`. One provider must always be active.
 
@@ -144,10 +144,10 @@ about which client's board they are one click from writing to.
 What they are entitled to assume is that disconnecting *took*, from either door. That is why there
 is one implementation and not two — `MiroConnectionStore.disconnect` (18 Aug 2026); the sheet kept
 its own three-quarter copy until then. The missing quarter is the reason this pane takes
-`serveManager` (`SettingsView.swift`, the `.accounts` pane closure): the token has **four** copies, not one — the Keychain
-item, the server's in-memory session, the cached identity line, and the one no HTTP call can reach,
+`serveManager` (`SettingsView.swift`, the `.accounts` pane closure): the token has **five** copies, not one — two Keychain
+items (the app's synced one and the login copy the CLI reads; `KeychainHelper.delete` removes both), the server's in-memory session, the cached identity line, and the one no HTTP call can reach,
 `BRISTLENOSE_MIRO_ACCESS_TOKEN`, which `overlayMiroToken` bakes into every sidecar at spawn and the
-server resolves *before* the session. Clear the first three and a live process can still export.
+server resolves *before* the session. Clear the first four and a live process can still export.
 `.bristlenosePrefsChanged` drains the parked sidecar and restarts the fronted one, which is what
 makes the confirmation true; it is also why the sheet dismisses itself afterwards, since the restart
 takes a fresh port and the sheet's own API client dies with the old one. This coupling belongs in
@@ -164,7 +164,7 @@ is here and its per-platform sign-in flows are in `docs/design-cloud-import.md` 
 
 `BristlenoseShared.overlayPreferences()` reads `UserDefaults` and injects values as environment variables into the `Process.environment` dictionary before launching `bristlenose serve`. **Don't-override-default guard**: `overlayPreferences` only emits an env var when the user has explicitly set the value (e.g. `BRISTLENOSE_WHISPER_LANGUAGE` only set when `lang != "en"`; concurrency only set when the user has touched the slider). This lets Python-side defaults stay authoritative when the user hasn't expressed a preference. See `BristlenoseShared.swift:221-287`.
 
-API keys are injected via `BristlenoseShared.overlayAPIKeys()` (C3, Apr 2026) — Swift reads Keychain via `Security.framework` (through the `KeychainStore` protocol; tests use `InMemoryKeychain`) and sets `BRISTLENOSE_<PROVIDER>_API_KEY` on the same env dict. Python never touches Keychain in this deployment; pydantic-settings reads the env vars directly. **Threat-model rationale** (from the `BristlenoseShared.swift` comment above `overlayAPIKeys`): env vars are visible to same-UID attackers via `ps -E`, but a same-UID attacker can already call `SecItemCopyMatching` directly; the net delta is small. Sandbox protects against *other* UIDs, not same-UID code execution. Documenting the residual risk honestly beats security theatre (keychain-access-groups wouldn't raise the bar against the real threat model). Full credential-flow discussion in `design-keychain.md` §Desktop (sandboxed) credential path.
+API keys are injected via `BristlenoseShared.overlayAPIKeys()` (C3, Apr 2026) — Swift reads Keychain via `Security.framework` (through the `KeychainStore` protocol; tests use `InMemoryKeychain`) and sets `BRISTLENOSE_<PROVIDER>_API_KEY` on the same env dict. The sidecar never touches Keychain in this deployment; pydantic-settings reads the env vars directly. (The *CLI* on the same Mac does: it reads the login-keychain copy the app keeps of every CLI-shared key — `design-keychain.md` §"One keyspace, two keychains".) **Threat-model rationale** (from the `BristlenoseShared.swift` comment above `overlayAPIKeys`): env vars are visible to same-UID attackers via `ps -E`, but a same-UID attacker can already read the login-keychain copy with `SecItemCopyMatching` past the ACL dialog, and the app's own copy with the app's entitlement; the net delta is small. Sandbox protects against *other* UIDs, not same-UID code execution. Documenting the residual risk honestly beats security theatre (keychain-access-groups wouldn't raise the bar against the real threat model). Full credential-flow discussion in `design-keychain.md` §Desktop (sandboxed) credential path.
 
 `BristlenoseApp` registers the observer for `Notification.Name.bristlenosePrefsChanged` and hands it to `ServeFleet.applyEnvChange()` — **not** `ServeManager`, which has had no subscription of its own since `4ec46822` (19 Aug 2026). Any writer can post it; it is not only a settings view (`MiroConnectionStore` and `MiroSheetModel` both do). The fleet then fans out per serve on `ServeEnvStaleness.action`: `.restartNow`, `.restartOnNextFront`, or `.nothing` — so a background project does not pay a respawn for a pref it cannot be showing.
 
@@ -183,9 +183,9 @@ API keys are injected via `BristlenoseShared.overlayAPIKeys()` (C3, Apr 2026) �
 | Azure API version | `azureAPIVersion` | `BRISTLENOSE_AZURE_API_VERSION` |
 | Ollama URL | *(parent process env only)* | `BRISTLENOSE_LOCAL_URL` |
 | Appearance | `appearance` | *(neither — WKWebView inherits `NSApp.appearance`)* |
+| API keys | **Keychain** — `KeychainHelper`, both keychains | `BRISTLENOSE_<PROVIDER>_API_KEY` via `overlayAPIKeys`; the sidecar never reads Keychain |
 
 > **Note on `BRISTLENOSE_LOCAL_URL`:** the desktop GUI hardwires the Ollama URL (no editable field). `overlayPreferences` therefore reads only the **parent process environment** for `BRISTLENOSE_LOCAL_URL` (`BristlenoseShared.swift`) and forwards it to the sidecar if set — there's no UserDefaults round-trip. CLI users and CI keep the override path; desktop alpha users are locked to localhost. See `BristlenoseShared.swift` (`overlayPreferences`) and `LLMSettingsView.hardwiredOllamaURL`.
-| API keys | **Keychain** | *(Python reads directly)* |
 
 ## Provider status model
 
@@ -346,7 +346,7 @@ user-facing concept. They exist to explain *which technique runs when*.
 | Rung | Operation | Cost | Proves | Cannot tell us |
 |------|-----------|------|--------|----------------|
 | **0. In-memory** | read cached verdict (`verdictStore`) | free, instant, offline-ok | what we concluded last time | anything current |
-| **1. Local API** | Keychain `SecItemCopyMatching` | a syscall; real cost = **prompt risk in unsigned/dev builds**; offline-ok | a credential *exists* (+ value to hash) | is it valid? endpoint up? credit? model real? |
+| **1. Local API** | Keychain `SecItemCopyMatching` | a syscall; real cost = **prompt risk in unsigned/dev builds**, and on any build the one-time macOS dialog for a login-keychain item `bristlenose configure` created — this pane is where that dialog is spent (`design-keychain.md` §prompt budget); offline-ok | a credential *exists* (+ value to hash) | is it valid? endpoint up? credit? model real? |
 | **2. Network auth** | minimal auth round-trip (`LLMValidator.buildRequest`) | ~1s, needs net, < $0.0001 | endpoint *reachable* + key *authenticates* (200 vs 401) | credit? model valid? |
 | **3. Real work call** | structured `analyze()` against a fixture | fractions of a cent, needs net | credit OK (402 vs 200) + model exists (vs 404) + model does structured output → *a real run will succeed* | — this **is** ground truth |
 
@@ -382,10 +382,14 @@ a team-scoped `keychain-access-groups` entitlement
 (`$(AppIdentifierPrefix)app.bristlenose`) and no biometric `SecAccessControl`.
 The data-protection keychain validates by **Team ID, not binary hash**, has no
 ACLs, and does **not** prompt an app reading its *own* access-group items — so
-eager all-providers reads are expected to be silent on any team-signed build.
+eager reads of the app's *own* items are silent on any team-signed build.
+**Since 4 Sep 2026 the eager board is also the one reader that may raise the
+*login*-keychain dialog** (`interaction: .allowed`): once per item `bristlenose
+configure` created, bounded by a ledger, and deliberate — every other read in
+the app is quiet (`design-keychain.md` §"One keyspace, two keychains").
 
 **Verification gate (narrowed):** the question is no longer "is eager viable" —
-the documented default is *no prompts*. It is "**is the running build ad-hoc?**"
+the documented default is *no prompts for the app's own items*. It is "**is the running build ad-hoc?**"
 Ad-hoc (`None` + `Sign to Run Locally`) has an empty `$(AppIdentifierPrefix)`,
 which breaks the access group and falls back to the legacy keychain → prompts.
 Confirm the build is team-signed (`Z56GZVA2QB`); TestFlight/MAS builds always

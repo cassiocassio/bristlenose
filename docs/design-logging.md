@@ -1,13 +1,15 @@
 ---
 status: current
-last-trued: 2026-04-21
-trued-against: HEAD@sidecar-signing on 2026-04-21
+last-trued: 2026-09-04
+previous-trued: 2026-04-21
+trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 ---
 
 > **Truing status:** Current for Python-side logging (Phase 1 + Phase 2 as described). Scope note added for the Track C desktop channel (sidecar stdout → Swift redactor → unified logging) — that layer is covered in `design-keychain.md` §Secret-leak defences rather than duplicated here.
 
 ## Changelog
 
+- _2026-09-04_ — secret-handling claims trued (`--topic keychain`): rule 5's proportionality argument is scoped to `bristlenose.log` and a new rule 5a names the two re-identification keys beside it (`pii_summary.txt`, `llm-calls.jsonl`) that no bundle may include; `bristlenose/llm/telemetry.py` joins the key-files table; the Tier 3 diagnostic-bundle item carries the exclusion; the redactor and `overlayAPIKeys` anchors moved from `ServeManager` to `BristlenoseShared`.
 - _2026-04-21_ — trued up: added scoping note clarifying this doc covers Python-side logging only; corrected "We do not need a third channel" claim (Track C desktop deployment adds a third channel with its own hygiene layer); updated Tier 3 item on keychain resolution to reflect Swift-side partial-ship. Canonical home for desktop-side log hygiene is `design-keychain.md` §Secret-leak defences; this doc cross-references rather than duplicating. Anchors: `desktop/Bristlenose/Bristlenose/ServeManager.swift:409-473`, `desktop/Bristlenose/Bristlenose/ServeManager.swift:382`, `desktop/scripts/check-logging-hygiene.sh`, commits "runtime log redactor for api key shapes", "CI grep gate for Swift logging hygiene".
 
 # Logging Architecture
@@ -55,7 +57,7 @@ Nobody is tailing these logs in real time. Nobody is shipping them to Grafana. N
 
 The desktop app reads stderr for progress and reads the log file for diagnostics.
 
-> **Amended 2026-04-21:** the original statement here — "we do not need a third channel" — is load-bearingly wrong for the Track C sandboxed-desktop deployment. That deployment adds a third channel: the Swift host reads sidecar stdout line-by-line, applies a runtime key-shape redactor (`ServeManager.swift:409-473`), then forwards to `os.Logger` unified logging with `.private` markers. A source-time CI grep gate (`desktop/scripts/check-logging-hygiene.sh`) blocks Swift source from interpolating secret-shaped values. Canonical home for these defences: `design-keychain.md` §Secret-leak defences. The two-channel model in this doc remains correct for the Python side; the third channel is layered on top by Swift.
+> **Amended 2026-04-21:** the original statement here — "we do not need a third channel" — is load-bearingly wrong for the Track C sandboxed-desktop deployment. That deployment adds a third channel: the Swift host reads sidecar stdout line-by-line, applies a runtime key-shape redactor (`BristlenoseShared.redactKeys`, applied in `ServeManager.handleLine`), then forwards to `os.Logger` unified logging with `.private` markers. A source-time CI grep gate (`desktop/scripts/check-logging-hygiene.sh`) blocks Swift source from interpolating secret-shaped values. Canonical home for these defences: `design-keychain.md` §Secret-leak defences. The two-channel model in this doc remains correct for the Python side; the third channel is layered on top by Swift.
 
 ### Research references
 
@@ -123,6 +125,8 @@ Bristlenose processes interview transcripts containing real names, job titles, o
 
 5. **Log file lives inside the project output.** Anyone with access to the log file already has access to the transcripts, quotes, and names it lives alongside. The log does not create new exposure within this trust boundary. PII paranoia should be proportional: the log is not more sensitive than the data beside it.
 
+5a. **Two neighbours in that directory are re-identification keys, and rule 5 does not extend to them.** `.bristlenose/pii_summary.txt` (every original PII value with timecodes) and `.bristlenose/llm-calls.jsonl` (session ids, prompt hashes, timing fingerprints — mode 0600 + `O_NOFOLLOW` in `bristlenose/llm/telemetry.py`, kill switch `BRISTLENOSE_LLM_TELEMETRY=0`) are never included in any export, support bundle or shareable archive. Rule 5 is about `bristlenose.log`; it does not make the directory bundle-safe.
+
 6. **Diagnostic export must strip PII.** When the desktop app exports a "Send diagnostic info" bundle, it should redact input file paths, project names, and DEBUG-level lines. This is a desktop app concern (future Phase F), not a logging infrastructure concern.
 
 ### Current PII exposure audit
@@ -164,6 +168,7 @@ These systems must not merge. The operational log is disposable. The event log i
 | `bristlenose/server/app.py` | `create_app(verbose=...)` — serve mode setup |
 | `bristlenose/cli.py` | `-v` flag on `run`, `transcribe`, `analyze`, `serve` (post-A3 / 12 May 2026; `render` removed) |
 | `tests/test_logging.py` | 12 tests covering handlers, levels, independence, rotation |
+| `bristlenose/llm/telemetry.py` | `llm-calls.jsonl` — the 0600 + `O_NOFOLLOW` secret contract; a re-identification key, never exported (rule 5a) |
 
 ## Existing logger coverage
 
@@ -195,13 +200,13 @@ These systems must not merge. The operational log is disposable. The event log i
 8. **Concurrency queue depth** — log semaphore config when created. DEBUG level
 9. **PII entity breakdown** — per-type counts. DEBUG level. Low priority
 10. **FFmpeg error detail** — command and return code on failure. ERROR level
-11. **Keychain resolution** — which store, which keys found/missing. INFO level. *Python-side: still backlogged. Swift-side partial-ship: `ServeManager.overlayAPIKeys` logs `injected API key for provider=<name>` at `ServeManager.swift:382`. Equivalent coverage for the desktop deployment's credential path; Python-side CLI/serve still uninstrumented.*
+11. **Keychain resolution** — which store, which keys found/missing. INFO level. *Python-side: still backlogged. Swift-side partial-ship: `BristlenoseShared.overlayAPIKeys` logs `injected API key for active provider=<name>` (`BristlenoseShared.swift`). Equivalent coverage for the desktop deployment's credential path; Python-side CLI/serve still uninstrumented.*
 12. **Manifest load/save** — schema version and stage summary. DEBUG level
 
 ### Future: desktop app support (gated on desktop work)
 
 13. **Machine-readable progress markers** — `[BN:STAGE:8:START]` / `[BN:STAGE:8:DONE:12.3s]` on stdout for the SwiftUI process runner to parse
-14. **`bristlenose diagnostic-bundle`** CLI command — collects PII-stripped log, Python version, platform, bristlenose version, installed providers, manifest summary
+14. **`bristlenose diagnostic-bundle`** CLI command — collects PII-stripped log, Python version, platform, bristlenose version, installed providers (names only, never key material), manifest summary — and **never** `llm-calls.jsonl` or `pii_summary.txt` (rule 5a)
 15. **Desktop app error panel** — last N stderr lines + "Send diagnostic info" button
 
 ## Multi-project / multi-user

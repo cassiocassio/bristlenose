@@ -4,11 +4,19 @@ Provides secure storage for API keys using native system keychains where availab
 with a persisting file fallback so `bristlenose configure` always leaves the user
 configured — even on a headless box with no keyring.
 
-Priority order:
-1. System keychain (macOS Keychain, Linux Secret Service)
-2. Environment variable (BRISTLENOSE_* prefix or bare)
-3. User-level config .env file (~/.config/bristlenose/.env), which is also loaded
-   by pydantic-settings via config._find_env_files()
+Two readers, two orders — name which you mean:
+
+- The settings pipeline (``config._populate_keys_from_keychain``) fills a field
+  only if env/.env left it empty: environment variable → .env file → store.
+  The sandboxed desktop depends on that order — the Swift host injects
+  ``BRISTLENOSE_*_API_KEY`` and it must win.
+- ``get_credential()`` below, used by the Miro route, is the reverse: store
+  first, then environment.
+
+Stores: macOS login Keychain, Linux Secret Service, or a 0600 user-level
+config .env (~/.config/bristlenose/.env, also loaded by pydantic-settings via
+``config._find_env_files()``). Credential names come from one table,
+``bristlenose.providers.CREDENTIALS``.
 """
 
 from __future__ import annotations

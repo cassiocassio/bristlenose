@@ -1,6 +1,6 @@
 # Design: CLI / desktop "just works" defaults
 
-**Status:** post-implementation (Mon 11 May 2026). Initially drafted during A1 brew-formula closeout after a 2-hour first-run call with a friendly CTO. Slices A–H shipped on the `cli-just-works` branch; deferred items called out below per section.
+**Status:** post-implementation (Mon 11 May 2026). Initially drafted during A1 brew-formula closeout after a 2-hour first-run call with a friendly CTO. Slices A–H shipped on the `cli-just-works` branch; deferred items called out below per section. _Trued 4 Sep 2026 (--topic keychain): §Detection order and §Branch (1) described a persistence path that never shipped — `keyring`, Credential Manager, a `keys` file, `--persist=shell` — see the banner and the rewritten paragraph there._
 
 **Scope:** primarily the CLI channel (`bristlenose run`, `bristlenose serve`, `bristlenose doctor`), but the same principle and several of the same primitives apply to the macOS desktop. Cross-channel notes inline.
 
@@ -390,10 +390,12 @@ $ bristlenose interviews/
 
 #### Detection order and source attribution
 
+> **Partly shipped (trued 4 Sep 2026).** The order is right. The attribution table below is the *design*; what ships is `Using {provider} API key from {source}` with `source` ∈ {`env`, `stored`} (`bristlenose/preflight/api_key.py`) — no Keychain-versus-file distinction and no conflict line (the status table above marks that refinement deferred). Lookup precedence is canonical in `docs/design-keychain.md` §5, which this section restates.
+
 Before prompting at all, check in this order:
 
 1. **Env var** (`BRISTLENOSE_<PROVIDER>_API_KEY`) — session-scoped, intentional, wins.
-2. **Keychain** (macOS) / `~/.config/bristlenose/keys` (Linux) — persistent fallback.
+2. **Stored key** — Keychain (macOS), Secret Service (Linux), or the 0600 config file `~/.config/bristlenose/.env` when there is no keyring — persistent fallback.
 3. **Paste flow** — last resort, only fires if 1 and 2 are both empty.
 
 When a key is found in 1 or 2, announce the source the *first time it's used* (on a fresh machine or after marker reset). Quiet on subsequent runs within the 24h TTL — once announced, trust the user to remember.
@@ -422,7 +424,7 @@ The conflict case matters: a researcher with an old `BRISTLENOSE_ANTHROPIC_API_K
   Validating... ✓ Key works · saved to Keychain
 ```
 
-Key persistence is automatic: Keychain on macOS, `~/.config/bristlenose/keys` (0600) on Linux, Credential Manager on Windows — all via Python's `keyring` library, same path the desktop already uses. No "persist to your shell?" prompt; that's an extra question for zero benefit. A researcher who wants the `~/.zshrc` export-line behaviour can opt in via `--persist=shell`, which is an alternative *for advanced users*, not a question for the median user.
+Key persistence is automatic: Keychain on macOS (`/usr/bin/security`), Secret Service on Linux (`secret-tool`), and a 0600 `~/.config/bristlenose/.env` wherever there is no keyring — Windows included; there is no `keyring` library and no Credential Manager backend (`bristlenose/credentials.py`). It is *not* the path the desktop uses: the sandboxed app keeps its own data-protection item and, since 4 Sep 2026, a login-keychain copy the CLI reads (`docs/design-keychain.md` §"One keyspace, two keychains"). The write is read back before `configure` claims it (`credentials.set_verified`; exit 1 otherwise). No "persist to your shell?" prompt; `--persist=shell` never shipped. _This paragraph described `keyring`, Credential Manager, a `keys` file and `--persist=shell` until 4 Sep 2026._
 
 **Validation must exercise billing, not just auth.** A pure auth ping (e.g. listing models, or some providers' `/whoami`) returns 200 for keys that are valid-but-unfunded. We need to know whether the key can *actually do inference*, which means a minimal real call — a `/messages` request with `max_tokens=1` and a one-character prompt. Cost: roughly **$0.0001** on Claude Sonnet, similar order on every provider. Functionally free, but enough to surface the billing state.
 
@@ -837,7 +839,7 @@ See **Design debates** above for the two big ones (rendering ownership and insta
 
 - ~~First-run default tier — settled, `large-v3-turbo`.~~ Kept as a strikethrough so future-Claude doesn't re-derive the question. The only adjacent live question is whether to auto-downshift on machines that can't handle turbo cleanly — and even that's "fallback if it bites us," not a default-tier question.
 - **Pre-warm during `doctor`:** should `bristlenose doctor` offer "fetch the Whisper model now? [Y/n]" so the first real run never blocks? Cheap to add once the preflight registry exists; reuses the same primitives. Lands under Debate-1 Option D as the *main* path; under A/B/C as a *backup* path.
-- **API-key persistence path:** writing to `~/.zshrc` is one option, but a `~/.config/bristlenose/keys` file readable only by user, with `bristlenose doctor` documenting where it lives, may be cleaner than mutating the shell rc.
+- ~~**API-key persistence path:** writing to `~/.zshrc` is one option, but a `~/.config/bristlenose/keys` file readable only by user, with `bristlenose doctor` documenting where it lives, may be cleaner than mutating the shell rc.~~ Settled: `~/.config/bristlenose/.env`, mode 0600, written by `FileCredentialStore` when there is no keyring; `bristlenose doctor` reports the source. Kept as strikethrough.
 - **Cancellation semantics during model download:** Ctrl+C should leave the cache resumable, not corrupt. HF Hub handles this by default — confirm under load. Same question for uv if Debate-2 / Option β wins.
 - ~~Sandbox + spaCy — runtime download path under App Sandbox.~~ Resolved: desktop bundles the spaCy model into the sidecar at build time (standard packaging), so there is no runtime download on desktop. Lives with sidecar bundle work, not here. Kept as strikethrough so future-Claude doesn't re-derive it.
 - **Telemetry hooks:** the alpha telemetry system (Phase 1 plumbing on main) could measure how often each preflight fires and how often users abort. Worth wiring once the registry is in place.

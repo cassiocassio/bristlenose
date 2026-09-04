@@ -1,8 +1,11 @@
 ---
 status: partial
-last-trued: 2026-04-21
-trued-against: HEAD@sidecar-signing on 2026-04-21
+last-trued: 2026-09-04
+previous-trued: 2026-04-21
+trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 ---
+
+> **Trued 4 Sep 2026 (--topic keychain).** The README-proposal block named an env var that is not read (`BRISTLENOSE_AZURE_API_KEY` → `BRISTLENOSE_AZURE_API_KEY`), a prompt sequence `configure azure` does not have, and a provider switch that predates `bristlenose use` (shipped 31 Jul 2026 — the "future verb" section below now says so). `configure` reads the key back before claiming it. Two anchors repointed. The parked-idea analyses are untouched.
 
 > **Truing status:** Partial — individual item analyses remain useful; status line and the "Provider Registry Abstraction" section are stale; command name throughout was the aspirational `config set-key` (now corrected to shipped `configure`). See banner at Provider Registry Abstraction section for the aspirational-not-shipped call-out. Cost tables are Feb-2026 snapshots; `llm_max_tokens` default doubled Apr 2026. Preserved: all open-item analyses (still correct, still open).
 
@@ -448,15 +451,17 @@ A design conversation in May 2026 (out of the foundation-models-corpus reading) 
 **Shipped 18 May 2026 (branch `pipeline-view-v1`):** the read-only Pipeline view. `bristlenose pipeline` CLI verb (with `--json` and `--stage` filter) + a "Pipeline" tab as the last item in the React Settings modal, consuming `GET /api/pipeline`. Reads existing settings + reuses `_resolve_backend` from `s05_transcribe.py` for the transcription row; no new dispatch. Apple FM row returns `Unknown from CLI` (Swift-side probe deferred — see below). Catalogue lives in `bristlenose/pipeline_view/catalogue.py`; cross-language contract fixture at `tests/fixtures/pipeline-view-contract.json` round-tripped by both Python tests and the React component. Everything else below is still parked.
 
 **The shipping reality** (so the contrast is honest):
-- `bristlenose configure <provider>` already ships — interactive key entry, validates via test call, stores in Keychain (macOS) / Secret Service (Linux). See `bristlenose/cli.py:1843`. This is what the conversation rediscovered as a desirable `auth login`-style verb; it's already there.
+- `bristlenose configure <provider>` already ships — interactive key entry, validates via test call, stores in Keychain (macOS) / Secret Service (Linux) / a 0600 config `.env` when there is no keyring, and reads the key back before claiming it (exit 1 otherwise). See `bristlenose/cli.py` (`configure`). This is what the conversation rediscovered as a desirable `auth login`-style verb; it's already there.
 - `bristlenose doctor` already nudges users to run `configure` when keys are missing (`bristlenose/doctor.py`).
-- Provider switching today is done by editing `.env` or setting `BRISTLENOSE_LLM_PROVIDER` env var.
+- Provider switching: `bristlenose use <provider>` since 31 Jul 2026 (`docs/design-cli-provider-selection.md`); editing `.env` or setting `BRISTLENOSE_LLM_PROVIDER` still works as an override. _This line said only the latter until 4 Sep 2026._
 - No per-stage routing exists in dispatch — `bristlenose/llm/client.py` reads one provider, applies it to every LLM-using stage.
 - No TOML preferences file. Pydantic-settings reads from env vars + `.env` only.
 
 What follows is parked ideas, each with the question they answer + when they'd earn their place. None are commitments.
 
 ### Future verb: `bristlenose use <provider>` — fast-path provider switch
+
+> **Shipped 31 Jul 2026** as `bristlenose use <provider>` — the current-provider model in `docs/design-cli-provider-selection.md`. The analysis below is the pre-ship reasoning, kept; its "earns its place when" condition was overtaken by that design rather than by a cohort request.
 
 **The case:** switching active provider when keys for multiple are present (e.g. "Claude credit ran out, swap to ChatGPT"). Today you edit `.env` or pass an env var inline. Aspirationally:
 
@@ -651,7 +656,7 @@ If/when the Pipeline view's JSON becomes a multi-consumer contract (today: CLI t
 ### Cross-references
 
 - Design rationale: [design-pluggable-llm-routing.md](design-pluggable-llm-routing.md), [design-stage-backends.md](design-stage-backends.md), [design-modularity.md](design-modularity.md) §Modularisation matrix
-- Existing `configure` command: `bristlenose/cli.py:1843`
+- Existing `configure` command: `bristlenose/cli.py` (`configure`)
 - Existing UserDefaults→env-var translation: `desktop/Bristlenose/Bristlenose/BristlenoseShared.swift:105`
 - The v1 spike plan + review log live in the local-only branch handoff for this work.
 
@@ -746,7 +751,9 @@ Bristlenose works with several AI providers. You only need **one**.
 **Claude** (default)
 ```bash
 bristlenose configure claude
-# Prompts for your API key, stores securely in Keychain
+# Prompts for your API key, stores it in your system credential store
+# (Keychain on macOS, Secret Service on Linux, a protected config file
+# otherwise) and reads it back before saying so
 ```
 
 **ChatGPT**
@@ -758,7 +765,7 @@ bristlenose run ./interviews --llm chatgpt
 **Azure OpenAI** (enterprise)
 ```bash
 bristlenose configure azure
-# Prompts for: endpoint, deployment name, API key
+# Prompts for the API key only, then prints the endpoint + deployment env vars to set
 bristlenose run ./interviews --llm azure
 ```
 
@@ -793,10 +800,10 @@ The `--llm` flag overrides for a single run:
 bristlenose run ./interviews --llm gemini   # use Gemini this time
 ```
 
-To change the default, set a different key:
+To change the default: `bristlenose use chatgpt` for a provider you already configured, or configure a new one — configuring a provider makes it current.
 
 ```bash
-bristlenose configure chatgpt
+bristlenose use chatgpt
 ```
 
 ### Environment variables (alternative to Keychain)
@@ -812,7 +819,7 @@ BRISTLENOSE_OPENAI_API_KEY=sk-...
 
 # Azure OpenAI
 BRISTLENOSE_AZURE_ENDPOINT=https://my-resource.openai.azure.com/
-BRISTLENOSE_AZURE_KEY=abc123...
+BRISTLENOSE_AZURE_API_KEY=abc123...   # the old name BRISTLENOSE_AZURE_KEY is never read
 BRISTLENOSE_AZURE_DEPLOYMENT=gpt-4o-research
 
 # Gemini
@@ -878,7 +885,7 @@ class ProviderSpec:
 class ConfigField:
     """A configuration field for a provider."""
     name: str                          # e.g. "api_key", "endpoint", "deployment"
-    env_var: str                       # e.g. "BRISTLENOSE_AZURE_KEY"
+    env_var: str                       # e.g. "BRISTLENOSE_AZURE_API_KEY"
     prompt: str                        # e.g. "Azure OpenAI API key"
     secret: bool = True                # Mask input, store in Keychain
     required: bool = True
@@ -915,7 +922,7 @@ PROVIDERS: dict[str, ProviderSpec] = {
         config_fields=[
             ConfigField("endpoint", "BRISTLENOSE_AZURE_ENDPOINT", "Azure endpoint URL", secret=False),
             ConfigField("deployment", "BRISTLENOSE_AZURE_DEPLOYMENT", "Deployment name", secret=False),
-            ConfigField("api_key", "BRISTLENOSE_AZURE_KEY", "Azure API key"),
+            ConfigField("api_key", "BRISTLENOSE_AZURE_API_KEY", "Azure API key"),
         ],
         default_model="",  # Deployment name IS the model reference
         sdk_module="openai",  # Same SDK!

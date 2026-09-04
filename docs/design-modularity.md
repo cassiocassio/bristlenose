@@ -1,12 +1,14 @@
 ---
 status: mixed
-last-trued: 2026-08-21
-trued-against: HEAD@main on 2026-08-21 (ae05b1c0)
+last-trued: 2026-09-04
+previous-trued: 2026-08-21
+trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 split-candidate: true
 ---
 
 ## Changelog
 
+- _2026-09-04_ — §Credential stores trued (`--topic keychain`): the two macOS rows presented disjoint worlds and now share one keyspace (the host keeps a login-keychain copy of each CLI-shared key); the Linux row said `secretstorage` (it is the `secret-tool` CLI, with a 0600 `.env` fallback) and the Windows row said keyring (it is the `.env` fallback); the lookup-order sentence named one order where two readers ship with opposite precedence; and the two invariants item 4 of the 21 Aug entry owed — the `serviceNames` allowlist and store-then-read-back — are written. One anchor repointed. Everything else, including the split candidate, unchanged.
 - _2026-08-21_ — **Trued after 113 days at `status: current`, which was the most misleading line in it.** The header asserted currency over an April body while four sections had gone wrong in the same direction — each one *understating* what ships. (1) The distribution callout said "No `.dmg`. No Sparkle."; the `.dmg` has been a live channel since August (`build-dmg.sh`, `check-dmg-shippable.sh`, `upload-dmg.sh`, Developer ID cert, 30-day expiry) and only the Sparkle half survived. The §"macOS `.dmg` — deferred" heading was wrong the same way — and `docs/design-desktop-distribution.md:17` forwards readers *here* as the live answer, so the two docs formed a loop pointing at a dead decision. (2) §UI locales said "all 6 (en, es, fr, de, ko, ja)" against 22 locale directories; rewritten to name the source rather than a number, since that number has moved five times. (3) The component inventory still has **no MCP row**, though the `mcp` extra shipped 30 Jul, the sidecar installs it, and `Bristlenose.mcpb` ships inside the bundle — a channel-splittable component invisible to the doc whose whole job is "what ships where". (4) §Credential stores still omits the `KeychainHelper.serviceNames` allowlist and the store-then-read-back rule, both of which live in root `CLAUDE.md`; the canonical cross-channel credential section is the one place they are not. 3 and 4 are flagged, not written — they want a component-inventory pass rather than a banner. Status moved `current → mixed`, `split-candidate: true`: the Background Assets strategy (§Tier 0/1/2, ~90 lines) has **no code anywhere** and is plan, not record, sitting inside what read as a shipped-state doc.
 - _2026-04-30_ — Trued §"Local LLM" against Beat 3b shipped reality. Desktop GUI hardwires the Ollama URL to `localhost:11434` (commit `dbd54ec`) — editable field removed as a trust-boundary closure (paste-an-attacker-URL → silent transcript exfil). CLI/CI override path preserved via parent-process `BRISTLENOSE_LOCAL_URL` env var only. First-run detection / install / model-pull lives in `OllamaSetupSheet.swift` (Beat 3b, `07ee058`) — HTTP-only daemon probe, no `Process()` exec, no filesystem polling.
 
@@ -132,7 +134,7 @@ Awkwardness: Background Assets natively targets data files, not Python packages.
 
 **Code side:** detect Ollama via HTTP GET `http://localhost:11434/api/tags` on both platforms. Drop all `subprocess.run(["ollama", …])` calls (sandbox blocks on Mac, no benefit on Linux). UX if not detected: the Mac desktop ships `OllamaSetupSheet.swift` (Beat 3b) which opens `https://ollama.com/download` in the system browser and polls daemon reachability with a 120 s timeout + URLError catalogue (no internet / timed out / cannot connect). The CLI surfaces the same probe via `bristlenose doctor`. Single HTTP code path; sandbox-clean and Homebrew-friendly.
 
-**Desktop URL hardwire (alpha):** the Mac GUI's Settings tab shows the Ollama URL as a static read-only display (`http://localhost:11434/v1`) — no editable field. CLI users keep the override via the `BRISTLENOSE_LOCAL_URL` env var; the Mac sidecar honours it only when present in the *parent process* environment (`ServeManager.swift:351-357`). This closes the trust-boundary footgun where a social-engineered user could be tricked into pasting an attacker URL — see `design-desktop-security-audit.md` Finding #12.
+**Desktop URL hardwire (alpha):** the Mac GUI's Settings tab shows the Ollama URL as a static read-only display (`http://localhost:11434/v1`) — no editable field. CLI users keep the override via the `BRISTLENOSE_LOCAL_URL` env var; the Mac sidecar honours it only when present in the *parent process* environment (`BristlenoseShared.swift`, `overlayPreferences`). This closes the trust-boundary footgun where a social-engineered user could be tricked into pasting an attacker URL — see `design-desktop-security-audit.md` Finding #12.
 
 ### UI locales
 
@@ -147,12 +149,12 @@ moves: as of 21 Aug 2026 it is 22 locale directories (21 full locales plus
 
 | Platform | Mechanism | Python code |
 |---|---|---|
-| macOS desktop sidecar | Swift reads Keychain via `SecItemCopyMatching`; injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars at subprocess launch (C3, Apr 2026) | Python reads via pydantic-settings, no Keychain call |
-| macOS CLI | `/usr/bin/security` CLI wrapper in `credentials_macos.py` | Unchanged |
-| Linux CLI | `libsecret` via `secretstorage` package | Platform-conditional import |
-| Windows CLI | Future — `keyring` package's win32 backend | Same pattern |
+| macOS desktop sidecar | Swift reads the app's data-protection Keychain item via `SecItemCopyMatching`; injects `BRISTLENOSE_<PROVIDER>_API_KEY` env vars at subprocess launch (C3, Apr 2026). **Since 4 Sep 2026 the host also keeps a login-keychain copy of each CLI-shared key** — the row below reads the same items | Python reads via pydantic-settings, no Keychain call |
+| macOS CLI | `/usr/bin/security` CLI wrapper in `credentials_macos.py` — the **login** keychain, which is where the desktop's copy lands, so a key set up in either place is seen by both (`design-keychain.md` §"One keyspace, two keychains") | Unchanged mechanism; names derive from `providers.py` `CREDENTIALS` |
+| Linux CLI | `secret-tool` CLI (`credentials_linux.py`); a 0600 config `.env` (`FileCredentialStore`) when there is no Secret Service | Platform-conditional |
+| Windows CLI | Config `.env` fallback (`FileCredentialStore`) — no native store wired | Same file store |
 
-The **env-var injection** pattern for the desktop sidecar is the key insight: it keeps the Python side free of Mac-specific code. Credential lookup function: env var → platform-native CLI (Mac `security`, Linux libsecret). Desktop doesn't need to import `pyobjc-framework-Security`. See [`design-desktop-python-runtime.md`](./design-desktop-python-runtime.md) §"Credential flow" for the end-to-end sequence (Keychain → Swift → env → pydantic-settings) and residual risks.
+The **env-var injection** pattern for the desktop sidecar is the key insight: it keeps the Python side free of Mac-specific code. **Two readers, two orders:** the settings pipeline (`config.py`) is env var → `.env` → store; `get_credential()` in `credentials.py` (used by the Miro route) is store → env — `design-keychain.md` §5 records both. Desktop doesn't need to import `pyobjc-framework-Security`. **Two invariants (owed since 21 Aug):** `KeychainHelper.serviceNames` is an *allowlist* — an unregistered key reads nil and writes false, silently; and every credential write is verified by reading it back (`credentials.set_verified`; `KeychainHelper.set` reads back both copies) — a store's `set()` returning cleanly is not evidence anything was stored. See [`design-desktop-python-runtime.md`](./design-desktop-python-runtime.md) §"Credential flow" for the end-to-end sequence (Keychain → Swift → env → pydantic-settings) and residual risks.
 
 ### Development / testing deps
 

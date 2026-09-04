@@ -85,7 +85,15 @@ def run(argv, ceilings, metrics, incoming=None, **envkv):
     """Drive main() against a temp ceilings file and stub metrics.
 
     `incoming` is written beside it and appended to argv, for --adopt.
+
+    CI and GITHUB_ACTIONS are CLEARED unless a case names them, so every case
+    declares the environment it means. Defaulting to inherit made the suite pass
+    on a laptop and fail on a runner: "a CI-authority metric is skipped outside
+    CI" ran with CI=true on GitHub, where the skip correctly does not happen.
+    Its first real run caught it — which is the point, but the failing test was
+    the one asserting the thing this repo already knows to write down.
     """
+    envkv = {"CI": None, "GITHUB_ACTIONS": None, **envkv}
     with tempfile.TemporaryDirectory() as d:
         path = pathlib.Path(d) / "ratchet.json"
         path.write_text(json.dumps(ceilings, indent=2, sort_keys=True) + "\n")

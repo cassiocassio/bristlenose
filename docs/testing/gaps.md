@@ -306,7 +306,9 @@ Two consequences, opposite in sign, and the second is the one that bites:
 * **Nobody could tell.** `enforce_admins` is false and this is a solo trunk repo,
   so the maintainer pushes straight through a rule that has been unsatisfiable
   for a day. A protection that only ever applies to actors who do not exist reads
-  as protection.
+  as protection. GitHub says so out loud on every push and it scrolls past —
+  `remote: - 6 of 6 required status checks are expected.` immediately above a
+  successful `1c9482c9..f842cc4b  main -> main`.
 * **It is impassable for anything that is not the maintainer.** The first thing
   to try was `ratchet-tighten.yml` committing its own measurement; that job would
   have been red every time it worked correctly. It uploads an artifact instead,

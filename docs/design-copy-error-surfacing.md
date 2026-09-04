@@ -208,10 +208,17 @@ spawned sidecar. Consequences:
   `is_dataless()`, and `ensure_materialised()` with `MATERIALISE_TIMEOUT_SECONDS`.
   The desktop copy path at `CopyMachinery.swift:107` does not, and should mirror
   it rather than invent a third pattern.
-- `brctl download` / `brctl evict` **no longer exist** on 26.4.1 (verified —
-  both fall through to usage). `startDownloadingUbiquitousItem` /
-  `evictUbiquitousItem` are the surviving API. Any recipe or fix note naming
-  `brctl` is stale.
+- `brctl download` / `brctl evict` are **hidden, not gone** on 26.4.1. The
+  morning's claim that they "no longer exist" came from running them with *no
+  argument*, which prints the usage — the usage omits them, but given a path both
+  work (measured later the same day on a 608-byte placeholder: `download` returns
+  0 at once and the file lands ~12 s later, asynchronously; `evict` prints
+  `evicted content of '…'`). Undocumented, so still nothing to build on:
+  `startDownloadingUbiquitousItem` / `evictUbiquitousItem` are the API. The
+  measured record for the whole area — policy inheritance (launchd agents run
+  **OFF**, GUI-spawned processes **ON**), the per-operation table, the openrsync
+  source path — lives in the backup tool's repo,
+  `~/Code/code-backup/docs/design-dataless-files.md`; correct that first, then this.
 
 **`.inCloud` is unreachable for evicted media, and that is documented.**
 `ProjectAvailability` short-circuits on `fileExists(atPath: path)` — the project

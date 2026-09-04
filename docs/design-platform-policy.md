@@ -191,6 +191,7 @@ The review answers, in order:
 5. **Pinning register sweep** — any pin past its re-check date? Re-validate or remove.
 6. **Tooling-sprint trigger** — have enough deferred majors piled up to justify a 1–2 day batch release? (Three is usually the trigger; one or two is below the per-PR cost.) If triggered, **run `/cassandra` on the batch before applying it** — pre-mortem first, apply second.
 7. **Security advisories** — any open more than 2 weeks? Note exceptions and reasons.
+8. **Model ids and live endpoints** — run `scripts/check-providers-live.py`. Vendors soft-retire models ("no longer available to new users") with no shutdown date on any page, and rename parameters between generations; neither shows up in a dependency bump, a mocked test, or the app's key-only "Online" check. The release gate runs it most weeks; the quarterly job is to look at the *defaults* against each vendor's current lineup, not just whether they still answer.
 
 Output is a single bullet list in the quarterly review note ("Tooling: …") — not a separate document. The discipline is honesty: "nothing changed" is a valid answer if it's true.
 

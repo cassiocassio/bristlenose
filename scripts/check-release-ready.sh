@@ -792,6 +792,28 @@ fi
 # are only asked about flags new since the last tag — otherwise this prints 16
 # warnings on a clean tree forever, which is Risk 2 (preflight fatigue) built by
 # hand. The roff-unescaping the skill warned about in prose lives in that script.
+# Live provider check — the one question no mocked suite can ask.
+#
+#   check-providers-live.py  →  for every SHIPPED (provider, model): is the key
+#                               alive, does the model still exist, does our
+#                               request shape come back as a valid result?
+#
+# Added 4 Sep 2026 after one run of it found, the same afternoon: the freshly
+# moved Claude default double-encoding its tool input, and BOTH Gemini picker
+# models soft-retired ("no longer available to new users" — a status the
+# vendor's deprecations page does not carry, so no doc could have caught it).
+# The app's Settings "Online" light validates only the key, with a fixed cheap
+# model, so it saw none of that either. Releases happen most weeks, which makes
+# this the cadence that needs no remembering. Costs pence; needs keys, so a
+# missing key is WARN (unverified), never OK.
+_live=$(.venv/bin/python scripts/check-providers-live.py 2>/dev/null); _live_rc=$?
+case "$_live_rc" in
+    0) ok   "providers live" "$(printf '%s' "$_live" | tail -1)" ;;
+    1) bad  "providers live" "$(printf '%s' "$_live" | grep ' FAIL ' | awk '{print $2" ("$4")"}' | head -3 | tr '\n' ' ')" ;;
+    2) warn "providers live" "could not enumerate or no keys — unverified" ;;
+    *) warn "providers live" "unexpected exit $_live_rc — unverified" ;;
+esac
+
 if [ ! -x scripts/check-doc-surfaces.sh ]; then
     warn "doc surfaces" "checker missing"
 else

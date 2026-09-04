@@ -290,6 +290,11 @@ indicator.** The activity-indicator work must not touch the cloud/availability p
 > **Constraint on any resolution (maintainer, 4 Sep 2026):** custom materialisation
 > messaging, if any, is for **iCloud Drive, Google Drive and OneDrive only** — no other
 > provider, and nothing clever. Reading any File Provider correctly stays unconditional.
+>
+> **Where it now lives (4 Sep 2026, later the same day):** `design-cloud-wait-label.md` —
+> scope and policy as decided, a per-store table of what a third-party app can actually
+> know (label yes, pie no), the one open measurement, and what a pick-up would build.
+> Propose the label there. This note stays as the record that the two docs disagreed.
 
 ## Folders
 

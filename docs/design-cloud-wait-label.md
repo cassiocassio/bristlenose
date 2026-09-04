@@ -66,7 +66,7 @@ public API and no shipping app using one.
 | **Ask for it** | `startDownloadingUbiquitousItem` — returns in 1–3 ms, file lands later | any read *is* the request: under this app's policy (ON, measured) the syscall blocks in `msleep` with no timeout until the provider delivers | measured, pass 1 |
 | **Is it downloading right now?** | `ubiquitousItemIsDownloading` — a Bool, per URL | **not found** | documented |
 | **How far along?** | `NSMetadataUbiquitousItemPercentDownloadedKey` via `NSMetadataQuery`, external-documents scope for a file outside our container — **unmeasured on 26.x FP-backed iCloud, from a sandboxed app** | **not found** | documented; Forums 690124 and Clement (2023) unanswered |
-| **Finder's pie** | driven by the provider extension's `fetchContents` `Progress`, consumed by the system | same | documented (extension side only); no consumer API found |
+| **Finder's pie** | the provider extension returns a `Progress` from `fetchContents` that the system tracks and cancels; how Finder renders it is not public | same | documented, extension side only (DocC read 4 Sep 2026); no consumer API found |
 | **Cancel mid-file** | `Task.cancel()` cannot break a blocking copy inside a file; only the bounded read's own timeout returns control | same | `desktop/CLAUDE.md`, 19 Jun 2026 |
 | **Failure wording** | Finder: "The item couldn't be downloaded. Please check your internet connection, then try again." | provider-specific, unpublished | user report, May 2022 |
 

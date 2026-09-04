@@ -36,7 +36,7 @@ The **defining split** (the whole reason this set exists): the top two tiers are
 - **Private human tier** — the walks-fix-walks QA doc (cohort/TF-gated, under the gitignored private docs tree): the by-hand end-to-end walk, upload-day steps, and the concrete fixture-folder mapping. Kept private because it carries TF timing + cohort detail.
 
 **Code artifacts:**
-- `tests/test_no_fake_success_acceptance.py` — ⚠️ **written, never run.** Measured 3 Sep 2026: 8 tests, **8 skipped**, exit 0 — and a skip is indistinguishable from a pass in a summary line, a badge, or a close-out report, so the fake-success auditor currently produces a fake success ([gaps.md](gaps.md) G2). Executable fake-success audit: full pipeline on real data × providers × formats, asserts every success signal has a real artifact. `@pytest.mark.slow`, each leg **skips if its input is absent** — currently waiting on the format-parity fixtures.
+- `tests/test_no_fake_success_acceptance.py` — ⚠️ **written, never run.** Measured 4 Sep 2026: 6 tests, **6 skipped**, exit 0 (needs `-m slow`; the bare command now deselects them) — and a skip is indistinguishable from a pass in a summary line, a badge, or a close-out report, so the fake-success auditor currently produces a fake success ([gaps.md](gaps.md) G2). Executable fake-success audit: full pipeline on real data × providers × formats, asserts every success signal has a real artifact. `@pytest.mark.slow`, each leg **skips if its input is absent** — currently waiting on the format-parity fixtures.
 - `e2e/` — Playwright tier 2 (Chromium + WebKit; layers 1–3: console, links, network). `e2e/ALLOWLIST.md` governs suppressions.
 - `tests/fixtures/smoke-test/` — the committed synthetic single-session fixture both CI and Playwright trust.
 

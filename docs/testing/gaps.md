@@ -48,18 +48,21 @@ because it wasn't in the ask.
 every success signal has a real artifact behind it. Root `CLAUDE.md` lists it
 under "Built already".
 
-It has never run. **8 tests, 8 skipped, exit 0** — and a skip is indistinguishable
+It has never run. **6 tests, 6 skipped, exit 0** — and a skip is indistinguishable
 from a pass in a summary line, a badge, or a close-out report. The auditor built
 to catch success-without-substance is itself reporting success without substance.
 
-**Evidence:** `pytest tests/test_no_fake_success_acceptance.py -q` → `8 skipped in 0.97s`.
+**Evidence:** `pytest tests/test_no_fake_success_acceptance.py -q -m slow` → `6 skipped in 0.88s`.
+Note the `-m slow`: since 4 Sep 2026 `addopts = -m "not slow"` deselects the marker by
+default, so the bare form reports `6 deselected` and measures nothing. Re-measured
+4 Sep 2026 — it was 8 until `8094490e` parked the Zoom leg as a path no user can reach.
 
 **Blocker, measured 3 Sep 2026 — and it is not a fixture-generation problem.** The
-eight legs are 2 providers × 4 inputs, and they skip on three conditions: no
+six legs are 2 providers × 3 inputs, and they skip on three conditions: no
 provider API key, absent input, no Whisper backend. the gitignored local fixture slot
 contains **a README and nothing else**, so the test has never run *anywhere* —
-not in CI, where `@pytest.mark.slow` correctly excludes it, and not locally, where
-there is nothing to run against.
+not in CI and not locally — `@pytest.mark.slow` is deselected by default in both
+since 4 Sep 2026, and there is nothing to run it against anyway.
 
 That README specifies the work exactly: **one ~5-minute call exported natively from
 each of Zoom (`.vtt`), Microsoft Teams (`.docx`) and Google Meet (`.docx`)**. It is
@@ -69,11 +72,16 @@ parses by construction against the Teams-shaped parser and proves nothing. Runni
 it then fires paid LLM calls against real interview data, which is why it is a
 local, keyed, human-initiated tier by design.
 
-So *"8 skipped in CI"* is correct behaviour. The defect is the claim: root
+So *"6 skipped in CI"* is correct behaviour. The defect is the claim: root
 `CLAUDE.md` lists it under "Built already" without any of the above.
 
-**Cheap interim:** make the skip *loud*. A suite that reports "8 skipped" where
-someone expects "8 passed" is only safe if somebody reads the word.
+**Cheap interim:** make the skip *loud*. A suite that reports "6 skipped" where
+someone expects "6 passed" is only safe if somebody reads the word. **Precedent set
+4 Sep 2026** in `tests/test_autocode_discrimination.py`, whose live-LLM skip message
+now leads `SKIPPED, NOT PASSED` and names the provider failure kind — copy that shape
+here when the fixtures land. That harness used to *error* on an unfunded account, so
+every local close-out reported 3 non-regressions; the wording is the other half of the
+same fix.
 
 ---
 

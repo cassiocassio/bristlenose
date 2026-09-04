@@ -260,6 +260,33 @@ special-cased — that's the user's relationship with their cloud provider, not 
 "Downloading X of Y" + Cancel was proposed and walked back earlier. **No active "Fetching…"
 indicator.** The activity-indicator work must not touch the cloud/availability path.
 
+> **Reconciliation note, 4 Sep 2026 — this section and `design-project-storage.md` §3
+> disagree, and neither has been implemented. Read both before proposing anything here.**
+>
+> The premise above — "only iCloud is introspectable… third-party File Providers are
+> opaque" — was **measured false on 29 Jul 2026**: `ubiquitousItemDownloadingStatus` and
+> `SF_DATALESS` both work on Dropbox (storage doc §3, verified on a real Dropbox file).
+> On that basis the storage doc argues *for* a wait label — "Fetching from Dropbox…" —
+> and draws the line differently from this section: it rejects provider-specific
+> *behaviour* (download buttons, progress, integrations — the "Downloading X of Y +
+> Cancel" this section rightly walked back) but permits *naming what is already
+> happening*, citing this sidebar's own `cantFind(.unmountedVolume(name:))` as the
+> precedent. Its reason: an unexplained multi-minute stall reads as "Bristlenose is
+> slow"; a named one reads as "the network is slow", and each provider has a different
+> fix path.
+>
+> Neither position has shipped. The only live string is `desktop.availability.inCloud`
+> = "In iCloud", reached via `.inCloud` — which the storage doc shows is **unreachable
+> for evicted media** (the folder still exists, so availability resolves `.ready`) — and
+> which is hardcoded to iCloud although `detectLocation` already yields the provider
+> name ("Dropbox", "Google Drive", "iCloud Drive") in `displayHint`. So a Dropbox
+> project that *did* reach `.inCloud` (folder actually gone, location classified cloud)
+> would read "In iCloud".
+>
+> This was re-proposed from scratch on 4 Sep 2026 by a session that had read the
+> storage doc and not this one. Whichever way it is resolved, resolve it in **both**
+> docs in the same commit, and say which superseded which.
+
 ## Folders
 
 Projects render their chosen SF Symbol; folders render a folder icon + chevron.

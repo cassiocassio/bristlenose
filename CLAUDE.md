@@ -120,6 +120,40 @@ a refusal, assume **nothing** in that call ran; re-verify state before
 re-issuing, rather than assuming the parts before the offending fragment
 succeeded.
 
+### A guard that gates the COMMIT does not gate the PUSH — and pre-commit's pre-push stage checks ONE ref
+
+The 2 Jun 2026 scrub (`8a39f118`) untracked the private docs tree and added
+`scripts/check-tracked-vs-gitignore.sh`, which fails a commit whose **index**
+holds an ignored path. Good gate for the failure it names. It cannot see a
+branch or tag committed *before* the ignore rule existed, and nothing gated
+pushing one. Measured 4 Sep 2026: **four branches and twenty-three tags —
+sixteen of them release tags, v0.14.3–v0.15.12, six with GitHub Releases pages
+— had carried the tree on the public remote for three months after the scrub.**
+Deleting the branches and the seven checkpoint tags removed those copies. The
+release tags and `main`'s own history (125 commits; `git show 7229e180:<path>`
+still answers) keep it, **by decision** — the private history-scrub runbook
+stays unexecuted, and the reasons and measurements are under its Step 1. The
+question reopens at the desktop-repo split.
+
+The fix is `scripts/git-hooks/pre-push`, a **native** git hook, symlinked per
+clone (`ln -sf ../../scripts/git-hooks/pre-push .git/hooks/pre-push`). It reads
+**every** ref git hands it and refuses the whole push if any ref's tree carries
+a path the current `.gitignore` marks private. It is deliberately not a
+pre-commit stage: `pre_commit/commands/hook_impl.py::_pre_push_ns` **returns
+inside its loop on the first pushable ref** — read it rather than take this on
+trust; every branch of the loop body is `return _ns(...)` or `continue` — so a
+`--tags`, `--all`, or explicit multi-ref push is inspected one ref deep and the
+rest waved through, which is precisely the push the gate exists to stop. **Do
+not run `pre-commit install --hook-type pre-push`**: it overwrites the symlink
+with the one-ref-deep version and the gate goes quiet with no error. Proof:
+`scripts/test-pre-push.sh`; the offender-second case is the one that matters.
+
+**Tell that you are in this trap:** a ref that `check-tracked-vs-gitignore.sh`
+passes because it is not the index, while `git ls-tree -r <ref> | git
+check-ignore --no-index --stdin` prints paths. Ask the tree, not the index —
+and ask it of `origin`'s refs, not only `--all` locally: the remote held refs
+the local no longer did.
+
 ### Only Mach-O EXECUTABLES carry entitlements — bundles and dylibs never do
 
 The `.app` holds ~227 Mach-Os but only **4 are executables** (the host, ffmpeg,

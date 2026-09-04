@@ -18,3 +18,11 @@ repos:
         language: script
         pass_filenames: false
         always_run: true
+
+# pre-push is a NATIVE hook, deliberately not a pre-commit stage:
+#   scripts/git-hooks/pre-push   (install: see its header -- one symlink)
+# pre-commit's pre-push handler returns on the first pushable ref, so a
+# multi-ref push (`--tags`, `--all`, an explicit list) is checked one ref deep
+# -- and that is exactly the push the guard exists to stop. Do not add
+# `stages: [pre-push]` hooks here, and do not run
+# `pre-commit install --hook-type pre-push`: either would replace the real gate.

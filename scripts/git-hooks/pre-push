@@ -1,0 +1,71 @@
+#!/bin/bash
+# pre-push guard: refuse to push any ref whose TREE contains a file that the
+# current .gitignore says is private.
+#
+# Why this exists, and why it is a native hook rather than a pre-commit stage.
+# scripts/check-tracked-vs-gitignore.sh gates the INDEX at commit time. It
+# cannot see an old branch or tag that was committed before the ignore rule
+# existed -- and pushing one of those is how the private docs tree stayed on
+# the public remote for three months after the 2 Jun 2026 scrub: four branches
+# and twenty-three tags, sixteen of them release tags. Nothing gated the push.
+#
+# pre-commit's own pre-push stage was measured and rejected: its handler
+# (pre_commit/commands/hook_impl.py::_pre_push_ns) returns on the FIRST
+# pushable ref, so a `git push --tags` or any multi-ref push is checked one
+# ref deep and the rest waved through. This hook reads every line git sends.
+#
+# Install, once per clone (pre-commit does not manage this file):
+#     ln -sf ../../scripts/git-hooks/pre-push .git/hooks/pre-push
+# Do NOT run `pre-commit install --hook-type pre-push` -- it would replace the
+# symlink with the one-ref-deep version and the gate would go quiet.
+#
+# Contract (git pre-push): $1 remote name, $2 remote URL; stdin is one line per
+# ref: <local ref> <local sha> <remote ref> <remote sha>. Non-zero exit aborts
+# the whole push -- nothing is sent.
+#
+# Prove it: scripts/test-pre-push.sh  (runs in scripts/README.md's prove-the-gates loop)
+
+set -euo pipefail
+
+zero=0000000000000000000000000000000000000000
+status=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # Git never sends a blank line, but a blank line must not become a
+  # `git ls-tree ""` failure that reads as a broken gate.
+  [ -z "$local_sha" ] && continue
+  # A deletion pushes no tree.
+  [ "$local_sha" = "$zero" ] && continue
+
+  tree_paths="$(git ls-tree -r --name-only "$local_sha")" \
+    || { echo "✗ pre-push: cannot read the tree of $local_ref ($local_sha)" >&2; exit 2; }
+
+  # Judge every path by the CURRENT ignore rules. --no-index: by rules alone,
+  # not by what happens to be tracked today -- the whole point is that these
+  # files are NOT in today's index. check-ignore exits 1 for "none ignored",
+  # which is the good case, so its status is read rather than trusted to set -e.
+  set +e
+  offenders="$(printf '%s\n' "$tree_paths" | git check-ignore --no-index --stdin)"
+  rc=$?
+  set -e
+  case "$rc" in
+    0|1) ;;
+    *) echo "✗ pre-push: git check-ignore failed (exit $rc) on $local_ref" >&2; exit 2 ;;
+  esac
+
+  if [ -n "$offenders" ]; then
+    echo "✗ refusing to push $local_ref → $remote_ref: its tree carries files the current .gitignore marks private:" >&2
+    printf '%s\n' "$offenders" | sed 's/^/      /' >&2
+    status=1
+  fi
+done
+
+if [ "$status" -ne 0 ]; then
+  cat >&2 <<'EOF'
+
+  Nothing was pushed. Those files were committed before their ignore rule
+  existed, so the ref is a pre-scrub snapshot. Either do not push it, or
+  rebuild it without them (git rm --cached, or rebase it past the scrub).
+EOF
+fi
+exit "$status"

@@ -59,6 +59,7 @@ CI. Each has a suite below that proves it fires.
 | [`check-doc-surfaces.sh`](check-doc-surfaces.sh) | Every CLI flag reaches all three doc surfaces (README, man page, website CLI page). Unescapes roff before comparing — the naive grep reports present flags as missing. |
 | [`check-dep-drift.py`](check-dep-drift.py) | Names the packages whose resolved version drifted from the inventory; a major is a hard stop. Names them, rather than answering yes/no, because "is the inventory stale?" is not the answer that helps at 10pm. |
 | [`check-tracked-vs-gitignore.sh`](check-tracked-vs-gitignore.sh) | Fails if a **tracked** file matches a `.gitignore` rule — committed before its rule existed, therefore silently public while looking ignored. |
+| [`git-hooks/pre-push`](git-hooks/pre-push) | Refuses to push any ref whose **tree** carries a path the current `.gitignore` marks private — the pre-scrub branch or tag that `check-tracked-vs-gitignore.sh` cannot see, because that one reads the index. A native git hook reading **every** ref, deliberately not a pre-commit stage (whose handler returns on the first). Install: one symlink, see its header. |
 | [`check-locales.py`](check-locales.py) | Locale completeness and placeholder parity, honouring the runtime fallback chain and CLDR plural suffixes. Warnings by default; `--strict` to gate. |
 
 ## Prove the gates
@@ -94,6 +95,7 @@ done
 | [`test-preflight-substance.sh`](test-preflight-substance.sh) · [`test-preflight-gates.sh`](test-preflight-gates.sh) | The preflight's substance verdicts; and a replay of the 0.27.0 build failure where a rename made a gate's assertion unsatisfiable. |
 | [`test-doc-surfaces.sh`](test-doc-surfaces.sh) · [`test-dep-drift.py`](test-dep-drift.py) · [`test-tap-provenance.py`](test-tap-provenance.py) | Their namesake gates, same pattern. |
 | [`test-check-ratchet.py`](test-check-ratchet.py) | The ratchet's **write** path — `--tighten`, which `ratchet-tighten.yml` runs unattended, and `--adopt`, which installs a CI measurement here. Points `CEILINGS`/`METRICS` at temp objects rather than mutating a tracked file, so it needs no restore and never runs mypy. Proven red against the pre-fix script. |
+| [`test-pre-push.sh`](test-pre-push.sh) | The pre-push guard, driven with fabricated ref lines against a leaky commit built from plumbing — no index or working-tree mutation. The case that matters is the offender **second** in a multi-ref push, the one pre-commit's stage cannot fail. |
 
 ## Performance
 

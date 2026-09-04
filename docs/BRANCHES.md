@@ -2,7 +2,7 @@
 
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
-**Updated:** 4 Sep 2026 (closed `drag-push` — the last feature worktree. Its branch tip was already merged into `main` (0 unique commits), but the worktree carried **six months of uncommitted rail-drag animation work** that existed nowhere else; committed at `7105fb47` and tagged `archive/drag-push` before removal, so the branch and its 1.6 GB worktree are gone and nothing was lost. **No feature worktree now exists.**) Prior: 22 Aug 2026 (no branch opened or closed — the worktree table was **measured** against `git worktree list` and the disk, and four of its five rows were wrong; see the note under the table. Also documents the `.claude/worktrees/` agent-session worktrees, which this file has never tracked.) Prior: 14 Jul 2026 (closed `testflight-prep` — merged to main `ed5ef885`; the TF-prep sandbox/HR/arm64/MAS-signing work that DELIVERED Bristlenose 0.20.0 (2068) to TestFlight internal testing on 14 Jul. Worktree detached + tagged orange on disk with a stale marker; local branch deleted; remote never pushed. Also carried the inert build-script report tooling.) Prior: 9 Jul 2026 (closed three worktrees: `slavic` — merged to main 3 Jul `37e6f559`, machine-seeded/native-review-pending is a content gate not a branch one; `curation-persistence` — merged 7 Jul `c4152e13`, post-merge work continued on main; `native-experiment` — spike discarded, "possible but expensive", postmortem + mockup rescued to main `03a260d3`, history at tag `archive/native-experiment`. All worktrees detached + kept on disk with stale markers, local branches deleted, none were on remote.) Prior: 6 Jul 2026 (opened `native-experiment` — spike worktree for an experimental, lens-by-lens conversion of the UI to native macOS, inspired by Gruber's 2018 *Electron and the Decline of Native Apps*; a learning exercise, not a committed migration.) Prior: 6 Jul 2026 (opened `curation-persistence` — feature worktree for the incremental-analysis persistence layer: freeze marked quotes, membership-based section identity, best-effort themes. Plan: `docs/design-curation-persistence-plan.md`.) Prior: 3 Jul 2026 (closed `spike` branch — merged to main; worktree detached + tagged orange on disk, local branch deleted. Translucent titlebar/toolbar proof-of-concept for macOS 26 Tahoe.) Prior: 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
+**Updated:** 4 Sep 2026, second pass (**the content triage** — 17 local branches → 11, and the first **remote** deletions: 9 gone. Landed the anonymisation-export-boundary correction off `quirky-ellis` as `62944027` after re-verifying every `file:line` — 8 of 10 had rotted in 13 days. Deleted four superseded locals and nine absorbed remotes; removed both stale agent worktrees. Full record + what deliberately stays: § *4 Sep 2026 — the content triage the sweep deferred*.) Prior: 4 Sep 2026 (closed `drag-push` — the last feature worktree. Its branch tip was already merged into `main` (0 unique commits), but the worktree carried **six months of uncommitted rail-drag animation work** that existed nowhere else; committed at `7105fb47` and tagged `archive/drag-push` before removal, so the branch and its 1.6 GB worktree are gone and nothing was lost. **No feature worktree now exists.**) Prior: 22 Aug 2026 (no branch opened or closed — the worktree table was **measured** against `git worktree list` and the disk, and four of its five rows were wrong; see the note under the table. Also documents the `.claude/worktrees/` agent-session worktrees, which this file has never tracked.) Prior: 14 Jul 2026 (closed `testflight-prep` — merged to main `ed5ef885`; the TF-prep sandbox/HR/arm64/MAS-signing work that DELIVERED Bristlenose 0.20.0 (2068) to TestFlight internal testing on 14 Jul. Worktree detached + tagged orange on disk with a stale marker; local branch deleted; remote never pushed. Also carried the inert build-script report tooling.) Prior: 9 Jul 2026 (closed three worktrees: `slavic` — merged to main 3 Jul `37e6f559`, machine-seeded/native-review-pending is a content gate not a branch one; `curation-persistence` — merged 7 Jul `c4152e13`, post-merge work continued on main; `native-experiment` — spike discarded, "possible but expensive", postmortem + mockup rescued to main `03a260d3`, history at tag `archive/native-experiment`. All worktrees detached + kept on disk with stale markers, local branches deleted, none were on remote.) Prior: 6 Jul 2026 (opened `native-experiment` — spike worktree for an experimental, lens-by-lens conversion of the UI to native macOS, inspired by Gruber's 2018 *Electron and the Decline of Native Apps*; a learning exercise, not a committed migration.) Prior: 6 Jul 2026 (opened `curation-persistence` — feature worktree for the incremental-analysis persistence layer: freeze marked quotes, membership-based section identity, best-effort themes. Plan: `docs/design-curation-persistence-plan.md`.) Prior: 3 Jul 2026 (closed `spike` branch — merged to main; worktree detached + tagged orange on disk, local branch deleted. Translucent titlebar/toolbar proof-of-concept for macOS 26 Tahoe.) Prior: 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
 
 ---
 
@@ -33,7 +33,7 @@ Each active feature branch gets its own **git worktree** — a full working copy
 | Directory | Branch | Kind | Purpose |
 |-----------|--------|------|---------|
 | `bristlenose/` | `main` | — | Main repo, releases, hotfixes — and where work happens by default (solo trunk) |
-| `.claude/worktrees/<name>/` | detached | — | **Agent-session worktrees** (`isolation: worktree`). Ephemeral, auto-removed when unchanged, never registered here. Two were live at the 22 Aug audit. Don't hand-manage them |
+| `.claude/worktrees/<name>/` | detached | — | **Agent-session worktrees** (`isolation: worktree`). Ephemeral, never registered here. The two live at the 22 Aug audit were **still there on 4 Sep**, clean, at 32 MB and 393 MB — "auto-removed when unchanged" did not fire in a month, so they were removed by hand. Check `git worktree list` rather than assuming they clear themselves |
 
 **Measured 22 Aug 2026, and the rows above are what was actually there.** `git worktree list` and the disk disagreed with this file on four rows: `tower-of-hanoi`, `responsive-signal-cards`, `symbology` and `living-fish` were each listed as a live worktree, and **none of the four directories exists on disk**. They were removed without the table following. The branches and the experiments behind them are unaffected — the parked ones are described under Historical experiments below. At that point only `drag-push` survived as a real worktree; it was retired 4 Sep 2026, so **no feature worktree exists now** — `main` is the only working copy, which is what the solo-trunk default expects.
 
@@ -135,14 +135,14 @@ Feature branches are pushed to GitHub for backup without triggering releases (on
 | `i18n-llm-settings` _(merged)_ | `bristlenose_branch i18n-llm-settings/` _(detached, on disk)_ | merged to main 5 May 2026 (`c023f7d`) |
 | `symbology` _(parked)_ | `bristlenose_branch symbology/` | `origin/symbology` |
 | `highlighter` _(closed)_ | _removed 21 Jun 2026_ | local + remote deleted — tip was an ancestor of main (nothing unmerged) |
-| `living-fish` _(parked)_ | `bristlenose_branch living-fish/` | `origin/living-fish` |
+| `living-fish` _(parked)_ | _local branch deleted 4 Sep 2026_ | `origin/living-fish` — **now the only copy**, and deliberately kept: the branch is 2705 behind and edits `stages/render_html.py`, which no longer exists, but `docs/design-living-fish.md` has not been superseded |
 | `drag-push` _(closed)_ | _removed 4 Sep 2026_ | local only — never pushed; history at tag `archive/drag-push` |
 | `cli-message-kinds` _(closed)_ | `bristlenose_branch cli-message-kinds/` _(detached, on disk)_ | local only — code on main as `0a0c8d5` |
 | `desktop-provider-resolution` _(merged)_ | `bristlenose_branch desktop-provider-resolution/` _(detached, on disk)_ | local only — merged to main 7 Jun 2026 (`5292802`) |
 | `chunked-quote-extraction` _(merged)_ | `bristlenose_branch chunked-quote-extraction/` _(detached, on disk)_ | local only — merged to main 9 Jun 2026 (`927fa63`) |
 | `background-runs-view-switch` _(merged)_ | `bristlenose_branch background-runs-view-switch/` _(detached, on disk)_ | local only — merged to main 16 Jun 2026 (`bf03d55`) |
 | `determinate-progress` _(merged)_ | `bristlenose_branch determinate-progress/` _(detached, on disk)_ | local only — merged to main 17 Jun 2026 (`a1fa49a`) |
-| `gemini-provider` _(closed)_ | _removed 2 Jul 2026_ | `origin/gemini-provider` still on remote (local + worktree deleted; unique commit `3413e1c` was content-duplicate of main's `c73259b8`; branch was 17 days stale so a real merge would have regressed retired-Claude bumps + `.outOfCredit` provider status. Residual "Data use" links deliverable captured in the private planning notes as post-TF) |
+| `gemini-provider` _(closed)_ | _removed 2 Jul 2026_ | **remote deleted 4 Sep 2026** (0 unique by patch-id). Was: `origin/gemini-provider` still on remote (local + worktree deleted; unique commit `3413e1c` was content-duplicate of main's `c73259b8`; branch was 17 days stale so a real merge would have regressed retired-Claude bumps + `.outOfCredit` provider status. Residual "Data use" links deliverable captured in the private planning notes as post-TF) |
 
 
 
@@ -232,8 +232,8 @@ Marked parked: 1 May 2026.
 
 ### `living-fish` — started 26 Feb 2026
 
-**Worktree:** `/Users/cassio/Code/bristlenose_branch living-fish/`
-**Remote:** `origin/living-fish`
+**Worktree:** _removed before 22 Aug 2026_
+**Remote:** `origin/living-fish` — the only surviving copy (local branch deleted 4 Sep 2026)
 
 **Idea:** Animated "living portrait" bristlenose logo for serve mode — AI-generated video loop (WebM VP9 alpha + MOV HEVC alpha) with subtle breathing/gill/fin movement, plus a dark-mode logo fix that drops the `mix-blend-mode: lighten` hack via a transparent-background PNG. Touches `bristlenose/server/app.py`, `theme/report_header.html`, `theme/atoms/logo.css`, `theme/images/`, possibly a React header component.
 
@@ -807,7 +807,69 @@ genuinely not on `main` (verified by patch-id, not by commit count):
   `rescue-hide-sessions` (a stash promoted to a branch),
   `security-txt`, `txt-notes-ingest` (parked `.txt` ingest WIP).
 
-**Remotes were not touched.** Nine of the sixteen still have an `origin/`
-counterpart; deleting those is a separate, outward-facing act.
+**Remotes were not touched** in that pass — ~~nine of the sixteen still have an
+`origin/` counterpart; deleting those is a separate, outward-facing act.~~
+Done 4 Sep 2026, below.
 
 Everything deleted is recoverable from `git reflog` for 90 days.
+
+### 4 Sep 2026 — the content triage the sweep deferred
+
+The sweep stopped at "holds content not on `main`". This pass asked the next
+question — *is that content still wanted?* — and it is the one that needs
+reading, not counting. **17 local branches → 11; 9 remotes deleted.**
+
+**Landed, then deleted:** `claude/quirky-ellis-2b307a`. Its correction to the
+anonymisation export boundary was the only item where `main` was stating
+something false — the doc predicted exports would *"strip display names by
+default"* when the shipped default is the opposite. Landed as `62944027`.
+**Every `file:line` in it was re-verified first: 8 of 10 had drifted in 13
+days, and `QuoteCard.tsx`/`SessionsTable.tsx` had moved to `islands/`.**
+Applying the branch as written would have reproduced the defect it fixed.
+
+**Deleted as superseded** (`git cherry` patch-id, then read):
+`rescue-hide-sessions` (a stash; `main` is strictly ahead — it would have
+*removed* 44 lines), `claude/review-dependabot-updates-CF7in` (its
+`dependabot.yml` and policy doc are both on `main` and far richer — 231 lines
+vs 170, and `main` carries the whole held register), `claude/daily-code-lesson-j3z7l7`
+(a scratch file), `living-fish` (local only — see the register row).
+
+**Remotes deleted (9)** — the eight at 0 unique commits
+(`claude/britons-architecture-improvements-IqeCD`, `claude/cli-export-audit-9uuhn7`,
+`claude/document-deployment-targets-CQ95w`, `gemini-provider`,
+`pipeline-view-v1-5`, `serve`, `wip`, `snap-strict-confinement`), plus
+`claude/bn-strava-style-integration-cqekb6`, which **patch-id called 13-unique
+and content called landed**: it is the draft the shipped MCP and chat-lens docs
+grew out of (463→504 and 859→1417 lines), and all six of its aspirational tool
+names still appear in `docs/design-mcp-server.md`. Checked before deleting,
+because a nonzero patch-id count is not evidence of unique *content*.
+
+> **`origin/wip` was among them.** It is the documented backup slot
+> (`git push origin main:wip`, CLAUDE.md § Branch workflow) and held a stale
+> snapshot of `main`. Deleting it does not break the workflow — the next push
+> recreates it.
+
+**Two traps paid for in this pass, both already in CLAUDE.md.** The `git push
+--delete` was written with the branch list in a shell variable; **zsh does not
+word-split**, so it became one refspec and the push failed — loudly, this time,
+which is the only reason it was cheap. And a `git commit` in the retired
+`drag-push` worktree was **refused** by pre-commit (that March-era branch
+predates `.pre-commit-config.yaml`), while the `git tag` batched into the same
+call still ran — tagging the *pre-WIP* tip. Assume nothing in a refused call ran.
+
+**Left standing, and why** — these are decisions, not hygiene:
+
+| Branch | Why it stays |
+|---|---|
+| `audit/billing-hints-2026-07` | **Open PR #123**, and a live factual disagreement: it says Gemini moved to prepay in Mar 2026; `billing_hints.py:84` still tells users it is post-paid. One of them is wrong in shipped text |
+| `security-txt` | **Open PR #85**, but the `website/` path it targets moved to the separate deploy repo — close it and redo it there |
+| `origin/claude/css-system-audit-xy6hm7` | 8 commits, **none on `main`**: `scripts/audit-css.py`, a `--bn-z-*` scale retiring ~14 magic values, real `--bn-colour-danger/-success/-warning` tokens. Live design-system infrastructure that never landed |
+| `claude/youthful-bell-c43868` | Not superseded — a **disagreement**. `main` ships `Moderator`/`Teilnehmer`; the branch proposes inclusive `Moderator:in`/`Teilnehmer:in` across 19 locales. A translation-register call for native reviewers |
+| `txt-notes-ingest` | Parked feature with a design doc and 141 lines of tests |
+| `symbology`, `tower-of-hanoi`, `stale/claude-objective-banzai-rescued-…` | Design artefacts and experiments, which CLAUDE.md § Boundaries keeps in-tree on purpose |
+| `origin/gh-pages` | Orphan Pages branch |
+
+**Still orphaned:** `origin/claude/daily-code-lesson-j3z7l7` and
+`origin/claude/review-dependabot-updates-CF7in` outlived the locals deleted
+above and are now noise — a scratch file and a superseded policy draft. Left
+only because remote deletion was authorised branch-by-branch.

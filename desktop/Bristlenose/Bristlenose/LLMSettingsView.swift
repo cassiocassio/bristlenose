@@ -447,7 +447,7 @@ struct LLMSettingsView: View {
 
     // MARK: - Model section
 
-    @AppStorage("llmModel") private var globalModel: String = "claude-sonnet-4-6"
+    @AppStorage("llmModel") private var globalModel: String = LLMProvider.claude.defaultModel
     @State private var useCustomModel: Bool = false
     @State private var customModelText: String = ""
     @FocusState private var customModelFocused: Bool

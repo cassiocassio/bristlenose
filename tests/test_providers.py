@@ -25,7 +25,11 @@ class TestProviderSpec:
         assert spec.name == "anthropic"
         assert spec.display_name == "Claude"
         assert "claude" in spec.aliases
-        assert spec.default_model == "claude-sonnet-4-6"
+        # The recorded decision is "Sonnet class, current version" — so pin
+        # the class, not the version. Asserting the literal made every
+        # model refresh a test edit, which is how it drifted to a legacy
+        # model in the first place.
+        assert spec.default_model.startswith("claude-sonnet")
         assert spec.sdk_module == "anthropic"
 
     def test_openai_spec(self) -> None:

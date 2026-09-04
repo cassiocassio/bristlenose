@@ -28,6 +28,7 @@ from anthropic.resources.messages import AsyncMessages
 from bristlenose.config import BristlenoseSettings
 from bristlenose.llm.client import _ANTHROPIC_ACCEPTS_SAMPLING, LLMClient
 from bristlenose.llm.structured import QuoteExtractionResult
+from bristlenose.providers import PROVIDERS
 
 _SWIFT_PROVIDER = (
     Path(__file__).parent.parent / "desktop/Bristlenose/Bristlenose/LLMProvider.swift"
@@ -182,6 +183,26 @@ class TestPickerClientCoherence:
                     f"_ANTHROPIC_ACCEPTS_SAMPLING, yet a sampling parameter was sent. "
                     f"Post-4.6 Claude models reject it with a 400."
                 )
+
+    def test_swift_and_python_agree_on_the_default_model(self) -> None:
+        """The default is declared twice — once per language — which is
+        irreducible without codegen, so it is pinned instead.
+
+        Everything else cascades: ``config.py`` reads it from ``providers.py``
+        and ``LLMSettingsView`` reads it from ``LLMProvider``. These two are
+        what is left. Drift here means the Mac app and the CLI disagree about
+        what an unconfigured run actually uses, which is invisible until
+        someone compares two runs.
+        """
+        src = _SWIFT_PROVIDER.read_text(encoding="utf-8")
+        match = re.search(
+            r"var defaultModel: String \{.*?case \.claude: \"([^\"]+)\"", src, re.S
+        )
+        assert match, f"could not find .claude defaultModel in {_SWIFT_PROVIDER}"
+        assert match.group(1) == PROVIDERS["anthropic"].default_model, (
+            f"Swift defaults to {match.group(1)}, Python to "
+            f"{PROVIDERS['anthropic'].default_model}"
+        )
 
     def test_sunset_set_only_names_models_we_could_offer(self) -> None:
         """The set only ever shrinks. An entry that names nothing real is dead

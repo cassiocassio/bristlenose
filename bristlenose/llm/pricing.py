@@ -27,14 +27,21 @@ from .telemetry import iter_rows
 
 # Bump when any rate changes — stamped onto every cost-bearing event so a
 # future reader can recompute against a newer table.
-PRICE_TABLE_VERSION = "2026-04-25"
+PRICE_TABLE_VERSION = "2026-09-04"
 CURRENCY = "USD"
 
 # Pricing per million tokens: (input_rate_usd, output_rate_usd).
 PRICING: dict[str, tuple[float, float]] = {
     # Anthropic (Claude)
-    "claude-sonnet-4-20250514": (3.0, 15.0),
+    "claude-sonnet-5": (2.0, 10.0),
+    "claude-opus-5": (5.0, 25.0),
+    "claude-haiku-4-5-20251001": (1.0, 5.0),
+    # Legacy — kept because a user pinned to one in Settings still needs a
+    # cost estimate. `estimate_cost` returns None for anything unlisted, so a
+    # missing row is a silently absent feature, not an error.
     "claude-sonnet-4-6": (3.0, 15.0),
+    "claude-opus-4-8": (5.0, 25.0),
+    "claude-sonnet-4-20250514": (3.0, 15.0),
     "claude-haiku-3-5-20241022": (0.80, 4.0),
     # OpenAI (ChatGPT)
     "gpt-4o": (2.50, 10.0),
@@ -46,8 +53,12 @@ PRICING: dict[str, tuple[float, float]] = {
 
 # Mirrors PRICING — provider lookup for cohort key resolution.
 _MODEL_PROVIDER: dict[str, str] = {
-    "claude-sonnet-4-20250514": "anthropic",
+    "claude-sonnet-5": "anthropic",
+    "claude-opus-5": "anthropic",
+    "claude-haiku-4-5-20251001": "anthropic",
     "claude-sonnet-4-6": "anthropic",
+    "claude-opus-4-8": "anthropic",
+    "claude-sonnet-4-20250514": "anthropic",
     "claude-haiku-3-5-20241022": "anthropic",
     "gpt-4o": "openai",
     "gpt-4o-mini": "openai",

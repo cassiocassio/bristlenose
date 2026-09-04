@@ -47,7 +47,7 @@ PROVIDERS: dict[str, ProviderSpec] = {
                 "Claude API key",
             ),
         ],
-        default_model="claude-sonnet-4-6",
+        default_model="claude-sonnet-5",
         sdk_module="anthropic",
         pricing_url="https://docs.anthropic.com/en/docs/about-claude/models",
     ),

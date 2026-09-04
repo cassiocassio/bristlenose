@@ -10,6 +10,8 @@ from typing import NamedTuple
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from bristlenose.providers import PROVIDERS
+
 logger = logging.getLogger(__name__)
 
 # Set by the macOS desktop host (BristlenoseShared.childEnvironment) on every
@@ -130,7 +132,11 @@ class BristlenoseSettings(BaseSettings):
         default="",
         validation_alias=AliasChoices("BRISTLENOSE_OPENAI_API_KEY", "OPENAI_API_KEY"),
     )
-    llm_model: str = "claude-sonnet-4-6"
+    # Derived, not restated. providers.py is the single source for "which
+    # model does this provider default to"; this field is only the
+    # desktop-contract backstop, so a literal here was a second
+    # declaration that drifts silently the day the registry moves.
+    llm_model: str = PROVIDERS["anthropic"].default_model
     llm_max_tokens: int = 64000
     llm_temperature: float = 0.1
 

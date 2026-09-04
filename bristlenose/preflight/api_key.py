@@ -8,7 +8,9 @@ stage actually ran, several minutes into the pipeline.
 
 This preflight runs a paid ``/messages`` call up-front. Per finding 15:
 
-- Single token: ``max_tokens=1``
+- Single token: ``max_tokens=1`` — or ``max_completion_tokens=1`` for the
+  ChatGPT models that refuse the old name, decided by the *client's* own
+  ``_OPENAI_LEGACY_PARAMS`` rather than a copy of it (see ``_validate_openai``)
 - Locked inert prompt: ``"."`` (constant; never user-derived — so the call
   is greppable and cannot leak transcript content)
 - ``User-Agent: bristlenose/<version>`` so server-side logs identify us
@@ -55,6 +57,7 @@ if TYPE_CHECKING:
 from bristlenose import __version__
 from bristlenose.i18n import t
 from bristlenose.llm.billing_hints import billing_for, recovery_message
+from bristlenose.llm.client import _OPENAI_LEGACY_PARAMS
 from bristlenose.preflight import PreflightAbortedError
 
 # Back-compat alias — see preflight/whisper.py for the unification rationale.
@@ -264,6 +267,38 @@ def _openai_error_code(exc: BaseException) -> str | None:
     return code if isinstance(code, str) else None
 
 
+# Output cap for the GPT-5-class ping. Not 1: a reasoning model cannot finish
+# even "." inside one token and the API answers 400 "Could not finish the
+# message" rather than a truncated 200 (measured 5 Sep 2026 on gpt-5.6-terra:
+# cap=1 → 400; cap=16 → 12 tokens; cap=64 → 24 tokens, 10 of them reasoning).
+# Billing is per token produced, so a roomy cap costs nothing on the common
+# path and bounds the rare one at a few thousandths of a dollar.
+_OPENAI_MODERN_CAP = 256
+
+
+def _openai_token_cap(model: str) -> dict[str, Any]:
+    """The output cap for the ping, under the name and size this model accepts.
+
+    GPT-5 onward refuses ``max_tokens`` outright (400 ``unsupported_parameter``:
+    "Use 'max_completion_tokens' instead"); the models before it refuse the
+    new name. The client already decides this per model in
+    ``_OPENAI_LEGACY_PARAMS``; this preflight is a *second* request builder for
+    the same provider and must read the same list, never carry its own.
+
+    Measured 4 Sep 2026: the client was gated and the ChatGPT default moved to
+    ``gpt-5.6-terra`` in one commit that left this function on ``max_tokens=1``.
+    Every ChatGPT run then aborted here, before stage 1, with a message that
+    told the researcher to top up their credit. Mocked tests passed throughout,
+    because a mock accepts any keyword; the first real run through this path
+    (the acceptance matrix's ``run:openai`` cell) failed at once. The first
+    fix, ``max_completion_tokens=1``, passed the same mocks and failed the same
+    live call for the reason on ``_OPENAI_MODERN_CAP``.
+    """
+    if model in _OPENAI_LEGACY_PARAMS:
+        return {"max_tokens": 1}
+    return {"max_completion_tokens": _OPENAI_MODERN_CAP}
+
+
 def _validate_openai(api_key: str, model: str) -> ValidationResult:
     """Exercise billing via a 1-token chat-completion to the OpenAI API."""
     import openai
@@ -275,7 +310,7 @@ def _validate_openai(api_key: str, model: str) -> ValidationResult:
     try:
         client.chat.completions.create(
             model=model,
-            max_tokens=1,
+            **_openai_token_cap(model),
             messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
         )
     except openai.AuthenticationError as exc:
@@ -331,6 +366,10 @@ def _validate_azure(
         default_headers={"User-Agent": f"bristlenose/{__version__}"},
     )
     try:
+        # Deliberately NOT gated like ``_validate_openai``: a deployment name is
+        # the customer's own word and cannot say whether a GPT-5-class model
+        # sits behind it. Mirrors ``LLMClient._analyze_azure``, which keeps the
+        # legacy shape for the same reason — the two must move together.
         client.chat.completions.create(
             model=deployment,
             max_tokens=1,

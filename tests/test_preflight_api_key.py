@@ -256,6 +256,75 @@ class TestValidateOpenai:
         assert not result.ok
         assert result.error_class == "rate_limit"
 
+    # The request SHAPE, per model class. A mock accepts any keyword, so these
+    # pin what is sent rather than whether the call "worked": on 4 Sep 2026 the
+    # client was gated and the default moved to a GPT-5-class model while this
+    # validator kept sending `max_tokens=1`, and every ChatGPT run aborted at
+    # preflight with a 400 the mocked suite could not see.
+
+    def _sent_kwargs(self, monkeypatch, model: str) -> dict:
+        fake = self._fake_openai()
+        monkeypatch.setitem(__import__("sys").modules, "openai", fake)
+        result = _validate_openai("sk-key", model)
+        assert result.ok
+        return dict(fake.OpenAI.return_value.chat.completions.create.call_args.kwargs)
+
+    def test_gpt5_class_model_sends_max_completion_tokens(self, monkeypatch):
+        from bristlenose.preflight.api_key import _OPENAI_MODERN_CAP
+
+        kwargs = self._sent_kwargs(monkeypatch, "gpt-5.6-terra")
+        assert kwargs["max_completion_tokens"] == _OPENAI_MODERN_CAP
+        assert "max_tokens" not in kwargs
+
+    def test_modern_cap_is_not_one_token(self):
+        # A reasoning model cannot finish even "." in one token and the API
+        # returns 400 "Could not finish the message" — an error, not a
+        # truncated success — so a cap of 1 fails a perfectly good key
+        # (measured live 5 Sep 2026: cap=1 → 400, cap=16 → 12 tokens). Only
+        # the legacy models get the literal one-token ping.
+        from bristlenose.preflight.api_key import _OPENAI_MODERN_CAP
+
+        assert _OPENAI_MODERN_CAP >= 16
+
+    def test_unknown_model_fails_closed_to_the_modern_name(self, monkeypatch):
+        # Every future ChatGPT model refuses the old name; an unlisted model
+        # gets the new one, so a model added to the picker before the list is
+        # taught about it still validates.
+        kwargs = self._sent_kwargs(monkeypatch, "gpt-7-nova")
+        assert "max_completion_tokens" in kwargs
+        assert "max_tokens" not in kwargs
+
+    def test_legacy_model_keeps_max_tokens(self, monkeypatch):
+        kwargs = self._sent_kwargs(monkeypatch, "gpt-4o-mini")
+        assert kwargs["max_tokens"] == 1
+        assert "max_completion_tokens" not in kwargs
+
+    def test_the_gate_is_the_clients_not_a_copy(self):
+        # Two request builders for one provider drift the moment one is edited
+        # alone — which is exactly how the 4 Sep regression happened. The
+        # preflight must read the client's list by identity, never its own.
+        from bristlenose.llm import client
+        from bristlenose.preflight import api_key
+
+        assert api_key._OPENAI_LEGACY_PARAMS is client._OPENAI_LEGACY_PARAMS
+
+    def test_both_cap_names_exist_on_the_installed_sdk(self):
+        # The gap a mock cannot close: does the SDK actually installed accept
+        # the keyword we send? An `openai` too old to know
+        # `max_completion_tokens` would raise TypeError before any network
+        # call, and every faked test here would stay green.
+        import inspect
+
+        import openai
+        from openai.resources.chat.completions import Completions
+
+        params = inspect.signature(Completions.create).parameters
+        assert not any(
+            p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()
+        ), "Completions.create grew **kwargs; this test is now vacuous"
+        for name in ("max_tokens", "max_completion_tokens"):
+            assert name in params, f"openai {openai.__version__} lacks {name}"
+
 
 # ---------------------------------------------------------------------------
 # Real-SDK-exception validators (Azure, Google, Local, OpenAI-structured).

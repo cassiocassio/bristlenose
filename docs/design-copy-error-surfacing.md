@@ -143,13 +143,66 @@ app needs a force-quit. A fix brief exists in the maintainer's private handoffs
 surfacing change touches it. It was a rediscovery, and the trial artifact now
 says so.
 
-**The read path and the copy path fail differently.** `design-project-storage.md`
-§3 records — **MEASURED**, 28–29 Jul 2026 — that uncoordinated *reads* of a
-dataless file (`cat`, `cp`, `dd`, `os.read`, `readFileSync`) can fail with
-`EDEADLK`. That is the read path. `FileManager.copyItem` does not return
-`EDEADLK`; it hangs. Two operations, two behaviours. Conflating them produces a
-confident, wrong "correction" — which is exactly what happened in conversation
-on 4 Sep before this doc was written.
+**The axis is not read-vs-copy. It is the caller's materialisation policy.**
+This section was first written on the wrong axis and corrected the same day
+after a research pass measured the kernel behaviour on this machine.
+
+The kernel decides what happens when any syscall touches a dataless file by a
+per-process I/O policy, `IOPOL_TYPE_VFS_MATERIALIZE_DATALESS_FILES`, inherited
+across spawn:
+
+| Policy | `read(2)` / `Data(contentsOf:)` | `FileManager.copyItem` |
+|---|---|---|
+| **ON** (2) | blocks until the provider delivers the bytes, then succeeds | blocks the same way, then copies |
+| **OFF** (0/1) | fails instantly, `EDEADLK` = **errno 11** on macOS | fails instantly, `NSCocoaErrorDomain 512` / POSIX 11 |
+
+Reads and copies behave **identically** within a policy state. What differed
+between the project's two earlier measurements was not the operation but the
+process: the 19 Jun "hangs forever" gotcha was measured in the app (ON); the
+28 Jul "`EDEADLK`" finding came from tools listed without an OS, carries
+**Linux's** errno number (35 is `EAGAIN` on macOS — SDK header, verified), and
+a research pass traced its phrasing to a measurement inside an Ubuntu VM. That
+attribution I could not confirm from the commit history, which cites no source;
+the number being wrong for macOS I could.
+
+**MEASURED, 4 Sep 2026, inside the sandboxed test host** (`APP_SANDBOX_CONTAINER_ID
+= app.bristlenose`, `DatalessPolicyProbeTests`):
+
+```
+dataless.policy.process: 2   ← ON
+dataless.policy.errno.EDEADLK: 11
+dataless.policy.errno.EAGAIN: 35
+```
+
+So **Bristlenose runs with materialisation ON**, and — because the policy is
+inherited — so does the sidecar it spawns. Consequences:
+
+- The app never sees `EDEADLK` under normal launch. That path belongs to
+  launchd jobs lacking `MaterializeDatalessFiles`, processes that opt out, and
+  VM bridges. It is real; it is not ours.
+- The hazard the app actually has is the **blocking** one: `copyItem` on an
+  evicted source waits in `msleep(… PVFS|PCATCH …)` with no timeout,
+  interruptible only by a signal. No progress, no partial file, and
+  `Task.cancel()` cannot reach a synchronous call. That is the force-quit hang,
+  and the 29 Jul `ffprobe` 30-second timeouts on Dropbox are the same mechanism
+  seen from the sidecar.
+- **`NSFileCoordinator` is not the fix for this app.** Under ON, a coordinated
+  read materialises exactly as an uncoordinated one does — it changes neither
+  the blocking nor the cancellability. Coordination matters for OFF-policy
+  callers and as a fence against the sync daemon; the storage doc's "the fix
+  is `NSFileCoordinator`" was written against the wrong policy state.
+- The non-blocking shape every shipping app converges on is: detect
+  (`SF_DATALESS` via `st_flags`, or `ubiquitousItemDownloadingStatus` — both
+  work cross-provider, files and folders) → `startDownloadingUbiquitousItem`
+  (returns in 1–3 ms) → poll with a wall-clock bound → then copy. **The sidecar
+  already does this**: `bristlenose/utils/fs.py` carries `SF_DATALESS`,
+  `is_dataless()`, and `ensure_materialised()` with `MATERIALISE_TIMEOUT_SECONDS`.
+  The desktop copy path at `CopyMachinery.swift:107` does not, and should mirror
+  it rather than invent a third pattern.
+- `brctl download` / `brctl evict` **no longer exist** on 26.4.1 (verified —
+  both fall through to usage). `startDownloadingUbiquitousItem` /
+  `evictUbiquitousItem` are the surviving API. Any recipe or fix note naming
+  `brctl` is stale.
 
 **`.inCloud` is unreachable for evicted media, and that is documented.**
 `ProjectAvailability` short-circuits on `fileExists(atPath: path)` — the project
@@ -224,9 +277,11 @@ Recorded so they are not re-derived:
 
 1. *"Cloud state triggers the lease bug."* Wrong — §5. Reasoned from code
    without reading the storage doc, which had measured the opposite.
-2. *"copyItem on a dataless file fails with EDEADLK."* Wrong — §5. A
-   "correction" applied to an arm that had it right; the read-path finding
-   was transplanted onto the copy path.
+2. *"copyItem on a dataless file fails with EDEADLK."* Wrong — §5. And the
+   first correction of it, *"reads get EDEADLK, copies hang"*, was **also**
+   wrong: it put the difference on the operation when it is on the caller's
+   policy. Committed in an earlier revision of this doc and fixed the same
+   day once the policy was measured in-process.
 3. *"The dataless finding was the trial's highest-value discovery."* It was
    a rediscovery of a documented, briefed defect.
 
@@ -236,10 +291,43 @@ subsystem lives in `desktop/CLAUDE.md` (gotchas) and
 `design-project-storage.md` §3 (reproduced end to end). Read those before
 reasoning about cloud files.
 
-## 8. Evidence still pending
+## 8. Evidence — the research pass, 4 Sep 2026
 
-A research pass on developers' first-hand accounts of dataless-file behaviour
-across iCloud / OneDrive / Dropbox on macOS — including whether
-`NSFileCoordinator` actually materialises reliably and where the `EDEADLK`
-finding originates — is in flight at the time of writing and will be appended
-here when it lands. Nothing in §1–§6 depends on it.
+A research pass gathered first-hand accounts and ran its own probes on this
+Mac (macOS 26.4.1). Items marked ✓ were independently re-verified here; the
+rest are the pass's findings with their sources. The pass disclosed that its
+probes materialised five of the maintainer's own cloud files by ≤2 bytes total
+and evicted them back with `evictUbiquitousItem` — net state unchanged.
+
+| Claim | Status | Source |
+|---|---|---|
+| macOS `EDEADLK` = 11; 35 = `EAGAIN` | ✓ SDK `errno.h` | — |
+| Sandboxed app runs materialisation policy **ON** (2) | ✓ measured in-process | `DatalessPolicyProbeTests` |
+| `brctl evict` / `download` gone on 26.4 | ✓ | — |
+| Sidecar already has detect + bounded-materialise | ✓ `fs.py:108–200` | — |
+| Under OFF, `copyItem` → `NSCocoaErrorDomain 512` / POSIX 11 instantly | pass measured | probe sources in session scratchpad |
+| Under ON, `Data(contentsOf:)` blocks ~2 s and materialises (Dropbox) | pass measured | same |
+| Coordinated read materialises even under OFF, iCloud and Dropbox | pass measured | same |
+| `startDownloadingUbiquitousItem` returns in 1–3 ms, file lands ~750 ms later, works on Dropbox | pass measured | same |
+| Kernel wait is `msleep(… PVFS\|PCATCH …)`, no timeout, signal-interruptible; resolver give-up → `ETIMEDOUT` | documented | XNU `vfs_syscalls.c` |
+| Apple's own words: opt out and "handle any EDEADLK errors" | documented | TN3150 §Option 2 |
+| `coordinateAccessWithIntents:` and coordinated *writes* do **not** force download — only coordinated reads | DTS-confirmed bug | Apple Forums 764270, Oct 2024 |
+| Sonoma moved iCloud from `.icloud` stubs to File Provider dataless files | first-hand | Oakley, Bombich, Oct 2023 |
+| **26.3+: sandboxed app can lose all FP-backed access mid-session** (`NSFileProviderErrorDomain -2001`); coordinated reads don't help; only relaunch recovers; DTS engaged, unresolved | first-hand, FB22547671 | Apple Forums 823369, Apr 2026 |
+| 26.4.1: writes into iCloud Drive can silently never upload (stale QUIC session in `nsurlsessiond`) | first-hand, FB22476701 | Apple Forums 822534 |
+| Time Machine skips dataless files; Arq renders EDEADLK as "Cloud file contents not present on disk"; CCC downloads-copies-evicts in batches | first-hand | vendor docs and release notes, 2023–26 |
+| `fileExists` / `listdir` return true for placeholders — they lie | documented + this repo | TN3150; `design-cloud-import.md` |
+
+**What the pass could not verify:** materialisation behaviour *under* App
+Sandbox beyond the policy value (its own probes were unsandboxed); whether the
+26.3 access-loss bug reaches `copyItem` mid-flight (reports cover enumeration
+and extension issuance, not copies); native OneDrive / Google Drive behaviour
+on 26.x (all reports are 2022–25 and mostly OneDrive).
+
+**Bearing on the fix.** Tier 2 in §6 gains a required component: the desktop
+copy path must detect-then-bounded-materialise before `copyItem`, mirroring
+`fs.py`, or the hang stays regardless of how errors are surfaced. And the
+26.3 access-loss bug is a new scenario for §2 — a copy that fails with a
+File Provider error mid-session because the sandbox extension vanished —
+which no catch site can distinguish today because `.underlying` flattens the
+domain.

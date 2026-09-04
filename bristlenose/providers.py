@@ -47,7 +47,15 @@ PROVIDERS: dict[str, ProviderSpec] = {
                 "Claude API key",
             ),
         ],
-        default_model="claude-sonnet-5",
+        # NOT claude-sonnet-5, and not by oversight — measured 4 Sep 2026. On a
+        # realistic two-sentence transcript Sonnet 5 returns the tool input
+        # with `quotes` as a JSON *string* (the whole result re-serialised
+        # inside the first field), 5 runs out of 5; a terse prompt never
+        # triggers it, and Opus 5 / Haiku 4.5 / Sonnet 4.6 are all clean on
+        # the same input. "Sonnet class, current version" is the rule, and
+        # the current Sonnet fails our tool schema on real input. Re-test
+        # before promoting it; see tests/test_llm_sampling_params.py.
+        default_model="claude-sonnet-4-6",
         sdk_module="anthropic",
         pricing_url="https://docs.anthropic.com/en/docs/about-claude/models",
     ),

@@ -34,13 +34,49 @@ tombstone; fix it by adding the row.
 | **numpy** 2.5+ | **presidio ceiling** — *not* the numpy-ABI cluster any more | **The binding cap moved and it is no longer numba.** `numba 0.67.0` floats to `numpy<2.6`; `presidio-analyzer 2.2.364` (latest) pins `numpy>=1.19.0,<2.5.0`. A real resolve lands on 2.4.6 at 3.11, 3.12, 3.13 and 3.14 alike, so this reads as a floor problem and is not one | presidio-analyzer floats its numpy cap **and** the Python floor question is settled (numpy 2.5.2 declares `requires_python>=3.12`). Move as the quartet numpy+numba+llvmlite+presidio-analyzer | 2026-09-03 | held |
 | **websockets** 17+ | google-genai → websockets | `google-genai 2.22.0` (latest) pins `websockets<17.0`. Sole reverse-dep (`pip show websockets` → `Required-by: google-genai`; uvicorn[standard]'s is floor-only), and **zero `import websockets` in `bristlenose/`**. The resolver returns 16.1.1 on every interpreter 3.10–3.14, so the floor standing behind this cap is shadowed and buys nothing | genai floats to `websockets<18` **and** the Python floor is ≥3.11 (websockets 17.0 requires it). ⚠️ Do not hand-force: taking 17.0 under `requires-python = ">=3.10"` silently breaks the declared floor | 2026-09-03 | held |
 | **@eslint/js 10 / eslint 10** | **npm peer-cap chain** (new cluster) · `@eslint/js → eslint → eslint-plugin-jsx-a11y` | The hold was being enforced on **one of three** members, so the others could walk it past the pin. `@eslint/js@10.0.1` declares `peerDependencies: {eslint: "^10.0.0"}` while eslint is major-ignored at 9.39.4, and `eslint-plugin-jsx-a11y@6.10.2` (latest) peer-caps eslint at `^9` with no eslint-10 release in existence. Unlike a pip cap this fails as **ERESOLVE at `npm ci`**, not a warning. Paid for once already: landed 2 Jul 2026 (`7cc28c44`), reverted 3 Jul (`e449aad3`), recorded at `frontend/CLAUDE.md:23`. Both missing members added to the ignore list in `a6f8cc66` | `eslint-plugin-jsx-a11y` ships eslint-10 support; then bump `eslint` + `@eslint/js` + `eslint-plugin-jsx-a11y` in **one commit** | 2026-09-03 | held |
-| **snapcore/action-build** `v1.3.0` (node20) | GitHub Actions runtime | Action declares `runs.using: node20`; **v1.3.0 is the newest tag upstream** (`releases/latest` 404s, tags = `v1.3.0`, `v1`). No node24 release exists to take. Emits the runner's forced-to-node24 annotation. ~~Mitigant: `snap.yml` is `workflow_dispatch` only~~ — **expired 8 Aug 2026**: `snap.yml:28-33` was restored to `push`/`pull_request` on main, so the forced-to-node24 annotation now surfaces on every push and PR. Verdict unchanged (there is still nothing to bump to); the noise cost is higher. | snapcore publishes a release whose `action.yml` has `runs.using: node24` — then bump both snapcore SHAs together with their version comments | 2026-09-03 | held |
-| **snapcore/action-publish** `v1.2.0` (node20) | GitHub Actions runtime | Same: `runs.using: node20`; v1.2.0 is the newest upstream tag. Same expired mitigant as above. | Same predicate as action-build; move the pair | 2026-09-03 | held |
+| **snapcore/action-build** `v1.3.0` (node20) — **we are pinned to a FORK** | GitHub Actions runtime · snap build path | **The recorded predicate could never fire, because snapcore is not the publisher.** Measured 4 Sep 2026: `snapcore/action-build` is `fork=true`, `parent=canonical/action-build`. It was created 23 Sep 2024 and last pushed the *same day* — 5 stars against upstream's 45; the entire `snapcore` org has 3 public repos and its newest activity anywhere is `snapd-ci` in Jan 2025. The "chore: update to node24" PR sitting there (#1, opened 5 Apr 2026) is a PR against a fork nobody watches. Upstream `canonical/action-build` is quiet but alive — #96, #94 and #98 all open on node24, touched Apr–Jun 2026 — yet `master` is **still** `runs.using: node20` and its newest tag is the same `v1.3.0` we pin, so repointing fixes provenance, not the runtime | **Not a version wait — a migration decision.** See the note below the table; three options, none of which is "wait for snapcore". Nothing needs deciding before 16 Sep: the blast radius is a red `snap.yml` **build** on push (publishing is `workflow_dispatch`, the channel is edge) | 2026-09-04 | held — **migration decision, not a release wait** |
+| **snapcore/action-publish** `v1.2.0` (node20) — **also a fork** | GitHub Actions runtime · snap publish path | Same shape: `fork=true`, `parent=canonical/action-publish`, 1 star against upstream's 40, created and abandoned 23–24 Sep 2024. Its node24 PR (#1, 5 Apr 2026) has **zero comments**. Upstream has #52 and #54 open on node24 (May–Jun 2026) and `master` is still node20 at the same `v1.2.0` we pin. **Note this half has no craft-actions replacement** — `canonical/craft-actions` ships `pack` and `setup` only, no publish — so the publish path is either upstream `action-publish` or the snapcraft CLI with `SNAPCRAFT_STORE_CREDENTIALS` | Same decision as action-build; the two move together | 2026-09-04 | held — **migration decision, not a release wait** |
 
 <!-- Watch grounding: deps.dev GetRequirements for the upstream caps
      (spacy→thinc, fastapi→starlette), GetVersion for publishedAt/scorecard,
      OSV for advisories. spaCy-4 GA is the single event that clears the top
      three rows as one wave. -->
+
+### Note — the snap build path (4 Sep 2026)
+
+The two snapcore rows above are not one stale pin, they are **two layers of
+stale**: an abandoned fork of a quiet upstream, while Canonical's current
+tooling moved somewhere else entirely. Options, with the trade each carries:
+
+1. **Repoint to `canonical/*`.** Same tags, same node20, so it buys provenance
+   and a predicate with visible activity behind it — not a runtime fix. Cheapest,
+   and defensible on supply-chain grounds alone: we currently trust a stale fork
+   of an org that is not the publisher.
+2. **`canonical/craft-actions`** (pushed 2 Sep 2026, the craft-family monorepo).
+   Its `snapcraft/pack` and `snapcraft/setup` are **`using: composite`**, so the
+   node-runtime question does not apply to them at all — there is nothing for
+   16 Sep to remove. Caveats: **v0.1.1**, 4 stars, no formal releases despite the
+   repo existing since Jan 2023; **no publish action**; and the inputs differ
+   (`path`/`verbosity`/`channel`/`revision`/`lxd-channel` against the old
+   `path`/`build-info`/`snapcraft-channel`/`snapcraft-args`/`ua-token`/`snap`),
+   so `snap.yml` needs reworking rather than repointing.
+3. **Drop GitHub Actions from the snap path.** Two Canonical-hosted routes:
+   **`snapcraft remote-build`** (Launchpad farm, multi-arch, hands the `.snap`
+   back so **publishing stays deliberate** — needs full clones, no `--depth 1`,
+   and public upload unless a private Launchpad project is registered), or
+   **Build from GitHub** (snapcraft.io's native service, zero actions, six
+   architectures — but it **auto-releases to edge on every merge to main**, which
+   is exactly the behaviour `snap.yml` deliberately engineered out).
+
+**The unclaimed prize is arm64.** The snap is amd64-only, which is why amd64 VMs
+exist to test it from an arm64 dev machine. Both Canonical-hosted routes build
+arm64 for free, which retires that dance — a larger day-to-day win than the
+node24 fix that surfaced all this.
+
+**No upstream deprecation says stop using the actions.** They are still
+documented and still recommended in places, including a recent Canonical
+robotics how-to. This is a fit judgement, not a forced move.
+
 
 ---
 

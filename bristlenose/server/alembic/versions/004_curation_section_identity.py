@@ -29,6 +29,8 @@ Create Date: 2026-07-06
 """
 
 import logging
+from collections.abc import Sequence
+from typing import Any
 
 import sqlalchemy as sa
 from alembic import op
@@ -46,7 +48,7 @@ def _slug(label: str) -> str:
     return label.lower().replace(" ", "-")
 
 
-def _slug_map(rows: list) -> dict:
+def _slug_map(rows: Sequence[Any]) -> dict[tuple[Any, str], int]:
     """Build ``(project_id, slug) -> id``, dropping ambiguous slugs.
 
     Now that the label-unique constraint is gone, two groups can slugify to the
@@ -54,8 +56,8 @@ def _slug_map(rows: list) -> dict:
     the key (the row falls into the documented "unreconstructable, left as-is"
     branch) and log it rather than re-keying to an arbitrary winner.
     """
-    m: dict = {}
-    collided: set = set()
+    m: dict[tuple[Any, str], int] = {}
+    collided: set[tuple[Any, str]] = set()
     for gid, pid, label in rows:
         key = (pid, _slug(label))
         if key in m and m[key] != gid:

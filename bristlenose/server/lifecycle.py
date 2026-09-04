@@ -192,7 +192,7 @@ def install_parent_death_watcher(*, poll_interval_sec: float = 2.0) -> None:
         return
     _state["watcher_started"] = True
 
-    original_ppid = int(_state["original_ppid"])  # type: ignore[arg-type]
+    original_ppid = int(_state["original_ppid"])
 
     def _watch() -> None:
         while True:

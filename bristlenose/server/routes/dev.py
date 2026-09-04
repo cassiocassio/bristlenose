@@ -96,7 +96,7 @@ def _format_duration(seconds: float) -> str:
 @router.get("/sessions-table-html", response_class=HTMLResponse)
 def sessions_table_html(
     project_id: int = Query(default=1),
-    db: Session = Depends(_get_db),  # type: ignore[assignment]
+    db: Session = Depends(_get_db),
 ) -> str:
     """Render the sessions table using the Jinja2 template.
 

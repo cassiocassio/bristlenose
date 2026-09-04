@@ -45,7 +45,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from rich.console import Console
@@ -93,7 +93,7 @@ def state_path() -> Path:
     return base / "state.json"
 
 
-def read_state() -> dict:
+def read_state() -> dict[str, Any]:
     """Read the state JSON; return an empty schema on first run / parse error."""
     path = state_path()
     if not path.exists():
@@ -108,7 +108,7 @@ def read_state() -> dict:
     return data
 
 
-def write_state(state: dict) -> None:
+def write_state(state: dict[str, Any]) -> None:
     """Write the state JSON atomically with mode 0o600.
 
     Mode is enforced explicitly because the umask-inherited 0o644 default
@@ -127,7 +127,7 @@ def write_state(state: dict) -> None:
         f.write(payload)
 
 
-def _is_recently_validated(state: dict, provider: str) -> bool:
+def _is_recently_validated(state: dict[str, Any], provider: str) -> bool:
     info = state.get("providers", {}).get(provider, {})
     last = info.get("last_validated_epoch")
     if not isinstance(last, (int, float)):
@@ -135,7 +135,7 @@ def _is_recently_validated(state: dict, provider: str) -> bool:
     return (time.time() - last) < _TTL_SECONDS
 
 
-def _mark_validated(state: dict, provider: str, *, source: str) -> None:
+def _mark_validated(state: dict[str, Any], provider: str, *, source: str) -> None:
     state.setdefault("providers", {})[provider] = {
         "last_validated_epoch": int(time.time()),
         "source": source,
@@ -403,7 +403,7 @@ def _validate_google(api_key: str, model: str) -> ValidationResult:
         # SDK exception holds the full response JSON dict; the actual
         # details array lives at ``details["error"]["details"]``.
         details_blob = getattr(exc, "details", None)
-        details_list: list = []
+        details_list: list[Any] = []
         if isinstance(details_blob, dict):
             err = details_blob.get("error")
             if isinstance(err, dict):

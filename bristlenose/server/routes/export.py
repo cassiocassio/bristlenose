@@ -252,7 +252,7 @@ _EXPORT_NAMESPACES = ("common", "settings", "enums")
 
 
 def _build_export_html(
-    export_data: dict,
+    export_data: dict[str, Any],
     theme_css: str,
 ) -> str:
     """Build a self-contained HTML file with the SPA + data inlined.
@@ -533,7 +533,7 @@ def export_report(
     html = _build_export_html(export_data, theme_css)
 
     # --- Filename ---
-    project_name = project_info.project_name  # type: ignore[union-attr]
+    project_name = project_info.project_name
     slug = slugify(project_name) if project_name else "bristlenose"
     # The language is part of what this file IS now, not a rendering choice the
     # reader can undo, so it belongs in the name — otherwise a researcher

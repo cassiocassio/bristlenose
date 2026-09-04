@@ -14,6 +14,7 @@ import platform
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -45,7 +46,7 @@ router = APIRouter(prefix="/api")
 # Job state (module-level, ephemeral — lost on server restart)
 # ---------------------------------------------------------------------------
 
-_jobs: dict[int, dict] = {}  # project_id → job state
+_jobs: dict[int, dict[str, Any]] = {}  # project_id → job state
 
 
 # ---------------------------------------------------------------------------
@@ -75,7 +76,7 @@ def _resolve_output_dir(project_dir: Path | None) -> Path | None:
 
 
 def _load_speaker_names(
-    db, project_id: int,  # type: ignore[no-untyped-def]
+    db, project_id: int,
 ) -> dict[tuple[str, str], str]:
     """Map (session_id, speaker_code) → display_name."""
     rows = (
@@ -97,7 +98,7 @@ def _load_speaker_names(
 
 
 def _load_session_media(
-    db, project_id: int, project_dir: Path,  # type: ignore[no-untyped-def]
+    db, project_id: int, project_dir: Path,
 ) -> tuple[dict[str, tuple[Path, bool]], dict[str, float]]:
     """Load session media paths and durations.
 
@@ -202,7 +203,7 @@ async def _run_clip_extraction(
     if job is None:
         return
 
-    manifest_entries: list[dict] = []
+    manifest_entries: list[dict[str, Any]] = []
 
     for i, spec in enumerate(clips):
         if _jobs.get(project_id, {}).get("status") == "cancelled":
@@ -445,7 +446,7 @@ async def get_clip_status(
 
 
 @router.post("/projects/{project_id}/export/clips/cancel")
-async def cancel_clip_extraction(project_id: int) -> dict:
+async def cancel_clip_extraction(project_id: int) -> dict[str, Any]:
     """Signal a running clip-extraction job to stop after the current clip.
 
     The background loop polls the job's status each iteration and breaks when it
@@ -468,7 +469,7 @@ async def cancel_clip_extraction(project_id: int) -> dict:
 async def reveal_clips(
     request: Request,
     project_id: int,
-) -> dict:
+) -> dict[str, Any]:
     """Open the clips directory in the system file manager."""
     job = _jobs.get(project_id)
     if job is None or job.get("output_dir") is None:

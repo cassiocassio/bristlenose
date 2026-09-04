@@ -75,7 +75,7 @@ console = Console(width=min(80, Console().width))
 
 
 def _dominant_cause(
-    failures: list,
+    failures: list[Any],
     *,
     default_category: CauseCategoryEnum,
     message: str,
@@ -508,7 +508,7 @@ class Pipeline:
             return
         from bristlenose.timing import PipelineEvent
 
-        remaining = self._estimator.stage_completed(stage, elapsed)  # type: ignore[union-attr]
+        remaining = self._estimator.stage_completed(stage, elapsed)
         if remaining is None:
             # Cold estimator (<4 history) or late-run remaining<10s →
             # stage_completed returns None. Clear the carried ETA so a stale,
@@ -1083,7 +1083,7 @@ class Pipeline:
                 current_input_hashes=_si_input_hashes,
             ):
                 # Load all cached speaker info + segments with roles
-                all_speaker_infos: dict[str, list] = {}
+                all_speaker_infos: dict[str, list[SpeakerInfo]] = {}
                 for s in sessions:
                     sid = s.session_id
                     if sid not in session_segments:
@@ -1198,7 +1198,7 @@ class Pipeline:
 
                     async def _identify(
                         sid: str, segments: list[TranscriptSegment],
-                    ) -> tuple[str, list]:
+                    ) -> tuple[str, list[SpeakerInfo]]:
                         async with _sem_5b:
                             with _llm_telemetry.session(sid):
                                 infos = await identify_speaker_roles_llm(
@@ -1899,7 +1899,7 @@ class Pipeline:
 
         # Record actuals for future estimates.
         if self._estimator is not None:
-            self._estimator.record_run(_stage_actuals)  # type: ignore[union-attr]
+            self._estimator.record_run(_stage_actuals)
 
         # Extract root-cause error/warning for the CLI summary.
         _p_error, _p_error_link = "", ""

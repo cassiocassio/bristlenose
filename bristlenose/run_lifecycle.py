@@ -40,6 +40,7 @@ import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
 from bristlenose import __version__ as _bristlenose_version
 from bristlenose.cost import RunCost
@@ -248,7 +249,7 @@ def _write_pid_file(output_dir: Path, run_id: str, start_time: str) -> Path:
     return path
 
 
-def _read_pid_file(output_dir: Path) -> dict | None:
+def _read_pid_file(output_dir: Path) -> dict[str, Any] | None:
     path = pid_file_path(output_dir)
     if not path.exists():
         return None
@@ -265,7 +266,7 @@ def _remove_pid_file(output_dir: Path) -> None:
         pass
 
 
-def _is_alive_owned(pid_file: dict) -> bool:
+def _is_alive_owned(pid_file: dict[str, Any]) -> bool:
     """True iff the recorded (pid, start_time) matches a live process."""
     pid = pid_file.get("pid")
     recorded_start = pid_file.get("start_time")

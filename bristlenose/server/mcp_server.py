@@ -299,7 +299,7 @@ def _project_identity(project: Any) -> dict[str, Any]:
 
 def _curation_maps(
     db: Any, project_id: int,
-) -> tuple[list, set[int], set[int], dict[int, str], set[tuple[int, str]]]:
+) -> tuple[list[Any], set[int], set[int], dict[int, str], set[tuple[int, str]]]:
     """(all_quotes, hidden, starred, edited_text, deleted_badges) for a project."""
     from bristlenose.server.models import DeletedBadge, Quote, QuoteEdit, QuoteState
 
@@ -330,7 +330,7 @@ def _curation_maps(
     return all_quotes, hidden, starred, edited, deleted
 
 
-def _applied_frameworks(db: Any, project_id: int) -> tuple[list, dict[str, bool]]:
+def _applied_frameworks(db: Any, project_id: int) -> tuple[list[Any], dict[str, bool]]:
     """(active CodebookGroup rows in project order, framework enabled map).
 
     Applied frameworks resolve through ``ProjectCodebookGroup`` rows for THIS
@@ -366,7 +366,7 @@ def _valid_framework_ids() -> list[str]:
     return [*list_available_slugs(), LIVE_CODEBOOK_ID]
 
 
-def _tool_get_project_overview(db: Any, project_id: int, last_run: dict | None) -> dict:
+def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any] | None) -> dict[str, Any]:
     from bristlenose.server.models import (
         ClusterQuote,
         ScreenCluster,
@@ -404,7 +404,7 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict | None) 
             speakers.setdefault(sp.speaker_code, sp.speaker_role)
     speaker_names = resolve_speaker_names(db, project_id)
 
-    def _counts(join_model: Any, key_attr: str, label_of: dict[int, str]) -> list[dict]:
+    def _counts(join_model: Any, key_attr: str, label_of: dict[int, str]) -> list[dict[str, Any]]:
         counts: dict[int, int] = {}
         if visible_pks:
             for row in db.query(join_model).filter(
@@ -506,7 +506,7 @@ def _tool_search_quotes(
     starred_only: bool,
     limit: int,
     offset: int,
-) -> dict:
+) -> dict[str, Any]:
     from bristlenose.models import Sentiment
     from bristlenose.server.models import (
         ClusterQuote,
@@ -619,7 +619,7 @@ def _tool_search_quotes(
     }
 
 
-def _tool_get_signals(db: Any, project_id: int, lens: str, limit: int) -> dict:
+def _tool_get_signals(db: Any, project_id: int, lens: str, limit: int) -> dict[str, Any]:
     from bristlenose.server.elaboration import (
         compute_signal_key,
         load_cached_elaborations,
@@ -695,7 +695,7 @@ def _tool_get_signals(db: Any, project_id: int, lens: str, limit: int) -> dict:
     }
 
 
-def _tool_get_framework(db: Any, project_id: int, framework_id: str) -> dict:
+def _tool_get_framework(db: Any, project_id: int, framework_id: str) -> dict[str, Any]:
     from bristlenose.server.codebook import get_template
     from bristlenose.server.models import QuoteTag, TagDefinition, TagPrompt
 
@@ -841,7 +841,7 @@ def _tool_get_framework(db: Any, project_id: int, framework_id: str) -> dict:
 
 def create_mcp_server(
     session_factory: Callable[[], Any],
-    last_run: Callable[[], dict | None],
+    last_run: Callable[[], dict[str, Any] | None],
     on_tool_call: Callable[[], None] | None = None,
     readable: Callable[[], bool] | None = None,
 ) -> Any:
@@ -922,7 +922,7 @@ def create_mcp_server(
         return result
 
     @server.tool()
-    def get_project_overview(project_id: int = 1) -> dict:
+    def get_project_overview(project_id: int = 1) -> dict[str, Any]:
         """Cheap orientation: sessions, participants (codes only), sections,
         themes, codebook summary, counts, top signals, and last-run status.
         Call this first; it also lists valid framework ids."""
@@ -943,7 +943,7 @@ def create_mcp_server(
         starred_only: bool = False,
         limit: int = DEFAULT_SEARCH_LIMIT,
         offset: int = 0,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Search the curated quotes (hidden quotes excluded, researcher
         edits applied). Filters combine with AND; text is never truncated;
         limit is capped at 50 — page with offset/next_offset."""
@@ -956,7 +956,7 @@ def create_mcp_server(
         )
 
     @server.tool()
-    def get_signals(project_id: int = 1, lens: str = "sentiment", limit: int = 10) -> dict:
+    def get_signals(project_id: int = 1, lens: str = "sentiment", limit: int = 10) -> dict[str, Any]:
         """Concentration/agreement/intensity signals over the curated corpus.
         lens="sentiment" or "tags" (accepted tags only). Includes cached
         elaborations when present; never calls an LLM."""
@@ -966,7 +966,7 @@ def create_mcp_server(
         )
 
     @server.tool()
-    def get_framework(framework_id: str, project_id: int = 1) -> dict:
+    def get_framework(framework_id: str, project_id: int = 1) -> dict[str, Any]:
         """One framework in full — the stance, not just the tag list.
         framework_id is a published template id, or "codebook" for this
         project's live codebook (boundaries + usage counts)."""
@@ -998,7 +998,7 @@ def mount_mcp_server(app: Any, session_factory: Callable[[], Any]) -> Any | None
         )
         return None
 
-    def _last_run() -> dict | None:
+    def _last_run() -> dict[str, Any] | None:
         return (getattr(app.state, "last_run", None) or {}).get(1)
 
     # Monotonic, not wall-clock: a wall clock could fake or erase activity

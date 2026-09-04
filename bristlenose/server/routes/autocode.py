@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -32,7 +33,7 @@ router = APIRouter(prefix="/api")
 # references a bare ``create_task`` result, so a suspended one can be GC'd
 # mid-flight — stranding the job "running" (its finally never runs). Mirrors
 # ``_CATCH_UP_TASKS`` in routes/data.py. Discard on completion.
-_AUTOCODE_TASKS: set = set()
+_AUTOCODE_TASKS: set[asyncio.Task[Any]] = set()
 
 
 # ---------------------------------------------------------------------------

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -934,7 +934,7 @@ def get_framework_states(
 
 
 # Strong references to in-flight catch-up tasks (see _schedule_catch_up).
-_CATCH_UP_TASKS: set = set()
+_CATCH_UP_TASKS: set[Any] = set()
 
 
 def _schedule_catch_up(

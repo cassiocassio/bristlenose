@@ -13,6 +13,7 @@ import hashlib
 import secrets
 import time
 import urllib.parse
+from typing import Any
 
 import httpx
 
@@ -122,7 +123,7 @@ def build_authorize_url(client_id: str, redirect_uri: str, state: str,
 
 
 def exchange_code_for_tokens(client_id: str, code: str, redirect_uri: str,
-                             code_verifier: str) -> dict:
+                             code_verifier: str) -> dict[str, Any]:
     """Exchange an authorization code for access + refresh tokens (PKCE — no secret)."""
     resp = httpx.post(OAUTH_TOKEN, data={
         "grant_type": "authorization_code",
@@ -136,7 +137,7 @@ def exchange_code_for_tokens(client_id: str, code: str, redirect_uri: str,
     return resp.json()
 
 
-def refresh_access_token(client_id: str, refresh_token: str) -> dict:
+def refresh_access_token(client_id: str, refresh_token: str) -> dict[str, Any]:
     """Rotate an expiring access token using the refresh token."""
     resp = httpx.post(OAUTH_TOKEN, data={
         "grant_type": "refresh_token",
@@ -153,8 +154,8 @@ def refresh_access_token(client_id: str, refresh_token: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _request(method: str, token: str, path: str, json: dict | list | None = None,
-             *, retries: int = 4) -> dict | list:
+def _request(method: str, token: str, path: str, json: dict[str, Any] | list[Any] | None = None,
+             *, retries: int = 4) -> dict[str, Any] | list[Any]:
     """Call the Miro REST API with exponential backoff on 429 only.
 
     We retry ONLY on 429 (rate limit). Creation POSTs (board/frame/sticky) are
@@ -180,13 +181,13 @@ def _request(method: str, token: str, path: str, json: dict | list | None = None
     raise MiroError(f"{method} {path} failed after rate-limit retries")
 
 
-def create_board(token: str, name: str, description: str = "") -> dict:
+def create_board(token: str, name: str, description: str = "") -> dict[str, Any]:
     """Create a board. Returns the board object (id, viewLink, ...)."""
     return _request("POST", token, "/boards", {"name": name[:60], "description": description[:300]})
 
 
 def create_frame(token: str, board_id: str, title: str, x: float, y: float,
-                 width: float, height: float) -> dict:
+                 width: float, height: float) -> dict[str, Any]:
     """Create a named frame. Position is the frame CENTRE (Miro convention)."""
     return _request("POST", token, f"/boards/{board_id}/frames", {
         "data": {"title": title[:255], "format": "custom", "type": "freeform"},
@@ -195,18 +196,18 @@ def create_frame(token: str, board_id: str, title: str, x: float, y: float,
     })
 
 
-def bulk_create_items(token: str, board_id: str, items: list[dict]) -> list[dict]:
+def bulk_create_items(token: str, board_id: str, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Create up to 20 mixed items in one call (POST .../items/bulk)."""
     if not items:
         return []
     if len(items) > 20:
         raise ValueError("bulk_create_items accepts at most 20 items per call")
-    result = _request("POST", token, f"/boards/{board_id}/items/bulk", items)  # type: ignore[arg-type]
+    result = _request("POST", token, f"/boards/{board_id}/items/bulk", items)
     return result.get("data", []) if isinstance(result, dict) else result
 
 
 def create_text(token: str, board_id: str, content: str, x: float, y: float,
-                width: float, font_size: int = 18) -> dict:
+                width: float, font_size: int = 18) -> dict[str, Any]:
     """Create a free text item (real fontSize/colour, unlike a sticky)."""
     return _request("POST", token, f"/boards/{board_id}/texts", {
         "data": {"content": content},

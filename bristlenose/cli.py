@@ -660,7 +660,7 @@ def _print_header(settings: object, *, show_provider: bool = True, show_hardware
         parts.append(label)
     if show_provider:
         provider_name = PROVIDERS.get(
-            settings.llm_provider, PROVIDERS["anthropic"]  # type: ignore[union-attr]
+            settings.llm_provider, PROVIDERS["anthropic"]
         ).display_name
         parts.append(provider_name)
     if show_hardware:

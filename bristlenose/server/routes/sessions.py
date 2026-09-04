@@ -106,7 +106,7 @@ def _get_db(request: Request) -> Session:
 @router.get("/projects/{project_id}/sessions", response_model=SessionsListResponse)
 def get_sessions(
     project_id: int,
-    db: Session = Depends(_get_db),  # type: ignore[assignment]
+    db: Session = Depends(_get_db),
 ) -> SessionsListResponse:
     """Return all sessions for a project with full data for the sessions table."""
     try:
@@ -274,7 +274,7 @@ def _aggregate_sentiments(
 def get_video_map(
     project_id: int,
     request: Request,
-    db: Session = Depends(_get_db),  # type: ignore[assignment]
+    db: Session = Depends(_get_db),
 ) -> VideoMapResponse:
     """Return the video/audio map and player URL for a project.
 

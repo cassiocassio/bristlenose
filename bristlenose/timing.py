@@ -14,7 +14,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from bristlenose.config import BristlenoseSettings
@@ -172,7 +172,7 @@ def _timing_path(config_dir: Path) -> Path:
     return config_dir / _TIMING_FILENAME
 
 
-def load_timing_data(config_dir: Path) -> dict:
+def load_timing_data(config_dir: Path) -> dict[str, Any]:
     """Load timing profiles from disk. Returns empty structure on error."""
     path = _timing_path(config_dir)
     if not path.exists():
@@ -187,7 +187,7 @@ def load_timing_data(config_dir: Path) -> dict:
         return {"version": 1, "profiles": {}}
 
 
-def save_timing_data(data: dict, config_dir: Path) -> None:
+def save_timing_data(data: dict[str, Any], config_dir: Path) -> None:
     """Write timing profiles to disk."""
     path = _timing_path(config_dir)
     try:

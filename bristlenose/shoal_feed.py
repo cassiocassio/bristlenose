@@ -29,6 +29,7 @@ import logging
 import os
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Any
 
 from bristlenose import shoal
 from bristlenose.config import hosted_by_desktop
@@ -87,7 +88,7 @@ def _write(path: Path, *, line: str | None) -> None:
         os.close(fd)
 
 
-def _emit(output_dir: Path, batch: dict) -> None:
+def _emit(output_dir: Path, batch: dict[str, Any]) -> None:
     if not batch.get("texts"):
         return
     _write(_feed_path(output_dir), line=json.dumps(batch, ensure_ascii=True))

@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session as SASession
@@ -458,7 +458,7 @@ SIGNAL_LENSES: tuple[str, ...] = ("sentiment", "tags")
 class SignalsResult:
     """Signals computed over the curated corpus, plus their context."""
 
-    signals: list  # list[bristlenose.analysis.models.Signal]
+    signals: list[Any]  # list[bristlenose.analysis.models.Signal]
     total_participants: int
     group_colour_sets: dict[str, str]  # tags lens only; empty for sentiment
 
@@ -579,12 +579,12 @@ def load_signals(
         class _ClusterAdapter:
             screen_label: str
             display_order: int
-            quotes: list = _field(default_factory=list)
+            quotes: list[Any] = _field(default_factory=list)
 
         @_dc
         class _ThemeAdapter:
             theme_label: str
-            quotes: list = _field(default_factory=list)
+            quotes: list[Any] = _field(default_factory=list)
 
         adapters: dict[int, object] = {}
         for q in visible:

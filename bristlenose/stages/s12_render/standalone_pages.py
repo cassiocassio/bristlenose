@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 from bristlenose.stages.s12_render.html_helpers import (
     _document_shell_open,
@@ -101,9 +102,9 @@ def _render_codebook_page(
 # ---------------------------------------------------------------------------
 
 
-def _serialize_matrix(matrix: object) -> dict:
+def _serialize_matrix(matrix: object) -> dict[str, Any]:
     """Convert a Matrix dataclass to a JSON-friendly dict."""
-    cells_dict: dict[str, dict] = {}
+    cells_dict: dict[str, dict[str, Any]] = {}
     for key, cell in matrix.cells.items():  # type: ignore[attr-defined]
         cells_dict[key] = {
             "count": cell.count,

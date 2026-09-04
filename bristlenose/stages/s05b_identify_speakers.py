@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import Any
 
 from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.models import SpeakerRole, TranscriptSegment
@@ -21,7 +22,7 @@ class SpeakerInfo:
 logger = logging.getLogger(__name__)
 
 
-def speaker_info_to_dict(info: SpeakerInfo) -> dict:
+def speaker_info_to_dict(info: SpeakerInfo) -> dict[str, Any]:
     """Serialize a SpeakerInfo to a JSON-compatible dict."""
     return {
         "speaker_label": info.speaker_label,
@@ -31,7 +32,7 @@ def speaker_info_to_dict(info: SpeakerInfo) -> dict:
     }
 
 
-def speaker_info_from_dict(d: dict) -> SpeakerInfo:
+def speaker_info_from_dict(d: dict[str, Any]) -> SpeakerInfo:
     """Deserialize a SpeakerInfo from a dict."""
     return SpeakerInfo(
         speaker_label=d["speaker_label"],
@@ -258,13 +259,13 @@ async def split_single_speaker_llm(
             prompt_template=_tmpl,
         )
 
-        if result.speaker_count <= 1:  # type: ignore[attr-defined]
+        if result.speaker_count <= 1:
             logger.info("LLM speaker splitting: single speaker confirmed")
             return segments
 
         # Sort boundaries by segment index, filter out-of-range
         boundaries = sorted(
-            (b for b in result.boundaries if b.segment_index < len(segments)),  # type: ignore[attr-defined]
+            (b for b in result.boundaries if b.segment_index < len(segments)),
             key=lambda b: b.segment_index,
         )
 
@@ -299,7 +300,7 @@ async def split_single_speaker_llm(
         }
         logger.debug(
             "LLM speaker splitting: %d speakers detected, %d boundaries, names=%s",
-            result.speaker_count,  # type: ignore[attr-defined]
+            result.speaker_count,
             len(boundaries),
             names or "(none extracted)",
         )
@@ -388,7 +389,7 @@ async def identify_speaker_roles_llm(
         # Apply LLM assignments and collect extracted info
         infos: list[SpeakerInfo] = []
         role_map: dict[str, SpeakerRole] = {}
-        for assignment in result.assignments:  # type: ignore[attr-defined]
+        for assignment in result.assignments:
             role = SpeakerRole(assignment.role)
             role_map[assignment.speaker_label] = role
             infos.append(SpeakerInfo(

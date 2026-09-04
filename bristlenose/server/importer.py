@@ -18,6 +18,7 @@ import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import text as sa_text  # `text` clashes with a loop var below
 from sqlalchemy.orm import Session
@@ -274,12 +275,12 @@ def import_project(db: Session, project_dir: Path) -> Project:
     now = datetime.now(timezone.utc)
 
     # --- Read intermediate JSON ------------------------------------------
-    screen_clusters_data: list[dict] = []
+    screen_clusters_data: list[dict[str, Any]] = []
     sc_path = intermediate / "screen_clusters.json"
     if sc_path.exists():
         screen_clusters_data = json.loads(sc_path.read_text(encoding="utf-8"))
 
-    theme_groups_data: list[dict] = []
+    theme_groups_data: list[dict[str, Any]] = []
     tg_path = intermediate / "theme_groups.json"
     if tg_path.exists():
         theme_groups_data = json.loads(tg_path.read_text(encoding="utf-8"))
@@ -385,13 +386,13 @@ def import_project(db: Session, project_dir: Path) -> Project:
 
 def _parse_transcript_headers(
     transcripts_dir: Path,
-) -> dict[str, dict]:
+) -> dict[str, dict[str, Any]]:
     """Parse transcript file headers for session metadata.
 
     Returns a dict keyed by session_id with keys:
         date (datetime | None), duration_seconds (float), source (str).
     """
-    result: dict[str, dict] = {}
+    result: dict[str, dict[str, Any]] = {}
     if not transcripts_dir.is_dir():
         return result
 
@@ -420,7 +421,7 @@ def _parse_transcript_headers(
 def _import_source_files(
     db: Session,
     session_map: dict[str, SessionModel],
-    session_meta: dict[str, dict],
+    session_meta: dict[str, dict[str, Any]],
     project_dir: Path,
 ) -> None:
     """Import source file records from transcript metadata."""
@@ -772,7 +773,7 @@ def _update_persons_from_people(
 def _get_or_create_quote(
     db: Session,
     project: Project,
-    quote_data: dict,
+    quote_data: dict[str, Any],
     now: datetime,
 ) -> Quote:
     """Get or create a quote by stable key.
@@ -952,9 +953,9 @@ def _import_quotes_from_clusters(
     db: Session,
     project: Project,
     session_map: dict[str, SessionModel],
-    screen_clusters_data: list[dict],
+    screen_clusters_data: list[dict[str, Any]],
     now: datetime,
-) -> dict[tuple, Quote]:
+) -> dict[tuple[str, str, float], Quote]:
     """Import screen clusters and their quotes.
 
     Upserts each cluster by *membership* (quote overlap), not label, so a
@@ -964,7 +965,7 @@ def _import_quotes_from_clusters(
     Returns a quote_map keyed by (session_id, participant_id, start_timecode)
     for deduplication when the same quote appears in themes.
     """
-    quote_map: dict[tuple, Quote] = {}
+    quote_map: dict[tuple[str, str, float], Quote] = {}
 
     # Resolve incoming quotes first so we can match clusters by membership.
     incoming_quotes: list[list[Quote]] = []
@@ -1087,8 +1088,8 @@ def _import_quotes_from_themes(
     db: Session,
     project: Project,
     session_map: dict[str, SessionModel],
-    theme_groups_data: list[dict],
-    quote_map: dict[tuple, Quote],
+    theme_groups_data: list[dict[str, Any]],
+    quote_map: dict[tuple[str, str, float], Quote],
     now: datetime,
 ) -> None:
     """Import theme groups and their quotes.

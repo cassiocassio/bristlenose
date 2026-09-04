@@ -7,7 +7,7 @@ import copy
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 from pydantic import BaseModel
 
@@ -42,7 +42,7 @@ def _repo_relative_prompt_path(template: PromptTemplate) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _flatten_schema_for_gemini(schema: dict) -> dict:
+def _flatten_schema_for_gemini(schema: dict[str, Any]) -> dict[str, Any]:
     """Flatten a Pydantic JSON schema for Gemini's native structured output.
 
     Gemini's ``response_schema`` may not support JSON Schema ``$ref`` pointers
@@ -80,7 +80,7 @@ def _flatten_schema_for_gemini(schema: dict) -> dict:
                     # anyOf: [{"type": "string"}, {"type": "null"}] → {"type": "string"}
                     merged = {**node}
                     del merged["anyOf"]
-                    merged.update(_resolve(non_null[0]))  # type: ignore[arg-type]
+                    merged.update(_resolve(non_null[0]))
                     merged.pop("default", None)  # remove null default
                     return merged
 
@@ -895,7 +895,7 @@ class LLMClient:
                 api_key=self.settings.google_api_key,
             )
 
-        client = self._google_client.aio  # type: ignore[union-attr]
+        client = self._google_client.aio
 
         schema = _flatten_schema_for_gemini(response_model.model_json_schema())
 

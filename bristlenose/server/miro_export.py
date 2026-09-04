@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 from html import escape
+from typing import Any
 from urllib.parse import urlparse
 
 from sqlalchemy.orm import Session
@@ -126,7 +127,7 @@ def _sticky_content(s: Sticky) -> str:
     return f"{escape(body)}<br><i>{attribution}</i>"
 
 
-def _sticky_item(s: Sticky) -> dict:
+def _sticky_item(s: Sticky) -> dict[str, Any]:
     return {
         "type": "sticky_note",
         "data": {"content": _sticky_content(s), "shape": "square"},
@@ -138,7 +139,7 @@ def _sticky_item(s: Sticky) -> dict:
 
 def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
                  quote_ids: list[str] | None, *, colour_by: str = "sentiment",
-                 clips_base: str = "") -> dict:
+                 clips_base: str = "") -> dict[str, Any]:
     """Create a new Miro board from the layout IR. Returns {board_id, board_url, stickies}."""
     board = build_board(db, project_id, project_name, quote_ids,
                         colour_by=colour_by, clips_base=clips_base)

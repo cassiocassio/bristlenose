@@ -19,6 +19,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,7 @@ _CACHE_FILE = _CACHE_DIR / ".hardware-cache.json"
 _CACHE_TTL_SECONDS = 24 * 60 * 60  # 24 hours
 
 
-def _load_hardware_cache() -> dict | None:
+def _load_hardware_cache() -> dict[str, Any] | None:
     """Load cached hardware data if it exists and is fresh (within TTL)."""
     try:
         if not _CACHE_FILE.exists():

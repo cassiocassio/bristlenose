@@ -335,6 +335,12 @@ Researchers need clear guidance on how to get files out of each platform.
 | Google Meet | ~5.5% | Dominant in education (62% of students) |
 | Cisco Webex | ~7.6% | Mostly government/regulated industries |
 
+> **Webex is deliberately not a target.** Its share sits in government and regulated
+> industries, not the qualitative-research market the sequencing below maps to Zoom,
+> Teams and Meet. Maintainer's decision; until 4 Sep 2026 it lived only in the row above
+> — the commit that added the table (`28681d78`) says nothing — so it is written out here
+> to stop a future session proposing Webex support from the share figure alone.
+
 **By professional usage (survey, multi-select):**
 - Zoom: 71% of professionals use it
 - Teams: 53%

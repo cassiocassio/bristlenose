@@ -1943,9 +1943,19 @@ struct ContentView: View {
         // toolbar pill self-shows while `copyMachinery.inFlight != nil`.
         Task {
             do {
+                // Borrow the project's open security scope rather than rebuilding a
+                // URL from the stored path string. `ProjectBookmarkLease` names the
+                // copy worker as a borrower: a raw path URL carries no sandbox
+                // extension, so when no lease is held for this project — no
+                // bookmark, or past `maxConcurrentWatchers` — createDirectory and
+                // copyItem fail EPERM and surface as a generic copy error. Falls
+                // back to the path so behaviour is unchanged where no lease exists;
+                // same shape as CloudImportWindow.swift.
+                let destination = projectIndex.leaseURL(projectID: id)
+                    ?? URL(fileURLWithPath: project.path)
                 let copied = try await copyMachinery.copy(
                     urls: filteredURLs,
-                    into: URL(fileURLWithPath: project.path),
+                    into: destination,
                     projectID: id,
                     projectName: project.name,
                     acceptedExtensions: Self.acceptedExtensions

@@ -6,8 +6,13 @@ version + licence + origin URL. Run this manually before each release; the
 file is committed to the repo so the result travels with the source.
 
 How "what ships" is determined:
-  - Run `pip-licenses` against the venv to capture every installed
-    package's licence + version + URL.
+  - Run `pip-licenses` against the SIDECAR venv (`.venv-sidecar/`, the
+    environment `desktop/scripts/build-sidecar.sh` builds the bundle from)
+    to capture every installed package's licence + version + URL. Not
+    `.venv`: that is the dev environment, it resolves separately, and on
+    27 Aug 2026 it recorded starlette 1.3.1 against a bundle carrying 1.6.0
+    and listed tokenizers, which the bundle does not contain. `--python`
+    overrides the target; the tool itself still runs from `.venv`.
   - Filter out packages that the PyInstaller spec excludes (parsed
     from desktop/bristlenose-sidecar.spec) and packages in the
     [dev], [release], and PyInstaller-internal sets that obviously
@@ -23,14 +28,16 @@ How "what ships" is determined:
 
 Prerequisites:
   - .venv with [release] extra installed: `pip install -e '.[dev,serve,apple,release]'`
+    (pip-licenses lives here; it is never installed into the sidecar venv)
+  - .venv-sidecar built: `desktop/scripts/build-sidecar.sh`
 
 Usage:
-  .venv/bin/python scripts/generate-third-party-binaries.py [--check]
+  .venv/bin/python scripts/generate-third-party-binaries.py [--check] [--python PATH]
 
 Exit codes:
   0  Wrote (or, with --check, would write) without changes.
   1  --check mode and the file would change. Re-run without --check.
-  2  Environment error (missing venv, missing pip-licenses, unparseable spec).
+  2  Environment error (missing target venv, missing pip-licenses, unparseable spec).
 """
 
 from __future__ import annotations
@@ -47,6 +54,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SPEC = REPO_ROOT / "desktop" / "bristlenose-sidecar.spec"
 TARGET = REPO_ROOT / "THIRD-PARTY-BINARIES.md"
+# The interpreter whose site-packages IS the bundle's input. build-sidecar.sh
+# creates it with `python3.12 -m venv .venv-sidecar` and PyInstaller collects
+# from it; .venv is a different resolve and must not be read as a proxy.
+DEFAULT_TARGET_PYTHON = REPO_ROOT / ".venv-sidecar" / "bin" / "python"
 BEGIN_WHEELS = "<!-- BEGIN AUTO: python-wheels -->"
 END_WHEELS = "<!-- END AUTO: python-wheels -->"
 BEGIN_FRAMEWORK = "<!-- BEGIN AUTO: framework-libs -->"
@@ -155,8 +166,12 @@ def _normalise(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
-def _pip_licenses_json() -> list[dict]:
-    """Run pip-licenses against the venv, return all installed packages."""
+def _pip_licenses_json(target_python: Path) -> list[dict]:
+    """Run pip-licenses against the TARGET interpreter's site-packages.
+
+    The tool comes from .venv (release extra); `--python` points it at the
+    venv the bundle is built from, so the two never have to be the same
+    environment and the sidecar venv stays free of dev tooling."""
     pip_licenses = shutil.which("pip-licenses") or str(
         REPO_ROOT / ".venv" / "bin" / "pip-licenses"
     )
@@ -167,7 +182,7 @@ def _pip_licenses_json() -> list[dict]:
         )
         sys.exit(2)
     proc = subprocess.run(
-        [pip_licenses, "--format=json", "--with-urls"],
+        [pip_licenses, "--python", str(target_python), "--format=json", "--with-urls"],
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -215,27 +230,44 @@ def _format_rows(records: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _probe_framework_libs() -> str:
-    """Query the running Python for versions of bundled C libraries.
+_PROBE_SRC = """
+import json, sqlite3, ssl, sys, xml.parsers.expat, zlib
+print(json.dumps({
+    "python": sys.version.split()[0],
+    "openssl": ssl.OPENSSL_VERSION.split()[1],
+    "sqlite": sqlite3.sqlite_version,
+    "zlib": zlib.ZLIB_VERSION,
+    "expat": xml.parsers.expat.EXPAT_VERSION.removeprefix("expat_"),
+}))
+"""
 
-    Pythonic: each stdlib module that wraps a C library exposes the linked
-    version as an attribute (`ssl.OPENSSL_VERSION`, `sqlite3.sqlite_version`,
-    etc.). For libraries the stdlib doesn't expose, we declare them as
-    "tracks Python release" — versions move with the python.org installer
-    used by the build runner.
+
+def _probe_framework_libs(target_python: Path) -> str:
+    """Query the TARGET Python for versions of bundled C libraries.
+
+    Run as a subprocess under the sidecar interpreter, not in-process: the
+    bundle's Python.framework is copied from the interpreter that created
+    .venv-sidecar, so that is the one whose linked OpenSSL/SQLite ship. Each
+    stdlib module that wraps a C library exposes the linked version as an
+    attribute; libraries the stdlib doesn't expose are "tracks Python
+    release" — they move with the python.org installer on the build runner.
     """
-    import sqlite3
-    import ssl
-    import sys
-    import xml.parsers.expat
-    import zlib
-
+    proc = subprocess.run(
+        [str(target_python), "-c", _PROBE_SRC],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if proc.returncode != 0:
+        sys.stderr.write(f"error: framework probe failed under {target_python}:\n{proc.stderr}\n")
+        sys.exit(2)
+    v = json.loads(proc.stdout)
     rows = [
-        ("Python", sys.version.split()[0], "Tracks the build runner's `python.org` install"),
-        ("OpenSSL", ssl.OPENSSL_VERSION.split()[1], "Linked into `_ssl` and `_hashlib`"),
-        ("SQLite", sqlite3.sqlite_version, "Linked into `_sqlite3`"),
-        ("zlib", zlib.ZLIB_VERSION, "Linked into `zlib`"),
-        ("expat", xml.parsers.expat.EXPAT_VERSION.removeprefix("expat_"), "Linked into `pyexpat`"),
+        ("Python", v["python"], "Tracks the build runner's `python.org` install"),
+        ("OpenSSL", v["openssl"], "Linked into `_ssl` and `_hashlib`"),
+        ("SQLite", v["sqlite"], "Linked into `_sqlite3`"),
+        ("zlib", v["zlib"], "Linked into `zlib`"),
+        ("expat", v["expat"], "Linked into `pyexpat`"),
     ]
     lines = [
         "| Library | Version | Where it lives in the bundle |",
@@ -274,16 +306,37 @@ def main() -> int:
         action="store_true",
         help="Exit 1 without writing if the file would change. CI-friendly.",
     )
+    parser.add_argument(
+        "--python",
+        type=Path,
+        default=DEFAULT_TARGET_PYTHON,
+        help=(
+            "Interpreter whose site-packages to inventory. Default is the sidecar "
+            "venv the bundle is built from; .venv is NOT a proxy for it."
+        ),
+    )
     args = parser.parse_args()
 
+    # .absolute(), NOT .resolve(): a venv's bin/python is a symlink to the
+    # base interpreter, and resolving it yields the base's site-packages —
+    # one package, none of ours. Measured 5 Sep 2026 on the first run.
+    target_python = args.python.absolute()
+    if not target_python.is_file():
+        sys.stderr.write(
+            f"error: target interpreter not found: {target_python}\n"
+            "       the inventory is read from the venv the bundle is built from —\n"
+            "       run desktop/scripts/build-sidecar.sh first, or pass --python\n"
+        )
+        return 2
+
     excludes = _spec_excludes()
-    records = _filtered_records(_pip_licenses_json(), excludes)
+    records = _filtered_records(_pip_licenses_json(target_python), excludes)
     if not records:
         sys.stderr.write("error: no packages survived filtering\n")
         return 2
 
     wheels_table = _format_rows(records)
-    framework_table = _probe_framework_libs()
+    framework_table = _probe_framework_libs(target_python)
 
     existing = TARGET.read_text(encoding="utf-8") if TARGET.exists() else ""
     updated = _splice(existing, wheels_table, BEGIN_WHEELS, END_WHEELS)

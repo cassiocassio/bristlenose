@@ -20,17 +20,27 @@ any of them is a major, at the free first step rather than at 10pm. Same data
 yes/no ("is the file stale?"), which is exactly the answer that does not help
 you decide anything.
 
+Which environment is "installed": the SIDECAR venv (`.venv-sidecar/`), the one
+the bundle is built from — not the interpreter running this script. `.venv`
+resolves separately and has recorded versions the bundle never carried.
+`--python` overrides the target.
+
 Exit codes:
   0  no drift, or only minor/patch drift (named, not silent)
   1  at least one MAJOR version change since the committed inventory
-  2  could not run — no inventory, or metadata unreadable
+  2  could not run — no inventory, target venv missing, or metadata unreadable
 """
 from __future__ import annotations
 
+import argparse
 import pathlib
 import re
+import subprocess
 import sys
 from importlib import metadata
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+DEFAULT_TARGET_PYTHON = REPO_ROOT / ".venv-sidecar" / "bin" / "python"
 
 BEGIN = "<!-- BEGIN AUTO: python-wheels -->"
 END = "<!-- END AUTO: python-wheels -->"
@@ -77,8 +87,29 @@ def bump_kind(old: str, new: str) -> str:
     return "patch"
 
 
+def _site_packages(target_python: pathlib.Path) -> pathlib.Path | None:
+    """Ask the target interpreter where its distributions live."""
+    proc = subprocess.run(
+        [str(target_python), "-c", "import sysconfig; print(sysconfig.get_paths()['purelib'])"],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return None
+    return pathlib.Path(proc.stdout.strip())
+
+
 def main() -> int:
-    inv_path = pathlib.Path(__file__).resolve().parent.parent / "THIRD-PARTY-BINARIES.md"
+    parser = argparse.ArgumentParser(description="name resolved-version drift from the inventory")
+    parser.add_argument(
+        "--python",
+        type=pathlib.Path,
+        default=DEFAULT_TARGET_PYTHON,
+        help="interpreter whose site-packages count as 'installed' (default: the sidecar venv)",
+    )
+    args = parser.parse_args()
+
+    inv_path = REPO_ROOT / "THIRD-PARTY-BINARIES.md"
     if not inv_path.exists():
         print("::error::no THIRD-PARTY-BINARIES.md to compare against")
         return 2
@@ -87,8 +118,19 @@ def main() -> int:
         print("::error::inventory parsed to zero rows — refusing to report 'no drift'")
         return 2
 
+    # .absolute(), NOT .resolve(): resolving a venv's python follows the
+    # symlink to the base interpreter and its (empty) site-packages.
+    target_python = args.python.absolute()
+    if not target_python.is_file():
+        print(f"::error::target interpreter not found: {target_python} — build the sidecar or pass --python")
+        return 2
+    site = _site_packages(target_python)
+    if site is None or not site.is_dir():
+        print(f"::error::could not locate site-packages under {target_python}")
+        return 2
+
     installed: dict[str, str] = {}
-    for dist in metadata.distributions():
+    for dist in metadata.distributions(path=[str(site)]):
         name = (dist.metadata["Name"] or "").lower().replace("_", "-")
         if name:
             installed[name] = dist.version

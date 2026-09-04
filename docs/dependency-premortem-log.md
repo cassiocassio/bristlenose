@@ -828,11 +828,22 @@ direct receipt: mcp 2.1.1 was caught by CI *while the local venv sat on 2.0.0* �
 CI resolving **ahead**, the opposite of the claim. `.venv` was simply a month
 stale.
 
-The one real defect in that area is separate and unfixed:
-`scripts/generate-third-party-binaries.py:161` resolves from `.venv`, so
+The one real defect in that area is separate — and **fixed 5 Sep 2026**:
+`scripts/generate-third-party-binaries.py` resolved from `.venv`, so
 `THIRD-PARTY-BINARIES.md` — the file whose own header calls it the canonical
-inventory of what ships — records dev versions (`starlette 1.3.1` against the
-sidecar's 1.6.0) and lists `tokenizers`, which is not in the bundle at all.
+inventory of what ships — recorded dev versions (`starlette 1.3.1` against the
+sidecar's 1.6.0) and listed `tokenizers`, which is not in the bundle at all.
+Both it and `check-dep-drift.py` now read the **sidecar venv** by default
+(`--python` overrides; the tool still runs from `.venv`, via pip-licenses'
+own `--python`), and the framework-libs probe runs under that interpreter
+too. First honest regeneration moved 31 rows and dropped `en_core_web_sm`,
+which had been listed for months and was never in `_internal/`. One trap
+paid for on the way: `Path.resolve()` follows a venv's `bin/python` symlink
+to the base interpreter and inventories *its* site-packages — one package —
+so the scripts use `.absolute()`. (`tokenizers` is still listed: it is in the
+sidecar venv even though PyInstaller does not collect it. The script documents
+itself as an over-estimate that never under-counts, and that is the safer
+error for a procurement reader.)
 
 ### Applied on the day
 
@@ -877,6 +888,10 @@ constraint of ours, so they emit ordinary version-update PRs.
   dist-info in `_internal/` to read. The 🟢 above rests on introspecting the
   installed 1.6.0 plus the changelogs, **not** on "1.6.0 has shipped". Cheap
   next step: `copy_metadata("starlette")` in the spec, so the bundle records it.
+  _5 Sep 2026: the 0.29.1 question stays unanswerable, but from here on the
+  inventory is regenerated from the sidecar venv, so the **next** artefact's
+  starlette is recorded (1.6.0 today). The `copy_metadata` line is still the
+  only way to read it off the bundle itself; not taken._
 - ❔ **Whether `presidio-anonymizer` intends to float `cryptography<49`.**
   2.2.364 is latest and no upstream signal was found either way — which is why
   it is a predicate rather than a verdict.

@@ -169,7 +169,7 @@ Report quotes use a flexbox hanging-indent layout: timecodes sit in a left gutte
 
 ### Why speaker codes, not names
 
-The report uses two tiers of identity. **Speaker codes** (p1, p2) are the public-facing identity — they appear in quote attributions, CSV export, and clipboard copy. **Display names** (first names like "Mary") are a working tool for the research team.
+The report uses two tiers of identity. **Speaker codes** (p1, p2, m1, o1) are the durable identity — always present, in the report UI and in every export, never stripped. **Display names** (first names like "Mary") are a working tool for the research team; they sit beside the code in the report and ride along into exports unless the researcher switches anonymisation on.
 
 This separation exists for three reasons:
 
@@ -177,11 +177,29 @@ This separation exists for three reasons:
 
 2. **Participant protection** — team members with access to the report should not be able to look up participants on LinkedIn, contact them directly, or form inappropriate relationships. Codes create a practical barrier.
 
-3. **Research team workflow** — researchers, moderators, and observers who were on the call need names to recall who's who during analysis ("p3 — Mary — remember, she didn't like the pricing"). Display names serve this need without leaking into exported artifacts.
+3. **Research team workflow** — researchers, moderators, and observers who were on the call need names to recall who's who during analysis ("p3 — Mary — remember, she didn't like the pricing"). Display names serve this need; the anonymise switch is what keeps them out of an artefact meant for a wider audience.
 
-The **export boundary** is where anonymisation matters most. CSV export and clipboard copy are how quotes end up in PowerPoint, Miro, and stakeholder presentations. These outputs use codes only. The planned share/export feature will strip display names from the HTML by default, making it safe for wider distribution. The HTML report file itself currently contains display names (in the session table and embedded `BN_PARTICIPANTS` JSON) — this is acceptable for the research team's working copy but means the `.html` file should not be shared externally without the upcoming anonymise-on-export feature.
+### The export boundary
+
+The **export boundary** is where anonymisation matters most — CSV, clipboard, and the shared HTML file are how quotes reach PowerPoint, Miro, and stakeholder decks. It is a **researcher-controlled switch that is off by default**, not an automatic property of exporting. Four categories:
+
+- **Always present, never stripped.** Speaker codes in every export, and **moderator/observer names**. `_anonymise_data()` (`server/routes/export.py:101`) blanks `full_name`/`short_name` for `p*` codes only — m\* and o\* are research team, not research subjects, and keep their names by design.
+- **Governed by the anonymise switch, default off.** Participant display names in the exported HTML, the clipboard "Copy Quotes" payload, the rich spreadsheet, and clip filenames. The default is `false` at every layer: `export.py:358` (`anonymise: bool = Query(default=False)`), `quotes_export.py:113,159` (`Query(False)` on the CSV and XLSX endpoints), `clips_export.py:268` (`ClipStartRequest.anonymise = False`), `ExportDialog.tsx:31` (`useState(false)`), and the `anonymise = false` parameters throughout `frontend/src/utils/exportActions.ts`. **A plain export therefore includes names** — the researcher opts out, not in. When it is on, the export also neutralises source filenames (`jane-doe.mov` → `s1.mov`), since a recording name re-carries the identity the speaker fields just dropped.
+- **Codes only regardless of the switch.** The Miro bridge (`server/miro_export.py`) sends `participant_code` and never `speaker_name`, so that path is anonymous whatever the switch says.
+- **Also contains names** — the working copy. The served report shows the display name beside the code on every quote badge, and the sessions grid additionally exposes the **full name including surname** as a hover `title` when it differs from the display name. The static byproduct bakes `BN_PARTICIPANTS` into the page source; `people.yaml` holds both name fields. None of these are anonymised in place — the anonymised *export* is the artefact meant to leave the team.
+
+Mechanically, the switch blanks name fields rather than dropping columns or attributions: `extract_quotes_for_export()` sets `participant_name` to `""` (`server/export_core.py:169,172`), so the spreadsheet keeps its participant-name column with empty cells; `buildLeanQuotesText()` is the one exception, omitting the name **cell** from the clipboard row (`exportActions.ts:74-76`). Because `_anonymise_data()` blanks `speaker_name` on quotes, the quote badge in an anonymised export falls back to code-only with no separate code path.
+
+> **Shipped 0.22.0 (26 Jul 2026)** — "Share an offline report". This section previously described the feature in the future tense and predicted a strip-by-default behaviour; the shipped default is the opposite. Corrected 22 Aug 2026 against the code cited above; every reference re-verified at HEAD on landing, 4 Sep 2026.
 
 ### Implementation
+
+**React SPA (the product):**
+
+- **Quote attribution**: `islands/QuoteCard.tsx:730` renders a `<PersonBadge>` with `code={quote.participant_id}` and `name={quote.speaker_name}` (passed only when it differs from the code). `PersonBadge.tsx:23-24` renders both in a split badge — `.bn-speaker-badge-code` plus `.bn-speaker-badge-name`. **So the SPA quote attribution shows code *and* display name**, unlike the static render below. The name falls away on its own when absent, which is what makes an anonymised export code-only without a second code path
+- **Sessions grid**: `islands/SessionsTable.tsx:439-441,454` shows the display name (`short_name` falling back to `sp.name`) and sets `title={nameTitle}` — the **full name, surname included** — whenever `full_name` differs from the display name. This is the one place a surname reaches the report UI
+
+**Static render (sealed byproduct):**
 
 - **Report quotes**: `_format_quote_html()` uses `pid_esc` for the `.speaker-link` text. `names.js` `updateAllReferences()` does NOT update `.speaker-link` text. Attribution uses `&nbsp;` around the em-dash (`"…text"&nbsp;—&nbsp;p1`) to prevent widowing at line breaks
 - **Transcript page headings**: show code prefix + display name (`m1 Sarah Chen`, `p5 Maya`) since headings are private to the researcher. Segment labels show raw codes (`p1:`)

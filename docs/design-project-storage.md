@@ -77,6 +77,8 @@ Researched 28 Jul 2026. These are the facts that kill most of the attractive opt
 
 **Uncoordinated reads of dataless files are not safe.** iCloud Drive, OneDrive/SharePoint, Google Drive, Dropbox and Box are all File Providers on modern macOS. With eviction enabled, files become *dataless* (attributes and xattrs, no extents). An uncoordinated read can fail with **`EDEADLK` (errno 35, "Resource deadlock avoided")** rather than materialising — observed via `cat`, `cp`, `dd`, Python `os.read()` and Node `fs.readFileSync()`. The fix is `NSFileCoordinator`-wrapped access, which signals the provider to materialise before the accessor runs.
 
+> **That is the *read* path. `FileManager.copyItem` fails differently — it does not return `EDEADLK`, it hangs.** Measured 19 Jun 2026 with `sample <pid>` (`libcopyfile → com.apple.CloudDocs` frames): no error, no partial file, no sandbox denial, and `Task.cancel()` cannot break it. The two findings are both correct and about different operations; on 4 Sep 2026 they were conflated in conversation and produced a confident wrong "correction". Gotcha and fix brief: `desktop/CLAUDE.md` §Gotchas ("`FileManager.copyItem` blocks *indefinitely*…"); diagnosis of the surrounding error-surfacing: `design-copy-error-surfacing.md` §5.
+
 This contradicts the previous assumption (recorded in `design-desktop-project-status.md`) that "the CLI is right to do nothing about iCloud — macOS materialises the file on read." It usually does. It is not guaranteed. The same failure has already been hit locally in an unrelated `rsync` script, where the fix was `brctl download` pre-materialisation.
 
 **Third-party apps cannot pin files.** Apple's Developer Relations, on the Files app's "Keep Downloaded":

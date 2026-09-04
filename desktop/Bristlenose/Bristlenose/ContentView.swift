@@ -1813,6 +1813,15 @@ struct ContentView: View {
                         needed: needed, available: available
                     )
                 } catch {
+                    // KNOWN DEFECT — measured, not fixed here. This site has no
+                    // `.underlying(let msg)` arm (the drop-onto-project site below
+                    // does), so a `.underlying` error lands here and
+                    // `error.localizedDescription` on the bare enum renders
+                    //   "The operation couldn’t be completed. (Bristlenose.CopyMachinery.CopyError error 1.)"
+                    // — the wrapped reason discarded. The same permission failure
+                    // via the other gesture renders Foundation's full sentence.
+                    // Pinned by CopyErrorSurfacingTests (withKnownIssue); diagnosis
+                    // and the proposed fix in docs/design-copy-error-surfacing.md.
                     toast.show(error.localizedDescription)
                 }
             }

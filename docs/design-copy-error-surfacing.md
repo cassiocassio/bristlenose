@@ -9,9 +9,9 @@ evidence, and a proof plan — before any change.
 
 Every claim below is labelled **MEASURED** (a test or command run on this
 machine, output quoted), **VERIFIED** (read in code or git history), or
-**INFERRED** (reasoned, not observed). Two claims made in conversation before
-this doc turned out wrong when checked against the measured record; they are
-kept in §7 so they are not re-derived.
+**INFERRED** (reasoned, not observed). Three claims made in conversation before
+and during this doc turned out wrong when checked against the measured record —
+one of them twice; they are kept in §7 so they are not re-derived.
 
 ---
 

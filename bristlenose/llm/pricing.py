@@ -43,7 +43,13 @@ PRICING: dict[str, tuple[float, float]] = {
     "claude-opus-4-8": (5.0, 25.0),
     "claude-sonnet-4-20250514": (3.0, 15.0),
     "claude-haiku-3-5-20241022": (0.80, 4.0),
-    # OpenAI (ChatGPT)
+    # OpenAI (ChatGPT) — verified against developers.openai.com/api/docs/models
+    # on 2026-09-04.
+    "gpt-6-astra": (10.0, 50.0),
+    "gpt-5.6-sol": (4.0, 20.0),
+    "gpt-5.6-terra": (2.0, 12.0),
+    "gpt-5.6-luna": (0.20, 1.20),
+    # Legacy — still selectable, and still the Azure picker's list.
     "gpt-4o": (2.50, 10.0),
     "gpt-4o-mini": (0.15, 0.60),
     # Google (Gemini). Verified against ai.google.dev/gemini-api/docs/pricing
@@ -72,6 +78,10 @@ _MODEL_PROVIDER: dict[str, str] = {
     "claude-opus-4-8": "anthropic",
     "claude-sonnet-4-20250514": "anthropic",
     "claude-haiku-3-5-20241022": "anthropic",
+    "gpt-6-astra": "openai",
+    "gpt-5.6-sol": "openai",
+    "gpt-5.6-terra": "openai",
+    "gpt-5.6-luna": "openai",
     "gpt-4o": "openai",
     "gpt-4o-mini": "openai",
     "gemini-2.5-flash": "google",

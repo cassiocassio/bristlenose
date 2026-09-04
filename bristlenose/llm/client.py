@@ -132,6 +132,27 @@ def _clamp_max_tokens(model: str, requested: int) -> int:
 #
 # Deliberately not a version comparison — model ids don't sort, and a clever
 # parse would be wrong in a way nothing catches. Exact strings only.
+# OpenAI models that still take the LEGACY request shape. GPT-5 onward rejects
+# both parameters we send: `max_tokens` is refused outright in favour of
+# `max_completion_tokens`, and `temperature` accepts only its default of 1, so
+# our 0.1 is a hard 400. Two rejections, where Claude had one.
+#
+# A SUNSET LIST like _ANTHROPIC_ACCEPTS_SAMPLING, failing closed the same way:
+# an unknown model gets the modern shape, because every future model wants it.
+# When it empties, delete it and the legacy branch with it.
+#
+# NOT usable for Azure — Azure addresses a *deployment* whose name the customer
+# chooses ("prod-eastus"), so nothing here can say which model is behind it.
+_OPENAI_LEGACY_PARAMS: frozenset[str] = frozenset(
+    {
+        "gpt-4o",
+        "gpt-4o-mini",
+        "gpt-4o-2024-08-06",
+        "gpt-4o-mini-2024-07-18",
+    }
+)
+
+
 _ANTHROPIC_ACCEPTS_SAMPLING: frozenset[str] = frozenset(
     {
         "claude-sonnet-4-6",
@@ -703,10 +724,26 @@ class LLMClient:
 
         request_model = self.settings.llm_model
         try:
+            # See _OPENAI_LEGACY_PARAMS. GPT-5 onward renames the output cap
+            # and refuses a non-default temperature; older models refuse the
+            # new name. No single shape satisfies both.
+            if request_model in _OPENAI_LEGACY_PARAMS:
+                params: dict[str, Any] = {
+                    "max_tokens": max_tokens,
+                    "temperature": self.settings.llm_temperature,
+                }
+            else:
+                params = {"max_completion_tokens": max_tokens}
+                logger.info(
+                    "llm_sampling_omitted | model=%s | temperature=%s not sent "
+                    "(model accepts only the default)",
+                    request_model,
+                    self.settings.llm_temperature,
+                )
+
             response = await client.chat.completions.create(
                 model=request_model,
-                max_tokens=max_tokens,
-                temperature=self.settings.llm_temperature,
+                **params,
                 # Structured Outputs, not JSON mode. JSON mode guarantees only
                 # that the text parses; the schema matches ~80% of the time, and
                 # the other 20% surfaced here as a ValidationError that failed
@@ -832,6 +869,13 @@ class LLMClient:
 
         request_model = self.settings.azure_deployment or ""
         try:
+            # Deliberately NOT gated like _analyze_openai. `request_model`
+            # here is an Azure *deployment* name the customer chose, so it
+            # cannot tell us whether a GPT-5-class model sits behind it.
+            # The legacy shape keeps existing deployments working; a GPT-5
+            # deployment needs `max_completion_tokens`, and that pass is
+            # bigger than a rename — `azure_api_version` is still pinned to
+            # 2024-10-21, which predates those models entirely.
             response = await client.chat.completions.create(
                 model=request_model,
                 max_tokens=max_tokens,

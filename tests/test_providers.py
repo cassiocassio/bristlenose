@@ -38,7 +38,12 @@ class TestProviderSpec:
         assert spec.display_name == "ChatGPT"
         assert "chatgpt" in spec.aliases
         assert "gpt" in spec.aliases
-        assert spec.default_model == "gpt-4o"
+        # Not the literal. OpenAI renames wholesale between generations
+        # (gpt-4o -> gpt-5.6-terra), so there is no stable class prefix to
+        # pin the way "claude-sonnet" pins Claude. What is invariant is
+        # that a default exists at all — an empty one silently disables
+        # the provider-default fill.
+        assert spec.default_model
         assert spec.sdk_module == "openai"
 
     def test_azure_spec(self) -> None:

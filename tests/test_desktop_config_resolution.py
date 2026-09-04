@@ -197,13 +197,15 @@ class TestProviderDefaultModelFill:
     code-default *value* (any explicitly-chosen model wins — rule 1).
     """
 
-    def test_chatgpt_alias_fills_gpt_4o(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_chatgpt_alias_fills_the_provider_default(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
         monkeypatch.delenv("BRISTLENOSE_LLM_MODEL", raising=False)
         monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
         s = config.load_settings(llm_provider="chatgpt")  # alias → openai
         assert s.llm_provider == "openai"
-        assert s.llm_model == "gpt-4o"
+        assert s.llm_model == PROVIDERS["openai"].default_model
 
     def test_gemini_fills_gemini_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(config, "_populate_keys_from_keychain", lambda s: s)
@@ -238,7 +240,7 @@ class TestProviderDefaultModelFill:
         monkeypatch.delenv("BRISTLENOSE_LLM_MODEL", raising=False)
         monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
         s = config.load_settings(llm_provider="chatgpt")
-        assert s.llm_model == "gpt-4o"
+        assert s.llm_model == PROVIDERS["openai"].default_model
 
     def test_explicit_env_model_wins_over_fill(
         self, monkeypatch: pytest.MonkeyPatch
@@ -317,7 +319,8 @@ def test_provider_default_fill_recorded_in_ledger(
         config.load_settings(llm_provider="chatgpt")  # alias → openai, no model
     msgs = [r.message for r in caplog.records]
     # Token presence, not the verbatim sentence (don't lock the formatting).
-    assert any("step=3-provider-default" in m and "gpt-4o" in m for m in msgs)
+    default = PROVIDERS["openai"].default_model
+    assert any("step=3-provider-default" in m and default in m for m in msgs)
 
 
 class TestCliProviderDecisionLedger:

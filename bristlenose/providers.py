@@ -62,7 +62,7 @@ PROVIDERS: dict[str, ProviderSpec] = {
                 "ChatGPT API key",
             ),
         ],
-        default_model="gpt-4o",
+        default_model="gpt-5.6-terra",
         sdk_module="openai",
         pricing_url="https://platform.openai.com/docs/pricing",
     ),

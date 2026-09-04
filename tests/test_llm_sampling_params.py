@@ -1,4 +1,10 @@
-"""Sampling parameters must only reach Claude models that accept them.
+"""Request parameters must only reach models that accept them.
+
+Claude and OpenAI both moved the goalposts, differently. Claude removed
+``temperature``; OpenAI removed ``max_tokens`` in favour of
+``max_completion_tokens`` AND fixed temperature at its default — two
+rejections rather than one. Both are handled by a sunset list that fails
+closed, so an unknown model gets the modern shape.
 
 Anthropic removed ``temperature`` / ``top_p`` / ``top_k`` from Opus 4.7 and
 Sonnet 5 onward: a non-default value is a **400**, not a silently-ignored
@@ -277,3 +283,87 @@ class TestPickerClientCoherence:
         assert _ANTHROPIC_ACCEPTS_SAMPLING, "empty set means the kwarg can be deleted outright"
         for model in _ANTHROPIC_ACCEPTS_SAMPLING:
             assert model.startswith("claude-"), model
+
+
+# ---------------------------------------------------------------------------
+# OpenAI / Azure request shape
+# ---------------------------------------------------------------------------
+
+
+async def _capture_openai_kwargs(model: str, provider: str = "openai") -> dict[str, object]:
+    """Run one analyze() against a mocked SDK; return the create() kwargs."""
+    kw: dict[str, object] = {"llm_provider": provider, "llm_model": model,
+                             "llm_temperature": 0.1}
+    if provider == "openai":
+        kw["openai_api_key"] = "sk-test"
+    else:
+        kw |= {"azure_api_key": "az", "azure_endpoint": "https://x.openai.azure.com/",
+               "azure_deployment": model}
+    client = LLMClient(BristlenoseSettings(**kw))  # type: ignore[arg-type]
+    response = SimpleNamespace(
+        choices=[SimpleNamespace(finish_reason="stop",
+                                 message=SimpleNamespace(content='{"quotes": []}'))],
+        usage=SimpleNamespace(prompt_tokens=10, completion_tokens=5), model=model,
+    )
+    mock = AsyncMock()
+    mock.chat.completions.create = AsyncMock(return_value=response)
+    if provider == "openai":
+        client._openai_client = mock
+    else:
+        client._azure_client = mock
+    await client.analyze(system_prompt="s", user_prompt="u",
+                         response_model=QuoteExtractionResult)
+    return dict(mock.chat.completions.create.await_args.kwargs)
+
+
+class TestOpenAIRequestShape:
+    @pytest.mark.asyncio
+    async def test_legacy_model_keeps_the_old_shape(self) -> None:
+        kwargs = await _capture_openai_kwargs("gpt-4o")
+        assert kwargs["max_tokens"] > 0
+        assert kwargs["temperature"] == 0.1
+        assert "max_completion_tokens" not in kwargs
+
+    @pytest.mark.asyncio
+    async def test_modern_model_renames_the_cap_and_drops_temperature(self) -> None:
+        """GPT-5 onward: `max_tokens` is refused outright, and temperature
+        accepts only its default of 1 — so our 0.1 would be a hard 400."""
+        kwargs = await _capture_openai_kwargs("gpt-5.6-terra")
+        assert kwargs["max_completion_tokens"] > 0
+        assert "max_tokens" not in kwargs
+        assert "temperature" not in kwargs
+
+    @pytest.mark.asyncio
+    async def test_unknown_model_fails_closed_to_modern(self) -> None:
+        """Every future model wants the modern shape, so an unrecognised id
+        must not get the legacy one."""
+        kwargs = await _capture_openai_kwargs("gpt-7-whatever")
+        assert "max_completion_tokens" in kwargs
+        assert "temperature" not in kwargs
+
+    @pytest.mark.asyncio
+    async def test_the_shipped_default_is_on_the_modern_shape(self) -> None:
+        kwargs = await _capture_openai_kwargs(PROVIDERS["openai"].default_model)
+        assert "max_completion_tokens" in kwargs
+
+    @pytest.mark.asyncio
+    async def test_azure_is_deliberately_left_on_the_legacy_shape(self) -> None:
+        """Azure addresses a deployment whose name the customer chose, so no
+        gate here can know which model is behind it. Sending the legacy shape
+        keeps existing deployments working. Pinned so the decision is visible
+        rather than looking like an oversight."""
+        kwargs = await _capture_openai_kwargs("prod-eastus", provider="azure")
+        assert kwargs["max_tokens"] > 0
+        assert kwargs["temperature"] == 0.1
+
+    @pytest.mark.asyncio
+    async def test_every_kwarg_we_send_exists_on_the_installed_sdk(self) -> None:
+        """The Entry 6 lesson, applied to OpenAI: a mock accepts any keyword,
+        so only the real signature can say whether the call would survive."""
+        from openai.resources.chat.completions import AsyncCompletions
+
+        sig = inspect.signature(AsyncCompletions.create)
+        for model in ("gpt-4o", "gpt-5.6-terra"):
+            kwargs = await _capture_openai_kwargs(model)
+            unknown = set(kwargs) - set(sig.parameters)
+            assert not unknown, f"{model}: SDK rejects {sorted(unknown)}"

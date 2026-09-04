@@ -908,6 +908,18 @@ the rule; the current Sonnet cannot be honoured today, and the receipt sits in
 whether the stringifying is tied to the schema's `verbatim_excerpt`
 "copy-paste" instruction.
 
+**Corrected 5 Sep 2026 (six-real-template run, other session).** The Sonnet 5
+failure is at **quote-clustering** (clusters as a `str`, 2/2) and
+**thematic-grouping** (themes as a `dict`, 1/2), not quote-extraction, which
+passes on the real prompt — the 5/5 above is a property of the script's own
+prompt. With the real templates a run dies at stage 10/11. The revert stands;
+the fixture for any probe is the six real stage templates. Separately, the
+ChatGPT default move **broke preflight** (`api_key.py` sent `max_tokens=1`; GPT-5
+returns 400) for a night — the live check skips preflight and could not see it.
+Fixed in a separate commit the same night. And the acceptance matrix's cloud
+cells had been resuming stale manifests and reporting PASS with zero calls since
+**7 July** — silently green for two months.
+
 **Gemini, once the key was reachable: both picker models are retired for new
 users.** `bristlenose configure google` wrote a login-keychain item the CLI
 reads, and the first call returned `404 — no longer available to new users`
@@ -929,6 +941,13 @@ keychains, confirmed in Keychain Access showing both side by side. The login one
 22-char placeholder; the app's holds the real key and shows Online. On any Mac
 with the app installed the CLI and the app cannot share credentials. Not this
 review's to fix; the most consequential thing the afternoon found.
+
+**Superseded 4 Sep 2026 22:42 by `bcdc03b9`** — the app now writes the login-keychain
+copy the CLI reads and reconciles the two copies on read; proven end to end the
+same night by the acceptance matrix's `run:google` cell — `bristlenose run --llm
+google` read the key from the login keychain and made 5 real calls on
+`gemini-3.8-flash` (4 quotes, $0.01, 15 s; `acceptance-runs/run_google.log`).
+The paragraph above stays as the record of what the afternoon saw.
 
 
 ### Stale-register drift found while grounding

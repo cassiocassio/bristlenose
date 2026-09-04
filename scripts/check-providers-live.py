@@ -26,6 +26,17 @@ drift from it. Keys are read exactly as the app reads them (keychain / env /
 Exit 0 = every shipped model passed all three. Exit 1 = at least one failed.
 Exit 2 = could not enumerate (a parse or key-presence problem, not a model one).
 Not a CI gate — CI has no keys. Run it before a release, or on a cadence.
+
+TWO KNOWN BLIND SPOTS (5 Sep 2026):
+  - This calls ``LLMClient.analyze()`` directly and SKIPS ``preflight/api_key.py``,
+    which has its own request builder. The night the ChatGPT default moved,
+    preflight sent ``max_tokens=1`` to a GPT-5-class model and every run aborted
+    there with a 400 — and this script said 7/7. Exercise preflight too.
+  - The hand-written USER prompt below reproduces a Sonnet 5 double-encoding on
+    quote-extraction that the pipeline's REAL extraction prompt does not; the
+    real failures are at quote-clustering and thematic-grouping. The honest
+    fixture is the six stage templates via ``get_prompt_template`` (~4c per
+    model per pass), and one pass cannot promise a run — grouping flips.
 """
 
 from __future__ import annotations

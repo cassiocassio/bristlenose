@@ -71,13 +71,22 @@ a `TypeError` before any HTTP call. OpenAI's GPT-5 line rejects **both**
 `temperature`. Neither shows up as a dependency bump; both are invisible to a
 mocked SDK, because a mock accepts any keyword.
 
-**Output-shape regressions within a family.** `claude-sonnet-5` returns its
-tool input with `quotes` as a JSON **string** — the entire result re-serialised
-inside the first field — on any natural-language transcript, five runs of five,
-and never on a terse one. `max_tokens` makes no difference. Opus 5, Haiku 4.5
-and Sonnet 4.6 are clean on the identical input. It is specific to that model,
-it is deterministic on realistic input, and a short test fixture gives a false
-pass. The root cause is not established.
+**Output-shape regressions within a family.** `claude-sonnet-5` returns
+malformed tool input — a `str` or `dict` where a list was expected, carrying
+the expected container inside it — on **two of the six real stage prompts**:
+quote-clustering (2 of 2 passes) and thematic-grouping (1 of 2), while
+quote-extraction and the three earlier stages pass. Sonnet 4.6 passes all six.
+So with the real prompts a run dies at stage 10 or 11, *after* transcription
+and every per-session quote call. The live-check script's own prompt
+reproduces it on quote-extraction 5/5 — a property of that prompt, not the
+pipeline's (corrected 5 Sep from the six-template run in the Online-light
+session). Two consequences: **the right fixture is the six real stage
+templates**, about 4¢ per model per pass, not one hand-written transcript; and
+grouping flipping between passes means **no single probe can promise a run**
+— the durable fix is a repair step where decode-time enforcement is not
+available (unwrap a field that arrives as a `str`/`dict` containing the
+expected container, then one retry on `ValidationError`). Root cause still not
+established.
 
 ### Mocks cannot see any of this, and signature checks see only some
 
@@ -124,7 +133,7 @@ gone (Gemini 2.5).
 | Claude temperature via `extra_body` — same wire, survives SDK 1.x | `09bb5e82` | live pass on `claude-sonnet-4-6` |
 | OpenAI/Azure: Structured Outputs (`json_schema`, strict) replacing JSON mode | `7fbec0c2` | live pass on `gpt-5.6-terra` and `gpt-4o` |
 | OpenAI parameter gate (`_OPENAI_LEGACY_PARAMS`, fails closed to modern) | `208b4b57` | live pass, both shapes |
-| ChatGPT default `gpt-4o` → `gpt-5.6-terra`; picker terra + luna | `208b4b57` | live pass |
+| ChatGPT default `gpt-4o` → `gpt-5.6-terra`; picker terra + luna | `208b4b57` | live pass through `analyze()` — **but it broke preflight**: `preflight/api_key.py` validated keys with `max_tokens=1`, which GPT-5-class rejects with a 400 the copy blamed on credit, so every ChatGPT run aborted at preflight for a night. Fixed the same night in a separate session (reads `_OPENAI_LEGACY_PARAMS`, sends `max_completion_tokens=256` — a cap of 1 cannot finish a token on a reasoning model). The live check could not see it: it calls `analyze()` directly and skips preflight. |
 | Claude default declared once per language; `config.py` and `LLMSettingsView` derive it; parity test | `a9d8f443` | Swift suite green |
 | Sonnet 5 tried and **reverted** to 4.6, receipt beside the value | `c3a34866` | 5/5 live failures |
 | Gemini default → `gemini-3.8-flash`; picker flash + `3.5-flash-lite`; Pro dropped | `8efcf2dc` | live pass; 2.5 pair 404 |
@@ -140,17 +149,36 @@ nothing has to be remembered.
 
 ## What is not done, and could be
 
-**Rung 3 in the app** — in flight in a separate session. The Settings light
-should ask the same three questions of the *selected* model, with the real
-request shape, so "Online" means "your next run will work". Cost policy is
-settled: *a tiny fraction of £1 for a reassuring green light is fine if it's
-the only way to confirm a call would succeed* — a handful of probes a day on
-Settings visits, over a working year, is a handful of cents.
+**Rung 3 in the app — paused, by the maintainer's call ("no decisions
+yet").** The direction as of 5 Sep is a **weekly cloud-matrix run from the
+maintainer's Mac** with candidate models added, plus the cheap change of
+pointing the existing one-token ping at the *selected* model. Replicating each
+provider's request shape in Swift — proposed in the first handoff — is
+withdrawn: a second request builder drifts by construction, and the preflight
+regression above is exactly that failure. Running the sidecar's real
+`LLMClient.analyze()` has zero drift. Cost policy stands either way: *a tiny
+fraction of £1 for a reassuring green light is fine if it's the only way to
+confirm a call would succeed* — a handful of probes a day, a handful of cents
+a year.
 
-**Why Sonnet 5 stringifies.** Hypothesis: the schema's `verbatim_excerpt`
-"copy-paste the participant's words verbatim" instruction interacts badly with
-the tool-use path on that model. Untested. The live check *catches* it, which
-is enough for now; understanding it is what would let Sonnet 5 back in.
+**The live check skips preflight.** `check-providers-live.py` calls
+`analyze()`; `bristlenose run` goes through `preflight/api_key.py` first, which
+has its own request builder — and that is where the ChatGPT regression lived.
+The check should exercise preflight too, or preflight should stop building
+requests of its own.
+
+**The acceptance matrix has been silently green since 7 July.**
+`scripts/acceptance/run_matrix.py` writes each cell to a fixed directory and
+never cleans it, so cloud cells *resumed* old manifests, made zero calls, and
+reported PASS; and `is_green` counts `FAIL_EXPECTED` as green, so a configured
+provider that cannot start a run still prints GREEN. Fresh directories plus
+"configured-and-failed = red" are the two fixes (found 5 Sep, other session;
+old cell dirs moved aside, nothing deleted).
+
+**Why Sonnet 5 double-encodes at clustering and grouping.** Unknown. The
+`verbatim_excerpt` hypothesis is weakened — extraction, the stage that carries
+that instruction, passes. The repair step above is the durable answer; a root
+cause is what would let Sonnet 5 back in without one.
 
 **The quote-stability corpus has not been run** on any moved default. Two
 defaults changed model family and lost their temperature pin. The design
@@ -210,9 +238,10 @@ question**, so "valid" means one thing on both surfaces.
   add inter-release coverage, with the known hazard that an unanswered keychain
   prompt wedges a launchd job silently — it would need a non-interactive key
   source.
-- **"Online" should mean rung 3.** When that lands, the CLI script and the app
-  probe should share one definition of the three questions and one natural
-  transcript, so a green light and a green row cannot disagree.
+- **One request builder, not two.** Whatever probes a provider — the CLI check,
+  preflight, a Settings light — should run the sidecar's real `analyze()` on the
+  real stage templates. Every second builder has drifted: `api_key.py` did on
+  the night the default moved.
 - **The quarterly review gains a model-currency pass** (policy item 8): not
   "do the defaults still answer" — the gate covers that — but "are they still
   the right models against each vendor's current lineup", which is a judgement

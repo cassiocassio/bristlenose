@@ -174,8 +174,17 @@ dataless.policy.errno.EDEADLK: 11
 dataless.policy.errno.EAGAIN: 35
 ```
 
-So **Bristlenose runs with materialisation ON**, and — because the policy is
-inherited — so does the sidecar it spawns. Consequences:
+A shell-launched Python on the same machine reads `process=2 thread=0` too
+(**MEASURED**, `ctypes` → `getiopolicy_np`), so the app is not special-cased —
+it inherits the user-session default like every other GUI process.
+
+So **Bristlenose runs with materialisation ON** (MEASURED). That the sidecar
+it spawns does too is **INFERRED** — from the kernel's documented inheritance of
+this policy across spawn (`P_VFS_IOPOLICY_INHERITED_MASK`) — and **corroborated**
+by the project's own 29 Jul reproduction: `ffprobe` under the sidecar *timed out
+after 30 s* on evicted Dropbox files, which is ON-shaped blocking; an OFF
+process would have failed instantly with errno 11. Not measured directly in a
+spawned sidecar. Consequences:
 
 - The app never sees `EDEADLK` under normal launch. That path belongs to
   launchd jobs lacking `MaterializeDatalessFiles`, processes that opt out, and

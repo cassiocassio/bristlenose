@@ -807,6 +807,19 @@ sidecar's 1.6.0) and lists `tokenizers`, which is not in the bundle at all.
 - **`dependabot.yml`:** `tokenizers` ignore retired; `@eslint/js` +
   `eslint-plugin-jsx-a11y` added (`a6f8cc66`); the three ceiling-holds moved to
   the `versions:` form (`a97bedda`); `open-pull-requests-limit` 5 → **15**.
+- **Migrated off `actions/attest-sbom` (#138 closed, not merged).** The PR
+  proposed 2.4.0 → **4.1.0**, and attest-sbom is deprecated **as of its own
+  v4.0.0** — *"in favor of `actions/attest` … applications should make plans to
+  migrate"*. v4.1.0's `action.yml` is a four-line passthrough that forwards
+  `subject-path` and `sbom-path` to `actions/attest`, which are exactly the two
+  inputs `release.yml` passes — so taking the PR and migrating produce identical
+  behaviour, differing only in whether a dead layer sits in between. Moved
+  straight to `actions/attest@v4.2.2` (node24, actively maintained, no
+  deprecation of its own). **v3.0.0 was the intuitive answer and is the wrong
+  one:** it is merely the last release before the deprecation, dates from Aug
+  2025, and is terminal. Note the node-runtime argument does *not* apply here —
+  attest-sbom v3 and v4.1 are both `using: 'composite'`, so nothing was emitting
+  a node20 annotation; this is purely about not pinning to a dying layer.
 
 ### The ignore form was wrong for a ceiling
 

@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Elevated over the read-only default so this job can mint a signed
-    # SBOM attestation (attest-sbom below). id-token: write is the OIDC
+    # SBOM attestation (actions/attest below). id-token: write is the OIDC
     # handle Sigstore uses to key the signature to this workflow run;
     # attestations: write lets it publish to the repo's attestation store.
     # Supply-chain hardening 2026-07-03.
@@ -89,7 +89,14 @@ jobs:
       # SBOM rides in the release assets but isn't separately attested — it's
       # already inside the attested wheel (bristlenose/server/static).
       - name: Attest SBOM against built artifacts
-        uses: actions/attest-sbom@bd218ad0dbcb3e146bd073d1d9c6d78e08aa8a0b  # v2.4.0
+        # actions/attest, not actions/attest-sbom. attest-sbom is deprecated as
+        # of its own v4.0.0 ("in favor of actions/attest ... applications should
+        # make plans to migrate") and v4.1.0's action.yml is a four-line
+        # passthrough to `actions/attest`, forwarding exactly the two inputs
+        # below. So this is the same behaviour with the dead layer removed, not
+        # a change of tool -- the SBOM predicate and `gh attestation verify` are
+        # unaffected. See docs/dependency-premortem-log.md Entry 7.
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6  # v4.2.2
         with:
           subject-path: 'dist/*'
           sbom-path: 'sbom/sbom-python.json'

@@ -176,6 +176,49 @@ class TestMacOSCredentialStore:
             assert "add-generic-password" in add_args
             assert "new-key" in add_args
 
+    def test_set_records_a_refused_delete(self, store, caplog) -> None:
+        """A delete the ACL refuses is the measurement, so set() must record it.
+
+        The app's login-keychain items name ``/usr/bin/security`` in their ACL,
+        but a delete of an item another tool created was refused when the app
+        tried it (``-25244 errSecInvalidOwnerEdit``). Whether the CLI's
+        delete-then-add is refused on an *app*-owned item is answered by the
+        next ``bristlenose configure`` — only if the outcome is logged, and at
+        a level ``configure`` (which has no ``-v``) prints. The add must still
+        run: ``-U`` updates in place when the delete could not clear the way.
+        """
+        import logging
+
+        refused = MagicMock(
+            returncode=1,
+            stderr="security: SecKeychainItemDelete: errSecInvalidOwnerEdit (-25244)",
+        )
+        added = MagicMock(returncode=0, stderr="")
+        with patch("subprocess.run", side_effect=[refused, added]) as mock_run, caplog.at_level(
+            logging.WARNING, logger="bristlenose.credentials_macos"
+        ):
+            store.set("anthropic", "new-key")
+
+        assert mock_run.call_count == 2
+        assert "add-generic-password" in mock_run.call_args_list[1][0][0]
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert len(warnings) == 1
+        assert "Bristlenose Anthropic API Key" in warnings[0].getMessage()
+        assert "-25244" in warnings[0].getMessage()
+
+    def test_set_is_quiet_when_nothing_to_delete(self, store, caplog) -> None:
+        """Not found (exit 44) and a clean delete are routine — no warning."""
+        import logging
+
+        for rc in (44, 0):
+            caplog.clear()
+            outcomes = [MagicMock(returncode=rc, stderr=""), MagicMock(returncode=0, stderr="")]
+            with patch("subprocess.run", side_effect=outcomes), caplog.at_level(
+                logging.WARNING, logger="bristlenose.credentials_macos"
+            ):
+                store.set("anthropic", "new-key")
+            assert not [r for r in caplog.records if r.levelno >= logging.WARNING], rc
+
     def test_delete_ignores_not_found(self, store) -> None:
         """delete() should not raise if key doesn't exist."""
         with patch("subprocess.run") as mock_run:

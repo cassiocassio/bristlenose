@@ -108,8 +108,12 @@ class MacOSCredentialStore(CredentialStore):
         the app's items name ``/usr/bin/security`` in their ACL, but deleting
         an item another tool created was refused when the *app* tried it
         (``-25244 errSecInvalidOwnerEdit``, 4 Sep 2026), so expect the
-        ``delete`` to fail silently and ``-U`` to update in place — which may
-        ask once, in the terminal's GUI session.
+        ``delete`` to be refused and ``-U`` to update in place — which may
+        ask once, in the terminal's GUI session. A refused delete is logged
+        at WARNING with ``security``'s own stderr, so the next ``configure``
+        against an app-owned item records the answer in the terminal —
+        ``configure`` has no ``-v``, and DEBUG would be lost. Not found
+        (exit 44) and a clean delete are routine and stay at DEBUG.
 
         No-op if subprocess-exec is blocked (sandbox, SIP, MDM) — and a clean
         return is therefore **not** evidence anything was stored. Callers use
@@ -119,7 +123,7 @@ class MacOSCredentialStore(CredentialStore):
 
         # Delete existing entry first (ignore errors if not found)
         try:
-            subprocess.run(
+            deleted = subprocess.run(
                 [
                     "security",
                     "delete-generic-password",
@@ -127,11 +131,25 @@ class MacOSCredentialStore(CredentialStore):
                     "-s", service,
                 ],
                 capture_output=True,  # Suppress output
+                text=True,
                 check=False,  # Ignore "not found" errors
             )
         except (FileNotFoundError, PermissionError, OSError) as exc:
             logger.debug("keychain delete-before-set via security CLI failed for %s: %s", key, exc)
             return
+        if deleted.returncode in (0, 44):  # 44 = errSecItemNotFound: nothing to replace
+            logger.debug(
+                "keychain delete-before-set for %s: exit %d", key, deleted.returncode
+            )
+        else:
+            # The item exists and macOS would not let `security` remove it —
+            # its ACL belongs to another tool (the Mac app, most likely). The
+            # add below updates it in place, which may ask once in the GUI.
+            logger.warning(
+                "Keychain item '%s' could not be replaced (security exited %d: %s); "
+                "updating it in place — macOS may ask once",
+                service, deleted.returncode, (deleted.stderr or "").strip() or "no output",
+            )
 
         # Add new entry
         try:

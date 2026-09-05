@@ -329,7 +329,13 @@ The rule, in full on `SharedKeychainItem`'s doc comment:
   securityd log of the first live run said otherwise._ Whether Python's
   delete-then-add can replace an *app*-owned copy (whose ACL names `security`)
   is the one write direction not yet measured; if refused, `-U` updates in place
-  and may ask once in the terminal's GUI session.
+  and may ask once in the terminal's GUI session. **The next `bristlenose
+  configure` against such an item records the answer** (5 Sep 2026):
+  `MacOSCredentialStore.set` logs a refused delete at WARNING with
+  `security`'s own stderr — the OSStatus in that line is the measurement —
+  and `configure` has no `-v`, so WARNING is the level that reaches the
+  terminal. Which item is app-owned, and how to read the answer back, is under
+  §"Reading the unmeasured direction" below.
 - **The prompt budget, and who may spend it.** The synced copy never prompts.
   Decrypting a login item another tool created raises macOS's *"Bristlenose
   wants to use your confidential information stored in … in your keychain"*
@@ -439,6 +445,36 @@ most once per item; click **Always Allow**.
    one dialog, the row shows the new key, and `security … -w` still prints it.
 4. **Both stay agreeing.** Repeat 2 then 3; the app never shows a key the CLI
    does not, and vice versa. `bristlenose doctor` reports `(Keychain)`.
+
+### Reading the unmeasured direction
+
+The item that answers it is one the **app** created in login, because that is
+the copy whose ACL names `/usr/bin/security` as a trusted app. Attributes read
+5 Sep 2026 (`security find-generic-password -a bristlenose -s "<service>"`,
+no `-w`, so no secret and no dialog):
+
+| item | `cdat` | `mdat` | owner |
+|---|---|---|---|
+| Anthropic | 4 Sep 21:16:40Z | 4 Sep 21:16:40Z | **app** — created and modified in the same second, by the app's delete-then-add |
+| OpenAI | 9 Jun | 4 Sep 21:28:13Z | CLI — the app's delete was refused and it updated in place |
+| Gemini | 4 Sep 19:04:51Z | same | CLI (`configure`) |
+| Miro | 28 Jun | same | CLI (serve OAuth) |
+
+So `bristlenose configure anthropic --key …` is the run. Read the answer
+twice:
+
+1. **The terminal.** A line beginning `Keychain item 'Bristlenose Anthropic API
+   Key' could not be replaced (security exited N: …)` means **refused** — the
+   OSStatus in the message is the result, and a dialog may follow. No such
+   line means the delete went through.
+2. **The attributes**, with the same read-only command afterwards: `cdat`
+   unchanged and `mdat` at the run's second means updated in place (refused);
+   `cdat` *and* `mdat` at the run's second means deleted and re-added — and
+   the item is then CLI-owned, so the app's next write is the measured
+   `-25244` case again, not this one.
+
+Record the result in the table under §"One keyspace, two keychains" and
+strike this section's "unmeasured" from the bullet above.
 
 ### Cleaning up a machine that already carries the split
 

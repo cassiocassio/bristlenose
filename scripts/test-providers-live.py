@@ -52,6 +52,13 @@ REAL_SWIFT = cpl.SWIFT.read_text(encoding="utf-8")
 FAILURES: list[str] = []
 
 
+class _Empty:
+    """Schema-valid but useless: every list empty, every count zero."""
+
+    def __getattr__(self, name: str):
+        return 0 if name.endswith("count") else []
+
+
 def check(label: str, cond, detail: str = "") -> None:
     """cond is a callable so a raising assertion FAILS its case instead of
     killing the run — a suite that dies on the first defect reports one."""
@@ -86,7 +93,7 @@ def swift(variant: str):
 
 def run(argv: list[str], verdicts: dict[tuple[str, str], str]) -> tuple[int, str]:
     """Drive the real main() with check() stubbed. Returns (exit code, stdout)."""
-    async def fake_check(provider: str, model: str) -> tuple[str, str]:
+    async def fake_check(provider: str, model: str, stage_keys=()) -> tuple[str, str]:
         return verdicts.get((provider, model), "PASS"), "stubbed"
 
     real_check, real_argv = cpl.check, sys.argv
@@ -146,6 +153,26 @@ check("a RENAMED case raises rather than testing one model",
 swift(REAL_SWIFT.replace("var availableModels: [String] {", "var pickerModels: [String] {"))
 check("a renamed availableModels block raises",
       lambda: _raises(lambda: cpl.shipped_models("anthropic")))
+
+print("\n\033[1mthe fixture is the REAL stage prompts, not an invented one\033[0m")
+import live_check_fixture as fx  # noqa: E402
+
+check("all six stages render with the pipeline's own templates",
+      lambda: len(fx.STAGES) == 6 and all(all(fx_p) for fx_p in (st.prompts() for st in fx.STAGES)),
+      "a KeyError here means a template grew a placeholder the fixture does not fill")
+check("every stage carries the model its pipeline call uses",
+      lambda: [st.model.__name__ for st in fx.STAGES] == [
+          "SpeakerSplitAssignment", "SpeakerRoleAssignment", "TopicSegmentationResult",
+          "QuoteExtractionResult", "ScreenClusteringResult", "ThematicGroupingResult"])
+check("the default set is the two stages that actually broke",
+      lambda: cpl.DEFAULT_STAGES == ("s10:clusters", "s11:themes"),
+      "s09 was the invented prompt's stage and was never where the failures were")
+check("the untrusted envelope is present, as in production",
+      lambda: all("untrusted" in st.prompts()[1] for st in fx.STAGES),
+      "a fixture that skips wrap_untrusted is not testing the request we send")
+check("a VACUOUS result is a failure, not a pass",
+      lambda: not any(st.substantive(_Empty()) for st in fx.STAGES),
+      "validating is not answering — an empty list is how a stage ships an empty report")
 
 print("\n\033[1mmain — the exit codes, which are what a caller reads\033[0m")
 swift(REAL_SWIFT)

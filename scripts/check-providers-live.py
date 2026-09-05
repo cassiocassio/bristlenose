@@ -32,11 +32,17 @@ TWO KNOWN BLIND SPOTS (5 Sep 2026):
     which has its own request builder. The night the ChatGPT default moved,
     preflight sent ``max_tokens=1`` to a GPT-5-class model and every run aborted
     there with a 400 — and this script said 7/7. Exercise preflight too.
-  - The hand-written USER prompt below reproduces a Sonnet 5 double-encoding on
-    quote-extraction that the pipeline's REAL extraction prompt does not; the
-    real failures are at quote-clustering and thematic-grouping. The honest
-    fixture is the six stage templates via ``get_prompt_template`` (~4c per
-    model per pass), and one pass cannot promise a run — grouping flips.
+  - CLOSED 5 Sep 2026. The hand-written USER prompt is gone; every call now uses
+    a real stage template from ``bristlenose/llm/prompts/`` via
+    ``get_prompt_template``, the real ``wrap_untrusted`` envelope and the real
+    response model (``scripts/live_check_fixture.py``). The old invented prompt
+    reproduced a Sonnet 5 double-encoding on quote-extraction that the REAL
+    extraction prompt does not, and was blind to the failures that actually
+    stopped the move, at quote-clustering and thematic-grouping.
+
+ONE PASS IS STILL NOT A RUN. Clustering and grouping vary most between identical
+calls, so green here means "the shape came back right once". The stability corpus
+remains separate and owed.
 """
 
 from __future__ import annotations
@@ -51,24 +57,24 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from live_check_fixture import BY_KEY, STAGES  # noqa: E402
+
 from bristlenose.config import load_settings  # noqa: E402
 from bristlenose.llm.client import LLMClient  # noqa: E402
-from bristlenose.llm.structured import QuoteExtractionResult  # noqa: E402
 from bristlenose.providers import PROVIDERS  # noqa: E402
 
 SWIFT = ROOT / "desktop/Bristlenose/Bristlenose/LLMProvider.swift"
 SWIFT_CASE = {"anthropic": "claude", "openai": "chatGPT", "google": "gemini"}
 PROVIDER_ORDER = ("anthropic", "openai", "google")
 
-SYSTEM = "You extract short verbatim quotes from user-research transcripts."
-# Deliberately a *natural* transcript, not a terse one: the Sonnet 5
-# double-encoding only reproduced on natural phrasing.
-USER = (
-    "Extract up to 2 quotes from this transcript. Use the given timecodes.\n\n"
-    "[00:00:04] P1: Honestly the onboarding was fine until the password step. "
-    "It rejected mine three times with no reason given, I nearly gave up. "
-    "[00:00:19] P1: Once I was in, the dashboard was actually pretty clear."
-)
+# The DEFAULT set: the two stages that actually broke on Sonnet 5. Both hand the
+# model the whole quote set at once and both nest a list inside each item, which
+# is the shape the double-encoding appeared on -- and they are the two smallest
+# prompts of the six, so the honest default is also the cheap one. `--stages`
+# runs all six.
+DEFAULT_STAGES = ("s10:clusters", "s11:themes")
 
 
 def shipped_models(provider: str) -> list[str]:
@@ -109,26 +115,55 @@ def classify(exc: Exception) -> str:
     return "iii.shape"
 
 
-async def check(provider: str, model: str) -> tuple[str, str]:
+async def check(provider: str, model: str, stage_keys: tuple[str, ...] = ()) -> tuple[str, str]:
+    """Run the chosen stages against one (provider, model). First failure wins.
+
+    Column contract, relied on by check-release-ready.sh's awk: provider, model,
+    verdict, question. Anything about WHICH stage goes after those four.
+    """
     settings = load_settings(llm_provider=provider, llm_model=model)
     client = LLMClient(settings)
-    t0 = time.perf_counter()
-    try:
-        result = await client.analyze(
-            system_prompt=SYSTEM, user_prompt=USER, response_model=QuoteExtractionResult,
-        )
-    except Exception as exc:  # noqa: BLE001 — the point is to report it
-        detail = re.sub(r"\s+", " ", str(exc))[:140]
-        return "FAIL", f"{classify(exc):<10} {type(exc).__name__}: {detail}"
-    ms = int((time.perf_counter() - t0) * 1000)
-    return "PASS", f"{'':<10} {len(result.quotes)} quote(s), {ms} ms"
+    stages = [BY_KEY[k] for k in (stage_keys or DEFAULT_STAGES)]
+    total_ms = 0
+    notes: list[str] = []
+    for stage in stages:
+        system_prompt, user_prompt = stage.prompts()
+        t0 = time.perf_counter()
+        try:
+            result = await client.analyze(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_model=stage.model,
+            )
+        except Exception as exc:  # noqa: BLE001 — the point is to report it
+            detail = re.sub(r"\s+", " ", str(exc))[:120]
+            return "FAIL", f"{classify(exc):<10} {stage.key} {type(exc).__name__}: {detail}"
+        total_ms += int((time.perf_counter() - t0) * 1000)
+        # Validating is not the same as answering. A model can return an empty
+        # list and satisfy every schema here -- and an empty list is exactly how
+        # a stage produces a report with nothing in it, which is the failure a
+        # researcher actually sees. So a vacuous PASS is a FAIL.
+        if not stage.substantive(result):
+            return "FAIL", f"{'iii.shape':<10} {stage.key} validated but returned nothing usable"
+        notes.append(stage.key.split(":")[-1])
+    return "PASS", f"{'':<10} {'+'.join(notes)}, {total_ms} ms"
 
 
 async def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--provider", choices=PROVIDER_ORDER, help="check one provider only")
+    ap.add_argument("--stages", action="store_true",
+                    help="all six pipeline stages, not just the two that broke (~4c/model)")
+    ap.add_argument("--stage", action="append", choices=[st.key for st in STAGES],
+                    help="one named stage; repeatable")
     args = ap.parse_args()
     providers = [args.provider] if args.provider else list(PROVIDER_ORDER)
+    if args.stage:
+        stage_keys = tuple(args.stage)
+    elif args.stages:
+        stage_keys = tuple(st.key for st in STAGES)
+    else:
+        stage_keys = DEFAULT_STAGES
 
     plan: list[tuple[str, str]] = []
     for p in providers:
@@ -141,11 +176,13 @@ async def main() -> int:
         print("error: enumerated zero models — that is a tool failure, not a pass", file=sys.stderr)
         return 2
 
+    print(f"stages: {', '.join(stage_keys)}  "
+          f"({len(plan)} model(s) x {len(stage_keys)} = {len(plan) * len(stage_keys)} live calls)")
     print(f"{'provider':<10} {'model':<26} {'result':<6} question   detail")
     print("-" * 96)
     failures = 0
     for provider, model in plan:
-        verdict, detail = await check(provider, model)
+        verdict, detail = await check(provider, model, stage_keys)
         failures += verdict == "FAIL"
         print(f"{provider:<10} {model:<26} {verdict:<6} {detail}")
     print("-" * 96)

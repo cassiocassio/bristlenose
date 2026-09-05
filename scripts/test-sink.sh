@@ -78,7 +78,9 @@ ts="$(field_of "$SINK" step ts)"
 case "$ts" in *Z) ok "ts is UTC ISO-8601 ($ts)" ;; *) bad "ts is not UTC ISO-8601: '$ts'" ;; esac
 run="$(field_of "$SINK" step run)"
 case "$run" in standalone-*) ok "run id minted for a standalone sink ($run)" ;; *) bad "run id missing: '$run'" ;; esac
-mode="$(stat -f '%Lp' "$SINK" 2>/dev/null || stat -c '%a' "$SINK")"
+# GNU first: on Linux `stat -f` is FILESYSTEM status and succeeds with a "File:" block,
+# so the BSD-first order never reached the fallback and CI read a paragraph as the mode
+mode="$(stat -c '%a' "$SINK" 2>/dev/null || stat -f '%Lp' "$SINK")"
 eq "sink is 0600" 600 "$mode"
 
 head_ "2 · values that used to break the parser round-trip after normalisation"

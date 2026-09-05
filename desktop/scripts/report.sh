@@ -43,6 +43,18 @@ _bn_field() {
     done
 }
 
+# The sink (docs/design-release-board.md §1.1): when BN_EVENT_SINK is set, the
+# owner's events are also appended to that file with ts= and run=. Same
+# directory as this file; a partial checkout without it must not break a build
+# phase, so the source is guarded and sink_line degrades to a no-op.
+_BN_SINK_SH="${BASH_SOURCE[0]%/*}/sink.sh"
+if [ -f "$_BN_SINK_SH" ]; then
+    # shellcheck source=desktop/scripts/sink.sh
+    . "$_BN_SINK_SH"
+else
+    sink_line() { :; }
+fi
+
 # Emit one sentinel line. Suppressed for nested children (parent renders).
 _bn_emit() {
     # Nested under a rendering parent, and not the owner → stay silent.
@@ -50,6 +62,11 @@ _bn_emit() {
         return 0
     fi
     local kind="$1"; shift
+    # Record before rendering, in every mode: the sink follows rendering
+    # ownership (the guard above), so a nested child that is silent on stdout
+    # is silent in the file too — the parent narrates it. BN_REPORT=0 still
+    # records, because plain output is a view and the sink is the record.
+    sink_line "$kind" "$@"
     if [ "${BN_REPORT:-1}" = "0" ]; then
         _bn_plain "$kind" "$@"
         return
@@ -92,9 +109,22 @@ _bn_plain() {
 # OUR status (PIPESTATUS[0]). No-op when: BN_REPORT=0, a parent is already
 # rendering (_BN_ACTIVE), or python / build_report.py are unavailable.
 bn_autowrap() {
-    [ "${BN_REPORT:-1}" = "0" ] && return 0
     # A parent is already rendering → don't wrap; children stay silent (_bn_emit).
+    # This guard is first for a reason: the re-exec'd inner run exports BOTH
+    # _BN_ACTIVE and _BN_INNER to its children, so a child must be turned away
+    # here before the _BN_INNER branch below can mistake it for the inner run.
     [ -n "${_BN_ACTIVE:-}" ] && return 0
+    # Ownership is claimed ONCE, here, on every path a standalone run can take —
+    # plain mode, no renderer, or the re-exec'd inner run. Rendering and the
+    # sink share this one token; before 5 Sep 2026 the plain-mode and
+    # no-renderer returns never set it, so under BN_REPORT=0 a parent and its
+    # children all passed _bn_emit's guard and the sink would have recorded
+    # every line twice. Nested children now go silent in plain mode exactly as
+    # they do under the renderer (pinned by scripts/test-sink.sh).
+    if [ "${BN_REPORT:-1}" = "0" ]; then
+        _bn_owner=1; export _BN_ACTIVE=1
+        return 0
+    fi
     # This is the re-exec'd inner run: become the owner, silence descendants.
     if [ -n "${_BN_INNER:-}" ]; then
         _bn_owner=1
@@ -108,7 +138,8 @@ bn_autowrap() {
     [ -x "$py" ] || py="$(command -v python3 2>/dev/null || true)"
     local renderer="$SCRIPT_DIR/build_report.py"
     if [ -z "$py" ] || [ ! -f "$renderer" ]; then
-        return 0   # no renderer available → fall through to plain body
+        _bn_owner=1; export _BN_ACTIVE=1
+        return 0   # no renderer available → fall through to plain body, as owner
     fi
     set +e
     _BN_INNER=1 "$self" "$@" | "$py" "$renderer"

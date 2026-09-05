@@ -1,316 +1,263 @@
 ---
-status: plan — reviewed by /usual-suspects before build (5 Sep 2026)
+status: plan v2 — reviewed 5 Sep 2026 (four lanes + William), building
 date: 2026-09-05
 decides: docs/design-release-train-dashboard.md § 3 → sketch B, the board
 sketch: docs/mockups/release-train-board.html
+review log: the maintainer's private review notes, kept outside the public tree (33 findings with dispositions)
 ---
 
-# The release board — build plan
+# The release board — build plan (v2)
 
 **Decision (5 Sep 2026): build the board, not the timeline.** The maintainer's
-framing: this is the London Underground map, not the Ordnance Survey — what
-matters is the *connections and the logic of the journey*, sequence,
-dependencies, pass and fail, the qualitative state, not the distance between
-stations. A time axis makes the picture less useful, not more. The board has
-a flow (top-left to bottom-right), room for scrolling detail inside panes,
-and panes that can size to content or be resized.
+framing: this is the London Underground map, not the Ordnance Survey — the
+connections and the logic of the journey, sequence, dependencies, pass and
+fail, the qualitative state. A time axis makes the picture less useful. The
+board has a flow (top-left to bottom-right), room for scrolling detail inside
+panes, and panes that size to content or resize.
 
-This plan has two halves that ship in order: **the feed** (make the train
-write down what it already knows) and **the board** (draw it). The feed is
-worth having with no board at all; the board is worthless without the feed.
+**v2 differs from v1 in what it deletes.** The plan review found v1 breaking
+its own principle 4 ("no second copy") four times — a regex reader of
+`release.yml`, a `--ci` flag calling GitHub from the viewer, a `steps` verb the
+generator would depend on, a channel count written into prose — each a
+re-reading of a source that already has a correct reader. All four are gone.
+It also found the feed could be silently empty in four measured ways; all four
+are closed in the feed commit. And it deleted live mode: the one person who
+will ever watch this can type `while sleep 5; do …; done` and press ⌘R.
 
-## 0 · Principles, stated once
+Two halves, in order: **the feed** (make the train write down what it already
+knows) and **the board** (draw it). The feed is worth having with no board.
 
-1. **Read, never derive.** Every state on the board comes from a file a script
-   wrote or a probe answered. The board never infers "PyPI is live" from "the
-   tag was pushed". Where nothing was written, the tile says *no data*, which
-   is a third state, not green and not red — the tri-state rule from
-   `verify-channels.sh` applied to a picture.
+## 0 · Principles
+
+1. **Read, never derive.** Every state comes from a file a script wrote. Where
+   nothing was written the tile says *no data* — a third state. And "no data"
+   itself is read, not inferred: the driver writes its own boundary lines into
+   the sink, so an empty sink under a completed step is *"ran; sink received
+   nothing"*, never *"did not run"*.
 2. **The report is a view; so is the board.** No step's control flow changes.
-   The feed is a tee on lines the scripts already emit
-   (`REPORT-STYLE.md`: "a view, not the control flow").
-3. **One run id joins everything.** `release.sh` mints it; every child carries
-   it; a standalone build mints its own. Without it there is no join, only a
-   guess.
-4. **Topology from the sources of topology.** The sequence of steps comes from
-   `release.sh`'s own step table; the CI chain comes from `release.yml`'s
-   `needs:`; the channels come from `project.conf`'s `CHANNELS`. The board
-   holds no second copy of any of these — a number in two places is a number
-   wrong in one.
-5. **stdlib only, file-first.** The generator is a single Python script with
-   no dependencies; the board is a single HTML file that works from `file://`
-   with its data inlined. A `--serve` mode adds polling for the live case and
-   nothing else.
-6. **Escaped, not trusted.** Log tails, evidence strings and channel bodies are
-   third-party text. The inlined JSON is escaped for `<`, `>` and `&` after
-   `ensure_ascii` (the export-JSON gotcha in CLAUDE.md applies here verbatim).
+3. **One run id joins everything**; attempts ride on the driver's boundary
+   lines, not on a forked id.
+4. **Topology from the run.** The step table is snapshotted into the run dir
+   at start; the channels come from `project.conf`; the CI chain's *verdict*
+   comes from the preflight row that already parses the YAML properly. The
+   board holds no number that lives in a tracked file.
+5. **One parser.** The sink is the `@bn` protocol with `ts` and `run` added;
+   `parse_event` moves to a stdlib module both readers import.
+6. **Nothing here ships in the `.app`.** Maintainer tooling; the sandbox rules
+   do not apply, and the bn-accurate design recipe is deliberately not used.
+7. **What leaves the machine.** `board.html` carries no credentials, no host
+   identity and no raw tool output, by construction and by test; it is safe to
+   attach to an issue. `board-with-logs.html` is not, and says so in its header.
 
 ## 1 · The feed
 
-### 1.1 One helper, three consumers — `scripts/sink.sh`
+### 1.1 `desktop/scripts/sink.sh` — one helper, five consumers
 
 ```bash
-# sink_line <kind> k=v …  — append one "@bn <kind> ts=… run=… k=v…" line to
-# $BN_EVENT_SINK when it is set. No-op otherwise. Never fails the caller.
+# sink_line <kind> k=v …  — append "@bn <kind> ts=<UTC> run=<id> k=v…" to
+# $BN_EVENT_SINK. No-op unless the sink is set and absolute. Never fails the
+# caller. bash 3.2 safe.
 ```
 
-Ten lines. Values are `printf '%q'`-quoted exactly as `report.sh::_bn_emit`
-does, so the sink file is **the `@bn` protocol itself with two fields added**
-(`ts`, `run`), parseable by the existing `build_report.py::parse_event` —
-no JSON escaping in bash, no second parser. Append with `>>`; a write failure
-is swallowed (`2>/dev/null || true`), because a dashboard must never be the
-reason a release step fails. Sourced by:
+- **Normalise before quoting** (the measured defect): each value has control
+  bytes stripped (`tr -d '\000-\037'` after CR/LF/TAB → space) and is cut to
+  200 bytes, then `printf '%q'`. That keeps `shlex` able to read every line,
+  keeps every line under `PIPE_BUF` so concurrent appenders cannot interleave,
+  and keeps a value from forging a second `@bn` line.
+- `ts` is `date -u +%Y-%m-%dT%H:%M:%SZ`, written by `sink_line` itself, so a
+  child cannot write local time into the merge.
+- `run` is `$BN_RUN_ID`, or `standalone-<epoch>` when a sink is set by hand.
+- Writes happen under `umask 077`. A write failure is swallowed
+  (`2>/dev/null || true`): a dashboard must never fail a release step.
+- Lives next to `report.sh` (the desktop half is the publisher of the
+  protocol); the `scripts/*.sh` consumers source it with an existence guard.
 
-- `desktop/scripts/report.sh` — `_bn_emit` calls `sink_line` after its
-  nested-child suppression check (the owner's events are the record; a silent
-  child stays silent in the sink too). Every `@bn step/check/gate/art/done`
-  from `build-all.sh`, `build-dmg.sh` and any `check-*.sh` that narrates then
-  lands in the file with the run id.
-- `scripts/check-release-ready.sh` — `ok/warn/bad` gain one line each:
-  `sink_line row src=preflight label=… result=… evidence=…`. The 34 preflight
-  rows become data.
-- `scripts/verify-channels.sh` — `row()` gains
-  `sink_line channel name=… verdict=… evidence=…`. Every probe run is recorded
-  with its timestamp; "PyPI went green at T+34m" becomes answerable.
+Consumers:
 
-Two more emitters, one line each, for the clocks (§1.3):
-`desktop/scripts/upload-testflight.sh` after `EXPIRES` is parsed
-(`sink_line clock name=testflight build=… expires=…`), and
-`desktop/scripts/build-dmg.sh` at manifest time
-(`sink_line clock name=dmg built=… expires=…` — 30 days from the build, the
-one clock we *do* compute, because Apple gives no date for a `.dmg`).
+- **`report.sh::_bn_emit`** — the tee sits after the nested-child guard and
+  before the `BN_REPORT=0` branch, so plain mode records too. **Ownership is
+  claimed once:** every early-return branch of `bn_autowrap` taken by a
+  *standalone* run (no `_BN_ACTIVE` at entry) sets `_bn_owner=1` and exports
+  `_BN_ACTIVE=1`, so rendering and recording share one token in every mode.
+  This changes what nested children print under `BN_REPORT=0` (they go
+  silent, as they already do under the renderer); the test pins it.
+- **`scripts/check-release-ready.sh`** — `ok/warn/bad` gain
+  `sink_line row src=preflight label=… result=… evidence=…`.
+- **`scripts/verify-channels.sh`** — `row()` gains
+  `sink_line row src=verify label=… result=… evidence=…` for every row, plus
+  `sink_line verify status=start` at entry and `status=done rollup=<rc>
+  channels=<n>` at the end, so a partial verify is never rolled up as complete.
+- **`desktop/scripts/upload-testflight.sh`** — after `EXPIRES` is parsed:
+  `sink_line clock name=testflight build=… expires=…` (empty when altool gave
+  none — the board renders that as no-data, never a computed date).
+- **`desktop/scripts/build-dmg.sh`** — at manifest time:
+  `sink_line clock name=dmg built=<UTC>`; the 30-day rule stays in one place
+  (`AlphaBuild.swift`), mirrored in the generator with a parity test.
 
-### 1.2 The run id and the sink path — `scripts/release.sh`
+### 1.2 `scripts/release.sh` — the conductor writes its own boundaries
 
-In `cmd_run`, once `RUNDIR` exists:
+- `cmd_run`, once `RUNDIR` exists: `export BN_RUN_ID="$V"
+  BN_EVENT_SINK="$ROOT/$RUNDIR/bn-events.log"` (absolute), and
+  `run_steps > "$RUNDIR/steps.tbl"` — the topology snapshot the board reads.
+- `sink_line run status=start attempt=<n>` at entry (n = count of prior
+  `run started` lines + 1), and `sink_line step id=<step> attempt=<n>
+  status=start|end rc=<rc>` around every step — **these writes are asserted**
+  (`|| die`), like `ev_append`. Children swallow; the driver does not.
+- A shared `resolve_run` helper (the rule `retry`/`abandon` already use, plus
+  "newest by mtime when several, narrated") is used by `verify` and `status`
+  to export the same two variables when a run dir exists — so post-release
+  `release.sh verify 0.29.1` and `release.sh status` write channel and CI
+  lines into the run's sink.
+- `cmd_status` writes `sink_line ci …` lines from the same `gh` selector
+  `CI_CMD` uses (`--event workflow_dispatch --branch main`, `headSha ==
+  ci-sha`) — the one place that asks GitHub — with `queued`, `no run for sha`
+  and `unreachable` as distinct results.
 
-```bash
-export BN_RUN_ID="$V" BN_EVENT_SINK="$RUNDIR/bn-events.log"
-```
+### 1.3 Proof — `scripts/test-sink.sh` (bash, `test-lib.sh`)
 
-Children inherit both through `eval "$cmd"`. `ev_append` is untouched —
-`events.jsonl` stays the conductor's ledger; the sink is the orchestra's.
-A standalone `build-all.sh` (no `BN_RUN_ID`) writes nothing unless the caller
-sets a sink, in which case `sink_line` mints `run=standalone-<epoch>`.
-
-`release.sh` also gains a **`steps` verb** — `steps) run_steps ;;` — that prints
-the step table (`id|label|kind|est|tier|consequence|cmd`) so the generator can
-read the sequence from its source rather than carry a copy. Two lines.
-
-### 1.3 What the feed captures that nothing did before
-
-| Fact | Before | After |
-|---|---|---|
-| per-step build durations | measured, rendered, discarded | `@bn step … elapsed=` in the sink, per run |
-| which gate `d2` last ran, and when | log archaeology | `@bn gate id=d2 … ts=` |
-| preflight rows | terminal only | `@bn row src=preflight …` |
-| channel verdicts over time | one rollup, exited | `@bn channel … ts=` per probe run |
-| TestFlight expiry | printed once by altool | `@bn clock name=testflight expires=` |
-| `.dmg` expiry | a banner string | `@bn clock name=dmg expires=` |
-| a build joined to its release | impossible | `run=` on every line |
-
-### 1.4 Proof — `scripts/test-sink.sh`
-
-A fake script sources `report.sh` with `BN_EVENT_SINK` set to a temp file,
-emits a step/check/gate/done sequence, and the suite asserts: four lines
-landed; each parses with `parse_event`; `ts` and `run` are present; a value
-containing spaces, quotes, a backslash and a `<` round-trips intact; **no sink
-set → no file, exit 0**; an unwritable sink path → the script still exits 0.
-Uses `test-lib.sh`. Wired into `ci.yml::release-suites` beside the other
-`scripts/test-*.sh`.
+A fake script sources `report.sh` with a temp sink and emits step/check/gate/
+done. Asserts: four lines; each parses via `bn_events.parse_event`; `ts` ends
+in `Z`; `run` present; values with spaces, quotes, backslash, `<` round-trip;
+**a value with a newline and an apostrophe, a tab, and a non-ASCII string under
+`LC_ALL=C`** round-trip post-normalisation and parse; a 500-byte value is
+capped; no sink → no file, exit 0; unwritable sink → exit 0; **relative sink
+→ no write**; `BN_REPORT=0` + sink → lines land once (parent) and a nested
+child writes nothing; a `cd /tmp` before emitting still lands in the absolute
+path; `sink.sh` and `report.sh` contain none of `declare -A`, `${var,,}`,
+`mapfile`. Wired into `ci.yml::release-suites` by name.
 
 ## 2 · The generator — `scripts/release-board.py`
 
-One file, argparse, stdlib. Reads; never probes, with one opt-in exception.
+`.venv/bin/python scripts/release-board.py [VERSION] [--out DIR] [--with-logs]`.
+Stdlib plus one import by path (`desktop/scripts/bn_events.py`). Reads; never
+probes; makes no network call.
+
+Inputs, and each pane's **no-data condition**:
+
+| Pane | Source | No data when |
+|---|---|---|
+| header | `context.json` allowlist (`os arch xcode python disk_free_gb git`), `ci-sha` | file absent (0.28.0 has none) — header shows version and started only |
+| the line | `steps.tbl` + `events.jsonl` folded | `steps.tbl` absent → exit 1; unparseable lines counted and shown |
+| liveness | `.lock/pid` + `os.kill(pid,0)`; heartbeat as a fact | no lock and no `running` → "not running"; lock + dead pid → stranded; empty heartbeat → "mid-write" |
+| preflight | sink `row src=preflight` | no rows → no-data; rows present → N of them, never a rollup the file did not make |
+| build steps / checks / gates / art | sink `@bn step/check/gate/art` inside the driver's `build-all` window | driver boundary present, zero child lines → "ran, sink received nothing"; no boundary → "not run" |
+| CI | sink `ci` lines from `status` | none → "not queried (run `release.sh status`)" |
+| ratchets | `ratchet.json` | ceilings only: "ceiling N · current not measured" |
+| tag | `ci-sha` + the tag step's fold | as the line |
+| channels | `CHANNELS` from `project.conf` × newest complete verify's rows | no verify → no-data; verify without `done` → "partial, N of M"; `unreachable` amber never green; `as_of` age shown |
+| clocks | sink `clock` | none → no-data; empty `expires` → no-data |
+| events | both ledgers merged `(ts, source_rank, line_index)`, conductor wins | — |
+| failed step | log **path** and exit code only; `--with-logs` adds a 12×200 tail with CSI/control bytes stripped, in `board-with-logs.html` | — |
+
+**The confounded-expectations log** (added 5 Sep 2026 after the drift
+review). The board's drift guard is one pane, always present, with its count in
+the header — including *0 confounded* as a positive statement, and *cannot be
+computed* when `steps.tbl` is missing. Four sections: **unknown** (seen in the
+feed, not in the board's vocabulary — a kind, a field, a status word; rendered
+raw, counted, never dropped); **new shape** (a known thing carrying a value the
+board has no rule for); **missing** (declared by the run, never seen — a
+channel in `CHANNELS` with no row after a `done` verify, a step in `steps.tbl`
+with no event on a completed run, a driver window with zero child lines, the
+preflight label the CI tile keys on absent from a complete preflight); and
+**changed since last run** (this run's `steps.tbl` and channel set diffed
+against the previous run dir's — an added phase, a deleted platform, a rename).
+A fixture with one of each proves the log can fail. What it cannot see is a
+semantic disagreement between the ledger's fold and the board's; the
+round-trip test below is that guard. Version stamps: `steps.tbl` starts with
+`# steps.tbl v1`, and the driver's `run` line carries `proto=1`.
+
+Fold vocabulary: `ok · fail · running · pending · skipped · corrupt · stranded
+· later (tier 2) · unknown (id not in steps.tbl) · not-in-this-run (completed
+run, no event)`. Only `\n`-terminated lines are complete; a fragment naming a
+step folds it to `corrupt`, as `release.sh`'s awk does, so the two never
+disagree on one file.
+
+`as_of` per pane = the newest source mtime; the header prints generated time
+and newest source. Estimates are the step table's `est` column, labelled
+*table* (Welford deferred — review-log Finding 22). VERSION is validated
+(`\d+\.\d+\.\d+[\w.+-]*`) and resolved under `ROOT/.release`. Exit `0` when a
+board was written, `1` when the run dir or `steps.tbl` is missing, `2` usage.
+
+Output: `board.json` and `board.html` (the template with the JSON inlined,
+`ensure_ascii` then `< > &` escaped) into `.release/<v>/`, mode 0600.
+
+### 2.1 Proof — `scripts/test-release-board.py` (unittest, `.venv/bin/python`)
+
+Synthetic run dirs under a temp `.release/`: fold (stranded vs running via a
+dead pid; `corrupt` from a fragment; `skipped`; `later`; `unknown`;
+`not-in-this-run`); no data is not green (an empty run dir with `steps.tbl`
+renders every tile no-data, exit 0; without `steps.tbl` exit 1); build
+"ran, sink received nothing" vs "not run"; channels from `CHANNELS`
+(`unreachable` never green; partial verify never rolled up); clocks (empty
+expires → no-data; dmg expiry parity with `AlphaBuild.swift`); merge order on
+same-second ties; **escaping** (`</script><script>` in evidence → `<`
+present and literal `</script>` exactly once); **round-trip** (extract the
+inlined block with `html.parser`, `json.loads` it, equal to `board.json`);
+**CANARY** (`context.json` with `"host":"CANARY"` and a canary env value →
+absent from `board.html`); **DOM sinks** (the template contains none of
+`innerHTML`, `insertAdjacentHTML`, `outerHTML`, `document.write`, matched on
+whole tokens); a fixture copied from the real `0.28.0` run (fail, retry, skip,
+resume, no `context.json`) asserting every tile by name. Wired into
+`ci.yml::release-suites` on its own Python line.
+
+## 3 · The board — `scripts/release-board.template.html`
+
+One file, no framework, no CDN, opens from `file://`. Hand-rolled tokens (§0.6).
 
 ```
-release-board.py [VERSION] [--out DIR] [--ci] [--serve PORT] [--json]
+┌ header: version · run · started (first run started, n attempts) · generated · newest source · liveness ┐
+├ the line: stations from steps.tbl, interchange glyphs for gate/soft/hard, ▶ at running, · at later   ┤
+├──────────────────────────┬─ ┆ irreversible ┆ ─┬────────────────────────────────────────────────────────┤
+│ BUILD                    │                     │ RELEASE                                                │
+│  preflight rows          │                     │  tag: ci-sha · tag step                                │
+│  build steps + elapsed   │                     │  channel cards × CHANNELS, newest verify, as_of age    │
+│   ↳ checks · gates       │                     │  clocks                                                │
+│  CI (from status)        │                     │  verify rollup (complete only)                         │
+│  ratchets (ceilings)     │                     │                                                        │
+├──────────────────────────┴─────────────────────┴────────────────────────────────────────────────────────┤
+│ events tail (merged) · unparsed count           │ failed step: log path · exit code                    │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **VERSION** defaults to the sole run under `.release/` (the same rule
-  `release.sh` uses for `retry`/`abandon`); ambiguous → exit 2 naming them.
-- **Inputs, in reading order:**
-  1. `scripts/release.sh steps` → the sequence and each step's kind
-     (`gate | plain | soft | hard`) and static estimate.
-  2. `.release/<v>/events.jsonl` → fold per step to `ok | fail | running |
-     pending`, using the same rule as `fold_status` (a `running` with no
-     terminus is **stranded**, shown as such, never as running-green).
-  3. `.release/<v>/heartbeat` → liveness: step, elapsed, last log line, and
-     its age; older than `BN_HEARTBEAT_SECS` × 3 with a `running` step →
-     stranded.
-  4. `.release/<v>/bn-events.log` → the build steps with elapsed, the checks
-     under step 1, the a–f gate battery, the artefacts, the preflight rows,
-     the channel verdicts, the clocks. Parsed with `build_report.parse_event`
-     (imported by path; the two scripts already live in the same tree).
-  5. `.release/<v>/context.json`, `ci-sha` → the header (host, Xcode, sha).
-  6. `.release/<v>/logs/<step>.<n>.log` → last 12 non-blank lines of the
-     newest attempt of the running or failed step (CR → LF, as `release.sh`
-     does). Never the whole log.
-  7. `docs/testing/ratchet.json`, `soft-gates.json`, `gate-proofs.json` →
-     the ratchet meters and the gate dispositions.
-  8. `scripts/project.conf` → `CHANNELS`, `CHANNELS_UNPROBEABLE`, the
-     endpoint templates (parsed as `KEY="value"` lines; `${VAR}` expansion
-     for the derived URLs done in Python against the same file).
-  9. `.github/workflows/release.yml` → job names and `needs:` (a 15-line
-     YAML-shaped regex read, no PyYAML; asserted by a test against the real
-     file so a workflow edit that breaks the read is red).
-  10. **History**, for estimates: every `.release/*/bn-events.log` and
-      `events.jsonl` on disk → per-step Welford mean/stddev over past runs,
-      using `bristlenose/timing.py::WelfordStat` — the estimator the pipeline
-      already has, applied to the build for the first time. Fewer than two
-      samples → the static estimate from the step table, labelled *table*.
-- **`--ci`** (opt-in, the one network call): `gh run list` for `ci.yml` on
-  the `ci-sha` and for `release.yml` on the tag, `gh run view --json jobs` →
-  the matrix and gate cells. `gh` missing or non-zero → the CI panel reads
-  *unreachable*, dated; never empty-green.
-- **Output:** `board.json` (the model, every panel a keyed object with a
-  `source` and `as_of` on it) and `board.html` = the template with the JSON
-  inlined in a `<script type="application/json">`, escaped. Written to
-  `.release/<v>/` by default so the board travels with the run.
-- **`--serve PORT`:** `http.server` on localhost, `GET /` regenerates and
-  returns the page, `GET /board.json` regenerates and returns the model;
-  the page polls `/board.json` every 5 s when served, never from `file://`.
-  Localhost only, no auth, read-only, one process; the same shape as
-  `serve --dev` mounting `docs/mockups/`.
+- Panes: `resize: vertical; overflow: auto`, content-sized with a max; sizes
+  persist in `localStorage` (try/catch).
+- The renderer builds nodes with `createElement` and writes text with
+  `textContent`. No `innerHTML` anywhere (tested).
+- State colour carries `ok · warn · fail · running`; `pending · skipped ·
+  unreachable · stranded · corrupt · later · unknown · no-data` are outlined
+  or hatched, never filled.
+- Effort without a time axis: elapsed as a proportion of the run's longest
+  step; the table estimate as a hatched extension; the events-per-minute strip.
+- The header says *snapshot, generated HH:MM*; there is no live mode.
+  Watching: `while sleep 5; do .venv/bin/python scripts/release-board.py; done`
+  and ⌘R.
 
-**Exit codes**, the house vocabulary: `0` written · `1` run dir exists but
-holds nothing renderable (says what is missing) · `2` usage / ambiguous
-version.
-
-### 2.1 Proof — `scripts/test-release-board.py`
-
-stdlib `unittest`, run by `.venv/bin/python`. Fixtures are synthesised into
-a temp `.release/x.y.z/`:
-
-- **fold**: a run with `running` and no terminus renders `stranded`, not
-  `running`; a failed step keeps its attempt count; a completed run is
-  `completed`.
-- **no data is not green**: an empty run dir yields a board whose every tile
-  is `no data`, and the generator exits 1 naming the missing files.
-- **channels**: every name in `CHANNELS` has a card; a channel in
-  `CHANNELS_UNPROBEABLE` renders `skipped` with the reason; a probe line
-  `unreachable` renders amber, never green.
-- **topology**: the step order equals `release.sh steps` order; the
-  `release.yml` reader returns the real file's jobs and `needs:` (asserted
-  against the tree, so a workflow refactor that breaks the regex is red).
-- **estimates**: two past runs → Welford mean shown with `n=2`; one → the
-  table estimate labelled *table*.
-- **escaping**: a log tail containing `</script><script>` lands in the HTML
-  as `</script>`; the regression test from `export.py` copied in
-  shape.
-- **ci**: with `gh` stubbed to exit 1, the CI panel is `unreachable`; with
-  a canned JSON, the matrix cells are placed by `(os, python)`.
-- **`--serve`**: starts on port 0, `GET /board.json` returns the model with
-  `Content-Type: application/json`, stops.
-
-## 3 · The board — `scripts/release-board/board.html`
-
-One file: CSS, a `<template>`, and ~300 lines of JS that render `board.json`.
-No framework, no CDN — it must open from `file://` on a machine with no
-network in the middle of a release. Hand-rolled tokens; this is maintainer
-tooling, not a product surface, so the bn-accurate recipe is deliberately not
-used (recorded so nobody "fixes" it later).
-
-### 3.1 Layout — the Tube map
-
-```
-┌ header: version · run id · started · phase pill row · liveness ─────────────┐
-├ the line: 12 stations from `release.sh steps`, left→right, interchange     ┤
-│   glyphs for gate/soft/hard, coloured by fold state, ▶ at the running one   │
-├──────────────────────────┬─ ┆ irreversible ┆ ─┬───────────────────────────┤
-│ BUILD (left column)      │                     │ RELEASE (right column)     │
-│  preflight chips 34      │                     │  tag preconditions         │
-│  build steps + elapsed   │                     │  channel cards ×8, two     │
-│    ↳ checks · gates a–f  │                     │   columns, CHANNELS order  │
-│  CI chain (release.yml   │                     │   each: trigger · live ·   │
-│   needs) + matrix cells  │                     │   probe history · clock    │
-│  ratchets ×5             │                     │  verify rollup             │
-├──────────────────────────┴─────────────────────┴───────────────────────────┤
-│ events tail (both ledgers merged by ts) │ heartbeat + activity per minute  │
-└───────────────────────────────────────────────────────────────────────────┘
-```
-
-The **line** is the sequence-and-dependency spine the sketch lacked: the
-twelve steps as stations, a thicker ring at `gate` steps, a black bar at the
-`hard` (tag) step, a half-ring at `soft` ones; below it a second, thinner
-line for the `release.yml` chain drawn from `needs:` (ci → build → publish →
-{github-release, verify-pypi → trigger-copr, notify-homebrew}), which is the
-only fan-out in the system and the reason a Tube map is the right metaphor.
-Clicking a station scrolls its pane into view.
-
-### 3.2 Panes
-
-- `resize: vertical; overflow: auto` on every pane — native, no JS; default
-  height is content-sized with a max, so a healthy board needs no scrollbars
-  and a busy one gets them inside the pane, not on the page. Pane heights
-  persist in `localStorage` (wrapped in try/catch; the page renders without
-  it).
-- **State vocabulary, one set:** `ok · warn · fail · running · pending ·
-  skipped · unreachable · stranded · no-data`. Colour carries only the first
-  five; the last four are outlined or hatched, never filled — the same
-  discipline as `REPORT-STYLE.md`'s probes.
-- **Effort without a time axis:** each build step shows its elapsed as a
-  proportion of the run's longest step, and its estimate as a hatched
-  extension; the activity strip is events-per-minute across both ledgers. That
-  is the "activity and effort" of the ask, delivered without geography.
-- **Scrolling areas:** the events tail, the failed step's log tail, a channel
-  card's probe history, the preflight evidence column. Each is a pane.
-- **No data** is rendered as a labelled empty tile ("no bn-events.log — the
-  build has not run under this release"), never as a blank.
-
-### 3.3 Live mode
-
-Under `--serve`, the page fetches `/board.json` every 5 s, diffs by `as_of`
-per panel, and re-renders only panels whose `as_of` moved. A pane the user
-has resized keeps its size. The heartbeat's age drives the header's
-liveness pill (green under 2× `BN_HEARTBEAT_SECS`, amber to 3×, red beyond
-with "stranded?"). From `file://` the page is a snapshot and says so in the
-header.
-
-## 4 · Sequence, and what proves each step
+## 4 · Sequence and proof
 
 | # | step | proof |
 |---|---|---|
-| 1 | `scripts/sink.sh` + `report.sh` tee + `release.sh` exports and `steps` verb | `test-sink.sh` green; `release.sh steps` prints 12 rows; a `check-*.sh` run with a sink set writes lines |
-| 2 | preflight rows, channel rows and the two clocks emit to the sink | `check-release-ready.sh` with a sink set writes ≥30 `row` lines; `verify-channels.sh` writes 8 `channel` lines (network needed for real verdicts; `unreachable` is fine) |
-| 3 | generator reads the real `.release/0.29.1` (events, context, logs) and renders a board with the build panes at *no data* | `release-board.py 0.29.1` writes `board.html`; opened, the twelve stations show 0.29.1's real fold; build panes say *no data* honestly |
-| 4 | generator unit suite | `test-release-board.py` green |
-| 5 | board template — layout, line, panes, states, escaping | a synthetic full run (fixture from the suite) renders every pane populated; the sketch's screenshot compared by eye |
-| 6 | `--serve` + polling | `curl localhost:PORT/board.json` returns the model; the page re-renders a changed panel |
-| 7 | a real feed: `build-all.sh` run under a sink (ad-hoc signing path stops at step 2d — enough to prove step/check/gate lines and elapsed) | `bn-events.log` holds real `@bn` lines; the board's build pane fills |
-| 8 | docs: `scripts/README.md` rows, `docs/release-channels.md` "watching it" paragraph, `REPORT-STYLE.md` sink paragraph, mockup register → IMPLEMENTED, this doc trued to as-built | `check-mockup-register.py` green; `check-doc-surfaces` untouched (no CLI flag changes) |
-
-Steps 1–2 ship as one commit (the feed), 3–6 as one or two (the board),
-7–8 close it out. Nothing here is release-gating, so no ratchet or gate-proof
-entry is needed; the two suites join `release-suites` so they run where the
-rest of the release machine's proofs run.
+| 0 | key-id slip in `upload-testflight.sh` — landed alone | `git log -S'printed the live ASC key id'` |
+| 1 | the feed: `sink.sh`, `report.sh` ownership + tee, `bn_events.py` extracted, `release.sh` boundaries + `steps.tbl` + `resolve_run` + `status` CI lines, preflight/verify rows, the two clocks, `test-sink.sh`, `ci.yml` entry | `test-sink.sh` green; `test-release-sh.sh` / `test-release-e2e.sh` / `test-verify-channels.sh` / `test-preflight-*.sh` still green; a `check-*.sh` run with a sink set writes lines |
+| 2 | generator + `test-release-board.py` + the 0.28.0 fixture | suite green; `release-board.py 0.29.1` renders the real run with build panes honestly no-data |
+| 3 | template | the fixture run renders every pane; DOM-sink grep and round-trip tests green; screenshot compared with the sketch |
+| 4 | docs: `scripts/README.md`, `REPORT-STYLE.md` sink paragraph, `release-channels.md` "watching it", mockup register → IMPLEMENTED, this doc trued | `check-mockup-register.py` green |
 
 ## 5 · Out of scope, by decision
 
-- **History overlay** (past runs on the board): the feed makes it possible;
-  the board shows only the estimate it derives from history. The Marey
-  sketch stays a sketch.
-- **Probing from the board**: the board never calls PyPI, ASC or the store.
-  `release.sh verify` does, and writes the sink. One place asks the network.
-- **A SwiftUI window, a FastAPI mount, SSE**: rejected in the options doc;
-  `--serve` is `http.server` and stays that.
-- **The bn-accurate design system**: not for maintainer tooling.
-- **Any change to what a step does.** If a step's behaviour has to change to
-  be visible, the plan is wrong, not the step.
+History overlay and Welford estimates (review-log Finding 22); probing from
+the board; any server (`--serve`, SSE, FastAPI, SwiftUI); the T-7 expiry
+warning (a future preflight row, not the board); the bn-accurate design
+system; any change to what a step does. The orphaned Python suites
+(`test-dep-drift.py`, `test-tap-provenance.py` run in no workflow) are a
+separate item.
 
-## 6 · Risks the review should look at
+## 6 · Risks the review named, and where each is answered
 
-1. `report.sh` is "3.2-safe bash"; the sink helper must stay so (no
-   associative arrays, no `${var,,}`), and must not break `bn_autowrap`'s
-   re-exec (the sink is written by the *inner* run, which is the owner).
-2. The `release.yml` regex reader is the one place topology is read from a
-   file not designed to be read; the test against the real file is what keeps
-   it honest, and it must fail loud on a shape it does not understand rather
-   than return a partial chain.
-3. `--serve` regenerates on every poll: reading every `.release/*/bn-events.log`
-   for history each time is wasteful; cache by mtime.
-4. The log tail is untrusted text from tools (rsync, altool, notarytool); the
-   escaping test is the guard, and the tail is capped at 12 lines × 200 chars.
-5. Two ledgers (`events.jsonl`, `bn-events.log`) merged by timestamp: both are
-   UTC ISO-8601 already; the sink must write the same format or the merge
-   silently misorders.
+bash 3.2 safety → grep assertion in `test-sink.sh`. The `release.yml` reader →
+deleted. Poll cost → no live mode. Untrusted tail → never inlined by default.
+Two-ledger merge → `sink_line` owns the clock; sort key; conductor wins.
+**Can the tee hurt the train?** A full disk mid-`build-dmg`: the child's write
+is swallowed and the driver's boundary write dies loud, which is the right
+asymmetry — the driver already dies on `events.jsonl`. File growth: a run is a
+few hundred lines. The EXIT trap's `rmdir` only succeeds on an empty dir, and
+the sink makes it non-empty exactly as `events.jsonl` already does.

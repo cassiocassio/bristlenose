@@ -255,7 +255,8 @@ jobs:
         run: |
           rc=0
           for s in test-release-sh test-release-e2e test-verify-channels \
-                   test-preflight-gates test-preflight-substance test-doc-surfaces; do
+                   test-preflight-gates test-preflight-substance test-doc-surfaces \
+                   test-sink; do
             echo "::group::$s"
             bash "scripts/$s.sh" </dev/null || { echo "::error::$s failed"; rc=1; }
             echo "::endgroup::"

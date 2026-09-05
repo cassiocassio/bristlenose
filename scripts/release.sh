@@ -423,6 +423,34 @@ verdict_recover() {
 [ "${RELEASE_LIB:-0}" = "1" ] && return 0 2>/dev/null
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
+# The sink (docs/design-release-board.md §1.2). The driver writes its own
+# boundary lines — asserted, unlike the children's — so an empty sink under a
+# completed step reads "ran; sink received nothing", never "did not run".
+if [ -f "$ROOT/desktop/scripts/sink.sh" ]; then
+    # shellcheck source=desktop/scripts/sink.sh
+    . "$ROOT/desktop/scripts/sink.sh"
+else
+    sink_line() { :; }; sink_line_or_die() { :; }
+fi
+# resolve_run — the run a bare `verify`/`status` means: the sole run under
+# .release/, or the newest by events.jsonl mtime when several exist (narrated
+# to stderr). Prints the version or nothing. Used to export the sink so the
+# post-release verbs write channel and CI rows into the run they describe.
+resolve_run() {
+    local d newest="" n=0
+    for d in .release/*/; do
+        [ -f "$d/events.jsonl" ] || continue
+        n=$((n+1))
+        if [ -z "$newest" ] || [ "$d/events.jsonl" -nt "$newest/events.jsonl" ]; then newest="${d%/}"; fi
+    done
+    [ -n "$newest" ] || return 0
+    [ "$n" -gt 1 ] && printf '  %s(%d runs under .release/ — using the newest, %s)%s\n' "$D" "$n" "$(basename "$newest")" "$N" >&2
+    basename "$newest"
+}
+export_sink_for() { # export_sink_for <version> — no-op when the run dir is absent
+    [ -n "${1:-}" ] && [ -d ".release/$1" ] || return 0
+    export BN_RUN_ID="$1" BN_EVENT_SINK="$ROOT/.release/$1/bn-events.log"
+}
 
 # Project identity. Everything about WHICH project this is lives in project.conf;
 # everything about HOW a release is ordered and executed lives here. A second
@@ -570,7 +598,14 @@ EOF
     return 0
 }
 
-cmd_verify() { exec "$ROOT/scripts/verify-channels.sh" "$@"; }
+cmd_verify() {
+    # The version is the first non-flag argument, else the resolved run; the
+    # sink is exported for it so verify-channels.sh's rows land in the run dir.
+    local _v=""
+    case "${1-}" in ""|-*) _v="$(resolve_run)" ;; *) _v="$1" ;; esac
+    export_sink_for "$_v"
+    exec "$ROOT/scripts/verify-channels.sh" "$@"
+}
 
 cmd_status() {
     CUR=$(sed -n 's/^__version__ *= *"\(.*\)"/\1/p' bristlenose/__init__.py 2>/dev/null)
@@ -578,9 +613,42 @@ cmd_status() {
     printf '\n%sBristlenose%s  tree %s · last tag %s\n\n' "$B" "$N" "${CUR:-?}" "$LAST_TAG"
 
     held=0
+    # Status is the one verb that asks GitHub, so it is where CI facts enter the
+    # sink: the strict run on the sha strict-ci dispatched (the same selector
+    # CI_CMD uses — --event workflow_dispatch, headSha == ci-sha; a sha-only
+    # match picks the non-strict push run, release-log 0.25.2), and the release
+    # run. Results are tri-state: a run, `no run for sha`, or `unreachable`.
+    _sv="$(resolve_run)"; export_sink_for "$_sv"
     if command -v gh >/dev/null 2>&1; then
+        if [ -n "${_sv:-}" ] && [ -f ".release/$_sv/ci-sha" ]; then
+            _sha="$(cat ".release/$_sv/ci-sha" 2>/dev/null)"
+            if printf '%s' "$_sha" | grep -qE '^[0-9a-f]{40}$'; then
+                _ci="$(SHA="$_sha" gh run list --workflow=$WF_CI --event workflow_dispatch --branch main --limit 10 \
+                        --json databaseId,headSha,status,conclusion \
+                        --jq '[.[]|select(.headSha==env.SHA)]|.[0] | "\(.databaseId) \(.status) \(.conclusion // "-")"' 2>/dev/null)"
+                if [ -z "$_ci" ]; then
+                    sink_line ci workflow="$WF_CI" sha="$_sha" result=unreachable
+                elif [ "$_ci" = "null" ] || [ "$_ci" = "  " ]; then
+                    sink_line ci workflow="$WF_CI" sha="$_sha" result="no run for sha"
+                else
+                    set -- $_ci
+                    _cires="${3-}"; [ "${2-}" = completed ] || _cires="${2-}"
+                    sink_line ci workflow="$WF_CI" sha="$_sha" run_id="${1-}" result="$_cires"
+                    if [ -n "${1-}" ] && [ "${1-}" != null ]; then
+                        gh run view "$1" --json jobs --jq '.jobs[] | "\(.name)\t\(.status)\t\(.conclusion // "-")"' 2>/dev/null \
+                          | while IFS=$'\t' read -r _jn _js _jc; do
+                                [ -n "$_jn" ] || continue
+                                _jr="$_jc"; [ "$_js" = completed ] || _jr="$_js"
+                                sink_line ci workflow="$WF_CI" sha="$_sha" run_id="$1" job="$_jn" result="$_jr"
+                            done
+                    fi
+                fi
+            fi
+        fi
         run=$(gh run list --workflow=$WF_RELEASE --limit 1 --json databaseId,status,conclusion \
                 --jq '.[0] | "\(.databaseId) \(.status) \(.conclusion // "-")"' 2>/dev/null || echo "")
+        if [ -z "$run" ]; then sink_line ci workflow="$WF_RELEASE" result=unreachable
+        else set -- $run; _rr="${3-}"; [ "${2-}" = completed ] || _rr="${2-}"; sink_line ci workflow="$WF_RELEASE" run_id="${1-}" result="$_rr"; fi
         if [ -z "$run" ]; then
             printf '  %s⚠%s release runs   %scould not query — unverified%s\n' "$Y" "$N" "$D" "$N"
         else
@@ -1122,6 +1190,17 @@ cmd_run() {
     CI_CMD="SHA=\$(cat '$CI_SHA_FILE' 2>/dev/null); [ -n \"\$SHA\" ] || { echo 'strict-ci recorded no dispatched sha — release.sh retry $V strict-ci'; exit 1; }; export SHA; _id=\$(gh run list --workflow=$WF_CI --event workflow_dispatch --branch main --limit 10 --json databaseId,headSha --jq '[.[]|select(.headSha==env.SHA)]|.[0].databaseId'); [ -n \"\$_id\" ] && [ \"\$_id\" != null ] && gh run watch \"\$_id\" --exit-status"
 
     ev_append run started "bump=$BUMP"
+    # The board's inputs (after the prompt: a declined run must leave an EMPTY
+    # dir for the EXIT trap's rmdir — test-release-sh pins it), written by the driver (docs/design-release-board.md
+    # §1.2). Absolute sink path: a child's cwd is not ours. The step table is
+    # snapshotted per run so the board reads THIS run's topology, and no seam
+    # (RELEASE_STEPS_FILE) can feed it a synthetic one after the fact.
+    export BN_RUN_ID="$V" BN_EVENT_SINK="$ROOT/$RUNDIR/bn-events.log"
+    { echo "# steps.tbl v1"; run_steps; } > "$RUNDIR/steps.tbl" || die "could not snapshot the step table"
+    _attempt=$(grep -c '"step":"run","status":"started"' "$EVENTS" 2>/dev/null || true)
+    _attempt=$(( ${_attempt:-0} + 1 ))
+    sink_line_or_die run status=start attempt="$_attempt" proto=1 \
+        || die "cannot write the event sink at $BN_EVENT_SINK"
     write_context "$RUNDIR"
     # Idle sleep parks xcodebuild/notarytool/altool with no error — the
     # overnight run's quietest failure mode, and no env var converts machine
@@ -1247,6 +1326,8 @@ cmd_run() {
         n=1; while [ -e "$LOGDIR/$id.$n.log" ]; do n=$((n+1)); done
         LOG="$LOGDIR/$id.$n.log"
         ev_append "$id" running "attempt $n"
+        sink_line_or_die step id="$id" attempt="$n" status=start \
+            || die "cannot write the event sink at $BN_EVENT_SINK"
         t0=$SECONDS
         # REDIRECT, never pipe. $? is then the command's own status, not tail's.
         # release-log 0.27.0 #1: five runs reported exit 0 and three had failed.
@@ -1270,6 +1351,8 @@ cmd_run() {
         STEP_PID=""
         el=$(( SECONDS - t0 ))
 
+        sink_line_or_die step id="$id" attempt="$n" status=end rc="$rc" elapsed="$el" \
+            || die "cannot write the event sink at $BN_EVENT_SINK"
         if [ "$rc" -eq 0 ]; then
             ev_append "$id" ok "${el}s"
             printf '  %b✓%b %-26s %b%ss%b\n\n' "$G" "$N" "$label" "$D" "$el" "$N"

@@ -63,6 +63,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 GATE="$SCRIPT_DIR/check-pkg-shippable.sh"
+# The sink (docs/design-release-board.md §1.1): the TestFlight expiry is the one
+# clock nobody wrote down; it is recorded here, as Apple gives it, or empty.
+if [ -f "$SCRIPT_DIR/sink.sh" ]; then . "$SCRIPT_DIR/sink.sh"; else sink_line() { :; }; fi
 DEFAULT_PKG="$ROOT/desktop/build/export/Bristlenose.pkg"
 LOG_DIR="$ROOT/desktop/build"
 
@@ -397,6 +400,9 @@ if xcrun altool --build-status --delivery-id "$DELIVERY" \
 else
     EXPIRES=$(sed -n 's/.*EXPIRATION-DATE: *\(.*\)/\1/p' "$CLEAN" | head -1)
 fi
+# Empty when altool gave no date — the board renders that as no data, never a
+# computed 90 days (docs/design-testflight-upload.md: read Apple's clock).
+sink_line clock name=testflight build="$BUILD" expires="$EXPIRES" confirmed="$CONFIRMED"
 
 # The independent check is this script's entire reason to exist — its header says
 # a zero exit from altool is not evidence the build landed. Yet the fallback used

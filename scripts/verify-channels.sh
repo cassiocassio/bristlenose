@@ -38,6 +38,12 @@
 
 set -uo pipefail
 
+# The sink (docs/design-release-board.md §1.1): every row, plus a start and a
+# done line so a verify interrupted after five rows can never be rolled up as
+# complete by a reader. No-op unless release.sh exported BN_EVENT_SINK.
+_VC_SINK="$(cd "$(dirname "$0")/.." && pwd)/desktop/scripts/sink.sh"
+if [ -f "$_VC_SINK" ]; then . "$_VC_SINK"; else sink_line() { :; }; fi
+
 # ---------------------------------------------------------------------------
 # Pure decision functions. No I/O. These are the whole risk surface, and they
 # are the only thing the test suite needs to exercise.
@@ -216,6 +222,7 @@ row() { # row <name> <verdict> <evidence>
     esac
     printf '  %b %-18s %s%s%s\n' "$glyph" "$1" "$D" "$3" "$N"
     VERDICTS+=("$2")
+    sink_line row src=verify label="$1" result="$2" evidence="$3"
 }
 
 # -f: fail on an HTTP error rather than returning the error PAGE as content.
@@ -357,6 +364,7 @@ case " $CHANNELS " in *" website "*) _need_site=1 ;; esac
 
 printf '\n\033[1mChannels · %s\033[0m\033[2m%s\033[0m\n\n' "$VERSION" "$VERSION_SOURCE"
 
+sink_line verify status=start version="$VERSION"
 for _ch in $CHANNELS; do
     # CHANNELS_UNPROBEABLE is the allow-list for "no probe exists here", and it
     # is consulted in BOTH directions. It used to be consulted in neither: the
@@ -445,4 +453,5 @@ else
     printf '  %b %s of %s channels on %s · %s outstanding\n\n' \
         "${R}✗${N}" "$oks" "$total" "$VERSION" "$((total-oks))"
 fi
+sink_line verify status=done version="$VERSION" rollup="$RC" channels="$total" ok="$oks"
 exit "$RC"

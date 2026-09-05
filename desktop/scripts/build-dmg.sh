@@ -45,6 +45,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DESKTOP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# The sink (docs/design-release-board.md §1.1): the .dmg's build time is the
+# 30-day clock's origin; the 30 lives in AlphaBuild.swift, not here.
+if [ -f "$SCRIPT_DIR/sink.sh" ]; then . "$SCRIPT_DIR/sink.sh"; else sink_line() { :; }; fi
 ROOT="$(cd "$DESKTOP_DIR/.." && pwd)"
 
 # Shared non-secret constants — same conf, same env-wins shape as build-all.sh
@@ -511,6 +514,7 @@ SIDECAR_BIN="$PROJECT_DIR/Resources/bristlenose-sidecar/bristlenose-sidecar"
     [ -n "$SBOM_PATH" ] && [ -f "$SBOM_PATH" ] && shasum -a 256 "$SBOM_PATH" | sed 's/^/  /'
 } > "$MANIFEST_PATH"
 ok "manifest: $(basename "$MANIFEST_PATH")"
+sink_line clock name=dmg version="$VERSION" built="$(date -u +%Y-%m-%dT%H:%M:%SZ)" commit="$BUILD_COMMIT"
 
 # ------------------------------------------------------------
 # 10. Final gates

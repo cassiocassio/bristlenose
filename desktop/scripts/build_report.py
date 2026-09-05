@@ -22,7 +22,6 @@ Self-test (no build needed):
 from __future__ import annotations
 
 import os
-import shlex
 import sys
 import textwrap
 from dataclasses import dataclass, field
@@ -91,23 +90,10 @@ class Gate:
 
 
 # ── event parsing ──────────────────────────────────────────────────────────
-def parse_event(line: str) -> tuple[str, dict[str, str]] | None:
-    """`@bn <kind> k=v k="v w/ spaces" …` → (kind, fields). None if not an event."""
-    if not line.startswith("@bn "):
-        return None
-    try:
-        toks = shlex.split(line[4:].strip())
-    except ValueError:
-        return None
-    if not toks:
-        return None
-    kind, rest = toks[0], toks[1:]
-    fields: dict[str, str] = {}
-    for tok in rest:
-        if "=" in tok:
-            k, _, v = tok.partition("=")
-            fields[k] = v
-    return kind, fields
+# The parser lives in bn_events.py (stdlib) so the release board can read the
+# sink file without importing Rich. Same directory; imported by path.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from bn_events import parse_event  # noqa: E402
 
 
 def _st(v: str) -> St:

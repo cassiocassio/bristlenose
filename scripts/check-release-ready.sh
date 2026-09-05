@@ -82,9 +82,12 @@ done
 FAIL=0
 WARN=0
 ALREADY_RELEASED=0
-ok()   { printf '  \033[32m✓\033[0m %-26s %s\n' "$1" "${2:-}"; }
-warn() { printf '  \033[33m⚠\033[0m %-26s %s\n' "$1" "${2:-}"; WARN=$((WARN+1)); }
-bad()  { printf '  \033[31m✗\033[0m %-26s %s\n' "$1" "${2:-}" >&2; FAIL=$((FAIL+1)); }
+# Every row is also a sink line (docs/design-release-board.md §1.1) when a
+# release run exported BN_EVENT_SINK; sink_line is a no-op otherwise.
+if [ -f "$ROOT/desktop/scripts/sink.sh" ]; then . "$ROOT/desktop/scripts/sink.sh"; else sink_line() { :; }; fi
+ok()   { printf '  \033[32m✓\033[0m %-26s %s\n' "$1" "${2:-}"; sink_line row src=preflight label="$1" result=ok evidence="${2:-}"; }
+warn() { printf '  \033[33m⚠\033[0m %-26s %s\n' "$1" "${2:-}"; WARN=$((WARN+1)); sink_line row src=preflight label="$1" result=warn evidence="${2:-}"; }
+bad()  { printf '  \033[31m✗\033[0m %-26s %s\n' "$1" "${2:-}" >&2; FAIL=$((FAIL+1)); sink_line row src=preflight label="$1" result=bad evidence="${2:-}"; }
 head_() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 
 CURRENT=$(sed -n "$VERSION_REGEX" "$VERSION_FILE" | head -1)

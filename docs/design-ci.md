@@ -237,8 +237,8 @@ The three pinned actions were prioritised because each touches a credential:
 | Action | Workflow | Credential in reach |
 |--------|----------|---------------------|
 | `peter-evans/repository-dispatch` | `release.yml` | `HOMEBREW_TAP_TOKEN` (can push to the tap repo) |
-| `snapcore/action-build` | `snap.yml` | — (build only; pinned for consistency) |
-| `snapcore/action-publish` | `snap.yml` | `SNAPCRAFT_STORE_CREDENTIALS` (can publish as us) |
+| `canonical/action-build` | `snap.yml` | — (build only; pinned for consistency). _Was `snapcore/action-build` until 4 Sep 2026 — an abandoned fork of this repo at the identical SHA_ |
+| `canonical/action-publish` | `snap.yml` | `SNAPCRAFT_STORE_CREDENTIALS` (can publish as us). _Same repoint, same SHA_ |
 
 ### Why the token is read-only by default
 

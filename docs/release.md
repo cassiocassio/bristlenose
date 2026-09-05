@@ -186,7 +186,7 @@ homebrew-bristlenose repo (update-formula.yml)
                    formula uses post_install pip instead of resource blocks)
 
 bristlenose repo (snap.yml) — BUILDS on every push/PR; publishes only on demand
-├─ build          → snapcore/action-build (amd64, ~10 min) — publishes nothing
+├─ build          → canonical/action-build (amd64, ~10 min) — publishes nothing
 ├─ publish-edge   → workflow_dispatch ONLY (gh workflow run snap.yml --ref main)
 └─ publish-stable → dispatch against a v* tag ref (--ref vX.Y.Z)
                     NB a tag-ref dispatch fires BOTH publish jobs — the ref

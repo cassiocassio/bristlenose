@@ -662,7 +662,12 @@ a snap bug (not a user action item).
 
 ### Build strategy
 
-**Primary: GitHub Actions** with `snapcore/action-build` + `snapcore/action-publish`.
+**Primary: GitHub Actions** with `canonical/action-build` + `canonical/action-publish`.
+_(Repointed 4 Sep 2026: `snapcore/*` are abandoned forks made the day the repos
+migrated to `canonical/*` in Sep 2024 — same tags, same SHAs, wrong publisher.
+`snap.yml` pins by SHA, which is why the breakage everyone else saw never hit
+here and the stale name survived two years. The YAML below is the original
+sketch; the shipped workflow SHA-pins `canonical/*`.)_
 
 - Builds amd64 snaps on ubuntu-latest runners
 - ~~Auto-publishes to `edge` channel from main branch~~ — **false since 8 Aug
@@ -1056,7 +1061,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: snapcore/action-build@v1
+      - uses: canonical/action-build@v1
         id: snapcraft
       - uses: actions/upload-artifact@v4
         with:
@@ -1071,7 +1076,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: snap-amd64
-      - uses: snapcore/action-publish@v1
+      - uses: canonical/action-publish@v1
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
@@ -1086,7 +1091,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: snap-amd64
-      - uses: snapcore/action-publish@v1
+      - uses: canonical/action-publish@v1
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:

@@ -587,7 +587,8 @@ Say this first, because it changes which chains are worth an attacker's time.
 - **Trusted Publishing** — no long-lived PyPI token exists to steal. PEP 740
   provenance and SBOM attestations are already generated.
 - **Third-party actions that touch secrets are SHA-pinned** —
-  `peter-evans/repository-dispatch@ff45666b…`, `snapcore/action-publish@214b86e5…`.
+  `peter-evans/repository-dispatch@ff45666b…`, `canonical/action-publish@214b86e5…`
+  (repointed from the abandoned `snapcore/*` fork on 4 Sep 2026; same SHA).
 - **The `pypi` environment hold** means no automated path publishes.
 
 That is a genuinely hard target. The chains below are what remains.
